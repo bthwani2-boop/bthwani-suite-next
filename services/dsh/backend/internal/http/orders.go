@@ -33,6 +33,19 @@ func parseIfMatchVersion(w http.ResponseWriter, r *http.Request) (int, bool) {
 	return version, true
 }
 
+func parsePartnerMutationHeaders(w http.ResponseWriter, r *http.Request) (string, int, bool) {
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain between 8 and 200 characters")
+		return "", 0, false
+	}
+	version, ok := parseIfMatchVersion(w, r)
+	if !ok {
+		return "", 0, false
+	}
+	return idempotencyKey, version, true
+}
+
 type partnerOrderDecisionRequest struct {
 	Decision   string `json:"decision"`
 	Reason     string `json:"reason"`
@@ -199,7 +212,14 @@ func (s *protectedStoreServer) handleMarkPreparing(w http.ResponseWriter, r *htt
 	if !ok {
 		return
 	}
-	order, err := orders.MarkPreparing(s.db, ownedOrder.ID, actor.ID)
+	idempotencyKey, expectedVersion, ok := parsePartnerMutationHeaders(w, r)
+	if !ok {
+		return
+	}
+	order, err := orders.TransitionPartnerPreparation(s.db, orders.PartnerPreparationTransitionInput{
+		OrderID: ownedOrder.ID, StoreID: ownedOrder.StoreID, ActorID: actor.ID,
+		Operation: "prepare", ExpectedVersion: expectedVersion, IdempotencyKey: idempotencyKey,
+	})
 	if errors.Is(err, orders.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return
@@ -221,7 +241,14 @@ func (s *protectedStoreServer) handleMarkReadyForPickup(w http.ResponseWriter, r
 	if !ok {
 		return
 	}
-	order, err := orders.MarkReadyForPickup(s.db, ownedOrder.ID, actor.ID)
+	idempotencyKey, expectedVersion, ok := parsePartnerMutationHeaders(w, r)
+	if !ok {
+		return
+	}
+	order, err := orders.TransitionPartnerPreparation(s.db, orders.PartnerPreparationTransitionInput{
+		OrderID: ownedOrder.ID, StoreID: ownedOrder.StoreID, ActorID: actor.ID,
+		Operation: "ready", ExpectedVersion: expectedVersion, IdempotencyKey: idempotencyKey,
+	})
 	if errors.Is(err, orders.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return
@@ -261,6 +288,7 @@ func marshalOrder(o *orders.Order) map[string]any {
 	}
 	return map[string]any{
 		"id":               o.ID,
+		"version":          o.Version,
 		"checkoutIntentId": o.CheckoutIntentID,
 		"storeId":          o.StoreID,
 		"fulfillmentMode":  o.FulfillmentMode,

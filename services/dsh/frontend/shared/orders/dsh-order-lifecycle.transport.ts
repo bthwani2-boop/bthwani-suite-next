@@ -140,6 +140,9 @@ export function createDshOrderLifecycleHttpClient(
     updateOrderStatus: async (orderId, req) => {
       if (!baseUrl) throw { kind: 'offline' } as DshOrderApiOfflineError;
       if (req.actor === 'partner') {
+        if (!Number.isInteger(req.expectedVersion) || req.expectedVersion < 1 || req.idempotencyKey.trim().length < 8) {
+          unsupportedTransition('partner order mutations require expectedVersion and Idempotency-Key');
+        }
         const partnerPath =
           req.status === 'store_accepted'
             ? 'accept'
@@ -155,7 +158,11 @@ export function createDshOrderLifecycleHttpClient(
           'POST',
           `/dsh/partner/orders/${encodeURIComponent(orderId)}/${partnerPath}`,
           undefined,
-          orderAuthHeaders(auth),
+          {
+            ...orderAuthHeaders(auth),
+            'Idempotency-Key': req.idempotencyKey,
+            'If-Match-Version': String(req.expectedVersion),
+          },
         );
         return normalizeOrderResponse(resp).order;
       }

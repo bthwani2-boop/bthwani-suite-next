@@ -1,7 +1,9 @@
 package orders
 
 import (
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -19,6 +21,17 @@ type DecidePartnerOrderInput struct {
 	IdempotencyKey  string
 }
 
+func partnerDecisionFingerprint(input DecidePartnerOrderInput) string {
+	hash := sha256.Sum256([]byte(strings.Join([]string{
+		input.OrderID,
+		input.StoreID,
+		input.Decision,
+		input.ReasonCode,
+		input.ReasonNote,
+	}, "|")))
+	return hex.EncodeToString(hash[:])
+}
+
 // DecidePartnerOrder replaces the legacy AcceptOrder and RejectOrder endpoints.
 // It enforces idempotency, OCC (versioning), and unified decision tracking.
 func DecidePartnerOrder(db *sql.DB, input DecidePartnerOrderInput) (*Order, error) {
@@ -27,6 +40,8 @@ func DecidePartnerOrder(db *sql.DB, input DecidePartnerOrderInput) (*Order, erro
 	input.ActorID = strings.TrimSpace(input.ActorID)
 	input.Decision = strings.TrimSpace(input.Decision)
 	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
+	input.ReasonCode = strings.TrimSpace(input.ReasonCode)
+	input.ReasonNote = strings.TrimSpace(input.ReasonNote)
 
 	if db == nil || input.OrderID == "" || input.StoreID == "" || input.ActorID == "" || input.IdempotencyKey == "" {
 		return nil, ErrInvalid
@@ -40,18 +55,23 @@ func DecidePartnerOrder(db *sql.DB, input DecidePartnerOrderInput) (*Order, erro
 		return nil, err
 	}
 	defer tx.Rollback()
+	fingerprint := partnerDecisionFingerprint(input)
+	lockIdentity := input.StoreID + "|partner-order-decision|" + input.IdempotencyKey
+	if _, err := tx.Exec(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, lockIdentity); err != nil {
+		return nil, err
+	}
 
 	// 1. Idempotency Check
-	var existingDecision string
+	var existingOrderID, existingDecision, existingFingerprint string
 	err = tx.QueryRow(`
-		SELECT decision
+		SELECT order_id::text, decision, request_fingerprint
 		FROM dsh_partner_order_decisions
 		WHERE store_id = $1 AND idempotency_key = $2
-	`, input.StoreID, input.IdempotencyKey).Scan(&existingDecision)
+	`, input.StoreID, input.IdempotencyKey).Scan(&existingOrderID, &existingDecision, &existingFingerprint)
 	if err == nil {
 		// Found idempotent record
-		if existingDecision != input.Decision {
-			return nil, fmt.Errorf("%w: idempotent key used with different decision", ErrConflict)
+		if existingOrderID != input.OrderID || existingDecision != input.Decision || existingFingerprint != fingerprint {
+			return nil, fmt.Errorf("%w: idempotent key used with different order decision input", ErrConflict)
 		}
 		// Return current order state
 		if err := tx.Commit(); err != nil {
@@ -96,9 +116,9 @@ func DecidePartnerOrder(db *sql.DB, input DecidePartnerOrderInput) (*Order, erro
 	// 3. Record Decision
 	_, err = tx.Exec(`
 		INSERT INTO dsh_partner_order_decisions
-		(order_id, store_id, actor_id, decision, reason_code, reason_note, idempotency_key)
-		VALUES ($1::uuid, $2, $3, $4, $5, $6, $7)
-	`, input.OrderID, input.StoreID, input.ActorID, input.Decision, input.ReasonCode, input.ReasonNote, input.IdempotencyKey)
+		(order_id, store_id, actor_id, decision, reason_code, reason_note, idempotency_key, request_fingerprint)
+		VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8)
+	`, input.OrderID, input.StoreID, input.ActorID, input.Decision, input.ReasonCode, input.ReasonNote, input.IdempotencyKey, fingerprint)
 	if err != nil {
 		return nil, err
 	}

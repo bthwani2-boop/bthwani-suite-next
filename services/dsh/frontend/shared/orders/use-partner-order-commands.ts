@@ -5,7 +5,9 @@ import {
   confirmStoreCaptainHandoff,
   markOrderPreparing,
   markOrderReady,
+  type PartnerOrderMutationOptions,
 } from './orders.api';
+import { corrId } from '../_kernel/dsh-http-request';
 import {
   type PartnerOrderMutationCommand,
   resolvePartnerOrderMutation,
@@ -49,14 +51,22 @@ export function usePartnerOrderCommands(refreshOrders: () => void | Promise<void
   const execute = React.useCallback(async (
     command: PartnerOrderMutationCommand,
     orderId: string,
+    expectedVersion?: number,
   ): Promise<boolean> => {
-    if (!orderId) return false;
+    const hasExpectedVersion = Number.isInteger(expectedVersion) && (expectedVersion ?? 0) >= 1;
+    if (!orderId || (command !== 'handoff' && !hasExpectedVersion)) return false;
+
+    const resolvedExpectedVersion = expectedVersion;
+    const mutationOptions: PartnerOrderMutationOptions = {
+      expectedVersion: resolvedExpectedVersion as number,
+      idempotencyKey: corrId('partner-order-command'),
+    };
 
     setState({ kind: 'submitting', command, orderId });
     try {
-      if (command === 'accept') await acceptOrder(orderId);
-      else if (command === 'prepare') await markOrderPreparing(orderId);
-      else if (command === 'ready') await markOrderReady(orderId);
+      if (command === 'accept') await acceptOrder(orderId, mutationOptions);
+      else if (command === 'prepare') await markOrderPreparing(orderId, mutationOptions);
+      else if (command === 'ready') await markOrderReady(orderId, mutationOptions);
       else await confirmStoreCaptainHandoff(orderId);
     } catch (error) {
       setState({ kind: 'error', command, orderId, message: resolveErrorMessage(error) });

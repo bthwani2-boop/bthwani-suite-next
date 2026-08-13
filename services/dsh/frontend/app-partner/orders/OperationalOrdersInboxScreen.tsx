@@ -158,7 +158,7 @@ export function OperationalOrdersInboxScreen({
       }
       const handoffMutation = resolvePartnerOrderMutation('handoff', item.allowedActions);
       if (handoffMutation) {
-        void commands.execute(handoffMutation, orderId);
+        void commands.execute(handoffMutation, orderId, item.version);
         return;
       }
       onNavigateAction('details', orderId);
@@ -167,7 +167,7 @@ export function OperationalOrdersInboxScreen({
 
     const mutation = resolvePartnerOrderMutation(actionId, item.allowedActions);
     if (mutation) {
-      void commands.execute(mutation, orderId);
+      void commands.execute(mutation, orderId, item.version);
       return;
     }
     onNavigateAction(actionId === 'delivering' || actionId === 'issue' ? actionId : 'details', orderId);

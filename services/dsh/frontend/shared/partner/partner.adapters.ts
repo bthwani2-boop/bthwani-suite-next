@@ -78,6 +78,7 @@ export type GovernedPartnerOrderItem = PartnerOrderItem & {
 
 type CanonicalOrderShape = {
   readonly id?: string;
+  readonly version?: number;
   readonly storeId?: string;
   readonly fulfillmentMode?: "bthwani_delivery" | "partner_delivery" | "pickup";
   readonly status?: string;
@@ -225,6 +226,10 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
   if (!Array.isArray(raw.items)) {
     throw new Error(`partner order ${orderId} is missing immutable order items`);
   }
+  const version = Number(raw.version);
+  if (!Number.isInteger(version) || version < 1) {
+    throw new Error(`partner order ${orderId} is missing a valid server version`);
+  }
 
   const preparationIssues = validatePreparationIssueProjection(raw, orderId);
   const handoffException = validateHandoffExceptionProjection(raw, orderId);
@@ -258,6 +263,7 @@ export function mapDshOrderToPartnerOrderItem(order: DshPartnerOrder): GovernedP
 
   return {
     id: orderId,
+    version,
     orderCode: `#${orderId.slice(-6).toUpperCase()}`,
     branchLabel: String(raw.storeId ?? "الفرع المرتبط بالحساب"),
     status,

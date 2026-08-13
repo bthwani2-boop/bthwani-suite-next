@@ -51,6 +51,13 @@
       "sha256": "a001a56a1b863815e331ee667342843db4298436b5c024a88b82c3037628f210",
       "historicalPrefix": "1000",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 247,
+      "file": "dsh-999d_partner_order_transition_receipts.sql",
+      "sha256": "56856bc81331adde0f0fb83818781c5e54e39c6cda39a0d238486b4810e660f5",
+      "historicalPrefix": "999d",
+      "state": "ACTIVE"
     }
   ]
 }

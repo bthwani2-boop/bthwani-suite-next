@@ -54,9 +54,13 @@ DshOrderItem:
 
 DshOrder:
   type: object
-  required: [id, checkoutIntentId, storeId, fulfillmentMode, clientId, status, wltPaymentRefId, currency, createdAt, updatedAt]
+  required: [id, version, checkoutIntentId, storeId, fulfillmentMode, clientId, status, wltPaymentRefId, currency, createdAt, updatedAt]
   properties:
     id: { type: string }
+    version:
+      type: integer
+      minimum: 1
+      description: Optimistic-concurrency version owned by DSH and required for every partner order mutation.
     checkoutIntentId: { type: string }
     storeId: { type: string }
     fulfillmentMode:

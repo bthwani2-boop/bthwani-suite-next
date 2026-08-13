@@ -2,6 +2,8 @@ import type { DshOrderStatus } from './orders.types';
 
 export type DshOrderRecord = {
   readonly id: string;
+  /** Present for canonical order projections; dispatch-only projections omit it. */
+  readonly version?: number;
   readonly store_id: string;
   readonly fulfillment_mode: 'bthwani_delivery' | 'partner_delivery' | 'pickup';
   readonly client_id: string;
@@ -98,11 +100,19 @@ export type DshCreateOrderResponse = {
   readonly order: DshOrderRecord;
 };
 
-export type DshUpdateOrderStatusRequest = {
-  readonly actor: 'client' | 'partner' | 'captain' | 'operator' | 'system';
-  readonly status: 'store_accepted' | 'preparing' | 'ready_for_pickup' | 'cancelled';
-  readonly note?: string;
-};
+export type DshUpdateOrderStatusRequest =
+  | {
+      readonly actor: 'partner';
+      readonly status: 'store_accepted' | 'preparing' | 'ready_for_pickup';
+      readonly expectedVersion: number;
+      readonly idempotencyKey: string;
+      readonly note?: string;
+    }
+  | {
+      readonly actor: 'client' | 'captain' | 'operator' | 'system';
+      readonly status: 'cancelled';
+      readonly note?: string;
+    };
 
 export type DshCreateSupportEscalationRequest = {
   readonly order_id: string;
@@ -166,6 +176,7 @@ export type BackendOrderItem = {
 
 export type BackendOrder = {
   readonly id?: string;
+  readonly version?: number;
   readonly checkoutIntentId?: string;
   readonly checkout_intent_id?: string;
   readonly storeId?: string;

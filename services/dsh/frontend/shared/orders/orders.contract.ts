@@ -710,6 +710,7 @@ export type PartnerOrderPriority = 'high' | 'normal' | 'low';
 
 export type PartnerOrderItem = {
   id: string;
+  version: number;
   orderCode: string;
   branchLabel: string;
   status: PartnerOrderStatus;

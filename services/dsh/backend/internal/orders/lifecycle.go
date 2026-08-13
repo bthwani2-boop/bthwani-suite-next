@@ -26,20 +26,6 @@ func CancelOrderByOperator(db *sql.DB, orderID, actorID, reason string) (*Order,
 	})
 }
 
-// MarkPreparing is the compatibility entry point used by partner surfaces.
-// The governed implementation records preparation_started_at atomically with
-// the lifecycle transition.
-func MarkPreparing(db *sql.DB, orderID, actorID string) (*Order, error) {
-	return MarkPreparingWithTiming(db, orderID, actorID)
-}
-
-// MarkReadyForPickup delegates to the governed issue gate so open missing-item,
-// substitution, or quality issues cannot coexist with a ready order. The gate
-// records ready_at and the lifecycle transition in the same transaction.
-func MarkReadyForPickup(db *sql.DB, orderID, actorID string) (*Order, error) {
-	return MarkReadyWithIssueGuard(db, orderID, actorID)
-}
-
 func TransitionDispatchOrder(
 	db *sql.Tx,
 	orderID,
@@ -115,7 +101,7 @@ func transitionOrderTx(
 		UPDATE dsh_orders
 		SET status = $1, updated_at = NOW()
 		WHERE id = $2::uuid AND status = $3
-		RETURNING id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
+		RETURNING id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status, version,
 		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at`,
 		string(toStatus),
 		orderID,
@@ -180,6 +166,7 @@ func scanOrderRow(row *sql.Row) (*Order, error) {
 		&order.FulfillmentMode,
 		&order.ClientID,
 		&order.Status,
+		&order.Version,
 		&order.RejectionReason,
 		&order.WltPaymentRefID,
 		&order.Currency,
@@ -203,6 +190,7 @@ func scanOrders(rows *sql.Rows) ([]Order, error) {
 			&order.FulfillmentMode,
 			&order.ClientID,
 			&order.Status,
+			&order.Version,
 			&order.RejectionReason,
 			&order.WltPaymentRefID,
 			&order.Currency,
