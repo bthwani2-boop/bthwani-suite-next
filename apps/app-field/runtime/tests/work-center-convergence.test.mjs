@@ -23,10 +23,13 @@ test("field work center has no parallel history route or tab", async () => {
 });
 
 test("field tasks keep stale work non-actionable and actor-scoped", async () => {
-  const [queueScreen, queueController, queueApi] = await Promise.all([
+  const [queueScreen, queueController, queueApi, assignmentCard, partnersScreen, assignmentWorkspace] = await Promise.all([
     source("services/dsh/frontend/app-field/escalation/DshFieldWorkQueueScreen.tsx"),
     source("services/dsh/frontend/shared/field-readiness/use-field-readiness-controller.tsx"),
     source("services/dsh/frontend/shared/field-readiness/field-readiness.api.ts"),
+    source("services/dsh/frontend/app-field/components/FieldOnboardingAssignmentCard.tsx"),
+    source("services/dsh/frontend/app-field/stores/DshFieldPartnersScreen.tsx"),
+    source("services/dsh/frontend/control-panel/partners/field-assignment/FieldAssignmentWorkspace.tsx"),
   ]);
 
   assert.match(queueScreen, /disabled=\{isStale\}/);
@@ -34,4 +37,12 @@ test("field tasks keep stale work non-actionable and actor-scoped", async () => 
   assert.match(queueScreen, /!isStale && onOpenEscalation/);
   assert.match(queueController, /isAuthenticated\(authKind\)/);
   assert.match(queueApi, /\/dsh\/field\/work-queue/);
+  assert.match(queueScreen, /listFieldOnboardingAssignments/);
+  assert.match(queueScreen, /<FieldOnboardingAssignmentCard/);
+  assert.match(partnersScreen, /<FieldOnboardingAssignmentCard/);
+  assert.doesNotMatch(partnersScreen, /onboarding المسندة/);
+  assert.match(assignmentCard, /الموقع مثبت/);
+  assert.match(assignmentWorkspace, /GoogleMapsWebCanvas/);
+  assert.match(assignmentWorkspace, /locationLatitude/);
+  assert.doesNotMatch(assignmentWorkspace, /إسناد مهمة onboarding/);
 });

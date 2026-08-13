@@ -100,7 +100,7 @@ function evidenceErrorMessage(error: unknown): string {
 export type DshFieldOnboardingScreenProps = {
   readonly controller?: FieldOnboardingController;
   readonly partnerId?: string;
-  readonly assignmentPrefill?: { readonly id: string; readonly storeNameHint: string; readonly phoneHint?: string; readonly addressHint?: string };
+  readonly assignmentPrefill?: { readonly id: string; readonly storeNameHint: string; readonly phoneHint?: string; readonly addressHint?: string; readonly locationLatitude?: number; readonly locationLongitude?: number };
   readonly onBack?: () => void;
   readonly onOpenProducts?: (partnerId: string) => void;
 };
@@ -116,7 +116,7 @@ export function DshFieldOnboardingScreen({
   const ownController = useFieldPartnerOnboardingController();
   const controller = controllerProp ?? ownController;
   const insets = useSafeAreaInsets();
-  const { state, validationErrors, updateForm, updateVisitNotes, submitDraft, switchDraft } = controller;
+  const { state, validationErrors, updateForm, updateVisitNotes, updateLocation, submitDraft, switchDraft } = controller;
   const { state: feeRefState } = useStoreOnboardingFeeReferenceController(identity.state.kind);
 
   const [activeGroup, setActiveGroup] = React.useState<GroupId>('basics_profile');
@@ -134,8 +134,11 @@ export function DshFieldOnboardingScreen({
         addressLine: assignmentPrefill.addressHint ?? '',
         notes: `مرجع إسناد DSH: ${assignmentPrefill.id}`,
       });
+      if (assignmentPrefill.locationLatitude !== undefined && assignmentPrefill.locationLongitude !== undefined) {
+        updateLocation(assignmentPrefill.locationLatitude, assignmentPrefill.locationLongitude);
+      }
     });
-  }, [assignmentPrefill, partnerId, switchDraft, updateForm]);
+  }, [assignmentPrefill, partnerId, switchDraft, updateForm, updateLocation]);
 
   const pickEvidenceFile = React.useCallback(async (
     source: EvidencePickSource,

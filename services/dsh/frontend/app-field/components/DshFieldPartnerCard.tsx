@@ -3,9 +3,10 @@
 // ملتزم بالكامل بالمسار السيادي shared كحاكم وعقل للواجهات
 import React from 'react';
 import { Pressable, View } from 'react-native';
-import { Badge, Text, spacing, radius, colorRoles } from '@bthwani/ui-kit';
+import { Badge, Icon, Text, spacing, radius, colorRoles } from '@bthwani/ui-kit';
 import { buildPartnerListRowViewModel, getDshPartnerActivationProgress } from '../../shared/partner';
 import type { DshPartnerSummary } from '../../shared/partner';
+import { formatFieldPartnerCategory } from './field-display';
 
 type DshFieldPartnerCardProps = {
   readonly partner: DshPartnerSummary;
@@ -50,6 +51,8 @@ export function DshFieldPartnerCard({ partner, onPress }: DshFieldPartnerCardPro
           borderRadius: radius.lg,
           borderWidth: 1,
           borderColor: colorRoles.borderSubtle,
+          borderRightWidth: 4,
+          borderRightColor: colorRoles.brandAction,
           padding: spacing[4],
           marginBottom: spacing[3],
           gap: spacing[3],
@@ -60,7 +63,7 @@ export function DshFieldPartnerCard({ partner, onPress }: DshFieldPartnerCardPro
           elevation: 1,
         }}
       >
-        {/* Row 1: Badges + title */}
+        {/* Row 1: identity, status, and progress */}
         <View
           style={{
             flexDirection: 'row-reverse',
@@ -69,7 +72,9 @@ export function DshFieldPartnerCard({ partner, onPress }: DshFieldPartnerCardPro
             gap: spacing[3],
           }}
         >
-          {/* Right side: badges + title + subtitle */}
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: colorRoles.surfaceMuted, alignItems: 'center', justifyContent: 'center' }}>
+            <Icon name="storefront-outline" size={24} tone="brand" />
+          </View>
           <View style={{ flex: 1, gap: spacing[2], alignItems: 'flex-end' }}>
             {/* Badges row */}
             <View style={{ flexDirection: 'row-reverse', gap: spacing[1], flexWrap: 'wrap' }}>
@@ -89,8 +94,11 @@ export function DshFieldPartnerCard({ partner, onPress }: DshFieldPartnerCardPro
             </Text>
             {/* City / category */}
             <Text style={{ fontSize: 13, color: colorRoles.textMuted, textAlign: 'right' }}>
-              {partner.category}
+              {formatFieldPartnerCategory(partner.category)}
             </Text>
+            <View style={{ width: '100%', height: 5, borderRadius: 3, backgroundColor: colorRoles.surfaceMuted, overflow: 'hidden' }}>
+              <View style={{ width: `${progress}%`, height: '100%', borderRadius: 3, backgroundColor: colorRoles.brandAction }} />
+            </View>
           </View>
         </View>
 
@@ -126,6 +134,9 @@ export function DshFieldPartnerCard({ partner, onPress }: DshFieldPartnerCardPro
             <Text style={{ fontSize: 13, textAlign: 'right', color: colorRoles.textSecondary }}>
               الآن · {updatedDate}
             </Text>
+          </View>
+          <View style={{ minWidth: 86, alignItems: 'flex-end', justifyContent: 'flex-end' }}>
+            <Text style={{ fontSize: 13, fontWeight: 'bold', color: colorRoles.brandAction, textAlign: 'right' }}>فتح الملف</Text>
           </View>
         </View>
       </View>

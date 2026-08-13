@@ -24,6 +24,8 @@ import {
 import { DshFieldProblemState } from '../components/DshFieldProblemNotice';
 import { ActorNotificationsPanel, useNotificationsController } from '../../shared/notifications';
 import { DshFieldPartnerCard } from '../components/DshFieldPartnerCard';
+import { FieldOnboardingAssignmentCard } from '../components/FieldOnboardingAssignmentCard';
+import { formatFieldPartnerCategory } from '../components/field-display';
 
 type DshFieldPartnersScreenProps = {
   readonly onOpenPartner: (partnerId: string, activationStatus: string) => void;
@@ -268,7 +270,7 @@ export function DshFieldPartnersScreen({
   React.useEffect(() => {
     void listFieldOnboardingAssignments()
       .then(setAssignments)
-      .catch(() => setAssignmentError('تعذر تحميل مهام onboarding المسندة من DSH'));
+      .catch(() => setAssignmentError('تعذر تحميل المهام المسندة. تحقق من الاتصال ثم أعد المحاولة.'));
   }, []);
 
   const openAssignment = React.useCallback(async (assignment: FieldOnboardingAssignment) => {
@@ -281,7 +283,7 @@ export function DshFieldPartnersScreen({
       setAssignments((current) => current.map((item) => item.id === opened.id ? opened : item));
       onOpenAssignment(opened);
     } catch {
-      setAssignmentError('تعذر فتح مهمة onboarding؛ أعد تحميل القائمة ثم حاول مجددًا');
+      setAssignmentError('تعذر فتح المهمة. أعد تحميل القائمة ثم حاول مجددًا.');
     } finally {
       setOpeningAssignmentId(null);
     }
@@ -413,7 +415,7 @@ export function DshFieldPartnersScreen({
           <View style={{ paddingHorizontal: spacing[4], paddingTop: spacing[4] }}>
             <NextPartnerCard
               displayName={priorityPartner.displayName || 'ملف انضمام جديد'}
-              subtitle={`${priorityPartner.category} · ${priorityPartner.primaryPhone}`}
+              subtitle={`${formatFieldPartnerCategory(priorityPartner.category)} · ${priorityPartner.primaryPhone}`}
               onPress={() => onOpenPartner(priorityPartner.id, priorityPartner.activationStatus)}
             />
           </View>
@@ -421,18 +423,14 @@ export function DshFieldPartnersScreen({
 
         {assignments.length > 0 ? (
           <View style={{ paddingHorizontal: spacing[4], paddingTop: spacing[3], gap: spacing[2] }}>
-            <Text style={{ fontWeight: 'bold', fontSize: 16, textAlign: 'right' }}>مهام onboarding المسندة</Text>
+            <Text style={{ fontWeight: 'bold', fontSize: 16, textAlign: 'right' }}>المهام المسندة</Text>
             {assignments.map((assignment) => (
-              <Pressable
+              <FieldOnboardingAssignmentCard
                 key={assignment.id}
+                assignment={assignment}
+                loading={openingAssignmentId === assignment.id}
                 onPress={() => void openAssignment(assignment)}
-                disabled={openingAssignmentId === assignment.id || assignment.status === 'cancelled'}
-                style={{ padding: spacing[3], borderRadius: radius.md, borderWidth: 1, borderColor: colorRoles.borderSubtle, backgroundColor: colorRoles.surfaceBase, opacity: openingAssignmentId === assignment.id ? 0.6 : 1 }}
-              >
-                <Text style={{ fontWeight: 'bold', textAlign: 'right' }}>{assignment.storeNameHint}</Text>
-                <Text style={{ color: colorRoles.textMuted, textAlign: 'right' }}>{assignment.phoneHint || assignment.addressHint || 'بيانات أولية قابلة للتصحيح'}</Text>
-                <Text style={{ color: colorRoles.brandAction, textAlign: 'right', marginTop: spacing[1] }}>{assignment.status === 'assigned' ? 'فتح المهمة وبدء المسودة' : assignment.status === 'in_progress' ? 'متابعة المسودة' : 'المسودة مرتبطة'}</Text>
-              </Pressable>
+              />
             ))}
             {assignmentError ? <Text style={{ color: colorRoles.danger, textAlign: 'right' }}>{assignmentError}</Text> : null}
           </View>

@@ -45,6 +45,8 @@ export function DshFieldSurface({ command, onExit, installationId }: DshFieldSur
       storeNameHint: assignment.storeNameHint,
       ...(assignment.phoneHint ? { phoneHint: assignment.phoneHint } : {}),
       ...(assignment.addressHint ? { addressHint: assignment.addressHint } : {}),
+      ...(assignment.locationLatitude !== undefined ? { locationLatitude: assignment.locationLatitude } : {}),
+      ...(assignment.locationLongitude !== undefined ? { locationLongitude: assignment.locationLongitude } : {}),
     } });
   }, [fieldSurface.actions]);
   const offlineScope = identity.state.kind === 'authenticated' && installationId

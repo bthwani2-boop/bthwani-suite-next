@@ -155,6 +155,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
         onOpenEscalation={(storeId, visitId) =>
           actions.pushRoute({ kind: 'escalation', storeId, ...(visitId ? { visitId } : {}) })
         }
+        onOpenAssignment={onOpenAssignment}
       />
     );
   }

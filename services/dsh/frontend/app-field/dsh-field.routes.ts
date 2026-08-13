@@ -21,7 +21,7 @@ export type DshFieldRoute =
 
 export type DshFieldRouteState =
   | { kind: 'stores' }
-  | { kind: 'onboarding'; partnerId?: string; assignmentPrefill?: { readonly id: string; readonly storeNameHint: string; readonly phoneHint?: string; readonly addressHint?: string } }
+  | { kind: 'onboarding'; partnerId?: string; assignmentPrefill?: { readonly id: string; readonly storeNameHint: string; readonly phoneHint?: string; readonly addressHint?: string; readonly locationLatitude?: number; readonly locationLongitude?: number } }
   | { kind: 'partner-progress'; partnerId: string }
   | { kind: 'visit'; storeId: string }
   | { kind: 'verification'; storeId: string; visitId: string }
