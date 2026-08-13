@@ -384,6 +384,8 @@ if ($resolvedTransport -eq "adb") {
 Write-Host ""
 
 $expoArguments = @(
+    "--dir",
+    $RuntimeDir,
     "exec",
     "expo",
     "start",

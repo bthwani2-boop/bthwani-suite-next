@@ -159,7 +159,7 @@ test("captain presentation policy enforces GPS, store-courier and proof boundari
     true,
   );
   assert.equal(storeCourier.isStoreCourierMode, true);
-  assert.equal(storeCourier.captainPodRequired, false);
+  assert.equal(storeCourier.captainPodRequired, true);
 
   const withoutAssignment = buildCaptainPresentationPolicy(state(), false);
   assert.equal(withoutAssignment.captainPodRequired, false);

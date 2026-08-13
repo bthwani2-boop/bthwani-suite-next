@@ -132,7 +132,11 @@ export function buildCaptainPresentationPolicy(
   const isStoreCourierMode = state.captainAppMode === 'store_courier_mode';
   const isCaptainAvailable = state.captainAvailabilityStatus === 'available';
   const isGpsEnabled = state.gpsStatus !== 'disabled';
-  const captainPodRequired = hasActiveAssignment && !isStoreCourierMode;
+  // A local service-mode toggle is presentation-only. Whether this Captain
+  // assignment requires delivery proof is owned by the DSH assignment/proof
+  // contract; without a server-authorized exception, an active assignment
+  // must keep the PoD path reachable.
+  const captainPodRequired = hasActiveAssignment;
   const showBottomNav = isStoreCourierMode
     ? state.route === 'home' || state.route === 'entry' || state.route === 'account'
     : CAPTAIN_BOTTOM_NAV_ROUTES.has(state.route);

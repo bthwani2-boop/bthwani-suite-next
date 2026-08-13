@@ -10,15 +10,14 @@ const workspaceRoot = path.resolve(projectRoot, "../../..");
 const config = getSentryExpoConfig(projectRoot);
 
 config.watchFolders = [
-  projectRoot,
-  path.join(workspaceRoot, "services/dsh"),
-  path.join(workspaceRoot, "shared/ui-kit"),
-  path.join(workspaceRoot, "shared/data-runtime"),
-  path.join(workspaceRoot, "core/identity"),
+  workspaceRoot,
 ];
 
 config.resolver.nodeModulesPaths = [
   path.join(projectRoot, "node_modules"),
+  path.join(workspaceRoot, "shared/ui-kit/node_modules"),
+  path.join(workspaceRoot, "shared/data-runtime/node_modules"),
+  path.join(workspaceRoot, "core/identity/node_modules"),
   path.join(workspaceRoot, "node_modules"),
 ];
 
@@ -33,6 +32,10 @@ config.resolver.extraNodeModules = {
   "react-native-screens": path.join(projectRoot, "node_modules/react-native-screens"),
   "react-native-gesture-handler": path.join(projectRoot, "node_modules/react-native-gesture-handler"),
   "react-native-reanimated": path.join(projectRoot, "node_modules/react-native-reanimated"),
+  tamagui: path.join(workspaceRoot, "shared/ui-kit/node_modules/tamagui"),
+  "@tamagui/config": path.join(workspaceRoot, "shared/ui-kit/node_modules/@tamagui/config"),
+  "@tamagui/animations-react-native": path.join(workspaceRoot, "shared/ui-kit/node_modules/@tamagui/animations-react-native"),
+  "@tanstack/react-query": path.join(workspaceRoot, "shared/data-runtime/node_modules/@tanstack/react-query"),
 };
 
 const defaultResolveRequest = config.resolver.resolveRequest;
