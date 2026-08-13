@@ -41,8 +41,15 @@
     {
       "ordinal": 245,
       "file": "dsh-999c_onboarding_collaboration.sql",
-    "sha256": "39dba4cbba9c40837edd43a342ea30805fc68d71d498c9cca5a13d091d114181",
+      "sha256": "39dba4cbba9c40837edd43a342ea30805fc68d71d498c9cca5a13d091d114181",
       "historicalPrefix": "999c",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 246,
+      "file": "dsh-1000_partner_team_membership_scope.sql",
+      "sha256": "a001a56a1b863815e331ee667342843db4298436b5c024a88b82c3037628f210",
+      "historicalPrefix": "1000",
       "state": "ACTIVE"
     }
   ]

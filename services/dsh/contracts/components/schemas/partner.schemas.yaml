@@ -200,7 +200,8 @@ DshPartnerTeamMember:
     operationalImpact: { type: string }
     auditNote: { type: string }
     inlineActionLabel: { type: string }
-  required: [id, name, role, roleLabel, status, statusLabel, branchAssignment, permissionsSummary, deliveryAssignment, inviteLifecycle, operationalImpact, auditNote, inlineActionLabel]
+    version: { type: integer, minimum: 1 }
+  required: [id, name, role, roleLabel, status, statusLabel, branchAssignment, permissionsSummary, deliveryAssignment, inviteLifecycle, operationalImpact, auditNote, inlineActionLabel, version]
 
 DshPartnerStoreCourierSettings:
   type: object

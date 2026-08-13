@@ -50,6 +50,9 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/couriers/{memberId}/connection-code", protected.handleIssuePartnerCourierConnectionCode)
 	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/courier-connections", protected.handleListPartnerCourierConnections)
 	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/courier-connections/{connectionId}/revoke", protected.handleRevokePartnerCourierConnection)
+	mux.HandleFunc("GET /dsh/partner/stores/{storeId}/team", protected.handleListPartnerStoreTeam)
+	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/team/invites", protected.handleInvitePartnerStoreTeamMember)
+	mux.HandleFunc("POST /dsh/partner/stores/{storeId}/team/members/{memberId}/action", protected.handlePartnerStoreTeamMemberAction)
 
 	mux.HandleFunc("GET /dsh/partner/scopes", protected.handlePartnerScopes)
 	mux.HandleFunc("POST /dsh/field/stores", protected.enforceFieldReadinessGate(protected.handleFieldCreateStore))

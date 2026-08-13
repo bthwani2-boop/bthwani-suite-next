@@ -406,6 +406,7 @@ export type DshPartnerTeamMember = {
   readonly operationalImpact: string;
   readonly auditNote: string;
   readonly inlineActionLabel: string;
+  readonly version: number;
 };
 
 export type DshPartnerStoreCourierSettings = {

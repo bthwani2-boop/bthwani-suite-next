@@ -144,10 +144,12 @@ $InviteIdentity = "+9677$($RunId.ToString().Substring($RunId.ToString().Length -
 $InviteKey = "partner-team-invite-$RunId"
 $Invite = Invoke-Api POST "$DshBaseUrl/dsh/partner/stores/$StoreId/team/invites" (Headers $Partner "team-invite" -FixedIdempotencyKey $InviteKey) @{
   identity = $InviteIdentity
+  role = "staff"
 }
 Require-Status $Invite @(200, 201) "partner team invite"
 $InviteReplay = Invoke-Api POST "$DshBaseUrl/dsh/partner/stores/$StoreId/team/invites" (Headers $Partner "team-invite-replay" -FixedIdempotencyKey $InviteKey) @{
   identity = $InviteIdentity
+  role = "staff"
 }
 Require-Status $InviteReplay @(200, 201) "partner team invite replay"
 $TeamAfter = Invoke-Api GET "$DshBaseUrl/dsh/partner/stores/$StoreId/team" (Headers $Partner "team-after" -ReadOnly)
@@ -203,7 +205,7 @@ Require (-not [string]::IsNullOrWhiteSpace($ProposalId)) "partner product propos
 
 $PartnerOrders = Invoke-Api GET "$DshBaseUrl/dsh/partner/orders" (Headers $Partner "orders" -ReadOnly)
 Require-Status $PartnerOrders @(200) "partner orders inbox"
-$PartnerAnalytics = Invoke-Api GET "$DshBaseUrl/dsh/partner/analytics/performance?period=today" (Headers $Partner "analytics" -ReadOnly)
+$PartnerAnalytics = Invoke-Api GET "$DshBaseUrl/dsh/partner/analytics/performance?period=today&storeId=$([uri]::EscapeDataString($StoreId))" (Headers $Partner "analytics" -ReadOnly)
 Require-Status $PartnerAnalytics @(200) "partner performance analytics"
 
 $PartnerSettlements = Invoke-Api GET "$DshBaseUrl/dsh/partner/me/finance/settlements" (Headers $Partner "settlements" -ReadOnly)

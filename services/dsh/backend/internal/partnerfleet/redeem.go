@@ -43,8 +43,10 @@ func RedeemCode(ctx context.Context, db *sql.DB, captainActorID, plainCode strin
 	// Check that the captain doesn't already have an active membership
 	var existingCount int
 	err = tx.QueryRowContext(ctx, `
-		SELECT COUNT(*) FROM dsh_captain_memberships WHERE captain_actor_id = $1 AND status = 'active'`,
-		captainActorID).Scan(&existingCount)
+		SELECT COUNT(*)
+		FROM dsh_captain_memberships
+		WHERE captain_actor_id = $1 AND store_id = $2 AND status = 'active'`,
+		captainActorID, storeID).Scan(&existingCount)
 	if err != nil {
 		return CaptainFleetMembership{}, err
 	}

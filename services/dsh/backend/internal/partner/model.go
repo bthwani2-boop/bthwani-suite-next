@@ -520,6 +520,7 @@ type StoreTeamMember struct {
 	AuditNote          string `json:"auditNote"`
 	InlineAction       string `json:"inlineAction"`
 	InlineActionLabel  string `json:"inlineActionLabel"`
+	Version            int    `json:"version"`
 }
 
 type InviteTeamMemberInput struct {

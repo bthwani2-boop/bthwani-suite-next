@@ -102,7 +102,7 @@ func ensureStoreEligible(ctx context.Context, q queryRower, storeID string) erro
 	if err != nil {
 		return err
 	}
-	if status != "active" {
+	if status != "published" {
 		return ErrStoreIneligible
 	}
 	return nil

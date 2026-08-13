@@ -776,7 +776,10 @@
             properties:
               identity:
                 type: string
-            required: [identity]
+              role:
+                type: string
+                enum: [manager, supervisor, staff]
+            required: [identity, role]
     responses:
       "200":
         description: Invite sent.
