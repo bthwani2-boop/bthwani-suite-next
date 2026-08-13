@@ -16,11 +16,50 @@ type expiredConnectionProjection struct {
 }
 
 func expirePendingStoreCodes(ctx context.Context, db *sql.DB, storeID string) error {
-	_, err := db.ExecContext(ctx, `
-		UPDATE dsh_partner_courier_connection_codes
-		SET status = 'expired', version = version + 1, updated_at = NOW()
-		WHERE store_id = $1 AND status = 'pending' AND expires_at <= NOW()`, storeID)
-	return err
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	rows, err := tx.QueryContext(ctx, `
+		SELECT id::TEXT, team_member_id, created_by_actor_id
+		FROM dsh_partner_courier_connection_codes
+		WHERE store_id = $1 AND status = 'pending' AND expires_at <= NOW()
+		FOR UPDATE`, storeID)
+	if err != nil {
+		return err
+	}
+	type expiredCode struct{ id, teamMemberID, actorID string }
+	var expired []expiredCode
+	for rows.Next() {
+		var code expiredCode
+		if err := rows.Scan(&code.id, &code.teamMemberID, &code.actorID); err != nil {
+			rows.Close()
+			return err
+		}
+		expired = append(expired, code)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return err
+	}
+	rows.Close()
+	for _, code := range expired {
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE dsh_partner_courier_connection_codes
+			SET status = 'expired', version = version + 1, updated_at = NOW()
+			WHERE id = $1 AND status = 'pending'`, code.id); err != nil {
+			return err
+		}
+		key := "expire-read:" + code.id
+		if err := insertMembershipHistory(ctx, tx, code.teamMemberID, "expire_captain_connection_code", code.actorID, "pending", "expired", key, key); err != nil {
+			return err
+		}
+		if err := insertFleetNotification(ctx, tx, code.actorID, "partner", "partner_fleet_connection", "انتهت صلاحية كود ربط الأسطول", "انتهت صلاحية كود ربط موصل المتجر."); err != nil {
+			return err
+		}
+	}
+	return tx.Commit()
 }
 
 func ListStoreConnections(ctx context.Context, db *sql.DB, storeID string) ([]ConnectionCode, error) {
@@ -61,11 +100,10 @@ func ListCaptainMemberships(ctx context.Context, db *sql.DB, captainActorID stri
 		return nil, ErrInvalid
 	}
 	rows, err := db.QueryContext(ctx, `
-		SELECT m.id, m.store_id, COALESCE(s.name, ''), COALESCE(wp.full_name_ar, ''), m.status, m.branch_assignment, m.delivery_assignment, m.version
+		SELECT m.id, m.store_id, COALESCE(s.display_name, ''), m.captain_actor_id, m.status, m.branch_assignment, m.delivery_assignment, m.version
 		FROM dsh_captain_memberships m
 		LEFT JOIN dsh_stores s ON m.store_id = s.id
-		LEFT JOIN workforce_people wp ON m.captain_actor_id = wp.actor_id
-		WHERE m.captain_actor_id = $1
+		WHERE m.captain_actor_id = $1 AND m.status IN ('active', 'suspended')
 		ORDER BY m.created_at DESC`, captainActorID)
 	if err != nil {
 		return nil, err

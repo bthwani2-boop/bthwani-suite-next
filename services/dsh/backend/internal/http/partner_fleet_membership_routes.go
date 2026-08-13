@@ -34,6 +34,10 @@ func (s *protectedStoreServer) handleCaptainDisconnectPartnerFleetMembership(w h
 	if !ok {
 		return
 	}
+	idempotencyKey, correlationID, ok := partnerFleetMutationHeaders(w, r)
+	if !ok {
+		return
+	}
 	var body struct {
 		StoreID         string `json:"storeId"`
 		ExpectedVersion int    `json:"expectedVersion"`
@@ -48,6 +52,8 @@ func (s *protectedStoreServer) handleCaptainDisconnectPartnerFleetMembership(w h
 		body.StoreID,
 		r.PathValue("teamMemberId"),
 		body.ExpectedVersion,
+		idempotencyKey,
+		correlationID,
 	)
 	if err != nil {
 		writePartnerFleetError(w, err)

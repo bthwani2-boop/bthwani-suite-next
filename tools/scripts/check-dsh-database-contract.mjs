@@ -160,7 +160,7 @@ if (migrations.length === 0) {
   fail("DSH must contain at least one migration");
 }
 
-const migrationNamePattern = /^dsh-\d{3}[a-z]?[-_][a-z0-9][a-z0-9_.-]*\.sql$/i;
+const migrationNamePattern = /^dsh-\d{3,}[a-z]?[-_][a-z0-9][a-z0-9_.-]*\.sql$/i;
 const lowerNames = new Set();
 for (const migration of migrations) {
   if (!migrationNamePattern.test(migration)) {

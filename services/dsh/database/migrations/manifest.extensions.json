@@ -58,6 +58,20 @@
       "sha256": "56856bc81331adde0f0fb83818781c5e54e39c6cda39a0d238486b4810e660f5",
       "historicalPrefix": "999d",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 248,
+      "file": "dsh-1001_partner_fleet_lifecycle_idempotency.sql",
+      "sha256": "fcfd9ae269e835bfeccec7010fa1970e317c0444fdac618cad5b94437da03764",
+      "historicalPrefix": "1001",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 249,
+      "file": "dsh-1002_partner_fleet_redeem_receipts.sql",
+      "sha256": "4ede685de48cccda94662c8cc1f52d3148f5bccec9b4e1a4dbfeca43a21c7eb0",
+      "historicalPrefix": "1002",
+      "state": "ACTIVE"
     }
   ]
 }

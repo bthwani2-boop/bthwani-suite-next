@@ -63,20 +63,13 @@ export function usePartnerFleetController(storeId: string): PartnerFleetControll
     }
     try {
       const response = await issuePartnerCourierConnectionCode(storeId, memberId);
-      setConnections((current) => [
-        response.issued.connection,
-        ...current.filter((connection) => (
-          connection.id !== response.issued.connection.id
-          && !(connection.teamMemberId === memberId && connection.status === "pending")
-        )),
-      ]);
-      setError(null);
       try {
         const refreshed = await listPartnerCourierConnections(storeId);
         setConnections(refreshed.connections);
+        setError(null);
       } catch {
-        // Preserve the successful one-time issuance and remove any superseded
-        // pending projection even when follow-up readback is temporarily unavailable.
+        setError("تم تنفيذ الإصدار لكن تعذر تأكيد الحالة من DSH؛ أعد التحميل قبل المتابعة.");
+        return null;
       }
       return response.issued.code;
     } catch (caught) {
@@ -105,11 +98,15 @@ export function usePartnerFleetController(storeId: string): PartnerFleetControll
         setError("لا يوجد رمز ربط معلق لهذا الموصل. يمكن للكابتن فك العضوية النشطة من تطبيق الكابتن.");
         return false;
       }
-      const response = await revokePartnerCourierConnection(storeId, pending.id, pending.version);
-      setConnections((current) => current.map((connection) => (
-        connection.id === response.connection.id ? response.connection : connection
-      )));
-      setError(null);
+      await revokePartnerCourierConnection(storeId, pending.id, pending.version);
+      try {
+        const refreshed = await listPartnerCourierConnections(storeId);
+        setConnections(refreshed.connections);
+        setError(null);
+      } catch {
+        setError("تم تنفيذ السحب لكن تعذر تأكيد الحالة من DSH؛ أعد التحميل قبل المتابعة.");
+        return false;
+      }
       return true;
     } catch (caught) {
       setError(resolveFleetError(caught));

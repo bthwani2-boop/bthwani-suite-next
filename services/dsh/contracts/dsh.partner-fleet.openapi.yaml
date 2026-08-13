@@ -24,6 +24,9 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/ConnectCaptainRequest'
+      parameters:
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CorrelationId'
       responses:
         '200':
           description: Activated captain membership.
@@ -77,6 +80,8 @@ paths:
         schema:
           type: string
           minLength: 1
+      - $ref: '#/components/parameters/IdempotencyKey'
+      - $ref: '#/components/parameters/CorrelationId'
       requestBody:
         required: true
         content:
@@ -160,6 +165,22 @@ components:
       type: http
       scheme: bearer
   parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 240
+      description: Retry identity for one authenticated fleet mutation.
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: false
+      schema:
+        type: string
+        minLength: 1
     StoreId:
       name: storeId
       in: path
@@ -318,7 +339,10 @@ components:
           minLength: 1
         status:
           type: string
-          minLength: 1
+          enum:
+          - invited
+          - active
+          - suspended
         branchAssignment:
           type: string
         deliveryAssignment:
@@ -349,7 +373,10 @@ components:
           minLength: 1
         status:
           type: string
-          minLength: 1
+          enum:
+          - invited
+          - active
+          - suspended
         captainActorId:
           type: string
           minLength: 1

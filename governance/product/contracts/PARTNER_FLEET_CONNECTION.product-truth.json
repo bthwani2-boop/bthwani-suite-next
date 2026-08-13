@@ -67,7 +67,7 @@
       "actors": ["captain"],
       "routesOrScreens": ["PartnerFleetConnectionCard"],
       "operationIds": [],
-      "states": ["loading", "empty", "active", "paused", "error", "expired", "ineligible", "already-bound", "version-conflict"],
+      "states": ["loading", "empty", "active", "suspended", "error", "expired", "ineligible", "already-bound", "version-conflict"],
       "actions": ["redeem code", "list memberships across stores", "disconnect one membership", "refresh"]
     },
     {
@@ -102,14 +102,14 @@
         "disconnectDshCaptainPartnerFleetMembership",
         "getDshOperatorPartnerFleetSnapshot"
       ],
-      "states": ["pending", "redeemed", "revoked", "expired", "active", "paused", "version-conflict", "forbidden"],
+      "states": ["pending", "redeemed", "revoked", "expired", "active", "suspended", "version-conflict", "forbidden"],
       "actions": ["enforce role and store scope", "enforce active-store eligibility", "hash code", "lock mutations", "audit lifecycle actions", "notify partner and captain", "return redacted operator readback"]
     },
     {
       "id": "database",
       "required": true,
       "actors": ["partner-operator", "captain", "control-panel-operator"],
-      "routesOrScreens": ["dsh_partner_courier_connection_codes", "dsh_store_team_members", "dsh_store_team_member_actions", "dsh_notifications", "dsh-933_partner_fleet_action_audit.sql"],
+      "routesOrScreens": ["dsh_partner_courier_connection_codes", "dsh_captain_memberships", "dsh_captain_membership_history", "dsh_notifications", "dsh-1000_partner_team_membership_scope.sql"],
       "operationIds": [],
       "states": ["transactional", "versioned", "audited", "trusted-context-scoped", "single-use", "store-scoped-multi-membership"],
       "actions": ["store digest only", "enforce one pending code", "persist and audit expiry", "prevent duplicate identity binding inside one store", "permit governed multi-store membership", "retain lifecycle audit and notifications"]
@@ -133,7 +133,7 @@
       "Expired codes become durably expired, create an audit action and partner notification, and cannot be redeemed.",
       "Inactive stores and ineligible courier records fail closed.",
       "Optimistic versions protect revoke redeem and disconnect transitions.",
-      "Disconnect pauses the member, records the governed lifecycle event, revokes the redeemed connection, and notifies both actors.",
+      "Disconnect suspends the member, records the governed lifecycle event, revokes the redeemed connection, and notifies both actors.",
       "Control-panel readback is redacted and requires current operator/partner read authorization.",
       "OpenAPI responses are typed and do not expose code hashes or plaintext outside issuance.",
       "Targeted Go, TypeScript, contract binding, Product Truth and PostgreSQL checks pass on the same candidate when applicable."

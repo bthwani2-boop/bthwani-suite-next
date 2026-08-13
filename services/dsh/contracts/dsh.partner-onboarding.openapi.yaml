@@ -409,11 +409,11 @@ paths:
       operationId: get_dsh_field_partners__partnerId__assortment_pauses
       responses:
         '200':
-          description: Auto-generated
+          description: Canonical partner fleet connection lifecycle.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/PartnerFleetConnectionListResponse'
         '400':
           description: Bad request
           content:
@@ -476,14 +476,14 @@ paths:
     get:
       tags:
       - partner
-      operationId: get_dsh_partner_stores__storeId__courier_connections
+      operationId: listDshPartnerCourierConnections
       responses:
         '200':
-          description: Auto-generated
+          description: Canonical partner fleet connection lifecycle.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/PartnerFleetConnectionListResponse'
         '400':
           description: Bad request
           content:
@@ -711,14 +711,23 @@ paths:
     post:
       tags:
       - partner
-      operationId: post_dsh_partner_stores__storeId__courier_connections__connectionId__revoke
+      operationId: revokeDshPartnerCourierConnection
+      parameters:
+      - $ref: '#/components/parameters/PartnerFleetIdempotencyKey'
+      - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerFleetRevokeRequest'
       responses:
         '200':
-          description: Auto-generated
+          description: Revoked canonical partner fleet connection.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/PartnerFleetConnectionResponse'
         '400':
           description: Bad request
           content:
@@ -751,14 +760,23 @@ paths:
     post:
       tags:
       - partner
-      operationId: post_dsh_partner_stores__storeId__couriers__memberId__connection_code
+      operationId: issueDshPartnerCourierConnectionCode
+      parameters:
+      - $ref: '#/components/parameters/PartnerFleetIdempotencyKey'
+      - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartnerFleetIssueRequest'
       responses:
-        '200':
-          description: Auto-generated
+        '201':
+          description: One-time plaintext code returned only at issuance.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/PartnerFleetIssueResponse'
         '400':
           description: Bad request
           content:
@@ -1086,6 +1104,15 @@ components:
         minLength: 8
       description: Omission is accepted only where the server derives a deterministic
         key from the versioned command.
+    PartnerFleetIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 240
+      description: Retry identity for one authenticated partner fleet mutation.
     CorrelationId:
       name: X-Correlation-ID
       in: header
@@ -1094,6 +1121,71 @@ components:
         type: string
         minLength: 1
   schemas:
+    PartnerFleetIssueRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        expiresInHours:
+          type: integer
+          minimum: 1
+          maximum: 48
+          default: 24
+    PartnerFleetRevokeRequest:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+    PartnerFleetConnectionCode:
+      type: object
+      additionalProperties: false
+      required: [id, storeId, teamMemberId, codeLast4, status, expiresAt, createdByActorId, version, createdAt, updatedAt]
+      properties:
+        id: { type: string, minLength: 1 }
+        storeId: { type: string, minLength: 1 }
+        teamMemberId: { type: string, minLength: 1 }
+        codeLast4: { type: string, minLength: 4, maxLength: 4 }
+        status: { type: string, enum: [pending, redeemed, revoked, expired] }
+        expiresAt: { type: string, minLength: 1 }
+        createdByActorId: { type: string, minLength: 1 }
+        redeemedByCaptainActorId: { type: string, minLength: 1 }
+        redeemedAt: { type: string, minLength: 1 }
+        version: { type: integer, minimum: 1 }
+        createdAt: { type: string, minLength: 1 }
+        updatedAt: { type: string, minLength: 1 }
+    PartnerFleetIssuedConnection:
+      type: object
+      additionalProperties: false
+      required: [connection, code]
+      properties:
+        connection: { $ref: '#/components/schemas/PartnerFleetConnectionCode' }
+        code:
+          type: string
+          minLength: 8
+          maxLength: 16
+          pattern: '^[A-Z0-9-]+$'
+    PartnerFleetIssueResponse:
+      type: object
+      additionalProperties: false
+      required: [issued]
+      properties:
+        issued: { $ref: '#/components/schemas/PartnerFleetIssuedConnection' }
+    PartnerFleetConnectionResponse:
+      type: object
+      additionalProperties: false
+      required: [connection]
+      properties:
+        connection: { $ref: '#/components/schemas/PartnerFleetConnectionCode' }
+    PartnerFleetConnectionListResponse:
+      type: object
+      additionalProperties: false
+      required: [connections]
+      properties:
+        connections:
+          type: array
+          items: { $ref: '#/components/schemas/PartnerFleetConnectionCode' }
     ActivationStatus:
       type: string
       enum:

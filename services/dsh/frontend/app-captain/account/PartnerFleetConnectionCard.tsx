@@ -132,7 +132,7 @@ export function PartnerFleetConnectionCard({ onMembershipStateChange }: Props) {
             لا توجد عضوية موصل متجر مرتبطة بحساب الكابتن.
           </Text>
         ) : memberships.map((membership) => (
-          <Card key={`${membership.storeId}-${membership.teamMemberId}`} padding={3} gap={1} tone={membership.status === "active" ? "success" : "default"}>
+            <Card key={`${membership.storeId}-${membership.teamMemberId}`} padding={3} gap={1} tone={membership.status === "active" ? "success" : "default"}>
             <Text role="bodyStrong" align="start">{membership.storeName}</Text>
             <Text role="bodySm" tone="muted" align="start">
               {membership.courierName} · {membership.status}
@@ -149,10 +149,10 @@ export function PartnerFleetConnectionCard({ onMembershipStateChange }: Props) {
             ) : null}
             <View style={styles.membershipActions}>
               <Button
-                label={disconnectingMembershipId === membership.teamMemberId ? "جاري فك العضوية…" : "فك العضوية"}
+                label={disconnectingMembershipId === membership.teamMemberId ? "جاري فك العضوية…" : membership.status === "active" ? "فك العضوية" : "العضوية موقوفة"}
                 tone="secondary"
                 fullWidth={false}
-                disabled={loading || disconnectingMembershipId !== null}
+                disabled={loading || disconnectingMembershipId !== null || membership.status !== "active"}
                 onPress={() => void handleDisconnect(membership)}
               />
             </View>
