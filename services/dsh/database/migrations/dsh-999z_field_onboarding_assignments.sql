@@ -46,4 +46,3 @@ CREATE TABLE IF NOT EXISTS dsh_field_onboarding_assignment_events (
 
 CREATE INDEX IF NOT EXISTS idx_dsh_field_onboarding_assignment_events
   ON dsh_field_onboarding_assignment_events (assignment_id, created_at DESC);
-
