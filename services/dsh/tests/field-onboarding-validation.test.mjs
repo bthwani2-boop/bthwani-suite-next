@@ -17,6 +17,7 @@ const completeForm = {
   primaryPhone: "770000000",
   city: "sana",
   addressLine: "شارع تجريبي",
+  businessVerticalId: "grocery",
   operatingHours: "السبت–الخميس 08:00–23:00",
   deliveryReadiness: "bthwani_couriers",
 };
@@ -43,13 +44,13 @@ describe("field onboarding validation", () => {
     assert.equal(canCompleteOperationalForm(form, ["national_id"]), true);
   });
 
-  test("freelancer intake requires identity plus the current governed other-document slot", () => {
+  test("freelancer intake requires identity plus the canonical freelancer certificate", () => {
     const form = { ...completeForm, legalIdentityType: "freelancer_certificate" };
     assert.deepEqual(
       getRequiredPartnerDocuments(form).map((item) => item.documentType),
-      ["national_id", "other"],
+      ["national_id", "freelancer_certificate"],
     );
-    assert.equal(canCompleteOperationalForm(form, ["national_id", "other"]), true);
+    assert.equal(canCompleteOperationalForm(form, ["national_id", "freelancer_certificate"]), true);
   });
 
   test("field form validates operational onboarding only", () => {

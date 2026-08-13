@@ -71,15 +71,30 @@ SET partner_id = 'prt_partner_local_001',
 WHERE id = 'store-test-grocery'
   AND operator_context_id = 'local-dsh';
 
+INSERT INTO dsh_media_refs (
+    media_ref, storage_key, owner_actor_id, owner_actor_role, partner_id,
+    store_id, purpose, content_type, original_filename
+) VALUES
+    ('media_cr_990011.jpg', 'local-seed/media_cr_990011.jpg', '@@FIELD_ACTOR_ID@@', 'field', 'prt_partner_local_001', NULL, 'partner_document', 'image/jpeg', 'media_cr_990011.jpg'),
+    ('media_id_partner1.jpg', 'local-seed/media_id_partner1.jpg', '@@FIELD_ACTOR_ID@@', 'field', 'prt_partner_local_001', NULL, 'partner_document', 'image/jpeg', 'media_id_partner1.jpg'),
+    ('media_visit_front_001.jpg', 'local-seed/media_visit_front_001.jpg', '@@FIELD_ACTOR_ID@@', 'field', 'prt_partner_local_001', 'store-test-grocery', 'field_readiness_evidence', 'image/jpeg', 'media_visit_front_001.jpg'),
+    ('media_visit_inside_001.jpg', 'local-seed/media_visit_inside_001.jpg', '@@FIELD_ACTOR_ID@@', 'field', 'prt_partner_local_001', 'store-test-grocery', 'field_readiness_evidence', 'image/jpeg', 'media_visit_inside_001.jpg')
+ON CONFLICT (media_ref) DO NOTHING;
+
 INSERT INTO dsh_partner_documents (
     id,
     partner_id,
     document_type,
     document_status,
+    upload_status,
+    review_status,
     uploaded_by_actor_id,
     media_ref,
     notes,
     rejection_reason,
+    reviewed_by_actor_id,
+    reviewed_at,
+    last_review_reason,
     version,
     created_at,
     updated_at
@@ -89,10 +104,15 @@ INSERT INTO dsh_partner_documents (
         'prt_partner_local_001',
         'commercial_register',
         'approved',
+        'uploaded',
+        'verified',
         '@@FIELD_ACTOR_ID@@',
         'media_cr_990011.jpg',
         'السجل التجاري الأصلي',
         '',
+        'operator-local-001',
+        now() - interval '1 day',
+        'مستند رسمي معتمد ومطابق',
         2,
         now() - interval '2 days',
         now() - interval '1 day'
@@ -102,18 +122,28 @@ INSERT INTO dsh_partner_documents (
         'prt_partner_local_001',
         'national_id',
         'approved',
+        'uploaded',
+        'verified',
         '@@FIELD_ACTOR_ID@@',
         'media_id_partner1.jpg',
         'بطاقة الهوية الوطنية للمالك',
         '',
+        'operator-local-001',
+        now() - interval '1 day',
+        'مطابق لهوية المالك المسجلة',
         2,
         now() - interval '2 days',
         now() - interval '1 day'
     )
 ON CONFLICT (id) DO UPDATE SET
     document_status = EXCLUDED.document_status,
+    upload_status = EXCLUDED.upload_status,
+    review_status = EXCLUDED.review_status,
     notes = EXCLUDED.notes,
     rejection_reason = EXCLUDED.rejection_reason,
+    reviewed_by_actor_id = EXCLUDED.reviewed_by_actor_id,
+    reviewed_at = EXCLUDED.reviewed_at,
+    last_review_reason = EXCLUDED.last_review_reason,
     version = EXCLUDED.version,
     updated_at = EXCLUDED.updated_at;
 
@@ -182,6 +212,14 @@ INSERT INTO dsh_partner_field_visits (
     location_longitude = EXCLUDED.location_longitude,
     evidence_media_refs = EXCLUDED.evidence_media_refs,
     submitted_at = EXCLUDED.submitted_at;
+
+INSERT INTO dsh_partner_field_visit_media (
+    partner_id, visit_id, store_id, media_ref, captured_by_actor_id, context
+)
+SELECT 'prt_partner_local_001', 'pfv_001', 'store-test-grocery', refs.media_ref,
+       '@@FIELD_ACTOR_ID@@', 'partner_onboarding'
+FROM unnest(ARRAY['media_visit_front_001.jpg', 'media_visit_inside_001.jpg']::TEXT[]) AS refs(media_ref)
+ON CONFLICT (visit_id, media_ref) DO NOTHING;
 
 INSERT INTO dsh_partner_activation_events (
     id,

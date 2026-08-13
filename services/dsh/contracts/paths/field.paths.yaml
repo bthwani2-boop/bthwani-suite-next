@@ -783,8 +783,7 @@
 /dsh/field/media/uploads:
   post:
     operationId: uploadFieldMedia
-    summary: Field agent uploads a binary document/photo, receiving a mediaRef to
-      attach via uploadFieldPartnerDocument.
+    summary: Field agent uploads a legal document or visit evidence and receives a mediaRef.
     tags: [ DshPartnerActivation ]
     security:
       - bearerAuth: []
@@ -794,7 +793,9 @@
         multipart/form-data:
           schema:
             type: object
-            required: [ partnerId, file ]
+            oneOf:
+              - required: [ partnerId, file ]
+              - required: [ storeId, file ]
             properties:
               partnerId: { type: string }
               storeId: { type: string }

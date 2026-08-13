@@ -62,8 +62,8 @@ describe("partner unified multi-surface platform closure", () => {
     assert.match(readiness, /StoreSummary/);
     assert.match(readiness, /Stores\s+\[\]StorePublicationReadiness/);
     assert.doesNotMatch(readiness, /LIMIT 1/);
-    assert.match(documentCount, /document_status = 'approved'/);
-    assert.doesNotMatch(documentCount, /review_status/);
+    assert.match(documentCount, /review_status = 'verified'/);
+    assert.doesNotMatch(documentCount, /document_status = 'approved'/);
     assert.match(routes, /handleAggregatedPartnerReadiness/);
     assert.match(routes, /handleFieldAggregatedPartnerReadiness/);
     assert.match(selfRoutes, /handlePartnerAggregatedActivationReadiness/);

@@ -156,18 +156,35 @@ ON CONFLICT (actor_id, actor_role, store_id) DO UPDATE SET
 
 -- Seed one approved legal document per independently visible local partner so
 -- partner activation readiness is internally coherent rather than status-only.
-INSERT INTO dsh_partner_documents (
-    id, partner_id, document_type, document_status,
-    uploaded_by_actor_id, media_ref, notes, version, created_at, updated_at
+INSERT INTO dsh_media_refs (
+    media_ref, storage_key, owner_actor_id, owner_actor_role, partner_id,
+    purpose, content_type, original_filename
 ) VALUES
-    ('doc_local_002_cr', 'prt_partner_local_002', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_002_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
-    ('doc_local_003_cr', 'prt_partner_local_003', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_003_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
-    ('doc_local_005_cr', 'prt_partner_local_005', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_005_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
-    ('doc_local_006_cr', 'prt_partner_local_006', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_006_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
-    ('doc_local_007_cr', 'prt_partner_local_007', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_007_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW())
+    ('media_local_002_cr.jpg', 'local-seed/media_local_002_cr.jpg', '@@FIELD_ACTOR_ID@@', 'field', 'prt_partner_local_002', 'partner_document', 'image/jpeg', 'media_local_002_cr.jpg'),
+    ('media_local_003_cr.jpg', 'local-seed/media_local_003_cr.jpg', '@@FIELD_ACTOR_ID@@', 'field', 'prt_partner_local_003', 'partner_document', 'image/jpeg', 'media_local_003_cr.jpg'),
+    ('media_local_005_cr.jpg', 'local-seed/media_local_005_cr.jpg', '@@FIELD_ACTOR_ID@@', 'field', 'prt_partner_local_005', 'partner_document', 'image/jpeg', 'media_local_005_cr.jpg'),
+    ('media_local_006_cr.jpg', 'local-seed/media_local_006_cr.jpg', '@@FIELD_ACTOR_ID@@', 'field', 'prt_partner_local_006', 'partner_document', 'image/jpeg', 'media_local_006_cr.jpg'),
+    ('media_local_007_cr.jpg', 'local-seed/media_local_007_cr.jpg', '@@FIELD_ACTOR_ID@@', 'field', 'prt_partner_local_007', 'partner_document', 'image/jpeg', 'media_local_007_cr.jpg')
+ON CONFLICT (media_ref) DO NOTHING;
+
+INSERT INTO dsh_partner_documents (
+    id, partner_id, document_type, document_status, upload_status, review_status,
+    uploaded_by_actor_id, media_ref, notes, reviewed_by_actor_id, reviewed_at,
+    last_review_reason, version, created_at, updated_at
+) VALUES
+    ('doc_local_002_cr', 'prt_partner_local_002', 'commercial_register', 'approved', 'uploaded', 'verified', '@@FIELD_ACTOR_ID@@', 'media_local_002_cr.jpg', 'سجل تجاري محلي معتمد', 'operator-local-001', NOW() - INTERVAL '1 day', 'مستند محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
+    ('doc_local_003_cr', 'prt_partner_local_003', 'commercial_register', 'approved', 'uploaded', 'verified', '@@FIELD_ACTOR_ID@@', 'media_local_003_cr.jpg', 'سجل تجاري محلي معتمد', 'operator-local-001', NOW() - INTERVAL '1 day', 'مستند محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
+    ('doc_local_005_cr', 'prt_partner_local_005', 'commercial_register', 'approved', 'uploaded', 'verified', '@@FIELD_ACTOR_ID@@', 'media_local_005_cr.jpg', 'سجل تجاري محلي معتمد', 'operator-local-001', NOW() - INTERVAL '1 day', 'مستند محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
+    ('doc_local_006_cr', 'prt_partner_local_006', 'commercial_register', 'approved', 'uploaded', 'verified', '@@FIELD_ACTOR_ID@@', 'media_local_006_cr.jpg', 'سجل تجاري محلي معتمد', 'operator-local-001', NOW() - INTERVAL '1 day', 'مستند محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
+    ('doc_local_007_cr', 'prt_partner_local_007', 'commercial_register', 'approved', 'uploaded', 'verified', '@@FIELD_ACTOR_ID@@', 'media_local_007_cr.jpg', 'سجل تجاري محلي معتمد', 'operator-local-001', NOW() - INTERVAL '1 day', 'مستند محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW())
 ON CONFLICT (id) DO UPDATE SET
     document_status = 'approved',
+    upload_status = 'uploaded',
+    review_status = 'verified',
     notes = EXCLUDED.notes,
+    reviewed_by_actor_id = EXCLUDED.reviewed_by_actor_id,
+    reviewed_at = EXCLUDED.reviewed_at,
+    last_review_reason = EXCLUDED.last_review_reason,
     updated_at = NOW();
 
 INSERT INTO dsh_partner_activation_events (
