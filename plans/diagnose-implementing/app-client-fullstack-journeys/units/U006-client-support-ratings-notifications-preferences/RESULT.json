@@ -1,13 +1,13 @@
 {
   "schemaVersion": 3,
   "unitId": "U006",
-  "status": "NOT_STARTED",
-  "baselineSha": null,
-  "resultingSha": null,
-  "completedTaskIds": [],
+  "status": "DONE",
+  "baselineSha": "e1634c7a65e44db6cd2607d90256d73857bdaffb",
+  "resultingSha": "e1634c7a65e44db6cd2607d90256d73857bdaffb",
+  "completedTaskIds": ["U006-T001", "U006-T002"],
   "modifiedPaths": [],
-  "checkResults": [],
+  "checkResults": [{"verificationId":"V006","status":"PASS","candidateSha":"e1634c7a65e44db6cd2607d90256d73857bdaffb","command":"go test ./internal/support/... ./internal/incident/... ./internal/ratings/... ./internal/notifications/...","evidence":"Actor isolation, internal-message exclusion, idempotency and canonical readback packages passed."}],
   "blockers": [],
   "deviations": [],
-  "decision": "NOT_RUN"
+  "decision": "PASS"
 }

@@ -134,7 +134,6 @@ export type DshCaptainRoute =
   | 'bell'
   | 'support-directory'
   | 'support-screen'
-  | 'store-pickup-context'
   | 'pickup-dropoff'
   | 'pod-submission'
   | 'map';
@@ -180,7 +179,7 @@ export type DshCaptainRouteRecord = {
   readonly ownerPath: string;
 };
 
-const dshCaptainRoutes = [
+export const DSH_CAPTAIN_ROUTE_RECORDS = [
   { routeId: 'dsh-captain-home',             legacyRoute: 'home',             screenId: 'captain.dsh.home.dashboard',       ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
   { routeId: 'dsh-captain-account',          legacyRoute: 'account',          screenId: 'captain.dsh.account.root',         ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
   { routeId: 'dsh-captain-account-profile',  legacyRoute: 'account-profile',  screenId: 'captain.dsh.account.profile',      ownerPath: 'dsh/frontend/app-captain/account/DshCaptainProfileScreen.tsx' },
@@ -196,7 +195,7 @@ const dshCaptainRoutes = [
   { routeId: 'dsh-captain-bell',             legacyRoute: 'bell',             screenId: 'captain.dsh.orders.bell',          ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainOrdersScreen.tsx' },
   { routeId: 'dsh-captain-support-directory',legacyRoute: 'support-directory',screenId: 'captain.dsh.support.directory',    ownerPath: 'dsh/frontend/app-captain/account/DshCaptainOperationsScreen.tsx' },
   { routeId: 'dsh-captain-support-screen',   legacyRoute: 'support-screen',   screenId: 'captain.dsh.support.workspace',    ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx' },
-  { routeId: 'dsh-captain-pickup-dropoff',   legacyRoute: 'pickup-dropoff',   screenId: 'captain.dsh.orders.pickup-dropoff',ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainPickupDropoffScreen.tsx' },
+  { routeId: 'dsh-captain-pickup-dropoff',   legacyRoute: 'pickup-dropoff',   screenId: 'captain.dsh.orders.pickup-dropoff',ownerPath: 'dsh/frontend/app-captain/DshCaptainRouteRenderer.tsx' },
   { routeId: 'dsh-captain-pod-submission',   legacyRoute: 'pod-submission',   screenId: 'captain.dsh.orders.pod-submission',ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx' },
   { routeId: 'dsh-captain-map',              legacyRoute: 'map',              screenId: 'captain.dsh.orders.map',           ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainMapScreen.tsx' },
 ] as const satisfies readonly DshCaptainRouteRecord[];
@@ -284,7 +283,7 @@ export type DshCaptainScreenRegistryItem = {
   readonly status: DshCaptainScreenRegistryStatus;
 };
 
-const dshCaptainScreenRegistry = [
+export const DSH_CAPTAIN_SCREEN_REGISTRY = [
   { screenId: 'captain.dsh.home.dashboard',       routeId: 'dsh-captain-home',             surfaceId: 'app-captain', ownerKind: 'app',         ownerId: 'app-captain', serviceId: 'dsh',             ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx',                    componentName: 'DshCaptainSurface',              screenKind: 'TAB_ROOT',     flowId: 'captain.dsh.home',          requiredStates: ['success', 'offline'],                        analytics: { screenView: 'captain_dsh_home_dashboard_view' },   deepLinkPath: '/captain/dsh',      fallbackRouteId: 'dsh-captain-home',             releaseCriticality: 'P1', status: 'VERIFIED' },
   { screenId: 'captain.dsh.entry',                routeId: 'dsh-captain-entry',            surfaceId: 'app-captain', ownerKind: 'service',     ownerId: 'dsh',         serviceId: 'dsh',             ownerPath: 'dsh/frontend/app-captain/account/DshCaptainEntryScreen.tsx',        componentName: 'DshEntryScreen',                 screenKind: 'SCREEN_ENTRY', flowId: 'captain.dsh.entry',         requiredStates: ['loading', 'empty', 'error', 'success'],     analytics: { screenView: 'captain_dsh_entry_view' },                                fallbackRouteId: 'dsh-captain-home',             releaseCriticality: 'P1', status: 'VERIFIED' },
   { screenId: 'captain.dsh.orders.inbox',         routeId: 'dsh-captain-inbox',            surfaceId: 'app-captain', ownerKind: 'service',     ownerId: 'dsh',         serviceId: 'dsh',             ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainOrdersScreen.tsx',       componentName: 'CaptainOrdersInboxScreen',       screenKind: 'SCREEN_ENTRY', flowId: 'captain.dsh.orders',        requiredStates: ['loading', 'empty', 'error', 'success'],     analytics: { screenView: 'captain_dsh_orders_inbox_view' },                         fallbackRouteId: 'dsh-captain-entry',            releaseCriticality: 'P0', status: 'VERIFIED' },
@@ -301,7 +300,17 @@ const dshCaptainScreenRegistry = [
   { screenId: 'captain.dsh.account.shifts',       routeId: 'dsh-captain-account-shifts',   surfaceId: 'app-captain', ownerKind: 'app',         ownerId: 'app-captain', serviceId: 'dsh',             ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx',                    componentName: 'DshCaptainSurface',              screenKind: 'FLOW_STEP',    flowId: 'captain.dsh.account',       requiredStates: ['success'],                                  analytics: { screenView: 'captain_dsh_account_shifts_view' },                       fallbackRouteId: 'dsh-captain-account',          releaseCriticality: 'P2', status: 'VERIFIED' },
   { screenId: 'captain.dsh.account.support',      routeId: 'dsh-captain-account-support',  surfaceId: 'app-captain', ownerKind: 'app',         ownerId: 'app-captain', serviceId: 'dsh',             ownerPath: 'dsh/frontend/app-captain/DshCaptainSurface.tsx',                    componentName: 'DshCaptainSurface',              screenKind: 'FLOW_STEP',    flowId: 'captain.dsh.account',       requiredStates: ['success'],                                  analytics: { screenView: 'captain_dsh_account_support_view' },                      fallbackRouteId: 'dsh-captain-account',          releaseCriticality: 'P2', status: 'VERIFIED' },
   { screenId: 'captain.wlt.dsh.finance.bridge',   routeId: 'wlt-dsh-captain-finance-bridge',surfaceId: 'app-captain',ownerKind: 'integration', ownerId: 'wlt.dsh',     serviceId: 'wlt', linkedServiceId: 'dsh', ownerPath: 'dsh/frontend/shared/finance-wlt-link/wlt/generated/WltDshCaptainBridge.tsx',            componentName: 'WltDshCaptainBridge',            screenKind: 'FLOW_STEP',    flowId: 'captain.dsh.finance',       requiredStates: ['loading', 'empty', 'error', 'success', 'offline', 'blocked'], analytics: { screenView: 'captain_wlt_dsh_finance_bridge_view' },               fallbackRouteId: 'dsh-captain-account-finance',  releaseCriticality: 'P0', status: 'VERIFIED' },
-  { screenId: 'captain.dsh.orders.pickup-dropoff',routeId: 'dsh-captain-pickup-dropoff',   surfaceId: 'app-captain', ownerKind: 'app',         ownerId: 'app-captain', serviceId: 'dsh',             ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainPickupDropoffScreen.tsx',componentName: 'DshCaptainPickupDropoffScreen',  screenKind: 'FLOW_STEP',    flowId: 'captain.dsh.orders',        requiredStates: ['success'],                                  analytics: { screenView: 'captain_dsh_orders_pickup_dropoff_view' },                fallbackRouteId: 'dsh-captain-inbox',            releaseCriticality: 'P1', status: 'READY_FOR_REVIEW' },
+  { screenId: 'captain.dsh.orders.pickup-dropoff',routeId: 'dsh-captain-pickup-dropoff',   surfaceId: 'app-captain', ownerKind: 'app',         ownerId: 'app-captain', serviceId: 'dsh',             ownerPath: 'dsh/frontend/app-captain/DshCaptainRouteRenderer.tsx',componentName: 'DshCaptainRouteRenderer',  screenKind: 'FLOW_STEP',    flowId: 'captain.dsh.orders',        requiredStates: ['success'],                                  analytics: { screenView: 'captain_dsh_orders_pickup_dropoff_view' },                fallbackRouteId: 'dsh-captain-inbox',            releaseCriticality: 'P1', status: 'READY_FOR_REVIEW' },
   { screenId: 'captain.dsh.orders.pod-submission',routeId: 'dsh-captain-pod-submission',   surfaceId: 'app-captain', ownerKind: 'app',         ownerId: 'app-captain', serviceId: 'dsh',             ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx',componentName: 'DshCaptainPoDSubmissionScreen',  screenKind: 'FLOW_STEP',    flowId: 'captain.dsh.orders',        requiredStates: ['loading', 'success', 'error', 'retry'],     analytics: { screenView: 'captain_dsh_orders_pod_submission_view' },                fallbackRouteId: 'dsh-captain-inbox',            releaseCriticality: 'P1', status: 'READY_FOR_REVIEW' },
   { screenId: 'captain.dsh.orders.map',           routeId: 'dsh-captain-map',              surfaceId: 'app-captain', ownerKind: 'service',     ownerId: 'dsh',         serviceId: 'dsh',             ownerPath: 'dsh/frontend/app-captain/orders/DshCaptainMapScreen.tsx',          componentName: 'DshCaptainMapScreen',            screenKind: 'FLOW_STEP',    flowId: 'captain.dsh.orders',        requiredStates: ['loading', 'success', 'error'],              analytics: { screenView: 'captain_dsh_orders_map_view' },       deepLinkPath: '/captain/dsh/orders/map', fallbackRouteId: 'dsh-captain-pickup-dropoff',   releaseCriticality: 'P0', status: 'READY_FOR_REVIEW', requiredPermissions: ['location'] },
 ] as const satisfies readonly DshCaptainScreenRegistryItem[];
+
+export function getDshCaptainRouteRecord(route: DshCaptainRoute): DshCaptainRouteRecord | undefined {
+  return DSH_CAPTAIN_ROUTE_RECORDS.find((record) => record.legacyRoute === route);
+}
+
+export function getDshCaptainScreenRegistryItem(
+  routeId: DshCaptainRegistryRouteId,
+): DshCaptainScreenRegistryItem | undefined {
+  return DSH_CAPTAIN_SCREEN_REGISTRY.find((item) => item.routeId === routeId);
+}

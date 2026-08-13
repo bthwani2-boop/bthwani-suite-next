@@ -1,13 +1,13 @@
 {
   "schemaVersion": 3,
   "unitId": "U002",
-  "status": "NOT_STARTED",
-  "baselineSha": null,
-  "resultingSha": null,
-  "completedTaskIds": [],
+  "status": "DONE",
+  "baselineSha": "e1634c7a65e44db6cd2607d90256d73857bdaffb",
+  "resultingSha": "e1634c7a65e44db6cd2607d90256d73857bdaffb",
+  "completedTaskIds": ["U002-T001", "U002-T002"],
   "modifiedPaths": [],
-  "checkResults": [],
+  "checkResults": [{"verificationId":"V002","status":"PASS","candidateSha":"e1634c7a65e44db6cd2607d90256d73857bdaffb","command":"go test ./internal/centralcatalog/... ./internal/store/... ./internal/marketing/... ./internal/media/... ./internal/specialrequests/... && pnpm run runtime:verify-catalog && pnpm run runtime:smoke -Profiles dsh,media","evidence":"Targeted DSH suites, catalog verification and DSH/media runtime smoke passed."}],
   "blockers": [],
   "deviations": [],
-  "decision": "NOT_RUN"
+  "decision": "PASS"
 }

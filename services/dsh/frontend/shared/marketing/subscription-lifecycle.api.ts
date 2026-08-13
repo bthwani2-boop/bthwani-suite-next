@@ -1,34 +1,67 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
+import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   SubscriptionActivationEnvelope,
   SubscriptionCancellationEnvelope,
   SubscriptionPaymentMethod,
   SubscriptionPurchaseEnvelope,
 } from "./subscription-lifecycle.types";
+import {
+  clearSubscriptionMutationAttempt,
+  getLatestSubscriptionPurchaseAttempt,
+  getOrCreateSubscriptionMutationAttempt,
+} from "./subscription-mutation-attempt";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "subscription-lifecycle");
 
-let mutationSequence = 0;
-
-function mutationIdentity(action: string, subject: string) {
-  mutationSequence += 1;
-  const seed = `${action}-${subject}-${Date.now().toString(36)}-${mutationSequence.toString(36)}`;
-  return {
-    idempotencyKey: seed,
-    correlationId: corrId(`subscription-${action}`),
-  };
+async function mutationContext(
+  operation: "purchase" | "activate" | "renew" | "cancel",
+  subject: string,
+  fingerprint: string,
+  paymentMethod?: SubscriptionPaymentMethod,
+) {
+  const attempt = await getOrCreateSubscriptionMutationAttempt({
+    operation,
+    subject,
+    fingerprint,
+    ...(paymentMethod ? { paymentMethod } : {}),
+  });
+  return { attempt, ...attempt.context };
 }
 
-export function createDshSubscriptionPurchase(
+function purchaseIsTerminal(status: SubscriptionPurchaseEnvelope["purchase"]["status"]): boolean {
+  return status === "active" || status === "renewed" || status === "cancelled" || status === "expired" || status === "compensated" || status === "failed";
+}
+
+export async function recoverDshSubscriptionPurchase() {
+  const attempt = await getLatestSubscriptionPurchaseAttempt();
+  if (!attempt || attempt.operation !== "purchase" || !attempt.paymentMethod) return undefined;
+  const response = await request<SubscriptionPurchaseEnvelope>("/dsh/client/marketing/subscriptions/purchase", {
+    method: "POST",
+    body: { planId: attempt.subject, paymentMethod: attempt.paymentMethod },
+    ...attempt.context,
+  });
+  if (purchaseIsTerminal(response.purchase.status)) {
+    await clearSubscriptionMutationAttempt({ operation: "purchase", subject: attempt.subject, fingerprint: attempt.fingerprint });
+  }
+  return response;
+}
+
+export async function createDshSubscriptionPurchase(
   planId: string,
   paymentMethod: SubscriptionPaymentMethod = "official_wallet",
-) {
-  return request<SubscriptionPurchaseEnvelope>("/dsh/client/marketing/subscriptions/purchase", {
+): Promise<SubscriptionPurchaseEnvelope> {
+  const fingerprint = `purchase:${planId}:${paymentMethod}`;
+  const { attempt } = await mutationContext("purchase", planId, fingerprint, paymentMethod);
+  const response = await request<SubscriptionPurchaseEnvelope>("/dsh/client/marketing/subscriptions/purchase", {
     method: "POST",
     body: { planId, paymentMethod },
-    ...mutationIdentity("purchase", planId),
+    ...attempt.context,
   });
+  if (purchaseIsTerminal(response.purchase.status)) {
+    await clearSubscriptionMutationAttempt({ operation: "purchase", subject: planId, fingerprint });
+  }
+  return response;
 }
 
 export function getDshSubscriptionPurchase(purchaseId: string) {
@@ -37,38 +70,55 @@ export function getDshSubscriptionPurchase(purchaseId: string) {
   );
 }
 
-export function activateDshSubscriptionPurchase(purchaseId: string) {
-  return request<SubscriptionActivationEnvelope>(
+export async function activateDshSubscriptionPurchase(purchaseId: string): Promise<SubscriptionActivationEnvelope> {
+  const fingerprint = `activate:${purchaseId}`;
+  const { attempt } = await mutationContext("activate", purchaseId, fingerprint);
+  const response = await request<SubscriptionActivationEnvelope>(
     `/dsh/client/marketing/subscriptions/purchases/${encodeURIComponent(purchaseId)}/activate`,
     {
       method: "POST",
       body: {},
-      ...mutationIdentity("activate", purchaseId),
+      ...attempt.context,
     },
   );
+  if (response.purchase.status === "active" || response.purchase.status === "renewed") {
+    await clearSubscriptionMutationAttempt({ operation: "activate", subject: purchaseId, fingerprint });
+  }
+  return response;
 }
 
-export function renewDshSubscription(
+export async function renewDshSubscription(
   subscriptionId: string,
   paymentMethod: SubscriptionPaymentMethod = "official_wallet",
-) {
-  return request<SubscriptionPurchaseEnvelope>(
+): Promise<SubscriptionPurchaseEnvelope> {
+  const fingerprint = `renew:${subscriptionId}:${paymentMethod}`;
+  const { attempt } = await mutationContext("renew", subscriptionId, fingerprint, paymentMethod);
+  const response = await request<SubscriptionPurchaseEnvelope>(
     `/dsh/client/marketing/subscriptions/instances/${encodeURIComponent(subscriptionId)}/renew`,
     {
       method: "POST",
       body: { paymentMethod },
-      ...mutationIdentity("renew", subscriptionId),
+      ...attempt.context,
     },
   );
+  if (purchaseIsTerminal(response.purchase.status)) {
+    await clearSubscriptionMutationAttempt({ operation: "renew", subject: subscriptionId, fingerprint });
+  }
+  return response;
 }
 
-export function cancelDshSubscription(subscriptionId: string, reason: string) {
-  return request<SubscriptionCancellationEnvelope>(
+export async function cancelDshSubscription(subscriptionId: string, reason: string): Promise<SubscriptionCancellationEnvelope> {
+  const normalizedReason = reason.trim();
+  const fingerprint = `cancel:${subscriptionId}:${normalizedReason}`;
+  const { attempt } = await mutationContext("cancel", subscriptionId, fingerprint);
+  const response = await request<SubscriptionCancellationEnvelope>(
     `/dsh/client/marketing/subscriptions/instances/${encodeURIComponent(subscriptionId)}/cancel`,
     {
       method: "POST",
-      body: { reason: reason.trim() },
-      ...mutationIdentity("cancel", subscriptionId),
+      body: { reason: normalizedReason },
+      ...attempt.context,
     },
   );
+  await clearSubscriptionMutationAttempt({ operation: "cancel", subject: subscriptionId, fingerprint });
+  return response;
 }

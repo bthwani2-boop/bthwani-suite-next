@@ -62,62 +62,12 @@ func payoutAfterUpdate(ctx context.Context, tx *sql.Tx, query string, args ...an
 	return scanPayoutRequest(rows)
 }
 
-func releasePayoutReservation(ctx context.Context, tx *sql.Tx, req *PayoutRequest) error {
-	operatorContextID, err := shared.RequireOperatorContext(ctx)
-	if err != nil {
-		return err
-	}
-	result, err := tx.ExecContext(ctx, `UPDATE wlt_wallets
-		SET pending_balance_minor_units=pending_balance_minor_units-$4, updated_at=now()
-		WHERE operator_context_id=$1 AND actor_id=$2 AND actor_type=$3
-		  AND pending_balance_minor_units >= $4`,
-		operatorContextID, req.BeneficiaryActorID, req.BeneficiaryActorType, req.AmountMinorUnits)
-	if err != nil {
-		return err
-	}
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if affected != 1 {
-		return fmt.Errorf("payout reservation drift: expected one wallet reservation for %s", req.ID)
-	}
-	return nil
-}
-
-// settlePayoutReservation converts the pending payout reservation into the
-// lifecycle paid counter. The canonical balance is debited separately by the
-// double-entry posting in the same transaction; the wallet projection trigger
-// therefore commits only when both workflow and accounting truth agree.
-func settlePayoutReservation(ctx context.Context, tx *sql.Tx, req *PayoutRequest) error {
-	operatorContextID, err := shared.RequireOperatorContext(ctx)
-	if err != nil {
-		return err
-	}
-	result, err := tx.ExecContext(ctx, `UPDATE wlt_wallets
-		SET pending_balance_minor_units=pending_balance_minor_units-$4,
-		    paid_total_minor_units=paid_total_minor_units+$4,
-		    updated_at=now()
-		WHERE operator_context_id=$1 AND actor_id=$2 AND actor_type=$3
-		  AND pending_balance_minor_units >= $4`,
-		operatorContextID, req.BeneficiaryActorID, req.BeneficiaryActorType, req.AmountMinorUnits)
-	if err != nil {
-		return err
-	}
-	affected, err := result.RowsAffected()
-	if err != nil {
-		return err
-	}
-	if affected != 1 {
-		return fmt.Errorf("payout reservation drift: expected one wallet reservation for %s", req.ID)
-	}
-	return nil
-}
-
 func HandleApprovePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorID, ok := decodeRequiredOperator(w, r)
-		if !ok { return }
+		if !ok {
+			return
+		}
 		correlationID, err := governedCorrelationID(r)
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", err.Error())
@@ -211,7 +161,9 @@ func HandleApprovePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 func HandleRejectPayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorID, ok := decodeRequiredOperator(w, r)
-		if !ok { return }
+		if !ok {
+			return
+		}
 		correlationID, err := governedCorrelationID(r)
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", err.Error())
@@ -236,10 +188,6 @@ func HandleRejectPayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusConflict, "INVALID_STATUS", "only pending or approved payouts can be rejected")
 			return
 		}
-		if err := releasePayoutReservation(r.Context(), tx, req); err != nil {
-			shared.SendError(w, http.StatusConflict, "PAYOUT_RESERVATION_DRIFT", err.Error())
-			return
-		}
 		updated, err := payoutAfterUpdate(r.Context(), tx,
 			"UPDATE wlt_payout_requests SET status = 'rejected', rejected_at = now(), rejected_by_operator_id = $2, operator_id = $2 WHERE id = $1 RETURNING "+requestCols,
 			req.ID, operatorID)
@@ -262,7 +210,9 @@ func HandleRejectPayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorID, ok := decodeRequiredOperator(w, r)
-		if !ok { return }
+		if !ok {
+			return
+		}
 		correlationID, err := governedCorrelationID(r)
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", err.Error())
@@ -339,10 +289,6 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		if err := settlePayoutReservation(r.Context(), tx, req); err != nil {
-			shared.SendError(w, http.StatusConflict, "PAYOUT_RESERVATION_DRIFT", err.Error())
-			return
-		}
 		lines := []ledger.LedgerLine{
 			{AccountType: "wallet", ActorType: req.BeneficiaryActorType, ActorID: req.BeneficiaryActorID, DebitCredit: "debit", AmountMinorUnits: req.AmountMinorUnits, Currency: req.Currency},
 			{AccountType: "external_settlement_cash", DebitCredit: "credit", AmountMinorUnits: req.AmountMinorUnits, Currency: req.Currency},

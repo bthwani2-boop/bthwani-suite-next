@@ -167,7 +167,7 @@ export function useDshCaptainSurfaceModel({
     setActiveOrderDraft: chatModel.setActiveOrderDraft,
     handleSelectServiceType: serviceModeModel.handleSelectServiceType,
     toggleStoreCourierMode: serviceModeModel.toggleStoreCourierMode,
-    openStoreCourierProof: () => podUpload.openStoreCourierProof(profileModel.captainAppMode, setRoute),
+    openStoreCourierProof: () => podUpload.openStoreCourierProof(setRoute),
     pushLocation,
     dismissAssignmentClosureNotice: () => orderModel.setAssignmentClosureNotice(null),
     ...deliveryActions,

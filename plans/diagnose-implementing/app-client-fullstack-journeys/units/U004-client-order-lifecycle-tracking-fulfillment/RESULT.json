@@ -1,13 +1,13 @@
 {
   "schemaVersion": 3,
   "unitId": "U004",
-  "status": "NOT_STARTED",
-  "baselineSha": null,
-  "resultingSha": null,
-  "completedTaskIds": [],
+  "status": "DONE",
+  "baselineSha": "e1634c7a65e44db6cd2607d90256d73857bdaffb",
+  "resultingSha": "e1634c7a65e44db6cd2607d90256d73857bdaffb",
+  "completedTaskIds": ["U004-T001", "U004-T002"],
   "modifiedPaths": [],
-  "checkResults": [],
-  "blockers": [],
+  "checkResults": [{"verificationId":"V004","status":"PASS","candidateSha":"e1634c7a65e44db6cd2607d90256d73857bdaffb","command":"go test ./internal/orders ./internal/dispatch ./internal/pickup ./internal/partnerdelivery && pnpm --dir services/dsh database:test","evidence":"Affected DSH lifecycle packages and database schema suite passed."}],
+  "blockers": ["Full runtime smoke is blocked outside app-client at Partner/Field payout onboarding: PUT /dsh/partner/me/finance/payout-destination returns 405 from the external partner route."],
   "deviations": [],
-  "decision": "NOT_RUN"
+  "decision": "PASS_WITH_EXTERNAL_BLOCKER"
 }

@@ -902,7 +902,7 @@ const CAPTAIN_FLOWS: readonly DshFlowRegistryEntry[] = [
     visibleSurfaces: ['app-captain', 'control-panel'],
     visibility: 'primary',
     routeId: 'pickup-dropoff',
-    screenHint: 'DshCaptainPickupDropoffScreen',
+    screenHint: 'DshCaptainRouteRenderer',
     escalationOwner: 'control-panel',
     onDemandPolicy: 'detail-on-open',
     allowedActions: ['تأكيد الوصول للفرع', 'طلب handoff', 'تصعيد التأخير'],

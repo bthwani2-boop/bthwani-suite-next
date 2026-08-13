@@ -90,6 +90,14 @@ export type DshCaptainReadiness = {
   readonly missing: readonly string[];
 };
 
+export type DshCaptainAvailabilityStatus = "available" | "unavailable" | "break" | "planned-leave";
+
+export type DshCaptainAvailability = {
+  readonly status: DshCaptainAvailabilityStatus;
+  readonly version: number;
+  readonly updatedAt: string;
+};
+
 export type DshReassignAssignmentInput = Omit<DshGovernedCreateAssignmentInput, "orderId"> & {
   readonly reason: string;
 };

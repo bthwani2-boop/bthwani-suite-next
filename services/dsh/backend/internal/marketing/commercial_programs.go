@@ -46,7 +46,6 @@ type SubscriptionPlan struct {
 	OrderCap            int     `json:"orderCap"`
 	Badge               string  `json:"badge"`
 	Status              string  `json:"status"`
-	SubscriberCount     int64   `json:"subscriberCount"`
 	WLTProductReference string  `json:"wltProductReference,omitempty"`
 	Version             int     `json:"version"`
 	CreatedByActorID    string  `json:"createdByActorId"`
@@ -172,17 +171,9 @@ const loyaltyTierSelectCols = `id::TEXT, name_ar, name_en, min_points,
 	created_by_actor_id, approved_by_actor_id, approved_at::TEXT,
 	created_at::TEXT, updated_at::TEXT`
 
-// Per-plan subscriber count is not tracked in DSH -- WLT is the sole owner
-// of subscription lifecycle truth and does not expose a per-product
-// breakdown today (only the platform-wide aggregate via GetCommercialSummary,
-// used directly by handleListSubscriptionPlans). This column is a literal 0
-// placeholder rather than a query against the removed dsh_client_subscriptions
-// table (see D2 remediation); a real per-plan count needs a WLT aggregate
-// endpoint, which is future work.
 const subscriptionPlanSelectCols = `p.id::TEXT, p.name_ar, p.name_en, p.price_yer,
 	p.billing_cycle, p.include_free_delivery, p.points_multiplier, p.order_cap,
 	p.badge, p.status,
-	0,
 	p.wlt_product_reference, p.version, p.created_by_actor_id, p.approved_by_actor_id,
 	p.approved_at::TEXT, p.created_at::TEXT, p.updated_at::TEXT`
 
@@ -213,7 +204,7 @@ func scanSubscriptionPlan(row interface{ Scan(dest ...any) error }) (Subscriptio
 	err := row.Scan(
 		&plan.ID, &plan.NameAr, &plan.NameEn, &plan.PriceYer,
 		&plan.BillingCycle, &plan.IncludeFreeDelivery, &plan.PointsMultiplier,
-		&plan.OrderCap, &plan.Badge, &plan.Status, &plan.SubscriberCount,
+		&plan.OrderCap, &plan.Badge, &plan.Status,
 		&plan.WLTProductReference, &plan.Version, &plan.CreatedByActorID,
 		&plan.ApprovedByActorID, &approvedAt, &plan.CreatedAt, &plan.UpdatedAt,
 	)

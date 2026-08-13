@@ -1,13 +1,13 @@
 {
   "schemaVersion": 3,
   "unitId": "U005",
-  "status": "NOT_STARTED",
-  "baselineSha": null,
-  "resultingSha": null,
-  "completedTaskIds": [],
-  "modifiedPaths": [],
-  "checkResults": [],
+  "status": "DONE",
+  "baselineSha": "e1634c7a65e44db6cd2607d90256d73857bdaffb",
+  "resultingSha": "e1634c7a65e44db6cd2607d90256d73857bdaffb",
+  "completedTaskIds": ["U005-T001", "U005-T002"],
+  "modifiedPaths": ["services/wlt/backend/internal/health/health.go"],
+  "checkResults": [{"verificationId":"V005","status":"PASS","candidateSha":"e1634c7a65e44db6cd2607d90256d73857bdaffb","command":"go test ./internal/health/... ./internal/wallet/... ./internal/payment/... ./internal/ledger/... ./internal/reconciliation/... ./internal/refund/... && pnpm run runtime:wlt:smoke","evidence":"WLT affected suites and WLT runtime smoke passed; readiness migration pin matches wlt-931."}],
   "blockers": [],
   "deviations": [],
-  "decision": "NOT_RUN"
+  "decision": "PASS"
 }

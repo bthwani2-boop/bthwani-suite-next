@@ -87,3 +87,29 @@ DshPushDispatchLocationRequest:
       format: date-time
 
 # ── Field Readiness ──────────────────────────────────────────────
+DshCaptainAvailability:
+  type: object
+  additionalProperties: false
+  required: [status, version, updatedAt]
+  properties:
+    status:
+      type: string
+      enum: [available, unavailable, break, planned-leave]
+    version:
+      type: integer
+      minimum: 1
+    updatedAt:
+      type: string
+      format: date-time
+
+DshSetCaptainAvailabilityRequest:
+  type: object
+  additionalProperties: false
+  required: [status, expectedVersion]
+  properties:
+    status:
+      type: string
+      enum: [available, unavailable]
+    expectedVersion:
+      type: integer
+      minimum: 0

@@ -68,6 +68,12 @@ paths:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1me~1finance~1ledger-entries"
   /dsh/field/me/finance/payout-requests:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1me~1finance~1payout-requests"
+  /dsh/control-panel/finance/payout-destinations/{actorType}/{actorId}:
+    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1payout-destinations~1{actorType}~1{actorId}"
+  /dsh/control-panel/finance/payout-destinations/{actorType}/{actorId}/verify:
+    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1payout-destinations~1{actorType}~1{actorId}~1verify"
+  /dsh/control-panel/finance/payout-destinations/{actorType}/{actorId}/deactivate:
+    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1payout-destinations~1{actorType}~1{actorId}~1deactivate"
   /dsh/health:
     $ref: "./paths/system.paths.yaml#/~1dsh~1health"
   /dsh/readiness:

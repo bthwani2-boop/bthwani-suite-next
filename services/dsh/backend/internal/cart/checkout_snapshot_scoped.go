@@ -9,7 +9,7 @@ import (
 	"fmt"
 )
 
-var ErrVersionConflict = errors.New("cart version conflict")
+var ErrVersionConflict = ErrConflict
 
 // GovernedCheckoutSnapshot is the OCC-locked, server-priced cart snapshot used
 // by checkout. Amounts and currency are snapshotted from DSH catalog truth and
@@ -125,40 +125,6 @@ func ComputeCheckoutSnapshotTx(
 		ItemCount:          itemCount,
 		CartVersion:        currentVersion,
 		Lines:              lines,
-	}, nil
-}
-
-// ComputeCheckoutSnapshotForClientTx is retained for existing callers that do
-// not yet carry an expected version. It still locks and scopes the cart, but
-// new checkout code must use ComputeCheckoutSnapshotTx.
-func ComputeCheckoutSnapshotForClientTx(
-	ctx context.Context,
-	tx *sql.Tx,
-	cartID, clientID, storeID string,
-) (*CartSnapshot, error) {
-	if cartID == "" || clientID == "" || storeID == "" {
-		return nil, ErrInvalid
-	}
-	var version int
-	if err := tx.QueryRowContext(ctx, `
-		SELECT version FROM dsh_carts
-		WHERE id=$1::uuid AND client_id=$2 AND store_id=$3 AND state='active'
-		FOR UPDATE`, cartID, clientID, storeID).Scan(&version); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-	governed, err := ComputeCheckoutSnapshotTx(ctx, tx, clientID, cartID, storeID, version)
-	if err != nil {
-		return nil, err
-	}
-	return &CartSnapshot{
-		AmountMinorUnits: governed.SubtotalMinorUnits,
-		Currency:         governed.Currency,
-		SnapshotHash:     governed.SnapshotHash,
-		CartVersion:      governed.CartVersion,
-		Lines:            governed.Lines,
 	}, nil
 }
 

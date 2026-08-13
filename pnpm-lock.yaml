@@ -255,9 +255,6 @@ importers:
       expo-sqlite:
         specifier: ~56.0.5
         version: 56.0.5(expo@56.0.17)(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)
-      expo-task-manager:
-        specifier: ~56.0.23
-        version: 56.0.23(expo@56.0.17)(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))
       expo-updates:
         specifier: ~56.0.23
         version: 56.0.23(expo-dev-client@56.0.24(expo@56.0.17)(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3)))(expo@56.0.17)(react-native@0.85.3(@react-native/metro-config@0.85.3)(@types/react@19.2.17)(react@19.2.3))(react@19.2.3)

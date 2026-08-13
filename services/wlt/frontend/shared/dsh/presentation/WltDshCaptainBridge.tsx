@@ -253,7 +253,11 @@ export function WltDshCaptainBridge({
   const codCurrency =
     codController.state.kind === "loaded" && codController.state.records[0]
       ? codController.state.records[0].currency
-      : "YER";
+      : null;
+
+  const codLiabilitySubtitle = codController.state.kind === "loaded" && codCurrency
+    ? `العهدة المحصّلة غير المودعة: ${formatMinorUnitsToLabel(codOutstandingMinorUnits, codCurrency)}`
+    : "تُقرأ العهدة من WLT بعد ربط هوية الكابتن";
 
   const codPendingCollectionCount =
     codController.state.kind === "loaded"
@@ -274,10 +278,7 @@ export function WltDshCaptainBridge({
           <ActionStrip
             icon="wallet-outline"
             title="عهدة النقد عند الاستلام"
-            subtitle={`العهدة المحصّلة غير المودعة: ${formatMinorUnitsToLabel(
-              codOutstandingMinorUnits,
-              codCurrency,
-            )}`}
+            subtitle={codLiabilitySubtitle}
             expanded={expandedSection === "cod-liability"}
             onPress={() =>
               setExpandedSection(expandedSection === "cod-liability" ? null : "cod-liability")
@@ -334,7 +335,7 @@ export function WltDshCaptainBridge({
                     },
                     {
                       label: "إجمالي العهدة القائمة",
-                      value: formatMinorUnitsToLabel(codOutstandingMinorUnits, codCurrency),
+                       value: formatMinorUnitsToLabel(codOutstandingMinorUnits, codCurrency ?? "YER"),
                       tone: codOutstandingMinorUnits > 0 ? "warning" : "success",
                     },
                   ]}

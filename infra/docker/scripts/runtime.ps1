@@ -555,6 +555,7 @@ switch ($Action) {
 
   "verify-catalog" {
     Write-Host "=== runtime:verify-catalog"
+    $global:LASTEXITCODE = 0
     & (Join-Path $RepoRoot "tools/scripts/verify-catalog.ps1")
     if ($LASTEXITCODE -ne 0) { throw "verify-catalog failed (exit $LASTEXITCODE)" }
     Write-Host "verify-catalog: PASS"

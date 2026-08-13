@@ -24,13 +24,14 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		return
 	}
 	var body struct {
-		CartID            string `json:"cartId"`
-		StoreID           string `json:"storeId"`
-		FulfillmentMode   string `json:"fulfillmentMode"`
-		PaymentMethod     string `json:"paymentMethod"`
-		DeliveryAddressID string `json:"deliveryAddressId"`
-		Note              string `json:"note"`
-		CouponCode        string `json:"couponCode"`
+		CartID              string `json:"cartId"`
+		StoreID             string `json:"storeId"`
+		ExpectedCartVersion int    `json:"expectedCartVersion"`
+		FulfillmentMode     string `json:"fulfillmentMode"`
+		PaymentMethod       string `json:"paymentMethod"`
+		DeliveryAddressID   string `json:"deliveryAddressId"`
+		Note                string `json:"note"`
+		CouponCode          string `json:"couponCode"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -39,8 +40,8 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	cartID := strings.TrimSpace(body.CartID)
 	storeID := strings.TrimSpace(body.StoreID)
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
-	if cartID == "" || storeID == "" || actor.OperatorContextID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId, storeId and authenticated OperatorContext are required")
+	if cartID == "" || storeID == "" || body.ExpectedCartVersion < 1 || actor.OperatorContextID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId, storeId, expectedCartVersion and authenticated OperatorContext are required")
 		return
 	}
 	if len(idempotencyKey) < 16 || len(idempotencyKey) > 200 {
@@ -195,13 +196,17 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			return
 		}
 
-		snapshot, snapshotErr := cart.ComputeCheckoutSnapshotForClientTx(r.Context(), tx, cartID, actor.ID, storeID)
+		snapshot, snapshotErr := cart.ComputeCheckoutSnapshotTx(r.Context(), tx, actor.ID, cartID, storeID, body.ExpectedCartVersion)
 		if errors.Is(snapshotErr, cart.ErrCartItemMissingPrice) {
 			store.SendError(w, http.StatusConflict, "CART_ITEM_MISSING_PRICE", "one or more cart items are missing a price snapshot")
 			return
 		}
 		if errors.Is(snapshotErr, cart.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "CART_NOT_FOUND", "active cart does not belong to the authenticated client and store")
+			return
+		}
+		if errors.Is(snapshotErr, cart.ErrVersionConflict) {
+			store.SendError(w, http.StatusConflict, "CART_VERSION_CONFLICT", "cart changed; reload the current cart before checkout")
 			return
 		}
 		if errors.Is(snapshotErr, cart.ErrInvalid) {
@@ -235,7 +240,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			Code: couponCode, ClientActorID: actor.ID, CartID: cartID,
 			CheckoutIntentID: intentID, StoreID: storeID,
 			FulfillmentMode:       fulfillmentMode,
-			SubtotalMinorUnits:    snapshot.AmountMinorUnits,
+			SubtotalMinorUnits:    snapshot.SubtotalMinorUnits,
 			DeliveryFeeMinorUnits: deliveryPolicy.FeeMinorUnits,
 			Currency:              snapshot.Currency,
 		})
@@ -257,9 +262,9 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		}
 
 		pricing = checkout.PricingSnapshot{
-			SubtotalMinorUnits:    snapshot.AmountMinorUnits,
+			SubtotalMinorUnits:    snapshot.SubtotalMinorUnits,
 			DeliveryFeeMinorUnits: deliveryPolicy.FeeMinorUnits,
-			TotalMinorUnits:       snapshot.AmountMinorUnits + deliveryPolicy.FeeMinorUnits,
+			TotalMinorUnits:       snapshot.SubtotalMinorUnits + deliveryPolicy.FeeMinorUnits,
 			Currency:              snapshot.Currency,
 		}
 		if reservation != nil {

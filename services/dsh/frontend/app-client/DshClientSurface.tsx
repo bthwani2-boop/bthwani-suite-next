@@ -17,6 +17,7 @@ import { StoreDetailRoute } from "./store/StoreDetailRoute";
 import { ClientCheckoutRoute } from "./checkout/ClientCheckoutRoute";
 import { OrdersListScreen } from "./orders/OrdersListScreen";
 import { MySpaceScreen } from "./account/MySpaceScreen";
+import { MyProfileScreen } from "./account/MyProfileScreen";
 import { AddressLocationScreen } from "./account/AddressLocationScreen";
 import { IdentityHubScreen } from "./account/IdentityHubScreen";
 import { BenefitsHubScreen } from "./account/BenefitsHubScreen";
@@ -39,6 +40,7 @@ import { notificationActionFromDeepLink } from "../shared/notifications/client-n
 type ClientTab = "home" | "stores" | "orders" | "special" | "profile" | "cart";
 type ProfileRoute =
   | "profile"
+  | "commercial-profile"
   | "addresses"
   | "identity"
   | "benefits"
@@ -371,6 +373,8 @@ export function DshClientSurface() {
               onSuccess={openOrderTracking}
             />
           )
+        ) : profileRoute === "commercial-profile" ? (
+          <MyProfileScreen onBack={() => setProfileRoute("profile")} />
         ) : profileRoute === "addresses" ? (
           <AddressLocationScreen
             onBack={() => setProfileRoute("profile")}
@@ -401,6 +405,7 @@ export function DshClientSurface() {
             onOpenIdentity={() => setProfileRoute("identity")}
             onOpenBenefits={() => setProfileRoute("benefits")}
             onOpenPreferences={() => setProfileRoute("preferences")}
+            onOpenProfile={() => setProfileRoute("commercial-profile")}
             onOpenSupport={() => setProfileRoute("support")}
           />
         )}

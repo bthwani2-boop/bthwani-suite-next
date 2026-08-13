@@ -1,13 +1,13 @@
 {
   "schemaVersion": 3,
   "unitId": "U001",
-  "status": "NOT_STARTED",
-  "baselineSha": null,
-  "resultingSha": null,
-  "completedTaskIds": [],
-  "modifiedPaths": [],
-  "checkResults": [],
+  "status": "DONE",
+  "baselineSha": "e1634c7a65e44db6cd2607d90256d73857bdaffb",
+  "resultingSha": "e1634c7a65e44db6cd2607d90256d73857bdaffb",
+  "completedTaskIds": ["U001-T001", "U001-T002", "U001-T003"],
+  "modifiedPaths": ["services/dsh/frontend/app-client/DshClientSurface.tsx", "services/dsh/frontend/app-client/account/MyProfileScreen.tsx", "apps/app-client/runtime/tests/client-operational-experience-contract.test.mjs", "infra/docker/scripts/runtime.ps1"],
+  "checkResults": [{"verificationId":"V001","status":"PASS","candidateSha":"e1634c7a65e44db6cd2607d90256d73857bdaffb","command":"node --test apps/app-client/runtime/tests/client-operational-experience-contract.test.mjs && pnpm --dir apps/app-client/runtime typecheck","evidence":"16 client operational/provider contract tests and app-client typecheck passed."}],
   "blockers": [],
   "deviations": [],
-  "decision": "NOT_RUN"
+  "decision": "PASS"
 }

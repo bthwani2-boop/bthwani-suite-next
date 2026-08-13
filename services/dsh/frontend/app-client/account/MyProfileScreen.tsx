@@ -20,8 +20,6 @@ import {
 
 export type MyProfileScreenProps = {
   onBack?: () => void;
-  onRequestDataCopy?: () => void;
-  onRequestAccountDeletion?: () => void;
 };
 
 type ProfileState =
@@ -30,7 +28,7 @@ type ProfileState =
   | { kind: "error"; message: string }
   | { kind: "conflict"; message: string; serverProfile: ClientProfile };
 
-export function MyProfileScreen({ onBack, onRequestDataCopy, onRequestAccountDeletion }: MyProfileScreenProps) {
+export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
   const { state: sessionState } = useIdentitySession();
   const [profileState, setProfileState] = React.useState<ProfileState>({ kind: "loading" });
   const [locale, setLocale] = React.useState<"ar" | "en">("ar");
@@ -129,12 +127,19 @@ export function MyProfileScreen({ onBack, onRequestDataCopy, onRequestAccountDel
       setProfileState({ kind: "ready", profile: updatedProfile });
     } catch (error: any) {
       if (error?.status === 409) {
-        // Conflict
-        setProfileState({
-          kind: "conflict",
-          message: "حدث تعارض: تم تعديل الملف من جهاز آخر.",
-          serverProfile: profileState.profile,
-        });
+        try {
+          const serverProfile = await fetchClientProfile();
+          setProfileState({
+            kind: "conflict",
+            message: "حدث تعارض: تم تعديل الملف من جهاز آخر. راجع القيم الحالية قبل إعادة الحفظ.",
+            serverProfile,
+          });
+        } catch (reloadError: any) {
+          setProfileState({
+            kind: "error",
+            message: reloadError?.message || "تعذر إعادة تحميل الملف بعد التعارض",
+          });
+        }
       } else {
         setProfileState({ kind: "error", message: error?.message || "حدث خطأ أثناء الحفظ" });
       }
@@ -245,21 +250,6 @@ export function MyProfileScreen({ onBack, onRequestDataCopy, onRequestAccountDel
               )}
             </View>
 
-            <View style={styles.dangerZone}>
-              <Text role="headingSm" tone="danger">الخيارات المتقدمة</Text>
-              <Button
-                label="طلب نسخة بياناتي"
-                tone="secondary"
-                disabled={!onRequestDataCopy}
-                {...(onRequestDataCopy ? { onPress: onRequestDataCopy } : {})}
-              />
-              <Button
-                label="طلب حذف الحساب"
-                tone="secondary"
-                disabled={!onRequestAccountDeletion}
-                {...(onRequestAccountDeletion ? { onPress: onRequestAccountDeletion } : {})}
-              />
-            </View>
           </>
         )}
       </View>
@@ -274,5 +264,4 @@ const styles = StyleSheet.create({
   card: { padding: spacing[4], backgroundColor: colorRoles.surfaceBase, borderRadius: radius.lg, gap: spacing[3] },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   actions: { gap: spacing[3], marginTop: spacing[4] },
-  dangerZone: { gap: spacing[3], marginTop: spacing[6], padding: spacing[4], borderColor: colorRoles.danger, borderWidth: 1, borderRadius: radius.lg },
 });

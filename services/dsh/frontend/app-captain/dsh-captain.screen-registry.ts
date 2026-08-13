@@ -6,3 +6,8 @@ export type {
   DshCaptainScreenRegistryStatus,
 } from '../shared/delivery';
 
+export {
+  DSH_CAPTAIN_SCREEN_REGISTRY,
+  getDshCaptainScreenRegistryItem,
+} from '../shared/delivery';
+

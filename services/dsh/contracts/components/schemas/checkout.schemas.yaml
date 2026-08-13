@@ -86,10 +86,11 @@ DshCheckoutIntent: &DshCheckoutIntent
 DshCreateCheckoutIntentRequest:
   type: object
   additionalProperties: false
-  required: [cartId, storeId]
+  required: [cartId, storeId, expectedCartVersion]
   properties:
     cartId: { type: string, format: uuid }
     storeId: { type: string, minLength: 1 }
+    expectedCartVersion: { type: integer, minimum: 1 }
     fulfillmentMode: *DshCheckoutFulfillmentMode
     paymentMethod: *DshCheckoutPaymentMethod
     deliveryAddressId: { type: string, format: uuid }

@@ -1,14 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { registerIdentityBeforeSessionEndHook } from "@bthwani/core-identity";
 import { fetchClientBenefits } from "./marketing.api";
 import {
   activateDshSubscriptionPurchase,
   cancelDshSubscription,
   createDshSubscriptionPurchase,
   getDshSubscriptionPurchase,
+  recoverDshSubscriptionPurchase,
   renewDshSubscription,
 } from "./subscription-lifecycle.api";
+import { clearSubscriptionMutationAttempts } from "./subscription-mutation-attempt";
 import type { ClientBenefitsPayload } from "./loyalty-subscriptions.types";
 import type {
   SubscriptionPaymentSession,
@@ -91,7 +94,24 @@ export function useSubscriptionLifecycleController() {
   }, []);
 
   useEffect(() => {
-    void reload();
+    let active = true;
+    const unregisterSessionEndHook = registerIdentityBeforeSessionEndHook(clearSubscriptionMutationAttempts);
+    void (async () => {
+      try {
+        const recovered = await recoverDshSubscriptionPurchase();
+        if (active && recovered) {
+          setPendingPurchase(recovered.purchase);
+          setPaymentSession(recovered.paymentSession);
+        }
+      } catch (error) {
+        setActionError(messageFor(error));
+      }
+      if (active) await reload();
+    })();
+    return () => {
+      active = false;
+      unregisterSessionEndHook();
+    };
   }, [reload]);
 
   const run = useCallback(async <T,>(action: Exclude<SubscriptionLifecycleAction, null>, operation: () => Promise<T>) => {

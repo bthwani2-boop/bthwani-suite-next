@@ -266,7 +266,7 @@ func TestPayoutDestinationsRequestsAndReservationsAreOperatorContextLocal(t *tes
 
 	for _, operatorContextID := range operatorContexts {
 		var available, pending int64
-		if err := db.QueryRow(`SELECT available_balance_minor_units,pending_balance_minor_units
+		if err := db.QueryRow(`SELECT available_balance_minor_units,held_balance_minor_units
 			FROM wlt_wallets WHERE operator_context_id=$1 AND actor_type='field' AND actor_id=$2`, operatorContextID, actorID).Scan(&available, &pending); err != nil {
 			t.Fatal(err)
 		}

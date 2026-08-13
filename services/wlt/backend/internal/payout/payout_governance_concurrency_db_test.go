@@ -18,7 +18,9 @@ import (
 // racing against one wallet cannot reserve more than the eligible balance.
 func TestConcurrentPayoutRequestsCannotOverReserveWallet(t *testing.T) {
 	db := getTestDB(t)
-	if db == nil { return }
+	if db == nil {
+		return
+	}
 	defer db.Close()
 	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", "concurrency-test-key-32-bytes-long")
 
@@ -56,7 +58,7 @@ func TestConcurrentPayoutRequestsCannotOverReserveWallet(t *testing.T) {
 	}
 
 	var available, pending int64
-	if err := db.QueryRow(`SELECT available_balance_minor_units,pending_balance_minor_units FROM wlt_wallets
+	if err := db.QueryRow(`SELECT available_balance_minor_units,held_balance_minor_units FROM wlt_wallets
 		WHERE operator_context_id=$1 AND actor_type='field' AND actor_id=$2`, operatorContextID, actorID).Scan(&available, &pending); err != nil {
 		t.Fatal(err)
 	}
@@ -70,7 +72,9 @@ func TestConcurrentPayoutRequestsCannotOverReserveWallet(t *testing.T) {
 
 func TestFullAvailablePayoutIsResolvedInsideLockedWallet(t *testing.T) {
 	db := getTestDB(t)
-	if db == nil { return }
+	if db == nil {
+		return
+	}
 	defer db.Close()
 	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", "concurrency-test-key-32-bytes-long")
 
@@ -81,11 +85,21 @@ func TestFullAvailablePayoutIsResolvedInsideLockedWallet(t *testing.T) {
 	executeDestinationUpsert(t, db, operatorContextID, actorID, "full-available-corr")
 
 	first := executePayoutCreate(t, db, operatorContextID, actorID, "first-reservation-"+operatorContextID, 25000)
-	if first.Code != http.StatusCreated { t.Fatalf("first reservation returned %d: %s", first.Code, first.Body.String()) }
+	if first.Code != http.StatusCreated {
+		t.Fatalf("first reservation returned %d: %s", first.Code, first.Body.String())
+	}
 	full := executeFullAvailablePayoutCreate(t, db, operatorContextID, actorID, "full-available-"+operatorContextID)
-	if full.Code != http.StatusCreated { t.Fatalf("FULL_AVAILABLE returned %d: %s", full.Code, full.Body.String()) }
-	var envelope struct { PayoutRequest struct { AmountMinorUnits int64 `json:"amountMinorUnits"` } `json:"payoutRequest"` }
-	if err := json.Unmarshal(full.Body.Bytes(), &envelope); err != nil { t.Fatal(err) }
+	if full.Code != http.StatusCreated {
+		t.Fatalf("FULL_AVAILABLE returned %d: %s", full.Code, full.Body.String())
+	}
+	var envelope struct {
+		PayoutRequest struct {
+			AmountMinorUnits int64 `json:"amountMinorUnits"`
+		} `json:"payoutRequest"`
+	}
+	if err := json.Unmarshal(full.Body.Bytes(), &envelope); err != nil {
+		t.Fatal(err)
+	}
 	if envelope.PayoutRequest.AmountMinorUnits != balance-25000 {
 		t.Fatalf("FULL_AVAILABLE amount=%d, want %d", envelope.PayoutRequest.AmountMinorUnits, balance-25000)
 	}
@@ -93,7 +107,9 @@ func TestFullAvailablePayoutIsResolvedInsideLockedWallet(t *testing.T) {
 
 func TestApprovedPayoutSnapshotIsImmutable(t *testing.T) {
 	db := getTestDB(t)
-	if db == nil { return }
+	if db == nil {
+		return
+	}
 	defer db.Close()
 	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", "concurrency-test-key-32-bytes-long")
 
@@ -103,10 +119,14 @@ func TestApprovedPayoutSnapshotIsImmutable(t *testing.T) {
 	seedPayoutTestSettledWallet(t, db, operatorContextID, actorID, balance)
 	executeDestinationUpsert(t, db, operatorContextID, actorID, "immutable-corr")
 	res := executePayoutCreate(t, db, operatorContextID, actorID, "immutable-payout-"+operatorContextID, 10000)
-	if res.Code != http.StatusCreated { t.Fatalf("payout create returned %d: %s", res.Code, res.Body.String()) }
+	if res.Code != http.StatusCreated {
+		t.Fatalf("payout create returned %d: %s", res.Code, res.Body.String())
+	}
 
 	approveRes := approvePayout(t, db, operatorContextID, payoutIDFromResponse(t, res), "finance-approver-1")
-	if approveRes.Code != http.StatusOK { t.Fatalf("approve returned %d: %s", approveRes.Code, approveRes.Body.String()) }
+	if approveRes.Code != http.StatusOK {
+		t.Fatalf("approve returned %d: %s", approveRes.Code, approveRes.Body.String())
+	}
 
 	var snapshotID, snapshotHash string
 	var amount int64
@@ -114,7 +134,9 @@ func TestApprovedPayoutSnapshotIsImmutable(t *testing.T) {
 		WHERE operator_context_id=$1 AND beneficiary_actor_id=$2`, operatorContextID, actorID).Scan(&snapshotID, &snapshotHash, &amount); err != nil {
 		t.Fatalf("read approved snapshot: %v", err)
 	}
-	if amount != 10000 { t.Fatalf("snapshot amount mismatch: %d", amount) }
+	if amount != 10000 {
+		t.Fatalf("snapshot amount mismatch: %d", amount)
+	}
 
 	batchID := freezeBatchForSnapshot(t, db, operatorContextID, snapshotID)
 	ctx := shared.WithDelegatedFinancePrincipal(shared.WithOperatorContext(t.Context(), operatorContextID), "finance-approver-1")
@@ -155,9 +177,17 @@ func payoutIDFromResponse(t *testing.T, res *httptest.ResponseRecorder) string {
 
 func decodePayoutID(t *testing.T, res *httptest.ResponseRecorder) string {
 	t.Helper()
-	var out struct { PayoutRequest struct { ID string `json:"id"` } `json:"payoutRequest"` }
-	if err := json.Unmarshal(res.Body.Bytes(), &out); err != nil { t.Fatalf("decode payout ID: %v", err) }
-	if out.PayoutRequest.ID == "" { t.Fatalf("payout ID not found in response: %s", res.Body.String()) }
+	var out struct {
+		PayoutRequest struct {
+			ID string `json:"id"`
+		} `json:"payoutRequest"`
+	}
+	if err := json.Unmarshal(res.Body.Bytes(), &out); err != nil {
+		t.Fatalf("decode payout ID: %v", err)
+	}
+	if out.PayoutRequest.ID == "" {
+		t.Fatalf("payout ID not found in response: %s", res.Body.String())
+	}
 	return out.PayoutRequest.ID
 }
 

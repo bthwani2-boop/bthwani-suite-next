@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func TestComputeCheckoutSnapshotForClientTxUsesMinorUnitSnapshotDBIntegration(t *testing.T) {
+func TestComputeCheckoutSnapshotTxUsesMinorUnitSnapshotDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
 	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
@@ -52,12 +52,12 @@ func TestComputeCheckoutSnapshotForClientTxUsesMinorUnitSnapshotDBIntegration(t 
 	}
 	defer tx.Rollback()
 
-	snapshot, err := ComputeCheckoutSnapshotForClientTx(ctx, tx, cartID, clientID, storeID)
+	snapshot, err := ComputeCheckoutSnapshotTx(ctx, tx, clientID, cartID, storeID, 1)
 	if err != nil {
 		t.Fatalf("minor-unit checkout snapshot failed: %v", err)
 	}
-	if snapshot.AmountMinorUnits != 5100 {
-		t.Fatalf("expected subtotal 5100 minor units, got %d", snapshot.AmountMinorUnits)
+	if snapshot.SubtotalMinorUnits != 5100 {
+		t.Fatalf("expected subtotal 5100 minor units, got %d", snapshot.SubtotalMinorUnits)
 	}
 	if snapshot.Currency != "USD" {
 		t.Fatalf("expected USD snapshot currency, got %q", snapshot.Currency)

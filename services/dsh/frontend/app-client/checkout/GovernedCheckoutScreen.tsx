@@ -42,6 +42,7 @@ export function GovernedCheckoutScreen({
   const input: DshCreateIntentInput = {
     cartId: cart.id,
     storeId: cart.storeId,
+    expectedCartVersion: cart.version,
     fulfillmentMode: cart.fulfillmentMode,
     paymentMethod,
     ...(deliveryAddressId ? { deliveryAddressId } : {}),

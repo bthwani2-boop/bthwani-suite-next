@@ -2,6 +2,10 @@ package payout
 
 import "testing"
 
+func int64Pointer(value int64) *int64 {
+	return &value
+}
+
 func TestNormalizeGovernedOwner(t *testing.T) {
 	t.Parallel()
 
@@ -43,8 +47,8 @@ func TestGovernedPayoutHashBindsOperatorContextDestinationAndIntent(t *testing.T
 	base := governedCreatePayoutInput{
 		BeneficiaryActorID:   "field-1",
 		BeneficiaryActorType: "field",
-		PayoutDestinationID:  "destination-1",
-		AmountMinorUnits:     12500,
+		AmountMode:           payoutAmountModeSpecified,
+		AmountMinorUnits:     int64Pointer(12500),
 		Currency:             "YER",
 	}
 	baseHash := governedPayoutHash("OperatorContext-main", base)
@@ -57,19 +61,19 @@ func TestGovernedPayoutHashBindsOperatorContextDestinationAndIntent(t *testing.T
 
 	cases := map[string]governedCreatePayoutInput{
 		"different actor id": {
-			BeneficiaryActorID: "field-2", BeneficiaryActorType: "field", PayoutDestinationID: "destination-1", AmountMinorUnits: 12500, Currency: "YER",
+			BeneficiaryActorID: "field-2", BeneficiaryActorType: "field", AmountMode: payoutAmountModeSpecified, AmountMinorUnits: int64Pointer(12500), Currency: "YER",
 		},
 		"different actor type": {
-			BeneficiaryActorID: "field-1", BeneficiaryActorType: "captain", PayoutDestinationID: "destination-1", AmountMinorUnits: 12500, Currency: "YER",
+			BeneficiaryActorID: "field-1", BeneficiaryActorType: "captain", AmountMode: payoutAmountModeSpecified, AmountMinorUnits: int64Pointer(12500), Currency: "YER",
 		},
-		"different destination": {
-			BeneficiaryActorID: "field-1", BeneficiaryActorType: "field", PayoutDestinationID: "destination-2", AmountMinorUnits: 12500, Currency: "YER",
+		"different amount mode": {
+			BeneficiaryActorID: "field-1", BeneficiaryActorType: "field", AmountMode: payoutAmountModeFullAvailable, Currency: "YER",
 		},
 		"different amount": {
-			BeneficiaryActorID: "field-1", BeneficiaryActorType: "field", PayoutDestinationID: "destination-1", AmountMinorUnits: 12600, Currency: "YER",
+			BeneficiaryActorID: "field-1", BeneficiaryActorType: "field", AmountMode: payoutAmountModeSpecified, AmountMinorUnits: int64Pointer(12600), Currency: "YER",
 		},
 		"different currency": {
-			BeneficiaryActorID: "field-1", BeneficiaryActorType: "field", PayoutDestinationID: "destination-1", AmountMinorUnits: 12500, Currency: "SAR",
+			BeneficiaryActorID: "field-1", BeneficiaryActorType: "field", AmountMode: payoutAmountModeSpecified, AmountMinorUnits: int64Pointer(12500), Currency: "SAR",
 		},
 	}
 

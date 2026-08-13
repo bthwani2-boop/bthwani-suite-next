@@ -131,6 +131,8 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("GET /dsh/operator/dispatch/assignments", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleListGovernedOperatorDispatchAssignments))
 	mux.HandleFunc("GET /dsh/operator/dispatch/tracking-alerts", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleListDispatchTrackingAlerts))
 	mux.HandleFunc("GET /dsh/captain/dispatch/assignments", protected.handleListGovernedCaptainDispatchAssignments)
+	mux.HandleFunc("GET /dsh/captain/dispatch/availability", protected.handleGetCaptainAvailability)
+	mux.HandleFunc("PATCH /dsh/captain/dispatch/availability", protected.handleSetCaptainAvailability)
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/accept", protected.handleAcceptGovernedDispatchAssignment)
 	mux.HandleFunc("POST /dsh/captain/dispatch/assignments/{assignmentId}/decline", protected.handleDeclineGovernedDispatchAssignment)
 	mux.HandleFunc("PUT /dsh/operator/dispatch/captains/{captainId}/profile", protected.withPermission("control-panel", OperationsPermissionManage, protected.handleUpsertCaptainDispatchProfile))

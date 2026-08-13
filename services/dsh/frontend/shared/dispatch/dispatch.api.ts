@@ -3,6 +3,8 @@ import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshCaptainDispatchCandidate,
   DshCaptainDispatchProfileInput,
+  DshCaptainAvailability,
+  DshCaptainAvailabilityStatus,
   DshCaptainReadiness,
   DshDeliveryException,
   DshDeliveryExceptionResolutionAction,
@@ -20,6 +22,20 @@ const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "dispatch");
 
 export function fetchOwnCaptainReadiness(): Promise<DshCaptainReadiness> {
   return request<DshCaptainReadiness>("/dsh/captain/me/readiness");
+}
+
+export function fetchOwnCaptainAvailability(): Promise<DshCaptainAvailability> {
+  return request<DshCaptainAvailability>("/dsh/captain/dispatch/availability");
+}
+
+export function setOwnCaptainAvailability(
+  status: Extract<DshCaptainAvailabilityStatus, "available" | "unavailable">,
+  expectedVersion: number,
+): Promise<DshCaptainAvailability> {
+  return request<DshCaptainAvailability>("/dsh/captain/dispatch/availability", {
+    method: "PATCH",
+    body: { status, expectedVersion },
+  });
 }
 
 export function fetchOperatorCaptainReadiness(captainId: string): Promise<DshCaptainReadiness> {

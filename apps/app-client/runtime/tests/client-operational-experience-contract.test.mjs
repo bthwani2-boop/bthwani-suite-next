@@ -175,6 +175,45 @@ test("client order and support routes remain navigable and failure-safe", () => 
   );
 });
 
+test("client commercial profile is reachable from My Space and has no inert privacy actions", () => {
+  const surface = assertMarkers(
+    "services/dsh/frontend/app-client/DshClientSurface.tsx",
+    [
+      '"commercial-profile"',
+      "MyProfileScreen",
+      "onOpenProfile={() => setProfileRoute(\"commercial-profile\")}",
+    ],
+  );
+  assert.match(surface, /profileRoute === "commercial-profile"/);
+  const profile = assertMarkers(
+    "services/dsh/frontend/app-client/account/MyProfileScreen.tsx",
+    ["fetchClientProfile", "upsertClientProfilePreferences", "upsertClientProfileConsents", "serverProfile"],
+  );
+  assert.equal(profile.includes("طلب نسخة بياناتي"), false);
+  assert.equal(profile.includes("طلب حذف الحساب"), false);
+});
+
+test("catalog verification wrapper initializes native exit state before a PowerShell child", () => {
+  const runtime = assertMarkers(
+    "infra/docker/scripts/runtime.ps1",
+    ["\"verify-catalog\"", "$global:LASTEXITCODE = 0", "verify-catalog: PASS"],
+  );
+  assert.ok(runtime.indexOf("$global:LASTEXITCODE = 0") < runtime.indexOf("verify-catalog: PASS"));
+});
+
+test("checkout carries the confirmed cart version into the canonical DSH OCC contract", () => {
+  const screen = assertMarkers(
+    "services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx",
+    ["expectedCartVersion: cart.version", "useCheckoutToOrderFlow(input)"],
+  );
+  assert.ok(screen.includes("expectedCartVersion: cart.version"));
+  const schema = assertMarkers(
+    "services/dsh/contracts/components/schemas/checkout.schemas.yaml",
+    ["required: [cartId, storeId, expectedCartVersion]", "expectedCartVersion: { type: integer, minimum: 1 }"],
+  );
+  assert.ok(schema.includes("expectedCartVersion"));
+});
+
 test("privacy-safe order sharing uses temporary Expo files and no sensitive references", () => {
   const platform = assertMarkers(
     "apps/app-client/runtime/src/platform/client-platform-actions.ts",
@@ -233,6 +272,28 @@ test("notification mutations are contained and provide canonical readback", () =
   assertMarkers(
     "services/dsh/frontend/app-client/account/PreferencesHubScreen.tsx",
     ["const accepted = await controller.savePreference", "controller.actionError", "controller.busyAction"],
+  );
+});
+
+test("subscription mutations persist one governed attempt across retries and restart", () => {
+  const lifecycle = assertMarkers(
+    "services/dsh/frontend/shared/marketing/subscription-lifecycle.api.ts",
+    [
+      "getOrCreateSubscriptionMutationAttempt",
+      "recoverDshSubscriptionPurchase",
+      "clearSubscriptionMutationAttempt",
+      "attempt.context",
+    ],
+  );
+  assert.equal(lifecycle.includes("mutationSequence"), false);
+  assert.equal(lifecycle.includes("Date.now"), false);
+  assertMarkers(
+    "services/dsh/frontend/shared/marketing/use-subscription-lifecycle-controller.tsx",
+    ["registerIdentityBeforeSessionEndHook", "clearSubscriptionMutationAttempts", "recoverDshSubscriptionPurchase"],
+  );
+  assertMarkers(
+    "services/dsh/frontend/shared/marketing/subscription-mutation-attempt.ts",
+    ["@react-native-async-storage/async-storage", "LATEST_PURCHASE_KEY", "AsyncStorage.setItem", "AsyncStorage.removeItem"],
   );
 });
 

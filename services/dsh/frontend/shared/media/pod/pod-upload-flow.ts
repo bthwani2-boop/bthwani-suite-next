@@ -3,7 +3,6 @@
 // No JSX. No ui-kit. No Tamagui.
 
 import React from 'react';
-import type { CaptainAppMode } from '../../delivery/captain.contract';
 import { getCaptainLifecycleForOrderStage } from '../../delivery/delivery.policy';
 
 export type CaptainPodState =
@@ -25,9 +24,9 @@ export function usePodUploadFlow() {
     setCaptainPodMediaKey(undefined);
   }, []);
 
-  const openStoreCourierProof = React.useCallback((captainAppMode: CaptainAppMode, setRoute: (r: any) => void) => {
+  const openStoreCourierProof = React.useCallback((setRoute: (r: any) => void) => {
     setCaptainPodState('ready');
-    setRoute(getCaptainLifecycleForOrderStage('proof', captainAppMode === 'store_courier_mode').captainRoute);
+    setRoute(getCaptainLifecycleForOrderStage('proof', false).captainRoute);
   }, []);
 
   return {

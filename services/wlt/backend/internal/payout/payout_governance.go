@@ -440,19 +440,6 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		result, err := tx.ExecContext(r.Context(), `UPDATE wlt_wallets
-			SET pending_balance_minor_units=pending_balance_minor_units+$4, updated_at=now()
-			WHERE operator_context_id=$1 AND actor_id=$2 AND actor_type=$3 AND status='active'`,
-			operatorContextID, input.BeneficiaryActorID, input.BeneficiaryActorType, amount)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to reserve payout balance")
-			return
-		}
-		if affected, _ := result.RowsAffected(); affected != 1 {
-			shared.SendError(w, http.StatusConflict, "WALLET_NOT_ACTIVE", "wallet changed before payout balance could be reserved")
-			return
-		}
-
 		created.ReconciliationStatus = "not_required"
 		if err := appendPayoutAudit(r.Context(), tx, "payout_request", created.ID, "payout.requested", input.BeneficiaryActorID, input.BeneficiaryActorType, "", correlationID, map[string]any{
 			"payoutDestinationId": destinationID,

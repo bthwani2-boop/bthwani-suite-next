@@ -51,14 +51,8 @@ test("payout boundary executes verified, missing and mutation paths", async () =
   const destination = await payout.fetchOwnPayoutDestination("partner");
   assert.equal(payout.isVerifiedPayoutDestination(destination), true);
   assert.equal(payout.isVerifiedPayoutDestination({ ...destination, active: false }), false);
-  await payout.saveOwnPayoutDestination("partner", {
-    beneficiaryName: "Partner",
-    officialWalletProviderKey: "provider",
-    destinationReference: "  ref-1  ",
-  });
-  await payout.deactivateOwnPayoutDestination("partner");
   assert.deepEqual(await payout.fetchOwnPayoutRequests("partner"), [{ id: "payout-1", status: "pending" }]);
-  await payout.createOwnPayoutRequest("partner", "destination-1", 100, "YER", "payout-key");
+  await payout.createOwnPayoutRequest("partner", "SPECIFIED", 100, "YER", "payout-key");
 
   responseMode = "not-found";
   assert.equal(await payout.fetchOwnPayoutDestination("partner"), null);

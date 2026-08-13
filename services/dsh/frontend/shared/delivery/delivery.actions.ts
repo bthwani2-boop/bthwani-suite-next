@@ -154,7 +154,7 @@ export function useCaptainDeliveryActions(deps: DeliveryActionsDeps) {
       setCaptainPodState('error');
       return undefined;
     }
-    if (!DSH_CAPTAIN_CONTRACT_CAPABILITIES.failDelivery || captainAppMode === 'store_courier_mode') {
+    if (!DSH_CAPTAIN_CONTRACT_CAPABILITIES.failDelivery) {
       setCaptainPodState('error');
       return undefined;
     }

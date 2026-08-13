@@ -32,7 +32,6 @@ export type SubscriptionPlanRecord = {
   readonly orderCap: number;
   readonly badge: string;
   readonly status: CommercialProgramStatus;
-  readonly subscriberCount: number;
   readonly wltProductReference?: string;
   readonly version: number;
   readonly createdByActorId: string;
