@@ -1,1 +1,24 @@
-{"schemaVersion":3,"unitId":"U009","status":"DRAFT","baselineSha":"bee8e9cfe1762cef39690f0b254fdf0b6855e1a9","resultingSha":null,"completedTaskIds":[],"modifiedPaths":[],"checkResults":[],"blockers":["Execution evidence not collected yet."],"deviations":[],"decision":"OPEN"}
+{
+  "schemaVersion": 3,
+  "unitId": "U009",
+  "status": "DRAFT",
+  "baselineSha": "15dc27eccdc3833b02968cad34ad73af98948691",
+  "resultingSha": "b316329757e973afd2662a0e2754b0e74ad97e89",
+  "completedTaskIds": ["U009-T001"],
+  "modifiedPaths": [
+    "services/dsh/backend/internal/centralcatalog/assortment_runtime_truth.go",
+    "services/dsh/backend/internal/centralcatalog/client_catalog_runtime_truth_postgres_test.go",
+    "services/dsh/backend/internal/http/catalog.go",
+    "services/dsh/backend/internal/http/storefront.go"
+  ],
+  "checkResults": [
+    {"verificationId":"V0091","status":"NEEDS_EVIDENCE","candidateSha":"b316329757e973afd2662a0e2754b0e74ad97e89","command":"DSH_REQUIRE_DB_TESTS=true DATABASE_URL=postgresql://... go test ./...; pnpm run test in Field, Control Panel, Partner and Client runtimes","evidence":"Backend full suite PASS with PostgreSQL; new DB test proves client catalog/storefront projection omits depleted inventory and retains central product ID plus effective price. Field 18, Control Panel 31, Partner 9 and their mobile contracts PASS. App Client suite has one unrelated failure: app-captain backgroundLocation capability was removed by foreign working-tree changes in tools/mobile/mobile-apps.manifest.json.","proves":"Canonical server catalog projection and affected non-client surface regressions pass; complete V0091 cannot be claimed while App Client command fails."},
+    {"verificationId":"V0092","status":"NEEDS_EVIDENCE","candidateSha":"b316329757e973afd2662a0e2754b0e74ad97e89","command":"RUNTIME: one field-originated store through Control Panel, Partner and Client readback with publication, disabled, price and stock cases","evidence":"No authenticated live cross-surface session was available.","proves":"Not proven."}
+  ],
+  "blockers": [
+    "App Client runtime test is currently blocked by an unrelated foreign manifest change that removes app-captain backgroundLocation capability.",
+    "Cross-surface authenticated runtime evidence is unavailable."
+  ],
+  "deviations": ["No delegation used; Codex implemented and verified the unit."],
+  "decision": "NEEDS_EVIDENCE"
+}
