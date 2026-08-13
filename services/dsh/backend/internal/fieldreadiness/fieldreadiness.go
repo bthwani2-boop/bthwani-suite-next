@@ -23,6 +23,7 @@ var (
 	ErrChecklistIncomplete  = errors.New("required readiness checks are not all passed")
 	ErrOpenEscalation       = errors.New("visit has an open blocking escalation")
 	ErrVisitAlreadyComplete = errors.New("visit is already complete")
+	ErrVisitNotActive       = errors.New("visit is not active")
 	ErrConflict             = errors.New("conflicting in-progress visit exists")
 	ErrEvidenceRequired     = errors.New("required readiness evidence is missing")
 	ErrLocationRequired     = errors.New("visit start requires GPS location evidence")
@@ -594,40 +595,51 @@ func CreateEscalation(ctx context.Context, db *sql.DB, wf store.WorkforceScopeRe
 	if err := AuthorizeStore(ctx, db, wf, actor, input.StoreID); err != nil {
 		return Escalation{}, err
 	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return Escalation{}, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
 	var visitIDSQL sql.NullString
 	if input.VisitID != "" {
-		visit, err := GetVisit(ctx, db, input.VisitID)
-		if err != nil {
+		visitIDSQL = sql.NullString{String: input.VisitID, Valid: true}
+		if err := lockGovernedEscalationVisitTx(ctx, tx, actor, input); err != nil {
 			return Escalation{}, err
 		}
-		if visit.StoreID != input.StoreID {
-			return Escalation{}, ErrInvalid
-		}
-		if visit.FieldAgentID != input.RaisedBy && actor.Role != "operator" {
-			return Escalation{}, ErrForbidden
-		}
-		visitIDSQL = sql.NullString{String: input.VisitID, Valid: true}
 	}
-	row := db.QueryRowContext(ctx, `
+	row := tx.QueryRowContext(ctx, `
 		INSERT INTO dsh_readiness_escalations (visit_id, store_id, raised_by, severity, category, description)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, COALESCE(visit_id::text,''), store_id, raised_by, severity, category, description,
 		          status, COALESCE(resolved_by,''), resolved_at, COALESCE(resolution_note,''), created_at, updated_at`,
 		visitIDSQL, input.StoreID, input.RaisedBy, input.Severity, input.Category, input.Description,
 	)
-	return scanEscalation(row)
+	escalation, err := scanEscalation(row)
+	if err != nil {
+		return Escalation{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return Escalation{}, err
+	}
+	return escalation, nil
 }
 
-func ListOperatorEscalations(ctx context.Context, db *sql.DB, statusFilter string, limit int) ([]Escalation, error) {
-	q := `SELECT id, COALESCE(visit_id::text,''), store_id, raised_by, severity, category, description,
-	             status, COALESCE(resolved_by,''), resolved_at, COALESCE(resolution_note,''), created_at, updated_at
-	      FROM dsh_readiness_escalations`
-	args := []any{}
+func ListOperatorEscalations(ctx context.Context, db *sql.DB, operatorContextID, statusFilter string, limit int) ([]Escalation, error) {
+	if strings.TrimSpace(operatorContextID) == "" {
+		return nil, ErrForbidden
+	}
+	q := `SELECT e.id, COALESCE(e.visit_id::text,''), e.store_id, e.raised_by, e.severity, e.category, e.description,
+	             e.status, COALESCE(e.resolved_by,''), e.resolved_at, COALESCE(e.resolution_note,''), e.created_at, e.updated_at
+	      FROM dsh_readiness_escalations e
+	      JOIN dsh_stores s ON s.id = e.store_id
+	      WHERE s.operator_context_id = $1`
+	args := []any{operatorContextID}
 	if statusFilter != "" {
-		q += " WHERE status = $1 ORDER BY created_at DESC LIMIT $2"
+		q += " AND e.status = $2 ORDER BY e.created_at DESC LIMIT $3"
 		args = append(args, statusFilter, limit)
 	} else {
-		q += " ORDER BY created_at DESC LIMIT $1"
+		q += " ORDER BY e.created_at DESC LIMIT $2"
 		args = append(args, limit)
 	}
 	rows, err := db.QueryContext(ctx, q, args...)

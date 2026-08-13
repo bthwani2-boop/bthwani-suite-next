@@ -414,9 +414,12 @@ func allowedEscalationTransition(from, to EscalationStatus) bool {
 	}
 }
 
-func UpdateGovernedEscalation(ctx context.Context, db *sql.DB, escalationID string, input UpdateEscalationInput) (Escalation, error) {
+func UpdateGovernedEscalation(ctx context.Context, db *sql.DB, escalationID, operatorContextID string, input UpdateEscalationInput) (Escalation, error) {
 	if strings.TrimSpace(escalationID) == "" || strings.TrimSpace(input.ResolvedBy) == "" {
 		return Escalation{}, ErrInvalid
+	}
+	if strings.TrimSpace(operatorContextID) == "" {
+		return Escalation{}, ErrForbidden
 	}
 	if input.Status != EscalationAcknowledged && input.Status != EscalationResolved && input.Status != EscalationEscalatedFurther {
 		return Escalation{}, fmt.Errorf("%w: unsupported escalation transition target", ErrInvalid)
@@ -436,7 +439,12 @@ func UpdateGovernedEscalation(ctx context.Context, db *sql.DB, escalationID stri
 	defer tx.Rollback() //nolint:errcheck
 
 	var current EscalationStatus
-	if err := tx.QueryRowContext(ctx, `SELECT status FROM dsh_readiness_escalations WHERE id = $1 FOR UPDATE`, escalationID).Scan(&current); errors.Is(err, sql.ErrNoRows) {
+	if err := tx.QueryRowContext(ctx, `
+		SELECT e.status
+		FROM dsh_readiness_escalations e
+		JOIN dsh_stores s ON s.id = e.store_id
+		WHERE e.id = $1 AND s.operator_context_id = $2
+		FOR UPDATE OF e`, escalationID, operatorContextID).Scan(&current); errors.Is(err, sql.ErrNoRows) {
 		return Escalation{}, ErrNotFound
 	} else if err != nil {
 		return Escalation{}, err

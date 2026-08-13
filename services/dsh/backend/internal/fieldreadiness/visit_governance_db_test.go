@@ -126,7 +126,7 @@ func TestEscalatedFurtherRemainsACompletionBlocker(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create governed escalation: %v", err)
 	}
-	if _, err := UpdateGovernedEscalation(ctx, db, escalation.ID, UpdateEscalationInput{
+	if _, err := UpdateGovernedEscalation(ctx, db, escalation.ID, requiredTestOperatorContextID(t), UpdateEscalationInput{
 		Status: EscalationEscalatedFurther, ResolvedBy: "operator-1", ResolutionNote: "escalated to operations",
 	}); err != nil {
 		t.Fatalf("escalate further: %v", err)

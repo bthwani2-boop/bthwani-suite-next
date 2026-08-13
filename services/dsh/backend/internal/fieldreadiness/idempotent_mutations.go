@@ -365,18 +365,6 @@ func CreateGovernedEscalationIdempotent(
 	if err := AuthorizeStore(ctx, db, wf, actor, input.StoreID); err != nil {
 		return Escalation{}, err
 	}
-	if strings.TrimSpace(input.VisitID) != "" {
-		visit, err := GetVisit(ctx, db, input.VisitID)
-		if err != nil {
-			return Escalation{}, err
-		}
-		if visit.StoreID != input.StoreID {
-			return Escalation{}, ErrInvalid
-		}
-		if actor.Role != "operator" && visit.FieldAgentID != actor.ID {
-			return Escalation{}, ErrForbidden
-		}
-	}
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -391,6 +379,11 @@ func CreateGovernedEscalationIdempotent(
 	}
 	if found {
 		return replay, nil
+	}
+	if strings.TrimSpace(input.VisitID) != "" {
+		if err := lockGovernedEscalationVisitTx(ctx, tx, actor, input); err != nil {
+			return Escalation{}, err
+		}
 	}
 
 	created, err := insertGovernedEscalationTx(ctx, tx, input, mutation)

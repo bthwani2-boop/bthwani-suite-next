@@ -86,3 +86,14 @@ func TestCreateEscalationRequiresStoreRaisedByAndDescription(t *testing.T) {
 		}
 	}
 }
+
+func TestOperatorEscalationReadsRequireOperatorContext(t *testing.T) {
+	if _, err := ListOperatorEscalations(context.Background(), nil, "", "", 100); err != ErrForbidden {
+		t.Fatalf("expected operator escalation list to fail closed without context, got %v", err)
+	}
+	if _, err := UpdateGovernedEscalation(context.Background(), nil, "escalation-1", "", UpdateEscalationInput{
+		Status: EscalationAcknowledged, ResolvedBy: "operator-1",
+	}); err != ErrForbidden {
+		t.Fatalf("expected operator escalation update to fail closed without context, got %v", err)
+	}
+}

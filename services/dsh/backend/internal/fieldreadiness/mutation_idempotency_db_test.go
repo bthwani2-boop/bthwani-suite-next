@@ -253,6 +253,57 @@ func TestCompleteGovernedVisitIdempotentDoesNotDuplicateCommissionOutbox(t *test
 	}
 }
 
+func TestGovernedEscalationCannotMutateCompletedVisit(t *testing.T) {
+	db := openRequiredDB(t)
+	ctx := context.Background()
+	agentID := uniqueID("agent-escalation-after-complete")
+	partnerID := seedPartner(t, db, agentID)
+	storeID := uniqueID("store-escalation-after-complete")
+	seedFieldStoreForPartner(t, db, storeID, agentID, partnerID)
+	registerGovernedStoreLocation(t, db, storeID, partnerID)
+	actor := testFieldActor(t, agentID)
+	cleanupFieldMutationReceipts(t, db, agentID)
+
+	visit, err := CreateGovernedVisit(ctx, db, nil, actor, CreateVisitInput{
+		StoreID: storeID, FieldAgentID: agentID, VisitType: VisitTypeOnboarding, StartLocation: testValidLocation(),
+	})
+	if err != nil {
+		t.Fatalf("create governed visit: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_commission_outbox WHERE visit_id = $1`, visit.ID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_visits WHERE id = $1`, visit.ID)
+	})
+	for _, checkType := range RequiredCheckTypes {
+		mediaRef := seedStoreBoundReadinessMedia(t, db, partnerID, storeID, agentID)
+		if _, err := UpsertGovernedReadinessCheck(ctx, db, nil, actor, visit.ID, UpdateCheckInput{
+			CheckType: checkType, Status: CheckPassed, EvidenceURL: mediaRef,
+		}); err != nil {
+			t.Fatalf("upsert governed check %s: %v", checkType, err)
+		}
+	}
+	if _, err := CompleteGovernedVisit(ctx, db, nil, actor, visit.ID, testCompleteInput()); err != nil {
+		t.Fatalf("complete governed visit: %v", err)
+	}
+
+	input := CreateEscalationInput{
+		VisitID: visit.ID, StoreID: storeID, RaisedBy: agentID,
+		Severity: SeverityHigh, Category: CategorySafetyViolation, Description: "must be rejected after completion",
+	}
+	mutation := testMutationContext(t, uniqueID("escalation-after-complete"), input)
+	if _, err := CreateGovernedEscalationIdempotent(ctx, db, nil, actor, input, mutation); !errors.Is(err, ErrVisitAlreadyComplete) {
+		t.Fatalf("expected ErrVisitAlreadyComplete, got %v", err)
+	}
+
+	var count int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_readiness_escalations WHERE visit_id = $1`, visit.ID).Scan(&count); err != nil {
+		t.Fatalf("count post-completion escalations: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("completed visit must not receive a new escalation, got %d", count)
+	}
+}
+
 func TestRevokedActorCannotExecuteStaleMutations(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()

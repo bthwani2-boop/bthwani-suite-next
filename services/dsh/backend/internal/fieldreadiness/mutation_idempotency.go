@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strings"
 
+	"dsh-api/internal/store"
+
 	"github.com/lib/pq"
 )
 
@@ -236,6 +238,40 @@ func upsertGovernedCheckTx(
 		&check.UpdatedAt,
 	)
 	return check, err
+}
+
+func lockGovernedEscalationVisitTx(
+	ctx context.Context,
+	tx *sql.Tx,
+	actor store.StoreActor,
+	input CreateEscalationInput,
+) error {
+	var visitStoreID, fieldAgentID, status string
+	err := tx.QueryRowContext(ctx, `
+		SELECT store_id, field_agent_id, status
+		FROM dsh_field_visits
+		WHERE id = $1
+		FOR UPDATE`, strings.TrimSpace(input.VisitID)).Scan(&visitStoreID, &fieldAgentID, &status)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if visitStoreID != input.StoreID {
+		return ErrInvalid
+	}
+	if actor.Role != "operator" && fieldAgentID != actor.ID {
+		return ErrForbidden
+	}
+	switch VisitStatus(status) {
+	case VisitComplete:
+		return ErrVisitAlreadyComplete
+	case VisitInProgress:
+		return nil
+	default:
+		return ErrVisitNotActive
+	}
 }
 
 func insertGovernedEscalationTx(

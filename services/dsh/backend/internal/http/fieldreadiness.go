@@ -8,7 +8,6 @@ import (
 	"dsh-api/internal/store"
 )
 
-
 // GET /dsh/field/stores/{storeId}/visits
 func (s *protectedStoreServer) handleListFieldVisits(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "field")
@@ -55,8 +54,6 @@ func (s *protectedStoreServer) handleFieldWorkQueue(w http.ResponseWriter, r *ht
 	store.SendJSON(w, http.StatusOK, map[string]any{"visits": visitResult, "escalations": escalationResult})
 }
 
-
-
 // GET /dsh/field/visits/{visitId}/checks
 func (s *protectedStoreServer) handleListVisitChecks(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "field")
@@ -76,15 +73,14 @@ func (s *protectedStoreServer) handleListVisitChecks(w http.ResponseWriter, r *h
 	store.SendJSON(w, http.StatusOK, map[string]any{"checks": result})
 }
 
-
 // GET /dsh/operator/field-readiness/escalations
 func (s *protectedStoreServer) handleListOperatorEscalations(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
 	statusFilter := r.URL.Query().Get("status")
-	list, err := fieldreadiness.ListOperatorEscalations(r.Context(), s.db, statusFilter, 100)
+	list, err := fieldreadiness.ListOperatorEscalations(r.Context(), s.db, actor.OperatorContextID, statusFilter, 100)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list escalations")
 		return
@@ -95,8 +91,6 @@ func (s *protectedStoreServer) handleListOperatorEscalations(w http.ResponseWrit
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"escalations": result})
 }
-
-
 
 func (s *protectedStoreServer) writeFieldReadinessError(w http.ResponseWriter, err error) {
 	switch {
@@ -112,6 +106,8 @@ func (s *protectedStoreServer) writeFieldReadinessError(w http.ResponseWriter, e
 		store.SendError(w, http.StatusConflict, "OPEN_ESCALATION", "visit has an open blocking escalation")
 	case errors.Is(err, fieldreadiness.ErrVisitAlreadyComplete):
 		store.SendError(w, http.StatusConflict, "VISIT_ALREADY_COMPLETE", "visit is already complete")
+	case errors.Is(err, fieldreadiness.ErrVisitNotActive):
+		store.SendError(w, http.StatusConflict, "VISIT_NOT_ACTIVE", "visit is no longer active")
 	case errors.Is(err, fieldreadiness.ErrConflict):
 		store.SendError(w, http.StatusConflict, "VISIT_ALREADY_IN_PROGRESS", "store or agent already has an in-progress visit")
 	case errors.Is(err, fieldreadiness.ErrLocationRequired):

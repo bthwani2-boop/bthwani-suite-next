@@ -195,7 +195,12 @@ func (s *protectedStoreServer) handleUpdateGovernedEscalation(w http.ResponseWri
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	escalation, err := fieldreadiness.UpdateGovernedEscalation(r.Context(), s.db, r.PathValue("escalationId"), fieldreadiness.UpdateEscalationInput{
+	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
+	if operatorContextID == "" {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "operator context is required")
+		return
+	}
+	escalation, err := fieldreadiness.UpdateGovernedEscalation(r.Context(), s.db, r.PathValue("escalationId"), operatorContextID, fieldreadiness.UpdateEscalationInput{
 		Status:         fieldreadiness.EscalationStatus(body.Status),
 		ResolvedBy:     actor.ID,
 		ResolutionNote: body.ResolutionNote,
