@@ -3,7 +3,7 @@
   "unitId": "U007",
   "status": "DRAFT",
   "baselineSha": "bae55d0b7202e313f8344afe672641fac77d8d7b",
-  "resultingSha": "eee091877",
+  "resultingSha": "eee091877c5ff023256949375e7bd6a03c3f9f89",
   "completedTaskIds": ["U007-T001"],
   "modifiedPaths": [
     "services/dsh/backend/internal/http/onboarding_collaboration.go",
@@ -25,8 +25,8 @@
     "services/dsh/frontend/shared/field-assignment/onboarding-collaboration.types.ts"
   ],
   "checkResults": [
-    {"verificationId":"V0071","status":"PASS","candidateSha":"eee091877","command":"go test ./... (from services/dsh/backend); DSH DB integration: DSH_REQUIRE_DB_TESTS=true go test ./internal/partner ./internal/http; pnpm --dir services/dsh run openapi:test; pnpm --dir services/dsh run typecheck; pnpm --dir apps/control-panel/runtime run typecheck; pnpm --dir apps/app-field/runtime run typecheck; pnpm --dir apps/control-panel/runtime run test; pnpm --dir apps/app-field/runtime run test; pnpm --dir apps/app-field/runtime run test:runtime -- --app app-field; migration-manifest-drift-gate.mjs --service dsh","evidence":"All listed commands passed on the candidate; migration applied to PostgreSQL and collaboration DB isolation/idempotency/lifecycle test passed."},
-    {"verificationId":"V0072","status":"NEEDS_EVIDENCE","candidateSha":"eee091877","command":"RUNTIME: open field-related Partners/Support tabs, inspect workload, comment exact draft/document, return changes, field responds, reviewer sees same thread/history","evidence":"No authenticated live Control Panel/App Field runtime session was available in this execution; static and automated tests do not prove visual cross-surface readback.","proves":"Not proven."}
+    {"verificationId":"V0071","status":"PASS","candidateSha":"eee091877c5ff023256949375e7bd6a03c3f9f89","command":"go test ./... (from services/dsh/backend); DSH DB integration: DSH_REQUIRE_DB_TESTS=true go test ./internal/partner ./internal/http; pnpm --dir services/dsh run openapi:test; pnpm --dir services/dsh run typecheck; pnpm --dir apps/control-panel/runtime run typecheck; pnpm --dir apps/app-field/runtime run typecheck; pnpm --dir apps/control-panel/runtime run test; pnpm --dir apps/app-field/runtime run test; pnpm --dir apps/app-field/runtime run test:runtime -- --app app-field; migration-manifest-drift-gate.mjs --service dsh","evidence":"All listed commands passed on the candidate; migration applied to PostgreSQL and collaboration DB isolation/idempotency/lifecycle test passed."},
+    {"verificationId":"V0072","status":"NEEDS_EVIDENCE","candidateSha":"eee091877c5ff023256949375e7bd6a03c3f9f89","command":"RUNTIME: open field-related Partners/Support tabs, inspect workload, comment exact draft/document, return changes, field responds, reviewer sees same thread/history","evidence":"No authenticated live Control Panel/App Field runtime session was available in this execution; static and automated tests do not prove visual cross-surface readback.","proves":"Not proven."}
   ],
   "blockers": ["V0072 requires a live authenticated Control Panel and App Field runtime session for same-object visual/readback evidence."],
   "deviations": ["No delegation used; Codex implemented and verified the unit."],
