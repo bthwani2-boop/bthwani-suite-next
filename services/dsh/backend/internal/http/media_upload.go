@@ -42,12 +42,37 @@ func (s *protectedStoreServer) handleFieldMediaUpload(w http.ResponseWriter, r *
 	}
 	partnerID := r.FormValue("partnerId")
 	storeID := r.FormValue("storeId")
+	mediaKind := strings.TrimSpace(r.FormValue("mediaKind"))
 	purpose := "partner_document"
 	if partnerID == "" && storeID == "" {
 		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "partnerId or storeId is required")
 		return
 	}
-	if partnerID != "" {
+	if storeID != "" {
+		if mediaKind == "legal_document" {
+			store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "legal documents cannot be bound to a visit store upload")
+			return
+		}
+		if err := fieldreadiness.AuthorizeStore(r.Context(), s.db, s.workforce, actor, storeID); err != nil {
+			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
+			return
+		}
+		var linkedPartner sql.NullString
+		if err := s.db.QueryRowContext(r.Context(), `SELECT partner_id FROM dsh_stores WHERE id = $1`, storeID).Scan(&linkedPartner); err != nil {
+			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "store not found")
+			return
+		}
+		if !linkedPartner.Valid || linkedPartner.String == "" || (partnerID != "" && partnerID != linkedPartner.String) {
+			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "store and partner scope do not match")
+			return
+		}
+		partnerID = linkedPartner.String
+		purpose = "field_readiness_evidence"
+	} else if partnerID != "" {
+		if mediaKind != "" && mediaKind != "legal_document" && mediaKind != "visit_evidence" {
+			store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "unsupported media kind")
+			return
+		}
 		p, err := partner.GetPartner(s.db, partnerID)
 		if errors.Is(err, partner.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
@@ -61,22 +86,12 @@ func (s *protectedStoreServer) handleFieldMediaUpload(w http.ResponseWriter, r *
 			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this partner draft does not belong to you")
 			return
 		}
+		if mediaKind == "visit_evidence" {
+			purpose = "field_readiness_evidence"
+		}
 	} else {
-		if err := fieldreadiness.AuthorizeStore(r.Context(), s.db, s.workforce, actor, storeID); err != nil {
-			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
-			return
-		}
-		var linkedPartner sql.NullString
-		if err := s.db.QueryRowContext(r.Context(), `SELECT partner_id FROM dsh_stores WHERE id = $1`, storeID).Scan(&linkedPartner); err != nil {
-			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "store not found")
-			return
-		}
-		if !linkedPartner.Valid || linkedPartner.String == "" {
-			store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "store has no linked partner")
-			return
-		}
-		partnerID = linkedPartner.String
-		purpose = "field_readiness_evidence"
+		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "partnerId or storeId is required")
+		return
 	}
 	file, header, err := r.FormFile("file")
 	if err != nil {
@@ -90,6 +105,10 @@ func (s *protectedStoreServer) handleFieldMediaUpload(w http.ResponseWriter, r *
 		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "unsupported media type")
 		return
 	}
+	if purpose == "field_readiness_evidence" && !strings.HasPrefix(contentType, "image/") {
+		store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "visit evidence must be an image")
+		return
+	}
 	opaqueID := strings.ReplaceAll(uuid.NewString(), "-", "")
 	key := media.BuildKey("dsh-partner-documents", "objects", opaqueID, fmt.Sprintf("%d-%s", time.Now().UnixNano(), header.Filename))
 
@@ -97,7 +116,7 @@ func (s *protectedStoreServer) handleFieldMediaUpload(w http.ResponseWriter, r *
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to upload media")
 		return
 	}
-	mediaRef, err := s.createMediaReference(r.Context(), key, actor, partnerID, purpose, contentType, header.Filename)
+	mediaRef, err := s.createMediaReference(r.Context(), key, actor, partnerID, storeID, purpose, contentType, header.Filename)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to register media reference")
 		return
@@ -163,23 +182,18 @@ func (s *protectedStoreServer) createMediaReference(
 	storageKey string,
 	actor store.StoreActor,
 	partnerID string,
+	requestedStoreID string,
 	purpose string,
 	contentType string,
 	fileName string,
 ) (string, error) {
 	var storeID sql.NullString
-	err := s.db.QueryRowContext(ctx, `
-		SELECT id
-		FROM dsh_stores
-		WHERE partner_id = $1
-		ORDER BY created_at ASC
-		LIMIT 1`, partnerID).Scan(&storeID)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return "", err
+	if strings.TrimSpace(requestedStoreID) != "" {
+		storeID = sql.NullString{String: strings.TrimSpace(requestedStoreID), Valid: true}
 	}
 
 	var mediaRef string
-	err = s.db.QueryRowContext(ctx, `
+	err := s.db.QueryRowContext(ctx, `
 		INSERT INTO dsh_media_refs
 			(storage_key, owner_actor_id, owner_actor_role, partner_id, store_id, purpose, content_type, original_filename)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)

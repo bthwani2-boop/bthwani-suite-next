@@ -455,8 +455,13 @@ func validateTransitionReadinessTx(ctx context.Context, tx *sql.Tx, p Partner, t
 		var total, approved int
 		if err := tx.QueryRowContext(ctx, `
 			SELECT COUNT(*), COUNT(*) FILTER (WHERE document_status = 'approved')
-			FROM dsh_partner_documents
-			WHERE partner_id = $1`, p.ID).Scan(&total, &approved); err != nil {
+			FROM (
+				SELECT DISTINCT ON (document_type) review_status,
+				       CASE WHEN review_status = 'verified' THEN 'approved' ELSE document_status END AS document_status
+				FROM dsh_partner_documents
+				WHERE partner_id = $1
+				ORDER BY document_type, created_at DESC
+			) latest`, p.ID).Scan(&total, &approved); err != nil {
 			return err
 		}
 		if total == 0 || approved != total {

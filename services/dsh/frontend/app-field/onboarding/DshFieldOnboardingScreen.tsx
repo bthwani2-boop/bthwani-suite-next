@@ -205,7 +205,9 @@ export function DshFieldOnboardingScreen({
         ownerPartnerId = created;
       }
 
-      const mediaRef = await uploadFieldMedia(ownerPartnerId, picked);
+      const mediaRef = await uploadFieldMedia(ownerPartnerId, picked, {
+        kind: item.kind === 'document' ? 'legal_document' : 'visit_evidence',
+      });
       if (item.kind === 'document') {
         const documentSpec = getRequiredPartnerDocuments(state.form).find((candidate) => candidate.key === item.key);
         if (!documentSpec) throw new Error('DOCUMENT_TYPE_NOT_RESOLVED');

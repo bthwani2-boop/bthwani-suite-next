@@ -797,6 +797,10 @@
             required: [ partnerId, file ]
             properties:
               partnerId: { type: string }
+              storeId: { type: string }
+              mediaKind:
+                type: string
+                enum: [legal_document, visit_evidence]
               file: { type: string, format: binary }
     responses:
       "201":

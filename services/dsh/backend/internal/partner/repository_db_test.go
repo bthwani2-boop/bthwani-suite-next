@@ -63,6 +63,18 @@ func partnerStoreID(t *testing.T, db *sql.DB, partnerID string) string {
 	return storeID
 }
 
+func seedPartnerDocumentMedia(t *testing.T, db *sql.DB, partnerID, actorID, mediaRef string) {
+	t.Helper()
+	if _, err := db.Exec(`
+		INSERT INTO dsh_media_refs
+			(media_ref, storage_key, owner_actor_id, owner_actor_role, partner_id, purpose, content_type, original_filename)
+		VALUES ($1, $2, $3, 'field', $4, 'partner_document', 'application/pdf', 'document.pdf')`,
+		mediaRef, mediaRef+"-storage", actorID, partnerID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_media_refs WHERE media_ref = $1`, mediaRef) })
+}
+
 func TestPartnerLifecycleDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	p := createPartnerFixture(t, db, "IT")
@@ -165,9 +177,84 @@ func TestCreateFieldVisitRejectsStoreNotOwnedByPartner(t *testing.T) {
 	}
 }
 
+func TestFieldVisitMediaUsesCanonicalBoundRecordsAndDeduplicates(t *testing.T) {
+	db := openRequiredDB(t)
+	p := createPartnerFixture(t, db, "VISIT-MEDIA")
+	storeID := partnerStoreID(t, db, p.ID)
+	mediaRef := "media://visit-canonical-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	storePartnerMediaBound(t, db, p.ID, storeID, "field-local-001", mediaRef, "field_readiness_evidence", "image/jpeg")
+
+	visit, err := CreateFieldVisit(db, CreateFieldVisitInput{
+		PartnerID:         p.ID,
+		StoreID:           storeID,
+		VisitNotes:        "canonical visit media",
+		FieldActorID:      "field-local-001",
+		EvidenceMediaRefs: []string{mediaRef, mediaRef},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(visit.EvidenceMediaRefs) != 1 || visit.EvidenceMediaRefs[0] != mediaRef {
+		t.Fatalf("visit media refs = %#v, want one canonical ref", visit.EvidenceMediaRefs)
+	}
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM dsh_partner_field_visit_media WHERE visit_id = $1`, visit.ID).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("canonical visit media rows = %d, want 1", count)
+	}
+	listed, err := ListFieldVisits(db, p.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) == 0 || len(listed[0].EvidenceMediaRefs) != 1 || listed[0].EvidenceMediaRefs[0] != mediaRef {
+		t.Fatalf("listed visit media = %#v, want canonical readback", listed)
+	}
+}
+
+func storePartnerMediaBound(t *testing.T, db *sql.DB, partnerID, storeID, actorID, mediaRef, purpose, contentType string) {
+	t.Helper()
+	if _, err := db.Exec(`
+		INSERT INTO dsh_media_refs
+			(media_ref, storage_key, owner_actor_id, owner_actor_role, partner_id, store_id, purpose, content_type, original_filename)
+		VALUES ($1, $2, $3, 'field', $4, $5, $6, $7, 'evidence.bin')`,
+		mediaRef, mediaRef+"-storage", actorID, partnerID, storeID, purpose, contentType); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_media_refs WHERE media_ref = $1`, mediaRef) })
+}
+
+func TestPartnerDocumentRejectsVisitEvidenceMedia(t *testing.T) {
+	db := openRequiredDB(t)
+	p := createPartnerFixture(t, db, "DOC-SCOPE")
+	mediaRef := "media://visit-evidence-cannot-be-legal"
+	storePartnerMedia(t, db, p.ID, "field-local-001", mediaRef, "field_readiness_evidence", "image/jpeg")
+	if _, err := UploadDocument(db, p.ID, UploadDocumentInput{
+		DocumentType:      "commercial_register",
+		MediaRef:          mediaRef,
+		UploadedByActorID: "field-local-001",
+	}); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected visit evidence to be rejected as a legal document, got %v", err)
+	}
+}
+
+func storePartnerMedia(t *testing.T, db *sql.DB, partnerID, actorID, mediaRef, purpose, contentType string) {
+	t.Helper()
+	if _, err := db.Exec(`
+		INSERT INTO dsh_media_refs
+			(media_ref, storage_key, owner_actor_id, owner_actor_role, partner_id, purpose, content_type, original_filename)
+		VALUES ($1, $2, $3, 'field', $4, $5, $6, 'evidence.bin')`,
+		mediaRef, mediaRef+"-storage", actorID, partnerID, purpose, contentType); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_media_refs WHERE media_ref = $1`, mediaRef) })
+}
+
 func TestReviewDocumentClearsStaleRejectionReasonAfterApproval(t *testing.T) {
 	db := openRequiredDB(t)
 	p := createPartnerFixture(t, db, "DOC-REVIEW")
+	seedPartnerDocumentMedia(t, db, p.ID, "field-local-001", "media://partner-document-review")
 	document, err := UploadDocument(db, p.ID, UploadDocumentInput{
 		DocumentType:      "commercial_register",
 		MediaRef:          "media://partner-document-review",
@@ -200,6 +287,46 @@ func TestReviewDocumentClearsStaleRejectionReasonAfterApproval(t *testing.T) {
 	}
 	if document.DocumentStatus != "approved" || document.RejectionReason != "" {
 		t.Fatalf("approved document retained stale rejection state: status=%q reason=%q", document.DocumentStatus, document.RejectionReason)
+	}
+}
+
+func TestDocumentReuploadPreservesReviewHistoryAndSupersedesRejectedVersion(t *testing.T) {
+	db := openRequiredDB(t)
+	p := createPartnerFixture(t, db, "DOC-REUPLOAD")
+	oldRef := "media://document-old-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	seedPartnerDocumentMedia(t, db, p.ID, "field-local-001", oldRef)
+	oldDocument, err := UploadDocument(db, p.ID, UploadDocumentInput{
+		DocumentType:      "commercial_register",
+		MediaRef:          oldRef,
+		UploadedByActorID: "field-local-001",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldDocument, _, err = ReviewDocument(db, p.ID, oldDocument.ID, ReviewDocumentInput{
+		Decision:          "needs_resubmit",
+		Reason:            "الصورة غير واضحة",
+		ReviewedByActorID: "operator-local-001",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if oldDocument.ReviewStatus != "reupload_required" || oldDocument.LastReviewReason == "" {
+		t.Fatalf("reupload state = %#v", oldDocument)
+	}
+
+	newRef := "media://document-new-" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	seedPartnerDocumentMedia(t, db, p.ID, "field-local-001", newRef)
+	newDocument, err := UploadDocument(db, p.ID, UploadDocumentInput{
+		DocumentType:      "commercial_register",
+		MediaRef:          newRef,
+		UploadedByActorID: "field-local-001",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if newDocument.SupersedesDocumentID != oldDocument.ID || newDocument.ReviewStatus != "pending" {
+		t.Fatalf("new document linkage = %#v", newDocument)
 	}
 }
 

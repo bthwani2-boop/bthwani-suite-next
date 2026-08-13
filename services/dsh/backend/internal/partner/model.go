@@ -145,17 +145,23 @@ type PartnerSummary struct {
 // â”€â”€â”€ Document â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type Document struct {
-	ID                string    `json:"id"`
-	PartnerID         string    `json:"partnerId"`
-	DocumentType      string    `json:"documentType"`
-	DocumentStatus    string    `json:"documentStatus"`
-	UploadedByActorID string    `json:"uploadedByActorId"`
-	MediaRef          string    `json:"mediaRef"`
-	Notes             string    `json:"notes"`
-	RejectionReason   string    `json:"rejectionReason"`
-	Version           int       `json:"version"`
-	CreatedAt         time.Time `json:"createdAt"`
-	UpdatedAt         time.Time `json:"updatedAt"`
+	ID                   string     `json:"id"`
+	PartnerID            string     `json:"partnerId"`
+	DocumentType         string     `json:"documentType"`
+	UploadStatus         string     `json:"uploadStatus"`
+	ReviewStatus         string     `json:"reviewStatus"`
+	DocumentStatus       string     `json:"documentStatus"`
+	UploadedByActorID    string     `json:"uploadedByActorId"`
+	MediaRef             string     `json:"mediaRef"`
+	Notes                string     `json:"notes"`
+	RejectionReason      string     `json:"rejectionReason"`
+	ReviewedByActorID    string     `json:"reviewedByActorId,omitempty"`
+	ReviewedAt           *time.Time `json:"reviewedAt,omitempty"`
+	LastReviewReason     string     `json:"lastReviewReason"`
+	SupersedesDocumentID string     `json:"supersedesDocumentId,omitempty"`
+	Version              int        `json:"version"`
+	CreatedAt            time.Time  `json:"createdAt"`
+	UpdatedAt            time.Time  `json:"updatedAt"`
 }
 
 // â”€â”€â”€ Document review â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

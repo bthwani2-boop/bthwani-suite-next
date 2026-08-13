@@ -44,11 +44,17 @@ export type DshPartnerDocument = {
   readonly id: string;
   readonly partnerId: string;
   readonly documentType: string;
+  readonly uploadStatus: 'uploaded';
+  readonly reviewStatus: 'pending' | 'under_review' | 'verified' | 'rejected' | 'reupload_required';
   readonly documentStatus: 'pending' | 'under_review' | 'approved' | 'rejected';
   readonly uploadedByActorId: string;
   readonly mediaRef: string;
   readonly notes: string;
   readonly rejectionReason: string;
+  readonly reviewedByActorId?: string;
+  readonly reviewedAt?: string;
+  readonly lastReviewReason: string;
+  readonly supersedesDocumentId?: string;
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -209,6 +215,7 @@ export type DshPartnerListResponse = {
 export type DshPartnerDocumentType =
   | "national_id"
   | "commercial_register"
+  | "freelancer_certificate"
   | "lease_agreement"
   | "health_certificate"
   | "store_photo"
@@ -223,11 +230,27 @@ export const REQUIRED_DOCUMENT_TYPES: DshPartnerDocumentType[] = [
 export const DOCUMENT_TYPE_LABELS: Record<DshPartnerDocumentType, string> = {
   national_id: "الهوية الوطنية",
   commercial_register: "السجل التجاري",
+  freelancer_certificate: "وثيقة العمل الحر",
   lease_agreement: "عقد الإيجار أو الملكية",
   health_certificate: "شهادة صحة / ترخيص",
   store_photo: "صورة المتجر",
   owner_photo: "صورة المالك",
   other: "مستند آخر",
+};
+
+export const DOCUMENT_REVIEW_STATUS_LABELS: Record<string, string> = {
+  pending: "بانتظار المراجعة",
+  under_review: "قيد المراجعة",
+  verified: "تم التحقق",
+  rejected: "مرفوض",
+  reupload_required: "يلزم إعادة الرفع",
+};
+
+export const PARTNER_FIELD_VISIT_STATUS_LABELS: Record<string, string> = {
+  draft: "مسودة",
+  in_progress: "قيد التنفيذ",
+  submitted: "مُرسلة للمراجعة",
+  escalated: "مصعّدة",
 };
 
 export const DSH_PARTNER_OPERATIONAL_FLOW_IDS = [

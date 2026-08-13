@@ -21,6 +21,7 @@ import {
   useFieldPartnerProgressController,
   getDshPartnerReadinessChecklist,
   DOCUMENT_TYPE_LABELS,
+  DOCUMENT_REVIEW_STATUS_LABELS,
 } from '../../shared/partner';
 import { DshFieldProblemState } from '../components/DshFieldProblemNotice';
 
@@ -32,17 +33,12 @@ export type DshFieldPartnerProgressScreenProps = {
   readonly onOpenEscalation?: (storeId: string) => void;
 };
 
-const DOCUMENT_STATUS_LABELS: Record<string, string> = {
-  pending: 'قيد الانتظار',
-  under_review: 'قيد المراجعة',
-  approved: 'معتمد',
-  rejected: 'مرفوض',
-};
-
 const DOCUMENT_STATUS_TONE: Record<string, 'success' | 'warning' | 'danger' | 'info'> = {
   pending: 'warning',
   under_review: 'info',
   approved: 'success',
+  verified: 'success',
+  reupload_required: 'danger',
   rejected: 'danger',
 };
 
@@ -147,8 +143,8 @@ export function DshFieldPartnerProgressScreen({ partnerId, onBack, onOpenProduct
                   {(DOCUMENT_TYPE_LABELS as Record<string, string>)[doc.documentType] ?? doc.documentType}
                 </Text>
                 <Badge
-                  label={DOCUMENT_STATUS_LABELS[doc.documentStatus] ?? doc.documentStatus}
-                  tone={DOCUMENT_STATUS_TONE[doc.documentStatus] ?? 'info'}
+                  label={DOCUMENT_REVIEW_STATUS_LABELS[doc.reviewStatus] ?? DOCUMENT_REVIEW_STATUS_LABELS[doc.documentStatus] ?? 'حالة غير معروفة'}
+                  tone={DOCUMENT_STATUS_TONE[doc.reviewStatus] ?? DOCUMENT_STATUS_TONE[doc.documentStatus] ?? 'info'}
                 />
               </View>
             ))

@@ -30,6 +30,13 @@
       "sha256": "3273032059cf2d18e3f5b39b8408f01d4c58b27ac488bc774b2d072582f91c1a",
       "historicalPrefix": "999a",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 244,
+      "file": "dsh-999b_partner_evidence_lifecycle.sql",
+      "sha256": "3a1064a6686613f8a72c73ff0d749b672dd1adc693d2b38ec63a514506fb0110",
+      "historicalPrefix": "999b",
+      "state": "ACTIVE"
     }
   ]
 }

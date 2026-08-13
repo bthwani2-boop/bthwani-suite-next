@@ -12,8 +12,13 @@ export type FieldMediaPickResult = {
   readonly mimeType: string;
 };
 
-export async function uploadFieldMedia(partnerId: string, file: FieldMediaPickResult): Promise<string> {
-  return uploadFieldMediaForOwner({ partnerId }, file);
+export type FieldMediaUploadOptions = {
+  readonly kind?: "legal_document" | "visit_evidence";
+  readonly storeId?: string;
+};
+
+export async function uploadFieldMedia(partnerId: string, file: FieldMediaPickResult, options: FieldMediaUploadOptions = {}): Promise<string> {
+  return uploadFieldMediaForOwner({ partnerId, ...(options.storeId ? { storeId: options.storeId } : {}) }, file, options.kind);
 }
 
 export async function uploadFieldStoreMedia(storeId: string, file: FieldMediaPickResult): Promise<string> {
@@ -66,8 +71,9 @@ export async function uploadProviderMedia(
 }
 
 async function uploadFieldMediaForOwner(
-  owner: { readonly partnerId: string; readonly storeId?: never } | { readonly storeId: string; readonly partnerId?: never },
+  owner: { readonly partnerId: string; readonly storeId?: string } | { readonly storeId: string; readonly partnerId?: never },
   file: FieldMediaPickResult,
+  kind?: "legal_document" | "visit_evidence",
 ): Promise<string> {
   const baseUrl = resolveDshApiBaseUrl();
   const cookieMode = baseUrl.startsWith("/");
@@ -77,6 +83,7 @@ async function uploadFieldMediaForOwner(
   const form = new FormData();
   if (owner.partnerId) form.append("partnerId", owner.partnerId);
   if (owner.storeId) form.append("storeId", owner.storeId);
+  if (kind) form.append("mediaKind", kind);
   form.append("file", {
     uri: file.uri,
     name: file.name,

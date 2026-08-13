@@ -238,13 +238,19 @@ DshPartnerCoverageZone:
 
 DshPartnerDocument:
   type: object
-  required: [id, partnerId, documentType, documentStatus, uploadedByActorId, mediaRef, version, createdAt, updatedAt]
+  required: [id, partnerId, documentType, uploadStatus, reviewStatus, documentStatus, uploadedByActorId, mediaRef, notes, rejectionReason, lastReviewReason, version, createdAt, updatedAt]
   properties:
     id: { type: string }
     partnerId: { type: string }
     documentType:
       type: string
-      enum: [national_id, commercial_register, lease_agreement, health_certificate, store_photo, owner_photo, other]
+      enum: [national_id, commercial_register, freelancer_certificate, lease_agreement, health_certificate, store_photo, owner_photo, other]
+    uploadStatus:
+      type: string
+      enum: [uploaded]
+    reviewStatus:
+      type: string
+      enum: [pending, under_review, verified, rejected, reupload_required]
     documentStatus:
       type: string
       enum: [pending, under_review, approved, rejected]
@@ -252,6 +258,10 @@ DshPartnerDocument:
     mediaRef: { type: string }
     notes: { type: string }
     rejectionReason: { type: string }
+    reviewedByActorId: { type: [string, "null"] }
+    reviewedAt: { type: [string, "null"], format: date-time }
+    lastReviewReason: { type: string }
+    supersedesDocumentId: { type: [string, "null"] }
     version: { type: integer }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
@@ -270,14 +280,14 @@ DshAddPartnerDocumentRequest:
   properties:
     documentType:
       type: string
-      enum: [national_id, commercial_register, lease_agreement, health_certificate, store_photo, owner_photo, other]
+      enum: [national_id, commercial_register, freelancer_certificate, lease_agreement, health_certificate]
     mediaRef: { type: string, minLength: 1 }
     notes: { type: string }
 
 DshReviewPartnerDocumentRequest:
   type: object
-  required: [decision]
-  description: reason is mandatory when decision is rejected or needs_resubmit.
+  required: [decision, reason]
+  description: Every server-side document decision is audited with a reason.
   properties:
     decision: { type: string, enum: [approved, rejected, needs_resubmit] }
     reason: { type: string, minLength: 1 }

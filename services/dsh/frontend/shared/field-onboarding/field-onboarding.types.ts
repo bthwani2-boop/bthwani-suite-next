@@ -64,9 +64,7 @@ export type FieldRequiredDocument = {
 
 /**
  * Required evidence follows the legal identity selected in the same draft.
- * The current database contract has no dedicated freelancer-certificate
- * document enum, so that certificate is stored as `other` with a precise UI
- * label until the cross-surface document taxonomy is versioned centrally.
+ * The document type comes from the canonical DSH legal-document taxonomy.
  */
 export function getRequiredPartnerDocuments(
   form: Partial<FieldPartnerDraftForm>,
@@ -79,7 +77,7 @@ export function getRequiredPartnerDocuments(
     case "freelancer_certificate":
       return [
         { key: "identity_proof", documentType: "national_id", label: "الهوية الوطنية للمالك" },
-        { key: "freelancer_certificate", documentType: "other", label: "وثيقة العمل الحر" },
+        { key: "freelancer_certificate", documentType: "freelancer_certificate", label: "وثيقة العمل الحر" },
       ];
     case "commercial_register":
     default:

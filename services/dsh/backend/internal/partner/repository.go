@@ -264,31 +264,45 @@ func UploadDocument(db *sql.DB, partnerID string, input UploadDocumentInput) (Do
 	if err := input.Validate(); err != nil {
 		return Document{}, err
 	}
-	// verify partner exists
-	var exists bool
-	if err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM dsh_partners WHERE id=$1)`, partnerID).Scan(&exists); err != nil {
-		return Document{}, err
-	}
-	if !exists {
-		return Document{}, ErrNotFound
-	}
-
 	tx, err := db.Begin()
 	if err != nil {
 		return Document{}, err
 	}
 	defer tx.Rollback() //nolint:errcheck
 
+	var exists bool
+	if err := tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM dsh_partners WHERE id=$1)`, partnerID).Scan(&exists); err != nil {
+		return Document{}, err
+	}
+	if !exists {
+		return Document{}, ErrNotFound
+	}
+	if err := validateLegalDocumentType(tx, input.DocumentType); err != nil {
+		return Document{}, err
+	}
+	if err := validateLegalDocumentMedia(tx, partnerID, input.MediaRef); err != nil {
+		return Document{}, err
+	}
+
+	var supersedesID sql.NullString
+	_ = tx.QueryRow(`
+		SELECT id FROM dsh_partner_documents
+		WHERE partner_id = $1 AND document_type = $2 AND review_status = 'reupload_required'
+		ORDER BY created_at DESC LIMIT 1`, partnerID, input.DocumentType).Scan(&supersedesID)
+
 	var d Document
 	err = tx.QueryRow(`
 		INSERT INTO dsh_partner_documents
-			(partner_id, document_type, media_ref, notes, uploaded_by_actor_id)
-		VALUES ($1,$2,$3,$4,$5)
-		RETURNING id, partner_id, document_type, document_status, uploaded_by_actor_id,
-		          media_ref, notes, rejection_reason, version, created_at, updated_at`,
-		partnerID, input.DocumentType, input.MediaRef, input.Notes, input.UploadedByActorID,
-	).Scan(&d.ID, &d.PartnerID, &d.DocumentType, &d.DocumentStatus, &d.UploadedByActorID,
-		&d.MediaRef, &d.Notes, &d.RejectionReason, &d.Version, &d.CreatedAt, &d.UpdatedAt)
+			(partner_id, document_type, media_ref, notes, uploaded_by_actor_id, upload_status,
+			 review_status, supersedes_document_id)
+		VALUES ($1,$2,$3,$4,$5,'uploaded','pending',$6)
+		RETURNING id, partner_id, document_type, upload_status, review_status, document_status,
+		          uploaded_by_actor_id, media_ref, notes, rejection_reason,
+		          COALESCE(reviewed_by_actor_id,''),
+		          reviewed_at, last_review_reason, COALESCE(supersedes_document_id,''),
+		          version, created_at, updated_at`,
+		partnerID, input.DocumentType, input.MediaRef, input.Notes, input.UploadedByActorID, supersedesID,
+	).Scan(documentScanArgs(&d)...)
 	if err != nil {
 		return Document{}, err
 	}
@@ -307,8 +321,11 @@ func UploadDocument(db *sql.DB, partnerID string, input UploadDocumentInput) (Do
 
 func ListDocuments(db *sql.DB, partnerID string) ([]Document, error) {
 	rows, err := db.Query(`
-		SELECT id, partner_id, document_type, document_status, uploaded_by_actor_id,
-		       media_ref, notes, rejection_reason, version, created_at, updated_at
+		SELECT id, partner_id, document_type, upload_status, review_status, document_status,
+		       uploaded_by_actor_id, media_ref, notes, rejection_reason,
+		       COALESCE(reviewed_by_actor_id,''),
+		       reviewed_at, last_review_reason, COALESCE(supersedes_document_id,''),
+		       version, created_at, updated_at
 		FROM dsh_partner_documents WHERE partner_id = $1 ORDER BY created_at ASC`, partnerID)
 	if err != nil {
 		return nil, err
@@ -317,9 +334,7 @@ func ListDocuments(db *sql.DB, partnerID string) ([]Document, error) {
 	var list []Document
 	for rows.Next() {
 		var d Document
-		if err := rows.Scan(&d.ID, &d.PartnerID, &d.DocumentType, &d.DocumentStatus,
-			&d.UploadedByActorID, &d.MediaRef, &d.Notes, &d.RejectionReason,
-			&d.Version, &d.CreatedAt, &d.UpdatedAt); err != nil {
+		if err := rows.Scan(documentScanArgs(&d)...); err != nil {
 			return nil, err
 		}
 		list = append(list, d)
@@ -341,28 +356,41 @@ func ReviewDocument(db *sql.DB, partnerID, documentID string, input ReviewDocume
 	}
 	defer tx.Rollback() //nolint:errcheck
 
-	// Map decision to document_status
+	// document_status remains a compatibility projection; review_status is canonical.
 	newDocStatus := "under_review"
+	newReviewStatus := "under_review"
 	switch input.Decision {
 	case "approved":
 		newDocStatus = "approved"
+		newReviewStatus = "verified"
 	case "rejected", "needs_resubmit":
 		newDocStatus = "rejected"
+		if input.Decision == "needs_resubmit" {
+			newReviewStatus = "reupload_required"
+		} else {
+			newReviewStatus = "rejected"
+		}
 	}
 
 	var d Document
 	err = tx.QueryRow(`
 		UPDATE dsh_partner_documents SET
 			document_status  = $3,
-			rejection_reason = CASE WHEN $3='approved' THEN '' ELSE $4 END,
+			review_status    = $4,
+			rejection_reason = CASE WHEN $3='approved' THEN '' ELSE $6 END,
+			reviewed_by_actor_id = $5,
+			reviewed_at      = NOW(),
+			last_review_reason = $6,
 			version          = version + 1,
 			updated_at       = NOW()
 		WHERE id = $1 AND partner_id = $2
-		RETURNING id, partner_id, document_type, document_status, uploaded_by_actor_id,
-		          media_ref, notes, rejection_reason, version, created_at, updated_at`,
-		documentID, partnerID, newDocStatus, input.Reason,
-	).Scan(&d.ID, &d.PartnerID, &d.DocumentType, &d.DocumentStatus, &d.UploadedByActorID,
-		&d.MediaRef, &d.Notes, &d.RejectionReason, &d.Version, &d.CreatedAt, &d.UpdatedAt)
+		RETURNING id, partner_id, document_type, upload_status, review_status, document_status,
+		          uploaded_by_actor_id, media_ref, notes, rejection_reason,
+		          COALESCE(reviewed_by_actor_id,''),
+		          reviewed_at, last_review_reason, COALESCE(supersedes_document_id,''),
+		          version, created_at, updated_at`,
+		documentID, partnerID, newDocStatus, newReviewStatus, input.ReviewedByActorID, input.Reason,
+	).Scan(documentScanArgs(&d)...)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Document{}, DocumentReview{}, ErrNotFound
 	}
@@ -391,6 +419,49 @@ func ReviewDocument(db *sql.DB, partnerID, documentID string, input ReviewDocume
 		return Document{}, DocumentReview{}, err
 	}
 	return d, rev, nil
+}
+
+func documentScanArgs(d *Document) []any {
+	return []any{
+		&d.ID, &d.PartnerID, &d.DocumentType, &d.UploadStatus, &d.ReviewStatus,
+		&d.DocumentStatus, &d.UploadedByActorID, &d.MediaRef, &d.Notes,
+		&d.RejectionReason, &d.ReviewedByActorID, &d.ReviewedAt, &d.LastReviewReason,
+		&d.SupersedesDocumentID, &d.Version, &d.CreatedAt, &d.UpdatedAt,
+	}
+}
+
+func validateLegalDocumentMedia(tx *sql.Tx, partnerID, mediaRef string) error {
+	var valid bool
+	err := tx.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM dsh_media_refs
+			WHERE media_ref = $1 AND partner_id = $2
+			  AND purpose = 'partner_document'
+			  AND scan_status NOT IN ('failed', 'quarantined')
+			  AND content_type IN ('application/pdf', 'image/jpeg', 'image/png', 'image/webp')
+		)`, mediaRef, partnerID).Scan(&valid)
+	if err != nil {
+		return err
+	}
+	if !valid {
+		return ErrInvalid
+	}
+	return nil
+}
+
+func validateLegalDocumentType(tx *sql.Tx, documentType string) error {
+	var valid bool
+	if err := tx.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM dsh_partner_document_taxonomy
+			WHERE document_type = $1 AND document_family = 'legal' AND active = TRUE
+		)`, strings.TrimSpace(documentType)).Scan(&valid); err != nil {
+		return err
+	}
+	if !valid {
+		return ErrInvalid
+	}
+	return nil
 }
 
 // â”€â”€â”€ Field visits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -425,10 +496,7 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 		lonSQL = sql.NullFloat64{Float64: *input.LocationLongitude, Valid: true}
 	}
 
-	mediaRefs := input.EvidenceMediaRefs
-	if mediaRefs == nil {
-		mediaRefs = []string{}
-	}
+	mediaRefs := uniqueTrimmedMediaRefs(input.EvidenceMediaRefs)
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -443,16 +511,29 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 	err = tx.QueryRow(`
 		INSERT INTO dsh_partner_field_visits
 			(partner_id, store_id, field_actor_id, visit_status, visit_notes, location_latitude, location_longitude, evidence_media_refs, submitted_at)
-		VALUES ($1,$2,$3,'submitted',$4,$5,$6,$7,NOW())
+		VALUES ($1,$2,$3,'submitted',$4,$5,$6,ARRAY[]::TEXT[],NOW())
 		RETURNING id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
 		          visit_notes, location_latitude, location_longitude, evidence_media_refs,
 		          version, created_at, submitted_at`,
-		input.PartnerID, storeIDSQL, input.FieldActorID, input.VisitNotes, latSQL, lonSQL, pq.Array(mediaRefs),
+		input.PartnerID, storeIDSQL, input.FieldActorID, input.VisitNotes, latSQL, lonSQL,
 	).Scan(&v.ID, &v.PartnerID, &storeIDOut, &v.FieldActorID, &v.VisitStatus,
 		&v.VisitNotes, &lat, &lon, pq.Array(&v.EvidenceMediaRefs),
 		&v.Version, &v.CreatedAt, &submittedAt)
 	if err != nil {
 		return FieldVisit{}, err
+	}
+	for _, mediaRef := range mediaRefs {
+		if err := validateVisitMedia(tx, input.PartnerID, input.StoreID, input.FieldActorID, mediaRef); err != nil {
+			return FieldVisit{}, err
+		}
+		if _, err := tx.Exec(`
+			INSERT INTO dsh_partner_field_visit_media
+				(partner_id, visit_id, store_id, media_ref, captured_by_actor_id, context)
+			VALUES ($1,$2,$3,$4,$5,'partner_onboarding')
+			ON CONFLICT (visit_id, media_ref) DO NOTHING`,
+			input.PartnerID, v.ID, storeIDSQL, mediaRef, input.FieldActorID); err != nil {
+			return FieldVisit{}, err
+		}
 	}
 	if err := recordActivationEvent(tx, input.PartnerID, "field_visit_submitted", input.FieldActorID, "app-field", input.VisitNotes); err != nil {
 		return FieldVisit{}, err
@@ -470,6 +551,7 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 		v.SubmittedAt = &submittedAt.Time
 	}
 	v.StoreID = storeIDOut.String
+	v.EvidenceMediaRefs = mediaRefs
 	if v.EvidenceMediaRefs == nil {
 		v.EvidenceMediaRefs = []string{}
 	}
@@ -530,9 +612,12 @@ func LinkPartnerStore(db *sql.DB, partnerID, storeID, actorID string) ([]Partner
 func ListFieldVisits(db *sql.DB, partnerID string) ([]FieldVisit, error) {
 	rows, err := db.Query(`
 		SELECT id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
-		       visit_notes, location_latitude, location_longitude, evidence_media_refs,
+		       visit_notes, location_latitude, location_longitude,
+		       COALESCE((SELECT array_agg(media_ref ORDER BY created_at ASC)
+		                  FROM dsh_partner_field_visit_media vm
+		                  WHERE vm.visit_id = v.id AND vm.status = 'uploaded'), ARRAY[]::TEXT[]),
 		       version, created_at, submitted_at
-		FROM dsh_partner_field_visits WHERE partner_id = $1 ORDER BY created_at DESC`, partnerID)
+		FROM dsh_partner_field_visits v WHERE partner_id = $1 ORDER BY created_at DESC`, partnerID)
 	if err != nil {
 		return nil, err
 	}
@@ -583,7 +668,8 @@ func SubmitFieldVisit(db *sql.DB, partnerID, visitID, actorID string) (FieldVisi
 			version      = version + 1
 		WHERE id = $1 AND partner_id = $2 AND field_actor_id = $3 AND visit_status IN ('draft','in_progress')
 		RETURNING id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
-		          visit_notes, location_latitude, location_longitude, evidence_media_refs,
+		          visit_notes, location_latitude, location_longitude,
+		          ARRAY[]::TEXT[],
 		          version, created_at, submitted_at`,
 		visitID, partnerID, actorID, now,
 	).Scan(&v.ID, &v.PartnerID, &storeIDOut, &v.FieldActorID, &v.VisitStatus,
@@ -606,10 +692,67 @@ func SubmitFieldVisit(db *sql.DB, partnerID, visitID, actorID string) (FieldVisi
 		v.SubmittedAt = &t
 	}
 	v.StoreID = storeIDOut.String
-	if v.EvidenceMediaRefs == nil {
-		v.EvidenceMediaRefs = []string{}
+	v.EvidenceMediaRefs, err = listVisitMedia(db, v.ID)
+	if err != nil {
+		return FieldVisit{}, err
 	}
 	return v, nil
+}
+
+func uniqueTrimmedMediaRefs(refs []string) []string {
+	seen := make(map[string]struct{}, len(refs))
+	result := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ref = strings.TrimSpace(ref)
+		if ref == "" {
+			continue
+		}
+		if _, exists := seen[ref]; exists {
+			continue
+		}
+		seen[ref] = struct{}{}
+		result = append(result, ref)
+	}
+	return result
+}
+
+func validateVisitMedia(tx *sql.Tx, partnerID, storeID, actorID, mediaRef string) error {
+	var valid bool
+	err := tx.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM dsh_media_refs
+			WHERE media_ref = $1 AND partner_id = $2
+			  AND purpose = 'field_readiness_evidence'
+			  AND owner_actor_id = $3 AND owner_actor_role = 'field'
+			  AND scan_status NOT IN ('failed', 'quarantined')
+			  AND ($4 = '' AND store_id IS NULL OR $4 <> '' AND store_id = $4)
+		)`, mediaRef, partnerID, actorID, storeID).Scan(&valid)
+	if err != nil {
+		return err
+	}
+	if !valid {
+		return ErrInvalid
+	}
+	return nil
+}
+
+func listVisitMedia(db *sql.DB, visitID string) ([]string, error) {
+	rows, err := db.Query(`
+		SELECT media_ref FROM dsh_partner_field_visit_media
+		WHERE visit_id = $1 AND status = 'uploaded' ORDER BY created_at ASC`, visitID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	refs := []string{}
+	for rows.Next() {
+		var ref string
+		if err := rows.Scan(&ref); err != nil {
+			return nil, err
+		}
+		refs = append(refs, ref)
+	}
+	return refs, rows.Err()
 }
 
 // â”€â”€â”€ Activation audit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
