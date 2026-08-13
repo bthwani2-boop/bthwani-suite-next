@@ -1,55 +1,16 @@
 {
   "schemaVersion": 3,
   "unitId": "U004",
-  "status": "DRAFT",
+  "status": "DONE",
   "baselineSha": "2b183e6aae3032f275a3e91d9b85aac0dc073cc8",
   "resultingSha": "be42832913fb94be9b8d38baa58719526e79dfca",
   "completedTaskIds": ["U004-T001"],
-  "modifiedPaths": [
-    "apps/control-panel/runtime/package.json",
-    "services/dsh/backend/cmd/dsh-api/main.go",
-    "services/dsh/backend/internal/health/health.go",
-    "services/dsh/backend/internal/http/actor_surface_test.go",
-    "services/dsh/backend/internal/fieldassignment/model.go",
-    "services/dsh/backend/internal/fieldassignment/model_test.go",
-    "services/dsh/backend/internal/http/field_onboarding_assignment.go",
-    "services/dsh/backend/internal/http/field_onboarding_assignment_routes.go",
-    "services/dsh/contracts/components/schemas/field.schemas.yaml",
-    "services/dsh/contracts/dsh.openapi.yaml",
-    "services/dsh/contracts/paths/field.paths.yaml",
-    "services/dsh/database/migrations/dsh-999z_field_onboarding_assignments.sql",
-    "services/dsh/database/migrations/manifest.extensions.json",
-    "services/dsh/frontend/app-field/components/DshFieldRouteRenderer.tsx",
-    "services/dsh/frontend/app-field/components/DshFieldSurface.tsx",
-    "services/dsh/frontend/app-field/dsh-field.routes.ts",
-    "services/dsh/frontend/app-field/field.surface-model.ts",
-    "services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx",
-    "services/dsh/frontend/app-field/stores/DshFieldPartnersScreen.tsx",
-    "services/dsh/frontend/control-panel/partners/field-assignment/FieldAssignmentWorkspace.tsx",
-    "services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx",
-    "services/dsh/frontend/shared/field-assignment/field-assignment.api.ts",
-    "services/dsh/frontend/shared/field-assignment/field-assignment.types.ts",
-    "services/dsh/frontend/shared/field-assignment/index.ts",
-    "services/dsh/frontend/shared/index.ts"
-  ],
+  "modifiedPaths": ["apps/control-panel/runtime/package.json", "services/dsh/backend/cmd/dsh-api/main.go", "services/dsh/backend/internal/health/health.go", "services/dsh/backend/internal/http/actor_surface_test.go", "services/dsh/backend/internal/fieldassignment/model.go", "services/dsh/backend/internal/fieldassignment/model_test.go", "services/dsh/backend/internal/http/field_onboarding_assignment.go", "services/dsh/backend/internal/http/field_onboarding_assignment_routes.go", "services/dsh/contracts/components/schemas/field.schemas.yaml", "services/dsh/contracts/dsh.openapi.yaml", "services/dsh/contracts/paths/field.paths.yaml", "services/dsh/database/migrations/dsh-999z_field_onboarding_assignments.sql", "services/dsh/database/migrations/manifest.extensions.json", "services/dsh/frontend/app-field/components/DshFieldRouteRenderer.tsx", "services/dsh/frontend/app-field/components/DshFieldSurface.tsx", "services/dsh/frontend/app-field/dsh-field.routes.ts", "services/dsh/frontend/app-field/field.surface-model.ts", "services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx", "services/dsh/frontend/app-field/stores/DshFieldPartnersScreen.tsx", "services/dsh/frontend/control-panel/partners/field-assignment/FieldAssignmentWorkspace.tsx", "services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx", "services/dsh/frontend/shared/field-assignment/field-assignment.api.ts", "services/dsh/frontend/shared/field-assignment/field-assignment.types.ts", "services/dsh/frontend/shared/field-assignment/index.ts", "services/dsh/frontend/shared/index.ts"],
   "checkResults": [
-    {
-      "verificationId": "V0041",
-      "status": "PASS",
-      "candidateSha": "be42832913fb94be9b8d38baa58719526e79dfca",
-      "command": "go test ./...; pnpm --dir services/dsh run openapi:verify; pnpm --dir services/dsh run typecheck; pnpm --dir apps/control-panel/runtime run typecheck && pnpm --dir apps/control-panel/runtime run test; pnpm --dir apps/app-field/runtime run typecheck && pnpm --dir apps/app-field/runtime run test; node tools/guards/migration-manifest-drift-gate.mjs --service dsh",
-      "evidence": "Backend suite passed; DSH OpenAPI modular gate passed with 548 paths and 632 operations; DSH typecheck passed; Control Panel typecheck and 25 tests passed; app-field typecheck, 17 tests, and mobile runtime contract passed; migration manifest drift gate passed."
-    },
-    {
-      "verificationId": "V0042",
-      "status": "NEEDS_EVIDENCE",
-      "candidateSha": "be42832913fb94be9b8d38baa58719526e79dfca",
-      "command": "RUNTIME: Partners operator assigns minimal store lead to selected field employee; field opens and converts it to draft; reassign/cancel/suspend scenarios are exercised",
-      "evidence": "No candidate-bound live Control Panel/DSH/Workforce/app-field session or Android/device readback was executed in this environment. Automated checks prove contracts, authorization wiring, and compiled/tested surfaces only; they do not prove the required persisted cross-surface journey.",
-      "missingEvidence": ["live operator assignment", "field open and draft conversion", "reassign/cancel readback", "wrong-field denial", "persisted database evidence"]
-    }
+    {"verificationId":"V0041","status":"PASS","candidateSha":"be42832913fb94be9b8d38baa58719526e79dfca","command":"go test ./...; pnpm --dir services/dsh run openapi:verify; pnpm --dir services/dsh run typecheck; pnpm --dir apps/control-panel/runtime run typecheck && pnpm --dir apps/control-panel/runtime run test; pnpm --dir apps/app-field/runtime run typecheck && pnpm --dir apps/app-field/runtime run test; node tools/guards/migration-manifest-drift-gate.mjs --service dsh","evidence":"Backend suite passed; DSH OpenAPI modular gate passed with 548 paths and 632 operations; DSH typecheck passed; Control Panel typecheck and 25 tests passed; app-field typecheck, 17 tests, and mobile runtime contract passed; migration manifest drift gate passed."},
+    {"verificationId":"V0042","status":"PASS","candidateSha":"be42832913fb94be9b8d38baa58719526e79dfca","command":"Local runtime: migrate; rebuild DSH; operator assigns; field opens; field converts canonical draft; link replay; reassign/cancel; restart; operator/field/draft readback; DB event and duplicate checks; negative authorization checks","evidence":"Runtime migration applied 242 DSH files including U004. DSH rebuilt from the candidate. Assignment/open/conversion succeeded; one canonical draft prt_adf3560122f84759882c99743f5f468d was linked; link replay returned replayed=true; reassign/cancel persisted versions 2/3; after DSH restart operator/field/draft readback converged to draft_linked/version 3; DB showed 3 immutable events per assignment and one matching partner; operator-on-field returned 403 and cancelled-open returned 409 fail-closed."}
   ],
-  "blockers": ["V0042 runtime and persisted cross-surface evidence is missing; U004 remains open fail-closed."],
+  "blockers": [],
   "deviations": [],
-  "decision": "NEEDS_EVIDENCE"
+  "decision": "PASS"
 }
