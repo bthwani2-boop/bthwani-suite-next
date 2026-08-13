@@ -113,7 +113,7 @@ const checks = [
     ],
     required: [
       "Promise<PartnerTeamMutationResult>",
-      "const result = await onInviteMember(identity)",
+      "const result = await onInviteMember(identity, inviteRole)",
       "const result = await onMemberAction(member.id, action)",
       "if (!result.ok)",
       'action === "audit-log"',

@@ -487,8 +487,8 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
             {...(selfStatusState.partner.legalIdentityType ? { legalIdentityType: selfStatusState.partner.legalIdentityType } : {})}
             {...(selfStatusState.partner.legalIdentityNumber ? { legalIdentityNumber: selfStatusState.partner.legalIdentityNumber } : {})}
             {...(onOpenStoreScope ? { onOpenStoreScope } : {})}
-            {...(onOpenSupportScreen
-              ? { onOpenSupportScreen: () => { onOpenSupportScreen('support-directory' as any); } }
+            {...(onOpenSupportDirectory
+              ? { onOpenSupportScreen: onOpenSupportDirectory }
               : {})}
           />
         </HubSectionShell>
@@ -600,9 +600,6 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           onBack={() => updateSection("hub")}
           {...(onOpenStoreCourierSetup ? { onOpenStoreCourierSetup } : {})}
           {...(onOpenCommercialModel ? { onOpenCommercialModel } : {})}
-          {...(onOpenSupportScreen
-            ? { onOpenSupportScreen: () => { onOpenSupportScreen('support-directory' as any); } }
-            : {})}
           {...(props.onOpenTeamManagement
             ? { onOpenTeamManagement: props.onOpenTeamManagement }
             : {})}
