@@ -46,3 +46,5 @@ export * from './finance/cod-reconciliation.api';
 export * from './dsh-link/dsh-api-base-url';
 export * from './dsh-link/dsh-http-request';
 export * from './payment/payment-session-runtime.api';
+export * from './payment/captain-cash-in.api';
+export * from './payment/CaptainCashInPanel';

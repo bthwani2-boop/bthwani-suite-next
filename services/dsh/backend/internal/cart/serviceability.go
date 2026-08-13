@@ -38,6 +38,7 @@ func GetOrCreateSingleStoreCart(
 	clientID string,
 	storeID string,
 	mode FulfillmentMode,
+	expectedVersion *int,
 ) (*Cart, error) {
 	clientID = strings.TrimSpace(clientID)
 	storeID = strings.TrimSpace(storeID)
@@ -82,16 +83,8 @@ func GetOrCreateSingleStoreCart(
 		if current.StoreID != storeID {
 			return nil, &StoreConflictError{ActiveCartID: current.ID, ActiveStoreID: current.StoreID}
 		}
-		if current.FulfillmentMode != mode {
-			if _, err := tx.ExecContext(ctx, `
-				UPDATE dsh_carts
-				SET fulfillment_mode = $2, version = version + 1, updated_at = NOW()
-				WHERE id = $1::uuid`, current.ID, mode); err != nil {
-				return nil, err
-			}
-			current.FulfillmentMode = mode
-			current.Version++
-			current.UpdatedAt = time.Now().UTC()
+		if expectedVersion != nil && current.Version != *expectedVersion {
+			return nil, ErrConflict
 		}
 		if err := tx.Commit(); err != nil {
 			return nil, err
@@ -134,16 +127,16 @@ func GetOrCreateSingleStoreCart(
 }
 
 type CartItemValidation struct {
-	ItemID                         string  `json:"itemId"`
-	MasterProductID                string  `json:"masterProductId"`
-	Status                         string  `json:"status"`
-	ReasonCode                     string  `json:"reasonCode,omitempty"`
-	SnapshotUnitPriceMinorUnits    int64   `json:"snapshotUnitPriceMinorUnits"`
-	CurrentUnitPriceMinorUnits     *int64  `json:"currentUnitPriceMinorUnits,omitempty"`
-	SnapshotCurrency               string  `json:"snapshotCurrency"`
-	CurrentCurrency                *string `json:"currentCurrency,omitempty"`
-	SnapshotAssortmentID           *string `json:"snapshotAssortmentId,omitempty"`
-	CurrentAssortmentID            *string `json:"currentAssortmentId,omitempty"`
+	ItemID                      string  `json:"itemId"`
+	MasterProductID             string  `json:"masterProductId"`
+	Status                      string  `json:"status"`
+	ReasonCode                  string  `json:"reasonCode,omitempty"`
+	SnapshotUnitPriceMinorUnits int64   `json:"snapshotUnitPriceMinorUnits"`
+	CurrentUnitPriceMinorUnits  *int64  `json:"currentUnitPriceMinorUnits,omitempty"`
+	SnapshotCurrency            string  `json:"snapshotCurrency"`
+	CurrentCurrency             *string `json:"currentCurrency,omitempty"`
+	SnapshotAssortmentID        *string `json:"snapshotAssortmentId,omitempty"`
+	CurrentAssortmentID         *string `json:"currentAssortmentId,omitempty"`
 }
 
 type CartValidation struct {
@@ -384,6 +377,13 @@ func CheckGovernedServiceability(
 			result.Serviceable = false
 			result.Code = "mode_unavailable"
 			result.Reason = "requested fulfillment mode is unavailable"
+		} else if requestedMode == ModePickup {
+			// Pickup does not require the customer to be inside the store's
+			// delivery zone. Its mode capability is the serviceability decision
+			// when the store itself is published and operationally serviceable.
+			result.Serviceable = true
+			result.Code = "serviceable"
+			result.Reason = ""
 		}
 	}
 

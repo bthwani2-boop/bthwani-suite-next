@@ -336,6 +336,12 @@ paths:
     $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1payout-requests"
   /dsh/captain/me/finance/wallet:
     $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1wallet"
+  /dsh/captain/me/finance/topup-sessions:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1topup-sessions"
+  /dsh/captain/me/finance/topup-sessions/{topUpSessionId}:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1topup-sessions~1{topUpSessionId}"
+  /dsh/captain/me/finance/topup-sessions/{topUpSessionId}/{operation}:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1topup-sessions~1{topUpSessionId}~1{operation}"
   /dsh/client/me/finance/ledger-entries:
     $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1client~1me~1finance~1ledger-entries"
   /dsh/client/me/finance/wallet:
@@ -1367,6 +1373,8 @@ components:
       $ref: "./components/schemas/checkout.schemas.yaml#/DshCreateCheckoutIntentRequest"
     DshCheckoutIntentResponse:
       $ref: "./components/schemas/checkout.schemas.yaml#/DshCheckoutIntentResponse"
+    DshCheckoutCartVersionConflict:
+      $ref: "./components/schemas/checkout.schemas.yaml#/DshCheckoutCartVersionConflict"
     DshOperatorCheckoutIntentsResponse:
       $ref: "./components/schemas/checkout.schemas.yaml#/DshOperatorCheckoutIntentsResponse"
     DshOrderStatus:

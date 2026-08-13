@@ -1,6 +1,7 @@
 import React from 'react';
-import { ActivityIndicator, BackHandler, Platform, View, Pressable, StyleSheet, I18nManager } from 'react-native';
-import { Icon, Text, spacing, colorRoles } from '@bthwani/ui-kit';
+import { ActivityIndicator, BackHandler, Platform, View, Pressable, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Icon, Text, spacing, colorRoles, radius } from '@bthwani/ui-kit';
 import type { DshPartnerSurfaceProps } from './dsh-partner.types';
 import { useDshPartnerSurfaceModel } from './useDshPartnerSurfaceModel';
 import { PlatformVarsProvider, usePlatformVars } from '../shared/platform';
@@ -8,14 +9,16 @@ import { PartnerStoreScopeSheet } from './store/PartnerStoreScopeSheet';
 import { DshPartnerOrderJourneyRenderer } from './DshPartnerOrderJourneyRenderer';
 
 const COLORS = {
-  background: colorRoles.surfaceBase,
+  background: colorRoles.surfaceMuted,
   surface: colorRoles.surfaceBase,
-  text: colorRoles.brandStructure,
-  textMuted: colorRoles.brandStructure,
-  brand: colorRoles.brandStructure,
-  brandAction: colorRoles.brandAction,
-  line: colorRoles.surfaceBase,
-  success: colorRoles.brandStructure,
+  surfaceElevated: colorRoles.surfaceBase,
+  text: colorRoles.textPrimary,
+  textMuted: colorRoles.textMuted,
+  brand: colorRoles.brandAction,
+  brandSoft: colorRoles.brandActionSoft,
+  line: colorRoles.borderSubtle,
+  lineStrong: colorRoles.borderStrong,
+  success: colorRoles.success,
   white: colorRoles.surfaceBase,
 };
 
@@ -36,6 +39,7 @@ export function DshPartnerSurface(props: DshPartnerSurfaceProps) {
 }
 
 function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }: DshPartnerSurfaceProps = {}) {
+  const insets = useSafeAreaInsets();
   const { dshClientId } = usePlatformVars();
 
   const {
@@ -115,7 +119,7 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
       return (
         <View style={styles.shellContainer}>
           <View style={styles.centerLoading}>
-            <ActivityIndicator color={COLORS.brand} />
+            <ActivityIndicator size="large" color={COLORS.brand} />
           </View>
         </View>
       );
@@ -135,29 +139,28 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
     );
   }
 
-  const isRTL = I18nManager.isRTL;
-  const rowDirection = isRTL ? 'row-reverse' : 'row';
-
   const topBar = (
-    <View style={[styles.headerContainer, { flexDirection: rowDirection }]}>
-      <Pressable onPress={() => openAccountHub('profile')} style={styles.profileButton}>
-        <Icon name="person-circle-outline" size={28} tone="brand" />
-      </Pressable>
-
-      <Pressable onPress={openStoreScope} style={[styles.storeScopeButton, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
-        <Text role="bodyStrong" style={styles.storeNameText}>{runtimePartnerProfile.storeName}</Text>
-        <View style={[styles.storeScopeDetails, { flexDirection: rowDirection }]}>
-          <Text role="caption" tone="muted">{`${selectedStoreScope.displayName} · ${runtimePartnerProfile.activeZoneLabel}`}</Text>
-          <Icon name="chevron-down" size={12} tone="muted" />
+    <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 12) + 6 }]}>
+      <Pressable onPress={() => openAccountHub('profile')} style={styles.profileButton} accessibilityLabel="الملف التعريفي للمتجر">
+        <View style={styles.profileAvatar}>
+          <Icon name="storefront-outline" size={22} tone="brand" />
         </View>
       </Pressable>
 
-      <View style={[styles.headerActions, { flexDirection: rowDirection }]}>
-        <Pressable accessibilityLabel="البحث عن الطلبات" onPress={openOrdersSearch}>
-          <Icon name="search-outline" size={24} tone="brand" />
+      <Pressable onPress={openStoreScope} style={styles.storeScopeButton} accessibilityLabel="تغيير الفرع النشط">
+        <Text role="bodyStrong" style={styles.storeNameText}>{runtimePartnerProfile.storeName}</Text>
+        <View style={styles.storeScopeDetails}>
+          <Text role="caption" tone="muted">{`${selectedStoreScope.displayName} · ${runtimePartnerProfile.activeZoneLabel}`}</Text>
+          <Icon name="chevron-down" size={14} tone="muted" />
+        </View>
+      </Pressable>
+
+      <View style={styles.headerActions}>
+        <Pressable accessibilityLabel="البحث عن الطلبات" onPress={openOrdersSearch} style={styles.headerActionButton}>
+          <Icon name="search-outline" size={22} tone="brand" />
         </Pressable>
-        <Pressable accessibilityLabel="الإشعارات" onPress={() => { setActiveOrderId(initialOrderId); setRoute('bell'); }}>
-          <Icon name="notifications-outline" size={24} tone="brand" />
+        <Pressable accessibilityLabel="الإشعارات" onPress={() => { setActiveOrderId(initialOrderId); setRoute('bell'); }} style={styles.headerActionButton}>
+          <Icon name="notifications-outline" size={22} tone="brand" />
         </Pressable>
       </View>
     </View>
@@ -192,7 +195,7 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
   };
 
   const bottomNavBar = showBottomNav ? (
-    <View style={[styles.bottomNavContainer, { flexDirection: rowDirection }]}>
+    <View style={[styles.bottomNavContainer, { paddingBottom: Math.max(insets.bottom, 6) }]}>
       {navItems.map((item) => {
         const isActive = bottomActiveId === item.id;
         const iconName = isActive ? item.activeIcon : item.icon;
@@ -200,9 +203,13 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
           <Pressable
             key={item.id}
             onPress={() => handleNavSelect(item.id)}
-            style={styles.navTab}
+            style={[styles.navTab, isActive && styles.navTabActive]}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isActive }}
           >
-            <Icon name={iconName} size={20} tone={isActive ? 'brand' : 'muted'} />
+            <View style={[styles.navIconWrapper, isActive && styles.navIconWrapperActive]}>
+              <Icon name={iconName} size={22} tone={isActive ? 'brand' : 'muted'} />
+            </View>
             <Text
               role="caption"
               style={[
@@ -296,32 +303,58 @@ const styles = StyleSheet.create({
   },
   headerContainer: {
     backgroundColor: COLORS.surface,
-    paddingTop: Platform.OS === 'ios' ? 48 : 16,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
+    paddingBottom: spacing[3],
+    paddingHorizontal: spacing[4],
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: COLORS.line,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+    zIndex: 10,
   },
   profileButton: {
     justifyContent: 'center',
     alignItems: 'center',
   },
+  profileAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.brandSoft,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   storeScopeButton: {
     flex: 1,
+    marginHorizontal: spacing[3],
     gap: 2,
   },
   storeNameText: {
     color: COLORS.text,
+    fontSize: 15,
   },
   storeScopeDetails: {
+    flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
   headerActions: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing[3],
+    gap: spacing[2],
+  },
+  headerActionButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: COLORS.brandSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   centerLoading: {
     flex: 1,
@@ -332,54 +365,65 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    padding: spacing[6],
+    gap: spacing[2],
   },
   emptyStateTitle: {
     color: COLORS.text,
-    marginTop: 16,
     textAlign: 'center',
   },
   emptyStateDesc: {
     color: COLORS.textMuted,
-    marginTop: 8,
     textAlign: 'center',
+    lineHeight: 20,
   },
   mainContentContainer: {
     flex: 1,
-    marginTop: -2,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    overflow: 'visible',
-    paddingBottom: Platform.OS === 'android' ? 72 : 80,
+    paddingBottom: 76,
   },
   surfaceContentContainer: {
     flex: 1,
-    overflow: 'visible',
-    paddingBottom: Platform.OS === 'android' ? 72 : 80,
+    paddingBottom: 76,
   },
   bottomNavContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 64,
     backgroundColor: COLORS.surface,
     borderTopWidth: 1,
     borderTopColor: COLORS.line,
+    flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
     zIndex: 1000,
-    paddingBottom: Platform.OS === 'ios' ? 12 : 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 8,
+    paddingTop: spacing[2],
   },
   navTab: {
     flex: 1,
-    height: '100%',
-    justifyContent: 'center',
     alignItems: 'center',
-    gap: 2,
+    justifyContent: 'center',
+    gap: 3,
+    paddingVertical: 2,
+  },
+  navTabActive: {},
+  navIconWrapper: {
+    width: 36,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navIconWrapperActive: {
+    backgroundColor: COLORS.brandSoft,
   },
   navTabText: {
-    fontSize: 10,
+    fontSize: 11,
   },
   navTabTextActive: {
     color: COLORS.brand,
@@ -387,7 +431,7 @@ const styles = StyleSheet.create({
   },
   navTabTextInactive: {
     color: COLORS.textMuted,
-    fontWeight: '400',
+    fontWeight: '500',
   },
 });
 

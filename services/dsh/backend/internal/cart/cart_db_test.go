@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -115,6 +116,63 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	}
 	if snapshot.AmountMinorUnits != 7650 || snapshot.Currency != "USD" || snapshot.SnapshotHash == "" {
 		t.Fatalf("unexpected checkout snapshot: %#v", snapshot)
+	}
+
+	// Both callers confirm the same cart version. The row lock in UpsertItem
+	// must serialize them so exactly one mutation is accepted and the other is
+	// rejected after observing the committed version increment.
+	start := make(chan struct{})
+	results := make(chan error, 2)
+	var group sync.WaitGroup
+	for i := 0; i < 2; i++ {
+		group.Add(1)
+		go func() {
+			defer group.Done()
+			<-start
+			_, err := UpsertItem(ctx, db, storeID, cartID, UpsertItemInput{
+				MasterProductID: productID,
+				Quantity:        4,
+				ExpectedVersion: func() *int { value := 2; return &value }(),
+			})
+			results <- err
+		}()
+	}
+	close(start)
+	group.Wait()
+	close(results)
+
+	successes := 0
+	conflicts := 0
+	for err := range results {
+		switch {
+		case err == nil:
+			successes++
+		case errors.Is(err, ErrConflict):
+			conflicts++
+		default:
+			t.Fatalf("concurrent upsert returned unexpected error: %v", err)
+		}
+	}
+	if successes != 1 || conflicts != 1 {
+		t.Fatalf("expected one accepted mutation and one stale-version conflict, got successes=%d conflicts=%d", successes, conflicts)
+	}
+	failedMode := ModePartnerDelivery
+	failedVersion := 3
+	if _, err := UpsertItem(ctx, db, storeID, cartID, UpsertItemInput{
+		MasterProductID: productID,
+		Quantity:        999,
+		ExpectedVersion: &failedVersion,
+		FulfillmentMode: &failedMode,
+	}); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected invalid inventory mutation, got %v", err)
+	}
+	var modeAfterFailure string
+	var versionAfterFailure int
+	if err := db.QueryRowContext(ctx, `SELECT fulfillment_mode, version FROM dsh_carts WHERE id=$1::uuid`, cartID).Scan(&modeAfterFailure, &versionAfterFailure); err != nil {
+		t.Fatalf("read cart after failed mode/item mutation: %v", err)
+	}
+	if modeAfterFailure != string(ModeBthwaniDelivery) || versionAfterFailure != 3 {
+		t.Fatalf("failed item mutation left cart state behind: mode=%q version=%d", modeAfterFailure, versionAfterFailure)
 	}
 	if _, err := db.ExecContext(ctx, `UPDATE dsh_store_assortment_prices SET amount_minor=2600, version=version+1, updated_at=NOW() WHERE store_assortment_id=$1`, assortmentID); err != nil {
 		t.Fatal(err)

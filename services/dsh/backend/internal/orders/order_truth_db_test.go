@@ -313,6 +313,72 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 	}
 }
 
+func TestCreateOrderTruthConcurrentReplacementKeysCreateOneOrderDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	fixture := seedOrderTruthDBFixture(t, db)
+	start := make(chan struct{})
+	type result struct {
+		order  *OrderTruth
+		replay bool
+		err    error
+	}
+	results := make(chan result, 2)
+	for i := 0; i < 2; i++ {
+		key := fmt.Sprintf("concurrent-order-key-%d-%d", time.Now().UnixNano(), i)
+		correlation := fmt.Sprintf("concurrent-order-correlation-%d-%d", time.Now().UnixNano(), i)
+		go func(idempotencyKey, correlationID string) {
+			<-start
+			order, replay, err := CreateOrderTruth(db, CreateOrderTruthInput{
+				CheckoutIntentID:  fixture.CheckoutID,
+				ClientID:          fixture.ClientID,
+				OperatorContextID: fixture.OperatorContextID,
+				IdempotencyKey:    idempotencyKey,
+				CorrelationID:     correlationID,
+			})
+			results <- result{order: order, replay: replay, err: err}
+		}(key, correlation)
+	}
+	close(start)
+
+	first := <-results
+	second := <-results
+	if first.err != nil || second.err != nil {
+		t.Fatalf("concurrent replacement-key creation failed: first=%v second=%v", first.err, second.err)
+	}
+	if first.order == nil || second.order == nil || first.order.ID != second.order.ID {
+		t.Fatalf("concurrent replacement keys returned different orders: first=%+v second=%+v", first.order, second.order)
+	}
+	if first.replay == second.replay {
+		t.Fatalf("exactly one concurrent creator must be initial and the other replay: first=%v second=%v", first.replay, second.replay)
+	}
+
+	var orderCount, eventCount, outboxCount int
+	if err := db.QueryRow(`
+		SELECT COUNT(*) FROM dsh_orders
+		WHERE operator_context_id=$1 AND checkout_intent_id=$2::uuid`,
+		fixture.OperatorContextID, fixture.CheckoutID,
+	).Scan(&orderCount); err != nil {
+		t.Fatalf("count concurrent orders: %v", err)
+	}
+	if err := db.QueryRow(`
+		SELECT COUNT(*) FROM dsh_order_status_events
+		WHERE operator_context_id=$1 AND order_id=$2::uuid AND event_type='order.created'`,
+		fixture.OperatorContextID, first.order.ID,
+	).Scan(&eventCount); err != nil {
+		t.Fatalf("count concurrent order events: %v", err)
+	}
+	if err := db.QueryRow(`
+		SELECT COUNT(*) FROM dsh_order_event_outbox
+		WHERE operator_context_id=$1 AND order_id=$2::uuid AND event_type='order.created'`,
+		fixture.OperatorContextID, first.order.ID,
+	).Scan(&outboxCount); err != nil {
+		t.Fatalf("count concurrent order outbox rows: %v", err)
+	}
+	if orderCount != 1 || eventCount != 1 || outboxCount != 1 {
+		t.Fatalf("concurrent creation duplicated governed effects: orders=%d events=%d outbox=%d", orderCount, eventCount, outboxCount)
+	}
+}
+
 func containsJSONField(raw []byte, field string) bool {
 	var decoded map[string]any
 	if err := json.Unmarshal(raw, &decoded); err != nil {

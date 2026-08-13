@@ -100,23 +100,20 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		deliveryAddressSnapshot = address.CheckoutSnapshot()
 	}
 
-	// J051: Enforce mode capability using the universal check.
-	// This covers store_unavailable, out_of_area, and mode_not_enabled securely.
-	modesResp := cart.GetFulfillmentModes(r.Context(), s.db, storeID, serviceAreaCode, clientLat, clientLng)
-	var modeAvailable bool
-	var reasonCode string
-	for _, m := range modesResp.Modes {
-		if string(m.Mode) == fulfillmentMode {
-			modeAvailable = m.Available
-			reasonCode = m.UnavailableReasonCode
-			break
-		}
-	}
-	if !modeAvailable {
+	// Re-evaluate the canonical DSH operational decision immediately before the
+	// OCC-locked cart snapshot. A cached or earlier successful serviceability
+	// result cannot authorize checkout after a pause, capacity change, mode
+	// disablement, or provider denial.
+	serviceability := cart.CheckGovernedServiceability(
+		r.Context(), s.db, s.maps, storeID, serviceAreaCode, clientLat, clientLng,
+		cart.FulfillmentMode(fulfillmentMode),
+	)
+	if !serviceability.Serviceable {
+		reasonCode := serviceability.Code
 		if reasonCode == "" {
-			reasonCode = "mode_not_enabled"
+			reasonCode = "serviceability_unavailable"
 		}
-		store.SendError(w, http.StatusUnprocessableEntity, strings.ToUpper(reasonCode), fmt.Sprintf("fulfillment mode %s is unavailable: %s", fulfillmentMode, reasonCode))
+		store.SendError(w, http.StatusUnprocessableEntity, strings.ToUpper(reasonCode), fmt.Sprintf("checkout is unavailable: %s", reasonCode))
 		return
 	}
 
@@ -206,7 +203,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			return
 		}
 		if errors.Is(snapshotErr, cart.ErrVersionConflict) {
-			store.SendError(w, http.StatusConflict, "CART_VERSION_CONFLICT", "cart changed; reload the current cart before checkout")
+			s.sendCheckoutCartVersionConflict(w, r, actor.ID, cartID, storeID, body.ExpectedCartVersion)
 			return
 		}
 		if errors.Is(snapshotErr, cart.ErrInvalid) {
@@ -454,6 +451,33 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		return
 	}
 	store.SendJSON(w, responseStatus, map[string]any{"intent": marshalIntentWithPricing(intent, pricing)})
+}
+
+func (s *protectedStoreServer) sendCheckoutCartVersionConflict(
+	w http.ResponseWriter,
+	r *http.Request,
+	clientID string,
+	cartID string,
+	storeID string,
+	expectedVersion int,
+) {
+	current, err := cart.GetCart(r.Context(), s.db, s.wlt, clientID, storeID)
+	if errors.Is(err, cart.ErrNotFound) {
+		store.SendError(w, http.StatusConflict, "CART_VERSION_CONFLICT", "cart changed and is no longer active")
+		return
+	}
+	if err != nil || current.ID != cartID {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cart changed but canonical readback failed")
+		return
+	}
+	w.Header().Set("ETag", fmt.Sprintf(`"%d"`, current.Version))
+	store.SendJSON(w, http.StatusConflict, map[string]any{
+		"code":                "CART_VERSION_CONFLICT",
+		"message":             "cart changed; reload the current cart before checkout",
+		"expectedCartVersion": expectedVersion,
+		"currentCartVersion":  current.Version,
+		"cart":                current,
+	})
 }
 
 func (s *protectedStoreServer) handleGetCheckoutIntent(w http.ResponseWriter, r *http.Request) {

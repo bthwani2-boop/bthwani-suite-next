@@ -166,6 +166,9 @@ func registerRepresentativeFinanceRoutes(mux *http.ServeMux, s *protectedStoreSe
 	mux.HandleFunc("GET /dsh/captain/me/finance/payout-requests", s.handleCaptainPayoutRequests)
 	mux.HandleFunc("POST /dsh/captain/me/finance/payout-requests", s.handleCaptainCreatePayoutRequest)
 	mux.HandleFunc("GET /dsh/captain/me/finance/payout-destination", s.handleCaptainPayoutDestinationRead)
+	mux.HandleFunc("POST /dsh/captain/me/finance/topup-sessions", s.handleCaptainCreateTopUpSession)
+	mux.HandleFunc("GET /dsh/captain/me/finance/topup-sessions/{topUpSessionId}", s.handleCaptainReadTopUpSession)
+	mux.HandleFunc("POST /dsh/captain/me/finance/topup-sessions/{topUpSessionId}/{operation}", s.handleCaptainMutateTopUpSession)
 	mux.HandleFunc("POST /dsh/captain/finance/cod-records/{recordId}/collect", s.handleCaptainCollectCod)
 	mux.HandleFunc("POST /dsh/captain/finance/cod-records/{recordId}/remit", s.handleCaptainRemitCod)
 

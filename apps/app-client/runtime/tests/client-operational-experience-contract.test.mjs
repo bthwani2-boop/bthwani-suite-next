@@ -189,6 +189,11 @@ test("client commercial profile is reachable from My Space and has no inert priv
     "services/dsh/frontend/app-client/account/MyProfileScreen.tsx",
     ["fetchClientProfile", "upsertClientProfilePreferences", "upsertClientProfileConsents", "serverProfile"],
   );
+  const profileApi = assertMarkers(
+    "services/dsh/frontend/shared/client-profile/client-profile.api.ts",
+    ["resolveDshApiBaseUrl()"],
+  );
+  assert.equal(profileApi.includes('createDshHttpClient("",'), false);
   assert.equal(profile.includes("طلب نسخة بياناتي"), false);
   assert.equal(profile.includes("طلب حذف الحساب"), false);
 });
@@ -212,6 +217,33 @@ test("checkout carries the confirmed cart version into the canonical DSH OCC con
     ["required: [cartId, storeId, expectedCartVersion]", "expectedCartVersion: { type: integer, minimum: 1 }"],
   );
   assert.ok(schema.includes("expectedCartVersion"));
+  const checkoutHandler = assertMarkers(
+    "services/dsh/backend/internal/http/checkout.go",
+    ["CheckGovernedServiceability", "ComputeCheckoutSnapshotTx", "CART_VERSION_CONFLICT", "currentCartVersion"],
+  );
+  assert.ok(checkoutHandler.includes("CheckGovernedServiceability"));
+  const snapshot = assertMarkers(
+    "services/dsh/backend/internal/cart/checkout_snapshot_scoped.go",
+    ["func ComputeCheckoutSnapshotTx(", "expectedVersion int"],
+  );
+  assert.equal(snapshot.includes("ComputeCheckoutSnapshotForClient"), false);
+  const conflictSchema = assertMarkers(
+    "services/dsh/contracts/components/schemas/checkout.schemas.yaml",
+    ["DshCheckoutCartVersionConflict", "currentCartVersion"],
+  );
+  assert.ok(conflictSchema.includes("DshCheckoutCartVersionConflict"));
+  assertMarkers(
+    "services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx",
+    ["useCreateOrderTruthController", "submitOrder({ checkoutIntentId })", "order_ready"],
+  );
+  assertMarkers(
+    "services/dsh/frontend/shared/order-truth/order-truth.api.ts",
+    ["/dsh/client/order-truth", "idempotencyKey: context.idempotencyKey", "correlationId: context.correlationId"],
+  );
+  assertMarkers(
+    "services/dsh/frontend/shared/order-truth/use-order-truth-controller.ts",
+    ["fetchClientOrderTruthDetail(created.id, token)", "clearOrderTruthAttempt(attempt.fingerprint)"],
+  );
 });
 
 test("privacy-safe order sharing uses temporary Expo files and no sensitive references", () => {

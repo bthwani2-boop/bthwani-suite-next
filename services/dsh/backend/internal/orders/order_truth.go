@@ -103,6 +103,12 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, input.OperatorContextID+"|"+input.ClientID+"|"+input.IdempotencyKey); err != nil {
 		return nil, false, err
 	}
+	// Serialize every creation attempt for the same checkout aggregate after
+	// serializing the idempotency-key scope. A replacement key must replay the
+	// already-created order instead of racing the checkout unique constraint.
+	if _, err = tx.Exec(`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`, input.OperatorContextID+"|"+input.ClientID+"|checkout|"+input.CheckoutIntentID); err != nil {
+		return nil, false, err
+	}
 
 	var existingFingerprint string
 	var existingOrderID sql.NullString

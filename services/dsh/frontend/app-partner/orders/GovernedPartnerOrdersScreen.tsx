@@ -7,6 +7,7 @@ import {
   MobileScrollView,
   SearchField,
   StateView,
+  Surface,
   Tabs,
   Text,
 } from '@bthwani/ui-kit';
@@ -187,8 +188,8 @@ export function GovernedPartnerOrdersScreen({
       {filtered.length === 0 ? (
         <StateView title="لا توجد نتائج" description="غيّر التبويب أو عبارة البحث." />
       ) : (
-        <Box gap={2}>
-          {filtered.map((item, index) => {
+        <Box gap={3}>
+          {filtered.map((item) => {
             const action = primaryAction(item);
             const expanded = expandedId === item.id;
             const openHandoffException = hasOpenHandoffException(item);
@@ -197,69 +198,72 @@ export function GovernedPartnerOrdersScreen({
               || item.storeCaptainHandoffStatus === 'partner_confirmed'
             );
             return (
-              <React.Fragment key={item.id}>
-                {index > 0 ? <Divider /> : null}
-                <Box gap={2} paddingY={2}>
-                  <Box layoutDirection="row" justify="space-between" align="center">
-                    <Box gap={1}>
-                      <Text role="bodyStrong">{item.orderCode}</Text>
-                      <Text role="caption" tone="muted">{`${item.itemsCountLabel} · ${item.amountLabel} · ${item.elapsedLabel}`}</Text>
-                    </Box>
-                    <Badge label={statusLabel(item)} tone={statusTone(item)} />
+              <Surface
+                key={item.id}
+                tone="raised"
+                padding={4}
+                gap={3}
+                radiusToken="xl"
+              >
+                <Box layoutDirection="row" justify="space-between" align="center">
+                  <Box gap={1}>
+                    <Text role="titleSm">{item.orderCode}</Text>
+                    <Text role="caption" tone="muted">{`${item.itemsCountLabel} · ${item.amountLabel} · ${item.elapsedLabel}`}</Text>
                   </Box>
-
-                  {expanded ? (
-                    <Box gap={1} background="surfaceInset" padding={3}>
-                      <Text role="bodySm">{item.itemsSummaryLabel ?? 'تُقرأ تفاصيل الأصناف من الطلب عند فتحه.'}</Text>
-                      <Text role="caption" tone="muted">{`نمط التنفيذ: ${item.orderTypeLabel}`}</Text>
-                      {item.preparation.estimatedReadyAt ? (
-                        <Text role="caption" tone="muted">{`موعد الجاهزية: ${new Date(item.preparation.estimatedReadyAt).toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit' })}`}</Text>
-                      ) : null}
-                      {item.preparation.preparationDelayReason ? (
-                        <Text role="caption" tone="warning">{`سبب آخر مراجعة: ${item.preparation.preparationDelayReason}`}</Text>
-                      ) : null}
-                      {item.preparationIssues.filter((issue) => issue.status === 'open').map((issue) => (
-                        <Text key={issue.id} role="caption" tone="danger">
-                          {`${PREPARATION_ISSUE_KIND_LABELS[issue.kind]}: ${issue.note}`}
-                        </Text>
-                      ))}
-                      {openHandoffException && item.openStoreCaptainHandoffExceptionReason ? (
-                        <Text role="bodySm" tone="danger">
-                          {`${STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS[item.openStoreCaptainHandoffExceptionReason]} · ${item.openStoreCaptainHandoffExceptionStatus === 'acknowledged' ? 'قيد مراجعة العمليات' : 'بانتظار اعتماد العمليات'}`}
-                        </Text>
-                      ) : null}
-                      {item.storeCaptainHandoffCaptainId ? (
-                        <Text role="caption" tone="muted">{`الكابتن المعيّن: ${item.storeCaptainHandoffCaptainId}`}</Text>
-                      ) : null}
-                      {item.nextOwnerLabel ? <Text role="caption" tone="muted">{`الجهة التالية: ${item.nextOwnerLabel}`}</Text> : null}
-                      <OrderRefundStatusCard orderId={item.id} surface="partner" />
-                    </Box>
-                  ) : null}
-
-                  <Box layoutDirection="row" gap={2}>
-                    <Button label={primaryLabel(item)} size="sm" fullWidth={false} onPress={() => onAction(action, item.id)} />
-                    {handoffExceptionAvailable ? (
-                      <Button label="نقص أو عدم تطابق" tone="danger" size="sm" fullWidth={false} onPress={() => onAction('handoff_exception', item.id)} />
-                    ) : null}
-                    {item.allowedActions.includes('report_issue') && action !== 'report_issue' ? (
-                      <Button label="تسجيل مشكلة" tone="danger" size="sm" fullWidth={false} onPress={() => onAction('report_issue', item.id)} />
-                    ) : null}
-                    {item.allowedActions.includes('revise_estimate') ? (
-                      <Button label="تعديل الوقت" tone="secondary" size="sm" fullWidth={false} onPress={() => onAction('revise_estimate', item.id)} />
-                    ) : null}
-                    {item.allowedActions.includes('reject') ? (
-                      <Button label="رفض مع سبب" tone="danger" size="sm" fullWidth={false} onPress={() => onAction('reject', item.id)} />
-                    ) : null}
-                    <Button
-                      label={expanded ? 'إغلاق التفاصيل' : 'تفاصيل'}
-                      tone="ghost"
-                      size="sm"
-                      fullWidth={false}
-                      onPress={() => setExpandedId(expanded ? null : item.id)}
-                    />
-                  </Box>
+                  <Badge label={statusLabel(item)} tone={statusTone(item)} />
                 </Box>
-              </React.Fragment>
+
+                {expanded ? (
+                  <Box gap={2} background="surfaceInset" padding={3} radiusToken="md">
+                    <Text role="bodySm">{item.itemsSummaryLabel ?? 'تُقرأ تفاصيل الأصناف من الطلب عند فتحه.'}</Text>
+                    <Text role="caption" tone="muted">{`نمط التنفيذ: ${item.orderTypeLabel}`}</Text>
+                    {item.preparation.estimatedReadyAt ? (
+                      <Text role="caption" tone="muted">{`موعد الجاهزية: ${new Date(item.preparation.estimatedReadyAt).toLocaleTimeString('ar-YE', { hour: '2-digit', minute: '2-digit' })}`}</Text>
+                    ) : null}
+                    {item.preparation.preparationDelayReason ? (
+                      <Text role="caption" tone="warning">{`سبب آخر مراجعة: ${item.preparation.preparationDelayReason}`}</Text>
+                    ) : null}
+                    {item.preparationIssues.filter((issue) => issue.status === 'open').map((issue) => (
+                      <Text key={issue.id} role="caption" tone="danger">
+                        {`${PREPARATION_ISSUE_KIND_LABELS[issue.kind]}: ${issue.note}`}
+                      </Text>
+                    ))}
+                    {openHandoffException && item.openStoreCaptainHandoffExceptionReason ? (
+                      <Text role="bodySm" tone="danger">
+                        {`${STORE_CAPTAIN_HANDOFF_EXCEPTION_LABELS[item.openStoreCaptainHandoffExceptionReason]} · ${item.openStoreCaptainHandoffExceptionStatus === 'acknowledged' ? 'قيد مراجعة العمليات' : 'بانتظار اعتماد العمليات'}`}
+                      </Text>
+                    ) : null}
+                    {item.storeCaptainHandoffCaptainId ? (
+                      <Text role="caption" tone="muted">{`الكابتن المعيّن: ${item.storeCaptainHandoffCaptainId}`}</Text>
+                    ) : null}
+                    {item.nextOwnerLabel ? <Text role="caption" tone="muted">{`الجهة التالية: ${item.nextOwnerLabel}`}</Text> : null}
+                    <OrderRefundStatusCard orderId={item.id} surface="partner" />
+                  </Box>
+                ) : null}
+
+                <Box layoutDirection="row" gap={2} align="center" style={{ flexWrap: 'wrap' }}>
+                  <Button label={primaryLabel(item)} size="sm" fullWidth={false} onPress={() => onAction(action, item.id)} />
+                  {handoffExceptionAvailable ? (
+                    <Button label="نقص أو عدم تطابق" tone="danger" size="sm" fullWidth={false} onPress={() => onAction('handoff_exception', item.id)} />
+                  ) : null}
+                  {item.allowedActions.includes('report_issue') && action !== 'report_issue' ? (
+                    <Button label="تسجيل مشكلة" tone="danger" size="sm" fullWidth={false} onPress={() => onAction('report_issue', item.id)} />
+                  ) : null}
+                  {item.allowedActions.includes('revise_estimate') ? (
+                    <Button label="تعديل الوقت" tone="secondary" size="sm" fullWidth={false} onPress={() => onAction('revise_estimate', item.id)} />
+                  ) : null}
+                  {item.allowedActions.includes('reject') ? (
+                    <Button label="رفض مع سبب" tone="danger" size="sm" fullWidth={false} onPress={() => onAction('reject', item.id)} />
+                  ) : null}
+                  <Button
+                    label={expanded ? 'إغلاق التفاصيل' : 'تفاصيل'}
+                    tone="ghost"
+                    size="sm"
+                    fullWidth={false}
+                    onPress={() => setExpandedId(expanded ? null : item.id)}
+                  />
+                </Box>
+              </Surface>
             );
           })}
         </Box>

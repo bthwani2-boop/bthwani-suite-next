@@ -1,5 +1,4 @@
 import React, { useCallback } from "react";
-import { I18nManager } from "react-native";
 import { LoadingState, StateView } from "@bthwani/ui-kit";
 import { useStorefrontController } from "../../shared/storefront";
 import type {
@@ -8,7 +7,6 @@ import type {
 } from "../../shared/catalog/client-catalog.types";
 import type { DshFulfillmentDeliveryMode } from "../../shared/delivery/delivery.contract";
 import { StoreDetailShell } from "./StoreDetailShell";
-import { StoreDetailInfoCard } from "./StoreDetailInfoCard";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { useCartController } from "../../shared/cart";
 
@@ -121,23 +119,14 @@ export function StoreDetailScreen({ storeId, onBack, onGoToCart }: Props) {
   );
 
   return (
-    <>
-      <StoreDetailInfoCard
-        openingHours={store.operatingHours}
-        coverageSummary={store.coverageSummary}
-        addressLine={store.addressLine}
-        deliveryReadiness={store.deliveryReadiness}
-        isRTL={I18nManager.isRTL}
-      />
-      <StoreDetailShell
-        store={store}
-        categories={categories}
-        products={products}
-        onAddToCart={handleAddToCart}
-        cartActionError={cartCtrl.actionError}
-        onBack={onBack}
-        onGoToCart={onGoToCart}
-      />
-    </>
+    <StoreDetailShell
+      store={store}
+      categories={categories}
+      products={products}
+      onAddToCart={handleAddToCart}
+      cartActionError={cartCtrl.actionError}
+      onBack={onBack}
+      onGoToCart={onGoToCart}
+    />
   );
 }

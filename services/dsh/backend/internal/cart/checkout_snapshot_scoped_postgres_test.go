@@ -2,6 +2,7 @@ package cart
 
 import (
 	"context"
+	"errors"
 	"strconv"
 	"testing"
 	"time"
@@ -64,5 +65,19 @@ func TestComputeCheckoutSnapshotTxUsesMinorUnitSnapshotDBIntegration(t *testing.
 	}
 	if snapshot.SnapshotHash == "" {
 		t.Fatal("expected non-empty checkout snapshot hash")
+	}
+	if err := tx.Rollback(); err != nil {
+		t.Fatalf("release current checkout snapshot transaction: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `UPDATE dsh_carts SET version = version + 1, updated_at = NOW() WHERE id=$1::uuid`, cartID); err != nil {
+		t.Fatalf("advance cart version for stale checkout test: %v", err)
+	}
+	staleTx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("begin stale checkout snapshot transaction: %v", err)
+	}
+	defer staleTx.Rollback()
+	if _, err := ComputeCheckoutSnapshotTx(ctx, staleTx, clientID, cartID, storeID, 1); !errors.Is(err, ErrVersionConflict) {
+		t.Fatalf("expected stale checkout version conflict before snapshot creation, got %v", err)
 	}
 }

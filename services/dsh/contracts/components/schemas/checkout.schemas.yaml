@@ -104,6 +104,18 @@ DshCheckoutIntentResponse:
   properties:
     intent: *DshCheckoutIntent
 
+DshCheckoutCartVersionConflict:
+  type: object
+  additionalProperties: false
+  required: [code, message, expectedCartVersion, currentCartVersion, cart]
+  properties:
+    code: { type: string, enum: [CART_VERSION_CONFLICT] }
+    message: { type: string }
+    expectedCartVersion: { type: integer, minimum: 1 }
+    currentCartVersion: { type: integer, minimum: 1 }
+    cart:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshCart"
+
 DshOperatorCheckoutIntentsResponse:
   type: object
   additionalProperties: false

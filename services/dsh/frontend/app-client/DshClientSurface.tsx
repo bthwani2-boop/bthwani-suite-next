@@ -259,19 +259,20 @@ export function DshClientSurface() {
     };
   }, [openNotificationActionUrl]);
 
+  const isStoreDetail = activeTab === "stores" && selectedStoreId !== null;
   const nestedRoute =
     showNotifications ||
     activeSpecialRequest !== null ||
     activeOrderId !== null ||
     activePickupOrderId !== null ||
     activeTicketId !== null ||
-    (activeTab === "stores" && selectedStoreId !== null) ||
+    isStoreDetail ||
     (activeTab === "profile" && profileRoute !== "profile");
   const showHeader = activeTab === "home" && !nestedRoute;
   const showBottomNav = !nestedRoute;
 
   return (
-    <View style={[styles.root, { paddingTop: showHeader ? 0 : insets.top }]}>
+    <View style={[styles.root, { paddingTop: (showHeader || isStoreDetail) ? 0 : insets.top }]}>
       {showHeader ? (
         <AppHeader
           title="بثواني"

@@ -172,6 +172,10 @@ type UpsertItemInput struct {
 	Options         []string `json:"options"`
 	Note            string   `json:"note"`
 	ExpectedVersion *int     `json:"expectedVersion,omitempty"`
+	// FulfillmentMode is applied with the item mutation when the caller owns
+	// the cart. Keeping it in this transaction prevents a failed item write
+	// from leaving a mode change behind.
+	FulfillmentMode *FulfillmentMode `json:"-"`
 }
 
 func hashOptions(options []string) string {
@@ -250,17 +254,36 @@ func UpsertItem(ctx context.Context, db *sql.DB, storeID, cartID string, input U
 	if len(input.Note) > 500 {
 		return nil, ErrInvalid
 	}
+	if input.FulfillmentMode != nil &&
+		*input.FulfillmentMode != ModeBthwaniDelivery &&
+		*input.FulfillmentMode != ModePartnerDelivery &&
+		*input.FulfillmentMode != ModePickup {
+		return nil, ErrInvalid
+	}
 
-	// ETag/If-Match version check
-	if input.ExpectedVersion != nil {
-		var currentVersion int
-		err := db.QueryRowContext(ctx, `SELECT version FROM dsh_carts WHERE id = $1`, cartID).Scan(&currentVersion)
-		if err != nil {
-			return nil, err
-		}
-		if currentVersion != *input.ExpectedVersion {
-			return nil, ErrConflict
-		}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	// Lock the cart before checking its version and resolving the assortment
+	// snapshot. A pre-check on db followed by a later transaction lets two
+	// concurrent mutations pass the same expected version.
+	var currentVersion int
+	err = tx.QueryRowContext(ctx, `
+		SELECT version
+		FROM dsh_carts
+		WHERE id = $1 AND store_id = $2 AND state = 'active'
+		FOR UPDATE`, cartID, storeID).Scan(&currentVersion)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if input.ExpectedVersion != nil && currentVersion != *input.ExpectedVersion {
+		return nil, ErrConflict
 	}
 
 	// Resolve one deterministic current assortment snapshot. The primitive is
@@ -271,7 +294,7 @@ func UpsertItem(ctx context.Context, db *sql.DB, storeID, cartID string, input U
 	var assortmentID, name, currency string
 	var unitPriceMinorUnits int64
 	var available bool
-	err := db.QueryRowContext(ctx, `
+	err = tx.QueryRowContext(ctx, `
 		SELECT
 			a.id,
 			mp.canonical_name_ar,
@@ -326,12 +349,6 @@ func UpsertItem(ctx context.Context, db *sql.DB, storeID, cartID string, input U
 		optionsJSON = []byte("[]")
 	}
 
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
 	var item CartItem
 	var optsBytes []byte
 	err = tx.QueryRowContext(ctx,
@@ -358,7 +375,14 @@ func UpsertItem(ctx context.Context, db *sql.DB, storeID, cartID string, input U
 		item.Options = []string{}
 	}
 
-	_, err = tx.ExecContext(ctx, `UPDATE dsh_carts SET version = version + 1, updated_at = NOW() WHERE id = $1`, cartID)
+	if input.FulfillmentMode != nil {
+		_, err = tx.ExecContext(ctx, `
+			UPDATE dsh_carts
+			SET fulfillment_mode = $1, version = version + 1, updated_at = NOW()
+			WHERE id = $2`, *input.FulfillmentMode, cartID)
+	} else {
+		_, err = tx.ExecContext(ctx, `UPDATE dsh_carts SET version = version + 1, updated_at = NOW() WHERE id = $1`, cartID)
+	}
 	if err != nil {
 		return nil, err
 	}

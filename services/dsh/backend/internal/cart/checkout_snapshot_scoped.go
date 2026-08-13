@@ -127,32 +127,3 @@ func ComputeCheckoutSnapshotTx(
 		Lines:              lines,
 	}, nil
 }
-
-// ComputeCheckoutSnapshotForClient is the scoped handoff helper used by
-// reconciliation retries. It locks the authenticated cart while taking the
-// exact snapshot submitted to WLT.
-func ComputeCheckoutSnapshotForClient(ctx context.Context, db *sql.DB, cartID, clientID, storeID string) (*GovernedCheckoutSnapshot, error) {
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback() //nolint:errcheck
-	var version int
-	if err := tx.QueryRowContext(ctx, `
-		SELECT version FROM dsh_carts
-		WHERE id=$1::uuid AND client_id=$2 AND store_id=$3 AND state='active'
-		FOR UPDATE`, cartID, clientID, storeID).Scan(&version); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-	snapshot, err := ComputeCheckoutSnapshotTx(ctx, tx, clientID, cartID, storeID, version)
-	if err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return snapshot, nil
-}
