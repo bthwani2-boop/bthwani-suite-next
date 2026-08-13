@@ -178,6 +178,25 @@ func FilterPurchasableClientCatalogEntries(ctx context.Context, db *sql.DB, entr
 	return out, nil
 }
 
+// GetPurchasableClientCatalog is the sole client-facing catalog projection.
+// It derives the catalog graph from central identity, then removes every
+// assortment that lacks a current effective price or purchasable inventory.
+// Both the catalog and storefront routes must use this function so no client
+// surface can return legacy assortment projections as commercial truth.
+func GetPurchasableClientCatalog(ctx context.Context, db *sql.DB, storeID string) ([]Domain, []Node, []ClientCatalogEntry, []CatalogAssetLinkWithAsset, []CatalogPolicy, error) {
+	domains, nodes, products, catalogMedia, policySnapshot, err := GetClientCatalog(ctx, db, storeID)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+	products, err = FilterPurchasableClientCatalogEntries(ctx, db, products)
+	if err != nil {
+		return nil, nil, nil, nil, nil, err
+	}
+	domains, nodes = FilterClientCatalogDimensions(domains, nodes, products)
+	catalogMedia, policySnapshot = FilterClientCatalogAuxiliaryProjection(catalogMedia, policySnapshot, products)
+	return domains, nodes, products, catalogMedia, policySnapshot, nil
+}
+
 func bootstrapAssortmentRuntimeTruth(ctx context.Context, tx *sql.Tx, a StoreAssortment) error {
 	quantity := 0
 	if a.Available {

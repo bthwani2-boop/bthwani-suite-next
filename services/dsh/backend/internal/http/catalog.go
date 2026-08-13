@@ -23,7 +23,7 @@ import (
 // product set.
 func handlePublicCatalog(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		domains, nodes, products, catalogMedia, policySnapshot, err := centralcatalog.GetClientCatalog(r.Context(), db, r.PathValue("storeId"))
+		domains, nodes, products, catalogMedia, policySnapshot, err := centralcatalog.GetPurchasableClientCatalog(r.Context(), db, r.PathValue("storeId"))
 		if errors.Is(err, centralcatalog.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "approved catalog not found")
 			return
@@ -32,13 +32,6 @@ func handlePublicCatalog(db *sql.DB) http.HandlerFunc {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "catalog unavailable")
 			return
 		}
-		products, err = centralcatalog.FilterPurchasableClientCatalogEntries(r.Context(), db, products)
-		if err != nil {
-			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "catalog purchasability unavailable")
-			return
-		}
-		domains, nodes = centralcatalog.FilterClientCatalogDimensions(domains, nodes, products)
-		catalogMedia, policySnapshot = centralcatalog.FilterClientCatalogAuxiliaryProjection(catalogMedia, policySnapshot, products)
 		store.SendJSON(w, http.StatusOK, map[string]any{
 			"domains":        domains,
 			"nodes":          nodes,
