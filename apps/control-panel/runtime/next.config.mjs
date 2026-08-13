@@ -8,17 +8,32 @@ const developmentConnectSources =
   process.env.NODE_ENV === "production"
     ? []
     : ["http://localhost:*", "http://127.0.0.1:*", "ws:", "wss:"];
-const developmentScriptSources =
-  process.env.NODE_ENV === "production" ? [] : ["'unsafe-eval'"];
+
+const googleMapsScriptSources = [
+  "https://*.googleapis.com",
+  "https://*.gstatic.com",
+  "https://*.google.com",
+  "https://*.ggpht.com",
+  "https://*.googleusercontent.com",
+  "blob:",
+];
+const googleMapsConnectSources = [
+  "https://*.googleapis.com",
+  "https://*.google.com",
+  "https://*.gstatic.com",
+  "data:",
+  "blob:",
+];
 
 const contentSecurityPolicy = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' ${developmentScriptSources.join(" ")}`.trim(),
-  "style-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline' 'unsafe-eval' ${googleMapsScriptSources.join(" ")}`,
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "img-src 'self' data: blob: http: https:",
-  "font-src 'self' data:",
+  "font-src 'self' data: https://fonts.gstatic.com",
   "media-src 'self' data: blob: http: https:",
-  `connect-src 'self' ${developmentConnectSources.join(" ")}`.trim(),
+  `connect-src 'self' ${developmentConnectSources.join(" ")} ${googleMapsConnectSources.join(" ")}`.trim(),
+  "frame-src https://*.google.com",
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",
