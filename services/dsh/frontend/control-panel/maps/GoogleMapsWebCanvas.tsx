@@ -46,9 +46,12 @@ type GoogleMapsRuntime = {
 declare global {
   interface Window {
     google?: { readonly maps?: GoogleMapsRuntime };
+    gm_authFailure?: () => void;
     __bthwaniGoogleMapsPromise?: Promise<GoogleMapsRuntime>;
   }
 }
+
+const GOOGLE_MAPS_SCRIPT_ID = "bthwani-google-maps-js";
 
 function loadGoogleMaps(apiKey: string): Promise<GoogleMapsRuntime> {
   if (window.google?.maps) return Promise.resolve(window.google.maps);
@@ -58,25 +61,58 @@ function loadGoogleMaps(apiKey: string): Promise<GoogleMapsRuntime> {
   const promise = new Promise<GoogleMapsRuntime>((resolve, reject) => {
     const callbackName = `__bthwaniGoogleMapsReady_${Date.now()}`;
     const runtimeWindow = window as unknown as Window & Record<string, unknown>;
-    runtimeWindow[callbackName] = () => {
+    const previousAuthFailure = window.gm_authFailure;
+    let settled = false;
+    let script: HTMLScriptElement | null = null;
+
+    const restoreAuthFailure = () => {
+      if (window.gm_authFailure !== authFailure) return;
+      if (previousAuthFailure) {
+        window.gm_authFailure = previousAuthFailure;
+      } else {
+        delete window.gm_authFailure;
+      }
+    };
+
+    const cleanup = () => {
       delete runtimeWindow[callbackName];
+      restoreAuthFailure();
+    };
+
+    const fail = (message: string) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      delete window.__bthwaniGoogleMapsPromise;
+      script?.remove();
+      reject(new Error(message));
+    };
+
+    const authFailure = () => {
+      fail("فشل توثيق Google Maps. تحقق من مفتاح المتصفح وقيود HTTP referrer وMaps JavaScript API.");
+    };
+    window.gm_authFailure = authFailure;
+
+    runtimeWindow[callbackName] = () => {
+      if (settled) return;
       const runtime = window.google?.maps;
       if (!runtime) {
-        reject(new Error("Google Maps runtime was not exposed after script load."));
+        fail("Google Maps runtime was not exposed after script load.");
         return;
       }
+      settled = true;
+      cleanup();
       resolve(runtime);
     };
 
-    const script = document.createElement("script");
-    script.id = "bthwani-google-maps-js";
+    document.getElementById(GOOGLE_MAPS_SCRIPT_ID)?.remove();
+    script = document.createElement("script");
+    script.id = GOOGLE_MAPS_SCRIPT_ID;
     script.async = true;
     script.defer = true;
     script.src = buildGoogleMapsJavaScriptApiUrl(apiKey, callbackName);
     script.onerror = () => {
-      delete runtimeWindow[callbackName];
-      delete window.__bthwaniGoogleMapsPromise;
-      reject(new Error("تعذر تحميل Google Maps JavaScript API."));
+      fail("تعذر تحميل Google Maps JavaScript API. تحقق من اتصال الشبكة وسياسة CSP.");
     };
     document.head.appendChild(script);
   });
