@@ -398,6 +398,30 @@ func UpdateOperatorTicketGoverned(db *sql.DB, input OperatorTicketTransitionInpu
 	} else if err != nil {
 		return Ticket{}, err
 	}
+	var replayActor string
+	replayErr := tx.QueryRow(`
+		SELECT actor_id
+		FROM dsh_support_ticket_events
+		WHERE ticket_id = $1 AND correlation_id = $2 AND event_type <> 'created'
+		ORDER BY created_at DESC LIMIT 1`, input.TicketID, correlationID).
+		Scan(&replayActor)
+	if replayErr == nil {
+		if replayActor != input.ActorID || currentStatus != input.Status ||
+			(input.AssignedTo != "" && input.AssignedTo != currentAssignee) {
+			return Ticket{}, ErrConflict
+		}
+		updated, readbackErr := scanTicket(tx.QueryRow(ticketSelect+` WHERE id = $1`, input.TicketID))
+		if readbackErr != nil {
+			return Ticket{}, readbackErr
+		}
+		if commitErr := tx.Commit(); commitErr != nil {
+			return Ticket{}, commitErr
+		}
+		return updated, nil
+	}
+	if !errors.Is(replayErr, sql.ErrNoRows) {
+		return Ticket{}, replayErr
+	}
 	if input.ExpectedStatus != "" && input.ExpectedStatus != currentStatus {
 		return Ticket{}, ErrConflict
 	}
