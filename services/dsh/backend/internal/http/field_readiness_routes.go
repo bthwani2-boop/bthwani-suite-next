@@ -25,6 +25,7 @@ func RegisterFieldReadinessRoutes(
 	mux.HandleFunc("POST /dsh/field/stores/{storeId}/visits", protected.handleCreateGovernedFieldVisit)
 	mux.HandleFunc("GET /dsh/field/stores/{storeId}/visits", protected.handleListFieldVisits)
 	mux.HandleFunc("GET /dsh/field/work-queue", protected.handleFieldWorkQueue)
+	mux.HandleFunc("GET /dsh/field/mutations/{operation}/{idempotencyKey}", protected.handleFieldMutationReconciliation)
 	mux.HandleFunc("POST /dsh/field/visits/{visitId}/complete", protected.handleCompleteGovernedFieldVisit)
 	mux.HandleFunc("PUT /dsh/field/visits/{visitId}/checks", protected.handleUpsertGovernedReadinessCheck)
 	mux.HandleFunc("GET /dsh/field/visits/{visitId}/checks", protected.handleListVisitChecks)

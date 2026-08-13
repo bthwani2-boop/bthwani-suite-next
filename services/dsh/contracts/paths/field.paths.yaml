@@ -429,6 +429,46 @@
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshFieldWorkQueueResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
+/dsh/field/mutations/{operation}/{idempotencyKey}:
+  get:
+    operationId: getDshFieldMutationReceipt
+    summary: Read the authenticated field actor's committed mutation receipt.
+    description: A missing receipt means the mutation was not committed and may be retried with the same idempotency key.
+    tags: [ DshFieldReadiness ]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: operation
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [create_visit, complete_visit, upsert_readiness_check, create_escalation]
+      - name: idempotencyKey
+        in: path
+        required: true
+        schema: { type: string, minLength: 8, maxLength: 200 }
+    responses:
+      "200":
+        description: Committed mutation receipt.
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, operation, idempotencyKey, correlationId, response]
+              properties:
+                status: { type: string, enum: [committed] }
+                operation: { type: string }
+                idempotencyKey: { type: string }
+                correlationId: { type: string }
+                response: { type: object, additionalProperties: true }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404":
+        description: No committed receipt exists for this actor and key.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse" }
+
 /dsh/field/visits/{visitId}/complete:
   post:
     operationId: completeDshFieldVisit

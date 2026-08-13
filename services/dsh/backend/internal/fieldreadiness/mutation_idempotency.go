@@ -35,6 +35,56 @@ type MutationContext struct {
 	RequestHash    string
 }
 
+type MutationReceipt struct {
+	Operation      MutationOperation
+	IdempotencyKey string
+	CorrelationID  string
+	ResponseJSON   json.RawMessage
+}
+
+func ParseMutationOperation(value string) (MutationOperation, error) {
+	switch MutationOperation(strings.TrimSpace(value)) {
+	case MutationCreateVisit, MutationCompleteVisit, MutationUpsertCheck, MutationEscalation:
+		return MutationOperation(strings.TrimSpace(value)), nil
+	default:
+		return "", ErrInvalid
+	}
+}
+
+// FindMutationReceipt is the authoritative read for an ambiguous field
+// mutation. The actor id is part of the lookup so a reconnecting device cannot
+// inspect or acknowledge another actor's result.
+func FindMutationReceipt(
+	ctx context.Context,
+	db *sql.DB,
+	actorID string,
+	operation MutationOperation,
+	idempotencyKey string,
+) (MutationReceipt, error) {
+	parsedOperation, err := ParseMutationOperation(string(operation))
+	if err != nil {
+		return MutationReceipt{}, err
+	}
+	idempotencyKey = strings.TrimSpace(idempotencyKey)
+	if strings.TrimSpace(actorID) == "" || len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
+		return MutationReceipt{}, ErrInvalid
+	}
+	var receipt MutationReceipt
+	err = db.QueryRowContext(ctx, `
+		SELECT operation, idempotency_key, correlation_id, response_json
+		FROM dsh_field_readiness_operation_receipts
+		WHERE actor_id = $1 AND operation = $2 AND idempotency_key = $3`,
+		actorID, parsedOperation, idempotencyKey,
+	).Scan(&receipt.Operation, &receipt.IdempotencyKey, &receipt.CorrelationID, &receipt.ResponseJSON)
+	if errors.Is(err, sql.ErrNoRows) {
+		return MutationReceipt{}, ErrNotFound
+	}
+	if err != nil {
+		return MutationReceipt{}, err
+	}
+	return receipt, nil
+}
+
 func BuildMutationContext(idempotencyKey, correlationID string, request any) (MutationContext, error) {
 	idempotencyKey = strings.TrimSpace(idempotencyKey)
 	correlationID = strings.TrimSpace(correlationID)

@@ -16,6 +16,7 @@ export {
   updateEscalation,
   fetchPartnerOnboardingStatus,
   fetchFieldWorkQueue,
+  reconcileFieldMutation,
 } from "./field-readiness.api";
 export type { FieldMutationContext } from "./field-readiness.api";
 export {
@@ -34,8 +35,11 @@ export {
   clearFieldOfflineQueue,
   enqueueFieldOperation,
   markOperationSynced,
+  markOperationUnknown,
+  markOperationReadyForRetry,
   markOperationFailed,
   getDueOperations,
+  getUnknownOperations,
   purgeSyncedOperations,
   evacuateTerminalOperations,
   getAllOperations,
@@ -57,6 +61,7 @@ export type {
 export { useFieldOfflineSync } from "./use-field-offline-sync";
 export type {
   FieldOfflineExecutorMap,
+  FieldOfflineReconcilerMap,
   FieldOfflineSyncController,
   FieldOfflineSyncState,
 } from "./use-field-offline-sync";

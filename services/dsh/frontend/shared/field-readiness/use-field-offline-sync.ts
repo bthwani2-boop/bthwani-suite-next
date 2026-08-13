@@ -12,7 +12,10 @@ import {
   configureFieldOfflineQueueScope,
   prepareFieldOfflineQueue,
   getDueOperations,
+  getUnknownOperations,
   markOperationSynced,
+  markOperationUnknown,
+  markOperationReadyForRetry,
   markOperationFailed,
   purgeSyncedOperations,
   evacuateTerminalOperations,
@@ -23,11 +26,16 @@ import {
 } from "./field-offline-queue";
 import {
   classifyGovernedError,
+  createGovernedProblem,
   type GovernedProblem,
 } from "../_kernel/governed-problem";
 
 export type FieldOfflineExecutorMap = Partial<
   Record<FieldOfflineOperationType, (op: FieldOfflineOperation) => Promise<void>>
+>;
+
+export type FieldOfflineReconcilerMap = Partial<
+  Record<FieldOfflineOperationType, (op: FieldOfflineOperation) => Promise<boolean>>
 >;
 
 export type FieldOfflineSyncState =
@@ -62,9 +70,12 @@ function queueErrorState(error: unknown): FieldOfflineSyncState {
 export function useFieldOfflineSync(
   executors: FieldOfflineExecutorMap | undefined,
   scope: FieldOfflineQueueScope | undefined,
+  reconcilers: FieldOfflineReconcilerMap | undefined,
 ): FieldOfflineSyncController {
   const executorsRef = useRef(executors);
   executorsRef.current = executors;
+  const reconcilersRef = useRef(reconcilers);
+  reconcilersRef.current = reconcilers;
   const scopeRef = useRef(scope);
   scopeRef.current = scope;
   const syncRef = useRef(false);
@@ -77,9 +88,30 @@ export function useFieldOfflineSync(
     configureFieldOfflineQueueScope(currentScope);
     syncRef.current = true;
     setState({ kind: "syncing" });
+    let reconciliationError: unknown;
     try {
       const migration = await prepareFieldOfflineQueue();
       if (migration.quarantined > 0) setQuarantinedCount(migration.quarantined);
+      for (const operation of await getUnknownOperations()) {
+        const reconciler = reconcilersRef.current?.[operation.operationType];
+        if (!reconciler) {
+          reconciliationError = createGovernedProblem(
+            "UNKNOWN_RESULT_RECONCILIATION_REQUIRED",
+            "توجد عملية محفوظة بنتيجة غير محسومة، ولا يمكن إعادة تنفيذها قبل قراءة النتيجة المعتمدة.",
+            { kind: "conflict", retryable: true, nextAction: "refresh_record" },
+          );
+          continue;
+        }
+        try {
+          if (await reconciler(operation)) {
+            await markOperationSynced(operation.operationId);
+          } else {
+            await markOperationReadyForRetry(operation.operationId);
+          }
+        } catch (error) {
+          reconciliationError = error;
+        }
+      }
       const due = await getDueOperations();
       for (const operation of due) {
         const executor = executorsRef.current?.[operation.operationType];
@@ -95,6 +127,28 @@ export function useFieldOfflineSync(
           await markOperationSynced(operation.operationId);
         } catch (error) {
           const problem = classifyGovernedError(error);
+          if (problem.kind === "offline") {
+            await markOperationUnknown(operation.operationId, problem.message);
+            const reconciler = reconcilersRef.current?.[operation.operationType];
+            if (!reconciler) {
+              reconciliationError = createGovernedProblem(
+                "UNKNOWN_RESULT_RECONCILIATION_REQUIRED",
+                "تعذر تحديد نتيجة العملية، ولا يمكن إعادة تنفيذها قبل قراءة النتيجة المعتمدة.",
+                { kind: "conflict", retryable: true, nextAction: "refresh_record" },
+              );
+              continue;
+            }
+            try {
+              if (await reconciler(operation)) {
+                await markOperationSynced(operation.operationId);
+              } else {
+                await markOperationReadyForRetry(operation.operationId);
+              }
+            } catch (reconciliationFailure) {
+              reconciliationError = reconciliationFailure;
+            }
+            continue;
+          }
           await markOperationFailed(operation.operationId, problem.message, !problem.retryable);
         }
       }
@@ -103,7 +157,8 @@ export function useFieldOfflineSync(
       // queue capacity nor disappear without the employee being told.
       const evacuated = await evacuateTerminalOperations();
       if (evacuated > 0) setQuarantinedCount((current) => current + evacuated);
-      setState({ kind: "ready" });
+      if (reconciliationError) setState(queueErrorState(reconciliationError));
+      else setState({ kind: "ready" });
     } catch (error) {
       setState(queueErrorState(error));
     } finally {

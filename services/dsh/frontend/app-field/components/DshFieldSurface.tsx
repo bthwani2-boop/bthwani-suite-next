@@ -17,6 +17,7 @@ import {
   completeFieldVisit,
   upsertReadinessCheck,
   createReadinessEscalation,
+  reconcileFieldMutation,
 } from '../../shared/field-readiness';
 
 function useAndroidBackHandler(onBackPress: () => boolean) {
@@ -102,6 +103,14 @@ export function DshFieldSurface({ command, onExit, installationId }: DshFieldSur
         }
       : undefined,
     offlineScope,
+    identity.state.kind === 'authenticated'
+      ? {
+          create_visit: (operation) => reconcileFieldMutation(operation.operationType, operation.idempotencyKey),
+          complete_visit: (operation) => reconcileFieldMutation(operation.operationType, operation.idempotencyKey),
+          upsert_readiness_check: (operation) => reconcileFieldMutation(operation.operationType, operation.idempotencyKey),
+          create_escalation: (operation) => reconcileFieldMutation(operation.operationType, operation.idempotencyKey),
+        }
+      : undefined,
   );
 
   useAndroidBackHandler(

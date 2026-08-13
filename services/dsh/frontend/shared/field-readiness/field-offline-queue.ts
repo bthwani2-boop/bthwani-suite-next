@@ -16,6 +16,7 @@ export type FieldOfflineOperationType =
 export type FieldOfflineOperationStatus =
   | "pending"
   | "retrying"
+  | "unknown"
   | "synced"
   | "failed_permanent";
 
@@ -174,6 +175,12 @@ export function configureFieldOfflineQueueScope(scope: FieldOfflineQueueScope | 
 function isOperation(value: unknown, scope: FieldOfflineQueueScope): value is FieldOfflineOperation {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<FieldOfflineOperation>;
+  const validStatus =
+    candidate.status === "pending" ||
+    candidate.status === "retrying" ||
+    candidate.status === "unknown" ||
+    candidate.status === "synced" ||
+    candidate.status === "failed_permanent";
   return (
     typeof candidate.operationId === "string" &&
     typeof candidate.operationType === "string" &&
@@ -186,7 +193,7 @@ function isOperation(value: unknown, scope: FieldOfflineQueueScope): value is Fi
     typeof candidate.createdAt === "string" &&
     typeof candidate.attemptCount === "number" &&
     typeof candidate.nextRetryAt === "string" &&
-    typeof candidate.status === "string"
+    validStatus
   );
 }
 
@@ -362,6 +369,42 @@ export async function markOperationSynced(operationId: string): Promise<void> {
   );
 }
 
+/**
+ * A network failure after dispatch leaves the business result unknown. Persist
+ * that fact so restart/reconnect never treats it as an ordinary retryable error.
+ */
+export async function markOperationUnknown(operationId: string, error: string): Promise<void> {
+  const queue = await readQueue();
+  await writeQueue(
+    queue.map((operation) => {
+      if (operation.operationId !== operationId) return operation;
+      return {
+        ...operation,
+        attemptCount: operation.attemptCount + 1,
+        lastError: error,
+        nextRetryAt: new Date().toISOString(),
+        status: "unknown" as const,
+      };
+    }),
+  );
+}
+
+/**
+ * Re-enables delivery only after an authoritative read confirms no receipt
+ * exists. This is intentionally separate from markOperationFailed so callers
+ * cannot accidentally retry an unresolved result.
+ */
+export async function markOperationReadyForRetry(operationId: string): Promise<void> {
+  const queue = await readQueue();
+  await writeQueue(
+    queue.map((operation) =>
+      operation.operationId === operationId
+        ? { ...operation, nextRetryAt: new Date().toISOString(), status: "retrying" as const }
+        : operation,
+    ),
+  );
+}
+
 export async function markOperationFailed(operationId: string, error: string, isPermanent = false): Promise<void> {
   const queue = await readQueue();
   const updated = queue.map((operation) => {
@@ -388,6 +431,11 @@ export async function getDueOperations(): Promise<FieldOfflineOperation[]> {
       (operation.status === "pending" || operation.status === "retrying") &&
       operation.nextRetryAt <= now,
   );
+}
+
+export async function getUnknownOperations(): Promise<FieldOfflineOperation[]> {
+  const queue = await readQueue();
+  return queue.filter((operation) => operation.status === "unknown");
 }
 
 export async function purgeSyncedOperations(): Promise<void> {

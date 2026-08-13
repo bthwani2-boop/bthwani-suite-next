@@ -54,6 +54,43 @@ func (s *protectedStoreServer) handleFieldWorkQueue(w http.ResponseWriter, r *ht
 	store.SendJSON(w, http.StatusOK, map[string]any{"visits": visitResult, "escalations": escalationResult})
 }
 
+// GET /dsh/field/mutations/{operation}/{idempotencyKey}
+// Returns only the authenticated actor's committed receipt. A missing receipt
+// is an explicit not-committed result, allowing the client to retry safely.
+func (s *protectedStoreServer) handleFieldMutationReconciliation(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "field")
+	if !ok {
+		return
+	}
+	operation, err := fieldreadiness.ParseMutationOperation(r.PathValue("operation"))
+	if err != nil {
+		s.writeFieldReadinessError(w, err)
+		return
+	}
+	receipt, err := fieldreadiness.FindMutationReceipt(
+		r.Context(),
+		s.db,
+		actor.ID,
+		operation,
+		r.PathValue("idempotencyKey"),
+	)
+	if errors.Is(err, fieldreadiness.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "MUTATION_NOT_COMMITTED", "no committed field mutation receipt exists for this actor and key")
+		return
+	}
+	if err != nil {
+		s.writeFieldReadinessError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"status":         "committed",
+		"operation":      receipt.Operation,
+		"idempotencyKey": receipt.IdempotencyKey,
+		"correlationId":  receipt.CorrelationID,
+		"response":       receipt.ResponseJSON,
+	})
+}
+
 // GET /dsh/field/visits/{visitId}/checks
 func (s *protectedStoreServer) handleListVisitChecks(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "field")

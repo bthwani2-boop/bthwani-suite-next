@@ -454,6 +454,8 @@ paths:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1stores~1{storeId}~1visits"
   /dsh/field/work-queue:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1work-queue"
+  /dsh/field/mutations/{operation}/{idempotencyKey}:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1mutations~1{operation}~1{idempotencyKey}"
   /dsh/operator/field-onboarding-assignments:
     $ref: "./paths/field.paths.yaml#/~1dsh~1operator~1field-onboarding-assignments"
   /dsh/operator/field-onboarding/workload:

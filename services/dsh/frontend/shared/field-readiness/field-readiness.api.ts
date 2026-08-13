@@ -179,3 +179,27 @@ export async function fetchPartnerOnboardingStatus(storeId: string): Promise<Dsh
 export async function fetchFieldWorkQueue(): Promise<DshFieldWorkQueue> {
   return request<DshFieldWorkQueue>("/dsh/field/work-queue");
 }
+
+/**
+ * Reads DSH's actor-scoped receipt after a response was lost. `false` is a
+ * proved-not-committed result; transport failures remain errors and therefore
+ * keep the queue in its persisted unknown state.
+ */
+export async function reconcileFieldMutation(
+  operation: string,
+  idempotencyKey: string,
+): Promise<boolean> {
+  try {
+    await request(
+      `/dsh/field/mutations/${encodeURIComponent(operation)}/${encodeURIComponent(idempotencyKey)}`,
+    );
+    return true;
+  } catch (error) {
+    const typed = (error && typeof error === "object" ? error : {}) as {
+      readonly status?: unknown;
+      readonly code?: unknown;
+    };
+    if (typed.status === 404 && typed.code === "MUTATION_NOT_COMMITTED") return false;
+    throw error;
+  }
+}

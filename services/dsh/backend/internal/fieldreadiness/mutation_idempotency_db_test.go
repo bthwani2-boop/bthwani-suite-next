@@ -87,6 +87,45 @@ func TestCreateGovernedVisitIdempotentReturnsOriginalVisitAndRejectsConflict(t *
 	}
 }
 
+func TestFindMutationReceiptIsActorScopedAndMissingMeansNotCommitted(t *testing.T) {
+	db := openRequiredDB(t)
+	ctx := context.Background()
+	actorID := uniqueID("agent-reconcile-receipt")
+	otherActorID := uniqueID("agent-reconcile-other")
+	cleanupFieldMutationReceipts(t, db, actorID)
+	cleanupFieldMutationReceipts(t, db, otherActorID)
+	mutation := testMutationContext(t, uniqueID("reconcile-receipt"), map[string]any{"visitId": "visit-receipt"})
+	_, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_field_readiness_operation_receipts
+		  (actor_id, operation, resource_id, idempotency_key, request_hash, correlation_id, response_json)
+		VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+		actorID,
+		MutationCompleteVisit,
+		"visit-receipt",
+		mutation.IdempotencyKey,
+		mutation.RequestHash,
+		mutation.CorrelationID,
+		`{"visit":{"id":"visit-receipt","status":"complete"}}`,
+	)
+	if err != nil {
+		t.Fatalf("seed mutation receipt: %v", err)
+	}
+
+	receipt, err := FindMutationReceipt(ctx, db, actorID, MutationCompleteVisit, mutation.IdempotencyKey)
+	if err != nil {
+		t.Fatalf("find actor receipt: %v", err)
+	}
+	if receipt.CorrelationID != mutation.CorrelationID || string(receipt.ResponseJSON) != `{"visit":{"id":"visit-receipt","status":"complete"}}` {
+		t.Fatalf("unexpected receipt: %#v", receipt)
+	}
+	if _, err := FindMutationReceipt(ctx, db, otherActorID, MutationCompleteVisit, mutation.IdempotencyKey); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected other actor to see not committed, got %v", err)
+	}
+	if _, err := FindMutationReceipt(ctx, db, actorID, MutationOperation("unsupported"), mutation.IdempotencyKey); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected unsupported operation to be invalid, got %v", err)
+	}
+}
+
 func TestGovernedCheckReceiptDoesNotReapplyAnOlderMutation(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
