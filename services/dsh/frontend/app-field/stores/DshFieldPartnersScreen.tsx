@@ -102,23 +102,11 @@ function FieldTopBar({
           >
             بثواني
           </Text>
-          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 3 }}>
-            <Text style={{ color: alpha(colorRoles.surfaceBase, 0.88), fontSize: 12 }}>📍</Text>
-            <Text style={{ color: alpha(colorRoles.surfaceBase, 0.88), fontSize: 12 }}>
-              {locationLabel}
-            </Text>
-          </View>
+
         </View>
 
         {/* Right: bell + person icons */}
         <View style={{ flexDirection: 'row', gap: spacing[1] }}>
-        <Pressable
-          onPress={onWorkQueuePress}
-          style={{ padding: spacing[2] }}
-          accessibilityLabel="مهام التحقق"
-        >
-          <Icon name="list-outline" size={24} color={colorRoles.surfaceBase} />
-        </Pressable>
           <Pressable
             onPress={onNotificationsPress}
             style={{ padding: spacing[2], position: 'relative' }}
@@ -463,7 +451,7 @@ export function DshFieldPartnersScreen({
 
         <View style={{ height: spacing[3] }} />
 
-        {/* Section bar: "ملفات الانضمام" + "ملف جديد" */}
+        {/* Section bar: "ملفات الانضمام" + "إضافة شريك" */}
         <View
           style={{
             flexDirection: 'row-reverse',
@@ -474,7 +462,7 @@ export function DshFieldPartnersScreen({
           }}
         >
           <Text style={{ fontWeight: 'bold', fontSize: 16 }}>ملفات الانضمام</Text>
-          <Button label="ملف جديد" tone="primary" size="sm" onPress={onCreatePartner} />
+          <Button label="إضافة شريك" tone="primary" size="sm" onPress={onCreatePartner} />
         </View>
 
         {/* Search */}

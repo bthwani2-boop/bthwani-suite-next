@@ -29,6 +29,7 @@ function useAndroidBackHandler(onBackPress: () => boolean) {
 
 const FIELD_TAB_BAR_ITEMS: readonly TabBarItem[] = [
   { id: 'stores', label: 'الرئيسية', icon: 'home-outline', activeIcon: 'home' },
+  { id: 'work-queue', label: 'المهام', icon: 'list-outline', activeIcon: 'list' },
   { id: 'finance', label: 'محفظتي', icon: 'cash-outline', activeIcon: 'cash' },
   { id: 'profile', label: 'حسابي', icon: 'person-outline', activeIcon: 'person' },
 ];
@@ -180,14 +181,9 @@ export function DshFieldSurface({ command, onExit, installationId }: DshFieldSur
             items={FIELD_TAB_BAR_ITEMS}
             activeId={fieldSurface.model.bottomNav.activeId}
             bottomInset={insets.bottom}
-            centerAction={{
-              icon: 'add',
-              label: 'إضافة شريك',
-              accessibilityLabel: 'إضافة شريك جديد',
-              onPress: () => fieldSurface.actions.pushRoute({ kind: 'onboarding' }),
-            }}
             onSelect={(id: string) => {
               if (id === 'stores') fieldSurface.actions.resetToStores();
+              if (id === 'work-queue') fieldSurface.actions.pushRoute({ kind: 'work-queue' });
               if (id === 'finance') fieldSurface.actions.pushRoute({ kind: 'finance' });
               if (id === 'profile') fieldSurface.actions.pushRoute({ kind: 'account' });
             }}

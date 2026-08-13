@@ -30,7 +30,8 @@
   },
   "dependencies": {
     "@tamagui/config": "2.0.0-rc.41",
-    "tamagui": "2.0.0-rc.41"
+    "tamagui": "2.0.0-rc.41",
+    "@tamagui/animations-react-native": "2.0.0-rc.41"
   },
   "peerDependencies": {
     "react": "19.2.3",
