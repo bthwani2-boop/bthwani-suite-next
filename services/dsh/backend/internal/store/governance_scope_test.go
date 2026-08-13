@@ -2,6 +2,8 @@ package store
 
 import (
 	"context"
+	"os"
+	"strings"
 	"testing"
 )
 
@@ -56,5 +58,16 @@ func TestPermissionScopeAllowsOnlyExplicitStoreOrAll(t *testing.T) {
 				t.Fatalf("permissionScopeAllowsStore(%q, %q)=%v want %v", tc.scope, tc.storeID, got, tc.want)
 			}
 		})
+	}
+}
+
+func TestActorStoreScopeDoesNotAcceptBlankOperatorContextCompatibilityRows(t *testing.T) {
+	source, err := os.ReadFile("governance.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(source)
+	if strings.Contains(text, "operator_context_id = $3 OR operator_context_id = ''") {
+		t.Fatal("store scope resolution must reject blank operator-context compatibility rows")
 	}
 }

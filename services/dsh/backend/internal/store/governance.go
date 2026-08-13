@@ -108,7 +108,7 @@ func resolveStoreIDsForActor(ctx context.Context, db queryer, wf WorkforceScopeR
 		rows, err := db.QueryContext(ctx, `
 			SELECT store_id
 			FROM dsh_store_actor_scopes
-			WHERE actor_id = $1 AND actor_role = $2 AND active = true AND (operator_context_id = $3 OR operator_context_id = '')
+			WHERE actor_id = $1 AND actor_role = $2 AND active = true AND operator_context_id = $3
 			ORDER BY created_at ASC`, actorID, role, operatorContextID)
 		if err == nil {
 			defer rows.Close()
