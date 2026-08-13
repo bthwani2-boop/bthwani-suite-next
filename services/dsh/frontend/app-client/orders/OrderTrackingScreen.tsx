@@ -11,6 +11,7 @@ import {
   Text,
   TextField,
   TopBar,
+  alpha,
   colorRoles,
   spacing,
 } from "@bthwani/ui-kit";
@@ -51,6 +52,7 @@ type Props = {
   readonly orderId: string;
   readonly onBack?: () => void;
   readonly onOpenPickup?: (orderId: string) => void;
+  readonly onOpenOrderSupport?: (orderId: string) => void;
 };
 
 const FULFILLMENT_LABELS: Readonly<Record<OrderTruth["fulfillmentMode"], string>> = {
@@ -72,6 +74,40 @@ function financialTone(status: DshFinancialClosureStatus): "neutral" | "success"
   if (status === "refund_requested") return "info";
   if (status === "session_expired" || status === "refund_completed" || status === "no_action") return "success";
   return "neutral";
+}
+
+function journeyTitle(order: OrderTruth): string {
+  if (order.status === "delivered") return "تم تسليم طلبك";
+  if (order.status === "ready_for_pickup") return "طلبك جاهز للاستلام";
+  if (order.status === "cancelled" || order.status.startsWith("cancelled_")) return "تم إلغاء الطلب";
+  if (order.status === "failed" || order.status.startsWith("failed_")) return "تعذر إكمال الطلب";
+  if (order.status === "out_for_delivery" || order.status === "in_transit") return "طلبك في الطريق إليك";
+  if (order.status === "preparing" || order.status === "store_accepted") return "المتجر يجهز طلبك";
+  return "تم استلام طلبك";
+}
+
+function journeyStepIndex(order: OrderTruth): number {
+  if (order.status === "delivered" || order.status === "ready_for_pickup") return 3;
+  if (order.status === "out_for_delivery" || order.status === "in_transit") return 2;
+  if (order.status === "preparing" || order.status === "store_accepted") return 1;
+  return 0;
+}
+
+function JourneySteps({ order }: { readonly order: OrderTruth }) {
+  const activeIndex = journeyStepIndex(order);
+  const steps = ["تم الاستلام", "قيد التجهيز", order.fulfillmentMode === "pickup" ? "جاهز للاستلام" : "في الطريق", "تم التسليم"];
+  return (
+    <View style={styles.journeySteps} accessibilityLabel={`تقدم الطلب: ${steps[activeIndex]}`}>
+      {steps.map((label, index) => (
+        <View key={label} style={styles.journeyStep}>
+          <View style={[styles.journeyDot, index <= activeIndex && styles.journeyDotActive]}>
+            <Text role="caption" style={index <= activeIndex ? styles.journeyDotTextActive : styles.journeyDotText}>{String(index + 1)}</Text>
+          </View>
+          <Text role="caption" style={[styles.journeyLabel, index === activeIndex && styles.journeyLabelActive]}>{label}</Text>
+        </View>
+      ))}
+    </View>
+  );
 }
 
 function OrderTimeline({ order }: { readonly order: OrderTruth }) {
@@ -230,7 +266,7 @@ function ClientCancellationPanel({
   );
 }
 
-export function OrderTrackingScreen({ orderId, onBack, onOpenPickup }: Props) {
+export function OrderTrackingScreen({ orderId, onBack, onOpenPickup, onOpenOrderSupport }: Props) {
   const { state, reload } = useClientOrderController(orderId);
 
   if (state.kind === "loading") {
@@ -271,23 +307,39 @@ export function OrderTrackingScreen({ orderId, onBack, onOpenPickup }: Props) {
 
   return (
     <View style={styles.root}>
-      <TopBar title="رحلة الطلب" onBack={onBack} />
+      <TopBar title="متابعة الطلب" onBack={onBack} />
       <MobileScrollView fill padding={4} gap={4} contentContainerStyle={styles.content}>
         <Surface tone="action" gap={3}>
           <View style={styles.summaryHeader}>
-            <Text role="titleMd" style={styles.actionText}>{bidiIsolate(order.orderNumber)}</Text>
+            <View style={styles.heroCopy}>
+              <Text role="titleMd" style={styles.actionText}>{journeyTitle(order)}</Text>
+              <Text role="caption" style={styles.actionText}>الطلب {bidiIsolate(order.orderNumber)}</Text>
+            </View>
             <Badge label={summary.statusLabel} tone={statusTone(order.status)} />
           </View>
           <Text role="bodySm" style={styles.actionText}>{FULFILLMENT_LABELS[order.fulfillmentMode]}</Text>
           <Text role="caption" style={styles.actionText}>
             {`${order.items.length} أصناف · ${formatMinorUnits(order.totalMinorUnits, order.currency)}`}
           </Text>
-          <Text role="caption" style={styles.actionText}>
-            {`المالك الحالي: ${summary.currentOwnerLabel} · الإصدار: ${order.version}`}
-          </Text>
+          <JourneySteps order={order} />
         </Surface>
 
         <OrderTimeline order={order} />
+
+        <Surface tone="raised" gap={3}>
+          <Text role="titleSm">مراسلة الطلب</Text>
+          <Text role="bodySm" tone="muted">
+            افتح محادثة دعم مرتبطة بهذا الطلب. تُحفظ الرسائل في تذكرة DSH نفسها ويمكن لفريق العمليات متابعتها من المصدر.
+          </Text>
+          {onOpenOrderSupport ? (
+            <Button
+              label="مراسلة الدعم بشأن الطلب"
+              accessibilityLabel={`${accessibilityLabel}، فتح مراسلة الدعم`}
+              tone="primary"
+              onPress={() => onOpenOrderSupport(order.id)}
+            />
+          ) : null}
+        </Surface>
 
         <Surface tone="raised" gap={3}>
           <Box layoutDirection="row" justify="space-between" align="center">
@@ -453,10 +505,33 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing[2],
   },
+  heroCopy: { flex: 1, alignItems: "flex-end", gap: spacing[1] },
   actionText: {
     color: colorRoles.surfaceBase,
     textAlign: "right",
   },
+  journeySteps: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    gap: spacing[1],
+    paddingTop: spacing[2],
+  },
+  journeyStep: { flex: 1, alignItems: "center", gap: spacing[1] },
+  journeyDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colorRoles.surfaceBase,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colorRoles.surfaceBase,
+  },
+  journeyDotActive: { backgroundColor: colorRoles.brandAction, borderColor: colorRoles.brandAction },
+  journeyDotText: { color: colorRoles.brandStructure },
+  journeyDotTextActive: { color: colorRoles.surfaceBase },
+  journeyLabel: { color: alpha(colorRoles.surfaceBase, 0.82), textAlign: "center", fontSize: 11 },
+  journeyLabelActive: { color: colorRoles.surfaceBase, fontWeight: "800" },
   timelineRow: {
     flexDirection: "row-reverse",
     alignItems: "center",

@@ -64,12 +64,6 @@ export type DshSupportEscalationRecord = {
   readonly resolved_at?: string;
 };
 
-export type DshOrderItemInput = {
-  readonly product_id: string;
-  readonly quantity: number;
-  readonly price: number;
-};
-
 export type DshDeliverOrderRequest = {
   readonly captain_id: string;
   readonly pod_media_key?: string;
@@ -85,19 +79,6 @@ export type DshFailDeliveryRequest = {
 export type DshConfirmReturnRequest = {
   readonly captain_id: string;
   readonly note?: string;
-};
-
-export type DshCreateOrderRequest = {
-  readonly checkout_intent_id: string;
-  readonly store_id?: string;
-  readonly client_id?: string;
-  readonly total_price?: number;
-  readonly wlt_payment_ref_id?: string;
-  readonly items?: readonly DshOrderItemInput[];
-};
-
-export type DshCreateOrderResponse = {
-  readonly order: DshOrderRecord;
 };
 
 export type DshUpdateOrderStatusRequest =
@@ -222,7 +203,6 @@ export type BackendDispatchAssignment = {
 
 export interface DshOrderLifecycleClient {
   listOrders(query?: DshListOrdersQuery): Promise<DshListOrdersResponse>;
-  createOrder(req: DshCreateOrderRequest): Promise<DshCreateOrderResponse>;
   getOrder(orderId: string): Promise<DshOrderDetailsResponse>;
   updateOrderStatus(orderId: string, req: DshUpdateOrderStatusRequest): Promise<DshOrderRecord>;
   cancelOrder(orderId: string, req?: { actor?: string; note?: string }): Promise<DshOrderRecord>;

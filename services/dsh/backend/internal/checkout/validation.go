@@ -13,21 +13,21 @@ import (
 )
 
 type IntentDependencyValidation struct {
-	CartReady           bool
-	CartCode            string
-	Serviceable         bool
-	ServiceabilityCode  string
+	CartReady          bool
+	CartCode           string
+	Serviceable        bool
+	ServiceabilityCode string
 }
 
 type RefreshIntentInput struct {
-	IntentID           string
-	OperatorContextID  string
-	ClientID           string
-	AddressID          string
-	AddressSnapshot    string
-	Mode               FulfillmentMode
-	QuoteVersion       int
-	Dependencies       IntentDependencyValidation
+	IntentID          string
+	OperatorContextID string
+	ClientID          string
+	AddressID         string
+	AddressSnapshot   string
+	Mode              FulfillmentMode
+	QuoteVersion      int
+	Dependencies      IntentDependencyValidation
 }
 
 func GeneratePreviewHash(cartID, addressID string, mode FulfillmentMode, quoteVersion int) string {
@@ -135,13 +135,13 @@ func RefreshIntent(db *sql.DB, input RefreshIntentInput) (*Intent, error) {
 	newState := resolveIntentValidationState(issues)
 	row := tx.QueryRow(`
 		UPDATE dsh_checkout_intents
-		SET state=$1, fulfillment_mode=$2, delivery_address=$3, preview_hash=$4,
-			expires_at=$5, validation_issues=$6, version=version+1, updated_at=NOW()
-		WHERE id=$7::uuid AND operator_context_id=$8 AND client_id=$9
+		SET state=$1, fulfillment_mode=$2, delivery_address_id=NULLIF($3,''), delivery_address=$4, preview_hash=$5,
+			expires_at=$6, validation_issues=$7, version=version+1, updated_at=NOW()
+		WHERE id=$8::uuid AND operator_context_id=$9 AND client_id=$10
 		RETURNING id, operator_context_id, client_id, cart_id::text, store_id::text, fulfillment_mode,
-			      state, payment_method, wlt_payment_session_id, delivery_address, note,
-			      version, created_at, updated_at, expires_at, preview_hash, validation_issues`,
-		string(newState), string(input.Mode), input.AddressSnapshot,
+		      state, payment_method, wlt_payment_session_id, delivery_address, note,
+		      version, created_at, updated_at, expires_at, preview_hash, validation_issues`,
+		string(newState), string(input.Mode), input.AddressID, input.AddressSnapshot,
 		GeneratePreviewHash(cartID, input.AddressID, input.Mode, input.QuoteVersion),
 		time.Now().Add(15*time.Minute), issuesJSON, input.IntentID, input.OperatorContextID, input.ClientID)
 	intent, err := scanIntent(row)

@@ -5,7 +5,6 @@ import type {
   DshOrder,
   DshOrderPreparation,
   DshPartnerOrder,
-  DshCreateOrderInput,
   DshRejectOrderInput,
   DshStoreCaptainHandoff,
   DshStorePreparationPolicy,
@@ -37,26 +36,6 @@ function withOptionalToken(
   token?: string,
 ): DshRequestOptions {
   return token === undefined ? options : { ...options, token };
-}
-
-export async function createOrder(input: DshCreateOrderInput): Promise<DshOrder> {
-  const data = await request<{ order: DshOrder }>("/dsh/client/orders", {
-    method: "POST",
-    body: input,
-  });
-  return data.order;
-}
-
-export async function fetchClientOrders(): Promise<readonly DshOrder[]> {
-  const data = await request<{ orders: DshOrder[] }>("/dsh/client/orders");
-  return data.orders ?? [];
-}
-
-export async function fetchClientOrder(orderId: string): Promise<DshOrder> {
-  const data = await request<{ order: DshOrder }>(
-    `/dsh/client/orders/${encodeURIComponent(orderId)}`,
-  );
-  return data.order;
 }
 
 export async function fetchOrderPreparation(

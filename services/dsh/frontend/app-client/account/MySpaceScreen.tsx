@@ -38,13 +38,13 @@ type TabConfig = {
 };
 
 const TABS: readonly TabConfig[] = [
-  { id: "orders", label: "طلباتي", summary: "الطلب والتاريخ والتتبع", iconName: "bag-outline" },
-  { id: "addresses", label: "العناوين والموقع", summary: "إدارة العناوين وتعليمات التوصيل", iconName: "location-outline" },
-  { id: "identity", label: "الملف الشخصي", summary: "البيانات الشخصية والأمان", iconName: "person-outline" },
-  { id: "benefits", label: "المزايا والولاء", summary: "النقاط والاشتراكات والعروض المعتمدة", iconName: "gift-outline" },
-  { id: "profile", label: "الملف التجاري", summary: "التفضيلات اللغوية والموافقات", iconName: "person-circle-outline" },
-  { id: "preferences", label: "تفضيلات الإشعارات", summary: "إعدادات محفوظة في DSH ومقروءة بعد التعديل", iconName: "notifications-outline" },
-  { id: "support", label: "الدعم والمساعدة", summary: "تذاكر الدعم ومتابعة المشاكل", iconName: "help-buoy-outline" },
+  { id: "orders", label: "طلباتي", summary: "تتبع الطلبات وسجل المشتريات", iconName: "bag-outline" },
+  { id: "addresses", label: "عناويني والموقع", summary: "إدارة عناوين التوصيل والمواقع المفضلة", iconName: "location-outline" },
+  { id: "profile", label: "الملف الشخصي", summary: "اللغة وخيارات التواصل", iconName: "person-circle-outline" },
+  { id: "identity", label: "الأمان والدخول", summary: "إدارة الحساب، الأجهزة المتصلة وكلمة المرور", iconName: "lock-closed-outline" },
+  { id: "benefits", label: "المزايا والمكافآت", summary: "نقاط الولاء، الاشتراكات والكوبونات", iconName: "gift-outline" },
+  { id: "preferences", label: "تفضيلات الإشعارات", summary: "تخصيص تنبيهات الطلبات والعروض", iconName: "notifications-outline" },
+  { id: "support", label: "الدعم والمساعدة", summary: "تذاكر الدعم الفني وخدمة العملاء", iconName: "help-buoy-outline" },
 ];
 
 function MySpaceRow({

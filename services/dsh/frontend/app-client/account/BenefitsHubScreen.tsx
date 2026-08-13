@@ -42,7 +42,7 @@ function rowsFor(
               subtitle: benefits.loyaltyAccount.tier
                 ? `المستوى الحالي: ${benefits.loyaltyAccount.tier.nameAr}`
                 : "لا يوجد مستوى حالي",
-              badge: "رصيد WLT",
+              badge: "رصيد النقاط",
             },
           ]
         : []),
@@ -131,7 +131,7 @@ export function BenefitsHubScreen({ initialSection = "loyalty", onBack }: Benefi
     setCancellationInputError(null);
     Alert.alert(
       "تأكيد إلغاء الاشتراك",
-      "ستتوقف المنافع المدفوعة، وقد ينشأ تعويض مالي قيد المراجعة في WLT.",
+      "ستتوقف منافع الاشتراك ومزايا التوصيل بعد الإلغاء.",
       [
         { text: "تراجع", style: "cancel" },
         {
@@ -152,7 +152,7 @@ export function BenefitsHubScreen({ initialSection = "loyalty", onBack }: Benefi
     <View style={styles.root}>
       <TopBar
         title={LABELS[section]}
-        subtitle="بيانات معتمدة من DSH وWLT"
+        subtitle="عروض ومكافآت حصرية لك"
         {...(onBack ? { onBack } : {})}
       />
       <ScrollScreen>

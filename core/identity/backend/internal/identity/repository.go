@@ -1282,7 +1282,7 @@ func (r *Repository) ListSessions(ctx context.Context, actorID string) ([]Sessio
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, COALESCE(device_fingerprint, ''), surface, version, created_at, access_expires_at, last_used_at, compromised_at
 		FROM identity_sessions
-		WHERE actor_id = $1 AND revoked_at IS NULL
+		WHERE actor_id = $1 AND revoked_at IS NULL AND refresh_expires_at > now()
 		ORDER BY created_at DESC`, actorID)
 	if err != nil {
 		return nil, err

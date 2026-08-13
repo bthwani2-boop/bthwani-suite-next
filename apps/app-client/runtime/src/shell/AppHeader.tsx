@@ -24,6 +24,7 @@ export type AppHeaderProps = {
   onTickerPress?: () => void;
   direction?: "ltr" | "rtl";
   topInset?: number;
+  searchSlot?: React.ReactNode;
 };
 
 function AppHeaderTicker({
@@ -76,6 +77,7 @@ export function AppHeader({
   onTickerPress,
   direction = "rtl",
   topInset = 0,
+  searchSlot,
 }: AppHeaderProps) {
   const rowDir = direction === "rtl" ? "row-reverse" : "row";
 
@@ -92,18 +94,22 @@ export function AppHeader({
             <AppHeaderIconButton key={i} action={action} />
           ))}
         </View>
-        <Pressable
-          onPress={onLocationPress}
-          disabled={onLocationPress === undefined}
-          style={styles.titleArea}
-        >
-          <Text style={styles.titleText}>{title}</Text>
-          {locationLabel !== undefined ? (
-            <Text style={[styles.locationText, { color: alpha(WHITE, 0.88) }]} numberOfLines={1}>
-              {locationLabel}
-            </Text>
-          ) : null}
-        </Pressable>
+        {searchSlot ? (
+          <View style={styles.titleArea}>{searchSlot}</View>
+        ) : (
+          <Pressable
+            onPress={onLocationPress}
+            disabled={onLocationPress === undefined}
+            style={styles.titleArea}
+          >
+            <Text style={styles.titleText}>{title}</Text>
+            {locationLabel !== undefined ? (
+              <Text style={[styles.locationText, { color: alpha(WHITE, 0.88) }]} numberOfLines={1}>
+                {locationLabel}
+              </Text>
+            ) : null}
+          </Pressable>
+        )}
         <View style={styles.leadingSlot}>{leadingSlot}</View>
       </View>
       {tickerMessage !== undefined ? (

@@ -25,7 +25,7 @@ import type {
   DshPricingQuote,
   DshServiceabilityState,
 } from "../../shared/cart";
-import type { DshPaymentMethod } from "../../shared/checkout";
+import type { CheckoutToOrderFlowState, DshPaymentMethod } from "../../shared/checkout";
 import type { DshClientAddress } from "../../shared/client-address";
 import { formatWltMoney, useWltPaymentController } from "@bthwani/wlt/dsh";
 import { PaymentDecisionSection } from "./PaymentDecisionSection";
@@ -45,6 +45,11 @@ type Props = {
   readonly onManageAddresses?: (() => void) | undefined;
   readonly onBrowseCatalog?: (() => void) | undefined;
   readonly onBack?: (() => void) | undefined;
+  readonly checkoutState?: CheckoutToOrderFlowState | undefined;
+  readonly onResetCheckout?: (() => void) | undefined;
+  readonly onCancelCheckout?: ((intentId: string) => void) | undefined;
+  readonly onRefreshCheckout?: ((intentId: string) => void) | undefined;
+  readonly onRetryOrder?: (() => void) | undefined;
 };
 
 function fulfillmentLabel(mode: DshFulfillmentMode): string {
@@ -208,6 +213,75 @@ function CartItemValidationNotice({
   );
 }
 
+function ConfirmationHero({
+  itemCount,
+  fulfillmentMode,
+  ready,
+}: {
+  readonly itemCount: number;
+  readonly fulfillmentMode: DshFulfillmentMode;
+  readonly ready: boolean;
+}) {
+  return (
+    <Surface tone={ready ? "action" : "warning"} style={styles.confirmationHero}>
+      <View style={styles.heroBadgeRow}>
+        <Badge label={ready ? "جاهز للتأكيد" : "تحتاج السلة إلى مراجعة"} tone={ready ? "success" : "warning"} />
+        <Text role="caption" style={styles.heroMutedText}>{itemCount} منتج · {fulfillmentLabel(fulfillmentMode)}</Text>
+      </View>
+      <Text role="titleMd" style={styles.heroTitle}>راجع طلبك قبل الإرسال</Text>
+      <Text role="bodySm" style={styles.heroText}>
+        تحقق من المنتجات والعنوان وطريقة الدفع. لن يُنشأ الطلب إلا بعد ضغط زر التأكيد، ثم نفتح لك رحلة الطلب مباشرة.
+      </Text>
+    </Surface>
+  );
+}
+
+function CheckoutProgress({
+  state,
+  onReset,
+  onCancel,
+  onRefresh,
+  onRetryOrder,
+}: {
+  readonly state: CheckoutToOrderFlowState | undefined;
+  readonly onReset?: (() => void) | undefined;
+  readonly onCancel?: ((intentId: string) => void) | undefined;
+  readonly onRefresh?: ((intentId: string) => void) | undefined;
+  readonly onRetryOrder?: (() => void) | undefined;
+}) {
+  if (!state || state.kind === "idle" || state.kind === "order_ready") return null;
+  if (state.kind === "loading" || state.kind === "creating_order") {
+    return <StateView title={state.kind === "loading" ? "جارٍ تثبيت الطلب" : "جارٍ إنشاء الطلب"} description="نثبت السعر والعنوان والدفع ثم نقرأ حقيقة الطلب من DSH." loading />;
+  }
+  if (state.kind === "confirming" || state.kind === "reconciliation_pending") {
+    return (
+      <Surface tone="warning" style={styles.checkoutProgress}>
+        <Text role="bodyStrong" style={styles.sectionTitle}>{state.kind === "confirming" ? "الدفع قيد المعالجة" : "نتحقق من نتيجة الدفع"}</Text>
+        <Text role="caption" style={styles.mutedText}>لن نعيد إنشاء العملية تلقائيًا. حدّث الحالة أو ألغِ المحاولة بأمان.</Text>
+        <View style={styles.progressActions}>
+          <Button label="تحديث الحالة" tone="secondary" onPress={() => onRefresh?.(state.intent.id)} />
+          <Button label="إلغاء والعودة للمراجعة" tone="secondary" onPress={() => onCancel?.(state.intent.id)} />
+        </View>
+      </Surface>
+    );
+  }
+  const message = state.kind === "blocked_payment_unavailable"
+    ? "خدمة WLT غير متاحة حاليًا. لم يُنشأ طلب."
+    : state.kind === "out_of_area"
+      ? "العنوان خارج نطاق الخدمة. غيّر العنوان ثم أعد المحاولة."
+      : state.kind === "terminal"
+        ? "انتهت جلسة الدفع أو فشلت. راجع بيانات السلة وأنشئ محاولة جديدة."
+        : state.message;
+  return (
+    <Surface tone="danger" style={styles.checkoutProgress}>
+      <Text role="bodyStrong" style={styles.sectionTitle}>لم يكتمل تأكيد الطلب</Text>
+      <Text role="caption" style={styles.errorText}>{message}</Text>
+      {state.kind === "order_error" && onRetryOrder ? <Button label="إعادة المحاولة الآمنة" tone="secondary" onPress={onRetryOrder} /> : null}
+      {onReset ? <Button label="العودة إلى مراجعة السلة" tone="secondary" onPress={onReset} /> : null}
+    </Surface>
+  );
+}
+
 export function CartScreen({
   storeId,
   selectedAddress,
@@ -216,6 +290,11 @@ export function CartScreen({
   onManageAddresses,
   onBrowseCatalog,
   onBack,
+  checkoutState,
+  onResetCheckout,
+  onCancelCheckout,
+  onRefreshCheckout,
+  onRetryOrder,
 }: Props) {
   const controller = useCartController(storeId, authKind);
   const serviceabilityController = useServiceabilityController();
@@ -296,7 +375,7 @@ export function CartScreen({
   if (controller.state.kind === "loading") {
     return (
       <View style={styles.container}>
-        <TopBar title="السلة" {...(onBack ? { onBack } : {})} />
+        <TopBar title="تأكيد الطلب" {...(onBack ? { onBack } : {})} />
         <LoadingState title="جاري تحميل السلة…" />
       </View>
     );
@@ -305,7 +384,7 @@ export function CartScreen({
   if (controller.state.kind === "offline") {
     return (
       <View style={styles.container}>
-        <TopBar title="السلة" {...(onBack ? { onBack } : {})} />
+        <TopBar title="تأكيد الطلب" {...(onBack ? { onBack } : {})} />
         <StateView
           title="لا يوجد اتصال بالشبكة"
           description="تعذر الوصول إلى DSH. تحقق من الشبكة ثم أعد المحاولة."
@@ -319,7 +398,7 @@ export function CartScreen({
   if (controller.state.kind === "permission_denied") {
     return (
       <View style={styles.container}>
-        <TopBar title="السلة" {...(onBack ? { onBack } : {})} />
+        <TopBar title="تأكيد الطلب" {...(onBack ? { onBack } : {})} />
         <StateView
           title="يلزم تسجيل الدخول"
           description="سجّل الدخول للوصول إلى السلة المحفوظة في DSH."
@@ -331,7 +410,7 @@ export function CartScreen({
   if (controller.state.kind === "error") {
     return (
       <View style={styles.container}>
-        <TopBar title="السلة" {...(onBack ? { onBack } : {})} />
+        <TopBar title="تأكيد الطلب" {...(onBack ? { onBack } : {})} />
         <StateView
           title="تعذر تحميل السلة"
           description={controller.state.message}
@@ -345,7 +424,7 @@ export function CartScreen({
   if (controller.state.kind === "empty") {
     return (
       <View style={styles.container}>
-        <TopBar title="السلة" {...(onBack ? { onBack } : {})} />
+        <TopBar title="تأكيد الطلب" {...(onBack ? { onBack } : {})} />
         <StateView
           title="السلة فارغة"
           description="أضف منتجًا من كتالوج المتجر للمتابعة."
@@ -360,12 +439,26 @@ export function CartScreen({
   return (
     <View style={styles.container}>
       <TopBar
-        title="السلة"
+        title="تأكيد الطلب"
         subtitle={`${controller.state.cart.items.length} منتج`}
         {...(onBack ? { onBack } : {})}
       />
 
       <ScrollScreen contentContainerStyle={styles.content}>
+        <ConfirmationHero
+          itemCount={controller.state.cart.items.length}
+          fulfillmentMode={controller.state.cart.fulfillmentMode}
+          ready={cartReady}
+        />
+
+        <CheckoutProgress
+          state={checkoutState}
+          {...(onResetCheckout ? { onReset: onResetCheckout } : {})}
+          {...(onCancelCheckout ? { onCancel: onCancelCheckout } : {})}
+          {...(onRefreshCheckout ? { onRefresh: onRefreshCheckout } : {})}
+          {...(onRetryOrder ? { onRetryOrder } : {})}
+        />
+
         {!cartReady ? (
           <Surface tone="default" style={styles.alertSection}>
             <Text role="bodyStrong" style={styles.errorText}>تحتاج السلة إلى مراجعة</Text>
@@ -399,9 +492,6 @@ export function CartScreen({
                     </Text>
                   ) : null}
                   <Text role="caption" style={styles.mutedText}>الكمية الحالية: {item.quantity}</Text>
-                  <Text role="caption" style={styles.mutedText}>
-                    مرجع التشكيلة: {item.storeAssortmentId ?? "غير مرتبط"}
-                  </Text>
                 </View>
                 <CartItemValidationNotice
                   validation={validation}
@@ -547,10 +637,17 @@ export function CartScreen({
 
         <WltQuoteSummary quote={cart?.quote ?? null} />
 
+        <Surface tone="default" style={styles.confirmationPolicy}>
+          <Text role="bodyStrong" style={styles.sectionTitle}>قبل تأكيد الطلب</Text>
+          <Text role="caption" style={styles.mutedText}>
+            السعر والتوفر ورسوم التنفيذ تُثبت من المصادر المعتمدة عند إنشاء الطلب. إذا تغيرت الحقيقة أثناء التأكيد سيبقى الطلب مفتوحًا للمراجعة ولن يظهر كأنه أُنشئ بنجاح.
+          </Text>
+        </Surface>
+
         <Button
-          label="متابعة إلى مراجعة checkout"
+          label="تأكيد الطلب وإرساله"
           tone="primary"
-          disabled={!canProceed || !onProceedToCheckout}
+          disabled={!canProceed || !onProceedToCheckout || (checkoutState !== undefined && checkoutState.kind !== "idle" && checkoutState.kind !== "order_ready")}
           onPress={proceed}
         />
       </ScrollScreen>
@@ -654,6 +751,20 @@ function OperationalPolicyDetails({
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colorRoles.surfaceWarm },
   content: { padding: spacing[4], paddingBottom: spacing[12], gap: spacing[4] },
+  confirmationHero: {
+    padding: spacing[4],
+    borderRadius: radius.lg,
+    gap: spacing[2],
+  },
+  heroBadgeRow: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: spacing[2],
+  },
+  heroTitle: { color: colorRoles.surfaceBase, textAlign: "right" },
+  heroText: { color: colorRoles.surfaceBase, textAlign: "right", lineHeight: 22 },
+  heroMutedText: { color: alpha(colorRoles.surfaceBase, 0.82), textAlign: "right" },
   section: {
     padding: spacing[4],
     borderRadius: radius.md,
@@ -668,6 +779,23 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colorRoles.danger,
     backgroundColor: alpha(colorRoles.danger, 0.06),
+    gap: spacing[2],
+  },
+  confirmationPolicy: {
+    padding: spacing[4],
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colorRoles.borderSubtle,
+    gap: spacing[2],
+  },
+  checkoutProgress: {
+    padding: spacing[4],
+    borderRadius: radius.md,
+    gap: spacing[2],
+  },
+  progressActions: {
+    flexDirection: "row-reverse",
+    flexWrap: "wrap",
     gap: spacing[2],
   },
   quoteLine: {

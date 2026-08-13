@@ -124,11 +124,11 @@ $partnerHeaders = @{
   "X-Correlation-ID" = "smoke-catalog-$([guid]::NewGuid())"
 }
 $proposalBody = @{
-  proposedNameAr = "منتج فحص الشريك"
-  proposedNameEn = "Partner Smoke Product"
+  proposedNameAr = "شاي أحمر فاخر كبوس 225 جم"
+  proposedNameEn = "Al-Kbous Premium Black Tea 225g"
   domainId = "domain-groceries"
   categoryNodeId = "node-supermarket"
-  brand = "بثواني"
+  brand = "الكبوس"
   sourceSurface = "app-partner"
 } | ConvertTo-Json
 $proposal = Invoke-RestMethod "http://localhost:58080/dsh/partner/catalog/product-proposals" -Method Post -Headers $partnerHeaders -ContentType "application/json" -Body $proposalBody -TimeoutSec 10

@@ -1,1 +1,1 @@
-export { GovernedCheckoutScreen as CheckoutScreen } from "./GovernedCheckoutScreen";
+export { ClientCheckoutRoute } from "./ClientCheckoutRoute";

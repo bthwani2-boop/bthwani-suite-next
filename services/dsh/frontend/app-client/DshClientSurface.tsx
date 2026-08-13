@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { BackHandler, Linking, StyleSheet, View } from "react-native";
+import { BackHandler, Linking, StyleSheet, View, TextInput } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "../../../../apps/app-client/runtime/src/shell/AppHeader";
 import {
@@ -16,6 +16,7 @@ import { StoreDiscoveryRoute } from "./store/StoreDiscoveryRoute";
 import { StoreDetailRoute } from "./store/StoreDetailRoute";
 import { ClientCheckoutRoute } from "./checkout/ClientCheckoutRoute";
 import { OrdersListScreen } from "./orders/OrdersListScreen";
+import { WltClientWalletPanel } from "./finance/WltClientWalletPanel";
 import { MySpaceScreen } from "./account/MySpaceScreen";
 import { MyProfileScreen } from "./account/MyProfileScreen";
 import { AddressLocationScreen } from "./account/AddressLocationScreen";
@@ -36,8 +37,12 @@ import {
 import { generateSpecialRequestIdempotencyKey } from "../shared/special-requests/special-requests.idempotency";
 import type { DshHomeSpecialRequestTarget } from "../shared/home-discovery";
 import { notificationActionFromDeepLink } from "../shared/notifications/client-notification-deep-link";
+import {
+  useOrderTruthCollectionController,
+  toOrderTruthSummary,
+} from "../shared/order-truth";
 
-type ClientTab = "home" | "stores" | "orders" | "special" | "profile" | "cart";
+type ClientTab = "home" | "stores" | "orders" | "special" | "wallet" | "profile" | "cart";
 type ProfileRoute =
   | "profile"
   | "commercial-profile"
@@ -56,10 +61,10 @@ const NAV_ITEMS: BottomNavItem[] = [
     activeIcon: <Icon name="person" size={22} color={colorRoles.brandAction} />,
   },
   {
-    id: "special",
-    label: "طلبات خاصة",
-    icon: <Icon name="sparkles-outline" size={22} color={colorRoles.brandStructure} />,
-    activeIcon: <Icon name="sparkles" size={22} color={colorRoles.brandAction} />,
+    id: "wallet",
+    label: "محفظتي",
+    icon: <Icon name="wallet-outline" size={22} color={colorRoles.brandStructure} />,
+    activeIcon: <Icon name="wallet" size={22} color={colorRoles.brandAction} />,
   },
   {
     id: "orders",
@@ -80,6 +85,7 @@ function isClientTab(value: string): value is ClientTab {
     || value === "stores"
     || value === "orders"
     || value === "special"
+    || value === "wallet"
     || value === "profile"
     || value === "cart";
 }
@@ -93,9 +99,25 @@ export function DshClientSurface() {
   const [activePickupOrderId, setActivePickupOrderId] = useState<string | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
+  const [activeSupportOrderId, setActiveSupportOrderId] = useState<string | null>(null);
   const [activeSpecialRequest, setActiveSpecialRequest] = useState<SpecialRequestRoute | null>(null);
+  const [isSearchActive, setIsSearchActive] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const specialRequestController = useSpecialRequestsController();
+  const { state: ordersState } = useOrderTruthCollectionController("client");
+
+  const activeOrder = React.useMemo(() => {
+    if (ordersState.kind !== "success" && ordersState.kind !== "partial") return null;
+    const active = ordersState.orders.find(
+      (order) =>
+        order.currentOwner !== "terminal" &&
+        !["delivered", "returned_to_store"].includes(order.status) &&
+        !order.status.startsWith("cancelled_") &&
+        !order.status.startsWith("failed_"),
+    );
+    return active ?? null;
+  }, [ordersState]);
 
   const activateTab = useCallback((tab: ClientTab) => {
     void performClientSelectionHaptic();
@@ -104,6 +126,7 @@ export function DshClientSurface() {
     setActivePickupOrderId(null);
     setActiveOrderId(null);
     setActiveTicketId(null);
+    setActiveSupportOrderId(null);
     if (tab === "profile") setProfileRoute("profile");
     setActiveTab(tab);
   }, []);
@@ -119,6 +142,14 @@ export function DshClientSurface() {
     setActiveTab("orders");
     setActiveOrderId(orderId);
     setActivePickupOrderId(orderId);
+  }, []);
+
+  const openOrderSupport = useCallback((orderId: string) => {
+    void performClientSelectionHaptic();
+    setActiveOrderId(null);
+    setActiveSupportOrderId(orderId);
+    setProfileRoute("support");
+    setActiveTab("profile");
   }, []);
 
   const openStore = useCallback((storeId: string) => {
@@ -192,6 +223,11 @@ export function DshClientSurface() {
       setShowNotifications(false);
       return true;
     }
+    if (isSearchActive) {
+      setIsSearchActive(false);
+      setSearchQuery("");
+      return true;
+    }
     if (activeSpecialRequest !== null) {
       setActiveSpecialRequest(null);
       setActiveTab("special");
@@ -235,6 +271,7 @@ export function DshClientSurface() {
     profileRoute,
     selectedStoreId,
     showNotifications,
+    isSearchActive,
   ]);
 
   useEffect(() => {
@@ -278,7 +315,48 @@ export function DshClientSurface() {
           title="بثواني"
           topInset={insets.top}
           direction="rtl"
+          {...(activeOrder ? {
+            tickerStatusLabel: "طلب نشط",
+            tickerMessage: `طلبك #${activeOrder.orderNumber} · ${toOrderTruthSummary(activeOrder).statusLabel}`,
+            onTickerPress: () => {
+              void performClientSelectionHaptic();
+              openOrderTracking(activeOrder.id);
+            },
+          } : {})}
+          searchSlot={
+            isSearchActive ? (
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="ابحث عن متجر أو فئة..."
+                placeholderTextColor={colorRoles.textMuted}
+                style={{
+                  height: 36,
+                  backgroundColor: colorRoles.surfaceBase,
+                  borderRadius: 18,
+                  paddingHorizontal: 16,
+                  textAlign: "right",
+                  flex: 1,
+                  fontSize: 14,
+                }}
+                autoFocus
+              />
+            ) : undefined
+          }
           actions={[
+            {
+              icon: <Icon name={isSearchActive ? "close-outline" : "search-outline"} size={20} color={colorRoles.surfaceBase} />,
+              accessibilityLabel: "بحث",
+              onPress: () => {
+                void performClientSelectionHaptic();
+                if (isSearchActive) {
+                  setSearchQuery("");
+                  setIsSearchActive(false);
+                } else {
+                  setIsSearchActive(true);
+                }
+              },
+            },
             {
               icon: <Icon name="notifications-outline" size={20} color={colorRoles.surfaceBase} />,
               accessibilityLabel: "الإشعارات",
@@ -312,6 +390,7 @@ export function DshClientSurface() {
             orderId={activeOrderId}
             onBack={() => setActiveOrderId(null)}
             onOpenPickup={openPickupSession}
+            onOpenOrderSupport={openOrderSupport}
           />
         ) : activeSpecialRequest === "shein" ? (
           <SheinForm
@@ -335,6 +414,7 @@ export function DshClientSurface() {
           />
         ) : activeTab === "home" ? (
           <HomeDiscoveryRoute
+            searchQuery={searchQuery}
             onStorePress={openStore}
             onSpecialRequestPress={openSpecialRequestType}
             onMarketingAction={openHomeMarketingAction}
@@ -356,7 +436,9 @@ export function DshClientSurface() {
             />
           )
         ) : activeTab === "orders" ? (
-          <OrdersListScreen onOpenOrder={openOrderTracking} />
+          <OrdersListScreen onOpenOrder={openOrderTracking} onOpenSpecialRequests={openSpecialRequestList} />
+        ) : activeTab === "wallet" ? (
+          <WltClientWalletPanel />
         ) : activeTab === "cart" ? (
           selectedStoreId === null ? (
             <StateView
@@ -395,8 +477,12 @@ export function DshClientSurface() {
             />
           ) : (
             <SupportTicketScreen
-              onBack={() => setProfileRoute("profile")}
+              onBack={() => {
+                setActiveSupportOrderId(null);
+                setProfileRoute("profile");
+              }}
               onOpenTicket={setActiveTicketId}
+              {...(activeSupportOrderId ? { orderId: activeSupportOrderId } : {})}
             />
           )
         ) : (

@@ -7,8 +7,6 @@ import type {
   DshOrderAuthContext,
   DshOrderApiOfflineError,
   DshOrderApiHttpError,
-  DshCreateOrderRequest,
-  DshCreateOrderResponse,
   DshOrderDetailsResponse,
   DshUpdateOrderStatusRequest,
   DshOrderRecord,
@@ -112,18 +110,6 @@ export function createDshOrderLifecycleHttpClient(
         orderAuthHeaders(auth),
       );
       return normalizeOrderList(resp);
-    },
-    createOrder: async (req) => {
-      if (!baseUrl) throw { kind: 'offline' } as DshOrderApiOfflineError;
-      const resp = await doFetch<{ order?: BackendOrder }>(
-        baseUrl,
-        fetchFn,
-        'POST',
-        '/dsh/client/orders',
-        { checkoutIntentId: req.checkout_intent_id },
-        orderAuthHeaders(auth),
-      );
-      return normalizeOrderResponse(resp);
     },
     getOrder: async (orderId) => {
       if (!baseUrl) throw { kind: 'offline' } as DshOrderApiOfflineError;

@@ -12,41 +12,41 @@ INSERT INTO dsh_catalog_assets (
 ) VALUES
     (
       'asset-local-home-banner-restaurants',
-      'realistic/store-test-restaurant-hero.jpg',
+      'banners/banner-001.png',
       NULL,
-      'realistic/store-test-restaurant-hero.jpg',
-      'image/jpeg', 0, 1200, 600,
-      '94d218b4b3d7a7891d27e04b78dcfe6da91ac38f766d16c6cabc133020b07871',
+      'banner-001.png',
+      'image/png', 844, 1200, 600,
+      'd1b5d40c767d0fce7673d56ce591b3f00e79d5bbd0f67210048ec238403415ec',
       'مطاعم مختارة بعناية', 'Curated restaurants', '#ffffff',
       'approved', 'system', 'system-seed'
     ),
     (
       'asset-local-home-banner-offers',
-      'realistic/store-test-grocery-hero.jpg',
+      'banners/banner-002.png',
       NULL,
-      'realistic/store-test-grocery-hero.jpg',
-      'image/jpeg', 0, 1200, 600,
-      '04cd18a893fd3e314db85de9818c86eafe2756190ab2412e8e7b260cf3c4d0b8',
+      'banner-002.png',
+      'image/png', 637, 1200, 600,
+      '601ff490aa42e3ae767f4b141437d885d32ee6fc45b9ce89b7a46ee3613fbbb7',
       'عروض يومية موفرة', 'Daily savings', '#ffffff',
       'approved', 'system', 'system-seed'
     ),
     (
       'asset-local-home-promo-free-delivery',
-      'realistic/store-test-pharmacy-hero.jpg',
+      'banners/promo-001.png',
       NULL,
-      'realistic/store-test-pharmacy-hero.jpg',
-      'image/jpeg', 0, 1200, 600,
-      '7dddabe1344a88bf5bd45bc7d38dead0600f7a0346e8d1c914dbfa069c962ebb',
+      'promo-001.png',
+      'image/png', 1359, 1200, 600,
+      '00e0d6d64c6597b362eb944eb3efd28e730c3683377bf68feaa522cadc88a936',
       'عرض توصيل مجاني', 'Free delivery offer', '#ffffff',
       'approved', 'system', 'system-seed'
     ),
     (
       'asset-local-home-promo-top-rated',
-      'realistic/store-test-restaurant-hero.jpg',
+      'banners/promo-002.png',
       NULL,
-      'realistic/store-test-restaurant-hero.jpg',
-      'image/jpeg', 0, 1200, 600,
-      '94d218b4b3d7a7891d27e04b78dcfe6da91ac38f766d16c6cabc133020b07871',
+      'promo-002.png',
+      'image/png', 1359, 1200, 600,
+      '00e0d6d64c6597b362eb944eb3efd28e730c3683377bf68feaa522cadc88a936',
       'اختيار العملاء', 'Customers choice', '#ffffff',
       'approved', 'system', 'system-seed'
     )

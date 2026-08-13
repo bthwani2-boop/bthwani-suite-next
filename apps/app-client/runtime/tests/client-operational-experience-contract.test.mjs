@@ -45,9 +45,8 @@ test("client discovery exposes real search, cached images, and a persistent dono
     "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx",
     [
       "createClientEphemeralId",
-      "searchText",
+      "searchQuery",
       "normalizedQuery",
-      "ابحث عن متجر أو فئة",
       "setReels([])",
       "setVideoOpenRequest",
       "onVideoPress={handleVideoPress}",
@@ -163,15 +162,15 @@ test("SHEIN and Awnak intake forms expose the backend-supported operational fiel
 test("client order and support routes remain navigable and failure-safe", () => {
   assertMarkers(
     "services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
-    ["onOpenPickup", 'order.fulfillmentMode === "pickup"', "افتح جلسة الاستلام"],
+    ["onOpenPickup", "onOpenOrderSupport", 'order.fulfillmentMode === "pickup"', "مراسلة الدعم بشأن الطلب"],
   );
   assertMarkers(
     "services/dsh/frontend/app-client/support/SupportTicketScreen.tsx",
-    ["const ok = await submitTicket", "if (!ok) return;", "maxLength={4000}"],
+    ["const ok = await submitTicket", "if (!ok) return;", "orderId", "maxLength={4000}"],
   );
   assertMarkers(
     "services/dsh/frontend/app-client/DshClientSurface.tsx",
-    ["openClientExternalUrl", "onOpenPickup={openPickupSession}", "performClientSelectionHaptic"],
+    ["openClientExternalUrl", "onOpenPickup={openPickupSession}", "onOpenOrderSupport={openOrderSupport}", "performClientSelectionHaptic"],
   );
 });
 
@@ -208,8 +207,8 @@ test("catalog verification wrapper initializes native exit state before a PowerS
 
 test("checkout carries the confirmed cart version into the canonical DSH OCC contract", () => {
   const screen = assertMarkers(
-    "services/dsh/frontend/app-client/checkout/GovernedCheckoutScreen.tsx",
-    ["expectedCartVersion: cart.version", "useCheckoutToOrderFlow(input)"],
+    "services/dsh/frontend/app-client/checkout/ClientCheckoutRoute.tsx",
+    ["expectedCartVersion: cart.version", "flow.start(input)"],
   );
   assert.ok(screen.includes("expectedCartVersion: cart.version"));
   const schema = assertMarkers(

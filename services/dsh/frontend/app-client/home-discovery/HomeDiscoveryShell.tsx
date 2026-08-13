@@ -48,6 +48,7 @@ type Props = {
   state: HomeDiscoveryState;
   activeFilter: DiscoveryFilterKind;
   onFilterChange: (kind: DiscoveryFilterKind) => void;
+  searchQuery?: string | undefined;
   onStorePress?: ((storeId: string, slug: string) => void) | undefined;
   onSpecialRequestPress?: ((requestType: DshHomeSpecialRequestTarget) => void) | undefined;
   onMarketingAction?: ((actionType: string, actionTarget: string) => void) | undefined;
@@ -62,6 +63,7 @@ export function HomeDiscoveryShell({
   state,
   activeFilter,
   onFilterChange,
+  searchQuery = "",
   onStorePress,
   onSpecialRequestPress,
   onMarketingAction,
@@ -70,8 +72,7 @@ export function HomeDiscoveryShell({
   const isRtl = I18nManager.isRTL;
   const [activeCategoryId, setActiveCategoryId] = React.useState<string | null>(null);
   const [showDropdown, setShowDropdown] = React.useState(false);
-  const [searchText, setSearchText] = React.useState("");
-  const normalizedQuery = searchText.trim();
+  const normalizedQuery = searchQuery.trim();
   const [reels, setReels] = React.useState<readonly HomePublicReel[]>([]);
   const [reelsLoadState, setReelsLoadState] = React.useState<HomeReelsLoadState>("idle");
   const [videoOpenRequest, setVideoOpenRequest] = React.useState(0);
@@ -298,32 +299,6 @@ export function HomeDiscoveryShell({
           onRetry={() => void loadReels()}
           onReelPress={handleReelPress}
         />
-
-        <View style={styles.searchWrap}>
-          <TextInput
-            accessibilityLabel="البحث في المتاجر والفئات"
-            value={searchText}
-            onChangeText={setSearchText}
-            placeholder="ابحث عن متجر أو فئة"
-            placeholderTextColor={colorRoles.textMuted}
-            maxLength={120}
-            returnKeyType="search"
-            autoCorrect={false}
-            style={styles.searchInput}
-            textAlign="right"
-          />
-          {searchText ? (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="مسح البحث"
-              hitSlop={8}
-              onPress={() => setSearchText("")}
-              style={styles.clearSearch}
-            >
-              <Text style={styles.clearSearchText}>×</Text>
-            </Pressable>
-          ) : null}
-        </View>
 
         <HomeFilterRailSection
           filters={filters}

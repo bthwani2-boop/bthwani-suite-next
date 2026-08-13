@@ -186,11 +186,11 @@ $Assortment = Invoke-Api GET "$DshBaseUrl/dsh/partner/stores/$StoreId/assortment
 Require-Status $Assortment @(200) "partner store assortment"
 
 $ProposalBody = @{
-  proposedNameAr = "منتج رحلة الشريك $RunId"
-  proposedNameEn = "Partner journey product $RunId"
+  proposedNameAr = "حليب مبخر الشاي الذهبي 170 جم"
+  proposedNameEn = "Golden Tea Evaporated Milk 170g"
   domainId = $DomainId
   categoryNodeId = $CategoryNodeId
-  brand = "BThwani Runtime"
+  brand = "الشاي الذهبي"
   imageObjectKey = $null
   sourceSurface = "app-partner"
 }

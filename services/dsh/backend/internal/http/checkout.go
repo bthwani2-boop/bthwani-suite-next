@@ -17,6 +17,67 @@ import (
 	"dsh-api/internal/wlt"
 )
 
+func (s *protectedStoreServer) evaluateCheckoutDependencies(
+	r *http.Request,
+	intent *checkout.Intent,
+	addressID string,
+	mode checkout.FulfillmentMode,
+) (checkout.IntentDependencyValidation, string, string, error) {
+	if mode != checkout.ModeBthwaniDelivery && mode != checkout.ModePartnerDelivery && mode != checkout.ModePickup {
+		return checkout.IntentDependencyValidation{}, "", "", checkout.ErrInvalid
+	}
+	resolvedAddressID := strings.TrimSpace(addressID)
+	if mode != checkout.ModePickup && resolvedAddressID == "" {
+		if err := s.db.QueryRowContext(r.Context(), `
+			SELECT COALESCE(delivery_address_id, '')
+			FROM dsh_checkout_intents
+			WHERE id=$1::uuid AND operator_context_id=$2 AND client_id=$3`,
+			intent.ID, intent.OperatorContextID, intent.ClientID).Scan(&resolvedAddressID); err != nil {
+			return checkout.IntentDependencyValidation{}, "", "", err
+		}
+	}
+
+	var serviceAreaCode string
+	var clientLat, clientLng *float64
+	addressSnapshot := ""
+	if mode != checkout.ModePickup {
+		if resolvedAddressID == "" {
+			return checkout.IntentDependencyValidation{
+				CartReady:   false,
+				CartCode:    "ADDRESS_REQUIRED",
+				Serviceable: false,
+			}, resolvedAddressID, addressSnapshot, nil
+		}
+		address, err := clientaddress.GetOwned(r.Context(), s.db, intent.ClientID, resolvedAddressID)
+		if err != nil {
+			return checkout.IntentDependencyValidation{}, "", "", err
+		}
+		serviceAreaCode = address.ServiceAreaCode
+		clientLat = address.Latitude
+		clientLng = address.Longitude
+		addressSnapshot = address.CheckoutSnapshot()
+	}
+
+	cartValidation, err := cart.ValidateCart(r.Context(), s.db, intent.CartID)
+	if err != nil {
+		return checkout.IntentDependencyValidation{}, "", "", err
+	}
+	if len(cartValidation.Items) == 0 {
+		cartValidation.Ready = false
+		cartValidation.Code = "CART_EMPTY"
+	}
+	serviceability := cart.CheckGovernedServiceability(
+		r.Context(), s.db, s.maps, intent.StoreID, serviceAreaCode, clientLat, clientLng,
+		cart.FulfillmentMode(mode),
+	)
+	return checkout.IntentDependencyValidation{
+		CartReady:          cartValidation.Ready,
+		CartCode:           cartValidation.Code,
+		Serviceable:        serviceability.Serviceable,
+		ServiceabilityCode: serviceability.Code,
+	}, resolvedAddressID, addressSnapshot, nil
+}
+
 // POST /dsh/client/checkout-intents
 func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
@@ -703,7 +764,29 @@ func (s *protectedStoreServer) handleValidateCheckoutIntent(w http.ResponseWrite
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "intentId is required")
 		return
 	}
-	intent, err := checkout.ValidateIntent(s.db, intentID, actor.OperatorContextID, actor.ID)
+	intent, err := checkout.GetIntent(s.db, intentID, actor.OperatorContextID, actor.ID)
+	if errors.Is(err, checkout.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve checkout intent")
+		return
+	}
+	dependencies, _, _, err := s.evaluateCheckoutDependencies(r, intent, "", intent.FulfillmentMode)
+	if errors.Is(err, clientaddress.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "ADDRESS_NOT_FOUND", "checkout address is no longer owned by the authenticated client")
+		return
+	}
+	if errors.Is(err, checkout.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "checkout fulfillment mode is invalid")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to evaluate checkout dependencies")
+		return
+	}
+	intent, err = checkout.ValidateIntent(s.db, intentID, actor.OperatorContextID, actor.ID, dependencies)
 	if errors.Is(err, checkout.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found")
 		return
@@ -713,7 +796,7 @@ func (s *protectedStoreServer) handleValidateCheckoutIntent(w http.ResponseWrite
 		return
 	}
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to validate checkout intent")
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to persist checkout validation")
 		return
 	}
 	pricing, err := checkout.GetPricing(s.db, intent.ID)
@@ -735,6 +818,15 @@ func (s *protectedStoreServer) handleRefreshCheckoutIntent(w http.ResponseWriter
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "intentId is required")
 		return
 	}
+	intent, err := checkout.GetIntent(s.db, intentID, actor.OperatorContextID, actor.ID)
+	if errors.Is(err, checkout.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve checkout intent")
+		return
+	}
 	var body struct {
 		FulfillmentMode   string `json:"fulfillmentMode"`
 		DeliveryAddressID string `json:"deliveryAddressId"`
@@ -746,10 +838,31 @@ func (s *protectedStoreServer) handleRefreshCheckoutIntent(w http.ResponseWriter
 	addressID := strings.TrimSpace(body.DeliveryAddressID)
 	mode := checkout.FulfillmentMode(strings.TrimSpace(body.FulfillmentMode))
 	if mode == "" {
-		mode = checkout.ModeBthwaniDelivery
+		mode = intent.FulfillmentMode
+	}
+	if mode != checkout.ModePickup && addressID == "" {
+		store.SendError(w, http.StatusBadRequest, "DELIVERY_ADDRESS_REQUIRED", "deliveryAddressId is required for delivery refresh")
+		return
 	}
 
-	intent, err := checkout.RefreshIntent(s.db, intentID, actor.OperatorContextID, actor.ID, addressID, mode, 0)
+	dependencies, resolvedAddressID, addressSnapshot, err := s.evaluateCheckoutDependencies(r, intent, addressID, mode)
+	if errors.Is(err, clientaddress.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "ADDRESS_NOT_FOUND", "delivery address is not owned by the authenticated client")
+		return
+	}
+	if errors.Is(err, checkout.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "checkout fulfillment mode is invalid")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to evaluate checkout dependencies")
+		return
+	}
+	intent, err = checkout.RefreshIntent(s.db, checkout.RefreshIntentInput{
+		IntentID: intentID, OperatorContextID: actor.OperatorContextID, ClientID: actor.ID,
+		AddressID: resolvedAddressID, AddressSnapshot: addressSnapshot, Mode: mode,
+		Dependencies: dependencies,
+	})
 	if errors.Is(err, checkout.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found")
 		return
@@ -759,7 +872,7 @@ func (s *protectedStoreServer) handleRefreshCheckoutIntent(w http.ResponseWriter
 		return
 	}
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to refresh checkout intent")
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to persist checkout refresh")
 		return
 	}
 	pricing, err := checkout.GetPricing(s.db, intent.ID)

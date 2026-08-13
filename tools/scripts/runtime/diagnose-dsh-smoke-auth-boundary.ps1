@@ -163,11 +163,11 @@ if (-not [bool]$publicStore.store.publicationEligible) {
 $partnerToken = Get-ActorToken -Username (Get-LocalUsername "partner")
 $diagnosticSuffix = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 $proposalBody = @{
-  proposedNameAr = "منتج تشخيص $diagnosticSuffix"
-  proposedNameEn = "Runtime Diagnostic Product $diagnosticSuffix"
+  proposedNameAr = "تونة قطع لحم أبيض في زيت دوار الشمس 185 جم"
+  proposedNameEn = "Goody White Meat Tuna Chunks in Sunflower Oil 185g"
   domainId = "domain-groceries"
   categoryNodeId = "node-supermarket"
-  brand = "بثواني"
+  brand = "قودي"
   sourceSurface = "app-partner"
 } | ConvertTo-Json
 $proposal = Invoke-CheckedJsonRequest `

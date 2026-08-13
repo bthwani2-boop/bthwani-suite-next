@@ -135,11 +135,16 @@ export function StoreDetailShell({
     if (!selectedProduct || isSubmitting) return;
     setIsSubmitting(true);
     setMutationError(null);
-    const accepted = await onAddToCart(
-      selectedProduct,
-      quantity,
-      selectedMode,
-    );
+    let accepted = false;
+    try {
+      accepted = await onAddToCart(
+        selectedProduct,
+        quantity,
+        selectedMode,
+      );
+    } catch (e) {
+      // Fallback if the promise rejects unexpectedly
+    }
     setIsSubmitting(false);
     if (accepted) {
       setIsAddedToCart(true);

@@ -248,6 +248,25 @@ $Field = [pscustomobject]@{
   Subject = [string]$FieldProvider.actorId
 }
 
+# This matrix uses the one provisioned local captain. Repeated failed runs may
+# leave an offered/accepted test assignment occupying that captain's governed
+# capacity. Reconcile only assignments owned by this exact test captain before
+# creating the next isolated run; unrelated captains and orders are untouched.
+$CaptainAssignmentsBeforeRun = Invoke-Api GET "$DshBaseUrl/dsh/operator/dispatch/assignments" (Headers $Operator "captain-capacity-reconcile" -ReadOnly)
+Require-Status $CaptainAssignmentsBeforeRun @(200) "captain capacity reconciliation read"
+foreach ($StaleAssignment in @((Get-Value $CaptainAssignmentsBeforeRun.Json 'assignments') | Where-Object {
+  "$(Get-Value $_ 'captainId')" -eq $Captain.Subject -and
+  "$(Get-Value $_ 'status')" -notin @("completed", "cancelled")
+})) {
+  $StaleAssignmentId = "$(Get-Value $StaleAssignment 'id')"
+  $StaleCancelHeaders = Headers $Operator "captain-capacity-reconcile-$StaleAssignmentId"
+  $StaleCancel = Invoke-Api POST "$DshBaseUrl/dsh/operator/dispatch/assignments/$StaleAssignmentId/cancel" $StaleCancelHeaders @{
+    reasonCode = "runtime_test_reset"
+    reason = "reconcile stale local runtime matrix assignment before a new isolated run"
+  }
+  Require-Status $StaleCancel @(204) "stale captain assignment cancellation"
+}
+
 $StorePoint = Resolve-GovernedStoreServicePoint -StoreId "store-test-grocery"
 
 $Anonymous = Invoke-Api GET "$DshBaseUrl/dsh/client/orders"
@@ -256,11 +275,13 @@ $CrossRole = Invoke-Api GET "$DshBaseUrl/dsh/client/orders" (Headers $Partner "c
 Require-Status $CrossRole @(403) "partner reading client orders"
 
 $AddressId = Ensure-ClientAddress $Client $StorePoint
-$ExistingCart = Invoke-Api GET "$DshBaseUrl/dsh/client/cart?storeId=store-test-grocery" (Headers $Client "cart-read" -ReadOnly)
-Require-Status $ExistingCart @(200) "client cart read"
-if ($null -ne (Get-Value $ExistingCart.Json 'cart')) {
-  $Clear = Invoke-Api DELETE "$DshBaseUrl/dsh/client/cart?storeId=store-test-grocery" (Headers $Client "cart-clear")
-  Require-Status $Clear @(204) "client cart clear"
+foreach ($CandidateStoreId in @("store-test-grocery", "store-test-electronics", "store-test-pharmacy", "store-test-restaurant", "store-test-sweets")) {
+  $ExistingCart = Invoke-Api GET "$DshBaseUrl/dsh/client/cart?storeId=$CandidateStoreId" (Headers $Client "cart-read-$CandidateStoreId" -ReadOnly)
+  Require-Status $ExistingCart @(200) "client cart read $CandidateStoreId"
+  if ($null -ne (Get-Value $ExistingCart.Json 'cart')) {
+    $Clear = Invoke-Api DELETE "$DshBaseUrl/dsh/client/cart?storeId=$CandidateStoreId" (Headers $Client "cart-clear-$CandidateStoreId")
+    Require-Status $Clear @(204) "client cart clear $CandidateStoreId"
+  }
 }
 
 $Catalog = Invoke-Api GET "$DshBaseUrl/dsh/stores/store-test-grocery/catalog"
@@ -282,10 +303,15 @@ $Cart = Invoke-Api POST "$DshBaseUrl/dsh/client/cart/items" (Headers $Client "ca
 Require-Status $Cart @(200) "client cart upsert"
 $CartId = "$(Get-Value $Cart.Json 'cartId')"
 Require (-not [string]::IsNullOrWhiteSpace($CartId)) "cart returned no id"
+$CartReadback = Invoke-Api GET "$DshBaseUrl/dsh/client/cart?storeId=store-test-grocery" (Headers $Client "cart-readback" -ReadOnly)
+Require-Status $CartReadback @(200) "client cart readback"
+$CartVersion = [int](Get-Value (Get-Value $CartReadback.Json 'cart') 'version')
+Require ($CartVersion -gt 0) "cart returned no governed version"
 
 $Checkout = Invoke-Api POST "$DshBaseUrl/dsh/client/checkout-intents" (Headers $Client "checkout") @{
   cartId = $CartId
   storeId = "store-test-grocery"
+  expectedCartVersion = $CartVersion
   fulfillmentMode = "bthwani_delivery"
   paymentMethod = "cod"
   deliveryAddressId = $AddressId
@@ -324,9 +350,13 @@ $Accepted = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/decision" $
 Require-Status $Accepted @(200) "partner governed accept"
 Require ("$(Get-Value (Get-Value $Accepted.Json 'order') 'status')" -eq "store_accepted") "partner accept status mismatch"
 
-$Preparing = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/preparing" (Headers $Partner "partner-preparing")
+$PreparingHeaders = Headers $Partner "partner-preparing"
+$PreparingHeaders["If-Match-Version"] = "$(Get-Value (Get-Value $Accepted.Json 'order') 'version')"
+$Preparing = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/preparing" $PreparingHeaders
 Require-Status $Preparing @(200) "partner preparing"
-$Ready = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/ready" (Headers $Partner "partner-ready")
+$ReadyHeaders = Headers $Partner "partner-ready"
+$ReadyHeaders["If-Match-Version"] = "$(Get-Value (Get-Value $Preparing.Json 'order') 'version')"
+$Ready = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/ready" $ReadyHeaders
 Require-Status $Ready @(200) "partner ready"
 Require ("$(Get-Value (Get-Value $Ready.Json 'order') 'status')" -eq "ready_for_pickup") "ready status mismatch"
 

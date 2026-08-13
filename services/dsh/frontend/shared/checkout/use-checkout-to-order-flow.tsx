@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useCheckoutController } from "./use-checkout-controller";
 import { useCreateOrderTruthController } from "../order-truth";
 import type {
@@ -8,6 +8,7 @@ import type {
 } from "./checkout.types";
 
 export type CheckoutToOrderFlowState =
+  | { readonly kind: "idle" }
   | { readonly kind: "loading" }
   | { readonly kind: "confirming"; readonly intent: DshCheckoutIntent }
   | { readonly kind: "reconciliation_pending"; readonly intent: DshCheckoutIntent }
@@ -25,7 +26,7 @@ export type CheckoutToOrderFlowState =
       readonly correlationId: string;
     };
 
-export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
+export function useCheckoutToOrderFlow() {
   const checkout = useCheckoutController();
   const order = useCreateOrderTruthController();
   const submitCheckout = checkout.submit;
@@ -33,23 +34,30 @@ export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
   const reloadCheckout = checkout.reload;
   const submitOrder = order.submit;
   const resetOrder = order.reset;
+  const resetCheckout = checkout.reset;
+  const [activeInput, setActiveInput] = useState<DshCreateIntentInput | null>(null);
 
   useEffect(() => {
+    if (!activeInput) return undefined;
     // A new checkout must never inherit a previous order mutation result. The
     // durable order attempt remains in AsyncStorage until canonical readback.
-    resetOrder();
-    void submitCheckout(input);
+    void submitCheckout(activeInput);
   }, [
-    input.cartId,
-    input.storeId,
-    input.fulfillmentMode,
-    input.paymentMethod,
-    input.deliveryAddressId,
-    input.note,
-    input.couponCode,
-    resetOrder,
+    activeInput,
     submitCheckout,
   ]);
+
+  const start = useCallback((input: DshCreateIntentInput) => {
+    resetCheckout();
+    resetOrder();
+    setActiveInput(input);
+  }, [resetCheckout, resetOrder]);
+
+  const reset = useCallback(() => {
+    resetCheckout();
+    resetOrder();
+    setActiveInput(null);
+  }, [resetCheckout, resetOrder]);
 
   const checkoutIntentId = checkout.state.kind === "success"
     ? checkout.state.intent.id
@@ -71,10 +79,10 @@ export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
   }, [pendingIntentId, reconciliationPending, reloadCheckout]);
 
   useEffect(() => {
-    if (checkoutIntentId && order.state.kind === "idle") {
+    if (activeInput && checkoutIntentId && order.state.kind === "idle") {
       void submitOrder({ checkoutIntentId });
     }
-  }, [checkoutIntentId, order.state.kind, submitOrder]);
+  }, [activeInput, checkoutIntentId, order.state.kind, submitOrder]);
 
   const retryOrder = useCallback(() => {
     if (!checkoutIntentId) return;
@@ -85,6 +93,7 @@ export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
   const cancel = useCallback((intentId: string) => {
     resetOrder();
     void cancelCheckout(intentId);
+    setActiveInput(null);
   }, [cancelCheckout, resetOrder]);
 
   const refresh = useCallback((intentId: string) => {
@@ -92,6 +101,7 @@ export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
   }, [reloadCheckout]);
 
   const state: CheckoutToOrderFlowState = (() => {
+    if (!activeInput) return { kind: "idle" };
     if (
       checkout.state.kind === "idle" ||
       checkout.state.kind === "loading"
@@ -137,5 +147,5 @@ export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
     return { kind: "creating_order", intent };
   })();
 
-  return { state, cancel, refresh, retryOrder };
+  return { state, start, reset, cancel, refresh, retryOrder };
 }

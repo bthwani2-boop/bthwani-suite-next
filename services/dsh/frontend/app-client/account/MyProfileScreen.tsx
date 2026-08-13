@@ -173,7 +173,7 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
 
   return (
     <ScrollScreen>
-      <Header title="ملفي" subtitle="بياناتك التجارية وتفضيلاتك في المنصة" />
+      <Header title="الملف الشخصي" subtitle="تفضيلات اللغة وخيارات التواصل" />
       <View style={styles.content}>
         {onBack && (
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
@@ -182,8 +182,8 @@ export function MyProfileScreen({ onBack }: MyProfileScreenProps) {
         )}
 
         <View style={styles.card}>
-          <Text role="bodyStrong">المعرف: {identity.subject}</Text>
-          <Text role="bodySm" tone="muted">يُدار الاسم ورقم الهاتف عبر شاشة الهوية المركزية.</Text>
+          <Text role="bodyStrong">رقم الهاتف: {identity.phoneE164 || "غير مسجل"}</Text>
+          <Text role="bodySm" tone="muted">يمكنك إدارة أمان الدخول وكلمة المرور عبر تبويب الأمان والدخول.</Text>
         </View>
 
         {profileState.kind === "loading" && <StateView tone="neutral" title="جارٍ تحميل الملف..." />}

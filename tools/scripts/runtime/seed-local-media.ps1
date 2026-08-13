@@ -2,7 +2,7 @@ param()
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../..")).Path
-$MediaRoot = (Resolve-Path (Join-Path $RepoRoot "services/dsh/database/seeds/local/media/realistic")).Path
+$MediaRoot = (Resolve-Path (Join-Path $RepoRoot "services/dsh/database/seeds/local/media")).Path
 $EnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
 $McImage = "minio/mc:RELEASE.2025-08-13T08-35-41Z"
 
@@ -22,10 +22,12 @@ $user = if ($env:BTHWANI_MINIO_ROOT_USER) { $env:BTHWANI_MINIO_ROOT_USER } elsei
 $password = if ($env:BTHWANI_MINIO_ROOT_PASSWORD) { $env:BTHWANI_MINIO_ROOT_PASSWORD } elseif ($runtimeEnv.BTHWANI_MINIO_ROOT_PASSWORD) { $runtimeEnv.BTHWANI_MINIO_ROOT_PASSWORD } else { "bthwani_minio_password" }
 
 $requiredObjects = @(
-  "node-electronics.jpg",
-  "node-grocery.jpg",
-  "node-pharmacy.jpg",
-  "node-sweets.jpg"
+  "banners/banner-001.png",
+  "categories/node-baby-care.png",
+  "logos/store-test-grocery-logo.png",
+  "products/product-panadol-advance.png",
+  "storefronts/store-test-grocery-hero.png",
+  "subcategories/node-android-phones.png"
 )
 foreach ($name in $requiredObjects) {
   $source = Join-Path $MediaRoot $name
@@ -41,9 +43,9 @@ set -eu
 mc alias set local http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"
 mc mb --ignore-existing local/dsh-media
 mc anonymous set none local/dsh-media
-mc mirror --overwrite --remove /fixtures local/dsh-media/realistic
-for object in node-electronics.jpg node-grocery.jpg node-pharmacy.jpg node-sweets.jpg; do
-  mc stat "local/dsh-media/realistic/$object" >/dev/null
+mc mirror --overwrite --remove /fixtures local/dsh-media
+for object in banners/banner-001.png categories/node-baby-care.png logos/store-test-grocery-logo.png products/product-panadol-advance.png storefronts/store-test-grocery-hero.png; do
+  mc stat "local/dsh-media/$object" >/dev/null
 done
 '@
 
@@ -60,3 +62,4 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Local media fixtures: PASS"
+

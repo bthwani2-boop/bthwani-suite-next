@@ -1379,9 +1379,6 @@
           <mxCell id="tools-tools_scripts_generate_migration_manifest_mjs" value="generate-migration-manifest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="400" y="1740" width="160" height="50" as="geometry" />
           </mxCell>
-          <mxCell id="tools-tools_scripts_generate_realistic_images_mjs" value="generate-realistic-images" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="590" y="1740" width="160" height="50" as="geometry" />
-          </mxCell>
           <mxCell id="tools-tools_scripts_generate_security_openapi_mjs" value="generate-security-openapi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="780" y="1740" width="160" height="50" as="geometry" />
           </mxCell>

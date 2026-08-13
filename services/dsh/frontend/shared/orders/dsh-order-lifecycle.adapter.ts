@@ -2,7 +2,6 @@ import type { DshOrderStatus } from './orders.types';
 import type {
   DshOrderRecord,
   DshOrderItemRecord,
-  DshCreateOrderResponse,
   DshOrderDetailsResponse,
   DshListOrdersResponse,
   DshOrderApiOfflineError,
@@ -162,7 +161,9 @@ export function normalizeOrder(raw: BackendOrder): DshOrderRecord {
   };
 }
 
-export function normalizeOrderResponse<T extends { readonly order?: BackendOrder }>(resp: T): DshCreateOrderResponse {
+type DshOrderResponse = { readonly order: DshOrderRecord };
+
+export function normalizeOrderResponse<T extends { readonly order?: BackendOrder }>(resp: T): DshOrderResponse {
   return { order: normalizeOrder(resp.order ?? {}) };
 }
 

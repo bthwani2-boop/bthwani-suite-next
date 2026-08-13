@@ -52,12 +52,15 @@ export function clearCartSyncQueue(): void {
   }
 }
 
+let fallbackSequence = 0;
+
 // Generate an idempotency key if not available
 export function generateIdempotencyKey(): string {
   if (typeof globalThis.crypto?.randomUUID === "function") {
     return globalThis.crypto.randomUUID();
   }
-  throw new Error("SECURE_RANDOM_UNAVAILABLE");
+  fallbackSequence += 1;
+  return `idemp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}-${fallbackSequence.toString(36)}`;
 }
 
 export function getDeviceId(): string {
