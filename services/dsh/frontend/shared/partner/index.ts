@@ -28,7 +28,7 @@ export type {
 } from "./partner.states";
 
 export type { DshPartnerListRowViewModel, DshPartnerDetailViewModel, DshPartnerReadinessViewModel, DshPartnerPayoutDestinationViewModel } from "./partner.view-model";
-export { buildPartnerListRowViewModel, buildPartnerDetailViewModel, buildPartnerReadinessViewModel } from "./partner.view-model";
+export { buildPartnerListRowViewModel, buildPartnerDetailViewModel, buildPartnerReadinessViewModel, getDshBusinessVerticalLabel } from "./partner.view-model";
 
 export type { DshPartnerListFilters } from "./use-partner-admin-controller";
 export {

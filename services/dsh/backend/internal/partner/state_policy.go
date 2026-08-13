@@ -66,6 +66,15 @@ func AllowedActionsForSurface(status ActivationStatus, surface string) []string 
 	return compactActions(actions)
 }
 
+func IsFieldPartnerEditableStatus(status ActivationStatus) bool {
+	switch status {
+	case StatusDraft, StatusFieldVisitScheduled, StatusDocumentsMissing, StatusOpsRejected:
+		return true
+	default:
+		return false
+	}
+}
+
 func BuildPartnerStateView(partner Partner, surface string) PartnerStateView {
 	partner = SanitizePartnerForSurface(partner)
 	return PartnerStateView{Partner: partner, AllowedActions: AllowedActionsForSurface(partner.ActivationStatus, surface), AllowedTransitions: AllowedTransitionsForSurface(partner.ActivationStatus, surface)}

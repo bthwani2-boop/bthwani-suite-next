@@ -185,6 +185,37 @@ func TestCreatePartnerInput_valid(t *testing.T) {
 	}
 }
 
+func TestCanonicalBusinessVerticalIDUsesCentralDomainIDs(t *testing.T) {
+	cases := map[string]string{
+		"restaurant": "domain-restaurants",
+		"grocery":    "domain-groceries",
+		"bakery":     "domain-groceries",
+		"pharmacy":   "domain-pharmacy",
+		"default":    "",
+	}
+	for category, want := range cases {
+		if got := canonicalBusinessVerticalID("", category); got != want {
+			t.Fatalf("category %q mapped to %q, want %q", category, got, want)
+		}
+	}
+	if got := canonicalBusinessVerticalID("domain-pharmacy", "restaurant"); got != "domain-pharmacy" {
+		t.Fatalf("explicit central vertical was rewritten to %q", got)
+	}
+}
+
+func TestFieldPartnerEditableStatusIsFailClosed(t *testing.T) {
+	for _, status := range []ActivationStatus{StatusDraft, StatusFieldVisitScheduled, StatusDocumentsMissing, StatusOpsRejected} {
+		if !IsFieldPartnerEditableStatus(status) {
+			t.Fatalf("expected field editing to be allowed for %q", status)
+		}
+	}
+	for _, status := range []ActivationStatus{StatusSubmitted, StatusDocumentsUploaded, StatusOpsReview, StatusPartnerActive, StatusClientVisible} {
+		if IsFieldPartnerEditableStatus(status) {
+			t.Fatalf("expected field editing to be locked for %q", status)
+		}
+	}
+}
+
 func TestCreatePartnerInput_missingLegalNameAr(t *testing.T) {
 	input := CreatePartnerInput{
 		DisplayName: "Test", PrimaryPhone: "+967", LegalIdentityNumber: "CR-001",

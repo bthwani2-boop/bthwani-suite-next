@@ -13,6 +13,8 @@ export type DshPartner = {
   readonly secondaryPhone: string;
   readonly email: string;
   readonly category: string;
+  readonly businessVerticalId: string;
+  readonly onboardingCaseStatus?: string;
   readonly activationStatus: DshPartnerActivationStatus;
   readonly notes: string;
   // DSH caches only the WLT-owned masked readiness projection. Raw payout
@@ -31,6 +33,7 @@ export type DshPartnerSummary = {
   readonly displayName: string;
   readonly legalNameAr: string;
   readonly category: string;
+  readonly businessVerticalId: string;
   readonly activationStatus: DshPartnerActivationStatus;
   readonly primaryPhone: string;
   readonly createdAt: string;
@@ -78,6 +81,8 @@ export type DshPartnerReadiness = {
   readonly canActivate: boolean;
   readonly canActivatePartner: boolean;
   readonly canPublishStoreToClient: boolean;
+  readonly intakeComplete: boolean;
+  readonly publicationReady: boolean;
   readonly blockedReason?: string;
   readonly partnerActivationBlockedReason?: string;
   readonly storePublicationBlockedReason?: string;
@@ -154,6 +159,7 @@ export type DshCreatePartnerInput = {
   readonly secondaryPhone?: string;
   readonly email?: string;
   readonly category?: string;
+  readonly businessVerticalId?: string;
   readonly notes?: string;
 };
 

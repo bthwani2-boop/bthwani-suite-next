@@ -29,6 +29,8 @@ import {
   usePartnerVisitsController,
   type DshPartnerActivationStatus,
   type DshPartnerReadiness,
+  getDshBusinessVerticalLabel,
+  getDshPartnerActivationStatusLabel,
 } from "../../shared/partner";
 import { OperatorDeliveryPricingPanel } from "./stores/OperatorDeliveryPricingPanel";
 import { PartnerStoreCreateWizard } from "./stores/PartnerStoreCreateWizard";
@@ -220,10 +222,10 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                 <CpDescriptionRow label="الاسم الظاهر">{viewModel.displayName}</CpDescriptionRow>
                 <CpDescriptionRow label="نوع الهوية">{viewModel.legalIdentityType}</CpDescriptionRow>
                 <CpDescriptionRow label="رقم الهوية">{viewModel.legalIdentityNumber}</CpDescriptionRow>
-                <CpDescriptionRow label="Actor ID">{viewModel.ownerActorId}</CpDescriptionRow>
-                <CpDescriptionRow label="Workforce ID">{viewModel.workforcePersonId}</CpDescriptionRow>
+                <CpDescriptionRow label="معرّف حساب المالك">{viewModel.ownerActorId}</CpDescriptionRow>
+                <CpDescriptionRow label="معرّف العامل الميداني">{viewModel.workforcePersonId}</CpDescriptionRow>
                 <CpDescriptionRow label="الهاتف">{viewModel.primaryPhone}</CpDescriptionRow>
-                <CpDescriptionRow label="الفئة">{viewModel.category}</CpDescriptionRow>
+                <CpDescriptionRow label="مجال النشاط">{getDshBusinessVerticalLabel(viewModel.businessVerticalId, viewModel.category)}</CpDescriptionRow>
                 <CpDescriptionRow label="الإصدار">{partner.version}</CpDescriptionRow>
               </CpDescriptionList>
             ))}
@@ -231,7 +233,7 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
               <div style={{ display: "grid", gap: 10 }}>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {viewModel.allowedNextStatuses.map((status) => (
-                    <CpButton key={status} onClick={() => { setTransitionTarget(status); setTransitionReason(""); }}>{status}</CpButton>
+                    <CpButton key={status} onClick={() => { setTransitionTarget(status); setTransitionReason(""); }}>{getDshPartnerActivationStatusLabel(status)}</CpButton>
                   ))}
                 </div>
                 {transitionTarget ? (

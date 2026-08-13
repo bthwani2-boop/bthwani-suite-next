@@ -57,7 +57,7 @@ DshPartnerPerformanceResponse:
 
 DshPartner:
   type: object
-  required: [id, legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerActorId, workforcePersonId, primaryPhone, category, activationStatus, payoutDestinationId, destinationMethod, maskedDestinationReference, destinationVerificationStatus, version, createdAt, updatedAt]
+  required: [id, legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerActorId, workforcePersonId, primaryPhone, category, businessVerticalId, activationStatus, payoutDestinationId, destinationMethod, maskedDestinationReference, destinationVerificationStatus, version, createdAt, updatedAt]
   properties:
     id: { type: string }
     legalNameAr: { type: string }
@@ -72,6 +72,7 @@ DshPartner:
     secondaryPhone: { type: string }
     email: { type: string }
     category: { type: string, enum: [restaurant, grocery, pharmacy, bakery, default] }
+    businessVerticalId: { type: string }
     activationStatus:
       type: string
       enum:
@@ -135,7 +136,7 @@ DshPartnerListResponse:
 DshCreatePartnerRequest:
   type: object
   additionalProperties: false
-  required: [legalNameAr, displayName, legalIdentityType, legalIdentityNumber, primaryPhone, category]
+  required: [legalNameAr, displayName, legalIdentityType, legalIdentityNumber, primaryPhone, businessVerticalId]
   properties:
     legalNameAr: { type: string, minLength: 1 }
     legalNameEn: { type: string }
@@ -148,6 +149,7 @@ DshCreatePartnerRequest:
     secondaryPhone: { type: string }
     email: { type: string }
     category: { type: string, enum: [restaurant, grocery, pharmacy, bakery, other] }
+    businessVerticalId: { type: string, minLength: 1 }
     notes: { type: string }
 
 DshPartnerTransitionRequest:

@@ -59,6 +59,10 @@ func HandleGovernedFieldUpdatePartner(db *sql.DB) http.HandlerFunc {
 			sendError(w, http.StatusConflict, "VERSION_CONFLICT", "partner was modified concurrently")
 			return
 		}
+		if !IsFieldPartnerEditableStatus(current.ActivationStatus) {
+			sendError(w, http.StatusConflict, "FIELD_EDIT_LOCKED", "ملف الشريك قيد مراجعة الشركاء ولا يمكن تعديله ميدانيًا حتى إعادته للتعديلات")
+			return
+		}
 
 		input := UpdatePartnerInput{
 			DisplayName:       request.DisplayName,

@@ -23,6 +23,13 @@
       "sha256": "2ab23d657f24ca8f1083fa3a2584849ad9a0382181fd5476357d83bcc75cb7ac",
       "historicalPrefix": "999z",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 243,
+      "file": "dsh-999a_partner_business_vertical_binding.sql",
+      "sha256": "3273032059cf2d18e3f5b39b8408f01d4c58b27ac488bc774b2d072582f91c1a",
+      "historicalPrefix": "999a",
+      "state": "ACTIVE"
     }
   ]
 }

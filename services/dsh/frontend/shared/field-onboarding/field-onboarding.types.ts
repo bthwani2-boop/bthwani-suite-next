@@ -13,6 +13,7 @@ export type FieldPartnerDraftForm = {
   primaryPhone: string;
   secondaryPhone: string;
   email: string;
+  businessVerticalId: string;
   category: "restaurant" | "grocery" | "pharmacy" | "bakery" | "default";
   notes: string;
 
@@ -120,6 +121,7 @@ export function initialDraftState(): FieldOnboardingDraftState {
     step: "basics_profile",
     form: {
       legalIdentityType: "commercial_register",
+      businessVerticalId: "",
       category: "default",
     },
     visitNotes: "",
@@ -153,6 +155,7 @@ export function validateIdentityStep(form: Partial<FieldPartnerDraftForm>): Fiel
 export function validateOwnerStep(form: Partial<FieldPartnerDraftForm>): FieldOnboardingValidationErrors {
   const errors: FieldOnboardingValidationErrors = {};
   if (!form.primaryPhone?.trim()) errors.primaryPhone = "رقم جوال المالك مطلوب للتواصل المباشر";
+  if (!form.businessVerticalId?.trim()) errors.businessVerticalId = "اختر مجال نشاط المتجر من التصنيف المركزي";
   return errors;
 }
 
@@ -161,6 +164,7 @@ export function getBasicsProfileMissingCount(form: Partial<FieldPartnerDraftForm
   if (!form.legalNameAr?.trim()) count++;
   if (!form.legalIdentityNumber?.trim()) count++;
   if (!form.primaryPhone?.trim()) count++;
+  if (!form.businessVerticalId?.trim()) count++;
   return count;
 }
 
@@ -206,6 +210,7 @@ export function getFieldRequiredMissingItems(
   if (!form.legalNameAr?.trim()) missing.push("اسم المتجر");
   if (!form.legalIdentityNumber?.trim()) missing.push("رقم الهوية القانونية");
   if (!form.primaryPhone?.trim()) missing.push("جوال المالك");
+  if (!form.businessVerticalId?.trim()) missing.push("مجال نشاط المتجر");
   if (!form.city?.trim()) missing.push("المدينة");
   if (!form.addressLine?.trim()) missing.push("العنوان");
   for (const document of getRequiredPartnerDocuments(form)) {

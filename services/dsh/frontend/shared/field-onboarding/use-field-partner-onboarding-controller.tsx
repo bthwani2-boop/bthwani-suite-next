@@ -2,7 +2,7 @@
 // No fetch in screens. No env in screens. All API calls here.
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   fieldCreateDraft,
   fieldGetPartner,
@@ -20,6 +20,8 @@ import {
   type DshPartnerDocumentType,
   type DshUpdatePartnerRequest,
 } from "../partner";
+import { fetchFieldTaxonomy } from "../catalog/central-catalog.api";
+import type { CentralCatalogDomain } from "../catalog/central-catalog.types";
 import { linkFieldOnboardingAssignmentDraft } from "../field-assignment";
 import {
   initialDraftState,
@@ -55,6 +57,8 @@ export type FieldOnboardingController = {
   save: () => Promise<boolean>;
   submitDraft: () => Promise<void>;
   reset: () => void;
+  businessVerticals: readonly CentralCatalogDomain[];
+  businessVerticalsError: string | null;
 };
 
 function buildStoreDraftInput(form: Partial<FieldPartnerDraftForm>) {
@@ -85,7 +89,23 @@ function buildUpdatePartnerInput(form: Partial<FieldPartnerDraftForm>): DshUpdat
 export function useFieldPartnerOnboardingController(): FieldOnboardingController {
   const [state, setState] = useState<FieldOnboardingDraftState>(initialDraftState);
   const [validationErrors, setValidationErrors] = useState<FieldOnboardingValidationErrors>({});
+  const [businessVerticals, setBusinessVerticals] = useState<readonly CentralCatalogDomain[]>([]);
+  const [businessVerticalsError, setBusinessVerticalsError] = useState<string | null>(null);
   const activeRouteKeyRef = useRef("new-draft");
+
+  useEffect(() => {
+    let active = true;
+    void fetchFieldTaxonomy()
+      .then(({ domains }) => {
+        if (!active) return;
+        setBusinessVerticals(domains.filter((domain) => domain.isActive));
+        setBusinessVerticalsError(null);
+      })
+      .catch(() => {
+        if (active) setBusinessVerticalsError("تعذر تحميل مجالات النشاط المركزية");
+      });
+    return () => { active = false; };
+  }, []);
 
   const updateForm = useCallback((patch: Partial<FieldPartnerDraftForm>) => {
     setState((s) => ({
@@ -148,6 +168,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         secondaryPhone: form.secondaryPhone ?? "",
         email: form.email ?? "",
         category: form.category ?? "default",
+        businessVerticalId: form.businessVerticalId ?? "",
         notes: form.notes ?? "",
       }, createMutation);
       await fieldUpdatePartnerStore(
@@ -203,6 +224,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
           secondaryPhone: partner.secondaryPhone,
           email: partner.email,
           category: partner.category as FieldPartnerDraftForm["category"],
+          businessVerticalId: partner.businessVerticalId,
           notes: partner.notes,
           city: storeRes.store.cityCode,
           serviceAreaCode: storeRes.store.serviceAreaCode,
@@ -449,5 +471,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     save,
     submitDraft,
     reset,
+    businessVerticals,
+    businessVerticalsError,
   };
 }

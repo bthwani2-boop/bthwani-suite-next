@@ -113,6 +113,7 @@ type Partner struct {
 	SecondaryPhone       string               `json:"secondaryPhone"`
 	Email                string               `json:"email"`
 	Category             string               `json:"category"`
+	BusinessVerticalID   string               `json:"businessVerticalId"`
 	ActivationStatus     ActivationStatus     `json:"activationStatus"`
 	OnboardingCaseStatus OnboardingCaseStatus `json:"onboardingCaseStatus"`
 	CreatedByActorID     string               `json:"createdByActorId"`
@@ -130,14 +131,15 @@ type Partner struct {
 }
 
 type PartnerSummary struct {
-	ID               string           `json:"id"`
-	DisplayName      string           `json:"displayName"`
-	LegalNameAr      string           `json:"legalNameAr"`
-	Category         string           `json:"category"`
-	ActivationStatus ActivationStatus `json:"activationStatus"`
-	PrimaryPhone     string           `json:"primaryPhone"`
-	CreatedAt        time.Time        `json:"createdAt"`
-	UpdatedAt        time.Time        `json:"updatedAt"`
+	ID                 string           `json:"id"`
+	DisplayName        string           `json:"displayName"`
+	LegalNameAr        string           `json:"legalNameAr"`
+	Category           string           `json:"category"`
+	BusinessVerticalID string           `json:"businessVerticalId"`
+	ActivationStatus   ActivationStatus `json:"activationStatus"`
+	PrimaryPhone       string           `json:"primaryPhone"`
+	CreatedAt          time.Time        `json:"createdAt"`
+	UpdatedAt          time.Time        `json:"updatedAt"`
 }
 
 // â”€â”€â”€ Document â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -214,6 +216,8 @@ type PartnerReadiness struct {
 	CanActivate                    bool            `json:"canActivate"`
 	CanActivatePartner             bool            `json:"canActivatePartner"`
 	CanPublishStoreToClient        bool            `json:"canPublishStoreToClient"`
+	IntakeComplete                 bool            `json:"intakeComplete"`
+	PublicationReady               bool            `json:"publicationReady"`
 	BlockedReason                  string          `json:"blockedReason,omitempty"`
 	PartnerActivationBlockedReason string          `json:"partnerActivationBlockedReason,omitempty"`
 	StorePublicationBlockedReason  string          `json:"storePublicationBlockedReason,omitempty"`
@@ -288,6 +292,8 @@ func ComputeReadiness(
 		CanActivate:                    canActivatePartner,
 		CanActivatePartner:             canActivatePartner,
 		CanPublishStoreToClient:        canPublishStoreToClient,
+		IntakeComplete:                 docsDone && hasStore && strings.TrimSpace(p.BusinessVerticalID) != "",
+		PublicationReady:               canPublishStoreToClient,
 		BlockedReason:                  partnerActivationBlockedReason,
 		PartnerActivationBlockedReason: partnerActivationBlockedReason,
 		StorePublicationBlockedReason:  storePublicationBlockedReason,
@@ -370,6 +376,7 @@ type CreatePartnerInput struct {
 	SecondaryPhone      string `json:"secondaryPhone"`
 	Email               string `json:"email"`
 	Category            string `json:"category"`
+	BusinessVerticalID  string `json:"businessVerticalId"`
 	Notes               string `json:"notes"`
 	CreatedByActorID    string `json:"-"`
 	CreatedBySurface    string `json:"-"`

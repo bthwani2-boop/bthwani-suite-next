@@ -2,11 +2,23 @@ import type { DshPartner, DshPartnerSummary, DshPartnerReadiness } from "./partn
 import type { DshPartnerActivationStatus } from "./partner-activation.model";
 import { getDshPartnerActivationStatusLabel, getDshPartnerActivationStateMetadata, getDshPartnerReadinessChecklist } from "./partner-activation.model";
 
+const BUSINESS_VERTICAL_LABELS: Record<string, string> = {
+  "domain-restaurants": "مطاعم",
+  "domain-groceries": "مقاضي ومتاجر غذائية",
+  "domain-pharmacy": "صيدلية",
+  "domain-bthwani-store": "متجر بثواني",
+};
+
+export function getDshBusinessVerticalLabel(verticalId: string, legacyCategory = ""): string {
+  return BUSINESS_VERTICAL_LABELS[verticalId] ?? (legacyCategory && legacyCategory !== "default" ? legacyCategory : "غير محدد");
+}
+
 export type DshPartnerListRowViewModel = {
   readonly id: string;
   readonly displayName: string;
   readonly legalNameAr: string;
   readonly category: string;
+  readonly businessVerticalId: string;
   readonly activationStatus: DshPartnerActivationStatus;
   readonly statusLabel: string;
   readonly statusTone: "success" | "warning" | "danger" | "info" | "muted";
@@ -38,6 +50,7 @@ export type DshPartnerDetailViewModel = {
   readonly primaryPhone: string;
   readonly email: string;
   readonly category: string;
+  readonly businessVerticalId: string;
   readonly payoutDestination: DshPartnerPayoutDestinationViewModel;
   readonly activationStatus: DshPartnerActivationStatus;
   readonly statusLabel: string;
@@ -58,6 +71,8 @@ export type DshPartnerReadinessViewModel = {
   readonly allGatesPassed: boolean;
   readonly canActivatePartner: boolean;
   readonly canPublishStoreToClient: boolean;
+  readonly intakeComplete: boolean;
+  readonly publicationReady: boolean;
   readonly blockerLabel: string;
   readonly partnerActivationBlockedReason: string;
   readonly storePublicationBlockedReason: string;
@@ -95,6 +110,7 @@ export function buildPartnerListRowViewModel(p: DshPartnerSummary | DshPartner):
     displayName: p.displayName,
     legalNameAr: p.legalNameAr,
     category: p.category,
+    businessVerticalId: p.businessVerticalId,
     activationStatus: status,
     statusLabel: getDshPartnerActivationStatusLabel(status),
     statusTone: resolveStatusTone(status),
@@ -123,6 +139,7 @@ export function buildPartnerDetailViewModel(p: DshPartner): DshPartnerDetailView
     primaryPhone: p.primaryPhone,
     email: p.email,
     category: p.category,
+    businessVerticalId: p.businessVerticalId,
     payoutDestination: buildPayoutDestinationViewModel(p),
     activationStatus: status,
     statusLabel: getDshPartnerActivationStatusLabel(status),
@@ -145,6 +162,8 @@ export function buildPartnerReadinessViewModel(r: DshPartnerReadiness): DshPartn
     allGatesPassed: r.canActivate,
     canActivatePartner: r.canActivatePartner,
     canPublishStoreToClient: r.canPublishStoreToClient,
+    intakeComplete: r.intakeComplete,
+    publicationReady: r.publicationReady,
     blockerLabel: r.blockedReason ?? "",
     partnerActivationBlockedReason: r.partnerActivationBlockedReason ?? "",
     storePublicationBlockedReason: r.storePublicationBlockedReason ?? "",

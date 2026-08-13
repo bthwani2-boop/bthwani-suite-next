@@ -223,13 +223,14 @@ func GetStoreByPartnerIDContext(ctx context.Context, db storeContextQueryRower, 
 }
 
 type CreateDraftStoreInput struct {
-	StoreID        string
-	PartnerID      string
-	DisplayName    string
-	CityCode       string
-	Category       string
-	AddressLine    string
-	OperatingHours string
+	StoreID         string `json:"StoreID"`
+	PartnerID       string `json:"PartnerID"`
+	DisplayName     string `json:"DisplayName"`
+	CityCode        string `json:"CityCode"`
+	Category        string `json:"Category"`
+	CatalogDomainID string `json:"businessVerticalId"`
+	AddressLine     string `json:"AddressLine"`
+	OperatingHours  string `json:"OperatingHours"`
 }
 
 type execQueryRower interface {
@@ -249,7 +250,10 @@ func CreateDraftStore(db execQueryRower, input CreateDraftStoreInput) (DshStoreR
 		// Ensure standard prefix if a raw UUID is passed
 		id = "store-" + id
 	}
-	catalogDomainID := catalogDomainIDForPartnerCategory(input.Category)
+	catalogDomainID := strings.TrimSpace(input.CatalogDomainID)
+	if catalogDomainID == "" {
+		catalogDomainID = catalogDomainIDForPartnerCategory(input.Category)
+	}
 	cityCode := input.CityCode
 	if cityCode == "" {
 		cityCode = "unassigned"

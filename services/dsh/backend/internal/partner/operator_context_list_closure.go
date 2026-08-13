@@ -56,7 +56,7 @@ func ListPartnersForOperatorContextCategory(
 
 	args = append(args, query.Limit, query.Offset)
 	rows, err := db.Query(`
-		SELECT id, display_name, legal_name_ar, category, activation_status,
+		SELECT id, display_name, legal_name_ar, category, COALESCE(business_vertical_id,''), activation_status,
 		       primary_phone, created_at, updated_at
 		FROM dsh_partners`+where+`
 		ORDER BY created_at DESC
@@ -71,7 +71,7 @@ func ListPartnersForOperatorContextCategory(
 		var item PartnerSummary
 		if err := rows.Scan(
 			&item.ID, &item.DisplayName, &item.LegalNameAr, &item.Category,
-			&item.ActivationStatus, &item.PrimaryPhone, &item.CreatedAt, &item.UpdatedAt,
+			&item.BusinessVerticalID, &item.ActivationStatus, &item.PrimaryPhone, &item.CreatedAt, &item.UpdatedAt,
 		); err != nil {
 			return nil, 0, err
 		}

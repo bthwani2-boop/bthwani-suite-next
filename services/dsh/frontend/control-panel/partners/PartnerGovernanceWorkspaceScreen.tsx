@@ -17,6 +17,7 @@ import {
   getDshPartnerActivationStatusLabel,
   type PartnerWorkspaceTabId,
   usePartnerWorkspaceListController,
+  getDshBusinessVerticalLabel,
 } from "../../shared/partner";
 
 type Controller = ReturnType<typeof usePartnerWorkspaceListController>;
@@ -217,7 +218,7 @@ export function PartnerGovernanceWorkspaceScreen({
                 <div style={{ fontWeight: 700 }}>{partner.displayName}</div>
                 <CpMutedInline tight>{partner.legalNameAr}</CpMutedInline>
               </CpTableCell>
-              <CpTableCell>{partner.category}</CpTableCell>
+              <CpTableCell>{getDshBusinessVerticalLabel(partner.businessVerticalId, partner.category)}</CpTableCell>
               <CpTableCell>{partner.primaryPhone || "—"}</CpTableCell>
               <CpTableCell>
                 <CpBadge tone={statusTone(partner.activationStatus)}>{getDshPartnerActivationStatusLabel(partner.activationStatus)}</CpBadge>

@@ -24,7 +24,7 @@ var (
 const governedPartnerColumns = `id, legal_name_ar, legal_name_en, display_name,
 	legal_identity_type, legal_identity_number,
 	owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
-	category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
+	category, COALESCE(business_vertical_id,''), activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 	notes,
 	COALESCE(payout_destination_id,''), COALESCE(destination_method,''),
 	COALESCE(masked_destination_reference,''), COALESCE(destination_verification_status,''),
@@ -44,7 +44,7 @@ func scanGovernedPartner(row partnerScanner) (Partner, error) {
 		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
 		&p.LegalIdentityType, &p.LegalIdentityNumber,
 		&p.OwnerActorID, &p.WorkforcePersonID, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
-		&p.Category, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
+		&p.Category, &p.BusinessVerticalID, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
 		&p.PayoutDestinationID, &p.DestinationMethod, &p.MaskedDestinationReference, &p.DestinationVerificationStatus,
 		&p.Version, &p.CreatedAt, &p.UpdatedAt,
@@ -394,6 +394,26 @@ func loadOnboardingStoreGateTx(ctx context.Context, tx *sql.Tx, partnerID string
 }
 
 func validateTransitionReadinessTx(ctx context.Context, tx *sql.Tx, p Partner, target ActivationStatus) error {
+	if target != StatusDraft {
+		verticalID := strings.TrimSpace(p.BusinessVerticalID)
+		if verticalID == "" {
+			return fmt.Errorf("%w: a central business vertical is required before review", ErrReadinessGate)
+		}
+		var active bool
+		var clientVisible bool
+		if err := tx.QueryRowContext(ctx, `
+			SELECT is_active, is_client_visible
+			FROM dsh_catalog_domains
+			WHERE id = $1`, verticalID).Scan(&active, &clientVisible); errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("%w: the selected business vertical does not exist", ErrReadinessGate)
+		} else if err != nil {
+			return err
+		} else if !active {
+			return fmt.Errorf("%w: the selected business vertical is inactive", ErrReadinessGate)
+		} else if target == StatusClientVisible && !clientVisible {
+			return fmt.Errorf("%w: the selected business vertical is not enabled for client publication", ErrReadinessGate)
+		}
+	}
 	requiresProfile := target == StatusSubmitted || target == StatusOpsReview || target == StatusPartnerActive
 	requiresDocuments := target == StatusDocumentsVerified || target == StatusOpsReview || target == StatusPartnerActive
 	requiresVisit := target == StatusPartnerActive
@@ -425,6 +445,9 @@ func validateTransitionReadinessTx(ctx context.Context, tx *sql.Tx, p Partner, t
 		}
 		if strings.TrimSpace(p.PayoutDestinationID) == "" {
 			return fmt.Errorf("%w: an active WLT payout destination is required", ErrReadinessGate)
+		}
+		if gate.Category != store.DshStoreCategory(p.BusinessVerticalID) {
+			return fmt.Errorf("%w: the linked store must use the partner business vertical", ErrReadinessGate)
 		}
 	}
 

@@ -122,12 +122,14 @@ DshReadinessEscalation:
 
 DshPartnerReadiness:
   type: object
-  required: [partnerId, canActivate, canActivatePartner, canPublishStoreToClient, checklist]
+  required: [partnerId, canActivate, canActivatePartner, canPublishStoreToClient, intakeComplete, publicationReady, checklist]
   properties:
     partnerId: { type: string }
     canActivate: { type: boolean }
     canActivatePartner: { type: boolean }
     canPublishStoreToClient: { type: boolean }
+    intakeComplete: { type: boolean }
+    publicationReady: { type: boolean }
     blockedReason: { type: string }
     partnerActivationBlockedReason: { type: string }
     storePublicationBlockedReason: { type: string }

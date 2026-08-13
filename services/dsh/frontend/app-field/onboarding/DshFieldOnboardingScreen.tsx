@@ -116,7 +116,7 @@ export function DshFieldOnboardingScreen({
   const ownController = useFieldPartnerOnboardingController();
   const controller = controllerProp ?? ownController;
   const insets = useSafeAreaInsets();
-  const { state, validationErrors, updateForm, updateVisitNotes, updateLocation, submitDraft, switchDraft } = controller;
+  const { state, validationErrors, updateForm, updateVisitNotes, updateLocation, submitDraft, switchDraft, businessVerticals, businessVerticalsError } = controller;
   const { state: feeRefState } = useStoreOnboardingFeeReferenceController(identity.state.kind);
 
   const [activeGroup, setActiveGroup] = React.useState<GroupId>('basics_profile');
@@ -381,7 +381,7 @@ export function DshFieldOnboardingScreen({
 
   const renderGroupContent = (groupId: GroupId) => {
     if (groupId === 'basics_profile') {
-      return <OnboardingBasicsSection form={form} errors={validationErrors} readOnly={false} onChange={updateForm} />;
+      return <OnboardingBasicsSection form={form} errors={validationErrors} readOnly={false} onChange={updateForm} businessVerticals={businessVerticals} businessVerticalsError={businessVerticalsError} />;
     }
     if (groupId === 'location_media') {
       return (

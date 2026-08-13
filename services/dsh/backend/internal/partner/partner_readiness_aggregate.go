@@ -32,6 +32,8 @@ type AggregatedPartnerReadiness struct {
 	CanActivate                    bool                         `json:"canActivate"`
 	CanActivatePartner             bool                         `json:"canActivatePartner"`
 	CanPublishStoreToClient        bool                         `json:"canPublishStoreToClient"`
+	IntakeComplete                 bool                         `json:"intakeComplete"`
+	PublicationReady               bool                         `json:"publicationReady"`
 	BlockedReason                  string                       `json:"blockedReason,omitempty"`
 	PartnerActivationBlockedReason string                       `json:"partnerActivationBlockedReason,omitempty"`
 	StorePublicationBlockedReason  string                       `json:"storePublicationBlockedReason,omitempty"`
@@ -156,6 +158,8 @@ func LoadAggregatedPartnerReadiness(db *sql.DB, partnerID string) (AggregatedPar
 		CanActivate:                    base.CanActivate,
 		CanActivatePartner:             base.CanActivatePartner,
 		CanPublishStoreToClient:        base.CanPublishStoreToClient,
+		IntakeComplete:                 base.IntakeComplete,
+		PublicationReady:               base.PublicationReady,
 		BlockedReason:                  base.BlockedReason,
 		PartnerActivationBlockedReason: base.PartnerActivationBlockedReason,
 		StorePublicationBlockedReason:  base.StorePublicationBlockedReason,

@@ -20,7 +20,7 @@ func GetPartner(db *sql.DB, partnerID string) (Partner, error) {
 		SELECT id, legal_name_ar, legal_name_en, display_name,
 		       legal_identity_type, legal_identity_number,
 		       owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
-		       category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
+		       category, COALESCE(business_vertical_id,''), activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 		       notes,
 		       COALESCE(payout_destination_id,''), COALESCE(destination_method,''),
 		       COALESCE(masked_destination_reference,''), COALESCE(destination_verification_status,''),
@@ -30,7 +30,7 @@ func GetPartner(db *sql.DB, partnerID string) (Partner, error) {
 		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
 		&p.LegalIdentityType, &p.LegalIdentityNumber,
 		&p.OwnerActorID, &p.WorkforcePersonID, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
-		&p.Category, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
+		&p.Category, &p.BusinessVerticalID, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
 		&p.PayoutDestinationID, &p.DestinationMethod, &p.MaskedDestinationReference, &p.DestinationVerificationStatus,
 		&p.Version, &p.CreatedAt, &p.UpdatedAt,
@@ -78,7 +78,7 @@ func ListPartners(db *sql.DB, q PartnerListQuery) ([]PartnerSummary, int, error)
 
 	args = append(args, q.Limit, q.Offset)
 	rows, err := db.Query(`
-		SELECT id, display_name, legal_name_ar, category, activation_status, primary_phone, created_at, updated_at
+		SELECT id, display_name, legal_name_ar, category, COALESCE(business_vertical_id,''), activation_status, primary_phone, created_at, updated_at
 		FROM dsh_partners`+where+`
 		ORDER BY created_at DESC
 		LIMIT $`+itoa(i)+` OFFSET $`+itoa(i+1),
@@ -93,7 +93,7 @@ func ListPartners(db *sql.DB, q PartnerListQuery) ([]PartnerSummary, int, error)
 	for rows.Next() {
 		var s PartnerSummary
 		if err := rows.Scan(&s.ID, &s.DisplayName, &s.LegalNameAr, &s.Category,
-			&s.ActivationStatus, &s.PrimaryPhone, &s.CreatedAt, &s.UpdatedAt); err != nil {
+			&s.BusinessVerticalID, &s.ActivationStatus, &s.PrimaryPhone, &s.CreatedAt, &s.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
 		list = append(list, s)
@@ -177,7 +177,7 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		RETURNING id, legal_name_ar, legal_name_en, display_name,
 		          legal_identity_type, legal_identity_number,
 		          owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
-		          category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
+		          category, COALESCE(business_vertical_id,''), activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 		          notes,
 		          COALESCE(payout_destination_id,''), COALESCE(destination_method,''),
 		          COALESCE(masked_destination_reference,''), COALESCE(destination_verification_status,''),
@@ -187,7 +187,7 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		&updated.ID, &updated.LegalNameAr, &updated.LegalNameEn, &updated.DisplayName,
 		&updated.LegalIdentityType, &updated.LegalIdentityNumber,
 		&updated.OwnerActorID, &updated.WorkforcePersonID, &updated.PrimaryPhone, &updated.SecondaryPhone, &updated.Email,
-		&updated.Category, &updated.ActivationStatus, &updated.OnboardingCaseStatus, &updated.CreatedByActorID, &updated.CreatedBySurface,
+		&updated.Category, &updated.BusinessVerticalID, &updated.ActivationStatus, &updated.OnboardingCaseStatus, &updated.CreatedByActorID, &updated.CreatedBySurface,
 		&updated.Notes,
 		&updated.PayoutDestinationID, &updated.DestinationMethod, &updated.MaskedDestinationReference, &updated.DestinationVerificationStatus,
 		&updated.Version, &updated.CreatedAt, &updated.UpdatedAt,
