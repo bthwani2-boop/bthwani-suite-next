@@ -46,3 +46,19 @@ test("field tasks keep stale work non-actionable and actor-scoped", async () => 
   assert.match(assignmentWorkspace, /locationLatitude/);
   assert.doesNotMatch(assignmentWorkspace, /إسناد مهمة onboarding/);
 });
+
+test("field partner home exposes canonical status analytics as smart filters", async () => {
+  const [partnersScreen, partnerCard, activationModel] = await Promise.all([
+    source("services/dsh/frontend/app-field/stores/DshFieldPartnersScreen.tsx"),
+    source("services/dsh/frontend/app-field/components/DshFieldPartnerCard.tsx"),
+    source("services/dsh/frontend/shared/partner/partner-activation.model.ts"),
+  ]);
+
+  assert.match(partnersScreen, /function WorkAnalytics/);
+  assert.match(partnersScreen, /activeFilter === 'completed'/);
+  assert.match(partnersScreen, /isDshPartnerActivationComplete/);
+  assert.match(partnersScreen, /اضغط على الحالة للتصفية/);
+  assert.doesNotMatch(partnersScreen, /function FilterPills/);
+  assert.match(partnerCard, /padding: spacing\[3\]/);
+  assert.match(activationModel, /export function isDshPartnerActivationComplete/);
+});

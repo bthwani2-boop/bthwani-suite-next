@@ -16,6 +16,7 @@ import {
   Icon,
 } from '@bthwani/ui-kit';
 import { useFieldPartnerDraftsController } from '../../shared/field-onboarding';
+import { isDshPartnerActivationComplete } from '../../shared/partner';
 import {
   listFieldOnboardingAssignments,
   openFieldOnboardingAssignment,
@@ -35,15 +36,8 @@ type DshFieldPartnersScreenProps = {
   readonly onOpenAssignment: (assignment: FieldOnboardingAssignment) => void;
 };
 
-type FilterOptionId = 'all' | 'today' | 'ready' | 'follow-up' | 'pending';
-
-const FILTER_OPTIONS: readonly { id: FilterOptionId; label: string }[] = [
-  { id: 'all', label: 'الكل' },
-  { id: 'today', label: 'اليوم' },
-  { id: 'ready', label: 'جاهز للإضافة' },
-  { id: 'follow-up', label: 'تحتاج متابعة' },
-  { id: 'pending', label: 'بانتظار اعتماد' },
-];
+type FilterOptionId = 'all' | 'completed' | 'draft' | 'follow-up' | 'pending';
+type AnalyticsCounts = Record<FilterOptionId, number>;
 
 // ─── Orange Brand Header (exact donor replica) ───────────────────────────────
 // Layout: [🔍] ——— [بثواني / 📍 جولة المتاجر] ——— [🔔 👤]
@@ -166,7 +160,7 @@ function NextPartnerCard({
         borderRadius: radius.lg,
         borderWidth: 1,
         borderColor: colorRoles.borderSubtle,
-        padding: spacing[4],
+        padding: spacing[3],
         flexDirection: 'row-reverse',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -196,53 +190,65 @@ function NextPartnerCard({
     </Pressable>
   );
 }
-// ─── Filter pill row ──────────────────────────────────────────────────────────
-function FilterPills({
-  options,
+// ─── Compact analytics + smart filter ────────────────────────────────────────
+function WorkAnalytics({
   counts,
+  totalCount,
   activeId,
   onSelect,
 }: {
-  options: readonly { id: FilterOptionId; label: string }[];
-  counts: Record<FilterOptionId, number>;
+  counts: AnalyticsCounts;
+  totalCount: number;
   activeId: FilterOptionId;
   onSelect: (id: FilterOptionId) => void;
 }) {
+  const options: readonly { id: Exclude<FilterOptionId, 'all'>; label: string; hint: string }[] = [
+    { id: 'completed', label: 'مكتملة', hint: 'جاهزة للتشغيل' },
+    { id: 'draft', label: 'مسودات', hint: 'تحتاج إكمال' },
+    { id: 'follow-up', label: 'تحتاج متابعة', hint: 'نواقص أو عائق' },
+    { id: 'pending', label: 'بانتظار الاعتماد', hint: 'لدى الشركاء' },
+  ];
+
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={{ flexGrow: 0 }}
-      contentContainerStyle={{ flexDirection: 'row-reverse', gap: spacing[2], paddingHorizontal: spacing[4] }}
-    >
-      {options.map((opt) => {
+    <View style={{ paddingHorizontal: spacing[4], gap: spacing[2] }}>
+      <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ alignItems: 'flex-end', gap: 2 }}>
+          <Text style={{ fontWeight: 'bold', fontSize: 16, color: colorRoles.textPrimary, textAlign: 'right' }}>ملخص العمل</Text>
+          <Text style={{ fontSize: 12, color: colorRoles.textMuted, textAlign: 'right' }}>{`إجمالي المتاجر ${totalCount} · اضغط على الحالة للتصفية`}</Text>
+        </View>
+        <Pressable onPress={() => onSelect('all')} accessibilityRole="button" style={{ paddingHorizontal: spacing[2], paddingVertical: spacing[1], borderRadius: radius.round, backgroundColor: activeId === 'all' ? colorRoles.brandAction : colorRoles.surfaceMuted }}>
+          <Text style={{ color: activeId === 'all' ? colorRoles.surfaceBase : colorRoles.textPrimary, fontSize: 12, fontWeight: 'bold' }}>{`المفتوحة ${counts.all}`}</Text>
+        </Pressable>
+      </View>
+      <View style={{ flexDirection: 'row-reverse', flexWrap: 'wrap', gap: spacing[2] }}>
+        {options.map((opt) => {
         const selected = activeId === opt.id;
         return (
           <Pressable
             key={opt.id}
             onPress={() => onSelect(opt.id)}
+            accessibilityRole="button"
             style={{
-              paddingHorizontal: spacing[3],
-              paddingVertical: spacing[1],
-              borderRadius: radius.round,
+              width: '48%',
+              minHeight: 72,
+              padding: spacing[3],
+              borderRadius: radius.md,
               borderWidth: 1,
-              borderColor: selected ? colorRoles.textPrimary : colorRoles.borderSubtle,
-              backgroundColor: selected ? colorRoles.textPrimary : colorRoles.surfaceBase,
+              borderColor: selected ? colorRoles.brandAction : colorRoles.borderSubtle,
+              backgroundColor: selected ? colorRoles.brandActionSoft : colorRoles.surfaceBase,
+              justifyContent: 'space-between',
             }}
           >
-            <Text
-              style={{
-                fontSize: 13,
-                color: selected ? colorRoles.surfaceBase : colorRoles.textPrimary,
-                fontWeight: selected ? 'bold' : 'normal',
-              }}
-            >
-              {`${opt.label} ${counts[opt.id]}`}
-            </Text>
+            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', justifyContent: 'space-between', gap: spacing[2] }}>
+              <Text style={{ fontSize: 22, fontWeight: 'bold', color: selected ? colorRoles.brandAction : colorRoles.textPrimary }}>{counts[opt.id]}</Text>
+              <Text style={{ flex: 1, fontSize: 13, fontWeight: 'bold', color: colorRoles.textPrimary, textAlign: 'right' }}>{opt.label}</Text>
+            </View>
+            <Text style={{ fontSize: 11, color: colorRoles.textMuted, textAlign: 'right' }}>{opt.hint}</Text>
           </Pressable>
         );
-      })}
-    </ScrollView>
+        })}
+      </View>
+    </View>
   );
 }
 
@@ -291,15 +297,15 @@ export function DshFieldPartnersScreen({
 
   // Once a partner is visible to clients, its onboarding job is done — it
   // disappears from the field agent's active list immediately.
-  const partnersList = (controller.listState.kind === 'success' ? controller.listState.partners : [])
-    .filter((partner) => partner.activationStatus !== 'client_visible');
+  const allPartners = controller.listState.kind === 'success' ? controller.listState.partners : [];
+  const activePartners = allPartners.filter((partner) => !isDshPartnerActivationComplete(partner.activationStatus));
+  const partnersList = activeFilter === 'completed'
+    ? allPartners.filter((partner) => isDshPartnerActivationComplete(partner.activationStatus))
+    : activePartners;
 
   const filteredPartners = React.useMemo(() => {
     return partnersList.filter((partner) => {
-      if (activeFilter === 'today') {
-        const today = new Date().toISOString().split('T')[0];
-        if (!partner.createdAt.startsWith(today!)) return false;
-      } else if (activeFilter === 'ready' && partner.activationStatus !== 'draft') {
+      if (activeFilter === 'draft' && partner.activationStatus !== 'draft') {
         return false;
       } else if (activeFilter === 'follow-up' && partner.activationStatus !== 'documents_missing') {
         return false;
@@ -319,19 +325,16 @@ export function DshFieldPartnersScreen({
   }, [partnersList, activeFilter, searchQuery]);
 
   const priorityPartner = React.useMemo(
-    () => filteredPartners.find((p) => p.activationStatus === 'draft') || filteredPartners[0],
-    [filteredPartners]
+    () => activeFilter === 'all' ? filteredPartners.find((p) => p.activationStatus === 'draft') || filteredPartners[0] : undefined,
+    [activeFilter, filteredPartners]
   );
 
-  const counts: Record<FilterOptionId, number> = {
-    all: partnersList.length,
-    today: partnersList.filter((p) => {
-      const today = new Date().toISOString().split('T')[0];
-      return p.createdAt.startsWith(today!);
-    }).length,
-    ready: partnersList.filter((p) => p.activationStatus === 'draft').length,
-    'follow-up': partnersList.filter((p) => p.activationStatus === 'documents_missing').length,
-    pending: partnersList.filter((p) => p.activationStatus === 'submitted').length,
+  const counts: AnalyticsCounts = {
+    all: activePartners.length,
+    completed: allPartners.filter((p) => isDshPartnerActivationComplete(p.activationStatus)).length,
+    draft: allPartners.filter((p) => p.activationStatus === 'draft').length,
+    'follow-up': allPartners.filter((p) => p.activationStatus === 'documents_missing').length,
+    pending: allPartners.filter((p) => p.activationStatus === 'submitted').length,
   };
 
   if (controller.listState.kind === 'loading') {
@@ -421,6 +424,9 @@ export function DshFieldPartnersScreen({
           </View>
         )}
 
+        <View style={{ height: spacing[3] }} />
+        <WorkAnalytics counts={counts} totalCount={allPartners.length} activeId={activeFilter} onSelect={setActiveFilter} />
+
         {assignments.length > 0 ? (
           <View style={{ paddingHorizontal: spacing[4], paddingTop: spacing[3], gap: spacing[2] }}>
             <Text style={{ fontWeight: 'bold', fontSize: 16, textAlign: 'right' }}>المهام المسندة</Text>
@@ -435,17 +441,6 @@ export function DshFieldPartnersScreen({
             {assignmentError ? <Text style={{ color: colorRoles.danger, textAlign: 'right' }}>{assignmentError}</Text> : null}
           </View>
         ) : null}
-
-        {/* Separator */}
-        <View style={{ height: spacing[3] }} />
-
-        {/* Filter pills */}
-        <FilterPills
-          options={FILTER_OPTIONS}
-          counts={counts}
-          activeId={activeFilter}
-          onSelect={setActiveFilter}
-        />
 
         <View style={{ height: spacing[3] }} />
 
@@ -482,7 +477,7 @@ export function DshFieldPartnersScreen({
               <DshFieldPartnerCard
                 key={partner.id}
                 partner={partner}
-                onPress={() => onOpenPartner(partner.id, partner.activationStatus)}
+                {...(!isDshPartnerActivationComplete(partner.activationStatus) ? { onPress: () => onOpenPartner(partner.id, partner.activationStatus) } : {})}
               />
             ))
           ) : (

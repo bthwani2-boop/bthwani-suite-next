@@ -51,8 +51,8 @@ export function FieldOnboardingAssignmentCard({ assignment, onPress, loading = f
           borderRadius: radius.lg,
           borderWidth: 1,
           borderColor: colorRoles.borderSubtle,
-          padding: spacing[4],
-          gap: spacing[3],
+          padding: spacing[3],
+          gap: spacing[2],
           shadowColor: colorRoles.brandStructure,
           shadowOpacity: 0.06,
           shadowOffset: { width: 0, height: 3 },
@@ -61,19 +61,17 @@ export function FieldOnboardingAssignmentCard({ assignment, onPress, loading = f
         }}
       >
         <View style={{ flexDirection: "row-reverse", alignItems: "flex-start", gap: spacing[3] }}>
-          <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: colorRoles.brandAction, alignItems: "center", justifyContent: "center" }}>
-            <Icon name="storefront-outline" size={22} color={colorRoles.surfaceBase} />
+          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: colorRoles.brandAction, alignItems: "center", justifyContent: "center" }}>
+            <Icon name="storefront-outline" size={19} color={colorRoles.surfaceBase} />
           </View>
           <View style={{ flex: 1, alignItems: "flex-end", gap: spacing[1] }}>
             <Text role="caption" tone="muted" style={{ textAlign: "right" }}>مهمة إدخال متجر</Text>
-            <Text role="titleSm" style={{ textAlign: "right", fontWeight: "bold" }} numberOfLines={2}>{assignment.storeNameHint}</Text>
+            <Text role="bodyStrong" style={{ textAlign: "right", fontWeight: "bold" }} numberOfLines={2}>{assignment.storeNameHint}</Text>
           </View>
           <AssignmentStatusBadge status={assignment.status} />
         </View>
 
-        <View style={{ height: 1, backgroundColor: colorRoles.borderSubtle }} />
-
-        <View style={{ gap: spacing[2] }}>
+        <View style={{ gap: spacing[1] }}>
           {assignment.phoneHint ? (
             <View style={{ flexDirection: "row-reverse", alignItems: "center", gap: spacing[2] }}>
               <Icon name="call-outline" size={17} tone="muted" />
