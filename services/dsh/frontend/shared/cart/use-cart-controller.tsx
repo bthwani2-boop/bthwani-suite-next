@@ -185,8 +185,13 @@ export function useCartController(
           ...(expectedVersion !== undefined ? { expectedVersion } : {}),
           ...input,
         });
-        await load();
         setAction("success");
+        // The mutation response is the authoritative acceptance boundary. A
+        // slow/failing readback must not keep the product sheet in a spinner
+        // after DSH has already committed the item. The cart route performs a
+        // fresh canonical read when opened; this read keeps the current view
+        // convergent without changing the mutation result.
+        void load();
         return true;
       } catch (error) {
         const typed: CartMutationError = typeof error === "object" && error !== null ? error : {};
@@ -198,7 +203,8 @@ export function useCartController(
             command: { kind: "add", storeId, masterProductId: input.masterProductId, quantity: input.quantity, options: input.options ? [...input.options] : [], note: input.note ?? "" }
           });
           setAction("offline_pending");
-          return true;
+          setActionError("لم تُضف السلة بعد. لا يوجد اتصال؛ أعد المحاولة عند عودة الشبكة.");
+          return false;
         }
         if (typed.status === 412 || typed.code === "VERSION_CONFLICT") {
           setAction("conflict");

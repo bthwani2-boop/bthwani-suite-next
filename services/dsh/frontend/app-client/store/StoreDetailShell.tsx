@@ -142,8 +142,11 @@ export function StoreDetailShell({
         quantity,
         selectedMode,
       );
-    } catch (e) {
-      // Fallback if the promise rejects unexpectedly
+    } catch (error) {
+      const message = error instanceof Error && error.message.trim()
+        ? error.message.trim()
+        : "تعذر الوصول إلى DSH لإضافة المنتج. أعد المحاولة.";
+      setMutationError(message);
     }
     setIsSubmitting(false);
     if (accepted) {
