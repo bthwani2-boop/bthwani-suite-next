@@ -15,6 +15,7 @@ var (
 	ErrZoneNotFound = errors.New("zone not found")
 	ErrZoneInactive = errors.New("zone is inactive")
 	ErrUnavailable  = errors.New("dsh-api is unavailable")
+	ErrProviderMediaInvalid = errors.New("provider media reference is invalid")
 )
 
 type Client struct {
@@ -141,6 +142,42 @@ func (c *Client) SyncAvailabilityProjection(ctx context.Context, input Availabil
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("DSH availability projection returned HTTP %d", resp.StatusCode)
+	}
+	return nil
+}
+
+// ValidateProviderDocumentMedia asks DSH, the media owner, to validate the
+// reference before Workforce persists it in a provider profile.
+func (c *Client) ValidateProviderDocumentMedia(ctx context.Context, actorID, actorRole, mediaRef string) error {
+	if !c.Configured() || c.token == "" {
+		return ErrUnavailable
+	}
+	payload, err := json.Marshal(struct {
+		ActorID   string `json:"actorId"`
+		ActorRole string `json:"actorRole"`
+		MediaRef  string `json:"mediaRef"`
+	}{actorID, actorRole, mediaRef})
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/dsh/internal/workforce/provider-media-refs/validate", bytes.NewReader(payload))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("X-Service-Caller", "workforce")
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("%w: %v", ErrUnavailable, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusBadRequest {
+		return ErrProviderMediaInvalid
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("%w: DSH returned HTTP %d", ErrUnavailable, resp.StatusCode)
 	}
 	return nil
 }

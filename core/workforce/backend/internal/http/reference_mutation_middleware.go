@@ -1,18 +1,29 @@
 package http
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
 	"workforce-api/internal/auth"
+	"workforce-api/internal/dshclient"
 	"workforce-api/internal/workforce"
 )
+
+type providerMediaVerifier interface {
+	ValidateProviderDocumentMedia(context.Context, string, string, string) error
+}
 
 // ReferenceMutationMiddleware owns governed reference-data and document-link
 // mutations that cross the existing service boundary without duplicating the
 // main router.
-func ReferenceMutationMiddleware(next http.Handler, repo *workforce.Repository, authClient *auth.Client) http.Handler {
+func ReferenceMutationMiddleware(next http.Handler, repo *workforce.Repository, authClient *auth.Client, verifiers ...providerMediaVerifier) http.Handler {
+	var mediaVerifier providerMediaVerifier
+	if len(verifiers) > 0 {
+		mediaVerifier = verifiers[0]
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost && r.URL.Path == "/workforce/reference/cities" {
 			handleCityCreate(w, r, repo, authClient)
@@ -24,7 +35,7 @@ func ReferenceMutationMiddleware(next http.Handler, repo *workforce.Repository, 
 		}
 		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/documents") {
 			if kind, actorID, ok := parseProviderDocumentPath(r.URL.Path); ok {
-				handleDocumentLink(w, r, repo, authClient, kind, actorID)
+				handleDocumentLink(w, r, repo, authClient, mediaVerifier, kind, actorID)
 				return
 			}
 		}
@@ -114,6 +125,7 @@ func handleDocumentLink(
 	r *http.Request,
 	repo *workforce.Repository,
 	authClient *auth.Client,
+	mediaVerifier providerMediaVerifier,
 	kind string,
 	actorID string,
 ) {
@@ -126,6 +138,18 @@ func handleDocumentLink(
 		MediaRef        string `json:"mediaRef"`
 	}
 	if !decodeReferenceMutationJSON(w, r, &input) {
+		return
+	}
+	if mediaVerifier == nil {
+		sendError(w, http.StatusServiceUnavailable, "MEDIA_AUTHORITY_UNAVAILABLE", "DSH media authority is unavailable")
+		return
+	}
+	if err := mediaVerifier.ValidateProviderDocumentMedia(r.Context(), actorID, kind, input.MediaRef); err != nil {
+		if errors.Is(err, dshclient.ErrProviderMediaInvalid) {
+			sendError(w, http.StatusBadRequest, "INVALID_REFERENCE", "media reference is not valid for this provider")
+			return
+		}
+		sendError(w, http.StatusServiceUnavailable, "MEDIA_AUTHORITY_UNAVAILABLE", "DSH media authority is unavailable")
 		return
 	}
 	operatorRole := "operator"
