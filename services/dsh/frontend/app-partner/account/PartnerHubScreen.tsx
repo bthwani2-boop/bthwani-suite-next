@@ -510,7 +510,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
               description="الشريك نشط داخليًا، لكن المتجر غير ظاهر للعملاء حتى اكتمال بوابات النشر."
             />
           ) : (
-            <AnalyticsInsightsPanel storeName={storeName} />
+            <AnalyticsInsightsPanel storeName={storeName} canonicalStoreId={canonicalStoreId} />
           )}
         </HubSectionShell>
       );

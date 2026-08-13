@@ -207,6 +207,18 @@ $PartnerOrders = Invoke-Api GET "$DshBaseUrl/dsh/partner/orders" (Headers $Partn
 Require-Status $PartnerOrders @(200) "partner orders inbox"
 $PartnerAnalytics = Invoke-Api GET "$DshBaseUrl/dsh/partner/analytics/performance?period=today&storeId=$([uri]::EscapeDataString($StoreId))" (Headers $Partner "analytics" -ReadOnly)
 Require-Status $PartnerAnalytics @(200) "partner performance analytics"
+$PartnerAnalyticsRecord = Get-Value $PartnerAnalytics.Json 'value'
+if ($null -eq $PartnerAnalyticsRecord) { $PartnerAnalyticsRecord = $PartnerAnalytics.Json }
+Require ([string]$PartnerAnalyticsRecord.storeId -eq $StoreId) "partner performance returned another store"
+Require ([string]$PartnerAnalyticsRecord.sourceSystem -eq "DSH") "partner performance source provenance is missing"
+Require ([bool]$PartnerAnalyticsRecord.readOnly) "partner performance readOnly provenance is missing"
+Require (-not [string]::IsNullOrWhiteSpace([string]$PartnerAnalyticsRecord.readState)) "partner performance read state is missing"
+Require ($null -ne $PartnerAnalyticsRecord.windowFrom -and $null -ne $PartnerAnalyticsRecord.windowTo) "partner performance window provenance is missing"
+if ([string]$PartnerAnalyticsRecord.readState -eq "available") {
+  Require ($null -ne $PartnerAnalyticsRecord.generatedAt -and $null -ne $PartnerAnalyticsRecord.freshnessSeconds) "available partner performance is missing freshness evidence"
+} elseif ([string]$PartnerAnalyticsRecord.readState -ne "no_data") {
+  throw "partner performance returned unknown read state: $($PartnerAnalyticsRecord.readState)"
+}
 
 $PartnerSettlements = Invoke-Api GET "$DshBaseUrl/dsh/partner/me/finance/settlements" (Headers $Partner "settlements" -ReadOnly)
 Require-Status $PartnerSettlements @(200) "partner settlement references"

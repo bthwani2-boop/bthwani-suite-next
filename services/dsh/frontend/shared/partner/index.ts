@@ -86,11 +86,11 @@ export {
   fetchPartnerStoreCoverageZones,
   fetchPartnerStoreSettings,
   updatePartnerStoreSettings,
-  fetchPartnerPerformance,
   fetchPartnerStoreTeam,
   invitePartnerStoreTeamMember,
   executePartnerStoreTeamMemberAction,
 } from "./partner.api";
+export { fetchPartnerPerformance } from "../analytics/analytics.api";
 export type { DshPartnerReadinessItem, DshPartnerDocumentType } from "./partner.types";
 export { REQUIRED_DOCUMENT_TYPES, DOCUMENT_TYPE_LABELS, DOCUMENT_REVIEW_STATUS_LABELS, PARTNER_FIELD_VISIT_STATUS_LABELS } from "./partner.types";
 export * from "./partner.workflow";

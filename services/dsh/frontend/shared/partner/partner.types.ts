@@ -558,12 +558,3 @@ type UiAuditRow = {
   slaBreachReason: string; supportTicketLink: string; proofRequired: string;
   evidenceState: string; resolutionPath: string; note: string; statusTone: string;
 };
-
-export type DshPartnerPerformanceResponse = {
-  readonly storeId: string;
-  readonly totalOrders: number;
-  readonly acceptedOrders: number;
-  readonly rejectedOrders: number;
-  readonly period: string;
-  readonly generatedAt: string;
-};

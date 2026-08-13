@@ -2,6 +2,7 @@ package analytics
 
 import (
 	"database/sql"
+	"fmt"
 	"time"
 )
 
@@ -266,17 +267,46 @@ func GetStoreAnalytics(db *sql.DB) (StoreAnalytics, error) {
 }
 
 type PartnerPerformance struct {
-	StoreID        string    `json:"storeId"`
-	TotalOrders    int       `json:"totalOrders"`
-	AcceptedOrders int       `json:"acceptedOrders"`
-	RejectedOrders int       `json:"rejectedOrders"`
-	Period         string    `json:"period"`
-	GeneratedAt    time.Time `json:"generatedAt"`
+	StoreID          string     `json:"storeId"`
+	ReadState        string     `json:"readState"`
+	SourceSystem     string     `json:"sourceSystem"`
+	ReadOnly         bool       `json:"readOnly"`
+	WindowFrom       time.Time  `json:"windowFrom"`
+	WindowTo         time.Time  `json:"windowTo"`
+	GeneratedAt      *time.Time `json:"generatedAt"`
+	FreshnessSeconds *int       `json:"freshnessSeconds"`
+	Lineage          []string   `json:"lineage"`
+	TotalOrders      int        `json:"totalOrders"`
+	AcceptedOrders   int        `json:"acceptedOrders"`
+	RejectedOrders   int        `json:"rejectedOrders"`
+	Period           string     `json:"period"`
+}
+
+const (
+	PartnerPerformanceAvailable = "available"
+	PartnerPerformanceNoData    = "no_data"
+)
+
+func partnerPerformanceReadState(totalOrders int) string {
+	if totalOrders == 0 {
+		return PartnerPerformanceNoData
+	}
+	return PartnerPerformanceAvailable
 }
 
 func GetPartnerPerformance(db *sql.DB, storeID, period string) (PartnerPerformance, error) {
 	since := periodFilter(period)
-	out := PartnerPerformance{StoreID: storeID, Period: period, GeneratedAt: time.Now().UTC()}
+	now := time.Now().UTC()
+	out := PartnerPerformance{
+		StoreID:      storeID,
+		ReadState:    PartnerPerformanceNoData,
+		SourceSystem: "DSH",
+		ReadOnly:     true,
+		WindowFrom:   since,
+		WindowTo:     now,
+		Lineage:      []string{"dsh_orders"},
+		Period:       period,
+	}
 	queries := []struct {
 		dest *int
 		q    string
@@ -292,6 +322,23 @@ func GetPartnerPerformance(db *sql.DB, storeID, period string) (PartnerPerforman
 		if err := db.QueryRow(query.q, since, storeID).Scan(query.dest); err != nil {
 			return out, err
 		}
+	}
+	out.ReadState = partnerPerformanceReadState(out.TotalOrders)
+	if out.ReadState == PartnerPerformanceAvailable {
+		var sourceUpdatedAt sql.NullTime
+		if err := db.QueryRow(`SELECT MAX(updated_at) FROM dsh_orders WHERE store_id = $1 AND created_at >= $2`, storeID, since).Scan(&sourceUpdatedAt); err != nil {
+			return out, err
+		}
+		if !sourceUpdatedAt.Valid {
+			return out, fmt.Errorf("partner performance source freshness is unavailable")
+		}
+		generatedAt := sourceUpdatedAt.Time.UTC()
+		freshnessSeconds := int(now.Sub(generatedAt).Seconds())
+		if freshnessSeconds < 0 {
+			freshnessSeconds = 0
+		}
+		out.GeneratedAt = &generatedAt
+		out.FreshnessSeconds = &freshnessSeconds
 	}
 	return out, nil
 }
