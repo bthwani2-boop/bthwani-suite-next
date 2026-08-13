@@ -1,9 +1,11 @@
-# Closure
+# Closure gate — app-client full-stack journeys
 
-Current decision: `NOT_STARTED`.
+Current decision: **READY_FOR_IMPLEMENTATION**, not closed.
 
-This package is diagnosis/implementation planning only. It must not be interpreted as product readiness or runtime correctness.
+Closure is forbidden until U001-U007 are implemented and U008 proves the exact final candidate. The re-audit explicitly adds missing client-profile/consent/privacy-right and benefits/subscription journeys; they cannot be waived as “marketing” or “finance” subdetails.
 
-`CLOSED_WITH_EVIDENCE` is forbidden until U001-U007 are all DONE; every required verification is PASS on the exact final candidate SHA; cleanup and red-team are complete; client-relevant runtime/database/native/visual/security/finance evidence is recorded; blockers and deviations are empty; protected approvals required by active governance are recorded; and the final GitHub CI for that same candidate is green.
+The final candidate must satisfy all required unit checks, strict Schema v3 validation, visible-action/deep-link reachability census, proven cleanup of dead/legacy client residue, adversarial actor/OCC/replay/offline/restart/provider/payment/subscription/privacy cases, governed database/runtime/native evidence and required exact-SHA CI.
 
-Any failed, skipped-without-authority, stale-SHA or unproven required check reopens the affected unit and keeps this file OPEN.
+Current repository failures are classified rather than hidden. WLT readiness is shared and client-relevant. Partner/Field payout/onboarding failures and Partner payout runtime smoke are outside client implementation unless a direct client trace is later proven. If a required global gate stays red because of an external owner, the package must report the blocker accurately; it must not implement unrelated code to manufacture a green client result.
+
+`CLOSED_WITH_EVIDENCE` may appear here only after MANIFEST implementation/verification are COMPLETE, every unit RESULT is DONE/PASS with the same final SHA, all required verification IDs are PASS, zero in-scope known defect remains, and branch readback confirms no movement after the last evidence run.
