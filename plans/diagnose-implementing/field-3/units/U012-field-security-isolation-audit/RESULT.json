@@ -1,1 +1,45 @@
-{"schemaVersion":3,"unitId":"U012","status":"DRAFT","baselineSha":"bee8e9cfe1762cef39690f0b254fdf0b6855e1a9","resultingSha":null,"completedTaskIds":[],"modifiedPaths":[],"checkResults":[],"blockers":["Execution evidence not collected yet."],"deviations":[],"decision":"OPEN"}
+{
+  "schemaVersion": 3,
+  "unitId": "U012",
+  "status": "NEEDS_EVIDENCE",
+  "baselineSha": "bee8e9cfe1762cef39690f0b254fdf0b6855e1a9",
+  "resultingSha": "7830b465442f91ed7d5ec2553309e758bb1f6e94",
+  "completedTaskIds": [],
+  "modifiedPaths": [
+    "core/workforce/backend/cmd/workforce-api/main.go",
+    "core/workforce/backend/internal/dshclient/client.go",
+    "core/workforce/backend/internal/dshclient/client_test.go",
+    "core/workforce/backend/internal/http/reference_mutation_middleware.go",
+    "core/workforce/backend/internal/http/reference_mutation_security_test.go",
+    "services/dsh/backend/internal/http/operations_intelligence.go",
+    "services/dsh/backend/internal/http/workforce_media_validation.go",
+    "services/dsh/backend/internal/http/workforce_media_validation_test.go",
+    "services/dsh/contracts/dsh.runtime-extensions.openapi.yaml"
+  ],
+  "checkResults": [
+    {
+      "verificationId": "V0121",
+      "status": "PASS",
+      "candidateSha": "7830b465442f91ed7d5ec2553309e758bb1f6e94",
+      "command": "go test ./... from services/dsh/backend, core/workforce/backend, core/identity/backend, and services/wlt/backend; pnpm --dir apps/app-field/runtime run test; pnpm --dir services/dsh run openapi:verify; node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/field-3 --strict",
+      "evidence": "All four backend suites passed. app-field passed 20 tests and mobile-runtime-contract. DSH OpenAPI modular gate passed with 559 paths and 646 operations. Package validation returned 0 errors and 0 warnings."
+    },
+    {
+      "verificationId": "V0122",
+      "status": "NEEDS_EVIDENCE",
+      "candidateSha": "7830b465442f91ed7d5ec2553309e758bb1f6e94",
+      "command": "Deep Security Scan whole repository with repeated discovery, validation, attack-path analysis, and generated reporting",
+      "evidence": "Manual red-team review found and fixed unscoped Workforce provider-document linking by requiring DSH-owned media validation with actor, role, purpose, owner, partner-null, and clean-scan predicates. Added negative tests for invalid ownership, service identity, malformed role, and unavailable authority. The official Deep Scan coordinator repeatedly failed during setup before discovery because its generated in_scope_files.txt was rejected as an unsafe repository-relative path; no canonical scan manifest or report was produced.",
+      "proves": "Targeted code and regression coverage only; repository-wide canonical security-scan closure is not proven."
+    }
+  ],
+  "blockers": [
+    "Official Codex Security Deep Scan is externally blocked in setup by a stable coordinator path-validation failure: generated artifacts\\deep_discovery\\setup\\deterministic-setup-*\\in_scope_files.txt:1 must be a safe repository-relative path; discovery count remains zero and no canonical report exists.",
+    "Authenticated runtime cross-surface, Android/ADB, database-backed media ownership readback, and production-like upload/download evidence were not available in this execution."
+  ],
+  "deviations": [
+    "No delegation used; Codex implemented and verified the security fix as explicitly requested.",
+    "Provider-media upload routes remain disabled; no local Workforce media table or compatibility bypass was introduced."
+  ],
+  "decision": "NEEDS_EVIDENCE"
+}
