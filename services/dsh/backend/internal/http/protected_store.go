@@ -356,7 +356,7 @@ func (s *protectedStoreServer) handleGetPartnerSettings(w http.ResponseWriter, r
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
 		return
 	}
-	row, err := store.GetStoreByIDInternal(r.Context(), s.db, storeID)
+	row, err := store.GetStoreByIDInternalForOperatorContext(r.Context(), s.db, actor.OperatorContextID, storeID)
 	if err != nil {
 		s.writeStoreError(w, err)
 		return
