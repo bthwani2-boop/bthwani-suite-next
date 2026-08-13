@@ -1,1 +1,54 @@
-{"schemaVersion":3,"unitId":"U006","status":"DRAFT","baselineSha":"bee8e9cfe1762cef39690f0b254fdf0b6855e1a9","resultingSha":null,"completedTaskIds":[],"modifiedPaths":[],"checkResults":[],"blockers":["Execution evidence not collected yet."],"deviations":[],"decision":"OPEN"}
+{
+  "schemaVersion": 3,
+  "unitId": "U006",
+  "status": "DRAFT",
+  "baselineSha": "bee8e9cfe1762cef39690f0b254fdf0b6855e1a9",
+  "resultingSha": "a13eacd6c5892501358563e324b1a9a53fa912cf",
+  "completedTaskIds": ["U006-T001"],
+  "modifiedPaths": [
+    "services/dsh/backend/internal/http/media_upload.go",
+    "services/dsh/backend/internal/partner/document_count.go",
+    "services/dsh/backend/internal/partner/model.go",
+    "services/dsh/backend/internal/partner/onboarding_case_promotion.go",
+    "services/dsh/backend/internal/partner/onboarding_integrity_repository.go",
+    "services/dsh/backend/internal/partner/repository.go",
+    "services/dsh/backend/internal/partner/repository_db_test.go",
+    "services/dsh/backend/internal/partner/review_separation_boundary_db_test.go",
+    "services/dsh/contracts/components/schemas/partner.schemas.yaml",
+    "services/dsh/contracts/paths/field.paths.yaml",
+    "services/dsh/database/migrations/dsh-999b_partner_evidence_lifecycle.sql",
+    "services/dsh/database/migrations/manifest.extensions.json",
+    "services/dsh/database/seeds/local/dsh-015_partner_lifecycle.local.sql",
+    "services/dsh/database/seeds/local/dsh-958_partner_store_ownership.local.sql",
+    "services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx",
+    "services/dsh/frontend/app-field/stores/DshFieldPartnerProgressScreen.tsx",
+    "services/dsh/frontend/control-panel/partners/PartnerDetailOperationalScreen.tsx",
+    "services/dsh/frontend/control-panel/partners/PartnerDetailUnifiedScreen.tsx",
+    "services/dsh/frontend/shared/field-onboarding/field-onboarding.types.ts",
+    "services/dsh/frontend/shared/media/field-document-media.ts",
+    "services/dsh/frontend/shared/partner/index.ts",
+    "services/dsh/frontend/shared/partner/partner.types.ts",
+    "services/dsh/tests/field-onboarding-validation.test.mjs",
+    "services/dsh/tests/partner-unified-platform-closure.test.mjs"
+  ],
+  "checkResults": [
+    {
+      "verificationId": "V0061",
+      "status": "PASS",
+      "candidateSha": "a13eacd6c5892501358563e324b1a9a53fa912cf",
+      "command": "cd services/dsh/backend && go test ./...; pnpm --dir services/dsh run test; pnpm --dir apps/app-field/runtime run typecheck && pnpm --dir apps/app-field/runtime run test; pnpm --dir apps/control-panel/runtime run typecheck && pnpm --dir apps/control-panel/runtime run test; pnpm --dir services/dsh run openapi:verify; node tools/guards/migration-manifest-drift-gate.mjs dsh; node tools/scripts/check-dsh-database-contract.mjs; node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/field-3 --strict",
+      "evidence": "Backend packages passed; DSH build and 305 service tests passed; app-field typecheck and 18 tests plus mobile runtime contract passed; Control Panel typecheck and 31 tests passed; OpenAPI modular gate, migration manifest gate, DSH database contract, and strict package validation passed with zero validation errors. Candidate-bound Docker migration and local seed reruns passed using the generated Workforce placeholder registry and source SHA."
+    },
+    {
+      "verificationId": "V0062",
+      "status": "NEEDS_EVIDENCE",
+      "candidateSha": "a13eacd6c5892501358563e324b1a9a53fa912cf",
+      "command": "RUNTIME: capture storefront media, upload legal image/PDF, review/reject/reupload/verify from every related Partners page/tab and confirm field readback",
+      "evidence": "Database migration and local seed execution passed on the candidate, and automated backend/frontend contract coverage passed. The required authenticated interactive capture/provider and cross-surface review journey was not executed, so no visual/runtime same-object evidence is claimed.",
+      "missingEvidence": "Authenticated runtime journey covering field capture, legal image/PDF upload, rejection with reason, reupload/supersession, approval, restart, and canonical readback in every affected Partners page/tab."
+    }
+  ],
+  "blockers": ["V0062 interactive runtime and visual evidence is not collected; U006 remains OPEN under fail-closed policy."],
+  "deviations": [],
+  "decision": "NEEDS_EVIDENCE"
+}
