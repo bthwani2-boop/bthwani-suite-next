@@ -35,7 +35,7 @@ function applyCompilerApiBridge(pkg) {
   if (pkg.peerDependenciesMeta) delete pkg.peerDependenciesMeta.typescript;
   pkg.dependencies = {
     ...pkg.dependencies,
-    typescript: "npm:@typescript/typescript6@6.0.3",
+    typescript: "npm:@typescript/typescript6@6.0.2",
   };
   return pkg;
 }

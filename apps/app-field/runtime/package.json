@@ -15,7 +15,7 @@
     "eas-build-pre-install": "node ../../mobile/verify-eas-provider-inputs.mjs --app app-field"
   },
   "devDependencies": {
-    "typescript": "npm:@typescript/typescript6@6.0.3"
+    "typescript": "npm:@typescript/typescript6@6.0.2"
   },
   "dependencies": {
     "@bthwani/core-identity": "workspace:*",
@@ -68,5 +68,12 @@
     "react-native-screens": "4.26.2",
     "react-native-svg": "15.15.4",
     "react-native-worklets": "0.8.3"
+  },
+  "expo": {
+    "install": {
+      "exclude": [
+        "typescript"
+      ]
+    }
   }
 }
