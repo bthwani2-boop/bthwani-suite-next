@@ -73,7 +73,7 @@ func (s *protectedStoreServer) handleLegacyPartnerUpsertStoreAssortmentAtomic(w 
 }
 
 func (s *protectedStoreServer) handleFieldUpsertStoreAssortmentAtomic(w http.ResponseWriter, r *http.Request) {
-	actorID, storeID, ok := s.fieldPartnerStore(w, r)
+	actor, storeID, ok := s.fieldPartnerStore(w, r)
 	if !ok {
 		return
 	}
@@ -81,7 +81,7 @@ func (s *protectedStoreServer) handleFieldUpsertStoreAssortmentAtomic(w http.Res
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store does not belong to this partner draft")
 		return
 	}
-	s.upsertStoreAssortmentAtomic(w, r, actorID, "field", storeID)
+	s.upsertStoreAssortmentAtomic(w, r, actor.ID, "field", storeID)
 }
 
 func (s *protectedStoreServer) handleLegacyFieldUpsertStoreAssortmentAtomic(w http.ResponseWriter, r *http.Request) {
@@ -115,7 +115,7 @@ func (s *protectedStoreServer) handleUpdatePartnerProductProposalAtomic(w http.R
 }
 
 func (s *protectedStoreServer) handleUpdateFieldProductProposalAtomic(w http.ResponseWriter, r *http.Request) {
-	actorID, _, ok := s.fieldPartnerStore(w, r)
+	actor, _, ok := s.fieldPartnerStore(w, r)
 	if !ok {
 		return
 	}
@@ -123,7 +123,7 @@ func (s *protectedStoreServer) handleUpdateFieldProductProposalAtomic(w http.Res
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	proposal, err := centralcatalog.UpdateProposalAtomic(r.Context(), s.db, r.PathValue("proposalId"), actorID, input)
+	proposal, err := centralcatalog.UpdateProposalAtomic(r.Context(), s.db, r.PathValue("proposalId"), actor.ID, input)
 	if err != nil {
 		s.writeCatalogMutationError(w, err)
 		return
@@ -151,7 +151,7 @@ func (s *protectedStoreServer) handleWithdrawPartnerProductProposalAtomic(w http
 }
 
 func (s *protectedStoreServer) handleWithdrawFieldProductProposalAtomic(w http.ResponseWriter, r *http.Request) {
-	actorID, _, ok := s.fieldPartnerStore(w, r)
+	actor, _, ok := s.fieldPartnerStore(w, r)
 	if !ok {
 		return
 	}
@@ -161,7 +161,7 @@ func (s *protectedStoreServer) handleWithdrawFieldProductProposalAtomic(w http.R
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	proposal, err := centralcatalog.WithdrawProposalAtomic(r.Context(), s.db, r.PathValue("proposalId"), actorID, input.ExpectedVersion)
+	proposal, err := centralcatalog.WithdrawProposalAtomic(r.Context(), s.db, r.PathValue("proposalId"), actor.ID, input.ExpectedVersion)
 	if err != nil {
 		s.writeCatalogMutationError(w, err)
 		return

@@ -295,9 +295,9 @@ func (s *protectedStoreServer) handlePartnerCreateProductProposal(w http.Respons
 }
 
 func (s *protectedStoreServer) handleFieldCreateProductProposal(w http.ResponseWriter, r *http.Request) {
-	actorID, storeID, ok := s.fieldPartnerStore(w, r)
+	actor, storeID, ok := s.fieldPartnerStore(w, r)
 	if !ok {
 		return
 	}
-	s.createProductProposal(w, r, actorID, &storeID)
+	s.createProductProposal(w, r, actor.ID, &storeID)
 }

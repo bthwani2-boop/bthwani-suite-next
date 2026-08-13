@@ -95,44 +95,49 @@ func (s *protectedStoreServer) partnerStore(w http.ResponseWriter, r *http.Reque
 // {partnerId} in the URL, requiring the calling field actor to be the one
 // who created that partner draft, and requiring the partner to already have
 // a linked store (every partner gets one automatically on creation).
-func (s *protectedStoreServer) fieldPartnerStore(w http.ResponseWriter, r *http.Request) (actorID, storeID string, ok bool) {
+func (s *protectedStoreServer) fieldPartnerStore(w http.ResponseWriter, r *http.Request) (actor store.StoreActor, storeID string, ok bool) {
 	actor, reqOk := s.requireActor(w, r, "field")
 	if !reqOk {
-		return "", "", false
+		return store.StoreActor{}, "", false
+	}
+	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
+	if operatorContextID == "" {
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+		return store.StoreActor{}, "", false
 	}
 	partnerID := r.PathValue("partnerId")
-	p, err := partner.GetPartner(s.db, partnerID)
+	p, err := partner.GetPartnerForOperatorContext(s.db, operatorContextID, partnerID)
 	if errors.Is(err, partner.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
-		return "", "", false
+		return store.StoreActor{}, "", false
 	}
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to verify partner ownership")
-		return "", "", false
+		return store.StoreActor{}, "", false
 	}
 	if p.CreatedByActorID != actor.ID {
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this partner draft does not belong to you")
-		return "", "", false
+		return store.StoreActor{}, "", false
 	}
-	row, err := store.GetStoreByPartnerID(s.db, partnerID)
+	row, err := store.GetStoreByPartnerIDForOperatorContext(s.db, operatorContextID, partnerID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load partner store")
-		return "", "", false
+		return store.StoreActor{}, "", false
 	}
 	if row == nil {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "partner has no linked store yet")
-		return "", "", false
+		return store.StoreActor{}, "", false
 	}
-	return actor.ID, row.ID, true
+	return actor, row.ID, true
 }
 
 // GET /dsh/field/partners/{partnerId}/store
 func (s *protectedStoreServer) handleFieldGetPartnerStore(w http.ResponseWriter, r *http.Request) {
-	_, storeID, ok := s.fieldPartnerStore(w, r)
+	actor, storeID, ok := s.fieldPartnerStore(w, r)
 	if !ok {
 		return
 	}
-	row, err := store.GetStoreByPartnerID(s.db, r.PathValue("partnerId"))
+	row, err := store.GetStoreByPartnerIDForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("partnerId"))
 	if err != nil || row == nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load store")
 		return
@@ -142,7 +147,7 @@ func (s *protectedStoreServer) handleFieldGetPartnerStore(w http.ResponseWriter,
 
 // PATCH /dsh/field/partners/{partnerId}/store
 func (s *protectedStoreServer) handleFieldUpdatePartnerStore(w http.ResponseWriter, r *http.Request) {
-	actorID, storeID, ok := s.fieldPartnerStore(w, r)
+	actor, storeID, ok := s.fieldPartnerStore(w, r)
 	if !ok {
 		return
 	}
@@ -156,7 +161,7 @@ func (s *protectedStoreServer) handleFieldUpdatePartnerStore(w http.ResponseWrit
 		return
 	}
 
-	row, audit, err := store.UpdateFieldStoreDraft(r.Context(), s.db, storeID, actorID, idempotencyKey, correlationID(r), input)
+	row, audit, err := store.UpdateFieldStoreDraft(r.Context(), s.db, storeID, actor.ID, idempotencyKey, correlationID(r), input)
 	if errors.Is(err, store.ErrIdempotencyConflict) {
 		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "idempotency key was already used with a different store draft update request")
 		return

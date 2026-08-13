@@ -69,11 +69,16 @@ func (s *protectedStoreServer) handleFieldMediaUpload(w http.ResponseWriter, r *
 		partnerID = linkedPartner.String
 		purpose = "field_readiness_evidence"
 	} else if partnerID != "" {
+		operatorContextID := strings.TrimSpace(actor.OperatorContextID)
+		if operatorContextID == "" {
+			store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+			return
+		}
 		if mediaKind != "" && mediaKind != "legal_document" && mediaKind != "visit_evidence" {
 			store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "unsupported media kind")
 			return
 		}
-		p, err := partner.GetPartner(s.db, partnerID)
+		p, err := partner.GetPartnerForOperatorContext(s.db, operatorContextID, partnerID)
 		if errors.Is(err, partner.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
 			return
