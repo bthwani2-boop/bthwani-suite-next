@@ -1,1 +1,57 @@
-{"schemaVersion":3,"unitId":"U005","status":"DRAFT","baselineSha":"bee8e9cfe1762cef39690f0b254fdf0b6855e1a9","resultingSha":null,"completedTaskIds":[],"modifiedPaths":[],"checkResults":[],"blockers":["Execution evidence not collected yet."],"deviations":[],"decision":"OPEN"}
+{
+  "schemaVersion": 3,
+  "unitId": "U005",
+  "status": "DRAFT",
+  "baselineSha": "c612dd0bc9f5511011b0d019af6deb9c700ef1bc",
+  "resultingSha": "995ff550fb4c079a9784ca84a71839bb834337b0",
+  "completedTaskIds": [],
+  "modifiedPaths": [
+    "services/dsh/backend/internal/partner/model.go",
+    "services/dsh/backend/internal/partner/model_test.go",
+    "services/dsh/backend/internal/partner/onboarding_integrity_handlers.go",
+    "services/dsh/backend/internal/partner/onboarding_integrity_repository.go",
+    "services/dsh/backend/internal/partner/operator_context_list_closure.go",
+    "services/dsh/backend/internal/partner/operator_context_repository.go",
+    "services/dsh/backend/internal/partner/partner_readiness_aggregate.go",
+    "services/dsh/backend/internal/partner/repository.go",
+    "services/dsh/backend/internal/partner/state_policy.go",
+    "services/dsh/backend/internal/partner/business_vertical.go",
+    "services/dsh/backend/internal/store/governed_operator_store_creation.go",
+    "services/dsh/backend/internal/store/repository.go",
+    "services/dsh/contracts/components/schemas/partner.schemas.yaml",
+    "services/dsh/contracts/components/schemas/system.schemas.yaml",
+    "services/dsh/database/migrations/manifest.extensions.json",
+    "services/dsh/database/migrations/dsh-999a_partner_business_vertical_binding.sql",
+    "services/dsh/frontend/app-field/components/OnboardingBasicsSection.tsx",
+    "services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx",
+    "services/dsh/frontend/control-panel/partners/PartnerCreatePanel.tsx",
+    "services/dsh/frontend/control-panel/partners/PartnerDetailUnifiedScreen.tsx",
+    "services/dsh/frontend/control-panel/partners/PartnerGovernanceWorkspaceScreen.tsx",
+    "services/dsh/frontend/control-panel/partners/stores/PartnerStoreCreateWizard.tsx",
+    "services/dsh/frontend/shared/field-onboarding/field-onboarding.types.ts",
+    "services/dsh/frontend/shared/field-onboarding/use-field-partner-onboarding-controller.tsx",
+    "services/dsh/frontend/shared/partner/index.ts",
+    "services/dsh/frontend/shared/partner/partner.types.ts",
+    "services/dsh/frontend/shared/partner/partner.view-model.ts"
+  ],
+  "checkResults": [
+    {
+      "verificationId": "V0051",
+      "status": "PASS",
+      "candidateSha": "995ff550fb4c079a9784ca84a71839bb834337b0",
+      "command": "go test ./...; pnpm --dir services/dsh run build; pnpm --dir apps/app-field/runtime run typecheck && pnpm --dir apps/app-field/runtime run test; pnpm --dir apps/control-panel/runtime run typecheck && pnpm --dir apps/control-panel/runtime run test; pnpm --dir apps/app-partner/runtime run test; pnpm run contracts:redocly; pnpm run guard:generated-client-provenance; pnpm run guard:migration-manifest-drift; pnpm run database:dsh:contract; node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/field-3 --strict",
+      "evidence": "Backend all packages passed; DSH build and Go build verification passed; app-field 18 tests and mobile runtime contract passed; Control Panel 31 tests passed; app-partner 9 tests and mobile runtime contract passed; OpenAPI composition/typecheck, generated-client provenance, migration manifest, DSH database contract, and strict package validation passed with zero errors and warnings."
+    },
+    {
+      "verificationId": "V0052",
+      "status": "NEEDS_EVIDENCE",
+      "candidateSha": "995ff550fb4c079a9784ca84a71839bb834337b0",
+      "command": "RUNTIME: complete one field-originated partner/store draft through all Partners pages/tabs: queue, partner detail, stores, return-for-changes, resubmit and approve",
+      "evidence": "Local runtime migration applied dsh-999a successfully; 243 governed DSH migrations and runtime smoke passed, including DSH stores readback. The required interactive cross-surface field-to-Control-Panel-to-Partner page journey was not executed in this batch, so no same-object UI evidence is claimed.",
+      "missingEvidence": "Interactive authenticated runtime journey with one canonical partner/store ID across field draft, Partners queue/detail/stores, returned-for-changes, resubmit, approve, and Partner readback."
+    }
+  ],
+  "blockers": ["V0052 interactive cross-surface evidence is not collected; U005 remains OPEN under fail-closed policy."],
+  "deviations": [],
+  "decision": "NEEDS_EVIDENCE"
+}
