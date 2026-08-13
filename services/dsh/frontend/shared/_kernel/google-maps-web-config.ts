@@ -12,6 +12,7 @@ export function buildGoogleMapsJavaScriptApiUrl(
   const query = new URLSearchParams({
     key: apiKey,
     v: "weekly",
+    loading: "async",
     callback: callbackName,
   });
   return `${GOOGLE_MAPS_JAVASCRIPT_API_BASE_URL}?${query.toString()}`;
