@@ -60,3 +60,12 @@ test("partner surface exposes explicit store-scope loading, empty, error, and op
   assert.match(source, /id: 'orders'/);
   assert.match(source, /id: 'inventory'/);
 });
+
+test("partner client visibility keeps unknown serviceability and store-open state closed", async () => {
+  const source = await read("services/dsh/frontend/shared/partner/dsh-client-visibility.model.ts");
+
+  assert.match(source, /if \(typeof options\.inZone === 'boolean'\) return options\.inZone;/);
+  assert.match(source, /return false;/);
+  assert.match(source, /options\.storeOpen \?\? false/);
+  assert.doesNotMatch(source, /options\.storeOpen \?\? true/);
+});
