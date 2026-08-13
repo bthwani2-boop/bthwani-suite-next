@@ -62,7 +62,13 @@ export function AnalyticsInsightsPanel({ storeName, canonicalStoreId }: { storeN
   React.useEffect(() => {
     let cancelled = false;
     setState({ kind: 'loading' });
-    void fetchPartnerPerformance(period)
+    if (!canonicalStoreId?.trim()) {
+      setState({ kind: 'error', message: 'لا يوجد متجر محدد لقراءة أداء المتجر من DSH.' });
+      return () => {
+        cancelled = true;
+      };
+    }
+    void fetchPartnerPerformance(period, canonicalStoreId)
       .then((value) => {
         if (!cancelled) setState({ kind: 'success', value });
       })

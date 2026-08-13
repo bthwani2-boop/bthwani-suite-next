@@ -290,6 +290,11 @@ export function fieldUpdatePartnerStore(
 
 // ── Partner analytics (outside partner-onboarding mutation scope) ──────────
 
-export function fetchPartnerPerformance(period: "today" | "week" | "month" = "today"): Promise<import("./partner.types").DshPartnerPerformanceResponse> {
-  return request(`/dsh/partner/analytics/performance?period=${period}`);
+export function fetchPartnerPerformance(
+	period: "today" | "week" | "month" = "today",
+	storeId: string,
+): Promise<import("./partner.types").DshPartnerPerformanceResponse> {
+	const normalizedStoreId = storeId.trim();
+	if (!normalizedStoreId) return Promise.reject(new Error("storeId is required for partner performance"));
+	return request(`/dsh/partner/analytics/performance?period=${period}&storeId=${encodeURIComponent(normalizedStoreId)}`);
 }
