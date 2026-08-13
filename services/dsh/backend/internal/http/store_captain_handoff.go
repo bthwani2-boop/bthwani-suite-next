@@ -1,8 +1,10 @@
 package http
 
 import (
+	"database/sql"
 	"errors"
 	"net/http"
+	"strings"
 
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/store"
@@ -17,6 +19,9 @@ func (s *protectedStoreServer) handleGovernedUpdateDeliveryStatus(w http.Respons
 	if !ok {
 		return
 	}
+	if _, ok := requireStoreCaptainHandoffIdempotencyKey(w, r); !ok {
+		return
+	}
 	var body struct {
 		Status          dispatch.DeliveryStatus `json:"status"`
 		Latitude        *float64                `json:"latitude,omitempty"`
@@ -28,17 +33,9 @@ func (s *protectedStoreServer) handleGovernedUpdateDeliveryStatus(w http.Respons
 	}
 	assignmentID := r.PathValue("assignmentId")
 
-	// Verify assignment and version for offline action queueing
-	if body.ExpectedVersion > 0 {
-		meta, err := dispatch.GetAssignmentGovernance(s.db, assignmentID)
-		if err != nil {
-			writeGovernedDispatchError(w, err)
-			return
-		}
-		if meta.Version != body.ExpectedVersion {
-			store.SendError(w, http.StatusConflict, "STALE_OFFLINE_ACTION", "assignment version mismatch")
-			return
-		}
+	if body.ExpectedVersion < 1 {
+		store.SendError(w, http.StatusBadRequest, "EXPECTED_VERSION_REQUIRED", "version must be a positive integer")
+		return
 	}
 
 	// Geofence enforcement (J066)
@@ -47,35 +44,46 @@ func (s *protectedStoreServer) handleGovernedUpdateDeliveryStatus(w http.Respons
 			store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "latitude and longitude required for arrival")
 			return
 		}
-		var sLat, sLng, cLat, cLng float64
-		err := s.db.QueryRow(`
+		var sLat, sLng, cLat, cLng sql.NullFloat64
+		err := s.db.QueryRowContext(r.Context(), `
 			SELECT s.latitude, s.longitude,
-			       COALESCE((o.delivery_address_snapshot->>'latitude')::float8, 0),
-			       COALESCE((o.delivery_address_snapshot->>'longitude')::float8, 0)
+			       NULLIF(o.delivery_address_snapshot->>'latitude', '')::float8,
+			       NULLIF(o.delivery_address_snapshot->>'longitude', '')::float8
 			FROM dsh_assignments a
 			JOIN dsh_orders o ON o.id = a.order_id
 			JOIN dsh_stores s ON s.id = o.store_id
 			WHERE a.id = $1::uuid
 		`, assignmentID).Scan(&sLat, &sLng, &cLat, &cLng)
-		if err == nil {
-			var dist float64
-			if body.Status == dispatch.DeliveryArrivedStore {
-				dist = distanceMeters(*body.Latitude, *body.Longitude, sLat, sLng)
-			} else {
-				dist = distanceMeters(*body.Latitude, *body.Longitude, cLat, cLng)
-			}
-			if dist > 150.0 {
-				store.SendError(w, http.StatusUnprocessableEntity, "GEOFENCE_VIOLATION", "captain is not within arrival radius")
-				return
-			}
+		if errors.Is(err, sql.ErrNoRows) {
+			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "assignment or order location was not found")
+			return
+		}
+		if err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "arrival geofence could not be verified")
+			return
+		}
+		if !sLat.Valid || !sLng.Valid || !cLat.Valid || !cLng.Valid {
+			store.SendError(w, http.StatusUnprocessableEntity, "GEOFENCE_UNAVAILABLE", "server location data is required for arrival")
+			return
+		}
+		var dist float64
+		if body.Status == dispatch.DeliveryArrivedStore {
+			dist = distanceMeters(*body.Latitude, *body.Longitude, sLat.Float64, sLng.Float64)
+		} else {
+			dist = distanceMeters(*body.Latitude, *body.Longitude, cLat.Float64, cLng.Float64)
+		}
+		if dist > 150.0 {
+			store.SendError(w, http.StatusUnprocessableEntity, "GEOFENCE_VIOLATION", "captain is not within arrival radius")
+			return
 		}
 	}
 
-	assignment, err := dispatch.UpdateDeliveryStatusGovernedIdempotent(
+	assignment, err := dispatch.UpdateDeliveryStatusGovernedIdempotentVersioned(
 		s.db,
 		assignmentID,
 		actor.ID,
 		body.Status,
+		body.ExpectedVersion,
 	)
 	if errors.Is(err, dispatch.ErrStoreHandoffRequired) {
 		store.SendError(
@@ -95,6 +103,9 @@ func (s *protectedStoreServer) handleConfirmPartnerStoreCaptainHandoff(w http.Re
 	if !ok {
 		return
 	}
+	if _, ok := requireStoreCaptainHandoffIdempotencyKey(w, r); !ok {
+		return
+	}
 	item, err := dispatch.ConfirmStoreCaptainHandoffIdempotent(
 		s.db,
 		r.PathValue("orderId"),
@@ -106,6 +117,15 @@ func (s *protectedStoreServer) handleConfirmPartnerStoreCaptainHandoff(w http.Re
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"handoff": marshalStoreCaptainHandoff(item)})
+}
+
+func requireStoreCaptainHandoffIdempotencyKey(w http.ResponseWriter, r *http.Request) (string, bool) {
+	key := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if len(key) < 8 || len(key) > 200 {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain between 8 and 200 characters")
+		return "", false
+	}
+	return key, true
 }
 
 func writeStoreCaptainHandoffError(w http.ResponseWriter, err error) {

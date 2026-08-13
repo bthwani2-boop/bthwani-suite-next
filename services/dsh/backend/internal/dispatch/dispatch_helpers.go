@@ -42,7 +42,7 @@ func mapSpecialRequestError(err error) error {
 func assignmentSelectSQL() string {
 	return `
 		SELECT a.id::text, COALESCE(a.order_id::text, ''), a.captain_id, a.assigned_by, a.status,
-		       a.response_deadline_at, a.accepted_at, a.declined_at, a.completed_at, a.created_at, a.updated_at,
+		       a.response_deadline_at, a.accepted_at, a.declined_at, a.completed_at, a.created_at, a.updated_at, a.version,
 		       a.last_latitude, a.last_longitude, a.location_recorded_at,
 		       COALESCE(a.special_request_id::text, ''),
 		       COALESCE(sr.request_type::text, ''),
@@ -89,6 +89,7 @@ func scanAssignmentRow(row *sql.Row) (*Assignment, error) {
 		&assignment.CompletedAt,
 		&assignment.CreatedAt,
 		&assignment.UpdatedAt,
+		&assignment.Version,
 	)
 	return &assignment, err
 }
@@ -129,6 +130,7 @@ func scanAssignmentScanner(row scanner) (*Assignment, error) {
 		&assignment.CompletedAt,
 		&assignment.CreatedAt,
 		&assignment.UpdatedAt,
+		&assignment.Version,
 		&assignment.LastLatitude,
 		&assignment.LastLongitude,
 		&assignment.LocationRecordedAt,

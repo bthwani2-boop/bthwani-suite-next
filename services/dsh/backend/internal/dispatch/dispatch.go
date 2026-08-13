@@ -55,6 +55,7 @@ type Assignment struct {
 	CompletedAt        *time.Time
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+	Version            int
 	LastLatitude       *float64
 	LastLongitude      *float64
 	LocationRecordedAt *time.Time
@@ -132,7 +133,7 @@ func CreateAssignment(db *sql.DB, input CreateAssignmentInput) (*Assignment, err
 		INSERT INTO dsh_assignments (order_id, captain_id, assigned_by, status, response_deadline_at)
 		VALUES ($1::uuid, $2, $3, $4, NOW() + INTERVAL '90 seconds')
 		RETURNING id::text, order_id::text, captain_id, assigned_by, status,
-		          response_deadline_at, accepted_at, declined_at, completed_at, created_at, updated_at`,
+		          response_deadline_at, accepted_at, declined_at, completed_at, created_at, updated_at, version`,
 		input.OrderID, input.CaptainID, input.ActorID, string(AssignmentOffered)))
 	if err != nil {
 		return nil, err
@@ -180,7 +181,7 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 		INSERT INTO dsh_assignments (special_request_id, captain_id, assigned_by, status, response_deadline_at)
 		VALUES ($1::uuid, $2, $3, $4, NOW() + INTERVAL '90 seconds')
 		RETURNING id::text, COALESCE(order_id::text, ''), captain_id, assigned_by, status,
-		          response_deadline_at, accepted_at, declined_at, completed_at, created_at, updated_at`,
+		          response_deadline_at, accepted_at, declined_at, completed_at, created_at, updated_at, version`,
 		input.SpecialRequestID, input.CaptainID, input.ActorID, string(AssignmentOffered)))
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
@@ -507,6 +508,10 @@ func updateAssignmentStatus(db *sql.DB, assignmentID, captainID string, status A
 }
 
 func updateDeliveryProgress(db *sql.DB, assignmentID, captainID string, allowed []DeliveryStatus, next DeliveryStatus, orderStatus orders.OrderStatus) (*Assignment, error) {
+	return updateDeliveryProgressVersioned(db, assignmentID, captainID, allowed, next, orderStatus, 0)
+}
+
+func updateDeliveryProgressVersioned(db *sql.DB, assignmentID, captainID string, allowed []DeliveryStatus, next DeliveryStatus, orderStatus orders.OrderStatus, expectedVersion int) (*Assignment, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
@@ -518,6 +523,9 @@ func updateDeliveryProgress(db *sql.DB, assignmentID, captainID string, allowed 
 	}
 	if current.Status == AssignmentCancelled || current.Delivery.Status == DeliveryCancelled {
 		return nil, fmt.Errorf("%w: assignment was cancelled with the order", ErrConflict)
+	}
+	if expectedVersion > 0 && current.Version != expectedVersion {
+		return nil, fmt.Errorf("%w: assignment version changed", ErrConflict)
 	}
 	if err = ensureNoOpenDeliveryException(tx, assignmentID); err != nil {
 		return nil, err
@@ -540,6 +548,12 @@ func updateDeliveryProgress(db *sql.DB, assignmentID, captainID string, allowed 
 			[]orders.OrderStatus{orders.OrderStatus(current.Delivery.Status)}, orderStatus, string(next)); err != nil {
 			return nil, mapOrderError(err)
 		}
+	}
+	_, err = tx.Exec(`
+		UPDATE dsh_assignments SET version=version+1, updated_at=NOW()
+		WHERE id=$1::uuid AND captain_id=$2`, assignmentID, captainID)
+	if err != nil {
+		return nil, err
 	}
 	_, err = tx.Exec(`
 		UPDATE dsh_deliveries SET status=$1, updated_at=NOW()

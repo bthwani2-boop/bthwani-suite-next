@@ -148,10 +148,11 @@ export async function markOrderReady(orderId: string, options: PartnerOrderMutat
 export async function confirmStoreCaptainHandoff(
   orderId: string,
   token?: string,
+  idempotencyKey?: string,
 ): Promise<DshStoreCaptainHandoff> {
   const data = await request<{ handoff: DshStoreCaptainHandoff }>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/captain-handoff/confirm`,
-    withOptionalToken({ method: "POST" }, token),
+    withOptionalToken({ method: "POST", idempotencyKey: idempotencyKey ?? corrId("partner-handoff-confirm") }, token),
   );
   return data.handoff;
 }
@@ -163,7 +164,7 @@ export async function reportPartnerStoreCaptainHandoffException(
 ): Promise<DshDeliveryException> {
   const data = await request<{ exception: DshDeliveryException }>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/captain-handoff/exceptions`,
-    withOptionalToken({ method: "POST", body: input }, token),
+    withOptionalToken({ method: "POST", body: input, idempotencyKey: input.correlationId }, token),
   );
   return data.exception;
 }

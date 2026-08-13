@@ -148,6 +148,14 @@
         in: path
         required: true
         schema: { type: string }
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: { type: string, minLength: 8, maxLength: 200 }
+      - name: If-Match-Version
+        in: header
+        required: true
+        schema: { type: integer, minimum: 1 }
     requestBody:
       required: true
       content:

@@ -515,7 +515,7 @@ func CreateGovernedAssignment(db *sql.DB, input GovernedCreateAssignmentInput) (
 			$6,$7,$8,$9,$10,NULLIF($11,''),NULLIF($12,'')::uuid
 		)
 		RETURNING id::text, order_id::text, captain_id, assigned_by, status,
-		          response_deadline_at, accepted_at, declined_at, completed_at, created_at, updated_at`,
+		          response_deadline_at, accepted_at, declined_at, completed_at, created_at, updated_at, version`,
 		input.OrderID, input.CaptainID, input.ActorID, string(AssignmentOffered), input.ResponseTimeoutSecond,
 		input.OperatorContextID, input.ServiceAreaCode, input.IdempotencyKey, input.Priority, input.DistanceMeters,
 		input.OfferReason, input.SupersedesAssignmentID,
@@ -892,7 +892,7 @@ func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Ass
 			idempotency_key,priority,distance_meters,offer_reason,supersedes_assignment_id
 		) VALUES ($1::uuid,$2,$3,'offered',NOW()+($4*INTERVAL '1 second'),$5,$6,$7,$8,$9,NULLIF($10,''),$11::uuid)
 		RETURNING id::text,order_id::text,captain_id,assigned_by,status,response_deadline_at,
-		          accepted_at,declined_at,completed_at,created_at,updated_at`,
+		          accepted_at,declined_at,completed_at,created_at,updated_at,version`,
 		current.OrderID, input.CaptainID, input.ActorID, input.ResponseTimeoutSecond, operatorContextID,
 		input.ServiceAreaCode, input.IdempotencyKey, input.Priority, input.DistanceMeters, input.Reason,
 		input.AssignmentID,

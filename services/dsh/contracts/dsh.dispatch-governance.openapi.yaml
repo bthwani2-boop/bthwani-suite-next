@@ -385,6 +385,13 @@ paths:
       required: true
       schema:
         type: string
+    - name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 200
   /dsh/operator/dispatch/assignments/{assignmentId}/cancel:
     post:
       operationId: cancelGovernedDispatchAssignment
@@ -632,6 +639,13 @@ paths:
       required: true
       schema:
         type: string
+    - name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 200
     post:
       tags:
       - captain

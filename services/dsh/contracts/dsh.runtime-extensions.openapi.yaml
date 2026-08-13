@@ -110,6 +110,13 @@ paths:
       required: true
       schema:
         type: string
+    - name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 200
     post:
       tags:
       - partner
@@ -145,6 +152,13 @@ paths:
       required: true
       schema:
         type: string
+    - name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 200
     post:
       tags:
       - partner

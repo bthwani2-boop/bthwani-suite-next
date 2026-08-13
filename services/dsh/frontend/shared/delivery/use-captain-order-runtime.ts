@@ -4,9 +4,11 @@ import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle
 import {
   acceptDispatchAssignment,
   declineDispatchAssignment,
+  fetchCaptainDispatchAssignments,
   reportDeliveryException,
   updateDeliveryStatus,
 } from '../dispatch/dispatch.api';
+import { corrId } from '../_kernel/dsh-http-request';
 import {
   flushPendingForegroundDispatchLocations,
   syncForegroundDispatchLocation,
@@ -111,8 +113,17 @@ export function useCaptainOrderRuntime() {
   );
 
   const confirmPickup = React.useCallback(
-    (assignmentId: string, _captainId: string) =>
-      updateDeliveryStatus(assignmentId, 'picked_up'),
+    async (assignmentId: string, _captainId: string) => {
+      const assignments = await fetchCaptainDispatchAssignments();
+      const assignment = assignments.find((item) => item.id === assignmentId);
+      if (!assignment || !Number.isInteger(assignment.version) || assignment.version < 1) {
+        throw new Error('تعذر قراءة إصدار مهمة التوصيل. حدّث المهمة قبل الاستلام.');
+      }
+      return updateDeliveryStatus(assignmentId, 'picked_up', {
+        expectedVersion: assignment.version,
+        idempotencyKey: corrId('captain-pickup'),
+      });
+    },
     [],
   );
 

@@ -13,7 +13,7 @@ export type DshDispatchAssignment = components["schemas"]["DshDispatchAssignment
   cancelledAt?: string | null;
   cancelledBy?: string;
   supersedesAssignmentId?: string;
-  version?: number;
+  version: number;
 };
 export type DshAssignmentStatus = components["schemas"]["DshAssignmentStatus"];
 export type DshDeliveryStatus = components["schemas"]["DshDeliveryStatus"];

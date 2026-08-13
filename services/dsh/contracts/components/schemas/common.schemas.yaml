@@ -357,11 +357,14 @@ DshDeclineAssignmentRequest:
 
 DshUpdateDeliveryStatusRequest:
   type: object
-  required: [status]
+  required: [status, version]
   properties:
     status:
       type: string
       enum: [driver_arrived_store, picked_up, arrived_customer]
+    version: { type: integer, minimum: 1 }
+    latitude: { type: number, minimum: -90, maximum: 90 }
+    longitude: { type: number, minimum: -180, maximum: 180 }
 
 DshSubmitPoDRequest:
   type: object

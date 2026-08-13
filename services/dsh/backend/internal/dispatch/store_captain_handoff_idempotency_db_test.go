@@ -1,8 +1,44 @@
 package dispatch
 
 import (
+	"errors"
 	"testing"
 )
+
+func TestStoreCaptainHandoffStatusRejectsStaleAssignmentVersionDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	fixture := seedOutboundHandoffFixture(t, db)
+
+	if _, err := UpdateDeliveryStatusGovernedVersioned(
+		db, fixture.AssignmentID, fixture.CaptainID, DeliveryArrivedStore, 99,
+	); !errors.Is(err, ErrConflict) {
+		t.Fatalf("stale arrival version error=%v want ErrConflict", err)
+	}
+
+	arrived, err := UpdateDeliveryStatusGovernedVersioned(
+		db, fixture.AssignmentID, fixture.CaptainID, DeliveryArrivedStore, 1,
+	)
+	if err != nil {
+		t.Fatalf("versioned arrival failed: %v", err)
+	}
+	if arrived.Version != 2 {
+		t.Fatalf("arrival assignment version=%d want=2", arrived.Version)
+	}
+
+	if _, err = ConfirmStoreCaptainHandoffIdempotent(db, fixture.OrderID, fixture.StoreID, "partner-actor"); err != nil {
+		t.Fatalf("partner confirmation failed: %v", err)
+	}
+	if _, err = UpdateDeliveryStatusGovernedVersioned(
+		db, fixture.AssignmentID, fixture.CaptainID, DeliveryPickedUp, 1,
+	); !errors.Is(err, ErrConflict) {
+		t.Fatalf("stale pickup version error=%v want ErrConflict", err)
+	}
+	if _, err = UpdateDeliveryStatusGovernedVersioned(
+		db, fixture.AssignmentID, fixture.CaptainID, DeliveryPickedUp, arrived.Version,
+	); err != nil {
+		t.Fatalf("versioned pickup failed: %v", err)
+	}
+}
 
 func TestStoreCaptainHandoffConfirmationReplaysAfterPickupDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
