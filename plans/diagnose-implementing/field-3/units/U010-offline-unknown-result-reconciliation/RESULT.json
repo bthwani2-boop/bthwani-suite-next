@@ -1,1 +1,30 @@
-{"schemaVersion":3,"unitId":"U010","status":"DRAFT","baselineSha":"bee8e9cfe1762cef39690f0b254fdf0b6855e1a9","resultingSha":null,"completedTaskIds":[],"modifiedPaths":[],"checkResults":[],"blockers":["Execution evidence not collected yet."],"deviations":[],"decision":"OPEN"}
+{
+  "schemaVersion": 3,
+  "unitId": "U010",
+  "status": "DRAFT",
+  "baselineSha": "1d1c6de5b9176d0a5553d1a7628816d1b593a414",
+  "resultingSha": "14519e824a625ef7ab9b65451c3ab75e048bc054",
+  "completedTaskIds": ["U010-T001"],
+  "modifiedPaths": [
+    "apps/app-field/runtime/tests/offline-queue-unknown-result.test.mjs",
+    "services/dsh/backend/internal/fieldreadiness/mutation_idempotency.go",
+    "services/dsh/backend/internal/fieldreadiness/mutation_idempotency_db_test.go",
+    "services/dsh/backend/internal/http/field_readiness_routes.go",
+    "services/dsh/backend/internal/http/fieldreadiness.go",
+    "services/dsh/backend/internal/http/journeys_020_025_routes_test.go",
+    "services/dsh/contracts/dsh.openapi.yaml",
+    "services/dsh/contracts/paths/field.paths.yaml",
+    "services/dsh/frontend/app-field/components/DshFieldSurface.tsx",
+    "services/dsh/frontend/shared/field-readiness/field-offline-queue.ts",
+    "services/dsh/frontend/shared/field-readiness/field-readiness.api.ts",
+    "services/dsh/frontend/shared/field-readiness/index.ts",
+    "services/dsh/frontend/shared/field-readiness/use-field-offline-sync.ts"
+  ],
+  "checkResults": [
+    {"verificationId":"V0101","status":"PASS","candidateSha":"14519e824a625ef7ab9b65451c3ab75e048bc054","command":"pnpm --dir apps/app-field/runtime run test; cd services/dsh/backend && go test ./...; pnpm --dir services/dsh openapi:verify; node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/field-3 --strict","evidence":"App Field runtime 20 tests and mobile runtime contract PASS; DSH backend full Go suite PASS; DSH OpenAPI modular gate PASS with 559 paths and 646 operations; package strict validation PASS with 0 errors and 0 warnings. Focused unknown-result queue tests cover persisted unknown state, restart, actor/installation isolation, no ordinary delivery, and safe re-enable only after reconciliation.","proves":"Automated queue, backend receipt, route registration, contract, generated-contract integrity, and regression checks pass on the implementation candidate."},
+    {"verificationId":"V0102","status":"NEEDS_EVIDENCE","candidateSha":"14519e824a625ef7ab9b65451c3ab75e048bc054","command":"RUNTIME: execute governed field operations while toggling network at request/response boundary, kill/restart app, reconnect and verify canonical server/Operations readback","evidence":"No authenticated device/runtime session with controllable request/response network boundary was available.","proves":"Not proven."}
+  ],
+  "blockers": ["Authenticated Android/runtime fault-injection evidence for response-loss, restart, reconnect, and canonical Operations readback is unavailable."],
+  "deviations": ["No delegation used; Codex implemented and verified the unit."],
+  "decision": "NEEDS_EVIDENCE"
+}
