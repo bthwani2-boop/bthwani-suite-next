@@ -154,8 +154,9 @@ if ($null -eq $payoutDestination) {
   if ([string]$payoutPartner.maskedDestinationReference -ne [string]$payoutDestination.maskedDestinationReference) { throw "Partner Onboarding & Store Publication DSH payout mask diverged from WLT" }
 }
 
-$visitEvidencePath = Join-Path $env:TEMP ("dsh-partner-visit-" + [guid]::NewGuid().ToString("N") + ".jpg")
-[System.IO.File]::WriteAllBytes($visitEvidencePath, [System.Text.Encoding]::UTF8.GetBytes("partner visit evidence smoke payload"))
+$visitEvidencePath = Join-Path $env:TEMP ("dsh-partner-visit-" + [guid]::NewGuid().ToString("N") + ".png")
+$onePixelPng = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+[System.IO.File]::WriteAllBytes($visitEvidencePath, [Convert]::FromBase64String($onePixelPng))
 try {
   $visitEvidenceUpload = Invoke-RestMethod "http://localhost:58080/dsh/field/media/uploads" -Method Post -Headers $fieldHeaders -Form @{
     partnerId = [string]$partnerDraft.id
@@ -179,9 +180,22 @@ $visitBody = @{
 $visit = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/visits" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $visitBody -TimeoutSec 10
 if ($visit.visitStatus -ne "submitted") { throw "Partner Onboarding & Store Publication field visit was not submitted" }
 
+$documentEvidencePath = Join-Path $env:TEMP ("dsh-partner-document-" + [guid]::NewGuid().ToString("N") + ".png")
+[System.IO.File]::WriteAllBytes($documentEvidencePath, [Convert]::FromBase64String($onePixelPng))
+try {
+  $documentEvidenceUpload = Invoke-RestMethod "http://localhost:58080/dsh/field/media/uploads" -Method Post -Headers $fieldHeaders -Form @{
+    partnerId = [string]$partnerDraft.id
+    mediaKind = "legal_document"
+    file = Get-Item -LiteralPath $documentEvidencePath
+  } -TimeoutSec 20
+} finally {
+  if (Test-Path -LiteralPath $documentEvidencePath) { Remove-Item -LiteralPath $documentEvidencePath -Force }
+}
+if ([string]::IsNullOrWhiteSpace([string]$documentEvidenceUpload.mediaRef)) { throw "Partner Onboarding & Store Publication legal document upload did not return mediaRef" }
+
 $docBody = @{
   documentType = "commercial_register"
-  mediaRef = "media_smoke_commercial_register.jpg"
+  mediaRef = [string]$documentEvidenceUpload.mediaRef
   notes = "commercial register smoke document"
 } | ConvertTo-Json
 $doc = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/documents" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $docBody -TimeoutSec 10

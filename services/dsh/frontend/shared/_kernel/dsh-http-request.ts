@@ -1,4 +1,8 @@
-import { getIdentityAccessToken, refreshIdentitySession } from "@bthwani/core-identity";
+import {
+  executeWithControlPanelCookieSession,
+  getIdentityAccessToken,
+  refreshIdentitySession,
+} from "@bthwani/core-identity";
 
 export type DshRequestMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -21,11 +25,7 @@ export type DshSessionRequestResult<T> = {
   readonly message?: string;
 };
 
-export const CONTROL_PANEL_SESSION_EXPIRED_EVENT =
-  "bthwani:control-panel-session-expired";
-
 let correlationFallbackSequence = 0;
-let controlPanelRefreshInFlight: Promise<boolean> | null = null;
 
 export function corrId(prefix: string): string {
   const uuid = globalThis.crypto?.randomUUID?.();
@@ -34,57 +34,21 @@ export function corrId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${correlationFallbackSequence.toString(36)}`;
 }
 
-function notifyControlPanelSessionExpired(): void {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new Event(CONTROL_PANEL_SESSION_EXPIRED_EVENT));
-}
-
-async function refreshControlPanelCookieSession(): Promise<boolean> {
-  if (controlPanelRefreshInFlight) return controlPanelRefreshInFlight;
-
-  const refresh = fetch("/api/auth/refresh", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: {
-      Accept: "application/json",
-      "Cache-Control": "no-cache",
-      Pragma: "no-cache",
-      "X-Correlation-ID": corrId("cp-refresh"),
-    },
-    signal: AbortSignal.timeout(10000),
-  })
-    .then((response) => response.ok)
-    .catch(() => false);
-
-  controlPanelRefreshInFlight = refresh;
-  try {
-    return await refresh;
-  } finally {
-    if (controlPanelRefreshInFlight === refresh) {
-      controlPanelRefreshInFlight = null;
-    }
-  }
-}
-
 async function fetchWithControlPanelSessionRetry(
   execute: () => Promise<Response>,
   cookieMode: boolean,
 ): Promise<Response> {
+  if (cookieMode) return executeWithControlPanelCookieSession(execute, true);
+
   let response = await execute();
   if (response.status !== 401) return response;
 
-  const refreshed = cookieMode
-    ? await refreshControlPanelCookieSession()
-    : await refreshIdentitySession();
-
+  const refreshed = await refreshIdentitySession();
   if (!refreshed) {
-    if (cookieMode) notifyControlPanelSessionExpired();
     return response;
   }
 
-  response = await execute();
-  if (cookieMode && response.status === 401) notifyControlPanelSessionExpired();
-  return response;
+  return execute();
 }
 
 async function parseResponse<T>(

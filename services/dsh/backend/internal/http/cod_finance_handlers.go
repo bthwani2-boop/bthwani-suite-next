@@ -18,8 +18,8 @@ func (s *protectedStoreServer) handlePartnerFinanceCodRecords(w http.ResponseWri
 	s.proxyFinanceRead(w, r, "finance.cod.read", "/wlt/cod-records", query, actor.OperatorContextID)
 }
 
-func (s *protectedStoreServer) requirePartnerCodRecord(w http.ResponseWriter, r *http.Request, partnerID, recordID string) bool {
-	status, body, err := s.wlt.FinanceReadCodRecord(r.Context(), recordID, r.Header.Get("X-Correlation-ID"))
+func (s *protectedStoreServer) requirePartnerCodRecord(w http.ResponseWriter, r *http.Request, partnerID, recordID, operatorContextID string) bool {
+	status, body, err := s.wlt.FinanceReadCodRecord(r.Context(), recordID, r.Header.Get("X-Correlation-ID"), operatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", err.Error())
 		return false
@@ -51,6 +51,10 @@ func (s *protectedStoreServer) handlePartnerRemitCodRecord(w http.ResponseWriter
 	if !ok {
 		return
 	}
+	idempotencyKey, ok := requireFinanceMutationIdempotency(w, r)
+	if !ok {
+		return
+	}
 	recordID := strings.TrimSpace(r.PathValue("recordId"))
 	if recordID == "" {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "recordId is required")
@@ -66,7 +70,7 @@ func (s *protectedStoreServer) handlePartnerRemitCodRecord(w http.ResponseWriter
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "proofReference is required")
 		return
 	}
-	if !s.requirePartnerCodRecord(w, r, actor.ID, recordID) {
+	if !s.requirePartnerCodRecord(w, r, actor.ID, recordID, actor.OperatorContextID) {
 		return
 	}
 	payload, err := json.Marshal(map[string]any{
@@ -85,7 +89,8 @@ func (s *protectedStoreServer) handlePartnerRemitCodRecord(w http.ResponseWriter
 		"remit",
 		payload,
 		r.Header.Get("X-Correlation-ID"),
-		r.Header.Get("Idempotency-Key"),
+		idempotencyKey,
+		actor.OperatorContextID,
 	)
 	writeWltActorFinanceResponse(w, status, body, err)
 }

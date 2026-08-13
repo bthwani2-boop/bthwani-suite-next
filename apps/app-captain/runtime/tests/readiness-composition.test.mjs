@@ -33,7 +33,13 @@ test("captain app keeps canonical identity, workforce, and notification boundari
   assert.match(source, /requiredRole="captain"/);
   assert.match(source, /requiredSurface="app-captain"/);
   assert.match(source, /expectedKind="captain"/);
-  assert.match(source, /useDshMobilePushRegistration\(identity\.state\.kind, "app-captain", "bthwani-captain-next"\)/);
+  const effectsMatch = source.match(/function CaptainSessionEffects[\s\S]+?function AppContent/);
+  assert.ok(effectsMatch, "CaptainSessionEffects should exist");
+  assert.match(effectsMatch[0], /useDshMobilePushRegistration\(identity\.state\.kind, "app-captain", "bthwani-captain-next"\)/);
+  assert.match(source, /<WorkforceAccessGate expectedKind="captain"[\s\S]+?<CaptainSessionEffects \/>/);
+  const appContentMatch = source.match(/function AppContent[\s\S]+?return \(/);
+  assert.ok(appContentMatch, "AppContent should exist");
+  assert.doesNotMatch(appContentMatch[0], /useDshMobilePushRegistration/);
   assert.match(source, /configureIdentityDeviceFingerprintProvider/);
   assert.match(source, /SecureStore/);
   assert.match(source, /randomUUID/);

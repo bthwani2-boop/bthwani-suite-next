@@ -142,6 +142,10 @@ func (s *protectedStoreServer) handleActorPayoutCreate(w http.ResponseWriter, r 
 	if !ok {
 		return
 	}
+	idempotencyKey, ok := requireFinanceMutationIdempotency(w, r)
+	if !ok {
+		return
+	}
 	var input payoutRequestBody
 	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
 	decoder.DisallowUnknownFields()
@@ -164,7 +168,7 @@ func (s *protectedStoreServer) handleActorPayoutCreate(w http.ResponseWriter, r 
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "SPECIFIED requires positive amountMinorUnits")
 		return
 	}
-	if len(input.Currency) != 3 || len(input.IdempotencyKey) < 8 {
+	if len(input.Currency) != 3 || input.IdempotencyKey != idempotencyKey {
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "three-letter currency and Idempotency-Key of at least 8 characters are required")
 		return
 	}
@@ -185,7 +189,7 @@ func (s *protectedStoreServer) handleActorPayoutCreate(w http.ResponseWriter, r 
 		return
 	}
 	correlationID := correlationForActorMutation(r, input.IdempotencyKey)
-	status, body, err := s.wlt.FinanceWriteWithOperatorContext(r.Context(), http.MethodPost, "/wlt/payout-requests", payload, correlationID, r.Header.Get("Idempotency-Key"), actor.OperatorContextID)
+	status, body, err := s.wlt.FinanceWriteWithOperatorContext(r.Context(), http.MethodPost, "/wlt/payout-requests", payload, correlationID, idempotencyKey, actor.OperatorContextID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 

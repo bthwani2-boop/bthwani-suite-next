@@ -1,5 +1,7 @@
 \set ON_ERROR_STOP on
 
+BEGIN;
+
 DO $$
 DECLARE
   missing text[] := ARRAY[]::text[];
@@ -84,6 +86,8 @@ DECLARE
   evidence_id text;
   case_id text;
   audit_count integer;
+  probe_context_id text := 'ctx-invariant-probe-' || txid_current()::text;
+  probe_order_id text := 'order-invariant-' || txid_current()::text;
 BEGIN
   INSERT INTO wlt_cod_records
     -- wlt_cod_records has no payment_session_id column; the COD record is keyed by
@@ -91,7 +95,7 @@ BEGIN
     (order_id, operator_context_id, partner_id, captain_id, collector_type, collector_id,
      amount_minor_units, currency, status)
   VALUES
-    ('order-invariant', 'ctx-invariant-probe', 'partner-',
+    (probe_order_id, probe_context_id, 'partner-',
      'captain-', 'captain', 'captain-', 10000, 'YER', 'pending_collection')
   RETURNING id INTO record_id;
 
@@ -101,7 +105,7 @@ BEGIN
        difference_minor_units, currency, proof_reference, actor_id, actor_type,
        correlation_id, idempotency_key, ledger_transaction_id)
     VALUES
-      (record_id, 'ctx-invariant-probe', 'collection', 10000, 9500, 0, 'YER', 'proof-invalid-difference',
+      (record_id, probe_context_id, 'collection', 10000, 9500, 0, 'YER', 'proof-invalid-difference',
        'captain-', 'captain', 'corr-invalid', 'idem-invalid', 'ledger-invalid');
     RAISE EXCEPTION ' invariant failure: invalid difference was accepted';
   EXCEPTION
@@ -114,7 +118,7 @@ BEGIN
        difference_minor_units, currency, proof_reference, actor_id, actor_type,
        correlation_id, idempotency_key, ledger_transaction_id)
     VALUES
-      (record_id, 'ctx-invariant-probe', 'collection', 10000, 9500, -500, 'YER', 'x',
+      (record_id, probe_context_id, 'collection', 10000, 9500, -500, 'YER', 'x',
        'captain-', 'captain', 'corr-proof', 'idem-proof', 'ledger-proof');
     RAISE EXCEPTION ' invariant failure: weak proof reference was accepted';
   EXCEPTION
@@ -126,8 +130,8 @@ BEGIN
      difference_minor_units, currency, proof_reference, actor_id, actor_type,
      correlation_id, idempotency_key, ledger_transaction_id)
   VALUES
-    (record_id, 'ctx-invariant-probe', 'collection', 10000, 9500, -500, 'YER', 'proof-valid',
-     'captain-', 'captain', 'corr-valid', 'idem-valid', 'ledger-valid')
+    (record_id, probe_context_id, 'collection', 10000, 9500, -500, 'YER', 'proof-valid',
+      'captain-', 'captain', 'corr-valid-' || txid_current(), 'idem-valid-' || txid_current(), 'ledger-valid-' || txid_current())
   RETURNING id INTO evidence_id;
 
   BEGIN
@@ -146,7 +150,7 @@ BEGIN
     (cod_record_id, operator_context_id, custody_evidence_id, expected_amount_minor_units,
      actual_amount_minor_units, difference_minor_units, currency)
   VALUES
-    (record_id, 'ctx-invariant-probe', evidence_id, 10000, 9500, -500, 'YER')
+    (record_id, probe_context_id, evidence_id, 10000, 9500, -500, 'YER')
   RETURNING id INTO case_id;
 
   SELECT count(*) INTO audit_count
@@ -187,5 +191,7 @@ BEGIN
   END;
 END
 $$;
+
+ROLLBACK;
 
 SELECT ' COD custody invariants passed' AS result;

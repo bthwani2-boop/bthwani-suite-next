@@ -35,10 +35,11 @@ test("removes stale declarations, temporary diagnostics, and unbound session art
   assert.doesNotMatch(model, /SupportSession/);
   assert.doesNotMatch(model, /SessionKind/);
 
+  assert.match(await read("core/identity/backend/internal/identity/support_session.go"), /ResolveSupportSession/);
+  assert.match(await read("core/identity/backend/internal/http/support_sessions.go"), /internalSupportSessionsIssue/);
+
   for (const removedPath of [
     ".github/workflows/tmp-diagnostics.yml",
-    "core/identity/backend/internal/identity/support_sessions.go",
-    "core/identity/backend/internal/http/support_sessions.go",
     "core/identity/clients/generated/identity-api.d.ts",
     "core/identity/clients/generated/identity-api.d.ts.map",
     "core/identity/clients/generated/identity-api.js",

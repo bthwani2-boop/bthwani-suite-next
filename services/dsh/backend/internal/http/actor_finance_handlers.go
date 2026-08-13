@@ -19,8 +19,8 @@ func writeWltActorFinanceResponse(w http.ResponseWriter, status int, body []byte
 	_, _ = w.Write(body)
 }
 
-func (s *protectedStoreServer) requireCodOwner(w http.ResponseWriter, r *http.Request, actorID, recordID string) bool {
-	status, body, err := s.wlt.FinanceReadCodRecord(r.Context(), recordID, r.Header.Get("X-Correlation-ID"))
+func (s *protectedStoreServer) requireCodOwner(w http.ResponseWriter, r *http.Request, actorID, recordID, operatorContextID string) bool {
+	status, body, err := s.wlt.FinanceReadCodRecord(r.Context(), recordID, r.Header.Get("X-Correlation-ID"), operatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", err.Error())
 		return false
@@ -80,8 +80,21 @@ func decodeActorFinanceJSON(w http.ResponseWriter, r *http.Request, target any) 
 	return true
 }
 
+func requireFinanceMutationIdempotency(w http.ResponseWriter, r *http.Request) (string, bool) {
+	key := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if len(key) < 8 || len(key) > 200 {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain between 8 and 200 characters")
+		return "", false
+	}
+	return key, true
+}
+
 func (s *protectedStoreServer) handleCaptainCollectCod(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "captain")
+	if !ok {
+		return
+	}
+	idempotencyKey, ok := requireFinanceMutationIdempotency(w, r)
 	if !ok {
 		return
 	}
@@ -100,7 +113,7 @@ func (s *protectedStoreServer) handleCaptainCollectCod(w http.ResponseWriter, r 
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "actualAmountMinorUnits and proofReference are required")
 		return
 	}
-	if !s.requireCodOwner(w, r, actor.ID, recordID) {
+	if !s.requireCodOwner(w, r, actor.ID, recordID, actor.OperatorContextID) {
 		return
 	}
 	payload, err := json.Marshal(map[string]any{
@@ -114,12 +127,16 @@ func (s *protectedStoreServer) handleCaptainCollectCod(w http.ResponseWriter, r 
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode COD collection evidence")
 		return
 	}
-	status, body, err := s.wlt.FinanceWriteCodRecord(r.Context(), recordID, "collect", payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
+	status, body, err := s.wlt.FinanceWriteCodRecord(r.Context(), recordID, "collect", payload, r.Header.Get("X-Correlation-ID"), idempotencyKey, actor.OperatorContextID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
 func (s *protectedStoreServer) handleCaptainRemitCod(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "captain")
+	if !ok {
+		return
+	}
+	idempotencyKey, ok := requireFinanceMutationIdempotency(w, r)
 	if !ok {
 		return
 	}
@@ -138,7 +155,7 @@ func (s *protectedStoreServer) handleCaptainRemitCod(w http.ResponseWriter, r *h
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "proofReference is required")
 		return
 	}
-	if !s.requireCodOwner(w, r, actor.ID, recordID) {
+	if !s.requireCodOwner(w, r, actor.ID, recordID, actor.OperatorContextID) {
 		return
 	}
 	payload, err := json.Marshal(map[string]any{
@@ -151,7 +168,7 @@ func (s *protectedStoreServer) handleCaptainRemitCod(w http.ResponseWriter, r *h
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode COD remittance evidence")
 		return
 	}
-	status, body, err := s.wlt.FinanceWriteCodRecord(r.Context(), recordID, "remit", payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
+	status, body, err := s.wlt.FinanceWriteCodRecord(r.Context(), recordID, "remit", payload, r.Header.Get("X-Correlation-ID"), idempotencyKey, actor.OperatorContextID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 

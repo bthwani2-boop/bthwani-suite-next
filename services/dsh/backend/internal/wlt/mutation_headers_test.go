@@ -114,9 +114,28 @@ func TestActorFinanceCodMutationAddsFallbackCorrelation(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	status, _, err := client.FinanceWriteCodRecord(trustedMutationTestContext(), "cod-1", "collect", proof, "", "")
+	status, _, err := client.FinanceWriteCodRecord(trustedMutationTestContext(), "cod-1", "collect", proof, "", "", "OperatorContext-a")
 	if err != nil {
 		t.Fatalf("expected governed fallback correlation: %v", err)
+	}
+	if status != http.StatusOK {
+		t.Fatalf("expected 200, got %d", status)
+	}
+}
+
+func TestActorFinanceCodReadCarriesOperatorContext(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Operator-Context-Id") != "OperatorContext-a" {
+			t.Fatalf("unexpected X-Operator-Context-Id %q", r.Header.Get("X-Operator-Context-Id"))
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "token")
+	status, _, err := client.FinanceReadCodRecord(trustedMutationTestContext(), "cod-1", "corr-1", "OperatorContext-a")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 	if status != http.StatusOK {
 		t.Fatalf("expected 200, got %d", status)

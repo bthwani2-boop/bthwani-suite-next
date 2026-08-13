@@ -116,8 +116,9 @@ test("refresh coordination has one database owner and one browser owner", () => 
   assert.match(wlt, /executeWithControlPanelCookieSession/);
   assert.match(browser, /CONTROL_PANEL_SESSION_LOCK/);
   assert.match(coordination, /pg_advisory_xact_lock/);
-  assert.match(coordination, /WithRefreshRotationLock/);
+  assert.match(coordination, /RefreshGoverned/);
   assert.match(boundary, /next\.ServeHTTP\(w, r\)/);
-  assert.doesNotMatch(boundary, /tokenResponse\(|AccessToken|RefreshToken:/);
-  assert.equal(exists("apps/control-panel/runtime/src/app/api/auth/refresh/route.ts"), false);
+  assert.doesNotMatch(boundary, /randomToken\(|createSession|mint|generate.*token/i);
+  const refreshRoute = read("apps/control-panel/runtime/src/app/api/auth/refresh/route.ts");
+  assert.match(refreshRoute, /identitySessionIsBoundToSurface\(rotated\.identity,\s*"control-panel"\)/);
 });

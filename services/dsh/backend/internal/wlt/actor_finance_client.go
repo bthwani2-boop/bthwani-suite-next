@@ -38,17 +38,17 @@ func (c *Client) actorFinanceRequest(ctx context.Context, method, path string, b
 			req.Header.Set("X-Correlation-ID", correlationID)
 		}
 	} else {
-        idempotencyKey = strings.TrimSpace(idempotencyKey)
-        if idempotencyKey == "" {
-            idempotencyKey = deterministicMutationKey("actor-finance", method, path, string(body), correlationID)
-        }
-        if err := setRequiredMutationHeaders(
-            req,
-            correlationID,
-            idempotencyKey,
-        ); err != nil {
-            return 0, nil, fmt.Errorf("prepare WLT actor finance mutation: %w", err)
-        }
+		idempotencyKey = strings.TrimSpace(idempotencyKey)
+		if idempotencyKey == "" {
+			idempotencyKey = deterministicMutationKey("actor-finance", method, path, string(body), correlationID)
+		}
+		if err := setRequiredMutationHeaders(
+			req,
+			correlationID,
+			idempotencyKey,
+		); err != nil {
+			return 0, nil, fmt.Errorf("prepare WLT actor finance mutation: %w", err)
+		}
 	}
 	response, err := c.http.Do(req)
 	if err != nil {
@@ -62,17 +62,17 @@ func (c *Client) actorFinanceRequest(ctx context.Context, method, path string, b
 	return response.StatusCode, responseBody, nil
 }
 
-func (c *Client) FinanceReadCodRecord(ctx context.Context, recordID, correlationID string) (int, []byte, error) {
+func (c *Client) FinanceReadCodRecord(ctx context.Context, recordID, correlationID, operatorContextID string) (int, []byte, error) {
 	if recordID == "" {
 		return 0, nil, fmt.Errorf("COD record id is required")
 	}
-	return c.actorFinanceRequest(ctx, http.MethodGet, "/wlt/cod-records/"+url.PathEscape(recordID), nil, correlationID, "", "")
+	return c.actorFinanceRequest(ctx, http.MethodGet, "/wlt/cod-records/"+url.PathEscape(recordID), nil, correlationID, "", operatorContextID)
 }
 
 // FinanceWriteCodRecord forwards only the evidence payload already governed by
 // DSH. WLT independently verifies the actor against the persisted collector,
 // derives expected cash from its own COD record and owns all ledger effects.
-func (c *Client) FinanceWriteCodRecord(ctx context.Context, recordID, action string, body []byte, correlationID, idempotencyKey string) (int, []byte, error) {
+func (c *Client) FinanceWriteCodRecord(ctx context.Context, recordID, action string, body []byte, correlationID, idempotencyKey, operatorContextID string) (int, []byte, error) {
 	recordID = strings.TrimSpace(recordID)
 	if recordID == "" || (action != "collect" && action != "remit") || len(body) == 0 {
 		return 0, nil, fmt.Errorf("invalid COD record mutation")
@@ -84,7 +84,7 @@ func (c *Client) FinanceWriteCodRecord(ctx context.Context, recordID, action str
 	if correlationID == "" {
 		correlationID = deterministicMutationKey("cod-custody", action, recordID, string(body))
 	}
-	return c.actorFinanceRequest(ctx, http.MethodPost, "/wlt/cod-records/"+url.PathEscape(recordID)+"/"+action, body, correlationID, idempotencyKey, "")
+	return c.actorFinanceRequest(ctx, http.MethodPost, "/wlt/cod-records/"+url.PathEscape(recordID)+"/"+action, body, correlationID, idempotencyKey, operatorContextID)
 }
 
 func jsonBodyValid(body []byte) bool {

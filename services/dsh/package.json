@@ -17,7 +17,7 @@
     "pretypecheck": "pnpm run openapi:generate",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prebuild": "pnpm run openapi:generate",
-    "build": "tsc -p tsconfig.json && node ../../tools/scripts/verify-go-build.mjs backend",
+    "build": "tsc -p tsconfig.json && node -e \"require('node:fs').writeFileSync('dist/package.json', JSON.stringify({type:'commonjs'}))\" && node ../../tools/scripts/verify-go-build.mjs backend",
     "test": "pnpm run build && pnpm --dir ../.. exec node --test services/dsh/tests/*.test.mjs",
     "lint": "pnpm --dir ../.. run guard:fullstack-boundary"
   },

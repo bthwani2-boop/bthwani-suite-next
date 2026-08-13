@@ -118,10 +118,15 @@ function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
   );
 }
 
+function CaptainSessionEffects() {
+  const identity = useIdentitySession();
+  useDshMobilePushRegistration(identity.state.kind, "app-captain", "bthwani-captain-next");
+  return null;
+}
+
 function AppContent() {
   const identity = useIdentitySession();
   const [navigationCommand, setNavigationCommand] = useState<DshCaptainNavigationCommand>({ token: 0, target: "home" });
-  useDshMobilePushRegistration(identity.state.kind, "app-captain", "bthwani-captain-next");
 
   useEffect(() => {
     let active = true;
@@ -148,6 +153,7 @@ function AppContent() {
     <View style={styles.root}>
       <IdentitySessionGate requiredRole="captain" requiredSurface="app-captain">
         <WorkforceAccessGate expectedKind="captain" onLogout={logout}>
+          <CaptainSessionEffects />
           <UnifiedReadinessWrapper>
             <DshCaptainSurface command={navigationCommand} />
           </UnifiedReadinessWrapper>
