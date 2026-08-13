@@ -1,4 +1,6 @@
 import React from "react";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Button, Surface, Text, colorRoles, radius, spacing } from "@bthwani/ui-kit";
 
 export type CartConflictSheetProps = {
   readonly onKeepServer: () => void;
@@ -10,46 +12,80 @@ export const CartConflictSheet: React.FC<CartConflictSheetProps> = ({
   onReviewOffline,
 }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center bg-black/40 backdrop-blur-sm animate-in fade-in">
-      <div className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl shadow-xl overflow-hidden animate-in slide-in-from-bottom-10 sm:slide-in-from-bottom-0 sm:zoom-in-95">
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-4 text-amber-600">
-            <svg
-              fill="none"
-              viewBox="0 0 24 24"
-              strokeWidth={1.5}
-              stroke="currentColor"
-              className="w-8 h-8"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            <h3 className="text-xl font-bold">تضارب في السلة</h3>
-          </div>
-          <p className="text-gray-600 mb-6 leading-relaxed">
-            تم تعديل سلتك من جهاز آخر أو أثناء انقطاع اتصالك بالإنترنت.
-            نحن نمنع التعديلات المتضاربة لحمايتك من الطلب بشكل خاطئ. ماذا تريد أن تفعل؟
-          </p>
-
-          <div className="flex flex-col gap-3">
-            <button
-              onClick={onKeepServer}
-              className="w-full py-3 px-4 bg-gray-900 text-white font-medium rounded-xl hover:bg-gray-800 transition-colors"
-            >
-              مزامنة مع الخادم وتجاهل تعديلاتي
-            </button>
-            <button
-              onClick={onReviewOffline}
-              className="w-full py-3 px-4 bg-white text-gray-900 border border-gray-200 font-medium rounded-xl hover:bg-gray-50 transition-colors"
-            >
-              المراجعة أولاً (سلة الخادم الحالية)
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <View style={styles.backdrop} accessibilityViewIsModal accessibilityRole="alert">
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="إغلاق تنبيه تعارض السلة"
+        onPress={onReviewOffline}
+        style={StyleSheet.absoluteFill}
+      />
+      <Surface tone="default" style={styles.sheet}>
+        <View style={styles.header}>
+          <View style={styles.warningBadge}>
+            <Text role="bodyStrong" style={styles.warningMark}>!</Text>
+          </View>
+          <Text role="title" style={styles.title}>تضارب في السلة</Text>
+        </View>
+        <Text role="body" style={styles.description}>
+          تم تعديل سلتك من جهاز آخر أو أثناء انقطاع الاتصال. نمنع التعديلات المتضاربة حتى لا يتم تأكيد طلب غير صحيح.
+        </Text>
+        <Button
+          label="مزامنة مع الخادم وتجاهل تعديلاتي"
+          tone="primary"
+          onPress={onKeepServer}
+        />
+        <Button
+          label="المراجعة أولًا — سلة الخادم الحالية"
+          tone="secondary"
+          onPress={onReviewOffline}
+        />
+      </Surface>
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 50,
+    alignItems: "center",
+    justifyContent: "flex-end",
+    padding: spacing[4],
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+  },
+  sheet: {
+    width: "100%",
+    maxWidth: 480,
+    gap: spacing[3],
+    padding: spacing[5],
+    borderRadius: radius.lg,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing[2],
+  },
+  warningBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colorRoles.warning,
+  },
+  warningMark: {
+    color: colorRoles.surfaceBase,
+    fontSize: 18,
+    textAlign: "center",
+  },
+  title: {
+    flex: 1,
+    color: colorRoles.textPrimary,
+    textAlign: "right",
+  },
+  description: {
+    color: colorRoles.textSecondary,
+    lineHeight: 22,
+    textAlign: "right",
+  },
+});
