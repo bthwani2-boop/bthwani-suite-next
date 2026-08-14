@@ -1,38 +1,29 @@
-# Global Diagnosis — Field 3
+# Global Diagnosis — Field 3 canonical rebaseline
 
-## Baseline and authority
+## Baseline
 
-Pinned diagnosis baseline: `bthwani2-boop/bthwani-suite-next@BB bee8e9cfe1762cef39690f0b254fdf0b6855e1a9`. هذه الحزمة مشتقة ولا تنشئ Product Truth أو Policy. `BTHWANI_CHATGPT_GITHUB_EXECUTION_CARD_ONE_PAGE.md` يفرض exact-ref evidence وroot-cause execution، و`01-diagnose-plan-package.md` يفرض أصغر نطاق سببي كامل مع تقييم جميع seeded surfaces دون تحويلها إلى مشاريع مستقلة.
+الحزمة أعيد تأسيسها على `A@449b129b526fbe725c6aa6822ef3b3139dd1b8b0` بعد حذف حزمتَي Field الأقدم. لا ترث أي DONE أو PASS سابق؛ التنفيذ يبدأ OPEN ويعيد الإثبات من الصفر على أحدث candidate.
 
-## Current proven changes versus stale assumptions
+## عيوب جذرية مثبتة
 
-الحزمة الأقدم `app-field-final-closure` مفيدة كمصدر provenance لكنها لم تعد baseline صالحًا: manifest القديم مثبت على SHA أقدم، وU001 القديم كان يصف `src/__tests__` مفقودًا. التنفيذ الحالي لـ`apps/app-field/runtime/package.json` يشغل `node --test tests/*.test.mjs` ثم runtime-contract، ومجلد `tests/` يحتوي اختبارات deep-link/readiness/offline. لذلك Field 3 لا يعيد بناء بوابة الاختبارات؛ يثبتها على candidate حديث ويغلق ما ينقصها.
+1. **إنشاء مقدم الخدمة الميداني متناقض ومكسور.** العقد يقول independent provider، بينما واجهة الإنشاء أرسلت `employee`. شاشة الإنشاء مرتبطة controller deprecated يعيد خطأ دائمًا، وفي الوقت نفسه توجد `createFieldAgent()` حية غير مستخدمة و`provisioning-cases` frontend موجودة بينما routes الخلفية معلقة. عقد POST نفسه متناقض بين ادعاء إنشاء Identity وبين طلب `actorId` مسبقًا. الجذر المطلوب: public creation command واحدة في Workforce orchestrates Identity داخليًا، ثم حذف كل المسارات/controllers/contracts المتنافسة والميتة.
+2. **Activation readiness له أكثر من معنى.** توجد `sovereignFieldsComplete` و`EvaluateProviderActivationReadiness` و`GovernedActivationReadiness`، وشروطها ليست متطابقة. إصدار الكود/الميدلوير/لوحة التحكم يجب أن تعتمد policy واحدة canonical مطابقة للقرار: name+phone+zone+supervisor+verified identity+approved contract؛ لا فرض ضامن/إحالة عالميًا بلا Policy.
+3. **ملف الميداني في Control Panel مكرر وغير موصول بالكامل.** `FieldAgentDetailView` و`ProviderDetailView` يمثلان واجهتين متوازيتين؛ تبويب media بلا render كامل، save/supervisor/operational-core logic موجود جزئيًا بلا wiring. يجب اختيار route/view canonical واحد ودمج ما يلزم ثم حذف الآخر والكود الميت.
+4. **Partners يحتاج تنظيماً سببيًا لا تراكم Tabs.** Field assignment موجود وفعال، لكن self-initiated onboarding يجب أن يبقى مسموحًا أيضًا. كلا المصدرين يجب أن يصبا في نفس canonical draft/review lifecycle مع provenance، collaboration، handoff، SLA، وreadiness review داخل Partners، بلا shadow states أو raw Actor ID كبديل للمهمة.
+5. **الزيارة والChecklist تحتاجان Policy حقيقية.** التنفيذ الحالي يدعم visits/checks/evidence لكنه يعتمد قائمة ثابتة في shared policy/view model. القرار النهائي يفرض checklist حسب Business Vertical من Control Panel، GPS event proof بلا continuous tracking، camera-first evidence، وPartners reviewer مستقل.
+6. **Catalog/Publication ownership يحتاج تصحيحًا.** Field لا يملك Master Product، لكنه يستطيع assortment/local commercial data/proposals. Store publication تخص Marketing Control Panel: server-side Composite Gate + audited manual override. Client/Partner readback يجب أن يحافظ على نفس store/product IDs ويثبت positive وnegative paths.
+7. **Offline متقدم لكنه غير شامل للنطاق المطلوب.** queue الحالية تعالج visits/checks/escalations والنتيجة المجهولة؛ المطلوب توسيع onboarding drafts/evidence بصورة durable، Catalog cache+draft+revalidation، retention 30 يومًا وواجهة pending/failed/quarantined مع عدم blind replay.
+8. **المالية يجب تنظيفها من أشياء ألغيت تجاريًا.** WLT صحيح كمالك للwallet/ledger/commissions/payout، لكن app-field يعرض ProviderIncidentsPanel وتوجد routes/state لincidents/penalties. هذه خارج المنتج الميداني المعتمد ويجب إزالتها من Field وما يصبح ميتًا بسببها. COD كذلك خارج Field تمامًا. العمولة policy-driven بعد approval، payout destination Finance-owned، والتسوية عند offboarding تبقى مالية لا تعطل قطع الوصول.
+9. **الاختبارات الحالية ليست كافية كإغلاق E2E.** app-field يملك test/type/lint/build واختبارات offline/readiness/navigation، لكن ذلك لا يثبت Field→Control Panel→Partner→Marketing→Client ولا WLT ولا Android real-device على exact same SHA.
 
-المشكلة المشتركة الحالية قبل gates هي فشل `pnpm install --frozen-lockfile` في root postinstall أثناء OpenAPI materialization برسالة `Self-referencing circular pointer`. الإصلاح يجب أن يحدد context/schema/$ref ويزيل السبب من العقد أو composer، لا تعطيل generation.
+## حدود النطاق
 
-## Product/root-cause findings in scope
+Primary: app-field + كل Control Panel section/tab يقرأ أو يراجع أو يغير حقيقة ميدانية. app-partner/app-client يدخلان readback وإصلاح defect المثبت فقط. app-captain لا يدخل كمنتج؛ فقط shared regression إن عُدل عقد مالي مشترك. Generic dashboard/analytics/administration/login/platform خارج النطاق ما لم يظهر causal dependency مثبت. Marketing داخل النطاق حصريًا لنشر store/product الناتج عن field journey. WLT finance داخل النطاق حصريًا لمالية الميداني.
 
-1. Identity/Workforce/session/readiness يجب أن تبقى سلطات منفصلة وواضحة وتفشل مغلقًا عند revocation أو حالة وظيفية غير صالحة.
-2. Home/History/Tasks الحالية تحتاج convergence: History لا يصبح حقيقة ثانية، Tasks تمثل عملًا مستقلًا، وكل card يفتح canonical detail واحدة بصلاحية object-level.
-3. Control Panel field assignment الحالي مبني على raw Actor ID وWorkforceScopeManager؛ المطلوب business assignment حقيقي أو reuse لمكافئ موجود بعد البحث.
-4. Onboarding يحمل خطر حقيقة مزدوجة بين local category/default وCentral Catalog. المطلوب Business Vertical canonical وdraft/publication lifecycle موحد.
-5. uploaded لا يساوي verified؛ visit media لا يساوي legal documents؛ document taxonomy يجب أن يكون قابلًا للمراجعة والتدقيق.
-6. Partners يحتاج read visibility + contextual collaboration دون silent editing أو chat عام مكرر.
-7. Visits/checklists/escalations موجودة أساسًا وتُعامل verification-first، منفصلة عن onboarding assignment.
-8. Catalog يبقى مركزيًا؛ publication gate server-authoritative؛ Partner/Client readback يجب أن يحافظ على نفس IDs والحقيقة.
-9. Offline v3/legacy/capacity لديه تنفيذ واختبارات؛ المتبقي الأهم unknown-result reconciliation قبل retry.
-10. Finance الحالي تحسن: payout request يدعم `FULL_AVAILABLE`/`SPECIFIED` ولا يختار التطبيق destination. المتبقي authority hardening، provisioning، maker/checker، versioning/reconciliation واختبار shared actor contract.
-11. Native dependency set واسع. لا حذف متفرق أثناء تطوير المنتج. نجمع أدلة per-app ونجمّد graph ثم ننفذ U014 كنافذة تنظيف واحدة.
-12. final closure هو fail-closed: cleanup + hardening + red-team + Android + cross-surface + CI + backend/database/security على أحدث SHA.
+## التنظيف البنيوي الإلزامي
 
-## Scope exclusions
+التنظيف ليس cosmetic. كل duplicate line/state/type/controller/view/API/route/file/directory/package يخالف النموذج المعتمد يجب دمجه أو حذفه. ممنوع ترك aliases مؤقتة أو commented dead routes أو deprecated controllers أو duplicate field packages بعد إثبات عدم الحاجة. إعادة الهيكلة الجذرية مطلوبة عندما يكون العيب بنيويًا؛ workaround وترقيع فوق مسارين متنافسين غير مقبول.
 
-Generic Control Panel administration/analytics/dashboard/login/marketing/platform ليست execution scope. Captain custody/COD/order work غير داخل الحزمة. Partner/Client لا يدخلان إلا readback أو shared payout regression المذكور. Repository-wide Sonar/CI failures غير المرتبطة بالميدان لا تُسحب إلى الحزمة؛ أما OpenAPI materialization الحالي فهو in-scope لأنه prerequisite مثبت يمنع field verification نفسها.
+## أدوات الإثبات
 
-## Concurrency and collision zones
-
-قبل كل write batch يعاد حل `BB`. أهم collision zones: generated OpenAPI contracts/clients، Identity/session، DSH schemas/migrations، partner onboarding models، WLT payout contracts، mobile capability manifest/lockfile. ممنوع overwrite لعمل وكيل آخر؛ أي حركة مرتبطة تُدمج semantic ثم يعاد التحقق. fast-forward only، وpush owner واحد لكل batch.
-
-## Closure interpretation
-
-التشخيص والخطة `READY` لا يعنيان أن المنتج مغلق. RESULT يبدأ غير منفذ. لا يتحول القرار النهائي إلا بعد exact-SHA evidence حديث لكل check required وعدم وجود مشكلة معلومة قابلة للتنفيذ داخل النطاق.
+تستخدم أدوات Codex/GitHub المتاحة فعليًا، والـcontracts/OpenAPI guards، Graphify، Trivy، Sonar، runtime smokes، database checks، device/EAS وCI عندما تكون مناسبة ومتاحة. عدم توفر أداة يوثق ولا يُدّعى استخدامها. أي warning أو regression متعلق بالنطاق يمنع الإغلاق.

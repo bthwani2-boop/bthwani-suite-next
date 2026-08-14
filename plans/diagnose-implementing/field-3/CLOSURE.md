@@ -1,19 +1,9 @@
 # Closure — Field 3
 
-**Decision: OPEN — execution and evidence required.**
+Decision: **OPEN — EXECUTION REQUIRED**.
 
-الإغلاق ممنوع افتراضيًا. وجود أي خلل معلوم قابل للمعالجة داخل نطاق الميداني أو علاقة مثبتة لازمة له يعيد الحزمة إلى OPEN حتى لو نجح build أو lint أو typecheck أو unit tests منفردة.
+This package was rebaselined after deleting superseded Field packages. No historical `DONE` or `PASS` closes the current candidate.
 
-## Final gate
+`CLOSED_WITH_EVIDENCE` is allowed only when all 15 units are DONE on compatible current evidence and the manifest points to the final exact candidate. Required proof includes: strict package validator; relevant OpenAPI/contracts; app-field type/lint/test/build; Workforce/Identity/DSH/WLT backend and database checks; canonical provider creation/activation; complete Control Panel provider profile; organized Partners field workspace; assignment and self-initiated onboarding; documents/review; visit/location/checklist/readiness/escalation; Catalog and Marketing publication; positive and negative Partner/Client same-ID readback; offline/restart/unknown-result recovery; policy-driven commissions/payout/offboarding settlement with no Field COD/incidents/penalties; security isolation; native cleanup and EAS Preview; real Android full journey; applicable CI and governance gates.
 
-قبل اعتبار المهمة منتهية يجب إكمال جميع الوحدات بنتائج مرتبطة بأحدث execution SHA، ثم تنفيذ Final Cleanup + Hardening + Red-Team Review + End-to-End Verification. يلزم إثبات Backend/Frontend/API/Bindings/DB/Contracts/Authz/Security/Runtime/Offline/Finance/Build/CI وAndroid/cross-surface حسب الخطة.
-
-لا يقبل workaround أو bypass أو fallback يخفي السبب، ولا تخفيف gate أو اختبار. التنظيف جزء من الإغلاق: البقايا الميتة/المكررة/المهجورة داخل النطاق تُزال عندما تكون الإزالة آمنة ومثبتة.
-
-### Native exception is sequencing, not abandonment
-
-خلال تنفيذ المنتج لا يتم حذف Native dependencies متفرقة. تُصنف وتُجمّد حتى U014، ثم تُزال العناصر `DEPRECATED_CONFIRMED` في نافذة coherent واحدة مع manifest/plugins/permissions وlocal native verification وبناء EAS مخطط. إذا بقيت إزالة Native لازمة ولم تنفذ U014 بنجاح، فالحزمة لا تُغلق.
-
-### Zero-known-defect rule
-
-الإغلاق يتطلب: صفر أخطاء معلومة، صفر فجوات/تناقضات معلومة، صفر تكرار أو كود ميت معلوم غير مبرر، صفر حالات أو صلاحيات أو تكاملات غير محسومة، صفر regressions معلومة، وصفر عمل متبقٍ معلوم قابل للتنفيذ داخل النطاق. أي evidence قديم أو غير قابل للإثبات لا يحسب.
+Any duplicate route/controller/view/state/file/directory/package, dead commented path, stale warning, regression, unhandled state, security bypass or known executable defect related to Field keeps the decision OPEN. Final cleanup must re-scan the latest head after the last write, not the implementation SHA from an earlier unit.

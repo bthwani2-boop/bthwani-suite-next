@@ -3,48 +3,41 @@
   "packageClass": "DERIVED_SUPPORT_ARTIFACT",
   "multiSurfaceScope": {
     "mode": "FULLSTACK_UNIFIED_MULTI_SURFACE",
-    "surfaces": [
-      "control-panel",
-      "app-client",
-      "app-partner",
-      "app-captain",
-      "app-field"
-    ],
+    "surfaces": ["control-panel", "app-client", "app-partner", "app-captain", "app-field"],
     "journeyPolicy": "ONLY_FIELD_CAUSAL_OR_FIELD_SHARED_CONTRACT_EFFECTS_ARE_FUNCTIONALLY_IN_SCOPE",
-    "sliceContract": "The five-surface envelope is structural. Execution is limited to field-originated behavior, required readback, shared contract regression boundaries, and proven prerequisites."
+    "sliceContract": "app-field and field-related Control Panel behavior are primary; app-partner/app-client are required readback surfaces; app-captain is regression-only where a shared contract is touched."
   },
   "task": {
     "id": "PKG-FIELD_3",
-    "name": "Field 3 — App Field Root-Cause Final Closure",
-    "objective": "Execute root-cause, fail-closed end-to-end closure for app-field and every proven dependency, writer, reader, shared contract and required readback surface, while excluding unrelated repository work and deferring physical native dependency removal to one evidence-gated build window.",
+    "name": "Field 3 — Canonical App Field + Control Panel Final Closure",
+    "objective": "Diagnose, execute, restructure, test, clean and close the complete field-provider lifecycle from provider creation and activation through assignments or self-initiated partner/store onboarding, visits, documents, readiness, catalog, Marketing publication, client readback, field commissions and payout settlement, removing every field-related contradiction, duplicate, dead path and obsolete package without patches or shadow truth.",
     "primarySurface": "app-field",
-    "createdAt": "2026-08-13T01:26:00+03:00"
+    "createdAt": "2026-08-14T05:44:00+03:00"
   },
   "repository": {
     "name": "bthwani2-boop/bthwani-suite-next",
-    "targetBranch": "BB",
-    "pinnedStartSha": "bee8e9cfe1762cef39690f0b254fdf0b6855e1a9",
-    "latestObservedRemoteSha": "95649d7350803e230477e9564060b1ca7bcd0bb8"
+    "targetBranch": "A",
+    "pinnedStartSha": "449b129b526fbe725c6aa6822ef3b3139dd1b8b0",
+    "latestObservedRemoteSha": "449b129b526fbe725c6aa6822ef3b3139dd1b8b0"
   },
   "authority": {
     "root": "governance/authority/authority-precedence.json",
-    "entryPoint": "governance/GOVERNANCE.md",
+    "entryPoint": "AGENTS.md",
     "canCreatePolicy": false,
     "canOverrideCanonicalSource": false
   },
   "derivedSupport": {
-    "prompting": "tools/prompting/01-diagnose-plan-package.md",
-    "executionCard": "tools/prompting/BTHWANI_CHATGPT_GITHUB_EXECUTION_CARD_ONE_PAGE.md",
-    "priorFieldPackage": "plans/diagnose-implementing/app-field-final-closure",
-    "creationMode": "NEW_DISTINCT_TASK_IDENTITY",
-    "nativePolicy": "DEPRECATE_FIRST_FREEZE_NATIVE_GRAPH_THEN_CONSOLIDATED_REMOVAL_AND_BUILD",
+    "diagnosisPrompt": "tools/prompting/01-diagnose-plan-package.md",
+    "executionPrompt": "tools/prompting/02-execute-verify-close.md",
+    "creationMode": "REBASE_EXISTING_CANONICAL_AFTER_LEGACY_FIELD_PACKAGE_DELETION",
+    "legacyPackagesRemoved": ["plans/diagnose-implementing/app-field-final-closure", "plans/diagnose-implementing/app-field-multisurface-journeys"],
     "failClosed": "OPEN_BY_DEFAULT_EXACT_SHA_EVIDENCE_REQUIRED"
   },
   "status": {
     "diagnosis": "COMPLETE",
     "plan": "READY",
     "implementation": "NOT_STARTED",
-    "verification": "REQUIRED_ON_EXECUTION_CANDIDATE",
+    "verification": "NOT_STARTED",
     "decision": "OPEN"
   },
   "disposability": {
