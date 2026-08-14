@@ -196,6 +196,8 @@
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOnboardingCollaborationResponse" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/partners/{partnerId}/collaboration/messages:
   post:
     operationId: addDshOperatorOnboardingCollaborationMessage
     summary: Add an operator comment to the object-scoped onboarding thread.

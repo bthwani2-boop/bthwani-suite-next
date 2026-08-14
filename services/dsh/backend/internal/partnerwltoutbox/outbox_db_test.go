@@ -134,6 +134,12 @@ func TestPartnerDeactivationTriggerAndOutboxDeliveryDBIntegration(t *testing.T) 
 func TestPartnerWltReconciliationCreatesAndResolvesMaskedReadbackCaseDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	partnerID := seedPartner(t, db, "RECON")
+	// Reconcile is deliberately bounded to the oldest 500 partners. Anchor this
+	// fixture at the front of that deterministic window so a reused developer DB
+	// cannot make the test depend on unrelated accumulated rows.
+	if _, err := db.Exec(`UPDATE dsh_partners SET updated_at='1900-01-01'::timestamptz WHERE id=$1`, partnerID); err != nil {
+		t.Fatal(err)
+	}
 
 	active := true
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

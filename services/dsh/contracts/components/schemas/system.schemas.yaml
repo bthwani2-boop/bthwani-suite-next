@@ -64,9 +64,49 @@ DshReadinessResponse:
       type: string
       format: date-time
 
+DshReadinessChecklistPolicyItem:
+  type: object
+  required: [checkType, labelAr, required, critical, evidenceRequired, displayOrder]
+  properties:
+    checkType: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCheckType" }
+    labelAr: { type: string, minLength: 2, maxLength: 160 }
+    required: { type: boolean }
+    critical: { type: boolean }
+    evidenceRequired: { type: boolean }
+    displayOrder: { type: integer, minimum: 0, maximum: 1000 }
+
+DshReadinessChecklistPolicy:
+  type: object
+  required: [businessVerticalId, version, items]
+  properties:
+    businessVerticalId: { type: string }
+    version: { type: integer, minimum: 0 }
+    items:
+      type: array
+      minItems: 1
+      maxItems: 50
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshReadinessChecklistPolicyItem" }
+
+DshReadinessChecklistPolicyResponse:
+  type: object
+  required: [policy]
+  properties:
+    policy: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshReadinessChecklistPolicy" }
+
+DshReplaceReadinessChecklistPolicyRequest:
+  type: object
+  required: [expectedVersion, items]
+  properties:
+    expectedVersion: { type: integer, minimum: 0 }
+    items:
+      type: array
+      minItems: 1
+      maxItems: 50
+      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshReadinessChecklistPolicyItem" }
+
 DshReadinessCheck:
   type: object
-  required: [id, visitId, storeId, checkType, status, evidenceUrl, notes, verifiedBy, createdAt, updatedAt]
+  required: [id, visitId, storeId, checkType, status, evidenceUrl, notes, verifiedBy, createdAt, updatedAt, labelAr, required, critical, displayOrder]
   properties:
     id: { type: string }
     visitId: { type: string }
@@ -78,6 +118,10 @@ DshReadinessCheck:
     verifiedBy: { type: string }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
+    labelAr: { type: string }
+    required: { type: boolean }
+    critical: { type: boolean }
+    displayOrder: { type: integer }
 
 DshReadinessCheckResponse:
   type: object

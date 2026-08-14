@@ -3,6 +3,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolvePackageManagerInvocation } from "./lib/package-manager-invocation.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const appIndex = process.argv.indexOf("--app");
@@ -24,19 +25,18 @@ function filesUnder(directory) {
 
 try {
   if (!appKey || !fs.existsSync(appDir)) fail(`unknown or missing app runtime: ${appKey || "<none>"}`);
-  const executable = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
+  const args = ["--dir", appDir, "exec", "expo", "export", "--platform", "android", "--output-dir", outputDir, "--clear"];
+  const environment = { ...process.env, CI: "1", EXPO_NO_TELEMETRY: "1", COREPACK_ENABLE_DOWNLOAD_PROMPT: "0" };
+  const invocation = resolvePackageManagerInvocation("pnpm", args, environment);
   const result = spawnSync(
-    executable,
-    ["--dir", appDir, "exec", "expo", "export", "--platform", "android", "--output-dir", outputDir, "--clear"],
+    invocation.executable,
+    invocation.args,
     {
       cwd: repoRoot,
       stdio: "inherit",
-      env: { ...process.env, CI: "1", EXPO_NO_TELEMETRY: "1", COREPACK_ENABLE_DOWNLOAD_PROMPT: "0" },
+      env: environment,
       windowsHide: true,
-      // Node's CVE-2024-27980 mitigation blocks spawning .cmd/.bat directly without
-      // a shell (EINVAL) on Windows. All arguments here are locally constructed
-      // (repo-relative paths, fixed CLI flags) -- no untrusted input crosses this call.
-      shell: process.platform === "win32",
+      shell: false,
     },
   );
   if (result.error) fail(`${appKey}: Expo export could not start: ${result.error.message}`);

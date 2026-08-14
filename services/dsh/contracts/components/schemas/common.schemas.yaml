@@ -389,7 +389,7 @@ DshVisitStatus:
 
 DshCheckType:
   type: string
-  enum: [location_verified, documents_uploaded, product_list_submitted, equipment_checked, safety_compliant, hygiene_compliant]
+  pattern: "^[a-z][a-z0-9_]{2,63}$"
 
 DshCheckStatus:
   type: string

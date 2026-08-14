@@ -29,6 +29,7 @@ func TestPartnerFleetLifecyclePostgres(t *testing.T) {
 	}
 
 	ctx := context.Background()
+	operatorContextID := "local-dsh"
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
 	storeID := "store_jrn030_" + suffix
 	secondStoreID := "store_jrn030_second_" + suffix
@@ -51,9 +52,9 @@ func TestPartnerFleetLifecyclePostgres(t *testing.T) {
 		t.Helper()
 		_, err := db.ExecContext(ctx, `
 			INSERT INTO dsh_stores
-				(id, slug, display_name, status, city_code, service_area_code, serviceability_status)
-			VALUES ($1, $2, $3, $4, 'SANAA', 'SANAA', 'serviceable')`,
-			id, id, displayName, status)
+				(id, operator_context_id, slug, display_name, status, city_code, service_area_code, serviceability_status)
+			VALUES ($1, $2, $3, $4, $5, 'SANAA', 'SANAA', 'serviceable')`,
+			id, operatorContextID, id, displayName, status)
 		if err != nil {
 			t.Fatalf("insert store %s: %v", id, err)
 		}

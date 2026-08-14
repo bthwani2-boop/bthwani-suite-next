@@ -3,6 +3,7 @@ package fieldreadiness
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -115,7 +116,16 @@ func TestFindMutationReceiptIsActorScopedAndMissingMeansNotCommitted(t *testing.
 	if err != nil {
 		t.Fatalf("find actor receipt: %v", err)
 	}
-	if receipt.CorrelationID != mutation.CorrelationID || string(receipt.ResponseJSON) != `{"visit":{"id":"visit-receipt","status":"complete"}}` {
+	var receiptPayload struct {
+		Visit struct {
+			ID     string `json:"id"`
+			Status string `json:"status"`
+		} `json:"visit"`
+	}
+	if err := json.Unmarshal(receipt.ResponseJSON, &receiptPayload); err != nil {
+		t.Fatalf("decode receipt response: %v", err)
+	}
+	if receipt.CorrelationID != mutation.CorrelationID || receiptPayload.Visit.ID != "visit-receipt" || receiptPayload.Visit.Status != "complete" {
 		t.Fatalf("unexpected receipt: %#v", receipt)
 	}
 	if _, err := FindMutationReceipt(ctx, db, otherActorID, MutationCompleteVisit, mutation.IdempotencyKey); !errors.Is(err, ErrNotFound) {
@@ -254,7 +264,7 @@ func TestCompleteGovernedVisitIdempotentDoesNotDuplicateCommissionOutbox(t *test
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_commission_outbox WHERE visit_id = $1`, visit.ID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_visits WHERE id = $1`, visit.ID)
 	})
-	for _, checkType := range RequiredCheckTypes {
+	for _, checkType := range policyCheckTypes(t, db, visit.ID) {
 		mediaRef := seedStoreBoundReadinessMedia(t, db, partnerID, storeID, agentID)
 		if _, err := UpsertGovernedReadinessCheck(ctx, db, nil, actor, visit.ID, UpdateCheckInput{
 			CheckType: checkType, Status: CheckPassed, EvidenceURL: mediaRef,
@@ -313,7 +323,7 @@ func TestGovernedEscalationCannotMutateCompletedVisit(t *testing.T) {
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_commission_outbox WHERE visit_id = $1`, visit.ID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_visits WHERE id = $1`, visit.ID)
 	})
-	for _, checkType := range RequiredCheckTypes {
+	for _, checkType := range policyCheckTypes(t, db, visit.ID) {
 		mediaRef := seedStoreBoundReadinessMedia(t, db, partnerID, storeID, agentID)
 		if _, err := UpsertGovernedReadinessCheck(ctx, db, nil, actor, visit.ID, UpdateCheckInput{
 			CheckType: checkType, Status: CheckPassed, EvidenceURL: mediaRef,

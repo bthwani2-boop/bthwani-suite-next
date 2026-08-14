@@ -137,6 +137,8 @@ func (s *protectedStoreServer) writeFieldReadinessError(w http.ResponseWriter, e
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store or visit")
 	case errors.Is(err, fieldreadiness.ErrChecklistIncomplete):
 		store.SendError(w, http.StatusConflict, "CHECKLIST_INCOMPLETE", "not all required readiness checks have passed")
+	case errors.Is(err, fieldreadiness.ErrChecklistPolicyMissing):
+		store.SendError(w, http.StatusConflict, "CHECKLIST_POLICY_MISSING", "no governed readiness checklist policy is configured for this store")
 	case errors.Is(err, fieldreadiness.ErrEvidenceRequired):
 		store.SendError(w, http.StatusConflict, "EVIDENCE_REQUIRED", "required readiness evidence is missing")
 	case errors.Is(err, fieldreadiness.ErrOpenEscalation):
@@ -205,16 +207,20 @@ func marshalVisit(v fieldreadiness.Visit) map[string]any {
 
 func marshalCheck(c fieldreadiness.ReadinessCheck) map[string]any {
 	return map[string]any{
-		"id":          c.ID,
-		"visitId":     c.VisitID,
-		"storeId":     c.StoreID,
-		"checkType":   c.CheckType,
-		"status":      c.Status,
-		"evidenceUrl": c.EvidenceURL,
-		"notes":       c.Notes,
-		"verifiedBy":  c.VerifiedBy,
-		"createdAt":   c.CreatedAt,
-		"updatedAt":   c.UpdatedAt,
+		"id":           c.ID,
+		"visitId":      c.VisitID,
+		"storeId":      c.StoreID,
+		"checkType":    c.CheckType,
+		"status":       c.Status,
+		"evidenceUrl":  c.EvidenceURL,
+		"notes":        c.Notes,
+		"verifiedBy":   c.VerifiedBy,
+		"createdAt":    c.CreatedAt,
+		"updatedAt":    c.UpdatedAt,
+		"labelAr":      c.LabelAR,
+		"required":     c.Required,
+		"critical":     c.Critical,
+		"displayOrder": c.DisplayOrder,
 	}
 }
 

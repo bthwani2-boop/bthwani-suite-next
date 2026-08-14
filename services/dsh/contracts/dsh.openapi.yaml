@@ -124,6 +124,8 @@ paths:
     $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1diagnostics~1stores~1{storeId}"
   /dsh/operator/stores/{storeId}/audit:
     $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1stores~1{storeId}~1audit"
+  /dsh/operator/marketing/stores/{storeId}/publication:
+    $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1marketing~1stores~1{storeId}~1publication"
   /dsh/stores/{storeId}/catalog:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1stores~1{storeId}~1catalog"
   /dsh/public/media/{assetId}/{variant}:
@@ -258,6 +260,8 @@ paths:
     $ref: "./paths/dispatch.paths.yaml#/~1dsh~1operator~1dispatch~1assignments"
   /dsh/captain/dispatch/assignments:
     $ref: "./paths/dispatch.paths.yaml#/~1dsh~1captain~1dispatch~1assignments"
+  /dsh/captain/dispatch/availability:
+    $ref: "./paths/dispatch.paths.yaml#/~1dsh~1captain~1dispatch~1availability"
   /dsh/captain/dispatch/assignments/{assignmentId}/accept:
     $ref: "./paths/dispatch.paths.yaml#/~1dsh~1captain~1dispatch~1assignments~1{assignmentId}~1accept"
   /dsh/captain/dispatch/assignments/{assignmentId}/decline:
@@ -480,6 +484,8 @@ paths:
     $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1field-onboarding~1workload"
   /dsh/operator/partners/{partnerId}/collaboration:
     $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1partners~1{partnerId}~1collaboration"
+  /dsh/operator/partners/{partnerId}/collaboration/messages:
+    $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1partners~1{partnerId}~1collaboration~1messages"
   /dsh/operator/partners/{partnerId}/collaboration/change-requests:
     $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1partners~1{partnerId}~1collaboration~1change-requests"
   /dsh/operator/partners/{partnerId}/collaboration/read:
@@ -502,6 +508,8 @@ paths:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1onboarding~1workload"
   /dsh/field/partners/{partnerId}/collaboration:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1collaboration"
+  /dsh/field/partners/{partnerId}/collaboration/messages:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1collaboration~1messages"
   /dsh/field/partners/{partnerId}/collaboration/read:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1collaboration~1read"
   /dsh/field/visits/{visitId}/complete:
@@ -512,6 +520,8 @@ paths:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1stores~1{storeId}~1escalations"
   /dsh/operator/field-readiness/escalations:
     $ref: "./paths/field.paths.yaml#/~1dsh~1operator~1field-readiness~1escalations"
+  /dsh/operator/field-readiness/checklist-policies/{businessVerticalId}:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1operator~1field-readiness~1checklist-policies~1{businessVerticalId}"
   /dsh/operator/field-readiness/escalations/{escalationId}:
     $ref: "./paths/field.paths.yaml#/~1dsh~1operator~1field-readiness~1escalations~1{escalationId}"
   /dsh/partner/stores/{storeId}/onboarding-status:
@@ -972,6 +982,8 @@ paths:
     $ref: "./dsh.home-marketing-events.openapi.yaml#/paths/~1dsh~1home-discovery~1events"
   /dsh/internal/workforce/availability-projections:
     $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1internal~1workforce~1availability-projections"
+  /dsh/internal/workforce/provider-media-refs/validate:
+    $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1internal~1workforce~1provider-media-refs~1validate"
   /dsh/operator/stores/{storeId}/assortment/{masterProductId}/pause:
     $ref: "./dsh.catalog-governance.openapi.yaml#/paths/~1dsh~1operator~1stores~1{storeId}~1assortment~1{masterProductId}~1pause"
   /dsh/operator/stores/{storeId}/assortment/{masterProductId}/resume:
@@ -1222,6 +1234,8 @@ components:
       $ref: "./components/responses.yaml#/NotFound"
     Conflict:
       $ref: "./components/responses.yaml#/Conflict"
+    InternalError:
+      $ref: "./components/responses.yaml#/InternalError"
     ServiceUnavailable:
       $ref: "./components/responses.yaml#/ServiceUnavailable"
   schemas:
@@ -1285,6 +1299,14 @@ components:
       $ref: "./components/schemas/store.schemas.yaml#/OperatorStoreGovernanceRequest"
     DshStoreActionResponse:
       $ref: "./components/schemas/store.schemas.yaml#/DshStoreActionResponse"
+    StorePublicationDiagnostics:
+      $ref: "./components/schemas/store.schemas.yaml#/StorePublicationDiagnostics"
+    StorePublicationOverridePolicy:
+      $ref: "./components/schemas/store.schemas.yaml#/StorePublicationOverridePolicy"
+    StorePublicationWorkspaceResponse:
+      $ref: "./components/schemas/store.schemas.yaml#/StorePublicationWorkspaceResponse"
+    StorePublicationRequest:
+      $ref: "./components/schemas/store.schemas.yaml#/StorePublicationRequest"
     DshStoreAuditEvent:
       $ref: "./components/schemas/store.schemas.yaml#/DshStoreAuditEvent"
     DshStoreAuditResponse:
@@ -1419,6 +1441,10 @@ components:
       $ref: "./components/schemas/dispatch.schemas.yaml#/DshPartnerDispatchReferenceResponse"
     DshDispatchAssignmentsResponse:
       $ref: "./components/schemas/dispatch.schemas.yaml#/DshDispatchAssignmentsResponse"
+    DshCaptainAvailability:
+      $ref: "./components/schemas/dispatch.schemas.yaml#/DshCaptainAvailability"
+    DshSetCaptainAvailabilityRequest:
+      $ref: "./components/schemas/dispatch.schemas.yaml#/DshSetCaptainAvailabilityRequest"
     DshCreateAssignmentRequest:
       $ref: "./components/schemas/common.schemas.yaml#/DshCreateAssignmentRequest"
     DshDeclineAssignmentRequest:
@@ -1459,6 +1485,14 @@ components:
       $ref: "./components/schemas/system.schemas.yaml#/DshReadinessChecksResponse"
     DshUpsertReadinessCheckRequest:
       $ref: "./components/schemas/system.schemas.yaml#/DshUpsertReadinessCheckRequest"
+    DshReadinessChecklistPolicyItem:
+      $ref: "./components/schemas/system.schemas.yaml#/DshReadinessChecklistPolicyItem"
+    DshReadinessChecklistPolicy:
+      $ref: "./components/schemas/system.schemas.yaml#/DshReadinessChecklistPolicy"
+    DshReadinessChecklistPolicyResponse:
+      $ref: "./components/schemas/system.schemas.yaml#/DshReadinessChecklistPolicyResponse"
+    DshReplaceReadinessChecklistPolicyRequest:
+      $ref: "./components/schemas/system.schemas.yaml#/DshReplaceReadinessChecklistPolicyRequest"
     DshReadinessEscalation:
       $ref: "./components/schemas/system.schemas.yaml#/DshReadinessEscalation"
     DshEscalationResponse:

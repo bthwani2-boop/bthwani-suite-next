@@ -11,6 +11,8 @@ import type {
   DshCreateEscalationInput,
   DshUpdateEscalationInput,
   DshFieldWorkQueue,
+  DshChecklistPolicy,
+  DshChecklistPolicyItem,
 } from "./field-readiness.types";
 
 export {
@@ -178,6 +180,25 @@ export async function fetchPartnerOnboardingStatus(storeId: string): Promise<Dsh
 
 export async function fetchFieldWorkQueue(): Promise<DshFieldWorkQueue> {
   return request<DshFieldWorkQueue>("/dsh/field/work-queue");
+}
+
+export async function fetchChecklistPolicy(businessVerticalId: string): Promise<DshChecklistPolicy> {
+  const data = await request<{ policy: DshChecklistPolicy }>(
+    `/dsh/operator/field-readiness/checklist-policies/${encodeURIComponent(businessVerticalId)}`,
+  );
+  return data.policy;
+}
+
+export async function replaceChecklistPolicy(
+  businessVerticalId: string,
+  expectedVersion: number,
+  items: readonly DshChecklistPolicyItem[],
+): Promise<DshChecklistPolicy> {
+  const data = await request<{ policy: DshChecklistPolicy }>(
+    `/dsh/operator/field-readiness/checklist-policies/${encodeURIComponent(businessVerticalId)}`,
+    { method: "PUT", body: { expectedVersion, items } },
+  );
+  return data.policy;
 }
 
 /**

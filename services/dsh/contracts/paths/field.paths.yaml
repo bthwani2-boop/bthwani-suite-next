@@ -267,6 +267,8 @@
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOnboardingCollaborationResponse" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/field/partners/{partnerId}/collaboration/messages:
   post:
     operationId: addDshFieldOnboardingCollaborationMessage
     summary: Add a field response to the object-scoped onboarding thread.
@@ -634,6 +636,53 @@
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshEscalationResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/field-readiness/checklist-policies/{businessVerticalId}:
+  get:
+    operationId: getDshReadinessChecklistPolicy
+    summary: Partners operator reads the effective checklist policy for a Business Vertical.
+    tags: [ DshFieldReadiness ]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: businessVerticalId
+        in: path
+        required: true
+        schema: { type: string }
+    responses:
+      "200":
+        description: Effective operator or inherited system checklist policy.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshReadinessChecklistPolicyResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+  put:
+    operationId: replaceDshReadinessChecklistPolicy
+    summary: Partners operator atomically replaces a Business-Vertical checklist policy.
+    tags: [ DshFieldReadiness ]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: businessVerticalId
+        in: path
+        required: true
+        schema: { type: string }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshReplaceReadinessChecklistPolicyRequest" }
+    responses:
+      "200":
+        description: Checklist policy replaced and version advanced.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshReadinessChecklistPolicyResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
 /dsh/partner/stores/{storeId}/onboarding-status:
   get:

@@ -22,6 +22,7 @@ import {
   type DshEscalationStatus,
 } from "../../../shared/field-readiness";
 import { ControlPanelFieldProblemPanel } from "../../shared/ControlPanelFieldProblemPanel";
+import { ChecklistPolicyEditor } from "./ChecklistPolicyEditor";
 
 type FollowUpStatus = "resolved" | "escalated_further";
 
@@ -108,9 +109,10 @@ export function FieldReadinessQueueScreen() {
           aria-label="فلاتر التصعيدات"
         />
       }
-      stateView={stateView}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "1rem", padding: "1rem" }}>
+        <ChecklistPolicyEditor />
+        {stateView}
         {actionState.kind === "error" ? (
           <ControlPanelFieldProblemPanel problem={actionState.problem}>
             <CpRetryButton onClick={resetAction}>إغلاق</CpRetryButton>

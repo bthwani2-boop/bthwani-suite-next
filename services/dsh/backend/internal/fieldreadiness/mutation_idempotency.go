@@ -287,7 +287,13 @@ func upsertGovernedCheckTx(
 		&check.CreatedAt,
 		&check.UpdatedAt,
 	)
-	return check, err
+	if err != nil {
+		return ReadinessCheck{}, err
+	}
+	if err := hydrateChecklistMetadata(ctx, tx, &check); err != nil {
+		return ReadinessCheck{}, err
+	}
+	return check, nil
 }
 
 func lockGovernedEscalationVisitTx(

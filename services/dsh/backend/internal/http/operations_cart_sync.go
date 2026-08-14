@@ -2,9 +2,9 @@ package http
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"time"
-	"encoding/json"
 
 	"dsh-api/internal/store"
 )
@@ -27,7 +27,7 @@ type CartDiagnosticsView struct {
 }
 
 type CartSyncDiagnosticsResponse struct {
-	Cart    CartDiagnosticsView       `json:"cart"`
+	Cart    CartDiagnosticsView     `json:"cart"`
 	History []CartIdempotencyRecord `json:"history"`
 }
 

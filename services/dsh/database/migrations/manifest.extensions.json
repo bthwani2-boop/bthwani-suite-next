@@ -79,6 +79,34 @@
       "sha256": "ff607b3ad288d984257e724a71f9672ccd4cde3e5bc6554498b969ef526007c5",
       "historicalPrefix": "1003",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 251,
+      "file": "dsh-1004_field_readiness_checklist_policy.sql",
+      "sha256": "74e2aea8be1ecf940d8175613aa5ceb002ea5da59f14c45770b89d3ef9d2c5e2",
+      "historicalPrefix": "1004",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 252,
+      "file": "dsh-1005_field_readiness_checklist_policy_seed.sql",
+      "sha256": "6587f17981af79a1c4682602c922cc45aa0bcfc4876dd54f76da02a9c3c57630",
+      "historicalPrefix": "1005",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 253,
+      "file": "dsh-1006_field_readiness_checklist_policy_audit.sql",
+      "sha256": "195db04e1acf6b2ece30b59ac490d05fd42e02910261837203397a231a03258f",
+      "historicalPrefix": "1006",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 254,
+      "file": "dsh-1007_marketing_store_publication_command.sql",
+      "sha256": "1c23e8a2bc5105992756800402dfa393372641776c6b6f1f18ea710d8e22a262",
+      "historicalPrefix": "1007",
+      "state": "ACTIVE"
     }
   ]
 }

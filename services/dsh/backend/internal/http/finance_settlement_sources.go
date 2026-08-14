@@ -64,16 +64,34 @@ func settlementEvidenceHash(parts ...string) string {
 // settlement policy, arithmetic, ledger effects, and duplicate prevention.
 func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.ActorFromContext(r.Context())
-	if !ok { return }
-	if !s.wlt.Configured() { store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured"); return }
+	if !ok {
+		return
+	}
+	if !s.wlt.Configured() {
+		store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured")
+		return
+	}
 	var input createGovernedSettlementRequest
-	if !decodeStrictFinanceJSON(w, r, &input) { return }
-	input.PartnerID = strings.TrimSpace(input.PartnerID); input.PeriodStart = strings.TrimSpace(input.PeriodStart); input.PeriodEnd = strings.TrimSpace(input.PeriodEnd)
-	if input.PartnerID == "" || input.PeriodStart == "" || input.PeriodEnd == "" { store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "partnerId, periodStart and periodEnd are required"); return }
+	if !decodeStrictFinanceJSON(w, r, &input) {
+		return
+	}
+	input.PartnerID = strings.TrimSpace(input.PartnerID)
+	input.PeriodStart = strings.TrimSpace(input.PeriodStart)
+	input.PeriodEnd = strings.TrimSpace(input.PeriodEnd)
+	if input.PartnerID == "" || input.PeriodStart == "" || input.PeriodEnd == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "partnerId, periodStart and periodEnd are required")
+		return
+	}
 	periodStart, err := time.Parse("2006-01-02", input.PeriodStart)
-	if err != nil { store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "periodStart must use YYYY-MM-DD"); return }
+	if err != nil {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "periodStart must use YYYY-MM-DD")
+		return
+	}
 	periodEnd, err := time.Parse("2006-01-02", input.PeriodEnd)
-	if err != nil || periodEnd.Before(periodStart) { store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "periodEnd must use YYYY-MM-DD and be on or after periodStart"); return }
+	if err != nil || periodEnd.Before(periodStart) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "periodEnd must use YYYY-MM-DD and be on or after periodStart")
+		return
+	}
 
 	rows, err := s.db.QueryContext(r.Context(), `
 		SELECT o.id::text, o.subtotal_minor_units, o.currency,
@@ -91,45 +109,99 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 		  AND o.subtotal_minor_units > 0 AND btrim(o.currency) <> ''
 		  AND btrim(o.pricing_snapshot_hash) <> ''
 		ORDER BY delivered.delivered_at, o.id`, input.PartnerID, input.PeriodStart, input.PeriodEnd)
-	if err != nil { store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to derive delivered order sources"); return }
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to derive delivered order sources")
+		return
+	}
 	defer rows.Close()
 	orderSources := make([]financeSettlementOrderSource, 0)
 	for rows.Next() {
 		var source financeSettlementOrderSource
-		if err := rows.Scan(&source.OrderID, &source.GrossAmountMinorUnits, &source.Currency, &source.DeliveredAt, &source.PricingSnapshotHash); err != nil { store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to decode delivered order source"); return }
+		if err := rows.Scan(&source.OrderID, &source.GrossAmountMinorUnits, &source.Currency, &source.DeliveredAt, &source.PricingSnapshotHash); err != nil {
+			store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to decode delivered order source")
+			return
+		}
 		source.CancellationStatus = "not_cancelled"
 		source.CompletionEventID = "delivered:" + source.OrderID + ":" + source.DeliveredAt.UTC().Format(time.RFC3339Nano)
 		source.CompletionEvidenceHash = settlementEvidenceHash(source.OrderID, "delivered", source.DeliveredAt.UTC().Format(time.RFC3339Nano), source.PricingSnapshotHash, fmt.Sprint(source.GrossAmountMinorUnits), source.Currency, source.CancellationStatus)
 		orderSources = append(orderSources, source)
 	}
-	if err := rows.Err(); err != nil { store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed while deriving delivered order sources"); return }
-	if len(orderSources) == 0 { store.SendError(w, http.StatusConflict, "NO_ELIGIBLE_DELIVERED_ORDERS", "no delivered non-cancelled orders with an authoritative pricing snapshot are eligible for this partner and period"); return }
+	if err := rows.Err(); err != nil {
+		store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed while deriving delivered order sources")
+		return
+	}
+	if len(orderSources) == 0 {
+		store.SendError(w, http.StatusConflict, "NO_ELIGIBLE_DELIVERED_ORDERS", "no delivered non-cancelled orders with an authoritative pricing snapshot are eligible for this partner and period")
+		return
+	}
 	payload, err := json.Marshal(map[string]any{"partnerId": input.PartnerID, "periodStart": input.PeriodStart, "periodEnd": input.PeriodEnd, "orderSources": orderSources, "operatorId": actor.ID})
-	if err != nil { store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode governed settlement"); return }
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode governed settlement")
+		return
+	}
 	status, responseBody, err := s.wlt.FinanceWriteSettlement(r.Context(), http.MethodPost, "/wlt/settlements", payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
-	if err != nil { store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT governed settlement call failed"); return }
-	w.Header().Set("Content-Type", "application/json"); w.Header().Set("Cache-Control", "no-store"); w.WriteHeader(status); _, _ = w.Write(responseBody)
+	if err != nil {
+		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT governed settlement call failed")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(status)
+	_, _ = w.Write(responseBody)
 }
 
 // PUT /dsh/control-panel/finance/settlement-policies/{partnerId}
 func (s *protectedStoreServer) handleUpsertFinanceSettlementPolicy(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.ActorFromContext(r.Context())
-	if !ok { return }
-	if !s.wlt.Configured() { store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured"); return }
+	if !ok {
+		return
+	}
+	if !s.wlt.Configured() {
+		store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured")
+		return
+	}
 	partnerID := strings.TrimSpace(r.PathValue("partnerId"))
-	if partnerID == "" { store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "partnerId is required"); return }
+	if partnerID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "partnerId is required")
+		return
+	}
 	var input upsertSettlementPolicyRequest
-	if !decodeStrictFinanceJSON(w, r, &input) { return }
-	if input.FeeBasisPoints < 0 || input.FeeBasisPoints > 10000 || input.MinimumNetMinorUnits < 0 { store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "feeBasisPoints must be 0..10000 and minimumNetMinorUnits cannot be negative"); return }
-	input.Currency = strings.TrimSpace(input.Currency); if input.Currency == "" { input.Currency = "YER" }
-	input.Status = strings.ToLower(strings.TrimSpace(input.Status)); if input.Status == "" { input.Status = "active" }
-	if input.CycleDays == 0 { input.CycleDays = 7 }
+	if !decodeStrictFinanceJSON(w, r, &input) {
+		return
+	}
+	if input.FeeBasisPoints < 0 || input.FeeBasisPoints > 10000 || input.MinimumNetMinorUnits < 0 {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "feeBasisPoints must be 0..10000 and minimumNetMinorUnits cannot be negative")
+		return
+	}
+	input.Currency = strings.TrimSpace(input.Currency)
+	if input.Currency == "" {
+		input.Currency = "YER"
+	}
+	input.Status = strings.ToLower(strings.TrimSpace(input.Status))
+	if input.Status == "" {
+		input.Status = "active"
+	}
+	if input.CycleDays == 0 {
+		input.CycleDays = 7
+	}
 	input.ChangeReason = strings.TrimSpace(input.ChangeReason)
-	if input.CycleDays < 1 || input.CycleDays > 366 || input.ChangeReason == "" { store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cycleDays must be 1..366 and changeReason is required"); return }
+	if input.CycleDays < 1 || input.CycleDays > 366 || input.ChangeReason == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cycleDays must be 1..366 and changeReason is required")
+		return
+	}
 	payload, err := json.Marshal(map[string]any{"feeBasisPoints": input.FeeBasisPoints, "currency": input.Currency, "status": input.Status, "cycleDays": input.CycleDays, "minimumNetMinorUnits": input.MinimumNetMinorUnits, "changeReason": input.ChangeReason, "operatorId": actor.ID})
-	if err != nil { store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode settlement policy"); return }
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode settlement policy")
+		return
+	}
 	path := "/wlt/settlement-policies/" + url.PathEscape(partnerID)
 	status, responseBody, err := s.wlt.FinanceWriteSettlement(r.Context(), http.MethodPut, path, bytes.Clone(payload), r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
-	if err != nil { store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", fmt.Sprintf("WLT settlement policy call failed: %v", err)); return }
-	w.Header().Set("Content-Type", "application/json"); w.Header().Set("Cache-Control", "no-store"); w.WriteHeader(status); _, _ = w.Write(responseBody)
+	if err != nil {
+		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", fmt.Sprintf("WLT settlement policy call failed: %v", err))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(status)
+	_, _ = w.Write(responseBody)
 }

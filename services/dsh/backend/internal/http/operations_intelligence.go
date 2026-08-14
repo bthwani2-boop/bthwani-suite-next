@@ -168,8 +168,7 @@ func copyRecordedResponse(w http.ResponseWriter, recorder *httptest.ResponseReco
 func OperationsAvailabilityMiddleware(db *sql.DB, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		candidateList := r.Method == http.MethodGet && r.URL.Path == "/dsh/operator/dispatch/candidates"
-		assignmentMutation := r.Method == http.MethodPost && (
-			r.URL.Path == "/dsh/operator/dispatch/assignments" ||
+		assignmentMutation := r.Method == http.MethodPost && (r.URL.Path == "/dsh/operator/dispatch/assignments" ||
 			(strings.HasPrefix(r.URL.Path, "/dsh/operator/dispatch/assignments/") && strings.HasSuffix(r.URL.Path, "/reassign")) ||
 			(strings.HasPrefix(r.URL.Path, "/dsh/captain/dispatch/assignments/") && strings.HasSuffix(r.URL.Path, "/accept")))
 		if !candidateList && !assignmentMutation {

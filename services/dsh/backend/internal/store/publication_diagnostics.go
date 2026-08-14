@@ -3,14 +3,17 @@ package store
 import "strings"
 
 type StorePublicationDiagnostics struct {
-	IsReady  bool     `json:"isReady"`
-	Blockers []string `json:"blockers"`
+	IsReady      bool     `json:"isReady"`
+	Blockers     []string `json:"blockers"`
+	BlockerCodes []string `json:"blockerCodes"`
 }
 
 func DiagnoseStorePublication(row DshStoreRow) StorePublicationDiagnostics {
 	blockers := make([]string, 0, 15)
+	blockerCodes := make([]string, 0, 15)
 	add := func(code, message string) {
 		blockers = append(blockers, code+": "+message)
+		blockerCodes = append(blockerCodes, code)
 	}
 
 	if row.Status != StatusPublished {
@@ -60,8 +63,9 @@ func DiagnoseStorePublication(row DshStoreRow) StorePublicationDiagnostics {
 	}
 
 	return StorePublicationDiagnostics{
-		IsReady:  len(blockers) == 0,
-		Blockers: blockers,
+		IsReady:      len(blockers) == 0,
+		Blockers:     blockers,
+		BlockerCodes: blockerCodes,
 	}
 }
 
@@ -71,6 +75,8 @@ func DiagnoseStorePublication(row DshStoreRow) StorePublicationDiagnostics {
 // reads remain denied until that transition actually commits.
 func DiagnoseStorePublicationReadiness(row DshStoreRow) StorePublicationDiagnostics {
 	row.Status = StatusPublished
+	row.IsVisible = true
+	row.MarketingVisibility = "visible"
 	if row.PartnerActivationStatus == "partner_active" || row.PartnerActivationStatus == "client_visible" {
 		row.PartnerActivationStatus = "client_visible"
 	}

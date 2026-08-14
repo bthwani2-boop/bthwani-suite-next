@@ -1,13 +1,8 @@
 export type DshVisitType = "onboarding" | "periodic" | "escalation_followup";
 export type DshVisitStatus = "in_progress" | "complete" | "escalated";
 
-export type DshCheckType =
-  | "location_verified"
-  | "documents_uploaded"
-  | "product_list_submitted"
-  | "equipment_checked"
-  | "safety_compliant"
-  | "hygiene_compliant";
+/** Server-authoritative policy key. New checklist types do not require an app release. */
+export type DshCheckType = string;
 
 export type DshCheckStatus = "pending" | "passed" | "failed";
 
@@ -73,6 +68,10 @@ export type DshReadinessCheck = {
   readonly verifiedBy: string;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly labelAr: string;
+  readonly required: boolean;
+  readonly critical: boolean;
+  readonly displayOrder: number;
 };
 
 export type DshReadinessEscalation = {
@@ -135,13 +134,20 @@ export type DshUpdateEscalationInput = {
   readonly resolutionNote?: string;
 };
 
-export const CHECK_TYPE_LABELS: Record<DshCheckType, string> = {
-  location_verified: "التحقق من الموقع",
-  documents_uploaded: "رفع الوثائق",
-  product_list_submitted: "قائمة المنتجات",
-  equipment_checked: "فحص المعدات",
-  safety_compliant: "الامتثال الأمني",
-  hygiene_compliant: "الامتثال الصحي",
+export type DshChecklistPolicyItem = {
+  readonly checkType: DshCheckType;
+  readonly labelAr: string;
+  readonly required: boolean;
+  readonly critical: boolean;
+  readonly evidenceRequired: boolean;
+  readonly displayOrder: number;
+};
+
+export type DshChecklistPolicy = {
+  readonly businessVerticalId: string;
+  /** Zero means the response is the inherited system policy, not an operator override. */
+  readonly version: number;
+  readonly items: readonly DshChecklistPolicyItem[];
 };
 
 export const ESCALATION_SEVERITY_LABELS: Record<DshEscalationSeverity, string> = {

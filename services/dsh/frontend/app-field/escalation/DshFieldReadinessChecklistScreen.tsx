@@ -17,7 +17,6 @@ import {
 import {
   useFieldChecklistController,
   buildChecklistViewModel,
-  CHECK_TYPE_LABELS,
   VISIT_STATUS_LABELS,
   classifyGovernedError,
   type DshCheckType,
@@ -250,7 +249,7 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
           <View style={styles.notice}>
             <Text role="titleSm" tone="warning">بنود غير مكتملة</Text>
             {vm.blockers.map((blocker) => (
-              <Text key={blocker} role="caption" tone="muted">• {CHECK_TYPE_LABELS[blocker]}</Text>
+              <Text key={blocker.checkType} role="caption" tone="muted">• {blocker.label}</Text>
             ))}
           </View>
         </Card>

@@ -98,13 +98,40 @@ func seedVerificationEvidence(t *testing.T, db *sql.DB, visitID, storeID, agentI
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_partners WHERE id = $1`, partnerID) })
 
-	required := []string{
-		"location_verified",
-		"documents_uploaded",
-		"product_list_submitted",
-		"equipment_checked",
-		"safety_compliant",
-		"hygiene_compliant",
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_visit_checklist_requirements
+		  (visit_id, template_id, template_version, business_vertical_id, check_type,
+		   label_ar, required, critical, evidence_required, display_order)
+		SELECT $1, template.id, template.version, template.business_vertical_id,
+		       item.check_type, item.label_ar, item.required, item.critical,
+		       item.evidence_required, item.display_order
+		FROM dsh_readiness_checklist_templates template
+		JOIN dsh_readiness_checklist_template_items item ON item.template_id = template.id
+		WHERE template.operator_context_id = 'system-default'
+		  AND template.business_vertical_id = 'default'
+		ON CONFLICT (visit_id, check_type) DO NOTHING`, visitID); err != nil {
+		t.Fatalf("seed visit checklist snapshot: %v", err)
+	}
+	rows, err := db.QueryContext(ctx, `
+		SELECT check_type FROM dsh_visit_checklist_requirements
+		WHERE visit_id = $1 AND required = TRUE ORDER BY display_order`, visitID)
+	if err != nil {
+		t.Fatalf("list required visit checks: %v", err)
+	}
+	defer rows.Close()
+	var required []string
+	for rows.Next() {
+		var checkType string
+		if err := rows.Scan(&checkType); err != nil {
+			t.Fatalf("scan required visit check: %v", err)
+		}
+		required = append(required, checkType)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("iterate required visit checks: %v", err)
+	}
+	if err := rows.Close(); err != nil {
+		t.Fatalf("close required visit checks: %v", err)
 	}
 	for _, checkType := range required {
 		mediaRef := uniqueID("media-fv")

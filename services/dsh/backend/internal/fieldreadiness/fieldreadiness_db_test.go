@@ -263,7 +263,7 @@ func TestCompleteVisitRequiresChecklistAndNoOpenEscalation(t *testing.T) {
 		t.Fatalf("expected ErrChecklistIncomplete with no checks recorded, got %v", err)
 	}
 
-	for _, ct := range RequiredCheckTypes {
+	for _, ct := range policyCheckTypes(t, db, visit.ID) {
 		mediaRef := seedFieldMediaRef(t, db, partnerID, agentA)
 		if _, err := UpsertReadinessCheck(ctx, db, nil, actorA, visit.ID, UpdateCheckInput{CheckType: ct, Status: CheckPassed, EvidenceURL: mediaRef}); err != nil {
 			t.Fatalf("upsert check %s: %v", ct, err)

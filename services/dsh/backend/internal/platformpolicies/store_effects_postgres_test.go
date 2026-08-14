@@ -29,6 +29,7 @@ func TestEvaluateOperationalPolicyForStoreFailsClosedOnAmbiguousZoneBinding(t *t
 	}
 
 	ctx := context.Background()
+	operatorContextID := "local-dsh"
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
 	storeID := "store-zone-ambiguity-" + suffix
 	serviceAreaCode := "area-zone-ambiguity-" + suffix
@@ -37,14 +38,14 @@ func TestEvaluateOperationalPolicyForStoreFailsClosedOnAmbiguousZoneBinding(t *t
 
 	_, err = db.ExecContext(ctx, `
 		INSERT INTO dsh_stores (
-			id, slug, display_name, status, city_code, service_area_code,
+			id, operator_context_id, slug, display_name, status, city_code, service_area_code,
 			serviceability_status, is_visible, partner_readiness,
 			catalog_approval_status, marketing_visibility
 		)
 		VALUES (
-			$1, $1, $2, 'published', 'test-city', $3, 'serviceable', TRUE,
+			$1, $4, $1, $2, 'published', 'test-city', $3, 'serviceable', TRUE,
 			'ready', 'approved', 'visible'
-		)`, storeID, "Ambiguous Zone Store", serviceAreaCode)
+		)`, storeID, "Ambiguous Zone Store", serviceAreaCode, operatorContextID)
 	if err != nil {
 		t.Fatalf("insert store: %v", err)
 	}

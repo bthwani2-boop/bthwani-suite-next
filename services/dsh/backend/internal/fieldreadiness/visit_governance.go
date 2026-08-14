@@ -23,15 +23,6 @@ var allowedVisitTypes = map[VisitType]struct{}{
 	VisitTypeEscalationFollowup: {},
 }
 
-var allowedCheckTypes = map[string]struct{}{
-	"location_verified":      {},
-	"documents_uploaded":     {},
-	"product_list_submitted": {},
-	"equipment_checked":      {},
-	"safety_compliant":       {},
-	"hygiene_compliant":      {},
-}
-
 var allowedCheckStatuses = map[CheckStatus]struct{}{
 	CheckPending: {},
 	CheckPassed:  {},
@@ -220,7 +211,7 @@ func CompleteGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceSc
 	geofence := geofenceStatus(distance, radius)
 
 	rows, err := tx.QueryContext(ctx, `
-		SELECT checks.check_type, checks.status,
+		SELECT requirement.check_type, requirement.evidence_required, COALESCE(checks.status,''),
 		       EXISTS (
 		         SELECT 1
 		         FROM dsh_media_refs refs
@@ -229,23 +220,28 @@ func CompleteGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceSc
 		           AND refs.purpose = 'field_readiness_evidence'
 		           AND ($2 = 'operator' OR (refs.owner_actor_id = $3 AND refs.owner_actor_role = $2))
 		       )
-		FROM dsh_readiness_checks checks
-		WHERE checks.visit_id = $1`, visitID, actor.Role, actor.ID)
+		FROM dsh_visit_checklist_requirements requirement
+		LEFT JOIN dsh_readiness_checks checks
+		  ON checks.visit_id = requirement.visit_id AND checks.check_type = requirement.check_type
+		WHERE requirement.visit_id = $1 AND requirement.required = TRUE`, visitID, actor.Role, actor.ID)
 	if err != nil {
 		return Visit{}, err
 	}
-	passed := make(map[string]bool, len(RequiredCheckTypes))
-	evidenceValid := make(map[string]bool, len(RequiredCheckTypes))
+	requiredCount := 0
 	for rows.Next() {
 		var checkType, status string
+		var evidenceRequired bool
 		var validEvidence bool
-		if err := rows.Scan(&checkType, &status, &validEvidence); err != nil {
+		if err := rows.Scan(&checkType, &evidenceRequired, &status, &validEvidence); err != nil {
 			rows.Close()
 			return Visit{}, err
 		}
-		if status == string(CheckPassed) {
-			passed[checkType] = true
-			evidenceValid[checkType] = validEvidence
+		requiredCount++
+		if status != string(CheckPassed) {
+			return Visit{}, ErrChecklistIncomplete
+		}
+		if evidenceRequired && !validEvidence {
+			return Visit{}, ErrEvidenceRequired
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -253,13 +249,8 @@ func CompleteGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceSc
 		return Visit{}, err
 	}
 	rows.Close()
-	for _, required := range RequiredCheckTypes {
-		if !passed[required] {
-			return Visit{}, ErrChecklistIncomplete
-		}
-		if !evidenceValid[required] {
-			return Visit{}, ErrEvidenceRequired
-		}
+	if requiredCount == 0 {
+		return Visit{}, ErrChecklistPolicyMissing
 	}
 
 	blocking, err := hasBlockingEscalation(ctx, tx, visitID)
@@ -301,7 +292,7 @@ func CompleteGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceSc
 }
 
 func validateCheckInput(input UpdateCheckInput) error {
-	if _, ok := allowedCheckTypes[input.CheckType]; !ok {
+	if !checkTypePattern.MatchString(strings.TrimSpace(input.CheckType)) {
 		return fmt.Errorf("%w: unsupported readiness check type", ErrInvalid)
 	}
 	if _, ok := allowedCheckStatuses[input.Status]; !ok {
@@ -348,6 +339,13 @@ func UpsertGovernedReadinessCheck(ctx context.Context, db *sql.DB, wf store.Work
 	if visit.Status == VisitComplete {
 		return ReadinessCheck{}, ErrVisitAlreadyComplete
 	}
+	exists, err := checklistItemExists(ctx, db, visitID, input.CheckType)
+	if err != nil {
+		return ReadinessCheck{}, err
+	}
+	if !exists {
+		return ReadinessCheck{}, fmt.Errorf("%w: check type is not part of the visit policy", ErrInvalid)
+	}
 	if input.Status == CheckPassed {
 		if err := validateGovernedCheckEvidence(ctx, db, wf, actor, visit.StoreID, input.EvidenceURL); err != nil {
 			return ReadinessCheck{}, err
@@ -370,7 +368,13 @@ func UpsertGovernedReadinessCheck(ctx context.Context, db *sql.DB, wf store.Work
 	var check ReadinessCheck
 	err = row.Scan(&check.ID, &check.VisitID, &check.StoreID, &check.CheckType, &check.Status,
 		&check.EvidenceURL, &check.Notes, &check.VerifiedBy, &check.CreatedAt, &check.UpdatedAt)
-	return check, err
+	if err != nil {
+		return ReadinessCheck{}, err
+	}
+	if err := hydrateChecklistMetadata(ctx, db, &check); err != nil {
+		return ReadinessCheck{}, err
+	}
+	return check, nil
 }
 
 func validateEscalationInput(input CreateEscalationInput) error {

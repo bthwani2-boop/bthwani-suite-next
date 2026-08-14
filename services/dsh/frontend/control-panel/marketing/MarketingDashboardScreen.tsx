@@ -19,6 +19,7 @@ import { LoyaltyCommandDeck } from "./components/LoyaltyCommandDeck";
 import { SubscriptionsCommandDeck } from "./components/SubscriptionsCommandDeck";
 import { CouponsCommandDeck } from "./components/CouponsCommandDeck";
 import { LoyaltyPolicyPanel } from "./components/LoyaltyPolicyPanel";
+import { StorePublicationCommandPanel } from "./components/StorePublicationCommandPanel";
 
 export function MarketingDashboardScreen() {
   const [mainTab, setMainTab] = useState<MarketingMainTabId>("visibility-gates");
@@ -50,6 +51,7 @@ export function MarketingDashboardScreen() {
       </CpKpiStrip>
 
       {mainTab === "visibility-gates" ? <VisibilityGatesSection metrics={metrics} reloadMetrics={reloadMetrics} deliverySignals={deliverySignals} /> : null}
+      {mainTab === "store-publication" ? <StorePublicationCommandPanel /> : null}
       {mainTab === "banners-carousel" ? <MarketingHomeDiscoveryPanel kind="banners" /> : null}
       {mainTab === "homepage-promos" ? <MarketingHomeDiscoveryPanel kind="promos" /> : null}
       {mainTab === "smart-bar" ? <TickerCommandDeck /> : null}

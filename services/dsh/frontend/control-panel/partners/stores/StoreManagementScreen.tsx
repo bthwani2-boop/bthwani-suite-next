@@ -57,7 +57,6 @@ export function StoreManagementScreen() {
           <StoreGovernanceActions
             store={selectedDetail}
             actionState={controller.actionState}
-            diagnosticsState={controller.diagnosticsState}
             onSubmit={(input) => controller.govern(selectedDetail.id, input)}
           />
         )}

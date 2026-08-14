@@ -85,18 +85,6 @@ const (
 	VisitTypeEscalationFollowup VisitType = "escalation_followup"
 )
 
-// RequiredCheckTypes are the readiness check types that must all be recorded
-// with status=passed before a visit may be completed. Mirrors the check_type
-// CHECK constraint on dsh_readiness_checks (migration dsh-008).
-var RequiredCheckTypes = []string{
-	"location_verified",
-	"documents_uploaded",
-	"product_list_submitted",
-	"equipment_checked",
-	"safety_compliant",
-	"hygiene_compliant",
-}
-
 // LocationEvidence carries GPS evidence captured by the mobile device.
 type LocationEvidence struct {
 	Latitude        float64   `json:"latitude"`
@@ -145,16 +133,20 @@ type Visit struct {
 }
 
 type ReadinessCheck struct {
-	ID          string
-	VisitID     string
-	StoreID     string
-	CheckType   string
-	Status      CheckStatus
-	EvidenceURL string
-	Notes       string
-	VerifiedBy  string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID           string
+	VisitID      string
+	StoreID      string
+	CheckType    string
+	Status       CheckStatus
+	EvidenceURL  string
+	Notes        string
+	VerifiedBy   string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+	LabelAR      string
+	Required     bool
+	Critical     bool
+	DisplayOrder int
 }
 
 type Escalation struct {
@@ -272,7 +264,12 @@ func CreateVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolve
 		geoStatus = &s
 	}
 
-	row := db.QueryRowContext(ctx, `
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return Visit{}, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+	row := tx.QueryRowContext(ctx, `
 		INSERT INTO dsh_field_visits
 			(store_id, field_agent_id, visit_type,
 			 start_latitude, start_longitude, start_accuracy_meters, start_captured_at,
@@ -292,6 +289,12 @@ func CreateVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolve
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
 			return Visit{}, ErrConflict
 		}
+		return Visit{}, err
+	}
+	if err := snapshotChecklistPolicyTx(ctx, tx, v.ID, v.StoreID); err != nil {
+		return Visit{}, err
+	}
+	if err := tx.Commit(); err != nil {
 		return Visit{}, err
 	}
 	return v, nil
@@ -454,25 +457,31 @@ func CompleteVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResol
 	}
 
 	checkRows, err := tx.QueryContext(ctx, `
-		SELECT check_type, status, COALESCE(evidence_url,''),
-		       EXISTS (SELECT 1 FROM dsh_media_refs refs WHERE refs.media_ref = dsh_readiness_checks.evidence_url)
-		FROM dsh_readiness_checks
-		WHERE visit_id = $1`, visitID)
+		SELECT requirement.check_type, requirement.evidence_required,
+		       COALESCE(checks.status,''), COALESCE(checks.evidence_url,''),
+		       EXISTS (SELECT 1 FROM dsh_media_refs refs WHERE refs.media_ref = checks.evidence_url)
+		FROM dsh_visit_checklist_requirements requirement
+		LEFT JOIN dsh_readiness_checks checks
+		  ON checks.visit_id = requirement.visit_id AND checks.check_type = requirement.check_type
+		WHERE requirement.visit_id = $1 AND requirement.required = TRUE`, visitID)
 	if err != nil {
 		return Visit{}, err
 	}
-	passed := map[string]bool{}
-	evidence := map[string]bool{}
+	requiredCount := 0
 	for checkRows.Next() {
 		var ct, st, ev string
+		var evidenceRequired bool
 		var evidenceExists bool
-		if err := checkRows.Scan(&ct, &st, &ev, &evidenceExists); err != nil {
+		if err := checkRows.Scan(&ct, &evidenceRequired, &st, &ev, &evidenceExists); err != nil {
 			checkRows.Close()
 			return Visit{}, err
 		}
-		if st == string(CheckPassed) {
-			passed[ct] = true
-			evidence[ct] = strings.TrimSpace(ev) != "" && evidenceExists
+		requiredCount++
+		if st != string(CheckPassed) {
+			return Visit{}, ErrChecklistIncomplete
+		}
+		if evidenceRequired && (strings.TrimSpace(ev) == "" || !evidenceExists) {
+			return Visit{}, ErrEvidenceRequired
 		}
 	}
 	if err := checkRows.Err(); err != nil {
@@ -480,13 +489,8 @@ func CompleteVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResol
 		return Visit{}, err
 	}
 	checkRows.Close()
-	for _, required := range RequiredCheckTypes {
-		if !passed[required] {
-			return Visit{}, ErrChecklistIncomplete
-		}
-		if !evidence[required] {
-			return Visit{}, ErrEvidenceRequired
-		}
+	if requiredCount == 0 {
+		return Visit{}, ErrChecklistPolicyMissing
 	}
 
 	var openCount int
@@ -543,6 +547,13 @@ func UpsertReadinessCheck(ctx context.Context, db *sql.DB, wf store.WorkforceSco
 	if v.Status == VisitComplete {
 		return ReadinessCheck{}, ErrVisitAlreadyComplete
 	}
+	exists, err := checklistItemExists(ctx, db, visitID, input.CheckType)
+	if err != nil {
+		return ReadinessCheck{}, err
+	}
+	if !exists {
+		return ReadinessCheck{}, fmt.Errorf("%w: check type is not part of the visit policy", ErrInvalid)
+	}
 	if input.Status == CheckPassed {
 		if err := validateCheckEvidence(ctx, db, wf, actor, input.EvidenceURL); err != nil {
 			return ReadinessCheck{}, err
@@ -563,7 +574,13 @@ func UpsertReadinessCheck(ctx context.Context, db *sql.DB, wf store.WorkforceSco
 	if errors.Is(err, sql.ErrNoRows) {
 		return ReadinessCheck{}, ErrNotFound
 	}
-	return c, err
+	if err != nil {
+		return ReadinessCheck{}, err
+	}
+	if err := hydrateChecklistMetadata(ctx, db, &c); err != nil {
+		return ReadinessCheck{}, err
+	}
+	return c, nil
 }
 
 func ListVisitChecks(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, visitID string) ([]ReadinessCheck, error) {
@@ -571,8 +588,17 @@ func ListVisitChecks(ctx context.Context, db *sql.DB, wf store.WorkforceScopeRes
 		return nil, err
 	}
 	rows, err := db.QueryContext(ctx, `
-		SELECT id, visit_id, store_id, check_type, status, COALESCE(evidence_url,''), COALESCE(notes,''), verified_by, created_at, updated_at
-		FROM dsh_readiness_checks WHERE visit_id = $1 ORDER BY created_at ASC`, visitID)
+		SELECT requirement.id, requirement.visit_id, visit.store_id, requirement.check_type,
+		       COALESCE(checks.status, 'pending'), COALESCE(checks.evidence_url,''),
+		       COALESCE(checks.notes,''), COALESCE(checks.verified_by,''),
+		       COALESCE(checks.created_at, requirement.created_at),
+		       COALESCE(checks.updated_at, requirement.created_at),
+		       requirement.label_ar, requirement.required, requirement.critical, requirement.display_order
+		FROM dsh_visit_checklist_requirements requirement
+		JOIN dsh_field_visits visit ON visit.id = requirement.visit_id
+		LEFT JOIN dsh_readiness_checks checks
+		  ON checks.visit_id = requirement.visit_id AND checks.check_type = requirement.check_type
+		WHERE requirement.visit_id = $1 ORDER BY requirement.display_order`, visitID)
 	if err != nil {
 		return nil, err
 	}
@@ -580,7 +606,7 @@ func ListVisitChecks(ctx context.Context, db *sql.DB, wf store.WorkforceScopeRes
 	var list []ReadinessCheck
 	for rows.Next() {
 		var c ReadinessCheck
-		if err := rows.Scan(&c.ID, &c.VisitID, &c.StoreID, &c.CheckType, &c.Status, &c.EvidenceURL, &c.Notes, &c.VerifiedBy, &c.CreatedAt, &c.UpdatedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.VisitID, &c.StoreID, &c.CheckType, &c.Status, &c.EvidenceURL, &c.Notes, &c.VerifiedBy, &c.CreatedAt, &c.UpdatedAt, &c.LabelAR, &c.Required, &c.Critical, &c.DisplayOrder); err != nil {
 			return nil, err
 		}
 		list = append(list, c)

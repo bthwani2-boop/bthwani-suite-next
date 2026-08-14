@@ -14,7 +14,7 @@ import (
 
 const (
 	dshMigrationServiceName = "dsh"
-	dshLatestMigration      = "dsh-1002_partner_fleet_redeem_receipts.sql"
+	dshLatestMigration      = "dsh-1007_marketing_store_publication_command.sql"
 	dshReadinessTimeout     = 2 * time.Second
 )
 

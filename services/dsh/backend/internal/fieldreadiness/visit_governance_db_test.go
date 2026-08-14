@@ -111,7 +111,7 @@ func TestEscalatedFurtherRemainsACompletionBlocker(t *testing.T) {
 		t.Fatalf("create governed visit: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_visits WHERE id = $1`, visit.ID) })
-	for _, checkType := range RequiredCheckTypes {
+	for _, checkType := range policyCheckTypes(t, db, visit.ID) {
 		mediaRef := seedStoreBoundReadinessMedia(t, db, partnerID, storeID, agentID)
 		if _, err := UpsertGovernedReadinessCheck(ctx, db, nil, actor, visit.ID, UpdateCheckInput{
 			CheckType: checkType, Status: CheckPassed, EvidenceURL: mediaRef,

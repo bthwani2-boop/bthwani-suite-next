@@ -17,6 +17,8 @@ export {
   fetchPartnerOnboardingStatus,
   fetchFieldWorkQueue,
   reconcileFieldMutation,
+  fetchChecklistPolicy,
+  replaceChecklistPolicy,
 } from "./field-readiness.api";
 export type { FieldMutationContext } from "./field-readiness.api";
 export {

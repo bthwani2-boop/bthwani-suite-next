@@ -2,6 +2,7 @@ import type { DshSupportAnalytics } from "../analytics/analytics.types";
 
 export type MarketingMainTabId =
   | "visibility-gates"
+  | "store-publication"
   | "smart-bar"
   | "banners-carousel"
   | "homepage-promos"
@@ -19,6 +20,7 @@ export type MarketingMainTabMeta = {
 
 export const MARKETING_MAIN_TABS: readonly MarketingMainTabMeta[] = [
   { id: "visibility-gates", label: "بوابات الظهور" },
+  { id: "store-publication", label: "نشر المتاجر" },
   { id: "smart-bar", label: "الشريط الذكي" },
   { id: "banners-carousel", label: "البنرات والكاروسيل" },
   { id: "homepage-promos", label: "بروموهات الرئيسية" },

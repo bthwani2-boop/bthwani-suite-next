@@ -36,6 +36,8 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("POST /dsh/operator/stores", protected.withPermission("control-panel", PartnersPermissionManage, protected.handleOperatorCreateStore))
 	mux.HandleFunc("GET /dsh/operator/stores/{storeId}", protected.withPermission("control-panel", PartnersPermissionRead, protected.handleOperatorStoreDetail))
 	mux.HandleFunc("GET /dsh/operator/diagnostics/stores/{storeId}", protected.withPermission("control-panel", PartnersPermissionRead, protected.handleGovernedOperatorStoreDiagnostics))
+	mux.HandleFunc("GET /dsh/operator/marketing/stores/{storeId}/publication", protected.withPermission("control-panel", MarketingPermissionRead, protected.handleGetMarketingStorePublication))
+	mux.HandleFunc("POST /dsh/operator/marketing/stores/{storeId}/publication", protected.withPermission("control-panel", MarketingPermissionManage, protected.handleMarketingStorePublication))
 	mux.HandleFunc("GET /dsh/operator/stores/{storeId}/delivery-pricing", protected.withPermission("control-panel", "operations.read", protected.handleOperatorListDeliveryPricing))
 	mux.HandleFunc("PUT /dsh/operator/stores/{storeId}/delivery-pricing/{fulfillmentMode}", protected.withPermission("control-panel", "operations.manage", protected.handleOperatorUpsertDeliveryPricing))
 	mux.HandleFunc("POST /dsh/partner/stores", protected.handlePartnerCreateStore)
