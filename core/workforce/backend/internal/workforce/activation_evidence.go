@@ -25,6 +25,12 @@ func appendMissingUnique(current []string, values ...string) []string {
 // readiness projection. It does not introduce a second state machine.
 func ProviderActivationEvidenceMissing(core ProviderOperationalCore) []string {
 	missing := make([]string, 0)
+	if core.WorkforceKind == "field" {
+		// These are policy-driven progressive facts for Field, not universal
+		// activation gates. Their presence is still returned in the operational
+		// core projection and may be required by a future explicit policy.
+		return missing
+	}
 	if strings.TrimSpace(core.GuarantorPhoneVerifiedAt) == "" {
 		missing = append(missing, "guarantorPhoneVerified")
 	}

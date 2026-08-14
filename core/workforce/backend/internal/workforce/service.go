@@ -525,7 +525,22 @@ func (s *Service) IssueActivation(ctx context.Context, operator Operator, actorI
 	default:
 		return identityclient.ActivationCode{}, ErrStatusNotIssuable
 	}
-	if !sovereignFieldsComplete(person) {
+	if expectedActorType == "field" {
+		readiness, readinessErr := s.repo.GovernedActivationReadiness(ctx, actorID)
+		if readinessErr != nil {
+			return identityclient.ActivationCode{}, readinessErr
+		}
+		actor, actorErr := s.identity.Actor(ctx, actorID)
+		if actorErr != nil {
+			return identityclient.ActivationCode{}, actorErr
+		}
+		if strings.TrimSpace(actor.PhoneE164) == "" {
+			return identityclient.ActivationCode{}, ErrProfileIncomplete
+		}
+		if !readiness.Ready {
+			return identityclient.ActivationCode{}, ErrProfileIncomplete
+		}
+	} else if !sovereignFieldsComplete(person) {
 		return identityclient.ActivationCode{}, ErrProfileIncomplete
 	}
 	code, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, expectedActorType, expectedSurface, idempotencyKey, correlationID)
@@ -644,12 +659,14 @@ func (s *Service) FieldAgentByID(ctx context.Context, actorID string) (FieldAgen
 		return FieldAgentDetail{}, err
 	}
 	detail := FieldAgentDetail{
-		Person:       person,
-		ReadyToIssue: person.EngagementStatus == "pending_activation" && sovereignFieldsComplete(person),
+		Person: person,
 	}
 	if actor, err := s.identity.Actor(ctx, actorID); err == nil {
 		detail.PhoneMasked = maskPhone(actor.PhoneE164)
 		detail.AuthActive = actor.IsActive()
+		if readiness, readinessErr := s.repo.GovernedActivationReadiness(ctx, actorID); readinessErr == nil {
+			detail.ReadyToIssue = person.EngagementStatus == "pending_activation" && readiness.Ready && strings.TrimSpace(actor.PhoneE164) != ""
+		}
 	}
 	if meta, err := s.identity.LatestActivation(ctx, actorID); err == nil && meta != nil {
 		detail.LatestActivation = meta

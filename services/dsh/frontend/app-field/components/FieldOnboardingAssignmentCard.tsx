@@ -89,6 +89,8 @@ export function FieldOnboardingAssignmentCard({ assignment, onPress, loading = f
 
         <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[2], alignItems: "center" }}>
           <Badge label={hasLocation ? "الموقع مثبت" : "الموقع غير محدد"} tone={hasLocation ? "success" : "neutral"} />
+          <Badge label={`أولوية ${assignment.priority}`} tone={assignment.overdue ? "danger" : "info"} />
+          <Text role="caption" tone={assignment.overdue ? "danger" : "muted"}>{`SLA ${assignment.slaMinutes} دقيقة${assignment.overdue ? " · متأخرة" : ""}`}</Text>
           {actionable ? <Text role="bodySm" style={{ flex: 1, minWidth: 150, color: colorRoles.brandAction, textAlign: "right", fontWeight: "bold" }}>{loading ? "جارٍ فتح المهمة…" : ACTION_LABELS[assignment.status]}</Text> : null}
         </View>
       </View>

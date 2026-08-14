@@ -97,6 +97,7 @@ export function FieldAssignmentWorkspace() {
   const [agents, setAgents] = useState<readonly FieldAgent[]>([]);
   const [assignments, setAssignments] = useState<readonly FieldOnboardingAssignment[]>([]);
   const [selectedActorId, setSelectedActorId] = useState("");
+  const [businessTaskKey, setBusinessTaskKey] = useState("");
   const [storeNameHint, setStoreNameHint] = useState("");
   const [phoneHint, setPhoneHint] = useState("");
   const [addressHint, setAddressHint] = useState("");
@@ -163,12 +164,14 @@ export function FieldAssignmentWorkspace() {
     try {
       const input = {
         fieldActorId: selectedActorId,
+        businessTaskKey: businessTaskKey.trim(),
         storeNameHint: storeNameHint.trim(),
         ...(phoneHint.trim() ? { phoneHint: phoneHint.trim() } : {}),
         ...(addressHint.trim() ? { addressHint: addressHint.trim() } : {}),
         ...(hasCompleteLocation ? { locationLatitude: parsedLatitude, locationLongitude: parsedLongitude } : {}),
       };
       await createFieldOnboardingAssignment(input);
+      setBusinessTaskKey("");
       setStoreNameHint("");
       setPhoneHint("");
       setAddressHint("");
@@ -186,7 +189,7 @@ export function FieldAssignmentWorkspace() {
     if (!reassigningId || reassigningId === item.fieldActorId || item.status === "draft_linked" || item.status === "cancelled") return;
     setSubmitting(true);
     try {
-      await reassignFieldOnboardingAssignment(item.id, { expectedVersion: item.version, fieldActorId: reassigningId, reason: "إعادة إسناد من قسم الشركاء" });
+      await reassignFieldOnboardingAssignment(item.id, { expectedVersion: item.version, fieldActorId: reassigningId, handoff: item.status === "in_progress", reason: item.status === "in_progress" ? "تسليم رسمي لمهمة بدأت" : "إعادة إسناد من قسم الشركاء" });
       setReassigningId(null);
       await reload();
     } catch (cause) {
@@ -215,6 +218,7 @@ export function FieldAssignmentWorkspace() {
           <span aria-hidden="true" style={{ fontSize: 30 }}>📍</span>
         </div>
         <CpSelect value={selectedActorId} onChange={setSelectedActorId} options={agentOptions} aria-label="الميداني" />
+        <CpTextInput value={businessTaskKey} onChange={setBusinessTaskKey} placeholder="مرجع مهمة الأعمال" aria-label="مرجع مهمة الأعمال" />
         <CpTextInput value={storeNameHint} onChange={setStoreNameHint} placeholder="اسم المتجر" aria-label="اسم المتجر" />
         <CpTextInput value={phoneHint} onChange={setPhoneHint} placeholder="رقم هاتف المتجر (اختياري إذا وُجد العنوان)" aria-label="رقم هاتف المتجر" />
         <CpTextInput value={addressHint} onChange={setAddressHint} placeholder="العنوان أو وصف المكان (اختياري إذا وُجد الهاتف)" aria-label="عنوان المتجر" />
@@ -230,7 +234,7 @@ export function FieldAssignmentWorkspace() {
             <CpTextInput value={locationLongitude} onChange={setLocationLongitude} placeholder="خط الطول مثال 44.1910" aria-label="خط طول موقع المتجر" />
           </div>
         </div>
-        <CpButton variant="primary" disabled={submitting || !selectedActorId || !storeNameHint.trim() || (!phoneHint.trim() && !addressHint.trim())} onClick={() => void createAssignment()}>إنشاء إسناد</CpButton>
+        <CpButton variant="primary" disabled={submitting || !selectedActorId || !businessTaskKey.trim() || !storeNameHint.trim() || (!phoneHint.trim() && !addressHint.trim())} onClick={() => void createAssignment()}>إنشاء إسناد</CpButton>
       </section>
 
       {error ? <CpStatePanel role="alert" title="تعذر تنفيذ العملية" description={error} /> : null}
@@ -240,7 +244,8 @@ export function FieldAssignmentWorkspace() {
             <div><Text role="titleSm">{item.storeNameHint}</Text><Text role="bodySm">الميداني: {agents.find((agent) => agent.actorId === item.fieldActorId)?.fullNameAr ?? item.fieldActorId}</Text></div>
             <CpBadge tone={item.status === "cancelled" ? "danger" : item.status === "draft_linked" ? "success" : "info"}>{STATUS_LABELS[item.status]}</CpBadge>
           </div>
-          <Text role="bodySm">{item.phoneHint || item.addressHint || "لا توجد بيانات اتصال"}</Text>
+          <Text role="bodySm">مرجع المهمة: {item.businessTaskKey} · {item.phoneHint || item.addressHint || "لا توجد بيانات اتصال"}</Text>
+          <Text role="bodySm">الأولوية: {item.priority} · SLA: {item.slaMinutes} دقيقة{item.overdue ? " · متأخرة" : ""}</Text>
           <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--bthwani-control-panel-text-muted)" }}>
             <span aria-hidden="true">📍</span>
             <Text role="bodySm">{item.locationLatitude !== undefined && item.locationLongitude !== undefined ? `الموقع مثبت: ${item.locationLatitude.toFixed(6)}، ${item.locationLongitude.toFixed(6)}` : "لم يُثبت موقع جغرافي بعد"}</Text>

@@ -72,6 +72,13 @@
       "sha256": "4ede685de48cccda94662c8cc1f52d3148f5bccec9b4e1a4dbfeca43a21c7eb0",
       "historicalPrefix": "1002",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 250,
+      "file": "dsh-1003_field_assignment_governance.sql",
+      "sha256": "ff607b3ad288d984257e724a71f9672ccd4cde3e5bc6554498b969ef526007c5",
+      "historicalPrefix": "1003",
+      "state": "ACTIVE"
     }
   ]
 }

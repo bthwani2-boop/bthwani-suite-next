@@ -152,6 +152,9 @@ func (s *operationalCoreServer) createProviderIncident(w http.ResponseWriter, r 
 	if !decodeJSON(w, r, &input) {
 		return
 	}
+	if !s.isCaptain(w, r, strings.TrimSpace(input.ActorID)) {
+		return
+	}
 	incident, err := s.repo.CreateProviderIncident(r.Context(), identity.Subject, input)
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -168,6 +171,9 @@ func (s *operationalCoreServer) listProviderIncidents(w http.ResponseWriter, r *
 		sendError(w, http.StatusBadRequest, "INVALID_INPUT", "actorId query parameter is required")
 		return
 	}
+	if !s.isCaptain(w, r, actorID) {
+		return
+	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	incidents, err := s.repo.ListProviderIncidents(r.Context(), actorID, limit)
 	if err != nil {
@@ -178,6 +184,9 @@ func (s *operationalCoreServer) listProviderIncidents(w http.ResponseWriter, r *
 }
 
 func (s *operationalCoreServer) listOwnIncidents(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	if !s.isCaptain(w, r, identity.Subject) {
+		return
+	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	incidents, err := s.repo.ListProviderIncidents(r.Context(), identity.Subject, limit)
 	if err != nil {
@@ -188,6 +197,9 @@ func (s *operationalCoreServer) listOwnIncidents(w http.ResponseWriter, r *http.
 }
 
 func (s *operationalCoreServer) appealOwnIncident(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	if !s.isCaptain(w, r, identity.Subject) {
+		return
+	}
 	var input struct {
 		Note string `json:"note"`
 	}
@@ -202,6 +214,23 @@ func (s *operationalCoreServer) appealOwnIncident(w http.ResponseWriter, r *http
 	_ = s.repo.RecordAudit(r.Context(), identity.Subject, firstRole(identity), identity.Subject,
 		"provider.incident.appealed", nil, incident, input.Note, r.Header.Get("X-Correlation-ID"))
 	sendJSON(w, http.StatusOK, map[string]any{"incident": incident})
+}
+
+// isCaptain keeps the legacy incident/appeal capability isolated to its only
+// remaining product consumer. Field finance deliberately has no incident or
+// penalty surface; the server must enforce that boundary even for direct API
+// callers and stale mobile clients.
+func (s *operationalCoreServer) isCaptain(w http.ResponseWriter, r *http.Request, actorID string) bool {
+	person, err := s.repo.PersonByActorID(r.Context(), actorID)
+	if err != nil {
+		writeWorkforceError(w, err)
+		return false
+	}
+	if person.WorkforceKind != "captain" {
+		sendError(w, http.StatusForbidden, "FIELD_CAPABILITY_REMOVED", "provider incidents are not available to this provider kind")
+		return false
+	}
+	return true
 }
 
 func firstRole(identity auth.Identity) string {

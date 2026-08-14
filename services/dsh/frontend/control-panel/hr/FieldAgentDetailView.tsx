@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { CpButton, CpMutedInline, CpPageHeader, CpStateView, CpTabs, CpTextInput } from "@bthwani/control-panel/components";
+import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpStateView, CpTabs, CpTextInput } from "@bthwani/control-panel/components";
 import { DetailPageFrame } from "@bthwani/control-panel/shell";
 import { Text } from "@bthwani/ui-kit";
 
@@ -26,6 +26,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
 
   const [activeTab, setActiveTab] = useState("profile");
   const [fullNameAr, setFullNameAr] = useState("");
+  const [fullNameEn, setFullNameEn] = useState("");
   const [zoneId, setZoneId] = useState("");
   const [engagementStartDate, setEngagementStartDate] = useState("");
   const [supervisor, setSupervisor] = useState<SupervisorCandidate | null>(null);
@@ -40,6 +41,7 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
   useEffect(() => {
     if (!agent) return;
     setFullNameAr(agent.fullNameAr);
+    setFullNameEn(agent.fullNameEn ?? "");
     setZoneId(agent.fieldProfile?.serviceZoneId ?? "");
     setEngagementStartDate(agent.engagementStartDate ?? "");
     setSupervisor(
@@ -112,6 +114,18 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
 
   const canSave = fullNameAr.trim().length > 0 && zoneId.length > 0 && !controller.actionBusy;
 
+  const saveProfile = async () => {
+    if (!agent || !canSave) return;
+    await controller.update({
+      expectedVersion: agent.version,
+      fullNameAr: fullNameAr.trim(),
+      fullNameEn: fullNameEn.trim() || undefined,
+      engagementStartDate: engagementStartDate.trim() || undefined,
+      serviceZoneId: zoneId,
+      supervisorActorId: supervisor?.actorId || undefined,
+    });
+  };
+
   return (
     <DetailPageFrame
       header={
@@ -149,6 +163,10 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
                 <CpTextInput value={fullNameAr} onChange={setFullNameAr} aria-label="الاسم بالعربية" />
               </div>
               <div>
+                <Text role="bodySm" style={{ marginBottom: "8px", display: "block" }}>الاسم بالإنجليزية</Text>
+                <CpTextInput value={fullNameEn} onChange={setFullNameEn} aria-label="الاسم بالإنجليزية" />
+              </div>
+              <div>
                 <Text role="bodySm" style={{ marginBottom: "8px", display: "block" }}>تاريخ بداية الارتباط</Text>
                 <CpTextInput type="date" value={engagementStartDate} onChange={setEngagementStartDate} placeholder="YYYY-MM-DD" aria-label="تاريخ بداية الارتباط" />
               </div>
@@ -156,11 +174,52 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
               <ZonePicker value={zoneId} onChange={(zone) => setZoneId(zone?.id ?? "")} />
+              <SupervisorPicker kind="field" selected={supervisor} onSelect={setSupervisor} />
+            </div>
+            {controller.actionError ? <CpStatePanel role="alert" title="تعذر حفظ الملف" description={controller.actionError} /> : null}
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <CpButton variant="primary" disabled={!canSave} onClick={() => void saveProfile()}>
+                {controller.actionBusy ? "جارٍ الحفظ…" : "حفظ الملف"}
+              </CpButton>
             </div>
           </section>
         )}
+        {activeTab === "media" && (
+          <section style={{
+            padding: "24px",
+            border: "1px solid var(--bthwani-control-panel-border)",
+            borderRadius: "16px",
+            background: "var(--bthwani-control-panel-surface)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+          }}>
+            <Text role="titleMd">الوثائق والصور</Text>
+            {uploadError ? <CpStatePanel role="alert" title="تعذر رفع الملف" description={uploadError} /> : null}
+            <CpMutedInline>
+              {agent.photoMediaRef ? "الصورة الشخصية مرفوعة." : "لا توجد صورة شخصية مرفوعة بعد."}
+            </CpMutedInline>
+            <CpButton variant="secondary" disabled={uploadBusy} onClick={() => void pickFile("photo")}>
+              {uploadBusy ? "جارٍ الرفع…" : "رفع الصورة الشخصية"}
+            </CpButton>
+            <Text role="titleSm">المستندات المرتبطة</Text>
+            {profile?.documentMediaRefs?.length ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                {profile.documentMediaRefs.map((mediaRef, index) => (
+                  <CpMutedInline key={`${mediaRef}-${index}`}>{mediaRef}</CpMutedInline>
+                ))}
+              </div>
+            ) : <CpMutedInline>لا توجد مستندات مرفوعة بعد.</CpMutedInline>}
+            <CpButton variant="secondary" disabled={uploadBusy} onClick={() => void pickFile("document")}>
+              {uploadBusy ? "جارٍ الرفع…" : "رفع مستند قانوني"}
+            </CpButton>
+          </section>
+        )}
         {activeTab === "ops" && (
-          <ProviderActivationWorkspace providerKind="field" initialActorId={agent.actorId} entrySource="hr" />
+          <>
+            <ProviderOperationalCorePanel actorId={agent.actorId} kind="field" />
+            <ProviderActivationWorkspace providerKind="field" initialActorId={agent.actorId} entrySource="hr" />
+          </>
         )}
       </div>
     </DetailPageFrame>

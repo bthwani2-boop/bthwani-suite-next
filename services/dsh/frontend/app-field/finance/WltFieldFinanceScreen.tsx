@@ -23,7 +23,6 @@ import {
   commissionTypeLabel,
   walletStatusLabel
 } from '@bthwani/wlt/dsh';
-import { ProviderIncidentsPanel } from "../../../../dsh/frontend/shared/workforce/ProviderIncidentsPanel";
 import { DshFieldReferenceTag } from "../../../../dsh/frontend/app-field/components/DshFieldReferenceTag";
 
 type WltFieldFinanceScreenProps = {
@@ -198,7 +197,6 @@ export function WltFieldFinanceScreen({ onBack }: WltFieldFinanceScreenProps) {
           ))
         )}
 
-        <ProviderIncidentsPanel />
       </ScrollView>
     </View>
   );
