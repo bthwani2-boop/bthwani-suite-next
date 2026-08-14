@@ -1,8 +1,10 @@
 # أمر تنفيذ إلزامي — إغلاق جذري نهائي End-to-End / FAIL-CLOSED
 
+Status: DERIVED_SUPPORT
+
 ## 0) القاعدة الحاكمة
 
-**ابدأ التنفيذ فورًا واستمر حتى الإغلاق الكامل لكل ما يقع ضمن نطاق المهمة.**
+**على نطاق تنفيذي محسوم وقابل للتنفيذ، ابدأ التنفيذ فورًا واستمر حتى الإغلاق الكامل لكل ما يقع ضمن نطاق المهمة.**
 
 الحالة الافتراضية دائمًا:
 
@@ -20,8 +22,91 @@
 **غير مختبر = غير مغلق.**
 **معلوم ولم يُعالج = غير مغلق.**
 **متبقٍ وقابل للتنفيذ = غير مغلق.**
+**قرار جوهري لازم للتنفيذ وغير محسوم = غير مغلق.**
 
 لا يجوز استنتاج النجاح من غياب الخطأ فقط؛ يجب وجود **دليل تحقق إيجابي حديث** على النتيجة المطلوبة.
+
+### 0.1) حقيقة المصادر — الخطط والمسودات ليست كودًا حيًا
+
+هذا الملف نفسه Prompt مشتق، وليس Source of Truth للمنتج أو التنفيذ أو Runtime.
+
+تعامل مع:
+
+```text
+plans/**
+plans/diagnose-implementing/**
+Prompts
+Reports
+Historical docs/statuses
+```
+
+باعتبارها **DERIVED/HISTORICAL SUPPORT** قد تكون مفيدة لفهم النية والسياق والفرضيات، لكنها قد تكون ناقصة أو قديمة أو متناقضة أو خاطئة، وليست:
+
+```text
+live code
+implementation truth
+runtime truth
+proof of execution
+proof of PASS/DONE
+canonical product truth
+```
+
+**ممنوع نسخ أو اعتماد Claim أو تصميم أو حالة PASS/DONE أو افتراض من مسودة/خطة تلقائيًا.** تحقّق من كل ادعاء مادي مقابل أحدث:
+
+```text
+Authority / Product Truth
+Code
+Contracts / Schemas / Registries
+Configuration / Environment definitions
+Data / Migrations
+Tests / CI definitions
+Runtime Path
+Actual Behavior / Persisted Readback
+```
+
+عند التعارض:
+
+```text
+higher-authority/current live evidence wins
+→ سجل التناقض كFinding
+→ لا تورّث المسودة القديمة إلى التنفيذ
+```
+
+### 0.2) إذا لم يكن النطاق أو القرار محسومًا فلا تخمّن
+
+إذا استُخدم هذا الأمر مباشرة وظهر نقص فهم أو قرار منتجي/وظيفي/معماري/سياساتي جوهري لا يمكن حسمه من الأدلة:
+
+```text
+DERIVABLE FACT → استخرجه بنفسك ولا تسأل.
+TRUE DECISION GAP → OPEN؛ لا تخمّن ولا تنفذ الجزء المتأثر.
+```
+
+اطرح فقط استفسارات القرار الحقيقية غير القابلة للاشتقاق، بعد دمج المتشابه وإزالة التكرار، ولكل سؤال:
+
+```text
+القرار المطلوب
+سبب عدم إمكان حسمه من الأدلة
+خيارات واضحة ومتمايزة
+التوصية الأفضل
+سبب التوصية
+أثر/مقايضات كل خيار
+```
+
+ثم أعد دورة التشخيص حتى تصبح القرارات اللازمة للتنفيذ محسومة. وجود أسئلة كثيرة ليس هدفًا؛ الهدف **صفر أسئلة مكررة وصفر قرار جوهري مخفي وراء افتراض**.
+
+### 0.3) اكتشاف واستخدام قدرات Codex الملائمة
+
+**اكتشف واستخدم إلزاميًا وتلقائيًا جميع قدرات وأدوات وإضافات وتكاملات Codex المتاحة والملائمة للمهمة** عندما يمكنها تحسين التشخيص أو التنفيذ أو مراجعة الكود أو تحليل العلاقات/المعمارية/الاعتماديات أو الأمن أو الاختبارات أو التحقق أو الإغلاق.
+
+عند وجود Skill/Plugin ملائم، اقرأ تعليماته الفعلية واستخدمه ضمن السلطة والنطاق. لا تهمل Capability ملائمة، ولا تستخدم أدوات غير مرتبطة لمجرد توفرها، ولا تدّع استخدام أداة أو Validator أو Test لم يُنفذ.
+
+المبدأ:
+
+```text
+USE EVERYTHING APPLICABLE.
+DO NOT USE EVERYTHING BLINDLY.
+TOOL AVAILABLE ≠ TOOL ACTUALLY USED.
+```
 
 ---
 
@@ -110,10 +195,12 @@
 - technical debt معلوم يمكن حسمه داخل النطاق.
 - أثر جانبي معلوم.
 - عمل متبقٍ معلوم قابل للتنفيذ.
+- قرار جوهري مطلوب للإغلاق وغير محسوم.
+- اعتماد على Plan/Draft كحقيقة دون تحقق حي.
 
 ### ممنوع قطعًا
 
-**التجاهل، التأجيل، الالتفاف، الترقيع، masking، bypass، workaround يخفي السبب، fallback يخفي failure، تعطيل الاختبارات، إسكات التحذيرات الجوهرية، تخفيف شروط النجاح، false positive، اعتبار partial success نجاحًا، أو إخراج مشكلة مرتبطة فعليًا بالمهمة من النطاق للتهرب من إصلاحها.**
+**التجاهل، التأجيل، الالتفاف، الترقيع، masking، bypass، workaround يخفي السبب، fallback يخفي failure، تعطيل الاختبارات، إسكات التحذيرات الجوهرية، تخفيف شروط النجاح، false positive، اعتبار partial success نجاحًا، تخمين قرار جوهري، توريث PASS/DONE تاريخي كدليل حالي، أو إخراج مشكلة مرتبطة فعليًا بالمهمة من النطاق للتهرب من إصلاحها.**
 
 ---
 
@@ -128,6 +215,8 @@
 أي مكوّن خارج الوصف الأولي للمهمة لكنه متأثر مباشرة بالخلل أو مطلوب لإكمال المسار End-to-End يصبح جزءًا من نطاق المعالجة.
 
 وأي مكوّن لا يملك ارتباطًا فعليًا بالمهمة لا يُغيّر لمجرد الرغبة في التنظيف العام.
+
+اسم تطبيق/سطح/صفحة/ملف هو **نقطة بدء وليس حدًا** إذا أثبتت العلاقات امتداد الأثر.
 
 ---
 
@@ -154,7 +243,7 @@
 
 وافحص كل الطبقات المرتبطة، حسب الحاجة، بما فيها:
 
-**Backend، Frontend، Mobile، Web، APIs، Routes، Bindings، Integrations، Services، Repositories، Database، Queries، Schemas، Migrations، Contracts، DTOs، Models، Identity/Auth، Permissions، Security، Configuration، Environment، Runtime، State، Validation، Error Handling، Transactions، Concurrency، Events، Queues، Networking، Dependencies، Build، Typecheck، Lint، Tests، Integration، E2E، CI، التشغيل الفعلي.**
+**Backend، Frontend، Mobile، Web، APIs، Routes، Bindings، Integrations، Services، Repositories، Database، Queries، Schemas، Migrations، Contracts، DTOs، Models، Identity/Auth، Permissions، Security، Configuration، Environment، Runtime، State، Validation، Error Handling، Transactions، Concurrency، Events، Queues، Networking، Dependencies، Build، Typecheck، Lint، Tests، Integration، E2E، CI، التشغيل الفعلي، UI/UX، RTL، Accessibility، Localization، Observability.**
 
 نجاح طبقة منفردة لا يثبت نجاح النظام.
 
@@ -177,10 +266,12 @@
 - اختفاء رسالة الخطأ.
 - عدم ظهور Exception.
 - اختبار قديم يمر.
+- Package/Plan تقول DONE.
+- Validator يمر خارج حدود ما يثبته فعلًا.
 
 المطلوب سلامة:
 
-**Architecture + Logic + Contracts + Data + State + Permissions + Integration + Runtime + Real Behavior + Failure Behavior**
+**Architecture + Logic + Contracts + Data + State + Permissions + Integration + Runtime + Real Behavior + Failure Behavior + Relevant User/Operational Experience**
 
 معًا.
 
@@ -192,9 +283,11 @@
 
 **Diagnosis / Findings / Recommendations / TODO List**
 
-إذا كان الخلل قابلًا للحسم ضمن الأدوات والصلاحيات والنطاق:
+إذا كان الخلل قابلًا للحسم ضمن الأدوات والصلاحيات والنطاق والقرارات المحسومة:
 
 **نفّذه الآن.**
+
+أما القرار الجوهري غير القابل للاشتقاق من الأدلة فلا يُخترع تحت ذريعة «التنفيذ الفوري»؛ يبقى الجزء المتأثر `OPEN` حتى يُحسم.
 
 الدورة المطلوبة:
 
@@ -608,6 +701,8 @@
 **Unvalidated Inputs**
 **Inconsistent Cross-Surface Behavior**
 **Operational Regressions**
+**Stale Plan Assumptions**
+**Missing Writers/Readers/Consumers**
 
 نجاح الاختبارات الحالية لا يثبت غياب عيوب لم تغطها الاختبارات.
 
@@ -684,17 +779,16 @@
 
 يجب أن يكون كل عنصر:
 
-\*\*ضروريًا
-
-- صحيحًا
-- في المكان الصحيح
-- داخل الـDomain الصحيح
-- تحت Ownership صحيحة
-- ذا Responsibility واضحة
-- بالاسم الصحيح
-- في Context صحيح
-- مرتبطًا بالمراجع الصحيحة فقط
-- وله Consumer/Purpose مشروع\*\*
+- ضروريًا.
+- صحيحًا.
+- في المكان الصحيح.
+- داخل الـDomain الصحيح.
+- تحت Ownership صحيحة.
+- ذا Responsibility واضحة.
+- بالاسم الصحيح.
+- في Context صحيح.
+- مرتبطًا بالمراجع الصحيحة فقط.
+- وله Consumer/Purpose مشروع.
 
 ويجب إثبات:
 
@@ -716,10 +810,11 @@
 **صفر scripts متجاوزة معلومة.**
 **صفر TODO/FIXME/HACK مرتبطة بالنطاق.**
 **صفر workaround أو fallback غير مبرر معلوم.**
-**صفر documentation أو comments أو examples متقادمة معلومة.**
+**صفر documentation أو comments أو examples متقادمة معلومة ضمن النطاق.**
 **صفر debug/temporary artifacts معلومة.**
 **صفر compatibility/legacy layers غير مبررة معلومة.**
 **صفر technical noise جوهري معلوم.**
+**صفر Draft/Plan claim مستخدم كحقيقة تنفيذية بلا إثبات حي.**
 
 ---
 
@@ -758,6 +853,7 @@
 **End-to-End**
 **CI**
 **Operational Behavior**
+**UI/UX/Accessibility when in scope**
 
 أي بند مرتبط بالمهمة ولم يتم التحقق منه فعليًا:
 
@@ -818,6 +914,8 @@
 **صفر حلول مؤقتة تخفي Root Cause.**
 **صفر technical debt معلوم قابل للحسم داخل النطاق.**
 **صفر أعمال معلومة متبقية قابلة للتنفيذ داخل النطاق.**
+**صفر قرارات جوهرية مطلوبة للإغلاق وغير محسومة.**
+**صفر اعتماد غير متحقق على مسودة/خطة/حالة تاريخية.**
 
 إذا بقي أي منها:
 
@@ -833,27 +931,27 @@ DONE لا يعني:
 
 DONE يعني أن النتيجة:
 
-\*\*صحيحة هندسيًا
-
-- سليمة معماريًا
-- صحيحة منطقيًا
-- صحيحة تقنيًا
-- مكتملة وظيفيًا
-- متكاملة End-to-End
-- صحيحة في البيانات والحالات والصلاحيات
-- مجرّبة فعليًا
-- متحققة في حالات النجاح والفشل
-- سليمة تشغيليًا
-- آمنة
-- مستقرة
-- منظمة
-- Canonical
-- ذات Naming صحيح
-- ذات Placement صحيح
-- ذات Context صحيح
-- ذات References صحيحة
-- خالية من البقايا والازدواجية والضجيج المعلوم
-- نظيفة ومشطبة وقابلة للصيانة\*\*
+- صحيحة هندسيًا.
+- سليمة معماريًا.
+- صحيحة منطقيًا.
+- صحيحة تقنيًا.
+- مكتملة وظيفيًا.
+- متكاملة End-to-End.
+- صحيحة في البيانات والحالات والصلاحيات.
+- مجرّبة فعليًا.
+- متحققة في حالات النجاح والفشل.
+- سليمة تشغيليًا.
+- آمنة.
+- مستقرة.
+- منظمة.
+- Canonical.
+- ذات Naming صحيح.
+- ذات Placement صحيح.
+- ذات Context صحيح.
+- ذات References صحيحة.
+- خالية من البقايا والازدواجية والضجيج المعلوم.
+- نظيفة ومشطبة وقابلة للصيانة.
+- مثبتة على أحدث Candidate/رأس مطلوب، لا على Plan أو SHA قديم.
 
 ولا يجوز اعتبار التنفيذ DONE إذا كان الوصف الصحيح له:
 
@@ -882,6 +980,9 @@ DONE يعني أن النتيجة:
 **هل أزيل القديم والمكرر والميت والمؤقت؟**
 **هل اختبرت حالات الفشل والحواف؟**
 **هل بحثت عدائيًا عن عيوب إضافية؟**
+**هل استخدمت القدرات والأدوات الملائمة المتاحة ولم أدّع غير المستخدم؟**
+**هل تحققت من Claims القادمة من `plans/**` بدل اعتبارها حقيقة؟**
+**هل بقي قرار جوهري مطلوب تم تخمينه بدل حسمه؟**
 **هل التحقق مبني على أحدث رأس بعد آخر تغيير؟**
 **هل بقي أي شيء معلوم يمكن إصلاحه الآن؟**
 
@@ -894,6 +995,10 @@ DONE يعني أن النتيجة:
 **OPEN**
 
 إذا بقي عمل معلوم قابل للتنفيذ:
+
+**OPEN**
+
+إذا بقي قرار جوهري لازم للتنفيذ أو الإغلاق وغير محسوم:
 
 **OPEN**
 
