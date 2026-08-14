@@ -1,5 +1,0 @@
-# U007 — escalation-offline-recovery
-
-## Current-BB diagnosis
-
-Current source disproves the old claim that offline replay is broadly missing. One scoped v2 queue plus `useFieldOfflineSync` already cover `create_visit`, `complete_visit`, `upsert_readiness_check` and `create_escalation` with actor/installation scope, idempotency/correlation, retry/backoff and manual retry/discard. Preserve that architecture. The focused remaining risk is upgrade/ambiguous-result durability: queue preparation removes the legacy v1 storage key, but current evidence does not demonstrate lossless migration of pending legacy work; non-finance DSH replay also lacks equally explicit unknown-result reconciliation proof. First add direct deterministic tests for legacy pending data, corrupt storage, offline enqueue, restart, scope mismatch, transient failure, ambiguous server result and duplicate retry. Implement migration/readback reconciliation only where those tests prove a gap. Do not create per-screen queues or treat local queue state as DSH truth.
