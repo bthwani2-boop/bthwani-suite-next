@@ -43,9 +43,15 @@ func TestActorProvisionSearchReadbackDBIntegration(t *testing.T) {
 	if created.ActorID == "" || created.Status != ActorStatusProvisioned {
 		t.Fatalf("unexpected provisioned actor: %#v", created)
 	}
+	if !created.Created {
+		t.Fatalf("first provision must identify the newly created actor: %#v", created)
+	}
 	replayed, err := repository.ProvisionActorGoverned(context.Background(), input)
 	if err != nil || replayed.ActorID != created.ActorID {
 		t.Fatalf("identical replay was not idempotent: created=%#v replayed=%#v err=%v", created, replayed, err)
+	}
+	if replayed.Created {
+		t.Fatalf("idempotent replay must not authorize compensation: %#v", replayed)
 	}
 
 	roleMismatch := input

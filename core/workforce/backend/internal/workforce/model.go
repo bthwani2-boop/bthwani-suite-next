@@ -63,7 +63,8 @@ type EmployeeProfile struct {
 type CreateFieldAgentInput struct {
 	FullNameAr          string   `json:"fullNameAr"`
 	FullNameEn          string   `json:"fullNameEn"`
-	ActorID             string   `json:"actorId"`
+	Username            string   `json:"username"`
+	PhoneE164           string   `json:"phoneE164"`
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
 	ServiceZoneID       string   `json:"serviceZoneId"`
@@ -223,22 +224,24 @@ type ActorScopes struct {
 	ShiftCodes        []string `json:"shiftCodes"`
 }
 type ProvisioningCase struct {
-	ID             string          `json:"id"`
-	IdempotencyKey string          `json:"idempotencyKey"`
-	Status         string          `json:"status"`
-	WorkforceKind  string          `json:"workforceKind"`
-	ActorID        string          `json:"actorId,omitempty"`
-	WorkforceCode  string          `json:"workforceCode,omitempty"`
-	Payload        json.RawMessage `json:"payload"`
-	FailureReason  string          `json:"failureReason,omitempty"`
-	CreatedAt      time.Time       `json:"createdAt"`
-	UpdatedAt      time.Time       `json:"updatedAt"`
+	ID              string          `json:"id"`
+	IdempotencyKey  string          `json:"idempotencyKey"`
+	Status          string          `json:"status"`
+	WorkforceKind   string          `json:"workforceKind"`
+	ActorID         string          `json:"actorId,omitempty"`
+	IdentityCreated bool            `json:"identityCreated,omitempty"`
+	WorkforceCode   string          `json:"workforceCode,omitempty"`
+	Payload         json.RawMessage `json:"payload"`
+	FailureReason   string          `json:"failureReason,omitempty"`
+	CreatedAt       time.Time       `json:"createdAt"`
+	UpdatedAt       time.Time       `json:"updatedAt"`
 }
 
 type StartProvisioningInput struct {
 	WorkforceKind string          `json:"workforceKind"`
 	Payload       json.RawMessage `json:"payload"`
 }
+
 // BlockerReason represents a specific reason why an actor is blocked from operations.
 type BlockerReason string
 

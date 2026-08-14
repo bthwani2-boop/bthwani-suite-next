@@ -15,8 +15,6 @@ import {
   revokeCaptainActivationCodes,
   revokeFieldAgentActivationCodes,
   searchSupervisors,
-  startProvisioningCase,
-  resumeProvisioningCase,
   suspendCaptain,
   suspendFieldAgent,
   updateCaptain,
@@ -36,7 +34,6 @@ import type {
   FieldAgent,
   FieldAgentDetail,
   ProviderKind,
-  StartProvisioningInput,
   SupervisorCandidate,
   UpdateCaptainInput,
   UpdateFieldAgentInput,
@@ -149,55 +146,6 @@ export function useFieldAgentDetailController(actorId: string) {
   );
 
   return { state, reload, actionBusy, actionError, issuedCode, update, suspend, reactivate, issueCode, revokeCodes };
-}
-
-export type CreateFieldAgentState =
-  | { kind: "idle" }
-  | { kind: "provisioning"; caseId: string; status: string }
-  | { kind: "error"; message: string; caseId?: string }
-  | { kind: "created"; caseId: string };
-
-export function useFieldAgentCreateController() {
-  const [state, setState] = useState<CreateFieldAgentState>({ kind: "idle" });
-
-  const submit = useCallback(async (input: StartProvisioningInput) => {
-    setState({ kind: "provisioning", caseId: "", status: "DRAFT" });
-    try {
-      const pc = await startProvisioningCase(input);
-      if (pc.status === "READY_FOR_ACTIVATION" || pc.status === "COMPLETED") {
-        setState({ kind: "created", caseId: pc.id });
-      } else if (pc.status.startsWith("FAILED")) {
-        setState({ kind: "error", message: pc.failureReason || "Failed", caseId: pc.id });
-      } else {
-        setState({ kind: "provisioning", caseId: pc.id, status: pc.status });
-      }
-      return pc;
-    } catch (error) {
-      setState({ kind: "error", message: workforceErrorMessage(error) });
-      return null;
-    }
-  }, []);
-
-  const resume = useCallback(async (caseId: string) => {
-    setState({ kind: "provisioning", caseId, status: "RESUMING" });
-    try {
-      const pc = await resumeProvisioningCase(caseId);
-      if (pc.status === "READY_FOR_ACTIVATION" || pc.status === "COMPLETED") {
-        setState({ kind: "created", caseId: pc.id });
-      } else if (pc.status.startsWith("FAILED")) {
-        setState({ kind: "error", message: pc.failureReason || "Failed", caseId: pc.id });
-      } else {
-        setState({ kind: "provisioning", caseId: pc.id, status: pc.status });
-      }
-      return pc;
-    } catch (error) {
-      setState({ kind: "error", message: workforceErrorMessage(error), caseId });
-      return null;
-    }
-  }, []);
-
-  const reset = useCallback(() => setState({ kind: "idle" }), []);
-  return { state, submit, resume, reset };
 }
 
 export type WorkforceReferenceState = {

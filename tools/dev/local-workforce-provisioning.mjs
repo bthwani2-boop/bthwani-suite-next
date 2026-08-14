@@ -195,12 +195,13 @@ async function createProvider(operatorToken, kind, payload) {
   }
 }
 
-export function fieldCreatePayload(zoneId, actorId) {
+export function fieldCreatePayload(zoneId) {
   const fixture = LOCAL_WORKFORCE_PROVIDERS.field;
   return {
     fullNameAr: fixture.fullNameAr,
     fullNameEn: fixture.fullNameEn,
-    actorId,
+    username: 'local-field-001',
+    phoneE164: fixture.phoneE164,
     engagementType: 'independent_contractor',
     engagementStartDate: '2026-01-01',
     serviceZoneId: zoneId,
@@ -412,23 +413,33 @@ async function provisionOne(operatorToken, kind, zone) {
     }
     assertIdentityBinding(kind, actorId, identityActor);
   } else {
-    let identityActor;
-    try {
-      identityActor = await provisionIdentityActor(kind, phoneE164);
-    } catch (error) {
-      if (error instanceof HttpError && error.status === 409) {
-        throw new Error(
-          `Identity actor with phone ${phoneE164} already exists but no Workforce profile was found. ` +
-            'The local databases are inconsistent and must not mint a second sovereign provider.',
-        );
+    if (kind === 'field') {
+      // Workforce owns the complete Field create saga: it provisions the
+      // Identity actor from business identity inputs and returns the canonical
+      // actor id. The local helper must not pre-create or adopt an actor.
+      const payload = fieldCreatePayload(zone.id);
+      person = await createProvider(operatorToken, kind, payload);
+      actorId = person?.actorId;
+      if (!actorId) throw new Error('workforce:field provisioning returned no actorId');
+      const identityActor = await getIdentityActor(actorId);
+      assertIdentityBinding(kind, actorId, identityActor);
+    } else {
+      let identityActor;
+      try {
+        identityActor = await provisionIdentityActor(kind, phoneE164);
+      } catch (error) {
+        if (error instanceof HttpError && error.status === 409) {
+          throw new Error(
+            `Identity actor with phone ${phoneE164} already exists but no Workforce profile was found. ` +
+              'The local databases are inconsistent and must not mint a second sovereign provider.',
+          );
+        }
+        throw error;
       }
-      throw error;
+      actorId = identityActor.actorId;
+      assertIdentityBinding(kind, actorId, identityActor);
+      person = await createProvider(operatorToken, kind, captainCreatePayload(zone.id, actorId));
     }
-    actorId = identityActor.actorId;
-    assertIdentityBinding(kind, actorId, identityActor);
-
-    const payload = kind === 'field' ? fieldCreatePayload(zone.id, actorId) : captainCreatePayload(zone.id, actorId);
-    person = await createProvider(operatorToken, kind, payload);
     if (!person?.actorId) throw new Error(`workforce:${kind} provisioning returned no actorId`);
     if (person.actorId !== actorId) {
       throw new Error(`workforce:${kind} provisioning returned a divergent actorId`);

@@ -85,15 +85,38 @@ func TestProvisionUsesTrustedContextInHeaderAndBody(t *testing.T) {
 			t.Fatalf("expected context-main body, got %q", input.OperatorContextID)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(ActorView{ActorID: "field-1"})
+		_ = json.NewEncoder(w).Encode(ActorView{ActorID: "field-1", Created: true})
 	}))
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token", "context-main")
-	if _, err := client.Provision(context.Background(), ProvisionInput{
+	actor, err := client.Provision(context.Background(), ProvisionInput{
 		Username: "field-1", PhoneE164: "+967770000001", Role: "field",
-	}); err != nil {
+	})
+	if err != nil {
 		t.Fatalf("Provision returned error: %v", err)
+	}
+	if !actor.Created {
+		t.Fatal("Provision must preserve Identity's new-actor marker")
+	}
+}
+
+func TestProvisionReplayDoesNotAuthorizeCompensation(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(ActorView{ActorID: "field-existing", Status: "PROVISIONED"})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "service-token", "context-main")
+	actor, err := client.Provision(context.Background(), ProvisionInput{
+		Username: "field-existing", PhoneE164: "+967770000002", Role: "field",
+	})
+	if err != nil {
+		t.Fatalf("Provision replay returned error: %v", err)
+	}
+	if actor.Created {
+		t.Fatal("replayed provision must not authorize deprovision compensation")
 	}
 }
 

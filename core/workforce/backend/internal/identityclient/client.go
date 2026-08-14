@@ -75,6 +75,10 @@ type ActorView struct {
 	Roles     []string `json:"roles"`
 	Version   int      `json:"version"`
 	Status    string   `json:"status"`
+	// Created is true only when this Provision call created the actor. A
+	// replayed provision is intentionally false so callers can compensate only
+	// resources they actually created.
+	Created bool `json:"created,omitempty"`
 }
 
 // IsActive derives lifecycle truth exclusively from Identity's canonical

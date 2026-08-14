@@ -87,8 +87,9 @@ export type WorkforceMe = FieldAgent & {
 export type CreateFieldAgentInput = {
   readonly fullNameAr: string;
   readonly fullNameEn?: string | undefined;
-  readonly actorId: string;
-  readonly engagementType?: EngagementType | undefined;
+  readonly username: string;
+  readonly phoneE164: string;
+  readonly engagementType?: "independent_contractor" | undefined;
   readonly engagementStartDate?: string | undefined;
   readonly serviceZoneId: string;
   readonly supervisorActorId?: string | undefined;
@@ -100,7 +101,7 @@ export type UpdateFieldAgentInput = {
   readonly expectedVersion: number;
   readonly fullNameAr?: string | undefined;
   readonly fullNameEn?: string | undefined;
-  readonly engagementType?: EngagementType | undefined;
+  readonly engagementType?: "independent_contractor" | undefined;
   readonly engagementStartDate?: string | undefined;
   readonly serviceZoneId?: string | undefined;
   readonly supervisorActorId?: string | undefined;

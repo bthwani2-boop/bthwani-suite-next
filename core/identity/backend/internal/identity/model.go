@@ -113,6 +113,10 @@ type ActorAdminView struct {
 	Roles     []string             `json:"roles"`
 	Version   int                  `json:"version"`
 	Status    ActorLifecycleStatus `json:"status"`
+	// Created is set only on a successful new actor provision. It is false for
+	// idempotent readbacks so downstream sagas never compensate an actor they
+	// did not create.
+	Created bool `json:"created,omitempty"`
 }
 
 type ApiError struct {

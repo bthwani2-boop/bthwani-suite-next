@@ -30,10 +30,6 @@ function useCreateActivationController() {
   return { state, submit, resume, reset };
 }
 
-export function useFieldAgentCreateAndActivationController() {
-  return useCreateActivationController();
-}
-
 export function useCaptainCreateAndActivationController() {
   return useCreateActivationController();
 }

@@ -75,6 +75,7 @@ func (o *ProvisioningOrchestrator) Advance(ctx context.Context, operator Operato
 	}
 
 	// 1. ACTOR_CREATED
+	identityCreated := pc.IdentityCreated
 	if pc.Status == "DRAFT" || pc.Status == "VALIDATED" {
 		actorView, err := o.identity.Provision(ctx, identityclient.ProvisionInput{
 			Username:          req.Username,
@@ -89,6 +90,8 @@ func (o *ProvisioningOrchestrator) Advance(ctx context.Context, operator Operato
 			return pc, err
 		}
 		pc.ActorID = actorView.ActorID
+		pc.IdentityCreated = actorView.Created
+		identityCreated = pc.IdentityCreated
 		pc.Status = "ACTOR_CREATED"
 		_ = o.repo.UpdateProvisioningCase(ctx, pc)
 	}
@@ -108,12 +111,6 @@ func (o *ProvisioningOrchestrator) Advance(ctx context.Context, operator Operato
 				input.ActorID = pc.ActorID
 				_, _, err = o.service.CreateCaptain(ctx, operator, input, pc.IdempotencyKey, "")
 			}
-		} else if req.WorkforceKind == "field" {
-			var input CreateFieldAgentInput
-			if err = json.Unmarshal(req.Payload, &input); err == nil {
-				input.ActorID = pc.ActorID
-				_, _, err = o.service.CreateFieldAgent(ctx, operator, input, pc.IdempotencyKey, "")
-			}
 		} else {
 			err = errors.New("unsupported workforce kind")
 		}
@@ -123,12 +120,16 @@ func (o *ProvisioningOrchestrator) Advance(ctx context.Context, operator Operato
 			pc.FailureReason = err.Error()
 			_ = o.repo.UpdateProvisioningCase(ctx, pc)
 
-			// Compensation trigger:
-			deprovisionErr := o.identity.Deprovision(ctx, pc.ActorID)
-			if deprovisionErr == nil {
-				pc.Status = "COMPENSATED"
-				pc.FailureReason = fmt.Sprintf("compensated after workforce failure: %v", err)
-				_ = o.repo.UpdateProvisioningCase(ctx, pc)
+			// Compensation is allowed only when this Advance call created the
+			// actor. Identity returns Created=false for idempotent replay, so a
+			// retry can never delete an actor owned by another saga.
+			if identityCreated {
+				deprovisionErr := o.identity.Deprovision(ctx, pc.ActorID)
+				if deprovisionErr == nil {
+					pc.Status = "COMPENSATED"
+					pc.FailureReason = fmt.Sprintf("compensated after workforce failure: %v", err)
+					_ = o.repo.UpdateProvisioningCase(ctx, pc)
+				}
 			}
 			return pc, err
 		}

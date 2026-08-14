@@ -84,8 +84,9 @@ paths:
       description: >-
         Operator-only. Orchestrates provider creation: provisions an inactive
         Identity actor (idempotent on phone+role) then writes the sovereign
-        profile. Requires an Idempotency-Key; replays return 200 with the
-        original result.
+        profile. The caller supplies business identity inputs only; actorId is
+        generated and owned by Identity. Requires an Idempotency-Key; replays
+        return 200 with the original result.
       security:
         - bearerAuth: []
       parameters:
@@ -1204,24 +1205,26 @@ components:
     CreateFieldAgentRequest:
       type: object
       additionalProperties: false
-      required: [ actorId, fullNameAr, serviceZoneId ]
+      required: [ username, phoneE164, fullNameAr, serviceZoneId ]
       properties:
-        actorId:
+        username:
           type: string
           minLength: 1
+        phoneE164:
+          type: string
+          minLength: 7
         fullNameAr:
           type: string
           minLength: 1
         fullNameEn:
           type: string
         engagementType:
-          $ref: "#/components/schemas/EngagementType"
+          type: string
+          enum: [ independent_contractor ]
         engagementStartDate:
           type: string
           format: date
         serviceZoneId:
-          type: string
-        shiftCode:
           type: string
         supervisorActorId:
           type: string
@@ -1244,13 +1247,12 @@ components:
         fullNameEn:
           type: string
         engagementType:
-          $ref: "#/components/schemas/EngagementType"
+          type: string
+          enum: [ independent_contractor ]
         engagementStartDate:
           type: string
           format: date
         serviceZoneId:
-          type: string
-        shiftCode:
           type: string
         supervisorActorId:
           type: string

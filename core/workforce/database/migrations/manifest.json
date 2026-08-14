@@ -3,7 +3,7 @@
   "service": "workforce",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "workforce-016_provisioning_cases.sql",
+  "cutover": "workforce-017_provisioning_identity_creation_marker.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -115,6 +115,13 @@
       "file": "workforce-016_provisioning_cases.sql",
       "sha256": "1d365c309420eed09c7b27c589a55768100b1379702404338216fafcf36b80dc",
       "historicalPrefix": "016",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 17,
+      "file": "workforce-017_provisioning_identity_creation_marker.sql",
+      "sha256": "f954d31db7ea8accc17e2fd5f7ceb831f5d7b6b2806a70a7b4cee66ab13a30a5",
+      "historicalPrefix": "017",
       "state": "ACTIVE"
     }
   ]
