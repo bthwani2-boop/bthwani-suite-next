@@ -4,7 +4,7 @@ Status: DERIVED_SUPPORT
 
 استخدم هذا الأمر بعد التشخيص/الخطة لتنفيذ الحزمة، أو تنفيذ مهمة مباشرة محدودة وآمنة، أو مراجعة Candidate مثبت read-only. الهدف هو إزالة السبب الجذري على أحدث حقيقة ريموت، بناء Candidate واضح، إثبات النتيجة عليه فعليًا End-to-End، ثم إصدار أعلى قرار تسمح به السلطة والأدلة الحالية فقط.
 
-> هذا Prompt مساعد مشتق. كل enum/flag/status/approval/evidence/schema/path مذكور هنا يخضع للمصدر الحاكم الحالي على الـSHA المثبت. لا تجعل Prompt أو Package أو Report سلطة أعلى من Governance/Product Truth/Implementation Truth/Runtime Truth/Repository-Platform Truth.
+> هذا Prompt مساعد مشتق. كل enum/flag/status/approval/evidence/schema/path مذكور هنا يخضع للمصدر الحاكم الحالي على الـSHA المثبت. لا تجعل Prompt أو Package أو Report أو أي ملف داخل `plans/**` سلطة أعلى من Governance/Product Truth/Implementation Truth/Runtime Truth/Repository-Platform Truth.
 
 ## 0. العقد الإلزامي غير القابل للتفاوض — FAIL-CLOSED
 
@@ -92,6 +92,21 @@ auth/authz/sessions, privacy/secrets, isolation, finance,
 CI/infrastructure/release/production, irreversible external side effect
 ```
 
+### 1.1 بوابة handoff من التشخيص — لا تخمّن قرارًا مفقودًا
+
+في `EXECUTE_PACKAGE` افحص قبل أول Product/Runtime write أن الحزمة لا تعتمد على قرار مادي غير محسوم.
+
+```text
+resolved decision from diagnosis
+→ consume as an explicit constraint when still valid under current authority/truth
+
+material decision gap still unresolved
+→ OPEN/BLOCKED
+→ do not invent Product/Architecture/Business preference during execution
+```
+
+لا تعِد فتح قرار حُسم صراحةً في التشخيص لمجرد تفضيل المنفذ خيارًا آخر؛ أعد فتحه فقط إذا ظهرت **أدلة جديدة مادية** أو تعارض مع مصدر سلطة/حقيقة أعلى أو تغيّر الـRoot Cause/Blast Radius بما يبطل القرار السابق. عندها سجّل سبب إعادة الفتح ولا تغيّره بصمت.
+
 ## 2. السلطة والحقيقة
 
 رتب الحقيقة ديناميكيًا من المصادر الحاكمة الحالية:
@@ -113,9 +128,43 @@ PRODUCT TRUTH
 IMPLEMENTATION TRUTH
 RUNTIME TRUTH
 REPOSITORY-PLATFORM TRUTH
+DERIVED/HISTORICAL SUPPORT
 ```
 
 Search/discovery ليس Truth نهائيًا. Package/Prompt/Historical status أضعف من الحقيقة الحالية.
+
+### 2.1 `plans/**` وPackage ليست تنفيذًا ولا إثباتًا
+
+تعامل مع:
+
+```text
+plans/**
+plans/diagnose-implementing/**
+PACKAGE_PATH
+```
+
+كـ`DERIVED_SUPPORT`: قد تحتوي نية أو تشخيصًا أو قرارات أو خطوات مفيدة، لكنها **ليست كودًا حيًا، وليست Runtime Truth، وليست Proof أن التنفيذ موجود أو صحيح أو DONE**، وقد تكون قديمة أو ناقصة أو متناقضة مع الرأس الحالي.
+
+قبل الاعتماد على أي Claim مادي منها:
+
+```text
+revalidate against current authority/product truth
+→ exact current code/contracts/schema/config
+→ writers/readers/consumers
+→ migrations/data/runtime path
+→ current tests/CI definitions
+→ actual runtime/readback when claim requires it
+```
+
+أي old `PASS/DONE/CLOSED/evidence` لا يورث تلقائيًا. عند التعارض:
+
+```text
+higher-authority/current live evidence wins
+→ record contradiction as Finding
+→ reconcile package before affected execution
+```
+
+لا تنفذ خطة قديمة ميكانيكيًا إذا أثبت الرأس الحالي أن Root Cause أو Owner أو Contract أو Runtime Path تغير.
 
 استخدم فقط:
 
@@ -159,6 +208,8 @@ stale package → rebaseline against current truth before product writes
 
 ## 4. Capability Preflight + Pre-Execution Authority Gate
 
+**اكتشف واستخدم تلقائيًا جميع قدرات وأدوات وإضافات وتكاملات Codex المتاحة والملائمة للمهمة** عندما تحسن التنفيذ أو المراجعة أو كشف الأخطاء أو التحقق أو الإغلاق. عند وجود Skill/Plugin مناسب، اقرأ تعليماته الفعلية قبل استخدامه. لا تهمل Capability ملائمة، ولا تستخدم أدوات غير ذات صلة لمجرد توفرها، ولا تدّع تشغيل أداة لم تُشغّل.
+
 سجّل ما ينطبق:
 
 ```text
@@ -174,6 +225,10 @@ CAN_RUN_CI
 CAN_RUN_SECURITY_CHECKS
 CAN_RUN_E2E
 CAN_RUN_VISUAL
+CAN_RUN_CODE_REVIEW
+CAN_RUN_ARCHITECTURE_ANALYSIS
+CAN_RUN_DEPENDENCY_ANALYSIS
+CAN_RUN_STATIC_ANALYSIS
 CAN_ACCESS_PROVIDER
 CAN_VERIFY_PRODUCTION
 CAN_COMMIT
@@ -193,6 +248,14 @@ proof limit
 ```
 
 غياب القدرة المطلوبة لا يصبح PASS.
+
+المبدأ:
+
+```text
+USE EVERYTHING APPLICABLE.
+DO NOT USE EVERYTHING BLINDLY.
+CAPABILITY EXISTS ≠ CAPABILITY WAS USED.
+```
 
 ### بوابة قبل العمليات المحمية أو غير القابلة للعكس
 
@@ -234,6 +297,18 @@ CLAIMED_OUTCOME
 → required failure/recovery paths
 ```
 
+النطاق الحقيقي لا يحدده اسم الملف أو التطبيق وحده، بل:
+
+```text
+Root Cause
++ Blast Radius
++ Consumers
++ Dependencies
++ Contracts
++ Data Flow
++ Runtime Path
+```
+
 سجّل:
 
 ```text
@@ -252,6 +327,8 @@ related → يدخل النطاق ويُعالج
 proven unrelated → exclusion موثق + evidence + reopen trigger
 uncertain materially → remains OPEN until resolved
 ```
+
+لا توسّع المهمة إلى تنظيف عام غير مرتبط، ولا تضيقها لتجنب إصلاح أثر حقيقي.
 
 ## 6. SHA / Candidate lifecycle
 
@@ -567,6 +644,8 @@ legacy route left reachable after migration
 new financial retry identity before unknown-result reconciliation
 ```
 
+إذا كان Root Cause في Architecture/Design/Data Model/Schema/Contract/Ownership/Responsibility/State/Permissions/Integration Boundary/Abstraction/Dependency Direction/Source of Truth/Legacy Design، فنفّذ Refactor/Redesign/Rebuild اللازم؛ لا تحفظ تصميمًا ثبت خطؤه لمجرد تقليل الـdiff.
+
 ## 15. CI / Runtime Failure Loop — لا Blind Rerun
 
 لكل Workflow/Runtime failure:
@@ -627,11 +706,14 @@ Product Truth
 → shared controller/adapter
 → generated client/canonical contract
 → API/domain/state machine
+→ validation/transformation
 → transaction/database
 → cache/idempotency
 → events/jobs/providers/WLT
+→ networking/response
 → persisted canonical readback
 → every affected consuming surface
+→ observable UI/operational result
 → audit/observability
 → runtime/startup/networking
 ```
@@ -640,6 +722,7 @@ Product Truth
 
 ```text
 success
+empty/missing data
 invalid input
 unauthenticated/denied
 wrong scope / IDOR
@@ -647,16 +730,21 @@ forbidden state
 not found
 conflict/stale version
 duplicate/replay/idempotency
+boundary/min/max
 race/concurrency
 partial failure
+dependency/database/network failure
 restart/recovery
 timeout/unknown result
 retry/backoff/DLQ where relevant
 offline/reconnect
+old/new data
 mixed-version compatibility
 rollback/roll-forward
 compensation/reconciliation
 ```
+
+نجاح طبقة واحدة لا يثبت المسار الكامل.
 
 ## 17. Domain Gates
 
@@ -753,6 +841,8 @@ audit/session/error/readback
 responsive/RTL/localization/accessibility
 ```
 
+التحقق من Surface مرئية يشمل صحة UX/UI/الحالات والتصميم المتسق حيث يدخل ذلك في Claim؛ صحة API وحدها لا تثبت صحة التجربة.
+
 ### Dependencies / Supply Chain / CI
 
 عند تغير dependency/workflow/tooling:
@@ -812,6 +902,7 @@ nearest root-cause regression
 → DB/data/security/isolation
 → runtime/readiness/smoke/canonical readback
 → cross-surface E2E/manual visual when claimed
+→ failure/edge/adversarial checks
 → full workspace/runtime only when impact/policy requires
 ```
 
@@ -876,6 +967,21 @@ DERIVED_LEGACY_METADATA
 
 وصف فقط؛ لا يخلق scope/requirement/approval.
 
+### Revalidate package assumptions before product writes
+
+استخرج الافتراضات والقرارات وFindings والOwners وPaths من الحزمة، وصنف كل عنصر:
+
+```text
+CONFIRMED_CURRENT
+STALE
+CONTRADICTED
+NEEDS_EVIDENCE
+RESOLVED_DECISION
+MATERIAL_DECISION_GAP
+```
+
+`STALE/CONTRADICTED/NEEDS_EVIDENCE` لا ينتقل إلى التنفيذ كحقيقة. `MATERIAL_DECISION_GAP` يمنع تنفيذ الجزء المتأثر حتى يُحسم؛ لا تخمّن.
+
 ### No-shell structural preflight
 
 إذا لا يوجد Shell:
@@ -894,7 +1000,7 @@ fetch current framework README + generator + validator
 
 ```text
 limited drift → reconcile affected assumptions only
-material authority/framework/schema drift → rebaseline/re-diagnose current target
+material authority/framework/schema/root-cause drift → rebaseline/re-diagnose current target
 ```
 
 لا replay ميكانيكي لمئات commits لمجرد الحفاظ على package قديم.
@@ -911,22 +1017,53 @@ results/checks/blockers/deviations/order/coverage/latest observed state
 
 لا تكتب `CLOSED_WITH_EVIDENCE` أو أي final approval state استباقيًا.
 
-## 23. Cleanup / Refactor جزء من DONE
+ولا تجعل تحديث Package نفسه مصدر Truth جديدًا؛ هو سجل مشتق يجب أن يشير إلى evidence/candidate الفعلي.
+
+## 23. Cleanup / Refactor / Structural Finishing جزء من DONE
 
 بعد إزالة السبب وقبل Freeze:
 
 ```text
-remove dead/obsolete/duplicate code
-remove retired routes/exports/imports/configs/dependencies
-remove unnecessary compatibility/fallback layers
-remove stale TODO/FIXME related to scope
-remove orphan generated artifacts
-unify source of truth
+remove dead/unreachable/obsolete/duplicate code
+remove retired routes/exports/imports/re-exports/configs/dependencies
+remove unnecessary compatibility/fallback/workaround layers
+remove stale TODO/FIXME/HACK related to scope
+remove orphan generated artifacts/references
+unify canonical source of truth
 simplify duplicated logic
+remove old names/paths/aliases after migration
 verify no legacy path remains reachable
+verify docs/comments/examples touched by the scope describe current truth
 ```
 
-Cleanup غير المرتبط بالنطاق لا يُسحب عشوائيًا إلى المهمة؛ لكنه يصبح in-scope إذا كان بقايا مباشرة من السبب/الإصلاح.
+**وحدة التنظيف ليست الملف.** افحص حسب الحاجة:
+
+```text
+line
+→ condition/branch/block
+→ function/method/type/component/helper
+→ file/file group/folder
+→ module/package
+→ service/surface/domain
+→ contract/route/config/dependency
+```
+
+لكل عنصر باقٍ داخل النطاق يجب أن يمكن تبرير:
+
+```text
+Responsibility
+Purpose
+Consumer
+Requirement
+Architectural Reason
+Correct Ownership
+Correct Placement
+Correct Naming/Context
+```
+
+بعد أي Delete/Rename/Move/Merge/Split/Refactor/Replace افحص شبكة المراجع كاملة في الاتجاهين: imports/exports/callers/callees/bindings/routes/contracts/schemas/config/env/dependencies/tests/mocks/fixtures/docs/build/CI/scripts/generated references.
+
+Cleanup غير المرتبط بالنطاق لا يُسحب عشوائيًا إلى المهمة؛ لكنه يصبح in-scope إذا كان بقايا مباشرة من السبب/الإصلاح أو يخلق ambiguity/parallel truth داخل المسار المتأثر.
 
 ## 24. Final Latest-Head Integration قبل Freeze
 
@@ -1008,6 +1145,11 @@ foreign/out-of-scope delta
 legacy/dead/reachable path
 PII/secret leakage
 regression on neighboring consumer
+wrong ownership/placement/naming/context
+orphan/stale references
+stale config/env/dependency
+unnecessary file/folder/residue
+cross-surface inconsistent behavior
 ```
 
 أي Finding يحتاج كتابة يعيد Phase A.
@@ -1023,6 +1165,7 @@ required final checks
 → canonical persisted readbacks
 → runtime/E2E evidence where claimed
 → security/data/finance gates where applicable
+→ failure/edge/adversarial behavior
 → test-effectiveness review
 → evidence/artifact provenance verification
 ```
@@ -1140,6 +1283,7 @@ finance
 readbacks
 failure/recovery
 compatibility
+design/UX when claimed
 evidence
 approvals
 ```
@@ -1154,6 +1298,7 @@ out-of-scope cleanup
 missing consumer migration
 legacy path reachable
 unreviewed contract/schema/runtime effect
+stale plan assumption accidentally implemented
 ```
 
 لكل Test/Guard:
@@ -1225,6 +1370,7 @@ Tracked workflow/config لا يثبت live enforcement.
 ## 36. Package Validation Semantics
 
 - لا تعتمد DONE/PASS داخل package كدليل مستقل.
+- لا تعتمد Claims داخل `plans/**` كImplementation/Runtime Truth.
 - شغّل current `--strict`/`--closure` فقط إذا أمكن فعليًا وبالصيغة الحالية.
 - نجاح Validator يثبت فقط checks التي ينفذها.
 - ممنوع استخدام Validator كبديل لـEvidence Matrix/Protected approvals/Runtime truth/Final closure.
@@ -1262,6 +1408,11 @@ zero known dead/legacy reachable path caused by the work
 zero known contract/integration gaps
 zero known unresolved runtime/data state
 zero known regressions
+zero known structural/naming/placement/context defects in scope
+zero known orphan/stale references caused by or exposed by the work
+zero known unnecessary legacy/residue directly tied to the scope
+zero material unresolved decision gaps required for the claimed outcome
+zero plan/package assertions treated as live truth without revalidation
 zero required pending/missing/stale evidence
 zero required missing/unproven approvals
 ```
@@ -1280,7 +1431,9 @@ starting_remote_sha / work_base_sha / final_candidate_sha
 head_at_review_start / head_at_decision / candidate-head relation
 base_or_reviewed_range
 package_or_task / claimed_outcome
-capability limits
+source hierarchy + package revalidation result
+resolved decisions consumed + any evidence-based reopenings
+capability/tools/plugins actually used + limits
 pre-execution approvals for protected/irreversible actions
 scope / dependencies / supported exclusions
 concurrent movements + classification + reconciliation
@@ -1294,6 +1447,7 @@ checks + proof limits + evidence invalidation/reruns
 CI failure classifications + first real failed steps
 test effectiveness / flakiness status
 Findings Ledger final state
+structural/cleanup/source-of-truth/reference review result
 Evidence Matrix
 Approval Matrix
 same-candidate GitHub/CI evidence
@@ -1310,8 +1464,11 @@ final decision
 
 ```text
 SEARCH IS NOT TRUTH.
+PLAN/PACKAGE IS NOT LIVE CODE OR RUNTIME TRUTH.
+OLD PASS/DONE IS NOT CURRENT EVIDENCE.
 OLD SHA IS NOT CURRENT TRUTH.
 ROOT CAUSE FIRST.
+BLAST RADIUS DEFINES REAL SCOPE.
 ONE ROOT CAUSE MAY CREATE MANY FAILURES.
 FAIL ≠ BLIND RERUN.
 CANCELLED ≠ PASS.
@@ -1324,6 +1481,7 @@ NO FAKE GREEN.
 NO SILENT BRANCH SWITCH.
 NO STALE RUNTIME.
 NO FOREIGN CHANGE CLAIMED AS OWN.
+NO PRODUCT/ARCHITECTURE GUESSING FOR AN UNRESOLVED MATERIAL DECISION.
 NO MERGE/RELEASE/DEPLOY WITHOUT EXPLICIT AUTHORITY.
 EVIDENCE MUST MATCH THE EXACT FINAL CANDIDATE SHA.
 NO KNOWN FIXABLE IN-SCOPE DEFECT MAY REMAIN AT CLOSURE.
