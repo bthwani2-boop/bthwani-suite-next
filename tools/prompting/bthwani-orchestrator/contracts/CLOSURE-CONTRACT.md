@@ -30,6 +30,26 @@ INTEGRATION_COMPLETE=YES
 
 `INTEGRATION_COMPLETE=YES` means the task/package result was reconciled against the latest Integration Target and integrated through the serialized Integration Owner. Task-branch green alone is not sufficient.
 
+## Root-Cause Landscape / Priority Preconditions
+
+Before final handoff/closure the target-wide landscape must still be reconciled and fully accounted:
+
+```text
+TARGET_LANDSCAPE_COMPLETE=YES
+LANDSCAPE_RECONCILED_SHA=LATEST_RECONCILED_SHA
+ROOT_CAUSE_CLUSTERING_COMPLETE=YES
+ROOT_CAUSE_CLUSTERS_ACCOUNTED=YES
+UNCLUSTERED_MATERIAL_FINDINGS=0
+PRIORITY_MODEL_COMPLETE=YES
+PRIORITY_DERIVATION_SOURCE=ROOT_CAUSE_LANDSCAPE
+UNRANKED_MATERIAL_CLUSTERS=0
+PRIMARY_FRONTIER_JUSTIFIED=YES
+LANDSCAPE_ADVERSARIAL_PASS=YES
+PRIORITY_POLICY=HIGHEST_PROVEN_SYSTEMIC_LEVERAGE
+```
+
+No closure if a known material Finding is unclustered, a material root-cause cluster is unranked, or a newer causal/dependency/authority fact invalidates the priority model.
+
 ## PREPARE_ONLY
 
 Each material Sequence terminal state = `PREPARED`.
@@ -40,6 +60,9 @@ Final handoff requires:
 ACTIVE_EXECUTION_FRONTIER=NONE
 all material sequence files PREPARED
 FINDINGS_ACCOUNTED=YES
+ROOT_CAUSE_CLUSTERS_ACCOUNTED=YES
+UNCLUSTERED_MATERIAL_FINDINGS=0
+UNRANKED_MATERIAL_CLUSTERS=0
 SCOPE_DELTAS_ACCOUNTED=YES
 DECISIONS_ACCOUNTED=YES
 CONSUMERS_ACCOUNTED=YES
@@ -67,6 +90,9 @@ Final closure requires:
 ACTIVE_EXECUTION_FRONTIER=NONE
 all material sequence files COMPLETE
 FINDINGS_ACCOUNTED=YES
+ROOT_CAUSE_CLUSTERS_ACCOUNTED=YES
+UNCLUSTERED_MATERIAL_FINDINGS=0
+UNRANKED_MATERIAL_CLUSTERS=0
 SCOPE_DELTAS_ACCOUNTED=YES
 DECISIONS_ACCOUNTED=YES
 CONSUMERS_ACCOUNTED=YES
@@ -99,6 +125,6 @@ FINAL_CANDIDATE_SHA belongs to Integration Target after task integration
 FINAL_DECISION == current governance closureRules.closedDecision
 ```
 
-No closure with a known fixable defect, undispositioned Finding/Scope Delta/Decision/Consumer/Cleanup item, stale required evidence, duplicate truth, reachable obsolete path, unverified root fix, unintegrated task delta, or durable truth left only in derived task artifacts.
+No closure with a known fixable defect, undispositioned Finding/Root-Cause Cluster/Scope Delta/Decision/Consumer/Cleanup item, stale required evidence, duplicate truth, reachable obsolete path, unverified root fix, unintegrated task delta, stale priority landscape, or durable truth left only in derived task artifacts.
 
-Any material new finding, related target drift, upstream dependency change, or invalidated evidence reopens the affected Sequence/global lifecycle.
+Any material new finding, related target drift, upstream dependency change, authority change, cluster split/merge, priority inversion, or invalidated evidence reopens the affected Sequence/global lifecycle and requires affected landscape re-ranking before continuation.
