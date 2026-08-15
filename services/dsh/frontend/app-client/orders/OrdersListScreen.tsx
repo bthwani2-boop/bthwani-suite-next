@@ -8,6 +8,7 @@ import {
   Surface,
   Text,
   TopBar,
+  alpha,
   spacing,
   colorRoles,
   brandScale,
@@ -183,7 +184,7 @@ export function OrdersListScreen({ onOpenOrder, onOpenSpecialRequests, onBack, o
                 borderRadius: 18,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: "rgba(0,0,0,0.04)",
+                backgroundColor: alpha(colorRoles.shadowBase, 0.04),
               }}
             >
               <Icon name="notifications-outline" size={20} color={colorRoles.textPrimary} />
