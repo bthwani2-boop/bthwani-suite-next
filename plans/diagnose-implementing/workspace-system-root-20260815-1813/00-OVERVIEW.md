@@ -32,47 +32,47 @@ OPERATIONAL_ROOT_COMPLETE: YES
 OPERATIONAL_ROOT_RECONCILED_SHA: 8a244d7b2bb5a0193cd8a9ff7476892585175a1b
 OPERATIONAL_NEGATIVE_SPACE_PASS: YES
 OPERATIONAL_ADVERSARIAL_PASS: YES
-LOWER_LAYER_HOLD_COUNT: 4
-TARGET_LANDSCAPE_COMPLETE: NO
-LANDSCAPE_RECONCILED_SHA: UNSET
-ROOT_CAUSE_CLUSTERING_COMPLETE: NO
-ROOT_CAUSE_CLUSTERS_ACCOUNTED: NO
-UNCLUSTERED_MATERIAL_FINDINGS: UNSET
-PRIORITY_MODEL_COMPLETE: NO
-PRIORITY_DERIVATION_SOURCE: UNSET
-UNRANKED_MATERIAL_CLUSTERS: UNSET
-PRIMARY_FRONTIER_JUSTIFIED: NO
-LANDSCAPE_ADVERSARIAL_PASS: NO
+LOWER_LAYER_HOLD_COUNT: 0
+TARGET_LANDSCAPE_COMPLETE: YES
+LANDSCAPE_RECONCILED_SHA: 8a244d7b2bb5a0193cd8a9ff7476892585175a1b
+ROOT_CAUSE_CLUSTERING_COMPLETE: YES
+ROOT_CAUSE_CLUSTERS_ACCOUNTED: YES
+UNCLUSTERED_MATERIAL_FINDINGS: 0
+PRIORITY_MODEL_COMPLETE: YES
+PRIORITY_DERIVATION_SOURCE: ROOT_GRAPH
+UNRANKED_MATERIAL_CLUSTERS: 0
+PRIMARY_FRONTIER_JUSTIFIED: YES
+LANDSCAPE_ADVERSARIAL_PASS: YES
 PRIORITY_POLICY: HIGHEST_PROVEN_SYSTEMIC_LEVERAGE
-FRONTIER_DERIVATION_SOURCE: UNSET
-FRONTIER_VALID: NO
+FRONTIER_DERIVATION_SOURCE: ROOT_GRAPH
+FRONTIER_VALID: YES
 ACTIVE_EXECUTION_FRONTIER: NONE
 SUSPENSION_STACKS: NONE
-LIFECYCLE_STATE: ROOT_COMPLETE
+LIFECYCLE_STATE: FRONTIER_READY
 FINAL_DECISION: UNSET
 FINAL_CANDIDATE_SHA: UNSET
 HEAD_AT_DECISION: UNSET
 
 ## 1. Truth Baseline
 
-Pinned Integration Target `A` at `8a244d7b2bb5a0193cd8a9ff7476892585175a1b`. The orchestrator and modules `00–06` were read from that exact SHA. Operational Root is reconciled to that same live target SHA; repository-platform CI/enforcement evidence remains separately scoped and currently incomplete.
+Integration target `A` remains pinned and rechecked at `8a244d7b2bb5a0193cd8a9ff7476892585175a1b`. The Orchestrator and modules `00–06` were read from that exact SHA. Direct GitHub Actions evidence now proves that Contextual CI exists on the exact baseline and run `31890801263` on `A` fails deterministic workspace diagnostics; the earlier no-run interpretation was corrected in the evidence record.
 
 ## 2. Macro Blueprint / Dependency Graph
 
-Operational Root is COMPLETE at `SYSTEM_OPERATIONAL_ROOT`: 121 material nodes across Product Outcomes, Actors, Authorities, Responsibilities, Journeys, States, Transitions, Invariants, Handoffs, Truth Owners, Writers/Readers/Consumers, Flows and Implementation/Runtime Boundaries. Negative-space and adversarial root challenges PASS. Root-Cause Landscape remains OPEN.
+Operational Root is COMPLETE at `SYSTEM_OPERATIONAL_ROOT`: 121 material nodes across the 13 required categories; Negative-Space and Operational Adversarial challenges PASS. Target-Wide Root-Cause Landscape is COMPLETE with 15 material findings clustered into five root causes. Competitive priority is: `RC-001` DSH cross-layer integration contract drift; `RC-002` WLT money-kernel presentation bypass; `RC-003` mobile dependency coherence drift; `RC-004` dead/stale/noise reconciliation; `RC-005` candidate proof/governance provenance lag.
 
 ## 3. Sequence Registry / Execution Frontier
 
-No Sequence exists. Four lower-layer observations are held as evidence only and cannot direct execution until promoted into proven Root-Cause Clusters. Frontier derivation remains forbidden until landscape and priority gates pass.
+Machine-selected primary frontier: `RC-001`. No parallel frontier is selected because this task has one remote writer even though RC-002 and RC-003 are semantically independent. No Sequence has yet been activated; Sequence creation is the next gate. RC-005 is downstream of source convergence and final exact-candidate proof.
 
 ## 4. Global Decisions / Blockers
 
-No user decision requested. No non-derivable product decision has yet been proven necessary. Current external evidence deficits include absent exact-SHA CI/status evidence and inaccessible live branch-protection state; these do not prove implementation failure and are not yet final blockers while internal diagnosis/execution remains possible.
+No user decision is required: all current implementation choices are derivable from existing contracts/guards/current runtime paths. Live branch-protection enforcement remains inaccessible to this GitHub integration and is `NEEDS_EVIDENCE`, not a source-code defect. Explicit `workflow_dispatch mode=full` is supported by the repository but no dispatch-creation action is exposed by this connector; full-workspace proof therefore remains a later evidence gate unless change-impact routing legitimately expands to full verification.
 
 ## 5. Global Accounting / Coverage / Reconciliation
 
-Operational root bounded coverage is accounted and reconciled. Lower-layer queue: four HOLD observations (DSH surface binding, DSH current runtime evidence, WLT runtime/data evidence, repository-platform evidence) and one dispositioned lower-authority scope-wording observation. Material root clustering, competitive deepening and priority accounting are the next gates.
+Lower-layer HOLD queue is zero: all four prior HOLD observations were promoted into RC-001/RC-005 and the lower-authority scope observation remains dispositioned. Known material CI findings are clustered: 2 missing DSH backend route bindings, 5 missing OpenAPI path parameter declarations, 7 missing/unreachable surface bindings, 8 migration filename violations, 3 WLT money-kernel bypasses, 8 Expo version drifts, 10 normal-Knip unused dependency candidates, 2 normal-Knip unused files, strict cleanup backlog, stale DSH/WLT/Identity proof metadata, contextual same-SHA evidence divergence and inaccessible branch-protection evidence.
 
 ## 6. Final Target Handoff / Closure
 
-OPEN. No Product/Runtime/Data mutation, integration-target write, release, deployment or closure claim has occurred. `CLOSED_WITH_EVIDENCE` remains forbidden until every material finding is clustered/dispositioned, implementation/cleanup is complete, same-candidate evidence exists for applicable scopes, protected approvals are satisfied where required, and final reconciliation succeeds.
+OPEN. No integration-target write, release or deployment has occurred. Product/runtime mutation may begin only through a Sequence bound to the machine-selected frontier. `CLOSED_WITH_EVIDENCE` remains forbidden until all RCs are terminal, cleanup is consumer-proven, final same-candidate full verification is green for applicable static/runtime/database/mobile scopes, protected approvals are independently satisfied where required, final HEAD reconciliation succeeds and `ACTIVE_EXECUTION_FRONTIER` returns to `NONE`.
