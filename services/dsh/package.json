@@ -137,7 +137,8 @@
         "deletionAuthorized": false
       },
       "expo-location": {
-        "status": "CONSUMER_REVIEW_PENDING",
+        "status": "ACTIVE_DIRECT_CONSUMER",
+        "evidence": ["services/dsh/frontend/app-client/account/AddressLocationScreen.tsx"],
         "deletionAuthorized": false
       },
       "expo-notifications": {
@@ -166,7 +167,8 @@
         "deletionAuthorized": false
       },
       "react-native-safe-area-context": {
-        "status": "CONSUMER_REVIEW_PENDING",
+        "status": "ACTIVE_DIRECT_CONSUMER",
+        "evidence": ["services/dsh/frontend/app-client/DshClientSurface.tsx"],
         "deletionAuthorized": false
       },
       "react-native-svg": {
