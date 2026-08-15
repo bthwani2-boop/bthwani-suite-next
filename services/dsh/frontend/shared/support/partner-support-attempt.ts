@@ -1,4 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime";
 import type { DshCreateTicketInput } from "./support.types";
 import type { PartnerSupportMutationContext } from "./partner-support.api";
 
