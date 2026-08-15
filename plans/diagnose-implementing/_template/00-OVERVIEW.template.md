@@ -8,6 +8,9 @@ REPOSITORY: __REPOSITORY__
 BRANCH: __BRANCH__
 MODE: __MODE__
 TARGET: __TARGET__
+ORCHESTRATION_ROOT: __ORCHESTRATION_ROOT__
+NAVIGATION_POLICY: ROOT_ANCHORED_GRAPH_ONLY
+LATEST_HEAD_ROLE: TRUTH_INTEGRATION_BASELINE_ONLY
 OBJECTIVE: __TASK_OBJECTIVE__
 ORCHESTRATOR_PATH: __ORCHESTRATOR_PATH__
 CREATED_AT: __CREATED_AT_ISO__
@@ -15,6 +18,10 @@ LAST_RECONCILED_AT: __LAST_RECONCILED_AT_ISO__
 START_SHA: __START_SHA__
 CURRENT_SHA: __CURRENT_SHA__
 LATEST_RECONCILED_SHA: __CURRENT_SHA__
+ROOT_RECONCILIATION_REQUIRED: YES
+ROOT_RECONCILED_SHA: UNSET
+FRONTIER_DERIVATION_SOURCE: UNSET
+FRONTIER_VALID: NO
 LIFECYCLE_STATE: OPEN
 ACTIVE_EXECUTION_FRONTIER: NONE
 SUSPENSION_STACKS: NONE
@@ -41,25 +48,21 @@ FINAL_CANDIDATE_SHA: UNSET
 HEAD_AT_REVIEW_START: UNSET
 HEAD_AT_DECISION: UNSET
 
-> Living Derived Support only. The graph governs movement; sequence numbers record closure-unit identity, not a forced linear path. Details belong in `NNN-<sequence>.md`.
+> Living Derived Support. TARGET/ORCHESTRATION_ROOT governs orientation; latest HEAD governs truth/integration only. Persisted frontier is never automatic resume authority.
 
-## 1. Truth Baseline
+## 1. Truth / Root Baseline
 
+- Resolved orchestration root:
 - Authority/Product/Policy/Product-Truth/Machine-Contract sources actually read:
-- Pinned/current/latest reconciled SHA evidence:
-- Runtime/repository-platform evidence limits:
-- Known source contradictions:
+- Latest reconciled SHA:
+- Previous evidence reused vs invalidated:
+- Concurrent/foreign delta classification:
 
 ## 2. Macro Blueprint / Dependency Graph
 
-### Domains / Actors / Responsibilities
-Pending discovery.
+Start root-down: Macro System/Product → Canonical Owners/Foundations → Domains/Contracts/Data → Journeys/States/Handoffs → Surfaces/Consumers → details.
 
-### Major Journeys / States / Owners / Handoffs
-Pending discovery.
-
-### Multi-Directional Dependency / Impact Graph
-Pending discovery. Track vertical/horizontal/reverse/cross-layer edges and proven invalidation cones.
+Movement after orientation may be vertical/horizontal/reverse/cross-layer/cross-surface/jump-to-root.
 
 ## 3. Sequence Registry / Execution Frontier
 
@@ -67,38 +70,16 @@ Pending discovery. Track vertical/horizontal/reverse/cross-layer edges and prove
 |---|---|---|---|---|---|---|---|---|---|
 <!-- SEQUENCE_REGISTRY_ROWS -->
 
-`ACTIVE_EXECUTION_FRONTIER` may contain multiple comma-separated Sequence IDs only when graph-proven independent. No two live fronts may share the same Conflict Domain. Suspended/reopened nodes remain in the registry and are not forgotten.
+No Sequence may be created/resumed from recency. Frontier must be derived/revalidated from `ROOT_GRAPH`.
 
-## 4. Global Decisions / Blockers
+## 4. Global Decisions / Blockers / Foreign Deltas
 
-### Global Decisions
-Only decisions that truly cross multiple Sequences; all decisions must propagate through the proven impact graph.
-
-### Global Blockers
-Record protected/external blockers without freezing unrelated independent frontiers.
+Record cross-sequence decisions, blockers, and concurrent observations. Foreign changes are inputs to classification, not automatic work direction.
 
 ## 5. Global Accounting / Coverage / Reconciliation
 
-Track by IDs/references, not duplicated prose:
-
-```text
-Graph Nodes / Coverage
-Findings
-Scope Deltas
-Decisions
-Consumers
-Evidence
-Cleanup Findings
-Suspended/Reopened Sequences
-Invalidated Evidence Cones
-```
-
-Before handoff/closure all accounting categories must be dispositioned and adversarial negative-space discovery must challenge completeness.
+Track Graph Nodes, Findings, Scope Deltas, Decisions, Consumers, Evidence, Cleanup, suspended/reopened sequences and invalidation cones.
 
 ## 6. Final Target Handoff / Closure
 
-`SEQUENCE_PREPARED/COMPLETE` does not imply TARGET closure.
-
-PREPARE_ONLY: all material sequences PREPARED + accounting/global gates PASS.
-
-EXECUTE_END_TO_END: all material sequences COMPLETE + accounting + implementation/evidence/cleanup/governance/fresh-head/adversarial gates + canonical final decision on the exact final candidate.
+No handoff/closure while root/frontier provenance is stale, accounting incomplete, or final evidence/fresh-head/adversarial gates are missing.
