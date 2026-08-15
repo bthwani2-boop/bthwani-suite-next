@@ -148,3 +148,22 @@ If another task changes the same canonical owner/authority/contract/data/runtime
 ## 15) Resume / package collision
 
 A package name/path collision never authorizes reuse. New invocation chooses a new identity. Existing package may be resumed only by explicit user request for that exact package, after branch/workspace/root/machine-registry compatibility and freshness checks. If any of these cannot be proven, resume fails closed rather than silently forking task meaning.
+
+## 16) Legacy package migration
+
+إذا طلب المستخدم صراحةً استئناف Package قديمة بلا V3 Machine Registry، لا تنشئ Package جديدة ولا تستأنفها مباشرة. نفّذ فقط:
+
+```text
+migrate-package-v3.mjs <exact-package> --explicit-resume YES
+→ add V3 operational metadata
+→ create machine registries as OPEN
+→ trust NO prior operational/priority/frontier claim
+→ establish/repair Task Branch + workspace isolation
+→ resolve latest target
+→ root + operational reconciliation from current truth
+→ rebuild findings/RC ranking
+→ pass canonical gates
+→ only then resume execution
+```
+
+Migration ليست conversion إلى DONE ولا PASS؛ هي fail-closed bootstrap يسمح للحزمة القديمة بالدخول إلى العقد الجديد دون فقدان هويتها أو الثقة بتاريخها تلقائيًا.
