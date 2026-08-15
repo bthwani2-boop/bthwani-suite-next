@@ -54,6 +54,11 @@
     "sqlite": {
       "status": "REQUIREMENT_PENDING",
       "currentPersistenceAuthority": false,
+      "productFeatureOwner": null,
+      "declaredCapabilityApps": ["app-client", "app-partner", "app-field"],
+      "installedWithoutCapabilityApps": ["app-captain"],
+      "directConsumerAudit": "PENDING_EXACT_REF_OR_GUARD_EXECUTION",
+      "nativeRemovalDeferredToCleanupWindow": true,
       "decisionGate": "Adopt only when a proven relational/offline-first requirement needs indexed local records, transactions, or an outbox; app-field is the primary candidate."
     },
     "rule": "Product code must not create a parallel cache/offline/connectivity authority. Mobile runtimes may provide native peers for the isolated pnpm linker, but data policy remains owned by @bthwani/data-runtime."
