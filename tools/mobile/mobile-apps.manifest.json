@@ -64,6 +64,35 @@
         "permissionAndNativeChangesDeferredToBuildWindow": true,
         "packageDeletionRequiresConsumerAndRequirementClosure": true
       }
+    },
+    "systemArchitecture": {
+      "decision": "CAPABILITY_CONSOLIDATION_FIRST",
+      "remoteBuildNow": false,
+      "owners": {
+        "sessionSecretStorage": { "package": "expo-secure-store", "status": "CANONICAL_ACTIVE" },
+        "ephemeralIdentifiers": { "package": "expo-crypto", "status": "CANONICAL_ACTIVE" },
+        "runtimeConstants": { "package": "expo-constants", "status": "INFRA_ACTIVE" },
+        "updatesRuntime": { "package": "expo-updates", "status": "INFRA_ACTIVE" },
+        "splashLifecycle": { "package": "expo-splash-screen", "status": "INFRA_ACTIVE" },
+        "deepLinking": { "package": "expo-linking", "status": "TARGET_ROUTER_SUPPORT" },
+        "biometricUnlock": { "package": "expo-local-authentication", "status": "REQUIREMENT_REVIEW_PENDING" },
+        "applicationMetadata": { "package": "expo-application", "status": "CONSUMER_REVIEW_PENDING" },
+        "deviceMetadata": { "package": "expo-device", "status": "CONSUMER_REVIEW_PENDING" },
+        "localization": { "package": "expo-localization", "status": "REQUIREMENT_REVIEW_PENDING" }
+      },
+      "alignment": {
+        "app-client.localAuthentication": "DECLARED_PENDING_PRODUCT_DECISION",
+        "app-partner.localAuthentication": "DECLARED_PENDING_PRODUCT_DECISION",
+        "app-field.localAuthentication": "DECLARED_PENDING_PRODUCT_DECISION",
+        "app-captain.localAuthentication": "NOT_DECLARED_REVIEW_PENDING"
+      },
+      "rules": {
+        "secureStoreOwnsSecretsNotGeneralCache": true,
+        "cryptoDoesNotOwnPersistence": true,
+        "routerTargetProtectsLinkingFromPrematureDeprecation": true,
+        "reviewPendingDoesNotAuthorizeDeletion": true,
+        "nativeRemovalDeferredToCleanupWindow": true
+      }
     }
   },
   "apps": {
