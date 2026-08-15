@@ -24,7 +24,7 @@ The captain funds through supported official-wallet Cash-In rails. No operator e
 
 ### D04 — Excess withdrawal
 
-**Decision:** the captain may request settlement only from server-derived excess above protected requirements after active COD reservations, holds, debts and unresolved finance exposure are accounted.
+**Decision:** the captain may request settlement only from server-derived excess above protected requirements after active COD reservations, open cash exposure, holds, debts and unresolved finance exposure are accounted.
 
 ### D05 — COD exposure
 
@@ -36,7 +36,7 @@ For Mixed, reserve only `PaymentAllocation.cash_amount`.
 
 **Decision:** reserve cash exposure before/at governed assignment; on accepted delivery convert the reservation to final WLT wallet debit; cancellation/reassignment releases/retargets it exactly once.
 
-Do not also create a second legacy cash-remittance liability for the same economic amount.
+Do not also create a second legacy cash-remittance liability for the same economic amount. Physical cash custody and financial exposure must remain explicitly modeled and reconciled so neither can disappear behind the other.
 
 ### D07 — Captain primary fleet affiliation
 
@@ -88,57 +88,34 @@ Official electronic wallets are Cash-In/top-up rails, not a fourth checkout paym
 
 **Decision:** Bthwani provides the app/account/security platform boundary. Store owns its employment, payroll and store-specific staff responsibility. Bthwani identity/security isolation cannot be disabled by the store.
 
-## Decision Required — only unresolved product semantics
+### D17 — Ongoing floor and prepaid-only work
 
-### D17 — What happens to prepaid-only work after a BTHWANI captain falls below the configured floor?
+**Decision:** initial opening/minimum funding is required to activate a BTHWANI captain. After activation, falling below the configured COD-safe floor blocks `COD` and the cash component of `MIXED`, but fully prepaid `WALLET` assignments may remain eligible when all non-financial gates pass.
 
-There is a semantic conflict between two accepted statements:
+Prepaid work never reserves collateral. COD/Mixed cash exposure is allowed only while the authoritative WLT decision proves the effective protected balance covers the new cash exposure in addition to existing reservations/open financial exposure.
 
-- an opening/minimum financial floor is required for BTHWANI captain activation generally;
-- the user later stated that low/zero balance makes the captain ineligible for COD orders.
+### D18 — Partner courier per-delivery compensation
 
-**A — Recommended:** separate initial onboarding activation from ongoing order risk. Opening funding is required to activate initially; after activation, falling below the COD floor blocks COD/Mixed cash exposure but may still allow prepaid/WALLET-only delivery if all non-financial gates pass. This avoids unnecessarily stopping risk-free prepaid work and keeps the financial gate proportional to exposure.
+**Decision:** when a store chooses a per-delivery compensation model instead of salary, the platform may manage that earning canonically as a store-funded partner-courier earning.
 
-**B:** falling below the configured floor blocks every BTHWANI delivery assignment, including fully prepaid orders, until top-up restores the floor.
+The store selects a governed versioned compensation policy through Partner surfaces; WLT owns/derives the monetary amount and settlement. Bthwani never funds the store payroll/earning from platform money and never grants credit. Salary mode creates no per-order courier earning.
 
-**C:** no floor after initial activation; only per-order COD amount matters. Not recommended because it removes the ongoing protected minimum requested by the product.
+Free-form per-order manual amounts are not authoritative.
 
-**Recommendation:** A.
+### D19 — Optional store-courier collateral
 
-**Impact:** controls whether financial eligibility is purpose-specific or a universal dispatch prerequisite after initial activation.
+**Decision:** store-courier collateral is the store's own off-platform responsibility unless a future explicitly authorized product changes that boundary.
 
----
+Bthwani/WLT must not custody, guarantee or present that store-owned collateral as a Bthwani financial position. The platform may provide operational configuration/status/evidence needed by the store workflow, but no DSH/Workforce field may become an authoritative monetary balance or fake wallet.
 
-### D18 — If a store chooses per-delivery compensation for its courier, who performs the financial settlement?
+### D20 — Store-courier responsibility boundary
 
-Salary mode is already resolved. This question is only for store-selected per-delivery compensation.
+**Decision:** for store delivery, Bthwani supplies the application, identity/account isolation, permissions and governed operational workflow; the store remains responsible for the employment relationship, salary, internal staff policies and store-owned collateral arrangements.
 
-**A — Recommended:** optional platform-managed partner-courier earning. Store configures an allowed versioned compensation policy through Partner surface; WLT stores/derives the monetary policy and creates courier earning only for stores that explicitly opt in. Salary mode creates no courier earning. This gives stores flexibility while keeping money canonical.
+Platform security and identity baseline remain mandatory and cannot be disabled by the store.
 
-**B:** Bthwani never pays/settles partner couriers. Delivery fee always belongs to store; store pays courier outside the platform even when it uses per-delivery compensation. App may show operational delivery counts only, not authoritative earnings.
+## Decision status
 
-**C:** store manually enters each courier amount after each order. Rejected because it creates ad-hoc monetary truth.
+`DECISION_REQUIRED = 0` for the product semantics covered by this package as of the user's latest answers and the standing rule that any unanswered previously asked question adopts the stated recommendation.
 
-**Recommendation:** A if the product intends the Partner app to show/pay per-delivery courier earnings; otherwise B is simpler and keeps Bthwani out of the store payroll relationship.
-
-**Impact:** determines whether partner couriers need WLT earning/settlement capabilities and additional Finance/Partner UI.
-
----
-
-### D19 — Optional store-courier collateral: platform-managed or entirely store-external?
-
-The user decided that a store may optionally use collateral for its courier and that it must be linked to the store, not BTHWANI captain finance.
-
-**A — Recommended if the platform must enforce it:** WLT provides a distinct store-scoped partner-courier risk policy/position. Partner configures allowed policy within governed bounds; WLT is monetary owner; DSH only consumes an eligibility decision. No BTHWANI collateral tables/policies are reused.
-
-**B — Recommended if Bthwani only provides the app:** collateral is entirely the store's off-platform responsibility. Bthwani does not store a monetary collateral amount or display a fake wallet balance; it may store only a non-financial store declaration if needed for workflow.
-
-**C:** store enters collateral amount/status into DSH/Workforce and DSH treats it as financial truth. Rejected.
-
-**Recommendation:** B unless Bthwani explicitly wants to guarantee/enforce this financial risk for stores. If enforcement is a platform feature, choose A.
-
-**Impact:** determines whether WLT needs a new partner-courier financial product or whether this cone is explicitly out of Bthwani finance scope.
-
-## Auto-adoption rule
-
-If the user does not override D17/D18/D19, their recommendations above become the authorized decisions according to the user's stated rule that unanswered decisions adopt the recommendation.
+Any newly discovered contradiction outside these resolved semantics must be surfaced as a new explicit decision; existing resolved decisions may not be silently reopened by implementation convenience.
