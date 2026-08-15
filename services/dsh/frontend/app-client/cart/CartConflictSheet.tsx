@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-end",
     padding: spacing[4],
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: colorRoles.mediaScrimStrong,
   },
   sheet: {
     width: "100%",

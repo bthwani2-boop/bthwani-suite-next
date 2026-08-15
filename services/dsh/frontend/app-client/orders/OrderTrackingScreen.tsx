@@ -312,7 +312,7 @@ export function OrderTrackingScreen({
                 borderRadius: 18,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: "rgba(0,0,0,0.04)",
+                backgroundColor: colorRoles.surfaceMuted,
               }}
             >
               <Icon name="notifications-outline" size={20} color={colorRoles.textPrimary} />
@@ -339,14 +339,14 @@ export function OrderTrackingScreen({
           </Surface>
         ) : null}
 
-        <Surface tone="raised" gap={3} style={{ borderColor: "rgba(255, 80, 13, 0.3)", borderWidth: 1.5 }}>
+        <Surface tone="raised" gap={3} style={{ borderColor: alpha(colorRoles.brandAction, 0.3), borderWidth: 1.5 }}>
           <Box layoutDirection="row" justify="space-between" align="center">
             <Box layoutDirection="row" gap={2} align="center">
               <View style={{
                 width: 32,
                 height: 32,
                 borderRadius: 16,
-                backgroundColor: "rgba(255, 80, 13, 0.12)",
+                backgroundColor: colorRoles.brandActionTint,
                 alignItems: "center",
                 justifyContent: "center",
               }}>
@@ -377,7 +377,7 @@ export function OrderTrackingScreen({
               }
               accessibilityLabel={`${accessibilityLabel}، مراسلة الدعم بشأن الطلب ومتابعة الكابتن`}
               tone="primary"
-              leading={<Icon name="chatbubbles-outline" size={18} color="#ffffff" />}
+              leading={<Icon name="chatbubbles-outline" size={18} color={colorRoles.surfaceBase} />}
               onPress={() => onOpenOrderSupport(order.id, order.fulfillmentMode)}
             />
           ) : null}
@@ -579,7 +579,7 @@ const styles = StyleSheet.create({
   journeyDotActive: { backgroundColor: colorRoles.brandAction, borderColor: colorRoles.brandAction },
   journeyDotText: { color: colorRoles.brandStructure },
   journeyDotTextActive: { color: colorRoles.surfaceBase },
-  journeyLabel: { color: "rgba(255, 255, 255, 0.82)", textAlign: "center", fontSize: 11 },
+  journeyLabel: { color: alpha(colorRoles.surfaceBase, 0.82), textAlign: "center", fontSize: 11 },
   journeyLabelActive: { color: colorRoles.surfaceBase, fontWeight: "800" },
   timelineRow: {
     flexDirection: "row-reverse",
@@ -592,7 +592,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: colorRoles.surfaceWarm,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.05)",
+    borderColor: colorRoles.borderSubtle,
   },
   storeHeroBg: {
     position: "absolute",

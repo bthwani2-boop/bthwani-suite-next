@@ -200,7 +200,3 @@ func (s *protectedStoreServer) handleFieldFinanceWallet(w http.ResponseWriter, r
 func (s *protectedStoreServer) handleFieldFinancePayouts(w http.ResponseWriter, r *http.Request) {
 	s.handleFieldPayoutRequests(w, r)
 }
-
-func (s *protectedStoreServer) handleFieldListPayoutDestinations(w http.ResponseWriter, r *http.Request) {
-	s.handleFieldPayoutDestinationRead(w, r)
-}

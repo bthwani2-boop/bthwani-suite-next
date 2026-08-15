@@ -35,6 +35,16 @@ components:
       required: true
 `;
 
+const inlineParameterYaml = `
+paths:
+  /test/inline/{assignmentId}:
+    post:
+      operationId: testInlineParameter
+      parameters: [{ name: assignmentId, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: OK }
+`;
+
 function testParser() {
   console.log("Running _openapi-utils.mjs parser tests...");
   
@@ -75,6 +85,11 @@ function testParser() {
   const callerParam = op.parameters.find(p => p.name === "X-Service-Caller");
   assert.strictEqual(callerParam.in, "header");
   assert.strictEqual(callerParam.required, true);
+
+  const inlineOperation = parseOpenApiContractContent(inlineParameterYaml, "inline.yaml")[0];
+  const inlineAssignment = inlineOperation.parameters.find((parameter) => parameter.name === "assignmentId");
+  assert.strictEqual(inlineAssignment?.in, "path");
+  assert.strictEqual(inlineAssignment?.required, true);
 
   const modularOperations = parseOpenApiContract("services/dsh/contracts/dsh.openapi.yaml");
   const homeUpdate = modularOperations.find((item) => item.operationId === "updateOperatorHomeDiscoveryContent");

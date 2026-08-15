@@ -15,6 +15,7 @@ import {
   StateView,
   Text,
   TopBar,
+  alpha,
   brandScale,
   colorRoles,
   spacing,
@@ -286,7 +287,7 @@ export function OrderChatScreen({
         <Button
           label={mutationState === "sending" ? "جارٍ الإرسال" : "إرسال"}
           disabled={isClosed || draft.trim().length < 2 || mutationState !== "idle"}
-          leading={mutationState === "sending" ? <ActivityIndicator color="#ffffff" /> : <Icon name="send" size={18} color="#ffffff" />}
+          leading={mutationState === "sending" ? <ActivityIndicator color={colorRoles.surfaceBase} /> : <Icon name="send" size={18} color={colorRoles.surfaceBase} />}
           onPress={() => void sendMessage()}
         />
       </View>
@@ -297,8 +298,8 @@ export function OrderChatScreen({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: brandScale.surface[50] },
-  headerButton: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(0,0,0,0.04)" },
-  banner: { flexDirection: "row-reverse", alignItems: "center", gap: 6, paddingHorizontal: spacing[3], paddingVertical: 7, backgroundColor: "rgba(255, 80, 13, 0.08)" },
+  headerButton: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: colorRoles.surfaceMuted },
+  banner: { flexDirection: "row-reverse", alignItems: "center", gap: 6, paddingHorizontal: spacing[3], paddingVertical: 7, backgroundColor: colorRoles.brandActionSoft },
   bannerText: { flex: 1, textAlign: "right" },
   messageScroll: { flex: 1 },
   messageContent: { padding: spacing[3], gap: spacing[3] },
@@ -311,10 +312,10 @@ const styles = StyleSheet.create({
   senderText: { color: colorRoles.brandAction, fontWeight: "700" },
   messageText: { color: colorRoles.textPrimary },
   mutedText: { color: colorRoles.textMuted },
-  lightText: { color: "#ffffff" },
-  lightMutedText: { color: "rgba(255,255,255,0.75)" },
+  lightText: { color: colorRoles.surfaceBase },
+  lightMutedText: { color: alpha(colorRoles.surfaceBase, 0.75) },
   quickReplies: { flexDirection: "row-reverse", gap: 8, paddingHorizontal: spacing[3], paddingVertical: 6 },
-  quickReply: { backgroundColor: colorRoles.surfaceBase, borderWidth: 1, borderColor: "rgba(255, 80, 13, 0.25)", borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6 },
+  quickReply: { backgroundColor: colorRoles.surfaceBase, borderWidth: 1, borderColor: alpha(colorRoles.brandAction, 0.25), borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6 },
   quickReplyText: { color: colorRoles.brandAction },
   composer: { flexDirection: "row-reverse", alignItems: "flex-end", gap: spacing[2], padding: spacing[3], borderTopWidth: 1, borderTopColor: colorRoles.borderSubtle, backgroundColor: colorRoles.surfaceBase },
   input: { flex: 1, minHeight: 44, maxHeight: 120, borderWidth: 1, borderColor: colorRoles.borderSubtle, borderRadius: 12, paddingHorizontal: spacing[3], paddingVertical: spacing[2], color: colorRoles.textPrimary, backgroundColor: brandScale.surface[50] },

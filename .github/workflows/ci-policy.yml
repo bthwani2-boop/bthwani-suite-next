@@ -43,6 +43,17 @@ jobs:
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
 
+      - name: Verify canonical governance and SDLC gates
+        if: ${{ inputs.governance_policy == 'true' }}
+        run: |
+          pnpm run guard:governance-schema
+          pnpm run guard:agent-governance
+          pnpm run guard:authority-separation
+          pnpm run guard:guard-registry
+          pnpm run guard:sdlc
+          node --test tools/guards/direct-work-branch-execution-gate.test.mjs
+          node tools/guards/direct-work-branch-execution-gate.mjs
+
       - name: Test shared TypeScript Compiler API loader
         if: ${{ inputs.governance_policy == 'true' || inputs.workflow_policy == 'true' }}
         run: node --test tools/guards/lib/typescript-compiler.test.mjs
@@ -177,6 +188,13 @@ jobs:
 
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
+
+      - name: Verify CI source, repository hygiene, and portable tracked configuration
+        if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' || inputs.infrastructure_policy == 'true' }}
+        run: |
+          node tools/scripts/check-ci-source-immutability.mjs
+          node tools/scripts/check-repository-hygiene.mjs
+          node tools/scripts/check-portable-tracked-config.mjs
 
       - name: Verify workflow security preflight
         id: workflow_security

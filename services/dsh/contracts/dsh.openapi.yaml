@@ -452,10 +452,6 @@ paths:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1finance~1wallet"
   /dsh/field/finance/payouts:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1finance~1payouts"
-  /dsh/field/finance/payout-destinations:
-    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1finance~1payout-destinations"
-  /dsh/field/finance/payout-destinations/{destinationId}:
-    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1finance~1payout-destinations~1{destinationId}"
   /dsh/control-panel/finance/reconciliation-cases:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1reconciliation-cases"
   /dsh/control-panel/finance/reconciliation-cases/{caseId}:

@@ -111,6 +111,50 @@ function parseParameterBlock(lines, startIndex) {
   return { parameter: parameter.name ? parameter : null, nextIndex };
 }
 
+function parseInlineParameterList(value) {
+  const parameters = [];
+  const arrayStart = value.indexOf("[");
+  if (arrayStart === -1) return parameters;
+
+  let objectStart = -1;
+  let objectDepth = 0;
+  let quote = "";
+  let escaped = false;
+  for (let index = arrayStart + 1; index < value.length; index += 1) {
+    const character = value[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === quote) quote = "";
+      continue;
+    }
+    if (character === '"' || character === "'") {
+      quote = character;
+      continue;
+    }
+    if (character === "{") {
+      if (objectDepth === 0) objectStart = index;
+      objectDepth += 1;
+      continue;
+    }
+    if (character !== "}" || objectDepth === 0) continue;
+    objectDepth -= 1;
+    if (objectDepth !== 0 || objectStart === -1) continue;
+
+    const parameter = { name: "", in: "", required: false };
+    const body = value.slice(objectStart + 1, index).trim();
+    for (const match of body.matchAll(/(?:^|,\s*)(name|in|required):\s*(?:"([^"]*)"|'([^']*)'|([^,}\s]+))/g)) {
+      const rawValue = match[2] ?? match[3] ?? match[4] ?? "";
+      if (match[1] === "name") parameter.name = String(rawValue);
+      if (match[1] === "in") parameter.in = String(rawValue);
+      if (match[1] === "required") parameter.required = parseScalar(rawValue) === true;
+    }
+    if (parameter.name) parameters.push(parameter);
+    objectStart = -1;
+  }
+  return parameters;
+}
+
 function parseComponentParameters(lines) {
   const parameters = new Map();
   const wrapperStart = lines.findIndex((line) => /^\s{2}parameters:\s*$/.test(line));
@@ -236,6 +280,11 @@ function collectParameters(blockLines, componentParameters, file) {
   const parameters = [];
   for (let i = 0; i < blockLines.length; i += 1) {
     const trimmed = blockLines[i].trim();
+
+    const inlineParameters = trimmed.match(/^parameters:\s*(\[.*\])\s*$/);
+    if (inlineParameters) {
+      parameters.push(...parseInlineParameterList(inlineParameters[1]));
+    }
 
     for (const match of trimmed.matchAll(/\$ref:\s*["']?([^"'\]\s}]+)["']?/g)) {
       const parameter = resolveParameterReference(match[1], file, componentParameters);

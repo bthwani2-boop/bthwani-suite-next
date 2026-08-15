@@ -183,7 +183,7 @@ export function OrdersListScreen({ onOpenOrder, onOpenSpecialRequests, onBack, o
                 borderRadius: 18,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: "rgba(0,0,0,0.04)",
+                backgroundColor: colorRoles.surfaceMuted,
               }}
             >
               <Icon name="notifications-outline" size={20} color={colorRoles.textPrimary} />

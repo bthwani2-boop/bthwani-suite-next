@@ -232,7 +232,6 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("GET /dsh/field/finance/commissions", protected.enforceFieldReadinessGate(protected.handleFieldFinanceCommissions))
 	mux.HandleFunc("GET /dsh/field/finance/wallet", protected.enforceFieldReadinessGate(protected.handleFieldFinanceWallet))
 	mux.HandleFunc("GET /dsh/field/finance/payouts", protected.enforceFieldReadinessGate(protected.handleFieldFinancePayouts))
-	mux.HandleFunc("GET /dsh/field/finance/payout-destinations", protected.enforceFieldReadinessGate(protected.handleFieldListPayoutDestinations))
 
 	// Representative self-service finance routes are composed once, from
 	// registerUnifiedCatalogRoutes below. A second call here registered the
