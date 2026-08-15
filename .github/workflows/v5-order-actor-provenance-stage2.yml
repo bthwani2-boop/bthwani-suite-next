@@ -46,7 +46,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24.17.0
-          cache: pnpm
 
       - name: Enable governed pnpm
         run: corepack enable && corepack prepare pnpm@10.34.0 --activate
@@ -81,7 +80,6 @@ jobs:
                   raise SystemExit(f"{path}: expected {expected} exact matches, found {actual}: {old!r}")
               p.write_text(text.replace(old, new))
 
-          # Partner decision writers already own input.ActorID; preserve it in the canonical event.
           replace(
               "services/dsh/backend/internal/orders/decision.go",
               "INSERT INTO dsh_order_status_events(order_id, actor_role, from_status, to_status, note)\n\t\t\tVALUES($1::uuid, 'partner', $2, $3, $4)`,\n\t\t\tinput.OrderID, string(StatusPending),",
@@ -89,21 +87,18 @@ jobs:
               expected=2,
           )
 
-          # Preparation acceptance already requires actorID.
           replace(
               "services/dsh/backend/internal/orders/preparation.go",
               "INSERT INTO dsh_order_status_events(order_id, actor_role, from_status, to_status, note)\n\t\tVALUES($1::uuid,'partner',$2,$3,$4)`,\n\t\torderID,\n\t\tstring(StatusPending),",
               "INSERT INTO dsh_order_status_events(order_id, actor_id, actor_role, from_status, to_status, note)\n\t\tVALUES($1::uuid,$2,'partner',$3,$4,$5)`,\n\t\torderID,\n\t\tactorID,\n\t\tstring(StatusPending),",
           )
 
-          # Cancellation case owns the originating actor identity and role.
           replace(
               "services/dsh/backend/internal/orders/cancellation_saga.go",
               "INSERT INTO dsh_order_status_events(order_id,actor_role,from_status,to_status,note)\n\t\t\tVALUES($1::uuid,$2,$3,$4,$5)`,\n\t\t\tcaseItem.OrderID, caseItem.ActorRole, caseItem.FromStatus, caseItem.ToStatus, caseItem.ReasonCode,",
               "INSERT INTO dsh_order_status_events(order_id,actor_id,actor_role,from_status,to_status,note)\n\t\t\tVALUES($1::uuid,$2,$3,$4,$5,$6)`,\n\t\t\tcaseItem.OrderID, caseItem.ActorID, caseItem.ActorRole, caseItem.FromStatus, caseItem.ToStatus, caseItem.ReasonCode,",
           )
 
-          # Delivery-exception transitions all have an authenticated actor in scope.
           delivery = "services/dsh/backend/internal/dispatch/delivery_exceptions.go"
           replace(
               delivery,
@@ -127,20 +122,16 @@ jobs:
           )
 
           truth = "services/dsh/backend/internal/orders/order_truth.go"
-          # Order creation is an authenticated client action, not a system action.
           replace(
               truth,
               "VALUES ($1::uuid,$2,'system','',$3,$4,'order created from eligible checkout','order.created',$5,$6,1,$7::jsonb)\n\t\tRETURNING id::text`, orderID, input.OperatorContextID, \"\", string(StatusPending), input.CorrelationID, input.CheckoutIntentID, eventMetadata,",
               "VALUES ($1::uuid,$2,'client',$3,$4,$5,'order created from eligible checkout','order.created',$6,$7,1,$8::jsonb)\n\t\tRETURNING id::text`, orderID, input.OperatorContextID, input.ClientID, \"\", string(StatusPending), input.CorrelationID, input.CheckoutIntentID, eventMetadata,",
           )
-          # Fallback/manual outbox path must preserve the same provenance as the trigger path.
           replace(
               truth,
               "jsonb_build_object('orderId',$2::text,'checkoutIntentId',$5::text,'correlationId',$4::text,'version',1))\n\t\tON CONFLICT (operator_context_id,event_id) DO NOTHING`,\n\t\tinput.OperatorContextID, orderID, eventID, input.CorrelationID, input.CheckoutIntentID,",
               "jsonb_build_object('orderId',$2::text,'checkoutIntentId',$5::text,'correlationId',$4::text,'actorId',$6::text,'actorRole','client','version',1))\n\t\tON CONFLICT (operator_context_id,event_id) DO NOTHING`,\n\t\tinput.OperatorContextID, orderID, eventID, input.CorrelationID, input.CheckoutIntentID, input.ClientID,",
           )
-
-          # Canonical readback carries actor identity internally.
           replace(
               truth,
               "\tActorRole     string          `json:\"actorRole\"`\n\tFromStatus",
@@ -157,7 +148,6 @@ jobs:
               "eventRows.Scan(&event.ID, &event.Type, &event.ActorRole, &event.ActorID, &event.FromStatus, &event.ToStatus, &event.CorrelationID, &event.CausationID, &event.OrderVersion, &metadata, &event.CreatedAt)",
           )
 
-          # Actor identifiers are operational audit data: client/partner never receive them.
           queries = "services/dsh/backend/internal/orders/order_truth_queries.go"
           replace(
               queries,
@@ -165,14 +155,12 @@ jobs:
               "\tif truth.AllowedActions == nil {\n\t\ttruth.AllowedActions = []string{\"view\"}\n\t}\n\tif viewerRole != \"operator\" {\n\t\tfor index := range truth.StatusTimeline {\n\t\t\ttruth.StatusTimeline[index].ActorID = \"\"\n\t\t}\n\t}\n\tif viewerRole == \"partner\" || viewerRole == \"operator\" {",
           )
 
-          # Shared consumer contract is optional because non-operator readback redacts actorId.
           replace(
               "services/dsh/frontend/shared/order-truth/order-truth.types.ts",
               "  readonly actorRole: string;\n  readonly fromStatus:",
               "  readonly actorRole: string;\n  readonly actorId?: string;\n  readonly fromStatus:",
           )
 
-          # OpenAPI exposes actorId as an optional operator-only audit field.
           contract = Path("services/dsh/contracts/dsh.order-truth.openapi.yaml")
           contract_text = contract.read_text()
           pattern = r"(    OrderEvent:\n[\s\S]*?        actorRole:\n          type: string\n)"
@@ -184,14 +172,11 @@ jobs:
           insertion = match.group(1) + "        actorId:\n          type: string\n          description: Authenticated actor identifier; returned only to operator-scoped readers and redacted from client and partner responses.\n"
           contract.write_text(contract_text[:match.start()] + insertion + contract_text[match.end():])
 
-          # Add a focused privacy regression test.
           test_path = Path("services/dsh/backend/internal/orders/actor_provenance_redaction_test.go")
           if test_path.exists():
               raise SystemExit(f"{test_path}: unexpected pre-existing file")
           test_path.write_text('''package orders\n\nimport "testing"\n\nfunc TestRedactOrderTruthForViewerActorProvenance(t *testing.T) {\n\tfor _, tc := range []struct {\n\t\tname string\n\t\trole string\n\t\twant string\n\t}{\n\t\t{name: "client redacted", role: "client", want: ""},\n\t\t{name: "partner redacted", role: "partner", want: ""},\n\t\t{name: "operator retained", role: "operator", want: "actor-123"},\n\t} {\n\t\tt.Run(tc.name, func(t *testing.T) {\n\t\t\ttruth := &OrderTruth{StatusTimeline: []OrderTruthEvent{{ActorID: "actor-123", ActorRole: "captain"}}}\n\t\t\tRedactOrderTruthForViewer(truth, tc.role)\n\t\t\tif got := truth.StatusTimeline[0].ActorID; got != tc.want {\n\t\t\t\tt.Fatalf("ActorID after redaction = %q, want %q", got, tc.want)\n\t\t\t}\n\t\t})\n\t}\n}\n''')
 
-          # New forward-only migration: preserve old rows, reject all new blank actor IDs,
-          # and publish actorId in the canonical order-event outbox.
           migration = Path("services/dsh/database/migrations/dsh-1008_order_event_actor_provenance.sql")
           if migration.exists():
               raise SystemExit(f"{migration}: unexpected pre-existing migration")
