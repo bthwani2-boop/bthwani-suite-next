@@ -6,110 +6,174 @@ Owner: `tools/prompting/bthwani-orchestrator/03-DECISIONS-COVERAGE-ANTI-DRIFT.md
 ## 1) القاعدة الدستورية
 
 ```text
-EVERY DISCOVERED MATERIAL THING → RELATION GRAPH.
-EVERY MATERIAL GRAPH NODE → COVERAGE STATUS.
-EVERY MATERIAL DEFECT/GAP/CONTRADICTION → FINDING.
-EVERY NEW DEPENDENCY/CONSUMER/SURFACE → SCOPE DELTA.
-EVERY TRUE DECISION → DECISION RECORD.
-EVERY DECISION → IMPACT PROPAGATION + RE-DIAGNOSIS.
-EVERY PROVEN EXECUTION BOUNDARY → SEQUENCE REGISTRY.
+EVERY DISCOVERED MATERIAL THING → RELATION GRAPH + COVERAGE STATUS.
+EVERY DEFECT/GAP/CONTRADICTION → FINDING ID.
+EVERY NEW DEPENDENCY/CONSUMER/SURFACE → SCOPE DELTA ID.
+EVERY TRUE DECISION → DECISION ID.
+EVERY DECISION → FULL IMPACT PROPAGATION + RE-DIAGNOSIS.
+EVERY PROVEN CLOSURE BOUNDARY → SEQUENCE REGISTRY.
+EVERY REQUIRED PROOF → EVIDENCE ID.
 NO SILENT MATERIAL ELEMENT.
 ```
 
-## 2) Universe Inventory
+## 2) Universe / Coverage
 
 احصر حسب الانطباق Domains/Journeys/Actors/Surfaces/Routes/States/Actions/Transitions/Handoffs/Contracts/Services/Data Owners/Writers/Readers/Consumers/Runtime/Configs/Verification owners.
 
-## 3) Coverage Status
+Coverage: `UNVISITED / IN_PROGRESS / PROVEN / CONTRADICTED / DECISION_REQUIRED / BLOCKED_EXTERNAL / NOT_APPLICABLE_WITH_PROOF`.
 
-`UNVISITED / IN_PROGRESS / PROVEN / CONTRADICTED / DECISION_REQUIRED / BLOCKED_EXTERNAL / NOT_APPLICABLE_WITH_PROOF`.
-
-## 4) Bidirectional Traceability
+## 3) Bidirectional / Multi-Directional Traceability
 
 ```text
 Journey → Code/Contract/Data/Runtime
-AND
-Route/Contract/State/Writer/Reader/Config/Runtime → Journey/Capability/Consumer
+AND reverse
+AND cross-surface
+AND cross-owner
+AND temporal/failure/recovery paths
 ```
 
-## 5) Scope Delta
+الـGraph لا يُعامل كسلسلة خطية.
+
+## 4) Findings / Scope Delta
+
+كل Finding مادي يسجل ID، ACTUAL/INTENDED/DESIRED/CONFLICT، evidence، hypotheses، root cause/missing proof، owner، consumers، blast radius، risk، status، required action/decision/verification، sequence placement، reopen trigger.
+
+أي Scope Delta:
 
 ```text
-DISCOVERED → CLASSIFY RELATION → ADD TO GRAPH → IMPACT ANALYSIS → IN_SCOPE | SUPPORTED_EXCLUSION | MATERIAL_UNCERTAIN → COVER
+DISCOVERED → CLASSIFY RELATION → ADD TO GRAPH → IMPACT ANALYSIS
+→ IN_SCOPE | SUPPORTED_EXCLUSION | MATERIAL_UNCERTAIN
+→ DISPOSITION
 ```
 
-## 6) Findings
+## 5) Decision Boundary + Propagation
 
-كل Finding مادي يسجل ID، location/journey/surface، ACTUAL/INTENDED/DESIRED/CONFLICT، evidence، hypotheses، root cause/missing proof، owner، consumers، blast radius، risk، status، required action/decision/verification، reopen trigger.
+ابدأ `QUESTION_CANDIDATE`، وحاول حسمه من authority/product truth/code/contracts/data/permissions/tests/runtime. لا يصل للمستخدم إلا قرار غير قابل للاشتقاق.
 
-## 7) Decision Candidate vs True Decision
-
-ابدأ `QUESTION_CANDIDATE`. حاول حسمه من authority/product truth/code/state/contracts/data/permissions/other surfaces/tests/runtime. لا يصل للمستخدم إلا `CONTRADICTION / AMBIGUITY / MISSING_PRODUCT_OR_OPERATIONAL_DECISION / MULTIPLE_VALID_BEHAVIORS`.
-
-## 8) Decision Order
-
-الأسئلة تتبع Dependency Graph. اسأل أصغر مجموعة مترابطة تفتح أكبر قدر من العمل، ثم decision → impact propagation → re-diagnose → adversarial recheck. لا تجمع أسئلة TARGET الكبير حتى النهاية إذا كان قرار حالي يمنع Sequence حالية.
-
-## 9) Sequence Derivation
-
-لا تنشئ Sequence لأن هناك Domain/Surface باسم ما. اشتقه فقط عندما يثبت الرسم البياني وحدة Closure متماسكة.
-
-الفصل مبرر عند:
+بعد الحسم:
 
 ```text
-distinct root-cause cluster
-different canonical owner
-hard dependency boundary
-independent state/journey boundary
-materially distinct verification/runtime boundary
-different protected/risk domain
-independent consumer migration set
-different durable governance decision boundary
+DECISION
+→ full proven impact graph
+→ writers/readers/consumers/contracts/states/data/surfaces/governance/runtime
+→ invalidate affected assumptions/evidence
+→ re-diagnose
 ```
 
-الدمج مطلوب عندما تشترك العناصر في Root Cause + Canonical Owner + Consumer Migration + Verification Boundary.
+لا يؤجل فهم الأثر إلى Sequence لاحقة.
 
-## 10) Sequence Registry Discipline
+## 6) Finding Disposition Rule
 
-`00-OVERVIEW.md` يسجل فقط `SEQUENCE_ID / FILE / SUBJECT / DERIVATION_BASIS / DEPENDS_ON / UNLOCKS / STATUS / REOPEN_TRIGGER`.
+كل Finding جديدة فورًا تصبح:
 
 ```text
-one registry row ↔ one sequence file
-contiguous sequence order
-at most one active non-terminal sequence
-no future placeholder sequence files
-no sequence directory
+SAME_ROOT_CAUSE → current Sequence
+UPSTREAM_OR_BLOCKER → structured backtrack
+INDEPENDENT_IN_SCOPE → later/parallel proven Sequence
+SUPPORTED_EXCLUSION → proof + reopen trigger
 ```
 
-## 11) Mode-Specific Sequence Exit
+`IGNORE` وsilent TODO ممنوعان.
 
-### PREPARE_ONLY
+## 7) Sequence Derivation
 
-قبل التالي: `ROOT_CAUSE_PROVEN=YES`, `DECISIONS_RESOLVED=YES`, `REDIAGNOSIS_COMPLETE=YES`, `IMPACT_MAPPED=YES`, `VERIFICATION_DEFINED=YES`, `SOLUTION_READY=YES`, `SEQUENCE_STATUS=PREPARED`.
+Sequence = أصغر Closure Unit متماسكة. الفصل مبرر عند Root Cause/Canonical Owner/Hard Dependency/State-Journey/Verification-Runtime/Protected Risk/Consumer Migration/Governance boundary مستقل.
 
-### EXECUTE_END_TO_END
+ادمج الأعراض عندما تشترك في Root Cause + Owner + Migration + Verification boundary.
 
-قبل التالي: كل solution-ready gates + `SEQUENCE_STATUS=COMPLETE`, `IMPLEMENTATION_COMPLETE=YES`, `CONSUMERS_RECONCILED=YES`, `LOCAL_CLEANUP_COMPLETE=YES`, `VERIFICATION_PASS=YES`, `GOVERNANCE_SYNC=YES|NOT_APPLICABLE`, `SCOPE_DELTA_CLASSIFIED=YES`.
+## 8) Registry / Frontier Discipline
 
-## 12) Just-In-Time Rule
+`00-OVERVIEW.md` يسجل:
 
 ```text
-DO NOT PRE-CREATE 002 WHILE 001 IS ACTIVE.
-COMPLETE/PREPARE 001 → reconcile graph → derive whether 002 still exists → only then create it.
+SEQUENCE_ID / FILE / SUBJECT / DERIVATION_BASIS
+DEPENDS_ON / UNLOCKS / CONFLICT_DOMAIN
+EXECUTION_OWNER / STATUS / REOPEN_TRIGGER
 ```
 
-## 13) Periodic Reconciliation
+قواعد:
 
-بعد كل Sequence: Journey↔Journey, Surface↔Surface, State↔State, Owner↔Consumer, Contract↔Client/Backend, Governance↔Product Truth↔Implementation, Sequence Registry↔Dependency Graph.
+```text
+one row ↔ one sequence file
+contiguous sequence IDs as creation history, not execution chain
+no placeholder future sequences
+multiple non-terminal sequences allowed only when graph-justified
+SUSPENDED_BY_DEPENDENCY / REOPENED are first-class states
+ACTIVE_EXECUTION_FRONTIER may contain multiple independent sequences
+no two live execution fronts may share the same conflict domain
+```
 
-## 14) Independent Adversarial Completeness
+## 9) Graph Frontier / Structured Backtracking
 
-ابحث عن unmapped routes/states/APIs/hidden writers/jobs/admin/fallback/config/data/migration/error/recovery paths. Material node جديد يعيد فتح الرسم والتغطية وقد يغيّر ترتيب/حدود Sequences.
+إذا Sequence تكشف Dependency أعمق:
 
-## 15) Fresh-Head Drift
+```text
+current → SUSPENDED_BY_DEPENDENCY
+→ register dependency edge
+→ derive/open upstream sequence JIT
+→ close/prepare upstream
+→ invalidate affected descendants
+→ REOPEN/RESUME suspended sequence
+→ re-diagnose before execution
+```
 
-قبل إنشاء Sequence، قبل write في EXECUTE، وبعد Sequence، وقبل handoff/closure: re-resolve HEAD → classify delta → update graph/coverage → invalidate/re-diagnose affected scope.
+إذا اكتشاف جديد يبطل Sequence مغلقة، تصبح `REOPENED`; descendants/evidence classified stale by invalidation cone.
 
-## 16) Global Gates
+## 10) Parallelism Safety
 
-بعد تغطية كل material universe فقط: `DISCOVERY_COMPLETE / DIAGNOSIS_COMPLETE / DECISION_COMPLETE / COVERAGE_COMPLETE / PACKAGE_READY`. `ZERO known findings` وحدها لا تثبت completeness.
+التوازي لا يُستنتج من اختلاف الملفات فقط. يجب إثبات استقلال:
+
+```text
+canonical owner / semantic state / contracts / data/migrations
+runtime authority / shared generated artifacts / conflict domain
+```
+
+Parallel analysis is broader; parallel writes require graph-proven independent conflict domains + isolated workspace + execution owner. Target-branch integration remains serialized.
+
+## 11) Mode-Specific Exit
+
+PREPARE_ONLY قبل `PREPARED`:
+
+```text
+ROOT_CAUSE_PROVEN=YES
+DECISIONS_RESOLVED=YES
+DECISION_IMPACT_PROPAGATED=YES
+REDIAGNOSIS_COMPLETE=YES
+IMPACT_MAPPED=YES
+FINDINGS_DISPOSITIONED=YES
+DEPENDENCIES_DISPOSITIONED=YES
+VERIFICATION_DEFINED=YES
+SOLUTION_READY=YES
+IMPLEMENTATION_COMPLETE=NO
+```
+
+EXECUTE_END_TO_END قبل `COMPLETE`: كل ما سبق + implementation/consumers/cleanup/verification/governance/scope-delta gates.
+
+## 12) Accounting Gate
+
+قبل final handoff/closure:
+
+```text
+FINDINGS_ACCOUNTED=YES
+SCOPE_DELTAS_ACCOUNTED=YES
+DECISIONS_ACCOUNTED=YES
+CONSUMERS_ACCOUNTED=YES
+EVIDENCE_ACCOUNTED=YES
+CLEANUP_ACCOUNTED=YES
+ACCOUNTING_COMPLETE=YES
+```
+
+لا يكفي `ZERO known findings` لإثبات completeness؛ يلزم Adversarial/negative-space discovery مستقل يحاول كشف nodes غير محسوبة.
+
+## 13) Fresh Head / Periodic Reconciliation
+
+قبل sequence creation، قبل live write، قبل integration، بعد sequence، وقبل handoff/closure:
+
+```text
+re-resolve HEAD
+→ classify DISJOINT / RELATED_NON_CONFLICTING / SEMANTIC_OVERLAP / DIRECT_CONFLICT / AUTHORITY_OR_TRUTH_CHANGE
+→ update graph/accounting
+→ invalidate only affected evidence
+```
+
+الحركة غير المرتبطة لا توقف Frontiers المستقلة.
