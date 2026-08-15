@@ -24,6 +24,7 @@ if (basename(packageRoot) === '_template') throw new Error('Validate a generated
 async function exists(path) { try { await access(path, constants.F_OK); return true; } catch { return false; } }
 function isSha(value) { return /^[0-9a-f]{40}$/i.test(value ?? ''); }
 function isUnsetOrSha(value) { return value === 'UNSET' || isSha(value); }
+function isUnsetOrCount(value) { return value === 'UNSET' || /^(0|[1-9]\d*)$/.test(value ?? ''); }
 function yes(value) { return value === 'YES'; }
 function meta(text) {
   const out = {};
@@ -80,6 +81,16 @@ if (!isUnsetOrSha(overview.TASK_BRANCH_BASE_SHA)) violations.push('00-OVERVIEW.m
 for (const field of ['FINAL_CANDIDATE_SHA','HEAD_AT_REVIEW_START','HEAD_AT_DECISION']) if (!isUnsetOrSha(overview[field])) violations.push(`00-OVERVIEW.md: ${field}_INVALID`);
 if (!['YES','NO'].includes(overview.ROOT_RECONCILIATION_REQUIRED)) violations.push('00-OVERVIEW.md: ROOT_RECONCILIATION_REQUIRED_INVALID');
 if (!isUnsetOrSha(overview.ROOT_RECONCILED_SHA)) violations.push('00-OVERVIEW.md: ROOT_RECONCILED_SHA_INVALID');
+
+for (const field of ['TARGET_LANDSCAPE_COMPLETE','ROOT_CAUSE_CLUSTERING_COMPLETE','ROOT_CAUSE_CLUSTERS_ACCOUNTED','PRIORITY_MODEL_COMPLETE','PRIMARY_FRONTIER_JUSTIFIED','LANDSCAPE_ADVERSARIAL_PASS']) {
+  if (!['YES','NO'].includes(overview[field])) violations.push(`00-OVERVIEW.md: ${field}_MUST_BE_YES_OR_NO`);
+}
+if (!isUnsetOrSha(overview.LANDSCAPE_RECONCILED_SHA)) violations.push('00-OVERVIEW.md: LANDSCAPE_RECONCILED_SHA_INVALID');
+if (!isUnsetOrCount(overview.UNCLUSTERED_MATERIAL_FINDINGS)) violations.push('00-OVERVIEW.md: UNCLUSTERED_MATERIAL_FINDINGS_INVALID');
+if (!['UNSET','ROOT_CAUSE_LANDSCAPE'].includes(overview.PRIORITY_DERIVATION_SOURCE)) violations.push('00-OVERVIEW.md: PRIORITY_DERIVATION_SOURCE_INVALID');
+if (!isUnsetOrCount(overview.UNRANKED_MATERIAL_CLUSTERS)) violations.push('00-OVERVIEW.md: UNRANKED_MATERIAL_CLUSTERS_INVALID');
+if (overview.PRIORITY_POLICY !== 'HIGHEST_PROVEN_SYSTEMIC_LEVERAGE') violations.push('00-OVERVIEW.md: PRIORITY_POLICY_INVALID');
+
 if (!['UNSET','ROOT_GRAPH'].includes(overview.FRONTIER_DERIVATION_SOURCE)) violations.push('00-OVERVIEW.md: FRONTIER_DERIVATION_SOURCE_INVALID');
 if (!['YES','NO'].includes(overview.FRONTIER_VALID)) violations.push('00-OVERVIEW.md: FRONTIER_VALID_INVALID');
 if (overview.NAVIGATION_POLICY !== 'ROOT_ANCHORED_GRAPH_ONLY') violations.push('00-OVERVIEW.md: NAVIGATION_POLICY_INVALID');
@@ -101,6 +112,7 @@ for (const h of ['## 1. Truth Baseline','## 2. Macro Blueprint / Dependency Grap
 
 const seqFiles = files.filter((f) => /^\d{3}-[a-z0-9-]+\.md$/.test(f)).sort();
 const allowedStatuses = new Set(['DIAGNOSING','DECISION_REQUIRED','SOLUTION_READY','READY_TO_EXECUTE','EXECUTING','VERIFYING','SUSPENDED_BY_DEPENDENCY','REOPENED','BLOCKED_EXTERNAL','PREPARED','COMPLETE']);
+const allowedPriorityClasses = new Set(['PRIMARY_SYSTEMIC','UPSTREAM_FOUNDATION','INDEPENDENT_PARALLEL','DEPENDENT_SECONDARY','LEAF_LOCAL']);
 const records = [];
 for (let i = 0; i < seqFiles.length; i += 1) {
   const filename = seqFiles[i];
@@ -113,9 +125,13 @@ for (let i = 0; i < seqFiles.length; i += 1) {
   if (m.SEQUENCE_ORDER !== order) violations.push(`${filename}: SEQUENCE_ORDER_INVALID expected ${order}`);
   for (const field of ['TASK_ID','REPOSITORY','BRANCH','TASK_BRANCH','MODE']) if ((m[field] ?? '') !== (overview[field] ?? '')) violations.push(`${filename}: ${field}_MISMATCH`);
   for (const field of ['BASE_SHA','RECONCILED_HEAD_SHA']) if (!isSha(m[field])) violations.push(`${filename}: ${field}_INVALID`);
+  if (!/^RC-\d{3}$/.test(m.ROOT_CAUSE_CLUSTER_ID ?? '')) violations.push(`${filename}: ROOT_CAUSE_CLUSTER_ID_INVALID`);
+  if (!allowedPriorityClasses.has(m.PRIORITY_CLASS)) violations.push(`${filename}: PRIORITY_CLASS_INVALID ${m.PRIORITY_CLASS ?? '<missing>'}`);
+  if (!m.PRIORITY_BASIS) violations.push(`${filename}: PRIORITY_BASIS_REQUIRED`);
   if (!m.DERIVATION_BASIS) violations.push(`${filename}: DERIVATION_BASIS_REQUIRED`);
   if (!allowedStatuses.has(m.SEQUENCE_STATUS)) violations.push(`${filename}: SEQUENCE_STATUS_INVALID ${m.SEQUENCE_STATUS ?? '<missing>'}`);
   if (!['UNPROVEN','SERIAL_REQUIRED','PROVEN_INDEPENDENT'].includes(m.PARALLEL_SAFETY)) violations.push(`${filename}: PARALLEL_SAFETY_INVALID`);
+  if (m.PRIORITY_CLASS === 'INDEPENDENT_PARALLEL' && m.PARALLEL_SAFETY !== 'PROVEN_INDEPENDENT' && ['READY_TO_EXECUTE','EXECUTING','VERIFYING'].includes(m.SEQUENCE_STATUS)) violations.push(`${filename}: INDEPENDENT_PARALLEL_LIVE_WRITE_REQUIRES_PARALLEL_SAFETY=PROVEN_INDEPENDENT`);
   if (!m.CONFLICT_DOMAIN) violations.push(`${filename}: CONFLICT_DOMAIN_REQUIRED`);
   if (!m.EXECUTION_OWNER) violations.push(`${filename}: EXECUTION_OWNER_REQUIRED`);
   for (const field of ['ROOT_CAUSE_PROVEN','DECISIONS_RESOLVED','DECISION_IMPACT_PROPAGATED','REDIAGNOSIS_COMPLETE','IMPACT_MAPPED','FINDINGS_DISPOSITIONED','DEPENDENCIES_DISPOSITIONED','VERIFICATION_DEFINED','SOLUTION_READY','IMPLEMENTATION_COMPLETE','CONSUMERS_RECONCILED','LOCAL_CLEANUP_COMPLETE','VERIFICATION_PASS','SCOPE_DELTA_CLASSIFIED']) if (!['YES','NO'].includes(m[field])) violations.push(`${filename}: ${field}_MUST_BE_YES_OR_NO`);
@@ -147,7 +163,12 @@ for (const record of writeLive) {
   if (existing) violations.push(`CONFLICT_DOMAIN_PARALLEL_WRITE ${m.CONFLICT_DOMAIN}: ${existing} <> ${m.SEQUENCE_ID}`);
   conflictOwners.set(m.CONFLICT_DOMAIN,m.SEQUENCE_ID);
 }
-if (writeLive.length > 1) for (const r of writeLive) if (r.metadata.PARALLEL_SAFETY !== 'PROVEN_INDEPENDENT') violations.push(`${r.filename}: MULTI_FRONTIER_LIVE_WRITE_REQUIRES_PARALLEL_SAFETY=PROVEN_INDEPENDENT`);
+if (writeLive.length > 1) {
+  for (const r of writeLive) {
+    if (r.metadata.PARALLEL_SAFETY !== 'PROVEN_INDEPENDENT') violations.push(`${r.filename}: MULTI_FRONTIER_LIVE_WRITE_REQUIRES_PARALLEL_SAFETY=PROVEN_INDEPENDENT`);
+    if (r.metadata.PRIORITY_CLASS !== 'INDEPENDENT_PARALLEL') violations.push(`${r.filename}: MULTI_FRONTIER_LIVE_WRITE_REQUIRES_PRIORITY_CLASS=INDEPENDENT_PARALLEL`);
+  }
+}
 
 function selectedRecord(label) {
   if (selectedSequenceId) {
@@ -169,6 +190,16 @@ function requireRoot(label) {
   if (!isSha(overview.ROOT_RECONCILED_SHA) || overview.ROOT_RECONCILED_SHA !== overview.LATEST_RECONCILED_SHA) violations.push(`00-OVERVIEW.md: ${label}_ROOT_RECONCILED_SHA_NOT_CURRENT`);
   if (overview.FRONTIER_DERIVATION_SOURCE !== 'ROOT_GRAPH') violations.push(`00-OVERVIEW.md: ${label}_FRONTIER_NOT_ROOT_GRAPH_DERIVED`);
   if (!yes(overview.FRONTIER_VALID)) violations.push(`00-OVERVIEW.md: ${label}_FRONTIER_NOT_VALID`);
+}
+function requirePriority(label) {
+  for (const field of ['TARGET_LANDSCAPE_COMPLETE','ROOT_CAUSE_CLUSTERING_COMPLETE','ROOT_CAUSE_CLUSTERS_ACCOUNTED','PRIORITY_MODEL_COMPLETE','PRIMARY_FRONTIER_JUSTIFIED','LANDSCAPE_ADVERSARIAL_PASS']) {
+    if (!yes(overview[field])) violations.push(`00-OVERVIEW.md: ${label}_${field}_NOT_PASS`);
+  }
+  if (!isSha(overview.LANDSCAPE_RECONCILED_SHA) || overview.LANDSCAPE_RECONCILED_SHA !== overview.LATEST_RECONCILED_SHA) violations.push(`00-OVERVIEW.md: ${label}_LANDSCAPE_RECONCILED_SHA_NOT_CURRENT`);
+  if (overview.UNCLUSTERED_MATERIAL_FINDINGS !== '0') violations.push(`00-OVERVIEW.md: ${label}_UNCLUSTERED_MATERIAL_FINDINGS_NOT_ZERO`);
+  if (overview.PRIORITY_DERIVATION_SOURCE !== 'ROOT_CAUSE_LANDSCAPE') violations.push(`00-OVERVIEW.md: ${label}_PRIORITY_DERIVATION_SOURCE_INVALID`);
+  if (overview.UNRANKED_MATERIAL_CLUSTERS !== '0') violations.push(`00-OVERVIEW.md: ${label}_UNRANKED_MATERIAL_CLUSTERS_NOT_ZERO`);
+  if (overview.PRIORITY_POLICY !== 'HIGHEST_PROVEN_SYSTEMIC_LEVERAGE') violations.push(`00-OVERVIEW.md: ${label}_PRIORITY_POLICY_INVALID`);
 }
 function requireCommon(label, record) {
   if (!record) { violations.push(`${label}: SEQUENCE_REQUIRED`); return; }
@@ -196,6 +227,7 @@ function requireGlobal(label) {
 if (sequenceReady) {
   requireIsolation('SEQUENCE_READY');
   requireRoot('SEQUENCE_READY');
+  requirePriority('SEQUENCE_READY');
   const r = selectedRecord('SEQUENCE_READY');
   requireCommon('SEQUENCE_READY',r);
   if (r && !frontier.includes(r.metadata.SEQUENCE_ID)) violations.push(`${r.filename}: SEQUENCE_READY_MUST_BE_IN_ACTIVE_FRONTIER`);
@@ -209,6 +241,7 @@ if (sequenceReady) {
 if (sequenceComplete) {
   requireIsolation('SEQUENCE_COMPLETE');
   requireRoot('SEQUENCE_COMPLETE');
+  requirePriority('SEQUENCE_COMPLETE');
   const r = selectedRecord('SEQUENCE_COMPLETE');
   if (r && !frontier.includes(r.metadata.SEQUENCE_ID)) violations.push(`${r.filename}: SEQUENCE_COMPLETE_MUST_BE_IN_ACTIVE_FRONTIER_UNTIL_REGISTRY_CLEAR`);
   requireTerminal('SEQUENCE_COMPLETE',r);
@@ -223,6 +256,7 @@ if (overview.FINAL_DECISION && !canonical.has(overview.FINAL_DECISION)) violatio
 if (handoff) {
   requireIsolation('HANDOFF');
   requireRoot('HANDOFF');
+  requirePriority('HANDOFF');
   if (overview.MODE !== 'PREPARE_ONLY') violations.push('HANDOFF_REQUIRES_PREPARE_ONLY');
   if (frontier.length) violations.push('HANDOFF_REQUIRES_EMPTY_ACTIVE_EXECUTION_FRONTIER');
   requireGlobal('HANDOFF');
@@ -234,6 +268,7 @@ if (handoff) {
 if (closure) {
   requireIsolation('CLOSURE');
   requireRoot('CLOSURE');
+  requirePriority('CLOSURE');
   if (overview.MODE !== 'EXECUTE_END_TO_END') violations.push('CLOSURE_REQUIRES_EXECUTE_END_TO_END');
   if (frontier.length) violations.push('CLOSURE_REQUIRES_EMPTY_ACTIVE_EXECUTION_FRONTIER');
   requireGlobal('CLOSURE');
@@ -253,4 +288,4 @@ if (violations.length) {
 }
 const suffix = closure?' --closure':handoff?' --handoff':sequenceComplete?' --sequence-complete':sequenceReady?' --sequence-ready':'';
 console.log(`PACKAGE VALIDATION: PASS${suffix}`);
-console.log('Proof limit: structural/root/isolation/accounting/sequence/integration consistency only; not Product/Runtime correctness.');
+console.log('Proof limit: structural/root/landscape-priority/isolation/accounting/sequence/integration consistency only; not Product/Runtime correctness.');
