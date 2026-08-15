@@ -34,8 +34,9 @@ const startSha = args['start-sha'];
 const currentSha = args['current-sha'] ?? startSha;
 const mode = args.mode;
 const target = args.target ?? '';
+const orchestrationRoot = target.trim() || 'AUTHORIZED_TASK_SCOPE';
 const repository = args.repository ?? 'bthwani2-boop/bthwani-suite-next';
-const objective = args.objective ?? `Diagnose ${target || 'the authorized target'} sequentially and close/prepare each proven dependency sequence without guessing.`;
+const objective = args.objective ?? `Diagnose and close ${orchestrationRoot} from its logical root through the proven dependency/impact graph without recency-driven navigation.`;
 
 if (!name || !branch || !startSha || !mode) throw new Error('Usage: new-package.mjs --name <task-name> --branch <branch> --start-sha <40-sha> [--current-sha <40-sha>] --mode <PREPARE_ONLY|EXECUTE_END_TO_END> [--target <target>] [--objective <text>] [--repository owner/repo]');
 if (!/^[a-z0-9][a-z0-9-]{2,79}$/.test(name) || name === '_template' || name.includes('..')) throw new Error('Unsafe task name.');
@@ -52,6 +53,7 @@ const taskId = `PKG-${name.toUpperCase().replace(/-/g, '_')}`;
 const now = new Date().toISOString();
 const replacements = {
   '__TASK_NAME__': name, '__TASK_ID__': taskId, '__TASK_OBJECTIVE__': objective, '__TARGET__': target,
+  '__ORCHESTRATION_ROOT__': orchestrationRoot,
   '__MODE__': mode, '__CREATED_AT_ISO__': now, '__LAST_RECONCILED_AT_ISO__': now,
   '__REPOSITORY__': repository, '__BRANCH__': branch, '__START_SHA__': startSha.toLowerCase(),
   '__CURRENT_SHA__': currentSha.toLowerCase(), '__ORCHESTRATOR_PATH__': orchestratorPath,
@@ -62,6 +64,6 @@ const overview = replaceAll(await readFile(join(templateRoot, '00-OVERVIEW.templ
 await writeFile(join(destination, '00-OVERVIEW.md'), overview, 'utf8');
 
 console.log(`Created BTHWANI_TASK_PACKAGE_V2: ${destination}`);
-console.log('Created: 00-OVERVIEW.md only.');
-console.log('Do not pre-create sequence files.');
-console.log('After the dependency graph proves the next coherent execution boundary, use new-sequence.mjs.');
+console.log(`ORCHESTRATION_ROOT=${orchestrationRoot}`);
+console.log('Root reconciliation is REQUIRED before any Sequence is derived.');
+console.log('Latest HEAD is truth/integration baseline only; never derive work direction from commit recency.');
