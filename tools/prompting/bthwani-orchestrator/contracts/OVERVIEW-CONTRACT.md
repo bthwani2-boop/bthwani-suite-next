@@ -3,89 +3,59 @@
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
 Applies to: `plans/diagnose-implementing/<TASK_NAME>/00-OVERVIEW.md`
 
-## Required Header
+## Required Root/Truth Header
 
 ```text
 PACKAGE_SCHEMA: BTHWANI_TASK_PACKAGE_V2
-TASK_ID
-TASK_NAME
-REPOSITORY
-BRANCH
-MODE
-TARGET
-OBJECTIVE
-ORCHESTRATOR_PATH
-CREATED_AT
-LAST_RECONCILED_AT
-START_SHA
-CURRENT_SHA
-LATEST_RECONCILED_SHA
+TASK_ID / TASK_NAME / REPOSITORY / BRANCH / MODE / TARGET
+ORCHESTRATION_ROOT
+NAVIGATION_POLICY: ROOT_ANCHORED_GRAPH_ONLY
+LATEST_HEAD_ROLE: TRUTH_INTEGRATION_BASELINE_ONLY
+OBJECTIVE / ORCHESTRATOR_PATH
+CREATED_AT / LAST_RECONCILED_AT
+START_SHA / CURRENT_SHA / LATEST_RECONCILED_SHA
+ROOT_RECONCILIATION_REQUIRED
+ROOT_RECONCILED_SHA
+FRONTIER_DERIVATION_SOURCE
+FRONTIER_VALID
 LIFECYCLE_STATE
 ACTIVE_EXECUTION_FRONTIER
 SUSPENSION_STACKS
 INTEGRATION_OWNER
-FINDINGS_ACCOUNTED
-SCOPE_DELTAS_ACCOUNTED
-DECISIONS_ACCOUNTED
-CONSUMERS_ACCOUNTED
-EVIDENCE_ACCOUNTED
-CLEANUP_ACCOUNTED
-ACCOUNTING_COMPLETE
-DISCOVERY_COMPLETE
-DIAGNOSIS_COMPLETE
-DECISION_COMPLETE
-COVERAGE_COMPLETE
-PACKAGE_READY
-IMPLEMENTATION_COMPLETE
-EVIDENCE_COMPLETE
-CLEANUP_COMPLETE
-GOVERNANCE_SYNC_COMPLETE
-FRESH_HEAD_VALID
-FINAL_ADVERSARIAL_PASS
-FINAL_CANDIDATE_SHA
-HEAD_AT_REVIEW_START
-HEAD_AT_DECISION
 ```
 
-`FINAL_DECISION` remains absent until a canonical final decision is actually issued.
+Plus all accounting/global/final candidate fields already defined by V2.
+
+## Root Anchor Invariants
+
+```text
+ORCHESTRATION_ROOT is resolved from TARGET/task authority, never latest commit topic.
+NAVIGATION_POLICY must remain ROOT_ANCHORED_GRAPH_ONLY.
+LATEST_HEAD_ROLE must remain TRUTH_INTEGRATION_BASELINE_ONLY.
+```
+
+Before frontier execution:
+
+```text
+ROOT_RECONCILIATION_REQUIRED=NO
+ROOT_RECONCILED_SHA=LATEST_RECONCILED_SHA
+FRONTIER_DERIVATION_SOURCE=ROOT_GRAPH
+FRONTIER_VALID=YES
+```
+
+Before first JIT sequence, root reconciliation must pass; sequence creation establishes the frontier.
 
 ## Required Sections
 
 ```text
-1. Truth Baseline
+1. Truth / Root Baseline
 2. Macro Blueprint / Dependency Graph
 3. Sequence Registry / Execution Frontier
-4. Global Decisions / Blockers
+4. Global Decisions / Blockers / Foreign Deltas
 5. Global Accounting / Coverage / Reconciliation
 6. Final Target Handoff / Closure
 ```
 
-## Sequence Registry Record
+Sequence rows remain one row ↔ one materialized file. No placeholder rows. Foreign/concurrent observations without materialized sequence files stay in section 4/5 until root graph proves placement.
 
-```text
-SEQUENCE_ID
-FILE
-SUBJECT
-DERIVATION_BASIS
-DEPENDS_ON
-UNLOCKS
-CONFLICT_DOMAIN
-EXECUTION_OWNER
-STATUS
-REOPEN_TRIGGER
-```
-
-Rules:
-
-```text
-one row ↔ one sequence file
-contiguous IDs describe creation history, not forced execution chain
-no placeholder future sequences
-multiple non-terminal rows allowed only when graph-justified
-ACTIVE_EXECUTION_FRONTIER references zero or more graph-proven independent live fronts
-no duplicate live conflict domain
-SUSPENDED_BY_DEPENDENCY / REOPENED are first-class
-INTEGRATION_OWNER is single target-branch integration authority at a time
-```
-
-Before final handoff/closure all accounting fields and `ACCOUNTING_COMPLETE` must be YES.
+Final handoff/closure also requires all accounting/global gates and fresh root/head reconciliation.
