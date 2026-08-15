@@ -8,6 +8,8 @@ Status: DERIVED_SUPPORT
 Root-Anchored Graph-Driven Multi-Agent Root-Cause Closure
 + New-Package-Per-Invocation
 + Task-Branch / Worktree Isolation
++ Target-Wide Root-Cause Landscape
++ Highest-Proven-Systemic-Leverage Priority
 ```
 
 ```text
@@ -46,7 +48,9 @@ Ordinary writing workers never use Integration Target as shared working context.
 ```text
 TARGET / ORCHESTRATION_ROOT → where the task starts and how it is oriented
 LATEST INTEGRATION TARGET HEAD → current truth + integration baseline only
-ROOT-RECONCILED GRAPH → what to do next
+ROOT-RECONCILED GRAPH → causal/dependency movement
+ROOT-CAUSE LANDSCAPE → what material systemic problems exist
+PRIORITY MODEL → which proven cluster should be treated first
 TASK_BRANCH/WORKSPACE → where this task writes
 LATEST COMMIT → never task direction by recency
 ```
@@ -61,6 +65,10 @@ resolve latest Integration Target SHA
    REMOTE/API: use TASK_BRANCH as isolated remote workspace
 → create NEW package on TASK_BRANCH
 → Root/Macro reconciliation
+→ target-wide Gap & Root-Cause Landscape
+→ correlate Findings into RC-NNN clusters
+→ rank all material clusters by systemic leverage
+→ adversarially challenge the landscape/ranking
 → Graph/Frontier derivation
 ```
 
@@ -111,6 +119,39 @@ FRONTIER_DERIVATION_SOURCE
 FRONTIER_VALID
 ```
 
+## Target landscape / priority fields
+
+```text
+TARGET_LANDSCAPE_COMPLETE
+LANDSCAPE_RECONCILED_SHA
+ROOT_CAUSE_CLUSTERING_COMPLETE
+ROOT_CAUSE_CLUSTERS_ACCOUNTED
+UNCLUSTERED_MATERIAL_FINDINGS
+PRIORITY_MODEL_COMPLETE
+PRIORITY_DERIVATION_SOURCE
+UNRANKED_MATERIAL_CLUSTERS
+PRIMARY_FRONTIER_JUSTIFIED
+LANDSCAPE_ADVERSARIAL_PASS
+PRIORITY_POLICY=HIGHEST_PROVEN_SYSTEMIC_LEVERAGE
+```
+
+The landscape is target-wide, not necessarily whole-repository-wide when TARGET is narrow.
+
+Priority is evidence-backed comparison, not a blind numerical score:
+
+```text
+UPSTREAM / ROOT-CAUSE DEPTH
+→ BLOCKING POWER
+→ CANONICAL / FOUNDATION IMPORTANCE
+→ BLAST RADIUS
+→ RISK / SEVERITY
+→ UNLOCK VALUE
+→ FINDING DENSITY / RECURRENCE
+→ STRUCTURAL-DEBT MULTIPLIER
+```
+
+`MOST_FINDINGS` is a correlation signal, not an automatic winner.
+
 ## Task isolation fields
 
 ```text
@@ -139,6 +180,14 @@ node plans/diagnose-implementing/root-anchor-gate.mjs <package> `
   --phase <derive|frontier|closure>
 ```
 
+Root-cause landscape / priority:
+
+```powershell
+node plans/diagnose-implementing/root-cause-priority-gate.mjs <package> `
+  --latest-sha <live-integration-target-sha> `
+  --phase <derive|frontier|closure>
+```
+
 Isolation:
 
 ```powershell
@@ -154,24 +203,43 @@ node plans/diagnose-implementing/task-isolation-gate.mjs <package> `
 
 ```text
 UNRELATED → preserve, do not follow
-RELATED → attach to correct root graph node
-UPSTREAM/BLOCKING → may alter frontier only with proof
-AUTHORITY/ROOT CHANGE → re-anchor/re-diagnose
+RELATED → attach to correct root graph / RC cluster
+UPSTREAM/BLOCKING → may alter priority/frontier only with proof
+AUTHORITY/ROOT CHANGE → re-anchor/re-diagnose/re-rank affected cone
 RECENCY ALONE → never priority
 ```
 
 ## Create Sequence
 
-After Root + Task Isolation are valid:
+After Root + Target Landscape/Priority + Task Isolation are valid:
 
 ```powershell
 node plans/diagnose-implementing/new-sequence.mjs `
   --package <task-name> --name <slug> --title "<title>" `
   --base-sha <latest-reconciled-target-sha> `
-  --basis "<root-graph-proven boundary>" --depends-on "<SEQ-NNN|NONE>"
+  --cluster <RC-NNN> `
+  --priority-class <PRIMARY_SYSTEMIC|UPSTREAM_FOUNDATION|INDEPENDENT_PARALLEL|DEPENDENT_SECONDARY|LEAF_LOCAL> `
+  --priority-basis "<comparative systemic-leverage proof>" `
+  --basis "<root-graph-proven boundary>" `
+  --depends-on "<SEQ-NNN|NONE>"
 ```
 
-Supports `--suspend-current YES` for structured backtracking and `--parallel YES` only for graph-proven independent frontier.
+Supports `--suspend-current YES` for structured backtracking and `--parallel YES` only with `priority-class=INDEPENDENT_PARALLEL` and graph-proven independent frontier.
+
+## Re-ranking rule
+
+Any material discovery/decision/dependency/foreign delta that creates, merges, splits, or materially reprioritizes a root-cause cluster invalidates affected priority provenance:
+
+```text
+PRIORITY_MODEL_COMPLETE=NO
+PRIMARY_FRONTIER_JUSTIFIED=NO
+LANDSCAPE_ADVERSARIAL_PASS=NO when landscape completeness changed
+→ reconcile affected landscape cone
+→ rerank
+→ justify frontier again
+```
+
+Do not mechanically continue the next Sequence ID.
 
 ## Integration
 
@@ -191,11 +259,14 @@ resolve latest Integration Target
 ## Other invariants
 
 - one file = one coherent root-cause/execution/verification/closure unit
-- JIT sequences only; no placeholder rows/files
+- JIT sequences only; no placeholder Sequence rows/files
+- every material Finding clustered/dispositioned before frontier selection
+- every material RC cluster ranked before frontier selection
+- highest proven systemic leverage governs priority
 - graph-driven non-linear movement after root orientation
 - full impact propagation after decisions/root causes
 - accounting prevents silent loss
-- parallel live writes only on independent conflict domains
+- parallel live writes only on independent conflict domains and priority frontiers
 - one writing workspace per writing worker
 - one Integration Owner per target at a time
 - evidence governs closure
