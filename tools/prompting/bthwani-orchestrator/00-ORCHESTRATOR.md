@@ -2,7 +2,7 @@
 
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
 
-هذه الحزمة منهجية توثيقية فقط تحت `tools/prompting/**`. ليست Product Code ولا Runtime Code ولا Product Truth ولا Proof of implementation/closure. بيانات المهمة المشتقة تكتب تحت `plans/diagnose-implementing/<TASK_NAME>/`، والحقيقة الدائمة تترقى إلى مالكها الحاكم داخل `governance/**`/العقود/الكود الحي عندما يسمح الـMODE والسلطة بذلك.
+هذه الحزمة منهجية توثيقية تحت `tools/prompting/**`. ليست Product Code ولا Runtime Code ولا Product Truth ولا Proof of implementation/closure. بيانات المهمة المشتقة تكتب تحت `plans/diagnose-implementing/<TASK_NAME>/`، والحقيقة الدائمة تترقى إلى مالكها الحاكم داخل `governance/**`/العقود/الكود الحي عندما يسمح الـMODE والسلطة بذلك.
 
 ## 0) الاستدعاء
 
@@ -14,64 +14,39 @@ Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
 
 ## 1) المبدأ الحاكم
 
-النمطان يستخدمان نفس منهج التشخيص والقرار وإعادة التشخيص وترتيب الاعتماديات. الفرق هو سلطة الكتابة بعد أن يصبح التسلسل الحالي مفهومًا ومحدد الحل بلا تخمين.
+```text
+THE GRAPH GOVERNS MOVEMENT.
+ROOT CAUSE GOVERNS SCOPE.
+LEDGERS PREVENT SILENT LOSS.
+DEPENDENCIES GOVERN ORDER.
+INDEPENDENCE GOVERNS PARALLELISM.
+LATEST HEAD GOVERNS WRITES.
+ONE INTEGRATION OWNER GOVERNS TARGET-BRANCH MUTATION.
+EVIDENCE GOVERNS CLOSURE.
+```
+
+التشخيص/التحليل/انتشار الأثر **شبكي وغير خطي**: رأسي/أفقي/عكسي/عبر الطبقات والأسطح والخدمات والبيانات والعقود والـRuntime، مع قفز منطقي إلى Root Cause أو Dependency أعمق ثم عودة منظمة. أرقام Sequences تسجل وحدات الإغلاق ولا تفرض مسارًا خطيًا مصطنعًا.
+
+المسار المشترك:
 
 ```text
-DISCOVER GLOBALLY
-→ MACRO BLUEPRINT
+PIN LATEST TRUTH
+→ CAPABILITY PREFLIGHT
+→ CREATE/RESUME OVERVIEW
+→ GLOBAL DISCOVERY
 → RELATION / DEPENDENCY GRAPH
-→ DERIVE NEXT COHERENT EXECUTION SEQUENCE
-→ DIAGNOSE
-→ FINDINGS / ROOT CAUSE / BLAST RADIUS
-→ RESOLVE DERIVABLE FACTS
-→ TRUE DECISION BOUNDARY when required
-→ USER/AUTHORITY DECISION
-→ IMPACT PROPAGATION + RE-DIAGNOSIS
-→ DEFINE EXACT TARGET STATE / CONSUMERS / GOVERNANCE / CLEANUP / VERIFICATION
-→ SEQUENCE_SOLUTION_READY
+→ ACCOUNT EVERY MATERIAL NODE
+→ ROOT-CAUSE CORRELATION
+→ DERIVE PROVEN EXECUTION FRONTIER
+→ DIAGNOSE / DECIDE / PROPAGATE / RE-DIAGNOSE
+→ DEFINE EXACT TARGET STATE / CUTOVER / CLEANUP / VERIFICATION
+→ MODE-SPECIFIC EXECUTION OR HANDOFF
+→ RECONCILE GRAPH ON LATEST HEAD
 ```
 
-ممنوع questions-first، app-by-app ordering، pre-creating future sequences، أو الانتقال لتسلسل تابع مع نقص مادي معروف في التسلسل الحالي.
+لا questions-first، ولا app-by-app ordering، ولا إصلاح أعراض معروفة وترك Root Cause مثبت، ولا إسقاط Finding/Dependency/Consumer/Scope Delta لأن موقعه في التسلسل لم يأت بعد.
 
-### PREPARE_ONLY
-
-```text
-DOCUMENT EXACT ROOT SOLUTION
-→ DOCUMENT EXECUTION / CONSUMERS / GOVERNANCE PROMOTION / CLEANUP / VERIFICATION
-→ SEQUENCE_STATUS=PREPARED
-→ SEQUENCE EXIT GATE
-→ DERIVE NEXT SEQUENCE
-```
-
-لا Product/Governance/Runtime/Data/Provider mutation ولا migration application ولا implementation commit. كل حقيقة دائمة تسجل `GOVERNANCE_PROMOTION_PENDING` مع exact canonical owner + exact semantic change.
-
-### EXECUTE_END_TO_END
-
-```text
-SEQUENCE WRITE GATE
-→ Governance Promotion when required
-→ Root-Cause implementation
-→ migrate writers/readers/consumers
-→ remove obsolete/parallel path
-→ local cleanup
-→ required verification/runtime readback
-→ update sequence record
-→ SEQUENCE_STATUS=COMPLETE
-→ SEQUENCE EXIT GATE
-→ DERIVE NEXT SEQUENCE
-```
-
-لا يشترط اكتمال تشخيص كامل TARGET عالميًا قبل أول write؛ يشترط اكتمال التسلسل الحالي فقط. لا ينتقل للتالي قبل إغلاق الحالي حسب الـMODE.
-
-## 2) Package Schema V2 — Adaptive Sequential Package
-
-الحزمة ليست ثلاثة ملفات ثابتة، وليست شجرة Domains ثابتة. بنيتها مشتقة من:
-
-```text
-TARGET + DISCOVERY + DEPENDENCY GRAPH + ROOT-CAUSE / OWNERSHIP / VERIFICATION BOUNDARIES
-```
-
-الشكل الحاكم:
+## 2) Package Schema V2 — Graph-Driven Adaptive Package
 
 ```text
 plans/diagnose-implementing/<TASK_NAME>/
@@ -84,216 +59,246 @@ plans/diagnose-implementing/<TASK_NAME>/
 قواعد دستورية:
 
 ```text
-ONE FILE = ONE COHERENT EXECUTION/CLOSURE SEQUENCE
-SEQUENCES ARE DERIVED FROM THE DEPENDENCY GRAPH
-SEQUENCES ARE CREATED JUST-IN-TIME
-NO PRECREATED FUTURE SEQUENCES
+ONE FILE = ONE COHERENT ROOT-CAUSE / EXECUTION / VERIFICATION / CLOSURE UNIT
+SEQUENCES COME FROM THE PROVEN GRAPH
+CREATE SEQUENCES JUST-IN-TIME
 NO FIXED NUMBER OF SEQUENCES
 NO FIXED DOMAIN DIRECTORY TREE
-NO SUBDIRECTORIES INSIDE A V2 TASK PACKAGE
-NO SPLIT BY DIAGNOSIS / EXECUTION / VERIFICATION
+NO SUBDIRECTORIES INSIDE V2 PACKAGE
+NO DIAGNOSIS/EXECUTION/VERIFICATION SPLIT
 NO FILE WITHOUT DISTINCT PURPOSE
 NO SPLIT BY LINE COUNT ALONE
-NO MERGE OF UNRELATED ROOT-CAUSE/OWNERSHIP/VERIFICATION BOUNDARIES
+NO MERGE OF UNRELATED CLOSURE BOUNDARIES
 ```
 
-`00-OVERVIEW.md` صغير ومركزي: Task identity, SHA, Macro map, sequence registry/order, global decisions/blockers/coverage/final closure فقط. لا يكرر تفاصيل التسلسلات.
+`00-OVERVIEW.md` هو Control/Accounting layer صغير: Task/SHA/Macro Graph/Execution Frontier/Sequence Registry/Global Decisions/Accounting/Final Closure فقط. لا يكرر تفاصيل Sequences.
 
-ملف التسلسل نفسه يجمع:
+## 3) Accounting Machine — منع النسيان
+
+كل شيء مادي يجب أن يملك هوية وحالة:
 
 ```text
-Scope/Context
-→ Diagnosis/Findings
-→ Root Cause/Blast Radius
-→ Decisions/Re-Diagnosis
-→ Exact Target State
-→ Treatment/Execution
-→ Consumers/Contracts/Data/Governance
-→ Cleanup
-→ Verification/Runtime/Evidence
-→ Sequence Exit Gate/Reopen
+DISCOVERED MATERIAL NODE → GRAPH NODE + COVERAGE STATUS
+DEFECT/GAP/CONTRADICTION → FINDING ID
+NEW DEPENDENCY/CONSUMER/SURFACE → SCOPE DELTA ID
+TRUE DECISION → DECISION ID
+EXECUTION/CLOSURE UNIT → SEQUENCE ID
+TEST/RUNTIME/READBACK/REVIEW → EVIDENCE ID
+CLEANUP RESIDUE → CLEANUP DISPOSITION
 ```
 
-إذا أصبح ملف واحد يحتوي Closure Boundaries مستقلة حقيقية، قسّمه إلى تسلسلين أو أكثر في الرسم البياني نفسه، لا إلى ملفات مساعدة اعتباطية.
-
-## 3) Just-In-Time Sequence Lifecycle
+ممنوع `IGNORE`, silent TODO, أو عنصر مادي بلا disposition. قبل handoff/closure يلزم:
 
 ```text
-CREATE/RESUME 00-OVERVIEW.md
-→ BROAD DISCOVERY / MACRO GRAPH
-→ prove first sequence boundary
-→ create 001-<name>.md
-→ complete according to MODE
-→ reconcile graph
-→ only then derive/create 002-<name>.md
+FINDINGS_ACCOUNTED = YES
+SCOPE_DELTAS_ACCOUNTED = YES
+DECISIONS_ACCOUNTED = YES
+CONSUMERS_ACCOUNTED = YES
+EVIDENCE_ACCOUNTED = YES
+CLEANUP_ACCOUNTED = YES
+ACCOUNTING_COMPLETE = YES
 ```
 
-لا تنشئ `002` لأنك تتوقعه؛ أنشئه فقط عندما يصبح نطاقه/اعتماده/سبب فصله مثبتًا. إصلاح Sequence سابقة قد يلغي Sequences كانت مجرد أعراض.
+`ACCOUNTING_COMPLETE` لا يعني “لم نجد مشاكل”، بل يعني أن كل ما اكتُشف ماديًا مصنف ومربوط ومغلق أو مستبعد بدليل.
 
-## 4) كيف يُشتق Sequence مستقل؟
+## 4) Decision / Root-Cause Propagation
 
-Sequence هو أصغر وحدة منطقية يمكن فهمها ومعالجتها والتحقق منها وإغلاقها بصورة متماسكة. الفصل مبرر عند وجود Boundary مثبت مثل:
+أي قرار أو Root Cause مثبت ينتشر فورًا عبر **كامل Proven Impact Graph**:
 
 ```text
-distinct root-cause cluster
-different canonical owner/source of truth
-hard dependency boundary
-independent state-machine or operational journey boundary
-materially distinct verification/runtime boundary
-different protected/risk domain
-independent consumer migration set
-different durable governance decision boundary
+writers → readers → consumers → contracts → states → data → surfaces
+→ permissions → jobs/events/providers → governance → runtime/evidence
 ```
 
-إذا كانت Backend/Frontend/DB/Control Panel آثارًا لنفس Root Cause وOwner وVerification Boundary، فهي Sequence واحدة لا أربع.
+الانتشار فوري؛ التنفيذ يبقى dependency-ordered. لا تغلق Sequence إذا بقي Consumer/parallel truth/migration/legacy path/workaround لازم لصحة الـcoherent cutover.
 
-## 5) State Machine
+أي Finding جديدة يجب أن تصبح واحدة من:
 
 ```text
-INIT
-→ PIN_TRUTH
-→ CAPABILITY_PREFLIGHT
-→ CREATE_OR_RESUME_V2_OVERVIEW
-→ BROAD_DISCOVERY
-→ BUILD_RELATION_GRAPH
-→ MACRO_BLUEPRINT
-↔ MACRO_DECISION_GATE
-↔ USER/AUTHORITY_DECISION
-↔ IMPACT_PROPAGATION_AND_RE_DIAGNOSIS
-→ PRIORITIZE_FOUNDATIONS_AND_CONNECTED_CLUSTERS
-
-LOOP:
-  DERIVE_NEXT_SEQUENCE_FROM_GRAPH
-  → CREATE_SEQUENCE_JUST_IN_TIME
-  → DIAGNOSE_SEQUENCE
-  → ROOT_CAUSE / BLAST_RADIUS
-  ↔ TRUE_DECISION_BOUNDARY
-  ↔ USER/AUTHORITY_DECISION
-  ↔ IMPACT_PROPAGATION_AND_RE_DIAGNOSIS
-  → SEQUENCE_SOLUTION_READY
-
-  PREPARE_ONLY:
-    → DOCUMENT_EXECUTION_READY_HANDOFF
-    → SEQUENCE_PREPARED_GATE
-    → CLEAR_CURRENT_SEQUENCE
-    → RECONCILE_GRAPH
-    → NEXT
-
-  EXECUTE_END_TO_END:
-    → SEQUENCE_WRITE_GATE
-    → GOVERNANCE_PROMOTION_WHERE_REQUIRED
-    → EXECUTE_ROOT_CAUSE
-    → MIGRATE_CONSUMERS
-    → LOCAL_CLEANUP
-    → VERIFY / RUNTIME_READBACK
-    → SEQUENCE_COMPLETE_GATE
-    → CLEAR_CURRENT_SEQUENCE
-    → RECONCILE_GRAPH
-    → NEXT
-
-AFTER MATERIAL UNIVERSE COVERED:
-→ GLOBAL CROSS-SEQUENCE / CROSS-JOURNEY / CROSS-SURFACE / CROSS-STATE / OWNER RECONCILIATION
-→ DISCOVERY_COMPLETE
-→ DIAGNOSIS_COMPLETE
-→ DECISION_COMPLETE
-→ COVERAGE_COMPLETE
-→ FINAL_ADVERSARIAL_COMPLETENESS
-→ PACKAGE_READY
+SAME_ROOT_CAUSE → fix in current closure unit
+UPSTREAM/BLOCKER → structured backtrack
+INDEPENDENT_IN_SCOPE → proven later/parallel Sequence
+SUPPORTED_EXCLUSION → proof + reopen trigger
 ```
 
-Structured Backtracking يبقى حاكمًا: `A → B → C → finish/prepare C → return B → return A`.
+لا يوجد `IGNORE`.
 
-## 6) Global Gates
+## 5) Graph-Driven Movement + Structured Backtracking
 
-هذه عالمية فقط للتسليم النهائي في PREPARE وللإغلاق النهائي في EXECUTE:
+الحركة قد تكون:
+
+```text
+vertical / horizontal / reverse / cross-layer / cross-surface / cross-domain / jump-to-root
+```
+
+إذا اكتشف `SEQ-A` اعتمادًا أعمق:
+
+```text
+SEQ-A → SUSPENDED_BY_DEPENDENCY
+→ derive/open upstream SEQ-B
+→ finish/prepare B
+→ invalidate affected assumptions/evidence in A
+→ REOPEN/RESUME A
+→ re-diagnose before continuing
+```
+
+يمكن أن توجد Sequences معلقة أو معاد فتحها. **الممنوع هو تنفيذ متضارب بلا ملكية**، وليس وجود أكثر من عقدة غير terminal.
+
+## 6) Multi-Agent Orchestration
+
+التوازي ديناميكي حسب الـGraph، لا حسب عدد الوكلاء المرغوب:
+
+```text
+ORCHESTRATOR ROLE
+→ owns graph/accounting/dedup/root-cause correlation/assignment/gates
+
+DISCOVERY/DIAGNOSIS WORKERS
+→ parallel read/analysis probes on scoped graph regions
+
+EXECUTION WORKERS
+→ may work in parallel only on graph-proven independent conflict domains
+
+VERIFICATION / ADVERSARIAL WORKERS
+→ challenge root cause, missed consumers, stale paths, weak tests, closure claims
+
+INTEGRATION OWNER
+→ the only owner allowed to mutate/integrate the target branch at a time
+```
+
+كل عامل يجب أن يملك:
+
+```text
+MISSION + GRAPH_SCOPE + INPUT_SHA + READ/WRITE_AUTHORITY
++ CONFLICT_DOMAIN + EXPECTED_OUTPUT + HANDOFF + INVALIDATION_TRIGGER
+```
+
+قواعد:
+
+```text
+NO AGENT WITHOUT OWNED QUESTION/SCOPE
+NO DUPLICATE INVESTIGATION WITHOUT INDEPENDENCE PURPOSE
+NO PARALLEL WRITES TO SAME SEMANTIC OWNER/CONFLICT DOMAIN
+MULTIPLE INDEPENDENT EXECUTION FRONTS ARE ALLOWED
+TARGET-BRANCH INTEGRATION REMAINS SERIALIZED
+```
+
+## 7) Sequence States
+
+Allowed conceptual states:
+
+```text
+DIAGNOSING
+DECISION_REQUIRED
+SOLUTION_READY
+READY_TO_EXECUTE
+EXECUTING
+VERIFYING
+SUSPENDED_BY_DEPENDENCY
+REOPENED
+BLOCKED_EXTERNAL
+PREPARED
+COMPLETE
+```
+
+كل Sequence تسجل: `DEPENDS_ON / BLOCKS / UNLOCKS / CONFLICT_DOMAIN / EXECUTION_OWNER / SUSPENDED_BY / RESUME_AFTER / INVALIDATES / REOPEN_TRIGGER`.
+
+## 8) PREPARE_ONLY
+
+لكل Sequence:
+
+```text
+diagnose → decisions → full impact propagation → re-diagnose
+→ exact root treatment/cutover → consumers/governance/cleanup/verification
+→ findings/dependencies dispositioned
+→ SEQUENCE_STATUS=PREPARED
+```
+
+لا Product/Governance/Runtime/Data/Provider mutation. يسمح بتوازي الاستكشاف/التشخيص المستقل، لكن لا live product write.
+
+## 9) EXECUTE_END_TO_END
+
+قبل live write لأي Sequence:
+
+```text
+ROOT_CAUSE_PROVEN = YES
+DECISIONS_RESOLVED = YES
+DECISION_IMPACT_PROPAGATED = YES
+REDIAGNOSIS_COMPLETE = YES
+IMPACT_MAPPED = YES
+FINDINGS_DISPOSITIONED = YES
+DEPENDENCIES_DISPOSITIONED = YES
+VERIFICATION_DEFINED = YES
+SOLUTION_READY = YES
+RECONCILED_HEAD_SHA = latest reconciled head
+EXECUTION_OWNER assigned
+CONFLICT_DOMAIN classified
+```
+
+ثم:
+
+```text
+root fix/refactor/redesign/rebuild
+→ migrate every required consumer
+→ synchronize contracts/data/generated state
+→ remove obsolete/parallel truth
+→ local cleanup
+→ verify/readback
+→ SEQUENCE_STATUS=COMPLETE
+```
+
+لا إغلاق جزئي للـcutover.
+
+## 10) Continuous Latest-Head Execution
+
+العمل دائمًا على أحدث رأس دون تعطيل الحملة كلها:
+
+```text
+before sequence creation / semantic write / integration / push / final decision:
+resolve LATEST_REMOTE_SHA
+→ compare prior base → latest
+→ classify semantic delta
+```
+
+```text
+DISJOINT → adopt latest head automatically; retain valid evidence
+RELATED_NON_CONFLICTING → reconcile affected assumptions/checks
+SEMANTIC_OVERLAP → pause/re-diagnose affected node only
+DIRECT_CONFLICT → block conflicting node only; independent graph work continues
+AUTHORITY_OR_TRUTH_CHANGE → invalidate affected model and reread authority/truth
+```
+
+Git clean merge ≠ semantic safety. لا stale push ولا force push. Target branch mutation = one Integration Owner + fast-forward-safe update on latest reconciled head.
+
+## 11) Global Closure
+
+`SEQUENCE_COMPLETE/PREPARED` لا تعني TARGET closure. بعد تغطية Material Universe:
+
+```text
+global graph/accounting reconciliation
+→ cross-sequence/journey/surface/state/owner reconciliation
+→ duplicate truth / hidden writer / legacy path search
+→ final structural cleanup
+→ governance reconciliation
+→ latest HEAD reconciliation
+→ evidence invalidation/reacquisition
+→ independent adversarial completeness
+→ final read-only verification
+```
+
+Global gates:
 
 ```text
 DISCOVERY_COMPLETE
 DIAGNOSIS_COMPLETE
 DECISION_COMPLETE
 COVERAGE_COMPLETE
+ACCOUNTING_COMPLETE
 PACKAGE_READY
 ```
 
-وجود Overview أو Sequence files لا يثبت أي Gate.
+وفي EXECUTE يضاف implementation/evidence/cleanup/governance/fresh-head/adversarial gates، ولا يصدر القرار النهائي إلا على نفس immutable candidate وبحسب current governance decision vocabulary.
 
-## 7) Sequence Gates
-
-### Solution Ready — مشتركة
-
-```text
-ROOT_CAUSE_PROVEN = YES
-DECISIONS_RESOLVED = YES
-REDIAGNOSIS_COMPLETE = YES
-IMPACT_MAPPED = YES
-VERIFICATION_DEFINED = YES
-SOLUTION_READY = YES
-```
-
-### PREPARE_ONLY Exit
-
-```text
-SEQUENCE_STATUS = PREPARED
-exact target state defined
-execution steps actionable
-all affected consumers mapped/dispositioned
-governance promotion requirements exact
-cleanup exact
-verification/acceptance exact
-IMPLEMENTATION_COMPLETE = NO
-```
-
-### EXECUTE_END_TO_END Exit
-
-```text
-SEQUENCE_STATUS = COMPLETE
-IMPLEMENTATION_COMPLETE = YES
-CONSUMERS_RECONCILED = YES
-LOCAL_CLEANUP_COMPLETE = YES
-VERIFICATION_PASS = YES
-GOVERNANCE_SYNC = YES | NOT_APPLICABLE
-SCOPE_DELTA_CLASSIFIED = YES
-```
-
-## 8) Anti-Drift
-
-```text
-EVERY MATERIAL DISCOVERY → GRAPH
-EVERY MATERIAL GRAPH NODE → COVERAGE
-EVERY DEFECT/GAP/CONTRADICTION → FINDING
-EVERY NEW DEPENDENCY/CONSUMER/SURFACE → SCOPE DELTA
-EVERY TRUE DECISION → DECISION RECORD
-EVERY DECISION → IMPACT PROPAGATION + RE-DIAGNOSIS
-EVERY PROVEN SEQUENCE → ONE REGISTRY ENTRY + ONE FILE
-EVERY SEQUENCE FILE → PURPOSE + SCOPE + DERIVATION BASIS + DEPENDENCIES + REOPEN TRIGGER
-EVERY WRITE → INVALIDATE AFFECTED EVIDENCE
-EVERY FINAL CLAIM → EXACT CANDIDATE/HEAD PROVENANCE
-```
-
-## 9) Governance Promotion
-
-PREPARE_ONLY يسجل pending owner/semantic change. EXECUTE يرقّي الحقيقة الدائمة ويثبت `Governance ↔ Product Truth ↔ Machine Contract ↔ Implementation ↔ Consumers ↔ Runtime`.
-
-## 10) Final Closure
-
-`SEQUENCE_COMPLETE` أو `SEQUENCE_PREPARED` لا تعني `TARGET_CLOSED/PACKAGE_READY`.
-
-بعد كل Sequences:
-
-```text
-global reconciliation
-→ duplicate truth search
-→ final structural cleanup
-→ governance reconciliation
-→ fresh HEAD
-→ evidence invalidation/reacquisition
-→ final adversarial completeness
-→ final read-only verification
-```
-
-وفي EXECUTE لا يصدر القرار النهائي إلا إذا `HEAD_AT_DECISION == FINAL_CANDIDATE_SHA` و`FINAL_DECISION == current governance closureRules.closedDecision` وكل global gates المطلوبة = YES.
-
-## 11) الوحدات الحاكمة
+## 12) الوحدات الحاكمة
 
 ```text
 01-CORE-CONTRACT.md
