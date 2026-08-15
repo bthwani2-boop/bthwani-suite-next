@@ -50,7 +50,7 @@ HEAD_AT_DECISION: UNSET
 
 > Living Derived Support. TARGET/ORCHESTRATION_ROOT governs orientation; latest HEAD governs truth/integration only. Persisted frontier is never automatic resume authority.
 
-## 1. Truth / Root Baseline
+## 1. Truth Baseline
 
 - Resolved orchestration root:
 - Authority/Product/Policy/Product-Truth/Machine-Contract sources actually read:
@@ -72,9 +72,9 @@ Movement after orientation may be vertical/horizontal/reverse/cross-layer/cross-
 
 No Sequence may be created/resumed from recency. Frontier must be derived/revalidated from `ROOT_GRAPH`.
 
-## 4. Global Decisions / Blockers / Foreign Deltas
+## 4. Global Decisions / Blockers
 
-Record cross-sequence decisions, blockers, and concurrent observations. Foreign changes are inputs to classification, not automatic work direction.
+Record cross-sequence decisions, blockers, and concurrent/foreign observations. Foreign changes are inputs to classification, not automatic work direction.
 
 ## 5. Global Accounting / Coverage / Reconciliation
 
