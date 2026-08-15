@@ -1,16 +1,14 @@
 import type { DshCapability } from "./capability-map";
 import { DSH_CAPABILITIES } from "./capabilities";
 
-export type DshRuntimeEvidenceState =
-  | "NONE"
-  | "HISTORICAL_NOT_SAME_COMMIT"
-  | "SAME_COMMIT_VERIFIED";
+export type DshRuntimeEvidenceState = "NONE" | "SAME_COMMIT_VERIFIED";
 
 export type DshRuntimeBinding = {
   readonly capabilityId: DshCapability["id"];
   readonly contractOperations: readonly string[];
   /** Static source presence only; this is not runtime, database, or release proof. */
   readonly backendImplemented: boolean;
+  /** Current-candidate evidence only. Historical evidence belongs in reports, not runtime truth. */
   readonly runtimeEvidence: string | null;
   readonly runtimeEvidenceCommitSha: string | null;
   readonly evidenceState: DshRuntimeEvidenceState;
@@ -20,6 +18,7 @@ export type DshRuntimeBinding = {
     | "experience-fix-required"
     | "client-reverified-only"
     | "incomplete";
+  /** Static binding declaration from the capability map; not proof that the current runtime is healthy. */
   readonly runtimeBound: boolean;
   readonly screensReady: boolean;
   readonly databaseReady: boolean;
@@ -28,53 +27,36 @@ export type DshRuntimeBinding = {
   readonly surfaceBindingApproved: boolean;
 };
 
-const historicalRuntimeEvidence: Partial<
-  Record<DshCapability["id"], string>
-> = {
-  "dsh.system.readiness":
-    "services/dsh/evidence/Store Discovery-store-discovery-fullstack-multi-surface",
-  "dsh.store.discovery":
-    "services/dsh/evidence/Store Discovery-store-discovery-fullstack-multi-surface",
-  "dsh.client.home-discovery":
-    "services/dsh/evidence/Home Discovery-client-home-discovery",
-  "dsh.client.catalog":
-    "services/dsh/evidence/Catalog Management-catalog-fullstack",
-  "dsh.client.cart": "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
-  "dsh.client.checkout": "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
-  "dsh.client.orders": "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
-  "dsh.client.dispatch": "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
-  "dsh.field.readiness": "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
-  "dsh.support.hub": "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
-  "dsh.operator.analytics": "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
-  "dsh.notifications": "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
-  "dsh.marketing": "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
-  "dsh.policies": "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
-  "dsh.admin": "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
-  "dsh.partner.activation": "services/dsh/evidence/bthwani-ponytail-yagni-fullstack",
-};
+function unresolvedState(capability: DshCapability): DshRuntimeBinding["state"] {
+  if (capability.status === "blocked-runtime") return "blocked";
+  if (capability.status === "planned" || capability.status === "contract-active") return "incomplete";
+  if (capability.closureState === "CLIENT_REVERIFIED_ONLY") return "client-reverified-only";
+  return "experience-fix-required";
+}
 
 /**
- * This map records implementation posture, not release approval. Historical
- * evidence paths are traceability only. Database and generated-client readiness
- * remain false until their own same-commit gates publish machine-readable proof;
- * source presence alone must never promote them.
+ * Candidate-bound runtime evidence is deliberately empty in source control.
+ * A historical report or an old evidence directory cannot make the current
+ * commit runtime-ready. CI/runtime verification may prove a candidate, but the
+ * proof remains external evidence until a governed same-commit evidence record
+ * is explicitly bound to that candidate.
+ *
+ * Static implementation facts (operations/runtimeBound) remain visible so
+ * diagnostics can distinguish "implemented but not proven on this candidate"
+ * from "not implemented" without manufacturing a PASS.
  */
-export const DSH_RUNTIME_MAP = DSH_CAPABILITIES.map((capability) => {
-  const runtimeEvidence = historicalRuntimeEvidence[capability.id] ?? null;
-
-  return {
-    capabilityId: capability.id,
-    contractOperations: capability.contractOperations,
-    backendImplemented: capability.contractOperations.length > 0,
-    runtimeEvidence,
-    runtimeEvidenceCommitSha: null,
-    evidenceState: runtimeEvidence ? "HISTORICAL_NOT_SAME_COMMIT" : "NONE",
-    state: "experience-fix-required",
-    runtimeBound: capability.runtimeBound,
-    screensReady: false,
-    databaseReady: false,
-    generatedClientReady: false,
-    sharedBrainReady: false,
-    surfaceBindingApproved: false,
-  } as const;
-}) satisfies readonly DshRuntimeBinding[];
+export const DSH_RUNTIME_MAP = DSH_CAPABILITIES.map((capability) => ({
+  capabilityId: capability.id,
+  contractOperations: capability.contractOperations,
+  backendImplemented: capability.contractOperations.length > 0,
+  runtimeEvidence: null,
+  runtimeEvidenceCommitSha: null,
+  evidenceState: "NONE",
+  state: unresolvedState(capability),
+  runtimeBound: capability.runtimeBound,
+  screensReady: false,
+  databaseReady: false,
+  generatedClientReady: false,
+  sharedBrainReady: false,
+  surfaceBindingApproved: false,
+})) satisfies readonly DshRuntimeBinding[];
