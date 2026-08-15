@@ -2,51 +2,108 @@
 
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
 
-هذه الحزمة منهجية توثيقية تحت `tools/prompting/**`. ليست Product Code ولا Runtime Code ولا Product Truth ولا Proof of implementation/closure. بيانات المهمة المشتقة تكتب تحت `plans/diagnose-implementing/<TASK_NAME>/`، والحقيقة الدائمة تترقى إلى مالكها الحاكم داخل `governance/**`/العقود/الكود الحي عندما يسمح الـMODE والسلطة بذلك.
+هذه الحزمة منهجية تشغيل/توثيق فقط. ليست Product/Runtime Truth ولا Proof of implementation/closure. بيانات المهمة المشتقة تكتب تحت `plans/diagnose-implementing/<TASK_NAME>/`، والحقيقة الدائمة تترقى إلى مالكها الحاكم عندما يسمح الـMODE والسلطة.
 
 ## 0) الاستدعاء
 
 ```text
-@GitHub BRANCH: `<EXACT_BRANCH>` | TARGET: `<blank | target>` | MODE: `<PREPARE_ONLY | EXECUTE_END_TO_END>` — استخدم `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md` كنقطة الدخول الوحيدة ونفّذ المسار الحاكم كاملًا FAIL-CLOSED دون تخطي أي Gate.
+@GitHub BRANCH: `<EXACT_BRANCH>` | TARGET: `<blank | target>` | MODE: `<PREPARE_ONLY | EXECUTE_END_TO_END>` — استخدم هذا الملف كنقطة الدخول الوحيدة ونفّذ المسار الحاكم كاملًا FAIL-CLOSED.
 ```
 
 القيم الوحيدة للـMODE: `PREPARE_ONLY` و`EXECUTE_END_TO_END`.
 
-## 1) المبدأ الحاكم
+## 1) Root-Anchored Constitutional Rule
 
 ```text
+ORCHESTRATION_ROOT = RESOLVED TARGET
+LATEST_HEAD = TRUTH + INTEGRATION BASELINE ONLY
+LATEST_COMMIT ≠ TASK DIRECTION
+PERSISTED_FRONTIER ≠ AUTOMATIC RESUME AUTHORITY
+```
+
+في **كل استدعاء جديد أو Resume**:
+
+```text
+resolve latest HEAD
+→ restore ORCHESTRATION_ROOT from TARGET/task identity
+→ perform ROOT / MACRO ORIENTATION CHECK
+→ reuse still-valid prior diagnosis/evidence
+→ classify concurrent/foreign deltas
+→ rebuild/reconcile Macro Blueprint + Relation/Dependency/Impact Graph
+→ only then derive/revalidate ACTIVE_EXECUTION_FRONTIER
+```
+
+ممنوع استنتاج نقطة البدء أو الـFrontier أو Next Action من أحدث Commit/commit message/آخر جلسة/آخر ملف متغير. تغييرات الآخرين تصبح Graph/Scope Delta inputs فقط.
+
+القواعد الحاكمة:
+
+```text
+TARGET ROOT GOVERNS ORIENTATION.
 THE GRAPH GOVERNS MOVEMENT.
 ROOT CAUSE GOVERNS SCOPE.
 LEDGERS PREVENT SILENT LOSS.
 DEPENDENCIES GOVERN ORDER.
 INDEPENDENCE GOVERNS PARALLELISM.
-LATEST HEAD GOVERNS WRITES.
+LATEST HEAD GOVERNS TRUTH AND WRITES — NOT NAVIGATION.
 ONE INTEGRATION OWNER GOVERNS TARGET-BRANCH MUTATION.
 EVIDENCE GOVERNS CLOSURE.
 ```
 
-التشخيص/التحليل/انتشار الأثر **شبكي وغير خطي**: رأسي/أفقي/عكسي/عبر الطبقات والأسطح والخدمات والبيانات والعقود والـRuntime، مع قفز منطقي إلى Root Cause أو Dependency أعمق ثم عودة منظمة. أرقام Sequences تسجل وحدات الإغلاق ولا تفرض مسارًا خطيًا مصطنعًا.
+## 2) Root-to-Detail Orientation, Graph-Driven Movement
 
-المسار المشترك:
+البدء يكون من الرأس المنطقي الأعلى ثم النزول حسب الحقيقة:
 
 ```text
-PIN LATEST TRUTH
-→ CAPABILITY PREFLIGHT
-→ CREATE/RESUME OVERVIEW
-→ GLOBAL DISCOVERY
-→ RELATION / DEPENDENCY GRAPH
-→ ACCOUNT EVERY MATERIAL NODE
-→ ROOT-CAUSE CORRELATION
-→ DERIVE PROVEN EXECUTION FRONTIER
-→ DIAGNOSE / DECIDE / PROPAGATE / RE-DIAGNOSE
-→ DEFINE EXACT TARGET STATE / CUTOVER / CLEANUP / VERIFICATION
-→ MODE-SPECIFIC EXECUTION OR HANDOFF
-→ RECONCILE GRAPH ON LATEST HEAD
+ORCHESTRATION_ROOT
+→ Macro Product/System Model
+→ Canonical Owners / Foundations / Invariants
+→ Domains / Services / Shared Contracts / Data Owners
+→ Journeys / States / Handoffs
+→ Surfaces / Consumers
+→ implementation details
 ```
 
-لا questions-first، ولا app-by-app ordering، ولا إصلاح أعراض معروفة وترك Root Cause مثبت، ولا إسقاط Finding/Dependency/Consumer/Scope Delta لأن موقعه في التسلسل لم يأت بعد.
+هذا **Orientation** وليس مسارًا خطيًا. بعد تثبيت الـMacro Graph تكون الحركة رأسية/أفقية/عكسية/Cross-Layer/Cross-Surface/Jump-to-Root مع Structured Backtracking.
 
-## 2) Package Schema V2 — Graph-Driven Adaptive Package
+```text
+START FROM ROOT ≠ REDIAGNOSE EVERYTHING FROM ZERO
+```
+
+أعد استخدام ما بقي صالحًا؛ أعد فقط ما أبطلته الحقيقة الجديدة.
+
+## 3) Foreign / Concurrent Delta Policy
+
+أي حركة منذ آخر baseline تصنف قبل أن تؤثر على الاتجاه:
+
+```text
+UNRELATED
+→ preserve on latest head
+→ do not follow
+→ no frontier change
+
+RELATED_NON_BLOCKING
+→ attach to correct graph node
+→ update affected assumptions/evidence
+→ do not promote by recency
+
+UPSTREAM_OR_ROOT_CHANGING
+→ root/macro reconciliation
+→ structured backtrack if proven
+
+BLOCKING
+→ adjust only affected frontier/dependency
+
+AUTHORITY_OR_CANONICAL_TRUTH_CHANGE
+→ reread authority/truth
+→ re-diagnose affected graph
+
+DIRECT_CONFLICT
+→ block affected conflict domain only
+```
+
+**Recency is never priority.** Priority comes from Root Cause + Dependency + Canonical Owner + Blast Radius + Blocking Power + Risk + Unlock Value.
+
+## 4) Package Schema V2
 
 ```text
 plans/diagnose-implementing/<TASK_NAME>/
@@ -56,262 +113,104 @@ plans/diagnose-implementing/<TASK_NAME>/
 └── ...
 ```
 
-قواعد دستورية:
-
 ```text
 ONE FILE = ONE COHERENT ROOT-CAUSE / EXECUTION / VERIFICATION / CLOSURE UNIT
-SEQUENCES COME FROM THE PROVEN GRAPH
+SEQUENCES COME FROM THE ROOT-RECONCILED PROVEN GRAPH
 CREATE SEQUENCES JUST-IN-TIME
-NO FIXED NUMBER OF SEQUENCES
-NO FIXED DOMAIN DIRECTORY TREE
-NO SUBDIRECTORIES INSIDE V2 PACKAGE
+SEQUENCE NUMBER ≠ FORCED EXECUTION ORDER
+NO SPECULATIVE FUTURE SEQUENCES
+NO FIXED DOMAIN TREE
 NO DIAGNOSIS/EXECUTION/VERIFICATION SPLIT
-NO FILE WITHOUT DISTINCT PURPOSE
-NO SPLIT BY LINE COUNT ALONE
-NO MERGE OF UNRELATED CLOSURE BOUNDARIES
 ```
 
-`00-OVERVIEW.md` هو Control/Accounting layer صغير: Task/SHA/Macro Graph/Execution Frontier/Sequence Registry/Global Decisions/Accounting/Final Closure فقط. لا يكرر تفاصيل Sequences.
+`00-OVERVIEW.md` يمتلك Root Anchor / latest truth baseline / Macro Graph / frontier / registry / accounting / closure state فقط.
 
-## 3) Accounting Machine — منع النسيان
+## 5) Root Reconciliation Machine Fields
 
-كل شيء مادي يجب أن يملك هوية وحالة:
+كل Overview يجب أن يسجل:
 
 ```text
-DISCOVERED MATERIAL NODE → GRAPH NODE + COVERAGE STATUS
-DEFECT/GAP/CONTRADICTION → FINDING ID
-NEW DEPENDENCY/CONSUMER/SURFACE → SCOPE DELTA ID
-TRUE DECISION → DECISION ID
-EXECUTION/CLOSURE UNIT → SEQUENCE ID
-TEST/RUNTIME/READBACK/REVIEW → EVIDENCE ID
-CLEANUP RESIDUE → CLEANUP DISPOSITION
+ORCHESTRATION_ROOT
+NAVIGATION_POLICY = ROOT_ANCHORED_GRAPH_ONLY
+LATEST_HEAD_ROLE = TRUTH_INTEGRATION_BASELINE_ONLY
+ROOT_RECONCILIATION_REQUIRED = YES|NO
+ROOT_RECONCILED_SHA = UNSET|<sha>
+FRONTIER_DERIVATION_SOURCE = UNSET|ROOT_GRAPH
+FRONTIER_VALID = YES|NO
 ```
 
-ممنوع `IGNORE`, silent TODO, أو عنصر مادي بلا disposition. قبل handoff/closure يلزم:
+قبل إنشاء/استئناف/تنفيذ Sequence:
 
 ```text
-FINDINGS_ACCOUNTED = YES
-SCOPE_DELTAS_ACCOUNTED = YES
-DECISIONS_ACCOUNTED = YES
-CONSUMERS_ACCOUNTED = YES
-EVIDENCE_ACCOUNTED = YES
-CLEANUP_ACCOUNTED = YES
-ACCOUNTING_COMPLETE = YES
+ROOT_RECONCILIATION_REQUIRED = NO
+ROOT_RECONCILED_SHA = LATEST_RECONCILED_SHA
+FRONTIER_DERIVATION_SOURCE = ROOT_GRAPH
+FRONTIER_VALID = YES
 ```
 
-`ACCOUNTING_COMPLETE` لا يعني “لم نجد مشاكل”، بل يعني أن كل ما اكتُشف ماديًا مصنف ومربوط ومغلق أو مستبعد بدليل.
+للـfirst JIT Sequence: Root reconciliation يجب أن يمر أولًا؛ المولد يجعل `FRONTIER_VALID=YES` عند إنشاء الـFrontier.
 
-## 4) Decision / Root-Cause Propagation
+أي head drift مادي أو invocation يعيد **Root Orientation Check**؛ وإذا تغيرت الحقيقة المؤثرة، يصبح `ROOT_RECONCILIATION_REQUIRED=YES` و`FRONTIER_VALID=NO` حتى إعادة الاشتقاق.
 
-أي قرار أو Root Cause مثبت ينتشر فورًا عبر **كامل Proven Impact Graph**:
+## 6) Accounting / Decisions / Root Cause
+
+كل Material Node/Finding/Scope Delta/Decision/Consumer/Evidence/Cleanup item يجب أن يكون قابلًا للتتبع والتصرف. لا `IGNORE` ولا silent TODO.
+
+أي قرار أو Root Cause مثبت:
 
 ```text
-writers → readers → consumers → contracts → states → data → surfaces
-→ permissions → jobs/events/providers → governance → runtime/evidence
+→ full proven impact propagation
+→ writers/readers/consumers/contracts/states/data/surfaces
+→ permissions/jobs/events/providers/governance/runtime/evidence
+→ affected re-diagnosis
 ```
 
-الانتشار فوري؛ التنفيذ يبقى dependency-ordered. لا تغلق Sequence إذا بقي Consumer/parallel truth/migration/legacy path/workaround لازم لصحة الـcoherent cutover.
+Finding جديدة = `SAME_ROOT_CAUSE | UPSTREAM/BLOCKER | INDEPENDENT_IN_SCOPE | SUPPORTED_EXCLUSION_WITH_PROOF`.
 
-أي Finding جديدة يجب أن تصبح واحدة من:
+## 7) Multi-Agent / Backtracking
+
+التوازي Graph-Proven لا Agent-count-driven:
 
 ```text
-SAME_ROOT_CAUSE → fix in current closure unit
-UPSTREAM/BLOCKER → structured backtrack
-INDEPENDENT_IN_SCOPE → proven later/parallel Sequence
-SUPPORTED_EXCLUSION → proof + reopen trigger
+ORCHESTRATOR → root/graph/accounting/dedup/assignment/gates
+DISCOVERY/DIAGNOSIS WORKERS → scoped parallel probes
+EXECUTION WORKERS → proven-independent conflict domains only
+VERIFICATION/ADVERSARIAL WORKERS → challenge completeness
+INTEGRATION OWNER → sole target-branch integration owner at a time
 ```
 
-لا يوجد `IGNORE`.
-
-## 5) Graph-Driven Movement + Structured Backtracking
-
-الحركة قد تكون:
+إذا ظهر upstream dependency:
 
 ```text
-vertical / horizontal / reverse / cross-layer / cross-surface / cross-domain / jump-to-root
+current → SUSPENDED_BY_DEPENDENCY
+→ open upstream JIT
+→ fix/verify upstream
+→ invalidate affected descendants
+→ REOPEN/RESUME descendant after root/graph reconciliation
 ```
 
-إذا اكتشف `SEQ-A` اعتمادًا أعمق:
+## 8) MODE
+
+### PREPARE_ONLY
+Diagnose/decide/propagate/re-diagnose from root-derived graph → exact root treatment/cutover/consumers/governance/cleanup/verification → `PREPARED`. No live Product/Governance/Runtime/Data mutation.
+
+### EXECUTE_END_TO_END
+بعد Root/Frontier gate: root fix/refactor/redesign/rebuild → all required consumer migration → contract/data sync → obsolete/parallel truth removal → cleanup → verify/readback → `COMPLETE`.
+
+لا partial cutover.
+
+## 9) Mandatory Root Anchor Gate
+
+قبل `derive/resume/write/complete/closure` استخدم:
 
 ```text
-SEQ-A → SUSPENDED_BY_DEPENDENCY
-→ derive/open upstream SEQ-B
-→ finish/prepare B
-→ invalidate affected assumptions/evidence in A
-→ REOPEN/RESUME A
-→ re-diagnose before continuing
+node plans/diagnose-implementing/root-anchor-gate.mjs <package> --latest-sha <LIVE_HEAD_SHA> --phase <derive|frontier|closure>
 ```
 
-يمكن أن توجد Sequences معلقة أو معاد فتحها. **الممنوع هو تنفيذ متضارب بلا ملكية**، وليس وجود أكثر من عقدة غير terminal.
+هذا Gate لا يثبت Product correctness؛ يثبت فقط أن العمل لم يُختطف بواسطة latest commit وأن الـFrontier مشتق من Root-reconciled graph على آخر حقيقة معروفة.
 
-## 6) Multi-Agent Orchestration
+## 10) Final Closure
 
-التوازي ديناميكي حسب الـGraph، لا حسب عدد الوكلاء المرغوب:
+`SEQUENCE_COMPLETE/PREPARED` لا تعني TARGET closure. يلزم global graph/accounting reconciliation + final cleanup + governance reconciliation + latest-head reconciliation + evidence invalidation/reacquisition + adversarial completeness + final read-only verification.
 
-```text
-ORCHESTRATOR ROLE
-→ owns graph/accounting/dedup/root-cause correlation/assignment/gates
-
-DISCOVERY/DIAGNOSIS WORKERS
-→ parallel read/analysis probes on scoped graph regions
-
-EXECUTION WORKERS
-→ may work in parallel only on graph-proven independent conflict domains
-
-VERIFICATION / ADVERSARIAL WORKERS
-→ challenge root cause, missed consumers, stale paths, weak tests, closure claims
-
-INTEGRATION OWNER
-→ the only owner allowed to mutate/integrate the target branch at a time
-```
-
-كل عامل يجب أن يملك:
-
-```text
-MISSION + GRAPH_SCOPE + INPUT_SHA + READ/WRITE_AUTHORITY
-+ CONFLICT_DOMAIN + EXPECTED_OUTPUT + HANDOFF + INVALIDATION_TRIGGER
-```
-
-قواعد:
-
-```text
-NO AGENT WITHOUT OWNED QUESTION/SCOPE
-NO DUPLICATE INVESTIGATION WITHOUT INDEPENDENCE PURPOSE
-NO PARALLEL WRITES TO SAME SEMANTIC OWNER/CONFLICT DOMAIN
-MULTIPLE INDEPENDENT EXECUTION FRONTS ARE ALLOWED
-TARGET-BRANCH INTEGRATION REMAINS SERIALIZED
-```
-
-## 7) Sequence States
-
-Allowed conceptual states:
-
-```text
-DIAGNOSING
-DECISION_REQUIRED
-SOLUTION_READY
-READY_TO_EXECUTE
-EXECUTING
-VERIFYING
-SUSPENDED_BY_DEPENDENCY
-REOPENED
-BLOCKED_EXTERNAL
-PREPARED
-COMPLETE
-```
-
-كل Sequence تسجل: `DEPENDS_ON / BLOCKS / UNLOCKS / CONFLICT_DOMAIN / EXECUTION_OWNER / SUSPENDED_BY / RESUME_AFTER / INVALIDATES / REOPEN_TRIGGER`.
-
-## 8) PREPARE_ONLY
-
-لكل Sequence:
-
-```text
-diagnose → decisions → full impact propagation → re-diagnose
-→ exact root treatment/cutover → consumers/governance/cleanup/verification
-→ findings/dependencies dispositioned
-→ SEQUENCE_STATUS=PREPARED
-```
-
-لا Product/Governance/Runtime/Data/Provider mutation. يسمح بتوازي الاستكشاف/التشخيص المستقل، لكن لا live product write.
-
-## 9) EXECUTE_END_TO_END
-
-قبل live write لأي Sequence:
-
-```text
-ROOT_CAUSE_PROVEN = YES
-DECISIONS_RESOLVED = YES
-DECISION_IMPACT_PROPAGATED = YES
-REDIAGNOSIS_COMPLETE = YES
-IMPACT_MAPPED = YES
-FINDINGS_DISPOSITIONED = YES
-DEPENDENCIES_DISPOSITIONED = YES
-VERIFICATION_DEFINED = YES
-SOLUTION_READY = YES
-RECONCILED_HEAD_SHA = latest reconciled head
-EXECUTION_OWNER assigned
-CONFLICT_DOMAIN classified
-```
-
-ثم:
-
-```text
-root fix/refactor/redesign/rebuild
-→ migrate every required consumer
-→ synchronize contracts/data/generated state
-→ remove obsolete/parallel truth
-→ local cleanup
-→ verify/readback
-→ SEQUENCE_STATUS=COMPLETE
-```
-
-لا إغلاق جزئي للـcutover.
-
-## 10) Continuous Latest-Head Execution
-
-العمل دائمًا على أحدث رأس دون تعطيل الحملة كلها:
-
-```text
-before sequence creation / semantic write / integration / push / final decision:
-resolve LATEST_REMOTE_SHA
-→ compare prior base → latest
-→ classify semantic delta
-```
-
-```text
-DISJOINT → adopt latest head automatically; retain valid evidence
-RELATED_NON_CONFLICTING → reconcile affected assumptions/checks
-SEMANTIC_OVERLAP → pause/re-diagnose affected node only
-DIRECT_CONFLICT → block conflicting node only; independent graph work continues
-AUTHORITY_OR_TRUTH_CHANGE → invalidate affected model and reread authority/truth
-```
-
-Git clean merge ≠ semantic safety. لا stale push ولا force push. Target branch mutation = one Integration Owner + fast-forward-safe update on latest reconciled head.
-
-## 11) Global Closure
-
-`SEQUENCE_COMPLETE/PREPARED` لا تعني TARGET closure. بعد تغطية Material Universe:
-
-```text
-global graph/accounting reconciliation
-→ cross-sequence/journey/surface/state/owner reconciliation
-→ duplicate truth / hidden writer / legacy path search
-→ final structural cleanup
-→ governance reconciliation
-→ latest HEAD reconciliation
-→ evidence invalidation/reacquisition
-→ independent adversarial completeness
-→ final read-only verification
-```
-
-Global gates:
-
-```text
-DISCOVERY_COMPLETE
-DIAGNOSIS_COMPLETE
-DECISION_COMPLETE
-COVERAGE_COMPLETE
-ACCOUNTING_COMPLETE
-PACKAGE_READY
-```
-
-وفي EXECUTE يضاف implementation/evidence/cleanup/governance/fresh-head/adversarial gates، ولا يصدر القرار النهائي إلا على نفس immutable candidate وبحسب current governance decision vocabulary.
-
-## 12) الوحدات الحاكمة
-
-```text
-01-CORE-CONTRACT.md
-02-DISCOVERY-DIAGNOSIS.md
-03-DECISIONS-COVERAGE-ANTI-DRIFT.md
-04-PACKAGE-EXECUTION.md
-05-VERIFICATION-CLEANUP-CLOSURE.md
-06-CONCURRENCY-RESUME-RECOVERY.md
-contracts/OVERVIEW-CONTRACT.md
-contracts/SEQUENCE-CONTRACT.md
-contracts/DECISION-OUTPUT-CONTRACT.md
-contracts/EVIDENCE-CONTRACT.md
-contracts/CLOSURE-CONTRACT.md
-```
-
-`source-map/SOURCE-RULE-TRACEABILITY.md` يثبت مصدر القواعد. أي Source SHA drift أو تغيير منهجي مادي يعيد فتح Source Coverage حتى المصالحة.
+Final closure لا تتم إذا Root/Frontier provenance stale أو أي Material Node/Accounting category غير مغلقة.
