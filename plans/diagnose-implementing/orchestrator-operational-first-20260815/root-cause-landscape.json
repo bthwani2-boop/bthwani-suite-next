@@ -1,0 +1,16 @@
+{
+  "schema": "BTHWANI_ROOT_CAUSE_LANDSCAPE_V1",
+  "taskId": "PKG-ORCHESTRATOR_OPERATIONAL_FIRST_20260815",
+  "reconciledSha": "6868fb16898e5bee54a670db49486f34855aef18",
+  "status": "COMPLETE",
+  "priorityPolicy": "HIGHEST_PROVEN_SYSTEMIC_LEVERAGE",
+  "findings": [
+    {"id":"F-001","clusterId":"RC-001","claim":"Diagnostic priority could be derived before machine-accounted operational semantics","evidence":["02-DISCOVERY-DIAGNOSIS.md","root-cause-priority-gate.mjs"]}
+  ],
+  "unclusteredFindings": [],
+  "clusters": [
+    {"id":"RC-001","status":"IN_PROGRESS","operationalParents":["JRN-001","FLOW-001","OWN-001"],"priorityRank":1,"priorityClass":"PRIMARY_SYSTEMIC","comparisonBasis":"Framework-level authority affects every future invocation and can cause repeated leaf-first waste across all targets","evidence":["00-ORCHESTRATOR.md","02-DISCOVERY-DIAGNOSIS.md","tools/guards/orchestrator"]}
+  ],
+  "selectedFrontier": {"clusterIds":["RC-001"],"justification":"Highest upstream framework root; fixes ordering, coverage proof, lower-layer hold and gate authority together."},
+  "adversarial": {"status":"PASS","evidence":["Compared alternative full-deep-scan and leaf-fix approaches; progressive narrowing preserves speed while gating priority"]}
+}

@@ -1,0 +1,27 @@
+{
+  "schema": "BTHWANI_OPERATIONAL_ROOT_V1",
+  "taskId": "PKG-ORCHESTRATOR_OPERATIONAL_FIRST_20260815",
+  "target": "orchestrator diagnosis/execution framework",
+  "diagnosticAltitude": "ORCHESTRATOR_OPERATIONAL_SEMANTICS",
+  "reconciledSha": "6868fb16898e5bee54a670db49486f34855aef18",
+  "status": "COMPLETE",
+  "coverage": {
+    "productOutcomes": {"applicability":"APPLICABLE","items":[{"id":"OUT-001","name":"Diagnose highest operational cause before lower technical work","status":"ACCOUNTED","evidence":["tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md","user operational-first requirement"]}],"exclusionEvidence":[]},
+    "actors": {"applicability":"APPLICABLE","items":[{"id":"ACT-001","name":"Orchestrator/diagnosis agent","status":"ACCOUNTED","evidence":["00-ORCHESTRATOR.md"]},{"id":"ACT-002","name":"Integration Owner","status":"ACCOUNTED","evidence":["00-ORCHESTRATOR.md"]}],"exclusionEvidence":[]},
+    "authorities": {"applicability":"APPLICABLE","items":[{"id":"AUTH-001","name":"Operational meaning controls initial diagnosis; Integration Target controls truth/integration","status":"ACCOUNTED","evidence":["01-CORE-CONTRACT.md"]}],"exclusionEvidence":[]},
+    "responsibilities": {"applicability":"APPLICABLE","items":[{"id":"RESP-001","name":"Orchestrator owns operational coverage, root placement, ranking and gates","status":"ACCOUNTED","evidence":["00-ORCHESTRATOR.md"]}],"exclusionEvidence":[]},
+    "journeys": {"applicability":"APPLICABLE","items":[{"id":"JRN-001","name":"Invocation to operational breadth to frontier to execution to closure","status":"ACCOUNTED","evidence":["07-OPERATIONAL-FIRST-PROGRESSIVE-NARROWING.md"]}],"exclusionEvidence":[]},
+    "states": {"applicability":"APPLICABLE","items":[{"id":"ST-001","name":"OPEN/HOLD/READY/EXECUTING/VERIFYING/CLOSED lifecycle","status":"ACCOUNTED","evidence":["00-ORCHESTRATOR.md","SEQUENCE-CONTRACT.md"]}],"exclusionEvidence":[]},
+    "transitions": {"applicability":"APPLICABLE","items":[{"id":"TR-001","name":"Breadth coverage must precede priority/frontier","status":"ACCOUNTED","evidence":["02-DISCOVERY-DIAGNOSIS.md"]}],"exclusionEvidence":[]},
+    "invariants": {"applicability":"APPLICABLE","items":[{"id":"INV-001","name":"Technical finding is evidence before execution authority","status":"ACCOUNTED","evidence":["00-ORCHESTRATOR.md"]}],"exclusionEvidence":[]},
+    "handoffs": {"applicability":"APPLICABLE","items":[{"id":"HND-001","name":"Read-only diagnosis workers hand evidence to orchestrator; writers hand results to Integration Owner","status":"ACCOUNTED","evidence":["00-ORCHESTRATOR.md"]}],"exclusionEvidence":[]},
+    "truthOwners": {"applicability":"APPLICABLE","items":[{"id":"OWN-001","name":"Operational registry owns coverage evidence; target HEAD owns repository truth","status":"ACCOUNTED","evidence":["OPERATIONAL-ROOT-CONTRACT.md"]}],"exclusionEvidence":[]},
+    "writersReadersConsumers": {"applicability":"APPLICABLE","items":[{"id":"WRC-001","name":"Package generator/gates/sequencer consume machine registries","status":"ACCOUNTED","evidence":["new-package.mjs","new-sequence.mjs","tools/guards/orchestrator"]}],"exclusionEvidence":[]},
+    "flows": {"applicability":"APPLICABLE","items":[{"id":"FLOW-001","name":"Operational registry to RC landscape to frontier gate","status":"ACCOUNTED","evidence":["operational-root-gate.mjs","root-cause-priority-gate.mjs","frontier-derivation-gate.mjs"]}],"exclusionEvidence":[]},
+    "implementationRuntimeBoundaries": {"applicability":"APPLICABLE","items":[{"id":"BND-001","name":"Prompting is derived documentation; canonical machine gates live under tools/guards/orchestrator","status":"ACCOUNTED","evidence":["00-ORCHESTRATOR.md"]}],"exclusionEvidence":[]}
+  },
+  "challenges": {
+    "negativeSpace": {"status":"PASS","evidence":["Checked missing Journey/State/Handoff gate, header-only gate trust, lower-layer promotion path"]},
+    "adversarial": {"status":"PASS","evidence":["Rejected full-deep-scan approach; retained progressive narrowing and diagnostic-blocker exception"]}
+  }
+}

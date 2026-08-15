@@ -1,0 +1,9 @@
+{
+  "schema": "BTHWANI_LOWER_LAYER_OBSERVATIONS_V1",
+  "taskId": "PKG-ORCHESTRATOR_OPERATIONAL_FIRST_20260815",
+  "observations": [
+    {"id":"OBS-001","layer":"diagnostic ordering","symptom":"Frontier could precede deep journey diagnosis","parentOperationalNode":"JRN-001","rootCauseCluster":"RC-001","status":"PROMOTED","evidence":["previous 02-DISCOVERY-DIAGNOSIS ordering"]},
+    {"id":"OBS-002","layer":"machine gate","symptom":"Priority gate trusted overview header values","parentOperationalNode":"FLOW-001","rootCauseCluster":"RC-001","status":"PROMOTED","evidence":["previous root-cause-priority-gate.mjs"]},
+    {"id":"OBS-003","layer":"governance ownership","symptom":"Executable gates lived under derived plans path","parentOperationalNode":"OWN-001","rootCauseCluster":"RC-001","status":"PROMOTED","evidence":["plans/diagnose-implementing/*-gate.mjs"]}
+  ]
+}
