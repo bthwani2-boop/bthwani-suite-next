@@ -4,24 +4,197 @@
   "target": "كل الوركسبايس",
   "diagnosticAltitude": "SYSTEM_OPERATIONAL_ROOT",
   "reconciledSha": "8a244d7b2bb5a0193cd8a9ff7476892585175a1b",
-  "status": "OPEN",
+  "status": "COMPLETE",
   "coverage": {
-    "productOutcomes": {"applicability": "UNASSESSED", "items": []},
-    "actors": {"applicability": "UNASSESSED", "items": []},
-    "authorities": {"applicability": "UNASSESSED", "items": []},
-    "responsibilities": {"applicability": "UNASSESSED", "items": []},
-    "journeys": {"applicability": "UNASSESSED", "items": []},
-    "states": {"applicability": "UNASSESSED", "items": []},
-    "transitions": {"applicability": "UNASSESSED", "items": []},
-    "invariants": {"applicability": "UNASSESSED", "items": []},
-    "handoffs": {"applicability": "UNASSESSED", "items": []},
-    "truthOwners": {"applicability": "UNASSESSED", "items": []},
-    "writersReadersConsumers": {"applicability": "UNASSESSED", "items": []},
-    "flows": {"applicability": "UNASSESSED", "items": []},
-    "implementationRuntimeBoundaries": {"applicability": "UNASSESSED", "items": []}
+    "productOutcomes": {
+      "applicability": "APPLICABLE",
+      "items": [
+        {"id":"OUT-001","name":"Unified platform/context semantics across all surfaces","status":"ACCOUNTED","evidence":["governance/product/PRD.md","governance/product/platform-model.yaml"]},
+        {"id":"OUT-002","name":"Sovereign identity activation, authentication and session lifecycle","status":"ACCOUNTED","evidence":["governance/product/contracts/identity-activation-sessions.product-truth.json"]},
+        {"id":"OUT-003","name":"Workforce provisioning, readiness and assignment","status":"ACCOUNTED","evidence":["governance/product/PRD.md","core/workforce"]},
+        {"id":"OUT-004","name":"Partner onboarding, approval, first-store readiness and publication","status":"ACCOUNTED","evidence":["governance/product/contracts/partner-onboarding-store-publication.product-truth.json"]},
+        {"id":"OUT-005","name":"Canonical discovery, catalog, publication and serviceability","status":"ACCOUNTED","evidence":["governance/product/PRD.md","services/dsh/capability-map.ts"]},
+        {"id":"OUT-006","name":"Cart, checkout, financial handoff and immutable order truth","status":"ACCOUNTED","evidence":["governance/product/contracts/order-creation-truth.product-truth.json","services/dsh/capability-map.ts"]},
+        {"id":"OUT-007","name":"Fulfillment, dispatch, bilateral custody, delivery and tracking","status":"ACCOUNTED","evidence":["governance/product/contracts/store-captain-handoff.product-truth.json","governance/product/contracts/captain-dispatch.product-truth.json"]},
+        {"id":"OUT-008","name":"Zones, SLA, capacity and delivery-mode governance","status":"ACCOUNTED","evidence":["governance/product/contracts/zones-sla-capacity-delivery-modes.product-truth.json"]},
+        {"id":"OUT-009","name":"Field visits, readiness, verification and escalation","status":"ACCOUNTED","evidence":["governance/product/PRD.md","services/dsh/capability-map.ts"]},
+        {"id":"OUT-010","name":"Support, incidents and order rescue","status":"ACCOUNTED","evidence":["governance/product/contracts/support-incidents-order-rescue.product-truth.json"]},
+        {"id":"OUT-011","name":"WLT-owned money movement, wallet, COD, earnings, settlement and reconciliation","status":"ACCOUNTED","evidence":["governance/product/contracts/wlt-money-movement-settlement.product-truth.json","services/wlt/service.manifest.ts"]},
+        {"id":"OUT-012","name":"Platform configuration, change-set rollout and provider health","status":"ACCOUNTED","evidence":["governance/product/contracts/platform-change-sets.product-truth.json","core/platform-control","core/providers"]},
+        {"id":"OUT-013","name":"Operator administration, roles, approvals and audit","status":"ACCOUNTED","evidence":["governance/product/contracts/administration-roles-approvals-audit.product-truth.json"]},
+        {"id":"OUT-014","name":"Maps, service-area, address and location privacy","status":"ACCOUNTED","evidence":["governance/product/contracts/maps-service-area-address-privacy.product-truth.json"]},
+        {"id":"OUT-015","name":"Notifications, marketing, analytics and special requests","status":"ACCOUNTED","evidence":["services/dsh/capability-map.ts","governance/product/contracts/special-requests.product-truth.json"]},
+        {"id":"OUT-016","name":"Truthful cross-surface UX, accessibility, RTL, localization and recovery","status":"ACCOUNTED","evidence":["governance/product/PRD.md","governance/policies/engineering.md"]}
+      ]
+    },
+    "actors": {
+      "applicability": "APPLICABLE",
+      "items": [
+        {"id":"ACT-001","name":"Customer","status":"ACCOUNTED","evidence":["governance/product/PRD.md"]},
+        {"id":"ACT-002","name":"Partner operator/owner","status":"ACCOUNTED","evidence":["governance/product/PRD.md"]},
+        {"id":"ACT-003","name":"Captain","status":"ACCOUNTED","evidence":["governance/product/PRD.md"]},
+        {"id":"ACT-004","name":"Field worker/agent","status":"ACCOUNTED","evidence":["governance/product/PRD.md"]},
+        {"id":"ACT-005","name":"Platform/control operator","status":"ACCOUNTED","evidence":["governance/product/PRD.md"]},
+        {"id":"ACT-006","name":"Finance operator","status":"ACCOUNTED","evidence":["governance/product/contracts/wlt-money-movement-settlement.product-truth.json"]},
+        {"id":"ACT-007","name":"Trusted internal service actors","status":"ACCOUNTED","evidence":["governance/policies/security.md","governance/product/contracts/identity-activation-sessions.product-truth.json"]},
+        {"id":"ACT-008","name":"System/runtime workers and provider adapters","status":"ACCOUNTED","evidence":["governance/policies/engineering.md","infra/docker/compose.runtime.yml"]}
+      ]
+    },
+    "authorities": {
+      "applicability": "APPLICABLE",
+      "items": [
+        {"id":"AUT-001","name":"Current task instruction authority","status":"ACCOUNTED","evidence":["governance/authority/authority-precedence.json"]},
+        {"id":"AUT-002","name":"Unified governance and product authority","status":"ACCOUNTED","evidence":["governance/GOVERNANCE.md","governance/product/PRD.md"]},
+        {"id":"AUT-003","name":"Capability Product Truth authority","status":"ACCOUNTED","evidence":["governance/product/contracts/README.md"]},
+        {"id":"AUT-004","name":"Machine contract and registry authority","status":"ACCOUNTED","evidence":["governance/authority/authority-precedence.json"]},
+        {"id":"AUT-005","name":"Owning backend/domain mutation authority","status":"ACCOUNTED","evidence":["governance/policies/engineering.md","governance/product/PRD.md"]},
+        {"id":"AUT-006","name":"Protected security/finance/isolation/release approval authority","status":"ACCOUNTED","evidence":["governance/policies/security.md","governance/policies/delivery.md"]},
+        {"id":"AUT-007","name":"Live repository-platform evidence authority","status":"ACCOUNTED","evidence":["governance/GOVERNANCE.md","governance/policies/delivery.md"]}
+      ]
+    },
+    "responsibilities": {
+      "applicability": "APPLICABLE",
+      "items": [
+        {"id":"RSP-001","name":"Identity owns actor credentials authentication activation sessions and trusted identity context","status":"ACCOUNTED","evidence":["governance/product/PRD.md"]},
+        {"id":"RSP-002","name":"Workforce owns employment profile status affiliation readiness and workforce evidence","status":"ACCOUNTED","evidence":["governance/product/PRD.md"]},
+        {"id":"RSP-003","name":"DSH owns commerce fulfillment operational truth and bounded app-facing projections","status":"ACCOUNTED","evidence":["governance/product/PRD.md","services/dsh/service.manifest.ts"]},
+        {"id":"RSP-004","name":"WLT exclusively owns authoritative financial mutation and truth","status":"ACCOUNTED","evidence":["governance/product/PRD.md","services/wlt/service.manifest.ts"]},
+        {"id":"RSP-005","name":"Platform Control and Providers own governed platform/provider configuration semantics","status":"ACCOUNTED","evidence":["governance/product/PRD.md","core/platform-control","core/providers"]},
+        {"id":"RSP-006","name":"Surfaces/shared layers render intent coordination and canonical readback without parallel truth","status":"ACCOUNTED","evidence":["governance/policies/engineering.md","governance/product/PRD.md"]},
+        {"id":"RSP-007","name":"Runtime/CI/evidence systems prove candidate behavior without creating Product Truth","status":"ACCOUNTED","evidence":["governance/policies/delivery.md","governance/github/workflow-registry.json"]}
+      ]
+    },
+    "journeys": {
+      "applicability": "APPLICABLE",
+      "items": [
+        {"id":"JRN-001","name":"Platform context and authorization resolution","status":"ACCOUNTED","evidence":["governance/product/contracts/bthwani-platform-model.product-truth.json"]},
+        {"id":"JRN-002","name":"Identity activation-login-refresh-revocation","status":"ACCOUNTED","evidence":["governance/product/contracts/identity-activation-sessions.product-truth.json"]},
+        {"id":"JRN-003","name":"Workforce provision-readiness-assignment","status":"ACCOUNTED","evidence":["governance/product/PRD.md","core/workforce"]},
+        {"id":"JRN-004","name":"Field partner onboarding and evidence submission","status":"ACCOUNTED","evidence":["governance/product/contracts/partner-onboarding-store-publication.product-truth.json"]},
+        {"id":"JRN-005","name":"Operator review-approval-publication","status":"ACCOUNTED","evidence":["governance/product/contracts/partner-onboarding-store-publication.product-truth.json"]},
+        {"id":"JRN-006","name":"Customer discovery and central catalog consumption","status":"ACCOUNTED","evidence":["governance/product/PRD.md","services/dsh/capability-map.ts"]},
+        {"id":"JRN-007","name":"Cart-serviceability-checkout-WLT handoff","status":"ACCOUNTED","evidence":["services/dsh/capability-map.ts","governance/product/contracts/wlt-money-movement-settlement.product-truth.json"]},
+        {"id":"JRN-008","name":"Order creation and multi-surface readback","status":"ACCOUNTED","evidence":["governance/product/contracts/order-creation-truth.product-truth.json"]},
+        {"id":"JRN-009","name":"Partner acceptance-preparation-readiness","status":"ACCOUNTED","evidence":["services/dsh/capability-map.ts"]},
+        {"id":"JRN-010","name":"Dispatch-assignment-captain acceptance","status":"ACCOUNTED","evidence":["governance/product/contracts/captain-dispatch.product-truth.json"]},
+        {"id":"JRN-011","name":"Partner-to-captain custody handoff and exceptions","status":"ACCOUNTED","evidence":["governance/product/contracts/store-captain-handoff.product-truth.json"]},
+        {"id":"JRN-012","name":"Delivery-proof-exception-customer tracking","status":"ACCOUNTED","evidence":["services/dsh/capability-map.ts"]},
+        {"id":"JRN-013","name":"Field visit-readiness-escalation","status":"ACCOUNTED","evidence":["services/dsh/capability-map.ts"]},
+        {"id":"JRN-014","name":"Support-incident-order rescue","status":"ACCOUNTED","evidence":["governance/product/contracts/support-incidents-order-rescue.product-truth.json"]},
+        {"id":"JRN-015","name":"Cash-In-COD-earnings-payout-settlement-reconciliation-close","status":"ACCOUNTED","evidence":["governance/product/contracts/wlt-money-movement-settlement.product-truth.json"]},
+        {"id":"JRN-016","name":"Platform/provider change-health-rollout-audit","status":"ACCOUNTED","evidence":["governance/product/contracts/platform-change-sets.product-truth.json","core/providers"]}
+      ]
+    },
+    "states": {
+      "applicability": "APPLICABLE",
+      "items": [
+        {"id":"STA-001","name":"Identity/session lifecycle state family","status":"ACCOUNTED","evidence":["governance/product/contracts/identity-activation-sessions.product-truth.json"]},
+        {"id":"STA-002","name":"Partner/onboarding/publication lifecycle state family","status":"ACCOUNTED","evidence":["governance/product/contracts/partner-onboarding-store-publication.product-truth.json"]},
+        {"id":"STA-003","name":"Commerce/cart/checkout/order lifecycle state family","status":"ACCOUNTED","evidence":["governance/product/contracts/order-creation-truth.product-truth.json"]},
+        {"id":"STA-004","name":"Dispatch/custody/delivery lifecycle state family","status":"ACCOUNTED","evidence":["governance/product/contracts/store-captain-handoff.product-truth.json"]},
+        {"id":"STA-005","name":"Financial wallet/payment/COD/payout/settlement state family","status":"ACCOUNTED","evidence":["governance/product/contracts/wlt-money-movement-settlement.product-truth.json"]},
+        {"id":"STA-006","name":"Support/incident/recovery lifecycle state family","status":"ACCOUNTED","evidence":["governance/product/contracts/support-incidents-order-rescue.product-truth.json"]},
+        {"id":"STA-007","name":"Platform/provider rollout and health state family","status":"ACCOUNTED","evidence":["governance/product/contracts/platform-change-sets.product-truth.json"]},
+        {"id":"STA-008","name":"Universal surface loading-empty-offline-forbidden-conflict-partial-error-recovery-success states","status":"ACCOUNTED","evidence":["governance/product/PRD.md","governance/policies/engineering.md"]}
+      ]
+    },
+    "transitions": {
+      "applicability": "APPLICABLE",
+      "items": [
+        {"id":"TRN-001","name":"Actor provisioning activation authentication refresh revocation","status":"ACCOUNTED","evidence":["governance/product/contracts/identity-activation-sessions.product-truth.json"]},
+        {"id":"TRN-002","name":"Partner draft submission review activation and publication","status":"ACCOUNTED","evidence":["governance/product/contracts/partner-onboarding-store-publication.product-truth.json"]},
+        {"id":"TRN-003","name":"Cart mutation serviceability checkout and order creation","status":"ACCOUNTED","evidence":["governance/product/contracts/order-creation-truth.product-truth.json"]},
+        {"id":"TRN-004","name":"Order acceptance preparation readiness and dispatch","status":"ACCOUNTED","evidence":["services/dsh/capability-map.ts"]},
+        {"id":"TRN-005","name":"Custody confirmation pickup delivery proof exception and reassignment","status":"ACCOUNTED","evidence":["governance/product/contracts/store-captain-handoff.product-truth.json"]},
+        {"id":"TRN-006","name":"Financial reserve-release-finalize-hold-approve-execute-verify-reconcile-close","status":"ACCOUNTED","evidence":["governance/product/contracts/wlt-money-movement-settlement.product-truth.json"]},
+        {"id":"TRN-007","name":"Support incident escalation resolution and rescue","status":"ACCOUNTED","evidence":["governance/product/contracts/support-incidents-order-rescue.product-truth.json"]},
+        {"id":"TRN-008","name":"Platform/provider change approval rollout rollback and audit","status":"ACCOUNTED","evidence":["governance/product/contracts/platform-change-sets.product-truth.json"]}
+      ]
+    },
+    "invariants": {
+      "applicability": "APPLICABLE",
+      "items": [
+        {"id":"INV-001","name":"One authoritative owner per durable fact","status":"ACCOUNTED","evidence":["governance/product/PRD.md","governance/policies/engineering.md"]},
+        {"id":"INV-002","name":"Platform Context is isolation; Partner and Store are business scopes","status":"ACCOUNTED","evidence":["governance/product/platform-model.yaml"]},
+        {"id":"INV-003","name":"Trusted context is server-derived and client input cannot grant it","status":"ACCOUNTED","evidence":["governance/product/PRD.md","governance/policies/security.md"]},
+        {"id":"INV-004","name":"WLT is sole financial truth owner and DSH only bounded facade/projection","status":"ACCOUNTED","evidence":["governance/product/PRD.md"]},
+        {"id":"INV-005","name":"One canonical write path and canonical committed readback per transition","status":"ACCOUNTED","evidence":["governance/GOVERNANCE.md","governance/policies/engineering.md"]},
+        {"id":"INV-006","name":"Generated clients derive from canonical composed contracts","status":"ACCOUNTED","evidence":["governance/policies/engineering.md","governance/product/contracts/bthwani-platform-model.product-truth.json"]},
+        {"id":"INV-007","name":"Retry/concurrency/idempotency cannot create duplicate effects","status":"ACCOUNTED","evidence":["governance/policies/engineering.md"]},
+        {"id":"INV-008","name":"Service-owned persistence and migration history do not cross-mutate","status":"ACCOUNTED","evidence":["governance/policies/engineering.md"]},
+        {"id":"INV-009","name":"Historical/static/narrow evidence never substitutes for same-candidate runtime scope","status":"ACCOUNTED","evidence":["governance/policies/delivery.md"]},
+        {"id":"INV-010","name":"Surfaces do not maintain mock/fallback/local business truth","status":"ACCOUNTED","evidence":["governance/policies/engineering.md","governance/product/PRD.md"]}
+      ]
+    },
+    "handoffs": {
+      "applicability": "APPLICABLE",
+      "items": [
+        {"id":"HOF-001","name":"Identity to Workforce actor provisioning/readiness","status":"ACCOUNTED","evidence":["governance/product/contracts/identity-activation-sessions.product-truth.json"]},
+        {"id":"HOF-002","name":"Field/Workforce evidence to DSH partner-store readiness","status":"ACCOUNTED","evidence":["governance/product/contracts/partner-onboarding-store-publication.product-truth.json"]},
+        {"id":"HOF-003","name":"DSH checkout/order orchestration to WLT financial authority","status":"ACCOUNTED","evidence":["governance/product/contracts/wlt-money-movement-settlement.product-truth.json"]},
+        {"id":"HOF-004","name":"Partner fulfillment state to DSH dispatch","status":"ACCOUNTED","evidence":["services/dsh/capability-map.ts"]},
+        {"id":"HOF-005","name":"DSH assignment to Captain execution","status":"ACCOUNTED","evidence":["governance/product/contracts/captain-dispatch.product-truth.json"]},
+        {"id":"HOF-006","name":"Partner store custody to Captain custody with bilateral confirmation","status":"ACCOUNTED","evidence":["governance/product/contracts/store-captain-handoff.product-truth.json"]},
+        {"id":"HOF-007","name":"WLT to approved provider/manual settlement evidence and reconciliation","status":"ACCOUNTED","evidence":["governance/product/contracts/wlt-money-movement-settlement.product-truth.json"]},
+        {"id":"HOF-008","name":"Owner canonical readback to all affected application/control consumers","status":"ACCOUNTED","evidence":["governance/product/PRD.md"]},
+        {"id":"HOF-009","name":"Platform Control/Providers configuration and health to dependent services/surfaces","status":"ACCOUNTED","evidence":["governance/product/contracts/platform-change-sets.product-truth.json"]}
+      ]
+    },
+    "truthOwners": {
+      "applicability": "APPLICABLE",
+      "items": [
+        {"id":"OWN-001","name":"Identity authoritative owner","status":"ACCOUNTED","evidence":["governance/product/PRD.md","core/identity"]},
+        {"id":"OWN-002","name":"Workforce authoritative owner","status":"ACCOUNTED","evidence":["governance/product/PRD.md","core/workforce"]},
+        {"id":"OWN-003","name":"DSH authoritative operational owner","status":"ACCOUNTED","evidence":["governance/product/PRD.md","services/dsh"]},
+        {"id":"OWN-004","name":"WLT authoritative financial owner","status":"ACCOUNTED","evidence":["governance/product/PRD.md","services/wlt"]},
+        {"id":"OWN-005","name":"Platform Control authoritative governed platform-configuration owner","status":"ACCOUNTED","evidence":["governance/product/PRD.md","core/platform-control"]},
+        {"id":"OWN-006","name":"Providers authoritative provider-registration/capability-policy owner","status":"ACCOUNTED","evidence":["governance/product/PRD.md","core/providers"]},
+        {"id":"OWN-007","name":"Media governed binary/document storage owner where assigned","status":"ACCOUNTED","evidence":["governance/product/PRD.md","infra/docker/compose.runtime.yml"]}
+      ]
+    },
+    "writersReadersConsumers": {
+      "applicability": "APPLICABLE",
+      "items": [
+        {"id":"WRC-001","name":"Owning backend/domain services are canonical writers","status":"ACCOUNTED","evidence":["governance/policies/engineering.md","governance/product/PRD.md"]},
+        {"id":"WRC-002","name":"Service-owned PostgreSQL schemas persist durable owner truth","status":"ACCOUNTED","evidence":["governance/policies/engineering.md","infra/docker/scripts/runtime.ps1"]},
+        {"id":"WRC-003","name":"Generated OpenAPI clients are typed contract consumers","status":"ACCOUNTED","evidence":["package.json","governance/policies/engineering.md"]},
+        {"id":"WRC-004","name":"Shared controllers/adapters coordinate owner calls without parallel truth","status":"ACCOUNTED","evidence":["governance/product/PRD.md","governance/policies/engineering.md"]},
+        {"id":"WRC-005","name":"Five application/control surfaces read and act on authorized canonical state","status":"ACCOUNTED","evidence":["apps","governance/product/PRD.md"]},
+        {"id":"WRC-006","name":"Cross-service consumers use explicit contracts rather than direct table coupling","status":"ACCOUNTED","evidence":["governance/policies/engineering.md","infra/docker/compose.runtime.yml"]},
+        {"id":"WRC-007","name":"Analytics/read models consume owner facts without owning them","status":"ACCOUNTED","evidence":["governance/product/PRD.md"]},
+        {"id":"WRC-008","name":"CI/runtime/evidence consumers validate exact candidates and do not mutate source","status":"ACCOUNTED","evidence":["governance/policies/delivery.md","governance/github/workflow-registry.json"]}
+      ]
+    },
+    "flows": {
+      "applicability": "APPLICABLE",
+      "items": [
+        {"id":"FLW-001","name":"Surface interaction to shared controller/adapter","status":"ACCOUNTED","evidence":["governance/product/PRD.md"]},
+        {"id":"FLW-002","name":"Shared controller to generated contract client","status":"ACCOUNTED","evidence":["governance/product/PRD.md","governance/policies/engineering.md"]},
+        {"id":"FLW-003","name":"Generated client to owning backend/domain authorization and state rule","status":"ACCOUNTED","evidence":["governance/product/PRD.md","governance/policies/engineering.md"]},
+        {"id":"FLW-004","name":"Domain mutation to service-owned persistence events jobs integrations","status":"ACCOUNTED","evidence":["governance/product/PRD.md","governance/policies/engineering.md"]},
+        {"id":"FLW-005","name":"Committed owner state to canonical readback and affected consumers","status":"ACCOUNTED","evidence":["governance/product/PRD.md"]},
+        {"id":"FLW-006","name":"DSH operational flow to WLT bounded financial handoff and readback","status":"ACCOUNTED","evidence":["governance/product/PRD.md","governance/product/contracts/wlt-money-movement-settlement.product-truth.json"]},
+        {"id":"FLW-007","name":"Runtime configuration/readiness to service dependency graph","status":"ACCOUNTED","evidence":["infra/docker/scripts/runtime.ps1","infra/docker/compose.runtime.yml"]},
+        {"id":"FLW-008","name":"Candidate implementation to static/runtime/CI/protected evidence and closure decision","status":"ACCOUNTED","evidence":["governance/policies/delivery.md","governance/github/workflow-registry.json"]}
+      ]
+    },
+    "implementationRuntimeBoundaries": {
+      "applicability": "APPLICABLE",
+      "items": [
+        {"id":"BND-001","name":"Five product application/control runtimes","status":"ACCOUNTED","evidence":["apps","governance/product/PRD.md"]},
+        {"id":"BND-002","name":"Core Identity bounded context","status":"ACCOUNTED","evidence":["core/identity","pnpm-workspace.yaml"]},
+        {"id":"BND-003","name":"Core Workforce bounded context","status":"ACCOUNTED","evidence":["core/workforce","pnpm-workspace.yaml"]},
+        {"id":"BND-004","name":"Core Platform Control bounded context","status":"ACCOUNTED","evidence":["core/platform-control","pnpm-workspace.yaml"]},
+        {"id":"BND-005","name":"Core Providers bounded context","status":"ACCOUNTED","evidence":["core/providers","pnpm-workspace.yaml"]},
+        {"id":"BND-006","name":"DSH service boundary","status":"ACCOUNTED","evidence":["services/dsh","services/dsh/service.manifest.ts"]},
+        {"id":"BND-007","name":"WLT service boundary","status":"ACCOUNTED","evidence":["services/wlt","services/wlt/service.manifest.ts"]},
+        {"id":"BND-008","name":"Shared contract/data/UI/control packages and root contracts","status":"ACCOUNTED","evidence":["shared","pnpm-workspace.yaml"]},
+        {"id":"BND-009","name":"Canonical Docker/PostgreSQL/MinIO and optional support runtime profiles","status":"ACCOUNTED","evidence":["infra/docker/scripts/runtime.ps1","infra/docker/compose.runtime.yml"]}
+      ]
+    }
   },
   "challenges": {
-    "negativeSpace": {"status": "OPEN", "evidence": []},
-    "adversarial": {"status": "OPEN", "evidence": []}
+    "negativeSpace": {"status":"PASS","evidence":["plans/diagnose-implementing/workspace-system-root-20260815-1813/evidence/negative-space-challenge.md"]},
+    "adversarial": {"status":"PASS","evidence":["plans/diagnose-implementing/workspace-system-root-20260815-1813/evidence/adversarial-operational-root.md"]}
   }
 }
