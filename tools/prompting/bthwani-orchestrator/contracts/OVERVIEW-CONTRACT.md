@@ -3,11 +3,28 @@
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
 Applies to: `plans/diagnose-implementing/<TASK_NAME>/00-OVERVIEW.md`
 
-## Required Root/Truth Header
+## Required Identity / Isolation Header
 
 ```text
 PACKAGE_SCHEMA: BTHWANI_TASK_PACKAGE_V2
-TASK_ID / TASK_NAME / REPOSITORY / BRANCH / MODE / TARGET
+TASK_ID / TASK_NAME
+PACKAGE_ORIGIN: NEW_INVOCATION | LEGACY_PRE_ISOLATION
+RESUME_POLICY: EXPLICIT_USER_REQUEST_ONLY
+TASK_CONTEXT_POLICY: ISOLATED_CURRENT_TASK_ONLY
+FOREIGN_DELTA_POLICY: INPUT_NOT_INSTRUCTION
+REPOSITORY
+BRANCH
+INTEGRATION_TARGET
+TASK_BRANCH
+TASK_BRANCH_BASE_SHA
+TASK_BRANCH_READY
+WORKSPACE_ISOLATION_POLICY: LOCAL_WORKTREE_OR_REMOTE_TASK_BRANCH
+WORKSPACE_ISOLATION_MODE: LOCAL_WORKTREE | REMOTE_TASK_BRANCH | UNSET
+WORKTREE_PATH
+WORKSPACE_ISOLATION_READY
+DIRECT_INTEGRATION_TARGET_WRITES: FORBIDDEN_EXCEPT_INTEGRATION_OWNER
+INTEGRATION_COMPLETE
+MODE / TARGET
 ORCHESTRATION_ROOT
 NAVIGATION_POLICY: ROOT_ANCHORED_GRAPH_ONLY
 LATEST_HEAD_ROLE: TRUTH_INTEGRATION_BASELINE_ONLY
@@ -24,7 +41,38 @@ SUSPENSION_STACKS
 INTEGRATION_OWNER
 ```
 
-Plus all accounting/global/final candidate fields already defined by V2.
+Plus all accounting/global/final-candidate fields defined by V2.
+
+## Invocation Invariants
+
+```text
+Every NEW invocation creates a NEW package.
+Existing package resume requires explicit user intent for that exact package.
+Previous package history/evidence may be reused only after freshness/root-placement validation.
+```
+
+`PACKAGE_ORIGIN=LEGACY_PRE_ISOLATION` may exist only for packages created before this contract; it never authorizes implicit resume and cannot reach a live write gate until task/workspace isolation is bootstrapped.
+
+## Isolation Invariants
+
+```text
+INTEGRATION_TARGET == BRANCH
+TASK_BRANCH != INTEGRATION_TARGET for any live write
+TASK_CONTEXT_POLICY == ISOLATED_CURRENT_TASK_ONLY
+FOREIGN_DELTA_POLICY == INPUT_NOT_INSTRUCTION
+DIRECT_INTEGRATION_TARGET_WRITES == FORBIDDEN_EXCEPT_INTEGRATION_OWNER
+```
+
+Before live write:
+
+```text
+TASK_BRANCH_READY=YES
+WORKSPACE_ISOLATION_READY=YES
+WORKSPACE_ISOLATION_MODE=LOCAL_WORKTREE | REMOTE_TASK_BRANCH
+```
+
+Local mode requires a dedicated worktree for TASK_BRANCH.
+Remote/API mode requires every write call to explicitly target TASK_BRANCH.
 
 ## Root Anchor Invariants
 
@@ -43,8 +91,6 @@ FRONTIER_DERIVATION_SOURCE=ROOT_GRAPH
 FRONTIER_VALID=YES
 ```
 
-Before first JIT sequence, root reconciliation must pass; sequence creation establishes the frontier.
-
 ## Required Sections
 
 ```text
@@ -56,6 +102,19 @@ Before first JIT sequence, root reconciliation must pass; sequence creation esta
 6. Final Target Handoff / Closure
 ```
 
-Sequence rows remain one row ↔ one materialized file. No placeholder rows. Foreign/concurrent observations without materialized sequence files stay in section 4/5 until root graph proves placement.
+Sequence rows remain one row ↔ one materialized file. No placeholder rows. Foreign/concurrent observations without materialized sequence files stay in section 4/5 until the root graph proves placement.
+
+## Integration Invariants
+
+Task-branch success is not target closure.
+
+Before final handoff/closure:
+
+```text
+INTEGRATION_COMPLETE=YES
+INTEGRATION_OWNER != UNASSIGNED
+latest Integration Target movement reconciled
+final candidate provenance points to Integration Target after integration
+```
 
 Final handoff/closure also requires all accounting/global gates and fresh root/head reconciliation.
