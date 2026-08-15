@@ -1,4 +1,4 @@
-import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime";
+import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/native-data-adapters";
 import type { DshCreateIntentInput } from "./checkout.types";
 
 const STORAGE_KEY = "@bthwani/checkout-create-attempt:v1";
