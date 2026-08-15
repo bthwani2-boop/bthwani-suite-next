@@ -135,16 +135,13 @@ export function OrderChatScreen({
           entityId: orderId,
           fingerprint,
         });
-        try {
-          selected = await createActorSupportTicket(input, attempt.context);
-        } finally {
-          await clearSupportMutationAttempt({
-            scope: "client",
-            operation: "create-order-chat",
-            entityId: orderId,
-            fingerprint,
-          });
-        }
+        selected = await createActorSupportTicket(input, attempt.context);
+        await clearSupportMutationAttempt({
+          scope: "client",
+          operation: "create-order-chat",
+          entityId: orderId,
+          fingerprint,
+        });
       }
       await readback(selected);
       setLoadState("ready");
@@ -171,16 +168,13 @@ export function OrderChatScreen({
         entityId: ticket.id,
         fingerprint,
       });
-      try {
-        await addActorSupportMessage(ticket.id, { body }, attempt.context);
-      } finally {
-        await clearSupportMutationAttempt({
-          scope: "client",
-          operation: "send-order-chat-msg",
-          entityId: ticket.id,
-          fingerprint,
-        });
-      }
+      await addActorSupportMessage(ticket.id, { body }, attempt.context);
+      await clearSupportMutationAttempt({
+        scope: "client",
+        operation: "send-order-chat-msg",
+        entityId: ticket.id,
+        fingerprint,
+      });
       const tickets = await fetchActorSupportTickets();
       await readback(selectOrderTicket(tickets, orderId) ?? ticket);
       setDraft("");

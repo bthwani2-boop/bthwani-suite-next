@@ -11,10 +11,10 @@ TARGET: كل شيء
 OBJECTIVE: Diagnose and execute the complete repository end-to-end through a graph-driven, root-cause-first, multi-agent-capable closure model, accounting for every material finding, dependency, consumer, scope delta, decision, cleanup item and required evidence.
 ORCHESTRATOR_PATH: tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md
 CREATED_AT: 2026-08-15T03:05:00Z
-LAST_RECONCILED_AT: 2026-08-15T07:47:00+03:00
+LAST_RECONCILED_AT: 2026-08-15T07:58:00+03:00
 START_SHA: b73e2752ef65e5b8817e35cdd96948dc1386fb47
-CURRENT_SHA: 2102f45e86d73c855a863ade0b6f47c9cc64e427
-LATEST_RECONCILED_SHA: 2102f45e86d73c855a863ade0b6f47c9cc64e427
+CURRENT_SHA: be3023d6e673c1979a7bdd8806cf9be52d88adfe
+LATEST_RECONCILED_SHA: be3023d6e673c1979a7bdd8806cf9be52d88adfe
 LIFECYCLE_STATE: OPEN
 ACTIVE_EXECUTION_FRONTIER: SEQ-001
 SUSPENSION_STACKS: NONE
@@ -27,11 +27,11 @@ EVIDENCE_ACCOUNTED: NO
 CLEANUP_ACCOUNTED: NO
 ACCOUNTING_COMPLETE: NO
 DISCOVERY_COMPLETE: PARTIAL
-DIAGNOSIS_COMPLETE: PARTIAL
-DECISION_COMPLETE: PARTIAL
+DIAGNOSIS_COMPLETE: YES
+DECISION_COMPLETE: YES
 COVERAGE_COMPLETE: NO
 PACKAGE_READY: PARTIAL
-IMPLEMENTATION_COMPLETE: NO
+IMPLEMENTATION_COMPLETE: PARTIAL
 EVIDENCE_COMPLETE: NO
 CLEANUP_COMPLETE: NO
 GOVERNANCE_SYNC_COMPLETE: NO
@@ -45,19 +45,19 @@ HEAD_AT_DECISION: UNSET
 
 ## 1. Truth Baseline
 
-- Current graph-driven framework reconciled on branch `A` at `2102f45e86d73c855a863ade0b6f47c9cc64e427` immediately before this package bookkeeping write.
+- Current graph-driven framework and SEQ-001 implementation are reconciled on branch `A` at `be3023d6e673c1979a7bdd8806cf9be52d88adfe`; the candidate includes a concurrent commit and requires fresh post-movement evidence.
 - START_SHA remains `b73e2752ef65e5b8817e35cdd96948dc1386fb47` for task provenance.
 - `TARGET=كل شيء`; therefore every concurrent product change discovered on branch A must be classified into the global graph rather than silently assumed disjoint.
-- Runtime/DB/device/provider/CI claims remain unproven until candidate-bound evidence is actually acquired.
+- Runtime/DB/device/provider/CI claims remain unproven until candidate-bound evidence is actually acquired. Evidence collected before `be3023d6e…` is stale for SEQ-001.
 
 ## 2. Macro Blueprint / Dependency Graph
 
 ```text
 BROAD_DISCOVERY = IN_PROGRESS
-MACRO_BLUEPRINT = NOT_COMPLETE
-RELATION_GRAPH = NOT_COMPLETE
-ROOT_CAUSE_CLUSTERS = NOT_COMPLETE
-ACTIVE_EXECUTION_FRONTIER = SEQ-001
+MACRO_BLUEPRINT = PARTIAL
+RELATION_GRAPH = PARTIAL (historical Graphify graph; stale against current HEAD)
+ROOT_CAUSE_CLUSTERS = SEQ-001 PROVEN; GLOBAL INCOMPLETE
+ACTIVE_EXECUTION_FRONTIER = SEQ-001 / VERIFYING
 ```
 
 The graph must support vertical/horizontal/reverse/cross-layer/cross-surface traversal, structured backtracking, suspension/reopen, and proven independent parallel frontiers.
@@ -66,7 +66,7 @@ The graph must support vertical/horizontal/reverse/cross-layer/cross-surface tra
 
 | Sequence ID | File | Subject | Derivation basis | Depends on | Unlocks | Conflict domain | Execution owner | Status | Reopen trigger |
 |---|---|---|---|---|---|---|---|---|---|
-| SEQ-001 | 001-client-order-chat-canonical-support-cutover.md | Client order chat canonical DSH cutover | F-001..F-006 + support Product Truth | None proven | Client DSH text chat readback | DSH client support + shared actor-support adapter | CODEX_LOCAL_INTEGRATION_OWNER | READY_TO_EXECUTE | SD-001 provider upload contract; runtime/readback failure; semantic overlap |
+| SEQ-001 | 001-client-order-chat-canonical-support-cutover.md | Client order chat canonical DSH cutover | F-001..F-006 + support Product Truth | None proven | Client DSH text chat readback | DSH client support + shared actor-support adapter | CODEX_LOCAL_INTEGRATION_OWNER | VERIFYING | SD-001 provider upload contract; runtime/readback failure; semantic overlap |
 
 SEQ-001 is the first proven closure boundary. Further sequences remain Just-In-Time only after the reconciled graph proves a distinct root cause/conflict domain.
 
@@ -81,6 +81,11 @@ SEQ-001 is the first proven closure boundary. Further sequences remain Just-In-T
 - Applicable runtime/DB/device/provider evidence capabilities must be acquired when a closure claim requires them.
 - External/protected blockers may pause affected graph nodes only; they must not freeze unrelated independent frontiers without a proven dependency.
 - `SD-001`: real client support-media upload/finalize/read URL binding is absent from the current governed path; no fake media write is permitted.
+- `F-007`: app-client suite failure: missing Expo `crypto` capability marker; pre-existing/outside SEQ-001, remains open.
+- `F-008`: app-client suite failure: checkout flow missing `useCreateOrderTruthController` marker; pre-existing/outside SEQ-001, remains open.
+- `F-009`: app-client mobile provider contract test dereferences an absent manifest field; pre-existing/outside SEQ-001, remains open.
+- `CONC-001`: branch moved from `2102f45e…` to `be3023d6e…` through a concurrent feature commit overlapping SEQ-001; evidence was invalidated and re-diagnosis is required.
+- `F-010`: official `runtime:full:smoke` reaches DSH readiness but fails the catalog smoke at operator store governance with `400 INVALID_REQUEST` because visibility is controlled by Marketing publication; this is outside SEQ-001 and blocks global runtime closure.
 
 ## 5. Global Accounting / Coverage / Reconciliation
 
@@ -96,6 +101,13 @@ Evidence = OPEN ACCOUNTING
 Cleanup = OPEN ACCOUNTING
 Adversarial negative-space discovery = NOT_RUN
 ```
+
+Fresh evidence observed on the current working-tree candidate at HEAD `be3023d6e…`:
+
+- PASS: app-client typecheck, DSH typecheck/OpenAPI composition, DSH support route tests, app-client source lint, identity/workforce/postgres/minio/DSH readiness and financial simulator smoke.
+- PASS: app-client order/support navigation marker and stale chat-path negative scan.
+- FAIL/BLOCKED_EXTERNAL: `pnpm run runtime:full:smoke` at DSH catalog smoke / operator store governance (`F-010`).
+- MISSING: authenticated client order-chat create/send/reload/read-receipt runtime readback, cross-surface operator/captain/partner readback, visual/device QA, immutable candidate after the pending working-tree retry/package writes.
 
 Every material discovery must become an ID-addressable graph/ledger item. No IGNORE, silent TODO, or untracked carry-forward is permitted.
 
