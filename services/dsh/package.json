@@ -16,12 +16,13 @@
     "database:contract": "node ../../tools/scripts/check-dsh-database-contract.mjs",
     "platform:boundary": "node ../../tools/guards/dsh-platform-boundary-gate.mjs",
     "data-provider:quarantine": "node ../../tools/guards/dsh-data-provider-quarantine-gate.mjs",
+    "native-dependency:inventory": "node ../../tools/guards/dsh-native-dependency-inventory-gate.mjs",
     "pretypecheck": "pnpm run openapi:generate",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prebuild": "pnpm run openapi:generate",
     "build": "tsc -p tsconfig.json && node -e \"require('node:fs').writeFileSync('dist/package.json', JSON.stringify({type:'commonjs'}))\" && node ../../tools/scripts/verify-go-build.mjs backend",
     "test": "pnpm run build && pnpm --dir ../.. exec node --test services/dsh/tests/*.test.mjs",
-    "lint": "pnpm run platform:boundary && pnpm run data-provider:quarantine && pnpm --dir ../.. run guard:fullstack-boundary"
+    "lint": "pnpm run platform:boundary && pnpm run data-provider:quarantine && pnpm run native-dependency:inventory && pnpm --dir ../.. run guard:fullstack-boundary"
   },
   "peerDependencies": {
     "expo-document-picker": "~56.0.4",
@@ -105,6 +106,72 @@
         "currentVersion": "11.4.1",
         "canonicalVersion": "12.0.1",
         "target": "REMOVE_FROM_DSH_ROOT_AFTER_CONSUMER_MIGRATION"
+      }
+    },
+    "nativeDependencyReview": {
+      "@react-native-async-storage/async-storage": {
+        "status": "LEGACY_DATA_PROVIDER_QUARANTINE",
+        "deletionAuthorized": false
+      },
+      "@react-native-community/netinfo": {
+        "status": "LEGACY_DATA_PROVIDER_QUARANTINE",
+        "deletionAuthorized": false
+      },
+      "expo-constants": {
+        "status": "ACTIVE_DIRECT_CONSUMER",
+        "evidence": ["services/dsh/frontend/shared/notifications/use-mobile-push-registration.ts"],
+        "deletionAuthorized": false
+      },
+      "expo-crypto": {
+        "status": "ACTIVE_DIRECT_CONSUMER",
+        "evidence": ["services/dsh/frontend/shared/notifications/use-mobile-push-registration.ts"],
+        "deletionAuthorized": false
+      },
+      "expo-document-picker": {
+        "status": "CONSUMER_REVIEW_PENDING",
+        "deletionAuthorized": false
+      },
+      "expo-image-picker": {
+        "status": "ACTIVE_DIRECT_CONSUMER",
+        "evidence": ["services/dsh/frontend/app-partner/catalog/ProductMediaScreen.tsx"],
+        "deletionAuthorized": false
+      },
+      "expo-location": {
+        "status": "CONSUMER_REVIEW_PENDING",
+        "deletionAuthorized": false
+      },
+      "expo-notifications": {
+        "status": "ACTIVE_DIRECT_CONSUMER",
+        "evidence": ["services/dsh/frontend/shared/notifications/use-mobile-push-registration.ts"],
+        "deletionAuthorized": false
+      },
+      "expo-secure-store": {
+        "status": "ACTIVE_DIRECT_CONSUMER",
+        "evidence": ["services/dsh/frontend/shared/notifications/use-mobile-push-registration.ts"],
+        "deletionAuthorized": false
+      },
+      "expo-video": {
+        "status": "ACTIVE_DIRECT_CONSUMER",
+        "evidence": ["services/dsh/frontend/app-client/home-discovery/HomeReelsSection.tsx"],
+        "deletionAuthorized": false
+      },
+      "react-native": {
+        "status": "ACTIVE_DIRECT_CONSUMER",
+        "evidence": ["services/dsh/frontend/app-partner/catalog/ProductMediaScreen.tsx"],
+        "deletionAuthorized": false
+      },
+      "react-native-maps": {
+        "status": "ACTIVE_DIRECT_CONSUMER",
+        "evidence": ["services/dsh/frontend/shared/maps/BthwaniNativeMap.tsx"],
+        "deletionAuthorized": false
+      },
+      "react-native-safe-area-context": {
+        "status": "CONSUMER_REVIEW_PENDING",
+        "deletionAuthorized": false
+      },
+      "react-native-svg": {
+        "status": "CONSUMER_REVIEW_PENDING",
+        "deletionAuthorized": false
       }
     },
     "cleanupPolicy": "Do not add native dependencies here. Migrate consumers to explicit mobile adapters and remove quarantined dependencies only after exact-ref consumer, lockfile, Metro, typecheck, and fresh native-build evidence."
