@@ -147,3 +147,4 @@ node-gates*.log
 *.p12
 .artifacts/
 .codeatlas/
+scratch/

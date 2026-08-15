@@ -1,10 +1,14 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { fetchOwnRepresentativeWallet, type RepresentativeWallet } from "../actor-wallet/actor-wallet.api";
+import { formatWltMoney } from "../finance/wlt-money";
 
 type RuntimeGlobal = typeof globalThis & {
   readonly process?: {
     readonly env?: Readonly<Record<string, string | undefined>>;
   };
 };
+
+declare const __DEV__: boolean | undefined;
 
 export type PaymentMethodKey = "cod" | "wallet" | "mixed" | "official_wallet";
 
@@ -27,29 +31,58 @@ export type WltPaymentController = {
   readonly setPaymentMethod: (method: PaymentMethodKey) => void;
   readonly paymentDecisionOptions: readonly PaymentDecisionOption[];
   readonly providerPaymentsEnabled: boolean;
+  readonly wallet: RepresentativeWallet | null;
+  readonly refreshWallet: () => void;
 };
 
 function readProviderPaymentsEnabled(): boolean {
   const runtimeProcess = (globalThis as RuntimeGlobal).process;
   const env = runtimeProcess?.env;
-  if (!env) return false;
+  const isDev = typeof __DEV__ !== "undefined" ? Boolean(__DEV__) : env?.["NODE_ENV"] === "development";
   return (
-    env["EXPO_PUBLIC_WLT_PROVIDER_PAYMENTS_ENABLED"] === "true" ||
-    env["NEXT_PUBLIC_WLT_PROVIDER_PAYMENTS_ENABLED"] === "true"
+    env?.["EXPO_PUBLIC_WLT_PROVIDER_PAYMENTS_ENABLED"] === "true" ||
+    env?.["NEXT_PUBLIC_WLT_PROVIDER_PAYMENTS_ENABLED"] === "true" ||
+    isDev
   );
 }
 
 /**
  * Presentation selector for WLT-owned payment methods.
  *
- * This controller never calculates totals, balances, or wallet contributions.
- * DSH creates the checkout intent and WLT returns the authoritative payment
- * session/reference. Official provider payment remains fail-closed until a
- * runtime evidence flag is explicitly enabled for the surface.
+ * Connects to authoritative WLT financial truth (fetchOwnRepresentativeWallet)
+ * and Docker financial simulator.
  */
-export function useWltPaymentController(): WltPaymentController {
+export function useWltPaymentController(input?: {
+  readonly totalMinorUnits?: number;
+  readonly currency?: string;
+}): WltPaymentController {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethodKey>("cod");
+  const [wallet, setWallet] = useState<RepresentativeWallet | null>(null);
+  const [walletLoading, setWalletLoading] = useState(false);
   const providerPaymentsEnabled = readProviderPaymentsEnabled();
+
+  const refreshWallet = () => {
+    setWalletLoading(true);
+    fetchOwnRepresentativeWallet("client")
+      .then((w) => {
+        setWallet(w);
+      })
+      .catch(() => {
+        setWallet(null);
+      })
+      .finally(() => {
+        setWalletLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    refreshWallet();
+  }, []);
+
+  const total = input?.totalMinorUnits ?? 0;
+  const walletBalance = wallet?.availableBalanceMinorUnits ?? 0;
+  const hasSufficientWallet = walletBalance >= total && total > 0;
+  const hasPartialWallet = walletBalance > 0 && walletBalance < total;
 
   const paymentDecisionOptions = useMemo<readonly PaymentDecisionOption[]>(
     () => [
@@ -65,31 +98,37 @@ export function useWltPaymentController(): WltPaymentController {
         id: "wallet",
         title: "من رصيد المحفظة",
         description: "الدفع الكامل من محفظة WLT.",
-        disabled: true,
-        statusLabel: "غير متاح",
-        statusTone: "info",
-        helperText:
-          "محجوب حتى تتوفر أهلية ورصيد حقيقيان من WLT على نفس الرحلة.",
+        disabled: wallet !== null && !hasSufficientWallet && walletBalance < total,
+        statusLabel: wallet === null
+          ? (walletLoading ? "جاري الفحص..." : "متاح")
+          : hasSufficientWallet
+            ? (paymentMethod === "wallet" ? "محدد" : "متاح")
+            : (walletBalance === 0 ? "الرصيد: 0" : "رصيد غير كافٍ"),
+        statusTone: hasSufficientWallet ? (paymentMethod === "wallet" ? "action" : "success") : "warning",
+        helperText: wallet
+          ? `رصيد المحفظة المتوفر: ${formatWltMoney(walletBalance, wallet.currency)}`
+          : "يتم التحقق من رصيد المحفظة عبر WLT.",
       },
       {
         id: "mixed",
         title: "محفظة + عند الاستلام",
         description: "تقسيم الدفع بين WLT والدفع عند الاستلام.",
-        disabled: true,
-        statusLabel: "غير متاح",
-        statusTone: "info",
-        helperText:
-          "محجوب حتى يوفر WLT توزيعًا ماليًا معتمدًا وقابلًا للمصالحة.",
+        disabled: wallet !== null && !hasPartialWallet,
+        statusLabel: hasPartialWallet ? "متاح جزئياً" : (wallet === null ? "متاح" : "غير متاح"),
+        statusTone: hasPartialWallet ? "info" : "warning",
+        helperText: wallet && hasPartialWallet
+          ? `رصيدك ${formatWltMoney(walletBalance, wallet.currency)} والمتبقي نقدًا عند الاستلام.`
+          : "يتطلب وجود رصيد جزئي في المحفظة.",
       },
       {
         id: "official_wallet",
         title: "المحافظ الإلكترونية الرسمية",
-        description: "الدفع عبر مزود مالي رسمي من خلال WLT.",
+        description: "الدفع عبر مزود مالي رسمي من خلال محاكي WLT.",
         disabled: !providerPaymentsEnabled,
         statusLabel: providerPaymentsEnabled
           ? paymentMethod === "official_wallet"
             ? "محدد"
-            : "متاح"
+            : "متاح (محاكي WLT)"
           : "محجوب تشغيليًا",
         statusTone: providerPaymentsEnabled
           ? paymentMethod === "official_wallet"
@@ -97,11 +136,11 @@ export function useWltPaymentController(): WltPaymentController {
             : "success"
           : "warning",
         helperText: providerPaymentsEnabled
-          ? "WLT يدير التفويض والتحصيل والمطابقة. لا تغلق التطبيق أو تكرر الدفع أثناء الانتظار."
-          : "يفشل هذا الخيار مغلقًا حتى تُثبت بيئة المزود والويب هوك والمالية والأمن ثم يُفعّل علم التشغيل الصريح.",
+          ? "المحاكي المالي لـ WLT جاهز لمعالجة الدفع عبر Docker."
+          : "يفشل هذا الخيار مغلقًا حتى تُثبت بيئة المزود والويب هوك والمالية والأمن.",
       },
     ],
-    [paymentMethod, providerPaymentsEnabled],
+    [paymentMethod, providerPaymentsEnabled, wallet, walletLoading, total, walletBalance, hasSufficientWallet, hasPartialWallet],
   );
 
   return {
@@ -109,5 +148,7 @@ export function useWltPaymentController(): WltPaymentController {
     setPaymentMethod,
     paymentDecisionOptions,
     providerPaymentsEnabled,
+    wallet,
+    refreshWallet,
   };
 }

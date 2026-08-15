@@ -13,6 +13,7 @@ import {
   TopBar,
   alpha,
   colorRoles,
+  radius,
   spacing,
 } from "@bthwani/ui-kit";
 import {
@@ -36,6 +37,8 @@ import type { DshPartnerDeliveryTaskStatus } from "../../shared/partner-delivery
 import { ClientLiveTrackingCard } from "./ClientLiveTrackingCard";
 import { ClientPreparationDecisionPanel } from "./ClientPreparationDecisionPanel";
 import { useClientOrderController } from "./useClientOrderController";
+import { useStoreDetailController } from "../../shared/store";
+import { Image } from "react-native";
 
 const PARTNER_DELIVERY_STATUS_LABELS: Readonly<Record<DshPartnerDeliveryTaskStatus, string>> = {
   unassigned: "بانتظار تعيين سائق من المتجر",
@@ -81,7 +84,7 @@ function journeyTitle(order: OrderTruth): string {
   if (order.status === "ready_for_pickup") return "طلبك جاهز للاستلام";
   if (order.status === "cancelled" || order.status.startsWith("cancelled_")) return "تم إلغاء الطلب";
   if (order.status === "failed" || order.status.startsWith("failed_")) return "تعذر إكمال الطلب";
-  if (order.status === "out_for_delivery" || order.status === "in_transit") return "طلبك في الطريق إليك";
+  if (order.status === "out_for_delivery" || order.status === "in_transit") return "جاري توصيل ومتابعة طلبك";
   if (order.status === "preparing" || order.status === "store_accepted") return "المتجر يجهز طلبك";
   return "تم استلام طلبك";
 }
@@ -107,6 +110,56 @@ function JourneySteps({ order }: { readonly order: OrderTruth }) {
         </View>
       ))}
     </View>
+  );
+}
+
+function OrderStoreHero({ order }: { readonly order: OrderTruth }) {
+  const summary = toOrderTruthSummary(order);
+  const storeController = useStoreDetailController(order.storeId);
+  const store = storeController.state.kind === "success" ? storeController.state.store : null;
+
+  return (
+    <Surface tone="default" style={styles.storeHero}>
+      {store?.heroImageSource ? (
+        <Image source={store.heroImageSource} style={styles.storeHeroBg} />
+      ) : null}
+      <View style={styles.storeHeroOverlay}>
+        <View style={styles.storeHeroHeader}>
+          {store?.logoImageSource ? (
+            <Image source={store.logoImageSource} style={styles.storeLogo} />
+          ) : (
+            <View style={styles.storeLogoPlaceholder}>
+              <Text style={{ fontSize: 24 }}>{store?.placeholderEmoji ?? "🏪"}</Text>
+            </View>
+          )}
+          <View style={styles.storeHeroInfo}>
+            <Text role="titleMd" style={styles.storeHeroTitle}>
+              {store?.displayName ?? "متابعة الطلب"}
+            </Text>
+            <Text role="caption" style={styles.storeHeroSubtitle}>
+              الطلب {bidiIsolate(order.orderNumber)} · {order.items.length} أصناف · {formatMinorUnits(order.totalMinorUnits, order.currency)}
+            </Text>
+          </View>
+        </View>
+        <Surface tone={statusTone(order.status) === "neutral" ? "default" : statusTone(order.status) as any} style={styles.heroStatusCard}>
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
+              {(order.status === "out_for_delivery" || order.status === "in_transit") ? (
+                <View style={{ backgroundColor: alpha(colorRoles.brandAction, 0.1), borderRadius: 16, padding: 4 }}>
+                  <Icon name="pulse-outline" size={20} tone="brand" />
+                </View>
+              ) : null}
+              <Text role="bodyStrong" style={{ color: colorRoles.surfaceBase }}>{journeyTitle(order)}</Text>
+            </View>
+            <Badge label={summary.statusLabel} tone={statusTone(order.status)} />
+          </View>
+          <Text role="bodySm" style={{ color: alpha(colorRoles.surfaceBase, 0.8), textAlign: "right", marginTop: 4 }}>
+            {FULFILLMENT_LABELS[order.fulfillmentMode]}
+          </Text>
+          <JourneySteps order={order} />
+        </Surface>
+      </View>
+    </Surface>
   );
 }
 
@@ -308,28 +361,15 @@ export function OrderTrackingScreen({ orderId, onBack, onOpenPickup, onOpenOrder
   return (
     <View style={styles.root}>
       <TopBar title="متابعة الطلب" onBack={onBack} />
-      <MobileScrollView fill padding={4} gap={4} contentContainerStyle={styles.content}>
-        <Surface tone="action" gap={3}>
-          <View style={styles.summaryHeader}>
-            <View style={styles.heroCopy}>
-              <Text role="titleMd" style={styles.actionText}>{journeyTitle(order)}</Text>
-              <Text role="caption" style={styles.actionText}>الطلب {bidiIsolate(order.orderNumber)}</Text>
-            </View>
-            <Badge label={summary.statusLabel} tone={statusTone(order.status)} />
-          </View>
-          <Text role="bodySm" style={styles.actionText}>{FULFILLMENT_LABELS[order.fulfillmentMode]}</Text>
-          <Text role="caption" style={styles.actionText}>
-            {`${order.items.length} أصناف · ${formatMinorUnits(order.totalMinorUnits, order.currency)}`}
-          </Text>
-          <JourneySteps order={order} />
-        </Surface>
+      <MobileScrollView fill padding={3} gap={3} contentContainerStyle={styles.content}>
+        <OrderStoreHero order={order} />
 
         <OrderTimeline order={order} />
 
-        <Surface tone="raised" gap={3}>
+        <Surface tone="raised" gap={2}>
           <Text role="titleSm">مراسلة الطلب</Text>
           <Text role="bodySm" tone="muted">
-            افتح محادثة دعم مرتبطة بهذا الطلب. تُحفظ الرسائل في تذكرة DSH نفسها ويمكن لفريق العمليات متابعتها من المصدر.
+            افتح محادثة دعم مرتبطة بهذا الطلب. تُحفظ الرسائل لضمان متابعة سريعة من فريق الدعم.
           </Text>
           {onOpenOrderSupport ? (
             <Button
@@ -341,7 +381,7 @@ export function OrderTrackingScreen({ orderId, onBack, onOpenPickup, onOpenOrder
           ) : null}
         </Surface>
 
-        <Surface tone="raised" gap={3}>
+        <Surface tone="raised" gap={2}>
           <Box layoutDirection="row" justify="space-between" align="center">
             <Text role="titleSm">تجهيز الطلب</Text>
             <Badge
@@ -457,7 +497,7 @@ export function OrderTrackingScreen({ orderId, onBack, onOpenPickup, onOpenOrder
           <ClientLiveTrackingCard tracking={liveTracking} />
         ) : null}
 
-        <Surface tone="raised" gap={3}>
+        <Surface tone="raised" gap={2}>
           <Text role="titleSm">أصناف الطلب المثبتة</Text>
           {order.items.map((item) => (
             <View key={item.id} style={styles.detailRow}>
@@ -468,7 +508,7 @@ export function OrderTrackingScreen({ orderId, onBack, onOpenPickup, onOpenOrder
         </Surface>
 
         <Surface tone="raised" gap={2}>
-          <Text role="titleSm">مرجع التدقيق</Text>
+          <Text role="titleSm">رقم الطلب المرجعي</Text>
           <Text role="caption">{bidiIsolate(order.correlationId)}</Text>
         </Surface>
 
@@ -498,6 +538,8 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingBottom: spacing[12],
+    paddingHorizontal: spacing[3],
+    gap: spacing[2],
   },
   summaryHeader: {
     flexDirection: "row-reverse",
@@ -530,16 +572,76 @@ const styles = StyleSheet.create({
   journeyDotActive: { backgroundColor: colorRoles.brandAction, borderColor: colorRoles.brandAction },
   journeyDotText: { color: colorRoles.brandStructure },
   journeyDotTextActive: { color: colorRoles.surfaceBase },
-  journeyLabel: { color: alpha(colorRoles.surfaceBase, 0.82), textAlign: "center", fontSize: 11 },
+  journeyLabel: { color: "rgba(255, 255, 255, 0.82)", textAlign: "center", fontSize: 11 },
   journeyLabelActive: { color: colorRoles.surfaceBase, fontWeight: "800" },
   timelineRow: {
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: spacing[3],
   },
-  timelineText: {
+  timelineText: { flex: 1, alignItems: "flex-end" },
+  storeHero: {
+    borderRadius: radius.xl,
+    overflow: "hidden",
+    backgroundColor: colorRoles.surfaceWarm,
+    borderWidth: 1,
+    borderColor: "rgba(0,0,0,0.05)",
+  },
+  storeHeroBg: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 120,
+    opacity: 0.15,
+  },
+  storeHeroOverlay: {
+    padding: spacing[4],
+    gap: spacing[4],
+  },
+  storeHeroHeader: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: spacing[3],
+  },
+  storeLogo: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: colorRoles.surfaceBase,
+    backgroundColor: colorRoles.surfaceBase,
+  },
+  storeLogoPlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: alpha(colorRoles.brandAction, 0.1),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  storeHeroInfo: {
     flex: 1,
     alignItems: "flex-end",
+  },
+  storeHeroTitle: {
+    color: colorRoles.brandStructure,
+    fontWeight: "800",
+  },
+  storeHeroSubtitle: {
+    color: colorRoles.textSecondary,
+    marginTop: 2,
+  },
+  heroStatusCard: {
+    padding: spacing[3],
+    borderRadius: radius.md,
+    backgroundColor: colorRoles.surfaceBase,
+    gap: spacing[1],
+    shadowColor: colorRoles.brandStructure,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   detailRow: {
     flexDirection: "row-reverse",

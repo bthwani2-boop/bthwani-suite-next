@@ -30,11 +30,9 @@ export function PaymentDecisionSection({
         <Text role="bodySm" weight="bold" style={styles.cardLabel}>
           وسيلة الدفع
         </Text>
-        <Badge label="WLT" tone="info" />
       </View>
       <Text role="caption" style={styles.description}>
-        لا تُحسب أرصدة أو مبالغ داخل الواجهة. يعتمد checkout النتيجة المالية
-        ويربطها بمرجع WLT.
+        اختر وسيلة الدفع المفضلة لإتمام الطلب.
       </Text>
 
       <View style={styles.options}>
@@ -65,9 +63,6 @@ export function PaymentDecisionSection({
                     <Text role="bodyStrong" style={styles.optionTitle}>
                       {option.title}
                     </Text>
-                    <Text role="caption" style={styles.optionDescription}>
-                      {option.description}
-                    </Text>
                   </View>
                 </View>
                 {option.statusLabel ? (
@@ -83,6 +78,7 @@ export function PaymentDecisionSection({
                   {option.helperText}
                 </Text>
               ) : null}
+
 
               {option.action && isSelected ? (
                 <Button
@@ -108,8 +104,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
     borderRadius: radius.md,
-    padding: 14,
-    gap: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    gap: 8,
   },
   headerRow: {
     flexDirection: "row-reverse",
@@ -118,23 +115,25 @@ const styles = StyleSheet.create({
   },
   cardLabel: {
     color: colorRoles.textPrimary,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "bold",
     textAlign: "right",
   },
   description: {
     color: colorRoles.textSecondary,
     textAlign: "right",
-    lineHeight: 19,
+    fontSize: 11,
+    lineHeight: 15,
   },
-  options: { gap: 8 },
+  options: { gap: 6 },
   paymentCard: {
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
-    borderRadius: radius.md,
-    padding: 12,
+    borderRadius: radius.sm,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
     backgroundColor: colorRoles.surfaceBase,
-    gap: 6,
+    gap: 4,
   },
   paymentCardActive: {
     borderColor: colorRoles.brandAction,
@@ -144,25 +143,20 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     justifyContent: "space-between",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
   },
   optionIdentity: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     flex: 1,
   },
   optionText: { alignItems: "flex-end", flex: 1 },
-  optionTitle: { color: colorRoles.textPrimary, textAlign: "right" },
-  optionDescription: {
-    color: colorRoles.textSecondary,
-    textAlign: "right",
-    lineHeight: 18,
-  },
+  optionTitle: { color: colorRoles.textPrimary, textAlign: "right", fontSize: 13 },
   radioDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     borderWidth: 1.5,
     borderColor: colorRoles.borderSubtle,
     backgroundColor: "transparent",
@@ -174,7 +168,8 @@ const styles = StyleSheet.create({
   helperText: {
     color: colorRoles.textSecondary,
     textAlign: "right",
-    lineHeight: 18,
+    fontSize: 11,
+    lineHeight: 15,
   },
-  actionButton: { alignSelf: "flex-start", marginTop: 4 },
+  actionButton: { alignSelf: "flex-start", marginTop: 2 },
 });

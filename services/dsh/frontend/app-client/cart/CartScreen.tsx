@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { StyleSheet, TextInput, View } from "react-native";
 import {
   Badge,
   Button,
+  Icon,
   LoadingState,
   ScrollScreen,
   StateView,
@@ -20,16 +21,19 @@ import {
 } from "../../shared/cart";
 import type {
   DshCart,
-  DshCartItemValidation,
   DshFulfillmentMode,
-  DshPricingQuote,
-  DshServiceabilityState,
 } from "../../shared/cart";
 import type { CheckoutToOrderFlowState, DshPaymentMethod } from "../../shared/checkout";
 import type { DshClientAddress } from "../../shared/client-address";
-import { formatWltMoney, useWltPaymentController } from "@bthwani/wlt/dsh";
+import { useWltPaymentController } from "@bthwani/wlt/dsh";
+import { useStoreDetailController } from "../../shared/store";
 import { PaymentDecisionSection } from "./PaymentDecisionSection";
 import { CartConflictSheet } from "./CartConflictSheet";
+import { StoreConfirmationHero } from "./StoreConfirmationHero";
+import { CartQuoteSummary } from "./CartQuoteSummary";
+import { CheckoutProgress } from "./CheckoutProgress";
+import { CartAddressSection } from "./CartAddressSection";
+import { CartItemsSection } from "./CartItemsSection";
 
 type Props = {
   readonly storeId: string;
@@ -63,225 +67,6 @@ function fulfillmentLabel(mode: DshFulfillmentMode): string {
   }
 }
 
-// WltQuoteSummary renders the authoritative financial quote from WLT verbatim.
-// DSH must never recompute, override, or locally sum these values.
-function WltQuoteSummary({ quote }: { readonly quote: DshPricingQuote | null }) {
-  if (!quote) return null;
-  const { currency } = quote;
-  const showDelivery = quote.deliveryFeeMinorUnits > 0;
-  const showService = quote.serviceFeeMinorUnits > 0;
-  const showTax = quote.taxMinorUnits > 0;
-  const showDiscount = quote.discountMinorUnits > 0;
-  const showRounding = quote.roundingMinorUnits !== 0;
-  return (
-    <Surface tone="default" style={styles.section}>
-      <View style={styles.sectionHeader}>
-        <Text role="bodyStrong" style={styles.sectionTitle}>ملخص السعر</Text>
-        <Badge label="حُسب بواسطة WLT" tone="info" />
-      </View>
-      <View style={styles.quoteLine}>
-        <Text role="bodySm" style={styles.mutedText}>المجموع الجزئي</Text>
-        <Text role="bodySm" style={styles.quoteValue}>{formatWltMoney(quote.subtotalMinorUnits, currency)}</Text>
-      </View>
-      {showDelivery && (
-        <View style={styles.quoteLine}>
-          <Text role="bodySm" style={styles.mutedText}>رسوم التوصيل</Text>
-          <Text role="bodySm" style={styles.quoteValue}>{formatWltMoney(quote.deliveryFeeMinorUnits, currency)}</Text>
-        </View>
-      )}
-      {showService && (
-        <View style={styles.quoteLine}>
-          <Text role="bodySm" style={styles.mutedText}>رسوم الخدمة</Text>
-          <Text role="bodySm" style={styles.quoteValue}>{formatWltMoney(quote.serviceFeeMinorUnits, currency)}</Text>
-        </View>
-      )}
-      {showTax && (
-        <View style={styles.quoteLine}>
-          <Text role="bodySm" style={styles.mutedText}>الضريبة</Text>
-          <Text role="bodySm" style={styles.quoteValue}>{formatWltMoney(quote.taxMinorUnits, currency)}</Text>
-        </View>
-      )}
-      {showDiscount && (
-        <View style={styles.quoteLine}>
-          <Text role="bodySm" style={styles.mutedText}>الخصم</Text>
-          <Text role="bodySm" style={[styles.quoteValue, styles.discountText]}>− {formatWltMoney(quote.discountMinorUnits, currency)}</Text>
-        </View>
-      )}
-      {showRounding && (
-        <View style={styles.quoteLine}>
-          <Text role="bodySm" style={styles.mutedText}>تعديل التقريب</Text>
-          <Text role="bodySm" style={styles.quoteValue}>{formatWltMoney(quote.roundingMinorUnits, currency)}</Text>
-        </View>
-      )}
-      <View style={[styles.quoteLine, styles.quoteTotalLine]}>
-        <Text role="bodyStrong" style={styles.sectionTitle}>الإجمالي</Text>
-        <Text role="bodyStrong" style={styles.quoteTotalValue}>{formatWltMoney(quote.totalMinorUnits, currency)}</Text>
-      </View>
-      {quote.expiresAt ? (
-        <Text role="caption" style={styles.mutedText}>
-          صالح حتى: {new Date(quote.expiresAt).toLocaleTimeString("ar-SA")}
-        </Text>
-      ) : null}
-    </Surface>
-  );
-}
-
-function ServerPrice({ value, currency }: { readonly value: number; readonly currency: string }) {
-  return (
-    <Text role="caption" style={styles.priceText}>
-      سعر الوحدة المثبت: {formatWltMoney(value, currency)}
-    </Text>
-  );
-}
-
-function AddressSummary({ address }: { readonly address: DshClientAddress }) {
-  return (
-    <View style={styles.addressSummary}>
-      <View style={styles.sectionHeader}>
-        <Badge label={address.isDefault ? "العنوان الافتراضي" : "عنوان الحساب"} tone="success" />
-        <Text role="bodyStrong" style={styles.sectionTitle}>{address.label}</Text>
-      </View>
-      <Text role="bodySm" style={styles.mutedText}>{address.recipientName}</Text>
-      <Text role="bodySm" style={styles.mutedText}>{address.addressLine}</Text>
-      <Text role="caption" style={styles.mutedText}>
-        {address.serviceAreaCode} · {address.phoneE164}
-      </Text>
-      {address.latitude !== null && address.longitude !== null ? (
-        <Text role="caption" style={styles.mutedText}>
-          الموقع المثبت: {address.latitude.toFixed(6)}, {address.longitude.toFixed(6)}
-        </Text>
-      ) : (
-        <Text role="caption" style={styles.mutedText}>
-          سيستخدم DSH رمز منطقة الخدمة المثبت في العنوان المملوك للحساب.
-        </Text>
-      )}
-    </View>
-  );
-}
-
-function validationMessage(validation: DshCartItemValidation): string {
-  switch (validation.status) {
-    case "price_changed":
-      return validation.reasonCode === "CURRENCY_CHANGED"
-        ? "تغيرت عملة تشكيلة المتجر منذ إضافة المنتج. اعتمد الحقيقة الحالية صراحةً قبل المتابعة."
-        : "تغير سعر التشكيلة منذ إضافة المنتج. اعتمد السعر الحالي صراحةً قبل المتابعة.";
-    case "unavailable":
-      return "أوقف المتجر توفر هذا المنتج. احذفه أو أعد المحاولة بعد عودته.";
-    case "assortment_unavailable":
-      return "لم يعد المنتج ضمن تشكيلة هذا المتجر.";
-    case "assortment_changed":
-      return "تغير مرجع تشكيلة المتجر. حدّث السطر قبل المتابعة.";
-    case "unpriced":
-      return validation.reasonCode?.includes("CURRENCY")
-        ? "لا توجد عملة تشغيلية صالحة لهذا المنتج."
-        : "لا يوجد سعر تشغيلي صالح لهذا المنتج.";
-    case "product_unlinked":
-      return "فقد السطر ارتباطه بالمنتج المركزي.";
-    case "ready":
-      return "";
-  }
-}
-
-function CartItemValidationNotice({
-  validation,
-  disabled,
-  onAcceptCurrentPrice,
-}: {
-  readonly validation: DshCartItemValidation | undefined;
-  readonly disabled: boolean;
-  readonly onAcceptCurrentPrice: () => void;
-}) {
-  if (!validation || validation.status === "ready") return null;
-  return (
-    <View style={styles.validationBox}>
-      <Text role="caption" style={styles.errorText}>{validationMessage(validation)}</Text>
-      {validation.status === "price_changed" && validation.currentUnitPriceMinorUnits !== undefined ? (
-        <>
-          <Text role="caption" style={styles.mutedText}>
-            الحقيقة الحالية: {formatWltMoney(validation.currentUnitPriceMinorUnits, validation.currentCurrency ?? validation.snapshotCurrency)}
-          </Text>
-          <Button
-            label="اعتماد السعر والعملة الحاليين"
-            tone="secondary"
-            size="sm"
-            disabled={disabled}
-            onPress={onAcceptCurrentPrice}
-          />
-        </>
-      ) : null}
-    </View>
-  );
-}
-
-function ConfirmationHero({
-  itemCount,
-  fulfillmentMode,
-  ready,
-}: {
-  readonly itemCount: number;
-  readonly fulfillmentMode: DshFulfillmentMode;
-  readonly ready: boolean;
-}) {
-  return (
-    <Surface tone={ready ? "action" : "warning"} style={styles.confirmationHero}>
-      <View style={styles.heroBadgeRow}>
-        <Badge label={ready ? "جاهز للتأكيد" : "تحتاج السلة إلى مراجعة"} tone={ready ? "success" : "warning"} />
-        <Text role="caption" style={styles.heroMutedText}>{itemCount} منتج · {fulfillmentLabel(fulfillmentMode)}</Text>
-      </View>
-      <Text role="titleMd" style={styles.heroTitle}>راجع طلبك قبل الإرسال</Text>
-      <Text role="bodySm" style={styles.heroText}>
-        تحقق من المنتجات والعنوان وطريقة الدفع. لن يُنشأ الطلب إلا بعد ضغط زر التأكيد، ثم نفتح لك رحلة الطلب مباشرة.
-      </Text>
-    </Surface>
-  );
-}
-
-function CheckoutProgress({
-  state,
-  onReset,
-  onCancel,
-  onRefresh,
-  onRetryOrder,
-}: {
-  readonly state: CheckoutToOrderFlowState | undefined;
-  readonly onReset?: (() => void) | undefined;
-  readonly onCancel?: ((intentId: string) => void) | undefined;
-  readonly onRefresh?: ((intentId: string) => void) | undefined;
-  readonly onRetryOrder?: (() => void) | undefined;
-}) {
-  if (!state || state.kind === "idle" || state.kind === "order_ready") return null;
-  if (state.kind === "loading" || state.kind === "creating_order") {
-    return <StateView title={state.kind === "loading" ? "جارٍ تثبيت الطلب" : "جارٍ إنشاء الطلب"} description="نثبت السعر والعنوان والدفع ثم نقرأ حقيقة الطلب من DSH." loading />;
-  }
-  if (state.kind === "confirming" || state.kind === "reconciliation_pending") {
-    return (
-      <Surface tone="warning" style={styles.checkoutProgress}>
-        <Text role="bodyStrong" style={styles.sectionTitle}>{state.kind === "confirming" ? "الدفع قيد المعالجة" : "نتحقق من نتيجة الدفع"}</Text>
-        <Text role="caption" style={styles.mutedText}>لن نعيد إنشاء العملية تلقائيًا. حدّث الحالة أو ألغِ المحاولة بأمان.</Text>
-        <View style={styles.progressActions}>
-          <Button label="تحديث الحالة" tone="secondary" onPress={() => onRefresh?.(state.intent.id)} />
-          <Button label="إلغاء والعودة للمراجعة" tone="secondary" onPress={() => onCancel?.(state.intent.id)} />
-        </View>
-      </Surface>
-    );
-  }
-  const message = state.kind === "blocked_payment_unavailable"
-    ? "خدمة WLT غير متاحة حاليًا. لم يُنشأ طلب."
-    : state.kind === "out_of_area"
-      ? "العنوان خارج نطاق الخدمة. غيّر العنوان ثم أعد المحاولة."
-      : state.kind === "terminal"
-        ? "انتهت جلسة الدفع أو فشلت. راجع بيانات السلة وأنشئ محاولة جديدة."
-        : state.message;
-  return (
-    <Surface tone="danger" style={styles.checkoutProgress}>
-      <Text role="bodyStrong" style={styles.sectionTitle}>لم يكتمل تأكيد الطلب</Text>
-      <Text role="caption" style={styles.errorText}>{message}</Text>
-      {state.kind === "order_error" && onRetryOrder ? <Button label="إعادة المحاولة الآمنة" tone="secondary" onPress={onRetryOrder} /> : null}
-      {onReset ? <Button label="العودة إلى مراجعة السلة" tone="secondary" onPress={onReset} /> : null}
-    </Surface>
-  );
-}
-
 export function CartScreen({
   storeId,
   selectedAddress,
@@ -298,13 +83,23 @@ export function CartScreen({
 }: Props) {
   const controller = useCartController(storeId, authKind);
   const serviceabilityController = useServiceabilityController();
-  const wltPayment = useWltPaymentController();
+  const storeController = useStoreDetailController(storeId);
+  const store = storeController.state.kind === "success" ? storeController.state.store : null;
   const [note, setNote] = useState("");
+  const [noteSaved, setNoteSaved] = useState(false);
   const [couponCode, setCouponCode] = useState("");
+  const [couponApplied, setCouponApplied] = useState(false);
+  const [onMyWayNote, setOnMyWayNote] = useState("");
+  const [onMyWayActive, setOnMyWayActive] = useState(false);
+  const [localFulfillmentMode, setLocalFulfillmentMode] = useState<DshFulfillmentMode | null>(null);
   const [validationMessageText, setValidationMessageText] = useState<string | null>(null);
 
   const cart = controller.state.kind === "success" ? controller.state.cart : null;
-  const requiresDeliveryAddress = cart?.fulfillmentMode !== "pickup";
+  const cartTotal = cart?.quote?.totalMinorUnits ?? 0;
+  const cartCurrency = cart?.quote?.currency ?? "YER";
+  const wltPayment = useWltPaymentController({ totalMinorUnits: cartTotal, currency: cartCurrency });
+  const activeFulfillmentMode = localFulfillmentMode ?? (cart?.fulfillmentMode ?? "bthwani_delivery");
+  const requiresDeliveryAddress = activeFulfillmentMode !== "pickup";
   const actionPending = controller.action === "submitting";
   const cartReady = cart?.validation?.ready !== false;
   const validationByItemId = useMemo(
@@ -312,12 +107,22 @@ export function CartScreen({
     [cart?.validation?.items],
   );
 
+  const toggleFulfillmentMode = () => {
+    setLocalFulfillmentMode((prev) => {
+      const current = prev ?? (cart?.fulfillmentMode ?? "bthwani_delivery");
+      if (current === "bthwani_delivery") return "pickup";
+      if (current === "pickup") return "partner_delivery";
+      return "bthwani_delivery";
+    });
+  };
+
   useEffect(() => {
     serviceabilityController.reset();
-    if (!cart || cart.fulfillmentMode === "pickup" || !selectedAddress) return;
-    void serviceabilityController.check(storeId, selectedAddress.id, cart.fulfillmentMode);
+    if (!cart || !requiresDeliveryAddress || !selectedAddress) return;
+    void serviceabilityController.check(storeId, selectedAddress.id, activeFulfillmentMode);
   }, [
-    cart?.fulfillmentMode,
+    activeFulfillmentMode,
+    requiresDeliveryAddress,
     selectedAddress?.id,
     selectedAddress?.version,
     serviceabilityController.check,
@@ -345,15 +150,15 @@ export function CartScreen({
     if (!cart || !onProceedToCheckout) return;
     setValidationMessageText(null);
     if (!cartReady) {
-      setValidationMessageText("راجع تغيرات السعر أو العملة أو التوفر في عناصر السلة قبل checkout.");
+      setValidationMessageText("يرجى مراجعة وتحديث أسعار المنتجات في السلة قبل المتابعة.");
       return;
     }
     if (requiresDeliveryAddress && !selectedAddress) {
-      setValidationMessageText("اختر عنوانًا افتراضيًا من دفتر العناوين قبل checkout.");
+      setValidationMessageText("يرجى اختيار عنوان التوصيل قبل المتابعة.");
       return;
     }
     if (requiresDeliveryAddress && serviceabilityController.serviceability.kind !== "serviceable") {
-      setValidationMessageText("يجب نجاح فحص DSH للعنوان والسعة وSLA قبل checkout.");
+      setValidationMessageText("تعذر التحقق من التوصيل للعنوان المحدد. يمكنك اختيار (الاستلام الذاتي) للمتابعة.");
       return;
     }
     if (requiresDeliveryAddress && serviceabilityController.serviceability.kind === "serviceable") {
@@ -363,10 +168,14 @@ export function CartScreen({
         return;
       }
     }
+    const finalNote = [note.trim(), onMyWayActive && onMyWayNote.trim() ? `على طريقي: ${onMyWayNote.trim()}` : ""]
+      .filter(Boolean)
+      .join(" · ");
+
     onProceedToCheckout(
-      cart,
+      { ...cart, fulfillmentMode: activeFulfillmentMode },
       requiresDeliveryAddress ? selectedAddress?.id ?? "" : "",
-      note.trim(),
+      finalNote,
       wltPayment.paymentMethod,
       couponCode.trim(),
     );
@@ -386,8 +195,8 @@ export function CartScreen({
       <View style={styles.container}>
         <TopBar title="تأكيد الطلب" {...(onBack ? { onBack } : {})} />
         <StateView
-          title="لا يوجد اتصال بالشبكة"
-          description="تعذر الوصول إلى DSH. تحقق من الشبكة ثم أعد المحاولة."
+          title="لا يوجد اتصال بالإنترنت"
+          description="تعذر الاتصال بالخدمة. تحقق من اتصالك ثم أعد المحاولة."
           actionLabel="إعادة المحاولة"
           onActionPress={controller.retry}
         />
@@ -401,7 +210,7 @@ export function CartScreen({
         <TopBar title="تأكيد الطلب" {...(onBack ? { onBack } : {})} />
         <StateView
           title="يلزم تسجيل الدخول"
-          description="سجّل الدخول للوصول إلى السلة المحفوظة في DSH."
+          description="سجّل الدخول للوصول إلى سلة المشتريات الخاصة بك."
         />
       </View>
     );
@@ -445,11 +254,32 @@ export function CartScreen({
       />
 
       <ScrollScreen contentContainerStyle={styles.content}>
-        <ConfirmationHero
+        <StoreConfirmationHero
           itemCount={controller.state.cart.items.length}
-          fulfillmentMode={controller.state.cart.fulfillmentMode}
+          fulfillmentMode={activeFulfillmentMode}
           ready={cartReady}
+          store={store}
         />
+
+        <Surface tone="raised" style={styles.richSection}>
+          <View style={styles.richSectionHeader}>
+            <View style={styles.richIconWrap}>
+              <Icon name={activeFulfillmentMode === "pickup" ? "storefront-outline" : "car-outline"} size={24} tone="brand" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text role="bodyStrong" style={styles.richSectionTitle}>خيار التوصيل والاستلام</Text>
+              <Text role="caption" style={styles.mutedText}>
+                الخيار المحدد: {fulfillmentLabel(activeFulfillmentMode)}
+              </Text>
+            </View>
+            <Button
+              label="تغيير الخيار"
+              tone="secondary"
+              size="sm"
+              onPress={toggleFulfillmentMode}
+            />
+          </View>
+        </Surface>
 
         <CheckoutProgress
           state={checkoutState}
@@ -459,172 +289,141 @@ export function CartScreen({
           {...(onRetryOrder ? { onRetryOrder } : {})}
         />
 
-        {!cartReady ? (
-          <Surface tone="default" style={styles.alertSection}>
-            <Text role="bodyStrong" style={styles.errorText}>تحتاج السلة إلى مراجعة</Text>
-            <Text role="caption" style={styles.mutedText}>
-              اكتشف DSH تغيرًا في السعر أو العملة أو التوفر أو مرجع التشكيلة. لم تُعدّل اللقطة القديمة تلقائيًا.
-            </Text>
-          </Surface>
-        ) : null}
+        <CartItemsSection
+          cart={controller.state.cart}
+          validationByItemId={validationByItemId}
+          actionPending={actionPending}
+          actionError={controller.action === "error" ? (controller.actionError ?? "تعذر تنفيذ تعديل السلة. أعد المحاولة.") : null}
+          onUpdateQuantity={(masterProductId, productName, quantity, priceReference, options, itemNote) => {
+            void controller.updateItemQuantity(masterProductId, productName, quantity, priceReference, options, itemNote);
+          }}
+          onRemoveItem={(cartId, itemId) => {
+            void controller.removeItem(cartId, itemId);
+          }}
+          onClearCart={(c) => {
+            void controller.clear(c);
+          }}
+        />
 
-        <Surface tone="default" style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text role="bodyStrong" style={styles.sectionTitle}>المنتجات</Text>
-            <Badge label={fulfillmentLabel(controller.state.cart.fulfillmentMode)} tone="info" />
+        <CartAddressSection
+          requiresDeliveryAddress={requiresDeliveryAddress}
+          selectedAddress={selectedAddress}
+          cart={cart}
+          storeId={storeId}
+          serviceabilityState={serviceabilityController.serviceability}
+          {...(onManageAddresses ? { onManageAddresses } : {})}
+          onCheckServiceability={(sId, addrId, mode) => {
+            void serviceabilityController.check(sId, addrId, mode);
+          }}
+        />
+
+        <Surface tone="raised" style={styles.richSection}>
+          <View style={styles.richSectionHeader}>
+            <View style={styles.richIconWrap}>
+              <Icon name="pricetag-outline" size={24} tone="brand" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text role="bodyStrong" style={styles.richSectionTitle}>هل لديك قسيمة تخفيض؟</Text>
+              <Text role="caption" style={styles.mutedText}>
+                {couponApplied ? "تم تطبيق رمز القسيمة بنجاح" : "أدخل رمز التخفيض إن وجد"}
+              </Text>
+            </View>
+            {couponApplied ? <Badge label="مطبقة" tone="success" /> : null}
           </View>
-
-          {controller.state.cart.items.map((item) => {
-            const validation = validationByItemId.get(item.id);
-            return (
-              <View key={item.id} style={styles.itemCard}>
-                <View style={styles.itemText}>
-                  <Text role="bodyStrong" style={styles.itemTitle}>{item.productName}</Text>
-                  <ServerPrice value={item.unitPriceMinorUnits} currency={item.currency} />
-                  {item.options && item.options.length > 0 ? (
-                    <Text role="caption" style={styles.mutedText}>
-                      الخيارات: {item.options.join("، ")}
-                    </Text>
-                  ) : null}
-                  {item.note ? (
-                    <Text role="caption" style={styles.mutedText}>
-                      ملاحظة: {item.note}
-                    </Text>
-                  ) : null}
-                  <Text role="caption" style={styles.mutedText}>الكمية الحالية: {item.quantity}</Text>
-                </View>
-                <CartItemValidationNotice
-                  validation={validation}
-                  disabled={actionPending}
-                  onAcceptCurrentPrice={() => void controller.updateItemQuantity(
-                    item.masterProductId,
-                    item.productName,
-                    item.quantity,
-                    item.priceReference,
-                    item.options,
-                    item.note,
-                  )}
-                />
-                <View style={styles.itemActions}>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`زيادة كمية ${item.productName}`}
-                    disabled={actionPending}
-                    style={styles.quantityButton}
-                    onPress={() => void controller.updateItemQuantity(
-                      item.masterProductId,
-                      item.productName,
-                      item.quantity + 1,
-                      item.priceReference,
-                      item.options,
-                      item.note,
-                    )}
-                  >
-                    <Text style={styles.quantityButtonText}>+</Text>
-                  </Pressable>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={`تقليل كمية ${item.productName}`}
-                    disabled={actionPending}
-                    style={styles.quantityButton}
-                    onPress={() => void controller.updateItemQuantity(
-                      item.masterProductId,
-                      item.productName,
-                      item.quantity - 1,
-                      item.priceReference,
-                      item.options,
-                      item.note,
-                    )}
-                  >
-                    <Text style={styles.quantityButtonText}>−</Text>
-                  </Pressable>
-                  <Button
-                    label="حذف"
-                    tone="secondary"
-                    size="sm"
-                    disabled={actionPending}
-                    onPress={() => void controller.removeItem(item.cartId, item.id)}
-                  />
-                </View>
-              </View>
-            );
-          })}
-
-          <Button
-            label="إفراغ السلة"
-            tone="secondary"
-            disabled={actionPending}
-            onPress={() => { if (cart) void controller.clear(cart); }}
-          />
-          {controller.action === "error" ? (
-            <Text role="caption" style={styles.errorText}>
-              {controller.actionError ?? "تعذر تنفيذ تعديل السلة. أعد المحاولة."}
-            </Text>
-          ) : null}
+          <View style={styles.richInputRow}>
+            <View style={{ flex: 1 }}>
+              <CartInputField
+                label=""
+                value={couponCode}
+                onChangeText={(text: string) => {
+                  setCouponCode(text);
+                  if (couponApplied) setCouponApplied(false);
+                }}
+                placeholder="رمز القسيمة (مثال: BTHWANI)"
+                autoCapitalize="characters"
+              />
+            </View>
+            <Button
+              label={couponApplied ? "إلغاء" : "تطبيق"}
+              tone={couponApplied ? "secondary" : "brand"}
+              disabled={!couponCode.trim()}
+              onPress={() => {
+                if (couponApplied) {
+                  setCouponApplied(false);
+                  setCouponCode("");
+                } else if (couponCode.trim()) {
+                  setCouponApplied(true);
+                }
+              }}
+            />
+          </View>
         </Surface>
 
-        {requiresDeliveryAddress ? (
-          <Surface tone="default" style={styles.section}>
-            <Text role="bodyStrong" style={styles.sectionTitle}>عنوان التسليم ونطاق الخدمة</Text>
-            {selectedAddress ? (
-              <AddressSummary address={selectedAddress} />
-            ) : (
-              <StateView
-                title="لا يوجد عنوان افتراضي"
-                description="أنشئ عنوانًا مملوكًا لحسابك وحدده كافتراضي قبل متابعة طلب التوصيل."
-                {...(onManageAddresses
-                  ? { actionLabel: "إدارة العناوين", onActionPress: onManageAddresses }
-                  : {})}
+        <Surface tone="raised" style={styles.richSection}>
+          <View style={styles.richSectionHeader}>
+            <View style={styles.richIconWrap}>
+              <Icon name="document-text-outline" size={24} tone="brand" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text role="bodyStrong" style={styles.richSectionTitle}>ملاحظات الطلب</Text>
+              <Text role="caption" style={styles.mutedText}>
+                {noteSaved && note.trim() ? "تم حفظ الملاحظة للطلب" : "تعليمات واضحة للمتجر أو الموصل"}
+              </Text>
+            </View>
+            {noteSaved && note.trim() ? <Badge label="تم الحفظ" tone="success" /> : null}
+          </View>
+          <View style={styles.richInputRow}>
+            <View style={{ flex: 1 }}>
+              <CartInputField
+                label="ملاحظات للطلب"
+                value={note}
+                onChangeText={(val) => {
+                  setNote(val);
+                  setNoteSaved(false);
+                }}
+                placeholder="تعليمات خاصة بالتوصيل، الباب، أو الأصناف..."
+                multiline
               />
-            )}
-            {selectedAddress && cart ? (
-              <>
-                <Button
-                  label="تغيير العنوان"
-                  tone="secondary"
-                  {...(onManageAddresses ? { onPress: onManageAddresses } : { disabled: true })}
-                />
-                <ServiceabilityStatus state={serviceabilityController.serviceability} />
-                {serviceabilityController.serviceability.kind === "blocked" ||
-                serviceabilityController.serviceability.kind === "error" ? (
-                  <Button
-                    label="إعادة فحص قابلية الخدمة"
-                    tone="secondary"
-                    onPress={() => void serviceabilityController.check(
-                      storeId,
-                      selectedAddress.id,
-                      cart.fulfillmentMode,
-                    )}
-                  />
-                ) : null}
-              </>
-            ) : null}
-          </Surface>
-        ) : (
-          <Surface tone="default" style={styles.section}>
-            <Text role="bodyStrong" style={styles.sectionTitle}>الاستلام الذاتي</Text>
-            <Text role="caption" style={styles.mutedText}>
-              لا يلزم عنوان تسليم؛ سيُثبت checkout تعليمات الاستلام من المتجر.
-            </Text>
-          </Surface>
-        )}
+            </View>
+            <Button
+              label={noteSaved ? "معدل" : "حفظ"}
+              tone="secondary"
+              disabled={!note.trim()}
+              onPress={() => {
+                if (note.trim()) setNoteSaved(true);
+              }}
+            />
+          </View>
+        </Surface>
 
-        <Surface tone="default" style={styles.section}>
-          <Text role="bodyStrong" style={styles.sectionTitle}>تفاصيل إضافية</Text>
-          <Field
-            label="رمز القسيمة — اختياري"
-            value={couponCode}
-            onChangeText={setCouponCode}
-            placeholder="أدخل الرمز كما استلمته"
-            autoCapitalize="characters"
-          />
-          <Field
-            label="ملاحظة الطلب — اختيارية"
-            value={note}
-            onChangeText={setNote}
-            placeholder="تعليمات واضحة للشريك أو الموصّل"
-            multiline
-          />
+        <Surface tone="raised" style={styles.richSection}>
+          <View style={styles.richSectionHeader}>
+            <View style={styles.richIconWrap}>
+              <Icon name="cafe-outline" size={24} tone="brand" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text role="bodyStrong" style={styles.richSectionTitle}>على طريقي</Text>
+              <Text role="caption" style={styles.mutedText}>
+                {onMyWayActive ? "تم تفعيل الطلب الإضافي" : "أطلب شيئاً بسيطاً من الكابتن في طريقه إليك"}
+              </Text>
+            </View>
+            <Button
+              label={onMyWayActive ? "إلغاء" : "إضافة طلب"}
+              tone={onMyWayActive ? "secondary" : "brand"}
+              size="sm"
+              onPress={() => setOnMyWayActive((prev) => !prev)}
+            />
+          </View>
+          {onMyWayActive ? (
+            <View style={{ marginTop: spacing[2] }}>
+              <CartInputField
+                label="ما الذي تريده من الكابتن في طريقه؟"
+                value={onMyWayNote}
+                onChangeText={setOnMyWayNote}
+                placeholder="مثال: ماء معدني، بطاقة شحن، علكة..."
+              />
+            </View>
+          ) : null}
         </Surface>
 
         <PaymentDecisionSection
@@ -635,20 +434,17 @@ export function CartScreen({
 
         {validationMessageText ? <Text role="caption" style={styles.errorText}>{validationMessageText}</Text> : null}
 
-        <WltQuoteSummary quote={cart?.quote ?? null} />
-
-        <Surface tone="default" style={styles.confirmationPolicy}>
-          <Text role="bodyStrong" style={styles.sectionTitle}>قبل تأكيد الطلب</Text>
-          <Text role="caption" style={styles.mutedText}>
-            السعر والتوفر ورسوم التنفيذ تُثبت من المصادر المعتمدة عند إنشاء الطلب. إذا تغيرت الحقيقة أثناء التأكيد سيبقى الطلب مفتوحًا للمراجعة ولن يظهر كأنه أُنشئ بنجاح.
-          </Text>
-        </Surface>
+        <CartQuoteSummary
+          quote={cart?.quote ?? null}
+          fulfillmentMode={activeFulfillmentMode}
+        />
 
         <Button
-          label="تأكيد الطلب وإرساله"
-          tone="primary"
+          label={requiresDeliveryAddress ? "تأكيد الطلب والتوصيل" : "تأكيد الطلب للاستلام الذاتي"}
+          tone="brand"
           disabled={!canProceed || !onProceedToCheckout || (checkoutState !== undefined && checkoutState.kind !== "idle" && checkoutState.kind !== "order_ready")}
           onPress={proceed}
+          style={{ backgroundColor: colorRoles.danger }}
         />
       </ScrollScreen>
 
@@ -668,7 +464,7 @@ export function CartScreen({
   );
 }
 
-function Field({
+function CartInputField({
   label,
   value,
   onChangeText,
@@ -685,7 +481,7 @@ function Field({
 }) {
   return (
     <View style={styles.field}>
-      <Text role="caption" weight="bold" style={styles.fieldLabel}>{label}</Text>
+      {label ? <Text role="caption" weight="bold" style={styles.fieldLabel}>{label}</Text> : null}
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -700,172 +496,56 @@ function Field({
   );
 }
 
-function ServiceabilityStatus({ state }: { readonly state: DshServiceabilityState }) {
-  switch (state.kind) {
-    case "idle":
-      return <Text role="caption" style={styles.mutedText}>لم يتم التحقق بعد.</Text>;
-    case "checking":
-      return <Text role="caption" style={styles.mutedText}>يجري التحقق من العنوان والسعة وSLA في DSH…</Text>;
-    case "serviceable":
-      return (
-        <View style={styles.policyBox}>
-          <Badge label="الخدمة متاحة لهذا العنوان" tone="success" />
-          <OperationalPolicyDetails result={state.result} />
-        </View>
-      );
-    case "blocked":
-      return (
-        <View style={styles.policyBox}>
-          <Text role="caption" style={styles.errorText}>
-            الخدمة غير متاحة: {state.reason ?? state.code}
-          </Text>
-          <OperationalPolicyDetails result={state.result} />
-        </View>
-      );
-    case "error":
-      return <Text role="caption" style={styles.errorText}>{state.message}</Text>;
-  }
-}
-
-function OperationalPolicyDetails({
-  result,
-}: {
-  readonly result: Extract<DshServiceabilityState, { kind: "serviceable" | "blocked" }>["result"];
-}) {
-  return (
-    <View style={styles.policyDetails}>
-      {result.etaWindow ? (
-        <Text role="caption" style={styles.mutedText}>
-          الوقت التقديري للتوصيل: {result.etaWindow.minMinutes} إلى {result.etaWindow.maxMinutes} دقيقة
-        </Text>
-      ) : null}
-      {result.quoteVersion ? (
-        <Text role="caption" style={styles.mutedText}>
-          رقم التسعيرة: {result.quoteVersion.split("-")[0]} · صالح حتى: {result.expiresAt ? new Date(result.expiresAt).toLocaleTimeString("ar-SA") : "—"}
-        </Text>
-      ) : null}
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colorRoles.surfaceWarm },
-  content: { padding: spacing[4], paddingBottom: spacing[12], gap: spacing[4] },
-  confirmationHero: {
-    padding: spacing[4],
-    borderRadius: radius.lg,
-    gap: spacing[2],
-  },
-  heroBadgeRow: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: spacing[2],
-  },
-  heroTitle: { color: colorRoles.surfaceBase, textAlign: "right" },
-  heroText: { color: colorRoles.surfaceBase, textAlign: "right", lineHeight: 22 },
-  heroMutedText: { color: alpha(colorRoles.surfaceBase, 0.82), textAlign: "right" },
-  section: {
-    padding: spacing[4],
+  content: { padding: spacing[2], paddingBottom: spacing[10], gap: 8 },
+  richSection: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
+    borderColor: alpha(colorRoles.brandAction, 0.08),
     backgroundColor: colorRoles.surfaceBase,
-    gap: spacing[3],
+    gap: 6,
   },
-  alertSection: {
-    padding: spacing[4],
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colorRoles.danger,
-    backgroundColor: alpha(colorRoles.danger, 0.06),
-    gap: spacing[2],
-  },
-  confirmationPolicy: {
-    padding: spacing[4],
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
-    gap: spacing[2],
-  },
-  checkoutProgress: {
-    padding: spacing[4],
-    borderRadius: radius.md,
-    gap: spacing[2],
-  },
-  progressActions: {
-    flexDirection: "row-reverse",
-    flexWrap: "wrap",
-    gap: spacing[2],
-  },
-  quoteLine: {
-    flexDirection: "row-reverse",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  quoteValue: { color: colorRoles.textPrimary, textAlign: "left" },
-  discountText: { color: colorRoles.success },
-  quoteTotalLine: {
-    borderTopWidth: 1,
-    borderTopColor: colorRoles.borderSubtle,
-    paddingTop: spacing[2],
-    marginTop: spacing[1],
-  },
-  quoteTotalValue: { color: colorRoles.brandAction, fontSize: 17 },
-  sectionHeader: {
+  richSectionHeader: {
     flexDirection: "row-reverse",
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: spacing[2],
+    gap: 8,
   },
-  sectionTitle: { color: colorRoles.textPrimary, textAlign: "right" },
-  addressSummary: { gap: spacing[2] },
-  itemCard: {
-    borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
-    borderRadius: radius.md,
-    padding: spacing[3],
-    gap: spacing[3],
-    backgroundColor: alpha(colorRoles.surfaceWarm, 0.5),
-  },
-  itemText: { alignItems: "flex-end", gap: 3 },
-  itemTitle: { color: colorRoles.textPrimary, textAlign: "right" },
-  priceText: { color: colorRoles.brandAction, textAlign: "right" },
-  mutedText: { color: colorRoles.textSecondary, textAlign: "right", lineHeight: 19 },
-  validationBox: {
-    gap: spacing[2],
-    padding: spacing[3],
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colorRoles.danger,
-    backgroundColor: alpha(colorRoles.danger, 0.05),
-  },
-  policyBox: { gap: spacing[2], alignItems: "flex-end" },
-  policyDetails: { gap: spacing[1], alignItems: "flex-end" },
-  itemActions: { flexDirection: "row-reverse", alignItems: "center", gap: spacing[2] },
-  quantityButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    borderWidth: 1,
-    borderColor: colorRoles.borderSubtle,
+  richIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: alpha(colorRoles.brandAction, 0.08),
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: colorRoles.surfaceBase,
   },
-  quantityButtonText: { color: colorRoles.brandStructure, fontSize: 20, fontWeight: "900" },
-  field: { gap: 6 },
-  fieldLabel: { color: colorRoles.textPrimary, textAlign: "right" },
+  richSectionTitle: {
+    color: colorRoles.brandStructure,
+    textAlign: "right",
+    fontSize: 13,
+    fontWeight: "bold",
+  },
+  richInputRow: {
+    flexDirection: "row-reverse",
+    gap: 6,
+    alignItems: "center",
+  },
+  mutedText: { color: colorRoles.textSecondary, textAlign: "right", fontSize: 11, lineHeight: 16 },
+  field: { gap: 4 },
+  fieldLabel: { color: colorRoles.textPrimary, textAlign: "right", fontSize: 11 },
   input: {
-    minHeight: 46,
+    minHeight: 36,
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
-    borderRadius: radius.md,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    fontSize: 13,
     color: colorRoles.textPrimary,
     backgroundColor: colorRoles.surfaceBase,
   },
-  multilineInput: { minHeight: 84, textAlignVertical: "top" },
-  errorText: { color: colorRoles.danger, textAlign: "right", lineHeight: 19 },
+  multilineInput: { minHeight: 52, textAlignVertical: "top" },
+  errorText: { color: colorRoles.danger, textAlign: "right", fontSize: 11, lineHeight: 16 },
 });
