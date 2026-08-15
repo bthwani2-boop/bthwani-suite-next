@@ -186,7 +186,7 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
       const withdrawn = await withdrawPartnerProductProposal(proposalId, expectedVersion);
       setProposals((items) => items.map((p) => p.id === withdrawn.id ? withdrawn : p));
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "تعذر سحب الاقتراح.");
+      setError(caught instanceof Error ? caught.message : "تعذر سحب الاقراح.");
     } finally {
       setSaving(false);
     }
@@ -552,7 +552,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: spacing[5],
     gap: spacing[3],
-    shadowColor: "#000",
+    shadowColor: colorRoles.shadowBase,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 16,
