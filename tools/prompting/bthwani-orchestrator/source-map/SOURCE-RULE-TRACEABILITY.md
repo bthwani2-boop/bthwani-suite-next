@@ -1,7 +1,7 @@
 # Source Rule Traceability
 
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
-Purpose: prove source-rule accounting after the root-anchored graph-driven refinement.
+Purpose: prove source-rule accounting after the root-anchored, task-isolated, graph-driven refinement.
 
 ## Preserved Source Baseline
 
@@ -15,24 +15,40 @@ Purpose: prove source-rule accounting after the root-anchored graph-driven refin
 
 Any source SHA drift reopens this map. `UNACCOUNTED` / `DROPPED` forbidden.
 
-## Current Explicit Agreement — Root Anchoring
+## Current Explicit Agreement — Invocation / Task Isolation
 
-New stronger rule adopted:
+Stronger rules adopted:
+
+```text
+NEW INVOCATION = NEW PACKAGE BY DEFAULT.
+OLD PACKAGE RESUME = EXPLICIT USER INTENT FOR EXACT PACKAGE ONLY.
+PACKAGE HISTORY = REUSABLE EVIDENCE, NOT IMPLICIT CONTINUATION AUTHORITY.
+
+INTEGRATION_TARGET = latest truth + final delivery target.
+TASK_BRANCH = isolated working branch.
+LOCAL WRITES = TASK_BRANCH + dedicated worktree.
+REMOTE/API WRITES = dedicated TASK_BRANCH.
+DIRECT TARGET WRITES = integration owner only.
+
+THIS TASK/PACKAGE/ROOT/GRAPH governs direction.
+FOREIGN DELTA = INPUT_NOT_INSTRUCTION.
+```
+
+This supersedes any earlier behavior that could:
+- reuse the last open package automatically;
+- continue a previous session because it changed the branch most recently;
+- use the Integration Target as a shared working branch.
+
+## Root Anchoring Preserved
 
 ```text
 ORCHESTRATION_ROOT = resolved TARGET/task root.
 LATEST_HEAD = truth/integration baseline only.
 LATEST_COMMIT/last-session topic/last changed file never chooses task direction.
 Every invocation/resume restores root orientation first.
-Prior valid diagnosis/evidence is reused; no blind restart.
-Concurrent deltas are classified and attached to the correct graph nodes.
-UNRELATED delta is preserved but not followed.
-Only proven upstream/blocking/root/authority change may redirect/backtrack.
 Execution frontier is derived/revalidated from ROOT_RECONCILED_GRAPH.
 Recency is never execution priority.
 ```
-
-This supersedes any interpretation of older `resume exact invalidated node` / `latest-head execution` that could skip root orientation.
 
 ## Existing Graph/Closure Rules Preserved
 
@@ -42,7 +58,7 @@ ROOT CAUSE GOVERNS SCOPE.
 ACCOUNTING PREVENTS SILENT LOSS.
 DEPENDENCIES GOVERN ORDER.
 INDEPENDENCE GOVERNS PARALLELISM.
-LATEST HEAD GOVERNS TRUTH/WRITES, NOT NAVIGATION.
+TASK ISOLATION GOVERNS WRITES.
 ONE INTEGRATION OWNER MUTATES TARGET BRANCH AT A TIME.
 EVIDENCE GOVERNS CLOSURE.
 ```
@@ -51,24 +67,47 @@ Movement remains non-linear after root orientation; Structured Backtracking/Reop
 
 Decision/root-cause impact propagates immediately through the proven impact graph. Findings never disappear. Coherent cutover, cleanup, governance, fresh-head, adversarial and final read-only verification rules remain unchanged.
 
+## Integration Strengthening
+
+Task-branch PASS is not target closure.
+
+```text
+task branch
+→ latest target reconciliation
+→ semantic rebuild/rebase
+→ invalidated verification
+→ serialized integration
+→ INTEGRATION_COMPLETE=YES
+→ final candidate on Integration Target
+→ final read-only verification
+```
+
 ## Tooling Binding
 
-- `00-OVERVIEW.template.md`: root/frontier provenance fields.
-- `new-package.mjs`: initializes resolved root and stale frontier.
-- `root-anchor-gate.mjs`: validates root/frontier provenance against live SHA.
-- `new-sequence.mjs`: refuses JIT derivation on stale root.
-- `OVERVIEW-CONTRACT.md`: defines root invariants.
-- Orchestrator `00/01/03/04/06`: prevents recency-driven navigation.
+- `00-OVERVIEW.template.md`: invocation/root/task-isolation/frontier provenance fields.
+- `new-package.mjs`: creates only a fresh package and requires isolated task workspace inputs.
+- `root-anchor-gate.mjs`: validates root/frontier provenance against live target SHA.
+- `task-isolation-gate.mjs`: validates task branch/worktree/remote isolation and explicit resume/integration phases.
+- `new-sequence.mjs`: refuses JIT derivation on stale root or unproven task isolation.
+- `validate-package.mjs`: validates isolation/header/sequence/final integration gates.
+- `OVERVIEW-CONTRACT.md` / `SEQUENCE-CONTRACT.md` / `CLOSURE-CONTRACT.md`: define machine-readable invariants.
+- Orchestrator `00/01/04/05/06`: prevents implicit package resume, recency-driven navigation and shared-target writes.
 
 ## Final Coverage Gate
 
 ```text
 SOURCE_BASELINES_PINNED = YES
+NEW_PACKAGE_PER_INVOCATION = ACCOUNTED
+EXPLICIT_RESUME_ONLY = ACCOUNTED
+TASK_CONTEXT_ISOLATION = ACCOUNTED
+WORKTREE_LOCAL_ISOLATION = ACCOUNTED
+REMOTE_TASK_BRANCH_ISOLATION = ACCOUNTED
 ROOT_ANCHOR_AGREEMENT = ACCOUNTED
 GRAPH_DRIVEN_MODEL = ACCOUNTED
 MULTI_AGENT_CONCURRENCY = ACCOUNTED
 ACCOUNTING = ACCOUNTED
-LATEST_HEAD_INTEGRATION = ACCOUNTED
+LATEST_TARGET_INTEGRATION = ACCOUNTED
+FINAL_INTEGRATION_GATE = ACCOUNTED
 HIGH_RISK_RULES = ACCOUNTED
 UNACCOUNTED = 0
 DROPPED = 0
