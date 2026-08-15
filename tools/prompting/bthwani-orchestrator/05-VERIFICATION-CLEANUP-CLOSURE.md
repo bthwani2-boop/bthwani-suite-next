@@ -46,7 +46,7 @@ resolve latest INTEGRATION_TARGET
 → compare target movement against reconciled target SHA
 → classify foreign delta
 → retain proven-unrelated evidence
-→ invalidate affected graph/evidence cone
+→ invalidate affected graph/evidence/landscape-priority cone
 → rebase/rebuild task delta semantically when required
 ```
 
@@ -68,20 +68,44 @@ DIRECT_INTEGRATION_TARGET_WRITES=FORBIDDEN_EXCEPT_INTEGRATION_OWNER
 Local mode requires actual current branch/worktree proof.
 Remote/API mode requires every write to explicitly target TASK_BRANCH.
 
-## 5) Package Bookkeeping / Freeze
+## 5) Target Landscape / Root-Cause Priority Verification
 
-Do not freeze on an unintegrated task branch.
+Before first live write, after any material causal reprioritization, and before final handoff/closure prove:
+
+```text
+TARGET_LANDSCAPE_COMPLETE=YES
+LANDSCAPE_RECONCILED_SHA=LATEST_RECONCILED_SHA
+ROOT_CAUSE_CLUSTERING_COMPLETE=YES
+ROOT_CAUSE_CLUSTERS_ACCOUNTED=YES
+UNCLUSTERED_MATERIAL_FINDINGS=0
+PRIORITY_MODEL_COMPLETE=YES
+PRIORITY_DERIVATION_SOURCE=ROOT_CAUSE_LANDSCAPE
+UNRANKED_MATERIAL_CLUSTERS=0
+PRIMARY_FRONTIER_JUSTIFIED=YES
+LANDSCAPE_ADVERSARIAL_PASS=YES
+PRIORITY_POLICY=HIGHEST_PROVEN_SYSTEMIC_LEVERAGE
+```
+
+Verification must challenge not only whether a fix passes, but whether the chosen frontier was still justified after new evidence. A newly proven upstream/foundation root cause, cluster split/merge, authority change, or material change in dependency/blocking/blast-radius/risk/unlock value invalidates the affected priority model.
+
+`MOST_FINDINGS`, recency, easiest fix, changed-file count, last session, and Sequence number are not valid priority proof.
+
+## 6) Package Bookkeeping / Freeze
+
+Do not freeze on an unintegrated task branch or stale priority model.
 
 ```text
 finish task-branch package/product/governance bookkeeping
 → finish cleanup writes
 → verify task branch
+→ reconcile affected root-cause landscape/priority
 → resolve latest Integration Target
 → Integration Owner reconciles/rebuilds task delta on latest target
 → rerun invalidated checks
 → integrate safely/non-force
 → set INTEGRATION_COMPLETE=YES
 → re-resolve Integration Target
+→ reconcile affected landscape/priority again if integration movement changed truth
 → finish final target bookkeeping if needed
 → FREEZE WRITES
 → FINAL_CANDIDATE_SHA = exact Integration Target commit
@@ -89,7 +113,7 @@ finish task-branch package/product/governance bookkeeping
 
 Any write after Freeze invalidates candidate and affected evidence.
 
-## 6) Evidence Routing / Failure Classification
+## 7) Evidence Routing / Failure Classification
 
 For each evidence scope record source, exact candidate, environment/profile, result, proof limit, required capability, approval binding and invalidation trigger.
 
@@ -105,10 +129,12 @@ STALE → cannot prove current candidate
 
 No blind rerun to force green.
 
-## 7) Proof Limits
+## 8) Proof Limits
 
 ```text
 task branch green ≠ Integration Target green
+priority model complete ≠ no undiscovered defect exists
+most findings in a cluster ≠ cluster has highest systemic leverage
 Sonar scan completed ≠ Sonar Quality Gate passed
 migration apply PASS ≠ idempotency/schema/readback/restart proof
 static/build/typecheck/lint/unit/mock green ≠ runtime/E2E proof
@@ -118,7 +144,7 @@ scanner green ≠ permission to suppress a known finding
 
 Finance/security/identity/isolation/data migrations raise evidence/authority strength automatically.
 
-## 8) Runtime Freshness / Real Scenario
+## 9) Runtime Freshness / Real Scenario
 
 Before runtime/E2E prove source/artifact/process/container/schema/seed/config/network freshness. Then, where claimed:
 
@@ -136,7 +162,7 @@ Actor/identity/session/scope
 
 Stateful tests capture pre-state, use unique run identity, isolate/clean safe test data and prove post-state from the canonical owner.
 
-## 9) Domain Gates
+## 10) Domain Gates
 
 Security: auth/session/revocation/role/permission/trusted context/object auth/IDOR/cross-scope/service auth/input-output/injection/SSRF/path/upload/PII/secrets/signature/replay/rate-limit/audit.
 
@@ -148,9 +174,9 @@ Mobile/Control Panel: permissions/deep-links/push/maps/location/SecureStore/offl
 
 Supply chain/CI: lockfile/dependency/CVE/CodeQL/secrets/workflow policy/pinning as affected.
 
-## 10) Evidence Invalidation Cone
+## 11) Evidence / Priority Invalidation Cone
 
-Every mutation, upstream dependency fix, reopened sequence, target movement or authority/truth change maps to affected graph nodes/evidence:
+Every mutation, upstream dependency fix, reopened sequence, target movement or authority/truth change maps to affected graph nodes/evidence/root-cause clusters/priority:
 
 ```text
 contract/schema → consumers/generation/integration evidence stale
@@ -158,18 +184,19 @@ migration/data owner → DB/runtime/readback stale
 runtime/config/network → runtime/E2E stale
 security/auth/permission → negative isolation/security stale
 shared owner/library → affected consumer cone stale
+new upstream root / cluster split-merge / authority shift → affected priority model stale
 proven unrelated movement → retain with provenance
 ```
 
-Integration itself may invalidate task-branch evidence if target movement changes semantics; reacquire the minimum sufficient affected set unless policy/risk requires broader proof.
+Integration itself may invalidate task-branch evidence or priority if target movement changes semantics; reacquire/re-rank the minimum sufficient affected set unless policy/risk requires broader proof.
 
-## 11) Repository-Platform Truth
+## 12) Repository-Platform Truth
 
 When closure relies on repository-hosted enforcement, verify live **Integration Target candidate-specific** state: workflow runs/jobs/first real failure, required checks/context names, cancelled/superseded/stale runs, reviews/threads, live rulesets/protection, base/head relation/mergeability, Sonar Quality Gate, CodeQL/dependency/security checks when applicable.
 
 Tracked workflow/ruleset files alone do not prove live enforcement. Pending/missing/stale/cancelled required evidence is not PASS.
 
-## 12) Approval / Independent Review
+## 13) Approval / Independent Review
 
 For each protected approval record domain, reason, allowed authority/reviewer, actual provenance, exact candidate binding and result.
 
@@ -177,15 +204,17 @@ For each protected approval record domain, reason, allowed authority/reviewer, a
 
 For multi-agent work, independent verifier/adversarial agents may challenge executor claims, but identity/provenance must be explicit when policy requires independence.
 
-## 13) Claim / Diff / Test Review
+For the landscape phase, independent/adversarial review should attempt to find missing upstream roots, hidden writers/readers, falsely local symptoms, unclustered findings and priority inversions.
+
+## 14) Claim / Diff / Test Review
 
 Review claimed outcome, not only changed files: actors/surfaces/owners/states/scopes/permissions/contracts/persistence/providers/readbacks/failure/recovery/UX/evidence/approvals.
 
-Review complete owned range for foreign delta, generated/lockfile drift, missing consumer migration, reachable legacy paths, stale package assumptions and cross-sequence effects.
+Review complete owned range for foreign delta, generated/lockfile drift, missing consumer migration, reachable legacy paths, stale package assumptions, stale priority assumptions and cross-sequence effects.
 
 For changed Test/Guard ask what claim it can falsify and whether it can still pass with the defect present. Weakening/skipping/mocking/non-blocking changes cannot manufacture green.
 
-## 14) Cleanup = Part of DONE
+## 15) Cleanup = Part of DONE
 
 Local cleanup during every root fix + final global sweep. Cover proven-related:
 
@@ -214,7 +243,7 @@ DISCOVER → CLASSIFY → TRACE CONSUMERS → PROVE OBSOLETE/WRONG/DUPLICATE
 
 Cleanup applies from line/expression/block → symbol/component/type → file/folder/module/package → service/surface/domain → contract/route/config/dependency.
 
-## 15) Canonical Source / Reference Integrity
+## 16) Canonical Source / Reference Integrity
 
 For concepts needing one authority, inspect Contracts/Schemas/Models/Configs/Policies/Mappings/Constants/Business Rules/State/Domain definitions.
 
@@ -222,7 +251,7 @@ When duplication is unjustified: identify canonical owner → map writers/reader
 
 After delete/rename/move/merge/split/refactor inspect imports/exports/callers/callees/registrations/routes/contracts/schemas/config/env/dependencies/tests/mocks/fixtures/docs/build/CI/generated references.
 
-## 16) Final Cleanup Gate
+## 17) Final Cleanup Gate
 
 ```text
 ZERO known dead code/files/folders in scope
@@ -238,14 +267,17 @@ ZERO known structural contradiction
 ZERO known cleanup finding unresolved
 ```
 
-Cleanup writes invalidate affected evidence.
+Cleanup writes invalidate affected evidence and may invalidate cluster/priority assumptions when they reveal deeper ownership/structural truth.
 
-## 17) Accounting Gate — No Silent Loss
+## 18) Accounting Gate — No Silent Loss
 
 Before handoff/closure prove:
 
 ```text
 FINDINGS_ACCOUNTED=YES
+ROOT_CAUSE_CLUSTERS_ACCOUNTED=YES
+UNCLUSTERED_MATERIAL_FINDINGS=0
+UNRANKED_MATERIAL_CLUSTERS=0
 SCOPE_DELTAS_ACCOUNTED=YES
 DECISIONS_ACCOUNTED=YES
 CONSUMERS_ACCOUNTED=YES
@@ -254,15 +286,15 @@ CLEANUP_ACCOUNTED=YES
 ACCOUNTING_COMPLETE=YES
 ```
 
-This requires every material discovery to be ID-addressable and dispositioned. `ZERO known findings` alone is insufficient; independent adversarial/negative-space discovery must attempt to find untracked graph nodes, hidden writers/readers, stale paths and missing consumers.
+This requires every material discovery to be ID-addressable and dispositioned. `ZERO known findings` alone is insufficient; independent adversarial/negative-space discovery must attempt to find untracked graph nodes, hidden writers/readers, stale paths, missing consumers, missing root-cause clusters and priority inversions.
 
-## 18) Governance Reconciliation
+## 19) Governance Reconciliation
 
 All durable decisions classified → required governance promotions complete or explicitly blocking → machine counterpart synchronized where applicable → governance ↔ Product Truth ↔ contracts/registries ↔ code/consumers ↔ runtime compared.
 
 No closure with durable truth only in task artifacts.
 
-## 19) Final Integration / Fresh Head
+## 20) Final Integration / Fresh Head
 
 Before final review and decision:
 
@@ -271,37 +303,50 @@ ACTIVE_EXECUTION_FRONTIER = NONE
 no unresolved material suspended/reopened/blocked sequence
 TASK_BRANCH_READY=YES
 WORKSPACE_ISOLATION_READY=YES
+TARGET_LANDSCAPE_COMPLETE=YES
+ROOT_CAUSE_CLUSTERS_ACCOUNTED=YES
+UNCLUSTERED_MATERIAL_FINDINGS=0
+PRIORITY_MODEL_COMPLETE=YES
+UNRANKED_MATERIAL_CLUSTERS=0
+LANDSCAPE_ADVERSARIAL_PASS=YES
 INTEGRATION_OWNER assigned
 INTEGRATION_COMPLETE=YES
 HEAD_AT_REVIEW_START = live Integration Target head
 HEAD_AT_DECISION = live Integration Target head immediately before decision
 ```
 
-Branch-head closure requires `HEAD_AT_DECISION == FINAL_CANDIDATE_SHA`. If not, classify movement, rebuild/reconcile candidate and rerun invalidated evidence.
+Branch-head closure requires `HEAD_AT_DECISION == FINAL_CANDIDATE_SHA`. If not, classify movement, rebuild/reconcile candidate, rerun invalidated evidence and re-rank affected landscape before judgment.
 
-## 20) Final Adversarial Completeness
+## 21) Final Adversarial Completeness
 
-Try to disprove closure via alternate entry points: hidden writers/readers, parallel/stale truth, missing consumers, contract/binding mismatch, permission bypass, retry/replay/concurrency, unknown-result/recovery, partial failure/restart, runtime-only defects, stale process/data/config, weak/flaky guards, missing audit/observability, foreign delta, reachable legacy, PII/secrets, neighboring regression, wrong ownership/placement/naming/context and unnecessary residue.
+Try to disprove closure via alternate entry points: hidden writers/readers, parallel/stale truth, missing consumers, contract/binding mismatch, permission bypass, retry/replay/concurrency, unknown-result/recovery, partial failure/restart, runtime-only defects, stale process/data/config, weak/flaky guards, missing audit/observability, foreign delta, reachable legacy, PII/secrets, neighboring regression, wrong ownership/placement/naming/context, unnecessary residue, unclustered findings, wrongly merged/split root-cause clusters, high-risk low-frequency roots and priority inversions.
 
-Any material Finding requiring write cancels Freeze and reopens the affected graph cone.
+Any material Finding requiring write cancels Freeze and reopens the affected graph/landscape cone.
 
-## 21) Final Read-Only Verification
+## 22) Final Read-Only Verification
 
-On exact final **Integration Target** candidate only: required checks, generated consistency without mutation, exact diff/scope/foreign-change review, canonical readbacks, runtime/E2E where claimed, security/data/finance scopes, edge/adversarial behavior, test effectiveness, artifact provenance, repository-platform evidence and approvals.
+On exact final **Integration Target** candidate only: required checks, generated consistency without mutation, exact diff/scope/foreign-change review, canonical readbacks, runtime/E2E where claimed, security/data/finance scopes, edge/adversarial behavior, test effectiveness, artifact provenance, repository-platform evidence, approvals and current root-cause/priority accounting.
 
 No `--fix`, formatter/generator write, lockfile/migration mutation, package/source mutation, commit/push/merge or swallowed exit.
 
-## 22) Lifecycle vs Canonical Decision
+## 23) Lifecycle vs Canonical Decision
 
 `LIFECYCLE_STATE` is internal derived state. `FINAL_DECISION` must be an ID from current `governance/contracts/decision-vocabulary.json`. Do not invent decision aliases.
 
-## 23) Final Closure Equation
+## 24) Final Closure Equation
 
 ```text
 DISCOVERY_COMPLETE
 AND DIAGNOSIS_COMPLETE
 AND DECISION_COMPLETE
 AND COVERAGE_COMPLETE
+AND TARGET_LANDSCAPE_COMPLETE
+AND ROOT_CAUSE_CLUSTERING_COMPLETE
+AND ROOT_CAUSE_CLUSTERS_ACCOUNTED
+AND UNCLUSTERED_MATERIAL_FINDINGS = 0
+AND PRIORITY_MODEL_COMPLETE
+AND UNRANKED_MATERIAL_CLUSTERS = 0
+AND LANDSCAPE_ADVERSARIAL_PASS
 AND ACCOUNTING_COMPLETE
 AND PACKAGE_READY
 AND IMPLEMENTATION_COMPLETE
@@ -314,7 +359,7 @@ AND FINAL_ADVERSARIAL_PASS
 AND ACTIVE_EXECUTION_FRONTIER = NONE
 ```
 
-Plus zero known fixable defect, undispositioned Finding/Scope Delta/Decision/Consumer/Cleanup item, unverified fix, required missing/stale/pending/cancelled evidence, missing required approval, duplicate truth, reachable obsolete path, unresolved material suspended/reopened sequence, structural/reference residue, or durable truth left only in derived artifacts.
+Plus zero known fixable defect, undispositioned Finding/Root-Cause Cluster/Scope Delta/Decision/Consumer/Cleanup item, unverified fix, required missing/stale/pending/cancelled evidence, missing required approval, duplicate truth, reachable obsolete path, unresolved material suspended/reopened sequence, stale priority model, structural/reference residue, or durable truth left only in derived artifacts.
 
 Final branch-head closure requires:
 
@@ -324,6 +369,7 @@ FINAL_DECISION = current decision-vocabulary.closureRules.closedDecision
 HEAD_AT_DECISION = FINAL_CANDIDATE_SHA
 FINAL_CANDIDATE_SHA is an Integration Target commit after completed task integration
 all applicable evidence/approval scopes satisfied on same immutable candidate
+root-cause landscape/priority provenance current on the same final truth
 ```
 
 Anything less is not closure.
