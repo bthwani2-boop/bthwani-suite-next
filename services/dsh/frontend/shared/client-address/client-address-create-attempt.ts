@@ -1,4 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime";
 import type { DshAddressMutationContext, DshClientAddressDraft } from "./client-address.types";
 
 const STORAGE_KEY = "@bthwani/client-address-create-attempt:v1";
