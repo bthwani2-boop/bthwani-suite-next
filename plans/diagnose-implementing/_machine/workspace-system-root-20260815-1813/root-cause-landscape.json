@@ -1,0 +1,16 @@
+{
+  "schema": "BTHWANI_ROOT_CAUSE_LANDSCAPE_V1",
+  "taskId": "TASK-20260815-1813-WORKSPACE-SYSTEM-ROOT",
+  "reconciledSha": "8a244d7b2bb5a0193cd8a9ff7476892585175a1b",
+  "status": "OPEN",
+  "priorityPolicy": "HIGHEST_PROVEN_SYSTEMIC_LEVERAGE",
+  "findings": [],
+  "unclusteredFindings": [],
+  "clusters": [],
+  "adversarial": {"status": "OPEN", "evidence": []},
+  "selectedFrontier": {
+    "primaryClusterId": null,
+    "parallelClusterIds": [],
+    "justification": "OPEN: frontier derivation forbidden until operational-root and priority gates pass."
+  }
+}
