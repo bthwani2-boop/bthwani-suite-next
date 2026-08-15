@@ -13,164 +13,132 @@ plans/diagnose-implementing/<TASK_NAME>/
 └── ...
 ```
 
-لا يوجد عدد ثابت من Sequences. لا توجد مجلدات Domains/Surfaces داخل الحزمة. لا توجد ملفات Diagnosis/Execution/Verification منفصلة لنفس Sequence.
+Sequence numbers = creation/identity order, not a forced linear execution chain.
 
-## 2) 00-OVERVIEW Ownership
+## 2) Overview Ownership
 
-يمتلك فقط: task identity / repository / branch / mode / target، START_SHA / CURRENT_SHA، macro blueprint / dependency graph summary، sequence registry + order، global decisions/blockers، global coverage/reconciliation، final handoff/closure metadata.
+يمتلك فقط: task identity/SHA، Macro Graph، `ACTIVE_EXECUTION_FRONTIER`, Integration Owner، Sequence Registry، suspension/reopen references، global decisions/blockers، accounting gates، global closure metadata.
 
-## 3) Sequence File Ownership
+## 3) Sequence Ownership
 
-كل `NNN-<sequence>.md` يمتلك دورة واحدة متماسكة:
+كل Sequence تجمع Scope/Diagnosis/Findings/Root Cause/Blast Radius/Decisions/Re-Diagnosis/Target State/Treatment/Consumers-Governance/Cleanup/Verification/Evidence/Exit-Reopen.
 
-```text
-Scope / Context
-Diagnosis / Findings
-Root Cause / Blast Radius
-Decisions / Re-Diagnosis
-Exact Target State
-Treatment / Execution
-Consumer / Contract / Data / Governance
-Cleanup
-Verification / Runtime / Evidence
-Exit Gate / Reopen
-```
-
-`ONE FILE = ONE COHERENT EXECUTION/CLOSURE SEQUENCE`.
-
-## 4) Create / Resume
+وتسجل Machine fields إضافية:
 
 ```text
-ABSENT → create V2 overview only.
-EXISTS V2 + same task identity → resume/reconcile.
-EXISTS legacy V1 active task → rebaseline, preserve only valid evidence/decisions, migrate to V2.
-DIFFERENT identity collision → stop; do not overwrite.
+RECONCILED_HEAD_SHA
+CONFLICT_DOMAIN
+EXECUTION_OWNER
+PARALLEL_SAFETY
+SUSPENDED_BY
+RESUME_AFTER
+INVALIDATES
+DECISION_IMPACT_PROPAGATED
+FINDINGS_DISPOSITIONED
+DEPENDENCIES_DISPOSITIONED
 ```
 
-`new-package.mjs` ينشئ `00-OVERVIEW.md` فقط. `new-sequence.mjs` يستخدم فقط بعد إثبات Sequence boundary من Graph وينشئ الرقم التالي Just-In-Time.
+## 4) No Mega Package / No Fragmentation
 
-## 5) No Mega Package / No Fragmentation
+ممنوع giant target file، pre-created future sequences، one file per app/folder، split by line count، أو merge unrelated root causes. قسّم فقط عند Closure Boundary مثبت.
 
-ممنوع:
+## 5) JIT Creation + Backtracking
+
+Normal creation:
 
 ```text
-one giant file for all target details
-hundreds of pre-created future sequence files
-one file per app/folder merely because repository has that structure
-three files per sequence by default
-split because line count crossed an arbitrary threshold
-merge unrelated root causes just to reduce file count
+prove boundary → create sequence → register graph/frontier
 ```
 
-قسّم Sequence فقط إذا ظهر Closure Boundary مستقل. ادمج الأعراض إذا كان لها Root Cause/Owner/Verification مشتركة.
+Backtrack creation مسموح بينما Sequence حالية غير terminal فقط إذا الحالية صراحةً `SUSPENDED_BY_DEPENDENCY`، ويتم دفعها إلى Suspension Stack/graph ثم جعل upstream dependency هو focus الجديد.
 
-## 6) PREPARE_ONLY Sequence
+لا تنشئ future speculative sequence لمجرد توقعها.
+
+## 6) Root-Cause / Finding Correlation
 
 ```text
-diagnose to evidence limit
-→ resolve derivable facts
-→ ask true decision(s) if needed
-→ propagate decision
-→ re-diagnose
-→ prove root cause / owner / blast radius
-→ define exact target state
-→ define root treatment
-→ map writers/readers/consumers
-→ define governance promotion
-→ define obsolete removal + cleanup
-→ define verification / acceptance
-→ SEQUENCE_STATUS=PREPARED
+symptoms/findings
+→ correlate
+→ first causal failure
+→ canonical owner
+→ full impact propagation
+→ coherent cutover
 ```
 
-لا Actual execution ولا fabricated implementation SHA/evidence. الهدف: وكيل آخر يفتح الملف ويستطيع التنفيذ دون Product/Architecture guessing أو إعادة تصميم.
+إذا 20 Finding من Root Cause واحدة، لا تتحول تلقائيًا إلى 20 Sequences. إذا Finding مستقلة ولا تمنع cutover الحالي، تسجل في graph وتوضع في Frontier لاحق/مستقل بدليل.
 
-## 7) EXECUTE_END_TO_END Sequence
+## 7) PREPARE_ONLY
+
+```text
+diagnose → decide → propagate → re-diagnose
+→ exact target/cutover → consumers/governance/cleanup/verification
+→ dispose findings/dependencies
+→ PREPARED
+```
+
+لا live mutation.
+
+## 8) EXECUTE_END_TO_END Write Gate
 
 قبل live write:
 
 ```text
-SEQUENCE_STATUS=READY_TO_EXECUTE
+SEQUENCE_STATUS=READY_TO_EXECUTE | REOPENED
 ROOT_CAUSE_PROVEN=YES
 DECISIONS_RESOLVED=YES
+DECISION_IMPACT_PROPAGATED=YES
 REDIAGNOSIS_COMPLETE=YES
 IMPACT_MAPPED=YES
+FINDINGS_DISPOSITIONED=YES
+DEPENDENCIES_DISPOSITIONED=YES
 VERIFICATION_DEFINED=YES
 SOLUTION_READY=YES
-BASE_SHA reconciled
+RECONCILED_HEAD_SHA = latest reconciled head
+CONFLICT_DOMAIN != UNCLASSIFIED
+EXECUTION_OWNER != UNASSIGNED
 ```
 
-ثم:
+ثم root fix/refactor/redesign/rebuild → all required consumer migration → contract/data/generated sync → obsolete/parallel path removal → local cleanup → verification/runtime readback → COMPLETE.
+
+## 9) Coherent Cutover Rule
+
+لا `COMPLETE` مع known affected consumer أو contradictory truth أو required migration أو reachable obsolete path أو temporary workaround أو unclassified scope delta لازم لصحة التغيير.
+
+## 10) Multi-Agent Execution
+
+يسمح بعدة Workers على Frontiers مستقلة فقط. لكل Worker isolated workspace وConflict Domain وowned scope. يمكن لعدة Sequences أن تكون في execution frontier إذا ثبت الاستقلال، لكن:
 
 ```text
-Governance Promotion where required
-→ canonical owner root fix/refactor/redesign/rebuild
-→ migrate every affected writer/reader/consumer
-→ synchronize contract/data/generated transitions
-→ remove obsolete/parallel path
-→ local cleanup
-→ affected verification
-→ runtime/readback where required
-→ record exact evidence
-→ SEQUENCE_STATUS=COMPLETE
+ONE EXECUTION OWNER PER CONFLICT DOMAIN
+ONE TARGET-BRANCH INTEGRATION OWNER AT A TIME
 ```
 
-## 8) Governance Promotion
+Integration Owner يعيد بناء/دمج delta على latest head بدل دفع stale candidate.
 
-لكل durable resolved rule: classify durability → existing canonical owner → authority check → canonical governance write when authorized → machine counterpart when applicable → implementation/consumer propagation → verify parity. PREPARE يسجل pending فقط.
+## 11) Sequence Completion / Resume
 
-## 9) Root-Cause Loop
+بعد complete/prepare dependency:
 
 ```text
-confirm symptom/evidence
-→ correlate duplicate symptoms
-→ first causal failure
-→ challenge competing hypothesis
-→ canonical owner/root cause
-→ root fix
-→ consumer migration
-→ contract/data/generated sync
-→ obsolete path removal
-→ cleanup
-→ verification
-→ neighboring regression search
+update graph
+→ identify suspended/reopened descendants
+→ invalidate affected evidence
+→ resume highest-priority unblocked node
+→ re-diagnose before live write
 ```
-
-## 10) Consumer Migration
-
-كل proven consumer = `MIGRATED` أو `NOT_AFFECTED_WITH_PROOF`. Cover writers/readers/APIs/generated clients/surfaces/jobs/events/DB/config/permissions/tests/docs وفق semantic blast radius.
-
-## 11) Sequence Creation Safety
-
-قبل إنشاء Sequence التالية:
-
-```text
-current sequence mode-specific exit gate = PASS
-overview registry reconciled
-current sequence cleared
-latest HEAD reconciled
-dependency graph refreshed
-next sequence boundary proven
-```
-
-ثم فقط أنشئ `NNN-<name>.md`.
 
 ## 12) Cleanup
 
-داخل كل Sequence: remove obsolete path/compatibility/workaround، repair imports/exports/routes/bindings/references، normalize affected naming/ownership/placement، remove debug/temp residue، verify reference integrity. التنظيف النهائي العالمي يبقى في الوحدة 05.
+داخل كل Sequence: remove obsolete/compatibility/workaround/debug/temp residue، repair imports/routes/contracts/bindings/references، normalize naming/ownership/placement. Final global sweep يبقى إلزاميًا.
 
-## 13) Protected Domains
-
-Data/Security/Finance/Events/Mobile/Control Panel ترفع Evidence/Authority gates تلقائيًا؛ لا تخفضها بنية الملف الجديدة.
-
-## 14) Global Completion
-
-لا تعتبر TARGET جاهزًا/مغلقًا بمجرد إغلاق آخر Sequence:
+## 13) Global Completion
 
 ```text
-all sequence records terminal for MODE
+all material graph nodes dispositioned
++ all sequence records terminal/unblocked for MODE
++ accounting complete
 → global reconciliation
 → duplicate truth search
-→ global coverage gates
 → final cleanup
 → final evidence/fresh-head/adversarial gates
 ```
