@@ -207,6 +207,7 @@ for (const [key, app] of Object.entries(manifest.apps)) {
     backgroundTask: "expo-background-task",
     location: "expo-location",
     backgroundLocation: "expo-location",
+    maps: "react-native-maps",
     notifications: "expo-notifications",
     secureStore: "expo-secure-store",
   };
