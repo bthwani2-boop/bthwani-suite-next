@@ -1,33 +1,5 @@
 const KNOWN_NATIVE_CAPABILITIES = new Set([
-  "router",
-  "updates",
-  "constants",
-  "application",
-  "device",
-  "crypto",
-  "image",
-  "battery",
-  "splashScreen",
-  "localization",
-  "localAuthentication",
-  "fileSystem",
-  "documentPicker",
-  "imagePicker",
-  "secureStore",
-  "notifications",
-  "audio",
-  "camera",
-  "video",
-  "imageManipulator",
-  "sharing",
-  "webBrowser",
-  "keepAwake",
-  "sqlite",
-  "location",
-  "backgroundLocation",
-  "maps",
-  "taskManager",
-  "backgroundTask",
+  "router", "updates", "constants", "application", "device", "crypto", "image", "battery", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "imageManipulator", "sharing", "webBrowser", "keepAwake", "sqlite", "location", "backgroundLocation", "maps", "taskManager", "backgroundTask",
 ]);
 
 const REQUIRED_NAVIGATION_APPS = ["app-client", "app-partner", "app-captain", "app-field"];
@@ -53,6 +25,23 @@ const REQUIRED_MEDIA_RULES = {
   broaderPackageWinsOnlyWhenMultipleRequiredCapabilitiesAreActuallyUsed: true,
   duplicateCapabilityOwnersRequireExplicitJustification: true,
   nativeRemovalDeferredToCleanupWindow: true,
+  packageDeletionRequiresConsumerAndRequirementClosure: true,
+};
+
+const REQUIRED_MOBILITY_OWNERS = {
+  foregroundLocation: [["expo-location"], "CANONICAL_ACTIVE"],
+  mapRendering: [["react-native-maps"], "CANONICAL_ACTIVE"],
+  backgroundLocation: [["expo-location", "expo-task-manager"], "COMPOSITE_CAPABILITY"],
+  deferredBackgroundSync: [["expo-background-task", "expo-task-manager"], "FIELD_DECLARED_ACTIVE"],
+  powerAwareness: [["expo-battery"], "CANONICAL_ACTIVE_CAPTAIN_FIELD"],
+  keepAwake: [["expo-keep-awake"], "REQUIREMENT_REVIEW_PENDING"],
+};
+
+const REQUIRED_MOBILITY_RULES = {
+  backgroundLocationRequiresTopLevelTaskDefinition: true,
+  backgroundLocationRequiresTaskManager: true,
+  backgroundTaskMustNotReplaceLocationEngine: true,
+  permissionAndNativeChangesDeferredToBuildWindow: true,
   packageDeletionRequiresConsumerAndRequirementClosure: true,
 };
 
@@ -87,17 +76,36 @@ function validateMediaArchitecture(globalConfig) {
   assert(media.decision === "CAPABILITY_CONSOLIDATION_FIRST", "mobile media packages must remain governed by capability consolidation first");
   assert(media.remoteBuildNow === false, "media package governance must not trigger an EAS remote build");
   assert(isPlainObject(media.owners), "mobile media capability owners are required");
-
   for (const [capability, [requiredPackage, requiredStatus]] of Object.entries(REQUIRED_MEDIA_OWNERS)) {
     const owner = media.owners[capability];
     assert(isPlainObject(owner), `media capability '${capability}' requires an explicit owner`);
     assert(owner.package === requiredPackage, `media capability '${capability}' must be owned by '${requiredPackage}'`);
     assert(owner.status === requiredStatus, `media capability '${capability}' must remain '${requiredStatus}' until deliberately reviewed`);
   }
-
   assert(isPlainObject(media.rules), "mobile media consolidation rules are required");
   for (const [rule, requiredValue] of Object.entries(REQUIRED_MEDIA_RULES)) {
     assert(media.rules[rule] === requiredValue, `mobile media rule '${rule}' drifted from the governed decision`);
+  }
+}
+
+function validateMobilityArchitecture(globalConfig) {
+  const mobility = globalConfig?.mobilityArchitecture;
+  assert(isPlainObject(mobility), "mobile location/background architecture decision is required");
+  assert(mobility.decision === "CAPABILITY_CONSOLIDATION_FIRST", "mobility packages must remain governed by capability consolidation first");
+  assert(mobility.remoteBuildNow === false, "mobility package governance must not trigger an EAS remote build");
+  assert(isPlainObject(mobility.owners), "mobility capability owners are required");
+  for (const [capability, [requiredPackages, requiredStatus]] of Object.entries(REQUIRED_MOBILITY_OWNERS)) {
+    const owner = mobility.owners[capability];
+    assert(isPlainObject(owner), `mobility capability '${capability}' requires an explicit owner`);
+    assert(sameArray(owner.packages, requiredPackages), `mobility capability '${capability}' must use ${requiredPackages.join(" + ")}`);
+    assert(owner.status === requiredStatus, `mobility capability '${capability}' must remain '${requiredStatus}' until deliberately reviewed`);
+  }
+  assert(isPlainObject(mobility.alignment), "mobility alignment decisions are required");
+  assert(mobility.alignment["app-captain.backgroundLocation"] === "REQUIRES_TASK_MANAGER_BEFORE_IMPLEMENTATION", "captain backgroundLocation must remain blocked on TaskManager alignment");
+  assert(mobility.alignment["app-field.deferredBackgroundSync"] === "DECLARED_WITH_TASK_MANAGER", "field background sync must retain TaskManager alignment");
+  assert(isPlainObject(mobility.rules), "mobility consolidation rules are required");
+  for (const [rule, requiredValue] of Object.entries(REQUIRED_MOBILITY_RULES)) {
+    assert(mobility.rules[rule] === requiredValue, `mobility rule '${rule}' drifted from the governed decision`);
   }
 }
 
@@ -106,6 +114,7 @@ function validateMobileFeatureCapabilityManifest(manifest) {
   assert(manifest.global?.capabilityModelVersion === 1, "mobile capability model version must be 1");
   validateNavigationArchitecture(manifest.global);
   validateMediaArchitecture(manifest.global);
+  validateMobilityArchitecture(manifest.global);
   assert(isPlainObject(manifest.apps) && Object.keys(manifest.apps).length > 0, "mobile manifest apps are required");
 
   for (const [appKey, app] of Object.entries(manifest.apps)) {
@@ -113,11 +122,9 @@ function validateMobileFeatureCapabilityManifest(manifest) {
     const nativeCapabilities = app.nativeCapabilities;
     assert(Array.isArray(nativeCapabilities) && nativeCapabilities.length > 0, `${appKey}: nativeCapabilities must be a non-empty array`);
     assert(new Set(nativeCapabilities).size === nativeCapabilities.length, `${appKey}: nativeCapabilities must not contain duplicates`);
-
     for (const capability of nativeCapabilities) {
       assert(typeof capability === "string" && KNOWN_NATIVE_CAPABILITIES.has(capability), `${appKey}: unknown native capability '${capability}'`);
     }
-
     assert(isPlainObject(app.productFeatures) && Object.keys(app.productFeatures).length > 0, `${appKey}: productFeatures must be a non-empty object`);
     for (const [productFeature, requiredCapabilities] of Object.entries(app.productFeatures)) {
       assert(/^[a-z][A-Za-z0-9]*$/.test(productFeature), `${appKey}: invalid product feature id '${productFeature}'`);
@@ -139,5 +146,7 @@ module.exports = {
   REQUIRED_NAVIGATION_MIGRATION_ORDER,
   REQUIRED_MEDIA_OWNERS,
   REQUIRED_MEDIA_RULES,
+  REQUIRED_MOBILITY_OWNERS,
+  REQUIRED_MOBILITY_RULES,
   validateMobileFeatureCapabilityManifest,
 };
