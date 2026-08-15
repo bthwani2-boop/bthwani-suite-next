@@ -11,17 +11,24 @@ SEQUENCE_PREPARED / SEQUENCE_COMPLETE
 PACKAGE_READY / TARGET_CLOSED
 ```
 
-A local sequence may be terminal while the overall TARGET remains OPEN.
+A local sequence may be terminal while the overall TARGET remains OPEN. Sequence numbers do not imply a linear traversal; suspended/reopened graph nodes remain accountable until dispositioned.
 
 ## PREPARE_ONLY
 
-Each Sequence terminal state = `PREPARED`.
+Each material Sequence terminal state = `PREPARED`.
 
 Final handoff requires:
 
 ```text
-CURRENT_SEQUENCE_ID=UNSET
-all sequence files PREPARED
+ACTIVE_EXECUTION_FRONTIER=NONE
+all material sequence files PREPARED
+FINDINGS_ACCOUNTED=YES
+SCOPE_DELTAS_ACCOUNTED=YES
+DECISIONS_ACCOUNTED=YES
+CONSUMERS_ACCOUNTED=YES
+EVIDENCE_ACCOUNTED=YES
+CLEANUP_ACCOUNTED=YES
+ACCOUNTING_COMPLETE=YES
 DISCOVERY_COMPLETE=YES
 DIAGNOSIS_COMPLETE=YES
 DECISION_COMPLETE=YES
@@ -34,13 +41,20 @@ No final product decision is issued.
 
 ## EXECUTE_END_TO_END
 
-Each Sequence terminal state = `COMPLETE`.
+Each material Sequence terminal state = `COMPLETE`; any `SUSPENDED_BY_DEPENDENCY`, `REOPENED`, or `BLOCKED_EXTERNAL` node must be resolved/dispositioned before target closure.
 
 Final closure requires:
 
 ```text
-CURRENT_SEQUENCE_ID=UNSET
-all sequence files COMPLETE
+ACTIVE_EXECUTION_FRONTIER=NONE
+all material sequence files COMPLETE
+FINDINGS_ACCOUNTED=YES
+SCOPE_DELTAS_ACCOUNTED=YES
+DECISIONS_ACCOUNTED=YES
+CONSUMERS_ACCOUNTED=YES
+EVIDENCE_ACCOUNTED=YES
+CLEANUP_ACCOUNTED=YES
+ACCOUNTING_COMPLETE=YES
 DISCOVERY_COMPLETE=YES
 DIAGNOSIS_COMPLETE=YES
 DECISION_COMPLETE=YES
@@ -65,4 +79,6 @@ HEAD_AT_DECISION == FINAL_CANDIDATE_SHA
 FINAL_DECISION == current governance closureRules.closedDecision
 ```
 
-Any material new finding reopens the affected Sequence/global lifecycle and invalidates affected evidence.
+No closure with a known fixable defect, undispositioned Finding/Scope Delta/Decision/Consumer/Cleanup item, stale required evidence, duplicate truth, reachable obsolete path, unverified root fix, or durable truth left only in derived task artifacts.
+
+Any material new finding, related head drift, upstream dependency change, or invalidated evidence reopens the affected Sequence/global lifecycle and only the proven invalidation cone may be retained as stale/reacquired according to evidence policy.
