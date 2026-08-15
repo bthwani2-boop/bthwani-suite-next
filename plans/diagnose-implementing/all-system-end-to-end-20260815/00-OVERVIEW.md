@@ -8,14 +8,24 @@ REPOSITORY: bthwani2-boop/bthwani-suite-next
 BRANCH: A
 MODE: EXECUTE_END_TO_END
 TARGET: كل شيء
-OBJECTIVE: Diagnose and execute the complete repository end-to-end in proven dependency sequences, closing every material finding, dependency, consumer, scope delta and required decision under the orchestrator gates.
+OBJECTIVE: Diagnose and execute the complete repository end-to-end through a graph-driven, root-cause-first, multi-agent-capable closure model, accounting for every material finding, dependency, consumer, scope delta, decision, cleanup item and required evidence.
 ORCHESTRATOR_PATH: tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md
 CREATED_AT: 2026-08-15T03:05:00Z
-LAST_RECONCILED_AT: 2026-08-15T06:44:00+03:00
+LAST_RECONCILED_AT: 2026-08-15T07:23:38+03:00
 START_SHA: b73e2752ef65e5b8817e35cdd96948dc1386fb47
-CURRENT_SHA: bd24be9ec308e5fd635a5281d51d6adc5250da7e
+CURRENT_SHA: 5c0af6f402ef3379dc77a9565c104b1ab22836e5
+LATEST_RECONCILED_SHA: 5c0af6f402ef3379dc77a9565c104b1ab22836e5
 LIFECYCLE_STATE: OPEN
-CURRENT_SEQUENCE_ID: UNSET
+ACTIVE_EXECUTION_FRONTIER: NONE
+SUSPENSION_STACKS: NONE
+INTEGRATION_OWNER: UNASSIGNED
+FINDINGS_ACCOUNTED: NO
+SCOPE_DELTAS_ACCOUNTED: NO
+DECISIONS_ACCOUNTED: NO
+CONSUMERS_ACCOUNTED: NO
+EVIDENCE_ACCOUNTED: NO
+CLEANUP_ACCOUNTED: NO
+ACCOUNTING_COMPLETE: NO
 DISCOVERY_COMPLETE: NO
 DIAGNOSIS_COMPLETE: NO
 DECISION_COMPLETE: NO
@@ -31,78 +41,61 @@ FINAL_CANDIDATE_SHA: UNSET
 HEAD_AT_REVIEW_START: UNSET
 HEAD_AT_DECISION: UNSET
 
-> Migrated from V1 three-file Derived Support to V2 sequential package. No execution Sequence has been proven/selected yet, so no `001-*.md` is created. Git history retains the retired V1 package files.
+> Active whole-system package migrated to the graph-driven V2 refinement. No execution Sequence has yet been proven/selected; no speculative `001-*.md` is created. Sequence IDs will record closure units, not impose a linear traversal.
 
 ## 1. Truth Baseline
 
-- Orchestrator/control sources read: `tools/prompting/bthwani-orchestrator/**` and current package framework.
-- START_SHA: `b73e2752ef65e5b8817e35cdd96948dc1386fb47`.
-- Reconciled pre-migration HEAD: `bd24be9ec308e5fd635a5281d51d6adc5250da7e`.
-- Branch movement since START includes mobile/captain changes and the original V1 package creation. Because `TARGET=كل شيء`, concurrent product changes are not silently treated as disjoint; broad discovery must classify them into the global graph.
-- Runtime/DB/E2E evidence is not yet established for this whole-system target.
+- Current graph-driven framework reconciled on branch `A` at `5c0af6f402ef3379dc77a9565c104b1ab22836e5` immediately before this package bookkeeping write.
+- START_SHA remains `b73e2752ef65e5b8817e35cdd96948dc1386fb47` for task provenance.
+- `TARGET=كل شيء`; therefore every concurrent product change discovered on branch A must be classified into the global graph rather than silently assumed disjoint.
+- Runtime/DB/device/provider/CI claims remain unproven until candidate-bound evidence is actually acquired.
 
 ## 2. Macro Blueprint / Dependency Graph
-
-`TARGET=كل شيء` must become a bounded Universe covering material domains, actors, journeys, surfaces, routes, states, contracts, data owners, runtime paths, configs, tests/guards, governance, security, jobs/providers, observability and structural residue.
-
-Current state:
 
 ```text
 BROAD_DISCOVERY = IN_PROGRESS
 MACRO_BLUEPRINT = NOT_COMPLETE
-DEPENDENCY_GRAPH = NOT_COMPLETE
-FIRST_EXECUTION_SEQUENCE = NOT_DERIVED
+RELATION_GRAPH = NOT_COMPLETE
+ROOT_CAUSE_CLUSTERS = NOT_COMPLETE
+ACTIVE_EXECUTION_FRONTIER = NONE
 ```
 
-No Domain/app/surface sequence files are pre-created. The first `001-*.md` may be created only after the graph proves a coherent root-cause/ownership/dependency/verification boundary.
+The graph must support vertical/horizontal/reverse/cross-layer/cross-surface traversal, structured backtracking, suspension/reopen, and proven independent parallel frontiers.
 
-## 3. Sequence Registry
+## 3. Sequence Registry / Execution Frontier
 
-| Sequence ID | File | Subject | Derivation basis | Depends on | Unlocks | Status | Reopen trigger |
-|---|---|---|---|---|---|---|---|
+| Sequence ID | File | Subject | Derivation basis | Depends on | Unlocks | Conflict domain | Execution owner | Status | Reopen trigger |
+|---|---|---|---|---|---|---|---|---|---|
 <!-- SEQUENCE_REGISTRY_ROWS -->
 
-No Sequence exists yet. This is intentional, not missing work: the V2 rule forbids future placeholder sequences.
+No Sequence exists yet. This is intentional: future closure units must be derived from evidence/graph boundaries Just-In-Time.
 
 ## 4. Global Decisions / Blockers
 
 ### Global Decisions
-None proven yet. Derivable facts must be exhausted before asking Product/Architecture questions.
+None proven yet. Every future resolved decision must propagate through the full proven impact graph before dependent execution continues.
 
 ### Global Blockers
-- Whole-system runtime/DB/device/provider evidence requires applicable execution capabilities when triggered.
-- No final closure claim until candidate-bound repository-platform/runtime evidence required by actual blast radius is acquired.
+- Applicable runtime/DB/device/provider evidence capabilities must be acquired when a closure claim requires them.
+- External/protected blockers may pause affected graph nodes only; they must not freeze unrelated independent frontiers without a proven dependency.
 
-## 5. Global Coverage / Reconciliation
+## 5. Global Accounting / Coverage / Reconciliation
 
-Initial global coverage state:
+All accounting categories start open:
 
 ```text
-Universe Inventory = IN_PROGRESS
-Scope Delta = open and must classify every discovered material node
-Findings = evidence-driven only; none may be invented
-Decisions = no true boundary reached yet
-Adversarial completeness = NOT_RUN
+Graph Nodes/Coverage = IN_PROGRESS
+Findings = OPEN ACCOUNTING
+Scope Deltas = OPEN ACCOUNTING
+Decisions = OPEN ACCOUNTING
+Consumers = OPEN ACCOUNTING
+Evidence = OPEN ACCOUNTING
+Cleanup = OPEN ACCOUNTING
+Adversarial negative-space discovery = NOT_RUN
 ```
 
-V1 package details were initialization scaffolding, not live Product Truth. Valid baseline/provenance information is preserved here; sequence-specific content will be created only when evidence proves the sequence.
+Every material discovery must become an ID-addressable graph/ledger item. No IGNORE, silent TODO, or untracked carry-forward is permitted.
 
 ## 6. Final Target Handoff / Closure
 
-All global gates remain fail-closed:
-
-```text
-DISCOVERY_COMPLETE = NO
-DIAGNOSIS_COMPLETE = NO
-DECISION_COMPLETE = NO
-COVERAGE_COMPLETE = NO
-PACKAGE_READY = NO
-IMPLEMENTATION_COMPLETE = NO
-EVIDENCE_COMPLETE = NO
-CLEANUP_COMPLETE = NO
-GOVERNANCE_SYNC_COMPLETE = NO
-FRESH_HEAD_VALID = NO
-FINAL_ADVERSARIAL_PASS = NO
-```
-
-No `FINAL_DECISION` may be issued until every material Sequence is complete, global reconciliation/final cleanup is complete, evidence is valid on the immutable final candidate, live HEAD is reconciled and the current governance decision vocabulary authorizes closure.
+Fail-closed until every global and accounting gate passes on latest reconciled truth. `SEQUENCE_COMPLETE` is local closure only; TARGET closure requires global reconciliation, final structural cleanup, governance parity, exact final candidate, fresh HEAD, evidence reacquisition after invalidation, independent adversarial completeness and final read-only verification.
