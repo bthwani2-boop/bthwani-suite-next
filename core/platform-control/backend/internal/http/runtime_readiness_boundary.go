@@ -15,7 +15,7 @@ import (
 const (
 	minimumInternalServiceTokenLength   = 32
 	platformControlMigrationServiceName = "platform-control"
-	platformControlLatestMigration      = "platform-008_partner_commercial_model.sql"
+	platformControlLatestMigration      = "platform-009_partner_commercial_truth_boundary.sql"
 	defaultReadinessProbeTimeout        = 2 * time.Second
 	defaultClockSkewLimit               = 5 * time.Second
 )

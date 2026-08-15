@@ -39,7 +39,7 @@
       "baseUrlEnv": "PROVIDERS_API_BASE_URL",
       "defaultBaseUrl": "http://127.0.0.1:58087",
       "path": "/providers/readiness",
-      "healthyStatuses": ["ready"]
+      "healthyStatuses": ["HEALTHY"]
     },
     "platform": {
       "name": "Platform Control API",
@@ -47,7 +47,7 @@
       "baseUrlEnv": "PLATFORM_CONTROL_API_BASE_URL",
       "defaultBaseUrl": "http://127.0.0.1:58088",
       "path": "/platform/readiness",
-      "healthyStatuses": ["ready"]
+      "healthyStatuses": ["HEALTHY"]
     },
     "media": {
       "name": "MinIO",

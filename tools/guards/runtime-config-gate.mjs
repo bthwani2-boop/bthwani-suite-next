@@ -137,6 +137,7 @@ if (!fs.existsSync(path.join(repoRoot, envExample))) {
     ["WLT_DSH_SERVICE_TOKEN", "dev-only-dsh-wlt-shared-secret"],
     ["DSH_WLT_SERVICE_TOKEN", "dev-only-dsh-wlt-shared-secret"],
     ["WLT_PAYOUT_ENCRYPTION_KEY", "dev-only-payout-destination-encryption-key"],
+    ["PLATFORM_CONTROL_DSH_SERVICE_TOKEN", "LOCAL_ONLY_replace_with_platform_control_dsh_service_token"],
   ]);
   if (mode === "production") {
     for (const [key, weak] of weakDefaults) {
