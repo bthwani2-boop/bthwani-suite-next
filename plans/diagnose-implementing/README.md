@@ -2,93 +2,65 @@
 
 Status: DERIVED_SUPPORT
 
-This framework creates evidence-backed diagnosis/execution packages under `plans/diagnose-implementing/<task-name>/`. It is planning support only and cannot create policy, Product Truth, implementation truth, approval, or final closure.
+هذا الإطار ينشئ حزم تشخيص/تنفيذ مشتقة تحت `plans/diagnose-implementing/<task-name>/`. لا ينشئ Product Truth أو Implementation/Runtime Truth أو Approval أو Closure بذاته، ولا يجوز لأي Runtime/Build/CI الاعتماد على محتوى الحزم الناتجة.
 
-## Operating model
+## القالب الحاكم
 
-Start from the named task/surface/journey and expand only through proven ownership, dependency, product, security, financial, data, runtime, or cross-surface impact. The package must make execution possible without rediscovering scope, guessing owners/paths, inventing tests, or creating a parallel truth model.
-
-## Generated package
+القالب الحالي الوحيد للحزم الجديدة هو:
 
 ```text
-<task-name>/
-├─ START-HERE.md
-├─ MANIFEST.json
-├─ GLOBAL-DIAGNOSIS.md
-├─ COVERAGE.json
-├─ EXECUTION-ORDER.json
-├─ units/
-│  └─ U001-<unit-name>/
-│     ├─ DIAGNOSIS.md
-│     ├─ EXECUTION.json
-│     ├─ VERIFICATION.json
-│     └─ RESULT.json
-└─ CLOSURE.md
+plans/diagnose-implementing/_template/
+├── 01-DIAGNOSIS.template.md
+├── 02-EXECUTION.template.md
+└── 03-VERIFICATION-CLOSURE.template.md
 ```
 
-## Information ownership inside a package
-
-- identity/repository/branch/SHA/objective/primary surface → `MANIFEST.json`;
-- repository/cross-domain diagnosis → `GLOBAL-DIAGNOSIS.md`;
-- assessed scope and inclusion/exclusion evidence → `COVERAGE.json`;
-- dependency order/progress → `EXECUTION-ORDER.json`;
-- unit root cause/evidence → `units/<ID>/DIAGNOSIS.md`;
-- exact tasks/paths/symbols/target state → `units/<ID>/EXECUTION.json`;
-- required checks/proof limits → `units/<ID>/VERIFICATION.json`;
-- actual results → `units/<ID>/RESULT.json`;
-- package-level final summary → `CLOSURE.md`.
-
-Do not duplicate complete unit tasks/checks into root files.
-
-## Coverage
-
-`COVERAGE.json` is the only structured coverage ledger. Allowed assessments:
+وينتج:
 
 ```text
-UNASSESSED
-RELATED
-NOT_RELATED_WITH_EVIDENCE
-DEFECT_OUTSIDE_EXECUTION_SCOPE
-EXTERNAL_DEPENDENCY
+plans/diagnose-implementing/<TASK_NAME>/
+├── 01-DIAGNOSIS.md
+├── 02-EXECUTION.md
+└── 03-VERIFICATION-CLOSURE.md
 ```
 
-A related entry links evidence and at least one execution unit. An exclusion records evidence, reason, and reopen trigger. Silence is invalid.
+المسارات القديمة داخل `_template` و`new-unit.mjs` باقية فقط كـ`RETIRED_COMPATIBILITY_SENTINEL` لمنع كسر حراس/مراجع أقدم؛ ليست قالبًا موازيًا ولا يجوز استخدامها لإنشاء حزمة جديدة.
 
-## Execution units
+## الارتباط بالأوركسترا
 
-Create exactly one unit per non-overlapping executable concern. A unit identifies root cause/truth owner, affected paths/symbols/surfaces/journeys, ordered changes, forbidden changes, measurable acceptance, verification, rollback, and logical commit boundary.
-
-Only one writable unit may be `IN_PROGRESS`. A unit starts only after dependencies are `DONE` and blocking prerequisites are satisfied.
-
-Allowed kinds:
+نقطة الدخول المنهجية:
 
 ```text
-TOPIC | CONTEXT | JOURNEY | FOUNDATION | MIGRATION | CLEANUP | VERIFICATION
+tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md
 ```
 
-## Create a package
+حزمة الأمر تحت `tools/prompting/**` منفصلة عن حزمة المهمة تحت `plans/**`.
+
+## الأوضاع
+
+```text
+PREPARE_ONLY
+= تشخيص كامل + قرارات + تغطية + إنشاء حزمة جاهزة، دون Product/Governance/Runtime mutation.
+
+EXECUTE_END_TO_END
+= نفس التشخيص أولًا، ثم Governance Promotion عند الحاجة + Root-Cause implementation + cleanup + verification + closure gates.
+```
+
+## إنشاء حزمة
 
 ```powershell
 node plans/diagnose-implementing/new-package.mjs `
   --name <task-name> `
   --branch <branch> `
   --sha <40-character-sha> `
-  --surface <surface-or-section> `
+  --mode PREPARE_ONLY `
+  --target "<blank-or-target>" `
   --objective "<measurable objective>"
 ```
 
-## Create a unit
+يمكن استخدام `--surface` كـalias انتقالي لـ`--target` فقط؛ لا يغير نموذج الحزمة.
 
-```powershell
-node plans/diagnose-implementing/new-unit.mjs `
-  plans/diagnose-implementing/<task-name> `
-  --id U001 `
-  --name <unit-name> `
-  --kind JOURNEY `
-  --depends-on ""
-```
-
-## Validate
+## التحقق
 
 ```powershell
 node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/<task-name>
@@ -96,16 +68,14 @@ node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementin
 node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/<task-name> --strict --closure
 ```
 
-`--closure` requires strict validation. Do not invent unsupported flags.
+- `--strict`: يتطلب اجتياز بوابات Discovery/Diagnosis/Decision/Coverage/Package Ready وعدم وجود placeholders غير محسومة.
+- `--closure`: يتطلب `EXECUTE_END_TO_END` ويضيف Implementation/Cleanup/Evidence/Governance/Fresh-Head/Adversarial gates وقرار إغلاق غير OPEN/BLOCKED.
+- Validator يثبت فقط شكل الحزمة والبوابات النصية التي يفحصها؛ لا يثبت صحة المنتج أو Runtime.
 
-Strict validation rejects unassessed required coverage, unsupported exclusions, missing/cyclic dependencies, overlapping execution concerns, vague tasks, missing targets/paths/symbols/checks/rollback, nonexistent verification references, unresolved template markers, invalid JSON, secret-like content, or an incomplete plan.
+## استئناف الحزم القديمة
 
-Closure additionally requires all units/results/checks to satisfy the validator's current schema and decision requirements.
+أي حزمة قديمة ببنية `MANIFEST/COVERAGE/units/**` هي Derived Historical Support. عند استئنافها لا يُعاد تشغيل مخططها القديم ميكانيكيًا؛ تُعاد معايرتها مقابل الأوركسترا والحقيقة الحالية ثم تُسقط إلى الملفات الثلاثة الحالية إذا كانت المهمة ما تزال نشطة.
 
-## Planning sources
+## السلامة
 
-`plans/smsm-dsh-wlt-journeys/` may be used as derived journey discovery/support. It is not Product Truth or implementation evidence and must be reconciled with `governance/product/PRD.md`, applicable Product Truth, current contracts/source/migrations/tests, and runtime evidence where claimed.
-
-## Safety
-
-Runtime, builds, CI, migrations, governance, and operations must never depend on a generated package. Do not store credentials, secrets, private keys, production data, raw dumps, PII, or sensitive screenshots here. Git history is the archive for retired packages unless a current task explicitly requires a retained planning artifact.
+لا تخزن Credentials/Secrets/PII/production dumps هنا. Git history هو الأرشيف الافتراضي. الحقيقة الدائمة التي يجب أن تبقى بعد حذف Prompt/Plan تُرقّى إلى مالكها الحاكم داخل `governance/**` والعقود/الكود الحي وفق الـMODE والسلطة.

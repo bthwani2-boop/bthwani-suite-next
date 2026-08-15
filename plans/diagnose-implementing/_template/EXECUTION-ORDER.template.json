@@ -1,6 +1,5 @@
 {
-  "schemaVersion": 3,
-  "taskId": "TASK_PACKAGE_ID",
-  "status": "DRAFT",
-  "units": []
+  "status": "RETIRED_COMPATIBILITY_SENTINEL",
+  "canonicalTemplate": "02-EXECUTION.template.md",
+  "note": "Dependency and execution order now live in 02-EXECUTION.md."
 }

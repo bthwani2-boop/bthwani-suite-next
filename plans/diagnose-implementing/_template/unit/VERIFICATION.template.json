@@ -1,5 +1,4 @@
 {
-  "schemaVersion": 3,
-  "unitId": "UNIT_ID",
-  "checks": []
+  "status": "RETIRED_COMPATIBILITY_SENTINEL",
+  "canonicalTemplate": "03-VERIFICATION-CLOSURE.template.md"
 }

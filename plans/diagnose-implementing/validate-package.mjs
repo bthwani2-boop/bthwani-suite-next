@@ -1,21 +1,121 @@
 #!/usr/bin/env node
-import{access,readFile,readdir}from'node:fs/promises';import{constants}from'node:fs';import{dirname,join,resolve,sep}from'node:path';import{fileURLToPath}from'node:url';
-const root=dirname(fileURLToPath(import.meta.url)),repo=resolve(root,'..','..'),argv=process.argv.slice(2),strict=argv.includes('--strict'),closure=argv.includes('--closure'),arg=argv.find(x=>!x.startsWith('--'));
-if(!arg)throw Error('Usage: validate-package.mjs <package-path> [--strict] [--closure]');if(closure&&!strict)throw Error('--closure requires --strict.');
-const pkg=resolve(process.cwd(),arg);if(!pkg.startsWith(`${resolve(root)}${sep}`)||pkg===resolve(root,'_template'))throw Error('Invalid package path.');
-const E=[],W=[],fail=m=>E.push(m),soft=m=>(strict?E:W).push(m),A=v=>Array.isArray(v)?v:[],S=v=>typeof v==='string'&&v.trim().length>0;
-const rootFiles=['START-HERE.md','MANIFEST.json','GLOBAL-DIAGNOSIS.md','COVERAGE.json','EXECUTION-ORDER.json','CLOSURE.md'],unitFiles=['DIAGNOSIS.md','EXECUTION.json','VERIFICATION.json','RESULT.json'];
-const assessments=new Set(['UNASSESSED','RELATED','NOT_RELATED_WITH_EVIDENCE','DEFECT_OUTSIDE_EXECUTION_SCOPE','EXTERNAL_DEPENDENCY']),kinds=new Set(['TOPIC','CONTEXT','JOURNEY','FOUNDATION','MIGRATION','CLEANUP','VERIFICATION']),surfaces=['control-panel','app-client','app-partner','app-captain','app-field'];
-const markers=[/\bTASK_(?:NAME|PACKAGE_ID|OBJECTIVE)\b/g,/\bPRIMARY_SURFACE\b/g,/\bTARGET_BRANCH\b/g,/\bPINNED_START_SHA\b/g,/\bREPOSITORY_NAME\b/g,/\bUNIT_(?:ID|NAME|KIND)\b/g,/\bTODO\b/g,/\bTBD\b/g],secrets=[/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,/\bAKIA[0-9A-Z]{16}\b/,/\bgh[pousr]_[A-Za-z0-9_]{20,}\b/,/\bgithub_pat_[A-Za-z0-9_]{20,}\b/,/\bsk-[A-Za-z0-9]{20,}\b/],vague=/^(fix|improve|clean|complete|review|connect|update|handle|verify)( everything| it| this| the issue| the code)?[.!]?$/i;
-async function ex(p){try{await access(p,constants.F_OK);return true}catch{return false}}async function txt(p){return readFile(p,'utf8')}async function js(p,l){try{return JSON.parse(await txt(p))}catch(e){fail(`${l}: invalid JSON: ${e.message}`);return null}}function need(v,l){if(!S(v))fail(`${l} required.`)}function arr(v,l,r=false){if(!Array.isArray(v)){fail(`${l} must be array.`);return[]}if(r&&!v.length)fail(`${l} empty.`);return v}async function scan(p,l){const c=await txt(p);for(const x of markers){x.lastIndex=0;if(x.test(c))soft(`${l} unresolved marker ${x}.`)}for(const x of secrets)if(x.test(c))fail(`${l} secret-like content.`);return c}
-if(!await ex(pkg))throw Error(`Package path does not exist: ${pkg}`);
-const allowedRoot=new Set([...rootFiles,'units']);for(const e of await readdir(pkg,{withFileTypes:true}))if(!allowedRoot.has(e.name))fail(`Unexpected package root entry ${e.name}.`);
-for(const f of rootFiles){const p=join(pkg,f);if(!await ex(p))fail(`Missing ${f}.`);else await scan(p,f)}if(!await ex(join(pkg,'units')))fail('Missing units/.');
-const m=await js(join(pkg,'MANIFEST.json'),'MANIFEST'),c=await js(join(pkg,'COVERAGE.json'),'COVERAGE'),o=await js(join(pkg,'EXECUTION-ORDER.json'),'EXECUTION-ORDER');
-if(m){if(m.schemaVersion!==3||m.packageClass!=='DERIVED_SUPPORT_ARTIFACT')fail('Manifest schema/class.');for(const[k,v]of Object.entries({taskId:m.task?.id,name:m.task?.name,objective:m.task?.objective,primarySurface:m.task?.primarySurface,repository:m.repository?.name,branch:m.repository?.targetBranch}))need(v,`manifest.${k}`);if(!/^[0-9a-f]{40}$/i.test(m.repository?.pinnedStartSha??''))fail('Manifest SHA.');if(m.authority?.canCreatePolicy!==false||m.authority?.canOverrideCanonicalSource!==false)fail('Manifest authority.');for(const k of['runtimeDependsOnPackage','buildDependsOnPackage','ciDependsOnPackage','migrationDependsOnPackage','governanceDependsOnPackage','operationsDependOnPackage','containsSecretsOrProductionData'])if(m.disposability?.[k]!==false)fail(`disposability.${k}.`);if(strict&&(m.status?.diagnosis!=='COMPLETE'||m.status?.plan!=='READY'))fail('Diagnosis COMPLETE and plan READY required.');}
-const cov=new Map(),ev=new Set();if(c){if(c.schemaVersion!==3||c.taskId!==m?.task?.id)fail('Coverage schema/task.');for(const[x,i]of A(c.evidenceIndex).map((x,i)=>[x,i])){for(const k of['evidenceRef','source','claim','result','limitations'])need(x?.[k],`evidence[${i}].${k}`);if(ev.has(x?.evidenceRef))fail(`Duplicate evidence ${x.evidenceRef}.`);else ev.add(x?.evidenceRef)}for(const[e,i]of arr(c.entries,'coverage.entries',true).map((x,i)=>[x,i])){for(const k of['coverageId','entityType','name'])need(e?.[k],`coverage[${i}].${k}`);if(cov.has(e?.coverageId))fail(`Duplicate coverage ${e.coverageId}.`);else cov.set(e?.coverageId,e);if(!assessments.has(e?.assessment))fail(`${e?.coverageId} assessment.`);if(strict&&e?.assessment==='UNASSESSED')fail(`${e.coverageId} UNASSESSED.`);if(e?.assessment!=='UNASSESSED')need(e?.summary,`${e?.coverageId}.summary`);for(const r of arr(e?.evidenceRefs,`${e?.coverageId}.evidenceRefs`,e?.assessment!=='UNASSESSED'))if(!ev.has(r))fail(`${e.coverageId} unknown evidence ${r}.`);if(e?.assessment==='RELATED'){if(e.executionDisposition!=='IN_SCOPE')fail(`${e.coverageId} disposition.`);arr(e.unitIds,`${e.coverageId}.unitIds`,true)}if(e?.assessment==='NOT_RELATED_WITH_EVIDENCE'||e?.assessment==='DEFECT_OUTSIDE_EXECUTION_SCOPE'){need(e.exclusionReason,`${e.coverageId}.exclusionReason`);need(e.reopenTrigger,`${e.coverageId}.reopenTrigger`)}if(e?.assessment==='EXTERNAL_DEPENDENCY')need(e.reopenTrigger,`${e.coverageId}.reopenTrigger`)}for(const s of surfaces)if(A(c.entries).filter(e=>e.entityType==='SURFACE'&&e.name===s).length!==1)fail(`Surface ${s} missing/duplicate.`);for(const[d,p]of[['DSH','apps/control-panel/runtime/src/app/(shell)/dsh'],['WLT','apps/control-panel/runtime/src/app/(shell)/wlt']]){const q=resolve(repo,p);if(await ex(q))for(const x of await readdir(q,{withFileTypes:true}))if(x.isDirectory()&&!A(c.entries).some(e=>e.entityType==='CONTROL_PANEL_SECTION'&&e.domain===d&&e.name===x.name))fail(`Missing ${d} section ${x.name}.`)}if(strict&&c.assessmentStatus!=='COMPLETE')fail('Coverage COMPLETE required.');}
-const refs=new Map();if(o){if(o.schemaVersion!==3||o.taskId!==m?.task?.id)fail('Order schema/task.');for(const[u,i]of arr(o.units,'order.units',strict).map((x,i)=>[x,i])){if(!/^U\d{3,}$/.test(u?.unitId??''))fail(`unit[${i}] id.`);need(u?.path,`unit[${i}].path`);arr(u?.dependsOn,`unit[${i}].dependsOn`);if(refs.has(u?.unitId))fail(`Duplicate unit ${u.unitId}.`);else refs.set(u?.unitId,u);if(!['DRAFT','READY','IN_PROGRESS','BLOCKED','DONE'].includes(u?.status))fail(`${u?.unitId} status.`);if(strict&&!['READY','DONE'].includes(u?.status))fail(`${u?.unitId} not ready.`)}for(const u of refs.values())for(const d of u.dependsOn)if(!refs.has(d))fail(`${u.unitId} unknown dependency ${d}.`);const visiting=new Set(),done=new Set();function visit(id){if(visiting.has(id)){fail(`Dependency cycle ${id}.`);return}if(done.has(id))return;visiting.add(id);for(const d of refs.get(id)?.dependsOn??[])visit(d);visiting.delete(id);done.add(id)}for(const id of refs.keys())visit(id);if([...refs.values()].filter(u=>u.status==='IN_PROGRESS').length>1)fail('Multiple IN_PROGRESS units.');if(strict&&o.status!=='READY')fail('Order READY required.');}
-const unitsRoot=join(pkg,'units');if(await ex(unitsRoot)){const registeredUnitPaths=new Set([...refs.values()].map(r=>resolve(pkg,r.path)));for(const e of await readdir(unitsRoot,{withFileTypes:true})){const p=resolve(unitsRoot,e.name);if(!e.isDirectory())fail(`Unexpected units entry ${e.name}; units/ may contain unit directories only.`);else if(!registeredUnitPaths.has(p))fail(`Unregistered unit directory units/${e.name}.`);}}
-const concerns=new Map(),taskIds=new Set();for(const[id,r]of refs){const up=resolve(pkg,r.path);if(!up.startsWith(`${resolve(pkg,'units')}${sep}`)){fail(`${id} path escape.`);continue}if(await ex(up)){const allowedUnit=new Set(unitFiles);for(const e of await readdir(up,{withFileTypes:true}))if(!allowedUnit.has(e.name))fail(`${id} unexpected unit entry ${e.name}.`);}for(const f of unitFiles){const p=join(up,f);if(!await ex(p))fail(`${id} missing ${f}.`);else await scan(p,`${id}/${f}`)}const d=await ex(join(up,'DIAGNOSIS.md'))?await txt(join(up,'DIAGNOSIS.md')):'';if(strict&&d.length<600)fail(`${id} diagnosis shallow.`);const x=await js(join(up,'EXECUTION.json'),`${id}/EXECUTION`),v=await js(join(up,'VERIFICATION.json'),`${id}/VERIFICATION`),z=await js(join(up,'RESULT.json'),`${id}/RESULT`);if(!x||!v||!z)continue;if(x.schemaVersion!==3||x.unitId!==id||v.unitId!==id||z.unitId!==id)fail(`${id} IDs.`);if(!kinds.has(x.kind))fail(`${id} kind.`);if(strict||x.status!=='DRAFT'){for(const[k,val]of Object.entries({name:x.name,executionConcern:x.executionConcern,objective:x.objective,truthOwner:x.truthOwner}))need(val,`${id}.${k}`);if(vague.test(x.objective??''))fail(`${id} vague objective.`);if(concerns.has(x.executionConcern))fail(`${id} duplicate concern ${concerns.get(x.executionConcern)}.`);else concerns.set(x.executionConcern,id);for(const q of arr(x.coverageIds,`${id}.coverageIds`,true)){const e=cov.get(q);if(!e)fail(`${id} unknown coverage ${q}.`);else if(!A(e.unitIds).includes(id))fail(`${q} no backlink ${id}.`)}arr(x.affectedSurfaces,`${id}.affectedSurfaces`,true);arr(x.journeys,`${id}.journeys`,true);if(JSON.stringify(x.dependsOn??[])!==JSON.stringify(r.dependsOn??[]))fail(`${id} dependsOn mismatch.`);const checks=new Map();for(const[h,i]of arr(v.checks,`${id}.checks`,true).map((q,i)=>[q,i])){for(const k of['verificationId','type','command','proves','doesNotProve','passCriteria','failCriteria'])need(h?.[k],`${id}.check[${i}].${k}`);if(checks.has(h?.verificationId))fail(`${id} duplicate check ${h.verificationId}.`);else checks.set(h?.verificationId,h)}const orders=new Set();for(const[t,i]of arr(x.tasks,`${id}.tasks`,true).map((q,i)=>[q,i])){if(!new RegExp(`^${id}-T\\d{3,}$`).test(t?.taskId??''))fail(`${id}.task[${i}] id.`);if(taskIds.has(t?.taskId))fail(`Duplicate task ${t.taskId}.`);else taskIds.add(t?.taskId);if(!Number.isInteger(t?.order)||t.order<1||orders.has(t.order))fail(`${t?.taskId} order.`);else orders.add(t.order);for(const k of['objective','currentProblem','requiredChange','targetState','action','rollback','commitBoundary'])need(t?.[k],`${t?.taskId}.${k}`);if(vague.test(t?.objective??'')||vague.test(t?.requiredChange??''))fail(`${t?.taskId} vague.`);for(const k of['paths','symbols','mustNotChange','acceptanceCriteria','verificationIds'])arr(t?.[k],`${t?.taskId}.${k}`,true);for(const q of A(t?.verificationIds))if(!checks.has(q))fail(`${t.taskId} unknown check ${q}.`)}}if(strict&&x.status!==r.status)fail(`${id} status mismatch.`);if(closure){if(r.status!=='DONE'||x.status!=='DONE'||z.status!=='DONE')fail(`${id} not DONE.`);if(!/^[0-9a-f]{40}$/i.test(z.resultingSha??''))fail(`${id} result SHA.`);if(z.decision!=='PASS'||A(z.blockers).length||A(z.deviations).length)fail(`${id} unresolved result.`);const R=new Map(A(z.checkResults).map(q=>[q.verificationId,q]));for(const h of A(v.checks))if(h.required===true&&R.get(h.verificationId)?.status!=='PASS')fail(`${id} check ${h.verificationId} not PASS.`)}}
-for(const e of cov.values())for(const id of A(e.unitIds))if(!refs.has(id))fail(`${e.coverageId} unknown unit ${id}.`);if(closure&&m){if(m.status?.implementation!=='COMPLETE'||m.status?.verification!=='COMPLETE'||m.status?.decision!=='CLOSED_WITH_EVIDENCE')fail('Manifest closure state.');if(!(await txt(join(pkg,'CLOSURE.md'))).includes('CLOSED_WITH_EVIDENCE'))fail('CLOSURE decision missing.');}
-for(const x of W)console.warn(`WARN: ${x}`);for(const x of E)console.error(`ERROR: ${x}`);console.log(`Validation summary: ${E.length} error(s), ${W.length} warning(s).`);if(E.length)process.exitCode=1;
+import { access, readFile, readdir, stat } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { basename, resolve, sep } from 'node:path';
+
+const args = process.argv.slice(2);
+const packageArg = args.find((value) => !value.startsWith('--'));
+const strict = args.includes('--strict') || args.includes('--closure');
+const closure = args.includes('--closure');
+if (!packageArg) throw new Error('Usage: validate-package.mjs <package-path> [--strict] [--closure]');
+
+const packageRoot = resolve(packageArg);
+const frameworkRoot = resolve('plans/diagnose-implementing');
+if (!packageRoot.startsWith(`${frameworkRoot}${sep}`)) throw new Error('Package path must be under plans/diagnose-implementing/.');
+if (basename(packageRoot) === '_template') throw new Error('Validate a generated package, not _template.');
+
+async function exists(path) {
+  try { await access(path, constants.F_OK); return true; } catch { return false; }
+}
+
+const requiredFiles = ['01-DIAGNOSIS.md', '02-EXECUTION.md', '03-VERIFICATION-CLOSURE.md'];
+const violations = [];
+const texts = {};
+for (const file of requiredFiles) {
+  const path = resolve(packageRoot, file);
+  if (!(await exists(path))) {
+    violations.push(`${file}: MISSING_REQUIRED_FILE`);
+    continue;
+  }
+  texts[file] = await readFile(path, 'utf8');
+}
+
+if (violations.length && await exists(resolve(packageRoot, 'MANIFEST.json'))) {
+  violations.push('LEGACY_PACKAGE_SCHEMA_DETECTED: rebaseline/migrate the active task into the current three-file package model before claiming current readiness.');
+}
+
+function meta(text) {
+  const out = {};
+  for (const line of text.split(/\r?\n/)) {
+    const match = /^([A-Z][A-Z0-9_]+):\s*(.*)$/.exec(line.trim());
+    if (match) out[match[1]] = match[2].trim();
+  }
+  return out;
+}
+
+function requireHeading(file, heading) {
+  if (texts[file] && !texts[file].includes(heading)) violations.push(`${file}: MISSING_SECTION ${heading}`);
+}
+
+for (const [file, text] of Object.entries(texts)) {
+  const unresolved = [...text.matchAll(/__[A-Z0-9_]+__/g)].map((m) => m[0]);
+  if (unresolved.length) violations.push(`${file}: UNRESOLVED_TEMPLATE_MARKERS ${[...new Set(unresolved)].join(',')}`);
+  if (/-----BEGIN (RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/.test(text)) violations.push(`${file}: PRIVATE_KEY_MATERIAL_FORBIDDEN`);
+}
+
+requireHeading('01-DIAGNOSIS.md', '## 1. Truth Baseline');
+requireHeading('01-DIAGNOSIS.md', '## 4. Macro Operational Blueprint');
+requireHeading('01-DIAGNOSIS.md', '## 7. Findings Ledger');
+requireHeading('01-DIAGNOSIS.md', '## 8. Coverage Ledger');
+requireHeading('01-DIAGNOSIS.md', '## 9. Decision Ledger');
+requireHeading('01-DIAGNOSIS.md', '## 12. Final Diagnosis Gate');
+requireHeading('02-EXECUTION.md', '## 1. Execution Plan');
+requireHeading('02-EXECUTION.md', '## 5. Actual Change Ledger');
+requireHeading('02-EXECUTION.md', '## 8. Local Cleanup');
+requireHeading('03-VERIFICATION-CLOSURE.md', '## 1. Verification Plan');
+requireHeading('03-VERIFICATION-CLOSURE.md', '## 4. Final Cleanup / Structural Hygiene');
+requireHeading('03-VERIFICATION-CLOSURE.md', '## 5. Governance Reconciliation');
+requireHeading('03-VERIFICATION-CLOSURE.md', '## 8. Final Closure Gate');
+
+const diagnosis = meta(texts['01-DIAGNOSIS.md'] ?? '');
+const execution = meta(texts['02-EXECUTION.md'] ?? '');
+const verification = meta(texts['03-VERIFICATION-CLOSURE.md'] ?? '');
+
+if (diagnosis.PACKAGE_SCHEMA !== 'BTHWANI_TASK_PACKAGE_V1') violations.push('01-DIAGNOSIS.md: PACKAGE_SCHEMA_INVALID');
+if (!/^PKG-[A-Z0-9_]+$/.test(diagnosis.TASK_ID ?? '')) violations.push('01-DIAGNOSIS.md: TASK_ID_INVALID');
+if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(diagnosis.REPOSITORY ?? '')) violations.push('01-DIAGNOSIS.md: REPOSITORY_INVALID');
+if (!['PREPARE_ONLY', 'EXECUTE_END_TO_END'].includes(diagnosis.MODE)) violations.push('01-DIAGNOSIS.md: MODE_INVALID');
+for (const field of ['START_SHA', 'CURRENT_SHA']) {
+  if (!/^[0-9a-f]{40}$/i.test(diagnosis[field] ?? '')) violations.push(`01-DIAGNOSIS.md: ${field}_INVALID`);
+}
+
+const yes = (value) => value === 'YES';
+if (strict) {
+  for (const field of ['DISCOVERY_COMPLETE', 'DIAGNOSIS_COMPLETE', 'DECISION_COMPLETE', 'COVERAGE_COMPLETE', 'PACKAGE_READY']) {
+    if (!yes(diagnosis[field])) violations.push(`01-DIAGNOSIS.md: STRICT_GATE_NOT_PASS ${field}=${diagnosis[field] ?? '<missing>'}`);
+  }
+  if (/\bUNVISITED\b|\bUNCLASSIFIED\b|\bDECISION_REQUIRED\b/.test(texts['01-DIAGNOSIS.md'] ?? '')) {
+    violations.push('01-DIAGNOSIS.md: STRICT_UNRESOLVED_STATUS_PRESENT');
+  }
+}
+
+if (diagnosis.MODE === 'PREPARE_ONLY') {
+  if (yes(execution.IMPLEMENTATION_COMPLETE)) violations.push('02-EXECUTION.md: PREPARE_ONLY_CANNOT_CLAIM_IMPLEMENTATION_COMPLETE');
+  if ((verification.FINAL_DECISION ?? 'OPEN') !== 'OPEN') violations.push('03-VERIFICATION-CLOSURE.md: PREPARE_ONLY_FINAL_DECISION_MUST_REMAIN_OPEN');
+}
+
+if (closure) {
+  if (diagnosis.MODE !== 'EXECUTE_END_TO_END') violations.push('CLOSURE_REQUIRES_EXECUTE_END_TO_END');
+  if (!yes(execution.IMPLEMENTATION_COMPLETE)) violations.push('02-EXECUTION.md: IMPLEMENTATION_COMPLETE_REQUIRED');
+  for (const field of ['EVIDENCE_COMPLETE', 'CLEANUP_COMPLETE', 'GOVERNANCE_SYNC_COMPLETE', 'FRESH_HEAD_VALID', 'FINAL_ADVERSARIAL_PASS']) {
+    if (!yes(verification[field])) violations.push(`03-VERIFICATION-CLOSURE.md: CLOSURE_GATE_NOT_PASS ${field}=${verification[field] ?? '<missing>'}`);
+  }
+  if (!verification.FINAL_CANDIDATE_SHA || !/^[0-9a-f]{40}$/i.test(verification.FINAL_CANDIDATE_SHA)) violations.push('03-VERIFICATION-CLOSURE.md: FINAL_CANDIDATE_SHA_INVALID');
+  if (!verification.HEAD_AT_DECISION || !/^[0-9a-f]{40}$/i.test(verification.HEAD_AT_DECISION)) violations.push('03-VERIFICATION-CLOSURE.md: HEAD_AT_DECISION_INVALID');
+  if (!verification.FINAL_DECISION || ['OPEN', 'BLOCKED', 'UNSET'].includes(verification.FINAL_DECISION)) violations.push('03-VERIFICATION-CLOSURE.md: FINAL_DECISION_NOT_CLOSED');
+}
+
+if (await exists(packageRoot) && (await stat(packageRoot)).isDirectory()) {
+  const entries = await readdir(packageRoot, { withFileTypes: true });
+  const rootFiles = entries.filter((e) => e.isFile()).map((e) => e.name);
+  for (const file of requiredFiles) if (!rootFiles.includes(file)) {/* already reported */}
+}
+
+if (violations.length) {
+  console.error(`PACKAGE VALIDATION: FAIL (${violations.length})`);
+  for (const violation of violations) console.error(`- ${violation}`);
+  process.exit(1);
+}
+
+console.log(`PACKAGE VALIDATION: PASS${closure ? ' --closure' : strict ? ' --strict' : ''}`);
+console.log('Proof limit: structural/package-gate validation only; not Product/Runtime correctness.');
