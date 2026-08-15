@@ -34,6 +34,11 @@ function replaceAll(text, replacements) {
   for (const [key, value] of Object.entries(replacements)) output = output.split(key).join(value);
   return output;
 }
+function parseFrontier(value) {
+  if (!value || value === 'NONE') return [];
+  return value.split(',').map((x) => x.trim()).filter(Boolean);
+}
+function serializeFrontier(values) { return values.length ? values.join(',') : 'NONE'; }
 
 const args = parseArgs(process.argv.slice(2));
 const packageName = args.package;
@@ -42,15 +47,20 @@ const title = args.title ?? name;
 const baseSha = args['base-sha'];
 const basis = args.basis;
 const dependsOn = args['depends-on'] ?? 'NONE';
+const suspendCurrent = (args['suspend-current'] ?? 'NO').toUpperCase();
+const parallel = (args.parallel ?? 'NO').toUpperCase();
 
 if (!packageName || !name || !baseSha || !basis) {
-  throw new Error('Usage: new-sequence.mjs --package <task-name> --name <sequence-slug> [--title <title>] --base-sha <40-sha> --basis <proven-boundary-reason> [--depends-on <SEQ-001|NONE>]');
+  throw new Error('Usage: new-sequence.mjs --package <task-name> --name <slug> [--title <title>] --base-sha <40-sha> --basis <proven-boundary> [--depends-on <SEQ-NNN|NONE>] [--suspend-current YES|NO] [--parallel YES|NO]');
 }
 if (!/^[a-z0-9][a-z0-9-]{2,79}$/.test(packageName) || packageName === '_template' || packageName.includes('..')) throw new Error('Unsafe package name.');
 if (!/^[a-z0-9][a-z0-9-]{1,79}$/.test(name) || name.includes('..')) throw new Error('Unsafe sequence name.');
 if (!/^[0-9a-f]{40}$/i.test(baseSha)) throw new Error('base-sha must be exactly 40 hexadecimal characters.');
-if (!basis.trim()) throw new Error('basis must explain the proven dependency/root-cause/ownership/verification boundary.');
+if (!basis.trim()) throw new Error('basis must explain the proven graph/root-cause/ownership/verification boundary.');
 if (!(dependsOn === 'NONE' || /^(SEQ-\d{3})(,\s*SEQ-\d{3})*$/.test(dependsOn))) throw new Error('depends-on must be NONE or comma-separated SEQ-NNN IDs.');
+if (!['YES','NO'].includes(suspendCurrent)) throw new Error('suspend-current must be YES or NO.');
+if (!['YES','NO'].includes(parallel)) throw new Error('parallel must be YES or NO.');
+if (suspendCurrent === 'YES' && parallel === 'YES') throw new Error('suspend-current and parallel cannot both be YES.');
 
 const packageRoot = resolve(frameworkRoot, packageName);
 if (!packageRoot.startsWith(`${resolve(frameworkRoot)}${sep}`)) throw new Error('Package path escapes framework root.');
@@ -60,14 +70,26 @@ if (!(await exists(overviewPath))) throw new Error('V2 package must contain 00-O
 let overview = await readFile(overviewPath, 'utf8');
 const overviewMeta = meta(overview);
 if (overviewMeta.PACKAGE_SCHEMA !== 'BTHWANI_TASK_PACKAGE_V2') throw new Error('Package is not BTHWANI_TASK_PACKAGE_V2.');
-if (overviewMeta.CURRENT_SEQUENCE_ID !== 'UNSET') throw new Error(`Current sequence is still active: ${overviewMeta.CURRENT_SEQUENCE_ID}. Complete/prepare and clear it before creating the next sequence.`);
-if ((overviewMeta.CURRENT_SHA ?? '').toLowerCase() !== baseSha.toLowerCase()) throw new Error(`base-sha must equal overview CURRENT_SHA (${overviewMeta.CURRENT_SHA ?? '<missing>'}) after fresh-head reconciliation.`);
+if ((overviewMeta.LATEST_RECONCILED_SHA ?? '').toLowerCase() !== baseSha.toLowerCase()) throw new Error(`base-sha must equal LATEST_RECONCILED_SHA (${overviewMeta.LATEST_RECONCILED_SHA ?? '<missing>'}) after fresh-head reconciliation.`);
+
+const frontier = parseFrontier(overviewMeta.ACTIVE_EXECUTION_FRONTIER);
+let suspensionStacks = overviewMeta.SUSPENSION_STACKS ?? 'NONE';
+if (suspendCurrent === 'YES') {
+  if (frontier.length !== 1) throw new Error('suspend-current requires exactly one current active focus.');
+  const currentId = frontier[0];
+  const entries = await readdir(packageRoot, { withFileTypes: true });
+  const currentEntry = entries.find((entry) => entry.isFile() && new RegExp(`^${currentId.slice(4)}-[a-z0-9-]+\\.md$`).test(entry.name));
+  if (!currentEntry) throw new Error(`Current focus file not found for ${currentId}.`);
+  const currentMeta = meta(await readFile(join(packageRoot, currentEntry.name), 'utf8'));
+  if (currentMeta.SEQUENCE_STATUS !== 'SUSPENDED_BY_DEPENDENCY') throw new Error(`${currentId} must already be SUSPENDED_BY_DEPENDENCY before backtrack creation.`);
+  suspensionStacks = suspensionStacks === 'NONE' ? currentId : `${suspensionStacks};${currentId}`;
+} else if (frontier.length && parallel !== 'YES') {
+  throw new Error(`Active execution frontier is not empty (${frontier.join(',')}). Use --parallel YES only for a graph-proven independent frontier, or explicitly suspend the single current focus before deriving an upstream sequence.`);
+}
 
 const entries = await readdir(packageRoot, { withFileTypes: true });
 if (entries.some((entry) => entry.isDirectory())) throw new Error('V2 packages must not contain subdirectories.');
-const ordinals = entries
-  .filter((entry) => entry.isFile() && /^\d{3}-[a-z0-9-]+\.md$/.test(entry.name))
-  .map((entry) => Number(entry.name.slice(0, 3)));
+const ordinals = entries.filter((e) => e.isFile() && /^\d{3}-[a-z0-9-]+\.md$/.test(e.name)).map((e) => Number(e.name.slice(0, 3)));
 const nextOrder = ordinals.length ? Math.max(...ordinals) + 1 : 1;
 if (nextOrder > 999) throw new Error('Sequence ordinal limit exceeded.');
 const order = String(nextOrder).padStart(3, '0');
@@ -93,13 +115,16 @@ const content = replaceAll(template, {
 
 const marker = '<!-- SEQUENCE_REGISTRY_ROWS -->';
 if (!overview.includes(marker)) throw new Error('Overview sequence registry marker is missing.');
-const row = `| ${sequenceId} | \`${filename}\` | ${title.replaceAll('|', '\\|')} | ${basis.replaceAll('|', '\\|')} | ${dependsOn} | TBD | DIAGNOSING | material finding/decision/head drift |`;
-overview = overview.replace(/^CURRENT_SEQUENCE_ID:\s*UNSET$/m, `CURRENT_SEQUENCE_ID: ${sequenceId}`);
+const row = `| ${sequenceId} | \`${filename}\` | ${title.replaceAll('|', '\\|')} | ${basis.replaceAll('|', '\\|')} | ${dependsOn} | TBD | UNCLASSIFIED | UNASSIGNED | DIAGNOSING | material finding/decision/head drift |`;
+const nextFrontier = parallel === 'YES' ? [...frontier, sequenceId] : [sequenceId];
+overview = overview.replace(/^ACTIVE_EXECUTION_FRONTIER:\s*.*$/m, `ACTIVE_EXECUTION_FRONTIER: ${serializeFrontier(nextFrontier)}`);
+overview = overview.replace(/^SUSPENSION_STACKS:\s*.*$/m, `SUSPENSION_STACKS: ${suspensionStacks}`);
 overview = overview.replace(marker, `${row}\n${marker}`);
 
 await writeFile(destination, content, { encoding: 'utf8', flag: 'wx' });
 await writeFile(overviewPath, overview, 'utf8');
 
 console.log(`Created ${sequenceId}: ${filename}`);
-console.log('Overview CURRENT_SEQUENCE_ID and registry were updated.');
-console.log('Do not create another sequence until this one reaches the mode-specific exit gate and CURRENT_SEQUENCE_ID is cleared.');
+console.log(`ACTIVE_EXECUTION_FRONTIER=${serializeFrontier(nextFrontier)}`);
+if (parallel === 'YES') console.log('Parallel frontier created; live writes remain forbidden until conflict-domain independence is proven.');
+if (suspendCurrent === 'YES') console.log(`Backtrack stack updated: ${suspensionStacks}`);
