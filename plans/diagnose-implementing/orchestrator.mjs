@@ -153,10 +153,31 @@ function isAncestor(base, head, branchName = null) {
   return git(["merge-base", "--is-ancestor", base, head], { allowFailure: true }).ok;
 }
 
+function changedPaths(base, head) {
+  ensureCommitObject(base);
+  ensureCommitObject(head);
+  const output = git(["diff", "--name-only", "-z", base, head, "--"]).stdout;
+  return output ? output.split("\0").filter(Boolean) : [];
+}
+
+function taskContentIntegrated(base, task, integration) {
+  if (isAncestor(task, integration)) return true;
+  const taskPaths = changedPaths(base, task);
+  if (taskPaths.length === 0) return true;
+  const finalDifferences = new Set(changedPaths(task, integration));
+  return taskPaths.every((file) => !finalDifferences.has(file));
+}
+
 function currentHead() {
   const sha = git(["rev-parse", "HEAD"]).stdout;
   assert(SHA.test(sha), "current HEAD did not resolve to a commit SHA");
   return sha.toLowerCase();
+}
+
+function currentBranch() {
+  const result = git(["symbolic-ref", "--quiet", "--short", "HEAD"], { allowFailure: true });
+  assert(result.ok && result.stdout, "detached HEAD is not a governed execution context");
+  return result.stdout;
 }
 
 function replaceToken(text, token, value) {
@@ -176,6 +197,11 @@ function atomicWrite(file, text) {
     fs.closeSync(fd);
     fd = undefined;
     fs.renameSync(temp, file);
+    try {
+      const dirFd = fs.openSync(dir, "r");
+      fs.fsyncSync(dirFd);
+      fs.closeSync(dirFd);
+    } catch {}
   } catch (error) {
     if (fd !== undefined) {
       try { fs.closeSync(fd); } catch {}
@@ -203,6 +229,13 @@ function requireEvidencePass(evidenceById, id, { candidate = null } = {}) {
   assert(row.Claim, `${id} claim is missing`);
   assert(row["Limits / invalidates on"], `${id} proof limits/invalidation trigger is missing`);
   if (candidate) assert(row.Candidate === candidate, `${id} must be bound to Candidate=${candidate}`);
+  return row;
+}
+
+function requireEvidenceNA(evidenceById, id) {
+  const row = evidenceById.get(id);
+  assert(row, `missing required evidence ${id}`);
+  assert(row.Result === "N/A", `${id} must be N/A`);
   return row;
 }
 
@@ -271,10 +304,18 @@ function validateOperational(model, evidenceById) {
     }
     byId.set(row.Node, row);
   }
+
+  const parentGraph = new Map();
   for (const row of model.operational) {
-    if (row.Parent === "ROOT" || row.Parent === "NONE") continue;
+    if (row.Parent === "ROOT" || row.Parent === "NONE") {
+      parentGraph.set(row.Node, []);
+      continue;
+    }
     assert(byId.has(row.Parent), `${row.Node} references unknown operational parent ${row.Parent}`);
+    parentGraph.set(row.Node, [row.Parent]);
   }
+  assertAcyclic(byId, (row) => parentGraph.get(row.Node) ?? [], "operational graph");
+
   const open = model.operational.filter((row) => !new Set(["PROVEN", "EXCLUDED"]).has(row.Status));
   assert(open.length === 0, `operational coverage has open/stale nodes: ${open.map((row) => row.Node).join(", ")}`);
   return byId;
@@ -283,7 +324,7 @@ function validateOperational(model, evidenceById) {
 function validateEvidence(model) {
   const byId = new Map();
   const allowedResult = new Set(["PASS", "FAIL", "MISSING", "STALE", "BLOCKED", "N/A"]);
-  const allowedCandidate = /^(?:BASE|TASK_HEAD|INTEGRATION_HEAD|SELF|N\/A|[0-9a-f]{40})$/i;
+  const allowedCandidate = /^(?:BASE|BASE_SHA|TASK_HEAD|INTEGRATION_HEAD|SELF|N\/A|[0-9a-f]{40})$/i;
   for (const row of model.evidence) {
     assert(EVD_ID.test(row.Evidence), `invalid Evidence id ${row.Evidence}`);
     assert(!byId.has(row.Evidence), `duplicate Evidence ${row.Evidence}`);
@@ -319,28 +360,30 @@ function assertAcyclic(byId, depsFor, label) {
 }
 
 function validateRoots(model, operationalById, evidenceById) {
-  assert(model.roots.length > 0, "root-cause landscape is empty");
   const byId = new Map();
-  const priorities = [];
+  if (model.roots.length === 0) return byId;
+
+  const priorities = new Set();
   for (const row of model.roots) {
     assert(RC_ID.test(row.RC), `invalid RC id ${row.RC}`);
     assert(!byId.has(row.RC), `duplicate RC ${row.RC}`);
     assert(row["Root cause"] && row["Blast / unlock"], `${row.RC} missing root cause/blast-unlock`);
     assert(operationalById.has(row["Operational parent"]), `${row.RC} references unknown Operational parent ${row["Operational parent"]}`);
     assert(/^[1-9]\d*$/.test(row.Priority), `${row.RC} Priority must be a positive integer`);
-    priorities.push(Number(row.Priority));
+    const priority = Number(row.Priority);
+    assert(!priorities.has(priority), `duplicate root-cause Priority=${priority}`);
+    priorities.add(priority);
     assert(new Set(["DEEPENED_ENOUGH_TO_RANK", "PROVEN_CANNOT_OUTRANK"]).has(row.Deepening), `${row.RC} has invalid Deepening ${row.Deepening}`);
     assert(new Set(["READY", "DEPENDENT", "RESOLVED", "EXCLUDED"]).has(row.Disposition), `${row.RC} has unresolved/invalid Disposition ${row.Disposition}`);
     for (const ev of listRefs(row.Evidence)) assert(evidenceById.has(ev), `${row.RC} references unknown Evidence ${ev}`);
     byId.set(row.RC, row);
   }
-  assert(priorities.includes(1), "root-cause ranking must contain Priority=1");
+  assert(priorities.has(1), "root-cause ranking must contain Priority=1");
   for (const row of model.roots) {
     for (const dep of listRefs(row["Depends on"])) assert(byId.has(dep), `${row.RC} references unknown RC dependency ${dep}`);
   }
   assertAcyclic(byId, (row) => listRefs(row["Depends on"]), "root-cause graph");
   const winners = model.roots.filter((row) => row.Priority === "1" && !new Set(["RESOLVED", "EXCLUDED"]).has(row.Disposition));
-  assert(winners.length > 0, "no active Priority=1 root cause");
   for (const winner of winners) assert(winner.Deepening === "DEEPENED_ENOUGH_TO_RANK", `${winner.RC} winner must be DEEPENED_ENOUGH_TO_RANK`);
   return byId;
 }
@@ -357,7 +400,13 @@ function validateLedger(model, rootsById, evidenceById) {
     assert(row.Status, `${row.ID} missing Status`);
     if (row.RC !== "NONE") assert(rootsById.has(row.RC), `${row.ID} references unknown RC ${row.RC}`);
     if (row.Type === "FINDING" && row.RC === "NONE") assert(row.Status === "EXCLUDED", `${row.ID} Finding requires RC unless EXCLUDED`);
-    if (row.Type === "LOWER_LAYER") assert(new Set(["PROMOTED", "DISPOSITIONED", "HOLD"]).has(row.Status), `${row.ID} lower-layer status invalid`);
+    if (row.Type === "LOWER_LAYER") {
+      assert(new Set(["PROMOTED", "DISPOSITIONED", "HOLD"]).has(row.Status), `${row.ID} lower-layer status invalid`);
+      if (row.Status === "PROMOTED") {
+        assert(row.RC !== "NONE", `${row.ID} PROMOTED lower-layer observation requires RC`);
+        assert(listRefs(row.Evidence).length > 0, `${row.ID} PROMOTED lower-layer observation requires evidence`);
+      }
+    }
     for (const ev of listRefs(row.Evidence)) assert(evidenceById.has(ev), `${row.ID} references unknown Evidence ${ev}`);
     byId.set(row.ID, row);
   }
@@ -370,12 +419,22 @@ function validateLedger(model, rootsById, evidenceById) {
       assert(row && row.Type === "CONSUMER", `${root.RC} references unknown/non-consumer ${consumer}`);
     }
   }
+  if (rootsById.size === 0) {
+    const materialFindings = model.ledger.filter((row) => row.Type === "FINDING" && row.Status !== "EXCLUDED");
+    assert(materialFindings.length === 0, "material Findings exist without a root-cause landscape");
+  }
   return { byId, settled };
 }
 
 function validateFrontier(model, rootsById, evidenceById, phase) {
-  assert(model.frontier.length > 0, "frontier is empty");
   const byId = new Map();
+  if (rootsById.size === 0) {
+    assert(model.frontier.length === 0, "frontier must be empty when there are no material root causes");
+    if (phase === "execute") assert(false, "execute has no material root treatment");
+    return byId;
+  }
+
+  assert(model.frontier.length > 0, "frontier is empty");
   const allowedState = new Set(["WAITING", "READY", "EXECUTING", "BLOCKED", "COMPLETE", "PREPARED"]);
   for (const row of model.frontier) {
     assert(ID.test(row.Work), `invalid Work id ${row.Work}`);
@@ -435,6 +494,7 @@ function semanticPhase(text, phase) {
   requireEvidencePass(evidenceById, "EVD-VERIFICATION-PLAN");
   const rootsById = validateRoots(model, operationalById, evidenceById);
   const { settled } = validateLedger(model, rootsById, evidenceById);
+  if (rootsById.size === 0) requireEvidencePass(evidenceById, "EVD-NO-MATERIAL-FINDINGS");
   validateFrontier(model, rootsById, evidenceById, phase);
 
   if (phase === "prepare") {
@@ -446,7 +506,17 @@ function semanticPhase(text, phase) {
   }
   if (phase === "verify" || phase === "close") {
     validateCleanup(model, settled);
-    for (const id of ["EVD-IMPLEMENTATION", "EVD-CONSUMERS", "EVD-CLEANUP", "EVD-VERIFICATION"]) requireEvidencePass(evidenceById, id);
+    if (rootsById.size > 0) {
+      requireEvidencePass(evidenceById, "EVD-IMPLEMENTATION", { candidate: "TASK_HEAD" });
+      requireEvidencePass(evidenceById, "EVD-CONSUMERS", { candidate: "TASK_HEAD" });
+      requireEvidencePass(evidenceById, "EVD-CLEANUP", { candidate: "TASK_HEAD" });
+      requireEvidencePass(evidenceById, "EVD-VERIFICATION");
+    } else {
+      requireEvidenceNA(evidenceById, "EVD-IMPLEMENTATION");
+      requireEvidenceNA(evidenceById, "EVD-CONSUMERS");
+      requireEvidenceNA(evidenceById, "EVD-CLEANUP");
+      requireEvidencePass(evidenceById, "EVD-VERIFICATION");
+    }
   }
   if (phase === "close") {
     assert(model.fields.INTEGRATION_OWNER !== "UNASSIGNED", "close requires assigned INTEGRATION_OWNER");
@@ -476,17 +546,25 @@ export function semanticCheckForTests(text, phase) {
 function gitTruth(model, phase) {
   const integrationSha = remoteBranchSha(model.fields.INTEGRATION_BRANCH);
   const taskSha = remoteBranchSha(model.fields.TASK_BRANCH);
+  const head = currentHead();
+  const branch = currentBranch();
   assert(isAncestor(model.fields.BASE_SHA.toLowerCase(), taskSha, model.fields.TASK_BRANCH), "BASE_SHA is not an ancestor of TASK_BRANCH");
   const reconciled = model.fields.LATEST_RECONCILED_SHA.toLowerCase();
 
   if (phase !== "close") {
+    assert(branch === model.fields.TASK_BRANCH, `${phase} must run on TASK_BRANCH ${model.fields.TASK_BRANCH}`);
+    assert(head === taskSha, `${phase} must run on exact TASK_BRANCH HEAD; current=${head} task=${taskSha}`);
     assert(reconciled === integrationSha, `package is stale: LATEST_RECONCILED_SHA=${reconciled} live=${integrationSha}`);
   } else {
-    const head = currentHead();
+    assert(branch === model.fields.INTEGRATION_BRANCH, "close must run on the integration branch");
     assert(head === integrationSha, `close must run on exact live Integration Target HEAD; current=${head} live=${integrationSha}`);
+    assert(
+      taskContentIntegrated(model.fields.BASE_SHA.toLowerCase(), taskSha, integrationSha),
+      "TASK_BRANCH content has not been fully integrated into the live Integration Target",
+    );
     assert(isAncestor(reconciled, integrationSha, model.fields.INTEGRATION_BRANCH), "LATEST_RECONCILED_SHA is not an ancestor of final Integration Target");
   }
-  return { integrationSha, taskSha, head: currentHead() };
+  return { integrationSha, taskSha, head, branch };
 }
 
 function commandNew(tokens) {
@@ -505,7 +583,9 @@ function commandNew(tokens) {
 
   const baseSha = remoteBranchSha(integration);
   const taskSha = remoteBranchSha(task);
-  assert(isAncestor(baseSha, taskSha, task), `task branch ${task} is not based on current ${integration}=${baseSha}`);
+  assert(taskSha === baseSha, `new package requires TASK_BRANCH to start exactly at current ${integration}=${baseSha}`);
+  assert(currentBranch() === task, `new must run on TASK_BRANCH ${task}`);
+  assert(currentHead() === taskSha, "new must run on exact TASK_BRANCH HEAD");
   assert(fs.existsSync(TEMPLATE), "PACKAGE.template.md is missing");
 
   const taskDir = path.join(HERE, name);

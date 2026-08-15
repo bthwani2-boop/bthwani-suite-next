@@ -116,10 +116,19 @@ requireMarkers("orchestrator.mjs", cli, [
   'command === "check"',
   'command === "state"',
   "remoteBranchSha",
+  "currentBranch",
+  "taskContentIntegrated",
   "merge-base",
   "semanticCheckForTests",
   "EVD-FINAL-ADVERSARIAL",
+  "EVD-NO-MATERIAL-FINDINGS",
+  "new package requires TASK_BRANCH to start exactly",
+  "must run on exact TASK_BRANCH HEAD",
+  "TASK_BRANCH content has not been fully integrated into the live Integration Target",
   "close must run on exact live Integration Target HEAD",
+  "PROMOTED lower-layer observation requires RC",
+  "operational graph",
+  '{ candidate: "TASK_HEAD" }',
 ]);
 
 rejectMarkers("orchestrator.mjs", cli, [
@@ -223,6 +232,30 @@ function fixture({ mode = "EXECUTE_END_TO_END", frontierState = "READY", full = 
   return text;
 }
 
+function noMaterialFixture() {
+  const zero = "0".repeat(40);
+  let text = template
+    .replaceAll("__TASK_ID__", "guard-no-material")
+    .replaceAll("__TARGET__", "all")
+    .replaceAll("__MODE__", "PREPARE_ONLY")
+    .replaceAll("__INTEGRATION_BRANCH__", "A")
+    .replaceAll("__TASK_BRANCH__", "task/guard-no-material")
+    .replaceAll("__BASE_SHA__", zero);
+  text = rowAfter(
+    text,
+    "Operational Coverage",
+    "| OP-ROOT | SYSTEM_ROOT | ROOT | Material operational root reconciled with no material findings | PROVEN | EVD-ROOT |",
+  );
+  for (const row of [
+    "| EVD-ROOT | Root coverage proof | operational-root-check | BASE | repo | PASS | invalidate on root/authority change |",
+    "| EVD-NEGATIVE-SPACE | Negative-space challenge | negative-space-check | BASE | repo | PASS | invalidate on scope change |",
+    "| EVD-ADVERSARIAL | Adversarial diagnosis | adversarial-check | BASE | repo | PASS | invalidate on causal graph change |",
+    "| EVD-VERIFICATION-PLAN | Verification defined | verification-plan | BASE | repo | PASS | invalidate on scope change |",
+    "| EVD-NO-MATERIAL-FINDINGS | No material findings remain | adversarial-no-findings | BASE | repo | PASS | invalidate on new material evidence |",
+  ].reverse()) text = rowAfter(text, "Evidence", row);
+  return text;
+}
+
 let semanticCheckForTests;
 try {
   ({ semanticCheckForTests } = await import(`${pathToFileURL(CLI).href}?gate=${Date.now()}`));
@@ -255,6 +288,7 @@ const goodDiagnose = fixture();
 expectPass("positive diagnose fixture", goodDiagnose, "diagnose");
 expectPass("positive execute fixture", goodDiagnose, "execute");
 expectPass("positive prepare fixture", fixture({ mode: "PREPARE_ONLY", prepare: true }), "prepare");
+expectPass("positive no-material-findings fixture", noMaterialFixture(), "diagnose");
 const goodFull = fixture({ frontierState: "COMPLETE", full: true });
 expectPass("positive verify fixture", goodFull, "verify");
 expectPass("positive close semantic fixture", goodFull, "close");
@@ -270,6 +304,12 @@ expectFail(
   goodDiagnose.replace("| OP-ROOT | SYSTEM_ROOT | ROOT | Material operational root reconciled | PROVEN | EVD-ROOT |", "| OP-ROOT | SYSTEM_ROOT | ROOT | Material operational root reconciled | PROVEN | EVD-404 |"),
   "diagnose",
   "OP-ROOT references unknown Evidence EVD-404",
+);
+expectFail(
+  "operational parent cycle",
+  goodDiagnose.replace("| OP-ROOT | SYSTEM_ROOT | ROOT |", "| OP-ROOT | SYSTEM_ROOT | OP-ROOT |"),
+  "diagnose",
+  "operational graph dependency cycle",
 );
 expectFail(
   "root-cause dependency cycle",
@@ -296,6 +336,12 @@ expectFail(
   "unaccounted material ledger rows",
 );
 expectFail(
+  "promoted lower-layer without RC",
+  goodDiagnose.replace("| LOWER_LAYER | LOW-001 | RC-001 | Early technical symptom dispositioned | DISPOSITIONED |", "| LOWER_LAYER | LOW-001 | NONE | Early technical symptom dispositioned | PROMOTED |"),
+  "diagnose",
+  "PROMOTED lower-layer observation requires RC",
+);
+expectFail(
   "unknown consumer",
   goodDiagnose.replace("| CON-001 | Removes duplicate truth |", "| CON-404 | Removes duplicate truth |"),
   "diagnose",
@@ -306,6 +352,12 @@ expectFail(
   goodDiagnose.replace("| owner | NO | READY |", "| owner | NO | BLOCKED |"),
   "execute",
   "execute cannot pass with BLOCKED",
+);
+expectFail(
+  "verify with stale implementation candidate",
+  goodFull.replace("| EVD-IMPLEMENTATION | Root treatment implemented | implementation-check | TASK_HEAD |", "| EVD-IMPLEMENTATION | Root treatment implemented | implementation-check | BASE |"),
+  "verify",
+  "EVD-IMPLEMENTATION must be bound to Candidate=TASK_HEAD",
 );
 expectFail(
   "verify without implementation evidence",
