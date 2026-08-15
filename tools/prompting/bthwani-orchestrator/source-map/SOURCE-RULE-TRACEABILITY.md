@@ -1,7 +1,7 @@
 # Source Rule Traceability
 
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
-Purpose: prove source-rule accounting after the root-anchored, task-isolated, graph-driven refinement.
+Purpose: prove source-rule accounting after the root-anchored, task-isolated, graph-driven, systemic-priority refinement.
 
 ## Preserved Source Baseline
 
@@ -16,8 +16,6 @@ Purpose: prove source-rule accounting after the root-anchored, task-isolated, gr
 Any source SHA drift reopens this map. `UNACCOUNTED` / `DROPPED` forbidden.
 
 ## Current Explicit Agreement — Invocation / Task Isolation
-
-Stronger rules adopted:
 
 ```text
 NEW INVOCATION = NEW PACKAGE BY DEFAULT.
@@ -34,10 +32,7 @@ THIS TASK/PACKAGE/ROOT/GRAPH governs direction.
 FOREIGN DELTA = INPUT_NOT_INSTRUCTION.
 ```
 
-This supersedes any earlier behavior that could:
-- reuse the last open package automatically;
-- continue a previous session because it changed the branch most recently;
-- use the Integration Target as a shared working branch.
+This supersedes any earlier behavior that could reuse the last open package automatically, follow the most recent session/commit, or use the Integration Target as a shared working branch.
 
 ## Root Anchoring Preserved
 
@@ -47,14 +42,64 @@ LATEST_HEAD = truth/integration baseline only.
 LATEST_COMMIT/last-session topic/last changed file never chooses task direction.
 Every invocation/resume restores root orientation first.
 Execution frontier is derived/revalidated from ROOT_RECONCILED_GRAPH.
-Recency is never execution priority.
 ```
+
+## Current Explicit Agreement — Target-Wide Root-Cause Landscape / Priority
+
+New stronger rule adopted:
+
+```text
+BEFORE FIRST EXECUTION FRONTIER:
+TARGET-wide material discovery
+→ Finding IDs
+→ symptom correlation
+→ RC-NNN root-cause clusters
+→ dependency/impact placement
+→ comparative systemic-leverage ranking
+→ adversarial challenge
+→ justified execution frontier
+```
+
+Priority rule:
+
+```text
+PRIORITY = HIGHEST PROVEN SYSTEMIC LEVERAGE
+```
+
+Comparative dimensions:
+
+```text
+UPSTREAM / ROOT-CAUSE DEPTH
+→ BLOCKING POWER
+→ CANONICAL / FOUNDATION IMPORTANCE
+→ BLAST RADIUS
+→ RISK / SEVERITY
+→ UNLOCK VALUE
+→ FINDING DENSITY / RECURRENCE
+→ STRUCTURAL-DEBT MULTIPLIER
+```
+
+`MOST_FINDINGS` is a correlation/density signal, not automatic execution priority. A smaller cluster may outrank a noisier one when it is more upstream/foundational/blocking/risky or unlocks more of the graph.
+
+Forbidden priority shortcuts:
+
+```text
+RECENCY
+MOST_FINDINGS_ALONE
+MOST_CHANGED_FILES
+EASIEST_FIX
+LAST_SESSION_TOPIC
+SEQUENCE_NUMBER
+```
+
+Every material Finding must be clustered/dispositioned; every material root-cause cluster must be ranked before frontier selection. Any new causal/dependency/authority truth that changes clustering or systemic leverage invalidates the affected priority model and requires re-ranking before continuation.
 
 ## Existing Graph/Closure Rules Preserved
 
 ```text
 THE GRAPH GOVERNS MOVEMENT.
 ROOT CAUSE GOVERNS SCOPE.
+SYSTEMIC LEVERAGE GOVERNS PRIORITY.
 ACCOUNTING PREVENTS SILENT LOSS.
 DEPENDENCIES GOVERN ORDER.
 INDEPENDENCE GOVERNS PARALLELISM.
@@ -76,6 +121,7 @@ task branch
 → latest target reconciliation
 → semantic rebuild/rebase
 → invalidated verification
+→ affected landscape/priority reconciliation
 → serialized integration
 → INTEGRATION_COMPLETE=YES
 → final candidate on Integration Target
@@ -84,14 +130,15 @@ task branch
 
 ## Tooling Binding
 
-- `00-OVERVIEW.template.md`: invocation/root/task-isolation/frontier provenance fields.
+- `00-OVERVIEW.template.md`: invocation/root/task-isolation/landscape/priority/frontier provenance fields and root-cause landscape table.
 - `new-package.mjs`: creates only a fresh package and requires isolated task workspace inputs.
 - `root-anchor-gate.mjs`: validates root/frontier provenance against live target SHA.
+- `root-cause-priority-gate.mjs`: validates target-wide landscape, clustering, ranking and frontier-priority provenance.
 - `task-isolation-gate.mjs`: validates task branch/worktree/remote isolation and explicit resume/integration phases.
-- `new-sequence.mjs`: refuses JIT derivation on stale root or unproven task isolation.
-- `validate-package.mjs`: validates isolation/header/sequence/final integration gates.
-- `OVERVIEW-CONTRACT.md` / `SEQUENCE-CONTRACT.md` / `CLOSURE-CONTRACT.md`: define machine-readable invariants.
-- Orchestrator `00/01/04/05/06`: prevents implicit package resume, recency-driven navigation and shared-target writes.
+- `new-sequence.mjs`: refuses JIT derivation unless Root + Landscape/Priority + Isolation gates are represented and requires `RC-NNN` + priority class/basis.
+- `SEQUENCE.template.md`: binds every Sequence to a root-cause cluster and comparative priority rationale.
+- `OVERVIEW-CONTRACT.md` / `SEQUENCE-CONTRACT.md` / `CLOSURE-CONTRACT.md`: define landscape/priority + isolation + closure invariants.
+- Orchestrator `00/01/02/03/04`: prevents implicit package resume, recency-driven navigation, finding-count-only prioritization and leaf-first execution around systemic roots.
 
 ## Final Coverage Gate
 
@@ -103,6 +150,11 @@ TASK_CONTEXT_ISOLATION = ACCOUNTED
 WORKTREE_LOCAL_ISOLATION = ACCOUNTED
 REMOTE_TASK_BRANCH_ISOLATION = ACCOUNTED
 ROOT_ANCHOR_AGREEMENT = ACCOUNTED
+TARGET_WIDE_LANDSCAPE = ACCOUNTED
+ROOT_CAUSE_CLUSTERING = ACCOUNTED
+SYSTEMIC_LEVERAGE_PRIORITY = ACCOUNTED
+PRIORITY_INVALIDATION_RERANK = ACCOUNTED
+LANDSCAPE_ADVERSARIAL_PASS = ACCOUNTED
 GRAPH_DRIVEN_MODEL = ACCOUNTED
 MULTI_AGENT_CONCURRENCY = ACCOUNTED
 ACCOUNTING = ACCOUNTED
@@ -113,4 +165,4 @@ UNACCOUNTED = 0
 DROPPED = 0
 ```
 
-This proves methodology/source-rule accounting only, not Product/Runtime correctness.
+This proves methodology/source-rule accounting only, not Product/Runtime correctness or literal discovery of every possible defect.
