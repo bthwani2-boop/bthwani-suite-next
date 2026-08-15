@@ -4,6 +4,7 @@ Status: DERIVED_SUPPORT
 TASK_ID: __TASK_ID__
 REPOSITORY: __REPOSITORY__
 BRANCH: __BRANCH__
+TASK_BRANCH: __TASK_BRANCH__
 MODE: __MODE__
 SEQUENCE_ID: __SEQUENCE_ID__
 SEQUENCE_NAME: __SEQUENCE_NAME__
@@ -37,13 +38,14 @@ VERIFICATION_PASS: NO
 GOVERNANCE_SYNC: NOT_APPLICABLE
 SCOPE_DELTA_CLASSIFIED: NO
 
-> One file = one coherent root-cause/execution/verification/closure unit. The graph may suspend/reopen/jump across sequences; never hide that movement in prose only.
+> One file = one coherent root-cause/execution/verification/closure unit. All live writes belong to the package TASK_BRANCH/isolated workspace, never directly to the Integration Target.
 
 ## 1. Scope / Context / Graph Position
 
 - Why this Sequence exists / proven boundary:
 - Depends on / blocks / unlocks:
 - Conflict Domain:
+- Task branch / writing workspace:
 - Execution owner / worker mission / input SHA:
 - Parallel safety proof or SERIAL_REQUIRED reason:
 - In-scope journeys/surfaces/contracts/data/runtime:
@@ -70,8 +72,6 @@ After each true decision:
 decision → full proven impact graph → invalidate affected assumptions/evidence → re-diagnose
 ```
 
-Record affected writers/readers/consumers/contracts/states/data/surfaces/governance/runtime.
-
 ## 5. Exact Target State / Coherent Cutover
 
 Define final semantic/architectural state. No closure while a required consumer, parallel truth, migration, legacy path, workaround or contradictory state remains necessary for cutover correctness.
@@ -79,10 +79,10 @@ Define final semantic/architectural state. No closure while a required consumer,
 ## 6. Treatment / Execution
 
 ### PREPARE_ONLY
-Exact actionable root treatment/cutover/cleanup/verification; no fabricated execution.
+Exact actionable root treatment/cutover/cleanup/verification; package writes remain on isolated Task Branch.
 
 ### EXECUTE_END_TO_END
-Record planned action and actual changes/candidates as they occur on latest reconciled head.
+Record actual changes/candidates on Task Branch/workspace after Root + Task-Isolation + Sequence gates.
 
 ## 7. Consumers / Contracts / Data / Governance
 
