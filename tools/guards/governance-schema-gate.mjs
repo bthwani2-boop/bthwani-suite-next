@@ -163,7 +163,7 @@ requireExactDirectory("tools/prompting/bthwani-orchestrator/contracts", [
   "CLOSURE-CONTRACT.md",
 ]);
 requireExactDirectory("tools/prompting/bthwani-orchestrator/source-map", ["SOURCE-RULE-TRACEABILITY.md"]);
-requireExactDirectory("plans", [], ["diagnose-implementing", "smsm-dsh-wlt-journeys"]);
+requireExactDirectory("plans", [], ["diagnose-implementing"]);
 requireExactDirectory("plans/diagnose-implementing/_template", [
   "01-DIAGNOSIS.template.md",
   "02-EXECUTION.template.md",
@@ -227,6 +227,8 @@ for (const retired of [
   "plans/diagnose-implementing/_template/EXECUTION-ORDER.template.json",
   "plans/diagnose-implementing/_template/CLOSURE.template.md",
   "plans/diagnose-implementing/_template/unit",
+  "plans/smsm-dsh-wlt-journeys",
+  "tools/scripts/check-smsm-journey-coverage.mjs",
 ]) {
   if (exists(retired)) violations.push({ file: retired, line: 0, message: "RETIRED_OR_PARALLEL_PATH_REINTRODUCED" });
 }
@@ -242,7 +244,6 @@ for (const required of [
   "plans/diagnose-implementing/_template/03-VERIFICATION-CLOSURE.template.md",
   "tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md",
   "tools/prompting/bthwani-orchestrator/source-map/SOURCE-RULE-TRACEABILITY.md",
-  "plans/smsm-dsh-wlt-journeys/04-JOURNEY-REGISTRY.yaml",
   `${sdlcRoot}/README.md`,
   `${sdlcRoot}/lifecycle.state-machine.yaml`,
   `${sdlcRoot}/roles-and-authority.yaml`,
@@ -393,7 +394,6 @@ if (authority) {
     workflowPath,
     "governance/github/master-protection.ruleset.json",
     "plans/diagnose-implementing",
-    "plans/smsm-dsh-wlt-journeys",
   ]) {
     if (!paths.has(required)) violations.push({ file: authorityPath, line: 0, message: `REQUIRED_AUTHORITY_NOT_REGISTERED ${required}` });
   }
