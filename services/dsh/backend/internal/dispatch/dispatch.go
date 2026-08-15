@@ -118,7 +118,7 @@ func CreateAssignment(db *sql.DB, input CreateAssignmentInput) (*Assignment, err
 		return nil, fmt.Errorf("%w: only bthwani_delivery orders can be assigned to platform captains", ErrConflict)
 	}
 
-	if _, err = orders.TransitionDispatchOrder(tx, input.OrderID, "operator",
+	if _, err = orders.TransitionDispatchOrder(tx, input.OrderID, input.ActorID, "operator",
 		[]orders.OrderStatus{orders.StatusReadyForPickup}, orders.StatusDriverAssigned, "captain assigned"); err != nil {
 		if errors.Is(err, orders.ErrNotFound) {
 			return nil, ErrNotFound
@@ -384,7 +384,7 @@ func SubmitPoD(db *sql.DB, assignmentID, captainID string, input PoDInput) (*Ass
 		return nil, fmt.Errorf("%w: proof requires arrived_customer state", ErrConflict)
 	}
 	if current.OrderID != "" {
-		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, "captain",
+		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, captainID, "captain",
 			[]orders.OrderStatus{orders.StatusArrivedCustomer}, orders.StatusDelivered, "proof of delivery submitted"); err != nil {
 			return nil, mapOrderError(err)
 		}
@@ -462,7 +462,7 @@ func updateAssignmentStatus(db *sql.DB, assignmentID, captainID string, status A
 	}
 	if current.OrderID != "" {
 		allowedOrderStatus := []orders.OrderStatus{orders.StatusDriverAssigned}
-		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, "captain", allowedOrderStatus, orderStatus, note); err != nil {
+		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, captainID, "captain", allowedOrderStatus, orderStatus, note); err != nil {
 			return nil, mapOrderError(err)
 		}
 	} else if current.SpecialRequestID != "" {
@@ -544,7 +544,7 @@ func updateDeliveryProgressVersioned(db *sql.DB, assignmentID, captainID string,
 		return nil, fmt.Errorf("%w: delivery cannot move from %s to %s", ErrConflict, current.Delivery.Status, next)
 	}
 	if current.OrderID != "" {
-		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, "captain",
+		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, captainID, "captain",
 			[]orders.OrderStatus{orders.OrderStatus(current.Delivery.Status)}, orderStatus, string(next)); err != nil {
 			return nil, mapOrderError(err)
 		}

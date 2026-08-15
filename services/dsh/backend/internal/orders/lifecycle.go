@@ -29,12 +29,13 @@ func CancelOrderByOperator(db *sql.DB, orderID, actorID, reason string) (*Order,
 func TransitionDispatchOrder(
 	db *sql.Tx,
 	orderID,
+	actorID,
 	actorRole string,
 	allowedFrom []OrderStatus,
 	toStatus OrderStatus,
 	note string,
 ) (*Order, error) {
-	return transitionOrderTx(db, orderID, actorRole, allowedFrom, toStatus, note)
+	return transitionOrderTx(db, orderID, actorID, actorRole, allowedFrom, toStatus, note)
 }
 
 func transitionOrder(
@@ -55,7 +56,7 @@ func transitionOrder(
 	}
 	defer tx.Rollback()
 
-	order, err := transitionOrderTx(tx, orderID, actorRole, allowedFrom, toStatus, note)
+	order, err := transitionOrderTx(tx, orderID, actorID, actorRole, allowedFrom, toStatus, note)
 	if err != nil {
 		return nil, err
 	}
@@ -68,11 +69,17 @@ func transitionOrder(
 func transitionOrderTx(
 	tx *sql.Tx,
 	orderID,
+	actorID,
 	actorRole string,
 	allowedFrom []OrderStatus,
 	toStatus OrderStatus,
 	note string,
 ) (*Order, error) {
+	actorID = strings.TrimSpace(actorID)
+	actorRole = strings.TrimSpace(actorRole)
+	if strings.TrimSpace(orderID) == "" || actorID == "" || actorRole == "" || len(allowedFrom) == 0 {
+		return nil, ErrInvalid
+	}
 	var fromStatus string
 	err := tx.QueryRow(`
 		SELECT status
@@ -115,9 +122,10 @@ func transitionOrderTx(
 	}
 
 	if _, err = tx.Exec(`
-		INSERT INTO dsh_order_status_events (order_id, actor_role, from_status, to_status, note)
-		VALUES ($1::uuid, $2, $3, $4, NULLIF($5, ''))`,
+		INSERT INTO dsh_order_status_events (order_id, actor_id, actor_role, from_status, to_status, note)
+		VALUES ($1::uuid, $2, $3, $4, $5, NULLIF($6, ''))`,
 		order.ID,
+		actorID,
 		actorRole,
 		fromStatus,
 		string(toStatus),
