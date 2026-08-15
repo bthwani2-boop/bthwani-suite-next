@@ -19,8 +19,18 @@ CREATED_AT
 LAST_RECONCILED_AT
 START_SHA
 CURRENT_SHA
+LATEST_RECONCILED_SHA
 LIFECYCLE_STATE
-CURRENT_SEQUENCE_ID
+ACTIVE_EXECUTION_FRONTIER
+SUSPENSION_STACKS
+INTEGRATION_OWNER
+FINDINGS_ACCOUNTED
+SCOPE_DELTAS_ACCOUNTED
+DECISIONS_ACCOUNTED
+CONSUMERS_ACCOUNTED
+EVIDENCE_ACCOUNTED
+CLEANUP_ACCOUNTED
+ACCOUNTING_COMPLETE
 DISCOVERY_COMPLETE
 DIAGNOSIS_COMPLETE
 DECISION_COMPLETE
@@ -44,9 +54,9 @@ HEAD_AT_DECISION
 ```text
 1. Truth Baseline
 2. Macro Blueprint / Dependency Graph
-3. Sequence Registry
+3. Sequence Registry / Execution Frontier
 4. Global Decisions / Blockers
-5. Global Coverage / Reconciliation
+5. Global Accounting / Coverage / Reconciliation
 6. Final Target Handoff / Closure
 ```
 
@@ -59,6 +69,8 @@ SUBJECT
 DERIVATION_BASIS
 DEPENDS_ON
 UNLOCKS
+CONFLICT_DOMAIN
+EXECUTION_OWNER
 STATUS
 REOPEN_TRIGGER
 ```
@@ -67,11 +79,13 @@ Rules:
 
 ```text
 one row ↔ one sequence file
-contiguous 001..NNN ordering
-at most one active non-terminal sequence
-CURRENT_SEQUENCE_ID references that active sequence or UNSET
-no future placeholder sequences
-no duplicated sequence detail in overview
+contiguous IDs describe creation history, not forced execution chain
+no placeholder future sequences
+multiple non-terminal rows allowed only when graph-justified
+ACTIVE_EXECUTION_FRONTIER references zero or more graph-proven independent live fronts
+no duplicate live conflict domain
+SUSPENDED_BY_DEPENDENCY / REOPENED are first-class
+INTEGRATION_OWNER is single target-branch integration authority at a time
 ```
 
-`PACKAGE_READY` is final handoff readiness in PREPARE and global pre-closure readiness in EXECUTE.
+Before final handoff/closure all accounting fields and `ACCOUNTING_COMPLETE` must be YES.
