@@ -1,6 +1,6 @@
 import React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
-import { Button, Surface, Text, colorRoles, radius, spacing } from "@bthwani/ui-kit";
+import { Button, Surface, Text, alpha, colorRoles, radius, spacing } from "@bthwani/ui-kit";
 
 export type CartConflictSheetProps = {
   readonly onKeepServer: () => void;
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "flex-end",
     padding: spacing[4],
-    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    backgroundColor: alpha(colorRoles.shadowBase, 0.4),
   },
   sheet: {
     width: "100%",
