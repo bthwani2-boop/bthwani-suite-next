@@ -7,7 +7,25 @@
     "node": "24.17.0",
     "pnpm": "10.34.0",
     "runtimeTypeScript": "npm:@typescript/typescript6@6.0.2",
-    "capabilityModelVersion": 1
+    "capabilityModelVersion": 1,
+    "navigationArchitecture": {
+      "target": "expo-router",
+      "decision": "ADOPTED_TARGET_ARCHITECTURE",
+      "implementation": "DEFERRED_UNTIL_STABILITY",
+      "appliesTo": ["app-client", "app-partner", "app-captain", "app-field"],
+      "migrationMode": "ONE_APP_AT_A_TIME_FAIL_CLOSED",
+      "remoteBuildNow": false,
+      "migrationOrder": ["app-field", "app-captain", "app-partner", "app-client"],
+      "requiredStabilityGates": [
+        "productJourneys",
+        "backendContracts",
+        "mobileAppShell",
+        "deepLinksAndNotifications",
+        "regressionBaseline",
+        "routeContracts",
+        "parityTests"
+      ]
+    }
   },
   "apps": {
     "app-client": {
