@@ -198,12 +198,25 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 	}
 
 	var cartID, storeID, fulfillmentMode, wltPaymentRefID, checkoutState, paymentMethod string
+	var checkoutSubtotalMinorUnits int64
+	var checkoutCurrency, checkoutPricingSnapshotHash string
 	err = tx.QueryRow(`
-		SELECT cart_id::text, store_id, fulfillment_mode, wlt_payment_session_id, state, payment_method
+		SELECT cart_id::text, store_id, fulfillment_mode, wlt_payment_session_id, state, payment_method,
+		       subtotal_minor_units, currency, pricing_snapshot_hash
 		FROM dsh_checkout_intents
 		WHERE id=$1::uuid AND operator_context_id=$2 AND client_id=$3 AND wlt_payment_session_id<>''
 		FOR UPDATE`, input.CheckoutIntentID, input.OperatorContextID, input.ClientID,
-	).Scan(&cartID, &storeID, &fulfillmentMode, &wltPaymentRefID, &checkoutState, &paymentMethod)
+	).Scan(
+		&cartID,
+		&storeID,
+		&fulfillmentMode,
+		&wltPaymentRefID,
+		&checkoutState,
+		&paymentMethod,
+		&checkoutSubtotalMinorUnits,
+		&checkoutCurrency,
+		&checkoutPricingSnapshotHash,
+	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, fmt.Errorf("%w: checkout intent is inaccessible", ErrConflict)
 	}
@@ -245,37 +258,19 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 		return nil, false, err
 	}
 
-	rows, err := tx.Query(`
-		SELECT product_id, product_name, unit_price_minor, quantity
-		FROM dsh_cart_items WHERE cart_id=$1::uuid ORDER BY created_at, id`, cartID)
+	checkoutSnapshot, err := loadCheckoutOrderSnapshotTx(
+		tx,
+		input.CheckoutIntentID,
+		input.OperatorContextID,
+		input.ClientID,
+		cartID,
+		storeID,
+		checkoutSubtotalMinorUnits,
+		checkoutCurrency,
+		checkoutPricingSnapshotHash,
+	)
 	if err != nil {
 		return nil, false, err
-	}
-	type sourceItem struct {
-		productID, productName string
-		unitPriceMinor         int64
-		quantity               int
-	}
-	items := make([]sourceItem, 0)
-	for rows.Next() {
-		var item sourceItem
-		if scanErr := rows.Scan(&item.productID, &item.productName, &item.unitPriceMinor, &item.quantity); scanErr != nil {
-			rows.Close()
-			return nil, false, scanErr
-		}
-		if item.quantity <= 0 || item.unitPriceMinor <= 0 {
-			rows.Close()
-			return nil, false, fmt.Errorf("%w: invalid cart item snapshot", ErrInvalid)
-		}
-		items = append(items, item)
-	}
-	if err = rows.Err(); err != nil {
-		rows.Close()
-		return nil, false, err
-	}
-	rows.Close()
-	if len(items) == 0 {
-		return nil, false, fmt.Errorf("%w: checkout cart has no items", ErrInvalid)
 	}
 
 	var orderID string
@@ -290,23 +285,24 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 		return nil, false, err
 	}
 
-	for _, item := range items {
+	for _, item := range checkoutSnapshot.items {
 		snapshot, marshalErr := json.Marshal(map[string]any{
 			"productId":           item.productID,
 			"productName":         item.productName,
 			"quantity":            item.quantity,
 			"unitPriceMinorUnits": item.unitPriceMinor,
+			"lineTotalMinorUnits": item.lineTotalMinorUnits,
+			"currency":            item.currency,
 		})
 		if marshalErr != nil {
 			return nil, false, marshalErr
 		}
-		lineMinor := item.unitPriceMinor * int64(item.quantity)
 		unitPrice := float64(item.unitPriceMinor) / 100
 		if _, err = tx.Exec(`
 			INSERT INTO dsh_order_items
 			(order_id, product_id, product_name, quantity, unit_price, item_snapshot, line_total_minor_units)
 			VALUES ($1::uuid,$2,$3,$4,$5,$6::jsonb,$7)`,
-			orderID, item.productID, item.productName, item.quantity, unitPrice, string(snapshot), lineMinor,
+			orderID, item.productID, item.productName, item.quantity, unitPrice, string(snapshot), item.lineTotalMinorUnits,
 		); err != nil {
 			return nil, false, err
 		}
@@ -350,10 +346,14 @@ func CreateOrderTruth(db *sql.DB, input CreateOrderTruthInput) (*OrderTruth, boo
 	if affected, _ := result.RowsAffected(); affected != 1 {
 		return nil, false, fmt.Errorf("%w: checkout changed concurrently", ErrConflict)
 	}
+
+	// Close only the exact cart version that checkout froze. Any later client
+	// edit belongs to the still-active cart and must never be consumed by this order.
 	if _, err = tx.Exec(`
 		UPDATE dsh_carts
 		SET state='checked_out', version=version+1, updated_at=NOW()
-		WHERE id=$1::uuid AND client_id=$2 AND state='active'`, cartID, input.ClientID,
+		WHERE id=$1::uuid AND client_id=$2 AND state='active' AND version=$3`,
+		cartID, input.ClientID, checkoutSnapshot.cartVersion,
 	); err != nil {
 		return nil, false, err
 	}
