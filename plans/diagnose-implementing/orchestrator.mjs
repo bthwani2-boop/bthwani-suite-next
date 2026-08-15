@@ -153,6 +153,21 @@ function isAncestor(base, head, branchName = null) {
   return git(["merge-base", "--is-ancestor", base, head], { allowFailure: true }).ok;
 }
 
+function changedPaths(base, head) {
+  ensureCommitObject(base);
+  ensureCommitObject(head);
+  const output = git(["diff", "--name-only", "-z", base, head, "--"]).stdout;
+  return output ? output.split("\0").filter(Boolean) : [];
+}
+
+function taskContentIntegrated(base, task, integration) {
+  if (isAncestor(task, integration)) return true;
+  const taskPaths = changedPaths(base, task);
+  if (taskPaths.length === 0) return true;
+  const finalDifferences = new Set(changedPaths(task, integration));
+  return taskPaths.every((file) => !finalDifferences.has(file));
+}
+
 function currentHead() {
   const sha = git(["rev-parse", "HEAD"]).stdout;
   assert(SHA.test(sha), "current HEAD did not resolve to a commit SHA");
@@ -543,7 +558,10 @@ function gitTruth(model, phase) {
   } else {
     assert(branch === model.fields.INTEGRATION_BRANCH, "close must run on the integration branch");
     assert(head === integrationSha, `close must run on exact live Integration Target HEAD; current=${head} live=${integrationSha}`);
-    assert(isAncestor(taskSha, integrationSha, model.fields.INTEGRATION_BRANCH), "TASK_BRANCH has not been fully integrated into the live Integration Target");
+    assert(
+      taskContentIntegrated(model.fields.BASE_SHA.toLowerCase(), taskSha, integrationSha),
+      "TASK_BRANCH content has not been fully integrated into the live Integration Target",
+    );
     assert(isAncestor(reconciled, integrationSha, model.fields.INTEGRATION_BRANCH), "LATEST_RECONCILED_SHA is not an ancestor of final Integration Target");
   }
   return { integrationSha, taskSha, head, branch };
