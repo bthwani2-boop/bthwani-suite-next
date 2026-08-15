@@ -8,14 +8,7 @@ import {
   createCheckoutIntent,
   fetchCheckoutIntent,
 } from "./checkout.api";
-import {
-  clearOrderTruthAttempt,
-  getOrCreateOrderTruthAttempt,
-} from "../order-truth/order-truth-create-attempt";
-import {
-  createOrderTruth,
-  fetchClientOrderTruthDetail,
-} from "../order-truth/order-truth.api";
+import { useCreateOrderTruthController } from "../order-truth/use-order-truth-controller";
 import type {
   DshCheckoutIntent,
   DshCheckoutTerminalReason,
@@ -43,32 +36,30 @@ export type CheckoutToOrderFlowState =
 
 export function useCheckoutToOrderFlow() {
   const [state, setState] = useState<CheckoutToOrderFlowState>({ kind: "idle" });
+  const { submit: submitOrder } = useCreateOrderTruthController();
 
   const start = useCallback(async (input: DshCreateIntentInput) => {
     setState({ kind: "loading" });
     try {
-      // 1. Submit checkout intent to DSH backend
       const attempt = await getOrCreateCheckoutAttempt(input);
       const intent = await createCheckoutIntent(input, attempt.context);
       try {
         await clearCheckoutAttempt(attempt.fingerprint);
       } catch {
-        // Safe to ignore cleanup error
+        // The canonical checkout mutation succeeded; stale local cleanup must
+        // not rewrite the server result.
       }
 
       setState({ kind: "creating_order", intent });
 
-      // 2. Submit order truth to convert intent to canonical order
-      const orderAttempt = await getOrCreateOrderTruthAttempt({ checkoutIntentId: intent.id });
-      const created = await createOrderTruth({ checkoutIntentId: intent.id }, orderAttempt.context);
-      const readback = await fetchClientOrderTruthDetail(created.id);
-      try {
-        await clearOrderTruthAttempt(orderAttempt.fingerprint);
-      } catch {
-        // Safe to ignore cleanup error
+      // Order creation is delegated to the canonical controller so mutation
+      // locking, durable idempotency, actor-scoped readback validation, failure
+      // classification, and attempt cleanup stay in one owner.
+      const readback = await submitOrder({ checkoutIntentId: intent.id });
+      if (!readback) {
+        throw new Error("تعذر تثبيت الطلب وقراءة الحقيقة المعتمدة بعد الدفع.");
       }
 
-      // 3. Mark flow ready with canonical order
       setState({
         kind: "order_ready",
         intent,
@@ -88,7 +79,7 @@ export function useCheckoutToOrderFlow() {
       }
       setState({ kind: "order_error", message });
     }
-  }, []);
+  }, [submitOrder]);
 
   const reset = useCallback(() => {
     setState({ kind: "idle" });
@@ -98,7 +89,7 @@ export function useCheckoutToOrderFlow() {
     try {
       await cancelCheckoutIntent(intentId);
     } catch {
-      // Best effort cancel
+      // Best effort cancel; the next readback remains canonical.
     }
     setState({ kind: "idle" });
   }, []);
@@ -113,7 +104,6 @@ export function useCheckoutToOrderFlow() {
   }, []);
 
   const retryOrder = useCallback(() => {
-    // If needed, reset state to idle to allow re-submission
     setState({ kind: "idle" });
   }, []);
 
