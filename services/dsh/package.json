@@ -14,12 +14,13 @@
     "database:test": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite schema",
     "database:test:seed": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite seed",
     "database:contract": "node ../../tools/scripts/check-dsh-database-contract.mjs",
+    "platform:boundary": "node ../../tools/guards/dsh-platform-boundary-gate.mjs",
     "pretypecheck": "pnpm run openapi:generate",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prebuild": "pnpm run openapi:generate",
     "build": "tsc -p tsconfig.json && node -e \"require('node:fs').writeFileSync('dist/package.json', JSON.stringify({type:'commonjs'}))\" && node ../../tools/scripts/verify-go-build.mjs backend",
     "test": "pnpm run build && pnpm --dir ../.. exec node --test services/dsh/tests/*.test.mjs",
-    "lint": "pnpm --dir ../.. run guard:fullstack-boundary"
+    "lint": "pnpm run platform:boundary && pnpm --dir ../.. run guard:fullstack-boundary"
   },
   "peerDependencies": {
     "expo-document-picker": "~56.0.4",
@@ -61,6 +62,39 @@
     "next": "^16.2.11",
     "react": "19.2.3",
     "typescript": "7.0.2"
+  },
+  "x-bthwani-platform-boundary": {
+    "status": "LEGACY_MIXED_PACKAGE_QUARANTINE",
+    "target": "PLATFORM_NEUTRAL_CORE_WITH_EXPLICIT_WEB_AND_MOBILE_ADAPTERS",
+    "canonicalNativeDependencyOwner": "apps/*/runtime",
+    "webRoot": "frontend/control-panel",
+    "mobileRoots": [
+      "frontend/app-client",
+      "frontend/app-partner",
+      "frontend/app-captain",
+      "frontend/app-field"
+    ],
+    "sharedPlatformRoots": {
+      "web": "frontend/shared/platform/web",
+      "mobile": "frontend/shared/platform/mobile"
+    },
+    "legacyNativeDependencyQuarantine": [
+      "@react-native-async-storage/async-storage",
+      "@react-native-community/netinfo",
+      "expo-constants",
+      "expo-crypto",
+      "expo-document-picker",
+      "expo-image-picker",
+      "expo-location",
+      "expo-notifications",
+      "expo-secure-store",
+      "expo-video",
+      "react-native",
+      "react-native-maps",
+      "react-native-safe-area-context",
+      "react-native-svg"
+    ],
+    "cleanupPolicy": "Do not add native dependencies here. Migrate consumers to explicit mobile adapters and remove quarantined dependencies only after exact-ref consumer, lockfile, Metro, typecheck, and fresh native-build evidence."
   },
   "exports": {
     "./control-panel": "./frontend/control-panel/index.ts",

@@ -1,7 +1,8 @@
 // Canonical location: dsh/frontend/shared/media/field-document-media.ts
-// Authority: dsh/frontend/shared/media — real field document/photo upload binding.
-// Uploads a picked file to dsh-api (which streams it to MinIO) and returns the
-// real mediaRef to attach via fieldUploadDocument. No screen may call fetch directly.
+// Authority: dsh/frontend/shared/media — governed field/provider media upload binding.
+// Mobile callers pass React Native-style { uri, name, mimeType } descriptors.
+// Browser callers currently pass blob: object URLs; those are materialized to a
+// real Blob before FormData append so web never relies on the React Native body shape.
 
 import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
@@ -17,6 +18,28 @@ export type FieldMediaUploadOptions = {
   readonly storeId?: string;
 };
 
+async function appendPickedFile(form: FormData, file: FieldMediaPickResult): Promise<void> {
+  const isBrowserObjectUrl = typeof window !== "undefined"
+    && typeof Blob !== "undefined"
+    && /^(blob:|data:)/i.test(file.uri);
+
+  if (isBrowserObjectUrl) {
+    const response = await fetch(file.uri);
+    if (!response.ok) throw { kind: "media", status: response.status };
+    const blob = await response.blob();
+    form.append("file", blob, file.name);
+    return;
+  }
+
+  // React Native FormData accepts the URI descriptor shape below. Keep this
+  // branch isolated from browser execution; web must append a real Blob/File.
+  form.append("file", {
+    uri: file.uri,
+    name: file.name,
+    type: file.mimeType,
+  } as unknown as Blob);
+}
+
 export async function uploadFieldMedia(partnerId: string, file: FieldMediaPickResult, options: FieldMediaUploadOptions = {}): Promise<string> {
   return uploadFieldMediaForOwner({ partnerId, ...(options.storeId ? { storeId: options.storeId } : {}) }, file, options.kind);
 }
@@ -25,16 +48,10 @@ export async function uploadFieldStoreMedia(storeId: string, file: FieldMediaPic
   return uploadFieldMediaForOwner({ storeId }, file);
 }
 
-// Provider-owned upload (captain license/vehicle photo, field agent
-// document) from the Workforce HR create/edit screens — not tied to any
-// partner or store, unlike the uploads above.
-//
-// This targets the actor-scoped governed route. The flat
-// /dsh/operator/workforce/media/uploads path this used to call was a legacy
-// compatibility entry that already answered 410 ROUTE_RETIRED, and its shim
-// was deleted with legacy_contract_compat_routes.go, so the call had no
-// handler at all. The actor is now identified by the path, and the server
-// classifies the object as an employee document, so no actor field is sent.
+// Provider-owned upload (captain license/vehicle photo, field agent document)
+// from Workforce HR create/edit screens. The transport contract remains shared,
+// while appendPickedFile keeps the browser and React Native multipart shapes
+// explicit instead of pretending that one FormData value representation fits both.
 export async function uploadProviderMedia(
   actorId: string,
   role: "employees" | "captains" | "field-agents",
@@ -47,11 +64,7 @@ export async function uploadProviderMedia(
   if (!cookieMode && !token) throw { kind: "http", status: 401 };
 
   const form = new FormData();
-  form.append("file", {
-    uri: file.uri,
-    name: file.name,
-    type: file.mimeType,
-  } as unknown as Blob);
+  await appendPickedFile(form, file);
 
   const path = `/workforce/${role}/${encodeURIComponent(actorId)}/media/uploads`;
   const url = cookieMode ? `${baseUrl.replace(/\/$/, "")}${path}` : new URL(path, baseUrl);
@@ -84,11 +97,7 @@ async function uploadFieldMediaForOwner(
   if (owner.partnerId) form.append("partnerId", owner.partnerId);
   if (owner.storeId) form.append("storeId", owner.storeId);
   if (kind) form.append("mediaKind", kind);
-  form.append("file", {
-    uri: file.uri,
-    name: file.name,
-    type: file.mimeType,
-  } as unknown as Blob);
+  await appendPickedFile(form, file);
 
   const url = cookieMode
     ? `${baseUrl.replace(/\/$/, "")}/dsh/field/media/uploads`
