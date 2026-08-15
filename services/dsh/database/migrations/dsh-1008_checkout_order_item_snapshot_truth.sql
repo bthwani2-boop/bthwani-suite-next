@@ -1,24 +1,24 @@
 -- DSH-1008: close checkout -> order commercial truth at one durable snapshot boundary.
 --
--- Checkout already freezes pricing totals and the cart hash before the WLT handoff.
--- Persist the exact cart header and item lines in DSH in the same transaction so
+-- Checkout already freezes pricing totals before the WLT handoff. Persist the
+-- exact cart header and item lines in the same priced-checkout transaction so
 -- order creation never re-derives commercial truth from a mutable live cart.
 
 BEGIN;
 
 CREATE TABLE IF NOT EXISTS dsh_checkout_cart_snapshots (
-    checkout_intent_id    UUID        PRIMARY KEY
-                                      REFERENCES dsh_checkout_intents(id) ON DELETE RESTRICT,
-    operator_context_id   TEXT        NOT NULL,
-    client_id             TEXT        NOT NULL,
-    cart_id               UUID        NOT NULL REFERENCES dsh_carts(id) ON DELETE RESTRICT,
-    store_id              TEXT        NOT NULL REFERENCES dsh_stores(id) ON DELETE RESTRICT,
-    cart_version          INTEGER     NOT NULL CHECK (cart_version > 0),
-    cart_snapshot_hash    TEXT        NOT NULL CHECK (cart_snapshot_hash ~ '^[0-9a-f]{64}$'),
-    subtotal_minor_units  BIGINT      NOT NULL CHECK (subtotal_minor_units > 0),
-    currency              TEXT        NOT NULL CHECK (currency = UPPER(BTRIM(currency)) AND currency ~ '^[A-Z]{3}$'),
-    item_count            INTEGER     NOT NULL CHECK (item_count > 0),
-    created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    checkout_intent_id     UUID        PRIMARY KEY
+                                       REFERENCES dsh_checkout_intents(id) ON DELETE RESTRICT,
+    operator_context_id    TEXT        NOT NULL,
+    client_id              TEXT        NOT NULL,
+    cart_id                UUID        NOT NULL REFERENCES dsh_carts(id) ON DELETE RESTRICT,
+    store_id               TEXT        NOT NULL REFERENCES dsh_stores(id) ON DELETE RESTRICT,
+    cart_version           INTEGER     NOT NULL CHECK (cart_version > 0),
+    pricing_snapshot_hash  TEXT        NOT NULL CHECK (pricing_snapshot_hash ~ '^[0-9a-f]{64}$'),
+    subtotal_minor_units   BIGINT      NOT NULL CHECK (subtotal_minor_units > 0),
+    currency               TEXT        NOT NULL CHECK (currency = UPPER(BTRIM(currency)) AND currency ~ '^[A-Z]{3}$'),
+    item_count             INTEGER     NOT NULL CHECK (item_count > 0),
+    created_at             TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_dsh_checkout_cart_snapshots_actor
