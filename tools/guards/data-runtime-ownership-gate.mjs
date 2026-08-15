@@ -7,6 +7,7 @@ const violations = [];
 
 const DATA_RUNTIME_PACKAGE = "shared/data-runtime/package.json";
 const DSH_PACKAGE = "services/dsh/package.json";
+const MOBILE_MANIFEST = "tools/mobile/mobile-apps.manifest.json";
 const DATA_RUNTIME_PERSISTENCE = "shared/data-runtime/src/persistence.ts";
 const DATA_RUNTIME_QUEUE = "shared/data-runtime/src/offline-mutation-queue.ts";
 const DATA_RUNTIME_NETINFO = "shared/data-runtime/src/netinfo-online-manager.ts";
@@ -33,6 +34,13 @@ function requireEqual(file, actual, expected, message) {
   }
 }
 
+function sameArray(left, right) {
+  return Array.isArray(left)
+    && Array.isArray(right)
+    && left.length === right.length
+    && left.every((value, index) => value === right[index]);
+}
+
 const dataRuntime = readJson(DATA_RUNTIME_PACKAGE);
 const ownership = dataRuntime["x-bthwani-data-ownership"];
 
@@ -56,14 +64,20 @@ if (!ownership || typeof ownership !== "object" || Array.isArray(ownership)) {
   if (!dataRuntime.peerDependencies?.["@react-native-community/netinfo"]) {
     violations.push({ file: DATA_RUNTIME_PACKAGE, message: "NetInfo must remain an explicit peer provider for optional connectivity integration" });
   }
+  if (dependencyVersion(dataRuntime, "expo-sqlite")) {
+    violations.push({ file: DATA_RUNTIME_PACKAGE, message: "@bthwani/data-runtime must not depend on expo-sqlite while SQLite authority is requirement-pending" });
+  }
 
   const mobileProviders = Array.isArray(ownership.mobileRuntimeProviders) ? ownership.mobileRuntimeProviders : [];
   if (mobileProviders.length !== 4) {
     violations.push({ file: DATA_RUNTIME_PACKAGE, message: "mobileRuntimeProviders must enumerate exactly the four governed mobile runtimes" });
   }
 
+  const runtimePackages = new Map();
   for (const packagePath of mobileProviders) {
     const runtimePackage = readJson(packagePath);
+    const appKey = packagePath.split("/")[1];
+    runtimePackages.set(appKey, runtimePackage);
     requireEqual(packagePath, runtimePackage.dependencies?.["@bthwani/data-runtime"], "workspace:*", "mobile runtime must consume canonical @bthwani/data-runtime");
     requireEqual(packagePath, runtimePackage.dependencies?.["@react-native-async-storage/async-storage"], asyncStorageVersion, "mobile runtime AsyncStorage provider version drifted");
     requireEqual(packagePath, runtimePackage.dependencies?.["@react-native-community/netinfo"], netInfoVersion, "mobile runtime NetInfo provider version drifted");
@@ -73,6 +87,61 @@ if (!ownership || typeof ownership !== "object" || Array.isArray(ownership)) {
   const sqlite = ownership.sqlite;
   if (!sqlite || sqlite.status !== "REQUIREMENT_PENDING" || sqlite.currentPersistenceAuthority !== false) {
     violations.push({ file: DATA_RUNTIME_PACKAGE, message: "SQLite must remain requirement-pending and must not silently become persistence authority" });
+  } else {
+    if (sqlite.productFeatureOwner !== null) {
+      violations.push({ file: DATA_RUNTIME_PACKAGE, message: "SQLite cannot have a product feature owner before the requirement decision is closed" });
+    }
+    if (sqlite.directConsumerAudit !== "PENDING_EXACT_REF_OR_GUARD_EXECUTION") {
+      violations.push({ file: DATA_RUNTIME_PACKAGE, message: "SQLite direct-consumer audit state must remain explicit while exact-ref proof is incomplete" });
+    }
+    if (sqlite.nativeRemovalDeferredToCleanupWindow !== true) {
+      violations.push({ file: DATA_RUNTIME_PACKAGE, message: "SQLite native removal must remain deferred to the governed cleanup window" });
+    }
+
+    const manifest = readJson(MOBILE_MANIFEST);
+    const capabilityApps = [];
+    const featureOwners = [];
+    for (const [appKey, app] of Object.entries(manifest.apps ?? {})) {
+      if ((app.nativeCapabilities ?? []).includes("sqlite")) capabilityApps.push(appKey);
+      for (const [feature, capabilities] of Object.entries(app.productFeatures ?? {})) {
+        if (Array.isArray(capabilities) && capabilities.includes("sqlite")) {
+          featureOwners.push(`${appKey}.${feature}`);
+        }
+      }
+    }
+
+    if (featureOwners.length > 0) {
+      violations.push({
+        file: MOBILE_MANIFEST,
+        message: `SQLite is requirement-pending but product features already claim it: ${featureOwners.join(", ")}`,
+      });
+    }
+    if (!sameArray(capabilityApps, sqlite.declaredCapabilityApps)) {
+      violations.push({
+        file: MOBILE_MANIFEST,
+        message: `SQLite declared capability apps drifted; manifest=${capabilityApps.join(",")}, ownership=${(sqlite.declaredCapabilityApps ?? []).join(",")}`,
+      });
+    }
+
+    const installedApps = [];
+    for (const [appKey, runtimePackage] of runtimePackages) {
+      if (runtimePackage.dependencies?.["expo-sqlite"]) installedApps.push(appKey);
+    }
+    const installedWithoutCapability = installedApps.filter((appKey) => !capabilityApps.includes(appKey));
+    if (!sameArray(installedWithoutCapability, sqlite.installedWithoutCapabilityApps)) {
+      violations.push({
+        file: DATA_RUNTIME_PACKAGE,
+        message: `SQLite installed-without-capability inventory drifted; actual=${installedWithoutCapability.join(",")}, governed=${(sqlite.installedWithoutCapabilityApps ?? []).join(",")}`,
+      });
+    }
+    for (const appKey of capabilityApps) {
+      if (!runtimePackages.get(appKey)?.dependencies?.["expo-sqlite"]) {
+        violations.push({
+          file: `apps/${appKey}/runtime/package.json`,
+          message: "SQLite native capability is declared but expo-sqlite is not installed; reconcile capability and native graph deliberately",
+        });
+      }
+    }
   }
 
   const persistenceSource = readText(DATA_RUNTIME_PERSISTENCE);
