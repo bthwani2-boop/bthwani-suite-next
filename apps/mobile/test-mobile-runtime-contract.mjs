@@ -10,6 +10,7 @@ const manifestPath = path.join(repoRoot, "tools/mobile/mobile-apps.manifest.json
 const readinessContractPath = path.join(repoRoot, "infra/docker/runtime-readiness.contract.json");
 const mobileBootstrapPath = path.join(repoRoot, "apps/mobile/ensure-mobile-dev-runtime.ps1");
 const frontendReadinessPath = path.join(repoRoot, "tools/scripts/check-frontend-binding-readiness.mjs");
+const controlPanelPackagePath = path.join(repoRoot, "apps/control-panel/runtime/package.json");
 const runtimeAuthorityPath = path.join(repoRoot, "infra/docker/scripts/runtime.ps1");
 const runtimeEnvPath = path.join(repoRoot, "infra/docker/env/runtime.env.example");
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
@@ -49,6 +50,11 @@ function validateSharedRuntimeReadinessContract() {
   const actualMobileProfiles = contract.bundles?.mobileDevelopment;
   if (JSON.stringify(actualMobileProfiles) !== JSON.stringify(expectedMobileProfiles)) {
     fail(`mobileDevelopment readiness bundle drift: expected=${expectedMobileProfiles.join(",")} actual=${(actualMobileProfiles ?? []).join(",")}`);
+  }
+  const expectedControlPanelProfiles = ["identity", "workforce", "dsh", "wlt", "providers", "platform"];
+  const actualControlPanelProfiles = contract.bundles?.controlPanelDevelopment;
+  if (JSON.stringify(actualControlPanelProfiles) !== JSON.stringify(expectedControlPanelProfiles)) {
+    fail(`controlPanelDevelopment readiness bundle drift: expected=${expectedControlPanelProfiles.join(",")} actual=${(actualControlPanelProfiles ?? []).join(",")}`);
   }
   const frontendDefault = contract.bundles?.frontendDefault;
   if (!Array.isArray(frontendDefault) || frontendDefault.length === 0) fail("frontendDefault readiness bundle must be non-empty");
@@ -102,7 +108,15 @@ function validateSharedRuntimeReadinessContract() {
     '"frontendDefault"',
     "healthyStatuses.includes",
     "BTHWANI_FRONTEND_READINESS_BUNDLE",
+    "normalizeAbsoluteHttpUrl",
+    'process.argv.indexOf("--bundle")',
   ]) requireMarker("check-frontend-binding-readiness.mjs", frontendText, marker);
+
+  const controlPanelPackage = JSON.parse(requireRepoFile(controlPanelPackagePath));
+  const expectedControlPredev = "node ../../../tools/scripts/check-frontend-binding-readiness.mjs --bundle controlPanelDevelopment";
+  if (controlPanelPackage.scripts?.predev !== expectedControlPredev) {
+    fail(`control-panel predev readiness binding drift: expected '${expectedControlPredev}'`);
+  }
 
   return contract;
 }
