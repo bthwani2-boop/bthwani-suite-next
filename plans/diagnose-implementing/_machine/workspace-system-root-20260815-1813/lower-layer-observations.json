@@ -2,5 +2,42 @@
   "schema": "BTHWANI_LOWER_LAYER_OBSERVATIONS_V1",
   "taskId": "TASK-20260815-1813-WORKSPACE-SYSTEM-ROOT",
   "reconciledSha": "8a244d7b2bb5a0193cd8a9ff7476892585175a1b",
-  "observations": []
+  "observations": [
+    {
+      "id": "OBS-001",
+      "layer": "DSH_SURFACE_BINDING",
+      "symptom": "All five DSH product surfaces are explicitly fix-required pending same-candidate actor navigation, authorization, network, persistence, readback and negative-path verification.",
+      "status": "HOLD",
+      "sourceEvidence": ["services/dsh/surface-map.ts"]
+    },
+    {
+      "id": "OBS-002",
+      "layer": "DSH_RUNTIME_EVIDENCE",
+      "symptom": "DSH runtime bindings have null current evidence SHA, historical/not-current evidence, false database/generated-client/shared-brain/surface-binding readiness and service-level PARTIALLY_BOUND/FIX_REQUIRED posture.",
+      "status": "HOLD",
+      "sourceEvidence": ["services/dsh/runtime-map.ts", "services/dsh/service.manifest.ts"]
+    },
+    {
+      "id": "OBS-003",
+      "layer": "WLT_RUNTIME_AND_DATA_EVIDENCE",
+      "symptom": "WLT is FIX_REQUIRED with database/runtime/journey/provider evidence unproven on the current candidate and financial mutations fail-closed.",
+      "status": "HOLD",
+      "sourceEvidence": ["services/wlt/service.manifest.ts"]
+    },
+    {
+      "id": "OBS-004",
+      "layer": "REPOSITORY_PLATFORM_EVIDENCE",
+      "symptom": "Exact-SHA GitHub queries returned no workflow runs or combined statuses for the baseline and no workflow run for the initial task candidate; live branch-protection state was inaccessible to the integration.",
+      "status": "HOLD",
+      "sourceEvidence": ["plans/diagnose-implementing/workspace-system-root-20260815-1813/evidence/repository-platform-state.md"]
+    },
+    {
+      "id": "OBS-005",
+      "layer": "DERIVED_SCOPE_WORDING",
+      "symptom": "The Product Truth contracts README contains a generic sentence excluding platform/isolation implementation from a prior/current local scope, which conflicts with this task's explicit whole-workspace target if read as task authority.",
+      "status": "DISPOSITIONED",
+      "sourceEvidence": ["governance/product/contracts/README.md"],
+      "dispositionEvidence": ["governance/authority/authority-precedence.json", "plans/diagnose-implementing/workspace-system-root-20260815-1813/evidence/adversarial-operational-root.md"]
+    }
+  ]
 }
