@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import {
   Badge,
   Box,
@@ -55,7 +55,8 @@ type Props = {
   readonly orderId: string;
   readonly onBack?: () => void;
   readonly onOpenPickup?: (orderId: string) => void;
-  readonly onOpenOrderSupport?: (orderId: string) => void;
+  readonly onOpenOrderSupport?: (orderId: string, fulfillmentMode: OrderTruth["fulfillmentMode"]) => void;
+  readonly onOpenNotifications?: () => void;
 };
 
 const FULFILLMENT_LABELS: Readonly<Record<OrderTruth["fulfillmentMode"], string>> = {
@@ -249,7 +250,13 @@ function ClientCancellationPanel({
   );
 }
 
-export function OrderTrackingScreen({ orderId, onBack, onOpenPickup, onOpenOrderSupport }: Props) {
+export function OrderTrackingScreen({
+  orderId,
+  onBack,
+  onOpenPickup,
+  onOpenOrderSupport,
+  onOpenNotifications,
+}: Props) {
   const { state, reload } = useClientOrderController(orderId);
 
   if (state.kind === "loading") {
@@ -290,23 +297,88 @@ export function OrderTrackingScreen({ orderId, onBack, onOpenPickup, onOpenOrder
 
   return (
     <View style={styles.root}>
-      <TopBar title="متابعة الطلب" onBack={onBack} />
+      <TopBar
+        title="متابعة الطلب"
+        onBack={onBack}
+        rightSlot={
+          onOpenNotifications ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="الإشعارات"
+              onPress={onOpenNotifications}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "rgba(0,0,0,0.04)",
+              }}
+            >
+              <Icon name="notifications-outline" size={20} color={colorRoles.textPrimary} />
+            </Pressable>
+          ) : undefined
+        }
+      />
       <MobileScrollView fill padding={3} gap={3} contentContainerStyle={styles.content}>
         <OrderStoreHero order={order} />
 
         <OrderTimeline order={order} />
 
-        <Surface tone="raised" gap={2}>
-          <Text role="titleSm">مراسلة الطلب</Text>
+        {order.status === "delivered" ? (
+          <Surface tone="raised" gap={2} style={{ borderColor: colorRoles.brandAction, borderWidth: 1.5 }}>
+            <Box layoutDirection="row" justify="space-between" align="center">
+              <Text role="titleSm">⭐ تم تسليم الطلب بنجاح</Text>
+              <Badge label="مكتمل" tone="success" />
+            </Box>
+            <Text role="bodySm" tone="muted">
+              {order.fulfillmentMode === "pickup"
+                ? "شكراً لطلبك! يمكنك تقييم جودة منتجات المتجر وسرعة الاستلام."
+                : "شكراً لطلبك! يمكنك تقييم أداء كابتن التوصيل وجودة المنتجات."}
+            </Text>
+          </Surface>
+        ) : null}
+
+        <Surface tone="raised" gap={3} style={{ borderColor: "rgba(255, 80, 13, 0.3)", borderWidth: 1.5 }}>
+          <Box layoutDirection="row" justify="space-between" align="center">
+            <Box layoutDirection="row" gap={2} align="center">
+              <View style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: "rgba(255, 80, 13, 0.12)",
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                <Icon name="chatbubble-ellipses" size={18} tone="brand" />
+              </View>
+              <Text role="titleSm">
+                {order.fulfillmentMode === "pickup"
+                  ? "محادثة المتجر والعمليات"
+                  : "محادثة الكابتن والعمليات"}
+              </Text>
+            </Box>
+            <Badge
+              label="محادثة مدمجة بالطلب"
+              tone="brand"
+            />
+          </Box>
           <Text role="bodySm" tone="muted">
-            افتح محادثة دعم مرتبطة بهذا الطلب. تُحفظ الرسائل لضمان متابعة سريعة من فريق الدعم.
+            {order.fulfillmentMode === "pickup"
+              ? "محادثة مخصصة مع المتجر لمتابعة استلام وتجهيز طلبك، مع إشراف ومتابعة قسم العمليات (مراسلة الدعم بشأن الطلب)."
+              : "محادثة مباشرة مع كابتن التوصيل لمتابعة الوصول وتأكيد العنوان، مع إشراف ومتابعة قسم العمليات (مراسلة الدعم بشأن الطلب)."}
           </Text>
           {onOpenOrderSupport ? (
             <Button
-              label="مراسلة الدعم بشأن الطلب"
-              accessibilityLabel={`${accessibilityLabel}، فتح مراسلة الدعم`}
+              label={
+                order.fulfillmentMode === "pickup"
+                  ? "مراسلة المتجر بخصوص الطلب"
+                  : "مراسلة كابتن التوصيل"
+              }
+              accessibilityLabel={`${accessibilityLabel}، مراسلة الدعم بشأن الطلب ومتابعة الكابتن`}
               tone="primary"
-              onPress={() => onOpenOrderSupport(order.id)}
+              leading={<Icon name="chatbubbles-outline" size={18} color="#ffffff" />}
+              onPress={() => onOpenOrderSupport(order.id, order.fulfillmentMode)}
             />
           ) : null}
         </Surface>
@@ -343,7 +415,7 @@ export function OrderTrackingScreen({ orderId, onBack, onOpenPickup, onOpenOrder
         <ClientCancellationPanel
           orderId={order.id}
           isCancelled={order.status.startsWith("cancelled_") || order.status.startsWith("failed_")}
-          onOpenSupport={onOpenOrderSupport}
+          onOpenSupport={onOpenOrderSupport ? (id) => onOpenOrderSupport(id, order.fulfillmentMode) : undefined}
         />
 
         <Surface tone="raised" gap={2}>

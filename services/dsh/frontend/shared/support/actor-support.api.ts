@@ -72,7 +72,10 @@ export async function addActorSupportMessage(
     `/dsh/support/tickets/${encodeURIComponent(ticketId)}/messages`,
     {
       method: "POST",
-      body: { body: input.body },
+      body: {
+        body: input.body,
+        attachments: input.attachments,
+      },
       idempotencyKey: context.idempotencyKey,
       correlationId: context.correlationId,
     },

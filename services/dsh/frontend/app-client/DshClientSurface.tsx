@@ -25,6 +25,7 @@ import { BenefitsHubScreen } from "./account/BenefitsHubScreen";
 import { PreferencesHubScreen } from "./account/PreferencesHubScreen";
 import { NotificationCenterScreen } from "./notifications/NotificationCenterScreen";
 import { OrderTrackingScreen } from "./orders/OrderTrackingScreen";
+import { OrderChatScreen } from "./orders/OrderChatScreen";
 import { PickupSessionScreen } from "./orders/PickupSessionScreen";
 import { SupportTicketScreen } from "./support/SupportTicketScreen";
 import { TicketDetailScreen } from "./support/TicketDetailScreen";
@@ -40,8 +41,10 @@ import { notificationActionFromDeepLink } from "../shared/notifications/client-n
 import {
   useOrderTruthCollectionController,
   toOrderTruthSummary,
+  type OrderTruth,
 } from "../shared/order-truth";
 import { fetchActiveCart } from "../shared/cart";
+import { ClientOrderRatingGate } from "./ratings/ClientOrderRatingGate";
 
 type ClientTab = "home" | "stores" | "orders" | "special" | "wallet" | "profile" | "cart";
 type ProfileRoute =
@@ -98,6 +101,8 @@ export function DshClientSurface() {
   const [selectedStoreId, setSelectedStoreId] = useState<string | null>(null);
   const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
   const [activePickupOrderId, setActivePickupOrderId] = useState<string | null>(null);
+  const [activeChatOrderId, setActiveChatOrderId] = useState<string | null>(null);
+  const [activeChatFulfillmentMode, setActiveChatFulfillmentMode] = useState<OrderTruth["fulfillmentMode"]>("bthwani_delivery");
   const [showNotifications, setShowNotifications] = useState(false);
   const [activeTicketId, setActiveTicketId] = useState<string | null>(null);
   const [activeSupportOrderId, setActiveSupportOrderId] = useState<string | null>(null);
@@ -129,6 +134,8 @@ export function DshClientSurface() {
     setActiveSpecialRequest(null);
     setActivePickupOrderId(null);
     setActiveOrderId(null);
+    setActiveChatOrderId(null);
+    setActiveChatFulfillmentMode("bthwani_delivery");
     setActiveTicketId(null);
     setActiveSupportOrderId(null);
     if (tab === "profile") setProfileRoute("profile");
@@ -148,12 +155,10 @@ export function DshClientSurface() {
     setActivePickupOrderId(orderId);
   }, []);
 
-  const openOrderSupport = useCallback((orderId: string) => {
+  const openOrderSupport = useCallback((orderId: string, fulfillmentMode?: OrderTruth["fulfillmentMode"]) => {
     void performClientSelectionHaptic();
-    setActiveOrderId(null);
-    setActiveSupportOrderId(orderId);
-    setProfileRoute("support");
-    setActiveTab("profile");
+    setActiveChatFulfillmentMode(fulfillmentMode ?? "bthwani_delivery");
+    setActiveChatOrderId(orderId);
   }, []);
 
   const openStore = useCallback((storeId: string) => {
@@ -235,6 +240,10 @@ export function DshClientSurface() {
     if (activeSpecialRequest !== null) {
       setActiveSpecialRequest(null);
       setActiveTab("special");
+      return true;
+    }
+    if (activeChatOrderId !== null) {
+      setActiveChatOrderId(null);
       return true;
     }
     if (activePickupOrderId !== null) {
@@ -328,6 +337,7 @@ export function DshClientSurface() {
     activeSpecialRequest !== null ||
     activeOrderId !== null ||
     activePickupOrderId !== null ||
+    activeChatOrderId !== null ||
     activeTicketId !== null ||
     isStoreDetail ||
     (activeTab === "profile" && profileRoute !== "profile");
@@ -335,89 +345,98 @@ export function DshClientSurface() {
   const showBottomNav = !nestedRoute;
 
   return (
-    <View style={[styles.root, { paddingTop: (showHeader || isStoreDetail) ? 0 : insets.top }]}>
-      {showHeader ? (
-        <AppHeader
-          title="بثواني"
-          topInset={insets.top}
-          direction="rtl"
-          {...(activeOrder ? {
-            tickerStatusLabel: "طلب نشط",
-            tickerMessage: `طلبك #${activeOrder.orderNumber} · ${toOrderTruthSummary(activeOrder).statusLabel}`,
-            onTickerPress: () => {
-              void performClientSelectionHaptic();
-              openOrderTracking(activeOrder.id);
-            },
-          } : {})}
-          searchSlot={
-            isSearchActive ? (
-              <TextInput
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder="ابحث عن متجر أو فئة..."
-                placeholderTextColor={colorRoles.textMuted}
-                style={{
-                  height: 36,
-                  backgroundColor: colorRoles.surfaceBase,
-                  borderRadius: 18,
-                  paddingHorizontal: 16,
-                  textAlign: "right",
-                  flex: 1,
-                  fontSize: 14,
-                }}
-                autoFocus
-              />
-            ) : undefined
-          }
-          actions={[
-            {
-              icon: <Icon name={isSearchActive ? "close-outline" : "search-outline"} size={20} color={colorRoles.surfaceBase} />,
-              accessibilityLabel: "بحث",
-              onPress: () => {
+    <ClientOrderRatingGate>
+      <View style={[styles.root, { paddingTop: (showHeader || isStoreDetail) ? 0 : insets.top }]}>
+        {showHeader ? (
+          <AppHeader
+            title="بثواني"
+            topInset={insets.top}
+            direction="rtl"
+            {...(activeOrder ? {
+              tickerStatusLabel: "طلب نشط",
+              tickerMessage: `طلبك #${activeOrder.orderNumber} · ${toOrderTruthSummary(activeOrder).statusLabel}`,
+              onTickerPress: () => {
                 void performClientSelectionHaptic();
-                if (isSearchActive) {
-                  setSearchQuery("");
-                  setIsSearchActive(false);
-                } else {
-                  setIsSearchActive(true);
-                }
+                openOrderTracking(activeOrder.id);
               },
-            },
-            {
-              icon: <Icon name="notifications-outline" size={20} color={colorRoles.surfaceBase} />,
-              accessibilityLabel: "الإشعارات",
-              onPress: () => {
-                void performClientSelectionHaptic();
-                setShowNotifications(true);
+            } : {})}
+            searchSlot={
+              isSearchActive ? (
+                <TextInput
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder="ابحث عن متجر أو فئة..."
+                  placeholderTextColor={colorRoles.textMuted}
+                  style={{
+                    height: 36,
+                    backgroundColor: colorRoles.surfaceBase,
+                    borderRadius: 18,
+                    paddingHorizontal: 16,
+                    textAlign: "right",
+                    flex: 1,
+                    fontSize: 14,
+                  }}
+                  autoFocus
+                />
+              ) : undefined
+            }
+            actions={[
+              {
+                icon: <Icon name={isSearchActive ? "close-outline" : "search-outline"} size={20} color={colorRoles.surfaceBase} />,
+                accessibilityLabel: "بحث",
+                onPress: () => {
+                  void performClientSelectionHaptic();
+                  if (isSearchActive) {
+                    setSearchQuery("");
+                    setIsSearchActive(false);
+                  } else {
+                    setIsSearchActive(true);
+                  }
+                },
               },
-            },
-            {
-              icon: <Icon name="cart-outline" size={20} color={colorRoles.surfaceBase} />,
-              accessibilityLabel: "عربة التسوق",
-              onPress: () => activateTab("cart"),
-            },
-          ]}
-        />
-      ) : null}
+              {
+                icon: <Icon name="notifications-outline" size={20} color={colorRoles.surfaceBase} />,
+                accessibilityLabel: "الإشعارات",
+                onPress: () => {
+                  void performClientSelectionHaptic();
+                  setShowNotifications(true);
+                },
+              },
+              {
+                icon: <Icon name="cart-outline" size={20} color={colorRoles.surfaceBase} />,
+                accessibilityLabel: "عربة التسوق",
+                onPress: () => activateTab("cart"),
+              },
+            ]}
+          />
+        ) : null}
 
-      <View style={styles.content}>
-        {showNotifications ? (
-          <NotificationCenterScreen
-            onBack={() => setShowNotifications(false)}
-            onOpenActionUrl={openNotificationActionUrl}
-          />
-        ) : activePickupOrderId !== null ? (
-          <PickupSessionScreen
-            orderId={activePickupOrderId}
-            onBack={() => setActivePickupOrderId(null)}
-          />
-        ) : activeOrderId !== null ? (
-          <OrderTrackingScreen
-            orderId={activeOrderId}
-            onBack={() => setActiveOrderId(null)}
-            onOpenPickup={openPickupSession}
-            onOpenOrderSupport={openOrderSupport}
-          />
+        <View style={styles.content}>
+          {showNotifications ? (
+            <NotificationCenterScreen
+              onBack={() => setShowNotifications(false)}
+              onOpenActionUrl={openNotificationActionUrl}
+            />
+          ) : activeChatOrderId !== null ? (
+            <OrderChatScreen
+              orderId={activeChatOrderId}
+              fulfillmentMode={activeChatFulfillmentMode}
+              onBack={() => setActiveChatOrderId(null)}
+              onOpenNotifications={() => setShowNotifications(true)}
+            />
+          ) : activePickupOrderId !== null ? (
+            <PickupSessionScreen
+              orderId={activePickupOrderId}
+              onBack={() => setActivePickupOrderId(null)}
+            />
+          ) : activeOrderId !== null ? (
+            <OrderTrackingScreen
+              orderId={activeOrderId}
+              onBack={() => setActiveOrderId(null)}
+              onOpenPickup={openPickupSession}
+              onOpenOrderSupport={openOrderSupport}
+              onOpenNotifications={() => setShowNotifications(true)}
+            />
         ) : activeSpecialRequest === "shein" ? (
           <SheinForm
             onBack={openSpecialRequestList}
@@ -462,7 +481,11 @@ export function DshClientSurface() {
             />
           )
         ) : activeTab === "orders" ? (
-          <OrdersListScreen onOpenOrder={openOrderTracking} onOpenSpecialRequests={openSpecialRequestList} />
+          <OrdersListScreen
+            onOpenOrder={openOrderTracking}
+            onOpenSpecialRequests={openSpecialRequestList}
+            onOpenNotifications={() => setShowNotifications(true)}
+          />
         ) : activeTab === "wallet" ? (
           <WltClientWalletPanel />
         ) : activeTab === "cart" ? (
@@ -554,6 +577,7 @@ export function DshClientSurface() {
         />
       ) : null}
     </View>
+    </ClientOrderRatingGate>
   );
 }
 

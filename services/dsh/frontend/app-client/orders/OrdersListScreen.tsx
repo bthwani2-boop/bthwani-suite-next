@@ -62,6 +62,7 @@ type Props = {
   readonly onOpenOrder?: (orderId: string) => void;
   readonly onOpenSpecialRequests?: () => void;
   readonly onBack?: () => void;
+  readonly onOpenNotifications?: () => void;
 };
 
 function OrderCard({ order, onOpenOrder }: { order: OrderTruth; onOpenOrder?: (id: string) => void }) {
@@ -162,12 +163,34 @@ function OrderCard({ order, onOpenOrder }: { order: OrderTruth; onOpenOrder?: (i
   );
 }
 
-export function OrdersListScreen({ onOpenOrder, onOpenSpecialRequests, onBack }: Props) {
+export function OrdersListScreen({ onOpenOrder, onOpenSpecialRequests, onBack, onOpenNotifications }: Props) {
   const { state, reload } = useOrderTruthCollectionController("client", { limit: 100 });
   const visibleOrders = state.kind === "success" || state.kind === "partial" ? state.orders : [];
   return (
     <View style={styles.container}>
-      <TopBar title="طلباتي" {...(onBack ? { onBack } : {})} />
+      <TopBar
+        title="طلباتي"
+        {...(onBack ? { onBack } : {})}
+        rightSlot={
+          onOpenNotifications ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="الإشعارات"
+              onPress={onOpenNotifications}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "rgba(0,0,0,0.04)",
+              }}
+            >
+              <Icon name="notifications-outline" size={20} color={colorRoles.textPrimary} />
+            </Pressable>
+          ) : undefined
+        }
+      />
       {onOpenSpecialRequests ? (
         <View style={styles.specialRequestsHeader}>
           <Button 

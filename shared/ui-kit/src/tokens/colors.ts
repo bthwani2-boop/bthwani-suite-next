@@ -6,8 +6,14 @@ export const brandRoots = {
 
 export type BrandRoot = keyof typeof brandRoots;
 
-export function alpha(hex: string, opacity: number): string {
-  const normalized = hex.replace("#", "");
+export function alpha(color: string, opacity: number): string {
+  if (!color) return `rgba(0, 0, 0, ${opacity})`;
+  const rgbMatch = color.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if (rgbMatch) {
+    const [, r, g, b] = rgbMatch;
+    return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+  }
+  const normalized = color.replace("#", "");
   const expanded =
     normalized.length === 3
       ? normalized
@@ -17,7 +23,7 @@ export function alpha(hex: string, opacity: number): string {
       : normalized;
 
   if (expanded.length !== 6) {
-    throw new Error(`Invalid hex color: ${hex}`);
+    throw new Error(`Invalid hex color: ${color}`);
   }
 
   const red = Number.parseInt(expanded.slice(0, 2), 16);

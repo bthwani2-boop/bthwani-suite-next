@@ -11,10 +11,11 @@ export type TopBarProps = {
   subtitle?: string | undefined;
   variant?: 'primary' | 'secondary' | undefined;
   onBack?: (() => void) | undefined;
+  rightSlot?: React.ReactNode | undefined;
   style?: any;
 };
 
-export function TopBar({ title, subtitle, variant = 'primary', onBack, style }: TopBarProps) {
+export function TopBar({ title, subtitle, variant = 'primary', onBack, rightSlot, style }: TopBarProps) {
   const isRTL = I18nManager.isRTL;
   const rowDirection = isRTL ? 'row-reverse' : 'row';
 
@@ -55,7 +56,11 @@ export function TopBar({ title, subtitle, variant = 'primary', onBack, style }: 
         ) : null}
       </View>
 
-      <View style={styles.spacer} />
+      {rightSlot ? (
+        <View style={styles.rightSlotContainer}>{rightSlot}</View>
+      ) : (
+        <View style={styles.spacer} />
+      )}
     </View>
   );
 }
@@ -81,6 +86,12 @@ const styles = StyleSheet.create({
   spacer: {
     width: 36,
     height: 36,
+  },
+  rightSlotContainer: {
+    minWidth: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   titleContainer: {
     flex: 1,
