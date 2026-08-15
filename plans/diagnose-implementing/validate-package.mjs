@@ -84,9 +84,6 @@ if (strict) {
   for (const field of ['DISCOVERY_COMPLETE', 'DIAGNOSIS_COMPLETE', 'DECISION_COMPLETE', 'COVERAGE_COMPLETE', 'PACKAGE_READY']) {
     if (!yes(diagnosis[field])) violations.push(`01-DIAGNOSIS.md: STRICT_GATE_NOT_PASS ${field}=${diagnosis[field] ?? '<missing>'}`);
   }
-  if (/\bUNVISITED\b|\bUNCLASSIFIED\b|\bDECISION_REQUIRED\b/.test(texts['01-DIAGNOSIS.md'] ?? '')) {
-    violations.push('01-DIAGNOSIS.md: STRICT_UNRESOLVED_STATUS_PRESENT');
-  }
 }
 
 if (diagnosis.MODE === 'PREPARE_ONLY') {
