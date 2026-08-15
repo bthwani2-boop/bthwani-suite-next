@@ -12,6 +12,26 @@ jobs:
   patch-and-verify:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4-alpine
+        env:
+          POSTGRES_USER: dsh_runtime
+          POSTGRES_PASSWORD: dsh_runtime_password
+          POSTGRES_DB: dsh_runtime
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U dsh_runtime -d dsh_runtime"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://dsh_runtime:dsh_runtime_password@localhost:5432/dsh_runtime?sslmode=disable
+      PGPASSWORD: dsh_runtime_password
+      BTHWANI_ENVIRONMENT: ci
+      DSH_REQUIRE_DB_TESTS: "true"
+      DSH_TEST_operator_context_id: ci-dsh
     steps:
       - uses: actions/checkout@v4
         with:
@@ -22,6 +42,13 @@ jobs:
         with:
           go-version-file: services/dsh/backend/go.mod
           cache: false
+
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+
+      - name: Apply canonical DSH migrations
+        shell: pwsh
+        run: ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action migrate -Transport url -DatabaseUrl $env:DATABASE_URL
 
       - name: Prove V5 execute gate before mutation
         run: node plans/diagnose-implementing/orchestrator.mjs check --package plans/diagnose-implementing/v5-first-top-logic-gap-20260815/PACKAGE.md --phase execute
@@ -122,7 +149,7 @@ jobs:
             services/dsh/backend/internal/partnerdelivery/service.go \
             services/dsh/backend/internal/pickup/service.go
 
-      - name: Compile and test all DSH backend consumers
+      - name: Compile and test all DSH backend consumers on migrated PostgreSQL
         working-directory: services/dsh/backend
         run: go test ./...
 
