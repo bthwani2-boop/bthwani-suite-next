@@ -1,0 +1,27 @@
+{
+  "schema": "BTHWANI_OPERATIONAL_ROOT_V1",
+  "taskId": "TASK-20260815-1813-WORKSPACE-SYSTEM-ROOT",
+  "target": "كل الوركسبايس",
+  "diagnosticAltitude": "SYSTEM_OPERATIONAL_ROOT",
+  "reconciledSha": "8a244d7b2bb5a0193cd8a9ff7476892585175a1b",
+  "status": "OPEN",
+  "coverage": {
+    "productOutcomes": {"applicability": "UNASSESSED", "items": []},
+    "actors": {"applicability": "UNASSESSED", "items": []},
+    "authorities": {"applicability": "UNASSESSED", "items": []},
+    "responsibilities": {"applicability": "UNASSESSED", "items": []},
+    "journeys": {"applicability": "UNASSESSED", "items": []},
+    "states": {"applicability": "UNASSESSED", "items": []},
+    "transitions": {"applicability": "UNASSESSED", "items": []},
+    "invariants": {"applicability": "UNASSESSED", "items": []},
+    "handoffs": {"applicability": "UNASSESSED", "items": []},
+    "truthOwners": {"applicability": "UNASSESSED", "items": []},
+    "writersReadersConsumers": {"applicability": "UNASSESSED", "items": []},
+    "flows": {"applicability": "UNASSESSED", "items": []},
+    "implementationRuntimeBoundaries": {"applicability": "UNASSESSED", "items": []}
+  },
+  "challenges": {
+    "negativeSpace": {"status": "OPEN", "evidence": []},
+    "adversarial": {"status": "OPEN", "evidence": []}
+  }
+}
