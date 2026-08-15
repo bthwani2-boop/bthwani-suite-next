@@ -1,10 +1,10 @@
-import type { DshCapability } from "./capability-map";
+import type { DshMergedCapability } from "./capabilities";
 import { DSH_CAPABILITIES } from "./capabilities";
 
 export type DshRuntimeEvidenceState = "NONE" | "SAME_COMMIT_VERIFIED";
 
 export type DshRuntimeBinding = {
-  readonly capabilityId: DshCapability["id"];
+  readonly capabilityId: DshMergedCapability["id"];
   readonly contractOperations: readonly string[];
   /** Static source presence only; this is not runtime, database, or release proof. */
   readonly backendImplemented: boolean;
@@ -27,7 +27,9 @@ export type DshRuntimeBinding = {
   readonly surfaceBindingApproved: boolean;
 };
 
-function unresolvedState(capability: DshCapability): DshRuntimeBinding["state"] {
+function unresolvedState(
+  capability: Pick<DshMergedCapability, "status" | "closureState">,
+): DshRuntimeBinding["state"] {
   if (capability.status === "blocked-runtime") return "blocked";
   if (capability.status === "planned" || capability.status === "contract-active") return "incomplete";
   if (capability.closureState === "CLIENT_REVERIFIED_ONLY") return "client-reverified-only";
@@ -45,18 +47,20 @@ function unresolvedState(capability: DshCapability): DshRuntimeBinding["state"] 
  * diagnostics can distinguish "implemented but not proven on this candidate"
  * from "not implemented" without manufacturing a PASS.
  */
-export const DSH_RUNTIME_MAP = DSH_CAPABILITIES.map((capability) => ({
-  capabilityId: capability.id,
-  contractOperations: capability.contractOperations,
-  backendImplemented: capability.contractOperations.length > 0,
-  runtimeEvidence: null,
-  runtimeEvidenceCommitSha: null,
-  evidenceState: "NONE",
-  state: unresolvedState(capability),
-  runtimeBound: capability.runtimeBound,
-  screensReady: false,
-  databaseReady: false,
-  generatedClientReady: false,
-  sharedBrainReady: false,
-  surfaceBindingApproved: false,
-})) satisfies readonly DshRuntimeBinding[];
+export const DSH_RUNTIME_MAP: readonly DshRuntimeBinding[] = DSH_CAPABILITIES.map(
+  (capability): DshRuntimeBinding => ({
+    capabilityId: capability.id,
+    contractOperations: capability.contractOperations,
+    backendImplemented: capability.contractOperations.length > 0,
+    runtimeEvidence: null,
+    runtimeEvidenceCommitSha: null,
+    evidenceState: "NONE",
+    state: unresolvedState(capability),
+    runtimeBound: capability.runtimeBound,
+    screensReady: false,
+    databaseReady: false,
+    generatedClientReady: false,
+    sharedBrainReady: false,
+    surfaceBindingApproved: false,
+  }),
+);
