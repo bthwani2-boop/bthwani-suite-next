@@ -1,4 +1,4 @@
-import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime";
+import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/native-data-adapters";
 import type { DshAddressMutationContext, DshClientAddressDraft } from "./client-address.types";
 
 const STORAGE_KEY = "@bthwani/client-address-create-attempt:v1";
