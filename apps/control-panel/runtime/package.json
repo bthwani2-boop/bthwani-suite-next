@@ -19,6 +19,7 @@
   },
   "scripts": {
     "typecheck": "next typegen && tsc6 --noEmit -p tsconfig.json",
+    "predev": "node ../../../tools/scripts/check-frontend-binding-readiness.mjs --bundle controlPanelDevelopment",
     "dev": "pwsh -NoProfile -ExecutionPolicy Bypass -File ./assert-google-maps-env.ps1 && next dev --port 13000",
     "build": "next build",
     "lint": "pnpm --dir ../../.. run guard:ui-kit-boundary",
