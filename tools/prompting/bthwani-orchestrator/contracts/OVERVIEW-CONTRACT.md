@@ -33,6 +33,17 @@ CREATED_AT / LAST_RECONCILED_AT
 START_SHA / CURRENT_SHA / LATEST_RECONCILED_SHA
 ROOT_RECONCILIATION_REQUIRED
 ROOT_RECONCILED_SHA
+TARGET_LANDSCAPE_COMPLETE
+LANDSCAPE_RECONCILED_SHA
+ROOT_CAUSE_CLUSTERING_COMPLETE
+ROOT_CAUSE_CLUSTERS_ACCOUNTED
+UNCLUSTERED_MATERIAL_FINDINGS
+PRIORITY_MODEL_COMPLETE
+PRIORITY_DERIVATION_SOURCE
+UNRANKED_MATERIAL_CLUSTERS
+PRIMARY_FRONTIER_JUSTIFIED
+LANDSCAPE_ADVERSARIAL_PASS
+PRIORITY_POLICY
 FRONTIER_DERIVATION_SOURCE
 FRONTIER_VALID
 LIFECYCLE_STATE
@@ -82,11 +93,41 @@ NAVIGATION_POLICY must remain ROOT_ANCHORED_GRAPH_ONLY.
 LATEST_HEAD_ROLE must remain TRUTH_INTEGRATION_BASELINE_ONLY.
 ```
 
+## Target Landscape / Root-Cause Priority Invariants
+
+Before the first execution frontier, and after any material causal/priority invalidation, the Overview must prove:
+
+```text
+TARGET_LANDSCAPE_COMPLETE=YES
+LANDSCAPE_RECONCILED_SHA=LATEST_RECONCILED_SHA
+ROOT_CAUSE_CLUSTERING_COMPLETE=YES
+ROOT_CAUSE_CLUSTERS_ACCOUNTED=YES
+UNCLUSTERED_MATERIAL_FINDINGS=0
+PRIORITY_MODEL_COMPLETE=YES
+PRIORITY_DERIVATION_SOURCE=ROOT_CAUSE_LANDSCAPE
+UNRANKED_MATERIAL_CLUSTERS=0
+PRIMARY_FRONTIER_JUSTIFIED=YES
+LANDSCAPE_ADVERSARIAL_PASS=YES
+PRIORITY_POLICY=HIGHEST_PROVEN_SYSTEMIC_LEVERAGE
+```
+
+`TARGET_LANDSCAPE_COMPLETE` means the target-wide material landscape is sufficient to rank known/probed root-cause clusters before execution; it does not mean final deep diagnosis/closure is complete.
+
+Priority is comparative and evidence-backed, not a blind arithmetic score. Finding count/density is a supporting signal only; recency, changed-file count, easiest-fix bias, last-session topic and Sequence number never determine priority.
+
+Any material change that creates/merges/splits a root-cause cluster or changes canonical owner/dependency/blocking/blast radius/risk/unlock value invalidates affected priority provenance until re-ranked.
+
+## Frontier Invariants
+
 Before frontier execution:
 
 ```text
 ROOT_RECONCILIATION_REQUIRED=NO
 ROOT_RECONCILED_SHA=LATEST_RECONCILED_SHA
+TARGET_LANDSCAPE_COMPLETE=YES
+LANDSCAPE_RECONCILED_SHA=LATEST_RECONCILED_SHA
+PRIORITY_MODEL_COMPLETE=YES
+PRIMARY_FRONTIER_JUSTIFIED=YES
 FRONTIER_DERIVATION_SOURCE=ROOT_GRAPH
 FRONTIER_VALID=YES
 ```
@@ -96,13 +137,14 @@ FRONTIER_VALID=YES
 ```text
 1. Truth Baseline
 2. Macro Blueprint / Dependency Graph
+   + Target-Wide Gap & Root-Cause Landscape
 3. Sequence Registry / Execution Frontier
 4. Global Decisions / Blockers
 5. Global Accounting / Coverage / Reconciliation
 6. Final Target Handoff / Closure
 ```
 
-Sequence rows remain one row ↔ one materialized file. No placeholder rows. Foreign/concurrent observations without materialized sequence files stay in section 4/5 until the root graph proves placement.
+Root-cause landscape rows use `RC-NNN` IDs. Sequence rows remain one row ↔ one materialized file and must carry Root-Cause Cluster + Priority Class + Priority Basis. No placeholder future Sequence rows. Foreign/concurrent observations without materialized sequence files stay in section 4/5 until root/priority graph proves placement.
 
 ## Integration Invariants
 
@@ -115,6 +157,12 @@ INTEGRATION_COMPLETE=YES
 INTEGRATION_OWNER != UNASSIGNED
 latest Integration Target movement reconciled
 final candidate provenance points to Integration Target after integration
+TARGET_LANDSCAPE_COMPLETE=YES
+ROOT_CAUSE_CLUSTERS_ACCOUNTED=YES
+UNCLUSTERED_MATERIAL_FINDINGS=0
+PRIORITY_MODEL_COMPLETE=YES
+UNRANKED_MATERIAL_CLUSTERS=0
+LANDSCAPE_ADVERSARIAL_PASS=YES
 ```
 
 Final handoff/closure also requires all accounting/global gates and fresh root/head reconciliation.
