@@ -94,6 +94,10 @@
         "biometricUnlockCannotCreateServerSession": true,
         "biometricUnlockCannotBypassIdentityOrWorkforceGates": true,
         "biometricFeatureBindingRequiresDecisionClosure": true,
+        "applicationMetadataCannotOwnInstallationIdentity": true,
+        "deviceMetadataCannotOwnStableInstallationIdentity": true,
+        "stableInstallationIdentityRemainsSecureStoreCrypto": true,
+        "metadataFeatureBindingRequiresConsumerProof": true,
         "reviewPendingDoesNotAuthorizeDeletion": true,
         "nativeRemovalDeferredToCleanupWindow": true
       }
