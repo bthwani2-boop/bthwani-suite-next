@@ -94,6 +94,8 @@ SEQUENCE_NUMBER
 
 Every material Finding must be clustered/dispositioned; every material root-cause cluster must be ranked before frontier selection. Any new causal/dependency/authority truth that changes clustering or systemic leverage invalidates the affected priority model and requires re-ranking before continuation.
 
+Resume/backtracking preserve the same rule: a persisted frontier or old priority model is never continuation authority. Resume must reconcile Root + Landscape + Clusters + Priority on current truth before `NEXT_GRAPH_ACTION` is restored.
+
 ## Existing Graph/Closure Rules Preserved
 
 ```text
@@ -136,9 +138,10 @@ task branch
 - `root-cause-priority-gate.mjs`: validates target-wide landscape, clustering, ranking and frontier-priority provenance.
 - `task-isolation-gate.mjs`: validates task branch/worktree/remote isolation and explicit resume/integration phases.
 - `new-sequence.mjs`: refuses JIT derivation unless Root + Landscape/Priority + Isolation gates are represented and requires `RC-NNN` + priority class/basis.
+- `validate-package.mjs`: rejects ready/complete/handoff/closure when landscape/clustering/ranking/priority provenance is incomplete or stale.
 - `SEQUENCE.template.md`: binds every Sequence to a root-cause cluster and comparative priority rationale.
 - `OVERVIEW-CONTRACT.md` / `SEQUENCE-CONTRACT.md` / `CLOSURE-CONTRACT.md`: define landscape/priority + isolation + closure invariants.
-- Orchestrator `00/01/02/03/04`: prevents implicit package resume, recency-driven navigation, finding-count-only prioritization and leaf-first execution around systemic roots.
+- Orchestrator `00/01/02/03/04/05/06`: applies systemic-priority rules consistently across invocation, diagnosis, coverage, execution, verification/closure, concurrency, resume and recovery.
 
 ## Final Coverage Gate
 
@@ -155,6 +158,7 @@ ROOT_CAUSE_CLUSTERING = ACCOUNTED
 SYSTEMIC_LEVERAGE_PRIORITY = ACCOUNTED
 PRIORITY_INVALIDATION_RERANK = ACCOUNTED
 LANDSCAPE_ADVERSARIAL_PASS = ACCOUNTED
+RESUME_PRIORITY_RECONCILIATION = ACCOUNTED
 GRAPH_DRIVEN_MODEL = ACCOUNTED
 MULTI_AGENT_CONCURRENCY = ACCOUNTED
 ACCOUNTING = ACCOUNTED
