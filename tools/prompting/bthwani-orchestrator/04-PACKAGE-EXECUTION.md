@@ -9,81 +9,64 @@ Owner: `tools/prompting/bthwani-orchestrator/04-PACKAGE-EXECUTION.md`
 plans/diagnose-implementing/<TASK_NAME>/
 ├── 00-OVERVIEW.md
 ├── 001-<sequence>.md
-├── 002-<sequence>.md
 └── ...
 ```
 
-Sequence numbers = creation/identity order, not a forced linear execution chain.
+Sequence IDs = creation history, not forced execution chain.
 
 ## 2) Overview Ownership
 
-يمتلك فقط: task identity/SHA، Macro Graph، `ACTIVE_EXECUTION_FRONTIER`, Integration Owner، Sequence Registry، suspension/reopen references، global decisions/blockers، accounting gates، global closure metadata.
+Overview owns task identity/SHA, `ORCHESTRATION_ROOT`, root reconciliation provenance, Macro Graph, frontier validity/source, registry, concurrency/accounting/final closure metadata.
 
-## 3) Sequence Ownership
+## 3) Root Before Frontier
 
-كل Sequence تجمع Scope/Diagnosis/Findings/Root Cause/Blast Radius/Decisions/Re-Diagnosis/Target State/Treatment/Consumers-Governance/Cleanup/Verification/Evidence/Exit-Reopen.
-
-وتسجل Machine fields إضافية:
+On every invocation/resume, do not jump directly to persisted frontier:
 
 ```text
-RECONCILED_HEAD_SHA
-CONFLICT_DOMAIN
-EXECUTION_OWNER
-PARALLEL_SAFETY
-SUSPENDED_BY
-RESUME_AFTER
-INVALIDATES
-DECISION_IMPACT_PROPAGATED
-FINDINGS_DISPOSITIONED
-DEPENDENCIES_DISPOSITIONED
+restore root
+→ reconcile Macro Graph on latest truth
+→ classify foreign delta
+→ reuse valid prior evidence
+→ derive/revalidate frontier
 ```
 
-## 4) No Mega Package / No Fragmentation
-
-ممنوع giant target file، pre-created future sequences، one file per app/folder، split by line count، أو merge unrelated root causes. قسّم فقط عند Closure Boundary مثبت.
-
-## 5) JIT Creation + Backtracking
-
-Normal creation:
+Before first or later Sequence derivation:
 
 ```text
-prove boundary → create sequence → register graph/frontier
+ROOT_RECONCILIATION_REQUIRED=NO
+ROOT_RECONCILED_SHA=LATEST_RECONCILED_SHA
+FRONTIER_DERIVATION_SOURCE=ROOT_GRAPH
 ```
 
-Backtrack creation مسموح بينما Sequence حالية غير terminal فقط إذا الحالية صراحةً `SUSPENDED_BY_DEPENDENCY`، ويتم دفعها إلى Suspension Stack/graph ثم جعل upstream dependency هو focus الجديد.
+`new-sequence.mjs` must reject stale/unreconciled root state.
 
-لا تنشئ future speculative sequence لمجرد توقعها.
+## 4) JIT / Backtracking
 
-## 6) Root-Cause / Finding Correlation
+Normal:
 
 ```text
-symptoms/findings
-→ correlate
-→ first causal failure
-→ canonical owner
-→ full impact propagation
-→ coherent cutover
+root-reconciled graph → prove closure boundary → create sequence JIT
 ```
 
-إذا 20 Finding من Root Cause واحدة، لا تتحول تلقائيًا إلى 20 Sequences. إذا Finding مستقلة ولا تمنع cutover الحالي، تسجل في graph وتوضع في Frontier لاحق/مستقل بدليل.
-
-## 7) PREPARE_ONLY
+Backtrack:
 
 ```text
-diagnose → decide → propagate → re-diagnose
-→ exact target/cutover → consumers/governance/cleanup/verification
-→ dispose findings/dependencies
-→ PREPARED
+current SUSPENDED_BY_DEPENDENCY
+→ upstream sequence JIT
+→ upstream complete/prepare
+→ re-root/reconcile affected graph
+→ resume descendant
 ```
 
-لا live mutation.
+No future speculative sequence.
 
-## 8) EXECUTE_END_TO_END Write Gate
+## 5) EXECUTE Write Gate
 
-قبل live write:
+Before live write:
 
 ```text
-SEQUENCE_STATUS=READY_TO_EXECUTE | REOPENED
+root-anchor gate PASS on live latest SHA
+FRONTIER_VALID=YES
 ROOT_CAUSE_PROVEN=YES
 DECISIONS_RESOLVED=YES
 DECISION_IMPACT_PROPAGATED=YES
@@ -93,52 +76,24 @@ FINDINGS_DISPOSITIONED=YES
 DEPENDENCIES_DISPOSITIONED=YES
 VERIFICATION_DEFINED=YES
 SOLUTION_READY=YES
-RECONCILED_HEAD_SHA = latest reconciled head
-CONFLICT_DOMAIN != UNCLASSIFIED
-EXECUTION_OWNER != UNASSIGNED
+CONFLICT_DOMAIN classified
+EXECUTION_OWNER assigned
 ```
 
-ثم root fix/refactor/redesign/rebuild → all required consumer migration → contract/data/generated sync → obsolete/parallel path removal → local cleanup → verification/runtime readback → COMPLETE.
+Then root fix/refactor/redesign/rebuild → required consumers → contracts/data/generated sync → obsolete/parallel truth removal → cleanup → verification/readback → COMPLETE.
 
-## 9) Coherent Cutover Rule
+## 6) Coherent Cutover
 
-لا `COMPLETE` مع known affected consumer أو contradictory truth أو required migration أو reachable obsolete path أو temporary workaround أو unclassified scope delta لازم لصحة التغيير.
+No COMPLETE with known affected consumer, contradictory truth, required migration, reachable obsolete path, workaround, or unclassified scope delta required for correctness.
 
-## 10) Multi-Agent Execution
+## 7) Multi-Agent
 
-يسمح بعدة Workers على Frontiers مستقلة فقط. لكل Worker isolated workspace وConflict Domain وowned scope. يمكن لعدة Sequences أن تكون في execution frontier إذا ثبت الاستقلال، لكن:
+Independent workers may execute in parallel only when graph proves independent conflict domains. Target branch integration is serialized and always rebuilt/reconciled on latest HEAD.
 
-```text
-ONE EXECUTION OWNER PER CONFLICT DOMAIN
-ONE TARGET-BRANCH INTEGRATION OWNER AT A TIME
-```
+## 8) Foreign Work
 
-Integration Owner يعيد بناء/دمج delta على latest head بدل دفع stale candidate.
+Foreign/pre-existing delta is preserved. It may update graph evidence but **never becomes current work merely because it is latest**.
 
-## 11) Sequence Completion / Resume
+## 9) Global Completion
 
-بعد complete/prepare dependency:
-
-```text
-update graph
-→ identify suspended/reopened descendants
-→ invalidate affected evidence
-→ resume highest-priority unblocked node
-→ re-diagnose before live write
-```
-
-## 12) Cleanup
-
-داخل كل Sequence: remove obsolete/compatibility/workaround/debug/temp residue، repair imports/routes/contracts/bindings/references، normalize naming/ownership/placement. Final global sweep يبقى إلزاميًا.
-
-## 13) Global Completion
-
-```text
-all material graph nodes dispositioned
-+ all sequence records terminal/unblocked for MODE
-+ accounting complete
-→ global reconciliation
-→ duplicate truth search
-→ final cleanup
-→ final evidence/fresh-head/adversarial gates
-```
+All material graph nodes + sequence records + accounting must reconcile from the root before final cleanup/governance/evidence/fresh-head/adversarial gates.
