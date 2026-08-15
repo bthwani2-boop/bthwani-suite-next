@@ -122,10 +122,6 @@
         "status": "DEPRECATED_CANDIDATE",
         "removalTrigger": "Captain native cleanup window with fresh device-build evidence"
       },
-      "expo-router": {
-        "status": "DEPRECATED_CANDIDATE",
-        "removalTrigger": "Captain native cleanup window with fresh device-build evidence"
-      },
       "expo-sharing": {
         "status": "DEPRECATED_CANDIDATE",
         "removalTrigger": "Captain native cleanup window with fresh device-build evidence"
