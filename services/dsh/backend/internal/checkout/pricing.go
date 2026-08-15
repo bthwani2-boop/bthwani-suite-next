@@ -74,7 +74,23 @@ func CreatePricedIntentTx(ctx context.Context, tx *sql.Tx, input CreateIntentInp
 		pricing.SubtotalMinorUnits, pricing.DeliveryFeeMinorUnits, pricing.DiscountMinorUnits,
 		pricing.TotalMinorUnits, pricing.Currency, pricing.SnapshotHash, pricing.CouponID,
 		pricing.CouponRedemptionID, pricing.CouponCodeLast4)
-	return scanIntent(row)
+	intent, err := scanIntent(row)
+	if err != nil {
+		return nil, err
+	}
+	if err := PersistCartSnapshotTx(ctx, tx, PersistCartSnapshotInput{
+		CheckoutIntentID:    intent.ID,
+		OperatorContextID:   input.OperatorContextID,
+		ClientID:            input.ClientID,
+		CartID:              input.CartID,
+		StoreID:             input.StoreID,
+		PricingSnapshotHash: pricing.SnapshotHash,
+		SubtotalMinorUnits:  pricing.SubtotalMinorUnits,
+		Currency:            pricing.Currency,
+	}); err != nil {
+		return nil, err
+	}
+	return intent, nil
 }
 
 func GetPricing(db *sql.DB, intentID string) (PricingSnapshot, error) {
