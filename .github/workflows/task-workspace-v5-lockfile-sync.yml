@@ -1,0 +1,60 @@
+name: Task Workspace V5 Lockfile Sync
+
+on:
+  push:
+    branches:
+      - task/workspace-v5-e2e-closure-20260815
+    paths:
+      - "apps/app-client/runtime/package.json"
+      - "apps/app-partner/runtime/package.json"
+      - "apps/app-captain/runtime/package.json"
+      - "apps/app-field/runtime/package.json"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: task-workspace-v5-lockfile-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact task branch
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: task/workspace-v5-e2e-closure-20260815
+          fetch-depth: 0
+
+      - name: Setup repository-pinned PNPM
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093
+        with:
+          version: 10.34.0
+
+      - name: Setup repository-pinned Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24.17.0
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Regenerate lockfile deterministically
+        run: pnpm install --lockfile-only --ignore-scripts
+
+      - name: Commit lockfile only when changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- pnpm-lock.yaml; then
+            echo "LOCKFILE_SYNC=NO_CHANGE"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- pnpm-lock.yaml
+          test "$(git diff --cached --name-only)" = "pnpm-lock.yaml"
+          git commit -m "chore(mobile): synchronize task lockfile"
+          git push origin HEAD:task/workspace-v5-e2e-closure-20260815
