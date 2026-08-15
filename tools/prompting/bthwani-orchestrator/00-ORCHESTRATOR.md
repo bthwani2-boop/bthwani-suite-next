@@ -1,181 +1,124 @@
-# BThwani Orchestrator — نقطة الدخول الوحيدة
+# Bthwani Orchestrator
 
-Status: DERIVED_SUPPORT / GOVERNING_ENTRYPOINT
+BTHWANI_ORCHESTRATOR_SCHEMA: 4
+PUBLIC_SURFACE: 4_FILES
+PACKAGE_MODEL: ONE_TASK_ONE_PACKAGE
+CLI_MODEL: ONE_TOOL_TWO_COMMANDS
+PRIORITY_POLICY: SYSTEMIC_LEVERAGE
+WRITE_POLICY: ISOLATED_TASK_BRANCH
+INTEGRATION_POLICY: ONE_INTEGRATION_OWNER
+CLOSURE_POLICY: EVIDENCE_ONLY
 
-هذا الملف هو نقطة الدخول الوحيدة. الوحدات `01–06` عقود مكملة غير متعارضة؛ كل واحدة تملك مسؤولية واحدة. الحقيقة التشغيلية/التنفيذية لا تأتي من هذه الوثائق بل من الأدلة الحية والمصادر الحاكمة.
+## Authority
 
-## 0) Invocation
+- `TARGET` is the semantic task root.
+- `LATEST_HEAD` is repository truth and integration baseline; recency never sets work order.
+- Product/runtime evidence outranks plans. Plans are Derived Support only.
+- Old packages are evidence only; they never authorize implicit resume.
 
-```text
-@GitHub BRANCH: `<EXACT_BRANCH>` | TARGET: `<blank | target>` | MODE: `<PREPARE_ONLY | EXECUTE_END_TO_END>`
-```
+## Invocation
 
-MODE فقط: `PREPARE_ONLY | EXECUTE_END_TO_END`.
+Fresh:
 
-## 1) Constitution
+`pin live target → isolate task branch/worktree → new PACKAGE.md → reconcile root → diagnose target → cluster/rank → prove frontier → execute → verify → reconcile live target → integrate → close`
 
-```text
-NEW INVOCATION = NEW PACKAGE + DEDICATED TASK BRANCH/WORKSPACE.
-OLD PACKAGE RESUME = EXPLICIT USER REQUEST FOR EXACT PACKAGE ONLY.
-TARGET = ORCHESTRATION_ROOT.
-LATEST HEAD = TRUTH + INTEGRATION BASELINE ONLY; NEVER TASK DIRECTION.
-FOREIGN DELTA = INPUT, NOT INSTRUCTION.
+Resume:
 
-OPERATIONAL MEANING GOVERNS INITIAL DIAGNOSIS.
-TOP-DOWN DIAGNOSIS; BOTTOM-UP EVIDENCE.
-ESCALATE BEFORE FIX.
-TECHNICAL FINDING = EVIDENCE FIRST, NOT EXECUTION AUTHORITY.
-HIGHER MATERIAL CAUSES MUST BE EXHAUSTED BEFORE LOWER-LAYER DEFECTS GOVERN EXECUTION.
+`repin live target → validate package/head → reconcile root/landscape/ranking/frontier → continue`
 
-THE GRAPH GOVERNS MOVEMENT.
-ROOT CAUSE GOVERNS SCOPE.
-SYSTEMIC LEVERAGE GOVERNS PRIORITY.
-TASK ISOLATION GOVERNS WRITES.
-ONE INTEGRATION OWNER GOVERNS TARGET MUTATION.
-LEDGERS PREVENT SILENT LOSS.
-EVIDENCE GOVERNS CLOSURE.
-UNPROVEN = OPEN.
-```
+Never trust a saved frontier after repository truth changes.
 
-## 2) One mandatory diagnostic path
+For `TARGET=كل شيء`:
 
-```text
-PRE-FLIGHT / TASK ISOLATION
-→ LOCK MINIMUM_DIAGNOSTIC_ALTITUDE FROM TARGET
-→ OPERATIONAL TRUTH RECONCILIATION
-→ PRODUCT OUTCOMES
-→ ACTORS / AUTHORITY / RESPONSIBILITY
-→ END-TO-END JOURNEY UNIVERSE
-→ STATES / TRANSITIONS / PRECONDITIONS / INVARIANTS
-→ ACTION / DECISION / FAILURE / RECOVERY
-→ CROSS-SURFACE HANDOFFS
-→ CANONICAL TRUTH / OWNERSHIP
-→ DATA / CONTRACT / API / PERSISTENCE / EVENT / READBACK FLOW
-→ SURFACE / SERVICE / IMPLEMENTATION / RUNTIME BOUNDARIES
-→ OPERATIONAL NEGATIVE-SPACE + ADVERSARIAL CHALLENGE
-→ MACHINE OPERATIONAL-ROOT GATE
-→ TARGET-WIDE FINDINGS
-→ ROOT-CAUSE CLUSTERING
-→ COMPETITIVE DEEPENING
-→ SYSTEMIC-LEVERAGE RANKING
-→ MACHINE FRONTIER-DERIVATION GATE
-→ EXECUTE HIGHEST PROVEN ROOT
-→ VERIFY / RECONCILE / RE-RANK
-```
+`system root → owners/foundations/invariants → domains/services/contracts/data → journeys/states/handoffs → surfaces/consumers → implementation/runtime`
 
-لا يوجد مسار آخر يسمح باشتقاق Landscape/Priority/Sequence/Frontier قبل Operational Root PASS.
+## Diagnosis
 
-## 3) Progressive narrowing
+Trace material issues through:
 
-لا Full Deep Scan أعمى لكل leaf قبل أول تنفيذ، ولا leaf-first fixing. Breadth التشغيلي يثبت `bounded material operational universe` أولًا. بعده نعمق فقط root candidates القادرة على:
+`Product Truth → identity/session/auth → UI → client → contract → API → domain → data → jobs/providers → readback → consumers → operational result → audit/runtime evidence`
 
-```text
-become the highest-leverage root
-OR invalidate the current winner
-OR block the current winner
-OR materially change authority / dependency / blast-radius / risk / unlock value
-```
+Truth states:
 
-إذا ثبت أن candidate لا تستطيع ذلك، تبقى محاسبة للمرحلة اللاحقة ولا تستهلك Deep Diagnosis الآن.
+`ACTUAL | INTENDED_AUTHORIZED | DESIRED_RESOLVED | CONFLICT`
 
-## 4) Diagnostic altitude
+Every material finding must be accounted. Silent loss is forbidden.
 
-ابدأ من أعلى معنى تشغيلي داخل TARGET، لا من أعلى مجلد تقني:
+Reuse before create:
 
-```text
-TARGET=كل شيء      → SYSTEM_OPERATIONAL_ROOT
-TARGET=app-captain → responsibility/journeys/states/handoffs before app files
-TARGET=checkout    → outcome/actors/order-payment states/truth before components/APIs
-```
+`REUSE → EXTEND → MERGE → MOVE_TO_OWNER → SPLIT → CREATE_NEW`
 
-الهبوط المبكر مسموح فقط لـ`DIAGNOSTIC_BLOCKER` مثبت يمنع اكتساب الحقيقة نفسها، وبأصغر معالجة لازمة ثم عودة فورية للمسار الأعلى.
+## Root cause and priority
 
-## 5) Lower-layer holding queue
+Required:
 
-أي `UI/Expo/SQL/CI/lint/dependency/file/runtime` defect يظهر قبل parent/root placement يسجل `HOLD`. لا يهمل ولا ينفذ. Promotion يتطلب:
+`target-wide discovery → findings → RC clusters → dependency/impact graph → systemic-leverage ranking → adversarial challenge → frontier`
 
-```text
-operational parent proven
-+ RC-NNN placement proven
-+ current comparative priority justified
-+ promotion evidence
-```
+Priority is the highest proven systemic leverage:
 
-## 6) Machine truth
+1. upstream/root-cause depth
+2. blocking power
+3. canonical/foundation importance
+4. blast radius
+5. risk/severity
+6. unlock value
+7. recurrence/density
+8. structural-debt multiplier
 
-Package V2 يبقى flat:
+Never prioritize by recency, finding count alone, changed-file count, easiest fix,
+last topic, or sequence number.
 
-```text
-plans/diagnose-implementing/<TASK_NAME>/
-├── 00-OVERVIEW.md
-└── NNN-<sequence>.md
-```
+A stronger upstream root invalidates the affected ranking/frontier. Resolve it,
+invalidate affected descendants, rerank, and resume only if still justified.
 
-Machine evidence منفصلة:
+## Execution
 
-```text
-plans/diagnose-implementing/_machine/<TASK_NAME>/
-├── operational-root.json
-├── lower-layer-observations.json
-└── root-cause-landscape.json
-```
+- Dependencies govern order.
+- Parallel diagnosis is allowed.
+- Parallel writes require proven independence and non-overlap.
+- Task writes stay on the task branch/worktree.
+- Only one Integration Owner mutates the integration branch.
+- Never force-push or integrate from stale target truth.
 
-`00-OVERVIEW.md` ملخص/provenance؛ لا يستطيع `YES` أو `0` مكتوب يدويًا صناعة PASS.
+Before integration:
 
-## 7) Canonical gates
+`refetch target → classify foreign delta → reconcile graph/evidence → reverify → non-force integrate`
 
-```text
-tools/guards/orchestrator/task-isolation-gate.mjs
-tools/guards/orchestrator/root-anchor-gate.mjs
-tools/guards/orchestrator/operational-root-gate.mjs
-tools/guards/orchestrator/root-cause-priority-gate.mjs
-tools/guards/orchestrator/frontier-derivation-gate.mjs
-```
+Foreign delta:
 
-قبل Sequence/live write:
+- unrelated: preserve; no direction change
+- related/nonblocking: update affected evidence; rerank only if leverage changes
+- upstream/root/authority change: invalidate affected root/landscape/ranking and backtrack
+- conflict/overlap: block only the affected domain until reconciled
 
-```text
-TASK ISOLATION
-→ ROOT ANCHOR
-→ OPERATIONAL ROOT
-→ ROOT-CAUSE PRIORITY
-→ FRONTIER DERIVATION
-→ SEQUENCE DECISION/IMPACT/SOLUTION/VERIFICATION GATES
-```
+## Cleanup
 
-Compatibility entries تحت `plans/diagnose-implementing/*-gate.mjs` تستدعي canonical gates فقط ولا تملك منطقًا موازيًا.
+Cleanup is DONE work. Remove proven dead, stale, legacy, superseded, unused,
+obsolete, workaround/fallback, unjustified compatibility, orphan, misplaced,
+duplicate-truth, temporary, debug, and generated noise.
 
-## 8) Priority
+`discover → prove obsolete/wrong/duplicate → remove/merge/move → repair references → reverify`
 
-```text
-UPSTREAM / ROOT-CAUSE DEPTH
-> BLOCKING POWER
-> CANONICAL / FOUNDATION IMPORTANCE
-> BLAST RADIUS
-> SECURITY / DATA / FINANCE / OPERATIONAL RISK
-> UNLOCK VALUE
-> CROSS-JOURNEY / CROSS-SURFACE EFFECT
-> FINDING DENSITY
-> LOCAL LEAF
-> COSMETIC / HYGIENE
-```
+## Closure
 
-هذا causal default precedence وليس score أعمى. ممنوع أن تحكم الأولوية: `RECENCY / MOST_FINDINGS_ALONE / MOST_CHANGED_FILES / EASIEST_FIX / LAST_SESSION / SEQUENCE_NUMBER`.
+Closure requires:
 
-## 9) Unit ownership
+- live integration head reconciled
+- `UNACCOUNTED_FINDINGS=0`
+- current root, landscape, ranking, and frontier
+- implementation and cleanup complete
+- executable evidence for executable claims
+- runtime/product evidence for runtime/product claims
+- no invented CI/test/runtime evidence
 
-```text
-01-CORE-CONTRACT                  → truth/scope/isolation/gates invariants
-02-DISCOVERY-DIAGNOSIS            → operational discovery/deepening/evidence methods
-03-DECISIONS-COVERAGE-ANTI-DRIFT  → accounting/decisions/priority/invalidation
-04-PACKAGE-EXECUTION              → package/JIT/write/cutover/integration
-05-VERIFICATION-CLEANUP-CLOSURE   → evidence/cleanup/fresh-head/final closure
-06-CONCURRENCY-RESUME-RECOVERY    → agents/worktrees/resume/backtracking/concurrency
-contracts/*                       → machine/document schemas
-```
+Docs/plans never prove Product PASS. Missing required runtime proof keeps closure open.
 
-لا تكرر وحدة سلطة وحدة أخرى؛ الإحالة إليها بدل تعريف قاعدة ثانية.
+## Public operation
 
-## 10) Closure
+Only:
 
-لا `PREPARED/CLOSED` إلا بعد Operational Root machine PASS + Root-Cause Priority PASS + Frontier/empty-frontier proof + جميع accounting/cleanup/evidence/governance/integration/fresh-head/adversarial gates في `05`. المعيار `bounded material completeness`; لا ادعاء اكتمال مطلق غير قابل للإثبات.
+`node plans/diagnose-implementing/orchestrator.mjs new ...`
+
+`node plans/diagnose-implementing/orchestrator.mjs check ...`
+
+The package is the sole task state. The CLI is the sole package gate.

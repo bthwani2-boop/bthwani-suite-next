@@ -1,46 +1,23 @@
-# Diagnose / Implementing — Index
+# Diagnose / Implement
 
-Status: DERIVED_SUPPORT / NAVIGATION_ONLY
+One task = one `<task>/PACKAGE.md`.
 
-هذا الملف فهرس فقط ولا يملك قواعد مستقلة. السلطة المنهجية: `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md` ثم الوحدات `01–06` والعقود المشار إليها منه.
+One public tool = `orchestrator.mjs`.
 
-## Public commands
+One governing contract =
+`tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`.
 
-```text
-new-package.mjs         → governed new package + machine-registry bootstrap
-new-sequence.mjs        → governed JIT sequence creation after machine gates
-validate-package.mjs    → V2 structural validation + canonical machine gates
-migrate-package-v3.mjs  → explicit-resume-only migration of a legacy package to OPEN V3 machine state
-```
+Create:
 
-`*-core.mjs` تنفيذ داخلي محفوظ حرفيًا للـV2 checks؛ لا يستخدم كنقطة دخول عادية.
+`node plans/diagnose-implementing/orchestrator.mjs new --name <task> --target "<target>" --mode <PREPARE_ONLY|EXECUTE_END_TO_END> --integration-branch A --task-branch <branch> --base-sha <sha>`
 
-## Layout
+Validate:
 
-```text
-plans/diagnose-implementing/<TASK_NAME>/
-├── 00-OVERVIEW.md
-└── NNN-<sequence>.md
+`node plans/diagnose-implementing/orchestrator.mjs check --package <PACKAGE.md> --head <live-sha> --phase <diagnose|execute|close>`
 
-plans/diagnose-implementing/_machine/<TASK_NAME>/
-├── operational-root.json
-├── lower-layer-observations.json
-└── root-cause-landscape.json
-```
+`check` is fail-closed. Execute/close require current head, reconciled
+root/landscape/frontier, zero unaccounted findings, and closure requires
+implementation, cleanup, and evidence.
 
-## Canonical executable gates
-
-```text
-tools/guards/orchestrator/orchestrator-integrity-gate.mjs
-tools/guards/orchestrator/task-isolation-gate.mjs
-tools/guards/orchestrator/root-anchor-gate.mjs
-tools/guards/orchestrator/operational-root-gate.mjs
-tools/guards/orchestrator/root-cause-priority-gate.mjs
-tools/guards/orchestrator/frontier-derivation-gate.mjs
-```
-
-Files named `*-gate.mjs` in this directory are compatibility entries only and contain no duplicate gate logic.
-
-Machine summary synchronization: `tools/orchestrator/sync-machine-summary.mjs`.
-
-Legacy migration never resumes work or trusts prior frontier/priority; it only creates missing V3 machine metadata/registries as `OPEN`. Explicit resume must then re-establish isolation, latest-head/root reconciliation, operational coverage and all canonical gates.
+Only packages with `SCHEMA: BTHWANI_PACKAGE_V4` are executable authority.
+Older packages remain historical evidence only.
