@@ -25,6 +25,12 @@ SUSPENDED_BY: NONE
 RESUME_AFTER: NONE
 INVALIDATES: NONE
 SEQUENCE_STATUS: DIAGNOSING
+OPERATIONAL_GRAPH_POSITION_PROVEN: NO
+JOURNEY_IMPACT_MAPPED: NO
+STATE_IMPACT_MAPPED: NO
+AUTHORITY_IMPACT_MAPPED: NO
+HANDOFF_IMPACT_MAPPED: NO
+CANONICAL_TRUTH_IMPACT_MAPPED: NO
 ROOT_CAUSE_PROVEN: NO
 DECISIONS_RESOLVED: NO
 DECISION_IMPACT_PROPAGATED: NO
@@ -41,95 +47,46 @@ VERIFICATION_PASS: NO
 GOVERNANCE_SYNC: NOT_APPLICABLE
 SCOPE_DELTA_CLASSIFIED: NO
 
-> One file = one coherent root-cause/execution/verification/closure unit. All live writes belong to the package TASK_BRANCH/isolated workspace, never directly to the Integration Target. This Sequence exists because its root-cause cluster and priority placement were proven from the target-wide landscape, not because it was recent, noisy, easy, or had the most findings.
+> One file = one coherent machine-selected root-cause execution/verification/closure unit. Lower-layer symptoms cannot create a Sequence while HOLD.
 
 ## 1. Scope / Context / Graph Position
-
-- Why this Sequence exists / proven boundary:
-- Root-cause cluster ID / cluster definition:
-- Priority class / comparative priority basis:
-- Why this cluster outranks or safely parallels other open material clusters:
+- Operational parent(s) and graph position:
+- Journey/state/authority/handoff/canonical-truth impact:
+- Why this RC is current highest/independent frontier:
+- Competing higher roots rejected/resolved:
 - Depends on / blocks / unlocks:
-- Conflict Domain:
-- Task branch / writing workspace:
-- Execution owner / worker mission / input SHA:
-- Parallel safety proof or SERIAL_REQUIRED reason:
-- In-scope journeys/surfaces/contracts/data/runtime:
+- Conflict domain / execution owner / workspace:
 - Supported exclusions + proof:
 
 ## 2. Diagnosis / Findings / Disposition
-
-Record every material Finding ID and classify: SAME_ROOT_CAUSE / UPSTREAM_BLOCKER / INDEPENDENT_IN_SCOPE / SUPPORTED_EXCLUSION. No silent TODO/ignore. Symptoms must be correlated; do not create one Sequence per Finding when a shared root cause explains them.
+Record every material Finding; correlate symptoms. No silent TODO/ignore and no one-Sequence-per-symptom when shared root explains them.
 
 ## 3. Root Cause / Blast Radius
-
-- Root cause / first causal failure:
+- Highest proven causal owner/root:
 - Competing hypotheses rejected:
-- Canonical owner/source of truth:
 - Writers/readers/consumers:
-- States/transitions/handoffs:
-- Security/data/finance/operational risks:
-- Systemic leverage: dependency position / blocking power / blast radius / foundation importance / risk / unlock value / finding density:
+- Blast radius/dependencies/risk/unlock:
+- Operational/cross-surface meaning:
 
 ## 4. Decisions / Impact Propagation / Re-Diagnosis
-
-After each true decision:
-
-```text
-decision → full proven impact graph → invalidate affected assumptions/evidence → re-diagnose
-```
-
-Any material discovery that creates/redefines a root-cause cluster invalidates the current priority model until the target landscape is reconciled and re-ranked.
+Decision → full impact graph → invalidate affected assumptions/evidence → re-diagnose/re-rank.
 
 ## 5. Exact Target State / Coherent Cutover
-
-Define final semantic/architectural state. No closure while a required consumer, parallel truth, migration, legacy path, workaround or contradictory state remains necessary for cutover correctness.
+Define final operational + technical semantic state; no required consumer/parallel truth/migration/legacy path/workaround remains contradictory.
 
 ## 6. Treatment / Execution
-
-### PREPARE_ONLY
-Exact actionable root treatment/cutover/cleanup/verification; package writes remain on isolated Task Branch.
-
-### EXECUTE_END_TO_END
-Record actual changes/candidates on Task Branch/workspace after Root + Target-Landscape/Priority + Task-Isolation + Sequence gates.
+PREPARE_ONLY: exact treatment/cutover/cleanup/verification. EXECUTE_END_TO_END: actual root treatment after all canonical gates.
 
 ## 7. Consumers / Contracts / Data / Governance
-
 | Item | Before | Required/Actual transition | After | Verification / disposition |
 |---|---|---|---|---|
 
-Every proven consumer = migrated/reconciled or not-affected-with-proof.
-
 ## 8. Cleanup
-
-Resolve dead/stale/duplicate/legacy/compatibility/workaround/reference/naming/ownership/debug/temp residue related to this closure unit.
+Resolve proven-related dead/stale/duplicate/legacy/workaround/reference/naming/ownership/debug/temp residue.
 
 ## 9. Verification / Runtime / Evidence
-
 | Evidence ID | Claim | Check/source | Candidate/runtime provenance | Result | Proof limit | Invalidation/reopen trigger |
 |---|---|---|---|---|---|---|
 
-Static/build/mock green is not runtime proof.
-
 ## 10. Sequence Exit / Suspension / Reopen
-
-Common gates:
-
-```text
-ROOT_CAUSE_PROVEN
-DECISIONS_RESOLVED
-DECISION_IMPACT_PROPAGATED
-REDIAGNOSIS_COMPLETE
-IMPACT_MAPPED
-FINDINGS_DISPOSITIONED
-DEPENDENCIES_DISPOSITIONED
-VERIFICATION_DEFINED
-SOLUTION_READY
-```
-
-Suspension: set `SEQUENCE_STATUS=SUSPENDED_BY_DEPENDENCY`, record `SUSPENDED_BY` + `RESUME_AFTER`, open upstream dependency JIT, then re-diagnose and re-rank affected clusters before resume.
-
-Reopen: set `SEQUENCE_STATUS=REOPENED`, record new evidence/change and `INVALIDATES`, then rerun invalidated gates including landscape/priority when the new truth changes root-cause placement or leverage.
-
-PREPARE terminal: `PREPARED`, no live implementation claim.
-EXECUTE terminal: `COMPLETE` + implementation/consumers/cleanup/verification/governance/scope-delta gates.
+Before READY_TO_EXECUTE all six operational impact fields + all existing common gates are YES. Suspend/backtrack if a higher root appears; resume only after machine re-ranking. PREPARE terminal=`PREPARED`; EXECUTE terminal=`COMPLETE` plus implementation/consumer/cleanup/verification/governance/scope-delta gates.

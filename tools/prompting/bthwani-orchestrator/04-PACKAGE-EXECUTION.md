@@ -1,108 +1,65 @@
 # 04 — Package & Execution
 
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
-Owner: `tools/prompting/bthwani-orchestrator/04-PACKAGE-EXECUTION.md`
+Owner: package lifecycle, JIT Sequence creation, write gates, root treatment, cutover and target integration.
 
-## 1) New Invocation = New Package
+## 1) Package topology
 
 ```text
 NEW INVOCATION
-→ unique TASK/PACKAGE identity
-→ dedicated TASK_BRANCH from exact latest INTEGRATION_TARGET SHA
+→ unique TASK_ID/TASK_NAME
+→ TASK_BRANCH from exact latest INTEGRATION_TARGET SHA
 → isolated workspace
-→ NEW 00-OVERVIEW.md
+→ new flat Package V2
+→ sibling machine registry directory
 ```
-
-Existing package reuse is forbidden unless the user explicitly requests resume of that exact package.
-
-Package history may be searched/reused as evidence after freshness/root-placement validation; it never authorizes implicit continuation.
-
-## 2) Package V2
 
 ```text
 plans/diagnose-implementing/<TASK_NAME>/
 ├── 00-OVERVIEW.md
-├── 001-<sequence>.md
-└── ...
+└── NNN-<sequence>.md
+
+plans/diagnose-implementing/_machine/<TASK_NAME>/
+├── operational-root.json
+├── lower-layer-observations.json
+└── root-cause-landscape.json
 ```
 
-Sequence IDs = creation history, not forced execution chain.
+Existing Package resume فقط بطلب مستخدم صريح للحزمة نفسها.
 
-## 3) Overview Ownership
+## 2) Overview vs machine ownership
 
-Overview owns:
-- task/package identity and invocation origin;
-- integration target + task branch + workspace isolation;
-- `ORCHESTRATION_ROOT`;
-- root reconciliation provenance;
-- Macro Graph;
-- target-wide Gap/Root-Cause Landscape + cluster/priority state;
-- frontier validity/source;
-- registry/concurrency/accounting/final closure metadata.
+Overview يملك identity/isolation/root/frontier/registry/accounting/closure summary. Machine registries تملك operational coverage/lower-layer hold/root-cause priority proof. Header لا يصنع machine PASS.
 
-## 4) Workspace Bootstrap
-
-Before package creation:
+## 3) Bootstrap
 
 ```text
-resolve exact INTEGRATION_TARGET HEAD
-→ derive unique TASK_BRANCH
-→ create TASK_BRANCH from exact target HEAD
-→ LOCAL: create dedicated worktree
-   REMOTE/API: use TASK_BRANCH as isolated remote workspace
-→ prove task isolation
-→ create package inside/on TASK_BRANCH
+resolve latest target
+→ create dedicated Task Branch
+→ LOCAL: dedicated Worktree / REMOTE: Task Branch isolation
+→ prove isolation
+→ create package + machine registries OPEN
+→ lock TARGET/ORCHESTRATION_ROOT/diagnostic altitude
 ```
 
-`INTEGRATION_TARGET` is never the normal working branch.
-
-## 5) Root + Landscape Before Frontier
-
-On every invocation/resume, do not jump directly to persisted frontier:
+## 4) Before first Sequence
 
 ```text
-restore root
-→ reconcile Macro Graph on latest target truth
-→ classify foreign delta
-→ reuse valid prior evidence
-→ build/reconcile Target-Wide Gap & Root-Cause Landscape
-→ correlate Findings into RC-NNN clusters
-→ rank all material clusters by systemic leverage
-→ adversarially challenge missing/unranked clusters
-→ derive/revalidate frontier
+operational breadth/deepening needed for coverage
+→ operational negative-space/adversarial
+→ operational-root-gate PASS
+→ findings + RC clusters
+→ competitive deepening
+→ root-cause-priority-gate PASS
+→ frontier-derivation-gate --phase derive --cluster RC-NNN PASS
+→ create Sequence JIT
 ```
 
-Before Sequence derivation:
+No speculative future sequences, no fixed domain tree, no Sequence per Finding.
 
-```text
-ROOT_RECONCILIATION_REQUIRED=NO
-ROOT_RECONCILED_SHA=LATEST_RECONCILED_SHA
-TARGET_LANDSCAPE_COMPLETE=YES
-LANDSCAPE_RECONCILED_SHA=LATEST_RECONCILED_SHA
-ROOT_CAUSE_CLUSTERING_COMPLETE=YES
-ROOT_CAUSE_CLUSTERS_ACCOUNTED=YES
-UNCLUSTERED_MATERIAL_FINDINGS=0
-PRIORITY_MODEL_COMPLETE=YES
-PRIORITY_DERIVATION_SOURCE=ROOT_CAUSE_LANDSCAPE
-UNRANKED_MATERIAL_CLUSTERS=0
-PRIMARY_FRONTIER_JUSTIFIED=YES
-LANDSCAPE_ADVERSARIAL_PASS=YES
-PRIORITY_POLICY=HIGHEST_PROVEN_SYSTEMIC_LEVERAGE
-FRONTIER_DERIVATION_SOURCE=ROOT_GRAPH
-TASK_BRANCH_READY=YES
-WORKSPACE_ISOLATION_READY=YES
-```
+## 5) Sequence boundary
 
-## 6) Priority / Sequence Derivation
-
-A Sequence must be attached to a proven `RC-NNN` and record:
-
-```text
-ROOT_CAUSE_CLUSTER_ID
-PRIORITY_CLASS
-PRIORITY_BASIS
-DERIVATION_BASIS
-```
+One Sequence = one coherent proven RC treatment/execution/verification/closure unit. It records cluster, priority basis, operational graph position, journeys/states/authorities/handoffs/truth owners impacted, dependencies/consumers, conflict domain, owner, verification and cleanup.
 
 Allowed priority classes:
 
@@ -114,54 +71,16 @@ DEPENDENT_SECONDARY
 LEAF_LOCAL
 ```
 
-Default comparative priority:
+## 6) Live write gate
+
+Before Product/Runtime/Data/package execution write:
 
 ```text
-upstream/root-cause depth
-→ blocking power
-→ canonical/foundation importance
-→ blast radius
-→ risk/severity
-→ unlock value
-→ finding density/recurrence
-→ structural-debt multiplier
-```
-
-Do not choose by recency, most Findings alone, changed-file count, easiest fix, last session, or Sequence number.
-
-## 7) JIT / Backtracking
-
-Normal:
-
-```text
-root-reconciled + prioritized landscape
-→ prove highest-leverage closure boundary
-→ create sequence JIT
-```
-
-Backtrack:
-
-```text
-current SUSPENDED_BY_DEPENDENCY
-→ update affected root-cause landscape
-→ rerank
-→ upstream sequence JIT if now proven priority
-→ upstream complete/prepare
-→ re-root/reconcile affected graph/priority
-→ resume descendant
-```
-
-No future speculative sequence.
-
-## 8) EXECUTE Write Gate
-
-Before live write:
-
-```text
-root-anchor gate PASS on latest integration-target SHA
-root-cause-priority gate PASS
-task-isolation gate PASS
-FRONTIER_VALID=YES
+canonical task-isolation gate PASS
+canonical root-anchor gate PASS
+canonical operational-root gate PASS
+canonical root-cause-priority gate PASS
+canonical frontier-derivation gate PASS
 ROOT_CAUSE_PROVEN=YES
 DECISIONS_RESOLVED=YES
 DECISION_IMPACT_PROPAGATED=YES
@@ -175,74 +94,83 @@ CONFLICT_DOMAIN classified
 EXECUTION_OWNER assigned
 ```
 
-Then highest-leverage root fix/refactor/redesign/rebuild → required consumers → contracts/data/generated sync → obsolete/parallel truth removal → cleanup → verification/readback → COMPLETE.
+كلها على same reconciled truth.
 
-## 9) Coherent Cutover
+## 7) Diagnostic blocker exception
 
-No COMPLETE with known affected consumer, contradictory truth, required migration, reachable obsolete path, workaround, or unclassified scope delta required for correctness.
+قبل Operational PASS لا كتابة تقنية إلا `DIAGNOSTIC_BLOCKER` مثبت يمنع اكتساب الحقيقة نفسها. سجّل السبب والحد الأدنى للتغيير، تحقق أنه لا يغير Product semantics دون قرار، ثم عد فورًا للـOperational diagnosis. CI/lint/UI bug ليس blocker تلقائيًا.
 
-## 10) Multi-Agent
-
-Read-only discovery/diagnosis workers may operate against pinned refs and should be used across complementary diagnostic angles when useful.
-Writing workers require isolated task workspaces and owned Conflict Domains.
-Independent writing workers may use child worker branches/worktrees only when graph + priority model prove independent material frontiers; their deltas integrate into the task branch first.
-Target integration remains serialized.
-
-`INDEPENDENT_PARALLEL` is not inferred from different files; it requires semantic independence across canonical owner/state/contracts/data/runtime authority.
-
-## 11) Foreign Work
-
-Foreign/pre-existing delta is preserved. It may update graph/root-cause evidence but **never becomes current work merely because it is latest**. If it changes causal placement or leverage, invalidate/rerank only the affected landscape cone.
-
-## 12) Post-Sequence Reconciliation
-
-After every `PREPARED/COMPLETE`, and whenever material evidence changes causal placement:
+## 8) Root treatment / coherent cutover
 
 ```text
-update graph + findings + RC clusters
-→ close/reopen affected cluster state
-→ recalculate dependency/blocking/blast-radius/risk/unlock relations
-→ rerank remaining material clusters
-→ adversarially challenge next frontier when landscape completeness changed
-→ justify next frontier
+highest proven root fix/refactor/redesign/rebuild
+→ canonical owner
+→ required writers/readers/consumers
+→ contracts/data/generated sync/migrations
+→ cross-surface behavior
+→ obsolete/parallel truth removal
+→ cleanup
+→ canonical readback/runtime verification
 ```
 
-Do not mechanically continue `SEQ-NNN+1`.
+No COMPLETE مع required consumer/migration/contradictory truth/reachable obsolete path/workaround/unclassified scope delta.
 
-## 13) Integration Gate
+## 9) Reuse before create
 
-Before target mutation:
+`REUSE → EXTEND → MERGE → MOVE_TO_OWNER → SPLIT → CREATE_NEW`. Create New آخر خيار بعد relationship/consumer search.
+
+## 10) Backtracking
+
+إذا ظهر upstream root أعلى:
 
 ```text
-task branch work complete for intended integration unit
+current = SUSPENDED_BY_DEPENDENCY
+→ update operational/RC machine registries
+→ invalidate affected rank/frontier
+→ rerank
+→ open upstream JIT only after gates
+→ fix/verify upstream
+→ invalidate descendants
+→ resume only after current re-justification
+```
+
+## 11) Parallel writes
+
+Read-only diagnosis واسع بالتوازي. Live writes فقط عندما RCs `INDEPENDENT_PARALLEL` + semantic conflict domains مستقلة + isolated worker branches/worktrees + execution owners. Outputs integrate into Task Branch أولًا.
+
+## 12) Post-sequence reconciliation
+
+بعد PREPARED/COMPLETE/material evidence:
+
+```text
+update operational nodes if affected
+→ findings/RC state
+→ dependency/blocking/blast-radius/risk/unlock
+→ rerank affected open RCs
+→ challenge next frontier
+```
+
+لا `SEQ-NNN+1` ميكانيكي.
+
+## 13) Integration gate
+
+Task Branch success ≠ target closure.
+
+```text
+task integration unit ready
 → resolve latest INTEGRATION_TARGET
-→ classify target movement
-→ semantic rebase/rebuild task delta
-→ rerun invalidated checks
-→ assign single INTEGRATION_OWNER
+→ classify foreign movement
+→ reconcile/rebase/rebuild semantically
+→ invalidate/reacquire affected operational/priority/evidence
+→ rerun required gates/checks
+→ assign one INTEGRATION_OWNER
 → non-force/fast-forward-safe integration
-→ INTEGRATION_COMPLETE=YES
+→ re-resolve target
+→ INTEGRATION_COMPLETE=YES only after exact result proven on target
 ```
 
-No direct integration-target writes by ordinary execution workers.
+## 14) MODE
 
-## 14) PREPARE_ONLY Delivery
+`PREPARE_ONLY`: diagnose/decide/prepare exact cutover/cleanup/verification; no Product/Runtime/Data mutation. Package may be integrated as authoritative handoff when governance permits.
 
-PREPARE package remains isolated while being prepared. Before final handoff, reconcile/integrate the final package state through the Integration Owner so the authoritative handoff is visible from the latest Integration Target; then set `INTEGRATION_COMPLETE=YES`.
-
-## 15) Global Completion
-
-All material graph nodes + Findings + Root-Cause Clusters + sequence records + accounting must reconcile from the root before final cleanup/governance/evidence/fresh-head/adversarial gates.
-
-Final closure/handoff additionally requires:
-
-```text
-TARGET_LANDSCAPE_COMPLETE=YES
-ROOT_CAUSE_CLUSTERS_ACCOUNTED=YES
-UNCLUSTERED_MATERIAL_FINDINGS=0
-PRIORITY_MODEL_COMPLETE=YES
-UNRANKED_MATERIAL_CLUSTERS=0
-LANDSCAPE_ADVERSARIAL_PASS=YES
-```
-
-plus task-isolation provenance and completed integration.
+`EXECUTE_END_TO_END`: execute root treatments after all gates, verify, reconcile/rerank until no authorized material work remains and closure gates pass.

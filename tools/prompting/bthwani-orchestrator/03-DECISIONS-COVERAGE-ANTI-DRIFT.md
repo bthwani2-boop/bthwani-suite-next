@@ -1,118 +1,90 @@
 # 03 — Decisions, Coverage & Anti-Drift
 
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
-Owner: `tools/prompting/bthwani-orchestrator/03-DECISIONS-COVERAGE-ANTI-DRIFT.md`
+Owner: accounting, decisions, causal clustering, priority, invalidation and frontier accounting.
 
-## 1) Constitutional Accounting
+## 1) Constitutional accounting
 
 ```text
-EVERY MATERIAL THING → GRAPH + COVERAGE
+EVERY MATERIAL OPERATIONAL NODE → OPERATIONAL REGISTRY + GRAPH
+EVERY LOWER-LAYER EARLY OBSERVATION → HOLD/PROMOTED/DISPOSITIONED
 EVERY DEFECT/GAP/CONTRADICTION → FINDING ID
-EVERY MATERIAL FINDING → ROOT-CAUSE CLUSTER OR PROVEN DISPOSITION
-EVERY MATERIAL ROOT-CAUSE CLUSTER → PRIORITY POSITION
-EVERY DEPENDENCY/CONSUMER/SURFACE → SCOPE DELTA ID
-EVERY TRUE DECISION → DECISION ID
-EVERY DECISION → FULL IMPACT PROPAGATION + RE-DIAGNOSIS
-EVERY PROVEN CLOSURE BOUNDARY → SEQUENCE REGISTRY
+EVERY MATERIAL FINDING → RC-NNN OR PROVEN DISPOSITION
+EVERY MATERIAL RC → COMPARATIVE PRIORITY POSITION
+EVERY DEPENDENCY/CONSUMER/SURFACE → SCOPE DELTA / GRAPH RELATION
+EVERY TRUE DECISION → DECISION ID + FULL IMPACT PROPAGATION
 EVERY REQUIRED PROOF → EVIDENCE ID
 NO SILENT MATERIAL ELEMENT
 ```
 
-## 2) Root-Anchored Coverage
+## 2) Coverage order
 
-Coverage starts from `ORCHESTRATION_ROOT`, not from changed-file/commit recency:
-
-```text
-Root/Macro Model
-→ Canonical Owners / Foundations / Invariants
-→ Domains / Services / Contracts / Data
-→ Journeys / States / Handoffs
-→ Surfaces / Consumers
-→ implementation/runtime detail
-```
-
-Reverse/cross-surface/cross-layer traces then challenge completeness.
-
-## 3) Target Landscape / Root-Cause Cluster Accounting
-
-قبل أول Frontier تنفيذية:
+Coverage يبدأ من أعلى معنى تشغيلي، لا من repository structure:
 
 ```text
-TARGET-WIDE MATERIAL DISCOVERY
-→ Finding IDs
-→ correlation / de-duplication
-→ RC-NNN clusters
-→ dependency/impact placement
-→ comparative priority
-→ adversarial missing-cluster challenge
+Product Outcomes
+→ Actors / Authorities / Responsibilities
+→ Journeys
+→ States / Transitions / Preconditions / Invariants
+→ Handoffs / Cross-Surface Meaning
+→ Canonical Owners / Writers / Readers / Consumers
+→ Data/Contract/API/Persistence/Event/Readback Flows
+→ Implementation/Runtime Boundaries
+→ Findings / RCs / Priority / Frontier
 ```
 
-لا يُسمح ببقاء Finding مادية مكتشفة خارج Cluster/Disposition، ولا Cluster مادية بلا ترتيب:
+Machine `operational-root.json` يحكم اكتمال الطبقات التشغيلية؛ `00-OVERVIEW.md` ملخص فقط.
 
-```text
-UNCLUSTERED_MATERIAL_FINDINGS = 0
-UNRANKED_MATERIAL_CLUSTERS = 0
-```
+## 3) Finding / lower-layer disposition
 
-كثرة Findings تحت Cluster واحدة ترفع `FINDING_DENSITY` لكنها لا تتغلب تلقائيًا على upstream dependency/foundation/blocking/risk/blast-radius/unlock evidence.
-
-## 4) Foreign Delta Classification
-
-Latest-head delta must be attached to the root graph as:
-
-```text
-UNRELATED
-RELATED_NON_BLOCKING
-UPSTREAM_OR_ROOT_CHANGING
-BLOCKING
-SEMANTIC_OVERLAP
-DIRECT_CONFLICT
-AUTHORITY_OR_TRUTH_CHANGE
-```
-
-No delta gets priority because it is newest. `UNRELATED` is preserved but not followed. Related delta updates the correct graph node/root-cause cluster and invalidates only affected evidence/priority assumptions.
-
-## 5) Findings / Decisions
-
-Finding disposition:
+Finding مادية:
 
 ```text
 SAME_ROOT_CAUSE
 UPSTREAM_OR_BLOCKER
 INDEPENDENT_IN_SCOPE
 SUPPORTED_EXCLUSION_WITH_PROOF
+REQUIRES_MORE_DIAGNOSIS
 ```
 
-Decision resolution:
+Lower-layer observation:
 
 ```text
-derive if possible
-→ true decision boundary only when non-derivable
-→ resolve
-→ propagate through full impact graph
-→ invalidate affected assumptions/evidence
-→ re-diagnose
-→ re-cluster/re-rank if causal placement or leverage changed
+HOLD → لا تنفيذ
+PROMOTED → parent + RC + evidence + current priority
+DISPOSITIONED → resolved/excluded with proof
 ```
 
-## 6) Priority Constitution
+وجود technical failure واضح لا يمنحه الأولوية.
 
-Frontier priority is comparative, evidence-backed systemic leverage:
+## 4) Root-cause clustering
+
+اربط الأعراض عبر operational parent/canonical owner/state model/contract/data writer/dependency/migration/runtime boundary. لا split/merge بالحدس. كل RC مادي يملك Operational Parents، competing hypotheses، evidence، blast radius، dependencies، consumers، upstream disposition.
+
+```text
+UNCLUSTERED_MATERIAL_FINDINGS=0
+```
+
+قبل ranking/frontier.
+
+## 5) Competitive priority
 
 ```text
 UPSTREAM / ROOT-CAUSE DEPTH
 > BLOCKING POWER
 > CANONICAL / FOUNDATION IMPORTANCE
 > BLAST RADIUS
-> RISK / SEVERITY
+> SECURITY / DATA / FINANCE / OPERATIONAL RISK
 > UNLOCK VALUE
+> CROSS-JOURNEY / CROSS-SURFACE EFFECT
 > FINDING DENSITY / RECURRENCE
 > STRUCTURAL-DEBT MULTIPLIER
+> LOCAL LEAF / COSMETIC
 ```
 
-`>` expresses default causal precedence, not an arithmetic score. Evidence may show a later dimension is materially dominant, but that rationale must be explicit.
+`>` causal default precedence لا score ميكانيكي. Evidence قد يثبت dominance مختلفًا ويجب توثيقه.
 
-Forbidden priority shortcuts:
+Forbidden shortcuts:
 
 ```text
 RECENCY
@@ -121,117 +93,104 @@ MOST_CHANGED_FILES
 EASIEST_FIX
 LAST_SESSION
 SEQUENCE_NUMBER
+FIRST_CI_FAILURE
 ```
 
-Allowed Sequence priority classes:
+## 6) Competitive deepening status
+
+كل RC مفتوح قبل ranking النهائي يكون:
 
 ```text
-PRIMARY_SYSTEMIC
-UPSTREAM_FOUNDATION
-INDEPENDENT_PARALLEL
-DEPENDENT_SECONDARY
-LEAF_LOCAL
+DEEPENED_ENOUGH_TO_RANK
+or
+PROVEN_CANNOT_OUTRANK
 ```
 
-## 7) Sequence / Frontier Derivation
+Winner نفسه يجب `DEEPENED_ENOUGH_TO_RANK`. لا تسمح candidate غير مفهومة يمكنها قلب الترتيب.
 
-A Sequence is a proven closure unit, not the newest feature branch topic or one Finding.
-
-Boundary may follow distinct Root Cause / Canonical Owner / hard dependency / journey-state / verification-runtime / protected risk / consumer migration / durable governance boundary.
-
-Before deriving/revalidating frontier:
+## 7) Decision boundary
 
 ```text
-ROOT_RECONCILIATION_REQUIRED = NO
-ROOT_RECONCILED_SHA = LATEST_RECONCILED_SHA
-TARGET_LANDSCAPE_COMPLETE = YES
-LANDSCAPE_RECONCILED_SHA = LATEST_RECONCILED_SHA
-ROOT_CAUSE_CLUSTERING_COMPLETE = YES
-ROOT_CAUSE_CLUSTERS_ACCOUNTED = YES
-UNCLUSTERED_MATERIAL_FINDINGS = 0
-PRIORITY_MODEL_COMPLETE = YES
-PRIORITY_DERIVATION_SOURCE = ROOT_CAUSE_LANDSCAPE
-UNRANKED_MATERIAL_CLUSTERS = 0
-PRIMARY_FRONTIER_JUSTIFIED = YES
-LANDSCAPE_ADVERSARIAL_PASS = YES
-FRONTIER_DERIVATION_SOURCE = ROOT_GRAPH
+derive from evidence if possible
+→ ask only true non-derivable decision
+→ options + recommendation + reason + impact
+→ record DECISION ID
+→ propagate through full operational/technical graph
+→ invalidate affected assumptions/evidence
+→ re-diagnose
+→ re-cluster/re-rank when causal placement/leverage changes
 ```
 
-Sequence numbers are creation history, not priority.
+لا سؤال للمستخدم عن شيء قابل للاشتقاق.
 
-## 8) Priority Invalidation / Anti-Drift
+## 8) Frontier derivation
 
-أي material discovery أو Decision أو foreign delta أو upstream fix يقوم بأحد التالي:
+Frontier صالح فقط إذا Machine Gates تثبت:
 
 ```text
-creates a new RC-NNN
-merges/splits an existing cluster
-changes canonical owner
-changes dependency position
-changes blocking power/blast radius/risk/unlock value
-invalidates landscape evidence
+operational coverage current
+root-cause landscape current
+all material findings dispositioned
+all material RCs ranked
+winner operationalGraphPositionProven=true
+blastRadiusComplete=true
+dependenciesComplete=true
+consumersComplete=true
+unresolvedUpstream=[]
+competitiveDeepening=DEEPENED_ENOUGH_TO_RANK
+parallel RCs have explicit semantic independence evidence
 ```
 
-يجب أن يفعل:
+Sequence number = creation history فقط.
+
+## 9) Priority invalidation
+
+أي discovery/decision/foreign delta/fix يغير:
 
 ```text
-PRIORITY_MODEL_COMPLETE = NO
-PRIMARY_FRONTIER_JUSTIFIED = NO
-LANDSCAPE_ADVERSARIAL_PASS = NO when completeness is affected
-→ reconcile only affected landscape cone
-→ rerank
-→ rejustify frontier
+actor/authority/responsibility
+journey/state/handoff
+canonical owner/writer/reader/consumer
+dependency/upstream position
+blocking power/blast radius/risk/unlock value
+cluster merge/split
+operational coverage evidence
 ```
 
-لا تستمر في Frontier قديمة لمجرد أنها بدأت سابقًا إذا ثبت أن upstream/root priority تغيرت؛ استخدم structured suspension/backtrack.
-
-## 9) Structured Backtracking / Reopen
+يبطل affected cone فقط:
 
 ```text
-current detects upstream
-→ SUSPENDED_BY_DEPENDENCY
-→ update cluster/priority graph
-→ open upstream JIT only when re-ranked as proven frontier
-→ resolve upstream
-→ invalidate affected descendants
-→ root/landscape/graph reconcile
-→ REOPEN/RESUME descendant
+operational registry affected nodes → OPEN/STALE when applicable
+priority model affected RCs → STALE
+selected frontier → INVALID if winner can change
+→ reconcile minimum sufficient cone
+→ re-rank
 ```
 
-A completed sequence may reopen if new root/canonical truth invalidates it.
+لا full rescan بلا سبب، ولا استمرار بسبب sunk cost.
 
-## 10) Parallelism
+## 10) Foreign delta
 
-Parallel analysis may be broad. Parallel writes require proven-independent Conflict Domains + isolated workspaces + execution owners **and** `PRIORITY_CLASS=INDEPENDENT_PARALLEL`. One target-branch Integration Owner at a time.
+Classify: `UNRELATED / RELATED_NON_BLOCKING / UPSTREAM_OR_ROOT_CHANGING / BLOCKING / SEMANTIC_OVERLAP / DIRECT_CONFLICT / AUTHORITY_OR_TRUTH_CHANGE`.
 
-## 11) Accounting Gate
+UNRELATED يُحفظ ولا يُتبع. Related يربط بعقدته ويعيد فقط affected evidence/priority. Recency never promotes.
 
-Before final handoff/closure:
+## 11) Accounting gate
+
+قبل handoff/closure:
 
 ```text
+OPERATIONAL_MACHINE_ACCOUNTING=PASS
 FINDINGS_ACCOUNTED=YES
 ROOT_CAUSE_CLUSTERS_ACCOUNTED=YES
+UNCLUSTERED_MATERIAL_FINDINGS=0
+UNRANKED_MATERIAL_CLUSTERS=0
 SCOPE_DELTAS_ACCOUNTED=YES
 DECISIONS_ACCOUNTED=YES
 CONSUMERS_ACCOUNTED=YES
 EVIDENCE_ACCOUNTED=YES
 CLEANUP_ACCOUNTED=YES
 ACCOUNTING_COMPLETE=YES
-UNCLUSTERED_MATERIAL_FINDINGS=0
-UNRANKED_MATERIAL_CLUSTERS=0
 ```
 
-Adversarial negative-space discovery must challenge missing/unmapped nodes and falsely local symptoms.
-
-## 12) Fresh Head
-
-Before sequence creation/live write/integration/closure:
-
-```text
-re-resolve HEAD
-→ classify semantic delta
-→ update affected graph/root-cause clusters
-→ set root/landscape/priority stale only when required by affected truth
-→ never change frontier by recency
-→ rederive/revalidate from root graph + priority landscape
-```
+Adversarial challenge يحاول إيجاد operational nodes/hidden writers/consumers/roots غير محاسبة.

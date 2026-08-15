@@ -23,6 +23,8 @@ INTEGRATION_COMPLETE: NO
 MODE: __MODE__
 TARGET: __TARGET__
 ORCHESTRATION_ROOT: __ORCHESTRATION_ROOT__
+MINIMUM_DIAGNOSTIC_ALTITUDE: UNSET
+MACHINE_REGISTRY_PATH: UNSET
 NAVIGATION_POLICY: ROOT_ANCHORED_GRAPH_ONLY
 LATEST_HEAD_ROLE: TRUTH_INTEGRATION_BASELINE_ONLY
 OBJECTIVE: __TASK_OBJECTIVE__
@@ -34,6 +36,12 @@ CURRENT_SHA: __CURRENT_SHA__
 LATEST_RECONCILED_SHA: __CURRENT_SHA__
 ROOT_RECONCILIATION_REQUIRED: YES
 ROOT_RECONCILED_SHA: UNSET
+OPERATIONAL_ROOT_REQUIRED: YES
+OPERATIONAL_ROOT_COMPLETE: NO
+OPERATIONAL_ROOT_RECONCILED_SHA: UNSET
+OPERATIONAL_NEGATIVE_SPACE_PASS: NO
+OPERATIONAL_ADVERSARIAL_PASS: NO
+LOWER_LAYER_HOLD_COUNT: UNSET
 TARGET_LANDSCAPE_COMPLETE: NO
 LANDSCAPE_RECONCILED_SHA: UNSET
 ROOT_CAUSE_CLUSTERING_COMPLETE: NO
@@ -73,48 +81,30 @@ FINAL_CANDIDATE_SHA: UNSET
 HEAD_AT_REVIEW_START: UNSET
 HEAD_AT_DECISION: UNSET
 
-> New invocation package. This package is isolated from other sessions by TASK_BRANCH/workspace. TARGET/ORCHESTRATION_ROOT governs orientation; latest Integration Target HEAD governs truth/integration only. Existing packages never imply automatic resume. The first execution frontier is forbidden until the target-wide gap/root-cause landscape is clustered, ranked, adversarially challenged and justified.
+> New invocation package. Operational meaning governs initial diagnosis. Technical findings discovered before operational/root placement are evidence held outside this flat package in the machine registry and cannot govern execution.
 
 ## 1. Truth Baseline
 
-- Resolved orchestration root:
+- Operational/Product/Governance truth sources actually read:
+- Resolved ORCHESTRATION_ROOT / diagnostic altitude:
 - Integration Target + exact starting SHA:
-- Dedicated Task Branch:
-- Workspace isolation mode/path:
-- Authority/Product/Policy/Product-Truth/Machine-Contract sources actually read:
-- Previous packages/evidence reused vs invalidated:
+- Dedicated Task Branch / workspace:
+- Previous evidence reused vs invalidated:
 - Concurrent/foreign delta classification:
 
 ## 2. Macro Blueprint / Dependency Graph
 
-Start root-down: Macro System/Product → Canonical Owners/Foundations → Domains/Contracts/Data → Journeys/States/Handoffs → Surfaces/Consumers → details.
+Start: Product Outcomes → Actors/Authority/Responsibility → Journeys → States/Transitions/Invariants → Handoffs → Canonical Owners → Writers/Readers/Consumers → Data/Contract/API/Persistence/Event/Readback → Surfaces/Services/Runtime.
 
-Movement after orientation may be vertical/horizontal/reverse/cross-layer/cross-surface/jump-to-root.
+Machine operational coverage lives under `MACHINE_REGISTRY_PATH`; this Overview summarizes it but does not manufacture PASS.
 
 ### Target-Wide Gap & Root-Cause Landscape
 
-Before the first execution frontier, map material gaps/defects/contradictions/structural debt across the authorized TARGET, correlate symptoms into root-cause clusters, and rank the clusters by evidence-backed systemic leverage.
+Only after Operational Root PASS: findings → RC-NNN correlation → competitive deepening → comparative systemic ranking → adversarial priority challenge.
 
-| Cluster ID | Proven/working root cause or foundation gap | Findings/symptoms | Dependency position | Blocking power | Blast radius | Canonical/foundation importance | Risk/severity | Unlock value | Finding density | Priority class | Disposition |
+| Cluster ID | Proven/working root cause | Findings/symptoms | Operational parents | Dependency position | Blocking power | Blast radius | Foundation importance | Risk | Unlock value | Priority class | Disposition |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 <!-- ROOT_CAUSE_LANDSCAPE_ROWS -->
-
-Priority is comparative and evidence-backed, not a naive arithmetic score. Finding density is supporting evidence only. A cluster with fewer symptoms may outrank a noisy cluster when it is more upstream, foundational, blocking, risky, or unlocks more of the graph.
-
-Required before first/later frontier derivation after any material landscape change:
-
-```text
-TARGET_LANDSCAPE_COMPLETE=YES
-LANDSCAPE_RECONCILED_SHA=LATEST_RECONCILED_SHA
-ROOT_CAUSE_CLUSTERING_COMPLETE=YES
-ROOT_CAUSE_CLUSTERS_ACCOUNTED=YES
-UNCLUSTERED_MATERIAL_FINDINGS=0
-PRIORITY_MODEL_COMPLETE=YES
-PRIORITY_DERIVATION_SOURCE=ROOT_CAUSE_LANDSCAPE
-UNRANKED_MATERIAL_CLUSTERS=0
-PRIMARY_FRONTIER_JUSTIFIED=YES
-LANDSCAPE_ADVERSARIAL_PASS=YES
-```
 
 ## 3. Sequence Registry / Execution Frontier
 
@@ -122,16 +112,16 @@ LANDSCAPE_ADVERSARIAL_PASS=YES
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 <!-- SEQUENCE_REGISTRY_ROWS -->
 
-No Sequence may be created/resumed from recency, finding count alone, easiest-fix bias, or latest changed files. Frontier must be derived/revalidated from `ROOT_GRAPH` after the root-cause landscape/priority gates pass.
+No Sequence from recency/finding count/easiest fix/latest file. Public `new-sequence.mjs` requires canonical Operational Root + Priority + Frontier Derivation gates.
 
 ## 4. Global Decisions / Blockers
 
-Record cross-sequence decisions, blockers, prior-package observations and concurrent/foreign deltas. Foreign changes are inputs to classification, not automatic work direction.
+Record true non-derivable decisions, diagnostic blockers, concurrent delta and affected invalidation cones.
 
 ## 5. Global Accounting / Coverage / Reconciliation
 
-Track Graph Nodes, Findings, Root-Cause Clusters, Scope Deltas, Decisions, Consumers, Evidence, Cleanup, suspended/reopened sequences and invalidation cones. Every material Finding must be clustered or explicitly dispositioned; every material cluster must be ranked before frontier selection.
+Track Operational Nodes, Lower-Layer Observations, Findings, RCs, Scope Deltas, Decisions, Consumers, Evidence, Cleanup, suspended/reopened sequences and invalidation cones. Machine registry is authoritative for operational/RC proof.
 
 ## 6. Final Target Handoff / Closure
 
-No handoff/closure while root/frontier provenance is stale, target landscape/clustering/priority is incomplete or stale, task/workspace isolation is unproven, integration is incomplete, accounting incomplete, or final evidence/fresh-head/adversarial gates are missing.
+No handoff/closure while operational/root/frontier provenance is stale, machine accounting incomplete, task isolation/integration incomplete, accounting/cleanup/evidence/governance/fresh-head/adversarial gates missing, or material HOLD/unresolved RC remains.

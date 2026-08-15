@@ -1,406 +1,146 @@
 # 02 — Discovery & Diagnosis
 
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
-Owner: `tools/prompting/bthwani-orchestrator/02-DISCOVERY-DIAGNOSIS.md`
+Owner: operational discovery, diagnostic methods, competitive deepening and evidence acquisition.
 
-هذا الملف يملك منهج الاكتشاف والتشخيص. الحقيقة/السلطة/الكتابة في `01-CORE-CONTRACT.md`، والقرارات/التغطية/المحاسبة في `03-DECISIONS-COVERAGE-ANTI-DRIFT.md`.
-
-## 1) المنهج الحاكم
+## 1) Governing order
 
 ```text
-CREATE/RESUME LIVING OVERVIEW EARLY
-→ BROAD DISCOVERY FROM ORCHESTRATION_ROOT
-→ BUILD MULTI-DIRECTIONAL RELATION / DEPENDENCY / IMPACT GRAPH
-→ MACRO OPERATIONAL BLUEPRINT
-→ TARGET-WIDE GAP & ROOT-CAUSE LANDSCAPE
-→ ROOT-CAUSE CLUSTERING / CORRELATION
-→ PRIORITY / SYSTEMIC-LEVERAGE MODEL
-→ LANDSCAPE ADVERSARIAL CHALLENGE
-→ MACRO DECISION GATE
-→ DERIVE HIGHEST-LEVERAGE PROVEN EXECUTION FRONTIER
-→ DEEP GRAPH-DRIVEN JOURNEY DIAGNOSIS
-→ RESOLVE DERIVABLE FACTS
-→ RECORD/ACCOUNT FINDINGS / CONTRADICTIONS / UNKNOWNS / SCOPE DELTAS
-→ TRUE DECISION BOUNDARY when necessary
-→ FULL IMPACT PROPAGATION + RE-DIAGNOSIS + RE-RANK WHEN AFFECTED
-→ ADVERSARIAL COMPLETENESS
+CREATE/RESUME OVERVIEW + MACHINE REGISTRIES EARLY
+→ OPERATIONAL TRUTH RECONCILIATION
+→ OPERATIONAL BREADTH PASS
+→ MULTI-DIRECTIONAL RELATION/DEPENDENCY/IMPACT GRAPH
+→ DEEPEN MATERIAL JOURNEY/STATE/AUTHORITY/HANDOFF QUESTIONS NEEDED FOR COVERAGE
+→ OPERATIONAL NEGATIVE-SPACE PASS
+→ OPERATIONAL ADVERSARIAL PASS
+→ MACHINE OPERATIONAL-ROOT GATE
+→ TARGET-WIDE FINDINGS
+→ RC CORRELATION/CLUSTERING
+→ COMPETITIVE DEEPENING OF ROOT CANDIDATES
+→ PRIORITY MODEL + LANDSCAPE ADVERSARIAL
+→ FRONTIER
+→ FRONTIER-SPECIFIC DEEP DIAGNOSIS / DECISIONS / EXECUTION PREPARATION
 ```
 
-`00-OVERVIEW.md` يُنشأ/يُستأنف مبكرًا كسجل مشتق حي. ملفات Sequences فقط هي Just-In-Time بعد إثبات Closure Boundary من الرسم **وبعد مرور Root-Cause Landscape/Priority Gate**. ممنوع questions-first، app-by-app isolation، screen-by-screen isolation، full-repo wandering بلا علاقة، ask-after-every-finding، أو إنشاء Sequences مستقبلية بالتخمين.
+**Frontier قبل Operational Root PASS ممنوع.**
 
-## 2) Broad Discovery
+## 2) Operational Breadth Pass
 
-ابدأ دون أسئلة للمستخدم واكتشف بقدر الانطباق:
+ابدأ دون questions-first، وغطِّ بحسب الانطباق:
 
 ```text
-Domains / Actors / Responsibilities / Journeys / Entry Points
-Surfaces / Routes / Screens / Controls
-States / Actions / Transitions / Handoffs / Outcomes / Failure-Recovery
-Canonical owners / Writers / Readers / Consumers
-Contracts / APIs / Bindings / Generated clients
-Data owners / schemas / migrations
+Product outcomes / required observable results
+Actors / identities / authority / responsibility
+Journeys / entries / actions / outcomes / failure / recovery
+States / transitions / preconditions / invariants
+Handoffs / next actor / responsibility transfer / cross-surface visibility
+Canonical owners / writers / readers / consumers
+Contracts / APIs / generated bindings
+Data owners / schemas / migrations / persistence/readback
 Permissions / scopes
 Events / jobs / providers
 Control-Panel interventions
-Runtime / readback paths
-Configs / env / dependencies
-Tests / guards / observability
+Runtime / configs / env / dependencies / observability / CI/security boundaries
 Structural residue / cleanup candidates
 ```
 
-الهدف: bounded material universe + relation graph، لا مستند ضخم ولا افتراض شمول بلا قياس.
+الهدف bounded material universe + relation graph، لا ادعاء «كل مجهول في الكون».
 
-## 3) Relation / Dependency / Impact Graph
+## 3) Operational Truth Reconciliation
 
-العقد الممكنة:
+قارن ولا تفترض:
 
 ```text
-Journey | Actor | State | Action | Surface | Route | Contract | Data Owner
-Service | Runtime Path | Config | Dependency | Writer | Reader | Consumer | Evidence
+AUTHORIZED INTENT / PRODUCT TRUTH
+↔ ACTUAL IMPLEMENTATION/RUNTIME/DATA BEHAVIOR
+↔ GOVERNANCE / CONTRACT / CANONICAL OWNER
+↔ USER-RESOLVED DECISIONS
 ```
 
-العلاقات حسب الانطباق:
+صنف `PROVEN / INFERRED / CONTRADICTED / DECISION_REQUIRED`. Product documentation ليست حقيقة مطلقة إذا خالفت authority أعلى أو runtime evidence.
+
+## 4) Journey / State / Authority coverage
+
+كل Journey مادية يجب أن تجيب بلا تخمين عن Actor, Entry, Preconditions, Authorization, Action, Decision Rule, Current/Next State, Invariants, Side Effects, Handoff, Canonical Owner, Success/Failure/Recovery, Later Readback, Cross-Surface meaning.
+
+Deepen هذه الجوانب **قبل Operational PASS** بالقدر اللازم لإزالة material uncertainty، لا بعد Frontier.
+
+## 5) Multi-directional evidence
+
+Orientation top-down لكن evidence يمكن أن تأتي forward/reverse/vertical/horizontal/cross-layer/cross-surface. Repository/code/DB/runtime قد يكشف operational node مفقودة؛ سجّلها وارفع معناها للأعلى قبل fix.
 
 ```text
-DEPENDS_ON / BLOCKS / UNLOCKS
-READS_FROM / WRITES_TO / TRIGGERS / HANDOFF_TO / CONSUMED_BY
-VISIBLE_ON / AUTHORIZED_BY / OWNS / IMPLEMENTS / VERIFIED_BY / INVALIDATES
+Forward: Entry → Preconditions → Action → Decision → State → Handoff → Outcome
+Reverse: Outcome → Handoff → State → Decision → Actor/Entry
+Temporal: Before → Trigger → Pending → Complete/Fail → Recovery → Readback
 ```
 
-كل علاقة مادية تحتاج Evidence أو Status يوضح أنها فرضية قيد الإثبات. الحركة عبر الرسم قد تكون forward/reverse/vertical/horizontal/cross-layer/cross-surface/jump-to-root.
+## 6) Lower-layer holding queue
 
-## 4) Macro Operational Blueprint
-
-قبل الاستنتاجات المجهرية كوّن:
+أي technical defect يظهر قبل parent/root placement يدخل Machine Queue:
 
 ```text
-Major domains / actors / responsibilities / journeys
-Canonical states / state-data owners / handoffs / sources of truth
-Major dependencies / core invariants / macro contradictions
+HOLD → no execution
+PROMOTED → operationalParent + RC-NNN + promotion evidence + current priority
+DISPOSITIONED → resolved/excluded with proof
 ```
 
-صنف: `PROVEN / INFERRED / CONTRADICTED / DECISION_REQUIRED`.
+هذا يمنع silent loss وفي الوقت نفسه يمنع leaf-first distraction.
 
-لا تبنِ سلسلة تنفيذ طويلة على Macro Model غير محسوم؛ القرار المؤثر يمر Decision Gate ثم ينتشر أثره عبر الرسم ويعاد التشخيص.
+## 7) Negative space
 
-## 5) Target-Wide Gap & Root-Cause Landscape + Priority
+ابحث عما ينبغي أن يوجد لكنه مفقود: actor/authority/responsibility, journey/state/transition/action/validation, handoff/recovery/cancel/retry/idempotency, control-panel intervention, cross-surface visibility, owner/writer/reader/consumer, decision/failure path, technical route/job/API بلا operational parent، أو outcome بلا implementation/readback.
 
-هذه مرحلة **إلزامية قبل أول تنفيذ**، وعلى أي `TARGET` واسع أو ضيق بحسب النطاق المصرح به.
+## 8) Competitive deepening
 
-### 5.1 حصر Landscape
-
-اجمع كل Material gap/defect/contradiction/regression/missing behavior/duplicate truth/structural debt المكتشف في Broad Discovery، ولا تتعامل معها كقائمة Bugs مستقلة مباشرة.
-
-كل Finding مادية يجب أن تصبح واحدة من:
+بعد Operational PASS وظهور RC candidates، عمق فقط candidate قادرة على الفوز أو نقض/حجب winner أو تغيير materially authority/dependency/blast-radius/risk/unlock. استخدم cheapest discriminating evidence:
 
 ```text
-ASSIGNED_TO_ROOT_CAUSE_CLUSTER (RC-NNN)
-SUPPORTED_EXCLUSION_WITH_PROOF
-REQUIRES_MORE_DIAGNOSIS before execution
+Observation → Hypothesis → cheapest differentiating evidence → Confirm/Reject → compare leverage
 ```
 
-قبل اختيار Frontier:
+توقف عن تعميق candidate عندما يثبت أنها لا تستطيع outrank/invalidate/block winner؛ احفظها محاسبة للمرحلة اللاحقة.
+
+## 9) Root-cause correlation
+
+Cross-surface symptoms قد تكون جذرًا واحدًا. `20 Findings ≠ 20 Sequences`. اربط shared state/canonical owner/contract/data writer/dependency/migration/runtime boundary قبل فصل clusters.
+
+## 10) Core diagnostic passes
+
+لكل material journey/cluster بحسب الخطر: Logical, State/Transition, Forward, Reverse, Temporal, Actor/Responsibility, Invariant, Cross-Surface Differential, Cross-Layer Vertical, Failure/Recovery, Counterfactual, Negative-Space, Adversarial, Concurrency/Idempotency, Security/Isolation, Finance, Offline/Reconnect, Provider Failure, Migration/Compatibility.
+
+## 11) Cross-layer trace
 
 ```text
-UNCLUSTERED_MATERIAL_FINDINGS = 0
-```
-
-هذا لا يعني أن كل Finding عميقة أُغلقت؛ يعني أن كل ما اكتُشف ماديًا تم وضعه في مكان سببي/استبعادي واضح بدل أن يضيع أو يتحول تلقائيًا إلى Sequence.
-
-### 5.2 Correlation / Clustering
-
-اربط الأعراض التي تتشارك في Root Cause / Canonical Owner / State Model / Contract / Data Owner / Dependency / Migration / Verification boundary.
-
-مثال منطقي:
-
-```text
-client mismatch
-+ partner mismatch
-+ captain mismatch
-+ control-panel mismatch
-+ API branches
-+ stale DB values
-→ investigate shared state ownership
-→ one proven canonical-state Root Cause cluster
-```
-
-`20 Findings ≠ 20 Sequences` إذا كانت أعراضًا لجذر واحد.
-
-### 5.3 Systemic-Leverage Priority
-
-الأولوية **ليست عدد Findings فقط**. قارن Root-Cause Clusters بالأدلة وفق:
-
-```text
-1. UPSTREAM / ROOT-CAUSE DEPTH
-2. BLOCKING POWER
-3. CANONICAL / FOUNDATION IMPORTANCE
-4. BLAST RADIUS
-5. RISK / SEVERITY
-6. UNLOCK VALUE
-7. FINDING DENSITY / RECURRENCE
-8. STRUCTURAL-DEBT MULTIPLIER
-```
-
-لا تجمعها كـscore حسابي أعمى؛ استخدم مقارنة سببية موثقة. `Finding density` عامل مهم لكنه تابع: Cluster بأعراض أقل قد يكون الأول إذا كان upstream foundation ويغلق عشرات النتائج downstream.
-
-محظور أن تصبح الأولوية بسبب:
-
-```text
-MOST RECENT
-MOST FILES CHANGED
-MOST FINDINGS ALONE
-EASIEST FIX
-LAST SESSION TOPIC
-SEQUENCE NUMBER
-```
-
-القاعدة:
-
-```text
-PRIORITY = HIGHEST PROVEN SYSTEMIC LEVERAGE
-```
-
-إذا كانت uncertainty عالية بحيث قد تقلب ترتيب الجذور، لا تبدأ write؛ زد التشخيص حتى تصبح المقارنة قابلة للدفاع بالأدلة.
-
-### 5.4 Priority Classes
-
-استخدم عند اشتقاق Sequence:
-
-```text
-PRIMARY_SYSTEMIC
-UPSTREAM_FOUNDATION
-INDEPENDENT_PARALLEL
-DEPENDENT_SECONDARY
-LEAF_LOCAL
-```
-
-`LEAF_LOCAL` لا يتقدم على Root Cause أعلى لمجرد سهولته. `INDEPENDENT_PARALLEL` مسموح فقط إذا أثبت الرسم استقلال conflict domains/owners/contracts/data/runtime authority.
-
-### 5.5 Landscape Adversarial Pass
-
-قبل أول Frontier، حاول إسقاط ترتيبك:
-
-```text
-search missing upstream owner
-search hidden writers/readers
-search duplicate canonical truth
-search unclustered findings
-search cluster split/merge mistakes
-search high-risk low-frequency defects
-search cross-surface symptoms falsely treated as local
-search dependency that would invert priority
-```
-
-عندما تكون الأدلة كافية:
-
-```text
-TARGET_LANDSCAPE_COMPLETE=YES
-LANDSCAPE_RECONCILED_SHA=LATEST_RECONCILED_SHA
-ROOT_CAUSE_CLUSTERING_COMPLETE=YES
-ROOT_CAUSE_CLUSTERS_ACCOUNTED=YES
-UNCLUSTERED_MATERIAL_FINDINGS=0
-PRIORITY_MODEL_COMPLETE=YES
-PRIORITY_DERIVATION_SOURCE=ROOT_CAUSE_LANDSCAPE
-UNRANKED_MATERIAL_CLUSTERS=0
-PRIMARY_FRONTIER_JUSTIFIED=YES
-LANDSCAPE_ADVERSARIAL_PASS=YES
-```
-
-أي اكتشاف جديد يخلق/يدمج/يفصل Root-Cause Cluster أو يغيّر dependency/blast radius/risk/unlock value يبطل ترتيب الجزء المتأثر ويعيد `PRIORITY_MODEL_COMPLETE=NO` و`PRIMARY_FRONTIER_JUSTIFIED=NO` حتى إعادة المصالحة.
-
-## 6) الوحدة الأساسية
-
-```text
-Journey-by-Journey × Multi-Surface × Cross-Layer
-```
-
-Journey Matrix المنطقية تعرف عند الانطباق:
-
-```text
-Journey ID/Name / Actor / Entry/Context / Preconditions
-Available Action / Validation / Decision Rule / Authorization/Scope
-Current State / Transition / Next State / Side Effects
-Handoff / Next Actor / Surface visibility / Outcome
-Failure / Recovery / Later Readback / Canonical Owner / Evidence/Confidence
-```
-
-Cross-Surface:
-
-```text
-Client ↔ Partner ↔ Captain ↔ Field ↔ Control Panel ↔ Backend/Domain/Data/Runtime
-```
-
-Cross-Layer:
-
-```text
-Product Truth
-→ Actor/Service Identity
-→ Session/Device/Trusted Context
-→ Role/Permission/Object Authorization
-→ UX/UI / Surface / Route / Control
-→ Surface State / Client Logic / Controller / Adapter
-→ Contract / Binding / Generated Client
-→ API
-→ Validation / Transformation
-→ Domain / Business Logic / State Machine
-→ Transaction / Data / Persistence
-→ Cache / Idempotency
-→ Events / Jobs / Providers / Integrations
-→ Networking / Response
-→ Persisted Canonical Readback
-→ Every Required Consumer / Surface
+Operational/Product meaning
+→ Actor/Identity/Session/Scope
+→ UX/Surface/Route/Control
+→ Client state/controller/adapter
+→ Contract/Binding/API
+→ Validation/Domain/State Machine
+→ Transaction/Data/Persistence
+→ Cache/Idempotency
+→ Events/Jobs/Providers
+→ Response/Canonical Readback
+→ Required Consumers/Surfaces
 → Observable Operational Result
-→ Audit / Observability / Runtime Evidence
+→ Audit/Observability Evidence
 ```
 
 لا تسقط enforcement/writer/reader/persistence/consumer ماديًا.
 
-## 7) Core Diagnostic Pass
+## 12) Experimental proof
 
-لكل Journey/Cluster مادي بحسب الانطباق:
+Falsifiable hypothesis → smallest real check → canonical runtime/readback → expected vs actual. لا تدّع Runtime/E2E/Visual proof إذا لم ينفذ.
 
-```text
-Logical
-→ State/Transition
-→ Forward Trace
-→ Reverse Trace
-→ Cross-Surface Differential
-→ Cross-Layer Vertical
-→ Failure/Recovery
-```
+## 13) Reuse before create
 
-وفعّل حسب Risk/Signal:
+`REUSE → EXTEND → MERGE → MOVE_TO_OWNER → SPLIT → CREATE_NEW`. قبل إنشاء truth/contract/state/helper/config جديد ابحث imports/routes/callers/consumers/API/DB/tests/config/generated relationships.
 
-```text
-Temporal / Actor-Responsibility / Invariant / Counterfactual
-Negative-Space / Experimental / Adversarial
-Concurrency-Idempotency / Security-Isolation / Finance
-Offline-Reconnect / Performance-Fanout / Provider Failure
-Migration-Compatibility
-```
+## 14) Structural diagnosis
 
-## 8) Logical / State Analysis
+افحص dead/unreachable/stale/legacy/superseded code، duplicate truth/implementation، unused imports/deps، obsolete routes/contracts/models/config/env/scripts، TODO/FIXME/HACK/workarounds/fallbacks، orphan refs، wrong ownership/naming/placement، debug/temp/generated noise. لا تحذف بالحدس؛ أثبت Responsibility/Purpose/Consumer/Requirement/Architectural Reason.
 
-بالدليل: هل Action مسموحة؟ Preconditions كافية؟ Validation/Authorization في المالك الصحيح؟ Transition قانونية؟ Outcome منطقية؟ هل توجد State ممنوعة قابلة للوصول؟ هل State معرفة في أكثر من Truth owner؟
+## 15) Reopen
 
-## 9) Forward + Reverse + Temporal
-
-```text
-Forward: Entry → Preconditions → Action → Validation → Decision → State → Transition → Handoff → Outcome
-Reverse: Outcome → Handoff → Transition → State → Decision → Validation → Action → Actor/Entry
-Temporal: Before → Trigger → During → Pending → Completed/Failed → Recovery → Later Readback
-```
-
-افحص timeout/retry/stale state/restart/delayed events/late propagation/version mismatch.
-
-## 10) Actor / Responsibility / Ownership
-
-لكل خطوة: من يبدأ؟ من يقرر؟ من ينفذ؟ من يملك durable truth؟ من يلغي/يعكس/يتدخل؟ من يستلم بعد ذلك؟ من ينتظر من؟ Wrong owner/orphan handoff/responsibility gap/hidden writer = Finding.
-
-## 11) Cross-Surface Differential
-
-قارن نفس Entity/State/Event:
-
-```text
-canonical backend/domain meaning
-↔ client ↔ partner ↔ captain ↔ field ↔ control-panel meaning
-```
-
-أي اختلاف غير مبرر في المعنى/Action/timing/visibility/responsibility = Finding حتى لو API لا يفشل.
-
-## 12) UX / Decision Clarity
-
-افحص عند الانطباق: Entry/Discoverability, Loading, Empty, Partial, Ready, Success, Error, Denied, Conflict, Stale, Pending, Timeout, Retry, Offline/Reconnect, Cancelled, Recovery, Completed, Later Readback. يجب أن يعرف المستخدم الحالة، ما حدث، ماذا ينتظر، الإجراء التالي، سبب المنع/الفشل وكيف يسترد.
-
-## 13) Invariants
-
-استخرج قواعد لا يجب كسرها مثل ترتيب States، حدود actor/action، prerequisite قبل handoff، canonical owner، recovery rule. ثم حاول كسرها عمدًا.
-
-## 14) Negative Space
-
-ابحث عما ينبغي أن يوجد لكنه مفقود:
-
-```text
-journey/state/transition/action/validation
-feedback/handoff/recovery
-control-panel intervention
-cross-surface visibility
-owner/consumer/writer/reader
-decision rule/failure path
-```
-
-عدم وجود code قد يكون Requirement gap.
-
-## 15) Hypothesis-Driven Evidence
-
-```text
-Observation → Hypothesis → Cheapest discriminating evidence → Confirm/Reject → Next hypothesis
-```
-
-توقف عند أول Failure سببي ثم عمّق Root Cause/Blast Radius بدل Checks عشوائية.
-
-## 16) Experimental Validation
-
-عندما تتوفر القدرة:
-
-```text
-falsifiable hypothesis → smallest real check → runtime/readback
-→ compare expected → refine/reject
-```
-
-لا تدّع Runtime/E2E/Visual proof إن لم يُنفذ.
-
-## 17) Full-Stack Failure Matrix
-
-غطِّ حسب الخطر:
-
-```text
-success / empty-missing / invalid input / unauthenticated-denied
-wrong role/scope/IDOR / forbidden state / not found / conflict-stale
-duplicate-replay-idempotency / boundary / race-concurrency / partial failure
-dependency-DB-network failure / timeout-unknown result / retry-backoff-DLQ
-offline-reconnect / restart-recovery / old-new data / mixed-version migration
-rollback-roll-forward / compensation-reconciliation
-```
-
-## 18) Reuse Before Create
-
-قبل File/Helper/Contract/State/Config/Abstraction/Source-of-Truth جديد:
-
-```text
-search exact name + semantics
-→ imports/exports/re-exports
-→ routes/navigation/registries/manifests
-→ callers/consumers/writers/readers
-→ API/DB/tests/bindings
-→ configs/env/scripts/generated references
-→ relationship/dependency tools
-```
-
-ثم: `REUSE → EXTEND → MERGE → MOVE_TO_OWNER → SPLIT → CREATE_NEW`. Create New هو الأخير.
-
-## 19) Structural / Hygiene Diagnosis
-
-من السطر حتى النظام ابحث عن dead/unreachable/stale/legacy/superseded code، duplicate implementation/truth، unused imports/exports/deps، obsolete routes/contracts/schemas/models، stale config/env/flags/scripts، TODO/FIXME/HACK/workarounds/fallbacks، orphan references، wrong placement/naming/ownership، unnecessary compatibility، debug/generated noise، files/folders بلا Purpose/Consumer/Responsibility.
-
-مستويات الفحص:
-
-```text
-line/expression/condition/branch/block
-→ function/method/type/class/component/helper/constant
-→ file/group/folder/module/package
-→ service/surface/domain
-→ contract/route/config/dependency
-```
-
-لا تحذف/تبقِ بالحدس؛ أثبت Responsibility + Purpose + Consumer + Requirement + Architectural Reason، وتتبع Blast Radius والمراجع بالاتجاهين.
-
-## 20) Adversarial Diagnosis / Accounting Challenge
-
-حاول إثبات أن التشخيص **ناقص** عبر unmapped routes/states/APIs، hidden writers/readers، jobs/events/admin/fallback/legacy، unreachable error paths، race/partial transaction، permissions/cross-scope، contract/schema/data drift، stale runtime/config، orphan refs، missing recovery، weak tests.
-
-كل Material discovery جديدة يجب أن تصبح Graph Node/Finding/Root-Cause Cluster/Scope Delta/Decision/Consumer/Evidence/Cleanup disposition. Finding جديد يعيد فتح Coverage والعقد/الترتيب المتأثر؛ لا يختفي بسبب أن Sequence أخرى كانت قد أغلقت.
-
-## 21) شرط فهم Journey / Cluster
-
-لا تعتبرها مفهومة إذا لم تستطع الإجابة بلا تخمين عن Actor، Entry، visible state، allowed actions، Preconditions، Authorization/Scope، Decision Rule، current/next State، side effects، truth owner، Handoff، cross-surface visibility، success/failure/recovery، later readback، وحفظ نفس المعنى عبر UI/API/Domain/Data/Runtime.
+أي discovery يغير operational meaning/authority/ownership أو causal placement يعيد فتح affected operational/root/priority cone فقط؛ لا تكمل Frontier قديمة بسبب sunk cost.

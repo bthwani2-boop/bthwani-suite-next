@@ -1,249 +1,136 @@
 # 01 — Core Contract
 
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
-Owner: `tools/prompting/bthwani-orchestrator/01-CORE-CONTRACT.md`
+Owner: truth/scope/isolation/root/gate invariants only.
 
-## 1) Truth vs Orientation vs Priority vs Isolation
+## 1) Authorities
 
 ```text
-INTEGRATION_TARGET/LATEST_HEAD → current implementation/repository truth + final delivery baseline
-TARGET → resolved ORCHESTRATION_ROOT
+AUTHORIZED OPERATIONAL/PRODUCT TRUTH + ACTUAL LIVE EVIDENCE → semantic reconciliation
+TARGET → ORCHESTRATION_ROOT
+OPERATIONAL_ROOT_GRAPH → initial material coverage authority
 ROOT_RECONCILED_GRAPH → navigation/dependency authority
-ROOT_CAUSE_LANDSCAPE → material causal problem map
+ROOT_CAUSE_LANDSCAPE → causal problem map
 SYSTEMIC_PRIORITY_MODEL → frontier selection authority
 TASK_BRANCH/WORKSPACE → isolated working context
-LATEST_COMMIT → never navigation/priority authority by recency alone
+INTEGRATION_TARGET/LATEST_HEAD → current repository truth + final delivery baseline only
+LATEST_COMMIT → never navigation/priority authority by recency
 ```
 
-`plans/**` و`tools/prompting/**` Derived Support فقط.
+`plans/**` و`tools/prompting/**` Derived Support؛ لا تثبت Product/Runtime truth وحدها.
 
-## 2) Invocation Contract
+## 2) Invocation / Resume
 
 ```text
-NEW INVOCATION → NEW PACKAGE BY DEFAULT
-EXPLICIT USER RESUME → exact previous package only
+NEW INVOCATION → NEW PACKAGE + TASK_BRANCH/WORKSPACE
+EXPLICIT USER RESUME → exact requested package only
 ```
 
-ممنوع استئناف آخر Package مفتوحة أو آخر Session أو latest changed files تلقائيًا. الحزم السابقة مصادر Evidence/Findings/Decisions قابلة لإعادة التحقق فقط.
+ممنوع automatic latest-package/session/file resume. Package history reusable evidence after freshness/root-placement validation only.
 
-New invocation:
+## 3) Isolation
 
 ```text
-resolve latest integration target
-→ unique task/package identity
-→ dedicated task branch
-→ isolated workspace
-→ new package
-→ root/macro reconciliation
-→ target-wide gap/root-cause landscape
-→ root-cause clustering + priority model
-→ graph/frontier derivation
+TASK_CONTEXT_POLICY=ISOLATED_CURRENT_TASK_ONLY
+FOREIGN_DELTA_POLICY=INPUT_NOT_INSTRUCTION
+DIRECT_INTEGRATION_TARGET_WRITES=FORBIDDEN_EXCEPT_INTEGRATION_OWNER
 ```
 
-Explicit resume:
-
-```text
-exact package requested by user
-→ validate package/task branch/target/mode/root
-→ latest target reconciliation
-→ task-isolation gate
-→ root/landscape reconciliation
-→ stale-evidence + stale-priority invalidation
-→ resume correct graph position
-```
-
-## 3) Task Isolation
-
-```text
-TASK_CONTEXT_POLICY = ISOLATED_CURRENT_TASK_ONLY
-FOREIGN_DELTA_POLICY = INPUT_NOT_INSTRUCTION
-DIRECT_INTEGRATION_TARGET_WRITES = FORBIDDEN_EXCEPT_INTEGRATION_OWNER
-```
-
-Local writes require dedicated Task Branch + Worktree.
-Remote/API-only writes require dedicated Task Branch and every write must target it explicitly.
-Read-only workers may operate against pinned refs without an isolated worktree.
-
-No writing worker may use `INTEGRATION_TARGET` as its normal working branch.
+Local writes require Task Branch + dedicated Worktree. Remote/API writes require dedicated Task Branch. Read-only workers may inspect pinned refs. Integration Target ليس shared working branch.
 
 ## 4) FAIL-CLOSED
 
+كل حالة غير مثبتة OPEN، وبالأخص:
+
 ```text
-DEFAULT_STATE = OPEN
-UNPROVEN = OPEN
-KNOWN_UNRESOLVED = OPEN
-STALE_EVIDENCE = OPEN for affected claim
-UNACCOUNTED_MATERIAL_ITEM = OPEN
-UNCLUSTERED_MATERIAL_FINDING = OPEN
-UNRANKED_MATERIAL_ROOT_CAUSE = OPEN
-STALE_ROOT_RECONCILIATION = OPEN
-STALE_PRIORITY_MODEL = OPEN
-INVALID_FRONTIER = OPEN
-TASK_BRANCH_NOT_READY = OPEN
-WORKSPACE_ISOLATION_NOT_PROVEN = OPEN
-INTEGRATION_NOT_COMPLETE = OPEN for final closure
+UNACCOUNTED_MATERIAL_OPERATIONAL_NODE
+STALE_OPERATIONAL_ROOT
+FAILED_OPERATIONAL_NEGATIVE_SPACE_OR_ADVERSARIAL
+LOWER_LAYER_HOLD promoted without proof
+UNCLUSTERED_MATERIAL_FINDING
+UNRANKED_MATERIAL_ROOT_CAUSE
+STALE_ROOT_RECONCILIATION
+STALE_PRIORITY_MODEL
+INVALID_FRONTIER
+TASK/WORKSPACE_ISOLATION_NOT_PROVEN
+INTEGRATION_NOT_COMPLETE
+STALE/MISSING REQUIRED EVIDENCE
 ```
 
-ممنوع ignore/defer/hide/patch-around/fake green/force push/foreign overwrite أو إسقاط Finding/Dependency/Consumer/Scope Delta/Root-Cause Cluster.
+لا `IGNORE`, silent TODO, patch-around, fake green, force push, foreign overwrite أو إسقاط Finding/Dependency/Consumer/Scope Delta/RC.
 
 ## 5) Scope
 
 ```text
 TARGET ROOT
-+ Root Cause
++ bounded material operational universe
++ highest proven Root Cause
 + Blast Radius
 + Writers/Readers/Consumers
 + Dependencies/Contracts/Data/Runtime
 + required cross-surface behavior
-+ related structural residue
++ related cleanup/structural residue
 ```
 
-`TARGET=كل شيء` يبدأ من Macro System/Product root ثم يهبط عبر Canonical Owners/Foundations إلى التفاصيل؛ لا يبدأ من newest touched file.
+`TARGET=كل شيء` يبدأ من System Operational Root. TARGET ضيق يبدأ من أعلى معنى تشغيلي داخله.
 
-## 6) Graph Motion
+## 6) Movement
 
-Orientation top-down؛ movement بعد ذلك Graph-Driven non-linear:
+Initial diagnosis top-down وفق `00`. بعد Operational Root coverage تصبح الحركة Graph-Driven غير خطية: vertical/horizontal/reverse/cross-layer/cross-surface/jump-to-root. Structured backtracking واجب عند upstream cause. Reuse still-valid evidence؛ لا rescan بلا سبب.
+
+## 7) Escalate before fix
 
 ```text
-vertical / horizontal / reverse / cross-layer / cross-surface / jump-to-root
+technical symptom
+↑ implementation
+↑ contract/data meaning
+↑ state/transition
+↑ journey/handoff
+↑ authority/ownership
+↑ highest proven material causal root
 ```
 
-Structured backtracking واجب إذا ظهر upstream cause. Start-from-root لا يعني full rescan؛ احتفظ بالأدلة غير المتأثرة.
+Technical finding = Evidence قبل Work. Lower-layer fix لا يحكم التنفيذ إلا إذا ثبت root/required cutover أو كان `DIAGNOSTIC_BLOCKER` حقيقيًا.
 
-## 7) Root-Cause Landscape / Priority
-
-قبل التنفيذ اجمع Findings المادية ضمن Root-Cause Clusters `RC-NNN` ثم رتّبها مقارنةً بالأدلة.
+## 8) Priority invariant
 
 ```text
-PRIORITY = HIGHEST PROVEN SYSTEMIC LEVERAGE
+PRIORITY=HIGHEST_PROVEN_SYSTEMIC_LEVERAGE
 ```
 
-العوامل الحاكمة:
+العوامل والتفاصيل يملكها `03`. إذا uncertainty قادرة على تغيير winner، الأولوية للتشخيص التمييزي لا للكتابة.
+
+## 9) Gate invariant
+
+لا Sequence creation/resume/live Product write قبل PASS على **نفس latest reconciled Integration Target SHA**:
 
 ```text
-UPSTREAM / ROOT-CAUSE DEPTH
-→ BLOCKING POWER
-→ CANONICAL / FOUNDATION IMPORTANCE
-→ BLAST RADIUS
-→ RISK / SEVERITY
-→ UNLOCK VALUE
-→ FINDING DENSITY / RECURRENCE
-→ STRUCTURAL-DEBT MULTIPLIER
+Task Isolation
+Root Anchor
+Operational Root machine registry
+Root-Cause Landscape/Priority machine registry
+Frontier Derivation
+Sequence common gates
 ```
 
-لا score ميكانيكي أعمى. كثرة Findings إشارة مهمة لكنها لا تتغلب تلقائيًا على Root Cause أعلى أو أخطر أو أكثر فتحًا للنظام.
+Header summary لا يستبدل Machine Registry proof.
 
-محظور أن تحدد الأولوية: `RECENCY / MOST_FINDINGS_ALONE / MOST_CHANGED_FILES / EASIEST_FIX / LAST_SESSION / SEQUENCE_NUMBER`.
-
-إذا كانت causal uncertainty قادرة على تغيير الترتيب، زد التشخيص قبل الكتابة.
-
-## 8) Latest Head Discipline
-
-قبل semantic write/integration/push:
+## 10) Root treatment invariant
 
 ```text
-resolve latest INTEGRATION_TARGET head
-→ classify delta
-→ carry unrelated work without following it
-→ attach related delta to correct graph/root-cause cluster
-→ re-open only affected root/landscape/priority/evidence cone
-```
-
-`LATEST HEAD GOVERNS TRUTH AND INTEGRATION, NOT NAVIGATION OR PRIORITY.`
-
-## 9) Root + Landscape + Isolation + Frontier Gate
-
-لا Sequence creation/resume/live write إذا:
-
-```text
-ROOT_RECONCILIATION_REQUIRED != NO
-ROOT_RECONCILED_SHA != LATEST_RECONCILED_SHA
-TARGET_LANDSCAPE_COMPLETE != YES
-LANDSCAPE_RECONCILED_SHA != LATEST_RECONCILED_SHA
-ROOT_CAUSE_CLUSTERING_COMPLETE != YES
-ROOT_CAUSE_CLUSTERS_ACCOUNTED != YES
-UNCLUSTERED_MATERIAL_FINDINGS != 0
-PRIORITY_MODEL_COMPLETE != YES
-PRIORITY_DERIVATION_SOURCE != ROOT_CAUSE_LANDSCAPE
-UNRANKED_MATERIAL_CLUSTERS != 0
-PRIMARY_FRONTIER_JUSTIFIED != YES
-LANDSCAPE_ADVERSARIAL_PASS != YES
-PRIORITY_POLICY != HIGHEST_PROVEN_SYSTEMIC_LEVERAGE
-FRONTIER_DERIVATION_SOURCE != ROOT_GRAPH
-FRONTIER_VALID != YES
-TASK_BRANCH_READY != YES
-WORKSPACE_ISOLATION_READY != YES
-TASK_BRANCH == INTEGRATION_TARGET
-```
-
-For first JIT sequence, Root + Landscape/Priority reconciliation passes first, then sequence creation establishes the valid frontier.
-
-## 10) Root Cause / Decision
-
-```text
-Detect → Confirm → correlate → Root Cause → Blast Radius → Canonical Owner
-→ compare systemic leverage
-→ full impact propagation → root treatment
-→ migrate consumers → remove obsolete/parallel truth
+Confirm → correlate → highest causal root → blast radius → canonical owner
+→ decisions/impact propagation → root treatment
+→ migrate affected writers/readers/consumers
+→ remove obsolete/parallel truth
 → cleanup → runtime/readback → verification
 ```
 
-أي Decision يفرض impact propagation + affected re-diagnosis + affected re-ranking when causal placement/leverage changes.
+لا symptom patch إذا كان upstream root معروفًا.
 
 ## 11) Accounting
 
-كل Graph Node/Finding/Root-Cause Cluster/Scope Delta/Decision/Consumer/Evidence/Cleanup item يجب أن يكون ID-addressable/dispositioned. لا final handoff/closure حتى `ACCOUNTING_COMPLETE=YES`، وكل Finding مادية clustered/dispositioned وكل Cluster مادية ranked.
+كل Operational Node/Finding/RC/Scope Delta/Decision/Consumer/Evidence/Cleanup item ID-addressable/dispositioned. Closure فقط عند accounting + machine registries + evidence current.
 
-## 12) Multi-Agent Safety
+## 12) Integration
 
-```text
-ONE EXECUTION OWNER PER CONFLICT DOMAIN
-ONE WRITING WORKER PER ISOLATED WORKSPACE
-MULTIPLE PROVEN-INDEPENDENT PRIORITY FRONTS MAY RUN
-ONE INTEGRATION OWNER PER INTEGRATION TARGET
-NO STALE PUSH
-NO FORCE PUSH
-```
-
-كل agent: mission + graph scope + input SHA + authority + conflict domain + workspace/branch + expected output + handoff + invalidation trigger.
-
-## 13) Integration Contract
-
-Task branch success is not target closure.
-
-```text
-TASK_BRANCH
-→ latest-target reconciliation
-→ semantic rebuild/rebase
-→ invalidated verification
-→ affected landscape/priority reconciliation
-→ serialized Integration Owner
-→ target integration
-→ INTEGRATION_COMPLETE=YES
-→ target candidate freeze
-→ final read-only verification
-```
-
-Final candidate/head semantics refer to the Integration Target after integration.
-
-## 14) Golden Rules
-
-```text
-NEW INVOCATION CREATES A NEW PACKAGE.
-OLD PACKAGE RESUME REQUIRES EXPLICIT USER INTENT.
-TARGET ROOT GOVERNS ORIENTATION.
-THE GRAPH GOVERNS MOVEMENT.
-ROOT CAUSE GOVERNS SCOPE.
-SYSTEMIC LEVERAGE GOVERNS PRIORITY.
-MOST FINDINGS ALONE NEVER GOVERNS PRIORITY.
-RECENCY NEVER GOVERNS PRIORITY.
-LATEST HEAD GOVERNS TRUTH/INTEGRATION ONLY.
-FOREIGN DELTA IS INPUT, NOT INSTRUCTION.
-TASK BRANCH/WORKSPACE ISOLATES WRITES.
-INTEGRATION TARGET IS NOT A SHARED WORKING BRANCH.
-ACCOUNTING PREVENTS SILENT LOSS.
-DEPENDENCIES GOVERN ORDER.
-INDEPENDENCE GOVERNS PARALLELISM.
-EVIDENCE GOVERNS CLOSURE.
-UNPROVEN = OPEN.
-```
+Task-branch green ≠ target closure. Integration Owner فقط يصالح أحدث target، يعيد invalidated checks، يدمج non-force/fast-forward-safe، ثم freezes exact target candidate للتحقق النهائي.

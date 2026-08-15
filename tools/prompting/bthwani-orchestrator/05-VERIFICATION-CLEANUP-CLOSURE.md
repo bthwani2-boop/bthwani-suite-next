@@ -1,233 +1,128 @@
 # 05 — Verification, Cleanup & Closure
 
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
-Owner: `tools/prompting/bthwani-orchestrator/05-VERIFICATION-CLEANUP-CLOSURE.md`
+Owner: evidence, candidate freshness, runtime/E2E, cleanup, governance reconciliation and final closure.
 
-هذا الملف يملك Candidate/Evidence، CI/runtime/E2E، repository-platform truth، approvals/independence، cleanup/structural hygiene، Source-of-Truth consolidation، Governance Sync، Fresh Head، Adversarial Review وFinal canonical decision.
+## 1) Verification starts at root altitude
 
-## 1) Verification Strategy
+Verify the claim at the semantic altitude where the root was proven, then descend:
 
 ```text
-nearest root-cause regression
-→ affected unit/package
-→ related integration
-→ affected typecheck/lint/test/build
-→ contract/generated client
-→ DB/data/security/isolation
-→ runtime/readiness/smoke/readback
-→ cross-surface E2E/visual/manual when claimed
+operational outcome / authority / journey / state / handoff
+→ canonical owner / contract / data
+→ implementation
+→ runtime/readback/consumers
 → failure/edge/adversarial
-→ full verification only when policy/risk/blast-radius requires it
 ```
 
-Use everything applicable, not everything blindly.
+Use everything applicable, not everything blindly. Static/test green ≠ runtime/operational proof.
 
-## 2) Candidate / Branch Roles
+## 2) Candidate roles
 
 ```text
-INTEGRATION_TARGET = target branch named by BRANCH
-TASK_BRANCH = isolated working branch for this package
-TASK_BRANCH_BASE_SHA = exact target SHA from which isolated work began/rebased
-WORK_BASE_SHA = latest target truth reconciled into task work
-IMPLEMENTATION_SHA = task-branch implementation commit(s)
-FINAL_CANDIDATE_SHA = exact immutable Integration Target commit after final integration
-HEAD_AT_REVIEW_START = live Integration Target head at final review start
-HEAD_AT_DECISION = live Integration Target head immediately before final decision
+INTEGRATION_TARGET = target branch
+TASK_BRANCH = isolated work branch
+TASK_BRANCH_BASE_SHA = target SHA used to start/reconcile work
+IMPLEMENTATION_SHA = task branch implementation candidate
+FINAL_CANDIDATE_SHA = exact Integration Target commit after integration
+HEAD_AT_REVIEW_START / HEAD_AT_DECISION = live target heads at those gates
 ```
 
-Task-branch green is not target-branch closure.
+## 3) Fresh target reconciliation
 
-## 3) Latest-Target Reconciliation
-
-Before every semantic write/integration and before final judgment:
+Before semantic write/integration/final judgment:
 
 ```text
-resolve latest INTEGRATION_TARGET
-→ compare target movement against reconciled target SHA
+resolve latest target
 → classify foreign delta
 → retain proven-unrelated evidence
-→ invalidate affected graph/evidence/landscape-priority cone
-→ rebase/rebuild task delta semantically when required
+→ invalidate affected operational/root/priority/evidence cone
+→ semantic rebase/rebuild when required
 ```
 
-Git textual mergeability is not semantic safety.
+Textual mergeability ≠ semantic safety.
 
-## 4) Task-Isolation Verification
+## 4) Machine proof before write and closure
 
-Before live writes prove:
+Required on current reconciled SHA:
 
 ```text
-TASK_CONTEXT_POLICY=ISOLATED_CURRENT_TASK_ONLY
-FOREIGN_DELTA_POLICY=INPUT_NOT_INSTRUCTION
-TASK_BRANCH != INTEGRATION_TARGET
-TASK_BRANCH_READY=YES
-WORKSPACE_ISOLATION_READY=YES
-DIRECT_INTEGRATION_TARGET_WRITES=FORBIDDEN_EXCEPT_INTEGRATION_OWNER
+TASK ISOLATION PASS
+ROOT ANCHOR PASS
+OPERATIONAL ROOT PASS
+ROOT-CAUSE PRIORITY PASS
+FRONTIER DERIVATION PASS
 ```
 
-Local mode requires actual current branch/worktree proof.
-Remote/API mode requires every write to explicitly target TASK_BRANCH.
+For closure, Operational Root requires zero material lower-layer `HOLD`; Root-Cause Priority requires no unresolved material RC; Frontier gate requires empty active frontier.
 
-## 5) Target Landscape / Root-Cause Priority Verification
+## 5) Evidence routing
 
-Before first live write, after any material causal reprioritization, and before final handoff/closure prove:
+لكل Evidence: claim, source/check, exact candidate, environment/profile, result, proof limit, capability/approval requirements, invalidation trigger.
 
-```text
-TARGET_LANDSCAPE_COMPLETE=YES
-LANDSCAPE_RECONCILED_SHA=LATEST_RECONCILED_SHA
-ROOT_CAUSE_CLUSTERING_COMPLETE=YES
-ROOT_CAUSE_CLUSTERS_ACCOUNTED=YES
-UNCLUSTERED_MATERIAL_FINDINGS=0
-PRIORITY_MODEL_COMPLETE=YES
-PRIORITY_DERIVATION_SOURCE=ROOT_CAUSE_LANDSCAPE
-UNRANKED_MATERIAL_CLUSTERS=0
-PRIMARY_FRONTIER_JUSTIFIED=YES
-LANDSCAPE_ADVERSARIAL_PASS=YES
-PRIORITY_POLICY=HIGHEST_PROVEN_SYSTEMIC_LEVERAGE
-```
-
-Verification must challenge not only whether a fix passes, but whether the chosen frontier was still justified after new evidence. A newly proven upstream/foundation root cause, cluster split/merge, authority change, or material change in dependency/blocking/blast-radius/risk/unlock value invalidates the affected priority model.
-
-`MOST_FINDINGS`, recency, easiest fix, changed-file count, last session, and Sequence number are not valid priority proof.
-
-## 6) Package Bookkeeping / Freeze
-
-Do not freeze on an unintegrated task branch or stale priority model.
+Allowed: `PASS / FAIL / MISSING / STALE / BLOCKED / CANCELLED_OR_SUPERSEDED / NOT_APPLICABLE_WITH_PROOF`.
 
 ```text
-finish task-branch package/product/governance bookkeeping
-→ finish cleanup writes
-→ verify task branch
-→ reconcile affected root-cause landscape/priority
-→ resolve latest Integration Target
-→ Integration Owner reconciles/rebuilds task delta on latest target
-→ rerun invalidated checks
-→ integrate safely/non-force
-→ set INTEGRATION_COMPLETE=YES
-→ re-resolve Integration Target
-→ reconcile affected landscape/priority again if integration movement changed truth
-→ finish final target bookkeeping if needed
-→ FREEZE WRITES
-→ FINAL_CANDIDATE_SHA = exact Integration Target commit
-```
-
-Any write after Freeze invalidates candidate and affected evidence.
-
-## 7) Evidence Routing / Failure Classification
-
-For each evidence scope record source, exact candidate, environment/profile, result, proof limit, required capability, approval binding and invalidation trigger.
-
-Allowed outcomes include `PASS / FAIL / MISSING / STALE / BLOCKED / CANCELLED_OR_SUPERSEDED / NOT_APPLICABLE_WITH_PROOF`.
-
-```text
-DETERMINISTIC_PRODUCT or TEST/CONTRACT → first causal failure → root fix → NEW SHA
+DETERMINISTIC_PRODUCT/TEST/CONTRACT failure → first causal failure → root fix → NEW SHA
 INFRA/PROVIDER → prove cause → targeted rerun
 FLAKY → defect until controlled/proven
-CANCELLED/SUPERSEDED → not PASS
-STALE → cannot prove current candidate
+CANCELLED/SUPERSEDED/STALE → not PASS
 ```
 
-No blind rerun to force green.
+No blind rerun to manufacture green.
 
-## 8) Proof Limits
+## 6) Runtime / real scenario
 
-```text
-task branch green ≠ Integration Target green
-priority model complete ≠ no undiscovered defect exists
-most findings in a cluster ≠ cluster has highest systemic leverage
-Sonar scan completed ≠ Sonar Quality Gate passed
-migration apply PASS ≠ idempotency/schema/readback/restart proof
-static/build/typecheck/lint/unit/mock green ≠ runtime/E2E proof
-UI hidden/disabled ≠ server-side authorization proof
-scanner green ≠ permission to suppress a known finding
-```
-
-Finance/security/identity/isolation/data migrations raise evidence/authority strength automatically.
-
-## 9) Runtime Freshness / Real Scenario
-
-Before runtime/E2E prove source/artifact/process/container/schema/seed/config/network freshness. Then, where claimed:
+Prove source/artifact/process/container/schema/seed/config/network freshness, then where claimed:
 
 ```text
-Actor/identity/session/scope
-→ Surface action
+Actor/Identity/Scope
+→ Surface Action
 → Contract/API
-→ Domain transition
+→ Domain Transition
 → Transaction/Persistence
-→ Events/Integration
-→ canonical readback
-→ consuming surfaces
-→ observable operational result
+→ Event/Integration
+→ Canonical Readback
+→ Required Consumers
+→ Observable Operational Result
 ```
 
-Stateful tests capture pre-state, use unique run identity, isolate/clean safe test data and prove post-state from the canonical owner.
+Stateful tests capture pre/post state and unique run identity.
 
-## 10) Domain Gates
+## 7) Risk-sensitive gates
 
-Security: auth/session/revocation/role/permission/trusted context/object auth/IDOR/cross-scope/service auth/input-output/injection/SSRF/path/upload/PII/secrets/signature/replay/rate-limit/audit.
+Security: auth/session/revocation/roles/permissions/object auth/IDOR/cross-scope/input-output/injection/SSRF/upload/PII/secrets/replay/rate-limit/audit.
 
-Finance: canonical financial owner, idempotency/correlation/state constraints/provider outcome/readback/unknown-result reconciliation/compensation/restart/replay.
+Finance: canonical owner/idempotency/correlation/state/provider outcome/readback/unknown-result reconciliation/compensation/restart/replay.
 
-Data/PostgreSQL: deterministic migration/schema/constraints/indexes/fresh+non-empty/drift/orphans/duplicates/lock/concurrency/idempotency/restart/compatibility/rollback/roll-forward.
+Data: deterministic migrations/schema/constraints/indexes/drift/orphans/duplicates/locks/concurrency/idempotency/restart/compatibility/rollback/roll-forward.
 
-Mobile/Control Panel: permissions/deep-links/push/maps/location/SecureStore/offline/build/OTA/EAS/env; route/object auth/trusted scope/search isolation/bulk/audit/session/error/readback/responsive/RTL/localization/accessibility as claimed.
+Mobile/Control Panel: permissions/deeplink/push/maps/location/SecureStore/offline/build/OTA/env; route/object auth/scope/search isolation/bulk/audit/session/error/readback/responsive/RTL/localization/accessibility as affected.
 
 Supply chain/CI: lockfile/dependency/CVE/CodeQL/secrets/workflow policy/pinning as affected.
 
-## 11) Evidence / Priority Invalidation Cone
+## 8) Repository-platform truth
 
-Every mutation, upstream dependency fix, reopened sequence, target movement or authority/truth change maps to affected graph nodes/evidence/root-cause clusters/priority:
+When closure relies on hosted enforcement, verify candidate-specific workflows/jobs/required checks/cancelled or stale runs/reviews/rulesets/protection/base-head relation/Sonar/CodeQL/security as applicable. Tracked workflow files alone do not prove live enforcement.
 
-```text
-contract/schema → consumers/generation/integration evidence stale
-migration/data owner → DB/runtime/readback stale
-runtime/config/network → runtime/E2E stale
-security/auth/permission → negative isolation/security stale
-shared owner/library → affected consumer cone stale
-new upstream root / cluster split-merge / authority shift → affected priority model stale
-proven unrelated movement → retain with provenance
-```
+## 9) Independent/adversarial review
 
-Integration itself may invalidate task-branch evidence or priority if target movement changes semantics; reacquire/re-rank the minimum sufficient affected set unless policy/risk requires broader proof.
+`SELF_REVIEW ≠ INDEPENDENT_REVIEW` when policy requires independence. Bind reviewer/approval to exact candidate. Adversarial review attempts to find missing operational roots, hidden writers/readers, false local symptoms, cluster errors, priority inversion, permission/retry/concurrency/recovery/runtime-only defects and stale evidence.
 
-## 12) Repository-Platform Truth
+## 10) Cleanup = DONE
 
-When closure relies on repository-hosted enforcement, verify live **Integration Target candidate-specific** state: workflow runs/jobs/first real failure, required checks/context names, cancelled/superseded/stale runs, reviews/threads, live rulesets/protection, base/head relation/mergeability, Sonar Quality Gate, CodeQL/dependency/security checks when applicable.
-
-Tracked workflow/ruleset files alone do not prove live enforcement. Pending/missing/stale/cancelled required evidence is not PASS.
-
-## 13) Approval / Independent Review
-
-For each protected approval record domain, reason, allowed authority/reviewer, actual provenance, exact candidate binding and result.
-
-`SELF_REVIEW ≠ INDEPENDENT_REVIEW`. If reviewer changes candidate, re-establish required independence.
-
-For multi-agent work, independent verifier/adversarial agents may challenge executor claims, but identity/provenance must be explicit when policy requires independence.
-
-For the landscape phase, independent/adversarial review should attempt to find missing upstream roots, hidden writers/readers, falsely local symptoms, unclustered findings and priority inversions.
-
-## 14) Claim / Diff / Test Review
-
-Review claimed outcome, not only changed files: actors/surfaces/owners/states/scopes/permissions/contracts/persistence/providers/readbacks/failure/recovery/UX/evidence/approvals.
-
-Review complete owned range for foreign delta, generated/lockfile drift, missing consumer migration, reachable legacy paths, stale package assumptions, stale priority assumptions and cross-sequence effects.
-
-For changed Test/Guard ask what claim it can falsify and whether it can still pass with the defect present. Weakening/skipping/mocking/non-blocking changes cannot manufacture green.
-
-## 15) Cleanup = Part of DONE
-
-Local cleanup during every root fix + final global sweep. Cover proven-related:
+Cover proven-related:
 
 ```text
 dead/unreachable/stale/legacy/superseded code
-unused files/folders/imports/exports/re-exports/dependencies
+unused files/folders/imports/exports/dependencies
 obsolete routes/contracts/DTOs/schemas/models
-stale configs/env/flags/scripts/commands/tests/docs/comments/examples
+stale config/env/flags/scripts/tests/docs/comments/examples
 fallbacks/workarounds/TODO/FIXME/HACK
-unnecessary compatibility layers
+unnecessary compatibility
 old paths/names/aliases/orphan references
 wrong ownership/responsibility/placement/naming/context
-parallel business logic/state machines/data writers
+parallel business logic/state/data writers
 duplicate source of truth
 temporary/debug/generated noise
 files/folders without Purpose/Consumer/Responsibility
@@ -241,39 +136,40 @@ DISCOVER → CLASSIFY → TRACE CONSUMERS → PROVE OBSOLETE/WRONG/DUPLICATE
 → REPAIR REFERENCES → REVERIFY
 ```
 
-Cleanup applies from line/expression/block → symbol/component/type → file/folder/module/package → service/surface/domain → contract/route/config/dependency.
+## 11) Canonical source integrity
 
-## 16) Canonical Source / Reference Integrity
+عند duplicate truth: identify canonical owner → map writers/readers/consumers → migrate → remove secondary truth/residue → verify canonical readback. بعد move/delete/rename inspect all imports/registrations/routes/contracts/config/tests/generated refs.
 
-For concepts needing one authority, inspect Contracts/Schemas/Models/Configs/Policies/Mappings/Constants/Business Rules/State/Domain definitions.
+## 12) Cleanup gate
 
-When duplication is unjustified: identify canonical owner → map writers/readers/consumers → migrate → remove secondary truth/residue → verify canonical readback.
+Zero known in closure cone: dead code, stale reachable path, unjustified duplicate truth/logic, orphan refs, unused affected dependency/config/script, misleading ownership/naming/placement, workaround/fallback, unjustified compatibility, scope TODO/FIXME/HACK, structural contradiction, cleanup finding unresolved.
 
-After delete/rename/move/merge/split/refactor inspect imports/exports/callers/callees/registrations/routes/contracts/schemas/config/env/dependencies/tests/mocks/fixtures/docs/build/CI/generated references.
+## 13) Governance reconciliation
 
-## 17) Final Cleanup Gate
+Durable decisions must be promoted to authoritative owners when required. Compare governance ↔ Product Truth ↔ contracts/registries ↔ code/consumers ↔ runtime. No closure with durable truth only in task artifacts.
+
+## 14) Freeze / final candidate
 
 ```text
-ZERO known dead code/files/folders in scope
-ZERO known stale/obsolete reachable path
-ZERO known unjustified duplicate truth/logic
-ZERO known orphan/stale reference
-ZERO known unused affected dependency/config/flag/script
-ZERO known misleading naming/placement/context/ownership
-ZERO known temporary workaround/fallback
-ZERO known unjustified compatibility residue
-ZERO known scope-related TODO/FIXME/HACK
-ZERO known structural contradiction
-ZERO known cleanup finding unresolved
+finish task work/package/cleanup
+→ verify task branch
+→ reconcile operational/RC/priority
+→ latest target reconciliation
+→ Integration Owner integrates safely
+→ INTEGRATION_COMPLETE=YES
+→ reconcile target truth again
+→ FREEZE WRITES
+→ FINAL_CANDIDATE_SHA = exact target HEAD
+→ final read-only verification
 ```
 
-Cleanup writes invalidate affected evidence and may invalidate cluster/priority assumptions when they reveal deeper ownership/structural truth.
+Any write after freeze invalidates candidate/evidence.
 
-## 18) Accounting Gate — No Silent Loss
-
-Before handoff/closure prove:
+## 15) Final accounting
 
 ```text
+OPERATIONAL MACHINE PASS
+ROOT-CAUSE MACHINE PASS
 FINDINGS_ACCOUNTED=YES
 ROOT_CAUSE_CLUSTERS_ACCOUNTED=YES
 UNCLUSTERED_MATERIAL_FINDINGS=0
@@ -286,90 +182,28 @@ CLEANUP_ACCOUNTED=YES
 ACCOUNTING_COMPLETE=YES
 ```
 
-This requires every material discovery to be ID-addressable and dispositioned. `ZERO known findings` alone is insufficient; independent adversarial/negative-space discovery must attempt to find untracked graph nodes, hidden writers/readers, stale paths, missing consumers, missing root-cause clusters and priority inversions.
-
-## 19) Governance Reconciliation
-
-All durable decisions classified → required governance promotions complete or explicitly blocking → machine counterpart synchronized where applicable → governance ↔ Product Truth ↔ contracts/registries ↔ code/consumers ↔ runtime compared.
-
-No closure with durable truth only in task artifacts.
-
-## 20) Final Integration / Fresh Head
-
-Before final review and decision:
-
-```text
-ACTIVE_EXECUTION_FRONTIER = NONE
-no unresolved material suspended/reopened/blocked sequence
-TASK_BRANCH_READY=YES
-WORKSPACE_ISOLATION_READY=YES
-TARGET_LANDSCAPE_COMPLETE=YES
-ROOT_CAUSE_CLUSTERS_ACCOUNTED=YES
-UNCLUSTERED_MATERIAL_FINDINGS=0
-PRIORITY_MODEL_COMPLETE=YES
-UNRANKED_MATERIAL_CLUSTERS=0
-LANDSCAPE_ADVERSARIAL_PASS=YES
-INTEGRATION_OWNER assigned
-INTEGRATION_COMPLETE=YES
-HEAD_AT_REVIEW_START = live Integration Target head
-HEAD_AT_DECISION = live Integration Target head immediately before decision
-```
-
-Branch-head closure requires `HEAD_AT_DECISION == FINAL_CANDIDATE_SHA`. If not, classify movement, rebuild/reconcile candidate, rerun invalidated evidence and re-rank affected landscape before judgment.
-
-## 21) Final Adversarial Completeness
-
-Try to disprove closure via alternate entry points: hidden writers/readers, parallel/stale truth, missing consumers, contract/binding mismatch, permission bypass, retry/replay/concurrency, unknown-result/recovery, partial failure/restart, runtime-only defects, stale process/data/config, weak/flaky guards, missing audit/observability, foreign delta, reachable legacy, PII/secrets, neighboring regression, wrong ownership/placement/naming/context, unnecessary residue, unclustered findings, wrongly merged/split root-cause clusters, high-risk low-frequency roots and priority inversions.
-
-Any material Finding requiring write cancels Freeze and reopens the affected graph/landscape cone.
-
-## 22) Final Read-Only Verification
-
-On exact final **Integration Target** candidate only: required checks, generated consistency without mutation, exact diff/scope/foreign-change review, canonical readbacks, runtime/E2E where claimed, security/data/finance scopes, edge/adversarial behavior, test effectiveness, artifact provenance, repository-platform evidence, approvals and current root-cause/priority accounting.
-
-No `--fix`, formatter/generator write, lockfile/migration mutation, package/source mutation, commit/push/merge or swallowed exit.
-
-## 23) Lifecycle vs Canonical Decision
-
-`LIFECYCLE_STATE` is internal derived state. `FINAL_DECISION` must be an ID from current `governance/contracts/decision-vocabulary.json`. Do not invent decision aliases.
-
-## 24) Final Closure Equation
+## 16) Final closure equation
 
 ```text
 DISCOVERY_COMPLETE
 AND DIAGNOSIS_COMPLETE
 AND DECISION_COMPLETE
 AND COVERAGE_COMPLETE
-AND TARGET_LANDSCAPE_COMPLETE
-AND ROOT_CAUSE_CLUSTERING_COMPLETE
-AND ROOT_CAUSE_CLUSTERS_ACCOUNTED
-AND UNCLUSTERED_MATERIAL_FINDINGS = 0
-AND PRIORITY_MODEL_COMPLETE
-AND UNRANKED_MATERIAL_CLUSTERS = 0
-AND LANDSCAPE_ADVERSARIAL_PASS
+AND OPERATIONAL_ROOT_MACHINE_PASS
+AND ROOT_CAUSE_PRIORITY_MACHINE_PASS
+AND FRONTIER_DERIVATION_CLOSURE_PASS
 AND ACCOUNTING_COMPLETE
 AND PACKAGE_READY
-AND IMPLEMENTATION_COMPLETE
+AND IMPLEMENTATION_COMPLETE (EXECUTE mode)
 AND CLEANUP_COMPLETE
 AND EVIDENCE_COMPLETE
 AND GOVERNANCE_SYNC_COMPLETE
 AND INTEGRATION_COMPLETE
 AND FRESH_HEAD_VALID
 AND FINAL_ADVERSARIAL_PASS
-AND ACTIVE_EXECUTION_FRONTIER = NONE
+AND ACTIVE_EXECUTION_FRONTIER=NONE
 ```
 
-Plus zero known fixable defect, undispositioned Finding/Root-Cause Cluster/Scope Delta/Decision/Consumer/Cleanup item, unverified fix, required missing/stale/pending/cancelled evidence, missing required approval, duplicate truth, reachable obsolete path, unresolved material suspended/reopened sequence, stale priority model, structural/reference residue, or durable truth left only in derived artifacts.
+Plus zero known fixable defect/undispositioned material item/missing required evidence/duplicate truth/reachable obsolete path/unresolved suspended or reopened material sequence/stale operational or priority provenance.
 
-Final branch-head closure requires:
-
-```text
-LIFECYCLE_STATE = CLOSED
-FINAL_DECISION = current decision-vocabulary.closureRules.closedDecision
-HEAD_AT_DECISION = FINAL_CANDIDATE_SHA
-FINAL_CANDIDATE_SHA is an Integration Target commit after completed task integration
-all applicable evidence/approval scopes satisfied on same immutable candidate
-root-cause landscape/priority provenance current on the same final truth
-```
-
-Anything less is not closure.
+Final branch closure requires `LIFECYCLE_STATE=CLOSED`, canonical `FINAL_DECISION`, `HEAD_AT_DECISION=FINAL_CANDIDATE_SHA`, and all applicable evidence/approvals on the same immutable target candidate.
