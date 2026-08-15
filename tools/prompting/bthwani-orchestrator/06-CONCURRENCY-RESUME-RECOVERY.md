@@ -114,3 +114,37 @@ If branch/worktree isolation stale: repair isolation before writes. If machine r
 Persist/restore at least: task identity, Integration Target/Task Branch/workspace, ORCHESTRATION_ROOT, diagnostic altitude, latest target SHA, Operational Root registry status/SHA, lower-layer HOLD count, RC landscape SHA, priority winner/invalidated cone, active/suspended/reopened sequences, Integration Owner, last passed gate, open Findings/RCs/Decisions/Scope Deltas/Blockers, invalidated evidence, NEXT_GRAPH_ACTION.
 
 `NEXT_GRAPH_ACTION` derives from current operational+causal graph, never recency/old frontier/finding count/easiest fix/sequence number.
+
+## 12) Latest-target reconciliation
+
+Before semantic write/integration/resume continuation:
+
+```text
+resolve latest INTEGRATION_TARGET
+→ compare last reconciled target SHA → live target
+→ classify semantic delta
+→ preserve unrelated work/evidence without following it
+→ attach related delta to exact operational/RC node
+→ invalidate only affected operational/root/priority/evidence cone
+→ semantic rebase/rebuild task work when required
+→ rerun affected machine gates
+→ rejustify frontier before write
+```
+
+Git textual mergeability alone does not prove semantic compatibility.
+
+## 13) Evidence under concurrency
+
+Branch movement/upstream fixes/worker integration produce an invalidation cone. Retain proven-unrelated evidence. Stale only claims actually affected unless security/data/finance/policy requires broader reacquisition. Evidence that changes causal structure also invalidates clustering/priority; it is not merely test output.
+
+Foreign technical commits or newly observed CI/UI/code failures remain lower-layer observations until operational parent/root/priority proof exists; recency cannot promote them.
+
+## 14) Integration serialization / collision
+
+Only the Integration Owner may mutate the Integration Target. Before target write: fetch/resolve latest, classify concurrent delta as disjoint/related/overlap/conflict/authority-change, reconcile semantically, rerun invalidated checks and use non-force/fast-forward-safe integration. Parallel push assumptions are forbidden; one push/integration owner at a time.
+
+If another task changes the same canonical owner/authority/contract/data/runtime boundary, block only the affected conflict domain and re-diagnose/re-rank it; independent proven work may continue.
+
+## 15) Resume / package collision
+
+A package name/path collision never authorizes reuse. New invocation chooses a new identity. Existing package may be resumed only by explicit user request for that exact package, after branch/workspace/root/machine-registry compatibility and freshness checks. If any of these cannot be proven, resume fails closed rather than silently forking task meaning.
