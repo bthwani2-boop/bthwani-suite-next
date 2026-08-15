@@ -3,260 +3,168 @@
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
 Owner: `tools/prompting/bthwani-orchestrator/06-CONCURRENCY-RESUME-RECOVERY.md`
 
-هذا الملف يملك قواعد تعدد الوكلاء، تحرك الفرع، الاستئناف، إعادة الأساس، الكتابات الذرية، والدفع الآمن.
-
 ## 1) القاعدة العامة
 
 ```text
-PARALLEL DISCOVERY/ANALYSIS MAY BE ALLOWED.
-PARALLEL PUSH ASSUMPTIONS ARE NOT.
-ONE FINAL PUSH OWNER AT A TIME.
+PARALLELISM IS GRAPH-PROVEN, NOT AGENT-COUNT-DRIVEN.
+ONE WRITING OWNER PER CONFLICT DOMAIN.
+MULTIPLE INDEPENDENT EXECUTION FRONTS MAY RUN IN ISOLATION.
+ONE TARGET-BRANCH INTEGRATION OWNER AT A TIME.
+LATEST REMOTE HEAD GOVERNS EVERY INTEGRATION/PUSH.
 ```
 
-لا يفترض أي وكيل أن HEAD الذي بدأ منه ما يزال Push baseline صالحًا.
+## 2) Agent Topology
 
-## 2) Isolated Workspace
+- Orchestrator role: graph/accounting/dedup/root-cause correlation/assignment/gates.
+- Discovery/diagnosis workers: parallel scoped probes.
+- Execution workers: independent conflict domains only.
+- Verification/adversarial workers: challenge claims and hidden/missed paths.
+- Integration owner: sole target-branch mutation/integration owner at a time.
 
-محليًا، الأفضل:
+كل agent assignment يسجل: mission, graph scope, input SHA, read/write authority, conflict domain, expected output, handoff, invalidation trigger.
+
+## 3) Isolated Workspace
 
 ```text
 ONE WRITING AGENT = ONE ISOLATED WORKTREE/CLONE/WORKSPACE
 ```
 
-قبل أول تعديل سجل:
+Inventory tracked/untracked state + intended owned paths/symbols/hunks. Path ownership وحده لا يثبت semantic independence.
 
-```text
-workspace identity
-current branch/ref
-pre-existing tracked/untracked changes
-intended owned paths/symbols/hunks
-```
+## 4) Continuous Latest-Head Reconciliation
 
-حتى نفس الملف قد يحتوي hunk لوكيل آخر؛ path ownership وحده غير كافٍ.
-
-## 3) Remote Reconciliation Before Writes
-
-قبل كل logical write/final commit/push:
+قبل sequence creation / semantic write / integration / commit / push / final decision:
 
 ```text
 resolve LATEST_REMOTE_SHA
 → compare WORK_BASE_SHA → LATEST_REMOTE_SHA
-→ inspect affected paths/symbols/contracts/schema/migrations/generated clients/truth owners
-→ classify delta
+→ inspect paths/symbols/contracts/schema/migrations/generated/truth owners
+→ classify semantic delta
 ```
-
-التصنيف:
 
 ```text
 DISJOINT
-RELATED_NON_CONFLICTING
-SEMANTIC_OVERLAP
-DIRECT_CONFLICT
-AUTHORITY_OR_TRUTH_CHANGE
-```
-
-المعالجة:
-
-```text
-DISJOINT
-→ carry forward on latest head; rerun only invalidated evidence.
+→ adopt latest head automatically; keep valid evidence.
 
 RELATED_NON_CONFLICTING
-→ reconcile assumptions + affected checks.
+→ reconcile affected assumptions/checks only.
 
 SEMANTIC_OVERLAP
-→ re-diagnose owner/readers/writers/contracts/state
-→ rebuild delta on latest head
-→ reverify.
+→ suspend only affected graph node/frontier
+→ re-diagnose/rebuild on latest head.
 
 DIRECT_CONFLICT
-→ no push
-→ intentional resolution on latest head
-→ new candidate.
+→ block only conflicting conflict-domain integration
+→ independent frontiers continue.
 
 AUTHORITY_OR_TRUTH_CHANGE
-→ reread authority/Product Truth/contracts
-→ re-diagnose before write.
+→ invalidate affected model/evidence
+→ reread authority/Product Truth/contracts before write.
 ```
 
 Git textual mergeability لا يساوي semantic safety.
 
-## 4) Push Serialization
+## 5) Integration / Push Serialization
 
 ```text
-many agents may prepare independently
-→ one writer reconciles latest head
+workers produce scoped deltas/evidence
+→ integration owner fetches latest head
+→ classifies concurrent movement
+→ rebases/rebuilds semantically on latest head
+→ reruns invalidated checks
 → candidate parent = latest reconciled head
-→ re-resolve immediately before push/ref update
-→ fast-forward-safe update only
-→ re-resolve immediately after push
+→ re-resolve immediately before ref update
+→ fast-forward-safe non-force update
+→ re-resolve after push
 ```
 
-إذا تحرك الفرع بين verification والدفع:
+لا stale push ولا force push.
+
+## 6) Atomic GitHub/API Writes
+
+لـmulti-file logical write:
 
 ```text
-DO NOT PUSH STALE CANDIDATE
-→ reconcile movement
-→ rebuild candidate
-→ rerun invalidated evidence
+latest head → blobs → tree on exact base tree → commit exact parent
+→ re-resolve ref → non-force fast-forward update
 ```
 
-## 5) Atomic GitHub/API Writes
+إذا تحرك الفرع قبل update_ref: لا Force؛ rebuild commit on latest head.
 
-لـmulti-file logical/final write فضّل عند توفره:
+## 7) Parallel Frontier Safety
+
+قبل parallel live writes أثبت استقلال Conflict Domains عبر:
 
 ```text
-resolve latest head
-→ create blobs
-→ create tree against exact base tree
-→ create commit with exact expected parent
-→ re-resolve target ref
-→ non-force fast-forward update_ref
+canonical owner / shared state / contracts / DB-migration chain
+shared generated outputs / runtime authority / same symbols/hunks / governance owner
 ```
 
-إذا تحرك الفرع قبل `update_ref`، لا Force؛ أعد reconciliation وابنِ commit جديدًا على latest head.
+إذا الاستقلال غير مثبت → SERIAL_REQUIRED.
 
-استخدم Contents API لكل ملف فقط عندما لا تتوفر الذرية أو التغيير محدود ومخاطره مقبولة. Partial multi-file write ليس نجاحًا نهائيًا.
+لا Agentين يكتبان لنفس semantic owner/conflict domain بالتوازي.
 
-## 6) Resume Semantics
+## 8) Structured Backtracking / Suspension
 
-عند `continue/resume`:
+عند اكتشاف upstream dependency:
 
 ```text
-recover exact task identity
-recover current package path
-recover last proven head/candidate
+current sequence = SUSPENDED_BY_DEPENDENCY
+→ record SUSPENDED_BY / RESUME_AFTER
+→ open upstream dependency JIT
+→ work/verify upstream
+→ mark affected descendant evidence stale
+→ resume/reopen descendant
+→ re-diagnose before write
+```
+
+وجود عدة suspended/reopened sequences مسموح؛ الفوضى التنفيذية غير مسموحة.
+
+## 9) Resume Semantics
+
+```text
+recover task identity/package
+recover graph/frontier/suspension/reopen state
 recover still-valid findings/decisions/evidence
-re-resolve current remote head
+re-resolve remote head
 classify drift
-resume from exact invalidated gate
+resume exact invalidated node/gate
 ```
 
-ممنوع إعادة المهمة من الصفر بلا سبب، وممنوع الحفاظ على Evidence أصبح stale لمجرد توفير الوقت.
-
-## 7) Package Rebaseline
-
-إذا drift محدود:
-
-```text
-reconcile affected paths/contracts/owners only
-```
-
-إذا تغيرت authority/framework/schema/root cause materially أو drift واسع وغير قابل للحد بأمان:
-
-```text
-mark affected assumptions/evidence stale
-→ re-diagnose target against latest head
-→ rewrite derived package as needed
-→ preserve history through Git
-```
-
-لا replay ميكانيكي لمئات commits أو metadata تاريخية.
-
-## 8) Collision Policy
-
-```text
-package path exists + same task identity
-→ RESUME_AND_RECONCILE
-
-package path exists + different identity
-→ COLLISION
-→ do not overwrite
-→ choose distinct safe TASK_NAME
-```
-
-نفس القاعدة لأي output path حساس.
-
-## 9) Candidate / Branch Race
-
-أثناء CI أو review، evidence تبقى مرتبطة بالSHA الأصلي. إذا تحرك branch:
-
-```text
-running evidence remains bound to original SHA
-→ do not relabel it for new head
-→ classify movement
-→ rerun only scopes invalidated for the required final head/candidate
-```
-
-قبل final decision:
-
-```text
-HEAD_AT_DECISION = live re-resolved head
-```
-
-إذا المطلوب إغلاق الرأس الحالي ولم يساو Candidate أو لم تكن العلاقة مثبتة، لا Closure.
+لا restart from zero بلا سبب ولا preserve stale evidence لتوفير الوقت.
 
 ## 10) Foreign Change Discipline
 
-```text
-foreign/pre-existing change ≠ this task's change
-```
+foreign/pre-existing change ≠ task change. لا reset/clean/overwrite foreign work. Integration Owner يحمل التغيير فوق latest head إذا DISJOINT، ويعيد التشخيص فقط للمساحة المتأثرة إذا overlap.
 
-قبل commit/push:
+## 11) Evidence Preservation / Invalidation Cone
 
-```text
-inventory workspace
-→ allowlist owned paths/hunks
-→ inspect diff
-→ stage exact owned changes
-→ inspect staged diff
-→ verify no foreign delta claimed
-```
-
-لا reset/clean/overwrite تغييرات أجنبية بلا سلطة صريحة.
-
-## 11) Evidence Preservation
-
-عند الاستئناف لا تعِد كل شيء تلقائيًا. لكل Evidence:
+لكل branch movement أو upstream fix:
 
 ```text
-still valid on current candidate/context? → retain
-invalidated by changed path/contract/schema/runtime/config/authority? → stale + rerun
-proven unrelated movement? → retain with provenance
+identify affected graph cone
+→ retain proven-unrelated evidence
+→ stale only affected evidence
+→ rerun minimum sufficient set unless policy/risk requires broader proof
 ```
 
-## 12) Recovery from Partial Failure
+## 12) Partial Failure
 
-إذا حدثت كتابة جزئية أو فشل وسط logical batch:
+partial write/integration ≠ DONE. افحص remote tree، classify committed/missing pieces، ثم complete coherently on latest head أو repair/revert intentionally when authorized.
 
-```text
-stop further writes
-→ inspect remote/current tree
-→ identify committed vs missing pieces
-→ classify semantic safety
-→ complete coherently on latest head OR intentionally revert/repair when authorized
-→ never call partial state DONE
-```
-
-## 13) Retention
-
-Prompt package وTask packages = `DERIVED_SUPPORT`.
-
-طبّق repository retention policy الحالية:
-
-```text
-actively consumed → retain while needed
-task-temporary/superseded/unconsumed/reproducible → remove when authorized and safe
-Git history = default archive
-```
-
-لا تستخدم active tree كأرشيف `old/final2/backup/temp` بلا Requirement.
-
-إذا حذف Task Package جزء من final desired branch state، نفذ الحذف قبل Final Freeze ثم أعد evidence المرتبط بالSHA النهائي.
-
-## 14) Exact Resume Point
-
-عند Blocker أو interruption، اترك Resume Point واحدًا واضحًا:
+## 13) Exact Resume Point
 
 ```text
 TASK_ID
 BRANCH
 LATEST_OBSERVED_SHA
-CURRENT_STATE
+ACTIVE_EXECUTION_FRONTIER
+SUSPENDED/REOPENED_SEQUENCES
+INTEGRATION_OWNER
 LAST_PASSED_GATE
-OPEN_FINDINGS/DECISIONS/BLOCKERS
+OPEN_FINDINGS/DECISIONS/SCOPE_DELTAS/BLOCKERS
 INVALIDATED_EVIDENCE
-NEXT_SINGLE_ACTION
+NEXT_GRAPH_ACTION
 ```
 
-الهدف أن يتابع الوكيل التالي من الحقيقة الحالية لا من الذاكرة أو التخمين.
+الهدف أن يتابع أي وكيل من الحقيقة المسجلة لا من ذاكرة الجلسة.
