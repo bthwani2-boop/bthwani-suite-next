@@ -113,9 +113,9 @@ function validateSharedRuntimeReadinessContract() {
   ]) requireMarker("check-frontend-binding-readiness.mjs", frontendText, marker);
 
   const controlPanelPackage = JSON.parse(requireRepoFile(controlPanelPackagePath));
-  const expectedControlPredev = "node ../../../tools/scripts/check-frontend-binding-readiness.mjs --bundle controlPanelDevelopment";
-  if (controlPanelPackage.scripts?.predev !== expectedControlPredev) {
-    fail(`control-panel predev readiness binding drift: expected '${expectedControlPredev}'`);
+  const readinessCommand = "node ../../../tools/scripts/check-frontend-binding-readiness.mjs --bundle controlPanelDevelopment";
+  if (!controlPanelPackage.scripts?.dev?.startsWith(`${readinessCommand} && `)) {
+    fail(`control-panel dev must begin with governed readiness command '${readinessCommand}'`);
   }
 
   return contract;
