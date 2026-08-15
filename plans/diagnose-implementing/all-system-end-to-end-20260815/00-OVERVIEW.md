@@ -50,7 +50,7 @@ HEAD_AT_DECISION: UNSET
 
 > Root-anchored reset of orchestration direction. Previous concurrent observations are preserved below for reuse/revalidation, but they do not constitute active Sequences or execution priority. GitHub currently materializes no `NNN-*.md` files in this package, so no Sequence is claimed until the root-reconciled graph proves and materializes one.
 
-## 1. Truth / Root Baseline
+## 1. Truth Baseline
 
 - `ORCHESTRATION_ROOT=كل شيء`: each invocation starts from the whole-system Macro root, then descends by canonical ownership/dependency/root-cause priority.
 - Latest reconciled branch head before this package bookkeeping write: `5f7631f1728d04481c0e00938ea4ddbc82b8d340`.
@@ -92,7 +92,7 @@ After orientation, traversal remains graph-driven/non-linear with vertical/horiz
 
 No materialized Sequence currently exists in this package tree. Do not recreate earlier textual SEQ-001/SEQ-002 rows as active work unless root reconciliation proves a closure boundary and `new-sequence.mjs` materializes its file Just-In-Time.
 
-## 4. Global Decisions / Blockers / Foreign Deltas
+## 4. Global Decisions / Blockers
 
 ### Concurrent observations preserved for root placement/revalidation
 
