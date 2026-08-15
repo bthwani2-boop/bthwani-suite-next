@@ -57,8 +57,8 @@ func TestOrderTruthRedactionProtectsPartnerAndOperatorEventMetadata(t *testing.T
 
 func TestAllowedActionsAreServerOwnedByActorAndState(t *testing.T) {
 	clientPending := AllowedActions(StatusPending, "client")
-	if !slices.Contains(clientPending, "view") || !slices.Contains(clientPending, "cancel_if_policy_allows") {
-		t.Fatalf("client pending actions are incomplete: %#v", clientPending)
+	if !slices.Contains(clientPending, "view") || slices.Contains(clientPending, "cancel_if_policy_allows") {
+		t.Fatalf("client pending actions must only include view and never allow self-cancellation: %#v", clientPending)
 	}
 	if slices.Contains(clientPending, "accept") {
 		t.Fatalf("client must not receive partner action: %#v", clientPending)

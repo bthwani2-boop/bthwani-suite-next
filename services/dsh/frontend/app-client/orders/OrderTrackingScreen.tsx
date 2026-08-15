@@ -202,119 +202,49 @@ function OrderTimeline({ order }: { readonly order: OrderTruth }) {
 
 function ClientCancellationPanel({
   orderId,
-  allowedActions,
-  onOrderChanged,
+  isCancelled,
+  onOpenSupport,
 }: {
   readonly orderId: string;
-  readonly allowedActions: readonly string[];
-  readonly onOrderChanged: () => void | Promise<void>;
+  readonly isCancelled: boolean;
+  readonly onOpenSupport?: ((orderId: string) => void) | undefined;
 }) {
-  const [reasonCode, setReasonCode] = React.useState<ClientCancellationReasonCode>("changed_mind");
-  const [reasonNote, setReasonNote] = React.useState("");
-  const controller = useOrderCancellationController({
-    surface: "client",
-    orderId,
-    onCancelled: onOrderChanged,
-  });
-  const canCancel = allowedActions.includes("cancel_if_policy_allows");
-  const cancellation =
-    controller.state.kind === "ready"
-      ? controller.state.cancellation
-      : controller.state.kind === "submitting"
-        ? controller.state.cancellation
-        : undefined;
-
-  if (cancellation) {
+  if (isCancelled) {
     return (
-      <Surface tone="raised" gap={3}>
-        <Text role="titleSm">قرار الإلغاء والاسترداد</Text>
-        <View style={styles.detailRow}>
-          <Text role="bodySm" tone="muted">سبب الإلغاء</Text>
-          <Text role="bodyStrong">{cancellation.reasonCode}</Text>
-        </View>
-        {cancellation.reasonNote ? <Text role="bodySm" tone="muted">{cancellation.reasonNote}</Text> : null}
-        <Badge
-          label={FINANCIAL_CLOSURE_LABELS[cancellation.financialClosureStatus]}
-          tone={financialTone(cancellation.financialClosureStatus)}
-        />
-        {cancellation.financialReference ? (
-          <View style={styles.detailRow}>
-            <Text role="bodySm" tone="muted">المرجع المالي</Text>
-            <Text role="caption">{bidiIsolate(cancellation.financialReference)}</Text>
-          </View>
-        ) : null}
-        {cancellation.financialFailure ? <Text role="bodySm" tone="danger">{cancellation.financialFailure}</Text> : null}
-        <Button
-          label={controller.state.kind === "submitting" ? "جارٍ تحديث القرار المالي…" : "تحديث حالة الاسترداد"}
-          accessibilityLabel="تحديث حالة الاسترداد من المصدر المالي"
-          tone="secondary"
-          disabled={controller.state.kind === "submitting"}
-          onPress={() => void controller.refresh()}
-        />
-      </Surface>
-    );
-  }
-
-  if (controller.state.kind === "requires_review") {
-    return (
-      <Surface tone="warning" gap={3}>
-        <Text role="titleSm">الإلغاء يحتاج مراجعة العمليات</Text>
-        <Text role="bodySm">{controller.state.message}</Text>
-        <Text role="caption" tone="muted">لا يتم إلغاء الطلب أو تغيير حالته المالية قبل اعتماد العمليات.</Text>
-      </Surface>
-    );
-  }
-
-  if (!canCancel) {
-    return (
-      <Surface tone="raised" gap={2}>
-        <Text role="bodyStrong">قرار الإلغاء</Text>
-        <Text role="bodySm" tone="muted">
-          لا يعرض الخادم إجراء إلغاء مباشر لهذا الطلب. أي متابعة إضافية تتم عبر العمليات وفق السياسة.
+      <Surface tone="warning" gap={2}>
+        <Text role="titleSm">حالة الطلب</Text>
+        <Text role="bodyStrong" tone="danger">
+          تم إلغاء هذا الطلب من قبل قسم العمليات.
         </Text>
+        <Text role="caption" tone="muted">
+          إذا كانت لديك أي استفسارات حول استرداد المبلغ أو تفاصيل الإلغاء، يرجى التواصل مع الدعم.
+        </Text>
+        {onOpenSupport ? (
+          <Button
+            label="مراسلة الدعم"
+            tone="secondary"
+            size="sm"
+            onPress={() => onOpenSupport(orderId)}
+          />
+        ) : null}
       </Surface>
     );
   }
-
-  const submitting = controller.state.kind === "submitting";
-  const selectedReason = CLIENT_CANCELLATION_REASONS.find((option) => option.code === reasonCode);
-  const noteRequired = reasonCode === "other";
 
   return (
-    <Surface tone="raised" gap={3}>
-      <Text role="titleSm">إلغاء الطلب</Text>
+    <Surface tone="raised" gap={2}>
+      <Text role="titleSm">إلغاء أو تعديل الطلب</Text>
       <Text role="bodySm" tone="muted">
-        صلاحية الإلغاء معروضة من allowedActions. يقرر WLT تحرير الدفع أو الاسترداد بصورة مستقلة.
+        يدخل الطلب مرحلة التجهيز الفوري مع المتجر فور تأكيده. في حال رغبتك بإلغاء أو تعديل الطلب قبل التجهيز، يرجى التواصل مع فريق العمليات والدعم.
       </Text>
-      <Box gap={2}>
-        {CLIENT_CANCELLATION_REASONS.map((reason) => (
-          <Button
-            key={reason.code}
-            label={reason.label}
-            accessibilityLabel={`اختيار سبب الإلغاء: ${reason.label}`}
-            tone={reasonCode === reason.code ? "brand" : "secondary"}
-            size="sm"
-            fullWidth={false}
-            disabled={submitting}
-            onPress={() => setReasonCode(reason.code as ClientCancellationReasonCode)}
-          />
-        ))}
-      </Box>
-      {selectedReason ? <Text role="caption" tone="muted">{selectedReason.description}</Text> : null}
-      <TextField
-        label={noteRequired ? "التوضيح المطلوب" : "ملاحظة اختيارية"}
-        placeholder="اكتب معلومات تساعد العمليات على فهم القرار"
-        value={reasonNote}
-        onChangeText={setReasonNote}
-      />
-      {controller.state.kind === "error" ? <Text role="bodySm" tone="danger">{controller.state.message}</Text> : null}
-      <Button
-        label={submitting ? "جارٍ تثبيت الإلغاء…" : "تأكيد إلغاء الطلب"}
-        accessibilityLabel="تأكيد إلغاء الطلب وفق السياسة"
-        tone="danger"
-        disabled={submitting || (noteRequired && !reasonNote.trim())}
-        onPress={() => void controller.submit({ reasonCode, reasonNote })}
-      />
+      {onOpenSupport ? (
+        <Button
+          label="طلب المساعدة أو الإلغاء عبر الدعم"
+          tone="secondary"
+          size="sm"
+          onPress={() => onOpenSupport(orderId)}
+        />
+      ) : null}
     </Surface>
   );
 }
@@ -410,19 +340,24 @@ export function OrderTrackingScreen({ orderId, onBack, onOpenPickup, onOpenOrder
           onUpdated={reload}
         />
 
-        <ClientCancellationPanel orderId={order.id} allowedActions={order.allowedActions} onOrderChanged={reload} />
+        <ClientCancellationPanel
+          orderId={order.id}
+          isCancelled={order.status.startsWith("cancelled_") || order.status.startsWith("failed_")}
+          onOpenSupport={onOpenOrderSupport}
+        />
 
-        <Surface tone="raised" gap={3}>
-          <Text role="titleSm">إسقاط الدفع للقراءة فقط</Text>
+        <Surface tone="raised" gap={2}>
+          <Text role="titleSm">تفاصيل الدفع</Text>
           <View style={styles.detailRow}>
-            <Text role="bodySm" tone="muted">الحالة</Text>
-            <Text role="bodyStrong">{order.paymentStatusProjection}</Text>
+            <Text role="bodySm" tone="muted">إجمالي الطلب</Text>
+            <Text role="bodyStrong">
+              {(order.totalMinorUnits / 100).toLocaleString("ar-YE")} {order.currency}
+            </Text>
           </View>
           <View style={styles.detailRow}>
-            <Text role="bodySm" tone="muted">مرجع WLT المعتم</Text>
-            <Text role="caption">{bidiIsolate(order.wltPaymentRefId)}</Text>
+            <Text role="bodySm" tone="muted">حالة السداد</Text>
+            <Text role="bodyStrong">{order.paymentStatusProjection || "مؤكد"}</Text>
           </View>
-          <Text role="caption" tone="muted">لا ينفذ هذا السطح خصمًا أو استردادًا أو تسوية.</Text>
         </Surface>
 
         <Surface tone="raised" gap={3}>

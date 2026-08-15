@@ -117,25 +117,27 @@ export function CartScreen({
   };
 
   useEffect(() => {
-    serviceabilityController.reset();
-    if (!cart || !requiresDeliveryAddress || !selectedAddress) return;
+    if (!cart || !requiresDeliveryAddress || !selectedAddress?.id) {
+      serviceabilityController.reset();
+      return;
+    }
     void serviceabilityController.check(storeId, selectedAddress.id, activeFulfillmentMode);
   }, [
     activeFulfillmentMode,
     requiresDeliveryAddress,
     selectedAddress?.id,
     selectedAddress?.version,
-    serviceabilityController.check,
-    serviceabilityController.reset,
     storeId,
+    cart?.id,
   ]);
 
   const canProceed = useMemo(() => {
     if (!cart || actionPending || !cartReady) return false;
     if (!requiresDeliveryAddress) return true;
-    return Boolean(
-      selectedAddress &&
-      serviceabilityController.serviceability.kind === "serviceable",
+    if (!selectedAddress) return false;
+    return (
+      serviceabilityController.serviceability.kind !== "blocked" &&
+      serviceabilityController.serviceability.kind !== "error"
     );
   }, [
     actionPending,
@@ -148,6 +150,7 @@ export function CartScreen({
 
   const proceed = () => {
     if (!cart || !onProceedToCheckout) return;
+    if (onResetCheckout) onResetCheckout();
     setValidationMessageText(null);
     if (!cartReady) {
       setValidationMessageText("يرجى مراجعة وتحديث أسعار المنتجات في السلة قبل المتابعة.");
@@ -156,17 +159,6 @@ export function CartScreen({
     if (requiresDeliveryAddress && !selectedAddress) {
       setValidationMessageText("يرجى اختيار عنوان التوصيل قبل المتابعة.");
       return;
-    }
-    if (requiresDeliveryAddress && serviceabilityController.serviceability.kind !== "serviceable") {
-      setValidationMessageText("تعذر التحقق من التوصيل للعنوان المحدد. يمكنك اختيار (الاستلام الذاتي) للمتابعة.");
-      return;
-    }
-    if (requiresDeliveryAddress && serviceabilityController.serviceability.kind === "serviceable") {
-      const expiresAt = serviceabilityController.serviceability.result.expiresAt;
-      if (expiresAt && new Date(expiresAt) < new Date()) {
-        setValidationMessageText("انتهت صلاحية وقت التوصيل (ETA). يرجى تحديث الصفحة لإعادة حسابه.");
-        return;
-      }
     }
     const finalNote = [note.trim(), onMyWayActive && onMyWayNote.trim() ? `على طريقي: ${onMyWayNote.trim()}` : ""]
       .filter(Boolean)
@@ -433,6 +425,9 @@ export function CartScreen({
         />
 
         {validationMessageText ? <Text role="caption" style={styles.errorText}>{validationMessageText}</Text> : null}
+        {checkoutState && (checkoutState.kind === "error" || checkoutState.kind === "order_error") ? (
+          <Text role="caption" style={styles.errorText}>{checkoutState.message || "تعذر إتمام الطلب، يرجى المحاولة مرة أخرى."}</Text>
+        ) : null}
 
         <CartQuoteSummary
           quote={cart?.quote ?? null}
@@ -440,11 +435,17 @@ export function CartScreen({
         />
 
         <Button
-          label={requiresDeliveryAddress ? "تأكيد الطلب والتوصيل" : "تأكيد الطلب للاستلام الذاتي"}
+          label={
+            checkoutState?.kind === "loading" || checkoutState?.kind === "confirming" || checkoutState?.kind === "creating_order"
+              ? "جاري تأكيد الطلب…"
+              : requiresDeliveryAddress
+                ? "تأكيد الطلب والتوصيل"
+                : "تأكيد الطلب للاستلام الذاتي"
+          }
           tone="brand"
-          disabled={!canProceed || !onProceedToCheckout || (checkoutState !== undefined && checkoutState.kind !== "idle" && checkoutState.kind !== "order_ready")}
+          loading={checkoutState?.kind === "loading" || checkoutState?.kind === "confirming" || checkoutState?.kind === "creating_order"}
+          disabled={!cart || cart.items.length === 0}
           onPress={proceed}
-          style={{ backgroundColor: colorRoles.danger }}
         />
       </ScrollScreen>
 

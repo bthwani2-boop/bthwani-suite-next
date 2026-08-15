@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
 	"dsh-api/internal/wlt"
@@ -532,6 +533,27 @@ func calculateDistanceKM(lat1, lon1, lat2, lon2 float64) float64 {
 }
 
 // CheckServiceability verifies that the store is active and in the serviceable state,
+func normalizeCityCode(code string) string {
+	code = strings.ToLower(strings.TrimSpace(code))
+	switch code {
+	case "sana", "sanaa", "sana'a", "صنعاء", "haddah", "maeen", "sabeen", "taiz-st", "zubairi", "old-city", "sanaa-haddah":
+		return "sana"
+	case "aden", "عدن":
+		return "aden"
+	case "taiz", "تعز":
+		return "taiz"
+	case "ibb", "إب":
+		return "ibb"
+	case "mukalla", "المكلا":
+		return "mukalla"
+	case "hodeidah", "الحديدة":
+		return "hodeidah"
+	default:
+		return code
+	}
+}
+
+// CheckServiceability determines if a store is active, published, and within physical range of a client,
 // and reports which canonical checkout fulfillment modes are actually usable for this
 // store+location combination. DSH only checks store-level and zone-level availability —
 // delivery fee and zone pricing are WLT concerns.
@@ -571,10 +593,18 @@ func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCo
 		calculatedDistance = distanceKM
 	}
 
-	// Check if store is within delivery range (<= 5.0 km) or matches the zone/city name fallback
-	isWithinDistance := calculatedDistance != nil && *calculatedDistance > 0 && *calculatedDistance <= 5.0
+	// Delivery coverage is at the city level:
+	// A store can deliver across its entire city (e.g. Sana'a city-wide delivery within 35 km).
+	normStoreCity := normalizeCityCode(storeCity)
+	if normStoreCity == "" {
+		normStoreCity = normalizeCityCode(storeServiceArea)
+	}
+	normClientCity := normalizeCityCode(serviceAreaCode)
+
+	isSameCity := normStoreCity != "" && normClientCity != "" && normStoreCity == normClientCity
+	isWithinDistance := calculatedDistance == nil || *calculatedDistance <= 35.0
 	matchesZone := serviceAreaCode != "" && (storeServiceArea == serviceAreaCode || storeCity == serviceAreaCode)
-	inZone := isWithinDistance || matchesZone
+	inZone := isSameCity || matchesZone || isWithinDistance
 
 	availableModes := computeFulfillmentModeAvailability(deliveryModes, inZone)
 

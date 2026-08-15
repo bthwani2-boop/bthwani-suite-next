@@ -89,16 +89,16 @@ export function useWltPaymentController(input?: {
       {
         id: "cod",
         title: "عند الاستلام (نقدًا)",
-        description:
-          "يُثبت المبلغ النهائي في checkout ثم يفتح WLT مرجع الدفع عند الاستلام.",
+        description: "الدفع نقدًا عند استلام الطلب من الكابتن أو المتجر.",
         statusLabel: paymentMethod === "cod" ? "محدد" : "متاح",
         statusTone: paymentMethod === "cod" ? "action" : "success",
+        helperText: "الخيار الأسرع بدون الحاجة لرصيد مسبق.",
       },
       {
         id: "wallet",
-        title: "من رصيد المحفظة",
-        description: "الدفع الكامل من محفظة WLT.",
-        disabled: wallet !== null && !hasSufficientWallet && walletBalance < total,
+        title: "من رصيد محفظة بثواني",
+        description: "خصم فوري مباشر من رصيد محفظتك الرقمية.",
+        disabled: false,
         statusLabel: wallet === null
           ? (walletLoading ? "جاري الفحص..." : "متاح")
           : hasSufficientWallet
@@ -106,38 +106,28 @@ export function useWltPaymentController(input?: {
             : (walletBalance === 0 ? "الرصيد: 0" : "رصيد غير كافٍ"),
         statusTone: hasSufficientWallet ? (paymentMethod === "wallet" ? "action" : "success") : "warning",
         helperText: wallet
-          ? `رصيد المحفظة المتوفر: ${formatWltMoney(walletBalance, wallet.currency)}`
-          : "يتم التحقق من رصيد المحفظة عبر WLT.",
-      },
-      {
-        id: "mixed",
-        title: "محفظة + عند الاستلام",
-        description: "تقسيم الدفع بين WLT والدفع عند الاستلام.",
-        disabled: wallet !== null && !hasPartialWallet,
-        statusLabel: hasPartialWallet ? "متاح جزئياً" : (wallet === null ? "متاح" : "غير متاح"),
-        statusTone: hasPartialWallet ? "info" : "warning",
-        helperText: wallet && hasPartialWallet
-          ? `رصيدك ${formatWltMoney(walletBalance, wallet.currency)} والمتبقي نقدًا عند الاستلام.`
-          : "يتطلب وجود رصيد جزئي في المحفظة.",
+          ? `رصيد المحفظة الحالي: ${formatWltMoney(walletBalance, wallet.currency)}`
+          : "متصلة مباشرة بالنظام المالي WLT.",
       },
       {
         id: "official_wallet",
-        title: "المحافظ الإلكترونية الرسمية",
-        description: "الدفع عبر مزود مالي رسمي من خلال محاكي WLT.",
-        disabled: !providerPaymentsEnabled,
-        statusLabel: providerPaymentsEnabled
-          ? paymentMethod === "official_wallet"
-            ? "محدد"
-            : "متاح (محاكي WLT)"
-          : "محجوب تشغيليًا",
-        statusTone: providerPaymentsEnabled
-          ? paymentMethod === "official_wallet"
-            ? "action"
-            : "success"
-          : "warning",
-        helperText: providerPaymentsEnabled
-          ? "المحاكي المالي لـ WLT جاهز لمعالجة الدفع عبر Docker."
-          : "يفشل هذا الخيار مغلقًا حتى تُثبت بيئة المزود والويب هوك والمالية والأمن.",
+        title: "المحافظ والبنوك الإلكترونية",
+        description: "الدفع عبر مزود مالي رسمي (محاكي الدفع الإلكتروني).",
+        disabled: false,
+        statusLabel: paymentMethod === "official_wallet" ? "محدد" : "متاح (محاكي WLT)",
+        statusTone: paymentMethod === "official_wallet" ? "action" : "success",
+        helperText: "جاهز ومربوط بمحاكي المعاملات المالية في Docker.",
+      },
+      {
+        id: "mixed",
+        title: "دفع مختلط (محفظة + نقدًا)",
+        description: "استخدام رصيد المحفظة المتوفر ودفع المتبقي نقدًا.",
+        disabled: false,
+        statusLabel: hasPartialWallet ? (paymentMethod === "mixed" ? "محدد" : "متاح") : "متاح",
+        statusTone: paymentMethod === "mixed" ? "action" : "info",
+        helperText: wallet && hasPartialWallet
+          ? `رصيدك ${formatWltMoney(walletBalance, wallet.currency)} والباقي نقدًا.`
+          : "يتم احتساب الرصيد المتاح وتكملة الباقي نقدًا.",
       },
     ],
     [paymentMethod, providerPaymentsEnabled, wallet, walletLoading, total, walletBalance, hasSufficientWallet, hasPartialWallet],

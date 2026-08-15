@@ -489,9 +489,7 @@ func AllowedActions(status OrderStatus, viewerRole string) []string {
 	actions := []string{"view"}
 	switch viewerRole {
 	case "client":
-		if status == StatusPending {
-			actions = append(actions, "cancel_if_policy_allows")
-		}
+		// Clients cannot self-cancel once confirmed into preparation; cancellations must be handled via support & operations.
 		if status == StatusDriverAssigned || status == StatusArrivedStore || status == StatusPickedUp || status == StatusArrivedCustomer {
 			actions = append(actions, "track")
 		}

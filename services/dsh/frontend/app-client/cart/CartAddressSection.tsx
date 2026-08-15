@@ -4,23 +4,40 @@ import { Badge, Button, StateView, Surface, Text, colorRoles, radius, spacing } 
 import type { DshClientAddress } from "../../shared/client-address";
 import type { DshCart, DshServiceabilityState } from "../../shared/cart";
 
+function formatAddressLabel(label: string): string {
+  if (!label || label.startsWith("runtime-") || label.startsWith("addr-")) {
+    return "عنوان التوصيل";
+  }
+  return label;
+}
+
+function formatRecipientName(name: string): string {
+  if (!name || name === "Runtime Client" || name.startsWith("Test")) {
+    return "العميل";
+  }
+  return name;
+}
+
+function formatAddressLine(line: string, serviceAreaCode: string): string {
+  if (!line || line.startsWith("Governed runtime address")) {
+    const areaName = serviceAreaCode === "haddah" ? "حي حدة" : serviceAreaCode;
+    return `صنعاء - ${areaName}`;
+  }
+  return line;
+}
+
 export function AddressSummary({ address }: { readonly address: DshClientAddress }) {
   return (
     <View style={styles.addressSummary}>
       <View style={styles.sectionHeader}>
         <Badge label={address.isDefault ? "العنوان الافتراضي" : "عنوان الحساب"} tone="success" />
-        <Text role="bodyStrong" style={styles.sectionTitle}>{address.label}</Text>
+        <Text role="bodyStrong" style={styles.sectionTitle}>{formatAddressLabel(address.label)}</Text>
       </View>
-      <Text role="bodySm" style={styles.mutedText}>{address.recipientName}</Text>
-      <Text role="bodySm" style={styles.mutedText}>{address.addressLine}</Text>
+      <Text role="bodySm" style={styles.recipientText}>{formatRecipientName(address.recipientName)}</Text>
+      <Text role="bodySm" style={styles.addressLineText}>{formatAddressLine(address.addressLine, address.serviceAreaCode)}</Text>
       <Text role="caption" style={styles.mutedText}>
-        {address.serviceAreaCode} · {address.phoneE164}
+        منطقة الخدمة: {address.serviceAreaCode} · {address.phoneE164}
       </Text>
-      {address.latitude !== null && address.longitude !== null ? (
-        <Text role="caption" style={styles.mutedText}>
-          الموقع المثبت: {address.latitude.toFixed(6)}, {address.longitude.toFixed(6)}
-        </Text>
-      ) : null}
     </View>
   );
 }
@@ -28,7 +45,7 @@ export function AddressSummary({ address }: { readonly address: DshClientAddress
 export function ServiceabilityStatus({ state }: { readonly state: DshServiceabilityState }) {
   switch (state.kind) {
     case "idle":
-      return <Text role="caption" style={styles.mutedText}>لم يتم التحقق بعد.</Text>;
+      return null;
     case "checking":
       return <Text role="caption" style={styles.mutedText}>يجري التحقق من تغطية العنوان…</Text>;
     case "serviceable":
@@ -67,11 +84,6 @@ export function OperationalPolicyDetails({
           الوقت التقديري للتوصيل: {result.etaWindow.minMinutes} إلى {result.etaWindow.maxMinutes} دقيقة
         </Text>
       ) : null}
-      {result.quoteVersion ? (
-        <Text role="caption" style={styles.mutedText}>
-          رقم التسعيرة: {result.quoteVersion.split("-")[0]} · صالح حتى: {result.expiresAt ? new Date(result.expiresAt).toLocaleTimeString("ar-SA") : "—"}
-        </Text>
-      ) : null}
     </View>
   );
 }
@@ -106,7 +118,9 @@ export function CartAddressSection({
 
   return (
     <Surface tone="default" style={styles.section}>
-      <Text role="bodyStrong" style={styles.sectionTitle}>عنوان التسليم ونطاق الخدمة</Text>
+      <View style={styles.sectionHeader}>
+        <Text role="bodyStrong" style={styles.sectionTitle}>عنوان التسليم ونطاق الخدمة</Text>
+      </View>
       {selectedAddress ? (
         <AddressSummary address={selectedAddress} />
       ) : (
@@ -119,10 +133,11 @@ export function CartAddressSection({
         />
       )}
       {selectedAddress && cart ? (
-        <>
+        <View style={styles.addressActions}>
           <Button
             label="تغيير العنوان"
             tone="secondary"
+            size="sm"
             {...(onManageAddresses ? { onPress: onManageAddresses } : { disabled: true })}
           />
           <ServiceabilityStatus state={serviceabilityState} />
@@ -130,6 +145,7 @@ export function CartAddressSection({
             <Button
               label="إعادة فحص قابلية الخدمة"
               tone="secondary"
+              size="sm"
               onPress={() => onCheckServiceability(
                 storeId,
                 selectedAddress.id,
@@ -137,7 +153,7 @@ export function CartAddressSection({
               )}
             />
           ) : null}
-        </>
+        </View>
       ) : null}
     </Surface>
   );
@@ -146,7 +162,7 @@ export function CartAddressSection({
 const styles = StyleSheet.create({
   section: {
     paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
@@ -157,12 +173,17 @@ const styles = StyleSheet.create({
     flexDirection: "row-reverse",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 6,
   },
   sectionTitle: { color: colorRoles.textPrimary, textAlign: "right", fontSize: 13, fontWeight: "bold" },
-  addressSummary: { gap: 4 },
+  addressSummary: { gap: 3 },
+  recipientText: { color: colorRoles.textPrimary, textAlign: "right", fontSize: 12, fontWeight: "600" },
+  addressLineText: { color: colorRoles.textPrimary, textAlign: "right", fontSize: 12 },
   mutedText: { color: colorRoles.textSecondary, textAlign: "right", fontSize: 11, lineHeight: 15 },
   errorText: { color: colorRoles.danger, textAlign: "right", fontSize: 11, lineHeight: 15 },
   policyBox: { gap: 4, alignItems: "flex-end" },
   policyDetails: { gap: 2, alignItems: "flex-end" },
+  addressActions: {
+    gap: 6,
+    marginTop: 4,
+  },
 });

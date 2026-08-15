@@ -1,8 +1,10 @@
-import { colorRoles } from '../../tokens/colors';
 import React from 'react';
-import { View, Pressable, I18nManager } from 'react-native';
+import { View, Pressable, I18nManager, StyleSheet } from 'react-native';
 import { Text } from '../Text';
+import { Icon } from '../Icon';
+import { colorRoles } from '../../tokens/colors';
 import { spacing } from '../../tokens/spacing';
+import { radius } from '../../tokens/radius';
 
 export type TopBarProps = {
   title: string;
@@ -19,35 +21,81 @@ export function TopBar({ title, subtitle, variant = 'primary', onBack, style }: 
   return (
     <View
       style={[
+        styles.topBar,
         {
           flexDirection: rowDirection,
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          minHeight: 56,
-          paddingHorizontal: spacing[4],
-          paddingVertical: spacing[3],
-          backgroundColor: variant === 'secondary' ? colorRoles.surfaceBase : colorRoles.surfaceBase,
-          borderBottomWidth: 1,
-          borderBottomColor: colorRoles.surfaceBase,
+          backgroundColor: variant === 'secondary' ? colorRoles.surfaceWarm : colorRoles.surfaceBase,
         },
         style,
       ]}
     >
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <Text role="titleMd" style={{ textAlign: 'center' }}>{title}</Text>
+      {onBack ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="الرجوع"
+          onPress={onBack}
+          style={styles.backButton}
+        >
+          <Icon
+            name={isRTL ? "chevron-forward" : "chevron-back"}
+            size={22}
+            color={colorRoles.textPrimary}
+          />
+        </Pressable>
+      ) : (
+        <View style={styles.spacer} />
+      )}
+
+      <View style={styles.titleContainer}>
+        <Text role="titleMd" style={styles.titleText}>{title}</Text>
         {subtitle ? (
-          <Text role="bodySm" tone="muted" style={{ marginTop: 2, textAlign: 'center' }}>
+          <Text role="caption" tone="muted" style={styles.subtitleText}>
             {subtitle}
           </Text>
         ) : null}
       </View>
-      {onBack ? (
-        <Pressable onPress={onBack} style={{ padding: spacing[2] }}>
-          <Text role="bodySm" tone="action">
-            {isRTL ? '→' : '←'}
-          </Text>
-        </Pressable>
-      ) : null}
+
+      <View style={styles.spacer} />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  topBar: {
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 46,
+    paddingHorizontal: spacing[3],
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.round,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.04)',
+  },
+  spacer: {
+    width: 36,
+    height: 36,
+  },
+  titleContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  titleText: {
+    textAlign: 'center',
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: colorRoles.textPrimary,
+  },
+  subtitleText: {
+    marginTop: 1,
+    textAlign: 'center',
+    fontSize: 11,
+  },
+});

@@ -5,6 +5,7 @@ import {
   Button,
   Surface,
   Text,
+  alpha,
   colorRoles,
   radius,
 } from "@bthwani/ui-kit";
@@ -137,6 +138,7 @@ const styles = StyleSheet.create({
   },
   paymentCardActive: {
     borderColor: colorRoles.brandAction,
+    backgroundColor: alpha(colorRoles.brandAction, 0.04),
   },
   paymentCardDisabled: { opacity: 0.48 },
   optionHeader: {

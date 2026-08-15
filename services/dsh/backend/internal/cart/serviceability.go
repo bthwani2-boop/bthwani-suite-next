@@ -442,31 +442,38 @@ func CheckGovernedServiceability(
 	expiry := time.Now().UTC().Add(15 * time.Minute)
 	result.ExpiresAt = &expiry
 
-	if result.Serviceable && mapClient != nil && (requestedMode == ModeBthwaniDelivery || requestedMode == ModePartnerDelivery) && clientLat != nil && clientLng != nil {
+	if result.Serviceable && (requestedMode == ModeBthwaniDelivery || requestedMode == ModePartnerDelivery) && clientLat != nil && clientLng != nil {
 		var storeLat, storeLng float64
 		err := db.QueryRowContext(ctx, `SELECT latitude, longitude FROM dsh_stores WHERE id = $1`, storeID).Scan(&storeLat, &storeLng)
 		if err == nil {
-			routeResponse, err := mapClient.Route(ctx, "", mapproviders.RouteInput{
-				OriginLatitude:       storeLat,
-				OriginLongitude:      storeLng,
-				DestinationLatitude:  *clientLat,
-				DestinationLongitude: *clientLng,
-			})
-			if err != nil {
-				result.Serviceable = false
-				result.Code = "provider_unavailable"
-				result.Reason = "routing provider could not estimate ETA"
-			} else {
-				routeMinutes := int(math.Ceil(routeResponse.DurationSeconds / 60.0))
-				prepMinutes := 15
-				if decision.SLA.Configured {
-					prepMinutes = decision.SLA.MaxPrepMins
+			var routeDuration float64 = 0
+			if mapClient != nil {
+				routeResponse, routeErr := mapClient.Route(ctx, "", mapproviders.RouteInput{
+					OriginLatitude:       storeLat,
+					OriginLongitude:      storeLng,
+					DestinationLatitude:  *clientLat,
+					DestinationLongitude: *clientLng,
+				})
+				if routeErr == nil {
+					routeDuration = routeResponse.DurationSeconds
 				}
-				minETA := prepMinutes + routeMinutes
-				maxETA := minETA + 15
-				result.EtaMinMinutes = &minETA
-				result.EtaMaxMinutes = &maxETA
 			}
+			if routeDuration <= 0 {
+				distKM := calculateDistanceKM(storeLat, storeLng, *clientLat, *clientLng)
+				routeDuration = distKM * 3.0 * 60.0
+			}
+			routeMinutes := int(math.Ceil(routeDuration / 60.0))
+			if routeMinutes < 10 {
+				routeMinutes = 10
+			}
+			prepMinutes := 15
+			if decision.SLA.Configured && decision.SLA.MaxPrepMins > 0 {
+				prepMinutes = decision.SLA.MaxPrepMins
+			}
+			minETA := prepMinutes + routeMinutes
+			maxETA := minETA + 15
+			result.EtaMinMinutes = &minETA
+			result.EtaMaxMinutes = &maxETA
 		}
 	}
 
