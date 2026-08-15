@@ -3,7 +3,7 @@
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
 Applies to: `plans/diagnose-implementing/<TASK_NAME>/NNN-<sequence-name>.md`
 
-## Identity / Graph / Isolation Fields
+## Identity / Graph / Isolation / Priority Fields
 
 ```text
 TASK_ID
@@ -16,6 +16,9 @@ SEQUENCE_NAME
 SEQUENCE_ORDER
 BASE_SHA
 RECONCILED_HEAD_SHA
+ROOT_CAUSE_CLUSTER_ID
+PRIORITY_CLASS
+PRIORITY_BASIS
 DERIVATION_BASIS
 DEPENDS_ON
 BLOCKS
@@ -31,6 +34,20 @@ SEQUENCE_STATUS
 
 `BRANCH` = Integration Target identity. `TASK_BRANCH` = isolated working branch and must match the owning Overview.
 
+`ROOT_CAUSE_CLUSTER_ID` must be an `RC-NNN` material cluster present in the current target-wide landscape.
+
+Allowed `PRIORITY_CLASS`:
+
+```text
+PRIMARY_SYSTEMIC
+UPSTREAM_FOUNDATION
+INDEPENDENT_PARALLEL
+DEPENDENT_SECONDARY
+LEAF_LOCAL
+```
+
+`PRIORITY_BASIS` must explain why this cluster is the highest-leverage current frontier or why it safely parallels another frontier. It must compare causal/dependency position, blocking power, canonical/foundation importance, blast radius, risk/severity, unlock value, finding density/recurrence and relevant structural debt. No priority by recency, most Findings alone, easiest fix, last session or Sequence number.
+
 Allowed `SEQUENCE_STATUS`:
 
 ```text
@@ -40,6 +57,8 @@ BLOCKED_EXTERNAL / PREPARED / COMPLETE
 ```
 
 `PARALLEL_SAFETY`: `UNPROVEN / SERIAL_REQUIRED / PROVEN_INDEPENDENT`.
+
+`PRIORITY_CLASS=INDEPENDENT_PARALLEL` requires graph-proven semantic independence and `PARALLEL_SAFETY=PROVEN_INDEPENDENT` before live parallel write.
 
 ## Gate Fields
 
@@ -76,6 +95,21 @@ SCOPE_DELTA_CLASSIFIED: YES|NO
 10. Sequence Exit / Suspension / Reopen
 ```
 
+Section 1 must preserve the cluster/priority provenance and justify why this Sequence outranks or safely parallels other open material clusters.
+
+## Priority Invalidation
+
+If a new finding/decision/dependency/foreign delta/upstream fix changes the cluster definition, canonical owner, dependency position, blocking power, blast radius, risk or unlock value:
+
+```text
+owning Overview priority model becomes stale for the affected landscape cone
+→ re-cluster/re-rank
+→ rejustify frontier
+→ suspend/reopen this Sequence when required
+```
+
+A Sequence cannot use an old `PRIORITY_BASIS` to bypass a newly proven upstream/foundation root cause.
+
 ## PREPARE_ONLY terminal
 
 `PREPARED` + all common solution/accounting gates YES + `IMPLEMENTATION_COMPLETE=NO`.
@@ -84,4 +118,4 @@ SCOPE_DELTA_CLASSIFIED: YES|NO
 
 `COMPLETE` + all common gates YES + implementation/consumers/cleanup/verification/governance/scope-delta gates PASS.
 
-A Sequence may be suspended/reopened by graph evidence. Dependent work cannot falsely close around unresolved upstream dependency. Parallel execution requires distinct proven conflict domains, explicit execution ownership and isolated writing workspaces. Integration Target mutation remains serialized through the package Integration Owner.
+A Sequence may be suspended/reopened by graph evidence. Dependent work cannot falsely close around unresolved upstream dependency. Parallel execution requires distinct proven conflict domains, explicit execution ownership, isolated writing workspaces and priority-class consistency. Integration Target mutation remains serialized through the package Integration Owner.
