@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import NetInfo from "@react-native-community/netinfo";
+import { subscribeBthwaniConnectivity } from "@bthwani/data-runtime";
 import {
   configureFieldOfflineQueueScope,
   prepareFieldOfflineQueue,
@@ -153,8 +153,6 @@ export function useFieldOfflineSync(
         }
       }
       await purgeSyncedOperations();
-      // Refusals that can never drain are evacuated so they neither consume
-      // queue capacity nor disappear without the employee being told.
       const evacuated = await evacuateTerminalOperations();
       if (evacuated > 0) setQuarantinedCount((current) => current + evacuated);
       if (reconciliationError) setState(queueErrorState(reconciliationError));
@@ -191,7 +189,7 @@ export function useFieldOfflineSync(
     }
 
     void drainQueue();
-    const unsubscribe = NetInfo.addEventListener((networkState) => {
+    const unsubscribe = subscribeBthwaniConnectivity((networkState) => {
       if (networkState.isConnected && networkState.isInternetReachable) {
         void drainQueue();
       }
