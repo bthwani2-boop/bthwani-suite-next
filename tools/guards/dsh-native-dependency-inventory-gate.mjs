@@ -3,6 +3,7 @@ import path from "node:path";
 import {
   fail,
   findImportSpecifiers,
+  listCodeFiles,
   read,
   repoRoot,
 } from "./_guard-utils.mjs";
@@ -10,6 +11,7 @@ import {
 const guardId = "dsh-native-dependency-inventory-gate";
 const violations = [];
 const packagePath = "services/dsh/package.json";
+const dshRoot = "services/dsh/";
 const pkg = JSON.parse(fs.readFileSync(path.join(repoRoot, packagePath), "utf8"));
 const boundary = pkg["x-bthwani-platform-boundary"] ?? {};
 const quarantine = boundary.legacyNativeDependencyQuarantine ?? [];
@@ -24,9 +26,31 @@ const allowedStatuses = new Set([
 
 const quarantineSet = new Set(quarantine);
 const reviewKeys = Object.keys(review);
+const directConsumers = new Map();
+
+for (const file of listCodeFiles()) {
+  if (!file.startsWith(dshRoot)) continue;
+  const content = read(file);
+  for (const { specifier } of findImportSpecifiers(content)) {
+    if (!quarantineSet.has(specifier)) continue;
+    const consumers = directConsumers.get(specifier) ?? [];
+    consumers.push(file);
+    directConsumers.set(specifier, consumers);
+  }
+}
 
 for (const dependency of quarantine) {
   const entry = review[dependency];
+  const declared = pkg.dependencies?.[dependency] ?? pkg.peerDependencies?.[dependency] ?? null;
+  const consumers = directConsumers.get(dependency) ?? [];
+
+  if (declared === null) {
+    violations.push({
+      file: packagePath,
+      message: `stale native quarantine dependency '${dependency}' is not declared as a dependency or peerDependency`,
+    });
+  }
+
   if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
     violations.push({ file: packagePath, message: `native quarantine dependency '${dependency}' requires an explicit review entry` });
     continue;
@@ -39,15 +63,37 @@ for (const dependency of quarantine) {
     violations.push({ file: packagePath, message: `native dependency '${dependency}' must keep deletionAuthorized=false until package-specific approval and closure evidence` });
   }
 
-  if (entry.status === "LEGACY_DATA_PROVIDER_QUARANTINE" && !dataQuarantine[dependency]) {
-    violations.push({ file: packagePath, message: `legacy data provider '${dependency}' must be present in dataRuntimeLegacyQuarantine` });
+  if (entry.status === "LEGACY_DATA_PROVIDER_QUARANTINE") {
+    if (!dataQuarantine[dependency]) {
+      violations.push({ file: packagePath, message: `legacy data provider '${dependency}' must be present in dataRuntimeLegacyQuarantine` });
+    }
+    if (consumers.length > 0) {
+      violations.push({
+        file: packagePath,
+        message: `legacy data provider '${dependency}' still has direct DSH consumers that must migrate before removal: ${consumers.slice(0, 8).join(", ")}`,
+      });
+    }
+  }
+
+  if (entry.status === "CONSUMER_REVIEW_PENDING" && consumers.length > 0) {
+    violations.push({
+      file: packagePath,
+      message: `review-pending drift: '${dependency}' already has direct DSH consumers and must be promoted with exact evidence: ${consumers.slice(0, 8).join(", ")}`,
+    });
   }
 
   if (entry.status === "ACTIVE_DIRECT_CONSUMER") {
+    if (consumers.length === 0) {
+      violations.push({
+        file: packagePath,
+        message: `active native dependency '${dependency}' no longer has a direct DSH consumer; reclassify only after exact-ref review`,
+      });
+    }
     if (!Array.isArray(entry.evidence) || entry.evidence.length === 0) {
       violations.push({ file: packagePath, message: `active native dependency '${dependency}' requires exact source evidence` });
       continue;
     }
+
     let proven = false;
     for (const evidencePath of entry.evidence) {
       const absolute = path.join(repoRoot, evidencePath);
