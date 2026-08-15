@@ -207,3 +207,49 @@ AND ACTIVE_EXECUTION_FRONTIER=NONE
 Plus zero known fixable defect/undispositioned material item/missing required evidence/duplicate truth/reachable obsolete path/unresolved suspended or reopened material sequence/stale operational or priority provenance.
 
 Final branch closure requires `LIFECYCLE_STATE=CLOSED`, canonical `FINAL_DECISION`, `HEAD_AT_DECISION=FINAL_CANDIDATE_SHA`, and all applicable evidence/approvals on the same immutable target candidate.
+
+## 17) Proof limits
+
+```text
+task branch green ≠ Integration Target green
+operational machine PASS ≠ no unknowable defect exists
+priority model complete ≠ no undiscovered defect exists
+most findings in a cluster ≠ highest systemic leverage
+migration apply PASS ≠ idempotency/schema/readback/restart proof
+static/build/typecheck/lint/unit/mock green ≠ runtime/E2E proof
+UI hidden/disabled ≠ server-side authorization proof
+scanner green ≠ permission to suppress a known finding
+tracked workflow/ruleset file ≠ live platform enforcement
+```
+
+كل Evidence يصرح بما يثبته وما لا يثبته.
+
+## 18) Claim / Diff / Test Review
+
+راجع claimed operational outcome لا changed files فقط: actors/surfaces/owners/states/scopes/permissions/contracts/persistence/providers/readbacks/failure/recovery/UX/evidence/approvals. راجع كامل owned range للـforeign delta، generated/lockfile drift، missing consumer migration، reachable legacy paths، stale package/priority assumptions وcross-sequence effects.
+
+لكل Test/Guard متغير اسأل: ما claim الذي يستطيع falsify؟ وهل يمكنه أن يمر والعيب موجود؟ weakening/skipping/mock-only/non-blocking changes لا تصنع green.
+
+## 19) Evidence / Priority Invalidation Cone
+
+```text
+contract/schema → consumers/generated/integration evidence stale
+migration/data owner → DB/runtime/readback stale
+runtime/config/network → runtime/E2E stale
+security/auth/permission → negative isolation/security stale
+shared owner/library → affected consumer cone stale
+new upstream root / cluster split-merge / authority shift → affected priority stale
+proven unrelated movement → retain with provenance
+```
+
+Integration نفسها قد تبطل task-branch evidence؛ أعد minimum sufficient affected evidence ما لم يفرض risk/policy نطاقًا أوسع.
+
+## 20) Final adversarial + read-only verification
+
+حاول إسقاط الإغلاق عبر hidden writers/readers، parallel/stale truth، missing consumers، contract/binding mismatch، permission bypass، retry/replay/concurrency، unknown-result/recovery، partial failure/restart، runtime-only defects، stale process/data/config، weak/flaky guards، foreign delta، reachable legacy، PII/secrets، neighboring regression، wrong ownership/placement/naming، unnecessary residue، unclustered findings، cluster split/merge mistakes، high-risk low-frequency roots وpriority inversions.
+
+على exact final Integration Target candidate فقط نفّذ required checks/readbacks/runtime/E2E/security/data/finance/edge/adversarial/repository-platform/approval verification. هذه المرحلة **read-only**: لا `--fix`, formatter/generator write, lockfile/migration/source/package mutation, commit/push/merge أو swallowed exit. أي material finding requiring write يلغي Freeze ويعيد affected cone.
+
+## 21) Lifecycle vs canonical decision
+
+`LIFECYCLE_STATE` حالة مشتقة داخل الحزمة. `FINAL_DECISION` يجب أن يكون ID حاكمًا من `governance/contracts/decision-vocabulary.json`; لا aliases مخترعة. إذا تغير candidate بعد review/approval، أعد binding/evidence/independence المطلوبة قبل القرار النهائي.
