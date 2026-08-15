@@ -8,57 +8,53 @@ import (
 	"strings"
 )
 
-// PersistCartSnapshotInput binds the OCC-locked cart snapshot used to price a
-// checkout to the durable Checkout Intent created in the same transaction.
-// The persisted rows are the sole commercial line source for order creation.
+// PersistCartSnapshotInput binds a priced Checkout Intent to the live cart
+// state protected by the caller's checkout transaction. The persisted rows are
+// the sole commercial line source for later order creation.
 type PersistCartSnapshotInput struct {
-	CheckoutIntentID  string
-	OperatorContextID string
-	ClientID          string
-	CartID            string
-	StoreID           string
-	CartVersion       int
-	CartSnapshotHash  string
+	CheckoutIntentID   string
+	OperatorContextID  string
+	ClientID           string
+	CartID             string
+	StoreID            string
+	PricingSnapshotHash string
 	SubtotalMinorUnits int64
-	Currency          string
-	ItemCount         int
+	Currency           string
 }
 
-func validatePersistCartSnapshotInput(input PersistCartSnapshotInput) error {
+func normalizePersistCartSnapshotInput(input PersistCartSnapshotInput) PersistCartSnapshotInput {
 	input.CheckoutIntentID = strings.TrimSpace(input.CheckoutIntentID)
 	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.ClientID = strings.TrimSpace(input.ClientID)
 	input.CartID = strings.TrimSpace(input.CartID)
 	input.StoreID = strings.TrimSpace(input.StoreID)
-	input.CartSnapshotHash = strings.TrimSpace(input.CartSnapshotHash)
+	input.PricingSnapshotHash = strings.TrimSpace(input.PricingSnapshotHash)
 	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
+	return input
+}
+
+func validatePersistCartSnapshotInput(input PersistCartSnapshotInput) error {
 	if input.CheckoutIntentID == "" || input.OperatorContextID == "" || input.ClientID == "" ||
-		input.CartID == "" || input.StoreID == "" || input.CartVersion <= 0 ||
-		input.SubtotalMinorUnits <= 0 || input.ItemCount <= 0 || len(input.Currency) != 3 {
+		input.CartID == "" || input.StoreID == "" || input.SubtotalMinorUnits <= 0 ||
+		len(input.Currency) != 3 {
 		return ErrInvalid
 	}
-	decoded, err := hex.DecodeString(input.CartSnapshotHash)
+	decoded, err := hex.DecodeString(input.PricingSnapshotHash)
 	if err != nil || len(decoded) != 32 {
 		return ErrInvalid
 	}
 	return nil
 }
 
-// PersistCartSnapshotTx persists the exact cart state already protected by the
-// cart aggregate's FOR UPDATE lock. The checkout row, cart identity/version,
-// item count, subtotal, and currency must all agree or the transaction fails
-// closed. No live-cart fallback is permitted after this boundary.
-func PersistCartSnapshotTx(ctx context.Context, tx *sql.Tx, input PersistCartSnapshotInput) error {
+// PersistCartSnapshotTx copies the current cart into immutable checkout-owned
+// rows and proves that the copied line count, subtotal, and currency match the
+// priced Checkout Intent. Any mismatch aborts the surrounding transaction.
+// There is intentionally no fallback to dsh_cart_items after this boundary.
+func PersistCartSnapshotTx(ctx context.Context, tx *sql.Tx, rawInput PersistCartSnapshotInput) error {
 	if tx == nil {
 		return ErrInvalid
 	}
-	input.CheckoutIntentID = strings.TrimSpace(input.CheckoutIntentID)
-	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
-	input.ClientID = strings.TrimSpace(input.ClientID)
-	input.CartID = strings.TrimSpace(input.CartID)
-	input.StoreID = strings.TrimSpace(input.StoreID)
-	input.CartSnapshotHash = strings.TrimSpace(input.CartSnapshotHash)
-	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
+	input := normalizePersistCartSnapshotInput(rawInput)
 	if err := validatePersistCartSnapshotInput(input); err != nil {
 		return err
 	}
@@ -66,9 +62,10 @@ func PersistCartSnapshotTx(ctx context.Context, tx *sql.Tx, input PersistCartSna
 	result, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_checkout_cart_snapshots
 			(checkout_intent_id, operator_context_id, client_id, cart_id, store_id,
-			 cart_version, cart_snapshot_hash, subtotal_minor_units, currency, item_count)
+			 cart_version, pricing_snapshot_hash, subtotal_minor_units, currency, item_count)
 		SELECT ci.id, ci.operator_context_id, ci.client_id, ci.cart_id, ci.store_id,
-		       $6, $7, $8, $9, $10
+		       cart.version, ci.pricing_snapshot_hash, ci.subtotal_minor_units, ci.currency,
+		       (SELECT COUNT(*)::integer FROM dsh_cart_items item WHERE item.cart_id = ci.cart_id)
 		FROM dsh_checkout_intents ci
 		JOIN dsh_carts cart ON cart.id = ci.cart_id
 		WHERE ci.id = $1::uuid
@@ -76,22 +73,20 @@ func PersistCartSnapshotTx(ctx context.Context, tx *sql.Tx, input PersistCartSna
 		  AND ci.client_id = $3
 		  AND ci.cart_id = $4::uuid
 		  AND ci.store_id = $5
-		  AND ci.subtotal_minor_units = $8
-		  AND ci.currency = $9
+		  AND ci.pricing_snapshot_hash = $6
+		  AND ci.subtotal_minor_units = $7
+		  AND ci.currency = $8
 		  AND cart.client_id = $3
 		  AND cart.store_id = $5
-		  AND cart.state = 'active'
-		  AND cart.version = $6`,
+		  AND cart.state = 'active'`,
 		input.CheckoutIntentID,
 		input.OperatorContextID,
 		input.ClientID,
 		input.CartID,
 		input.StoreID,
-		input.CartVersion,
-		input.CartSnapshotHash,
+		input.PricingSnapshotHash,
 		input.SubtotalMinorUnits,
 		input.Currency,
-		input.ItemCount,
 	)
 	if err != nil {
 		return err
@@ -124,23 +119,31 @@ func PersistCartSnapshotTx(ctx context.Context, tx *sql.Tx, input PersistCartSna
 	}
 
 	var (
-		persistedCount    int
-		persistedSubtotal int64
-		minCurrency       string
-		maxCurrency       string
+		expectedCount      int
+		persistedCount     int
+		persistedSubtotal  int64
+		minCurrency        string
+		maxCurrency        string
 	)
 	if err = tx.QueryRowContext(ctx, `
-		SELECT COUNT(*), COALESCE(SUM(line_total_minor_units), 0),
-		       COALESCE(MIN(currency), ''), COALESCE(MAX(currency), '')
-		FROM dsh_checkout_item_snapshots
-		WHERE checkout_intent_id = $1::uuid`, input.CheckoutIntentID,
-	).Scan(&persistedCount, &persistedSubtotal, &minCurrency, &maxCurrency); err != nil {
+		SELECT snapshot.item_count,
+		       COUNT(item.line_number),
+		       COALESCE(SUM(item.line_total_minor_units), 0),
+		       COALESCE(MIN(item.currency), ''),
+		       COALESCE(MAX(item.currency), '')
+		FROM dsh_checkout_cart_snapshots snapshot
+		LEFT JOIN dsh_checkout_item_snapshots item
+		  ON item.checkout_intent_id = snapshot.checkout_intent_id
+		WHERE snapshot.checkout_intent_id = $1::uuid
+		GROUP BY snapshot.item_count`, input.CheckoutIntentID,
+	).Scan(&expectedCount, &persistedCount, &persistedSubtotal, &minCurrency, &maxCurrency); err != nil {
 		return err
 	}
-	if persistedCount != input.ItemCount || persistedSubtotal != input.SubtotalMinorUnits ||
+	if expectedCount <= 0 || persistedCount != expectedCount ||
+		persistedSubtotal != input.SubtotalMinorUnits ||
 		minCurrency != input.Currency || maxCurrency != input.Currency {
 		return fmt.Errorf(
-			"%w: persisted checkout item snapshot differs from governed cart snapshot",
+			"%w: persisted checkout item snapshot differs from priced checkout truth",
 			ErrConflict,
 		)
 	}
