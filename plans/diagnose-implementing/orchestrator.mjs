@@ -257,7 +257,7 @@ function requiredClosureBullet(text, key) {
   return match[1].trim();
 }
 
-function validateOperational(model) {
+function validateOperational(model, evidenceById) {
   assert(model.operational.length > 0, "operational coverage is empty");
   const byId = new Map();
   for (const row of model.operational) {
@@ -267,6 +267,7 @@ function validateOperational(model) {
     assert(new Set(["PROVEN", "EXCLUDED", "OPEN", "STALE"]).has(row.Status), `${row.Node} has invalid status ${row.Status}`);
     if (new Set(["PROVEN", "EXCLUDED"]).has(row.Status)) {
       assert(row.Evidence && !/^(?:MISSING|UNSET)$/i.test(row.Evidence), `${row.Node} settled status requires evidence`);
+      for (const ev of listRefs(row.Evidence)) assert(evidenceById.has(ev), `${row.Node} references unknown Evidence ${ev}`);
     }
     byId.set(row.Node, row);
   }
@@ -294,6 +295,29 @@ function validateEvidence(model) {
   return byId;
 }
 
+function assertAcyclic(byId, depsFor, label) {
+  const visiting = new Set();
+  const visited = new Set();
+  const stack = [];
+
+  function visit(id) {
+    if (visited.has(id)) return;
+    if (visiting.has(id)) {
+      const start = stack.indexOf(id);
+      const cycle = [...stack.slice(start), id];
+      assert(false, `${label} dependency cycle: ${cycle.join(" -> ")}`);
+    }
+    visiting.add(id);
+    stack.push(id);
+    for (const dep of depsFor(byId.get(id))) visit(dep);
+    stack.pop();
+    visiting.delete(id);
+    visited.add(id);
+  }
+
+  for (const id of byId.keys()) visit(id);
+}
+
 function validateRoots(model, operationalById, evidenceById) {
   assert(model.roots.length > 0, "root-cause landscape is empty");
   const byId = new Map();
@@ -314,6 +338,7 @@ function validateRoots(model, operationalById, evidenceById) {
   for (const row of model.roots) {
     for (const dep of listRefs(row["Depends on"])) assert(byId.has(dep), `${row.RC} references unknown RC dependency ${dep}`);
   }
+  assertAcyclic(byId, (row) => listRefs(row["Depends on"]), "root-cause graph");
   const winners = model.roots.filter((row) => row.Priority === "1" && !new Set(["RESOLVED", "EXCLUDED"]).has(row.Disposition));
   assert(winners.length > 0, "no active Priority=1 root cause");
   for (const winner of winners) assert(winner.Deepening === "DEEPENED_ENOUGH_TO_RANK", `${winner.RC} winner must be DEEPENED_ENOUGH_TO_RANK`);
@@ -365,6 +390,7 @@ function validateFrontier(model, rootsById, evidenceById, phase) {
   for (const row of model.frontier) {
     for (const dep of listRefs(row["Depends on"])) assert(byId.has(dep), `${row.Work} references unknown Work dependency ${dep}`);
   }
+  assertAcyclic(byId, (row) => listRefs(row["Depends on"]), "frontier");
   const activePriorityOne = new Set(model.roots.filter((row) => row.Priority === "1" && !new Set(["RESOLVED", "EXCLUDED"]).has(row.Disposition)).map((row) => row.RC));
   for (const rc of activePriorityOne) assert(model.frontier.some((row) => row.RC === rc), `Priority=1 ${rc} is missing from frontier`);
 
@@ -402,7 +428,7 @@ function semanticPhase(text, phase) {
   assert(PHASES.has(phase), `unknown phase ${phase}`);
   const model = validateCoreShape(text);
   const evidenceById = validateEvidence(model);
-  const operationalById = validateOperational(model);
+  const operationalById = validateOperational(model, evidenceById);
   requireEvidencePass(evidenceById, "EVD-ROOT");
   requireEvidencePass(evidenceById, "EVD-NEGATIVE-SPACE");
   requireEvidencePass(evidenceById, "EVD-ADVERSARIAL");
