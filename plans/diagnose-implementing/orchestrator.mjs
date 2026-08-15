@@ -19,50 +19,616 @@ const RC_ID = /^RC-[A-Z0-9_-]+$/;
 const EVD_ID = /^EVD-[A-Z0-9_-]+$/;
 
 export class OrchestratorError extends Error {}
-function assert(ok, message) { if (!ok) throw new OrchestratorError(message); }
-function fail(message) { console.error(`orchestrator: FAIL: ${message}`); process.exit(1); }
-function safeLine(value, label) { const v=String(value??"").trim(); assert(v&&!/[\r\n]/.test(v),`${label} must be one non-empty line`); return v; }
-function safeBranch(value,label){const v=safeLine(value,label);assert(SAFE_BRANCH.test(v)&&!v.includes("..")&&!v.includes("//")&&!v.includes("@{")&&!v.endsWith("/")&&!v.endsWith("."),`${label} is not a safe branch name`);return v;}
-function parseArgs(tokens,allowed,required=allowed){const out={};for(let i=0;i<tokens.length;i+=2){const k=tokens[i],v=tokens[i+1];assert(k?.startsWith("--")&&v!==undefined&&!v.startsWith("--"),"arguments must be --key value pairs");const n=k.slice(2);assert(allowed.has(n),`unknown argument --${n}`);assert(!Object.hasOwn(out,n),`duplicate argument --${n}`);out[n]=v;}for(const n of required)assert(Object.hasOwn(out,n),`missing --${n}`);return out;}
-function lineValue(text,key){const e=key.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");const m=text.match(new RegExp(`^${e}:\\s*(.*)$`,"m"));return m?m[1].trim():null;}
-function requiredLine(text,key){const v=lineValue(text,key);assert(v!==null,`missing field ${key}`);return v;}
-function requiredClosureBullet(text,key){const e=key.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");const m=text.match(new RegExp(`^- ${e}:\\s*(.*)$`,"m"));assert(m,`missing Closure ${key}`);return m[1].trim();}
-function section(text,heading){const marker=`## ${heading}`;const start=text.indexOf(marker);assert(start>=0,`missing section ${marker}`);const after=start+marker.length;const next=text.indexOf("\n## ",after);return text.slice(after,next>=0?next:text.length).trim();}
-function splitCells(line){return line.trim().replace(/^\|/,"").replace(/\|$/,"").split("|").map(c=>c.trim());}
-function parseTable(text,heading,headers){const lines=section(text,heading).split(/\r?\n/).map(x=>x.trim()).filter(x=>x.startsWith("|"));assert(lines.length>=2,`${heading} table header/separator missing`);assert(JSON.stringify(splitCells(lines[0]))===JSON.stringify(headers),`${heading} table header drift`);const sep=splitCells(lines[1]);assert(sep.length===headers.length&&sep.every(c=>/^:?-{3,}:?$/.test(c)),`${heading} table separator invalid`);return lines.slice(2).map(splitCells).filter(c=>!c.every(x=>x==="")).map(c=>{assert(c.length===headers.length,`${heading} row has ${c.length} cells; expected ${headers.length}`);return Object.fromEntries(headers.map((h,i)=>[h,c[i]]));});}
-function listRefs(value){const v=safeLine(value,"reference list");if(v==="NONE"||v==="N/A")return[];return v.split(",").map(x=>x.trim()).filter(Boolean);}
 
-function git(args,{allowFailure=false}={}){const r=spawnSync("git",args,{cwd:ROOT,encoding:"utf8"});if(r.error||r.status!==0){if(allowFailure)return{ok:false,stdout:r.stdout??"",stderr:r.stderr??r.error?.message??""};throw new OrchestratorError(`git ${args.join(" ")} failed: ${(r.stderr||r.stdout||r.error?.message||"").trim()}`);}return{ok:true,stdout:(r.stdout??"").trim(),stderr:(r.stderr??"").trim()};}
-function remoteBranchSha(name){const b=safeBranch(name,"branch");const line=git(["ls-remote","--heads","origin",`refs/heads/${b}`]).stdout.split(/\r?\n/).find(Boolean);assert(line,`remote branch does not exist: ${b}`);const sha=line.split(/\s+/)[0];assert(SHA.test(sha),`remote branch ${b} did not resolve to a commit SHA`);return sha.toLowerCase();}
-function ensureCommitObject(sha,branch=null){assert(SHA.test(sha),`invalid commit SHA ${sha}`);if(git(["cat-file","-e",`${sha}^{commit}`],{allowFailure:true}).ok)return;if(branch)git(["fetch","--no-tags","--quiet","origin",branch],{allowFailure:true});if(!git(["cat-file","-e",`${sha}^{commit}`],{allowFailure:true}).ok)git(["fetch","--no-tags","--quiet","origin",sha],{allowFailure:true});assert(git(["cat-file","-e",`${sha}^{commit}`],{allowFailure:true}).ok,`commit object unavailable locally: ${sha}`);}
-function isAncestor(base,head,branch=null){ensureCommitObject(base);ensureCommitObject(head,branch);return git(["merge-base","--is-ancestor",base,head],{allowFailure:true}).ok;}
-function currentHead(){const sha=git(["rev-parse","HEAD"]).stdout;assert(SHA.test(sha),"current HEAD did not resolve to a commit SHA");return sha.toLowerCase();}
-function currentBranch(){const r=git(["symbolic-ref","--quiet","--short","HEAD"],{allowFailure:true});assert(r.ok&&r.stdout,"detached HEAD is not a governed execution context");return r.stdout;}
+function assert(condition, message) {
+  if (!condition) throw new OrchestratorError(message);
+}
 
-function replaceToken(text,token,value){assert(text.includes(token),`template missing ${token}`);return text.split(token).join(value);}
-function atomicWrite(file,text){const dir=path.dirname(file);fs.mkdirSync(dir,{recursive:false});const temp=path.join(dir,`.${path.basename(file)}.${process.pid}.${Date.now()}.tmp`);let fd;try{fd=fs.openSync(temp,"wx");fs.writeFileSync(fd,text,"utf8");fs.fsyncSync(fd);fs.closeSync(fd);fd=undefined;fs.renameSync(temp,file);try{const d=fs.openSync(dir,"r");fs.fsyncSync(d);fs.closeSync(d);}catch{}}catch(error){if(fd!==undefined)try{fs.closeSync(fd);}catch{};try{fs.rmSync(temp,{force:true});}catch{};try{if(fs.existsSync(dir)&&fs.readdirSync(dir).length===0)fs.rmdirSync(dir);}catch{};throw error;}}
-function resolvePackage(input){const p=path.resolve(input);assert(fs.existsSync(p),`package path does not exist: ${input}`);const f=fs.statSync(p).isDirectory()?path.join(p,"PACKAGE.md"):p;assert(fs.existsSync(f)&&fs.statSync(f).isFile(),`PACKAGE.md is missing: ${f}`);return f;}
-function requireEvidencePass(byId,id,{candidate=null}={}){const r=byId.get(id);assert(r,`missing required evidence ${id}`);assert(r.Result==="PASS",`${id} must be PASS`);assert(r["Check / source"]&&!/^(?:MISSING|UNSET|N\/A)$/i.test(r["Check / source"]),`${id} check/source is missing`);assert(r.Claim,`${id} claim is missing`);assert(r["Limits / invalidates on"],`${id} proof limits/invalidation trigger is missing`);if(candidate)assert(r.Candidate===candidate,`${id} must be bound to Candidate=${candidate}`);return r;}
-function requireEvidenceNA(byId,id){const r=byId.get(id);assert(r,`missing required evidence ${id}`);assert(r.Result==="N/A",`${id} must be N/A`);return r;}
+function fail(message) {
+  console.error(`orchestrator: FAIL: ${message}`);
+  process.exit(1);
+}
 
-function validateCoreShape(text){assert(!/__[A-Z0-9_]+__/.test(text),"unresolved template placeholder");const fields={SCHEMA:requiredLine(text,"SCHEMA"),TASK_ID:requiredLine(text,"TASK_ID"),TARGET:requiredLine(text,"TARGET"),MODE:requiredLine(text,"MODE"),INTEGRATION_BRANCH:requiredLine(text,"INTEGRATION_BRANCH"),TASK_BRANCH:requiredLine(text,"TASK_BRANCH"),BASE_SHA:requiredLine(text,"BASE_SHA"),LATEST_RECONCILED_SHA:requiredLine(text,"LATEST_RECONCILED_SHA"),ROOT:requiredLine(text,"ROOT"),INTEGRATION_OWNER:requiredLine(text,"INTEGRATION_OWNER"),RUNTIME_REQUIRED:requiredLine(text,"RUNTIME_REQUIRED")};assert(fields.SCHEMA===SCHEMA,`SCHEMA must be ${SCHEMA}`);assert(SAFE_NAME.test(fields.TASK_ID),"TASK_ID must be a safe lowercase identifier");assert(MODES.has(fields.MODE),"invalid MODE");assert(SHA.test(fields.BASE_SHA),"invalid BASE_SHA");assert(SHA.test(fields.LATEST_RECONCILED_SHA),"invalid LATEST_RECONCILED_SHA");assert(fields.ROOT===fields.TARGET,"ROOT must equal TARGET");fields.INTEGRATION_BRANCH=safeBranch(fields.INTEGRATION_BRANCH,"INTEGRATION_BRANCH");fields.TASK_BRANCH=safeBranch(fields.TASK_BRANCH,"TASK_BRANCH");assert(fields.INTEGRATION_BRANCH!==fields.TASK_BRANCH,"TASK_BRANCH must differ from INTEGRATION_BRANCH");assert(new Set(["YES","NO","UNSET"]).has(fields.RUNTIME_REQUIRED),"RUNTIME_REQUIRED must be YES, NO, or UNSET");return{fields,operational:parseTable(text,"Operational Coverage",["Node","Kind","Parent","Claim","Status","Evidence"]),roots:parseTable(text,"Root-Cause Graph",["RC","Root cause","Operational parent","Evidence","Depends on","Consumers","Blast / unlock","Priority","Deepening","Disposition"]),ledger:parseTable(text,"Ledger",["Type","ID","RC","Relation / claim","Status","Evidence"]),frontier:parseTable(text,"Frontier",["Work","RC","Depends on","Blocks / unlocks","Conflict","Owner","Parallel","State","Evidence"]),evidence:parseTable(text,"Evidence",["Evidence","Claim","Check / source","Candidate","Environment","Result","Limits / invalidates on"]),closure:{integrationHead:requiredClosureBullet(text,"Integration head"),finalCandidate:requiredClosureBullet(text,"Final candidate"),verification:requiredClosureBullet(text,"Verification"),runtime:requiredClosureBullet(text,"Runtime/product evidence"),cleanup:requiredClosureBullet(text,"Cleanup"),governance:requiredClosureBullet(text,"Governance"),adversarial:requiredClosureBullet(text,"Final adversarial")}};}
-function validateEvidence(model){const byId=new Map(),allowed=new Set(["PASS","FAIL","MISSING","STALE","BLOCKED","N/A"]),candidate=/^(?:BASE|BASE_SHA|TASK_HEAD|INTEGRATION_HEAD|SELF|N\/A|[0-9a-f]{40})$/i;for(const r of model.evidence){assert(EVD_ID.test(r.Evidence),`invalid Evidence id ${r.Evidence}`);assert(!byId.has(r.Evidence),`duplicate Evidence ${r.Evidence}`);assert(r.Claim&&r["Check / source"]&&r.Environment&&r["Limits / invalidates on"],`${r.Evidence} has incomplete evidence record`);assert(allowed.has(r.Result),`${r.Evidence} has invalid Result ${r.Result}`);assert(candidate.test(r.Candidate),`${r.Evidence} has invalid Candidate ${r.Candidate}`);byId.set(r.Evidence,r);}return byId;}
-function assertAcyclic(byId,depsFor,label){const visiting=new Set(),visited=new Set(),stack=[];function visit(id){if(visited.has(id))return;if(visiting.has(id)){const start=stack.indexOf(id);assert(false,`${label} dependency cycle: ${[...stack.slice(start),id].join(" -> ")}`);}visiting.add(id);stack.push(id);for(const dep of depsFor(byId.get(id)))visit(dep);stack.pop();visiting.delete(id);visited.add(id);}for(const id of byId.keys())visit(id);}
-function validateOperational(model,evidenceById){assert(model.operational.length>0,"operational coverage is empty");const byId=new Map();for(const r of model.operational){assert(OP_ID.test(r.Node),`invalid Operational Node id ${r.Node}`);assert(!byId.has(r.Node),`duplicate Operational Node ${r.Node}`);assert(r.Kind&&r.Claim,`${r.Node} missing Kind/Claim`);assert(new Set(["PROVEN","EXCLUDED","OPEN","STALE"]).has(r.Status),`${r.Node} has invalid status ${r.Status}`);if(new Set(["PROVEN","EXCLUDED"]).has(r.Status)){assert(r.Evidence&&!/^(?:MISSING|UNSET)$/i.test(r.Evidence),`${r.Node} settled status requires evidence`);for(const ev of listRefs(r.Evidence))assert(evidenceById.has(ev),`${r.Node} references unknown Evidence ${ev}`);}byId.set(r.Node,r);}const graph=new Map();for(const r of model.operational){if(r.Parent==="ROOT"||r.Parent==="NONE"){graph.set(r.Node,[]);continue;}assert(byId.has(r.Parent),`${r.Node} references unknown operational parent ${r.Parent}`);graph.set(r.Node,[r.Parent]);}assertAcyclic(byId,r=>graph.get(r.Node)??[],"operational graph");const open=model.operational.filter(r=>!new Set(["PROVEN","EXCLUDED"]).has(r.Status));assert(open.length===0,`operational coverage has open/stale nodes: ${open.map(r=>r.Node).join(", ")}`);return byId;}
-function validateRoots(model,operationalById,evidenceById){const byId=new Map();if(model.roots.length===0)return byId;const priorities=new Set();for(const r of model.roots){assert(RC_ID.test(r.RC),`invalid RC id ${r.RC}`);assert(!byId.has(r.RC),`duplicate RC ${r.RC}`);assert(r["Root cause"]&&r["Blast / unlock"],`${r.RC} missing root cause/blast-unlock`);assert(operationalById.has(r["Operational parent"]),`${r.RC} references unknown Operational parent ${r["Operational parent"]}`);assert(/^[1-9]\d*$/.test(r.Priority),`${r.RC} Priority must be a positive integer`);const p=Number(r.Priority);assert(!priorities.has(p),`duplicate root-cause Priority=${p}`);priorities.add(p);assert(new Set(["DEEPENED_ENOUGH_TO_RANK","PROVEN_CANNOT_OUTRANK"]).has(r.Deepening),`${r.RC} has invalid Deepening ${r.Deepening}`);assert(new Set(["READY","DEPENDENT","RESOLVED","EXCLUDED"]).has(r.Disposition),`${r.RC} has unresolved/invalid Disposition ${r.Disposition}`);for(const ev of listRefs(r.Evidence))assert(evidenceById.has(ev),`${r.RC} references unknown Evidence ${ev}`);byId.set(r.RC,r);}assert(priorities.has(1),"root-cause ranking must contain Priority=1");for(const r of model.roots)for(const dep of listRefs(r["Depends on"]))assert(byId.has(dep),`${r.RC} references unknown RC dependency ${dep}`);assertAcyclic(byId,r=>listRefs(r["Depends on"]),"root-cause graph");const winners=model.roots.filter(r=>r.Priority==="1"&&!new Set(["RESOLVED","EXCLUDED"]).has(r.Disposition));if(winners.length)for(const w of winners)assert(w.Deepening==="DEEPENED_ENOUGH_TO_RANK",`${w.RC} winner must be DEEPENED_ENOUGH_TO_RANK`);return byId;}
-function validateLedger(model,rootsById,evidenceById){const types=new Set(["FINDING","DECISION","CONSUMER","DEPENDENCY","SCOPE_DELTA","CLEANUP","LOWER_LAYER"]),settled=new Set(["RESOLVED","PASS","DONE","EXCLUDED","DISPOSITIONED","PROMOTED"]),byId=new Map();for(const r of model.ledger){assert(types.has(r.Type),`Ledger ${r.ID||"<missing>"} has invalid Type ${r.Type}`);assert(ID.test(r.ID),`invalid Ledger id ${r.ID}`);assert(!byId.has(r.ID),`duplicate Ledger id ${r.ID}`);assert(r["Relation / claim"],`${r.ID} missing relation/claim`);assert(r.Status,`${r.ID} missing Status`);if(r.RC!=="NONE")assert(rootsById.has(r.RC),`${r.ID} references unknown RC ${r.RC}`);if(r.Type==="FINDING"&&r.RC==="NONE")assert(r.Status==="EXCLUDED",`${r.ID} Finding requires RC unless EXCLUDED`);if(r.Type==="LOWER_LAYER"){assert(new Set(["PROMOTED","DISPOSITIONED","HOLD"]).has(r.Status),`${r.ID} lower-layer status invalid`);if(r.Status==="PROMOTED"){assert(r.RC!=="NONE",`${r.ID} PROMOTED lower-layer observation requires RC`);assert(listRefs(r.Evidence).length>0,`${r.ID} PROMOTED lower-layer observation requires evidence`);}}for(const ev of listRefs(r.Evidence))assert(evidenceById.has(ev),`${r.ID} references unknown Evidence ${ev}`);byId.set(r.ID,r);}const accounting=new Set(["FINDING","DECISION","CONSUMER","DEPENDENCY","SCOPE_DELTA","LOWER_LAYER"]);const open=model.ledger.filter(r=>accounting.has(r.Type)&&!settled.has(r.Status));assert(open.length===0,`unaccounted material ledger rows: ${open.map(r=>r.ID).join(", ")}`);for(const root of model.roots)for(const c of listRefs(root.Consumers)){const r=byId.get(c);assert(r&&r.Type==="CONSUMER",`${root.RC} references unknown/non-consumer ${c}`);}if(rootsById.size===0){const material=model.ledger.filter(r=>r.Type==="FINDING"&&r.Status!=="EXCLUDED");assert(material.length===0,"material Findings exist without a root-cause landscape");}return{byId,settled};}
-function validateFrontier(model,rootsById,evidenceById,phase){const byId=new Map(),states=new Set(["WAITING","READY","EXECUTING","BLOCKED","COMPLETE","PREPARED"]);if(rootsById.size===0){assert(model.frontier.length===0,"frontier must be empty when there are no material root causes");if(phase==="execute")assert(false,"execute has no material root treatment");return byId;}assert(model.frontier.length>0,"frontier is empty");for(const r of model.frontier){assert(ID.test(r.Work),`invalid Work id ${r.Work}`);assert(!byId.has(r.Work),`duplicate Work id ${r.Work}`);assert(rootsById.has(r.RC),`${r.Work} references unknown RC ${r.RC}`);assert(r["Blocks / unlocks"]&&r.Conflict&&r.Owner&&r.Owner!=="UNASSIGNED",`${r.Work} missing block/unlock, conflict domain, or owner`);assert(new Set(["YES","NO"]).has(r.Parallel),`${r.Work} Parallel must be YES or NO`);assert(states.has(r.State),`${r.Work} has invalid State ${r.State}`);for(const ev of listRefs(r.Evidence))assert(evidenceById.has(ev),`${r.Work} references unknown Evidence ${ev}`);byId.set(r.Work,r);}for(const r of model.frontier)for(const dep of listRefs(r["Depends on"]))assert(byId.has(dep),`${r.Work} references unknown Work dependency ${dep}`);assertAcyclic(byId,r=>listRefs(r["Depends on"]),"frontier");const p1=new Set(model.roots.filter(r=>r.Priority==="1"&&!new Set(["RESOLVED","EXCLUDED"]).has(r.Disposition)).map(r=>r.RC));for(const rc of p1)assert(model.frontier.some(r=>r.RC===rc),`Priority=1 ${rc} is missing from frontier`);if(phase==="diagnose")assert(model.frontier.every(r=>new Set(["WAITING","READY"]).has(r.State)),"diagnose frontier may contain only WAITING/READY");if(phase==="prepare")assert(model.frontier.every(r=>r.State==="PREPARED"),"prepare requires every frontier row PREPARED");if(phase==="execute"){assert(!model.frontier.some(r=>r.State==="BLOCKED"),"execute cannot pass with BLOCKED frontier work");assert(model.frontier.some(r=>new Set(["READY","EXECUTING"]).has(r.State)),"execute requires READY or EXECUTING work");for(const r of model.frontier.filter(x=>new Set(["READY","EXECUTING"]).has(x.State)))for(const dep of listRefs(r["Depends on"]))assert(byId.get(dep).State==="COMPLETE",`${r.Work} dependency ${dep} is not COMPLETE`);}if(phase==="verify"||phase==="close"){assert(model.frontier.every(r=>r.State==="COMPLETE"),`${phase} requires every frontier row COMPLETE`);for(const r of model.frontier){const refs=listRefs(r.Evidence);assert(refs.length>0,`${r.Work} COMPLETE requires evidence`);for(const ev of refs)assert(evidenceById.get(ev)?.Result==="PASS",`${r.Work} evidence ${ev} must PASS`);}}return byId;}
-function validateCleanup(model,settled){const open=model.ledger.filter(r=>r.Type==="CLEANUP"&&!settled.has(r.Status));assert(open.length===0,`cleanup remains open: ${open.map(r=>r.ID).join(", ")}`);}
+function safeLine(value, label) {
+  const clean = String(value ?? "").trim();
+  assert(clean && !/[\r\n]/.test(clean), `${label} must be one non-empty line`);
+  return clean;
+}
 
-function semanticPhase(text,phase){assert(PHASES.has(phase),`unknown phase ${phase}`);const model=validateCoreShape(text),evidenceById=validateEvidence(model),operational=validateOperational(model,evidenceById);requireEvidencePass(evidenceById,"EVD-ROOT");requireEvidencePass(evidenceById,"EVD-NEGATIVE-SPACE");requireEvidencePass(evidenceById,"EVD-ADVERSARIAL");requireEvidencePass(evidenceById,"EVD-VERIFICATION-PLAN");const roots=validateRoots(model,operational,evidenceById);const{settled}=validateLedger(model,roots,evidenceById);if(roots.size===0)requireEvidencePass(evidenceById,"EVD-NO-MATERIAL-FINDINGS");validateFrontier(model,roots,evidenceById,phase);if(phase==="prepare"){assert(model.fields.MODE==="PREPARE_ONLY","prepare requires MODE=PREPARE_ONLY");return model;}if(new Set(["execute","verify","close"]).has(phase))assert(model.fields.MODE==="EXECUTE_END_TO_END",`${phase} requires MODE=EXECUTE_END_TO_END`);if(phase==="verify"||phase==="close"){validateCleanup(model,settled);if(roots.size){requireEvidencePass(evidenceById,"EVD-IMPLEMENTATION",{candidate:"TASK_HEAD"});requireEvidencePass(evidenceById,"EVD-CONSUMERS",{candidate:"TASK_HEAD"});requireEvidencePass(evidenceById,"EVD-CLEANUP",{candidate:"TASK_HEAD"});requireEvidencePass(evidenceById,"EVD-VERIFICATION");}else{requireEvidenceNA(evidenceById,"EVD-IMPLEMENTATION");requireEvidenceNA(evidenceById,"EVD-CONSUMERS");requireEvidenceNA(evidenceById,"EVD-CLEANUP");requireEvidencePass(evidenceById,"EVD-VERIFICATION");}}
-if(phase==="close"){assert(model.fields.INTEGRATION_OWNER!=="UNASSIGNED","close requires assigned INTEGRATION_OWNER");assert(new Set(["YES","NO"]).has(model.fields.RUNTIME_REQUIRED),"close requires RUNTIME_REQUIRED=YES or NO");requireEvidencePass(evidenceById,"EVD-GOVERNANCE",{candidate:"SELF"});requireEvidencePass(evidenceById,"EVD-FINAL-ADVERSARIAL",{candidate:"SELF"});requireEvidencePass(evidenceById,"EVD-VERIFICATION",{candidate:"SELF"});if(model.fields.RUNTIME_REQUIRED==="YES")requireEvidencePass(evidenceById,"EVD-RUNTIME",{candidate:"SELF"});else{const r=evidenceById.get("EVD-RUNTIME");if(r)assert(r.Result==="N/A","EVD-RUNTIME must be N/A when runtime is not required");}assert(model.closure.integrationHead==="SELF","Closure Integration head must be SELF");assert(model.closure.finalCandidate==="SELF","Closure Final candidate must be SELF");for(const[k,v]of Object.entries(model.closure)){if(new Set(["integrationHead","finalCandidate"]).has(k))continue;assert(v&&!/^(?:MISSING|UNSET)$/i.test(v),`Closure ${k} evidence is missing`);}}return model;}
-export function semanticCheckForTests(text,phase){return semanticPhase(text,phase);}
+function safeBranch(value, label) {
+  const clean = safeLine(value, label);
+  assert(
+    SAFE_BRANCH.test(clean) &&
+      !clean.includes("..") &&
+      !clean.includes("//") &&
+      !clean.includes("@{") &&
+      !clean.endsWith("/") &&
+      !clean.endsWith("."),
+    `${label} is not a safe branch name`,
+  );
+  return clean;
+}
 
-function gitTruth(model,phase){const integrationSha=remoteBranchSha(model.fields.INTEGRATION_BRANCH),taskSha=remoteBranchSha(model.fields.TASK_BRANCH),head=currentHead(),branch=currentBranch();assert(isAncestor(model.fields.BASE_SHA.toLowerCase(),taskSha,model.fields.TASK_BRANCH),"BASE_SHA is not an ancestor of TASK_BRANCH");const reconciled=model.fields.LATEST_RECONCILED_SHA.toLowerCase();if(phase!=="close"){assert(branch===model.fields.TASK_BRANCH,`${phase} must run on TASK_BRANCH ${model.fields.TASK_BRANCH}`);assert(head===taskSha,`${phase} must run on exact TASK_BRANCH HEAD; current=${head} task=${taskSha}`);assert(reconciled===integrationSha,`package is stale: LATEST_RECONCILED_SHA=${reconciled} live=${integrationSha}`);}else{assert(branch===model.fields.INTEGRATION_BRANCH,"close must run on the integration branch");assert(head===integrationSha,`close must run on exact live Integration Target HEAD; current=${head} live=${integrationSha}`);assert(isAncestor(taskSha,integrationSha,model.fields.INTEGRATION_BRANCH),"TASK_BRANCH has not been fully integrated into the live Integration Target");assert(isAncestor(reconciled,integrationSha,model.fields.INTEGRATION_BRANCH),"LATEST_RECONCILED_SHA is not an ancestor of final Integration Target");}return{integrationSha,taskSha,head,branch};}
+function parseArgs(tokens, allowed, required = allowed) {
+  const out = {};
+  for (let i = 0; i < tokens.length; i += 2) {
+    const key = tokens[i];
+    const value = tokens[i + 1];
+    assert(key?.startsWith("--") && value !== undefined && !value.startsWith("--"), "arguments must be --key value pairs");
+    const name = key.slice(2);
+    assert(allowed.has(name), `unknown argument --${name}`);
+    assert(!Object.hasOwn(out, name), `duplicate argument --${name}`);
+    out[name] = value;
+  }
+  for (const name of required) assert(Object.hasOwn(out, name), `missing --${name}`);
+  return out;
+}
 
-function commandNew(tokens){const a=parseArgs(tokens,new Set(["name","target","mode","integration-branch","task-branch"])),name=safeLine(a.name,"name");assert(SAFE_NAME.test(name),"name must be 1-80 lowercase safe characters");const target=safeLine(a.target,"target"),mode=safeLine(a.mode,"mode");assert(MODES.has(mode),`mode must be ${[...MODES].join(" or ")}`);const integration=safeBranch(a["integration-branch"],"integration branch"),task=safeBranch(a["task-branch"],"task branch");assert(integration!==task,"task branch must differ from integration branch");const baseSha=remoteBranchSha(integration),taskSha=remoteBranchSha(task);assert(taskSha===baseSha,`new package requires TASK_BRANCH to start exactly at current ${integration}=${baseSha}`);assert(currentBranch()===task,`new must run on TASK_BRANCH ${task}`);assert(currentHead()===taskSha,"new must run on exact TASK_BRANCH HEAD");assert(fs.existsSync(TEMPLATE),"PACKAGE.template.md is missing");const dir=path.join(HERE,name);assert(!fs.existsSync(dir),`task package already exists: ${name}`);let text=fs.readFileSync(TEMPLATE,"utf8");for(const[t,v]of [["__TASK_ID__",name],["__TARGET__",target],["__MODE__",mode],["__INTEGRATION_BRANCH__",integration],["__TASK_BRANCH__",task],["__BASE_SHA__",baseSha]])text=replaceToken(text,t,v);const out=path.join(dir,"PACKAGE.md");atomicWrite(out,text);console.log(path.relative(process.cwd(),out)||out);}
-function commandCheck(tokens){const a=parseArgs(tokens,new Set(["package","phase"])),phase=safeLine(a.phase,"phase");assert(PHASES.has(phase),`phase must be ${[...PHASES].join(", ")}`);const p=resolvePackage(a.package),text=fs.readFileSync(p,"utf8"),model=semanticPhase(text,phase),truth=gitTruth(model,phase);console.log(`orchestrator: PASS (${phase}) integration=${truth.integrationSha} task=${truth.taskSha}`);}
-function canPhase(text,phase,withGit=false){try{const m=semanticPhase(text,phase);if(withGit)gitTruth(m,phase);return true;}catch{return false;}}
-function commandState(tokens){const a=parseArgs(tokens,new Set(["package"])),p=resolvePackage(a.package),text=fs.readFileSync(p,"utf8");let state="DIAGNOSING";if(canPhase(text,"diagnose",true))state="READY";if(canPhase(text,"prepare",true))state="PREPARED";if(canPhase(text,"execute",true))state="EXECUTING";if(canPhase(text,"verify",true))state="INTEGRATION_READY";if(canPhase(text,"close",true))state="CLOSED";console.log(`orchestrator: STATE=${state}`);}
-function runCli(){const[command,...tokens]=process.argv.slice(2);try{if(command==="new")commandNew(tokens);else if(command==="check")commandCheck(tokens);else if(command==="state")commandState(tokens);else fail("command must be new, check, or state");}catch(error){if(error instanceof OrchestratorError)fail(error.message);throw error;}}
-if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.url))runCli();
+function lineValue(text, key) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = text.match(new RegExp(`^${escaped}:\\s*(.*)$`, "m"));
+  return match ? match[1].trim() : null;
+}
+
+function requiredLine(text, key) {
+  const value = lineValue(text, key);
+  assert(value !== null, `missing field ${key}`);
+  return value;
+}
+
+function section(text, heading) {
+  const marker = `## ${heading}`;
+  const start = text.indexOf(marker);
+  assert(start >= 0, `missing section ${marker}`);
+  const after = start + marker.length;
+  const next = text.indexOf("\n## ", after);
+  return text.slice(after, next >= 0 ? next : text.length).trim();
+}
+
+function splitCells(line) {
+  return line.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((cell) => cell.trim());
+}
+
+function parseTable(text, heading, expectedHeaders) {
+  const body = section(text, heading);
+  const lines = body.split(/\r?\n/).map((line) => line.trim()).filter((line) => line.startsWith("|"));
+  assert(lines.length >= 2, `${heading} table header/separator missing`);
+  const headers = splitCells(lines[0]);
+  assert(JSON.stringify(headers) === JSON.stringify(expectedHeaders), `${heading} table header drift`);
+  const separator = splitCells(lines[1]);
+  assert(separator.length === headers.length && separator.every((cell) => /^:?-{3,}:?$/.test(cell)), `${heading} table separator invalid`);
+  const rows = [];
+  for (const line of lines.slice(2)) {
+    const cells = splitCells(line);
+    assert(cells.length === headers.length, `${heading} row has ${cells.length} cells; expected ${headers.length}`);
+    if (cells.every((cell) => cell === "")) continue;
+    const row = Object.fromEntries(headers.map((header, index) => [header, cells[index]]));
+    rows.push(row);
+  }
+  return rows;
+}
+
+function listRefs(value) {
+  const clean = safeLine(value, "reference list");
+  if (clean === "NONE" || clean === "N/A") return [];
+  return clean.split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function git(args, { allowFailure = false } = {}) {
+  const result = spawnSync("git", args, { cwd: ROOT, encoding: "utf8" });
+  if (result.error) {
+    if (allowFailure) return { ok: false, stdout: "", stderr: result.error.message };
+    throw new OrchestratorError(`git ${args.join(" ")} failed: ${result.error.message}`);
+  }
+  if (result.status !== 0) {
+    if (allowFailure) return { ok: false, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
+    throw new OrchestratorError(`git ${args.join(" ")} failed: ${(result.stderr || result.stdout || "").trim()}`);
+  }
+  return { ok: true, stdout: (result.stdout ?? "").trim(), stderr: (result.stderr ?? "").trim() };
+}
+
+function remoteBranchSha(branchName) {
+  const branch = safeBranch(branchName, "branch");
+  const result = git(["ls-remote", "--heads", "origin", `refs/heads/${branch}`]);
+  const line = result.stdout.split(/\r?\n/).find(Boolean);
+  assert(line, `remote branch does not exist: ${branch}`);
+  const sha = line.split(/\s+/)[0];
+  assert(SHA.test(sha), `remote branch ${branch} did not resolve to a commit SHA`);
+  return sha.toLowerCase();
+}
+
+function ensureCommitObject(sha, branchName = null) {
+  assert(SHA.test(sha), `invalid commit SHA ${sha}`);
+  if (git(["cat-file", "-e", `${sha}^{commit}`], { allowFailure: true }).ok) return;
+  if (branchName) git(["fetch", "--no-tags", "--quiet", "origin", branchName], { allowFailure: true });
+  if (!git(["cat-file", "-e", `${sha}^{commit}`], { allowFailure: true }).ok) {
+    git(["fetch", "--no-tags", "--quiet", "origin", sha], { allowFailure: true });
+  }
+  assert(git(["cat-file", "-e", `${sha}^{commit}`], { allowFailure: true }).ok, `commit object unavailable locally: ${sha}`);
+}
+
+function isAncestor(base, head, branchName = null) {
+  ensureCommitObject(base);
+  ensureCommitObject(head, branchName);
+  return git(["merge-base", "--is-ancestor", base, head], { allowFailure: true }).ok;
+}
+
+function currentHead() {
+  const sha = git(["rev-parse", "HEAD"]).stdout;
+  assert(SHA.test(sha), "current HEAD did not resolve to a commit SHA");
+  return sha.toLowerCase();
+}
+
+function currentBranch() {
+  const result = git(["symbolic-ref", "--quiet", "--short", "HEAD"], { allowFailure: true });
+  assert(result.ok && result.stdout, "detached HEAD is not a governed execution context");
+  return result.stdout;
+}
+
+function replaceToken(text, token, value) {
+  assert(text.includes(token), `template missing ${token}`);
+  return text.split(token).join(value);
+}
+
+function atomicWrite(file, text) {
+  const dir = path.dirname(file);
+  fs.mkdirSync(dir, { recursive: false });
+  const temp = path.join(dir, `.${path.basename(file)}.${process.pid}.${Date.now()}.tmp`);
+  let fd;
+  try {
+    fd = fs.openSync(temp, "wx");
+    fs.writeFileSync(fd, text, "utf8");
+    fs.fsyncSync(fd);
+    fs.closeSync(fd);
+    fd = undefined;
+    fs.renameSync(temp, file);
+    try {
+      const dirFd = fs.openSync(dir, "r");
+      fs.fsyncSync(dirFd);
+      fs.closeSync(dirFd);
+    } catch {}
+  } catch (error) {
+    if (fd !== undefined) {
+      try { fs.closeSync(fd); } catch {}
+    }
+    try { fs.rmSync(temp, { force: true }); } catch {}
+    try { if (fs.existsSync(dir) && fs.readdirSync(dir).length === 0) fs.rmdirSync(dir); } catch {}
+    throw error;
+  }
+}
+
+function resolvePackage(input) {
+  const resolved = path.resolve(input);
+  assert(fs.existsSync(resolved), `package path does not exist: ${input}`);
+  const stat = fs.statSync(resolved);
+  const file = stat.isDirectory() ? path.join(resolved, "PACKAGE.md") : resolved;
+  assert(fs.existsSync(file) && fs.statSync(file).isFile(), `PACKAGE.md is missing: ${file}`);
+  return file;
+}
+
+function requireEvidencePass(evidenceById, id, { candidate = null } = {}) {
+  const row = evidenceById.get(id);
+  assert(row, `missing required evidence ${id}`);
+  assert(row.Result === "PASS", `${id} must be PASS`);
+  assert(row["Check / source"] && !/^(?:MISSING|UNSET|N\/A)$/i.test(row["Check / source"]), `${id} check/source is missing`);
+  assert(row.Claim, `${id} claim is missing`);
+  assert(row["Limits / invalidates on"], `${id} proof limits/invalidation trigger is missing`);
+  if (candidate) assert(row.Candidate === candidate, `${id} must be bound to Candidate=${candidate}`);
+  return row;
+}
+
+function requireEvidenceNA(evidenceById, id) {
+  const row = evidenceById.get(id);
+  assert(row, `missing required evidence ${id}`);
+  assert(row.Result === "N/A", `${id} must be N/A`);
+  return row;
+}
+
+function validateCoreShape(text) {
+  assert(!/__[A-Z0-9_]+__/.test(text), "unresolved template placeholder");
+  const fields = {
+    SCHEMA: requiredLine(text, "SCHEMA"),
+    TASK_ID: requiredLine(text, "TASK_ID"),
+    TARGET: requiredLine(text, "TARGET"),
+    MODE: requiredLine(text, "MODE"),
+    INTEGRATION_BRANCH: requiredLine(text, "INTEGRATION_BRANCH"),
+    TASK_BRANCH: requiredLine(text, "TASK_BRANCH"),
+    BASE_SHA: requiredLine(text, "BASE_SHA"),
+    LATEST_RECONCILED_SHA: requiredLine(text, "LATEST_RECONCILED_SHA"),
+    ROOT: requiredLine(text, "ROOT"),
+    INTEGRATION_OWNER: requiredLine(text, "INTEGRATION_OWNER"),
+    RUNTIME_REQUIRED: requiredLine(text, "RUNTIME_REQUIRED"),
+  };
+  assert(fields.SCHEMA === SCHEMA, `SCHEMA must be ${SCHEMA}`);
+  assert(SAFE_NAME.test(fields.TASK_ID), "TASK_ID must be a safe lowercase identifier");
+  assert(MODES.has(fields.MODE), "invalid MODE");
+  assert(SHA.test(fields.BASE_SHA), "invalid BASE_SHA");
+  assert(SHA.test(fields.LATEST_RECONCILED_SHA), "invalid LATEST_RECONCILED_SHA");
+  assert(fields.ROOT === fields.TARGET, "ROOT must equal TARGET");
+  fields.INTEGRATION_BRANCH = safeBranch(fields.INTEGRATION_BRANCH, "INTEGRATION_BRANCH");
+  fields.TASK_BRANCH = safeBranch(fields.TASK_BRANCH, "TASK_BRANCH");
+  assert(fields.INTEGRATION_BRANCH !== fields.TASK_BRANCH, "TASK_BRANCH must differ from INTEGRATION_BRANCH");
+  assert(new Set(["YES", "NO", "UNSET"]).has(fields.RUNTIME_REQUIRED), "RUNTIME_REQUIRED must be YES, NO, or UNSET");
+
+  const operational = parseTable(text, "Operational Coverage", ["Node", "Kind", "Parent", "Claim", "Status", "Evidence"]);
+  const roots = parseTable(text, "Root-Cause Graph", ["RC", "Root cause", "Operational parent", "Evidence", "Depends on", "Consumers", "Blast / unlock", "Priority", "Deepening", "Disposition"]);
+  const ledger = parseTable(text, "Ledger", ["Type", "ID", "RC", "Relation / claim", "Status", "Evidence"]);
+  const frontier = parseTable(text, "Frontier", ["Work", "RC", "Depends on", "Blocks / unlocks", "Conflict", "Owner", "Parallel", "State", "Evidence"]);
+  const evidence = parseTable(text, "Evidence", ["Evidence", "Claim", "Check / source", "Candidate", "Environment", "Result", "Limits / invalidates on"]);
+
+  const closure = {
+    integrationHead: requiredClosureBullet(text, "Integration head"),
+    finalCandidate: requiredClosureBullet(text, "Final candidate"),
+    verification: requiredClosureBullet(text, "Verification"),
+    runtime: requiredClosureBullet(text, "Runtime/product evidence"),
+    cleanup: requiredClosureBullet(text, "Cleanup"),
+    governance: requiredClosureBullet(text, "Governance"),
+    adversarial: requiredClosureBullet(text, "Final adversarial"),
+  };
+  return { fields, operational, roots, ledger, frontier, evidence, closure };
+}
+
+function requiredClosureBullet(text, key) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = text.match(new RegExp(`^- ${escaped}:\\s*(.*)$`, "m"));
+  assert(match, `missing Closure ${key}`);
+  return match[1].trim();
+}
+
+function validateOperational(model, evidenceById) {
+  assert(model.operational.length > 0, "operational coverage is empty");
+  const byId = new Map();
+  for (const row of model.operational) {
+    assert(OP_ID.test(row.Node), `invalid Operational Node id ${row.Node}`);
+    assert(!byId.has(row.Node), `duplicate Operational Node ${row.Node}`);
+    assert(row.Kind && row.Claim, `${row.Node} missing Kind/Claim`);
+    assert(new Set(["PROVEN", "EXCLUDED", "OPEN", "STALE"]).has(row.Status), `${row.Node} has invalid status ${row.Status}`);
+    if (new Set(["PROVEN", "EXCLUDED"]).has(row.Status)) {
+      assert(row.Evidence && !/^(?:MISSING|UNSET)$/i.test(row.Evidence), `${row.Node} settled status requires evidence`);
+      for (const ev of listRefs(row.Evidence)) assert(evidenceById.has(ev), `${row.Node} references unknown Evidence ${ev}`);
+    }
+    byId.set(row.Node, row);
+  }
+
+  const parentGraph = new Map();
+  for (const row of model.operational) {
+    if (row.Parent === "ROOT" || row.Parent === "NONE") {
+      parentGraph.set(row.Node, []);
+      continue;
+    }
+    assert(byId.has(row.Parent), `${row.Node} references unknown operational parent ${row.Parent}`);
+    parentGraph.set(row.Node, [row.Parent]);
+  }
+  assertAcyclic(byId, (row) => parentGraph.get(row.Node) ?? [], "operational graph");
+
+  const open = model.operational.filter((row) => !new Set(["PROVEN", "EXCLUDED"]).has(row.Status));
+  assert(open.length === 0, `operational coverage has open/stale nodes: ${open.map((row) => row.Node).join(", ")}`);
+  return byId;
+}
+
+function validateEvidence(model) {
+  const byId = new Map();
+  const allowedResult = new Set(["PASS", "FAIL", "MISSING", "STALE", "BLOCKED", "N/A"]);
+  const allowedCandidate = /^(?:BASE|BASE_SHA|TASK_HEAD|INTEGRATION_HEAD|SELF|N\/A|[0-9a-f]{40})$/i;
+  for (const row of model.evidence) {
+    assert(EVD_ID.test(row.Evidence), `invalid Evidence id ${row.Evidence}`);
+    assert(!byId.has(row.Evidence), `duplicate Evidence ${row.Evidence}`);
+    assert(row.Claim && row["Check / source"] && row.Environment && row["Limits / invalidates on"], `${row.Evidence} has incomplete evidence record`);
+    assert(allowedResult.has(row.Result), `${row.Evidence} has invalid Result ${row.Result}`);
+    assert(allowedCandidate.test(row.Candidate), `${row.Evidence} has invalid Candidate ${row.Candidate}`);
+    byId.set(row.Evidence, row);
+  }
+  return byId;
+}
+
+function assertAcyclic(byId, depsFor, label) {
+  const visiting = new Set();
+  const visited = new Set();
+  const stack = [];
+
+  function visit(id) {
+    if (visited.has(id)) return;
+    if (visiting.has(id)) {
+      const start = stack.indexOf(id);
+      const cycle = [...stack.slice(start), id];
+      assert(false, `${label} dependency cycle: ${cycle.join(" -> ")}`);
+    }
+    visiting.add(id);
+    stack.push(id);
+    for (const dep of depsFor(byId.get(id))) visit(dep);
+    stack.pop();
+    visiting.delete(id);
+    visited.add(id);
+  }
+
+  for (const id of byId.keys()) visit(id);
+}
+
+function validateRoots(model, operationalById, evidenceById) {
+  const byId = new Map();
+  if (model.roots.length === 0) return byId;
+
+  const priorities = new Set();
+  for (const row of model.roots) {
+    assert(RC_ID.test(row.RC), `invalid RC id ${row.RC}`);
+    assert(!byId.has(row.RC), `duplicate RC ${row.RC}`);
+    assert(row["Root cause"] && row["Blast / unlock"], `${row.RC} missing root cause/blast-unlock`);
+    assert(operationalById.has(row["Operational parent"]), `${row.RC} references unknown Operational parent ${row["Operational parent"]}`);
+    assert(/^[1-9]\d*$/.test(row.Priority), `${row.RC} Priority must be a positive integer`);
+    const priority = Number(row.Priority);
+    assert(!priorities.has(priority), `duplicate root-cause Priority=${priority}`);
+    priorities.add(priority);
+    assert(new Set(["DEEPENED_ENOUGH_TO_RANK", "PROVEN_CANNOT_OUTRANK"]).has(row.Deepening), `${row.RC} has invalid Deepening ${row.Deepening}`);
+    assert(new Set(["READY", "DEPENDENT", "RESOLVED", "EXCLUDED"]).has(row.Disposition), `${row.RC} has unresolved/invalid Disposition ${row.Disposition}`);
+    for (const ev of listRefs(row.Evidence)) assert(evidenceById.has(ev), `${row.RC} references unknown Evidence ${ev}`);
+    byId.set(row.RC, row);
+  }
+  assert(priorities.has(1), "root-cause ranking must contain Priority=1");
+  for (const row of model.roots) {
+    for (const dep of listRefs(row["Depends on"])) assert(byId.has(dep), `${row.RC} references unknown RC dependency ${dep}`);
+  }
+  assertAcyclic(byId, (row) => listRefs(row["Depends on"]), "root-cause graph");
+  const winners = model.roots.filter((row) => row.Priority === "1" && !new Set(["RESOLVED", "EXCLUDED"]).has(row.Disposition));
+  for (const winner of winners) assert(winner.Deepening === "DEEPENED_ENOUGH_TO_RANK", `${winner.RC} winner must be DEEPENED_ENOUGH_TO_RANK`);
+  return byId;
+}
+
+function validateLedger(model, rootsById, evidenceById) {
+  const allowedTypes = new Set(["FINDING", "DECISION", "CONSUMER", "DEPENDENCY", "SCOPE_DELTA", "CLEANUP", "LOWER_LAYER"]);
+  const settled = new Set(["RESOLVED", "PASS", "DONE", "EXCLUDED", "DISPOSITIONED", "PROMOTED"]);
+  const byId = new Map();
+  for (const row of model.ledger) {
+    assert(allowedTypes.has(row.Type), `Ledger ${row.ID || "<missing>"} has invalid Type ${row.Type}`);
+    assert(ID.test(row.ID), `invalid Ledger id ${row.ID}`);
+    assert(!byId.has(row.ID), `duplicate Ledger id ${row.ID}`);
+    assert(row["Relation / claim"], `${row.ID} missing relation/claim`);
+    assert(row.Status, `${row.ID} missing Status`);
+    if (row.RC !== "NONE") assert(rootsById.has(row.RC), `${row.ID} references unknown RC ${row.RC}`);
+    if (row.Type === "FINDING" && row.RC === "NONE") assert(row.Status === "EXCLUDED", `${row.ID} Finding requires RC unless EXCLUDED`);
+    if (row.Type === "LOWER_LAYER") {
+      assert(new Set(["PROMOTED", "DISPOSITIONED", "HOLD"]).has(row.Status), `${row.ID} lower-layer status invalid`);
+      if (row.Status === "PROMOTED") {
+        assert(row.RC !== "NONE", `${row.ID} PROMOTED lower-layer observation requires RC`);
+        assert(listRefs(row.Evidence).length > 0, `${row.ID} PROMOTED lower-layer observation requires evidence`);
+      }
+    }
+    for (const ev of listRefs(row.Evidence)) assert(evidenceById.has(ev), `${row.ID} references unknown Evidence ${ev}`);
+    byId.set(row.ID, row);
+  }
+  const accountingTypes = new Set(["FINDING", "DECISION", "CONSUMER", "DEPENDENCY", "SCOPE_DELTA", "LOWER_LAYER"]);
+  const open = model.ledger.filter((row) => accountingTypes.has(row.Type) && !settled.has(row.Status));
+  assert(open.length === 0, `unaccounted material ledger rows: ${open.map((row) => row.ID).join(", ")}`);
+  for (const root of model.roots) {
+    for (const consumer of listRefs(root.Consumers)) {
+      const row = byId.get(consumer);
+      assert(row && row.Type === "CONSUMER", `${root.RC} references unknown/non-consumer ${consumer}`);
+    }
+  }
+  if (rootsById.size === 0) {
+    const materialFindings = model.ledger.filter((row) => row.Type === "FINDING" && row.Status !== "EXCLUDED");
+    assert(materialFindings.length === 0, "material Findings exist without a root-cause landscape");
+  }
+  return { byId, settled };
+}
+
+function validateFrontier(model, rootsById, evidenceById, phase) {
+  const byId = new Map();
+  if (rootsById.size === 0) {
+    assert(model.frontier.length === 0, "frontier must be empty when there are no material root causes");
+    if (phase === "execute") assert(false, "execute has no material root treatment");
+    return byId;
+  }
+
+  assert(model.frontier.length > 0, "frontier is empty");
+  const allowedState = new Set(["WAITING", "READY", "EXECUTING", "BLOCKED", "COMPLETE", "PREPARED"]);
+  for (const row of model.frontier) {
+    assert(ID.test(row.Work), `invalid Work id ${row.Work}`);
+    assert(!byId.has(row.Work), `duplicate Work id ${row.Work}`);
+    assert(rootsById.has(row.RC), `${row.Work} references unknown RC ${row.RC}`);
+    assert(row["Blocks / unlocks"] && row.Conflict && row.Owner && row.Owner !== "UNASSIGNED", `${row.Work} missing block/unlock, conflict domain, or owner`);
+    assert(new Set(["YES", "NO"]).has(row.Parallel), `${row.Work} Parallel must be YES or NO`);
+    assert(allowedState.has(row.State), `${row.Work} has invalid State ${row.State}`);
+    for (const ev of listRefs(row.Evidence)) assert(evidenceById.has(ev), `${row.Work} references unknown Evidence ${ev}`);
+    byId.set(row.Work, row);
+  }
+  for (const row of model.frontier) {
+    for (const dep of listRefs(row["Depends on"])) assert(byId.has(dep), `${row.Work} references unknown Work dependency ${dep}`);
+  }
+  assertAcyclic(byId, (row) => listRefs(row["Depends on"]), "frontier");
+  const activePriorityOne = new Set(model.roots.filter((row) => row.Priority === "1" && !new Set(["RESOLVED", "EXCLUDED"]).has(row.Disposition)).map((row) => row.RC));
+  for (const rc of activePriorityOne) assert(model.frontier.some((row) => row.RC === rc), `Priority=1 ${rc} is missing from frontier`);
+
+  if (phase === "diagnose") {
+    assert(model.frontier.every((row) => new Set(["WAITING", "READY"]).has(row.State)), "diagnose frontier may contain only WAITING/READY");
+  }
+  if (phase === "prepare") {
+    assert(model.frontier.every((row) => row.State === "PREPARED"), "prepare requires every frontier row PREPARED");
+  }
+  if (phase === "execute") {
+    assert(!model.frontier.some((row) => row.State === "BLOCKED"), "execute cannot pass with BLOCKED frontier work");
+    assert(model.frontier.some((row) => new Set(["READY", "EXECUTING"]).has(row.State)), "execute requires READY or EXECUTING work");
+    for (const row of model.frontier.filter((item) => new Set(["READY", "EXECUTING"]).has(item.State))) {
+      for (const dep of listRefs(row["Depends on"])) assert(byId.get(dep).State === "COMPLETE", `${row.Work} dependency ${dep} is not COMPLETE`);
+    }
+  }
+  if (phase === "verify" || phase === "close") {
+    assert(model.frontier.every((row) => row.State === "COMPLETE"), `${phase} requires every frontier row COMPLETE`);
+    for (const row of model.frontier) {
+      const refs = listRefs(row.Evidence);
+      assert(refs.length > 0, `${row.Work} COMPLETE requires evidence`);
+      for (const ev of refs) assert(evidenceById.get(ev)?.Result === "PASS", `${row.Work} evidence ${ev} must PASS`);
+    }
+  }
+  return byId;
+}
+
+function validateCleanup(model, settled) {
+  const cleanup = model.ledger.filter((row) => row.Type === "CLEANUP");
+  const open = cleanup.filter((row) => !settled.has(row.Status));
+  assert(open.length === 0, `cleanup remains open: ${open.map((row) => row.ID).join(", ")}`);
+}
+
+function semanticPhase(text, phase) {
+  assert(PHASES.has(phase), `unknown phase ${phase}`);
+  const model = validateCoreShape(text);
+  const evidenceById = validateEvidence(model);
+  const operationalById = validateOperational(model, evidenceById);
+  requireEvidencePass(evidenceById, "EVD-ROOT");
+  requireEvidencePass(evidenceById, "EVD-NEGATIVE-SPACE");
+  requireEvidencePass(evidenceById, "EVD-ADVERSARIAL");
+  requireEvidencePass(evidenceById, "EVD-VERIFICATION-PLAN");
+  const rootsById = validateRoots(model, operationalById, evidenceById);
+  const { settled } = validateLedger(model, rootsById, evidenceById);
+  if (rootsById.size === 0) requireEvidencePass(evidenceById, "EVD-NO-MATERIAL-FINDINGS");
+  validateFrontier(model, rootsById, evidenceById, phase);
+
+  if (phase === "prepare") {
+    assert(model.fields.MODE === "PREPARE_ONLY", "prepare requires MODE=PREPARE_ONLY");
+    return model;
+  }
+  if (phase === "execute" || phase === "verify" || phase === "close") {
+    assert(model.fields.MODE === "EXECUTE_END_TO_END", `${phase} requires MODE=EXECUTE_END_TO_END`);
+  }
+  if (phase === "verify" || phase === "close") {
+    validateCleanup(model, settled);
+    if (rootsById.size > 0) {
+      requireEvidencePass(evidenceById, "EVD-IMPLEMENTATION", { candidate: "TASK_HEAD" });
+      requireEvidencePass(evidenceById, "EVD-CONSUMERS", { candidate: "TASK_HEAD" });
+      requireEvidencePass(evidenceById, "EVD-CLEANUP", { candidate: "TASK_HEAD" });
+      requireEvidencePass(evidenceById, "EVD-VERIFICATION");
+    } else {
+      requireEvidenceNA(evidenceById, "EVD-IMPLEMENTATION");
+      requireEvidenceNA(evidenceById, "EVD-CONSUMERS");
+      requireEvidenceNA(evidenceById, "EVD-CLEANUP");
+      requireEvidencePass(evidenceById, "EVD-VERIFICATION");
+    }
+  }
+  if (phase === "close") {
+    assert(model.fields.INTEGRATION_OWNER !== "UNASSIGNED", "close requires assigned INTEGRATION_OWNER");
+    assert(new Set(["YES", "NO"]).has(model.fields.RUNTIME_REQUIRED), "close requires RUNTIME_REQUIRED=YES or NO");
+    requireEvidencePass(evidenceById, "EVD-GOVERNANCE", { candidate: "SELF" });
+    requireEvidencePass(evidenceById, "EVD-FINAL-ADVERSARIAL", { candidate: "SELF" });
+    requireEvidencePass(evidenceById, "EVD-VERIFICATION", { candidate: "SELF" });
+    if (model.fields.RUNTIME_REQUIRED === "YES") requireEvidencePass(evidenceById, "EVD-RUNTIME", { candidate: "SELF" });
+    if (model.fields.RUNTIME_REQUIRED === "NO") {
+      const runtime = evidenceById.get("EVD-RUNTIME");
+      if (runtime) assert(runtime.Result === "N/A", "EVD-RUNTIME must be N/A when runtime is not required");
+    }
+    assert(model.closure.integrationHead === "SELF", "Closure Integration head must be SELF");
+    assert(model.closure.finalCandidate === "SELF", "Closure Final candidate must be SELF");
+    for (const [key, value] of Object.entries(model.closure)) {
+      if (new Set(["integrationHead", "finalCandidate"]).has(key)) continue;
+      assert(value && !/^(?:MISSING|UNSET)$/i.test(value), `Closure ${key} evidence is missing`);
+    }
+  }
+  return model;
+}
+
+export function semanticCheckForTests(text, phase) {
+  return semanticPhase(text, phase);
+}
+
+function gitTruth(model, phase) {
+  const integrationSha = remoteBranchSha(model.fields.INTEGRATION_BRANCH);
+  const taskSha = remoteBranchSha(model.fields.TASK_BRANCH);
+  const head = currentHead();
+  const branch = currentBranch();
+  assert(isAncestor(model.fields.BASE_SHA.toLowerCase(), taskSha, model.fields.TASK_BRANCH), "BASE_SHA is not an ancestor of TASK_BRANCH");
+  const reconciled = model.fields.LATEST_RECONCILED_SHA.toLowerCase();
+
+  if (phase !== "close") {
+    assert(branch === model.fields.TASK_BRANCH, `${phase} must run on TASK_BRANCH ${model.fields.TASK_BRANCH}`);
+    assert(head === taskSha, `${phase} must run on exact TASK_BRANCH HEAD; current=${head} task=${taskSha}`);
+    assert(reconciled === integrationSha, `package is stale: LATEST_RECONCILED_SHA=${reconciled} live=${integrationSha}`);
+  } else {
+    assert(branch === model.fields.INTEGRATION_BRANCH, "close must run on the integration branch");
+    assert(head === integrationSha, `close must run on exact live Integration Target HEAD; current=${head} live=${integrationSha}`);
+    assert(isAncestor(taskSha, integrationSha, model.fields.INTEGRATION_BRANCH), "TASK_BRANCH has not been fully integrated into the live Integration Target");
+    assert(isAncestor(reconciled, integrationSha, model.fields.INTEGRATION_BRANCH), "LATEST_RECONCILED_SHA is not an ancestor of final Integration Target");
+  }
+  return { integrationSha, taskSha, head, branch };
+}
+
+function commandNew(tokens) {
+  const args = parseArgs(
+    tokens,
+    new Set(["name", "target", "mode", "integration-branch", "task-branch"]),
+  );
+  const name = safeLine(args.name, "name");
+  assert(SAFE_NAME.test(name), "name must be 1-80 lowercase safe characters");
+  const target = safeLine(args.target, "target");
+  const mode = safeLine(args.mode, "mode");
+  assert(MODES.has(mode), `mode must be ${[...MODES].join(" or ")}`);
+  const integration = safeBranch(args["integration-branch"], "integration branch");
+  const task = safeBranch(args["task-branch"], "task branch");
+  assert(integration !== task, "task branch must differ from integration branch");
+
+  const baseSha = remoteBranchSha(integration);
+  const taskSha = remoteBranchSha(task);
+  assert(taskSha === baseSha, `new package requires TASK_BRANCH to start exactly at current ${integration}=${baseSha}`);
+  assert(currentBranch() === task, `new must run on TASK_BRANCH ${task}`);
+  assert(currentHead() === taskSha, "new must run on exact TASK_BRANCH HEAD");
+  assert(fs.existsSync(TEMPLATE), "PACKAGE.template.md is missing");
+
+  const taskDir = path.join(HERE, name);
+  assert(!fs.existsSync(taskDir), `task package already exists: ${name}`);
+  let text = fs.readFileSync(TEMPLATE, "utf8");
+  text = replaceToken(text, "__TASK_ID__", name);
+  text = replaceToken(text, "__TARGET__", target);
+  text = replaceToken(text, "__MODE__", mode);
+  text = replaceToken(text, "__INTEGRATION_BRANCH__", integration);
+  text = replaceToken(text, "__TASK_BRANCH__", task);
+  text = replaceToken(text, "__BASE_SHA__", baseSha);
+  const output = path.join(taskDir, "PACKAGE.md");
+  atomicWrite(output, text);
+  console.log(path.relative(process.cwd(), output) || output);
+}
+
+function commandCheck(tokens) {
+  const args = parseArgs(tokens, new Set(["package", "phase"]));
+  const phase = safeLine(args.phase, "phase");
+  assert(PHASES.has(phase), `phase must be ${[...PHASES].join(", ")}`);
+  const packagePath = resolvePackage(args.package);
+  const text = fs.readFileSync(packagePath, "utf8");
+  const model = semanticPhase(text, phase);
+  const truth = gitTruth(model, phase);
+  console.log(`orchestrator: PASS (${phase}) integration=${truth.integrationSha} task=${truth.taskSha}`);
+}
+
+function canPhase(text, phase, withGit = false) {
+  try {
+    const model = semanticPhase(text, phase);
+    if (withGit) gitTruth(model, phase);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function commandState(tokens) {
+  const args = parseArgs(tokens, new Set(["package"]));
+  const packagePath = resolvePackage(args.package);
+  const text = fs.readFileSync(packagePath, "utf8");
+  let state = "DIAGNOSING";
+  if (canPhase(text, "diagnose", true)) state = "READY";
+  if (canPhase(text, "prepare", true)) state = "PREPARED";
+  if (canPhase(text, "execute", true)) state = "EXECUTING";
+  if (canPhase(text, "verify", true)) state = "INTEGRATION_READY";
+  if (canPhase(text, "close", true)) state = "CLOSED";
+  console.log(`orchestrator: STATE=${state}`);
+}
+
+function runCli() {
+  const [command, ...tokens] = process.argv.slice(2);
+  try {
+    if (command === "new") commandNew(tokens);
+    else if (command === "check") commandCheck(tokens);
+    else if (command === "state") commandState(tokens);
+    else fail("command must be new, check, or state");
+  } catch (error) {
+    if (error instanceof OrchestratorError) fail(error.message);
+    throw error;
+  }
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) runCli();
