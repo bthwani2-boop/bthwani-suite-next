@@ -12,6 +12,7 @@
     "typecheck:ts6:compat": "tsc6 --noEmit -p tsconfig.json",
     "typecheck:all": "pnpm run typecheck:ts7 && pnpm run typecheck:ts6:compat",
     "build": "tsc --noEmit -p tsconfig.json",
+    "lint": "node ../../tools/guards/data-runtime-ownership-gate.mjs",
     "test": "node --test tests/*.test.mjs"
   },
   "peerDependencies": {
@@ -31,5 +32,30 @@
     "@types/react": "19.2.17",
     "typescript": "7.0.2",
     "@typescript/typescript6": "6.0.2"
+  },
+  "x-bthwani-data-ownership": {
+    "status": "CANONICAL_DATA_RUNTIME",
+    "policyOwner": "@bthwani/data-runtime",
+    "queryClient": "@tanstack/react-query",
+    "queryPersistence": "@react-native-async-storage/async-storage",
+    "offlineMutationQueue": "@react-native-async-storage/async-storage",
+    "connectivity": "@react-native-community/netinfo",
+    "providerVersions": {
+      "@react-native-async-storage/async-storage": "2.2.0",
+      "@react-native-community/netinfo": "12.0.1",
+      "@tanstack/react-query": "5.90.2"
+    },
+    "mobileRuntimeProviders": [
+      "apps/app-client/runtime/package.json",
+      "apps/app-partner/runtime/package.json",
+      "apps/app-captain/runtime/package.json",
+      "apps/app-field/runtime/package.json"
+    ],
+    "sqlite": {
+      "status": "REQUIREMENT_PENDING",
+      "currentPersistenceAuthority": false,
+      "decisionGate": "Adopt only when a proven relational/offline-first requirement needs indexed local records, transactions, or an outbox; app-field is the primary candidate."
+    },
+    "rule": "Product code must not create a parallel cache/offline/connectivity authority. Mobile runtimes may provide native peers for the isolated pnpm linker, but data policy remains owned by @bthwani/data-runtime."
   }
 }

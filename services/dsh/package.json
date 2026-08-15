@@ -94,6 +94,18 @@
       "react-native-safe-area-context",
       "react-native-svg"
     ],
+    "dataRuntimeLegacyQuarantine": {
+      "@react-native-async-storage/async-storage": {
+        "currentVersion": "1.24.0",
+        "canonicalVersion": "2.2.0",
+        "target": "REMOVE_FROM_DSH_ROOT_AFTER_CONSUMER_MIGRATION"
+      },
+      "@react-native-community/netinfo": {
+        "currentVersion": "11.4.1",
+        "canonicalVersion": "12.0.1",
+        "target": "REMOVE_FROM_DSH_ROOT_AFTER_CONSUMER_MIGRATION"
+      }
+    },
     "cleanupPolicy": "Do not add native dependencies here. Migrate consumers to explicit mobile adapters and remove quarantined dependencies only after exact-ref consumer, lockfile, Metro, typecheck, and fresh native-build evidence."
   },
   "exports": {
