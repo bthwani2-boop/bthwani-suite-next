@@ -157,7 +157,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rg -n 'TransitionDispatchOrder\(' services/dsh/backend/internal
+          grep -RIn --include='*.go' 'TransitionDispatchOrder(' services/dsh/backend/internal
           python3 <<'PY'
           from pathlib import Path
           lifecycle = Path('services/dsh/backend/internal/orders/lifecycle.go').read_text()
