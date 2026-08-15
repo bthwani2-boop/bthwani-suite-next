@@ -113,17 +113,17 @@ RUNTIME_REQUIRED: YES
 | EVD-IMPLEMENTATION | All bounded work units have implementation changes recorded on the isolated task branch | git diff --name-only BASE_SHA..TASK_HEAD; targeted source review | TASK_HEAD | isolated task branch task/v5-system-root-20260815-211414 | PASS | invalidate on any implementation write |
 | EVD-CONSUMERS | Contract, generated-client materialization, backend, capability, frontend registry, CI, and UI consumers were reconciled | postinstall-generate-clients; backend/frontend/service-manifest/foundation guards | TASK_HEAD | Node 24.17.0, pnpm 10.34.0 | PASS | invalidate on consumer or generated-contract change |
 | EVD-CLEANUP | Obsolete field destination bindings, stale capability operation, stale frontend entries, and token/CI drift are removed or reconciled | rg negative-space checks; cleanup-policy; targeted guard suite | TASK_HEAD | task worktree | PASS | invalidate on cleanup or consumer change |
-| EVD-VERIFICATION | Targeted implementation checks and full foundation verification pass on the task candidate | parser test; foundation; targeted boundary/binding/runtime guards | TASK_HEAD | Node 24.17.0, pnpm 10.34.0 | PASS | invalidate on any final relevant write |
-| EVD-RUNTIME | Candidate-bound runtime/product smoke for the WLT-backed field finance readback and affected DSH surfaces | runtime:full:smoke plus targeted DSH/WLT readback evidence | SELF | runtime environment not yet exercised | MISSING | required because RUNTIME_REQUIRED=YES; invalidate on runtime or candidate change |
-| EVD-GOVERNANCE | Final candidate governance, schema, authority, CI-policy, and same-candidate evidence | governance-all; governance-schema; guard-registry; orchestrator close checks | SELF | final integration candidate not yet reconciled | MISSING | invalidate on final candidate or governance change |
-| EVD-FINAL-ADVERSARIAL | Final adversarial checks confirm no obsolete field destination route, stale capability/client/registry edge, parser false negative, or token drift remains | negative-space rg checks; contract/product-truth comparison; all registered static journey guards | SELF | final integration candidate not yet reconciled | MISSING | invalidate on final candidate or root-cause graph change |
+| EVD-VERIFICATION | Targeted implementation checks and full foundation verification pass on the task candidate | parser test; foundation; all twelve registered static journey guards run directly; targeted boundary/binding/runtime guards | SELF | Node 24.17.0, pnpm 10.34.0, task candidate | PASS | invalidate on any final relevant write |
+| EVD-RUNTIME | Candidate-bound runtime/product smoke for WLT-backed financial ownership and affected DSH surfaces | runtime:smoke; runtime:wlt:smoke; runtime:wlt:provider:smoke with local-dsh context and container-provided secrets; WireMock journal | SELF | Docker local runtime, DSH/WLT/Identity/Postgres healthy; migrations sha ac2dd554d3b9f5733fcea353a9210b17df822079 | PASS | invalidate on runtime or candidate change |
+| EVD-GOVERNANCE | Final candidate governance, schema, authority, CI-policy, and same-candidate evidence | guard:foundation; guard:governance-all; guard-registry; orchestrator verify | SELF | Node 24.17.0, pnpm 10.34.0, task candidate | PASS | invalidate on final candidate or governance change |
+| EVD-FINAL-ADVERSARIAL | Final adversarial checks confirm no obsolete field destination route, stale capability/client/registry edge, parser false negative, or token drift remains | negative-space rg checks; Product Truth comparison; all registered static journey guards | SELF | task candidate | PASS | invalidate on final candidate or root-cause graph change |
 
 ## Closure
 
 - Integration head: SELF
 - Final candidate: SELF
-- Verification: foundation and all twelve registered static journey guards pass on the task candidate; final candidate rerun pending
-- Runtime/product evidence: pending final candidate runtime smoke
-- Cleanup: completed on task candidate; final integration readback pending
-- Governance: pending final candidate reconciliation
-- Final adversarial: pending final candidate reconciliation
+- Verification: SELF foundation and all twelve registered static journey guards pass
+- Runtime/product evidence: SELF DSH, WLT, and provider-through-WLT smoke pass with WireMock readback
+- Cleanup: SELF obsolete routes, capability operation, stale registry edges, and token/CI drift reconciled
+- Governance: SELF governance, CI policy, authority, and evidence gates pass
+- Final adversarial: SELF negative-space and Product Truth ownership checks pass
