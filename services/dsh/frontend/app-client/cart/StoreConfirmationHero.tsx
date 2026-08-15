@@ -73,7 +73,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     backgroundColor: colorRoles.surfaceWarm,
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: alpha(colorRoles.shadowBase, 0.06),
   },
   storeHeroBg: {
     position: "absolute",
