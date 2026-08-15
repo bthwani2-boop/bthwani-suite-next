@@ -93,6 +93,31 @@
         "reviewPendingDoesNotAuthorizeDeletion": true,
         "nativeRemovalDeferredToCleanupWindow": true
       }
+    },
+    "toolingArchitecture": {
+      "decision": "EXPO_METRO_SINGLE_OWNER",
+      "remoteBuildNow": false,
+      "metro": {
+        "base": "expo/metro-config",
+        "sentryOwner": "@sentry/react-native/metro#getSentryExpoConfig",
+        "appConfigParity": "IDENTICAL_CURRENTLY",
+        "manualMonorepoResolution": {
+          "status": "COMPATIBILITY_QUARANTINE_PENDING_RUNTIME_PROOF",
+          "requiredProof": "expo start --clear plus runtime smoke for all four mobile apps before removal"
+        },
+        "directReactNativeMetroConfig": {
+          "package": "@react-native/metro-config",
+          "status": "DEPRECATION_CANDIDATE",
+          "removalGate": "explicit package approval plus package/lockfile update plus Metro smoke; no EAS build solely for this tooling dependency"
+        }
+      },
+      "rules": {
+        "expoMetroConfigIsCanonical": true,
+        "sentryMetroIntegrationMustRemain": true,
+        "manualMonorepoOverridesRequireRuntimeProofBeforeRemoval": true,
+        "reactNativeMetroConfigMustNotBeImportedByExpoApps": true,
+        "metadataOnlyGovernanceMustNotTriggerNativeBuild": true
+      }
     }
   },
   "apps": {
