@@ -21,7 +21,7 @@ DECISION_COMPLETE: NO
 COVERAGE_COMPLETE: NO
 PACKAGE_READY: NO
 
-> هذا الملف Derived Support فقط. لا يحل محل Product Truth أو Implementation/Runtime Truth. اتبع `ORCHESTRATOR_PATH` والعقود التابعة له، وأعد تثبيت `CURRENT_SHA` بعد أي drift مادي.
+> هذا الملف Living Derived Support فقط. لا يحل محل Product Truth أو Implementation/Runtime Truth. اتبع `ORCHESTRATOR_PATH` والعقود التابعة له، وأعد تثبيت `CURRENT_SHA` بعد أي drift مادي. في `EXECUTE_END_TO_END` قد تبقى البوابات العالمية أعلاه `NO` أثناء تنفيذ Waves مبكرة؛ الكتابة الحية تحكمها بوابة الـWave الحالية في `02-EXECUTION.md`. في `PREPARE_ONLY` لا تصبح `PACKAGE_READY: YES` إلا بعد إعداد كل الـWaves والمصالحة العالمية.
 
 ## 1. Truth Baseline
 
@@ -76,12 +76,19 @@ Record material nodes and edges using the orchestrator relation types: `DEPENDS_
 
 ## 6. Journey-by-Journey Diagnosis
 
-For every material journey, preserve the same operational meaning across all participating surfaces/layers.
+For every material journey, preserve the same operational meaning across all participating surfaces/layers. Diagnose in dependency Wave order; when a Wave reaches a true decision boundary, resolve it and re-diagnose before preparing/executing that Wave.
 
-| Journey ID | Actors/Surfaces | Preconditions | Actions/Rules | States/Transitions | Handoffs | Failure/Recovery | Cross-layer/runtime readback | Status |
+| Journey/Wave ID | Actors/Surfaces | Preconditions | Actions/Rules | States/Transitions | Handoffs | Failure/Recovery | Cross-layer/runtime readback | Status |
 |---|---|---|---|---|---|---|---|---|
 
 Core pass: logical → state/transition → forward → reverse → cross-surface → cross-layer → failure/recovery. Add temporal/concurrency/security/finance/offline/performance/provider/migration passes only when risk or evidence triggers them.
+
+### Sequential Wave Ledger
+
+| Wave ID | Depends on | Root cause status | Decision status | Re-diagnosis status | Solution-ready | MODE-specific exit status | Next/reopen trigger |
+|---|---|---|---|---|---|---|---|
+
+`PREPARE_ONLY`: mode-specific exit = fully executable handoff documented, no live mutation. `EXECUTE_END_TO_END`: mode-specific exit = live implementation + consumers + cleanup + required verification/governance/scope-delta complete before next dependent Wave.
 
 ## 7. Findings Ledger
 
@@ -103,10 +110,10 @@ Bidirectional traceability must cover Journey → implementation/contract/state 
 
 Only true decision boundaries belong here.
 
-| Decision ID | Exact decision | Why evidence cannot resolve it | Options | Recommendation + reason | Impact/tradeoffs | User/authority decision | Status |
-|---|---|---|---|---|---|---|---|
+| Decision ID | Wave/Journey/Location | Exact decision | Why evidence cannot resolve it | Options | Recommendation + reason | Impact/tradeoffs | User/authority decision | Status |
+|---|---|---|---|---|---|---|---|---|
 
-Do not ask discoverable facts. Merge overlapping questions. After every material decision, propagate through the graph and re-diagnose affected journeys/surfaces/layers before package readiness.
+Do not ask discoverable facts. Merge overlapping questions. Ask decisions in dependency/Wave order when they block the current Wave, not only after diagnosing the whole target. After every material decision, propagate through the graph and re-diagnose affected journeys/surfaces/layers before that Wave can be solution-ready.
 
 ## 10. ACTUAL / INTENDED / DESIRED / CONFLICT
 
@@ -120,7 +127,7 @@ Do not ask discoverable facts. Merge overlapping questions. After every material
 | GOV ID | Durable rule candidate | Classification | Existing canonical owner | Status | Related decision/finding |
 |---|---|---|---|---|---|
 
-In `PREPARE_ONLY`, durable changes remain `GOVERNANCE_PROMOTION_PENDING`. In `EXECUTE_END_TO_END`, promote only resolved durable truth under valid authority.
+In `PREPARE_ONLY`, durable changes remain `GOVERNANCE_PROMOTION_PENDING`. In `EXECUTE_END_TO_END`, promote only resolved durable truth under valid authority as part of the affected Wave.
 
 ### Re-Diagnosis after decisions / drift
 
@@ -128,15 +135,17 @@ Record impacted graph nodes, journeys, surfaces, contracts, assumptions and new 
 
 ## 12. Final Diagnosis Gate
 
-Before setting the metadata gates at the top to `YES`, prove:
+These are **global final-target gates**, not package-existence gates. Before setting the metadata gates at the top to `YES`, prove:
 
-- zero material `UNVISITED` / `UNCLASSIFIED` / `UNTRACED` / `UNOWNED`;
+- zero material `UNVISITED` / `UNCLASSIFIED` / `UNTRACED` / `UNOWNED` for the final target;
 - zero unrecorded material Finding;
-- zero unresolved material Decision required to plan safely;
+- zero unresolved material Decision required for final handoff/closure;
 - every material scope delta classified;
 - macro model and affected journeys re-diagnosed after decisions;
+- every material Wave passed its MODE-specific exit gate;
 - alternative-entry adversarial completeness pass found no new material node, or any discovered node was reopened and covered;
 - current HEAD drift reconciled into `CURRENT_SHA` and `LAST_RECONCILED_AT`;
-- implementation and verification can proceed without guessing.
+- `PREPARE_ONLY`: execution can proceed across the entire target without guessing;
+- `EXECUTE_END_TO_END`: living documentation reconciles all actual waves and final verification/closure can proceed without hidden gaps.
 
-Do not set `PACKAGE_READY: YES` merely because this document is long.
+Do not set `PACKAGE_READY: YES` merely because this document is long or because one Wave is complete.

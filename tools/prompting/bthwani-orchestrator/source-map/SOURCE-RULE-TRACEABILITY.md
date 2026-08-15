@@ -50,21 +50,23 @@ DROPPED
 | §12 PostgreSQL/compat/security/DSH-WLT/mobile/control-panel/design risks | `01-CORE-CONTRACT`, `04-PACKAGE-EXECUTION`, `05-VERIFICATION-CLEANUP-CLOSURE` | ADOPTED |
 | §13 Concurrent-agent planning | `06-CONCURRENCY-RESUME-RECOVERY` | ADOPTED |
 | §14 Create/resume/rebaseline | `04-PACKAGE-EXECUTION`, `06-CONCURRENCY-RESUME-RECOVERY` | ADOPTED |
-| §15 Safe package creation | `04-PACKAGE-EXECUTION`, `06-CONCURRENCY-RESUME-RECOVERY`, current generator | ADOPTED |
+| §15 Safe package creation | early living-package creation + exact three-file schema + mode-specific gates in `00/04` | SUPERSEDED_BY_STRONGER_RULE |
 | §16 Coverage/units/ordering | graph/coverage + exact three-file schema | SUPERSEDED_BY_STRONGER_RULE |
 | §17 Verification-plan capability binding | `05-VERIFICATION-CLEANUP-CLOSURE`, evidence contract | ADOPTED |
 | §18 Handoff mapping | diagnosis/execution/evidence contracts | MERGED_WITH_EQUIVALENT |
-| §19 Readiness gate | four pre-package gates + `PACKAGE_READY` | SUPERSEDED_BY_STRONGER_RULE |
+| §19 Readiness gate | per-wave readiness in EXECUTE + final global PACKAGE_READY in PREPARE/closure | SUPERSEDED_BY_STRONGER_RULE |
 | §20 Delivery/latest-head semantics | `01-CORE-CONTRACT`, `06-CONCURRENCY-RESUME-RECOVERY` | ADOPTED |
 | §21 Retention | `06-CONCURRENCY-RESUME-RECOVERY` | ADOPTED |
 | §22 Report/decision | current three output files + contracts | ADOPTED |
+
+Current explicit user instruction has higher task authority than any conflicting historical prompt sequencing: package existence is now early/living, while `PACKAGE_READY` remains a final proven state. This does not weaken diagnosis; it makes the same diagnosis/decision/re-diagnosis loop incremental and auditable.
 
 ## Source 02 — Execute / verify / close
 
 | Source section | Destination owner | Status |
 |---|---|---|
 | §0 FAIL-CLOSED | `01-CORE-CONTRACT` | ADOPTED |
-| Inputs/§1 old execution modes | two user modes + internal review/freeze states | SUPERSEDED_BY_STRONGER_RULE |
+| Inputs/§1 old execution modes | two user modes + internal wave/review/freeze states | SUPERSEDED_BY_STRONGER_RULE |
 | §2 Authority/truth/package not truth | `01-CORE-CONTRACT` | ADOPTED |
 | §3 Pin/task identity/resume | `01-CORE-CONTRACT`, `06-CONCURRENCY-RESUME-RECOVERY` | ADOPTED |
 | §4 Capability + protected authority | `01-CORE-CONTRACT` | ADOPTED |
@@ -84,7 +86,7 @@ DROPPED
 | §18 Runtime freshness/state isolation | `05` | ADOPTED |
 | §19 Verification strategy | `05`, evidence contract | ADOPTED |
 | §20 Evidence invalidation | `05`, evidence contract | ADOPTED |
-| §21 Package current-schema/revalidation | `04`, `06`, validator | ADOPTED |
+| §21 Package current-schema/revalidation | living three-file package + mode-aware validator | SUPERSEDED_BY_STRONGER_RULE |
 | §22 Package bookkeeping before Freeze | `05` | ADOPTED |
 | §23 Cleanup/refactor/finishing | `05` | ADOPTED |
 | §24 Final latest-head integration | `05`, `06` | ADOPTED |
@@ -99,7 +101,7 @@ DROPPED
 | §33 Evidence Matrix | evidence contract + current 03 task template | ADOPTED |
 | §34 Approval Matrix | `01`, `05`, current 03 task template | ADOPTED |
 | §35 GitHub/CI/repository-platform truth | `01`, `05` | ADOPTED |
-| §36 Package validation semantics | current validator + `05` | ADOPTED |
+| §36 Package validation semantics | current validator + `04/05` | ADOPTED |
 | §37 Retention | `06` | ADOPTED |
 | §38 Final closure gate | `05`, closure contract, validator | ADOPTED |
 | §39 Final report | current three-file schema/contracts | MERGED_WITH_EQUIVALENT |
@@ -139,7 +141,7 @@ DROPPED
 
 ## Source 04 — Journey / multisurface diagnosis
 
-All §§0–17 are represented by `00/01/02/03/04` and the Diagnosis/Decision contracts. The original method is strengthened by Macro Blueprint Gate, Relation Graph ordering, Universe/Coverage, Scope Delta, bidirectional traceability, structured backtracking and independent adversarial completeness. Status: **ZERO UNACCOUNTED**.
+All §§0–17 are represented by `00/01/02/03/04` and the Diagnosis/Decision contracts. The original method is strengthened by Macro Blueprint Gate, Relation Graph ordering, Universe/Coverage, Scope Delta, bidirectional traceability, structured backtracking, sequential Wave gates and independent adversarial completeness. Status: **ZERO UNACCOUNTED**.
 
 ## Execution Card
 
@@ -167,6 +169,7 @@ CODE_BASED_LEAN + Blast Radius/Consumers/Dependencies/Contracts/Data/Runtime
 all applicable capabilities, never blind tool use or invented execution
 true Decision Boundary; no discoverable-fact questions
 decision impact propagation + re-diagnosis
+sequential decisions by dependency/wave; no dependent-wave bypass
 Universe/Coverage/Scope Delta/bidirectional traceability
 Journey × Multi-Surface × Cross-Layer + forward/reverse/temporal/failure/recovery
 root cause first; redesign/rebuild when root is structural
@@ -196,7 +199,18 @@ Result: **ACCOUNTED**.
 
 ```text
 Two modes only: PREPARE_ONLY / EXECUTE_END_TO_END
-MODE is write authority
+MODE is write authority, not diagnosis method
+same sequential diagnosis → decision → re-diagnosis loop in both modes
+same dependency/structured-backtracking order in both modes
+living three-file task package is created/resumed early and updated during work
+package existence/content does not imply PACKAGE_READY
+PREPARE_ONLY: each wave is fully diagnosed/decided/re-diagnosed and converted into executable handoff; no live mutation
+PREPARE_ONLY: questions occur when the current wave reaches a true decision boundary, not only at the end
+PREPARE_ONLY: final PACKAGE_READY only after every material wave + global reconciliation/adversarial completeness
+EXECUTE_END_TO_END: after current-wave diagnosis/decision/re-diagnosis, execute that wave immediately once its Wave Write Gate passes
+EXECUTE_END_TO_END: global PACKAGE_READY is not a prerequisite for first wave write
+EXECUTE_END_TO_END: no next dependent wave before current wave implementation/consumers/cleanup/verification/governance/scope-delta gate is COMPLETE
+EXECUTE_END_TO_END: task package is living derived documentation of actual execution, never live truth
 command package = documentation/control plane only
 task package = derived data plane under plans
 exactly three task-package files
@@ -209,6 +223,7 @@ Hypothesis → cheapest discriminating evidence
 Governance Promotion of durable truth
 local cleanup after each root fix + final structural sweep
 source rules have one owner; avoid context duplication
+final global reconciliation after all waves before closure/handoff
 ```
 
 Result: **ACCOUNTED**.
@@ -228,4 +243,4 @@ UNACCOUNTED = 0
 DROPPED = 0
 ```
 
-This proves methodology/source-rule accounting for the pinned sources. It does **not** prove product/runtime correctness. Any source blob drift, governance vocabulary drift, or orchestrator change reopens this source-coverage gate until reconciled.
+This proves methodology/source-rule accounting for the pinned sources. It does **not** prove product/runtime correctness. Any source blob drift, governance vocabulary drift, orchestrator change, or explicit mode-semantics change reopens this source-coverage gate until reconciled.

@@ -16,11 +16,11 @@ GOVERNANCE_SYNC_COMPLETE: NO
 FRESH_HEAD_VALID: NO
 FINAL_ADVERSARIAL_PASS: NO
 
-> `LIFECYCLE_STATE` is internal task state, not governance decision vocabulary. `FINAL_DECISION` is intentionally absent until an evidence-supported canonical decision is actually issued. In `PREPARE_ONLY`, no final product decision may be issued.
+> `LIFECYCLE_STATE` is internal task state, not governance decision vocabulary. `FINAL_DECISION` is intentionally absent until an evidence-supported canonical decision is actually issued. In `PREPARE_ONLY`, no final product decision may be issued. In `EXECUTE_END_TO_END`, this file records Wave evidence incrementally; a Wave PASS is not Final Task Closure.
 
 ## 1. Verification Plan
 
-| Verification ID | Claim/Finding | Exact check/source | Required capability/environment | What it proves | What it does NOT prove |
+| Verification ID | Claim/Finding/Wave | Exact check/source | Required capability/environment | What it proves | What it does NOT prove |
 |---|---|---|---|---|---|
 
 Use affected/risk-proportional verification. Do not duplicate heavy CI for the same still-valid candidate. When a PR exists, let PR-heavy verification own expensive checks unless policy requires another run; final candidate and post-merge checks remain separate when applicable.
@@ -31,6 +31,13 @@ Use affected/risk-proportional verification. Do not duplicate heavy CI for the s
 |---|---|---|---|---|---|---|---|---|
 
 Use only evidence scopes required by current governance/decision vocabulary and actual blast radius. `PASS` in one scope never implies another scope.
+
+### Wave Verification Ledger
+
+| Wave ID | Verification refs | Candidate/Runtime provenance | Required scopes | Result | Governance sync | Scope-delta status | Reopen trigger |
+|---|---|---|---|---|---|---|---|
+
+In `EXECUTE_END_TO_END`, do not mark a Wave `COMPLETE` in `02-EXECUTION.md` until the required verification/readback for that Wave is captured here (or referenced to an exact external source) and all Wave completion conditions are satisfied. In `PREPARE_ONLY`, record the exact acquisition plan; do not fabricate executed evidence.
 
 ## 3. Evidence Ledger / Failure Classification
 
@@ -43,7 +50,7 @@ Classify deterministic product/test failures, infra/runner/provider failures, fl
 
 Record actual scenario evidence when the claim is operational.
 
-| Scenario | Candidate/runtime provenance | Preconditions | Action | Persisted canonical readback | Cross-surface observable result | Failure/recovery result |
+| Scenario/Wave | Candidate/runtime provenance | Preconditions | Action | Persisted canonical readback | Cross-surface observable result | Failure/recovery result |
 |---|---|---|---|---|---|---|
 
 Static/build/mock green is not runtime proof. Prove process/artifact/schema/config freshness before using runtime evidence.
@@ -85,7 +92,7 @@ Rediscover from alternative entry points: unmapped routes/states/APIs, hidden wr
 | Probe | Alternative entry point | New material node/finding? | Disposition / reopened scope |
 |---|---|---|---|
 
-A new material node reopens diagnosis/execution; it is not silently appended after closure.
+A new material node reopens diagnosis/execution; it is not silently appended after closure. If it invalidates an earlier Wave, reopen that Wave and its affected evidence.
 
 ## 10. Final Closure Gate
 
@@ -107,6 +114,7 @@ AND FINAL_ADVERSARIAL_PASS
 
 Also require:
 
+- every material Wave passed its Wave Complete Gate;
 - zero known unresolved/fixed-pending-verify Finding in scope;
 - zero required missing/stale/pending/cancelled evidence;
 - zero required missing/unproven approval or independent review;

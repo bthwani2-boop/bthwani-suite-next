@@ -25,9 +25,10 @@ Highest lifecycle state:
 PREPARED
 ```
 
-Required gates:
+Required final handoff gates:
 
 ```text
+EVERY_MATERIAL_WAVE_PREPARED
 DISCOVERY_COMPLETE
 DIAGNOSIS_COMPLETE
 DECISION_COMPLETE
@@ -35,13 +36,18 @@ COVERAGE_COMPLETE
 PACKAGE_READY
 ```
 
-No final product decision/closure may be issued.
+`EVERY_MATERIAL_WAVE_PREPARED` means each Wave was diagnosed to evidence limit, its true decisions were resolved, impact was propagated and re-diagnosed, and its exact root-cause execution/consumer/governance/cleanup/verification handoff is complete enough for another agent to execute without Product/Architecture guessing.
+
+No final product decision/closure may be issued and no live Product/Governance/Runtime mutation is allowed.
 
 ## EXECUTE_END_TO_END
+
+Per-wave progress is allowed before global `PACKAGE_READY`, but no next dependent Wave may be selected until the current Wave has passed its Wave Complete Gate.
 
 Final closure requires:
 
 ```text
+EVERY_MATERIAL_WAVE_COMPLETE
 DISCOVERY_COMPLETE
 DIAGNOSIS_COMPLETE
 DECISION_COMPLETE
@@ -54,6 +60,8 @@ GOVERNANCE_SYNC_COMPLETE
 FRESH_HEAD_VALID
 FINAL_ADVERSARIAL_PASS
 ```
+
+`EVERY_MATERIAL_WAVE_COMPLETE` means each material Wave has proven implementation, consumer reconciliation, local cleanup, required verification/runtime readback, governance sync or explicit N/A, and scope-delta classification on a valid candidate/base before progressing.
 
 And:
 
@@ -103,4 +111,4 @@ governance ↔ runtime/readback
 
 ## Final Decision
 
-Read the current canonical vocabulary dynamically. Closure is allowed only with `closureRules.closedDecision` and all applicable evidence/approval scopes satisfied on the same immutable candidate. Any material new adversarial finding reopens the lifecycle before a final decision is issued.
+Read the current canonical vocabulary dynamically. Closure is allowed only with `closureRules.closedDecision` and all applicable evidence/approval scopes satisfied on the same immutable candidate. Any material new adversarial finding reopens the affected Wave/lifecycle before a final decision is issued.

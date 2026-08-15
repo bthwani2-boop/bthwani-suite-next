@@ -23,7 +23,7 @@ Do not ask the user while `DERIVABLE_FACT=YES`.
 
 ```text
 DECISION_ID
-JOURNEY / ACTOR / SURFACE / STATE
+WAVE_ID / JOURNEY / ACTOR / SURFACE / STATE
 DECISION_REQUIRED
 WHY_EVIDENCE_CANNOT_RESOLVE
 CONTRADICTING_OR_MISSING_EVIDENCE
@@ -64,6 +64,12 @@ MACHINE_CONTRACT
 REGISTRY
 ```
 
+## Sequential Question Rule
+
+Questions follow dependency/wave order. Diagnose the current wave to the evidence limit first, then ask only the smallest deduplicated set of true decisions that unlocks that wave. Do not defer all material questions until the end of the target merely to create one large batch.
+
+A material unresolved decision blocks the affected wave and dependent waves. It does not authorize guessing. After the user/authority answers, do not jump directly to execution or handoff; perform impact propagation and re-diagnosis first.
+
 ## After Decision
 
 Every resolved material decision must record:
@@ -78,4 +84,6 @@ NEW_FINDINGS_OR_DECISIONS
 GOVERNANCE_PROMOTION_STATUS
 ```
 
-No unresolved material decision required for safe planning may be silently carried into execution.
+In `PREPARE_ONLY`, no unresolved material decision required to execute the current wave may be silently carried into its handoff, and final `PACKAGE_READY` requires zero unresolved material decision required for the whole target.
+
+In `EXECUTE_END_TO_END`, no unresolved material decision required for the **current wave** may be carried into live execution; later independent waves may remain unresolved until selected, but final closure still requires zero unresolved material decision for the complete target.

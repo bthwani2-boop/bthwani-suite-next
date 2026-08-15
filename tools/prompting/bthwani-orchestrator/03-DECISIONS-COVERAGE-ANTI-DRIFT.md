@@ -3,7 +3,7 @@
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
 Owner: `tools/prompting/bthwani-orchestrator/03-DECISIONS-COVERAGE-ANTI-DRIFT.md`
 
-هذا الملف يملك نظام منع النسيان والانحراف، محاسبة التغطية، Findings، Scope Delta، Decision Boundary، Re-Diagnosis، وGovernance Candidates.
+هذا الملف يملك نظام منع النسيان والانحراف، محاسبة التغطية، Findings، Scope Delta، Decision Boundary، Re-Diagnosis، Wave Gates، وGovernance Candidates.
 
 ## 1) القاعدة الدستورية
 
@@ -15,6 +15,7 @@ EVERY NEW DEPENDENCY/CONSUMER/SURFACE → SCOPE DELTA CLASSIFICATION.
 EVERY TRUE DECISION → DECISION LEDGER.
 EVERY USER DECISION → IMPACT PROPAGATION + RE-DIAGNOSIS.
 EVERY DURABLE RESOLVED RULE → GOVERNANCE CANDIDATE / PROMOTION PATH.
+EVERY WAVE → MODE-SPECIFIC EXIT GATE BEFORE NEXT WAVE.
 NO PHASE TRANSITION WITH A SILENT OR UNCLASSIFIED MATERIAL ELEMENT.
 ```
 
@@ -57,7 +58,7 @@ BLOCKED_EXTERNAL
 NOT_APPLICABLE_WITH_PROOF
 ```
 
-`UNVISITED` مادي واحد يمنع `COVERAGE_COMPLETE`.
+`UNVISITED` مادي واحد يمنع **Global `COVERAGE_COMPLETE`**، لكنه لا يمنع تنفيذ Wave مستقلة في `EXECUTE_END_TO_END` إذا كانت الـWave نفسها وجميع Dependencies المطلوبة لها مغلقة تشخيصيًا وقرارياً ولم تعتمد على الجزء غير المغطى.
 
 `NOT_APPLICABLE_WITH_PROOF` يحتاج evidence + reason + reopen trigger، وليس مجرد تقدير.
 
@@ -177,7 +178,26 @@ MULTIPLE_VALID_BEHAVIORS
 
 `EXTERNAL_EVIDENCE_GAP` ليس Product decision؛ يسجل blocker/evidence gap.
 
-## 8) Macro Decision Gate
+## 8) Sequential Decision Discipline
+
+الأسئلة نفسها تتبع ترتيب Dependency/Wave، ولا تؤجل افتراضيًا حتى نهاية تشخيص الهدف كله:
+
+```text
+diagnose current wave to evidence limit
+→ collect only true decision boundaries for this wave/dependencies
+→ deduplicate and batch only tightly related questions
+→ ask the smallest set that unlocks the wave
+→ bind answers to Decision IDs
+→ propagate impact
+→ re-diagnose affected scope
+→ prove current wave solution-ready
+→ apply MODE-specific wave behavior
+→ then select next wave
+```
+
+قرار غير محسوم يمنع الـWave المتأثرة وأي dependent Wave. لا يجوز القفز فوقه ثم تصميم/تنفيذ ما يعتمد عليه. يمكن فقط متابعة عنصر مستقل مثبت أنه غير متأثر إذا كان ذلك لا يكسر الترتيب الحاكم أو يخلق تضاربًا.
+
+## 9) Macro Decision Gate
 
 بعد Macro Blueprint وقبل التشخيص المجهري واسع الكلفة، اعرض فقط الخطوط الكبرى التي يتغير بسببها اتجاه النظام:
 
@@ -191,9 +211,9 @@ Core Invariants
 Macro Contradictions
 ```
 
-العناصر المثبتة لا تحتاج سؤالًا. العناصر `DECISION_REQUIRED` فقط تدخل Decision Boundary.
+العناصر المثبتة لا تحتاج سؤالًا. العناصر `DECISION_REQUIRED` فقط تدخل Decision Boundary. بعد الحسم أعد تشخيص أثر القرار قبل اختيار/تنفيذ الـWaves التابعة له.
 
-## 9) Decision Ledger
+## 10) Decision Ledger
 
 لكل قرار حقيقي:
 
@@ -220,14 +240,14 @@ explicit user/authority decision
 merge overlapping questions
 remove duplicates
 remove derivative questions answerable by a parent decision
-batch related questions
+batch only related questions
 order by dependency/unlock value
-ask the smallest number that resolves the largest material ambiguity
+ask the smallest number that resolves the largest material ambiguity for the current wave/cluster
 ```
 
 التوصية ليست قرارًا نهائيًا إن كانت السلطة للمستخدم أو Product authority.
 
-## 10) Decision Impact Propagation
+## 11) Decision Impact Propagation
 
 بعد كل قرار:
 
@@ -247,9 +267,9 @@ bind answer to DECISION_ID
 → discover new findings/decisions if any
 ```
 
-لا تنتقل مباشرة من جواب المستخدم إلى Package creation.
+لا تنتقل مباشرة من جواب المستخدم إلى تنفيذ أو Wave preparation؛ يجب أن يمر القرار عبر Re-Diagnosis أولًا.
 
-## 11) Governance Delta Candidates
+## 12) Governance Delta Candidates
 
 كل قرار/حقيقة مادية تُصنف من حيث الديمومة:
 
@@ -271,28 +291,86 @@ REGISTRY
 ```text
 record candidate
 record exact existing canonical owner when identifiable
+record exact semantic change required
 status = GOVERNANCE_PROMOTION_PENDING
 NO governance mutation
 ```
 
-في `EXECUTE_END_TO_END`، بعد حسم القرار وبحسب `04-PACKAGE-EXECUTION.md`، تُرقّى الحقيقة الدائمة إلى Owner الحالي الصحيح قبل/مع التنفيذ المناسب.
+في `EXECUTE_END_TO_END`، بعد حسم القرار وإعادة التشخيص، تُرقّى الحقيقة الدائمة إلى Owner الحالي الصحيح قبل/مع تنفيذ الـWave التي تعتمد عليها وفق `04-PACKAGE-EXECUTION.md`.
 
 لا تحول Governance إلى سجل تاريخي للمهمة؛ Git history هو الأرشيف، وGovernance تقول القانون الحالي فقط.
 
-## 12) Wave Exit Gate
+## 13) Current Wave Solution-Ready Gate
 
-لا تنتقل للموجة التالية لمجرد نفاد القراءة. يجب أن يكون:
+قبل أن يختلف المسار حسب MODE، يجب للـWave الحالية إثبات:
 
 ```text
-all material nodes discovered in this wave classified
+all material nodes discovered for this wave classified
 all material findings recorded
-proven dependencies followed or explicitly excluded with proof
+root cause proven or explicit blocker/missing-proof classification
+canonical owner + exact target state known
+proven dependencies followed/closed or explicitly excluded with proof
+writers/readers/consumers materially mapped
+true decisions required by this wave resolved
+all decisions impact-propagated and affected scope re-diagnosed
 new scope deltas classified
-true decisions resolved or explicitly blocking
-coverage statuses updated
+governance implication classified
+cleanup requirements identified
+verification strategy/acquisition path defined
+latest relevant head/base reconciled
 ```
 
-## 13) Periodic Reconciliation
+إذا فشل أي بند = `CURRENT_WAVE_SOLUTION_READY = NO`.
+
+## 14) Mode-Specific Wave Exit Gate
+
+### PREPARE_ONLY
+
+لا تنتقل للـWave التالية حتى يصبح الحل الموثق للـWave الحالية قابلًا للتنفيذ دون تخمين:
+
+```text
+CURRENT_WAVE_SOLUTION_READY = YES
+EXACT_ROOT_FIX_DESIGNED = YES
+AFFECTED_CONSUMERS_AND_DEPENDENCIES_DOCUMENTED = YES
+GOVERNANCE_PROMOTION_REQUIREMENT_DOCUMENTED = YES | NOT_APPLICABLE
+OBSOLETE_PATH/CLEANUP_ACTION_DOCUMENTED = YES | NOT_APPLICABLE
+EXACT_ACCEPTANCE_AND_VERIFICATION_DEFINED = YES
+WAVE_PREPARED = YES
+```
+
+لا Product/Governance/Runtime write.
+
+### EXECUTE_END_TO_END — Pre-Write
+
+لا كتابة حية قبل:
+
+```text
+CURRENT_WAVE_SOLUTION_READY = YES
+CURRENT_WAVE_ROOT_CAUSE_PROVEN = YES
+CURRENT_WAVE_DECISIONS_RESOLVED = YES
+CURRENT_WAVE_REDIAGNOSIS_COMPLETE = YES
+CURRENT_WAVE_IMPACT_MAPPED = YES
+CURRENT_WAVE_VERIFICATION_DEFINED = YES
+CURRENT_WAVE_READY_TO_EXECUTE = YES
+```
+
+### EXECUTE_END_TO_END — Complete Before Next
+
+بعد التنفيذ لا تنتقل للـWave التالية حتى:
+
+```text
+CURRENT_WAVE_IMPLEMENTATION_COMPLETE = YES
+CURRENT_WAVE_CONSUMERS_RECONCILED = YES
+CURRENT_WAVE_LOCAL_CLEANUP_COMPLETE = YES
+CURRENT_WAVE_VERIFICATION_PASS = YES
+CURRENT_WAVE_GOVERNANCE_SYNC = YES | NOT_APPLICABLE
+CURRENT_WAVE_SCOPE_DELTA_CLASSIFIED = YES
+CURRENT_WAVE_STATUS = COMPLETE
+```
+
+`PASS` هنا يعني جميع evidence scopes المطلوبة للـWave نفسها حسب الخطر/الادعاء، وليس Final Task Closure.
+
+## 15) Periodic Reconciliation
 
 بعد كل Connected Cluster أو عدة Journeys مترابطة، قارن:
 
@@ -305,9 +383,9 @@ Contract ↔ Client/Backend
 Governance ↔ Product Truth ↔ Implementation
 ```
 
-الهدف كشف التناقضات التي لا تظهر داخل Journey منفردة.
+الهدف كشف التناقضات التي لا تظهر داخل Journey منفردة. في `EXECUTE_END_TO_END` أي تناقض جديد قد يعيد فتح Wave سابقة ويُبطل evidence المتأثر.
 
-## 14) Independent Adversarial Completeness Pass
+## 16) Independent Adversarial Completeness Pass
 
 بعد أن يبدو Discovery/Diagnosis كاملين، ابدأ Pass هدفه الوحيد **إثبات أن التغطية ناقصة**. ابحث من مداخل مختلفة:
 
@@ -331,12 +409,22 @@ data/migration paths not reached from UI journeys
 REOPEN DISCOVERY
 → add graph/scope delta
 → diagnose affected cluster
+→ if EXECUTE mode and prior evidence affected: reopen affected wave/evidence
 → rerun completeness pass
 ```
 
-## 15) Fresh-Head Drift Gate
+## 17) Fresh-Head Drift Gate
 
-قبل Package Ready، وقبل أي execution write، وقبل final closure:
+عند نقاط القرار التالية:
+
+```text
+before PREPARE final PACKAGE_READY
+before each EXECUTE current-wave write batch
+before/after each logical write batch as required by Core Contract
+before final closure
+```
+
+نفذ:
 
 ```text
 re-resolve branch HEAD
@@ -354,7 +442,9 @@ re-resolve branch HEAD
 
 لا تعتمد نتائج تشخيص على رأس قديم إذا تغيرت الحقيقة ذات الصلة.
 
-## 16) Gates
+## 18) Global Gates
+
+هذه البوابات تعني اكتمال الهدف **عالميًا**. في `PREPARE_ONLY` تلزم قبل التسليم النهائي. في `EXECUTE_END_TO_END` تلزم قبل Final Closure، لا قبل أول Wave write.
 
 ### DISCOVERY_COMPLETE
 
@@ -377,7 +467,7 @@ known cross-surface/cross-layer contradictions dispositioned
 ### DECISION_COMPLETE
 
 ```text
-ZERO unresolved material decision required to plan safely
+ZERO unresolved material decision required for the final target
 ZERO question still answerable from available evidence
 all user decisions propagated and re-diagnosed
 ```
@@ -393,9 +483,17 @@ ZERO unrecorded finding
 ZERO silent scope delta
 ```
 
-فشل أي Gate = لا Package Ready.
+### PACKAGE_READY
 
-## 17) Final Completeness Equation
+```text
+all global gates above = YES
+all waves accounted/dispositioned
+PREPARE_ONLY: every wave has executable handoff design
+EXECUTE_END_TO_END: living package reconciles actual work/evidence and final verification path
+latest head reconciled
+```
+
+## 19) Final Completeness Equation
 
 ```text
 ZERO UNVISITED
@@ -406,6 +504,7 @@ ZERO UNVISITED
 + ZERO UNRESOLVED REQUIRED DECISION
 + ZERO SILENT SCOPE DELTA
 + ZERO MATERIAL FRESH-HEAD DRIFT
++ EVERY MATERIAL WAVE PASSED ITS MODE-SPECIFIC EXIT GATE
 + ADVERSARIAL COMPLETENESS PASS = NO NEW MATERIAL NODE
 ```
 

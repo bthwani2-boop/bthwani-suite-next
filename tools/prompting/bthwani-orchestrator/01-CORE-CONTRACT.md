@@ -148,7 +148,7 @@ CAPABILITY EXISTS ≠ CAPABILITY WAS USED.
 
 سجّل عند الانطباق قدرات القراءة/الكتابة/GitHub/Shell/Node/validators/DB/runtime/CI/security/E2E/visual/review/architecture/dependency/static/provider/production/commit/push/merge/release/deploy، مع proof limit لكل قدرة غير متاحة.
 
-## 8) MODE = Write Authority
+## 8) MODE = Write Authority, not Diagnosis Method
 
 القيمة المسموحة فقط:
 
@@ -157,17 +157,43 @@ PREPARE_ONLY
 EXECUTE_END_TO_END
 ```
 
+**كلا النمطين يستخدمان نفس التشخيص المتسلسل ونفس Decision Boundary ونفس Re-Diagnosis ونفس Dependency/Wave ordering. لا يجوز جعل `PREPARE_ONLY` تشخيصًا ضخمًا دفعة واحدة بينما `EXECUTE_END_TO_END` متسلسلًا؛ الاختلاف هو سلطة الكتابة بعد إغلاق تشخيص الـWave الحالية.**
+
 ### PREPARE_ONLY
 
-مسموح: القراءة، التحليل، الاختبارات غير المتحولة، الأسئلة الحقيقية، إنشاء/تحديث حزمة المهمة تحت `plans/diagnose-implementing/<TASK_NAME>/`.
+مسموح: القراءة، التحليل، الاختبارات غير المتحولة، الأسئلة الحقيقية، وإنشاء/تحديث حزمة المهمة الحية تحت `plans/diagnose-implementing/<TASK_NAME>/` أثناء التقدم Wave-by-Wave.
+
+بعد تشخيص كل Wave وحسم قراراتها وإعادة تشخيصها:
+
+```text
+define exact root solution
+→ map dependencies/consumers/governance/cleanup/verification
+→ document executable handoff for that wave
+→ prove WAVE_PREPARED
+→ next wave
+```
 
 ممنوع: Product/source writes، runtime/data/provider mutation، governance mutation، migration application، merge/release/deploy/tag، final product closure claim.
 
-أي حقيقة دائمة تسجل `GOVERNANCE_PROMOTION_PENDING` فقط.
+أي حقيقة دائمة تسجل `GOVERNANCE_PROMOTION_PENDING` فقط. في النهاية يجب أن تكون الحزمة كاملة بما يكفي لكي ينفذها وكيل آخر دون Product/Architecture guessing أو قرار مادي مخفي.
 
 ### EXECUTE_END_TO_END
 
-يبدأ بنفس التشخيص الكامل ولا يكتب المنتج قبل Package Readiness. بعد الجاهزية يسمح بالكتابة المرتبطة بالنطاق إلى governance/implementation/contracts/data حسب السلطة. لا يمنح تلقائيًا Merge/Release/Deploy/Production mutation أو irreversible action.
+يبدأ بنفس Global Discovery/Macro model ثم يعمل Deep Diagnosis **Wave-by-Wave**. لا يشترط اكتمال تشخيص كامل الهدف عالميًا قبل أول Product write. المطلوب قبل كتابة كل Wave هو Wave Write Gate مثبت:
+
+```text
+root cause proven
+material decisions for this wave resolved
+impact propagated + affected scope re-diagnosed
+canonical owner/target state known
+affected consumers/dependencies mapped
+verification path defined
+latest head/base reconciled
+```
+
+بعدها يسمح بالكتابة المرتبطة بالـWave إلى governance/implementation/contracts/data حسب السلطة، ثم consumer migration + local cleanup + required verification/runtime readback. لا تنتقل إلى dependent Wave حتى `WAVE_COMPLETE` مثبت. Global completeness/package readiness تبقى مطلوبة قبل final closure.
+
+لا يمنح الـMODE تلقائيًا Merge/Release/Deploy/Production mutation أو irreversible action.
 
 ## 9) Protected / Irreversible Authority Gate
 
@@ -295,5 +321,6 @@ NO STALE RUNTIME.
 NO FOREIGN CHANGE CLAIMED AS OWN.
 NO PRODUCT/ARCHITECTURE GUESSING.
 NO DURABLE TRUTH LEFT ONLY IN DERIVED ARTIFACTS.
+NO NEXT WAVE BEFORE CURRENT MODE-SPECIFIC WAVE GATE.
 UNPROVEN = OPEN.
 ```

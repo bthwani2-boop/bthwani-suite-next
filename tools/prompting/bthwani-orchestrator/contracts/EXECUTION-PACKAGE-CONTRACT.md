@@ -12,11 +12,37 @@ BRANCH
 MODE
 PACKAGE_READY_BASE_SHA
 CURRENT_WORK_BASE_SHA
+CURRENT_WAVE_ID
+CURRENT_WAVE_BASE_SHA
+CURRENT_WAVE_STATUS
+CURRENT_WAVE_ROOT_CAUSE_PROVEN
+CURRENT_WAVE_DECISIONS_RESOLVED
+CURRENT_WAVE_REDIAGNOSIS_COMPLETE
+CURRENT_WAVE_IMPACT_MAPPED
+CURRENT_WAVE_VERIFICATION_DEFINED
+CURRENT_WAVE_READY_TO_EXECUTE
+CURRENT_WAVE_IMPLEMENTATION_COMPLETE
+CURRENT_WAVE_CONSUMERS_RECONCILED
+CURRENT_WAVE_LOCAL_CLEANUP_COMPLETE
+CURRENT_WAVE_VERIFICATION_PASS
+CURRENT_WAVE_GOVERNANCE_SYNC
+CURRENT_WAVE_SCOPE_DELTA_CLASSIFIED
 EXECUTION_STATUS
 IMPLEMENTATION_COMPLETE
 ```
 
-`PACKAGE_READY_BASE_SHA` هو HEAD الذي اجتازت عليه الحزمة readiness، و`CURRENT_WORK_BASE_SHA` يتحرك فقط بعد reconciliation مثبت.
+Semantics:
+
+```text
+PACKAGE_READY_BASE_SHA
+= UNSET until global PACKAGE_READY is actually proven.
+
+CURRENT_WORK_BASE_SHA
+= latest safe reconciled work base.
+
+CURRENT_WAVE_BASE_SHA
+= exact head/base against which the current wave was diagnosed/reconciled before live execution; UNSET when no wave is selected.
+```
 
 ## Required Sections
 
@@ -36,6 +62,7 @@ IMPLEMENTATION_COMPLETE
 
 ```text
 EXECUTION_ID
+WAVE_ID
 RELATED_FINDING_IDS
 ROOT_CAUSE
 CANONICAL_OWNER
@@ -53,14 +80,61 @@ ACTUAL_CHANGE
 IMPLEMENTATION_SHA
 ```
 
-In `PREPARE_ONLY`, actual changes/implementation SHA must not be fabricated.
+In `PREPARE_ONLY`, actual changes/implementation SHA must not be fabricated. كل Wave يجب أن تحتوي handoff قابلًا للتنفيذ بلا Product/Architecture guessing قبل الانتقال للـWave التالية.
 
-## Completion Gate
+## Current Wave Write Gate — EXECUTE_END_TO_END
+
+Before live write:
 
 ```text
+CURRENT_WAVE_ID != UNSET
+CURRENT_WAVE_BASE_SHA = valid exact SHA
+CURRENT_WAVE_STATUS = READY_TO_EXECUTE
+CURRENT_WAVE_ROOT_CAUSE_PROVEN = YES
+CURRENT_WAVE_DECISIONS_RESOLVED = YES
+CURRENT_WAVE_REDIAGNOSIS_COMPLETE = YES
+CURRENT_WAVE_IMPACT_MAPPED = YES
+CURRENT_WAVE_VERIFICATION_DEFINED = YES
+CURRENT_WAVE_READY_TO_EXECUTE = YES
+```
+
+Global `PACKAGE_READY` is **not** required for this per-wave write gate.
+
+## Current Wave Completion Gate — EXECUTE_END_TO_END
+
+Before selecting the next dependent wave:
+
+```text
+CURRENT_WAVE_STATUS = COMPLETE
+CURRENT_WAVE_IMPLEMENTATION_COMPLETE = YES
+CURRENT_WAVE_CONSUMERS_RECONCILED = YES
+CURRENT_WAVE_LOCAL_CLEANUP_COMPLETE = YES
+CURRENT_WAVE_VERIFICATION_PASS = YES
+CURRENT_WAVE_GOVERNANCE_SYNC = YES | NOT_APPLICABLE
+CURRENT_WAVE_SCOPE_DELTA_CLASSIFIED = YES
+```
+
+## Global Completion Gate
+
+### PREPARE_ONLY
+
+```text
+all material waves WAVE_PREPARED
+all global diagnosis/decision/coverage gates complete
+PACKAGE_READY_BASE_SHA = exact reconciled SHA
+PACKAGE_READY = YES
+no live implementation claimed
+```
+
+### EXECUTE_END_TO_END
+
+```text
+ZERO material wave not COMPLETE
 ZERO known implementation write still required in scope
 ZERO affected consumer without migration/disposition
-ZERO required durable governance promotion silently pending in EXECUTE mode
+ZERO required durable governance promotion silently pending
 ZERO local cleanup residue known to require write
+all global diagnosis/decision/coverage gates complete
+PACKAGE_READY_BASE_SHA = exact reconciled SHA
 LATEST_HEAD_RECONCILED
 ```
