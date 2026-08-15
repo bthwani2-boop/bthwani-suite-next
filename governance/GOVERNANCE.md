@@ -119,7 +119,6 @@ Skills own only their registered execution scope. Tools and adapters own no Prod
 Planning/support material lives outside governance:
 
 - `plans/diagnose-implementing/`
-- `plans/smsm-dsh-wlt-journeys/`
 - `tools/prompting/`
 - `docs/runbooks/`
 

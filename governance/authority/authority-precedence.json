@@ -49,7 +49,6 @@
     {"path": "opencode.json", "classification": "ADAPTER", "precedenceId": "TOOL_ADAPTER", "authorityDomains": ["opencode_adapter"]},
 
     {"path": ".agents/INDEX.md", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["skill_routing_index"]},
-    {"path": "plans/diagnose-implementing", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["diagnosis_execution_plans"], "scopeLimit": "Disposable task planning packages; no runtime, policy, approval, or product authority."},
-    {"path": "plans/smsm-dsh-wlt-journeys", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["journey_discovery_support"], "scopeLimit": "DSH/WLT discovery and coverage support only."}
+    {"path": "plans/diagnose-implementing", "classification": "DERIVED_SUPPORT", "precedenceId": "DERIVED_SUPPORT_ARTIFACT", "authorityDomains": ["diagnosis_execution_plans"], "scopeLimit": "Disposable task planning packages; no runtime, policy, approval, or product authority."}
   ]
 }
