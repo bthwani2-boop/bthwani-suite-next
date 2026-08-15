@@ -1,125 +1,170 @@
 #!/usr/bin/env node
 /**
- * check-frontend-binding-readiness.mjs
+ * Fail-closed frontend binding readiness preflight.
  *
- * Checks that all backend services are reachable before starting frontend surfaces.
- * Reads base URLs from env vars (same as the frontend resolvers).
- *
- * Usage:
- *   node tools/scripts/check-frontend-binding-readiness.mjs
- *
- * Exits 0 if all services are ready.
- * Exits 1 if any service is unreachable (unless BTHWANI_ALLOW_FRONTEND_WITHOUT_BACKEND=true).
- *
- * Environment overrides:
- *   NEXT_PUBLIC_DSH_API_BASE_URL  or  EXPO_PUBLIC_DSH_API_BASE_URL
- *   NEXT_PUBLIC_IDENTITY_API_BASE_URL  or  EXPO_PUBLIC_IDENTITY_API_BASE_URL
- *   BTHWANI_ALLOW_FRONTEND_WITHOUT_BACKEND=true  — skip exit 1 (warn only)
+ * Runtime profile endpoints/statuses are owned by
+ * infra/docker/runtime-readiness.contract.json. Frontend-specific public URL
+ * variables may override the host/base URL, but never the readiness path or
+ * accepted status values.
  */
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const contractPath = path.join(repoRoot, "infra", "docker", "runtime-readiness.contract.json");
 const allowWithoutBackend = process.env.BTHWANI_ALLOW_FRONTEND_WITHOUT_BACKEND === "true";
-
-function resolveUrl(nextKey, expoKey, legacyKey, defaultUrl) {
-  return (
-    process.env[nextKey]?.trim() ||
-    process.env[expoKey]?.trim() ||
-    (legacyKey ? process.env[legacyKey]?.trim() : undefined) ||
-    defaultUrl
-  );
-}
-
-const services = [
-  {
-    name: "DSH",
-    baseUrl: resolveUrl(
-      "NEXT_PUBLIC_DSH_API_BASE_URL",
-      "EXPO_PUBLIC_DSH_API_BASE_URL",
-      null,
-      "http://localhost:58080",
-    ),
-    healthPath: "/dsh/readiness",
-  },
-  {
-    name: "Identity",
-    baseUrl: resolveUrl(
-      "NEXT_PUBLIC_IDENTITY_API_BASE_URL",
-      "EXPO_PUBLIC_IDENTITY_API_BASE_URL",
-      null,
-      "http://localhost:58082",
-    ),
-    healthPath: "/identity/readiness",
-  },
-];
-
+const bundleName = process.env.BTHWANI_FRONTEND_READINESS_BUNDLE?.trim() || "frontendDefault";
 const TIMEOUT_MS = 5_000;
+
 const RESET = "\x1b[0m";
 const GREEN = "\x1b[32m";
 const RED = "\x1b[31m";
 const YELLOW = "\x1b[33m";
 const BOLD = "\x1b[1m";
 
-async function checkHealth(service) {
-  const url = `${service.baseUrl.replace(/\/$/, "")}${service.healthPath}`;
+function fail(message) {
+  console.error(`frontend-binding-readiness: ${message}`);
+  process.exit(1);
+}
+
+function readContract() {
+  if (!fs.existsSync(contractPath)) fail(`missing ${path.relative(repoRoot, contractPath)}`);
+  let contract;
   try {
-    const res = await fetch(url, {
+    contract = JSON.parse(fs.readFileSync(contractPath, "utf8"));
+  } catch (error) {
+    fail(`invalid runtime readiness contract: ${error.message}`);
+  }
+  if (contract.schemaVersion !== 1) fail(`unsupported runtime readiness schemaVersion=${contract.schemaVersion}`);
+  const profiles = contract.bundles?.[bundleName];
+  if (!Array.isArray(profiles) || profiles.length === 0) {
+    fail(`runtime readiness bundle '${bundleName}' is missing or empty`);
+  }
+  for (const profile of profiles) {
+    if (!contract.profiles?.[profile]) fail(`bundle '${bundleName}' references unknown profile '${profile}'`);
+  }
+  return { contract, profiles };
+}
+
+const publicEnvPrefixByProfile = {
+  identity: "IDENTITY",
+  workforce: "WORKFORCE",
+  dsh: "DSH",
+  wlt: "WLT",
+  providers: "PROVIDERS",
+  platform: "PLATFORM_CONTROL",
+};
+
+function resolveBaseUrl(profile, definition) {
+  const publicPrefix = publicEnvPrefixByProfile[profile];
+  const publicCandidates = publicPrefix
+    ? [
+        process.env[`NEXT_PUBLIC_${publicPrefix}_API_BASE_URL`],
+        process.env[`EXPO_PUBLIC_${publicPrefix}_API_BASE_URL`],
+      ]
+    : [];
+  const ownerEnv = definition.baseUrlEnv ? process.env[definition.baseUrlEnv] : undefined;
+  return [...publicCandidates, ownerEnv, definition.defaultBaseUrl]
+    .map((value) => String(value ?? "").trim())
+    .find(Boolean);
+}
+
+function resolveService(profile, definition) {
+  if (definition.kind === "json-status") {
+    const baseUrl = resolveBaseUrl(profile, definition);
+    if (!baseUrl) fail(`profile '${profile}' has no resolvable base URL`);
+    if (!definition.path || !Array.isArray(definition.healthyStatuses) || definition.healthyStatuses.length === 0) {
+      fail(`profile '${profile}' has an incomplete json-status readiness definition`);
+    }
+    return {
+      profile,
+      name: definition.name || profile,
+      kind: definition.kind,
+      url: `${baseUrl.replace(/\/$/, "")}${definition.path}`,
+      healthyStatuses: definition.healthyStatuses.map(String),
+    };
+  }
+
+  if (definition.kind === "http-ok") {
+    const port = String(
+      (definition.portEnv ? process.env[definition.portEnv] : undefined) ?? definition.defaultPort ?? "",
+    ).trim();
+    const host = String(definition.host ?? "").trim();
+    if (!host || !port || !definition.path) fail(`profile '${profile}' has an incomplete http-ok readiness definition`);
+    return {
+      profile,
+      name: definition.name || profile,
+      kind: definition.kind,
+      url: `http://${host}:${port}${definition.path}`,
+      healthyStatuses: [],
+    };
+  }
+
+  fail(`profile '${profile}' uses unsupported readiness kind '${definition.kind}'`);
+}
+
+async function checkReadiness(service) {
+  try {
+    const response = await fetch(service.url, {
       signal: AbortSignal.timeout(TIMEOUT_MS),
       headers: { Accept: "application/json" },
     });
-    if (res.ok) {
-      return { ok: true, url };
+    if (!response.ok) return { ok: false, reason: `HTTP ${response.status}` };
+    if (service.kind === "http-ok") return { ok: true };
+
+    let body;
+    try {
+      body = await response.json();
+    } catch (error) {
+      return { ok: false, reason: `invalid readiness JSON: ${error.message}` };
     }
-    return { ok: false, url, reason: `HTTP ${res.status}` };
-  } catch (e) {
-    if (e instanceof DOMException && e.name === "TimeoutError") {
-      return { ok: false, url, reason: `timeout (${TIMEOUT_MS}ms)` };
+    const status = String(body?.status ?? "");
+    if (!service.healthyStatuses.includes(status)) {
+      return { ok: false, reason: `unexpected status '${status || "<missing>"}'` };
     }
-    return { ok: false, url, reason: e instanceof Error ? e.message : String(e) };
+    return { ok: true, status };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "TimeoutError") {
+      return { ok: false, reason: `timeout (${TIMEOUT_MS}ms)` };
+    }
+    return { ok: false, reason: error instanceof Error ? error.message : String(error) };
   }
 }
 
+const { contract, profiles } = readContract();
+const services = profiles.map((profile) => resolveService(profile, contract.profiles[profile]));
+
 console.log(`\n${BOLD}BThwani Frontend Binding Readiness Check${RESET}`);
-console.log("─".repeat(50));
+console.log(`bundle: ${bundleName} [${profiles.join(", ")}]`);
+console.log("─".repeat(64));
 
 const results = await Promise.all(
-  services.map(async (svc) => {
-    const result = await checkHealth(svc);
-    return { ...svc, ...result };
-  }),
+  services.map(async (service) => ({ ...service, ...(await checkReadiness(service)) })),
 );
 
 let anyFailed = false;
-for (const r of results) {
-  if (r.ok) {
-    console.log(`${GREEN}✅ READY${RESET}  ${BOLD}${r.name.padEnd(10)}${RESET} → ${r.url}`);
+for (const result of results) {
+  if (result.ok) {
+    const statusSuffix = result.status ? ` status=${result.status}` : "";
+    console.log(`${GREEN}READY${RESET}  ${BOLD}${result.name.padEnd(20)}${RESET} → ${result.url}${statusSuffix}`);
   } else {
-    console.log(`${RED}❌ UNREACHABLE${RESET}  ${BOLD}${r.name.padEnd(10)}${RESET} → ${r.url}`);
-    console.log(`   Reason: ${r.reason}`);
+    console.log(`${RED}UNREADY${RESET}  ${BOLD}${result.name.padEnd(20)}${RESET} → ${result.url}`);
+    console.log(`   Reason: ${result.reason}`);
     anyFailed = true;
   }
 }
+console.log("─".repeat(64));
 
-console.log("─".repeat(50));
-
+if (anyFailed && !allowWithoutBackend) {
+  console.log(`${RED}${BOLD}BLOCKED:${RESET} One or more required '${bundleName}' runtime profiles are not ready.`);
+  console.log(`  Start the governed runtime or set a narrower governed bundle only when the surface contract permits it.\n`);
+  process.exit(1);
+}
 if (anyFailed) {
-  if (allowWithoutBackend) {
-    console.log(
-      `${YELLOW}⚠️  WARNING: Some backends are unreachable, but BTHWANI_ALLOW_FRONTEND_WITHOUT_BACKEND=true is set.${RESET}`,
-    );
-    console.log("   Frontend will start with reduced functionality.\n");
-    process.exit(0);
-  } else {
-    console.log(
-      `${RED}${BOLD}BLOCKED:${RESET} Backend(s) not ready. Cannot start frontend surfaces.`,
-    );
-    console.log(
-      `  Start the runtime: ${BOLD}pnpm runtime:up${RESET} or ${BOLD}pnpm runtime:reset${RESET}`,
-    );
-    console.log(
-      `  To skip this check (dev only): ${BOLD}BTHWANI_ALLOW_FRONTEND_WITHOUT_BACKEND=true${RESET}\n`,
-    );
-    process.exit(1);
-  }
-} else {
-  console.log(`${GREEN}${BOLD}All services are ready. Frontend may start.${RESET}\n`);
+  console.log(`${YELLOW}WARNING:${RESET} Required runtime profiles are unready, but BTHWANI_ALLOW_FRONTEND_WITHOUT_BACKEND=true is set.`);
+  console.log("  This is development-only reduced functionality and is not readiness evidence.\n");
   process.exit(0);
 }
+
+console.log(`${GREEN}${BOLD}Required runtime profiles are ready. Frontend may start.${RESET}\n`);
