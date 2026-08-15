@@ -15,12 +15,34 @@ if (!primaryContract) {
   throw new Error("DSH_PRIMARY_CONTRACT_MISSING");
 }
 
+const sameCommitRuntimeEvidenceReady = DSH_RUNTIME_MAP.every(
+  (binding) => binding.evidenceState === "SAME_COMMIT_VERIFIED",
+);
+const backendImplementationPresent = DSH_RUNTIME_MAP.every(
+  (binding) => binding.backendImplemented,
+);
+const backendRuntimeReady =
+  sameCommitRuntimeEvidenceReady && DSH_RUNTIME_MAP.every((binding) => binding.runtimeBound);
+const generatedClientReady =
+  sameCommitRuntimeEvidenceReady && DSH_RUNTIME_MAP.every((binding) => binding.generatedClientReady);
+const databaseReady =
+  sameCommitRuntimeEvidenceReady && DSH_RUNTIME_MAP.every((binding) => binding.databaseReady);
+const screensReady =
+  sameCommitRuntimeEvidenceReady && DSH_RUNTIME_MAP.every((binding) => binding.screensReady);
+const sharedBrainReady =
+  sameCommitRuntimeEvidenceReady && DSH_RUNTIME_MAP.every((binding) => binding.sharedBrainReady);
+const surfaceBindingApproved =
+  sameCommitRuntimeEvidenceReady && DSH_RUNTIME_MAP.every((binding) => binding.surfaceBindingApproved);
+const technicalRuntimeReady =
+  backendRuntimeReady && generatedClientReady && databaseReady && sharedBrainReady;
+const realExperienceReady = technicalRuntimeReady && screensReady && surfaceBindingApproved;
+
 export const dshServiceManifest = {
   service: "dsh",
   realService: true,
   activatesService: true,
-  runtimeState: "PARTIALLY_BOUND",
-  closureState: "FIX_REQUIRED",
+  runtimeState: realExperienceReady ? "RUNTIME_VERIFIED" : "PARTIALLY_BOUND",
+  closureState: realExperienceReady ? "RUNTIME_VERIFIED" : "FIX_REQUIRED",
   activationScope:
     "stores-home-discovery-catalog-cart-checkout-wlt-handoff-orders-dispatch-field-readiness-support-analytics-notifications-finance-special-requests-pickup-partner-delivery",
   contract: primaryContract.path,
@@ -33,14 +55,19 @@ export const dshServiceManifest = {
   runtime: DSH_RUNTIME_MAP,
   currentTruth: {
     contractOperations: DSH_CONTRACT_OPERATIONS,
-    backendRuntimeReady: true,
-    generatedClientReady: false,
-    generatedClientReason:
-      "The primary and catalog generated clients are registered; every active shard still requires registry and CI subset verification on the same commit.",
-    databaseReady: true,
-    screensReady: false,
-    technicalRuntimeReady: false,
-    realExperienceReady: false,
+    backendImplementationPresent,
+    sameCommitRuntimeEvidenceReady,
+    backendRuntimeReady,
+    generatedClientReady,
+    generatedClientReason: generatedClientReady
+      ? "Every active generated client shard is verified on the same candidate."
+      : "Generated clients may be present, but current-candidate registry/CI evidence is required before readiness is true.",
+    databaseReady,
+    screensReady,
+    sharedBrainReady,
+    surfaceBindingApproved,
+    technicalRuntimeReady,
+    realExperienceReady,
     platformControlRuntimeState: "VERIFICATION_REQUIRED",
     platformControlReason:
       "core/platform-control governed changes, live health, progressive rollout, audit, and rollback are implemented; same-commit runtime and independent release evidence remain required.",
