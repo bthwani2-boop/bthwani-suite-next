@@ -90,6 +90,10 @@
         "secureStoreOwnsSecretsNotGeneralCache": true,
         "cryptoDoesNotOwnPersistence": true,
         "routerTargetProtectsLinkingFromPrematureDeprecation": true,
+        "biometricUnlockIsLocalReauthOnly": true,
+        "biometricUnlockCannotCreateServerSession": true,
+        "biometricUnlockCannotBypassIdentityOrWorkforceGates": true,
+        "biometricFeatureBindingRequiresDecisionClosure": true,
         "reviewPendingDoesNotAuthorizeDeletion": true,
         "nativeRemovalDeferredToCleanupWindow": true
       }
