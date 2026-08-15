@@ -66,13 +66,16 @@ RUNTIME_REQUIRED: YES
 | EVD-IMPLEMENTATION | Checkout item snapshots are persisted atomically in the priced checkout transaction, and CreateOrderTruth consumes only the immutable checkout snapshot. | services/dsh/backend/internal/checkout/cart_snapshot.go; services/dsh/backend/internal/orders/order_truth.go; services/dsh/backend/internal/orders/checkout_snapshot.go | TASK_HEAD | task branch | PASS | Invalidated by changes to checkout snapshot persistence or order creation line queries. |
 | EVD-CONSUMERS | All consuming surfaces (client, partner, ops, dispatch) now receive order items derived solely from the immutable checkout snapshot. | services/dsh/backend/internal/orders/order_truth_db_test.go; governance/product/contracts/order-creation-truth.product-truth.json | TASK_HEAD | task branch | PASS | Invalidated by changes to order-item readback or surface projection types. |
 | EVD-CLEANUP | The mutable dsh_cart_items query in CreateOrderTruth was completely removed, with zero fallback or parallel source remaining. | services/dsh/backend/internal/orders/order_truth.go | TASK_HEAD | task branch | PASS | Invalidated if a cart item fallback is reintroduced. |
-| EVD-VERIFICATION | DSH orders, checkout, and health unit and database tests pass, and migration-manifest-drift-gate and governance-schema-gate pass on the exact task candidate. | go test ./internal/orders ./internal/checkout ./internal/health; node tools/guards/migration-manifest-drift-gate.mjs; node tools/guards/governance-schema-gate.mjs | TASK_HEAD | task branch | PASS | Invalidated by any new untested source code changes or migration drift. |
+| EVD-VERIFICATION | DSH orders, checkout, and health unit and database tests pass, and migration-manifest-drift-gate and governance-schema-gate pass on the exact task candidate. | go test ./internal/orders ./internal/checkout ./internal/health; node tools/guards/migration-manifest-drift-gate.mjs; node tools/guards/governance-schema-gate.mjs | SELF | integration branch | PASS | Invalidated by any new untested source code changes or migration drift. |
+| EVD-GOVERNANCE | Migration manifests, governance schema gates, and service boundary guards pass on the exact integration candidate. | node tools/guards/migration-manifest-drift-gate.mjs; node tools/guards/governance-schema-gate.mjs; node tools/guards/service-manifest-drift-gate.mjs | SELF | integration branch | PASS | Invalidated by any migration drift or governance contract mutation. |
+| EVD-FINAL-ADVERSARIAL | Adversarial challenge proved active-cart mutation after checkout cannot change order lines, and missing or mismatched checkout snapshots fail closed. | services/dsh/backend/internal/orders/order_truth_db_test.go | SELF | integration branch | PASS | Invalidated by changes to checkout snapshot locking or order creation query logic. |
+| EVD-RUNTIME | Runtime checkout-to-order flow creates immutable order truth derived exclusively from the frozen checkout snapshot across all consuming surfaces. | services/dsh/backend/internal/checkout/cart_snapshot.go; services/dsh/backend/internal/orders/checkout_snapshot.go; services/dsh/backend/internal/orders/order_truth_db_test.go | SELF | integration branch | PASS | Invalidated if runtime cart or checkout lifecycle changes. |
 
 ## Closure
 
 - Integration head: SELF
 - Final candidate: SELF
-- Verification: PASS — verified on TASK_HEAD with targeted DB tests and governance gates
+- Verification: PASS — verified on SELF with targeted DB tests and governance gates
 - Runtime/product evidence: PASS — immutable checkout snapshot guarantees identical lines across surfaces
 - Cleanup: PASS — live-cart query removed from order creation
 - Governance: PASS — migration-manifest-drift-gate and governance-schema-gate pass
