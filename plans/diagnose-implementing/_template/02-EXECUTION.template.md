@@ -2,7 +2,11 @@
 
 Status: DERIVED_SUPPORT
 TASK_ID: __TASK_ID__
+REPOSITORY: __REPOSITORY__
+BRANCH: __BRANCH__
 MODE: __MODE__
+PACKAGE_READY_BASE_SHA: __CURRENT_SHA__
+CURRENT_WORK_BASE_SHA: __CURRENT_SHA__
 EXECUTION_STATUS: PLANNED
 IMPLEMENTATION_COMPLETE: NO
 
@@ -61,7 +65,7 @@ In `PREPARE_ONLY`, keep this section explicitly `NOT_EXECUTED`.
 | Event | SHA/base/head | Concurrent delta classification | Reconciliation | Evidence impact |
 |---|---|---|---|---|
 
-Never claim foreign/pre-existing changes as this task’s work. No force-push or stale-candidate push.
+Track `START_SHA → CURRENT_WORK_BASE_SHA → IMPLEMENTATION_SHA(s) → FINAL_CANDIDATE_SHA`. Never claim foreign/pre-existing changes as this task’s work. No force-push or stale-candidate push.
 
 ## 7. Consumer / Contract / Data Migration
 
@@ -73,11 +77,11 @@ Never claim foreign/pre-existing changes as this task’s work. No force-push or
 Cleanup happens after each root fix, not only at the end.
 
 | Cleanup ID | Dead/stale/duplicate/obsolete residue | Trace/consumer proof | Action | Reference repair | Verification |
-|---|---|---|---|---|---|
+|---|---|---|---|---|
 
 ## 9. Blockers / Deviations / Remaining Execution State
 
 | Item | Type | Evidence | Required action/decision | Resume point |
 |---|---|---|---|---|
 
-Set `IMPLEMENTATION_COMPLETE: YES` only when every in-scope executable Finding is implemented, migrated, locally cleaned and has an acquisition path for final verification.
+Set `IMPLEMENTATION_COMPLETE: YES` only when every in-scope executable Finding is implemented, every consumer is migrated or proven unaffected, durable governance promotion required by execution is complete or explicitly blocking, local residue is cleaned, and final verification has a concrete acquisition path.

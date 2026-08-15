@@ -3,9 +3,9 @@
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
 Owner: `tools/prompting/bthwani-orchestrator/05-VERIFICATION-CLEANUP-CLOSURE.md`
 
-هذا الملف يملك Candidate/Evidence، Runtime/E2E، Cleanup/Structural Hygiene، Governance Sync، Fresh-Head، Adversarial Review، وFinal Closure.
+هذا الملف يملك Candidate/Evidence، CI/runtime/E2E، approvals/independence، cleanup/structural hygiene، Governance Sync، Fresh Head، Adversarial Review وFinal canonical decision.
 
-## 1) Verification Principle
+## 1) Verification Strategy
 
 ```text
 nearest root-cause regression
@@ -17,79 +17,65 @@ nearest root-cause regression
 → runtime/readiness/smoke/readback
 → cross-surface E2E/visual/manual when claimed
 → failure/edge/adversarial
-→ full verification only when proven/policy-required
+→ full verification only when policy/risk/blast-radius requires it
 ```
 
-استخدم كل Evidence منطبقة، لا كل الأدوات كل مرة. لا Heavy CI مكرر لنفس Candidate إذا الدليل ما يزال صالحًا.
+Use everything applicable, not everything blindly.
 
-## 2) Candidate Lifecycle
+## 2) Candidate / Base Resolution
 
-استخدم المعاني التالية:
+Deterministic meanings:
 
 ```text
-STARTING_REMOTE_SHA
-WORK_BASE_SHA
-IMPLEMENTATION_SHA
-BOOKKEEPING_SHA optional
-FINAL_CANDIDATE_SHA
-LATEST_REMOTE_SHA
-HEAD_AT_REVIEW_START
-HEAD_AT_DECISION
-MERGE_SHA only if actual authorized merge
+STARTING_REMOTE_SHA = diagnosis/task start head
+WORK_BASE_SHA = latest safe reconciled head used for current delta
+IMPLEMENTATION_SHA = logical implementation commit(s)
+BOOKKEEPING_SHA = optional pre-Freeze derived-artifact commit
+FINAL_CANDIDATE_SHA = exact immutable commit after every allowed write and cleanup
+HEAD_AT_REVIEW_START = live target head at final review start
+HEAD_AT_DECISION = live target head immediately before final decision
+MERGE_SHA = only if separately authorized merge actually occurs
 ```
 
-كل write بعد `FINAL_CANDIDATE_SHA` يلغي Freeze ويخلق Candidate جديدًا ويعيد evidence المتأثر.
+No arbitrary parent/default-branch/base guessing. For total task-range review, use `STARTING_REMOTE_SHA..FINAL_CANDIDATE_SHA` only when ancestry/provenance is valid. `FINAL_CANDIDATE_SHA` is assigned only after Freeze.
 
-## 3) Freeze
+Any write after candidate assignment invalidates Freeze and affected evidence.
 
-قبل Final Evidence:
+## 3) Package Bookkeeping / Freeze
+
+Avoid evidence-write loops:
 
 ```text
-complete all product/package/governance writes required for candidate
+complete all package/product/governance bookkeeping required in final branch state
 → complete cleanup writes
 → reconcile latest head
 → create final logical commit(s)
 → FREEZE WRITES
-→ FINAL_CANDIDATE_SHA = exact last allowed commit
+→ FINAL_CANDIDATE_SHA
 ```
 
-بعد Freeze ممنوع source/package/governance/format/generation/lockfile/migration write أو commit/push أثناء Final Read-Only Verification. أي write = عودة إلى التنفيذ.
+After Freeze: no source/package/governance/format/generation/lockfile/migration write or commit/push during final evidence. Any write = return to execution/new candidate.
 
-## 4) Evidence Record
+## 4) CI Topology / Rerun Economy
 
-لكل Check:
+When applicable:
 
 ```text
-EVIDENCE_ID
-source/command/workflow/run/artifact
-candidate_sha
-environment/profile/runner
-started/completed when useful
-status/exit
-claim it can falsify
-what it does NOT prove
-covered scope
-invalidated-by triggers
-artifact/log provenance
+Before PR → fast/affected verification
+PR exists → PR owns heavy verification; pushes use lightweight receipt unless policy requires otherwise
+Final Candidate → full closure scopes required by risk/policy
+Post-merge target → separate post-merge FAIL-CLOSED verification when merge is authorized/performed
 ```
 
-الحالات:
+Never run heavy CI twice for the same still-valid candidate merely for reassurance. Deterministic fail → fix/new SHA. Proven transient infra/provider fail → targeted rerun only.
 
-```text
-PASS
-FAIL
-MISSING
-STALE
-BLOCKED
-NOT_APPLICABLE_WITH_PROOF
-CANCELLED_OR_SUPERSEDED
-```
+## 5) Evidence Sources / Routing
 
-`CANCELLED` ليس PASS، و`MISSING/STALE` لا يثبت Closure.
+Use current available sources according to claim: GitHub/Actions, repository guards, Sonar/quality gate, CodeQL/security data-flow, dependency/CVE scanners, secrets/workflow-policy tools, DB/schema/readback, runtime/journey, observability, visual/design source, and task systems when they provide relevant context. Names are examples, not hardcoded requirements; actual tool availability and current governance control.
 
-## 5) Failure Classification
+For each evidence scope record source, exact candidate, environment, status, proof limit, required capability and approval binding.
 
-لكل CI/Runtime failure:
+## 6) Failure Classification
 
 ```text
 DETERMINISTIC_PRODUCT
@@ -101,202 +87,102 @@ CANCELLED_OR_SUPERSEDED
 STALE_RUN
 ```
 
-القواعد:
+Rules:
 
 ```text
 DETERMINISTIC → root-cause fix → NEW SHA
-INFRA/PROVIDER → prove external cause → targeted rerun only
-FLAKY → flakiness defect until controlled/proven
-CANCELLED/SUPERSEDED → neither product PASS nor product FAIL proof
+INFRA/PROVIDER → prove cause → targeted rerun
+FLAKY → defect until controlled/proven
+CANCELLED/SUPERSEDED → neither PASS nor product FAIL proof
 STALE → cannot prove current candidate
 ```
 
-لا Blind rerun لإجبار green.
+## 7) Runtime Freshness / Real Scenario
 
-## 6) Runtime Freshness
-
-قبل Runtime/E2E حسب الحاجة أثبت:
+Before runtime/E2E prove source/artifact/process/container/schema/seed/config/network profile freshness. Then execute real scenario where claimed:
 
 ```text
-source checkout = candidate
-artifact/image/bundle provenance = candidate or exact derived digest
-process/container/service version current
-schema/migrations required version
-seed/fixture provenance known
-no stale dev server/container/process
-network/config/env target intended profile
-```
-
-عند الحاجة:
-
-```text
-rebuild/restart affected services
-clear only safe derived caches
-unique test run id
-capture pre-state
-execute real scenario
-read canonical persisted post-state
-clean/isolate test data safely
-```
-
-نجاح مبني على stale process/data ليس Runtime proof.
-
-## 7) Real Scenario / Cross-Surface Verification
-
-إذا Claim تشغيلي، اختبر Actual Scenario الحقيقي حسب الإمكان:
-
-```text
-Actor/identity/session/scope
+Actor/session/scope
 → Surface action
 → Contract/API
 → Domain transition
 → Persistence/events/integration
 → canonical readback
-→ affected consuming surfaces
+→ consuming surfaces
 → observable operational result
 ```
 
-Mock/Static proof يبقى محدودًا ولا يترقى تلقائيًا إلى End-to-End.
+Static/mock green is not runtime proof.
 
 ## 8) Domain Gates
 
-### Security
+Security: auth/session/revocation/role/permission/trusted context/object auth/IDOR/cross-scope/service auth/input-output/injection/SSRF/path/upload/PII/secrets/signature/replay/rate-limit/audit.
 
-عند الانطباق: auth/session/revocation/role/permission/trusted context/object auth/IDOR/cross-scope/service auth/input-output validation/injection/SSRF/path traversal/upload/PII/secrets/provider signatures/replay/rate-limit/audit.
+Finance: canonical financial owner, idempotency/correlation/state constraints/provider outcome/readback/unknown-result reconciliation/compensation/restart/replay.
 
-### Finance
+Data/PostgreSQL: deterministic migration/schema/constraints/indexes/fresh+non-empty/drift/orphans/duplicates/lock/concurrency/idempotency/restart/compatibility/rollback/roll-forward.
 
-أثبت owner المالي، idempotency/correlation، state constraints، provider outcome binding، canonical readback، unknown-result reconciliation، compensation، replay/restart safety.
+Mobile/Control Panel: permissions/deep-links/push/maps/location/SecureStore/offline/build/OTA/EAS/env; route/object auth/trusted scope/search isolation/bulk/audit/session/error/readback/responsive/RTL/localization/accessibility as claimed.
 
-### Data/PostgreSQL
-
-أثبت migration determinism، schema/constraints/indexes، fresh + non-empty cases، drift/orphans/duplicates، lock/concurrency/idempotency، restart/partial failure، compatibility/rollback/roll-forward.
-
-### Mobile / Control Panel
-
-Mobile: permissions/deep-links/push/maps/location/SecureStore/session/offline/reconnect/build/OTA/EAS/env/runtime transport حسب Claim.
-
-Control Panel: route/object auth/trusted scope/server-client/search isolation/bulk/audit/session/error/readback/responsive/RTL/localization/accessibility حسب Claim.
-
-### Supply Chain / CI
-
-lockfile integrity، unsupported/duplicate dependency، CVE/dependency review، CodeQL/Gitleaks/workflow policy/pinning حسب التغيير والخطر. Scanner green لا يبرر إخفاء Finding.
+Supply chain/CI: lockfile/dependency/CVE/CodeQL/secrets/workflow policy/pinning as affected.
 
 ## 9) Evidence Invalidation
 
-أي mutation أو branch movement قد يبطل evidence. أمثلة:
+Map every mutation/branch movement to affected evidence. Reacquire the minimum sufficient invalidated set, except where policy/risk requires broader proof.
+
+## 10) Approval / Independent Review
+
+Resolve current protected approvals from authority contracts:
 
 ```text
-contract/schema change → consumers/generation/integration rerun
-migration/data owner → DB/runtime/readback rerun
-runtime/config/network → runtime/E2E rerun
-security/auth/permission → negative isolation/security rerun
-shared library → all proven consumers rerun
-unrelated docs only → evidence may remain valid if provenance proves independence
+approval domain
+required + reason
+allowed approver/reviewer identity or role
+actual provenance
+exact candidate binding
+SATISFIED | MISSING | UNPROVEN | NOT_APPLICABLE
 ```
 
-أعد أقل مجموعة كافية من الأدلة المتأثرة، لا كل شيء عشوائيًا.
+`SELF_REVIEW ≠ INDEPENDENT_REVIEW`. Historical blanket authorization is not candidate-bound protected acceptance unless current governance explicitly permits it.
 
-## 10) Cleanup = Part of DONE
+## 11) Cleanup = Part of DONE
 
-التنظيف ليس تجميلًا. ينفذ موضعيًا أثناء الإصلاح، ثم Sweep نهائي قبل الإغلاق.
-
-ابحث داخل النطاق المثبت عن:
+Perform local cleanup during fixes and a final sweep before Freeze/closure. Cover proven-related:
 
 ```text
-dead/unreachable code
-stale/legacy/superseded residue
-duplicate implementations / duplicate truth
+dead/unreachable/stale/legacy/superseded code
+unused files/folders/imports/exports/dependencies
 obsolete routes/contracts/DTOs/schemas/models
-unused imports/exports/re-exports/dependencies
-stale configs/env/flags/scripts/commands
-temporary/debug/generated noise
-old names/paths/aliases
-orphan/stale references
-wrong ownership/responsibility/placement/context
-misleading naming
-TODO/FIXME/HACK/workarounds/fallbacks
+stale configs/env/flags/scripts/tests/docs/comments
+hidden fallbacks/workarounds/TODO/FIXME/HACK
 unnecessary compatibility layers
-files/folders without proven Purpose/Consumer/Responsibility
+orphan references
+wrong ownership/placement/naming/context
 parallel business logic/state machines/data writers
-stale docs/comments/examples touched by scope
+duplicate source of truth
+temporary/debug/generated noise
 ```
 
-## 11) Structural Hygiene
-
-وحدة التنظيف ليست الملف فقط:
+Never delete blindly:
 
 ```text
-line/expression/branch/block
-→ function/method/type/component/helper
-→ file/file group/folder
-→ module/package
-→ service/surface/domain
-→ contract/route/config/dependency
+DISCOVER → CLASSIFY → TRACE CONSUMERS → PROVE OBSOLETE/WRONG/DUPLICATE
+→ REMOVE/MERGE/MOVE/RENAME/REFACTOR → REPAIR REFERENCES → REVERIFY
 ```
 
-المعالجات المسموحة حسب الدليل:
+## 12) Structural / Reference Integrity
+
+For every changed/deleted/moved/renamed item inspect both directions: imports/exports/callers/callees/registrations/routes/contracts/config/env/dependencies/tests/mocks/fixtures/docs/build/CI/generated refs. No stale alias or reachable compatibility residue without a proven requirement/removal trigger.
+
+## 13) Final Cleanup Gate
 
 ```text
-Delete / Rename / Move / Merge / Split / Refactor / Reorganize / Redesign / Rebuild
-```
-
-لكل عنصر باقٍ يجب أن يكون له:
-
-```text
-Responsibility
-Purpose
-Consumer
-Requirement
-Architectural Reason
-Correct Ownership
-Correct Placement
-Correct Naming/Context
-```
-
-## 12) Reference Integrity
-
-بعد أي Delete/Rename/Move/Merge/Split/Replace افحص الاتجاهين:
-
-```text
-Imports/Exports/Re-exports
-Callers/Callees
-Registrations/Bindings/Routes
-Contracts/Schemas
-Configs/Env
-Dependencies
-Tests/Mocks/Fixtures
-Docs/Examples
-Build/CI/Scripts
-Generated References
-```
-
-الحذف الجزئي أو Rename مع Alias قديم بلا حاجة = غير مكتمل.
-
-## 13) Canonical Source Consolidation
-
-لكل مفهوم يجب أن يكون له Owner واحد حيث يحكم التصميم بذلك. عند duplication:
-
-```text
-identify canonical owner
-→ migrate writers/readers/consumers
-→ remove secondary truth/sync residue when safe
-→ update references
-→ verify canonical readback
-```
-
-## 14) Final Cleanup Gate
-
-قبل Closure أثبت داخل النطاق:
-
-```text
-ZERO known dead code/files/folders
-ZERO known stale/obsolete implementation path
+ZERO known dead code/files/folders in scope
+ZERO known stale/obsolete reachable path
 ZERO known unjustified duplicate truth/logic
 ZERO known orphan/stale reference
-ZERO known unused affected dependency
-ZERO known stale affected config/env/flag/script
-ZERO known misleading naming/placement/context
+ZERO known unused affected dependency/config/flag/script
+ZERO known misleading naming/placement/context/ownership
 ZERO known temporary workaround/fallback
 ZERO known unjustified compatibility residue
 ZERO known scope-related TODO/FIXME/HACK
@@ -304,110 +190,53 @@ ZERO known structural contradiction
 ZERO known cleanup finding unresolved
 ```
 
-ثم أعد verification المتأثر لإثبات أن التنظيف لم يُحدث Regression.
+Cleanup writes invalidate affected evidence and must be reverified before Freeze.
 
-## 15) Governance Reconciliation
-
-في `EXECUTE_END_TO_END` قبل الإغلاق:
+## 14) Governance Reconciliation
 
 ```text
-all durable task decisions classified
-→ all required governance promotions completed or explicitly blocked
-→ machine-readable counterpart synchronized when applicable
-→ governance ↔ Product Truth ↔ contract ↔ code ↔ runtime compared
+all durable decisions classified
+→ required governance promotions complete or explicitly blocking
+→ machine counterpart synchronized when applicable
+→ governance ↔ Product Truth ↔ contracts/registries ↔ code/consumers ↔ runtime compared
 ```
 
-ممنوع Closure إذا بقي:
+No closure with durable truth only in task artifacts or any known semantic contradiction across these layers.
+
+## 15) Fresh Head
 
 ```text
-durable truth only in task artifacts
-governance ↔ Product Truth contradiction
-governance ↔ machine-contract contradiction
-governance ↔ implementation contradiction
-governance ↔ runtime contradiction
-stale governance caused/exposed by task without disposition
+HEAD_AT_REVIEW_START = live re-resolved head at final review start
+HEAD_AT_DECISION = live re-resolved head immediately before decision
 ```
 
-النتيجة المطلوبة: `GOVERNANCE_SYNC_COMPLETE`.
-
-## 16) Fresh-Head Gate
-
-قبل Final Decision:
+For branch-head closure:
 
 ```text
-HEAD_AT_DECISION = re-resolve exact branch
-compare HEAD_AT_DECISION with FINAL_CANDIDATE_SHA
-classify any movement
+HEAD_AT_DECISION == FINAL_CANDIDATE_SHA
 ```
 
-إذا المطلوب إغلاق branch head والرأس مختلف أو تغيرت truth ذات الصلة، أعد reconciliation + evidence المتأثر. لا تدّع إغلاق رأس قديم.
+If not, classify movement, reconcile/rebuild candidate and rerun invalidated evidence.
 
-## 17) Final Adversarial Completeness
+## 16) Final Adversarial Completeness
 
-على Candidate المرشح حاول اكتشاف ما يمنع الإغلاق:
+Try to disprove closure using alternative entry points: hidden writers/readers, parallel/stale truth, missing consumers, contract/binding mismatch, permission bypass, retry/replay/concurrency, unknown-result/recovery, partial failure/restart, runtime-only defects, stale process/data/config, weak/flaky guards, missing audit/observability, foreign delta, reachable legacy, PII/secrets, neighboring consumer regression, wrong ownership/placement/naming/context and unnecessary residue.
 
-```text
-unclosed root cause
-parallel/stale truth
-hidden writer/reader
-missing consumer/migration
-contract/binding mismatch
-security/authz bypass
-retry/replay/concurrency defect
-unknown-result/recovery gap
-partial failure/restart gap
-runtime-only defect
-stale process/data/config
-weak/flaky/modified guard
-missing audit/observability
-foreign/out-of-scope delta
-legacy reachable path
-PII/secret leakage
-neighbor consumer regression
-wrong ownership/placement/naming/context
-unnecessary residue
-cross-surface semantic mismatch
-```
+Any material Finding requiring write cancels Freeze and returns to execution.
 
-أي Finding يحتاج write → إلغاء Freeze والعودة للتنفيذ.
+## 17) Final Read-Only Verification
 
-## 18) Final Read-Only Verification
+On exact final candidate only: required checks, generated consistency without mutation, exact diff/scope review, canonical readbacks, runtime/E2E where claimed, security/data/finance scopes, edge/adversarial behavior, test effectiveness, artifact provenance and approvals.
 
-على `FINAL_CANDIDATE_SHA` فقط:
+If a test/guard changed, prove it fails on broken behavior/equivalent regression and passes after root fix; do not accept weakened guard.
 
-```text
-required final checks
-generated consistency without mutation
-exact diff/scope/foreign-change review
-canonical persisted readbacks
-runtime/E2E evidence where claimed
-security/data/finance gates where applicable
-failure/edge/adversarial behavior
-test effectiveness
-evidence/artifact provenance
-```
+## 18) Lifecycle vs Canonical Decision
 
-ممنوع `--fix` أو formatter/generator writes أو source/package mutation أثناء هذه المرحلة.
+`LIFECYCLE_STATE` is internal derived state. `FINAL_DECISION` must be an ID from **current** `governance/contracts/decision-vocabulary.json`.
 
-## 19) Test Effectiveness
+Do not write `OPEN`, `BLOCKED`, `DONE`, or invented aliases as canonical decisions unless current governance defines them. When not closed, choose the canonical evidence-supported decision (`FIX_REQUIRED`, `BLOCKED_EXTERNAL`, `NEEDS_EVIDENCE`, `QA_BLOCK`, `SECURITY_BLOCK`, `RELEASE_BLOCK`, etc.).
 
-إذا عُدّل Test/Guard، أثبت أنه:
-
-```text
-fails on broken behavior or equivalent regression fixture
-passes after root fix
-was not weakened to accept the bug
-```
-
-## 20) Approval / Independence
-
-حل approvals من authority الحالية. Historical blanket authorization ليس outcome acceptance إذا كانت policy تحتاج approval/provenance/candidate binding خاصًا.
-
-`SELF_REVIEW ≠ INDEPENDENT_REVIEW`. إذا كانت مراجعة مستقلة مطلوبة، أثبت reviewer provenance وbinding للـCandidate.
-
-## 21) Closure Equation
-
-في EXECUTE mode:
+## 19) Final Closure Equation
 
 ```text
 DISCOVERY_COMPLETE
@@ -423,60 +252,15 @@ AND FRESH_HEAD_VALID
 AND FINAL_ADVERSARIAL_PASS
 ```
 
-مع:
+Plus zero known fixable defect, unresolved Finding/Decision, unverified fix, required missing/stale/pending/cancelled evidence, required missing/unproven approval, duplicate truth, reachable obsolete path, or durable truth left only in derived artifacts.
+
+Final branch-head closure requires:
 
 ```text
-ZERO known fixable in-scope defects
-ZERO unresolved findings
-ZERO unverified fixes
-ZERO required missing/stale evidence
-ZERO required missing/unproven approval
-ZERO unresolved material decision required for outcome
-ZERO plan/package assertion treated as live truth without revalidation
+LIFECYCLE_STATE = CLOSED
+FINAL_DECISION = current decision-vocabulary.closureRules.closedDecision
+HEAD_AT_DECISION = FINAL_CANDIDATE_SHA
+all applicable evidence/approval scopes satisfied on same immutable candidate
 ```
 
-فشل أي بند = `OPEN/BLOCKED` وفق vocabulary الحاكمة.
-
-## 22) PREPARE_ONLY Closure Semantics
-
-في PREPARE_ONLY لا يوجد Product Closure. أعلى حالة هي:
-
-```text
-STOP_PREPARED / PACKAGE_READY
-```
-
-بمعنى أن التشخيص والقرارات والتغطية وخطة التنفيذ/التحقق جاهزة، لا أن المنتج أُصلح.
-
-## 23) Final Report
-
-`03-VERIFICATION-CLOSURE.md` يسجل على الأقل:
-
-```text
-repository/branch/mode/target
-starting/work/final/head SHAs
-scope + supported exclusions
-root causes/owners
-actual changed/removed/moved paths
-consumer migration
-checks + proof limits
-runtime freshness/readbacks
-Findings final state
-cleanup/structural/source-of-truth review
-Governance Sync
-Evidence Matrix
-Approval/independence when required
-concurrent movement/reconciliation
-remaining blockers/resume point
-retention action
-final decision
-```
-
-## 24) Final Rule
-
-إذا كان الوصف الصادق للنتيجة هو:
-
-```text
-"يعمل لكن ..."
-```
-
-وكانت الـ"لكن" Finding مادية معلومة قابلة للمعالجة داخل النطاق، فالحالة `OPEN`.
+Anything less is not closure.

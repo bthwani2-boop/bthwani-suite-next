@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const frameworkRoot = dirname(fileURLToPath(import.meta.url));
 const templateRoot = join(frameworkRoot, '_template');
+const orchestratorPath = 'tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md';
 
 function parseArgs(argv) {
   const out = {};
@@ -33,17 +34,20 @@ function replaceAll(text, replacements) {
 const args = parseArgs(process.argv.slice(2));
 const name = args.name;
 const branch = args.branch;
-const sha = args.sha;
+const startSha = args['start-sha'];
+const currentSha = args['current-sha'] ?? startSha;
 const mode = args.mode;
-const target = args.target ?? args.surface ?? '';
+const target = args.target ?? '';
 const repository = args.repository ?? 'bthwani2-boop/bthwani-suite-next';
 const objective = args.objective ?? `Diagnose ${target || 'the authorized target'} completely and prepare the smallest complete root-cause execution scope.`;
 
-if (!name || !branch || !sha || !mode) {
-  throw new Error('Usage: new-package.mjs --name <task-name> --branch <branch> --sha <40-sha> --mode <PREPARE_ONLY|EXECUTE_END_TO_END> [--target <target>] [--objective <text>] [--repository owner/repo]');
+if (!name || !branch || !startSha || !mode) {
+  throw new Error('Usage: new-package.mjs --name <task-name> --branch <branch> --start-sha <40-sha> [--current-sha <40-sha>] --mode <PREPARE_ONLY|EXECUTE_END_TO_END> [--target <target>] [--objective <text>] [--repository owner/repo]');
 }
 if (!/^[a-z0-9][a-z0-9-]{2,79}$/.test(name) || name === '_template' || name.includes('..')) throw new Error('Unsafe task name.');
-if (!/^[0-9a-f]{40}$/i.test(sha)) throw new Error('SHA must be exactly 40 hexadecimal characters.');
+for (const [label, sha] of [['start-sha', startSha], ['current-sha', currentSha]]) {
+  if (!/^[0-9a-f]{40}$/i.test(sha)) throw new Error(`${label} must be exactly 40 hexadecimal characters.`);
+}
 if (!/^[A-Za-z0-9._/-]+$/.test(branch) || branch.includes('..')) throw new Error('Unsafe branch.');
 if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) throw new Error('Repository must use owner/name.');
 if (!['PREPARE_ONLY', 'EXECUTE_END_TO_END'].includes(mode)) throw new Error('MODE must be PREPARE_ONLY or EXECUTE_END_TO_END.');
@@ -61,9 +65,12 @@ const replacements = {
   '__TARGET__': target,
   '__MODE__': mode,
   '__CREATED_AT_ISO__': now,
+  '__LAST_RECONCILED_AT_ISO__': now,
   '__REPOSITORY__': repository,
   '__BRANCH__': branch,
-  '__START_SHA__': sha.toLowerCase(),
+  '__START_SHA__': startSha.toLowerCase(),
+  '__CURRENT_SHA__': currentSha.toLowerCase(),
+  '__ORCHESTRATOR_PATH__': orchestratorPath,
 };
 
 const templates = [
@@ -80,5 +87,6 @@ for (const [source, targetFile] of templates) {
 
 console.log(`Created orchestrated package: ${destination}`);
 console.log(`Mode: ${mode}`);
-console.log(`Pinned baseline: ${repository}@${branch} ${sha.toLowerCase()}`);
-console.log('Next: follow tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md; do not bypass diagnosis gates.');
+console.log(`Diagnosis baseline: ${repository}@${branch} ${startSha.toLowerCase()}`);
+console.log(`Current reconciled SHA: ${currentSha.toLowerCase()}`);
+console.log(`Next: follow ${orchestratorPath}; do not bypass diagnosis gates.`);

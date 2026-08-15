@@ -1,17 +1,31 @@
 # Closure Contract
 
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
-Applies to: closure sections of `03-VERIFICATION-CLOSURE.md`
+Applies to: `03-VERIFICATION-CLOSURE.md`
+
+## Lifecycle State vs Governance Decision
+
+These are different concepts:
+
+```text
+LIFECYCLE_STATE
+= internal derived task state: OPEN | PREPARED | READY_TO_EXECUTE | EXECUTING | VERIFYING | BLOCKED | CLOSED
+
+FINAL_DECISION
+= optional canonical decision ID read from current governance/contracts/decision-vocabulary.json
+```
+
+Never use `OPEN`, `BLOCKED`, `DONE`, or invented aliases as canonical decisions unless current governance explicitly defines them.
 
 ## PREPARE_ONLY
 
-Highest allowed task state:
+Highest lifecycle state:
 
 ```text
-STOP_PREPARED / PACKAGE_READY
+PREPARED
 ```
 
-Required proof:
+Required gates:
 
 ```text
 DISCOVERY_COMPLETE
@@ -21,11 +35,11 @@ COVERAGE_COMPLETE
 PACKAGE_READY
 ```
 
-No product DONE/CLOSED claim is permitted.
+No final product decision/closure may be issued.
 
 ## EXECUTE_END_TO_END
 
-Final closure requires all applicable gates:
+Final closure requires:
 
 ```text
 DISCOVERY_COMPLETE
@@ -47,63 +61,46 @@ And:
 ZERO known fixable in-scope defects
 ZERO unresolved material findings
 ZERO unverified fixes
-ZERO required missing/stale evidence
-ZERO required missing/unproven approvals
+ZERO required missing/stale/pending/cancelled evidence
+ZERO required missing/unproven approvals or independent review
 ZERO unresolved material decisions required for the outcome
 ZERO unjustified duplicate/parallel truth
-ZERO known stale/dead/legacy reachable path tied to the scope
-ZERO known structural/naming/placement/context defect tied to the scope
+ZERO known stale/dead/legacy reachable path tied to scope
+ZERO known structural/naming/placement/context defect tied to scope
 ZERO durable resolved truth existing only in task artifacts
 ZERO plan/package assertion treated as live truth without revalidation
 ```
 
-## Governance Sync
+## Candidate / Fresh Head
 
-Must prove, when applicable:
-
-```text
-durable decisions promoted to current canonical owner
-governance ↔ Product Truth consistent
-governance ↔ machine contracts/registries consistent
-governance ↔ implementation consistent
-governance ↔ runtime/readback consistent
-```
-
-## Fresh-Head
-
-Record:
+Record exact:
 
 ```text
 FINAL_CANDIDATE_SHA
 HEAD_AT_REVIEW_START
 HEAD_AT_DECISION
-candidate/head relationship
-concurrent movement classification
-reconciliation performed
 ```
 
-Do not close the current branch head on evidence bound to an older un-reconciled candidate.
-
-## Final Adversarial Pass
-
-Must deliberately seek:
+For branch-head closure:
 
 ```text
-unclosed root causes
-missing consumers/writers/readers
-hidden fallbacks/legacy paths
-cross-surface contradictions
-contract/schema/data drift
-security/finance/concurrency/recovery gaps
-stale runtime/config/process/data
-weak/flaky/modified tests or guards
-orphan/stale references
-wrong ownership/placement/naming
-unnecessary structural residue
+HEAD_AT_DECISION == FINAL_CANDIDATE_SHA
 ```
 
-Any material new finding reopens the task.
+Otherwise reconcile/rebuild/reverify; do not close an older head.
+
+## Governance Sync
+
+Prove when applicable:
+
+```text
+durable decisions promoted to canonical owner
+governance ↔ Product Truth
+governance ↔ machine contracts/registries
+governance ↔ implementation/consumers
+governance ↔ runtime/readback
+```
 
 ## Final Decision
 
-Use only current governance decision vocabulary. If any required gate cannot be proven, record `OPEN/BLOCKED` with exact missing proof and resume point; do not invent DONE.
+Read the current canonical vocabulary dynamically. Closure is allowed only with `closureRules.closedDecision` and all applicable evidence/approval scopes satisfied on the same immutable candidate. Any material new adversarial finding reopens the lifecycle before a final decision is issued.

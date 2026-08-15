@@ -1,5 +1,0 @@
-{
-  "status": "RETIRED_COMPATIBILITY_SENTINEL",
-  "canonicalTemplate": "01-DIAGNOSIS.template.md",
-  "note": "Package metadata now lives at the top of the three canonical Markdown files."
-}

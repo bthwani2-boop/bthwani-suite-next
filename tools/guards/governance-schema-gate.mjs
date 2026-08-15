@@ -142,9 +142,33 @@ requireExactDirectory(".agents/tools", registeredToolPolicyFiles(agentToolRegist
 requireExactDirectory("tools/prompting", [
   "01-diagnose-plan-package.md",
   "02-execute-verify-close.md",
+  "03-end-to-end-fail-closed.md",
+  "04-journey-multisurface-operational-diagnosis.md",
   "BTHWANI_CHATGPT_GITHUB_EXECUTION_CARD_ONE_PAGE.md",
+], ["bthwani-orchestrator"]);
+requireExactDirectory("tools/prompting/bthwani-orchestrator", [
+  "00-ORCHESTRATOR.md",
+  "01-CORE-CONTRACT.md",
+  "02-DISCOVERY-DIAGNOSIS.md",
+  "03-DECISIONS-COVERAGE-ANTI-DRIFT.md",
+  "04-PACKAGE-EXECUTION.md",
+  "05-VERIFICATION-CLEANUP-CLOSURE.md",
+  "06-CONCURRENCY-RESUME-RECOVERY.md",
+], ["contracts", "source-map"]);
+requireExactDirectory("tools/prompting/bthwani-orchestrator/contracts", [
+  "DIAGNOSIS-OUTPUT-CONTRACT.md",
+  "DECISION-OUTPUT-CONTRACT.md",
+  "EXECUTION-PACKAGE-CONTRACT.md",
+  "EVIDENCE-CONTRACT.md",
+  "CLOSURE-CONTRACT.md",
 ]);
+requireExactDirectory("tools/prompting/bthwani-orchestrator/source-map", ["SOURCE-RULE-TRACEABILITY.md"]);
 requireExactDirectory("plans", [], ["diagnose-implementing", "smsm-dsh-wlt-journeys"]);
+requireExactDirectory("plans/diagnose-implementing/_template", [
+  "01-DIAGNOSIS.template.md",
+  "02-EXECUTION.template.md",
+  "03-VERIFICATION-CLOSURE.template.md",
+]);
 
 for (const required of [
   "governance/GOVERNANCE.md",
@@ -195,6 +219,14 @@ for (const retired of [
   ".agents/rules",
   ".agents/adapters",
   ".agents/hooks",
+  "plans/diagnose-implementing/new-unit.mjs",
+  "plans/diagnose-implementing/_template/START-HERE.template.md",
+  "plans/diagnose-implementing/_template/MANIFEST.template.json",
+  "plans/diagnose-implementing/_template/GLOBAL-DIAGNOSIS.template.md",
+  "plans/diagnose-implementing/_template/COVERAGE.template.json",
+  "plans/diagnose-implementing/_template/EXECUTION-ORDER.template.json",
+  "plans/diagnose-implementing/_template/CLOSURE.template.md",
+  "plans/diagnose-implementing/_template/unit",
 ]) {
   if (exists(retired)) violations.push({ file: retired, line: 0, message: "RETIRED_OR_PARALLEL_PATH_REINTRODUCED" });
 }
@@ -204,18 +236,12 @@ for (const required of [
   "tools/guards/opa/governance.rego",
   "plans/diagnose-implementing/README.md",
   "plans/diagnose-implementing/new-package.mjs",
-  "plans/diagnose-implementing/new-unit.mjs",
   "plans/diagnose-implementing/validate-package.mjs",
-  "plans/diagnose-implementing/_template/START-HERE.template.md",
-  "plans/diagnose-implementing/_template/MANIFEST.template.json",
-  "plans/diagnose-implementing/_template/GLOBAL-DIAGNOSIS.template.md",
-  "plans/diagnose-implementing/_template/COVERAGE.template.json",
-  "plans/diagnose-implementing/_template/EXECUTION-ORDER.template.json",
-  "plans/diagnose-implementing/_template/CLOSURE.template.md",
-  "plans/diagnose-implementing/_template/unit/DIAGNOSIS.template.md",
-  "plans/diagnose-implementing/_template/unit/EXECUTION.template.json",
-  "plans/diagnose-implementing/_template/unit/VERIFICATION.template.json",
-  "plans/diagnose-implementing/_template/unit/RESULT.template.json",
+  "plans/diagnose-implementing/_template/01-DIAGNOSIS.template.md",
+  "plans/diagnose-implementing/_template/02-EXECUTION.template.md",
+  "plans/diagnose-implementing/_template/03-VERIFICATION-CLOSURE.template.md",
+  "tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md",
+  "tools/prompting/bthwani-orchestrator/source-map/SOURCE-RULE-TRACEABILITY.md",
   "plans/smsm-dsh-wlt-journeys/04-JOURNEY-REGISTRY.yaml",
   `${sdlcRoot}/README.md`,
   `${sdlcRoot}/lifecycle.state-machine.yaml`,

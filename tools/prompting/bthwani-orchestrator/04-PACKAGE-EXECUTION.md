@@ -3,292 +3,182 @@
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
 Owner: `tools/prompting/bthwani-orchestrator/04-PACKAGE-EXECUTION.md`
 
-هذا الملف يملك بوابة حزمة المهمة، شكلها المختصر، Governance Promotion في وضع التنفيذ، والتنفيذ الجذري. لا يملك قواعد التشخيص أو الإغلاق النهائي.
+هذا الملف يملك Package Readiness، Schema الحزمة الثلاثية، Governance Promotion، Root-Cause execution، consumer migration وlocal cleanup.
 
 ## 1) Package Readiness
 
-لا تنشئ/تحدّث حزمة المهمة قبل:
+لا تنشئ/تحدّث الحزمة الحالية قبل:
 
 ```text
-DISCOVERY_COMPLETE = PASS
-DIAGNOSIS_COMPLETE = PASS
-DECISION_COMPLETE = PASS
-COVERAGE_COMPLETE = PASS
+DISCOVERY_COMPLETE = PASS/YES
+DIAGNOSIS_COMPLETE = PASS/YES
+DECISION_COMPLETE = PASS/YES
+COVERAGE_COMPLETE = PASS/YES
 latest-head drift reconciled
-acceptance/verification can be defined without guessing
+implementation/verification definable without guessing
 ```
 
-إذا بقي قرار مادي غير محسوم أو Finding غير مسجل أو Root Cause/Owner مجهول ماديًا بلا blocker واضح، فالحزمة غير جاهزة.
+إذا بقي قرار مادي غير محسوم، Finding غير مسجل، أو Root Cause/Owner مجهول بلا blocker صريح، فالحزمة غير جاهزة.
 
-## 2) مكان وشكل حزمة المهمة
-
-الجذر:
+## 2) Exact Package Schema
 
 ```text
 plans/diagnose-implementing/<TASK_NAME>/
+├── 01-DIAGNOSIS.md
+├── 02-EXECUTION.md
+└── 03-VERIFICATION-CLOSURE.md
 ```
 
-الملفات الحاكمة الثلاثة فقط:
+**Exactly these three files.** لا Manifest/Coverage/units parallel schema ولا ملفات إضافية افتراضيًا. تاريخ الحزم القديمة لا يغير Schema الحالية.
+
+## 3) Baseline Semantics
+
+عند الإنشاء سجّل منفصلًا:
 
 ```text
-01-DIAGNOSIS.md
-02-EXECUTION.md
-03-VERIFICATION-CLOSURE.md
+START_SHA   = exact branch head at diagnosis start
+CURRENT_SHA = exact latest diagnosis head after readiness reconciliation
 ```
 
-الحزمة `DERIVED_SUPPORT` وليست Product/Implementation/Runtime Truth. لا تنشئ ملفات إضافية افتراضيًا. إذا أثبت التعقيد أن ملفًا أصبح غير قابل للاستخدام، يمكن تقسيمه داخليًا مع إبقاء الملفات الثلاثة فهارس/مداخل حاكمة وعدم إنشاء truth موازٍ.
+`new-package.mjs` يأخذ `--start-sha` و`--current-sha` صراحةً. لا تستخدم SHA واحدة لتغطية baseline وcurrent truth إذا اختلفتا.
 
-## 3) Create / Resume / Rebaseline
-
-قبل الإنشاء:
+Execution metadata:
 
 ```text
-ABSENT
-→ create package.
-
-EXISTS + same task identity
-→ RESUME_AND_RECONCILE; do not duplicate or overwrite blindly.
-
-EXISTS + different task identity
-→ COLLISION; choose distinct safe task name.
+PACKAGE_READY_BASE_SHA = CURRENT_SHA at package readiness
+CURRENT_WORK_BASE_SHA  = latest safe reconciled execution base
 ```
 
-الحزمة القديمة لا تثبت أن التشخيص الحالي مكتمل.
-
-عند الاستئناف:
+## 4) Create / Resume / Rebaseline
 
 ```text
-re-read current orchestrator/contracts/governance
-→ revalidate package claims against current truth/head
-→ preserve still-valid evidence/decisions only
-→ mark stale/contradicted assumptions
-→ re-diagnose affected scope
+ABSENT → create current three-file package.
+EXISTS + same task identity → RESUME_AND_RECONCILE.
+EXISTS + different identity → COLLISION; do not overwrite.
 ```
 
-لا replay ميكانيكي لتاريخ قديم لمجرد الحفاظ على Package.
+عند استئناف legacy package: أعد معايرتها مقابل current Orchestrator/Governance/HEAD، حافظ فقط على valid evidence/decisions، وانقل المهمة النشطة إلى current three-file schema. لا تحافظ على legacy schema في القالب الحاكم.
 
-## 4) 01-DIAGNOSIS.md Ownership
+## 5) File Ownership
 
-يحتوي على الأقل:
+`01-DIAGNOSIS.md`: identity/truth/scope/Macro/Graph/Journeys/Findings/Coverage/Decisions/Governance Candidates/Re-Diagnosis/Readiness.
+
+`02-EXECUTION.md`: root-cause ordered plan + actual execution ledger + governance promotion + consumers + candidate movement + local cleanup + blockers.
+
+`03-VERIFICATION-CLOSURE.md`: verification/evidence/runtime/approvals/cleanup/governance sync/fresh-head/adversarial/final decision.
+
+لا تكرر نفس الحقيقة في الملفات الثلاثة؛ استخدم IDs/references.
+
+## 6) PREPARE_ONLY
 
 ```text
-task identity / repository / branch / start/current SHA / mode / target
-truth hierarchy and capability limits
-scope + supported exclusions
-Macro Blueprint
-Relation/System Graph summary
-Actors/responsibilities
-Journey matrices or concise equivalent
-States/transitions/actions/handoffs
-ACTUAL / INTENDED / DESIRED / CONFLICT
-Findings + Root Causes + Blast Radius
-Coverage status / scope deltas
-Contradictions
-Decision Ledger + explicit decisions
-Governance Delta Candidates
-Re-Diagnosis results
-Final Diagnosis Gate
+create/update three files
+→ record exact implementation plan
+→ record governance promotion candidates
+→ record evidence acquisition plan
+→ set package readiness gates
+→ LIFECYCLE_STATE=PREPARED
+→ STOP_PREPARED
 ```
 
-التفاصيل الدقيقة يحكمها `contracts/DIAGNOSIS-OUTPUT-CONTRACT.md` و`contracts/DECISION-OUTPUT-CONTRACT.md`.
+No product/governance/runtime mutation and no final product decision.
 
-## 5) 02-EXECUTION.md Ownership
+## 7) EXECUTE_END_TO_END
 
-يبدأ بخطة تنفيذ محسومة، ثم يصبح سجل التنفيذ الحقيقي:
+قبل أول Product write:
 
 ```text
-execution order / dependencies
-root cause + canonical owner per change
-paths/symbols/contracts/data affected
-writers/readers/consumers migration
-must-not-change boundaries
-implementation steps
-actual changes performed
-local cleanup after each root fix
-candidate lifecycle
-concurrent movement/reconciliation
-blockers/deviations
-remaining execution state
+re-read current authority/truth/head
+→ revalidate package readiness
+→ LIFECYCLE_STATE=READY_TO_EXECUTE
 ```
 
-لا يكرر التشخيص الكامل؛ يشير إلى IDs من `01-DIAGNOSIS.md`.
-
-## 6) 03-VERIFICATION-CLOSURE.md Ownership
-
-يحتوي:
+ثم:
 
 ```text
-verification plan and actual evidence
-candidate SHA/evidence provenance
-runtime/E2E/readback
-security/data/finance/domain gates when applicable
-cleanup and structural hygiene result
-Governance reconciliation
-fresh-head reconciliation
-final adversarial completeness
-remaining open items
-final OPEN/BLOCKED/CLOSED decision
-```
-
-يحكمه `05-VERIFICATION-CLEANUP-CLOSURE.md` وعقود Evidence/Closure.
-
-## 7) PREPARE_ONLY Boundary
-
-في هذا الوضع:
-
-```text
-create/update the three task-package files
-record exact implementation plan
-record required governance promotion candidates
-record evidence acquisition plan
-STOP at PACKAGE_READY / STOP_PREPARED
-```
-
-ممنوع:
-
-```text
-product/source writes
-governance mutation
-runtime/data/provider mutation
-migration application
-implementation commits
-final product DONE claim
-```
-
-`02-EXECUTION.md` في PREPARE_ONLY هو **خطة تنفيذ جاهزة** وليس سجل تغييرات مزعومة. `03-VERIFICATION-CLOSURE.md` هو **خطة تحقق وإغلاق** وليس Evidence مزعومة.
-
-## 8) EXECUTE_END_TO_END Boundary
-
-لا Product write قبل Readiness. بعد Readiness:
-
-```text
-revalidate current authority/truth/head
-→ Governance Promotion where required
+Governance Promotion where required
 → canonical implementation owner first
+→ root fix/refactor/redesign/rebuild
 → migrate every affected writer/reader/consumer
-→ remove obsolete/parallel behavior
+→ synchronize contracts/generated/data transitions
+→ remove obsolete/parallel path
 → local cleanup
-→ targeted affected verification
-→ continue until implementation scope exhausted
+→ targeted verify
+→ adjacent regression search
 ```
 
-## 9) Governance Promotion
+## 8) Governance Promotion
 
-لكل `GOVERNANCE_PROMOTION_PENDING` أو حقيقة دائمة جديدة:
+لكل durable resolved rule:
 
 ```text
-resolved durable rule
-→ classify type
-→ find existing canonical governance owner
-→ check authority to mutate
-→ update canonical owner when authorized
-→ update machine-readable counterpart/registry when applicable
-→ propagate into implementation and consumers
-→ verify semantic parity later
+classify durability
+→ existing canonical owner
+→ authority check
+→ canonical governance write when authorized
+→ machine-readable counterpart/registry when applicable
+→ implementation/consumer propagation
+→ verification later in Governance Reconciliation
 ```
 
-Routing المعتاد، وفق الحوكمة الحية الحالية:
+Do not create journey-history/topic-decision governance files when an existing canonical owner can hold the rule.
 
-```text
-Platform/Product-wide → governance/product/PRD.md / platform-model.yaml
-Capability Product Truth → governance/product/contracts/*.product-truth.json
-Engineering → governance/policies/engineering.md
-Security → governance/policies/security.md
-Delivery → governance/policies/delivery.md
-Authority → governance/authority/**
-Machine contract/registry → governance/contracts/** or registered canonical path
-```
-
-لا تنشئ `governance/<topic>-decisions.md` أو ملف Journey تاريخي لمجرد أهمية القرار. إذا لا يوجد Owner مناسب، اتبع Governance change rule الحالية بدل اختراع طبقة جديدة.
-
-## 10) Governance Timing
-
-ثلاث نقاط فقط افتراضيًا:
-
-```text
-A) durable Macro decision locked
-→ promote before deep downstream assumptions depend on it, when authorized.
-
-B) new material evidence during execution invalidates a durable decision
-→ reopen affected decision
-→ re-diagnose
-→ update governance intentionally, never silently.
-
-C) before final closure
-→ full Governance Reconciliation Gate.
-```
-
-لا تكتب كل فرضية مؤقتة إلى Governance.
-
-## 11) Root-Cause Execution Loop
-
-لكل Finding تنفيذي:
+## 9) Root-Cause Execution Loop
 
 ```text
 confirm current failure/evidence
 → correlate duplicate symptoms
 → identify first causal failure
-→ canonical owner/root cause
 → challenge competing hypothesis
-→ root fix/refactor/redesign/rebuild
-→ migrate affected consumers
-→ sync contracts/generated artifacts
-→ data/migration transition when needed
-→ remove obsolete/parallel path
-→ local structural cleanup
-→ targeted verify
-→ adjacent regression search
-→ update Finding status
+→ canonical owner/root cause
+→ root fix
+→ consumer migration
+→ contract/data/generated synchronization
+→ obsolete path removal
+→ local cleanup
+→ affected verification
+→ neighboring regression search
+→ update Finding
 ```
 
-لا Patch loop بلا فرضية جديدة.
+No patch loop without a new falsifiable hypothesis.
 
-## 12) No Patch / No Parallel Truth
+## 10) No Parallel Truth / Hidden Workaround
 
-ممنوع كحل نهائي:
+Forbidden as final state:
 
 ```text
-temporary patch masking root cause
+patch masking root cause
 silent fallback
 parallel Product/Business truth
-permanent dual-write without migration contract
-surface-local business truth duplicating canonical owner
+unbounded dual-write
+surface-local duplicate business truth
 UI-only authorization
 state bypass
-legacy route left reachable after migration
-new finance retry identity before unknown-result reconciliation
+reachable legacy route after migration
+financial retry identity before unknown-result reconciliation
 test/guard weakening
+compatibility residue without explicit need + owner + expiry/removal trigger
 ```
 
-حل انتقالي ضروري فعليًا يجب أن يكون محدودًا، مبررًا، صريح الملكية، له expiry/removal trigger، ولا يخفي Failure.
+## 11) Consumer Migration
 
-## 13) Consumer Migration
-
-الإصلاح لا يغلق عند تعديل Owner فقط. احصر وحدث بحسب الأثر:
+Each proven consumer is:
 
 ```text
-writers
-readers
-API consumers
-generated clients/bindings
-surfaces
-jobs/events
-DB queries/migrations
-configs/env
-permissions/scopes
-tests/mocks/fixtures
-docs/comments touched by the semantic change
+MIGRATED
+or NOT_AFFECTED_WITH_PROOF
 ```
 
-كل Consumer إما migrated أو `NOT_AFFECTED_WITH_PROOF`.
+Cover writers/readers/APIs/generated clients/surfaces/jobs/events/DB/config/permissions/tests/docs touched by semantic change.
 
-## 14) Change Impact Propagation
+## 12) Change Impact Propagation
 
-كل Write مادي يطلق:
+Every material write:
 
 ```text
 changed owner/contract/state
-→ affected graph traversal
+→ graph traversal
 → affected consumers
 → invalidated evidence
 → required re-verification
@@ -296,77 +186,43 @@ changed owner/contract/state
 → cleanup residue
 ```
 
-لا تكرر Full Repo verification إذا كان impact محدودًا ومثبتًا، ولا تقللها إذا تغير shared owner/contract عالي الـfanout.
+Use affected + risk expansion; no blind full repo repetition and no under-verification of shared/high-risk owners.
 
-## 15) Local Cleanup During Execution
+## 13) Local Cleanup
 
-بعد كل Root Fix:
+After each root fix:
 
 ```text
 remove obsolete local path
-remove stale compatibility/workaround if انتهت الحاجة
-repair imports/exports/references
-normalize naming/placement/ownership if directly affected
+remove expired compatibility/workaround
+repair references/imports/exports
+normalize directly affected naming/placement/ownership
 remove debug/temp residue
-verify immediate reference integrity
+verify reference integrity
 ```
 
-التنظيف النهائي الشامل يبقى في الوحدة 05.
+Final comprehensive cleanup remains in unit 05.
 
-## 16) Execution Ordering
+## 14) Data / Security / Finance / Events
 
-رتّب:
+Data: forward deterministic migrations; no applied-history rewrite; expand/backfill/switch/contract where required; fresh + representative non-empty; locks/idempotency/restart/rollback/roll-forward/drift.
 
-```text
-hard dependency
-→ canonical foundation blocker
-→ high-risk / high-blast-radius owner
-→ core journey critical path
-→ consumers
-→ compatibility transition
-→ cleanup/finishing
-```
+Security: enforce at trusted owner, cover auth/authz/session/object scope/IDOR/replay/input-output/PII/secrets/audit as affected.
 
-وحدة التنفيذ لا تحددها الملفات بل concern/root cause غير المتداخل.
+Finance: canonical WLT/financial owner, idempotency/correlation/provider outcome/readback/reconciliation/unknown-result/compensation/replay safety.
 
-## 17) Data / Migration Rules
+Events/providers: stable identity, duplicate/out-of-order/replay, retry/backoff/DLQ/lease, timeout/unknown-result, provider auth/signature, restart/reconciliation.
 
-عند الانطباق:
+## 15) Execution Completion Gate
+
+Before Freeze:
 
 ```text
-forward deterministic migrations only
-no applied-history rewrite
-expand/compatible/backfill/switch/contract when needed
-fresh DB + representative non-empty DB
-constraints/indexes/FKs/checks
-locks/batching/idempotency
-restart/partial failure
-rollback/roll-forward
-orphan/duplicate/drift checks
-```
-
-أي destructive/production mutation تخضع للAuthority Gate في Core.
-
-## 18) Security / Finance / Events
-
-Security: أصلح enforcement في المالك الموثوق، لا UI فقط؛ غطِّ IDOR/cross-scope/session/replay/input-output/PII/secrets/audit حسب الأثر.
-
-Finance: WLT/المالك المالي الحاكم، idempotency/correlation/readback/reconciliation/unknown-result/compensation/replay safety؛ لا Mock success كإغلاق مالي.
-
-Events/Jobs/Providers: stable identity، duplicate/out-of-order/replay، retry/backoff/DLQ/lease، timeout/unknown result، provider auth/signature، reconciliation/compensation/restart.
-
-## 19) Execution Completion Gate
-
-قبل Freeze يجب أن يكون:
-
-```text
-zero known in-scope finding requiring implementation write
-zero FIXED_PENDING_VERIFY that still needs a write rather than evidence
+ZERO known in-scope finding requiring implementation write
+ZERO FIXED_PENDING_VERIFY still requiring a write
 all affected consumers migrated/dispositioned
-all governance promotions required for durable resolved truth completed or explicitly blocked
-all local cleanup caused by implementation complete
-package bookkeeping required before Freeze complete
+all required durable governance promotions complete or explicitly blocking
+all local cleanup complete
+all package bookkeeping needed before Freeze complete
 latest remote movement reconciled
 ```
-
-إذا لا، التنفيذ يبقى OPEN.
