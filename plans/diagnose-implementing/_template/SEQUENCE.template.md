@@ -11,6 +11,9 @@ SEQUENCE_NAME: __SEQUENCE_NAME__
 SEQUENCE_ORDER: __SEQUENCE_ORDER__
 BASE_SHA: __BASE_SHA__
 RECONCILED_HEAD_SHA: __BASE_SHA__
+ROOT_CAUSE_CLUSTER_ID: __ROOT_CAUSE_CLUSTER_ID__
+PRIORITY_CLASS: __PRIORITY_CLASS__
+PRIORITY_BASIS: __PRIORITY_BASIS__
 DERIVATION_BASIS: __DERIVATION_BASIS__
 DEPENDS_ON: __DEPENDS_ON__
 BLOCKS: NONE
@@ -38,11 +41,14 @@ VERIFICATION_PASS: NO
 GOVERNANCE_SYNC: NOT_APPLICABLE
 SCOPE_DELTA_CLASSIFIED: NO
 
-> One file = one coherent root-cause/execution/verification/closure unit. All live writes belong to the package TASK_BRANCH/isolated workspace, never directly to the Integration Target.
+> One file = one coherent root-cause/execution/verification/closure unit. All live writes belong to the package TASK_BRANCH/isolated workspace, never directly to the Integration Target. This Sequence exists because its root-cause cluster and priority placement were proven from the target-wide landscape, not because it was recent, noisy, easy, or had the most findings.
 
 ## 1. Scope / Context / Graph Position
 
 - Why this Sequence exists / proven boundary:
+- Root-cause cluster ID / cluster definition:
+- Priority class / comparative priority basis:
+- Why this cluster outranks or safely parallels other open material clusters:
 - Depends on / blocks / unlocks:
 - Conflict Domain:
 - Task branch / writing workspace:
@@ -53,7 +59,7 @@ SCOPE_DELTA_CLASSIFIED: NO
 
 ## 2. Diagnosis / Findings / Disposition
 
-Record every material Finding ID and classify: SAME_ROOT_CAUSE / UPSTREAM_BLOCKER / INDEPENDENT_IN_SCOPE / SUPPORTED_EXCLUSION. No silent TODO/ignore.
+Record every material Finding ID and classify: SAME_ROOT_CAUSE / UPSTREAM_BLOCKER / INDEPENDENT_IN_SCOPE / SUPPORTED_EXCLUSION. No silent TODO/ignore. Symptoms must be correlated; do not create one Sequence per Finding when a shared root cause explains them.
 
 ## 3. Root Cause / Blast Radius
 
@@ -63,6 +69,7 @@ Record every material Finding ID and classify: SAME_ROOT_CAUSE / UPSTREAM_BLOCKE
 - Writers/readers/consumers:
 - States/transitions/handoffs:
 - Security/data/finance/operational risks:
+- Systemic leverage: dependency position / blocking power / blast radius / foundation importance / risk / unlock value / finding density:
 
 ## 4. Decisions / Impact Propagation / Re-Diagnosis
 
@@ -71,6 +78,8 @@ After each true decision:
 ```text
 decision → full proven impact graph → invalidate affected assumptions/evidence → re-diagnose
 ```
+
+Any material discovery that creates/redefines a root-cause cluster invalidates the current priority model until the target landscape is reconciled and re-ranked.
 
 ## 5. Exact Target State / Coherent Cutover
 
@@ -82,7 +91,7 @@ Define final semantic/architectural state. No closure while a required consumer,
 Exact actionable root treatment/cutover/cleanup/verification; package writes remain on isolated Task Branch.
 
 ### EXECUTE_END_TO_END
-Record actual changes/candidates on Task Branch/workspace after Root + Task-Isolation + Sequence gates.
+Record actual changes/candidates on Task Branch/workspace after Root + Target-Landscape/Priority + Task-Isolation + Sequence gates.
 
 ## 7. Consumers / Contracts / Data / Governance
 
@@ -118,9 +127,9 @@ VERIFICATION_DEFINED
 SOLUTION_READY
 ```
 
-Suspension: set `SEQUENCE_STATUS=SUSPENDED_BY_DEPENDENCY`, record `SUSPENDED_BY` + `RESUME_AFTER`, open upstream dependency JIT, then re-diagnose before resume.
+Suspension: set `SEQUENCE_STATUS=SUSPENDED_BY_DEPENDENCY`, record `SUSPENDED_BY` + `RESUME_AFTER`, open upstream dependency JIT, then re-diagnose and re-rank affected clusters before resume.
 
-Reopen: set `SEQUENCE_STATUS=REOPENED`, record new evidence/change and `INVALIDATES`, then rerun invalidated gates.
+Reopen: set `SEQUENCE_STATUS=REOPENED`, record new evidence/change and `INVALIDATES`, then rerun invalidated gates including landscape/priority when the new truth changes root-cause placement or leverage.
 
 PREPARE terminal: `PREPARED`, no live implementation claim.
 EXECUTE terminal: `COMPLETE` + implementation/consumers/cleanup/verification/governance/scope-delta gates.
