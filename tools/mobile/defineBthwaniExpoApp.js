@@ -1,7 +1,10 @@
 const fs = require("fs");
 const path = require("path");
 const manifest = require("./mobile-apps.manifest.json");
+const { validateMobileFeatureCapabilityManifest } = require("./mobile-feature-capability-model.js");
 const { appEnvSuffix, resolveGoogleServicesFile, resolveSentryEnvironment } = require("./sentry-env.js");
+
+validateMobileFeatureCapabilityManifest(manifest);
 
 const PERMISSION_TEXT = {
   photos: "نحتاج الوصول إلى معرض الصور لاختيار الصور ومشاركتها.",
@@ -23,10 +26,10 @@ function resolveAppEnvironmentValue(baseName, appKey) {
     ?? optionalEnvironmentValue(process.env[baseName]);
 }
 
-function nativeCapabilities(features) {
-  const hasCamera = features.includes("camera");
-  const hasAudioRecording = features.includes("audio");
-  const hasVideoPlayback = features.includes("video");
+function mediaCapabilities(capabilities) {
+  const hasCamera = capabilities.includes("camera");
+  const hasAudioRecording = capabilities.includes("audio");
+  const hasVideoPlayback = capabilities.includes("video");
   const hasVideoRecording = hasCamera && hasVideoPlayback;
 
   return {
@@ -59,25 +62,24 @@ function hasRuntimeDependency(appKey, packageName) {
   ].some((section) => section && Object.prototype.hasOwnProperty.call(section, packageName));
 }
 
-function buildInfoPlist(features) {
-  const { hasCamera, needsMicrophone } = nativeCapabilities(features);
-  const infoPlist = {
-    NSPhotoLibraryUsageDescription: PERMISSION_TEXT.photos,
-  };
+function buildInfoPlist(capabilities) {
+  const { hasCamera, needsMicrophone } = mediaCapabilities(capabilities);
+  const infoPlist = {};
 
+  if (capabilities.includes("imagePicker")) infoPlist.NSPhotoLibraryUsageDescription = PERMISSION_TEXT.photos;
   if (hasCamera) infoPlist.NSCameraUsageDescription = PERMISSION_TEXT.camera;
   if (needsMicrophone) infoPlist.NSMicrophoneUsageDescription = PERMISSION_TEXT.microphone;
-  if (features.includes("location")) infoPlist.NSLocationWhenInUseUsageDescription = PERMISSION_TEXT.locationWhenInUse;
-  if (features.includes("backgroundLocation")) {
+  if (capabilities.includes("location")) infoPlist.NSLocationWhenInUseUsageDescription = PERMISSION_TEXT.locationWhenInUse;
+  if (capabilities.includes("backgroundLocation")) {
     infoPlist.NSLocationAlwaysAndWhenInUseUsageDescription = PERMISSION_TEXT.locationAlwaysAndWhenInUse;
   }
-  if (features.includes("localAuthentication")) infoPlist.NSFaceIDUsageDescription = PERMISSION_TEXT.faceId;
+  if (capabilities.includes("localAuthentication")) infoPlist.NSFaceIDUsageDescription = PERMISSION_TEXT.faceId;
 
   return infoPlist;
 }
 
-function buildAndroidConfig(appKey, app, features, googleServicesFile) {
-  const { needsMicrophone } = nativeCapabilities(features);
+function buildAndroidConfig(appKey, app, capabilities, googleServicesFile) {
+  const { needsMicrophone } = mediaCapabilities(capabilities);
   const adaptiveIcon = appAsset(appKey, "adaptive-icon.png");
   const android = {
     package: app.androidPackage,
@@ -91,12 +93,12 @@ function buildAndroidConfig(appKey, app, features, googleServicesFile) {
     };
   }
 
-  if (features.includes("notifications") && googleServicesFile) {
+  if (capabilities.includes("notifications") && googleServicesFile) {
     android.googleServicesFile = googleServicesFile;
   }
 
   const androidMapsKey = resolveAppEnvironmentValue("GOOGLE_MAPS_ANDROID_API_KEY", appKey);
-  if (features.includes("maps") && androidMapsKey) {
+  if (capabilities.includes("maps") && androidMapsKey) {
     android.config = {
       googleMaps: {
         apiKey: androidMapsKey,
@@ -107,15 +109,15 @@ function buildAndroidConfig(appKey, app, features, googleServicesFile) {
   return android;
 }
 
-function buildIosConfig(appKey, app, features) {
+function buildIosConfig(appKey, app, capabilities) {
   const ios = {
     bundleIdentifier: app.iosBundleIdentifier,
     supportsTablet: false,
-    infoPlist: buildInfoPlist(features),
+    infoPlist: buildInfoPlist(capabilities),
   };
 
   const iosMapsKey = resolveAppEnvironmentValue("GOOGLE_MAPS_IOS_API_KEY", appKey);
-  if (features.includes("maps") && iosMapsKey) {
+  if (capabilities.includes("maps") && iosMapsKey) {
     ios.config = {
       googleMapsApiKey: iosMapsKey,
     };
@@ -137,33 +139,35 @@ function buildSentryPlugin(sentry) {
   ];
 }
 
-function buildPlugins(appKey, features, sentry) {
+function buildPlugins(appKey, capabilities, sentry) {
   const {
     hasCamera,
     hasAudioRecording,
     hasVideoPlayback,
     needsMicrophone,
-  } = nativeCapabilities(features);
+  } = mediaCapabilities(capabilities);
 
-  const plugins = [
-    [
+  const plugins = [];
+
+  if (capabilities.includes("imagePicker") && hasRuntimeDependency(appKey, "expo-image-picker")) {
+    plugins.push([
       "expo-image-picker",
       {
         photosPermission: PERMISSION_TEXT.photos,
         cameraPermission: hasCamera ? PERMISSION_TEXT.camera : false,
         microphonePermission: needsMicrophone ? PERMISSION_TEXT.microphone : false,
       },
-    ],
-  ];
+    ]);
+  }
 
-  if (features.includes("documentPicker") && hasRuntimeDependency(appKey, "expo-document-picker")) {
+  if (capabilities.includes("documentPicker") && hasRuntimeDependency(appKey, "expo-document-picker")) {
     plugins.push("expo-document-picker");
   }
 
   const sentryPlugin = buildSentryPlugin(sentry);
   if (sentryPlugin) plugins.push(sentryPlugin);
 
-  if (features.includes("maps") && hasRuntimeDependency(appKey, "react-native-maps")) {
+  if (capabilities.includes("maps") && hasRuntimeDependency(appKey, "react-native-maps")) {
     const androidMapsKey = resolveAppEnvironmentValue("GOOGLE_MAPS_ANDROID_API_KEY", appKey);
     const iosMapsKey = resolveAppEnvironmentValue("GOOGLE_MAPS_IOS_API_KEY", appKey);
     const mapPluginOptions = {
@@ -175,10 +179,10 @@ function buildPlugins(appKey, features, sentry) {
       : "react-native-maps");
   }
 
-  if (features.includes("router")) plugins.push("expo-router");
-  if (features.includes("updates")) plugins.push("expo-updates");
+  if (capabilities.includes("router")) plugins.push("expo-router");
+  if (capabilities.includes("updates")) plugins.push("expo-updates");
 
-  if (features.includes("splashScreen")) {
+  if (capabilities.includes("splashScreen")) {
     const splashIcon = appAsset(appKey, "splash-icon.png");
     plugins.push(splashIcon ? [
       "expo-splash-screen",
@@ -191,7 +195,7 @@ function buildPlugins(appKey, features, sentry) {
     ] : "expo-splash-screen");
   }
 
-  if (features.includes("localAuthentication")) {
+  if (capabilities.includes("localAuthentication")) {
     plugins.push([
       "expo-local-authentication",
       { faceIDPermission: PERMISSION_TEXT.faceId },
@@ -222,13 +226,13 @@ function buildPlugins(appKey, features, sentry) {
   }
 
   if (hasVideoPlayback) plugins.push("expo-video");
-  if (features.includes("sharing")) plugins.push("expo-sharing");
-  if (features.includes("webBrowser")) plugins.push("expo-web-browser");
-  if (features.includes("sqlite")) plugins.push("expo-sqlite");
-  if (features.includes("taskManager")) plugins.push("expo-task-manager");
-  if (features.includes("backgroundTask")) plugins.push("expo-background-task");
+  if (capabilities.includes("sharing")) plugins.push("expo-sharing");
+  if (capabilities.includes("webBrowser")) plugins.push("expo-web-browser");
+  if (capabilities.includes("sqlite")) plugins.push("expo-sqlite");
+  if (capabilities.includes("taskManager")) plugins.push("expo-task-manager");
+  if (capabilities.includes("backgroundTask")) plugins.push("expo-background-task");
 
-  if (features.includes("backgroundLocation")) {
+  if (capabilities.includes("backgroundLocation")) {
     plugins.push([
       "expo-location",
       {
@@ -239,14 +243,14 @@ function buildPlugins(appKey, features, sentry) {
         isIosBackgroundLocationEnabled: true,
       },
     ]);
-  } else if (features.includes("location")) {
+  } else if (capabilities.includes("location")) {
     plugins.push([
       "expo-location",
       { locationWhenInUsePermission: PERMISSION_TEXT.locationWhenInUse },
     ]);
   }
 
-  if (features.includes("notifications")) {
+  if (capabilities.includes("notifications")) {
     const notificationIcon = appAsset(appKey, "notification-icon.png");
     plugins.push([
       "expo-notifications",
@@ -257,7 +261,8 @@ function buildPlugins(appKey, features, sentry) {
     ]);
   }
 
-  if (features.includes("secureStore")) plugins.push("expo-secure-store");
+  if (capabilities.includes("secureStore")) plugins.push("expo-secure-store");
+
   return plugins;
 }
 
@@ -265,13 +270,13 @@ function defineBthwaniExpoApp(appKey) {
   const app = manifest.apps[appKey];
   if (!app) throw new Error(`Unknown BThwani mobile app: ${appKey}`);
 
-  const features = app.features || [];
+  const capabilities = app.nativeCapabilities;
   const sentry = resolveSentryEnvironment(appKey);
   const googleServicesFile = resolveGoogleServicesFile(appKey, process.env);
   const androidMapsKey = resolveAppEnvironmentValue("GOOGLE_MAPS_ANDROID_API_KEY", appKey);
   const iosMapsKey = resolveAppEnvironmentValue("GOOGLE_MAPS_IOS_API_KEY", appKey);
   const sentryNativeConfigured = Boolean(sentry.dsn && sentry.organization && sentry.project);
-  const hasMapsFeature = features.includes("maps");
+  const hasMapsCapability = capabilities.includes("maps");
   const mapsNativeDependencyInstalled = hasRuntimeDependency(appKey, "react-native-maps");
   return {
     name: app.name,
@@ -290,13 +295,15 @@ function defineBthwaniExpoApp(appKey) {
     },
     orientation: "portrait",
     userInterfaceStyle: "light",
-    android: buildAndroidConfig(appKey, app, features, googleServicesFile),
-    ios: buildIosConfig(appKey, app, features),
-    plugins: buildPlugins(appKey, features, sentry),
+    android: buildAndroidConfig(appKey, app, capabilities, googleServicesFile),
+    ios: buildIosConfig(appKey, app, capabilities),
+    plugins: buildPlugins(appKey, capabilities, sentry),
     extra: {
       appKey,
       appLine: manifest.global.appLine,
       sourceRepo: manifest.global.sourceRepo,
+      productFeatures: Object.keys(app.productFeatures),
+      nativeCapabilities: capabilities,
       sentry: {
         enabled: Boolean(sentry.dsn),
         nativeConfigured: sentryNativeConfigured,
@@ -312,8 +319,8 @@ function defineBthwaniExpoApp(appKey) {
         androidNativeConfigured: Boolean(googleServicesFile),
       },
       maps: {
-        androidNativeConfigured: Boolean(hasMapsFeature && androidMapsKey),
-        iosNativeConfigured: Boolean(hasMapsFeature && iosMapsKey),
+        androidNativeConfigured: Boolean(hasMapsCapability && androidMapsKey),
+        iosNativeConfigured: Boolean(hasMapsCapability && iosMapsKey),
         nativeDependencyInstalled: mapsNativeDependencyInstalled,
       },
       eas: { projectId: app.projectId },

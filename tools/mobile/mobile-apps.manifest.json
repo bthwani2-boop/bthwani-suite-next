@@ -6,7 +6,8 @@
     "version": "0.3.0",
     "node": "24.17.0",
     "pnpm": "10.34.0",
-    "runtimeTypeScript": "npm:@typescript/typescript6@6.0.2"
+    "runtimeTypeScript": "npm:@typescript/typescript6@6.0.2",
+    "capabilityModelVersion": 1
   },
   "apps": {
     "app-client": {
@@ -16,7 +17,29 @@
       "androidPackage": "com.bthwani.client.next",
       "iosBundleIdentifier": "com.bthwani.client.next",
       "projectId": "abec897b-1f5f-409d-8286-607a5a6b69e2",
-      "features": ["router", "updates", "constants", "application", "device", "crypto", "image", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "imageManipulator", "sharing", "webBrowser", "sqlite", "location", "maps"]
+      "productFeatures": {
+        "identitySession": ["secureStore", "crypto"],
+        "homeDiscovery": [],
+        "reels": ["video"],
+        "storeDiscovery": [],
+        "search": [],
+        "cart": [],
+        "checkout": [],
+        "orders": [],
+        "orderTracking": ["maps"],
+        "pickupSession": [],
+        "specialRequests": ["imagePicker", "documentPicker"],
+        "profile": [],
+        "addresses": ["location", "maps"],
+        "identityHub": [],
+        "benefits": [],
+        "preferences": [],
+        "support": ["imagePicker", "documentPicker"],
+        "notifications": ["notifications"],
+        "ratings": [],
+        "wallet": []
+      },
+      "nativeCapabilities": ["router", "updates", "constants", "application", "device", "crypto", "image", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "imageManipulator", "sharing", "webBrowser", "sqlite", "location", "maps"]
     },
     "app-partner": {
       "name": "بثواني الشريك",
@@ -25,7 +48,30 @@
       "androidPackage": "com.bthwani.partner.next",
       "iosBundleIdentifier": "com.bthwani.partner.next",
       "projectId": "4cde7be0-7582-4a6b-9ae0-d74f2d149580",
-      "features": ["router", "updates", "constants", "application", "device", "crypto", "image", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "imageManipulator", "sharing", "webBrowser", "keepAwake", "sqlite", "location", "maps"]
+      "productFeatures": {
+        "identitySession": ["secureStore", "crypto"],
+        "storeScope": [],
+        "partnerOnboarding": ["documentPicker", "imagePicker"],
+        "orders": [],
+        "orderLifecycle": [],
+        "timers": [],
+        "inventory": [],
+        "catalog": [],
+        "categories": [],
+        "products": [],
+        "productMedia": ["camera", "imagePicker", "imageManipulator", "video"],
+        "reels": ["video", "imagePicker"],
+        "promotions": [],
+        "ratings": [],
+        "analytics": [],
+        "commercial": [],
+        "operations": [],
+        "notifications": ["notifications"],
+        "support": ["documentPicker", "imagePicker"],
+        "wallet": [],
+        "storeSettings": []
+      },
+      "nativeCapabilities": ["router", "updates", "constants", "application", "device", "crypto", "image", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "imageManipulator", "sharing", "webBrowser", "keepAwake", "sqlite", "location", "maps"]
     },
     "app-captain": {
       "name": "بثواني الكابتن",
@@ -34,7 +80,27 @@
       "androidPackage": "com.bthwani.captain.next",
       "iosBundleIdentifier": "com.bthwani.captain.next",
       "projectId": "07382a76-4dc5-460f-b4a7-7105d724bae6",
-      "features": ["updates", "constants", "crypto", "battery", "splashScreen", "documentPicker", "imagePicker", "secureStore", "notifications", "camera", "location", "backgroundLocation", "maps"]
+      "productFeatures": {
+        "identitySession": ["secureStore", "crypto"],
+        "workforce": [],
+        "availability": [],
+        "dispatch": ["notifications"],
+        "assignment": [],
+        "activeTask": [],
+        "pickup": [],
+        "delivery": [],
+        "navigation": ["location", "backgroundLocation", "maps"],
+        "gps": ["location"],
+        "proofOfDelivery": ["camera", "imagePicker"],
+        "support": [],
+        "finance": [],
+        "codCustody": [],
+        "documents": ["documentPicker"],
+        "rating": [],
+        "account": [],
+        "offlineSync": ["battery"]
+      },
+      "nativeCapabilities": ["updates", "constants", "crypto", "battery", "splashScreen", "documentPicker", "imagePicker", "secureStore", "notifications", "camera", "location", "backgroundLocation", "maps"]
     },
     "app-field": {
       "name": "بثواني الميدان",
@@ -43,7 +109,28 @@
       "androidPackage": "com.bthwani.field.next",
       "iosBundleIdentifier": "com.bthwani.field.next",
       "projectId": "08b6c8dc-80a2-4271-9904-d941a3d98914",
-      "features": ["router", "updates", "constants", "application", "device", "crypto", "image", "battery", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "location", "maps", "imageManipulator", "sqlite", "taskManager", "backgroundTask", "sharing", "webBrowser"]
+      "productFeatures": {
+        "identitySession": ["secureStore", "crypto"],
+        "workforce": [],
+        "profileCompletion": ["imagePicker"],
+        "stores": [],
+        "visit": ["location", "maps"],
+        "checklist": [],
+        "verification": ["camera", "imagePicker", "location"],
+        "partnerOnboarding": ["camera", "imagePicker", "documentPicker", "location"],
+        "evidence": ["camera", "imagePicker", "documentPicker"],
+        "partnerProgress": [],
+        "catalog": [],
+        "products": [],
+        "productsUpload": ["documentPicker", "imagePicker"],
+        "assortment": [],
+        "workQueue": [],
+        "escalation": ["camera", "imagePicker", "documentPicker"],
+        "offlineSync": ["battery", "taskManager", "backgroundTask"],
+        "notifications": ["notifications"],
+        "finance": []
+      },
+      "nativeCapabilities": ["router", "updates", "constants", "application", "device", "crypto", "image", "battery", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "location", "maps", "imageManipulator", "sqlite", "taskManager", "backgroundTask", "sharing", "webBrowser"]
     }
   }
 }
