@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useRef, useCallback, useState } from "react";
-import { subscribeBthwaniConnectivity } from "@bthwani/data-runtime";
+import { subscribeBthwaniConnectivity } from "@bthwani/data-runtime/native-data-adapters";
 import {
   configureFieldOfflineQueueScope,
   prepareFieldOfflineQueue,
