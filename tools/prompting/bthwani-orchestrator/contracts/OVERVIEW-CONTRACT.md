@@ -48,10 +48,10 @@ Before first JIT sequence, root reconciliation must pass; sequence creation esta
 ## Required Sections
 
 ```text
-1. Truth / Root Baseline
+1. Truth Baseline
 2. Macro Blueprint / Dependency Graph
 3. Sequence Registry / Execution Frontier
-4. Global Decisions / Blockers / Foreign Deltas
+4. Global Decisions / Blockers
 5. Global Accounting / Coverage / Reconciliation
 6. Final Target Handoff / Closure
 ```
