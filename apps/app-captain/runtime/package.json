@@ -79,7 +79,6 @@
       "expo-image": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
       "expo-image-manipulator": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
       "expo-keep-awake": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
-      "expo-linking": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
       "expo-local-authentication": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
       "expo-localization": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
       "expo-sharing": { "status": "DEPRECATED_CANDIDATE", "removalTrigger": "Captain native cleanup window with fresh device-build evidence" },
