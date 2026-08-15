@@ -10,30 +10,29 @@ BASE_SHA: __BASE_SHA__
 LATEST_RECONCILED_SHA: __BASE_SHA__
 ROOT: __TARGET__
 STATUS: DIAGNOSING
-ROOT_RECONCILED: NO
-LANDSCAPE_READY: NO
-FRONTIER_PROVEN: NO
-UNACCOUNTED_FINDINGS: UNSET
-IMPLEMENTATION_COMPLETE: NO
-CLEANUP_COMPLETE: NO
+ISOLATION_READY: NO
+INTEGRATION_OWNER: UNASSIGNED
+READINESS: ROOT=NO LANDSCAPE=NO PRIORITY=NO FRONTIER=NO NEGATIVE_SPACE=NO ADVERSARIAL=NO VERIFICATION_DEFINED=NO
+UNACCOUNTED: FINDINGS=UNSET DECISIONS=UNSET CONSUMERS=UNSET DEPENDENCIES=UNSET SCOPE_DELTAS=UNSET
+COMPLETION: IMPLEMENTATION=NO CONSUMERS=NO CLEANUP=NO VERIFICATION=NO EVIDENCE=NO GOVERNANCE=NO FRESH_HEAD=NO FINAL_ADVERSARIAL=NO
 RUNTIME_REQUIRED: UNSET
 PRODUCT_EVIDENCE: MISSING
 CLOSURE: OPEN
 
-## Graph
+## Root-Cause Graph
 
-| RC | Root cause | Depends on | Impact | Priority | Disposition |
-|---|---|---|---|---|---|
+| RC | Root cause | Operational impact | Depends on | Blast / unlock | Priority | Disposition |
+|---|---|---|---|---|---|---|
 
-## Findings
+## Ledger
 
-| Finding | RC | Evidence | Status |
-|---|---|---|---|
+| Type | ID | RC | Evidence / decision / consumer / delta | Status |
+|---|---|---|---|---|
 
 ## Frontier
 
-| Work | RC | Depends on | State | Evidence |
-|---|---|---|---|---|
+| Work | RC | Depends on | Blocks / unlocks | Conflict | Owner | Parallel | State | Evidence |
+|---|---|---|---|---|---|---|---|---|
 
 ## Closure
 

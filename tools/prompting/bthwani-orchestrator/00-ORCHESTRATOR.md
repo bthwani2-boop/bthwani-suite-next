@@ -5,6 +5,8 @@ PUBLIC_SURFACE: 4_FILES
 PACKAGE_MODEL: ONE_TASK_ONE_PACKAGE
 CLI_MODEL: ONE_TOOL_TWO_COMMANDS
 PRIORITY_POLICY: SYSTEMIC_LEVERAGE
+ACCOUNTING_POLICY: ZERO_UNACCOUNTED_BEFORE_FRONTIER
+PREPARE_POLICY: PREPARED_NOT_CLOSED
 WRITE_POLICY: ISOLATED_TASK_BRANCH
 INTEGRATION_POLICY: ONE_INTEGRATION_OWNER
 CLOSURE_POLICY: EVIDENCE_ONLY
@@ -42,7 +44,7 @@ Truth states:
 
 `ACTUAL | INTENDED_AUTHORIZED | DESIRED_RESOLVED | CONFLICT`
 
-Every material finding must be accounted. Silent loss is forbidden.
+Every material finding, decision, consumer, dependency, and scope delta must be accounted. Silent loss is forbidden.
 
 Reuse before create:
 
@@ -68,8 +70,29 @@ Priority is the highest proven systemic leverage:
 Never prioritize by recency, finding count alone, changed-file count, easiest fix,
 last topic, or sequence number.
 
+Every root-cause row must place the issue operationally: outcome/actor plus affected
+journey, state, authority, handoff, and canonical truth where applicable. Every
+frontier row must state dependency, block/unlock effect, conflict domain, owner,
+parallel safety, state, and evidence.
+
 A stronger upstream root invalidates the affected ranking/frontier. Resolve it,
 invalidate affected descendants, rerank, and resume only if still justified.
+
+## Package gates
+
+The package compresses the former detailed state into three machine lines:
+
+- `READINESS`: root, landscape, priority, frontier, negative-space pass,
+  adversarial pass, and verification definition.
+- `UNACCOUNTED`: findings, decisions, consumers, dependencies, and scope deltas.
+- `COMPLETION`: implementation, consumers, cleanup, verification, evidence,
+  governance sync, fresh-head proof, and final adversarial pass.
+
+`prepare` and `execute` require all READINESS values `YES`, all UNACCOUNTED values
+`0`, and proven task isolation. `PREPARE_ONLY` terminates at `STATUS=PREPARED` and
+must not claim execution closure. `close` additionally requires every COMPLETION
+value `YES`, an assigned Integration Owner, current integration head, and required
+runtime/product proof.
 
 ## Execution
 
@@ -104,9 +127,10 @@ duplicate-truth, temporary, debug, and generated noise.
 Closure requires:
 
 - live integration head reconciled
-- `UNACCOUNTED_FINDINGS=0`
+- zero unaccounted findings/decisions/consumers/dependencies/scope deltas
 - current root, landscape, ranking, and frontier
-- implementation and cleanup complete
+- implementation, consumer reconciliation, cleanup, verification, evidence, and governance complete
+- fresh-head and final adversarial passes
 - executable evidence for executable claims
 - runtime/product evidence for runtime/product claims
 - no invented CI/test/runtime evidence

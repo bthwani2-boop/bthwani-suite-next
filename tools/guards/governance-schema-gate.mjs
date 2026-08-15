@@ -38,18 +38,41 @@ for (const marker of [
   "PACKAGE_MODEL: ONE_TASK_ONE_PACKAGE",
   "CLI_MODEL: ONE_TOOL_TWO_COMMANDS",
   "PRIORITY_POLICY: SYSTEMIC_LEVERAGE",
+  "ACCOUNTING_POLICY: ZERO_UNACCOUNTED_BEFORE_FRONTIER",
+  "PREPARE_POLICY: PREPARED_NOT_CLOSED",
   "CLOSURE_POLICY: EVIDENCE_ONLY",
 ]) {
   if (!contract.includes(marker)) fail(`00-ORCHESTRATOR.md missing ${marker}`);
 }
-if (!template.includes("SCHEMA: BTHWANI_PACKAGE_V4")) {
-  fail("PACKAGE.template.md must use BTHWANI_PACKAGE_V4");
+
+for (const marker of [
+  "SCHEMA: BTHWANI_PACKAGE_V4",
+  "READINESS: ROOT=NO LANDSCAPE=NO PRIORITY=NO FRONTIER=NO NEGATIVE_SPACE=NO ADVERSARIAL=NO VERIFICATION_DEFINED=NO",
+  "UNACCOUNTED: FINDINGS=UNSET DECISIONS=UNSET CONSUMERS=UNSET DEPENDENCIES=UNSET SCOPE_DELTAS=UNSET",
+  "COMPLETION: IMPLEMENTATION=NO CONSUMERS=NO CLEANUP=NO VERIFICATION=NO EVIDENCE=NO GOVERNANCE=NO FRESH_HEAD=NO FINAL_ADVERSARIAL=NO",
+  "## Root-Cause Graph",
+  "## Ledger",
+  "## Frontier",
+  "## Closure",
+]) {
+  if (!template.includes(marker)) fail(`PACKAGE.template.md missing ${marker}`);
 }
-for (const marker of ['const SCHEMA = "BTHWANI_PACKAGE_V4"', 'command === "new"', 'command === "check"']) {
+
+for (const marker of [
+  'const SCHEMA = "BTHWANI_PACKAGE_V4"',
+  '"diagnose", "prepare", "execute", "close"',
+  'command === "new"',
+  'command === "check"',
+  'requireZero(state.accounting, "UNACCOUNTED")',
+  'requireYes(state.completion, "COMPLETION")',
+]) {
   if (!cli.includes(marker)) fail(`orchestrator.mjs missing ${marker}`);
 }
 if (!readme.includes("One public tool = `orchestrator.mjs`.")) {
   fail("README.md does not declare the single public tool");
+}
+if (!readme.includes("`PREPARE_ONLY` terminates at `PREPARED`")) {
+  fail("README.md does not preserve PREPARE_ONLY terminal semantics");
 }
 
 const forbiddenRootPlan = /^(?:_template|frontier-derivation-gate\.mjs|migrate-package-v3(?:-core)?\.mjs|new-package(?:-core)?\.mjs|new-sequence(?:-core)?\.mjs|operational-root-gate(?:-core)?\.mjs|root-anchor-gate(?:-core)?\.mjs|root-cause-priority-gate(?:-core)?\.mjs|task-isolation-gate(?:-core)?\.mjs|validate-package(?:-core)?\.mjs|expand-v3-.+)$/i;

@@ -7,11 +7,32 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const TEMPLATE = path.join(HERE, "PACKAGE.template.md");
 const SCHEMA = "BTHWANI_PACKAGE_V4";
 const MODES = new Set(["PREPARE_ONLY", "EXECUTE_END_TO_END"]);
-const PHASES = new Set(["diagnose", "execute", "close"]);
-const STATUSES = new Set(["DIAGNOSING", "READY", "EXECUTING", "BLOCKED", "VERIFYING", "CLOSED"]);
+const PHASES = new Set(["diagnose", "prepare", "execute", "close"]);
+const STATUSES = new Set(["DIAGNOSING", "READY", "PREPARED", "EXECUTING", "BLOCKED", "VERIFYING", "CLOSED"]);
 const SHA = /^[0-9a-f]{40}$/i;
 const NAME = /^[a-z0-9][a-z0-9._-]{0,79}$/;
 const BRANCH = /^[A-Za-z0-9][A-Za-z0-9._/-]*$/;
+
+const READINESS_KEYS = [
+  "ROOT",
+  "LANDSCAPE",
+  "PRIORITY",
+  "FRONTIER",
+  "NEGATIVE_SPACE",
+  "ADVERSARIAL",
+  "VERIFICATION_DEFINED",
+];
+const ACCOUNTING_KEYS = ["FINDINGS", "DECISIONS", "CONSUMERS", "DEPENDENCIES", "SCOPE_DELTAS"];
+const COMPLETION_KEYS = [
+  "IMPLEMENTATION",
+  "CONSUMERS",
+  "CLEANUP",
+  "VERIFICATION",
+  "EVIDENCE",
+  "GOVERNANCE",
+  "FRESH_HEAD",
+  "FINAL_ADVERSARIAL",
+];
 
 function fail(message) {
   console.error(`orchestrator: FAIL: ${message}`);
@@ -58,21 +79,40 @@ function branch(value, label) {
   return clean;
 }
 
-function field(text, key) {
+function lineValue(text, key) {
   const match = text.match(new RegExp(`^${key}:\\s*(.*)$`, "m"));
   return match ? match[1].trim() : null;
+}
+
+function requireLine(text, key) {
+  const value = lineValue(text, key);
+  if (value === null) fail(`missing field ${key}`);
+  return value;
+}
+
+function parseAssignments(text, key, expectedKeys) {
+  const raw = requireLine(text, key);
+  const values = {};
+  for (const token of raw.split(/\s+/).filter(Boolean)) {
+    const split = token.indexOf("=");
+    if (split <= 0 || split === token.length - 1) fail(`${key} has invalid token ${token}`);
+    const name = token.slice(0, split);
+    const value = token.slice(split + 1);
+    if (!expectedKeys.includes(name)) fail(`${key} has unknown key ${name}`);
+    if (Object.hasOwn(values, name)) fail(`${key} duplicates ${name}`);
+    values[name] = value;
+  }
+  for (const name of expectedKeys) {
+    if (!Object.hasOwn(values, name)) fail(`${key} missing ${name}`);
+  }
+  if (Object.keys(values).length !== expectedKeys.length) fail(`${key} has unexpected assignments`);
+  return values;
 }
 
 function bullet(text, key) {
   const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const match = text.match(new RegExp(`^- ${escaped}:\\s*(.*)$`, "m"));
   return match ? match[1].trim() : null;
-}
-
-function requireField(text, key) {
-  const value = field(text, key);
-  if (value === null) fail(`missing field ${key}`);
-  return value;
 }
 
 function replaceToken(text, token, value) {
@@ -85,6 +125,77 @@ function resolvePackage(input) {
   if (!fs.existsSync(resolved)) fail(`package path does not exist: ${input}`);
   const stat = fs.statSync(resolved);
   return stat.isDirectory() ? path.join(resolved, "PACKAGE.md") : resolved;
+}
+
+function requireYes(values, label) {
+  for (const [key, value] of Object.entries(values)) {
+    if (value !== "YES") fail(`${label}.${key} must be YES`);
+  }
+}
+
+function requireZero(values, label) {
+  for (const [key, value] of Object.entries(values)) {
+    if (value !== "0") fail(`${label}.${key} must be 0`);
+  }
+}
+
+function validateShape(text, liveHead) {
+  if (/__[A-Z0-9_]+__/.test(text)) fail("unresolved template placeholder");
+  for (const heading of ["## Root-Cause Graph", "## Ledger", "## Frontier", "## Closure"]) {
+    if (!text.includes(heading)) fail(`missing section ${heading}`);
+  }
+
+  const keys = [
+    "SCHEMA",
+    "TASK_ID",
+    "TARGET",
+    "MODE",
+    "INTEGRATION_BRANCH",
+    "TASK_BRANCH",
+    "BASE_SHA",
+    "LATEST_RECONCILED_SHA",
+    "ROOT",
+    "STATUS",
+    "ISOLATION_READY",
+    "INTEGRATION_OWNER",
+    "RUNTIME_REQUIRED",
+    "PRODUCT_EVIDENCE",
+    "CLOSURE",
+  ];
+  const values = Object.fromEntries(keys.map((key) => [key, requireLine(text, key)]));
+  const readiness = parseAssignments(text, "READINESS", READINESS_KEYS);
+  const accounting = parseAssignments(text, "UNACCOUNTED", ACCOUNTING_KEYS);
+  const completion = parseAssignments(text, "COMPLETION", COMPLETION_KEYS);
+
+  if (values.SCHEMA !== SCHEMA) fail(`SCHEMA must be ${SCHEMA}`);
+  if (!MODES.has(values.MODE)) fail("invalid MODE");
+  if (!SHA.test(values.BASE_SHA)) fail("invalid BASE_SHA");
+  if (!SHA.test(values.LATEST_RECONCILED_SHA)) fail("invalid LATEST_RECONCILED_SHA");
+  if (values.LATEST_RECONCILED_SHA.toLowerCase() !== liveHead.toLowerCase()) {
+    fail("package is stale: LATEST_RECONCILED_SHA differs from --head");
+  }
+  if (values.ROOT !== values.TARGET) fail("ROOT must equal TARGET");
+  if (branch(values.INTEGRATION_BRANCH, "INTEGRATION_BRANCH") === branch(values.TASK_BRANCH, "TASK_BRANCH")) {
+    fail("TASK_BRANCH must differ from INTEGRATION_BRANCH");
+  }
+  if (!STATUSES.has(values.STATUS)) fail("invalid STATUS");
+  if (!new Set(["YES", "NO"]).has(values.ISOLATION_READY)) fail("ISOLATION_READY must be YES or NO");
+  for (const [key, value] of Object.entries(readiness)) {
+    if (!new Set(["YES", "NO"]).has(value)) fail(`READINESS.${key} must be YES or NO`);
+  }
+  for (const [key, value] of Object.entries(accounting)) {
+    if (value !== "UNSET" && !/^\d+$/.test(value)) fail(`UNACCOUNTED.${key} must be UNSET or an integer`);
+  }
+  for (const [key, value] of Object.entries(completion)) {
+    if (!new Set(["YES", "NO"]).has(value)) fail(`COMPLETION.${key} must be YES or NO`);
+  }
+  return { values, readiness, accounting, completion };
+}
+
+function requireReady(state) {
+  if (state.values.ISOLATION_READY !== "YES") fail("ISOLATION_READY must be YES");
+  requireYes(state.readiness, "READINESS");
+  requireZero(state.accounting, "UNACCOUNTED");
 }
 
 function commandNew(tokens) {
@@ -126,72 +237,30 @@ function commandCheck(tokens) {
   const liveHead = oneLine(args.head, "head");
   if (!SHA.test(liveHead)) fail("head must be a 40-character commit SHA");
   const phase = oneLine(args.phase, "phase");
-  if (!PHASES.has(phase)) fail("phase must be diagnose, execute, or close");
+  if (!PHASES.has(phase)) fail("phase must be diagnose, prepare, execute, or close");
 
   const packagePath = resolvePackage(args.package);
   if (!fs.existsSync(packagePath)) fail(`PACKAGE.md is missing: ${packagePath}`);
   const text = fs.readFileSync(packagePath, "utf8");
-  if (/__[A-Z0-9_]+__/.test(text)) fail("unresolved template placeholder");
-  for (const heading of ["## Graph", "## Findings", "## Frontier", "## Closure"]) {
-    if (!text.includes(heading)) fail(`missing section ${heading}`);
-  }
-
-  const required = [
-    "SCHEMA",
-    "TASK_ID",
-    "TARGET",
-    "MODE",
-    "INTEGRATION_BRANCH",
-    "TASK_BRANCH",
-    "BASE_SHA",
-    "LATEST_RECONCILED_SHA",
-    "ROOT",
-    "STATUS",
-    "ROOT_RECONCILED",
-    "LANDSCAPE_READY",
-    "FRONTIER_PROVEN",
-    "UNACCOUNTED_FINDINGS",
-    "IMPLEMENTATION_COMPLETE",
-    "CLEANUP_COMPLETE",
-    "RUNTIME_REQUIRED",
-    "PRODUCT_EVIDENCE",
-    "CLOSURE",
-  ];
-  const values = Object.fromEntries(required.map((key) => [key, requireField(text, key)]));
-
-  if (values.SCHEMA !== SCHEMA) fail(`SCHEMA must be ${SCHEMA}`);
-  if (!MODES.has(values.MODE)) fail("invalid MODE");
-  if (!SHA.test(values.BASE_SHA)) fail("invalid BASE_SHA");
-  if (!SHA.test(values.LATEST_RECONCILED_SHA)) fail("invalid LATEST_RECONCILED_SHA");
-  if (values.LATEST_RECONCILED_SHA.toLowerCase() !== liveHead.toLowerCase()) {
-    fail("package is stale: LATEST_RECONCILED_SHA differs from --head");
-  }
-  if (values.ROOT !== values.TARGET) fail("ROOT must equal TARGET");
-  if (branch(values.INTEGRATION_BRANCH, "INTEGRATION_BRANCH") === branch(values.TASK_BRANCH, "TASK_BRANCH")) {
-    fail("TASK_BRANCH must differ from INTEGRATION_BRANCH");
-  }
-  if (!STATUSES.has(values.STATUS)) fail("invalid STATUS");
-
-  const accounted = values.UNACCOUNTED_FINDINGS;
-  if (accounted !== "UNSET" && !/^\d+$/.test(accounted)) {
-    fail("UNACCOUNTED_FINDINGS must be UNSET or a non-negative integer");
-  }
+  const state = validateShape(text, liveHead);
 
   if (phase === "diagnose") {
     console.log("orchestrator: PASS (diagnose)");
     return;
   }
 
-  if (values.MODE !== "EXECUTE_END_TO_END") fail(`${phase} requires MODE=EXECUTE_END_TO_END`);
-  for (const [key, value] of [
-    ["ROOT_RECONCILED", values.ROOT_RECONCILED],
-    ["LANDSCAPE_READY", values.LANDSCAPE_READY],
-    ["FRONTIER_PROVEN", values.FRONTIER_PROVEN],
-  ]) {
-    if (value !== "YES") fail(`${key} must be YES`);
+  requireReady(state);
+
+  if (phase === "prepare") {
+    if (state.values.MODE !== "PREPARE_ONLY") fail("prepare requires MODE=PREPARE_ONLY");
+    if (state.values.STATUS !== "PREPARED") fail("prepare requires STATUS=PREPARED");
+    if (state.values.CLOSURE !== "OPEN") fail("PREPARE_ONLY must not claim execution closure");
+    console.log("orchestrator: PASS (prepare)");
+    return;
   }
-  if (accounted !== "0") fail("UNACCOUNTED_FINDINGS must be 0");
-  if (!new Set(["READY", "EXECUTING", "BLOCKED", "VERIFYING", "CLOSED"]).has(values.STATUS)) {
+
+  if (state.values.MODE !== "EXECUTE_END_TO_END") fail(`${phase} requires MODE=EXECUTE_END_TO_END`);
+  if (!new Set(["READY", "EXECUTING", "BLOCKED", "VERIFYING", "CLOSED"]).has(state.values.STATUS)) {
     fail("STATUS is not execution-ready");
   }
 
@@ -200,17 +269,17 @@ function commandCheck(tokens) {
     return;
   }
 
-  if (values.STATUS !== "CLOSED") fail("STATUS must be CLOSED");
-  if (values.IMPLEMENTATION_COMPLETE !== "YES") fail("IMPLEMENTATION_COMPLETE must be YES");
-  if (values.CLEANUP_COMPLETE !== "YES") fail("CLEANUP_COMPLETE must be YES");
-  if (values.CLOSURE !== "CLOSED") fail("CLOSURE must be CLOSED");
-  if (!new Set(["YES", "NO"]).has(values.RUNTIME_REQUIRED)) {
+  if (state.values.STATUS !== "CLOSED") fail("STATUS must be CLOSED");
+  if (state.values.INTEGRATION_OWNER === "UNASSIGNED") fail("INTEGRATION_OWNER must be assigned");
+  requireYes(state.completion, "COMPLETION");
+  if (state.values.CLOSURE !== "CLOSED") fail("CLOSURE must be CLOSED");
+  if (!new Set(["YES", "NO"]).has(state.values.RUNTIME_REQUIRED)) {
     fail("RUNTIME_REQUIRED must be YES or NO");
   }
-  if (values.RUNTIME_REQUIRED === "YES" && values.PRODUCT_EVIDENCE !== "PASS") {
+  if (state.values.RUNTIME_REQUIRED === "YES" && state.values.PRODUCT_EVIDENCE !== "PASS") {
     fail("runtime-required closure needs PRODUCT_EVIDENCE=PASS");
   }
-  if (values.RUNTIME_REQUIRED === "NO" && values.PRODUCT_EVIDENCE !== "N/A") {
+  if (state.values.RUNTIME_REQUIRED === "NO" && state.values.PRODUCT_EVIDENCE !== "N/A") {
     fail("non-runtime closure needs PRODUCT_EVIDENCE=N/A");
   }
 
