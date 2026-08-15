@@ -41,6 +41,7 @@ function registryHas(overview, id, filename) {
   const escaped = filename.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   return new RegExp(`\\|\\s*${id}\\s*\\|\\s*\`${escaped}\`\\s*\\|`).test(overview);
 }
+function safeBranch(value) { return /^[A-Za-z0-9._/-]+$/.test(value ?? '') && !value.includes('..'); }
 
 const violations = [];
 if (!(await exists(packageRoot)) || !(await stat(packageRoot)).isDirectory()) throw new Error('Package path must be an existing directory.');
@@ -55,13 +56,47 @@ if (!overviewText) violations.push('00-OVERVIEW.md: MISSING_REQUIRED_FILE');
 const overview = meta(overviewText);
 const unresolvedOverview = unresolved(overviewText);
 if (unresolvedOverview.length) violations.push(`00-OVERVIEW.md: UNRESOLVED_TEMPLATE_MARKERS ${unresolvedOverview.join(',')}`);
+
 if (overview.PACKAGE_SCHEMA !== 'BTHWANI_TASK_PACKAGE_V2') violations.push('00-OVERVIEW.md: PACKAGE_SCHEMA_INVALID');
 if (!/^PKG-[A-Z0-9_]+$/.test(overview.TASK_ID ?? '')) violations.push('00-OVERVIEW.md: TASK_ID_INVALID');
+if (!['NEW_INVOCATION','LEGACY_PRE_ISOLATION'].includes(overview.PACKAGE_ORIGIN)) violations.push('00-OVERVIEW.md: PACKAGE_ORIGIN_INVALID');
+if (overview.RESUME_POLICY !== 'EXPLICIT_USER_REQUEST_ONLY') violations.push('00-OVERVIEW.md: RESUME_POLICY_INVALID');
+if (overview.TASK_CONTEXT_POLICY !== 'ISOLATED_CURRENT_TASK_ONLY') violations.push('00-OVERVIEW.md: TASK_CONTEXT_POLICY_INVALID');
+if (overview.FOREIGN_DELTA_POLICY !== 'INPUT_NOT_INSTRUCTION') violations.push('00-OVERVIEW.md: FOREIGN_DELTA_POLICY_INVALID');
 if (!['PREPARE_ONLY','EXECUTE_END_TO_END'].includes(overview.MODE)) violations.push('00-OVERVIEW.md: MODE_INVALID');
+if (!safeBranch(overview.BRANCH)) violations.push('00-OVERVIEW.md: BRANCH_INVALID');
+if (overview.INTEGRATION_TARGET !== overview.BRANCH) violations.push('00-OVERVIEW.md: INTEGRATION_TARGET_MUST_EQUAL_BRANCH');
+if (!(overview.TASK_BRANCH === 'UNSET' || safeBranch(overview.TASK_BRANCH))) violations.push('00-OVERVIEW.md: TASK_BRANCH_INVALID');
+if (!['YES','NO'].includes(overview.TASK_BRANCH_READY)) violations.push('00-OVERVIEW.md: TASK_BRANCH_READY_MUST_BE_YES_OR_NO');
+if (overview.WORKSPACE_ISOLATION_POLICY !== 'LOCAL_WORKTREE_OR_REMOTE_TASK_BRANCH') violations.push('00-OVERVIEW.md: WORKSPACE_ISOLATION_POLICY_INVALID');
+if (!['UNSET','LOCAL_WORKTREE','REMOTE_TASK_BRANCH'].includes(overview.WORKSPACE_ISOLATION_MODE)) violations.push('00-OVERVIEW.md: WORKSPACE_ISOLATION_MODE_INVALID');
+if (!overview.WORKTREE_PATH) violations.push('00-OVERVIEW.md: WORKTREE_PATH_REQUIRED');
+if (!['YES','NO'].includes(overview.WORKSPACE_ISOLATION_READY)) violations.push('00-OVERVIEW.md: WORKSPACE_ISOLATION_READY_MUST_BE_YES_OR_NO');
+if (overview.DIRECT_INTEGRATION_TARGET_WRITES !== 'FORBIDDEN_EXCEPT_INTEGRATION_OWNER') violations.push('00-OVERVIEW.md: DIRECT_INTEGRATION_TARGET_WRITES_POLICY_INVALID');
+if (!['YES','NO'].includes(overview.INTEGRATION_COMPLETE)) violations.push('00-OVERVIEW.md: INTEGRATION_COMPLETE_MUST_BE_YES_OR_NO');
+
 for (const field of ['START_SHA','CURRENT_SHA','LATEST_RECONCILED_SHA']) if (!isSha(overview[field])) violations.push(`00-OVERVIEW.md: ${field}_INVALID`);
+if (!isUnsetOrSha(overview.TASK_BRANCH_BASE_SHA)) violations.push('00-OVERVIEW.md: TASK_BRANCH_BASE_SHA_INVALID');
 for (const field of ['FINAL_CANDIDATE_SHA','HEAD_AT_REVIEW_START','HEAD_AT_DECISION']) if (!isUnsetOrSha(overview[field])) violations.push(`00-OVERVIEW.md: ${field}_INVALID`);
-for (const field of ['FINDINGS_ACCOUNTED','SCOPE_DELTAS_ACCOUNTED','DECISIONS_ACCOUNTED','CONSUMERS_ACCOUNTED','EVIDENCE_ACCOUNTED','CLEANUP_ACCOUNTED','ACCOUNTING_COMPLETE','DISCOVERY_COMPLETE','DIAGNOSIS_COMPLETE','DECISION_COMPLETE','COVERAGE_COMPLETE','PACKAGE_READY','IMPLEMENTATION_COMPLETE','EVIDENCE_COMPLETE','CLEANUP_COMPLETE','GOVERNANCE_SYNC_COMPLETE','FRESH_HEAD_VALID','FINAL_ADVERSARIAL_PASS']) if (!['YES','NO'].includes(overview[field])) violations.push(`00-OVERVIEW.md: ${field}_MUST_BE_YES_OR_NO`);
+if (!['YES','NO'].includes(overview.ROOT_RECONCILIATION_REQUIRED)) violations.push('00-OVERVIEW.md: ROOT_RECONCILIATION_REQUIRED_INVALID');
+if (!isUnsetOrSha(overview.ROOT_RECONCILED_SHA)) violations.push('00-OVERVIEW.md: ROOT_RECONCILED_SHA_INVALID');
+if (!['UNSET','ROOT_GRAPH'].includes(overview.FRONTIER_DERIVATION_SOURCE)) violations.push('00-OVERVIEW.md: FRONTIER_DERIVATION_SOURCE_INVALID');
+if (!['YES','NO'].includes(overview.FRONTIER_VALID)) violations.push('00-OVERVIEW.md: FRONTIER_VALID_INVALID');
+if (overview.NAVIGATION_POLICY !== 'ROOT_ANCHORED_GRAPH_ONLY') violations.push('00-OVERVIEW.md: NAVIGATION_POLICY_INVALID');
+if (overview.LATEST_HEAD_ROLE !== 'TRUTH_INTEGRATION_BASELINE_ONLY') violations.push('00-OVERVIEW.md: LATEST_HEAD_ROLE_INVALID');
+
+for (const field of ['FINDINGS_ACCOUNTED','SCOPE_DELTAS_ACCOUNTED','DECISIONS_ACCOUNTED','CONSUMERS_ACCOUNTED','EVIDENCE_ACCOUNTED','CLEANUP_ACCOUNTED','ACCOUNTING_COMPLETE','DISCOVERY_COMPLETE','DIAGNOSIS_COMPLETE','DECISION_COMPLETE','COVERAGE_COMPLETE','PACKAGE_READY','IMPLEMENTATION_COMPLETE','EVIDENCE_COMPLETE','CLEANUP_COMPLETE','GOVERNANCE_SYNC_COMPLETE','FRESH_HEAD_VALID','FINAL_ADVERSARIAL_PASS']) {
+  if (!['YES','NO'].includes(overview[field])) violations.push(`00-OVERVIEW.md: ${field}_MUST_BE_YES_OR_NO`);
+}
 if (!overview.INTEGRATION_OWNER) violations.push('00-OVERVIEW.md: INTEGRATION_OWNER_REQUIRED');
+
+if (overview.PACKAGE_ORIGIN === 'NEW_INVOCATION') {
+  if (overview.TASK_BRANCH === 'UNSET' || overview.TASK_BRANCH === overview.INTEGRATION_TARGET) violations.push('00-OVERVIEW.md: NEW_INVOCATION_REQUIRES_DEDICATED_TASK_BRANCH');
+  if (!yes(overview.TASK_BRANCH_READY)) violations.push('00-OVERVIEW.md: NEW_INVOCATION_TASK_BRANCH_NOT_READY');
+  if (!yes(overview.WORKSPACE_ISOLATION_READY)) violations.push('00-OVERVIEW.md: NEW_INVOCATION_WORKSPACE_ISOLATION_NOT_READY');
+  if (!['LOCAL_WORKTREE','REMOTE_TASK_BRANCH'].includes(overview.WORKSPACE_ISOLATION_MODE)) violations.push('00-OVERVIEW.md: NEW_INVOCATION_ISOLATION_MODE_NOT_READY');
+}
+
 for (const h of ['## 1. Truth Baseline','## 2. Macro Blueprint / Dependency Graph','## 3. Sequence Registry / Execution Frontier','## 4. Global Decisions / Blockers','## 5. Global Accounting / Coverage / Reconciliation','## 6. Final Target Handoff / Closure']) requireHeading(violations,'00-OVERVIEW.md',overviewText,h);
 
 const seqFiles = files.filter((f) => /^\d{3}-[a-z0-9-]+\.md$/.test(f)).sort();
@@ -76,7 +111,7 @@ for (let i = 0; i < seqFiles.length; i += 1) {
   const id = `SEQ-${order}`;
   if (m.SEQUENCE_ID !== id) violations.push(`${filename}: SEQUENCE_ID_INVALID expected ${id}`);
   if (m.SEQUENCE_ORDER !== order) violations.push(`${filename}: SEQUENCE_ORDER_INVALID expected ${order}`);
-  for (const field of ['TASK_ID','REPOSITORY','BRANCH','MODE']) if ((m[field] ?? '') !== (overview[field] ?? '')) violations.push(`${filename}: ${field}_MISMATCH`);
+  for (const field of ['TASK_ID','REPOSITORY','BRANCH','TASK_BRANCH','MODE']) if ((m[field] ?? '') !== (overview[field] ?? '')) violations.push(`${filename}: ${field}_MISMATCH`);
   for (const field of ['BASE_SHA','RECONCILED_HEAD_SHA']) if (!isSha(m[field])) violations.push(`${filename}: ${field}_INVALID`);
   if (!m.DERIVATION_BASIS) violations.push(`${filename}: DERIVATION_BASIS_REQUIRED`);
   if (!allowedStatuses.has(m.SEQUENCE_STATUS)) violations.push(`${filename}: SEQUENCE_STATUS_INVALID ${m.SEQUENCE_STATUS ?? '<missing>'}`);
@@ -123,6 +158,18 @@ function selectedRecord(label) {
   if (frontier.length !== 1) { violations.push(`${label}: REQUIRE --sequence SEQ-NNN WHEN FRONTIER_SIZE=${frontier.length}`); return null; }
   return byId.get(frontier[0]);
 }
+function requireIsolation(label) {
+  if (overview.TASK_BRANCH === 'UNSET' || overview.TASK_BRANCH === overview.INTEGRATION_TARGET) violations.push(`00-OVERVIEW.md: ${label}_DEDICATED_TASK_BRANCH_REQUIRED`);
+  if (!yes(overview.TASK_BRANCH_READY)) violations.push(`00-OVERVIEW.md: ${label}_TASK_BRANCH_NOT_READY`);
+  if (!yes(overview.WORKSPACE_ISOLATION_READY)) violations.push(`00-OVERVIEW.md: ${label}_WORKSPACE_ISOLATION_NOT_READY`);
+  if (!['LOCAL_WORKTREE','REMOTE_TASK_BRANCH'].includes(overview.WORKSPACE_ISOLATION_MODE)) violations.push(`00-OVERVIEW.md: ${label}_WORKSPACE_ISOLATION_MODE_NOT_READY`);
+}
+function requireRoot(label) {
+  if (overview.ROOT_RECONCILIATION_REQUIRED !== 'NO') violations.push(`00-OVERVIEW.md: ${label}_ROOT_RECONCILIATION_REQUIRED`);
+  if (!isSha(overview.ROOT_RECONCILED_SHA) || overview.ROOT_RECONCILED_SHA !== overview.LATEST_RECONCILED_SHA) violations.push(`00-OVERVIEW.md: ${label}_ROOT_RECONCILED_SHA_NOT_CURRENT`);
+  if (overview.FRONTIER_DERIVATION_SOURCE !== 'ROOT_GRAPH') violations.push(`00-OVERVIEW.md: ${label}_FRONTIER_NOT_ROOT_GRAPH_DERIVED`);
+  if (!yes(overview.FRONTIER_VALID)) violations.push(`00-OVERVIEW.md: ${label}_FRONTIER_NOT_VALID`);
+}
 function requireCommon(label, record) {
   if (!record) { violations.push(`${label}: SEQUENCE_REQUIRED`); return; }
   for (const field of ['ROOT_CAUSE_PROVEN','DECISIONS_RESOLVED','DECISION_IMPACT_PROPAGATED','REDIAGNOSIS_COMPLETE','IMPACT_MAPPED','FINDINGS_DISPOSITIONED','DEPENDENCIES_DISPOSITIONED','VERIFICATION_DEFINED','SOLUTION_READY']) if (!yes(record.metadata[field])) violations.push(`${record.filename}: ${label}_${field}_NOT_PASS`);
@@ -147,6 +194,8 @@ function requireGlobal(label) {
 }
 
 if (sequenceReady) {
+  requireIsolation('SEQUENCE_READY');
+  requireRoot('SEQUENCE_READY');
   const r = selectedRecord('SEQUENCE_READY');
   requireCommon('SEQUENCE_READY',r);
   if (r && !frontier.includes(r.metadata.SEQUENCE_ID)) violations.push(`${r.filename}: SEQUENCE_READY_MUST_BE_IN_ACTIVE_FRONTIER`);
@@ -158,6 +207,8 @@ if (sequenceReady) {
   }
 }
 if (sequenceComplete) {
+  requireIsolation('SEQUENCE_COMPLETE');
+  requireRoot('SEQUENCE_COMPLETE');
   const r = selectedRecord('SEQUENCE_COMPLETE');
   if (r && !frontier.includes(r.metadata.SEQUENCE_ID)) violations.push(`${r.filename}: SEQUENCE_COMPLETE_MUST_BE_IN_ACTIVE_FRONTIER_UNTIL_REGISTRY_CLEAR`);
   requireTerminal('SEQUENCE_COMPLETE',r);
@@ -170,17 +221,24 @@ const closed = vocab?.closureRules?.closedDecision;
 if (overview.FINAL_DECISION && !canonical.has(overview.FINAL_DECISION)) violations.push(`00-OVERVIEW.md: FINAL_DECISION_NOT_CANONICAL ${overview.FINAL_DECISION}`);
 
 if (handoff) {
+  requireIsolation('HANDOFF');
+  requireRoot('HANDOFF');
   if (overview.MODE !== 'PREPARE_ONLY') violations.push('HANDOFF_REQUIRES_PREPARE_ONLY');
   if (frontier.length) violations.push('HANDOFF_REQUIRES_EMPTY_ACTIVE_EXECUTION_FRONTIER');
   requireGlobal('HANDOFF');
+  if (!yes(overview.INTEGRATION_COMPLETE)) violations.push('HANDOFF_REQUIRES_INTEGRATION_COMPLETE=YES');
+  if (!overview.INTEGRATION_OWNER || overview.INTEGRATION_OWNER === 'UNASSIGNED') violations.push('HANDOFF_REQUIRES_INTEGRATION_OWNER');
   if (overview.LIFECYCLE_STATE !== 'PREPARED') violations.push('HANDOFF_REQUIRES_LIFECYCLE_STATE=PREPARED');
   for (const r of records) if (r.metadata.SEQUENCE_STATUS !== 'PREPARED') violations.push(`${r.filename}: HANDOFF_REQUIRES_PREPARED`);
 }
 if (closure) {
+  requireIsolation('CLOSURE');
+  requireRoot('CLOSURE');
   if (overview.MODE !== 'EXECUTE_END_TO_END') violations.push('CLOSURE_REQUIRES_EXECUTE_END_TO_END');
   if (frontier.length) violations.push('CLOSURE_REQUIRES_EMPTY_ACTIVE_EXECUTION_FRONTIER');
   requireGlobal('CLOSURE');
-  for (const f of ['IMPLEMENTATION_COMPLETE','EVIDENCE_COMPLETE','CLEANUP_COMPLETE','GOVERNANCE_SYNC_COMPLETE','FRESH_HEAD_VALID','FINAL_ADVERSARIAL_PASS']) if (!yes(overview[f])) violations.push(`00-OVERVIEW.md: CLOSURE_${f}_NOT_PASS`);
+  for (const f of ['IMPLEMENTATION_COMPLETE','EVIDENCE_COMPLETE','CLEANUP_COMPLETE','GOVERNANCE_SYNC_COMPLETE','INTEGRATION_COMPLETE','FRESH_HEAD_VALID','FINAL_ADVERSARIAL_PASS']) if (!yes(overview[f])) violations.push(`00-OVERVIEW.md: CLOSURE_${f}_NOT_PASS`);
+  if (!overview.INTEGRATION_OWNER || overview.INTEGRATION_OWNER === 'UNASSIGNED') violations.push('CLOSURE_REQUIRES_INTEGRATION_OWNER');
   for (const r of records) if (r.metadata.SEQUENCE_STATUS !== 'COMPLETE') violations.push(`${r.filename}: CLOSURE_REQUIRES_COMPLETE`);
   if (overview.LIFECYCLE_STATE !== 'CLOSED') violations.push('CLOSURE_REQUIRES_LIFECYCLE_STATE=CLOSED');
   for (const f of ['FINAL_CANDIDATE_SHA','HEAD_AT_REVIEW_START','HEAD_AT_DECISION']) if (!isSha(overview[f])) violations.push(`00-OVERVIEW.md: ${f}_INVALID_FOR_CLOSURE`);
@@ -195,4 +253,4 @@ if (violations.length) {
 }
 const suffix = closure?' --closure':handoff?' --handoff':sequenceComplete?' --sequence-complete':sequenceReady?' --sequence-ready':'';
 console.log(`PACKAGE VALIDATION: PASS${suffix}`);
-console.log('Proof limit: structural/accounting/sequence-gate consistency only; not Product/Runtime correctness.');
+console.log('Proof limit: structural/root/isolation/accounting/sequence/integration consistency only; not Product/Runtime correctness.');
