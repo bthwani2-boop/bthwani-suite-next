@@ -21,6 +21,7 @@ const dataQuarantine = boundary.dataRuntimeLegacyQuarantine ?? {};
 const allowedStatuses = new Set([
   "ACTIVE_DIRECT_CONSUMER",
   "LEGACY_DATA_PROVIDER_QUARANTINE",
+  "RUNTIME_BRIDGE_PROVIDER",
   "CONSUMER_REVIEW_PENDING",
 ]);
 
@@ -72,6 +73,36 @@ for (const dependency of quarantine) {
         file: packagePath,
         message: `legacy data provider '${dependency}' still has direct DSH consumers that must migrate before removal: ${consumers.slice(0, 8).join(", ")}`,
       });
+    }
+  }
+
+  if (entry.status === "RUNTIME_BRIDGE_PROVIDER") {
+    if (entry.runtimeOwner !== "apps/*/runtime") {
+      violations.push({
+        file: packagePath,
+        message: `runtime bridge '${dependency}' must remain owned by apps/*/runtime`,
+      });
+    }
+    if (consumers.length > 0) {
+      violations.push({
+        file: packagePath,
+        message: `runtime bridge drift: '${dependency}' is imported directly inside DSH: ${consumers.slice(0, 8).join(", ")}`,
+      });
+    }
+    if (!Array.isArray(entry.bridgeEvidence) || entry.bridgeEvidence.length === 0) {
+      violations.push({
+        file: packagePath,
+        message: `runtime bridge '${dependency}' requires explicit bridgeEvidence`,
+      });
+    } else {
+      for (const evidencePath of entry.bridgeEvidence) {
+        if (!fs.existsSync(path.join(repoRoot, evidencePath))) {
+          violations.push({
+            file: packagePath,
+            message: `runtime bridge '${dependency}' evidence path is missing: ${evidencePath}`,
+          });
+        }
+      }
     }
   }
 
