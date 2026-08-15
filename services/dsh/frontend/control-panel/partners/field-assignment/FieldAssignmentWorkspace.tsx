@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { CpBadge, CpButton, CpSelect, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
-import { Text } from "@bthwani/ui-kit";
+import { Text, alpha, colorRoles } from "@bthwani/ui-kit";
 import {
   cancelFieldOnboardingAssignment,
   addOperatorOnboardingMessage,
@@ -80,14 +80,14 @@ function CollaborationPanel({ item }: { readonly item: FieldOnboardingAssignment
       <CpButton disabled={busy} onClick={() => { setOpen((current) => !current); if (!open) void load(); }}>{open ? "إخفاء سجل المتابعة" : "فتح سجل المتابعة"}</CpButton>
       {open ? <>
         {busy && !view ? <Text role="caption">جارٍ تحميل سجل المتابعة…</Text> : null}
-        {view?.messages.map((message) => <div key={message.id} style={{ padding: 10, borderRadius: 10, background: "var(--bthwani-control-panel-surface-muted, #f7f8fa)" }}><Text role="bodySm">{message.body}</Text><Text role="caption" style={{ color: "var(--bthwani-control-panel-text-muted)" }}>{message.senderSurface === "app-field" ? "الميداني" : "المشرف"} · {new Date(message.createdAt).toLocaleString("ar-YE")}</Text></div>)}
+        {view?.messages.map((message) => <div key={message.id} style={{ padding: 10, borderRadius: 10, background: colorRoles.surfaceMuted }}><Text role="bodySm">{message.body}</Text><Text role="caption" style={{ color: "var(--bthwani-control-panel-text-muted)" }}>{message.senderSurface === "app-field" ? "الميداني" : "المشرف"} · {new Date(message.createdAt).toLocaleString("ar-YE")}</Text></div>)}
         {view && view.messages.length === 0 ? <Text role="caption">لا توجد ملاحظات بعد. اكتب ملاحظة مرتبطة بهذه المسودة.</Text> : null}
         <CpTextInput value={body} onChange={setBody} placeholder="ملاحظة مرتبطة بهذه المسودة" aria-label="ملاحظة المتابعة" />
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <CpButton disabled={busy || !body.trim()} onClick={() => void send()}>إرسال الملاحظة</CpButton>
           {view ? <CpButton variant="danger" disabled={busy} onClick={() => void returnForChanges()}>إعادة للميداني مع ملاحظات</CpButton> : null}
         </div>
-        {error ? <Text role="caption" style={{ color: "var(--bthwani-control-panel-danger, #b42318)" }}>{error}</Text> : null}
+        {error ? <Text role="caption" style={{ color: colorRoles.danger }}>{error}</Text> : null}
       </> : null}
     </div>
   );
@@ -239,7 +239,7 @@ export function FieldAssignmentWorkspace() {
 
       {error ? <CpStatePanel role="alert" title="تعذر تنفيذ العملية" description={error} /> : null}
       {assignments.length === 0 ? <CpStatePanel role="status" title="لا توجد إسنادات" description="أنشئ مهمة إدخال متجر من النموذج أعلاه." /> : assignments.map((item) => (
-        <section key={item.id} style={{ padding: 20, border: "1px solid var(--bthwani-control-panel-border)", borderRadius: 16, background: "var(--bthwani-control-panel-surface)", boxShadow: "0 8px 24px rgba(15, 43, 77, 0.06)", display: "flex", flexDirection: "column", gap: 10 }}>
+        <section key={item.id} style={{ padding: 20, border: "1px solid var(--bthwani-control-panel-border)", borderRadius: 16, background: "var(--bthwani-control-panel-surface)", boxShadow: `0 8px 24px ${alpha(colorRoles.shadowBase, 0.06)}`, display: "flex", flexDirection: "column", gap: 10 }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
             <div><Text role="titleSm">{item.storeNameHint}</Text><Text role="bodySm">الميداني: {agents.find((agent) => agent.actorId === item.fieldActorId)?.fullNameAr ?? item.fieldActorId}</Text></div>
             <CpBadge tone={item.status === "cancelled" ? "danger" : item.status === "draft_linked" ? "success" : "info"}>{STATUS_LABELS[item.status]}</CpBadge>
