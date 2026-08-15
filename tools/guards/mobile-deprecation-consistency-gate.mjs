@@ -67,11 +67,15 @@ for (const appKey of targetApps) {
     }
   }
 
-  if (manifest.global?.navigationArchitecture?.appliesTo?.includes(appKey) && deprecated["expo-router"]) {
-    violations.push({
-      file: packagePath,
-      message: "FORBIDDEN: expo-router is the adopted target navigation architecture and cannot be a deprecation candidate",
-    });
+  if (manifest.global?.navigationArchitecture?.appliesTo?.includes(appKey)) {
+    for (const dependency of ["expo-router", "expo-linking"]) {
+      if (deprecated[dependency]) {
+        violations.push({
+          file: packagePath,
+          message: `FORBIDDEN: '${dependency}' supports the adopted Expo Router target architecture and cannot be a deprecation candidate`,
+        });
+      }
+    }
   }
 }
 
