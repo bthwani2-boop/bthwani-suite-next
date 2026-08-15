@@ -15,29 +15,42 @@ function altitude(target){const value=(target??'').trim();if(!value)return'HIGHE
 const packageRoot=resolve(packageArg);
 if(!packageRoot.startsWith(`${resolve(frameworkRoot)}${sep}`)||basename(packageRoot).startsWith('_'))throw new Error('Package path must be a real package under plans/diagnose-implementing/.');
 const overviewPath=join(packageRoot,'00-OVERVIEW.md');
-let text=await readFile(overviewPath,'utf8');
+const originalText=await readFile(overviewPath,'utf8');
+let text=originalText;
 const before=meta(text),taskName=before.TASK_NAME??basename(packageRoot),taskId=before.TASK_ID;
 if(!taskId)throw new Error('Legacy package lacks TASK_ID; manual forensic migration required.');
 const machineBase=resolve(frameworkRoot,'_machine'),machineRoot=resolve(machineBase,taskName);
 if(await exists(machineRoot))throw new Error('Machine registry already exists; migration is not repeatable. Use explicit resume reconciliation instead.');
+const v3Fields=['MINIMUM_DIAGNOSTIC_ALTITUDE','MACHINE_REGISTRY_PATH','OPERATIONAL_ROOT_REQUIRED','OPERATIONAL_ROOT_COMPLETE','OPERATIONAL_ROOT_RECONCILED_SHA','OPERATIONAL_NEGATIVE_SPACE_PASS','OPERATIONAL_ADVERSARIAL_PASS','LOWER_LAYER_HOLD_COUNT'];
+const presentV3=v3Fields.filter((field)=>Object.prototype.hasOwnProperty.call(before,field));
+if(presentV3.length>0)throw new Error(`Package contains partial/existing V3 metadata (${presentV3.join(', ')}), but machine registry is absent; manual forensic recovery is required to avoid duplicate or contradictory state.`);
 const diagnosticAltitude=altitude(before.TARGET);
 const insertion=`MINIMUM_DIAGNOSTIC_ALTITUDE: ${diagnosticAltitude}\nMACHINE_REGISTRY_PATH: plans/diagnose-implementing/_machine/${taskName}\nOPERATIONAL_ROOT_REQUIRED: YES\nOPERATIONAL_ROOT_COMPLETE: NO\nOPERATIONAL_ROOT_RECONCILED_SHA: UNSET\nOPERATIONAL_NEGATIVE_SPACE_PASS: NO\nOPERATIONAL_ADVERSARIAL_PASS: NO\nLOWER_LAYER_HOLD_COUNT: UNSET\n`;
-if(!/^MINIMUM_DIAGNOSTIC_ALTITUDE:/m.test(text)){
-  const anchor=/^(ORCHESTRATION_ROOT:\s*.*\r?\n)/m;
-  if(!anchor.test(text))throw new Error('Cannot locate ORCHESTRATION_ROOT for deterministic metadata insertion.');
-  text=text.replace(anchor,`$1${insertion}`);
-}else throw new Error('Package already contains V3 operational metadata but no machine registry; manual forensic recovery required.');
-let created=false;
+const anchor=/^(ORCHESTRATION_ROOT:\s*.*\r?\n)/m;
+if(!anchor.test(text))throw new Error('Cannot locate ORCHESTRATION_ROOT for deterministic metadata insertion.');
+text=text.replace(anchor,`$1${insertion}`);
+let machineCreated=false,overviewWritten=false;
 try{
-  await mkdir(machineBase,{recursive:true});await mkdir(machineRoot);created=true;await writeFile(overviewPath,text,'utf8');
+  await mkdir(machineBase,{recursive:true});
+  await mkdir(machineRoot);
+  machineCreated=true;
+  await writeFile(overviewPath,text,'utf8');
+  overviewWritten=true;
   const categories=['productOutcomes','actors','authorities','responsibilities','journeys','states','transitions','invariants','handoffs','truthOwners','writersReadersConsumers','flows','implementationRuntimeBoundaries'];
   const coverage=Object.fromEntries(categories.map(name=>[name,{applicability:'UNASSESSED',items:[],exclusionEvidence:[]}])) ;
   const sha=before.LATEST_RECONCILED_SHA??before.CURRENT_SHA??'UNSET';
   await writeFile(join(machineRoot,'operational-root.json'),JSON.stringify({schema:'BTHWANI_OPERATIONAL_ROOT_V1',taskId,target:before.TARGET??'',diagnosticAltitude,reconciledSha:sha,status:'OPEN',coverage,challenges:{negativeSpace:{status:'NOT_RUN',evidence:[]},adversarial:{status:'NOT_RUN',evidence:[]}}},null,2)+'\n');
   await writeFile(join(machineRoot,'lower-layer-observations.json'),JSON.stringify({schema:'BTHWANI_LOWER_LAYER_OBSERVATIONS_V1',taskId,reconciledSha:sha,observations:[]},null,2)+'\n');
   await writeFile(join(machineRoot,'root-cause-landscape.json'),JSON.stringify({schema:'BTHWANI_ROOT_CAUSE_LANDSCAPE_V1',taskId,reconciledSha:sha,status:'OPEN',priorityPolicy:'HIGHEST_PROVEN_SYSTEMIC_LEVERAGE',findings:[],unclusteredFindings:[],clusters:[],selectedFrontier:{primaryClusterId:null,parallelClusterIds:[],justification:''},adversarial:{status:'NOT_RUN',evidence:[]}},null,2)+'\n');
-}catch(error){if(created)await rm(machineRoot,{recursive:true,force:true});throw error;}
+}catch(error){
+  let rollbackError=null;
+  try{if(machineCreated)await rm(machineRoot,{recursive:true,force:true});}catch(rollback){rollbackError=rollback;}
+  try{if(overviewWritten)await writeFile(overviewPath,originalText,'utf8');}catch(rollback){rollbackError=rollbackError??rollback;}
+  if(rollbackError)throw new Error(`Legacy migration failed (${error.message}) and rollback also failed (${rollbackError.message}); manual forensic recovery required.`);
+  throw new Error(`Legacy migration failed and was fully rolled back: ${error.message}`);
+}
 console.log('LEGACY PACKAGE V3 MIGRATION: PASS');
 console.log('State=OPEN');
+console.log('Atomicity=PASS');
 console.log('No prior diagnosis/priority/frontier was trusted or promoted.');
 console.log('Next: establish/verify Task Branch isolation, reconcile latest target/root, rebuild operational coverage, then pass canonical gates.');
