@@ -3,145 +3,113 @@
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
 Owner: `tools/prompting/bthwani-orchestrator/02-DISCOVERY-DIAGNOSIS.md`
 
-هذا الملف يملك منهج الاكتشاف والتشخيص فقط. قواعد الحقيقة/السلطة/الكتابة في `01-CORE-CONTRACT.md`، وقواعد القرارات والتغطية في `03-DECISIONS-COVERAGE-ANTI-DRIFT.md`.
+هذا الملف يملك منهج الاكتشاف والتشخيص. الحقيقة/السلطة/الكتابة في `01-CORE-CONTRACT.md`، والقرارات/التغطية/المحاسبة في `03-DECISIONS-COVERAGE-ANTI-DRIFT.md`.
 
 ## 1) المنهج الحاكم
 
 ```text
-BROAD DISCOVERY
-→ BUILD RELATION GRAPH
+CREATE/RESUME LIVING OVERVIEW EARLY
+→ BROAD DISCOVERY
+→ BUILD MULTI-DIRECTIONAL RELATION / DEPENDENCY / IMPACT GRAPH
 → MACRO OPERATIONAL BLUEPRINT
 → MACRO DECISION GATE
-→ PRIORITIZE FOUNDATIONS / CONNECTED CLUSTERS
-→ DEEP JOURNEY DIAGNOSIS WAVES
+→ PRIORITIZE FOUNDATIONS / CONNECTED CLUSTERS / EXECUTION FRONTIER
+→ DEEP GRAPH-DRIVEN JOURNEY DIAGNOSIS
 → RESOLVE DERIVABLE FACTS
-→ RECORD FINDINGS / CONTRADICTIONS / UNKNOWNS
+→ RECORD/ACCOUNT FINDINGS / CONTRADICTIONS / UNKNOWNS / SCOPE DELTAS
 → TRUE DECISION BOUNDARY when necessary
-→ RE-DIAGNOSIS after decisions
+→ FULL IMPACT PROPAGATION + RE-DIAGNOSIS
 → ADVERSARIAL COMPLETENESS
 ```
 
-ممنوع: questions-first، app-by-app isolation، screen-by-screen isolation، full-repo wandering بلا علاقة، ask-after-every-finding، أو package creation قبل readiness.
+`00-OVERVIEW.md` يُنشأ/يُستأنف مبكرًا كسجل مشتق حي. ملفات Sequences فقط هي Just-In-Time بعد إثبات Closure Boundary من الرسم. ممنوع questions-first، app-by-app isolation، screen-by-screen isolation، full-repo wandering بلا علاقة، ask-after-every-finding، أو إنشاء Sequences مستقبلية بالتخمين.
 
 ## 2) Broad Discovery
 
 ابدأ دون أسئلة للمستخدم واكتشف بقدر الانطباق:
 
 ```text
-Domains
-Actors
-Responsibilities
-Journeys
-Entry Points
-Surfaces
-Routes/Screens/Controls
-States
-Actions
-Transitions
-Handoffs
-Outcomes
-Failure/Recovery Paths
-Canonical owners
-Writers/Readers/Consumers
-Contracts/APIs/Bindings
+Domains / Actors / Responsibilities / Journeys / Entry Points
+Surfaces / Routes / Screens / Controls
+States / Actions / Transitions / Handoffs / Outcomes / Failure-Recovery
+Canonical owners / Writers / Readers / Consumers
+Contracts / APIs / Bindings / Generated clients
 Data owners / schemas / migrations
-Permissions/scopes
-Events/jobs/providers
-Control-Panel intervention points
-Runtime/readback paths
-Configs/env/dependencies
-Tests/guards/observability
+Permissions / scopes
+Events / jobs / providers
+Control-Panel interventions
+Runtime / readback paths
+Configs / env / dependencies
+Tests / guards / observability
+Structural residue / cleanup candidates
 ```
 
-الهدف هنا حصر الكون المرتبط، لا الغرق في كل تفصيلة.
+الهدف: bounded material universe + relation graph، لا مستند ضخم ولا افتراض شمول بلا قياس.
 
-## 3) Relation Graph
+## 3) Relation / Dependency / Impact Graph
 
 العقد الممكنة:
 
 ```text
-Journey | Actor | State | Action | Surface | Route | Contract | Data Owner | Service | Runtime Path | Config | Dependency
+Journey | Actor | State | Action | Surface | Route | Contract | Data Owner
+Service | Runtime Path | Config | Dependency | Writer | Reader | Consumer | Evidence
 ```
 
-العلاقات الأساسية:
+العلاقات حسب الانطباق:
 
 ```text
-DEPENDS_ON
-READS_FROM
-WRITES_TO
-TRIGGERS
-HANDOFF_TO
-CONSUMED_BY
-VISIBLE_ON
-AUTHORIZED_BY
-OWNS
-IMPLEMENTS
-VERIFIED_BY
+DEPENDS_ON / BLOCKS / UNLOCKS
+READS_FROM / WRITES_TO / TRIGGERS / HANDOFF_TO / CONSUMED_BY
+VISIBLE_ON / AUTHORIZED_BY / OWNS / IMPLEMENTS / VERIFIED_BY / INVALIDATES
 ```
 
-كل علاقة مادية تحتاج Evidence أو Status يوضح أنها فرضية تحتاج إثباتًا.
+كل علاقة مادية تحتاج Evidence أو Status يوضح أنها فرضية قيد الإثبات. الحركة عبر الرسم قد تكون forward/reverse/vertical/horizontal/cross-layer/cross-surface/jump-to-root.
 
 ## 4) Macro Operational Blueprint
 
-قبل التشخيص المجهري، كوّن:
+قبل الاستنتاجات المجهرية كوّن:
 
 ```text
-Major domains
-Major actors
-Major responsibilities
-Major journeys
-Canonical states
-State/data owners
-Major handoffs
-Sources of truth
-Major dependencies
-Core invariants
-Macro contradictions
+Major domains / actors / responsibilities / journeys
+Canonical states / state-data owners / handoffs / sources of truth
+Major dependencies / core invariants / macro contradictions
 ```
 
-وصنف كل عنصر:
+صنف: `PROVEN / INFERRED / CONTRADICTED / DECISION_REQUIRED`.
 
-```text
-PROVEN
-INFERRED
-CONTRADICTED
-DECISION_REQUIRED
-```
-
-لا تبنِ مئات الاستنتاجات الدقيقة فوق Macro Model غير محسوم. العناصر المؤثرة على اتجاه النظام تمر عبر Macro Decision Gate في الوحدة 03.
+لا تبنِ سلسلة تنفيذ طويلة على Macro Model غير محسوم؛ القرار المؤثر يمر Decision Gate ثم ينتشر أثره عبر الرسم ويعاد التشخيص.
 
 ## 5) ترتيب العمل — Graph Driven
 
-الأولوية:
+الأولوية الافتراضية:
 
 ```text
 BLOCKS OTHERS
 > CANONICAL TRUTH OWNER
+> ROOT-CAUSE LEVERAGE / UNLOCK VALUE
 > HIGH BLAST RADIUS
 > MULTI-SURFACE SHARED
-> BUSINESS CRITICAL
+> BUSINESS/SECURITY/DATA CRITICAL
 > HIGH UNCERTAINTY
 > LEAF / LOW IMPACT
 ```
 
-لا تستخدم ترتيب المجلدات أو أسماء التطبيقات كترتيب تشخيص افتراضي.
+لا ترتيب حسب أسماء التطبيقات أو المجلدات أو أرقام Sequence.
 
-### Structured Backtracking
+### Structured Backtracking / Reopen
 
-إذا:
-
-```text
-A reveals blocker B
-B reveals foundation C
-```
-
-اعمل:
+إذا `A` تكشف blocker `B` و`B` تكشف foundation `C`:
 
 ```text
-A → B → C → resolve C → return B → return A
+A = SUSPENDED_BY_DEPENDENCY
+→ B/C حسب graph boundary
+→ resolve/prepare upstream root
+→ invalidate affected descendants
+→ REOPEN/RESUME B
+→ REOPEN/RESUME A
 ```
 
-وإذا كانت عدة Journeys تشترك في State/Owner/Contract جذري، تعامل معها كـConnected Diagnostic Cluster بدل تكرار التشخيص.
+أعد التشخيص قبل live write بعد العودة. وإذا تشترك Journeys في State/Owner/Contract جذري، تعامل معها Connected Diagnostic Cluster بدل تكرار التشخيص.
 
 ## 6) الوحدة الأساسية
 
@@ -149,39 +117,23 @@ A → B → C → resolve C → return B → return A
 Journey-by-Journey × Multi-Surface × Cross-Layer
 ```
 
-لا تعتبر Journey مفهومة حتى يمكن تتبعها بين Actors والأسطح والطبقات ذات الصلة.
-
-Journey Matrix المنطقية يجب أن تعرف على الأقل:
+Journey Matrix المنطقية تعرف عند الانطباق:
 
 ```text
-Journey ID/Name
-Actor
-Entry/Context
-Preconditions
-Available Action
-Validation
-Decision Rule
-Authorization/Scope
-Current State
-Transition/Next State
-Side Effects/Persisted Change
-Handoff/Next Actor
-Surface visibility
-Outcome
-Failure Path
-Recovery Path
-Later Readback
-Canonical Owner
-Evidence/Confidence
+Journey ID/Name / Actor / Entry/Context / Preconditions
+Available Action / Validation / Decision Rule / Authorization/Scope
+Current State / Transition / Next State / Side Effects
+Handoff / Next Actor / Surface visibility / Outcome
+Failure / Recovery / Later Readback / Canonical Owner / Evidence/Confidence
 ```
 
-شكل Cross-Surface حسب الانطباق:
+Cross-Surface:
 
 ```text
 Client ↔ Partner ↔ Captain ↔ Field ↔ Control Panel ↔ Backend/Domain/Data/Runtime
 ```
 
-شكل Cross-Layer الكامل حسب الانطباق:
+Cross-Layer:
 
 ```text
 Product Truth
@@ -204,11 +156,11 @@ Product Truth
 → Audit / Observability / Runtime Evidence
 ```
 
-لا تختصر هذا المسار بطريقة تسقط enforcement أو writer/reader أو persistence أو consumer ماديًا.
+لا تسقط enforcement/writer/reader/persistence/consumer ماديًا.
 
 ## 7) Core Diagnostic Pass
 
-لكل Journey مادية نفذ كحد أدنى بحسب الانطباق:
+لكل Journey/Cluster مادي بحسب الانطباق:
 
 ```text
 Logical
@@ -220,296 +172,138 @@ Logical
 → Failure/Recovery
 ```
 
-ثم فعّل passes إضافية حسب Risk/Signal:
+وفعّل حسب Risk/Signal:
 
 ```text
-Temporal
-Actor/Responsibility
-Invariant
-Counterfactual / What-if
-Negative-Space
-Experimental
-Adversarial
-Concurrency/Idempotency
-Security/Isolation
-Finance
-Offline/Reconnect
-Performance/Fanout
-Provider Failure
-Migration/Compatibility
+Temporal / Actor-Responsibility / Invariant / Counterfactual
+Negative-Space / Experimental / Adversarial
+Concurrency-Idempotency / Security-Isolation / Finance
+Offline-Reconnect / Performance-Fanout / Provider Failure
+Migration-Compatibility
 ```
 
 ## 8) Logical / State Analysis
 
-اسأل بالدليل:
-
-```text
-هل Action مسموحة في State الحالية؟
-هل Preconditions كافية؟
-هل Validation/Authorization في المالك الصحيح؟
-هل Transition قانونية؟
-هل Outcome تترتب منطقيًا؟
-هل توجد طريقة للوصول إلى State ممنوعة؟
-هل State معرفة في أكثر من Truth owner؟
-```
+بالدليل: هل Action مسموحة؟ Preconditions كافية؟ Validation/Authorization في المالك الصحيح؟ Transition قانونية؟ Outcome منطقية؟ هل توجد State ممنوعة قابلة للوصول؟ هل State معرفة في أكثر من Truth owner؟
 
 ## 9) Forward + Reverse + Temporal
 
-Forward:
-
 ```text
-Entry → Preconditions → Action → Validation → Decision → State → Transition → Handoff → Outcome
+Forward: Entry → Preconditions → Action → Validation → Decision → State → Transition → Handoff → Outcome
+Reverse: Outcome → Handoff → Transition → State → Decision → Validation → Action → Actor/Entry
+Temporal: Before → Trigger → During → Pending → Completed/Failed → Recovery → Later Readback
 ```
 
-Reverse:
-
-```text
-Outcome → Handoff → Transition → State → Decision → Validation → Action → Actor/Entry
-```
-
-Temporal عند الحاجة:
-
-```text
-Before → Trigger → During → Pending → Completed/Failed → Recovery → Later Readback
-```
-
-افحص timeout/retry/stale state/restart/delayed events/late surface propagation/version mismatch.
+افحص timeout/retry/stale state/restart/delayed events/late propagation/version mismatch.
 
 ## 10) Actor / Responsibility / Ownership
 
-لكل خطوة:
-
-```text
-who initiates?
-who decides?
-who executes?
-who owns durable truth?
-who may cancel/reverse/intervene?
-who receives next?
-who waits for whom?
-```
-
-Wrong owner، orphan handoff، responsibility gap، أو hidden writer = Finding.
+لكل خطوة: من يبدأ؟ من يقرر؟ من ينفذ؟ من يملك durable truth؟ من يلغي/يعكس/يتدخل؟ من يستلم بعد ذلك؟ من ينتظر من؟ Wrong owner/orphan handoff/responsibility gap/hidden writer = Finding.
 
 ## 11) Cross-Surface Differential
 
-قارن نفس Entity/State/Event عبر الأسطح:
+قارن نفس Entity/State/Event:
 
 ```text
-canonical backend meaning
-↔ client meaning
-↔ partner meaning
-↔ captain meaning
-↔ field meaning
-↔ control-panel meaning
+canonical backend/domain meaning
+↔ client ↔ partner ↔ captain ↔ field ↔ control-panel meaning
 ```
 
-أي اختلاف غير مبرر في المعنى أو Action أو timing أو visibility أو responsibility = Finding، حتى لو لم يفشل API.
+أي اختلاف غير مبرر في المعنى/Action/timing/visibility/responsibility = Finding حتى لو API لا يفشل.
 
 ## 12) UX / Decision Clarity
 
-لكل Surface/Actor افحص عند الانطباق:
-
-```text
-Entry/Discoverability
-Loading
-Empty
-Partial
-Ready
-Success
-Error
-Denied/Forbidden
-Conflict
-Stale
-Pending
-Timeout
-Retry
-Offline/Reconnect
-Cancelled
-Recovery
-Completed
-Later Readback
-```
-
-وافحص: هل يعرف المستخدم أين هو، ماذا حدث، ماذا ينتظر، من ينتظر من، الإجراء التالي، سبب المنع/الفشل، وكيف يصحح أو يسترد عند الحاجة؟ UI تعرض Action غير مسموحة أو تخفي Action لازمة = Finding.
+افحص عند الانطباق: Entry/Discoverability, Loading, Empty, Partial, Ready, Success, Error, Denied, Conflict, Stale, Pending, Timeout, Retry, Offline/Reconnect, Cancelled, Recovery, Completed, Later Readback. يجب أن يعرف المستخدم الحالة، ما حدث، ماذا ينتظر، الإجراء التالي، سبب المنع/الفشل وكيف يسترد.
 
 ## 13) Invariants
 
-استخرج القواعد التي يجب ألا تُكسر، مثل:
-
-```text
-State C cannot precede B
-Actor X cannot perform Y in Z
-handoff cannot occur before prerequisite P
-one canonical owner decides durable state
-completed outcome cannot revert without an explicit recovery rule
-```
-
-ثم حاول كسرها عمدًا.
+استخرج قواعد لا يجب كسرها مثل ترتيب States، حدود actor/action، prerequisite قبل handoff، canonical owner، recovery rule. ثم حاول كسرها عمدًا.
 
 ## 14) Negative Space
 
-ابحث عما ينبغي أن يوجد لكنه مفقود بالكامل:
+ابحث عما ينبغي أن يوجد لكنه مفقود:
 
 ```text
-missing journey/state/transition/action/validation
-missing feedback/handoff/recovery
-missing control-panel intervention
-missing cross-surface visibility
-missing owner/consumer/writer/reader
-missing decision rule
-missing failure path
+journey/state/transition/action/validation
+feedback/handoff/recovery
+control-panel intervention
+cross-surface visibility
+owner/consumer/writer/reader
+decision rule/failure path
 ```
 
-عدم وجود code لا يعني عدم وجود Requirement gap.
+عدم وجود code قد يكون Requirement gap.
 
 ## 15) Hypothesis-Driven Evidence
 
-لتقليل الوقت:
-
 ```text
-Observation
-→ Hypothesis
-→ Cheapest discriminating evidence
-→ Confirm / Reject
-→ Next hypothesis
+Observation → Hypothesis → Cheapest discriminating evidence → Confirm/Reject → Next hypothesis
 ```
 
-مثال Missing State:
-
-```text
-DB truth?
-→ API response?
-→ contract/client mapping?
-→ surface state?
-→ rendering?
-```
-
-توقف عند أول Failure سببي ثم عمّق Root Cause وBlast Radius بدل تشغيل Checks عشوائية.
+توقف عند أول Failure سببي ثم عمّق Root Cause/Blast Radius بدل Checks عشوائية.
 
 ## 16) Experimental Validation
 
-عندما تتوفر القدرة والبيئة:
+عندما تتوفر القدرة:
 
 ```text
-form falsifiable hypothesis
-→ run smallest useful real check
-→ capture runtime/readback
-→ compare with expected state/journey
-→ refine/reject hypothesis
+falsifiable hypothesis → smallest real check → runtime/readback
+→ compare expected → refine/reject
 ```
 
-لا تدّع Runtime/E2E/Visual proof إذا لم يُنفذ فعليًا.
+لا تدّع Runtime/E2E/Visual proof إن لم يُنفذ.
 
 ## 17) Full-Stack Failure Matrix
 
 غطِّ حسب الخطر:
 
 ```text
-success
-empty/missing data
-invalid/malformed input
-unauthenticated/denied
-wrong role/scope/IDOR
-forbidden state
-not found
-conflict/stale version
-duplicate/replay/idempotency
-boundary/min/max
-race/concurrency
-partial failure
-dependency/database/network failure
-timeout/unknown result
-retry/backoff/DLQ where relevant
-offline/reconnect
-restart/recovery
-old/new data
-mixed-version/migration compatibility
-rollback/roll-forward
-compensation/reconciliation
+success / empty-missing / invalid input / unauthenticated-denied
+wrong role/scope/IDOR / forbidden state / not found / conflict-stale
+duplicate-replay-idempotency / boundary / race-concurrency / partial failure
+dependency-DB-network failure / timeout-unknown result / retry-backoff-DLQ
+offline-reconnect / restart-recovery / old-new data / mixed-version migration
+rollback-roll-forward / compensation-reconciliation
 ```
 
 ## 18) Reuse Before Create
 
-قبل إنشاء File/Helper/Contract/State/Config/Abstraction/Source-of-Truth أو مسار جديد:
+قبل File/Helper/Contract/State/Config/Abstraction/Source-of-Truth جديد:
 
 ```text
 search exact name + semantics
-→ imports / exports / re-exports
-→ routes / navigation / registries / manifests
-→ callers / consumers / writers / readers
-→ API / DB / tests / bindings
-→ configs / env / scripts / generated references
-→ relationship/dependency tools when useful
+→ imports/exports/re-exports
+→ routes/navigation/registries/manifests
+→ callers/consumers/writers/readers
+→ API/DB/tests/bindings
+→ configs/env/scripts/generated references
+→ relationship/dependency tools
 ```
 
-ثم طبق ترتيب القرار:
-
-```text
-REUSE → EXTEND → MERGE → MOVE_TO_OWNER → SPLIT → CREATE_NEW
-```
-
-`CREATE_NEW` هو الخيار الأخير، ولا يُستخدم إذا أمكن لمالك حاكم موجود أن يمتلك المعنى دون خلق Truth/Path موازٍ. لا تعتبر اختلاف الاسم دليلًا على عدم وجود تنفيذ مكافئ.
+ثم: `REUSE → EXTEND → MERGE → MOVE_TO_OWNER → SPLIT → CREATE_NEW`. Create New هو الأخير.
 
 ## 19) Structural / Hygiene Diagnosis
 
-أثناء التشخيص ابحث من السطر حتى النظام عن:
+من السطر حتى النظام ابحث عن dead/unreachable/stale/legacy/superseded code، duplicate implementation/truth، unused imports/exports/deps، obsolete routes/contracts/schemas/models، stale config/env/flags/scripts، TODO/FIXME/HACK/workarounds/fallbacks، orphan references، wrong placement/naming/ownership، unnecessary compatibility، debug/generated noise، files/folders بلا Purpose/Consumer/Responsibility.
+
+مستويات الفحص:
 
 ```text
-dead/unreachable/stale/legacy/superseded code
-duplicate implementation / duplicate truth
-unused imports/exports/dependencies
-obsolete routes/contracts/schemas/models
-stale config/env/flags/scripts
-TODO/FIXME/HACK/workarounds/fallbacks
-orphan references / wrong placement / misleading naming
-unnecessary compatibility layers
-temporary/debug/generated noise
-files/folders with no proven Purpose/Consumer/Responsibility
+line/expression/condition/branch/block
+→ function/method/type/class/component/helper/constant
+→ file/group/folder/module/package
+→ service/surface/domain
+→ contract/route/config/dependency
 ```
 
-وحدة الفحص ليست الملف فقط:
+لا تحذف/تبقِ بالحدس؛ أثبت Responsibility + Purpose + Consumer + Requirement + Architectural Reason، وتتبع Blast Radius والمراجع بالاتجاهين.
 
-```text
-line / expression / condition / branch / block
-→ function / method / type / class / component / helper / constant
-→ file / file group / folder / module / package
-→ service / surface / domain
-→ contract / route / config / dependency
-```
+## 20) Adversarial Diagnosis / Accounting Challenge
 
-لكل عنصر مشكوك فيه لا تحذف ولا تُبقِه بالحدس. أثبت:
+حاول إثبات أن التشخيص **ناقص** عبر unmapped routes/states/APIs، hidden writers/readers، jobs/events/admin/fallback/legacy، unreachable error paths، race/partial transaction، permissions/cross-scope، contract/schema/data drift، stale runtime/config، orphan refs، missing recovery، weak tests.
 
-```text
-Responsibility + Purpose + Consumer + Requirement + Architectural Reason
-```
+كل Material discovery جديدة يجب أن تصبح Graph Node/Finding/Scope Delta/Decision/Consumer/Evidence/Cleanup disposition. Finding جديد يعيد فتح Coverage والعقد المتأثرة؛ لا يختفي بسبب أن Sequence أخرى كانت قد أغلقت.
 
-ولا تخطط Delete/Rename/Move/Merge/Split/Refactor/Replace قبل فهم Blast Radius وشبكة المراجع في الاتجاهين.
+## 21) شرط فهم Journey / Cluster
 
-## 20) Adversarial Diagnosis
-
-بعد أن يبدو التشخيص صحيحًا، حاول إثبات أنه ناقص من مداخل مختلفة:
-
-```text
-unmapped routes
-states without consumers
-APIs without surfaces
-hidden writers/readers
-jobs/events/background paths
-admin interventions
-fallback/legacy paths
-unreachable error handling
-race/partial transaction
-permission leaks / cross-scope
-contract/schema/data drift
-stale runtime/config assumptions
-orphan references
-missing failure/recovery
-unvalidated inputs
-```
-
-Finding جديد يعيد فتح Coverage والتشخيص في الوحدة 03.
-
-## 21) شرط فهم Journey
-
-لا تعتبر Journey مفهومة إذا لم تستطع الإجابة بلا تخمين عن Actor، Entry، visible state، allowed actions، Preconditions، Authorization/Scope، Decision Rule، current/next State، side effects، truth owner، Handoff، cross-surface visibility، success/failure/recovery، later readback، وحفظ نفس المعنى عبر UI/API/Domain/Data/Runtime.
+لا تعتبرها مفهومة إذا لم تستطع الإجابة بلا تخمين عن Actor، Entry، visible state، allowed actions، Preconditions، Authorization/Scope، Decision Rule، current/next State، side effects، truth owner، Handoff، cross-surface visibility، success/failure/recovery، later readback، وحفظ نفس المعنى عبر UI/API/Domain/Data/Runtime.
