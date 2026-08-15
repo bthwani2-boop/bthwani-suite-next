@@ -11,7 +11,24 @@ SEQUENCE_PREPARED / SEQUENCE_COMPLETE
 PACKAGE_READY / TARGET_CLOSED
 ```
 
-A local sequence may be terminal while the overall TARGET remains OPEN. Sequence numbers do not imply a linear traversal; suspended/reopened graph nodes remain accountable until dispositioned.
+A local sequence or task-branch result may be terminal while the overall TARGET remains OPEN. Sequence numbers do not imply a linear traversal.
+
+## Isolation / Integration Preconditions
+
+For any final handoff/closure:
+
+```text
+TASK_CONTEXT_POLICY=ISOLATED_CURRENT_TASK_ONLY
+FOREIGN_DELTA_POLICY=INPUT_NOT_INSTRUCTION
+TASK_BRANCH != INTEGRATION_TARGET
+TASK_BRANCH_READY=YES
+WORKSPACE_ISOLATION_READY=YES
+DIRECT_INTEGRATION_TARGET_WRITES=FORBIDDEN_EXCEPT_INTEGRATION_OWNER
+INTEGRATION_OWNER != UNASSIGNED
+INTEGRATION_COMPLETE=YES
+```
+
+`INTEGRATION_COMPLETE=YES` means the task/package result was reconciled against the latest Integration Target and integrated through the serialized Integration Owner. Task-branch green alone is not sufficient.
 
 ## PREPARE_ONLY
 
@@ -34,6 +51,7 @@ DIAGNOSIS_COMPLETE=YES
 DECISION_COMPLETE=YES
 COVERAGE_COMPLETE=YES
 PACKAGE_READY=YES
+INTEGRATION_COMPLETE=YES
 LIFECYCLE_STATE=PREPARED
 ```
 
@@ -64,6 +82,7 @@ IMPLEMENTATION_COMPLETE=YES
 CLEANUP_COMPLETE=YES
 EVIDENCE_COMPLETE=YES
 GOVERNANCE_SYNC_COMPLETE=YES
+INTEGRATION_COMPLETE=YES
 FRESH_HEAD_VALID=YES
 FINAL_ADVERSARIAL_PASS=YES
 LIFECYCLE_STATE=CLOSED
@@ -76,9 +95,10 @@ FINAL_CANDIDATE_SHA
 HEAD_AT_REVIEW_START
 HEAD_AT_DECISION
 HEAD_AT_DECISION == FINAL_CANDIDATE_SHA
+FINAL_CANDIDATE_SHA belongs to Integration Target after task integration
 FINAL_DECISION == current governance closureRules.closedDecision
 ```
 
-No closure with a known fixable defect, undispositioned Finding/Scope Delta/Decision/Consumer/Cleanup item, stale required evidence, duplicate truth, reachable obsolete path, unverified root fix, or durable truth left only in derived task artifacts.
+No closure with a known fixable defect, undispositioned Finding/Scope Delta/Decision/Consumer/Cleanup item, stale required evidence, duplicate truth, reachable obsolete path, unverified root fix, unintegrated task delta, or durable truth left only in derived task artifacts.
 
-Any material new finding, related head drift, upstream dependency change, or invalidated evidence reopens the affected Sequence/global lifecycle and only the proven invalidation cone may be retained as stale/reacquired according to evidence policy.
+Any material new finding, related target drift, upstream dependency change, or invalidated evidence reopens the affected Sequence/global lifecycle.
