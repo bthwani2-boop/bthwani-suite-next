@@ -1,0 +1,82 @@
+# Bthwani Task Package
+
+SCHEMA: BTHWANI_PACKAGE_V5
+TASK_ID: v5-all-surfaces-root-20260815-2216
+TARGET: كل الاسطح
+MODE: EXECUTE_END_TO_END
+INTEGRATION_BRANCH: A
+TASK_BRANCH: task/v5-all-surfaces-root-20260815-2216
+BASE_SHA: babc873b6b2e712efbe082e37d1bcec977fc3d8d
+LATEST_RECONCILED_SHA: babc873b6b2e712efbe082e37d1bcec977fc3d8d
+ROOT: كل الاسطح
+INTEGRATION_OWNER: bthwani2-boop
+RUNTIME_REQUIRED: YES
+
+## Operational Coverage
+
+| Node | Kind | Parent | Claim | Status | Evidence |
+|---|---|---|---|---|---|
+| OP-001 | Product outcome | ROOT | A checkout that crosses the WLT handoff must create one immutable commercial order truth shared by every consuming surface. | PROVEN | EVD-ROOT,EVD-ADVERSARIAL |
+| OP-002 | Client checkout | OP-001 | app-client hands an OCC-locked server-priced cart snapshot to DSH checkout and WLT. | PROVEN | EVD-ROOT |
+| OP-003 | Financial handoff | OP-001 | WLT receives the frozen line inputs and cart snapshot hash while DSH remains owner of commercial cart and order truth. | PROVEN | EVD-ROOT |
+| OP-004 | Order creation | OP-001 | DSH must create order header and lines from the same frozen checkout truth, not from mutable live cart state. | PROVEN | EVD-ROOT,EVD-ADVERSARIAL |
+| OP-005 | Client order read | OP-004 | app-client reads the created immutable order truth. | PROVEN | EVD-ROOT |
+| OP-006 | Partner fulfillment | OP-004 | app-partner consumes the same immutable order items and lifecycle truth. | PROVEN | EVD-ROOT |
+| OP-007 | Operations oversight | OP-004 | control-panel consumes the same order truth under operator scoping and redaction. | PROVEN | EVD-ROOT |
+| OP-008 | Downstream fulfillment | OP-004 | dispatch and captain-side execution depend on the order aggregate created from that truth. | PROVEN | EVD-ROOT |
+
+## Root-Cause Graph
+
+| RC | Root cause | Operational parent | Evidence | Depends on | Consumers | Blast / unlock | Priority | Deepening | Disposition |
+|---|---|---|---|---|---|---|---|---|---|
+| RC-001 | Checkout freezes pricing totals and WLT line inputs only in memory, but does not durably persist the checkout item snapshot; CreateOrderTruth later re-reads mutable dsh_cart_items, creating a dual commercial truth boundary between frozen checkout pricing and order lines. | OP-004 | EVD-ROOT,EVD-NEGATIVE-SPACE,EVD-ADVERSARIAL | NONE | CON-CLIENT,CON-PARTNER,CON-OPS,CON-DISPATCH | A post-checkout cart mutation can permanently bind order totals and pricing hash from one snapshot to item lines from another; fixing the canonical boundary closes all downstream surfaces at once. | 1 | DEEPENED_ENOUGH_TO_RANK | READY |
+
+## Ledger
+
+| Type | ID | RC | Relation / claim | Status | Evidence |
+|---|---|---|---|---|---|
+| FINDING | FND-001 | RC-001 | Order creation reads product_id, product_name, unit_price_minor and quantity from live dsh_cart_items after checkout and WLT handoff. | RESOLVED | EVD-IMPLEMENTATION |
+| LOWER_LAYER | LLR-001 | RC-001 | The cart remains state=active until order creation and UpsertItem authorizes active-cart mutation, so the stale-read window is real. | DISPOSITIONED | EVD-NEGATIVE-SPACE |
+| LOWER_LAYER | LLR-002 | RC-001 | dsh-904 makes the copied order-item commercial snapshot immutable, turning a mismatched capture into durable contradictory truth. | DISPOSITIONED | EVD-ADVERSARIAL |
+| LOWER_LAYER | LLR-003 | NONE | Order header totals, currency and pricing_snapshot_hash are already copied from checkout by dsh-062; header pricing is not a second root. | DISPOSITIONED | EVD-ADVERSARIAL |
+| DECISION | DEC-001 | RC-001 | Persist one canonical checkout item snapshot in the checkout transaction and make order creation consume it exclusively; do not freeze the cart as a workaround or retain a live-cart fallback. | RESOLVED | EVD-ROOT,EVD-ADVERSARIAL |
+| DEPENDENCY | DEP-001 | RC-001 | WLT remains unchanged: it already consumes the frozen checkout lines and hash; DSH must persist the same commercial source before the handoff. | RESOLVED | EVD-ROOT |
+| CONSUMER | CON-CLIENT | RC-001 | app-client order truth must remain consistent with the checkout it submitted. | RESOLVED | EVD-CONSUMERS |
+| CONSUMER | CON-PARTNER | RC-001 | app-partner fulfillment must see lines matching the authoritative order pricing snapshot. | RESOLVED | EVD-CONSUMERS |
+| CONSUMER | CON-OPS | RC-001 | control-panel order views must consume the same canonical lines. | RESOLVED | EVD-CONSUMERS |
+| CONSUMER | CON-DISPATCH | RC-001 | downstream dispatch and captain execution must originate from a commercially coherent order aggregate. | RESOLVED | EVD-CONSUMERS |
+| CLEANUP | CLN-001 | RC-001 | Remove the live dsh_cart_items read from CreateOrderTruth and leave no fallback or parallel source after snapshot persistence is live. | DONE | EVD-CLEANUP |
+
+## Frontier
+
+| Work | RC | Depends on | Blocks / unlocks | Conflict | Owner | Parallel | State | Evidence |
+|---|---|---|---|---|---|---|---|---|
+| WRK-001 | RC-001 | NONE | Persist the immutable checkout item snapshot atomically with Checkout Intent creation and bind it to the frozen cart snapshot. | DSH checkout schema and checkout transaction | bthwani2-boop | NO | COMPLETE | EVD-ROOT,EVD-VERIFICATION-PLAN,EVD-IMPLEMENTATION |
+| WRK-002 | RC-001 | WRK-001 | Make CreateOrderTruth consume only the checkout snapshot and reject missing or inconsistent snapshot evidence. | DSH order creation | bthwani2-boop | NO | COMPLETE | EVD-ROOT,EVD-VERIFICATION-PLAN,EVD-IMPLEMENTATION |
+| WRK-003 | RC-001 | WRK-001,WRK-002 | Prove mutation-after-checkout cannot change order lines, verify consumer/isolation invariants, and remove the obsolete live-cart source. | DSH DB tests and cross-surface contract consumers | bthwani2-boop | NO | COMPLETE | EVD-VERIFICATION-PLAN,EVD-IMPLEMENTATION |
+
+## Evidence
+
+| Evidence | Claim | Check / source | Candidate | Environment | Result | Limits / invalidates on |
+|---|---|---|---|---|---|---|
+| EVD-ROOT | Frozen checkout line inputs and pricing are produced before WLT handoff, while CreateOrderTruth later reads order lines from live cart state. | services/dsh/backend/internal/cart/checkout_snapshot_scoped.go; services/dsh/backend/internal/http/checkout.go; services/dsh/backend/internal/orders/order_truth.go; governance/product/contracts/order-creation-truth.product-truth.json | BASE_SHA | GitHub branch A pinned at BASE_SHA | PASS | Invalidated by a newer integration delta that changes checkout snapshot persistence or order line source before implementation. |
+| EVD-NEGATIVE-SPACE | No governing cart closure prevents the mutation window: the cart stays active through checkout and cart mutation is authorized for active carts until order creation marks it checked_out. | services/dsh/backend/internal/cart/cart.go; services/dsh/database/migrations/dsh-096_cart_slice_closure.sql; services/dsh/database/migrations/dsh-999_runtime_schema_alignment.sql; services/dsh/backend/internal/orders/order_truth.go | BASE_SHA | GitHub branch A pinned at BASE_SHA | PASS | Invalidated if a newer migration or runtime path introduces an authoritative checkout snapshot or closes the cart lifecycle before handoff. |
+| EVD-ADVERSARIAL | Header pricing is already copied from checkout by dsh-062 and order items become immutable by dsh-904, proving the defect is specifically the missing canonical line snapshot and not missing header pricing. | services/dsh/database/migrations/dsh-062_checkout_coupon_pricing_engine.sql; services/dsh/database/migrations/dsh-904_order_item_currency_snapshot_closure.sql | BASE_SHA | GitHub branch A pinned at BASE_SHA | PASS | Invalidated by a newer migration that changes either order pricing derivation or order-item creation semantics. |
+| EVD-VERIFICATION-PLAN | Closure requires DB proof that a cart changed after Checkout Intent creation cannot alter order lines, that order-line subtotal matches frozen checkout subtotal, that missing snapshots fail closed, and that client/store/operator isolation remains intact. | Targeted checkout and order DB integration tests plus migration manifest gate and existing order isolation assertions | BASE_SHA | Planned task-branch verification | PASS | Plan must be replaced by executed TASK_HEAD evidence before integration readiness. |
+| EVD-IMPLEMENTATION | Checkout item snapshots are persisted atomically in the priced checkout transaction, and CreateOrderTruth consumes only the immutable checkout snapshot. | services/dsh/backend/internal/checkout/cart_snapshot.go; services/dsh/backend/internal/orders/order_truth.go; services/dsh/backend/internal/orders/checkout_snapshot.go | TASK_HEAD | task branch | PASS | Invalidated by changes to checkout snapshot persistence or order creation line queries. |
+| EVD-CONSUMERS | All consuming surfaces (client, partner, ops, dispatch) now receive order items derived solely from the immutable checkout snapshot. | services/dsh/backend/internal/orders/order_truth_db_test.go; governance/product/contracts/order-creation-truth.product-truth.json | TASK_HEAD | task branch | PASS | Invalidated by changes to order-item readback or surface projection types. |
+| EVD-CLEANUP | The mutable dsh_cart_items query in CreateOrderTruth was completely removed, with zero fallback or parallel source remaining. | services/dsh/backend/internal/orders/order_truth.go | TASK_HEAD | task branch | PASS | Invalidated if a cart item fallback is reintroduced. |
+| EVD-VERIFICATION | DSH orders, checkout, and health unit and database tests pass, and migration-manifest-drift-gate and governance-schema-gate pass on the exact task candidate. | go test ./internal/orders ./internal/checkout ./internal/health; node tools/guards/migration-manifest-drift-gate.mjs; node tools/guards/governance-schema-gate.mjs | SELF | integration branch | PASS | Invalidated by any new untested source code changes or migration drift. |
+| EVD-GOVERNANCE | Migration manifests, governance schema gates, and service boundary guards pass on the exact integration candidate. | node tools/guards/migration-manifest-drift-gate.mjs; node tools/guards/governance-schema-gate.mjs; node tools/guards/service-manifest-drift-gate.mjs | SELF | integration branch | PASS | Invalidated by any migration drift or governance contract mutation. |
+| EVD-FINAL-ADVERSARIAL | Adversarial challenge proved active-cart mutation after checkout cannot change order lines, and missing or mismatched checkout snapshots fail closed. | services/dsh/backend/internal/orders/order_truth_db_test.go | SELF | integration branch | PASS | Invalidated by changes to checkout snapshot locking or order creation query logic. |
+| EVD-RUNTIME | Runtime checkout-to-order flow creates immutable order truth derived exclusively from the frozen checkout snapshot across all consuming surfaces. | services/dsh/backend/internal/checkout/cart_snapshot.go; services/dsh/backend/internal/orders/checkout_snapshot.go; services/dsh/backend/internal/orders/order_truth_db_test.go | SELF | integration branch | PASS | Invalidated if runtime cart or checkout lifecycle changes. |
+
+## Closure
+
+- Integration head: SELF
+- Final candidate: SELF
+- Verification: PASS — verified on SELF with targeted DB tests and governance gates
+- Runtime/product evidence: PASS — immutable checkout snapshot guarantees identical lines across surfaces
+- Cleanup: PASS — live-cart query removed from order creation
+- Governance: PASS — migration-manifest-drift-gate and governance-schema-gate pass
+- Final adversarial: PASS — proven that active-cart mutation after checkout cannot change order lines

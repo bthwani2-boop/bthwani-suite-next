@@ -107,6 +107,13 @@
       "sha256": "1c23e8a2bc5105992756800402dfa393372641776c6b6f1f18ea710d8e22a262",
       "historicalPrefix": "1007",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 255,
+      "file": "dsh-1008_checkout_order_item_snapshot_truth.sql",
+      "sha256": "b39a61bff9bf38ce9bb4432a3253dc506e7b2fbafdabb1b357791114f40f185f",
+      "historicalPrefix": "1008",
+      "state": "ACTIVE"
     }
   ]
 }

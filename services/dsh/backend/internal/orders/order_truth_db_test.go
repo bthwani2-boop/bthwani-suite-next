@@ -66,6 +66,40 @@ func seedOrderTruthCheckout(t *testing.T, db *sql.DB, operatorContextID, clientI
 	).Scan(&checkoutID); err != nil {
 		t.Fatalf("seed checkout intent: %v", err)
 	}
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_checkout_cart_snapshots
+			(checkout_intent_id, operator_context_id, client_id, cart_id, store_id,
+			 cart_version, pricing_snapshot_hash, subtotal_minor_units, currency, item_count)
+		SELECT ci.id, ci.operator_context_id, ci.client_id, ci.cart_id, ci.store_id,
+		       cart.version, ci.pricing_snapshot_hash, ci.subtotal_minor_units, ci.currency,
+		       (SELECT COUNT(*)::integer FROM dsh_cart_items item WHERE item.cart_id=ci.cart_id)
+		FROM dsh_checkout_intents ci
+		JOIN dsh_carts cart ON cart.id=ci.cart_id
+		WHERE ci.id=$1::uuid`, checkoutID); err != nil {
+		t.Fatalf("seed canonical checkout snapshot: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		WITH ranked AS (
+			SELECT
+				(row_number() OVER (ORDER BY item.created_at, item.id))::integer AS line_number,
+				item.product_id,
+				item.product_name,
+				item.quantity,
+				item.unit_price_minor,
+				item.currency,
+				item.unit_price_minor * item.quantity::bigint AS line_total_minor_units
+			FROM dsh_cart_items item
+			WHERE item.cart_id=$2::uuid
+		)
+		INSERT INTO dsh_checkout_item_snapshots
+			(checkout_intent_id, line_number, product_id, product_name, quantity,
+			 unit_price_minor, currency, line_total_minor_units)
+		SELECT $1::uuid, line_number, product_id, product_name, quantity,
+		       unit_price_minor, currency, line_total_minor_units
+		FROM ranked`, checkoutID, cartID); err != nil {
+		t.Fatalf("seed canonical checkout item lines: %v", err)
+	}
 	return checkoutID
 }
 
@@ -310,6 +344,113 @@ func TestCreateOrderTruthLifecycleDBIntegration(t *testing.T) {
 	}
 	if _, err := db.Exec(`UPDATE dsh_order_items SET currency='USD' WHERE order_id=$1::uuid`, created.ID); err == nil {
 		t.Fatal("order item commercial snapshot mutation must be rejected")
+	}
+}
+
+func TestCreateOrderTruthUsesFrozenCheckoutSnapshotAfterCartMutationDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	fixture := seedOrderTruthDBFixture(t, db)
+
+	var cartID string
+	var frozenVersion int
+	if err := db.QueryRow(`
+		SELECT cart_id::text, cart_version
+		FROM dsh_checkout_cart_snapshots
+		WHERE checkout_intent_id=$1::uuid`, fixture.CheckoutID,
+	).Scan(&cartID, &frozenVersion); err != nil {
+		t.Fatalf("read frozen cart snapshot: %v", err)
+	}
+	if _, err := db.Exec(`
+		UPDATE dsh_cart_items
+		SET product_name='mutated live cart item', quantity=3, updated_at=NOW()
+		WHERE cart_id=$1::uuid`, cartID); err != nil {
+		t.Fatalf("mutate live cart after checkout: %v", err)
+	}
+	if _, err := db.Exec(`
+		UPDATE dsh_carts
+		SET version=version+1, updated_at=NOW()
+		WHERE id=$1::uuid AND state='active'`, cartID); err != nil {
+		t.Fatalf("advance live cart version after checkout: %v", err)
+	}
+
+	var liveVersion int
+	if err := db.QueryRow(`SELECT version FROM dsh_carts WHERE id=$1::uuid`, cartID).Scan(&liveVersion); err != nil {
+		t.Fatalf("read mutated cart version: %v", err)
+	}
+	if liveVersion <= frozenVersion {
+		t.Fatalf("test setup did not advance cart version: frozen=%d live=%d", frozenVersion, liveVersion)
+	}
+
+	created, replay, err := CreateOrderTruth(db, CreateOrderTruthInput{
+		CheckoutIntentID:  fixture.CheckoutID,
+		ClientID:          fixture.ClientID,
+		OperatorContextID: fixture.OperatorContextID,
+		IdempotencyKey:    "frozen-snapshot-" + strconv.FormatInt(time.Now().UnixNano(), 10),
+		CorrelationID:     "frozen-snapshot-correlation-" + strconv.FormatInt(time.Now().UnixNano(), 10),
+	})
+	if err != nil {
+		t.Fatalf("CreateOrderTruth from frozen checkout snapshot: %v", err)
+	}
+	if replay {
+		t.Fatal("first frozen-snapshot creation must not replay")
+	}
+	if len(created.Items) != 1 || created.Items[0].ProductName != " governed item" ||
+		created.Items[0].Quantity != 2 || created.Items[0].LineTotalMinorUnits != 250000 {
+		t.Fatalf("order consumed mutated live cart instead of frozen checkout lines: %+v", created.Items)
+	}
+	if created.SubtotalMinorUnits != 250000 || created.TotalMinorUnits != 255000 || created.Currency != "YER" {
+		t.Fatalf("order pricing no longer matches frozen checkout truth: %+v", created)
+	}
+
+	var cartState string
+	if err := db.QueryRow(`SELECT state FROM dsh_carts WHERE id=$1::uuid`, cartID).Scan(&cartState); err != nil {
+		t.Fatalf("read post-order cart state: %v", err)
+	}
+	if cartState != "active" {
+		t.Fatalf("post-checkout client edits must stay in the active cart, got state=%s", cartState)
+	}
+
+	var frozenName string
+	var frozenQuantity int
+	if err := db.QueryRow(`
+		SELECT product_name, quantity
+		FROM dsh_checkout_item_snapshots
+		WHERE checkout_intent_id=$1::uuid`, fixture.CheckoutID,
+	).Scan(&frozenName, &frozenQuantity); err != nil {
+		t.Fatalf("read canonical checkout line after live mutation: %v", err)
+	}
+	if frozenName != " governed item" || frozenQuantity != 2 {
+		t.Fatalf("canonical checkout line was altered: name=%q quantity=%d", frozenName, frozenQuantity)
+	}
+}
+
+func TestCreateOrderTruthRejectsMissingCanonicalCheckoutSnapshotDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	fixture := seedOrderTruthDBFixture(t, db)
+
+	if _, err := db.Exec(`DELETE FROM dsh_checkout_item_snapshots WHERE checkout_intent_id=$1::uuid`, fixture.CheckoutID); err != nil {
+		t.Fatalf("remove item snapshot for fail-closed test: %v", err)
+	}
+	if _, err := db.Exec(`DELETE FROM dsh_checkout_cart_snapshots WHERE checkout_intent_id=$1::uuid`, fixture.CheckoutID); err != nil {
+		t.Fatalf("remove snapshot header for fail-closed test: %v", err)
+	}
+
+	_, _, err := CreateOrderTruth(db, CreateOrderTruthInput{
+		CheckoutIntentID:  fixture.CheckoutID,
+		ClientID:          fixture.ClientID,
+		OperatorContextID: fixture.OperatorContextID,
+		IdempotencyKey:    "missing-snapshot-" + strconv.FormatInt(time.Now().UnixNano(), 10),
+		CorrelationID:     "missing-snapshot-correlation-" + strconv.FormatInt(time.Now().UnixNano(), 10),
+	})
+	if !errors.Is(err, ErrConflict) {
+		t.Fatalf("missing canonical checkout snapshot must fail closed, got %v", err)
+	}
+	var orderCount int
+	if countErr := db.QueryRow(`SELECT COUNT(*) FROM dsh_orders WHERE checkout_intent_id=$1::uuid`, fixture.CheckoutID).Scan(&orderCount); countErr != nil {
+		t.Fatalf("count orders after missing snapshot rejection: %v", countErr)
+	}
+	if orderCount != 0 {
+		t.Fatalf("missing snapshot path created %d order(s)", orderCount)
 	}
 }
 
