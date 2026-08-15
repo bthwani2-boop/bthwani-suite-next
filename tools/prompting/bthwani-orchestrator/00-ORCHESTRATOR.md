@@ -33,7 +33,8 @@ resolve latest integration-target HEAD
 → lock TARGET / ORCHESTRATION_ROOT
 → perform Root/Macro reconciliation
 → classify prior packages/evidence and foreign deltas
-→ derive this package's graph/frontier
+→ build target-wide gap/root-cause landscape
+→ derive this package's graph/frontier only after priority gates pass
 ```
 
 ممنوع البحث عن "آخر حزمة مفتوحة" واستئنافها تلقائيًا. الاستئناف مسموح فقط عندما يطلب المستخدم صراحةً متابعة حزمة محددة، وعندها يجب التحقق من الحزمة/الفرع/الجذر/الـMODE وإعادة المصالحة قبل أي متابعة.
@@ -94,6 +95,7 @@ resolve latest integration-target HEAD
 → reuse still-valid prior diagnosis/evidence
 → classify concurrent/foreign deltas
 → rebuild/reconcile Macro Blueprint + Relation/Dependency/Impact Graph
+→ build/reconcile target-wide Gap & Root-Cause Landscape
 → only then derive/revalidate ACTIVE_EXECUTION_FRONTIER
 ```
 
@@ -105,6 +107,7 @@ resolve latest integration-target HEAD
 TARGET ROOT GOVERNS ORIENTATION.
 THE GRAPH GOVERNS MOVEMENT.
 ROOT CAUSE GOVERNS SCOPE.
+SYSTEMIC LEVERAGE GOVERNS PRIORITY.
 LEDGERS PREVENT SILENT LOSS.
 DEPENDENCIES GOVERN ORDER.
 INDEPENDENCE GOVERNS PARALLELISM.
@@ -136,7 +139,75 @@ START FROM ROOT ≠ REDIAGNOSE EVERYTHING FROM ZERO
 
 أعد استخدام ما بقي صالحًا؛ أعد فقط ما أبطلته الحقيقة الجديدة.
 
-## 5) Foreign / Concurrent Delta Policy
+## 5) Target-Wide Gap & Root-Cause Landscape — Mandatory Before Execution
+
+قبل أول Frontier تنفيذية، وقبل إعادة ترتيب Frontier بعد أي اكتشاف مادي يغيّر الصورة، يجب بناء Landscape على كامل `TARGET` المصرح به:
+
+```text
+material gaps / defects / contradictions / regressions / missing states
++ duplicate/parallel truth
++ structural/cleanup debt
++ missing owners/consumers/contracts/data/runtime paths
+→ correlate symptoms
+→ ROOT-CAUSE CLUSTERS (RC-NNN)
+→ dependency / impact placement
+→ comparative systemic-priority model
+→ adversarial challenge of missing/unclustered/unranked material work
+```
+
+لا تبدأ بالأكثر عددًا فقط. كثرة Findings هي **إشارة Correlation** وليست Priority مطلقة. قد يتقدم Root Cause له 3 أعراض على Cluster له 40 عرضًا إذا كان الأول أعلى في dependency graph أو يملك foundation/canonical truth أو يحجب النظام أو أثره/مخاطره/قيمة فتحه أكبر.
+
+ترتيب المقارنة الحاكم، مع استخدام الأدلة لا جمع نقاط ميكانيكي أعمى:
+
+```text
+UPSTREAM / ROOT-CAUSE DEPTH
+→ BLOCKING POWER
+→ CANONICAL / FOUNDATION IMPORTANCE
+→ BLAST RADIUS
+→ RISK / SEVERITY
+→ UNLOCK VALUE
+→ FINDING DENSITY / RECURRENCE
+→ STRUCTURAL-DEBT MULTIPLIER
+```
+
+إذا كانت الأدلة غير كافية لتحديد Root Cause أو ترتيب Cluster قد يغير التنفيذ، الأولوية تصبح **لمزيد من التشخيص** لا لكتابة إصلاح غير مثبت.
+
+ممنوع اختيار Frontier بسبب:
+
+```text
+MOST RECENT
+MOST FILES CHANGED
+MOST FINDINGS ALONE
+EASIEST FIX
+LAST SESSION TOPIC
+SEQUENCE NUMBER
+```
+
+القاعدة:
+
+```text
+PRIORITY = HIGHEST PROVEN SYSTEMIC LEVERAGE.
+```
+
+Machine gates قبل اشتقاق/تنفيذ Frontier:
+
+```text
+TARGET_LANDSCAPE_COMPLETE = YES
+LANDSCAPE_RECONCILED_SHA = LATEST_RECONCILED_SHA
+ROOT_CAUSE_CLUSTERING_COMPLETE = YES
+ROOT_CAUSE_CLUSTERS_ACCOUNTED = YES
+UNCLUSTERED_MATERIAL_FINDINGS = 0
+PRIORITY_MODEL_COMPLETE = YES
+PRIORITY_DERIVATION_SOURCE = ROOT_CAUSE_LANDSCAPE
+UNRANKED_MATERIAL_CLUSTERS = 0
+PRIMARY_FRONTIER_JUSTIFIED = YES
+LANDSCAPE_ADVERSARIAL_PASS = YES
+PRIORITY_POLICY = HIGHEST_PROVEN_SYSTEMIC_LEVERAGE
+```
+
+أي Finding/Scope Delta/Decision/foreign truth جديد يخلق Root Cause جديدًا أو يغير dependency/blast radius/risk/unlock value يعيد `PRIORITY_MODEL_COMPLETE=NO` و`PRIMARY_FRONTIER_JUSTIFIED=NO` حتى إعادة clustering/ranking. لا يلزم إعادة landscape غير المتأثرة بلا سبب.
+
+## 6) Foreign / Concurrent Delta Policy
 
 أي حركة منذ آخر baseline تصنف قبل أن تؤثر على الاتجاه:
 
@@ -147,7 +218,7 @@ UNRELATED
 → no frontier change
 
 RELATED_NON_BLOCKING
-→ attach to correct graph node
+→ attach to correct graph node/root-cause cluster
 → update affected assumptions/evidence
 → do not promote by recency
 
@@ -160,15 +231,15 @@ BLOCKING
 
 AUTHORITY_OR_CANONICAL_TRUTH_CHANGE
 → reread authority/truth
-→ re-diagnose affected graph
+→ re-diagnose affected graph/landscape
 
 DIRECT_CONFLICT
 → block affected conflict domain only
 ```
 
-**Recency is never priority.** Priority comes from Root Cause + Dependency + Canonical Owner + Blast Radius + Blocking Power + Risk + Unlock Value.
+**Recency is never priority.**
 
-## 6) Package Schema V2
+## 7) Package Schema V2
 
 ```text
 plans/diagnose-implementing/<TASK_NAME>/
@@ -180,7 +251,7 @@ plans/diagnose-implementing/<TASK_NAME>/
 
 ```text
 ONE FILE = ONE COHERENT ROOT-CAUSE / EXECUTION / VERIFICATION / CLOSURE UNIT
-SEQUENCES COME FROM THE ROOT-RECONCILED PROVEN GRAPH
+SEQUENCES COME FROM THE ROOT-RECONCILED + PRIORITIZED PROVEN GRAPH
 CREATE SEQUENCES JUST-IN-TIME
 SEQUENCE NUMBER ≠ FORCED EXECUTION ORDER
 NO SPECULATIVE FUTURE SEQUENCES
@@ -188,9 +259,9 @@ NO FIXED DOMAIN TREE
 NO DIAGNOSIS/EXECUTION/VERIFICATION SPLIT
 ```
 
-`00-OVERVIEW.md` يمتلك Task isolation + Root Anchor + latest truth baseline + Macro Graph + frontier + registry + accounting + closure state فقط.
+`00-OVERVIEW.md` يمتلك Task isolation + Root Anchor + Macro Graph + Root-Cause Landscape/Priority + frontier + registry + accounting + closure state فقط.
 
-## 7) Root Reconciliation Machine Fields
+## 8) Root / Landscape / Frontier Machine Fields
 
 ```text
 ORCHESTRATION_ROOT
@@ -198,26 +269,26 @@ NAVIGATION_POLICY = ROOT_ANCHORED_GRAPH_ONLY
 LATEST_HEAD_ROLE = TRUTH_INTEGRATION_BASELINE_ONLY
 ROOT_RECONCILIATION_REQUIRED = YES|NO
 ROOT_RECONCILED_SHA = UNSET|<sha>
+TARGET_LANDSCAPE_COMPLETE = YES|NO
+LANDSCAPE_RECONCILED_SHA = UNSET|<sha>
+ROOT_CAUSE_CLUSTERING_COMPLETE = YES|NO
+ROOT_CAUSE_CLUSTERS_ACCOUNTED = YES|NO
+UNCLUSTERED_MATERIAL_FINDINGS = UNSET|0|<positive-int>
+PRIORITY_MODEL_COMPLETE = YES|NO
+PRIORITY_DERIVATION_SOURCE = UNSET|ROOT_CAUSE_LANDSCAPE
+UNRANKED_MATERIAL_CLUSTERS = UNSET|0|<positive-int>
+PRIMARY_FRONTIER_JUSTIFIED = YES|NO
+LANDSCAPE_ADVERSARIAL_PASS = YES|NO
+PRIORITY_POLICY = HIGHEST_PROVEN_SYSTEMIC_LEVERAGE
 FRONTIER_DERIVATION_SOURCE = UNSET|ROOT_GRAPH
 FRONTIER_VALID = YES|NO
 ```
 
-قبل إنشاء/استئناف/تنفيذ Sequence:
+قبل إنشاء/استئناف/تنفيذ Sequence يجب أن تمر Root + Landscape/Priority + Isolation gates على آخر truth ذات الصلة.
 
-```text
-ROOT_RECONCILIATION_REQUIRED = NO
-ROOT_RECONCILED_SHA = LATEST_RECONCILED_SHA
-FRONTIER_DERIVATION_SOURCE = ROOT_GRAPH
-FRONTIER_VALID = YES
-TASK_BRANCH_READY = YES
-WORKSPACE_ISOLATION_READY = YES
-```
+## 9) Accounting / Decisions / Root Cause
 
-أي integration-target head drift مادي يعيد Root Orientation Check للـcone المتأثر؛ إذا تغيرت الحقيقة المؤثرة تصبح root/frontier provenance stale حتى إعادة الاشتقاق.
-
-## 8) Accounting / Decisions / Root Cause
-
-كل Material Node/Finding/Scope Delta/Decision/Consumer/Evidence/Cleanup item يجب أن يكون قابلًا للتتبع والتصرف. لا `IGNORE` ولا silent TODO.
+كل Material Node/Finding/Root-Cause Cluster/Scope Delta/Decision/Consumer/Evidence/Cleanup item يجب أن يكون قابلًا للتتبع والتصرف. لا `IGNORE` ولا silent TODO.
 
 أي قرار أو Root Cause مثبت:
 
@@ -226,17 +297,18 @@ WORKSPACE_ISOLATION_READY = YES
 → writers/readers/consumers/contracts/states/data/surfaces
 → permissions/jobs/events/providers/governance/runtime/evidence
 → affected re-diagnosis
+→ affected cluster/priority re-evaluation
 ```
 
 Finding جديدة = `SAME_ROOT_CAUSE | UPSTREAM/BLOCKER | INDEPENDENT_IN_SCOPE | SUPPORTED_EXCLUSION_WITH_PROOF`.
 
-## 9) Multi-Agent / Backtracking
+## 10) Multi-Agent / Backtracking
 
 ```text
-ORCHESTRATOR → root/graph/accounting/dedup/assignment/gates
-DISCOVERY/DIAGNOSIS WORKERS → scoped read-only/isolated probes
+ORCHESTRATOR → root/graph/landscape/clustering/priority/accounting/dedup/assignment/gates
+DISCOVERY/DIAGNOSIS WORKERS → scoped read-only/isolated probes across different diagnostic angles
 EXECUTION WORKERS → proven-independent conflict domains in isolated workspaces
-VERIFICATION/ADVERSARIAL WORKERS → challenge completeness/candidate
+VERIFICATION/ADVERSARIAL WORKERS → challenge completeness/candidate/landscape priority
 INTEGRATION OWNER → sole integration-target mutation owner
 ```
 
@@ -244,40 +316,50 @@ INTEGRATION OWNER → sole integration-target mutation owner
 
 ```text
 current → SUSPENDED_BY_DEPENDENCY
-→ open upstream JIT
+→ update cluster/dependency landscape
+→ rerank affected material clusters
+→ open upstream JIT if it becomes proven frontier
 → fix/verify upstream
 → invalidate affected descendants
-→ REOPEN/RESUME descendant after root/graph reconciliation
+→ REOPEN/RESUME descendant after root/graph/priority reconciliation
 ```
 
-## 10) MODE
+## 11) MODE
 
 ### PREPARE_ONLY
 
-Diagnose/decide/propagate/re-diagnose from root-derived graph → exact treatment/cutover/consumers/governance/cleanup/verification → `PREPARED`. لا live Product/Runtime/Data mutation. Package/workspace writes remain isolated on TASK_BRANCH.
+Diagnose/cluster/rank/decide/propagate/re-diagnose from root-derived graph → exact treatment/cutover/consumers/governance/cleanup/verification → `PREPARED`. لا live Product/Runtime/Data mutation. Package/workspace writes remain isolated on TASK_BRANCH.
 
 ### EXECUTE_END_TO_END
 
-بعد Root + Task-Isolation + Frontier gates:
+بعد Root + Landscape/Priority + Task-Isolation + Frontier gates:
 
 ```text
-root fix/refactor/redesign/rebuild
+highest-leverage proven root fix/refactor/redesign/rebuild
 → required consumers
 → contract/data/generated sync
 → obsolete/parallel truth removal
 → cleanup
 → verify/readback
 → COMPLETE
+→ reconcile/rerank landscape
+→ next proven frontier
 ```
 
 لا partial cutover.
 
-## 11) Mandatory Gates
+## 12) Mandatory Gates
 
 Root provenance:
 
 ```text
 node plans/diagnose-implementing/root-anchor-gate.mjs <package> --latest-sha <LIVE_INTEGRATION_TARGET_SHA> --phase <derive|frontier|closure>
+```
+
+Root-cause landscape / priority:
+
+```text
+node plans/diagnose-implementing/root-cause-priority-gate.mjs <package> --latest-sha <LIVE_INTEGRATION_TARGET_SHA> --phase <derive|frontier|closure>
 ```
 
 Task isolation:
@@ -291,9 +373,9 @@ node plans/diagnose-implementing/task-isolation-gate.mjs <package> \
   [--current-branch <branch>]
 ```
 
-هذه الـGates تثبت provenance/isolation فقط، لا Product correctness.
+هذه الـGates تثبت provenance/isolation/priority accounting فقط، لا Product correctness.
 
-## 12) Integration / Final Candidate
+## 13) Integration / Final Candidate
 
 لا يصبح نجاح TASK_BRANCH إغلاقًا للـTARGET.
 
@@ -312,12 +394,13 @@ task branch result
 
 `A` أو أي Integration Target يبقى **latest truth + final delivery target**؛ لا يستخدم كـshared working context.
 
-## 13) Final Closure
+## 14) Final Closure
 
-`SEQUENCE_COMPLETE/PREPARED` لا تعني TARGET closure. يلزم global graph/accounting reconciliation + final cleanup + governance reconciliation + latest-head reconciliation + task integration + evidence invalidation/reacquisition + adversarial completeness + final read-only verification.
+`SEQUENCE_COMPLETE/PREPARED` لا تعني TARGET closure. يلزم global graph + root-cause landscape/priority + accounting reconciliation + final cleanup + governance reconciliation + latest-head reconciliation + task integration + evidence invalidation/reacquisition + adversarial completeness + final read-only verification.
 
 Final closure ممنوعة إذا:
-- root/frontier provenance stale؛
+- root/frontier/landscape/priority provenance stale؛
+- material Finding غير clustered/dispositioned أو material Cluster غير ranked؛
 - task/workspace isolation غير مثبت؛
 - `INTEGRATION_COMPLETE != YES`؛
 - أي Material Node/Accounting category غير مغلقة؛
