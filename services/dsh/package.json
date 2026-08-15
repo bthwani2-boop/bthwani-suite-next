@@ -15,12 +15,13 @@
     "database:test:seed": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite seed",
     "database:contract": "node ../../tools/scripts/check-dsh-database-contract.mjs",
     "platform:boundary": "node ../../tools/guards/dsh-platform-boundary-gate.mjs",
+    "data-provider:quarantine": "node ../../tools/guards/dsh-data-provider-quarantine-gate.mjs",
     "pretypecheck": "pnpm run openapi:generate",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "prebuild": "pnpm run openapi:generate",
     "build": "tsc -p tsconfig.json && node -e \"require('node:fs').writeFileSync('dist/package.json', JSON.stringify({type:'commonjs'}))\" && node ../../tools/scripts/verify-go-build.mjs backend",
     "test": "pnpm run build && pnpm --dir ../.. exec node --test services/dsh/tests/*.test.mjs",
-    "lint": "pnpm run platform:boundary && pnpm --dir ../.. run guard:fullstack-boundary"
+    "lint": "pnpm run platform:boundary && pnpm run data-provider:quarantine && pnpm --dir ../.. run guard:fullstack-boundary"
   },
   "peerDependencies": {
     "expo-document-picker": "~56.0.4",
