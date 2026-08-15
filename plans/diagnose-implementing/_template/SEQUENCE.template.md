@@ -9,13 +9,25 @@ SEQUENCE_ID: __SEQUENCE_ID__
 SEQUENCE_NAME: __SEQUENCE_NAME__
 SEQUENCE_ORDER: __SEQUENCE_ORDER__
 BASE_SHA: __BASE_SHA__
+RECONCILED_HEAD_SHA: __BASE_SHA__
 DERIVATION_BASIS: __DERIVATION_BASIS__
 DEPENDS_ON: __DEPENDS_ON__
+BLOCKS: NONE
+UNLOCKS: NONE
+CONFLICT_DOMAIN: UNCLASSIFIED
+EXECUTION_OWNER: UNASSIGNED
+PARALLEL_SAFETY: UNPROVEN
+SUSPENDED_BY: NONE
+RESUME_AFTER: NONE
+INVALIDATES: NONE
 SEQUENCE_STATUS: DIAGNOSING
 ROOT_CAUSE_PROVEN: NO
 DECISIONS_RESOLVED: NO
+DECISION_IMPACT_PROPAGATED: NO
 REDIAGNOSIS_COMPLETE: NO
 IMPACT_MAPPED: NO
+FINDINGS_DISPOSITIONED: NO
+DEPENDENCIES_DISPOSITIONED: NO
 VERIFICATION_DEFINED: NO
 SOLUTION_READY: NO
 IMPLEMENTATION_COMPLETE: NO
@@ -25,90 +37,90 @@ VERIFICATION_PASS: NO
 GOVERNANCE_SYNC: NOT_APPLICABLE
 SCOPE_DELTA_CLASSIFIED: NO
 
-> One file = one coherent execution/closure sequence. Do not split diagnosis/execution/verification into separate files. Do not create this file before its boundary is proven from the Dependency Graph.
+> One file = one coherent root-cause/execution/verification/closure unit. The graph may suspend/reopen/jump across sequences; never hide that movement in prose only.
 
-## 1. Scope / Context
+## 1. Scope / Context / Graph Position
 
-- Why this Sequence exists:
-- Exact dependency boundary:
-- Depends on:
-- Unlocks:
+- Why this Sequence exists / proven boundary:
+- Depends on / blocks / unlocks:
+- Conflict Domain:
+- Execution owner / worker mission / input SHA:
+- Parallel safety proof or SERIAL_REQUIRED reason:
 - In-scope journeys/surfaces/contracts/data/runtime:
 - Supported exclusions + proof:
 
-## 2. Diagnosis / Findings
+## 2. Diagnosis / Findings / Disposition
 
-Record ACTUAL / INTENDED / DESIRED / CONFLICT, exact evidence, findings, failure/recovery, cross-surface/cross-layer traces.
+Record every material Finding ID and classify: SAME_ROOT_CAUSE / UPSTREAM_BLOCKER / INDEPENDENT_IN_SCOPE / SUPPORTED_EXCLUSION. No silent TODO/ignore.
 
 ## 3. Root Cause / Blast Radius
 
-- Root cause:
+- Root cause / first causal failure:
 - Competing hypotheses rejected:
 - Canonical owner/source of truth:
 - Writers/readers/consumers:
 - States/transitions/handoffs:
 - Security/data/finance/operational risks:
 
-## 4. Decisions / Re-Diagnosis
+## 4. Decisions / Impact Propagation / Re-Diagnosis
 
-Record only true Decision Boundaries. After each resolved decision: impact propagation + affected re-diagnosis + new findings/decisions.
+After each true decision:
 
-## 5. Exact Target State
+```text
+decision → full proven impact graph → invalidate affected assumptions/evidence → re-diagnose
+```
 
-Define the final semantic/architectural state for this Sequence without implementation ambiguity.
+Record affected writers/readers/consumers/contracts/states/data/surfaces/governance/runtime.
+
+## 5. Exact Target State / Coherent Cutover
+
+Define final semantic/architectural state. No closure while a required consumer, parallel truth, migration, legacy path, workaround or contradictory state remains necessary for cutover correctness.
 
 ## 6. Treatment / Execution
 
 ### PREPARE_ONLY
-Specify exact root treatment, order, paths/symbols/contracts/data changes, obsolete removals, acceptance. Do not fabricate actual execution.
+Exact actionable root treatment/cutover/cleanup/verification; no fabricated execution.
 
 ### EXECUTE_END_TO_END
-Record planned action and actual change/commit/candidate evidence as it occurs.
+Record planned action and actual changes/candidates as they occur on latest reconciled head.
 
 ## 7. Consumers / Contracts / Data / Governance
 
-| Item | Before | Required/Actual transition | After | Verification |
+| Item | Before | Required/Actual transition | After | Verification / disposition |
 |---|---|---|---|---|
 
-Governance durable truth:
-- classification:
-- canonical owner:
-- PREPARE pending semantic change / EXECUTE actual promotion:
-- parity evidence:
+Every proven consumer = migrated/reconciled or not-affected-with-proof.
 
 ## 8. Cleanup
 
-Trace and resolve dead/stale/duplicate/legacy/compatibility/workaround/reference/naming/ownership residue related to this Sequence.
+Resolve dead/stale/duplicate/legacy/compatibility/workaround/reference/naming/ownership/debug/temp residue related to this closure unit.
 
 ## 9. Verification / Runtime / Evidence
 
-| Verification ID | Claim | Check/source | Candidate/runtime provenance | Result | Proof limit | Reopen trigger |
+| Evidence ID | Claim | Check/source | Candidate/runtime provenance | Result | Proof limit | Invalidation/reopen trigger |
 |---|---|---|---|---|---|---|
 
-Runtime/E2E/readback only marked PASS when actually executed on fresh applicable state.
+Static/build/mock green is not runtime proof.
 
-## 10. Sequence Exit Gate / Reopen
+## 10. Sequence Exit / Suspension / Reopen
 
-### Common solution-ready gate
+Common gates:
 
 ```text
 ROOT_CAUSE_PROVEN
 DECISIONS_RESOLVED
+DECISION_IMPACT_PROPAGATED
 REDIAGNOSIS_COMPLETE
 IMPACT_MAPPED
+FINDINGS_DISPOSITIONED
+DEPENDENCIES_DISPOSITIONED
 VERIFICATION_DEFINED
 SOLUTION_READY
 ```
 
-### PREPARE_ONLY
-Terminal: `SEQUENCE_STATUS=PREPARED`; no live implementation claim.
+Suspension: set `SEQUENCE_STATUS=SUSPENDED_BY_DEPENDENCY`, record `SUSPENDED_BY` + `RESUME_AFTER`, open upstream dependency JIT, then re-diagnose before resume.
 
-### EXECUTE_END_TO_END
-Terminal: `SEQUENCE_STATUS=COMPLETE` plus implementation/consumers/cleanup/verification/governance/scope-delta gates.
+Reopen: set `SEQUENCE_STATUS=REOPENED`, record new evidence/change and `INVALIDATES`, then rerun invalidated gates.
 
-Reopen triggers:
-- new material dependency/finding/decision
-- related head drift
-- invalidated evidence
-- failed verification/runtime
-- governance/contract truth change
+PREPARE terminal: `PREPARED`, no live implementation claim.
+EXECUTE terminal: `COMPLETE` + implementation/consumers/cleanup/verification/governance/scope-delta gates.
