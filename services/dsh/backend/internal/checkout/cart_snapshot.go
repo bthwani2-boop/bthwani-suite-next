@@ -9,17 +9,17 @@ import (
 )
 
 // PersistCartSnapshotInput binds a priced Checkout Intent to the live cart
-// state protected by the caller's checkout transaction. The persisted rows are
+// state protected inside the same checkout transaction. The persisted rows are
 // the sole commercial line source for later order creation.
 type PersistCartSnapshotInput struct {
-	CheckoutIntentID   string
-	OperatorContextID  string
-	ClientID           string
-	CartID             string
-	StoreID            string
+	CheckoutIntentID    string
+	OperatorContextID   string
+	ClientID            string
+	CartID              string
+	StoreID             string
 	PricingSnapshotHash string
-	SubtotalMinorUnits int64
-	Currency           string
+	SubtotalMinorUnits  int64
+	Currency            string
 }
 
 func normalizePersistCartSnapshotInput(input PersistCartSnapshotInput) PersistCartSnapshotInput {
@@ -46,10 +46,11 @@ func validatePersistCartSnapshotInput(input PersistCartSnapshotInput) error {
 	return nil
 }
 
-// PersistCartSnapshotTx copies the current cart into immutable checkout-owned
-// rows and proves that the copied line count, subtotal, and currency match the
-// priced Checkout Intent. Any mismatch aborts the surrounding transaction.
-// There is intentionally no fallback to dsh_cart_items after this boundary.
+// PersistCartSnapshotTx locks the governed cart itself, copies its current
+// lines into immutable checkout-owned rows, and proves that the copied count,
+// subtotal, and currency match the priced Checkout Intent. Any mismatch aborts
+// the surrounding transaction. There is intentionally no live-cart fallback
+// after this boundary.
 func PersistCartSnapshotTx(ctx context.Context, tx *sql.Tx, rawInput PersistCartSnapshotInput) error {
 	if tx == nil {
 		return ErrInvalid
@@ -59,15 +60,37 @@ func PersistCartSnapshotTx(ctx context.Context, tx *sql.Tx, rawInput PersistCart
 		return err
 	}
 
+	var cartVersion int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT version
+		FROM dsh_carts
+		WHERE id=$1::uuid AND client_id=$2 AND store_id=$3 AND state='active'
+		FOR UPDATE`, input.CartID, input.ClientID, input.StoreID,
+	).Scan(&cartVersion); errorsIsNoRows(err) {
+		return fmt.Errorf("%w: cart is no longer eligible for checkout snapshot", ErrConflict)
+	} else if err != nil {
+		return err
+	}
+
+	var itemCount int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*)::integer
+		FROM dsh_cart_items
+		WHERE cart_id=$1::uuid`, input.CartID,
+	).Scan(&itemCount); err != nil {
+		return err
+	}
+	if itemCount <= 0 {
+		return fmt.Errorf("%w: checkout cart snapshot has no items", ErrConflict)
+	}
+
 	result, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_checkout_cart_snapshots
 			(checkout_intent_id, operator_context_id, client_id, cart_id, store_id,
 			 cart_version, pricing_snapshot_hash, subtotal_minor_units, currency, item_count)
 		SELECT ci.id, ci.operator_context_id, ci.client_id, ci.cart_id, ci.store_id,
-		       cart.version, ci.pricing_snapshot_hash, ci.subtotal_minor_units, ci.currency,
-		       (SELECT COUNT(*)::integer FROM dsh_cart_items item WHERE item.cart_id = ci.cart_id)
+		       $9, ci.pricing_snapshot_hash, ci.subtotal_minor_units, ci.currency, $10
 		FROM dsh_checkout_intents ci
-		JOIN dsh_carts cart ON cart.id = ci.cart_id
 		WHERE ci.id = $1::uuid
 		  AND ci.operator_context_id = $2
 		  AND ci.client_id = $3
@@ -75,10 +98,7 @@ func PersistCartSnapshotTx(ctx context.Context, tx *sql.Tx, rawInput PersistCart
 		  AND ci.store_id = $5
 		  AND ci.pricing_snapshot_hash = $6
 		  AND ci.subtotal_minor_units = $7
-		  AND ci.currency = $8
-		  AND cart.client_id = $3
-		  AND cart.store_id = $5
-		  AND cart.state = 'active'`,
+		  AND ci.currency = $8`,
 		input.CheckoutIntentID,
 		input.OperatorContextID,
 		input.ClientID,
@@ -87,6 +107,8 @@ func PersistCartSnapshotTx(ctx context.Context, tx *sql.Tx, rawInput PersistCart
 		input.PricingSnapshotHash,
 		input.SubtotalMinorUnits,
 		input.Currency,
+		cartVersion,
+		itemCount,
 	)
 	if err != nil {
 		return err
@@ -119,11 +141,11 @@ func PersistCartSnapshotTx(ctx context.Context, tx *sql.Tx, rawInput PersistCart
 	}
 
 	var (
-		expectedCount      int
-		persistedCount     int
-		persistedSubtotal  int64
-		minCurrency        string
-		maxCurrency        string
+		expectedCount     int
+		persistedCount    int
+		persistedSubtotal int64
+		minCurrency       string
+		maxCurrency       string
 	)
 	if err = tx.QueryRowContext(ctx, `
 		SELECT snapshot.item_count,
@@ -139,7 +161,7 @@ func PersistCartSnapshotTx(ctx context.Context, tx *sql.Tx, rawInput PersistCart
 	).Scan(&expectedCount, &persistedCount, &persistedSubtotal, &minCurrency, &maxCurrency); err != nil {
 		return err
 	}
-	if expectedCount <= 0 || persistedCount != expectedCount ||
+	if expectedCount != itemCount || persistedCount != expectedCount ||
 		persistedSubtotal != input.SubtotalMinorUnits ||
 		minCurrency != input.Currency || maxCurrency != input.Currency {
 		return fmt.Errorf(
@@ -148,4 +170,8 @@ func PersistCartSnapshotTx(ctx context.Context, tx *sql.Tx, rawInput PersistCart
 		)
 	}
 	return nil
+}
+
+func errorsIsNoRows(err error) bool {
+	return err == sql.ErrNoRows
 }
