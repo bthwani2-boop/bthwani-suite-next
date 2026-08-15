@@ -9,13 +9,20 @@ $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $RuntimePhase = Join-Path $PSScriptRoot "invoke-runtime-phase.ps1"
 $DataScript = Join-Path $PSScriptRoot "mobile-dev-data.mjs"
 $MobileEnvFile = Join-Path $RepoRoot "infra/local/mobile.env"
-$Profiles = "identity,workforce,dsh,wlt,media"
+$ReadinessContractFile = Join-Path $RepoRoot "infra/docker/runtime-readiness.contract.json"
 
-foreach ($requiredPath in @($RuntimePhase, $DataScript)) {
+foreach ($requiredPath in @($RuntimePhase, $DataScript, $ReadinessContractFile)) {
   if (-not (Test-Path -LiteralPath $requiredPath -PathType Leaf)) {
     throw "Required mobile runtime file not found: $requiredPath"
   }
 }
+
+$RuntimeReadinessContract = Get-Content -LiteralPath $ReadinessContractFile -Raw | ConvertFrom-Json
+$MobileProfiles = @($RuntimeReadinessContract.bundles.mobileDevelopment | ForEach-Object { [string]$_ })
+if ($MobileProfiles.Count -eq 0) {
+  throw "runtime-readiness.contract.json has no mobileDevelopment profiles."
+}
+$Profiles = $MobileProfiles -join ","
 
 function Import-BthwaniMobileEnvironment {
   if (-not (Test-Path -LiteralPath $MobileEnvFile -PathType Leaf)) {
@@ -43,29 +50,72 @@ function Import-BthwaniMobileEnvironment {
   }
 }
 
-function Test-BthwaniHealthEndpoint {
+function Resolve-BthwaniRuntimeReadinessUri {
   param(
-    [Parameter(Mandatory)][string]$Uri,
-    [Parameter(Mandatory)][string]$ExpectedStatus
+    [Parameter(Mandatory)]$Definition
   )
 
+  switch ([string]$Definition.kind) {
+    "json-status" {
+      $baseUrl = ""
+      $baseUrlEnv = [string]$Definition.baseUrlEnv
+      if ($baseUrlEnv) {
+        $baseUrl = [string][Environment]::GetEnvironmentVariable($baseUrlEnv, "Process")
+      }
+      if ([string]::IsNullOrWhiteSpace($baseUrl)) {
+        $baseUrl = [string]$Definition.defaultBaseUrl
+      }
+      if ([string]::IsNullOrWhiteSpace($baseUrl)) {
+        throw "Readiness definition '$($Definition.name)' has no base URL."
+      }
+      return "$($baseUrl.TrimEnd('/'))$([string]$Definition.path)"
+    }
+    "http-ok" {
+      $port = ""
+      $portEnv = [string]$Definition.portEnv
+      if ($portEnv) {
+        $port = [string][Environment]::GetEnvironmentVariable($portEnv, "Process")
+      }
+      if ([string]::IsNullOrWhiteSpace($port)) {
+        $port = [string]$Definition.defaultPort
+      }
+      if ([string]::IsNullOrWhiteSpace($port)) {
+        throw "Readiness definition '$($Definition.name)' has no port."
+      }
+      return "http://$([string]$Definition.host):$port$([string]$Definition.path)"
+    }
+    default {
+      throw "Unsupported runtime readiness kind '$([string]$Definition.kind)' for '$($Definition.name)'."
+    }
+  }
+}
+
+function Test-BthwaniRuntimeProfileReadiness {
+  param(
+    [Parameter(Mandatory)][string]$Profile
+  )
+
+  $definition = $RuntimeReadinessContract.profiles.$Profile
+  if ($null -eq $definition) {
+    throw "runtime-readiness.contract.json is missing profile '$Profile'."
+  }
+  $uri = Resolve-BthwaniRuntimeReadinessUri -Definition $definition
+
   try {
-    $response = Invoke-RestMethod -Uri $Uri -TimeoutSec 3 -ErrorAction Stop
-    return [string]$response.status -eq $ExpectedStatus
+    $response = Invoke-RestMethod -Uri $uri -TimeoutSec 3 -ErrorAction Stop
+    if ([string]$definition.kind -eq "http-ok") {
+      return $true
+    }
+    $healthyStatuses = @($definition.healthyStatuses | ForEach-Object { [string]$_ })
+    return $healthyStatuses -contains [string]$response.status
   } catch {
     return $false
   }
 }
 
 function Test-BthwaniMobileBackend {
-  $checks = @(
-    @{ Uri = "http://127.0.0.1:58082/identity/readiness"; Status = "HEALTHY" },
-    @{ Uri = "http://127.0.0.1:58086/workforce/health"; Status = "healthy" },
-    @{ Uri = "http://127.0.0.1:58080/dsh/health"; Status = "healthy" }
-  )
-
-  foreach ($check in $checks) {
-    if (-not (Test-BthwaniHealthEndpoint -Uri $check.Uri -ExpectedStatus $check.Status)) {
+  foreach ($profile in $MobileProfiles) {
+    if (-not (Test-BthwaniRuntimeProfileReadiness -Profile $profile)) {
       return $false
     }
   }
@@ -94,10 +144,10 @@ function Ensure-BthwaniMobileBackend {
   $setting = ([string]$env:BTHWANI_AUTO_START_BACKEND).Trim().ToLowerInvariant()
   $autoStart = $setting -notin @("0", "false", "off", "disabled")
   if (-not $autoStart) {
-    throw "Mobile backend is not ready and BTHWANI_AUTO_START_BACKEND disables automatic startup."
+    throw "Mobile runtime dependencies are not ready and BTHWANI_AUTO_START_BACKEND disables automatic startup."
   }
   if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-    throw "Mobile backend is not ready and Docker was not found. Start Docker Desktop and retry."
+    throw "Mobile runtime dependencies are not ready and Docker was not found. Start Docker Desktop and retry."
   }
 
   Invoke-BthwaniProcess `
@@ -117,12 +167,12 @@ function Ensure-BthwaniMobileBackend {
       $isHealthy = $true
       break
     }
-    Write-Host "Waiting for Mobile backend to become healthy..."
+    Write-Host "Waiting for declared Mobile runtime dependencies to become ready..."
     Start-Sleep -Seconds 2
   }
 
   if (-not $isHealthy) {
-    throw "Mobile backend startup completed, but an application-facing Identity, Workforce, or DSH endpoint is still unhealthy after $maxWaitSeconds seconds."
+    throw "Mobile runtime startup completed, but one or more declared mobileDevelopment profiles are still unready after $maxWaitSeconds seconds: $Profiles"
   }
 }
 
@@ -151,7 +201,6 @@ function Repair-BthwaniMobileDevData {
     )
 }
 
-
 Import-BthwaniMobileEnvironment
 
 $mutexName = if ($IsWindows) { "Global\BthwaniMobileDevRuntimeBootstrap" } else { "BthwaniMobileDevRuntimeBootstrap" }
@@ -176,7 +225,7 @@ try {
       return
     }
 
-    Write-Host "Mobile APIs are healthy but governed development data is incomplete; invoking targeted canonical data repair..."
+    Write-Host "Mobile APIs are ready but governed development data is incomplete; invoking targeted canonical data repair..."
     Repair-BthwaniMobileDevData
 
     if (-not (Test-BthwaniMobileDevData)) {

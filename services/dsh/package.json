@@ -128,9 +128,8 @@
         "deletionAuthorized": false
       },
       "expo-document-picker": {
-        "status": "RUNTIME_BRIDGE_PROVIDER",
-        "runtimeOwner": "apps/*/runtime",
-        "bridgeEvidence": ["services/dsh/frontend/shared/catalog/catalog-mobile-file-picker.ts"],
+        "status": "ACTIVE_DIRECT_CONSUMER",
+        "evidence": ["services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx"],
         "deletionAuthorized": false
       },
       "expo-image-picker": {
@@ -174,7 +173,8 @@
         "deletionAuthorized": false
       },
       "react-native-svg": {
-        "status": "CONSUMER_REVIEW_PENDING",
+        "status": "ACTIVE_DIRECT_CONSUMER",
+        "evidence": ["services/dsh/frontend/app-client/shared/ui/Icons.tsx"],
         "deletionAuthorized": false
       }
     },

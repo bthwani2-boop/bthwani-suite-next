@@ -34,9 +34,9 @@ test("app-client keeps every Expo capability used by the operational experience"
   }
 
   const manifest = JSON.parse(source("tools/mobile/mobile-apps.manifest.json"));
-  const features = new Set(manifest.apps?.["app-client"]?.features ?? []);
-  for (const feature of ["crypto", "fileSystem", "image", "sharing", "video", "webBrowser"]) {
-    assert.equal(features.has(feature), true, `app-client manifest missing feature: ${feature}`);
+  const capabilities = new Set(manifest.apps?.["app-client"]?.nativeCapabilities ?? []);
+  for (const capability of ["crypto", "fileSystem", "image", "sharing", "video", "webBrowser"]) {
+    assert.equal(capabilities.has(capability), true, `app-client manifest missing capability: ${capability}`);
   }
 });
 
@@ -233,7 +233,7 @@ test("checkout carries the confirmed cart version into the canonical DSH OCC con
   assert.ok(conflictSchema.includes("DshCheckoutCartVersionConflict"));
   assertMarkers(
     "services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx",
-    ["useCreateOrderTruthController", "submitOrder({ checkoutIntentId })", "order_ready"],
+    ["useCreateOrderTruthController", "submitOrder({ checkoutIntentId", "order_ready"],
   );
   assertMarkers(
     "services/dsh/frontend/shared/order-truth/order-truth.api.ts",
@@ -324,7 +324,7 @@ test("subscription mutations persist one governed attempt across retries and res
   );
   assertMarkers(
     "services/dsh/frontend/shared/marketing/subscription-mutation-attempt.ts",
-    ["@react-native-async-storage/async-storage", "LATEST_PURCHASE_KEY", "AsyncStorage.setItem", "AsyncStorage.removeItem"],
+    ["@bthwani/data-runtime", "bthwaniKeyValueStorage", "LATEST_PURCHASE_KEY", "AsyncStorage.setItem", "AsyncStorage.removeItem"],
   );
 });
 

@@ -5,7 +5,7 @@
  * current app installation. Mobile runtimes must use encrypted storage.
  */
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/native-data-adapters";
 
 export type FieldOfflineOperationType =
   | "create_visit"
@@ -31,27 +31,13 @@ export type FieldOfflineQueueStorageAdapter = {
   readonly removeItem: (key: string) => Promise<void>;
 };
 
-/**
- * The v1 queue predates the injectable adapter and was written straight to
- * AsyncStorage, while the current queue lives in the encrypted store. Legacy
- * recovery must therefore read from where v1 actually wrote.
- */
 export type FieldOfflineLegacyStorageAdapter = {
   readonly getItem: (key: string) => Promise<string | null>;
   readonly removeItem: (key: string) => Promise<void>;
 };
 
-/**
- * Why a legacy entry could not be carried forward into the current queue.
- * Quarantined work is preserved for recovery, never silently discarded.
- */
 export type FieldOfflineQuarantineReason =
   | "LEGACY_V1_UNSCOPED"
-  /**
-   * The server refused the operation permanently (401/403/409/422) or it
-   * exhausted its retries. It can never drain, so leaving it in the live queue
-   * would consume capacity forever while staying invisible to the employee.
-   */
   | "TERMINAL_SYNC_FAILURE";
 
 export type FieldOfflineQuarantineRecord = {
@@ -62,9 +48,7 @@ export type FieldOfflineQuarantineRecord = {
 };
 
 export type FieldOfflineLegacyMigrationSummary = {
-  /** Legacy operations carried forward into the current scoped queue. */
   readonly adopted: number;
-  /** Legacy operations preserved for recovery instead of being executed. */
   readonly quarantined: number;
 };
 
@@ -83,12 +67,6 @@ export type FieldOfflineOperation<P = unknown> = {
   readonly lastError?: string;
 };
 
-/**
- * v1 wrote a single unscoped key through AsyncStorage. A v2 generation existed
- * on trunk for roughly ninety minutes but never had its scope configured by any
- * call site, so `requireScope()` rejected every read and write and no device
- * could persist v2 work. v1 is therefore the only recoverable legacy state.
- */
 const LEGACY_V1_STORAGE_KEYS = [
   "@bthwani/field-offline-queue:v1",
   "@bthwani/field-offline-queue:corrupt:v1",
@@ -103,10 +81,6 @@ let storageAdapter: FieldOfflineQueueStorageAdapter = {
   setItem: (key, value) => AsyncStorage.setItem(key, value),
   removeItem: (key) => AsyncStorage.removeItem(key),
 };
-/**
- * Deliberately not the injectable queue adapter: the current queue lives in the
- * encrypted store, but v1 wrote to AsyncStorage, so recovery must read there.
- */
 let legacyStorageAdapter: FieldOfflineLegacyStorageAdapter = {
   getItem: (key) => AsyncStorage.getItem(key),
   removeItem: (key) => AsyncStorage.removeItem(key),
@@ -131,10 +105,7 @@ function requireNonEmpty(value: string, label: string): string {
 function normalizeScope(scope: FieldOfflineQueueScope): FieldOfflineQueueScope {
   return {
     actorId: requireNonEmpty(scope.actorId, "field offline queue actor id"),
-    installationId: requireNonEmpty(
-      scope.installationId,
-      "field offline queue installation id",
-    ),
+    installationId: requireNonEmpty(scope.installationId, "field offline queue installation id"),
   };
 }
 
@@ -158,7 +129,6 @@ function corruptStorageKey(scope: FieldOfflineQueueScope): string {
 function legacyQuarantineStorageKey(scope: FieldOfflineQueueScope): string {
   return `${STORAGE_PREFIX}.legacy-quarantine.${scopeFingerprint(scope)}`;
 }
-
 
 export function configureFieldOfflineQueueStorage(adapter: FieldOfflineQueueStorageAdapter): void {
   storageAdapter = adapter;
@@ -208,18 +178,7 @@ async function readQuarantine(scope: FieldOfflineQueueScope): Promise<FieldOffli
   }
 }
 
-/**
- * Recovers work left by the v1 queue.
- *
- * v1 operations carry no actor or installation identity, so adopting them would
- * replay one worker's governed mutations under whichever session happens to
- * open the upgraded build first. They are preserved under the current scope for
- * recovery and reported to the surface, never executed and never dropped. The
- * legacy keys are released only once that copy is durably written.
- */
-async function migrateLegacyQueues(
-  scope: FieldOfflineQueueScope,
-): Promise<FieldOfflineLegacyMigrationSummary> {
+async function migrateLegacyQueues(scope: FieldOfflineQueueScope): Promise<FieldOfflineLegacyMigrationSummary> {
   const found: { key: string; raw: string }[] = [];
   for (const key of LEGACY_V1_STORAGE_KEYS) {
     const raw = await legacyStorageAdapter.getItem(key);
@@ -239,9 +198,7 @@ async function migrateLegacyQueues(
   ];
 
   await storageAdapter.setItem(legacyQuarantineStorageKey(scope), JSON.stringify(quarantined));
-  for (const { key } of found) {
-    await legacyStorageAdapter.removeItem(key);
-  }
+  for (const { key } of found) await legacyStorageAdapter.removeItem(key);
   return { adopted: 0, quarantined: quarantined.length };
 }
 
@@ -249,10 +206,6 @@ export async function readLegacyQuarantine(): Promise<FieldOfflineQuarantineReco
   return readQuarantine(requireScope());
 }
 
-/**
- * Carries a stable reason code so callers decide recover-vs-retry from the
- * code, never from matching the message text.
- */
 export class FieldOfflineQueueCorruptError extends Error {
   readonly code = "OFFLINE_QUEUE_CORRUPT";
 
@@ -275,17 +228,13 @@ async function readQueue(): Promise<FieldOfflineOperation[]> {
     return parsed;
   } catch (error) {
     await storageAdapter.setItem(corruptStorageKey(scope), raw);
-    throw new FieldOfflineQueueCorruptError(
-      error instanceof Error ? error.message : String(error),
-    );
+    throw new FieldOfflineQueueCorruptError(error instanceof Error ? error.message : String(error));
   }
 }
 
 async function writeQueue(queue: FieldOfflineOperation[]): Promise<void> {
   const scope = requireScope();
-  if (queue.length > MAX_QUEUE_OPERATIONS) {
-    throw new Error("field offline queue capacity exceeded");
-  }
+  if (queue.length > MAX_QUEUE_OPERATIONS) throw new Error("field offline queue capacity exceeded");
   const serialized = JSON.stringify(queue);
   if (serialized.length > MAX_SERIALIZED_CHARACTERS) {
     throw new Error("field offline queue encrypted storage limit exceeded");
@@ -299,11 +248,7 @@ export async function prepareFieldOfflineQueue(): Promise<FieldOfflineLegacyMigr
 
 export async function clearFieldOfflineQueue(): Promise<void> {
   const scope = activeScope;
-  // Session end clears legacy work too; it is being discarded deliberately
-  // here, not lost to an unnoticed upgrade.
-  for (const key of LEGACY_V1_STORAGE_KEYS) {
-    await legacyStorageAdapter.removeItem(key);
-  }
+  for (const key of LEGACY_V1_STORAGE_KEYS) await legacyStorageAdapter.removeItem(key);
   if (!scope) return;
   await Promise.all([
     storageAdapter.removeItem(storageKey(scope)),
@@ -338,9 +283,7 @@ export async function enqueueFieldOperation<P>(
   );
   if (existing) return existing as FieldOfflineOperation<P>;
 
-  const fingerprint = stableHash(
-    `${scope.actorId}|${scope.installationId}|${operationType}|${normalizedKey}`,
-  );
+  const fingerprint = stableHash(`${scope.actorId}|${scope.installationId}|${operationType}|${normalizedKey}`);
   const now = new Date().toISOString();
   const operation: FieldOfflineOperation<P> = {
     operationId: `field-op:${operationType}:${fingerprint}`,
@@ -362,47 +305,32 @@ export async function enqueueFieldOperation<P>(
 
 export async function markOperationSynced(operationId: string): Promise<void> {
   const queue = await readQueue();
-  await writeQueue(
-    queue.map((operation) =>
-      operation.operationId === operationId ? { ...operation, status: "synced" as const } : operation,
-    ),
-  );
+  await writeQueue(queue.map((operation) =>
+    operation.operationId === operationId ? { ...operation, status: "synced" as const } : operation,
+  ));
 }
 
-/**
- * A network failure after dispatch leaves the business result unknown. Persist
- * that fact so restart/reconnect never treats it as an ordinary retryable error.
- */
 export async function markOperationUnknown(operationId: string, error: string): Promise<void> {
   const queue = await readQueue();
-  await writeQueue(
-    queue.map((operation) => {
-      if (operation.operationId !== operationId) return operation;
-      return {
-        ...operation,
-        attemptCount: operation.attemptCount + 1,
-        lastError: error,
-        nextRetryAt: new Date().toISOString(),
-        status: "unknown" as const,
-      };
-    }),
-  );
+  await writeQueue(queue.map((operation) => {
+    if (operation.operationId !== operationId) return operation;
+    return {
+      ...operation,
+      attemptCount: operation.attemptCount + 1,
+      lastError: error,
+      nextRetryAt: new Date().toISOString(),
+      status: "unknown" as const,
+    };
+  }));
 }
 
-/**
- * Re-enables delivery only after an authoritative read confirms no receipt
- * exists. This is intentionally separate from markOperationFailed so callers
- * cannot accidentally retry an unresolved result.
- */
 export async function markOperationReadyForRetry(operationId: string): Promise<void> {
   const queue = await readQueue();
-  await writeQueue(
-    queue.map((operation) =>
-      operation.operationId === operationId
-        ? { ...operation, nextRetryAt: new Date().toISOString(), status: "retrying" as const }
-        : operation,
-    ),
-  );
+  await writeQueue(queue.map((operation) =>
+    operation.operationId === operationId
+      ? { ...operation, nextRetryAt: new Date().toISOString(), status: "retrying" as const }
+      : operation,
+  ));
 }
 
 export async function markOperationFailed(operationId: string, error: string, isPermanent = false): Promise<void> {
@@ -426,10 +354,8 @@ export async function markOperationFailed(operationId: string, error: string, is
 export async function getDueOperations(): Promise<FieldOfflineOperation[]> {
   const queue = await readQueue();
   const now = new Date().toISOString();
-  return queue.filter(
-    (operation) =>
-      (operation.status === "pending" || operation.status === "retrying") &&
-      operation.nextRetryAt <= now,
+  return queue.filter((operation) =>
+    (operation.status === "pending" || operation.status === "retrying") && operation.nextRetryAt <= now,
   );
 }
 
@@ -443,20 +369,6 @@ export async function purgeSyncedOperations(): Promise<void> {
   await writeQueue(queue.filter((operation) => operation.status !== "synced"));
 }
 
-/**
- * Moves permanently failed operations out of the live queue and into the
- * recovery store.
- *
- * A `failed_permanent` operation can never drain: `getDueOperations` ignores it
- * and no retry will revisit it. Left in place it occupies queue capacity
- * forever, so a worker who accumulates enough refusals eventually cannot
- * capture any offline work at all — `writeQueue` rejects every new enqueue once
- * the queue hits its capacity or serialized-size limit. Evacuating it here
- * keeps capacity available and routes the loss through the same recovery
- * channel the surface already reports.
- *
- * @returns how many operations were evacuated.
- */
 export async function evacuateTerminalOperations(): Promise<number> {
   const scope = requireScope();
   const queue = await readQueue();

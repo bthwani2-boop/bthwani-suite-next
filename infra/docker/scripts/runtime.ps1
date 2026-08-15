@@ -431,10 +431,10 @@ function Wait-ForSelectedApis {
     Wait-ForHttpStatus -Name "Workforce API" -Url "http://localhost:58086/workforce/readiness" -HealthyValues @("ready") | Out-Null
   }
   if ($ProfileList -contains "providers") {
-    Wait-ForHttpStatus -Name "Providers API" -Url "http://localhost:58087/providers/readiness" -HealthyValues @("ready") | Out-Null
+    Wait-ForHttpStatus -Name "Providers API" -Url "http://localhost:58087/providers/readiness" -HealthyValues @("HEALTHY") | Out-Null
   }
   if ($ProfileList -contains "platform") {
-    Wait-ForHttpStatus -Name "Platform Control API" -Url "http://localhost:58088/platform/readiness" -HealthyValues @("ready") | Out-Null
+    Wait-ForHttpStatus -Name "Platform Control API" -Url "http://localhost:58088/platform/readiness" -HealthyValues @("HEALTHY") | Out-Null
   }
   if ($ProfileList -contains "wlt") {
     Wait-ForHttpStatus -Name "WLT API" -Url "http://localhost:58083/wlt/readiness" -HealthyValues @("ready") | Out-Null

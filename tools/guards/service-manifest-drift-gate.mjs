@@ -7,17 +7,45 @@ const guardId = "service-manifest-drift-gate";
 const violations = [];
 const serviceRoot = "services/dsh";
 const manifestFile = `${serviceRoot}/service.manifest.ts`;
+const runtimeMapFile = `${serviceRoot}/runtime-map.ts`;
 const registryFile = `${serviceRoot}/contracts/contract-registry.ts`;
 const capabilityFiles = [`${serviceRoot}/capability-map.ts`, `${serviceRoot}/capability-map.extensions.ts`];
 const manifest = read(manifestFile);
+const runtimeMap = read(runtimeMapFile);
 const registrySource = read(registryFile);
 
 for (const [marker, message] of [
   ["capabilities: DSH_CAPABILITIES", "MANIFEST_CAPABILITY_DRIFT"],
   ["contracts: DSH_CONTRACT_REGISTRY.map", "MANIFEST_CONTRACT_DRIFT"],
   ["contractOperations: DSH_CONTRACT_OPERATIONS", "MANIFEST_OPERATION_DRIFT"],
+  ["sameCommitRuntimeEvidenceReady", "MANIFEST_SAME_COMMIT_EVIDENCE_DERIVATION_MISSING"],
+  ["DSH_RUNTIME_MAP.every", "MANIFEST_RUNTIME_DERIVATION_MISSING"],
 ]) {
   if (!manifest.includes(marker)) violations.push({ file: manifestFile, message });
+}
+
+for (const [pattern, message] of [
+  [/backendRuntimeReady:\s*true\b/, "MANIFEST_HARDCODED_BACKEND_RUNTIME_READY_FORBIDDEN"],
+  [/databaseReady:\s*true\b/, "MANIFEST_HARDCODED_DATABASE_READY_FORBIDDEN"],
+  [/generatedClientReady:\s*true\b/, "MANIFEST_HARDCODED_GENERATED_CLIENT_READY_FORBIDDEN"],
+  [/screensReady:\s*true\b/, "MANIFEST_HARDCODED_SCREENS_READY_FORBIDDEN"],
+]) {
+  if (pattern.test(manifest)) violations.push({ file: manifestFile, message });
+}
+
+for (const [marker, message] of [
+  ['runtimeEvidence: null', "RUNTIME_MAP_CURRENT_EVIDENCE_MUST_START_EMPTY"],
+  ['runtimeEvidenceCommitSha: null', "RUNTIME_MAP_CURRENT_EVIDENCE_SHA_MUST_START_EMPTY"],
+  ['evidenceState: "NONE"', "RUNTIME_MAP_CURRENT_EVIDENCE_STATE_MISSING"],
+  ["unresolvedState(capability)", "RUNTIME_MAP_UNRESOLVED_STATE_DERIVATION_MISSING"],
+]) {
+  if (!runtimeMap.includes(marker)) violations.push({ file: runtimeMapFile, message });
+}
+for (const [pattern, message] of [
+  [/services\/dsh\/evidence\//, "RUNTIME_MAP_HISTORICAL_EVIDENCE_PATH_FORBIDDEN"],
+  [/HISTORICAL_NOT_SAME_COMMIT/, "RUNTIME_MAP_HISTORICAL_EVIDENCE_STATE_FORBIDDEN"],
+]) {
+  if (pattern.test(runtimeMap)) violations.push({ file: runtimeMapFile, message });
 }
 
 function registrations(source) {
@@ -146,5 +174,6 @@ for (const [operationId, operationOwners] of owners) {
 // The contract registry is the complete operation inventory. The capability
 // map is a curated business taxonomy and is therefore validated for non-empty,
 // canonical, non-duplicated ownership without pretending to enumerate every
-// endpoint in the primary generated contract.
+// endpoint in the primary generated contract. Runtime/evidence readiness is
+// separately fail-closed above: historical reports cannot grant current PASS.
 fail(guardId, violations);

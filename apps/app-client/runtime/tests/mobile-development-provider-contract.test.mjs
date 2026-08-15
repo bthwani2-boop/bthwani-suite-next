@@ -47,16 +47,16 @@ function appEnvSuffix(appKey) {
 
 test("all four mobile apps keep the required provider capabilities", () => {
   for (const appKey of mobileApps) {
-    const features = manifest.apps[appKey].features;
-    assert.ok(features.includes("notifications"), `${appKey}: notifications are required`);
-    assert.ok(features.includes("location"), `${appKey}: location is required`);
-    assert.ok(features.includes("maps"), `${appKey}: native maps are required`);
+    const capabilities = manifest.apps[appKey].nativeCapabilities;
+    assert.ok(capabilities.includes("notifications"), `${appKey}: notifications are required`);
+    assert.ok(capabilities.includes("location"), `${appKey}: location is required`);
+    assert.ok(capabilities.includes("maps"), `${appKey}: native maps are required`);
   }
 
-  assert.equal(manifest.apps["app-client"].features.includes("backgroundLocation"), false);
-  assert.equal(manifest.apps["app-partner"].features.includes("backgroundLocation"), false);
-  assert.equal(manifest.apps["app-field"].features.includes("backgroundLocation"), false);
-  assert.equal(manifest.apps["app-captain"].features.includes("backgroundLocation"), true);
+  assert.equal(manifest.apps["app-client"].nativeCapabilities.includes("backgroundLocation"), false);
+  assert.equal(manifest.apps["app-partner"].nativeCapabilities.includes("backgroundLocation"), false);
+  assert.equal(manifest.apps["app-field"].nativeCapabilities.includes("backgroundLocation"), false);
+  assert.equal(manifest.apps["app-captain"].nativeCapabilities.includes("backgroundLocation"), true);
 });
 
 test("each app receives its own scoped Android Maps key", () => {

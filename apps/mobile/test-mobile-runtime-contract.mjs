@@ -7,6 +7,12 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../
 const appIndex = process.argv.indexOf("--app");
 const appKey = appIndex >= 0 ? process.argv[appIndex + 1] : "";
 const manifestPath = path.join(repoRoot, "tools/mobile/mobile-apps.manifest.json");
+const readinessContractPath = path.join(repoRoot, "infra/docker/runtime-readiness.contract.json");
+const mobileBootstrapPath = path.join(repoRoot, "apps/mobile/ensure-mobile-dev-runtime.ps1");
+const frontendReadinessPath = path.join(repoRoot, "tools/scripts/check-frontend-binding-readiness.mjs");
+const controlPanelPackagePath = path.join(repoRoot, "apps/control-panel/runtime/package.json");
+const runtimeAuthorityPath = path.join(repoRoot, "infra/docker/scripts/runtime.ps1");
+const runtimeEnvPath = path.join(repoRoot, "infra/docker/env/runtime.env.example");
 const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
 const app = manifest.apps?.[appKey];
 const appDir = path.join(repoRoot, "apps", appKey, "runtime");
@@ -16,10 +22,106 @@ function fail(message) {
   process.exit(1);
 }
 
+function requireRepoFile(file, label = path.relative(repoRoot, file)) {
+  if (!fs.existsSync(file) || !fs.statSync(file).isFile()) fail(`missing ${label}`);
+  return fs.readFileSync(file, "utf8");
+}
+
 function requireFile(relative) {
   const absolute = path.join(appDir, relative);
   if (!fs.existsSync(absolute)) fail(`${appKey}: missing ${relative}`);
 }
+
+function requireMarker(label, text, marker) {
+  if (!text.includes(marker)) fail(`${label}: missing governed marker ${marker}`);
+}
+
+function validateSharedRuntimeReadinessContract() {
+  const contractText = requireRepoFile(readinessContractPath);
+  let contract;
+  try {
+    contract = JSON.parse(contractText);
+  } catch (error) {
+    fail(`runtime readiness contract is invalid JSON: ${error.message}`);
+  }
+  if (contract.schemaVersion !== 1) fail(`runtime readiness schemaVersion must be 1, got ${contract.schemaVersion}`);
+
+  const expectedMobileProfiles = ["identity", "workforce", "dsh", "wlt", "media"];
+  const actualMobileProfiles = contract.bundles?.mobileDevelopment;
+  if (JSON.stringify(actualMobileProfiles) !== JSON.stringify(expectedMobileProfiles)) {
+    fail(`mobileDevelopment readiness bundle drift: expected=${expectedMobileProfiles.join(",")} actual=${(actualMobileProfiles ?? []).join(",")}`);
+  }
+  const expectedControlPanelProfiles = ["identity", "workforce", "dsh", "wlt", "providers", "platform"];
+  const actualControlPanelProfiles = contract.bundles?.controlPanelDevelopment;
+  if (JSON.stringify(actualControlPanelProfiles) !== JSON.stringify(expectedControlPanelProfiles)) {
+    fail(`controlPanelDevelopment readiness bundle drift: expected=${expectedControlPanelProfiles.join(",")} actual=${(actualControlPanelProfiles ?? []).join(",")}`);
+  }
+  const frontendDefault = contract.bundles?.frontendDefault;
+  if (!Array.isArray(frontendDefault) || frontendDefault.length === 0) fail("frontendDefault readiness bundle must be non-empty");
+
+  for (const [bundleName, profiles] of Object.entries(contract.bundles ?? {})) {
+    if (!Array.isArray(profiles) || profiles.length === 0) fail(`readiness bundle '${bundleName}' must be non-empty`);
+    if (new Set(profiles).size !== profiles.length) fail(`readiness bundle '${bundleName}' contains duplicate profiles`);
+    for (const profile of profiles) {
+      if (!contract.profiles?.[profile]) fail(`readiness bundle '${bundleName}' references unknown profile '${profile}'`);
+    }
+  }
+
+  const runtimeText = requireRepoFile(runtimeAuthorityPath);
+  const runtimeEnvText = requireRepoFile(runtimeEnvPath);
+  for (const [profile, definition] of Object.entries(contract.profiles ?? {})) {
+    if (!definition.name || !definition.kind || !definition.path) fail(`readiness profile '${profile}' is incomplete`);
+    requireMarker("runtime.ps1", runtimeText, definition.path);
+
+    if (definition.kind === "json-status") {
+      if (!definition.baseUrlEnv || !definition.defaultBaseUrl) fail(`json-status profile '${profile}' needs baseUrlEnv/defaultBaseUrl`);
+      if (!Array.isArray(definition.healthyStatuses) || definition.healthyStatuses.length === 0) {
+        fail(`json-status profile '${profile}' needs healthyStatuses`);
+      }
+      requireMarker("runtime.env.example", runtimeEnvText, `${definition.baseUrlEnv}=`);
+      for (const status of definition.healthyStatuses) requireMarker("runtime.ps1", runtimeText, String(status));
+    } else if (definition.kind === "http-ok") {
+      if (!definition.host || !definition.portEnv || definition.defaultPort === undefined) {
+        fail(`http-ok profile '${profile}' needs host/portEnv/defaultPort`);
+      }
+      requireMarker("runtime.env.example", runtimeEnvText, `${definition.portEnv}=`);
+      requireMarker("runtime.ps1", runtimeText, definition.portEnv);
+    } else {
+      fail(`readiness profile '${profile}' has unsupported kind '${definition.kind}'`);
+    }
+  }
+
+  const bootstrapText = requireRepoFile(mobileBootstrapPath);
+  for (const marker of [
+    "runtime-readiness.contract.json",
+    "bundles.mobileDevelopment",
+    "Test-BthwaniRuntimeProfileReadiness",
+    "Test-BthwaniMobileBackend",
+  ]) requireMarker("ensure-mobile-dev-runtime.ps1", bootstrapText, marker);
+  for (const forbidden of ["/workforce/health", "/dsh/health"]) {
+    if (bootstrapText.includes(forbidden)) fail(`ensure-mobile-dev-runtime.ps1: liveness-only mobile readiness is forbidden (${forbidden})`);
+  }
+
+  const frontendText = requireRepoFile(frontendReadinessPath);
+  for (const marker of [
+    "runtime-readiness.contract.json",
+    '"frontendDefault"',
+    "healthyStatuses.includes",
+    "BTHWANI_FRONTEND_READINESS_BUNDLE",
+    "normalizeAbsoluteHttpUrl",
+    'process.argv.indexOf("--bundle")',
+  ]) requireMarker("check-frontend-binding-readiness.mjs", frontendText, marker);
+
+  const controlPanelPackage = JSON.parse(requireRepoFile(controlPanelPackagePath));
+  const readinessCommand = "node ../../../tools/scripts/check-frontend-binding-readiness.mjs --bundle controlPanelDevelopment";
+  if (!controlPanelPackage.scripts?.dev?.startsWith(`${readinessCommand} && `)) {
+    fail(`control-panel dev must begin with governed readiness command '${readinessCommand}'`);
+  }
+
+  return contract;
+}
+
+validateSharedRuntimeReadinessContract();
 
 if (!app) fail(`unknown app '${appKey || "<none>"}'`);
 for (const file of ["package.json", "index.js", "src/index.ts", "eas.json", "metro.config.cjs", "tsconfig.json"]) {
