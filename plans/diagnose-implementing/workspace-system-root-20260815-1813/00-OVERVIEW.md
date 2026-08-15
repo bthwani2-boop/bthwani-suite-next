@@ -25,14 +25,14 @@ MACHINE_REGISTRY_PATH: plans/diagnose-implementing/_machine/workspace-system-roo
 NAVIGATION_POLICY: ROOT_ANCHORED_GRAPH_ONLY
 LATEST_HEAD_ROLE: TRUTH_INTEGRATION_BASELINE_ONLY
 LATEST_RECONCILED_SHA: 8a244d7b2bb5a0193cd8a9ff7476892585175a1b
-ROOT_RECONCILIATION_REQUIRED: YES
-ROOT_RECONCILED_SHA: UNSET
+ROOT_RECONCILIATION_REQUIRED: NO
+ROOT_RECONCILED_SHA: 8a244d7b2bb5a0193cd8a9ff7476892585175a1b
 OPERATIONAL_ROOT_REQUIRED: YES
-OPERATIONAL_ROOT_COMPLETE: NO
-OPERATIONAL_ROOT_RECONCILED_SHA: UNSET
-OPERATIONAL_NEGATIVE_SPACE_PASS: NO
-OPERATIONAL_ADVERSARIAL_PASS: NO
-LOWER_LAYER_HOLD_COUNT: 0
+OPERATIONAL_ROOT_COMPLETE: YES
+OPERATIONAL_ROOT_RECONCILED_SHA: 8a244d7b2bb5a0193cd8a9ff7476892585175a1b
+OPERATIONAL_NEGATIVE_SPACE_PASS: YES
+OPERATIONAL_ADVERSARIAL_PASS: YES
+LOWER_LAYER_HOLD_COUNT: 4
 TARGET_LANDSCAPE_COMPLETE: NO
 LANDSCAPE_RECONCILED_SHA: UNSET
 ROOT_CAUSE_CLUSTERING_COMPLETE: NO
@@ -48,31 +48,31 @@ FRONTIER_DERIVATION_SOURCE: UNSET
 FRONTIER_VALID: NO
 ACTIVE_EXECUTION_FRONTIER: NONE
 SUSPENSION_STACKS: NONE
-LIFECYCLE_STATE: OPEN
+LIFECYCLE_STATE: ROOT_COMPLETE
 FINAL_DECISION: UNSET
 FINAL_CANDIDATE_SHA: UNSET
 HEAD_AT_DECISION: UNSET
 
 ## 1. Truth Baseline
 
-Pinned Integration Target `A` at `8a244d7b2bb5a0193cd8a9ff7476892585175a1b`. The orchestrator and modules `00–06` were read from that exact SHA. All product/runtime truth remains OPEN until reconciled from live repository evidence.
+Pinned Integration Target `A` at `8a244d7b2bb5a0193cd8a9ff7476892585175a1b`. The orchestrator and modules `00–06` were read from that exact SHA. Operational Root is reconciled to that same live target SHA; repository-platform CI/enforcement evidence remains separately scoped and currently incomplete.
 
 ## 2. Macro Blueprint / Dependency Graph
 
-OPEN. Diagnosis starts at `SYSTEM_OPERATIONAL_ROOT` using `TOP-DOWN DIAGNOSIS; BOTTOM-UP EVIDENCE`.
+Operational Root is COMPLETE at `SYSTEM_OPERATIONAL_ROOT`: 121 material nodes across Product Outcomes, Actors, Authorities, Responsibilities, Journeys, States, Transitions, Invariants, Handoffs, Truth Owners, Writers/Readers/Consumers, Flows and Implementation/Runtime Boundaries. Negative-space and adversarial root challenges PASS. Root-Cause Landscape remains OPEN.
 
 ## 3. Sequence Registry / Execution Frontier
 
-No Sequence exists. Frontier derivation is forbidden until Operational Root and Root-Cause Priority machine gates pass.
+No Sequence exists. Four lower-layer observations are held as evidence only and cannot direct execution until promoted into proven Root-Cause Clusters. Frontier derivation remains forbidden until landscape and priority gates pass.
 
 ## 4. Global Decisions / Blockers
 
-No user decision requested. No non-derivable product decision has yet been proven necessary.
+No user decision requested. No non-derivable product decision has yet been proven necessary. Current external evidence deficits include absent exact-SHA CI/status evidence and inaccessible live branch-protection state; these do not prove implementation failure and are not yet final blockers while internal diagnosis/execution remains possible.
 
 ## 5. Global Accounting / Coverage / Reconciliation
 
-Machine registries initialized OPEN. Findings, root-cause clusters, consumers, dependencies, evidence, scope deltas and cleanup are not yet claimed complete.
+Operational root bounded coverage is accounted and reconciled. Lower-layer queue: four HOLD observations (DSH surface binding, DSH current runtime evidence, WLT runtime/data evidence, repository-platform evidence) and one dispositioned lower-authority scope-wording observation. Material root clustering, competitive deepening and priority accounting are the next gates.
 
 ## 6. Final Target Handoff / Closure
 
-OPEN. No Product/Runtime/Data mutation, integration, closure claim, or target write has occurred.
+OPEN. No Product/Runtime/Data mutation, integration-target write, release, deployment or closure claim has occurred. `CLOSED_WITH_EVIDENCE` remains forbidden until every material finding is clustered/dispositioned, implementation/cleanup is complete, same-candidate evidence exists for applicable scopes, protected approvals are satisfied where required, and final reconciliation succeeds.
