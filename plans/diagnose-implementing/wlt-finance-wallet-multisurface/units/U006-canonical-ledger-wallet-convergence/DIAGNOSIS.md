@@ -1,3 +1,0 @@
-# U006 Diagnosis — Canonical Ledger / Wallet Convergence
-
-WLT has a canonical double-entry kernel but active legacy wallet/ledger projections remain. `penalty/penalty.go` proves the problem: it posts a balanced ledger transaction and separately changes `wlt_wallets`. Historical finance inventory also identified COD/payout direct wallet writers. `ledger/ledger.go` labels `wlt_ledger_entries` compatibility-only while representative reads/close logic can still use it. This unit owns convergence only: canonical posting for every balance effect, derived wallet projection, retirement of legacy ledger entries from current authority, penalty canonicalization and trusted operator context. COD semantics remain U003; payout workflow semantics remain U004.
