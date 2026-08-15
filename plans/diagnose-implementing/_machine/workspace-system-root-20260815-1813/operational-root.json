@@ -1,6 +1,6 @@
 {
   "schema": "BTHWANI_OPERATIONAL_ROOT_V1",
-  "taskId": "TASK-20260815-1813-WORKSPACE-SYSTEM-ROOT",
+  "taskId": "PKG-WORKSPACE_SYSTEM_ROOT_20260815_1813",
   "target": "كل الوركسبايس",
   "diagnosticAltitude": "SYSTEM_OPERATIONAL_ROOT",
   "reconciledSha": "8a244d7b2bb5a0193cd8a9ff7476892585175a1b",

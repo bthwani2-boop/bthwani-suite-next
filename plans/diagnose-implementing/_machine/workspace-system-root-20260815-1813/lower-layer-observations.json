@@ -1,6 +1,6 @@
 {
   "schema": "BTHWANI_LOWER_LAYER_OBSERVATIONS_V1",
-  "taskId": "TASK-20260815-1813-WORKSPACE-SYSTEM-ROOT",
+  "taskId": "PKG-WORKSPACE_SYSTEM_ROOT_20260815_1813",
   "reconciledSha": "8a244d7b2bb5a0193cd8a9ff7476892585175a1b",
   "observations": [
     {
@@ -8,8 +8,8 @@
       "layer":"DSH_SURFACE_BINDING",
       "symptom":"DSH product surfaces are fix-required pending same-candidate binding/runtime verification; exact A CI additionally proves seven missing/unreachable governed static surface bindings.",
       "status":"PROMOTED",
-      "rootCauseClusterId":"RC-001",
-      "operationalParentIds":["OUT-004","OUT-006","OUT-007","OUT-009","OUT-016"],
+      "rootCauseCluster":"RC-001",
+      "operationalParent":"OUT-004",
       "sourceEvidence":["services/dsh/surface-map.ts","GitHub Actions run 31890801263 job 95026698938"],
       "promotionEvidence":["plans/diagnose-implementing/workspace-system-root-20260815-1813/evidence/root-cause-landscape-priority.md"]
     },
@@ -18,8 +18,8 @@
       "layer":"DSH_RUNTIME_EVIDENCE",
       "symptom":"DSH runtime bindings remain historical/current-evidence-null and service closure remains FIX_REQUIRED; exact static CI now provides partial current proof but runtime/full-candidate evidence remains downstream.",
       "status":"PROMOTED",
-      "rootCauseClusterId":"RC-005",
-      "operationalParentIds":["OUT-001","AUT-007","FLW-008","INV-009"],
+      "rootCauseCluster":"RC-005",
+      "operationalParent":"OUT-001",
       "sourceEvidence":["services/dsh/runtime-map.ts","services/dsh/service.manifest.ts"],
       "promotionEvidence":["plans/diagnose-implementing/workspace-system-root-20260815-1813/evidence/repository-platform-state.md","plans/diagnose-implementing/workspace-system-root-20260815-1813/evidence/root-cause-landscape-priority.md"]
     },
@@ -28,8 +28,8 @@
       "layer":"WLT_RUNTIME_AND_DATA_EVIDENCE",
       "symptom":"WLT remains FIX_REQUIRED without current runtime/database/provider evidence, while exact-code deepening proves substantial sovereign implementation and moves the unresolved problem to current proof/provenance plus any specifically failing consumers.",
       "status":"PROMOTED",
-      "rootCauseClusterId":"RC-005",
-      "operationalParentIds":["OUT-011","AUT-007","FLW-008","INV-009"],
+      "rootCauseCluster":"RC-005",
+      "operationalParent":"OUT-011",
       "sourceEvidence":["services/wlt/service.manifest.ts","services/wlt/backend/internal/http/server.go","services/wlt/backend/internal/cod/sovereign_cod.go","services/wlt/backend/internal/payment/topup.go"],
       "promotionEvidence":["plans/diagnose-implementing/workspace-system-root-20260815-1813/evidence/root-cause-landscape-priority.md"]
     },
@@ -38,8 +38,8 @@
       "layer":"REPOSITORY_PLATFORM_EVIDENCE",
       "symptom":"Corrected: direct Actions API proves two Contextual CI runs for exact A SHA; A run 31890801263 fails deterministic workspace diagnostics while another branch run succeeds under a different affected scope. Branch protection remains inaccessible.",
       "status":"PROMOTED",
-      "rootCauseClusterId":"RC-005",
-      "operationalParentIds":["AUT-007","FLW-008","INV-009"],
+      "rootCauseCluster":"RC-005",
+      "operationalParent":"AUT-007",
       "sourceEvidence":["plans/diagnose-implementing/workspace-system-root-20260815-1813/evidence/repository-platform-state.md"],
       "promotionEvidence":["GitHub Actions run 31890801263","GitHub Actions run 31890761624","plans/diagnose-implementing/workspace-system-root-20260815-1813/evidence/root-cause-landscape-priority.md"]
     },
