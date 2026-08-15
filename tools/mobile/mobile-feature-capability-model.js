@@ -45,6 +45,27 @@ const REQUIRED_MOBILITY_RULES = {
   packageDeletionRequiresConsumerAndRequirementClosure: true,
 };
 
+const REQUIRED_SYSTEM_OWNERS = {
+  sessionSecretStorage: ["expo-secure-store", "CANONICAL_ACTIVE"],
+  ephemeralIdentifiers: ["expo-crypto", "CANONICAL_ACTIVE"],
+  runtimeConstants: ["expo-constants", "INFRA_ACTIVE"],
+  updatesRuntime: ["expo-updates", "INFRA_ACTIVE"],
+  splashLifecycle: ["expo-splash-screen", "INFRA_ACTIVE"],
+  deepLinking: ["expo-linking", "TARGET_ROUTER_SUPPORT"],
+  biometricUnlock: ["expo-local-authentication", "REQUIREMENT_REVIEW_PENDING"],
+  applicationMetadata: ["expo-application", "CONSUMER_REVIEW_PENDING"],
+  deviceMetadata: ["expo-device", "CONSUMER_REVIEW_PENDING"],
+  localization: ["expo-localization", "REQUIREMENT_REVIEW_PENDING"],
+};
+
+const REQUIRED_SYSTEM_RULES = {
+  secureStoreOwnsSecretsNotGeneralCache: true,
+  cryptoDoesNotOwnPersistence: true,
+  routerTargetProtectsLinkingFromPrematureDeprecation: true,
+  reviewPendingDoesNotAuthorizeDeletion: true,
+  nativeRemovalDeferredToCleanupWindow: true,
+};
+
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
@@ -109,12 +130,36 @@ function validateMobilityArchitecture(globalConfig) {
   }
 }
 
+function validateSystemArchitecture(globalConfig) {
+  const system = globalConfig?.systemArchitecture;
+  assert(isPlainObject(system), "mobile system capability architecture decision is required");
+  assert(system.decision === "CAPABILITY_CONSOLIDATION_FIRST", "system packages must remain governed by capability consolidation first");
+  assert(system.remoteBuildNow === false, "system package governance must not trigger an EAS remote build");
+  assert(isPlainObject(system.owners), "system capability owners are required");
+  for (const [capability, [requiredPackage, requiredStatus]] of Object.entries(REQUIRED_SYSTEM_OWNERS)) {
+    const owner = system.owners[capability];
+    assert(isPlainObject(owner), `system capability '${capability}' requires an explicit owner`);
+    assert(owner.package === requiredPackage, `system capability '${capability}' must be owned by '${requiredPackage}'`);
+    assert(owner.status === requiredStatus, `system capability '${capability}' must remain '${requiredStatus}' until deliberately reviewed`);
+  }
+  assert(isPlainObject(system.alignment), "system capability alignment decisions are required");
+  assert(system.alignment["app-client.localAuthentication"] === "DECLARED_PENDING_PRODUCT_DECISION", "client biometric declaration must remain pending a product decision");
+  assert(system.alignment["app-partner.localAuthentication"] === "DECLARED_PENDING_PRODUCT_DECISION", "partner biometric declaration must remain pending a product decision");
+  assert(system.alignment["app-field.localAuthentication"] === "DECLARED_PENDING_PRODUCT_DECISION", "field biometric declaration must remain pending a product decision");
+  assert(system.alignment["app-captain.localAuthentication"] === "NOT_DECLARED_REVIEW_PENDING", "captain biometric state must remain explicitly review-pending");
+  assert(isPlainObject(system.rules), "system capability consolidation rules are required");
+  for (const [rule, requiredValue] of Object.entries(REQUIRED_SYSTEM_RULES)) {
+    assert(system.rules[rule] === requiredValue, `system capability rule '${rule}' drifted from the governed decision`);
+  }
+}
+
 function validateMobileFeatureCapabilityManifest(manifest) {
   assert(isPlainObject(manifest), "mobile manifest must be an object");
   assert(manifest.global?.capabilityModelVersion === 1, "mobile capability model version must be 1");
   validateNavigationArchitecture(manifest.global);
   validateMediaArchitecture(manifest.global);
   validateMobilityArchitecture(manifest.global);
+  validateSystemArchitecture(manifest.global);
   assert(isPlainObject(manifest.apps) && Object.keys(manifest.apps).length > 0, "mobile manifest apps are required");
 
   for (const [appKey, app] of Object.entries(manifest.apps)) {
@@ -148,5 +193,7 @@ module.exports = {
   REQUIRED_MEDIA_RULES,
   REQUIRED_MOBILITY_OWNERS,
   REQUIRED_MOBILITY_RULES,
+  REQUIRED_SYSTEM_OWNERS,
+  REQUIRED_SYSTEM_RULES,
   validateMobileFeatureCapabilityManifest,
 };
