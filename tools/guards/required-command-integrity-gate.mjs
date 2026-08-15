@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { fail, read, repoRoot } from "./_guard-utils.mjs";
 import { resolveWorkflowInventory } from "./_workflow-registry.mjs";
 
@@ -36,7 +37,7 @@ function rejectMarkers(relativePath, content, markers) {
 const packageJson = JSON.parse(text(packageFile));
 const scripts = packageJson.scripts ?? {};
 const requiredFailClosedScripts = [
-  "guard:required-command-integrity", "guard:workflow-lint", "guard:workflow-security", "guard:actions-pin",
+  "guard:required-command-integrity", "guard:governance-schema", "guard:workflow-lint", "guard:workflow-security", "guard:actions-pin",
   "guard:a11y", "web:runtime-contract:test", "ui-kit:catalog:build", "visual:ui-kit:contract",
   "performance:api:quick", "performance:bundle:size",
 ];
@@ -52,8 +53,21 @@ const expectedCommands = new Map([
   ["ui-kit:catalog:build", "node tools/scripts/build-ui-kit-catalog.mjs"],
   ["visual:ui-kit:contract", "node tools/guards/ui-kit-visual-contract-gate.mjs"],
   ["guard:required-command-integrity", "node tools/guards/required-command-integrity-gate.mjs"],
+  ["guard:governance-schema", "node tools/guards/governance-schema-gate.mjs"],
 ]);
 for (const [scriptName, expected] of expectedCommands) if (scripts[scriptName] !== expected) violations.push({ file: packageFile, line: 0, message: `GOVERNED_COMMAND_DRIFT ${scriptName}` });
+
+const governanceSchema = spawnSync(process.execPath, [path.join(repoRoot, "tools", "guards", "governance-schema-gate.mjs")], {
+  cwd: repoRoot,
+  encoding: "utf8",
+});
+if (governanceSchema.status !== 0) {
+  violations.push({
+    file: "tools/guards/governance-schema-gate.mjs",
+    line: 0,
+    message: `GOVERNANCE_SCHEMA_GATE_FAILED ${(governanceSchema.stderr || governanceSchema.stdout || "").trim()}`,
+  });
+}
 
 const performanceQuick = scripts["performance:api:quick"] ?? "";
 if (performanceQuick.includes("localhost:8080")) violations.push({ file: packageFile, line: 0, message: "LEGACY_DSH_HOST_PORT_FORBIDDEN" });

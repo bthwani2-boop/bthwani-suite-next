@@ -1,23 +1,28 @@
 # Diagnose / Implement
 
+Status: DERIVED_SUPPORT / NAVIGATION_ONLY
+
+Executable orchestration authority is defined only by the V5 canonical core:
+`tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`,
+`PACKAGE.template.md`, `orchestrator.mjs`, and
+`tools/guards/governance-schema-gate.mjs`.
+
 One task = one `<task>/PACKAGE.md`.
 
-One public tool = `orchestrator.mjs`.
+Create a package after the isolated task branch exists:
 
-One governing contract =
-`tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`.
+`node plans/diagnose-implementing/orchestrator.mjs new --name <task> --target "<target>" --mode <PREPARE_ONLY|EXECUTE_END_TO_END> --integration-branch A --task-branch <branch>`
 
-Create:
+Run a derived gate:
 
-`node plans/diagnose-implementing/orchestrator.mjs new --name <task> --target "<target>" --mode <PREPARE_ONLY|EXECUTE_END_TO_END> --integration-branch A --task-branch <branch> --base-sha <sha>`
+`node plans/diagnose-implementing/orchestrator.mjs check --package <PACKAGE.md> --phase <diagnose|prepare|execute|verify|close>`
 
-Validate:
+Inspect the derived lifecycle state:
 
-`node plans/diagnose-implementing/orchestrator.mjs check --package <PACKAGE.md> --head <live-sha> --phase <diagnose|prepare|execute|close>`
+`node plans/diagnose-implementing/orchestrator.mjs state --package <PACKAGE.md>`
 
-`check` is fail-closed. `prepare`/`execute` require isolation, complete root/landscape/priority/frontier/negative-space/adversarial/verification readiness, and zero unaccounted findings/decisions/consumers/dependencies/scope deltas. `close` additionally requires complete implementation/consumer/cleanup/verification/evidence/governance/fresh-head/final-adversarial proof and runtime evidence when required.
+V5 does not trust package-authored READINESS/UNACCOUNTED/COMPLETION/STATUS summaries. The engine derives gates from the operational graph, causal graph, ledger, frontier, evidence records, and live Git truth.
 
-`PREPARE_ONLY` terminates at `PREPARED`; it never claims execution closure.
+`PREPARE_ONLY` may reach a proven prepared frontier but never execution closure.
 
-Only packages with `SCHEMA: BTHWANI_PACKAGE_V4` are executable authority.
-Older packages remain historical evidence only.
+Only `SCHEMA: BTHWANI_PACKAGE_V5` is executable package authority. V1-V4 packages are historical evidence only and require fresh V5 reconciliation before reuse.

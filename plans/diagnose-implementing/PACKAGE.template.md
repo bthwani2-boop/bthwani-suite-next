@@ -1,6 +1,6 @@
 # Bthwani Task Package
 
-SCHEMA: BTHWANI_PACKAGE_V4
+SCHEMA: BTHWANI_PACKAGE_V5
 TASK_ID: __TASK_ID__
 TARGET: __TARGET__
 MODE: __MODE__
@@ -9,34 +9,40 @@ TASK_BRANCH: __TASK_BRANCH__
 BASE_SHA: __BASE_SHA__
 LATEST_RECONCILED_SHA: __BASE_SHA__
 ROOT: __TARGET__
-STATUS: DIAGNOSING
-ISOLATION_READY: NO
 INTEGRATION_OWNER: UNASSIGNED
-READINESS: ROOT=NO LANDSCAPE=NO PRIORITY=NO FRONTIER=NO NEGATIVE_SPACE=NO ADVERSARIAL=NO VERIFICATION_DEFINED=NO
-UNACCOUNTED: FINDINGS=UNSET DECISIONS=UNSET CONSUMERS=UNSET DEPENDENCIES=UNSET SCOPE_DELTAS=UNSET
-COMPLETION: IMPLEMENTATION=NO CONSUMERS=NO CLEANUP=NO VERIFICATION=NO EVIDENCE=NO GOVERNANCE=NO FRESH_HEAD=NO FINAL_ADVERSARIAL=NO
 RUNTIME_REQUIRED: UNSET
-PRODUCT_EVIDENCE: MISSING
-CLOSURE: OPEN
+
+## Operational Coverage
+
+| Node | Kind | Parent | Claim | Status | Evidence |
+|---|---|---|---|---|---|
 
 ## Root-Cause Graph
 
-| RC | Root cause | Operational impact | Depends on | Blast / unlock | Priority | Disposition |
-|---|---|---|---|---|---|---|
+| RC | Root cause | Operational parent | Evidence | Depends on | Consumers | Blast / unlock | Priority | Deepening | Disposition |
+|---|---|---|---|---|---|---|---|---|---|
 
 ## Ledger
 
-| Type | ID | RC | Evidence / decision / consumer / delta | Status |
-|---|---|---|---|---|
+| Type | ID | RC | Relation / claim | Status | Evidence |
+|---|---|---|---|---|---|
 
 ## Frontier
 
 | Work | RC | Depends on | Blocks / unlocks | Conflict | Owner | Parallel | State | Evidence |
 |---|---|---|---|---|---|---|---|---|
 
+## Evidence
+
+| Evidence | Claim | Check / source | Candidate | Environment | Result | Limits / invalidates on |
+|---|---|---|---|---|---|---|
+
 ## Closure
 
-- Integration head:
+- Integration head: SELF
+- Final candidate: SELF
 - Verification:
 - Runtime/product evidence:
 - Cleanup:
+- Governance:
+- Final adversarial:
