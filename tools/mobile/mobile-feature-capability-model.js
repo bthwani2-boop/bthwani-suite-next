@@ -5,6 +5,7 @@ const KNOWN_NATIVE_CAPABILITIES = new Set([
 const REQUIRED_NAVIGATION_APPS = ["app-client", "app-partner", "app-captain", "app-field"];
 const REQUIRED_NAVIGATION_STABILITY_GATES = ["productJourneys", "backendContracts", "mobileAppShell", "deepLinksAndNotifications", "regressionBaseline", "routeContracts", "parityTests"];
 const REQUIRED_NAVIGATION_MIGRATION_ORDER = ["app-field", "app-captain", "app-partner", "app-client"];
+const REQUIRED_BIOMETRIC_DECLARED_APPS = ["app-client", "app-partner", "app-field"];
 
 const REQUIRED_MEDIA_OWNERS = {
   systemCameraPhotoCapture: ["expo-image-picker", "CANONICAL_ACTIVE"],
@@ -62,6 +63,10 @@ const REQUIRED_SYSTEM_RULES = {
   secureStoreOwnsSecretsNotGeneralCache: true,
   cryptoDoesNotOwnPersistence: true,
   routerTargetProtectsLinkingFromPrematureDeprecation: true,
+  biometricUnlockIsLocalReauthOnly: true,
+  biometricUnlockCannotCreateServerSession: true,
+  biometricUnlockCannotBypassIdentityOrWorkforceGates: true,
+  biometricFeatureBindingRequiresDecisionClosure: true,
   reviewPendingDoesNotAuthorizeDeletion: true,
   nativeRemovalDeferredToCleanupWindow: true,
 };
@@ -162,6 +167,9 @@ function validateMobileFeatureCapabilityManifest(manifest) {
   validateSystemArchitecture(manifest.global);
   assert(isPlainObject(manifest.apps) && Object.keys(manifest.apps).length > 0, "mobile manifest apps are required");
 
+  const biometricCapabilityApps = [];
+  const biometricFeatureOwners = [];
+
   for (const [appKey, app] of Object.entries(manifest.apps)) {
     assert(!Object.prototype.hasOwnProperty.call(app, "features"), `${appKey}: legacy 'features' is forbidden; use productFeatures + nativeCapabilities`);
     const nativeCapabilities = app.nativeCapabilities;
@@ -170,6 +178,8 @@ function validateMobileFeatureCapabilityManifest(manifest) {
     for (const capability of nativeCapabilities) {
       assert(typeof capability === "string" && KNOWN_NATIVE_CAPABILITIES.has(capability), `${appKey}: unknown native capability '${capability}'`);
     }
+    if (nativeCapabilities.includes("localAuthentication")) biometricCapabilityApps.push(appKey);
+
     assert(isPlainObject(app.productFeatures) && Object.keys(app.productFeatures).length > 0, `${appKey}: productFeatures must be a non-empty object`);
     for (const [productFeature, requiredCapabilities] of Object.entries(app.productFeatures)) {
       assert(/^[a-z][A-Za-z0-9]*$/.test(productFeature), `${appKey}: invalid product feature id '${productFeature}'`);
@@ -179,8 +189,21 @@ function validateMobileFeatureCapabilityManifest(manifest) {
         assert(KNOWN_NATIVE_CAPABILITIES.has(capability), `${appKey}: product feature '${productFeature}' references unknown native capability '${capability}'`);
         assert(nativeCapabilities.includes(capability), `${appKey}: product feature '${productFeature}' requires undeclared native capability '${capability}'`);
       }
+      if (requiredCapabilities.includes("localAuthentication")) biometricFeatureOwners.push(`${appKey}.${productFeature}`);
     }
   }
+
+  if (manifest.global.systemArchitecture?.owners?.biometricUnlock?.status === "REQUIREMENT_REVIEW_PENDING") {
+    assert(
+      sameArray(biometricCapabilityApps, REQUIRED_BIOMETRIC_DECLARED_APPS),
+      `biometric capability declarations must remain ${REQUIRED_BIOMETRIC_DECLARED_APPS.join(", ")} until the product decision is closed`,
+    );
+    assert(
+      biometricFeatureOwners.length === 0,
+      `biometric unlock is requirement-pending and cannot be bound to product features yet: ${biometricFeatureOwners.join(", ")}`,
+    );
+  }
+
   return manifest;
 }
 
@@ -189,6 +212,7 @@ module.exports = {
   REQUIRED_NAVIGATION_APPS,
   REQUIRED_NAVIGATION_STABILITY_GATES,
   REQUIRED_NAVIGATION_MIGRATION_ORDER,
+  REQUIRED_BIOMETRIC_DECLARED_APPS,
   REQUIRED_MEDIA_OWNERS,
   REQUIRED_MEDIA_RULES,
   REQUIRED_MOBILITY_OWNERS,
