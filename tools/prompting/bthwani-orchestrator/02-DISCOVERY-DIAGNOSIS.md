@@ -144,3 +144,30 @@ Falsifiable hypothesis → smallest real check → canonical runtime/readback �
 ## 15) Reopen
 
 أي discovery يغير operational meaning/authority/ownership أو causal placement يعيد فتح affected operational/root/priority cone فقط؛ لا تكمل Frontier قديمة بسبب sunk cost.
+
+## 16) UX / Decision Clarity
+
+لكل Journey/Surface مادية افحص بحسب الانطباق: Entry/Discoverability, Loading, Empty, Partial, Ready, Success, Error, Denied, Conflict, Stale, Pending, Timeout, Retry, Offline/Reconnect, Cancelled, Recovery, Completed, Later Readback. يجب أن يعرف المستخدم/المشغل الحالة، ما حدث، ما ينتظر، الإجراء التالي، سبب المنع/الفشل وكيفية الاسترداد.
+
+## 17) Full-Stack Failure Matrix
+
+غطِّ حسب الخطر:
+
+```text
+success / empty-missing / invalid input / unauthenticated-denied
+wrong role/scope/IDOR / forbidden state / not found / conflict-stale
+duplicate-replay-idempotency / boundary / race-concurrency / partial failure
+dependency-DB-network failure / timeout-unknown result / retry-backoff-DLQ
+offline-reconnect / restart-recovery / old-new data / mixed-version migration
+rollback-roll-forward / compensation-reconciliation
+```
+
+المصفوفة تُطبّق على الجذر/الرحلة المادية ولا تستخدم كذريعة لـfull-repo test sweep غير موجّه.
+
+## 18) Invariant / Counterfactual Challenge
+
+استخرج القواعد التي لا يجب كسرها: ترتيب States، حدود Actor/Action، prerequisites قبل handoff، canonical owner، recovery rule، idempotency/security/isolation boundaries. ثم حاول كسرها عمدًا، واسأل counterfactually: لو كان الجذر المقترح غير صحيح، ما الدليل الذي يجب أن يختلف؟
+
+## 19) Adversarial Completeness
+
+حاول إثبات أن التشخيص ناقص عبر unmapped routes/states/APIs، hidden writers/readers، jobs/events/admin/fallback/legacy، unreachable error paths، race/partial transaction، permissions/cross-scope، contract/schema/data drift، stale runtime/config، orphan refs، missing recovery، weak tests. كل Material discovery تصبح Operational Node/Finding/RC/Scope Delta/Decision/Consumer/Evidence/Cleanup disposition؛ لا تختفي بسبب أن Sequence أخرى أغلقت سابقًا.
