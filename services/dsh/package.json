@@ -128,7 +128,9 @@
         "deletionAuthorized": false
       },
       "expo-document-picker": {
-        "status": "CONSUMER_REVIEW_PENDING",
+        "status": "RUNTIME_BRIDGE_PROVIDER",
+        "runtimeOwner": "apps/*/runtime",
+        "bridgeEvidence": ["services/dsh/frontend/shared/catalog/catalog-mobile-file-picker.ts"],
         "deletionAuthorized": false
       },
       "expo-image-picker": {
