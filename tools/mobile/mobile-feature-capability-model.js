@@ -6,6 +6,7 @@ const REQUIRED_NAVIGATION_APPS = ["app-client", "app-partner", "app-captain", "a
 const REQUIRED_NAVIGATION_STABILITY_GATES = ["productJourneys", "backendContracts", "mobileAppShell", "deepLinksAndNotifications", "regressionBaseline", "routeContracts", "parityTests"];
 const REQUIRED_NAVIGATION_MIGRATION_ORDER = ["app-field", "app-captain", "app-partner", "app-client"];
 const REQUIRED_BIOMETRIC_DECLARED_APPS = ["app-client", "app-partner", "app-field"];
+const REQUIRED_METADATA_DECLARED_APPS = ["app-client", "app-partner", "app-field"];
 
 const REQUIRED_MEDIA_OWNERS = {
   systemCameraPhotoCapture: ["expo-image-picker", "CANONICAL_ACTIVE"],
@@ -67,6 +68,10 @@ const REQUIRED_SYSTEM_RULES = {
   biometricUnlockCannotCreateServerSession: true,
   biometricUnlockCannotBypassIdentityOrWorkforceGates: true,
   biometricFeatureBindingRequiresDecisionClosure: true,
+  applicationMetadataCannotOwnInstallationIdentity: true,
+  deviceMetadataCannotOwnStableInstallationIdentity: true,
+  stableInstallationIdentityRemainsSecureStoreCrypto: true,
+  metadataFeatureBindingRequiresConsumerProof: true,
   reviewPendingDoesNotAuthorizeDeletion: true,
   nativeRemovalDeferredToCleanupWindow: true,
 };
@@ -169,6 +174,10 @@ function validateMobileFeatureCapabilityManifest(manifest) {
 
   const biometricCapabilityApps = [];
   const biometricFeatureOwners = [];
+  const applicationCapabilityApps = [];
+  const deviceCapabilityApps = [];
+  const applicationFeatureOwners = [];
+  const deviceFeatureOwners = [];
 
   for (const [appKey, app] of Object.entries(manifest.apps)) {
     assert(!Object.prototype.hasOwnProperty.call(app, "features"), `${appKey}: legacy 'features' is forbidden; use productFeatures + nativeCapabilities`);
@@ -179,6 +188,8 @@ function validateMobileFeatureCapabilityManifest(manifest) {
       assert(typeof capability === "string" && KNOWN_NATIVE_CAPABILITIES.has(capability), `${appKey}: unknown native capability '${capability}'`);
     }
     if (nativeCapabilities.includes("localAuthentication")) biometricCapabilityApps.push(appKey);
+    if (nativeCapabilities.includes("application")) applicationCapabilityApps.push(appKey);
+    if (nativeCapabilities.includes("device")) deviceCapabilityApps.push(appKey);
 
     assert(isPlainObject(app.productFeatures) && Object.keys(app.productFeatures).length > 0, `${appKey}: productFeatures must be a non-empty object`);
     for (const [productFeature, requiredCapabilities] of Object.entries(app.productFeatures)) {
@@ -190,6 +201,8 @@ function validateMobileFeatureCapabilityManifest(manifest) {
         assert(nativeCapabilities.includes(capability), `${appKey}: product feature '${productFeature}' requires undeclared native capability '${capability}'`);
       }
       if (requiredCapabilities.includes("localAuthentication")) biometricFeatureOwners.push(`${appKey}.${productFeature}`);
+      if (requiredCapabilities.includes("application")) applicationFeatureOwners.push(`${appKey}.${productFeature}`);
+      if (requiredCapabilities.includes("device")) deviceFeatureOwners.push(`${appKey}.${productFeature}`);
     }
   }
 
@@ -204,6 +217,28 @@ function validateMobileFeatureCapabilityManifest(manifest) {
     );
   }
 
+  if (manifest.global.systemArchitecture?.owners?.applicationMetadata?.status === "CONSUMER_REVIEW_PENDING") {
+    assert(
+      sameArray(applicationCapabilityApps, REQUIRED_METADATA_DECLARED_APPS),
+      `application metadata capability declarations must remain ${REQUIRED_METADATA_DECLARED_APPS.join(", ")} until consumer review closes`,
+    );
+    assert(
+      applicationFeatureOwners.length === 0,
+      `application metadata is consumer-review-pending and cannot be bound to product features without proof: ${applicationFeatureOwners.join(", ")}`,
+    );
+  }
+
+  if (manifest.global.systemArchitecture?.owners?.deviceMetadata?.status === "CONSUMER_REVIEW_PENDING") {
+    assert(
+      sameArray(deviceCapabilityApps, REQUIRED_METADATA_DECLARED_APPS),
+      `device metadata capability declarations must remain ${REQUIRED_METADATA_DECLARED_APPS.join(", ")} until consumer review closes`,
+    );
+    assert(
+      deviceFeatureOwners.length === 0,
+      `device metadata is consumer-review-pending and cannot be bound to product features without proof: ${deviceFeatureOwners.join(", ")}`,
+    );
+  }
+
   return manifest;
 }
 
@@ -213,6 +248,7 @@ module.exports = {
   REQUIRED_NAVIGATION_STABILITY_GATES,
   REQUIRED_NAVIGATION_MIGRATION_ORDER,
   REQUIRED_BIOMETRIC_DECLARED_APPS,
+  REQUIRED_METADATA_DECLARED_APPS,
   REQUIRED_MEDIA_OWNERS,
   REQUIRED_MEDIA_RULES,
   REQUIRED_MOBILITY_OWNERS,
