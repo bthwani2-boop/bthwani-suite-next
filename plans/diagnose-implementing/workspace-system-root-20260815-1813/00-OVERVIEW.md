@@ -46,16 +46,16 @@ LANDSCAPE_ADVERSARIAL_PASS: YES
 PRIORITY_POLICY: HIGHEST_PROVEN_SYSTEMIC_LEVERAGE
 FRONTIER_DERIVATION_SOURCE: ROOT_GRAPH
 FRONTIER_VALID: YES
-ACTIVE_EXECUTION_FRONTIER: NONE
+ACTIVE_EXECUTION_FRONTIER: SEQ-001
 SUSPENSION_STACKS: NONE
-LIFECYCLE_STATE: FRONTIER_READY
+LIFECYCLE_STATE: IMPLEMENTING
 FINAL_DECISION: UNSET
 FINAL_CANDIDATE_SHA: UNSET
 HEAD_AT_DECISION: UNSET
 
 ## 1. Truth Baseline
 
-Integration target `A` remains pinned and rechecked at `8a244d7b2bb5a0193cd8a9ff7476892585175a1b`. The Orchestrator and modules `00–06` were read from that exact SHA. Direct GitHub Actions evidence now proves that Contextual CI exists on the exact baseline and run `31890801263` on `A` fails deterministic workspace diagnostics; the earlier no-run interpretation was corrected in the evidence record.
+Integration target `A` remains pinned and rechecked at `8a244d7b2bb5a0193cd8a9ff7476892585175a1b`. The Orchestrator and modules `00–06` were read from that exact SHA. Direct GitHub Actions evidence proves Contextual CI run `31890801263` on `A` fails deterministic workspace diagnostics; a same-SHA run on another branch had different affected coverage and is not whole-workspace proof.
 
 ## 2. Macro Blueprint / Dependency Graph
 
@@ -63,16 +63,16 @@ Operational Root is COMPLETE at `SYSTEM_OPERATIONAL_ROOT`: 121 material nodes ac
 
 ## 3. Sequence Registry / Execution Frontier
 
-Machine-selected primary frontier: `RC-001`. No parallel frontier is selected because this task has one remote writer even though RC-002 and RC-003 are semantically independent. No Sequence has yet been activated; Sequence creation is the next gate. RC-005 is downstream of source convergence and final exact-candidate proof.
+Active frontier: `SEQ-001`, bound only to `RC-001`. Its pre-execution Operational/Common gates are YES and its status is `READY_TO_EXECUTE`. Work is serialized under the single remote writer even though RC-002 and RC-003 are semantically independent. RC-005 remains downstream of source convergence and final exact-candidate proof.
 
 ## 4. Global Decisions / Blockers
 
-No user decision is required: all current implementation choices are derivable from existing contracts/guards/current runtime paths. Live branch-protection enforcement remains inaccessible to this GitHub integration and is `NEEDS_EVIDENCE`, not a source-code defect. Explicit `workflow_dispatch mode=full` is supported by the repository but no dispatch-creation action is exposed by this connector; full-workspace proof therefore remains a later evidence gate unless change-impact routing legitimately expands to full verification.
+No user decision is required: current RC-001 implementation choices are derivable from canonical contracts, live router paths, immutable migration policy and exact CI evidence. Live branch-protection enforcement remains inaccessible to this GitHub integration and is `NEEDS_EVIDENCE`, not a source-code defect. Explicit `workflow_dispatch mode=full` is supported by the repository but dispatch creation is not exposed by this connector; this remains a later closure-evidence gate.
 
 ## 5. Global Accounting / Coverage / Reconciliation
 
-Lower-layer HOLD queue is zero: all four prior HOLD observations were promoted into RC-001/RC-005 and the lower-authority scope observation remains dispositioned. Known material CI findings are clustered: 2 missing DSH backend route bindings, 5 missing OpenAPI path parameter declarations, 7 missing/unreachable surface bindings, 8 migration filename violations, 3 WLT money-kernel bypasses, 8 Expo version drifts, 10 normal-Knip unused dependency candidates, 2 normal-Knip unused files, strict cleanup backlog, stale DSH/WLT/Identity proof metadata, contextual same-SHA evidence divergence and inaccessible branch-protection evidence.
+Lower-layer HOLD queue is zero. RC-001 implementation must reconcile: obsolete payout contract aliases without reintroducing beneficiary mutation authority; five missing field-onboarding path parameters; seven governed surface binding failures by correcting real paths/reachability rather than creating duplicate truth; and migration filename grammar so immutable canonical migrations `1000+` are accepted.
 
 ## 6. Final Target Handoff / Closure
 
-OPEN. No integration-target write, release or deployment has occurred. Product/runtime mutation may begin only through a Sequence bound to the machine-selected frontier. `CLOSED_WITH_EVIDENCE` remains forbidden until all RCs are terminal, cleanup is consumer-proven, final same-candidate full verification is green for applicable static/runtime/database/mobile scopes, protected approvals are independently satisfied where required, final HEAD reconciliation succeeds and `ACTIVE_EXECUTION_FRONTIER` returns to `NONE`.
+OPEN. No integration-target write, release or deployment has occurred. Product/runtime mutation is authorized only inside `SEQ-001` on the isolated Task Branch. `CLOSED_WITH_EVIDENCE` remains forbidden until all RCs are terminal, cleanup is consumer-proven, final same-candidate full verification is green for applicable scopes, protected approvals are satisfied where required, final HEAD reconciliation succeeds and `ACTIVE_EXECUTION_FRONTIER` returns to `NONE`.
