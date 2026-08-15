@@ -77,7 +77,7 @@ Track `START_SHA → CURRENT_WORK_BASE_SHA → IMPLEMENTATION_SHA(s) → FINAL_C
 Cleanup happens after each root fix, not only at the end.
 
 | Cleanup ID | Dead/stale/duplicate/obsolete residue | Trace/consumer proof | Action | Reference repair | Verification |
-|---|---|---|---|---|
+|---|---|---|---|---|---|
 
 ## 9. Blockers / Deviations / Remaining Execution State
 
