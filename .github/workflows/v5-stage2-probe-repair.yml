@@ -1,0 +1,55 @@
+name: V5 Stage2 Probe Repair
+
+on:
+  push:
+    branches:
+      - task/v5-first-top-logic-gap-20260815
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: task/v5-first-top-logic-gap-20260815
+          fetch-depth: 0
+
+      - name: Repair DB constraint probe without weakening verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "a616289043d90f5e8ccf8cb2c4c13dcc43859b1f" || {
+            echo "task HEAD moved; refuse stale repair" >&2
+            exit 42
+          }
+          python3 <<'PY'
+          from pathlib import Path
+
+          path = Path('.github/workflows/v5-order-actor-provenance-stage2.yml')
+          text = path.read_text()
+          old = '''          BEGIN;\n          ALTER TABLE dsh_order_status_events DISABLE TRIGGER trg_dsh_enrich_order_event;\n          ALTER TABLE dsh_order_status_events DISABLE TRIGGER trg_dsh_order_event_outbox;\n          DO $$\n          DECLARE\n            constraint_name text;\n          BEGIN\n            BEGIN\n              INSERT INTO dsh_order_status_events(order_id,actor_id,actor_role,from_status,to_status,note)\n              VALUES(gen_random_uuid(),'','system','','pending','guard probe');\n              RAISE EXCEPTION 'blank actor_id unexpectedly accepted';\n            EXCEPTION WHEN check_violation THEN\n              GET STACKED DIAGNOSTICS constraint_name = CONSTRAINT_NAME;\n              IF constraint_name <> 'dsh_order_status_events_actor_id_required' THEN\n                RAISE EXCEPTION 'unexpected check violation: %', constraint_name;\n              END IF;\n            END;\n          END $$;\n          ROLLBACK;\n'''
+          new = '''          BEGIN;\n          CREATE TEMP TABLE dsh_order_status_events_actor_guard_probe\n            (LIKE dsh_order_status_events INCLUDING DEFAULTS INCLUDING CONSTRAINTS);\n          DO $$\n          DECLARE\n            expected_constraint text;\n            raised_constraint text;\n          BEGIN\n            SELECT conname\n              INTO expected_constraint\n            FROM pg_constraint\n            WHERE conrelid='dsh_order_status_events_actor_guard_probe'::regclass\n              AND contype='c'\n              AND position('actor_id' in lower(pg_get_constraintdef(oid))) > 0;\n            IF expected_constraint IS NULL THEN\n              RAISE EXCEPTION 'actor provenance constraint was not copied into isolated probe table';\n            END IF;\n\n            BEGIN\n              INSERT INTO dsh_order_status_events_actor_guard_probe(\n                order_id,operator_context_id,actor_id,actor_role,from_status,to_status,note\n              ) VALUES(\n                gen_random_uuid(),'ci-dsh','','system','','pending','guard probe'\n              );\n              RAISE EXCEPTION 'blank actor_id unexpectedly accepted';\n            EXCEPTION WHEN check_violation THEN\n              GET STACKED DIAGNOSTICS raised_constraint = CONSTRAINT_NAME;\n              IF raised_constraint <> expected_constraint THEN\n                RAISE EXCEPTION 'unexpected check violation: expected %, got %', expected_constraint, raised_constraint;\n              END IF;\n            END;\n          END $$;\n          ROLLBACK;\n'''
+          count = text.count(old)
+          if count != 1:
+              raise SystemExit(f'expected exactly one stale DB probe block, found {count}')
+          path.write_text(text.replace(old, new))
+          PY
+          git diff --check
+          git diff -- .github/workflows/v5-order-actor-provenance-stage2.yml
+
+      - name: Commit repaired Stage2 and self-delete repair harness
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/v5-stage2-probe-repair.yml
+          git add .github/workflows/v5-order-actor-provenance-stage2.yml
+          test "$(git diff --cached --name-only | wc -l)" -eq 2
+          git diff --cached --check
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git commit -m 'ci: isolate order actor provenance constraint probe'
+          git push origin HEAD:task/v5-first-top-logic-gap-20260815
