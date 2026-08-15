@@ -7,7 +7,7 @@
   "types": "src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "node ../../mobile/verify-mobile-source.mjs --app app-captain && node ../../../tools/guards/mobile-deprecation-consistency-gate.mjs --app app-captain",
+    "lint": "node ../../mobile/verify-mobile-source.mjs --app app-captain && node ../../../tools/guards/mobile-deprecation-consistency-gate.mjs --app app-captain && node ../../../tools/guards/mobile-metro-ownership-gate.mjs --app app-captain",
     "test:app": "node --test tests/*.test.mjs",
     "test:runtime": "node ../../mobile/test-mobile-runtime-contract.mjs --app app-captain",
     "test": "pnpm run test:app && pnpm run test:runtime",
