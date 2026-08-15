@@ -20,11 +20,7 @@ function parseArgs(argv) {
   }
   return out;
 }
-
-async function exists(path) {
-  try { await access(path, constants.F_OK); return true; } catch { return false; }
-}
-
+async function exists(path) { try { await access(path, constants.F_OK); return true; } catch { return false; } }
 function replaceAll(text, replacements) {
   let output = text;
   for (const [key, value] of Object.entries(replacements)) output = output.split(key).join(value);
@@ -39,15 +35,11 @@ const currentSha = args['current-sha'] ?? startSha;
 const mode = args.mode;
 const target = args.target ?? '';
 const repository = args.repository ?? 'bthwani2-boop/bthwani-suite-next';
-const objective = args.objective ?? `Diagnose ${target || 'the authorized target'} completely and prepare the smallest complete root-cause execution scope.`;
+const objective = args.objective ?? `Diagnose ${target || 'the authorized target'} sequentially and close/prepare each proven dependency sequence without guessing.`;
 
-if (!name || !branch || !startSha || !mode) {
-  throw new Error('Usage: new-package.mjs --name <task-name> --branch <branch> --start-sha <40-sha> [--current-sha <40-sha>] --mode <PREPARE_ONLY|EXECUTE_END_TO_END> [--target <target>] [--objective <text>] [--repository owner/repo]');
-}
+if (!name || !branch || !startSha || !mode) throw new Error('Usage: new-package.mjs --name <task-name> --branch <branch> --start-sha <40-sha> [--current-sha <40-sha>] --mode <PREPARE_ONLY|EXECUTE_END_TO_END> [--target <target>] [--objective <text>] [--repository owner/repo]');
 if (!/^[a-z0-9][a-z0-9-]{2,79}$/.test(name) || name === '_template' || name.includes('..')) throw new Error('Unsafe task name.');
-for (const [label, sha] of [['start-sha', startSha], ['current-sha', currentSha]]) {
-  if (!/^[0-9a-f]{40}$/i.test(sha)) throw new Error(`${label} must be exactly 40 hexadecimal characters.`);
-}
+for (const [label, sha] of [['start-sha', startSha], ['current-sha', currentSha]]) if (!/^[0-9a-f]{40}$/i.test(sha)) throw new Error(`${label} must be exactly 40 hexadecimal characters.`);
 if (!/^[A-Za-z0-9._/-]+$/.test(branch) || branch.includes('..')) throw new Error('Unsafe branch.');
 if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) throw new Error('Repository must use owner/name.');
 if (!['PREPARE_ONLY', 'EXECUTE_END_TO_END'].includes(mode)) throw new Error('MODE must be PREPARE_ONLY or EXECUTE_END_TO_END.');
@@ -59,34 +51,17 @@ if (await exists(destination)) throw new Error(`Destination already exists: ${de
 const taskId = `PKG-${name.toUpperCase().replace(/-/g, '_')}`;
 const now = new Date().toISOString();
 const replacements = {
-  '__TASK_NAME__': name,
-  '__TASK_ID__': taskId,
-  '__TASK_OBJECTIVE__': objective,
-  '__TARGET__': target,
-  '__MODE__': mode,
-  '__CREATED_AT_ISO__': now,
-  '__LAST_RECONCILED_AT_ISO__': now,
-  '__REPOSITORY__': repository,
-  '__BRANCH__': branch,
-  '__START_SHA__': startSha.toLowerCase(),
-  '__CURRENT_SHA__': currentSha.toLowerCase(),
-  '__ORCHESTRATOR_PATH__': orchestratorPath,
+  '__TASK_NAME__': name, '__TASK_ID__': taskId, '__TASK_OBJECTIVE__': objective, '__TARGET__': target,
+  '__MODE__': mode, '__CREATED_AT_ISO__': now, '__LAST_RECONCILED_AT_ISO__': now,
+  '__REPOSITORY__': repository, '__BRANCH__': branch, '__START_SHA__': startSha.toLowerCase(),
+  '__CURRENT_SHA__': currentSha.toLowerCase(), '__ORCHESTRATOR_PATH__': orchestratorPath,
 };
 
-const templates = [
-  ['01-DIAGNOSIS.template.md', '01-DIAGNOSIS.md'],
-  ['02-EXECUTION.template.md', '02-EXECUTION.md'],
-  ['03-VERIFICATION-CLOSURE.template.md', '03-VERIFICATION-CLOSURE.md'],
-];
-
 await mkdir(destination);
-for (const [source, targetFile] of templates) {
-  const content = replaceAll(await readFile(join(templateRoot, source), 'utf8'), replacements);
-  await writeFile(join(destination, targetFile), content, 'utf8');
-}
+const overview = replaceAll(await readFile(join(templateRoot, '00-OVERVIEW.template.md'), 'utf8'), replacements);
+await writeFile(join(destination, '00-OVERVIEW.md'), overview, 'utf8');
 
-console.log(`Created orchestrated package: ${destination}`);
-console.log(`Mode: ${mode}`);
-console.log(`Diagnosis baseline: ${repository}@${branch} ${startSha.toLowerCase()}`);
-console.log(`Current reconciled SHA: ${currentSha.toLowerCase()}`);
-console.log(`Next: follow ${orchestratorPath}; do not bypass diagnosis gates.`);
+console.log(`Created BTHWANI_TASK_PACKAGE_V2: ${destination}`);
+console.log('Created: 00-OVERVIEW.md only.');
+console.log('Do not pre-create sequence files.');
+console.log('After the dependency graph proves the next coherent execution boundary, use new-sequence.mjs.');

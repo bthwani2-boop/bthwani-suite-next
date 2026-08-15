@@ -2,7 +2,7 @@
 
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
 
-هذه الحزمة منهجية توثيقية فقط تحت `tools/prompting/**`. ليست Product Code ولا Runtime Code ولا Product Truth ولا Proof of implementation/closure. بيانات المهمة الفعلية تكتب فقط في `plans/diagnose-implementing/<TASK_NAME>/`، والحقيقة الدائمة تترقى إلى مالكها الحاكم داخل `governance/**`/العقود/الكود الحي عند السماح بذلك.
+هذه الحزمة منهجية توثيقية فقط تحت `tools/prompting/**`. ليست Product Code ولا Runtime Code ولا Product Truth ولا Proof of implementation/closure. بيانات المهمة المشتقة تكتب تحت `plans/diagnose-implementing/<TASK_NAME>/`، والحقيقة الدائمة تترقى إلى مالكها الحاكم داخل `governance/**`/العقود/الكود الحي عندما يسمح الـMODE والسلطة بذلك.
 
 ## 0) الاستدعاء
 
@@ -10,384 +10,303 @@ Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
 @GitHub BRANCH: `<EXACT_BRANCH>` | TARGET: `<blank | target>` | MODE: `<PREPARE_ONLY | EXECUTE_END_TO_END>` — استخدم `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md` كنقطة الدخول الوحيدة ونفّذ المسار الحاكم كاملًا FAIL-CLOSED دون تخطي أي Gate.
 ```
 
-`TARGET` الفارغ لا يعني full-repository scan تلقائيًا؛ استخرج النطاق الحقيقي من الأدلة والعلاقات. إذا كان الهدف صراحةً «كل شيء»، حوّله إلى Universe/Coverage قابلة للتتبع والإثبات.
+القيم الوحيدة للـMODE: `PREPARE_ONLY` و`EXECUTE_END_TO_END`.
 
-القيم الوحيدة للـMODE:
+## 1) المبدأ الحاكم
 
-```text
-PREPARE_ONLY
-EXECUTE_END_TO_END
-```
-
-أي قيمة أخرى = invocation غير صالح، والحالة التشغيلية تبقى غير مغلقة.
-
-## 1) المبدأ الحاكم للـMODE
-
-**الخياران يستخدمان نفس منهج التفكير والتشخيص والقرارات وإعادة التشخيص والترتيب بالاعتماديات. الاختلاف الوحيد الجوهري هو ما يحدث بعد أن تصبح الـWave الحالية مفهومة ومصممة بلا تخمين.**
-
-المسار المشترك:
+النمطان يستخدمان نفس منهج التشخيص والقرار وإعادة التشخيص وترتيب الاعتماديات. الفرق هو سلطة الكتابة بعد أن يصبح التسلسل الحالي مفهومًا ومحدد الحل بلا تخمين.
 
 ```text
 DISCOVER GLOBALLY
 → MACRO BLUEPRINT
 → RELATION / DEPENDENCY GRAPH
-→ SELECT NEXT FOUNDATION / CONNECTED CLUSTER / JOURNEY
-→ DIAGNOSE CURRENT WAVE
+→ DERIVE NEXT COHERENT EXECUTION SEQUENCE
+→ DIAGNOSE
 → FINDINGS / ROOT CAUSE / BLAST RADIUS
 → RESOLVE DERIVABLE FACTS
-→ TRUE DECISION BOUNDARY when needed
+→ TRUE DECISION BOUNDARY when required
 → USER/AUTHORITY DECISION
 → IMPACT PROPAGATION + RE-DIAGNOSIS
-→ DEFINE EXACT ROOT SOLUTION / CONSUMERS / GOVERNANCE / CLEANUP / VERIFICATION
-→ CURRENT_WAVE_SOLUTION_READY
+→ DEFINE EXACT TARGET STATE / CONSUMERS / GOVERNANCE / CLEANUP / VERIFICATION
+→ SEQUENCE_SOLUTION_READY
 ```
 
-لا questions-first، ولا تنفيذ قبل حسم القرار المادي المؤثر على الـWave، ولا انتقال للـWave التالية مع نقص مادي معروف في الحالية.
+ممنوع questions-first، app-by-app ordering، pre-creating future sequences، أو الانتقال لتسلسل تابع مع نقص مادي معروف في التسلسل الحالي.
 
 ### PREPARE_ONLY
 
-بعد `CURRENT_WAVE_SOLUTION_READY`:
-
 ```text
 DOCUMENT EXACT ROOT SOLUTION
-→ DOCUMENT EXECUTION ORDER / CONSUMERS / GOVERNANCE PROMOTION / CLEANUP / VERIFICATION
-→ WAVE_PREPARED
-→ WAVE EXIT GATE
-→ NEXT WAVE
+→ DOCUMENT EXECUTION / CONSUMERS / GOVERNANCE PROMOTION / CLEANUP / VERIFICATION
+→ SEQUENCE_STATUS=PREPARED
+→ SEQUENCE EXIT GATE
+→ DERIVE NEXT SEQUENCE
 ```
 
-يسمح بالقراءة والتحليل والفحوص غير المتحولة والأسئلة الحقيقية وإنشاء/تحديث حزمة المهمة الحية ذات الملفات الثلاثة فقط. يمنع Product/Governance/Runtime/Data/Provider mutation، migration application، implementation commits، merge/release/deploy/tag، وأي final product closure claim.
-
-الحقيقة الدائمة تسجل `GOVERNANCE_PROMOTION_PENDING` فقط. يجب أن تنتهي كل Wave بخطة جذرية قابلة للتنفيذ من وكيل آخر دون Product/Architecture guessing. بعد جميع الـWaves تُجرى Global Reconciliation + Adversarial Completeness + Final Execution Design reconciliation، ثم فقط `PACKAGE_READY=YES` و`LIFECYCLE_STATE=PREPARED`.
+لا Product/Governance/Runtime/Data/Provider mutation ولا migration application ولا implementation commit. كل حقيقة دائمة تسجل `GOVERNANCE_PROMOTION_PENDING` مع exact canonical owner + exact semantic change.
 
 ### EXECUTE_END_TO_END
 
-بعد `CURRENT_WAVE_SOLUTION_READY` لا ينتظر اكتمال تشخيص كل الهدف عالميًا. قبل الكتابة الحية للـWave الحالية يجب أن تجتاز **Wave Write Gate** فقط:
-
 ```text
-CURRENT_WAVE_ROOT_CAUSE_PROVEN = YES
-CURRENT_WAVE_DECISIONS_RESOLVED = YES
-CURRENT_WAVE_REDIAGNOSIS_COMPLETE = YES
-CURRENT_WAVE_IMPACT_MAPPED = YES
-CURRENT_WAVE_VERIFICATION_DEFINED = YES
-CURRENT_WAVE_READY_TO_EXECUTE = YES
-```
-
-ثم:
-
-```text
-Governance Promotion when required
+SEQUENCE WRITE GATE
+→ Governance Promotion when required
 → Root-Cause implementation
-→ migrate every affected writer/reader/consumer
+→ migrate writers/readers/consumers
 → remove obsolete/parallel path
 → local cleanup
-→ affected verification
-→ runtime/readback when applicable
-→ update living task documentation
-→ WAVE COMPLETE GATE
-→ NEXT WAVE
+→ required verification/runtime readback
+→ update sequence record
+→ SEQUENCE_STATUS=COMPLETE
+→ SEQUENCE EXIT GATE
+→ DERIVE NEXT SEQUENCE
 ```
 
-ولا تنتقل إلى التالية حتى تثبت للـWave الحالية:
+لا يشترط اكتمال تشخيص كامل TARGET عالميًا قبل أول write؛ يشترط اكتمال التسلسل الحالي فقط. لا ينتقل للتالي قبل إغلاق الحالي حسب الـMODE.
+
+## 2) Package Schema V2 — Adaptive Sequential Package
+
+الحزمة ليست ثلاثة ملفات ثابتة، وليست شجرة Domains ثابتة. بنيتها مشتقة من:
 
 ```text
-CURRENT_WAVE_IMPLEMENTATION_COMPLETE = YES
-CURRENT_WAVE_CONSUMERS_RECONCILED = YES
-CURRENT_WAVE_LOCAL_CLEANUP_COMPLETE = YES
-CURRENT_WAVE_VERIFICATION_PASS = YES
-CURRENT_WAVE_GOVERNANCE_SYNC = YES | NOT_APPLICABLE
-CURRENT_WAVE_SCOPE_DELTA_CLASSIFIED = YES
-CURRENT_WAVE_STATUS = COMPLETE
+TARGET + DISCOVERY + DEPENDENCY GRAPH + ROOT-CAUSE / OWNERSHIP / VERIFICATION BOUNDARIES
 ```
 
-الـMODE لا يمنح تلقائيًا Merge/Release/Deploy/Production/destructive/irreversible authority.
-
-## 2) الحزمة الحية
-
-بعد تثبيت Task identity وRepository/Branch/START_SHA، أنشئ أو استأنف حزمة المهمة مبكرًا **قبل deep diagnosis waves** حتى تكون سجلًا مشتقًا حيًا لما يثبت ويتقرر ويُنفذ. وجود الحزمة لا يعني readiness أو PASS.
+الشكل الحاكم:
 
 ```text
 plans/diagnose-implementing/<TASK_NAME>/
-├── 01-DIAGNOSIS.md
-├── 02-EXECUTION.md
-└── 03-VERIFICATION-CLOSURE.md
+├── 00-OVERVIEW.md
+├── 001-<proven-sequence>.md
+├── 002-<proven-sequence>.md
+└── ...
 ```
 
-في `PREPARE_ONLY` تتطور الحزمة Wave-by-Wave حتى تصبح حزمة تسليم تنفيذ كاملة. في `EXECUTE_END_TO_END` تتطور بالتوازي مع الحقيقة الحية كسجل توثيقي مشتق فقط. الكود/الحوكمة/العقود/البيانات/Runtime هي الحقيقة الحية، لا الـPlan.
-
-`PACKAGE_READY` لا يعني أن المجلد موجود؛ يعني أن **التغطية العالمية والتشخيص والقرارات وتصميم التنفيذ قد اكتملت وأعيدت مصالحتها**. لذلك:
+قواعد دستورية:
 
 ```text
-PREPARE_ONLY: PACKAGE_READY is required before PREPARED handoff.
-EXECUTE_END_TO_END: PACKAGE_READY is NOT a prerequisite for the first wave write; it is required before final closure after all waves/global reconciliation.
+ONE FILE = ONE COHERENT EXECUTION/CLOSURE SEQUENCE
+SEQUENCES ARE DERIVED FROM THE DEPENDENCY GRAPH
+SEQUENCES ARE CREATED JUST-IN-TIME
+NO PRECREATED FUTURE SEQUENCES
+NO FIXED NUMBER OF SEQUENCES
+NO FIXED DOMAIN DIRECTORY TREE
+NO SUBDIRECTORIES INSIDE A V2 TASK PACKAGE
+NO SPLIT BY DIAGNOSIS / EXECUTION / VERIFICATION
+NO FILE WITHOUT DISTINCT PURPOSE
+NO SPLIT BY LINE COUNT ALONE
+NO MERGE OF UNRELATED ROOT-CAUSE/OWNERSHIP/VERIFICATION BOUNDARIES
 ```
 
-## 3) الوحدات الحاكمة
+`00-OVERVIEW.md` صغير ومركزي: Task identity, SHA, Macro map, sequence registry/order, global decisions/blockers/coverage/final closure فقط. لا يكرر تفاصيل التسلسلات.
+
+ملف التسلسل نفسه يجمع:
 
 ```text
-01-CORE-CONTRACT.md
-= truth/authority/scope/SHA/capabilities/FAIL-CLOSED/write boundaries.
-
-02-DISCOVERY-DIAGNOSIS.md
-= broad discovery/macro blueprint/graph/journey × multisurface × crosslayer/root-cause diagnosis.
-
-03-DECISIONS-COVERAGE-ANTI-DRIFT.md
-= Universe/Coverage/Findings/Scope Delta/Decision Boundary/Re-Diagnosis/Wave Gates/Governance Candidates.
-
-04-PACKAGE-EXECUTION.md
-= living three-file task package/wave readiness/governance promotion/root-cause execution/consumer migration.
-
-05-VERIFICATION-CLEANUP-CLOSURE.md
-= candidate/evidence/CI/runtime/E2E/approvals/cleanup/governance sync/fresh head/final closure.
-
-06-CONCURRENCY-RESUME-RECOVERY.md
-= multi-agent/branch movement/atomic writes/resume/rebaseline/recovery/retention.
+Scope/Context
+→ Diagnosis/Findings
+→ Root Cause/Blast Radius
+→ Decisions/Re-Diagnosis
+→ Exact Target State
+→ Treatment/Execution
+→ Consumers/Contracts/Data/Governance
+→ Cleanup
+→ Verification/Runtime/Evidence
+→ Sequence Exit Gate/Reopen
 ```
 
-`01-CORE-CONTRACT.md` حاضر منطقيًا في كل مرحلة. اقرأ الوحدة الحالية وأي وحدة trigger يفرضها الخطر/الاعتماد، لا كل شيء عشوائيًا.
+إذا أصبح ملف واحد يحتوي Closure Boundaries مستقلة حقيقية، قسّمه إلى تسلسلين أو أكثر في الرسم البياني نفسه، لا إلى ملفات مساعدة اعتباطية.
 
-## 4) State Machine
+## 3) Just-In-Time Sequence Lifecycle
+
+```text
+CREATE/RESUME 00-OVERVIEW.md
+→ BROAD DISCOVERY / MACRO GRAPH
+→ prove first sequence boundary
+→ create 001-<name>.md
+→ complete according to MODE
+→ reconcile graph
+→ only then derive/create 002-<name>.md
+```
+
+لا تنشئ `002` لأنك تتوقعه؛ أنشئه فقط عندما يصبح نطاقه/اعتماده/سبب فصله مثبتًا. إصلاح Sequence سابقة قد يلغي Sequences كانت مجرد أعراض.
+
+## 4) كيف يُشتق Sequence مستقل؟
+
+Sequence هو أصغر وحدة منطقية يمكن فهمها ومعالجتها والتحقق منها وإغلاقها بصورة متماسكة. الفصل مبرر عند وجود Boundary مثبت مثل:
+
+```text
+distinct root-cause cluster
+different canonical owner/source of truth
+hard dependency boundary
+independent state-machine or operational journey boundary
+materially distinct verification/runtime boundary
+different protected/risk domain
+independent consumer migration set
+different durable governance decision boundary
+```
+
+إذا كانت Backend/Frontend/DB/Control Panel آثارًا لنفس Root Cause وOwner وVerification Boundary، فهي Sequence واحدة لا أربع.
+
+## 5) State Machine
 
 ```text
 INIT
 → PIN_TRUTH
 → CAPABILITY_PREFLIGHT
-→ CREATE_OR_RESUME_LIVING_THREE_FILE_PACKAGE
+→ CREATE_OR_RESUME_V2_OVERVIEW
 → BROAD_DISCOVERY
 → BUILD_RELATION_GRAPH
 → MACRO_BLUEPRINT
 ↔ MACRO_DECISION_GATE
 ↔ USER/AUTHORITY_DECISION
 ↔ IMPACT_PROPAGATION_AND_RE_DIAGNOSIS
-→ LOCK_RESOLVED_MACRO_MODEL
 → PRIORITIZE_FOUNDATIONS_AND_CONNECTED_CLUSTERS
 
-LOOP UNTIL MATERIAL UNIVERSE IS COVERED:
-  SELECT_NEXT_WAVE_BY_DEPENDENCY
-  → DIAGNOSE_CURRENT_WAVE
-  → FINDINGS_ROOT_CAUSE_BLAST_RADIUS
+LOOP:
+  DERIVE_NEXT_SEQUENCE_FROM_GRAPH
+  → CREATE_SEQUENCE_JUST_IN_TIME
+  → DIAGNOSE_SEQUENCE
+  → ROOT_CAUSE / BLAST_RADIUS
   ↔ TRUE_DECISION_BOUNDARY
   ↔ USER/AUTHORITY_DECISION
   ↔ IMPACT_PROPAGATION_AND_RE_DIAGNOSIS
-  → CURRENT_WAVE_SOLUTION_READY
+  → SEQUENCE_SOLUTION_READY
 
   PREPARE_ONLY:
-    → DOCUMENT_COMPLETE_EXECUTION_DESIGN
-    → WAVE_PREPARED_GATE
-    → NEXT_WAVE
+    → DOCUMENT_EXECUTION_READY_HANDOFF
+    → SEQUENCE_PREPARED_GATE
+    → CLEAR_CURRENT_SEQUENCE
+    → RECONCILE_GRAPH
+    → NEXT
 
   EXECUTE_END_TO_END:
-    → CURRENT_WAVE_WRITE_GATE
+    → SEQUENCE_WRITE_GATE
     → GOVERNANCE_PROMOTION_WHERE_REQUIRED
     → EXECUTE_ROOT_CAUSE
     → MIGRATE_CONSUMERS
     → LOCAL_CLEANUP
-    → VERIFY_CURRENT_WAVE
-    → RUNTIME_READBACK_WHEN_APPLICABLE
-    → UPDATE_LIVING_DOCUMENTATION
-    → WAVE_COMPLETE_GATE
-    → NEXT_WAVE
+    → VERIFY / RUNTIME_READBACK
+    → SEQUENCE_COMPLETE_GATE
+    → CLEAR_CURRENT_SEQUENCE
+    → RECONCILE_GRAPH
+    → NEXT
 
-AFTER ALL WAVES:
-→ GLOBAL_CROSS_JOURNEY/CROSS_SURFACE/CROSS_STATE/CANONICAL_OWNER_RECONCILIATION
-→ DISCOVERY_COMPLETE_GATE
-→ DIAGNOSIS_COMPLETE_GATE
-→ DECISION_COMPLETE_GATE
-→ COVERAGE_COMPLETE_GATE
+AFTER MATERIAL UNIVERSE COVERED:
+→ GLOBAL CROSS-SEQUENCE / CROSS-JOURNEY / CROSS-SURFACE / CROSS-STATE / OWNER RECONCILIATION
+→ DISCOVERY_COMPLETE
+→ DIAGNOSIS_COMPLETE
+→ DECISION_COMPLETE
+→ COVERAGE_COMPLETE
 → FINAL_ADVERSARIAL_COMPLETENESS
-→ PACKAGE_READY_GATE
-
-PREPARE_ONLY:
-→ LIFECYCLE_STATE=PREPARED
-→ STOP_PREPARED
-
-EXECUTE_END_TO_END:
-→ FINAL_STRUCTURAL_CLEANUP
-→ REVERIFY_INVALIDATED_SCOPE
-→ FREEZE_FINAL_CANDIDATE
-→ FINAL_READ_ONLY_VERIFICATION
-→ GOVERNANCE_RECONCILIATION
-→ FRESH_HEAD_DRIFT_GATE
-→ FINAL_ADVERSARIAL_COMPLETENESS_RECHECK
-→ CLOSURE_GATE
-→ LIFECYCLE_STATE=CLOSED only with governed closure decision
+→ PACKAGE_READY
 ```
 
-لا يجوز تخطي مرحلة. فشل Gate يعيد إلى أقرب مرحلة قادرة على إزالة السبب. اكتشاف Foundation أعمق أثناء Wave يفعّل Structured Backtracking: `A → B → C → close C → return B → return A`.
+Structured Backtracking يبقى حاكمًا: `A → B → C → finish/prepare C → return B → return A`.
 
-## 5) Transition Contract
+## 6) Global Gates
 
-كل انتقال يحدد:
-
-```text
-INPUT
-REQUIRED EVIDENCE
-REQUIRED MODULE
-REQUIRED TASK-PACKAGE UPDATE
-EXIT GATE
-NEXT STATE
-REOPEN TRIGGER
-```
-
-الانتقال لا يحدث لأن الوكيل «أنهى القراءة» بل لأن Exit Gate ثبت.
-
-## 6) Global Completion Gates
-
-هذه Gates عالمية للتسليم النهائي في `PREPARE_ONLY` وللمصالحة النهائية قبل Closure في `EXECUTE_END_TO_END`. **ليست شرطًا لبدء كل Wave في EXECUTE mode.**
+هذه عالمية فقط للتسليم النهائي في PREPARE وللإغلاق النهائي في EXECUTE:
 
 ```text
 DISCOVERY_COMPLETE
-= bounded Universe + all material discovered nodes recorded + no silent scope delta + adversarial/negative-space discovery at required depth.
-
 DIAGNOSIS_COMPLETE
-= every material covered node dispositioned + root cause or explicit missing proof + ACTUAL/INTENDED/DESIRED/CONFLICT separated + cross-surface/layer contradictions dispositioned.
-
 DECISION_COMPLETE
-= zero unresolved required product/operational/architecture/policy decision for the final target + zero discoverable fact still asked of user + all decisions propagated and re-diagnosed.
-
 COVERAGE_COMPLETE
-= zero material UNVISITED/UNCLASSIFIED/UNTRACED/UNOWNED + zero unrecorded Finding + zero silent exclusion/delta.
-
 PACKAGE_READY
-= all global gates above + exact execution design/actual execution records reconciled + verification path defined + latest head reconciled.
 ```
 
-## 7) Anti-Drift Constitution
+وجود Overview أو Sequence files لا يثبت أي Gate.
+
+## 7) Sequence Gates
+
+### Solution Ready — مشتركة
 
 ```text
-EVERY DISCOVERED MATERIAL THING → GRAPH.
-EVERY MATERIAL GRAPH NODE → COVERAGE STATUS.
-EVERY MATERIAL DEFECT/GAP/CONTRADICTION → FINDING.
-EVERY NEW DEPENDENCY/CONSUMER/SURFACE → SCOPE DELTA.
-EVERY TRUE DECISION → DECISION LEDGER.
-EVERY DECISION → IMPACT PROPAGATION + RE-DIAGNOSIS.
-EVERY DURABLE RESOLVED RULE → GOVERNANCE CANDIDATE / CANONICAL GOVERNANCE OWNER in EXECUTE mode.
-EVERY WRITE → INVALIDATE AFFECTED EVIDENCE.
-EVERY WAVE → MODE-SPECIFIC EXIT GATE BEFORE NEXT WAVE.
-EVERY FINAL CLAIM → EXACT CURRENT CANDIDATE/HEAD PROVENANCE.
+ROOT_CAUSE_PROVEN = YES
+DECISIONS_RESOLVED = YES
+REDIAGNOSIS_COMPLETE = YES
+IMPACT_MAPPED = YES
+VERIFICATION_DEFINED = YES
+SOLUTION_READY = YES
 ```
 
-ممنوع حمل عنصر مادي صامت من مرحلة إلى أخرى.
-
-## 8) Global Breadth + Risk-Adaptive Depth
+### PREPARE_ONLY Exit
 
 ```text
-GLOBAL BREADTH
-→ bounded inventory/relevance for the proven universe
-
-LOCAL ADAPTIVE DEPTH
-→ deepen the current dependency wave where risk/contradiction/uncertainty/blast radius/protected domain requires it
+SEQUENCE_STATUS = PREPARED
+exact target state defined
+execution steps actionable
+all affected consumers mapped/dispositioned
+governance promotion requirements exact
+cleanup exact
+verification/acceptance exact
+IMPLEMENTATION_COMPLETE = NO
 ```
 
-استخدم:
+### EXECUTE_END_TO_END Exit
 
 ```text
-Observation → Hypothesis → Cheapest discriminating evidence → Confirm/Reject → Next hypothesis
+SEQUENCE_STATUS = COMPLETE
+IMPLEMENTATION_COMPLETE = YES
+CONSUMERS_RECONCILED = YES
+LOCAL_CLEANUP_COMPLETE = YES
+VERIFICATION_PASS = YES
+GOVERNANCE_SYNC = YES | NOT_APPLICABLE
+SCOPE_DELTA_CLASSIFIED = YES
+```
+
+## 8) Anti-Drift
+
+```text
+EVERY MATERIAL DISCOVERY → GRAPH
+EVERY MATERIAL GRAPH NODE → COVERAGE
+EVERY DEFECT/GAP/CONTRADICTION → FINDING
+EVERY NEW DEPENDENCY/CONSUMER/SURFACE → SCOPE DELTA
+EVERY TRUE DECISION → DECISION RECORD
+EVERY DECISION → IMPACT PROPAGATION + RE-DIAGNOSIS
+EVERY PROVEN SEQUENCE → ONE REGISTRY ENTRY + ONE FILE
+EVERY SEQUENCE FILE → PURPOSE + SCOPE + DERIVATION BASIS + DEPENDENCIES + REOPEN TRIGGER
+EVERY WRITE → INVALIDATE AFFECTED EVIDENCE
+EVERY FINAL CLAIM → EXACT CANDIDATE/HEAD PROVENANCE
 ```
 
 ## 9) Governance Promotion
 
-في `EXECUTE_END_TO_END`، بعد حسم الحقيقة الدائمة في الـWave الحالية وقبل/مع تنفيذ ما يعتمد عليها:
+PREPARE_ONLY يسجل pending owner/semantic change. EXECUTE يرقّي الحقيقة الدائمة ويثبت `Governance ↔ Product Truth ↔ Machine Contract ↔ Implementation ↔ Consumers ↔ Runtime`.
+
+## 10) Final Closure
+
+`SEQUENCE_COMPLETE` أو `SEQUENCE_PREPARED` لا تعني `TARGET_CLOSED/PACKAGE_READY`.
+
+بعد كل Sequences:
 
 ```text
-resolved durable rule
-→ classify durability/type
-→ identify existing canonical governance owner
-→ verify authority
-→ update canonical owner
-→ update machine counterpart/registry when applicable
-→ update implementation owner and consumers
-→ verify governance ↔ Product Truth ↔ contract ↔ code ↔ runtime parity
+global reconciliation
+→ duplicate truth search
+→ final structural cleanup
+→ governance reconciliation
+→ fresh HEAD
+→ evidence invalidation/reacquisition
+→ final adversarial completeness
+→ final read-only verification
 ```
 
-لا تنشئ topic-specific governance إذا كان Owner حاكم قائم مناسبًا.
+وفي EXECUTE لا يصدر القرار النهائي إلا إذا `HEAD_AT_DECISION == FINAL_CANDIDATE_SHA` و`FINAL_DECISION == current governance closureRules.closedDecision` وكل global gates المطلوبة = YES.
 
-في `PREPARE_ONLY` لا تكتب Governance؛ سجل `GOVERNANCE_PROMOTION_PENDING` + exact owner + exact semantic change required.
-
-قبل Closure:
+## 11) الوحدات الحاكمة
 
 ```text
-ZERO durable truth only in task artifacts
-ZERO governance/Product Truth contradiction
-ZERO governance/machine-contract contradiction
-ZERO governance/implementation contradiction
-ZERO governance/runtime contradiction
-```
-
-## 10) Evidence / Candidate / Decision Separation
-
-ثلاثة مفاهيم مختلفة:
-
-```text
-LIFECYCLE_STATE
-= internal task state in derived package.
-
-EVIDENCE_STATUS
-= PASS/FAIL/MISSING/STALE/BLOCKED/... for a declared evidence scope.
-
-FINAL_DECISION
-= canonical decision ID from current governance/contracts/decision-vocabulary.json.
-```
-
-`OPEN` و`BLOCKED` يمكن أن يصفا lifecycle داخليًا، لكنهما **ليسا** Final Decision إلا إذا عرّفتهـما Governance الحالية صراحةً.
-
-Final branch-head closure requires:
-
-```text
-FINAL_CANDIDATE_SHA = immutable exact SHA after all writes/cleanup
-HEAD_AT_REVIEW_START = live exact SHA at review start
-HEAD_AT_DECISION = live exact SHA immediately before decision
-HEAD_AT_DECISION == FINAL_CANDIDATE_SHA
-FINAL_DECISION == current closureRules.closedDecision
-```
-
-No arbitrary parent/base guessing. Any write after Freeze creates a new candidate and invalidates affected evidence.
-
-## 11) Final Closure Equation
-
-In `EXECUTE_END_TO_END`:
-
-```text
-DISCOVERY_COMPLETE
-AND DIAGNOSIS_COMPLETE
-AND DECISION_COMPLETE
-AND COVERAGE_COMPLETE
-AND PACKAGE_READY
-AND IMPLEMENTATION_COMPLETE
-AND CLEANUP_COMPLETE
-AND EVIDENCE_COMPLETE
-AND GOVERNANCE_SYNC_COMPLETE
-AND FRESH_HEAD_VALID
-AND FINAL_ADVERSARIAL_PASS
-```
-
-Additionally: every material Wave closed its Wave Gate; zero known fixable in-scope defect; zero unresolved material Finding/Decision; zero required missing/stale/pending/cancelled evidence; zero required unproven approval/independent review; zero unjustified duplicate truth; zero reachable obsolete path tied to scope; zero durable truth left only in derived artifacts.
-
-Only then may the current governed closure decision be issued. Otherwise keep lifecycle non-closed and use the appropriate **canonical** non-closed decision when a decision is required (`FIX_REQUIRED`, `BLOCKED_EXTERNAL`, `NEEDS_EVIDENCE`, `QA_BLOCK`, `SECURITY_BLOCK`, etc. according to current vocabulary).
-
-## 12) Safe Stop / Resume
-
-Stopping before final objective is legitimate only for:
-
-```text
-TRUE_DECISION_GAP
-EXTERNAL_EVIDENCE_GAP
-PROTECTED_ACTION lacking authority/approval
-hard external blocker
-```
-
-في القرار المتسلسل، أوقف فقط الـWave المتأثرة بالقرار. لا تتجاوزها إلى dependent Wave. سجل one exact resume point; do not call it closure.
-
-## 13) Contracts + Source Integrity
-
-Output contracts:
-
-```text
-contracts/DIAGNOSIS-OUTPUT-CONTRACT.md
+01-CORE-CONTRACT.md
+02-DISCOVERY-DIAGNOSIS.md
+03-DECISIONS-COVERAGE-ANTI-DRIFT.md
+04-PACKAGE-EXECUTION.md
+05-VERIFICATION-CLEANUP-CLOSURE.md
+06-CONCURRENCY-RESUME-RECOVERY.md
+contracts/OVERVIEW-CONTRACT.md
+contracts/SEQUENCE-CONTRACT.md
 contracts/DECISION-OUTPUT-CONTRACT.md
-contracts/EXECUTION-PACKAGE-CONTRACT.md
 contracts/EVIDENCE-CONTRACT.md
 contracts/CLOSURE-CONTRACT.md
 ```
 
-`source-map/SOURCE-RULE-TRACEABILITY.md` records exact preserved source SHAs and rule mappings. Any source SHA drift makes source coverage stale until reconciled. No `UNACCOUNTED`/`DROPPED` rule is allowed.
+`source-map/SOURCE-RULE-TRACEABILITY.md` يثبت مصدر القواعد. أي Source SHA drift أو تغيير منهجي مادي يعيد فتح Source Coverage حتى المصالحة.

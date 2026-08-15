@@ -13,135 +13,89 @@ Purpose: prove section-level accounting and high-risk-rule preservation from the
 | `tools/prompting/04-journey-multisurface-operational-diagnosis.md` | `b0735847180d69886e715aa23d1685344a7c017e` | ACCOUNTED |
 | `tools/prompting/BTHWANI_CHATGPT_GITHUB_EXECUTION_CARD_ONE_PAGE.md` | `53afe043118b9fe18a5069200edfbc6392b9c048` | ACCOUNTED |
 
-**Source Drift Rule:** if any current source blob SHA differs from this table, this map becomes `STALE` until the changed source is reread and affected mappings are reconciled. A stale map cannot support `ZERO UNACCOUNTED`.
-
-Allowed mapping status:
-
-```text
-ADOPTED
-MERGED_WITH_EQUIVALENT
-SUPERSEDED_BY_STRONGER_RULE
-NOT_APPLICABLE_WITH_REASON
-```
-
-Forbidden:
-
-```text
-UNACCOUNTED
-DROPPED
-```
+If any source SHA drifts, this map becomes STALE until reread/reconciliation. Allowed mapping: `ADOPTED / MERGED_WITH_EQUIVALENT / SUPERSEDED_BY_STRONGER_RULE / NOT_APPLICABLE_WITH_REASON`. Forbidden: `UNACCOUNTED / DROPPED`.
 
 ## Source 01 — Diagnosis / package preparation
 
 | Source section | Destination owner | Status |
 |---|---|---|
-| Inputs / blank TARGET semantics | `00-ORCHESTRATOR`, `01-CORE-CONTRACT`, current generator | ADOPTED |
-| §1 Authority/truth + plans are derived | `01-CORE-CONTRACT` | ADOPTED |
-| §2 Remote pinning + capability preflight | `01-CORE-CONTRACT`, `06-CONCURRENCY-RESUME-RECOVERY` | ADOPTED |
-| §3 CODE_BASED_LEAN / real scope | `01-CORE-CONTRACT` | ADOPTED |
-| §4 Seeded coverage | `03-DECISIONS-COVERAGE-ANTI-DRIFT` | SUPERSEDED_BY_STRONGER_RULE |
-| §5 Deep diagnosis + reuse-before-create | `02-DISCOVERY-DIAGNOSIS` | ADOPTED |
-| §6 FAIL-CLOSED diagnosis | `01-CORE-CONTRACT`, `03-DECISIONS-COVERAGE-ANTI-DRIFT` | ADOPTED |
-| §7 Full-stack multi-surface trace | `02-DISCOVERY-DIAGNOSIS` | ADOPTED |
-| §8 Structural/hygiene diagnosis | `02-DISCOVERY-DIAGNOSIS`, `05-VERIFICATION-CLEANUP-CLOSURE` | ADOPTED |
-| §9 Canonical truth/reference network | `01-CORE-CONTRACT`, `05-VERIFICATION-CLEANUP-CLOSURE` | ADOPTED |
-| §10 Adversarial diagnosis | `02-DISCOVERY-DIAGNOSIS`, `03-DECISIONS-COVERAGE-ANTI-DRIFT` | SUPERSEDED_BY_STRONGER_RULE |
-| §11 Questions/true decision gate | `03-DECISIONS-COVERAGE-ANTI-DRIFT`, decision contract | ADOPTED |
-| §12 PostgreSQL/compat/security/DSH-WLT/mobile/control-panel/design risks | `01-CORE-CONTRACT`, `04-PACKAGE-EXECUTION`, `05-VERIFICATION-CLEANUP-CLOSURE` | ADOPTED |
-| §13 Concurrent-agent planning | `06-CONCURRENCY-RESUME-RECOVERY` | ADOPTED |
-| §14 Create/resume/rebaseline | `04-PACKAGE-EXECUTION`, `06-CONCURRENCY-RESUME-RECOVERY` | ADOPTED |
-| §15 Safe package creation | early living-package creation + exact three-file schema + mode-specific gates in `00/04` | SUPERSEDED_BY_STRONGER_RULE |
-| §16 Coverage/units/ordering | graph/coverage + exact three-file schema | SUPERSEDED_BY_STRONGER_RULE |
-| §17 Verification-plan capability binding | `05-VERIFICATION-CLEANUP-CLOSURE`, evidence contract | ADOPTED |
-| §18 Handoff mapping | diagnosis/execution/evidence contracts | MERGED_WITH_EQUIVALENT |
-| §19 Readiness gate | per-wave readiness in EXECUTE + final global PACKAGE_READY in PREPARE/closure | SUPERSEDED_BY_STRONGER_RULE |
-| §20 Delivery/latest-head semantics | `01-CORE-CONTRACT`, `06-CONCURRENCY-RESUME-RECOVERY` | ADOPTED |
-| §21 Retention | `06-CONCURRENCY-RESUME-RECOVERY` | ADOPTED |
-| §22 Report/decision | current three output files + contracts | ADOPTED |
-
-Current explicit user instruction has higher task authority than any conflicting historical prompt sequencing: package existence is now early/living, while `PACKAGE_READY` remains a final proven state. This does not weaken diagnosis; it makes the same diagnosis/decision/re-diagnosis loop incremental and auditable.
+| Inputs / blank TARGET semantics | `00`, `01`, generator | ADOPTED |
+| §1 Authority/truth + plans derived | `01` | ADOPTED |
+| §2 Remote pinning + capability | `01`, `06` | ADOPTED |
+| §3 CODE_BASED_LEAN / scope | `01` | ADOPTED |
+| §4 Seeded coverage | `03` | SUPERSEDED_BY_STRONGER_RULE |
+| §5 Deep diagnosis + reuse-before-create | `02` | ADOPTED |
+| §6 FAIL-CLOSED diagnosis | `01`, `03` | ADOPTED |
+| §7 Full-stack multi-surface trace | `02` | ADOPTED |
+| §8 Structural/hygiene | `02`, `05` | ADOPTED |
+| §9 Canonical truth/reference network | `01`, `05` | ADOPTED |
+| §10 Adversarial diagnosis | `02`, `03` | SUPERSEDED_BY_STRONGER_RULE |
+| §11 True decisions only | `03`, decision contract | ADOPTED |
+| §12 Domain risk gates | `01`, `04`, `05` | ADOPTED |
+| §13 Concurrent-agent planning | `06` | ADOPTED |
+| §14 Create/resume/rebaseline | `04`, `06` | ADOPTED |
+| §15 Safe package creation | V2 overview + JIT sequence creation | SUPERSEDED_BY_STRONGER_RULE |
+| §16 Coverage/units/ordering | Dependency-graph Sequences + V2 registry | SUPERSEDED_BY_STRONGER_RULE |
+| §17 Verification-plan capability binding | `05`, evidence contract | ADOPTED |
+| §18 Handoff mapping | overview/sequence/evidence contracts | MERGED_WITH_EQUIVALENT |
+| §19 Readiness gate | per-sequence gates + global handoff/closure | SUPERSEDED_BY_STRONGER_RULE |
+| §20 Latest-head delivery semantics | `01`, `06` | ADOPTED |
+| §21 Retention | `06` | ADOPTED |
+| §22 Report/decision | overview + sequence records + contracts | SUPERSEDED_BY_STRONGER_RULE |
 
 ## Source 02 — Execute / verify / close
 
 | Source section | Destination owner | Status |
 |---|---|---|
-| §0 FAIL-CLOSED | `01-CORE-CONTRACT` | ADOPTED |
-| Inputs/§1 old execution modes | two user modes + internal wave/review/freeze states | SUPERSEDED_BY_STRONGER_RULE |
-| §2 Authority/truth/package not truth | `01-CORE-CONTRACT` | ADOPTED |
-| §3 Pin/task identity/resume | `01-CORE-CONTRACT`, `06-CONCURRENCY-RESUME-RECOVERY` | ADOPTED |
-| §4 Capability + protected authority | `01-CORE-CONTRACT` | ADOPTED |
-| §5 Scope/Blast Radius | `01-CORE-CONTRACT` | ADOPTED |
-| §6 Candidate lifecycle | `05-VERIFICATION-CLEANUP-CLOSURE` | ADOPTED |
-| §7 Deterministic AUTO/base/candidate resolution | deterministic Candidate/Base section in `05` | SUPERSEDED_BY_STRONGER_RULE |
-| §8 Candidate existence/reachability/head relation | `05`, closure contract, validator branch-head equality | ADOPTED |
-| §9 Workspace/staging hygiene | `01`, `06` | ADOPTED |
+| §0 FAIL-CLOSED | `01` | ADOPTED |
+| Inputs/§1 old modes | two user modes + sequence/review/freeze states | SUPERSEDED_BY_STRONGER_RULE |
+| §2 Authority/truth/package not truth | `01` | ADOPTED |
+| §3 Pin/task/resume | `01`, `06` | ADOPTED |
+| §4 Capability/protected authority | `01` | ADOPTED |
+| §5 Scope/Blast Radius | `01` | ADOPTED |
+| §6 Candidate lifecycle | `05` | ADOPTED |
+| §7 Deterministic candidate/base | `05` | ADOPTED |
+| §8 Candidate existence/reachability | `05`, closure contract, validator | ADOPTED |
+| §9 Workspace/staging | `01`, `06` | ADOPTED |
 | §10 Concurrent isolation | `06` | ADOPTED |
 | §11 Atomic GitHub writes | `06` | ADOPTED |
 | §12 Push serialization | `06` | ADOPTED |
-| §13 Findings Ledger | `03` | ADOPTED |
+| §13 Findings Ledger | owning Sequence + `03` | SUPERSEDED_BY_STRONGER_RULE |
 | §14 Root-cause loop | `04` | ADOPTED |
 | §15 CI/runtime failure loop | `05` | ADOPTED |
-| §16 Full-stack closure | `02`, `05` | ADOPTED |
+| §16 Full-stack closure | `02`, `04`, `05` | ADOPTED |
 | §17 Domain gates | `04`, `05` | ADOPTED |
-| §18 Runtime freshness/state isolation | `05` | ADOPTED |
+| §18 Runtime freshness | `05` | ADOPTED |
 | §19 Verification strategy | `05`, evidence contract | ADOPTED |
 | §20 Evidence invalidation | `05`, evidence contract | ADOPTED |
-| §21 Package current-schema/revalidation | living three-file package + mode-aware validator | SUPERSEDED_BY_STRONGER_RULE |
-| §22 Package bookkeeping before Freeze | `05` | ADOPTED |
-| §23 Cleanup/refactor/finishing | `05` | ADOPTED |
-| §24 Final latest-head integration | `05`, `06` | ADOPTED |
-| §25 Delivery boundary | MODE + protected-action authority + concurrency rules | SUPERSEDED_BY_STRONGER_RULE |
+| §21 Package schema/revalidation | V2 overview + JIT sequence validator | SUPERSEDED_BY_STRONGER_RULE |
+| §22 Bookkeeping before Freeze | `05` | ADOPTED |
+| §23 Cleanup/finishing | `04`, `05` | ADOPTED |
+| §24 Latest-head integration | `05`, `06` | ADOPTED |
+| §25 Delivery boundary | MODE + authority + concurrency | SUPERSEDED_BY_STRONGER_RULE |
 | §26 Freeze | `05` | ADOPTED |
-| §27 Final cleanup/hardening/red-team | `05` | ADOPTED |
+| §27 Final cleanup/red-team | `05` | ADOPTED |
 | §28 Final read-only verification | `05` | ADOPTED |
-| §29 Evidence provenance/artifact integrity | `05`, evidence contract | ADOPTED |
+| §29 Evidence provenance | `05`, evidence contract | ADOPTED |
 | §30 Branch-race gates | `05`, `06` | ADOPTED |
-| §31 Independence provenance | `05`, current 03 task template | ADOPTED |
+| §31 Independence provenance | `05`, sequence evidence | ADOPTED |
 | §32 Claim/diff/test review | `05` | ADOPTED |
-| §33 Evidence Matrix | evidence contract + current 03 task template | ADOPTED |
-| §34 Approval Matrix | `01`, `05`, current 03 task template | ADOPTED |
-| §35 GitHub/CI/repository-platform truth | `01`, `05` | ADOPTED |
-| §36 Package validation semantics | current validator + `04/05` | ADOPTED |
+| §33 Evidence Matrix | evidence contract + sequence files | ADOPTED |
+| §34 Approval Matrix | `01`, `05`, sequence files | ADOPTED |
+| §35 Repository-platform truth | `01`, `05` | ADOPTED |
+| §36 Package validation | V2 validator + `04/05` | SUPERSEDED_BY_STRONGER_RULE |
 | §37 Retention | `06` | ADOPTED |
-| §38 Final closure gate | `05`, closure contract, validator | ADOPTED |
-| §39 Final report | current three-file schema/contracts | MERGED_WITH_EQUIVALENT |
+| §38 Final closure | `05`, closure contract, validator | ADOPTED |
+| §39 Final report | V2 overview/sequence records | SUPERSEDED_BY_STRONGER_RULE |
 | §40 Golden rule | `00`, `01` | ADOPTED |
 
 ## Source 03 — End-to-End FAIL-CLOSED
 
-| Source section | Destination owner | Status |
-|---|---|---|
-| §0 governing rule/source truth/decision/capabilities | `01` | ADOPTED |
-| §1 Root Cause / redesign when structural | `01`, `04` | ADOPTED |
-| §2 zero tolerance | `01`, closure contract | ADOPTED |
-| §3 Blast Radius | `01` | ADOPTED |
-| §4 E2E path | `02` | ADOPTED |
-| §5 no partial success | `01`, evidence contract | ADOPTED |
-| §6 execute not report | `04` | ADOPTED |
-| §7 cleanup part of DONE | `05` | ADOPTED |
-| §8 all structural levels | `05` | ADOPTED |
-| §9 remove obsolete material | `05` | ADOPTED |
-| §10 Git is history | `06` | ADOPTED |
-| §11 structural organization | `05` | ADOPTED |
-| §12 naming | `05` | ADOPTED |
-| §13 one source of truth | `01`, `05` | ADOPTED |
-| §14 reference network | `05` | ADOPTED |
-| §15 noise reduction | `05` | ADOPTED |
-| §16 prevent new debt | `04`, `05` | ADOPTED |
-| §17 real/failure behavior | `02`, `05` | ADOPTED |
-| §18 adversarial verification | `02`, `05` | ADOPTED |
-| §19 execution/verification cycle | `00`, `04`, `05` | MERGED_WITH_EQUIVALENT |
-| §20 authority to refactor | `01`, `04` | ADOPTED |
-| §21 final finishing gate | `05` | ADOPTED |
-| §22 final technical gate | `05`, evidence contract | ADOPTED |
-| §23 latest-head verification | `05`, `06`, validator | ADOPTED |
-| §24 DONE conditions | closure contract | ADOPTED |
-| §25 DONE definition | closure contract | ADOPTED |
-| §26 final decision questions | closure contract + canonical decision vocabulary separation | ADOPTED |
+All §§0–26 remain accounted through `01/02/04/05/06` and the current contracts. Root cause, blast radius, cleanup, canonical source consolidation, reference integrity, real/failure behavior, latest-head verification and DONE/closure conditions are unchanged. V2 changes only Derived Support structure, not proof strength. Status: **ZERO UNACCOUNTED**.
 
 ## Source 04 — Journey / multisurface diagnosis
 
-All §§0–17 are represented by `00/01/02/03/04` and the Diagnosis/Decision contracts. The original method is strengthened by Macro Blueprint Gate, Relation Graph ordering, Universe/Coverage, Scope Delta, bidirectional traceability, structured backtracking, sequential Wave gates and independent adversarial completeness. Status: **ZERO UNACCOUNTED**.
+All §§0–17 remain represented by `00/01/02/03/04` and decision/sequence contracts. The method remains Journey × Multi-Surface × Cross-Layer, strengthened by Macro Blueprint, Relation Graph, Universe/Coverage, Scope Delta, bidirectional traceability, Structured Backtracking, dependency-derived Sequences and independent adversarial completeness. Status: **ZERO UNACCOUNTED**.
 
 ## Execution Card
 
@@ -149,9 +103,9 @@ All §§0–17 are represented by `00/01/02/03/04` and the Diagnosis/Decision co
 |---|---|---|
 | §1 PIN + TRUTH | `01`, `06` | ADOPTED |
 | §2 root-cause execution | `01`, `04` | ADOPTED |
-| §3 applicable evidence routing | `01`, `05`, evidence contract | ADOPTED |
+| §3 evidence routing | `01`, `05`, evidence contract | ADOPTED |
 | §4 failure → action / no fake green | `05` | ADOPTED |
-| §5 fast CI topology / no duplicate heavy CI | explicit CI topology in `05` | ADOPTED |
+| §5 fast CI topology | `05` | ADOPTED |
 | §6 special gates | `01`, `04`, `05` | ADOPTED |
 | §7 write/candidate/merge safety | `05`, `06` | ADOPTED |
 | §8 recovery/resume | `06` | ADOPTED |
@@ -159,71 +113,72 @@ All §§0–17 are represented by `00/01/02/03/04` and the Diagnosis/Decision co
 
 ## High-Risk Rule Preservation Audit
 
-These rules were independently spot-checked after section mapping because section accounting alone can hide semantic loss:
-
 ```text
-FAIL-CLOSED default and positive evidence
+FAIL-CLOSED + positive evidence
 plans/prompts are derived, never live truth
 exact remote SHA + fresh-head reconciliation
 CODE_BASED_LEAN + Blast Radius/Consumers/Dependencies/Contracts/Data/Runtime
-all applicable capabilities, never blind tool use or invented execution
 true Decision Boundary; no discoverable-fact questions
 decision impact propagation + re-diagnosis
-sequential decisions by dependency/wave; no dependent-wave bypass
+dependency ordering + Structured Backtracking
 Universe/Coverage/Scope Delta/bidirectional traceability
-Journey × Multi-Surface × Cross-Layer + forward/reverse/temporal/failure/recovery
-root cause first; redesign/rebuild when root is structural
-consumer migration + removal of obsolete parallel path
-candidate/base deterministic resolution; no arbitrary parent
-package bookkeeping before Freeze
-no writes during final read-only verification
-same-candidate evidence + evidence invalidation
+Journey × Multi-Surface × Cross-Layer
+root cause first; redesign/rebuild when structural
+consumer migration + obsolete parallel-path removal
+same-candidate evidence + invalidation
 runtime freshness/readback
-failure classification; no blind rerun
-fast CI topology; no duplicate heavy CI on same valid candidate
-workspace/staging/foreign-change discipline
-atomic remote writes + single push owner + no force
-approval matrix + protected action authority
-independent-review provenance
-cleanup/structural hygiene/naming/reference/source-of-truth consolidation
+no blind rerun
+workspace/foreign-change discipline
+atomic writes + single push owner + no force
+approval/independent-review provenance
+cleanup/naming/reference/source-of-truth consolidation
 Governance Promotion + Governance Reconciliation
-canonical lifecycle-vs-decision separation
-branch-head closure requires HEAD_AT_DECISION == FINAL_CANDIDATE_SHA
+canonical lifecycle vs decision separation
+HEAD_AT_DECISION == FINAL_CANDIDATE_SHA for branch-head closure
 current closureRules.closedDecision only
 retention/Git history archive
 ```
 
 Result: **ACCOUNTED**.
 
-## Explicitly Agreed Methodology
+## Explicitly Agreed Methodology — current
 
 ```text
 Two modes only: PREPARE_ONLY / EXECUTE_END_TO_END
 MODE is write authority, not diagnosis method
-same sequential diagnosis → decision → re-diagnosis loop in both modes
-same dependency/structured-backtracking order in both modes
-living three-file task package is created/resumed early and updated during work
-package existence/content does not imply PACKAGE_READY
-PREPARE_ONLY: each wave is fully diagnosed/decided/re-diagnosed and converted into executable handoff; no live mutation
-PREPARE_ONLY: questions occur when the current wave reaches a true decision boundary, not only at the end
-PREPARE_ONLY: final PACKAGE_READY only after every material wave + global reconciliation/adversarial completeness
-EXECUTE_END_TO_END: after current-wave diagnosis/decision/re-diagnosis, execute that wave immediately once its Wave Write Gate passes
-EXECUTE_END_TO_END: global PACKAGE_READY is not a prerequisite for first wave write
-EXECUTE_END_TO_END: no next dependent wave before current wave implementation/consumers/cleanup/verification/governance/scope-delta gate is COMPLETE
-EXECUTE_END_TO_END: task package is living derived documentation of actual execution, never live truth
-command package = documentation/control plane only
-task package = derived data plane under plans
-exactly three task-package files
-no parallel legacy template/schema
-ACTUAL / INTENDED / DESIRED / CONFLICT
-Macro Blueprint before expensive deep waves
-Graph-driven foundations + structured backtracking
-Global breadth + risk-adaptive depth
-Hypothesis → cheapest discriminating evidence
-Governance Promotion of durable truth
-local cleanup after each root fix + final structural sweep
-source rules have one owner; avoid context duplication
-final global reconciliation after all waves before closure/handoff
+same sequential diagnosis → decision → re-diagnosis in both modes
+same dependency/Structured Backtracking order
+
+Package schema is adaptive and sequential:
+00-OVERVIEW.md + NNN-<sequence>.md
+one file = one coherent execution/closure sequence
+no diagnosis/execution/verification split for a sequence
+no fixed number of files
+no fixed domain/surface directory tree
+no subdirectories inside a V2 task package
+sequences are derived from dependency graph
+sequences are created Just-In-Time
+no future placeholder sequences
+at most one active non-terminal sequence by default
+
+00-OVERVIEW is small global control/index only
+sequence file owns local diagnosis/findings/root cause/decisions/re-diagnosis/target/treatment/consumers/governance/cleanup/verification/evidence/exit
+
+PREPARE_ONLY:
+each sequence fully diagnosed/decided/re-diagnosed and made execution-ready
+no live mutation
+sequence terminal = PREPARED
+final handoff only after all sequences + global reconciliation + PACKAGE_READY
+
+EXECUTE_END_TO_END:
+execute current sequence immediately after solution/write gate
+no dependent next sequence before current COMPLETE
+sequence terminal = COMPLETE
+final target closure only after all sequences + global reconciliation + cleanup + governance + fresh-head + adversarial/read-only verification
+
+If a sequence grows because it contains independent closure boundaries, split the graph into multiple sequences.
+Do not split merely by line count, repository folder, app, or desire to reduce file size.
+Do not merge unrelated root causes merely to reduce file count.
 ```
 
 Result: **ACCOUNTED**.
@@ -243,4 +198,4 @@ UNACCOUNTED = 0
 DROPPED = 0
 ```
 
-This proves methodology/source-rule accounting for the pinned sources. It does **not** prove product/runtime correctness. Any source blob drift, governance vocabulary drift, orchestrator change, or explicit mode-semantics change reopens this source-coverage gate until reconciled.
+This proves methodology/source-rule accounting for the pinned sources. It does not prove Product/Runtime correctness. Source drift or material orchestrator/schema change reopens this gate until reconciled.

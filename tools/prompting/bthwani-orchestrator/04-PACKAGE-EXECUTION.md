@@ -3,328 +3,174 @@
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
 Owner: `tools/prompting/bthwani-orchestrator/04-PACKAGE-EXECUTION.md`
 
-هذا الملف يملك Living Task Package، Wave Readiness، PREPARE handoff design، Governance Promotion، Root-Cause execution، consumer migration وlocal cleanup.
-
-## 1) Package Lifecycle — Create Early, Ready Late
-
-بعد تثبيت Task identity وRepository/Branch/START_SHA:
-
-```text
-ABSENT → create current three-file package early.
-EXISTS + same task identity → RESUME_AND_RECONCILE.
-EXISTS + different identity → COLLISION; do not overwrite.
-```
-
-أنشئ/استأنف الحزمة **قبل deep diagnosis waves** حتى تُوثق الحقيقة المشتقة تدريجيًا. لا تنتظر Global `PACKAGE_READY` لإنشاء أو تحديث الملفات.
-
-```text
-PACKAGE_EXISTS ≠ PACKAGE_READY
-PACKAGE_HAS_CONTENT ≠ DIAGNOSIS_COMPLETE
-PACKAGE_READY ≠ PRODUCT_IMPLEMENTED
-```
-
-`PACKAGE_READY` حالة نهائية للتسليم في `PREPARE_ONLY` وحالة مصالحة عالمية مطلوبة قبل Final Closure في `EXECUTE_END_TO_END`.
-
-## 2) Exact Package Schema
+## 1) Package V2
 
 ```text
 plans/diagnose-implementing/<TASK_NAME>/
-├── 01-DIAGNOSIS.md
-├── 02-EXECUTION.md
-└── 03-VERIFICATION-CLOSURE.md
+├── 00-OVERVIEW.md
+├── 001-<sequence>.md
+├── 002-<sequence>.md
+└── ...
 ```
 
-**Exactly these three files.** لا Manifest/Coverage/units parallel schema ولا ملفات إضافية افتراضيًا. تاريخ الحزم القديمة لا يغير Schema الحالية.
+لا يوجد عدد ثابت من Sequences. لا توجد مجلدات Domains/Surfaces داخل الحزمة. لا توجد ملفات Diagnosis/Execution/Verification منفصلة لنفس Sequence.
 
-## 3) Baseline Semantics
+## 2) 00-OVERVIEW Ownership
 
-عند الإنشاء سجّل منفصلًا:
+يمتلك فقط: task identity / repository / branch / mode / target، START_SHA / CURRENT_SHA، macro blueprint / dependency graph summary، sequence registry + order، global decisions/blockers، global coverage/reconciliation، final handoff/closure metadata.
+
+## 3) Sequence File Ownership
+
+كل `NNN-<sequence>.md` يمتلك دورة واحدة متماسكة:
 
 ```text
-START_SHA   = exact branch head at diagnosis start
-CURRENT_SHA = exact latest diagnosis head after last reconciliation
+Scope / Context
+Diagnosis / Findings
+Root Cause / Blast Radius
+Decisions / Re-Diagnosis
+Exact Target State
+Treatment / Execution
+Consumer / Contract / Data / Governance
+Cleanup
+Verification / Runtime / Evidence
+Exit Gate / Reopen
 ```
 
-`new-package.mjs` يأخذ `--start-sha` و`--current-sha` صراحةً. لا تستخدم SHA واحدة لتغطية baseline وcurrent truth إذا اختلفتا.
+`ONE FILE = ONE COHERENT EXECUTION/CLOSURE SEQUENCE`.
 
-Execution metadata:
+## 4) Create / Resume
 
 ```text
-PACKAGE_READY_BASE_SHA = UNSET until global PACKAGE_READY is actually proven
-CURRENT_WORK_BASE_SHA  = latest safe reconciled execution/diagnosis base
-CURRENT_WAVE_BASE_SHA  = exact reconciled base used to prove current wave readiness
+ABSENT → create V2 overview only.
+EXISTS V2 + same task identity → resume/reconcile.
+EXISTS legacy V1 active task → rebaseline, preserve only valid evidence/decisions, migrate to V2.
+DIFFERENT identity collision → stop; do not overwrite.
 ```
 
-في `PREPARE_ONLY` يعيّن `PACKAGE_READY_BASE_SHA` عند Final Package Ready. في `EXECUTE_END_TO_END` لا يلزم تعيينه قبل أول Wave؛ يعيّن عند global package reconciliation قبل closure.
+`new-package.mjs` ينشئ `00-OVERVIEW.md` فقط. `new-sequence.mjs` يستخدم فقط بعد إثبات Sequence boundary من Graph وينشئ الرقم التالي Just-In-Time.
 
-## 4) File Ownership
+## 5) No Mega Package / No Fragmentation
 
-`01-DIAGNOSIS.md`: identity/truth/scope/Macro/Graph/Journeys/Findings/Coverage/Decisions/Governance Candidates/Re-Diagnosis/global readiness.
-
-`02-EXECUTION.md`: root-cause ordered plan + current wave machine-readable state + actual execution ledger + governance promotion + consumers + candidate movement + local cleanup + blockers.
-
-`03-VERIFICATION-CLOSURE.md`: verification/evidence/runtime/approvals/wave evidence references/final cleanup/governance sync/fresh-head/adversarial/final decision.
-
-لا تكرر نفس الحقيقة في الملفات الثلاثة؛ استخدم IDs/references.
-
-## 5) Shared Sequential Work Model
-
-كلا الـMODEين يتبعان:
+ممنوع:
 
 ```text
-SELECT_NEXT_WAVE_BY_DEPENDENCY
-→ DIAGNOSE
-→ ROOT_CAUSE / BLAST_RADIUS
-→ RESOLVE DERIVABLE FACTS
-→ ASK TRUE DECISION(S) IF NEEDED
-→ APPLY DECISION
-→ RE-DIAGNOSE
-→ DEFINE EXACT ROOT SOLUTION
-→ CURRENT_WAVE_SOLUTION_READY
+one giant file for all target details
+hundreds of pre-created future sequence files
+one file per app/folder merely because repository has that structure
+three files per sequence by default
+split because line count crossed an arbitrary threshold
+merge unrelated root causes just to reduce file count
 ```
 
-لا تؤجل كل الأسئلة إلى نهاية الهدف، ولا تنتقل إلى dependent Wave مع قرار مادي غير محسوم في الحالية.
+قسّم Sequence فقط إذا ظهر Closure Boundary مستقل. ادمج الأعراض إذا كان لها Root Cause/Owner/Verification مشتركة.
 
-## 6) PREPARE_ONLY — Sequential Preparation
-
-بعد `CURRENT_WAVE_SOLUTION_READY`:
+## 6) PREPARE_ONLY Sequence
 
 ```text
-record exact root fix/design
-→ record canonical owner + exact target state
-→ record dependencies + writers/readers/consumers
-→ record contract/data/state/governance changes required
-→ record obsolete/parallel paths to remove
-→ record local/final cleanup actions
-→ record exact acceptance + verification strategy
-→ prove WAVE_PREPARED
-→ next wave
+diagnose to evidence limit
+→ resolve derivable facts
+→ ask true decision(s) if needed
+→ propagate decision
+→ re-diagnose
+→ prove root cause / owner / blast radius
+→ define exact target state
+→ define root treatment
+→ map writers/readers/consumers
+→ define governance promotion
+→ define obsolete removal + cleanup
+→ define verification / acceptance
+→ SEQUENCE_STATUS=PREPARED
 ```
 
-لا Product/Governance/Runtime mutation. لا Implementation SHA مختلقة. لا تعتبر عبارات مثل `fix backend`, `update frontend`, `run tests` خطة قابلة للتسليم.
+لا Actual execution ولا fabricated implementation SHA/evidence. الهدف: وكيل آخر يفتح الملف ويستطيع التنفيذ دون Product/Architecture guessing أو إعادة تصميم.
 
-قبل الانتقال من Wave في `PREPARE_ONLY` يجب أن يستطيع وكيل آخر تنفيذ تلك الـWave دون:
+## 7) EXECUTE_END_TO_END Sequence
+
+قبل live write:
 
 ```text
-product/architecture guessing
-new material decision
-unknown root cause
-unknown owner/consumer/dependency
-unclear target state
-unclear execution order
-unclear cleanup/removal
-unclear acceptance/verification
+SEQUENCE_STATUS=READY_TO_EXECUTE
+ROOT_CAUSE_PROVEN=YES
+DECISIONS_RESOLVED=YES
+REDIAGNOSIS_COMPLETE=YES
+IMPACT_MAPPED=YES
+VERIFICATION_DEFINED=YES
+SOLUTION_READY=YES
+BASE_SHA reconciled
 ```
 
-بعد جميع الـWaves:
-
-```text
-Global Reconciliation
-→ Global Adversarial Completeness
-→ reconcile final execution ordering/dependencies
-→ set global diagnosis/decision/coverage gates
-→ PACKAGE_READY_BASE_SHA = latest reconciled head
-→ PACKAGE_READY=YES
-→ LIFECYCLE_STATE=PREPARED
-→ STOP_PREPARED
-```
-
-Governance changes remain `GOVERNANCE_PROMOTION_PENDING` with exact owner + exact semantic change.
-
-## 7) EXECUTE_END_TO_END — Sequential Immediate Execution
-
-لا ينتظر Global `PACKAGE_READY` قبل التنفيذ. بعد كل Wave Diagnosis/Decision/Re-Diagnosis، يجب أولًا تعيين وفحص current-wave fields:
-
-```text
-CURRENT_WAVE_ID
-CURRENT_WAVE_BASE_SHA
-CURRENT_WAVE_STATUS = READY_TO_EXECUTE
-CURRENT_WAVE_ROOT_CAUSE_PROVEN = YES
-CURRENT_WAVE_DECISIONS_RESOLVED = YES
-CURRENT_WAVE_REDIAGNOSIS_COMPLETE = YES
-CURRENT_WAVE_IMPACT_MAPPED = YES
-CURRENT_WAVE_VERIFICATION_DEFINED = YES
-CURRENT_WAVE_READY_TO_EXECUTE = YES
-```
-
-ثم فقط:
+ثم:
 
 ```text
 Governance Promotion where required
-→ canonical implementation owner first
-→ root fix/refactor/redesign/rebuild
+→ canonical owner root fix/refactor/redesign/rebuild
 → migrate every affected writer/reader/consumer
-→ synchronize contracts/generated/data transitions
+→ synchronize contract/data/generated transitions
 → remove obsolete/parallel path
 → local cleanup
-→ targeted/required verification
-→ runtime/readback when applicable
-→ adjacent regression/adversarial search
-→ update the three living documentation files
-```
-
-بعد التنفيذ لا تنتقل إلى next Wave حتى:
-
-```text
-CURRENT_WAVE_STATUS = COMPLETE
-CURRENT_WAVE_IMPLEMENTATION_COMPLETE = YES
-CURRENT_WAVE_CONSUMERS_RECONCILED = YES
-CURRENT_WAVE_LOCAL_CLEANUP_COMPLETE = YES
-CURRENT_WAVE_VERIFICATION_PASS = YES
-CURRENT_WAVE_GOVERNANCE_SYNC = YES | NOT_APPLICABLE
-CURRENT_WAVE_SCOPE_DELTA_CLASSIFIED = YES
-```
-
-إذا اكتشف التنفيذ Evidence مادية جديدة تغير Root Cause/Decision/Blast Radius:
-
-```text
-STOP affected write path
-→ REOPEN CURRENT/AFFECTED WAVE
-→ diagnose new evidence
-→ decision if needed
-→ re-diagnose
-→ update solution
-→ execute only after Wave Write Gate passes again
+→ affected verification
+→ runtime/readback where required
+→ record exact evidence
+→ SEQUENCE_STATUS=COMPLETE
 ```
 
 ## 8) Governance Promotion
 
-لكل durable resolved rule في `EXECUTE_END_TO_END`:
+لكل durable resolved rule: classify durability → existing canonical owner → authority check → canonical governance write when authorized → machine counterpart when applicable → implementation/consumer propagation → verify parity. PREPARE يسجل pending فقط.
+
+## 9) Root-Cause Loop
 
 ```text
-classify durability
-→ existing canonical owner
-→ authority check
-→ canonical governance write when authorized
-→ machine-readable counterpart/registry when applicable
-→ implementation/consumer propagation
-→ wave verification
-→ final Governance Reconciliation later
-```
-
-Do not create journey-history/topic-decision governance files when an existing canonical owner can hold the rule.
-
-في `PREPARE_ONLY`: document only; no governance mutation.
-
-## 9) Root-Cause Execution Loop
-
-```text
-confirm current failure/evidence
+confirm symptom/evidence
 → correlate duplicate symptoms
-→ identify first causal failure
+→ first causal failure
 → challenge competing hypothesis
 → canonical owner/root cause
 → root fix
 → consumer migration
-→ contract/data/generated synchronization
+→ contract/data/generated sync
 → obsolete path removal
-→ local cleanup
-→ affected verification
+→ cleanup
+→ verification
 → neighboring regression search
-→ update Finding + Wave state
 ```
 
-No patch loop without a new falsifiable hypothesis.
+## 10) Consumer Migration
 
-## 10) No Parallel Truth / Hidden Workaround
+كل proven consumer = `MIGRATED` أو `NOT_AFFECTED_WITH_PROOF`. Cover writers/readers/APIs/generated clients/surfaces/jobs/events/DB/config/permissions/tests/docs وفق semantic blast radius.
 
-Forbidden as final state:
+## 11) Sequence Creation Safety
+
+قبل إنشاء Sequence التالية:
 
 ```text
-patch masking root cause
-silent fallback
-parallel Product/Business truth
-unbounded dual-write
-surface-local duplicate business truth
-UI-only authorization
-state bypass
-reachable legacy route after migration
-financial retry identity before unknown-result reconciliation
-test/guard weakening
-compatibility residue without explicit need + owner + expiry/removal trigger
+current sequence mode-specific exit gate = PASS
+overview registry reconciled
+current sequence cleared
+latest HEAD reconciled
+dependency graph refreshed
+next sequence boundary proven
 ```
 
-## 11) Consumer Migration
+ثم فقط أنشئ `NNN-<name>.md`.
 
-Each proven consumer is:
+## 12) Cleanup
 
-```text
-MIGRATED
-or NOT_AFFECTED_WITH_PROOF
-```
+داخل كل Sequence: remove obsolete path/compatibility/workaround، repair imports/exports/routes/bindings/references، normalize affected naming/ownership/placement، remove debug/temp residue، verify reference integrity. التنظيف النهائي العالمي يبقى في الوحدة 05.
 
-Cover writers/readers/APIs/generated clients/surfaces/jobs/events/DB/config/permissions/tests/docs touched by semantic change.
+## 13) Protected Domains
 
-في `PREPARE_ONLY` يسجل exact migration/disposition required. في `EXECUTE_END_TO_END` يجب تنفيذها أو إثبات عدم التأثر قبل `WAVE_COMPLETE`.
+Data/Security/Finance/Events/Mobile/Control Panel ترفع Evidence/Authority gates تلقائيًا؛ لا تخفضها بنية الملف الجديدة.
 
-## 12) Change Impact Propagation
+## 14) Global Completion
 
-Every material decision/write:
+لا تعتبر TARGET جاهزًا/مغلقًا بمجرد إغلاق آخر Sequence:
 
 ```text
-changed owner/contract/state
-→ graph traversal
-→ affected consumers
-→ affected waves/journeys
-→ invalidated evidence
-→ required re-diagnosis/re-verification
-→ governance impact
-→ cleanup residue
-```
-
-Use affected + risk expansion; no blind full repo repetition and no under-verification of shared/high-risk owners.
-
-## 13) Local Cleanup
-
-After each root fix in `EXECUTE_END_TO_END`:
-
-```text
-remove obsolete local path
-remove expired compatibility/workaround
-repair references/imports/exports
-normalize directly affected naming/placement/ownership
-remove debug/temp residue
-verify reference integrity
-```
-
-في `PREPARE_ONLY` حدد هذه الإجراءات بدقة كجزء من handoff ولا تنفذها.
-
-Final comprehensive cleanup remains in unit 05.
-
-## 14) Data / Security / Finance / Events
-
-Data: forward deterministic migrations; no applied-history rewrite; expand/backfill/switch/contract where required; fresh + representative non-empty; locks/idempotency/restart/rollback/roll-forward/drift.
-
-Security: enforce at trusted owner, cover auth/authz/session/object scope/IDOR/replay/input-output/PII/secrets/audit as affected.
-
-Finance: canonical WLT/financial owner, idempotency/correlation/provider outcome/readback/reconciliation/unknown-result/compensation/replay safety.
-
-Events/providers: stable identity, duplicate/out-of-order/replay, retry/backoff/DLQ/lease, timeout/unknown-result, provider auth/signature, restart/reconciliation.
-
-## 15) Global Completion After All Waves
-
-### PREPARE_ONLY
-
-```text
-ZERO material wave without WAVE_PREPARED
-ZERO unresolved decision required for execution
-ZERO unknown root cause/owner/consumer/dependency required for execution
-ZERO unclear target state/order/cleanup/verification
-all global coverage/diagnosis/decision gates = YES
-PACKAGE_READY = YES
-```
-
-### EXECUTE_END_TO_END — Before Freeze
-
-```text
-ZERO material wave not COMPLETE
-ZERO known in-scope finding requiring implementation write
-ZERO FIXED_PENDING_VERIFY still requiring a write
-all affected consumers migrated/dispositioned
-all required durable governance promotions complete or explicitly blocking
-all local cleanup complete
-all global coverage/diagnosis/decision gates = YES
-PACKAGE_READY = YES after living-package reconciliation
-all package bookkeeping needed before Freeze complete
-latest remote movement reconciled
+all sequence records terminal for MODE
+→ global reconciliation
+→ duplicate truth search
+→ global coverage gates
+→ final cleanup
+→ final evidence/fresh-head/adversarial gates
 ```

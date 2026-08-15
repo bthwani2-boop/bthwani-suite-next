@@ -2,178 +2,108 @@
 
 Status: DERIVED_SUPPORT
 
-هذا الإطار ينشئ حزم تشخيص/تنفيذ مشتقة تحت `plans/diagnose-implementing/<task-name>/`. لا ينشئ Product Truth أو Implementation/Runtime Truth أو Approval أو Closure بذاته، ولا يجوز لأي Runtime/Build/CI الاعتماد على محتوى الحزم الناتجة.
+هذا الإطار ينشئ Living Derived task packages تحت `plans/diagnose-implementing/<task-name>/`. لا ينشئ Product/Implementation/Runtime Truth أو Approval أو Closure بذاته.
 
-## القالب الحاكم الوحيد
-
-```text
-plans/diagnose-implementing/_template/
-├── 01-DIAGNOSIS.template.md
-├── 02-EXECUTION.template.md
-└── 03-VERIFICATION-CLOSURE.template.md
-```
-
-وينتج **ثلاثة ملفات فقط**:
+## Schema V2 — Sequential Adaptive Package
 
 ```text
-plans/diagnose-implementing/<TASK_NAME>/
-├── 01-DIAGNOSIS.md
-├── 02-EXECUTION.md
-└── 03-VERIFICATION-CLOSURE.md
+plans/diagnose-implementing/<TASK>/
+├── 00-OVERVIEW.md
+├── 001-<proven-sequence>.md
+├── 002-<proven-sequence>.md
+└── ...
 ```
 
-لا توجد بنية `MANIFEST/COVERAGE/units/**` موازية للقالب الحالي، ولا `new-unit.mjs`. الحزم التاريخية القديمة تبقى Derived Historical Support فقط ولا تحدد Schema الحزمة الجديدة.
-
-## الارتباط بالأوركسترا
-
-نقطة الدخول المنهجية الوحيدة:
+لا يوجد عدد ثابت من الملفات، ولا Domain tree ثابتة، ولا ثلاثة ملفات لكل موضوع.
 
 ```text
-tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md
+ONE FILE = ONE COHERENT EXECUTION/CLOSURE SEQUENCE
+SEQUENCES COME FROM THE DEPENDENCY GRAPH
+CREATE SEQUENCES JUST-IN-TIME
+NO PRECREATED FUTURE SEQUENCES
+NO SUBDIRECTORIES INSIDE V2 PACKAGE
+NO DIAGNOSIS/EXECUTION/VERIFICATION SPLIT
+00-OVERVIEW = SMALL GLOBAL MAP ONLY
 ```
 
-حزمة الأمر تحت `tools/prompting/**` منفصلة عن حزمة المهمة تحت `plans/**`، والحقيقة الدائمة تترقى إلى مالكها الحاكم في `governance/**`/العقود/الكود الحي عندما يسمح الـMODE والسلطة بذلك.
-
-## المبدأ المشترك للنمطين
-
-`PREPARE_ONLY` و`EXECUTE_END_TO_END` لا يستخدمان منهجين مختلفين للتشخيص. كلاهما يعمل:
-
-```text
-DISCOVER GLOBALLY
-→ MACRO BLUEPRINT / DEPENDENCY GRAPH
-→ SELECT NEXT WAVE
-→ DIAGNOSE
-→ ROOT CAUSE / BLAST RADIUS
-→ RESOLVE DERIVABLE FACTS
-→ ASK TRUE DECISION(S) WHEN NEEDED
-→ APPLY DECISION
-→ RE-DIAGNOSE
-→ DEFINE EXACT ROOT SOLUTION
-→ MODE-SPECIFIC WAVE GATE
-→ NEXT WAVE
-```
-
-الفرق هو سلطة الكتابة بعد أن تصبح الـWave الحالية solution-ready.
+TARGET صغير قد يبقى `00-OVERVIEW.md + 001-...md`. TARGET واسع قد يحتوي Sequences كثيرة، لكنها تنشأ واحدة بعد الأخرى فقط عندما يثبت الرسم البياني الحاجة إليها. هذا يمنع Mega Package والـMicro-file noise معًا.
 
 ## PREPARE_ONLY
 
 ```text
-Wave diagnosis
-→ decisions/questions if needed
-→ re-diagnosis
-→ exact root solution design
-→ exact consumers/governance/cleanup/verification handoff
-→ WAVE_PREPARED
-→ next wave
+diagnose → decide → re-diagnose → exact root solution
+→ exact consumers/governance/cleanup/verification
+→ PREPARED → next
 ```
 
-لا Product/Governance/Runtime mutation. الحزمة تُبنى تدريجيًا أثناء التشخيص حتى تصبح حزمة تنفيذ يمكن لوكيل آخر تنفيذها دون Product/Architecture guessing أو قرار مادي مخفي.
-
-بعد جميع الـWaves فقط:
-
-```text
-Global Reconciliation
-→ Adversarial Completeness
-→ Global Diagnosis/Decision/Coverage gates
-→ PACKAGE_READY
-→ LIFECYCLE_STATE=PREPARED
-```
+لا live mutation. كل Sequence يصبح handoff قابلًا للتنفيذ من وكيل آخر دون Product/Architecture guessing.
 
 ## EXECUTE_END_TO_END
 
-نفس التشخيص والقرارات وإعادة التشخيص، لكن بعد أن تجتاز **الـWave الحالية** بوابة الجاهزية:
-
 ```text
-CURRENT_WAVE_ROOT_CAUSE_PROVEN = YES
-CURRENT_WAVE_DECISIONS_RESOLVED = YES
-CURRENT_WAVE_REDIAGNOSIS_COMPLETE = YES
-CURRENT_WAVE_IMPACT_MAPPED = YES
-CURRENT_WAVE_VERIFICATION_DEFINED = YES
-CURRENT_WAVE_READY_TO_EXECUTE = YES
+diagnose → decide → re-diagnose → solution-ready
+→ execute → migrate consumers → cleanup → verify/readback
+→ COMPLETE → next
 ```
 
-يبدأ التنفيذ الحي فورًا للـWave الحالية:
+لا dependent next Sequence قبل Exit Gate الحالية.
 
-```text
-Governance Promotion when required
-→ root fix
-→ consumer migration
-→ obsolete path removal
-→ local cleanup
-→ required verification/runtime readback
-→ update living documentation
-```
-
-ولا ينتقل إلى التالية حتى:
-
-```text
-CURRENT_WAVE_STATUS = COMPLETE
-CURRENT_WAVE_IMPLEMENTATION_COMPLETE = YES
-CURRENT_WAVE_CONSUMERS_RECONCILED = YES
-CURRENT_WAVE_LOCAL_CLEANUP_COMPLETE = YES
-CURRENT_WAVE_VERIFICATION_PASS = YES
-CURRENT_WAVE_GOVERNANCE_SYNC = YES | NOT_APPLICABLE
-CURRENT_WAVE_SCOPE_DELTA_CLASSIFIED = YES
-```
-
-Global `PACKAGE_READY` **ليس شرطًا قبل أول Wave write** في هذا النمط. هو شرط للمصالحة العالمية قبل Final Closure.
-
-## الحزمة Living Derived Documentation
-
-تُنشأ/تستأنف بعد تثبيت Task identity وBranch/SHA، قبل deep waves. وجودها لا يعني أنها جاهزة أو صحيحة أو مغلقة.
-
-- `01-DIAGNOSIS.md`: يتطور مع Findings/Decisions/Re-Diagnosis/Coverage.
-- `02-EXECUTION.md`: في PREPARE يوثق التنفيذ المطلوب؛ في EXECUTE يوثق current-wave gate وما نُفذ فعليًا.
-- `03-VERIFICATION-CLOSURE.md`: يوثق Evidence/Runtime/Readback/Approvals/Cleanup/Governance/Fresh Head/Closure.
-
-الكود والحوكمة والعقود والبيانات والـRuntime الحي تقود الحقيقة؛ الحزمة توثقها فقط.
-
-## إنشاء حزمة
+## إنشاء الحزمة
 
 ```powershell
 node plans/diagnose-implementing/new-package.mjs `
   --name <task-name> `
   --branch <branch> `
-  --start-sha <diagnosis-start-40-sha> `
-  --current-sha <latest-reconciled-40-sha> `
-  --mode PREPARE_ONLY `
-  --target "<blank-or-target>" `
-  --objective "<measurable objective>"
+  --start-sha <40-sha> `
+  --current-sha <40-sha> `
+  --mode <PREPARE_ONLY|EXECUTE_END_TO_END> `
+  --target "<target>" `
+  --objective "<objective>"
 ```
 
-`--current-sha` اختياري فقط عندما يساوي `--start-sha`. لا يوجد alias قديم لـ`--surface` أو`--sha`؛ الحقول الحالية صريحة لتجنب التباس baseline مع current truth.
+ينشئ `00-OVERVIEW.md` فقط.
+
+## إنشاء Sequence بعد إثباتها
+
+```powershell
+node plans/diagnose-implementing/new-sequence.mjs `
+  --package <task-name> `
+  --name <sequence-slug> `
+  --title "<human title>" `
+  --base-sha <overview CURRENT_SHA> `
+  --basis "<why this is a distinct proven execution boundary>" `
+  --depends-on "<SEQ-001|NONE>"
+```
+
+المولد يرفض إنشاء Sequence جديدة إذا بقيت الحالية active، ويحدّث `CURRENT_SEQUENCE_ID` والـRegistry.
 
 ## التحقق
 
 ```powershell
-# Structural/package-schema validation only
-node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/<task-name>
-
-# MODE-aware transition gate:
-# PREPARE_ONLY => final handoff readiness
-# EXECUTE_END_TO_END => current-wave pre-write readiness
-node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/<task-name> --strict
-
-# EXECUTE_END_TO_END => current wave must be fully implemented/verified before next dependent wave
-node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/<task-name> --wave-complete
-
-# EXECUTE_END_TO_END => final global closure only
-node plans/diagnose-implementing/validate-package.mjs plans/diagnose-implementing/<task-name> --closure
+node plans/diagnose-implementing/validate-package.mjs <package>
+node plans/diagnose-implementing/validate-package.mjs <package> --sequence-ready
+node plans/diagnose-implementing/validate-package.mjs <package> --sequence-complete
+node plans/diagnose-implementing/validate-package.mjs <package> --handoff
+node plans/diagnose-implementing/validate-package.mjs <package> --closure
 ```
 
-- Validator يرفض أي ملف/مجلد إضافي في حزمة Schema V1؛ البنية الحالية ثلاثة ملفات فقط.
-- Basic validation لا يعني readiness.
-- `--strict` في `PREPARE_ONLY` يتطلب Global Discovery/Diagnosis/Decision/Coverage/Package Ready + `LIFECYCLE_STATE: PREPARED`.
-- `--strict` في `EXECUTE_END_TO_END` يتطلب Current Wave Write Gate فقط؛ لا يطلب Global `PACKAGE_READY`.
-- `--wave-complete` يثبت بنيويًا أن current wave مسجلة `COMPLETE` وأن consumer/cleanup/verification/governance/scope-delta gates الخاصة بها مقفلة قبل التالية.
-- `--closure` يتطلب Global gates، `IMPLEMENTATION_COMPLETE`, final evidence/cleanup/governance/fresh-head/adversarial gates، وقرار الإغلاق الحاكم المقروء ديناميكيًا من `governance/contracts/decision-vocabulary.json`.
-- `FINAL_DECISION` مختلف عن `LIFECYCLE_STATE`: الأول مفردة Governance canonical، والثاني حالة تشغيلية داخل الحزمة المشتقة.
-- Validator يثبت فقط الشكل والبوابات التي ينفذها؛ لا يثبت Product/Runtime correctness.
+- Basic: schema/flat structure/registry/sequence consistency.
+- `--sequence-ready`: current Sequence solution/write readiness.
+- `--sequence-complete`: mode-specific Sequence exit.
+- `--handoff`: PREPARE_ONLY final package readiness.
+- `--closure`: EXECUTE_END_TO_END final target closure structure.
+- Validator يثبت فقط ما يفحصه، لا Product/Runtime correctness.
 
-## استئناف الحزم القديمة
+## متى نقسم Sequence؟
 
-الحزم القديمة ذات `MANIFEST/COVERAGE/units/**` لا تُعاد تشغيلها ميكانيكيًا. إذا كانت المهمة ما تزال نشطة: أعد معايرتها مقابل HEAD/Orchestrator/Governance الحالية، حافظ فقط على الأدلة والقرارات التي ما تزال صالحة، ثم أنشئ/حدّث الحزمة الحالية ذات الملفات الثلاثة. Git history هو الأرشيف.
+فقط عند Boundary مثبت: Root Cause مختلف، Canonical Owner مختلف، dependency/handoff مستقل، verification/runtime boundary مستقل، protected/risk domain مستقل، أو consumer/governance closure مستقلة.
+
+لا تقسّم بسبب عدد الأسطر، اسم التطبيق، أو مجلد المستودع. ولا تدمج Root Causes غير مرتبطة فقط لتقليل عدد الملفات.
+
+## Legacy V1
+
+الحزم النشطة ذات `01-DIAGNOSIS.md / 02-EXECUTION.md / 03-VERIFICATION-CLOSURE.md` تُعاد معايرتها إلى V2 عند استئنافها. Git history هو الأرشيف. لا parallel V1 template/schema.
 
 ## السلامة
 
-لا تخزن Credentials/Secrets/PII/production dumps هنا. لا تُعامل الحزمة كمصدر حقيقة دائم. قبل Final Closure يجب ترقية كل حقيقة دائمة لازمة إلى مالكها الحاكم وإثبات التطابق مع العقود والكود والـRuntime الحديث.
+لا Secrets/PII/production dumps. Durable truth تترقى إلى canonical owner؛ Package/Sequence files تبقى Derived Support فقط.

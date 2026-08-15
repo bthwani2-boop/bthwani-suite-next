@@ -1,7 +1,7 @@
 # Evidence Contract
 
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
-Applies to: evidence sections of `03-VERIFICATION-CLOSURE.md`
+Applies to: evidence sections inside each Sequence file and final global evidence summary in `00-OVERVIEW.md`.
 
 ## Evidence Matrix Record
 
@@ -17,22 +17,13 @@ REQUIRED_CAPABILITY
 APPROVAL_BINDING when applicable
 ```
 
-Allowed evidence status:
+Allowed status: `PASS / FAIL / MISSING / STALE / BLOCKED / CANCELLED_OR_SUPERSEDED / NOT_APPLICABLE_WITH_PROOF`.
 
-```text
-PASS
-FAIL
-MISSING
-STALE
-BLOCKED
-CANCELLED_OR_SUPERSEDED
-NOT_APPLICABLE_WITH_PROOF
-```
-
-## Detailed Evidence Record
+## Detailed Evidence
 
 ```text
 EVIDENCE_ID
+SEQUENCE_ID
 VERIFICATION_ID
 CLAIM
 CANDIDATE_SHA
@@ -44,15 +35,11 @@ PROVENANCE
 INVALIDATION_TRIGGER
 ```
 
-## Rules
-
+Rules:
 - Search/discovery is not final proof.
-- Evidence is bound to the exact candidate when code state matters.
-- Static/build/unit/mock proof cannot become runtime/E2E proof without real evidence.
-- Cancelled, missing, stale, pending or superseded evidence is not PASS.
-- Prove runtime/process/artifact/schema/config freshness before runtime claims.
-- Later writes invalidate affected evidence; rerun only invalidated scopes unless policy/risk requires broader proof.
-- Deterministic failures require root-cause fix/new SHA, not blind rerun.
-- Final closure must use all applicable scopes required by current decision vocabulary/delivery policy and actual blast radius.
-- Required independent review/approval must be candidate-bound and provenance-proven.
-- Final closure must not mix incompatible SHAs.
+- Evidence binds to exact candidate when code state matters.
+- Static/build/unit/mock proof is not runtime/E2E proof.
+- Cancelled/missing/stale/pending/superseded is not PASS.
+- Writes invalidate affected evidence.
+- Deterministic failures require root fix/new SHA, not blind rerun.
+- Sequence PASS proves only that Sequence claims; final TARGET closure requires global reconciliation and all applicable scopes.
