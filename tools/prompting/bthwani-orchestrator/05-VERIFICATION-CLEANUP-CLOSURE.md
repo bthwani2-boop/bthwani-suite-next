@@ -3,7 +3,7 @@
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
 Owner: `tools/prompting/bthwani-orchestrator/05-VERIFICATION-CLEANUP-CLOSURE.md`
 
-هذا الملف يملك Candidate/Evidence، CI/runtime/E2E، approvals/independence، cleanup/structural hygiene، Governance Sync، Fresh Head، Adversarial Review وFinal canonical decision.
+هذا الملف يملك Candidate/Evidence، CI/runtime/E2E، repository-platform truth، approvals/independence، cleanup/structural hygiene، Source-of-Truth consolidation، Governance Sync، Fresh Head، Adversarial Review وFinal canonical decision.
 
 ## 1) Verification Strategy
 
@@ -22,7 +22,7 @@ nearest root-cause regression
 
 Use everything applicable, not everything blindly.
 
-## 2) Candidate / Base Resolution
+## 2) Candidate / Base Resolution and Validity
 
 Deterministic meanings:
 
@@ -38,6 +38,19 @@ MERGE_SHA = only if separately authorized merge actually occurs
 ```
 
 No arbitrary parent/default-branch/base guessing. For total task-range review, use `STARTING_REMOTE_SHA..FINAL_CANDIDATE_SHA` only when ancestry/provenance is valid. `FINAL_CANDIDATE_SHA` is assigned only after Freeze.
+
+Before final judgment prove:
+
+```text
+candidate exists
+candidate is an exact full immutable SHA
+candidate/base ancestry or reviewed range is proven, not guessed
+candidate relationship/reachability to TARGET_REF is understood
+HEAD_AT_REVIEW_START is live and exact
+HEAD_AT_DECISION is live and exact
+```
+
+A deliberately reviewed older commit may be valid review evidence, but it cannot close the current branch head unless the required head/candidate relation is proven.
 
 Any write after candidate assignment invalidates Freeze and affected evidence.
 
@@ -75,6 +88,17 @@ Use current available sources according to claim: GitHub/Actions, repository gua
 
 For each evidence scope record source, exact candidate, environment, status, proof limit, required capability and approval binding.
 
+Special proof limits:
+
+```text
+Sonar scan completed ≠ Sonar Quality Gate passed
+one migration/apply PASS ≠ idempotency/schema/readback/restart proof
+static/build/typecheck/lint/unit/mock green ≠ runtime/E2E proof
+UI hidden/disabled control ≠ server-side authorization proof
+scanner green ≠ permission to suppress a known finding
+finance/security/identity/isolation changes automatically raise evidence strength
+```
+
 ## 6) Failure Classification
 
 ```text
@@ -90,27 +114,32 @@ STALE_RUN
 Rules:
 
 ```text
-DETERMINISTIC → root-cause fix → NEW SHA
+DETERMINISTIC → first causal failure → root-cause fix → NEW SHA
 INFRA/PROVIDER → prove cause → targeted rerun
 FLAKY → defect until controlled/proven
 CANCELLED/SUPERSEDED → neither PASS nor product FAIL proof
 STALE → cannot prove current candidate
 ```
 
+No blind rerun to force green.
+
 ## 7) Runtime Freshness / Real Scenario
 
 Before runtime/E2E prove source/artifact/process/container/schema/seed/config/network profile freshness. Then execute real scenario where claimed:
 
 ```text
-Actor/session/scope
+Actor/identity/session/scope
 → Surface action
 → Contract/API
 → Domain transition
-→ Persistence/events/integration
+→ Transaction/Persistence
+→ Events/Integration
 → canonical readback
 → consuming surfaces
 → observable operational result
 ```
+
+Where state contamination is possible, capture pre-state, use unique run identity, isolate/clean safe test data, and prove post-state from the canonical owner.
 
 Static/mock green is not runtime proof.
 
@@ -128,9 +157,36 @@ Supply chain/CI: lockfile/dependency/CVE/CodeQL/secrets/workflow policy/pinning 
 
 ## 9) Evidence Invalidation
 
-Map every mutation/branch movement to affected evidence. Reacquire the minimum sufficient invalidated set, except where policy/risk requires broader proof.
+Map every mutation/branch movement to affected evidence. Examples:
 
-## 10) Approval / Independent Review
+```text
+contract/schema change → consumers/generation/integration evidence stale
+migration/data owner change → DB/runtime/readback evidence stale
+runtime/config/network change → runtime/E2E evidence stale
+security/auth/permission change → negative isolation/security evidence stale
+shared library/owner change → all proven affected consumers stale
+proven unrelated docs-only movement → evidence may remain valid with provenance
+```
+
+Reacquire the minimum sufficient invalidated set, except where policy/risk requires broader proof.
+
+## 10) Repository-Platform Truth
+
+When closure relies on repository-hosted enforcement, verify the **live candidate-specific state**, not only tracked configuration:
+
+```text
+workflow runs / jobs / first real failed step
+required checks and required context names
+cancelled / superseded / stale runs
+reviews / unresolved review threads when applicable
+live rulesets / branch protection
+base/head relation and mergeability when merge is in scope
+Sonar Quality Gate / CodeQL / dependency / security checks when applicable
+```
+
+Tracked workflow/ruleset files do not prove live enforcement. `green` is not “absence of red”: pending, cancelled, missing, stale or superseded required evidence is not PASS.
+
+## 11) Approval / Independent Review
 
 Resolve current protected approvals from authority contracts:
 
@@ -143,38 +199,109 @@ exact candidate binding
 SATISFIED | MISSING | UNPROVEN | NOT_APPLICABLE
 ```
 
-`SELF_REVIEW ≠ INDEPENDENT_REVIEW`. Historical blanket authorization is not candidate-bound protected acceptance unless current governance explicitly permits it.
+`SELF_REVIEW ≠ INDEPENDENT_REVIEW`. Git author/account alone does not prove independence. Historical blanket authorization is not candidate-bound protected acceptance unless current governance explicitly permits it. If the reviewer changes the candidate, re-establish any independence required by current policy.
 
-## 11) Cleanup = Part of DONE
+## 12) Claim / Diff / Test Review
+
+Before closure review the claimed outcome, not only changed files:
+
+```text
+actors / surfaces / owners / states
+scopes / permissions / contracts
+persistence / providers / finance
+readbacks / failure / recovery / compatibility
+UX/design when claimed
+evidence / approvals
+```
+
+Review the complete owned range for foreign/pre-existing delta, unexpected generated/lockfile changes, out-of-scope cleanup, missing consumer migration, reachable legacy paths, contract/schema/runtime effects and stale plan assumptions.
+
+For each changed Test/Guard ask what claim it can falsify, whether it can still pass with the defect present, whether it covers the real contract/DB/runtime path, and whether it was weakened/skipped/mocked/redirected/non-blocking. Prove a root-cause regression where reasonably regressable.
+
+## 13) Cleanup = Part of DONE
 
 Perform local cleanup during fixes and a final sweep before Freeze/closure. Cover proven-related:
 
 ```text
 dead/unreachable/stale/legacy/superseded code
-unused files/folders/imports/exports/dependencies
+unused files/folders/imports/exports/re-exports/dependencies
 obsolete routes/contracts/DTOs/schemas/models
-stale configs/env/flags/scripts/tests/docs/comments
+stale configs/env/flags/scripts/commands/tests/docs/comments/examples
 hidden fallbacks/workarounds/TODO/FIXME/HACK
 unnecessary compatibility layers
-orphan references
-wrong ownership/placement/naming/context
+old paths/names/aliases
+orphan/stale references
+wrong ownership/responsibility/placement/naming/context
 parallel business logic/state machines/data writers
 duplicate source of truth
 temporary/debug/generated noise
+files/folders without proven Purpose/Consumer/Responsibility
 ```
 
 Never delete blindly:
 
 ```text
 DISCOVER → CLASSIFY → TRACE CONSUMERS → PROVE OBSOLETE/WRONG/DUPLICATE
-→ REMOVE/MERGE/MOVE/RENAME/REFACTOR → REPAIR REFERENCES → REVERIFY
+→ REMOVE/MERGE/MOVE/RENAME/REFACTOR/REDESIGN/REBUILD
+→ REPAIR REFERENCES → REVERIFY
 ```
 
-## 12) Structural / Reference Integrity
+## 14) Structural Levels / Keep-or-Delete Proof
 
-For every changed/deleted/moved/renamed item inspect both directions: imports/exports/callers/callees/registrations/routes/contracts/config/env/dependencies/tests/mocks/fixtures/docs/build/CI/generated refs. No stale alias or reachable compatibility residue without a proven requirement/removal trigger.
+Cleanup is not file-only:
 
-## 13) Final Cleanup Gate
+```text
+line / expression / condition / branch / block
+→ function / method / type / class / component / helper / constant
+→ file / file group / folder / module / package
+→ service / surface / domain
+→ contract / route / config / dependency
+```
+
+For every questioned element, do not delete because it “looks old” and do not keep because it “does not fail”. Prove:
+
+```text
+Responsibility + Purpose + Consumer + Requirement + Architectural Reason
+```
+
+Then choose the evidence-backed action: Delete / Rename / Move / Merge / Split / Refactor / Reorganize / Redesign / Rebuild / Keep-with-reason.
+
+## 15) Canonical Source Consolidation / Reference Integrity
+
+For concepts that should have one authoritative owner, examine at least:
+
+```text
+Contracts / Schemas / Models / Configurations / Policies
+Mappings / Constants / Business Rules / State Definitions / Domain Definitions
+```
+
+When duplication is unjustified:
+
+```text
+identify canonical owner
+→ map writers/readers/consumers
+→ migrate them
+→ remove secondary truth/synchronization residue when safe
+→ verify canonical readback
+```
+
+After Delete/Rename/Move/Merge/Split/Refactor/Replace inspect both directions:
+
+```text
+Imports / Exports / Re-exports
+Callers / Callees
+Registrations / Bindings / Routes
+Contracts / Schemas / Configs / Env
+Dependencies
+Tests / Mocks / Fixtures
+Docs / Examples
+Build / CI / Scripts
+Generated References
+```
+
+No stale alias or reachable compatibility residue without a proven requirement, owner and removal trigger.
+
+## 16) Final Cleanup Gate
 
 ```text
 ZERO known dead code/files/folders in scope
@@ -192,7 +319,7 @@ ZERO known cleanup finding unresolved
 
 Cleanup writes invalidate affected evidence and must be reverified before Freeze.
 
-## 14) Governance Reconciliation
+## 17) Governance Reconciliation
 
 ```text
 all durable decisions classified
@@ -203,7 +330,7 @@ all durable decisions classified
 
 No closure with durable truth only in task artifacts or any known semantic contradiction across these layers.
 
-## 15) Fresh Head
+## 18) Fresh Head
 
 ```text
 HEAD_AT_REVIEW_START = live re-resolved head at final review start
@@ -218,25 +345,25 @@ HEAD_AT_DECISION == FINAL_CANDIDATE_SHA
 
 If not, classify movement, reconcile/rebuild candidate and rerun invalidated evidence.
 
-## 16) Final Adversarial Completeness
+## 19) Final Adversarial Completeness
 
 Try to disprove closure using alternative entry points: hidden writers/readers, parallel/stale truth, missing consumers, contract/binding mismatch, permission bypass, retry/replay/concurrency, unknown-result/recovery, partial failure/restart, runtime-only defects, stale process/data/config, weak/flaky guards, missing audit/observability, foreign delta, reachable legacy, PII/secrets, neighboring consumer regression, wrong ownership/placement/naming/context and unnecessary residue.
 
 Any material Finding requiring write cancels Freeze and returns to execution.
 
-## 17) Final Read-Only Verification
+## 20) Final Read-Only Verification
 
-On exact final candidate only: required checks, generated consistency without mutation, exact diff/scope review, canonical readbacks, runtime/E2E where claimed, security/data/finance scopes, edge/adversarial behavior, test effectiveness, artifact provenance and approvals.
+On exact final candidate only: required checks, generated consistency without mutation, exact diff/scope/foreign-change review, canonical readbacks, runtime/E2E where claimed, security/data/finance scopes, edge/adversarial behavior, test effectiveness, artifact provenance, repository-platform evidence and approvals.
 
-If a test/guard changed, prove it fails on broken behavior/equivalent regression and passes after root fix; do not accept weakened guard.
+No `--fix`, formatter/generator write, lockfile/migration mutation, source/package mutation, commit/push/merge or swallowed exit during this phase.
 
-## 18) Lifecycle vs Canonical Decision
+## 21) Lifecycle vs Canonical Decision
 
 `LIFECYCLE_STATE` is internal derived state. `FINAL_DECISION` must be an ID from **current** `governance/contracts/decision-vocabulary.json`.
 
 Do not write `OPEN`, `BLOCKED`, `DONE`, or invented aliases as canonical decisions unless current governance defines them. When not closed, choose the canonical evidence-supported decision (`FIX_REQUIRED`, `BLOCKED_EXTERNAL`, `NEEDS_EVIDENCE`, `QA_BLOCK`, `SECURITY_BLOCK`, `RELEASE_BLOCK`, etc.).
 
-## 19) Final Closure Equation
+## 22) Final Closure Equation
 
 ```text
 DISCOVERY_COMPLETE
@@ -252,7 +379,7 @@ AND FRESH_HEAD_VALID
 AND FINAL_ADVERSARIAL_PASS
 ```
 
-Plus zero known fixable defect, unresolved Finding/Decision, unverified fix, required missing/stale/pending/cancelled evidence, required missing/unproven approval, duplicate truth, reachable obsolete path, or durable truth left only in derived artifacts.
+Plus zero known fixable defect, unresolved Finding/Decision, unverified fix, required missing/stale/pending/cancelled evidence, required missing/unproven approval, duplicate truth, reachable obsolete path, structural/reference residue, or durable truth left only in derived artifacts.
 
 Final branch-head closure requires:
 

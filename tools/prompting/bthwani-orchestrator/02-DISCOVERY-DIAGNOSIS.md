@@ -181,23 +181,30 @@ Evidence/Confidence
 Client ↔ Partner ↔ Captain ↔ Field ↔ Control Panel ↔ Backend/Domain/Data/Runtime
 ```
 
-شكل Cross-Layer:
+شكل Cross-Layer الكامل حسب الانطباق:
 
 ```text
-UX/UI
-→ Surface State
-→ Client Logic
-→ Controller/Adapter
-→ Contract/Binding/Generated Client
+Product Truth
+→ Actor/Service Identity
+→ Session/Device/Trusted Context
+→ Role/Permission/Object Authorization
+→ UX/UI / Surface / Route / Control
+→ Surface State / Client Logic / Controller / Adapter
+→ Contract / Binding / Generated Client
 → API
-→ Domain/Business Logic
-→ State Machine
-→ Data/Persistence
-→ Events/Integrations
-→ Runtime
-→ Persisted Readback
-→ Observable Result
+→ Validation / Transformation
+→ Domain / Business Logic / State Machine
+→ Transaction / Data / Persistence
+→ Cache / Idempotency
+→ Events / Jobs / Providers / Integrations
+→ Networking / Response
+→ Persisted Canonical Readback
+→ Every Required Consumer / Surface
+→ Observable Operational Result
+→ Audit / Observability / Runtime Evidence
 ```
+
+لا تختصر هذا المسار بطريقة تسقط enforcement أو writer/reader أو persistence أو consumer ماديًا.
 
 ## 7) Core Diagnostic Pass
 
@@ -422,7 +429,29 @@ rollback/roll-forward
 compensation/reconciliation
 ```
 
-## 18) Structural / Hygiene Diagnosis
+## 18) Reuse Before Create
+
+قبل إنشاء File/Helper/Contract/State/Config/Abstraction/Source-of-Truth أو مسار جديد:
+
+```text
+search exact name + semantics
+→ imports / exports / re-exports
+→ routes / navigation / registries / manifests
+→ callers / consumers / writers / readers
+→ API / DB / tests / bindings
+→ configs / env / scripts / generated references
+→ relationship/dependency tools when useful
+```
+
+ثم طبق ترتيب القرار:
+
+```text
+REUSE → EXTEND → MERGE → MOVE_TO_OWNER → SPLIT → CREATE_NEW
+```
+
+`CREATE_NEW` هو الخيار الأخير، ولا يُستخدم إذا أمكن لمالك حاكم موجود أن يمتلك المعنى دون خلق Truth/Path موازٍ. لا تعتبر اختلاف الاسم دليلًا على عدم وجود تنفيذ مكافئ.
+
+## 19) Structural / Hygiene Diagnosis
 
 أثناء التشخيص ابحث من السطر حتى النظام عن:
 
@@ -439,9 +468,25 @@ temporary/debug/generated noise
 files/folders with no proven Purpose/Consumer/Responsibility
 ```
 
-لا تحذف لمجرد أنه يبدو قديمًا؛ أثبت Responsibility + Purpose + Consumer + Requirement + Architectural Reason أو أثبت عدم الحاجة وشبكة المراجع.
+وحدة الفحص ليست الملف فقط:
 
-## 19) Adversarial Diagnosis
+```text
+line / expression / condition / branch / block
+→ function / method / type / class / component / helper / constant
+→ file / file group / folder / module / package
+→ service / surface / domain
+→ contract / route / config / dependency
+```
+
+لكل عنصر مشكوك فيه لا تحذف ولا تُبقِه بالحدس. أثبت:
+
+```text
+Responsibility + Purpose + Consumer + Requirement + Architectural Reason
+```
+
+ولا تخطط Delete/Rename/Move/Merge/Split/Refactor/Replace قبل فهم Blast Radius وشبكة المراجع في الاتجاهين.
+
+## 20) Adversarial Diagnosis
 
 بعد أن يبدو التشخيص صحيحًا، حاول إثبات أنه ناقص من مداخل مختلفة:
 
@@ -460,10 +505,11 @@ contract/schema/data drift
 stale runtime/config assumptions
 orphan references
 missing failure/recovery
+unvalidated inputs
 ```
 
 Finding جديد يعيد فتح Coverage والتشخيص في الوحدة 03.
 
-## 20) شرط فهم Journey
+## 21) شرط فهم Journey
 
 لا تعتبر Journey مفهومة إذا لم تستطع الإجابة بلا تخمين عن Actor، Entry، visible state، allowed actions، Preconditions، Authorization/Scope، Decision Rule، current/next State، side effects، truth owner، Handoff، cross-surface visibility، success/failure/recovery، later readback، وحفظ نفس المعنى عبر UI/API/Domain/Data/Runtime.
