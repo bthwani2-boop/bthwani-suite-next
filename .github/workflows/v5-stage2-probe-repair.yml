@@ -22,7 +22,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "a616289043d90f5e8ccf8cb2c4c13dcc43859b1f" || {
+          test "$(git rev-parse HEAD)" = "0872daf557bcdf1c3015e72f0d44efea0cca90c3" || {
             echo "task HEAD moved; refuse stale repair" >&2
             exit 42
           }
