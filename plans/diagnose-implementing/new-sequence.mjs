@@ -64,6 +64,15 @@ if (!(await exists(overviewPath))) throw new Error('V2 package must contain 00-O
 let overview = await readFile(overviewPath, 'utf8');
 const om = meta(overview);
 if (om.PACKAGE_SCHEMA !== 'BTHWANI_TASK_PACKAGE_V2') throw new Error('Package is not BTHWANI_TASK_PACKAGE_V2.');
+if (om.RESUME_POLICY !== 'EXPLICIT_USER_REQUEST_ONLY') throw new Error('RESUME_POLICY drift.');
+if (om.TASK_CONTEXT_POLICY !== 'ISOLATED_CURRENT_TASK_ONLY') throw new Error('TASK_CONTEXT_POLICY drift.');
+if (om.FOREIGN_DELTA_POLICY !== 'INPUT_NOT_INSTRUCTION') throw new Error('FOREIGN_DELTA_POLICY drift.');
+if (!om.INTEGRATION_TARGET || om.INTEGRATION_TARGET !== om.BRANCH) throw new Error('INTEGRATION_TARGET must equal BRANCH.');
+if (!om.TASK_BRANCH || om.TASK_BRANCH === 'UNSET' || om.TASK_BRANCH === om.INTEGRATION_TARGET) throw new Error('Dedicated TASK_BRANCH is required and must differ from Integration Target.');
+if (om.TASK_BRANCH_READY !== 'YES') throw new Error('TASK_BRANCH_READY must be YES before Sequence creation.');
+if (om.WORKSPACE_ISOLATION_READY !== 'YES') throw new Error('WORKSPACE_ISOLATION_READY must be YES before Sequence creation.');
+if (!['LOCAL_WORKTREE','REMOTE_TASK_BRANCH'].includes(om.WORKSPACE_ISOLATION_MODE)) throw new Error('WORKSPACE_ISOLATION_MODE must be LOCAL_WORKTREE or REMOTE_TASK_BRANCH.');
+if (om.DIRECT_INTEGRATION_TARGET_WRITES !== 'FORBIDDEN_EXCEPT_INTEGRATION_OWNER') throw new Error('Direct Integration Target write policy drift.');
 if (!om.ORCHESTRATION_ROOT) throw new Error('ORCHESTRATION_ROOT is required.');
 if (om.NAVIGATION_POLICY !== 'ROOT_ANCHORED_GRAPH_ONLY') throw new Error('NAVIGATION_POLICY must be ROOT_ANCHORED_GRAPH_ONLY.');
 if (om.LATEST_HEAD_ROLE !== 'TRUTH_INTEGRATION_BASELINE_ONLY') throw new Error('LATEST_HEAD_ROLE must be TRUTH_INTEGRATION_BASELINE_ONLY.');
@@ -101,9 +110,18 @@ if (await exists(destination)) throw new Error(`Sequence file already exists: ${
 
 const template = await readFile(join(templateRoot, 'SEQUENCE.template.md'), 'utf8');
 const content = replaceAll(template, {
-  '__TASK_ID__': om.TASK_ID, '__REPOSITORY__': om.REPOSITORY, '__BRANCH__': om.BRANCH, '__MODE__': om.MODE,
-  '__SEQUENCE_ID__': sequenceId, '__SEQUENCE_NAME__': name, '__SEQUENCE_TITLE__': title, '__SEQUENCE_ORDER__': order,
-  '__BASE_SHA__': baseSha.toLowerCase(), '__DERIVATION_BASIS__': basis, '__DEPENDS_ON__': dependsOn,
+  '__TASK_ID__': om.TASK_ID,
+  '__REPOSITORY__': om.REPOSITORY,
+  '__BRANCH__': om.BRANCH,
+  '__TASK_BRANCH__': om.TASK_BRANCH,
+  '__MODE__': om.MODE,
+  '__SEQUENCE_ID__': sequenceId,
+  '__SEQUENCE_NAME__': name,
+  '__SEQUENCE_TITLE__': title,
+  '__SEQUENCE_ORDER__': order,
+  '__BASE_SHA__': baseSha.toLowerCase(),
+  '__DERIVATION_BASIS__': basis,
+  '__DEPENDS_ON__': dependsOn,
 });
 
 const marker = '<!-- SEQUENCE_REGISTRY_ROWS -->';
@@ -119,4 +137,5 @@ await writeFile(destination, content, { encoding: 'utf8', flag: 'wx' });
 await writeFile(overviewPath, overview, 'utf8');
 
 console.log(`Created ${sequenceId}: ${filename}`);
-console.log('Frontier was derived from the root-reconciled graph, not commit recency.');
+console.log(`TASK_BRANCH=${om.TASK_BRANCH}`);
+console.log('Frontier was derived from the root-reconciled graph in an isolated task context, not commit recency.');
