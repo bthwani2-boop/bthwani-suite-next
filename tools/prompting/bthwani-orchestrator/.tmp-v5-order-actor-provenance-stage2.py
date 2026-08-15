@@ -110,7 +110,7 @@ if test_path.exists():
     raise SystemExit(f"{test_path}: unexpected pre-existing file")
 test_path.write_text('''package orders\n\nimport "testing"\n\nfunc TestRedactOrderTruthForViewerActorProvenance(t *testing.T) {\n\tfor _, tc := range []struct {\n\t\tname string\n\t\trole string\n\t\twant string\n\t}{\n\t\t{name: "client redacted", role: "client", want: ""},\n\t\t{name: "partner redacted", role: "partner", want: ""},\n\t\t{name: "operator retained", role: "operator", want: "actor-123"},\n\t} {\n\t\tt.Run(tc.name, func(t *testing.T) {\n\t\t\ttruth := &OrderTruth{StatusTimeline: []OrderTruthEvent{{ActorID: "actor-123", ActorRole: "captain"}}}\n\t\t\tRedactOrderTruthForViewer(truth, tc.role)\n\t\t\tif got := truth.StatusTimeline[0].ActorID; got != tc.want {\n\t\t\t\tt.Fatalf("ActorID after redaction = %q, want %q", got, tc.want)\n\t\t\t}\n\t\t})\n\t}\n}\n''')
 
-migration = Path("services/dsh/database/migrations/dsh-1008_order_event_actor_provenance.sql")
+migration = Path("services/dsh/database/migrations/dsh-1009_order_event_actor_provenance.sql")
 if migration.exists():
     raise SystemExit(f"{migration}: unexpected pre-existing migration")
 migration_text = '''-- V5 RC-ORDER-ACTOR-PROVENANCE: complete the forward-only actor identity cutover.\nBEGIN;\n\nALTER TABLE dsh_order_status_events\n  ADD CONSTRAINT dsh_order_status_events_actor_id_required\n  CHECK (NULLIF(BTRIM(actor_id), '') IS NOT NULL) NOT VALID;\n\nCREATE OR REPLACE FUNCTION dsh_publish_order_event_to_outbox()\nRETURNS TRIGGER LANGUAGE plpgsql AS $$\nBEGIN\n  INSERT INTO dsh_order_event_outbox\n    (operator_context_id,order_id,event_id,event_type,correlation_id,causation_id,payload)\n  VALUES\n    (NEW.operator_context_id,NEW.order_id,NEW.id,NEW.event_type,NEW.correlation_id,NEW.causation_id,\n     jsonb_build_object(\n       'eventId',NEW.id,\n       'eventType',NEW.event_type,\n       'orderId',NEW.order_id,\n       'fromStatus',NEW.from_status,\n       'toStatus',NEW.to_status,\n       'actorRole',NEW.actor_role,\n       'actorId',NEW.actor_id,\n       'correlationId',NEW.correlation_id,\n       'causationId',NEW.causation_id,\n       'orderVersion',NEW.order_version,\n       'metadata',NEW.metadata,\n       'occurredAt',NEW.created_at\n     ))\n  ON CONFLICT (operator_context_id,event_id) DO NOTHING;\n  RETURN NEW;\nEND $$;\n\nCOMMIT;\n'''
@@ -119,15 +119,15 @@ migration.write_text(migration_text)
 manifest_path = Path("services/dsh/database/migrations/manifest.extensions.json")
 manifest = json.loads(manifest_path.read_text())
 if any(entry["file"] == migration.name for entry in manifest["migrations"]):
-    raise SystemExit("dsh-1008 already registered")
-if max(entry["ordinal"] for entry in manifest["migrations"]) != 254:
+    raise SystemExit("dsh-1009 already registered")
+if max(entry["ordinal"] for entry in manifest["migrations"]) != 255:
     raise SystemExit("migration extension frontier moved; reconcile before execution")
 digest = hashlib.sha256(migration.read_bytes()).hexdigest()
 manifest["migrations"].append({
-    "ordinal": 255,
+    "ordinal": 256,
     "file": migration.name,
     "sha256": digest,
-    "historicalPrefix": "1008",
+    "historicalPrefix": "1009",
     "state": "ACTIVE",
 })
 manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")

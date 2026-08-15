@@ -3,7 +3,7 @@ name: V5 Order Actor Provenance Stage 2
 on:
   push:
     branches:
-      - task/v5-first-top-logic-gap-20260815
+      - task/v5-all-surfaces-rootfix-20260815-2345
 
 permissions:
   contents: write
@@ -35,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: task/v5-first-top-logic-gap-20260815
+          ref: task/v5-all-surfaces-rootfix-20260815-2345
           fetch-depth: 0
 
       - uses: actions/setup-go@v5
@@ -59,11 +59,11 @@ jobs:
           set -euo pipefail
           git fetch origin A --quiet
           actual="$(git rev-parse origin/A)"
-          expected="babc873b6b2e712efbe082e37d1bcec977fc3d8d"
+          expected="bdbcb811ab2a0fe0cc4db6e4947d5ef741d2c5c7"
           test "$actual" = "$expected" || { echo "FOREIGN_DELTA: A moved expected=$expected actual=$actual" >&2; exit 42; }
 
       - name: V5 execute gate before mutation
-        run: node plans/diagnose-implementing/orchestrator.mjs check --package plans/diagnose-implementing/v5-first-top-logic-gap-20260815/PACKAGE.md --phase execute
+        run: node plans/diagnose-implementing/orchestrator.mjs check --package plans/diagnose-implementing/v5-all-surfaces-rootfix-20260815-2345/PACKAGE.md --phase execute
 
       - name: Apply governed root-cause treatment
         shell: bash
@@ -213,10 +213,10 @@ jobs:
             services/dsh/contracts/dsh.order-truth.openapi.yaml \
             services/dsh/contracts/generated/dsh.bundle.openapi.yaml \
             services/dsh/clients/generated/dsh-api.ts \
-            services/dsh/database/migrations/dsh-1008_order_event_actor_provenance.sql \
+            services/dsh/database/migrations/dsh-1009_order_event_actor_provenance.sql \
             services/dsh/database/migrations/manifest.extensions.json
 
-          allowed='^(tools/prompting/bthwani-orchestrator/\.tmp-v5-order-actor-provenance-stage2\.py|services/dsh/backend/internal/orders/(decision|preparation|cancellation_saga|order_truth|order_truth_queries|actor_provenance_redaction_test)\.go|services/dsh/backend/internal/dispatch/delivery_exceptions\.go|services/dsh/frontend/shared/order-truth/order-truth\.types\.ts|services/dsh/contracts/(dsh\.order-truth\.openapi\.yaml|generated/dsh\.bundle\.openapi\.yaml)|services/dsh/clients/generated/dsh-api\.ts|services/dsh/database/migrations/(dsh-1008_order_event_actor_provenance\.sql|manifest\.extensions\.json))$'
+          allowed='^(tools/prompting/bthwani-orchestrator/\.tmp-v5-order-actor-provenance-stage2\.py|services/dsh/backend/internal/orders/(decision|preparation|cancellation_saga|order_truth|order_truth_queries|actor_provenance_redaction_test)\.go|services/dsh/backend/internal/dispatch/delivery_exceptions\.go|services/dsh/frontend/shared/order-truth/order-truth\.types\.ts|services/dsh/contracts/(dsh\.order-truth\.openapi\.yaml|generated/dsh\.bundle\.openapi\.yaml)|services/dsh/clients/generated/dsh-api\.ts|services/dsh/database/migrations/(dsh-1009_order_event_actor_provenance\.sql|manifest\.extensions\.json))$'
           git diff --cached --name-only | tee /tmp/staged.txt
           if grep -Ev "$allowed" /tmp/staged.txt | grep -q .; then
             echo 'unexpected staged path' >&2
@@ -231,4 +231,4 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git commit -m 'dsh: close order actor provenance across writers and readback'
-          git push origin HEAD:task/v5-first-top-logic-gap-20260815
+          git push origin HEAD:task/v5-all-surfaces-rootfix-20260815-2345
