@@ -38,30 +38,30 @@ type GovernedCreateAssignmentInput struct {
 }
 
 type CaptainDispatchProfileInput struct {
-	OperatorContextID     string
-	CaptainID             string
-	AccreditationStatus   string
-	AvailabilityStatus    string
-	MaxActiveAssignments  int
-	PriorityScore         int
-	ExpectedVersion       int
-	ActorID               string
+	OperatorContextID    string
+	CaptainID            string
+	AccreditationStatus  string
+	AvailabilityStatus   string
+	MaxActiveAssignments int
+	PriorityScore        int
+	ExpectedVersion      int
+	ActorID              string
 }
 
 type CaptainDispatchCandidate struct {
-	OperatorContextID     string    `json:"operatorContextId"`
-	CaptainID             string    `json:"captainId"`
-	ServiceAreaCode       string    `json:"serviceAreaCode"`
-	AccreditationStatus   string    `json:"accreditationStatus"`
-	AvailabilityStatus    string    `json:"availabilityStatus"`
-	MaxActiveAssignments  int       `json:"maxActiveAssignments"`
-	ActiveAssignments     int       `json:"activeAssignments"`
-	RemainingCapacity     int       `json:"remainingCapacity"`
-	PriorityScore         int       `json:"priorityScore"`
-	Eligible              bool      `json:"eligible"`
-	IneligibilityReason   string    `json:"ineligibilityReason,omitempty"`
-	Version               int       `json:"version"`
-	UpdatedAt             time.Time `json:"updatedAt"`
+	OperatorContextID    string    `json:"operatorContextId"`
+	CaptainID            string    `json:"captainId"`
+	ServiceAreaCode      string    `json:"serviceAreaCode"`
+	AccreditationStatus  string    `json:"accreditationStatus"`
+	AvailabilityStatus   string    `json:"availabilityStatus"`
+	MaxActiveAssignments int       `json:"maxActiveAssignments"`
+	ActiveAssignments    int       `json:"activeAssignments"`
+	RemainingCapacity    int       `json:"remainingCapacity"`
+	PriorityScore        int       `json:"priorityScore"`
+	Eligible             bool      `json:"eligible"`
+	IneligibilityReason  string    `json:"ineligibilityReason,omitempty"`
+	Version              int       `json:"version"`
+	UpdatedAt            time.Time `json:"updatedAt"`
 }
 
 type DispatchDecision struct {
@@ -500,7 +500,7 @@ func CreateGovernedAssignment(db *sql.DB, input GovernedCreateAssignmentInput) (
 		return nil, false, err
 	}
 
-	if _, err = orders.TransitionDispatchOrder(tx, input.OrderID, "operator",
+	if _, err = orders.TransitionDispatchOrder(tx, input.OrderID, input.ActorID, "operator",
 		[]orders.OrderStatus{orders.StatusReadyForPickup}, orders.StatusDriverAssigned, "captain offer created"); err != nil {
 		return nil, false, mapOrderError(err)
 	}
@@ -640,7 +640,7 @@ func DeclineGovernedAssignment(db *sql.DB, assignmentID, captainID, reasonCode, 
 		}
 		return nil, ErrOfferExpired
 	}
-	if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, "captain",
+	if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, captainID, "captain",
 		[]orders.OrderStatus{orders.StatusDriverAssigned}, orders.StatusReadyForPickup, reason); err != nil {
 		return nil, mapOrderError(err)
 	}
@@ -707,7 +707,7 @@ func expireAssignmentTx(tx *sql.Tx, operatorContextID string, current *Assignmen
 		return fmt.Errorf("%w: only offered assignments can expire", ErrConflict)
 	}
 	if current.OrderID != "" {
-		if _, err := orders.TransitionDispatchOrder(tx, current.OrderID, "operator",
+		if _, err := orders.TransitionDispatchOrder(tx, current.OrderID, actorID, actorRole,
 			[]orders.OrderStatus{orders.StatusDriverAssigned}, orders.StatusReadyForPickup, reason); err != nil {
 			return mapOrderError(err)
 		}
@@ -758,7 +758,7 @@ func CancelGovernedAssignment(db *sql.DB, assignmentID, actorID, reasonCode, rea
 		return err
 	}
 	if current.OrderID != "" {
-		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, "operator",
+		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, actorID, "operator",
 			[]orders.OrderStatus{orders.StatusDriverAssigned}, orders.StatusReadyForPickup, reason); err != nil {
 			return mapOrderError(err)
 		}
@@ -864,7 +864,7 @@ func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Ass
 		return nil, err
 	}
 	if current.OrderID != "" {
-		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, "operator",
+		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, input.ActorID, "operator",
 			[]orders.OrderStatus{orders.StatusDriverAssigned}, orders.StatusReadyForPickup, input.Reason); err != nil {
 			return nil, mapOrderError(err)
 		}
@@ -882,7 +882,7 @@ func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Ass
 		"reassigned", "OPERATOR_REASSIGNED", input.Reason, input.ActorID, "operator", map[string]any{"newCaptainId": input.CaptainID}); err != nil {
 		return nil, err
 	}
-	if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, "operator",
+	if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, input.ActorID, "operator",
 		[]orders.OrderStatus{orders.StatusReadyForPickup}, orders.StatusDriverAssigned, "replacement captain offer created"); err != nil {
 		return nil, mapOrderError(err)
 	}

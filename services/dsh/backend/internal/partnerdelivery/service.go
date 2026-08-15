@@ -249,6 +249,7 @@ func (s *Service) SubmitProof(ctx context.Context, taskID string, expectedVersio
 	if _, err := orders.TransitionDispatchOrder(
 		tx,
 		current.OrderID,
+		actorID,
 		actorRole,
 		[]orders.OrderStatus{orders.StatusArrivedCustomer},
 		orders.StatusDelivered,
@@ -346,6 +347,7 @@ func (s *Service) transition(ctx context.Context, taskID string, expectedVersion
 		if _, err := orders.TransitionDispatchOrder(
 			tx,
 			current.OrderID,
+			actorID,
 			actorRole,
 			orderStep.allowedFrom,
 			orderStep.to,

@@ -88,16 +88,16 @@ type DeliveryProof struct {
 }
 
 type SubmitDeliveryProofInput struct {
-	Method            DeliveryProofMethod
-	PIN               string
+	Method                DeliveryProofMethod
+	PIN                   string
 	PhotoMediaRef         string
 	SignatureMediaRef     string
 	RecipientRelationship string
 	RecipientName         string
 	CapturedLatitude      *float64
-	CapturedLongitude *float64
-	CapturedAt        *time.Time
-	IdempotencyKey    string
+	CapturedLongitude     *float64
+	CapturedAt            *time.Time
+	IdempotencyKey        string
 }
 
 type ReviewDeliveryProofInput struct {
@@ -639,7 +639,7 @@ func finalizeAcceptedDeliveryProof(tx *sql.Tx, current *Assignment, proof *Deliv
 	if current.OrderID == "" {
 		return fmt.Errorf("%w: proof completion requires an order", ErrInvalid)
 	}
-	if _, err := orders.TransitionDispatchOrder(tx, current.OrderID, "captain",
+	if _, err := orders.TransitionDispatchOrder(tx, current.OrderID, captainID, "captain",
 		[]orders.OrderStatus{orders.StatusArrivedCustomer}, orders.StatusDelivered, "governed proof of delivery accepted"); err != nil {
 		return mapOrderError(err)
 	}
