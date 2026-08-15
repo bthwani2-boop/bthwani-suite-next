@@ -261,7 +261,7 @@ const styles = StyleSheet.create({
   },
   itemCard: {
     borderWidth: 1,
-    borderColor: "rgba(0,0,0,0.06)",
+    borderColor: alpha(colorRoles.shadowBase, 0.06),
     borderRadius: radius.sm,
     padding: 8,
     backgroundColor: colorRoles.surfaceBase,
