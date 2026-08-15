@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { loadContext, readMachineJson } from '../../tools/guards/orchestrator/_machine-lib.mjs';
 
 const frameworkRoot=dirname(fileURLToPath(import.meta.url));
+execFileSync(process.execPath,[resolve('tools/guards/orchestrator/orchestrator-integrity-gate.mjs')],{stdio:'inherit'});
 const raw=process.argv.slice(2);
 function value(name){const i=raw.indexOf(`--${name}`);return i>=0?raw[i+1]:null;}
 function run(script,args){execFileSync(process.execPath,[resolve(script),...args],{stdio:'inherit'});}
@@ -27,4 +28,4 @@ run('tools/guards/orchestrator/task-isolation-gate.mjs',isolationArgs);
 run('tools/guards/orchestrator/root-anchor-gate.mjs',[packageRoot,'--latest-sha',baseSha,'--phase','derive']);
 run('tools/guards/orchestrator/frontier-derivation-gate.mjs',[packageRoot,'--latest-sha',baseSha,'--phase','derive','--cluster',clusterId]);
 run(join(frameworkRoot,'new-sequence-core.mjs'),raw);
-console.log('Governed Sequence creation: PASS (summary synchronized; Isolation + Root + transitive Operational/Priority/Frontier gates passed before core mutation).');
+console.log('Governed Sequence creation: PASS (integrity + summary sync + Isolation/Root + transitive Operational/Priority/Frontier gates).');

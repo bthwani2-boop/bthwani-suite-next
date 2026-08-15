@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 
 const frameworkRoot=dirname(fileURLToPath(import.meta.url));
 const corePath=join(frameworkRoot,'new-package-core.mjs');
+execFileSync(process.execPath,[resolve('tools/guards/orchestrator/orchestrator-integrity-gate.mjs')],{stdio:'inherit'});
 async function exists(path){try{await access(path,constants.F_OK);return true;}catch{return false;}}
 function meta(text){const out={};for(const line of text.split(/\r?\n##\s+/)[0].split(/\r?\n/)){const m=/^([A-Z][A-Z0-9_]+):\s*(.*)$/.exec(line.trim());if(m)out[m[1]]=m[2].trim();}return out;}
 function altitude(target){const value=(target??'').trim();if(!value)return'HIGHEST_AUTHORIZED_OPERATIONAL_ROOT';if(['*','all','everything','كل شيء'].includes(value.toLowerCase()))return'SYSTEM_OPERATIONAL_ROOT';return'HIGHEST_OPERATIONAL_MEANING_WITHIN_TARGET';}
