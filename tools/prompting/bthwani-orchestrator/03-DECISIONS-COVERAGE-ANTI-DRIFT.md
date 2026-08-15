@@ -3,155 +3,109 @@
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
 Owner: `tools/prompting/bthwani-orchestrator/03-DECISIONS-COVERAGE-ANTI-DRIFT.md`
 
-## 1) القاعدة الدستورية
+## 1) Constitutional Accounting
 
 ```text
-EVERY DISCOVERED MATERIAL THING → RELATION GRAPH + COVERAGE STATUS.
-EVERY DEFECT/GAP/CONTRADICTION → FINDING ID.
-EVERY NEW DEPENDENCY/CONSUMER/SURFACE → SCOPE DELTA ID.
-EVERY TRUE DECISION → DECISION ID.
-EVERY DECISION → FULL IMPACT PROPAGATION + RE-DIAGNOSIS.
-EVERY PROVEN CLOSURE BOUNDARY → SEQUENCE REGISTRY.
-EVERY REQUIRED PROOF → EVIDENCE ID.
-NO SILENT MATERIAL ELEMENT.
+EVERY MATERIAL THING → GRAPH + COVERAGE
+EVERY DEFECT/GAP/CONTRADICTION → FINDING ID
+EVERY DEPENDENCY/CONSUMER/SURFACE → SCOPE DELTA ID
+EVERY TRUE DECISION → DECISION ID
+EVERY DECISION → FULL IMPACT PROPAGATION + RE-DIAGNOSIS
+EVERY PROVEN CLOSURE BOUNDARY → SEQUENCE REGISTRY
+EVERY REQUIRED PROOF → EVIDENCE ID
+NO SILENT MATERIAL ELEMENT
 ```
 
-## 2) Universe / Coverage
+## 2) Root-Anchored Coverage
 
-احصر حسب الانطباق Domains/Journeys/Actors/Surfaces/Routes/States/Actions/Transitions/Handoffs/Contracts/Services/Data Owners/Writers/Readers/Consumers/Runtime/Configs/Verification owners.
-
-Coverage: `UNVISITED / IN_PROGRESS / PROVEN / CONTRADICTED / DECISION_REQUIRED / BLOCKED_EXTERNAL / NOT_APPLICABLE_WITH_PROOF`.
-
-## 3) Bidirectional / Multi-Directional Traceability
+Coverage starts from `ORCHESTRATION_ROOT`, not from changed-file/commit recency:
 
 ```text
-Journey → Code/Contract/Data/Runtime
-AND reverse
-AND cross-surface
-AND cross-owner
-AND temporal/failure/recovery paths
+Root/Macro Model
+→ Canonical Owners / Foundations / Invariants
+→ Domains / Services / Contracts / Data
+→ Journeys / States / Handoffs
+→ Surfaces / Consumers
+→ implementation/runtime detail
 ```
 
-الـGraph لا يُعامل كسلسلة خطية.
+Reverse/cross-surface/cross-layer traces then challenge completeness.
 
-## 4) Findings / Scope Delta
+## 3) Foreign Delta Classification
 
-كل Finding مادي يسجل ID، ACTUAL/INTENDED/DESIRED/CONFLICT، evidence، hypotheses، root cause/missing proof، owner، consumers، blast radius، risk، status، required action/decision/verification، sequence placement، reopen trigger.
-
-أي Scope Delta:
+Latest-head delta must be attached to the root graph as:
 
 ```text
-DISCOVERED → CLASSIFY RELATION → ADD TO GRAPH → IMPACT ANALYSIS
-→ IN_SCOPE | SUPPORTED_EXCLUSION | MATERIAL_UNCERTAIN
-→ DISPOSITION
+UNRELATED
+RELATED_NON_BLOCKING
+UPSTREAM_OR_ROOT_CHANGING
+BLOCKING
+SEMANTIC_OVERLAP
+DIRECT_CONFLICT
+AUTHORITY_OR_TRUTH_CHANGE
 ```
 
-## 5) Decision Boundary + Propagation
+No delta gets priority because it is newest. `UNRELATED` is preserved but not followed. Related delta updates the correct graph node and invalidates only affected evidence.
 
-ابدأ `QUESTION_CANDIDATE`، وحاول حسمه من authority/product truth/code/contracts/data/permissions/tests/runtime. لا يصل للمستخدم إلا قرار غير قابل للاشتقاق.
+## 4) Findings / Decisions
 
-بعد الحسم:
+Finding disposition:
 
 ```text
-DECISION
-→ full proven impact graph
-→ writers/readers/consumers/contracts/states/data/surfaces/governance/runtime
+SAME_ROOT_CAUSE
+UPSTREAM_OR_BLOCKER
+INDEPENDENT_IN_SCOPE
+SUPPORTED_EXCLUSION_WITH_PROOF
+```
+
+Decision resolution:
+
+```text
+derive if possible
+→ true decision boundary only when non-derivable
+→ resolve
+→ propagate through full impact graph
 → invalidate affected assumptions/evidence
 → re-diagnose
 ```
 
-لا يؤجل فهم الأثر إلى Sequence لاحقة.
+## 5) Sequence / Frontier Derivation
 
-## 6) Finding Disposition Rule
+A Sequence is a proven closure unit, not the newest feature branch topic.
 
-كل Finding جديدة فورًا تصبح:
+Boundary may follow distinct Root Cause / Canonical Owner / hard dependency / journey-state / verification-runtime / protected risk / consumer migration / durable governance boundary.
+
+Before deriving/revalidating frontier:
 
 ```text
-SAME_ROOT_CAUSE → current Sequence
-UPSTREAM_OR_BLOCKER → structured backtrack
-INDEPENDENT_IN_SCOPE → later/parallel proven Sequence
-SUPPORTED_EXCLUSION → proof + reopen trigger
+ROOT_RECONCILIATION_REQUIRED = NO
+ROOT_RECONCILED_SHA = LATEST_RECONCILED_SHA
+FRONTIER_DERIVATION_SOURCE = ROOT_GRAPH
 ```
 
-`IGNORE` وsilent TODO ممنوعان.
+Sequence numbers are creation history, not priority.
 
-## 7) Sequence Derivation
-
-Sequence = أصغر Closure Unit متماسكة. الفصل مبرر عند Root Cause/Canonical Owner/Hard Dependency/State-Journey/Verification-Runtime/Protected Risk/Consumer Migration/Governance boundary مستقل.
-
-ادمج الأعراض عندما تشترك في Root Cause + Owner + Migration + Verification boundary.
-
-## 8) Registry / Frontier Discipline
-
-`00-OVERVIEW.md` يسجل:
+## 6) Structured Backtracking / Reopen
 
 ```text
-SEQUENCE_ID / FILE / SUBJECT / DERIVATION_BASIS
-DEPENDS_ON / UNLOCKS / CONFLICT_DOMAIN
-EXECUTION_OWNER / STATUS / REOPEN_TRIGGER
-```
-
-قواعد:
-
-```text
-one row ↔ one sequence file
-contiguous sequence IDs as creation history, not execution chain
-no placeholder future sequences
-multiple non-terminal sequences allowed only when graph-justified
-SUSPENDED_BY_DEPENDENCY / REOPENED are first-class states
-ACTIVE_EXECUTION_FRONTIER may contain multiple independent sequences
-no two live execution fronts may share the same conflict domain
-```
-
-## 9) Graph Frontier / Structured Backtracking
-
-إذا Sequence تكشف Dependency أعمق:
-
-```text
-current → SUSPENDED_BY_DEPENDENCY
-→ register dependency edge
-→ derive/open upstream sequence JIT
-→ close/prepare upstream
+current detects upstream
+→ SUSPENDED_BY_DEPENDENCY
+→ open upstream JIT
+→ resolve upstream
 → invalidate affected descendants
-→ REOPEN/RESUME suspended sequence
-→ re-diagnose before execution
+→ root/graph reconcile
+→ REOPEN/RESUME descendant
 ```
 
-إذا اكتشاف جديد يبطل Sequence مغلقة، تصبح `REOPENED`; descendants/evidence classified stale by invalidation cone.
+A completed sequence may reopen if new root/canonical truth invalidates it.
 
-## 10) Parallelism Safety
+## 7) Parallelism
 
-التوازي لا يُستنتج من اختلاف الملفات فقط. يجب إثبات استقلال:
+Parallel analysis may be broad. Parallel writes require proven-independent Conflict Domains + isolated workspaces + execution owners. One target-branch Integration Owner at a time.
 
-```text
-canonical owner / semantic state / contracts / data/migrations
-runtime authority / shared generated artifacts / conflict domain
-```
+## 8) Accounting Gate
 
-Parallel analysis is broader; parallel writes require graph-proven independent conflict domains + isolated workspace + execution owner. Target-branch integration remains serialized.
-
-## 11) Mode-Specific Exit
-
-PREPARE_ONLY قبل `PREPARED`:
-
-```text
-ROOT_CAUSE_PROVEN=YES
-DECISIONS_RESOLVED=YES
-DECISION_IMPACT_PROPAGATED=YES
-REDIAGNOSIS_COMPLETE=YES
-IMPACT_MAPPED=YES
-FINDINGS_DISPOSITIONED=YES
-DEPENDENCIES_DISPOSITIONED=YES
-VERIFICATION_DEFINED=YES
-SOLUTION_READY=YES
-IMPLEMENTATION_COMPLETE=NO
-```
-
-EXECUTE_END_TO_END قبل `COMPLETE`: كل ما سبق + implementation/consumers/cleanup/verification/governance/scope-delta gates.
-
-## 12) Accounting Gate
-
-قبل final handoff/closure:
+Before final handoff/closure:
 
 ```text
 FINDINGS_ACCOUNTED=YES
@@ -163,17 +117,16 @@ CLEANUP_ACCOUNTED=YES
 ACCOUNTING_COMPLETE=YES
 ```
 
-لا يكفي `ZERO known findings` لإثبات completeness؛ يلزم Adversarial/negative-space discovery مستقل يحاول كشف nodes غير محسوبة.
+Adversarial negative-space discovery must challenge missing/unmapped nodes.
 
-## 13) Fresh Head / Periodic Reconciliation
+## 9) Fresh Head
 
-قبل sequence creation، قبل live write، قبل integration، بعد sequence، وقبل handoff/closure:
+Before sequence creation/live write/integration/closure:
 
 ```text
 re-resolve HEAD
-→ classify DISJOINT / RELATED_NON_CONFLICTING / SEMANTIC_OVERLAP / DIRECT_CONFLICT / AUTHORITY_OR_TRUTH_CHANGE
-→ update graph/accounting
-→ invalidate only affected evidence
+→ classify semantic delta
+→ set root reconciliation stale only when required by affected truth
+→ never change frontier by recency
+→ rederive/revalidate from root graph
 ```
-
-الحركة غير المرتبطة لا توقف Frontiers المستقلة.
