@@ -3,12 +3,13 @@
 Status: DERIVED_SUPPORT / DOCUMENTATION_ONLY
 Applies to: `plans/diagnose-implementing/<TASK_NAME>/NNN-<sequence-name>.md`
 
-## Identity / Graph Fields
+## Identity / Graph / Isolation Fields
 
 ```text
 TASK_ID
 REPOSITORY
 BRANCH
+TASK_BRANCH
 MODE
 SEQUENCE_ID
 SEQUENCE_NAME
@@ -27,6 +28,8 @@ RESUME_AFTER
 INVALIDATES
 SEQUENCE_STATUS
 ```
+
+`BRANCH` = Integration Target identity. `TASK_BRANCH` = isolated working branch and must match the owning Overview.
 
 Allowed `SEQUENCE_STATUS`:
 
@@ -81,4 +84,4 @@ SCOPE_DELTA_CLASSIFIED: YES|NO
 
 `COMPLETE` + all common gates YES + implementation/consumers/cleanup/verification/governance/scope-delta gates PASS.
 
-A Sequence may be suspended/reopened by graph evidence. Dependent work cannot falsely close around unresolved upstream dependency. Parallel execution requires distinct proven conflict domains and explicit execution ownership; target-branch integration remains serialized.
+A Sequence may be suspended/reopened by graph evidence. Dependent work cannot falsely close around unresolved upstream dependency. Parallel execution requires distinct proven conflict domains, explicit execution ownership and isolated writing workspaces. Integration Target mutation remains serialized through the package Integration Owner.
