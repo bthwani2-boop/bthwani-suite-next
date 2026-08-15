@@ -9,20 +9,24 @@ Owner: `tools/prompting/bthwani-orchestrator/02-DISCOVERY-DIAGNOSIS.md`
 
 ```text
 CREATE/RESUME LIVING OVERVIEW EARLY
-→ BROAD DISCOVERY
+→ BROAD DISCOVERY FROM ORCHESTRATION_ROOT
 → BUILD MULTI-DIRECTIONAL RELATION / DEPENDENCY / IMPACT GRAPH
 → MACRO OPERATIONAL BLUEPRINT
+→ TARGET-WIDE GAP & ROOT-CAUSE LANDSCAPE
+→ ROOT-CAUSE CLUSTERING / CORRELATION
+→ PRIORITY / SYSTEMIC-LEVERAGE MODEL
+→ LANDSCAPE ADVERSARIAL CHALLENGE
 → MACRO DECISION GATE
-→ PRIORITIZE FOUNDATIONS / CONNECTED CLUSTERS / EXECUTION FRONTIER
+→ DERIVE HIGHEST-LEVERAGE PROVEN EXECUTION FRONTIER
 → DEEP GRAPH-DRIVEN JOURNEY DIAGNOSIS
 → RESOLVE DERIVABLE FACTS
 → RECORD/ACCOUNT FINDINGS / CONTRADICTIONS / UNKNOWNS / SCOPE DELTAS
 → TRUE DECISION BOUNDARY when necessary
-→ FULL IMPACT PROPAGATION + RE-DIAGNOSIS
+→ FULL IMPACT PROPAGATION + RE-DIAGNOSIS + RE-RANK WHEN AFFECTED
 → ADVERSARIAL COMPLETENESS
 ```
 
-`00-OVERVIEW.md` يُنشأ/يُستأنف مبكرًا كسجل مشتق حي. ملفات Sequences فقط هي Just-In-Time بعد إثبات Closure Boundary من الرسم. ممنوع questions-first، app-by-app isolation، screen-by-screen isolation، full-repo wandering بلا علاقة، ask-after-every-finding، أو إنشاء Sequences مستقبلية بالتخمين.
+`00-OVERVIEW.md` يُنشأ/يُستأنف مبكرًا كسجل مشتق حي. ملفات Sequences فقط هي Just-In-Time بعد إثبات Closure Boundary من الرسم **وبعد مرور Root-Cause Landscape/Priority Gate**. ممنوع questions-first، app-by-app isolation، screen-by-screen isolation، full-repo wandering بلا علاقة، ask-after-every-finding، أو إنشاء Sequences مستقبلية بالتخمين.
 
 ## 2) Broad Discovery
 
@@ -79,37 +83,130 @@ Major dependencies / core invariants / macro contradictions
 
 لا تبنِ سلسلة تنفيذ طويلة على Macro Model غير محسوم؛ القرار المؤثر يمر Decision Gate ثم ينتشر أثره عبر الرسم ويعاد التشخيص.
 
-## 5) ترتيب العمل — Graph Driven
+## 5) Target-Wide Gap & Root-Cause Landscape + Priority
 
-الأولوية الافتراضية:
+هذه مرحلة **إلزامية قبل أول تنفيذ**، وعلى أي `TARGET` واسع أو ضيق بحسب النطاق المصرح به.
 
-```text
-BLOCKS OTHERS
-> CANONICAL TRUTH OWNER
-> ROOT-CAUSE LEVERAGE / UNLOCK VALUE
-> HIGH BLAST RADIUS
-> MULTI-SURFACE SHARED
-> BUSINESS/SECURITY/DATA CRITICAL
-> HIGH UNCERTAINTY
-> LEAF / LOW IMPACT
-```
+### 5.1 حصر Landscape
 
-لا ترتيب حسب أسماء التطبيقات أو المجلدات أو أرقام Sequence.
+اجمع كل Material gap/defect/contradiction/regression/missing behavior/duplicate truth/structural debt المكتشف في Broad Discovery، ولا تتعامل معها كقائمة Bugs مستقلة مباشرة.
 
-### Structured Backtracking / Reopen
-
-إذا `A` تكشف blocker `B` و`B` تكشف foundation `C`:
+كل Finding مادية يجب أن تصبح واحدة من:
 
 ```text
-A = SUSPENDED_BY_DEPENDENCY
-→ B/C حسب graph boundary
-→ resolve/prepare upstream root
-→ invalidate affected descendants
-→ REOPEN/RESUME B
-→ REOPEN/RESUME A
+ASSIGNED_TO_ROOT_CAUSE_CLUSTER (RC-NNN)
+SUPPORTED_EXCLUSION_WITH_PROOF
+REQUIRES_MORE_DIAGNOSIS before execution
 ```
 
-أعد التشخيص قبل live write بعد العودة. وإذا تشترك Journeys في State/Owner/Contract جذري، تعامل معها Connected Diagnostic Cluster بدل تكرار التشخيص.
+قبل اختيار Frontier:
+
+```text
+UNCLUSTERED_MATERIAL_FINDINGS = 0
+```
+
+هذا لا يعني أن كل Finding عميقة أُغلقت؛ يعني أن كل ما اكتُشف ماديًا تم وضعه في مكان سببي/استبعادي واضح بدل أن يضيع أو يتحول تلقائيًا إلى Sequence.
+
+### 5.2 Correlation / Clustering
+
+اربط الأعراض التي تتشارك في Root Cause / Canonical Owner / State Model / Contract / Data Owner / Dependency / Migration / Verification boundary.
+
+مثال منطقي:
+
+```text
+client mismatch
++ partner mismatch
++ captain mismatch
++ control-panel mismatch
++ API branches
++ stale DB values
+→ investigate shared state ownership
+→ one proven canonical-state Root Cause cluster
+```
+
+`20 Findings ≠ 20 Sequences` إذا كانت أعراضًا لجذر واحد.
+
+### 5.3 Systemic-Leverage Priority
+
+الأولوية **ليست عدد Findings فقط**. قارن Root-Cause Clusters بالأدلة وفق:
+
+```text
+1. UPSTREAM / ROOT-CAUSE DEPTH
+2. BLOCKING POWER
+3. CANONICAL / FOUNDATION IMPORTANCE
+4. BLAST RADIUS
+5. RISK / SEVERITY
+6. UNLOCK VALUE
+7. FINDING DENSITY / RECURRENCE
+8. STRUCTURAL-DEBT MULTIPLIER
+```
+
+لا تجمعها كـscore حسابي أعمى؛ استخدم مقارنة سببية موثقة. `Finding density` عامل مهم لكنه تابع: Cluster بأعراض أقل قد يكون الأول إذا كان upstream foundation ويغلق عشرات النتائج downstream.
+
+محظور أن تصبح الأولوية بسبب:
+
+```text
+MOST RECENT
+MOST FILES CHANGED
+MOST FINDINGS ALONE
+EASIEST FIX
+LAST SESSION TOPIC
+SEQUENCE NUMBER
+```
+
+القاعدة:
+
+```text
+PRIORITY = HIGHEST PROVEN SYSTEMIC LEVERAGE
+```
+
+إذا كانت uncertainty عالية بحيث قد تقلب ترتيب الجذور، لا تبدأ write؛ زد التشخيص حتى تصبح المقارنة قابلة للدفاع بالأدلة.
+
+### 5.4 Priority Classes
+
+استخدم عند اشتقاق Sequence:
+
+```text
+PRIMARY_SYSTEMIC
+UPSTREAM_FOUNDATION
+INDEPENDENT_PARALLEL
+DEPENDENT_SECONDARY
+LEAF_LOCAL
+```
+
+`LEAF_LOCAL` لا يتقدم على Root Cause أعلى لمجرد سهولته. `INDEPENDENT_PARALLEL` مسموح فقط إذا أثبت الرسم استقلال conflict domains/owners/contracts/data/runtime authority.
+
+### 5.5 Landscape Adversarial Pass
+
+قبل أول Frontier، حاول إسقاط ترتيبك:
+
+```text
+search missing upstream owner
+search hidden writers/readers
+search duplicate canonical truth
+search unclustered findings
+search cluster split/merge mistakes
+search high-risk low-frequency defects
+search cross-surface symptoms falsely treated as local
+search dependency that would invert priority
+```
+
+عندما تكون الأدلة كافية:
+
+```text
+TARGET_LANDSCAPE_COMPLETE=YES
+LANDSCAPE_RECONCILED_SHA=LATEST_RECONCILED_SHA
+ROOT_CAUSE_CLUSTERING_COMPLETE=YES
+ROOT_CAUSE_CLUSTERS_ACCOUNTED=YES
+UNCLUSTERED_MATERIAL_FINDINGS=0
+PRIORITY_MODEL_COMPLETE=YES
+PRIORITY_DERIVATION_SOURCE=ROOT_CAUSE_LANDSCAPE
+UNRANKED_MATERIAL_CLUSTERS=0
+PRIMARY_FRONTIER_JUSTIFIED=YES
+LANDSCAPE_ADVERSARIAL_PASS=YES
+```
+
+أي اكتشاف جديد يخلق/يدمج/يفصل Root-Cause Cluster أو يغيّر dependency/blast radius/risk/unlock value يبطل ترتيب الجزء المتأثر ويعيد `PRIORITY_MODEL_COMPLETE=NO` و`PRIMARY_FRONTIER_JUSTIFIED=NO` حتى إعادة المصالحة.
 
 ## 6) الوحدة الأساسية
 
@@ -302,7 +399,7 @@ line/expression/condition/branch/block
 
 حاول إثبات أن التشخيص **ناقص** عبر unmapped routes/states/APIs، hidden writers/readers، jobs/events/admin/fallback/legacy، unreachable error paths، race/partial transaction، permissions/cross-scope، contract/schema/data drift، stale runtime/config، orphan refs، missing recovery، weak tests.
 
-كل Material discovery جديدة يجب أن تصبح Graph Node/Finding/Scope Delta/Decision/Consumer/Evidence/Cleanup disposition. Finding جديد يعيد فتح Coverage والعقد المتأثرة؛ لا يختفي بسبب أن Sequence أخرى كانت قد أغلقت.
+كل Material discovery جديدة يجب أن تصبح Graph Node/Finding/Root-Cause Cluster/Scope Delta/Decision/Consumer/Evidence/Cleanup disposition. Finding جديد يعيد فتح Coverage والعقد/الترتيب المتأثر؛ لا يختفي بسبب أن Sequence أخرى كانت قد أغلقت.
 
 ## 21) شرط فهم Journey / Cluster
 
