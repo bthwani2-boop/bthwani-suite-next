@@ -7,6 +7,8 @@ const REQUIRED_NAVIGATION_STABILITY_GATES = ["productJourneys", "backendContract
 const REQUIRED_NAVIGATION_MIGRATION_ORDER = ["app-field", "app-captain", "app-partner", "app-client"];
 const REQUIRED_BIOMETRIC_DECLARED_APPS = ["app-client", "app-partner", "app-field"];
 const REQUIRED_METADATA_DECLARED_APPS = ["app-client", "app-partner", "app-field"];
+const REQUIRED_LOCALIZATION_DECLARED_APPS = ["app-client", "app-partner", "app-field"];
+const REQUIRED_KEEP_AWAKE_DECLARED_APPS = ["app-partner"];
 
 const REQUIRED_MEDIA_OWNERS = {
   systemCameraPhotoCapture: ["expo-image-picker", "CANONICAL_ACTIVE"],
@@ -178,6 +180,10 @@ function validateMobileFeatureCapabilityManifest(manifest) {
   const deviceCapabilityApps = [];
   const applicationFeatureOwners = [];
   const deviceFeatureOwners = [];
+  const localizationCapabilityApps = [];
+  const localizationFeatureOwners = [];
+  const keepAwakeCapabilityApps = [];
+  const keepAwakeFeatureOwners = [];
 
   for (const [appKey, app] of Object.entries(manifest.apps)) {
     assert(!Object.prototype.hasOwnProperty.call(app, "features"), `${appKey}: legacy 'features' is forbidden; use productFeatures + nativeCapabilities`);
@@ -190,6 +196,8 @@ function validateMobileFeatureCapabilityManifest(manifest) {
     if (nativeCapabilities.includes("localAuthentication")) biometricCapabilityApps.push(appKey);
     if (nativeCapabilities.includes("application")) applicationCapabilityApps.push(appKey);
     if (nativeCapabilities.includes("device")) deviceCapabilityApps.push(appKey);
+    if (nativeCapabilities.includes("localization")) localizationCapabilityApps.push(appKey);
+    if (nativeCapabilities.includes("keepAwake")) keepAwakeCapabilityApps.push(appKey);
 
     assert(isPlainObject(app.productFeatures) && Object.keys(app.productFeatures).length > 0, `${appKey}: productFeatures must be a non-empty object`);
     for (const [productFeature, requiredCapabilities] of Object.entries(app.productFeatures)) {
@@ -203,6 +211,8 @@ function validateMobileFeatureCapabilityManifest(manifest) {
       if (requiredCapabilities.includes("localAuthentication")) biometricFeatureOwners.push(`${appKey}.${productFeature}`);
       if (requiredCapabilities.includes("application")) applicationFeatureOwners.push(`${appKey}.${productFeature}`);
       if (requiredCapabilities.includes("device")) deviceFeatureOwners.push(`${appKey}.${productFeature}`);
+      if (requiredCapabilities.includes("localization")) localizationFeatureOwners.push(`${appKey}.${productFeature}`);
+      if (requiredCapabilities.includes("keepAwake")) keepAwakeFeatureOwners.push(`${appKey}.${productFeature}`);
     }
   }
 
@@ -239,6 +249,28 @@ function validateMobileFeatureCapabilityManifest(manifest) {
     );
   }
 
+  if (manifest.global.systemArchitecture?.owners?.localization?.status === "REQUIREMENT_REVIEW_PENDING") {
+    assert(
+      sameArray(localizationCapabilityApps, REQUIRED_LOCALIZATION_DECLARED_APPS),
+      `localization capability declarations must remain ${REQUIRED_LOCALIZATION_DECLARED_APPS.join(", ")} until the product decision is closed`,
+    );
+    assert(
+      localizationFeatureOwners.length === 0,
+      `localization is requirement-pending and cannot be bound to product features yet: ${localizationFeatureOwners.join(", ")}`,
+    );
+  }
+
+  if (manifest.global.mobilityArchitecture?.owners?.keepAwake?.status === "REQUIREMENT_REVIEW_PENDING") {
+    assert(
+      sameArray(keepAwakeCapabilityApps, REQUIRED_KEEP_AWAKE_DECLARED_APPS),
+      `keep-awake capability declarations must remain ${REQUIRED_KEEP_AWAKE_DECLARED_APPS.join(", ")} until the product decision is closed`,
+    );
+    assert(
+      keepAwakeFeatureOwners.length === 0,
+      `keep-awake is requirement-pending and cannot be bound to product features yet: ${keepAwakeFeatureOwners.join(", ")}`,
+    );
+  }
+
   return manifest;
 }
 
@@ -249,6 +281,8 @@ module.exports = {
   REQUIRED_NAVIGATION_MIGRATION_ORDER,
   REQUIRED_BIOMETRIC_DECLARED_APPS,
   REQUIRED_METADATA_DECLARED_APPS,
+  REQUIRED_LOCALIZATION_DECLARED_APPS,
+  REQUIRED_KEEP_AWAKE_DECLARED_APPS,
   REQUIRED_MEDIA_OWNERS,
   REQUIRED_MEDIA_RULES,
   REQUIRED_MOBILITY_OWNERS,
