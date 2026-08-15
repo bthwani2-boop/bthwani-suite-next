@@ -266,6 +266,24 @@ expectFail(
   "operational coverage is empty",
 );
 expectFail(
+  "unknown operational evidence",
+  goodDiagnose.replace("| OP-ROOT | SYSTEM_ROOT | ROOT | Material operational root reconciled | PROVEN | EVD-ROOT |", "| OP-ROOT | SYSTEM_ROOT | ROOT | Material operational root reconciled | PROVEN | EVD-404 |"),
+  "diagnose",
+  "OP-ROOT references unknown Evidence EVD-404",
+);
+expectFail(
+  "root-cause dependency cycle",
+  goodDiagnose.replace("| RC-001 | Root ownership contradiction | OP-ROOT | EVD-RC-001 | NONE |", "| RC-001 | Root ownership contradiction | OP-ROOT | EVD-RC-001 | RC-001 |"),
+  "diagnose",
+  "root-cause graph dependency cycle",
+);
+expectFail(
+  "frontier dependency cycle",
+  goodDiagnose.replace("| WORK-001 | RC-001 | NONE |", "| WORK-001 | RC-001 | WORK-001 |"),
+  "diagnose",
+  "frontier dependency cycle",
+);
+expectFail(
   "unknown RC reference",
   goodDiagnose.replace("| FINDING | FND-001 | RC-001 |", "| FINDING | FND-001 | RC-404 |"),
   "diagnose",
