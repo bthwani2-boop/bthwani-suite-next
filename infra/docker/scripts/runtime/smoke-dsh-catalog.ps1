@@ -69,19 +69,8 @@ $operatorHeaders = @{ Authorization = "Bearer $operatorToken" }
 $operatorStores = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores" -Headers $operatorHeaders -TimeoutSec 10
 if ($operatorStores.stores.Count -lt 1) { throw "operator store list returned no stores" }
 $operatorStore = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery" -Headers $operatorHeaders -TimeoutSec 10
-$governanceHeaders = @{
-  Authorization = "Bearer $operatorToken"
-  "Idempotency-Key" = "smoke-operator-$([guid]::NewGuid())"
-  "X-Correlation-ID" = "smoke-operator-$([guid]::NewGuid())"
-}
-$governanceBody = @{
-  expectedVersion = $operatorStore.store.version
-  action = "visibility"
-  value = "visible"
-  reason = "runtime smoke verification"
-} | ConvertTo-Json
-$governance = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery/governance" -Method Post -Headers $governanceHeaders -ContentType "application/json" -Body $governanceBody -TimeoutSec 10
-if ($governance.audit.actorRole -ne "operator") { throw "operator governance audit missing" }
+$publicationWorkspace = Invoke-RestMethod "http://localhost:58080/dsh/operator/marketing/stores/store-test-grocery/publication" -Headers $operatorHeaders -TimeoutSec 10
+if ($publicationWorkspace.store.id -ne "store-test-grocery") { throw "marketing publication workspace returned the wrong store" }
 
 # DSH-JOURNEY-001: prove the publication gate changes persisted state.
 $hideHeaders = @{
@@ -90,12 +79,11 @@ $hideHeaders = @{
   "X-Correlation-ID" = "smoke-hide-$([guid]::NewGuid())"
 }
 $hideBody = @{
-  expectedVersion = $governance.store.version
-  action = "marketing-visibility"
-  value = "hidden"
+  expectedVersion = $publicationWorkspace.store.version
+  decision = "hide"
   reason = "runtime publication gate verification"
 } | ConvertTo-Json
-$hidden = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery/governance" -Method Post -Headers $hideHeaders -ContentType "application/json" -Body $hideBody -TimeoutSec 10
+$hidden = Invoke-RestMethod "http://localhost:58080/dsh/operator/marketing/stores/store-test-grocery/publication" -Method Post -Headers $hideHeaders -ContentType "application/json" -Body $hideBody -TimeoutSec 10
 try {
   Invoke-RestMethod "http://localhost:58080/dsh/stores/store-test-grocery" -TimeoutSec 10 -ErrorAction Stop | Out-Null
   throw "store remained publicly visible after marketing gate was hidden"
@@ -109,11 +97,10 @@ $showHeaders = @{
 }
 $showBody = @{
   expectedVersion = $hidden.store.version
-  action = "marketing-visibility"
-  value = "visible"
+  decision = "publish"
   reason = "restore runtime publication gate"
 } | ConvertTo-Json
-$visible = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery/governance" -Method Post -Headers $showHeaders -ContentType "application/json" -Body $showBody -TimeoutSec 10
+$visible = Invoke-RestMethod "http://localhost:58080/dsh/operator/marketing/stores/store-test-grocery/publication" -Method Post -Headers $showHeaders -ContentType "application/json" -Body $showBody -TimeoutSec 10
 $publicStore = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-test-grocery" -TimeoutSec 10
 if (-not $publicStore.store.publicationEligible) { throw "store publication gates were not restored" }
 

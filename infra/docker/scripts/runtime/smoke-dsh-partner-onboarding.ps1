@@ -275,11 +275,9 @@ function Invoke-SmokeStoreGovernance([string] $StoreId, [string] $Action, [strin
   return $result.store
 }
 
-Invoke-SmokeStoreGovernance $smokeStoreId "visibility" "visible" | Out-Null
 Invoke-SmokeStoreGovernance $smokeStoreId "serviceability" "serviceable" | Out-Null
 Invoke-SmokeStoreGovernance $smokeStoreId "partner-readiness" "ready" | Out-Null
 Invoke-SmokeStoreGovernance $smokeStoreId "catalog-approval" "approved" | Out-Null
-Invoke-SmokeStoreGovernance $smokeStoreId "marketing-visibility" "visible" | Out-Null
 
 # Reuse approved local DAM assets but bind them to this newly created store as
 # its own primary logo/cover. The API performs atomic primary replacement and
@@ -316,12 +314,25 @@ if ($assortment.assortment.publicationStatus -ne "client_visible" -or -not $asso
   throw "Partner Onboarding & Store Publication approved assortment was not persisted"
 }
 
-# published is the canonical store lifecycle. It is allowed only after every
-# store-owned gate is complete, while public reads remain closed until the
-# following audited partner client_visible transition commits.
-Invoke-SmokeStoreGovernance $smokeStoreId "lifecycle" "published" | Out-Null
-
+# Partner activation and store publication have separate owners. The partner
+# transition is audited first; Marketing then owns the single publication
+# command that commits the store's published/visible projection.
 Invoke-PartnerTransition $partnerDraft.id "client_visible" | Out-Null
+$publicationWorkspace = Invoke-RestMethod "http://localhost:58080/dsh/operator/marketing/stores/$smokeStoreId/publication" -Headers $operatorHeaders -TimeoutSec 10
+$publicationHeaders = @{}
+foreach ($key in $operatorHeaders.Keys) {
+  $publicationHeaders[$key] = $operatorHeaders[$key]
+}
+$publicationHeaders["X-Correlation-ID"] = "smoke-store-publication-$([guid]::NewGuid())"
+$publicationHeaders["Idempotency-Key"] = "smoke-store-publication-$smokeStoreId-$([guid]::NewGuid())"
+$publicationBody = @{
+  expectedVersion = [int]$publicationWorkspace.store.version
+  decision = "publish"
+  reason = "Partner Onboarding & Store Publication runtime smoke: marketing publication publish"
+} | ConvertTo-Json
+$published = Invoke-RestMethod "http://localhost:58080/dsh/operator/marketing/stores/$smokeStoreId/publication" -Method Post -Headers $publicationHeaders -ContentType "application/json" -Body $publicationBody -TimeoutSec 10
+if (-not $published.store.publicationEligible) { throw "Partner Onboarding & Store Publication marketing publication did not return an eligible store" }
+
 $readiness = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/readiness" -Headers $operatorHeaders -TimeoutSec 10
 if ($readiness.partnerId -ne $partnerDraft.id) { throw "Partner Onboarding & Store Publication readiness response did not match partner" }
 $audit = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/audit" -Headers $operatorHeaders -TimeoutSec 10

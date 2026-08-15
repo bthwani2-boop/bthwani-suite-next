@@ -106,8 +106,8 @@ $detail = Invoke-CheckedJsonRequest `
 
 $governanceBody = @{
   expectedVersion = [int]$detail.store.version
-  action = "visibility"
-  value = if ([bool]$detail.store.isVisible) { "visible" } else { "hidden" }
+  action = "serviceability"
+  value = [string]$detail.store.serviceabilityStatus
   reason = "runtime smoke request-boundary diagnosis"
 } | ConvertTo-Json
 $governance = Invoke-CheckedJsonRequest `
@@ -122,14 +122,13 @@ if ([string]$governance.audit.actorRole -ne "operator") {
 
 $hideBody = @{
   expectedVersion = [int]$governance.store.version
-  action = "marketing-visibility"
-  value = "hidden"
+  decision = "hide"
   reason = "runtime publication gate diagnosis"
 } | ConvertTo-Json
 $hidden = Invoke-CheckedJsonRequest `
   -Name "dsh-store-marketing-hide" `
   -Method "POST" `
-  -Uri "$DshBaseUrl/dsh/operator/stores/$([Uri]::EscapeDataString($StoreId))/governance" `
+  -Uri "$DshBaseUrl/dsh/operator/marketing/stores/$([Uri]::EscapeDataString($StoreId))/publication" `
   -Headers (New-MutationHeaders -Token $operatorToken -Operation "diagnose-hide") `
   -Body $hideBody
 
@@ -141,14 +140,13 @@ Invoke-CheckedJsonRequest `
 
 $showBody = @{
   expectedVersion = [int]$hidden.store.version
-  action = "marketing-visibility"
-  value = "visible"
+  decision = "publish"
   reason = "restore runtime publication gate after diagnosis"
 } | ConvertTo-Json
 $visible = Invoke-CheckedJsonRequest `
   -Name "dsh-store-marketing-show" `
   -Method "POST" `
-  -Uri "$DshBaseUrl/dsh/operator/stores/$([Uri]::EscapeDataString($StoreId))/governance" `
+  -Uri "$DshBaseUrl/dsh/operator/marketing/stores/$([Uri]::EscapeDataString($StoreId))/publication" `
   -Headers (New-MutationHeaders -Token $operatorToken -Operation "diagnose-show") `
   -Body $showBody
 

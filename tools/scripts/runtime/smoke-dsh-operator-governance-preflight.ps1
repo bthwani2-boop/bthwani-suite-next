@@ -91,8 +91,8 @@ $governanceHeaders = @{
 }
 $governanceBody = @{
   expectedVersion = [int]$detail.store.version
-  action = "visibility"
-  value = if ([bool]$detail.store.isVisible) { "visible" } else { "hidden" }
+  action = "serviceability"
+  value = [string]$detail.store.serviceabilityStatus
   reason = "runtime operator governance boundary preflight"
 } | ConvertTo-Json
 

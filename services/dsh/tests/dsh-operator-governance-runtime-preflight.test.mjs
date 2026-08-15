@@ -38,8 +38,8 @@ describe("DSH operator governance runtime preflight", () => {
 
   it("uses the current store version and preserves its visibility value", () => {
     assert.match(preflight, /expectedVersion = \[int\]\$detail\.store\.version/);
-    assert.match(preflight, /value = if \(\[bool\]\$detail\.store\.isVisible\) \{ "visible" \} else \{ "hidden" \}/);
-    assert.match(preflight, /action = "visibility"/);
+    assert.match(preflight, /value = \[string\]\$detail\.store\.serviceabilityStatus/);
+    assert.match(preflight, /action = "serviceability"/);
     assert.match(preflight, /audit\.actorRole -ne "operator"/);
   });
 });
