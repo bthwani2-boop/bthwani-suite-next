@@ -1,5 +1,0 @@
-# U012 — Proportional Field security and audit
-
-The user explicitly rejected unnecessary Control Panel complexity because the operator team will be small. That does not relax backend security. The final design uses the smallest canonical permission model that can distinguish required actions, with super-admin for administration and server-side object authorization for every Field/Partner/Store/Marketing/WLT resource. No separate bespoke security engine is created for this package.
-
-The adversarial matrix must still cover cross-field and cross-store IDs, list/search leakage, direct API access, deep links, stale cache, offline replay, document/message attachments, publication override and financial actions. Sensitive actions such as suspend, terminate, reassign, reject, publication override and financial adjustment require a reason and audit where applicable. Cancelled Field incident/COD permissions and stale UI-only checks are removed. The target is simple operations plus strict server truth, not a large role taxonomy.

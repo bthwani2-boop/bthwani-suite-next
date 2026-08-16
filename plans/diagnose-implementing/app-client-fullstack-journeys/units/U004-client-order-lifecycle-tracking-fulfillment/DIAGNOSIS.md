@@ -1,9 +1,0 @@
-# U004 — owned order lifecycle, fulfillment, tracking, pickup and delivery convergence
-
-Once an order exists, the client is mostly a reader of a state machine written by other authorized actors. That makes this unit cross-surface by necessity but not broad by permission. Partner, Captain and control-panel code enters only where it writes the exact DSH order/dispatch/pickup/custody/exception state that the authenticated customer reads. Independent partner operations, captain workforce/earnings and operator administration remain outside scope.
-
-The first invariant is one DSH-owned order version and legal transition model. Client order list/detail must be actor/object scoped and deep links must re-authorize the target rather than trusting an order ID carried by a notification. Every partner preparation decision, dispatch/assignment, store-captain handoff, live-location projection, client pickup step, proof and completion must move the same canonical order/custody truth through allowed transitions with idempotency/version guards. A local surface cannot mark completion before committed readback.
-
-Location and proof are privacy-sensitive. The client may see only the location/proof allowed for its owned order and current lifecycle state; another customer must not obtain captain location, pickup tokens or delivery evidence by guessing identifiers. Cancellation, return, delivery exception and reassignment introduce saga/outbox/WLT consequences and must remain retry-safe: stale/duplicate actions cannot double-cancel, double-refund, double-release or leave contradictory fulfillment state.
-
-Closure therefore requires owned-read tests, targeted DSH order/dispatch/pickup/partner-delivery tests, database invariants, full runtime smoke and an exact-candidate cross-surface scenario that proves preparation through delivery plus negative, stale, duplicate, restart and deep-link cases.

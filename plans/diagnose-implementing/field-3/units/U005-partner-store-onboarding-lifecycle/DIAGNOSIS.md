@@ -1,5 +1,0 @@
-# U005 — Self-initiated and assignment-linked Partner/Store onboarding
-
-The product decision is explicit: a Field provider may start onboarding freely to maximize partner acquisition. Therefore the assignment subsystem cannot become a hard gate. The correct architecture is two intake origins feeding one canonical DSH draft: `self_initiated` and `assignment_linked`. Source provenance is retained, but validation, documents, review, IDs and downstream readiness are identical. A free-start draft is not a bypass and cannot publish itself.
-
-The legal Partner and Store/Branch must remain separate entities. Business Vertical must come from the central classification authority rather than a local default/category shadow. Partners staff reviews the same object captured by Field and can return it for changes; silent rewriting of Field provenance is not acceptable. Approval of intake is still distinct from readiness/catalog/publication. This unit ends when acquisition source no longer changes truth semantics and all related Partners screens are organized around one lifecycle.
