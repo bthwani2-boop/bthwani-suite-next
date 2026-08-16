@@ -968,6 +968,8 @@ paths:
     $ref: "./dsh.home-marketing-events.openapi.yaml#/paths/~1dsh~1home-discovery~1events"
   /dsh/internal/workforce/availability-projections:
     $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1internal~1workforce~1availability-projections"
+  /dsh/internal/workforce/captains/{captainId}/financial-eligibility:
+    $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1internal~1workforce~1captains~1{captainId}~1financial-eligibility"
   /dsh/internal/workforce/provider-media-refs/validate:
     $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1internal~1workforce~1provider-media-refs~1validate"
   /dsh/operator/stores/{storeId}/assortment/{masterProductId}/pause:
