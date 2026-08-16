@@ -1,524 +1,350 @@
-# Deep Diagnosis — diagnose_all-end-to-end
+# DIAGNOSIS — BTHWANI SYSTEM-WIDE ROOT LANDSCAPE
 
-## 0. Diagnostic posture
+Status: `PREPARE / EVIDENCE-BOUND`
+Repository: `bthwani2-boop/bthwani-suite-next`
+Branch: `b`
+Evidence HEAD before documentation writes: `7f053af499891b6bb6ae9281c658f7eeedd35eb7`
 
-This is the merged diagnosis for the finance / wallet / checkout / captain / partner-store-delivery / eligibility / settlement / refund / penalty / identity-boundary cluster.
+## 0. Diagnosis law
 
-It consolidates the diagnostic meaning of both prior packages into one root-cause landscape. Older plans are search seeds and historical evidence only. Live current code/runtime/data/contracts on the pinned execution candidate remain the technical source of truth; later explicit user product decisions remain binding product authority.
+This file records proven structure, systemic root hypotheses backed by current repository evidence, and explicit `MUST_PROVE` obligations. It does **not** convert unexecuted checks into PASS.
 
-The method is:
+A technical smell is not execution authority until its operational parent and highest provable root are known. A plan/doc is not evidence that code/runtime is correct. A passing leaf test is not closure of its parent journey.
 
-`TOP-DOWN DIAGNOSIS; BOTTOM-UP EVIDENCE`
+## 1. Current repository shape that materially affects closure
 
-A low-level technical issue is not allowed to direct execution until its operational parent, canonical owner and root cause are proven.
+### Core authorities
 
-## 1. Canonical platform meaning
+Current branch contains explicit core roots for:
 
-The system must have one owner for each durable fact.
+- `core/identity`
+- `core/workforce`
+- `core/platform-control`
+- `core/providers`
 
-```text
-Identity
-  owns authentication/session/principal/trusted actor context
+Root tooling composes OpenAPI and generated clients for these roots. Therefore identity, workforce, operator configuration and provider semantics cannot be treated as incidental helpers of DSH/WLT; they are first-class authority boundaries.
 
-Workforce
-  owns person/provider lifecycle
-  owns non-financial readiness
-  owns operational accreditation
-  owns suspension/absence/work windows/scopes
-  does NOT own authoritative money
+### Services
 
-DSH
-  owns store/real branch/order/fulfillment
-  owns primary fleet affiliation and partner memberships
-  owns dispatch assignment/presence/capacity
-  owns partner delivery operational tasks
-  does NOT own authoritative money
+Current `services/**` includes at least:
 
-WLT
-  owns wallets/ledger
-  owns canonical monetary amounts
-  owns captain collateral/guarantee
-  owns payment allocation financial effects
-  owns COD exposure and cash custody
-  owns debt/receivable
-  owns penalties monetary effect
-  owns settlement/payout/refund/reversal
-  owns financial eligibility
-```
+- `dsh`
+- `wlt`
+- `fin`
+- `pymt`
+- `order`
+- `wallet`
+- `ledger`
+- `stl`
+- `ops`
+- `mkt`
+- `support`
 
-Read-only projections may exist outside the owner only when source/version/freshness are explicit and the projection cannot grant a critical write.
+Any apparent older service that remains reachable, imported, deployed, migrated or queried is part of the blast radius until proven retired.
 
-## 2. Executive root cause
+### Active surfaces/hosts
 
-The highest systemic defect is not one missing page or enum. The architecture repeatedly conflates four distinct concepts:
+Root scripts explicitly launch:
 
-1. **Tender** — how the customer funds the order.
-2. **Exposure** — how much new cash risk BTHWANI permits a captain to accept.
-3. **Custody** — physical cash actually collected and still owed/remittable.
-4. **Settlement** — the final financial obligation between canonical counterparties.
+- `apps/app-client/runtime`
+- `apps/app-partner/runtime`
+- `apps/app-captain/runtime`
+- `apps/app-field/runtime`
+- `apps/control-panel/runtime`
 
-When downstream logic infers these from a payment-method label, a local balance field, a legacy courier role, or caller-computed totals, money authority leaks into operational domains.
+The repository also contains other app roots. Their status must be classified `ACTIVE | HOST_ONLY | LEGACY_REACHABLE | DEAD_PROVEN | OUT_OF_SCOPE_WITH_PROOF`; directory naming alone is insufficient.
 
-The highest root is therefore:
+### Contract/runtime/tooling
 
-`RC-PAYMENT-TENDER-EXPOSURE-CUSTODY-SETTLEMENT-CONFLATION`
+The root package exposes:
 
-The structural fix is a canonical persisted numeric `PaymentAllocation`, explicit WLT exposure/custody/settlement models, one monetary authority, and one composed captain eligibility authority.
+- canonical contract composition and generated client commands;
+- service/database/runtime migration and smoke commands;
+- boundary, contract drift, generated-client provenance, migration manifest, API/binding and runtime-config guards;
+- Graphify/Nx diagnostics;
+- security/CodeQL/Sonar/observability diagnostics.
 
-## 3. Root-cause landscape
+This is evidence that the intended platform already recognizes cross-layer governance. The defect class is therefore not “missing tools” in general; it is whether all live paths are actually governed by one consistent authority model and whether the guards prove the complete set rather than a subset.
 
-### P0 — RC-PAYMENT-TENDER-EXPOSURE-CUSTODY-SETTLEMENT-CONFLATION
+## 2. Attached blueprint diagnosis
 
-**Evidence/pattern**
+### Strong parts to adopt
 
-- Checkout historically contains method-name semantics including `official_wallet`.
-- COD protection paths can key on literal COD instead of exact cash allocation.
-- Mixed can therefore contain real cash without identical risk/custody treatment unless all financial logic consumes numeric allocation.
-- Current/previous WLT COD concepts include reservation plus legacy collection/remittance semantics that require reconciliation and cleanup.
+The blueprint correctly demands:
 
-**Blast radius**
+1. explicit actors, authorities, journeys, states, transitions and invariants;
+2. a single declared source of truth rather than infer-by-convention behavior;
+3. restart-safe authoritative state and horizontally safe/idempotent writers/readers;
+4. explicit semantics for retries, callbacks, duplicates, restarts and concurrency;
+5. explicit provider degraded/failure behavior;
+6. authenticated/authorized internal/control-plane operations;
+7. fail-closed runtime configuration;
+8. a complete traceability chain from business flow through surface/API/domain/data/integration/verification;
+9. a Decision Registry and Invariants Registry;
+10. Negative Architecture prohibiting parallel truth, fake success, silent fallback, hidden workarounds and duplicated policy;
+11. canonical ubiquitous language to prevent cross-surface semantic drift.
 
-Checkout, payment authorization/capture, dispatch financial eligibility, COD reservation, cash collection, partner/store delivery, settlement, refunds, receipts, captain wallet UI and finance/operator views.
+### Parts that must be refined
 
-**Target**
+- The human blueprint must **not** own machine runtime/product truth. Product rules that can be machine-enforced belong in `governance/product/contracts/**` or the canonical runtime/domain owner.
+- “One owner” means one authority for a fact/mutation, not one monolith for every concern. Read models/projections may exist if their source/version/staleness semantics are explicit and they cannot mutate authority.
+- “No fallback” means no silent/authority-bypassing fallback. Explicit degraded behavior may be correct when it fails safely and is part of the product contract.
+- Policy values must be separated into hard invariants, versioned policy, runtime config and operator-configurable values. Do not hardcode mutable product policy into the blueprint.
+- The blueprint’s generation baseline is older than the current evidence HEAD, so every code/path claim from it is `MUST_PROVE` until reconciled.
 
-Persist one `PaymentAllocation` and make every financial consequence consume exact numeric legs.
+### Parts rejected as authority
 
-### P0 — RC-MONETARY-FACT-OWNERSHIP-SPLIT
+- Any prose that attempts to override current canonical Product Truth without an explicit user decision.
+- Any generated path inventory treated as current merely because it existed at blueprint generation.
+- Any “complete/ready/closed” implication without same-candidate runtime evidence.
 
-**Proven examples**
+## 3. Root-cause graph
 
-- Workforce previously carries writable captain fields equivalent to `FinancialGuaranteeMinorUnits`, `FinancialGuaranteeCurrency`, `FinancialGuaranteeStatus`, `FinancialGuaranteeReference` even though WLT is intended monetary authority.
-- Workforce incident input can carry `ProposedPenaltyMinorUnits`/currency.
-- WLT penalty posting can accept caller amount even though WLT should derive the amount from policy.
-- Partner settlement can accept caller-computed gross/amount rather than derive/verify immutable economic evidence.
-- DSH/WLT reservation boundaries can trust caller amount/currency rather than canonical financial allocation.
+### SYS-RC-00 — System meaning-to-runtime closure is not yet proven
 
-**Target**
+**Symptom:** multiple strong governance/runtime artifacts exist, but there is no current same-SHA proof that every active capability/journey follows one complete authority chain.
 
-WLT is decision owner as well as ledger owner for canonical monetary facts. Operational domains provide immutable references/facts, not authoritative amounts.
+**Root:** no final repository-wide traceability/evidence closure has yet been demonstrated for the current branch candidate.
 
-### P0 — RC-CAPTAIN-OPERATIONAL-ELIGIBILITY-AUTHORITY-SPLIT
+**Blast radius:** every service/surface because lower roots can hide under local PASS results.
 
-**Pattern**
+**Required closure:** one complete operational inventory + traceability matrix + root graph + same-candidate verification bundle, with every active item classified.
 
-Identity, Workforce, DSH Fleet, DSH Dispatch and WLT each own legitimate inputs, but candidate/capacity/assign/reassign/inbox/accept paths can use different subsets or stale projections.
+---
 
-**Failure**
+### SYS-RC-01 — Authority and writer ownership fragmentation
 
-An offer can be visible/created for an actor who later fails an omitted gate, or capacity can count an actor who is unauthorized for the service area.
+**Evidence direction:** the repository includes both modern `core/**`/DSH/WLT authority roots and multiple finance/order/wallet/ledger-style service roots. Existing finance diagnosis already proved overlapping financial/order responsibilities and direct dependency patterns. This does not make every older root wrong, but it makes writer ownership a mandatory proof target.
 
-**Target**
+**Findings to prove/close:**
 
-One conceptual primitive such as:
+- every authoritative state field/table/topic must name one writer authority;
+- every mutation endpoint/worker/callback must map to that authority;
+- read models must carry source/version/freshness semantics when materially stale;
+- no UI/shared consumer may become an alternate writer through direct transport/storage;
+- no service-local lifecycle may shadow a canonical lifecycle.
 
-`EvaluateCaptainEligibility(captainActorId, orderId, purpose, evaluatedAt)`
+**Closure test:** writer inventory is complete and duplicates are either removed or proved non-authoritative projections.
 
-combines all authorities and returns auditable reason codes/source versions. Governed writes use current synchronous authority; short-lived versioned preview decisions are allowed only for scalable discovery and never become unbounded write authority.
+---
 
-### P1 — RC-STORE-DELIVERY-FLEET-COMPENSATION-PARALLEL-TRUTH
+### SYS-RC-02 — Journey/state semantics are not uniformly represented as one graph
 
-**Carried-forward evidence**
+**Risk:** state meaning can drift among frontend labels, OpenAPI enums, backend states, DB values, event states and operator screens.
 
-- legacy `StoreCourierSettings`-style person/lifecycle fields such as courier name/phone/active state can coexist with Workforce person and DSH membership truth;
-- legacy `pricingSource`/courier-pricing selectors can coexist with canonical store-delivery pricing;
-- partner/store courier can leak through older collector/captain financial semantics;
-- store courier compensation settings can be confused with BTHWANI payroll/earning authority.
+**Must prove for every material journey:**
 
-**Target**
+`actor -> entry condition -> command -> validation/authority read -> legal transition -> authoritative write -> event/handoff -> downstream state -> success/failure/recovery -> terminal outcome`.
 
-Workforce owns person/provider; DSH owns primary affiliation/membership/task; WLT owns BTHWANI financial settlement with store/customer; store owns its employee payroll/compensation and optional store-specific collateral unless a future explicit financial-custody product changes that boundary.
+High-risk journey families:
 
-### P1 — RC-IDENTIFIER-SEMANTIC-OVERLOADING
+- identity activation/session/recovery;
+- workforce creation/readiness/suspension/scopes;
+- partner onboarding/store publication/catalog/serviceability;
+- customer discovery/cart/checkout/order lifecycle;
+- payment/wallet funding/financial allocation/refund/settlement;
+- dispatch/assignment/accept/reassign/delivery/COD custody;
+- support/incident/escalation/recovery;
+- control-panel approval/change-set/audit;
+- provider callbacks/degraded/reconciliation;
+- notifications/jobs/outbox and delayed effects.
 
-**Proven class**
+---
 
-- a `storeCourierId`-like value can mean membership in DSH but be sent to Workforce as if actor ID;
-- store or scope IDs can be persisted/passed under branch-named fields;
-- generic strings cross authority boundaries with insufficient entity semantics.
+### SYS-RC-03 — Contract/API/generated-client/binding drift
 
-**Correct handoff**
+**Evidence:** root scripts contain explicit OpenAPI composition/generation for identity/workforce/platform-control/providers/DSH/WLT and guards for contract drift, generated-client provenance and binding. Presence of these mechanisms is positive, but closure requires proving all active paths use them.
 
-```text
-captainMembershipId
-  -> DSH Fleet resolves active membership
-  -> validate store + PARTNER affiliation
-  -> captainActorId
-  -> Workforce readiness(captainActorId)
-  -> persist/use membershipId only where membership is the intended entity
-```
+**Failure patterns to eliminate:**
 
-**Target**
+- raw/manual DTO duplication that diverges from canonical contract;
+- direct fetch/axios/process-env URL construction in UI surfaces;
+- business/error/state mapping invented per screen;
+- endpoint exists but no client binding or no UI state coverage;
+- UI exists but backend/API/database chain is missing;
+- generated client is stale or bypassed;
+- event schema version is implicit.
 
-Explicit actor/membership/person/store/branch types across DB, Go, TS, OpenAPI, generated clients, events, audit and UI query state.
+---
 
-### P1 — RC-DISTRIBUTED-FINANCIAL-OBLIGATION-BEST-EFFORT
+### SYS-RC-04 — Persistence/migration/source-lineage fragmentation
 
-A proven example is accepted delivery completing while the required WLT `FinalizeCodReservation` call error is discarded (`_, _ = ...`). The class is wider and includes any reserve/release/bind/refund/settlement/promotion/coupon financial obligation handled as best-effort RPC.
+**Must prove:**
 
-**Target**
+- authoritative table/column owner and legal writer;
+- constraints for invariants that belong in persistence;
+- fresh install and every supported upgrade path;
+- forward migration/backfill/cutover semantics;
+- no old column/table remains authoritative after cutover;
+- seeds are clearly dev/test and cannot masquerade as live truth;
+- projections/read models reconcile and can be rebuilt where required;
+- deletion/retention/privacy semantics are explicit.
 
-A durable state machine/outbox/saga with idempotency, correlation, explicit pending/succeeded/failed/reconciliation states, retry and deterministic readback. Operational success cannot hide unknown financial state.
+A migration compiling is insufficient if old writers/readers survive.
 
-### P1 — RC-SERVICE-AREA-CAPACITY-TRUTH-DRIFT
+---
 
-DSH candidate/capacity can historically receive a requested `serviceAreaCode` and label candidates with it without proving the Workforce actor actually owns that scope.
+### SYS-RC-05 — Distributed failure/idempotency/reconciliation semantics need complete proof
 
-Correct flow:
+Every external or cross-process mutation must answer:
 
-`order/store area + Workforce serviceAreaCodes + all other eligibility gates -> eligible candidate set -> capacity`
+- What is the idempotency key and scope?
+- What happens on duplicate command/callback?
+- What happens after write-before-response timeout?
+- What happens on process restart?
+- What happens if messages reorder?
+- What happens if dependency is unavailable?
+- Which state is `pending/unknown/retryable/failed/reconciled`?
+- Which component owns reconciliation?
+- How is double-post/double-fulfillment prevented?
 
-Capacity must count only actors truly eligible for that requested area.
+Financial and order/provider paths are P0 because silent divergence is materially harmful.
 
-### P1 — RC-AVAILABILITY-AND-SUSPENSION-SEMANTIC-OVERLAP
+---
 
-Workforce durable facts and DSH presence must be separate:
+### SYS-RC-06 — Trust boundaries must be unified and adversarially proven
 
-- Workforce: active/suspended, planned absence, leave/work window, readiness.
-- DSH: online/offline/available/busy/current assignment state.
+Coverage includes:
 
-A Workforce suspension makes composite eligibility false; DSH must not create a second independently writable suspension truth.
+- authentication/session validity;
+- authorization/RBAC;
+- actor, tenant, partner, store and scope isolation;
+- IDOR protection;
+- service-to-service auth and identity propagation;
+- privileged financial/state mutations;
+- operator approvals/maker-checker where policy requires it;
+- step-up auth for sensitive operations where required;
+- audit actor/source/correlation provenance;
+- sensitive-data minimization/redaction;
+- secrets and provider credentials;
+- production rejection of debug/test identity shortcuts.
 
-### P1 — RC-ACCREDITATION-PARALLEL-AUTHORITY
+The execution phase must use the Codex Security deep repository scan when available, then centralized validation + attack-path analysis; targeted security tests remain required even if the scanner returns no candidates.
 
-Workforce is the canonical owner of general operational accreditation. Any mutable DSH `accreditation_status` with the same business meaning is duplicate authority and must be removed or renamed only if it is proven to represent a different dispatch-specific certification.
+---
 
-### P2 — RC-GOVERNANCE-AUTHORITY-DRIFT
+### SYS-RC-07 — Runtime/config/deployment authority drift
 
-Historical Product Truth/plans can lag behind live code, and current code may evolve without one machine-enforced authority declaration. This is a recurrence multiplier.
+**Evidence:** root scripts distinguish DSH, Identity, WLT, Workforce and full-runtime profiles and expose runtime-config guards. This means runtime wiring is part of governed behavior.
 
-Target: one machine-readable authority registry for owners, writers, projections, identifiers and invariants, with human governance mechanically checked against it.
+**Must prove:**
 
-### P2 — RC-ORDER-ACTOR-PROVENANCE
+- canonical port/service-address registry;
+- startup fails on invalid/ambiguous critical config;
+- no hidden localhost/legacy URL fallback in production paths;
+- readiness means dependencies needed for claimed functionality are usable;
+- migrations/bootstrap are deterministic and bounded;
+- environment/profile differences do not change product authority silently;
+- CI tests the same required contracts/guards as local closure;
+- deploy/rollback preserves schema and event compatibility within the supported window.
 
-The finding is valid but the previous implementation attempt is not closed. GitHub Actions run `31908535848` failed at `Compile and test all DSH backend consumers`; OpenAPI/generated verification, full tests/static checks, client smoke, final DB reproof and governed final commit were skipped.
+---
 
-It remains HOLD behind higher systemic roots until contracts stabilize and the failed consumer compilation is diagnosed/fixed.
+### SYS-RC-08 — Observability, audit and explainability need end-to-end traceability
 
-## 4. Customer checkout and PaymentAllocation
+For material transitions, prove correlation/trace identity, actor provenance, source version, idempotency identity and enough structured audit to explain “why is the system in this state?”. Financial reconciliation, dispatch decisions, operator approvals and security denials are priority paths.
 
-### Final customer choices
+Observability must not log secrets or sensitive raw data merely to improve diagnosis.
 
-Exactly:
+---
 
-1. `COD`
-2. `BTHWANI Wallet`
-3. `Mixed`
+### SYS-RC-09 — Legacy/duplicate/fallback/dead-code residue
 
-This applies to both BTHWANI delivery and store/partner delivery.
+Potential residue is not deleted by pattern matching alone. Each candidate must have:
 
-`official_wallet` / external banks/e-wallets/providers are funding rails into BTHWANI Wallet, not a fourth checkout tender authority.
+`path/symbol -> current references -> runtime reachability -> authority role -> replacement -> migration status -> delete/keep decision -> verification`.
 
-### Canonical allocation
+Delete only after replacement/cutover proof. Keep only when there is a current justified owner and consumer. Compatibility paths require explicit expiry/removal criteria; indefinite compatibility is an open architecture defect.
 
-At minimum the system needs authoritative numeric fields such as:
+---
 
-```text
-orderId
-currency
-subtotal
-deliveryFee
-discount
-platformSubsidy
-walletAmountMinorUnits
-cashOnDeliveryAmountMinorUnits
-partner/store payable components
-platform fee/commission components
-pricing/policy version
-pricing snapshot/reference
-total/orderPayableMinorUnits
-```
+### SYS-RC-10 — Verification/release proof is fragmented until same-candidate closure
 
-Conservation must be mechanically enforced. The client displays the result but never calculates authoritative allocation.
+Required hierarchy:
 
-Invariant:
+1. targeted static/unit/contract tests for root fix;
+2. DB migration/invariant proof where touched;
+3. integration/failure/idempotency/security negatives;
+4. surface binding and UI state proof;
+5. runtime smoke and critical E2E journeys;
+6. global governing guards;
+7. CodeRabbit review of the resulting committed/uncommitted diff when available;
+8. Deep Codex Security scan for repository-wide security closure when security closure is claimed;
+9. cleanup/zero-residue scan;
+10. re-pin HEAD and adversarial re-diagnosis.
 
-`walletAmountMinorUnits + cashOnDeliveryAmountMinorUnits = orderPayableMinorUnits`
+No evidence from an older SHA closes a newer candidate automatically.
 
-COD: wallet=0, cash=total.
+## 4. Finance subgraph — retained, not discarded
 
-Wallet: wallet=total, cash=0.
+The previous package diagnosed finance in depth. Those findings remain active children unless later evidence closes/supersedes them:
 
-Mixed: wallet>0 and cash>0.
+- ambiguous distinction among execution order, control order and economic/financial order;
+- fragmented financial method/provider/instrument/rail semantics;
+- fragmented payment/order/financial lifecycle ownership among WLT/PYMT/ORDER/FIN and adapters;
+- absence or incompleteness of one canonical financial intent/checkout allocation model across all consumers;
+- cyclic/direct legacy dependencies and service-local adapters that can preserve parallel truth;
+- local seed/fake payment/order state and service-local read models that must be classified as test-only, projection or defect;
+- generated/client/surface consumers that must converge on the canonical model.
 
-## 5. External official provider funding
+The current head changes `services/wlt/backend/internal/reference/payment_session.go` so checkout rejects missing method and rejects `official_wallet` as checkout tender while still allowing it in a non-checkout funding context. Correct interpretation: **official wallet is a funding rail, not a fourth checkout method**. This commit closes one semantic leaf only; it does not prove all callers/contracts/UI/data/legacy paths migrated.
 
-Correct model:
+## 5. Global finding taxonomy for execution
 
-`official bank/e-wallet/provider -> verified funding transaction -> WLT ledger -> BTHWANI Wallet`
+Every discovered item gets exactly one primary classification plus root parent:
 
-The same governed WLT Cash-In mechanism is used by customer and captain where product policy permits. Provider identity does not own dispatch/checkout monetary authority.
+- `MISSING_PRODUCT_TRUTH`
+- `AUTHORITY_CONFLICT`
+- `DUPLICATED_TRUTH`
+- `WRONG_OWNER`
+- `MISSING_STATE_MACHINE`
+- `ILLEGAL_OR_UNPROVEN_TRANSITION`
+- `MISSING_API_CONTRACT`
+- `CONTRACT_DRIFT`
+- `MISSING_GENERATED_CLIENT`
+- `DIRECT_API_IN_SURFACE`
+- `BUSINESS_LOGIC_IN_SURFACE`
+- `MISSING_BINDING`
+- `UNBOUND_UI_ACTION`
+- `MISSING_PERMISSION`
+- `TRUST_BOUNDARY_GAP`
+- `MISSING_AUDIT`
+- `MISSING_DATABASE_TRUTH`
+- `STALE_MIGRATION`
+- `PROJECTION_DRIFT`
+- `IDEMPOTENCY_GAP`
+- `RECONCILIATION_GAP`
+- `PROVIDER_FAILURE_GAP`
+- `RUNTIME_CONFIG_GAP`
+- `OBSERVABILITY_GAP`
+- `TEST_GAP`
+- `SECURITY_GAP`
+- `LEGACY_REACHABLE`
+- `DEAD_CODE_PROVEN`
+- `WORKAROUND_OR_FALLBACK`
+- `CLEANUP_REQUIRED`
+- `BLOCKED_EXTERNAL`
+- `DECISION_REQUIRED`
 
-The complete E2E journey must be proven, not inferred from enums or primitives:
+No `UNKNOWN` item may disappear from the ledger; unresolved ownership itself is a finding.
 
-`funding intent -> provider verification/callback -> idempotency/unknown-result handling -> WLT ledger credit -> readback/reconciliation`
+## 6. Priority frontier
 
-## 6. BTHWANI captain collateral/guarantee
+Execution priority is graph-driven, not file-count-driven:
 
-The final model is a real WLT-owned restricted financial position, not a Workforce status and not merely a generic spendable wallet alias.
+1. `SYS-RC-00/01/02`: establish product/authority/journey truth for the current root being executed;
+2. `SYS-RC-03/04`: align contract, binding and persistence to that truth;
+3. `SYS-RC-05/06`: failure semantics and trust boundaries before declaring real-world safety;
+4. `SYS-RC-07/08`: runtime and explainability;
+5. `SYS-RC-09`: destructive cleanup only after canonical cutover proof;
+6. `SYS-RC-10`: same-candidate final verification and adversarial re-diagnosis.
 
-Required concepts are distinct:
+Within a root, immediately fix the highest proven executable cause instead of expanding diagnosis sideways without a closure need.
 
-- spendable wallet balance where applicable;
-- restricted guarantee/collateral;
-- protected minimum;
-- releasable excess;
-- active COD/Mixed cash exposure reservation;
-- open cash custody;
-- debt/receivable;
-- other holds.
+## 7. Decision status
 
-Platform Finance governance defines the opening/protected minimum as versioned WLT policy.
+No new product decision is being guessed in this document. Any unresolved product rule discovered during execution becomes `DECISION_REQUIRED` only after repository/Product Truth evidence cannot resolve it. Each such question must include options, recommendation, reason and blast radius.
 
-Activation requires the configured opening/baseline collateral. After activation, insufficient COD-safe collateral blocks COD/Mixed cash-bearing work but may allow fully prepaid work when all non-financial gates pass.
+## 8. Diagnosis verdict
 
-No unrestricted direct withdrawal of protected collateral is allowed. Governed excess release is permitted only when post-release collateral remains compliant and there is no overdue custody/debt/hold/unresolved liability.
-
-Offboarding can release/refund the provable remainder after obligations close.
-
-## 7. COD exposure, custody and settlement
-
-For exact cash leg `C`:
-
-1. current PaymentAllocation is resolved;
-2. composite operational eligibility passes;
-3. WLT proves `openCashCustody + C <= effectiveCollateral` and settlement is not overdue;
-4. WLT creates an idempotent exposure reservation for `C`;
-5. assignment/acceptance is governed by that decision/correlation;
-6. actual cash collection creates/increases custody;
-7. exposure and custody remain separate and auditable;
-8. settlement/reconciliation closes custody according to versioned policy.
-
-Prepaid-only orders create zero COD collateral reservation.
-
-Mixed reserves only the cash leg.
-
-Exposure finalization/release may never imply physical cash was remitted.
-
-Rolling settlement/deadline/end-shift/day policy can block new COD when custody is overdue or collateral insufficient.
-
-### Prior lifecycle contradiction
-
-Previous diagnosis found:
-
-- reservation and legacy custody/remittance semantics coexisting;
-- `sovereign_cod.go` rejecting legacy collection/remittance on reservation-funded orders;
-- accepted delivery path discarding WLT finalize error;
-- DSH reservation client able to send caller amount/currency rather than binding solely to canonical WLT allocation/reference.
-
-These remain mandatory reproof/cleanup cones during execution.
-
-## 8. Financial eligibility versus order-specific capacity
-
-A coarse general decision such as applying the strictest minimum dispatch/COD balance is insufficient.
-
-The architecture needs separate semantics for:
-
-- general financial readiness;
-- exact order-specific cash exposure reservation/capacity.
-
-Candidate discovery can use bounded preview decisions. Critical assign/accept/reassign writes must re-evaluate fresh authorities and exact cash exposure.
-
-## 9. Fleet affiliation and partner membership
-
-Primary dispatch affiliation is exclusive:
-
-`BTHWANI XOR PARTNER`
-
-A PARTNER actor may have multiple active store memberships where allowed. Memberships do not replace primary affiliation.
-
-Transfer between BTHWANI and PARTNER is an explicit audited lifecycle that must check active assignments, exposure, custody and blocking obligations.
-
-## 10. Partner/store delivery
-
-Customer still sees COD, BTHWANI Wallet and Mixed.
-
-The financial counterparty is the store, not the store courier as a BTHWANI captain.
-
-If a store courier physically collects cash, the system may record the actor/membership as store sub-custodian evidence. That must not create:
-
-- BTHWANI captain collateral usage;
-- BTHWANI captain commission;
-- BTHWANI captain debt;
-- BTHWANI captain payout/earning;
-- BTHWANI payroll liability.
-
-### Store employee compensation
-
-- Monthly-salary employee: delivery fee remains in store economics; no per-order BTHWANI entitlement.
-- Alternative per-delivery compensation: remains store-owned compensation under the later explicit user decision. The platform may record operational configuration/projection but does not become payer/payroll ledger merely because app-partner manages the courier.
-- Optional store-specific collateral: store responsibility; BTHWANI/WLT must not silently custody or display it as BTHWANI money.
-
-Any future BTHWANI-managed payroll/guarantee-custody product requires a separate explicit product/contract decision.
-
-### Partner app purpose
-
-app-partner should provide fit-for-purpose management for:
-
-- courier/team membership;
-- readiness/status;
-- coverage/scopes;
-- assignments and task lifecycle;
-- tracking/proof/exceptions/reassignment;
-- performance/incidents;
-- store-owned requirement/evidence/configuration where appropriate;
-- store cash custody/settlement visibility;
-- clear financial readback without BTHWANI-only captain finance controls.
-
-It must not maintain a free-text parallel courier identity.
-
-## 11. StoreBranch
-
-If product/UI semantics use “branch”, the implementation must have a real canonical StoreBranch entity/identifier with parent store and relevant location/hours/status/service-area/inventory/fleet links.
-
-`selectedBranchIds` or equivalent must never contain Store/Scope IDs under a branch name. No final compatibility fallback `branchId = storeId` is allowed.
-
-## 12. Penalties
-
-Correct flow:
-
-`immutable incident facts/evidence -> Operations selects WLT penaltyPolicyId/version -> WLT loads policy -> derives amount -> posts ledger or debt/receivable -> immutable audit/reference`
-
-Operations/Workforce does not author the amount.
-
-If insufficient spendable balance exists, WLT creates canonical receivable/debt rather than making spendable balance arbitrarily negative. Collection from future earnings or guarantee setoff is allowed only where versioned policy explicitly permits it.
-
-Any discretionary bounded amount remains WLT Finance Control with policy bounds, reason/evidence and maker/checker where applicable.
-
-## 13. Refunds and reversals
-
-Refund follows immutable original funding lineage:
-
-- wallet-funded leg -> BTHWANI Wallet;
-- true captured external-rail transaction requiring reversal -> same original rail/transaction when supported;
-- collected cash -> BTHWANI Wallet by default unless a real evidenced cash-refund workflow occurs.
-
-Mixed reversals use original allocation/ledger dimensions. No mutable caller `fundsSource` or reconstructed payment-method label may override immutable lineage.
-
-Reversal binds to original transaction/ledger entry; original financial history remains immutable.
-
-## 14. Partner/store settlement
-
-Store-delivery fee belongs in store gross economic settlement subject to canonical partner/platform contract. Courier compensation is a separate store expense and must never be assumed equal to delivery fee.
-
-WLT must derive/verify store gross, fee/commission, discounts/subsidies and other settlement components from canonical order/quote/tender/contract evidence, not trust a caller-authored `GrossAmountMinorUnits` or subtotal-only reconstruction.
-
-## 15. Failure/recovery contract
-
-Every material financial transition must carry or derive:
-
-- trusted actor/operator context;
-- role/scope authorization;
-- canonical source IDs;
-- idempotency key;
-- correlation ID;
-- expected/current state;
-- policy/source versions;
-- local invariants;
-- durable distributed handoff;
-- timeout/unknown-result semantics;
-- retry/reconciliation/readback;
-- compensating transition where valid;
-- immutable audit/evidence.
-
-Forbidden:
-
-- operational success + hidden unknown finance;
-- retry causing second debit/earning/refund;
-- local financial/eligibility fallback when WLT/required authority is unavailable;
-- stale projection granting money-moving/assignment write;
-- manual amount override as repair.
-
-## 16. Security/isolation adversarial requirements
-
-Must test at least:
-
-- wrong operator context;
-- wrong partner/store membership;
-- actor vs membership substitution;
-- store/scope vs branch substitution;
-- wrong role applying/reversing penalty;
-- partner attempting BTHWANI finance operations;
-- BTHWANI captain appearing in partner-only dispatch and vice versa;
-- IDOR on wallet/settlement/COD/penalty/partner-delivery data;
-- replay with modified amount/actor/store/order;
-- stale policy/source version;
-- cross-store courier assignment;
-- cross-currency mutation;
-- release below protected floor;
-- concurrent COD reservations exhausting the same collateral;
-- suspended Workforce provider remaining online in DSH;
-- Mixed cash leg bypassing COD guards.
-
-## 17. Cross-surface consequences
-
-### app-client
-
-- exactly three checkout choices;
-- official providers under top-up only;
-- exact Mixed summary from server allocation;
-- canonical payment/refund readback;
-- no client monetary arithmetic.
-
-### app-captain
-
-- canonical BTHWANI/PARTNER mode;
-- clear guarantee/protected/releasable/reserved/custody/debt/settlement/eligibility readback;
-- no financial master-data editing;
-- PARTNER mode isolated from BTHWANI-only finance semantics.
-
-### app-partner
-
-- canonical courier membership/person resolution;
-- task/coverage/readiness management;
-- store-owned compensation/optional guarantee clearly labeled as store responsibility;
-- store settlement/custody visibility;
-- no parallel free-text identity or BTHWANI payroll/collateral authority.
-
-### control-panel
-
-- Platform/Finance configures versioned BTHWANI collateral and penalty policy;
-- Operations selects incidents/policies and manages operational actions;
-- Finance owns WLT settlement/reconciliation/ledger/exceptions;
-- Partner/store views clearly separate store liability from platform/captain liability;
-- no manual balance or arbitrary authoritative money override.
-
-## 18. Historical finance reproof
-
-Historical finance packages are search seeds, not current defect proof.
-
-One older direct-penalty-wallet-mutation claim was already superseded by current canonical ledger posting. Other historical cones—legacy ledger coexistence, daily close, promotion funding, subscription/onboarding commercial fees, pricing, payout and reconciliation—must be re-proven on the exact current candidate before being carried as current findings.
-
-Never delete or fix solely because an old plan said it was broken.
-
-## 19. Mandatory carried-forward finding register
-
-The merged diagnosis explicitly retains:
-
-- `MR-F01` store courier parallel identity/lifecycle truth;
-- `MR-F02` parallel store-courier pricing source/configuration;
-- `MR-F03` identifier overloading beyond membership/actor;
-- `MR-F04` canonical StoreBranch gap;
-- `MR-F05` partner courier leaking into BTHWANI captain finance;
-- `MR-F06` distributed financial best-effort mutation class;
-- `MR-F07` partner settlement gross/amount authority drift;
-- `MR-F08` full WALLET/MIXED E2E journey gap;
-- `MR-F09` tender/exposure/custody/settlement separation;
-- `MR-F10` store-delivery fleet/compensation parallel truth;
-- `MR-F11` actor provenance open/lower-ranked after failed verification.
-
-None is dropped by consolidation.
-
-## 20. Current merged verdict
-
-`DIAGNOSIS = CLOSED FOR THIS MERGED SCOPE`
-
-`DECISION_REQUIRED = 0`
-
-`IMPLEMENTATION = OPEN`
-
-`CLEANUP = OPEN`
-
-`FINAL_E2E_CLOSURE = OPEN`
-
-The next executor must re-pin current `A`, classify concurrent delta, then execute the root-first frontier in `PACKAGE.md`. The existence of these documents is not runtime implementation evidence.
+The platform is **not eligible for a “100%/FINAL/CLOSED” claim in this PREPARE invocation**. The package now contains a system-wide root model and execution obligations. Runtime/code closure starts only under an execution mode and finishes only under the same-candidate closure law.
