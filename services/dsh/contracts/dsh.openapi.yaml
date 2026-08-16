@@ -788,22 +788,6 @@ paths:
     $ref: "./paths/preparation-handoff.paths.yaml#/~1dsh~1operator~1order-preparation~1alerts~1{alertId}~1acknowledge"
   /dsh/operator/pickups/{orderId}/reschedule:
     $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1pickups~1{orderId}~1reschedule"
-  /dsh/operator/platform/change-sets:
-    $ref: "./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1change-sets"
-  /dsh/operator/platform/change-sets/{changesetId}:
-    $ref: "./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}"
-  /dsh/operator/platform/change-sets/{changesetId}/submit:
-    $ref: "./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1submit"
-  /dsh/operator/platform/change-sets/{changesetId}/approve:
-    $ref: "./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1approve"
-  /dsh/operator/platform/change-sets/{changesetId}/apply:
-    $ref: "./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1apply"
-  /dsh/operator/platform/change-sets/{changesetId}/reject:
-    $ref: "./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1reject"
-  /dsh/operator/platform/providers:
-    $ref: "./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1providers"
-  /dsh/operator/platform/providers/{providerId}/status:
-    $ref: "./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1providers~1{providerId}~1status"
   /dsh/client/addresses/{addressId}:
     $ref: "./dsh.client-address.openapi.yaml#/paths/~1dsh~1client~1addresses~1{addressId}"
   /dsh/client/addresses:

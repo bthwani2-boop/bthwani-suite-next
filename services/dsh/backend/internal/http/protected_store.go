@@ -14,8 +14,6 @@ import (
 	"dsh-api/internal/mapproviders"
 	"dsh-api/internal/media"
 	"dsh-api/internal/partner"
-	"dsh-api/internal/platform/changeset"
-	"dsh-api/internal/platform/provider"
 	"dsh-api/internal/platformclient"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
@@ -30,8 +28,6 @@ type protectedStoreServer struct {
 	media           *media.Provider
 	workforce       *workforceclient.Client
 	decisionService store.DecisionService
-	changeSets      *changeset.Service
-	providers       *provider.Service
 	maps            *mapproviders.Client
 }
 
@@ -128,9 +124,7 @@ func newProtectedStoreServer(db *sql.DB, identity *auth.Client, wltClient *wlt.C
 		media:           mediaProvider,
 		workforce:       workforceclient.NewClient(os.Getenv("DSH_WORKFORCE_BASE_URL"), os.Getenv("WORKFORCE_DSH_SERVICE_TOKEN")),
 		decisionService: configuredDecisionService,
-		changeSets:      changeset.NewService(db),
-		providers:       provider.NewService(db),
-		maps:            mapproviders.NewClient(os.Getenv("DSH_MAPS_BASE_URL"), nil),
+		maps:            mapproviders.NewClient(os.Getenv("DSH_MAPS_BASE_URL")),
 	}
 }
 

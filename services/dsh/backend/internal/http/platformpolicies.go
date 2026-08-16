@@ -19,15 +19,14 @@ const (
 	DshDispatchFinancialEligibilityPermissionManage = "dsh.dispatch_financial_eligibility.manage"
 	DshOperationalPolicyAuditPermissionRead         = "dsh.operational_policy.audit.read"
 	DshOperationalPolicyRollbackPermission          = "dsh.operational_policy.rollback"
-	DshPlatformManagePermission                     = "dsh.platform.manage"
 )
 
 // Sovereign operational policy reads.
 //
 // Zone, SLA and capacity mutations are no longer served here: a direct write
-// path alongside the change-set workflow is a second policy authority, and
-// J015 requires exactly one effective version behind draft/review/approval.
-// Mutations go through the change-set routes in platform_changesets_routes.go.
+// path alongside the canonical Platform Control workflow is a second policy
+// authority. Platform-wide governed configuration mutations belong to Platform
+// Control; DSH exposes only the operational reads and mutations assigned to it.
 
 func (s *protectedStoreServer) handleListZones(w http.ResponseWriter, r *http.Request) {
 	if _, ok := s.ActorFromContext(r.Context()); !ok {

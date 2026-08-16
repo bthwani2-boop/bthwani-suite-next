@@ -22,6 +22,7 @@ type server struct {
 func NewRouter(db *sql.DB, service *providers.Service, repo *providers.Repository, authClient *auth.Client) http.Handler {
 	s := &server{db: db, service: service, repo: repo, auth: authClient}
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /providers/health", s.operatorOnly("provider:read", s.providerHealth))
 	mux.HandleFunc("GET /providers", s.operatorOnly("provider:read", s.listProviders))
 	mux.HandleFunc("GET /providers/{providerId}", s.operatorOnly("provider:read", s.getProvider))
 	mux.HandleFunc("PATCH /providers/{providerId}", s.operatorOnly("provider:update", s.updateProvider))
@@ -117,6 +118,15 @@ func (s *server) listProviders(w http.ResponseWriter, r *http.Request, identity 
 		return
 	}
 	sendJSON(w, http.StatusOK, list)
+}
+
+func (s *server) providerHealth(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	health, err := s.service.GetHealth(r.Context())
+	if err != nil {
+		sendError(w, http.StatusInternalServerError, "PROVIDERS_HEALTH_UNAVAILABLE", "provider health could not be read")
+		return
+	}
+	sendJSON(w, http.StatusOK, health)
 }
 
 func (s *server) getProvider(w http.ResponseWriter, r *http.Request, identity auth.Identity) {

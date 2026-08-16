@@ -73,15 +73,6 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("GET /dsh/operator/platform/service-areas", protected.withPermission("control-panel", "platform.read", protected.handleOperatorListServiceAreas))
 	mux.HandleFunc("PUT /dsh/operator/platform/service-areas/{serviceAreaCode}", protected.withPermission("control-panel", "platform.manage", protected.handleOperatorUpsertServiceArea))
 
-	mux.HandleFunc("POST /dsh/operator/platform/change-sets", protected.handleCreateChangeSet)
-	mux.HandleFunc("GET /dsh/operator/platform/change-sets/{changesetId}", protected.handleGetChangeSet)
-	mux.HandleFunc("POST /dsh/operator/platform/change-sets/{changesetId}/submit", protected.handleSubmitChangeSet)
-	mux.HandleFunc("POST /dsh/operator/platform/change-sets/{changesetId}/approve", protected.handleApproveChangeSet)
-	mux.HandleFunc("POST /dsh/operator/platform/change-sets/{changesetId}/apply", protected.handleApplyChangeSet)
-	mux.HandleFunc("POST /dsh/operator/platform/change-sets/{changesetId}/reject", protected.handleRejectChangeSet)
-	mux.HandleFunc("GET /dsh/operator/platform/providers", protected.handleListProviders)
-	mux.HandleFunc("POST /dsh/operator/platform/providers/{providerId}/status", protected.handleUpdateProviderStatus)
-
 	mux.HandleFunc("GET /dsh/client/me/profile", protected.handleGetClientProfile)
 	mux.HandleFunc("PATCH /dsh/client/me/profile/preferences", protected.handleUpsertClientProfilePreferences)
 	mux.HandleFunc("PATCH /dsh/client/me/profile/consents", protected.handleUpsertClientProfileConsents)
