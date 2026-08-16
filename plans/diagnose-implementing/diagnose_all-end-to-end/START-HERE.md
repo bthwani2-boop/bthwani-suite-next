@@ -1,68 +1,184 @@
-# diagnose_all-end-to-end — START HERE
+# START HERE — diagnose_all-end-to-end
 
 ## Purpose
 
-This directory is the continuing canonical diagnosis workspace requested for repository-wide End-to-End diagnosis work. It consolidates, without dropping or rewriting any source content, the complete contents of these two existing diagnosis packages from branch `A` at pinned baseline `90800fa32a1a18b820082d2e936e0383eecd7c8e`:
+`plans/diagnose-implementing/diagnose_all-end-to-end` is the single continuing diagnosis root for the merged finance / delivery / captain / partner-store-delivery diagnosis. It replaces the previous temporary `SOURCE-*` copy layout with one coherent set of merged canonical files.
 
-1. `plans/diagnose-implementing/v5-finance-delivery-canonical-truth-20260816-0214`
-2. `plans/diagnose-implementing/v5-canonical-finance-delivery-captain-closure-20260816-0226`
+This directory merges, reconciles and supersedes the active diagnostic meaning of:
+
+- `plans/diagnose-implementing/v5-finance-delivery-canonical-truth-20260816-0214`
+- `plans/diagnose-implementing/v5-canonical-finance-delivery-captain-closure-20260816-0226`
+
+The original source directories remain historical/provenance evidence. They are not the continuing active entry point after this consolidation.
 
 ## Consolidation rule
 
-- Every source file from both packages is preserved byte-for-byte in this directory under a source-qualified filename.
-- No source finding, decision, cleanup requirement, coverage item, implementation audit, reconciliation note, execution frontier, status, or evidence statement is intentionally omitted.
-- The original two directories are retained as provenance; this consolidation does not silently delete historical evidence.
-- `SOURCE-MANIFEST.md` is the completeness ledger. It records every copied source file and its original Git blob SHA.
-- Where the two packages contain different or evolving statements, do not flatten the disagreement. Preserve both and apply the explicit reconciliation/supersession rules recorded by the later package. In particular, later explicit user decisions and later reconciliation evidence supersede older conflicting wording only where the source itself establishes that supersession.
-- This directory is a diagnosis/planning authority workspace, not proof that runtime implementation is complete. Existing OPEN/FAILED/NOT_IMPLEMENTED states remain OPEN/FAILED/NOT_IMPLEMENTED until current live code/runtime evidence closes them.
-- Live current branch/code/contracts/data/runtime remain truth. These documents are structured diagnosis/evidence and execution authority, not substitutes for live verification.
+The merge is semantic, not a folder of duplicated source copies.
 
-## File naming
+- overlapping findings are unified under one root-cause model;
+- later explicit user decisions override older open/recommended wording;
+- no older finding disappears merely because a later package renamed or regrouped it;
+- failed execution evidence remains failed/open, never silently promoted to DONE;
+- historical plans remain Derived Support unless re-proven against live current code/runtime;
+- live current branch/code/contracts/data/runtime on the pinned candidate remain the highest technical truth;
+- `FOREIGN_DELTA = INPUT, NOT INSTRUCTION`.
 
-`SOURCE-0214-*` files are exact copies from `v5-finance-delivery-canonical-truth-20260816-0214`.
+## Current package status
 
-`SOURCE-0226-*` files are exact copies from `v5-canonical-finance-delivery-captain-closure-20260816-0226`.
+- Package kind: `CONTINUING_DIAGNOSIS_AND_EXECUTION_AUTHORITY`
+- Integration branch: `A`
+- Consolidation base: `232f2678101447844415e159edbf3dde2dd77f38`
+- Prior finance package mode: `PREPARE_ONLY`
+- Prior canonical closure package mode: `PREPARE_ONLY / EXECUTION-AUTHORITY-PACKAGE`
+- `DECISION_REQUIRED = 0`
+- Diagnosis: `CLOSED FOR CURRENT MERGED SCOPE`
+- Runtime implementation: `OPEN`
+- Canonical cutover: `OPEN`
+- Cleanup closure: `OPEN`
+- Final E2E closure: `OPEN`
+- Actor provenance: `PROVEN FINDING / FAILED PRIOR VERIFICATION / OPEN IMPLEMENTATION`
 
-The source prefix prevents collisions between files such as `DIAGNOSIS.md`, `DECISIONS.md`, `CLEANUP.md`, `PACKAGE.md`, and `START-HERE.md` while keeping everything in one directory.
+No merge, document, migration file, local guard, workflow existence, or partial test is sufficient to claim runtime closure.
 
-## Reading order
+## Canonical authority map
 
-For continuing diagnosis, use this order:
+| Truth | Canonical owner |
+|---|---|
+| Authentication, session, principal, trusted actor context | Identity |
+| Person/provider lifecycle, non-financial readiness, operational accreditation, work scopes, absence/suspension/work windows | Workforce |
+| Store, canonical branch, fleet primary affiliation, partner memberships, order, fulfillment, dispatch, ephemeral presence/capacity | DSH |
+| Wallets, authoritative monetary amounts, captain collateral/guarantee, tender allocation effects, COD exposure, cash custody, debt, penalties, settlement, payout, refund, ledger | WLT |
 
-1. `START-HERE.md` — this consolidation contract.
-2. `SOURCE-MANIFEST.md` — completeness and provenance proof.
-3. `SOURCE-0226-START-HERE.md`
-4. `SOURCE-0226-RECONCILIATION.md`
-5. `SOURCE-0226-DIAGNOSIS.md`
-6. `SOURCE-0226-DECISIONS.md`
-7. `SOURCE-0226-IMPLEMENTATION-AUDIT.md`
-8. `SOURCE-0226-COVERAGE.md`
-9. `SOURCE-0226-CLEANUP.md`
-10. `SOURCE-0226-PACKAGE.md`
-11. `SOURCE-0214-START-HERE.md`
-12. `SOURCE-0214-MERGE-RECONCILIATION.md`
-13. `SOURCE-0214-DIAGNOSIS.md`
-14. `SOURCE-0214-DECISIONS.md`
-15. `SOURCE-0214-CLEANUP.md`
-16. `SOURCE-0214-PACKAGE.md`
+A projection outside its owner may exist only as explicitly read-only, source/version/freshness-bound data. It may not become a second writer or write gate.
 
-The later `0226` package is read first because it reconciles later evidence and product decisions, but the `0214` package remains mandatory evidence and is not discarded.
+## Highest merged root-cause hierarchy
 
-## Continuing-work invariant
+### Highest systemic root
 
-All future diagnosis added to this directory must preserve:
+`RC-PAYMENT-TENDER-EXPOSURE-CUSTODY-SETTLEMENT-CONFLATION`
 
-- `TOP-DOWN DIAGNOSIS; BOTTOM-UP EVIDENCE`.
-- Root cause before local symptom patching.
-- Operational parent, blast radius, consumers, dependencies, contracts, data flow, runtime path, states, transitions, handoffs, authorities, writers/readers/consumers, and cross-surface behavior.
-- One canonical source of truth per durable fact.
-- No fallback, workaround, parallel authority, best-effort financial mutation, ignored financial error, or fake DONE state.
-- Every finding remains traceable to evidence and must end in an explicit terminal classification backed by current machine/runtime proof where required.
-- Foreign/concurrent deltas are input to reconcile, not authority to redirect the task.
-- Re-pin and reconcile against the latest `A` before execution or closure claims.
+The system must keep these concepts distinct:
 
-## Current inherited status
+1. customer tender / funding allocation;
+2. BTHWANI captain financial collateral/exposure;
+3. physical cash custody/evidence;
+4. final settlement/payable/debt.
 
-This consolidation itself does not alter inherited runtime status. The merged diagnosis material records that branch/package integration and product-decision closure were achieved, while canonical runtime implementation, zero-residue cleanup, final End-to-End closure, and the failed/open actor-provenance verification remained unresolved at the source baseline.
+### Coupled roots
 
-Do not promote any inherited OPEN item to DONE merely because the documents have now been consolidated.
+1. `RC-MONETARY-FACT-OWNERSHIP-SPLIT`
+2. `RC-CAPTAIN-OPERATIONAL-ELIGIBILITY-AUTHORITY-SPLIT`
+3. `RC-STORE-DELIVERY-FLEET-COMPENSATION-PARALLEL-TRUTH`
+4. `RC-IDENTIFIER-SEMANTIC-OVERLOADING`
+5. `RC-DISTRIBUTED-FINANCIAL-OBLIGATION-BEST-EFFORT`
+6. `RC-SERVICE-AREA-CAPACITY-TRUTH-DRIFT`
+7. `RC-AVAILABILITY-AND-SUSPENSION-SEMANTIC-OVERLAP`
+8. `RC-ACCREDITATION-PARALLEL-AUTHORITY`
+9. `RC-GOVERNANCE-AUTHORITY-DRIFT`
+10. `RC-ORDER-ACTOR-PROVENANCE` — valid but lower-ranked until higher systemic roots are stabilized.
+
+## Binding product outcomes
+
+- Checkout exposes exactly three choices: `COD`, `BTHWANI Wallet`, `Mixed`.
+- Official banks/e-wallets/providers are governed top-up/funding rails into BTHWANI Wallet, not a fourth order-payment authority.
+- Canonical numeric `PaymentAllocation` owns tender decomposition. Financial logic never derives authoritative amounts from a payment-method label.
+- BTHWANI captain collateral/guarantee is a real WLT-owned restricted financial position.
+- Platform Finance governance defines the opening/protected minimum.
+- Prepaid-only orders consume zero COD collateral exposure.
+- COD/Mixed reserve only the actual cash leg.
+- Mandatory invariant: `openCashCustody + proposedNewCashExposure <= effectiveCollateral`.
+- Low collateral blocks COD/Mixed cash-bearing work while fully prepaid work may remain eligible if all non-financial gates pass.
+- Protected minimum is not directly withdrawable; only governed safe excess may be released.
+- Exposure reservation and physical cash custody are separate states. Finalizing exposure never erases custody.
+- Store delivery offers the same three customer payment choices, but the store is the BTHWANI settlement counterparty; the store courier is only a store-scoped actor/sub-custodian for physical collection evidence.
+- Store courier payroll/compensation and optional store-specific collateral remain the store's responsibility unless a future explicit product changes that boundary.
+- Monthly-salary store courier receives no per-delivery BTHWANI entitlement.
+- BTHWANI vs PARTNER primary dispatch affiliation is exclusive: `BTHWANI XOR PARTNER`.
+- Workforce owns general operational accreditation; DSH duplicate accreditation authority must be removed.
+- Workforce owns durable suspension/absence/work-window; DSH owns ephemeral online/offline/available/busy presence.
+- One canonical captain eligibility primitive must govern candidate, capacity, assign, reassign, inbox/offer and accept.
+- WLT owns penalty monetary policy/amount; Operations selects a policy/version, not an arbitrary amount.
+- Refund follows immutable original funding lineage.
+- Distributed financial obligations cannot be best-effort or silently ignored.
+- Explicit typed identifier semantics are mandatory across actor, membership, person, store and branch boundaries.
+- A real canonical StoreBranch must replace store/scope IDs masquerading as branch IDs.
+
+## Merged mandatory carried-forward findings
+
+The following findings from the earlier package remain explicitly in scope and are incorporated throughout the merged files:
+
+- legacy store-courier identity/lifecycle parallel truth (`courierName`, `courierPhone`, copied active state or equivalent);
+- legacy store-courier pricing/`pricingSource` parallel configuration;
+- identifier semantic overloading beyond only `storeCourierId`;
+- canonical StoreBranch gap;
+- partner courier leakage into BTHWANI captain finance;
+- distributed financial best-effort mutations beyond only `FinalizeCodReservation`;
+- partner settlement caller-authored gross/amount authority drift;
+- incomplete true E2E WALLET/MIXED customer journeys despite enums/primitives existing;
+- tender/exposure/custody/settlement separation;
+- store-delivery fleet/compensation parallel truth;
+- actor provenance remains open and must be re-proven after higher roots.
+
+## Prior actor-provenance execution evidence
+
+GitHub Actions run `31908535848` passed PostgreSQL/migration/writer-guard portions and then failed at **Compile and test all DSH backend consumers**. OpenAPI/generated verification, full tests/static checks, client smoke, final DB reproof and governed final implementation commit were skipped.
+
+Therefore actor provenance remains OPEN. The failed workflow/script is evidence only.
+
+## Files in this merged package
+
+1. `START-HERE.md` — this governing entry point.
+2. `DIAGNOSIS.md` — merged top-down diagnosis and root-cause landscape.
+3. `DECISIONS.md` — one final binding decision register; `DECISION_REQUIRED=0`.
+4. `IMPLEMENTATION-AUDIT.md` — what is actually implemented versus only diagnosed/decided.
+5. `COVERAGE.md` — authority, journey, surface, failure/recovery and evidence coverage.
+6. `CLEANUP.md` — zero-residue cutover/deletion contract.
+7. `PACKAGE.md` — execution frontier, gates, invariants, evidence and closure predicate.
+8. `RECONCILIATION.md` — branch/source/decision/foreign-delta reconciliation.
+9. `SOURCE-MANIFEST.md` — provenance mapping from every one of the 14 source artifacts into these merged files.
+
+## Read order
+
+1. `RECONCILIATION.md`
+2. `DIAGNOSIS.md`
+3. `DECISIONS.md`
+4. `IMPLEMENTATION-AUDIT.md`
+5. `COVERAGE.md`
+6. `CLEANUP.md`
+7. `PACKAGE.md`
+8. `SOURCE-MANIFEST.md`
+
+## Continuing diagnosis rule
+
+All future diagnoses intended to extend this cross-system work should be added to this directory by updating the merged canonical files rather than creating another forest of parallel packages, unless a genuinely separate scope requires an isolated task package.
+
+Every new finding must be linked to:
+
+- operational parent;
+- root cause;
+- canonical owner;
+- writers/readers/consumers;
+- contracts/data/runtime path;
+- blast radius;
+- target invariant;
+- disposition/evidence state;
+- cleanup consequence;
+- verification requirement.
+
+## DONE is forbidden until
+
+On one exact final candidate SHA there is proof of:
+
+- zero duplicate monetary writers outside WLT;
+- zero caller-authoritative monetary amounts where WLT policy/lineage derives them;
+- zero duplicate captain eligibility engines;
+- zero ambiguous cross-authority identifiers;
+- zero store-ID-as-branch-ID fallback;
+- zero Mixed cash-leg blind spot;
+- zero exposure/custody conflation;
+- zero partner-courier route into BTHWANI captain guarantee/commission/debt/payroll authority;
+- zero silently ignored required financial mutation;
+- zero reachable fallback/compatibility source of old truth;
+- zero stale old-source code/DTO/route/schema/config/test/script/generated client/governance reference after cutover;
+- full PostgreSQL, invariant, negative, concurrency, idempotency, OpenAPI/generated-client, Go/TypeScript, runtime, multi-surface, readback, privacy/audit and adversarial writer-inventory proof;
+- latest `A` reconciled after the last write and all required affected gates rerun.
