@@ -31,7 +31,7 @@
     {"ordinal":24,"file":"wlt-024_payment_session_operator_context.sql","sha256":"17fa0324dff406719541e00a146ab77d1f4a2d01b651ce55b86821abf1997069","historicalPrefix":"024","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":25,"file":"wlt-025_ledger_integrity.sql","sha256":"017873dae10fa2c639eb86caa3d0e767bebd25a59f4f9bafdcaa0edb011cdeb2","historicalPrefix":"025","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":26,"file":"wlt-026_cash_in_transit_account.sql","sha256":"9edeff1c25ce59e849164b4daa8b844951e9189b3204200b45b4dcf3bb8cb5ca","historicalPrefix":"026","state":"HISTORICAL_IMMUTABLE"},
-    {"ordinal":27,"file":"wlt-027_payout_provider_proof.sql","sha256":"c1ab845d10193000190b8ef23012a26188ce0d38ba6c996518b08483a8339eb","historicalPrefix":"027","state":"HISTORICAL_IMMUTABLE"},
+    {"ordinal":27,"file":"wlt-027_payout_provider_proof.sql","sha256":"c1ab845d10113000190b8bdd7b26a1a12437ba7b975ce73da2df05b4a8ec9cdb","historicalPrefix":"027","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":28,"file":"wlt-028_commercial_benefits.sql","sha256":"2e82818e0a03af1b3f1bfb8204c03a7f8ac2e0f197bae312127777c6a5391193","historicalPrefix":"028","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":29,"file":"wlt-029_payment_session_operator_context_lock.sql","sha256":"f217ee1e27bcb9ca1f63a508c46bd3135712dd345ea0ea84361e6d181d7c9bd7","historicalPrefix":"029","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":30,"file":"wlt-030_subscription_payment_source.sql","sha256":"4a629d5fce18248c7a5b78d0d1b2d1400e815c3a0e815be9bd89667c7a0ce1ec","historicalPrefix":"030","state":"HISTORICAL_IMMUTABLE"},
@@ -110,7 +110,6 @@
     {"ordinal":103,"file":"wlt-933_provider_penalty_policy_authority.sql","sha256":"56e5087f863428312084c54707e614a271202ecd9f720b5d82eaa171ada50e59","historicalPrefix":"933","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":104,"file":"wlt-934_provider_debts.sql","sha256":"0268b3b0dfb1dd94e08961dc94bb661273e5417f32ac836544ee8228dc46bae0","historicalPrefix":"934","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":105,"file":"wlt-935_captain_collateral_authority.sql","sha256":"b11bff401b888d48ad701cff7bd61022c88fc97583caf7078146b4e67e051cb0","historicalPrefix":"935","state":"ACTIVE"},
-    {"ordinal":106,"file":"wlt-936_special_request_quote_authority.sql","sha256":"cc4d753c3be9b44428601261c31e00593fa3f37408f8622e460f92435c1d1319","historicalPrefix":"936","state":"ACTIVE"},
-    {"ordinal":107,"file":"wlt-937_payment_session_funding_rail_source_guard.sql","sha256":"a75485a5d593a028e95db3e79aa4b81f8256609d13f347cc5ba98daca289c78f","historicalPrefix":"937","state":"ACTIVE"}
+    {"ordinal":106,"file":"wlt-936_special_request_quote_authority.sql","sha256":"cc4d753c3be9b44428601261c31e00593fa3f37408f8622e460f92435c1d1319","historicalPrefix":"936","state":"ACTIVE"}
   ]
 }
