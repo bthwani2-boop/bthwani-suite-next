@@ -165,6 +165,10 @@ func (s *protectedStoreServer) handleGetCart(w http.ResponseWriter, r *http.Requ
 		store.SendJSON(w, http.StatusOK, map[string]any{"cart": nil})
 		return
 	}
+	if errors.Is(err, cart.ErrFinancialUnavailable) {
+		store.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_QUOTE_UNAVAILABLE", "canonical financial pricing is temporarily unavailable")
+		return
+	}
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cart lookup failed")
 		return
@@ -371,6 +375,10 @@ func (s *protectedStoreServer) handleClearCart(w http.ResponseWriter, r *http.Re
 		current, err := cart.GetCart(r.Context(), s.db, s.wlt, actor.ID, storeID)
 		if errors.Is(err, cart.ErrNotFound) {
 			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if errors.Is(err, cart.ErrFinancialUnavailable) {
+			store.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_QUOTE_UNAVAILABLE", "canonical financial pricing is temporarily unavailable")
 			return
 		}
 		if err != nil {

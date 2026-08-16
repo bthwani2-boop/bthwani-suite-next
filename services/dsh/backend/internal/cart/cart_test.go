@@ -2,6 +2,7 @@ package cart
 
 import (
 	"context"
+	"errors"
 	"math"
 	"testing"
 )
@@ -40,6 +41,23 @@ func TestUpsertItemRejectsNonPositiveQuantity(t *testing.T) {
 		if err != ErrInvalid {
 			t.Fatalf("expected ErrInvalid for quantity=%d, got %v", qty, err)
 		}
+	}
+}
+
+func TestFetchWltQuoteFailsClosedWhenWltIsUnavailableForNonEmptyCart(t *testing.T) {
+	_, err := FetchWltQuote(context.Background(), nil, nil, &Cart{
+		ClientID: "client-1",
+		StoreID:  "store-1",
+		Items: []CartItem{{
+			MasterProductID:     "product-1",
+			ProductName:         "Product",
+			UnitPriceMinorUnits: 1000,
+			Currency:            "YER",
+			Quantity:            1,
+		}},
+	})
+	if !errors.Is(err, ErrFinancialUnavailable) {
+		t.Fatalf("expected typed financial unavailability, got %v", err)
 	}
 }
 

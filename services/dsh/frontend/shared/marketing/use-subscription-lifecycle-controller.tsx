@@ -15,6 +15,7 @@ import { clearSubscriptionMutationAttempts } from "./subscription-mutation-attem
 import type { ClientBenefitsPayload } from "./loyalty-subscriptions.types";
 import type {
   SubscriptionPaymentSession,
+  SubscriptionPaymentMethod,
   SubscriptionPurchaseRecord,
 } from "./subscription-lifecycle.types";
 
@@ -128,8 +129,8 @@ export function useSubscriptionLifecycleController() {
     }
   }, [busyAction]);
 
-  const purchase = useCallback(async (planId: string) => {
-    const response = await run("purchase", () => createDshSubscriptionPurchase(planId));
+  const purchase = useCallback(async (planId: string, paymentMethod: SubscriptionPaymentMethod) => {
+    const response = await run("purchase", () => createDshSubscriptionPurchase(planId, paymentMethod));
     setPendingPurchase(response.purchase);
     setPaymentSession(response.paymentSession);
     return response;
@@ -151,8 +152,8 @@ export function useSubscriptionLifecycleController() {
     return response;
   }, [pendingPurchase, reload, run]);
 
-  const renew = useCallback(async (subscriptionId: string) => {
-    const response = await run("renew", () => renewDshSubscription(subscriptionId));
+  const renew = useCallback(async (subscriptionId: string, paymentMethod: SubscriptionPaymentMethod) => {
+    const response = await run("renew", () => renewDshSubscription(subscriptionId, paymentMethod));
     setPendingPurchase(response.purchase);
     setPaymentSession(response.paymentSession);
     return response;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchOwnRepresentativeWallet, type RepresentativeWallet } from "../actor-wallet/actor-wallet.api";
 import { formatWltMoney } from "../finance/wlt-money";
 
@@ -7,8 +7,6 @@ type RuntimeGlobal = typeof globalThis & {
     readonly env?: Readonly<Record<string, string | undefined>>;
   };
 };
-
-declare const __DEV__: boolean | undefined;
 
 export type PaymentMethodKey = "cod" | "wallet" | "mixed";
 
@@ -38,11 +36,9 @@ export type WltPaymentController = {
 function readProviderPaymentsEnabled(): boolean {
   const runtimeProcess = (globalThis as RuntimeGlobal).process;
   const env = runtimeProcess?.env;
-  const isDev = typeof __DEV__ !== "undefined" ? Boolean(__DEV__) : env?.["NODE_ENV"] === "development";
   return (
     env?.["EXPO_PUBLIC_WLT_PROVIDER_PAYMENTS_ENABLED"] === "true" ||
-    env?.["NEXT_PUBLIC_WLT_PROVIDER_PAYMENTS_ENABLED"] === "true" ||
-    isDev
+    env?.["NEXT_PUBLIC_WLT_PROVIDER_PAYMENTS_ENABLED"] === "true"
   );
 }
 
@@ -56,7 +52,7 @@ export function useWltPaymentController(input?: {
   readonly totalMinorUnits?: number;
   readonly currency?: string;
 }): WltPaymentController {
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethodKey>("cod");
+  const [paymentMethod, setPaymentMethodState] = useState<PaymentMethodKey>("cod");
   const [wallet, setWallet] = useState<RepresentativeWallet | null>(null);
   const [walletLoading, setWalletLoading] = useState(false);
   const providerPaymentsEnabled = readProviderPaymentsEnabled();
@@ -81,8 +77,21 @@ export function useWltPaymentController(input?: {
 
   const total = input?.totalMinorUnits ?? 0;
   const walletBalance = wallet?.availableBalanceMinorUnits ?? 0;
-  const hasSufficientWallet = walletBalance >= total && total > 0;
-  const hasPartialWallet = walletBalance > 0 && walletBalance < total;
+  const currency = input?.currency?.trim().toUpperCase() ?? "";
+  const hasUsableWallet = Boolean(
+    wallet &&
+      !walletLoading &&
+      currency &&
+      wallet.currency.toUpperCase() === currency,
+  );
+  const hasSufficientWallet = hasUsableWallet && walletBalance >= total && total > 0;
+  const hasPartialWallet = hasUsableWallet && walletBalance > 0 && walletBalance < total;
+
+  const setPaymentMethod = useCallback((method: PaymentMethodKey) => {
+    if (method === "wallet" && !hasSufficientWallet) return;
+    if (method === "mixed" && !hasPartialWallet) return;
+    setPaymentMethodState(method);
+  }, [hasPartialWallet, hasSufficientWallet]);
 
   const paymentDecisionOptions = useMemo<readonly PaymentDecisionOption[]>(
     () => [
@@ -98,12 +107,12 @@ export function useWltPaymentController(input?: {
         id: "wallet",
         title: "من رصيد محفظة بثواني",
         description: "خصم فوري مباشر من رصيد محفظتك الرقمية.",
-        disabled: false,
+        disabled: !hasSufficientWallet,
         statusLabel: wallet === null
           ? (walletLoading ? "جاري الفحص..." : "متاح")
           : hasSufficientWallet
             ? (paymentMethod === "wallet" ? "محدد" : "متاح")
-            : (walletBalance === 0 ? "الرصيد: 0" : "رصيد غير كافٍ"),
+            : (!currency ? "يتطلب إجماليًا معتمدًا" : walletBalance === 0 ? "الرصيد: 0" : "رصيد غير كافٍ"),
         statusTone: hasSufficientWallet ? (paymentMethod === "wallet" ? "action" : "success") : "warning",
         helperText: wallet
           ? `رصيد المحفظة الحالي: ${formatWltMoney(walletBalance, wallet.currency)}`
@@ -113,15 +122,15 @@ export function useWltPaymentController(input?: {
         id: "mixed",
         title: "دفع مختلط (محفظة + نقدًا)",
         description: "استخدام رصيد المحفظة المتوفر ودفع المتبقي نقدًا.",
-        disabled: false,
-        statusLabel: hasPartialWallet ? (paymentMethod === "mixed" ? "محدد" : "متاح") : "متاح",
+        disabled: !hasPartialWallet,
+        statusLabel: hasPartialWallet ? (paymentMethod === "mixed" ? "محدد" : "متاح") : "غير متاح",
         statusTone: paymentMethod === "mixed" ? "action" : "info",
         helperText: wallet && hasPartialWallet
           ? `رصيدك ${formatWltMoney(walletBalance, wallet.currency)} والباقي نقدًا.`
           : "يتم احتساب الرصيد المتاح وتكملة الباقي نقدًا.",
       },
     ],
-    [paymentMethod, providerPaymentsEnabled, wallet, walletLoading, total, walletBalance, hasSufficientWallet, hasPartialWallet],
+    [paymentMethod, providerPaymentsEnabled, wallet, walletLoading, total, walletBalance, currency, hasSufficientWallet, hasPartialWallet],
   );
 
   return {

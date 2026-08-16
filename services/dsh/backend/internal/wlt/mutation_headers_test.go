@@ -233,6 +233,7 @@ func TestSubscriptionPaymentSessionAddsFallbackHeaders(t *testing.T) {
 		SubscriptionPurchaseID: "purchase-1",
 		ProductReference:       "plus",
 		ClientID:               "client-1",
+		PaymentMethod:          "official_wallet",
 	}, "", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

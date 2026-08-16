@@ -49,7 +49,7 @@ export async function recoverDshSubscriptionPurchase() {
 
 export async function createDshSubscriptionPurchase(
   planId: string,
-  paymentMethod: SubscriptionPaymentMethod = "official_wallet",
+  paymentMethod: SubscriptionPaymentMethod,
 ): Promise<SubscriptionPurchaseEnvelope> {
   const fingerprint = `purchase:${planId}:${paymentMethod}`;
   const { attempt } = await mutationContext("purchase", planId, fingerprint, paymentMethod);
@@ -89,7 +89,7 @@ export async function activateDshSubscriptionPurchase(purchaseId: string): Promi
 
 export async function renewDshSubscription(
   subscriptionId: string,
-  paymentMethod: SubscriptionPaymentMethod = "official_wallet",
+  paymentMethod: SubscriptionPaymentMethod,
 ): Promise<SubscriptionPurchaseEnvelope> {
   const fingerprint = `renew:${subscriptionId}:${paymentMethod}`;
   const { attempt } = await mutationContext("renew", subscriptionId, fingerprint, paymentMethod);

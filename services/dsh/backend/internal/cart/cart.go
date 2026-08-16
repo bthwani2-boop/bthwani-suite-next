@@ -18,11 +18,12 @@ import (
 )
 
 var (
-	ErrNotFound  = errors.New("cart not found")
-	ErrConflict  = errors.New("cart version conflict")
-	ErrInvalid   = errors.New("invalid cart input")
-	ErrStoreGone = errors.New("store no longer active")
-	ErrOutOfArea = errors.New("store outside serviceable area")
+	ErrNotFound             = errors.New("cart not found")
+	ErrConflict             = errors.New("cart version conflict")
+	ErrInvalid              = errors.New("invalid cart input")
+	ErrStoreGone            = errors.New("store no longer active")
+	ErrOutOfArea            = errors.New("store outside serviceable area")
+	ErrFinancialUnavailable = errors.New("canonical financial quote is unavailable")
 )
 
 type FulfillmentMode string
@@ -71,23 +72,34 @@ type Cart struct {
 // FetchDeliveryFeeMinorUnits reads the store's persisted delivery fee from the
 // DSH operational database. This is a DSH concern (logistics configuration),
 // not a financial computation — WLT receives it as a raw input.
-func FetchDeliveryFeeMinorUnits(ctx context.Context, db *sql.DB, storeID string) int64 {
+func FetchDeliveryFeeMinorUnits(ctx context.Context, db *sql.DB, storeID string) (int64, error) {
+	if db == nil || strings.TrimSpace(storeID) == "" {
+		return 0, fmt.Errorf("%w: delivery fee store scope is missing", ErrFinancialUnavailable)
+	}
 	var fee int64
-	_ = db.QueryRowContext(ctx,
-		"SELECT COALESCE(delivery_fee_minor, 0) FROM dsh_store_delivery_settings WHERE store_id = $1",
+	err := db.QueryRowContext(ctx,
+		"SELECT delivery_fee_minor FROM dsh_store_delivery_settings WHERE store_id = $1",
 		storeID,
 	).Scan(&fee)
-	return fee
+	if err != nil {
+		return 0, fmt.Errorf("%w: read delivery fee: %v", ErrFinancialUnavailable, err)
+	}
+	if fee < 0 {
+		return 0, fmt.Errorf("%w: delivery fee is negative", ErrFinancialUnavailable)
+	}
+	return fee, nil
 }
 
 // FetchWltQuote calls WLT's sovereign pricing engine. DSH passes operational
 // inputs; WLT owns all arithmetic, rounding, tax, and discount logic.
-// If wltClient is nil (unconfigured) it returns nil so callers can handle gracefully.
+// A non-empty cart cannot be represented as an ordinary nil quote when WLT or
+// its operational fee dependency is unavailable; callers must surface the
+// typed financial-unavailability error and block checkout readiness.
 func FetchWltQuote(ctx context.Context, db *sql.DB, wltClient interface {
 	CalculateQuote(context.Context, wlt.CalculatePricingQuoteRequest) (*wlt.WltPricingQuote, error)
 }, c *Cart) (*wlt.WltPricingQuote, error) {
-	if wltClient == nil {
-		return nil, nil
+	if c == nil {
+		return nil, fmt.Errorf("%w: cart is missing", ErrFinancialUnavailable)
 	}
 
 	var currency string
@@ -108,10 +120,16 @@ func FetchWltQuote(ctx context.Context, db *sql.DB, wltClient interface {
 		// Empty cart — no quote needed yet
 		return nil, nil
 	}
+	if wltClient == nil {
+		return nil, fmt.Errorf("%w: WLT pricing client is not configured", ErrFinancialUnavailable)
+	}
 
-	deliveryFee := FetchDeliveryFeeMinorUnits(ctx, db, c.StoreID)
+	deliveryFee, err := FetchDeliveryFeeMinorUnits(ctx, db, c.StoreID)
+	if err != nil {
+		return nil, err
+	}
 
-	return wltClient.CalculateQuote(ctx, wlt.CalculatePricingQuoteRequest{
+	quote, err := wltClient.CalculateQuote(ctx, wlt.CalculatePricingQuoteRequest{
 		ClientID:    c.ClientID,
 		StoreID:     c.StoreID,
 		Currency:    currency,
@@ -123,6 +141,13 @@ func FetchWltQuote(ctx context.Context, db *sql.DB, wltClient interface {
 			ServiceFeeMinorUnits:  0,
 		},
 	})
+	if err != nil {
+		return nil, fmt.Errorf("%w: WLT pricing quote: %v", ErrFinancialUnavailable, err)
+	}
+	if quote == nil || strings.TrimSpace(quote.ID) == "" {
+		return nil, fmt.Errorf("%w: WLT returned an empty quote", ErrFinancialUnavailable)
+	}
+	return quote, nil
 }
 
 type ServiceabilityResult struct {
@@ -218,8 +243,10 @@ func GetOrCreateActiveCart(ctx context.Context, db *sql.DB, wc wltQuoter, client
 		return nil, err
 	}
 	c.Items = items
-	// WLT is the sovereign owner of the quote. Ignore quote fetch errors gracefully.
-	c.Quote, _ = FetchWltQuote(ctx, db, wc, &c)
+	c.Quote, err = FetchWltQuote(ctx, db, wc, &c)
+	if err != nil {
+		return nil, err
+	}
 	return &c, nil
 }
 
@@ -243,8 +270,10 @@ func GetCart(ctx context.Context, db *sql.DB, wc wltQuoter, clientID, storeID st
 		return nil, err
 	}
 	c.Items = items
-	// WLT is the sovereign owner of the quote. Ignore quote fetch errors gracefully.
-	c.Quote, _ = FetchWltQuote(ctx, db, wc, &c)
+	c.Quote, err = FetchWltQuote(ctx, db, wc, &c)
+	if err != nil {
+		return nil, err
+	}
 	return &c, nil
 }
 
@@ -273,7 +302,10 @@ func GetActiveCartForClient(ctx context.Context, db *sql.DB, wc wltQuoter, clien
 		return nil, err
 	}
 	c.Items = items
-	c.Quote, _ = FetchWltQuote(ctx, db, wc, &c)
+	c.Quote, err = FetchWltQuote(ctx, db, wc, &c)
+	if err != nil {
+		return nil, err
+	}
 	return &c, nil
 }
 
