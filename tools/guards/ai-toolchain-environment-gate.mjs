@@ -140,8 +140,13 @@ const commandCandidates = {
   "open-code-review": ["ocr"],
 };
 
+const registryEntries = registry.entries || [];
+const registeredToolIds = new Set(
+  registryEntries.map((tool) => tool.id),
+);
+
 const report = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   required: [...required].sort(),
   tools: {
     node: probe(["node"]),
@@ -159,7 +164,29 @@ for (const core of ["node", "pnpm"]) {
   }
 }
 
-for (const tool of registry.entries || []) {
+for (const toolId of required) {
+  if (!registeredToolIds.has(toolId)) {
+    violations.push({
+      file: "environment",
+      line: 0,
+      message: `UNKNOWN_EXPLICITLY_REQUIRED_TOOL ${toolId}`,
+    });
+  }
+}
+
+for (const tool of registryEntries) {
+  const explicitlyRequired = required.has(tool.id);
+  const conditional = tool.status === "conditional";
+
+  if (conditional && !explicitlyRequired) {
+    report.tools[tool.id] = {
+      state: "NOT_PROBED_CONDITIONAL",
+      registryStatus: tool.status,
+      reason: "TOOL_NOT_REQUIRED_FOR_THIS_EXECUTION",
+    };
+    continue;
+  }
+
   const status = probe(
     commandCandidates[tool.id] || [tool.id],
   );
@@ -167,7 +194,7 @@ for (const tool of registry.entries || []) {
   report.tools[tool.id] = status;
 
   if (
-    required.has(tool.id) &&
+    explicitlyRequired &&
     status.state !== "VERIFIED_AVAILABLE"
   ) {
     violations.push({
