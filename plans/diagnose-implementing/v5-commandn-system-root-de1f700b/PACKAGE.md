@@ -76,14 +76,14 @@ RUNTIME_REQUIRED: YES
 | EVD-VERIFICATION | Exact task candidate passes final affected verification. | DSH test/build, WLT test/build, Workforce tests, focused guards, V5 execute gate | SELF | task@a446560e | PASS | Invalidates on any source write |
 | EVD-GOVERNANCE | Governance/self-guard evidence passes on the exact task candidate. | governance-schema, required-command-integrity, cleanup-policy, foundation static evidence | SELF | task@a446560e | PASS | Invalidates on governance/source write |
 | EVD-FINAL-ADVERSARIAL | Final negative-space/adversarial checks pass on the exact task candidate. | WLT financial boundary, fullstack boundary, runtime anti-stub, generated-client parity, failure-closed tests | SELF | task@a446560e | PASS | Invalidates on any source write |
-| EVD-RUNTIME | Required runtime/product/readback evidence passes on the exact task candidate. | pending runtime and journey verification | SELF | task runtime | MISSING | Invalidates on runtime/config/source write |
+| EVD-RUNTIME | Required runtime/product/readback evidence is not established: candidate-bound full runtime reset exceeded 300 seconds and was stopped; no smoke/readback claim is made. | runtime:full:reset timeout; runtime smoke not executed | SELF | task runtime | MISSING | Invalidates on runtime/config/source write |
 
 ## Closure
 
 - Integration head: SELF
 - Final candidate: SELF
 - Verification: PASS (task candidate only)
-- Runtime/product evidence: MISSING (runtime smoke/readback not executed in this session)
+- Runtime/product evidence: BLOCKED/MISSING (candidate-bound runtime reset timed out after 300 seconds; smoke/readback not executed)
 - Cleanup: PASS
 - Governance: PASS
 - Final adversarial: PASS
