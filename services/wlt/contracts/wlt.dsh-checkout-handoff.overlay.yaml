@@ -3,6 +3,15 @@ info:
   title: BThwani WLT to DSH Checkout Handoff Overlay
   version: 1.0.0
 actions:
+  - target: $.components.schemas.CreatePaymentSessionRequest.properties.paymentMethod
+    description: Keep external-wallet funding rails out of purchase checkout tender selection.
+    update:
+      type: string
+      description: Purchase checkout tender selected for the payment session. Official external wallets are funding rails for wallet top-up only and are never checkout payment methods.
+      enum:
+        - cod
+        - wallet
+        - mixed
   - target: $.components.schemas
     description: Add the WLT-owned payment reference contracts handed back to DSH.
     update:
