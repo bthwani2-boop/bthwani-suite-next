@@ -1,184 +1,159 @@
-# START HERE — diagnose_all-end-to-end
+# START HERE — BTHWANI SYSTEM ROOT-CLOSURE PACKAGE
 
-## Purpose
+Status: `PREPARED_NOT_CLOSED`
+Mode: `PREPARE`
+Execution target branch: `b` only, by explicit user instruction
+Pinned evidence HEAD before package writes: `7f053af499891b6bb6ae9281c658f7eeedd35eb7`
+Orchestration root: **the whole BTHWANI repository/system**
 
-`plans/diagnose-implementing/diagnose_all-end-to-end` is the single continuing diagnosis root for the merged finance / delivery / captain / partner-store-delivery diagnosis. It replaces the previous temporary `SOURCE-*` copy layout with one coherent set of merged canonical files.
+> This directory is the single diagnosis/execution package for closing BTHWANI from product meaning to runtime evidence. It is not runtime truth and it must never become a competing product, financial, contract, data, or operational source of truth.
 
-This directory merges, reconciles and supersedes the active diagnostic meaning of:
+## 1. Scope
 
-- `plans/diagnose-implementing/v5-finance-delivery-canonical-truth-20260816-0214`
-- `plans/diagnose-implementing/v5-canonical-finance-delivery-captain-closure-20260816-0226`
+Nothing materially connected to BTHWANI is implicitly out of scope. The execution package covers:
 
-The original source directories remain historical/provenance evidence. They are not the continuing active entry point after this consolidation.
+- every actor, capability, product rule, journey, state, transition, handoff, invariant and failure/recovery path;
+- every active mobile/web/control surface, screen, route, tab, action, binding and state;
+- `apps/**`, including active customer/partner/captain/field/control-panel runtime hosts and any older or alternative app roots that still have live references;
+- `core/identity`, `core/workforce`, `core/platform-control`, `core/providers`;
+- `services/dsh`, `services/wlt`, `services/fin`, `services/pymt`, `services/order`, `services/wallet`, `services/ledger`, `services/stl`, `services/ops`, `services/mkt`, `services/support`, plus every discovered service/adapter/worker;
+- `contracts/**`, generated clients, shared packages and frontend sovereign/shared layers;
+- database schemas, migrations, seeds, read models, materialized/projection state and ownership of every write;
+- events, outbox, queues, jobs, callbacks, retries, providers, reconciliation and idempotency;
+- auth, RBAC, actor/scope/tenant isolation, internal service identity, privacy and audit;
+- runtime wiring, ports, config, Docker, health/readiness, bootstrap, deployment and CI/CD;
+- observability, diagnostics, security, tests, release/cutover/rollback and cleanup;
+- `governance/**`, `tools/**`, `.github/**`, `infra/**`, docs/plans only where they materially affect authority or execution.
 
-## Consolidation rule
+## 2. Governing authority chain
 
-The merge is semantic, not a folder of duplicated source copies.
+Use this authority order. Lower layers may prove implementation, but must not invent higher-level meaning:
 
-- overlapping findings are unified under one root-cause model;
-- later explicit user decisions override older open/recommended wording;
-- no older finding disappears merely because a later package renamed or regrouped it;
-- failed execution evidence remains failed/open, never silently promoted to DONE;
-- historical plans remain Derived Support unless re-proven against live current code/runtime;
-- live current branch/code/contracts/data/runtime on the pinned candidate remain the highest technical truth;
-- `FOREIGN_DELTA = INPUT, NOT INSTRUCTION`.
+1. explicit current user decision;
+2. `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md` for V5 operational execution protocol;
+3. canonical machine-enforceable Product Truth under `governance/product/contracts/**` and its schema;
+4. canonical architecture/contract/runtime governance that is compatible with 1–3;
+5. current candidate implementation on branch `b`;
+6. current executable evidence from that same candidate SHA;
+7. this package and the attached blueprint as diagnosis/planning evidence only;
+8. historical plans/docs as untrusted input until re-proven.
 
-## Current package status
+If two authorities conflict, do not average them. Record the conflict, choose only what the hierarchy/evidence permits, and create `DECISION_REQUIRED` only when no higher authority resolves it.
 
-- Package kind: `CONTINUING_DIAGNOSIS_AND_EXECUTION_AUTHORITY`
-- Integration branch: `A`
-- Consolidation base: `232f2678101447844415e159edbf3dde2dd77f38`
-- Prior finance package mode: `PREPARE_ONLY`
-- Prior canonical closure package mode: `PREPARE_ONLY / EXECUTION-AUTHORITY-PACKAGE`
-- `DECISION_REQUIRED = 0`
-- Diagnosis: `CLOSED FOR CURRENT MERGED SCOPE`
-- Runtime implementation: `OPEN`
-- Canonical cutover: `OPEN`
-- Cleanup closure: `OPEN`
-- Final E2E closure: `OPEN`
-- Actor provenance: `PROVEN FINDING / FAILED PRIOR VERIFICATION / OPEN IMPLEMENTATION`
+## 3. Attached Blueprint handling
 
-No merge, document, migration file, local guard, workflow existence, or partial test is sufficient to claim runtime closure.
+The attached `BTHWANI_CANONICAL_SYSTEM_LOGIC_BLUEPRINT` is valuable as a system-model/coverage specification, but its generation baseline predates the pinned branch HEAD. Therefore every statement is classified as one of:
 
-## Canonical authority map
+- `ADOPT`: invariant/trace rule directly compatible with current authority;
+- `REFINE`: direction is correct but must be made machine-enforceable or owner-specific;
+- `MUST_PROVE`: plausible requirement that needs current-code/runtime evidence;
+- `REJECT_AS_AUTHORITY`: would create a parallel source of truth or contradict current canonical authority.
 
-| Truth | Canonical owner |
-|---|---|
-| Authentication, session, principal, trusted actor context | Identity |
-| Person/provider lifecycle, non-financial readiness, operational accreditation, work scopes, absence/suspension/work windows | Workforce |
-| Store, canonical branch, fleet primary affiliation, partner memberships, order, fulfillment, dispatch, ephemeral presence/capacity | DSH |
-| Wallets, authoritative monetary amounts, captain collateral/guarantee, tender allocation effects, COD exposure, cash custody, debt, penalties, settlement, payout, refund, ledger | WLT |
+The blueprint must map downward as:
 
-A projection outside its owner may exist only as explicitly read-only, source/version/freshness-bound data. It may not become a second writer or write gate.
+`Decision -> Capability -> Journey -> State/Invariant -> Product-Truth Contract -> Owner -> API/Event -> DB/Write Model -> Client/Binding -> Surface -> Verification/Evidence`.
 
-## Highest merged root-cause hierarchy
+No row may skip a material layer silently.
 
-### Highest systemic root
+## 4. Systemic root-cause hierarchy
 
-`RC-PAYMENT-TENDER-EXPOSURE-CUSTODY-SETTLEMENT-CONFLATION`
+The prior finance diagnosis is retained as a subsystem cluster, but the package root is now system-wide.
 
-The system must keep these concepts distinct:
+### SYS-RC-00 — Canonical operational model is not yet proven closed end-to-end
 
-1. customer tender / funding allocation;
-2. BTHWANI captain financial collateral/exposure;
-3. physical cash custody/evidence;
-4. final settlement/payable/debt.
+A human-readable model, machine Product Truth, code, persistence, runtime and evidence all exist, but closure requires proving that they describe one system rather than partially overlapping systems.
 
-### Coupled roots
+### SYS-RC-01 — Authority/ownership fragmentation
 
-1. `RC-MONETARY-FACT-OWNERSHIP-SPLIT`
-2. `RC-CAPTAIN-OPERATIONAL-ELIGIBILITY-AUTHORITY-SPLIT`
-3. `RC-STORE-DELIVERY-FLEET-COMPENSATION-PARALLEL-TRUTH`
-4. `RC-IDENTIFIER-SEMANTIC-OVERLOADING`
-5. `RC-DISTRIBUTED-FINANCIAL-OBLIGATION-BEST-EFFORT`
-6. `RC-SERVICE-AREA-CAPACITY-TRUTH-DRIFT`
-7. `RC-AVAILABILITY-AND-SUSPENSION-SEMANTIC-OVERLAP`
-8. `RC-ACCREDITATION-PARALLEL-AUTHORITY`
-9. `RC-GOVERNANCE-AUTHORITY-DRIFT`
-10. `RC-ORDER-ACTOR-PROVENANCE` — valid but lower-ranked until higher systemic roots are stabilized.
+For every business state or mutation, prove one canonical authority, one write policy and explicit read/projection consumers. Duplicate writers or parallel lifecycle owners are root defects.
 
-## Binding product outcomes
+### SYS-RC-02 — Journey/state-transition ambiguity
 
-- Checkout exposes exactly three choices: `COD`, `BTHWANI Wallet`, `Mixed`.
-- Official banks/e-wallets/providers are governed top-up/funding rails into BTHWANI Wallet, not a fourth order-payment authority.
-- Canonical numeric `PaymentAllocation` owns tender decomposition. Financial logic never derives authoritative amounts from a payment-method label.
-- BTHWANI captain collateral/guarantee is a real WLT-owned restricted financial position.
-- Platform Finance governance defines the opening/protected minimum.
-- Prepaid-only orders consume zero COD collateral exposure.
-- COD/Mixed reserve only the actual cash leg.
-- Mandatory invariant: `openCashCustody + proposedNewCashExposure <= effectiveCollateral`.
-- Low collateral blocks COD/Mixed cash-bearing work while fully prepaid work may remain eligible if all non-financial gates pass.
-- Protected minimum is not directly withdrawable; only governed safe excess may be released.
-- Exposure reservation and physical cash custody are separate states. Finalizing exposure never erases custody.
-- Store delivery offers the same three customer payment choices, but the store is the BTHWANI settlement counterparty; the store courier is only a store-scoped actor/sub-custodian for physical collection evidence.
-- Store courier payroll/compensation and optional store-specific collateral remain the store's responsibility unless a future explicit product changes that boundary.
-- Monthly-salary store courier receives no per-delivery BTHWANI entitlement.
-- BTHWANI vs PARTNER primary dispatch affiliation is exclusive: `BTHWANI XOR PARTNER`.
-- Workforce owns general operational accreditation; DSH duplicate accreditation authority must be removed.
-- Workforce owns durable suspension/absence/work-window; DSH owns ephemeral online/offline/available/busy presence.
-- One canonical captain eligibility primitive must govern candidate, capacity, assign, reassign, inbox/offer and accept.
-- WLT owns penalty monetary policy/amount; Operations selects a policy/version, not an arbitrary amount.
-- Refund follows immutable original funding lineage.
-- Distributed financial obligations cannot be best-effort or silently ignored.
-- Explicit typed identifier semantics are mandatory across actor, membership, person, store and branch boundaries.
-- A real canonical StoreBranch must replace store/scope IDs masquerading as branch IDs.
+Every material journey requires explicit actors, preconditions, legal transitions, handoffs, failure/recovery and terminal outcomes. UI labels or service-local enums cannot independently define lifecycle semantics.
 
-## Merged mandatory carried-forward findings
+### SYS-RC-03 — Contract/binding drift
 
-The following findings from the earlier package remain explicitly in scope and are incorporated throughout the merged files:
+Product Truth, OpenAPI/event schemas, generated clients, backend handlers and frontend bindings must have traceable semantic parity. Local DTOs or hardcoded interpretation that bypass the canonical contract remain open.
 
-- legacy store-courier identity/lifecycle parallel truth (`courierName`, `courierPhone`, copied active state or equivalent);
-- legacy store-courier pricing/`pricingSource` parallel configuration;
-- identifier semantic overloading beyond only `storeCourierId`;
-- canonical StoreBranch gap;
-- partner courier leakage into BTHWANI captain finance;
-- distributed financial best-effort mutations beyond only `FinalizeCodReservation`;
-- partner settlement caller-authored gross/amount authority drift;
-- incomplete true E2E WALLET/MIXED customer journeys despite enums/primitives existing;
-- tender/exposure/custody/settlement separation;
-- store-delivery fleet/compensation parallel truth;
-- actor provenance remains open and must be re-proven after higher roots.
+### SYS-RC-04 — Persistence/migration/read-model drift
 
-## Prior actor-provenance execution evidence
+Every authoritative field/table/write must have a canonical owner, migration/cutover policy, supported historical upgrade path, constraints and read-model consistency. Seeds/mocks cannot become runtime truth.
 
-GitHub Actions run `31908535848` passed PostgreSQL/migration/writer-guard portions and then failed at **Compile and test all DSH backend consumers**. OpenAPI/generated verification, full tests/static checks, client smoke, final DB reproof and governed final implementation commit were skipped.
+### SYS-RC-05 — Distributed failure/idempotency/reconciliation gaps
 
-Therefore actor provenance remains OPEN. The failed workflow/script is evidence only.
+Callbacks, retries, duplicate commands, timeout/unknown-result, process restart, event reordering and concurrency require explicit semantics and durable recovery.
 
-## Files in this merged package
+### SYS-RC-06 — Security/trust-boundary ambiguity
 
-1. `START-HERE.md` — this governing entry point.
-2. `DIAGNOSIS.md` — merged top-down diagnosis and root-cause landscape.
-3. `DECISIONS.md` — one final binding decision register; `DECISION_REQUIRED=0`.
-4. `IMPLEMENTATION-AUDIT.md` — what is actually implemented versus only diagnosed/decided.
-5. `COVERAGE.md` — authority, journey, surface, failure/recovery and evidence coverage.
-6. `CLEANUP.md` — zero-residue cutover/deletion contract.
-7. `PACKAGE.md` — execution frontier, gates, invariants, evidence and closure predicate.
-8. `RECONCILIATION.md` — branch/source/decision/foreign-delta reconciliation.
-9. `SOURCE-MANIFEST.md` — provenance mapping from every one of the 14 source artifacts into these merged files.
+Identity propagation, RBAC, actor/tenant/scope isolation, service-to-service authorization, financial mutation authority, IDOR protection, audit and sensitive-data handling must be machine-auditable end-to-end.
 
-## Read order
+### SYS-RC-07 — Runtime/config/deployment drift
 
-1. `RECONCILIATION.md`
-2. `DIAGNOSIS.md`
-3. `DECISIONS.md`
-4. `IMPLEMENTATION-AUDIT.md`
-5. `COVERAGE.md`
-6. `CLEANUP.md`
-7. `PACKAGE.md`
-8. `SOURCE-MANIFEST.md`
+Runtime endpoints, ports, startup validation, profiles, environment authority, health/readiness and CI must fail closed on ambiguous or invalid wiring. No debug-header or accidental local fallback may carry production authority.
 
-## Continuing diagnosis rule
+### SYS-RC-08 — Observability/explainability/reconciliation incompleteness
 
-All future diagnoses intended to extend this cross-system work should be added to this directory by updating the merged canonical files rather than creating another forest of parallel packages, unless a genuinely separate scope requires an isolated task package.
+Critical decisions and mutations must be attributable through correlation/idempotency/actor/source version, with enough evidence to explain current state and reconcile divergence.
 
-Every new finding must be linked to:
+### SYS-RC-09 — Legacy/duplicate/dead/fallback residue
 
-- operational parent;
-- root cause;
-- canonical owner;
-- writers/readers/consumers;
-- contracts/data/runtime path;
-- blast radius;
-- target invariant;
-- disposition/evidence state;
-- cleanup consequence;
-- verification requirement.
+Old APIs, parallel sources of truth, compatibility shims, silent fallbacks, dead code, obsolete migrations/config/routes and duplicate policy remain defects until proven unreachable and deleted or explicitly time-bounded with a removal gate.
 
-## DONE is forbidden until
+### SYS-RC-10 — Verification/release closure not unified
 
-On one exact final candidate SHA there is proof of:
+No subsystem is `CLOSED` because a unit test or one surface passes. Closure requires same-candidate cross-layer evidence, adversarial negatives, runtime proof, cleanup proof and re-diagnosis after the final write.
 
-- zero duplicate monetary writers outside WLT;
-- zero caller-authoritative monetary amounts where WLT policy/lineage derives them;
-- zero duplicate captain eligibility engines;
-- zero ambiguous cross-authority identifiers;
-- zero store-ID-as-branch-ID fallback;
-- zero Mixed cash-leg blind spot;
-- zero exposure/custody conflation;
-- zero partner-courier route into BTHWANI captain guarantee/commission/debt/payroll authority;
-- zero silently ignored required financial mutation;
-- zero reachable fallback/compatibility source of old truth;
-- zero stale old-source code/DTO/route/schema/config/test/script/generated client/governance reference after cutover;
-- full PostgreSQL, invariant, negative, concurrency, idempotency, OpenAPI/generated-client, Go/TypeScript, runtime, multi-surface, readback, privacy/audit and adversarial writer-inventory proof;
-- latest `A` reconciled after the last write and all required affected gates rerun.
+### Finance subgraph retained
+
+The existing finance roots remain mandatory children of the system graph: explicit execution/control/economic order semantics, canonical financial instrument taxonomy, canonical financial lifecycle owner, canonical checkout/financial intent, and removal of cyclic/direct legacy financial dependencies. The latest WLT commit rejecting `official_wallet` as checkout tender is evidence for that cutover, not proof that the whole finance root is closed.
+
+## 5. Negative architecture — mandatory
+
+The following are prohibited unless a narrowly documented, time-bounded migration gate proves why they temporarily exist and when they are removed:
+
+- parallel business/financial/product truth;
+- authoritative calculations or lifecycle decisions in frontend;
+- UI-only authorization;
+- manual authoritative balance/state edits outside canonical command paths;
+- duplicate wallet/state per provider when provider is only a rail;
+- fake success before canonical readback;
+- implicit critical identifiers/amounts/actor authority;
+- silent fallback, hidden workaround or compatibility behavior that masks a broken canonical path;
+- duplicated business policy in multiple services/surfaces;
+- runtime discovery-by-convention for critical authority;
+- provider callback/retry handling without idempotency/reconciliation;
+- caller-selected authoritative financial amounts when canonical evidence can derive them;
+- seed/demo/mock state accepted as production truth.
+
+## 6. Required working order
+
+`TOP-DOWN DIAGNOSIS; FIX HIGHEST PROVEN ROOT FIRST`
+
+1. Pin latest `b` HEAD and reconcile this package.
+2. Build operational root: actors, outcomes, authorities, responsibilities, capabilities.
+3. Build journey/state/invariant/decision registry.
+4. Build total traceability and writer/reader/consumer graph.
+5. Cluster findings under highest proven root; technical leaves stay `Evidence/HOLD` until parent/root is proven.
+6. Execute only the highest proven executable root and its full blast radius.
+7. Migrate all consumers and data; cut over canonical truth atomically where practical.
+8. Delete obsolete/duplicate/fallback paths after zero-reference and rollback evidence.
+9. Verify affected layers plus required global guards/runtime/security gates.
+10. Re-pin latest HEAD, re-diagnose, and repeat until no material root remains open.
+
+## 7. Package map
+
+- `DIAGNOSIS.md` — current system diagnosis and root landscape.
+- `COVERAGE.md` — total operational/layer/surface/service coverage contract.
+- `PACKAGE.md` — strongest executable command and ordered implementation frontier.
+- `BLUEPRINT-TRACEABILITY.md` — exact reflection of the attached blueprint into implementation/verification obligations.
+- `DECISIONS.md` — resolved decisions, conflicts and decision-required registry.
+- `CLEANUP.md` — cutover/deletion/cleanup contract.
+- `RECONCILIATION.md` — baseline/head/foreign-delta reconciliation rules.
+- `IMPLEMENTATION-AUDIT.md` — proof ledger and closure audit.
+- `SOURCE-MANIFEST.md` — evidence provenance.
+
+## 8. Current verdict
+
+`PREPARED_NOT_CLOSED`.
+
+Reason: this invocation is `MODE: PREPARE`. It authorizes diagnosis/package writes, not a truthful claim that all runtime/code/data/security/UX roots have already been remediated and verified. The next execution invocation must consume this package root-first and may call `CLOSED` only after the closure law in `PACKAGE.md` is satisfied.
