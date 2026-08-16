@@ -48,3 +48,5 @@ export * from './dsh-link/dsh-http-request';
 export * from './payment/payment-session-runtime.api';
 export * from './payment/captain-cash-in.api';
 export * from './payment/CaptainCashInPanel';
+export * from './collateral/captain-collateral.api';
+export * from './collateral/CaptainCollateralPanel';

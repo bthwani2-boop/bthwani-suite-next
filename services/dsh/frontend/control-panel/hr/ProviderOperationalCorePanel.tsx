@@ -131,9 +131,6 @@ type FormState = {
   contractMediaRef: string;
   contractStatus: ContractReviewStatus;
   onboardingStage: ProviderOnboardingStage;
-  guaranteeAmount: string;
-  guaranteeStatus: CaptainActivationCore["financialGuaranteeStatus"];
-  guaranteeReference: string;
   bagStatus: CaptainActivationCore["deliveryBagCustodyStatus"];
   bagReference: string;
   purchasesStatus: CaptainActivationCore["mandatoryPurchasesStatus"];
@@ -169,9 +166,6 @@ const EMPTY_FORM: FormState = {
   contractMediaRef: "",
   contractStatus: "pending",
   onboardingStage: "basic_profile",
-  guaranteeAmount: "0",
-  guaranteeStatus: "not_funded",
-  guaranteeReference: "",
   bagStatus: "not_issued",
   bagReference: "",
   purchasesStatus: "not_required",
@@ -198,13 +192,6 @@ function activationEvidenceError(form: FormState, kind: IndependentProviderKind)
     }
   }
   if (kind === "captain") {
-    const guaranteeAmount = Number(form.guaranteeAmount);
-    if (!Number.isSafeInteger(guaranteeAmount) || guaranteeAmount < 0) {
-      return "قيمة الضمانة المالية يجب أن تكون عددًا صحيحًا بوحدات العملة الصغرى.";
-    }
-    if (form.guaranteeStatus === "funded" && (guaranteeAmount <= 0 || form.guaranteeReference.trim() === "")) {
-      return "الضمانة الممولة تحتاج مبلغًا موجبًا ومرجع قراءة أو قيد من WLT.";
-    }
     if (form.bagStatus === "issued" && form.bagReference.trim() === "") {
       return "تسليم حقيبة التوصيل كعهدة يحتاج مرجع محضر العهدة.";
     }
@@ -257,9 +244,6 @@ export function ProviderOperationalCorePanel({ actorId, kind }: { readonly actor
       contractMediaRef: core.contractMediaRef ?? "",
       contractStatus: core.contractReviewStatus,
       onboardingStage: core.onboardingStage,
-      guaranteeAmount: String(captain?.financialGuaranteeMinorUnits ?? 0),
-      guaranteeStatus: captain?.financialGuaranteeStatus ?? "not_funded",
-      guaranteeReference: captain?.financialGuaranteeReference ?? "",
       bagStatus: captain?.deliveryBagCustodyStatus ?? "not_issued",
       bagReference: captain?.deliveryBagCustodyReference ?? "",
       purchasesStatus: captain?.mandatoryPurchasesStatus ?? "not_required",
@@ -344,7 +328,6 @@ export function ProviderOperationalCorePanel({ actorId, kind }: { readonly actor
       setError(validationError);
       return;
     }
-    const normalizedGuarantee = Number(form.guaranteeAmount);
     setSaving(true);
     setError(null);
     setSuccess(null);
@@ -369,10 +352,6 @@ export function ProviderOperationalCorePanel({ actorId, kind }: { readonly actor
         partnershipsApproved: kind === "field" && form.onboardingStage === "activation_ready",
         ...(kind === "captain" ? {
           captain: {
-            financialGuaranteeMinorUnits: normalizedGuarantee,
-            financialGuaranteeCurrency: "YER",
-            financialGuaranteeStatus: form.guaranteeStatus,
-            financialGuaranteeReference: form.guaranteeReference.trim(),
             deliveryBagCustodyStatus: form.bagStatus,
             deliveryBagCustodyReference: form.bagReference.trim(),
             mandatoryPurchasesStatus: form.purchasesStatus,
@@ -447,14 +426,8 @@ export function ProviderOperationalCorePanel({ actorId, kind }: { readonly actor
       </Section>
 
       {kind === "captain" ? (
-        <Section title="تأهيل الكابتن والضمانة المالية">
+        <Section title="تأهيل الكابتن">
           <CpMutedInline>التصنيف الحالي: {data.operationalCore.captain?.classification ?? "joker"}. الانتقال إلى Basic يتم من قرار مستقل مدعوم بالأدلة.</CpMutedInline>
-          <CpTextInput value={form.guaranteeAmount} onChange={(value) => setField("guaranteeAmount", value)} placeholder="الضمانة المالية بوحدات العملة الصغرى" aria-label="قيمة الضمانة المالية" />
-          <CpTextInput value={form.guaranteeReference} onChange={(value) => setField("guaranteeReference", value)} placeholder="مرجع قراءة أو قيد WLT" aria-label="مرجع الضمانة المالية" />
-          <select value={form.guaranteeStatus} onChange={(event) => setField("guaranteeStatus", event.target.value as FormState["guaranteeStatus"])} style={selectStyle} aria-label="حالة الضمانة المالية">
-            <option value="not_funded">الضمانة غير ممولة</option><option value="pending_review">الضمانة تحت المراجعة</option>
-            <option value="funded">الضمانة ممولة</option><option value="released">الضمانة مفرج عنها</option><option value="forfeited">الضمانة مصادرة بقرار</option>
-          </select>
           <select value={form.bagStatus} onChange={(event) => setField("bagStatus", event.target.value as FormState["bagStatus"])} style={selectStyle} aria-label="حالة عهدة الحقيبة">
             <option value="not_issued">حقيبة التوصيل غير مسلمة</option><option value="issued">حقيبة التوصيل مسلمة كعهدة</option>
             <option value="returned">العهدة معادة</option><option value="lost">العهدة مفقودة</option><option value="damaged">العهدة تالفة</option>

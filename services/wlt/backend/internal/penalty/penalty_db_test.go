@@ -68,13 +68,17 @@ func TestPenaltyPostAndReverseUseCanonicalLedgerAsSoleBalanceWriter(t *testing.T
 	if err := tx.Commit(); err != nil {
 		t.Fatalf("commit opening balance: %v", err)
 	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO wlt_provider_penalty_policies(
+		operator_context_id,policy_id,policy_version,provider_actor_type,amount_minor_units,currency)
+		VALUES($1,'penalty-default','v1','captain',1200,'YER')`, operatorContextID); err != nil {
+		t.Fatalf("seed penalty policy: %v", err)
+	}
 
 	input := PostInput{
 		IncidentID:        "incident-" + suffix,
 		ProviderActorID:   actorID,
 		ProviderActorType: "captain",
-		AmountMinorUnits:  1200,
-		Currency:          "YER",
+		PolicyID:          "penalty-default",
 		Reason:            "verified provider incident",
 		PostedByActorID:   "workforce-operator-a",
 	}
@@ -134,7 +138,7 @@ func TestPenaltyPostAndReverseUseCanonicalLedgerAsSoleBalanceWriter(t *testing.T
 }
 
 func TestPenaltyHandlerDoesNotTrustRawOperatorContextHeader(t *testing.T) {
-	body := `{"incidentId":"incident-spoof","providerActorId":"captain-spoof","providerActorType":"captain","amountMinorUnits":100,"currency":"YER","reason":"spoof attempt","postedByActorId":"operator-spoof"}`
+	body := `{"incidentId":"incident-spoof","providerActorId":"captain-spoof","providerActorType":"captain","policyId":"penalty-default","reason":"spoof attempt","postedByActorId":"operator-spoof"}`
 	req := httptest.NewRequest(http.MethodPost, "/wlt/provider-penalties", strings.NewReader(body))
 	req.Header.Set("X-Operator-Context-ID", "attacker-controlled-context")
 	req.Header.Set("Idempotency-Key", "spoof-key-123")
@@ -143,5 +147,70 @@ func TestPenaltyHandlerDoesNotTrustRawOperatorContextHeader(t *testing.T) {
 	HandlePost(nil)(res, req)
 	if res.Code != http.StatusBadRequest {
 		t.Fatalf("raw OperatorContext header must not become domain authority, got status=%d body=%s", res.Code, res.Body.String())
+	}
+}
+
+func TestPenaltyPostCreatesCanonicalDebtWhenWalletIsInsufficient(t *testing.T) {
+	db := penaltyTestDB(t)
+	if db == nil {
+		return
+	}
+	suffix := fmt.Sprint(time.Now().UnixNano())
+	operatorContextID := "penalty-debt-context-" + suffix
+	actorID := "captain-penalty-debt-" + suffix
+	ctx := shared.WithOperatorContext(context.Background(), operatorContextID)
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ledger.PostOpeningBalance(ctx, tx, "captain", actorID, "YER", 500,
+		"penalty-debt-opening-"+suffix, ledger.Actor{ID: "finance-test", Type: "test"}); err != nil {
+		_ = tx.Rollback()
+		t.Fatalf("post opening balance: %v", err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.ExecContext(ctx, `INSERT INTO wlt_provider_penalty_policies(
+		operator_context_id,policy_id,policy_version,provider_actor_type,amount_minor_units,currency)
+		VALUES($1,'penalty-debt','v1','captain',1200,'YER')`, operatorContextID); err != nil {
+		t.Fatalf("seed penalty policy: %v", err)
+	}
+
+	posted, err := Post(ctx, db, "penalty-debt-key-"+suffix, PostInput{
+		IncidentID:        "incident-debt-" + suffix,
+		ProviderActorID:   actorID,
+		ProviderActorType: "captain",
+		PolicyID:          "penalty-debt",
+		Reason:            "verified provider incident",
+		PostedByActorID:   "workforce-operator-a",
+	})
+	if err != nil {
+		t.Fatalf("post penalty with insufficient wallet: %v", err)
+	}
+	if posted.WalletAppliedAmountMinorUnits != 500 || posted.DebtAmountMinorUnits != 700 || posted.DebtID == "" {
+		t.Fatalf("expected split wallet/debt effect, got %+v", posted)
+	}
+	var outstanding int64
+	var status string
+	if err := db.QueryRowContext(ctx, `SELECT outstanding_amount_minor_units,status FROM wlt_provider_debts WHERE id=$1`, posted.DebtID).Scan(&outstanding, &status); err != nil {
+		t.Fatal(err)
+	}
+	if outstanding != 700 || status != "open" {
+		t.Fatalf("unexpected canonical debt: outstanding=%d status=%s", outstanding, status)
+	}
+	projection, err := ledger.GetWalletLedgerProjection(ctx, db, "captain", actorID, "YER")
+	if err != nil || projection == nil || projection.BalanceMinorUnits != 0 {
+		t.Fatalf("expected wallet leg to consume only available 500, projection=%+v err=%v", projection, err)
+	}
+	if _, err := Reverse(ctx, db, posted.ID, ReverseInput{Reason: "penalty overturned by review", ReversedByActorID: "workforce-operator-b"}); err != nil {
+		t.Fatalf("reverse debt-backed penalty: %v", err)
+	}
+	if err := db.QueryRowContext(ctx, `SELECT outstanding_amount_minor_units,status FROM wlt_provider_debts WHERE id=$1`, posted.DebtID).Scan(&outstanding, &status); err != nil {
+		t.Fatal(err)
+	}
+	if outstanding != 0 || status != "reversed" {
+		t.Fatalf("reversal did not close canonical debt: outstanding=%d status=%s", outstanding, status)
 	}
 }

@@ -159,15 +159,16 @@ func TestEmployeeRolesReserveOperatorForPlatformOwner(t *testing.T) {
 		bundle          string
 		wantOperator    bool
 		wantSupervisory bool
+		wantProviderSupervisors bool
 	}{
-		{bundle: EmployeeBundleStaff, wantOperator: false, wantSupervisory: false},
-		{bundle: EmployeeBundlePlatformCoordinator, wantOperator: false, wantSupervisory: true},
-		{bundle: EmployeeBundleOperationsManager, wantOperator: false, wantSupervisory: true},
-		{bundle: EmployeeBundlePartnersManager, wantOperator: false, wantSupervisory: true},
-		{bundle: EmployeeBundleFinanceManager, wantOperator: false, wantSupervisory: true},
-		{bundle: EmployeeBundleSupportManager, wantOperator: false, wantSupervisory: true},
-		{bundle: EmployeeBundleHRManager, wantOperator: false, wantSupervisory: true},
-		{bundle: EmployeeBundlePlatformOwner, wantOperator: true, wantSupervisory: true},
+		{bundle: EmployeeBundleStaff, wantOperator: false, wantSupervisory: false, wantProviderSupervisors: false},
+		{bundle: EmployeeBundlePlatformCoordinator, wantOperator: false, wantSupervisory: true, wantProviderSupervisors: false},
+		{bundle: EmployeeBundleOperationsManager, wantOperator: false, wantSupervisory: true, wantProviderSupervisors: true},
+		{bundle: EmployeeBundlePartnersManager, wantOperator: false, wantSupervisory: true, wantProviderSupervisors: false},
+		{bundle: EmployeeBundleFinanceManager, wantOperator: false, wantSupervisory: true, wantProviderSupervisors: false},
+		{bundle: EmployeeBundleSupportManager, wantOperator: false, wantSupervisory: true, wantProviderSupervisors: false},
+		{bundle: EmployeeBundleHRManager, wantOperator: false, wantSupervisory: true, wantProviderSupervisors: false},
+		{bundle: EmployeeBundlePlatformOwner, wantOperator: true, wantSupervisory: true, wantProviderSupervisors: true},
 	}
 	for _, test := range tests {
 		t.Run(test.bundle, func(t *testing.T) {
@@ -180,6 +181,11 @@ func TestEmployeeRolesReserveOperatorForPlatformOwner(t *testing.T) {
 			}
 			if got := hasRole(roles, "workforce.supervise.employee"); got != test.wantSupervisory {
 				t.Fatalf("bundle %s supervisory=%v want %v roles=%v", test.bundle, got, test.wantSupervisory, roles)
+			}
+			for _, role := range []string{"workforce.supervise.field", "workforce.supervise.captain"} {
+				if got := hasRole(roles, role); got != test.wantProviderSupervisors {
+					t.Fatalf("bundle %s role %s=%v want %v roles=%v", test.bundle, role, got, test.wantProviderSupervisors, roles)
+				}
 			}
 		})
 	}

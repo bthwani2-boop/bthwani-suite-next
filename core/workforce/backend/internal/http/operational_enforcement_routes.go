@@ -81,8 +81,8 @@ func (s *operationalEnforcementServer) transitionProviderIncident(w http.Respons
 
 	switch strings.TrimSpace(input.ToStatus) {
 	case "financial_action_posted":
-		if before.ProposedPenaltyMinorUnits <= 0 || strings.TrimSpace(before.PolicyID) == "" {
-			writeWorkforceError(w, fmt.Errorf("%w: approved penalty amount and policy are required", workforce.ErrInvalidInput))
+		if strings.TrimSpace(before.PolicyID) == "" {
+			writeWorkforceError(w, fmt.Errorf("%w: approved penalty policy is required", workforce.ErrInvalidInput))
 			return
 		}
 		person, err := s.repo.PersonByActorID(r.Context(), before.ActorID)
@@ -94,8 +94,7 @@ func (s *operationalEnforcementServer) transitionProviderIncident(w http.Respons
 			IncidentID:        incidentID,
 			ProviderActorID:   before.ActorID,
 			ProviderActorType: person.WorkforceKind,
-			AmountMinorUnits:  before.ProposedPenaltyMinorUnits,
-			Currency:          before.Currency,
+			PolicyID:          before.PolicyID,
 			Reason:            strings.TrimSpace(input.ResolutionNote),
 			PostedByActorID:   identity.Subject,
 		})

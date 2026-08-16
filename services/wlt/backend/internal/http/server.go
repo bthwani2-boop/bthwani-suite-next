@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"wlt-api/internal/cod"
+	"wlt-api/internal/collateral"
 	"wlt-api/internal/commercial"
 	"wlt-api/internal/health"
 	"wlt-api/internal/ledger"
@@ -101,6 +102,10 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	public("GET /wlt/references/wallet-status", reference.HandleGetWalletStatus(db))
 
 	read("GET /wlt/wallets/{actorType}/{actorId}", wallet.HandleGetWallet(db))
+	read("GET /wlt/captain-collateral/{captainId}", collateral.HandleGet(db))
+	mutation("PUT /wlt/captain-collateral-policy", collateral.HandleUpsertPolicy(db))
+	mutation("POST /wlt/captain-collateral/allocate", collateral.HandleAllocate(db))
+	mutation("POST /wlt/captain-collateral/release", collateral.HandleRelease(db))
 	mutation("POST /wlt/payment-sessions", reference.HandleCreatePaymentSessionTrustedDsh(db))
 	read("GET /wlt/payment-sessions/{paymentSessionId}", reference.HandleGetPaymentSessionTrustedDsh(db))
 	read("GET /wlt/payment-sessions/{paymentSessionId}/timeline", payment.HandleGetPaymentSessionTimeline(db))
@@ -158,6 +163,7 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	mutation("POST /wlt/cod-reconciliation-cases/{caseId}/assign", cod.HandleAssignCodReconciliationCase(db))
 	mutation("POST /wlt/cod-reconciliation-cases/{caseId}/resolve", cod.HandleResolveCodReconciliationCase(db))
 	mutation("PUT /wlt/commission-policies", cod.HandleUpsertGovernedCommissionPolicyIdempotent(db))
+	mutation("PUT /wlt/provider-penalty-policies/{policyId}", penalty.HandleUpsertPolicy(db))
 	mutation("POST /wlt/commissions", cod.HandleCreateCanonicalCommission(db))
 	read("GET /wlt/commissions/{commissionId}", shared.RequireOperatorContextScope(db, shared.OperatorContextScopeConfig{Table: "wlt_commissions", IDPathValue: "commissionId"}, cod.HandleGetGovernedCommission(db)))
 	read("GET /wlt/commissions", shared.RequireOperatorContextScope(db, shared.OperatorContextScopeConfig{Table: "wlt_commissions", ListPath: "/wlt/commissions"}, cod.HandleListGovernedCommissions(db)))
@@ -205,6 +211,8 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	// it behind service authentication and the finance kill switch.
 	mutation("POST /wlt/internal/quotes/calculate", HandleCalculateQuote(db))
 	read("GET /wlt/internal/quotes/checkout/{checkoutIntentId}", HandleGetCheckoutQuote(db))
+	mutation("POST /wlt/internal/quotes/special-request", HandleIssueSpecialRequestQuote(db))
+	read("GET /wlt/internal/quotes/special-request/{specialRequestId}", HandleGetActiveSpecialRequestQuote(db))
 
 	read("GET /wlt/commercial/store-onboarding-fee", commercial.HandleGetStoreOnboardingFeePolicy(db))
 	mutation("PUT /wlt/commercial/store-onboarding-fee", commercial.HandleUpsertStoreOnboardingFeePolicy(db))

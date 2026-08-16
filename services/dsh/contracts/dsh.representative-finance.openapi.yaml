@@ -215,6 +215,70 @@ paths:
         '502': { $ref: '#/components/responses/WltUnavailable' }
       security:
         - bearerAuth: []
+  /dsh/captain/me/finance/collateral:
+    get:
+      operationId: getDshCaptainOwnCollateral
+      tags: [ representative-finance ]
+      responses:
+        '200': { $ref: '#/components/responses/ReferenceItemResponse' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
+  /dsh/captain/me/finance/collateral/allocate:
+    post:
+      operationId: allocateDshCaptainOwnCollateral
+      tags: [ representative-finance ]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ paymentSessionId ]
+              properties:
+                paymentSessionId: { type: string, minLength: 1, maxLength: 200 }
+              additionalProperties: false
+      responses:
+        '200': { $ref: '#/components/responses/ReferenceItemResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '409': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
+  /dsh/captain/me/finance/collateral/release:
+    post:
+      operationId: releaseDshCaptainOwnCollateral
+      tags: [ representative-finance ]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ positionId, releaseReason ]
+              properties:
+                positionId: { type: string, minLength: 1, maxLength: 200 }
+                releaseReason: { type: string, minLength: 1, maxLength: 500 }
+              additionalProperties: false
+      responses:
+        '200': { $ref: '#/components/responses/ReferenceItemResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '409': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/field/me/finance/wallet:
     get:
       operationId: getDshFieldMeWallet
@@ -465,6 +529,11 @@ components:
         - earnedTotalMinorUnits
         - settledTotalMinorUnits
         - paidTotalMinorUnits
+        - collateralReservedBalanceMinorUnits
+        - protectedMinimumCollateralMinorUnits
+        - releasableCollateralExcessMinorUnits
+        - outstandingDebtMinorUnits
+        - activeCollateralPositionCount
       properties:
         id: { type: string }
         actorId: { type: string }
@@ -477,6 +546,11 @@ components:
         earnedTotalMinorUnits: { type: integer, format: int64 }
         settledTotalMinorUnits: { type: integer, format: int64 }
         paidTotalMinorUnits: { type: integer, format: int64 }
+        collateralReservedBalanceMinorUnits: { type: integer, format: int64 }
+        protectedMinimumCollateralMinorUnits: { type: integer, format: int64 }
+        releasableCollateralExcessMinorUnits: { type: integer, format: int64 }
+        outstandingDebtMinorUnits: { type: integer, format: int64 }
+        activeCollateralPositionCount: { type: integer, format: int32, minimum: 0 }
         lastLedgerEntryAt: { type: [string, 'null'], format: date-time }
         updatedAt: { type: [string, 'null'], format: date-time }
     RepresentativeLedgerEntry:

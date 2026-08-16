@@ -7,22 +7,37 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
 
 var (
-	ErrZoneNotFound = errors.New("zone not found")
-	ErrZoneInactive = errors.New("zone is inactive")
-	ErrUnavailable  = errors.New("dsh-api is unavailable")
+	ErrZoneNotFound         = errors.New("zone not found")
+	ErrZoneInactive         = errors.New("zone is inactive")
+	ErrUnavailable          = errors.New("dsh-api is unavailable")
 	ErrProviderMediaInvalid = errors.New("provider media reference is invalid")
 )
 
 type Client struct {
-	baseURL  string
-	token    string
+	baseURL           string
+	token             string
 	operatorContextID string
-	http     *http.Client
+	http              *http.Client
+}
+
+type CaptainFinancialEligibility struct {
+	OperatorContextID   string    `json:"operatorContextId"`
+	CaptainID           string    `json:"captainId"`
+	WltDecisionID       string    `json:"wltDecisionId"`
+	WltReasonCode       string    `json:"wltReasonCode"`
+	WltPolicyVersion    string    `json:"wltPolicyVersion"`
+	Eligible            bool      `json:"eligible"`
+	IneligibilityReason string    `json:"ineligibilityReason,omitempty"`
+	SnapshotReference   string    `json:"snapshotReference"`
+	CheckedAt           time.Time `json:"checkedAt"`
+	EvaluatedAt         time.Time `json:"evaluatedAt"`
+	ExpiresAt           time.Time `json:"expiresAt"`
 }
 
 // NewClient accepts the service token and operator context as optional arguments to keep
@@ -104,17 +119,59 @@ func (c *Client) ValidateZone(ctx context.Context, zoneID, operatorToken string)
 	return Zone{}, ErrZoneNotFound
 }
 
+func (c *Client) CaptainFinancialEligibility(ctx context.Context, actorID string) (CaptainFinancialEligibility, error) {
+	var result CaptainFinancialEligibility
+	if !c.Configured() || strings.TrimSpace(c.operatorContextID) == "" {
+		return result, fmt.Errorf("DSH financial eligibility client is not configured")
+	}
+	endpoint := fmt.Sprintf(
+		"%s/dsh/internal/workforce/captains/%s/financial-eligibility",
+		c.baseURL,
+		url.PathEscape(strings.TrimSpace(actorID)),
+	)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return result, fmt.Errorf("build DSH financial eligibility request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("X-Service-Caller", "workforce")
+	req.Header.Set("X-Operator-Context-ID", c.operatorContextID)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return result, fmt.Errorf("call DSH financial eligibility: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return result, fmt.Errorf("DSH financial eligibility returned HTTP %d", resp.StatusCode)
+	}
+	var envelope struct {
+		FinancialEligibility CaptainFinancialEligibility `json:"financialEligibility"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
+		return result, fmt.Errorf("decode DSH financial eligibility: %w", err)
+	}
+	result = envelope.FinancialEligibility
+	if strings.TrimSpace(result.CaptainID) == "" ||
+		strings.TrimSpace(result.WltDecisionID) == "" ||
+		strings.TrimSpace(result.WltPolicyVersion) == "" ||
+		result.ExpiresAt.IsZero() {
+		return CaptainFinancialEligibility{}, fmt.Errorf("DSH financial eligibility projection is incomplete")
+	}
+	return result, nil
+}
+
 type AvailabilityProjectionInput struct {
-	OperatorContextID        string    `json:"operatorContextId"`
-	NoticeID        string    `json:"noticeId"`
-	ActorType       string    `json:"actorType"`
-	ActorID         string    `json:"actorId"`
-	NoticeType      string    `json:"noticeType"`
-	StartsAt        time.Time `json:"startsAt"`
-	EndsAt          time.Time `json:"endsAt"`
-	Status          string    `json:"status"`
-	Reason          string    `json:"reason"`
-	SourceUpdatedAt time.Time `json:"sourceUpdatedAt"`
+	OperatorContextID string    `json:"operatorContextId"`
+	NoticeID          string    `json:"noticeId"`
+	ActorType         string    `json:"actorType"`
+	ActorID           string    `json:"actorId"`
+	NoticeType        string    `json:"noticeType"`
+	StartsAt          time.Time `json:"startsAt"`
+	EndsAt            time.Time `json:"endsAt"`
+	Status            string    `json:"status"`
+	Reason            string    `json:"reason"`
+	SourceUpdatedAt   time.Time `json:"sourceUpdatedAt"`
 }
 
 func (c *Client) SyncAvailabilityProjection(ctx context.Context, input AvailabilityProjectionInput) error {

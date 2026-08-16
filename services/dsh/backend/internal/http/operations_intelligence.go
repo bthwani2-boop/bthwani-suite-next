@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -27,6 +28,7 @@ func RegisterOperationsIntelligenceRoutes(
 	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	mux.HandleFunc("POST /dsh/internal/workforce/availability-projections", handleWorkforceAvailabilityProjection(db))
 	mux.HandleFunc("POST /dsh/internal/workforce/provider-media-refs/validate", handleValidateProviderDocumentMedia(db))
+	mux.HandleFunc("GET /dsh/internal/workforce/captains/{captainId}/financial-eligibility", handleWorkforceCaptainFinancialEligibility(db))
 	mux.HandleFunc("GET /dsh/operator/dispatch/capacity-forecast", protected.withPermission("control-panel", DshDispatchCapacityPermissionRead, protected.handleGetServiceAreaCapacityForecast))
 	mux.HandleFunc("PUT /dsh/operator/dispatch/capacity-policies/{serviceAreaCode}", protected.withPermission("control-panel", DshDispatchCapacityPermissionManage, protected.handleUpsertServiceAreaCapacityPolicy))
 	mux.HandleFunc("GET /dsh/operator/dispatch/heatmap", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleGetOperationsHeatmap))
@@ -47,6 +49,34 @@ func handleWorkforceAvailabilityProjection(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		store.SendJSON(w, http.StatusOK, map[string]any{"availabilityProjection": projection})
+	}
+}
+
+// handleWorkforceCaptainFinancialEligibility exposes only the DSH projection
+// to Workforce. WLT remains the decision owner; Workforce never receives
+// wallet balances or evaluates financial policy itself.
+func handleWorkforceCaptainFinancialEligibility(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !store.RequireServiceCaller(w, r, "DSH_WORKFORCE_SERVICE_TOKEN", "workforce") {
+			return
+		}
+		operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		if operatorContextID == "" {
+			store.SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "trusted operator context is required")
+			return
+		}
+		snapshot, err := dispatch.GetCaptainFinancialEligibilitySnapshot(
+			r.Context(), db, operatorContextID, r.PathValue("captainId"),
+		)
+		if err != nil {
+			if errors.Is(err, dispatch.ErrCaptainNotEligible) {
+				store.SendError(w, http.StatusNotFound, "FINANCIAL_ELIGIBILITY_NOT_VERIFIED", "captain WLT financial eligibility has not been verified")
+				return
+			}
+			store.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_ELIGIBILITY_UNAVAILABLE", "captain financial eligibility projection is unavailable")
+			return
+		}
+		store.SendJSON(w, http.StatusOK, map[string]any{"financialEligibility": snapshot})
 	}
 }
 

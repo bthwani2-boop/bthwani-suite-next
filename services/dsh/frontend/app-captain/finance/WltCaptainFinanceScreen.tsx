@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { Box, MobileScrollView, TopBar, useTheme } from '@bthwani/ui-kit';
-import { WltDshCaptainBridge, ActorWalletPanel, RepresentativeCommissionPanel, PayoutDestinationPanel, CaptainCashInPanel } from '@bthwani/wlt/dsh';
+import { WltDshCaptainBridge, ActorWalletPanel, RepresentativeCommissionPanel, PayoutDestinationPanel, CaptainCashInPanel, CaptainCollateralPanel } from '@bthwani/wlt/dsh';
 import { CaptainFinancialEligibilityPanel } from '../../../../dsh/frontend/shared/dispatch';
 import { ProviderIncidentsPanel } from '../../../../dsh/frontend/shared/workforce/ProviderIncidentsPanel';
 import { DshOperationScreen } from '../../../../dsh/frontend/app-captain/DshOperationScreen';
@@ -25,7 +25,8 @@ function EarningsContent({ actorId }: { readonly actorId: string | null | undefi
 		<Box gap={4}>
 			<CaptainFinancialEligibilityPanel />
 			<CaptainCashInPanel actorId={actorId} />
-			<ActorWalletPanel actorType="captain" title="الرصيد والضمانة المالية والأرباح" embedded />
+			<CaptainCollateralPanel embedded />
+			<ActorWalletPanel actorType="captain" title="الرصيد والضمانة المحمية والأرباح" embedded />
 			<WltCaptainCodCustodyScreen embedded />
 			<RepresentativeCommissionPanel actorType="captain" title="أجور وعمولات التوصيل" embedded />
 			<PayoutDestinationPanel actorType="captain" title="وجهة صرف الكابتن وطلبات الدفع" embedded />

@@ -24,6 +24,11 @@ export type RepresentativeWallet = {
   readonly earnedTotalMinorUnits: number;
   readonly settledTotalMinorUnits: number;
   readonly paidTotalMinorUnits: number;
+  readonly collateralReservedBalanceMinorUnits: number;
+  readonly protectedMinimumCollateralMinorUnits: number;
+  readonly releasableCollateralExcessMinorUnits: number;
+  readonly outstandingDebtMinorUnits: number;
+  readonly activeCollateralPositionCount: number;
   readonly lastLedgerEntryAt: string | null;
   readonly updatedAt: string | null;
 };

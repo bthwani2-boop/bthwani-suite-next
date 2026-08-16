@@ -539,7 +539,7 @@ components:
           description: Opaque WLT-issued checkout quote identity. WLT derives its hash, version, expiry and allocation server-side.
       oneOf:
         - required: [ checkoutIntentId, pricingQuoteId, cartSnapshotHash ]
-        - required: [ specialRequestId ]
+        - required: [ specialRequestId, pricingQuoteId ]
         - required: [ subscriptionPurchaseId, commercialProductReference ]
     CreateTopUpSessionRequest:
       type: object

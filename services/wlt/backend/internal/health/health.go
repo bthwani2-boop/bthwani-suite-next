@@ -13,7 +13,7 @@ import (
 
 const (
 	wltMigrationServiceName = "wlt"
-	wltLatestMigration      = "wlt-932_checkout_tender_allocation.sql"
+	wltLatestMigration      = "wlt-936_special_request_quote_authority.sql"
 	wltReadinessTimeout     = 2 * time.Second
 )
 
@@ -48,7 +48,12 @@ func (s sqlRuntimeReadinessStore) Ready(ctx context.Context) (bool, error) {
 			AND to_regclass('public.wlt_dispatch_financial_eligibility_decisions') IS NOT NULL
 			AND to_regclass('public.wlt_approved_payout_snapshots') IS NOT NULL
 			AND to_regclass('public.wlt_checkout_pricing_quotes') IS NOT NULL
-			AND to_regclass('public.wlt_store_onboarding_fee_policy_versions') IS NOT NULL`,
+			AND to_regclass('public.wlt_store_onboarding_fee_policy_versions') IS NOT NULL
+			AND to_regclass('public.wlt_provider_penalty_policies') IS NOT NULL
+			AND to_regclass('public.wlt_provider_debts') IS NOT NULL
+			AND to_regclass('public.wlt_captain_collateral_policies') IS NOT NULL
+			AND to_regclass('public.wlt_captain_collateral_positions') IS NOT NULL
+			AND to_regclass('public.wlt_captain_collateral_events') IS NOT NULL`,
 		wltMigrationServiceName,
 		wltLatestMigration,
 	).Scan(&ready)

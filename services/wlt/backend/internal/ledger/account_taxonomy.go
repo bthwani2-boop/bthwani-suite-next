@@ -49,6 +49,7 @@ var accountTaxonomy = map[string]accountTaxonomyEntry{
 	"platform_payable":               {Classification: "liability", Category: "liability", NormalBalanceSide: "credit"},
 	"platform_revenue":               {Classification: "income", Category: "revenue", NormalBalanceSide: "credit"},
 	"provider_clearing":              {Classification: "asset", Category: "asset", NormalBalanceSide: "debit"},
+	"provider_receivable":            {Classification: "asset", Category: "asset", NormalBalanceSide: "debit"},
 	"platform_commission_receivable": {Classification: "asset", Category: "asset", NormalBalanceSide: "debit"},
 	// Corrected by wlt-909: captain-held COD cash awaiting remittance is the
 	// platform's asset, not a liability.

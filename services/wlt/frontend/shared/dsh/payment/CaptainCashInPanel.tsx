@@ -12,6 +12,7 @@ import {
   storeCaptainCashInSession,
   type CaptainCashInSession,
 } from "./captain-cash-in.api";
+import { allocateCaptainCollateral, fetchOwnCaptainCollateral } from "../collateral/captain-collateral.api";
 
 type PanelState = "idle" | "loading" | "ready" | "unknown" | "success" | "error";
 
@@ -37,6 +38,18 @@ export function CaptainCashInPanel({ actorId }: { readonly actorId: string | nul
   const [session, setSession] = React.useState<CaptainCashInSession | null>(null);
   const [panelState, setPanelState] = React.useState<PanelState>("idle");
   const [message, setMessage] = React.useState("");
+  const [collateralState, setCollateralState] = React.useState<PanelState>("idle");
+  const [collateralAllocated, setCollateralAllocated] = React.useState(false);
+  const [collateralMessage, setCollateralMessage] = React.useState("");
+
+  const syncCollateral = React.useCallback(async (sessionId: string) => {
+    try {
+      const readback = await fetchOwnCaptainCollateral();
+      setCollateralAllocated(readback.positions.some((position) => position.status === "active" && position.sourcePaymentSessionId === sessionId));
+    } catch {
+      setCollateralAllocated(false);
+    }
+  }, []);
 
   const refresh = React.useCallback(async () => {
     if (!actorId || !session) return;
@@ -45,6 +58,7 @@ export function CaptainCashInPanel({ actorId }: { readonly actorId: string | nul
       const readback = await readCaptainCashInSession(session.id);
       setSession(readback);
       await storeCaptainCashInSession(actorId, readback);
+      if (readback.status === "captured") void syncCollateral(readback.id);
       setPanelState(readback.status === "captured" ? "success" : isUnknownStatus(readback.status) ? "unknown" : "ready");
       setMessage(isUnknownStatus(readback.status) ? "لا توجد إعادة محاولة تلقائية؛ انتظر المطابقة أو أعد تحديث الحالة." : "");
     } catch (error) {
@@ -52,7 +66,7 @@ export function CaptainCashInPanel({ actorId }: { readonly actorId: string | nul
       setPanelState(normalized.state === "unknown" ? "unknown" : "error");
       setMessage(normalized.message);
     }
-  }, [actorId, session]);
+  }, [actorId, session, syncCollateral]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -67,6 +81,7 @@ export function CaptainCashInPanel({ actorId }: { readonly actorId: string | nul
         if (cancelled) return;
         setSession(readback);
         void storeCaptainCashInSession(actorId, readback);
+        if (readback.status === "captured") void syncCollateral(readback.id);
         setPanelState(readback.status === "captured" ? "success" : isUnknownStatus(readback.status) ? "unknown" : "ready");
       }).catch((error: unknown) => {
         if (cancelled) return;
@@ -81,7 +96,26 @@ export function CaptainCashInPanel({ actorId }: { readonly actorId: string | nul
       setMessage(normalized.message);
     });
     return () => { cancelled = true; };
-  }, [actorId]);
+  }, [actorId, syncCollateral]);
+
+  const allocateCollateral = React.useCallback(async () => {
+    if (!session || session.status !== "captured" || collateralAllocated) return;
+    setCollateralState("loading");
+    setCollateralMessage("");
+    try {
+      const context = await getOrCreateCaptainCashInMutationContext({ operation: "allocateCollateral", sessionId: session.id, fingerprint: `${session.id}|allocate-collateral` });
+      await allocateCaptainCollateral({ paymentSessionId: session.id, idempotencyKey: context.idempotencyKey, correlationId: context.correlationId });
+      await clearCaptainCashInMutationContext("allocateCollateral", session.id);
+      setCollateralAllocated(true);
+      setCollateralState("success");
+      setCollateralMessage("تم تخصيص Cash-In كضمانة محمية في WLT.");
+    } catch (error) {
+      const normalized = error instanceof CaptainCashInError ? error : new CaptainCashInError("unknown", "COLLATERAL_UNKNOWN", "تعذر تحديد نتيجة تخصيص الضمانة؛ حدّث readback قبل إعادة المحاولة.");
+      setCollateralState(normalized.state === "unknown" ? "unknown" : "error");
+      setCollateralMessage(normalized.message);
+      if (normalized.state === "unknown") void syncCollateral(session.id);
+    }
+  }, [collateralAllocated, session, syncCollateral]);
 
   const advance = React.useCallback(async () => {
     if (!actorId) {
@@ -148,6 +182,7 @@ export function CaptainCashInPanel({ actorId }: { readonly actorId: string | nul
     if (session) {
       await clearCaptainCashInMutationContext("authorize", session.id);
       await clearCaptainCashInMutationContext("capture", session.id);
+      await clearCaptainCashInMutationContext("allocateCollateral", session.id);
     }
     setSession(null);
     setPanelState("idle");
@@ -174,6 +209,13 @@ export function CaptainCashInPanel({ actorId }: { readonly actorId: string | nul
         </Box>
       )}
       {message ? <Text role="bodySm" tone={panelState === "error" ? "danger" : panelState === "unknown" ? "warning" : "muted"}>{message}</Text> : null}
+      {session?.status === "captured" ? (
+        <Box gap={2}>
+          <Text role="bodySm" tone="muted">التخصيص خطوة صريحة منفصلة: لا تتحول أموال Cash-In إلى ضمانة مقيدة تلقائيًا.</Text>
+          <Button label={collateralAllocated ? "تم تخصيص الضمانة المحمية" : collateralState === "loading" ? "جارٍ التحقق من WLT" : "تخصيص Cash-In كضمانة محمية"} tone={collateralAllocated ? "secondary" : "brand"} disabled={collateralAllocated || collateralState === "loading"} onPress={() => void allocateCollateral()} />
+          {collateralMessage ? <Text role="bodySm" tone={collateralState === "error" ? "danger" : collateralState === "unknown" ? "warning" : "muted"}>{collateralMessage}</Text> : null}
+        </Box>
+      ) : null}
       {panelState === "unknown" ? <StateView title="نتيجة تحتاج readback" description="توقفت إعادة المحاولة حتى تؤكد WLT الحالة النهائية." tone="warning" actionLabel="تحديث الحالة" onActionPress={() => void refresh()} /> : null}
       {!terminal && panelState !== "unknown" ? <Button label={panelState === "loading" ? "جارٍ التحقق من WLT" : session ? "متابعة Cash-In" : "بدء Cash-In"} disabled={panelState === "loading"} onPress={() => void advance()} /> : null}
       {session && !terminal ? <Button label="تحديث readback" tone="secondary" disabled={panelState === "loading"} onPress={() => void refresh()} /> : null}

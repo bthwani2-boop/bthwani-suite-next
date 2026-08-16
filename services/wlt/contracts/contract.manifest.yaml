@@ -3,6 +3,7 @@ entry: wlt.openapi.yaml
 modules:
   - wlt.cod-custody.openapi.yaml
   - wlt.cod-records.openapi.yaml
+  - wlt.captain-collateral.openapi.yaml
   - wlt.commercial-summary.openapi.yaml
   - wlt.commercial.openapi.yaml
   - wlt.common.openapi.yaml
@@ -12,6 +13,7 @@ modules:
   - wlt.payout-failure-boundary.openapi.yaml
   - wlt.payouts-destinations.openapi.yaml
   - wlt.pricing-quotes.openapi.yaml
+  - wlt.special-request-quotes.openapi.yaml
   - wlt.promotion-funding.openapi.yaml
   - wlt.refunds.openapi.yaml
   - wlt.settlement-operations.openapi.yaml

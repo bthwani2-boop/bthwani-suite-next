@@ -232,6 +232,13 @@ func mergeEmployeeRoles(existing []string, bundle string) []string {
 	if bundle != EmployeeBundleStaff && !hasRole(result, "workforce.supervise.employee") {
 		result = append(result, "workforce.supervise.employee")
 	}
+	if bundle == EmployeeBundleOperationsManager || bundle == EmployeeBundlePlatformOwner {
+		for _, required := range []string{"workforce.supervise.field", "workforce.supervise.captain"} {
+			if !hasRole(result, required) {
+				result = append(result, required)
+			}
+		}
+	}
 	return result
 }
 

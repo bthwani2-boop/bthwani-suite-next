@@ -56,6 +56,38 @@ ON CONFLICT (operator_context_id) DO UPDATE SET
   decision_ttl_seconds = EXCLUDED.decision_ttl_seconds,
   policy_version = EXCLUDED.policy_version,
   updated_by = EXCLUDED.updated_by,
+   updated_at = now();
+
+-- The captain activation journey requires a real WLT-owned protected position.
+-- The position itself is allocated only after a captured captain top-up through
+-- the governed WLT route; this seed owns the local policy authority only.
+INSERT INTO wlt_captain_collateral_policies (
+  operator_context_id,
+  policy_id,
+  policy_version,
+  enabled,
+  minimum_collateral_minor_units,
+  currency,
+  change_reason,
+  updated_by_actor_id
+)
+VALUES (
+  'local-dsh',
+  'captain-collateral@runtime-local-1',
+  1,
+  true,
+  1000,
+  'YER',
+  'Provision governed local captain collateral requirement',
+  'operator-local-001'
+)
+ON CONFLICT (operator_context_id) DO UPDATE SET
+  policy_id = EXCLUDED.policy_id,
+  enabled = EXCLUDED.enabled,
+  minimum_collateral_minor_units = EXCLUDED.minimum_collateral_minor_units,
+  currency = EXCLUDED.currency,
+  change_reason = EXCLUDED.change_reason,
+  updated_by_actor_id = EXCLUDED.updated_by_actor_id,
   updated_at = now();
 
 DO $$

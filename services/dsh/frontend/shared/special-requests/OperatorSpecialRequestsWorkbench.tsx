@@ -31,8 +31,9 @@ type OperatorMutableStatus = NonNullable<DshUpdateSpecialRequest['status']>;
 type OperatorForm = {
   status: OperatorMutableStatus;
   workflowStage: string;
-  estimatedAmountMinorUnits: string;
-  currency: string;
+  proposedAmountMinorUnits: string;
+  proposedCurrency: string;
+  proposalReason: string;
   assignedOperatorId: string;
   rejectionReason: string;
   captainId: string;
@@ -61,10 +62,11 @@ function formFromRequest(request: DshSpecialRequestResponse): OperatorForm {
   return {
     status: request.status === 'submitted' ? 'under_review' : request.status,
     workflowStage: request.workflowStage ?? '',
-    estimatedAmountMinorUnits: request.estimatedAmountMinorUnits === null || request.estimatedAmountMinorUnits === undefined
+    proposedAmountMinorUnits: request.wltQuoteAmountMinorUnits === null || request.wltQuoteAmountMinorUnits === undefined
       ? ''
-      : String(request.estimatedAmountMinorUnits),
-    currency: request.currency ?? 'YER',
+      : String(request.wltQuoteAmountMinorUnits),
+    proposedCurrency: request.wltQuoteCurrency ?? 'YER',
+    proposalReason: '',
     assignedOperatorId: request.assignedOperatorId ?? '',
     rejectionReason: request.rejectionReason ?? '',
     captainId: '',
@@ -219,16 +221,19 @@ export function OperatorSpecialRequestsWorkbench({
     setPendingAction('quote');
     setFeedback(null);
     try {
-      const amount = parsePositiveMinorUnits(form.estimatedAmountMinorUnits);
-      const currency = form.currency.trim().toUpperCase();
+      const amount = parsePositiveMinorUnits(form.proposedAmountMinorUnits);
+      const currency = form.proposedCurrency.trim().toUpperCase();
       if (!currency) throw new Error('رمز العملة مطلوب.');
+      const proposalReason = form.proposalReason.trim();
+      if (proposalReason.length < 5) throw new Error('سبب العرض مطلوب ويجب أن يحتوي على خمسة أحرف على الأقل.');
       applyReadback(await update(selectedRequest.id, {
         expectedVersion: selectedRequest.version,
         status: 'needs_customer_input',
         workflowStage: 'customer_approval',
-        estimatedAmountMinorUnits: amount,
-        currency,
-        quotePreparedAt: new Date().toISOString(),
+        quotePolicyId: 'special-request-standard',
+        proposedAmountMinorUnits: amount,
+        proposedCurrency: currency,
+        proposalReason,
       }), 'تم إرسال العرض للعميل وأصبحت الموافقة والدفع متاحين من تطبيق العميل.');
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : 'تعذر إرسال العرض للعميل.');
@@ -403,9 +408,10 @@ export function OperatorSpecialRequestsWorkbench({
           </Box>
 
           <Box gap={2}>
-            <Text role="titleSm">عرض السعر وموافقة العميل</Text>
-            <TextField label="القيمة بالوحدة الصغرى" value={form.estimatedAmountMinorUnits} keyboardType="numeric" onChangeText={(value) => updateForm('estimatedAmountMinorUnits', value)} disabled={pendingAction !== null} />
-            <TextField label="العملة" value={form.currency} autoCapitalize="characters" onChangeText={(value) => updateForm('currency', value)} disabled={pendingAction !== null} />
+            <Text role="titleSm">طلب تسعير WLT وموافقة العميل</Text>
+            <TextField label="القيمة المقترحة بالوحدة الصغرى" value={form.proposedAmountMinorUnits} keyboardType="numeric" onChangeText={(value) => updateForm('proposedAmountMinorUnits', value)} disabled={pendingAction !== null} />
+            <TextField label="العملة المقترحة" value={form.proposedCurrency} autoCapitalize="characters" onChangeText={(value) => updateForm('proposedCurrency', value)} disabled={pendingAction !== null} />
+            <TextField label="سبب الاقتراح" value={form.proposalReason} multiline numberOfLines={3} maxLength={2000} onChangeText={(value) => updateForm('proposalReason', value)} disabled={pendingAction !== null} />
             <Button label={pendingAction === 'quote' ? 'جارٍ إرسال العرض...' : 'إرسال العرض للعميل'} tone="primary" loading={pendingAction === 'quote'} disabled={pendingAction !== null || exchange?.status === 'pending'} onPress={() => void handleQuote()} />
           </Box>
 

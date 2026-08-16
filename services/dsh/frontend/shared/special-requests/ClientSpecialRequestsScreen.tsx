@@ -25,10 +25,10 @@ export type ClientSpecialRequestsScreenProps = {
 };
 
 function quoteLabel(request: DshSpecialRequestResponse): string | null {
-  if (request.estimatedAmountMinorUnits === null || request.estimatedAmountMinorUnits === undefined || !request.currency) {
+  if (request.wltQuoteAmountMinorUnits === null || request.wltQuoteAmountMinorUnits === undefined || !request.wltQuoteCurrency) {
     return null;
   }
-  return formatWltMoney(request.estimatedAmountMinorUnits, request.currency);
+  return formatWltMoney(request.wltQuoteAmountMinorUnits, request.wltQuoteCurrency);
 }
 
 function formatTimestamp(value: string | null | undefined): string | null {

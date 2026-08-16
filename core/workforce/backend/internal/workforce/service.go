@@ -542,6 +542,14 @@ func (s *Service) IssueActivation(ctx context.Context, operator Operator, actorI
 		}
 	} else if !sovereignFieldsComplete(person) {
 		return identityclient.ActivationCode{}, ErrProfileIncomplete
+	} else {
+		if s.dsh == nil {
+			return identityclient.ActivationCode{}, ErrProfileIncomplete
+		}
+		decision, decisionErr := s.dsh.CaptainFinancialEligibility(ctx, actorID)
+		if decisionErr != nil || !decision.Eligible || !decision.ExpiresAt.After(time.Now().UTC()) {
+			return identityclient.ActivationCode{}, ErrProfileIncomplete
+		}
 	}
 	code, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, expectedActorType, expectedSurface, idempotencyKey, correlationID)
 	if err != nil {

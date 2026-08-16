@@ -46,6 +46,7 @@ const ACCOUNT_TYPE_LABELS: Record<string, string> = {
   platform_revenue: 'إيرادات المنصة',
   platform_payable: 'مستحقات الدفع',
   provider_clearing: 'مقاصة مزود الدفع',
+  provider_receivable: 'ذمم مزودي الخدمة',
   platform_commission_receivable: 'عمولات مستحقة القبض',
 };
 

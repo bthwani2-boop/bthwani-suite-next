@@ -17,37 +17,122 @@ import (
 var (
 	ErrNotFound          = errors.New("provider penalty not found")
 	ErrConflict          = errors.New("provider penalty conflicts with an existing incident posting")
+	ErrPolicyUnavailable = errors.New("provider penalty policy is unavailable")
+	ErrPolicyVersion     = errors.New("provider penalty policy version conflict")
 	ErrWalletUnavailable = errors.New("provider wallet is unavailable")
-	ErrInsufficientFunds = errors.New("provider wallet has insufficient available balance")
 )
 
+type ProviderPenaltyPolicy struct {
+	PolicyID          string    `json:"policyId"`
+	PolicyVersion     string    `json:"policyVersion"`
+	ProviderActorType string    `json:"providerActorType"`
+	AmountMinorUnits  int64     `json:"amountMinorUnits"`
+	Currency          string    `json:"currency"`
+	Enabled           bool      `json:"enabled"`
+	ChangeReason      string    `json:"changeReason"`
+	UpdatedByActorID  string    `json:"updatedByActorId"`
+	UpdatedAt         time.Time `json:"updatedAt"`
+}
+
+type UpsertPolicyInput struct {
+	ExpectedVersion   int64  `json:"expectedVersion"`
+	ProviderActorType string `json:"providerActorType"`
+	AmountMinorUnits  int64  `json:"amountMinorUnits"`
+	Currency          string `json:"currency"`
+	Enabled           bool   `json:"enabled"`
+	ChangeReason      string `json:"changeReason"`
+	UpdatedByActorID  string `json:"updatedByActorId"`
+}
+
+func UpsertPolicy(ctx context.Context, db *sql.DB, policyID string, input UpsertPolicyInput) (ProviderPenaltyPolicy, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return ProviderPenaltyPolicy{}, err
+	}
+	policyID = strings.TrimSpace(policyID)
+	input.ProviderActorType = strings.TrimSpace(input.ProviderActorType)
+	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
+	input.ChangeReason = strings.TrimSpace(input.ChangeReason)
+	input.UpdatedByActorID = strings.TrimSpace(input.UpdatedByActorID)
+	if policyID == "" || input.ExpectedVersion < 0 || input.AmountMinorUnits <= 0 ||
+		(input.ProviderActorType != "captain" && input.ProviderActorType != "field" && input.ProviderActorType != "any") ||
+		len(input.Currency) != 3 || len(input.ChangeReason) < 3 || input.UpdatedByActorID == "" {
+		return ProviderPenaltyPolicy{}, fmt.Errorf("policyId, expectedVersion, provider type, positive amount, currency, reason and updatedByActorId are required")
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return ProviderPenaltyPolicy{}, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, "provider-penalty-policy:"+operatorContextID+":"+policyID); err != nil {
+		return ProviderPenaltyPolicy{}, err
+	}
+	var currentVersion int64
+	err = tx.QueryRowContext(ctx, `SELECT COALESCE(NULLIF(regexp_replace(policy_version,'^v',''),'')::bigint,0)
+		FROM wlt_provider_penalty_policies WHERE operator_context_id=$1 AND policy_id=$2 FOR UPDATE`, operatorContextID, policyID).Scan(&currentVersion)
+	if errors.Is(err, sql.ErrNoRows) {
+		currentVersion = 0
+	} else if err != nil {
+		return ProviderPenaltyPolicy{}, err
+	}
+	if currentVersion != input.ExpectedVersion {
+		return ProviderPenaltyPolicy{}, ErrPolicyVersion
+	}
+	nextVersion := currentVersion + 1
+	var policy ProviderPenaltyPolicy
+	err = tx.QueryRowContext(ctx, `INSERT INTO wlt_provider_penalty_policies(
+		operator_context_id,policy_id,policy_version,provider_actor_type,amount_minor_units,currency,enabled,change_reason,updated_by_actor_id,updated_at)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,now())
+		ON CONFLICT(operator_context_id,policy_id) DO UPDATE SET
+			policy_version=EXCLUDED.policy_version,provider_actor_type=EXCLUDED.provider_actor_type,
+			amount_minor_units=EXCLUDED.amount_minor_units,currency=EXCLUDED.currency,
+			enabled=EXCLUDED.enabled,change_reason=EXCLUDED.change_reason,
+			updated_by_actor_id=EXCLUDED.updated_by_actor_id,updated_at=now()
+		RETURNING policy_id,policy_version,provider_actor_type,amount_minor_units,currency,enabled,change_reason,updated_by_actor_id,updated_at`,
+		operatorContextID, policyID, fmt.Sprintf("v%d", nextVersion), input.ProviderActorType,
+		input.AmountMinorUnits, input.Currency, input.Enabled, input.ChangeReason, input.UpdatedByActorID).
+		Scan(&policy.PolicyID, &policy.PolicyVersion, &policy.ProviderActorType, &policy.AmountMinorUnits,
+			&policy.Currency, &policy.Enabled, &policy.ChangeReason, &policy.UpdatedByActorID, &policy.UpdatedAt)
+	if err != nil {
+		return ProviderPenaltyPolicy{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return ProviderPenaltyPolicy{}, err
+	}
+	return policy, nil
+}
+
 type ProviderPenalty struct {
-	ID                          string     `json:"id"`
-	OperatorContextID           string     `json:"operatorContextId"`
-	IncidentID                  string     `json:"incidentId"`
-	ProviderActorID             string     `json:"providerActorId"`
-	ProviderActorType           string     `json:"providerActorType"`
-	AmountMinorUnits            int64      `json:"amountMinorUnits"`
-	Currency                    string     `json:"currency"`
-	Reason                      string     `json:"reason"`
-	Status                      string     `json:"status"`
-	LedgerTransactionID         string     `json:"ledgerTransactionId"`
-	ReversalLedgerTransactionID string     `json:"reversalLedgerTransactionId,omitempty"`
-	PostedByActorID             string     `json:"postedByActorId"`
-	ReversedByActorID           string     `json:"reversedByActorId,omitempty"`
-	ReversedReason              string     `json:"reversedReason,omitempty"`
-	IdempotencyKey              string     `json:"idempotencyKey"`
-	CreatedAt                   time.Time  `json:"createdAt"`
-	ReversedAt                  *time.Time `json:"reversedAt,omitempty"`
-	UpdatedAt                   time.Time  `json:"updatedAt"`
+	ID                            string     `json:"id"`
+	OperatorContextID             string     `json:"operatorContextId"`
+	IncidentID                    string     `json:"incidentId"`
+	ProviderActorID               string     `json:"providerActorId"`
+	ProviderActorType             string     `json:"providerActorType"`
+	PolicyID                      string     `json:"policyId"`
+	PolicyVersion                 string     `json:"policyVersion"`
+	DebtID                        string     `json:"debtId,omitempty"`
+	AmountMinorUnits              int64      `json:"amountMinorUnits"`
+	WalletAppliedAmountMinorUnits int64      `json:"walletAppliedAmountMinorUnits"`
+	DebtAmountMinorUnits          int64      `json:"debtAmountMinorUnits"`
+	Currency                      string     `json:"currency"`
+	Reason                        string     `json:"reason"`
+	Status                        string     `json:"status"`
+	LedgerTransactionID           string     `json:"ledgerTransactionId"`
+	ReversalLedgerTransactionID   string     `json:"reversalLedgerTransactionId,omitempty"`
+	PostedByActorID               string     `json:"postedByActorId"`
+	ReversedByActorID             string     `json:"reversedByActorId,omitempty"`
+	ReversedReason                string     `json:"reversedReason,omitempty"`
+	IdempotencyKey                string     `json:"idempotencyKey"`
+	CreatedAt                     time.Time  `json:"createdAt"`
+	ReversedAt                    *time.Time `json:"reversedAt,omitempty"`
+	UpdatedAt                     time.Time  `json:"updatedAt"`
 }
 
 type PostInput struct {
 	IncidentID        string `json:"incidentId"`
 	ProviderActorID   string `json:"providerActorId"`
 	ProviderActorType string `json:"providerActorType"`
-	AmountMinorUnits  int64  `json:"amountMinorUnits"`
-	Currency          string `json:"currency"`
+	PolicyID          string `json:"policyId"`
 	Reason            string `json:"reason"`
 	PostedByActorID   string `json:"postedByActorId"`
 }
@@ -58,7 +143,8 @@ type ReverseInput struct {
 }
 
 const columns = `id,operator_context_id,incident_id,provider_actor_id,provider_actor_type,
-	amount_minor_units,currency,reason,status,ledger_transaction_id,
+	policy_id,policy_version,COALESCE(debt_id,''),amount_minor_units,wallet_applied_amount_minor_units,
+	debt_amount_minor_units,currency,reason,status,ledger_transaction_id,
 	COALESCE(reversal_ledger_transaction_id,''),posted_by_actor_id,
 	COALESCE(reversed_by_actor_id,''),COALESCE(reversed_reason,''),idempotency_key,
 	created_at,reversed_at,updated_at`
@@ -69,7 +155,9 @@ func scan(row scanner) (ProviderPenalty, error) {
 	var item ProviderPenalty
 	err := row.Scan(
 		&item.ID, &item.OperatorContextID, &item.IncidentID, &item.ProviderActorID, &item.ProviderActorType,
-		&item.AmountMinorUnits, &item.Currency, &item.Reason, &item.Status, &item.LedgerTransactionID,
+		&item.PolicyID, &item.PolicyVersion, &item.DebtID,
+		&item.AmountMinorUnits, &item.WalletAppliedAmountMinorUnits, &item.DebtAmountMinorUnits,
+		&item.Currency, &item.Reason, &item.Status, &item.LedgerTransactionID,
 		&item.ReversalLedgerTransactionID, &item.PostedByActorID, &item.ReversedByActorID,
 		&item.ReversedReason, &item.IdempotencyKey, &item.CreatedAt, &item.ReversedAt, &item.UpdatedAt,
 	)
@@ -80,19 +168,46 @@ func normalizePost(input *PostInput) error {
 	input.IncidentID = strings.TrimSpace(input.IncidentID)
 	input.ProviderActorID = strings.TrimSpace(input.ProviderActorID)
 	input.ProviderActorType = strings.TrimSpace(input.ProviderActorType)
-	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
+	input.PolicyID = strings.TrimSpace(input.PolicyID)
 	input.Reason = strings.TrimSpace(input.Reason)
 	input.PostedByActorID = strings.TrimSpace(input.PostedByActorID)
-	if input.IncidentID == "" || input.ProviderActorID == "" || input.PostedByActorID == "" || input.AmountMinorUnits <= 0 || len(input.Reason) < 3 {
-		return fmt.Errorf("incidentId, provider, positive amount, reason and postedByActorId are required")
+	if input.IncidentID == "" || input.ProviderActorID == "" || input.PostedByActorID == "" || input.PolicyID == "" || len(input.Reason) < 3 {
+		return fmt.Errorf("incidentId, provider, policyId, reason and postedByActorId are required")
 	}
 	if input.ProviderActorType != "captain" && input.ProviderActorType != "field" {
 		return fmt.Errorf("providerActorType must be captain or field")
 	}
-	if len(input.Currency) != 3 {
-		return fmt.Errorf("currency must be a three-letter code")
-	}
 	return nil
+}
+
+type penaltyPolicy struct {
+	Version           string
+	ProviderActorType string
+	AmountMinorUnits  int64
+	Currency          string
+}
+
+func loadPenaltyPolicy(ctx context.Context, tx *sql.Tx, operatorContextID string, input PostInput) (penaltyPolicy, error) {
+	var policy penaltyPolicy
+	err := tx.QueryRowContext(ctx, `
+		SELECT policy_version,provider_actor_type,amount_minor_units,currency
+		FROM wlt_provider_penalty_policies
+		WHERE operator_context_id=$1 AND policy_id=$2 AND enabled
+		FOR SHARE`, operatorContextID, input.PolicyID).
+		Scan(&policy.Version, &policy.ProviderActorType, &policy.AmountMinorUnits, &policy.Currency)
+	if errors.Is(err, sql.ErrNoRows) {
+		return penaltyPolicy{}, ErrPolicyUnavailable
+	}
+	if err != nil {
+		return penaltyPolicy{}, err
+	}
+	if policy.ProviderActorType != "any" && policy.ProviderActorType != input.ProviderActorType {
+		return penaltyPolicy{}, ErrPolicyUnavailable
+	}
+	if policy.AmountMinorUnits <= 0 || len(policy.Currency) != 3 || strings.TrimSpace(policy.Version) == "" {
+		return penaltyPolicy{}, ErrPolicyUnavailable
+	}
+	return policy, nil
 }
 
 func existingForIncidentTx(ctx context.Context, tx *sql.Tx, operatorContextID, incidentID string) (*ProviderPenalty, error) {
@@ -133,13 +248,20 @@ func Post(ctx context.Context, db *sql.DB, idempotencyKey string, input PostInpu
 		return ProviderPenalty{}, err
 	}
 	if existing != nil {
-		if existing.ProviderActorID != input.ProviderActorID || existing.ProviderActorType != input.ProviderActorType || existing.AmountMinorUnits != input.AmountMinorUnits || existing.Currency != input.Currency || existing.IdempotencyKey != idempotencyKey {
+		if strings.HasPrefix(existing.PolicyID, "legacy:") {
+			return ProviderPenalty{}, ErrPolicyUnavailable
+		}
+		if existing.ProviderActorID != input.ProviderActorID || existing.ProviderActorType != input.ProviderActorType || existing.PolicyID != input.PolicyID || existing.IdempotencyKey != idempotencyKey {
 			return ProviderPenalty{}, ErrConflict
 		}
 		if err := tx.Commit(); err != nil {
 			return ProviderPenalty{}, err
 		}
 		return *existing, nil
+	}
+	policy, err := loadPenaltyPolicy(ctx, tx, operatorContextID, input)
+	if err != nil {
+		return ProviderPenalty{}, err
 	}
 
 	var walletStatus, walletCurrency string
@@ -148,34 +270,56 @@ func Post(ctx context.Context, db *sql.DB, idempotencyKey string, input PostInpu
 		FROM wlt_wallets WHERE operator_context_id=$1 AND actor_type=$2 AND actor_id=$3 FOR UPDATE`,
 		operatorContextID, input.ProviderActorType, input.ProviderActorID).Scan(&walletStatus, &walletCurrency, &available)
 	if errors.Is(err, sql.ErrNoRows) {
-		return ProviderPenalty{}, ErrWalletUnavailable
-	}
-	if err != nil {
+		walletStatus, walletCurrency, available = "", "", 0
+	} else if err != nil {
 		return ProviderPenalty{}, err
 	}
-	if walletStatus != "active" || walletCurrency != input.Currency {
-		return ProviderPenalty{}, ErrWalletUnavailable
+	walletApplied := int64(0)
+	if walletStatus == "active" && walletCurrency == policy.Currency && available > 0 {
+		walletApplied = available
+		if walletApplied > policy.AmountMinorUnits {
+			walletApplied = policy.AmountMinorUnits
+		}
 	}
-	if available < input.AmountMinorUnits {
-		return ProviderPenalty{}, ErrInsufficientFunds
-	}
+	debtAmount := policy.AmountMinorUnits - walletApplied
 
-	ledgerID, err := ledger.PostLedgerTransaction(ctx, tx, "provider_penalty_posted", "provider_incident", input.IncidentID, []ledger.LedgerLine{
-		{AccountType: "wallet", ActorType: input.ProviderActorType, ActorID: input.ProviderActorID, DebitCredit: "debit", AmountMinorUnits: input.AmountMinorUnits, Currency: input.Currency},
-		{AccountType: "platform_revenue", DebitCredit: "credit", AmountMinorUnits: input.AmountMinorUnits, Currency: input.Currency},
-	}, ledger.Actor{ID: input.PostedByActorID, Type: "operator"})
+	lines := make([]ledger.LedgerLine, 0, 3)
+	if walletApplied > 0 {
+		lines = append(lines, ledger.LedgerLine{AccountType: "wallet", ActorType: input.ProviderActorType, ActorID: input.ProviderActorID, DebitCredit: "debit", AmountMinorUnits: walletApplied, Currency: policy.Currency})
+	}
+	if debtAmount > 0 {
+		lines = append(lines, ledger.LedgerLine{AccountType: "provider_receivable", DebitCredit: "debit", AmountMinorUnits: debtAmount, Currency: policy.Currency})
+	}
+	lines = append(lines, ledger.LedgerLine{AccountType: "platform_revenue", DebitCredit: "credit", AmountMinorUnits: policy.AmountMinorUnits, Currency: policy.Currency})
+	ledgerID, err := ledger.PostLedgerTransaction(ctx, tx, "provider_penalty_posted", "provider_incident", input.IncidentID, lines, ledger.Actor{ID: input.PostedByActorID, Type: "operator"})
 	if err != nil {
 		return ProviderPenalty{}, err
 	}
 
 	item, err := scan(tx.QueryRowContext(ctx, `INSERT INTO wlt_provider_penalties(
 		operator_context_id,incident_id,provider_actor_id,provider_actor_type,amount_minor_units,
-		currency,reason,ledger_transaction_id,posted_by_actor_id,idempotency_key)
-		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING `+columns,
-		operatorContextID, input.IncidentID, input.ProviderActorID, input.ProviderActorType, input.AmountMinorUnits,
-		input.Currency, input.Reason, ledgerID, input.PostedByActorID, idempotencyKey))
+		policy_id,policy_version,wallet_applied_amount_minor_units,debt_amount_minor_units,currency,reason,ledger_transaction_id,posted_by_actor_id,idempotency_key)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING `+columns,
+		operatorContextID, input.IncidentID, input.ProviderActorID, input.ProviderActorType, policy.AmountMinorUnits,
+		input.PolicyID, policy.Version, walletApplied, debtAmount, policy.Currency, input.Reason, ledgerID, input.PostedByActorID, idempotencyKey))
 	if err != nil {
 		return ProviderPenalty{}, err
+	}
+	if debtAmount > 0 {
+		if err := tx.QueryRowContext(ctx, `INSERT INTO wlt_provider_debts(
+			operator_context_id,provider_actor_id,provider_actor_type,source_type,source_id,
+			policy_id,policy_version,original_amount_minor_units,outstanding_amount_minor_units,
+			currency,ledger_transaction_id)
+			VALUES($1,$2,$3,'provider_penalty',$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+			operatorContextID, input.ProviderActorID, input.ProviderActorType, item.ID,
+			input.PolicyID, policy.Version, policy.AmountMinorUnits, debtAmount, policy.Currency, ledgerID).Scan(&item.DebtID); err != nil {
+			return ProviderPenalty{}, err
+		}
+		item, err = scan(tx.QueryRowContext(ctx, `UPDATE wlt_provider_penalties SET debt_id=$3,updated_at=now()
+			WHERE operator_context_id=$1 AND id=$2 RETURNING `+columns, operatorContextID, item.ID, item.DebtID))
+		if err != nil {
+			return ProviderPenalty{}, err
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return ProviderPenalty{}, err
@@ -214,21 +358,22 @@ func Reverse(ctx context.Context, db *sql.DB, penaltyID string, input ReverseInp
 		}
 		return item, nil
 	}
-	var walletStatus, walletCurrency string
-	if err := tx.QueryRowContext(ctx, `SELECT status,currency FROM wlt_wallets
-		WHERE operator_context_id=$1 AND actor_type=$2 AND actor_id=$3 FOR UPDATE`,
-		operatorContextID, item.ProviderActorType, item.ProviderActorID).Scan(&walletStatus, &walletCurrency); err != nil {
-		return ProviderPenalty{}, ErrWalletUnavailable
+	lines := []ledger.LedgerLine{{AccountType: "platform_revenue", DebitCredit: "debit", AmountMinorUnits: item.AmountMinorUnits, Currency: item.Currency}}
+	if item.WalletAppliedAmountMinorUnits > 0 {
+		lines = append(lines, ledger.LedgerLine{AccountType: "wallet", ActorType: item.ProviderActorType, ActorID: item.ProviderActorID, DebitCredit: "credit", AmountMinorUnits: item.WalletAppliedAmountMinorUnits, Currency: item.Currency})
 	}
-	if walletStatus != "active" || walletCurrency != item.Currency {
-		return ProviderPenalty{}, ErrWalletUnavailable
+	if item.DebtAmountMinorUnits > 0 {
+		lines = append(lines, ledger.LedgerLine{AccountType: "provider_receivable", DebitCredit: "credit", AmountMinorUnits: item.DebtAmountMinorUnits, Currency: item.Currency})
 	}
-	ledgerID, err := ledger.PostLedgerTransaction(ctx, tx, "provider_penalty_reversed", "provider_penalty", item.ID, []ledger.LedgerLine{
-		{AccountType: "platform_revenue", DebitCredit: "debit", AmountMinorUnits: item.AmountMinorUnits, Currency: item.Currency},
-		{AccountType: "wallet", ActorType: item.ProviderActorType, ActorID: item.ProviderActorID, DebitCredit: "credit", AmountMinorUnits: item.AmountMinorUnits, Currency: item.Currency},
-	}, ledger.Actor{ID: input.ReversedByActorID, Type: "operator"})
+	ledgerID, err := ledger.PostLedgerTransaction(ctx, tx, "provider_penalty_reversed", "provider_penalty", item.ID, lines, ledger.Actor{ID: input.ReversedByActorID, Type: "operator"})
 	if err != nil {
 		return ProviderPenalty{}, err
+	}
+	if item.DebtID != "" {
+		if _, err := tx.ExecContext(ctx, `UPDATE wlt_provider_debts SET status='reversed',outstanding_amount_minor_units=0,reversed_at=now(),updated_at=now()
+			WHERE operator_context_id=$1 AND id=$2 AND status IN ('open','partially_settled')`, operatorContextID, item.DebtID); err != nil {
+			return ProviderPenalty{}, err
+		}
 	}
 	item, err = scan(tx.QueryRowContext(ctx, `UPDATE wlt_provider_penalties SET status='reversed',
 		reversal_ledger_transaction_id=$3,reversed_by_actor_id=$4,reversed_reason=$5,
@@ -245,16 +390,36 @@ func Reverse(ctx context.Context, db *sql.DB, penaltyID string, input ReverseInp
 
 func writeError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, ErrPolicyVersion):
+		shared.SendError(w, http.StatusConflict, "PROVIDER_PENALTY_POLICY_VERSION_CONFLICT", err.Error())
 	case errors.Is(err, ErrNotFound):
 		shared.SendError(w, http.StatusNotFound, "PROVIDER_PENALTY_NOT_FOUND", err.Error())
 	case errors.Is(err, ErrConflict):
 		shared.SendError(w, http.StatusConflict, "PROVIDER_PENALTY_CONFLICT", err.Error())
+	case errors.Is(err, ErrPolicyUnavailable):
+		shared.SendError(w, http.StatusConflict, "PROVIDER_PENALTY_POLICY_UNAVAILABLE", err.Error())
 	case errors.Is(err, ErrWalletUnavailable):
 		shared.SendError(w, http.StatusConflict, "PROVIDER_WALLET_UNAVAILABLE", err.Error())
-	case errors.Is(err, ErrInsufficientFunds):
-		shared.SendError(w, http.StatusConflict, "PROVIDER_WALLET_INSUFFICIENT", err.Error())
 	default:
 		shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+	}
+}
+
+func HandleUpsertPolicy(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var input UpsertPolicyInput
+		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&input); err != nil {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
+			return
+		}
+		policy, err := UpsertPolicy(r.Context(), db, r.PathValue("policyId"), input)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		shared.SendJSON(w, http.StatusOK, map[string]any{"providerPenaltyPolicy": policy})
 	}
 }
 

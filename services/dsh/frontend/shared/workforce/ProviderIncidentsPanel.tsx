@@ -1,16 +1,11 @@
 import React from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 import { Badge, Icon, StateView, Text, colorRoles, spacing } from "@bthwani/ui-kit";
-import { formatWltMoney } from "@bthwani/wlt/dsh";
 import {
   listOwnProviderIncidents,
   submitOwnProviderIncidentAppeal,
 } from "./workforce-me-operational.api";
 import type { ProviderIncident } from "./workforce.types";
-
-function amountLabel(minorUnits: number, currency: string): string {
-  return formatWltMoney(minorUnits, currency);
-}
 
 function statusLabel(status: string): string {
   const labels: Record<string, string> = {
@@ -109,10 +104,8 @@ export function ProviderIncidentsPanel() {
               <Text role="bodySm" style={styles.rtl}>{incident.description}</Text>
               <View style={styles.rowBetween}>
                 <Text role="caption" tone="muted">{new Date(incident.createdAt).toLocaleString("ar-YE")}</Text>
-                <Text role="bodyStrong" tone={incident.proposedPenaltyMinorUnits > 0 ? "danger" : "muted"}>
-                  {incident.proposedPenaltyMinorUnits > 0
-                    ? amountLabel(incident.proposedPenaltyMinorUnits, incident.currency)
-                    : "دون خصم مالي"}
+                <Text role="bodyStrong" tone={incident.wltLedgerReference ? "danger" : "muted"}>
+                  {incident.wltLedgerReference ? "إجراء مالي مثبت في WLT" : "لا يوجد إجراء مالي مثبت"}
                 </Text>
               </View>
               {incident.sourceId ? <Text role="caption" tone="muted" style={styles.rtl}>المرجع: {incident.sourceType}/{incident.sourceId}</Text> : null}

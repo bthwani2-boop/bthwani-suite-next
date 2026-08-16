@@ -81,7 +81,7 @@ func TestFieldActivationReadinessRequiresSupervisorIdentityAndContract(t *testin
 	}
 }
 
-func TestCaptainActivationRequiresSingleFundedFinancialGuarantee(t *testing.T) {
+func TestCaptainOperationalReadinessExcludesCrossServiceFinancialEligibility(t *testing.T) {
 	expires := time.Now().UTC().AddDate(1, 0, 0).Format("2006-01-02")
 	person := Person{
 		WorkforceKind: "captain",
@@ -96,8 +96,6 @@ func TestCaptainActivationRequiresSingleFundedFinancialGuarantee(t *testing.T) {
 	core := readyCommonCore("captain")
 	core.Captain = &CaptainActivationCore{
 		Classification:                "joker",
-		FinancialGuaranteeMinorUnits:  0,
-		FinancialGuaranteeStatus:      "not_funded",
 		DeliveryBagCustodyStatus:      "issued",
 		MandatoryPurchasesStatus:      "paid_and_delivered",
 		TrainingStatus:                "passed",
@@ -105,18 +103,8 @@ func TestCaptainActivationRequiresSingleFundedFinancialGuarantee(t *testing.T) {
 	}
 
 	readiness := EvaluateProviderActivationReadiness(person, core)
-	if readiness.Ready {
-		t.Fatal("captain must not activate without a funded financial guarantee")
-	}
-	if !slices.Contains(readiness.Missing, "financialGuaranteeFunded") {
-		t.Fatalf("expected financial guarantee blocker, missing=%v", readiness.Missing)
-	}
-
-	core.Captain.FinancialGuaranteeMinorUnits = 100000
-	core.Captain.FinancialGuaranteeStatus = "funded"
-	readiness = EvaluateProviderActivationReadiness(person, core)
 	if !readiness.Ready {
-		t.Fatalf("expected fully prepared joker captain to be ready, missing=%v", readiness.Missing)
+		t.Fatalf("captain operational readiness must not invent a WLT blocker, missing=%v", readiness.Missing)
 	}
 }
 
@@ -135,8 +123,6 @@ func TestCaptainStartsAsJokerAndHasNoShiftRequirement(t *testing.T) {
 	core := readyCommonCore("captain")
 	core.Captain = &CaptainActivationCore{
 		Classification:                "joker",
-		FinancialGuaranteeMinorUnits:  50000,
-		FinancialGuaranteeStatus:      "funded",
 		DeliveryBagCustodyStatus:      "issued",
 		MandatoryPurchasesStatus:      "paid_and_delivered",
 		TrainingStatus:                "passed",
@@ -145,6 +131,6 @@ func TestCaptainStartsAsJokerAndHasNoShiftRequirement(t *testing.T) {
 
 	readiness := EvaluateProviderActivationReadiness(person, core)
 	if !readiness.Ready {
-		t.Fatalf("joker is the valid initial captain classification, missing=%v", readiness.Missing)
+		t.Fatalf("captain operational readiness must be ready before the separate DSH/WLT activation gate, missing=%v", readiness.Missing)
 	}
 }

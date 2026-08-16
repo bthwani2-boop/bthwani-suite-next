@@ -3,7 +3,7 @@
   "service": "wlt",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "wlt-932_checkout_tender_allocation.sql",
+  "cutover": "wlt-933_provider_penalty_policy_authority.sql",
   "migrations": [
     {"ordinal":1,"file":"wlt-000_financial_references.sql","sha256":"64a1bec63acf81e53521bb683ddc1fb1f46cc1d5cccc61af4aa95696159ce6fe","historicalPrefix":"000","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":2,"file":"wlt-001_payment_sessions.sql","sha256":"aa350f36c803d912b0e51874f9f4c0f93d3ccfb4c56f2db819f65b32c82bb07d","historicalPrefix":"001","state":"HISTORICAL_IMMUTABLE"},
@@ -106,6 +106,10 @@
     {"ordinal":99,"file":"wlt-929_canonical_checkout_pricing_quotes.sql","sha256":"edfd8cf5bf7fb8a2184da92daf5139b2466b7cd4a3631dae0322cc3298ec95f7","historicalPrefix":"929","state":"ACTIVE"},
     {"ordinal":100,"file":"wlt-930_checkout_quote_payment_session_guard.sql","sha256":"931310b008f96c67db839b914d60093da47b55ec674a1d8d8c5502ffc56cd7c9","historicalPrefix":"930","state":"ACTIVE"},
     {"ordinal":101,"file":"wlt-931_settlement_batch_mutation_idempotency.sql","sha256":"b8004f6ab0f80db6b8eb18d1f5533c8697f0bee31db2f52309223b31ac330d26","historicalPrefix":"931","state":"ACTIVE"},
-    {"ordinal":102,"file":"wlt-932_checkout_tender_allocation.sql","sha256":"5c132fa3b28b6a689bf2f3cc3b7b6902ae72056a0fcad97693a95bd4137b3d9b","historicalPrefix":"932","state":"ACTIVE"}
+    {"ordinal":102,"file":"wlt-932_checkout_tender_allocation.sql","sha256":"5c132fa3b28b6a689bf2f3cc3b7b6902ae72056a0fcad97693a95bd4137b3d9b","historicalPrefix":"932","state":"HISTORICAL_IMMUTABLE"},
+    {"ordinal":103,"file":"wlt-933_provider_penalty_policy_authority.sql","sha256":"56e5087f863428312084c54707e614a271202ecd9f720b5d82eaa171ada50e59","historicalPrefix":"933","state":"HISTORICAL_IMMUTABLE"},
+    {"ordinal":104,"file":"wlt-934_provider_debts.sql","sha256":"0268b3b0dfb1dd94e08961dc94bb661273e5417f32ac836544ee8228dc46bae0","historicalPrefix":"934","state":"HISTORICAL_IMMUTABLE"},
+    {"ordinal":105,"file":"wlt-935_captain_collateral_authority.sql","sha256":"b11bff401b888d48ad701cff7bd61022c88fc97583caf7078146b4e67e051cb0","historicalPrefix":"935","state":"ACTIVE"},
+    {"ordinal":106,"file":"wlt-936_special_request_quote_authority.sql","sha256":"cc4d753c3be9b44428601261c31e00593fa3f37408f8622e460f92435c1d1319","historicalPrefix":"936","state":"ACTIVE"}
   ]
 }

@@ -25,6 +25,7 @@ x-bthwani-contracts:
   payoutFailureBoundary: ./wlt.payout-failure-boundary.openapi.yaml
   codCustody: ./wlt.cod-custody.openapi.yaml
   codRecords: ./wlt.cod-records.openapi.yaml
+  captainCollateral: ./wlt.captain-collateral.openapi.yaml
   commercial: ./wlt.commercial.openapi.yaml
   commercialSummary: ./wlt.commercial-summary.openapi.yaml
   promotionFunding: ./wlt.promotion-funding.openapi.yaml

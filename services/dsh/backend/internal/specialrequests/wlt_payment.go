@@ -19,10 +19,15 @@ var ErrPaymentSessionMismatch = errors.New("wlt payment session id does not matc
 // intentionally stays put here until WLT reports a terminal outcome via
 // ApplyWltPaymentEvent.
 func (s *Service) AttachWltPaymentSession(ctx context.Context, id string, expectedVersion int, sessionID string) (*SpecialRequest, error) {
-	return s.AttachWltPaymentSessionInOperatorContext(ctx, DefaultOperatorContextID, id, expectedVersion, sessionID)
+	return s.AttachWltPaymentSessionInOperatorContext(ctx, "", id, expectedVersion, sessionID)
 }
 
 func (s *Service) AttachWltPaymentSessionInOperatorContext(ctx context.Context, operatorContextID string, id string, expectedVersion int, sessionID string) (*SpecialRequest, error) {
+	var err error
+	operatorContextID, err = requireOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	if id == "" || sessionID == "" {
 		return nil, fmt.Errorf("%w: id and sessionID are required", ErrInvalid)
 	}
@@ -30,11 +35,11 @@ func (s *Service) AttachWltPaymentSessionInOperatorContext(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
-	if !moneyEditableStatuses[current.Status] {
+	if current.Status != StatusNeedsCustomerInput || current.WorkflowStage == nil || *current.WorkflowStage != "customer_approval" {
 		return nil, fmt.Errorf("%w: cannot attach payment session from status %s", ErrConflict, current.Status)
 	}
-	if current.EstimatedAmountMinorUnits == nil || current.Currency == nil {
-		return nil, fmt.Errorf("%w: quote must be set before approval", ErrInvalid)
+	if current.WltQuoteID == nil || current.WltQuoteAmountMinorUnits == nil || current.WltQuoteCurrency == nil {
+		return nil, fmt.Errorf("%w: WLT quote must be attached before approval", ErrInvalid)
 	}
 	return s.repo.UpdateInOperatorContext(ctx, operatorContextID, id, expectedVersion, UpdateInput{WltPaymentSessionID: &sessionID})
 }
@@ -57,6 +62,11 @@ func (s *Service) AttachWltPaymentSessionInOperatorContext(ctx context.Context, 
 // anything (already approved, or moved on operationally since) are a no-op
 // success.
 func ApplyWltPaymentEvent(db *sql.DB, operatorContextID string, id, paymentSessionID, wltStatus string) (*SpecialRequest, error) {
+	var err error
+	operatorContextID, err = requireOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	if id == "" || paymentSessionID == "" || wltStatus == "" {
 		return nil, fmt.Errorf("%w: id, paymentSessionId and status are required", ErrInvalid)
 	}
@@ -74,7 +84,7 @@ func ApplyWltPaymentEvent(db *sql.DB, operatorContextID string, id, paymentSessi
 
 	switch wltStatus {
 	case "captured", "cod_collected":
-		if !moneyEditableStatuses[current.Status] {
+		if current.Status != StatusNeedsCustomerInput {
 			// Already approved, or the request has moved on operationally
 			// (assigned/in_progress/completed) since the quote was approved:
 			// a late or retried payment confirmation must never fight with

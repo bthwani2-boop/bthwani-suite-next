@@ -18,10 +18,12 @@ export function canClientRespondToInformation(request: DshSpecialRequestResponse
 export function canClientApproveSpecialRequestQuote(request: DshSpecialRequestResponse): boolean {
   return request.status === "needs_customer_input"
     && request.workflowStage === "customer_approval"
-    && request.estimatedAmountMinorUnits !== null
-    && request.estimatedAmountMinorUnits !== undefined
-    && request.currency !== null
-    && request.currency !== undefined
+    && request.wltQuoteId !== null
+    && request.wltQuoteId !== undefined
+    && request.wltQuoteAmountMinorUnits !== null
+    && request.wltQuoteAmountMinorUnits !== undefined
+    && request.wltQuoteCurrency !== null
+    && request.wltQuoteCurrency !== undefined
     && !request.wltPaymentSessionId;
 }
 

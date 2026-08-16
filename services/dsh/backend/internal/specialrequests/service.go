@@ -39,13 +39,6 @@ var clientCancellableStatuses = map[RequestStatus]bool{
 	StatusApproved:           true,
 }
 
-// moneyEditableStatuses are the statuses during which estimated-amount /
-// currency fields may be set by an operator.
-var moneyEditableStatuses = map[RequestStatus]bool{
-	StatusUnderReview:        true,
-	StatusNeedsCustomerInput: true,
-}
-
 // stageRule binds a workflowStage value to the global status it is valid
 // under (or, for the terminal "any non-terminal status" stages, to a flag
 // instead of a fixed status), plus its position in the forward-only stage
@@ -183,22 +176,23 @@ const (
 	maxAddressLength = 500
 )
 
-const DefaultOperatorContextID = "OperatorContext-dev-001"
-
-func OperatorContextOrDefault(operatorContextID string) string {
-	if strings.TrimSpace(operatorContextID) == "" {
-		return DefaultOperatorContextID
+func requireOperatorContextID(operatorContextID string) (string, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return "", fmt.Errorf("%w: OperatorContext is required", ErrInvalid)
 	}
-	return strings.TrimSpace(operatorContextID)
+	return operatorContextID, nil
 }
 
 func (s *Service) Create(ctx context.Context, clientID string, in CreateInput) (*SpecialRequest, error) {
-	return s.CreateInOperatorContext(ctx, OperatorContextOrDefault(in.OperatorContextID), clientID, in)
+	return s.CreateInOperatorContext(ctx, in.OperatorContextID, clientID, in)
 }
 
 func (s *Service) CreateInOperatorContext(ctx context.Context, operatorContextID string, clientID string, in CreateInput) (*SpecialRequest, error) {
-	if operatorContextID == "" {
-		return nil, fmt.Errorf("%w: OperatorContext is required", ErrInvalid)
+	var err error
+	operatorContextID, err = requireOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
 	}
 	if clientID == "" {
 		return nil, fmt.Errorf("%w: client is required", ErrInvalid)
@@ -330,10 +324,13 @@ func validateTextField(field string, value *string, maxLen int) error {
 }
 
 func (s *Service) GetForClient(ctx context.Context, id, clientID string) (*SpecialRequest, error) {
-	return s.GetForClientInOperatorContext(ctx, DefaultOperatorContextID, id, clientID)
+	return s.GetForClientInOperatorContext(ctx, "", id, clientID)
 }
 
 func (s *Service) GetForClientInOperatorContext(ctx context.Context, operatorContextID string, id, clientID string) (*SpecialRequest, error) {
+	if _, err := requireOperatorContextID(operatorContextID); err != nil {
+		return nil, err
+	}
 	req, err := s.repo.GetInOperatorContext(ctx, operatorContextID, id)
 	if err != nil {
 		return nil, err
@@ -345,26 +342,35 @@ func (s *Service) GetForClientInOperatorContext(ctx context.Context, operatorCon
 }
 
 func (s *Service) ListForClient(ctx context.Context, clientID string, limit, offset int) ([]SpecialRequest, int, error) {
-	return s.ListForClientInOperatorContext(ctx, DefaultOperatorContextID, clientID, limit, offset)
+	return s.ListForClientInOperatorContext(ctx, "", clientID, limit, offset)
 }
 
 func (s *Service) ListForClientInOperatorContext(ctx context.Context, operatorContextID string, clientID string, limit, offset int) ([]SpecialRequest, int, error) {
+	if _, err := requireOperatorContextID(operatorContextID); err != nil {
+		return nil, 0, err
+	}
 	return s.repo.ListByClientInOperatorContext(ctx, operatorContextID, clientID, limit, offset)
 }
 
 func (s *Service) GetForOperator(ctx context.Context, id string) (*SpecialRequest, error) {
-	return s.GetForOperatorInOperatorContext(ctx, DefaultOperatorContextID, id)
+	return s.GetForOperatorInOperatorContext(ctx, "", id)
 }
 
 func (s *Service) GetForOperatorInOperatorContext(ctx context.Context, operatorContextID string, id string) (*SpecialRequest, error) {
+	if _, err := requireOperatorContextID(operatorContextID); err != nil {
+		return nil, err
+	}
 	return s.repo.GetInOperatorContext(ctx, operatorContextID, id)
 }
 
 func (s *Service) ListForOperator(ctx context.Context, reqType, status, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error) {
-	return s.ListForOperatorInOperatorContext(ctx, DefaultOperatorContextID, reqType, status, workflowStage, limit, offset)
+	return s.ListForOperatorInOperatorContext(ctx, "", reqType, status, workflowStage, limit, offset)
 }
 
 func (s *Service) ListForOperatorInOperatorContext(ctx context.Context, operatorContextID string, reqType, status, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error) {
+	if _, err := requireOperatorContextID(operatorContextID); err != nil {
+		return nil, 0, err
+	}
 	if reqType != nil && *reqType != "" {
 		rt := RequestType(*reqType)
 		if rt != TypeSheinAssistedPurchase && rt != TypeAwnakErrand {
@@ -390,10 +396,15 @@ func isValidStatus(status RequestStatus) bool {
 }
 
 func (s *Service) CancelForClient(ctx context.Context, id, clientID string, expectedVersion *int) (*SpecialRequest, error) {
-	return s.CancelForClientInOperatorContext(ctx, DefaultOperatorContextID, id, clientID, expectedVersion)
+	return s.CancelForClientInOperatorContext(ctx, "", id, clientID, expectedVersion)
 }
 
 func (s *Service) CancelForClientInOperatorContext(ctx context.Context, operatorContextID string, id, clientID string, expectedVersion *int) (*SpecialRequest, error) {
+	var err error
+	operatorContextID, err = requireOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	current, err := s.repo.GetInOperatorContext(ctx, operatorContextID, id)
 	if err != nil {
 		return nil, err
@@ -461,10 +472,15 @@ func (s *Service) CancelForClientInOperatorContext(ctx context.Context, operator
 }
 
 func (s *Service) ApplyOperatorTransition(ctx context.Context, id string, expectedVersion int, in UpdateInput) (*SpecialRequest, error) {
-	return s.ApplyOperatorTransitionInOperatorContext(ctx, DefaultOperatorContextID, id, expectedVersion, in)
+	return s.ApplyOperatorTransitionInOperatorContext(ctx, "", id, expectedVersion, in)
 }
 
 func (s *Service) ApplyOperatorTransitionInOperatorContext(ctx context.Context, operatorContextID string, id string, expectedVersion int, in UpdateInput) (*SpecialRequest, error) {
+	var err error
+	operatorContextID, err = requireOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	current, err := s.repo.GetInOperatorContext(ctx, operatorContextID, id)
 	if err != nil {
 		return nil, err
@@ -511,32 +527,23 @@ func (s *Service) ApplyOperatorTransitionInOperatorContext(ctx context.Context, 
 		targetStage = defaultStageFor(current.RequestType, newStatus)
 	}
 
-	if in.EstimatedAmountMinorUnits != nil || in.Currency != nil {
-		if !moneyEditableStatuses[newStatus] {
-			return nil, fmt.Errorf("%w: money fields can only be set while under review", ErrConflict)
-		}
-	}
-
 	update := UpdateInput{
-		WorkflowStage:             targetStage,
-		AssignedOperatorID:        in.AssignedOperatorID,
-		RejectionReason:           in.RejectionReason,
-		EstimatedAmountMinorUnits: in.EstimatedAmountMinorUnits,
-		Currency:                  in.Currency,
-		WltPaymentSessionID:       in.WltPaymentSessionID,
-		QuotePreparedAt:           in.QuotePreparedAt,
-		CustomerApprovedAt:        in.CustomerApprovedAt,
-		PurchaseBatchID:           in.PurchaseBatchID,
-		PurchasedAt:               in.PurchasedAt,
-		InboundReference:          in.InboundReference,
-		InboundReceivedAt:         in.InboundReceivedAt,
-		SortingStartedAt:          in.SortingStartedAt,
-		SortingCompletedAt:        in.SortingCompletedAt,
-		FulfillmentPreparedAt:     in.FulfillmentPreparedAt,
-		ReadyForDeliveryAt:        in.ReadyForDeliveryAt,
-		CaptainAssignedAt:         in.CaptainAssignedAt,
-		PickedUpAt:                in.PickedUpAt,
-		DeliveredAt:               in.DeliveredAt,
+		WorkflowStage:         targetStage,
+		AssignedOperatorID:    in.AssignedOperatorID,
+		RejectionReason:       in.RejectionReason,
+		WltPaymentSessionID:   in.WltPaymentSessionID,
+		CustomerApprovedAt:    in.CustomerApprovedAt,
+		PurchaseBatchID:       in.PurchaseBatchID,
+		PurchasedAt:           in.PurchasedAt,
+		InboundReference:      in.InboundReference,
+		InboundReceivedAt:     in.InboundReceivedAt,
+		SortingStartedAt:      in.SortingStartedAt,
+		SortingCompletedAt:    in.SortingCompletedAt,
+		FulfillmentPreparedAt: in.FulfillmentPreparedAt,
+		ReadyForDeliveryAt:    in.ReadyForDeliveryAt,
+		CaptainAssignedAt:     in.CaptainAssignedAt,
+		PickedUpAt:            in.PickedUpAt,
+		DeliveredAt:           in.DeliveredAt,
 	}
 	if in.Status != nil {
 		update.Status = in.Status
@@ -584,5 +591,70 @@ func (s *Service) ApplyOperatorTransitionInOperatorContext(ctx context.Context, 
 		return nil, err
 	}
 
+	return updated, nil
+}
+
+// AttachWltQuoteInOperatorContext stores only the WLT-issued quote projection.
+// No operator transition can populate these fields, so DSH remains an
+// operational owner while WLT remains the sole monetary authority.
+func (s *Service) AttachWltQuoteInOperatorContext(ctx context.Context, operatorContextID, id string, expectedVersion int, quote *wlt.SpecialRequestQuote) (*SpecialRequest, error) {
+	var err error
+	operatorContextID, err = requireOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
+	if quote == nil || strings.TrimSpace(quote.ID) == "" || quote.SpecialRequestID != id || quote.OperatorContextID != operatorContextID || quote.AmountMinorUnits <= 0 || strings.TrimSpace(quote.Currency) == "" || quote.Status != "active" || !time.Now().Before(quote.ExpiresAt) {
+		return nil, fmt.Errorf("%w: WLT quote readback is invalid or expired", ErrInvalid)
+	}
+	current, err := s.repo.GetInOperatorContext(ctx, operatorContextID, id)
+	if err != nil {
+		return nil, err
+	}
+	if current.ClientID != quote.ClientID {
+		return nil, fmt.Errorf("%w: WLT quote client does not match special request", ErrForbidden)
+	}
+	if current.Status != StatusNeedsCustomerInput || current.WorkflowStage == nil || *current.WorkflowStage != "customer_approval" {
+		return nil, fmt.Errorf("%w: WLT quote can only be attached at customer_approval", ErrConflict)
+	}
+	quotePreparedAt := quote.CreatedAt
+	if quotePreparedAt.IsZero() {
+		quotePreparedAt = time.Now().UTC()
+	}
+	update := UpdateInput{
+		wltQuoteID:               &quote.ID,
+		wltQuotePolicyID:         &quote.PolicyID,
+		wltQuotePolicyVersion:    &quote.PolicyVersion,
+		wltQuoteVersion:          &quote.QuoteVersion,
+		wltQuoteAmountMinorUnits: &quote.AmountMinorUnits,
+		wltQuoteCurrency:         &quote.Currency,
+		wltQuoteHash:             &quote.QuoteHash,
+		wltQuoteExpiresAt:        &quote.ExpiresAt,
+		quotePreparedAt:          &quotePreparedAt,
+	}
+	tx, err := s.repo.DB().Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	updated, err := s.repo.UpdateInOperatorContextTx(ctx, tx, operatorContextID, id, expectedVersion, update)
+	if err != nil {
+		return nil, err
+	}
+	correlationID := ""
+	if current.CorrelationID != nil {
+		correlationID = *current.CorrelationID
+	}
+	if err := WriteAuditEvent(tx, id, "wlt", "service", "wlt_quote_attached", quote.ID, correlationID, requestJSON(current), requestJSON(updated)); err != nil {
+		return nil, fmt.Errorf("write audit event: %w", err)
+	}
+	if err := operationaloutbox.Enqueue(tx, operationaloutbox.EnqueueInput{
+		EventType: "special_request_wlt_quote_attached", EntityType: "special_request", EntityID: id,
+		Payload: requestJSON(updated), CorrelationID: correlationID,
+	}); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
 	return updated, nil
 }

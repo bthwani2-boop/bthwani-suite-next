@@ -96,57 +96,61 @@ func writeSpecialRequestError(w http.ResponseWriter, err error, notFoundMsg stri
 
 func marshalSpecialRequest(req *specialrequests.SpecialRequest) map[string]any {
 	return map[string]any{
-		"id":                        req.ID,
-		"clientId":                  req.ClientID,
-		"requestType":               req.RequestType,
-		"status":                    req.Status,
-		"version":                   req.Version,
-		"workflowStage":             req.WorkflowStage,
-		"customerNotes":             req.CustomerNotes,
-		"currency":                  req.Currency,
-		"estimatedAmountReference":  req.EstimatedAmountReference,
-		"estimatedAmountMinorUnits": req.EstimatedAmountMinorUnits,
-		"wltPaymentSessionId":       req.WltPaymentSessionID,
-		"correlationId":             req.CorrelationID,
-		"productUrl":                req.ProductUrl,
-		"quantity":                  req.Quantity,
-		"size":                      req.Size,
-		"color":                     req.Color,
-		"variantNotes":              req.VariantNotes,
-		"deliveryAddressReference":  req.DeliveryAddressReference,
-		"pickupAddressReference":    req.PickupAddressReference,
-		"dropoffAddressReference":   req.DropoffAddressReference,
-		"pickupLocation":            req.PickupLocation,
-		"dropoffLocation":           req.DropoffLocation,
-		"itemType":                  req.ItemType,
-		"scheduleMode":              req.ScheduleMode,
-		"scheduledAt":               req.ScheduledAt,
-		"handlingRequirements":      req.HandlingRequirements,
-		"assignedOperatorId":        req.AssignedOperatorID,
-		"dispatchAssignmentId":      req.DispatchAssignmentID,
-		"rejectionReason":           req.RejectionReason,
-		"createdAt":                 req.CreatedAt,
-		"updatedAt":                 req.UpdatedAt,
-		"completedAt":               req.CompletedAt,
-		"cancelledAt":               req.CancelledAt,
-		"quotePreparedAt":           req.QuotePreparedAt,
-		"customerApprovedAt":        req.CustomerApprovedAt,
-		"purchaseBatchId":           req.PurchaseBatchID,
-		"purchasedAt":               req.PurchasedAt,
-		"inboundReference":          req.InboundReference,
-		"inboundReceivedAt":         req.InboundReceivedAt,
-		"sortingStartedAt":          req.SortingStartedAt,
-		"sortingCompletedAt":        req.SortingCompletedAt,
-		"fulfillmentPreparedAt":     req.FulfillmentPreparedAt,
-		"readyForDeliveryAt":        req.ReadyForDeliveryAt,
-		"captainAssignedAt":         req.CaptainAssignedAt,
-		"pickedUpAt":                req.PickedUpAt,
-		"deliveredAt":               req.DeliveredAt,
-		"quoteExpiresAt":            req.QuoteExpiresAt,
-		"mediaId":                   req.MediaID,
-		"safetyStatus":              req.SafetyStatus,
-		"moderationNote":            req.ModerationNote,
-		"isUnsafeContent":           req.IsUnsafeContent,
+		"id":                       req.ID,
+		"clientId":                 req.ClientID,
+		"requestType":              req.RequestType,
+		"status":                   req.Status,
+		"version":                  req.Version,
+		"workflowStage":            req.WorkflowStage,
+		"customerNotes":            req.CustomerNotes,
+		"wltQuoteId":               req.WltQuoteID,
+		"wltQuotePolicyId":         req.WltQuotePolicyID,
+		"wltQuotePolicyVersion":    req.WltQuotePolicyVersion,
+		"wltQuoteVersion":          req.WltQuoteVersion,
+		"wltQuoteAmountMinorUnits": req.WltQuoteAmountMinorUnits,
+		"wltQuoteCurrency":         req.WltQuoteCurrency,
+		"wltQuoteHash":             req.WltQuoteHash,
+		"wltQuoteExpiresAt":        req.WltQuoteExpiresAt,
+		"wltPaymentSessionId":      req.WltPaymentSessionID,
+		"correlationId":            req.CorrelationID,
+		"productUrl":               req.ProductUrl,
+		"quantity":                 req.Quantity,
+		"size":                     req.Size,
+		"color":                    req.Color,
+		"variantNotes":             req.VariantNotes,
+		"deliveryAddressReference": req.DeliveryAddressReference,
+		"pickupAddressReference":   req.PickupAddressReference,
+		"dropoffAddressReference":  req.DropoffAddressReference,
+		"pickupLocation":           req.PickupLocation,
+		"dropoffLocation":          req.DropoffLocation,
+		"itemType":                 req.ItemType,
+		"scheduleMode":             req.ScheduleMode,
+		"scheduledAt":              req.ScheduledAt,
+		"handlingRequirements":     req.HandlingRequirements,
+		"assignedOperatorId":       req.AssignedOperatorID,
+		"dispatchAssignmentId":     req.DispatchAssignmentID,
+		"rejectionReason":          req.RejectionReason,
+		"createdAt":                req.CreatedAt,
+		"updatedAt":                req.UpdatedAt,
+		"completedAt":              req.CompletedAt,
+		"cancelledAt":              req.CancelledAt,
+		"wltQuoteIssuedAt":         req.WltQuoteIssuedAt,
+		"customerApprovedAt":       req.CustomerApprovedAt,
+		"purchaseBatchId":          req.PurchaseBatchID,
+		"purchasedAt":              req.PurchasedAt,
+		"inboundReference":         req.InboundReference,
+		"inboundReceivedAt":        req.InboundReceivedAt,
+		"sortingStartedAt":         req.SortingStartedAt,
+		"sortingCompletedAt":       req.SortingCompletedAt,
+		"fulfillmentPreparedAt":    req.FulfillmentPreparedAt,
+		"readyForDeliveryAt":       req.ReadyForDeliveryAt,
+		"captainAssignedAt":        req.CaptainAssignedAt,
+		"pickedUpAt":               req.PickedUpAt,
+		"deliveredAt":              req.DeliveredAt,
+		"mediaId":                  req.MediaID,
+		"safetyStatus":             req.SafetyStatus,
+		"moderationNote":           req.ModerationNote,
+		"isUnsafeContent":          req.IsUnsafeContent,
 	}
 }
 
@@ -314,20 +318,21 @@ func (s *protectedStoreServer) handleApproveSpecialRequestQuote(w http.ResponseW
 		writeSpecialRequestError(w, fmt.Errorf("%w: quote approval requires customer_approval stage", specialrequests.ErrConflict), "special request not found")
 		return
 	}
-	if req.EstimatedAmountMinorUnits == nil || req.Currency == nil {
+	if req.WltQuoteID == nil || req.WltQuoteAmountMinorUnits == nil || req.WltQuoteCurrency == nil {
 		writeSpecialRequestError(w, fmt.Errorf("%w: quote not yet set", specialrequests.ErrInvalid), "special request not found")
 		return
 	}
 
 	paymentSession, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
-		SpecialRequestID: reqID,
-		OperatorContextID:         actor.OperatorContextID,
-		ClientID:         actor.ID,
-		StoreID:          "dsh-special-requests",
-		PaymentMethod:    "official_wallet",
-		AmountMinorUnits: *req.EstimatedAmountMinorUnits,
-		Currency:         *req.Currency,
-		CorrelationID:    r.Header.Get("X-Correlation-ID"),
+		SpecialRequestID:  reqID,
+		OperatorContextID: actor.OperatorContextID,
+		ClientID:          actor.ID,
+		StoreID:           "dsh-special-requests",
+		PaymentMethod:     "official_wallet",
+		PricingQuoteID:    *req.WltQuoteID,
+		AmountMinorUnits:  *req.WltQuoteAmountMinorUnits,
+		Currency:          *req.WltQuoteCurrency,
+		CorrelationID:     r.Header.Get("X-Correlation-ID"),
 	})
 	if err != nil {
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_HANDOFF_UNAVAILABLE", "WLT payment-session handoff is unavailable")
@@ -397,31 +402,30 @@ func (s *protectedStoreServer) handleGetOperatorSpecialRequest(w http.ResponseWr
 }
 
 type updateSpecialRequestBody struct {
-	Status                    *specialrequests.RequestStatus `json:"status"`
-	WorkflowStage             *string                        `json:"workflowStage"`
-	AssignedOperatorID        *string                        `json:"assignedOperatorId"`
-	RejectionReason           *string                        `json:"rejectionReason"`
-	EstimatedAmountMinorUnits *int64                         `json:"estimatedAmountMinorUnits"`
-	Currency                  *string                        `json:"currency"`
-	WltPaymentSessionID       *string                        `json:"wltPaymentSessionId"`
-	QuotePreparedAt           *time.Time                     `json:"quotePreparedAt"`
-	CustomerApprovedAt        *time.Time                     `json:"customerApprovedAt"`
-	PurchaseBatchID           *string                        `json:"purchaseBatchId"`
-	PurchasedAt               *time.Time                     `json:"purchasedAt"`
-	InboundReference          *string                        `json:"inboundReference"`
-	InboundReceivedAt         *time.Time                     `json:"inboundReceivedAt"`
-	SortingStartedAt          *time.Time                     `json:"sortingStartedAt"`
-	SortingCompletedAt        *time.Time                     `json:"sortingCompletedAt"`
-	FulfillmentPreparedAt     *time.Time                     `json:"fulfillmentPreparedAt"`
-	ReadyForDeliveryAt        *time.Time                     `json:"readyForDeliveryAt"`
-	CaptainAssignedAt         *time.Time                     `json:"captainAssignedAt"`
-	PickedUpAt                *time.Time                     `json:"pickedUpAt"`
-	DeliveredAt               *time.Time                     `json:"deliveredAt"`
-	QuoteExpiresAt            *time.Time                     `json:"quoteExpiresAt"`
-	SafetyStatus              *string                        `json:"safetyStatus"`
-	ModerationNote            *string                        `json:"moderationNote"`
-	IsUnsafeContent           *bool                          `json:"isUnsafeContent"`
-	ExpectedVersion           *int                           `json:"expectedVersion"`
+	Status                   *specialrequests.RequestStatus `json:"status"`
+	WorkflowStage            *string                        `json:"workflowStage"`
+	AssignedOperatorID       *string                        `json:"assignedOperatorId"`
+	RejectionReason          *string                        `json:"rejectionReason"`
+	QuotePolicyID            *string                        `json:"quotePolicyId"`
+	ProposedAmountMinorUnits *int64                         `json:"proposedAmountMinorUnits"`
+	ProposedCurrency         *string                        `json:"proposedCurrency"`
+	ProposalReason           *string                        `json:"proposalReason"`
+	CustomerApprovedAt       *time.Time                     `json:"customerApprovedAt"`
+	PurchaseBatchID          *string                        `json:"purchaseBatchId"`
+	PurchasedAt              *time.Time                     `json:"purchasedAt"`
+	InboundReference         *string                        `json:"inboundReference"`
+	InboundReceivedAt        *time.Time                     `json:"inboundReceivedAt"`
+	SortingStartedAt         *time.Time                     `json:"sortingStartedAt"`
+	SortingCompletedAt       *time.Time                     `json:"sortingCompletedAt"`
+	FulfillmentPreparedAt    *time.Time                     `json:"fulfillmentPreparedAt"`
+	ReadyForDeliveryAt       *time.Time                     `json:"readyForDeliveryAt"`
+	CaptainAssignedAt        *time.Time                     `json:"captainAssignedAt"`
+	PickedUpAt               *time.Time                     `json:"pickedUpAt"`
+	DeliveredAt              *time.Time                     `json:"deliveredAt"`
+	SafetyStatus             *string                        `json:"safetyStatus"`
+	ModerationNote           *string                        `json:"moderationNote"`
+	IsUnsafeContent          *bool                          `json:"isUnsafeContent"`
+	ExpectedVersion          *int                           `json:"expectedVersion"`
 }
 
 // PATCH /dsh/operator/special-requests/{requestId}
@@ -441,36 +445,69 @@ func (s *protectedStoreServer) handleUpdateOperatorSpecialRequest(w http.Respons
 	}
 
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
+	current, err := svc.GetForOperatorInOperatorContext(r.Context(), actor.OperatorContextID, reqID)
+	if err != nil {
+		writeSpecialRequestError(w, err, "special request not found")
+		return
+	}
+	proposalRequested := body.QuotePolicyID != nil || body.ProposedAmountMinorUnits != nil || body.ProposedCurrency != nil || body.ProposalReason != nil
+	if proposalRequested && (body.QuotePolicyID == nil || body.ProposedAmountMinorUnits == nil || body.ProposedCurrency == nil || body.ProposalReason == nil) {
+		writeSpecialRequestError(w, fmt.Errorf("%w: quotePolicyId, proposedAmountMinorUnits, proposedCurrency and proposalReason are required together", specialrequests.ErrInvalid), "special request not found")
+		return
+	}
 	input := specialrequests.UpdateInput{
-		Status:                    body.Status,
-		WorkflowStage:             body.WorkflowStage,
-		AssignedOperatorID:        body.AssignedOperatorID,
-		RejectionReason:           body.RejectionReason,
-		EstimatedAmountMinorUnits: body.EstimatedAmountMinorUnits,
-		Currency:                  body.Currency,
-		WltPaymentSessionID:       body.WltPaymentSessionID,
-		QuotePreparedAt:           body.QuotePreparedAt,
-		CustomerApprovedAt:        body.CustomerApprovedAt,
-		PurchaseBatchID:           body.PurchaseBatchID,
-		PurchasedAt:               body.PurchasedAt,
-		InboundReference:          body.InboundReference,
-		InboundReceivedAt:         body.InboundReceivedAt,
-		SortingStartedAt:          body.SortingStartedAt,
-		SortingCompletedAt:        body.SortingCompletedAt,
-		FulfillmentPreparedAt:     body.FulfillmentPreparedAt,
-		ReadyForDeliveryAt:        body.ReadyForDeliveryAt,
-		CaptainAssignedAt:         body.CaptainAssignedAt,
-		PickedUpAt:                body.PickedUpAt,
-		DeliveredAt:               body.DeliveredAt,
-		QuoteExpiresAt:            body.QuoteExpiresAt,
-		SafetyStatus:              body.SafetyStatus,
-		ModerationNote:            body.ModerationNote,
-		IsUnsafeContent:           body.IsUnsafeContent,
+		Status:                body.Status,
+		WorkflowStage:         body.WorkflowStage,
+		AssignedOperatorID:    body.AssignedOperatorID,
+		RejectionReason:       body.RejectionReason,
+		CustomerApprovedAt:    body.CustomerApprovedAt,
+		PurchaseBatchID:       body.PurchaseBatchID,
+		PurchasedAt:           body.PurchasedAt,
+		InboundReference:      body.InboundReference,
+		InboundReceivedAt:     body.InboundReceivedAt,
+		SortingStartedAt:      body.SortingStartedAt,
+		SortingCompletedAt:    body.SortingCompletedAt,
+		FulfillmentPreparedAt: body.FulfillmentPreparedAt,
+		ReadyForDeliveryAt:    body.ReadyForDeliveryAt,
+		CaptainAssignedAt:     body.CaptainAssignedAt,
+		PickedUpAt:            body.PickedUpAt,
+		DeliveredAt:           body.DeliveredAt,
+		SafetyStatus:          body.SafetyStatus,
+		ModerationNote:        body.ModerationNote,
+		IsUnsafeContent:       body.IsUnsafeContent,
+	}
+	var quote *wlt.SpecialRequestQuote
+	if proposalRequested {
+		if s.wlt == nil || !s.wlt.Configured() {
+			store.SendError(w, http.StatusServiceUnavailable, "WLT_HANDOFF_UNAVAILABLE", "WLT quote handoff is unavailable")
+			return
+		}
+		quote, err = s.wlt.IssueSpecialRequestQuote(r.Context(), wlt.SpecialRequestQuoteInput{
+			SpecialRequestID:         reqID,
+			ClientID:                 current.ClientID,
+			PolicyID:                 *body.QuotePolicyID,
+			ProposedAmountMinorUnits: *body.ProposedAmountMinorUnits,
+			ProposedCurrency:         *body.ProposedCurrency,
+			ProposalReason:           *body.ProposalReason,
+			CorrelationID:            *specialRequestCorrelationID(r),
+			IdempotencyKey:           r.Header.Get("Idempotency-Key"),
+		})
+		if err != nil {
+			store.SendError(w, http.StatusServiceUnavailable, "WLT_HANDOFF_UNAVAILABLE", "WLT quote handoff failed")
+			return
+		}
 	}
 	updated, err := svc.ApplyOperatorTransitionInOperatorContext(r.Context(), actor.OperatorContextID, reqID, *body.ExpectedVersion, input)
 	if err != nil {
 		writeSpecialRequestError(w, err, "special request not found")
 		return
+	}
+	if quote != nil {
+		updated, err = svc.AttachWltQuoteInOperatorContext(r.Context(), actor.OperatorContextID, reqID, updated.Version, quote)
+		if err != nil {
+			writeSpecialRequestError(w, err, "special request not found")
+			return
+		}
 	}
 	store.SendJSON(w, http.StatusOK, marshalSpecialRequest(updated))
 }
@@ -502,10 +539,10 @@ func (s *protectedStoreServer) handleAssignSpecialRequestDispatch(w http.Respons
 		return
 	}
 	assignment, err := dispatch.CreateAssignmentForSpecialRequest(s.db, dispatch.CreateAssignmentInput{
-		SpecialRequestID: reqID,
-		OperatorContextID:         actor.OperatorContextID,
-		CaptainID:        body.CaptainID,
-		ActorID:          actor.ID,
+		SpecialRequestID:  reqID,
+		OperatorContextID: actor.OperatorContextID,
+		CaptainID:         body.CaptainID,
+		ActorID:           actor.ID,
 	})
 	if err != nil {
 		var notReady *specialrequests.ErrDispatchNotReady

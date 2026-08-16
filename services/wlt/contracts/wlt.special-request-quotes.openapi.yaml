@@ -1,0 +1,105 @@
+openapi: 3.1.0
+info:
+  title: BThwani WLT Special Request Quotes API
+  version: 1.0.0
+  description: WLT-owned bounded quotes for DSH special-request operational proposals.
+x-bthwani-owner: services/wlt
+x-bthwani-capability: special-request-pricing
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-financial-owner: true
+x-bthwani-client-generation: ENABLED
+servers:
+  - url: http://localhost:58083
+paths:
+  /wlt/internal/quotes/special-request:
+    post:
+      operationId: issueWltSpecialRequestQuote
+      summary: Issue a bounded WLT quote from special-request proposal evidence.
+      tags: [WltPricing]
+      security: [{ serviceBearer: [] }]
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IssueSpecialRequestQuoteRequest' }
+      responses:
+        '201':
+          description: WLT-owned quote issued.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SpecialRequestQuoteResponse' }
+        '200':
+          description: Idempotent replay of the same WLT-owned quote.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SpecialRequestQuoteResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+  /wlt/internal/quotes/special-request/{specialRequestId}:
+    get:
+      operationId: getWltActiveSpecialRequestQuote
+      summary: Read the active WLT quote for a special request.
+      tags: [WltPricing]
+      security: [{ serviceBearer: [] }]
+      parameters:
+        - name: specialRequestId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+      responses:
+        '200':
+          description: Active WLT quote.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SpecialRequestQuoteResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+components:
+  schemas:
+    IssueSpecialRequestQuoteRequest:
+      type: object
+      additionalProperties: false
+      required: [specialRequestId, clientId, policyId, proposedAmountMinorUnits, proposedCurrency, proposalReason]
+      properties:
+        specialRequestId: { type: string, format: uuid }
+        clientId: { type: string, format: uuid }
+        policyId: { type: string, minLength: 1 }
+        proposedAmountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        proposedCurrency: { type: string, minLength: 3, maxLength: 3 }
+        proposalReason: { type: string, minLength: 5, maxLength: 2000 }
+    SpecialRequestQuote:
+      type: object
+      required: [id, specialRequestId, clientId, policyId, policyVersion, quoteVersion, amountMinorUnits, currency, quoteHash, status, expiresAt]
+      properties:
+        id: { type: string, format: uuid }
+        operatorContextId: { type: string }
+        specialRequestId: { type: string, format: uuid }
+        clientId: { type: string, format: uuid }
+        policyId: { type: string }
+        policyVersion: { type: integer, minimum: 1 }
+        quoteVersion: { type: integer, minimum: 1 }
+        proposedAmountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        proposedCurrency: { type: string }
+        proposalReason: { type: string }
+        amountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string }
+        quoteHash: { type: string, minLength: 64, maxLength: 64 }
+        status: { type: string, enum: [active, superseded, expired, accepted, cancelled] }
+        expiresAt: { type: string, format: date-time }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    SpecialRequestQuoteResponse:
+      type: object
+      required: [quote]
+      properties:
+        quote: { $ref: '#/components/schemas/SpecialRequestQuote' }

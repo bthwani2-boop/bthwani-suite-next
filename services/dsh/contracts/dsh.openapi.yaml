@@ -346,6 +346,12 @@ paths:
     $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1topup-sessions~1{topUpSessionId}"
   /dsh/captain/me/finance/topup-sessions/{topUpSessionId}/{operation}:
     $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1topup-sessions~1{topUpSessionId}~1{operation}"
+  /dsh/captain/me/finance/collateral:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1collateral"
+  /dsh/captain/me/finance/collateral/allocate:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1collateral~1allocate"
+  /dsh/captain/me/finance/collateral/release:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1collateral~1release"
   /dsh/client/me/finance/ledger-entries:
     $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1client~1me~1finance~1ledger-entries"
   /dsh/client/me/finance/wallet:

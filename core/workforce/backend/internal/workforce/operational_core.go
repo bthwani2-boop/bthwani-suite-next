@@ -45,10 +45,6 @@ type ProviderOperationalCore struct {
 
 type CaptainActivationCore struct {
 	Classification                string `json:"classification"`
-	FinancialGuaranteeMinorUnits  int64  `json:"financialGuaranteeMinorUnits"`
-	FinancialGuaranteeCurrency    string `json:"financialGuaranteeCurrency"`
-	FinancialGuaranteeStatus      string `json:"financialGuaranteeStatus"`
-	FinancialGuaranteeReference   string `json:"financialGuaranteeReference,omitempty"`
 	DeliveryBagCustodyStatus      string `json:"deliveryBagCustodyStatus"`
 	DeliveryBagCustodyReference   string `json:"deliveryBagCustodyReference,omitempty"`
 	MandatoryPurchasesStatus      string `json:"mandatoryPurchasesStatus"`
@@ -86,10 +82,6 @@ type OperationalCorePatch struct {
 
 type CaptainActivationCorePatch struct {
 	Classification                *string `json:"classification"`
-	FinancialGuaranteeMinorUnits  *int64  `json:"financialGuaranteeMinorUnits"`
-	FinancialGuaranteeCurrency    *string `json:"financialGuaranteeCurrency"`
-	FinancialGuaranteeStatus      *string `json:"financialGuaranteeStatus"`
-	FinancialGuaranteeReference   *string `json:"financialGuaranteeReference"`
 	DeliveryBagCustodyStatus      *string `json:"deliveryBagCustodyStatus"`
 	DeliveryBagCustodyReference   *string `json:"deliveryBagCustodyReference"`
 	MandatoryPurchasesStatus      *string `json:"mandatoryPurchasesStatus"`
@@ -128,41 +120,37 @@ type CreateAvailabilityNoticeInput struct {
 }
 
 type ProviderIncident struct {
-	ID                        string    `json:"id"`
-	ActorID                   string    `json:"actorId"`
-	IncidentCode              string    `json:"incidentCode"`
-	SourceType                string    `json:"sourceType"`
-	SourceID                  string    `json:"sourceId,omitempty"`
-	Description               string    `json:"description"`
-	EvidenceMediaRefs         []string  `json:"evidenceMediaRefs"`
-	Severity                  string    `json:"severity"`
-	Status                    string    `json:"status"`
-	PolicyID                  string    `json:"policyId,omitempty"`
-	ProposedPenaltyMinorUnits int64     `json:"proposedPenaltyMinorUnits"`
-	Currency                  string    `json:"currency"`
-	WltLedgerReference        string    `json:"wltLedgerReference,omitempty"`
-	AppealNote                string    `json:"appealNote,omitempty"`
-	AppealedAt                string    `json:"appealedAt,omitempty"`
-	ResolutionNote            string    `json:"resolutionNote,omitempty"`
-	ReportedByActorID         string    `json:"reportedByActorId"`
-	ReviewedByActorID         string    `json:"reviewedByActorId,omitempty"`
-	ResolvedAt                string    `json:"resolvedAt,omitempty"`
-	Version                   int       `json:"version"`
-	CreatedAt                 time.Time `json:"createdAt"`
-	UpdatedAt                 time.Time `json:"updatedAt"`
+	ID                 string    `json:"id"`
+	ActorID            string    `json:"actorId"`
+	IncidentCode       string    `json:"incidentCode"`
+	SourceType         string    `json:"sourceType"`
+	SourceID           string    `json:"sourceId,omitempty"`
+	Description        string    `json:"description"`
+	EvidenceMediaRefs  []string  `json:"evidenceMediaRefs"`
+	Severity           string    `json:"severity"`
+	Status             string    `json:"status"`
+	PolicyID           string    `json:"policyId,omitempty"`
+	WltLedgerReference string    `json:"wltLedgerReference,omitempty"`
+	AppealNote         string    `json:"appealNote,omitempty"`
+	AppealedAt         string    `json:"appealedAt,omitempty"`
+	ResolutionNote     string    `json:"resolutionNote,omitempty"`
+	ReportedByActorID  string    `json:"reportedByActorId"`
+	ReviewedByActorID  string    `json:"reviewedByActorId,omitempty"`
+	ResolvedAt         string    `json:"resolvedAt,omitempty"`
+	Version            int       `json:"version"`
+	CreatedAt          time.Time `json:"createdAt"`
+	UpdatedAt          time.Time `json:"updatedAt"`
 }
 
 type CreateProviderIncidentInput struct {
-	ActorID                   string   `json:"actorId"`
-	IncidentCode              string   `json:"incidentCode"`
-	SourceType                string   `json:"sourceType"`
-	SourceID                  string   `json:"sourceId"`
-	Description               string   `json:"description"`
-	EvidenceMediaRefs         []string `json:"evidenceMediaRefs"`
-	Severity                  string   `json:"severity"`
-	PolicyID                  string   `json:"policyId"`
-	ProposedPenaltyMinorUnits int64    `json:"proposedPenaltyMinorUnits"`
-	Currency                  string   `json:"currency"`
+	ActorID           string   `json:"actorId"`
+	IncidentCode      string   `json:"incidentCode"`
+	SourceType        string   `json:"sourceType"`
+	SourceID          string   `json:"sourceId"`
+	Description       string   `json:"description"`
+	EvidenceMediaRefs []string `json:"evidenceMediaRefs"`
+	Severity          string   `json:"severity"`
+	PolicyID          string   `json:"policyId"`
 }
 
 func (r *Repository) ensureOperationalCore(ctx context.Context, actorID string) (string, error) {
@@ -213,13 +201,11 @@ func (r *Repository) OperationalCoreByActorID(ctx context.Context, actorID strin
 	if kind == "captain" {
 		var captain CaptainActivationCore
 		err = r.db.QueryRowContext(ctx, `
-			SELECT classification,financial_guarantee_minor_units,financial_guarantee_currency,financial_guarantee_status,
-			financial_guarantee_reference,delivery_bag_custody_status,delivery_bag_custody_reference,
+			SELECT classification,delivery_bag_custody_status,delivery_bag_custody_reference,
 			mandatory_purchases_status,mandatory_purchases_reference,training_status,operations_accreditation_status,
 			classification_updated_at::text,updated_by_actor_id,version
 			FROM workforce_captain_activation_core WHERE actor_id=$1`, actorID).Scan(
-			&captain.Classification, &captain.FinancialGuaranteeMinorUnits, &captain.FinancialGuaranteeCurrency,
-			&captain.FinancialGuaranteeStatus, &captain.FinancialGuaranteeReference, &captain.DeliveryBagCustodyStatus,
+			&captain.Classification, &captain.DeliveryBagCustodyStatus,
 			&captain.DeliveryBagCustodyReference, &captain.MandatoryPurchasesStatus, &captain.MandatoryPurchasesReference,
 			&captain.TrainingStatus, &captain.OperationsAccreditationStatus, &captain.ClassificationUpdatedAt,
 			&captain.UpdatedByActorID, &captain.Version)
@@ -270,15 +256,12 @@ func (r *Repository) PatchOperationalCore(ctx context.Context, actorID, operator
 		c := input.Captain
 		_, err = tx.ExecContext(ctx, `
 			UPDATE workforce_captain_activation_core SET classification=COALESCE($2,classification),
-			financial_guarantee_minor_units=COALESCE($3,financial_guarantee_minor_units),
-			financial_guarantee_currency=COALESCE($4,financial_guarantee_currency),financial_guarantee_status=COALESCE($5,financial_guarantee_status),
-			financial_guarantee_reference=COALESCE($6,financial_guarantee_reference),delivery_bag_custody_status=COALESCE($7,delivery_bag_custody_status),
-			delivery_bag_custody_reference=COALESCE($8,delivery_bag_custody_reference),mandatory_purchases_status=COALESCE($9,mandatory_purchases_status),
-			mandatory_purchases_reference=COALESCE($10,mandatory_purchases_reference),training_status=COALESCE($11,training_status),
-			operations_accreditation_status=COALESCE($12,operations_accreditation_status),
+			delivery_bag_custody_status=COALESCE($3,delivery_bag_custody_status),
+			delivery_bag_custody_reference=COALESCE($4,delivery_bag_custody_reference),mandatory_purchases_status=COALESCE($5,mandatory_purchases_status),
+			mandatory_purchases_reference=COALESCE($6,mandatory_purchases_reference),training_status=COALESCE($7,training_status),
+			operations_accreditation_status=COALESCE($8,operations_accreditation_status),
 			classification_updated_at=CASE WHEN $2::text IS NULL THEN classification_updated_at ELSE now() END,
-			updated_by_actor_id=$13,version=version+1,updated_at=now() WHERE actor_id=$1`, actorID, c.Classification,
-			c.FinancialGuaranteeMinorUnits, c.FinancialGuaranteeCurrency, c.FinancialGuaranteeStatus, c.FinancialGuaranteeReference,
+			updated_by_actor_id=$9,version=version+1,updated_at=now() WHERE actor_id=$1`, actorID, c.Classification,
 			c.DeliveryBagCustodyStatus, c.DeliveryBagCustodyReference, c.MandatoryPurchasesStatus, c.MandatoryPurchasesReference,
 			c.TrainingStatus, c.OperationsAccreditationStatus, operatorID)
 		if err != nil {
@@ -312,12 +295,6 @@ func validateOperationalCorePatch(kind string, input OperationalCorePatch) error
 	}
 	c := input.Captain
 	if c.Classification != nil && !oneOf(*c.Classification, "joker", "basic") {
-		return ErrInvalidInput
-	}
-	if c.FinancialGuaranteeMinorUnits != nil && *c.FinancialGuaranteeMinorUnits < 0 {
-		return ErrInvalidInput
-	}
-	if c.FinancialGuaranteeStatus != nil && !oneOf(*c.FinancialGuaranteeStatus, "not_funded", "pending_review", "funded", "released", "forfeited") {
 		return ErrInvalidInput
 	}
 	if c.DeliveryBagCustodyStatus != nil && !oneOf(*c.DeliveryBagCustodyStatus, "not_issued", "issued", "returned", "lost", "damaged") {
@@ -388,6 +365,9 @@ func EvaluateProviderActivationReadiness(person Person, core ProviderOperational
 			missing = append(missing, "contractApproved")
 		}
 	case "captain":
+		// Financial eligibility is a cross-service gate, not a Workforce-owned
+		// operational fact. IssueActivation verifies the DSH projection backed by
+		// WLT immediately before issuing credentials.
 		if strings.TrimSpace(core.GuarantorFullName) == "" {
 			missing = append(missing, "guarantorFullName")
 		}
@@ -424,9 +404,6 @@ func EvaluateProviderActivationReadiness(person Person, core ProviderOperational
 			c := core.Captain
 			if c.Classification != "joker" && c.Classification != "basic" {
 				missing = append(missing, "captainClassification")
-			}
-			if c.FinancialGuaranteeStatus != "funded" || c.FinancialGuaranteeMinorUnits <= 0 {
-				missing = append(missing, "financialGuaranteeFunded")
 			}
 			if c.DeliveryBagCustodyStatus != "issued" {
 				missing = append(missing, "deliveryBagIssued")
@@ -498,7 +475,7 @@ func (r *Repository) CreateProviderIncident(ctx context.Context, reporterID stri
 	input.ActorID = strings.TrimSpace(input.ActorID)
 	input.IncidentCode = strings.TrimSpace(input.IncidentCode)
 	input.Description = strings.TrimSpace(input.Description)
-	if input.ActorID == "" || input.IncidentCode == "" || input.Description == "" || input.ProposedPenaltyMinorUnits < 0 {
+	if input.ActorID == "" || input.IncidentCode == "" || input.Description == "" {
 		return ProviderIncident{}, ErrInvalidInput
 	}
 	if input.SourceType == "" {
@@ -510,15 +487,12 @@ func (r *Repository) CreateProviderIncident(ctx context.Context, reporterID stri
 	if !oneOf(input.Severity, "minor", "major", "critical") {
 		return ProviderIncident{}, ErrInvalidInput
 	}
-	if input.Currency == "" {
-		input.Currency = "YER"
-	}
 	evidence, err := json.Marshal(nonNil(input.EvidenceMediaRefs))
 	if err != nil {
 		return ProviderIncident{}, err
 	}
 	var id string
-	err = r.db.QueryRowContext(ctx, `INSERT INTO workforce_provider_incidents(actor_id,incident_code,source_type,source_id,description,evidence_media_refs,severity,policy_id,proposed_penalty_minor_units,currency,reported_by_actor_id) VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11) RETURNING id::text`, input.ActorID, input.IncidentCode, input.SourceType, input.SourceID, input.Description, string(evidence), input.Severity, input.PolicyID, input.ProposedPenaltyMinorUnits, input.Currency, reporterID).Scan(&id)
+	err = r.db.QueryRowContext(ctx, `INSERT INTO workforce_provider_incidents(actor_id,incident_code,source_type,source_id,description,evidence_media_refs,severity,policy_id,reported_by_actor_id) VALUES($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9) RETURNING id::text`, input.ActorID, input.IncidentCode, input.SourceType, input.SourceID, input.Description, string(evidence), input.Severity, input.PolicyID, reporterID).Scan(&id)
 	if err != nil {
 		return ProviderIncident{}, err
 	}
@@ -528,7 +502,7 @@ func (r *Repository) CreateProviderIncident(ctx context.Context, reporterID stri
 func (r *Repository) ProviderIncidentByID(ctx context.Context, id, actorID string) (ProviderIncident, error) {
 	var incident ProviderIncident
 	var evidence []byte
-	err := r.db.QueryRowContext(ctx, `SELECT id::text,actor_id,incident_code,source_type,source_id,description,evidence_media_refs,severity,status,policy_id,proposed_penalty_minor_units,currency,wlt_ledger_reference,appeal_note,COALESCE(appealed_at::text,''),resolution_note,reported_by_actor_id,COALESCE(reviewed_by_actor_id,''),COALESCE(resolved_at::text,''),version,created_at,updated_at FROM workforce_provider_incidents WHERE id=$1::uuid AND ($2='' OR actor_id=$2)`, id, actorID).Scan(&incident.ID, &incident.ActorID, &incident.IncidentCode, &incident.SourceType, &incident.SourceID, &incident.Description, &evidence, &incident.Severity, &incident.Status, &incident.PolicyID, &incident.ProposedPenaltyMinorUnits, &incident.Currency, &incident.WltLedgerReference, &incident.AppealNote, &incident.AppealedAt, &incident.ResolutionNote, &incident.ReportedByActorID, &incident.ReviewedByActorID, &incident.ResolvedAt, &incident.Version, &incident.CreatedAt, &incident.UpdatedAt)
+	err := r.db.QueryRowContext(ctx, `SELECT id::text,actor_id,incident_code,source_type,source_id,description,evidence_media_refs,severity,status,policy_id,wlt_ledger_reference,appeal_note,COALESCE(appealed_at::text,''),resolution_note,reported_by_actor_id,COALESCE(reviewed_by_actor_id,''),COALESCE(resolved_at::text,''),version,created_at,updated_at FROM workforce_provider_incidents WHERE id=$1::uuid AND ($2='' OR actor_id=$2)`, id, actorID).Scan(&incident.ID, &incident.ActorID, &incident.IncidentCode, &incident.SourceType, &incident.SourceID, &incident.Description, &evidence, &incident.Severity, &incident.Status, &incident.PolicyID, &incident.WltLedgerReference, &incident.AppealNote, &incident.AppealedAt, &incident.ResolutionNote, &incident.ReportedByActorID, &incident.ReviewedByActorID, &incident.ResolvedAt, &incident.Version, &incident.CreatedAt, &incident.UpdatedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return ProviderIncident{}, ErrNotFound
 	}

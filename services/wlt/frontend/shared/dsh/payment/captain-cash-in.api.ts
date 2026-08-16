@@ -89,7 +89,7 @@ function mutationStorageKey(operation: string, sessionId?: string): string {
 }
 
 export async function getOrCreateCaptainCashInMutationContext(input: {
-  readonly operation: "create" | "authorize" | "capture";
+  readonly operation: "create" | "authorize" | "capture" | "allocateCollateral";
   readonly sessionId?: string;
   readonly fingerprint: string;
 }): Promise<{ readonly topupReference: string; readonly idempotencyKey: string; readonly correlationId: string }> {
@@ -110,7 +110,7 @@ export async function getOrCreateCaptainCashInMutationContext(input: {
   return context;
 }
 
-export async function clearCaptainCashInMutationContext(operation: "create" | "authorize" | "capture", sessionId?: string): Promise<void> {
+export async function clearCaptainCashInMutationContext(operation: "create" | "authorize" | "capture" | "allocateCollateral", sessionId?: string): Promise<void> {
   await AsyncStorage.removeItem(mutationStorageKey(operation, sessionId));
 }
 

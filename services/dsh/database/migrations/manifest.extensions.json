@@ -135,6 +135,13 @@
       "sha256": "ae9f603233cde3b08f46d60e2092bf57f993f55bb65af57c0567b6e7fcbeb5f4",
       "historicalPrefix": "1011",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 259,
+      "file": "dsh-1012_wlt_special_request_quote_projection.sql",
+      "sha256": "da176aa81815b9ed0cd4392988df972b2b026e265ce3410f0f250d596fb02306",
+      "historicalPrefix": "1012",
+      "state": "ACTIVE"
     }
   ]
 }

@@ -88,6 +88,7 @@ export type WltFinancialAccountType =
   | 'platform_revenue'
   | 'platform_payable'
   | 'provider_clearing'
+  | 'provider_receivable'
   | 'cash_in_transit'
   | 'platform_commission_receivable';
 

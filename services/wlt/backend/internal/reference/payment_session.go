@@ -170,6 +170,24 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	if input.CheckoutIntentID != "" && strings.TrimSpace(input.PricingQuoteID) == "" {
 		return nil, fmt.Errorf("checkout payment sessions require a canonical pricing quote")
 	}
+	if input.SpecialRequestID != "" {
+		if strings.TrimSpace(input.PricingQuoteID) == "" {
+			return nil, fmt.Errorf("special-request payment sessions require a canonical WLT pricing quote")
+		}
+		quote, err := pricing.LoadSpecialRequestQuote(context.Background(), db, input.OperatorContextID, input.PricingQuoteID)
+		if err != nil {
+			return nil, err
+		}
+		if quote.SpecialRequestID != input.SpecialRequestID || quote.ClientID != input.ClientID {
+			return nil, pricing.ErrSpecialRequestQuoteConflict
+		}
+		if quote.AmountMinorUnits != input.AmountMinorUnits || quote.Currency != input.Currency {
+			return nil, pricing.ErrSpecialRequestQuoteConflict
+		}
+		input.PricingQuoteHash = quote.QuoteHash
+		input.PricingQuoteVersion = quote.QuoteVersion
+		input.PricingQuoteExpiresAt = quote.ExpiresAt.UTC().Format(time.RFC3339Nano)
+	}
 	if input.CheckoutIntentID != "" && len(input.Allocation) != 0 {
 		return nil, fmt.Errorf("checkout payment allocation is derived from the canonical pricing quote")
 	}
@@ -274,6 +292,18 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 		input.PricingQuoteVersion = quote.Version
 		input.PricingQuoteExpiresAt = quote.ExpiresAt.UTC().Format(time.RFC3339Nano)
 		input.Allocation = quote.Allocation
+	}
+	if input.SpecialRequestID != "" {
+		quote, err := pricing.LoadSpecialRequestQuoteForSession(context.Background(), tx, input.OperatorContextID, input.PricingQuoteID)
+		if err != nil {
+			return nil, err
+		}
+		if quote.SpecialRequestID != input.SpecialRequestID || quote.ClientID != input.ClientID || quote.AmountMinorUnits != input.AmountMinorUnits || quote.Currency != input.Currency {
+			return nil, pricing.ErrSpecialRequestQuoteConflict
+		}
+		input.PricingQuoteHash = quote.QuoteHash
+		input.PricingQuoteVersion = quote.QuoteVersion
+		input.PricingQuoteExpiresAt = quote.ExpiresAt.UTC().Format(time.RFC3339Nano)
 	}
 	if err := payment.ValidatePaymentAllocation(input.Allocation, input.AmountMinorUnits); err != nil {
 		return nil, err

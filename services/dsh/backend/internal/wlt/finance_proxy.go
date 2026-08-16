@@ -39,6 +39,9 @@ func financeReadPathAllowed(path string) bool {
 		parts := strings.Split(rest, "/")
 		return (len(parts) == 1 || (len(parts) == 2 && parts[1] == "audit")) && strings.TrimSpace(parts[0]) != ""
 	}
+	if rest, ok := strings.CutPrefix(path, "/wlt/captain-collateral/"); ok {
+		return strings.TrimSpace(rest) != "" && !strings.Contains(rest, "/")
+	}
 	if rest, ok := strings.CutPrefix(path, "/wlt/payout-requests/"); ok {
 		parts := strings.Split(rest, "/")
 		return (len(parts) == 1 || (len(parts) == 2 && parts[1] == "audit")) && strings.TrimSpace(parts[0]) != ""
@@ -216,6 +219,9 @@ func financeWritePathAllowed(path string) bool {
 		}
 		_, allowed := actions[parts[1]]
 		return allowed
+	}
+	if path == "/wlt/captain-collateral/allocate" || path == "/wlt/captain-collateral/release" {
+		return true
 	}
 	return false
 }

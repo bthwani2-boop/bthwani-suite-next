@@ -13,6 +13,8 @@ import (
 	"github.com/google/uuid"
 )
 
+const testSpecialRequestOperatorContextID = "OperatorContext-dispatch-test"
+
 // newApprovedSpecialRequestFixture creates an AWNAK_ERRAND special request and
 // drives it through the real operator transition chain
 // submitted -> under_review -> approved (via specialrequests.Service, not a
@@ -32,8 +34,9 @@ func newApprovedSpecialRequestFixture(t *testing.T, db *sql.DB) (id, clientID st
 
 	pickup := "dispatch-test-pickup-" + suffix
 	dropoff := "dispatch-test-dropoff-" + suffix
-	req, err := svc.Create(ctx, clientID, specialrequests.CreateInput{
-		ClientID:                clientID,
+	req, err := svc.CreateInOperatorContext(ctx, testSpecialRequestOperatorContextID, clientID, specialrequests.CreateInput{
+		OperatorContextID:        testSpecialRequestOperatorContextID,
+		ClientID:                 clientID,
 		RequestType:             specialrequests.TypeAwnakErrand,
 		PickupAddressReference:  &pickup,
 		DropoffAddressReference: &dropoff,
@@ -49,12 +52,12 @@ func newApprovedSpecialRequestFixture(t *testing.T, db *sql.DB) (id, clientID st
 	})
 
 	underReview := specialrequests.StatusUnderReview
-	reviewed, err := svc.ApplyOperatorTransition(ctx, id, req.Version, specialrequests.UpdateInput{Status: &underReview})
+	reviewed, err := svc.ApplyOperatorTransitionInOperatorContext(ctx, testSpecialRequestOperatorContextID, id, req.Version, specialrequests.UpdateInput{Status: &underReview})
 	if err != nil {
 		t.Fatalf("failed to transition fixture to under_review: %v", err)
 	}
 	approved := specialrequests.StatusApproved
-	if _, err := svc.ApplyOperatorTransition(ctx, id, reviewed.Version, specialrequests.UpdateInput{Status: &approved}); err != nil {
+	if _, err := svc.ApplyOperatorTransitionInOperatorContext(ctx, testSpecialRequestOperatorContextID, id, reviewed.Version, specialrequests.UpdateInput{Status: &approved}); err != nil {
 		t.Fatalf("failed to transition fixture to approved: %v", err)
 	}
 	return id, clientID
@@ -77,8 +80,8 @@ func newSheinFixtureAtStage(t *testing.T, db *sql.DB, targetStage string) (id st
 
 	url := "https://www.shein.com/item/dispatch-readiness-" + strconv.FormatInt(time.Now().UnixNano(), 10)
 	qty := 1
-	req, err := svc.Create(ctx, clientID, specialrequests.CreateInput{
-		ClientID: clientID, RequestType: specialrequests.TypeSheinAssistedPurchase,
+	req, err := svc.CreateInOperatorContext(ctx, testSpecialRequestOperatorContextID, clientID, specialrequests.CreateInput{
+		OperatorContextID: testSpecialRequestOperatorContextID, ClientID: clientID, RequestType: specialrequests.TypeSheinAssistedPurchase,
 		ProductUrl: &url, Quantity: &qty,
 	})
 	if err != nil {
@@ -124,7 +127,7 @@ func newSheinFixtureAtStage(t *testing.T, db *sql.DB, targetStage string) (id st
 		if st.mutate != nil {
 			st.mutate(&update)
 		}
-		updated, err := svc.ApplyOperatorTransition(ctx, current.ID, current.Version, update)
+		updated, err := svc.ApplyOperatorTransitionInOperatorContext(ctx, testSpecialRequestOperatorContextID, current.ID, current.Version, update)
 		if err != nil {
 			t.Fatalf("failed to transition shein fixture to stage %s: %v", stage, err)
 		}
@@ -238,8 +241,9 @@ func TestCreateAssignmentForSpecialRequestDBIntegration(t *testing.T) {
 		svc := specialrequests.NewService(repo)
 		pickup := "not-approved-pickup"
 		dropoff := "not-approved-dropoff"
-		req, err := svc.Create(ctx, clientID, specialrequests.CreateInput{
-			ClientID:                clientID,
+		req, err := svc.CreateInOperatorContext(ctx, testSpecialRequestOperatorContextID, clientID, specialrequests.CreateInput{
+			OperatorContextID:        testSpecialRequestOperatorContextID,
+			ClientID:                 clientID,
 			RequestType:             specialrequests.TypeAwnakErrand,
 			PickupAddressReference:  &pickup,
 			DropoffAddressReference: &dropoff,
@@ -254,7 +258,7 @@ func TestCreateAssignmentForSpecialRequestDBIntegration(t *testing.T) {
 		// req.Status is "submitted" here, not approved.
 		captainID, actorID := newCaptainAndActor()
 		_, err = CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
-			SpecialRequestID: req.ID, CaptainID: captainID, ActorID: actorID,
+			SpecialRequestID: req.ID, CaptainID: captainID, ActorID: actorID, OperatorContextID: testSpecialRequestOperatorContextID,
 		})
 		if !errors.Is(err, ErrConflict) {
 			t.Fatalf("expected ErrConflict assigning a non-approved special request, got %v", err)

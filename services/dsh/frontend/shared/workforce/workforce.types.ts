@@ -234,10 +234,6 @@ export type CaptainClassification = "joker" | "basic";
 
 export type CaptainActivationCore = {
   readonly classification: CaptainClassification;
-  readonly financialGuaranteeMinorUnits: number;
-  readonly financialGuaranteeCurrency: string;
-  readonly financialGuaranteeStatus: "not_funded" | "pending_review" | "funded" | "released" | "forfeited";
-  readonly financialGuaranteeReference?: string;
   readonly deliveryBagCustodyStatus: "not_issued" | "issued" | "returned" | "lost" | "damaged";
   readonly deliveryBagCustodyReference?: string;
   readonly mandatoryPurchasesStatus: "not_required" | "pending_payment" | "paid" | "paid_and_delivered" | "cancelled";
@@ -305,8 +301,6 @@ export type ProviderIncident = {
   readonly severity: "minor" | "major" | "critical";
   readonly status: string;
   readonly policyId?: string;
-  readonly proposedPenaltyMinorUnits: number;
-  readonly currency: string;
   readonly wltLedgerReference?: string;
   readonly appealNote?: string;
   readonly resolutionNote?: string;

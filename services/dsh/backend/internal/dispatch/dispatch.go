@@ -161,7 +161,7 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 		return nil, fmt.Errorf("%w: specialRequestId, captainId, and actor are required", ErrInvalid)
 	}
 	if input.OperatorContextID == "" {
-		input.OperatorContextID = specialrequests.DefaultOperatorContextID
+		return nil, fmt.Errorf("%w: OperatorContext is required for special-request assignment", ErrInvalid)
 	}
 	tx, err := db.Begin()
 	if err != nil {

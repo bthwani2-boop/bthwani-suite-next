@@ -54,9 +54,51 @@ paths:
         required: true
         content:
           application/json:
-            schema: { type: object, additionalProperties: true }
+            schema:
+              type: object
+              additionalProperties: false
+              required: [ incidentId, providerActorId, providerActorType, policyId, reason, postedByActorId ]
+              properties:
+                incidentId: { type: string, minLength: 1 }
+                providerActorId: { type: string, minLength: 1 }
+                providerActorType: { type: string, enum: [ captain, field ] }
+                policyId: { type: string, minLength: 1 }
+                reason: { type: string, minLength: 3 }
+                postedByActorId: { type: string, minLength: 1 }
       responses:
         '201': { description: Provider penalty ledger effect recorded. }
+        '400': { $ref: '#/components/responses/WorkforceFinanceBadRequest' }
+        '401': { $ref: '#/components/responses/WorkforceFinanceUnauthorized' }
+        '403': { $ref: '#/components/responses/WorkforceFinanceForbidden' }
+        '409': { $ref: '#/components/responses/WorkforceFinanceConflict' }
+  /wlt/provider-penalty-policies/{policyId}:
+    put:
+      operationId: upsertProviderPenaltyPolicy
+      tags: [ WltWorkforceFinance ]
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - name: policyId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [ expectedVersion, providerActorType, amountMinorUnits, currency, changeReason, updatedByActorId ]
+              properties:
+                expectedVersion: { type: integer, format: int64, minimum: 0 }
+                providerActorType: { type: string, enum: [ captain, field, any ] }
+                amountMinorUnits: { type: integer, format: int64, minimum: 1 }
+                currency: { type: string, minLength: 3, maxLength: 3 }
+                enabled: { type: boolean }
+                changeReason: { type: string, minLength: 3 }
+                updatedByActorId: { type: string, minLength: 1 }
+      responses:
+        '200': { description: WLT provider penalty policy stored. }
         '400': { $ref: '#/components/responses/WorkforceFinanceBadRequest' }
         '401': { $ref: '#/components/responses/WorkforceFinanceUnauthorized' }
         '403': { $ref: '#/components/responses/WorkforceFinanceForbidden' }

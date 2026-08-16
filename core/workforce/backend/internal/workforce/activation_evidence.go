@@ -56,9 +56,6 @@ func ProviderActivationEvidenceMissing(core ProviderOperationalCore) []string {
 
 	if core.Captain != nil {
 		captain := core.Captain
-		if captain.FinancialGuaranteeStatus == "funded" && strings.TrimSpace(captain.FinancialGuaranteeReference) == "" {
-			missing = append(missing, "financialGuaranteeReference")
-		}
 		if captain.DeliveryBagCustodyStatus == "issued" && strings.TrimSpace(captain.DeliveryBagCustodyReference) == "" {
 			missing = append(missing, "deliveryBagCustodyReference")
 		}

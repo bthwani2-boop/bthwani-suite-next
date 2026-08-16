@@ -28,10 +28,20 @@ export const GENERATED_REGISTRY_PATH = path.join(
 export const DSH_API_BASE = process.env.DSH_API_BASE || 'http://127.0.0.1:58080';
 export const IDENTITY_API_BASE = process.env.IDENTITY_API_BASE || 'http://127.0.0.1:58082';
 export const WORKFORCE_API_BASE = process.env.WORKFORCE_API_BASE || 'http://127.0.0.1:58086';
+const WLT_API_BASE = process.env.WLT_API_BASE || 'http://127.0.0.1:58083';
+const WLT_DSH_SERVICE_TOKEN =
+  process.env.WLT_DSH_SERVICE_TOKEN ||
+  process.env.DSH_WLT_SERVICE_TOKEN ||
+  'dev-only-dsh-wlt-shared-secret';
 const IDENTITY_WORKFORCE_SERVICE_TOKEN =
   process.env.IDENTITY_WORKFORCE_SERVICE_TOKEN ||
   'LOCAL_ONLY_replace_with_workforce_internal_service_token';
 const LOCAL_OPERATOR_CONTEXT_ID = process.env.BTHWANI_OPERATOR_CONTEXT_ID || 'local-dsh';
+// The local platform-owner actor is the governed supervisor for both provider
+// kinds. This is a local fixture binding, not a Workforce fallback: Identity
+// must expose the matching workforce.supervise.* roles before any profile can
+// be activated.
+const LOCAL_WORKFORCE_SUPERVISOR_ACTOR_ID = LOCAL_ACTORS.operator.actorId;
 
 export class HttpError extends Error {
   constructor(operation, status, body) {
@@ -205,6 +215,7 @@ export function fieldCreatePayload(zoneId) {
     engagementType: 'independent_contractor',
     engagementStartDate: '2026-01-01',
     serviceZoneId: zoneId,
+    supervisorActorId: LOCAL_WORKFORCE_SUPERVISOR_ACTOR_ID,
     photoMediaRef: 'local-dev/workforce/field-profile.jpg',
     documentMediaRefs: [
       'local-dev/workforce/field-identity-front.jpg',
@@ -228,6 +239,7 @@ export function captainCreatePayload(zoneId, actorId) {
     licenseExpiresAt: '2035-12-31',
     serviceZoneId: zoneId,
     operatingScopeCode: 'local-dsh',
+    supervisorActorId: LOCAL_WORKFORCE_SUPERVISOR_ACTOR_ID,
     documentMediaRefs: [
       'local-dev/workforce/captain-license.jpg',
       'local-dev/workforce/captain-identity-front.jpg',
@@ -270,6 +282,137 @@ async function patchOperationalCore(operatorToken, kind, actorId, payload) {
       body: JSON.stringify(payload),
     },
   );
+}
+
+function wltHeaders(operation, idempotencyKey = '') {
+  const headers = {
+    Authorization: `Bearer ${WLT_DSH_SERVICE_TOKEN}`,
+    'X-Service-Caller': 'dsh',
+    'X-Operator-Context-ID': LOCAL_OPERATOR_CONTEXT_ID,
+    'X-Correlation-ID': `mobile-dev-${operation}-${stableToken(operation)}`,
+  };
+  if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;
+  return headers;
+}
+
+async function ensureCaptainFinancialStanding(captainId) {
+  const readback = await requestJson(
+    'wlt:captain-collateral:read',
+    `${WLT_API_BASE}/wlt/captain-collateral/${encodeURIComponent(captainId)}`,
+    { headers: wltHeaders('captain-collateral-read') },
+  );
+  const policy = readback?.policy;
+  if (
+    !policy ||
+    policy.enabled !== true ||
+    policy.currency !== 'YER' ||
+    policy.minimumCollateralMinorUnits <= 0
+  ) {
+    throw new Error(
+      `captain WLT collateral policy is not configured for ${captainId}: ${JSON.stringify(policy)}`,
+    );
+  }
+
+  const hasValidPosition = list(readback.positions).some(
+    (position) =>
+      position?.status === 'active' &&
+      position?.currency === policy.currency &&
+      position?.protectedMinimumMinorUnits >= policy.minimumCollateralMinorUnits &&
+      position?.restrictedAmountMinorUnits >= policy.minimumCollateralMinorUnits,
+  );
+  if (!hasValidPosition) {
+    const reference = `local-captain-collateral-${stableToken(captainId)}`;
+    const createHeaders = wltHeaders('captain-collateral-topup-create', `mobile-dev-${reference}`);
+    const created = await requestJson(
+      'wlt:captain-collateral:topup-create',
+      `${WLT_API_BASE}/wlt/topup-sessions`,
+      {
+        method: 'POST',
+        headers: createHeaders,
+        body: JSON.stringify({
+          actorType: 'captain',
+          actorId: captainId,
+          topupReference: reference,
+          amountMinorUnits: policy.minimumCollateralMinorUnits,
+          currency: policy.currency,
+        }),
+      },
+    );
+    const paymentSessionId = created?.paymentSession?.id;
+    if (!paymentSessionId) throw new Error('WLT captain collateral top-up returned no payment session');
+
+    for (const operation of ['authorize', 'capture']) {
+      await requestJson(
+        `wlt:captain-collateral:topup-${operation}`,
+        `${WLT_API_BASE}/wlt/topup-sessions/${encodeURIComponent(paymentSessionId)}/${operation}`,
+        {
+          method: 'POST',
+          headers: wltHeaders(
+            `captain-collateral-topup-${operation}`,
+            `mobile-dev-${reference}-${operation}`,
+          ),
+          body: '{}',
+        },
+      );
+    }
+
+    await requestJson(
+      'wlt:captain-collateral:allocate',
+      `${WLT_API_BASE}/wlt/captain-collateral/allocate`,
+      {
+        method: 'POST',
+        headers: wltHeaders('captain-collateral-allocate', `mobile-dev-${reference}-allocate`),
+        body: JSON.stringify({
+          captainId,
+          paymentSessionId,
+          allocatedByActorId: LOCAL_ACTORS.operator.actorId,
+        }),
+      },
+    );
+  }
+
+  const verified = await requestJson(
+    'wlt:captain-collateral:verify',
+    `${WLT_API_BASE}/wlt/captain-collateral/${encodeURIComponent(captainId)}`,
+    { headers: wltHeaders('captain-collateral-verify') },
+  );
+  const verifiedPosition = list(verified?.positions).find(
+    (position) =>
+      position?.status === 'active' &&
+      position?.currency === verified?.policy?.currency &&
+      position?.protectedMinimumMinorUnits >= verified?.policy?.minimumCollateralMinorUnits &&
+      position?.restrictedAmountMinorUnits >= verified?.policy?.minimumCollateralMinorUnits,
+  );
+  if (!verifiedPosition) {
+    throw new Error(`captain WLT collateral readback remained incomplete: ${JSON.stringify(verified)}`);
+  }
+}
+
+async function refreshCaptainFinancialEligibility(operatorToken, captainId) {
+  const result = await requestJson(
+    'dsh:refresh-captain-financial-eligibility',
+    `${DSH_API_BASE}/dsh/operator/dispatch/captains/${encodeURIComponent(captainId)}/financial-eligibility/refresh`,
+    {
+      method: 'POST',
+      headers: {
+        ...authorization(operatorToken),
+        'Content-Type': 'application/json',
+        'X-Operator-Context-ID': LOCAL_OPERATOR_CONTEXT_ID,
+        'X-Correlation-ID': `mobile-dev-captain-financial-eligibility-${stableToken(captainId)}`,
+      },
+      body: '{}',
+    },
+  );
+  const decision = result?.financialEligibility;
+  if (
+    decision?.eligible !== true ||
+    !decision?.wltDecisionId ||
+    !decision?.wltPolicyVersion ||
+    !decision?.expiresAt
+  ) {
+    throw new Error(`captain WLT financial eligibility readback remained incomplete: ${JSON.stringify(decision)}`);
+  }
+  return decision;
 }
 
 export async function getProvider(operatorToken, kind, actorId) {
@@ -446,6 +589,26 @@ async function provisionOne(operatorToken, kind, zone) {
     }
   }
 
+  const profile = kind === 'field' ? person?.fieldProfile : person?.captainProfile;
+  if (profile?.supervisorActorId !== LOCAL_WORKFORCE_SUPERVISOR_ACTOR_ID) {
+    person = await requestJson(
+      `workforce:update-${kind}-supervisor`,
+      `${WORKFORCE_API_BASE}/workforce/${endpointFor(kind)}/${encodeURIComponent(actorId)}`,
+      {
+        method: 'PATCH',
+        headers: {
+          ...authorization(operatorToken),
+          'Content-Type': 'application/json',
+          'X-Correlation-ID': `mobile-dev-${kind}-supervisor-${stableToken(actorId)}`,
+        },
+        body: JSON.stringify({
+          expectedVersion: person.version,
+          supervisorActorId: LOCAL_WORKFORCE_SUPERVISOR_ACTOR_ID,
+        }),
+      },
+    );
+  }
+
   const operationalCore = {
     ...commonOperationalCore(kind),
     ...(kind === 'field'
@@ -453,10 +616,6 @@ async function provisionOne(operatorToken, kind, zone) {
       : {
           captain: {
             classification: 'joker',
-            financialGuaranteeMinorUnits: 100000,
-            financialGuaranteeCurrency: 'YER',
-            financialGuaranteeStatus: 'funded',
-            financialGuaranteeReference: 'local-dev/wlt/captain-guarantee-001',
             deliveryBagCustodyStatus: 'issued',
             deliveryBagCustodyReference: 'local-dev/assets/delivery-bag-001',
             mandatoryPurchasesStatus: 'paid_and_delivered',
@@ -466,6 +625,10 @@ async function provisionOne(operatorToken, kind, zone) {
           },
         }),
   };
+  if (kind === 'captain') {
+    await ensureCaptainFinancialStanding(actorId);
+    await refreshCaptainFinancialEligibility(operatorToken, actorId);
+  }
   const operational = await patchOperationalCore(operatorToken, kind, actorId, operationalCore);
   if (operational?.activationReadiness?.ready !== true) {
     throw new Error(
