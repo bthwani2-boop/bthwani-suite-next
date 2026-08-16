@@ -132,6 +132,17 @@ const required = new Set(
     .filter(Boolean),
 );
 
+const registeredToolIds = new Set((registry.entries || []).map((tool) => tool.id));
+for (const requested of required) {
+  if (!registeredToolIds.has(requested)) {
+    violations.push({
+      file: "governance/tools/agent-tool-registry.json",
+      line: 0,
+      message: `EXPLICITLY_REQUIRED_TOOL_NOT_REGISTERED ${requested}`,
+    });
+  }
+}
+
 const commandCandidates = {
   "antigravity-implementer": ["agy"],
   "opencode-implementer": ["opencode"],
@@ -160,9 +171,12 @@ for (const core of ["node", "pnpm"]) {
 }
 
 for (const tool of registry.entries || []) {
-  const status = probe(
-    commandCandidates[tool.id] || [tool.id],
-  );
+  const status = tool.status === "conditional" && !required.has(tool.id)
+    ? {
+      state: "NOT_PROBED_CONDITIONAL",
+      reason: "Tool is conditional and was not explicitly requested",
+    }
+    : probe(commandCandidates[tool.id] || [tool.id]);
 
   report.tools[tool.id] = status;
 

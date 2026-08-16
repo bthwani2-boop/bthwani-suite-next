@@ -3,6 +3,21 @@ name: BThwani Backend Verification
 on:
   workflow_call:
     inputs:
+      base_sha:
+        type: string
+        required: true
+      head_sha:
+        type: string
+        required: true
+      full_verification:
+        type: string
+        required: true
+      verification_tier:
+        type: string
+        required: true
+      execution_phase:
+        type: string
+        required: true
       dsh:
         type: string
         required: true
@@ -98,6 +113,11 @@ jobs:
           --health-cmd "pg_isready -h 127.0.0.1 -U ci_runtime -d ci_runtime"
           --health-interval 5s --health-timeout 5s --health-retries 20
     env:
+      CI_BASE_SHA: ${{ inputs.base_sha }}
+      CI_HEAD_SHA: ${{ inputs.head_sha }}
+      CI_FULL_VERIFICATION: ${{ inputs.full_verification }}
+      CI_VERIFICATION_TIER: ${{ inputs.verification_tier }}
+      CI_EXECUTION_PHASE: ${{ inputs.execution_phase }}
       DATABASE_URL: postgres://ci_runtime:ci_runtime_password@localhost:5432/ci_runtime?sslmode=disable
       PGPASSWORD: ci_runtime_password
       DSH_REQUIRE_DB_TESTS: ${{ matrix.key == 'dsh' && 'true' || 'false' }}
@@ -144,13 +164,39 @@ jobs:
         run: |
           set -uo pipefail
           log="${RUNNER_TEMP}/${{ matrix.key }}-go-verification.log"
-          if ! go test ./... -count=1 >"${log}" 2>&1; then
+          changed_files="$(git diff --name-only "${CI_BASE_SHA}" "${CI_HEAD_SHA}" -- "${{ matrix.workdir }}")"
+          full_backend=false
+          if [[ "${CI_FULL_VERIFICATION}" == "true" || "${CI_EXECUTION_PHASE}" != "development" ]]; then
+            full_backend=true
+          elif grep -Eq '(^|/)(go\.mod|go\.sum)$|/migrations/' <<<"${changed_files}"; then
+            full_backend=true
+          fi
+
+          package_args=()
+          if [[ "${full_backend}" != "true" ]]; then
+            while IFS= read -r changed_file; do
+              [[ -z "${changed_file}" ]] && continue
+              relative="${changed_file#${{ matrix.workdir }}/}"
+              package_dir="./$(dirname "${relative}")"
+              package_import="$(go list -f '{{.ImportPath}}' "${package_dir}" 2>/dev/null || true)"
+              if [[ -n "${package_import}" && ! " ${package_args[*]} " == *" ${package_import} "* ]]; then
+                package_args+=("${package_import}")
+              fi
+            done <<<"${changed_files}"
+          fi
+
+          if [[ "${full_backend}" == "true" || "${#package_args[@]}" -eq 0 ]]; then
+            package_args=(./...)
+          fi
+          printf 'backend verification mode=%s packages=%s\n' "$([[ "${full_backend}" == "true" ]] && echo full || echo affected)" "${package_args[*]}" | tee "${log}"
+
+          if ! go test "${package_args[@]}" -count=1 >>"${log}" 2>&1; then
             echo "::error title=${{ matrix.key }} Go verification failed::The complete log is stored as an artifact."
             grep -E '^--- FAIL:|^FAIL([[:space:]]|$)|panic:|undefined:|cannot use|build failed|Error Trace:' "${log}" | tail -n 80 || true
             tail -n 160 "${log}"
             exit 1
           fi
-          if ! go build ./... >>"${log}" 2>&1; then
+          if ! go build "${package_args[@]}" >>"${log}" 2>&1; then
             tail -n 160 "${log}"
             exit 1
           fi

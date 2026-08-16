@@ -56,8 +56,8 @@ const scriptByTool = {
   codeql: "github/codeql-action", sonarqube: "sonarqube", gitleaks: "guard:secrets", trivy: "security:trivy",
   "osv-scanner": "security:osv", conftest: "guard:opa-policies", "markdownlint-cli2": "guard:markdown-governance",
   actionlint: "guard:workflow-lint", zizmor: "guard:workflow-security", pinact: "guard:actions-pin", nx: "nx:projects",
-  opa: "guard:opa-policies", ajv: "guard:governance-schema", regal: "guard:rego-lint", shellcheck: "guard:shellcheck",
-  hadolint: "guard:dockerfile-lint", yamllint: "guard:yaml-lint", "ls-lint": "guard:ls-lint", playwright: "e2e:web:smoke",
+  opa: "guard:opa-policies", ajv: "guard:governance-schema", regal: "diagnostics:rego", shellcheck: "diagnostics:shell",
+  hadolint: "diagnostics:dockerfile", yamllint: "diagnostics:yaml", "ls-lint": "diagnostics:naming", playwright: "e2e:web:smoke",
   axe: "guard:a11y-runtime", storybook: "diagnostics:storybook",
 };
 const workflowEvidenceByTool = {

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import {
   fail,
   lineNumber,
@@ -11,6 +12,37 @@ import {
 
 const guardId = "cleanup-policy-gate";
 const violations = [];
+
+function option(name) {
+  const index = process.argv.indexOf(name);
+  return index >= 0 ? String(process.argv[index + 1] ?? "").trim() : "";
+}
+
+const scope = option("--scope") || "full";
+if (!new Set(["affected", "full"]).has(scope)) {
+  violations.push({ file: "tools/guards/cleanup-policy-gate.mjs", line: 0, message: `INVALID_CLEANUP_SCOPE ${scope}` });
+}
+
+function resolveChangedFiles() {
+  const base = option("--base") || String(process.env.NX_BASE ?? "").trim();
+  const head = option("--head") || String(process.env.NX_HEAD ?? "").trim();
+  if (!base || !head) {
+    violations.push({ file: "tools/guards/cleanup-policy-gate.mjs", line: 0, message: "AFFECTED_CLEANUP_REQUIRES_EXPLICIT_BASE_AND_HEAD" });
+    return [];
+  }
+  const result = spawnSync("git", ["diff", "--name-only", "--diff-filter=ACMRDTUXB", base, head, "--"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  if (result.error || result.status !== 0) {
+    violations.push({ file: "tools/guards/cleanup-policy-gate.mjs", line: 0, message: `AFFECTED_CLEANUP_CHANGED_FILES_UNRESOLVED ${result.error?.message ?? result.status}` });
+    return [];
+  }
+  return String(result.stdout ?? "").split(/\r?\n/).map(toPosix).map((file) => file.trim()).filter(Boolean);
+}
+
+const changedFiles = scope === "affected" ? resolveChangedFiles() : [];
 
 function readJson(relativePath) {
   const full = path.join(repoRoot, relativePath);
@@ -140,16 +172,18 @@ function walk(targetPath, files = []) {
 }
 
 // 1. Active policy and executable repository files must not depend on a developer-specific repository root.
-const localPathScan = new Set([
-  ...walk(path.join(repoRoot, "infra")),
-  ...walk(path.join(repoRoot, "tools")),
-  ...walk(path.join(repoRoot, ".github")),
-  ...walk(path.join(repoRoot, "services")),
-  ...walk(path.join(repoRoot, "core")),
-  ...walk(path.join(repoRoot, "apps")),
-  "package.json",
-  ...textualPolicyFiles,
-]);
+const localPathScan = scope === "full"
+  ? new Set([
+    ...walk(path.join(repoRoot, "infra")),
+    ...walk(path.join(repoRoot, "tools")),
+    ...walk(path.join(repoRoot, ".github")),
+    ...walk(path.join(repoRoot, "services")),
+    ...walk(path.join(repoRoot, "core")),
+    ...walk(path.join(repoRoot, "apps")),
+    "package.json",
+    ...textualPolicyFiles,
+  ])
+  : new Set([...changedFiles, ...textualPolicyFiles]);
 
 const hardcodedPathRegexes = [
   /c:\\bthwani-suite-next/i,
@@ -216,7 +250,12 @@ const runtimeExclusions = [
   "/frontend/",
 ];
 const previewRegex = /\b(previewData|demoData|useFixtures|fakeActor|fakeUser)\b/g;
-for (const file of listCodeFiles()) {
+const runtimeFiles = scope === "full"
+  ? listCodeFiles()
+  : changedFiles
+    .filter((file) => /\.(?:[cm]?js|jsx|ts|tsx|go|py|rb|java|kt|rs|swift|php)$/i.test(file))
+    .filter((file) => fs.existsSync(path.join(repoRoot, file)));
+for (const file of runtimeFiles) {
   if (!runtimePrefixes.some((prefix) => file.startsWith(prefix))) continue;
   if (runtimeExclusions.some((part) => file.includes(part))) continue;
   const content = read(file);
@@ -273,14 +312,16 @@ const deprecatedGuards = [
   "wlt-dsh-frontend-shared-ownership-gate",
 ];
 
-const deprecatedReferenceFiles = new Set([
-  ...walk(path.join(repoRoot, "tools")),
-  ...walk(path.join(repoRoot, ".github")),
-  ...walk(path.join(repoRoot, "services")),
-  ...walk(path.join(repoRoot, "core")),
-  ...walk(path.join(repoRoot, "apps")),
-  "package.json",
-]);
+const deprecatedReferenceFiles = scope === "full"
+  ? new Set([
+    ...walk(path.join(repoRoot, "tools")),
+    ...walk(path.join(repoRoot, ".github")),
+    ...walk(path.join(repoRoot, "services")),
+    ...walk(path.join(repoRoot, "core")),
+    ...walk(path.join(repoRoot, "apps")),
+    "package.json",
+  ])
+  : new Set(changedFiles);
 for (const file of [...deprecatedReferenceFiles].sort()) {
   if (!file || file === "tools/guards/cleanup-policy-gate.mjs") continue;
   const full = path.join(repoRoot, file);
@@ -305,12 +346,16 @@ for (const file of [...deprecatedReferenceFiles].sort()) {
 
 // 5. Disabled placeholder projects are forbidden. Git history is the archive;
 // inactive products must not remain as fake Nx/package surfaces.
-const projectFiles = [
-  ...walk(path.join(repoRoot, "apps")),
-  ...walk(path.join(repoRoot, "services")),
-  ...walk(path.join(repoRoot, "core")),
-  ...walk(path.join(repoRoot, "shared")),
-].filter((file) => file.endsWith("/project.json"));
+const projectFiles = scope === "full"
+  ? [
+    ...walk(path.join(repoRoot, "apps")),
+    ...walk(path.join(repoRoot, "services")),
+    ...walk(path.join(repoRoot, "core")),
+    ...walk(path.join(repoRoot, "shared")),
+  ].filter((file) => file.endsWith("/project.json"))
+  : changedFiles.filter((file) => file.endsWith("/project.json"));
+
+console.log(`cleanup-policy-scope: ${scope}`);
 
 for (const projectFile of projectFiles) {
   const project = readJson(projectFile);

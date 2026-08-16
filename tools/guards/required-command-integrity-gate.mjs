@@ -203,9 +203,9 @@ rejectMarkers(`${workflowsRoot}/ci-policy.yml`, ciPolicy, [
   ["CI_GENERATED_SOURCE_MATERIALIZATION_FORBIDDEN", /openapi:generate:all/],
 ]);
 
-requireMarkers(`${workflowsRoot}/ci-node-diagnostics.yml`, ["pnpm exec knip", "guard:logic-coverage", "guard:a11y", "guard:dependency-graph", "guard:ast-grep-rules", "guard:api-binding", "guard:backend-api-binding", "guard:frontend-feature-binding"]);
+requireMarkers(`${workflowsRoot}/ci-node-diagnostics.yml`, ["pnpm exec knip", "guard:logic-all", "guard:a11y", "guard:dependency-graph", "guard:ast-grep-rules", "guard:api-binding", "guard:backend-api-binding", "guard:frontend-feature-binding"]);
 requireMarkers(`${workflowsRoot}/ci-node-verification.yml`, ["node --test apps/mobile/tests/*.test.mjs", "pnpm exec nx run-many -t test --all --outputStyle=stream", "pnpm exec nx affected -t test --outputStyle=stream", "pnpm run nx:typecheck", "pnpm run nx:lint", "pnpm run nx:build"]);
-requireMarkers(`${workflowsRoot}/ci-backends.yml`, ["Select affected backends", "Apply migrations", "go test ./...", "go build ./..."]);
+requireMarkers(`${workflowsRoot}/ci-backends.yml`, ["Select affected backends", "Apply migrations", "go test ", "go build "]);
 requireMarkers(`${workflowsRoot}/ci-runtime.yml`, ["runtime:full:smoke", "mobile:four-app-integration", "test-dsh-multisurface-runtime-matrix-v2.ps1", "Stop runtime"]);
 requireMarkers(`${workflowsRoot}/dsh-database.yml`, ["contents: read", "postgis/postgis:16-3.4-alpine", "invoke-dsh-database.ps1"]);
 

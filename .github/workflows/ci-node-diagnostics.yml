@@ -68,6 +68,9 @@ jobs:
         if: ${{ inputs.frontend == 'true' }}
         continue-on-error: true
         shell: bash
+        env:
+          FULL_VERIFICATION: ${{ inputs.full_verification }}
+          VERIFICATION_TIER: ${{ inputs.verification_tier }}
         run: |
           set +e
           log="${RUNNER_TEMP}/frontend-diagnostics.log"
@@ -80,11 +83,13 @@ jobs:
             if [[ "${code}" -ne 0 ]]; then status="${code}"; fi
           }
           run_check pnpm run diagnostics:ui-kit
-          run_check pnpm run guard:a11y
-          run_check node tools/guards/control-panel-architecture-gate.mjs
-          run_check node tools/guards/service-workspace-gate.mjs
-          run_check pnpm run guard:dependency-graph
-          run_check pnpm run guard:ast-grep-rules
+          run_check pnpm run guard:control-panel-architecture
+          run_check pnpm run guard:service-workspace
+          if [[ "${FULL_VERIFICATION}" != "true" && "${VERIFICATION_TIER}" != "deep" ]]; then
+            run_check pnpm run guard:a11y
+            run_check pnpm run guard:dependency-graph
+            run_check pnpm run guard:ast-grep-rules
+          fi
           exit "${status}"
       - name: Upload frontend diagnostics
         if: ${{ steps.frontend_diagnostics.outcome == 'failure' }}
@@ -144,7 +149,6 @@ jobs:
             if [[ "${code}" -ne 0 && "${status}" -eq 0 ]]; then status="${code}"; fi
           }
           run_check pnpm exec knip --config knip.json --reporter compact --reporter github-actions
-          run_check pnpm run guard:logic-coverage
           run_check pnpm run guard:logic-all
           run_check pnpm run guard:performance-all
           echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"

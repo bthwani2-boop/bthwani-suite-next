@@ -10,7 +10,7 @@ $checks = @(
   @{ Name = "runtime-anti-stub"; Command = "pnpm run guard:runtime-real-bindings" },
   @{ Name = "runtime-config"; Command = "pnpm run guard:runtime-config" },
   @{ Name = "repository-structure"; Command = "pnpm run guard:repo-structure" },
-  @{ Name = "orphan-files"; Command = "pnpm run guard:orphan-files" }
+  @{ Name = "orphan-files"; Command = "pnpm run diagnostics:orphan-files" }
 )
 
 $results = New-Object System.Collections.Generic.List[object]

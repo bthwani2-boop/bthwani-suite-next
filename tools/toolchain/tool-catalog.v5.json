@@ -200,7 +200,7 @@
       "decision": "add",
       "activation": "partial",
       "failure_policy": "warn",
-      "package_script": "guard:dockerfile-lint",
+      "package_script": "diagnostics:dockerfile",
       "binary": "hadolint"
     },
     {
@@ -292,7 +292,7 @@
       "decision": "add",
       "activation": "partial",
       "failure_policy": "warn",
-      "package_script": "guard:ls-lint"
+      "package_script": "diagnostics:naming"
     },
     {
       "id": "madge",
@@ -426,7 +426,7 @@
       "decision": "add",
       "activation": "partial",
       "failure_policy": "warn",
-      "package_script": "guard:rego-lint",
+      "package_script": "diagnostics:rego",
       "binary": "regal"
     },
     {
@@ -455,7 +455,7 @@
       "decision": "add",
       "activation": "partial",
       "failure_policy": "warn",
-      "package_script": "guard:shellcheck",
+      "package_script": "diagnostics:shell",
       "binary": "shellcheck"
     },
     {
@@ -569,7 +569,7 @@
       "decision": "add",
       "activation": "partial",
       "failure_policy": "warn",
-      "package_script": "guard:yaml-lint",
+      "package_script": "diagnostics:yaml",
       "binary": "yamllint"
     },
     {

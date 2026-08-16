@@ -47,5 +47,31 @@
       "required-command-integrity",
       "cleanup-policy"
     ]
+  },
+  "journeyProfiles": {
+    "PROJECT-WIDE": [
+      "required-command-integrity",
+      "no-broken-imports",
+      "runtime-config",
+      "api-binding",
+      "backend-api-binding",
+      "service-manifest-drift",
+      "migration-manifest-drift",
+      "frontend-feature-binding",
+      "fullstack-boundary",
+      "wlt-financial-boundary",
+      "runtime-real-bindings",
+      "field-surface-truth"
+    ],
+    "PLATFORM-CHANGE-SETS": [
+      "required-command-integrity",
+      "no-broken-imports",
+      "runtime-config",
+      "api-binding",
+      "backend-api-binding",
+      "service-manifest-drift",
+      "migration-manifest-drift",
+      "fullstack-boundary"
+    ]
   }
 }

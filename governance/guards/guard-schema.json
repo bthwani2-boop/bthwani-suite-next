@@ -24,7 +24,7 @@
           "kind": {
             "enum": ["AGGREGATE_GUARD", "EXECUTABLE_GUARD", "EXTERNAL_TOOL_GATE", "DIAGNOSTIC"]
           },
-          "script": { "type": "string", "pattern": "^guard:[a-z0-9-]+$" },
+          "script": { "type": "string", "pattern": "^(?:guard|diagnostics):[a-z0-9-]+$" },
           "exit_level": { "enum": ["fail", "warn"] },
           "description": { "type": "string", "minLength": 1 },
           "source_file": { "type": "string", "minLength": 1 }

@@ -294,6 +294,11 @@ jobs:
     if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && (needs.context.outputs.full_verification == 'true' || needs.context.outputs.dsh == 'true' || needs.context.outputs.wlt == 'true' || needs.context.outputs.identity == 'true' || needs.context.outputs.workforce == 'true' || needs.context.outputs.platform == 'true' || needs.context.outputs.providers == 'true') }}
     uses: ./.github/workflows/ci-backends.yml
     with:
+      base_sha: ${{ needs.context.outputs.base_sha }}
+      head_sha: ${{ needs.context.outputs.head_sha }}
+      full_verification: ${{ needs.context.outputs.full_verification }}
+      verification_tier: ${{ needs.context.outputs.verification_tier }}
+      execution_phase: ${{ needs.context.outputs.execution_phase }}
       dsh: ${{ needs.context.outputs.dsh }}
       wlt: ${{ needs.context.outputs.wlt }}
       identity: ${{ needs.context.outputs.identity }}
