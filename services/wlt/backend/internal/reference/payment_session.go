@@ -132,13 +132,20 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 		return nil, fmt.Errorf("financial compatibility scope, clientId and storeId are required")
 	}
 	if input.PaymentMethod == "" {
+		if input.CheckoutIntentID != "" {
+			return nil, fmt.Errorf("paymentMethod is required for checkout; supported checkout methods are cod, wallet and mixed")
+		}
 		input.PaymentMethod = "official_wallet"
 	}
 	if input.Currency == "" {
 		input.Currency = "YER"
 	}
 	switch input.PaymentMethod {
-	case "cod", "wallet", "mixed", "official_wallet":
+	case "cod", "wallet", "mixed":
+	case "official_wallet":
+		if input.CheckoutIntentID != "" {
+			return nil, fmt.Errorf("official_wallet is a wallet funding rail and is not a checkout payment method")
+		}
 	default:
 		return nil, fmt.Errorf("unsupported paymentMethod: %s", input.PaymentMethod)
 	}
