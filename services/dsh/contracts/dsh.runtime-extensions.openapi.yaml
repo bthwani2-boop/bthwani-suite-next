@@ -65,6 +65,39 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
+  /dsh/internal/workforce/captains/{captainId}/financial-eligibility:
+    get:
+      operationId: getWorkforceCaptainFinancialEligibility
+      summary: Read the DSH projection of a WLT-owned captain financial eligibility decision for Workforce dispatch gating
+      description: Workforce consumes this bounded projection; DSH stores only opaque WLT decision metadata and does not own financial policy.
+      security:
+      - serviceToken: []
+      parameters:
+      - name: captainId
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/ServiceCaller'
+      - name: X-Operator-Context-ID
+        in: header
+        required: true
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          $ref: './dsh.captain-financial-eligibility.openapi.yaml#/components/responses/EligibilityResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: WLT financial eligibility has not been projected for the captain.
+        '503':
+          description: The DSH financial eligibility projection is unavailable.
   /dsh/operator/stores/{storeId}/assortment-pauses:
     parameters:
     - name: storeId

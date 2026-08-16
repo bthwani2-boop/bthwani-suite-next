@@ -110,6 +110,14 @@ describe("generated DSH API client parity", () => {
     assert.match(callback, /\brequestBody:\s*\{/);
   });
 
+  test("keeps Workforce financial eligibility projection bound to service headers", () => {
+    const projection = operationEntryBlock("getWorkforceCaptainFinancialEligibility");
+    assert.match(projection, /\bAuthorization:\s*string;/);
+    assert.match(projection, /"X-Service-Caller":\s*"workforce";/);
+    assert.match(projection, /"X-Operator-Context-ID":\s*string;/);
+    assert.match(projection, /\bcaptainId:\s*string;/);
+  });
+
   test("keeps retired marketing banners and promos out of the generated client", () => {
     assert.doesNotMatch(source, /listDshMarketingBanners/);
     assert.doesNotMatch(source, /listDshMarketingPromos/);
