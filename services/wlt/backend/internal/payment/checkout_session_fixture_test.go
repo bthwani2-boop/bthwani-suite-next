@@ -21,7 +21,7 @@ func seedCheckoutSession(t *testing.T, db *sql.DB, checkoutIntentID, status, pro
 		CheckoutIntentID:  checkoutIntentID,
 		ClientID:          "client-test",
 		StoreID:           "store-test",
-		PaymentMethod:     "official_wallet",
+		PaymentMethod:     "wallet",
 		Status:            status,
 		ProviderReference: providerReference,
 		AmountMinorUnits:  amountMinorUnits,

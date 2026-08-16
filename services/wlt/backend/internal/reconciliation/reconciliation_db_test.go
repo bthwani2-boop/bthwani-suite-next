@@ -52,7 +52,7 @@ func insertTestCase(t *testing.T, db *sql.DB) string {
 		CheckoutIntentID:  checkoutIntentID,
 		ClientID:          "client-test",
 		StoreID:           "store-test",
-		PaymentMethod:     "official_wallet",
+		PaymentMethod:     "wallet",
 		Status:            "provider_result_unknown",
 		AmountMinorUnits:  1000,
 		Currency:          "YER",

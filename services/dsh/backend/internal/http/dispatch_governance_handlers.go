@@ -1,7 +1,6 @@
 package http
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -9,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"dsh-api/internal/checkoutfinanceoutbox"
 	"dsh-api/internal/dispatch"
 	"dsh-api/internal/orders"
 	"dsh-api/internal/store"
@@ -188,7 +188,7 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 	tx, err := s.db.BeginTx(r.Context(), nil)
 	if err == nil {
 		deliveryCtx, err := orders.GetOrderDeliveryContext(tx, assignment.OrderID)
-		if err == nil && deliveryCtx.PaymentMethod == "cod" && deliveryCtx.WltPaymentSessionID != "" {
+		if err == nil && (deliveryCtx.PaymentMethod == "cod" || deliveryCtx.PaymentMethod == "mixed") && deliveryCtx.WltPaymentSessionID != "" {
 			isCod = true
 			sessionID = deliveryCtx.WltPaymentSessionID
 		}
@@ -203,27 +203,45 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 			store.SendError(w, http.StatusServiceUnavailable, "WLT_UNAVAILABLE", "failed to verify COD capacity")
 			return
 		}
-		orderAmount = session.Amount
-		orderCurrency = session.Currency
-		_, _, err = s.wlt.ReserveCodCapacity(r.Context(), assignment.OrderID, actor.ID, orderAmount, orderCurrency, correlationID, "accept_"+assignment.ID)
-		if err != nil {
-			if strings.Contains(err.Error(), "INSUFFICIENT") {
-				store.SendError(w, http.StatusConflict, "INSUFFICIENT_COD_CAPACITY", "insufficient COD capacity to accept this order")
-			} else {
-				store.SendError(w, http.StatusConflict, "COD_RESERVATION_FAILED", err.Error())
-			}
+		if session.TenderAllocation == nil {
+			store.SendError(w, http.StatusServiceUnavailable, "WLT_TENDER_ALLOCATION_UNAVAILABLE", "WLT has not published the immutable cash-on-delivery tender")
 			return
+		}
+		orderAmount = session.TenderAllocation.CashOnDeliveryAmountMinorUnits
+		orderCurrency = session.Currency
+		if orderAmount > 0 {
+			_, _, err = s.wlt.ReserveCodCapacity(r.Context(), assignment.OrderID, actor.ID, orderAmount, orderCurrency, correlationID, "accept_"+assignment.ID)
+			if err != nil {
+				if strings.Contains(err.Error(), "INSUFFICIENT") {
+					store.SendError(w, http.StatusConflict, "INSUFFICIENT_COD_CAPACITY", "insufficient COD capacity to accept this order")
+				} else {
+					store.SendError(w, http.StatusConflict, "COD_RESERVATION_FAILED", err.Error())
+				}
+				return
+			}
 		}
 	}
 
-	assignment, err = dispatch.AcceptGovernedAssignment(s.db, r.PathValue("assignmentId"), actor.ID)
+	originalAssignment := assignment
+	acceptedAssignment, err := dispatch.AcceptGovernedAssignment(s.db, r.PathValue("assignmentId"), actor.ID)
 	if err != nil {
-		if isCod {
-			s.wlt.ReleaseCodReservation(r.Context(), assignment.OrderID, "assignment_accept_failed", correlationID)
+		if isCod && originalAssignment != nil && originalAssignment.OrderID != "" {
+			currentAssignment, readErr := dispatch.GetCaptainAssignment(s.db, originalAssignment.ID, actor.ID)
+			if readErr != nil && !errors.Is(readErr, dispatch.ErrNotFound) {
+				store.SendError(w, http.StatusServiceUnavailable, "COD_RESERVATION_RELEASE_UNCERTAIN", "assignment state could not be reconciled after acceptance failure")
+				return
+			}
+			if readErr != nil || currentAssignment.Status != dispatch.AssignmentAccepted {
+				if enqueueErr := checkoutfinanceoutbox.EnqueueCodReservationReleaseForOrder(s.db, originalAssignment.OrderID, "assignment_accept_failed", correlationID); enqueueErr != nil {
+					store.SendError(w, http.StatusServiceUnavailable, "COD_RESERVATION_RELEASE_UNCERTAIN", "COD reservation release could not be durably queued")
+					return
+				}
+			}
 		}
 		writeGovernedDispatchError(w, err)
 		return
 	}
+	assignment = acceptedAssignment
 	payload, err := s.marshalGovernedDispatchAssignment(assignment)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
@@ -245,17 +263,12 @@ func (s *protectedStoreServer) handleDeclineGovernedDispatchAssignment(w http.Re
 		return
 	}
 	assignmentID := r.PathValue("assignmentId")
-	assignment, _ := dispatch.GetCaptainAssignment(s.db, assignmentID, actor.ID)
-
 	assignment, err := dispatch.DeclineGovernedAssignment(
 		s.db, assignmentID, actor.ID, body.ReasonCode, body.Reason,
 	)
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
-	}
-	if assignment != nil {
-		go s.wlt.ReleaseCodReservation(context.Background(), assignment.OrderID, "declined: "+body.ReasonCode, r.Header.Get("X-Correlation-Id"))
 	}
 	payload, err := s.marshalGovernedDispatchAssignment(assignment)
 	if err != nil {
@@ -375,8 +388,6 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 		idempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	}
 	assignmentID := r.PathValue("assignmentId")
-	existingAssignment, _ := dispatch.GetCaptainAssignment(s.db, assignmentID, actor.ID)
-
 	assignment, err := dispatch.ReassignGovernedAssignment(s.db, dispatch.ReassignAssignmentInput{
 		AssignmentID: assignmentID, OperatorContextID: operatorContextID,
 		CaptainID: body.CaptainID, ActorID: actor.ID, ServiceAreaCode: body.ServiceAreaCode,
@@ -386,9 +397,6 @@ func (s *protectedStoreServer) handleReassignGovernedDispatchAssignment(w http.R
 	if err != nil {
 		writeGovernedDispatchError(w, err)
 		return
-	}
-	if existingAssignment != nil {
-		go s.wlt.ReleaseCodReservation(context.Background(), existingAssignment.OrderID, "reassigned: "+body.Reason, r.Header.Get("X-Correlation-Id"))
 	}
 	payload, err := s.marshalGovernedDispatchAssignment(assignment)
 	if err != nil {
@@ -411,16 +419,11 @@ func (s *protectedStoreServer) handleCancelGovernedDispatchAssignment(w http.Res
 		return
 	}
 	assignmentID := r.PathValue("assignmentId")
-	existingAssignment, _ := dispatch.GetCaptainAssignment(s.db, assignmentID, actor.ID)
-
 	if err := dispatch.CancelGovernedAssignment(
 		s.db, assignmentID, actor.ID, body.ReasonCode, body.Reason,
 	); err != nil {
 		writeGovernedDispatchError(w, err)
 		return
-	}
-	if existingAssignment != nil {
-		go s.wlt.ReleaseCodReservation(context.Background(), existingAssignment.OrderID, "cancelled: "+body.ReasonCode, r.Header.Get("X-Correlation-Id"))
 	}
 	w.WriteHeader(http.StatusNoContent)
 }

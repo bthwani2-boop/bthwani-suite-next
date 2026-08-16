@@ -26,21 +26,22 @@ import (
 )
 
 const (
-	EventTypeExpireSession  = "expire_session"
-	EventTypeCancelForOrder = "cancel_for_order"
+	EventTypeExpireSession         = "expire_session"
+	EventTypeCancelForOrder        = "cancel_for_order"
+	EventTypeReleaseCodReservation = "release_cod_reservation"
 )
 
 type Event struct {
-	ID               string
-	EventType        string
-	OperatorContextID         string
-	CheckoutIntentID string
-	PaymentSessionID string
-	OrderID          string
-	ClientID         string
-	Reason           string
-	CorrelationID    string
-	AttemptCount     int
+	ID                string
+	EventType         string
+	OperatorContextID string
+	CheckoutIntentID  string
+	PaymentSessionID  string
+	OrderID           string
+	ClientID          string
+	Reason            string
+	CorrelationID     string
+	AttemptCount      int
 }
 
 type EnqueueInput struct {
@@ -76,6 +77,79 @@ func Enqueue(tx *sql.Tx, input EnqueueInput) error {
 		return fmt.Errorf("enqueue checkout finance outbox event: %w", err)
 	}
 	return nil
+}
+
+// EnqueueCodReservationReleaseForOrder records a WLT reservation release
+// after an order assignment leaves the active dispatch state. It resolves the
+// checkout/session identity from DSH's order bridge, but never derives money
+// locally. The WLT operation is idempotent and remains the financial owner.
+func EnqueueCodReservationReleaseForOrderTx(tx *sql.Tx, orderID, reason, correlationID string) error {
+	if strings.TrimSpace(orderID) == "" {
+		return nil
+	}
+	var checkoutIntentID, paymentSessionID, clientID string
+	err := tx.QueryRow(`
+		SELECT intent.id::text, btrim(intent.wlt_payment_session_id), order_row.client_id
+		FROM dsh_orders order_row
+		JOIN dsh_checkout_intents intent ON intent.id = order_row.checkout_intent_id
+		WHERE order_row.id = $1::uuid`, orderID).Scan(&checkoutIntentID, &paymentSessionID, &clientID)
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("resolve order %q for COD reservation release: %w", orderID, err)
+	}
+	if err != nil {
+		return fmt.Errorf("resolve order %q for COD reservation release: %w", orderID, err)
+	}
+	if paymentSessionID == "" {
+		return nil
+	}
+	orderIDCopy := strings.TrimSpace(orderID)
+	return Enqueue(tx, EnqueueInput{
+		EventType:        EventTypeReleaseCodReservation,
+		CheckoutIntentID: checkoutIntentID,
+		PaymentSessionID: paymentSessionID,
+		OrderID:          &orderIDCopy,
+		ClientID:         clientID,
+		Reason:           strings.TrimSpace(reason),
+		CorrelationID:    correlationID,
+	})
+}
+
+// EnqueueCodReservationReleaseForOrder is the failure-compensation entrypoint
+// used when the reservation was created before a DSH transaction could start.
+// The durable intent is still committed before the request returns.
+func EnqueueCodReservationReleaseForOrder(db *sql.DB, orderID, reason, correlationID string) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := EnqueueCodReservationReleaseForOrderTx(tx, orderID, reason, correlationID); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// EnqueuePaymentSessionExpiry records the durable compensation for a WLT
+// payment session that was created but could not be attached to its DSH
+// checkout intent. The caller may have already attempted the idempotent WLT
+// operation; the outbox closes the ambiguous/error path without losing it.
+func EnqueuePaymentSessionExpiry(db *sql.DB, checkoutIntentID, paymentSessionID, clientID, reason, correlationID string) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := Enqueue(tx, EnqueueInput{
+		EventType:        EventTypeExpireSession,
+		CheckoutIntentID: strings.TrimSpace(checkoutIntentID),
+		PaymentSessionID: strings.TrimSpace(paymentSessionID),
+		ClientID:         strings.TrimSpace(clientID),
+		Reason:           strings.TrimSpace(reason),
+		CorrelationID:    strings.TrimSpace(correlationID),
+	}); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {

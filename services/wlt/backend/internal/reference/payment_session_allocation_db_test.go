@@ -13,8 +13,10 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"wlt-api/internal/ledger"
 	"wlt-api/internal/payment"
 	"wlt-api/internal/pricing"
+	"wlt-api/internal/shared"
 )
 
 func getAllocationTestDB(t *testing.T) *sql.DB {
@@ -41,7 +43,7 @@ func getAllocationTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
-func issueCheckoutQuoteForSession(t *testing.T, db *sql.DB, checkoutIntentID string, amountMinorUnits int64) *pricing.CheckoutQuote {
+func issueCheckoutQuoteForSession(t *testing.T, db *sql.DB, checkoutIntentID string, amountMinorUnits int64, clientID string) *pricing.CheckoutQuote {
 	t.Helper()
 	if amountMinorUnits <= 1000 {
 		t.Fatalf("fixture amount must exceed delivery fee: %d", amountMinorUnits)
@@ -62,7 +64,7 @@ func issueCheckoutQuoteForSession(t *testing.T, db *sql.DB, checkoutIntentID str
 	quote, err := pricing.IssueCheckoutQuote(context.Background(), db, "OperatorContext-dev-001", pricing.CalculateQuoteRequest{
 		CheckoutIntentID: checkoutIntentID,
 		CartSnapshotHash: "cart-" + checkoutIntentID,
-		ClientID:         "client-alloc-e2e",
+		ClientID:         clientID,
 		StoreID:          "store-alloc-e2e",
 		Currency:         "YER",
 		CartVersion:      1,
@@ -84,13 +86,13 @@ func TestCreatePaymentSession_DerivesPurposeAndPersistsConservingAllocation(t *t
 	defer db.Close()
 
 	checkoutIntentID := fmt.Sprintf("test-checkout-e2e-alloc-%d", time.Now().UnixNano())
-	quote := issueCheckoutQuoteForSession(t, db, checkoutIntentID, 5500)
+	quote := issueCheckoutQuoteForSession(t, db, checkoutIntentID, 5500, "client-alloc-e2e")
 	session, err := CreatePaymentSession(db, CreatePaymentSessionInput{
 		CheckoutIntentID:  checkoutIntentID,
 		OperatorContextID: "OperatorContext-dev-001",
 		ClientID:          "client-alloc-e2e",
 		StoreID:           "store-alloc-e2e",
-		PaymentMethod:     "official_wallet",
+		PaymentMethod:     "cod",
 		AmountMinorUnits:  5500,
 		Currency:          "YER",
 		CartSnapshotHash:  "cart-" + checkoutIntentID,
@@ -127,6 +129,51 @@ func TestCreatePaymentSession_DerivesPurposeAndPersistsConservingAllocation(t *t
 	}
 }
 
+func TestCreatePaymentSession_PersistsExactMixedTenderAllocation(t *testing.T) {
+	db := getAllocationTestDB(t)
+	defer db.Close()
+
+	ctx := shared.WithOperatorContext(context.Background(), "OperatorContext-dev-001")
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatalf("begin wallet funding transaction: %v", err)
+	}
+	clientID := fmt.Sprintf("client-alloc-e2e-%d", time.Now().UnixNano())
+	if _, err := ledger.PostOpeningBalance(ctx, tx, "client", clientID, "YER", 2000,
+		fmt.Sprintf("mixed-wallet-opening-%d", time.Now().UnixNano()), ledger.Actor{ID: "system", Type: "system"}); err != nil {
+		tx.Rollback()
+		t.Fatalf("seed client wallet: %v", err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatalf("commit client wallet: %v", err)
+	}
+
+	checkoutIntentID := fmt.Sprintf("test-checkout-e2e-mixed-%d", time.Now().UnixNano())
+	quote := issueCheckoutQuoteForSession(t, db, checkoutIntentID, 5000, clientID)
+	session, err := CreatePaymentSession(db, CreatePaymentSessionInput{
+		CheckoutIntentID:  checkoutIntentID,
+		OperatorContextID: "OperatorContext-dev-001",
+		ClientID:          clientID,
+		StoreID:           "store-alloc-e2e",
+		PaymentMethod:     "mixed",
+		AmountMinorUnits:  5000,
+		Currency:          "YER",
+		CartSnapshotHash:  "cart-" + checkoutIntentID,
+		PricingQuoteID:    quote.ID,
+		IdempotencyKey:    "idem-mixed-e2e-1",
+		CorrelationID:     "corr-mixed-e2e-1",
+	})
+	if err != nil {
+		t.Fatalf("CreatePaymentSession mixed: %v", err)
+	}
+	if session.TenderAllocation == nil {
+		t.Fatal("mixed checkout must publish an immutable tender allocation")
+	}
+	if session.TenderAllocation.WalletAmountMinorUnits != 2000 || session.TenderAllocation.CashOnDeliveryAmountMinorUnits != 3000 {
+		t.Fatalf("unexpected mixed tender allocation: %#v", session.TenderAllocation)
+	}
+}
+
 // TestCreatePaymentSession_RejectsNonConservingAllocation proves the reject
 // happens before any row is written -- ValidatePaymentAllocation runs before
 // the transaction starts, so a bad breakdown never reaches the database.
@@ -135,13 +182,13 @@ func TestCreatePaymentSession_RejectsNonConservingAllocation(t *testing.T) {
 	defer db.Close()
 
 	checkoutIntentID := fmt.Sprintf("test-checkout-e2e-badalloc-%d", time.Now().UnixNano())
-	quote := issueCheckoutQuoteForSession(t, db, checkoutIntentID, 5000)
+	quote := issueCheckoutQuoteForSession(t, db, checkoutIntentID, 5000, "client-alloc-e2e")
 	_, err := CreatePaymentSession(db, CreatePaymentSessionInput{
 		CheckoutIntentID:  checkoutIntentID,
 		OperatorContextID: "OperatorContext-dev-001",
 		ClientID:          "client-alloc-e2e",
 		StoreID:           "store-alloc-e2e",
-		PaymentMethod:     "official_wallet",
+		PaymentMethod:     "cod",
 		AmountMinorUnits:  5000,
 		Currency:          "YER",
 		CartSnapshotHash:  "cart-" + checkoutIntentID,
@@ -173,13 +220,13 @@ func TestCreatePaymentSession_CheckoutReplayUsesTheOriginalQuoteAllocation(t *te
 	defer db.Close()
 
 	checkoutIntentID := fmt.Sprintf("test-checkout-e2e-replay-%d", time.Now().UnixNano())
-	quote := issueCheckoutQuoteForSession(t, db, checkoutIntentID, 3000)
+	quote := issueCheckoutQuoteForSession(t, db, checkoutIntentID, 3000, "client-alloc-e2e")
 	base := CreatePaymentSessionInput{
 		CheckoutIntentID:  checkoutIntentID,
 		OperatorContextID: "OperatorContext-dev-001",
 		ClientID:          "client-alloc-e2e",
 		StoreID:           "store-alloc-e2e",
-		PaymentMethod:     "official_wallet",
+		PaymentMethod:     "cod",
 		AmountMinorUnits:  3000,
 		Currency:          "YER",
 		CartSnapshotHash:  "cart-" + checkoutIntentID,
@@ -211,13 +258,13 @@ func TestCheckoutPaymentSessionDatabaseRejectsQuoteMismatch(t *testing.T) {
 	defer db.Close()
 
 	checkoutIntentID := fmt.Sprintf("test-checkout-e2e-guard-%d", time.Now().UnixNano())
-	quote := issueCheckoutQuoteForSession(t, db, checkoutIntentID, 4200)
+	quote := issueCheckoutQuoteForSession(t, db, checkoutIntentID, 4200, "client-alloc-e2e")
 	session, err := CreatePaymentSession(db, CreatePaymentSessionInput{
 		CheckoutIntentID:  checkoutIntentID,
 		OperatorContextID: "OperatorContext-dev-001",
 		ClientID:          "client-alloc-e2e",
 		StoreID:           "store-alloc-e2e",
-		PaymentMethod:     "official_wallet",
+		PaymentMethod:     "cod",
 		AmountMinorUnits:  4200,
 		Currency:          "YER",
 		CartSnapshotHash:  "cart-" + checkoutIntentID,

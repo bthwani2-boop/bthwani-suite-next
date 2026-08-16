@@ -143,6 +143,13 @@ func (c *Client) CalculateQuote(ctx context.Context, input CalculatePricingQuote
 	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
 		return nil, fmt.Errorf("prepare WLT pricing OperatorContext: %w", err)
 	}
+	correlationID := strings.TrimSpace(input.CheckoutIntentID)
+	if correlationID == "" {
+		correlationID = strings.TrimSpace(input.CartSnapshotHash)
+	}
+	if err := setRequiredMutationHeaders(req, correlationID, deterministicMutationKey("pricing-quote", input.CheckoutIntentID, input.CartSnapshotHash, input.ClientID)); err != nil {
+		return nil, fmt.Errorf("prepare WLT pricing mutation: %w", err)
+	}
 
 	response, err := c.http.Do(req)
 	if err != nil {

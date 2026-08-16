@@ -243,6 +243,74 @@ func TestProcessOnceDispatchesCancelForOrderDBIntegration(t *testing.T) {
 	}
 }
 
+// TestProcessOnceDispatchesCodReservationReleaseDBIntegration proves that a
+// dispatch-state transition can durably release the WLT COD reservation even
+// when the original request is no longer in the handler call stack.
+func TestProcessOnceDispatchesCodReservationReleaseDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	paymentSessionID := uniqueID("ps")
+	storeID, clientID, intentID := seedCheckoutIntentFixture(t, db, paymentSessionID)
+	var orderID string
+	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM dsh_checkout_financial_closure_outbox WHERE checkout_intent_id = $1::uuid`, intentID)
+	})
+
+	if err := db.QueryRow(`
+		INSERT INTO dsh_orders (operator_context_id, checkout_intent_id, store_id, client_id, status, wlt_payment_ref_id)
+		SELECT operator_context_id, $1::uuid, $2, $3, 'cancelled_by_operator', $4
+		FROM dsh_checkout_intents
+		WHERE id = $1::uuid
+		RETURNING id::text`,
+		intentID, storeID, clientID, paymentSessionID,
+	).Scan(&orderID); err != nil {
+		t.Fatalf("failed to insert test order: %v", err)
+	}
+	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_orders WHERE id = $1::uuid`, orderID) })
+
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := EnqueueCodReservationReleaseForOrderTx(tx, orderID, "assignment_declined", "cod-release-test-correlation"); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+
+	var gotPath string
+	var gotBody map[string]any
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		_ = json.NewDecoder(r.Body).Decode(&gotBody)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"codReservation":{"id":"cod-release-test","orderId":"` + orderID + `","status":"released","amountMinorUnits":1000,"currency":"YER","captainId":"captain-test"}}`))
+	}))
+	defer server.Close()
+
+	client := wlt.NewClient(server.URL, "test-service-token")
+	if err := ProcessOnce(context.Background(), db, client); err != nil {
+		t.Fatalf("ProcessOnce failed: %v", err)
+	}
+
+	if expected := "/wlt/cod-reservations/release"; gotPath != expected {
+		t.Fatalf("expected path %q, got %q", expected, gotPath)
+	}
+	if gotBody["orderId"] != orderID || gotBody["reason"] != "assignment_declined" {
+		t.Fatalf("unexpected release request body: %#v", gotBody)
+	}
+
+	var id string
+	if err := db.QueryRow(`SELECT id::text FROM dsh_checkout_financial_closure_outbox WHERE checkout_intent_id = $1::uuid`, intentID).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	status, _, _ := fetchOutboxRow(t, db, id)
+	if status != "sent" {
+		t.Fatalf("expected status 'sent' after successful COD release, got %q", status)
+	}
+}
+
 // TestProcessOnceMarksFailedWithoutMarkingSentDBIntegration proves a WLT-down
 // scenario does not silently drop the event and does not falsely mark it sent.
 func TestProcessOnceMarksFailedWithoutMarkingSentDBIntegration(t *testing.T) {

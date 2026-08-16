@@ -202,11 +202,11 @@ func CreateCodRecord(db *sql.DB, input CreateCodRecordInput) (*CodRecord, error)
 	if session == nil {
 		return nil, fmt.Errorf("no WLT payment session found for checkoutIntentId %q", input.CheckoutIntentID)
 	}
-	if session.PaymentMethod != "cod" {
-		return nil, fmt.Errorf("checkoutIntentId %q is not a COD payment session", input.CheckoutIntentID)
+	if session.PaymentMethod != "cod" && session.PaymentMethod != "mixed" {
+		return nil, fmt.Errorf("checkoutIntentId %q has no physical COD tender", input.CheckoutIntentID)
 	}
-	if session.AmountMinorUnits <= 0 {
-		return nil, fmt.Errorf("checkoutIntentId %q has no positive COD amount", input.CheckoutIntentID)
+	if session.TenderAllocation == nil || session.TenderAllocation.CashOnDeliveryAmountMinorUnits <= 0 {
+		return nil, fmt.Errorf("checkoutIntentId %q has no positive cash-on-delivery tender", input.CheckoutIntentID)
 	}
 	currency := session.Currency
 	if currency == "" {
@@ -219,7 +219,7 @@ func CreateCodRecord(db *sql.DB, input CreateCodRecordInput) (*CodRecord, error)
 		VALUES ($1, NULLIF($2,''), $3, $4, $5, $6, $7)
 		ON CONFLICT (order_id) DO NOTHING
 		RETURNING ` + codCols
-	row := db.QueryRow(q, input.OrderID, captainID, collectorType, collectorID, input.PartnerID, session.AmountMinorUnits, currency)
+	row := db.QueryRow(q, input.OrderID, captainID, collectorType, collectorID, input.PartnerID, session.TenderAllocation.CashOnDeliveryAmountMinorUnits, currency)
 	created, err := scanCodRecord(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		existing, getErr := getCodRecordByOrder(db, input.OrderID)

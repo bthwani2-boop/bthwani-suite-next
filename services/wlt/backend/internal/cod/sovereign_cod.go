@@ -21,7 +21,7 @@ var (
 type CodCustodyEvidence struct {
 	ID                       string `json:"id"`
 	CodRecordID              string `json:"codRecordId"`
-	EventType                 string `json:"eventType"`
+	EventType                string `json:"eventType"`
 	ExpectedAmountMinorUnits int64  `json:"expectedAmountMinorUnits"`
 	ActualAmountMinorUnits   int64  `json:"actualAmountMinorUnits"`
 	DifferenceMinorUnits     int64  `json:"differenceMinorUnits"`
@@ -77,10 +77,10 @@ type RemitCodInput struct {
 }
 
 type CodCustodyMutationResult struct {
-	CodRecord           *CodRecord             `json:"codRecord"`
-	CustodyEvidence     *CodCustodyEvidence    `json:"custodyEvidence"`
+	CodRecord          *CodRecord             `json:"codRecord"`
+	CustodyEvidence    *CodCustodyEvidence    `json:"custodyEvidence"`
 	ReconciliationCase *CodReconciliationCase `json:"reconciliationCase,omitempty"`
-	Replayed            bool                   `json:"replayed"`
+	Replayed           bool                   `json:"replayed"`
 }
 
 const codCustodyEvidenceCols = `id, cod_record_id, event_type, expected_amount_minor_units,
@@ -285,12 +285,15 @@ func MarkCodCollectedSovereign(ctx context.Context, db *sql.DB, codRecordID stri
 	if err != nil || record == nil {
 		return nil, err
 	}
-	var hasReservation bool
-	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM wlt_cod_reservations WHERE operator_context_id = $1 AND order_id = $2)`, operatorContextID, record.OrderID).Scan(&hasReservation); err != nil {
+	reservation, err := getCodReservationForUpdate(ctx, tx, operatorContextID, record.OrderID)
+	if err != nil {
 		return nil, err
 	}
-	if hasReservation {
-		return nil, fmt.Errorf("%w: legacy collection is disabled for funded-wallet orders", ErrCodStateConflict)
+	if err := validateCodReservationForRecord(reservation, record); err != nil {
+		return nil, err
+	}
+	if reservation != nil && reservation.Status != "reserved" {
+		return nil, fmt.Errorf("%w: COD capacity is no longer reserved for collection", ErrCodStateConflict)
 	}
 	if !actorMatchesCollector(record, actorID, actorType) {
 		return nil, ErrCodActorMismatch
@@ -398,12 +401,18 @@ func MarkCodRemittedSovereign(ctx context.Context, db *sql.DB, codRecordID strin
 	if err != nil || record == nil {
 		return nil, err
 	}
-	var hasReservation bool
-	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM wlt_cod_reservations WHERE operator_context_id = $1 AND order_id = $2)`, operatorContextID, record.OrderID).Scan(&hasReservation); err != nil {
+	reservation, err := getCodReservationForUpdate(ctx, tx, operatorContextID, record.OrderID)
+	if err != nil {
 		return nil, err
 	}
-	if hasReservation {
-		return nil, fmt.Errorf("%w: legacy remittance is disabled for funded-wallet orders", ErrCodStateConflict)
+	if err := validateCodReservationForRecord(reservation, record); err != nil {
+		return nil, err
+	}
+	if reservation != nil && reservation.Status == "released" {
+		return nil, fmt.Errorf("%w: released COD capacity cannot be remitted", ErrCodStateConflict)
+	}
+	if reservation != nil && reservation.Status == "finalized" && record.Status != "remitted" {
+		return nil, fmt.Errorf("%w: finalized COD capacity has no matching remitted record", ErrCodStateConflict)
 	}
 	if !actorMayRemit(record, actorID, actorType) {
 		return nil, ErrCodActorMismatch
@@ -465,6 +474,11 @@ func MarkCodRemittedSovereign(ctx context.Context, db *sql.DB, codRecordID strin
 		RETURNING `+codCols, operatorContextID, record.ID))
 	if err != nil {
 		return nil, fmt.Errorf("transition COD record to remitted: %w", err)
+	}
+	if reservation != nil {
+		if _, err := finalizeCodReservationTx(ctx, tx, operatorContextID, record.OrderID); err != nil {
+			return nil, fmt.Errorf("finalize COD capacity with remittance: %w", err)
+		}
 	}
 	reconciliationCase, err := getCodReconciliationCaseTx(ctx, tx, operatorContextID, record.ID)
 	if err != nil {

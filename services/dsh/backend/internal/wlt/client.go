@@ -50,23 +50,30 @@ type CreatePaymentSessionInput struct {
 }
 
 type PaymentSession struct {
-	ID                    string `json:"id"`
-	CheckoutIntentID      string `json:"checkoutIntentId"`
-	SpecialRequestID      string `json:"specialRequestId"`
-	OperatorContextID     string `json:"operatorContextId"`
-	ClientID              string `json:"clientId"`
-	StoreID               string `json:"storeId"`
-	PaymentMethod         string `json:"paymentMethod"`
-	Status                string `json:"status"`
-	ProviderReference     string `json:"providerReference"`
-	AmountMinorUnits      int64  `json:"amountMinorUnits"`
-	Currency              string `json:"currency"`
-	CreatedAt             string `json:"createdAt"`
-	UpdatedAt             string `json:"updatedAt"`
-	PricingQuoteID        string `json:"pricingQuoteId,omitempty"`
-	PricingQuoteHash      string `json:"pricingQuoteHash,omitempty"`
-	PricingQuoteVersion   int    `json:"pricingQuoteVersion,omitempty"`
-	PricingQuoteExpiresAt string `json:"pricingQuoteExpiresAt,omitempty"`
+	ID                    string                   `json:"id"`
+	CheckoutIntentID      string                   `json:"checkoutIntentId"`
+	SpecialRequestID      string                   `json:"specialRequestId"`
+	OperatorContextID     string                   `json:"operatorContextId"`
+	ClientID              string                   `json:"clientId"`
+	StoreID               string                   `json:"storeId"`
+	PaymentMethod         string                   `json:"paymentMethod"`
+	Status                string                   `json:"status"`
+	ProviderReference     string                   `json:"providerReference"`
+	AmountMinorUnits      int64                    `json:"amountMinorUnits"`
+	Currency              string                   `json:"currency"`
+	TenderAllocation      *PaymentTenderAllocation `json:"tenderAllocation,omitempty"`
+	CreatedAt             string                   `json:"createdAt"`
+	UpdatedAt             string                   `json:"updatedAt"`
+	PricingQuoteID        string                   `json:"pricingQuoteId,omitempty"`
+	PricingQuoteHash      string                   `json:"pricingQuoteHash,omitempty"`
+	PricingQuoteVersion   int                      `json:"pricingQuoteVersion,omitempty"`
+	PricingQuoteExpiresAt string                   `json:"pricingQuoteExpiresAt,omitempty"`
+}
+
+type PaymentTenderAllocation struct {
+	WalletAmountMinorUnits         int64  `json:"walletAmountMinorUnits"`
+	CashOnDeliveryAmountMinorUnits int64  `json:"cashOnDeliveryAmountMinorUnits"`
+	Currency                       string `json:"currency"`
 }
 
 // NewClient builds the authenticated DSH-to-WLT service client. Financial

@@ -147,7 +147,6 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	mutation("PUT /wlt/settlement-policies/{partnerId}", settlement.HandleUpsertGovernedSettlementPolicyIdempotent(db))
 	mutation("POST /wlt/cod-reservations/reserve", cod.HandleReserveCodCapacity(db))
 	mutation("POST /wlt/cod-reservations/release", cod.HandleReleaseCodReservation(db))
-	mutation("POST /wlt/cod-reservations/finalize", cod.HandleFinalizeCodReservation(db))
 	read("GET /wlt/cod-reservations/{orderId}", cod.HandleGetCodReservation(db))
 
 	mutation("POST /wlt/cod-records", cod.HandleCreateCodRecordOperatorContext(db))

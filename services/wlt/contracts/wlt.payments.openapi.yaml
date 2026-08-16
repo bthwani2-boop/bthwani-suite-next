@@ -490,6 +490,16 @@ components:
         providerReference: { type: string }
         amountMinorUnits: { type: integer, format: int64, minimum: 1 }
         currency: { type: string, minLength: 3, maxLength: 3 }
+        tenderAllocation:
+          oneOf:
+            - type: object
+              additionalProperties: false
+              required: [ walletAmountMinorUnits, cashOnDeliveryAmountMinorUnits, currency ]
+              properties:
+                walletAmountMinorUnits: { type: integer, format: int64, minimum: 0 }
+                cashOnDeliveryAmountMinorUnits: { type: integer, format: int64, minimum: 0 }
+                currency: { type: string, minLength: 3, maxLength: 3 }
+            - type: 'null'
         financialPurpose: { $ref: '#/components/schemas/FinancialPurpose' }
         pricingQuoteId: { type: string, description: Immutable WLT-owned quote identity bound to a checkout session. }
         pricingQuoteHash: { type: string, description: Hash of the exact canonical quote used for payment allocation. }

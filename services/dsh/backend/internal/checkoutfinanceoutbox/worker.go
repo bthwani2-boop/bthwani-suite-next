@@ -101,6 +101,17 @@ func dispatch(ctx context.Context, client *wlt.Client, event Event) (DeliveryRes
 			RefundID:         result.RefundID,
 			PaymentSessionID: paymentSessionID,
 		}, nil
+	case EventTypeReleaseCodReservation:
+		if event.OrderID == "" {
+			return DeliveryResult{}, fmt.Errorf("COD reservation release event has no order id")
+		}
+		if _, err := client.ReleaseCodReservation(ctx, event.OrderID, event.Reason, event.CorrelationID); err != nil {
+			return DeliveryResult{}, err
+		}
+		return DeliveryResult{
+			Action:           "cod_reservation_released",
+			PaymentSessionID: event.PaymentSessionID,
+		}, nil
 	default:
 		return DeliveryResult{}, fmt.Errorf("unknown checkout finance outbox event type %q", event.EventType)
 	}

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"dsh-api/internal/checkoutfinanceoutbox"
 	"dsh-api/internal/orders"
 
 	"github.com/lib/pq"
@@ -657,6 +658,9 @@ func DeclineGovernedAssignment(db *sql.DB, assignmentID, captainID, reasonCode, 
 		"declined", reasonCode, reason, captainID, "captain", nil); err != nil {
 		return nil, err
 	}
+	if err = checkoutfinanceoutbox.EnqueueCodReservationReleaseForOrderTx(tx, current.OrderID, "declined: "+reasonCode, current.OrderID); err != nil {
+		return nil, err
+	}
 	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
@@ -722,8 +726,11 @@ func expireAssignmentTx(tx *sql.Tx, operatorContextID string, current *Assignmen
 	if _, err := tx.Exec(`UPDATE dsh_deliveries SET status='cancelled',updated_at=NOW() WHERE assignment_id=$1::uuid`, current.ID); err != nil {
 		return err
 	}
-	return insertDispatchDecisionTx(tx, operatorContextID, current.ID, current.OrderID, current.CaptainID,
-		"expired", reasonCode, reason, actorID, actorRole, nil)
+	if err := insertDispatchDecisionTx(tx, operatorContextID, current.ID, current.OrderID, current.CaptainID,
+		"expired", reasonCode, reason, actorID, actorRole, nil); err != nil {
+		return err
+	}
+	return checkoutfinanceoutbox.EnqueueCodReservationReleaseForOrderTx(tx, current.OrderID, "expired: "+reasonCode, current.ID)
 }
 
 func CancelGovernedAssignment(db *sql.DB, assignmentID, actorID, reasonCode, reason string) error {
@@ -774,6 +781,9 @@ func CancelGovernedAssignment(db *sql.DB, assignmentID, actorID, reasonCode, rea
 	}
 	if err = insertDispatchDecisionTx(tx, operatorContextID, assignmentID, current.OrderID, current.CaptainID,
 		"cancelled", reasonCode, reason, actorID, "operator", nil); err != nil {
+		return err
+	}
+	if err = checkoutfinanceoutbox.EnqueueCodReservationReleaseForOrderTx(tx, current.OrderID, "cancelled: "+reasonCode, assignmentID); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -880,6 +890,9 @@ func ReassignGovernedAssignment(db *sql.DB, input ReassignAssignmentInput) (*Ass
 	}
 	if err = insertDispatchDecisionTx(tx, operatorContextID, input.AssignmentID, current.OrderID, current.CaptainID,
 		"reassigned", "OPERATOR_REASSIGNED", input.Reason, input.ActorID, "operator", map[string]any{"newCaptainId": input.CaptainID}); err != nil {
+		return nil, err
+	}
+	if err = checkoutfinanceoutbox.EnqueueCodReservationReleaseForOrderTx(tx, current.OrderID, "reassigned: "+input.Reason, input.AssignmentID); err != nil {
 		return nil, err
 	}
 	if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, input.ActorID, "operator",

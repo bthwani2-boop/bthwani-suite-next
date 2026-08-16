@@ -78,8 +78,9 @@ func (c *Client) EvaluateDispatchFinancialEligibility(
 	}
 	setServiceHeaders(req, c.serviceToken)
 	req.Header.Set("Content-Type", "application/json")
-	if correlationID = strings.TrimSpace(correlationID); correlationID != "" {
-		req.Header.Set("X-Correlation-ID", correlationID)
+	correlationID = strings.TrimSpace(correlationID)
+	if err := setRequiredMutationHeaders(req, correlationID, deterministicMutationKey("dispatch-financial-eligibility", captainID, operatorContextID)); err != nil {
+		return DispatchFinancialEligibilityDecision{}, fmt.Errorf("%w: prepare mutation headers: %v", ErrDispatchFinancialEligibilityInvalidRequest, err)
 	}
 
 	response, err := c.http.Do(req)

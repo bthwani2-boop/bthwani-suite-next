@@ -28,7 +28,7 @@ func seedRefundLedgerReference(t *testing.T, operatorContextID string) (*sqlTest
 		CheckoutIntentID:  "checkout-" + suffix,
 		ClientID:          clientID,
 		StoreID:           "store-refund-ledger",
-		PaymentMethod:     "official_wallet",
+		PaymentMethod:     "wallet",
 		Status:            "captured",
 		AmountMinorUnits:  1000,
 		Currency:          "YER",

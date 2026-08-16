@@ -63,6 +63,33 @@ func scanCodReservation(row rowScanner) (*CodReservation, error) {
 	return &out, nil
 }
 
+func getCodReservationForUpdate(ctx context.Context, tx *sql.Tx, operatorContextID, orderID string) (*CodReservation, error) {
+	reservation, err := scanCodReservation(tx.QueryRowContext(ctx, `
+		SELECT `+codReservationCols+` FROM wlt_cod_reservations
+		WHERE operator_context_id = $1 AND order_id = $2 FOR UPDATE`,
+		operatorContextID, strings.TrimSpace(orderID),
+	))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return reservation, err
+}
+
+func validateCodReservationForRecord(reservation *CodReservation, record *CodRecord) error {
+	if reservation == nil {
+		return nil
+	}
+	collectorID := strings.TrimSpace(record.CollectorID)
+	if collectorID == "" {
+		collectorID = strings.TrimSpace(record.CaptainID)
+	}
+	if record.CollectorType != "captain" || collectorID == "" || collectorID != reservation.CaptainID ||
+		record.AmountMinorUnits != reservation.AmountMinorUnits || record.Currency != reservation.Currency {
+		return fmt.Errorf("%w: COD reservation does not match the canonical custody record", ErrCodStateConflict)
+	}
+	return nil
+}
+
 // ReserveCodCapacity atomically reserves amountMinorUnits of captainId's
 // wallet capacity against orderId. A new reservation is inserted first so
 // replays can be identified without re-checking a later wallet balance. Only a
@@ -341,54 +368,6 @@ func HandleReleaseCodReservation(db *sql.DB) http.HandlerFunc {
 func HandleGetCodReservation(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		reservation, err := GetCodReservation(r.Context(), db, r.PathValue("orderId"))
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		if reservation == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "COD reservation not found")
-			return
-		}
-		shared.SendJSON(w, http.StatusOK, map[string]any{"codReservation": reservation})
-	}
-}
-
-func FinalizeCodReservation(ctx context.Context, db *sql.DB, orderID string) (*CodReservation, error) {
-	operatorContextID, err := shared.RequireOperatorContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	orderID = strings.TrimSpace(orderID)
-	if orderID == "" {
-		return nil, fmt.Errorf("orderId is required")
-	}
-
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback() //nolint:errcheck
-
-	finalized, err := finalizeCodReservationTx(ctx, tx, operatorContextID, orderID)
-	if err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return finalized, nil
-}
-
-func HandleFinalizeCodReservation(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var input struct {
-			OrderID string `json:"orderId"`
-		}
-		if err := decodeStrictJSON(w, r, &input); err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		reservation, err := FinalizeCodReservation(r.Context(), db, input.OrderID)
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return

@@ -52,6 +52,31 @@ func TestRequiredMutationHeadersRejectMissingValues(t *testing.T) {
 	}
 }
 
+func TestActorFinanceMutationRejectsMissingCorrelation(t *testing.T) {
+	called := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "token")
+	_, _, err := client.actorFinanceRequest(
+		trustedMutationTestContext(),
+		http.MethodPost,
+		"/wlt/cod-records/cod-1/collect",
+		[]byte(`{"proofReference":"proof-1"}`),
+		"",
+		"idem-1",
+		"OperatorContext-a",
+	)
+	if err == nil {
+		t.Fatal("expected actor finance mutation to reject missing correlation")
+	}
+	if called {
+		t.Fatal("actor finance mutation reached WLT without correlation")
+	}
+}
+
 func TestNotifyDeliveryCollectionAddsDeterministicHeaders(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requireMutationHeaders(t, r)

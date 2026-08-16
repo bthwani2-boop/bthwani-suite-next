@@ -12,17 +12,19 @@ import (
 // checkout payment-session fixture. Tests must not manufacture a checkout
 // session without first creating its immutable WLT quote.
 type CheckoutPaymentSession struct {
-	OperatorContextID string
-	CheckoutIntentID  string
-	ClientID          string
-	StoreID           string
-	PaymentMethod     string
-	Status            string
-	ProviderReference string
-	AmountMinorUnits  int64
-	Currency          string
-	FinancialPurpose  string
-	CapturedAt        *time.Time
+	OperatorContextID              string
+	CheckoutIntentID               string
+	ClientID                       string
+	StoreID                        string
+	PaymentMethod                  string
+	Status                         string
+	ProviderReference              string
+	AmountMinorUnits               int64
+	WalletAmountMinorUnits         int64
+	CashOnDeliveryAmountMinorUnits int64
+	Currency                       string
+	FinancialPurpose               string
+	CapturedAt                     *time.Time
 }
 
 // SeedCanonicalCheckoutPaymentSession creates the immutable checkout quote and
@@ -41,6 +43,22 @@ func SeedCanonicalCheckoutPaymentSession(ctx context.Context, db *sql.DB, input 
 	quoteHash := "fixture-quote-" + fixtureID
 	quoteID := "fixture-wlpq-" + fixtureID
 	expiresAt := time.Now().UTC().Add(time.Hour)
+	walletAmount := input.WalletAmountMinorUnits
+	cashOnDeliveryAmount := input.CashOnDeliveryAmountMinorUnits
+	switch input.PaymentMethod {
+	case "cod":
+		walletAmount = 0
+		cashOnDeliveryAmount = input.AmountMinorUnits
+	case "wallet":
+		walletAmount = input.AmountMinorUnits
+		cashOnDeliveryAmount = 0
+	case "mixed":
+		if walletAmount < 0 || cashOnDeliveryAmount < 0 || walletAmount+cashOnDeliveryAmount != input.AmountMinorUnits {
+			return "", fmt.Errorf("mixed checkout fixture tender allocation must conserve the session amount")
+		}
+	default:
+		return "", fmt.Errorf("unsupported checkout fixture payment method %q", input.PaymentMethod)
+	}
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -67,12 +85,15 @@ func SeedCanonicalCheckoutPaymentSession(ctx context.Context, db *sql.DB, input 
 			operator_context_id, checkout_intent_id, client_id, store_id,
 			cart_snapshot_hash, pricing_quote_id, pricing_quote_hash,
 			pricing_quote_version, pricing_quote_expires_at, payment_method, status,
-			provider_reference, amount_minor_units, currency, captured_at, financial_purpose
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,1,$8,$9,$10,$11,$12,$13,$14,$15)
+			provider_reference, amount_minor_units, currency,
+			wallet_amount_minor_units, cash_on_delivery_amount_minor_units,
+			captured_at, financial_purpose
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,1,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
 		RETURNING id`,
 		input.OperatorContextID, input.CheckoutIntentID, input.ClientID, input.StoreID,
 		cartSnapshotHash, quoteID, quoteHash, expiresAt, input.PaymentMethod, input.Status,
-		input.ProviderReference, input.AmountMinorUnits, input.Currency, input.CapturedAt, input.FinancialPurpose,
+		input.ProviderReference, input.AmountMinorUnits, input.Currency,
+		walletAmount, cashOnDeliveryAmount, input.CapturedAt, input.FinancialPurpose,
 	).Scan(&sessionID)
 	if err != nil {
 		return "", fmt.Errorf("seed canonical checkout payment session: %w", err)

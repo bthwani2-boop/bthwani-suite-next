@@ -52,7 +52,7 @@ describe("checkout controller core", () => {
 });
 
 describe("checkout controller core: non-COD payment confirmation", () => {
-  test("wallet/mixed/official_wallet intents stay confirming until WLT confirms", () => {
+  test("wallet/mixed intents stay confirming until WLT confirms", () => {
     const walletIntent = intent({ paymentMethod: "wallet", wltPaymentSessionId: "wlt-1" });
     assert.equal(resolveCheckoutSubmitSuccess(walletIntent).kind, "confirming");
   });

@@ -28,13 +28,12 @@ func TestCreateIntentRejectsMissingRequiredFields(t *testing.T) {
 
 func TestPaymentMethodConstants(t *testing.T) {
 	methods := map[PaymentMethod]bool{
-		MethodCOD:            true,
-		MethodWallet:         true,
-		MethodMixed:          true,
-		MethodOfficialWallet: true,
+		MethodCOD:    true,
+		MethodWallet: true,
+		MethodMixed:  true,
 	}
-	if len(methods) != 4 {
-		t.Fatalf("expected 4 distinct payment methods, got %d", len(methods))
+	if len(methods) != 3 {
+		t.Fatalf("expected 3 distinct checkout payment methods, got %d", len(methods))
 	}
 }
 
@@ -76,8 +75,6 @@ func TestApplyWltPaymentEventRejectsUnsupportedStatus(t *testing.T) {
 		t.Fatalf("expected ErrInvalid for unsupported status, got %v", err)
 	}
 }
-
-
 
 func TestPaymentEventTargetStateDistinguishesExpired(t *testing.T) {
 	state, intermediate, err := paymentEventTargetState("expired")

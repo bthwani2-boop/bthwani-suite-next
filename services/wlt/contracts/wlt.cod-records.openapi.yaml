@@ -65,36 +65,6 @@ paths:
         '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
       security:
         - serviceBearer: []
-  /wlt/cod-reservations/finalize:
-    post:
-      operationId: finalizeWltCodReservation
-      tags: [ WltCodReservations ]
-      summary: Finalize COD capacity for an order upon delivery.
-      x-bthwani-mutation-approved: false
-      x-bthwani-default-enabled: false
-      parameters:
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [ orderId ]
-              properties:
-                orderId:
-                  type: string
-      responses:
-        '200':
-          description: Finalized.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ReleaseCodReservationResponse' }
-        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
-        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
-      security:
-        - serviceBearer: []
   /wlt/cod-reservations/{orderId}:
     get:
       operationId: getWltCodReservation

@@ -10,7 +10,7 @@ type RuntimeGlobal = typeof globalThis & {
 
 declare const __DEV__: boolean | undefined;
 
-export type PaymentMethodKey = "cod" | "wallet" | "mixed" | "official_wallet";
+export type PaymentMethodKey = "cod" | "wallet" | "mixed";
 
 export type PaymentDecisionOption = {
   readonly id: PaymentMethodKey;
@@ -108,15 +108,6 @@ export function useWltPaymentController(input?: {
         helperText: wallet
           ? `رصيد المحفظة الحالي: ${formatWltMoney(walletBalance, wallet.currency)}`
           : "متصلة مباشرة بالنظام المالي WLT.",
-      },
-      {
-        id: "official_wallet",
-        title: "المحافظ والبنوك الإلكترونية",
-        description: "الدفع عبر مزود مالي رسمي (محاكي الدفع الإلكتروني).",
-        disabled: false,
-        statusLabel: paymentMethod === "official_wallet" ? "محدد" : "متاح (محاكي WLT)",
-        statusTone: paymentMethod === "official_wallet" ? "action" : "success",
-        helperText: "جاهز ومربوط بمحاكي المعاملات المالية في Docker.",
       },
       {
         id: "mixed",

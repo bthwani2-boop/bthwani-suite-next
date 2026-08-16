@@ -114,6 +114,27 @@
       "sha256": "b39a61bff9bf38ce9bb4432a3253dc506e7b2fbafdabb1b357791114f40f185f",
       "historicalPrefix": "1008",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 256,
+      "file": "dsh-1009_checkout_payment_method_canonicalization.sql",
+      "sha256": "169620df23d0b7454ef1032f8fef59cca1a21dccf0d3cde0fd5f6f83b3b72752",
+      "historicalPrefix": "1009",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 257,
+      "file": "dsh-1010_dispatch_cod_reservation_release_outbox.sql",
+      "sha256": "2fa1e907f34ff33e89ff558cfd0748ecef1f5bae6ad94d6c6c68e5a96c30f61c",
+      "historicalPrefix": "1010",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 258,
+      "file": "dsh-1011_promotion_funding_reserve_reconciliation.sql",
+      "sha256": "ae9f603233cde3b08f46d60e2092bf57f993f55bb65af57c0567b6e7fcbeb5f4",
+      "historicalPrefix": "1011",
+      "state": "ACTIVE"
     }
   ]
 }

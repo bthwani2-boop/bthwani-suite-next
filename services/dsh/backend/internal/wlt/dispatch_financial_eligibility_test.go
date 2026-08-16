@@ -53,7 +53,7 @@ func TestEvaluateDispatchFinancialEligibilityRejectsIncompleteDecision(t *testin
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	_, err := client.EvaluateDispatchFinancialEligibility(trustedMutationTestContext(), "captain-1", "", "OperatorContext-a")
+	_, err := client.EvaluateDispatchFinancialEligibility(trustedMutationTestContext(), "captain-1", "correlation-1", "OperatorContext-a")
 	if err == nil {
 		t.Fatal("expected invalid WLT decision to fail closed")
 	}
@@ -69,7 +69,7 @@ func TestEvaluateDispatchFinancialEligibilityDoesNotInferOnWltFailure(t *testing
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token")
-	_, err := client.EvaluateDispatchFinancialEligibility(trustedMutationTestContext(), "captain-1", "", "OperatorContext-a")
+	_, err := client.EvaluateDispatchFinancialEligibility(trustedMutationTestContext(), "captain-1", "correlation-1", "OperatorContext-a")
 	if err == nil {
 		t.Fatal("expected WLT failure to be returned")
 	}

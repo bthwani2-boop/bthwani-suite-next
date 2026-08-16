@@ -50,7 +50,7 @@ func insertTestSession(t *testing.T, db *sql.DB, status string, amount int64, cu
 		CheckoutIntentID:  checkoutIntentID,
 		ClientID:          "client-test",
 		StoreID:           "store-test",
-		PaymentMethod:     "official_wallet",
+		PaymentMethod:     "wallet",
 		Status:            status,
 		ProviderReference: "card-ref-001",
 		AmountMinorUnits:  amount,

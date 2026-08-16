@@ -11,6 +11,7 @@ import (
 
 	"dsh-api/internal/cart"
 	"dsh-api/internal/checkout"
+	"dsh-api/internal/checkoutfinanceoutbox"
 	"dsh-api/internal/clientaddress"
 	"dsh-api/internal/coupons"
 	"dsh-api/internal/store"
@@ -127,8 +128,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	}
 	if paymentMethod != string(checkout.MethodCOD) &&
 		paymentMethod != string(checkout.MethodWallet) &&
-		paymentMethod != string(checkout.MethodMixed) &&
-		paymentMethod != string(checkout.MethodOfficialWallet) {
+		paymentMethod != string(checkout.MethodMixed) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_PAYMENT_METHOD", "payment method is invalid")
 		return
 	}
@@ -391,9 +391,19 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	if hasCouponFunding {
 		fundingProjection, err = s.reserveCouponFunding(r.Context(), actor.OperatorContextID, intent.ID, correlationID)
 		if err != nil {
-			_ = coupons.ReleaseByIntent(s.db, intent.ID, "wlt_funding_reserve_failed")
+			cleanupErr := coupons.ReleaseByIntent(s.db, intent.ID, "wlt_funding_reserve_failed")
 			failedIntent, markErr := checkout.MarkHandoffBlocked(s.db, intent.ID, actor.OperatorContextID, actor.ID)
 			if markErr == nil {
+				if cleanupErr != nil {
+					store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
+						"intent": marshalIntentWithPricing(failedIntent, pricing),
+						"error": map[string]any{
+							"code":    "CHECKOUT_COMPENSATION_REQUIRED",
+							"message": "promotion funding reservation failed and coupon compensation requires reconciliation",
+						},
+					})
+					return
+				}
 				store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
 					"intent": marshalIntentWithPricing(failedIntent, pricing),
 					"error": map[string]any{
@@ -401,6 +411,10 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 						"message": "promotion funding reservation is unavailable",
 					},
 				})
+				return
+			}
+			if cleanupErr != nil {
+				store.SendError(w, http.StatusServiceUnavailable, "CHECKOUT_COMPENSATION_REQUIRED", "promotion funding reservation failed and coupon compensation requires reconciliation")
 				return
 			}
 			store.SendError(w, http.StatusServiceUnavailable, "WLT_PROMOTION_FUNDING_UNAVAILABLE", "promotion funding reservation is unavailable")
@@ -421,14 +435,27 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		canonicalQuote, err = s.wlt.GetCheckoutQuote(r.Context(), intent.ID)
 	}
 	if err != nil || !checkoutQuoteMatchesPricing(canonicalQuote, intent, pricing) {
+		var compensationErr error
 		if fundingProjection != nil {
 			if releaseErr := s.releaseCouponFunding(r.Context(), actor.OperatorContextID, intent.ID, "pricing_quote_unavailable", correlationID); releaseErr != nil {
-				_ = coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_pricing_quote_failure")
+				compensationErr = errors.Join(compensationErr, releaseErr)
+				if markErr := coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_pricing_quote_failure"); markErr != nil {
+					compensationErr = errors.Join(compensationErr, markErr)
+				}
 			}
 		}
-		_ = coupons.ReleaseByIntent(s.db, intent.ID, "wlt_pricing_quote_unavailable")
+		if releaseErr := coupons.ReleaseByIntent(s.db, intent.ID, "wlt_pricing_quote_unavailable"); releaseErr != nil {
+			compensationErr = errors.Join(compensationErr, releaseErr)
+		}
 		failedIntent, markErr := checkout.MarkHandoffBlocked(s.db, intent.ID, actor.OperatorContextID, actor.ID)
 		if markErr == nil {
+			if compensationErr != nil {
+				store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
+					"intent": marshalIntentWithPricing(failedIntent, pricing),
+					"error":  map[string]any{"code": "WLT_PRICING_QUOTE_AND_COMPENSATION_REQUIRED", "message": "canonical WLT pricing quote is unavailable and financial compensation requires reconciliation"},
+				})
+				return
+			}
 			store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
 				"intent": marshalIntentWithPricing(failedIntent, pricing),
 				"error":  map[string]any{"code": "WLT_PRICING_QUOTE_UNAVAILABLE", "message": "canonical WLT pricing quote is unavailable or does not match the frozen checkout"},
@@ -465,18 +492,22 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			})
 			return
 		}
-		fundingReleaseFailed := false
+		var compensationErr error
 		if fundingProjection != nil {
 			if releaseErr := s.releaseCouponFunding(r.Context(), actor.OperatorContextID, intent.ID, "payment_session_handoff_failed", correlationID); releaseErr != nil {
-				fundingReleaseFailed = true
-				_ = coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_payment_handoff_failed")
+				compensationErr = errors.Join(compensationErr, releaseErr)
+				if markErr := coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_payment_handoff_failed"); markErr != nil {
+					compensationErr = errors.Join(compensationErr, markErr)
+				}
 			}
 		}
-		_ = coupons.ReleaseByIntent(s.db, intent.ID, "wlt_handoff_failed")
+		if releaseErr := coupons.ReleaseByIntent(s.db, intent.ID, "wlt_handoff_failed"); releaseErr != nil {
+			compensationErr = errors.Join(compensationErr, releaseErr)
+		}
 		if failedIntent, markErr := checkout.MarkHandoffBlocked(s.db, intent.ID, actor.OperatorContextID, actor.ID); markErr == nil {
 			code := "WLT_HANDOFF_UNAVAILABLE"
 			message := "WLT payment-session handoff is unavailable"
-			if fundingReleaseFailed {
+			if compensationErr != nil {
 				code = "WLT_HANDOFF_AND_FUNDING_COMPENSATION_FAILED"
 				message = "payment handoff failed and promotion funding compensation requires reconciliation"
 			}
@@ -492,14 +523,31 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 
 	intent, err = checkout.AttachWltPaymentSessionIdempotent(s.db, intent.ID, actor.OperatorContextID, actor.ID, paymentSession.ID)
 	if err != nil {
-		_ = s.wlt.ExpireSession(r.Context(), paymentSession.ID, correlationID)
-		if fundingProjection != nil {
-			if releaseErr := s.releaseCouponFunding(r.Context(), actor.OperatorContextID, intent.ID, "payment_session_attach_failed", correlationID); releaseErr != nil {
-				_ = coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_attach_failed")
+		var compensationErr error
+		if expireErr := s.wlt.ExpireSession(r.Context(), paymentSession.ID, correlationID); expireErr != nil {
+			if queueErr := checkoutfinanceoutbox.EnqueuePaymentSessionExpiry(s.db, intent.ID, paymentSession.ID, actor.ID, "payment_session_attach_failed", correlationID); queueErr != nil {
+				compensationErr = errors.Join(compensationErr, expireErr, queueErr)
 			}
 		}
-		_ = coupons.ReleaseByIntent(s.db, intent.ID, "payment_session_attach_failed")
-		_, _ = checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.OperatorContextID, actor.ID)
+		if fundingProjection != nil {
+			if releaseErr := s.releaseCouponFunding(r.Context(), actor.OperatorContextID, intent.ID, "payment_session_attach_failed", correlationID); releaseErr != nil {
+				compensationErr = errors.Join(compensationErr, releaseErr)
+				if markErr := coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_attach_failed"); markErr != nil {
+					compensationErr = errors.Join(compensationErr, markErr)
+				}
+			}
+		}
+		if releaseErr := coupons.ReleaseByIntent(s.db, intent.ID, "payment_session_attach_failed"); releaseErr != nil {
+			compensationErr = errors.Join(compensationErr, releaseErr)
+		}
+		_, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.OperatorContextID, actor.ID)
+		if markErr != nil {
+			compensationErr = errors.Join(compensationErr, markErr)
+		}
+		if compensationErr != nil {
+			store.SendError(w, http.StatusServiceUnavailable, "CHECKOUT_COMPENSATION_REQUIRED", "WLT payment-session attach failed and financial compensation requires reconciliation")
+			return
+		}
 		if errors.Is(err, checkout.ErrInvalid) {
 			store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
@@ -729,10 +777,23 @@ func (s *protectedStoreServer) handleReconcileCheckoutIntent(w http.ResponseWrit
 			})
 			return
 		}
-		_ = s.releaseCouponFunding(r.Context(), intent.OperatorContextID, intent.ID, "reconciliation_definitive_failure", correlationID)
-		_ = coupons.ReleaseByIntent(s.db, intent.ID, "reconciliation_definitive_failure")
+		var compensationErr error
+		if releaseErr := s.releaseCouponFunding(r.Context(), intent.OperatorContextID, intent.ID, "reconciliation_definitive_failure", correlationID); releaseErr != nil {
+			compensationErr = errors.Join(compensationErr, releaseErr)
+		}
+		if releaseErr := coupons.ReleaseByIntent(s.db, intent.ID, "reconciliation_definitive_failure"); releaseErr != nil {
+			compensationErr = errors.Join(compensationErr, releaseErr)
+		}
 		failed, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, intent.OperatorContextID, intent.ClientID)
 		if markErr == nil {
+			if compensationErr != nil {
+				store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
+					"intent":                 marshalIntentWithPricing(failed, pricing),
+					"reconciliationRequired": true,
+					"error":                  map[string]any{"code": "WLT_HANDOFF_COMPENSATION_REQUIRED", "message": "WLT reconciliation failed and financial compensation requires reconciliation"},
+				})
+				return
+			}
 			store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
 				"intent":                 marshalIntentWithPricing(failed, pricing),
 				"reconciliationRequired": false,

@@ -28,7 +28,7 @@ DshCheckoutValidationIssue: &DshCheckoutValidationIssue
 
 DshCheckoutPaymentMethod: &DshCheckoutPaymentMethod
   type: string
-  enum: [cod, wallet, mixed, official_wallet]
+  enum: [cod, wallet, mixed]
 
 DshCheckoutFulfillmentMode: &DshCheckoutFulfillmentMode
   type: string

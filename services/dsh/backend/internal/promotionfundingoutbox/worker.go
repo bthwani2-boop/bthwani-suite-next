@@ -39,6 +39,22 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 	}
 	for _, event := range events {
 		deliverCtx, cancel := context.WithTimeout(ctx, deliveryLimit)
+		if event.EventType == EventReserveThenRelease {
+			deliveryErr := reconcileReserveThenRelease(deliverCtx, db, client, event)
+			cancel()
+			if deliveryErr != nil {
+				log.Printf("[promotion-funding-outbox] reserve reconciliation failed redemption=%s attempt=%d: %v",
+					event.CouponRedemptionID, event.AttemptCount+1, deliveryErr)
+				if markErr := MarkRetry(db, event.ID, event.AttemptCount, deliveryErr); markErr != nil {
+					log.Printf("[promotion-funding-outbox] failed to record reserve reconciliation retry event=%s: %v", event.ID, markErr)
+				}
+				continue
+			}
+			if err := MarkSent(db, event.ID); err != nil {
+				log.Printf("[promotion-funding-outbox] failed to mark reserve reconciliation sent event=%s: %v", event.ID, err)
+			}
+			continue
+		}
 		targetStatus, deliveryErr := dispatch(deliverCtx, client, event)
 		cancel()
 		if deliveryErr == nil {
@@ -59,11 +75,54 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 	return nil
 }
 
+func reconcileReserveThenRelease(ctx context.Context, db *sql.DB, client *wlt.Client, event Event) error {
+	projection, err := coupons.FundingByIntent(ctx, db, event.CheckoutIntentID)
+	if err != nil {
+		return fmt.Errorf("load coupon funding projection: %w", err)
+	}
+	if projection == nil {
+		return fmt.Errorf("coupon funding projection is missing")
+	}
+	if projection.OperatorContextID != "" && projection.OperatorContextID != event.OperatorContextID {
+		return fmt.Errorf("coupon funding OperatorContext does not match outbox owner")
+	}
+	reservation, err := client.ReservePromotionFunding(ctx, wlt.ReservePromotionFundingInput{
+		OperatorContextID:        event.OperatorContextID,
+		ExternalReference:        "dsh-coupon-redemption:" + projection.RedemptionID,
+		CheckoutIntentID:         projection.CheckoutIntentID,
+		CouponRedemptionID:       projection.RedemptionID,
+		CouponID:                 projection.CouponID,
+		ClientID:                 projection.ClientActorID,
+		PartnerID:                projection.PartnerID,
+		PlatformFundedMinorUnits: projection.PlatformFundedMinorUnits,
+		PartnerFundedMinorUnits:  projection.PartnerFundedMinorUnits,
+		TotalDiscountMinorUnits:  projection.TotalDiscountMinorUnits,
+		Currency:                 projection.Currency,
+	}, event.IdempotencyKey, event.CorrelationID)
+	if err != nil {
+		return fmt.Errorf("reconcile WLT promotion funding reserve: %w", err)
+	}
+	if reservation == nil || reservation.Status != "reserved" {
+		return fmt.Errorf("reconciled WLT promotion funding reserve is not reserved")
+	}
+	released, err := client.ReleasePromotionFunding(ctx, reservation.ID, wlt.PromotionFundingTransitionInput{
+		OperatorContextID: event.OperatorContextID,
+		Reason:            event.Reason,
+	}, "dsh-promotion-funding-release:"+projection.RedemptionID+":reserve-reconcile", event.CorrelationID)
+	if err != nil {
+		return fmt.Errorf("release reconciled WLT promotion funding reservation: %w", err)
+	}
+	if released == nil || released.Status != "released" {
+		return fmt.Errorf("reconciled WLT promotion funding release is not released")
+	}
+	return nil
+}
+
 func dispatch(ctx context.Context, client *wlt.Client, event Event) (string, error) {
 	input := wlt.PromotionFundingTransitionInput{
 		OperatorContextID: event.OperatorContextID,
-		OrderID:  event.OrderID,
-		Reason:   event.Reason,
+		OrderID:           event.OrderID,
+		Reason:            event.Reason,
 	}
 	switch event.EventType {
 	case EventCommit:

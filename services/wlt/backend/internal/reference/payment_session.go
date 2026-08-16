@@ -20,27 +20,29 @@ var ErrIdempotencyConflict = errors.New("payment session idempotency conflict")
 const paymentSessionCols = `id, checkout_intent_id, special_request_id,
 	 subscription_purchase_id, commercial_product_reference,
 	 topup_reference, topup_actor_type,
-	 operator_context_id,
-	 client_id, store_id, payment_method, status, provider_reference, amount_minor_units,
-	 currency, financial_purpose, COALESCE(pricing_quote_id, ''), COALESCE(pricing_quote_hash, ''),
+	operator_context_id,
+	client_id, store_id, payment_method, status, provider_reference, amount_minor_units,
+	currency, wallet_amount_minor_units, cash_on_delivery_amount_minor_units, financial_purpose,
+	COALESCE(pricing_quote_id, ''), COALESCE(pricing_quote_hash, ''),
 	 COALESCE(pricing_quote_version, 0), pricing_quote_expires_at, captured_at, created_at, updated_at`
 
 type PaymentSession struct {
-	ID                         string  `json:"id"`
-	CheckoutIntentID           *string `json:"checkoutIntentId,omitempty"`
-	SpecialRequestID           *string `json:"specialRequestId,omitempty"`
-	SubscriptionPurchaseID     *string `json:"subscriptionPurchaseId,omitempty"`
-	CommercialProductReference *string `json:"commercialProductReference,omitempty"`
-	TopUpReference             *string `json:"topupReference,omitempty"`
-	TopUpActorType             *string `json:"topupActorType,omitempty"`
-	OperatorContextID          string  `json:"operatorContextId"`
-	ClientID                   string  `json:"clientId"`
-	StoreID                    string  `json:"storeId"`
-	PaymentMethod              string  `json:"paymentMethod"`
-	Status                     string  `json:"status"`
-	ProviderReference          string  `json:"providerReference"`
-	AmountMinorUnits           int64   `json:"amountMinorUnits"`
-	Currency                   string  `json:"currency"`
+	ID                         string            `json:"id"`
+	CheckoutIntentID           *string           `json:"checkoutIntentId,omitempty"`
+	SpecialRequestID           *string           `json:"specialRequestId,omitempty"`
+	SubscriptionPurchaseID     *string           `json:"subscriptionPurchaseId,omitempty"`
+	CommercialProductReference *string           `json:"commercialProductReference,omitempty"`
+	TopUpReference             *string           `json:"topupReference,omitempty"`
+	TopUpActorType             *string           `json:"topupActorType,omitempty"`
+	OperatorContextID          string            `json:"operatorContextId"`
+	ClientID                   string            `json:"clientId"`
+	StoreID                    string            `json:"storeId"`
+	PaymentMethod              string            `json:"paymentMethod"`
+	Status                     string            `json:"status"`
+	ProviderReference          string            `json:"providerReference"`
+	AmountMinorUnits           int64             `json:"amountMinorUnits"`
+	Currency                   string            `json:"currency"`
+	TenderAllocation           *TenderAllocation `json:"tenderAllocation,omitempty"`
 	// FinancialPurpose is server-derived and read-only to every caller. It is
 	// exposed so an auditor can see why the money moved without joining back to
 	// whichever source system created the session.
@@ -53,6 +55,12 @@ type PaymentSession struct {
 	CapturedAt            *string                  `json:"capturedAt,omitempty"`
 	CreatedAt             string                   `json:"createdAt"`
 	UpdatedAt             string                   `json:"updatedAt"`
+}
+
+type TenderAllocation struct {
+	WalletAmountMinorUnits         int64  `json:"walletAmountMinorUnits"`
+	CashOnDeliveryAmountMinorUnits int64  `json:"cashOnDeliveryAmountMinorUnits"`
+	Currency                       string `json:"currency"`
 }
 
 // Exactly one source identifier must be present. A subscription purchase also
@@ -140,6 +148,7 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	if input.Currency == "" {
 		input.Currency = "YER"
 	}
+	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
 	switch input.PaymentMethod {
 	case "cod", "wallet", "mixed":
 	case "official_wallet":
@@ -233,13 +242,14 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 			(checkout_intent_id, special_request_id, subscription_purchase_id,
 			 commercial_product_reference, topup_reference, topup_actor_type,
 			 operator_context_id, client_id, store_id,
-			 payment_method, status, amount_minor_units, currency, financial_purpose,
+			 payment_method, status, amount_minor_units, currency,
+			 wallet_amount_minor_units, cash_on_delivery_amount_minor_units, financial_purpose,
 			 cart_snapshot_hash, pricing_quote_id, pricing_quote_hash, pricing_quote_version,
 			 pricing_quote_expires_at, idempotency_key, correlation_id)
 		VALUES (NULLIF($1, ''), NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''),
-			$7, $8, $9, $10, 'reference_created', $11, $12, $13, $14,
-			NULLIF($15, ''), NULLIF($16, ''), NULLIF($17, 0), NULLIF($18, '')::timestamptz,
-			$19, $20)
+			$7, $8, $9, $10, 'reference_created', $11, $12, $13, $14, $15,
+			$16, NULLIF($17, ''), NULLIF($18, ''), NULLIF($19, 0), NULLIF($20, '')::timestamptz,
+			$21, $22)
 		RETURNING ` + paymentSessionCols
 
 	// The session and its allocation are one financial fact and are written in
@@ -268,6 +278,10 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	if err := payment.ValidatePaymentAllocation(input.Allocation, input.AmountMinorUnits); err != nil {
 		return nil, err
 	}
+	tenderAllocation, err := deriveCheckoutTenderAllocation(context.Background(), tx, input)
+	if err != nil {
+		return nil, err
+	}
 
 	session, err := scanPaymentSession(tx.QueryRow(q,
 		input.CheckoutIntentID,
@@ -282,6 +296,8 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 		input.PaymentMethod,
 		input.AmountMinorUnits,
 		input.Currency,
+		tenderAmount(tenderAllocation, "wallet"),
+		tenderAmount(tenderAllocation, "cash_on_delivery"),
 		string(purpose),
 		input.CartSnapshotHash,
 		input.PricingQuoteID,
@@ -314,7 +330,72 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 		return nil, err
 	}
 	session.Allocation = append([]payment.AllocationLine(nil), input.Allocation...)
+	session.TenderAllocation = tenderAllocation
 	return session, nil
+}
+
+func deriveCheckoutTenderAllocation(ctx context.Context, tx *sql.Tx, input CreatePaymentSessionInput) (*TenderAllocation, error) {
+	if input.CheckoutIntentID == "" {
+		return nil, nil
+	}
+
+	allocation := &TenderAllocation{Currency: input.Currency}
+	switch input.PaymentMethod {
+	case "cod":
+		allocation.CashOnDeliveryAmountMinorUnits = input.AmountMinorUnits
+	case "wallet", "mixed":
+		var available int64
+		var status, currency string
+		err := tx.QueryRowContext(ctx, `
+			SELECT status, currency, available_balance_minor_units
+			FROM wlt_wallets
+			WHERE operator_context_id = $1 AND actor_type = 'client' AND actor_id = $2
+			FOR UPDATE`, input.OperatorContextID, input.ClientID).Scan(&status, &currency, &available)
+		if errors.Is(err, sql.ErrNoRows) {
+			if input.PaymentMethod == "wallet" {
+				return nil, fmt.Errorf("client wallet is required for wallet checkout")
+			}
+			allocation.CashOnDeliveryAmountMinorUnits = input.AmountMinorUnits
+			return allocation, nil
+		}
+		if err != nil {
+			return nil, fmt.Errorf("load client wallet for checkout tender allocation: %w", err)
+		}
+		if currency != input.Currency {
+			return nil, fmt.Errorf("client wallet currency %s does not match checkout currency %s", currency, input.Currency)
+		}
+		if status != "active" {
+			if input.PaymentMethod == "wallet" {
+				return nil, fmt.Errorf("client wallet is not active for wallet checkout")
+			}
+			allocation.CashOnDeliveryAmountMinorUnits = input.AmountMinorUnits
+			return allocation, nil
+		}
+		if available < 0 {
+			available = 0
+		}
+		if input.PaymentMethod == "wallet" && available < input.AmountMinorUnits {
+			return nil, fmt.Errorf("client wallet balance is insufficient for wallet checkout")
+		}
+		if available > input.AmountMinorUnits {
+			available = input.AmountMinorUnits
+		}
+		allocation.WalletAmountMinorUnits = available
+		allocation.CashOnDeliveryAmountMinorUnits = input.AmountMinorUnits - available
+	default:
+		return nil, fmt.Errorf("unsupported checkout payment method %q", input.PaymentMethod)
+	}
+	return allocation, nil
+}
+
+func tenderAmount(allocation *TenderAllocation, kind string) any {
+	if allocation == nil {
+		return nil
+	}
+	if kind == "wallet" {
+		return allocation.WalletAmountMinorUnits
+	}
+	return allocation.CashOnDeliveryAmountMinorUnits
 }
 
 // sameAllocation compares two breakdowns as sets: the wire order of components
@@ -511,6 +592,7 @@ func requireDshServiceCaller(w http.ResponseWriter, r *http.Request) bool {
 
 func scanPaymentSession(row *sql.Row) (*PaymentSession, error) {
 	var session PaymentSession
+	var walletAmount, cashOnDeliveryAmount sql.NullInt64
 	err := row.Scan(
 		&session.ID,
 		&session.CheckoutIntentID,
@@ -527,6 +609,8 @@ func scanPaymentSession(row *sql.Row) (*PaymentSession, error) {
 		&session.ProviderReference,
 		&session.AmountMinorUnits,
 		&session.Currency,
+		&walletAmount,
+		&cashOnDeliveryAmount,
 		&session.FinancialPurpose,
 		&session.PricingQuoteID,
 		&session.PricingQuoteHash,
@@ -538,6 +622,16 @@ func scanPaymentSession(row *sql.Row) (*PaymentSession, error) {
 	)
 	if err != nil {
 		return nil, err
+	}
+	if walletAmount.Valid != cashOnDeliveryAmount.Valid {
+		return nil, fmt.Errorf("payment session has a partial checkout tender allocation")
+	}
+	if walletAmount.Valid {
+		session.TenderAllocation = &TenderAllocation{
+			WalletAmountMinorUnits:         walletAmount.Int64,
+			CashOnDeliveryAmountMinorUnits: cashOnDeliveryAmount.Int64,
+			Currency:                       session.Currency,
+		}
 	}
 	return &session, nil
 }
