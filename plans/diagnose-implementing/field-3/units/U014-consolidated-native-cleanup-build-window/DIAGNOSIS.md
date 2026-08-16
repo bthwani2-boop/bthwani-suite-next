@@ -1,5 +1,0 @@
-# U014 — consolidated-native-cleanup-build-window
-
-هذه الوحدة هي نافذة الحذف المادي الوحيدة لـNative داخل Field 3، ولا تبدأ حتى تنجح U012 وU013 ويستقر السلوك الميداني. عناصر `DEPRECATED_CONFIRMED` فقط تُنقل إلى `REMOVE_ON_NEXT_NATIVE_REBUILD`. الإزالة ليست package وحدها: يجب تعديل dependency + capability declaration + Expo config plugin + Android/iOS permission + lockfile وأي guard/peer ownership مرتبط، كوحدة coherent. إذا كان عنصر مشتركًا مع تطبيق آخر فلا تحذفه من ذلك التطبيق هنا؛ نسّق التوقيت مع نافذة native أوسع إن وجدت، لكن Field 3 يملك تغييرات app-field السببية فقط.
-
-قبل EAS يجب استنفاد التحقق الرخيص: config/fingerprint diff، typecheck/lint/tests/build، Metro/export، local Android native build/device إن كانت البيئة متاحة. الهدف تقليل build السحابي إلى نافذة مخططة واحدة قدر الإمكان، لا build بعد كل package. بعد build يجب اختبار startup/icons/fonts/safe-area/image-picker/document-picker/location/maps/notifications/SecureStore/network/offline/updates وكل capability بقيت أو أزيلت. إذا كشف build حاجة package مصنفة خطأ، تعود للحالة REQUIRED_NATIVE ويعاد التصحيح؛ لا fallback يخفي الخلل.

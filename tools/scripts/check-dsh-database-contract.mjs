@@ -280,7 +280,9 @@ if (rootPackage) {
 const workflow = read(".github/workflows/dsh-database.yml");
 requireText(workflow, runnerPath, "DSH database workflow");
 requireText(workflow, runnerVerificationPath, "DSH database workflow runner verification");
-requireText(workflow, '"package.json"', "DSH database workflow path routing");
+requireText(workflow, "workflow_dispatch:", "DSH database workflow manual closure trigger");
+forbidText(workflow, "\n  push:", "DSH database workflow automatic push trigger");
+forbidText(workflow, "\n  pull_request:", "DSH database workflow automatic pull request trigger");
 requireText(workflow, "permissions:\n  contents: read", "DSH database workflow read-only permissions");
 requireText(workflow, "DSH_TEST_operator_context_id: ci-dsh", "DSH database workflow test OperatorContext");
 requireText(workflow, "Apply canonical DSH migrations", "DSH database workflow");

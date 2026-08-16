@@ -77,10 +77,6 @@ const boundaryInterceptedRoutes = new Map([
     "Providers",
     new Map([
       [
-        "GET /providers/health",
-        "intercepted by RuntimeReadinessBoundary (core/providers/backend/internal/http/runtime_readiness_boundary.go) before the router",
-      ],
-      [
         "GET /providers/readiness",
         "intercepted by RuntimeReadinessBoundary (core/providers/backend/internal/http/runtime_readiness_boundary.go) before the router",
       ],

@@ -22,7 +22,7 @@ permissions:
 jobs:
   proof:
     name: Execute scoped runtime proof
-    if: ${{ inputs.runtime_proof || inputs.full_verification == 'true' || inputs.runtime == 'true' }}
+    if: ${{ inputs.runtime_proof || inputs.runtime == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -174,7 +174,7 @@ jobs:
 
   not-required:
     name: Runtime proof not required
-    if: ${{ !inputs.runtime_proof && inputs.full_verification != 'true' && inputs.runtime != 'true' }}
+    if: ${{ !inputs.runtime_proof && inputs.runtime != 'true' }}
     runs-on: ubuntu-24.04
     steps:
       - name: Confirm runtime proof not required

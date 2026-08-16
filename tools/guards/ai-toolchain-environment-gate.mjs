@@ -132,6 +132,18 @@ const required = new Set(
     .filter(Boolean),
 );
 
+const registryEntries = registry.entries || [];
+const registeredToolIds = new Set(registryEntries.map((tool) => tool.id));
+for (const requested of required) {
+  if (!registeredToolIds.has(requested)) {
+    violations.push({
+      file: "governance/tools/agent-tool-registry.json",
+      line: 0,
+      message: `EXPLICITLY_REQUIRED_TOOL_NOT_REGISTERED ${requested}`,
+    });
+  }
+}
+
 const commandCandidates = {
   "antigravity-implementer": ["agy"],
   "opencode-implementer": ["opencode"],
@@ -139,11 +151,6 @@ const commandCandidates = {
   leanctx: ["lean-ctx"],
   "open-code-review": ["ocr"],
 };
-
-const registryEntries = registry.entries || [];
-const registeredToolIds = new Set(
-  registryEntries.map((tool) => tool.id),
-);
 
 const report = {
   schemaVersion: 3,
@@ -164,37 +171,19 @@ for (const core of ["node", "pnpm"]) {
   }
 }
 
-for (const toolId of required) {
-  if (!registeredToolIds.has(toolId)) {
-    violations.push({
-      file: "environment",
-      line: 0,
-      message: `UNKNOWN_EXPLICITLY_REQUIRED_TOOL ${toolId}`,
-    });
-  }
-}
-
 for (const tool of registryEntries) {
-  const explicitlyRequired = required.has(tool.id);
-  const conditional = tool.status === "conditional";
-
-  if (conditional && !explicitlyRequired) {
-    report.tools[tool.id] = {
+  const status = tool.status === "conditional" && !required.has(tool.id)
+    ? {
       state: "NOT_PROBED_CONDITIONAL",
       registryStatus: tool.status,
       reason: "TOOL_NOT_REQUIRED_FOR_THIS_EXECUTION",
-    };
-    continue;
-  }
-
-  const status = probe(
-    commandCandidates[tool.id] || [tool.id],
-  );
+    }
+    : probe(commandCandidates[tool.id] || [tool.id]);
 
   report.tools[tool.id] = status;
 
   if (
-    explicitlyRequired &&
+    required.has(tool.id) &&
     status.state !== "VERIFIED_AVAILABLE"
   ) {
     violations.push({

@@ -142,6 +142,20 @@
       "sha256": "da176aa81815b9ed0cd4392988df972b2b026e265ce3410f0f250d596fb02306",
       "historicalPrefix": "1012",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 260,
+      "file": "dsh-1013_remove_legacy_platform_change_sets.sql",
+      "sha256": "920188999ef0f887ade0ec0a281960f790f47c199f5af062573e1256ade15e14",
+      "historicalPrefix": "1013",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 261,
+      "file": "dsh-1014_remove_legacy_platform_providers.sql",
+      "sha256": "94302ebf6ff89cbff4b4159a8d5b3c1e47aca71c04013533fcc551957983141b",
+      "historicalPrefix": "1014",
+      "state": "ACTIVE"
     }
   ]
 }

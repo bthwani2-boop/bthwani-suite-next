@@ -99,6 +99,7 @@ test("mobile tooling uses mobile config runtime profile", () => {
 test("native mobile changes use mobile native runtime profile", () => {
   const result = classifyFiles(["apps/app-field/runtime/android/app/build.gradle"]);
   assert.equal(result.native_changed, true);
+  assert.equal(result.mobile, true);
   assert.equal(result.runtime_profile, "mobile-native");
   assert.equal(result.verification_tier, "deep");
 });
@@ -130,6 +131,7 @@ test("infrastructure and runtime tooling use full runtime", () => {
     const result = classifyFiles([file]);
     assert.equal(result.runtime_profile, "full", file);
     assert.equal(result.verification_tier, "deep", file);
+    assert.equal(result.runtime_required, false, file);
   }
 });
 
@@ -152,7 +154,15 @@ test("full mode enables every domain and full runtime", () => {
     assert.equal(result[key], true, key);
   }
   assert.equal(result.runtime_profile, "full");
+  assert.equal(result.mobile, true);
   assert.equal(result.journey_scope, "PROJECT-WIDE");
+});
+
+test("runtime is required only at closure or master phases", () => {
+  const files = ["infra/docker/compose.runtime.yml"];
+  assert.equal(classifyFiles(files, { executionPhase: "pr" }).runtime_required, false);
+  assert.equal(classifyFiles(files, { executionPhase: "closure" }).runtime_required, true);
+  assert.equal(classifyFiles(files, { executionPhase: "master" }).runtime_required, true);
 });
 
 test("classification exports every required routing key", () => {
@@ -162,7 +172,7 @@ test("classification exports every required routing key", () => {
     "governance_policy", "workflow_policy", "security_policy", "infrastructure_policy", "nomenclature_required",
     "frontend", "contracts", "journey", "journey_scope", "node", "node_scope",
     "dsh", "wlt", "identity", "workforce", "platform", "providers", "database",
-    "runtime", "runtime_profile", "shared_brain", "heavy", "verification_tier", "diagnostics",
+    "runtime", "runtime_required", "runtime_profile", "mobile", "database_changed", "contracts_changed", "shared_brain", "heavy", "verification_tier", "diagnostics",
     "platform_change_sets", "cleanup_changed", "native_changed", "visual_changed",
     "OperatorContext_isolation_changed", "financial_changed", "migration_changed", "shared_contract_changed",
     "recovery_changed", "observability_changed", "auth_changed", "session_changed", "rbac_changed",

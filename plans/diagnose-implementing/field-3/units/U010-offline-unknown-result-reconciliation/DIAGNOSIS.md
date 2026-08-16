@@ -1,5 +1,0 @@
-# U010 — offline-unknown-result-reconciliation
-
-Offline queue الحالية ليست placeholder: legacy migration/quarantine وterminal-capacity لها اختبارات مخصصة، والعمليات المحكومة تشمل create_visit/complete_visit/upsert_readiness_check/create_escalation. لذلك إعادة بنائها من الصفر تخاطر بإدخال regressions. الخطر المتبقي الأهم هو ambiguous/unknown result: الطلب قد يصل الخادم ويلتزم ثم تموت الشبكة قبل response. retry أعمى قد ينشئ أثرًا مكررًا أو transition غير صحيح حتى مع idempotency غير كاملة.
-
-لكل mutation ذات أثر يجب تحديد reconciliation readback authoritative: idempotency/correlation key أو قراءة canonical state قبل قرار retry/complete. يجب اختبار actorId+installationId isolation، account switch، corrupt storage، restart، retry backoff، permanent failure evacuation، unknown result، server committed/server not committed، concurrent reconnect. Control Panel Operations/Support تدخل فقط كreadback عندما تظهر نتيجة visit/escalation. WLT payout unknown-result لا يدمج في هذه queue لأنه يملك lifecycle ماليًا منفصلًا في U011.

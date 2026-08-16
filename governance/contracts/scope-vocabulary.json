@@ -101,7 +101,6 @@
         { "scope": "partners.read", "domain": "dsh" },
         { "scope": "pickup.manage", "domain": "dsh" },
         { "scope": "pickup.read", "domain": "dsh" },
-        { "scope": "platform.approve", "domain": "dsh" },
         { "scope": "platform.manage", "domain": "dsh" },
         { "scope": "platform.read", "domain": "dsh" },
         { "scope": "support.manage", "domain": "dsh" },

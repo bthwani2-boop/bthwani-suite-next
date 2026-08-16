@@ -23,7 +23,6 @@ var (
 	providersRuntimeLogger = slog.New(slog.NewJSONHandler(os.Stderr, nil))
 	readinessSuccesses     atomic.Uint64
 	readinessFailures      atomic.Uint64
-	lastReadinessFailed    atomic.Bool
 )
 
 type runtimeReadinessStore interface {
@@ -98,17 +97,6 @@ func RuntimeReadinessBoundary(next http.Handler, databases ...*sql.DB) http.Hand
 
 func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet && r.URL.Path == "/providers/health" {
-			w.Header().Set("Cache-Control", "no-store")
-			status := "HEALTHY"
-			if lastReadinessFailed.Load() {
-				status = "DEGRADED"
-			}
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"status":"` + status + `","service":"core-providers"}`))
-			return
-		}
 		if r.Method != http.MethodGet || r.URL.Path != "/providers/readiness" {
 			next.ServeHTTP(w, r)
 			return
@@ -177,7 +165,6 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 			return
 		}
 
-		lastReadinessFailed.Store(false)
 		successTotal := readinessSuccesses.Add(1)
 		providersRuntimeLogger.Info(
 			"providers readiness probe",
@@ -194,7 +181,6 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 }
 
 func writeReadinessFailure(w http.ResponseWriter, check string, startedAt time.Time, err error) {
-	lastReadinessFailed.Store(true)
 	failureTotal := readinessFailures.Add(1)
 	reason := "failed"
 	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {

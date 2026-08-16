@@ -24,6 +24,7 @@ function uniqueSorted(values) {
 export function classifyFiles(inputFiles, options = {}) {
   const files = uniqueSorted(inputFiles.map(normalizePath));
   const mode = String(options.mode ?? "affected").trim().toLowerCase();
+  const executionPhase = String(options.executionPhase ?? "pr").trim().toLowerCase() || "pr";
   const manualJourney = normalizeJourney(options.journey);
   const full = mode === "full";
   const has = (predicate) => files.some(predicate);
@@ -71,7 +72,7 @@ export function classifyFiles(inputFiles, options = {}) {
   const platform = full || starts("core/platform-control/backend/", "core/platform-control/database/");
   const providers = full || starts("core/providers/backend/", "core/providers/database/");
 
-  const backendApiSurface = full || starts(
+  const backendApiSurfaceChanged = starts(
     "services/dsh/backend/internal/http/",
     "services/wlt/backend/internal/http/",
     "core/identity/backend/internal/http/"
@@ -83,8 +84,10 @@ export function classifyFiles(inputFiles, options = {}) {
   );
 
   const frontend = full || mobileTooling || mobileRuntimeTransport || workspaceManifest || starts("apps/", "shared/") || includes("/frontend/", "/clients/generated/");
-  const contracts = full || backendApiSurface || starts("contracts/") || includes("/contracts/", "/clients/generated/") || has((file) => file.endsWith(".openapi.yaml"));
-  const database = full || includes("/database/", "/migrations/") || starts("infra/docker/");
+  const contractsChanged = backendApiSurfaceChanged || starts("contracts/") || includes("/contracts/", "/clients/generated/") || has((file) => file.endsWith(".openapi.yaml"));
+  const databaseChanged = includes("/database/", "/migrations/") || starts("infra/docker/");
+  const contracts = full || contractsChanged;
+  const database = full || databaseChanged;
 
   const authChanged = full || has((file) => file.startsWith("core/identity/") && /(^|\/)(auth|authentication|activation|otp|token|credential)(\/|[-_.])/i.test(file));
   const sessionChanged = full || has((file) => /(^|\/)(session|sessions|refresh-token|revocation|device-fingerprint)(\/|[-_.])/i.test(file));
@@ -130,6 +133,14 @@ export function classifyFiles(inputFiles, options = {}) {
   else if (mobileTooling) runtimeProfile = "mobile-config";
 
   const runtime = runtimeProfile !== "none";
+  const runtimeRequired = runtime && ["closure", "master"].includes(executionPhase);
+
+  const mobile = full || mobileTooling || mobileRuntimeTransport || nativeChanged || starts(
+    "apps/app-client/",
+    "apps/app-captain/",
+    "apps/app-field/",
+    "apps/app-partner/",
+  );
 
   const sharedBrain = full || starts("shared/", "services/dsh/frontend/shared/", "services/wlt/frontend/shared/") || equals("contracts/openapi/index.yaml");
 
@@ -214,8 +225,12 @@ export function classifyFiles(inputFiles, options = {}) {
     platform,
     providers,
     database,
+    database_changed: databaseChanged,
+    contracts_changed: contractsChanged,
     runtime,
+    runtime_required: runtimeRequired,
     runtime_profile: runtimeProfile,
+    mobile,
     shared_brain: sharedBrain,
     heavy,
     verification_tier: verificationTier,
@@ -272,7 +287,8 @@ function main() {
   const journey = String(process.env.CI_JOURNEY ?? "").trim();
   const providedFiles = String(process.env.CI_CHANGED_FILES ?? "").trim();
   const files = providedFiles ? providedFiles.split(/\r?\n/).map(normalizePath).filter(Boolean) : readChangedFiles(baseSha, headSha);
-  const classification = classifyFiles(files, { mode, journey });
+  const executionPhase = String(process.env.CI_EXECUTION_PHASE ?? "pr").trim() || "pr";
+  const classification = classifyFiles(files, { mode, journey, executionPhase });
   const outputs = { base_sha: baseSha, head_sha: headSha, mode, ...classification };
   writeGitHubOutputs(outputs);
   process.stdout.write(`${JSON.stringify({ files: uniqueSorted(files), ...outputs }, null, 2)}\n`);

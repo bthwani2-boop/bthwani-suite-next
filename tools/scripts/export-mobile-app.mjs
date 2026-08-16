@@ -37,7 +37,6 @@ function exportPlatform(platform) {
       platform,
       "--output-dir",
       outputDir,
-      "--clear",
     ],
     environment,
   );

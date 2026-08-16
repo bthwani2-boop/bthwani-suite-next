@@ -109,6 +109,25 @@ for (const id of canonicalGuardIds) {
   else if (entry.exit_level !== "fail") violations.push({ file: guardSetsRelative, line: 0, message: `GUARD_SET_MAY_NOT_USE_DIAGNOSTIC ${id}` });
 }
 
+const journeyProfiles = guardSets?.journeyProfiles ?? {};
+if (!Object.prototype.hasOwnProperty.call(journeyProfiles, "PROJECT-WIDE")) {
+  violations.push({ file: guardSetsRelative, line: 0, message: "JOURNEY_PROFILE_PROJECT_WIDE_MISSING" });
+}
+for (const [profile, ids] of Object.entries(journeyProfiles)) {
+  if (!/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/.test(profile)) {
+    violations.push({ file: guardSetsRelative, line: 0, message: `INVALID_JOURNEY_PROFILE ${profile}` });
+  }
+  if (!Array.isArray(ids) || ids.length === 0 || new Set(ids).size !== ids.length) {
+    violations.push({ file: guardSetsRelative, line: 0, message: `JOURNEY_PROFILE_MUST_BE_NON_EMPTY_UNIQUE ${profile}` });
+    continue;
+  }
+  for (const id of ids) {
+    const entry = entryById.get(id);
+    if (!entry) violations.push({ file: guardSetsRelative, line: 0, message: `JOURNEY_PROFILE_REFERENCES_UNKNOWN_GUARD ${profile}:${id}` });
+    else if (entry.exit_level !== "fail") violations.push({ file: guardSetsRelative, line: 0, message: `JOURNEY_PROFILE_MAY_NOT_USE_DIAGNOSTIC ${profile}:${id}` });
+  }
+}
+
 const direct = entryById.get("direct-work-branch-execution");
 if (direct?.source_file !== "tools/guards/direct-work-branch-execution-gate.mjs") violations.push({ file: registryRelative, line: 0, message: "DIRECT_WORK_SOURCE_DRIFT" });
 for (const required of ["tools/guards/direct-work-branch-execution-gate.mjs", "tools/guards/direct-work-branch-execution-gate.test.mjs", "governance/authority/direct-work-branch-execution-policy.json", "governance/authority/direct-work-branch-execution-policy.schema.json"]) {

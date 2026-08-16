@@ -3,7 +3,7 @@
   "title": "BThwani Guard Sets",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "policy", "guardSets"],
+  "required": ["schemaVersion", "policy", "guardSets", "journeyProfiles"],
   "properties": {
     "schemaVersion": { "const": 1 },
     "policy": {
@@ -34,6 +34,13 @@
         "foundation": { "$ref": "#/definitions/guardIds" },
         "journey": { "$ref": "#/definitions/guardIds" },
         "governance": { "$ref": "#/definitions/guardIds" }
+      }
+    },
+    "journeyProfiles": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/definitions/guardIds"
       }
     }
   },

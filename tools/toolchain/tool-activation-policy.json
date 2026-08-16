@@ -30,7 +30,6 @@
     "sherif": "optional",
     "redocly": "active",
     "openapi-typescript": "optional",
-    "gemini-implementer": "optional",
     "graphify": "optional",
     "open-code-review": "optional",
     "playwright": "optional",

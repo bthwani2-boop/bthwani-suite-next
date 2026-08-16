@@ -125,12 +125,6 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/operator/platform/capacity", s.withPermission("control-panel", DshDispatchCapacityPermissionRead, s.handleGetCapacityConfig))
 	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", s.withPermission("control-panel", DshServiceZonesPermissionRead, s.handleGetZoneServiceability))
 
-	// Platform change sets are registered by RegisterRoutes against the
-	// changeset service in platform_changesets_routes.go. They were also
-	// registered here against a second, separate implementation, which made
-	// ServeMux panic on the duplicate pattern and split approval authority
-	// across two owners.
-
 	// Operator taxonomy, products, attributes, relationships, proposals,
 	// policies, assortments, audit and rollback.
 	mux.HandleFunc("GET /dsh/operator/catalog/domains", s.handleListCatalogDomains)

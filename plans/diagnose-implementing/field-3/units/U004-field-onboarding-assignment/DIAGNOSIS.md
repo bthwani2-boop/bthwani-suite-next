@@ -1,5 +1,0 @@
-# U004 — Field onboarding assignment
-
-The repository already has a meaningful Field assignment workspace, so this unit must not invent a second task engine. The approved model is one active assignment per business task, eligible active Field providers, priority/dueAt/SLA/overdue, and formal handoff when ownership changes after work has begun. Assignment is not a prerequisite for all onboarding: self-initiated acquisition remains valid and is handled by U005. The two paths converge only after a canonical draft exists.
-
-Location may be absent when an operator first assigns a lead, but governed location evidence is required before the real visit/onboarding completion stage. Assignment itself never creates a public store, never grants broad store scope and never substitutes raw Workforce scope for business work. Work Queue is the durable mobile source of assigned truth; Push is only a notification channel. Every transition and link to a draft must be idempotent, object-authorized and audited.

@@ -227,31 +227,10 @@ services/dsh/contracts/paths/checkout.paths.yaml:
     - '#/~1dsh~1operator~1checkout-intents~1{intentId}~1reconcile/post/summary'
 services/dsh/contracts/dsh.platform-policies.openapi.yaml:
   operation-summary:
-    - '#/paths/~1dsh~1operator~1platform~1change-sets/post/summary'
-    - '#/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}/get/summary'
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1submit/post/summary
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1approve/post/summary
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1apply/post/summary
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1reject/post/summary
     - '#/paths/~1dsh~1operator~1platform~1providers/get/summary'
     - >-
       #/paths/~1dsh~1operator~1platform~1providers~1{providerId}~1status/post/summary
   operation-4xx-response:
-    - '#/paths/~1dsh~1operator~1platform~1change-sets/post/responses'
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}/get/responses
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1submit/post/responses
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1approve/post/responses
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1apply/post/responses
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1reject/post/responses
     - '#/paths/~1dsh~1operator~1platform~1providers/get/responses'
     - >-
       #/paths/~1dsh~1operator~1platform~1providers~1{providerId}~1status/post/responses
@@ -421,31 +400,10 @@ services/dsh/contracts/generated/dsh.bundle.openapi.yaml:
     - '#/paths/~1dsh~1operator~1support~1tickets~1{ticketId}/patch/summary'
     - >-
       #/paths/~1dsh~1operator~1checkout-intents~1{intentId}~1reconcile/post/summary
-    - '#/paths/~1dsh~1operator~1platform~1change-sets/post/summary'
-    - '#/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}/get/summary'
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1submit/post/summary
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1approve/post/summary
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1apply/post/summary
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1reject/post/summary
     - '#/paths/~1dsh~1operator~1platform~1providers/get/summary'
     - >-
       #/paths/~1dsh~1operator~1platform~1providers~1{providerId}~1status/post/summary
   operation-4xx-response:
-    - '#/paths/~1dsh~1operator~1platform~1change-sets/post/responses'
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}/get/responses
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1submit/post/responses
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1approve/post/responses
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1apply/post/responses
-    - >-
-      #/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1reject/post/responses
     - '#/paths/~1dsh~1operator~1platform~1providers/get/responses'
     - >-
       #/paths/~1dsh~1operator~1platform~1providers~1{providerId}~1status/post/responses

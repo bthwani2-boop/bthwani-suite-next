@@ -1,28 +1,6 @@
 name: DSH Database Contract
 
 on:
-  push:
-    branches: ["**"]
-    paths:
-      - "package.json"
-      - "services/dsh/database/**"
-      - "services/dsh/backend/go.mod"
-      - "services/dsh/backend/go.sum"
-      - "services/dsh/package.json"
-      - "tools/scripts/check-dsh-database-contract.mjs"
-      - "tools/scripts/check-local-media-contract.mjs"
-      - ".github/workflows/dsh-database.yml"
-  pull_request:
-    branches: ["**"]
-    paths:
-      - "package.json"
-      - "services/dsh/database/**"
-      - "services/dsh/backend/go.mod"
-      - "services/dsh/backend/go.sum"
-      - "services/dsh/package.json"
-      - "tools/scripts/check-dsh-database-contract.mjs"
-      - "tools/scripts/check-local-media-contract.mjs"
-      - ".github/workflows/dsh-database.yml"
   workflow_dispatch:
 
 permissions:

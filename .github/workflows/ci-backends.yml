@@ -3,6 +3,24 @@ name: BThwani Backend Verification
 on:
   workflow_call:
     inputs:
+      base_sha:
+        type: string
+        required: true
+      head_sha:
+        type: string
+        required: true
+      full_verification:
+        type: string
+        required: true
+      verification_tier:
+        type: string
+        required: true
+      execution_phase:
+        type: string
+        required: true
+      database_changed:
+        type: string
+        required: true
       dsh:
         type: string
         required: true
@@ -78,9 +96,92 @@ jobs:
           echo "matrix={\"include\":${entries}}" >> "${GITHUB_OUTPUT}"
 
   verify:
-    name: Verify ${{ matrix.key }} backend and database
+    name: Verify ${{ matrix.key }} backend
     needs: [plan]
     if: ${{ needs.plan.outputs.count != '0' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CI_BASE_SHA: ${{ inputs.base_sha }}
+      CI_HEAD_SHA: ${{ inputs.head_sha }}
+      CI_FULL_VERIFICATION: ${{ inputs.full_verification }}
+      CI_VERIFICATION_TIER: ${{ inputs.verification_tier }}
+      CI_EXECUTION_PHASE: ${{ inputs.execution_phase }}
+      # Each matrix entry is a standalone Go module. A developer-local/partial
+      # go.work must never change which module CI verifies or mask module-local
+      # dependency/build failures.
+      GOWORK: off
+    steps:
+      - name: Checkout immutable source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+          show-progress: false
+      - name: Set up locked Go runtime
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: ${{ matrix.go_mod }}
+          cache-dependency-path: ${{ matrix.workdir }}/go.sum
+      - name: Test and build backend
+        working-directory: ${{ matrix.workdir }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          log="${RUNNER_TEMP}/${{ matrix.key }}-go-verification.log"
+          changed_files="$(git diff --name-only "${CI_BASE_SHA}" "${CI_HEAD_SHA}" -- "${{ matrix.workdir }}")"
+          full_backend=false
+          if [[ ("${CI_FULL_VERIFICATION}" == "true" && ("${CI_EXECUTION_PHASE}" == "closure" || "${CI_EXECUTION_PHASE}" == "master")) || "${CI_EXECUTION_PHASE}" == "closure" || "${CI_EXECUTION_PHASE}" == "master" ]]; then
+            full_backend=true
+          elif grep -Eq '(^|/)(go\.mod|go\.sum)$|/migrations/' <<<"${changed_files}"; then
+            full_backend=true
+          fi
+
+          package_args=()
+          if [[ "${full_backend}" != "true" ]]; then
+            while IFS= read -r changed_file; do
+              [[ -z "${changed_file}" ]] && continue
+              relative="${changed_file#${{ matrix.workdir }}/}"
+              package_dir="./$(dirname "${relative}")"
+              package_import="$(go list -f '{{.ImportPath}}' "${package_dir}" 2>/dev/null || true)"
+              if [[ -n "${package_import}" && ! " ${package_args[*]} " == *" ${package_import} "* ]]; then
+                package_args+=("${package_import}")
+              fi
+            done <<<"${changed_files}"
+          fi
+
+          if [[ "${full_backend}" == "true" || "${#package_args[@]}" -eq 0 ]]; then
+            package_args=(./...)
+          fi
+          printf 'backend verification mode=%s packages=%s\n' "$([[ "${full_backend}" == "true" ]] && echo full || echo affected)" "${package_args[*]}" | tee "${log}"
+
+          if ! go test "${package_args[@]}" -count=1 >>"${log}" 2>&1; then
+            echo "::error title=${{ matrix.key }} Go verification failed::The complete log is stored as an artifact."
+            grep -E '^--- FAIL:|^FAIL([[:space:]]|$)|panic:|undefined:|cannot use|build failed|Error Trace:' "${log}" | tail -n 80 || true
+            tail -n 160 "${log}"
+            exit 1
+          fi
+          if ! go build "${package_args[@]}" >>"${log}" 2>&1; then
+            tail -n 160 "${log}"
+            exit 1
+          fi
+      - name: Upload verification logs
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ matrix.key }}-backend-verification-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/${{ matrix.key }}-migration.log
+            ${{ runner.temp }}/${{ matrix.key }}-go-verification.log
+          if-no-files-found: warn
+          retention-days: 7
+
+  database:
+    name: Verify ${{ matrix.key }} database safety
+    needs: [plan]
+    if: ${{ needs.plan.outputs.count != '0' && (inputs.database_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master') }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
@@ -103,9 +204,6 @@ jobs:
       DSH_REQUIRE_DB_TESTS: ${{ matrix.key == 'dsh' && 'true' || 'false' }}
       WLT_REQUIRE_DB_TESTS: ${{ matrix.key == 'wlt' && 'true' || 'false' }}
       BTHWANI_OPERATOR_CONTEXT_ID: ${{ matrix.key == 'wlt' && 'ci-wlt' || '' }}
-      # Each matrix entry is a standalone Go module. A developer-local/partial
-      # go.work must never change which module CI verifies or mask module-local
-      # dependency/build failures.
       GOWORK: off
     steps:
       - name: Checkout immutable source
@@ -138,29 +236,11 @@ jobs:
             Write-Error "$env:BACKEND_KEY migration safety verification failed; complete output is retained as an artifact."
             exit $exitCode
           }
-      - name: Test and build backend
-        working-directory: ${{ matrix.workdir }}
-        shell: bash
-        run: |
-          set -uo pipefail
-          log="${RUNNER_TEMP}/${{ matrix.key }}-go-verification.log"
-          if ! go test ./... -count=1 >"${log}" 2>&1; then
-            echo "::error title=${{ matrix.key }} Go verification failed::The complete log is stored as an artifact."
-            grep -E '^--- FAIL:|^FAIL([[:space:]]|$)|panic:|undefined:|cannot use|build failed|Error Trace:' "${log}" | tail -n 80 || true
-            tail -n 160 "${log}"
-            exit 1
-          fi
-          if ! go build ./... >>"${log}" 2>&1; then
-            tail -n 160 "${log}"
-            exit 1
-          fi
-      - name: Upload verification logs
+      - name: Upload database verification log
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ${{ matrix.key }}-backend-verification-${{ github.run_id }}
-          path: |
-            ${{ runner.temp }}/${{ matrix.key }}-migration.log
-            ${{ runner.temp }}/${{ matrix.key }}-go-verification.log
+          name: ${{ matrix.key }}-database-verification-${{ github.run_id }}
+          path: ${{ runner.temp }}/${{ matrix.key }}-migration.log
           if-no-files-found: warn
           retention-days: 7

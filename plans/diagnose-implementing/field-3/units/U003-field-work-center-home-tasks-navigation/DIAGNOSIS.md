@@ -1,5 +1,0 @@
-# U003 — field-work-center-home-tasks-navigation
-
-المطلوب ليس شاشة إضافية بل مساحة عمل واحدة authoritative للميداني. Home وHistory الحالية تعتمد جزئيًا نفس drafts؛ وجود تبويب سجل منفصل لا يبرر حقيقة ثانية. Tasks من ناحية أخرى capability مستقلة لأنها تمثل assigned onboarding leads والزيارات/التصعيدات حسب النوع. يجب جرد كل tabs/cards/routes/deep-links الحالية في app-field وتحديد ما يعرض نفس dataset، ثم دمج العرض المكرر في Home إذا ثبت ذلك مع الإبقاء على canonical detail واحدة لكل Partner Draft/Store. حذف History من UX هو تغيير JS/TS وليس Native cleanup، ويُنفذ فقط بعد إثبات عدم وجود journey مستقلة له.
-
-يجب كذلك منع stale/revoked/completed/invalid targets من أن تصبح actionable بعد refresh/restart أو deep-link. Control Panel Operations يدخل فقط بقدر readback للعمل الميداني، وPartners يدخل لاحقًا في assignment. لا نخلط onboarding assignment مع verification visit أو escalation. كل قائمة يجب أن تكون actor-scoped من backend لا filter واجهة فقط. أي card من Home/Tasks/Search يجب أن يصل إلى نفس canonical detail contract لا شاشات متنافسة.

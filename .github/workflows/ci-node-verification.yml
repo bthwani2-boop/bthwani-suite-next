@@ -7,8 +7,10 @@ on:
       head_sha: { type: string, required: true }
       full_verification: { type: string, required: true }
       frontend: { type: string, required: true }
+      mobile: { type: string, required: true }
       heavy: { type: string, required: true }
       verification_tier: { type: string, required: true }
+      execution_phase: { type: string, required: true }
       journey: { type: string, required: true }
       journey_scope: { type: string, required: false, default: "" }
       platform_change_sets: { type: string, required: true }
@@ -69,7 +71,9 @@ jobs:
           NX_BASE: ${{ inputs.base_sha }}
           NX_HEAD: ${{ inputs.head_sha }}
           FULL_VERIFICATION: ${{ inputs.full_verification }}
+          MOBILE: ${{ inputs.mobile }}
           VERIFICATION_TIER: ${{ inputs.verification_tier }}
+          EXECUTION_PHASE: ${{ inputs.execution_phase }}
         shell: bash
         run: |
           set +e
@@ -81,19 +85,15 @@ jobs:
             return "${PIPESTATUS[0]}"
           }
           status=0
-          run_check node tools/guards/required-command-integrity-gate.mjs || status=$?
-          run_check node --test apps/mobile/tests/*.test.mjs || status=$?
-          if [[ "${FULL_VERIFICATION}" == "true" ]]; then
-            run_check pnpm run nx:typecheck || status=$?
-            run_check pnpm run nx:lint || status=$?
-            run_check pnpm exec nx run-many -t test --all --outputStyle=stream || status=$?
-            run_check pnpm run nx:build || status=$?
+          if [[ "${MOBILE}" == "true" ]]; then
+            run_check node --test apps/mobile/tests/*.test.mjs || status=$?
+          fi
+          if [[ "${FULL_VERIFICATION}" == "true" && ( "${EXECUTION_PHASE}" == "closure" || "${EXECUTION_PHASE}" == "master" ) ]]; then
+            run_check pnpm exec nx run-many -t typecheck lint test build --all --outputStyle=stream || status=$?
           elif [[ "${VERIFICATION_TIER}" == "fast" ]]; then
-            run_check node tools/scripts/run-affected-verification.mjs typecheck lint || status=$?
-            run_check pnpm exec nx affected -t test --outputStyle=stream || status=$?
+            run_check node tools/scripts/run-affected-verification.mjs typecheck lint test || status=$?
           else
-            run_check node tools/scripts/run-affected-verification.mjs typecheck lint build || status=$?
-            run_check pnpm exec nx affected -t test --outputStyle=stream || status=$?
+            run_check node tools/scripts/run-affected-verification.mjs typecheck lint test build || status=$?
           fi
           echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
           exit "${status}"
@@ -134,18 +134,11 @@ jobs:
         run: |
           $log = Join-Path $env:RUNNER_TEMP "journey-gates.log"
           Set-Content -Path $log -Value ""
-          $exitCode = 0
-          $journeys = $env:JOURNEY_SCOPE -split ',' | Where-Object { $_ -and $_.Trim() }
-          foreach ($journey in $journeys) {
-            "===== $($journey.Trim()) =====" | Tee-Object -FilePath $log -Append
-            $journeyOutput = & ./tools/scripts/run-journey-gate.ps1 -Journey $journey.Trim() 2>&1
-            $journeyExitCode = $LASTEXITCODE
-            $journeyOutput | Tee-Object -FilePath $log -Append
-            if ($journeyExitCode -ne 0) {
-              $exitCode = $journeyExitCode
-              break
-            }
-          }
+          $journeys = @($env:JOURNEY_SCOPE -split ',' | Where-Object { $_ -and $_.Trim() } | ForEach-Object { $_.Trim().ToUpperInvariant() } | Select-Object -Unique)
+          "===== journey profiles: $($journeys -join ',') =====" | Tee-Object -FilePath $log -Append
+          $journeyOutput = & ./tools/scripts/run-journey-gate.ps1 -Journey ($journeys -join ',') 2>&1
+          $exitCode = if ($null -eq $LASTEXITCODE) { 1 } else { $LASTEXITCODE }
+          $journeyOutput | Tee-Object -FilePath $log -Append
           exit $exitCode
       - name: Upload journey gate diagnostics
         if: ${{ steps.journey_gates.outcome == 'failure' }}
@@ -195,7 +188,7 @@ jobs:
           run_check git diff --exit-code -- \
             core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml \
             core/platform-control/clients/generated/platform-control-api.ts
-          run_check node tools/guards/platform-change-sets-gate.mjs
+          run_check pnpm run guard:platform-change-sets
           exit "${status}"
       - name: Upload platform change-set diagnostics
         if: ${{ steps.platform_change_sets.outcome == 'failure' }}

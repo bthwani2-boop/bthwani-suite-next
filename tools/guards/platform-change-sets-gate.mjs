@@ -13,6 +13,11 @@ const visualizationProofFile = "services/dsh/tests/platform-governance-visualiza
 const strictBoundaryProofFile = "core/platform-control/backend/internal/platformcontrol/change_set_strict_boundary_test.go";
 const databaseProofFile = "core/platform-control/backend/internal/platformcontrol/change_set_database_sensitive_guard_test.go";
 const httpProofFile = "core/platform-control/backend/internal/http/change_set_workflow_handlers_test.go";
+const legacyDshRemovalMigrationFile = "services/dsh/database/migrations/dsh-1013_remove_legacy_platform_change_sets.sql";
+const legacyDshAuthorityFiles = [
+  "services/dsh/backend/internal/platform/changeset/changeset.go",
+  "services/dsh/backend/internal/http/platform_changesets_routes.go",
+];
 const callerWorkflowFile = ".github/workflows/ci.yml";
 const verificationWorkflowFile = ".github/workflows/ci-node-verification.yml";
 const requiredFiles = [
@@ -38,11 +43,15 @@ const requiredFiles = [
   visualizationProofFile,
   callerWorkflowFile,
   verificationWorkflowFile,
+  legacyDshRemovalMigrationFile,
 ];
 
 const failures = [];
 for (const file of requiredFiles) {
   if (!fs.existsSync(file)) failures.push(`missing:${file}`);
+}
+for (const file of legacyDshAuthorityFiles) {
+  if (fs.existsSync(file)) failures.push(`legacy-dsh-authority-present:${file}`);
 }
 
 function requireText(file, tokens) {
@@ -90,6 +99,23 @@ if (failures.length === 0) {
     "sensitive",
     "confidential",
     "existing sensitive platform variable cannot enter a change set",
+  ]);
+  requireText(legacyDshRemovalMigrationFile, [
+    "DROP TABLE IF EXISTS dsh_platform_change_sets",
+    "Platform Control is the sole canonical owner",
+  ]);
+  forbidText("services/dsh/backend/internal/http/server.go", [
+    "/dsh/operator/platform/change-sets",
+    "handleCreateChangeSet",
+    "handleApplyChangeSet",
+  ]);
+  forbidText("services/dsh/contracts/dsh.openapi.yaml", [
+    "/dsh/operator/platform/change-sets",
+    "DshChangeSet",
+  ]);
+  forbidText("services/dsh/contracts/dsh.platform-policies.openapi.yaml", [
+    "/dsh/operator/platform/change-sets",
+    "DshChangeSet",
   ]);
   requireText("core/platform-control/backend/internal/platformcontrol/change_set_workflow.go", [
     "ensureNoActiveTargetConflict",

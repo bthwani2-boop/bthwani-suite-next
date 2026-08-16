@@ -66,7 +66,7 @@ $results += [pscustomobject]@{
 # ── 3. Verify frontend typechecking ───────────────────────────────────────────
 $results += [pscustomobject]@{
   step = "frontend-typecheck"
-  ok = Run-Step "frontend-typecheck" { pnpm run typecheck }
+  ok = Run-Step "frontend-typecheck" { pnpm run workspace:typecheck }
 }
 
 # ── 4. Run foundation guards gate ──────────────────────────────────────────────
