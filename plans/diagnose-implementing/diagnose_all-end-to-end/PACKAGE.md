@@ -1,329 +1,134 @@
-# PACKAGE — FAIL-CLOSED SYSTEM EXECUTION / RADICAL ROOT REMEDIATION
-
-Status: `PREPARED_NOT_CLOSED`
-Repository: `bthwani2-boop/bthwani-suite-next`
-Prepared for branch: `b`
-Current invocation mode: `PREPARE`
-Future execution mode required for live remediation: `EXECUTE_END_TO_END`
-
-## 0. Canonical execution command
-
-Use the following as the governing task body for the implementation run:
-
-> **BRANCH: `b` | TARGET: `the entire BTHWANI system/repository: every actor, capability, journey, state, surface, app, core, service, contract, API, binding, database, migration, event, job, provider, integration, permission, runtime, config, test, workflow, governance rule and cleanup dependency` | MODE: `EXECUTE_END_TO_END`. Use exclusively `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md` as the operational entry point and consume `plans/diagnose-implementing/diagnose_all-end-to-end` as evidence/plan, never as runtime truth. Execute V5 FAIL-CLOSED by `TOP-DOWN DIAGNOSIS; FIX HIGHEST PROVEN ROOT FIRST`: pin latest `b`, reconcile all foreign delta, establish the highest product/operational meaning and canonical authority before descending, build complete actor/outcome/authority/journey/state/invariant/handoff/writer-reader-consumer traceability, classify every technical finding as Evidence/HOLD until its operational parent and highest proven Root Cause are known, then immediately remediate the highest proven executable root End-to-End across `Product Truth/Logic/Journeys/States -> Frontend/UI -> Client/Bindings -> Contracts/APIs/Events -> Backend/Domain -> Data/DB/Migrations -> Providers/Jobs/Reconciliation -> Auth/Permissions/Audit -> Runtime/Config/Deploy -> every writer/reader/consumer/surface`. Migrate all consumers and historical data required by the supported compatibility window, establish one canonical source of truth, delete every obsolete/wrong/duplicate/dead/reachable-legacy path and every unjustified workaround/fallback/compatibility route only after cutover/zero-reference proof, and never create a parallel authority to make tests pass. For every distributed mutation prove idempotency, retry, duplicate, timeout/unknown-result, restart, concurrency, ordering, degraded-provider and reconciliation behavior. For every trust boundary prove authentication, authorization, actor/tenant/scope isolation, IDOR resistance, service identity, privileged mutation authority, privacy and audit. For every active UI prove canonical binding plus loading/empty/error/retry/offline/disabled/success and negative permission/state behavior. Use current Product Truth under `governance/product/contracts/**`; the attached canonical blueprint is a human system model/coverage input and MUST NOT override machine truth or become a competing runtime/data/financial/contract authority. Run only diagnostics/tests needed to prove the active root until remediation is complete, then expand to its entire blast radius and required global gates. Use all applicable Codex capabilities: Graphify/dependency tools for impact graph, generated-contract guards, DB/runtime/security/observability tooling; when available run Codex Security Deep Scan for repository-wide security closure followed by validation and attack-path analysis, and CodeRabbit review on the resulting diff. Re-pin and re-diagnose after the last code/data/config write. Do not claim DONE/CLOSED/READY/100% while any material Root Cause, Decision, Dependency, Consumer, Binding, Integration, Migration, Security finding, Runtime proof, Legacy path, Cleanup item or same-candidate evidence remains open. No patch, workaround, silent fallback, fake success, UI-only authorization, duplicated policy or parallel source of truth is permitted. Continue root by root until the closure law below is fully proved.**
-
-### Explicit branch-policy note
-
-The user explicitly instructed execution directly on `b` and prohibited creating another branch/worktree. This conflicts with the V5 orchestrator isolation rule for remote/API writes. Record this as `USER_ISOLATION_OVERRIDE / ORCHESTRATOR_CONFLICT`; do not falsely label direct-`b` execution isolation-compliant. The semantic/root/closure gates remain mandatory.
-
-## 1. Non-negotiable laws
-
-### L1 — Meaning before mechanism
-
-Do not let a code smell define the target architecture. Determine product outcome, actor, authority and legal state transition first.
-
-### L2 — Highest proven root first
-
-A leaf defect cannot consume execution priority while a higher proven root explains it and is executable.
-
-### L3 — One authority per authoritative fact/mutation
-
-Multiple projections are allowed only if they are non-authoritative, source-linked, rebuildable/reconcilable where required and cannot mutate canonical state.
-
-### L4 — No hidden compatibility
-
-Compatibility exists only as an explicit migration mechanism with owner, scope, tests, expiry/removal condition and observability. Silent fallback is forbidden.
-
-### L5 — No data-loss refactor
-
-Schema/API/state changes require supported migration/backfill/cutover/rollback evidence. “Clean architecture” does not justify dropping live meaning/history.
-
-### L6 — No security-by-UI
-
-Every privileged capability is enforced at authoritative backend/service boundaries. UI gating is supplementary.
-
-### L7 — Failure is a state, not an exception to architecture
-
-Timeout, retry, duplicate, restart, partial success and provider degradation must preserve explicit safe state and deterministic recovery.
-
-### L8 — Same-candidate evidence
-
-Final proof must correspond to the final candidate SHA after the last relevant write. Older PASS output is historical evidence, not final proof.
-
-### L9 — Cleanup is part of correctness
-
-Old reachable paths, duplicate truths, stale clients, dead migrations, obsolete docs that still claim authority and unused dependencies remain open closure items.
-
-### L10 — Plans are not implementation
-
-This directory is an execution package. It cannot satisfy a live-code/runtime closure gate by itself.
-
-## 2. Required Phase 0 — Truth pin and reconciliation
-
-Record:
-
-- exact branch/ref and current SHA;
-- current commit intent and recent delta relevant to open roots;
-- package baseline vs current candidate;
-- concurrent/foreign delta classification: `DISJOINT | RELATED | OVERLAP | CONFLICT | AUTHORITY_CHANGE`;
-- Product Truth and orchestrator versions relevant to target;
-- no stale path assumption from the attached blueprint.
-
-If branch movement changes authority, re-run root ordering before executing.
-
-## 3. Required Phase 1 — Operational root inventory
-
-Inventory without omission:
-
-- actors/principals/service identities;
-- product outcomes/capabilities;
-- canonical authorities and responsibilities;
-- policies vs hard invariants vs runtime config vs operator-configurable values;
-- journeys and entry points;
-- states/transitions/commands/events/handoffs;
-- success/failure/recovery/terminal outcomes;
-- cross-surface expectations;
-- data classification/privacy/audit requirements.
-
-Every item receives stable ID and owner or an explicit `AUTHORITY_CONFLICT` finding.
-
-## 4. Required Phase 2 — Total live traceability
-
-For each material capability/journey build:
-
-`Decision -> Capability -> Journey -> Invariant -> Product-Truth contract -> canonical owner -> route/command/event -> handler/domain -> writer/table/model -> outbox/job/provider -> generated client -> binding/controller/view-model -> surface/screen/action -> test/runtime evidence`.
-
-Required side inventories:
-
-- all authoritative writers;
-- readers/projections/caches;
-- API/event operations;
-- generated/manual clients;
-- UI direct transports and local business logic;
-- migrations/seeds;
-- provider callbacks/jobs;
-- auth/RBAC checks;
-- runtime/config endpoints;
-- tests/guards/workflows;
-- legacy/dead/duplicate candidates.
-
-Anything missing from traceability is a finding, not an implicit N/A.
-
-## 5. Required Phase 3 — Root clustering and frontier
-
-Every finding records:
-
-- `finding_id`
-- `classification`
-- `operational_parent`
-- `highest_proven_root`
-- `evidence`
-- `blast_radius`
-- `canonical_owner`
-- `writers/readers/consumers`
-- `dependencies`
-- `risk`
-- `required_action`
-- `verification`
-- `status`
-
-Build a graph and select frontier by:
-
-1. highest semantic/authority root;
-2. widest proven systemic leverage;
-3. prerequisite relation;
-4. safety/data/security severity;
-5. consumer blast radius.
-
-Do not sort primarily by file count or easiest test.
-
-## 6. Required Phase 4 — Radical root remediation pattern
-
-For each selected root:
-
-1. freeze canonical meaning and owner;
-2. define target state/contract/schema/event model;
-3. identify every writer/read consumer and migration path;
-4. implement canonical owner and enforce invariants;
-5. migrate backend handlers/workers/providers;
-6. migrate DB/schema/data with forward-safe migration;
-7. regenerate/update contracts and clients;
-8. migrate shared bindings/controllers/view-models;
-9. migrate every surface/action/state;
-10. migrate integrations/jobs/events/callbacks;
-11. align auth/RBAC/audit/observability;
-12. verify failure/idempotency/concurrency paths;
-13. cut over callers/readers;
-14. prove zero use of old authority;
-15. delete obsolete paths/config/schema/docs/deps;
-16. re-run target + blast-radius verification;
-17. re-diagnose root and only then mark it closed.
-
-No two authoritative paths may be left “temporarily” active without an explicit bounded migration gate.
-
-## 7. Mandatory subsystem fronts
-
-These are starting fronts, not independent silos.
-
-### A. Product Truth / governance
-
-- reconcile blueprint semantics with `governance/product/contracts/**`;
-- add missing machine-enforceable contracts/invariants rather than encoding mutable truth in prose;
-- ensure Decision Registry and invariant IDs can trace into implementation/tests;
-- eliminate canonical-doc contradictions.
-
-### B. Identity / Workforce / Platform Control / Providers
-
-- actor lifecycle, roles, scopes, activation/session;
-- workforce profile/readiness/accreditation/suspension;
-- versioned platform/operator configuration;
-- provider registry, credentials, callbacks and degradation;
-- explicit service-to-service identity.
-
-### C. DSH business system
-
-- partner vs store boundary;
-- catalog/discovery/serviceability;
-- cart/quote/checkout/order/fulfillment;
-- dispatch/fleet/captain/field/support handoffs;
-- all customer/partner/captain/field/control-panel surfaces;
-- UI remains consumer of canonical shared/domain bindings, not authority.
-
-### D. Financial system
-
-Retain and close all prior finance roots:
-
-- canonical checkout choices/allocation vs provider funding rails;
-- wallet/ledger lifecycle owner;
-- WLT/PYMT/FIN/ORDER/WALLET/LEDGER/STL responsibilities;
-- settlement/refund/reversal/COD exposure/custody/payout/debt;
-- provider callbacks/reconciliation;
-- remove direct/cyclic/legacy financial authority.
-
-### E. Data/integration/runtime/security
-
-- canonical writer ownership and schema lineage;
-- event/outbox/job durability;
-- restart/idempotency/concurrency;
-- runtime config/ports/startup/readiness;
-- audit/observability;
-- security/trust boundaries;
-- CI/release/rollback.
-
-## 8. Verification contract per root
-
-Run the smallest sufficient proof while fixing, then full blast-radius proof before closure.
-
-### Static/contract
-
-- changed-language compile/typecheck/lint;
-- contract schema/lint/registry/provenance;
-- generated-client drift/binding guards;
-- boundary/ownership guards;
-- `git diff --check` equivalent in local execution.
-
-### Data
-
-- migration syntax/order/manifest;
-- fresh DB;
-- supported upgrade DB;
-- invariant/constraint tests;
-- backfill/cutover correctness;
-- old writer/read zero-residue.
-
-### Integration/distributed
-
-- success;
-- invalid state/permission;
-- duplicate request/callback;
-- timeout after commit/unknown result;
-- dependency unavailable/degraded;
-- restart/replay;
-- out-of-order events where relevant;
-- concurrency race;
-- reconciliation without double effect.
-
-### UI/UX
-
-Every active state/action proves:
-
-- correct actor/scope/permission;
-- canonical binding;
-- loading;
-- empty;
-- error;
-- retry/offline/stale where applicable;
-- disabled/forbidden;
-- success/readback;
-- RTL/layout/accessibility/visual integrity where UI changes;
-- no local authoritative calculation/transition.
-
-### Security
-
-- targeted auth/RBAC/IDOR/tenant/scope negatives;
-- sensitive-data/log/secret review;
-- service-to-service trust proof;
-- Codex Security Deep Scan + validation + attack-path analysis when available for repository-wide security closure;
-- unresolved scanner candidate remains open until validated/triaged.
-
-### Review
-
-Use CodeRabbit on the implementation diff when available. Every critical/major issue is fixed or explicitly disproved with evidence before closure.
-
-### Runtime
-
-- required service profiles start;
-- migrations/bootstrap succeed;
-- health/readiness semantics are meaningful;
-- critical E2E journeys and negative/failure paths execute against the candidate;
-- logs/audit/readback prove canonical outcomes;
-- no fallback masks a missing dependency.
-
-## 9. Cleanup contract
-
-After canonical cutover, search semantically and textually for:
-
-- old type/state/enum names;
-- old routes/clients/adapters;
-- old tables/columns/migrations seeds;
-- direct URLs/transports;
-- duplicate calculations/policies;
-- debug/test auth shortcuts;
-- legacy ports/config keys;
-- fallback/workaround markers;
-- stale imports/exports/dependencies;
-- abandoned plan/docs that still claim current authority.
-
-Each deletion must have zero-reference/reachability and replacement proof. Each retained compatibility item must have explicit owner/removal gate.
-
-## 10. Closure law
-
-A root may become `CLOSED` only when all are true:
-
-- highest parent/root meaning is resolved;
-- one canonical authority/write path is proven;
-- all dependencies and consumers are migrated;
-- Product Truth/contracts/code/schema/events/clients/UI agree;
-- data migration/cutover is safe;
-- required security/privacy/audit controls pass;
-- distributed failure/idempotency/reconciliation semantics pass;
-- relevant runtime/E2E proof passes;
-- old reachable/duplicate/fallback paths are removed;
-- cleanup is complete;
-- no `DECISION_REQUIRED` blocks the root;
-- no material finding under the root is OPEN/HOLD without explicit external blocker;
-- final evidence is from the final candidate SHA;
-- adversarial re-diagnosis finds no material contradiction/gap.
-
-The entire TARGET may become `CLOSED` only when **every active root** satisfies this law and the repository-wide coverage matrix has no unclassified material item.
-
-## 11. Allowed final statuses
-
-- `PREPARED_NOT_CLOSED`
-- `EXECUTING_ROOT_<id>`
-- `BLOCKED_DECISION_REQUIRED`
-- `BLOCKED_EXTERNAL_WITH_EXACT_UNBLOCK`
-- `ROOT_<id>_CLOSED`
-- `TARGET_CLOSED_SAME_CANDIDATE_EVIDENCE`
-
-Never use `100%`, `1000%`, `10000%`, `FINAL`, `READY` or `CLOSED` as rhetorical confidence. They are evidence states only.
+# Bthwani Task Package
+
+SCHEMA: BTHWANI_PACKAGE_V5
+TASK_ID: b-canonical-reconstruction-prepare
+TARGET: كل الأسطح والخدمات وكل النظام End-to-End
+MODE: PREPARE_ONLY
+INTEGRATION_BRANCH: A
+TASK_BRANCH: b
+BASE_SHA: a719d018f7bac118c55c0dec02a7dfa33f10d454
+LATEST_RECONCILED_SHA: a719d018f7bac118c55c0dec02a7dfa33f10d454
+ROOT: كل الأسطح والخدمات وكل النظام End-to-End
+INTEGRATION_OWNER: bthwani2-boop
+RUNTIME_REQUIRED: YES
+
+## Operational Coverage
+
+| Node | Kind | Parent | Claim | Status | Evidence |
+|---|---|---|---|---|---|
+| OP-SYSTEM | SYSTEM_ROOT | ROOT | BThwani is one multi-surface platform and this package covers the whole system, not finance or one surface only. | PROVEN | EVD-ROOT,EVD-PRODUCT-TRUTH |
+| OP-ACTORS | ACTORS | OP-SYSTEM | Customer, Partner, Store operator, Captain, Field provider, Operator and service/provider actors are explicit coverage classes. | PROVEN | EVD-ROOT,EVD-LEGACY-COVERAGE |
+| OP-SURFACES | SURFACES | OP-SYSTEM | app-client, app-partner, app-captain, app-field, control-panel and backend/runtime counterparts are mandatory coverage. | PROVEN | EVD-PRODUCT-TRUTH,EVD-LEGACY-COVERAGE |
+| OP-AUTHORITY | AUTHORITY | OP-SYSTEM | Identity, Workforce, DSH, WLT, Platform Control, Providers and Media must have one canonical owner per durable truth. | PROVEN | EVD-PRODUCT-TRUTH,EVD-LIVE-WORKFORCE,EVD-LIVE-PARTNERDELIVERY |
+| OP-JOURNEYS | JOURNEYS | OP-SYSTEM | Whole-system journey inventory and cross-surface journey clusters are the coverage unit; surfaces are not isolated products. | PROVEN | EVD-NEGATIVE-SPACE,EVD-LEGACY-COVERAGE |
+| OP-STATES | STATE_MODEL | OP-JOURNEYS | Material entities require explicit states, transitions, preconditions, invariants, failure and recovery semantics. | PROVEN | EVD-ROOT,EVD-NEGATIVE-SPACE |
+| OP-HANDOFFS | HANDOFFS | OP-JOURNEYS | Cross-actor and cross-domain handoffs must identify authority, responsibility, side effects and canonical readback. | PROVEN | EVD-ROOT,EVD-ADVERSARIAL |
+| OP-DATA-CONTRACTS | DATA_CONTRACTS | OP-AUTHORITY | APIs, contracts, identifiers, DB ownership, events, jobs and generated clients must preserve canonical semantics end-to-end. | PROVEN | EVD-LIVE-PARTNERDELIVERY,EVD-ADVERSARIAL |
+| OP-RUNTIME | RUNTIME | OP-SYSTEM | Expo, EAS, native config, Next.js, Go, PostgreSQL, Docker, env, CI, providers, observability and recovery are foundation coverage. | PROVEN | EVD-LEGACY-COVERAGE,EVD-VERIFICATION-PLAN |
+| OP-REPOSITORY | REPOSITORY | OP-SYSTEM | Target repository structure, ownership, naming, dependency direction and content-preserving migration are mandatory reconstruction concerns. | PROVEN | EVD-CONTENT-PRESERVATION,EVD-VERIFICATION-PLAN |
+| OP-SECURITY | SECURITY | OP-AUTHORITY | Authentication, authorization, object scope, IDOR, isolation, financial mutation authority and audit are mandatory gates. | PROVEN | EVD-PRODUCT-TRUTH,EVD-ADVERSARIAL |
+| OP-CLEANUP | CLEANUP | OP-SYSTEM | Dead, stale, duplicate, misplaced, legacy, workaround, fallback and obsolete paths are part of closure and cannot remain after cutover. | PROVEN | EVD-CONTENT-PRESERVATION,EVD-VERIFICATION-PLAN |
+
+## Root-Cause Graph
+
+| RC | Root cause | Operational parent | Evidence | Depends on | Consumers | Blast / unlock | Priority | Deepening | Disposition |
+|---|---|---|---|---|---|---|---|---|---|
+| RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT | Durable truth, decision authority and responsibility are split or duplicated across domains, surfaces and historical packages. | OP-AUTHORITY | EVD-PRODUCT-TRUTH,EVD-LIVE-WORKFORCE,EVD-LIVE-PARTNERDELIVERY,EVD-NEGATIVE-SPACE | NONE | CONSUMER-ALL-SURFACES,CONSUMER-ALL-BACKENDS,CONSUMER-DATA-CONTRACTS | Blocks stable architecture; resolving it establishes canonical owners and unlocks every downstream reconstruction slice. | 1 | DEEPENED_ENOUGH_TO_RANK | READY |
+| RC-PAYMENT-TENDER-EXPOSURE-CUSTODY-SETTLEMENT-CONFLATION | Tender allocation, collateral exposure, cash custody, debt and settlement semantics are conflated or derived from labels/caller inputs. | OP-DATA-CONTRACTS | EVD-LIVE-WORKFORCE,EVD-LIVE-PAYMENT,EVD-LEGACY-COVERAGE | RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT | CONSUMER-ALL-SURFACES,CONSUMER-ALL-BACKENDS,CONSUMER-DATA-CONTRACTS | High financial risk across checkout, dispatch, delivery, refund and settlement; unlocks safe financial lifecycle. | 2 | DEEPENED_ENOUGH_TO_RANK | DEPENDENT |
+| RC-CAPTAIN-OPERATIONAL-ELIGIBILITY-AUTHORITY-SPLIT | Captain eligibility is composed inconsistently across Workforce, DSH fleet/dispatch/scopes and WLT. | OP-JOURNEYS | EVD-LEGACY-COVERAGE,EVD-LIVE-WORKFORCE | RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT | CONSUMER-ALL-SURFACES,CONSUMER-ALL-BACKENDS | Can create inconsistent candidate, capacity, offer, assignment and accept outcomes; unlocks one fail-closed decision primitive. | 3 | DEEPENED_ENOUGH_TO_RANK | DEPENDENT |
+| RC-IDENTIFIER-SEMANTIC-OVERLOADING | Actor, membership, store, branch and scope identifiers cross authority boundaries with ambiguous or false meaning. | OP-DATA-CONTRACTS | EVD-LIVE-PARTNERDELIVERY,EVD-LEGACY-COVERAGE | RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT | CONSUMER-ALL-BACKENDS,CONSUMER-DATA-CONTRACTS | Corrupts authorization, joins, scopes and audit; unlocks typed contracts and canonical StoreBranch. | 4 | DEEPENED_ENOUGH_TO_RANK | DEPENDENT |
+| RC-STORE-DELIVERY-FLEET-COMPENSATION-PARALLEL-TRUTH | Store courier identity, fleet membership, compensation, pricing, custody and settlement have legacy or parallel representations. | OP-JOURNEYS | EVD-LEGACY-COVERAGE,EVD-LIVE-PARTNERDELIVERY | RC-PAYMENT-TENDER-EXPOSURE-CUSTODY-SETTLEMENT-CONFLATION,RC-IDENTIFIER-SEMANTIC-OVERLOADING | CONSUMER-ALL-SURFACES,CONSUMER-ALL-BACKENDS | Risks financial leakage and duplicate identity/pricing truth; unlocks coherent partner-delivery lifecycle. | 5 | DEEPENED_ENOUGH_TO_RANK | DEPENDENT |
+| RC-DISTRIBUTED-FINANCIAL-OBLIGATION-BEST-EFFORT | Required cross-service financial effects can be treated as best-effort instead of durable, retryable and reconcilable obligations. | OP-HANDOFFS | EVD-LEGACY-COVERAGE,EVD-ADVERSARIAL | RC-PAYMENT-TENDER-EXPOSURE-CUSTODY-SETTLEMENT-CONFLATION | CONSUMER-ALL-BACKENDS,CONSUMER-RUNTIME | Can leave operational success with lost finance; unlocks deterministic failure and recovery. | 6 | DEEPENED_ENOUGH_TO_RANK | DEPENDENT |
+| RC-FIELD-PROVISIONING-READINESS-PARALLEL-PATHS | Field provider creation, readiness, detail views and onboarding paths contain competing or deprecated flows. | OP-JOURNEYS | EVD-LEGACY-COVERAGE | RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT | CONSUMER-ALL-SURFACES,CONSUMER-ALL-BACKENDS | Blocks one canonical provider lifecycle and causes duplicated UI/controller/contract truth. | 7 | DEEPENED_ENOUGH_TO_RANK | DEPENDENT |
+| RC-CATALOG-PUBLICATION-OWNERSHIP-DRIFT | Catalog, assortment, publication, serviceability and field/partner proposals are not consistently tied to one owner and one publication gate. | OP-JOURNEYS | EVD-LEGACY-COVERAGE,EVD-PRODUCT-TRUTH | RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT | CONSUMER-ALL-SURFACES,CONSUMER-ALL-BACKENDS | Affects discovery, partner operations, field workflows and client visibility; unlocks consistent commercial readback. | 8 | DEEPENED_ENOUGH_TO_RANK | DEPENDENT |
+| RC-CLIENT-COMMERCIAL-ACCOUNT-JOURNEY-GAPS | Client benefits/subscription, account privacy/consent reachability and crash-safe financial intent are incompletely owned or covered. | OP-JOURNEYS | EVD-LEGACY-COVERAGE | RC-PAYMENT-TENDER-EXPOSURE-CUSTODY-SETTLEMENT-CONFLATION,RC-CATALOG-PUBLICATION-OWNERSHIP-DRIFT | CONSUMER-ALL-SURFACES | Leaves visible actions and commercial journeys without complete durable lifecycle; unlocks client closure. | 9 | DEEPENED_ENOUGH_TO_RANK | DEPENDENT |
+| RC-CONTROL-PANEL-MULTIOWNER-BOUNDARY-DRIFT | Control Panel composes Identity, Platform Control, Providers, Workforce, DSH and WLT but older section plans blur sovereign owners and hidden routes. | OP-AUTHORITY | EVD-LEGACY-COVERAGE,EVD-PRODUCT-TRUTH | RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT | CONSUMER-ALL-SURFACES,CONSUMER-ALL-BACKENDS | Operator writes can target wrong authority or incomplete scope; unlocks governed control-plane behavior. | 10 | DEEPENED_ENOUGH_TO_RANK | DEPENDENT |
+| RC-REPOSITORY-CONTEXT-STRUCTURAL-DEBT | Correct content is mixed with misplaced, duplicate, stale, legacy or overly coupled containers that obscure ownership and increase refactor risk. | OP-REPOSITORY | EVD-CONTENT-PRESERVATION,EVD-NEGATIVE-SPACE | RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT | CONSUMER-ALL-SURFACES,CONSUMER-ALL-BACKENDS,CONSUMER-RUNTIME | Causes repeated rework and prior design/environment loss; unlocks content-preserving canonical structure. | 11 | DEEPENED_ENOUGH_TO_RANK | DEPENDENT |
+| RC-GOVERNANCE-PACKAGE-TRUTH-DRIFT | Historical packages bind stale branches, SHAs, scopes or self-declared readiness and can compete with current V5 and Product Truth. | OP-REPOSITORY | EVD-NEGATIVE-SPACE,EVD-ADVERSARIAL,EVD-LEGACY-COVERAGE | RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT | CONSUMER-RUNTIME | Can redirect work or claim false completeness; unlocks one current executable package and later governance promotion. | 12 | DEEPENED_ENOUGH_TO_RANK | DEPENDENT |
+| RC-ORDER-ACTOR-PROVENANCE | Some governed order lifecycle evidence can lose trusted actor provenance and prior verification did not reach full closure. | OP-DATA-CONTRACTS | EVD-LEGACY-COVERAGE | RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT,RC-IDENTIFIER-SEMANTIC-OVERLOADING | CONSUMER-ALL-BACKENDS,CONSUMER-DATA-CONTRACTS | Important audit/security repair but cannot outrank authority and identifier roots. | 13 | PROVEN_CANNOT_OUTRANK | DEPENDENT |
+
+## Ledger
+
+| Type | ID | RC | Relation / claim | Status | Evidence |
+|---|---|---|---|---|---|
+| SCOPE_DELTA | SCOPE-WHOLE-SYSTEM | RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT | Existing diagnose_all scope was finance/delivery/captain/store-delivery; current target expands to every surface, service, capability and foundation. | RESOLVED | EVD-NEGATIVE-SPACE |
+| DECISION | DEC-METHOD-CONTENT-PRESERVING | RC-REPOSITORY-CONTEXT-STRUCTURAL-DEBT | Reconstruction preserves proven value and environment while replacing wrong context; no greenfield rewrite and no blind extraction. | RESOLVED | EVD-CONTENT-PRESERVATION |
+| DECISION | DEC-METHOD-ROOT-FIRST | RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT | Execution unit is root cause times journey cluster times vertical slice; no bug-by-bug, file-by-file or isolated-surface patching. | RESOLVED | EVD-VERIFICATION-PLAN |
+| DECISION | DEC-FINANCE-THREE-TENDERS | RC-PAYMENT-TENDER-EXPOSURE-CUSTODY-SETTLEMENT-CONFLATION | Checkout has COD, BTHWANI Wallet and Mixed only; official wallet is funding rail, not checkout tender. | RESOLVED | EVD-LIVE-PAYMENT |
+| DECISION | DEC-FINANCE-CAPTAIN-COLLATERAL | RC-PAYMENT-TENDER-EXPOSURE-CUSTODY-SETTLEMENT-CONFLATION | BTHWANI captain collateral is real WLT-owned restricted value; prepaid creates zero cash exposure and COD/Mixed use exact cash leg. | RESOLVED | EVD-LEGACY-COVERAGE |
+| DECISION | DEC-STORE-COURIER-BOUNDARY | RC-STORE-DELIVERY-FLEET-COMPENSATION-PARALLEL-TRUTH | Store courier employment/compensation remains store responsibility; store is settlement counterparty and platform baseline cannot be weakened. | RESOLVED | EVD-LEGACY-COVERAGE |
+| FINDING | FIND-WORKFORCE-MONEY | RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT | Workforce still contains writable captain financial guarantee fields and caller-proposed penalty amount despite WLT monetary ownership. | DISPOSITIONED | EVD-LIVE-WORKFORCE |
+| FINDING | FIND-PARTNERDELIVERY-ID | RC-IDENTIFIER-SEMANTIC-OVERLOADING | Partner delivery stores branch from storeId and passes storeCourierId directly to Workforce readiness. | DISPOSITIONED | EVD-LIVE-PARTNERDELIVERY |
+| FINDING | FIND-PACKAGE-COVERAGE | RC-GOVERNANCE-PACKAGE-TRUTH-DRIFT | Existing diagnose_all name exceeds its merged finance/delivery scope and historical packages contain stale branch/SHA bindings. | DISPOSITIONED | EVD-NEGATIVE-SPACE,EVD-LEGACY-COVERAGE |
+| LOWER_LAYER | LL-WORKFORCE-FINANCE | RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT | Live lower-layer evidence confirms monetary fields outside WLT. | PROMOTED | EVD-LIVE-WORKFORCE |
+| LOWER_LAYER | LL-PARTNERDELIVERY-SEMANTICS | RC-IDENTIFIER-SEMANTIC-OVERLOADING | Live lower-layer evidence confirms store-as-branch and ambiguous courier identifier semantics. | PROMOTED | EVD-LIVE-PARTNERDELIVERY |
+| LOWER_LAYER | LL-OFFICIAL-WALLET-CHECKOUT | RC-PAYMENT-TENDER-EXPOSURE-CUSTODY-SETTLEMENT-CONFLATION | b already rejects official_wallet as checkout tender when checkoutIntentId is present; remaining consumers still require whole-system cutover proof. | PROMOTED | EVD-LIVE-PAYMENT |
+| CONSUMER | CONSUMER-ALL-SURFACES | NONE | All five user/operator surfaces and shared presentation readbacks are mandatory consumers when affected. | RESOLVED | EVD-PRODUCT-TRUTH |
+| CONSUMER | CONSUMER-ALL-BACKENDS | NONE | Identity, Workforce, DSH, WLT, Platform Control, Providers and directly affected backend consumers are mandatory. | RESOLVED | EVD-PRODUCT-TRUTH |
+| CONSUMER | CONSUMER-DATA-CONTRACTS | NONE | DB schemas, migrations, APIs, contracts, generated clients, events, jobs and audit are mandatory consumers. | RESOLVED | EVD-ROOT |
+| CONSUMER | CONSUMER-RUNTIME | NONE | Runtime, environment, CI, providers, observability and recovery paths are mandatory when affected. | RESOLVED | EVD-VERIFICATION-PLAN |
+| DEPENDENCY | DEP-CANONICAL-OWNERS-FIRST | RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT | Lower roots cannot be finalized while a higher owner/boundary contradiction can invalidate their target. | RESOLVED | EVD-ROOT |
+| DEPENDENCY | DEP-CURRENT-HEAD-REPIN | RC-GOVERNANCE-PACKAGE-TRUTH-DRIFT | Deep diagnosis and execution must reconcile the current b head and affected evidence cone before each material cutover. | RESOLVED | EVD-ROOT |
+| FINDING | FIND-GEOGRAPHY-SCOPE-IDENTITY | RC-IDENTIFIER-SEMANTIC-OVERLOADING | Historical/current diagnosis requires City, PlatformZone, ServiceArea, Workforce scope and StoreBranch to remain semantically distinct; store/scope-as-branch is already live-proven. | DISPOSITIONED | EVD-ATTACHMENT-COVERAGE,EVD-LIVE-PARTNERDELIVERY |
+| FINDING | FIND-AUTHORIZATION-TRUTH-DUPLICATION | RC-CONTROL-PANEL-MULTIOWNER-BOUNDARY-DRIFT | UI/control-plane permission booleans may never become authorization authority; every governed action requires backend permission plus object/business scope and audit/readback. | DISPOSITIONED | EVD-PRODUCT-TRUTH,EVD-ATTACHMENT-COVERAGE |
+| FINDING | FIND-PLATFORM-CHANGESET-COMPLETION | RC-CONTROL-PANEL-MULTIOWNER-BOUNDARY-DRIFT | A requested/approved platform change is not operationally applied until authoritative apply/readback/reconciliation proves it; request-record completion alone is insufficient. | DISPOSITIONED | EVD-ATTACHMENT-COVERAGE |
+| FINDING | FIND-PROVIDER-DESIRED-VS-OBSERVED | RC-CONTROL-PANEL-MULTIOWNER-BOUNDARY-DRIFT | Provider desired config/maintenance/credentials are distinct from observed runtime health and must not share a writable truth. | DISPOSITIONED | EVD-ATTACHMENT-COVERAGE |
+| FINDING | FIND-MEDIA-READINESS-SIDE-EFFECT | RC-REPOSITORY-CONTEXT-STRUCTURAL-DEBT | Media readiness must be read-only; bootstrap/provisioning and runtime readiness are separate operations with explicit required/optional semantics. | DISPOSITIONED | EVD-ATTACHMENT-COVERAGE |
+| FINDING | FIND-RATING-MODERATION-AGGREGATION | RC-CATALOG-PUBLICATION-OWNERSHIP-DRIFT | Public rating aggregation must honor canonical moderation/publication eligibility and cannot rely on an unrelated active flag. | DISPOSITIONED | EVD-ATTACHMENT-COVERAGE |
+| FINDING | FIND-CONSENT-PROVENANCE | RC-CLIENT-COMMERCIAL-ACCOUNT-JOURNEY-GAPS | Consent is not a bare preference boolean; policy/version/time/source/surface/revocation/audit provenance must be governed where applicable. | DISPOSITIONED | EVD-ATTACHMENT-COVERAGE |
+| FINDING | FIND-CACHE-CANONICAL-DENY | RC-CATALOG-PUBLICATION-OWNERSHIP-DRIFT | Stale cache/search/index state may never resurrect canonically suspended/deleted/forbidden Store, user or content truth. | DISPOSITIONED | EVD-ATTACHMENT-COVERAGE |
+| DEPENDENCY | DEP-INVENTORY-CLOSURE | RC-CATALOG-PUBLICATION-OWNERSHIP-DRIFT | Inventory reserve/release/TTL/return/restart/concurrency/oversell/reconciliation writer inventory is mandatory before affected commerce closure. | RESOLVED | EVD-ATTACHMENT-COVERAGE |
+| DEPENDENCY | DEP-RETURNS-CLOSURE | RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT | Returns require quantity/logistics/restock/refund/partial/retry/duplicate semantics and full affected-owner trace before closure. | RESOLVED | EVD-ATTACHMENT-COVERAGE |
+| DEPENDENCY | DEP-NOTIFICATION-CLOSURE | RC-REPOSITORY-CONTEXT-STRUCTURAL-DEBT | Notification producers, consent matrix, dedupe, delivery state, retry and device/session lifecycle are mandatory affected-system evidence. | RESOLVED | EVD-ATTACHMENT-COVERAGE |
+| DEPENDENCY | DEP-RUNTIME-READINESS-CLOSURE | RC-REPOSITORY-CONTEXT-STRUCTURAL-DEBT | Runtime env/secrets/dev fallback/prod reachability/readiness and provider degradation are required candidate-bound evidence, not documentation claims. | RESOLVED | EVD-ATTACHMENT-COVERAGE |
+| DEPENDENCY | DEP-CI-ARCHITECTURE-GUARDS | RC-GOVERNANCE-PACKAGE-TRUTH-DRIFT | CI must enforce current architecture/binding/contract/security/runtime invariants so reconstruction cannot regress silently. | RESOLVED | EVD-ATTACHMENT-COVERAGE |
+| SCOPE_DELTA | SCOPE-FOREIGN-FINANCE-DELTA | RC-PAYMENT-TENDER-EXPOSURE-CUSTODY-SETTLEMENT-CONFLATION | Concurrent b delta after preparation began changed checkout allocation, COD reservation release and financial outbox/reconciliation paths; it is root-related input and invalidates stale finance assumptions without changing system priority by recency. | RESOLVED | EVD-FOREIGN-FINANCE-DELTA |
+| DEPENDENCY | DEP-ISOLATION-MODE-CONSTRAINT | RC-GOVERNANCE-PACKAGE-TRUTH-DRIFT | Current PREPARE uses A as integration/reference and existing b as task branch; no new branch/worktree is created. Any later direct execution on b as integration truth conflicts with current V5 isolation and requires explicit governance cutover rather than silent bypass. | RESOLVED | EVD-ROOT |
+| CLEANUP | CLEANUP-LEGACY-PATHS | RC-REPOSITORY-CONTEXT-STRUCTURAL-DEBT | Remove obsolete files, routes, DTOs, schema, duplicate state, fallback, compatibility and dead design only after consumer/content migration proof. | OPEN | EVD-CONTENT-PRESERVATION |
+| CLEANUP | CLEANUP-PARALLEL-TRUTH | RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT | Remove every parallel authoritative writer or competing source after canonical cutover. | OPEN | EVD-VERIFICATION-PLAN |
+| CLEANUP | CLEANUP-HISTORICAL-PACKAGES | RC-GOVERNANCE-PACKAGE-TRUTH-DRIFT | Historical packages remain evidence until their unique material content is accounted; then superseded execution authority must be retired. | OPEN | EVD-NEGATIVE-SPACE |
+
+## Frontier
+
+| Work | RC | Depends on | Blocks / unlocks | Conflict | Owner | Parallel | State | Evidence |
+|---|---|---|---|---|---|---|---|---|
+| WORK-001 | RC-CANONICAL-OWNERSHIP-BOUNDARY-DRIFT | NONE | Establish canonical owners, authority registry, system blueprint and allowed dependency direction; unlocks all product reconstruction roots. | system-authority | canonical-architecture | NO | PREPARED | EVD-ROOT,EVD-VERIFICATION-PLAN |
+| WORK-002 | RC-PAYMENT-TENDER-EXPOSURE-CUSTODY-SETTLEMENT-CONFLATION | WORK-001 | Rebuild financial semantics and cut every affected writer/consumer to WLT-owned numeric truth. | finance | wlt-finance | NO | PREPARED | EVD-LIVE-WORKFORCE,EVD-LIVE-PAYMENT,EVD-VERIFICATION-PLAN |
+| WORK-003 | RC-IDENTIFIER-SEMANTIC-OVERLOADING | WORK-001 | Introduce explicit identifier semantics and canonical StoreBranch; migrate contracts, DB, events and consumers. | identifiers-data | dsh-data-contracts | NO | PREPARED | EVD-LIVE-PARTNERDELIVERY,EVD-VERIFICATION-PLAN |
+| WORK-004 | RC-CAPTAIN-OPERATIONAL-ELIGIBILITY-AUTHORITY-SPLIT | WORK-001,WORK-003 | Build one composed eligibility semantic for candidate, capacity, assign, reassign, offer and accept. | captain-eligibility | dsh-workforce-wlt | NO | PREPARED | EVD-LEGACY-COVERAGE,EVD-VERIFICATION-PLAN |
+| WORK-005 | RC-STORE-DELIVERY-FLEET-COMPENSATION-PARALLEL-TRUTH | WORK-002,WORK-003,WORK-004 | Cut partner delivery to canonical person, membership, pricing, tender, custody and store settlement boundaries. | partner-delivery | dsh-partner-wlt | NO | PREPARED | EVD-LIVE-PARTNERDELIVERY,EVD-LEGACY-COVERAGE |
+| WORK-006 | RC-DISTRIBUTED-FINANCIAL-OBLIGATION-BEST-EFFORT | WORK-002 | Replace ignored/best-effort required financial effects with durable idempotent recovery and reconciliation. | distributed-finance | dsh-wlt-runtime | NO | PREPARED | EVD-ADVERSARIAL,EVD-VERIFICATION-PLAN |
+| WORK-007 | RC-FIELD-PROVISIONING-READINESS-PARALLEL-PATHS | WORK-001 | Converge Field creation/readiness/onboarding/detail flows on one Workforce/Identity lifecycle and remove deprecated duplicates. | field-lifecycle | workforce-field | NO | PREPARED | EVD-LEGACY-COVERAGE,EVD-VERIFICATION-PLAN |
+| WORK-008 | RC-CATALOG-PUBLICATION-OWNERSHIP-DRIFT | WORK-001 | Converge catalog, assortment, publication and serviceability on canonical owners and readback. | catalog-publication | dsh-catalog | NO | PREPARED | EVD-PRODUCT-TRUTH,EVD-LEGACY-COVERAGE |
+| WORK-009 | RC-CLIENT-COMMERCIAL-ACCOUNT-JOURNEY-GAPS | WORK-002,WORK-008 | Close client commercial/account journeys including crash-safe financial intent, privacy/consent and visible-action reachability. | client-journeys | app-client | NO | PREPARED | EVD-LEGACY-COVERAGE,EVD-VERIFICATION-PLAN |
+| WORK-010 | RC-CONTROL-PANEL-MULTIOWNER-BOUNDARY-DRIFT | WORK-001 | Rebind Control Panel sections and hidden routes to sovereign owners with governed mutation/readback. | control-plane | control-panel | NO | PREPARED | EVD-PRODUCT-TRUTH,EVD-LEGACY-COVERAGE |
+| WORK-011 | RC-REPOSITORY-CONTEXT-STRUCTURAL-DEBT | WORK-001 | Apply target repository structure using content conservation and foundation preservation; no blind rewrite. | repository-structure | reconstruction | NO | PREPARED | EVD-CONTENT-PRESERVATION,EVD-VERIFICATION-PLAN |
+| WORK-012 | RC-GOVERNANCE-PACKAGE-TRUTH-DRIFT | WORK-001,WORK-002,WORK-003,WORK-004,WORK-005,WORK-006,WORK-007,WORK-008,WORK-009,WORK-010,WORK-011 | Reconcile durable final truth into governance and retire superseded execution authority without losing provenance. | governance | governance-owner | NO | PREPARED | EVD-NEGATIVE-SPACE,EVD-VERIFICATION-PLAN |
+| WORK-013 | RC-ORDER-ACTOR-PROVENANCE | WORK-001,WORK-003 | Re-open actor provenance only after higher authority and identifier contracts stabilize, then complete same-candidate proof. | provenance | dsh-orders | NO | PREPARED | EVD-LEGACY-COVERAGE,EVD-VERIFICATION-PLAN |
+
+## Evidence
+
+| Evidence | Claim | Check / source | Candidate | Environment | Result | Limits / invalidates on |
+|---|---|---|---|---|---|---|
+| EVD-ROOT | System root, coverage order and root-first rules were established from current V5 plus canonical product model. | tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md; governance/product/PRD.md; branches A and b | TASK_HEAD | GitHub pinned source review | PASS | Invalidated by authority-changing governance or branch movement affecting the diagnosed cone. |
+| EVD-PRODUCT-TRUTH | Required surfaces and domain ownership are explicitly defined by current product governance. | governance/product/PRD.md; governance/product/contracts | TASK_HEAD | GitHub pinned source review | PASS | Does not prove implementation conformity; invalidated by newer authorized Product Truth. |
+| EVD-NEGATIVE-SPACE | Whole-system negative-space review identified that existing diagnose_all is narrower than its name and that surface packages contain uncovered cross-system concerns. | diagnose_all-end-to-end; all-system-end-to-end-20260815; app-client; app-partner; app-captain; field-3; control-panel packages; supplied discussion attachments | TASK_HEAD | GitHub plus supplied-source review | PASS | Proves preparation coverage discovery, not absence of future findings; rerun on material scope/authority change. |
+| EVD-ADVERSARIAL | Adversarial review challenged stale SHA bindings, self-declared completeness, parallel truth, identifier confusion, financial authority leakage and design/environment-loss risk. | DIAGNOSIS.md; ATTACHMENT-DEEP-DIAGNOSIS.md; BLUEPRINT-TRACEABILITY.md; current V5 validator | TASK_HEAD | Preparation document review | PASS | Not runtime proof; must be repeated per root on current execution candidate and again globally before closure. |
+| EVD-VERIFICATION-PLAN | Exact cutover, content conservation, cleanup, cross-layer verification and final same-candidate gates are defined before execution. | RECONSTRUCTION-MAP.md; MASTER-RECONSTRUCTION-COMMAND.md; CANONICAL-SYSTEM-BLUEPRINT.md | TASK_HEAD | Preparation document review | PASS | Must be reconciled when a new root, dependency or required runtime claim is discovered. |
+| EVD-CONTENT-PRESERVATION | Reconstruction explicitly preserves proven environment, design, assets and correct logic while replacing wrong containers and deleting only after migration proof. | RECONSTRUCTION-MAP.md; supplied reconstruction discussion | TASK_HEAD | Preparation document review | PASS | Does not prove any individual file is safe to keep or delete; each item requires current evidence. |
+| EVD-LIVE-WORKFORCE | Live b source contains writable financial guarantee fields and proposed penalty amount inside Workforce operational core. | core/workforce/backend/internal/workforce/operational_core.go | TASK_HEAD | GitHub branch b source | PASS | Revalidate after any Workforce/WLT authority edit. |
+| EVD-LIVE-PARTNERDELIVERY | Live b partner-delivery source derives branchId from storeId and passes storeCourierId directly into Workforce readiness. | services/dsh/backend/internal/partnerdelivery/service.go | TASK_HEAD | GitHub branch b source | PASS | Revalidate after identifier, branch or partner-delivery edits. |
+| EVD-LIVE-PAYMENT | b explicitly rejects official_wallet as checkout tender and now contains additional checkout-allocation/financial-compensation work, confirming direction while leaving whole-system cutover unproven. | commits 7f053af499891b6bb6ae9281c658f7eeedd35eb7 and 1c31adb1e8d1443e59ca49e4b75051c2f897a334; DSH/WLT checkout/payment allocation sources | TASK_HEAD | GitHub branch b source | PASS | Does not prove stale enums, UI, DB, generated clients, failure semantics or tests are fully closed; revalidate the entire affected finance cone. |
+| EVD-LEGACY-COVERAGE | Historical surface and finance packages contain reusable findings, journeys and verification requirements but have stale branch/SHA/scope assumptions and are Derived Support. | listed plans/diagnose-implementing packages and current diagnose_all source manifest | TASK_HEAD | GitHub package review | PASS | Historical PASS/DONE claims are not imported; each implementation claim needs live revalidation. |
+| EVD-ATTACHMENT-COVERAGE | Uploaded discussion/diagnosis was reconciled into explicit whole-system obligations including geography, auth, provider health, media, moderation, consent, cache-deny, inventory, returns, notifications, runtime and CI cones. | ATTACHMENT-DEEP-DIAGNOSIS.md; BLUEPRINT-TRACEABILITY.md; supplied source attachments | TASK_HEAD | Supplied-source plus GitHub reconciliation | PASS | Source-derived obligations are preparation evidence; implementation claims must be re-proven against current code/runtime before mutation/closure. |
+| EVD-FOREIGN-FINANCE-DELTA | Concurrent b movement after initial preparation is directly related to finance root and was classified as input, not instruction; it adds checkout canonicalization and durable financial compensation/outbox changes. | commit 1c31adb1e8d1443e59ca49e4b75051c2f897a334 and its changed-path inventory | TASK_HEAD | GitHub concurrent-delta reconciliation | PASS | Does not prove the new finance implementation correct or complete; all affected assumptions/tests/runtime must be revalidated on execution candidate. |
+
+## Closure
+
+- Integration head: SELF
+- Final candidate: SELF
+- Verification: PREPARE_ONLY; EVD-VERIFICATION-PLAN defines future execution proof and no implementation PASS is claimed.
+- Runtime/product evidence: REQUIRED_FOR_EXECUTE; no runtime/product closure is claimed in PREPARE_ONLY.
+- Cleanup: Cleanup contract is prepared; deletion is forbidden until content and consumer migration are proven.
+- Governance: Current V5 and Product Truth govern preparation; durable reconstructed truth is promoted only after execution proof.
+- Final adversarial: Preparation adversarial pass is EVD-ADVERSARIAL; final product adversarial proof remains mandatory after execution.
