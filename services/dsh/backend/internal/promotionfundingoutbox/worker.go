@@ -86,7 +86,7 @@ func reconcileReserveThenRelease(ctx context.Context, db *sql.DB, client *wlt.Cl
 	if projection.OperatorContextID != "" && projection.OperatorContextID != event.OperatorContextID {
 		return fmt.Errorf("coupon funding OperatorContext does not match outbox owner")
 	}
-	reservation, err := client.ReservePromotionFunding(ctx, wlt.ReservePromotionFundingInput{
+	reservation, err := client.ReconcilePromotionFundingReserve(ctx, wlt.ReservePromotionFundingInput{
 		OperatorContextID:        event.OperatorContextID,
 		ExternalReference:        "dsh-coupon-redemption:" + projection.RedemptionID,
 		CheckoutIntentID:         projection.CheckoutIntentID,
@@ -103,6 +103,9 @@ func reconcileReserveThenRelease(ctx context.Context, db *sql.DB, client *wlt.Cl
 		return fmt.Errorf("reconcile WLT promotion funding reserve: %w", err)
 	}
 	if reservation == nil || reservation.Status != "reserved" {
+		if reservation != nil && reservation.Status == "released" {
+			return nil
+		}
 		return fmt.Errorf("reconciled WLT promotion funding reserve is not reserved")
 	}
 	released, err := client.ReleasePromotionFunding(ctx, reservation.ID, wlt.PromotionFundingTransitionInput{

@@ -9,6 +9,14 @@ func validatePromotionFundingReserveResponse(
 	reservation *PromotionFundingReservation,
 	input ReservePromotionFundingInput,
 ) error {
+	return validatePromotionFundingReserveResponseStatuses(reservation, input, "reserved")
+}
+
+func validatePromotionFundingReserveResponseStatuses(
+	reservation *PromotionFundingReservation,
+	input ReservePromotionFundingInput,
+	allowedStatuses ...string,
+) error {
 	if reservation == nil || strings.TrimSpace(reservation.ID) == "" {
 		return fmt.Errorf("WLT promotion funding response is missing reservation id")
 	}
@@ -19,6 +27,13 @@ func validatePromotionFundingReserveResponse(
 	expectedCurrency := strings.ToUpper(strings.TrimSpace(input.Currency))
 	if expectedCurrency == "" {
 		expectedCurrency = "YER"
+	}
+	statusAllowed := false
+	for _, allowedStatus := range allowedStatuses {
+		if reservation.Status == allowedStatus {
+			statusAllowed = true
+			break
+		}
 	}
 	if reservation.OperatorContextID != strings.TrimSpace(input.OperatorContextID) ||
 		reservation.ExternalReference != strings.TrimSpace(input.ExternalReference) ||
@@ -31,7 +46,7 @@ func validatePromotionFundingReserveResponse(
 		reservation.PartnerFundedMinorUnits != input.PartnerFundedMinorUnits ||
 		reservation.TotalDiscountMinorUnits != input.TotalDiscountMinorUnits ||
 		reservation.Currency != expectedCurrency ||
-		reservation.Status != "reserved" {
+		!statusAllowed {
 		return fmt.Errorf("WLT promotion funding reserve response does not match the governed DSH request")
 	}
 	return nil

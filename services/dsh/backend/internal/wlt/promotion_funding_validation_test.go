@@ -35,6 +35,15 @@ func TestValidatePromotionFundingReserveResponse(t *testing.T) {
 	if err := validatePromotionFundingReserveResponse(&mismatched, input); err == nil {
 		t.Fatal("changed funding split was accepted")
 	}
+
+	released := *matching
+	released.Status = "released"
+	if err := validatePromotionFundingReserveResponse(&released, input); err == nil {
+		t.Fatal("ordinary reserve validation accepted an already released reservation")
+	}
+	if err := validatePromotionFundingReserveResponseStatuses(&released, input, "reserved", "released"); err != nil {
+		t.Fatalf("reconciliation validation rejected an already released reservation: %v", err)
+	}
 }
 
 func TestValidatePromotionFundingTransitionResponse(t *testing.T) {
