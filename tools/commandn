@@ -1,0 +1,325 @@
+# أمر تنفيذ إلزامي — Semantic-First / Highest-Leverage Root Closure
+
+**REPOSITORY:** `bthwani2-boop/bthwani-suite-next`
+**BRANCH:** `b`
+**TARGET:** `كل الأسطح والخدمات وكل ما يرتبط بها End-to-End`
+**MODE:** `EXECUTE_END_TO_END`
+**EXECUTION LOCATION:** `DIRECTLY ON b — NO NEW BRANCH — NO NEW WORKTREE`
+
+استخدم إلزاميًا `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md` كمرجع الحوكمة التنفيذي الأساسي وطبّق V5 FAIL-CLOSED بالكامل، وفق القانون الحاكم التالي:
+
+> **TOP-DOWN SEMANTIC AUTHORITY; BOTTOM-UP EVIDENCE; HIGHEST PROVEN SYSTEMIC ROOT FIRST; COHERENT END-TO-END CUTOVER; ZERO PARALLEL TRUTH; ZERO LEGACY CLOSURE.**
+
+## 1. نقطة البداية الإلزامية: أعلى معنى في النظام
+
+لا تبدأ من الملفات أو الاختبارات أو الـAPIs أو قواعد البيانات أو أخطاء TypeScript/Go أو CI أو أي Finding تقنية محلية.
+
+ابدأ من أعلى مستوى مادي داخل `TARGET` وحدد أولًا:
+
+`Product Outcomes → User/Operator Experience → Actors → Authorities → Responsibilities → Business Rules → Journeys → States → Transitions → Preconditions → Decisions → Invariants → Handoffs → Failure/Recovery → Cross-Surface Meaning → Canonical Ownership`
+
+ثم فقط انزل عبر:
+
+`Domain Boundaries → Contracts/APIs → Data/Persistence → Integrations/Events/Jobs/Providers → Auth/Permissions → Frontend/Bindings → Runtime/Config/Environment → Implementation/Tests`
+
+تجربة المستخدم هنا لا تعني الشكل البصري فقط؛ بل تشمل أن تكون الرحلة صحيحة ومنطقية وكاملة ومتسقة من البداية إلى النتيجة، وأن تكون الحالات والقرارات والفشل والاسترداد والتسليم بين الأسطح مفهومة وصحيحة ومتطابقة مع الحقيقة التشغيلية.
+
+## 2. قانون ارتفاع الدليل
+
+يجوز النزول إلى أي طبقة تقنية في أي وقت **لجمع Evidence أو إثبات/نفي Root Cause**.
+
+لكن:
+
+**ممنوع تحويل Finding تقنية إلى Execution Authority لمجرد اكتشافها.**
+
+كل Finding تقنية مبكرة تبقى:
+
+`EVIDENCE/HOLD`
+
+حتى يثبت:
+
+`Operational Parent → Semantic Meaning → Causal Chain → Highest Proven Root Cause → Comparative Priority`
+
+ولا يُسمح بإصلاح leaf تقني إذا كان من المحتمل أن يتغير أو يُلغى عند حسم Root Cause أعلى.
+
+الاستثناء الوحيد هو `DIAGNOSTIC_BLOCKER` مثبت يمنع الوصول إلى الحقيقة نفسها؛ ويجب أن يكون تغييره أقل تغيير ممكن ولا يغيّر Product Semantics، ثم العودة مباشرة إلى التشخيص الأعلى.
+
+## 3. لا تشخيص تقني شامل أعمى قبل تحديد الجذور
+
+ابدأ بمسح **Semantic/Operational واسع عبر TARGET كله** لاكتشاف:
+
+* أعلى الفجوات والتناقضات المنطقية والمنتجية والتشغيلية؛
+* الرحلات المفقودة أو المتعارضة؛
+* المسؤوليات والسلطات غير الواضحة أو المتكررة؛
+* States/Transitions/Invariants/Handoffs غير الصحيحة؛
+* مصادر الحقيقة المتنافسة؛
+* اختلاف المعنى بين الأسطح؛
+* Root-Cause Clusters التي يمكن أن تغيّر أكبر جزء من النظام.
+
+بعدها نفّذ `Competitive Deepening` فقط للجذور التي يمكن واقعيًا أن تتصدر الأولوية.
+
+ممنوع استهلاك الوقت في exhaustive low-level scanning أو إعادة تشغيل عشرات الفحوصات قبل معرفة ما إذا كانت ستؤثر أصلًا في Root Cause الأعلى.
+
+## 4. ترتيب الأولوية
+
+لا ترتب العمل حسب:
+
+`أول مشكلة ظهرت | أسهل Fix | أحدث Commit | أكثر ملفات متضررة | أول CI Failure | أكثر Finding عددًا`
+
+بل رتبه حسب:
+
+`Root Depth → Blocking Power → Canonical Authority Impact → Blast Radius → User/Operational Impact → Security/Finance/Data Risk → Unlock Value → Cross-Surface Effect → Recurrence → Structural Debt Multiplier`
+
+والهدف دائمًا هو العثور على:
+
+**أعلى Root Cause مثبتة إذا عولجت فإنها تلغي أو تغير أو تحل أكبر قدر من المشاكل الموجودة تحتها.**
+
+## 5. متى يبدأ التنفيذ؟
+
+بعد أن تصبح التغطية التشغيلية العليا كافية لإثبات أنه لا يوجد Root Cause أعلى معروف يمكنه تغيير القرار الحالي، وعندما يصبح أعلى Root Cause:
+
+`PROVEN + DEEPENED_ENOUGH_TO_RANK + EXECUTABLE`
+
+أوقف أي توسع تشخيصي لا يمكنه تغيير قرار التنفيذ، وابدأ فورًا المعالجة الجذرية.
+
+لا تنتظر اكتمال فحص تقني شامل للنظام كله إذا لم يعد له أثر على ترتيب الجذر الحالي.
+
+## 6. المعالجة ليست Patch
+
+عند اختيار Root Cause لا تصلح symptom منفردًا.
+
+نفّذ **Coherent End-to-End Cutover** عبر كامل مخروط التأثير:
+
+`Product/Operational Meaning`
+→ `UX/Journeys`
+→ `Actors/Authorities`
+→ `States/Transitions/Invariants`
+→ `Canonical Owner`
+→ `Writers`
+→ `Readers`
+→ `Consumers`
+→ `All Surfaces`
+→ `Contracts/APIs`
+→ `Generated Clients/Bindings`
+→ `Backend/Domain`
+→ `Data/DB/Migrations`
+→ `Events/Jobs/Providers`
+→ `Auth/Permissions`
+→ `Runtime/Config`
+→ `Tests/Observability`
+→ `Cleanup`
+→ `Canonical Runtime Readback`
+
+أصلح كل Consumer وDependency وBinding وProjection ومستهلك متأثر.
+
+لا تترك النظام نصف قديم ونصف جديد.
+
+## 7. ممنوع منعًا باتًا
+
+ممنوع استخدام أو ترك:
+
+`Patch`
+`Workaround`
+`Temporary Fix`
+`Silent Fallback`
+`Parallel Source of Truth`
+`Dual Writer`
+`Hidden Compatibility Layer`
+`Fake Green`
+`Local Business Truth`
+`Duplicated Policy`
+`Dead Reachable Path`
+`Deprecated Reachable Flow`
+`Unjustified Alias`
+`TODO/FIXME/HACK` المرتبط بالنطاق
+أو أي مسار يسمح للنظام القديم بالاستمرار بعد الـcutover.
+
+التوافق المؤقت لا يُسمح باعتباره DONE.
+
+## 8. إعادة الهيكلة والتنظيف والتنظيم جزء من Root Fix
+
+بعد إثبات الشكل الصحيح، أعد هيكلة النطاق المتأثر بحيث يكون:
+
+* لكل حقيقة Canonical Owner واحد؛
+* لكل Mutation قانوني Write Path واحد؛
+* لكل مفهوم اسم واحد واضح في سياقه؛
+* الحدود بين Domains واضحة؛
+* الملفات والمجلدات والمسارات في مواقعها الصحيحة؛
+* Contracts وTypes وIdentifiers غير غامضة؛
+* لا توجد duplicate abstractions أو duplicate state machines؛
+* لا توجد مراجع قديمة أو imports أو routes أو config أو env أو tests أو generated artifacts متروكة؛
+* لا يوجد dead/stale/superseded/misplaced code أو ملفات أو مجلدات بلا سبب مثبت.
+
+التنظيف يشمل:
+
+`line → symbol → file → directory → package → dependency → route → API → contract → DTO → schema → table/column → migration consumer → config/env → UI state → test → workflow → event/job → documentation/governance reference`
+
+لكن **لا تحذف شيئًا اعتمادًا على التخمين أو static orphan detection وحده**؛ أثبت أنه خاطئ/ميت/مكرر/متجاوز ثم احذفه وأصلح كل مراجعه.
+
+## 9. التعامل مع `diagnose_all-end-to-end`
+
+عامل:
+
+`plans/diagnose-implementing/diagnose_all-end-to-end`
+
+على أنه:
+
+**HISTORICAL / UNTRUSTED DIAGNOSTIC INPUT — NOT SOURCE OF TRUTH — NOT PROOF OF DONE.**
+
+لا تفترض أن أي Finding أو Decision أو Blueprint أو Cleanup Item أو تقرير داخله:
+
+* صحيح حاليًا؛
+* لم يُنفذ؛
+* نُفذ؛
+* ما زال مطلوبًا؛
+* أو تم إغلاقه.
+
+أعد التحقق من كل عنصر مقابل أحدث:
+
+`Product Truth + explicit current user decisions + current HEAD + current contracts + implementation + data + runtime evidence`
+
+وصنف كل عنصر مادي إلى:
+
+`REPROVED_CURRENT`
+`IMPLEMENTED_BUT_UNVERIFIED`
+`STILL_OPEN`
+`SUPERSEDED`
+`DUPLICATE`
+`INCORRECT`
+`OBSOLETE`
+`DELETE`
+
+استخرج منه ما يستحق الاحتفاظ به فقط بعد إعادة إثباته.
+
+بعد الإغلاق، ادمج الحقيقة المفيدة في الـV5 package/canonical documentation الصحيحة، ثم احذف أو ادمج أو أعد تنظيم أي ملفات قديمة أصبحت ضجيجًا أو تكرارًا أو مصدر حقيقة موازٍ.
+
+يجوز حذف المجلد نفسه إذا ثبت بعد الاستخراج والتوثيق النهائي أنه لم يعد يمتلك وظيفة Canonical مشروعة.
+
+## 10. القرارات
+
+احسم ذاتيًا كل ما تثبته الأدلة التقنية أو المنطقية أو المعمارية.
+
+لا تسأل المستخدم عن قرار يمكن اشتقاقه.
+
+عند وجود قرار جوهري Product/Business/Policy لا يمكن اشتقاقه فعلًا، استخدم فقط:
+
+`DECISION_REQUIRED`
+
+وقدّم:
+
+`السؤال → الخيارات → توصيتك → سبب التوصية → أثر كل خيار → ما الذي سيتغير في النظام`
+
+ولا تنفذ الجزء المتأثر قبل القرار.
+
+بعد القرار:
+
+`propagate decision → invalidate affected assumptions/evidence → re-diagnose affected cone → re-rank`
+
+ولا تعيد تشخيص كل النظام بلا سبب.
+
+## 11. إعادة الترتيب المستمرة
+
+بعد إغلاق كل Root Cause:
+
+1. أعد قراءة أحدث حقيقة.
+2. احسب ما الذي اختفى أو تغير من Findings التابعة.
+3. اكتشف إن كان Root أعلى أصبح ظاهرًا.
+4. أعد ترتيب Root-Cause Landscape.
+5. اختر أعلى جذر مثبت جديد.
+6. كرر الدورة.
+
+إذا ظهر أثناء التنفيذ Root Cause أعلى قادر على تغيير الحل الحالي:
+
+**أوقف العمل التابع المتأثر فورًا، ولا تكمله بدافع sunk cost.**
+
+اصعد إلى الجذر الأعلى، عالجه أولًا، ثم أعد تقييم ما إذا كان العمل السفلي لا يزال مطلوبًا.
+
+## 12. حماية الفرع `b`
+
+هذا الاستدعاء يصرح صراحةً بالتنفيذ على الفرع:
+
+`b`
+
+ولا يسمح بإنشاء Branch أو Worktree جديد.
+
+اعتبر هذا **استثناءً صريحًا فقط من topology العزل الخاصة بالمهمة**، ولا تعتبره إذنًا لتعطيل بقية حوكمة V5.
+
+قبل الكتابة ثبّت أحدث `b` HEAD.
+
+ومع كل تغير مادي أو قبل أي Push:
+
+`fetch latest b → detect/classify foreign delta → reconcile affected truth/evidence → reverify`
+
+ممنوع:
+
+`force push`
+`foreign overwrite`
+`stale-head push`
+`discarding concurrent work`
+`blind conflict resolution`
+
+نفّذ التغييرات في وحدات ذرية مفهومة وقابلة للمراجعة.
+
+إذا كان حارس V5 الآلي يمنع التنفيذ المباشر على `b` ولا يمكن احترام الاستثناء دون تعديل/تعطيل/تجاوز الحارس، **لا تتحايل عليه ولا تعدله بصمت**؛ ارفع `DECISION_REQUIRED` قبل أي Source Mutation موضحًا التعارض بدقة.
+
+## 13. التحقق والإغلاق
+
+لا تعتبر نجاح:
+
+`lint`
+`typecheck`
+`unit tests`
+`build`
+`CI`
+`migration`
+`static analysis`
+
+وحده إثباتًا لإغلاق الرحلة أو Root Cause.
+
+الإغلاق يحتاج الأدلة المناسبة من نفس Candidate على:
+
+`Operational Outcome + UX/Journey + State transitions + authority + canonical write/readback + cross-surface consistency + contracts + data + integrations + security + runtime + failure/recovery + cleanup`
+
+وشغّل Adversarial/Negative-Space checks المناسبة لإثبات عدم وجود مسار بديل أو missing consumer أو fallback مخفي.
+
+## 14. تعريف DONE
+
+لا تستخدم تعبيرات مثل `1000%` أو `10000%` كدليل نجاح.
+
+`DONE/CLOSED` مسموح فقط عندما تثبت الأدلة الحالية على أحدث Candidate:
+
+`ZERO known material Finding`
+`ZERO unresolved Decision`
+`ZERO unresolved Dependency`
+`ZERO missing Consumer`
+`ZERO missing Binding`
+`ZERO contradictory Source of Truth`
+`ZERO reachable obsolete/parallel writer`
+`ZERO required migration/cutover gap`
+`ZERO material cleanup item`
+`ZERO material cross-surface contradiction`
+`ZERO known material orchestrator/task finding`
+
+مع نجاح التحقق التشغيلي المطلوب End-to-End.
+
+إذا بقي عنصر مادي واحد غير مثبت فالحالة:
+
+`OPEN`
+
+وليست `DONE`.
+
+## 15. الأدوات
+
+اكتشف واستخدم تلقائيًا جميع قدرات وأدوات وإضافات Codex المتاحة **عندما تخدم مباشرةً إثبات Root Cause أو تنفيذها أو التحقق من الإغلاق**.
+
+لا تستخدم أداة لمجرد أنها متاحة، ولا تشغّل فحوصات منخفضة القيمة أو متكررة بلا سؤال إثبات واضح.
+
+## الأمر النهائي
+
+ابدأ من **أعلى منطق وتجربة مستخدم ومعنى تشغيلي للنظام كله**، وابنِ أولًا خريطة عالية المستوى لكل الفجوات والتناقضات والجذور ذات الرافعة النظامية؛ ثم تعمق فقط بالقدر اللازم لاختيار **أعلى Root Cause مثبتة**، وعالجها معالجة جذرية كاملة End-to-End، وأعد هيكلة كامل مخروط تأثيرها، ووحّد الحقيقة، وهاجر كل المستهلكين، واحذف المسارات القديمة والمكررة والميتة، ونظف ونظم وشطب، وأثبت النتيجة تشغيليًا؛ ثم أعد ترتيب الجذور وكرر الدورة من الأعلى إلى الأسفل حتى لا يبقى أي عنصر مادي مفتوح يمكن إثباته ضمن TARGET.
+
+**لا تصلح ما قد يلغيه قرار أعلى.
+لا تترك ما استبدلته حيًا.
+لا تعتبر الوثائق حقيقة تشغيلية.
+لا تعتبر الاختبار المحلي إغلاقًا للنظام.
+ولا تعتبر المهمة مغلقة إلا عندما يثبت أحدث Candidate الإغلاق الفعلي End-to-End.**

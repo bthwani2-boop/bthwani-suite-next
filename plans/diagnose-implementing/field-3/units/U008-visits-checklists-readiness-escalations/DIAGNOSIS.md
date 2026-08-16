@@ -1,5 +1,0 @@
-# U008 — Visits, evidence, checklist, readiness and escalation
-
-The current implementation already has governed visit and checklist operations, so the issue is not absence of a workflow. The gap is policy ownership and the final evidence model. The checklist is effectively driven from shared hardcoded check types, while the approved product requires templates that vary by Business Vertical and are managed from Control Panel. Critical items must be capable of blocking readiness without shipping a new app build to change policy.
-
-Location privacy is also fixed by product decision: there is no continuous or live tracking of Field providers. Only required event points are collected, with configurable radius and server timestamps. Operational evidence is camera-first; legal documents remain allowed through file/gallery sources. Field collects and submits evidence but cannot approve its own readiness. Partners is the independent reviewer, and escalation must carry severity, SLA and mandatory resolution notes. Existing idempotency/concurrency strengths are preserved while static/duplicate policy is removed.

@@ -1,5 +1,0 @@
-# U007 — onboarding-collaboration-visibility
-
-قسم الشركاء يحتاج رؤية تقدم الميداني ومسوداته داخل حدود الصلاحية، لكن الرؤية لا تعني ownership للبيانات أو تعديلًا صامتًا. أثناء DRAFT يكتب الميداني ويقرأ/يعلّق reviewer؛ بعد SUBMITTED يصبح field read-only ويقرر reviewer approve/return/reject؛ RETURNED_FOR_CHANGES يعيد field write. المطلوب هو contextual collaboration مرتبط بـdraft/assignment/document، لا صندوق chat عام يقطع السياق ولا محرك رسائل ثانٍ إذا كانت support/message primitives الحالية قابلة لإعادة الاستخدام مع object authorization صحيح.
-
-لوحة التحكم يجب جردها على مستوى الصفحات والتبويبات: Partners queue، Partner Detail، Store Management، أي field workspace، وأي Support surface يعاد استخدام بنيته. عند فتح ميداني يجب أن يرى موظف الشركاء workload/progress مثل assigned/drafts/ready/review/returned/completed مع Workforce status كمرآة read-only. التعليقات/change requests يجب أن تحمل actor/time/entity/version/read state وألا تمنح موظف الشركاء تعديل مسودة field مباشرة دون event/audit. visibility نفسها يجب أن تكون scoped حسب operator permissions وfield actor؛ لا قائمة عامة تتسرب منها مسودات أو PII غير لازمة.
