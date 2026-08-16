@@ -124,14 +124,7 @@ function Invoke-Step {
 }
 
 if ($Full) {
-  foreach ($step in @(
-    @{ Name = "nx-projects"; Command = { pnpm run nx:projects } },
-    @{ Name = "contracts-lint"; Command = { pnpm run contracts:lint } },
-    @{ Name = "lint"; Command = { pnpm run lint } },
-    @{ Name = "typecheck"; Command = { pnpm run typecheck } },
-    @{ Name = "test"; Command = { pnpm run test } },
-    @{ Name = "build"; Command = { pnpm run build } }
-  )) { Invoke-Step $step.Name $step.Command }
+  Invoke-Step "workspace-verification" { pnpm run workspace:verify }
 }
 
 foreach ($guardName in $journeyGuards) {
@@ -151,11 +144,13 @@ foreach ($guardName in $journeyGuards) {
 }
 
 if ($Runtime) {
-  foreach ($step in @(
-    @{ Name = "runtime-full-reset"; Command = { pnpm run runtime:full:reset } },
-    @{ Name = "runtime-full-smoke"; Command = { pnpm run runtime:full:smoke } },
-    @{ Name = "wiremock-financial-smoke"; Command = { pnpm run runtime:wiremock:financial:smoke } }
-  )) { Invoke-Step $step.Name $step.Command }
+  Invoke-Step "runtime-full-bootstrap" { pnpm run runtime:full:bootstrap-dev }
+  try {
+    Invoke-Step "runtime-full-smoke" { pnpm run runtime:full:smoke }
+    Invoke-Step "wiremock-financial-smoke" { pnpm run runtime:wiremock:financial:smoke }
+  } finally {
+    Invoke-Step "runtime-full-down" { pnpm run runtime:full:down }
+  }
 }
 
 $scope = if ($Runtime) { "runtime" } else { "static" }

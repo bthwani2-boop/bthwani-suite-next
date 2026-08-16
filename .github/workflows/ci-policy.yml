@@ -24,6 +24,15 @@ on:
       nomenclature_required:
         type: string
         required: true
+      contracts_changed:
+        type: string
+        required: true
+      database_changed:
+        type: string
+        required: true
+      execution_phase:
+        type: string
+        required: true
 
 permissions:
   contents: read
@@ -42,6 +51,8 @@ jobs:
 
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
+        with:
+          materialize_generated: false
 
       - name: Verify canonical governance and SDLC gates
         if: ${{ inputs.governance_policy == 'true' }}
@@ -63,13 +74,16 @@ jobs:
         run: node --test tools/guards/lib/api-operations.test.mjs
 
       - name: Verify contract registry drift
+        if: ${{ inputs.contracts_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' }}
         run: pnpm run guard:contract-registry-drift
 
       - name: Verify migration manifest drift
+        if: ${{ inputs.database_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' }}
         run: pnpm run guard:migration-manifest-drift
 
       - name: Verify generated client provenance
         id: generated_client_provenance
+        if: ${{ inputs.contracts_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' }}
         continue-on-error: true
         shell: bash
         run: |
@@ -93,33 +107,42 @@ jobs:
         run: exit 1
 
       - name: Verify contract scope binding
+        if: ${{ inputs.contracts_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' }}
         run: pnpm run guard:contract-scope-binding
 
       - name: Verify OpenAPI bundle provenance (identity, workforce, platform-control, providers)
+        if: ${{ inputs.contracts_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' }}
         run: pnpm run guard:openapi-bundle-provenance
 
       - name: Verify DSH OpenAPI bundle provenance
+        if: ${{ inputs.contracts_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' }}
         run: pnpm run openapi:lint:dsh
 
       - name: Verify every registered DSH route is declared or a reviewed exception
+        if: ${{ inputs.contracts_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' }}
         run: pnpm run guard:dsh-route-declaration
 
       - name: Verify every registered DSH route resolves a reachable permission check
+        if: ${{ inputs.contracts_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' }}
         run: pnpm run guard:dsh-route-permission-binding
 
       - name: Verify every exported Go handler is referenced somewhere
+        if: ${{ inputs.contracts_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' }}
         run: pnpm run guard:go-handler-generation
 
       - name: Verify flaky-test quarantine registry
         run: pnpm run guard:flaky-tests
 
       - name: Verify DSH dispatch contract/registry consistency
+        if: ${{ inputs.contracts_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' }}
         run: pnpm run guard:dispatch-contract-registry
 
       - name: Verify local dev actors registry consistency
+        if: ${{ inputs.contracts_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' }}
         run: pnpm run guard:local-dev-actors
 
       - name: Verify WLT OpenAPI bundle provenance
+        if: ${{ inputs.contracts_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' }}
         run: pnpm run guard:wlt-openapi-bundle
 
       - name: Verify required command integrity
@@ -188,6 +211,8 @@ jobs:
 
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
+        with:
+          materialize_generated: false
 
       - name: Verify CI source, repository hygiene, and portable tracked configuration
         if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' || inputs.infrastructure_policy == 'true' }}
@@ -247,7 +272,7 @@ jobs:
         run: exit 1
 
       - name: Verify workflow policy
-        if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' }}
+        if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' || inputs.infrastructure_policy == 'true' }}
         run: pnpm run guard:opa-policies
 
       - name: Install locked security scanner binaries
@@ -336,7 +361,3 @@ jobs:
       - name: Verify runtime configuration policy
         if: ${{ inputs.infrastructure_policy == 'true' }}
         run: pnpm run guard:runtime-config
-
-      - name: Verify infrastructure policy
-        if: ${{ inputs.infrastructure_policy == 'true' }}
-        run: pnpm run guard:opa-policies

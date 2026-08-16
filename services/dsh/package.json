@@ -17,11 +17,9 @@
     "platform:boundary": "node ../../tools/guards/dsh-platform-boundary-gate.mjs",
     "data-provider:quarantine": "node ../../tools/guards/dsh-data-provider-quarantine-gate.mjs",
     "native-dependency:inventory": "node ../../tools/guards/dsh-native-dependency-inventory-gate.mjs",
-    "pretypecheck": "pnpm run openapi:generate",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "prebuild": "pnpm run openapi:generate",
     "build": "tsc -p tsconfig.json && node -e \"require('node:fs').writeFileSync('dist/package.json', JSON.stringify({type:'commonjs'}))\" && node ../../tools/scripts/verify-go-build.mjs backend",
-    "test": "pnpm run build && pnpm --dir ../.. exec node --test services/dsh/tests/*.test.mjs",
+    "test": "pnpm --dir ../.. exec node --test services/dsh/tests/*.test.mjs",
     "lint": "pnpm run platform:boundary && pnpm run data-provider:quarantine && pnpm run native-dependency:inventory && pnpm --dir ../.. run guard:fullstack-boundary"
   },
   "peerDependencies": {

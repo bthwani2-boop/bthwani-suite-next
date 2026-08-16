@@ -32,7 +32,7 @@ export function resolveAffectedPlan(targets, environment = process.env) {
       "nx",
       "affected",
       "-t",
-      normalizedTargets.join(","),
+      ...normalizedTargets,
       "--base",
       base,
       "--head",

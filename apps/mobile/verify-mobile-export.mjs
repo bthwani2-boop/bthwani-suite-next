@@ -25,7 +25,7 @@ function filesUnder(directory) {
 
 try {
   if (!appKey || !fs.existsSync(appDir)) fail(`unknown or missing app runtime: ${appKey || "<none>"}`);
-  const args = ["--dir", appDir, "exec", "expo", "export", "--platform", "android", "--output-dir", outputDir, "--clear"];
+  const args = ["--dir", appDir, "exec", "expo", "export", "--platform", "android", "--output-dir", outputDir];
   const environment = { ...process.env, CI: "1", EXPO_NO_TELEMETRY: "1", COREPACK_ENABLE_DOWNLOAD_PROMPT: "0" };
   const invocation = resolvePackageManagerInvocation("pnpm", args, environment);
   const result = spawnSync(

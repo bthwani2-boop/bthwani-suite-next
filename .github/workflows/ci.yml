@@ -76,7 +76,9 @@ jobs:
       infrastructure_policy: ${{ steps.scope.outputs.infrastructure_policy }}
       nomenclature_required: ${{ steps.scope.outputs.nomenclature_required }}
       frontend: ${{ steps.scope.outputs.frontend }}
+      mobile: ${{ steps.scope.outputs.mobile }}
       contracts: ${{ steps.scope.outputs.contracts }}
+      contracts_changed: ${{ steps.scope.outputs.contracts_changed }}
       journey: ${{ steps.scope.outputs.journey }}
       journey_scope: ${{ steps.scope.outputs.journey_scope }}
       node: ${{ steps.scope.outputs.node }}
@@ -88,7 +90,9 @@ jobs:
       platform: ${{ steps.scope.outputs.platform }}
       providers: ${{ steps.scope.outputs.providers }}
       database: ${{ steps.scope.outputs.database }}
+      database_changed: ${{ steps.scope.outputs.database_changed }}
       runtime: ${{ steps.scope.outputs.runtime }}
+      runtime_required: ${{ steps.scope.outputs.runtime_required }}
       runtime_profile: ${{ steps.scope.outputs.runtime_profile }}
       shared_brain: ${{ steps.scope.outputs.shared_brain }}
       heavy: ${{ steps.scope.outputs.heavy }}
@@ -215,6 +219,7 @@ jobs:
           CI_BASE_SHA="${BASE_SHA}" \
           CI_HEAD_SHA="${HEAD_SHA}" \
           CI_MODE="${MODE}" \
+          CI_EXECUTION_PHASE="${EXECUTION_PHASE}" \
           CI_JOURNEY="${DISPATCH_JOURNEY:-}" \
           node tools/scripts/detect-ci-context.mjs
       - name: Publish routing summary
@@ -257,6 +262,9 @@ jobs:
       security_policy: ${{ needs.context.outputs.security_policy }}
       infrastructure_policy: ${{ needs.context.outputs.infrastructure_policy }}
       nomenclature_required: ${{ needs.context.outputs.nomenclature_required }}
+      contracts_changed: ${{ needs.context.outputs.contracts_changed }}
+      database_changed: ${{ needs.context.outputs.database_changed }}
+      execution_phase: ${{ needs.context.outputs.execution_phase }}
 
   diagnostics:
     name: Static diagnostics
@@ -269,8 +277,10 @@ jobs:
       full_verification: ${{ needs.context.outputs.full_verification }}
       frontend: ${{ needs.context.outputs.frontend }}
       contracts: ${{ needs.context.outputs.contracts }}
+      contracts_changed: ${{ needs.context.outputs.contracts_changed }}
       node: ${{ needs.context.outputs.node }}
       verification_tier: ${{ needs.context.outputs.verification_tier }}
+      execution_phase: ${{ needs.context.outputs.execution_phase }}
 
   verification:
     name: Node verification
@@ -282,8 +292,10 @@ jobs:
       head_sha: ${{ needs.context.outputs.head_sha }}
       full_verification: ${{ needs.context.outputs.full_verification }}
       frontend: ${{ needs.context.outputs.frontend }}
+      mobile: ${{ needs.context.outputs.mobile }}
       heavy: ${{ needs.context.outputs.heavy }}
       verification_tier: ${{ needs.context.outputs.verification_tier }}
+      execution_phase: ${{ needs.context.outputs.execution_phase }}
       journey: ${{ needs.context.outputs.journey }}
       journey_scope: ${{ needs.context.outputs.journey_scope }}
       platform_change_sets: ${{ needs.context.outputs.platform_change_sets }}
@@ -299,6 +311,7 @@ jobs:
       full_verification: ${{ needs.context.outputs.full_verification }}
       verification_tier: ${{ needs.context.outputs.verification_tier }}
       execution_phase: ${{ needs.context.outputs.execution_phase }}
+      database_changed: ${{ needs.context.outputs.database_changed }}
       dsh: ${{ needs.context.outputs.dsh }}
       wlt: ${{ needs.context.outputs.wlt }}
       identity: ${{ needs.context.outputs.identity }}
@@ -309,11 +322,11 @@ jobs:
   runtime:
     name: Runtime proof
     needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && (needs.context.outputs.full_verification == 'true' || needs.context.outputs.runtime == 'true' || (github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true)) }}
+    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && (needs.context.outputs.runtime_required == 'true' || (github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true)) }}
     uses: ./.github/workflows/ci-runtime.yml
     with:
       full_verification: ${{ needs.context.outputs.full_verification }}
-      runtime: ${{ needs.context.outputs.runtime }}
+      runtime: ${{ needs.context.outputs.runtime_required }}
       runtime_profile: ${{ (github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true && needs.context.outputs.runtime_profile == 'none') && 'full' || needs.context.outputs.runtime_profile }}
       runtime_proof: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
 
@@ -372,7 +385,7 @@ jobs:
             verification_applicable=true
           fi
           runtime_applicable=false
-          if [[ "${FULL_VERIFICATION}" == "true" || "${RUNTIME_REQUIRED}" == "true" || "${EXPLICIT_RUNTIME_PROOF}" == "true" ]]; then
+          if [[ "${RUNTIME_REQUIRED}" == "true" || "${EXPLICIT_RUNTIME_PROOF}" == "true" ]]; then
             runtime_applicable=true
           fi
 

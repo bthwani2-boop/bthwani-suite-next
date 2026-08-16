@@ -18,10 +18,16 @@ on:
       contracts:
         type: string
         required: true
+      contracts_changed:
+        type: string
+        required: true
       node:
         type: string
         required: true
       verification_tier:
+        type: string
+        required: true
+      execution_phase:
         type: string
         required: true
 
@@ -101,7 +107,7 @@ jobs:
           retention-days: 7
       - name: Verify affected contracts and bindings
         id: contract_diagnostics
-        if: ${{ inputs.contracts == 'true' }}
+        if: ${{ inputs.contracts_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' }}
         continue-on-error: true
         shell: bash
         run: |
@@ -116,7 +122,6 @@ jobs:
             if [[ "${code}" -ne 0 ]]; then status="${code}"; fi
           }
           run_check pnpm run guard:no-broken-imports
-          run_check pnpm --dir contracts typecheck
           run_check pnpm run guard:api-binding
           run_check pnpm run guard:backend-api-binding
           run_check pnpm run guard:service-manifest-drift
@@ -134,7 +139,7 @@ jobs:
           retention-days: 7
       - name: Run deep code diagnostics
         id: deep_repository_diagnostics
-        if: ${{ inputs.full_verification == 'true' || inputs.verification_tier == 'deep' }}
+        if: ${{ (inputs.execution_phase == 'closure' || inputs.execution_phase == 'master') && (inputs.full_verification == 'true' || inputs.verification_tier == 'deep') }}
         continue-on-error: true
         shell: bash
         run: |
@@ -162,7 +167,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Record strict dead-code backlog
-        if: ${{ inputs.full_verification == 'true' || inputs.verification_tier == 'deep' }}
+        if: ${{ (inputs.execution_phase == 'closure' || inputs.execution_phase == 'master') && (inputs.full_verification == 'true' || inputs.verification_tier == 'deep') }}
         continue-on-error: true
         run: pnpm exec knip --config knip.strict.json --reporter compact
       - name: Enforce all diagnostic results

@@ -1,6 +1,5 @@
 import fs from "node:fs";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
 import { fail, read, repoRoot } from "./_guard-utils.mjs";
 import { resolveWorkflowInventory } from "./_workflow-registry.mjs";
 
@@ -56,18 +55,6 @@ const expectedCommands = new Map([
   ["guard:governance-schema", "node tools/guards/governance-schema-gate.mjs"],
 ]);
 for (const [scriptName, expected] of expectedCommands) if (scripts[scriptName] !== expected) violations.push({ file: packageFile, line: 0, message: `GOVERNED_COMMAND_DRIFT ${scriptName}` });
-
-const governanceSchema = spawnSync(process.execPath, [path.join(repoRoot, "tools", "guards", "governance-schema-gate.mjs")], {
-  cwd: repoRoot,
-  encoding: "utf8",
-});
-if (governanceSchema.status !== 0) {
-  violations.push({
-    file: "tools/guards/governance-schema-gate.mjs",
-    line: 0,
-    message: `GOVERNANCE_SCHEMA_GATE_FAILED ${(governanceSchema.stderr || governanceSchema.stdout || "").trim()}`,
-  });
-}
 
 const performanceQuick = scripts["performance:api:quick"] ?? "";
 if (performanceQuick.includes("localhost:8080")) violations.push({ file: packageFile, line: 0, message: "LEGACY_DSH_HOST_PORT_FORBIDDEN" });
@@ -204,7 +191,7 @@ rejectMarkers(`${workflowsRoot}/ci-policy.yml`, ciPolicy, [
 ]);
 
 requireMarkers(`${workflowsRoot}/ci-node-diagnostics.yml`, ["pnpm exec knip", "guard:logic-all", "guard:a11y", "guard:dependency-graph", "guard:ast-grep-rules", "guard:api-binding", "guard:backend-api-binding", "guard:frontend-feature-binding"]);
-requireMarkers(`${workflowsRoot}/ci-node-verification.yml`, ["node --test apps/mobile/tests/*.test.mjs", "pnpm exec nx run-many -t test --all --outputStyle=stream", "pnpm exec nx affected -t test --outputStyle=stream", "pnpm run nx:typecheck", "pnpm run nx:lint", "pnpm run nx:build"]);
+requireMarkers(`${workflowsRoot}/ci-node-verification.yml`, ["node --test apps/mobile/tests/*.test.mjs", "pnpm exec nx run-many -t typecheck lint test build --all --outputStyle=stream", "node tools/scripts/run-affected-verification.mjs typecheck lint test", "node tools/scripts/run-affected-verification.mjs typecheck lint test build"]);
 requireMarkers(`${workflowsRoot}/ci-backends.yml`, ["Select affected backends", "Apply migrations", "go test ", "go build "]);
 requireMarkers(`${workflowsRoot}/ci-runtime.yml`, ["runtime:full:smoke", "mobile:four-app-integration", "test-dsh-multisurface-runtime-matrix-v2.ps1", "Stop runtime"]);
 requireMarkers(`${workflowsRoot}/dsh-database.yml`, ["contents: read", "postgis/postgis:16-3.4-alpine", "invoke-dsh-database.ps1"]);

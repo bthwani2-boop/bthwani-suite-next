@@ -32,8 +32,9 @@ test("builds one deterministic fail-closed Nx command", () => {
     "nx",
     "affected",
     "-t",
-    "typecheck,lint,test,build",
+    "typecheck",
   ]);
+  assert.deepEqual(plan.args.slice(4, 8), ["typecheck", "lint", "test", "build"]);
   assert.ok(plan.args.includes("--base"));
   assert.ok(plan.args.includes("a".repeat(40)));
   assert.ok(plan.args.includes("--head"));
