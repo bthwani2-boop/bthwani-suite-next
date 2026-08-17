@@ -1,236 +1,200 @@
-# Bthwani Orchestrator — Final Core
+# BThwani Live End-to-End Root-Cause Execution Orchestrator
 
-BTHWANI_ORCHESTRATOR_SCHEMA: 5
-CANONICAL_SURFACE: 4_FILES
-PACKAGE_MODEL: ONE_TASK_ONE_PACKAGE
-CLI_MODEL: ONE_TOOL_THREE_COMMANDS
-STATE_MODEL: EVIDENCE_DERIVED
-PRIORITY_POLICY: SYSTEMIC_LEVERAGE
-ACCOUNTING_POLICY: ZERO_SILENT_MATERIAL_ELEMENT
-PREPARE_POLICY: PREPARED_NOT_CLOSED
-WRITE_POLICY: ISOLATED_TASK_BRANCH
-INTEGRATION_POLICY: ONE_INTEGRATION_OWNER
-CLOSURE_POLICY: EXACT_CANDIDATE_EVIDENCE_ONLY
-LEGACY_POLICY: V1_V4_HISTORICAL_EVIDENCE_ONLY
+PACKAGE_REVISION: 1
+PACKAGE_CLASS: PROTECTED_ENGINEERING_CONTROL_PLANE
+PROJECT: bthwani-suite-next
+DEFAULT_EXECUTION: LIVE_END_TO_END
+DEFAULT_PLAN_ARTIFACTS: FORBIDDEN
+DEFAULT_ORCHESTRATOR_MUTABILITY: READ_ONLY
 
-## 1. Canonical authority
+## 0. Governing law
 
-Only these four files define executable orchestration semantics:
+> **TOP-DOWN SEMANTIC AUTHORITY; BOTTOM-UP EVIDENCE; HIGHEST PROVEN SYSTEMIC ROOT FIRST; LIVE ROOT-CORRECT EXECUTION; COHERENT END-TO-END CUTOVER; ZERO PARALLEL TRUTH; ZERO UNJUSTIFIED LEGACY; ZERO DOCUMENTATION-ONLY CLOSURE.**
 
-1. `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md` — what must be true.
-2. `plans/diagnose-implementing/PACKAGE.template.md` — facts, relations, evidence schema.
-3. `plans/diagnose-implementing/orchestrator.mjs` — derives gates/state from package + Git truth.
-4. `tools/guards/governance-schema-gate.mjs` — proves the core cannot silently drift/fail open.
+This package governs how live project truth is discovered, diagnosed, executed, restructured, verified and closed. It is not Product Truth and it is not Runtime/Product code.
 
-Any README, plan, old package, historical prompt, report, comment, generated output, or prior session is Derived Support only. Product/runtime evidence outranks documentation. No document may make a runtime/product claim true by declaration.
+`tools/prompting/bthwani-orchestrator/**` is a protected engineering control plane. During normal project work it is **read-only**. No agent may create, modify, move, rename, delete, reformat, regenerate or indirectly alter this package unless the human explicitly authorizes that package change in the current invocation. Repository-wide execution, cleanup, `FOCUS: ALL`, or a previous authorization is not such authorization.
 
-## 2. Invocation, isolation, resume
+If this package itself appears defective during normal project execution: prove/report the defect; continue unaffected work when safe; use `DECISION_REQUIRED` only if the defect materially blocks correct execution; **do not self-repair**.
 
-Fresh invocation:
+## 1. Canonical package surface
 
-`resolve live integration target → create isolated task branch/workspace → create V5 package → reconcile semantic root → diagnose → cluster/rank → derive frontier → execute → verify → reconcile latest target → integrate non-force → final read-only verification`
+Executable orchestration semantics live only in these files:
 
-Resume is allowed only when the user explicitly identifies the exact package/task. Repin live repository truth and treat saved root placement, ranking, frontier, evidence freshness, and foreign-delta assumptions as untrusted until reconciled.
+1. `00-ORCHESTRATOR.md` — routing, lifecycle and governing invariants.
+2. `01-SCOPE-AUTHORITY-RULES.md` — scope, authority, project anchors, exclusions and longevity.
+3. `02-DIAGNOSE-ROOT-CAUSE.md` — coverage, semantic/operational diagnosis and root-cause proof.
+4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — live treatment, restructuring, migration, cutover and cleanup.
+5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — proof, re-diagnosis and closure.
+6. `focus/code-architecture-organization.md` — code, architecture, repository organization, naming, UI/UX implementation.
+7. `focus/governance-product-design.md` — product semantics, governance, policies and reconciliation.
+8. `focus/data-contracts-runtime-security-quality.md` — data, contracts, runtime, security, finance and quality.
+9. `99-SOURCE-MAP.md` — migration/traceability record for the command corpus; never runtime authority.
 
-Isolation:
+No old prompt, command, plan, report, package, historical branch or prior session is executable authority merely because it exists.
 
-- Local writes: dedicated Task Branch + dedicated Worktree.
-- Remote/API writes: dedicated Task Branch.
-- Read-only workers may inspect pinned refs.
-- Integration Target is never a shared work branch.
-- One writing owner per conflict domain and one Integration Owner per target.
-- Force push, foreign overwrite, and stale-target integration are forbidden.
+## 2. Invocation
 
-A schema migration of the orchestrator itself may bootstrap from the immediately previous schema only on an isolated exact-base task branch. After V5 lands, only V5 packages are executable authority.
+Preferred form:
 
-## 3. Semantic root and coverage
+```text
+BRANCH: <exact branch/ref>
+MODE: <DIAGNOSE | EXECUTE_END_TO_END | EXECUTE_PROJECT_CLOSURE>
+PRIMARY_FOCUS: <optional; default ALL for project closure>
+SCOPE: <optional; default REPOSITORY for project closure>
+```
 
-`TARGET` is the semantic task root, not a file-path hint. `LATEST_HEAD` is repository truth/integration baseline only; recency never sets work order.
+`PRIMARY_FOCUS` is the starting diagnostic lens, not a closure boundary.
 
-For `TARGET=كل شيء`, start from System Operational Root. For a narrow target, start from the highest material operational meaning inside the target.
+`SCOPE` is the requested orientation root, not the maximum allowed reach.
 
-Coverage order:
+For `EXECUTE_PROJECT_CLOSURE`:
 
-`Product outcomes → actors/identities → authorities/responsibilities → journeys → states/transitions/preconditions/invariants → handoffs/cross-surface meaning → canonical owners/writers/readers/consumers → contracts/APIs/data/persistence/readback → events/jobs/providers → control-panel interventions → runtime/config/environment/observability/security/CI → implementation`
+```text
+PRIMARY_FOCUS = ALL
+SCOPE = REPOSITORY
+```
 
-Every material journey must account for, where applicable:
+unless the human explicitly narrows either.
 
-`Actor | Entry | Preconditions | Authorization | Action | Decision Rule | Current State | Next State | Invariants | Side Effects | Handoff | Canonical Owner | Success | Failure | Recovery | Later Readback | Cross-Surface Meaning`
+There is no default planning/package phase. If planning is useful, it is internal execution reasoning, not a repository artifact.
 
-Diagnosis must deliberately use the passes required by the risk/scope, including:
+## 3. Plans are outside the default execution flow
 
-`forward | reverse | temporal | actor/responsibility | state/transition | invariant | cross-surface differential | cross-layer vertical | failure/recovery | counterfactual | negative-space | adversarial | concurrency/idempotency | security/isolation | finance | offline/reconnect | provider failure | migration/compatibility`
+`plans/**` and `plans/diagnose-implementing/**` are optional historical/user-requested records only.
 
-For material paths, challenge at least:
+During normal execution:
 
-`success | empty/missing | invalid | unauthenticated | denied | wrong role/scope | IDOR | forbidden state | not found | conflict/stale | duplicate/replay | idempotency | boundary | race | partial failure | dependency failure | timeout/unknown result | retry/backoff/DLQ | offline/reconnect | restart/recovery | old/new data | mixed-version migration | rollback/roll-forward | compensation/reconciliation`
+- do not create or update `plans/**`;
+- do not create diagnosis packages or execution packages;
+- do not create speculative execution sequences;
+- do not use plan state as authority, current truth, implementation evidence or DONE evidence.
 
-## 4. Evidence altitude and lower-layer HOLD
+Writing a plan is allowed only when the human explicitly requests planning/documentation work.
 
-Escalate before fixing:
+## 4. Exact live target first
 
-`technical symptom ↑ implementation ↑ contract/data meaning ↑ state/transition ↑ journey/handoff ↑ authority/ownership ↑ highest proven material causal root`
+Before diagnosis or mutation:
 
-An early technical observation is evidence, not automatically work:
+```text
+resolve exact repository + branch/ref
+→ pin current live HEAD
+→ inspect from that exact truth
+```
 
-`HOLD → PROMOTED(parent + RC + evidence + current priority) | DISPOSITIONED(with proof)`
+Never substitute the default branch when a branch/ref is specified. Never infer repository-wide absence from default-branch search.
 
-No Product/Runtime/Data mutation before operational diagnosis is ready except a proven `DIAGNOSTIC_BLOCKER` that prevents acquisition of the truth itself. A diagnostic blocker change must be minimal, must not silently change product semantics, and must return immediately to diagnosis.
+Before each material write batch and before final closure:
 
-## 5. Truth, findings, decisions and accounting
+```text
+re-resolve live HEAD
+→ classify concurrent/foreign delta
+→ reconcile affected assumptions and evidence
+→ continue only from current truth
+```
 
-Truth states:
+Recency never sets work priority. Latest HEAD is truth/integration baseline, not execution authority.
 
-`ACTUAL | INTENDED_AUTHORIZED | DESIRED_RESOLVED | CONFLICT`
+## 5. Execution lifecycle
 
-Every material element must be ID-addressable and dispositioned:
+```text
+RESOLVE LIVE TARGET
+→ ESTABLISH AUTHORITY + PROJECT ANCHORS
+→ BUILD MATERIAL COVERAGE
+→ START AT MINIMUM DIAGNOSTIC ALTITUDE
+→ DISCOVER / MODEL
+→ PROVE ROOT-CAUSE LANDSCAPE
+→ COMPETITIVELY DEEPEN ROOTS THAT CAN CHANGE PRIORITY
+→ SELECT HIGHEST PROVEN SYSTEMIC ROOT
+→ EXECUTE THE SMALLEST COMPLETE ROOT-CORRECT CHANGE
+→ MIGRATE ALL MATERIAL WRITERS/READERS/CONSUMERS
+→ CANONICAL CUTOVER
+→ DELETE/RETIRE SUPERSEDED PATHS WHEN PROVEN SAFE
+→ VERIFY AT CLAIM-APPROPRIATE RISK LEVEL
+→ RE-DIAGNOSE AFFECTED SYSTEM
+→ SELECT NEXT HIGHEST ROOT
+→ REPEAT
+→ FINAL NEGATIVE-SPACE + ADVERSARIAL RE-DIAGNOSIS
+→ CLOSE OR REMAIN OPEN
+```
 
-`Operational Node | Finding | Root Cause | Dependency | Consumer | Scope Delta | Decision | Cleanup Item | Evidence`
+Do not wait for exhaustive low-level scanning when the highest root is already proven deeply enough to rank and treat. Do not execute a low-level finding while a materially higher unresolved cause can change its correct treatment.
 
-No silent TODO, IGNORE, patch-around, fake green, or dropped material element.
+## 6. Root treatment, not symptom treatment
 
-Decision boundary:
+A technical observation is initially evidence:
 
-`derive from evidence if possible → ask only true non-derivable decision → options + recommendation + reason + impact → record Decision ID → propagate through affected graph → invalidate affected assumptions/evidence → re-diagnose/re-cluster/re-rank only the affected cone`
+```text
+EVIDENCE/HOLD
+→ PROMOTED only after operational parent + causal chain + root + affected graph are proven
+→ or DISPOSITIONED with proof
+```
 
-## 6. Root cause, competitive deepening and priority
+A patch is any change that suppresses a symptom without eliminating its proven parent Root Cause.
 
-Required causal path:
+Known workaround/fallback/bypass/parallel source of truth/half migration cannot be final closure.
 
-`target-wide material discovery → findings → RC clusters → dependency/impact graph → competitive deepening → systemic-leverage ranking → adversarial challenge → frontier`
+The correct change is not the largest possible rewrite. It is:
 
-Every material Finding is either linked to an RC or excluded with proof. Every material RC states operational parent, evidence, upstream dependencies, consumers, blast/unlock effect, comparative priority, deepening state, and disposition.
+> **the smallest complete root-correct change that removes the proven cause and reconciles its material blast radius.**
 
-Before final ranking, every open/material RC must be:
+## 7. Effective scope
 
-`DEEPENED_ENOUGH_TO_RANK` or `PROVEN_CANNOT_OUTRANK`
+```text
+EFFECTIVE_SCOPE
+=
+REQUESTED_SCOPE
++ PROVEN_ROOT_CAUSES
++ PROVEN_DEPENDENCIES
++ PROVEN_CONSUMERS
++ PROVEN_AUTHORITIES
++ PROVEN_BLAST_RADIUS
+```
 
-The winner must be `DEEPENED_ENOUGH_TO_RANK`.
+A narrow request may therefore require changes outside the named surface/path. This is required when necessary for correct closure; unrelated scope expansion is forbidden.
 
-Default leverage precedence:
+## 8. Project-specific but live-verified
 
-1. upstream/root-cause depth
-2. blocking power
-3. canonical/foundation importance
-4. blast radius
-5. security/data/finance/operational risk
-6. unlock value
-7. cross-journey/cross-surface effect
-8. recurrence/finding density
-9. structural-debt multiplier
-10. local leaf/cosmetic impact
+This orchestrator is intentionally specific to bthwani-suite-next. Stable names may be used as discovery anchors, but their current meaning/ownership must still be proven live.
 
-Forbidden shortcuts:
+Known anchors and classification rules are in `01-SCOPE-AUTHORITY-RULES.md`.
 
-`recency | finding count alone | changed-file count | easiest fix | last session/topic | sequence number | first CI failure`
+Principle:
 
-A stronger upstream cause invalidates only the affected cone: suspend dependent work, update graph/evidence, rerank, treat upstream root, invalidate descendants, then resume only if still justified.
+> **PROJECT-SPECIFIC NAMES MAY BE STABLE; PROJECT-SPECIFIC MEANING MUST STILL BE VERIFIED LIVE.**
 
-## 7. Frontier and execution
+## 9. Mandatory lenses
 
-The engine derives readiness; package authors do not grant themselves PASS through summary flags.
+Regardless of focus, keep these materially applicable lenses on:
 
-A frontier is executable only when:
+`ROOT CAUSE | DEPENDENCIES | CONSUMERS | DATA INTEGRITY | CONTRACT IMPACT | SECURITY | GOVERNANCE IMPACT | TESTING | RUNTIME PROOF | LEGACY/PARALLEL TRUTH CLEANUP`
 
-- operational coverage is materially settled;
-- negative-space and adversarial evidence pass;
-- all material Findings/Decisions/Consumers/Dependencies/Scope Deltas are accounted;
-- RC references are valid and ranking/deepening are complete;
-- every selected Work item references a valid RC and conflict domain/owner;
-- dependency order is satisfiable;
-- verification is defined before execution.
+A lens may be `N/A_PROVEN`; it may never disappear silently.
 
-Dependencies govern order. Read-only diagnosis may run broadly in parallel. Parallel writes require graph-proven semantic independence, non-overlapping conflict domains, isolated worker branches/worktrees, and explicit owners.
+## 10. Decision boundary
 
-Root treatment is coherent cutover:
+Derive what evidence can derive. Ask the human only for a material product/business/semantic choice that cannot be derived safely.
 
-`highest proven root treatment → canonical owner → affected writers/readers/consumers → contracts/data/generated sync/migrations → cross-surface behavior → obsolete/parallel truth removal → cleanup → canonical readback/runtime verification`
+A `DECISION_REQUIRED` request must contain:
 
-No COMPLETE while a required consumer, migration, contradictory source of truth, reachable obsolete path, workaround, or material scope delta remains unresolved.
+`question | options | recommendation | reason | impact/blast radius | migration consequences`
 
-## 8. Evidence model and proof limits
+Continue independent work that does not depend on that decision.
 
-Evidence records bind:
+## 11. Legitimate stop states
 
-`claim | source/check | candidate | environment/profile | result | proof limits/invalidation trigger`
+Only:
 
-Valid evidence states include `PASS | FAIL | MISSING | STALE | BLOCKED | N/A`. Missing/stale required evidence is OPEN.
+- `CLOSED` — closure gate proven.
+- `DECISION_REQUIRED` — true non-derivable material decision.
+- `EXTERNAL_BLOCKER` — genuine external dependency not resolvable from repository/runtime capabilities.
 
-Proof limits are explicit:
+`too many findings`, `large scope`, `follow up later`, `create ticket`, or `write a plan` are not closure states.
 
-- Task Branch green ≠ Integration Target green.
-- static/build/typecheck/lint/unit/mock evidence ≠ runtime/E2E evidence.
-- hidden/disabled UI ≠ server authorization.
-- migration applied ≠ idempotency/readback/restart/compatibility proof.
-- tracked workflow ≠ live hosted enforcement.
-- docs/plans ≠ Product PASS.
+## 12. Final closure authority
 
-Do not rerun blindly to manufacture green. A changed candidate, changed authority/contract/data/runtime assumption, or foreign delta invalidates the affected evidence cone.
+Closure is governed by `04-VERIFY-REDIAGNOSE-CLOSE.md` and is fail-closed.
 
-## 9. Git truth, integration and candidate
+At minimum, final closure requires no known material open root/finding, no silent exclusion, no unresolved decision, no unaccounted affected consumer, no unjustified parallel truth/legacy path, no proven governance drift left in scope, no unverified material claim, reconciliation with the latest exact HEAD, and a passing final adversarial re-diagnosis.
 
-The engine resolves live Git truth itself. An agent-supplied SHA is never the authority for freshness.
-
-Before integration:
-
-`resolve live target → classify foreign delta → reconcile affected graph/evidence → reverify → integrate non-force/fast-forward-safe`
-
-Foreign delta classes:
-
-`UNRELATED | RELATED_NON_BLOCKING | UPSTREAM_OR_ROOT_CHANGING | BLOCKING | SEMANTIC_OVERLAP | DIRECT_CONFLICT | AUTHORITY_OR_TRUTH_CHANGE`
-
-Unrelated work is preserved and does not redirect priority. Related/root-changing work invalidates only the affected cone.
-
-Candidate lifecycle:
-
-`BASE_SHA → TASK_HEAD → verified implementation candidate → latest-target reconciliation → integration result → FINAL_CANDIDATE(= exact live integration HEAD) → final read-only verification`
-
-Final closure is evaluated on the exact current Integration Target HEAD. Any source write after final-candidate verification creates a new candidate and invalidates candidate-bound evidence.
-
-## 10. Cleanup
-
-Cleanup is part of DONE, not optional polish.
-
-Remove or correctly relocate/merge proven:
-
-`dead | stale | legacy | superseded | unused | obsolete | workaround/fallback | unjustified compatibility | orphan | misplaced | duplicate-truth | temporary | debug | generated noise`
-
-Flow:
-
-`discover → prove obsolete/wrong/duplicate → remove/merge/move → repair references/consumers → reverify`
-
-Never blindly delete merely because a static tool calls something orphaned.
-
-## 11. Modes and derived gates
-
-`PREPARE_ONLY` may diagnose, decide, rank, define exact cutover/cleanup/verification, and end at a proven prepared frontier. It never claims execution closure.
-
-`EXECUTE_END_TO_END` continues through root treatment, consumer reconciliation, cleanup, verification, integration, exact-candidate final verification, and closure.
-
-The package contains facts and evidence, not authoritative `READINESS`, `UNACCOUNTED`, `COMPLETION`, or lifecycle `STATUS` declarations. `orchestrator.mjs` derives them.
-
-Public operation:
-
-`node plans/diagnose-implementing/orchestrator.mjs new ...`
-
-`node plans/diagnose-implementing/orchestrator.mjs check --package <PACKAGE.md> --phase <diagnose|prepare|execute|verify|close>`
-
-`node plans/diagnose-implementing/orchestrator.mjs state --package <PACKAGE.md>`
-
-## 12. Closure equation
-
-`CLOSED` is derivable only when all are true:
-
-- exact live Integration Target HEAD is the final candidate;
-- task isolation/base ancestry/reconciliation remain valid;
-- operational coverage and RC landscape are referentially sound;
-- zero material unaccounted Findings/Decisions/Consumers/Dependencies/Scope Deltas/lower-layer observations;
-- required consumers and cleanup are complete;
-- implementation and verification evidence pass;
-- governance/self-guard evidence passes;
-- runtime/product evidence passes when required;
-- final adversarial evidence passes;
-- closure evidence is candidate-bound and current;
-- no known material orchestrator/task finding remains.
-
-If any required condition is not proven, state remains OPEN.
+If any required condition is not proven, the state is `OPEN`.
