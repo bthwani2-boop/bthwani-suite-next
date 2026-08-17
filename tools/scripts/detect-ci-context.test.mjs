@@ -43,33 +43,37 @@ test("guard directory names do not widen product risk scope", () => {
   assert.equal(result.verification_tier, "standard");
 });
 
-test("workflow changes are deep security policy without runtime", () => {
+test("verification authority changes force complete fail-closed scope", () => {
   const result = classifyFiles([".github/workflows/ci.yml"]);
-  assert.equal(result.full_scope, false);
+  assert.equal(result.full_scope, true);
+  assert.equal(result.full_verification, true);
   assert.equal(result.workflow_policy, true);
   assert.equal(result.security_policy, true);
   assert.equal(result.workflow_security_policy, true);
-  assert.equal(result.security_scan_policy, false);
-  assert.equal(result.dsh, false);
-  assert.equal(result.wlt, false);
-  assert.equal(result.identity, false);
-  assert.equal(result.foundation_guard_ids.includes("source-integrity"), true);
+  assert.equal(result.dsh, true);
+  assert.equal(result.wlt, true);
+  assert.equal(result.identity, true);
+  assert.equal(result.runtime_profile, "full");
+  assert.equal(result.runtime_required, true);
+  assert.deepEqual(result.required_jobs, ["policy", "diagnostics", "node", "backends", "runtime"]);
+  assert.deepEqual(result.verification_requirement, {
+    scope: "all",
+    depth: "full",
+    runtime_required: true,
+    required_jobs: ["policy", "diagnostics", "node", "backends", "runtime"],
+    reason: "verification-authority-change",
+  });
   assert.equal(result.verification_tier, "deep");
-  assert.equal(result.runtime_profile, "none");
 });
 
-test("verification depth does not widen semantic scope", () => {
-  const result = classifyFiles([".github/workflows/ci.yml"], { verificationDepth: "full" });
+test("verification depth alone does not widen semantic scope", () => {
+  const result = classifyFiles(["README.md"], { verificationDepth: "full" });
   assert.equal(result.full_scope, false);
+  assert.equal(result.full_verification, true);
   assert.equal(result.verification_depth, "full");
   assert.equal(result.dsh, false);
   assert.equal(result.frontend, false);
   assert.equal(result.contracts, false);
-  assert.deepEqual(result.foundation_guard_ids, [
-    "source-integrity",
-    "required-command-integrity",
-    "no-broken-imports",
-  ]);
 });
 
 test("isolated app code remains fast", () => {
@@ -234,6 +238,7 @@ test("full mode enables every domain and full runtime", () => {
     assert.equal(result[key], true, key);
   }
   assert.equal(result.runtime_profile, "full");
+  assert.equal(result.runtime_required, true);
   assert.equal(result.mobile, true);
   assert.equal(result.journey_scope, "PROJECT-WIDE");
 });
@@ -245,14 +250,22 @@ test("runtime is required only at closure or master phases", () => {
   assert.equal(classifyFiles(files, { executionPhase: "master" }).runtime_required, true);
 });
 
+test("explicit runtime proof is represented by the canonical requirement", () => {
+  const result = classifyFiles([], { runtimeProof: "true" });
+  assert.equal(result.runtime_profile, "full");
+  assert.equal(result.runtime_required, true);
+  assert.deepEqual(result.required_jobs, ["runtime"]);
+  assert.equal(result.verification_requirement.runtime_required, true);
+});
+
 test("classification exports every required routing key", () => {
   const result = classifyFiles(["README.md"]);
   const expected = [
-    "changed_count", "full_scope", "verification_depth", "foundation_guard_ids", "governance", "workflow", "infrastructure", "security", "policy",
+    "changed_count", "full_scope", "full_verification", "verification_depth", "verification_requirement", "required_jobs", "foundation_guard_ids", "governance", "workflow", "infrastructure", "security", "policy",
     "governance_policy", "workflow_policy", "workflow_security_policy", "security_scan_policy", "security_policy", "infrastructure_policy", "nomenclature_required",
     "frontend", "contracts", "materialization_inputs_changed", "journey", "journey_scope", "node", "node_scope",
     "dsh", "wlt", "identity", "workforce", "platform", "providers", "database",
-    "runtime", "runtime_required", "runtime_profile", "mobile", "database_changed", "contracts_changed", "shared_brain", "heavy", "verification_tier", "diagnostics",
+    "runtime", "runtime_required", "runtime_profile", "mobile", "database_changed", "contracts_changed", "shared_brain", "heavy", "verification_tier", "diagnostics", "policy_required", "diagnostics_required", "verification_required", "backend_required",
     "platform_change_sets", "cleanup_changed", "native_changed", "visual_changed",
     "OperatorContext_isolation_changed", "financial_changed", "migration_changed", "shared_contract_changed",
     "recovery_changed", "observability_changed", "auth_changed", "session_changed", "rbac_changed",

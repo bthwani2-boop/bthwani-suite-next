@@ -2,6 +2,10 @@ import { execFileSync } from "node:child_process";
 import { appendFileSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  deriveVerificationRequirement,
+  isVerificationAuthorityChange,
+} from "./verification-requirement.mjs";
 
 const ZERO_SHA = /^0+$/;
 
@@ -82,7 +86,9 @@ export function classifyFiles(inputFiles, options = {}) {
     .toLowerCase();
   const executionPhase = String(options.executionPhase ?? "pr").trim().toLowerCase() || "pr";
   const manualJourney = normalizeJourney(options.journey);
-  const fullScope = mode === "full";
+  const runtimeProofRequested = String(options.runtimeProof ?? "false").trim().toLowerCase() === "true";
+  const verificationAuthorityChanged = isVerificationAuthorityChange(files);
+  const fullScope = mode === "full" || verificationAuthorityChanged;
   const full = fullScope;
   const has = (predicate) => files.some(predicate);
   const starts = (...prefixes) => has((file) => prefixes.some((prefix) => file.startsWith(prefix)));
@@ -207,9 +213,15 @@ export function classifyFiles(inputFiles, options = {}) {
   else if (mobileRuntimeTransport) runtimeProfile = "identity-security";
   else if (nativeChanged) runtimeProfile = "mobile-native";
   else if (mobileTooling) runtimeProfile = "mobile-config";
+  if (runtimeProofRequested && runtimeProfile === "none") runtimeProfile = "full";
 
   const runtime = runtimeProfile !== "none";
-  const runtimeRequired = runtime && (["closure", "master"].includes(executionPhase) || protectedSecurityChanged);
+  const runtimeRequired = runtime && (
+    runtimeProofRequested ||
+    fullScope ||
+    ["closure", "master"].includes(executionPhase) ||
+    protectedSecurityChanged
+  );
 
   const mobile = full || mobileTooling || mobileRuntimeTransport || nativeChanged || starts(
     "apps/app-client/",
@@ -265,6 +277,19 @@ export function classifyFiles(inputFiles, options = {}) {
   const heavy = verificationTier === "deep";
   const diagnostics = full || contracts || (frontend && verificationTier !== "fast");
 
+  const verificationRequired = full || frontend || node || journey || platformChangeSets;
+  const backendRequired = full || backendChanged;
+  const verificationRequirement = deriveVerificationRequirement({
+    fullScope,
+    verificationDepth: fullScope ? "full" : verificationDepth,
+    policy,
+    diagnostics,
+    verification: verificationRequired,
+    backend: backendRequired,
+    runtimeRequired,
+    authorityChange: verificationAuthorityChanged,
+  });
+
   let journeyScope = "";
   if (full || productJourneyGovernance) journeyScope = "PROJECT-WIDE";
   else if (manualJourney) journeyScope = manualJourney;
@@ -291,7 +316,10 @@ export function classifyFiles(inputFiles, options = {}) {
   return {
     changed_count: files.length,
     full_scope: fullScope,
-    verification_depth: verificationDepth,
+    full_verification: verificationRequirement.depth === "full",
+    verification_depth: verificationRequirement.depth,
+    verification_requirement: verificationRequirement,
+    required_jobs: verificationRequirement.required_jobs,
     foundation_guard_ids: uniqueInOrder(foundationGuardIds),
     governance,
     workflow,
@@ -322,13 +350,17 @@ export function classifyFiles(inputFiles, options = {}) {
     contracts_changed: contractsChanged,
     materialization_inputs_changed: materializationInputsChanged,
     runtime,
-    runtime_required: runtimeRequired,
+    runtime_required: verificationRequirement.runtime_required,
     runtime_profile: runtimeProfile,
     mobile,
     shared_brain: sharedBrain,
     heavy,
     verification_tier: verificationTier,
     diagnostics,
+    policy_required: policy,
+    diagnostics_required: diagnostics,
+    verification_required: verificationRequired,
+    backend_required: backendRequired,
     platform_change_sets: platformChangeSets,
     cleanup_changed: cleanupChanged,
     native_changed: nativeChanged,
@@ -383,7 +415,8 @@ function main() {
   const providedFiles = String(process.env.CI_CHANGED_FILES ?? "").trim();
   const files = providedFiles ? providedFiles.split(/\r?\n/).map(normalizePath).filter(Boolean) : readChangedFiles(baseSha, headSha);
   const executionPhase = String(process.env.CI_EXECUTION_PHASE ?? "pr").trim() || "pr";
-  const classification = classifyFiles(files, { mode, journey, executionPhase, verificationDepth });
+  const runtimeProof = String(process.env.CI_RUNTIME_PROOF ?? "false").trim() || "false";
+  const classification = classifyFiles(files, { mode, journey, executionPhase, verificationDepth, runtimeProof });
   const outputs = { base_sha: baseSha, head_sha: headSha, mode, ...classification };
   writeGitHubOutputs(outputs);
   process.stdout.write(`${JSON.stringify({ files: uniqueSorted(files), ...outputs }, null, 2)}\n`);

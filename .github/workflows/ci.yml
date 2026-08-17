@@ -51,7 +51,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FULL_VERIFICATION_TRIGGER: governance/contracts/full-verification-policy.json
   GIT_CONFIG_COUNT: "1"
   GIT_CONFIG_KEY_0: init.defaultBranch
   GIT_CONFIG_VALUE_0: master
@@ -66,6 +65,8 @@ jobs:
       head_sha: ${{ steps.scope.outputs.head_sha }}
       full_verification: ${{ steps.scope.outputs.full_verification }}
       full_scope: ${{ steps.scope.outputs.full_scope }}
+      verification_requirement: ${{ steps.scope.outputs.verification_requirement }}
+      required_jobs: ${{ steps.scope.outputs.required_jobs }}
       verification_depth: ${{ steps.scope.outputs.verification_depth }}
       governance: ${{ steps.scope.outputs.governance }}
       workflow: ${{ steps.scope.outputs.workflow }}
@@ -103,6 +104,10 @@ jobs:
       verification_tier: ${{ steps.scope.outputs.verification_tier }}
       diagnostics: ${{ steps.scope.outputs.diagnostics }}
       platform_change_sets: ${{ steps.scope.outputs.platform_change_sets }}
+      policy_required: ${{ steps.scope.outputs.policy_required }}
+      diagnostics_required: ${{ steps.scope.outputs.diagnostics_required }}
+      verification_required: ${{ steps.scope.outputs.verification_required }}
+      backend_required: ${{ steps.scope.outputs.backend_required }}
       skip_duplicate_push: ${{ steps.scope.outputs.skip_duplicate_push }}
       execution_phase: ${{ steps.scope.outputs.execution_phase }}
     steps:
@@ -130,6 +135,7 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           DISPATCH_MODE: ${{ inputs.mode }}
           DISPATCH_JOURNEY: ${{ inputs.journey }}
+          DISPATCH_RUNTIME_PROOF: ${{ inputs.runtime_proof }}
           EVENT_NAME: ${{ github.event_name }}
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -205,6 +211,8 @@ jobs:
             BASE_SHA="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${HEAD_SHA}")"
           fi
 
+          CHANGED_FILES="$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}")"
+          VERIFICATION_AUTHORITY_CHANGED="$(printf '%s\n' "${CHANGED_FILES}" | node tools/scripts/verification-requirement.mjs --authority-change)"
           FULL_VERIFICATION=false
           FULL_SCOPE=false
           if [[ "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "master" && "${VERIFIED_PUSH_BASE}" != "true" ]]; then
@@ -215,15 +223,15 @@ jobs:
           elif [[ "${EVENT_NAME}" == "workflow_dispatch" && "${DISPATCH_MODE:-affected}" == "full" ]]; then
             FULL_VERIFICATION=true
             FULL_SCOPE=true
-          elif git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" | grep -Fxq "${FULL_VERIFICATION_TRIGGER}"; then
+          elif [[ "${VERIFICATION_AUTHORITY_CHANGED}" == "true" ]]; then
+            # Verification authority cannot certify itself with a partial run.
             FULL_VERIFICATION=true
-          elif git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" | grep -Eq '^\.github/workflows/'; then
-            # Verification machinery cannot certify itself with a partial run.
-            FULL_VERIFICATION=true
+            FULL_SCOPE=true
           fi
           echo "full_verification=${FULL_VERIFICATION}" >> "${GITHUB_OUTPUT}"
+          echo "full_scope=${FULL_SCOPE}" >> "${GITHUB_OUTPUT}"
 
-          printf '%s\n' "verification base=${BASE_SHA} head=${HEAD_SHA} trusted_push_base=${VERIFIED_PUSH_BASE} full=${FULL_VERIFICATION}"
+          printf '%s\n' "verification base=${BASE_SHA} head=${HEAD_SHA} trusted_push_base=${VERIFIED_PUSH_BASE} authority_change=${VERIFICATION_AUTHORITY_CHANGED} full=${FULL_VERIFICATION} scope_all=${FULL_SCOPE}"
 
           MODE="affected"
           if [[ "${FULL_SCOPE}" == "true" ]]; then MODE="full"; fi
@@ -235,6 +243,7 @@ jobs:
           CI_VERIFICATION_DEPTH="${VERIFICATION_DEPTH}" \
           CI_EXECUTION_PHASE="${EXECUTION_PHASE}" \
           CI_JOURNEY="${DISPATCH_JOURNEY:-}" \
+          CI_RUNTIME_PROOF="${DISPATCH_RUNTIME_PROOF:-false}" \
           node tools/scripts/detect-ci-context.mjs
       - name: Publish routing summary
         env:
@@ -266,7 +275,7 @@ jobs:
   policy:
     name: Policy and governance
     needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.policy == 'true' }}
+    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.policy_required == 'true' }}
     uses: ./.github/workflows/ci-policy.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
@@ -285,7 +294,7 @@ jobs:
   diagnostics:
     name: Static diagnostics
     needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.diagnostics == 'true' }}
+    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.diagnostics_required == 'true' }}
     uses: ./.github/workflows/ci-node-diagnostics.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
@@ -301,7 +310,7 @@ jobs:
   verification:
     name: Node verification
     needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && (needs.context.outputs.full_scope == 'true' || needs.context.outputs.frontend == 'true' || needs.context.outputs.node == 'true' || needs.context.outputs.journey == 'true' || needs.context.outputs.platform_change_sets == 'true') }}
+    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.verification_required == 'true' }}
     uses: ./.github/workflows/ci-node-verification.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
@@ -319,7 +328,7 @@ jobs:
   backends:
     name: Backend verification
     needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && (needs.context.outputs.full_scope == 'true' || needs.context.outputs.dsh == 'true' || needs.context.outputs.wlt == 'true' || needs.context.outputs.identity == 'true' || needs.context.outputs.workforce == 'true' || needs.context.outputs.platform == 'true' || needs.context.outputs.providers == 'true') }}
+    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.backend_required == 'true' }}
     uses: ./.github/workflows/ci-backends.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
@@ -338,12 +347,12 @@ jobs:
   runtime:
     name: Runtime proof
     needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && (needs.context.outputs.runtime_required == 'true' || (github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true)) }}
+    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.runtime_required == 'true' }}
     uses: ./.github/workflows/ci-runtime.yml
     with:
       full_verification: ${{ needs.context.outputs.full_verification }}
       runtime: ${{ needs.context.outputs.runtime_required }}
-      runtime_profile: ${{ (github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true && needs.context.outputs.runtime_profile == 'none') && 'full' || needs.context.outputs.runtime_profile }}
+      runtime_profile: ${{ needs.context.outputs.runtime_profile }}
       runtime_proof: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
 
   result:
@@ -362,17 +371,11 @@ jobs:
           VERIFICATION_RESULT: ${{ needs.verification.result }}
           BACKENDS_RESULT: ${{ needs.backends.result }}
           RUNTIME_RESULT: ${{ needs.runtime.result }}
-          FULL_VERIFICATION: ${{ needs.context.outputs.full_verification }}
-          FULL_SCOPE: ${{ needs.context.outputs.full_scope }}
-          POLICY_REQUIRED: ${{ needs.context.outputs.policy }}
-          DIAGNOSTICS_REQUIRED: ${{ needs.context.outputs.diagnostics }}
-          FRONTEND_REQUIRED: ${{ needs.context.outputs.frontend }}
-          NODE_REQUIRED: ${{ needs.context.outputs.node }}
-          JOURNEY_REQUIRED: ${{ needs.context.outputs.journey }}
-          PLATFORM_CHANGE_SETS_REQUIRED: ${{ needs.context.outputs.platform_change_sets }}
-          BACKEND_REQUIRED: ${{ needs.context.outputs.full_scope == 'true' || needs.context.outputs.dsh == 'true' || needs.context.outputs.wlt == 'true' || needs.context.outputs.identity == 'true' || needs.context.outputs.workforce == 'true' || needs.context.outputs.platform == 'true' || needs.context.outputs.providers == 'true' }}
+          POLICY_REQUIRED: ${{ needs.context.outputs.policy_required }}
+          DIAGNOSTICS_REQUIRED: ${{ needs.context.outputs.diagnostics_required }}
+          VERIFICATION_REQUIRED: ${{ needs.context.outputs.verification_required }}
+          BACKEND_REQUIRED: ${{ needs.context.outputs.backend_required }}
           RUNTIME_REQUIRED: ${{ needs.context.outputs.runtime_required }}
-          EXPLICIT_RUNTIME_PROOF: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
           SKIP_DUPLICATE_PUSH: ${{ needs.context.outputs.skip_duplicate_push }}
           EXECUTION_PHASE: ${{ needs.context.outputs.execution_phase }}
         run: |
@@ -397,21 +400,12 @@ jobs:
             failed=1
           }
 
-          verification_applicable=false
-          if [[ "${FULL_SCOPE}" == "true" || "${FRONTEND_REQUIRED}" == "true" || "${NODE_REQUIRED}" == "true" || "${JOURNEY_REQUIRED}" == "true" || "${PLATFORM_CHANGE_SETS_REQUIRED}" == "true" ]]; then
-            verification_applicable=true
-          fi
-          runtime_applicable=false
-          if [[ "${RUNTIME_REQUIRED}" == "true" || "${EXPLICIT_RUNTIME_PROOF}" == "true" ]]; then
-            runtime_applicable=true
-          fi
-
           check_result context "${CONTEXT_RESULT}" true
           check_result policy "${POLICY_RESULT}" "${POLICY_REQUIRED}"
           check_result diagnostics "${DIAGNOSTICS_RESULT}" "${DIAGNOSTICS_REQUIRED}"
-          check_result verification "${VERIFICATION_RESULT}" "${verification_applicable}"
+          check_result verification "${VERIFICATION_RESULT}" "${VERIFICATION_REQUIRED}"
           check_result backends "${BACKENDS_RESULT}" "${BACKEND_REQUIRED}"
-          check_result runtime "${RUNTIME_RESULT}" "${runtime_applicable}"
+          check_result runtime "${RUNTIME_RESULT}" "${RUNTIME_REQUIRED}"
 
           if [[ "${failed}" -ne 0 ]]; then
             message="failed or unjustifiably skipped bundles: $(IFS=,; echo "${failures[*]}")"

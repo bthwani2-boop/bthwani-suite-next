@@ -176,11 +176,17 @@ rejectMarkers(lockfileIntegrityRelative, lockfile, [
 if (exists(`${workflowsRoot}/lockfile-snapshot.yml`)) violations.push({ file: `${workflowsRoot}/lockfile-snapshot.yml`, line: 0, message: "RETIRED_LOCKFILE_SNAPSHOT_WORKFLOW_PRESENT" });
 
 const ci = requireMarkers(`${workflowsRoot}/ci.yml`, [
-  "branches: [\"**\"]", fullVerificationPolicy, "uses: ./.github/workflows/ci-policy.yml", "uses: ./.github/workflows/ci-node-diagnostics.yml",
+  "branches: [\"**\"]", "verification_requirement:", "required_jobs:", "uses: ./.github/workflows/ci-policy.yml", "uses: ./.github/workflows/ci-node-diagnostics.yml",
   "uses: ./.github/workflows/ci-node-verification.yml", "uses: ./.github/workflows/ci-backends.yml", "uses: ./.github/workflows/ci-runtime.yml",
   "name: BThwani CI result", "if: ${{ always() }}", "Enforce fail-closed aggregate result",
 ]);
 if ((ci.match(/^\s*concurrency:\s*$/gm) ?? []).length !== 1) violations.push({ file: `${workflowsRoot}/ci.yml`, line: 0, message: "ONE_WORKFLOW_LEVEL_CONCURRENCY_REQUIRED" });
+requireMarkers("tools/scripts/verification-requirement.mjs", [
+  fullVerificationPolicy,
+  "--authority-change",
+  "required_jobs",
+  "verification-authority-change",
+]);
 
 const ciPolicy = requireMarkers(`${workflowsRoot}/ci-policy.yml`, [
   "guard:required-command-integrity", "guard:actions-pin", "guard:workflow-lint", "guard:workflow-security", "guard:opa-policies",

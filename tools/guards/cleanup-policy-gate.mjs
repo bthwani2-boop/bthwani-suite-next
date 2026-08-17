@@ -89,6 +89,33 @@ const textualPolicyFiles = new Set([
   "GEMINI.md",
 ]);
 
+// `tools/commandn` is intentionally retained as a human-requested historical
+// source corpus. Its absolute path is data in that retained prompt, not an
+// executable repository-root dependency. Keep this exception both narrow and
+// contract-bound so a missing/corrupted canonical cutover fails closed.
+function isCanonicalHistoricalCommandnRetention(file) {
+  if (file !== "tools/commandn") return false;
+  const orchestrator = path.join(
+    repoRoot,
+    "tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md",
+  );
+  const sourceMap = path.join(
+    repoRoot,
+    "tools/prompting/bthwani-orchestrator/99-SOURCE-MAP.md",
+  );
+  if (!fs.existsSync(orchestrator) || !fs.existsSync(sourceMap)) return false;
+  const orchestratorText = fs.readFileSync(orchestrator, "utf8");
+  const sourceMapText = fs.readFileSync(sourceMap, "utf8");
+  return (
+    orchestratorText.includes("PACKAGE_CLASS: PROTECTED_ENGINEERING_CONTROL_PLANE") &&
+    orchestratorText.includes("DEFAULT_ORCHESTRATOR_MUTABILITY: READ_ONLY") &&
+    sourceMapText.includes("RUNTIME_AUTHORITY: NO") &&
+    sourceMapText.includes("The human explicitly required the legacy files") &&
+    sourceMapText.includes("tools/commandn") &&
+    sourceMapText.includes("historical/source-corpus retention only")
+  );
+}
+
 const excludedDirs = new Set([
   ".git",
   "node_modules",
@@ -208,6 +235,12 @@ for (const file of [...localPathScan].sort()) {
   for (const [index, line] of content.split(/\r?\n/).entries()) {
     const hardcoded = hardcodedPathRegexes.find((regex) => regex.test(line));
     if (hardcoded) {
+      if (
+        isCanonicalHistoricalCommandnRetention(file) &&
+        line.toLowerCase().includes("c:\\bthwani-suite-next\\tools\\commandn")
+      ) {
+        continue;
+      }
       violations.push({
         file,
         line: index + 1,

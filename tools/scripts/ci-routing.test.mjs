@@ -10,8 +10,13 @@ test("CI workflow separates semantic scope from verification depth", () => {
   const workflow = read(".github/workflows/ci.yml");
   assert.match(workflow, /CI_MODE="\$\{MODE\}"/u);
   assert.match(workflow, /CI_VERIFICATION_DEPTH="\$\{VERIFICATION_DEPTH\}"/u);
-  assert.match(workflow, /full_scope == 'true'/u);
+  assert.match(workflow, /verification_requirement:/u);
+  assert.match(workflow, /required_jobs:/u);
+  assert.match(workflow, /verification_required:/u);
+  assert.match(workflow, /backend_required:/u);
   assert.doesNotMatch(workflow, /if:.*full_verification == 'true'.*frontend/u);
+  assert.doesNotMatch(workflow, /BACKEND_REQUIRED:.*full_scope/u);
+  assert.doesNotMatch(workflow, /verification_applicable/u);
   assert.match(read("tools/scripts/detect-ci-context.mjs"), /full_scope: fullScope/u);
 });
 
