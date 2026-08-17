@@ -1,5 +1,4 @@
-import { proxyAuthenticatedUpstream } from "../../adapters/upstream-proxy.adapter";
-import { resolveProvidersServerBaseUrl } from "../../auth/_lib/env";
+import { proxyControlPanelRequest } from "../../../../server/bff-proxy";
 
 export const runtime = "nodejs";
 
@@ -8,11 +7,7 @@ async function handle(
   context: { params: Promise<{ path: string[] }> },
 ): Promise<Response> {
   const { path } = await context.params;
-  return proxyAuthenticatedUpstream(
-    request,
-    path,
-    resolveProvidersServerBaseUrl(),
-  );
+  return proxyControlPanelRequest(request, "providers", path);
 }
 
 export {

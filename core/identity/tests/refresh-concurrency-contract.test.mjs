@@ -50,11 +50,10 @@ test("refresh concurrency is coordinated by Identity and PostgreSQL, not process
 });
 
 test("control-panel BFF preserves cookies for a concurrent refresh loser", async () => {
-  const [identityServer, refreshRoute, sessionRoute, upstreamProxy, genericProxy] = await Promise.all([
+  const [identityServer, refreshRoute, sessionRoute, bffProxy] = await Promise.all([
     read("apps/control-panel/runtime/src/app/api/auth/_lib/identity-server.ts"),
     read("apps/control-panel/runtime/src/app/api/auth/refresh/route.ts"),
     read("apps/control-panel/runtime/src/app/api/auth/session/route.ts"),
-    read("apps/control-panel/runtime/src/app/api/adapters/upstream-proxy.adapter.ts"),
     read("apps/control-panel/runtime/src/server/bff-proxy.adapter.ts"),
   ]);
 
@@ -62,7 +61,7 @@ test("control-panel BFF preserves cookies for a concurrent refresh loser", async
   assert.match(identityServer, /typed\.status === 409/);
   assert.match(identityServer, /REFRESH_ALREADY_ROTATED/);
 
-  for (const source of [refreshRoute, sessionRoute, upstreamProxy]) {
+  for (const source of [refreshRoute, sessionRoute, bffProxy]) {
     assert.match(source, /REFRESH_ALREADY_ROTATED/);
     assert.match(source, /409/);
   }
@@ -72,7 +71,7 @@ test("control-panel BFF preserves cookies for a concurrent refresh loser", async
     refreshRoute.match(/if \(isConcurrentRefreshError\(error\)\)[\s\S]*?\n\s*}/)?.[0] ?? "",
     /clearSessionCookies/,
   );
-  assert.match(upstreamProxy, /refreshFailureResponse/);
-  assert.match(upstreamProxy, /isConcurrentRefreshError\(error\)/);
-  assert.match(genericProxy, /logoutRevocationConfirmed/);
+  assert.match(bffProxy, /refreshFailureResponse/);
+  assert.match(bffProxy, /isConcurrentRefreshError\(error\)/);
+  assert.match(bffProxy, /logoutRevocationConfirmed/);
 });

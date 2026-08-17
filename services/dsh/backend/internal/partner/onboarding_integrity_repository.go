@@ -19,6 +19,7 @@ var (
 	ErrExpectedVersionRequired = errors.New("positive partner version is required")
 	ErrIdempotencyConflict     = errors.New("idempotency key reused with different partner transition")
 	ErrStoreOwnershipConflict  = errors.New("store already belongs to another partner")
+	ErrStoreIDRequired         = errors.New("explicit store id is required for a partner field visit")
 )
 
 const governedPartnerColumns = `id, legal_name_ar, legal_name_en, display_name,
@@ -304,12 +305,11 @@ func LinkPartnerStoreGoverned(ctx context.Context, db *sql.DB, partnerID, storeI
 	}
 	defer tx.Rollback() //nolint:errcheck
 
-	var partnerExists bool
-	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dsh_partners WHERE id = $1)`, partnerID).Scan(&partnerExists); err != nil {
-		return nil, err
-	}
-	if !partnerExists {
+	var partnerOperatorContextID string
+	if err := tx.QueryRowContext(ctx, `SELECT operator_context_id FROM dsh_partners WHERE id = $1`, partnerID).Scan(&partnerOperatorContextID); errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
+	} else if err != nil {
+		return nil, err
 	}
 
 	var currentPartnerID sql.NullString
@@ -332,6 +332,9 @@ func LinkPartnerStoreGoverned(ctx context.Context, db *sql.DB, partnerID, storeI
 		if err := recordActivationEvent(tx, partnerID, "store_linked:"+storeID, actorID, "control-panel", ""); err != nil {
 			return nil, err
 		}
+		if err := store.EnsurePartnerFirstStoreReferenceTx(ctx, tx, partnerID, storeID, partnerOperatorContextID); err != nil {
+			return nil, err
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, err
@@ -347,17 +350,7 @@ func CreateFieldVisitGoverned(db *sql.DB, input CreateFieldVisitInput) (FieldVis
 		return FieldVisit{}, fmt.Errorf("%w: field visit requires notes, location, or evidence", ErrInvalid)
 	}
 	if strings.TrimSpace(input.StoreID) == "" {
-		linkedStore, err := store.GetStoreByPartnerID(db, input.PartnerID)
-		if errors.Is(err, store.ErrAmbiguousPartnerStores) {
-			return FieldVisit{}, err
-		}
-		if err != nil {
-			return FieldVisit{}, err
-		}
-		if linkedStore == nil {
-			return FieldVisit{}, fmt.Errorf("%w: partner has no linked store", ErrReadinessGate)
-		}
-		input.StoreID = linkedStore.ID
+		return FieldVisit{}, ErrStoreIDRequired
 	}
 	return CreateFieldVisit(db, input)
 }
@@ -391,15 +384,15 @@ func loadPartnerTx(ctx context.Context, tx *sql.Tx, partnerID string, forUpdate 
 	return p, err
 }
 
-func loadOnboardingStoreGateTx(ctx context.Context, tx *sql.Tx, partnerID string) (store.DshStoreRow, error) {
-	row, err := store.GetStoreByPartnerIDContext(ctx, tx, partnerID)
+func loadOnboardingStoreGatesTx(ctx context.Context, tx *sql.Tx, partnerID string) ([]store.DshStoreRow, error) {
+	rows, err := store.ListStoresByPartnerIDContext(ctx, tx, partnerID)
 	if err != nil {
-		return store.DshStoreRow{}, err
+		return nil, err
 	}
-	if row == nil {
-		return store.DshStoreRow{}, fmt.Errorf("%w: no store is linked to the partner", ErrReadinessGate)
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("%w: no store is linked to the partner", ErrReadinessGate)
 	}
-	return *row, nil
+	return rows, nil
 }
 
 func validateTransitionReadinessTx(ctx context.Context, tx *sql.Tx, p Partner, target ActivationStatus) error {
@@ -428,10 +421,10 @@ func validateTransitionReadinessTx(ctx context.Context, tx *sql.Tx, p Partner, t
 	requiresVisit := target == StatusPartnerActive
 	requiresPublication := target == StatusClientVisible
 
-	var gate store.DshStoreRow
+	var gates []store.DshStoreRow
 	var err error
 	if requiresProfile || requiresVisit || requiresPublication {
-		gate, err = loadOnboardingStoreGateTx(ctx, tx, p.ID)
+		gates, err = loadOnboardingStoreGatesTx(ctx, tx, p.ID)
 		if err != nil {
 			return err
 		}
@@ -444,19 +437,21 @@ func validateTransitionReadinessTx(ctx context.Context, tx *sql.Tx, p Partner, t
 			strings.TrimSpace(p.PrimaryPhone) == "" {
 			return fmt.Errorf("%w: legal identity, owner, and primary phone must be complete", ErrReadinessGate)
 		}
-		if strings.TrimSpace(gate.DisplayName) == "" ||
-			strings.TrimSpace(gate.CityCode) == "" ||
-			strings.TrimSpace(gate.ServiceAreaCode) == "" ||
-			strings.TrimSpace(gate.AddressLine) == "" ||
-			strings.TrimSpace(gate.OperatingHours) == "" ||
-			strings.TrimSpace(gate.DeliveryReadiness) == "" {
-			return fmt.Errorf("%w: store location and operating profile must be complete", ErrReadinessGate)
+		for _, gate := range gates {
+			if strings.TrimSpace(gate.DisplayName) == "" ||
+				strings.TrimSpace(gate.CityCode) == "" ||
+				strings.TrimSpace(gate.ServiceAreaCode) == "" ||
+				strings.TrimSpace(gate.AddressLine) == "" ||
+				strings.TrimSpace(gate.OperatingHours) == "" ||
+				strings.TrimSpace(gate.DeliveryReadiness) == "" {
+				return fmt.Errorf("%w: every linked store must have complete location and operating profile", ErrReadinessGate)
+			}
+			if gate.Category != store.DshStoreCategory(p.BusinessVerticalID) {
+				return fmt.Errorf("%w: every linked store must use the partner business vertical", ErrReadinessGate)
+			}
 		}
 		if strings.TrimSpace(p.PayoutDestinationID) == "" {
 			return fmt.Errorf("%w: an active WLT payout destination is required", ErrReadinessGate)
-		}
-		if gate.Category != store.DshStoreCategory(p.BusinessVerticalID) {
-			return fmt.Errorf("%w: the linked store must use the partner business vertical", ErrReadinessGate)
 		}
 	}
 
@@ -502,10 +497,12 @@ func validateTransitionReadinessTx(ctx context.Context, tx *sql.Tx, p Partner, t
 		// The database view owns all publication rules. The only blockers that
 		// may disappear as part of this transition are the partner-state facts
 		// propagated by this same transaction; every store gate must already pass.
-		diagnostics := store.DiagnoseStorePublication(gate)
-		for _, code := range diagnostics.BlockerCodes {
-			if code != "PARTNER_NOT_CLIENT_VISIBLE" && code != "PARTNER_NOT_READY" {
-				return ErrStorePublicationGatesFailed
+		for _, gate := range gates {
+			diagnostics := store.DiagnoseStorePublication(gate)
+			for _, code := range diagnostics.BlockerCodes {
+				if code != "PARTNER_NOT_CLIENT_VISIBLE" && code != "PARTNER_NOT_READY" {
+					return ErrStorePublicationGatesFailed
+				}
 			}
 		}
 	}

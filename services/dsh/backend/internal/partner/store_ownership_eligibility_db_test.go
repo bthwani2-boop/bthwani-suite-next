@@ -1,6 +1,7 @@
 package partner
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -35,10 +36,11 @@ func TestGovernedStoreTransferRejectsClosedPartnerStatesDBIntegration(t *testing
 
 	source := create("source", "1")
 	target := create("target", "2")
-	sourceStore, err := store.GetStoreByPartnerID(db, source.ID)
-	if err != nil || sourceStore == nil {
-		t.Fatalf("load source store: row=%v err=%v", sourceStore, err)
+	sourceStores, err := store.ListStoresByPartnerIDContext(context.Background(), db, source.ID)
+	if err != nil || len(sourceStores) != 1 {
+		t.Fatalf("load source store: rows=%d err=%v", len(sourceStores), err)
 	}
+	sourceStore := &sourceStores[0]
 	originalVersion := sourceStore.Version
 
 	for _, status := range []ActivationStatus{StatusOpsRejected, StatusPartnerSuspended, StatusPartnerTerminated} {

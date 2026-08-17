@@ -191,6 +191,13 @@
       "sha256": "3948092bbf69be3c27b991e4b19d0eee04345b7fa1eccec3f5c4d6f449d768c0",
       "historicalPrefix": "1019",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 267,
+      "file": "dsh-1020_partner_first_store_identity.sql",
+      "sha256": "edce1ea3bd7246518cadbc706a987af5eef22185f09d9505967c5c1e866ed702",
+      "historicalPrefix": "1020",
+      "state": "ACTIVE"
     }
   ]
 }

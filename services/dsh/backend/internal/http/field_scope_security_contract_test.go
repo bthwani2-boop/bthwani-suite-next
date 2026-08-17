@@ -26,7 +26,7 @@ func TestFieldPartnerStoreBoundaryUsesOperatorContextScopedReaders(t *testing.T)
 	body := text[start : start+end]
 	for _, required := range []string{
 		"partner.GetPartnerForOperatorContext",
-		"store.GetStoreByPartnerIDForOperatorContext",
+		"store.GetPartnerFirstStoreForOperatorContext",
 	} {
 		if !strings.Contains(body, required) {
 			t.Fatalf("fieldPartnerStore must use %s", required)
@@ -34,6 +34,7 @@ func TestFieldPartnerStoreBoundaryUsesOperatorContextScopedReaders(t *testing.T)
 	}
 	for _, forbidden := range []string{
 		"partner.GetPartner(s.db, partnerID)",
+		"store.GetStoreByPartnerIDForOperatorContext",
 		"store.GetStoreByPartnerID(s.db, partnerID)",
 	} {
 		if strings.Contains(body, forbidden) {

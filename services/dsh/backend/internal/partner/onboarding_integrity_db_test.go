@@ -155,13 +155,14 @@ func TestClearOwnerPayoutDestinationProjectionUsesValidAbsentStateDBIntegration(
 	}
 }
 
-func TestCreateFieldVisitGovernedBindsTheOnlyLinkedStoreDBIntegration(t *testing.T) {
+func TestCreateFieldVisitGovernedRequiresExplicitStoreIDDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	partner := createPartnerFixture(t, db, "VISIT-STORE")
 	wantStoreID := partnerStoreID(t, db, partner.ID)
 	visit, err := CreateFieldVisitGoverned(db, CreateFieldVisitInput{
 		PartnerID:    partner.ID,
 		FieldActorID: "field-local-001",
+		StoreID:      wantStoreID,
 		VisitNotes:   "evidence-bearing visit",
 	})
 	if err != nil {
@@ -169,6 +170,17 @@ func TestCreateFieldVisitGovernedBindsTheOnlyLinkedStoreDBIntegration(t *testing
 	}
 	if visit.StoreID != wantStoreID {
 		t.Fatalf("field visit store = %q, want %q", visit.StoreID, wantStoreID)
+	}
+}
+
+func TestCreateFieldVisitGovernedRejectsMissingStoreID(t *testing.T) {
+	_, err := CreateFieldVisitGoverned(nil, CreateFieldVisitInput{
+		PartnerID:    "partner-under-test",
+		FieldActorID: "field-under-test",
+		VisitNotes:   "evidence-bearing visit",
+	})
+	if !errors.Is(err, ErrStoreIDRequired) {
+		t.Fatalf("expected explicit store id requirement, got %v", err)
 	}
 }
 

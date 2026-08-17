@@ -201,41 +201,38 @@ func GetStoreByID(db *sql.DB, storeID string) (*DshStoreRow, error) {
 	return &row, nil
 }
 
-// GetStoreByPartnerID resolves the store owned by partnerID, ignoring the
-// public visibility gate (used by internal/field/operator surfaces, never by
-// app-client). Returns nil if the partner has no linked store.
-func GetStoreByPartnerID(db *sql.DB, partnerID string) (*DshStoreRow, error) {
-	return GetStoreByPartnerIDContext(context.Background(), db, partnerID)
-}
-
 type storeContextQueryRower interface {
 	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
-var ErrAmbiguousPartnerStores = errors.New("partner has multiple stores; an explicit store id is required")
+type storeContextQueryer interface {
+	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+}
 
-// GetStoreByPartnerIDContext resolves canonical store publication facts through
-// either a database handle or the caller's transaction. Partner transitions use
-// the transaction form so all gates are evaluated from one consistent snapshot.
-func GetStoreByPartnerIDContext(ctx context.Context, db storeContextQueryRower, partnerID string) (*DshStoreRow, error) {
-	var count int
-	if err := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM dsh_stores WHERE partner_id = $1", partnerID).Scan(&count); err != nil {
-		return nil, fmt.Errorf("failed to count stores by partner id: %w", err)
-	}
-	if count > 1 {
-		return nil, ErrAmbiguousPartnerStores
-	}
-	row, err := scanStore(db.QueryRowContext(ctx,
-		"SELECT "+storeColumns+" FROM dsh_stores WHERE partner_id = $1",
+// ListStoresByPartnerIDContext is the partner-level store projection used by
+// activation/readiness. It preserves the one-to-many relationship and never
+// silently selects a branch.
+func ListStoresByPartnerIDContext(ctx context.Context, db storeContextQueryer, partnerID string) ([]DshStoreRow, error) {
+	rows, err := db.QueryContext(ctx,
+		"SELECT "+storeColumns+" FROM dsh_stores WHERE partner_id = $1 ORDER BY created_at ASC, id ASC",
 		partnerID,
-	))
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query store by partner id: %w", err)
+		return nil, fmt.Errorf("failed to list stores by partner id: %w", err)
 	}
-	return &row, nil
+	defer rows.Close()
+	stores := make([]DshStoreRow, 0)
+	for rows.Next() {
+		row, scanErr := scanStore(rows)
+		if scanErr != nil {
+			return nil, fmt.Errorf("failed to scan partner store: %w", scanErr)
+		}
+		stores = append(stores, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("failed to read partner stores: %w", err)
+	}
+	return stores, nil
 }
 
 type CreateDraftStoreInput struct {

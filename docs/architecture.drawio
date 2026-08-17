@@ -542,9 +542,6 @@
           <mxCell id="frontend-apps_app_partner_runtime_src_App_tsx" value="App" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3498db;strokeColor=#0165a8;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-frontend">
             <mxGeometry x="400" y="50" width="160" height="50" as="geometry" />
           </mxCell>
-          <mxCell id="frontend-apps_control_panel_runtime_src_app_api_adapters_upstream_proxy_adapter_ts" value="upstream-proxy.adapter" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3498db;strokeColor=#0165a8;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-frontend">
-            <mxGeometry x="590" y="50" width="160" height="50" as="geometry" />
-          </mxCell>
           <mxCell id="frontend-apps_control_panel_runtime_src_app_api_auth__lib_cookies_ts" value="cookies" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3498db;strokeColor=#0165a8;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-frontend">
             <mxGeometry x="780" y="50" width="160" height="50" as="geometry" />
           </mxCell>
@@ -730,9 +727,6 @@
           </mxCell>
           <mxCell id="frontend-apps_control_panel_runtime_src_app__shell__layout_tsx" value="layout" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3498db;strokeColor=#0165a8;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-frontend">
             <mxGeometry x="970" y="700" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="frontend-apps_control_panel_runtime_src_app_api__kernel_upstream_http_request_ts" value="upstream-http-request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3498db;strokeColor=#0165a8;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-frontend">
-            <mxGeometry x="20" y="765" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="frontend-apps_control_panel_runtime_src_app_api_auth__lib_identity_server_http_adapter_ts" value="identity-server-http.adapter" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3498db;strokeColor=#0165a8;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-frontend">
             <mxGeometry x="210" y="765" width="160" height="50" as="geometry" />
@@ -12920,13 +12914,10 @@
           <mxCell id="edge-2867" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="services-services_wlt_frontend_shared_dsh_wlt_settlement_wlt_settlement_api_ts" target="services-services_wlt_frontend_shared_dsh_wlt_settlement_wlt_settlement_types_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
-          <mxCell id="edge-2868" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_adapters_upstream_proxy_adapter_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_cookies_ts">
+          <mxCell id="edge-2868" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_server_bff_proxy_adapter_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_cookies_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
-          <mxCell id="edge-2869" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_adapters_upstream_proxy_adapter_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_identity_server_ts">
-            <mxGeometry relative="1" as="geometry" />
-          </mxCell>
-          <mxCell id="edge-2870" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_adapters_upstream_proxy_adapter_ts" target="frontend-apps_control_panel_runtime_src_app_api__kernel_upstream_http_request_ts">
+          <mxCell id="edge-2869" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_server_bff_proxy_adapter_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_identity_server_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
           <mxCell id="edge-2871" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_auth_activate_route_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_cookies_ts">
@@ -12977,25 +12968,25 @@
           <mxCell id="edge-2886" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_auth__lib_session_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_identity_server_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
-          <mxCell id="edge-2887" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_dsh_____path__route_ts" target="frontend-apps_control_panel_runtime_src_app_api_adapters_upstream_proxy_adapter_ts">
+          <mxCell id="edge-2887" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_dsh_____path__route_ts" target="frontend-apps_control_panel_runtime_src_server_bff_proxy_adapter_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
           <mxCell id="edge-2888" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_dsh_____path__route_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_env_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
-          <mxCell id="edge-2889" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_platform_control_____path__route_ts" target="frontend-apps_control_panel_runtime_src_app_api_adapters_upstream_proxy_adapter_ts">
+          <mxCell id="edge-2889" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_platform_control_____path__route_ts" target="frontend-apps_control_panel_runtime_src_server_bff_proxy_adapter_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
           <mxCell id="edge-2890" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_platform_control_____path__route_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_env_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
-          <mxCell id="edge-2891" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_providers_____path__route_ts" target="frontend-apps_control_panel_runtime_src_app_api_adapters_upstream_proxy_adapter_ts">
+          <mxCell id="edge-2891" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_providers_____path__route_ts" target="frontend-apps_control_panel_runtime_src_server_bff_proxy_adapter_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
           <mxCell id="edge-2892" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_providers_____path__route_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_env_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
-          <mxCell id="edge-2893" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_workforce_____path__route_ts" target="frontend-apps_control_panel_runtime_src_app_api_adapters_upstream_proxy_adapter_ts">
+          <mxCell id="edge-2893" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_workforce_____path__route_ts" target="frontend-apps_control_panel_runtime_src_server_bff_proxy_adapter_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
           <mxCell id="edge-2894" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_workforce_____path__route_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_env_ts">

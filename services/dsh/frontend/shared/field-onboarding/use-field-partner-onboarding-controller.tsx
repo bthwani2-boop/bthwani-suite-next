@@ -171,7 +171,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         businessVerticalId: form.businessVerticalId ?? "",
         notes: form.notes ?? "",
       }, createMutation);
-      await fieldUpdatePartnerStore(
+      const storeReadback = await fieldUpdatePartnerStore(
         res.id,
         buildStoreDraftInput(form),
         createPartnerMutationContext("field-update-first-store", res.id),
@@ -182,6 +182,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         ...s,
         partnerId: readback.id,
         partnerVersion: readback.version,
+        firstStoreId: storeReadback.storeId,
         form: { ...s.form, ...form },
         submitError: null,
         failure: null,
@@ -213,6 +214,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         ...s,
         partnerId: partner.id,
         partnerVersion: partner.version,
+        firstStoreId: storeRes.storeId,
         form: {
           ...s.form,
           legalNameAr: partner.legalNameAr,
@@ -291,7 +293,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         expectedVersion,
         createPartnerMutationContext("field-save-partner", state.partnerId, expectedVersion),
       );
-      await fieldUpdatePartnerStore(
+      const storeReadback = await fieldUpdatePartnerStore(
         state.partnerId,
         buildStoreDraftInput(state.form),
         createPartnerMutationContext("field-save-store", state.partnerId),
@@ -306,6 +308,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         isSaving: false,
         isDirty: false,
         partnerVersion: readback.version,
+        firstStoreId: storeReadback.storeId,
         submitError: null,
         failure: null,
         lastSavedAt: new Date().toISOString(),
@@ -399,7 +402,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         expectedVersion,
         createPartnerMutationContext("field-submit-save", state.partnerId, expectedVersion),
       );
-      await fieldUpdatePartnerStore(
+      const storeReadback = await fieldUpdatePartnerStore(
         state.partnerId,
         buildStoreDraftInput(state.form),
         createPartnerMutationContext("field-submit-store", state.partnerId),
@@ -407,7 +410,9 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
 
       // Create field visit if we have location or notes.
       if (state.visitNotes || state.locationLatitude !== null) {
+        if (!storeReadback.storeId) throw new Error("PARTNER_FIRST_STORE_REFERENCE_REQUIRED");
         const visitPayload: import("../partner").DshCreatePartnerFieldVisitRequest = {
+          storeId: storeReadback.storeId,
           visitNotes: state.visitNotes,
           evidenceMediaRefs: state.evidenceMediaRefs,
           ...(state.locationLatitude !== null && state.locationLongitude !== null && {
@@ -435,6 +440,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         ...s,
         isSubmitting: false,
         isSubmitted: true,
+        firstStoreId: storeReadback.storeId,
         partnerVersion: readback.version,
         submitError: null,
         failure: null,

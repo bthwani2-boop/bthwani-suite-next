@@ -23,7 +23,6 @@ const authSources = [
   ...filesUnder("core/identity/clients").filter((file) => file.endsWith(".ts") && !file.includes("/generated/")),
   ...filesUnder("apps/control-panel/runtime/src/app/api/auth").filter((file) => file.endsWith(".ts")),
   "apps/control-panel/runtime/src/server/bff-proxy.adapter.ts",
-  "apps/control-panel/runtime/src/app/api/adapters/upstream-proxy.adapter.ts",
   "services/dsh/frontend/shared/session/IdentitySessionGate.tsx",
   "services/dsh/frontend/shared/session/ControlPanelAuthBoundary.tsx",
   "services/dsh/backend/internal/http/protected_store.go",
@@ -85,7 +84,6 @@ test("generic control-panel authentication is exact-surface and role-neutral", (
     "apps/control-panel/runtime/src/app/api/auth/login/route.ts",
     "apps/control-panel/runtime/src/app/api/auth/session/route.ts",
     "apps/control-panel/runtime/src/app/api/auth/activate/route.ts",
-    "apps/control-panel/runtime/src/app/api/adapters/upstream-proxy.adapter.ts",
     "apps/control-panel/runtime/src/server/bff-proxy.adapter.ts",
     "services/dsh/frontend/shared/session/ControlPanelAuthBoundary.tsx",
   ];

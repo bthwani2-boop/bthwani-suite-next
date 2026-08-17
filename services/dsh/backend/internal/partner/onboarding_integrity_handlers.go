@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"dsh-api/internal/store"
 )
 
 type governedFieldPartnerUpdateRequest struct {
@@ -200,8 +199,8 @@ func HandleGovernedFieldCreateVisit(db *sql.DB) http.HandlerFunc {
 		input.PartnerID = partnerID
 		input.FieldActorID = actorID
 		visit, err := CreateFieldVisitGoverned(db, input)
-		if errors.Is(err, store.ErrAmbiguousPartnerStores) {
-			sendError(w, http.StatusConflict, "AMBIGUOUS_STORE", "partner has multiple stores; field visit requires an explicit store")
+		if errors.Is(err, ErrStoreIDRequired) {
+			sendError(w, http.StatusUnprocessableEntity, "STORE_ID_REQUIRED", "field visit requires an explicit storeId")
 			return
 		}
 		if errors.Is(err, ErrInvalid) || errors.Is(err, ErrReadinessGate) {

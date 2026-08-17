@@ -141,8 +141,15 @@
     {
       "ordinal": 20,
       "file": "workforce-020_operator_context_scope_boundary.sql",
-      "sha256": "ed2e079fbe4d5f2a386a847b17b30244af45f9be493a91c17960ac3487fe0caf",
+      "sha256": "267cef525a8b1a2398ad02f5f7b1cc289960aa92894844e0587af3ea014aec6d",
       "historicalPrefix": "020",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 21,
+      "file": "workforce-021_operator_context_identity_recovery.sql",
+      "sha256": "80bf3c475142ed807ce8673474c20ca208061ebbd190165730028573f977ef58",
+      "historicalPrefix": "021",
       "state": "ACTIVE"
     }
   ]

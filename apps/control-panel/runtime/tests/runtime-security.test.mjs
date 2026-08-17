@@ -90,9 +90,7 @@ test("control-panel token lifecycle authenticates exact surface without inventin
   const sessionRoute = read("apps/control-panel/runtime/src/app/api/auth/session/route.ts");
   const activateRoute = read("apps/control-panel/runtime/src/app/api/auth/activate/route.ts");
   const boundary = read("services/dsh/frontend/shared/session/ControlPanelAuthBoundary.tsx");
-  const upstreamProxy = read("apps/control-panel/runtime/src/app/api/adapters/upstream-proxy.adapter.ts");
-
-  for (const source of [proxy, loginRoute, refreshRoute, sessionRoute, activateRoute, boundary, upstreamProxy]) {
+  for (const source of [proxy, loginRoute, refreshRoute, sessionRoute, activateRoute, boundary]) {
     assert.match(source, /identitySessionIsBoundToSurface/);
     assert.match(source, /"control-panel"/);
     assert.doesNotMatch(source, /roles\.includes\("operator"\)/);
@@ -163,7 +161,7 @@ test("authenticated business services use explicit static BFF routes", () => {
   ];
   for (const routeFile of staticRoutes) {
     const route = read(routeFile);
-    assert.match(route, /proxyAuthenticatedUpstream/);
+    assert.match(route, /proxyControlPanelRequest/);
   }
 });
 

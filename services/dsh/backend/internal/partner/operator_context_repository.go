@@ -204,6 +204,9 @@ func createPartnerForOperatorContextTx(
 	if _, err = tx.ExecContext(ctx, `UPDATE dsh_stores SET operator_context_id = $1 WHERE id = $2`, operatorContextID, sRow.ID); err != nil {
 		return Partner{}, err
 	}
+	if err := store.EnsurePartnerFirstStoreReferenceTx(ctx, tx, p.ID, sRow.ID, operatorContextID); err != nil {
+		return Partner{}, err
+	}
 	if input.CreatedBySurface == "app-field" {
 		if err := store.EnsureFieldAssignedScopeTx(ctx, tx, operatorContextID, sRow.ID, input.CreatedByActorID); err != nil {
 			return Partner{}, err

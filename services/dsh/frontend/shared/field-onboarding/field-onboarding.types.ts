@@ -93,6 +93,7 @@ export type FieldOnboardingLoadStatus = "idle" | "hydrating" | "ready" | "error"
 export type FieldOnboardingDraftState = {
   partnerId: string | null;
   partnerVersion: number | null;
+  firstStoreId: string | null;
   step: FieldPartnerDraftStep;
   form: Partial<FieldPartnerDraftForm>;
   visitNotes: string;
@@ -116,6 +117,7 @@ export function initialDraftState(): FieldOnboardingDraftState {
   return {
     partnerId: null,
     partnerVersion: null,
+    firstStoreId: null,
     step: "basics_profile",
     form: {
       legalIdentityType: "commercial_register",

@@ -119,7 +119,11 @@ func (s *protectedStoreServer) fieldPartnerStore(w http.ResponseWriter, r *http.
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this partner draft does not belong to you")
 		return store.StoreActor{}, "", false
 	}
-	row, err := store.GetStoreByPartnerIDForOperatorContext(s.db, operatorContextID, partnerID)
+	row, err := store.GetPartnerFirstStoreForOperatorContext(r.Context(), s.db, operatorContextID, partnerID)
+	if errors.Is(err, store.ErrFirstStoreReferenceMissing) {
+		store.SendError(w, http.StatusConflict, "PARTNER_FIRST_STORE_REFERENCE_REQUIRED", "the first-store reference is not uniquely governed")
+		return store.StoreActor{}, "", false
+	}
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load partner store")
 		return store.StoreActor{}, "", false
@@ -137,7 +141,7 @@ func (s *protectedStoreServer) handleFieldGetPartnerStore(w http.ResponseWriter,
 	if !ok {
 		return
 	}
-	row, err := store.GetStoreByPartnerIDForOperatorContext(s.db, actor.OperatorContextID, r.PathValue("partnerId"))
+	row, err := store.GetStoreByIDInternalForOperatorContext(r.Context(), s.db, actor.OperatorContextID, storeID)
 	if err != nil || row == nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load store")
 		return

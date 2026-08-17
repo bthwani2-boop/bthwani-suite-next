@@ -195,7 +195,7 @@ export type DshReviewDocumentInput = {
 };
 
 export type DshCreatePartnerFieldVisitRequest = {
-  readonly storeId?: string;
+  readonly storeId: string;
   readonly visitNotes?: string;
   readonly locationLatitude?: number;
   readonly locationLongitude?: number;

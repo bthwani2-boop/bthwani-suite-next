@@ -8,7 +8,6 @@ import (
 	"strconv"
 
 	"dsh-api/internal/auth"
-	"dsh-api/internal/store"
 )
 
 // â”€â”€â”€ JSON helpers (reuse store.SendJSON pattern) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -86,53 +85,7 @@ func requireFieldOwnsPartner(w http.ResponseWriter, db *sql.DB, partnerID, actor
 
 func readinessHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		pid := partnerIDFromPath(r)
-		p, err := GetPartner(db, pid)
-		if errors.Is(err, ErrNotFound) {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
-			return
-		}
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get partner")
-			return
-		}
-		total, approved, err := CountApprovedDocuments(db, pid)
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to count documents")
-			return
-		}
-
-		var hasStore bool
-		linkedStore, err := store.GetStoreByPartnerID(db, pid)
-		if errors.Is(err, store.ErrAmbiguousPartnerStores) {
-			sendError(w, http.StatusConflict, "AMBIGUOUS_STORE", "partner has multiple stores; readiness requires an explicit store")
-			return
-		}
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve linked store")
-			return
-		}
-		if err == nil && linkedStore != nil {
-			hasStore = true
-		}
-
-		readiness := ComputeReadiness(
-			p, total, approved,
-			hasStore,
-			func() store.PublicationDecision {
-				if linkedStore == nil {
-					return ""
-				}
-				return linkedStore.PublicationDecision
-			}(),
-			func() []string {
-				if linkedStore == nil {
-					return nil
-				}
-				return linkedStore.BlockingReasonCodes
-			}(),
-		)
-		sendJSON(w, http.StatusOK, readiness)
+		writeAggregatedReadiness(w, db, partnerIDFromPath(r))
 	}
 }
 
