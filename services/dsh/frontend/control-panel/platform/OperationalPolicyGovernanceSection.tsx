@@ -103,17 +103,24 @@ function requiredReason(value: string): string {
 }
 
 export function OperationalPolicyGovernanceSection({
-  canRead,
-  canManage,
+  canReadZones,
+  canManageZones,
+  canReadSla,
+  canManageSla,
+  canReadCapacity,
+  canManageCapacity,
 }: {
-  readonly canRead: boolean;
-  readonly canManage: boolean;
+  readonly canReadZones: boolean;
+  readonly canManageZones: boolean;
+  readonly canReadSla: boolean;
+  readonly canManageSla: boolean;
+  readonly canReadCapacity: boolean;
+  readonly canManageCapacity: boolean;
 }) {
-  const authKind = canRead ? "authenticated" : "restricted";
-  const zones = useZonesController(authKind);
-  const sla = useSlaRulesController(authKind);
+  const zones = useZonesController(canReadZones ? "authenticated" : "restricted");
+  const sla = useSlaRulesController(canReadSla ? "authenticated" : "restricted");
   const [selectedZoneId, setSelectedZoneId] = React.useState<string | undefined>();
-  const capacity = useAreaCapacityController(authKind, selectedZoneId);
+  const capacity = useAreaCapacityController(canReadCapacity ? "authenticated" : "restricted", selectedZoneId);
   const [selectedSlaKey, setSelectedSlaKey] = React.useState<string | null>(null);
   const [zoneForm, setZoneForm] = React.useState<ZoneForm>(EMPTY_ZONE);
   const [slaForm, setSlaForm] = React.useState<SlaForm>(EMPTY_SLA);
@@ -203,6 +210,7 @@ export function OperationalPolicyGovernanceSection({
   }, [editor]);
 
   const saveZone = React.useCallback(async () => {
+    if (!canManageZones) return;
     try {
       const name = zoneForm.name.trim();
       const cityCode = zoneForm.cityCode.trim().toLowerCase();
@@ -226,10 +234,10 @@ export function OperationalPolicyGovernanceSection({
     } catch (error) {
       setValidationError(error instanceof Error ? error.message : "بيانات المنطقة غير صالحة.");
     }
-  }, [editor, selectedZone, zoneForm]);
+  }, [canManageZones, editor, selectedZone, zoneForm]);
 
   const saveSla = React.useCallback(async () => {
-    if (!selectedZoneId) {
+    if (!canManageSla || !selectedZoneId) {
       setValidationError("اختر منطقة تشغيلية أولًا.");
       return;
     }
@@ -254,10 +262,10 @@ export function OperationalPolicyGovernanceSection({
     } catch (error) {
       setValidationError(error instanceof Error ? error.message : "بيانات SLA غير صالحة.");
     }
-  }, [editor, selectedSla, selectedZoneId, slaForm]);
+  }, [canManageSla, editor, selectedSla, selectedZoneId, slaForm]);
 
   const saveCapacity = React.useCallback(async () => {
-    if (!selectedZoneId) {
+    if (!canManageCapacity || !selectedZoneId) {
       setValidationError("اختر منطقة تشغيلية أولًا.");
       return;
     }
@@ -283,7 +291,7 @@ export function OperationalPolicyGovernanceSection({
     } catch (error) {
       setValidationError(error instanceof Error ? error.message : "بيانات السعة غير صالحة.");
     }
-  }, [capacityForm, currentCapacity, editor, selectedZoneId]);
+  }, [canManageCapacity, capacityForm, currentCapacity, editor, selectedZoneId]);
 
   const zoneRows =
     zones.state.kind === "success"
@@ -296,7 +304,7 @@ export function OperationalPolicyGovernanceSection({
         )[])
       : [];
 
-  if (!canRead) {
+  if (!canReadZones && !canReadSla && !canReadCapacity) {
     return (
       <CpStatePanel
         role="status"
@@ -316,7 +324,7 @@ export function OperationalPolicyGovernanceSection({
             كل كتابة تعتمد الإصدار الحالي وتُسجّل بسبب واضح ومفتاح idempotency.
           </Text>
         </View>
-        {canManage ? <CpButton variant="secondary" onClick={beginZoneCreate}>منطقة تشغيلية جديدة</CpButton> : null}
+        {canManageZones ? <CpButton variant="secondary" onClick={beginZoneCreate}>منطقة تشغيلية جديدة</CpButton> : null}
       </View>
 
       {zones.state.kind === "loading" ? <CpStateView kind="loading" title="جارٍ تحميل المناطق…" /> : null}
@@ -385,7 +393,7 @@ export function OperationalPolicyGovernanceSection({
         />
         <CpButton
           variant={zoneForm.isActive ? "primary" : "secondary"}
-          disabled={!canManage}
+          disabled={!canManageZones}
           onClick={() =>
             setZoneForm((current) => ({ ...current, isActive: !current.isActive }))
           }
@@ -399,7 +407,7 @@ export function OperationalPolicyGovernanceSection({
         />
         <CpButton
           variant="primary"
-          disabled={!canManage || editor.mutating}
+          disabled={!canManageZones || editor.mutating}
           onClick={() => void saveZone()}
         >
           {editor.mutating ? "جارٍ الحفظ…" : "حفظ المنطقة"}
@@ -460,7 +468,7 @@ export function OperationalPolicyGovernanceSection({
             />
             <CpButton
               variant="primary"
-              disabled={!canManage || editor.mutating}
+              disabled={!canManageSla || editor.mutating}
               onClick={() => void saveSla()}
             >
               {editor.mutating ? "جارٍ الحفظ…" : "حفظ SLA"}
@@ -517,7 +525,7 @@ export function OperationalPolicyGovernanceSection({
             />
             <CpButton
               variant="primary"
-              disabled={!canManage || editor.mutating}
+              disabled={!canManageCapacity || editor.mutating}
               onClick={() => void saveCapacity()}
             >
               {editor.mutating ? "جارٍ الحفظ…" : "حفظ السعة"}

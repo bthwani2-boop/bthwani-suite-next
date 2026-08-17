@@ -182,6 +182,12 @@ export const evaluateDshOperationalPolicy = (body: DshOperationalEvaluationInput
     { method: "POST", body },
   );
 
+export const evaluateDshOperatorOperationalPolicy = (body: DshOperationalEvaluationInput) =>
+  request<{ decision: DshOperationalDecision }>(
+    "/dsh/operator/platform/operational-policy/evaluate",
+    { method: "POST", body },
+  );
+
 export const fetchDshOperationalPolicyAudit = (filters?: {
   readonly aggregateType?: string;
   readonly aggregateId?: string;

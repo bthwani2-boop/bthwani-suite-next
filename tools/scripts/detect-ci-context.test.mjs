@@ -131,6 +131,21 @@ test("RBAC and permissions code is deep", () => {
   }
 });
 
+test("authorization model changes require runtime proof in every execution phase", () => {
+  for (const file of [
+    "governance/contracts/scope-vocabulary.json",
+    "services/dsh/frontend/shared/session/control-panel-permissions.ts",
+    "core/identity/backend/internal/identity/employee_access.go",
+  ]) {
+    const result = classifyFiles([file], { executionPhase: "pr" });
+    assert.equal(result.rbac_changed, true, file);
+    assert.equal(result.runtime, true, file);
+    assert.equal(result.runtime_required, true, file);
+    assert.equal(result.runtime_profile, "identity-security", file);
+    assert.equal(result.verification_tier, "deep", file);
+  }
+});
+
 test("PII and privacy code is deep", () => {
   const result = classifyFiles(["core/workforce/backend/internal/pii/national-id.go"]);
   assert.equal(result.pii_changed, true);

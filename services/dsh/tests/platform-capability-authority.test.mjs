@@ -35,6 +35,15 @@ test("platform capability registry is bound to the canonical scope vocabulary", 
   assert.match(permissionsModule, /scope-vocabulary\.json/);
   assert.match(permissionsModule, /CONTROL_PANEL_CAPABILITIES/);
   assert.match(permissionsModule, /hasAllControlPanelPermissions/);
+  assert.match(permissionsModule, /dshOperationalProfileRead/);
+  assert.match(permissionsModule, /dshOperationalDeliveryModeManage/);
+  assert.match(permissionsModule, /dshOperationalSlaManage/);
+  assert.match(permissionsModule, /dshOperationalCapacityManage/);
+  assert.match(permissionsModule, /dshOperationalPolicyEvaluate/);
+  assert.equal(
+    scopeVocabulary.capabilities.some((capability) => capability.id === "dsh-operational-policy-evaluate"),
+    true,
+  );
 });
 
 test("platform policy routes use named DSH permission constants", () => {
@@ -42,16 +51,20 @@ test("platform policy routes use named DSH permission constants", () => {
   const server = read("services/dsh/backend/internal/http/server.go");
   assert.match(read("services/dsh/backend/internal/http/platformpolicies.go"), /DshPlatformPermissionRead\s+=\s+"platform\.read"/);
   assert.match(read("services/dsh/backend/internal/http/platformpolicies.go"), /DshPlatformPermissionManage\s+=\s+"platform\.manage"/);
+  assert.match(read("services/dsh/backend/internal/http/platformpolicies.go"), /DshOperationalPolicyEvaluatePermission\s+=\s+"dsh\.operational_policy\.evaluate"/);
   assert.doesNotMatch(routes, /"platform\.(?:read|manage)"/);
   assert.doesNotMatch(server, /"platform\.(?:read|manage)"/);
+  assert.match(routes, /service-areas\/\{serviceAreaCode\}.*DshServiceZonesPermissionRead/s);
+  assert.match(server, /GET \/dsh\/operator\/platform\/service-areas", protected\.withPermission\("control-panel", DshServiceZonesPermissionRead/);
+  assert.match(server, /PUT \/dsh\/operator\/platform\/service-areas\/\{serviceAreaCode\}", protected\.withPermission\("control-panel", DshServiceZonesPermissionManage/);
+  assert.match(routes, /operator\/platform\/operational-policy\/evaluate.*DshOperationalPolicyEvaluatePermission/s);
 });
 
 test("policy surfaces gate reads and writes before invoking their controllers", () => {
   const screen = read("services/dsh/frontend/control-panel/platform/PlatformPoliciesScreen.tsx");
   assert.match(screen, /useIdentitySession/);
   assert.match(screen, /hasAllControlPanelPermissions/);
-  for (const prop of ["canRead", "canManage", "canReadAudit", "canRollback"]) {
-    if (["canReadAudit", "canRollback"].includes(prop)) continue;
+  for (const prop of ["canReadZones", "canReadProfile", "canManageProfile", "canReadDeliveryModes", "canManageDeliveryModes", "canEvaluate", "canReadAudit", "canRollback"]) {
     assert.match(screen, new RegExp(`${prop}=`));
   }
 
@@ -61,9 +74,13 @@ test("policy surfaces gate reads and writes before invoking their controllers", 
   const governance = read("services/dsh/frontend/control-panel/platform/OperationalPolicyGovernanceSection.tsx");
   assert.match(serviceArea, /useServiceAreaController\(canRead\)/);
   assert.match(privacy, /useClientAddressPrivacyController\(canRead\)/);
-  assert.match(operational, /useZonesController\(canRead \? "authenticated" : "restricted"\)/);
-  assert.match(governance, /const authKind = canRead \? "authenticated" : "restricted"/);
-  assert.match(operational, /if \(!canManage \|\| !selectedZoneId\) return/);
+  assert.match(operational, /useZonesController\(canReadZones \? "authenticated" : "restricted"\)/);
+  assert.match(operational, /evaluateDshOperatorOperationalPolicy/);
+  assert.match(operational, /if \(!canManageProfile \|\| !selectedZoneId\) return/);
+  assert.match(operational, /if \(!canManageDeliveryModes \|\| !selectedZoneId\) return/);
+  assert.match(governance, /useZonesController\(canReadZones \? "authenticated" : "restricted"\)/);
+  assert.match(governance, /useSlaRulesController\(canReadSla \? "authenticated" : "restricted"\)/);
+  assert.match(governance, /useAreaCapacityController\(canReadCapacity \? "authenticated" : "restricted"/);
   assert.match(operational, /if \(!canRollback \|\| !selectedAudit\) return/);
 });
 
@@ -89,6 +106,7 @@ test("local operator grants match the live DSH policy surfaces", () => {
     "dsh.dispatch_capacity.read",
     "dsh.dispatch_capacity.manage",
     "dsh.operational_policy.audit.read",
+    "dsh.operational_policy.evaluate",
     "dsh.operational_policy.rollback",
     "finance.manage",
   ]) {

@@ -158,6 +158,17 @@ func (s *protectedStoreServer) handleEvaluateOperationalPolicy(w http.ResponseWr
 	if _, ok := s.requireActor(w, r, "client", "partner", "captain"); !ok {
 		return
 	}
+	s.evaluateOperationalPolicy(w, r)
+}
+
+func (s *protectedStoreServer) handleEvaluateOperatorOperationalPolicy(w http.ResponseWriter, r *http.Request) {
+	if _, ok := s.ActorFromContext(r.Context()); !ok {
+		return
+	}
+	s.evaluateOperationalPolicy(w, r)
+}
+
+func (s *protectedStoreServer) evaluateOperationalPolicy(w http.ResponseWriter, r *http.Request) {
 	var body platformpolicies.OperationalEvaluationInput
 	if !decodeProtectedJSON(w, r, &body) {
 		return

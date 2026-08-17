@@ -162,9 +162,10 @@ export function classifyFiles(inputFiles, options = {}) {
   const contracts = full || contractsChanged;
   const database = full || databaseChanged;
 
-  const authChanged = full || hasProduct((file) => file.startsWith("core/identity/") && /(^|\/)(auth|authentication|activation|otp|token|credential)(\/|[-_.])/i.test(file));
+  const authChanged = full || starts("core/identity/backend/internal/identity/") || hasProduct((file) => file.startsWith("core/identity/") && /(^|\/)(auth|authentication|activation|otp|token|credential)(\/|[-_.])/i.test(file));
   const sessionChanged = full || hasProduct((file) => /(^|\/)(session|sessions|refresh-token|revocation|device-fingerprint)(\/|[-_.])/i.test(file));
-  const rbacChanged = full || hasProduct((file) => /(^|\/)(rbac|role|roles|permission|permissions|authorization|policy-enforcement)(\/|[-_.])/i.test(file));
+  const authorizationModelChanged = full || starts("core/identity/backend/internal/identity/") || equals("governance/contracts/scope-vocabulary.json") || hasProduct((file) => /(^|\/)(?:[^/]*-)?(rbac|role|roles|permission|permissions|authorization|policy-enforcement)(\/|[-_.])/i.test(file));
+  const rbacChanged = full || authorizationModelChanged;
   const privacyChanged = full || hasProduct((file) => /(^|\/)(privacy|consent|retention|redaction|anonymization)(\/|[-_.])/i.test(file));
   const piiChanged = full || hasProduct((file) => /(^|\/)(pii|personal-data|national-id|identity-document)(\/|[-_.])/i.test(file));
   const secretsChanged = full || equals("governance/policies/security.md") || starts("tools/security/") || hasProduct((file) => /(^|\/)(secret|secrets|credential|credentials|signing|keystore|certificate)(\/|[-_.])/i.test(file));
@@ -208,7 +209,7 @@ export function classifyFiles(inputFiles, options = {}) {
   else if (mobileTooling) runtimeProfile = "mobile-config";
 
   const runtime = runtimeProfile !== "none";
-  const runtimeRequired = runtime && ["closure", "master"].includes(executionPhase);
+  const runtimeRequired = runtime && (["closure", "master"].includes(executionPhase) || protectedSecurityChanged);
 
   const mobile = full || mobileTooling || mobileRuntimeTransport || nativeChanged || starts(
     "apps/app-client/",

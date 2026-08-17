@@ -70,6 +70,7 @@ func localOperatorDevelopmentPermissions() []Permission {
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.dispatch_capacity.read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.dispatch_capacity.manage", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.operational_policy.audit.read", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "dsh.operational_policy.evaluate", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.operational_policy.rollback", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "platform:variables:propose", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "platform:health:read", Scope: "all"},

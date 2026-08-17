@@ -598,6 +598,8 @@ paths:
     $ref: "./paths/platform-policies.paths.yaml#/~1dsh~1operator~1platform~1operational-profiles~1{zoneId}~1delivery-modes~1{fulfillmentMode}"
   /dsh/platform/operational-policy/evaluate:
     $ref: "./paths/platform-policies.paths.yaml#/~1dsh~1platform~1operational-policy~1evaluate"
+  /dsh/operator/platform/operational-policy/evaluate:
+    $ref: "./paths/platform-policies.paths.yaml#/~1dsh~1operator~1platform~1operational-policy~1evaluate"
   /dsh/operator/platform/operational-policy/audit:
     $ref: "./paths/platform-policies.paths.yaml#/~1dsh~1operator~1platform~1operational-policy~1audit"
   /dsh/operator/platform/operational-policy/audit/{eventId}/rollback:

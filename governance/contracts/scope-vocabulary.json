@@ -29,7 +29,7 @@
       "manage": ["dsh.service_zones.manage"]
     },
     {
-      "id": "dsh-operational-policy",
+      "id": "dsh-operational-profile",
       "owner": "services/dsh",
       "service": "dsh",
       "surface": "control-panel",
@@ -39,12 +39,54 @@
         "dsh.dispatch_capacity.read"
       ],
       "manage": [
-        "dsh.service_zones.manage",
         "dsh.fulfillment_sla.manage",
         "dsh.dispatch_capacity.manage"
-      ],
-      "auditRead": ["dsh.operational_policy.audit.read"],
-      "rollback": ["dsh.operational_policy.rollback"]
+      ]
+    },
+    {
+      "id": "dsh-operational-delivery-mode",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["dsh.fulfillment_sla.read"],
+      "manage": ["dsh.fulfillment_sla.manage"]
+    },
+    {
+      "id": "dsh-operational-sla",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["dsh.fulfillment_sla.read"],
+      "manage": ["dsh.fulfillment_sla.manage"]
+    },
+    {
+      "id": "dsh-operational-capacity",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["dsh.dispatch_capacity.read"],
+      "manage": ["dsh.dispatch_capacity.manage"]
+    },
+    {
+      "id": "dsh-operational-policy-evaluate",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["dsh.operational_policy.evaluate"]
+    },
+    {
+      "id": "dsh-operational-policy-audit",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["dsh.operational_policy.audit.read"]
+    },
+    {
+      "id": "dsh-operational-policy-rollback",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "manage": ["dsh.operational_policy.rollback"]
     },
     {
       "id": "dsh-finance",
@@ -134,6 +176,7 @@
         { "scope": "dsh.fulfillment_sla.manage", "domain": "dsh" },
         { "scope": "dsh.fulfillment_sla.read", "domain": "dsh" },
         { "scope": "dsh.operational_policy.audit.read", "domain": "dsh" },
+        { "scope": "dsh.operational_policy.evaluate", "domain": "dsh" },
         { "scope": "dsh.operational_policy.rollback", "domain": "dsh" },
         { "scope": "dsh.service_zones.manage", "domain": "dsh" },
         { "scope": "dsh.service_zones.read", "domain": "dsh" },

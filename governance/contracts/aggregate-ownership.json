@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "decision": "Every mutable aggregate listed here has exactly one canonical service writer. Other services may keep bounded references or projections only.",
+  "aggregates": [
+    {
+      "id": "wlt.wallet_balance",
+      "ownerService": "services/wlt",
+      "tables": ["wlt_wallets"],
+      "writerRoots": ["services/wlt/backend/", "services/wlt/database/"],
+      "projectionRoots": ["services/dsh/backend/internal/wlt/"]
+    },
+    {
+      "id": "wlt.payout_destination",
+      "ownerService": "services/wlt",
+      "tables": ["wlt_payout_destinations", "wlt_payout_destination_requests"],
+      "writerRoots": ["services/wlt/backend/", "services/wlt/database/"],
+      "projectionRoots": ["services/dsh/backend/internal/wlt/", "services/dsh/backend/internal/partner/"]
+    },
+    {
+      "id": "dsh.service_zone",
+      "ownerService": "services/dsh",
+      "tables": ["dsh_platform_zones"],
+      "writerRoots": ["services/dsh/backend/", "services/dsh/database/"],
+      "projectionRoots": []
+    },
+    {
+      "id": "dsh.sla_policy",
+      "ownerService": "services/dsh",
+      "tables": ["dsh_platform_sla_rules"],
+      "writerRoots": ["services/dsh/backend/", "services/dsh/database/"],
+      "projectionRoots": []
+    },
+    {
+      "id": "dsh.dispatch_capacity",
+      "ownerService": "services/dsh",
+      "tables": ["dsh_platform_capacity", "dsh_platform_capacity_configs", "dsh_service_area_capacity_policies"],
+      "writerRoots": ["services/dsh/backend/", "services/dsh/database/"],
+      "projectionRoots": []
+    },
+    {
+      "id": "platform.runtime_variable",
+      "ownerService": "core/platform-control",
+      "tables": ["platform_variables"],
+      "writerRoots": ["core/platform-control/backend/", "core/platform-control/database/"],
+      "projectionRoots": []
+    },
+    {
+      "id": "platform.feature_flag",
+      "ownerService": "core/platform-control",
+      "tables": ["platform_feature_flags"],
+      "writerRoots": ["core/platform-control/backend/", "core/platform-control/database/"],
+      "projectionRoots": []
+    }
+  ]
+}

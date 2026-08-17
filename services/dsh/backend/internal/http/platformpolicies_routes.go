@@ -24,7 +24,7 @@ func RegisterPlatformPolicyRoutes(
 ) {
 	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 	mux.HandleFunc("GET /dsh/operator/platform/map-provider-health", protected.withPermission("control-panel", DshPlatformPermissionRead, protected.handleOperatorMapProviderHealth))
-	mux.HandleFunc("GET /dsh/operator/platform/service-areas/{serviceAreaCode}", protected.withPermission("control-panel", DshPlatformPermissionRead, protected.handleOperatorGetServiceArea))
+	mux.HandleFunc("GET /dsh/operator/platform/service-areas/{serviceAreaCode}", protected.withPermission("control-panel", DshServiceZonesPermissionRead, protected.handleOperatorGetServiceArea))
 	mux.HandleFunc("GET /dsh/operator/privacy/client-addresses/policy", protected.withPermission("control-panel", DshPlatformPermissionRead, protected.handleGetClientAddressPrivacyPolicy))
 	mux.HandleFunc("PUT /dsh/operator/privacy/client-addresses/policy", protected.withPermission("control-panel", DshPlatformPermissionManage, protected.handleUpdateClientAddressPrivacyPolicy))
 	mux.HandleFunc("GET /dsh/operator/privacy/client-addresses/status", protected.withPermission("control-panel", DshPlatformPermissionRead, protected.handleGetClientAddressPrivacyStatus))
@@ -45,6 +45,7 @@ func RegisterPlatformPolicyRoutes(
 	mux.HandleFunc("GET /dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes", protected.handleListOperationalDeliveryModes)
 	mux.HandleFunc("PUT /dsh/operator/platform/operational-profiles/{zoneId}/delivery-modes/{fulfillmentMode}", protected.handleUpsertOperationalDeliveryMode)
 	mux.HandleFunc("POST /dsh/platform/operational-policy/evaluate", protected.handleEvaluateOperationalPolicy)
+	mux.HandleFunc("POST /dsh/operator/platform/operational-policy/evaluate", protected.withPermission("control-panel", DshOperationalPolicyEvaluatePermission, protected.handleEvaluateOperatorOperationalPolicy))
 	mux.HandleFunc("GET /dsh/operator/platform/operational-policy/audit", protected.handleListOperationalPolicyAudit)
 	mux.HandleFunc("POST /dsh/operator/platform/operational-policy/audit/{eventId}/rollback", protected.handleRollbackOperationalPolicy)
 

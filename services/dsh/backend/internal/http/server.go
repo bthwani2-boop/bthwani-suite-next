@@ -70,8 +70,8 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("DELETE /dsh/operator/home-discovery/{kind}/{itemId}", protected.withPermission("control-panel", MarketingPermissionManage, protected.handleHomeDiscoveryAdminDelete))
 	mux.HandleFunc("GET /dsh/operator/home-discovery/{kind}/{itemId}/targeting", protected.withPermission("control-panel", MarketingPermissionRead, protected.handleHomeDiscoveryAdminTargetingGet))
 	mux.HandleFunc("PUT /dsh/operator/home-discovery/{kind}/{itemId}/targeting", protected.withPermission("control-panel", MarketingPermissionManage, protected.handleHomeDiscoveryAdminTargetingPut))
-	mux.HandleFunc("GET /dsh/operator/platform/service-areas", protected.withPermission("control-panel", DshPlatformPermissionRead, protected.handleOperatorListServiceAreas))
-	mux.HandleFunc("PUT /dsh/operator/platform/service-areas/{serviceAreaCode}", protected.withPermission("control-panel", DshPlatformPermissionManage, protected.handleOperatorUpsertServiceArea))
+	mux.HandleFunc("GET /dsh/operator/platform/service-areas", protected.withPermission("control-panel", DshServiceZonesPermissionRead, protected.handleOperatorListServiceAreas))
+	mux.HandleFunc("PUT /dsh/operator/platform/service-areas/{serviceAreaCode}", protected.withPermission("control-panel", DshServiceZonesPermissionManage, protected.handleOperatorUpsertServiceArea))
 
 	mux.HandleFunc("GET /dsh/client/me/profile", protected.handleGetClientProfile)
 	mux.HandleFunc("PATCH /dsh/client/me/profile/preferences", protected.handleUpsertClientProfilePreferences)

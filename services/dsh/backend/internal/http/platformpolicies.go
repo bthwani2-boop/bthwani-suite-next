@@ -19,6 +19,7 @@ const (
 	DshDispatchCapacityPermissionManage             = "dsh.dispatch_capacity.manage"
 	DshDispatchFinancialEligibilityPermissionRead   = "dsh.dispatch_financial_eligibility.read"
 	DshDispatchFinancialEligibilityPermissionManage = "dsh.dispatch_financial_eligibility.manage"
+	DshOperationalPolicyEvaluatePermission          = "dsh.operational_policy.evaluate"
 	DshOperationalPolicyAuditPermissionRead         = "dsh.operational_policy.audit.read"
 	DshOperationalPolicyRollbackPermission          = "dsh.operational_policy.rollback"
 )

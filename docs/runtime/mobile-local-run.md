@@ -39,6 +39,8 @@ $env:BTHWANI_ANDROID_TRANSPORT = "usb" # auto | usb | tcp
 | الميدان | `pnpm field` | 18104 |
 | لوحة التحكم | `pnpm control` | 13000 |
 
+`pnpm control` يقرأ bundle `controlPanelDevelopment` من عقد الجاهزية، ويشغّل الـruntime الرسمي تلقائيًا عند عدم جاهزية أي خدمة. لتعطيل هذا التشغيل التلقائي مع إبقاء الفشل المغلق استخدم `BTHWANI_AUTO_START_BACKEND=false`.
+
 المشغّل المحمول ينفذ تلقائيًا ما يلي:
 
 - يثبت منفذ Metro ويرفض التشغيل برسالة واضحة إذا كان مستخدمًا بدل الانتقال إلى منفذ آخر.

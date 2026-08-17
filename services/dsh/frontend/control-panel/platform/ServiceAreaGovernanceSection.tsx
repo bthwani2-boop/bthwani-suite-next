@@ -184,8 +184,8 @@ export function ServiceAreaGovernanceSection({
       <CpStatePanel
         role="status"
         title="صلاحية قراءة مناطق الخدمة مطلوبة"
-        description="لن يطلب هذا القسم مناطق الخدمة قبل تحقق صلاحية platform.read."
-        code="DSH_PLATFORM_READ_REQUIRED"
+        description="لن يطلب هذا القسم مناطق الخدمة قبل تحقق صلاحية dsh.service_zones.read."
+        code="DSH_SERVICE_ZONES_READ_REQUIRED"
       />
     );
   }
@@ -277,8 +277,8 @@ export function ServiceAreaGovernanceSection({
         <CpStatePanel
           role="status"
           title="العرض للقراءة فقط"
-          description="تتطلب إدارة مناطق الخدمة صلاحية platform.manage."
-          code="DSH_PLATFORM_MANAGE_REQUIRED"
+          description="تتطلب إدارة مناطق الخدمة صلاحية dsh.service_zones.manage."
+          code="DSH_SERVICE_ZONES_MANAGE_REQUIRED"
         />
       )}
     </View>

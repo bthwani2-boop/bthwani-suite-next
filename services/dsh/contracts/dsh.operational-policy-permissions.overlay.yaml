@@ -3,6 +3,15 @@ info:
   title: BThwani DSH Operational Policy Permission Overlay
   version: 1.0.0
 actions:
+  - target: $.paths['/dsh/operator/platform/service-areas'].get
+    update:
+      x-bthwani-required-scope: dsh.service_zones.read
+  - target: $.paths['/dsh/operator/platform/service-areas/{serviceAreaCode}'].get
+    update:
+      x-bthwani-required-scope: dsh.service_zones.read
+  - target: $.paths['/dsh/operator/platform/service-areas/{serviceAreaCode}'].put
+    update:
+      x-bthwani-required-scope: dsh.service_zones.manage
   - target: $.paths['/dsh/operator/platform/zones'].get
     update:
       x-bthwani-required-scope: dsh.service_zones.read
@@ -53,6 +62,9 @@ actions:
   - target: $.paths['/dsh/operator/platform/operational-policy/audit'].get
     update:
       x-bthwani-required-scope: dsh.operational_policy.audit.read
+  - target: $.paths['/dsh/operator/platform/operational-policy/evaluate'].post
+    update:
+      x-bthwani-required-scope: dsh.operational_policy.evaluate
   - target: $.paths['/dsh/operator/platform/operational-policy/audit/{eventId}/rollback'].post
     update:
       x-bthwani-required-scope: dsh.operational_policy.rollback

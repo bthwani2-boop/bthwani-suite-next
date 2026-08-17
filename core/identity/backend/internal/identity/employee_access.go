@@ -89,7 +89,7 @@ func employeeDshPermissions(bundle string) []Permission {
 			"dsh.fulfillment_sla.read", "dsh.fulfillment_sla.manage",
 			"dsh.dispatch_capacity.read", "dsh.dispatch_capacity.manage",
 			"dsh.dispatch_financial_eligibility.read", "dsh.dispatch_financial_eligibility.manage",
-			"dsh.operational_policy.audit.read", "dsh.operational_policy.rollback",
+			"dsh.operational_policy.audit.read", "dsh.operational_policy.evaluate", "dsh.operational_policy.rollback",
 			"operations.special_requests.read", "operations.special_requests.transition", "operations.special_requests.dispatch",
 			"support.read", "support.manage",
 			"administration.read", "administration.manage",
@@ -107,6 +107,7 @@ func employeeDshPermissions(bundle string) []Permission {
 			"dsh.dispatch_capacity.read",
 			"dsh.dispatch_financial_eligibility.read",
 			"dsh.operational_policy.audit.read",
+			"dsh.operational_policy.evaluate",
 		)
 	case EmployeeBundleOperationsManager:
 		return grant(
@@ -116,6 +117,7 @@ func employeeDshPermissions(bundle string) []Permission {
 			"dsh.dispatch_capacity.read", "dsh.dispatch_capacity.manage",
 			"dsh.dispatch_financial_eligibility.read", "dsh.dispatch_financial_eligibility.manage",
 			"dsh.operational_policy.audit.read",
+			"dsh.operational_policy.evaluate",
 			"operations.special_requests.read", "operations.special_requests.transition", "operations.special_requests.dispatch",
 			"analytics.read",
 		)

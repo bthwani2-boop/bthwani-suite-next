@@ -171,9 +171,8 @@ paths:
       operationId: evaluateDshOperationalPolicy
       tags:
       - operational-policy
-      description: Returns one fail-closed decision for client, partner, captain or
-        operator consumers, including explicit cart, checkout, order and dispatch
-        effects.
+      description: Returns one fail-closed decision for client, partner or captain
+        consumers, including explicit cart, checkout, order and dispatch effects.
       requestBody:
         required: true
         content:
@@ -194,6 +193,39 @@ paths:
                     $ref: '#/components/schemas/OperationalDecision'
         '400':
           $ref: '#/components/responses/Invalid'
+      security:
+      - bearerAuth: []
+  /dsh/operator/platform/operational-policy/evaluate:
+    post:
+      operationId: evaluateDshOperatorOperationalPolicy
+      tags:
+      - operational-policy
+      description: Returns the same fail-closed decision engine output for the
+        control-panel simulation with a dedicated operator capability.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationalEvaluationInput'
+      responses:
+        '200':
+          description: Canonical operational decision.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - decision
+                properties:
+                  decision:
+                    $ref: '#/components/schemas/OperationalDecision'
+        '400':
+          $ref: '#/components/responses/Invalid'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
       security:
       - bearerAuth: []
   /dsh/operator/platform/operational-policy/audit:

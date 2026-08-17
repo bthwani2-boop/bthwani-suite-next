@@ -37,13 +37,25 @@ export function PlatformPoliciesContent({ embedded = false }: PlatformPoliciesCo
     identity,
     CONTROL_PANEL_CAPABILITIES.dshPlatformPolicyManage,
   );
-  const canReadOperationalPolicy = hasAllControlPanelPermissions(
+  const canReadOperationalProfile = hasAllControlPanelPermissions(
     identity,
-    CONTROL_PANEL_CAPABILITIES.dshOperationalPolicyRead,
+    CONTROL_PANEL_CAPABILITIES.dshOperationalProfileRead,
   );
-  const canManageOperationalPolicy = hasAllControlPanelPermissions(
+  const canManageOperationalProfile = hasAllControlPanelPermissions(
     identity,
-    CONTROL_PANEL_CAPABILITIES.dshOperationalPolicyManage,
+    CONTROL_PANEL_CAPABILITIES.dshOperationalProfileManage,
+  );
+  const canReadOperationalDeliveryModes = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.dshOperationalDeliveryModeRead,
+  );
+  const canManageOperationalDeliveryModes = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.dshOperationalDeliveryModeManage,
+  );
+  const canEvaluateOperationalPolicy = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.dshOperationalPolicyEvaluate,
   );
   const canReadOperationalAudit = hasAllControlPanelPermissions(
     identity,
@@ -75,20 +87,28 @@ export function PlatformPoliciesContent({ embedded = false }: PlatformPoliciesCo
 
       <MapProviderHealthCard canRead={canReadPlatformPolicy} />
       <ServiceAreaGovernanceSection
-        canRead={canReadPlatformPolicy}
-        canManage={canManagePlatformPolicy}
+        canRead={hasAllControlPanelPermissions(identity, CONTROL_PANEL_CAPABILITIES.dshServiceAreasRead)}
+        canManage={hasAllControlPanelPermissions(identity, CONTROL_PANEL_CAPABILITIES.dshServiceAreasManage)}
       />
       <ClientAddressPrivacySection
         canRead={canReadPlatformPolicy}
         canManage={canManagePlatformPolicy}
       />
       <OperationalPolicyGovernanceSection
-        canRead={canReadOperationalPolicy}
-        canManage={canManageOperationalPolicy}
+        canReadZones={hasAllControlPanelPermissions(identity, CONTROL_PANEL_CAPABILITIES.dshServiceAreasRead)}
+        canManageZones={hasAllControlPanelPermissions(identity, CONTROL_PANEL_CAPABILITIES.dshServiceAreasManage)}
+        canReadSla={hasAllControlPanelPermissions(identity, CONTROL_PANEL_CAPABILITIES.dshOperationalSlaRead)}
+        canManageSla={hasAllControlPanelPermissions(identity, CONTROL_PANEL_CAPABILITIES.dshOperationalSlaManage)}
+        canReadCapacity={hasAllControlPanelPermissions(identity, CONTROL_PANEL_CAPABILITIES.dshOperationalCapacityRead)}
+        canManageCapacity={hasAllControlPanelPermissions(identity, CONTROL_PANEL_CAPABILITIES.dshOperationalCapacityManage)}
       />
       <OperationalPolicySection
-        canRead={canReadOperationalPolicy}
-        canManage={canManageOperationalPolicy}
+        canReadZones={hasAllControlPanelPermissions(identity, CONTROL_PANEL_CAPABILITIES.dshServiceAreasRead)}
+        canReadProfile={canReadOperationalProfile}
+        canManageProfile={canManageOperationalProfile}
+        canReadDeliveryModes={canReadOperationalDeliveryModes}
+        canManageDeliveryModes={canManageOperationalDeliveryModes}
+        canEvaluate={canEvaluateOperationalPolicy}
         canReadAudit={canReadOperationalAudit}
         canRollback={canRollbackOperationalPolicy}
       />

@@ -7,6 +7,26 @@ import test from "node:test";
 const repoRoot = path.resolve(import.meta.dirname, "../../../..");
 const startScriptPath = path.join(repoRoot, "apps/control-panel/runtime/start.ps1");
 const startScript = fs.readFileSync(startScriptPath, "utf8");
+const runtimeBootstrapPath = path.join(repoRoot, "apps/control-panel/ensure-control-panel-dev-runtime.ps1");
+const runtimeBootstrap = fs.readFileSync(runtimeBootstrapPath, "utf8");
+
+test("control-panel startup converges the declared backend bundle before Next.js", () => {
+  assert.match(startScript, /ensure-control-panel-dev-runtime\.ps1/);
+  assert.match(startScript, /Control Panel runtime bootstrap failed/);
+  for (const marker of [
+    "runtime-readiness.contract.json",
+    "bundles.controlPanelDevelopment",
+    "check-frontend-binding-readiness.mjs",
+    "invoke-runtime-phase.ps1",
+    "BTHWANI_AUTO_START_BACKEND",
+    "BthwaniControlPanelDevRuntimeBootstrap",
+  ]) {
+    assert.match(runtimeBootstrap, new RegExp(marker.replaceAll(".", "\\.")));
+  }
+  assert.match(runtimeBootstrap, /-Action\", \"up\"/);
+  assert.match(runtimeBootstrap, /-Profiles\", \$Profiles/);
+  assert.doesNotMatch(runtimeBootstrap, /-Action\", \"reset\"/);
+});
 
 test("control-panel startup forces all browser transports through the same-origin BFF", () => {
   assert.match(startScript, /NEXT_PUBLIC_CONTROL_PANEL_BFF_ENABLED\s*=\s*"true"/);

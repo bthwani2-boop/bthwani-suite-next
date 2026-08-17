@@ -72,7 +72,7 @@ jobs:
             "workforce" { "identity,workforce" }
             "wlt-finance" { "identity,dsh,wlt,financial-simulators" }
             "provider" { "wlt,financial-simulators" }
-            "full" { "identity,workforce,dsh,wlt,financial-simulators,mail,media" }
+            "full" { "identity,workforce,dsh,wlt,providers,platform,financial-simulators,mail,media" }
             "mobile-config" { "" }
             "mobile-native" { "" }
             default { throw "Unsupported runtime profile: $profile" }
@@ -157,7 +157,7 @@ jobs:
             "workforce" { "identity,workforce" }
             "wlt-finance" { "identity,dsh,wlt,financial-simulators" }
             "provider" { "wlt,financial-simulators" }
-            "full" { "identity,workforce,dsh,wlt,financial-simulators,mail,media" }
+            "full" { "identity,workforce,dsh,wlt,providers,platform,financial-simulators,mail,media" }
             default { "" }
           }
           if ($profiles) {
