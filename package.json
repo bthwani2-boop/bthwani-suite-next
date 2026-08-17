@@ -221,7 +221,6 @@
     "performance:bundle:size": "pnpm exec size-limit",
     "diagnostics:next-bundle": "ANALYZE=true pnpm --dir apps/control-panel/runtime build",
     "guard:tools-v5-all": "pnpm run guard:tools-v5-registry",
-    "diagnostics:ui-kit-catalog": "node tools/scripts/build-ui-kit-catalog.mjs",
     "diagnostics:state-machines": "node tools/scripts/check-state-machines.mjs",
     "diagnostics:journey-scenarios": "node tools/scripts/check-journey-scenarios.mjs",
     "diagnostics:expo-atlas:client": "node tools/scripts/check-expo-atlas-readiness.mjs",
