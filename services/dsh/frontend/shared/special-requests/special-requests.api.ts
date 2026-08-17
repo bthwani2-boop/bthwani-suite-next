@@ -17,6 +17,15 @@ import type {
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "special-requests");
 
+function deterministicMutationHash(value: string): string {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
 // --- Client-side ---------------------------------------------------------
 
 export async function createSpecialRequest(
@@ -147,9 +156,20 @@ export async function updateOperatorSpecialRequest(
   id: string,
   input: DshUpdateSpecialRequest,
 ): Promise<DshSpecialRequestResponse> {
+  const quoteRequested = input.quotePolicyId !== undefined || input.proposedAmountMinorUnits !== undefined ||
+    input.proposedCurrency !== undefined || input.proposalReason !== undefined;
+  const idempotencyKey = quoteRequested
+    ? `special-request-quote:${id}:v${input.expectedVersion}:${deterministicMutationHash(JSON.stringify({
+      quotePolicyId: input.quotePolicyId,
+      proposedAmountMinorUnits: input.proposedAmountMinorUnits,
+      proposedCurrency: input.proposedCurrency,
+      proposalReason: input.proposalReason,
+    }))}`
+    : undefined;
   return request<DshSpecialRequestResponse>(`/dsh/operator/special-requests/${encodeURIComponent(id)}`, {
     method: "PATCH",
     body: input,
+    ...(idempotencyKey ? { idempotencyKey } : {}),
   });
 }
 

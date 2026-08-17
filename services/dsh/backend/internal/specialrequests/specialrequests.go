@@ -6,8 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
+	"dsh-api/internal/operationaloutbox"
 	"github.com/google/uuid"
 )
 
@@ -55,6 +57,8 @@ type SpecialRequest struct {
 	WltQuoteHash             *string
 	WltQuoteExpiresAt        *time.Time
 	WltPaymentSessionID      *string
+	LastWltStatus            *string
+	LastWltEventAt           *time.Time
 	CorrelationID            *string
 	ProductUrl               *string
 	Quantity                 *int
@@ -128,11 +132,20 @@ type CreateInput struct {
 }
 
 type UpdateInput struct {
-	Status              *RequestStatus
-	WorkflowStage       *string
-	AssignedOperatorID  *string
-	RejectionReason     *string
-	WltPaymentSessionID *string
+	// ActorID is used only for audit attribution and must come from the
+	// authenticated actor context at the HTTP boundary.
+	ActorID string
+	// QuoteProposalRequested marks the governed operator quote command. It is
+	// intentionally not a lifecycle field: the HTTP boundary sets it only
+	// when the complete WLT quote proposal payload is present, allowing a
+	// failed WLT handoff to be retried at customer_approval without reopening
+	// a generic same-status transition path.
+	QuoteProposalRequested bool
+	Status                 *RequestStatus
+	WorkflowStage          *string
+	AssignedOperatorID     *string
+	RejectionReason        *string
+	WltPaymentSessionID    *string
 
 	CustomerApprovedAt    *time.Time
 	PurchaseBatchID       *string
@@ -169,6 +182,8 @@ type UpdateInput struct {
 	wltQuoteHash             *string
 	wltQuoteExpiresAt        *time.Time
 	quotePreparedAt          *time.Time
+	lastWltStatus            *string
+	lastWltEventAt           *time.Time
 }
 
 type Repository interface {
@@ -214,7 +229,7 @@ const specialRequestColumns = `
 	operator_context_id,
 	customer_notes, wlt_quote_id, wlt_quote_policy_id, wlt_quote_policy_version, wlt_quote_version,
 	wlt_quote_amount_minor_units, wlt_quote_currency, wlt_quote_hash, wlt_quote_expires_at,
-	wlt_payment_session_id, correlation_id,
+	wlt_payment_session_id, correlation_id, last_wlt_status, last_wlt_event_at,
 	product_url, quantity, size, color, variant_notes, delivery_address_reference,
 	pickup_address_reference, dropoff_address_reference, pickup_location, dropoff_location, item_type, schedule_mode, scheduled_at, handling_requirements,
 	assigned_operator_id, dispatch_assignment_id, rejection_reason,
@@ -232,7 +247,7 @@ func scanSpecialRequest(scan func(...any) error) (*SpecialRequest, error) {
 		&req.OperatorContextID,
 		&req.CustomerNotes, &req.WltQuoteID, &req.WltQuotePolicyID, &req.WltQuotePolicyVersion, &req.WltQuoteVersion,
 		&req.WltQuoteAmountMinorUnits, &req.WltQuoteCurrency, &req.WltQuoteHash, &req.WltQuoteExpiresAt,
-		&req.WltPaymentSessionID, &req.CorrelationID,
+		&req.WltPaymentSessionID, &req.CorrelationID, &req.LastWltStatus, &req.LastWltEventAt,
 		&req.ProductUrl, &req.Quantity, &req.Size, &req.Color, &req.VariantNotes, &req.DeliveryAddressReference,
 		&req.PickupAddressReference, &req.DropoffAddressReference, &req.PickupLocation, &req.DropoffLocation, &req.ItemType, &req.ScheduleMode, &req.ScheduledAt, &req.HandlingRequirements,
 		&req.AssignedOperatorID, &req.DispatchAssignmentID, &req.RejectionReason,
@@ -248,6 +263,31 @@ func scanSpecialRequest(scan func(...any) error) (*SpecialRequest, error) {
 	return &req, nil
 }
 
+func scanSpecialRequestWithCreated(scan func(...any) error) (*SpecialRequest, bool, error) {
+	var req SpecialRequest
+	created := false
+	targets := []any{
+		&req.ID, &req.ClientID, &req.RequestType, &req.Status, &req.Version, &req.WorkflowStage,
+		&req.OperatorContextID,
+		&req.CustomerNotes, &req.WltQuoteID, &req.WltQuotePolicyID, &req.WltQuotePolicyVersion, &req.WltQuoteVersion,
+		&req.WltQuoteAmountMinorUnits, &req.WltQuoteCurrency, &req.WltQuoteHash, &req.WltQuoteExpiresAt,
+		&req.WltPaymentSessionID, &req.CorrelationID, &req.LastWltStatus, &req.LastWltEventAt,
+		&req.ProductUrl, &req.Quantity, &req.Size, &req.Color, &req.VariantNotes, &req.DeliveryAddressReference,
+		&req.PickupAddressReference, &req.DropoffAddressReference, &req.PickupLocation, &req.DropoffLocation, &req.ItemType, &req.ScheduleMode, &req.ScheduledAt, &req.HandlingRequirements,
+		&req.AssignedOperatorID, &req.DispatchAssignmentID, &req.RejectionReason,
+		&req.CreatedAt, &req.UpdatedAt, &req.CompletedAt, &req.CancelledAt,
+		&req.WltQuoteIssuedAt, &req.CustomerApprovedAt, &req.PurchaseBatchID, &req.PurchasedAt,
+		&req.InboundReference, &req.InboundReceivedAt, &req.SortingStartedAt, &req.SortingCompletedAt,
+		&req.FulfillmentPreparedAt, &req.ReadyForDeliveryAt, &req.CaptainAssignedAt, &req.PickedUpAt, &req.DeliveredAt,
+		&req.MediaID, &req.SafetyStatus, &req.ModerationNote, &req.IsUnsafeContent,
+		&created,
+	}
+	if err := scan(targets...); err != nil {
+		return nil, false, err
+	}
+	return &req, created, nil
+}
+
 // queryRower is satisfied by both *sql.DB and *sql.Tx, letting Create/update
 // run against either a pooled connection or a caller-owned transaction. The
 // Tx variants exist so a mutation and the audit event describing it (see
@@ -258,19 +298,28 @@ type queryRower interface {
 }
 
 func (r *PostgresRepository) Create(ctx context.Context, input CreateInput) (*SpecialRequest, error) {
-	return r.createWith(ctx, r.db, input)
+	req, _, err := r.createWithReplay(ctx, r.db, input)
+	return req, err
 }
 
 // CreateTx is Create's transactional counterpart.
 func (r *PostgresRepository) CreateTx(ctx context.Context, tx *sql.Tx, input CreateInput) (*SpecialRequest, error) {
-	return r.createWith(ctx, tx, input)
+	req, _, err := r.createWithReplay(ctx, tx, input)
+	return req, err
 }
 
-func (r *PostgresRepository) createWith(ctx context.Context, exec queryRower, input CreateInput) (*SpecialRequest, error) {
+// CreateTxWithReplay returns whether this call inserted the request. The
+// idempotency conflict path must return the canonical existing request without
+// emitting a second audit/outbox mutation.
+func (r *PostgresRepository) CreateTxWithReplay(ctx context.Context, tx *sql.Tx, input CreateInput) (*SpecialRequest, bool, error) {
+	return r.createWithReplay(ctx, tx, input)
+}
+
+func (r *PostgresRepository) createWithReplay(ctx context.Context, exec queryRower, input CreateInput) (*SpecialRequest, bool, error) {
 	var err error
 	input.OperatorContextID, err = requireOperatorContextID(input.OperatorContextID)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	id := uuid.New().String()
 	query := `
@@ -287,7 +336,7 @@ func (r *PostgresRepository) createWith(ctx context.Context, exec queryRower, in
 		)
 		ON CONFLICT (operator_context_id, client_id, idempotency_key) WHERE idempotency_key IS NOT NULL
 		DO UPDATE SET updated_at = now()
-		RETURNING ` + specialRequestColumns
+		RETURNING ` + specialRequestColumns + `, (xmax = 0) AS inserted`
 
 	row := exec.QueryRowContext(ctx, query,
 		id, input.OperatorContextID, input.ClientID, input.RequestType, StatusSubmitted, input.IdempotencyKey, input.workflowStage, input.CorrelationID,
@@ -295,7 +344,8 @@ func (r *PostgresRepository) createWith(ctx context.Context, exec queryRower, in
 		input.PickupAddressReference, input.DropoffAddressReference, nullableJSON(input.PickupLocation), nullableJSON(input.DropoffLocation), input.ItemType, input.ScheduleMode, input.ScheduledAt, input.HandlingRequirements,
 		input.MediaID,
 	)
-	return scanSpecialRequest(row.Scan)
+	req, inserted, err := scanSpecialRequestWithCreated(row.Scan)
+	return req, inserted, err
 }
 
 func (r *PostgresRepository) Get(ctx context.Context, id string) (*SpecialRequest, error) {
@@ -319,6 +369,24 @@ func (r *PostgresRepository) GetInOperatorContext(ctx context.Context, operatorC
 		WHERE operator_context_id = $1 AND id = $2
 	`
 	req, err := scanSpecialRequest(r.db.QueryRowContext(ctx, query, operatorContextID, id).Scan)
+	if err == sql.ErrNoRows {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return req, nil
+}
+
+// GetInOperatorContextTx reads the same canonical request projection using a
+// caller-owned transaction. WLT receipts and dispatch transitions use it so
+// the locked mutation, audit, and outbox records share one commit boundary.
+func (r *PostgresRepository) GetInOperatorContextTx(ctx context.Context, tx *sql.Tx, operatorContextID string, id string) (*SpecialRequest, error) {
+	query := `SELECT ` + specialRequestColumns + `
+		FROM dsh_special_requests
+		WHERE operator_context_id = $1 AND id = $2
+		FOR UPDATE`
+	req, err := scanSpecialRequest(tx.QueryRowContext(ctx, query, operatorContextID, id).Scan)
 	if err == sql.ErrNoRows {
 		return nil, ErrNotFound
 	}
@@ -352,9 +420,10 @@ func (r *PostgresRepository) updateWith(ctx context.Context, exec queryRower, op
 		input.InboundReference, input.InboundReceivedAt, input.SortingStartedAt, input.SortingCompletedAt,
 		input.FulfillmentPreparedAt, input.ReadyForDeliveryAt, input.CaptainAssignedAt, input.PickedUpAt, input.DeliveredAt,
 		input.SafetyStatus, input.ModerationNote, input.IsUnsafeContent,
+		input.lastWltStatus, input.lastWltEventAt,
 	}
 	if operatorContextID != "" {
-		where = "operator_context_id = $34 AND id = $1 AND version = $2"
+		where = "operator_context_id = $36 AND id = $1 AND version = $2"
 		args = append(args, operatorContextID)
 	}
 	query := `
@@ -373,6 +442,8 @@ func (r *PostgresRepository) updateWith(ctx context.Context, exec queryRower, op
 			wlt_quote_hash = COALESCE($13, wlt_quote_hash),
 			wlt_quote_expires_at = COALESCE($14, wlt_quote_expires_at),
 			wlt_payment_session_id = COALESCE($15, wlt_payment_session_id),
+			last_wlt_status = COALESCE($34, last_wlt_status),
+			last_wlt_event_at = COALESCE($35, last_wlt_event_at),
 			quote_prepared_at = COALESCE($18, quote_prepared_at),
 			customer_approved_at = COALESCE($19, customer_approved_at),
 			purchase_batch_id = COALESCE($20, purchase_batch_id),
@@ -428,33 +499,34 @@ func (r *PostgresRepository) updateWith(ctx context.Context, exec queryRower, op
 // that triggered it. It locks the row, validates the current status is one
 // of allowedFrom, and moves it to toStatus.
 //
-// It deliberately does not touch workflow_stage: workflow_stage is owned by
-// the operator PATCH flow (ApplyOperatorTransition / service.go's
-// defaultStageFor-style mapping), which this function's caller (dispatch.go)
-// must not reach into per this phase's scope. Keeping status as the sole
-// driver handles the base use case without complex cross-module coupling. Mappings
-// stage sync for dispatch-driven transitions can follow in a later phase.
-func TransitionDispatchStatus(tx *sql.Tx, id string, allowedFrom []RequestStatus, toStatus RequestStatus) error {
-	return TransitionDispatchStatusInOperatorContext(tx, "", id, allowedFrom, toStatus)
+// The database dispatch-stage trigger is the canonical stage synchronizer for
+// these transitions. This function reads that post-trigger state for the
+// audit/outbox record, so dispatch does not maintain a second stage truth.
+type DispatchTransitionMetadata struct {
+	ActorID       string
+	ActorRole     string
+	Action        string
+	Reason        string
+	CorrelationID string
 }
 
-func TransitionDispatchStatusInOperatorContext(tx *sql.Tx, operatorContextID string, id string, allowedFrom []RequestStatus, toStatus RequestStatus) error {
+func TransitionDispatchStatusInOperatorContextWithMetadata(tx *sql.Tx, operatorContextID string, id string, allowedFrom []RequestStatus, toStatus RequestStatus, metadata DispatchTransitionMetadata) error {
 	var currentStatus RequestStatus
 	var version int
-	query := `SELECT status, version FROM dsh_special_requests WHERE id = $1 FOR UPDATE`
+	var currentStage, correlationID *string
+	query := `SELECT status, version, workflow_stage, correlation_id FROM dsh_special_requests WHERE id = $1 FOR UPDATE`
 	args := []any{id}
 	if operatorContextID != "" {
-		query = `SELECT status, version FROM dsh_special_requests WHERE operator_context_id = $1 AND id = $2 FOR UPDATE`
+		query = `SELECT status, version, workflow_stage, correlation_id FROM dsh_special_requests WHERE operator_context_id = $1 AND id = $2 FOR UPDATE`
 		args = []any{operatorContextID, id}
 	}
-	err := tx.QueryRow(query, args...).Scan(&currentStatus, &version)
+	err := tx.QueryRow(query, args...).Scan(&currentStatus, &version, &currentStage, &correlationID)
 	if err == sql.ErrNoRows {
 		return ErrNotFound
 	}
 	if err != nil {
 		return err
 	}
-
 	validFrom := false
 	for _, s := range allowedFrom {
 		if currentStatus == s {
@@ -465,23 +537,122 @@ func TransitionDispatchStatusInOperatorContext(tx *sql.Tx, operatorContextID str
 	if !validFrom {
 		return fmt.Errorf("%w: cannot transition special request from %s to %s", ErrConflict, currentStatus, toStatus)
 	}
-
 	setCompletedAt := toStatus == StatusCompleted
 	setCancelledAt := toStatus == StatusCancelled
-
+	setCaptainAssignedAt := toStatus == StatusAssigned
+	setDeliveredAt := toStatus == StatusCompleted
 	updateQuery := `
 		UPDATE dsh_special_requests
 		SET status = $1, version = version + 1, updated_at = now(),
 		    completed_at = CASE WHEN $2 THEN now() ELSE completed_at END,
-		    cancelled_at = CASE WHEN $3 THEN now() ELSE cancelled_at END
-		WHERE id = $4`
-	updateArgs := []any{string(toStatus), setCompletedAt, setCancelledAt, id}
+		    cancelled_at = CASE WHEN $3 THEN now() ELSE cancelled_at END,
+		    captain_assigned_at = CASE WHEN $4 THEN COALESCE(captain_assigned_at, now()) ELSE captain_assigned_at END,
+		    delivered_at = CASE WHEN $5 THEN COALESCE(delivered_at, now()) ELSE delivered_at END
+		WHERE id = $6`
+	updateArgs := []any{string(toStatus), setCompletedAt, setCancelledAt, setCaptainAssignedAt, setDeliveredAt, id}
 	if operatorContextID != "" {
-		updateQuery += ` AND operator_context_id = $5`
+		updateQuery += ` AND operator_context_id = $7`
 		updateArgs = append(updateArgs, operatorContextID)
 	}
-	_, err = tx.Exec(updateQuery, updateArgs...)
-	return err
+	updateQuery += ` RETURNING status, version, workflow_stage`
+	var updatedStatus RequestStatus
+	var updatedVersion int
+	var updatedStage *string
+	if err = tx.QueryRow(updateQuery, updateArgs...).Scan(&updatedStatus, &updatedVersion, &updatedStage); err != nil {
+		return err
+	}
+	actorID := strings.TrimSpace(metadata.ActorID)
+	if actorID == "" {
+		actorID = "dispatch"
+	}
+	actorRole := strings.TrimSpace(metadata.ActorRole)
+	if actorRole == "" {
+		actorRole = "service"
+	}
+	action := strings.TrimSpace(metadata.Action)
+	if action == "" {
+		action = "dispatch_transition"
+	}
+	reason := strings.TrimSpace(metadata.Reason)
+	if reason == "" {
+		reason = "dispatch lifecycle transition"
+	}
+	if strings.TrimSpace(metadata.CorrelationID) != "" {
+		correlationID = &metadata.CorrelationID
+	}
+	correlation := ""
+	if correlationID != nil {
+		correlation = strings.TrimSpace(*correlationID)
+	}
+	fromState, _ := json.Marshal(map[string]any{
+		"status": currentStatus, "version": version, "workflowStage": currentStage,
+	})
+	toState, _ := json.Marshal(map[string]any{
+		"status": updatedStatus, "version": updatedVersion, "workflowStage": updatedStage,
+	})
+	if err := WriteAuditEvent(tx, id, actorID, actorRole, action, reason, correlation, fromState, toState); err != nil {
+		return fmt.Errorf("write dispatch transition audit: %w", err)
+	}
+	return operationaloutbox.Enqueue(tx, operationaloutbox.EnqueueInput{
+		EventType: "special_request_" + string(updatedStatus), EntityType: "special_request", EntityID: id,
+		Payload: toState, CorrelationID: correlation,
+	})
+}
+
+// RecordDispatchAssignmentLink closes the second half of dispatch creation:
+// the assignment/delivery row and the canonical special-request projection
+// link are audited and notified together with the link update.
+func RecordDispatchAssignmentLink(tx *sql.Tx, operatorContextID, requestID, assignmentID string, metadata DispatchTransitionMetadata) error {
+	var status RequestStatus
+	var version int
+	var stage, correlationID *string
+	query := `SELECT status, version, workflow_stage, correlation_id
+		FROM dsh_special_requests WHERE id = $1 FOR UPDATE`
+	args := []any{requestID}
+	if operatorContextID != "" {
+		query = `SELECT status, version, workflow_stage, correlation_id
+			FROM dsh_special_requests WHERE operator_context_id = $1 AND id = $2 FOR UPDATE`
+		args = []any{operatorContextID, requestID}
+	}
+	if err := tx.QueryRow(query, args...).Scan(&status, &version, &stage, &correlationID); err != nil {
+		if err == sql.ErrNoRows {
+			return ErrNotFound
+		}
+		return err
+	}
+	actorID := strings.TrimSpace(metadata.ActorID)
+	if actorID == "" {
+		actorID = "dispatch"
+	}
+	actorRole := strings.TrimSpace(metadata.ActorRole)
+	if actorRole == "" {
+		actorRole = "operator"
+	}
+	action := strings.TrimSpace(metadata.Action)
+	if action == "" {
+		action = "dispatch_assignment_linked"
+	}
+	correlation := ""
+	if metadata.CorrelationID != "" {
+		correlation = strings.TrimSpace(metadata.CorrelationID)
+	} else if correlationID != nil {
+		correlation = strings.TrimSpace(*correlationID)
+	}
+	fromState, _ := json.Marshal(map[string]any{
+		"status": status, "version": version - 1, "workflowStage": stage,
+		"dispatchAssignmentId": nil,
+	})
+	toState, _ := json.Marshal(map[string]any{
+		"status": status, "version": version, "workflowStage": stage,
+		"dispatchAssignmentId": assignmentID,
+	})
+	if err := WriteAuditEvent(tx, requestID, actorID, actorRole, action, "special request dispatch assignment linked", correlation, fromState, toState); err != nil {
+		return err
+	}
+	return operationaloutbox.Enqueue(tx, operationaloutbox.EnqueueInput{
+		EventType: "special_request_dispatch_assignment_linked", EntityType: "special_request", EntityID: requestID,
+		Payload: toState, CorrelationID: correlation,
+	})
 }
 
 // ErrNotReadyForDispatch is the sentinel a caller can match against (via

@@ -19,6 +19,22 @@ func lockAssignment(tx *sql.Tx, assignmentID, captainID string) (*Assignment, er
 	return assignment, err
 }
 
+func specialRequestOperatorContextID(tx *sql.Tx, requestID string) (string, error) {
+	var operatorContextID string
+	err := tx.QueryRow(`
+		SELECT operator_context_id
+		FROM dsh_special_requests
+		WHERE id = $1::uuid
+		FOR UPDATE`, requestID).Scan(&operatorContextID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	return operatorContextID, nil
+}
+
 func mapOrderError(err error) error {
 	if errors.Is(err, orders.ErrNotFound) {
 		return ErrNotFound

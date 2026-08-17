@@ -74,7 +74,7 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 	}
 
 	if body.SpecialRequestID != "" {
-		req, err := specialrequests.ApplyWltPaymentEvent(s.db, body.OperatorContextID, body.SpecialRequestID, body.PaymentSessionID, body.Status)
+		req, replayed, err := specialrequests.ApplyWltPaymentEventWithEvent(s.db, body.OperatorContextID, body.SpecialRequestID, body.PaymentSessionID, body.Status, body.EventID, body.CorrelationID)
 		if errors.Is(err, specialrequests.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "special request not found")
 			return
@@ -91,11 +91,19 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 			store.SendError(w, http.StatusConflict, "CONFLICT", err.Error())
 			return
 		}
+		if errors.Is(err, specialrequests.ErrWltEventReplayConflict) {
+			store.SendError(w, http.StatusConflict, "WLT_EVENT_REPLAY_CONFLICT", "eventId was already used for a different special-request WLT event")
+			return
+		}
 		if err != nil {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to apply WLT payment event")
 			return
 		}
-		store.SendJSON(w, http.StatusOK, map[string]any{"specialRequest": marshalSpecialRequest(req)})
+		store.SendJSON(w, http.StatusOK, map[string]any{
+			"specialRequest": marshalSpecialRequest(req),
+			"eventReference": "wlt:" + body.EventID,
+			"replayed":       replayed,
+		})
 		return
 	}
 

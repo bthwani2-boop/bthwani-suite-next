@@ -863,6 +863,8 @@ DshSpecialRequestResponse:
     wltQuoteHash: { type: ["string", "null"] }
     wltQuoteExpiresAt: { type: ["string", "null"], format: date-time }
     wltPaymentSessionId: { type: ["string", "null"] }
+    lastWltStatus: { type: ["string", "null"], enum: [authorized, reference_created, cod_pending, captured, cod_collected, failed, expired, null] }
+    lastWltEventAt: { type: ["string", "null"], format: date-time }
     correlationId: { type: ["string", "null"] }
     productUrl: { type: ["string", "null"] }
     quantity: { type: ["integer", "null"] }

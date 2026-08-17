@@ -156,6 +156,13 @@
       "sha256": "94302ebf6ff89cbff4b4159a8d5b3c1e47aca71c04013533fcc551957983141b",
       "historicalPrefix": "1014",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 262,
+      "file": "dsh-1015_special_request_wlt_event_receipts.sql",
+      "sha256": "7c376e6450a0e921215fbc021cf36066bf7395349f91eeb647701a503a1a354d",
+      "historicalPrefix": "1015",
+      "state": "ACTIVE"
     }
   ]
 }

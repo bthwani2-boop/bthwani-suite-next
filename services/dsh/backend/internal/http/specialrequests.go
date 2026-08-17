@@ -112,6 +112,8 @@ func marshalSpecialRequest(req *specialrequests.SpecialRequest) map[string]any {
 		"wltQuoteHash":             req.WltQuoteHash,
 		"wltQuoteExpiresAt":        req.WltQuoteExpiresAt,
 		"wltPaymentSessionId":      req.WltPaymentSessionID,
+		"lastWltStatus":            req.LastWltStatus,
+		"lastWltEventAt":           req.LastWltEventAt,
 		"correlationId":            req.CorrelationID,
 		"productUrl":               req.ProductUrl,
 		"quantity":                 req.Quantity,
@@ -184,6 +186,9 @@ func (s *protectedStoreServer) handleCreateSpecialRequest(w http.ResponseWriter,
 	var body createSpecialRequestBody
 	if !decodeProtectedJSON(w, r, &body) {
 		return
+	}
+	if strings.TrimSpace(body.IdempotencyKey) == "" {
+		body.IdempotencyKey = strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	}
 
 	svc := specialrequests.NewService(specialrequests.NewPostgresRepository(s.db))
@@ -333,6 +338,7 @@ func (s *protectedStoreServer) handleApproveSpecialRequestQuote(w http.ResponseW
 		AmountMinorUnits:  *req.WltQuoteAmountMinorUnits,
 		Currency:          *req.WltQuoteCurrency,
 		CorrelationID:     r.Header.Get("X-Correlation-ID"),
+		IdempotencyKey:    r.Header.Get("Idempotency-Key"),
 	})
 	if err != nil {
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_HANDOFF_UNAVAILABLE", "WLT payment-session handoff is unavailable")
@@ -456,25 +462,27 @@ func (s *protectedStoreServer) handleUpdateOperatorSpecialRequest(w http.Respons
 		return
 	}
 	input := specialrequests.UpdateInput{
-		Status:                body.Status,
-		WorkflowStage:         body.WorkflowStage,
-		AssignedOperatorID:    body.AssignedOperatorID,
-		RejectionReason:       body.RejectionReason,
-		CustomerApprovedAt:    body.CustomerApprovedAt,
-		PurchaseBatchID:       body.PurchaseBatchID,
-		PurchasedAt:           body.PurchasedAt,
-		InboundReference:      body.InboundReference,
-		InboundReceivedAt:     body.InboundReceivedAt,
-		SortingStartedAt:      body.SortingStartedAt,
-		SortingCompletedAt:    body.SortingCompletedAt,
-		FulfillmentPreparedAt: body.FulfillmentPreparedAt,
-		ReadyForDeliveryAt:    body.ReadyForDeliveryAt,
-		CaptainAssignedAt:     body.CaptainAssignedAt,
-		PickedUpAt:            body.PickedUpAt,
-		DeliveredAt:           body.DeliveredAt,
-		SafetyStatus:          body.SafetyStatus,
-		ModerationNote:        body.ModerationNote,
-		IsUnsafeContent:       body.IsUnsafeContent,
+		ActorID:                actor.ID,
+		QuoteProposalRequested: proposalRequested,
+		Status:                 body.Status,
+		WorkflowStage:          body.WorkflowStage,
+		AssignedOperatorID:     body.AssignedOperatorID,
+		RejectionReason:        body.RejectionReason,
+		CustomerApprovedAt:     body.CustomerApprovedAt,
+		PurchaseBatchID:        body.PurchaseBatchID,
+		PurchasedAt:            body.PurchasedAt,
+		InboundReference:       body.InboundReference,
+		InboundReceivedAt:      body.InboundReceivedAt,
+		SortingStartedAt:       body.SortingStartedAt,
+		SortingCompletedAt:     body.SortingCompletedAt,
+		FulfillmentPreparedAt:  body.FulfillmentPreparedAt,
+		ReadyForDeliveryAt:     body.ReadyForDeliveryAt,
+		CaptainAssignedAt:      body.CaptainAssignedAt,
+		PickedUpAt:             body.PickedUpAt,
+		DeliveredAt:            body.DeliveredAt,
+		SafetyStatus:           body.SafetyStatus,
+		ModerationNote:         body.ModerationNote,
+		IsUnsafeContent:        body.IsUnsafeContent,
 	}
 	var quote *wlt.SpecialRequestQuote
 	if proposalRequested {
@@ -482,6 +490,23 @@ func (s *protectedStoreServer) handleUpdateOperatorSpecialRequest(w http.Respons
 			store.SendError(w, http.StatusServiceUnavailable, "WLT_HANDOFF_UNAVAILABLE", "WLT quote handoff is unavailable")
 			return
 		}
+		idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+		if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
+			writeSpecialRequestError(w, fmt.Errorf("%w: Idempotency-Key must contain between 8 and 200 characters", specialrequests.ErrInvalid), "special request not found")
+			return
+		}
+		status := specialrequests.StatusNeedsCustomerInput
+		stage := "customer_approval"
+		input.Status = &status
+		input.WorkflowStage = &stage
+	}
+	updated, err := svc.ApplyOperatorTransitionInOperatorContext(r.Context(), actor.OperatorContextID, reqID, *body.ExpectedVersion, input)
+	if err != nil {
+		writeSpecialRequestError(w, err, "special request not found")
+		return
+	}
+	if proposalRequested {
+		correlation := specialRequestCorrelationID(r)
 		quote, err = s.wlt.IssueSpecialRequestQuote(r.Context(), wlt.SpecialRequestQuoteInput{
 			SpecialRequestID:         reqID,
 			ClientID:                 current.ClientID,
@@ -489,18 +514,13 @@ func (s *protectedStoreServer) handleUpdateOperatorSpecialRequest(w http.Respons
 			ProposedAmountMinorUnits: *body.ProposedAmountMinorUnits,
 			ProposedCurrency:         *body.ProposedCurrency,
 			ProposalReason:           *body.ProposalReason,
-			CorrelationID:            *specialRequestCorrelationID(r),
+			CorrelationID:            *correlation,
 			IdempotencyKey:           r.Header.Get("Idempotency-Key"),
 		})
 		if err != nil {
 			store.SendError(w, http.StatusServiceUnavailable, "WLT_HANDOFF_UNAVAILABLE", "WLT quote handoff failed")
 			return
 		}
-	}
-	updated, err := svc.ApplyOperatorTransitionInOperatorContext(r.Context(), actor.OperatorContextID, reqID, *body.ExpectedVersion, input)
-	if err != nil {
-		writeSpecialRequestError(w, err, "special request not found")
-		return
 	}
 	if quote != nil {
 		updated, err = svc.AttachWltQuoteInOperatorContext(r.Context(), actor.OperatorContextID, reqID, updated.Version, quote)

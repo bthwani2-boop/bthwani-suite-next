@@ -9,11 +9,50 @@ import (
 	"time"
 
 	"dsh-api/internal/specialrequests"
+	"dsh-api/internal/wlt"
 
 	"github.com/google/uuid"
 )
 
 const testSpecialRequestOperatorContextID = "OperatorContext-dispatch-test"
+
+func approveSpecialRequestViaWlt(t *testing.T, db *sql.DB, svc *specialrequests.Service, req *specialrequests.SpecialRequest) *specialrequests.SpecialRequest {
+	t.Helper()
+	ctx := context.Background()
+	reviewStatus := specialrequests.StatusUnderReview
+	reviewed, err := svc.ApplyOperatorTransitionInOperatorContext(ctx, testSpecialRequestOperatorContextID, req.ID, req.Version, specialrequests.UpdateInput{Status: &reviewStatus})
+	if err != nil {
+		t.Fatalf("failed to transition fixture to under_review: %v", err)
+	}
+	needsInput := specialrequests.StatusNeedsCustomerInput
+	approvalStage := "customer_approval"
+	customerApproval, err := svc.ApplyOperatorTransitionInOperatorContext(ctx, testSpecialRequestOperatorContextID, req.ID, reviewed.Version, specialrequests.UpdateInput{Status: &needsInput, WorkflowStage: &approvalStage})
+	if err != nil {
+		t.Fatalf("failed to transition fixture to customer_approval: %v", err)
+	}
+	quote := &wlt.SpecialRequestQuote{
+		ID: uuid.NewString(), OperatorContextID: testSpecialRequestOperatorContextID, SpecialRequestID: req.ID, ClientID: req.ClientID,
+		PolicyID: "special-request-standard", PolicyVersion: 1, QuoteVersion: 1,
+		AmountMinorUnits: 20000, Currency: "SAR", QuoteHash: "dispatch-test-quote", Status: "active", ExpiresAt: time.Now().Add(time.Hour), CreatedAt: time.Now().UTC(),
+	}
+	quoted, err := svc.AttachWltQuoteInOperatorContext(ctx, testSpecialRequestOperatorContextID, req.ID, customerApproval.Version, quote)
+	if err != nil {
+		t.Fatalf("failed to attach WLT quote to fixture: %v", err)
+	}
+	sessionID := "dispatch-wlt-session-" + uuid.NewString()
+	attached, err := svc.AttachWltPaymentSessionInOperatorContext(ctx, testSpecialRequestOperatorContextID, req.ID, quoted.Version, sessionID)
+	if err != nil {
+		t.Fatalf("failed to attach WLT payment session to fixture: %v", err)
+	}
+	approved, err := specialrequests.ApplyWltPaymentEvent(db, testSpecialRequestOperatorContextID, req.ID, sessionID, "captured")
+	if err != nil {
+		t.Fatalf("failed to capture WLT payment for fixture: %v", err)
+	}
+	if approved.Version <= attached.Version || approved.Status != specialrequests.StatusApproved {
+		t.Fatalf("expected WLT capture to produce approved fixture, got status=%s version=%d", approved.Status, approved.Version)
+	}
+	return approved
+}
 
 // newApprovedSpecialRequestFixture creates an AWNAK_ERRAND special request and
 // drives it through the real operator transition chain
@@ -35,9 +74,10 @@ func newApprovedSpecialRequestFixture(t *testing.T, db *sql.DB) (id, clientID st
 	pickup := "dispatch-test-pickup-" + suffix
 	dropoff := "dispatch-test-dropoff-" + suffix
 	req, err := svc.CreateInOperatorContext(ctx, testSpecialRequestOperatorContextID, clientID, specialrequests.CreateInput{
-		OperatorContextID:        testSpecialRequestOperatorContextID,
-		ClientID:                 clientID,
+		OperatorContextID:       testSpecialRequestOperatorContextID,
+		ClientID:                clientID,
 		RequestType:             specialrequests.TypeAwnakErrand,
+		IdempotencyKey:          "dispatch-awnak-" + clientID,
 		PickupAddressReference:  &pickup,
 		DropoffAddressReference: &dropoff,
 	})
@@ -47,19 +87,12 @@ func newApprovedSpecialRequestFixture(t *testing.T, db *sql.DB) (id, clientID st
 	id = req.ID
 
 	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_special_request_wlt_event_receipts WHERE special_request_id = $1::uuid`, id)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_special_requests_audit_events WHERE entity_id = $1::uuid`, id)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_special_requests WHERE id = $1::uuid`, id)
 	})
 
-	underReview := specialrequests.StatusUnderReview
-	reviewed, err := svc.ApplyOperatorTransitionInOperatorContext(ctx, testSpecialRequestOperatorContextID, id, req.Version, specialrequests.UpdateInput{Status: &underReview})
-	if err != nil {
-		t.Fatalf("failed to transition fixture to under_review: %v", err)
-	}
-	approved := specialrequests.StatusApproved
-	if _, err := svc.ApplyOperatorTransitionInOperatorContext(ctx, testSpecialRequestOperatorContextID, id, reviewed.Version, specialrequests.UpdateInput{Status: &approved}); err != nil {
-		t.Fatalf("failed to transition fixture to approved: %v", err)
-	}
+	approveSpecialRequestViaWlt(t, db, svc, req)
 	return id, clientID
 }
 
@@ -82,13 +115,15 @@ func newSheinFixtureAtStage(t *testing.T, db *sql.DB, targetStage string) (id st
 	qty := 1
 	req, err := svc.CreateInOperatorContext(ctx, testSpecialRequestOperatorContextID, clientID, specialrequests.CreateInput{
 		OperatorContextID: testSpecialRequestOperatorContextID, ClientID: clientID, RequestType: specialrequests.TypeSheinAssistedPurchase,
-		ProductUrl: &url, Quantity: &qty,
+		IdempotencyKey: "dispatch-shein-" + clientID,
+		ProductUrl:     &url, Quantity: &qty,
 	})
 	if err != nil {
 		t.Fatalf("failed to create shein fixture: %v", err)
 	}
 	id = req.ID
 	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_special_request_wlt_event_receipts WHERE special_request_id = $1::uuid`, id)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_special_requests_audit_events WHERE entity_id = $1::uuid`, id)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_special_requests WHERE id = $1::uuid`, id)
 	})
@@ -135,6 +170,12 @@ func newSheinFixtureAtStage(t *testing.T, db *sql.DB, targetStage string) (id st
 		if stage == targetStage {
 			return id
 		}
+		if stage == "customer_approval" {
+			current = approveSpecialRequestViaWlt(t, db, svc, current)
+			if targetStage == "batch_pending" {
+				return id
+			}
+		}
 	}
 	t.Fatalf("newSheinFixtureAtStage: unknown target stage %q", targetStage)
 	return ""
@@ -157,7 +198,7 @@ func TestSheinDispatchReadinessGateDBIntegration(t *testing.T) {
 			id := newSheinFixtureAtStage(t, db, stage)
 			captainID, actorID := newCaptainAndActor()
 			_, err := CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
-				SpecialRequestID: id, CaptainID: captainID, ActorID: actorID,
+				SpecialRequestID: id, CaptainID: captainID, ActorID: actorID, OperatorContextID: testSpecialRequestOperatorContextID,
 			})
 			var notReady *specialrequests.ErrDispatchNotReady
 			if !errors.As(err, &notReady) {
@@ -187,7 +228,7 @@ func TestSheinDispatchReadinessGateDBIntegration(t *testing.T) {
 		id := newSheinFixtureAtStage(t, db, "ready_for_delivery")
 		captainID, actorID := newCaptainAndActor()
 		assignment, err := CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
-			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID,
+			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID, OperatorContextID: testSpecialRequestOperatorContextID,
 		})
 		if err != nil {
 			t.Fatalf("expected dispatch to succeed at ready_for_delivery, got %v", err)
@@ -209,7 +250,7 @@ func TestSheinDispatchReadinessGateDBIntegration(t *testing.T) {
 		id, _ := newApprovedSpecialRequestFixture(t, db)
 		captainID, actorID := newCaptainAndActor()
 		if _, err := CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
-			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID,
+			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID, OperatorContextID: testSpecialRequestOperatorContextID,
 		}); err != nil {
 			t.Fatalf("expected AWNAK dispatch from approved to still succeed, got %v", err)
 		}
@@ -242,9 +283,10 @@ func TestCreateAssignmentForSpecialRequestDBIntegration(t *testing.T) {
 		pickup := "not-approved-pickup"
 		dropoff := "not-approved-dropoff"
 		req, err := svc.CreateInOperatorContext(ctx, testSpecialRequestOperatorContextID, clientID, specialrequests.CreateInput{
-			OperatorContextID:        testSpecialRequestOperatorContextID,
-			ClientID:                 clientID,
+			OperatorContextID:       testSpecialRequestOperatorContextID,
+			ClientID:                clientID,
 			RequestType:             specialrequests.TypeAwnakErrand,
+			IdempotencyKey:          "dispatch-not-approved-" + clientID,
 			PickupAddressReference:  &pickup,
 			DropoffAddressReference: &dropoff,
 		})
@@ -270,7 +312,7 @@ func TestCreateAssignmentForSpecialRequestDBIntegration(t *testing.T) {
 		captainID, actorID := newCaptainAndActor()
 
 		assignment, err := CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
-			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID,
+			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID, OperatorContextID: testSpecialRequestOperatorContextID,
 		})
 		if err != nil {
 			t.Fatalf("CreateAssignmentForSpecialRequest failed: %v", err)
@@ -317,14 +359,14 @@ func TestCreateAssignmentForSpecialRequestDBIntegration(t *testing.T) {
 		captainID, actorID := newCaptainAndActor()
 
 		if _, err := CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
-			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID,
+			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID, OperatorContextID: testSpecialRequestOperatorContextID,
 		}); err != nil {
 			t.Fatalf("first CreateAssignmentForSpecialRequest failed: %v", err)
 		}
 
 		captainID2, actorID2 := newCaptainAndActor()
 		_, err := CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
-			SpecialRequestID: id, CaptainID: captainID2, ActorID: actorID2,
+			SpecialRequestID: id, CaptainID: captainID2, ActorID: actorID2, OperatorContextID: testSpecialRequestOperatorContextID,
 		})
 		if !errors.Is(err, ErrConflict) {
 			t.Fatalf("expected ErrConflict on double-assignment attempt, got %v", err)
@@ -339,7 +381,7 @@ func TestSpecialRequestAssignmentAcceptDeclineDBIntegration(t *testing.T) {
 		id, _ := newApprovedSpecialRequestFixture(t, db)
 		captainID, actorID := newCaptainAndActor()
 		assignment, err := CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
-			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID,
+			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID, OperatorContextID: testSpecialRequestOperatorContextID,
 		})
 		if err != nil {
 			t.Fatalf("CreateAssignmentForSpecialRequest failed: %v", err)
@@ -359,7 +401,7 @@ func TestSpecialRequestAssignmentAcceptDeclineDBIntegration(t *testing.T) {
 		id, _ := newApprovedSpecialRequestFixture(t, db)
 		captainID, actorID := newCaptainAndActor()
 		assignment, err := CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
-			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID,
+			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID, OperatorContextID: testSpecialRequestOperatorContextID,
 		})
 		if err != nil {
 			t.Fatalf("CreateAssignmentForSpecialRequest failed: %v", err)
@@ -376,7 +418,7 @@ func TestSpecialRequestAssignmentAcceptDeclineDBIntegration(t *testing.T) {
 
 		captainID2, actorID2 := newCaptainAndActor()
 		reassignment, err := CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
-			SpecialRequestID: id, CaptainID: captainID2, ActorID: actorID2,
+			SpecialRequestID: id, CaptainID: captainID2, ActorID: actorID2, OperatorContextID: testSpecialRequestOperatorContextID,
 		})
 		if err != nil {
 			t.Fatalf("expected re-dispatch after decline to succeed, got %v", err)
@@ -419,7 +461,7 @@ func TestSpecialRequestSubmitPoDDBIntegration(t *testing.T) {
 		id, _ := newApprovedSpecialRequestFixture(t, db)
 		captainID, actorID := newCaptainAndActor()
 		assignment, err := CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
-			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID,
+			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID, OperatorContextID: testSpecialRequestOperatorContextID,
 		})
 		if err != nil {
 			t.Fatalf("CreateAssignmentForSpecialRequest failed: %v", err)
@@ -450,7 +492,7 @@ func TestSpecialRequestSubmitPoDDBIntegration(t *testing.T) {
 		id, _ := newApprovedSpecialRequestFixture(t, db)
 		captainID, actorID := newCaptainAndActor()
 		assignment, err := CreateAssignmentForSpecialRequest(db, CreateAssignmentInput{
-			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID,
+			SpecialRequestID: id, CaptainID: captainID, ActorID: actorID, OperatorContextID: testSpecialRequestOperatorContextID,
 		})
 		if err != nil {
 			t.Fatalf("CreateAssignmentForSpecialRequest failed: %v", err)

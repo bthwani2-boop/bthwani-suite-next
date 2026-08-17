@@ -128,11 +128,19 @@ DshOperatorCheckoutIntentsResponse:
 DshWltPaymentSessionEvent:
   type: object
   additionalProperties: false
-  required: [operatorContextId, checkoutIntentId, paymentSessionId, status]
+  required: [operatorContextId, paymentSessionId, status]
+  oneOf:
+    - required: [checkoutIntentId]
+      not:
+        required: [specialRequestId]
+    - required: [specialRequestId]
+      not:
+        required: [checkoutIntentId]
   properties:
     eventId: { type: string, minLength: 8, maxLength: 200 }
     operatorContextId: { type: string, minLength: 1 }
     checkoutIntentId: { type: string, format: uuid }
+    specialRequestId: { type: string, format: uuid }
     paymentSessionId: { type: string, minLength: 1 }
     status:
       type: string

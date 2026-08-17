@@ -63,6 +63,7 @@ func cleanupRequest(t *testing.T, db *sql.DB, id string) {
 	t.Helper()
 	t.Cleanup(func() {
 		ctx := context.Background()
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_special_request_wlt_event_receipts WHERE special_request_id = $1::uuid`, id)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_special_requests_audit_events WHERE entity_id = $1::uuid`, id)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_special_requests WHERE id = $1::uuid`, id)
 	})
@@ -75,6 +76,7 @@ func validSheinInput(clientID string) CreateInput {
 		OperatorContextID: testOperatorContextID,
 		ClientID:          clientID,
 		RequestType:       TypeSheinAssistedPurchase,
+		IdempotencyKey:    "test-shein-" + clientID,
 		ProductUrl:        &url,
 		Quantity:          &qty,
 	}
@@ -87,6 +89,7 @@ func validAwnakInput(clientID string) CreateInput {
 		OperatorContextID:       testOperatorContextID,
 		ClientID:                clientID,
 		RequestType:             TypeAwnakErrand,
+		IdempotencyKey:          "test-awnak-" + clientID,
 		PickupAddressReference:  &pickup,
 		DropoffAddressReference: &dropoff,
 	}
@@ -131,7 +134,8 @@ func TestSpecialRequestsCreateDBIntegration(t *testing.T) {
 		qty := 1
 		_, err := svc.CreateInOperatorContext(ctx, testOperatorContextID, clientID, CreateInput{
 			ClientID: clientID, RequestType: TypeSheinAssistedPurchase,
-			ProductUrl: &bad, Quantity: &qty,
+			IdempotencyKey: "invalid-shein-" + testSuffix(),
+			ProductUrl:     &bad, Quantity: &qty,
 		})
 		if !errors.Is(err, ErrInvalid) {
 			t.Fatalf("expected ErrInvalid, got %v", err)
@@ -143,7 +147,8 @@ func TestSpecialRequestsCreateDBIntegration(t *testing.T) {
 		qty := 1
 		_, err := svc.CreateInOperatorContext(ctx, testOperatorContextID, clientID, CreateInput{
 			ClientID: clientID, RequestType: TypeSheinAssistedPurchase,
-			Quantity: &qty,
+			IdempotencyKey: "missing-shein-" + testSuffix(),
+			Quantity:       &qty,
 		})
 		if !errors.Is(err, ErrInvalid) {
 			t.Fatalf("expected ErrInvalid, got %v", err)
@@ -156,7 +161,8 @@ func TestSpecialRequestsCreateDBIntegration(t *testing.T) {
 		qty := 0
 		_, err := svc.CreateInOperatorContext(ctx, testOperatorContextID, clientID, CreateInput{
 			ClientID: clientID, RequestType: TypeSheinAssistedPurchase,
-			ProductUrl: &url, Quantity: &qty,
+			IdempotencyKey: "zero-shein-" + testSuffix(),
+			ProductUrl:     &url, Quantity: &qty,
 		})
 		if !errors.Is(err, ErrInvalid) {
 			t.Fatalf("expected ErrInvalid, got %v", err)
@@ -183,6 +189,7 @@ func TestSpecialRequestsCreateDBIntegration(t *testing.T) {
 		dropoff := "Dropoff ref"
 		_, err := svc.CreateInOperatorContext(ctx, testOperatorContextID, clientID, CreateInput{
 			ClientID: clientID, RequestType: TypeAwnakErrand,
+			IdempotencyKey:          "missing-pickup-" + testSuffix(),
 			DropoffAddressReference: &dropoff,
 		})
 		if !errors.Is(err, ErrInvalid) {
@@ -195,6 +202,7 @@ func TestSpecialRequestsCreateDBIntegration(t *testing.T) {
 		pickup := "Pickup ref"
 		_, err := svc.CreateInOperatorContext(ctx, testOperatorContextID, clientID, CreateInput{
 			ClientID: clientID, RequestType: TypeAwnakErrand,
+			IdempotencyKey:         "missing-dropoff-" + testSuffix(),
 			PickupAddressReference: &pickup,
 		})
 		if !errors.Is(err, ErrInvalid) {
@@ -530,30 +538,10 @@ func TestSpecialRequestsApplyOperatorTransitionDBIntegration(t *testing.T) {
 		}
 	})
 
-	t.Run("completedAt and cancelledAt are set on terminal transitions", func(t *testing.T) {
+	t.Run("operator cancellation sets cancelledAt", func(t *testing.T) {
 		req := createReq(t, TypeAwnakErrand)
-
-		steps := []RequestStatus{StatusUnderReview, StatusApproved, StatusAssigned, StatusInProgress, StatusCompleted}
-		current := req
-		for _, next := range steps {
-			s := next
-			updated, err := svc.ApplyOperatorTransitionInOperatorContext(ctx, testOperatorContextID, current.ID, current.Version, UpdateInput{Status: &s})
-			if err != nil {
-				t.Fatalf("transition to %s failed: %v", next, err)
-			}
-			current = updated
-		}
-		if current.Status != StatusCompleted {
-			t.Fatalf("expected final status completed, got %s", current.Status)
-		}
-		if current.CompletedAt == nil {
-			t.Fatal("expected completedAt to be set on completion")
-		}
-
-		// Separate request driven to cancelled to check cancelledAt.
-		req2 := createReq(t, TypeAwnakErrand)
 		reviewStatus := StatusUnderReview
-		reviewed, err := svc.ApplyOperatorTransitionInOperatorContext(ctx, testOperatorContextID, req2.ID, req2.Version, UpdateInput{Status: &reviewStatus})
+		reviewed, err := svc.ApplyOperatorTransitionInOperatorContext(ctx, testOperatorContextID, req.ID, req.Version, UpdateInput{Status: &reviewStatus})
 		if err != nil {
 			t.Fatalf("transition to under_review failed: %v", err)
 		}
@@ -605,9 +593,14 @@ func TestSpecialRequestsApplyOperatorTransitionDBIntegration(t *testing.T) {
 
 	t.Run("WLT quote readback is the only financial projection writer", func(t *testing.T) {
 		req := createReq(t, TypeSheinAssistedPurchase)
+		reviewStatus := StatusUnderReview
+		reviewed, err := svc.ApplyOperatorTransitionInOperatorContext(ctx, testOperatorContextID, req.ID, req.Version, UpdateInput{Status: &reviewStatus})
+		if err != nil {
+			t.Fatalf("transition to under_review failed: %v", err)
+		}
 		status := StatusNeedsCustomerInput
 		stage := "customer_approval"
-		reviewed, err := svc.ApplyOperatorTransitionInOperatorContext(ctx, testOperatorContextID, req.ID, req.Version, UpdateInput{Status: &status, WorkflowStage: &stage})
+		reviewed, err = svc.ApplyOperatorTransitionInOperatorContext(ctx, testOperatorContextID, req.ID, reviewed.Version, UpdateInput{Status: &status, WorkflowStage: &stage})
 		if err != nil {
 			t.Fatalf("transition to customer approval failed: %v", err)
 		}
@@ -791,9 +784,14 @@ func TestSpecialRequestsWltPaymentDBIntegration(t *testing.T) {
 			t.Fatalf("Create failed: %v", err)
 		}
 		cleanupRequest(t, db, req.ID)
+		reviewStatus := StatusUnderReview
+		reviewed, err := svc.ApplyOperatorTransitionInOperatorContext(ctx, testOperatorContextID, req.ID, req.Version, UpdateInput{Status: &reviewStatus})
+		if err != nil {
+			t.Fatalf("transition to under_review failed: %v", err)
+		}
 		status := StatusNeedsCustomerInput
 		stage := "customer_approval"
-		reviewed, err := svc.ApplyOperatorTransitionInOperatorContext(ctx, testOperatorContextID, req.ID, req.Version, UpdateInput{Status: &status, WorkflowStage: &stage})
+		reviewed, err = svc.ApplyOperatorTransitionInOperatorContext(ctx, testOperatorContextID, req.ID, reviewed.Version, UpdateInput{Status: &status, WorkflowStage: &stage})
 		if err != nil {
 			t.Fatalf("transition to customer approval failed: %v", err)
 		}
@@ -909,23 +907,15 @@ func TestSpecialRequestsWltPaymentDBIntegration(t *testing.T) {
 			t.Fatalf("expected approved after first captured event, got %s", approved.Status)
 		}
 
-		// Move the request on operationally (approved -> assigned) so a
-		// replayed "captured" event arrives after the approval stage has ended.
-		assignedStatus := StatusAssigned
-		assigned, err := svc.ApplyOperatorTransitionInOperatorContext(ctx, testOperatorContextID, approved.ID, approved.Version, UpdateInput{Status: &assignedStatus})
-		if err != nil {
-			t.Fatalf("transition to assigned failed: %v", err)
-		}
-
 		replayed, err := ApplyWltPaymentEvent(db, testOperatorContextID, req.ID, sessionID, "captured")
 		if err != nil {
 			t.Fatalf("replayed captured event should be a no-op success, got error %v", err)
 		}
-		if replayed.Status != StatusAssigned {
-			t.Fatalf("expected replay to leave status as assigned (no-op), got %s", replayed.Status)
+		if replayed.Status != StatusApproved {
+			t.Fatalf("expected replay to leave status as approved (no-op), got %s", replayed.Status)
 		}
-		if replayed.Version != assigned.Version {
-			t.Fatalf("expected replay not to bump version (no write performed), got %d want %d", replayed.Version, assigned.Version)
+		if replayed.Version != approved.Version {
+			t.Fatalf("expected replay not to bump version (no write performed), got %d want %d", replayed.Version, approved.Version)
 		}
 	})
 }

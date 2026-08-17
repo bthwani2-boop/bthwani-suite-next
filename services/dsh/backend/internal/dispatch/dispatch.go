@@ -169,11 +169,25 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 	}
 	defer tx.Rollback()
 
-	if err = specialrequests.CheckSheinDispatchReadiness(tx, input.OperatorContextID, input.SpecialRequestID); err != nil {
-		return nil, mapSpecialRequestError(err)
+	var existingAssignmentID, existingCaptainID string
+	err = tx.QueryRow(`
+		SELECT id::text, captain_id
+		FROM dsh_assignments
+		WHERE special_request_id = $1::uuid AND status IN ('offered', 'accepted')
+		FOR UPDATE`, input.SpecialRequestID).Scan(&existingAssignmentID, &existingCaptainID)
+	if err == nil {
+		if existingCaptainID != input.CaptainID {
+			return nil, fmt.Errorf("%w: special request already has an active assignment for another captain", ErrConflict)
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return GetCaptainAssignment(db, existingAssignmentID, input.CaptainID)
 	}
-	if err = specialrequests.TransitionDispatchStatusInOperatorContext(tx, input.OperatorContextID, input.SpecialRequestID,
-		[]specialrequests.RequestStatus{specialrequests.StatusApproved}, specialrequests.StatusAssigned); err != nil {
+	if err != sql.ErrNoRows {
+		return nil, err
+	}
+	if err = specialrequests.CheckSheinDispatchReadiness(tx, input.OperatorContextID, input.SpecialRequestID); err != nil {
 		return nil, mapSpecialRequestError(err)
 	}
 
@@ -207,11 +221,32 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 	delivery.SpecialRequestID = input.SpecialRequestID
 	assignment.Delivery = *delivery
 
-	if _, err = tx.Exec(`
+	if err = specialrequests.TransitionDispatchStatusInOperatorContextWithMetadata(tx, input.OperatorContextID, input.SpecialRequestID,
+		[]specialrequests.RequestStatus{specialrequests.StatusApproved}, specialrequests.StatusAssigned,
+		specialrequests.DispatchTransitionMetadata{
+			ActorID: input.ActorID, ActorRole: "operator", Action: "assign_captain", Reason: "captain assigned",
+		}); err != nil {
+		return nil, mapSpecialRequestError(err)
+	}
+
+	result, err := tx.Exec(`
 		UPDATE dsh_special_requests
-		SET dispatch_assignment_id = $1, version = version + 1
+		SET dispatch_assignment_id = $1,
+		    captain_assigned_at = COALESCE(captain_assigned_at, NOW()),
+		    version = version + 1, updated_at = NOW()
 		WHERE id = $2 AND operator_context_id = $3`,
-		assignment.ID, input.SpecialRequestID, input.OperatorContextID); err != nil {
+		assignment.ID, input.SpecialRequestID, input.OperatorContextID)
+	if err != nil {
+		return nil, err
+	}
+	if affected, err := result.RowsAffected(); err != nil || affected != 1 {
+		if err != nil {
+			return nil, err
+		}
+		return nil, ErrConflict
+	}
+	if err = specialrequests.RecordDispatchAssignmentLink(tx, input.OperatorContextID, input.SpecialRequestID, assignment.ID,
+		specialrequests.DispatchTransitionMetadata{ActorID: input.ActorID, ActorRole: "operator", Action: "link_dispatch_assignment"}); err != nil {
 		return nil, err
 	}
 
@@ -389,8 +424,13 @@ func SubmitPoD(db *sql.DB, assignmentID, captainID string, input PoDInput) (*Ass
 			return nil, mapOrderError(err)
 		}
 	} else if current.SpecialRequestID != "" {
-		if err = specialrequests.TransitionDispatchStatus(tx, current.SpecialRequestID,
-			[]specialrequests.RequestStatus{specialrequests.StatusInProgress}, specialrequests.StatusCompleted); err != nil {
+		operatorContextID, contextErr := specialRequestOperatorContextID(tx, current.SpecialRequestID)
+		if contextErr != nil {
+			return nil, mapSpecialRequestError(contextErr)
+		}
+		if err = specialrequests.TransitionDispatchStatusInOperatorContextWithMetadata(tx, operatorContextID, current.SpecialRequestID,
+			[]specialrequests.RequestStatus{specialrequests.StatusInProgress}, specialrequests.StatusCompleted,
+			specialrequests.DispatchTransitionMetadata{ActorID: captainID, ActorRole: "captain", Action: "submit_proof", Reason: "proof of delivery submitted"}); err != nil {
 			return nil, mapSpecialRequestError(err)
 		}
 	}
@@ -466,14 +506,20 @@ func updateAssignmentStatus(db *sql.DB, assignmentID, captainID string, status A
 			return nil, mapOrderError(err)
 		}
 	} else if current.SpecialRequestID != "" {
+		operatorContextID, contextErr := specialRequestOperatorContextID(tx, current.SpecialRequestID)
+		if contextErr != nil {
+			return nil, mapSpecialRequestError(contextErr)
+		}
 		if status == AssignmentAccepted {
-			if err = specialrequests.TransitionDispatchStatus(tx, current.SpecialRequestID,
-				[]specialrequests.RequestStatus{specialrequests.StatusAssigned}, specialrequests.StatusInProgress); err != nil {
+			if err = specialrequests.TransitionDispatchStatusInOperatorContextWithMetadata(tx, operatorContextID, current.SpecialRequestID,
+				[]specialrequests.RequestStatus{specialrequests.StatusAssigned}, specialrequests.StatusInProgress,
+				specialrequests.DispatchTransitionMetadata{ActorID: captainID, ActorRole: "captain", Action: "captain_accept", Reason: "captain accepted assignment"}); err != nil {
 				return nil, mapSpecialRequestError(err)
 			}
 		} else if status == AssignmentDeclined {
-			if err = specialrequests.TransitionDispatchStatus(tx, current.SpecialRequestID,
-				[]specialrequests.RequestStatus{specialrequests.StatusAssigned}, specialrequests.StatusApproved); err != nil {
+			if err = specialrequests.TransitionDispatchStatusInOperatorContextWithMetadata(tx, operatorContextID, current.SpecialRequestID,
+				[]specialrequests.RequestStatus{specialrequests.StatusAssigned}, specialrequests.StatusApproved,
+				specialrequests.DispatchTransitionMetadata{ActorID: captainID, ActorRole: "captain", Action: "captain_decline", Reason: note}); err != nil {
 				return nil, mapSpecialRequestError(err)
 			}
 		}

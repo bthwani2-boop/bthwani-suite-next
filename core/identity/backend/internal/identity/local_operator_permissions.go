@@ -26,6 +26,13 @@ func localOperatorDevelopmentPermissions() []Permission {
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.dispatch_financial_eligibility.manage", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "operations.read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "operations.manage", Scope: "all"},
+		// Special-request operations are a bounded Operations capability. Keep
+		// the local operator projection aligned with the Operations Manager
+		// bundle so the local Control Panel can exercise the canonical
+		// SHEIN/Awnak surface through the same backend permission boundary.
+		{Service: "dsh", Surface: "control-panel", Action: "operations.special_requests.read", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "operations.special_requests.transition", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "operations.special_requests.dispatch", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "marketing.read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "marketing.manage", Scope: "all"},
 
