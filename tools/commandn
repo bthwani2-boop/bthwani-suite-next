@@ -8,6 +8,13 @@
 
 استخدم إلزاميًا `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md` كمرجع الحوكمة التنفيذي الأساسي، وطبّق V5 FAIL-CLOSED بالكامل، مع اعتبار شرط التنفيذ المباشر على `b` أعلاه **استثناءً صريحًا فقط من سياسة Task Branch/Worktree** وليس إذنًا لتعطيل أي Gate أو Guard أو Evidence requirement أخرى.
 
+---
+
+**محفز التشغيل السريع (Quick Prompt):**
+> `GitHub BRANCH: <حدد الفرع> | MODE: EXECUTE_END_TO_END — استخدم الأمر الحاكم كاملًا من C:\bthwani-suite-next\tools\commandn وابدأ من أحدث HEAD بتشخيص FAIL-CLOSED شديد العمق يثبت بالأدلة ما عولج فعليًا وما لا يزال قائمًا، ثم احصر وتتبع إلى أعلى Root Cause كل فجوة أو تناقض أو تعدد Source of Truth أو عيب أو ضعف أو خطأ أو تكرار أو Dead/Stale Code أو خلل منطقي/معماري/تشغيلي/بياني/تكاملي/تصميمي؛ وبعد إثبات الجذور نفّذ المعالجة وإعادة الهيكلة والتنظيف والتصحيح والحذف وCanonical Cutover والإغلاق الجذري النهائي End-to-End في الكود والنظام الفعلي لا في التوثيق، مع إزالة المسارات القديمة والمكررة والمصادر الموازية نهائيًا، ومنع أي Patch/Workaround/Fallback أو معالجة أعراض أو مطاردة أخطاء محلية قبل حسم السبب الأعلى. لا تعتبر أي Finding مغلقًا حتى تتحقق من Root Cause + Blast Radius + Dependencies + Consumers + Contracts + Data/Runtime Flows وجميع الأسطح المتأثرة باختبارات وأدلة تشغيلية حديثة. احسم ذاتيًا كل ما يمكن إثباته؛ وإذا واجهت قرارًا منطقيًا جوهريًا غير قابل للاشتقاق فقط فأوقف ذلك الجزء واسألني سؤالًا محددًا مع الخيارات + توصيتك + السبب + أثر كل خيار، ثم استمر في كل ما لا يعتمد عليه. لا تتوقف عند تقرير أو قائمة مهام: استمر Diagnose → Root Cause → Implement → Delete Legacy → Verify → Re-diagnose حتى لا يبقى أي Finding معروف قابل للمعالجة أو مصدر حقيقة موازٍ أو تناقض أو تكرار أو خلل مثبت دون إغلاق فعلي.`
+
+---
+
 القانون الحاكم للمهمة هو:
 
 > **TOP-DOWN SEMANTIC AUTHORITY; BOTTOM-UP EVIDENCE; HIGHEST PROVEN SYSTEMIC ROOT FIRST; CODE/RUNTIME IS THE PLACE OF TREATMENT; COHERENT END-TO-END CUTOVER; ZERO PARALLEL TRUTH; ZERO LEGACY; ZERO DOCUMENTATION-ONLY CLOSURE.**
@@ -528,6 +535,7 @@
 * تعديل Blueprint وترك Runtime مخالفًا له؛
 * تسجيل Decision وعدم نشرها في Consumers؛
 * كتابة أن Canonical Source توحد مع بقاء Writer منافس؛
+* التوقف عند إنشاء تقرير أو قائمة مهام بدلاً من التنفيذ؛
 * وضع Finding = CLOSED بلا Runtime Evidence؛
 * إنشاء TODO بدل التنفيذ في `EXECUTE_END_TO_END`;
 * إزالة Finding من التقرير بينما ما زالت في النظام؛
@@ -652,6 +660,8 @@
 → `Affected graph`
 
 ولا تخمن القرار.
+
+**ثم أوقف ذلك الجزء فقط، واستمر في تنفيذ كل ما لا يعتمد على هذا القرار من مهام أخرى.**
 
 بعد الإجابة:
 
@@ -939,6 +949,10 @@
 بعد ذلك أثبت Runtime/Product Outcome الحقيقي، ثم فقط حدّث Documentation لتسجيل ما تم إثباته.
 
 أعد Ranking بعد كل Root Fix، واستمر من أعلى Root Cause إلى التي تليها حتى استنفاد كل العناصر المادية داخل TARGET وإثبات Final Closure على أحدث Candidate.
+
+**لا تتوقف عند تقرير أو قائمة مهام: استمر في الحلقة التالية:**
+`Diagnose` → `Root Cause` → `Implement` → `Delete Legacy` → `Verify` → `Re-diagnose`
+**حتى لا يبقى أي Finding معروف قابل للمعالجة، أو مصدر حقيقة موازٍ، أو تناقض، أو تكرار، أو خلل مثبت دون إغلاق فعلي.**
 
 ## قوانين لا يجوز خرقها
 

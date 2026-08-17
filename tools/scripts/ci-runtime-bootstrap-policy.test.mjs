@@ -18,6 +18,10 @@ test("DSH runtime profiles bootstrap exactly once before catalog readback and sm
   assert.ok(smoke > readback, "smoke must follow catalog readback");
 });
 
+test("identity-security includes WLT because local Workforce provisioning prepares captain standing", () => {
+  assert.match(workflow, /"identity-security"\s*\{\s*"identity,workforce,dsh,wlt,media"\s*\}/g);
+});
+
 test("profiles without DSH retain the non-mutating up path", () => {
   assert.match(workflow, /if \(\$requiresDshBootstrap\)[\s\S]*?else \{[\s\S]*?Invoke-Phase "runtime:up"/);
   assert.match(workflow, /-Action up -Profiles \$profiles/);

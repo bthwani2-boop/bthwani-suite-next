@@ -67,7 +67,7 @@ jobs:
           }
 
           $profiles = switch ($profile) {
-            "identity-security" { "identity,workforce,dsh,media" }
+            "identity-security" { "identity,workforce,dsh,wlt,media" }
             "dsh" { "dsh,media" }
             "workforce" { "identity,workforce" }
             "wlt-finance" { "identity,dsh,wlt,financial-simulators" }
@@ -152,7 +152,7 @@ jobs:
         run: |
           $profile = $env:RUNTIME_PROFILE
           $profiles = switch ($profile) {
-            "identity-security" { "identity,workforce,dsh,media" }
+            "identity-security" { "identity,workforce,dsh,wlt,media" }
             "dsh" { "dsh,media" }
             "workforce" { "identity,workforce" }
             "wlt-finance" { "identity,dsh,wlt,financial-simulators" }

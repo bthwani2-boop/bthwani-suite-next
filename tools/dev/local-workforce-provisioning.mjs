@@ -527,7 +527,7 @@ async function provisionIdentityActor(kind, phoneE164, actorId = '') {
   return result;
 }
 
-async function provisionOne(operatorToken, kind, zone) {
+async function provisionOne(operatorToken, kind, zone, { deferFinancialStanding = false } = {}) {
   const existing = await findExistingProvider(operatorToken, kind);
   const phoneE164 = LOCAL_WORKFORCE_PROVIDERS[kind].phoneE164;
   let actorId;
@@ -625,7 +625,7 @@ async function provisionOne(operatorToken, kind, zone) {
           },
         }),
   };
-  if (kind === 'captain') {
+  if (kind === 'captain' && !deferFinancialStanding) {
     await ensureCaptainFinancialStanding(actorId);
     await refreshCaptainFinancialEligibility(operatorToken, actorId);
   }
@@ -664,10 +664,13 @@ function writeGeneratedRegistry(actors) {
 }
 
 /** Provisions both providers and records their generated actor ids. Idempotent. */
-export async function provisionLocalWorkforceActors(operatorToken) {
+export async function provisionLocalWorkforceActors(
+  operatorToken,
+  { deferFinancialStanding = false } = {},
+) {
   const zone = await ensureActiveZone(operatorToken);
-  const field = await provisionOne(operatorToken, 'field', zone);
-  const captain = await provisionOne(operatorToken, 'captain', zone);
+  const field = await provisionOne(operatorToken, 'field', zone, { deferFinancialStanding });
+  const captain = await provisionOne(operatorToken, 'captain', zone, { deferFinancialStanding });
   const actors = { field, captain };
   writeGeneratedRegistry(actors);
   return { zone, actors };
@@ -678,7 +681,8 @@ async function main() {
     throw new Error('local workforce provisioning is forbidden in production');
   }
   const operatorToken = await getPasswordToken(LOCAL_ACTORS.operator.username);
-  const { actors } = await provisionLocalWorkforceActors(operatorToken);
+  const deferFinancialStanding = process.argv.includes('--defer-financial-standing');
+  const { actors } = await provisionLocalWorkforceActors(operatorToken, { deferFinancialStanding });
   console.log(
     `Local Workforce providers provisioned: field=${actors.field.actorId} (${actors.field.workforceCode}) ` +
       `captain=${actors.captain.actorId} (${actors.captain.workforceCode})`,

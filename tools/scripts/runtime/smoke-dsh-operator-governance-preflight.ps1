@@ -83,6 +83,10 @@ $detail = Invoke-CheckedJsonRequest `
 if ([string]$detail.store.id -ne $StoreId) {
   throw "dsh-operator-store-detail returned the wrong store"
 }
+$serviceabilityStatus = [string]$detail.store.serviceability.status
+if ([string]::IsNullOrWhiteSpace($serviceabilityStatus)) {
+  throw "dsh-operator-store-detail returned no canonical serviceability status"
+}
 
 $governanceHeaders = @{
   Authorization = "Bearer $token"
@@ -92,7 +96,7 @@ $governanceHeaders = @{
 $governanceBody = @{
   expectedVersion = [int]$detail.store.version
   action = "serviceability"
-  value = [string]$detail.store.serviceabilityStatus
+  value = $serviceabilityStatus
   reason = "runtime operator governance boundary preflight"
 } | ConvertTo-Json
 

@@ -9,6 +9,7 @@ function source(relativePath) {
 describe("DSH operator governance runtime preflight", () => {
   const workflow = source("../../../.github/workflows/ci-runtime.yml");
   const preflight = source("../../../tools/scripts/runtime/smoke-dsh-operator-governance-preflight.ps1");
+  const diagnosis = source("../../../tools/scripts/runtime/diagnose-dsh-smoke-auth-boundary.ps1");
 
   it("runs after runtime startup and catalog readback and before the broad runtime smoke", () => {
     const runtimeUp = workflow.indexOf('Invoke-Phase "runtime:up"');
@@ -38,7 +39,11 @@ describe("DSH operator governance runtime preflight", () => {
 
   it("uses the current store version and preserves its visibility value", () => {
     assert.match(preflight, /expectedVersion = \[int\]\$detail\.store\.version/);
-    assert.match(preflight, /value = \[string\]\$detail\.store\.serviceabilityStatus/);
+    assert.match(preflight, /\$serviceabilityStatus = \[string\]\$detail\.store\.serviceability\.status/);
+    assert.match(preflight, /value = \$serviceabilityStatus/);
+    assert.doesNotMatch(preflight, /\.serviceabilityStatus\b/);
+    assert.match(diagnosis, /\$serviceabilityStatus = \[string\]\$detail\.store\.serviceability\.status/);
+    assert.match(diagnosis, /value = \$serviceabilityStatus/);
     assert.match(preflight, /action = "serviceability"/);
     assert.match(preflight, /audit\.actorRole -ne "operator"/);
   });

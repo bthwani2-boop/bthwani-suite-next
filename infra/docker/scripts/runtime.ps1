@@ -361,14 +361,21 @@ function Assert-LocalIdentityBootstrapConverged {
 # Their actor ids are generated at runtime, so this must run before the governed
 # seeds, which substitute those ids into @@FIELD_ACTOR_ID@@ / @@CAPTAIN_ACTOR_ID@@.
 function Invoke-LocalWorkforceProvisioning {
+  param([switch]$DeferFinancialStanding)
+
   if ($env:NODE_ENV -eq "production") {
     throw "Local workforce provisioning is forbidden when NODE_ENV=production."
   }
   if (-not ($ProfileList -contains "workforce" -and $ProfileList -contains "identity")) { return }
+  if ($ProfileList -notcontains "wlt") {
+    throw "Local Workforce provisioning requires the WLT profile because captain standing is WLT-owned."
+  }
   if (@(Get-SelectedSeedServices).Count -eq 0) { return }
 
   Write-Host "`n--- Provisioning governed local Workforce providers ---"
-  & node (Join-Path $RepoRoot "tools/dev/local-workforce-provisioning.mjs")
+  $provisioningArguments = @((Join-Path $RepoRoot "tools/dev/local-workforce-provisioning.mjs"))
+  if ($DeferFinancialStanding) { $provisioningArguments += "--defer-financial-standing" }
+  & node @provisioningArguments
   if ($LASTEXITCODE -ne 0) {
     throw "Local Workforce provider provisioning failed (exit $LASTEXITCODE)"
   }
@@ -516,8 +523,9 @@ switch ($Action) {
     Invoke-Compose up -d --build
     Wait-ForSelectedApis
     Assert-LocalIdentityBootstrapConverged
-    Invoke-LocalWorkforceProvisioning
+    Invoke-LocalWorkforceProvisioning -DeferFinancialStanding
     Invoke-GovernedSeeds
+    Invoke-LocalWorkforceProvisioning
     Invoke-SelectedSmoke
     Write-Host "reset: PASS"
   }
@@ -542,8 +550,9 @@ switch ($Action) {
     Restart-MigratedApis
     Wait-ForSelectedApis
     Assert-LocalIdentityBootstrapConverged
-    Invoke-LocalWorkforceProvisioning
+    Invoke-LocalWorkforceProvisioning -DeferFinancialStanding
     Invoke-GovernedSeeds
+    Invoke-LocalWorkforceProvisioning
     if ($ProfileList -contains "dsh") {
       node tools/scripts/mobile-dev-data.mjs --repair
       if ($LASTEXITCODE -ne 0) {

@@ -287,6 +287,7 @@ services:
       DSH_WLT_PRICING_EVIDENCE_SECRET: "${DSH_WLT_PRICING_EVIDENCE_SECRET:-dev-only-dsh-wlt-pricing-evidence-secret}"
       DSH_WORKFORCE_BASE_URL: "${DSH_WORKFORCE_BASE_URL:-http://workforce-api:8086}"
       WORKFORCE_DSH_SERVICE_TOKEN: "${WORKFORCE_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_workforce_dsh_service_token}"
+      DSH_WORKFORCE_SERVICE_TOKEN: "${WORKFORCE_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_workforce_dsh_service_token}"
       DSH_PLATFORM_CONTROL_BASE_URL: "${DSH_PLATFORM_CONTROL_BASE_URL:-http://platform-control-api:8088}"
       PLATFORM_CONTROL_DSH_SERVICE_TOKEN: "${PLATFORM_CONTROL_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_platform_control_dsh_service_token}"
       DSH_MINIO_ENDPOINT: "minio:9000"

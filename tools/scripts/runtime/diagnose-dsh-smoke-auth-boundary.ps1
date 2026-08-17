@@ -103,11 +103,15 @@ $detail = Invoke-CheckedJsonRequest `
   -Method "GET" `
   -Uri "$DshBaseUrl/dsh/operator/stores/$([Uri]::EscapeDataString($StoreId))" `
   -Headers $operatorHeaders
+$serviceabilityStatus = [string]$detail.store.serviceability.status
+if ([string]::IsNullOrWhiteSpace($serviceabilityStatus)) {
+  throw "dsh-operator-store-detail returned no canonical serviceability status"
+}
 
 $governanceBody = @{
   expectedVersion = [int]$detail.store.version
   action = "serviceability"
-  value = [string]$detail.store.serviceabilityStatus
+  value = $serviceabilityStatus
   reason = "runtime smoke request-boundary diagnosis"
 } | ConvertTo-Json
 $governance = Invoke-CheckedJsonRequest `
