@@ -48,6 +48,7 @@ function resolveFoundationGuards({
   const starts = (...prefixes) => has((file) => prefixes.some((prefix) => file.startsWith(prefix)));
   const equals = (...names) => has((file) => names.includes(file));
   const governanceFiles = starts("governance/", ".agents/") || equals("AGENTS.md", "CLAUDE.md", "GEMINI.md", "LEAN-CTX.md", "opencode.json");
+  const guardSourcesChanged = starts("tools/guards/");
   const guardOrTooling = starts("tools/guards/", "tools/scripts/");
 
   const selected = ["source-integrity"];
@@ -56,11 +57,11 @@ function resolveFoundationGuards({
       "governance-schema",
       "agent-governance",
       "authority-separation",
-      "guard-registry",
       "sdlc",
       "cleanup-policy",
     );
   }
+  if (governanceFiles || guardSourcesChanged) selected.push("guard-registry");
 
   if (guardOrTooling || workflow || infrastructure || workspaceManifest || ciRouter || contractsChanged || backendChanged || frontend) {
     selected.push("required-command-integrity", "no-broken-imports");

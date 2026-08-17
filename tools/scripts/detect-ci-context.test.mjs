@@ -13,9 +13,9 @@ test("governance-only changes stay standard and avoid product checks", () => {
     "governance-schema",
     "agent-governance",
     "authority-separation",
-    "guard-registry",
     "sdlc",
     "cleanup-policy",
+    "guard-registry",
   ]);
 });
 
@@ -23,6 +23,7 @@ test("guard implementation changes use only code-integrity foundation guards", (
   const result = classifyFiles(["tools/guards/runtime-config-gate.mjs"]);
   assert.deepEqual(result.foundation_guard_ids, [
     "source-integrity",
+    "guard-registry",
     "required-command-integrity",
     "no-broken-imports",
   ]);
