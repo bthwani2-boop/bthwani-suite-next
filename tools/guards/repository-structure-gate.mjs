@@ -6,6 +6,7 @@
  */
 
 import fs from "node:fs";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fail, repoRoot, toPosix, listCodeFiles, read } from "./_guard-utils.mjs";
 
@@ -109,8 +110,36 @@ const APPROVED_TOP_LEVEL = new Set([
   ".agents", ".github", ".vscode", ".expo", ".nx", ".diagnostics", "node_modules", ".pnpm-store",
   "dist", "build", "out", "coverage", "graphify-out", "dist-swagger",
 ]);
+
+// Local agent/task artifacts may be ignored by Git without being repository
+// responsibility roots. Structure policy must not fail on those artifacts,
+// while still rejecting any untracked, non-ignored top-level source root.
+function repositoryTopLevels() {
+  try {
+    const tracked = execFileSync("git", ["ls-files", "--cached", "--full-name"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    });
+    const untracked = execFileSync("git", ["ls-files", "--others", "--exclude-standard", "--full-name"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    });
+    return new Set(`${tracked}\n${untracked}`
+      .split(/\r?\n/)
+      .map((entry) => entry.trim().replaceAll("\\", "/"))
+      .filter(Boolean)
+      .map((entry) => entry.split("/")[0]));
+  } catch {
+    // Fail closed if repository inventory cannot be resolved: preserve the
+    // previous behavior and inspect every visible top-level directory.
+    return null;
+  }
+}
+
+const repositoryRoots = repositoryTopLevels();
 for (const entry of fs.readdirSync(repoRoot, { withFileTypes: true })) {
   if (!entry.isDirectory() || APPROVED_TOP_LEVEL.has(entry.name) || entry.name.startsWith(".")) continue;
+  if (repositoryRoots && !repositoryRoots.has(entry.name)) continue;
   violations.push({
     file: entry.name + "/",
     line: 0,
