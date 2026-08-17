@@ -162,12 +162,10 @@ export function OperationalPolicySection({
     setError(null);
     try {
       const [profileResponse, modesResponse] = await Promise.all([
-        canReadProfile
-          ? fetchDshOperationalProfile(selectedZoneId)
-          : Promise.resolve(null),
+        canReadProfile ? fetchDshOperationalProfile(selectedZoneId) : null,
         canReadDeliveryModes
           ? fetchDshOperationalDeliveryModes(selectedZoneId)
-          : Promise.resolve({ deliveryModes: [] as DshDeliveryModePolicy[] }),
+          : { deliveryModes: [] as DshDeliveryModePolicy[] },
       ]);
       const auditResponse = canReadAudit
         ? await fetchDshOperationalPolicyAudit({ limit: 100 })

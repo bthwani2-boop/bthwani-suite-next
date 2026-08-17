@@ -13,6 +13,7 @@ import {
   type CaptainCashInSession,
 } from "./captain-cash-in.api";
 import { allocateCaptainCollateral, fetchOwnCaptainCollateral } from "../collateral/captain-collateral.api";
+import { formatWltMoney } from "../finance/wlt-money";
 
 type PanelState = "idle" | "loading" | "ready" | "unknown" | "success" | "error";
 
@@ -205,7 +206,7 @@ export function CaptainCashInPanel({ actorId }: { readonly actorId: string | nul
       ) : (
         <Box gap={1}>
           <Text role="bodyStrong">الجلسة: {session.id}</Text>
-          <Text role="bodySm" tone="muted">{sessionLabel(session.status)} · {session.amountMinorUnits.toLocaleString("ar-YE")} {session.currency}</Text>
+          <Text role="bodySm" tone="muted">{sessionLabel(session.status)} · {formatWltMoney(session.amountMinorUnits, session.currency)}</Text>
         </Box>
       )}
       {message ? <Text role="bodySm" tone={panelState === "error" ? "danger" : panelState === "unknown" ? "warning" : "muted"}>{message}</Text> : null}

@@ -122,12 +122,12 @@ function OrderStoreHero({ order }: { readonly order: OrderTruth }) {
   return (
     <Surface tone="default" style={styles.storeHero}>
       {store?.heroImageSource ? (
-        <Image source={store.heroImageSource} style={styles.storeHeroBg} />
+        <Image source={store.heroImageSource} style={styles.storeHeroBg} accessibilityLabel="صورة غلاف المتجر" />
       ) : null}
       <View style={styles.storeHeroOverlay}>
         <View style={styles.storeHeroHeader}>
           {store?.logoImageSource ? (
-            <Image source={store.logoImageSource} style={styles.storeLogo} />
+            <Image source={store.logoImageSource} style={styles.storeLogo} accessibilityLabel={`شعار ${store.displayName}`} />
           ) : (
             <View style={styles.storeLogoPlaceholder}>
               <Text style={{ fontSize: 24 }}>{store?.placeholderEmoji ?? "🏪"}</Text>
@@ -423,7 +423,7 @@ export function OrderTrackingScreen({
           <View style={styles.detailRow}>
             <Text role="bodySm" tone="muted">إجمالي الطلب</Text>
             <Text role="bodyStrong">
-              {(order.totalMinorUnits / 100).toLocaleString("ar-YE")} {order.currency}
+              {formatMinorUnits(order.totalMinorUnits, order.currency)}
             </Text>
           </View>
           <View style={styles.detailRow}>
