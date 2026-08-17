@@ -6,6 +6,7 @@ import path from "node:path";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const workflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/ci-runtime.yml"), "utf8");
+const contextualWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/ci.yml"), "utf8");
 
 test("DSH runtime profiles bootstrap exactly once before catalog readback and smoke", () => {
   const bootstrap = workflow.indexOf('Invoke-Phase "runtime:bootstrap-dev"');
@@ -25,4 +26,17 @@ test("identity-security includes WLT because local Workforce provisioning prepar
 test("profiles without DSH retain the non-mutating up path", () => {
   assert.match(workflow, /if \(\$requiresDshBootstrap\)[\s\S]*?else \{[\s\S]*?Invoke-Phase "runtime:up"/);
   assert.match(workflow, /-Action up -Profiles \$profiles/);
+});
+
+test("aggregate runtime applicability follows the canonical runtime_required decision", () => {
+  assert.match(
+    contextualWorkflow,
+    /RUNTIME_REQUIRED:\s*\$\{\{\s*needs\.context\.outputs\.runtime_required\s*\}\}/,
+    "aggregate must consume the router's canonical runtime_required output",
+  );
+  assert.doesNotMatch(
+    contextualWorkflow,
+    /RUNTIME_REQUIRED:\s*\$\{\{\s*needs\.context\.outputs\.runtime\s*\}\}/,
+    "runtime relevance must never be reinterpreted as runtime proof being required",
+  );
 });
