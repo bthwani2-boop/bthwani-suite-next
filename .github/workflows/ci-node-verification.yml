@@ -27,8 +27,15 @@ jobs:
       - name: Checkout immutable source history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
+      - name: Fetch exact verification commits
+        uses: ./.github/actions/fetch-exact-commits
+        with:
+          base_sha: ${{ inputs.base_sha }}
+          head_sha: ${{ inputs.head_sha }}
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Restore Nx computation cache
@@ -121,10 +128,19 @@ jobs:
       - name: Checkout immutable source history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
+      - name: Fetch exact verification commits
+        uses: ./.github/actions/fetch-exact-commits
+        with:
+          base_sha: ${{ inputs.base_sha }}
+          head_sha: ${{ inputs.head_sha }}
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
+      - name: Materialize contracts through the Nx owner
+        run: pnpm exec nx run contracts:materialize
       - name: Run detected journey gates
         id: journey_gates
         continue-on-error: true
@@ -163,10 +179,19 @@ jobs:
       - name: Checkout immutable source history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
+      - name: Fetch exact verification commits
+        uses: ./.github/actions/fetch-exact-commits
+        with:
+          base_sha: ${{ inputs.base_sha }}
+          head_sha: ${{ inputs.head_sha }}
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
+      - name: Materialize contracts through the Nx owner
+        run: pnpm exec nx run contracts:materialize
       - name: Verify platform change-set binding
         id: platform_change_sets
         continue-on-error: true
@@ -181,9 +206,8 @@ jobs:
             code=${PIPESTATUS[0]}
             if [[ "${code}" -ne 0 ]]; then status="${code}"; fi
           }
-          # setup-node-workspace already performs the canonical OpenAPI
-          # materialization. Verify that it produced no tracked drift instead of
-          # invoking a second generator with different formatting semantics.
+          # The Nx contracts target is the sole automatic materialization owner.
+          # Verify its derived outputs without invoking a second generator.
           run_check pnpm --dir services/dsh exec tsc -p tsconfig.platform-change-sets.json --noEmit --pretty false
           run_check git diff --exit-code -- \
             core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml \

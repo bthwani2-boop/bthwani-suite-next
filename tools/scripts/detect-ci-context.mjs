@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { appendFileSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ZERO_SHA = /^0+$/;
@@ -25,7 +25,7 @@ function uniqueInOrder(values) {
   return [...new Set(values.filter(Boolean))];
 }
 
-const repositoryRoot = resolve(fileURLToPath(import.meta.url), "../..");
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const FOUNDATION_GUARDS = JSON.parse(
   readFileSync(resolve(repositoryRoot, "governance/guards/guard-sets.json"), "utf8"),
 ).guardSets.foundation;

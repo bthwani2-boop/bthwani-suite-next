@@ -52,11 +52,22 @@ jobs:
       - name: Checkout immutable source history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
+      - name: Fetch exact verification commits
+        uses: ./.github/actions/fetch-exact-commits
+        with:
+          base_sha: ${{ inputs.base_sha }}
+          head_sha: ${{ inputs.head_sha }}
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
 
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
+
+      - name: Materialize contracts through the Nx owner
+        if: ${{ inputs.contracts_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' }}
+        run: pnpm exec nx run contracts:materialize
 
       - name: Verify canonical governance and SDLC gates
         if: ${{ inputs.governance_policy == 'true' }}
@@ -210,7 +221,7 @@ jobs:
       - name: Checkout immutable source history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
 
       - name: Set up locked Node workspace

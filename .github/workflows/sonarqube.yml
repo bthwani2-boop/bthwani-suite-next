@@ -91,6 +91,10 @@ jobs:
         if: ${{ steps.node_coverage_plan.outputs.required == 'true' }}
         uses: ./.github/actions/setup-node-workspace
 
+      - name: Materialize contracts through the Nx owner
+        if: ${{ steps.node_coverage_plan.outputs.required == 'true' }}
+        run: pnpm exec nx run contracts:materialize
+
       - name: Generate affected Node LCOV
         id: node_coverage
         if: ${{ steps.node_coverage_plan.outputs.required == 'true' }}

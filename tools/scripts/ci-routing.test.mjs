@@ -44,3 +44,25 @@ test("OpenAPI materialization has no lifecycle-hook authority", () => {
   assert.match(read("nx.json"), /target": "materialize"/u);
   assert.doesNotMatch(read(".github/actions/setup-node-workspace/action.yml"), /materialize_generated|postinstall/u);
 });
+
+test("affected jobs use shallow checkout plus exact commit hydration", () => {
+  for (const workflow of [
+    ".github/workflows/ci-node-diagnostics.yml",
+    ".github/workflows/ci-node-verification.yml",
+    ".github/workflows/ci-policy.yml",
+    ".github/workflows/ci-backends.yml",
+  ]) {
+    const content = read(workflow);
+    assert.match(content, /fetch-exact-commits/u, workflow);
+    assert.match(content, /fetch-depth: 1/u, workflow);
+  }
+  assert.match(read(".github/actions/fetch-exact-commits/action.yml"), /git fetch --no-tags --depth=1/u);
+  for (const workflow of [
+    ".github/workflows/ci-node-diagnostics.yml",
+    ".github/workflows/ci-policy.yml",
+    ".github/workflows/manual-deep-verification.yml",
+    ".github/workflows/sonarqube.yml",
+  ]) {
+    assert.match(read(workflow), /pnpm exec nx run contracts:materialize/u, workflow);
+  }
+});

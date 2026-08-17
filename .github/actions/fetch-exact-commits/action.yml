@@ -1,0 +1,39 @@
+name: Fetch exact verification commits
+description: Fetch only the immutable base and head commits required by a verification job.
+
+inputs:
+  base_sha:
+    description: Exact verification base commit.
+    required: true
+  head_sha:
+    description: Exact verification head commit.
+    required: true
+  token:
+    description: Read-only GitHub token used when the shallow checkout lacks a commit.
+    required: true
+  repository:
+    description: GitHub repository in owner/name form.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Fetch missing immutable commits only
+      shell: bash
+      env:
+        BASE_SHA: ${{ inputs.base_sha }}
+        HEAD_SHA: ${{ inputs.head_sha }}
+        GITHUB_TOKEN: ${{ inputs.token }}
+        GITHUB_REPOSITORY_NAME: ${{ inputs.repository }}
+      run: |
+        set -euo pipefail
+        remote_url="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY_NAME}.git"
+        for sha in "${BASE_SHA}" "${HEAD_SHA}"; do
+          if [[ -z "${sha}" || "${sha}" =~ ^0+$ ]]; then
+            continue
+          fi
+          if git cat-file -e "${sha}^{commit}" 2>/dev/null; then
+            continue
+          fi
+          git fetch --no-tags --depth=1 "${remote_url}" "${sha}"
+        done

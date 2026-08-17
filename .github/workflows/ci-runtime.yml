@@ -30,10 +30,13 @@ jobs:
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
-          fetch-depth: 0
+          fetch-depth: 1
           persist-credentials: false
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
+      - name: Materialize contracts through the Nx owner
+        if: ${{ inputs.runtime_profile != 'mobile-config' && inputs.runtime_profile != 'mobile-native' }}
+        run: pnpm exec nx run contracts:materialize
 
       - name: Execute selected runtime profile
         id: runtime

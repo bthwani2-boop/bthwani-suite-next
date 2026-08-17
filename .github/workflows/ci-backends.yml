@@ -118,8 +118,16 @@ jobs:
       - name: Checkout immutable source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          fetch-depth: 1
           persist-credentials: false
           show-progress: false
+      - name: Fetch exact verification commits
+        uses: ./.github/actions/fetch-exact-commits
+        with:
+          base_sha: ${{ inputs.base_sha }}
+          head_sha: ${{ inputs.head_sha }}
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
       - name: Set up locked Go runtime
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
@@ -212,6 +220,7 @@ jobs:
       - name: Checkout immutable source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          fetch-depth: 1
           persist-credentials: false
           show-progress: false
       - name: Set up locked Go runtime

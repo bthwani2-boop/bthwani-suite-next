@@ -119,6 +119,9 @@ jobs:
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
 
+      - name: Materialize contracts through the Nx owner
+        run: pnpm exec nx run contracts:materialize
+
       - name: Set up locked Go runtime
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
