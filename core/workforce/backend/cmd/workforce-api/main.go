@@ -73,7 +73,7 @@ func main() {
 	defer cancelApp()
 	mediaProvider := newMediaProvider(appCtx)
 
-	baseRouter := workforcehttp.NewRouter(db, service, repo, authClient, mediaProvider, dshServiceToken)
+	baseRouter := workforcehttp.NewRouter(db, service, repo, authClient, identity, mediaProvider, dshServiceToken)
 	workforcehttp.RegisterInternalReadinessRoutes(baseRouter, repo, dshServiceToken)
 	workforcehttp.RegisterOperationalCoreRoutes(baseRouter, repo, authClient)
 	workforcehttp.RegisterOperationalEnforcementRoutes(baseRouter, repo, authClient, wlt)

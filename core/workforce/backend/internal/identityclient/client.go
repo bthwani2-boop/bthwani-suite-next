@@ -134,6 +134,36 @@ func (c *Client) Actor(ctx context.Context, actorID string) (ActorView, error) {
 	return view, err
 }
 
+// VerifyActorInOperatorContext turns the caller's context assertion into a
+// verified Identity relationship before Workforce uses it as a database
+// boundary. The assertion is transport input; Identity remains the authority
+// for the actor-to-context relationship.
+func (c *Client) VerifyActorInOperatorContext(ctx context.Context, actorID, operatorContextID string) error {
+	actorID = strings.TrimSpace(actorID)
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if actorID == "" || operatorContextID == "" {
+		return ErrOperatorContextForbidden
+	}
+	if !c.Configured() {
+		return ErrUnavailable
+	}
+
+	view, err := c.Actor(workforceauth.WithOperatorContext(ctx, operatorContextID), actorID)
+	if errors.Is(err, ErrActorNotFound) {
+		// Identity deliberately does not distinguish a missing actor from an
+		// actor outside the requested context. Both are a failed boundary
+		// assertion to Workforce.
+		return ErrOperatorContextForbidden
+	}
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(view.ActorID) != actorID {
+		return ErrOperatorContextForbidden
+	}
+	return nil
+}
+
 // SearchActors performs a keyset-paginated actor search against identity. An empty
 // cursor starts at the first page; the returned cursor is empty once the last page
 // has been read.

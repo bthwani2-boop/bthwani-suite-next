@@ -9,7 +9,7 @@ import (
 
 const (
 	workforceMigrationServiceName = "workforce"
-	workforceLatestMigration      = "workforce-020_operator_context_scope_boundary.sql"
+	workforceLatestMigration      = "workforce-021_operator_context_identity_recovery.sql"
 	workforceReadinessTimeout     = 2 * time.Second
 )
 

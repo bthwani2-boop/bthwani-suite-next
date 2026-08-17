@@ -26,7 +26,9 @@ param(
   [ValidateRange(1, 120)]
   [int]$StatementTimeoutMinutes = 15,
 
-  [string]$SourceCommitSha = ""
+  [string]$SourceCommitSha = "",
+
+  [string]$IdentityDatabaseUrl = ""
 )
 
 Set-StrictMode -Version Latest
@@ -101,11 +103,50 @@ $executeStatement = {
   Invoke-DatabaseSql -Sql $Sql -Quiet
 }
 
-Invoke-BthwaniGovernedMigrations `
-  -ServiceName $ServiceKey `
-  -MigrationFiles $MigrationFiles `
-  -SourceCommitSha $SourceCommitSha `
-  -ExecuteBatch $executeBatch `
-  -ExecuteStatement $executeStatement
+function Test-WorkforceOperatorContextCutoverApplied {
+  $ledgerTable = Invoke-DatabaseSql -Sql "SELECT COALESCE(to_regclass('public.schema_migrations')::text, '');" -Quiet
+  if ([string]::IsNullOrWhiteSpace($ledgerTable)) { return $false }
+  $applied = Invoke-DatabaseSql -Sql @"
+SELECT CASE WHEN EXISTS (
+  SELECT 1
+  FROM schema_migrations
+  WHERE service_name = 'workforce'
+    AND migration_id = 'workforce-020_operator_context_scope_boundary.sql'
+    AND success = true
+    AND dirty = false
+) THEN '1' ELSE '0' END;
+"@ -Quiet
+  return $applied.Trim() -eq '1'
+}
+
+function Invoke-WorkforceIdentityImport {
+  if ($ServiceKey -ne 'workforce' -or (Test-WorkforceOperatorContextCutoverApplied)) { return }
+  if ([string]::IsNullOrWhiteSpace($IdentityDatabaseUrl)) {
+    throw 'IdentityDatabaseUrl is required before Workforce-020 can be applied; refusing an unbound cross-service migration.'
+  }
+
+  $importScript = Join-Path $RepoRoot 'tools/scripts/import-identity-operator-context-to-workforce.ps1'
+  if (-not (Test-Path -LiteralPath $importScript -PathType Leaf)) {
+    throw "Identity-to-Workforce migration authority not found: $importScript"
+  }
+  & $importScript `
+    -IdentityDatabaseUrl $IdentityDatabaseUrl `
+    -WorkforceDatabaseUrl $DatabaseUrl `
+    -SourceCommitSha $SourceCommitSha
+}
+
+try {
+  Invoke-WorkforceIdentityImport
+  Invoke-BthwaniGovernedMigrations `
+    -ServiceName $ServiceKey `
+    -MigrationFiles $MigrationFiles `
+    -SourceCommitSha $SourceCommitSha `
+    -ExecuteBatch $executeBatch `
+    -ExecuteStatement $executeStatement
+} finally {
+  if ($ServiceKey -eq 'workforce') {
+    Invoke-DatabaseSql -Sql 'DROP TABLE IF EXISTS workforce_identity_operator_context_import;' -Quiet
+  }
+}
 
 Write-Host "Governed service migrations: PASS service=$ServiceKey files=$($MigrationFiles.Count) sha=$SourceCommitSha"

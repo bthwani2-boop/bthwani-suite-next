@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
-	"strings"
 	"time"
 
 	"dsh-api/internal/store"
@@ -180,24 +179,11 @@ func HandleFieldGetAggregatedReadiness(db *sql.DB) http.HandlerFunc {
 
 func HandlePartnerMeAggregatedReadiness(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		storeID := storeIDFromContext(r)
-		if storeID == "" {
-			sendError(w, http.StatusForbidden, "FORBIDDEN", "no store context")
+		partnerID := partnerIDFromContext(r)
+		if partnerID == "" {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "no partner context")
 			return
 		}
-		var partnerID sql.NullString
-		if err := db.QueryRow(`SELECT partner_id FROM dsh_stores WHERE id = $1`, storeID).Scan(&partnerID); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				sendError(w, http.StatusNotFound, "NOT_FOUND", "store not found")
-				return
-			}
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve partner")
-			return
-		}
-		if !partnerID.Valid || strings.TrimSpace(partnerID.String) == "" {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "no partner linked to this store")
-			return
-		}
-		writeAggregatedReadiness(w, db, partnerID.String)
+		writeAggregatedReadiness(w, db, partnerID)
 	}
 }

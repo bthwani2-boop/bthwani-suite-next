@@ -13,7 +13,7 @@ test("partner analytics authorizes the explicitly selected store server-side", (
   const handler = backend.slice(backend.indexOf("func (s *protectedStoreServer) handlePartnerPerformance"));
   assert.match(handler, /requireActor\(w, r, "partner"\)/);
   assert.match(handler, /storeID := strings\.TrimSpace\(r\.URL\.Query\(\)\.Get\("storeId"\)\)/);
-  assert.match(handler, /ResolveActorStoreForID\(r\.Context\(\), s\.db, s\.workforce, actor, storeID\)/);
+  assert.match(handler, /ResolveActorStoreForID\(r\.Context\(\), s\.db, actor, storeID\)/);
   assert.doesNotMatch(handler, /partnerStore\(w, r\)/);
 });
 

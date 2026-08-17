@@ -306,30 +306,30 @@ export function usePartnerOffersController(authKind: string) {
 // submissions (app-partner PromotionsScreen): list own offers, submit a new
 // one for review. Partners can never edit or archive after submission — that
 // belongs to the operator review queue above.
-export function usePartnerSelfOffersController(authKind: string) {
+export function usePartnerSelfOffersController(authKind: string, storeId?: string) {
   const [items, setItems] = useState<ReadonlyArray<PartnerOfferRecord>>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const { offers } = await fetchPartnerSelfOffers();
+      const { offers } = await fetchPartnerSelfOffers(storeId);
       setItems(offers);
       setErrorMessage(null);
     } catch (err) {
       setErrorMessage(resolveMsg(err));
     }
-  }, []);
+  }, [storeId]);
 
   useEffect(() => {
-    if (authKind !== "authenticated") { setItems([]); return; }
+    if (authKind !== "authenticated" || !storeId?.trim()) { setItems([]); return; }
     void load();
-  }, [authKind, load]);
+  }, [authKind, load, storeId]);
 
   const submit = useCallback(async (input: PartnerOfferSubmitPayload): Promise<boolean> => {
     setSubmitting(true);
     try {
-      await submitPartnerSelfOffer(input);
+      await submitPartnerSelfOffer(input, storeId);
       setErrorMessage(null);
       await load();
       return true;
@@ -339,7 +339,7 @@ export function usePartnerSelfOffersController(authKind: string) {
     } finally {
       setSubmitting(false);
     }
-  }, [load]);
+  }, [load, storeId]);
 
   return {
     items, submit, submitting,

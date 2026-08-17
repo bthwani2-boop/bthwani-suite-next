@@ -22,6 +22,7 @@ type AnalyticsWorkspaceState = 'ready' | 'loading' | 'empty' | 'error' | 'offlin
 type PromotionsTab = 'active' | 'pending' | 'rejected' | 'new';
 
 export type PromotionsScreenProps = {
+  storeId: string;
   storeName: string;
   branchLabel: string;
   activeZoneLabel: string;
@@ -136,6 +137,7 @@ function PromotionRow({
 }
 
 export function PromotionsScreen({
+  storeId,
   storeName,
   branchLabel,
   activeZoneLabel,
@@ -145,7 +147,7 @@ export function PromotionsScreen({
   const marketingGovernance = React.useMemo(() => getDshControlPanelGovernanceEntry('marketing'), []);
   const catalogsGovernance = React.useMemo(() => getDshControlPanelGovernanceEntry('catalogs'), []);
   const partnersGovernance = React.useMemo(() => getDshControlPanelGovernanceEntry('partners'), []);
-  const controller = usePartnerSelfOffersController('authenticated');
+  const controller = usePartnerSelfOffersController('authenticated', storeId);
   const [activeTab, setActiveTab] = React.useState<PromotionsTab>('active');
   const [form, setForm] = React.useState<IntakeFormState>(INITIAL_FORM);
   const [statusMessage, setStatusMessage] = React.useState('');

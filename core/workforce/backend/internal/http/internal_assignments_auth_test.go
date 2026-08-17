@@ -1,10 +1,15 @@
 package http
 
 import (
+	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"workforce-api/internal/auth"
+	"workforce-api/internal/identityclient"
 )
 
 func TestInternalAssignmentsRequireConfiguredDSHServiceIdentity(t *testing.T) {
@@ -76,5 +81,25 @@ func TestInternalAssignmentsRequireTrustedContextHeader(t *testing.T) {
 	handler.ServeHTTP(response, request)
 	if response.Code != http.StatusBadRequest {
 		t.Fatalf("query-selected operator context must not satisfy trusted context, got %d", response.Code)
+	}
+}
+
+func TestInternalAssignmentsContextIsAttestedByIdentity(t *testing.T) {
+	identityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Operator-Context-ID") != "context-main" {
+			t.Fatalf("expected context-main at Identity, got %q", r.Header.Get("X-Operator-Context-ID"))
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(identityclient.ActorView{ActorID: "field-1"})
+	}))
+	defer identityServer.Close()
+
+	server := &server{identity: identityclient.NewClient(identityServer.URL, "identity-token")}
+	trusted, err := server.verifyAssignmentActorContext(context.Background(), "field-1", "context-main")
+	if err != nil {
+		t.Fatalf("expected verified assignment context, got %v", err)
+	}
+	if got, ok := auth.OperatorContextIDFromContext(trusted); !ok || got != "context-main" {
+		t.Fatalf("expected only the verified context to reach Workforce, got %q (ok=%v)", got, ok)
 	}
 }

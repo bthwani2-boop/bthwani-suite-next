@@ -14,7 +14,7 @@ import (
 
 const (
 	dshMigrationServiceName = "dsh"
-	dshLatestMigration      = "dsh-1019_remove_partner_deactivated_state.sql"
+	dshLatestMigration      = "dsh-1020_partner_first_store_identity.sql"
 	dshReadinessTimeout     = 2 * time.Second
 )
 

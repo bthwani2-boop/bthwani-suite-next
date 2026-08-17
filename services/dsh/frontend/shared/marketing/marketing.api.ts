@@ -99,6 +99,11 @@ export type PartnerOfferSubmitPayload = {
   readonly eligibility?: string;
 };
 
+function withPartnerStoreScope(path: string, storeId?: string): string {
+  const scopedStoreId = storeId?.trim();
+  return scopedStoreId ? `${path}?storeId=${encodeURIComponent(scopedStoreId)}` : path;
+}
+
 export const fetchPartnerOffers = () =>
   req<{ offers: import("../partner/dsh-partner-offer-types").PartnerOfferRecord[] }>(
     "/dsh/operator/marketing/partner-offers",
@@ -111,13 +116,13 @@ export const updatePartnerOffer = (id: string, body: PartnerOfferWritePayload) =
 export const archivePartnerOffer = (id: string) =>
   req<{ archived: boolean }>(`/dsh/operator/marketing/partner-offers/${id}`, { method: "DELETE" });
 
-export const fetchPartnerSelfOffers = () =>
+export const fetchPartnerSelfOffers = (storeId?: string) =>
   req<{ offers: import("../partner/dsh-partner-offer-types").PartnerOfferRecord[] }>(
-    "/dsh/partner/marketing/offers",
+    withPartnerStoreScope("/dsh/partner/marketing/offers", storeId),
   );
-export const submitPartnerSelfOffer = (body: PartnerOfferSubmitPayload) =>
+export const submitPartnerSelfOffer = (body: PartnerOfferSubmitPayload, storeId?: string) =>
   req<{ offer: import("../partner/dsh-partner-offer-types").PartnerOfferRecord }>(
-    "/dsh/partner/marketing/offers",
+    withPartnerStoreScope("/dsh/partner/marketing/offers", storeId),
     { method: "POST", body: JSON.stringify(body) },
   );
 

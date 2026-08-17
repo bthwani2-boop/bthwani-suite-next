@@ -15,6 +15,7 @@ x-bthwani-contracts:
   operationalCore: ./workforce.operational-core.openapi.yaml
   referenceMutations: ./workforce.reference-mutations.openapi.yaml
   sovereignLeadership: ./workforce.sovereign-leadership.openapi.yaml
+  internalScopes: ./workforce.internal-scopes.openapi.yaml
 servers:
   - url: http://localhost:58086
     description: Local workforce runtime

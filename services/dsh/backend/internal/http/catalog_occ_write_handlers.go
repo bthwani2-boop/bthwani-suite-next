@@ -90,7 +90,7 @@ func (s *protectedStoreServer) handleLegacyFieldUpsertStoreAssortmentAtomic(w ht
 		return
 	}
 	storeID := r.PathValue("storeId")
-	if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, s.workforce, actor, storeID); err != nil {
+	if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, storeID); err != nil {
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store is outside the field actor scope")
 		return
 	}

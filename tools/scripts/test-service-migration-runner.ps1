@@ -71,6 +71,7 @@ $ProbeTwoFile = "$ProbePrefix-992_followup.sql"
 $PartialProbeServiceKey = "$ServiceKey-partial-probe"
 $PartialProbeServiceKeySql = ConvertTo-SqlLiteral $PartialProbeServiceKey
 $SentinelCreated = $false
+$IdentityFixtureCreated = $false
 
 function Invoke-DatabaseSql {
   param(
@@ -96,10 +97,16 @@ function Invoke-RunnerProcess {
     [string]$RunnerServiceKey = $ServiceKey
   )
 
-  $output = & pwsh -NoProfile -ExecutionPolicy Bypass -File $RunnerPath `
-    -ServiceKey $RunnerServiceKey `
-    -MigrationDirectory $Directory `
-    -DatabaseUrl $DatabaseUrl 2>&1
+  $runnerArguments = @(
+    '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $RunnerPath,
+    '-ServiceKey', $RunnerServiceKey,
+    '-MigrationDirectory', $Directory,
+    '-DatabaseUrl', $DatabaseUrl
+  )
+  if ($ServiceKey -eq 'workforce') {
+    $runnerArguments += @('-IdentityDatabaseUrl', $DatabaseUrl)
+  }
+  $output = & pwsh @runnerArguments 2>&1
   $exitCode = $LASTEXITCODE
 
   if ($ExpectSuccess -and $exitCode -ne 0) {
@@ -170,6 +177,19 @@ New-Item -ItemType Directory -Path $partialDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $missingManifestDirectory -Force | Out-Null
 
 try {
+  if ($ServiceKey -eq 'workforce') {
+    Invoke-DatabaseSql -Sql @"
+CREATE TABLE IF NOT EXISTS identity_actors (
+  id text PRIMARY KEY,
+  operator_context_id text NOT NULL
+);
+INSERT INTO identity_actors (id, operator_context_id)
+VALUES ('ci-workforce-actor', 'ci-workforce-context')
+ON CONFLICT (id) DO UPDATE SET operator_context_id = EXCLUDED.operator_context_id;
+"@ | Out-Null
+    $IdentityFixtureCreated = $true
+  }
+
   Write-Host "--- ${ServiceKey}: manifest is mandatory and authoritative ---"
   Copy-Item -LiteralPath $canonicalFiles[0].FullName -Destination (Join-Path $missingManifestDirectory $canonicalFiles[0].Name)
   Invoke-RunnerProcess -Directory $missingManifestDirectory -ExpectSuccess $false
@@ -303,6 +323,9 @@ INSERT INTO $ProbeTwoTable (id, payload) VALUES (1, 'recovered');
 
   Write-Host "service-migration-wrapper-test: PASS service=$ServiceKey files=$($canonicalFiles.Count) ledger=schema_migrations manifest=authoritative"
 } finally {
+  if ($IdentityFixtureCreated) {
+    Invoke-DatabaseSql -Sql 'DROP TABLE IF EXISTS identity_actors;' | Out-Null
+  }
   if (Test-Path -LiteralPath $temporaryRoot) {
     Remove-Item -LiteralPath $temporaryRoot -Recurse -Force
   }

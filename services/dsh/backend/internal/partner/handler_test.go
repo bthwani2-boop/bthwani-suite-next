@@ -20,8 +20,8 @@ func TestStoreIDFromContextIgnoresSpoofableHeader(t *testing.T) {
 	req := httptest.NewRequest("GET", "/dsh/partner/activation/status", nil)
 	req.Header.Set("X-Store-ID", "spoofed-store")
 
-	if got := storeIDFromContext(req); got != "" {
-		t.Fatalf("storeIDFromContext must ignore client-controlled headers, got %q", got)
+	if got := partnerIDFromContext(req); got != "" {
+		t.Fatalf("partnerIDFromContext must ignore client-controlled headers, got %q", got)
 	}
 }
 

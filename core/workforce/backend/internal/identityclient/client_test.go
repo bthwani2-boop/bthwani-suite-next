@@ -141,6 +141,39 @@ func TestClientFailsClosedWithoutRuntimeContext(t *testing.T) {
 	}
 }
 
+func TestVerifyActorInOperatorContextAttestsIdentityBoundary(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/internal/actors/field-1" {
+			t.Fatalf("unexpected actor path %q", r.URL.Path)
+		}
+		if r.Header.Get("X-Operator-Context-ID") != "context-main" {
+			t.Fatalf("expected context-main assertion, got %q", r.Header.Get("X-Operator-Context-ID"))
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(ActorView{ActorID: "field-1"})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "service-token")
+	if err := client.VerifyActorInOperatorContext(context.Background(), "field-1", "context-main"); err != nil {
+		t.Fatalf("expected Identity attestation to succeed, got %v", err)
+	}
+}
+
+func TestVerifyActorInOperatorContextRejectsActorOutsideBoundary(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"code":"ACTOR_NOT_FOUND","message":"not found"}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "service-token")
+	if err := client.VerifyActorInOperatorContext(context.Background(), "field-1", "context-main"); !errors.Is(err, ErrOperatorContextForbidden) {
+		t.Fatalf("expected boundary rejection, got %v", err)
+	}
+}
+
 func TestLifecycleMutationsSendGovernedRequestBody(t *testing.T) {
 	tests := []struct {
 		name string

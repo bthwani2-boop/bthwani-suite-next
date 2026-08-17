@@ -19,9 +19,11 @@ Set-Location -LiteralPath $RepoRoot
 $ComposeFile = Join-Path $RepoRoot "infra/docker/compose.runtime.yml"
 $EnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
 $RebuildScript = Join-Path $ScriptDir "rebuild-runtime-service-database.ps1"
+$IdentityImportScript = Join-Path $RepoRoot "tools/scripts/import-identity-operator-context-to-workforce.ps1"
 if (-not (Test-Path -LiteralPath $ComposeFile -PathType Leaf)) { throw "Compose file not found: $ComposeFile" }
 if (-not (Test-Path -LiteralPath $EnvFile -PathType Leaf)) { throw "Runtime env file not found: $EnvFile" }
 if (-not (Test-Path -LiteralPath $RebuildScript -PathType Leaf)) { throw "Service database rebuild authority not found: $RebuildScript" }
+if ($Service -eq "workforce" -and -not (Test-Path -LiteralPath $IdentityImportScript -PathType Leaf)) { throw "Identity-to-Workforce migration authority not found: $IdentityImportScript" }
 
 $serviceMap = @{
   "identity" = @{ Directory = "core/identity/database/migrations"; User = "identity_runtime"; Database = "identity_runtime" }
@@ -100,7 +102,24 @@ function Invoke-ComposePsql {
   }
 }
 
+function Invoke-WorkforceIdentityImport {
+  if ($Service -ne 'workforce') { return }
+  & $IdentityImportScript `
+    -UseDockerCompose `
+    -ComposeFile $ComposeFile `
+    -EnvFile $EnvFile `
+    -PostgresAdminUser 'bthwani_runtime' `
+    -IdentityDatabaseName 'identity_runtime' `
+    -WorkforceDatabaseName 'workforce_runtime' `
+    -SourceCommitSha $SourceCommitSha
+  if ($LASTEXITCODE -ne 0) {
+    throw "Identity-to-Workforce import failed for runtime service '$Service' (exit $LASTEXITCODE)."
+  }
+}
+
 function Invoke-GovernedMigrationPass {
+  Invoke-WorkforceIdentityImport
+
   $executeBatch = {
     param([string]$Sql)
     Invoke-ComposePsql -Sql $Sql
@@ -119,30 +138,36 @@ function Invoke-GovernedMigrationPass {
 }
 
 try {
-  Invoke-GovernedMigrationPass
-} catch {
-  $migrationFailure = $_
-  $failureText = [string]$migrationFailure.Exception.Message
-  $isRecoverableLedgerConflict = Test-BthwaniRecoverableLedgerConflict -FailureText $failureText
+  try {
+    Invoke-GovernedMigrationPass
+  } catch {
+    $migrationFailure = $_
+    $failureText = [string]$migrationFailure.Exception.Message
+    $isRecoverableLedgerConflict = Test-BthwaniRecoverableLedgerConflict -FailureText $failureText
 
-  if (-not $isRecoverableLedgerConflict) { throw $migrationFailure }
-  if (-not (Test-LocalDatabaseRebuildAllowed)) {
-    throw [System.InvalidOperationException]::new(
-      "Migration ledger conflict for '$Service' is recoverable, but this phase holds no local recovery permission. " +
-      "Run 'pnpm run runtime:full:bootstrap-dev', which passes -AllowLocalLedgerRecovery explicitly. " +
-      "Original failure:`n$failureText",
-      $migrationFailure.Exception)
+    if (-not $isRecoverableLedgerConflict) { throw $migrationFailure }
+    if (-not (Test-LocalDatabaseRebuildAllowed)) {
+      throw [System.InvalidOperationException]::new(
+        "Migration ledger conflict for '$Service' is recoverable, but this phase holds no local recovery permission. " +
+        "Run 'pnpm run runtime:full:bootstrap-dev', which passes -AllowLocalLedgerRecovery explicitly. " +
+        "Original failure:`n$failureText",
+        $migrationFailure.Exception)
+    }
+
+    Write-Warning "Governed migration drift detected for local service '$Service'; rebuilding only its runtime database from canonical migrations."
+    & $RebuildScript `
+      -Service $Service `
+      -ComposeFile $ComposeFile `
+      -EnvFile $EnvFile `
+      -Reason "governed migration ledger conflict" `
+      -AllowLocalDevelopmentRebuild
+
+    Invoke-GovernedMigrationPass
   }
-
-  Write-Warning "Governed migration drift detected for local service '$Service'; rebuilding only its runtime database from canonical migrations."
-  & $RebuildScript `
-    -Service $Service `
-    -ComposeFile $ComposeFile `
-    -EnvFile $EnvFile `
-    -Reason "governed migration ledger conflict" `
-    -AllowLocalDevelopmentRebuild
-
-  Invoke-GovernedMigrationPass
+} finally {
+  if ($Service -eq 'workforce') {
+    Invoke-ComposePsql -Sql 'DROP TABLE IF EXISTS workforce_identity_operator_context_import;' -Quiet
+  }
 }
 
 Write-Host "Governed runtime migrations: PASS service=$Service files=$($migrationFiles.Count) sha=$SourceCommitSha"

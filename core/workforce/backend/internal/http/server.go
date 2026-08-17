@@ -22,13 +22,14 @@ type server struct {
 	service          *workforce.Service
 	repo             *workforce.Repository
 	auth             *auth.Client
+	identity         *identityclient.Client
 	media            *media.Provider
 	internalDSHToken string
 	readinessStore   workforceRuntimeReadinessStore
 }
 
-func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repository, authClient *auth.Client, mediaProvider *media.Provider, internalDSHToken string) http.Handler {
-	s := &server{db: db, service: service, repo: repo, auth: authClient, media: mediaProvider, internalDSHToken: strings.TrimSpace(internalDSHToken)}
+func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repository, authClient *auth.Client, identityClient *identityclient.Client, mediaProvider *media.Provider, internalDSHToken string) http.Handler {
+	s := &server{db: db, service: service, repo: repo, auth: authClient, identity: identityClient, media: mediaProvider, internalDSHToken: strings.TrimSpace(internalDSHToken)}
 	if db != nil {
 		s.readinessStore = sqlWorkforceRuntimeReadinessStore{db: db}
 	}

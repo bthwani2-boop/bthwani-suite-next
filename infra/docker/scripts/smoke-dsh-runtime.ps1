@@ -27,9 +27,9 @@ if ($null -eq $stores.stores) { throw "DSH /stores response missing 'stores' fie
 if ($null -eq $stores.pagination) { throw "DSH /stores response missing 'pagination' field" }
 
 Write-Host "`n--- GET /dsh/home-discovery and verify every published storefront ---"
-$home = Invoke-RestMethod -Uri "$DshBaseUrl/dsh/home-discovery?limit=50" -Method GET -TimeoutSec 15
-if ($null -eq $home.stores) { throw "DSH /home-discovery response missing 'stores' field" }
-$homeStores = @($home.stores)
+$homeDiscovery = Invoke-RestMethod -Uri "$DshBaseUrl/dsh/home-discovery?limit=50" -Method GET -TimeoutSec 15
+if ($null -eq $homeDiscovery.stores) { throw "DSH /home-discovery response missing 'stores' field" }
+$homeStores = @($homeDiscovery.stores)
 if ($homeStores.Count -lt 1) { throw "DSH /home-discovery returned no published stores" }
 
 foreach ($homeStore in $homeStores) {

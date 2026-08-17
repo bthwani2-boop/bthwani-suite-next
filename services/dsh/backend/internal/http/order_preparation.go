@@ -16,7 +16,7 @@ func (s *protectedStoreServer) handleGetStorePreparationPolicy(w http.ResponseWr
 		return
 	}
 	storeID := strings.TrimSpace(r.PathValue("storeId"))
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to authorize store preparation policy")
 		return
@@ -43,7 +43,7 @@ func (s *protectedStoreServer) handleUpdateStorePreparationPolicy(w http.Respons
 		return
 	}
 	storeID := strings.TrimSpace(r.PathValue("storeId"))
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to authorize store preparation policy")
 		return

@@ -143,7 +143,7 @@
       "file": "workforce-020_operator_context_scope_boundary.sql",
       "sha256": "267cef525a8b1a2398ad02f5f7b1cc289960aa92894844e0587af3ea014aec6d",
       "historicalPrefix": "020",
-      "state": "ACTIVE"
+      "state": "HISTORICAL_IMMUTABLE"
     },
     {
       "ordinal": 21,

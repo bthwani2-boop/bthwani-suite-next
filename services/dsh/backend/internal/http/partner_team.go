@@ -20,7 +20,7 @@ func (s *protectedStoreServer) resolvedPartnerTeamStore(w http.ResponseWriter, r
 		store.SendError(w, http.StatusBadRequest, "STORE_ID_REQUIRED", "storeId is required")
 		return store.StoreActor{}, "", false
 	}
-	row, _, err := store.ResolveActorStoreForID(r.Context(), s.db, s.workforce, actor, storeID)
+	row, _, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, storeID)
 	if err != nil {
 		s.writeStoreError(w, err)
 		return store.StoreActor{}, "", false

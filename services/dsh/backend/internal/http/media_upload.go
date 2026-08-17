@@ -53,7 +53,7 @@ func (s *protectedStoreServer) handleFieldMediaUpload(w http.ResponseWriter, r *
 			store.SendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "legal documents cannot be bound to a visit store upload")
 			return
 		}
-		if err := fieldreadiness.AuthorizeStore(r.Context(), s.db, s.workforce, actor, storeID); err != nil {
+		if err := fieldreadiness.AuthorizeStore(r.Context(), s.db, actor, storeID); err != nil {
 			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store")
 			return
 		}

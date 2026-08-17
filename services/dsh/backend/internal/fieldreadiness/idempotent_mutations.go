@@ -15,7 +15,7 @@ import (
 func CreateGovernedVisitIdempotent(
 	ctx context.Context,
 	db *sql.DB,
-	wf store.WorkforceScopeResolver, actor store.StoreActor,
+	actor store.StoreActor,
 	input CreateVisitInput,
 	mutation MutationContext,
 ) (Visit, error) {
@@ -34,7 +34,7 @@ func CreateGovernedVisitIdempotent(
 	if err := ValidateGovernedLocation(input.StartLocation, time.Now()); err != nil {
 		return Visit{}, err
 	}
-	if err := AuthorizeStore(ctx, db, wf, actor, input.StoreID); err != nil {
+	if err := AuthorizeStore(ctx, db, actor, input.StoreID); err != nil {
 		return Visit{}, err
 	}
 	latitude, longitude, err := loadStoreCoordinates(ctx, db, input.StoreID)
@@ -92,7 +92,7 @@ func CreateGovernedVisitIdempotent(
 func CompleteGovernedVisitIdempotent(
 	ctx context.Context,
 	db *sql.DB,
-	wf store.WorkforceScopeResolver, actor store.StoreActor,
+	actor store.StoreActor,
 	visitID string,
 	input CompleteVisitInput,
 	mutation MutationContext,
@@ -133,7 +133,7 @@ func CompleteGovernedVisitIdempotent(
 	if actor.Role != "operator" && visit.FieldAgentID != actor.ID {
 		return Visit{}, ErrForbidden
 	}
-	allowed, err := store.ActorCanAccessStore(ctx, db, wf, actor, visit.StoreID)
+	allowed, err := store.ActorCanAccessStore(ctx, db, actor, visit.StoreID)
 	if err != nil {
 		return Visit{}, err
 	}
@@ -274,7 +274,7 @@ func CompleteGovernedVisitIdempotent(
 func UpsertGovernedReadinessCheckIdempotent(
 	ctx context.Context,
 	db *sql.DB,
-	wf store.WorkforceScopeResolver, actor store.StoreActor,
+	actor store.StoreActor,
 	visitID string,
 	input UpdateCheckInput,
 	mutation MutationContext,
@@ -285,7 +285,7 @@ func UpsertGovernedReadinessCheckIdempotent(
 	if err := validateCheckInput(input); err != nil {
 		return ReadinessCheck{}, err
 	}
-	visit, err := GetOwnedVisit(ctx, db, wf, actor, visitID)
+	visit, err := GetOwnedVisit(ctx, db, actor, visitID)
 	if err != nil {
 		return ReadinessCheck{}, err
 	}
@@ -300,7 +300,7 @@ func UpsertGovernedReadinessCheckIdempotent(
 		return ReadinessCheck{}, fmt.Errorf("%w: check type is not part of the visit policy", ErrInvalid)
 	}
 	if input.Status == CheckPassed {
-		if err := validateGovernedCheckEvidence(ctx, db, wf, actor, visit.StoreID, input.EvidenceURL); err != nil {
+		if err := validateGovernedCheckEvidence(ctx, db, actor, visit.StoreID, input.EvidenceURL); err != nil {
 			return ReadinessCheck{}, err
 		}
 	}
@@ -361,7 +361,7 @@ func UpsertGovernedReadinessCheckIdempotent(
 func CreateGovernedEscalationIdempotent(
 	ctx context.Context,
 	db *sql.DB,
-	wf store.WorkforceScopeResolver, actor store.StoreActor,
+	actor store.StoreActor,
 	input CreateEscalationInput,
 	mutation MutationContext,
 ) (Escalation, error) {
@@ -372,7 +372,7 @@ func CreateGovernedEscalationIdempotent(
 		return Escalation{}, err
 	}
 	input.Description = strings.TrimSpace(input.Description)
-	if err := AuthorizeStore(ctx, db, wf, actor, input.StoreID); err != nil {
+	if err := AuthorizeStore(ctx, db, actor, input.StoreID); err != nil {
 		return Escalation{}, err
 	}
 

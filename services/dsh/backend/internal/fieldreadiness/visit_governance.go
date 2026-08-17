@@ -112,7 +112,7 @@ func loadStoreCoordinates(ctx context.Context, db *sql.DB, storeID string) (floa
 // CreateGovernedVisit starts a visit only from server-owned store coordinates.
 // Any coordinates supplied by a caller are overwritten and cannot influence the
 // geofence decision.
-func CreateGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, input CreateVisitInput) (Visit, error) {
+func CreateGovernedVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, input CreateVisitInput) (Visit, error) {
 	if strings.TrimSpace(input.StoreID) == "" || strings.TrimSpace(input.FieldAgentID) == "" {
 		return Visit{}, ErrInvalid
 	}
@@ -125,7 +125,7 @@ func CreateGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScop
 	if err := ValidateGovernedLocation(input.StartLocation, time.Now()); err != nil {
 		return Visit{}, err
 	}
-	if err := AuthorizeStore(ctx, db, wf, actor, input.StoreID); err != nil {
+	if err := AuthorizeStore(ctx, db, actor, input.StoreID); err != nil {
 		return Visit{}, err
 	}
 	latitude, longitude, err := loadStoreCoordinates(ctx, db, input.StoreID)
@@ -138,7 +138,7 @@ func CreateGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScop
 	}
 	input.StoreLatitude = &latitude
 	input.StoreLongitude = &longitude
-	return CreateVisit(ctx, db, wf, actor, input)
+	return CreateVisit(ctx, db, actor, input)
 }
 
 func hasBlockingEscalation(ctx context.Context, q interface {
@@ -157,7 +157,7 @@ func hasBlockingEscalation(ctx context.Context, q interface {
 // It validates fresh GPS evidence, exact evidence ownership and store binding,
 // all required checks, every blocking escalation state, and the commission
 // outbox write before committing the visit state.
-func CompleteGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, visitID string, input CompleteVisitInput) (Visit, error) {
+func CompleteGovernedVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, visitID string, input CompleteVisitInput) (Visit, error) {
 	if strings.TrimSpace(visitID) == "" {
 		return Visit{}, ErrInvalid
 	}
@@ -182,7 +182,7 @@ func CompleteGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceSc
 	if actor.Role != "operator" && visit.FieldAgentID != actor.ID {
 		return Visit{}, ErrForbidden
 	}
-	allowed, err := store.ActorCanAccessStore(ctx, db, wf, actor, visit.StoreID)
+	allowed, err := store.ActorCanAccessStore(ctx, db, actor, visit.StoreID)
 	if err != nil {
 		return Visit{}, err
 	}
@@ -304,7 +304,7 @@ func validateCheckInput(input UpdateCheckInput) error {
 	return nil
 }
 
-func validateGovernedCheckEvidence(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, storeID, mediaRef string) error {
+func validateGovernedCheckEvidence(ctx context.Context, db *sql.DB, actor store.StoreActor, storeID, mediaRef string) error {
 	ref := strings.TrimSpace(mediaRef)
 	if ref == "" {
 		return ErrEvidenceRequired
@@ -328,11 +328,11 @@ func validateGovernedCheckEvidence(ctx context.Context, db *sql.DB, wf store.Wor
 	return nil
 }
 
-func UpsertGovernedReadinessCheck(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, visitID string, input UpdateCheckInput) (ReadinessCheck, error) {
+func UpsertGovernedReadinessCheck(ctx context.Context, db *sql.DB, actor store.StoreActor, visitID string, input UpdateCheckInput) (ReadinessCheck, error) {
 	if err := validateCheckInput(input); err != nil {
 		return ReadinessCheck{}, err
 	}
-	visit, err := GetOwnedVisit(ctx, db, wf, actor, visitID)
+	visit, err := GetOwnedVisit(ctx, db, actor, visitID)
 	if err != nil {
 		return ReadinessCheck{}, err
 	}
@@ -347,7 +347,7 @@ func UpsertGovernedReadinessCheck(ctx context.Context, db *sql.DB, wf store.Work
 		return ReadinessCheck{}, fmt.Errorf("%w: check type is not part of the visit policy", ErrInvalid)
 	}
 	if input.Status == CheckPassed {
-		if err := validateGovernedCheckEvidence(ctx, db, wf, actor, visit.StoreID, input.EvidenceURL); err != nil {
+		if err := validateGovernedCheckEvidence(ctx, db, actor, visit.StoreID, input.EvidenceURL); err != nil {
 			return ReadinessCheck{}, err
 		}
 	}
@@ -394,12 +394,12 @@ func validateEscalationInput(input CreateEscalationInput) error {
 	return nil
 }
 
-func CreateGovernedEscalation(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, input CreateEscalationInput) (Escalation, error) {
+func CreateGovernedEscalation(ctx context.Context, db *sql.DB, actor store.StoreActor, input CreateEscalationInput) (Escalation, error) {
 	if err := validateEscalationInput(input); err != nil {
 		return Escalation{}, err
 	}
 	input.Description = strings.TrimSpace(input.Description)
-	return CreateEscalation(ctx, db, wf, actor, input)
+	return CreateEscalation(ctx, db, actor, input)
 }
 
 func allowedEscalationTransition(from, to EscalationStatus) bool {

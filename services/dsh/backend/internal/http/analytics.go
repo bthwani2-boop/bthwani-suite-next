@@ -127,7 +127,7 @@ func (s *protectedStoreServer) handlePartnerPerformance(w http.ResponseWriter, r
 		store.SendError(w, http.StatusBadRequest, "STORE_ID_REQUIRED", "storeId is required")
 		return
 	}
-	if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, s.workforce, actor, storeID); err != nil {
+	if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, storeID); err != nil {
 		s.writeStoreError(w, err)
 		return
 	}

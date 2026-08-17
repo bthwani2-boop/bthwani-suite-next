@@ -3,6 +3,7 @@ package workforceclient
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -35,6 +36,21 @@ func TestGetActorScopesUsesTrustedServiceHeaders(t *testing.T) {
 	}
 	if scopes.OperatorContextID != "trusted-context" || len(scopes.StoreIDs) != 1 || scopes.StoreIDs[0] != "store-1" {
 		t.Fatalf("unexpected scopes response: %#v", scopes)
+	}
+}
+
+func TestGetActorScopesRejectsMismatchedCanonicalReadback(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(ActorScopes{
+			ActorID: "different-actor", Role: "field", OperatorContextID: "trusted-context",
+		})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "dsh-workforce-token")
+	_, err := client.GetActorScopes(context.Background(), "field-1", "trusted-context", "field")
+	if !errors.Is(err, ErrScopeReadbackMismatch) {
+		t.Fatalf("expected canonical readback mismatch, got %v", err)
 	}
 }
 

@@ -40,7 +40,7 @@ func TestCreateVisitRequiresStoreAndAgent(t *testing.T) {
 	}
 	actor := store.StoreActor{ID: "agent-1", Role: "field"}
 	for _, input := range cases {
-		_, err := CreateVisit(context.Background(), nil, nil, actor, input)
+		_, err := CreateVisit(context.Background(), nil, actor, input)
 		if err != ErrInvalid {
 			t.Fatalf("expected ErrInvalid for input %+v, got %v", input, err)
 		}
@@ -50,12 +50,12 @@ func TestCreateVisitRequiresStoreAndAgent(t *testing.T) {
 func TestCreateVisitRequiresGPS(t *testing.T) {
 	actor := store.StoreActor{ID: "agent-1", Role: "field"}
 	// nil location
-	_, err := CreateVisit(context.Background(), nil, nil, actor, CreateVisitInput{StoreID: "s", FieldAgentID: "a"})
+	_, err := CreateVisit(context.Background(), nil, actor, CreateVisitInput{StoreID: "s", FieldAgentID: "a"})
 	if err != ErrLocationRequired {
 		t.Fatalf("expected ErrLocationRequired for nil GPS, got %v", err)
 	}
 	// mocked location
-	_, err = CreateVisit(context.Background(), nil, nil, actor, CreateVisitInput{
+	_, err = CreateVisit(context.Background(), nil, actor, CreateVisitInput{
 		StoreID: "s", FieldAgentID: "a",
 		StartLocation: &LocationEvidence{Latitude: 15.3, Longitude: 44.1, AccuracyMeters: 5, CapturedAt: time.Now(), IsMocked: true},
 	})
@@ -63,7 +63,7 @@ func TestCreateVisitRequiresGPS(t *testing.T) {
 		t.Fatalf("expected ErrLocationMocked, got %v", err)
 	}
 	// poor accuracy
-	_, err = CreateVisit(context.Background(), nil, nil, actor, CreateVisitInput{
+	_, err = CreateVisit(context.Background(), nil, actor, CreateVisitInput{
 		StoreID: "s", FieldAgentID: "a",
 		StartLocation: &LocationEvidence{Latitude: 15.3, Longitude: 44.1, AccuracyMeters: 200, CapturedAt: time.Now()},
 	})
@@ -80,7 +80,7 @@ func TestCreateEscalationRequiresStoreRaisedByAndDescription(t *testing.T) {
 	}
 	actor := store.StoreActor{ID: "agent-1", Role: "field"}
 	for _, input := range cases {
-		_, err := CreateEscalation(context.Background(), nil, nil, actor, input)
+		_, err := CreateEscalation(context.Background(), nil, actor, input)
 		if err != ErrInvalid {
 			t.Fatalf("expected ErrInvalid for input %+v, got %v", input, err)
 		}

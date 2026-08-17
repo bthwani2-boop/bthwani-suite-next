@@ -11,7 +11,6 @@ func TestActorCanAccessStoreFailsClosedWithoutDatabase(t *testing.T) {
 	allowed, err := ActorCanAccessStore(
 		context.Background(),
 		nil,
-		nil,
 		StoreActor{ID: "field-1", Role: "field", OperatorContextID: "operator-context-1"},
 		"store-1",
 	)
@@ -26,7 +25,6 @@ func TestActorCanAccessStoreFailsClosedWithoutDatabase(t *testing.T) {
 func TestActorCanAccessStoreFailsClosedWithoutTrustedOperatorContext(t *testing.T) {
 	allowed, err := ActorCanAccessStore(
 		context.Background(),
-		nil,
 		nil,
 		StoreActor{ID: "field-1", Role: "field"},
 		"store-1",

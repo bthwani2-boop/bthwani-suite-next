@@ -7,22 +7,10 @@ import (
 	"dsh-api/internal/store"
 )
 
-// workforceScopeResolverOverride is intentionally unset in production. Tests
-// in this package may bind a deterministic Workforce boundary adapter without
-// weakening the runtime fail-closed behavior for a missing resolver.
-var workforceScopeResolverOverride store.WorkforceScopeResolver
-
-func effectiveWorkforceScopeResolver(wf store.WorkforceScopeResolver) store.WorkforceScopeResolver {
-	if wf != nil {
-		return wf
-	}
-	return workforceScopeResolverOverride
-}
-
 // AuthorizeStore ensures the actor has an active canonical DSH store scope.
 // Identity roles or permission labels never bypass object authorization.
-func AuthorizeStore(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, storeID string) error {
-	allowed, err := store.ActorCanAccessStore(ctx, db, effectiveWorkforceScopeResolver(wf), actor, storeID)
+func AuthorizeStore(ctx context.Context, db *sql.DB, actor store.StoreActor, storeID string) error {
+	allowed, err := store.ActorCanAccessStore(ctx, db, actor, storeID)
 	if err != nil {
 		return err
 	}
@@ -35,7 +23,7 @@ func AuthorizeStore(ctx context.Context, db *sql.DB, wf store.WorkforceScopeReso
 // GetOwnedVisit loads a visit and requires both visit ownership and canonical
 // store scope. Operators must use separate governed operator operations; a role
 // name never overrides field-agent ownership.
-func GetOwnedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, visitID string) (Visit, error) {
+func GetOwnedVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, visitID string) (Visit, error) {
 	v, err := GetVisit(ctx, db, visitID)
 	if err != nil {
 		return Visit{}, err
@@ -43,7 +31,7 @@ func GetOwnedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResol
 	if v.FieldAgentID != actor.ID {
 		return Visit{}, ErrForbidden
 	}
-	if err := AuthorizeStore(ctx, db, wf, actor, v.StoreID); err != nil {
+	if err := AuthorizeStore(ctx, db, actor, v.StoreID); err != nil {
 		return Visit{}, err
 	}
 	return v, nil

@@ -97,6 +97,9 @@ export function useDshPartnerSurfaceModel(
   const orders = usePartnerOrdersModel({
     route: profile.route,
     initialOrderId,
+    ...(storeScope.selectedStoreScope?.storeId
+      ? { storeId: storeScope.selectedStoreScope.storeId }
+      : {}),
     setRoute: profile.setRoute,
   });
   const support = usePartnerSupportModel({

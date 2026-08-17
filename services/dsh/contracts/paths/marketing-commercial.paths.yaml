@@ -309,6 +309,11 @@
     tags: [DshMarketing]
     security:
       - bearerAuth: []
+    parameters:
+      - name: storeId
+        in: query
+        required: false
+        schema: { type: string, minLength: 1 }
     responses:
       "200":
         description: Own partner offers.
@@ -328,12 +333,18 @@
                           couponId: { type: string }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
   post:
     operationId: submitDshPartnerSelfOffer
     summary: Submit a new offer for review. The store binding is always the caller's own resolved store, never client-supplied.
     tags: [DshMarketing]
     security:
       - bearerAuth: []
+    parameters:
+      - name: storeId
+        in: query
+        required: false
+        schema: { type: string, minLength: 1 }
     requestBody:
       required: true
       content:

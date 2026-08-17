@@ -75,10 +75,12 @@ export async function fetchOrderPreparationIssues(
  */
 export async function fetchPartnerOrders(
   status?: string,
+  storeId?: string,
   token?: string,
 ): Promise<readonly DshPartnerOrder[]> {
   const params = new URLSearchParams();
   if (status) params.set("status", status);
+  if (storeId?.trim()) params.set("storeId", storeId.trim());
   const query = params.toString();
   const data = await request<{ orders: DshPartnerOrder[] }>(
     `/dsh/partner/order-workboard${query ? `?${query}` : ""}`,

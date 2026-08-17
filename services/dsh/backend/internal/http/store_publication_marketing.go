@@ -39,7 +39,7 @@ func (s *protectedStoreServer) handleMarketingStorePublication(w http.ResponseWr
 		return
 	}
 	response, err := store.PublishStore(
-		r.Context(), s.db, s.workforce, actor, r.PathValue("storeId"),
+		r.Context(), s.db, actor, r.PathValue("storeId"),
 		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input,
 	)
 	var gateErr *store.PublicationGateError

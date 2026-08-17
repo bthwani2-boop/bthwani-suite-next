@@ -125,10 +125,14 @@
 /dsh/partner/orders:
   get:
     operationId: listDshPartnerOrders
-    summary: List orders for a partner's store. Default status filter is pending.
+    summary: List orders for the authenticated partner's selected store. A storeId query is required when the actor owns multiple stores.
     tags: [DshOrders]
     security: [{ bearerAuth: [] }]
     parameters:
+      - name: storeId
+        in: query
+        required: false
+        schema: { type: string, minLength: 1 }
       - name: status
         in: query
         required: false
@@ -143,6 +147,7 @@
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOrdersResponse" }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
 /dsh/partner/orders/{orderId}/accept:
   post:
@@ -349,6 +354,7 @@
           application/json:
             schema: { type: object, additionalProperties: true }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
 /dsh/partner/me/finance/settlements/summary:
   get:
@@ -363,6 +369,7 @@
           application/json:
             schema: { type: object, additionalProperties: true }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
 /dsh/partner/me/finance/cod-records:
   get:

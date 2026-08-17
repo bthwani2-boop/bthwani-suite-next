@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
-	"dsh-api/internal/workforceclient"
 	"github.com/lib/pq"
 )
 
 var (
 	ErrScopedStoreNotFound = errors.New("scoped store not found")
+	ErrAmbiguousStoreScope = errors.New("actor store scope is ambiguous")
 	ErrVersionConflict     = errors.New("store version conflict")
 	ErrIdempotencyConflict = errors.New("idempotency conflict")
 	ErrPublicationGate     = errors.New("store publication gates failed")
@@ -106,17 +106,10 @@ func (e *PublicationGateError) Error() string { return ErrPublicationGate.Error(
 
 func (e *PublicationGateError) Unwrap() error { return ErrPublicationGate }
 
-type WorkforceScopeResolver interface {
-	GetActorScopes(ctx context.Context, actorID, operatorContextID, role string) (*workforceclient.ActorScopes, error)
-}
-
 // DSH is the operational owner of store assignments. Workforce owns actor
 // lifecycle/profile truth, while dsh_store_actor_scopes is the canonical
-// store-access boundary enforced by DSH. The resolver parameter is retained
-// temporarily for call-site compatibility and must not become a parallel
-// authorization source.
-func resolveStoreIDsForActor(ctx context.Context, db queryer, wf WorkforceScopeResolver, actorID, operatorContextID, role string) []string {
-	_ = wf // Retained only for call-site compatibility; Workforce is not a store-authorization source.
+// store-access boundary enforced by DSH.
+func resolveStoreIDsForActor(ctx context.Context, db queryer, actorID, operatorContextID, role string) []string {
 	var storeIDs []string
 	if db != nil {
 		rows, err := db.QueryContext(ctx, `
@@ -137,7 +130,7 @@ func resolveStoreIDsForActor(ctx context.Context, db queryer, wf WorkforceScopeR
 	return storeIDs
 }
 
-func ResolveActorStore(ctx context.Context, db *sql.DB, wf WorkforceScopeResolver, actor StoreActor) (*DshStoreRow, StoreScope, error) {
+func ResolveActorStore(ctx context.Context, db *sql.DB, actor StoreActor) (*DshStoreRow, StoreScope, error) {
 	actorID := strings.TrimSpace(actor.ID)
 	role := strings.TrimSpace(actor.Role)
 	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
@@ -145,9 +138,12 @@ func ResolveActorStore(ctx context.Context, db *sql.DB, wf WorkforceScopeResolve
 		return nil, StoreScope{}, ErrScopedStoreNotFound
 	}
 
-	storeIDs := resolveStoreIDsForActor(ctx, db, wf, actorID, operatorContextID, role)
+	storeIDs := resolveStoreIDsForActor(ctx, db, actorID, operatorContextID, role)
 	if len(storeIDs) == 0 {
 		return nil, StoreScope{}, ErrScopedStoreNotFound
+	}
+	if len(storeIDs) > 1 {
+		return nil, StoreScope{}, ErrAmbiguousStoreScope
 	}
 
 	scope := StoreScope{
@@ -160,8 +156,9 @@ func ResolveActorStore(ctx context.Context, db *sql.DB, wf WorkforceScopeResolve
 }
 
 // ResolveActorStoreForID resolves the actor's canonical DSH store scope for a
-// specific storeID, falling back to the first active assignment when empty.
-func ResolveActorStoreForID(ctx context.Context, db *sql.DB, wf WorkforceScopeResolver, actor StoreActor, storeID string) (*DshStoreRow, StoreScope, error) {
+// specific storeID. An empty storeID is only valid when the actor has exactly
+// one active store assignment; no store is selected implicitly from a list.
+func ResolveActorStoreForID(ctx context.Context, db *sql.DB, actor StoreActor, storeID string) (*DshStoreRow, StoreScope, error) {
 	actorID := strings.TrimSpace(actor.ID)
 	role := strings.TrimSpace(actor.Role)
 	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
@@ -170,10 +167,10 @@ func ResolveActorStoreForID(ctx context.Context, db *sql.DB, wf WorkforceScopeRe
 		return nil, StoreScope{}, ErrScopedStoreNotFound
 	}
 	if storeID == "" {
-		return ResolveActorStore(ctx, db, wf, actor)
+		return ResolveActorStore(ctx, db, actor)
 	}
 
-	storeIDs := resolveStoreIDsForActor(ctx, db, wf, actorID, operatorContextID, role)
+	storeIDs := resolveStoreIDsForActor(ctx, db, actorID, operatorContextID, role)
 	hasScope := false
 	for _, id := range storeIDs {
 		if id == storeID {
@@ -194,6 +191,54 @@ func ResolveActorStoreForID(ctx context.Context, db *sql.DB, wf WorkforceScopeRe
 	return row, scope, err
 }
 
+// ResolveActorPartnerID derives a partner-level scope from every active store
+// assignment. Multiple stores belonging to one partner are valid; multiple
+// partner identities are not silently collapsed into a first-store choice.
+func ResolveActorPartnerID(ctx context.Context, db *sql.DB, actor StoreActor) (string, error) {
+	actorID := strings.TrimSpace(actor.ID)
+	role := strings.TrimSpace(actor.Role)
+	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
+	if db == nil || actorID == "" || role == "" || operatorContextID == "" {
+		return "", ErrScopedStoreNotFound
+	}
+
+	storeIDs := resolveStoreIDsForActor(ctx, db, actorID, operatorContextID, role)
+	if len(storeIDs) == 0 {
+		return "", ErrScopedStoreNotFound
+	}
+
+	rows, err := db.QueryContext(ctx, `
+		SELECT DISTINCT partner_id
+		FROM dsh_stores
+		WHERE id = ANY($1)
+		  AND operator_context_id = $2
+		  AND NULLIF(BTRIM(partner_id), '') IS NOT NULL
+		ORDER BY partner_id`, pq.Array(storeIDs), operatorContextID)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+
+	partnerIDs := make([]string, 0, 1)
+	for rows.Next() {
+		var partnerID string
+		if err := rows.Scan(&partnerID); err != nil {
+			return "", err
+		}
+		partnerIDs = append(partnerIDs, strings.TrimSpace(partnerID))
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	if len(partnerIDs) == 0 {
+		return "", ErrScopedStoreNotFound
+	}
+	if len(partnerIDs) > 1 {
+		return "", ErrAmbiguousStoreScope
+	}
+	return partnerIDs[0], nil
+}
+
 func GetStoreByIDInternal(ctx context.Context, db *sql.DB, storeID string) (*DshStoreRow, error) {
 	return getStoreByIDContext(ctx, db, storeID)
 }
@@ -210,7 +255,7 @@ func permissionScopeAllowsStore(scope, storeID string) bool {
 // ActorCanAccessStore applies object authorization without interpreting role
 // names. Identity-issued permissions carry an explicit action and scope;
 // ordinary partner/field/captain actors must have an active DSH store scope.
-func ActorCanAccessStore(ctx context.Context, db queryer, wf WorkforceScopeResolver, actor StoreActor, storeID string) (bool, error) {
+func ActorCanAccessStore(ctx context.Context, db queryer, actor StoreActor, storeID string) (bool, error) {
 	actorID := strings.TrimSpace(actor.ID)
 	role := strings.TrimSpace(actor.Role)
 	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
@@ -237,7 +282,7 @@ func ActorCanAccessStore(ctx context.Context, db queryer, wf WorkforceScopeResol
 		return false, nil
 	}
 
-	storeIDs := resolveStoreIDsForActor(ctx, db, wf, actorID, operatorContextID, role)
+	storeIDs := resolveStoreIDsForActor(ctx, db, actorID, operatorContextID, role)
 	for _, id := range storeIDs {
 		if id == storeID {
 			// Additionally verify the store exists in DSH and matches operator context
@@ -254,7 +299,7 @@ func ActorCanAccessStore(ctx context.Context, db queryer, wf WorkforceScopeResol
 }
 
 func UpdatePartnerSettings(
-	ctx context.Context, db *sql.DB, wf WorkforceScopeResolver, actor StoreActor, storeID, key, correlationID string, input PartnerSettingsInput,
+	ctx context.Context, db *sql.DB, actor StoreActor, storeID, key, correlationID string, input PartnerSettingsInput,
 ) (StoreActionResponse, error) {
 	if input.ExpectedVersion < 1 || strings.TrimSpace(input.Reason) == "" || len(input.DeliveryModes) == 0 {
 		return StoreActionResponse{}, fmt.Errorf("invalid partner settings")
@@ -262,7 +307,7 @@ func UpdatePartnerSettings(
 	if !validStoreStatus(input.Status) || !validDeliveryModes(input.DeliveryModes) {
 		return StoreActionResponse{}, fmt.Errorf("invalid partner settings")
 	}
-	return runMutation(ctx, db, wf, actor, storeID, "partner.settings.update", key, correlationID, input, input.Reason,
+	return runMutation(ctx, db, actor, storeID, "partner.settings.update", key, correlationID, input, input.Reason,
 		func(tx *sql.Tx, current DshStoreRow) error {
 			if current.Version != input.ExpectedVersion {
 				return ErrVersionConflict
@@ -282,13 +327,13 @@ func UpdatePartnerSettings(
 }
 
 func SubmitFieldVerification(
-	ctx context.Context, db *sql.DB, wf WorkforceScopeResolver, actor StoreActor, storeID, key, correlationID string, input FieldVerificationInput,
+	ctx context.Context, db *sql.DB, actor StoreActor, storeID, key, correlationID string, input FieldVerificationInput,
 ) (StoreActionResponse, error) {
 	validOutcome := input.Outcome == "verified" || input.Outcome == "needs_follow_up" || input.Outcome == "rejected"
 	if input.ExpectedVersion < 1 || strings.TrimSpace(input.VisitID) == "" || !validOutcome || len(strings.TrimSpace(input.Notes)) < 3 {
 		return StoreActionResponse{}, fmt.Errorf("invalid field verification")
 	}
-	return runMutation(ctx, db, wf, actor, storeID, "field.verification.submit", key, correlationID, input, input.Notes,
+	return runMutation(ctx, db, actor, storeID, "field.verification.submit", key, correlationID, input, input.Notes,
 		func(tx *sql.Tx, current DshStoreRow) error {
 			if current.Version != input.ExpectedVersion {
 				return ErrVersionConflict
@@ -423,12 +468,12 @@ func buildFieldVerificationSnapshots(ctx context.Context, tx *sql.Tx, visitID st
 }
 
 func ReportCaptainReadiness(
-	ctx context.Context, db *sql.DB, wf WorkforceScopeResolver, actor StoreActor, storeID, key, correlationID string, input CaptainReadinessInput,
+	ctx context.Context, db *sql.DB, actor StoreActor, storeID, key, correlationID string, input CaptainReadinessInput,
 ) (StoreActionResponse, error) {
 	if input.ExpectedVersion < 1 || (input.Readiness != "ready" && input.Readiness != "blocked") || len(strings.TrimSpace(input.Reason)) < 3 {
 		return StoreActionResponse{}, fmt.Errorf("invalid pickup readiness")
 	}
-	return runMutation(ctx, db, wf, actor, storeID, "captain.pickup-readiness.report", key, correlationID, input, input.Reason,
+	return runMutation(ctx, db, actor, storeID, "captain.pickup-readiness.report", key, correlationID, input, input.Reason,
 		func(tx *sql.Tx, current DshStoreRow) error {
 			if current.Version != input.ExpectedVersion {
 				return ErrVersionConflict
@@ -443,7 +488,7 @@ func ReportCaptainReadiness(
 }
 
 func GovernStore(
-	ctx context.Context, db *sql.DB, wf WorkforceScopeResolver, actor StoreActor, storeID, key, correlationID string, input OperatorGovernanceInput,
+	ctx context.Context, db *sql.DB, actor StoreActor, storeID, key, correlationID string, input OperatorGovernanceInput,
 ) (StoreActionResponse, error) {
 	if input.ExpectedVersion < 1 || len(strings.TrimSpace(input.Reason)) < 3 {
 		return StoreActionResponse{}, fmt.Errorf("invalid governance action")
@@ -451,7 +496,7 @@ func GovernStore(
 	if strings.TrimSpace(actor.AuthorizedAction) != "partners.manage" {
 		return StoreActionResponse{}, ErrScopedStoreNotFound
 	}
-	return runMutation(ctx, db, wf, actor, storeID, "operator.store.govern", key, correlationID, input, input.Reason,
+	return runMutation(ctx, db, actor, storeID, "operator.store.govern", key, correlationID, input, input.Reason,
 		func(tx *sql.Tx, current DshStoreRow) error {
 			if current.Version != input.ExpectedVersion {
 				return ErrVersionConflict
@@ -544,7 +589,7 @@ func GetPublicationOverridePolicy(ctx context.Context, db *sql.DB, operatorConte
 }
 
 func PublishStore(
-	ctx context.Context, db *sql.DB, wf WorkforceScopeResolver, actor StoreActor,
+	ctx context.Context, db *sql.DB, actor StoreActor,
 	storeID, key, correlationID string, input StorePublicationInput,
 ) (StoreActionResponse, error) {
 	if input.ExpectedVersion < 1 || len(strings.TrimSpace(input.Reason)) < 3 || (input.Decision != "publish" && input.Decision != "hide") {
@@ -556,7 +601,7 @@ func PublishStore(
 	if input.Override && len(strings.TrimSpace(input.OverrideReason)) < 10 {
 		return StoreActionResponse{}, fmt.Errorf("an override reason of at least 10 characters is required")
 	}
-	return runMutation(ctx, db, wf, actor, storeID, "marketing.store.publication", key, correlationID, input, input.Reason,
+	return runMutation(ctx, db, actor, storeID, "marketing.store.publication", key, correlationID, input, input.Reason,
 		func(tx *sql.Tx, current DshStoreRow) error {
 			if current.Version != input.ExpectedVersion {
 				return ErrVersionConflict
@@ -690,7 +735,7 @@ type queryer interface {
 func runMutation(
 	ctx context.Context,
 	db *sql.DB,
-	wf WorkforceScopeResolver, actor StoreActor,
+	actor StoreActor,
 	storeID, operation, key, correlationID string,
 	request any,
 	reason string,
@@ -699,7 +744,7 @@ func runMutation(
 	if len(strings.TrimSpace(key)) < 8 || len(strings.TrimSpace(correlationID)) < 8 {
 		return StoreActionResponse{}, fmt.Errorf("idempotency and correlation headers are required")
 	}
-	allowed, err := ActorCanAccessStore(ctx, db, wf, actor, storeID)
+	allowed, err := ActorCanAccessStore(ctx, db, actor, storeID)
 	if err != nil {
 		return StoreActionResponse{}, err
 	}

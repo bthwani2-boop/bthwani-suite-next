@@ -13,25 +13,110 @@
 
 [CmdletBinding()]
 param(
-  [Parameter(Mandatory = $true)]
-  [string]$IdentityDatabaseUrl,
+  [string]$IdentityDatabaseUrl = "",
 
-  [Parameter(Mandatory = $true)]
-  [string]$WorkforceDatabaseUrl,
+  [string]$WorkforceDatabaseUrl = "",
 
   [Parameter(Mandatory = $true)]
   [ValidatePattern('^[0-9a-fA-F]{40}$')]
-  [string]$SourceCommitSha
+  [string]$SourceCommitSha,
+
+  [switch]$UseDockerCompose,
+
+  [string]$ComposeFile = "",
+
+  [string]$EnvFile = "",
+
+  [string]$PostgresAdminUser = "bthwani_runtime",
+
+  [string]$IdentityDatabaseName = "identity_runtime",
+
+  [string]$WorkforceDatabaseName = "workforce_runtime"
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-if (-not (Get-Command psql -ErrorAction SilentlyContinue)) {
-  throw 'psql is required to import the Identity operator-context snapshot.'
+$SourceCommitSha = $SourceCommitSha.ToLowerInvariant()
+
+if ($UseDockerCompose) {
+  if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+    throw 'docker is required for compose-backed Identity operator-context import.'
+  }
+  if ([string]::IsNullOrWhiteSpace($ComposeFile) -or -not (Test-Path -LiteralPath $ComposeFile -PathType Leaf)) {
+    throw "Compose file is required for compose-backed Identity operator-context import: $ComposeFile"
+  }
+  if ([string]::IsNullOrWhiteSpace($EnvFile) -or -not (Test-Path -LiteralPath $EnvFile -PathType Leaf)) {
+    throw "Environment file is required for compose-backed Identity operator-context import: $EnvFile"
+  }
+} else {
+  if (-not (Get-Command psql -ErrorAction SilentlyContinue)) {
+    throw 'psql is required to import the Identity operator-context snapshot.'
+  }
+  if ([string]::IsNullOrWhiteSpace($IdentityDatabaseUrl) -or [string]::IsNullOrWhiteSpace($WorkforceDatabaseUrl)) {
+    throw 'IdentityDatabaseUrl and WorkforceDatabaseUrl are required for direct PostgreSQL import.'
+  }
 }
 
-$SourceCommitSha = $SourceCommitSha.ToLowerInvariant()
+function Invoke-ImportDatabaseSql {
+  param(
+    [Parameter(Mandatory = $true)][ValidateSet('identity', 'workforce')][string]$Target,
+    [Parameter(Mandatory = $true)][string]$Sql,
+    [switch]$TuplesOnly,
+    [switch]$Quiet
+  )
+
+  if ($UseDockerCompose) {
+    $databaseName = if ($Target -eq 'identity') { $IdentityDatabaseName } else { $WorkforceDatabaseName }
+    $arguments = @(
+      'compose', '--env-file', $EnvFile, '-f', $ComposeFile,
+      'exec', '-T', 'postgres', 'psql',
+      '-U', $PostgresAdminUser, '-d', $databaseName, '-X', '-v', 'ON_ERROR_STOP=1'
+    )
+    if ($TuplesOnly) { $arguments += '-qAt' }
+    elseif ($Quiet) { $arguments += '-q' }
+    $output = $Sql | & docker @arguments 2>&1
+  } else {
+    $databaseUrl = if ($Target -eq 'identity') { $IdentityDatabaseUrl } else { $WorkforceDatabaseUrl }
+    $arguments = @($databaseUrl, '-X', '-v', 'ON_ERROR_STOP=1')
+    if ($TuplesOnly) { $arguments += '-qAt' }
+    elseif ($Quiet) { $arguments += '-q' }
+    $output = $Sql | & psql @arguments 2>&1
+  }
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "PostgreSQL import command failed for '$Target': $($output -join "`n")"
+  }
+  return (($output | ForEach-Object { "$_" }) -join "`n").Trim()
+}
+
+function Test-WorkforceCutoverApplied {
+  $ledgerTable = Invoke-ImportDatabaseSql -Target workforce -TuplesOnly -Sql "SELECT COALESCE(to_regclass('public.schema_migrations')::text, '');"
+  if ([string]::IsNullOrWhiteSpace($ledgerTable)) {
+    return $false
+  }
+  $applied = Invoke-ImportDatabaseSql -Target workforce -TuplesOnly -Sql @"
+SELECT CASE WHEN EXISTS (
+  SELECT 1
+  FROM schema_migrations
+  WHERE service_name = 'workforce'
+    AND migration_id = 'workforce-020_operator_context_scope_boundary.sql'
+    AND success = true
+    AND dirty = false
+) THEN '1' ELSE '0' END;
+"@
+  return $applied.Trim() -eq '1'
+}
+
+function Remove-WorkforceImportTable {
+  Invoke-ImportDatabaseSql -Target workforce -Quiet -Sql 'DROP TABLE IF EXISTS workforce_identity_operator_context_import;'
+}
+
+if (Test-WorkforceCutoverApplied) {
+  Remove-WorkforceImportTable
+  Write-Host 'Identity operator-context staging: SKIP workforce-020 is already applied; residual staging was removed.'
+  return
+}
 
 function ConvertTo-SqlLiteral {
   param([AllowNull()][string]$Value)
@@ -52,10 +137,7 @@ COPY (
 ) TO STDOUT
 '@
 
-$identityOutput = $identityQuery | & psql $IdentityDatabaseUrl '-X' '-qAt' '-v' 'ON_ERROR_STOP=1' 2>&1
-if ($LASTEXITCODE -ne 0) {
-  throw "Identity snapshot query failed: $($identityOutput -join "`n")"
-}
+$identityOutput = Invoke-ImportDatabaseSql -Target identity -TuplesOnly -Sql $identityQuery
 
 $records = @(
   foreach ($line in $identityOutput) {
@@ -131,9 +213,6 @@ $($values -join ",`n");
 COMMIT;
 "@
 
-$workforceOutput = $workforceSql | & psql $WorkforceDatabaseUrl '-X' '-v' 'ON_ERROR_STOP=1' 2>&1
-if ($LASTEXITCODE -ne 0) {
-  throw "Workforce operator-context staging failed: $($workforceOutput -join "`n")"
-}
+$null = Invoke-ImportDatabaseSql -Target workforce -Sql $workforceSql
 
 Write-Host "Identity operator-context staging: PASS actors=$rowCount checksum=$checksum source=$SourceCommitSha"

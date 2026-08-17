@@ -9,17 +9,19 @@ import { usePartnerOrdersRuntime } from './usePartnerOrdersRuntime';
 export function usePartnerOrdersModel({
   route,
   initialOrderId = '',
+  storeId,
   setRoute,
 }: {
   route: DshPartnerRoute;
   initialOrderId?: string;
+  storeId?: string;
   setRoute: (r: DshPartnerRoute) => void;
 }) {
   const [ordersSearchMode, setOrdersSearchMode] = React.useState(false);
   const [editingProductId, setEditingProductId] = React.useState<string | undefined>(undefined);
   const [activeOrderId, setActiveOrderId] = React.useState(initialOrderId);
 
-  const { orders: partnerOrders, state: partnerOrdersState, refresh } = usePartnerOrdersRuntime(route);
+  const { orders: partnerOrders, state: partnerOrdersState, refresh } = usePartnerOrdersRuntime(route, storeId);
 
   const openOrdersBoard = React.useCallback(() => {
     setOrdersSearchMode(false);

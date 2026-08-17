@@ -114,13 +114,13 @@ func TestMarketingPublicationCommandOwnsAtomicStorePublication(t *testing.T) {
 	t.Cleanup(func() { cleanupPublicationFixture(t, db, fixture) })
 
 	partnersActor := publicationActor(fixture, "partners.manage")
-	if _, err := GovernStore(ctx, db, nil, partnersActor, fixture.storeID,
+	if _, err := GovernStore(ctx, db, partnersActor, fixture.storeID,
 		"partners-publish-key", "partners-publish-correlation", OperatorGovernanceInput{
 			ExpectedVersion: 1, Action: "lifecycle", Value: "published", Reason: "direct publish denied",
 		}); err == nil {
 		t.Fatal("partners governance must not publish a store directly")
 	}
-	if _, err := GovernStore(ctx, db, nil, partnersActor, fixture.storeID,
+	if _, err := GovernStore(ctx, db, partnersActor, fixture.storeID,
 		"partners-visible-key", "partners-visible-correlation", OperatorGovernanceInput{
 			ExpectedVersion: 1, Action: "visibility", Value: "visible", Reason: "direct visibility denied",
 		}); err == nil {
@@ -128,7 +128,7 @@ func TestMarketingPublicationCommandOwnsAtomicStorePublication(t *testing.T) {
 	}
 
 	actor := publicationActor(fixture, "marketing.manage")
-	published, err := PublishStore(ctx, db, nil, actor, fixture.storeID,
+	published, err := PublishStore(ctx, db, actor, fixture.storeID,
 		"marketing-publish-key", "marketing-publish-correlation", StorePublicationInput{
 			ExpectedVersion: 1, Decision: "publish", Reason: "all publication gates complete",
 		})
@@ -170,7 +170,7 @@ func TestMarketingPublicationCommandOwnsAtomicStorePublication(t *testing.T) {
 		t.Fatalf("expected one audited partner publication transition, got %d", partnerPublicationEvents)
 	}
 
-	replayed, err := PublishStore(ctx, db, nil, actor, fixture.storeID,
+	replayed, err := PublishStore(ctx, db, actor, fixture.storeID,
 		"marketing-publish-key", "marketing-publish-correlation", StorePublicationInput{
 			ExpectedVersion: 1, Decision: "publish", Reason: "all publication gates complete",
 		})
@@ -178,7 +178,7 @@ func TestMarketingPublicationCommandOwnsAtomicStorePublication(t *testing.T) {
 		t.Fatalf("expected exact idempotent publication replay, response=%#v err=%v", replayed, err)
 	}
 
-	hidden, err := PublishStore(ctx, db, nil, actor, fixture.storeID,
+	hidden, err := PublishStore(ctx, db, actor, fixture.storeID,
 		"marketing-hide-key", "marketing-hide-correlation", StorePublicationInput{
 			ExpectedVersion: 2, Decision: "hide", Reason: "temporary marketing hold",
 		})
@@ -211,7 +211,7 @@ func TestMarketingPublicationOverrideIsFailClosedAndPolicyBound(t *testing.T) {
 	if _, err := db.ExecContext(ctx, `UPDATE dsh_stores SET coverage_summary='' WHERE id=$1`, fixture.storeID); err != nil {
 		t.Fatalf("create policy-bound blocker: %v", err)
 	}
-	_, err := PublishStore(ctx, db, nil, actor, fixture.storeID,
+	_, err := PublishStore(ctx, db, actor, fixture.storeID,
 		"override-disabled-key", "override-disabled-correlation", StorePublicationInput{
 			ExpectedVersion: 1, Decision: "publish", Reason: "request controlled override",
 			Override: true, OverrideReason: "approved operational exception",
@@ -234,7 +234,7 @@ func TestMarketingPublicationOverrideIsFailClosedAndPolicyBound(t *testing.T) {
 		VALUES ($1,TRUE,ARRAY['COVERAGE_MISSING']::TEXT[],$2)`, fixture.operatorContextID, fixture.actorID); err != nil {
 		t.Fatalf("insert durable override policy: %v", err)
 	}
-	overridden, err := PublishStore(ctx, db, nil, actor, fixture.storeID,
+	overridden, err := PublishStore(ctx, db, actor, fixture.storeID,
 		"override-enabled-key", "override-enabled-correlation", StorePublicationInput{
 			ExpectedVersion: 1, Decision: "publish", Reason: "request controlled override",
 			Override: true, OverrideReason: "approved operational exception",

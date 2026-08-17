@@ -83,7 +83,11 @@ func (s *protectedStoreServer) partnerStore(w http.ResponseWriter, r *http.Reque
 	if !ok {
 		return store.StoreActor{}, "", false
 	}
-	row, _, err := store.ResolveActorStore(r.Context(), s.db, s.workforce, actor)
+	requestedStoreID := strings.TrimSpace(r.PathValue("storeId"))
+	if requestedStoreID == "" {
+		requestedStoreID = strings.TrimSpace(r.URL.Query().Get("storeId"))
+	}
+	row, _, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, requestedStoreID)
 	if err != nil {
 		s.writeStoreError(w, err)
 		return store.StoreActor{}, "", false

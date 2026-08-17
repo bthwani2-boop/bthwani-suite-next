@@ -15,7 +15,7 @@ func (s *protectedStoreServer) handleListFieldVisits(w http.ResponseWriter, r *h
 		return
 	}
 	storeID := r.PathValue("storeId")
-	visits, err := fieldreadiness.ListStoreVisits(r.Context(), s.db, s.workforce, actor, storeID, 50)
+	visits, err := fieldreadiness.ListStoreVisits(r.Context(), s.db, actor, storeID, 50)
 	if err != nil {
 		s.writeFieldReadinessError(w, err)
 		return
@@ -98,7 +98,7 @@ func (s *protectedStoreServer) handleListVisitChecks(w http.ResponseWriter, r *h
 		return
 	}
 	visitID := r.PathValue("visitId")
-	checks, err := fieldreadiness.ListVisitChecks(r.Context(), s.db, s.workforce, actor, visitID)
+	checks, err := fieldreadiness.ListVisitChecks(r.Context(), s.db, actor, visitID)
 	if err != nil {
 		s.writeFieldReadinessError(w, err)
 		return

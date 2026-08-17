@@ -1,15 +1,41 @@
 package http
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"strings"
 
+	"workforce-api/internal/auth"
+	"workforce-api/internal/identityclient"
 	"workforce-api/internal/workforce"
 )
 
 type SetScopesRequest struct {
 	Role   string                                 `json:"role"`
 	Inputs []workforce.OperationalAssignmentInput `json:"inputs"`
+}
+
+func (s *server) verifyAssignmentActorContext(ctx context.Context, actorID, operatorContextID string) (context.Context, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if s.identity == nil || !s.identity.Configured() {
+		return nil, identityclient.ErrUnavailable
+	}
+	if err := s.identity.VerifyActorInOperatorContext(ctx, actorID, operatorContextID); err != nil {
+		return nil, err
+	}
+	return auth.WithOperatorContext(ctx, operatorContextID), nil
+}
+
+func writeAssignmentIdentityError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, identityclient.ErrOperatorContextForbidden):
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "actor is outside the verified operator context")
+	case errors.Is(err, identityclient.ErrUnavailable):
+		sendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity context authority is unavailable")
+	default:
+		sendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity context authority could not verify the actor")
+	}
 }
 
 func (s *server) handleGetActorScopes(w http.ResponseWriter, r *http.Request) {
@@ -22,7 +48,13 @@ func (s *server) handleGetActorScopes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	scopes, err := s.repo.GetOperationalScopes(r.Context(), actorID, operatorContextID, role)
+	trustedContext, err := s.verifyAssignmentActorContext(r.Context(), actorID, operatorContextID)
+	if err != nil {
+		writeAssignmentIdentityError(w, err)
+		return
+	}
+
+	scopes, err := s.repo.GetOperationalScopes(trustedContext, actorID, operatorContextID, role)
 	if err != nil {
 		writeWorkforceError(w, err)
 		return
@@ -50,7 +82,20 @@ func (s *server) handleSetActorScopes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	scopes, err := s.repo.SetOperationalScopes(r.Context(), actorID, operatorContextID, req.Role, req.Inputs, changedBy, correlationID)
+	trustedContext, err := s.verifyAssignmentActorContext(r.Context(), actorID, operatorContextID)
+	if err != nil {
+		writeAssignmentIdentityError(w, err)
+		return
+	}
+	if _, err := s.identity.Actor(auth.WithOperatorContext(trustedContext, operatorContextID), changedBy); err != nil {
+		if errors.Is(err, identityclient.ErrActorNotFound) {
+			err = identityclient.ErrOperatorContextForbidden
+		}
+		writeAssignmentIdentityError(w, err)
+		return
+	}
+
+	scopes, err := s.repo.SetOperationalScopes(trustedContext, actorID, operatorContextID, req.Role, req.Inputs, changedBy, correlationID)
 	if err != nil {
 		writeWorkforceError(w, err)
 		return

@@ -3,12 +3,15 @@ package workforceclient
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 )
+
+var ErrScopeReadbackMismatch = errors.New("workforce scope readback does not match the requested boundary")
 
 type Client struct {
 	baseURL      string
@@ -120,6 +123,11 @@ func (c *Client) GetActorScopes(ctx context.Context, actorID, operatorContextID,
 	var scopes ActorScopes
 	if err := json.NewDecoder(resp.Body).Decode(&scopes); err != nil {
 		return nil, fmt.Errorf("decode workforce scopes: %w", err)
+	}
+	if strings.TrimSpace(scopes.ActorID) != actorID ||
+		strings.TrimSpace(scopes.Role) != role ||
+		strings.TrimSpace(scopes.OperatorContextID) != operatorContextID {
+		return nil, fmt.Errorf("%w: actor=%q role=%q context=%q", ErrScopeReadbackMismatch, scopes.ActorID, scopes.Role, scopes.OperatorContextID)
 	}
 	return &scopes, nil
 }

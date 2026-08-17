@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Workforce Internal DSH API
-  version: 1.2.0
+  version: 1.3.0
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/workforce
 paths:
@@ -82,6 +82,8 @@ paths:
           $ref: '#/components/responses/InvalidRequest'
         '401':
           $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalError'
       security:
@@ -114,6 +116,8 @@ paths:
           $ref: '#/components/responses/InvalidRequest'
         '401':
           $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
         '500':
@@ -164,7 +168,7 @@ components:
       in: header
       name: X-Operator-Context-ID
       required: true
-      description: Trusted platform context resolved by DSH from Identity.
+      description: Context assertion resolved by DSH from Identity and independently attested by Workforce against Identity before use.
       schema:
         type: string
         minLength: 1
@@ -172,7 +176,7 @@ components:
       in: header
       name: X-Actor-ID
       required: true
-      description: Identity-resolved actor that requested the mutation.
+      description: Identity-resolved actor assertion that Workforce independently verifies in the same operator context.
       schema:
         type: string
         minLength: 1
@@ -193,6 +197,12 @@ components:
             $ref: '#/components/schemas/ApiError'
     Unauthenticated:
       description: Valid DSH service identity is required.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: The asserted actor or operator context is not a verified Identity relationship.
       content:
         application/json:
           schema:

@@ -2,11 +2,20 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 
 	"dsh-api/internal/store"
 )
+
+func writePartnerFinanceScopeError(w http.ResponseWriter, err error) {
+	if errors.Is(err, store.ErrAmbiguousStoreScope) {
+		store.SendError(w, http.StatusConflict, "PARTNER_SCOPE_REQUIRED", "actor is assigned to multiple partner scopes")
+		return
+	}
+	store.SendError(w, http.StatusForbidden, "NO_PARTNER_ASSIGNMENT", "actor has no partner assignments")
+}
 
 // Finance permission actions on the control-panel surface.
 const (
@@ -27,9 +36,9 @@ func (s *protectedStoreServer) handlePartnerFinanceSettlements(w http.ResponseWr
 	if !ok {
 		return
 	}
-	row, _, err := store.ResolveActorStore(r.Context(), s.db, s.workforce, actor)
-	if err != nil || row == nil || row.PartnerID == "" {
-		store.SendError(w, http.StatusForbidden, "NO_PARTNER_ASSIGNMENT", "actor has no partner assignments")
+	partnerID, err := store.ResolveActorPartnerID(r.Context(), s.db, actor)
+	if err != nil || partnerID == "" {
+		writePartnerFinanceScopeError(w, err)
 		return
 	}
 	query := url.Values{}
@@ -38,7 +47,7 @@ func (s *protectedStoreServer) handlePartnerFinanceSettlements(w http.ResponseWr
 			query.Set(key, v)
 		}
 	}
-	query.Set("partnerId", row.PartnerID)
+	query.Set("partnerId", partnerID)
 	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.settlements.read", "/wlt/settlements", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
@@ -54,13 +63,13 @@ func (s *protectedStoreServer) handlePartnerFinanceSettlementSummary(w http.Resp
 	if !ok {
 		return
 	}
-	row, _, err := store.ResolveActorStore(r.Context(), s.db, s.workforce, actor)
-	if err != nil || row == nil || row.PartnerID == "" {
-		store.SendError(w, http.StatusForbidden, "NO_PARTNER_ASSIGNMENT", "actor has no partner assignments")
+	partnerID, err := store.ResolveActorPartnerID(r.Context(), s.db, actor)
+	if err != nil || partnerID == "" {
+		writePartnerFinanceScopeError(w, err)
 		return
 	}
 	query := url.Values{}
-	query.Set("partnerId", row.PartnerID)
+	query.Set("partnerId", partnerID)
 	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.settlements.read", "/wlt/settlements/summary", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")

@@ -176,9 +176,9 @@ func dshActorSurface(role string) string {
 	}
 }
 
-func partnerRequestWithStore(r *http.Request, actor store.StoreActor, storeID string) *http.Request {
+func partnerRequestWithPartner(r *http.Request, actor store.StoreActor, partnerID string) *http.Request {
 	ctx := partnerRequestWithActor(r, actor).Context()
-	ctx = context.WithValue(ctx, "store_id", storeID)
+	ctx = context.WithValue(ctx, "partner_id", partnerID)
 	return r.WithContext(ctx)
 }
 
@@ -217,12 +217,12 @@ func (s *protectedStoreServer) servePartnerSelfHandler(
 	if !ok {
 		return
 	}
-	row, _, err := store.ResolveActorStore(r.Context(), s.db, s.workforce, actor)
+	partnerID, err := store.ResolveActorPartnerID(r.Context(), s.db, actor)
 	if err != nil {
 		s.writeStoreError(w, err)
 		return
 	}
-	handler(w, partnerRequestWithStore(r, actor, row.ID))
+	handler(w, partnerRequestWithPartner(r, actor, partnerID))
 }
 
 func (s *protectedStoreServer) handleListPartnerDocuments(w http.ResponseWriter, r *http.Request) {
@@ -262,7 +262,7 @@ func (s *protectedStoreServer) handleStoreContext(w http.ResponseWriter, r *http
 	if !ok {
 		return
 	}
-	row, scope, err := store.ResolveActorStoreForID(r.Context(), s.db, s.workforce, actor, r.URL.Query().Get("storeId"))
+	row, scope, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, r.URL.Query().Get("storeId"))
 	if err != nil {
 		s.writeStoreError(w, err)
 		return
@@ -329,7 +329,7 @@ func (s *protectedStoreServer) handlePartnerSettings(w http.ResponseWriter, r *h
 		return
 	}
 	response, err := store.UpdatePartnerSettings(
-		r.Context(), s.db, s.workforce, actor, r.PathValue("storeId"),
+		r.Context(), s.db, actor, r.PathValue("storeId"),
 		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input,
 	)
 	s.writeActionResponse(w, response, err)
@@ -341,7 +341,7 @@ func (s *protectedStoreServer) handleGetPartnerSettings(w http.ResponseWriter, r
 		return
 	}
 	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -375,7 +375,7 @@ func (s *protectedStoreServer) handleFieldVerification(w http.ResponseWriter, r 
 		return
 	}
 	response, err := store.SubmitFieldVerification(
-		r.Context(), s.db, s.workforce, actor, r.PathValue("storeId"),
+		r.Context(), s.db, actor, r.PathValue("storeId"),
 		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input,
 	)
 	s.writeActionResponse(w, response, err)
@@ -391,7 +391,7 @@ func (s *protectedStoreServer) handleCaptainReadiness(w http.ResponseWriter, r *
 		return
 	}
 	response, err := store.ReportCaptainReadiness(
-		r.Context(), s.db, s.workforce, actor, r.PathValue("storeId"),
+		r.Context(), s.db, actor, r.PathValue("storeId"),
 		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input,
 	)
 	s.writeActionResponse(w, response, err)
@@ -407,7 +407,7 @@ func (s *protectedStoreServer) handleOperatorGovernance(w http.ResponseWriter, r
 		return
 	}
 	response, err := store.GovernStore(
-		r.Context(), s.db, s.workforce, actor, r.PathValue("storeId"),
+		r.Context(), s.db, actor, r.PathValue("storeId"),
 		r.Header.Get("Idempotency-Key"), r.Header.Get("X-Correlation-ID"), input,
 	)
 	s.writeActionResponse(w, response, err)
@@ -440,7 +440,7 @@ func (s *protectedStoreServer) handlePartnerGetCourierSettings(w http.ResponseWr
 		return
 	}
 	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -458,7 +458,7 @@ func (s *protectedStoreServer) handlePartnerUpdateCourierSettings(w http.Respons
 		return
 	}
 	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -476,7 +476,7 @@ func (s *protectedStoreServer) handlePartnerCoverageZones(w http.ResponseWriter,
 		return
 	}
 	storeID := r.PathValue("storeId")
-	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, s.workforce, actor, storeID)
+	canAccess, err := store.ActorCanAccessStore(r.Context(), s.db, actor, storeID)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -610,6 +610,8 @@ func (s *protectedStoreServer) writeActionResponse(w http.ResponseWriter, respon
 
 func (s *protectedStoreServer) writeStoreError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, store.ErrAmbiguousStoreScope):
+		store.SendError(w, http.StatusConflict, "STORE_SCOPE_REQUIRED", "an explicit store or partner scope is required")
 	case errors.Is(err, store.ErrScopedStoreNotFound):
 		store.SendError(w, http.StatusNotFound, "STORE_NOT_FOUND", "store was not found in actor scope")
 	case errors.Is(err, store.ErrVersionConflict):
