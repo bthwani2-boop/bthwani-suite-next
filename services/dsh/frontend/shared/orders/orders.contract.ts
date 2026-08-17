@@ -298,56 +298,6 @@ const ORDER_RESCUE_ACTIONS: readonly DshOrderRescueNextActionId[] = [
   'open_wlt_visibility',
 ] as const;
 
-export type SheinProxyStage =
-  | 'intake_review'
-  | 'quote_pending'
-  | 'customer_approval'
-  | 'batch_pending'
-  | 'purchased'
-  | 'inbound'
-  | 'sorting'
-  | 'ready_for_delivery'
-  | 'captain_assignment'
-  | 'delivered'
-  | 'exception';
-
-export const SHEIN_PROXY_STAGE_LABELS: Record<SheinProxyStage, string> = {
-  intake_review: 'مراجعة الطلب',
-  quote_pending: 'بانتظار التسعير',
-  customer_approval: 'موافقة العميل',
-  batch_pending: 'بانتظار الدفعة',
-  purchased: 'تم الشراء',
-  inbound: 'في الطريق للاستقبال',
-  sorting: 'قيد الفرز',
-  ready_for_delivery: 'جاهز للتسليم',
-  captain_assignment: 'إسناد الكابتن',
-  delivered: 'تم التسليم',
-  exception: 'استثناء',
-};
-
-export type AwnakStage =
-  | 'intake'
-  | 'quote_review'
-  | 'dispatch_pending'
-  | 'assigned'
-  | 'in_progress'
-  | 'proof_review'
-  | 'completed'
-  | 'cancelled'
-  | 'escalated';
-
-export const AWNAK_STAGE_LABELS: Record<AwnakStage, string> = {
-  intake: 'استلام الطلب',
-  quote_review: 'مراجعة السعر',
-  dispatch_pending: 'قيد الإسناد',
-  assigned: 'تم الإسناد',
-  in_progress: 'قيد التنفيذ',
-  proof_review: 'مراجعة الإثبات',
-  completed: 'مكتمل',
-  cancelled: 'ملغى',
-  escalated: 'مصعّد',
-};
-
 type DshOpsMonitoringItem = {
   readonly entityId: string;
   readonly entityLabel: string;
