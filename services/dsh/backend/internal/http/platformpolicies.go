@@ -9,6 +9,8 @@ import (
 )
 
 const (
+	DshPlatformPermissionRead                       = "platform.read"
+	DshPlatformPermissionManage                     = "platform.manage"
 	DshServiceZonesPermissionRead                   = "dsh.service_zones.read"
 	DshServiceZonesPermissionManage                 = "dsh.service_zones.manage"
 	DshFulfillmentSlaPermissionRead                 = "dsh.fulfillment_sla.read"
@@ -21,12 +23,9 @@ const (
 	DshOperationalPolicyRollbackPermission          = "dsh.operational_policy.rollback"
 )
 
-// Sovereign operational policy reads.
-//
-// Zone, SLA and capacity mutations are no longer served here: a direct write
-// path alongside the canonical Platform Control workflow is a second policy
-// authority. Platform-wide governed configuration mutations belong to Platform
-// Control; DSH exposes only the operational reads and mutations assigned to it.
+// DSH owns operational serviceability policy: zones, SLA, capacity, pauses and
+// fulfillment modes. Platform Control owns runtime variables, feature flags,
+// change sets and rollouts. WLT remains the sole owner of financial truth.
 
 func (s *protectedStoreServer) handleListZones(w http.ResponseWriter, r *http.Request) {
 	if _, ok := s.ActorFromContext(r.Context()); !ok {

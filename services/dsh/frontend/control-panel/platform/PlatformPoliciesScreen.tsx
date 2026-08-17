@@ -6,21 +6,15 @@ import {
   WebView as View,
 } from "@bthwani/ui-kit/web";
 import {
-  CpBadge,
   CpMutedInline,
   CpPageHeader,
-  CpRetryButton,
-  CpStatePanel,
-  CpStateView,
-  CpTable,
-  CpTableCell,
-  CpTableHeaderCell,
 } from "@bthwani/control-panel/components";
 import { SettingsPageFrame } from "@bthwani/control-panel/shell";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
-  useSlaRulesController,
-  useZonesController,
-} from "../../shared/platform";
+  CONTROL_PANEL_CAPABILITIES,
+  hasAllControlPanelPermissions,
+} from "../../shared/session/control-panel-permissions";
 import { ClientAddressPrivacySection } from "./ClientAddressPrivacySection";
 import { OperationalPolicySection } from "./OperationalPolicySection";
 import { MapProviderHealthCard } from "./MapProviderHealthCard";
@@ -33,8 +27,40 @@ type PlatformPoliciesContentProps = {
 };
 
 export function PlatformPoliciesContent({ embedded = false }: PlatformPoliciesContentProps) {
-  const zonesController = useZonesController("authenticated");
-  const slaController = useSlaRulesController("authenticated");
+  const { state } = useIdentitySession();
+  const identity = state.kind === "authenticated" ? state.identity : null;
+  const canReadPlatformPolicy = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.dshPlatformPolicyRead,
+  );
+  const canManagePlatformPolicy = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.dshPlatformPolicyManage,
+  );
+  const canReadOperationalPolicy = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.dshOperationalPolicyRead,
+  );
+  const canManageOperationalPolicy = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.dshOperationalPolicyManage,
+  );
+  const canReadOperationalAudit = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.dshOperationalPolicyAuditRead,
+  );
+  const canRollbackOperationalPolicy = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.dshOperationalPolicyRollback,
+  );
+  const canReadFinance = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.dshFinanceRead,
+  );
+  const canManageFinance = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.dshFinanceManage,
+  );
 
   return (
     <View style={embedded ? styles.embeddedStack : styles.stack}>
@@ -47,111 +73,29 @@ export function PlatformPoliciesContent({ embedded = false }: PlatformPoliciesCo
         </View>
       ) : null}
 
-      <MapProviderHealthCard />
-      <ServiceAreaGovernanceSection />
-      <ClientAddressPrivacySection />
-
-      <View style={styles.section}>
-        <Text role="titleSm">مناطق التشغيل المنطقية</Text>
-        <Text role="caption" tone="muted">
-          ترتبط المنطقة التشغيلية بالمتاجر وقواعد SLA والسعة. المضلعات الجغرافية
-          أعلاه هي المرجع المكاني لاعتماد رمز منطقة الخدمة.
-        </Text>
-        {zonesController.mutationError ? (
-          <Text tone="danger">{zonesController.mutationError}</Text>
-        ) : null}
-        {zonesController.state.kind === "loading" ? (
-          <CpStateView kind="loading" title="جارٍ تحميل المناطق…" />
-        ) : null}
-        {zonesController.state.kind === "error" ? (
-          <CpStatePanel role="alert" title="تعذر تحميل المناطق" description={zonesController.state.message}>
-            <CpRetryButton onClick={zonesController.reload}>إعادة المحاولة</CpRetryButton>
-          </CpStatePanel>
-        ) : null}
-        {zonesController.state.kind === "success" ? (
-          zonesController.state.data.length === 0 ? (
-            <CpStatePanel
-              role="status"
-              title="لا توجد مناطق تشغيلية"
-              description="أنشئ المنطقة من API المحكومة أو من واجهة إدارة المنطقة المتقدمة قبل ربط المتاجر بها."
-            />
-          ) : (
-            <CpTable aria-label="مناطق التشغيل المنطقية">
-              <thead>
-                <tr>
-                  <CpTableHeaderCell>المنطقة</CpTableHeaderCell>
-                  <CpTableHeaderCell>رمز المدينة</CpTableHeaderCell>
-                  <CpTableHeaderCell>الإصدار</CpTableHeaderCell>
-                  <CpTableHeaderCell>الحالة</CpTableHeaderCell>
-                </tr>
-              </thead>
-              <tbody>
-                {zonesController.state.data.map((row) => (
-                  <tr key={row.id} onClick={() => void zonesController.toggle(row, !row.isActive)}>
-                    <CpTableCell>{row.name}</CpTableCell>
-                    <CpTableCell>{row.cityCode}</CpTableCell>
-                    <CpTableCell>{String(row.version)}</CpTableCell>
-                    <CpTableCell>
-                      <CpBadge tone={row.isActive ? "success" : "neutral"}>
-                        {row.isActive ? "نشطة" : "معطلة"}
-                      </CpBadge>
-                    </CpTableCell>
-                  </tr>
-                ))}
-              </tbody>
-            </CpTable>
-          )
-        ) : null}
-      </View>
-
-      <View style={styles.section}>
-        <Text role="titleSm">قواعد SLA</Text>
-        {slaController.mutationError ? <Text tone="danger">{slaController.mutationError}</Text> : null}
-        {slaController.state.kind === "loading" ? (
-          <CpStateView kind="loading" title="جارٍ تحميل قواعد SLA…" />
-        ) : null}
-        {slaController.state.kind === "error" ? (
-          <CpStatePanel role="alert" title="تعذر تحميل قواعد SLA" description={slaController.state.message}>
-            <CpRetryButton onClick={slaController.reload}>إعادة المحاولة</CpRetryButton>
-          </CpStatePanel>
-        ) : null}
-        {slaController.state.kind === "success" ? (
-          slaController.state.data.length === 0 ? (
-            <CpStatePanel
-              role="status"
-              title="لا توجد قواعد SLA"
-              description="لا تعتبر المنطقة جاهزة تشغيليًا حتى تعريف قواعد SLA المناسبة لها."
-            />
-          ) : (
-            <CpTable aria-label="قواعد SLA">
-              <thead>
-                <tr>
-                  <CpTableHeaderCell>المنطقة</CpTableHeaderCell>
-                  <CpTableHeaderCell>الفئة</CpTableHeaderCell>
-                  <CpTableHeaderCell>حد التحضير (د)</CpTableHeaderCell>
-                  <CpTableHeaderCell>حد التوصيل (د)</CpTableHeaderCell>
-                  <CpTableHeaderCell>الإصدار</CpTableHeaderCell>
-                </tr>
-              </thead>
-              <tbody>
-                {slaController.state.data.map((row) => (
-                  <tr key={`${row.zoneId}-${row.category}`}>
-                    <CpTableCell>{row.zoneId}</CpTableCell>
-                    <CpTableCell>{row.category}</CpTableCell>
-                    <CpTableCell>{String(row.maxPrepMins)}</CpTableCell>
-                    <CpTableCell>{String(row.maxDeliveryMins)}</CpTableCell>
-                    <CpTableCell>{String(row.version)}</CpTableCell>
-                  </tr>
-                ))}
-              </tbody>
-            </CpTable>
-          )
-        ) : null}
-      </View>
-
-      <OperationalPolicyGovernanceSection />
-      <OperationalPolicySection />
-      <StoreOnboardingFeePolicySection authKind="authenticated" />
+      <MapProviderHealthCard canRead={canReadPlatformPolicy} />
+      <ServiceAreaGovernanceSection
+        canRead={canReadPlatformPolicy}
+        canManage={canManagePlatformPolicy}
+      />
+      <ClientAddressPrivacySection
+        canRead={canReadPlatformPolicy}
+        canManage={canManagePlatformPolicy}
+      />
+      <OperationalPolicyGovernanceSection
+        canRead={canReadOperationalPolicy}
+        canManage={canManageOperationalPolicy}
+      />
+      <OperationalPolicySection
+        canRead={canReadOperationalPolicy}
+        canManage={canManageOperationalPolicy}
+        canReadAudit={canReadOperationalAudit}
+        canRollback={canRollbackOperationalPolicy}
+      />
+      <StoreOnboardingFeePolicySection
+        canRead={canReadFinance}
+        canManage={canManageFinance}
+      />
     </View>
   );
 }

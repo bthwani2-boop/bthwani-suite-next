@@ -109,8 +109,18 @@ function currentVersionForEvent(
   }
 }
 
-export function OperationalPolicySection() {
-  const zones = useZonesController("authenticated");
+export function OperationalPolicySection({
+  canRead,
+  canManage,
+  canReadAudit,
+  canRollback,
+}: {
+  readonly canRead: boolean;
+  readonly canManage: boolean;
+  readonly canReadAudit: boolean;
+  readonly canRollback: boolean;
+}) {
+  const zones = useZonesController(canRead ? "authenticated" : "restricted");
   const [selectedZoneId, setSelectedZoneId] = React.useState<string | null>(null);
   const [profile, setProfile] = React.useState<DshOperationalProfile | null>(null);
   const [modes, setModes] = React.useState<DshDeliveryModePolicy[]>([]);
@@ -139,15 +149,17 @@ export function OperationalPolicySection() {
   }, [selectedZoneId, zones.state]);
 
   const load = React.useCallback(async () => {
-    if (!selectedZoneId) return;
+    if (!canRead || !selectedZoneId) return;
     setLoading(true);
     setError(null);
     try {
-      const [profileResponse, modesResponse, auditResponse] = await Promise.all([
+      const [profileResponse, modesResponse] = await Promise.all([
         fetchDshOperationalProfile(selectedZoneId),
         fetchDshOperationalDeliveryModes(selectedZoneId),
-        fetchDshOperationalPolicyAudit({ limit: 100 }),
       ]);
+      const auditResponse = canReadAudit
+        ? await fetchDshOperationalPolicyAudit({ limit: 100 })
+        : { events: [] as DshOperationalPolicyAuditEvent[] };
       const nextProfile = profileResponse.profile;
       setProfile(nextProfile);
       setModes(modesResponse.deliveryModes);
@@ -177,14 +189,14 @@ export function OperationalPolicySection() {
     } finally {
       setLoading(false);
     }
-  }, [selectedZoneId]);
+  }, [canRead, canReadAudit, selectedZoneId]);
 
   React.useEffect(() => {
     void load();
   }, [load]);
 
   const saveProfile = React.useCallback(async () => {
-    if (!selectedZoneId) return;
+    if (!canManage || !selectedZoneId) return;
     try {
       const reason = requiredReason(form.reason);
       if (form.isPaused && form.pauseReason.trim().length < 3) {
@@ -212,11 +224,11 @@ export function OperationalPolicySection() {
     } finally {
       setLoading(false);
     }
-  }, [form, load, profile, selectedZoneId]);
+  }, [canManage, form, load, profile, selectedZoneId]);
 
   const toggleMode = React.useCallback(
     async (mode: DshDeliveryModePolicy) => {
-      if (!selectedZoneId) return;
+      if (!canManage || !selectedZoneId) return;
       try {
         setLoading(true);
         setError(null);
@@ -233,7 +245,7 @@ export function OperationalPolicySection() {
         setLoading(false);
       }
     },
-    [load, selectedZoneId],
+    [canManage, load, selectedZoneId],
   );
 
   const evaluate = React.useCallback(async () => {
@@ -258,7 +270,7 @@ export function OperationalPolicySection() {
   }, [activeOrders, captainsOnline, evaluationMode, form.slaCategory, selectedZone, selectedZoneId]);
 
   const rollback = React.useCallback(async () => {
-    if (!selectedAudit) return;
+    if (!canRollback || !selectedAudit) return;
     const version = currentVersionForEvent(selectedAudit, profile, modes, selectedZone);
     if (version == null) {
       setError("هذا السجل لا يملك إصدارًا حاليًا قابلًا للتراجع من هذه الواجهة.");
@@ -279,13 +291,24 @@ export function OperationalPolicySection() {
     } finally {
       setLoading(false);
     }
-  }, [load, modes, profile, rollbackReason, selectedAudit, selectedZone, zones]);
+  }, [canRollback, load, modes, profile, rollbackReason, selectedAudit, selectedZone, zones]);
 
   const zoneRows = zones.state.kind === "success"
     ? (zones.state.data as (DshZone & Record<string, unknown>)[])
     : [];
   const modeRows = modes as (DshDeliveryModePolicy & Record<string, unknown>)[];
   const auditRows = audit as (DshOperationalPolicyAuditEvent & Record<string, unknown>)[];
+
+  if (!canRead) {
+    return (
+      <CpStatePanel
+        role="status"
+        title="صلاحية قراءة السياسة التشغيلية مطلوبة"
+        description="لن يطلب هذا القسم الملف التشغيلي أو أنماط التنفيذ قبل تحقق صلاحيات القراءة التشغيلية."
+        code="DSH_OPERATIONAL_POLICY_READ_REQUIRED"
+      />
+    );
+  }
 
   return (
     <View style={styles.section}>
@@ -338,26 +361,27 @@ export function OperationalPolicySection() {
         <Card style={styles.card}>
           <Text role="titleSm">SLA والسعة والإيقاف</Text>
           <View style={styles.grid}>
-            <CpTextInput aria-label="فئة SLA" value={form.slaCategory} onChange={(slaCategory) => setForm((current) => ({ ...current, slaCategory }))} />
-            <CpTextInput aria-label="حد التحضير (د)" value={form.maxPrepMins} onChange={(maxPrepMins) => setForm((current) => ({ ...current, maxPrepMins }))} />
-            <CpTextInput aria-label="حد الإسناد (د)" value={form.maxAssignmentMins} onChange={(maxAssignmentMins) => setForm((current) => ({ ...current, maxAssignmentMins }))} />
-            <CpTextInput aria-label="حد التوصيل (د)" value={form.maxDeliveryMins} onChange={(maxDeliveryMins) => setForm((current) => ({ ...current, maxDeliveryMins }))} />
-            <CpTextInput aria-label="الطلبات المتزامنة" value={form.maxConcurrentOrders} onChange={(maxConcurrentOrders) => setForm((current) => ({ ...current, maxConcurrentOrders }))} />
-            <CpTextInput aria-label="الحد الأعلى للكباتن" value={form.maxCaptainsOnline} onChange={(maxCaptainsOnline) => setForm((current) => ({ ...current, maxCaptainsOnline }))} />
-            <CpTextInput aria-label="عتبة الضغط 0..1" value={form.throttleThreshold} onChange={(throttleThreshold) => setForm((current) => ({ ...current, throttleThreshold }))} />
+            <CpTextInput disabled={!canManage} aria-label="فئة SLA" value={form.slaCategory} onChange={(slaCategory) => setForm((current) => ({ ...current, slaCategory }))} />
+            <CpTextInput disabled={!canManage} aria-label="حد التحضير (د)" value={form.maxPrepMins} onChange={(maxPrepMins) => setForm((current) => ({ ...current, maxPrepMins }))} />
+            <CpTextInput disabled={!canManage} aria-label="حد الإسناد (د)" value={form.maxAssignmentMins} onChange={(maxAssignmentMins) => setForm((current) => ({ ...current, maxAssignmentMins }))} />
+            <CpTextInput disabled={!canManage} aria-label="حد التوصيل (د)" value={form.maxDeliveryMins} onChange={(maxDeliveryMins) => setForm((current) => ({ ...current, maxDeliveryMins }))} />
+            <CpTextInput disabled={!canManage} aria-label="الطلبات المتزامنة" value={form.maxConcurrentOrders} onChange={(maxConcurrentOrders) => setForm((current) => ({ ...current, maxConcurrentOrders }))} />
+            <CpTextInput disabled={!canManage} aria-label="الحد الأعلى للكباتن" value={form.maxCaptainsOnline} onChange={(maxCaptainsOnline) => setForm((current) => ({ ...current, maxCaptainsOnline }))} />
+            <CpTextInput disabled={!canManage} aria-label="عتبة الضغط 0..1" value={form.throttleThreshold} onChange={(throttleThreshold) => setForm((current) => ({ ...current, throttleThreshold }))} />
           </View>
           <View style={styles.headerRow}>
             <CpBadge tone={form.isPaused ? "danger" : "success"}>{form.isPaused ? "المنطقة متوقفة" : "المنطقة تعمل"}</CpBadge>
             <CpButton
               variant={form.isPaused ? "secondary" : "danger"}
+              disabled={!canManage}
               onClick={() => setForm((current) => ({ ...current, isPaused: !current.isPaused, pauseReason: current.isPaused ? "" : current.pauseReason }))}
             >
               {form.isPaused ? "إلغاء الإيقاف" : "إيقاف تشغيلي"}
             </CpButton>
           </View>
-          {form.isPaused ? <CpTextInput aria-label="سبب الإيقاف" value={form.pauseReason} onChange={(pauseReason) => setForm((current) => ({ ...current, pauseReason }))} /> : null}
-          <CpTextInput aria-label="سبب تغيير السياسة" value={form.reason} onChange={(reason) => setForm((current) => ({ ...current, reason }))} />
-          <CpButton onClick={() => void saveProfile()} disabled={loading}>حفظ SLA والسعة</CpButton>
+          {form.isPaused ? <CpTextInput disabled={!canManage} aria-label="سبب الإيقاف" value={form.pauseReason} onChange={(pauseReason) => setForm((current) => ({ ...current, pauseReason }))} /> : null}
+          <CpTextInput disabled={!canManage} aria-label="سبب تغيير السياسة" value={form.reason} onChange={(reason) => setForm((current) => ({ ...current, reason }))} />
+          <CpButton onClick={() => void saveProfile()} disabled={!canManage || loading}>حفظ SLA والسعة</CpButton>
         </Card>
       ) : null}
 
@@ -375,7 +399,7 @@ export function OperationalPolicySection() {
             </thead>
             <tbody>
               {modeRows.map((row) => (
-                <tr key={row.id} onClick={() => void toggleMode(row)}>
+                <tr key={row.id} onClick={canManage ? () => void toggleMode(row) : undefined}>
                   <CpTableCell>{MODE_LABELS[row.fulfillmentMode]}</CpTableCell>
                   <CpTableCell>{row.slaCategory}</CpTableCell>
                   <CpTableCell>{String(row.version)}</CpTableCell>
@@ -430,7 +454,7 @@ export function OperationalPolicySection() {
             </thead>
             <tbody>
               {auditRows.map((row) => (
-                <tr key={row.id} onClick={() => setSelectedAudit(row)}>
+                  <tr key={row.id} onClick={canRollback ? () => setSelectedAudit(row) : undefined}>
                   <CpTableCell>{row.aggregateType}</CpTableCell>
                   <CpTableCell>{row.action}</CpTableCell>
                   <CpTableCell>{String(row.toVersion)}</CpTableCell>
@@ -441,7 +465,7 @@ export function OperationalPolicySection() {
             </tbody>
           </CpTable>
         )}
-        {selectedAudit ? (
+        {selectedAudit && canRollback ? (
           <View style={styles.result}>
             <Text role="caption">العودة إلى الحدث {selectedAudit.toVersion} من {selectedAudit.aggregateType}</Text>
             <CpTextInput aria-label="سبب التراجع" value={rollbackReason} onChange={setRollbackReason} />

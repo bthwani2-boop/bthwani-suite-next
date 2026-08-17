@@ -102,11 +102,18 @@ function requiredReason(value: string): string {
   return reason;
 }
 
-export function OperationalPolicyGovernanceSection() {
-  const zones = useZonesController("authenticated");
-  const sla = useSlaRulesController("authenticated");
+export function OperationalPolicyGovernanceSection({
+  canRead,
+  canManage,
+}: {
+  readonly canRead: boolean;
+  readonly canManage: boolean;
+}) {
+  const authKind = canRead ? "authenticated" : "restricted";
+  const zones = useZonesController(authKind);
+  const sla = useSlaRulesController(authKind);
   const [selectedZoneId, setSelectedZoneId] = React.useState<string | undefined>();
-  const capacity = useAreaCapacityController("authenticated", selectedZoneId);
+  const capacity = useAreaCapacityController(authKind, selectedZoneId);
   const [selectedSlaKey, setSelectedSlaKey] = React.useState<string | null>(null);
   const [zoneForm, setZoneForm] = React.useState<ZoneForm>(EMPTY_ZONE);
   const [slaForm, setSlaForm] = React.useState<SlaForm>(EMPTY_SLA);
@@ -289,6 +296,17 @@ export function OperationalPolicyGovernanceSection() {
         )[])
       : [];
 
+  if (!canRead) {
+    return (
+      <CpStatePanel
+        role="status"
+        title="صلاحية قراءة السياسة التشغيلية مطلوبة"
+        description="لن يطلب هذا القسم المناطق أو قواعد SLA قبل تحقق صلاحيات القراءة التشغيلية."
+        code="DSH_OPERATIONAL_POLICY_READ_REQUIRED"
+      />
+    );
+  }
+
   return (
     <View style={styles.section}>
       <View style={styles.headerRow}>
@@ -298,7 +316,7 @@ export function OperationalPolicyGovernanceSection() {
             كل كتابة تعتمد الإصدار الحالي وتُسجّل بسبب واضح ومفتاح idempotency.
           </Text>
         </View>
-        <CpButton variant="secondary" onClick={beginZoneCreate}>منطقة تشغيلية جديدة</CpButton>
+        {canManage ? <CpButton variant="secondary" onClick={beginZoneCreate}>منطقة تشغيلية جديدة</CpButton> : null}
       </View>
 
       {zones.state.kind === "loading" ? <CpStateView kind="loading" title="جارٍ تحميل المناطق…" /> : null}
@@ -367,6 +385,7 @@ export function OperationalPolicyGovernanceSection() {
         />
         <CpButton
           variant={zoneForm.isActive ? "primary" : "secondary"}
+          disabled={!canManage}
           onClick={() =>
             setZoneForm((current) => ({ ...current, isActive: !current.isActive }))
           }
@@ -380,7 +399,7 @@ export function OperationalPolicyGovernanceSection() {
         />
         <CpButton
           variant="primary"
-          disabled={editor.mutating}
+          disabled={!canManage || editor.mutating}
           onClick={() => void saveZone()}
         >
           {editor.mutating ? "جارٍ الحفظ…" : "حفظ المنطقة"}
@@ -441,7 +460,7 @@ export function OperationalPolicyGovernanceSection() {
             />
             <CpButton
               variant="primary"
-              disabled={editor.mutating}
+              disabled={!canManage || editor.mutating}
               onClick={() => void saveSla()}
             >
               {editor.mutating ? "جارٍ الحفظ…" : "حفظ SLA"}
@@ -498,7 +517,7 @@ export function OperationalPolicyGovernanceSection() {
             />
             <CpButton
               variant="primary"
-              disabled={editor.mutating}
+              disabled={!canManage || editor.mutating}
               onClick={() => void saveCapacity()}
             >
               {editor.mutating ? "جارٍ الحفظ…" : "حفظ السعة"}

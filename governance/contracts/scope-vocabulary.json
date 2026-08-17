@@ -2,6 +2,59 @@
   "schemaVersion": 1,
   "decision": "EVERY_GO_ENFORCED_SCOPE_OR_PERMISSION_LITERAL_MUST_APPEAR_HERE",
   "description": "Machine-readable inventory of every authorization scope/permission literal enforced by Go route guards across the six bounded contexts. Contracts must declare security scopes drawn from this vocabulary; the CI gate tools/guards/contract-scope-binding-gate.mjs fails when Go enforces a literal absent from this file, or when a contract declares a scope absent from this file.",
+  "capabilities": [
+    {
+      "id": "platform-control",
+      "owner": "core/platform-control",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["platform:read"],
+      "healthRead": ["platform:health:read"],
+      "auditRead": ["platform:audit:read"]
+    },
+    {
+      "id": "dsh-platform-policy",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["platform.read"],
+      "manage": ["platform.manage"]
+    },
+    {
+      "id": "dsh-service-areas",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["dsh.service_zones.read"],
+      "manage": ["dsh.service_zones.manage"]
+    },
+    {
+      "id": "dsh-operational-policy",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": [
+        "dsh.service_zones.read",
+        "dsh.fulfillment_sla.read",
+        "dsh.dispatch_capacity.read"
+      ],
+      "manage": [
+        "dsh.service_zones.manage",
+        "dsh.fulfillment_sla.manage",
+        "dsh.dispatch_capacity.manage"
+      ],
+      "auditRead": ["dsh.operational_policy.audit.read"],
+      "rollback": ["dsh.operational_policy.rollback"]
+    },
+    {
+      "id": "dsh-finance",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["finance.read"],
+      "manage": ["finance.manage"]
+    }
+  ],
   "families": [
     {
       "family": "core-operator-scope",

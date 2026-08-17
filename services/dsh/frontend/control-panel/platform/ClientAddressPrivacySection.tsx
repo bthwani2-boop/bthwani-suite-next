@@ -19,8 +19,14 @@ import {
 } from "@bthwani/control-panel/components";
 import { useClientAddressPrivacyController } from "../../shared/privacy";
 
-export function ClientAddressPrivacySection() {
-  const controller = useClientAddressPrivacyController(true);
+export function ClientAddressPrivacySection({
+  canRead,
+  canManage,
+}: {
+  readonly canRead: boolean;
+  readonly canManage: boolean;
+}) {
+  const controller = useClientAddressPrivacyController(canRead);
   const [enabled, setEnabled] = React.useState(true);
   const [retentionDays, setRetentionDays] = React.useState("30");
   const [batchLimit, setBatchLimit] = React.useState("500");
@@ -86,6 +92,17 @@ export function ClientAddressPrivacySection() {
     }
   }, [batchLimit, controller, runId]);
 
+  if (!canRead) {
+    return (
+      <CpStatePanel
+        role="status"
+        title="صلاحية قراءة خصوصية العناوين مطلوبة"
+        description="لن يطلب هذا القسم سياسة الخصوصية قبل تحقق صلاحية platform.read."
+        code="DSH_PLATFORM_READ_REQUIRED"
+      />
+    );
+  }
+
   return (
     <View style={styles.section}>
       <Text role="titleSm">خصوصية عناوين العملاء</Text>
@@ -118,28 +135,39 @@ export function ClientAddressPrivacySection() {
               الإخفاء التالي: {controller.state.status.nextPurgeAt ? new Date(controller.state.status.nextPurgeAt).toLocaleString("ar") : "لا توجد عناوين مجدولة"}
             </Text>
 
-            <CpButton variant={enabled ? "secondary" : "primary"} onClick={() => setEnabled((current) => !current)}>
-              {enabled ? "تعطيل الجدولة" : "تفعيل الجدولة"}
-            </CpButton>
-            <CpTextInput aria-label="مدة الاحتفاظ بعد الحذف بالأيام" value={retentionDays} onChange={setRetentionDays} />
-            <CpTextInput aria-label="حجم دفعة anonymization" value={batchLimit} onChange={setBatchLimit} />
-            <CpTextInput aria-label="سبب تغيير السياسة" value={reason} onChange={setReason} placeholder="سبب قابل للتدقيق" />
-            <CpButton variant="primary" disabled={controller.mutating} onClick={() => void save()}>
-              {controller.mutating ? "جارٍ الحفظ…" : "حفظ سياسة الخصوصية"}
-            </CpButton>
+            {canManage ? (
+              <>
+                <CpButton variant={enabled ? "secondary" : "primary"} onClick={() => setEnabled((current) => !current)}>
+                  {enabled ? "تعطيل الجدولة" : "تفعيل الجدولة"}
+                </CpButton>
+                <CpTextInput aria-label="مدة الاحتفاظ بعد الحذف بالأيام" value={retentionDays} onChange={setRetentionDays} />
+                <CpTextInput aria-label="حجم دفعة anonymization" value={batchLimit} onChange={setBatchLimit} />
+                <CpTextInput aria-label="سبب تغيير السياسة" value={reason} onChange={setReason} placeholder="سبب قابل للتدقيق" />
+                <CpButton variant="primary" disabled={controller.mutating} onClick={() => void save()}>
+                  {controller.mutating ? "جارٍ الحفظ…" : "حفظ سياسة الخصوصية"}
+                </CpButton>
 
-            <Text role="titleSm">تشغيل دفعة الإخفاء المستحقة</Text>
-            <Text role="caption" tone="muted">
-              معرف التشغيل هو مفتاح idempotency وcorrelation الفعلي. استخدم معرفًا جديدًا لكل دفعة، وكرر المعرف نفسه فقط لإعادة محاولة الدفعة نفسها.
-            </Text>
-            <CpTextInput aria-label="معرف التشغيل" value={runId} onChange={setRunId} placeholder="privacy-2026-07-21-run-001" />
-            <CpButton variant="danger" disabled={controller.mutating || controller.state.status.dueCount === 0} onClick={() => void anonymize()}>
-              {controller.mutating ? "جارٍ التنفيذ…" : "تشغيل anonymization"}
-            </CpButton>
+                <Text role="titleSm">تشغيل دفعة الإخفاء المستحقة</Text>
+                <Text role="caption" tone="muted">
+                  معرف التشغيل هو مفتاح idempotency وcorrelation الفعلي. استخدم معرفًا جديدًا لكل دفعة، وكرر المعرف نفسه فقط لإعادة محاولة الدفعة نفسها.
+                </Text>
+                <CpTextInput aria-label="معرف التشغيل" value={runId} onChange={setRunId} placeholder="privacy-2026-07-21-run-001" />
+                <CpButton variant="danger" disabled={controller.mutating || controller.state.status.dueCount === 0} onClick={() => void anonymize()}>
+                  {controller.mutating ? "جارٍ التنفيذ…" : "تشغيل anonymization"}
+                </CpButton>
 
-            {controller.lastResult ? <CpBadge tone="success">{`تم إخفاء ${controller.lastResult.anonymizedCount} عنوانًا`}</CpBadge> : null}
-            {validationError ? <Text tone="danger">{validationError}</Text> : null}
-            {controller.mutationError ? <Text tone="danger">{controller.mutationError}</Text> : null}
+                {controller.lastResult ? <CpBadge tone="success">{`تم إخفاء ${controller.lastResult.anonymizedCount} عنوانًا`}</CpBadge> : null}
+                {validationError ? <Text tone="danger">{validationError}</Text> : null}
+                {controller.mutationError ? <Text tone="danger">{controller.mutationError}</Text> : null}
+              </>
+            ) : (
+              <CpStatePanel
+                role="status"
+                title="العرض للقراءة فقط"
+                description="تتطلب إدارة سياسة الخصوصية وتشغيل الإخفاء صلاحية platform.manage."
+                code="DSH_PLATFORM_MANAGE_REQUIRED"
+              />
+            )}
           </Card>
 
           <Card style={styles.card}>

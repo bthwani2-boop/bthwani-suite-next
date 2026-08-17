@@ -23,11 +23,26 @@ import {
 } from "../../shared/platform";
 
 export function StoreOnboardingFeePolicySection({
-  authKind,
+  canRead,
+  canManage,
 }: {
-  readonly authKind: string;
+  readonly canRead: boolean;
+  readonly canManage: boolean;
 }) {
-  const controller = useStoreOnboardingFeePolicyFormController(authKind);
+  const controller = useStoreOnboardingFeePolicyFormController(
+    canRead ? "authenticated" : "restricted",
+  );
+
+  if (!canRead) {
+    return (
+      <CpStatePanel
+        role="status"
+        title="صلاحية قراءة سياسة الرسوم مطلوبة"
+        description="لن يطلب هذا القسم سياسة الرسوم قبل تحقق finance.read."
+        code="DSH_FINANCE_READ_REQUIRED"
+      />
+    );
+  }
 
   return (
     <View style={styles.section}>
@@ -47,7 +62,7 @@ export function StoreOnboardingFeePolicySection({
       ) : null}
 
       {controller.state.kind === "success" ? (
-        <View style={styles.form}>
+        canManage ? <View style={styles.form}>
           <View style={styles.badges}>
             <CpBadge tone="info">{`الإصدار ${controller.state.data.version}`}</CpBadge>
             <CpBadge tone={controller.state.data.isConfigured ? "success" : "warning"}>
@@ -118,7 +133,14 @@ export function StoreOnboardingFeePolicySection({
           >
             {controller.saving ? "جارٍ الحفظ…" : "حفظ السياسة"}
           </CpButton>
-        </View>
+        </View> : (
+          <CpStatePanel
+            role="status"
+            title="العرض للقراءة فقط"
+            description="تتطلب إدارة سياسة الرسوم صلاحية finance.manage."
+            code="DSH_FINANCE_MANAGE_REQUIRED"
+          />
+        )
       ) : null}
     </View>
   );
