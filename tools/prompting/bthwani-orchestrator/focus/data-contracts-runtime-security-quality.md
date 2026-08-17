@@ -1,237 +1,155 @@
-# Focus — Data, Contracts, Runtime, Security, Finance and Quality
+# Focus — Data, Contracts, Runtime, Security, Finance, Quality and Engineering Control-Path Efficiency
 
 ## 1. Purpose
 
-Use this module when the starting focus or proven blast radius includes data/database, contracts/API/events, runtime/infrastructure, security/auth, finance, testing/quality or operations.
+Apply this module when proven scope includes data/database, contracts/API/events, runtime/infrastructure, security/auth, finance, testing/quality, operations, CI/tooling or engineering execution cost.
 
-These concerns are grouped because correctness often depends on their cross-boundary consistency. Do not split them into independent pseudo-projects when one root spans them.
+Do not split cross-boundary correctness into independent pseudo-projects when one root spans them.
 
 ## 2. Data ownership and database truth
 
-Inspect materially applicable:
-
-- canonical owner for authoritative data;
-- allowed writers/readers/projections;
-- schema/model consistency;
-- constraints/invariants;
-- transaction boundaries;
-- uniqueness/FKs/checks/indexes;
-- fresh install and representative non-empty upgrade states;
-- migration ordering and applied-history integrity;
-- expand/backfill/switch/contract sequences where required;
-- idempotency/concurrency/locking/batching;
-- drift, duplicates, orphans and stale fields;
-- restart/readback/roll-forward/rollback behavior;
-- old-writer elimination after cutover.
+Inspect canonical data owner, allowed writers/readers/projections, schema/model consistency, constraints/invariants, transactions, uniqueness/FKs/checks/indexes, fresh install and representative upgrade states, migration ordering/history, expand/backfill/switch/contract sequences, idempotency/concurrency/locking/batching, drift/duplicates/orphans/stale fields, restart/readback/roll-forward/rollback and old-writer elimination.
 
 A successful migration command alone does not prove correct product state.
 
 ## 3. Migration law
 
-Use forward corrective migrations. Do not rewrite applied migration history simply to make the past look clean.
+Use forward corrective migrations. Do not rewrite applied migration history merely for cosmetic cleanliness.
 
-When a change affects persisted authority, prove as applicable:
+For persisted authority changes prove as applicable:
 
-```text
-current owner
-→ target owner/schema
-→ forward migration
-→ backfill/transform
-→ compatibility window if real
-→ switch writers
-→ switch readers
-→ canonical readback
-→ zero old authoritative writer
-→ cleanup/contract phase
-```
-
-A database cleanup is not complete if runtime still writes through the old model.
+`current owner → target owner/schema → forward migration → backfill/transform → real compatibility window → switch writers → switch readers → canonical readback → zero old authoritative writer → cleanup/contract phase`.
 
 ## 4. Contracts and APIs
 
-Verify the full chain:
+Verify:
 
 `canonical schema/OpenAPI/event → generated/manual client → caller/request → auth/authz → route/handler → domain command/query → persistence/event/provider → response/error semantics → persisted readback → all consumers`.
 
-Look for:
-
-- request/response/schema/enum/nullable/error drift;
-- ambiguous IDs or scopes;
-- generated-client provenance mismatch;
-- shadow/duplicate endpoints;
-- consumers bypassing canonical clients/contracts;
-- server authorization missing despite UI restrictions;
-- stale clients after contract change;
-- idempotency/concurrency semantics not encoded where required;
-- compatibility requirements lacking a bounded removal condition.
-
-A public contract change is not closed until every required consumer and real compatibility implication is reconciled.
+Look for schema/enum/null/error drift, ambiguous IDs/scopes, generated-client provenance mismatch, shadow endpoints, contract bypass, missing server auth, stale clients, missing idempotency/concurrency semantics and indefinite compatibility.
 
 ## 5. Events, jobs and providers
 
-For material asynchronous/external paths prove:
+For asynchronous/external paths prove sender/receiver responsibility, identity, schema/version, durability/outbox when required, callback authenticity, ordering, idempotency/replay, retry/backoff/lease, DLQ/terminal handling, timeout/unknown result, restart, reconciliation, compensation and observability/correlation.
 
-```text
-sender/receiver responsibility
-message/event identity
-schema/version
-outbox/durability when required
-callback/provider authenticity
-ordering
-idempotency/replay
-retry/backoff/lease
-DLQ/terminal handling
-timeout/unknown result
-restart
-reconciliation
-compensation
-observability/correlation
-```
-
-A provider timeout after a possible commit is not equivalent to failure. Unknown-result paths require reconciliation before creating a second financial/business mutation identity.
+Provider timeout after possible commit is not equivalent to failure.
 
 ## 6. Runtime and infrastructure
 
-Inspect current declared/live runtime as materially applicable:
+Inspect service startup/readiness/health truthfulness, configuration/environment ownership, ports/endpoints/networking, Docker/container/process bindings, provider bindings, startup validation, hidden localhost/legacy fallback, jobs/events/queues/providers, mobile/control-panel boundaries, observability, failure/recovery/restart and release/rollback when in scope.
 
-- service startup/readiness/health truthfulness;
-- configuration/environment ownership;
-- ports/endpoints/networking;
-- Docker/container/process bindings;
-- provider bindings;
-- startup validation;
-- no hidden localhost/legacy fallback;
-- jobs/events/outbox/queues/providers;
-- mobile/control-panel runtime boundaries;
-- observability sufficient to prove the claim;
-- failure/recovery/restart behavior;
-- release/rollback only when actually in scope.
-
-Discover current canonical project commands/configuration live; do not hard-code historical commands into this package.
+Discover current canonical project commands/configuration live; do not hard-code historical commands here.
 
 ## 7. Runtime freshness
 
-Before trusting runtime proof, establish enough evidence that the observed process represents the intended candidate:
-
-`source/candidate identity | artifact/image/bundle provenance | service/process/container freshness | schema version | runtime profile/config | endpoint/network target | fixture/seed provenance | persisted readback`.
-
-No stale dev server/container/process may silently prove a changed candidate.
+Before trusting runtime proof establish enough candidate/artifact/process/schema/profile/endpoint/fixture/readback provenance to exclude stale execution.
 
 ## 8. Security and isolation
 
-Treat security as an always-on impact lens and deepen when materially relevant:
+Treat security as an always-on impact lens and deepen when material:
 
-`authentication | authorization | role/object/tenant/store/partner/actor scope | sessions/tokens | secrets | PII/privacy | input/output validation | injection | SSRF/path/file/upload risks | replay/idempotency | IDOR | rate/abuse controls | provider signature | service identity | auditability`.
+`authentication | authorization | role/object/tenant/store/partner/actor scope | sessions/tokens | secrets | PII/privacy | input/output validation | injection | SSRF/path/file/upload | replay/idempotency | IDOR | rate/abuse | provider signature | service identity | auditability`.
 
-UI visibility never substitutes for server-side authorization.
-
-For negative security proof include materially applicable wrong-role, wrong-scope, cross-actor/store/partner/tenant, object enumeration and replay paths.
-
-Never expose raw secrets/credentials/PII merely to preserve evidence; retain the proof while redacting sensitive values.
+UI visibility never substitutes for server authorization. Redact raw secrets/PII in evidence.
 
 ## 9. Finance and WLT
 
-For financial effects prove the current canonical financial authority live; do not infer implementation merely from a familiar name.
+Prove the current canonical financial authority live. Verify where applicable:
 
-Where applicable verify:
+`canonical ledger/fact owner | allowed writers | server-derived amount/identity | idempotency/correlation | state constraints | provider outcome binding | unknown-result reconciliation | compensation/reversal | restart/replay safety | canonical readback | maker-checker/step-up where governed | audit provenance`.
 
-```text
-canonical ledger/fact owner
-allowed financial writers
-server-derived amount/identity where required
-idempotency + correlation
-state constraints
-provider outcome binding
-unknown-result reconciliation
-compensation/reversal
-restart/replay safety
-canonical persisted readback
-authorization / maker-checker / step-up where governed
-audit provenance
-```
-
-Forbidden final states include:
-
-- caller/UI-authored authoritative money when canonical owner must derive it;
-- parallel financial truth;
-- best-effort required financial mutation;
-- fake success before persisted readback;
-- retry with a new financial identity before reconciling unknown result.
-
-Mock/local success never proves real provider/financial outcome.
+Forbidden final states include caller-authored money authority, parallel financial truth, best-effort required mutation, fake success before persisted readback and retry with new financial identity before reconciling unknown result.
 
 ## 10. Compatibility
 
-Evaluate compatibility only when a real mixed-version/rollout dependency exists, including mobile/backend, generated clients, events and data migrations.
+Allow compatibility only for a real mixed-version/rollout dependency. Require one semantic authority, explicit consumer scope, bounded behavior, observability, owner, expiry/removal trigger and negative tests where material.
 
-Compatibility must have:
+## 11. Protected/irreversible actions
 
-`one semantic authority | explicit consumer scope | bounded behavior | observability | owner | expiry/removal trigger | negative tests where material`.
-
-Do not preserve indefinite compatibility merely because deletion is inconvenient.
-
-## 11. Security/privacy and irreversible actions
-
-Before production-sensitive operations involving secrets, PII, financial providers, destructive backfills or irreversible infrastructure, apply the explicit authority gate in `01-SCOPE-AUTHORITY-RULES.md`.
-
-No broad “execute everything” request silently authorizes destructive external effects.
+Apply the authority gate in `01` before production-sensitive secret/PII/financial/destructive/infrastructure actions.
 
 ## 12. Testing and quality
 
-Tests are evidence. Select checks proportional to the claim and affected risk.
+Tests are evidence. Use focused unit/domain regression, integration/contract/database, generated-client consistency, cross-surface/journey, runtime/readback, security/isolation, migration fresh/upgrade, duplicate/replay/concurrency/restart and adversarial checks as relevant.
 
-Use, where relevant:
-
-- focused unit/domain regression tests;
-- integration/contract/database tests;
-- generated-client consistency checks;
-- cross-surface/journey tests;
-- runtime/smoke/readback checks;
-- security/isolation tests;
-- migration fresh/upgrade scenarios;
-- duplicate/replay/concurrency/restart scenarios;
-- adversarial scenarios.
-
-Do not create redundant matrices when one focused check proves the claim. Do not use focused checks to claim broad closure they cannot prove.
-
-Project CI/workflows/scanners may be used as project evidence when relevant. They are **not** orchestration self-validation and must never be introduced merely to run/check this command package.
+Do not use a focused check to claim broad closure it cannot prove.
 
 ## 13. Failure and recovery are product behavior
 
-For material operations cover applicable:
-
-`invalid | denied | wrong role/scope | forbidden state | not found | conflict/stale | duplicate/replay | race | partial failure | dependency/provider/database/network failure | timeout/unknown result | retry/backoff | offline/reconnect | restart | compensation | reconciliation`.
-
-A happy-path-only implementation is incomplete where these states materially affect truth or user/operator outcome.
+Cover applicable invalid, denied, wrong role/scope, forbidden state, not found, stale/conflict, duplicate/replay, race, partial failure, dependency/provider/database/network failure, timeout/unknown result, retry/backoff, offline/reconnect, restart, compensation and reconciliation.
 
 ## 14. Mobile and control-panel runtime concerns
 
-When Mobile is affected inspect as applicable:
+Mobile: native permissions, deep links, push, maps/location, SecureStore/session, offline/reconnect, build/OTA/EAS/env/runtime transport, physical-device/emulator proof limits.
 
-`native permissions | deep links | push | maps/location | SecureStore/session | offline/reconnect | build/OTA/EAS/env/runtime transport | physical-device/emulator proof limit`.
+Control Panel: route/object auth, trusted scope, server/client boundary, search isolation, bulk operations, audit/session/error/readback, responsive/RTL/localization/accessibility.
 
-When Control Panel is affected inspect as applicable:
+## 15. Engineering control-path efficiency
 
-`route/object authorization | trusted scope | server/client boundary | search isolation | bulk operations | audit/session/error/readback | responsive/RTL/localization/accessibility`.
+Treat developer/agent execution paths as first-class system paths when they materially affect delivery speed, correctness or maintainability.
 
-## 15. Quality and performance
+Candidate surfaces include:
 
-Inspect when they affect correctness, operability or maintainability:
+`guards | scripts | CI jobs | workflow routers | registries | policies | skills | prompting adapters | hooks | Nx/graph discovery | generators | postinstall | watchers | wrappers | runtime bootstrap/reset | scanners | repeated verification layers`.
 
-`duplicated calls | excessive coupling | inefficient/unbounded queries | missing pagination/cache semantics | flaky/non-deterministic checks | config drift | unused dependencies | unsafe retries | observability gaps | hidden fallback | resource leaks`.
+For the affected scenario measure/trace as applicable:
 
-Avoid cosmetic quality work while a higher semantic/root cause remains unresolved unless independent and non-blocking.
+```text
+wall-clock duration
+invocation count
+child-process fan-out
+repository scans / glob breadth
+parsing / hashing / dependency-discovery repetition
+disk I/O
+network operations
+DB/runtime startup/reset work
+regeneration/materialization
+cache hit/miss and cache invalidation
+same-input repeated work
+full-workspace work triggered by affected-only change
+nested aggregate commands executing the same assurance twice
+```
 
-## 16. Supply-chain/project automation evidence
+Then execute:
 
-When dependencies or project automation materially change, inspect as applicable:
+```text
+MEASURE BASELINE
+→ TRACE CALL GRAPH / TRIGGERS
+→ PROVE ROOT COST
+→ IDENTIFY UNIQUE ASSURANCE OF EACH LAYER
+→ REMOVE / MERGE / ROUTE / CACHE / NARROW / REORDER
+→ VERIFY ASSURANCE/CORRECTNESS DID NOT DECREASE
+→ MEASURE SAME SCENARIO AGAIN
+→ PROVE NO MATERIAL COST SHIFT
+```
 
-`lockfile integrity | unsupported/duplicate dependency | vulnerability/licensing policy when governed | secret leakage | action/tool pinning | build/release references | removed-path references`.
+`COMPLEXITY WITHOUT PROVEN UNIQUE VALUE = REMOVE OR SIMPLIFY.`
 
-Do not silence a scanner or weaken a project check simply to obtain green. Prove false positives or fix the real root.
+Do not adopt rigid numeric laws such as “exactly one registry” when the domain genuinely needs more than one authority boundary. The invariant is one canonical owner per concept and no duplicated assurance/cost without proven value.
 
-This section concerns the target project only. No tool, workflow, guard or scanner is required or permitted for orchestrator self-certification.
+## 16. Control-path anti-patterns
 
-## 17. Closure for this focus
+Explicitly inspect for:
 
-Close only when canonical data/contract/runtime/security/finance truth is consistent through every materially affected writer/reader/consumer, required migration/cutover and failure/recovery behavior is proven, runtime provenance is sufficient for the claim, obsolete authority is removed, and verification strength matches the risk.
+- nested aggregate scripts that invoke already-included checks;
+- full workspace verification by default when affected proof is sufficient;
+- the same repository parsing/hash/graph construction repeated in one execution;
+- duplicated workflow + local guard enforcement of the same claim without distinct value;
+- multiple routers/registries answering the same question;
+- generators that materialize outputs during read-only verification;
+- cache invalidation that makes caching ceremonial;
+- “green” speedups achieved by skipping required assurance;
+- moving expensive work from local to CI (or vice versa) without reducing total cost;
+- policy/guard layers that only assert the existence/text of another policy rather than a project property.
+
+## 17. Quality/performance and supply chain
+
+Inspect correctness/operability impacts such as excessive coupling, inefficient/unbounded queries, missing pagination/cache semantics, flaky checks, config drift, unused dependencies, unsafe retries, observability gaps, resource leaks, lockfile integrity, unsupported/duplicate dependencies, vulnerability/licensing policy where governed, secret leakage, action/tool pinning and removed-path references.
+
+Do not silence scanners or weaken checks to obtain green; prove false positives or fix the root.
+
+## 18. Closure for this focus
+
+Close only when canonical data/contract/runtime/security/finance truth is consistent through materially affected consumers, migration/cutover and failure/recovery are proven, runtime provenance matches the claim, obsolete authority is removed, verification strength matches risk, and any engineering-control-path root has comparable before/after evidence with preserved assurance and no material cost shift.
+
+Package independence/self-validation rules remain governed solely by `00-ORCHESTRATOR.md`.

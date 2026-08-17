@@ -1,142 +1,124 @@
 #!/usr/bin/env node
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fail, repoRoot, toPosix } from "./_guard-utils.mjs";
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-const PROMPT_ROOT = path.join(ROOT, "tools", "prompting", "bthwani-orchestrator");
-const CONTRACT = path.join(PROMPT_ROOT, "00-ORCHESTRATOR.md");
-const PACKAGE_JSON = path.join(ROOT, "package.json");
-const REQUIRED_COMMAND_GATE = path.join(ROOT, "tools", "guards", "required-command-integrity-gate.mjs");
-const EXPECTED_PACKAGE_FILES = [
-  "00-ORCHESTRATOR.md",
-  "01-SCOPE-AUTHORITY-RULES.md",
-  "02-DIAGNOSE-ROOT-CAUSE.md",
-  "03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md",
-  "04-VERIFY-REDIAGNOSE-CLOSE.md",
-  "99-SOURCE-MAP.md",
-  "focus/code-architecture-organization.md",
-  "focus/data-contracts-runtime-security-quality.md",
-  "focus/governance-product-design.md",
-].sort();
+const guardId = "governance-schema-gate";
+const violations = [];
+const authorityRoot = "governance/authority";
+const registryPath = `${authorityRoot}/authority-precedence.json`;
+const registrySchemaPath = `${authorityRoot}/authority-precedence.schema.json`;
+const allowedClassifications = new Set([
+  "ROOT_AUTHORITY",
+  "ACTIVE_CANONICAL",
+  "CONDITIONAL_CANONICAL",
+  "OWNER_CONTRACT",
+  "ADAPTER",
+  "DERIVED_SUPPORT",
+  "HISTORICAL_REFERENCE",
+]);
 
-let failed = false;
-
-function fail(message) {
-  console.error(`governance-schema-gate: FAIL: ${message}`);
-  failed = true;
+function issue(file, message) {
+  violations.push({ file, line: 0, message });
 }
 
-function readFile(file) {
-  if (!fs.existsSync(file) || !fs.statSync(file).isFile()) {
-    fail(`missing ${path.relative(ROOT, file)}`);
-    return "";
+function readJson(relativePath) {
+  const full = path.join(repoRoot, relativePath);
+  if (!fs.existsSync(full) || !fs.statSync(full).isFile()) {
+    issue(relativePath, "MISSING_REQUIRED_GOVERNANCE_FILE");
+    return null;
   }
-  return fs.readFileSync(file, "utf8");
-}
-
-function requireMarkers(label, text, markers) {
-  for (const marker of markers) if (!text.includes(marker)) fail(`${label} missing ${marker}`);
-}
-
-function listFiles(root, prefix = "") {
-  if (!fs.existsSync(root)) return [];
-  return fs.readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
-    const relative = path.join(prefix, entry.name);
-    return entry.isDirectory() ? listFiles(path.join(root, entry.name), relative) : [relative.replaceAll("\\", "/")];
-  });
-}
-
-function rejectLegacyMarkers(label, text, patterns) {
-  for (const [name, pattern] of patterns) if (pattern.test(text)) fail(`${label}: ${name}`);
-}
-
-const actualPackageFiles = listFiles(PROMPT_ROOT).sort();
-if (actualPackageFiles.join("\n") !== EXPECTED_PACKAGE_FILES.join("\n")) {
-  fail(`orchestrator package surface drift expected=${EXPECTED_PACKAGE_FILES.join(",")} actual=${actualPackageFiles.join(",")}`);
-}
-
-const contract = readFile(CONTRACT);
-const packageText = readFile(PACKAGE_JSON);
-const requiredCommandGate = readFile(REQUIRED_COMMAND_GATE);
-
-if (packageText) {
   try {
-    const packageJson = JSON.parse(packageText);
-    if (packageJson.scripts?.["guard:governance-schema"] !== "node tools/guards/governance-schema-gate.mjs") {
-      fail("package.json guard:governance-schema command drift");
-    }
+    return JSON.parse(fs.readFileSync(full, "utf8"));
   } catch (error) {
-    fail(`package.json invalid JSON: ${error.message}`);
+    issue(relativePath, `INVALID_JSON ${error.message}`);
+    return null;
   }
 }
-if (requiredCommandGate && !requiredCommandGate.includes("governance-schema-gate.mjs")) {
-  fail("required-command-integrity-gate.mjs does not execute governance-schema-gate.mjs");
+
+function walkJson(dir, files = []) {
+  if (!fs.existsSync(dir)) return files;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) walkJson(full, files);
+    else if (entry.name.endsWith(".json")) files.push(toPosix(path.relative(repoRoot, full)));
+  }
+  return files;
 }
 
-requireMarkers("00-ORCHESTRATOR.md", contract, [
-  "PACKAGE_CLASS: PROTECTED_ENGINEERING_CONTROL_PLANE",
-  "DEFAULT_EXECUTION: LIVE_END_TO_END",
-  "DEFAULT_PLAN_ARTIFACTS: FORBIDDEN",
-  "DEFAULT_ORCHESTRATOR_MUTABILITY: READ_ONLY",
-  "resolve exact repository + branch/ref",
-  "SELECT HIGHEST PROVEN SYSTEMIC ROOT",
-  "RE-DIAGNOSE AFFECTED SYSTEM",
-  "DECISION_REQUIRED",
-  "CLOSED",
-]);
-rejectLegacyMarkers("00-ORCHESTRATOR.md", contract, [
-  ["V5_SCHEMA_FORBIDDEN", /BTHWANI_ORCHESTRATOR_SCHEMA:\s*5/],
-  ["PLAN_PACKAGE_AUTHORITY_FORBIDDEN", /ONE_TASK_ONE_PACKAGE|BTHWANI_PACKAGE_V5/],
-]);
+// This guard validates live repository governance contracts only.
+// It intentionally does not read or validate tools/prompting/bthwani-orchestrator/**.
+for (const relative of walkJson(path.join(repoRoot, "governance"))) readJson(relative);
 
-requireMarkers("01-SCOPE-AUTHORITY-RULES.md", readFile(path.join(PROMPT_ROOT, "01-SCOPE-AUTHORITY-RULES.md")), [
-  "GOVERNANCE ≠ AUTOMATIC TRUTH",
-  "REQUESTED_SCOPE ≠ MAXIMUM_ALLOWED_SCOPE",
-  "NOT_INSPECTED ≠ CLEAN",
-  "Default execution writes nothing to `plans/**`",
-  "Orchestrator protection",
-]);
-requireMarkers("02-DIAGNOSE-ROOT-CAUSE.md", readFile(path.join(PROMPT_ROOT, "02-DIAGNOSE-ROOT-CAUSE.md")), [
-  "DISCOVER → MODEL → HYPOTHESIZE",
-  "operational parent",
-  "DEEPENED_ENOUGH_TO_RANK",
-  "JIT execution frontier",
-  "Re-diagnosis after every material root",
-]);
-requireMarkers("03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md", readFile(path.join(PROMPT_ROOT, "03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md")), [
-  "IDENTIFY CANONICAL OWNER / WRITE PATH",
-  "MIGRATE ALL MATERIAL WRITERS",
-  "Canonical cutover",
-  "zero-reference/reachability proof",
-  "runtime/readback proof",
-  "Orchestrator package exclusion",
-]);
-requireMarkers("04-VERIFY-REDIAGNOSE-CLOSE.md", readFile(path.join(PROMPT_ROOT, "04-VERIFY-REDIAGNOSE-CLOSE.md")), [
-  "Verification proves claims, not activity",
-  "Exact candidate evidence",
-  "Final negative-space pass",
-  "Final adversarial re-diagnosis",
-  "LATEST_EXACT_HEAD_RECONCILED",
-]);
-requireMarkers("99-SOURCE-MAP.md", readFile(path.join(PROMPT_ROOT, "99-SOURCE-MAP.md")), [
-  "STATUS: MIGRATION_RECORD_ONLY",
-  "RUNTIME_AUTHORITY: NO",
-  "protected 9-file orchestrator",
-  "UNACCOUNTED_REVIEWED_MATERIAL_CONCEPTS = 0",
-]);
+const registry = readJson(registryPath);
+const schema = readJson(registrySchemaPath);
 
-for (const relative of EXPECTED_PACKAGE_FILES.slice(6)) {
-  const text = readFile(path.join(PROMPT_ROOT, relative));
-  if (!text.trim()) fail(`${relative} is empty`);
+if (schema) {
+  if (schema.type !== "object") issue(registrySchemaPath, "AUTHORITY_SCHEMA_ROOT_TYPE_MUST_BE_OBJECT");
+  const required = new Set(schema.required ?? []);
+  for (const key of ["schemaVersion", "rootAuthority", "precedence", "documents"]) {
+    if (!required.has(key)) issue(registrySchemaPath, `AUTHORITY_SCHEMA_REQUIRED_KEY_MISSING ${key}`);
+  }
 }
 
-for (const dir of [
-  path.join(ROOT, "tools", "guards", "orchestrator"),
-  path.join(ROOT, "tools", "orchestrator"),
-]) {
-  if (fs.existsSync(dir)) fail(`obsolete orchestrator implementation remains: ${path.relative(ROOT, dir)}`);
+if (registry) {
+  if (registry.schemaVersion !== 1) issue(registryPath, "AUTHORITY_SCHEMA_VERSION_MUST_BE_1");
+  if (registry.rootAuthority !== registryPath) issue(registryPath, `ROOT_AUTHORITY_MUST_SELF_IDENTIFY ${registryPath}`);
+
+  if (!Array.isArray(registry.precedence) || registry.precedence.length === 0) issue(registryPath, "PRECEDENCE_MUST_BE_NON_EMPTY_ARRAY");
+  if (!Array.isArray(registry.documents) || registry.documents.length === 0) issue(registryPath, "DOCUMENTS_MUST_BE_NON_EMPTY_ARRAY");
+
+  const precedenceIds = new Set();
+  const ranks = new Set();
+  for (const entry of registry.precedence ?? []) {
+    if (!Number.isInteger(entry.rank) || entry.rank < 1) issue(registryPath, `INVALID_PRECEDENCE_RANK ${entry.rank}`);
+    if (ranks.has(entry.rank)) issue(registryPath, `DUPLICATE_PRECEDENCE_RANK ${entry.rank}`);
+    ranks.add(entry.rank);
+    if (typeof entry.id !== "string" || !/^[A-Z0-9_]+$/.test(entry.id)) issue(registryPath, `INVALID_PRECEDENCE_ID ${entry.id}`);
+    if (precedenceIds.has(entry.id)) issue(registryPath, `DUPLICATE_PRECEDENCE_ID ${entry.id}`);
+    precedenceIds.add(entry.id);
+    if (typeof entry.description !== "string" || entry.description.trim() === "") issue(registryPath, `EMPTY_PRECEDENCE_DESCRIPTION ${entry.id}`);
+  }
+
+  const orderedRanks = [...ranks].sort((a, b) => a - b);
+  for (let i = 0; i < orderedRanks.length; i += 1) {
+    if (orderedRanks[i] !== i + 1) issue(registryPath, `PRECEDENCE_RANKS_MUST_BE_CONTIGUOUS actual=${orderedRanks.join(",")}`);
+  }
+
+  const documentPaths = new Set();
+  for (const entry of registry.documents ?? []) {
+    const relative = toPosix(String(entry.path ?? "").trim());
+    if (!relative) {
+      issue(registryPath, "DOCUMENT_PATH_MISSING");
+      continue;
+    }
+    if (documentPaths.has(relative)) issue(registryPath, `DUPLICATE_DOCUMENT_PATH ${relative}`);
+    documentPaths.add(relative);
+
+    if (!allowedClassifications.has(entry.classification)) issue(registryPath, `INVALID_DOCUMENT_CLASSIFICATION ${relative}:${entry.classification}`);
+    if (!precedenceIds.has(entry.precedenceId)) issue(registryPath, `UNKNOWN_DOCUMENT_PRECEDENCE ${relative}:${entry.precedenceId}`);
+    if (!Array.isArray(entry.authorityDomains) || entry.authorityDomains.length === 0) issue(registryPath, `EMPTY_AUTHORITY_DOMAINS ${relative}`);
+    else if (new Set(entry.authorityDomains).size !== entry.authorityDomains.length) issue(registryPath, `DUPLICATE_AUTHORITY_DOMAIN ${relative}`);
+    if (entry.classification === "CONDITIONAL_CANONICAL" && (typeof entry.appliesWhen !== "string" || entry.appliesWhen.trim() === "")) {
+      issue(registryPath, `CONDITIONAL_AUTHORITY_REQUIRES_APPLIES_WHEN ${relative}`);
+    }
+
+    const target = path.join(repoRoot, relative);
+    if (!fs.existsSync(target)) issue(registryPath, `REGISTERED_AUTHORITY_PATH_MISSING ${relative}`);
+
+    if ((relative.startsWith("plans/") || relative.startsWith("tools/prompting/")) && !["DERIVED_SUPPORT", "HISTORICAL_REFERENCE"].includes(entry.classification)) {
+      issue(registryPath, `DERIVED_PROMPT_OR_PLAN_CANNOT_BE_CANONICAL_AUTHORITY ${relative}:${entry.classification}`);
+    }
+  }
+
+  const rootEntry = (registry.documents ?? []).find((entry) => entry.path === registryPath);
+  if (!rootEntry || rootEntry.classification !== "ROOT_AUTHORITY") issue(registryPath, "ROOT_AUTHORITY_REGISTRY_ENTRY_MISSING_OR_MISCLASSIFIED");
+
+  const currentUser = (registry.precedence ?? []).find((entry) => entry.id === "CURRENT_USER_INSTRUCTION");
+  if (!currentUser) issue(registryPath, "CURRENT_USER_INSTRUCTION_PRECEDENCE_MISSING");
+  else if (!/safety/i.test(currentUser.description) || !/permission/i.test(currentUser.description)) {
+    issue(registryPath, "CURRENT_USER_INSTRUCTION_MUST_EXPLICITLY_REMAIN_SUBJECT_TO_SAFETY_AND_PERMISSIONS");
+  }
 }
 
-if (failed) process.exit(1);
-console.log("governance-schema-gate: PASS");
+fail(guardId, violations);

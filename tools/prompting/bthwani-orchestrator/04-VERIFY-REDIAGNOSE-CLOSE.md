@@ -2,27 +2,17 @@
 
 ## 1. Verification proves claims, not activity
 
-Choose the **smallest sufficient proof that can actually falsify/prove the claim**, then escalate by material risk.
+Choose the **smallest sufficient proof that can falsify/prove the claim**, then escalate by material risk.
 
 Typical progression:
 
 `direct code/contract inspection → nearest unit/module regression → affected integration/type/lint/build → contract/data/security/isolation → runtime/readback → cross-surface/E2E/visual → broad final closure checks`.
 
-Do not automatically run the heaviest suite. Do not use a weak check to make a stronger claim.
+Do not automatically run the heaviest suite and do not use a weak check to make a stronger claim.
 
 ## 2. Risk-proportional escalation
 
-Escalate especially when materially involved:
-
-- public contracts/API/events;
-- database/migrations/data mutation;
-- finance/money/provider outcome;
-- security/auth/authz/privacy/secrets/isolation;
-- runtime/infrastructure/provider behavior;
-- move/delete/repository ownership restructuring;
-- governance semantics;
-- multi-surface journeys;
-- release/production claims.
+Escalate especially for public contracts/events, database/migrations, finance/provider outcomes, security/auth/privacy/isolation, runtime/infrastructure, structural move/delete, governance semantics, multi-surface journeys and release/production claims.
 
 ## 3. Proof limits
 
@@ -38,15 +28,13 @@ MOCK PASS ≠ REAL PROVIDER/RUNTIME PASS
 DOC UPDATED ≠ IMPLEMENTATION FIXED
 ```
 
-For material evidence state what it proves and what it does not prove.
+State what material evidence proves and what it does not prove.
 
 ## 4. Candidate lifecycle
 
-Use precise identities:
-
 ```text
 STARTING_LIVE_HEAD
-= exact target ref head at task start.
+= exact target-ref head at task start.
 
 WORK_BASE_HEAD
 = latest reconciled head used to build the current owned delta.
@@ -64,62 +52,46 @@ HEAD_AT_DECISION
 = live target head immediately before final closure decision.
 ```
 
-Any material write after `FINAL_CANDIDATE` creates a new candidate and invalidates affected evidence.
-
-Do not mix evidence from different candidate SHAs/runs/environments and call it one closure proof.
+Any material write after `FINAL_CANDIDATE` creates a new candidate and invalidates affected evidence. Never mix evidence from different candidates/runs/environments and call it one proof set.
 
 ## 5. Exact-candidate evidence
 
 Before final closure:
 
-```text
-freeze intended project writes
-→ resolve FINAL_CANDIDATE identity
-→ verify candidate exists/relation to target
-→ bind required evidence to candidate/runtime derived from it
-→ re-resolve target at decision time
-```
+`freeze intended writes → resolve FINAL_CANDIDATE → prove relation to target → bind required evidence to candidate/runtime derived from it → re-resolve target at decision time`.
 
-If the claim is closure of the current target branch/head, `HEAD_AT_DECISION` must be reconciled with and proven by the closure evidence. An older reviewed commit cannot silently prove a newer head.
+An older reviewed commit cannot silently prove a newer target head.
 
 ## 6. Runtime provenance/freshness
 
-Runtime evidence must establish enough provenance to exclude stale execution, as applicable:
+Runtime evidence must exclude stale execution as applicable:
 
-```text
-candidate/source identity
-artifact/image/bundle identity
-service/process/container freshness
-schema/migration level
-runtime endpoint/profile/config
-seed/fixture/data provenance
-observed canonical readback
-```
+`candidate/source identity | artifact/image/bundle identity | service/process/container freshness | schema/migration level | runtime endpoint/profile/config | seed/fixture provenance | canonical readback`.
 
-A screenshot, API response or green smoke result without sufficient provenance cannot prove a high-risk runtime claim.
+A screenshot, API response or smoke result without sufficient provenance cannot prove a high-risk runtime claim.
 
 ## 7. Required verification dimensions
 
-Verify where materially applicable:
+Verify where material:
 
-- root cause actually removed;
-- actual source of defect corrected;
+- root cause actually removed and actual source corrected;
 - canonical owner/write path enforced;
-- all affected writers/readers/consumers migrated;
+- affected writers/readers/consumers migrated;
 - success/failure/recovery/unknown-result paths;
 - state transitions/invariants;
 - cross-surface semantic consistency;
 - frontend/backend/data/contract vertical integrity;
 - authorization/security/isolation;
-- data integrity, migration/backfill/cutover/readback;
+- data migration/backfill/cutover/readback;
 - idempotency/replay/concurrency/restart;
 - runtime/config/provider behavior;
 - governance/product/policy synchronization;
 - deletion/retirement of superseded reachable paths;
-- absence of newly introduced parallel truth;
-- preservation of proven design/value through restructuring;
-- repository naming/placement/reference integrity;
-- absence of directly related cleanup residue.
+- absence of new parallel truth;
+- preservation of proven design/value;
+- naming/placement/reference integrity;
+- directly related cleanup residue removed;
+- engineering-control-path assurance/performance before→after when that root was treated.
 
 ## 8. Failure/edge verification
 
@@ -127,169 +99,94 @@ Cover materially applicable:
 
 `success | empty/missing | invalid/malformed | unauthenticated | denied | wrong role/scope | IDOR | forbidden state | not found | stale/conflict | boundary/min/max | duplicate/replay | idempotency | race/concurrency | partial failure | dependency/database/network/provider failure | timeout/unknown result | retry/backoff/DLQ | offline/reconnect | restart/recovery | old/new data | mixed-version | rollback/roll-forward | compensation/reconciliation`.
 
-A happy-path-only proof is insufficient when any of these are material to correctness.
+## 9. CI/runtime failure classification
 
-## 9. CI/runtime failure classification — no blind rerun
+Classify first causal failure:
 
-When project CI/runtime evidence fails, identify the first real causal failure and classify:
+`DETERMINISTIC_PRODUCT | DETERMINISTIC_TEST_OR_CONTRACT | INFRA_OR_RUNNER | EXTERNAL_PROVIDER | FLAKY_OR_NONDETERMINISTIC | CANCELLED_OR_SUPERSEDED | STALE_RUN`.
 
-```text
-DETERMINISTIC_PRODUCT
-DETERMINISTIC_TEST_OR_CONTRACT
-INFRA_OR_RUNNER
-EXTERNAL_PROVIDER
-FLAKY_OR_NONDETERMINISTIC
-CANCELLED_OR_SUPERSEDED
-STALE_RUN
-```
-
-Treatment:
-
-```text
-DETERMINISTIC_* → root-cause fix before rerun.
-INFRA/PROVIDER → prove external cause before targeted retry.
-FLAKY → flakiness itself remains a defect until controlled/proven.
-CANCELLED/SUPERSEDED → neither PASS nor product FAIL.
-STALE_RUN → cannot prove current candidate.
-```
-
-Do not rerun deterministic failures repeatedly to manufacture green.
+Deterministic failures require root correction before rerun. Flakiness remains a defect until controlled/proven. Cancelled/superseded is neither PASS nor product FAIL. Stale runs cannot prove current candidate.
 
 ## 10. Evidence invalidation
 
-For material evidence reason about:
-
-```text
-bound candidate
-inputs/environment
-covered scope
-what changes invalidate it
-```
+For each material evidence item reason about bound candidate, inputs/environment, covered scope and what changes invalidate it.
 
 Examples:
 
-```text
-contract/schema change → reverify generators/consumers/integration.
-data/migration owner change → reverify DB/runtime/readback.
-runtime/config/network change → reverify affected runtime/E2E.
-auth/permission change → reverify negative isolation/security paths.
-shared canonical library change → reverify all proven consumers.
-unrelated documentation-only change → retain evidence only when independence is actually provable.
-```
+- contract/schema change → reverify generators/consumers/integration;
+- data/migration owner change → reverify DB/runtime/readback;
+- runtime/config/network change → reverify affected runtime/E2E;
+- auth/permission change → reverify negative isolation/security paths;
+- shared canonical library change → reverify all proven consumers;
+- unrelated documentation-only change → retain evidence only when independence is actually provable.
 
 Rerun what is invalidated; do not rerun everything mechanically and do not retain stale proof.
 
 ## 11. Affected-only first
 
-Begin with nearest proof for the affected cone. Broaden when:
-
-- shared/canonical ownership changed;
-- multiple surfaces/services depend on the root;
-- public contract/data/runtime boundary changed;
-- targeted evidence fails or leaves material uncertainty;
-- feature/project closure is claimed.
+Begin with nearest proof. Broaden when shared/canonical ownership changed, multiple consumers depend on root, public contract/data/runtime boundary changed, targeted evidence leaves material uncertainty, or feature/project closure is claimed.
 
 Speed comes from accurate scope, not weaker proof.
 
-## 12. Zero-reference and reachability proof
-
-After cutover/removal inspect materially relevant:
-
-`imports/exports/re-exports | routes/navigation | callers/callees | writers/readers | contracts/generated consumers | DB/schema/migrations | runtime/config | tests/CI | project scripts/manifests | governance/documentation references`.
-
-Textual zero-reference search may be necessary but is not sufficient by itself. Also prove no runtime/reachable alternate path, registration, indirect consumer or authoritative data writer remains.
-
-## 13. Re-diagnosis after every material root
+## 12. Review provenance
 
 ```text
-reinspect affected product/operational outcome
-→ rerun affected journey/actor/state/handoff traces
-→ rerun ownership/contract/data/runtime traces
-→ invalidate descendant findings that were symptoms
-→ discover newly exposed roots
-→ rebuild affected coverage
-→ rerank
+SELF_REVIEW ≠ INDEPENDENT_REVIEW
 ```
 
-Never mechanically execute an old finding list after the system truth changes.
+Do not label self-review as independent. When a governing policy or risk decision requires independent review, prove reviewer provenance and exact candidate binding. If the reviewer mutates the candidate, the previous review no longer independently proves the new candidate.
 
-## 14. Final finishing gate
+Independent review is not mandatory by default merely because it existed in a historical package; it is risk/policy-driven.
 
-Before final candidate freeze, every materially affected remaining artifact should have a defensible:
+## 13. Zero-reference and reachability proof
+
+After cutover/removal inspect materially relevant imports/exports/re-exports, routes/navigation, callers/callees, writers/readers, contracts/generated consumers, DB/schema/migrations, runtime/config, tests/CI, scripts/manifests and governance/docs references.
+
+Textual zero-reference search may be necessary but is insufficient alone; prove no runtime/reachable alternate path or authoritative writer remains.
+
+## 14. Re-diagnosis after every material root
+
+`reinspect operational outcome → rerun affected journey/actor/state/handoff traces → rerun ownership/contract/data/runtime traces → invalidate descendant symptoms → discover exposed roots → rebuild affected coverage → rerank`.
+
+Never mechanically execute an old finding list after system truth changes.
+
+## 15. Final finishing gate
+
+Before freeze, every materially affected remaining artifact needs a defensible:
 
 `Responsibility | Purpose | Consumer | Requirement | Correct Owner | Correct Placement | Correct Naming/Context`.
 
-Closure is blocked by known materially related:
+Closure is blocked by known related dead/unreachable code, superseded implementation, duplicate authority, stale/orphan reference, old path/alias, misleading naming, wrong placement/ownership, unused dependency, obsolete config/env/flag/script, workaround/fallback, stale docs/comments/examples, debug/temp artifact or unjustified compatibility residue.
 
-`dead/unreachable code | superseded implementation | duplicate authority | stale/orphan reference | old path/alias | misleading naming | wrong placement/ownership | unused dependency | obsolete config/env/flag | stale project script | TODO/FIXME/HACK substitute | workaround/fallback | stale documentation/comment/example | debug/temp artifact | unjustified compatibility residue`.
+## 16. Final freeze and branch-race gate
 
-Do not pull unrelated cosmetic cleanup into the task.
+After required writes:
 
-## 15. Final freeze
-
-After all required writes and structural finishing:
-
-```text
-FREEZE PROJECT WRITES
-→ FINAL_CANDIDATE = exact last allowed candidate
-→ no formatter/generator/fix/cleanup/source mutation during final evidence
-```
+`FREEZE PROJECT WRITES → FINAL_CANDIDATE = exact last allowed candidate → final evidence is read-only with respect to candidate`.
 
 Any subsequent material write reopens the candidate cycle.
 
-Final verification should be read-only with respect to the candidate.
-
-## 16. Branch-race gate
-
-Immediately before push/ref update and before final decision:
-
-```text
-re-resolve target HEAD
-→ compare with expected parent/candidate
-→ classify movement using 01-SCOPE-AUTHORITY-RULES.md
-```
-
-If the head moved materially:
-
-`DO NOT FORCE → reconcile → rebuild affected candidate → rerun invalidated evidence`.
-
-Evidence from a workflow/run remains bound to the SHA it actually tested even if the branch moves while it runs.
+Immediately before ref update/push and final decision re-resolve target HEAD and classify movement under `01`. Do not force stale candidates over newer truth.
 
 ## 17. Final negative-space pass
 
-Deliberately search for what should exist but may be missing:
+Search deliberately for missing consumer/surface, route/handler/contract field, writer/readback, failure/recovery path, authorization boundary, handoff/intervention, migration/compatibility transition, hidden duplicate/legacy truth and missing operational/audit evidence required by the claim.
 
-- missing consumer/surface;
-- missing route/handler/contract field;
-- missing writer/readback;
-- missing failure/recovery path;
-- missing authorization boundary;
-- missing handoff/intervention;
-- missing migration/compatibility transition;
-- hidden duplicate/legacy truth;
-- missing operational/audit evidence required by the claim.
-
-Unexplained material absence is open.
+Unexplained material absence remains open.
 
 ## 18. Final adversarial re-diagnosis
 
-Assume the closure claim is false and try to prove it.
+Assume closure is false and search for:
 
-Search for:
+`missed domain/capability | duplicate truth | stale/wrong governance | hidden consumer/writer | reachable old path | contract/data mismatch | cross-surface mismatch | failure/recovery gap | runtime divergence | stale process/data | unresolved semantic ambiguity | patch/workaround | race/idempotency issue | security/isolation issue | wrong placement/naming/context | orphan references | assurance loss/cost shift in tooling changes`.
 
-`missed domain/capability | remaining duplicate truth | stale/wrong governance | hidden consumer/writer | reachable old path | contract/data mismatch | cross-surface mismatch | failure/recovery gap | runtime divergence | stale process/data | unresolved semantic ambiguity | patch/workaround | race/idempotency issue | security/isolation issue | wrong placement/naming/context | orphan references`.
-
-If a material issue is found:
-
-`REOPEN → prove root → execute → verify → adversarially re-diagnose again`.
+Any material issue reopens diagnosis/treatment/verification.
 
 ## 19. Coverage vs closure
 
-`COVERAGE_COMPLETE` means all required material nodes are accounted for and inspected or proven N/A.
+`COVERAGE_COMPLETE` means required material nodes are accounted for and inspected or proven N/A.
 
 `CLOSURE_COMPLETE` additionally means all material roots/findings are treated and verified on the correct candidate/runtime.
-
-Never conflate them.
 
 ## 20. Closure equation
 
@@ -324,21 +221,10 @@ AND FINAL_NEGATIVE_SPACE_PASS
 AND FINAL_ADVERSARIAL_REDIAGNOSIS_PASS
 ```
 
-If any conjunct is unproven, state is `OPEN` unless a true `DECISION_REQUIRED` or `EXTERNAL_BLOCKER` applies.
+If any conjunct is unproven, state is `OPEN` unless a valid `DECISION_REQUIRED` or `EXTERNAL_BLOCKER` applies.
 
 ## 21. Final report
 
-Keep reporting concise and evidence-based. State:
+Keep reporting concise and evidence-based: repository/ref, starting/final observed HEAD, final candidate relation, highest roots treated, canonical owners, migrations/cutovers/cleanup, affected consumers/surfaces, verification actually performed and proof limits, runtime provenance/readback when claimed, foreign-delta reconciliation, remaining true blocker/decision, and final state.
 
-- repository/ref and starting/final observed HEAD;
-- final candidate and its relation to the target head;
-- highest roots treated and canonical owners;
-- major migrations/cutovers/cleanup;
-- affected writers/readers/consumers/surfaces;
-- verification actually performed and proof limits;
-- runtime provenance/readback when claimed;
-- foreign/concurrent delta reconciliation;
-- remaining true decision/external blocker, if any;
-- final state: `CLOSED` or `OPEN`.
-
-Do not create a large evidence package merely to report completion. Do not use any script, workflow, guard, validator, CLI or registry to self-certify this orchestrator.
+Package independence/self-validation rules remain governed solely by `00-ORCHESTRATOR.md`.

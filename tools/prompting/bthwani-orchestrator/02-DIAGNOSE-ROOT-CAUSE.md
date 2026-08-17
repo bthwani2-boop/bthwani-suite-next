@@ -4,8 +4,6 @@
 
 Diagnosis exists to choose and prove the correct treatment, not to generate a report or enumerate every low-level defect before useful execution can begin.
 
-Use:
-
 ```text
 DISCOVER
 → MODEL
@@ -21,23 +19,23 @@ DISCOVER
 
 ## 2. Whole-system semantic descent
 
-For broad/project closure diagnose top-down:
+For broad/project work diagnose top-down:
 
 `Mission/Product Outcomes → User/Operator Experience → Domains/Capabilities → Actors/Identities → Authorities/Responsibilities → Journeys → States/Transitions/Preconditions/Decision Rules/Invariants → Handoffs/Cross-Surface Meaning → Canonical Owners/Writers/Readers/Consumers → Contracts/APIs/Events → Data/Persistence/Readback → Services → Surfaces → Runtime/Config/Infrastructure → Code → Tests/CI/Observability`.
 
-For a narrow target, start at the highest material meaning inside that target and expand only where evidence proves relation.
+For a narrow target start at the highest material meaning inside it and expand only where evidence proves relation.
 
-Do not let the first TypeScript/Go error, failing test, API response, migration, table, route or local smell dictate the task before its semantic parent is understood.
+Do not let the first TypeScript/Go error, failing test, endpoint, migration, table, route or local smell dictate execution before its semantic parent is understood.
 
-## 3. User experience is operational meaning
+## 3. UX is operational meaning
 
 Treat UX as the full reality lived by an actor:
 
 `entry → understanding → available actions → authorization → decision → state change → feedback → handoff → later readback → failure → recovery → terminal outcome`.
 
-A cross-surface discrepancy is not merely a visual defect if it expresses a different state, authority, responsibility or canonical fact.
+A cross-surface discrepancy is material when it expresses a different state, authority, responsibility or canonical fact, even if each screen is locally functional.
 
-## 4. Material coverage ledger
+## 4. Material coverage
 
 Coverage is a live reasoning model, not a required repository file.
 
@@ -47,7 +45,7 @@ Material nodes progress conceptually through:
 
 or `N/A_PROVEN`.
 
-Required coverage dimensions when materially applicable:
+Required dimensions when materially applicable:
 
 - product/business outcome and semantic intent;
 - actors, identities, roles, authorities and responsibilities;
@@ -59,41 +57,21 @@ Required coverage dimensions when materially applicable:
 - contracts, APIs, generated clients, schemas and events;
 - data, database, migrations, consistency and persisted readback;
 - runtime, configuration, networking, infrastructure and providers;
-- security/isolation/privacy;
-- finance when applicable;
+- security/isolation/privacy and finance where applicable;
 - testing, CI, observability and operational proof;
 - repository structure, naming, duplication, dead/stale/legacy paths;
-- governance/product/policy consistency.
+- governance/product/policy consistency;
+- engineering execution/toolchain cost when materially implicated.
 
-Missing required coverage remains open. Coverage complete is not closure complete.
+Coverage complete is not closure complete.
 
 ## 5. Broad discovery before deep local repair
 
-Start without asking the human for facts that can be discovered. Build the material landscape:
+Build the material landscape without asking for discoverable facts:
 
-```text
-Product outcomes
-Actors/identities
-Roles/permissions/scopes
-Authorities/responsibilities
-Domains/capabilities
-Surfaces/routes/screens/tabs/actions
-Journeys
-States/transitions/preconditions/invariants
-Handoffs
-Canonical writers/readers/consumers
-Contracts/APIs/events
-Schemas/tables/constraints/migrations/backfills
-Jobs/queues/providers/callbacks
-Runtime/config/environment/networking
-Observability/audit
-Security/privacy/isolation
-Tests/CI/release/rollback
-Structure/ownership/naming/dependencies
-Dead/stale/duplicate/legacy/fallback residue
-```
+`Product outcomes | Actors/identities | Roles/permissions/scopes | Authorities/responsibilities | Domains/capabilities | Surfaces/routes/screens/tabs/actions | Journeys | States/transitions/preconditions/invariants | Handoffs | Writers/readers/consumers | Contracts/APIs/events | Schemas/tables/constraints/migrations/backfills | Jobs/queues/providers/callbacks | Runtime/config/environment/networking | Observability/audit | Security/privacy/isolation | Tests/CI/release/rollback | Structure/ownership/naming/dependencies | Dead/stale/duplicate/legacy/fallback residue`.
 
-For repository-wide scope, a material domain/surface/foundation may be excluded only with current non-impact proof.
+For repository-wide closure, a material domain/surface/foundation may be excluded only with current non-impact proof.
 
 ## 6. Journey Matrix
 
@@ -133,65 +111,46 @@ Do not diagnose Client, Partner, Captain, Field, Control Panel, backend and data
 
 Use all materially applicable angles; do not run expensive techniques blindly.
 
-### Logical analysis
+### Logical
+Actions legal in state, sufficient preconditions, valid decision rules, forbidden outcomes impossible, no purposeless step.
 
-Ask whether actions are legal in the state, preconditions are sufficient, decisions follow business rules, forbidden outcomes are impossible and each step has an operational purpose.
-
-### Causal/root trace
-
+### Causal/root
 `Observed behavior → immediate cause → canonical owner/writer → higher causal parent → Root Cause → consumers → blast radius → correct target behavior`.
 
-### Forward trace
-
+### Forward
 `Entry → Preconditions → Action → Validation → Decision → State Mutation → Handoff → Outcome/Readback`.
 
-### Reverse trace
-
+### Reverse
 `Observed Outcome/Data → Read Path → Writer → Transition/Decision → Preconditions → Initiating Actor/Entry`.
 
-### Temporal trace
-
+### Temporal
 `Before → Trigger → During → Pending → Complete/Fail → Retry/Timeout → Restart/Recovery → Later Readback`.
 
-Include stale state, delayed events, mixed timing across surfaces and state changes between display and action.
+Include stale state, delayed/out-of-order events, mixed-version timing and state changes between display and action.
 
-### Actor/responsibility trace
+### Actor/responsibility
+Prove who initiates, decides, executes, owns truth, may cancel/recover, receives handoff, waits and intervenes.
 
-Prove who initiates, decides, executes, owns truth, may cancel/recover, receives handoff, waits and intervenes operationally.
-
-### Cross-layer vertical trace
-
+### Cross-layer vertical
 `UX/UI → Surface State → Client Logic → Controller/Adapter → Canonical/Generated Contract → API → Auth/AuthZ → Domain/State Machine → Transaction/Data/Event/Provider → Runtime → Persisted Readback → Observable Result`.
 
-### Differential cross-surface trace
+### Differential cross-surface
+For the same entity/state/event compare meaning, available actions, timing and responsibility across every affected surface.
 
-For the same canonical entity/state/event compare meaning, available actions, timing and responsibility across every affected surface.
-
-### Invariant analysis
-
+### Invariant
 Extract what must never be violated, then try to violate it.
 
-### Counterfactual analysis
+### Counterfactual
+Test repeated action, absent next actor, late/out-of-order event, concurrent state change, restart, unknown provider result and mixed versions.
 
-Ask what happens if the next actor never responds, action is repeated, event arrives late/out of order, state changes concurrently, process/app restarts, provider returns unknown result or surfaces run mixed versions.
+### Negative space
+Search for missing journey/state/transition/action/validation/authorization/feedback/handoff/recovery/intervention/consumer/readback/ownership/decision rule.
 
-### Negative-space analysis
+### Experimental
+When capabilities permit: `falsifiable hypothesis → smallest real check → runtime/persisted readback → compare with semantic model → refine/reject`.
 
-Search for what should exist but is absent:
-
-`missing journey | state | transition | action | validation | authorization | feedback | handoff | recovery | intervention | consumer | readback | ownership | decision rule`.
-
-### Experimental validation
-
-When capabilities permit:
-
-`form falsifiable hypothesis → run smallest real check → observe runtime/persisted readback → compare to expected semantic model → refine/reject hypothesis`.
-
-Never claim runtime/E2E/visual evidence that was not actually obtained.
-
-### Adversarial diagnosis
-
-Assume the current explanation is wrong and deliberately search for contradictions, hidden writers/readers, silent fallback, stale state, race, partial transaction, permission leak, contract/data drift, legacy path, missing consumer, wrong owner/handoff or unhandled failure/recovery.
+### Adversarial
+Assume the current explanation is wrong and search for contradictory evidence, hidden writers/readers, fallback, stale state, race, partial transaction, permission leak, contract/data drift, legacy path, missing consumer, wrong owner/handoff or unhandled failure/recovery.
 
 ## 8. Full-stack operation trace
 
@@ -199,11 +158,11 @@ A material operation should be traceable, where applicable, through:
 
 `Product Truth → Actor/Service Identity → Session/Device → Trusted Scope → Role/Permission/Object Authorization → Surface/Route/Control → Shared Controller/Binding → Canonical/Generated Contract → API → Domain/State Machine → Validation/Transformation → Transaction/Database → Cache/Idempotency → Events/Jobs/Providers → Network/Response → Persisted Canonical Readback → Every Required Consumer/Surface → Audit/Observability/Runtime Evidence`.
 
-A successful screen, endpoint, build or unit test is never by itself End-to-End proof.
+A successful screen, endpoint, build or unit test is not End-to-End proof by itself.
 
-## 9. Findings ledger
+## 9. Findings Ledger
 
-Every material finding must be addressable and remain accounted for. Record at least:
+Every material finding remains addressable with at least:
 
 ```text
 Finding ID
@@ -227,23 +186,13 @@ Status
 Reopen trigger
 ```
 
-Useful statuses:
+Statuses:
 
 `OPEN | EVIDENCE/HOLD | FIXED_PENDING_VERIFY | PROVEN_CLOSED | NOT_APPLICABLE_WITH_PROOF`.
 
-A finding does not disappear because it no longer appears in the latest log.
+A finding does not disappear because it vanished from the latest log.
 
-## 10. Findings are evidence until promoted
-
-Every early technical finding starts as `EVIDENCE/HOLD`.
-
-Promote only after proving enough of:
-
-`operational parent + semantic meaning + causal chain + highest proven root + affected graph + comparative priority`.
-
-The only exception is a proven diagnostic blocker that prevents acquiring truth; change it minimally and return immediately to higher diagnosis.
-
-## 11. Root-cause proof
+## 10. Root-cause proof
 
 For each material root candidate establish:
 
@@ -265,25 +214,21 @@ proof that treatment here removes cause rather than symptom
 
 Try to disprove the candidate before declaring it proven.
 
-A root may remain unproven only with explicit missing evidence or a proven exclusion.
+## 11. Root clusters, graph and systemic leverage
 
-## 12. Root clusters, graph and systemic leverage
+Cluster dependent findings under highest proven common causes and reason through a dependency/impact graph.
 
-Cluster dependent findings under their highest proven common causes and reason through a dependency/impact graph.
+Never prioritize by discovery order, easiest fix, latest commit, file/finding count, first CI failure or last-session topic.
 
-Do not prioritize by:
-
-`first discovered | easiest fix | latest commit | largest file/finding count | first CI failure | last session topic`.
-
-Prefer, by material relevance:
+Prefer by material relevance:
 
 `upstream depth → blocking power → canonical/foundation importance → blast radius → user/operational impact → security/data/finance risk → unlock value → cross-surface/journey effect → recurrence → structural-debt multiplier → local cosmetic impact`.
 
-## 13. Competitive deepening and progressive narrowing
+## 12. Competitive deepening
 
-Start broad enough to identify roots capable of materially outranking one another. Deepen only candidates that can change priority or invalidate the treatment.
+Deepen only candidates that can materially change priority or treatment.
 
-Before execution the winning root must satisfy:
+The winning root must be:
 
 ```text
 PROVEN
@@ -293,70 +238,26 @@ AND EXECUTABLE
 AND NO_KNOWN_HIGHER_ROOT_CAN_MATERIALLY_CHANGE_TREATMENT
 ```
 
-Then execute. Do not keep wandering through low-value details that cannot alter the next correct action.
+Then execute; do not keep wandering through details that cannot alter the next correct action.
 
-## 14. Decision taxonomy
-
-Classify unknowns:
+## 13. Decision taxonomy
 
 ```text
 DERIVABLE_FACT
-= evidence/code/contracts/data/runtime can resolve it; resolve it yourself.
+= resolve from evidence/code/contracts/data/runtime; do not ask.
 
 TRUE_DECISION_GAP
-= materially different product/business/semantic/architectural behaviors remain valid and evidence cannot choose; ask the human.
+= multiple materially valid product/business/semantic/architectural behaviors remain and evidence cannot choose; ask.
 
 EXTERNAL_EVIDENCE_GAP
 = correctness requires an unavailable environment/provider/capability; keep the claim open with exact acquisition/unblock path.
 ```
 
-Do not turn discoverable facts into questions.
+At a true Decision Boundary, batch overlapping questions, remove derivatives and order by unlock value. After a decision, re-diagnose the affected semantic cone before implementation.
 
-## 15. True Decision Boundary
+## 14. Source-of-fix readiness
 
-Do not ask after every finding. Continue until a material group of journeys/states/handoffs cannot be diagnosed or treated correctly without a non-derivable choice.
-
-Before asking, summarize:
-
-`what was inspected → what is proven → current operational truth → gaps/contradictions → what evidence resolved automatically → what cannot be resolved and why`.
-
-Batch overlapping questions, remove derivatives and order by unlock value.
-
-Each true decision request contains:
-
-```text
-Decision ID
-Affected Journey/Actor/Surface/State
-Exact decision required
-Why evidence cannot decide
-Options with materially distinct behavior
-Recommendation
-Reason
-Impact/tradeoffs per option
-Affected roots/journeys/surfaces/contracts/data
-```
-
-## 16. Re-diagnosis after decisions
-
-After human decisions:
-
-```text
-propagate decision
-→ rebuild affected actor/responsibility map
-→ rebuild affected state/transition/invariant model
-→ recheck actions/preconditions/authorization
-→ recheck handoffs/cross-surface meaning
-→ recheck cross-layer meaning
-→ recheck success/failure/recovery/temporal behavior
-→ re-run negative-space/adversarial checks on affected cone
-→ update roots/ranking
-```
-
-Never jump directly from an answer to implementation when the answer changes the semantic model.
-
-## 17. Source-of-fix readiness
-
-Before treating a material root, be able to identify:
+Before treating a material root identify:
 
 ```text
 ROOT_CAUSE_ID
@@ -375,12 +276,8 @@ OBSOLETE IMPLEMENTATION TO REMOVE
 REQUIRED VERIFICATION
 ```
 
-If the root requires source/runtime/data/contract mutation and the actual source of defect is still unknown, it is not executable yet.
+If a root requires source/runtime/data/contract mutation and the actual source of defect is still unknown, it is not executable yet.
 
-## 18. JIT execution frontier
+## 15. JIT execution frontier
 
-Derive only the next coherent treatment frontier from the currently proven root and hard dependencies.
-
-Do not build speculative multi-root task forests whose assumptions may disappear after the current root is fixed.
-
-After each treatment, re-diagnose and derive the next frontier from the new live state.
+Derive only the next coherent treatment frontier from the currently proven root and hard dependencies. Do not build speculative multi-root task forests whose assumptions may disappear after the current root is fixed. After treatment, re-diagnose and derive the next frontier from the new live state.

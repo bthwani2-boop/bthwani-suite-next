@@ -4,9 +4,7 @@
 
 In `EXECUTE_END_TO_END` and `EXECUTE_PROJECT_CLOSURE`, a proven executable root proceeds directly to treatment. No diagnosis package, planning package or repository task ledger is required first.
 
-Internal ordering is necessary; repository planning artifacts are not default output.
-
-## 2. Root-correct treatment
+## 2. Root-correct treatment sequence
 
 For every proven root:
 
@@ -39,7 +37,7 @@ If a root requires source/runtime/data/contract mutation and none occurred, docu
 
 ## 3. Definition of a real fix
 
-A material root is not treated until evidence supports:
+A root is treated only when evidence supports:
 
 ```text
 problem removed from actual implementation/runtime/data
@@ -48,32 +46,28 @@ problem removed from actual implementation/runtime/data
 + affected writers/readers/consumers migrated
 + affected surfaces use corrected truth
 + contracts/data/runtime aligned
-+ obsolete/parallel implementation no longer reachable/authoritative
++ obsolete/parallel implementation no longer authoritative/reachable
 + runtime/readback proves intended behavior when required
-+ structural cleanup completed in repository itself
++ directly related structural cleanup is complete
 ```
-
-Documentation may record this reality afterward; it cannot create it.
 
 ## 4. Smallest complete root-correct change
 
-Prefer the least disruptive change that **fully eliminates the root** and reconciles the material blast radius.
-
-Do not confuse root-cause treatment with rewriting everything. Preserve proven value.
+Prefer the least disruptive change that fully eliminates the root and reconciles the material blast radius.
 
 Before creating a new concept prefer:
 
 `REUSE → EXTEND → MERGE → MOVE_TO_OWNER → SPLIT → CREATE_NEW`.
 
-If the architecture/design/data model/schema/contract/ownership/state/permission/integration boundary/dependency direction is proven wrong, refactor/redesign/rebuild as much as necessary. Do not preserve a wrong structure merely to keep the diff small.
+If architecture/design/data model/schema/contract/ownership/state/permission/integration boundary/dependency direction is proven wrong, refactor/redesign/rebuild as much as necessary. Do not preserve a wrong structure merely to keep the diff small.
 
 ## 5. Content-preserving reconstruction
 
-For any materially affected artifact classify only after evidence:
+Classify materially affected artifacts only after evidence:
 
 `KEEP | HARDEN | MOVE | RENAME | MERGE | SPLIT | REFACTOR | MIGRATE | REGENERATE | REWRITE | REPLACE | DELETE`.
 
-When code/UI/UX/assets/data contain proven value but live in the wrong context:
+When code/UI/UX/assets/data contain proven value in the wrong context:
 
 ```text
 PRESERVE PROVEN VALUE
@@ -84,13 +78,11 @@ PRESERVE PROVEN VALUE
 → DELETE SUPERSEDED WRAPPER/PATH
 ```
 
-`KEEP BECAUSE IT EXISTS` and `DELETE BECAUSE IT LOOKS OLD` are both invalid.
-
-Do not clean-room-rebuild pnpm/Expo/EAS/Metro/Next/Go/Docker/CI/runtime foundations merely because they are old if they are proven sound. Rebuild the wrong authority/context/architecture, not every line indiscriminately.
+Do not clean-room rebuild sound pnpm/Expo/EAS/Metro/Next/Go/Docker/CI/runtime foundations merely because they are old.
 
 ## 6. Semantic repository restructuring
 
-Do not start from folder movement. Derive structure from meaning:
+Derive structure from meaning:
 
 `Product Outcomes → Canonical Domain Owners → Capability Boundaries → Public Contracts → Data Ownership → Shared/Runtime Boundaries → Surface Composition → Directories/Files`.
 
@@ -98,34 +90,32 @@ A structural refactor is:
 
 `SEMANTIC RE-OWNERSHIP + MOVE/RENAME + REWIRE + CLEANUP + VERIFY`.
 
-Review each material element by:
+Review affected elements by:
 
 `Domain → Ownership → Responsibility → Placement → Naming → Context → Dependencies → Consumers`.
 
-Wrong placement/ownership is a real architectural defect when it creates ambiguity, duplication, incorrect dependency direction or misleading authority even if imports still compile.
+Wrong placement/ownership is architectural debt when it creates ambiguity, duplication, incorrect dependency direction or misleading authority even if imports compile.
 
-## 7. Naming and context
+## 7. Naming, context and discoverability
 
-Review materially affected:
+Review materially affected files, folders, symbols, types, components, modules, packages, routes, services, contracts, models, configs, env vars and tests.
 
-`files | folders | functions | variables | types | classes | components | modules | packages | routes | services | contracts | models | configs | env vars | tests`.
+The final structure should let a new engineer/agent identify without guesswork:
 
-Names should represent current responsibility and ownership. After rename/move:
+`canonical owner | implementation path | contract | model | config | command | runtime path | source of truth`.
 
-`update all references → remove obsolete aliases when not required → prove old name/path no longer remains reachable/authoritative`.
+Ambiguity created by stale names, aliases, duplicate commands or multiple plausible paths is a defect when it can lead future work to the wrong authority.
+
+After rename/move, update references and remove obsolete aliases when not required.
 
 ## 8. Git is history; active tree is present truth
 
-Do not keep superseded copies merely as backup/history through active paths or names such as `old`, `backup`, `final2`, `temp`, `legacy`, `deprecated`, or `archive` without a proven runtime/legal/migration requirement.
-
-If an old version has no current responsibility, purpose, consumer, requirement or architectural reason, remove it after blast-radius proof. Git history is the default historical archive.
+Do not keep superseded active copies merely as backup/history (`old`, `backup`, `final2`, `temp`, `legacy`, `deprecated`, `archive`) without a proven runtime/legal/migration requirement. Git history is the default archive.
 
 ## 9. Canonical cutover
 
-Universal cutover sequence:
-
 ```text
-inventory current writers/readers/consumers
+inventory writers/readers/consumers
 → prove canonical owner
 → introduce/fix canonical replacement
 → migrate proven facts/data/state
@@ -138,70 +128,37 @@ inventory current writers/readers/consumers
 → runtime/readback proof
 ```
 
-A new correct path beside an old reachable path is not closure. Never leave the system `half-old + half-new` as the intended final state.
+A new correct path beside an old reachable path is not closure.
 
-## 10. Patch/workaround/parallel-truth policy
+## 10. Compatibility
 
-Final closure forbids known unjustified:
+Temporary compatibility is allowed only for a real mixed-version/rollout need and must have:
 
-- symptom suppression without parent-root removal;
-- hardcoded bypass/default masking incorrect state;
-- catch-and-ignore of material failure;
-- patch-around or temporary fix left as final state;
-- duplicate endpoint/adapter/registry creating second truth;
-- dual authoritative writer/read path;
-- shadow state machine or surface-local business authority;
-- UI-only authorization;
-- permanent fallback to legacy behavior;
-- reachable deprecated route/flow;
-- half migration;
-- test/guard/check weakening to manufacture green;
-- TODO/FIXME/HACK substituting for closure.
+`one semantic authority | explicit scope | owner | consumer list | observability | negative/failure behavior | expiry/removal condition | cutover proof`.
 
-## 11. Compatibility is a bounded migration contract
+Convenience is not a compatibility requirement.
 
-A temporary compatibility path is allowed only when a real mixed-version/rollout constraint requires it and it has:
+## 11. Frontend/backend vertical execution
 
-```text
-one semantic authority
-explicit scope
-owner
-consumer list
-observability
-negative/failure behavior
-expiry/removal condition
-cutover proof
-```
-
-Compatibility must be non-authoritative where possible and removed as soon as the proven rollout requirement ends. Convenience is not a compatibility requirement.
-
-## 12. Frontend/backend vertical execution
-
-Treat one operational feature as one vertical system slice. Do not ship as final state:
+Do not ship as final state:
 
 - UI control with no real backend effect;
-- backend endpoint with no required consumer;
-- contract change without all required generated/manual consumer reconciliation;
+- backend endpoint missing a required consumer;
+- contract change without required generated/manual consumer reconciliation;
 - mutation without persisted canonical readback/refresh;
 - authorization enforced only in UI;
-- direct raw transport mapping that duplicates canonical business truth;
-- divergent status/error/permission meaning across surfaces.
+- direct raw transport mapping duplicating canonical business truth;
+- divergent state/error/permission meaning across surfaces.
 
-## 13. Governance synchronization
+## 12. Governance synchronization
 
-If treatment changes material semantics such as actor, role, authority, responsibility, journey, state, transition, invariant, API/data ownership or operational responsibility:
+If treatment changes material actor, authority, responsibility, journey, state, transition, invariant, API/data ownership or operational responsibility:
 
-```text
-IMPLEMENT SYSTEM CHANGE
-→ PROVE BEHAVIOR/RUNTIME
-→ ANALYZE GOVERNANCE IMPACT
-→ RECONCILE AFFECTED GOVERNANCE
-→ CROSS-CHECK GOVERNANCE ↔ SYSTEM
-```
+`IMPLEMENT SYSTEM CHANGE → PROVE BEHAVIOR/RUNTIME → ANALYZE GOVERNANCE IMPACT → RECONCILE AFFECTED GOVERNANCE → CROSS-CHECK GOVERNANCE ↔ SYSTEM`.
 
-Never edit governance to describe an unfixed ideal. Never leave materially affected governance stale after a proven semantic change.
+Do not edit governance to describe an unfixed ideal and do not leave materially affected governance stale after a proven semantic change.
 
-## 14. Data and migration treatment
+## 13. Data and migration treatment
 
 When persistence changes:
 
@@ -212,23 +169,39 @@ When persistence changes:
 - enforce constraints/invariants/indexes/FKs/checks as applicable;
 - handle duplicates/orphans/drift;
 - consider locks/batching/concurrency/idempotency/restart;
-- cut over old writers and readers;
+- cut over old writers/readers;
 - prove canonical readback;
 - remove obsolete live authority only after safe cutover.
 
-## 15. Required distributed/failure semantics
+## 14. Distributed/failure semantics
 
 For jobs/events/providers/distributed mutation, prove materially applicable:
 
 `stable identity | idempotency | correlation | duplicate/replay | out-of-order | retry/backoff | lease/DLQ | timeout/unknown result | restart | compensation | reconciliation | provider authentication/signature | terminal-state handling`.
 
-For financial mutation, the financial canonical owner must derive and persist authoritative facts; callers/UI must not become parallel money authority.
+For financial mutation, the financial canonical owner derives/persists authoritative facts; callers/UI do not become parallel money authority.
+
+## 15. Engineering-control-path root treatment
+
+When the proven root is slowness, duplicated validation, orchestration/CI/tooling overhead, repeated scanning, excessive process fan-out or avoidable regeneration, treatment is evidence-driven:
+
+```text
+BASELINE BEFORE
+→ TRACE INVOCATIONS / FAN-OUT / SCANS / I/O / CACHE / NETWORK / RUNTIME WORK
+→ PROVE COST ROOT
+→ REMOVE / MERGE / ROUTE / CACHE / NARROW / REORDER AS CORRECT
+→ VERIFY REQUIRED ASSURANCE WAS NOT WEAKENED
+→ MEASURE THE SAME SCENARIO AFTER
+→ PROVE NO MATERIAL COST WAS MERELY SHIFTED ELSEWHERE
+```
+
+Do not claim a performance/tooling root closed merely because code is shorter or one command appears faster. Before/after evidence must use comparable inputs and identify what assurance remains preserved.
 
 ## 16. Cleanup is treatment, not polish
 
 Inspect at the necessary structural level:
 
-`line → condition/branch → function/method → type/component/helper → file → file group → folder → module/package → service/surface → domain → route/contract/config/dependency/data/runtime path`.
+`line → condition/branch → function/method → type/component/helper → file → file group → folder → module/package → service/surface → domain → route/contract/config/dependency/data/runtime/tooling path`.
 
 Act on what is proven:
 
@@ -238,87 +211,54 @@ For every suspicious artifact ask for:
 
 `Responsibility + Purpose + Consumer + Requirement + Architectural Reason + Correct Owner/Placement`.
 
-No static orphan/unused signal is deletion authority by itself. Prove references and runtime/semantic relevance first.
+Static orphan/unused output is evidence, not deletion authority.
 
 ## 17. Reference integrity after structural change
 
-After any `Delete/Rename/Move/Merge/Split/Refactor/Replace`, trace in both directions as materially applicable:
+After `Delete/Rename/Move/Merge/Split/Refactor/Replace`, trace materially relevant:
 
 `imports | exports | re-exports | callers/callees | registrations | routes/navigation | contracts/schemas | configs/env | dependencies | tests/mocks/fixtures | docs/examples | build/CI entries | project scripts/manifests | generated references | runtime bindings`.
 
-Do not leave broken imports, orphan references, stale exports, old paths/names, obsolete aliases, stale config keys, unused env variables/dependencies, tests for ended behavior, or project automation referring to removed paths.
+Do not leave broken/orphan/stale references, obsolete aliases/config keys/env vars/dependencies, tests for ended behavior or automation referring to removed paths.
 
 ## 18. Test integrity
 
-Tests encode correct semantics; they must not redefine the problem to make the implementation green.
+Tests encode correct semantics; they must not redefine the problem to make implementation green.
 
-Forbidden:
-
-- weakening/removing a valid test because it exposes a real defect;
-- changing expected behavior merely to match wrong implementation;
-- skip/disable/silence used to hide a required failure;
-- mock/fixture used as final proof for a real runtime claim.
+Forbidden: weakening/removing a valid test, changing expected behavior to match wrong implementation, skip/disable/silence hiding required failure, or mock/fixture used as final proof of a real runtime claim.
 
 Correct sequence:
 
 `determine correct semantics → fix implementation → update/add regression evidence → prove affected real behavior`.
 
-If the test/check itself changes, prove it can still falsify the broken behavior and was not weakened to accept it.
+If a test/check itself changes, prove it can still falsify the broken behavior and was not weakened.
 
 ## 19. Runtime freshness
 
-Runtime proof is invalid if stale code/process/data may have produced it.
+Runtime proof is invalid if stale code/process/data may have produced it. Establish as applicable:
 
-Before material runtime/E2E proof establish as applicable:
-
-```text
-source checkout/candidate identity
-built artifact/image/bundle provenance
-service/process/container freshness
-schema/migration version
-seed/fixture provenance
-intended endpoint/config/environment
-no stale server/container/process masking changes
-```
-
-Use unique scenario identifiers when helpful, capture pre-state, execute real path, and read canonical persisted post-state.
+`source/candidate identity | artifact/image/bundle provenance | process/container freshness | schema/migration version | seed/fixture provenance | intended endpoint/config/environment | canonical post-state readback`.
 
 ## 20. Reviewable mutation boundaries
 
-Perform source mutations in coherent logical units. Before commit/push/ref movement inspect:
+Perform mutations in coherent logical units. Before commit/push/ref movement inspect intended files, foreign files, generated files, deletions, renames, migrations, contracts, runtime/config and tests.
 
-`intended files | unintended/foreign files | generated files | deletions | renames | migrations | contracts | runtime/config | tests`.
-
-Do not blindly stage the whole workspace when that can include foreign changes. Preserve pre-existing/other-agent work and own only the intended delta/hunks.
+Do not blindly stage the whole workspace where it can capture foreign work. Own exact intended paths/hunks.
 
 ## 21. Atomic/concurrent repository writes
 
-Where the platform supports it, prefer an atomic multi-file commit built against the exact expected latest parent and a non-force fast-forward ref update.
+Where supported, prefer an atomic multi-file commit built against the exact expected latest parent and a non-force fast-forward ref update.
 
-If the target moves before final update:
+If target moves:
 
-`do not overwrite → re-resolve → classify delta → reconcile → rebuild affected candidate → reverify invalidated evidence`.
-
-Never force-push merely to preserve an obsolete candidate.
+`do not overwrite → re-resolve → classify delta under 01 → reconcile → rebuild affected candidate → reverify invalidated evidence`.
 
 ## 22. Re-rank after each root
 
 After coherent root treatment:
 
-```text
-read latest live truth
-→ re-evaluate descendant findings
-→ remove/disposition symptoms eliminated by the root
-→ invalidate changed assumptions/evidence
-→ discover newly exposed roots
-→ rerank
-→ choose next highest root
-```
+`read latest live truth → re-evaluate descendant findings → disposition symptoms eliminated by root → invalidate changed assumptions/evidence → discover newly exposed roots → rerank → choose next highest root`.
 
-If a higher root appears while descendant work is underway, suspend affected lower work immediately. Sunk cost is not execution authority.
+If a higher root appears, suspend affected lower work immediately. Sunk cost is not execution authority.
 
-## 23. Orchestrator exclusion
-
-During ordinary project execution the write set excludes `tools/prompting/bthwani-orchestrator/**` unless package maintenance is explicitly authorized by the human in the current invocation.
-
-No script, workflow, guard, validator, CLI or hook may be introduced for the purpose of executing or checking this textual package itself.
+Package protection/independence remains governed solely by `00-ORCHESTRATOR.md`.
