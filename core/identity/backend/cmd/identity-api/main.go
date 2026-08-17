@@ -88,8 +88,7 @@ func main() {
 	authRouter := identityhttp.AuthOperatorContextBoundary(repository, router)
 	issuerScopedRouter := identityhttp.ActivationIssuerBoundary(db, authRouter)
 	operatorScopedRouter := identityhttp.OperatorBoundary(db, issuerScopedRouter)
-	internalTrustRouter := identityhttp.RuntimeOperatorContextBoundary(operatorScopedRouter)
-	otpScopedRouter := identityhttp.OtpBoundary(repository, internalTrustRouter)
+	otpScopedRouter := identityhttp.OtpBoundary(repository, operatorScopedRouter)
 	// Readiness is the outer persistence boundary so no authentication,
 	// activation, operator-context, or service middleware can touch persistence
 	// before the authoritative fail-closed gate has passed.

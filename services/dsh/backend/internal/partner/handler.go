@@ -103,38 +103,35 @@ func readinessHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		var hasStore bool
-		var storePublished bool
-		var storeServiceable bool
-		var storePartnerReadinessReady bool
-		var storeCatalogApproved bool
-		var storeMarketingVisible bool
-		var storeIsVisible bool
-
 		linkedStore, err := store.GetStoreByPartnerID(db, pid)
+		if errors.Is(err, store.ErrAmbiguousPartnerStores) {
+			sendError(w, http.StatusConflict, "AMBIGUOUS_STORE", "partner has multiple stores; readiness requires an explicit store")
+			return
+		}
+		if err != nil {
+			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve linked store")
+			return
+		}
 		if err == nil && linkedStore != nil {
 			hasStore = true
-			storePublished = linkedStore.Status == store.StatusPublished
-			storeServiceable = (linkedStore.ServiceabilityStatus == store.ServiceabilityServiceable || linkedStore.ServiceabilityStatus == store.ServiceabilityLimited)
-			storePartnerReadinessReady = (linkedStore.PartnerReadiness == "ready")
-			storeCatalogApproved = (linkedStore.CatalogApprovalStatus == "approved")
-			storeMarketingVisible = (linkedStore.MarketingVisibility == "visible")
-			storeIsVisible = linkedStore.IsVisible
 		}
 
 		readiness := ComputeReadiness(
 			p, total, approved,
-			hasStore, storePublished, storeServiceable,
-			storePartnerReadinessReady, storeCatalogApproved,
-			storeMarketingVisible, storeIsVisible,
+			hasStore,
+			func() store.PublicationDecision {
+				if linkedStore == nil {
+					return ""
+				}
+				return linkedStore.PublicationDecision
+			}(),
+			func() []string {
+				if linkedStore == nil {
+					return nil
+				}
+				return linkedStore.BlockingReasonCodes
+			}(),
 		)
-		if linkedStore != nil {
-			diagnostics := store.DiagnoseStorePublicationReadiness(*linkedStore)
-			readiness.PublicationDecision = store.PublicationBlocked
-			readiness.BlockingReasons = append([]string(nil), diagnostics.BlockerCodes...)
-			if diagnostics.IsReady {
-				readiness.PublicationDecision = store.PublicationPublished
-			}
-		}
 		sendJSON(w, http.StatusOK, readiness)
 	}
 }

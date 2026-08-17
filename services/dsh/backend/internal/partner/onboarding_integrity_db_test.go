@@ -155,7 +155,7 @@ func TestClearOwnerPayoutDestinationProjectionUsesValidAbsentStateDBIntegration(
 	}
 }
 
-func TestCreateFieldVisitGovernedBindsFirstStoreDBIntegration(t *testing.T) {
+func TestCreateFieldVisitGovernedBindsTheOnlyLinkedStoreDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	partner := createPartnerFixture(t, db, "VISIT-STORE")
 	wantStoreID := partnerStoreID(t, db, partner.ID)

@@ -1,7 +1,5 @@
 package store
 
-import "strings"
-
 type StorePublicationDiagnostics struct {
 	IsReady      bool     `json:"isReady"`
 	Blockers     []string `json:"blockers"`
@@ -9,76 +7,37 @@ type StorePublicationDiagnostics struct {
 }
 
 func DiagnoseStorePublication(row DshStoreRow) StorePublicationDiagnostics {
-	blockers := make([]string, 0, 15)
-	blockerCodes := make([]string, 0, 15)
-	add := func(code, message string) {
+	messages := map[string]string{
+		"STORE_NOT_PUBLISHED":         "Store lifecycle must be published",
+		"STORE_HIDDEN":                "Store visibility must be enabled",
+		"STORE_NOT_SERVICEABLE":       "Store must be serviceable or limited",
+		"PARTNER_NOT_READY":           "Partner readiness must be ready",
+		"PARTNER_NOT_CLIENT_VISIBLE":  "Owning Partner must be client visible",
+		"CATALOG_NOT_APPROVED":        "Catalog must be approved",
+		"APPROVED_ASSORTMENT_MISSING": "At least one client-visible approved assortment is required",
+		"MARKETING_HIDDEN":            "Marketing visibility must be visible",
+		"DELIVERY_MODES_MISSING":      "At least one delivery or pickup mode is required",
+		"ADDRESS_MISSING":             "Store address is required",
+		"COVERAGE_MISSING":            "Coverage summary is required",
+		"OPERATING_HOURS_MISSING":     "Operating hours are required",
+		"DELIVERY_NOT_READY":          "Delivery readiness must be ready",
+		"STORE_LOGO_MISSING":          "Approved store logo is required",
+		"STORE_COVER_MISSING":         "Approved store cover image is required",
+	}
+	codes := append([]string(nil), row.BlockingReasonCodes...)
+	blockers := make([]string, 0, len(codes))
+	for _, code := range codes {
+		message, ok := messages[code]
+		if !ok {
+			message = "Unknown canonical publication blocker"
+		}
 		blockers = append(blockers, code+": "+message)
-		blockerCodes = append(blockerCodes, code)
 	}
-
-	if row.Status != StatusPublished {
-		add("STORE_NOT_PUBLISHED", "Store lifecycle must be published")
+	ready := row.PublicationDecision == PublicationPublished && len(codes) == 0
+	if row.PublicationDecision == "" {
+		codes = append(codes, "CANONICAL_PUBLICATION_DECISION_MISSING")
+		blockers = append(blockers, "CANONICAL_PUBLICATION_DECISION_MISSING: canonical publication view did not provide a decision")
+		ready = false
 	}
-	if !row.IsVisible {
-		add("STORE_HIDDEN", "Store visibility must be enabled")
-	}
-	if row.ServiceabilityStatus != ServiceabilityServiceable && row.ServiceabilityStatus != ServiceabilityLimited {
-		add("STORE_NOT_SERVICEABLE", "Store must be serviceable or limited")
-	}
-	if row.PartnerReadiness != "ready" {
-		add("PARTNER_NOT_READY", "Partner readiness must be ready")
-	}
-	if row.PartnerActivationStatus != "client_visible" {
-		add("PARTNER_NOT_CLIENT_VISIBLE", "Owning Partner must be client visible")
-	}
-	if row.CatalogApprovalStatus != "approved" {
-		add("CATALOG_NOT_APPROVED", "Catalog must be approved")
-	}
-	if !row.HasApprovedAssortment {
-		add("APPROVED_ASSORTMENT_MISSING", "At least one client-visible approved assortment is required")
-	}
-	if row.MarketingVisibility != "visible" {
-		add("MARKETING_HIDDEN", "Marketing visibility must be visible")
-	}
-	if len(row.DeliveryModes) == 0 {
-		add("DELIVERY_MODES_MISSING", "At least one delivery or pickup mode is required")
-	}
-	if strings.TrimSpace(row.AddressLine) == "" {
-		add("ADDRESS_MISSING", "Store address is required")
-	}
-	if strings.TrimSpace(row.CoverageSummary) == "" {
-		add("COVERAGE_MISSING", "Coverage summary is required")
-	}
-	if strings.TrimSpace(row.OperatingHours) == "" {
-		add("OPERATING_HOURS_MISSING", "Operating hours are required")
-	}
-	if strings.TrimSpace(row.DeliveryReadiness) != "ready" {
-		add("DELIVERY_NOT_READY", "Delivery readiness must be ready")
-	}
-	if row.LogoURL == nil || strings.TrimSpace(*row.LogoURL) == "" {
-		add("STORE_LOGO_MISSING", "Approved store logo is required")
-	}
-	if row.HeroImageURL == nil || strings.TrimSpace(*row.HeroImageURL) == "" {
-		add("STORE_COVER_MISSING", "Approved store cover image is required")
-	}
-
-	return StorePublicationDiagnostics{
-		IsReady:      len(blockers) == 0,
-		Blockers:     blockers,
-		BlockerCodes: blockerCodes,
-	}
-}
-
-// DiagnoseStorePublicationReadiness validates whether an operator may move a
-// store into the published lifecycle. The owning partner must already be active,
-// while client_visible is evaluated as the next audited partner state. Public
-// reads remain denied until that transition actually commits.
-func DiagnoseStorePublicationReadiness(row DshStoreRow) StorePublicationDiagnostics {
-	row.Status = StatusPublished
-	row.IsVisible = true
-	row.MarketingVisibility = "visible"
-	if row.PartnerActivationStatus == "partner_active" || row.PartnerActivationStatus == "client_visible" {
-		row.PartnerActivationStatus = "client_visible"
-	}
-	return DiagnoseStorePublication(row)
+	return StorePublicationDiagnostics{IsReady: ready, Blockers: blockers, BlockerCodes: codes}
 }

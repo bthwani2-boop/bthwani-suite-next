@@ -133,36 +133,24 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		return Partner{}, ActivationEvent{}, ErrInvalidTransition
 	}
 
-	if (input.ToStatus == StatusOpsRejected || input.ToStatus == StatusPartnerDeactivated) && strings.TrimSpace(input.Reason) == "" {
+	if input.ToStatus == StatusOpsRejected && strings.TrimSpace(input.Reason) == "" {
 		return Partner{}, ActivationEvent{}, ErrInvalid
 	}
 
 	if input.ToStatus == StatusClientVisible {
-		var storeID string
-		var storeStatus string
-		var storeIsVisible bool
-		var storeServiceability string
-		var storePartnerReadiness string
-		var storeCatalogApproval string
-		var storeMarketingVisibility string
-
+		var storeCount, blockedStoreCount int
 		err = tx.QueryRow(`
-			SELECT id, status, is_visible, serviceability_status, partner_readiness, catalog_approval_status, marketing_visibility
-			FROM dsh_stores WHERE partner_id = $1 ORDER BY created_at ASC LIMIT 1`, partnerID,
-		).Scan(&storeID, &storeStatus, &storeIsVisible, &storeServiceability, &storePartnerReadiness, &storeCatalogApproval, &storeMarketingVisibility)
-		if errors.Is(err, sql.ErrNoRows) {
-			return Partner{}, ActivationEvent{}, errors.New("store publication gates failed: no linked store found")
-		}
+			SELECT COUNT(*), COUNT(*) FILTER (WHERE publication_decision <> 'PUBLISHED')
+			FROM dsh_partner_store_readiness_v
+			WHERE partner_id = $1`, partnerID,
+		).Scan(&storeCount, &blockedStoreCount)
 		if err != nil {
 			return Partner{}, ActivationEvent{}, err
 		}
-
-		if storeStatus != "published" ||
-			!storeIsVisible ||
-			(storeServiceability != "serviceable" && storeServiceability != "limited") ||
-			storePartnerReadiness != "ready" ||
-			storeCatalogApproval != "approved" ||
-			storeMarketingVisibility != "visible" {
+		if storeCount == 0 {
+			return Partner{}, ActivationEvent{}, errors.New("store publication gates failed: no linked store found")
+		}
+		if blockedStoreCount > 0 {
 			return Partner{}, ActivationEvent{}, ErrStorePublicationGatesFailed
 		}
 	}
@@ -222,23 +210,18 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		}
 
 		// Write to dsh_store_action_audit
-		var storeID string
-		_ = tx.QueryRow(`SELECT id FROM dsh_stores WHERE partner_id = $1 ORDER BY created_at ASC LIMIT 1`, partnerID).Scan(&storeID)
-		if storeID != "" {
-			auditID := "evt-" + itoa(int(time.Now().UnixNano()))
-			action := "store_partner_readiness_updated"
-			reason := "partner transition to " + string(input.ToStatus)
-			role := "operator"
-			if input.ActorSurface == "app-field" {
-				role = "field"
-			}
-			_, _ = tx.Exec(`
-				INSERT INTO dsh_store_action_audit
-				  (id, actor_id, actor_role, store_id, action, from_state, to_state, reason, correlation_id, created_at)
-				VALUES ($1,$2,$3,$4,$5,'{}'::jsonb,'{}'::jsonb,$6,$7,NOW())`,
-				auditID, input.ActorID, role, storeID, action, reason, input.CorrelationID,
-			)
+		role := "operator"
+		if input.ActorSurface == "app-field" {
+			role = "field"
 		}
+		_, _ = tx.Exec(`
+			INSERT INTO dsh_store_action_audit
+			  (id, actor_id, actor_role, store_id, action, from_state, to_state, reason, correlation_id, created_at)
+			SELECT 'evt-' || md5($1 || s.id), $2, $3, s.id,
+			       'store_partner_readiness_updated','{}'::jsonb,'{}'::jsonb,$4,$5,NOW()
+			FROM dsh_stores s WHERE s.partner_id = $6`,
+			evt.ID, input.ActorID, role, "partner transition to "+string(input.ToStatus), input.CorrelationID, partnerID,
+		)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -251,7 +234,7 @@ func partnerReadinessForActivationStatus(status ActivationStatus) (string, bool)
 	switch status {
 	case StatusClientVisible:
 		return "ready", true
-	case StatusClientHidden, StatusPartnerDeactivated, StatusPartnerSuspended, StatusPartnerTerminated:
+	case StatusClientHidden, StatusPartnerSuspended, StatusPartnerTerminated:
 		return "blocked", true
 	default:
 		return "", false

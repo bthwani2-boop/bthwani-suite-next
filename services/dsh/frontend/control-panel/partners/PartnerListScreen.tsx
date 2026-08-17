@@ -32,7 +32,7 @@ const STATUS_OPTIONS = [
   { value: "ops_approved", label: "معتمد" },
   { value: "ops_rejected", label: "مرفوض" },
   { value: "partner_active", label: "نشط" },
-  { value: "partner_deactivated", label: "موقوف" },
+  { value: "partner_terminated", label: "منتهٍ" },
   { value: "client_visible", label: "ظاهر للعملاء" },
   { value: "client_hidden", label: "مخفي" },
 ];

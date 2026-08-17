@@ -124,12 +124,16 @@ func (s *Service) resolveLeadershipBundle(ctx context.Context, code, employmentC
 }
 
 func (r *Repository) SovereignAssignmentByActorID(ctx context.Context, actorID string) (SovereignAssignment, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return SovereignAssignment{}, err
+	}
 	var assignment SovereignAssignment
-	err := r.db.QueryRowContext(ctx, `
+	err = r.db.QueryRowContext(ctx, `
 		SELECT actor_id,permission_bundle,department_scope,starts_on::text,
 		       COALESCE(ends_on::text,''),assignment_status,created_by_actor_id,
 		       updated_by_actor_id,version,created_at,updated_at
-		FROM workforce_sovereign_leadership_assignments WHERE actor_id=$1`, strings.TrimSpace(actorID)).Scan(
+		FROM workforce_sovereign_leadership_assignments WHERE operator_context_id=$1 AND actor_id=$2`, operatorContextID, strings.TrimSpace(actorID)).Scan(
 		&assignment.ActorID, &assignment.PermissionBundle, &assignment.DepartmentScope,
 		&assignment.StartsOn, &assignment.EndsOn, &assignment.AssignmentStatus,
 		&assignment.CreatedByActorID, &assignment.UpdatedByActorID, &assignment.Version,
@@ -142,10 +146,14 @@ func (r *Repository) SovereignAssignmentByActorID(ctx context.Context, actorID s
 }
 
 func (r *Repository) UpsertSovereignAssignment(ctx context.Context, actorID, operatorID string, expectedVersion int, bundle, department, startsOn, endsOn string) (SovereignAssignment, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return SovereignAssignment{}, err
+	}
 	actorID = strings.TrimSpace(actorID)
 	operatorID = strings.TrimSpace(operatorID)
 	bundle, bundleErr := normalizeSovereignPermissionBundle(bundle)
-	department, err := normalizeSovereignDepartment(department)
+	department, err = normalizeSovereignDepartment(department)
 	if err != nil || bundleErr != nil || actorID == "" || operatorID == "" || expectedVersion < 0 {
 		return SovereignAssignment{}, ErrInvalidInput
 	}
@@ -159,17 +167,17 @@ func (r *Repository) UpsertSovereignAssignment(ctx context.Context, actorID, ope
 	}
 	defer tx.Rollback() //nolint:errcheck
 	var currentVersion int
-	err = tx.QueryRowContext(ctx, `SELECT version FROM workforce_sovereign_leadership_assignments WHERE actor_id=$1 FOR UPDATE`, actorID).Scan(&currentVersion)
+	err = tx.QueryRowContext(ctx, `SELECT version FROM workforce_sovereign_leadership_assignments WHERE operator_context_id=$1 AND actor_id=$2 FOR UPDATE`, operatorContextID, actorID).Scan(&currentVersion)
 	if errors.Is(err, sql.ErrNoRows) {
 		if expectedVersion != 0 {
 			return SovereignAssignment{}, ErrVersionConflict
 		}
 		_, err = tx.ExecContext(ctx, `
 			INSERT INTO workforce_sovereign_leadership_assignments(
-				actor_id,permission_bundle,department_scope,starts_on,ends_on,
+				operator_context_id,actor_id,permission_bundle,department_scope,starts_on,ends_on,
 				assignment_status,created_by_actor_id,updated_by_actor_id)
-			VALUES($1,$2,$3,$4::date,NULLIF($5,'')::date,'active',$6,$6)`,
-			actorID, bundle, department, startsOn, strings.TrimSpace(endsOn), operatorID)
+			VALUES($1,$2,$3,$4,$5::date,NULLIF($6,'')::date,'active',$7,$7)`,
+			operatorContextID, actorID, bundle, department, startsOn, strings.TrimSpace(endsOn), operatorID)
 	} else if err != nil {
 		return SovereignAssignment{}, err
 	} else {
@@ -181,7 +189,7 @@ func (r *Repository) UpsertSovereignAssignment(ctx context.Context, actorID, ope
 			SET permission_bundle=$2,department_scope=$3,starts_on=$4::date,
 			    ends_on=NULLIF($5,'')::date,assignment_status='active',
 			    updated_by_actor_id=$6,version=version+1,updated_at=now()
-			WHERE actor_id=$1`, actorID, bundle, department, startsOn, strings.TrimSpace(endsOn), operatorID)
+			WHERE operator_context_id=$7 AND actor_id=$1`, actorID, bundle, department, startsOn, strings.TrimSpace(endsOn), operatorID, operatorContextID)
 	}
 	if err != nil {
 		return SovereignAssignment{}, ErrInvalidInput
@@ -193,12 +201,17 @@ func (r *Repository) UpsertSovereignAssignment(ctx context.Context, actorID, ope
 }
 
 func (r *Repository) ListSovereignLeadership(ctx context.Context) ([]SovereignLeadershipRecord, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := r.db.QueryContext(ctx, personSelect+`
-		JOIN workforce_sovereign_leadership_assignments a ON a.actor_id=p.actor_id
+		JOIN workforce_sovereign_leadership_assignments a ON a.operator_context_id=p.operator_context_id AND a.actor_id=p.actor_id
 		WHERE a.assignment_status='active'
+		  AND a.operator_context_id=$1
 		  AND a.starts_on <= current_date
 		  AND (a.ends_on IS NULL OR a.ends_on >= current_date)
-		ORDER BY p.created_at DESC`)
+		ORDER BY p.created_at DESC`, operatorContextID)
 	if err != nil {
 		return nil, err
 	}
@@ -223,6 +236,10 @@ func (r *Repository) ListSovereignLeadership(ctx context.Context) ([]SovereignLe
 }
 
 func (r *Repository) ListEmployeesForDepartments(ctx context.Context, departments []string, filter ListFilter) ([]Person, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return nil, err
+	}
 	clean := make([]string, 0, len(departments))
 	for _, department := range departments {
 		normalized, err := normalizeSovereignDepartment(department)
@@ -231,11 +248,11 @@ func (r *Repository) ListEmployeesForDepartments(ctx context.Context, department
 		}
 		clean = append(clean, normalized)
 	}
-	clauses := []string{"e.actor_id IS NOT NULL"}
-	args := []any{}
+	clauses := []string{"e.actor_id IS NOT NULL", "p.operator_context_id = $1"}
+	args := []any{operatorContextID}
 	if len(clean) > 0 {
 		args = append(args, pq.Array(clean))
-		clauses = append(clauses, "LOWER(REPLACE(e.department,' ','-')) = ANY($1)")
+		clauses = append(clauses, "LOWER(REPLACE(e.department,' ','-')) = ANY($"+itoa(len(args)+0)+")")
 	}
 	if filter.Status != "" {
 		args = append(args, filter.Status)

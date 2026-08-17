@@ -5,93 +5,42 @@ import (
 	"testing"
 )
 
-func diagnosticReadyStoreRow() DshStoreRow {
+func TestDiagnoseStorePublicationMapsCanonicalViewReadback(t *testing.T) {
 	row := eligibleStoreRow()
-	logo := "https://media.example/store/logo.webp"
-	cover := "https://media.example/store/cover.webp"
-	row.LogoURL = &logo
-	row.HeroImageURL = &cover
-	row.PartnerActivationStatus = "client_visible"
-	row.HasApprovedAssortment = true
-	return row
-}
-
-func TestDiagnoseStorePublicationReadyOnlyWhenAllGatesPass(t *testing.T) {
-	diagnostics := DiagnoseStorePublication(diagnosticReadyStoreRow())
-	if !diagnostics.IsReady {
-		t.Fatalf("expected ready diagnostics, blockers=%v", diagnostics.Blockers)
-	}
-	if len(diagnostics.Blockers) != 0 {
-		t.Fatalf("expected no blockers, got %v", diagnostics.Blockers)
-	}
-}
-
-func TestDiagnoseStorePublicationReportsEveryRequiredGate(t *testing.T) {
-	row := diagnosticReadyStoreRow()
-	row.Status = StatusSuspended
-	row.IsVisible = false
-	row.ServiceabilityStatus = ServiceabilityOutOfArea
-	row.PartnerReadiness = "blocked"
-	row.PartnerActivationStatus = "partner_active"
-	row.CatalogApprovalStatus = "draft"
-	row.HasApprovedAssortment = false
-	row.MarketingVisibility = "hidden"
-	row.DeliveryModes = nil
-	row.AddressLine = ""
-	row.CoverageSummary = ""
-	row.OperatingHours = ""
-	row.DeliveryReadiness = "blocked"
-	row.LogoURL = nil
-	row.HeroImageURL = nil
-
+	row.PublicationDecision = PublicationPublished
+	row.BlockingReasonCodes = []string{}
 	diagnostics := DiagnoseStorePublication(row)
-	if diagnostics.IsReady {
-		t.Fatal("diagnostics must fail closed when governance requirements are missing")
+	if !diagnostics.IsReady || len(diagnostics.Blockers) != 0 {
+		t.Fatalf("expected canonical published decision, got %+v", diagnostics)
 	}
+}
 
-	expectedCodes := []string{
+func TestDiagnoseStorePublicationFailsClosedOnCanonicalBlockers(t *testing.T) {
+	row := eligibleStoreRow()
+	row.PublicationDecision = PublicationBlocked
+	row.BlockingReasonCodes = []string{
 		"STORE_NOT_PUBLISHED",
-		"STORE_HIDDEN",
-		"STORE_NOT_SERVICEABLE",
-		"PARTNER_NOT_READY",
 		"PARTNER_NOT_CLIENT_VISIBLE",
-		"CATALOG_NOT_APPROVED",
 		"APPROVED_ASSORTMENT_MISSING",
-		"MARKETING_HIDDEN",
-		"DELIVERY_MODES_MISSING",
-		"ADDRESS_MISSING",
-		"COVERAGE_MISSING",
-		"OPERATING_HOURS_MISSING",
-		"DELIVERY_NOT_READY",
-		"STORE_LOGO_MISSING",
-		"STORE_COVER_MISSING",
+	}
+	diagnostics := DiagnoseStorePublication(row)
+	if diagnostics.IsReady || len(diagnostics.BlockerCodes) != 3 {
+		t.Fatalf("expected canonical blockers, got %+v", diagnostics)
 	}
 	joined := strings.Join(diagnostics.Blockers, "\n")
-	for _, code := range expectedCodes {
+	for _, code := range row.BlockingReasonCodes {
 		if !strings.Contains(joined, code+":") {
-			t.Fatalf("expected blocker %s in %v", code, diagnostics.Blockers)
+			t.Fatalf("missing mapped blocker %s in %v", code, diagnostics.Blockers)
 		}
 	}
 }
 
-func TestDiagnoseStorePublicationReadinessBreaksLifecyclePartnerCycleWithoutOpeningPublicReads(t *testing.T) {
-	row := diagnosticReadyStoreRow()
-	row.Status = StatusReady
-	row.PartnerActivationStatus = "partner_active"
-
-	if public := DiagnoseStorePublication(row); public.IsReady {
-		t.Fatal("a ready store owned by a merely active partner must remain hidden from app-client")
-	}
-	if readiness := DiagnoseStorePublicationReadiness(row); !readiness.IsReady {
-		t.Fatalf("operator should be able to publish a fully prepared active partner store: %v", readiness.Blockers)
-	}
-
-	row.Status = StatusPublished
-	if public := DiagnoseStorePublication(row); public.IsReady {
-		t.Fatal("published lifecycle alone must not bypass the audited client_visible partner transition")
-	}
-	row.PartnerActivationStatus = "client_visible"
-	if public := DiagnoseStorePublication(row); !public.IsReady {
-		t.Fatalf("all final publication gates should pass after client_visible commits: %v", public.Blockers)
+func TestDiagnoseStorePublicationFailsClosedWhenCanonicalDecisionMissing(t *testing.T) {
+	row := eligibleStoreRow()
+	row.PublicationDecision = ""
+	row.BlockingReasonCodes = nil
+	diagnostics := DiagnoseStorePublication(row)
+	if diagnostics.IsReady || !strings.Contains(strings.Join(diagnostics.Blockers, "\n"), "CANONICAL_PUBLICATION_DECISION_MISSING:") {
+		t.Fatalf("missing canonical decision must fail closed: %+v", diagnostics)
 	}
 }

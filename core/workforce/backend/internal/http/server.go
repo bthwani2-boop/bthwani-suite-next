@@ -485,7 +485,10 @@ func operatorOf(r *http.Request, identity auth.Identity) workforce.Operator {
 	if len(identity.Roles) > 0 {
 		role = identity.Roles[0]
 	}
-	return workforce.Operator{ActorID: identity.Subject, Role: role, Token: r.Header.Get("Authorization")}
+	return workforce.Operator{
+		ActorID: identity.Subject, Role: role, Token: r.Header.Get("Authorization"),
+		OperatorContextID: identity.OperatorContextID,
+	}
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {

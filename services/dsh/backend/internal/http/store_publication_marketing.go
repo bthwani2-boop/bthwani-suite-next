@@ -24,7 +24,7 @@ func (s *protectedStoreServer) handleGetMarketingStorePublication(w http.Respons
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{
 		"store":          store.RowToDetail(*row),
-		"diagnostics":    store.DiagnoseStorePublicationReadiness(*row),
+		"diagnostics":    store.DiagnoseStorePublication(*row),
 		"overridePolicy": policy,
 	})
 }

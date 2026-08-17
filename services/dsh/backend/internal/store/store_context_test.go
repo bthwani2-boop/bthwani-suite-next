@@ -32,6 +32,8 @@ func eligibleStoreRow() DshStoreRow {
 		CoverageSummary:         "حدة والمناطق المجاورة",
 		OperatingHours:          "08:00-23:00",
 		DeliveryReadiness:       "ready",
+		PublicationDecision:     PublicationPublished,
+		BlockingReasonCodes:     []string{},
 		Version:                 3,
 		CreatedAt:               time.Date(2026, 7, 21, 8, 0, 0, 0, time.UTC),
 		UpdatedAt:               time.Date(2026, 7, 21, 9, 0, 0, 0, time.UTC),
@@ -62,22 +64,14 @@ func TestPublicationEligibilityFailsClosedForEveryGovernanceGate(t *testing.T) {
 		name   string
 		mutate func(*DshStoreRow)
 	}{
-		{name: "not published", mutate: func(row *DshStoreRow) { row.Status = StatusReady }},
-		{name: "inactive", mutate: func(row *DshStoreRow) { row.Status = StatusSuspended }},
-		{name: "hidden", mutate: func(row *DshStoreRow) { row.IsVisible = false }},
-		{name: "out of area", mutate: func(row *DshStoreRow) { row.ServiceabilityStatus = ServiceabilityOutOfArea }},
-		{name: "partner blocked", mutate: func(row *DshStoreRow) { row.PartnerReadiness = "blocked" }},
-		{name: "partner not client visible", mutate: func(row *DshStoreRow) { row.PartnerActivationStatus = "partner_active" }},
-		{name: "catalog draft", mutate: func(row *DshStoreRow) { row.CatalogApprovalStatus = "draft" }},
-		{name: "approved assortment missing", mutate: func(row *DshStoreRow) { row.HasApprovedAssortment = false }},
-		{name: "marketing hidden", mutate: func(row *DshStoreRow) { row.MarketingVisibility = "hidden" }},
-		{name: "delivery modes missing", mutate: func(row *DshStoreRow) { row.DeliveryModes = nil }},
-		{name: "address missing", mutate: func(row *DshStoreRow) { row.AddressLine = "" }},
-		{name: "coverage missing", mutate: func(row *DshStoreRow) { row.CoverageSummary = "" }},
-		{name: "operating hours missing", mutate: func(row *DshStoreRow) { row.OperatingHours = "" }},
-		{name: "delivery not ready", mutate: func(row *DshStoreRow) { row.DeliveryReadiness = "blocked" }},
-		{name: "logo missing", mutate: func(row *DshStoreRow) { row.LogoURL = nil }},
-		{name: "cover missing", mutate: func(row *DshStoreRow) { row.HeroImageURL = nil }},
+		{name: "not published", mutate: func(row *DshStoreRow) {
+			row.PublicationDecision = PublicationBlocked
+			row.BlockingReasonCodes = []string{"STORE_NOT_PUBLISHED"}
+		}},
+		{name: "missing canonical blocker", mutate: func(row *DshStoreRow) {
+			row.PublicationDecision = PublicationBlocked
+			row.BlockingReasonCodes = []string{}
+		}},
 	}
 
 	for _, tc := range tests {

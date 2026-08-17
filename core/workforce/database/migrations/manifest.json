@@ -136,6 +136,13 @@
       "file": "workforce-019_identity_operator_context_cutover.sql",
       "sha256": "aa771abd50d56a686f10e8e726f17facbccf6e6a43cdd84bf23cc92061267b9d",
       "historicalPrefix": "019",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 20,
+      "file": "workforce-020_operator_context_scope_boundary.sql",
+      "sha256": "ed2e079fbe4d5f2a386a847b17b30244af45f9be493a91c17960ac3487fe0caf",
+      "historicalPrefix": "020",
       "state": "ACTIVE"
     }
   ]

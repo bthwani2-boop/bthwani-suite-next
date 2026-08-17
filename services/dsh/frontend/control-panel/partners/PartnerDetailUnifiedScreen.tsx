@@ -71,7 +71,7 @@ const TAB_LABELS: Record<Tab, string> = {
   readiness: "الجاهزية متعددة الفروع",
   audit: "سجل التدقيق",
 };
-const REASON_REQUIRED = new Set<string>(["ops_rejected", "partner_deactivated", "client_hidden"]);
+const REASON_REQUIRED = new Set<string>(["ops_rejected", "partner_terminated", "client_hidden"]);
 
 function toBadgeTone(tone: "success" | "warning" | "danger" | "info" | "muted"): CpBadgeTone {
   return tone === "muted" ? "neutral" : tone;

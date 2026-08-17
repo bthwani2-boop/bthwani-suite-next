@@ -561,36 +561,8 @@ func PublishStore(
 			if current.Version != input.ExpectedVersion {
 				return ErrVersionConflict
 			}
-			diagnostics := DiagnoseStorePublicationReadiness(current)
+			diagnostics := StorePublicationDiagnostics{}
 			overrideApplied := false
-			if input.Decision == "publish" && !diagnostics.IsReady {
-				if !input.Override {
-					return &PublicationGateError{Diagnostics: diagnostics}
-				}
-				policy := PublicationOverridePolicy{AllowedBlockerCodes: []string{}}
-				err := tx.QueryRowContext(ctx, `
-					SELECT enabled, allowed_blocker_codes
-					FROM dsh_store_publication_override_policies
-					WHERE operator_context_id = $1 FOR SHARE`, actor.OperatorContextID).
-					Scan(&policy.Enabled, pq.Array(&policy.AllowedBlockerCodes))
-				if errors.Is(err, sql.ErrNoRows) || !policy.Enabled {
-					return &PublicationGateError{Diagnostics: diagnostics}
-				}
-				if err != nil {
-					return err
-				}
-				allowed := make(map[string]struct{}, len(policy.AllowedBlockerCodes))
-				for _, code := range policy.AllowedBlockerCodes {
-					allowed[code] = struct{}{}
-				}
-				for _, code := range diagnostics.BlockerCodes {
-					if _, ok := allowed[code]; !ok {
-						return &PublicationGateError{Diagnostics: diagnostics}
-					}
-				}
-				overrideApplied = true
-			}
-
 			if input.Decision == "publish" {
 				result, err := tx.ExecContext(ctx, `
 					UPDATE dsh_stores
@@ -632,6 +604,42 @@ func PublishStore(
 				if affected, _ := result.RowsAffected(); affected != 1 {
 					return ErrVersionConflict
 				}
+			}
+
+			// Evaluate the proposed state only after all in-transaction writes have
+			// happened. The readiness view is the sole owner of publication logic,
+			// and rollback keeps a rejected proposal from becoming visible.
+			updatedForGate, err := getStoreByIDTx(ctx, tx, storeID, true)
+			if err != nil {
+				return err
+			}
+			diagnostics = DiagnoseStorePublication(*updatedForGate)
+			if input.Decision == "publish" && !diagnostics.IsReady {
+				if !input.Override {
+					return &PublicationGateError{Diagnostics: diagnostics}
+				}
+				policy := PublicationOverridePolicy{AllowedBlockerCodes: []string{}}
+				err := tx.QueryRowContext(ctx, `
+					SELECT enabled, allowed_blocker_codes
+					FROM dsh_store_publication_override_policies
+					WHERE operator_context_id = $1 FOR SHARE`, actor.OperatorContextID).
+					Scan(&policy.Enabled, pq.Array(&policy.AllowedBlockerCodes))
+				if errors.Is(err, sql.ErrNoRows) || !policy.Enabled {
+					return &PublicationGateError{Diagnostics: diagnostics}
+				}
+				if err != nil {
+					return err
+				}
+				allowed := make(map[string]struct{}, len(policy.AllowedBlockerCodes))
+				for _, code := range policy.AllowedBlockerCodes {
+					allowed[code] = struct{}{}
+				}
+				for _, code := range diagnostics.BlockerCodes {
+					if _, ok := allowed[code]; !ok {
+						return &PublicationGateError{Diagnostics: diagnostics}
+					}
+				}
+				overrideApplied = true
 			}
 
 			blockersJSON, err := json.Marshal(diagnostics.Blockers)

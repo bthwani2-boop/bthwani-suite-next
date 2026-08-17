@@ -24,7 +24,7 @@ export type DshPartnerActivationStatus =
   | 'ops_approved'
   | 'ops_rejected'
   | 'partner_active'
-  | 'partner_deactivated'
+  | 'partner_terminated'
   | 'client_visible'
   | 'client_hidden';
 
@@ -66,7 +66,7 @@ export type DshPartnerDecisionCommandId =
   | 'activate_partner'
   | 'show_store_to_client'
   | 'hide_store_from_client'
-  | 'deactivate_partner';
+  | 'terminate_partner';
 
 export type DshPartnerDecisionCommand = {
   readonly id: DshPartnerDecisionCommandId;
@@ -214,17 +214,17 @@ export const DSH_PARTNER_ACTIVATION_STATES: ReadonlyArray<DshPartnerActivationSt
     visibleToPartner: true, visibleToField: false, visibleToControlPanel: true, visibleToClient: false,
     nextAction: 'التحقق من اجتياز جميع شروط الظهور لتمكين client_visible',
     blockedReason: '', auditRequired: false,
-    allowedNextStatuses: ['client_visible', 'client_hidden', 'partner_deactivated'],
+    allowedNextStatuses: ['client_visible', 'client_hidden', 'partner_terminated'],
   },
   {
-    status: 'partner_deactivated',
+    status: 'partner_terminated',
     ownerSurface: 'control-panel',
     actorResponsible: 'قسم الشركاء (CP)',
     visibleToPartner: true, visibleToField: false, visibleToControlPanel: true, visibleToClient: false,
     nextAction: 'مراجعة سبب الإيقاف وتحديد مسار إعادة التفعيل إن أمكن',
     blockedReason: 'الشريك موقوف من قِبل العمليات — يختفي فورًا من قائمة المتاجر لدى العميل',
     auditRequired: true,
-    allowedNextStatuses: ['ops_review', 'submitted'],
+    allowedNextStatuses: [],
   },
   {
     status: 'client_visible',
@@ -233,7 +233,7 @@ export const DSH_PARTNER_ACTIVATION_STATES: ReadonlyArray<DshPartnerActivationSt
     visibleToPartner: true, visibleToField: false, visibleToControlPanel: true, visibleToClient: true,
     nextAction: 'صيانة الحالة والمراقبة التشغيلية',
     blockedReason: '', auditRequired: false,
-    allowedNextStatuses: ['client_hidden', 'partner_deactivated'],
+    allowedNextStatuses: ['client_hidden', 'partner_terminated'],
   },
   {
     status: 'client_hidden',
@@ -243,7 +243,7 @@ export const DSH_PARTNER_ACTIVATION_STATES: ReadonlyArray<DshPartnerActivationSt
     nextAction: 'مراجعة سبب الإخفاء ورفع القيد عند الجاهزية',
     blockedReason: 'الشريك نشط لكن مخفي من اكتشاف العملاء — تجاوز تشغيلي أو خارج النطاق',
     auditRequired: true,
-    allowedNextStatuses: ['client_visible', 'partner_deactivated'],
+    allowedNextStatuses: ['client_visible', 'partner_terminated'],
   },
 ];
 
@@ -301,7 +301,7 @@ export function getDshPartnerActivationStatusLabel(status: DshPartnerActivationS
     ops_approved:             'معتمد من العمليات',
     ops_rejected:             'مرفوض من العمليات',
     partner_active:           'الشريك نشط',
-    partner_deactivated:      'الشريك موقوف',
+    partner_terminated:       'الشريك منتهٍ',
     client_visible:           'ظاهر للعملاء',
     client_hidden:            'مخفي من العملاء',
   };
@@ -319,7 +319,7 @@ export function getDshPartnerReadinessChecklist(
       'catalog_not_ready','catalog_ready',
       'delivery_modes_not_ready','delivery_modes_ready',
       'ops_review','ops_approved','ops_rejected',
-      'partner_active','partner_deactivated','client_visible','client_hidden',
+      'partner_active','partner_terminated','client_visible','client_hidden',
     ];
     return order.indexOf(status) >= order.indexOf(milestone);
   };

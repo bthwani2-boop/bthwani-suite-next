@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"dsh-api/internal/operationaloutbox"
+	"github.com/lib/pq"
 )
 
 // ErrPaymentSessionMismatch indicates a WLT payment event referenced a
@@ -237,6 +238,13 @@ func ApplyWltPaymentEventWithEvent(db *sql.DB, operatorContextID string, id, pay
 		VALUES ($1, $2, $3::uuid, $4, $5, $6, $7)
 		ON CONFLICT (event_key) DO NOTHING
 		RETURNING event_key`, eventKey, operatorContextID, id, paymentSessionID, wltStatus, payloadHash, correlationID).Scan(&insertedKey)
+	if err != nil && err != sql.ErrNoRows {
+		var pqErr *pq.Error
+		if isWltTerminalStatus(wltStatus) && errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			return nil, false, fmt.Errorf("%w: terminal outcome is already recorded for this payment session", ErrWltTerminalOutcomeConflict)
+		}
+		return nil, false, err
+	}
 	if err == sql.ErrNoRows {
 		var existingHash, existingContext, existingRequest, existingSession, existingStatus string
 		if err := tx.QueryRowContext(ctx, `

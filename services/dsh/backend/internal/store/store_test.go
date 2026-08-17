@@ -46,6 +46,8 @@ func TestRowToSummary(t *testing.T) {
 		CoverageSummary:         "حدة والمناطق المجاورة",
 		OperatingHours:          "08:00-23:00",
 		DeliveryReadiness:       "ready",
+		PublicationDecision:     PublicationPublished,
+		BlockingReasonCodes:     []string{},
 		CreatedAt:               time.Date(2026, 6, 21, 10, 0, 0, 0, time.UTC),
 		UpdatedAt:               time.Date(2026, 6, 21, 11, 0, 0, 0, time.UTC),
 	}
@@ -77,9 +79,10 @@ func TestPublicationEligibilityRequiresAllGates(t *testing.T) {
 	if !DiagnoseStorePublication(row).IsReady {
 		t.Fatal("all gates should publish the store")
 	}
-	row.CatalogApprovalStatus = "submitted"
+	row.PublicationDecision = PublicationBlocked
+	row.BlockingReasonCodes = []string{"CATALOG_NOT_APPROVED"}
 	if DiagnoseStorePublication(row).IsReady {
-		t.Fatal("unapproved catalog must hide the store")
+		t.Fatal("canonical catalog blocker must hide the store")
 	}
 }
 

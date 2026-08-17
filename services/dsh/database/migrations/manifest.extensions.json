@@ -177,6 +177,20 @@
       "sha256": "5983e1337a258a4ce7f843aa0ce690c3c2e720eadf79413f41af09540d7a78e4",
       "historicalPrefix": "1017",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 265,
+      "file": "dsh-1018_wlt_terminal_outcome_canonical_guard.sql",
+      "sha256": "f67c3be5af2d06704472d09f40dc1e62d9ac72b353463a0b83ffcf7221b645ac",
+      "historicalPrefix": "1018",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 266,
+      "file": "dsh-1019_remove_partner_deactivated_state.sql",
+      "sha256": "3948092bbf69be3c27b991e4b19d0eee04345b7fa1eccec3f5c4d6f449d768c0",
+      "historicalPrefix": "1019",
+      "state": "ACTIVE"
     }
   ]
 }

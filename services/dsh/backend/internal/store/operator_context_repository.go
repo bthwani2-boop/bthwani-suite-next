@@ -104,8 +104,18 @@ func GetStoreByPartnerIDForOperatorContext(db *sql.DB, operatorContextID, partne
 	if err != nil {
 		return nil, err
 	}
+	var count int
+	if err := db.QueryRow(
+		"SELECT COUNT(*) FROM dsh_stores WHERE partner_id = $1 AND operator_context_id = $2",
+		partnerID, operatorContextID,
+	).Scan(&count); err != nil {
+		return nil, err
+	}
+	if count > 1 {
+		return nil, ErrAmbiguousPartnerStores
+	}
 	row, err := scanStore(db.QueryRow(
-		"SELECT "+storeColumns+" FROM dsh_stores WHERE partner_id = $1 AND operator_context_id = $2 ORDER BY created_at ASC LIMIT 1",
+		"SELECT "+storeColumns+" FROM dsh_stores WHERE partner_id = $1 AND operator_context_id = $2",
 		partnerID, operatorContextID,
 	))
 	if errors.Is(err, sql.ErrNoRows) {

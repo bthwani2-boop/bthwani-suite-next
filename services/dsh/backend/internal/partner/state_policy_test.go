@@ -18,7 +18,7 @@ func TestPartnerActivationStateMachineRejectsForbiddenJumps(t *testing.T) {
 		{StatusSubmitted, StatusOpsApproved},
 		{StatusDocumentsUploaded, StatusPartnerActive},
 		{StatusOpsReview, StatusClientVisible},
-		{StatusPartnerDeactivated, StatusClientVisible},
+		{StatusPartnerTerminated, StatusClientVisible},
 	}
 	for _, pair := range forbidden {
 		if IsTransitionAllowed(pair[0], pair[1]) {
@@ -35,7 +35,7 @@ func TestPartnerActivationStateMachineHasNoSelfTransitions(t *testing.T) {
 		StatusCatalogNotReady, StatusCatalogReady,
 		StatusDeliveryModesNotReady, StatusDeliveryModesReady,
 		StatusOpsReview, StatusOpsApproved, StatusOpsRejected,
-		StatusPartnerActive, StatusPartnerDeactivated,
+		StatusPartnerActive, StatusPartnerTerminated,
 		StatusClientVisible, StatusClientHidden,
 	}
 	for _, state := range states {
@@ -150,7 +150,7 @@ func TestOperatorAllowedActionsMirrorEveryTransition(t *testing.T) {
 		StatusCatalogNotReady, StatusCatalogReady,
 		StatusDeliveryModesNotReady, StatusDeliveryModesReady,
 		StatusOpsReview, StatusOpsApproved, StatusOpsRejected,
-		StatusPartnerActive, StatusPartnerDeactivated,
+		StatusPartnerActive, StatusPartnerTerminated,
 		StatusClientVisible, StatusClientHidden,
 	}
 	for _, state := range states {

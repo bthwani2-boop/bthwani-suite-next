@@ -94,7 +94,7 @@ function definition(workspace: PartnerWorkspaceTabId, subTab: string): Workspace
       return {
         title: subTab === "store_performance" ? "أداء الفروع" : "أداء الشركاء",
         description: "نقطة دخول موحدة إلى الشركاء النشطين وفروعهم وقراءات الأداء التشغيلية.",
-        statuses: new Set(["partner_active", "client_visible", "client_hidden", "partner_deactivated"]),
+        statuses: new Set(["partner_active", "client_visible", "client_hidden", "partner_terminated"]),
       };
     case "promotion_eligibility":
       return {
@@ -106,7 +106,7 @@ function definition(workspace: PartnerWorkspaceTabId, subTab: string): Workspace
       return {
         title: subTab === "operational_follow_up" ? "المتابعة التشغيلية" : "مستويات الخدمة",
         description: "متابعة الشركاء التشغيليين وفتح ملف الشريك وفروعه والتصعيدات ذات العلاقة.",
-        statuses: new Set(["partner_active", "client_visible", "client_hidden", "partner_deactivated"]),
+        statuses: new Set(["partner_active", "client_visible", "client_hidden", "partner_terminated"]),
       };
     case "contracts":
       return {
@@ -123,7 +123,7 @@ function definition(workspace: PartnerWorkspaceTabId, subTab: string): Workspace
         description: "قرارات الإخفاء والإيقاف والرفض مع أسبابها وسجلها غير القابل للتجاوز.",
         statuses: subTab === "client_hidden"
           ? new Set(["client_hidden"])
-          : new Set(["ops_rejected", "partner_deactivated", "client_hidden"]),
+          : new Set(["ops_rejected", "partner_terminated", "client_hidden"]),
       };
     default:
       return {
@@ -135,7 +135,7 @@ function definition(workspace: PartnerWorkspaceTabId, subTab: string): Workspace
 
 function statusTone(status: string): CpBadgeTone {
   if (status === "client_visible" || status === "partner_active" || status === "ops_approved") return "success";
-  if (status === "ops_rejected" || status === "partner_deactivated") return "danger";
+  if (status === "ops_rejected" || status === "partner_terminated") return "danger";
   if (status === "client_hidden" || status.includes("missing") || status.includes("not_ready")) return "warning";
   return "info";
 }

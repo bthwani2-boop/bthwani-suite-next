@@ -5,36 +5,25 @@ import (
 	"testing"
 )
 
-func TestClientStorefrontPredicateContainsAllPublicationGates(t *testing.T) {
+func TestClientStorefrontPredicateUsesCanonicalReadinessView(t *testing.T) {
 	predicate := ClientStorefrontPredicate("s")
-	required := []string{
-		"s.is_visible = true",
-		"s.status = 'published'",
-		"s.serviceability_status IN ('serviceable','limited')",
-		"s.partner_readiness = 'ready'",
-		"s.catalog_approval_status = 'approved'",
-		"s.marketing_visibility = 'visible'",
-		"cardinality(s.delivery_modes) > 0",
-		"s.delivery_readiness = 'ready'",
-		"partner.id = s.partner_id",
-		"partner.activation_status = 'client_visible'",
-		"assortment.store_id = s.id",
-		"assortment.publication_status = 'client_visible'",
-		"product.approval_status = 'approved'",
-		"domain.is_client_visible = true",
-		"store_domain.status = 'approved'",
-	}
-
-	for _, fragment := range required {
+	for _, fragment := range []string{
+		"dsh_partner_store_readiness_v publication",
+		"publication.store_id = s.id",
+		"publication.publication_decision = 'PUBLISHED'",
+	} {
 		if !strings.Contains(predicate, fragment) {
-			t.Fatalf("client storefront predicate is missing %q", fragment)
+			t.Fatalf("canonical predicate is missing %q: %s", fragment, predicate)
 		}
+	}
+	if strings.Contains(predicate, "dsh_partners partner") || strings.Contains(predicate, "dsh_store_assortments assortment") {
+		t.Fatalf("publication rules were duplicated outside the canonical view: %s", predicate)
 	}
 }
 
 func TestClientStorefrontPredicateNormalizesAlias(t *testing.T) {
 	predicate := ClientStorefrontPredicate("  dsh_stores  ")
-	if !strings.Contains(predicate, "dsh_stores.is_visible = true") {
+	if !strings.Contains(predicate, "publication.store_id = dsh_stores.id") {
 		t.Fatalf("expected normalized table alias in predicate: %s", predicate)
 	}
 	if strings.Contains(predicate, "  dsh_stores  .") {

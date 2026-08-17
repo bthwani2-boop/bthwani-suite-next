@@ -33,7 +33,7 @@ func TestStoreCreationAuthorityIsSurfaceAndStateBound(t *testing.T) {
 
 	for _, status := range []ActivationStatus{
 		StatusOpsRejected,
-		StatusPartnerDeactivated,
+		StatusPartnerTerminated,
 		StatusPartnerSuspended,
 		StatusPartnerTerminated,
 	} {

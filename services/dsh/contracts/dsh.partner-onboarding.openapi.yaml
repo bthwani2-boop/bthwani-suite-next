@@ -1204,7 +1204,7 @@ components:
       - ops_approved
       - ops_rejected
       - partner_active
-      - partner_deactivated
+      - partner_terminated
       - client_visible
       - client_hidden
     PartnerCreateRequest:
@@ -1429,7 +1429,7 @@ components:
               enum:
               - ops_approved
               - ops_rejected
-              - partner_deactivated
+               - partner_terminated
           required:
           - toStatus
         then:

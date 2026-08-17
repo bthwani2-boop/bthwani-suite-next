@@ -87,7 +87,7 @@ func TestPartnerDeactivationTriggerAndOutboxDeliveryDBIntegration(t *testing.T) 
 		INSERT INTO dsh_partner_activation_events (
 			partner_id, from_status, to_status, actor_id, actor_surface,
 			reason, correlation_id, idempotency_key, request_hash
-		) VALUES ($1,'partner_active','partner_deactivated','operator-db','control-panel',
+		) VALUES ($1,'partner_active','partner_terminated','operator-db','control-panel',
 		          'integration deactivation','partner-deactivation-correlation',
 		          'partner-deactivation-transition-key','partner-deactivation-hash')
 		RETURNING id`, partnerID,

@@ -209,7 +209,7 @@ func transitionStatusGoverned(ctx context.Context, db *sql.DB, partnerID string,
 	if !IsTransitionAllowed(current.ActivationStatus, input.ToStatus) {
 		return Partner{}, ActivationEvent{}, ErrInvalidTransition
 	}
-	if (input.ToStatus == StatusOpsRejected || input.ToStatus == StatusPartnerDeactivated || input.ToStatus == StatusPartnerSuspended || input.ToStatus == StatusPartnerTerminated) && strings.TrimSpace(input.Reason) == "" {
+	if (input.ToStatus == StatusOpsRejected || input.ToStatus == StatusPartnerSuspended || input.ToStatus == StatusPartnerTerminated) && strings.TrimSpace(input.Reason) == "" {
 		return Partner{}, ActivationEvent{}, ErrInvalid
 	}
 	if err := validateTransitionReadinessTx(ctx, tx, current, input.ToStatus); err != nil {
@@ -265,24 +265,22 @@ func transitionStatusGoverned(ctx context.Context, db *sql.DB, partnerID string,
 			WHERE partner_id = $1`, partnerID, readiness); err != nil {
 			return Partner{}, ActivationEvent{}, err
 		}
-		var storeID string
-		_ = tx.QueryRowContext(ctx, `SELECT id FROM dsh_stores WHERE partner_id = $1 ORDER BY created_at ASC LIMIT 1`, partnerID).Scan(&storeID)
-		if storeID != "" {
-			role := "operator"
-			if input.ActorSurface == "app-field" {
-				role = "field"
-			}
-			_, err = tx.ExecContext(ctx, `
-				INSERT INTO dsh_store_action_audit
-					(id, actor_id, actor_role, store_id, action, from_state, to_state,
-					 reason, correlation_id, created_at)
-				VALUES ($1,$2,$3,$4,'store_partner_readiness_updated','{}'::jsonb,'{}'::jsonb,$5,$6,NOW())`,
-				"evt-"+event.ID, input.ActorID, role, storeID,
-				"partner transition to "+string(input.ToStatus), input.CorrelationID,
-			)
-			if err != nil {
-				return Partner{}, ActivationEvent{}, err
-			}
+		role := "operator"
+		if input.ActorSurface == "app-field" {
+			role = "field"
+		}
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO dsh_store_action_audit
+				(id, actor_id, actor_role, store_id, action, from_state, to_state,
+				 reason, correlation_id, created_at)
+			SELECT 'evt-' || md5($1 || s.id), $2, $3, s.id,
+			       'store_partner_readiness_updated','{}'::jsonb,'{}'::jsonb,$4,$5,NOW()
+			FROM dsh_stores s WHERE s.partner_id = $6`,
+			event.ID, input.ActorID, role,
+			"partner transition to "+string(input.ToStatus), input.CorrelationID, partnerID,
+		)
+		if err != nil {
+			return Partner{}, ActivationEvent{}, err
 		}
 	}
 
@@ -349,15 +347,17 @@ func CreateFieldVisitGoverned(db *sql.DB, input CreateFieldVisitInput) (FieldVis
 		return FieldVisit{}, fmt.Errorf("%w: field visit requires notes, location, or evidence", ErrInvalid)
 	}
 	if strings.TrimSpace(input.StoreID) == "" {
-		if err := db.QueryRow(`
-			SELECT id FROM dsh_stores
-			WHERE partner_id = $1
-			ORDER BY created_at ASC
-			LIMIT 1`, input.PartnerID).Scan(&input.StoreID); errors.Is(err, sql.ErrNoRows) {
-			return FieldVisit{}, fmt.Errorf("%w: partner has no linked store", ErrReadinessGate)
-		} else if err != nil {
+		linkedStore, err := store.GetStoreByPartnerID(db, input.PartnerID)
+		if errors.Is(err, store.ErrAmbiguousPartnerStores) {
 			return FieldVisit{}, err
 		}
+		if err != nil {
+			return FieldVisit{}, err
+		}
+		if linkedStore == nil {
+			return FieldVisit{}, fmt.Errorf("%w: partner has no linked store", ErrReadinessGate)
+		}
+		input.StoreID = linkedStore.ID
 	}
 	return CreateFieldVisit(db, input)
 }
@@ -499,10 +499,14 @@ func validateTransitionReadinessTx(ctx context.Context, tx *sql.Tx, p Partner, t
 	}
 
 	if requiresPublication {
-		candidate := gate
-		candidate.PartnerActivationStatus = string(StatusClientVisible)
-		if diagnostics := store.DiagnoseStorePublication(candidate); !diagnostics.IsReady {
-			return ErrStorePublicationGatesFailed
+		// The database view owns all publication rules. The only blockers that
+		// may disappear as part of this transition are the partner-state facts
+		// propagated by this same transaction; every store gate must already pass.
+		diagnostics := store.DiagnoseStorePublication(gate)
+		for _, code := range diagnostics.BlockerCodes {
+			if code != "PARTNER_NOT_CLIENT_VISIBLE" && code != "PARTNER_NOT_READY" {
+				return ErrStorePublicationGatesFailed
+			}
 		}
 	}
 	return nil

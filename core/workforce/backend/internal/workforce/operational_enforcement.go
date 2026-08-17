@@ -92,6 +92,10 @@ func validateCaptainPromotionInput(input PromoteCaptainInput) error {
 // history row is inserted before the classification update so the database
 // trigger can prove the update is evidence-backed within the same transaction.
 func (r *Repository) PromoteCaptainToBasic(ctx context.Context, actorID, operatorID string, input PromoteCaptainInput) (ProviderOperationalCore, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return ProviderOperationalCore{}, err
+	}
 	actorID = strings.TrimSpace(actorID)
 	operatorID = strings.TrimSpace(operatorID)
 	if actorID == "" || operatorID == "" {
@@ -114,9 +118,9 @@ func (r *Repository) PromoteCaptainToBasic(ctx context.Context, actorID, operato
 		SELECT activation.classification,activation.training_status,
 			activation.operations_accreditation_status,person.engagement_status
 		FROM workforce_captain_activation_core activation
-		JOIN workforce_people person ON person.actor_id=activation.actor_id
-		WHERE activation.actor_id=$1
-		FOR UPDATE OF activation,person`, actorID).Scan(
+		JOIN workforce_people person ON person.operator_context_id=activation.operator_context_id AND person.actor_id=activation.actor_id
+		WHERE activation.operator_context_id=$1 AND activation.actor_id=$2
+		FOR UPDATE OF activation,person`, operatorContextID, actorID).Scan(
 		&current, &trainingStatus, &accreditationStatus, &engagementStatus,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -146,19 +150,23 @@ func (r *Repository) PromoteCaptainToBasic(ctx context.Context, actorID, operato
 	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO workforce_captain_classification_history(
-			actor_id,from_classification,to_classification,completed_deliveries,
-			completion_rate_basis_points,severe_incident_free,evidence_media_refs,
-			decision_note,approved_by_actor_id
-		) VALUES($1,'joker','basic',$2,$3,$4,$5::jsonb,$6,$7)`,
-		actorID, input.CompletedDeliveries, input.CompletionRateBasisPoints,
+			operator_context_id,actor_id,from_classification,to_classification,evidence,
+			reason,decided_by_actor_id,idempotency_key
+		) VALUES($1,$2,'joker','basic',jsonb_build_object(
+			'completedDeliveries',$3,
+			'completionRateBasisPoints',$4,
+			'severeIncidentFree',$5,
+			'evidenceMediaRefs',$6::jsonb
+		),$7,$8,'promotion:' || $2 || ':' || gen_random_uuid()::text)`,
+		operatorContextID, actorID, input.CompletedDeliveries, input.CompletionRateBasisPoints,
 		input.SevereIncidentFree, string(evidenceJSON), input.DecisionNote, operatorID); err != nil {
 		return ProviderOperationalCore{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE workforce_captain_activation_core
-		SET classification='basic',classification_updated_at=now(),updated_by_actor_id=$2,
+		SET classification='basic',classification_updated_at=now(),updated_by_actor_id=$3,
 			version=version+1,updated_at=now()
-		WHERE actor_id=$1`, actorID, operatorID); err != nil {
+		WHERE operator_context_id=$1 AND actor_id=$2`, operatorContextID, actorID, operatorID); err != nil {
 		return ProviderOperationalCore{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -189,6 +197,10 @@ func incidentResolutionRequired(status string) bool {
 // debit is never created here; financial_action_posted is accepted only after
 // WLT has returned a ledger reference.
 func (r *Repository) TransitionProviderIncident(ctx context.Context, incidentID, operatorID string, input TransitionProviderIncidentInput) (ProviderIncident, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return ProviderIncident{}, err
+	}
 	incidentID = strings.TrimSpace(incidentID)
 	operatorID = strings.TrimSpace(operatorID)
 	input.ToStatus = strings.TrimSpace(input.ToStatus)
@@ -214,8 +226,8 @@ func (r *Repository) TransitionProviderIncident(ctx context.Context, incidentID,
 	if err := tx.QueryRowContext(ctx, `
 		SELECT actor_id,status
 		FROM workforce_provider_incidents
-		WHERE id=$1::uuid
-		FOR UPDATE`, incidentID).Scan(&actorID, &currentStatus); err != nil {
+		WHERE id=$1::uuid AND operator_context_id=$2
+		FOR UPDATE`, incidentID, operatorContextID).Scan(&actorID, &currentStatus); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ProviderIncident{}, ErrNotFound
 		}
@@ -240,15 +252,17 @@ func (r *Repository) TransitionProviderIncident(ctx context.Context, incidentID,
 			reviewed_by_actor_id=$5,
 			resolved_at=CASE WHEN $6 THEN now() ELSE NULL END,
 			version=version+1,updated_at=now()
-		WHERE id=$1::uuid`, incidentID, input.ToStatus, input.ResolutionNote,
-		input.WltLedgerReference, operatorID, resolved); err != nil {
+		WHERE id=$1::uuid AND operator_context_id=$7`, incidentID, input.ToStatus, input.ResolutionNote,
+		input.WltLedgerReference, operatorID, resolved, operatorContextID); err != nil {
 		return ProviderIncident{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO workforce_provider_incident_transitions(
-			incident_id,from_status,to_status,resolution_note,wlt_ledger_reference,changed_by_actor_id
-		) VALUES($1::uuid,$2,$3,$4,$5,$6)`, incidentID, currentStatus, input.ToStatus,
-		input.ResolutionNote, input.WltLedgerReference, operatorID); err != nil {
+			operator_context_id,incident_id,actor_id,from_status,to_status,reason,wlt_ledger_reference,decided_by_actor_id,incident_version
+		) SELECT $1, incident.id, incident.actor_id, $2, $3, $4, $5, $6, incident.version
+		FROM workforce_provider_incidents incident
+		WHERE incident.id=$7::uuid AND incident.operator_context_id=$1`, operatorContextID, currentStatus, input.ToStatus,
+		input.ResolutionNote, input.WltLedgerReference, operatorID, incidentID); err != nil {
 		return ProviderIncident{}, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -258,12 +272,16 @@ func (r *Repository) TransitionProviderIncident(ctx context.Context, incidentID,
 }
 
 func (r *Repository) ListProviderIncidentTransitions(ctx context.Context, incidentID string) ([]ProviderIncidentTransition, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT id::text,incident_id::text,from_status,to_status,resolution_note,
-			wlt_ledger_reference,changed_by_actor_id,created_at
+		SELECT id::text,incident_id::text,from_status,to_status,reason,
+			wlt_ledger_reference,decided_by_actor_id,created_at
 		FROM workforce_provider_incident_transitions
-		WHERE incident_id=$1::uuid
-		ORDER BY created_at ASC`, strings.TrimSpace(incidentID))
+		WHERE operator_context_id=$1 AND incident_id=$2::uuid
+		ORDER BY created_at ASC`, operatorContextID, strings.TrimSpace(incidentID))
 	if err != nil {
 		return nil, err
 	}

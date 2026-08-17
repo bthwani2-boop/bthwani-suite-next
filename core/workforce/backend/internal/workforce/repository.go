@@ -10,16 +10,18 @@ import (
 	"time"
 
 	"github.com/lib/pq"
+	"workforce-api/internal/auth"
 )
 
 var (
-	ErrNotFound               = errors.New("workforce person not found")
-	ErrVersionConflict        = errors.New("version conflict")
-	ErrDuplicateWorkforceCode = errors.New("workforce code already used")
-	ErrInvalidReference       = errors.New("invalid reference code")
-	ErrIdempotencyConflict    = errors.New("idempotency key reused with different request")
-	ErrReferenceInUse         = errors.New("reference code is in use")
-	ErrReferenceExists        = errors.New("reference code already exists")
+	ErrNotFound                = errors.New("workforce person not found")
+	ErrVersionConflict         = errors.New("version conflict")
+	ErrDuplicateWorkforceCode  = errors.New("workforce code already used")
+	ErrInvalidReference        = errors.New("invalid reference code")
+	ErrIdempotencyConflict     = errors.New("idempotency key reused with different request")
+	ErrReferenceInUse          = errors.New("reference code is in use")
+	ErrReferenceExists         = errors.New("reference code already exists")
+	ErrOperatorContextRequired = errors.New("authoritative operator context is required")
 )
 
 type Repository struct {
@@ -31,6 +33,14 @@ func NewRepository(db *sql.DB) *Repository {
 	return &Repository{db: db, now: time.Now}
 }
 
+func operatorContextID(ctx context.Context) (string, error) {
+	operatorContextID, ok := auth.OperatorContextIDFromContext(ctx)
+	if !ok {
+		return "", ErrOperatorContextRequired
+	}
+	return operatorContextID, nil
+}
+
 func (r *Repository) DB() *sql.DB { return r.db }
 
 // ---- idempotency (replay-capable, mirroring dsh_store_idempotency) ----
@@ -39,15 +49,19 @@ func (r *Repository) DB() *sql.DB { return r.db }
 // when the same request was already completed. A key reuse with a different
 // request hash is a client bug and fails loudly.
 func (r *Repository) IdempotentReplay(ctx context.Context, actorID, operation, key, requestHash string) ([]byte, bool, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return nil, false, err
+	}
 	if key == "" {
 		return nil, false, nil
 	}
 	var storedHash string
 	var response []byte
-	err := r.db.QueryRowContext(ctx, `
+	err = r.db.QueryRowContext(ctx, `
 		SELECT request_hash, response_body FROM workforce_idempotency
-		WHERE actor_id = $1 AND operation = $2 AND idempotency_key = $3`,
-		actorID, operation, key).Scan(&storedHash, &response)
+		WHERE operator_context_id = $1 AND actor_id = $2 AND operation = $3 AND idempotency_key = $4`,
+		operatorContextID, actorID, operation, key).Scan(&storedHash, &response)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, false, nil
 	}
@@ -61,14 +75,18 @@ func (r *Repository) IdempotentReplay(ctx context.Context, actorID, operation, k
 }
 
 func (r *Repository) StoreIdempotentResponse(ctx context.Context, actorID, operation, key, requestHash string, response []byte) error {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return err
+	}
 	if key == "" {
 		return nil
 	}
-	_, err := r.db.ExecContext(ctx, `
-		INSERT INTO workforce_idempotency (actor_id, operation, idempotency_key, request_hash, response_body)
-		VALUES ($1, $2, $3, $4, $5::jsonb)
+	_, err = r.db.ExecContext(ctx, `
+		INSERT INTO workforce_idempotency (operator_context_id, actor_id, operation, idempotency_key, request_hash, response_body)
+		VALUES ($1, $2, $3, $4, $5, $6::jsonb)
 		ON CONFLICT (actor_id, operation, idempotency_key) DO NOTHING`,
-		actorID, operation, key, requestHash, string(response))
+		operatorContextID, actorID, operation, key, requestHash, string(response))
 	return err
 }
 
@@ -77,6 +95,10 @@ func (r *Repository) StoreIdempotentResponse(ctx context.Context, actorID, opera
 // RecordAudit is best-effort for reads but called inside the write paths;
 // failures propagate so a state change is never silently unaudited.
 func (r *Repository) RecordAudit(ctx context.Context, actorID, actorRole, targetActorID, action string, fromState, toState any, reason, correlationID string) error {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return err
+	}
 	fromJSON, err := marshalNullable(fromState)
 	if err != nil {
 		return err
@@ -87,9 +109,9 @@ func (r *Repository) RecordAudit(ctx context.Context, actorID, actorRole, target
 	}
 	_, err = r.db.ExecContext(ctx, `
 		INSERT INTO workforce_action_audit
-			(actor_id, actor_role, target_actor_id, action, from_state, to_state, reason, correlation_id)
-		VALUES ($1, $2, NULLIF($3, ''), $4, $5::jsonb, $6::jsonb, NULLIF($7, ''), NULLIF($8, ''))`,
-		actorID, actorRole, targetActorID, action, fromJSON, toJSON, reason, correlationID)
+			(operator_context_id, actor_id, actor_role, target_actor_id, action, from_state, to_state, reason, correlation_id)
+		VALUES ($1, $2, $3, NULLIF($4, ''), $5, $6::jsonb, $7::jsonb, NULLIF($8, ''), NULLIF($9, ''))`,
+		operatorContextID, actorID, actorRole, targetActorID, action, fromJSON, toJSON, reason, correlationID)
 	return err
 }
 
@@ -107,6 +129,10 @@ func marshalNullable(state any) (any, error) {
 // ---- people ----
 
 func (r *Repository) CreatePerson(ctx context.Context, actorID, workforceCode, cityCode string, input CreateFieldAgentInput) (Person, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return Person{}, err
+	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Person{}, err
@@ -119,10 +145,10 @@ func (r *Repository) CreatePerson(ctx context.Context, actorID, workforceCode, c
 
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO workforce_people
-			(actor_id, full_name_ar, full_name_en, workforce_code, workforce_kind, engagement_type, engagement_start_date, photo_media_ref)
-		VALUES ($1, $2, NULLIF($3, ''), $4, 'field', $5, NULLIF($6, '')::date, NULLIF($7, ''))
+			(operator_context_id, actor_id, full_name_ar, full_name_en, workforce_code, workforce_kind, engagement_type, engagement_start_date, photo_media_ref)
+		VALUES ($1, $2, $3, NULLIF($4, ''), $5, 'field', $6, NULLIF($7, '')::date, NULLIF($8, ''))
 		ON CONFLICT (actor_id) DO NOTHING`,
-		actorID, input.FullNameAr, input.FullNameEn, workforceCode,
+		operatorContextID, actorID, input.FullNameAr, input.FullNameEn, workforceCode,
 		input.EngagementType, input.EngagementStartDate, input.PhotoMediaRef)
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
@@ -137,9 +163,9 @@ func (r *Repository) CreatePerson(ctx context.Context, actorID, workforceCode, c
 	// never accept shift authority from a request payload.
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO workforce_field_profiles
-			(actor_id, city_code, service_zone_id, shift_code, supervisor_actor_id, document_media_refs)
-		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), 'not_applicable', NULLIF($4, ''), $5::jsonb)`,
-		actorID, cityCode, input.ServiceZoneID, input.SupervisorActorID, string(documents))
+			(operator_context_id, actor_id, city_code, service_zone_id, shift_code, supervisor_actor_id, document_media_refs)
+		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), 'not_applicable', NULLIF($5, ''), $6::jsonb)`,
+		operatorContextID, actorID, cityCode, input.ServiceZoneID, input.SupervisorActorID, string(documents))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
@@ -150,6 +176,10 @@ func (r *Repository) CreatePerson(ctx context.Context, actorID, workforceCode, c
 }
 
 func (r *Repository) CreateCaptain(ctx context.Context, actorID, workforceCode, cityCode string, input CreateCaptainInput) (Person, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return Person{}, err
+	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Person{}, err
@@ -162,10 +192,10 @@ func (r *Repository) CreateCaptain(ctx context.Context, actorID, workforceCode, 
 
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO workforce_people
-			(actor_id, full_name_ar, full_name_en, workforce_code, workforce_kind, engagement_type, engagement_start_date, photo_media_ref)
-		VALUES ($1, $2, NULLIF($3, ''), $4, 'captain', $5, NULLIF($6, '')::date, NULLIF($7, ''))
+			(operator_context_id, actor_id, full_name_ar, full_name_en, workforce_code, workforce_kind, engagement_type, engagement_start_date, photo_media_ref)
+		VALUES ($1, $2, $3, NULLIF($4, ''), $5, 'captain', $6, NULLIF($7, '')::date, NULLIF($8, ''))
 		ON CONFLICT (actor_id) DO NOTHING`,
-		actorID, input.FullNameAr, input.FullNameEn, workforceCode,
+		operatorContextID, actorID, input.FullNameAr, input.FullNameEn, workforceCode,
 		input.EngagementType, input.EngagementStartDate, input.PhotoMediaRef)
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
@@ -181,11 +211,11 @@ func (r *Repository) CreateCaptain(ctx context.Context, actorID, workforceCode, 
 	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO workforce_captain_profiles
-			(actor_id, vehicle_type, vehicle_identifier, license_status, license_expires_at,
+			(operator_context_id, actor_id, vehicle_type, vehicle_identifier, license_status, license_expires_at,
 			 operating_city_code, service_zone_id, operating_scope_code, supervisor_actor_id, document_media_refs)
-		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), $4, NULLIF($5, '')::date,
-			NULLIF($6, ''), NULLIF($7, ''), NULLIF($8, ''), NULLIF($9, ''), $10::jsonb)`,
-		actorID, input.VehicleType, input.VehicleIdentifier, licenseStatus, input.LicenseExpiresAt,
+		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), $5, NULLIF($6, '')::date,
+			NULLIF($7, ''), NULLIF($8, ''), NULLIF($9, ''), NULLIF($10, ''), $11::jsonb)`,
+		operatorContextID, actorID, input.VehicleType, input.VehicleIdentifier, licenseStatus, input.LicenseExpiresAt,
 		cityCode, input.ServiceZoneID, input.OperatingScopeCode, input.SupervisorActorID, string(documents))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
@@ -197,6 +227,10 @@ func (r *Repository) CreateCaptain(ctx context.Context, actorID, workforceCode, 
 }
 
 func (r *Repository) CreateEmployee(ctx context.Context, actorID, workforceCode string, input CreateEmployeeInput) (Person, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return Person{}, err
+	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Person{}, err
@@ -205,10 +239,10 @@ func (r *Repository) CreateEmployee(ctx context.Context, actorID, workforceCode 
 
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO workforce_people
-			(actor_id, full_name_ar, full_name_en, workforce_code, workforce_kind, engagement_type, engagement_start_date, photo_media_ref)
-		VALUES ($1, $2, NULLIF($3, ''), $4, 'employee', $5, NULLIF($6, '')::date, NULLIF($7, ''))
+			(operator_context_id, actor_id, full_name_ar, full_name_en, workforce_code, workforce_kind, engagement_type, engagement_start_date, photo_media_ref)
+		VALUES ($1, $2, $3, NULLIF($4, ''), $5, 'employee', $6, NULLIF($7, '')::date, NULLIF($8, ''))
 		ON CONFLICT (actor_id) DO NOTHING`,
-		actorID, input.FullNameAr, input.FullNameEn, workforceCode,
+		operatorContextID, actorID, input.FullNameAr, input.FullNameEn, workforceCode,
 		input.EngagementType, input.EngagementStartDate, input.PhotoMediaRef)
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
@@ -220,9 +254,9 @@ func (r *Repository) CreateEmployee(ctx context.Context, actorID, workforceCode 
 	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO workforce_employee_profiles
-			(actor_id, department, role, supervisor_actor_id, office_location, document_media_refs)
-		VALUES ($1, NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), $6::jsonb)`,
-		actorID, input.Department, input.Role, input.SupervisorActorID, input.OfficeLocation, string(documents))
+			(operator_context_id, actor_id, department, role, supervisor_actor_id, office_location, document_media_refs)
+		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''), $7::jsonb)`,
+		operatorContextID, actorID, input.Department, input.Role, input.SupervisorActorID, input.OfficeLocation, string(documents))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
@@ -254,7 +288,11 @@ func (r *Repository) NextWorkforceCode(ctx context.Context, kind string) (string
 }
 
 func (r *Repository) PersonByActorID(ctx context.Context, actorID string) (Person, error) {
-	row := r.db.QueryRowContext(ctx, personSelect+` WHERE p.actor_id = $1`, actorID)
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return Person{}, err
+	}
+	row := r.db.QueryRowContext(ctx, personSelect+` WHERE p.operator_context_id = $1 AND p.actor_id = $2`, operatorContextID, actorID)
 	person, err := scanPerson(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Person{}, ErrNotFound
@@ -263,7 +301,7 @@ func (r *Repository) PersonByActorID(ctx context.Context, actorID string) (Perso
 }
 
 const personSelect = `
-	SELECT p.actor_id, p.full_name_ar, COALESCE(p.full_name_en, ''), p.workforce_code, p.workforce_kind,
+	SELECT p.actor_id, p.operator_context_id, p.full_name_ar, COALESCE(p.full_name_en, ''), p.workforce_code, p.workforce_kind,
 	       p.engagement_type, COALESCE(p.engagement_start_date::text, ''), p.engagement_status,
 	       COALESCE(p.photo_media_ref, ''), p.version, p.created_at, p.updated_at,
 	       COALESCE(f.city_code, ''), COALESCE(f.service_zone_id, ''), COALESCE(f.shift_code, ''), COALESCE(f.supervisor_actor_id, ''),
@@ -277,9 +315,9 @@ const personSelect = `
 	       COALESCE(e.department, ''), COALESCE(e.role, ''), COALESCE(e.supervisor_actor_id, ''), COALESCE(e.office_location, ''),
 	       COALESCE(e.document_media_refs, '[]'::jsonb), e.actor_id IS NOT NULL
 	FROM workforce_people p
-	LEFT JOIN workforce_field_profiles f ON f.actor_id = p.actor_id
-	LEFT JOIN workforce_captain_profiles c ON c.actor_id = p.actor_id
-	LEFT JOIN workforce_employee_profiles e ON e.actor_id = p.actor_id`
+	LEFT JOIN workforce_field_profiles f ON f.operator_context_id = p.operator_context_id AND f.actor_id = p.actor_id
+	LEFT JOIN workforce_captain_profiles c ON c.operator_context_id = p.operator_context_id AND c.actor_id = p.actor_id
+	LEFT JOIN workforce_employee_profiles e ON e.operator_context_id = p.operator_context_id AND e.actor_id = p.actor_id`
 
 type rowScanner interface{ Scan(dest ...any) error }
 
@@ -295,7 +333,7 @@ func scanPerson(row rowScanner) (Person, error) {
 	var hasCaptainProfile bool
 	var hasEmployeeProfile bool
 	err := row.Scan(
-		&person.ActorID, &person.FullNameAr, &person.FullNameEn, &person.WorkforceCode, &person.WorkforceKind,
+		&person.ActorID, &person.OperatorContextID, &person.FullNameAr, &person.FullNameEn, &person.WorkforceCode, &person.WorkforceKind,
 		&person.EngagementType, &person.EngagementStartDate, &person.EngagementStatus,
 		&person.PhotoMediaRef, &person.Version, &person.CreatedAt, &person.UpdatedAt,
 		&profile.CityCode, &profile.ServiceZoneID, &profile.ShiftCode, &profile.SupervisorActorID,
@@ -344,8 +382,12 @@ func scanPerson(row rowScanner) (Person, error) {
 }
 
 func (r *Repository) ListPeople(ctx context.Context, filter ListFilter) ([]Person, error) {
-	clauses := []string{"1=1"}
-	args := []any{}
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	clauses := []string{"p.operator_context_id = $1"}
+	args := []any{operatorContextID}
 	if filter.Status != "" {
 		args = append(args, filter.Status)
 		clauses = append(clauses, fmt.Sprintf("p.engagement_status = $%d", len(args)))
@@ -407,6 +449,10 @@ func (r *Repository) ListEmployees(ctx context.Context, filter ListFilter) ([]Pe
 }
 
 func (r *Repository) UpdateEmployee(ctx context.Context, actorID string, input UpdateEmployeeInput) (Person, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return Person{}, err
+	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Person{}, err
@@ -415,7 +461,7 @@ func (r *Repository) UpdateEmployee(ctx context.Context, actorID string, input U
 
 	var currentVersion int
 	err = tx.QueryRowContext(ctx, `
-		SELECT version FROM workforce_people WHERE actor_id = $1 FOR UPDATE`, actorID).Scan(&currentVersion)
+		SELECT version FROM workforce_people WHERE operator_context_id = $1 AND actor_id = $2 FOR UPDATE`, operatorContextID, actorID).Scan(&currentVersion)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Person{}, ErrNotFound
 	}
@@ -428,28 +474,28 @@ func (r *Repository) UpdateEmployee(ctx context.Context, actorID string, input U
 
 	_, err = tx.ExecContext(ctx, `
 		UPDATE workforce_people SET
-			full_name_ar = COALESCE($2, full_name_ar),
-			full_name_en = COALESCE(NULLIF($3, ''), full_name_en),
-			engagement_type = COALESCE($4, engagement_type),
-			engagement_start_date = COALESCE(NULLIF($5, '')::date, engagement_start_date),
-			photo_media_ref = COALESCE(NULLIF($6, ''), photo_media_ref),
+			full_name_ar = COALESCE($3, full_name_ar),
+			full_name_en = COALESCE(NULLIF($4, ''), full_name_en),
+			engagement_type = COALESCE($5, engagement_type),
+			engagement_start_date = COALESCE(NULLIF($6, '')::date, engagement_start_date),
+			photo_media_ref = COALESCE(NULLIF($7, ''), photo_media_ref),
 			version = version + 1,
 			updated_at = now()
-		WHERE actor_id = $1`,
-		actorID, input.FullNameAr, deref(input.FullNameEn),
+		WHERE operator_context_id = $1 AND actor_id = $2`,
+		operatorContextID, actorID, input.FullNameAr, deref(input.FullNameEn),
 		input.EngagementType, deref(input.EngagementStartDate), deref(input.PhotoMediaRef))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
 	_, err = tx.ExecContext(ctx, `
 		UPDATE workforce_employee_profiles SET
-			department = COALESCE(NULLIF($2, ''), department),
-			role = COALESCE(NULLIF($3, ''), role),
-			supervisor_actor_id = COALESCE(NULLIF($4, ''), supervisor_actor_id),
-			office_location = COALESCE(NULLIF($5, ''), office_location),
+			department = COALESCE(NULLIF($3, ''), department),
+			role = COALESCE(NULLIF($4, ''), role),
+			supervisor_actor_id = COALESCE(NULLIF($5, ''), supervisor_actor_id),
+			office_location = COALESCE(NULLIF($6, ''), office_location),
 			updated_at = now()
-		WHERE actor_id = $1`,
-		actorID, deref(input.Department), deref(input.Role), deref(input.SupervisorActorID), deref(input.OfficeLocation))
+		WHERE operator_context_id = $1 AND actor_id = $2`,
+		operatorContextID, actorID, deref(input.Department), deref(input.Role), deref(input.SupervisorActorID), deref(input.OfficeLocation))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
@@ -463,6 +509,10 @@ func (r *Repository) UpdateEmployee(ctx context.Context, actorID string, input U
 // version-guarded and bumps the version, so a stale expectedVersion never
 // silently overwrites a newer edit.
 func (r *Repository) UpdatePerson(ctx context.Context, actorID string, derivedCityCode *string, input UpdateFieldAgentInput) (Person, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return Person{}, err
+	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Person{}, err
@@ -471,7 +521,7 @@ func (r *Repository) UpdatePerson(ctx context.Context, actorID string, derivedCi
 
 	var currentVersion int
 	err = tx.QueryRowContext(ctx, `
-		SELECT version FROM workforce_people WHERE actor_id = $1 FOR UPDATE`, actorID).Scan(&currentVersion)
+		SELECT version FROM workforce_people WHERE operator_context_id = $1 AND actor_id = $2 FOR UPDATE`, operatorContextID, actorID).Scan(&currentVersion)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Person{}, ErrNotFound
 	}
@@ -490,27 +540,27 @@ func (r *Repository) UpdatePerson(ctx context.Context, actorID string, derivedCi
 
 	_, err = tx.ExecContext(ctx, `
 		UPDATE workforce_people SET
-			full_name_ar = COALESCE($2, full_name_ar),
-			full_name_en = COALESCE(NULLIF($3, ''), full_name_en),
-			engagement_type = COALESCE($4, engagement_type),
-			engagement_start_date = COALESCE(NULLIF($5, '')::date, engagement_start_date),
-			photo_media_ref = COALESCE(NULLIF($6, ''), photo_media_ref),
+			full_name_ar = COALESCE($3, full_name_ar),
+			full_name_en = COALESCE(NULLIF($4, ''), full_name_en),
+			engagement_type = COALESCE($5, engagement_type),
+			engagement_start_date = COALESCE(NULLIF($6, '')::date, engagement_start_date),
+			photo_media_ref = COALESCE(NULLIF($7, ''), photo_media_ref),
 			version = version + 1,
 			updated_at = now()
-		WHERE actor_id = $1`,
-		actorID, input.FullNameAr, deref(input.FullNameEn),
+		WHERE operator_context_id = $1 AND actor_id = $2`,
+		operatorContextID, actorID, input.FullNameAr, deref(input.FullNameEn),
 		input.EngagementType, deref(input.EngagementStartDate), deref(input.PhotoMediaRef))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
 	_, err = tx.ExecContext(ctx, `
 		UPDATE workforce_field_profiles SET
-			city_code = COALESCE(NULLIF($2, ''), city_code),
-			service_zone_id = COALESCE(NULLIF($3, ''), service_zone_id),
-			supervisor_actor_id = COALESCE(NULLIF($4, ''), supervisor_actor_id),
+			city_code = COALESCE(NULLIF($3, ''), city_code),
+			service_zone_id = COALESCE(NULLIF($4, ''), service_zone_id),
+			supervisor_actor_id = COALESCE(NULLIF($5, ''), supervisor_actor_id),
 			updated_at = now()
-		WHERE actor_id = $1`,
-		actorID, deref(derivedCityCode), deref(input.ServiceZoneID), deref(input.SupervisorActorID))
+		WHERE operator_context_id = $1 AND actor_id = $2`,
+		operatorContextID, actorID, deref(derivedCityCode), deref(input.ServiceZoneID), deref(input.SupervisorActorID))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
@@ -521,6 +571,10 @@ func (r *Repository) UpdatePerson(ctx context.Context, actorID string, derivedCi
 }
 
 func (r *Repository) UpdateCaptain(ctx context.Context, actorID string, derivedCityCode *string, input UpdateCaptainInput) (Person, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return Person{}, err
+	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Person{}, err
@@ -529,7 +583,7 @@ func (r *Repository) UpdateCaptain(ctx context.Context, actorID string, derivedC
 
 	var currentVersion int
 	err = tx.QueryRowContext(ctx, `
-		SELECT version FROM workforce_people WHERE actor_id = $1 FOR UPDATE`, actorID).Scan(&currentVersion)
+		SELECT version FROM workforce_people WHERE operator_context_id = $1 AND actor_id = $2 FOR UPDATE`, operatorContextID, actorID).Scan(&currentVersion)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Person{}, ErrNotFound
 	}
@@ -546,32 +600,32 @@ func (r *Repository) UpdateCaptain(ctx context.Context, actorID string, derivedC
 	}
 	_, err = tx.ExecContext(ctx, `
 		UPDATE workforce_people SET
-			full_name_ar = COALESCE($2, full_name_ar),
-			full_name_en = COALESCE(NULLIF($3, ''), full_name_en),
-			engagement_type = COALESCE($4, engagement_type),
-			engagement_start_date = COALESCE(NULLIF($5, '')::date, engagement_start_date),
-			photo_media_ref = COALESCE(NULLIF($6, ''), photo_media_ref),
+			full_name_ar = COALESCE($3, full_name_ar),
+			full_name_en = COALESCE(NULLIF($4, ''), full_name_en),
+			engagement_type = COALESCE($5, engagement_type),
+			engagement_start_date = COALESCE(NULLIF($6, '')::date, engagement_start_date),
+			photo_media_ref = COALESCE(NULLIF($7, ''), photo_media_ref),
 			version = version + 1,
 			updated_at = now()
-		WHERE actor_id = $1`,
-		actorID, input.FullNameAr, deref(input.FullNameEn),
+		WHERE operator_context_id = $1 AND actor_id = $2`,
+		operatorContextID, actorID, input.FullNameAr, deref(input.FullNameEn),
 		input.EngagementType, deref(input.EngagementStartDate), deref(input.PhotoMediaRef))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
 	}
 	_, err = tx.ExecContext(ctx, `
 		UPDATE workforce_captain_profiles SET
-			vehicle_type = COALESCE(NULLIF($2, ''), vehicle_type),
-			vehicle_identifier = COALESCE(NULLIF($3, ''), vehicle_identifier),
-			license_status = COALESCE(NULLIF($4, ''), license_status),
-			license_expires_at = COALESCE(NULLIF($5, '')::date, license_expires_at),
-			operating_city_code = COALESCE(NULLIF($6, ''), operating_city_code),
-			service_zone_id = COALESCE(NULLIF($7, ''), service_zone_id),
-			operating_scope_code = COALESCE(NULLIF($8, ''), operating_scope_code),
-			supervisor_actor_id = COALESCE(NULLIF($9, ''), supervisor_actor_id),
+			vehicle_type = COALESCE(NULLIF($3, ''), vehicle_type),
+			vehicle_identifier = COALESCE(NULLIF($4, ''), vehicle_identifier),
+			license_status = COALESCE(NULLIF($5, ''), license_status),
+			license_expires_at = COALESCE(NULLIF($6, '')::date, license_expires_at),
+			operating_city_code = COALESCE(NULLIF($7, ''), operating_city_code),
+			service_zone_id = COALESCE(NULLIF($8, ''), service_zone_id),
+			operating_scope_code = COALESCE(NULLIF($9, ''), operating_scope_code),
+			supervisor_actor_id = COALESCE(NULLIF($10, ''), supervisor_actor_id),
 			updated_at = now()
-		WHERE actor_id = $1`,
-		actorID, deref(input.VehicleType), deref(input.VehicleIdentifier), deref(input.LicenseStatus),
+		WHERE operator_context_id = $1 AND actor_id = $2`,
+		operatorContextID, actorID, deref(input.VehicleType), deref(input.VehicleIdentifier), deref(input.LicenseStatus),
 		deref(input.LicenseExpiresAt), deref(derivedCityCode), deref(input.ServiceZoneID),
 		deref(input.OperatingScopeCode), deref(input.SupervisorActorID))
 	if err != nil {
@@ -586,6 +640,10 @@ func (r *Repository) UpdateCaptain(ctx context.Context, actorID string, derivedC
 // UpdateSelf applies the provider's own (non-sovereign) edits. No version
 // gate: these fields are only ever written by their owner.
 func (r *Repository) UpdateSelf(ctx context.Context, actorID string, input UpdateSelfInput) (Person, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return Person{}, err
+	}
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return Person{}, err
@@ -594,14 +652,14 @@ func (r *Repository) UpdateSelf(ctx context.Context, actorID string, input Updat
 
 	if input.PhotoMediaRef != nil {
 		if _, err = tx.ExecContext(ctx, `
-			UPDATE workforce_people SET photo_media_ref = NULLIF($2, ''), updated_at = now()
-			WHERE actor_id = $1`, actorID, *input.PhotoMediaRef); err != nil {
+			UPDATE workforce_people SET photo_media_ref = NULLIF($3, ''), updated_at = now()
+			WHERE operator_context_id = $1 AND actor_id = $2`, operatorContextID, actorID, *input.PhotoMediaRef); err != nil {
 			return Person{}, err
 		}
 	}
 	var hasFieldProfile bool
 	if err := tx.QueryRowContext(ctx,
-		`SELECT EXISTS (SELECT 1 FROM workforce_field_profiles WHERE actor_id = $1)`, actorID).Scan(&hasFieldProfile); err != nil {
+		`SELECT EXISTS (SELECT 1 FROM workforce_field_profiles WHERE operator_context_id = $1 AND actor_id = $2)`, operatorContextID, actorID).Scan(&hasFieldProfile); err != nil {
 		return Person{}, err
 	}
 	if !hasFieldProfile {
@@ -620,13 +678,13 @@ func (r *Repository) UpdateSelf(ctx context.Context, actorID string, input Updat
 	}
 	result, err := tx.ExecContext(ctx, `
 		UPDATE workforce_field_profiles SET
-			emergency_contact_name = COALESCE(NULLIF($2, ''), emergency_contact_name),
-			emergency_contact_phone = COALESCE(NULLIF($3, ''), emergency_contact_phone),
-			preferred_language = COALESCE(NULLIF($4, ''), preferred_language),
+			emergency_contact_name = COALESCE(NULLIF($3, ''), emergency_contact_name),
+			emergency_contact_phone = COALESCE(NULLIF($4, ''), emergency_contact_phone),
+			preferred_language = COALESCE(NULLIF($5, ''), preferred_language),
 			policy_consent_at = `+consentClause+`,
 			updated_at = now()
-		WHERE actor_id = $1`,
-		actorID, deref(input.EmergencyContactName), deref(input.EmergencyContactPhone),
+		WHERE operator_context_id = $1 AND actor_id = $2`,
+		operatorContextID, actorID, deref(input.EmergencyContactName), deref(input.EmergencyContactPhone),
 		deref(input.PreferredLanguage))
 	if err != nil {
 		return Person{}, err
@@ -643,10 +701,14 @@ func (r *Repository) UpdateSelf(ctx context.Context, actorID string, input Updat
 // SetEngagementStatus transitions engagement_status under the version guard
 // and returns the refreshed person.
 func (r *Repository) SetEngagementStatus(ctx context.Context, actorID, status string, expectedVersion int) (Person, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return Person{}, err
+	}
 	result, err := r.db.ExecContext(ctx, `
 		UPDATE workforce_people
-		SET engagement_status = $2, version = version + 1, updated_at = now()
-		WHERE actor_id = $1 AND version = $3`, actorID, status, expectedVersion)
+		SET engagement_status = $3, version = version + 1, updated_at = now()
+		WHERE operator_context_id = $1 AND actor_id = $2 AND version = $4`, operatorContextID, actorID, status, expectedVersion)
 	if err != nil {
 		return Person{}, err
 	}
@@ -662,10 +724,14 @@ func (r *Repository) SetEngagementStatus(ctx context.Context, actorID, status st
 // MarkActiveIfPending performs the lazy pending_activation→active transition
 // once a provider proves possession of a valid session (activation worked).
 func (r *Repository) MarkActiveIfPending(ctx context.Context, actorID string) error {
-	_, err := r.db.ExecContext(ctx, `
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.ExecContext(ctx, `
 		UPDATE workforce_people
 		SET engagement_status = 'active', version = version + 1, updated_at = now()
-		WHERE actor_id = $1 AND engagement_status = 'pending_activation'`, actorID)
+		WHERE operator_context_id = $1 AND actor_id = $2 AND engagement_status = 'pending_activation'`, operatorContextID, actorID)
 	return err
 }
 
@@ -821,32 +887,44 @@ func nonNil(values []string) []string {
 	return values
 }
 func (r *Repository) CreateProvisioningCase(ctx context.Context, c ProvisioningCase) error {
-	_, err := r.db.ExecContext(ctx, `
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.ExecContext(ctx, `
 		INSERT INTO workforce_provisioning_cases
-		(id, idempotency_key, status, workforce_kind, actor_id, identity_created, workforce_code, payload, failure_reason)
-		VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6, NULLIF($7, ''), $8, NULLIF($9, ''))`,
-		c.ID, c.IdempotencyKey, c.Status, c.WorkforceKind, c.ActorID, c.IdentityCreated, c.WorkforceCode, c.Payload, c.FailureReason)
+		(id, operator_context_id, idempotency_key, status, workforce_kind, actor_id, identity_created, workforce_code, payload, failure_reason)
+		VALUES ($1, $2, $3, $4, $5, NULLIF($6, ''), $7, NULLIF($8, ''), $9, NULLIF($10, ''))`,
+		c.ID, operatorContextID, c.IdempotencyKey, c.Status, c.WorkforceKind, c.ActorID, c.IdentityCreated, c.WorkforceCode, c.Payload, c.FailureReason)
 	return err
 }
 
 func (r *Repository) UpdateProvisioningCase(ctx context.Context, c ProvisioningCase) error {
-	_, err := r.db.ExecContext(ctx, `
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.ExecContext(ctx, `
 		UPDATE workforce_provisioning_cases
 		SET status = $2, actor_id = NULLIF($3, ''), identity_created = $4,
 		    workforce_code = NULLIF($5, ''), failure_reason = NULLIF($6, ''), updated_at = CURRENT_TIMESTAMP
-		WHERE id = $1`,
-		c.ID, c.Status, c.ActorID, c.IdentityCreated, c.WorkforceCode, c.FailureReason)
+		WHERE operator_context_id = $1 AND id = $2`,
+		operatorContextID, c.ID, c.Status, c.ActorID, c.IdentityCreated, c.WorkforceCode, c.FailureReason)
 	return err
 }
 
 func (r *Repository) GetProvisioningCase(ctx context.Context, id string) (ProvisioningCase, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return ProvisioningCase{}, err
+	}
 	var c ProvisioningCase
 	var actorID, code, failureReason sql.NullString
-	err := r.db.QueryRowContext(ctx, `
-		SELECT id, idempotency_key, status, workforce_kind, actor_id, identity_created, workforce_code, payload, failure_reason, created_at, updated_at
+	err = r.db.QueryRowContext(ctx, `
+		SELECT id, operator_context_id, idempotency_key, status, workforce_kind, actor_id, identity_created, workforce_code, payload, failure_reason, created_at, updated_at
 		FROM workforce_provisioning_cases
-		WHERE id = $1`, id).Scan(
-		&c.ID, &c.IdempotencyKey, &c.Status, &c.WorkforceKind, &actorID, &c.IdentityCreated, &code, &c.Payload, &failureReason, &c.CreatedAt, &c.UpdatedAt)
+		WHERE operator_context_id = $1 AND id = $2`, operatorContextID, id).Scan(
+		&c.ID, &c.OperatorContextID, &c.IdempotencyKey, &c.Status, &c.WorkforceKind, &actorID, &c.IdentityCreated, &code, &c.Payload, &failureReason, &c.CreatedAt, &c.UpdatedAt)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ProvisioningCase{}, ErrNotFound

@@ -95,7 +95,7 @@ function buildPayoutDestinationViewModel(p: DshPartner): DshPartnerPayoutDestina
 
 function resolveStatusTone(status: DshPartnerActivationStatus): "success" | "warning" | "danger" | "info" | "muted" {
   if (status === "client_visible" || status === "partner_active") return "success";
-  if (status === "ops_rejected" || status === "partner_deactivated") return "danger";
+  if (status === "ops_rejected" || status === "partner_terminated") return "danger";
   if (status === "documents_missing" || status === "catalog_not_ready" || status === "delivery_modes_not_ready") return "warning";
   if (status === "ops_review" || status === "ops_approved") return "info";
   return "muted";
@@ -117,7 +117,7 @@ export function buildPartnerListRowViewModel(p: DshPartnerSummary | DshPartner):
     blockedReason: meta?.blockedReason ?? "",
     createdAt: p.createdAt,
     isClientVisible: status === "client_visible",
-    isDeactivated: status === "partner_deactivated",
+    isDeactivated: status === "partner_terminated",
     isRejected: status === "ops_rejected",
   };
 }
@@ -149,7 +149,7 @@ export function buildPartnerDetailViewModel(p: DshPartner): DshPartnerDetailView
     auditRequired: meta?.auditRequired ?? false,
     allowedNextStatuses: meta?.allowedNextStatuses ?? [],
     canActivate: meta?.allowedNextStatuses.includes("partner_active") ?? false,
-    canDeactivate: meta?.allowedNextStatuses.includes("partner_deactivated") ?? false,
+    canDeactivate: meta?.allowedNextStatuses.includes("partner_terminated") ?? false,
     canReject: meta?.allowedNextStatuses.includes("ops_rejected") ?? false,
     isClientVisible: status === "client_visible",
     checklist: checklist.map(c => ({ ...c })),

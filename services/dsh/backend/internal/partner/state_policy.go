@@ -110,8 +110,6 @@ func operatorTransitionAction(status ActivationStatus) string {
 		return "reject_partner"
 	case StatusPartnerActive:
 		return "activate_partner"
-	case StatusPartnerDeactivated:
-		return "deactivate_partner"
 	case StatusPartnerSuspended:
 		return "suspend_partner"
 	case StatusPartnerTerminated:

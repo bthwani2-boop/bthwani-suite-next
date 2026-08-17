@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -38,6 +39,14 @@ type ProvisioningRequest struct {
 }
 
 func (o *ProvisioningOrchestrator) StartCase(ctx context.Context, req ProvisioningRequest) (ProvisioningCase, error) {
+	trustedContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return ProvisioningCase{}, err
+	}
+	if supplied := strings.TrimSpace(req.OperatorContextID); supplied != "" && supplied != trustedContextID {
+		return ProvisioningCase{}, fmt.Errorf("%w: provisioning context does not match trusted context", ErrOperatorContextRequired)
+	}
+	req.OperatorContextID = trustedContextID
 	if req.IdempotencyKey == "" {
 		return ProvisioningCase{}, errors.New("idempotencyKey required")
 	}
@@ -45,14 +54,15 @@ func (o *ProvisioningOrchestrator) StartCase(ctx context.Context, req Provisioni
 	payloadBytes, _ := json.Marshal(req)
 
 	pc := ProvisioningCase{
-		ID:             uuid.New().String(),
-		IdempotencyKey: req.IdempotencyKey,
-		Status:         "DRAFT",
-		WorkforceKind:  req.WorkforceKind,
-		Payload:        payloadBytes,
+		ID:                uuid.New().String(),
+		OperatorContextID: trustedContextID,
+		IdempotencyKey:    req.IdempotencyKey,
+		Status:            "DRAFT",
+		WorkforceKind:     req.WorkforceKind,
+		Payload:           payloadBytes,
 	}
 
-	err := o.repo.CreateProvisioningCase(ctx, pc)
+	err = o.repo.CreateProvisioningCase(ctx, pc)
 	if err != nil {
 		return ProvisioningCase{}, err
 	}
@@ -60,6 +70,10 @@ func (o *ProvisioningOrchestrator) StartCase(ctx context.Context, req Provisioni
 }
 
 func (o *ProvisioningOrchestrator) Advance(ctx context.Context, operator Operator, id string) (ProvisioningCase, error) {
+	trustedContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return ProvisioningCase{}, err
+	}
 	pc, err := o.repo.GetProvisioningCase(ctx, id)
 	if err != nil {
 		return ProvisioningCase{}, err
@@ -72,6 +86,9 @@ func (o *ProvisioningOrchestrator) Advance(ctx context.Context, operator Operato
 	var req ProvisioningRequest
 	if err := json.Unmarshal(pc.Payload, &req); err != nil {
 		return pc, err
+	}
+	if pc.OperatorContextID != trustedContextID || req.OperatorContextID != trustedContextID {
+		return pc, fmt.Errorf("%w: provisioning case payload is outside trusted context", ErrOperatorContextRequired)
 	}
 
 	// 1. ACTOR_CREATED

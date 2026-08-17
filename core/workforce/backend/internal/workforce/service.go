@@ -348,9 +348,10 @@ func (s *Service) CreateEmployee(ctx context.Context, operator Operator, input C
 }
 
 type Operator struct {
-	ActorID string
-	Role    string
-	Token   string
+	ActorID           string
+	Role              string
+	Token             string
+	OperatorContextID string
 }
 
 // UpdateFieldAgent applies sovereign edits under optimistic locking.

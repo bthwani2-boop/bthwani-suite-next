@@ -49,6 +49,12 @@ const storeColumns = `id,
 	COALESCE(address_line,''), COALESCE(coverage_summary,''), COALESCE(operating_hours,''),
 	COALESCE(delivery_readiness,''), COALESCE(storefront_photo_ref,''),
 	COALESCE(interior_photo_ref,''), COALESCE(signage_photo_ref,''),
+	COALESCE((SELECT readiness.publication_decision
+		FROM dsh_partner_store_readiness_v readiness
+		WHERE readiness.store_id = dsh_stores.id), 'BLOCKED'),
+	COALESCE((SELECT readiness.blocking_reason_codes
+		FROM dsh_partner_store_readiness_v readiness
+		WHERE readiness.store_id = dsh_stores.id), ARRAY[]::text[]),
 	created_at, updated_at`
 
 func scanStore(scanner interface{ Scan(...any) error }) (DshStoreRow, error) {
@@ -66,6 +72,7 @@ func scanStore(scanner interface{ Scan(...any) error }) (DshStoreRow, error) {
 		&row.AddressLine, &row.CoverageSummary, &row.OperatingHours,
 		&row.DeliveryReadiness, &row.StorefrontPhotoRef, &row.InteriorPhotoRef,
 		&row.SignagePhotoRef,
+		&row.PublicationDecision, pq.Array(&row.BlockingReasonCodes),
 		&row.CreatedAt, &row.UpdatedAt,
 	)
 	return row, err
@@ -205,12 +212,21 @@ type storeContextQueryRower interface {
 	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 
+var ErrAmbiguousPartnerStores = errors.New("partner has multiple stores; an explicit store id is required")
+
 // GetStoreByPartnerIDContext resolves canonical store publication facts through
 // either a database handle or the caller's transaction. Partner transitions use
 // the transaction form so all gates are evaluated from one consistent snapshot.
 func GetStoreByPartnerIDContext(ctx context.Context, db storeContextQueryRower, partnerID string) (*DshStoreRow, error) {
+	var count int
+	if err := db.QueryRowContext(ctx, "SELECT COUNT(*) FROM dsh_stores WHERE partner_id = $1", partnerID).Scan(&count); err != nil {
+		return nil, fmt.Errorf("failed to count stores by partner id: %w", err)
+	}
+	if count > 1 {
+		return nil, ErrAmbiguousPartnerStores
+	}
 	row, err := scanStore(db.QueryRowContext(ctx,
-		"SELECT "+storeColumns+" FROM dsh_stores WHERE partner_id = $1 ORDER BY created_at ASC LIMIT 1",
+		"SELECT "+storeColumns+" FROM dsh_stores WHERE partner_id = $1",
 		partnerID,
 	))
 	if err == sql.ErrNoRows {

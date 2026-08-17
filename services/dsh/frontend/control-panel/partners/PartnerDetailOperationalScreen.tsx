@@ -45,7 +45,7 @@ const TAB_LABELS: Record<Tab, string> = {
   readiness: "الجاهزية",
   audit: "سجل التدقيق",
 };
-const REASON_REQUIRED = new Set<string>(["ops_rejected", "partner_deactivated", "client_hidden"]);
+const REASON_REQUIRED = new Set<string>(["ops_rejected", "partner_terminated", "client_hidden"]);
 
 function card(title: string, children: ReactNode): ReactNode {
   return (

@@ -7,15 +7,16 @@ import (
 	"strings"
 	"time"
 
+	"dsh-api/internal/store"
 	"github.com/lib/pq"
 )
 
 type StorePublicationReadiness struct {
-	StoreID              string   `json:"storeId"`
-	DisplayName          string   `json:"displayName"`
-	PublicationDecision  string   `json:"publicationDecision"`
-	BlockingReasons      []string `json:"blockingReasons"`
-	IsClientVisible      bool     `json:"isClientVisible"`
+	StoreID             string   `json:"storeId"`
+	DisplayName         string   `json:"displayName"`
+	PublicationDecision string   `json:"publicationDecision"`
+	BlockingReasons     []string `json:"blockingReasons"`
+	IsClientVisible     bool     `json:"isClientVisible"`
 }
 
 type PartnerStoreReadinessSummary struct {
@@ -96,26 +97,22 @@ func LoadAggregatedPartnerReadiness(db *sql.DB, partnerID string) (AggregatedPar
 
 	hasStore := len(stores) > 0
 	allStoreGatesPassed := hasStore && readyCount == len(stores)
+	aggregatePublicationDecision := store.PublicationBlocked
+	aggregateBlockingReasons := []string{"STORE_NOT_LINKED"}
+	if hasStore {
+		aggregateBlockingReasons = uniqueBlockingReasons(stores)
+		if allStoreGatesPassed {
+			aggregatePublicationDecision = store.PublicationPublished
+		}
+	}
 	base := ComputeReadiness(
 		partnerState,
 		documentCount,
 		approvedDocumentCount,
 		hasStore,
-		allStoreGatesPassed,
-		allStoreGatesPassed,
-		allStoreGatesPassed,
-		allStoreGatesPassed,
-		allStoreGatesPassed,
-		allStoreGatesPassed,
+		aggregatePublicationDecision,
+		aggregateBlockingReasons,
 	)
-	base.PublicationDecision = "BLOCKED"
-	base.BlockingReasons = []string{"STORE_NOT_LINKED"}
-	if hasStore {
-		base.BlockingReasons = uniqueBlockingReasons(stores)
-		if allStoreGatesPassed {
-			base.PublicationDecision = "PUBLISHED"
-		}
-	}
 	return AggregatedPartnerReadiness{
 		PartnerID:                      base.PartnerID,
 		CanActivate:                    base.CanActivate,

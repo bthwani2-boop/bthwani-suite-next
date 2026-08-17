@@ -18,7 +18,7 @@ export type DshPartnerAllowedAction =
   | "approve_partner"
   | "reject_partner"
   | "activate_partner"
-  | "deactivate_partner"
+  | "terminate_partner"
   | "publish_store"
   | "hide_store"
   | "read_own_status"

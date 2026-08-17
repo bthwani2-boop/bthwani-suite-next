@@ -23,7 +23,7 @@ export type UsePartnersControllerProps = {
 };
 
 const ACTIVE_PARTNER_STATUSES = new Set(['partner_active', 'client_visible']);
-const CLOSED_PARTNER_STATUSES = new Set(['ops_rejected', 'partner_deactivated']);
+const CLOSED_PARTNER_STATUSES = new Set(['ops_rejected', 'partner_terminated']);
 
 export function usePartnersController({
   initialWorkspace = 'inbox',

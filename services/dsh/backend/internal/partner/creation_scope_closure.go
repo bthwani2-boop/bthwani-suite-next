@@ -26,10 +26,20 @@ func ReconcilePartnerCreationScopes(ctx context.Context, db *sql.DB, operatorCon
 	defer tx.Rollback() //nolint:errcheck
 
 	var storeID string
+	var storeCount int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM dsh_stores
+		WHERE partner_id = $1 AND operator_context_id = $2`,
+		p.ID, operatorContextID).Scan(&storeCount); err != nil {
+		return err
+	}
+	if storeCount > 1 {
+		return store.ErrAmbiguousPartnerStores
+	}
 	err = tx.QueryRowContext(ctx, `
 		SELECT id FROM dsh_stores
 		WHERE partner_id = $1 AND operator_context_id = $2
-		ORDER BY created_at ASC LIMIT 1 FOR UPDATE`,
+		FOR UPDATE`,
 		p.ID, operatorContextID,
 	).Scan(&storeID)
 	if errors.Is(err, sql.ErrNoRows) {

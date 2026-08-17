@@ -102,7 +102,7 @@ DshPartner:
         - ops_approved
         - ops_rejected
         - partner_active
-        - partner_deactivated
+        - partner_terminated
         - client_visible
         - client_hidden
     rejectionReason: { type: string }
