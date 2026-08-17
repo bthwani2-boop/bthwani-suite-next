@@ -1268,44 +1268,14 @@
           <mxCell id="tools-tools_scripts_lib_mobile_app_key_test_mjs" value="mobile-app-key.test" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="210" y="1350" width="160" height="50" as="geometry" />
           </mxCell>
-          <mxCell id="tools-tools_guards_captain_captain_surface_truth_gate_mjs" value="captain-surface-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="400" y="1350" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_client_commerce_client_address_retry_truth_gate_mjs" value="client-address-retry-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="590" y="1350" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_control_panel_control_panel_runtime_truth_gate_mjs" value="control-panel-runtime-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="780" y="1350" width="160" height="50" as="geometry" />
-          </mxCell>
           <mxCell id="tools-tools_guards_field_field_surface_truth_gate_mjs" value="field-surface-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="970" y="1350" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_fullstack_surface_runtime_truth_gate_mjs" value="surface-runtime-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="20" y="1415" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="tools-tools_guards_lib_api_operations_test_mjs" value="api-operations.test" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="210" y="1415" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="tools-tools_guards_lib_typescript_compiler_test_mjs" value="typescript-compiler.test" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="400" y="1415" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_maps_map_platform_truth_gate_mjs" value="map-platform-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="590" y="1415" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_partner_partner_support_truth_gate_mjs" value="partner-support-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="780" y="1415" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_partner_partner_surface_truth_gate_mjs" value="partner-surface-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="970" y="1415" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_platform_operational_policy_ui_truth_gate_mjs" value="operational-policy-ui-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="20" y="1480" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_privacy_client_address_privacy_integration_gate_mjs" value="client-address-privacy-integration-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="210" y="1480" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_privacy_client_address_privacy_truth_gate_mjs" value="client-address-privacy-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="400" y="1480" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="tools-tools_guards_sdlc_validate_financial_and_evidence_scopes_mjs" value="validate-financial-and-evidence-scopes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="590" y="1480" width="160" height="50" as="geometry" />
@@ -1334,9 +1304,6 @@
           <mxCell id="tools-tools_guards_sdlc_validate_traceability_mjs" value="validate-traceability" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="970" y="1545" width="160" height="50" as="geometry" />
           </mxCell>
-          <mxCell id="tools-tools_guards_ui_actions_ui_action_binding_gate_mjs" value="ui-action-binding-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="20" y="1610" width="160" height="50" as="geometry" />
-          </mxCell>
           <mxCell id="tools-tools_mobile_defineBthwaniExpoApp_d_ts" value="defineBthwaniExpoApp.d" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="210" y="1610" width="160" height="50" as="geometry" />
           </mxCell>
@@ -1345,9 +1312,6 @@
           </mxCell>
           <mxCell id="tools-tools_scripts_apply_repository_ruleset_mjs" value="apply-repository-ruleset" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="590" y="1610" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_scripts_auto_declare_routes_v2_mjs" value="auto-declare-routes-v2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="780" y="1610" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="tools-tools_scripts_build_swagger_static_mjs" value="build-swagger-static" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="970" y="1610" width="160" height="50" as="geometry" />
@@ -1373,14 +1337,8 @@
           <mxCell id="tools-tools_scripts_ci_runtime_bootstrap_policy_test_mjs" value="ci-runtime-bootstrap-policy.test" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="20" y="1740" width="160" height="50" as="geometry" />
           </mxCell>
-          <mxCell id="tools-tools_scripts_fix_one_route_mjs" value="fix-one-route" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="210" y="1740" width="160" height="50" as="geometry" />
-          </mxCell>
           <mxCell id="tools-tools_scripts_generate_migration_manifest_mjs" value="generate-migration-manifest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="400" y="1740" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_scripts_generate_security_openapi_mjs" value="generate-security-openapi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="780" y="1740" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="tools-tools_scripts_guard_mobile_apps_test_mjs" value="guard-mobile-apps.test" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="970" y="1740" width="160" height="50" as="geometry" />
@@ -1441,9 +1399,6 @@
           </mxCell>
           <mxCell id="tools-tools_performance_k6_wlt_smoke_js" value="wlt-smoke" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="20" y="2000" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_finance_dsh_wlt_mutation_idempotency_gate_mjs" value="dsh-wlt-mutation-idempotency-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="210" y="2000" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="tools-tools_guards_sdlc_invoke_sdlc_gate_mjs" value="invoke-sdlc-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="400" y="2000" width="160" height="50" as="geometry" />
