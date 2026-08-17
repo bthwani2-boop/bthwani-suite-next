@@ -51,7 +51,8 @@ type PartnerActivationResult struct {
 }
 
 func (c *Client) newDSHInternalRequest(ctx context.Context, method, path string, body any) (*http.Request, error) {
-	if c.baseURL == "" || c.internalServiceToken == "" || c.operatorContextID == "" {
+	operatorContextID, ok := OperatorContextIDFromContext(ctx)
+	if c.baseURL == "" || c.internalServiceToken == "" || !ok {
 		return nil, ErrIdentityUnavailable
 	}
 	var encoded []byte
@@ -71,7 +72,7 @@ func (c *Client) newDSHInternalRequest(ctx context.Context, method, path string,
 	}
 	req.Header.Set("Authorization", "Bearer "+c.internalServiceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Operator-Context-ID", c.operatorContextID)
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
 	return req, nil
 }
 

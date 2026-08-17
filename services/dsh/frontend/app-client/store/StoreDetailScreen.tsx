@@ -82,7 +82,7 @@ export function StoreDetailScreen({ storeId, onBack, onGoToCart }: Props) {
   }
 
   const store = storefrontCtrl.state.payload.store;
-  if (!store.isClientEligible) {
+  if (store.publicationDecision !== "PUBLISHED") {
     return (
       <StateView
         title="المتجر غير منشور"

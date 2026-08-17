@@ -19,8 +19,7 @@ const maxMediaUploadBytes = 10 << 20 // 10 MB
 const mediaUploadMultipartOverheadBytes = 1024 * 1024
 
 func (s *server) handleMediaUpload(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
-	operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
-	if operatorContextID == "" {
+	if _, ok := auth.OperatorContextIDFromContext(r.Context()); !ok {
 		sendError(w, http.StatusUnauthorized, "UNAUTHORIZED", "trusted operator context is required")
 		return
 	}

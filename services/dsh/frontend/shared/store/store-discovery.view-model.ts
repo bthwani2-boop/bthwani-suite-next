@@ -41,8 +41,9 @@ export type DshStoreCardViewModel = {
   readonly hasCouponBadge: boolean;
   readonly pointsMultiplier: number | null;
   readonly isPopular: boolean;
-  /** true only when backend confirms all publication gates. */
-  readonly isClientEligible: boolean;
+  /** Canonical DSH publication decision. */
+  readonly publicationDecision: "PUBLISHED" | "BLOCKED";
+  readonly blockingReasons: readonly string[];
 };
 
 export type DshStoreDetailViewModel = DshStoreCardViewModel & {
@@ -146,7 +147,8 @@ export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel 
     hasCouponBadge: dto.hasCouponBadge,
     pointsMultiplier: dto.pointsMultiplier ?? null,
     isPopular: dto.isPopular,
-    isClientEligible: dto.publicationEligible,
+    publicationDecision: dto.publicationDecision,
+    blockingReasons: [...dto.blockingReasons],
   };
 }
 

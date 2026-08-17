@@ -19,7 +19,7 @@ func TestInternalOperatorContextRequestRequiresHeader(t *testing.T) {
 	request := internalActorRequest(http.MethodGet, "/internal/actors/search")
 	response := httptest.NewRecorder()
 
-	if validateInternalOperatorRequest(response, request, "OperatorContext-main") {
+	if _, ok := validateInternalOperatorRequest(response, request); ok {
 		t.Fatal("request without X-Operator-Context-ID was accepted")
 	}
 	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_REQUIRED") {
@@ -33,11 +33,12 @@ func TestInternalOperatorContextRequestRejectsCrossOperatorContextHeader(t *test
 	request.Header.Set("X-Operator-Context-ID", "OperatorContext-other")
 	response := httptest.NewRecorder()
 
-	if validateInternalOperatorRequest(response, request, "OperatorContext-main") {
-		t.Fatal("cross-OperatorContext request was accepted")
+	contextID, ok := validateInternalOperatorRequest(response, request)
+	if !ok || contextID != "OperatorContext-other" {
+		t.Fatalf("trusted header context was not accepted: context=%q ok=%v", contextID, ok)
 	}
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
-		t.Fatalf("expected OPERATOR_CONTEXT_FORBIDDEN, got status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected no response before downstream, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
@@ -101,8 +102,8 @@ func TestOperatorBoundaryFailsClosedWithoutRuntimeContext(t *testing.T) {
 	response := httptest.NewRecorder()
 
 	OperatorBoundary(nil, http.NotFoundHandler()).ServeHTTP(response, request)
-	if response.Code != http.StatusServiceUnavailable || !strings.Contains(response.Body.String(), "INTERNAL_API_UNAVAILABLE") {
-		t.Fatalf("missing runtime context did not fail closed: status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("trusted request was not delegated without a global runtime context: status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 

@@ -35,7 +35,7 @@ export function withStoreDiscoveryFilter(
 export function filterClientEligibleStores(
   stores: readonly DshStoreCardViewModel[],
 ): readonly DshStoreCardViewModel[] {
-  return stores.filter((store) => store.isClientEligible);
+  return stores.filter((store) => store.publicationDecision === "PUBLISHED");
 }
 
 export function withClientEligibilityFilter(

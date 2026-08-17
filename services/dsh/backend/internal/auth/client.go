@@ -39,7 +39,6 @@ type Identity struct {
 type Client struct {
 	baseURL              string
 	internalServiceToken string
-	operatorContextID    string
 	http                 *http.Client
 
 	mu                   sync.RWMutex
@@ -52,13 +51,12 @@ func NewClient(baseURL string) *Client {
 }
 
 // NewClientWithInternalAccess configures the DSH-to-Identity trust boundary.
-// The service token and operator context are server-owned configuration and are
-// never sourced from an application request.
-func NewClientWithInternalAccess(baseURL, serviceToken, operatorContextID string) *Client {
+// The service token is server-owned configuration. The operator context is
+// resolved per request from the trusted Identity boundary.
+func NewClientWithInternalAccess(baseURL, serviceToken, _ string) *Client {
 	return &Client{
 		baseURL:              strings.TrimRight(strings.TrimSpace(baseURL), "/"),
 		internalServiceToken: strings.TrimSpace(serviceToken),
-		operatorContextID:    strings.TrimSpace(operatorContextID),
 		http:                 &http.Client{Timeout: 3 * time.Second},
 	}
 }
@@ -146,7 +144,8 @@ func (c *Client) FetchPartnerPermissionBundles(ctx context.Context) ([]PartnerPe
 	if c.partnerBundlesLoaded {
 		return clonePartnerPermissionBundles(c.partnerBundles), nil
 	}
-	if c.baseURL == "" || c.internalServiceToken == "" || c.operatorContextID == "" {
+	operatorContextID, ok := OperatorContextIDFromContext(ctx)
+	if c.baseURL == "" || c.internalServiceToken == "" || !ok {
 		return nil, ErrIdentityUnavailable
 	}
 
@@ -156,7 +155,7 @@ func (c *Client) FetchPartnerPermissionBundles(ctx context.Context) ([]PartnerPe
 	}
 	req.Header.Set("Authorization", "Bearer "+c.internalServiceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Operator-Context-ID", c.operatorContextID)
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
 
 	resp, err := c.http.Do(req)
 	if err != nil {

@@ -202,8 +202,11 @@ export function StoreDetailAdminPanel({ state, diagnosticsState, auditState, onC
           <CpDescriptionRow label="الظهور التسويقي">
             {state.detail.marketingVisibility}
           </CpDescriptionRow>
-          <CpDescriptionRow label="أهلية النشر الأساسية">
-            {state.detail.publicationEligible ? "مؤهل" : "غير مؤهل"}
+          <CpDescriptionRow label="قرار النشر">
+            {state.detail.publicationDecision === "PUBLISHED" ? "منشور" : "محجوب"}
+          </CpDescriptionRow>
+          <CpDescriptionRow label="أسباب الحجب">
+            {state.detail.blockingReasons.length > 0 ? state.detail.blockingReasons.join("، ") : "—"}
           </CpDescriptionRow>
           <StoreDiagnosticsRows state={diagnosticsState} />
           <StoreAuditRows state={auditState} />

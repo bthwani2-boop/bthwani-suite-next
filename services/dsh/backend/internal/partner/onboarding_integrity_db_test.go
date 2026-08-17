@@ -122,6 +122,39 @@ func TestUpdatePartnerGovernedPersistsOnlyWltReferenceDBIntegration(t *testing.T
 	}
 }
 
+func TestClearOwnerPayoutDestinationProjectionUsesValidAbsentStateDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	partner := createPartnerFixture(t, db, "CLEAR-PAYOUT")
+	if _, err := db.Exec(`
+		UPDATE dsh_partners
+		SET payout_destination_id = 'wpd-clear-test',
+		    destination_method = 'official_wallet',
+		    masked_destination_reference = '******0001',
+		    destination_verification_status = 'verified'
+		WHERE id = $1`, partner.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ClearOwnerPayoutDestinationProjection(context.Background(), db, partnerTestOperatorContextID, partner.OwnerActorID); err != nil {
+		t.Fatal(err)
+	}
+
+	var destinationID, method, masked, verificationStatus string
+	if err := db.QueryRow(`
+		SELECT payout_destination_id, destination_method,
+		       masked_destination_reference, destination_verification_status
+		FROM dsh_partners WHERE id = $1`, partner.ID).
+		Scan(&destinationID, &method, &masked, &verificationStatus); err != nil {
+		t.Fatal(err)
+	}
+	if destinationID != "" || method != "" || masked != "" {
+		t.Fatalf("absent payout projection retained data: id=%q method=%q masked=%q", destinationID, method, masked)
+	}
+	if verificationStatus != payoutDestinationVerificationStatusWhenAbsent {
+		t.Fatalf("absent payout verification status = %q, want %q", verificationStatus, payoutDestinationVerificationStatusWhenAbsent)
+	}
+}
+
 func TestCreateFieldVisitGovernedBindsFirstStoreDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	partner := createPartnerFixture(t, db, "VISIT-STORE")

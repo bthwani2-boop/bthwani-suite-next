@@ -45,6 +45,12 @@ func (s *sovereignLeadershipServer) withIdentity(next guardedHandler) http.Handl
 			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 			return
 		}
+		boundContext, bindErr := auth.BindIdentityContext(r.Context(), identity)
+		if bindErr != nil {
+			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "identity operator context is missing")
+			return
+		}
+		r = r.WithContext(boundContext)
 		next(w, r, identity)
 	}
 }
@@ -299,7 +305,9 @@ func (s *sovereignLeadershipServer) issueDepartmentEmployeeActivation(w http.Res
 	if !requireEmployeeTarget(w, identity, "employee.activation:issue", current) {
 		return
 	}
-	var input struct { ExpectedVersion int `json:"expectedVersion"` }
+	var input struct {
+		ExpectedVersion int `json:"expectedVersion"`
+	}
 	if !decodeJSON(w, r, &input) {
 		return
 	}

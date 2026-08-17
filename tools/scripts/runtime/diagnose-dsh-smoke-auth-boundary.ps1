@@ -158,8 +158,8 @@ $publicStore = Invoke-CheckedJsonRequest `
   -Name "dsh-public-store-restored-readback" `
   -Method "GET" `
   -Uri "$DshBaseUrl/dsh/stores/$([Uri]::EscapeDataString($StoreId))"
-if (-not [bool]$publicStore.store.publicationEligible) {
-  throw "dsh-public-store-restored-readback is not publication eligible"
+if ($publicStore.store.publicationDecision -ne "PUBLISHED") {
+  throw "dsh-public-store-restored-readback is not published"
 }
 
 $partnerToken = Get-ActorToken -Username (Get-LocalUsername "partner")

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"dsh-api/internal/auth"
 	"dsh-api/internal/store"
@@ -130,11 +129,10 @@ func readinessHandler(db *sql.DB) http.HandlerFunc {
 		)
 		if linkedStore != nil {
 			diagnostics := store.DiagnoseStorePublicationReadiness(*linkedStore)
-			readiness.CanPublishStoreToClient = diagnostics.IsReady
+			readiness.PublicationDecision = store.PublicationBlocked
+			readiness.BlockingReasons = append([]string(nil), diagnostics.BlockerCodes...)
 			if diagnostics.IsReady {
-				readiness.StorePublicationBlockedReason = ""
-			} else {
-				readiness.StorePublicationBlockedReason = strings.Join(diagnostics.Blockers, "; ")
+				readiness.PublicationDecision = store.PublicationPublished
 			}
 		}
 		sendJSON(w, http.StatusOK, readiness)

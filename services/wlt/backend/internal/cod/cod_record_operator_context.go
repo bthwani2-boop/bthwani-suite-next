@@ -35,20 +35,20 @@ func CreateCodRecordForOperatorContext(
 	ctx context.Context,
 	db *sql.DB,
 	input CreateCodRecordInput,
-) (*CodRecord, error) {
+) (*CodRecord, bool, error) {
 	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	input.OrderID = strings.TrimSpace(input.OrderID)
 	input.PartnerID = strings.TrimSpace(input.PartnerID)
 	input.CheckoutIntentID = strings.TrimSpace(input.CheckoutIntentID)
 	if input.OrderID == "" || input.PartnerID == "" || input.CheckoutIntentID == "" {
-		return nil, fmt.Errorf("orderId, partnerId, and checkoutIntentId are required")
+		return nil, false, fmt.Errorf("orderId, partnerId, and checkoutIntentId are required")
 	}
 	collectorType, collectorID, captainID, err := normalizeCodRecordCollector(input)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	session, err := reference.GetPaymentSessionByCheckoutIntentForOperatorContext(
@@ -57,21 +57,21 @@ func CreateCodRecordForOperatorContext(
 		input.CheckoutIntentID,
 	)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if session == nil {
-		return nil, fmt.Errorf("no WLT payment session found for checkoutIntentId %q in trusted OperatorContext", input.CheckoutIntentID)
+		return nil, false, fmt.Errorf("no WLT payment session found for checkoutIntentId %q in trusted OperatorContext", input.CheckoutIntentID)
 	}
 	if session.PaymentMethod != "cod" {
-		return nil, fmt.Errorf("checkoutIntentId %q is not a COD payment session", input.CheckoutIntentID)
+		return nil, false, fmt.Errorf("checkoutIntentId %q is not a COD payment session", input.CheckoutIntentID)
 	}
 	if session.AmountMinorUnits <= 0 || strings.TrimSpace(session.Currency) == "" {
-		return nil, fmt.Errorf("checkoutIntentId %q has invalid COD amount or currency", input.CheckoutIntentID)
+		return nil, false, fmt.Errorf("checkoutIntentId %q has invalid COD amount or currency", input.CheckoutIntentID)
 	}
 
 	existing, err := getCodRecordByOperatorContextOrder(ctx, db, operatorContextID, input.OrderID)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	if existing != nil {
 		if existing.CollectorType != collectorType ||
@@ -79,9 +79,9 @@ func CreateCodRecordForOperatorContext(
 			existing.PartnerID != input.PartnerID ||
 			existing.AmountMinorUnits != session.AmountMinorUnits ||
 			existing.Currency != session.Currency {
-			return nil, ErrCodStateConflict
+			return nil, false, ErrCodStateConflict
 		}
-		return existing, nil
+		return existing, false, nil
 	}
 
 	const query = `
@@ -106,7 +106,7 @@ func CreateCodRecordForOperatorContext(
 	if errors.Is(err, sql.ErrNoRows) {
 		existing, getErr := getCodRecordByOperatorContextOrder(ctx, db, operatorContextID, input.OrderID)
 		if getErr != nil {
-			return nil, getErr
+			return nil, false, getErr
 		}
 		if existing == nil ||
 			existing.CollectorType != collectorType ||
@@ -114,11 +114,11 @@ func CreateCodRecordForOperatorContext(
 			existing.PartnerID != input.PartnerID ||
 			existing.AmountMinorUnits != session.AmountMinorUnits ||
 			existing.Currency != session.Currency {
-			return nil, ErrCodStateConflict
+			return nil, false, ErrCodStateConflict
 		}
-		return existing, nil
+		return existing, false, nil
 	}
-	return created, err
+	return created, err == nil, err
 }
 
 func HandleCreateCodRecordOperatorContext(db *sql.DB) http.HandlerFunc {
@@ -130,7 +130,7 @@ func HandleCreateCodRecordOperatorContext(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
-		record, err := CreateCodRecordForOperatorContext(r.Context(), db, input)
+		record, created, err := CreateCodRecordForOperatorContext(r.Context(), db, input)
 		switch {
 		case errors.Is(err, ErrCodStateConflict):
 			shared.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", err.Error())
@@ -139,6 +139,10 @@ func HandleCreateCodRecordOperatorContext(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
 		}
-		shared.SendJSON(w, http.StatusCreated, map[string]any{"codRecord": record})
+		status := http.StatusOK
+		if created {
+			status = http.StatusCreated
+		}
+		shared.SendJSON(w, status, map[string]any{"codRecord": record, "replayed": !created})
 	}
 }

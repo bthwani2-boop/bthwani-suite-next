@@ -22,6 +22,10 @@ func handleValidateProviderDocumentMedia(db *sql.DB) http.HandlerFunc {
 		if !store.RequireServiceCaller(w, r, "DSH_WORKFORCE_SERVICE_TOKEN", "workforce") {
 			return
 		}
+		if strings.TrimSpace(r.Header.Get("X-Operator-Context-ID")) == "" {
+			store.SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "trusted operator context is required")
+			return
+		}
 		var input providerMediaValidationRequest
 		if !decodeProtectedJSON(w, r, &input) {
 			return

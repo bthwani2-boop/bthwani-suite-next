@@ -7,7 +7,6 @@ modules:
   - wlt.commercial-summary.openapi.yaml
   - wlt.commercial.openapi.yaml
   - wlt.common.openapi.yaml
-  - wlt.delivery-collections.openapi.yaml
   - wlt.dispatch-financial-eligibility.openapi.yaml
   - wlt.payments.openapi.yaml
   - wlt.payout-failure-boundary.openapi.yaml

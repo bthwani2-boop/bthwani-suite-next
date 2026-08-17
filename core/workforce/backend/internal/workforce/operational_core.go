@@ -111,12 +111,13 @@ type AvailabilityNotice struct {
 }
 
 type CreateAvailabilityNoticeInput struct {
-	NoticeType    string    `json:"noticeType"`
-	StartsAt      time.Time `json:"startsAt"`
-	EndsAt        time.Time `json:"endsAt"`
-	ServiceZoneID string    `json:"serviceZoneId"`
-	ReasonCode    string    `json:"reasonCode"`
-	Note          string    `json:"note"`
+	NoticeType        string    `json:"noticeType"`
+	StartsAt          time.Time `json:"startsAt"`
+	EndsAt            time.Time `json:"endsAt"`
+	ServiceZoneID     string    `json:"serviceZoneId"`
+	ReasonCode        string    `json:"reasonCode"`
+	Note              string    `json:"note"`
+	OperatorContextID string    `json:"-"`
 }
 
 type ProviderIncident struct {
@@ -437,7 +438,7 @@ func (r *Repository) ActivationReadiness(ctx context.Context, actorID string) (A
 }
 
 func (r *Repository) CreateAvailabilityNotice(ctx context.Context, actorID string, input CreateAvailabilityNoticeInput) (AvailabilityNotice, error) {
-	if !oneOf(input.NoticeType, "planned_unavailability", "immediate_unavailability", "short_break", "emergency", "temporary_restriction") || input.StartsAt.IsZero() || input.EndsAt.IsZero() || !input.EndsAt.After(input.StartsAt) {
+	if !oneOf(input.NoticeType, "planned_unavailability", "immediate_unavailability", "short_break", "emergency", "temporary_restriction") || input.StartsAt.IsZero() || input.EndsAt.IsZero() || !input.EndsAt.After(input.StartsAt) || strings.TrimSpace(input.OperatorContextID) == "" {
 		return AvailabilityNotice{}, ErrInvalidInput
 	}
 	if _, err := r.ensureOperationalCore(ctx, actorID); err != nil {
@@ -447,7 +448,7 @@ func (r *Repository) CreateAvailabilityNotice(ctx context.Context, actorID strin
 		input.ReasonCode = "personal"
 	}
 	var n AvailabilityNotice
-	err := r.db.QueryRowContext(ctx, `INSERT INTO workforce_provider_availability_notices(actor_id,notice_type,starts_at,ends_at,service_zone_id,reason_code,note,created_by_actor_id) VALUES($1,$2,$3,$4,NULLIF($5,''),$6,$7,$1) RETURNING id::text,actor_id,notice_type,starts_at,ends_at,COALESCE(service_zone_id,''),reason_code,note,status,created_by_actor_id,created_at,updated_at`, actorID, input.NoticeType, input.StartsAt, input.EndsAt, strings.TrimSpace(input.ServiceZoneID), strings.TrimSpace(input.ReasonCode), strings.TrimSpace(input.Note)).Scan(&n.ID, &n.ActorID, &n.NoticeType, &n.StartsAt, &n.EndsAt, &n.ServiceZoneID, &n.ReasonCode, &n.Note, &n.Status, &n.CreatedByActorID, &n.CreatedAt, &n.UpdatedAt)
+	err := r.db.QueryRowContext(ctx, `INSERT INTO workforce_provider_availability_notices(actor_id,operator_context_id,notice_type,starts_at,ends_at,service_zone_id,reason_code,note,created_by_actor_id) VALUES($1,$2,$3,$4,$5,NULLIF($6,''),$7,$8,$1) RETURNING id::text,actor_id,notice_type,starts_at,ends_at,COALESCE(service_zone_id,''),reason_code,note,status,created_by_actor_id,created_at,updated_at`, actorID, strings.TrimSpace(input.OperatorContextID), input.NoticeType, input.StartsAt, input.EndsAt, strings.TrimSpace(input.ServiceZoneID), strings.TrimSpace(input.ReasonCode), strings.TrimSpace(input.Note)).Scan(&n.ID, &n.ActorID, &n.NoticeType, &n.StartsAt, &n.EndsAt, &n.ServiceZoneID, &n.ReasonCode, &n.Note, &n.Status, &n.CreatedByActorID, &n.CreatedAt, &n.UpdatedAt)
 	return n, err
 }
 

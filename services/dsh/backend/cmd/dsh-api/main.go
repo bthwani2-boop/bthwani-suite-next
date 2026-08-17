@@ -42,7 +42,6 @@ func main() {
 	authMode := os.Getenv("DSH_AUTH_MODE")
 	identityBaseURL := os.Getenv("DSH_IDENTITY_BASE_URL")
 	identityServiceToken := os.Getenv("DSH_IDENTITY_SERVICE_TOKEN")
-	operatorContextID := os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID")
 	wltBaseURL := os.Getenv("DSH_WLT_BASE_URL")
 	wltServiceToken := os.Getenv("WLT_DSH_SERVICE_TOKEN")
 	pushProviderURL := os.Getenv("DSH_PUSH_PROVIDER_URL")
@@ -66,7 +65,7 @@ func main() {
 
 	appCtx, cancelApp := context.WithCancel(context.Background())
 	mediaProvider := newMediaProvider(appCtx)
-	identityClient := auth.NewClientWithInternalAccess(identityBaseURL, identityServiceToken, operatorContextID)
+	identityClient := auth.NewClientWithInternalAccess(identityBaseURL, identityServiceToken, "")
 	supportSessionClient := supportsession.NewClient(identityBaseURL, identityServiceToken)
 	wltClient := wlt.NewClient(wltBaseURL, wltServiceToken)
 	platformClient := platformclient.NewClient(platformControlBaseURL, platformControlServiceToken)

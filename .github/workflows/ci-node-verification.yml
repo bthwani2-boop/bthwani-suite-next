@@ -212,7 +212,7 @@ jobs:
           run_check git diff --exit-code -- \
             core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml \
             core/platform-control/clients/generated/platform-control-api.ts
-          run_check pnpm run guard:platform-change-sets
+          run_check node tools/guards/platform-change-sets-gate.mjs
           exit "${status}"
       - name: Upload platform change-set diagnostics
         if: ${{ steps.platform_change_sets.outcome == 'failure' }}

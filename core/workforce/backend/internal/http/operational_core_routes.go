@@ -47,6 +47,12 @@ func (s *operationalCoreServer) withIdentity(next guardedHandler) http.HandlerFu
 			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 			return
 		}
+		boundContext, bindErr := auth.BindIdentityContext(r.Context(), identity)
+		if bindErr != nil {
+			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "identity operator context is missing")
+			return
+		}
+		r = r.WithContext(boundContext)
 		next(w, r, identity)
 	}
 }
@@ -127,6 +133,7 @@ func (s *operationalCoreServer) createOwnAvailabilityNotice(w http.ResponseWrite
 	if !decodeJSON(w, r, &input) {
 		return
 	}
+	input.OperatorContextID, _ = auth.OperatorContextIDFromContext(r.Context())
 	notice, err := s.repo.CreateAvailabilityNotice(r.Context(), identity.Subject, input)
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -262,6 +269,12 @@ func OperationalCoreGateMiddleware(next http.Handler, repo *workforce.Repository
 				next.ServeHTTP(w, r)
 				return
 			}
+			boundContext, bindErr := auth.BindIdentityContext(r.Context(), identity)
+			if bindErr != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+			r = r.WithContext(boundContext)
 			person, err := repo.PersonByActorID(r.Context(), identity.Subject)
 			if err == nil && (person.WorkforceKind == "field" || person.WorkforceKind == "captain") {
 				actorID = identity.Subject

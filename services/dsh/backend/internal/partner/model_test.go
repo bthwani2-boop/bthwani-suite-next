@@ -1,6 +1,10 @@
 package partner
 
-import "testing"
+import (
+	"testing"
+
+	"dsh-api/internal/store"
+)
 
 // ---------------------------------------------------------------------------
 // State machine
@@ -420,14 +424,18 @@ func TestComputeReadiness_storePublicationGates(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			p := Partner{ID: "prt_gate", ActivationStatus: tc.status}
 			r := ComputeReadiness(p, 2, 1, tc.hasStore, tc.storePublished, tc.storeServiceable, tc.storePartnerReadiness, tc.storeCatalog, tc.storeMarketing, tc.storeVisible)
-			if r.CanPublishStoreToClient != tc.wantPublish {
-				t.Fatalf("CanPublishStoreToClient=%v, want %v (blocked: %q)", r.CanPublishStoreToClient, tc.wantPublish, r.StorePublicationBlockedReason)
+			wantDecision := store.PublicationBlocked
+			if tc.wantPublish {
+				wantDecision = store.PublicationPublished
 			}
-			if !tc.wantPublish && r.StorePublicationBlockedReason == "" {
-				t.Fatal("expected StorePublicationBlockedReason when publication is blocked")
+			if r.PublicationDecision != wantDecision {
+				t.Fatalf("PublicationDecision=%q, want %q (blocking reasons: %v)", r.PublicationDecision, wantDecision, r.BlockingReasons)
 			}
-			if tc.wantPublish && r.StorePublicationBlockedReason != "" {
-				t.Fatalf("expected no blocked reason, got %q", r.StorePublicationBlockedReason)
+			if tc.wantPublish && len(r.BlockingReasons) != 0 {
+				t.Fatalf("expected no blocking reasons, got %v", r.BlockingReasons)
+			}
+			if !tc.wantPublish && len(r.BlockingReasons) == 0 {
+				t.Fatal("expected blocking reasons when publication is blocked")
 			}
 		})
 	}

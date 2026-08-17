@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+const payoutDestinationVerificationStatusWhenAbsent = "unverified"
+
 // PayoutDestinationProjection is the only financial destination state DSH may
 // cache for partner readiness. WLT remains the owner of the raw destination,
 // provider policy, versioning, verification and settlement truth.
@@ -143,7 +145,7 @@ func ClearOwnerPayoutDestinationProjection(
 		SET payout_destination_id = '',
 		    destination_method = '',
 		    masked_destination_reference = '',
-		    destination_verification_status = '',
+		    destination_verification_status = $3,
 		    version = version + 1,
 		    updated_at = NOW()
 		WHERE operator_context_id = $1
@@ -152,23 +154,23 @@ func ClearOwnerPayoutDestinationProjection(
 		    COALESCE(payout_destination_id,'') <> '' OR
 		    COALESCE(destination_method,'') <> '' OR
 		    COALESCE(masked_destination_reference,'') <> '' OR
-		    COALESCE(destination_verification_status,'') <> ''
-		  )`, operatorContextID, ownerActorID); err != nil {
+		    destination_verification_status <> $3
+		  )`, operatorContextID, ownerActorID, payoutDestinationVerificationStatusWhenAbsent); err != nil {
 		return err
 	}
 
 	var total, clear int
 	if err = db.QueryRowContext(ctx, `
-		SELECT COUNT(*),
-		       COUNT(*) FILTER (
-		         WHERE COALESCE(payout_destination_id,'') = ''
-		           AND COALESCE(destination_method,'') = ''
-		           AND COALESCE(masked_destination_reference,'') = ''
-		           AND COALESCE(destination_verification_status,'') = ''
-		       )
-		FROM dsh_partners
-		WHERE operator_context_id = $1 AND owner_actor_id = $2`,
-		operatorContextID, ownerActorID,
+	SELECT COUNT(*),
+	       COUNT(*) FILTER (
+	         WHERE COALESCE(payout_destination_id,'') = ''
+	           AND COALESCE(destination_method,'') = ''
+	           AND COALESCE(masked_destination_reference,'') = ''
+	           AND destination_verification_status = $3
+	       )
+	FROM dsh_partners
+	WHERE operator_context_id = $1 AND owner_actor_id = $2`,
+	operatorContextID, ownerActorID, payoutDestinationVerificationStatusWhenAbsent,
 	).Scan(&total, &clear); err != nil {
 		return err
 	}

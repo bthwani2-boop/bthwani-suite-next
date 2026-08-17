@@ -15,7 +15,6 @@ x-bthwani-policy:
 
 x-bthwani-environment: &bthwani-environment
   BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED: "${BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED:-false}"
-  BTHWANI_OPERATOR_CONTEXT_ID: "${BTHWANI_OPERATOR_CONTEXT_ID:-local-dsh}"
 
 services:
   postgres:
@@ -112,6 +111,8 @@ services:
       PORT: "8082"
       DATABASE_URL: "postgres://${BTHWANI_IDENTITY_DB_USER:-identity_runtime}:${BTHWANI_IDENTITY_DB_PASSWORD:-identity_runtime_password}@postgres:5432/${BTHWANI_IDENTITY_DB_NAME:-identity_runtime}?sslmode=disable"
       IDENTITY_LOCAL_BOOTSTRAP: "${IDENTITY_LOCAL_BOOTSTRAP:-true}"
+      # Identity is the sole owner of the local anonymous/bootstrap context.
+      BTHWANI_OPERATOR_CONTEXT_ID: "${BTHWANI_OPERATOR_CONTEXT_ID:-local-dsh}"
       IDENTITY_LOCAL_BOOTSTRAP_PASSWORD: "${IDENTITY_LOCAL_BOOTSTRAP_PASSWORD:-123456}"
       IDENTITY_ACTIVATION_HMAC_SECRET: "${IDENTITY_ACTIVATION_HMAC_SECRET:-LOCAL_ONLY_replace_with_32_plus_byte_activation_hmac_secret}"
       IDENTITY_WORKFORCE_SERVICE_TOKEN: "${IDENTITY_WORKFORCE_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_workforce_internal_service_token}"
@@ -138,7 +139,7 @@ services:
     container_name: ${BTHWANI_WORKFORCE_API_CONTAINER:-bthwani-workforce-api-runtime}
     restart: unless-stopped
     environment:
-      <<: *bthwani-environment
+      BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED: "${BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED:-false}"
       PORT: "8086"
       DATABASE_URL: "postgres://${BTHWANI_WORKFORCE_DB_USER:-workforce_runtime}:${BTHWANI_WORKFORCE_DB_PASSWORD:-workforce_runtime_password}@postgres:5432/${BTHWANI_WORKFORCE_DB_NAME:-workforce_runtime}?sslmode=disable"
       WORKFORCE_IDENTITY_BASE_URL: "http://identity-api:8082"

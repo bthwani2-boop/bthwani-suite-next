@@ -132,8 +132,20 @@ foreach ($key in $partnerHeaders.Keys) {
   $payoutHeaders[$key] = $partnerHeaders[$key]
 }
 $payoutHeaders["X-Correlation-ID"] = "smoke-partner-payout-$([guid]::NewGuid())"
-$payoutResult = Invoke-RestMethod "http://localhost:58080/dsh/partner/me/finance/payout-destination" -Headers $payoutHeaders -TimeoutSec 10
-$payoutDestination = $payoutResult.payoutDestination
+$payoutReadback = Invoke-WebRequest "http://localhost:58080/dsh/partner/me/finance/payout-destination" -Headers $payoutHeaders -TimeoutSec 10 -SkipHttpErrorCheck
+$payoutResult = $null
+$payoutDestination = $null
+if ($payoutReadback.StatusCode -eq 404) {
+  $payoutError = $payoutReadback.Content | ConvertFrom-Json
+  if ([string]$payoutError.code -ne "PAYOUT_DESTINATION_NOT_FOUND") {
+    throw "Partner Onboarding & Store Publication returned an unexpected payout readback 404: $($payoutReadback.Content)"
+  }
+} elseif ($payoutReadback.StatusCode -ge 200 -and $payoutReadback.StatusCode -lt 300) {
+  $payoutResult = $payoutReadback.Content | ConvertFrom-Json
+  $payoutDestination = $payoutResult.payoutDestination
+} else {
+  throw "Partner Onboarding & Store Publication payout readback failed with HTTP $($payoutReadback.StatusCode): $($payoutReadback.Content)"
+}
 if ($null -ne $payoutDestination) {
   if ([string]$payoutDestination.ownerActorId -ne [string]$partnerActor.actorId -or $payoutDestination.ownerActorType -ne "partner") { throw "Partner Onboarding & Store Publication WLT payout destination ownership mismatch" }
   if ($payoutDestination.officialWalletProviderKey -ne "bthwani_local_wallet") { throw "Partner Onboarding & Store Publication WLT provider key mismatch" }
@@ -331,7 +343,7 @@ $publicationBody = @{
   reason = "Partner Onboarding & Store Publication runtime smoke: marketing publication publish"
 } | ConvertTo-Json
 $published = Invoke-RestMethod "http://localhost:58080/dsh/operator/marketing/stores/$smokeStoreId/publication" -Method Post -Headers $publicationHeaders -ContentType "application/json" -Body $publicationBody -TimeoutSec 10
-if (-not $published.store.publicationEligible) { throw "Partner Onboarding & Store Publication marketing publication did not return an eligible store" }
+if ($published.store.publicationDecision -ne "PUBLISHED") { throw "Partner Onboarding & Store Publication marketing publication did not return a published store" }
 
 $readiness = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/readiness" -Headers $operatorHeaders -TimeoutSec 10
 if ($readiness.partnerId -ne $partnerDraft.id) { throw "Partner Onboarding & Store Publication readiness response did not match partner" }
@@ -340,11 +352,11 @@ if ($audit.events.Count -lt 7) { throw "Partner Onboarding & Store Publication a
 if ($audit.events[$audit.events.Count - 1].toStatus -ne "client_visible") { throw "Partner Onboarding & Store Publication audit final status is not client_visible" }
 $linkedStore = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/$smokeStoreId" -Headers $operatorHeaders -TimeoutSec 10
 if ($linkedStore.store.partnerReadiness -ne "ready") { throw "Partner Onboarding & Store Publication linked store partner_readiness is not ready" }
-if (-not $linkedStore.store.publicationEligible) { throw "Partner Onboarding & Store Publication operator readback is not publication eligible" }
+if ($linkedStore.store.publicationDecision -ne "PUBLISHED") { throw "Partner Onboarding & Store Publication operator readback is not published" }
 
 $publicStore = Invoke-RestMethod "http://localhost:58080/dsh/stores/$smokeStoreId" -TimeoutSec 10
-if ($publicStore.store.id -ne $smokeStoreId -or -not $publicStore.store.publicationEligible) {
-  throw "Partner Onboarding & Store Publication app-client store readback is not eligible"
+if ($publicStore.store.id -ne $smokeStoreId -or $publicStore.store.publicationDecision -ne "PUBLISHED") {
+  throw "Partner Onboarding & Store Publication app-client store readback is not published"
 }
 $publicCatalog = Invoke-RestMethod "http://localhost:58080/dsh/stores/$smokeStoreId/catalog" -TimeoutSec 10
 if (@($publicCatalog.products).Count -lt 1) { throw "Partner Onboarding & Store Publication app-client catalog is empty" }

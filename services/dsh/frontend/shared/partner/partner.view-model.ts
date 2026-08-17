@@ -70,12 +70,11 @@ export type DshPartnerDetailViewModel = {
 export type DshPartnerReadinessViewModel = {
   readonly allGatesPassed: boolean;
   readonly canActivatePartner: boolean;
-  readonly canPublishStoreToClient: boolean;
   readonly intakeComplete: boolean;
-  readonly publicationReady: boolean;
+  readonly publicationDecision: "PUBLISHED" | "BLOCKED";
+  readonly blockingReasons: readonly string[];
   readonly blockerLabel: string;
   readonly partnerActivationBlockedReason: string;
-  readonly storePublicationBlockedReason: string;
   readonly items: readonly { id: string; label: string; satisfied: boolean; blockedReason?: string | undefined }[];
 };
 
@@ -161,12 +160,11 @@ export function buildPartnerReadinessViewModel(r: DshPartnerReadiness): DshPartn
   return {
     allGatesPassed: r.canActivate,
     canActivatePartner: r.canActivatePartner,
-    canPublishStoreToClient: r.canPublishStoreToClient,
     intakeComplete: r.intakeComplete,
-    publicationReady: r.publicationReady,
+    publicationDecision: r.publicationDecision,
+    blockingReasons: [...r.blockingReasons],
     blockerLabel: r.blockedReason ?? "",
     partnerActivationBlockedReason: r.partnerActivationBlockedReason ?? "",
-    storePublicationBlockedReason: r.storePublicationBlockedReason ?? "",
     items: r.checklist.map(item => ({
       id: item.id,
       label: item.label,

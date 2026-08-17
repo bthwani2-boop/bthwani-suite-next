@@ -238,7 +238,6 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	// These route modules share the same registry as every other financial
 	// mutation. They must not be added by main after this inventory is built,
 	// otherwise they could bypass the decision-service kill switch.
-	registerDeliveryCollectionRoutes(db, mutation, read)
 	registerOrderCancellationRoutes(db, mutation)
 	registerFieldCategoryCommissionRoutes(db, mutation)
 

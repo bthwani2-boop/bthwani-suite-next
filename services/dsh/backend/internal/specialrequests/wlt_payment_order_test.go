@@ -1,6 +1,9 @@
 package specialrequests
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 func TestWltPaymentEventAdvancesProjection(t *testing.T) {
 	tests := []struct {
@@ -14,7 +17,6 @@ func TestWltPaymentEventAdvancesProjection(t *testing.T) {
 		{name: "terminal transition", current: "authorized", incoming: "captured", advances: true},
 		{name: "late earlier event", current: "captured", incoming: "authorized", advances: false},
 		{name: "same terminal event", current: "captured", incoming: "captured", advances: false},
-		{name: "different terminal event", current: "failed", incoming: "captured", advances: false},
 		{name: "alternate non-terminal branch", current: "authorized", incoming: "cod_pending", advances: false},
 	}
 	for _, tt := range tests {
@@ -27,6 +29,22 @@ func TestWltPaymentEventAdvancesProjection(t *testing.T) {
 				t.Fatalf("advances=%v, want %v", advances, tt.advances)
 			}
 		})
+	}
+}
+
+func TestWltPaymentEventDifferentTerminalOutcomeFailsClosed(t *testing.T) {
+	for _, pair := range [][2]string{
+		{"failed", "captured"},
+		{"expired", "cod_collected"},
+		{"captured", "failed"},
+	} {
+		advances, err := wltPaymentEventAdvancesProjection(pair[0], pair[1])
+		if advances {
+			t.Fatalf("%s -> %s must not advance the DSH projection", pair[0], pair[1])
+		}
+		if !errors.Is(err, ErrConflict) || !errors.Is(err, ErrWltTerminalOutcomeConflict) {
+			t.Fatalf("%s -> %s must fail as a terminal conflict, got %v", pair[0], pair[1], err)
+		}
 	}
 }
 

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"dsh-api/internal/store"
 )
 
 var (
@@ -218,16 +220,15 @@ type ReadinessItem struct {
 }
 
 type PartnerReadiness struct {
-	PartnerID                      string          `json:"partnerId"`
-	CanActivate                    bool            `json:"canActivate"`
-	CanActivatePartner             bool            `json:"canActivatePartner"`
-	CanPublishStoreToClient        bool            `json:"canPublishStoreToClient"`
-	IntakeComplete                 bool            `json:"intakeComplete"`
-	PublicationReady               bool            `json:"publicationReady"`
-	BlockedReason                  string          `json:"blockedReason,omitempty"`
-	PartnerActivationBlockedReason string          `json:"partnerActivationBlockedReason,omitempty"`
-	StorePublicationBlockedReason  string          `json:"storePublicationBlockedReason,omitempty"`
-	Checklist                      []ReadinessItem `json:"checklist"`
+	PartnerID                      string             `json:"partnerId"`
+	CanActivate                    bool               `json:"canActivate"`
+	CanActivatePartner             bool               `json:"canActivatePartner"`
+	IntakeComplete                 bool               `json:"intakeComplete"`
+	PublicationDecision            store.PublicationDecision `json:"publicationDecision"`
+	BlockingReasons                []string           `json:"blockingReasons"`
+	BlockedReason                  string             `json:"blockedReason,omitempty"`
+	PartnerActivationBlockedReason string             `json:"partnerActivationBlockedReason,omitempty"`
+	Checklist                      []ReadinessItem    `json:"checklist"`
 }
 
 func ComputeReadiness(
@@ -274,35 +275,23 @@ func ComputeReadiness(
 		}
 	}
 
-	storePublicationBlockedReason := ""
-	if !hasStore {
-		storePublicationBlockedReason = "Ù„Ø§ ÙŠÙˆØ¬Ø¯ ÙØ±Ø¹ Ù…Ø±Ø¨ÙˆØ· Ø¨Ø§Ù„Ø´Ø±ÙŠÙƒ"
-	} else if !partnerActiveDone {
-		storePublicationBlockedReason = "Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù†Ø´Ø· Ø­Ø§Ù„ÙŠØ§Ù‹"
-	} else if !storePublished {
-		storePublicationBlockedReason = "حالة الفرع غير منشورة"
-	} else if !storeIsVisible {
-		storePublicationBlockedReason = "Ø§Ù„ÙØ±Ø¹ Ù…Ø®ÙÙŠ Ù…Ù† Ù„ÙˆØ­Ø© Ø§Ù„ØªØ­ÙƒÙ…"
-	} else if !storeServiceable {
-		storePublicationBlockedReason = "Ø§Ù„ÙØ±Ø¹ Ø®Ø§Ø±Ø¬ Ø§Ù„Ø®Ø¯Ù…Ø© Ø£Ùˆ ØºÙŠØ± Ù…ØªÙˆÙØ± Ø­Ø§Ù„ÙŠØ§Ù‹"
-	} else if !storePartnerReadinessReady {
-		storePublicationBlockedReason = "Ø¬Ø§Ù‡Ø²ÙŠØ© Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø© Ù„Ù„ÙØ±Ø¹"
-	} else if !storeCatalogApproved {
-		storePublicationBlockedReason = "Ø§Ù„ÙƒØªØ§Ù„ÙˆØ¬ Ø§Ù„Ø®Ø§Øµ Ø¨Ø§Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…Ø¹ØªÙ…Ø¯"
-	} else if !storeMarketingVisible {
-		storePublicationBlockedReason = "Ø§Ù„Ø¸Ù‡ÙˆØ± Ø§Ù„ØªØ³ÙˆÙŠÙ‚ÙŠ Ù„Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…ÙØ¹Ù„"
+
+	publicationDecision := store.PublicationBlocked
+	blockingReasons := []string{"STORE_PUBLICATION_BLOCKED"}
+	if canPublishStoreToClient {
+		publicationDecision = store.PublicationPublished
+		blockingReasons = []string{}
 	}
 
 	return PartnerReadiness{
 		PartnerID:                      p.ID,
 		CanActivate:                    canActivatePartner,
 		CanActivatePartner:             canActivatePartner,
-		CanPublishStoreToClient:        canPublishStoreToClient,
 		IntakeComplete:                 docsDone && hasStore && strings.TrimSpace(p.BusinessVerticalID) != "",
-		PublicationReady:               canPublishStoreToClient,
 		BlockedReason:                  partnerActivationBlockedReason,
 		PartnerActivationBlockedReason: partnerActivationBlockedReason,
-		StorePublicationBlockedReason:  storePublicationBlockedReason,
+		PublicationDecision:            publicationDecision,
+		BlockingReasons:                blockingReasons,
 		Checklist: []ReadinessItem{
 			{
 				ID:            "documents",
@@ -482,14 +471,16 @@ type CreateFieldVisitInput struct {
 }
 
 type PartnerLinkedStore struct {
-	ID          string `json:"id"`
-	PartnerID   string `json:"partnerId"`
-	Slug        string `json:"slug"`
-	DisplayName string `json:"displayName"`
-	Status      string `json:"status"`
-	IsVisible   bool   `json:"isVisible"`
-	CityCode    string `json:"cityCode"`
-	CreatedAt   string `json:"createdAt"`
+	ID                 string   `json:"id"`
+	PartnerID          string   `json:"partnerId"`
+	Slug               string   `json:"slug"`
+	DisplayName        string   `json:"displayName"`
+	Status             string   `json:"status"`
+	IsVisible          bool     `json:"isVisible"`
+	CityCode           string   `json:"cityCode"`
+	PublicationDecision string   `json:"publicationDecision"`
+	BlockingReasons    []string `json:"blockingReasons"`
+	CreatedAt          string   `json:"createdAt"`
 }
 
 type PartnerListQuery struct {

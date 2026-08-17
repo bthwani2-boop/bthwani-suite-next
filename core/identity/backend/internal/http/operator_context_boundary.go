@@ -31,31 +31,27 @@ func trustedOperatorContext(r *http.Request) (string, bool) {
 	return value, ok && value != ""
 }
 
-func validateInternalOperatorRequest(w http.ResponseWriter, r *http.Request, operatorContextID string) bool {
+func validateInternalOperatorRequest(w http.ResponseWriter, r *http.Request) (string, bool) {
 	if strings.TrimSpace(r.Header.Get("X-Service-Caller")) != "workforce" {
 		sendError(w, http.StatusForbidden, "FORBIDDEN", "X-Service-Caller is not allowed")
-		return false
+		return "", false
 	}
 	expectedToken := strings.TrimSpace(os.Getenv("IDENTITY_WORKFORCE_SERVICE_TOKEN"))
 	if expectedToken == "" {
 		sendError(w, http.StatusServiceUnavailable, "INTERNAL_API_UNAVAILABLE", "internal API is not configured")
-		return false
+		return "", false
 	}
 	token, ok := bearerToken(r)
 	if !ok || subtle.ConstantTimeCompare([]byte(token), []byte(expectedToken)) != 1 {
 		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "service token is required")
-		return false
+		return "", false
 	}
 	requestedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 	if requestedOperatorContextID == "" {
 		sendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "X-Operator-Context-ID is required for internal actor operations")
-		return false
+		return "", false
 	}
-	if subtle.ConstantTimeCompare([]byte(requestedOperatorContextID), []byte(operatorContextID)) != 1 {
-		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "service operator context does not match the active runtime context")
-		return false
-	}
-	return true
+	return requestedOperatorContextID, true
 }
 
 func rewriteProvisionOperatorContext(w http.ResponseWriter, r *http.Request, operatorContextID string) bool {
@@ -136,16 +132,10 @@ func OperatorBoundary(db *sql.DB, next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		configuredOperatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
-		if configuredOperatorContextID == "" {
-			sendError(w, http.StatusServiceUnavailable, "INTERNAL_API_UNAVAILABLE", "internal operator context is not configured")
+		operatorContextID, ok := validateInternalOperatorRequest(w, r)
+		if !ok {
 			return
 		}
-		requestedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
-		if !validateInternalOperatorRequest(w, r, configuredOperatorContextID) {
-			return
-		}
-		operatorContextID := requestedOperatorContextID
 		r = withTrustedOperatorContext(r, operatorContextID)
 		if r.Method == http.MethodPost && r.URL.Path == "/internal/actors/provision" {
 			if !rewriteProvisionOperatorContext(w, r, operatorContextID) {

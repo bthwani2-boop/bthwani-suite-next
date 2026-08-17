@@ -52,8 +52,8 @@ func TestRowToDetailExposesOperationalContext(t *testing.T) {
 	if detail.DeliveryReadiness != "ready" {
 		t.Fatalf("expected delivery readiness readback, got %q", detail.DeliveryReadiness)
 	}
-	if !detail.PublicationEligible {
-		t.Fatal("expected fully governed store to be publication eligible")
+	if detail.PublicationDecision != PublicationPublished || len(detail.BlockingReasons) != 0 {
+		t.Fatalf("expected fully governed store to be published, got decision=%s reasons=%v", detail.PublicationDecision, detail.BlockingReasons)
 	}
 }
 
@@ -84,7 +84,7 @@ func TestPublicationEligibilityFailsClosedForEveryGovernanceGate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			row := eligibleStoreRow()
 			tc.mutate(&row)
-			if IsPublicationEligible(row) {
+			if DiagnoseStorePublication(row).IsReady {
 				t.Fatalf("publication must fail closed when %s", tc.name)
 			}
 		})

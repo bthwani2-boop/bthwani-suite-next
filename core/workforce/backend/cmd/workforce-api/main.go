@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -53,11 +52,6 @@ func main() {
 	if wltServiceToken == "" {
 		log.Fatal("[workforce-api] WORKFORCE_WLT_SERVICE_TOKEN is required")
 	}
-	operatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
-	if operatorContextID == "" {
-		log.Fatal("[workforce-api] BTHWANI_OPERATOR_CONTEXT_ID is required; silent operator context fallback is forbidden")
-	}
-
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
 		log.Fatalf("[workforce-api] open database: %v", err)
@@ -69,9 +63,9 @@ func main() {
 	}
 
 	repo := workforce.NewRepository(db)
-	identity := identityclient.NewClient(identityBaseURL, serviceToken, operatorContextID)
-	dsh := dshclient.NewClient(dshBaseURL, dshServiceToken, operatorContextID)
-	wlt := wltclient.NewClient(wltBaseURL, wltServiceToken, operatorContextID)
+	identity := identityclient.NewClient(identityBaseURL, serviceToken)
+	dsh := dshclient.NewClient(dshBaseURL, dshServiceToken)
+	wlt := wltclient.NewClient(wltBaseURL, wltServiceToken)
 	service := workforce.NewService(repo, identity, dsh)
 	authClient := auth.NewClient(identityBaseURL)
 

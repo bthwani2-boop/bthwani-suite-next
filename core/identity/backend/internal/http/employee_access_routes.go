@@ -59,12 +59,8 @@ func (s *employeeAccessServer) provision(w http.ResponseWriter, r *http.Request)
 	if !decodeJSON(w, r, &request) {
 		return
 	}
-	operatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
-	if operatorContextID == "" {
-		sendError(w, http.StatusServiceUnavailable, "INTERNAL_API_UNAVAILABLE", "trusted operator context is not configured")
-		return
-	}
-	if !validateInternalOperatorRequest(w, r, operatorContextID) {
+	operatorContextID, ok := validateInternalOperatorRequest(w, r)
+	if !ok {
 		return
 	}
 	input := identity.EmployeeProvisionInput{

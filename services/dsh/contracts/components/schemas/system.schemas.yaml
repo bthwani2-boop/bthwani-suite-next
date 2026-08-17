@@ -166,17 +166,18 @@ DshReadinessEscalation:
 
 DshPartnerReadiness:
   type: object
-  required: [partnerId, canActivate, canActivatePartner, canPublishStoreToClient, intakeComplete, publicationReady, checklist]
+  required: [partnerId, canActivate, canActivatePartner, intakeComplete, publicationDecision, blockingReasons, checklist]
   properties:
     partnerId: { type: string }
     canActivate: { type: boolean }
     canActivatePartner: { type: boolean }
-    canPublishStoreToClient: { type: boolean }
     intakeComplete: { type: boolean }
-    publicationReady: { type: boolean }
+    publicationDecision: { type: string, enum: [PUBLISHED, BLOCKED] }
+    blockingReasons:
+      type: array
+      items: { type: string }
     blockedReason: { type: string }
     partnerActivationBlockedReason: { type: string }
-    storePublicationBlockedReason: { type: string }
     checklist:
       type: array
       items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerReadinessItem" }

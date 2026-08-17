@@ -163,6 +163,20 @@
       "sha256": "7c376e6450a0e921215fbc021cf36066bf7395349f91eeb647701a503a1a354d",
       "historicalPrefix": "1015",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 263,
+      "file": "dsh-1016_special_request_wlt_terminal_outcome_guard.sql",
+      "sha256": "222dde3ccfd3c71981a445f2015cd856353cb9fc74fdfa366eae0d2e670db9de",
+      "historicalPrefix": "1016",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 264,
+      "file": "dsh-1017_canonical_store_publication_decision.sql",
+      "sha256": "5983e1337a258a4ce7f843aa0ce690c3c2e720eadf79413f41af09540d7a78e4",
+      "historicalPrefix": "1017",
+      "state": "ACTIVE"
     }
   ]
 }

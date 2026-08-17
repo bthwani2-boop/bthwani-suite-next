@@ -129,6 +129,13 @@
       "file": "workforce-018_financial_authority_cutover.sql",
       "sha256": "1c4f97f56b5b2a461687755c2217b715f256393f7f84cd22926aaa862960515b",
       "historicalPrefix": "018",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 19,
+      "file": "workforce-019_identity_operator_context_cutover.sql",
+      "sha256": "aa771abd50d56a686f10e8e726f17facbccf6e6a43cdd84bf23cc92061267b9d",
+      "historicalPrefix": "019",
       "state": "ACTIVE"
     }
   ]

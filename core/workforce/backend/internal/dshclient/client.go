@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	workforceauth "workforce-api/internal/auth"
 )
 
 var (
@@ -20,10 +22,9 @@ var (
 )
 
 type Client struct {
-	baseURL           string
-	token             string
-	operatorContextID string
-	http              *http.Client
+	baseURL string
+	token   string
+	http    *http.Client
 }
 
 type CaptainFinancialEligibility struct {
@@ -51,9 +52,6 @@ func NewClient(baseURL string, optional ...string) *Client {
 	if len(optional) > 0 {
 		client.token = strings.TrimSpace(optional[0])
 	}
-	if len(optional) > 1 {
-		client.operatorContextID = strings.TrimSpace(optional[1])
-	}
 	return client
 }
 
@@ -62,7 +60,7 @@ func (c *Client) Configured() bool {
 }
 
 func (c *Client) AvailabilityProjectionConfigured() bool {
-	return c.Configured() && c.token != "" && c.operatorContextID != ""
+	return c.Configured() && c.token != ""
 }
 
 type Zone struct {
@@ -121,7 +119,8 @@ func (c *Client) ValidateZone(ctx context.Context, zoneID, operatorToken string)
 
 func (c *Client) CaptainFinancialEligibility(ctx context.Context, actorID string) (CaptainFinancialEligibility, error) {
 	var result CaptainFinancialEligibility
-	if !c.Configured() || strings.TrimSpace(c.operatorContextID) == "" {
+	operatorContextID, ok := workforceauth.OperatorContextIDFromContext(ctx)
+	if !c.Configured() || !ok {
 		return result, fmt.Errorf("DSH financial eligibility client is not configured")
 	}
 	endpoint := fmt.Sprintf(
@@ -136,7 +135,7 @@ func (c *Client) CaptainFinancialEligibility(ctx context.Context, actorID string
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("X-Service-Caller", "workforce")
-	req.Header.Set("X-Operator-Context-ID", c.operatorContextID)
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return result, fmt.Errorf("call DSH financial eligibility: %w", err)
@@ -152,6 +151,9 @@ func (c *Client) CaptainFinancialEligibility(ctx context.Context, actorID string
 		return result, fmt.Errorf("decode DSH financial eligibility: %w", err)
 	}
 	result = envelope.FinancialEligibility
+	if strings.TrimSpace(result.OperatorContextID) != "" && result.OperatorContextID != operatorContextID {
+		return CaptainFinancialEligibility{}, fmt.Errorf("DSH financial eligibility context mismatch")
+	}
 	if strings.TrimSpace(result.CaptainID) == "" ||
 		strings.TrimSpace(result.WltDecisionID) == "" ||
 		strings.TrimSpace(result.WltPolicyVersion) == "" ||
@@ -178,7 +180,14 @@ func (c *Client) SyncAvailabilityProjection(ctx context.Context, input Availabil
 	if !c.AvailabilityProjectionConfigured() {
 		return ErrUnavailable
 	}
-	input.OperatorContextID = c.operatorContextID
+	operatorContextID, ok := workforceauth.OperatorContextIDFromContext(ctx)
+	if !ok {
+		return ErrUnavailable
+	}
+	if strings.TrimSpace(input.OperatorContextID) != "" && strings.TrimSpace(input.OperatorContextID) != operatorContextID {
+		return fmt.Errorf("operator context mismatch")
+	}
+	input.OperatorContextID = operatorContextID
 	encoded, err := json.Marshal(input)
 	if err != nil {
 		return err
@@ -209,6 +218,10 @@ func (c *Client) ValidateProviderDocumentMedia(ctx context.Context, actorID, act
 	if !c.Configured() || c.token == "" {
 		return ErrUnavailable
 	}
+	operatorContextID, ok := workforceauth.OperatorContextIDFromContext(ctx)
+	if !ok {
+		return ErrUnavailable
+	}
 	payload, err := json.Marshal(struct {
 		ActorID   string `json:"actorId"`
 		ActorRole string `json:"actorRole"`
@@ -225,6 +238,7 @@ func (c *Client) ValidateProviderDocumentMedia(ctx context.Context, actorID, act
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("X-Service-Caller", "workforce")
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrUnavailable, err)

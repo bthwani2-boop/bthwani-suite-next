@@ -86,12 +86,11 @@ export type DshPartnerReadiness = {
   readonly partnerId: string;
   readonly canActivate: boolean;
   readonly canActivatePartner: boolean;
-  readonly canPublishStoreToClient: boolean;
   readonly intakeComplete: boolean;
-  readonly publicationReady: boolean;
+  readonly publicationDecision: "PUBLISHED" | "BLOCKED";
+  readonly blockingReasons: readonly string[];
   readonly blockedReason?: string;
   readonly partnerActivationBlockedReason?: string;
-  readonly storePublicationBlockedReason?: string;
   readonly checklist: DshPartnerReadinessItem[];
 };
 

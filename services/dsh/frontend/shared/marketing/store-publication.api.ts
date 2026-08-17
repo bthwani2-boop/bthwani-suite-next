@@ -11,7 +11,8 @@ export type StorePublicationDetail = {
   readonly partnerReadiness: string;
   readonly catalogApprovalStatus: string;
   readonly marketingVisibility: string;
-  readonly publicationEligible: boolean;
+  readonly publicationDecision: "PUBLISHED" | "BLOCKED";
+  readonly blockingReasons: readonly string[];
   readonly version: number;
 };
 

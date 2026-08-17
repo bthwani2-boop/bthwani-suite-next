@@ -8,7 +8,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"os"
 	"strings"
 )
 
@@ -22,9 +21,9 @@ type activationIssuerPermission struct {
 }
 
 type activationActorAccess struct {
-	OperatorContextID   string
-	Active     bool
-	Permissions []activationIssuerPermission
+	OperatorContextID string
+	Active            bool
+	Permissions       []activationIssuerPermission
 }
 
 type actorAccessLookup interface {
@@ -176,12 +175,6 @@ func activationIssuerBoundary(lookup actorAccessLookup, next http.Handler) http.
 		}
 		if issuerAccess.OperatorContextID != targetAccess.OperatorContextID {
 			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "issuing actor and target belong to different OperatorContexts")
-			return
-		}
-
-		runtimeOperatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
-		if runtimeOperatorContextID != "" && issuerAccess.OperatorContextID != runtimeOperatorContextID {
-			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "issuing actor does not belong to the active runtime OperatorContext")
 			return
 		}
 

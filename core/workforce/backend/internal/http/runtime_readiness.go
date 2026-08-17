@@ -9,7 +9,7 @@ import (
 
 const (
 	workforceMigrationServiceName = "workforce"
-	workforceLatestMigration      = "workforce-018_financial_authority_cutover.sql"
+	workforceLatestMigration      = "workforce-019_identity_operator_context_cutover.sql"
 	workforceReadinessTimeout     = 2 * time.Second
 )
 

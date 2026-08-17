@@ -81,9 +81,6 @@ func configuredReadinessDuration(name string, fallback time.Duration) (time.Dura
 }
 
 func runtimeConfigurationReady() bool {
-	if strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID")) == "" {
-		return false
-	}
 	return true
 }
 
@@ -121,7 +118,7 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 		}
 
 		if store == nil {
-			next.ServeHTTP(w, r)
+			writeReadinessFailure(w, "database_configuration", startedAt, nil)
 			return
 		}
 

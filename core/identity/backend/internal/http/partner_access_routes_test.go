@@ -53,23 +53,21 @@ func TestPartnerPermissionBundlesRejectInvalidDshToken(t *testing.T) {
 	}
 }
 
-func TestPartnerPermissionBundlesRejectMismatchedOperatorContext(t *testing.T) {
+func TestPartnerPermissionBundlesAcceptsIdentityOwnedOperatorContext(t *testing.T) {
 	t.Setenv("IDENTITY_DSH_SERVICE_TOKEN", "dsh-secret")
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "operator-main")
 	request := configuredPartnerPermissionRequest()
 	request.Header.Set("X-Operator-Context-ID", "operator-other")
 	response := httptest.NewRecorder()
 
 	(&partnerAccessServer{}).dshOnly(http.NotFoundHandler().ServeHTTP)(response, request)
 
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
-		t.Fatalf("unexpected response status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("identity-owned context was not delegated status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
 func TestPartnerPermissionBundlesDelegateAuthenticatedDsh(t *testing.T) {
 	t.Setenv("IDENTITY_DSH_SERVICE_TOKEN", "dsh-secret")
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "operator-main")
 	called := false
 	handler := (&partnerAccessServer{}).dshOnly(func(w http.ResponseWriter, _ *http.Request) {
 		called = true

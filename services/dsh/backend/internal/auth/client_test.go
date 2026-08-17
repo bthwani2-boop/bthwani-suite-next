@@ -198,13 +198,13 @@ func TestFetchPartnerPermissionBundlesAuthenticatesAndCachesDefensiveCopy(t *tes
 	defer server.Close()
 
 	client := NewClientWithInternalAccess(server.URL, "dsh-identity-secret", "operator-main")
-	first, err := client.FetchPartnerPermissionBundles(context.Background())
+	first, err := client.FetchPartnerPermissionBundles(WithOperatorContext(context.Background(), "operator-main"))
 	if err != nil {
 		t.Fatalf("unexpected first fetch error: %v", err)
 	}
 	first[0].Actions[0] = "tampered"
 
-	second, err := client.FetchPartnerPermissionBundles(context.Background())
+	second, err := client.FetchPartnerPermissionBundles(WithOperatorContext(context.Background(), "operator-main"))
 	if err != nil {
 		t.Fatalf("unexpected cached fetch error: %v", err)
 	}

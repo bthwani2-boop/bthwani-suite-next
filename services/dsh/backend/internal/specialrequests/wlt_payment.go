@@ -85,6 +85,7 @@ func (s *Service) AttachWltPaymentSessionInOperatorContext(ctx context.Context, 
 }
 
 var ErrWltEventReplayConflict = errors.New("special request WLT event replay conflict")
+var ErrWltTerminalOutcomeConflict = errors.New("special request WLT terminal outcome conflict")
 
 // WltPaymentEventReference is the single owner of the durable reference used
 // for a WLT event receipt. The HTTP adapter must use this value verbatim so a
@@ -123,10 +124,20 @@ func wltPaymentEventIdentity(operatorContextID, id, paymentSessionID, wltStatus,
 	return "wlt-derived:" + payloadHash, payloadHash, nil
 }
 
+func isWltTerminalStatus(status string) bool {
+	switch strings.TrimSpace(status) {
+	case "captured", "cod_collected", "failed", "expired":
+		return true
+	default:
+		return false
+	}
+}
+
 // wltPaymentEventAdvancesProjection prevents a delayed event from moving the
 // DSH read model backwards. WLT remains the financial authority; this only
-// protects the DSH projection from transport reordering. Terminal outcomes
-// share the highest rank and therefore cannot replace one another.
+// protects the DSH projection from transport reordering. WLT's state machine
+// makes terminal outcomes final, so a different terminal outcome is a
+// boundary conflict that must fail closed rather than being silently ignored.
 func wltPaymentEventAdvancesProjection(currentStatus, incomingStatus string) (bool, error) {
 	ranks := map[string]int{
 		"reference_created": 1,
@@ -144,6 +155,9 @@ func wltPaymentEventAdvancesProjection(currentStatus, incomingStatus string) (bo
 	incomingRank, incomingOK := ranks[strings.TrimSpace(incomingStatus)]
 	if !currentOK || !incomingOK {
 		return false, fmt.Errorf("%w: unsupported WLT projection status transition %q -> %q", ErrConflict, currentStatus, incomingStatus)
+	}
+	if isWltTerminalStatus(currentStatus) && isWltTerminalStatus(incomingStatus) && currentStatus != incomingStatus {
+		return false, fmt.Errorf("%w: %w (%s -> %s)", ErrConflict, ErrWltTerminalOutcomeConflict, currentStatus, incomingStatus)
 	}
 	return incomingRank > currentRank, nil
 }
@@ -194,6 +208,25 @@ func ApplyWltPaymentEventWithEvent(db *sql.DB, operatorContextID string, id, pay
 	}
 	if correlationID == "" && current.CorrelationID != nil {
 		correlationID = strings.TrimSpace(*current.CorrelationID)
+	}
+	if isWltTerminalStatus(wltStatus) {
+		var existingTerminalEventKey, existingTerminalStatus string
+		err := tx.QueryRowContext(ctx, `
+			SELECT event_key, wlt_status
+			FROM dsh_special_request_wlt_event_receipts
+			WHERE operator_context_id = $1
+			  AND special_request_id = $2::uuid
+			  AND payment_session_id = $3
+			  AND wlt_status IN ('captured', 'cod_collected', 'failed', 'expired')
+			ORDER BY received_at
+			LIMIT 1
+			FOR UPDATE`, operatorContextID, id, paymentSessionID).Scan(&existingTerminalEventKey, &existingTerminalStatus)
+		if err != nil && err != sql.ErrNoRows {
+			return nil, false, err
+		}
+		if err == nil && existingTerminalEventKey != eventKey {
+			return nil, false, fmt.Errorf("%w: existing terminal outcome %s cannot accept %s", ErrWltTerminalOutcomeConflict, existingTerminalStatus, wltStatus)
+		}
 	}
 
 	var insertedKey string

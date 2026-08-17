@@ -67,18 +67,18 @@ func TestRowToSummary(t *testing.T) {
 	if !summary.IsFreeDelivery || summary.FollowerCount != 3100 || !summary.HasProBadge {
 		t.Errorf("expected API-backed premium metadata, got %+v", summary)
 	}
-	if !summary.PublicationEligible {
-		t.Fatal("expected store with all publication gates to be eligible")
+	if summary.PublicationDecision != PublicationPublished || len(summary.BlockingReasons) != 0 {
+		t.Fatalf("expected store with all publication gates to be published, got decision=%s reasons=%v", summary.PublicationDecision, summary.BlockingReasons)
 	}
 }
 
 func TestPublicationEligibilityRequiresAllGates(t *testing.T) {
 	row := eligibleStoreRow()
-	if !IsPublicationEligible(row) {
+	if !DiagnoseStorePublication(row).IsReady {
 		t.Fatal("all gates should publish the store")
 	}
 	row.CatalogApprovalStatus = "submitted"
-	if IsPublicationEligible(row) {
+	if DiagnoseStorePublication(row).IsReady {
 		t.Fatal("unapproved catalog must hide the store")
 	}
 }

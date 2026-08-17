@@ -49,6 +49,12 @@ func resolveReferenceOperator(w http.ResponseWriter, r *http.Request, authClient
 		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 		return auth.Identity{}, false
 	}
+	boundContext, bindErr := auth.BindIdentityContext(r.Context(), identity)
+	if bindErr != nil {
+		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "identity operator context is missing")
+		return auth.Identity{}, false
+	}
+	*r = *r.WithContext(boundContext)
 	if !identity.HasPermission("workforce", action, "all") {
 		sendError(w, http.StatusForbidden, "FORBIDDEN", "workforce permission is required")
 		return auth.Identity{}, false

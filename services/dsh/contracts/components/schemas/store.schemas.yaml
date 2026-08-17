@@ -33,7 +33,8 @@ DshStoreSummary:
     - partnerReadiness
     - catalogApprovalStatus
     - marketingVisibility
-    - publicationEligible
+    - publicationDecision
+    - blockingReasons
   properties:
     id:
       type: string
@@ -99,8 +100,13 @@ DshStoreSummary:
     marketingVisibility:
       type: string
       enum: [hidden, visible]
-    publicationEligible:
-      type: boolean
+    publicationDecision:
+      type: string
+      enum: [PUBLISHED, BLOCKED]
+    blockingReasons:
+      type: array
+      items:
+        type: string
 
 DshStoreDeliveryMode:
   type: string

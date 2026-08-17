@@ -102,7 +102,7 @@ $showBody = @{
 } | ConvertTo-Json
 $visible = Invoke-RestMethod "http://localhost:58080/dsh/operator/marketing/stores/store-test-grocery/publication" -Method Post -Headers $showHeaders -ContentType "application/json" -Body $showBody -TimeoutSec 10
 $publicStore = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-test-grocery" -TimeoutSec 10
-if (-not $publicStore.store.publicationEligible) { throw "store publication gates were not restored" }
+if ($publicStore.store.publicationDecision -ne "PUBLISHED") { throw "store publication gates were not restored" }
 
 # DSH-JOURNEY-002: product proposal, transition pipeline, and assortment management
 $partnerToken = Get-LocalActorToken (Get-LocalUsername "partner")

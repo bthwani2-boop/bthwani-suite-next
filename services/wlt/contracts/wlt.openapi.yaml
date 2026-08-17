@@ -17,7 +17,6 @@ x-bthwani-financial-owner: true
 x-bthwani-contracts:
   common: ./wlt.common.openapi.yaml
   payments: ./wlt.payments.openapi.yaml
-  deliveryCollections: ./wlt.delivery-collections.openapi.yaml
   refunds: ./wlt.refunds.openapi.yaml
   settlementsCommissions: ./wlt.settlements-commissions.openapi.yaml
   settlementOperations: ./wlt.settlement-operations.openapi.yaml

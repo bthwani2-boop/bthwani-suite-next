@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	workforceauth "workforce-api/internal/auth"
 )
 
 // actorSearchPageSize is the page size requested from identity's keyset-paginated
@@ -35,37 +37,36 @@ var (
 )
 
 type Client struct {
-	baseURL           string
-	serviceToken      string
-	operatorContextID string
-	http              *http.Client
+	baseURL      string
+	serviceToken string
+	http         *http.Client
 }
 
-// NewClient requires an explicit trusted operator context. Runtime callers
-// must resolve it once at composition time; individual Workforce operations
-// cannot silently substitute or override it.
-func NewClient(baseURL, serviceToken, operatorContextID string) *Client {
+// NewClient configures the Identity service endpoint. Operator context is
+// request-scoped and must be bound from the authenticated Identity response;
+// it is never held as process state.
+func NewClient(baseURL, serviceToken string, _ ...string) *Client {
 	return &Client{
-		baseURL:           strings.TrimRight(baseURL, "/"),
-		serviceToken:      serviceToken,
-		operatorContextID: strings.TrimSpace(operatorContextID),
-		http:              &http.Client{Timeout: 10 * time.Second},
+		baseURL:      strings.TrimRight(baseURL, "/"),
+		serviceToken: serviceToken,
+		http:         &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
 func (c *Client) Configured() bool {
-	return c != nil && c.baseURL != "" && c.serviceToken != "" && c.operatorContextID != ""
+	return c != nil && c.baseURL != "" && c.serviceToken != ""
 }
 
-func (c *Client) trustedOperatorContext(requested string) (string, error) {
-	if c == nil || c.operatorContextID == "" {
-		return "", ErrUnavailable
-	}
-	requested = strings.TrimSpace(requested)
-	if requested != "" && requested != c.operatorContextID {
+func trustedOperatorContext(ctx context.Context, requested string) (string, error) {
+	operatorContextID, ok := workforceauth.OperatorContextIDFromContext(ctx)
+	if !ok {
 		return "", ErrOperatorContextForbidden
 	}
-	return c.operatorContextID, nil
+	requested = strings.TrimSpace(requested)
+	if requested != "" && requested != operatorContextID {
+		return "", ErrOperatorContextForbidden
+	}
+	return operatorContextID, nil
 }
 
 type ActorView struct {
@@ -118,7 +119,7 @@ type ActivationMetadata struct {
 
 func (c *Client) Provision(ctx context.Context, input ProvisionInput) (ActorView, error) {
 	var view ActorView
-	operatorContextID, err := c.trustedOperatorContext(input.OperatorContextID)
+	operatorContextID, err := trustedOperatorContext(ctx, input.OperatorContextID)
 	if err != nil {
 		return view, err
 	}
@@ -221,6 +222,10 @@ func (c *Client) do(ctx context.Context, method, path string, body, target any, 
 	if !c.Configured() {
 		return ErrUnavailable
 	}
+	operatorContextID, ok := workforceauth.OperatorContextIDFromContext(ctx)
+	if !ok {
+		return ErrOperatorContextForbidden
+	}
 	var reader *bytes.Reader
 	if body != nil {
 		encoded, err := json.Marshal(body)
@@ -241,7 +246,7 @@ func (c *Client) do(ctx context.Context, method, path string, body, target any, 
 	}
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "workforce")
-	req.Header.Set("X-Operator-Context-ID", c.operatorContextID)
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}

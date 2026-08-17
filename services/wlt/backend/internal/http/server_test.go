@@ -28,7 +28,6 @@ func TestMutationRoutesDisabledByDefault(t *testing.T) {
 		{http.MethodPost, "/wlt/cod-records/c-1/collect"},
 		{http.MethodPost, "/wlt/cod-records/c-1/remit"},
 		{http.MethodPost, "/wlt/commissions"},
-		{http.MethodPost, "/wlt/delivery-collections"},
 		{http.MethodPost, "/wlt/order-cancellations"},
 		{http.MethodPost, "/wlt/field-commissions"},
 	}

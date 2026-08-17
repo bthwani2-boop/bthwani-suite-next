@@ -9,21 +9,21 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	workforceauth "workforce-api/internal/auth"
 )
 
 type Client struct {
-	baseURL           string
-	token             string
-	operatorContextID string
-	http              *http.Client
+	baseURL string
+	token   string
+	http    *http.Client
 }
 
-func NewClient(baseURL, token, operatorContextID string) *Client {
+func NewClient(baseURL, token string, _ ...string) *Client {
 	return &Client{
-		baseURL:           strings.TrimRight(strings.TrimSpace(baseURL), "/"),
-		token:             strings.TrimSpace(token),
-		operatorContextID: strings.TrimSpace(operatorContextID),
-		http:              &http.Client{Timeout: 12 * time.Second},
+		baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
+		token:   strings.TrimSpace(token),
+		http:    &http.Client{Timeout: 12 * time.Second},
 	}
 }
 
@@ -64,7 +64,8 @@ type errorResponse struct {
 }
 
 func (c *Client) request(ctx context.Context, method, path, idempotencyKey, correlationID string, body any) (ProviderPenalty, error) {
-	if c.baseURL == "" || c.token == "" || c.operatorContextID == "" {
+	operatorContextID, ok := workforceauth.OperatorContextIDFromContext(ctx)
+	if c == nil || c.baseURL == "" || c.token == "" || !ok {
 		return ProviderPenalty{}, fmt.Errorf("WLT workforce client is not configured")
 	}
 	encoded, err := json.Marshal(body)
@@ -78,7 +79,7 @@ func (c *Client) request(ctx context.Context, method, path, idempotencyKey, corr
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("X-Service-Caller", "workforce")
-	req.Header.Set("X-Operator-Context-ID", c.operatorContextID)
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
 	if strings.TrimSpace(idempotencyKey) != "" {
 		req.Header.Set("Idempotency-Key", idempotencyKey)
 	}

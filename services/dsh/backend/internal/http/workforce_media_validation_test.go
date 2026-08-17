@@ -12,6 +12,7 @@ func TestValidateProviderDocumentMediaRequiresWorkforceServiceIdentity(t *testin
 	req := httptest.NewRequest(http.MethodPost, "/dsh/internal/workforce/provider-media-refs/validate", strings.NewReader(`{"actorId":"field-1","actorRole":"field","mediaRef":"media-1"}`))
 	req.Header.Set("Authorization", "Bearer wrong-token")
 	req.Header.Set("X-Service-Caller", "workforce")
+	req.Header.Set("X-Operator-Context-ID", "context-main")
 	recorder := httptest.NewRecorder()
 	handleValidateProviderDocumentMedia(nil).ServeHTTP(recorder, req)
 	if recorder.Code != http.StatusForbidden {
@@ -24,6 +25,7 @@ func TestValidateProviderDocumentMediaRejectsMalformedScopeBeforeDatabase(t *tes
 	req := httptest.NewRequest(http.MethodPost, "/dsh/internal/workforce/provider-media-refs/validate", strings.NewReader(`{"actorId":"field-1","actorRole":"partner","mediaRef":"media-1"}`))
 	req.Header.Set("Authorization", "Bearer dsh-token")
 	req.Header.Set("X-Service-Caller", "workforce")
+	req.Header.Set("X-Operator-Context-ID", "context-main")
 	recorder := httptest.NewRecorder()
 	handleValidateProviderDocumentMedia(nil).ServeHTTP(recorder, req)
 	if recorder.Code != http.StatusBadRequest {

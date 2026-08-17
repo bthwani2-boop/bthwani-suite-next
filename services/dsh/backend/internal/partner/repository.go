@@ -560,7 +560,10 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 
 func ListPartnerStores(db *sql.DB, partnerID string) ([]PartnerLinkedStore, error) {
 	rows, err := db.Query(`
-		SELECT id, partner_id, slug, display_name, status, is_visible, city_code, created_at
+		SELECT id, partner_id, slug, display_name, status, is_visible, city_code,
+		       COALESCE((SELECT publication_decision FROM dsh_partner_store_readiness_v readiness WHERE readiness.store_id = dsh_stores.id), 'BLOCKED'),
+		       COALESCE((SELECT blocking_reason_codes FROM dsh_partner_store_readiness_v readiness WHERE readiness.store_id = dsh_stores.id), ARRAY[]::text[]),
+		       created_at
 		FROM dsh_stores
 		WHERE partner_id = $1
 		ORDER BY display_name ASC`, partnerID)
@@ -573,7 +576,7 @@ func ListPartnerStores(db *sql.DB, partnerID string) ([]PartnerLinkedStore, erro
 	for rows.Next() {
 		var s PartnerLinkedStore
 		var createdAt time.Time
-		if err := rows.Scan(&s.ID, &s.PartnerID, &s.Slug, &s.DisplayName, &s.Status, &s.IsVisible, &s.CityCode, &createdAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.PartnerID, &s.Slug, &s.DisplayName, &s.Status, &s.IsVisible, &s.CityCode, &s.PublicationDecision, pq.Array(&s.BlockingReasons), &createdAt); err != nil {
 			return nil, err
 		}
 		s.CreatedAt = createdAt.UTC().Format(time.RFC3339Nano)

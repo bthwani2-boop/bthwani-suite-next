@@ -45,10 +45,9 @@ type DocumentDecision = "approved" | "rejected" | "needs_resubmit";
 type StoreReadiness = Readonly<{
   storeId: string;
   displayName: string;
-  canPublishToClient: boolean;
+  publicationDecision: "PUBLISHED" | "BLOCKED";
+  blockingReasons: readonly string[];
   isClientVisible: boolean;
-  blockedReasonCodes: readonly string[];
-  blockedReasonMessage?: string;
 }>;
 
 type AggregatedReadiness = DshPartnerReadiness & Readonly<{
@@ -346,7 +345,7 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                 <div style={{ display: "grid", gap: 12 }}>
                   {aggregate.storeSummary ? section("ملخص الفروع", <CpDescriptionList><CpDescriptionRow label="إجمالي الفروع">{aggregate.storeSummary.totalStores}</CpDescriptionRow><CpDescriptionRow label="جاهزة للنشر">{aggregate.storeSummary.readyStores}</CpDescriptionRow><CpDescriptionRow label="محجوبة">{aggregate.storeSummary.blockedStores}</CpDescriptionRow><CpDescriptionRow label="ظاهرة للعملاء">{aggregate.storeSummary.clientVisibleStores}</CpDescriptionRow></CpDescriptionList>) : null}
                   {section("جاهزية الشريك", <div style={{ display: "grid", gap: 8 }}>{aggregate.checklist.map((item) => <CpStatePanel key={item.id} role="status" title={`${item.satisfied ? "مستوفى" : "غير مستوفى"}: ${item.label}`} {...(item.blockedReason ? { code: item.blockedReason } : {})} />)}</div>)}
-                  {aggregate.stores?.length ? section("جاهزية كل فرع", <CpTable aria-label="جاهزية الفروع"><thead><tr><CpTableHeaderCell>الفرع</CpTableHeaderCell><CpTableHeaderCell>النشر</CpTableHeaderCell><CpTableHeaderCell>الظهور</CpTableHeaderCell><CpTableHeaderCell>أسباب الحظر</CpTableHeaderCell></tr></thead><tbody>{aggregate.stores.map((store) => <tr key={store.storeId}><CpTableCell>{store.displayName}</CpTableCell><CpTableCell>{store.canPublishToClient ? "جاهز" : "محجوب"}</CpTableCell><CpTableCell>{store.isClientVisible ? "ظاهر" : "مخفي"}</CpTableCell><CpTableCell>{store.blockedReasonMessage || "—"}</CpTableCell></tr>)}</tbody></CpTable>) : null}
+                  {aggregate.stores?.length ? section("جاهزية كل فرع", <CpTable aria-label="جاهزية الفروع"><thead><tr><CpTableHeaderCell>الفرع</CpTableHeaderCell><CpTableHeaderCell>النشر</CpTableHeaderCell><CpTableHeaderCell>الظهور</CpTableHeaderCell><CpTableHeaderCell>أسباب الحظر</CpTableHeaderCell></tr></thead><tbody>{aggregate.stores.map((store) => <tr key={store.storeId}><CpTableCell>{store.displayName}</CpTableCell><CpTableCell>{store.publicationDecision === "PUBLISHED" ? "منشور" : "محجوب"}</CpTableCell><CpTableCell>{store.isClientVisible ? "ظاهر" : "مخفي"}</CpTableCell><CpTableCell>{store.blockingReasons.length > 0 ? store.blockingReasons.join("، ") : "—"}</CpTableCell></tr>)}</tbody></CpTable>) : null}
                 </div>
               ) : null
         ) : null}

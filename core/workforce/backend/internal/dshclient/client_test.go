@@ -6,6 +6,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	workforceauth "workforce-api/internal/auth"
 )
 
 func TestValidateProviderDocumentMediaUsesTrustedServiceBoundary(t *testing.T) {
@@ -28,7 +30,7 @@ func TestValidateProviderDocumentMediaUsesTrustedServiceBoundary(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "dsh-token")
-	if err := client.ValidateProviderDocumentMedia(t.Context(), "field-1", "field", "media-1"); err != nil {
+	if err := client.ValidateProviderDocumentMedia(workforceauth.WithOperatorContext(t.Context(), "context-main"), "field-1", "field", "media-1"); err != nil {
 		t.Fatalf("ValidateProviderDocumentMedia() error = %v", err)
 	}
 }
@@ -40,7 +42,7 @@ func TestValidateProviderDocumentMediaRejectsInvalidReference(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "dsh-token")
-	if err := client.ValidateProviderDocumentMedia(t.Context(), "field-1", "field", "media-other"); err != ErrProviderMediaInvalid {
+	if err := client.ValidateProviderDocumentMedia(workforceauth.WithOperatorContext(t.Context(), "context-main"), "field-1", "field", "media-other"); err != ErrProviderMediaInvalid {
 		t.Fatalf("expected ErrProviderMediaInvalid, got %v", err)
 	}
 }

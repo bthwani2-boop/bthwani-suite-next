@@ -40,7 +40,7 @@ func (c *Client) ReadbackOutboxEvent(ctx context.Context, input OutboxReadbackIn
 	ctx = WithOperatorContext(ctx, strings.TrimSpace(input.OperatorContextID))
 	switch input.EventType {
 	case "delivery_completed":
-		return c.readDeliveryCollection(ctx, input)
+		return c.readCodRecord(ctx, input)
 	case "promotion_funding_commit", "promotion_funding_release", "promotion_funding_reverse":
 		return c.readPromotionFunding(ctx, input)
 	case "loyalty_earned", "loyalty_reversed":
@@ -80,17 +80,16 @@ func (c *Client) readJSON(ctx context.Context, path string, target any) (int, er
 	return resp.StatusCode, nil
 }
 
-func (c *Client) readDeliveryCollection(ctx context.Context, input OutboxReadbackInput) (OutboxReadbackResult, error) {
+func (c *Client) readCodRecord(ctx context.Context, input OutboxReadbackInput) (OutboxReadbackResult, error) {
 	query := url.Values{}
-	query.Set("collectorType", input.CollectorType)
-	query.Set("collectorId", input.CollectorID)
+	query.Set("orderId", input.OrderID)
 	var envelope struct {
 		Records []struct {
 			ID      string `json:"id"`
 			OrderID string `json:"orderId"`
 		} `json:"codRecords"`
 	}
-	_, err := c.readJSON(ctx, "/wlt/delivery-collections?"+query.Encode(), &envelope)
+	_, err := c.readJSON(ctx, "/wlt/cod-records?"+query.Encode(), &envelope)
 	if err != nil {
 		return OutboxReadbackResult{}, err
 	}

@@ -42,6 +42,12 @@ func (s *operationalEnforcementServer) operatorOnly(action string, next guardedH
 			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 			return
 		}
+		boundContext, bindErr := auth.BindIdentityContext(r.Context(), identity)
+		if bindErr != nil {
+			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "identity operator context is missing")
+			return
+		}
+		r = r.WithContext(boundContext)
 		if !identity.HasPermission("workforce", action, "all") {
 			sendError(w, http.StatusForbidden, "FORBIDDEN", "workforce permission is required")
 			return

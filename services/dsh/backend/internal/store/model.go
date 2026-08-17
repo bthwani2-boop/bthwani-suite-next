@@ -5,6 +5,12 @@ import "time"
 type DshStoreStatus string
 type DshServiceabilityStatus string
 type DshStoreCategory string
+type PublicationDecision string
+
+const (
+	PublicationPublished PublicationDecision = "PUBLISHED"
+	PublicationBlocked  PublicationDecision = "BLOCKED"
+)
 
 const (
 	StatusDraft     DshStoreStatus = "draft"
@@ -105,7 +111,8 @@ type DshStoreSummary struct {
 	PartnerReadiness      string             `json:"partnerReadiness"`
 	CatalogApprovalStatus string             `json:"catalogApprovalStatus"`
 	MarketingVisibility   string             `json:"marketingVisibility"`
-	PublicationEligible   bool               `json:"publicationEligible"`
+	PublicationDecision   PublicationDecision `json:"publicationDecision"`
+	BlockingReasons       []string           `json:"blockingReasons"`
 	Version               int                `json:"version"`
 }
 
@@ -179,6 +186,11 @@ type DshStoreListQuery struct {
 }
 
 func RowToSummary(row DshStoreRow) DshStoreSummary {
+	diagnostics := DiagnoseStorePublication(row)
+	decision := PublicationBlocked
+	if diagnostics.IsReady {
+		decision = PublicationPublished
+	}
 	return DshStoreSummary{
 		ID: row.ID, Slug: row.Slug, DisplayName: row.DisplayName, Status: row.Status,
 		CityCode: row.CityCode, ServiceAreaCode: row.ServiceAreaCode,
@@ -194,13 +206,10 @@ func RowToSummary(row DshStoreRow) DshStoreSummary {
 		PartnerReadiness:      row.PartnerReadiness,
 		CatalogApprovalStatus: row.CatalogApprovalStatus,
 		MarketingVisibility:   row.MarketingVisibility,
-		PublicationEligible:   IsPublicationEligible(row),
+		PublicationDecision:   decision,
+		BlockingReasons:       append([]string(nil), diagnostics.BlockerCodes...),
 		Version:               row.Version,
 	}
-}
-
-func IsPublicationEligible(row DshStoreRow) bool {
-	return DiagnoseStorePublication(row).IsReady
 }
 
 func RowToDetail(row DshStoreRow) DshStoreDetail {

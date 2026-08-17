@@ -3,15 +3,12 @@ package http
 import (
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 )
 
-func TestRuntimeOperatorContextBoundaryRejectsUnconfiguredInternalRoutes(t *testing.T) {
+func TestRuntimeOperatorContextBoundaryDoesNotInventOrRequireGlobalContext(t *testing.T) {
 	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
-	nextCalled := false
 	handler := RuntimeOperatorContextBoundary(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		nextCalled = true
 		w.WriteHeader(http.StatusNoContent)
 	}))
 
@@ -22,10 +19,7 @@ func TestRuntimeOperatorContextBoundaryRejectsUnconfiguredInternalRoutes(t *test
 	} {
 		response := httptest.NewRecorder()
 		handler.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
-		if nextCalled {
-			t.Fatalf("%s reached an internal handler without server-owned operator context", path)
-		}
-		if response.Code != http.StatusServiceUnavailable || !strings.Contains(response.Body.String(), "INTERNAL_API_UNAVAILABLE") {
+		if response.Code != http.StatusNoContent {
 			t.Fatalf("%s unexpected response status=%d body=%s", path, response.Code, response.Body.String())
 		}
 	}

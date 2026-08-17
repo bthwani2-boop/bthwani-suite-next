@@ -123,6 +123,51 @@ paths:
         "404": { $ref: "#/components/responses/PlatformError" }
       security:
         - bearerAuth: []
+  /platform/internal/v1/variables/{key}:
+    get:
+      operationId: getInternalPlatformVariable
+      summary: Get a platform variable for an authenticated trusted service.
+      description: This route is service-to-service only; browser sessions and operator permissions do not authorize it.
+      tags: [ PlatformVariables ]
+      x-bthwani-service-auth: PLATFORM_CONTROL_DSH_SERVICE_TOKEN
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema: { type: string }
+        - name: scopeType
+          in: query
+          schema: { type: string, default: global }
+        - name: scopeId
+          in: query
+          schema: { type: string, default: "" }
+        - name: X-Service-Caller
+          in: header
+          required: true
+          schema: { type: string, enum: [ dsh ] }
+        - name: Authorization
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: X-Operator-Context-ID
+          in: header
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: Scoped platform variable.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ variable ]
+                properties:
+                  variable: { $ref: "#/components/schemas/PlatformVariable" }
+        "401": { $ref: "#/components/responses/PlatformError" }
+        "403": { $ref: "#/components/responses/PlatformError" }
+        "404": { $ref: "#/components/responses/PlatformError" }
+      security:
+        - bearerAuth: []
   /platform/v1/feature-flags:
     get:
       operationId: listPlatformFeatureFlags

@@ -39,10 +39,20 @@ func handleWorkforceAvailabilityProjection(db *sql.DB) http.HandlerFunc {
 		if !store.RequireServiceCaller(w, r, "DSH_WORKFORCE_SERVICE_TOKEN", "workforce") {
 			return
 		}
+		operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		if operatorContextID == "" {
+			store.SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "trusted operator context is required")
+			return
+		}
 		var input dispatch.ProviderAvailabilityProjectionInput
 		if !decodeProtectedJSON(w, r, &input) {
 			return
 		}
+		if strings.TrimSpace(input.OperatorContextID) != "" && strings.TrimSpace(input.OperatorContextID) != operatorContextID {
+			store.SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_FORBIDDEN", "operator context must match the trusted service context")
+			return
+		}
+		input.OperatorContextID = operatorContextID
 		projection, err := dispatch.UpsertProviderAvailabilityProjection(r.Context(), db, input)
 		if err != nil {
 			writeGovernedDispatchError(w, err)
@@ -58,6 +68,10 @@ func handleWorkforceAvailabilityProjection(db *sql.DB) http.HandlerFunc {
 func handleWorkforceCaptainFinancialEligibility(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !store.RequireServiceCaller(w, r, "DSH_WORKFORCE_SERVICE_TOKEN", "workforce") {
+			return
+		}
+		if strings.TrimSpace(r.Header.Get("X-Operator-Context-ID")) == "" {
+			store.SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "trusted operator context is required")
 			return
 		}
 		operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))

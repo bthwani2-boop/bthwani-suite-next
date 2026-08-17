@@ -111,6 +111,7 @@
     {"ordinal":104,"file":"wlt-934_provider_debts.sql","sha256":"0268b3b0dfb1dd94e08961dc94bb661273e5417f32ac836544ee8228dc46bae0","historicalPrefix":"934","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":105,"file":"wlt-935_captain_collateral_authority.sql","sha256":"b11bff401b888d48ad701cff7bd61022c88fc97583caf7078146b4e67e051cb0","historicalPrefix":"935","state":"ACTIVE"},
     {"ordinal":106,"file":"wlt-936_special_request_quote_authority.sql","sha256":"cc4d753c3be9b44428601261c31e00593fa3f37408f8622e460f92435c1d1319","historicalPrefix":"936","state":"ACTIVE"},
-    {"ordinal":107,"file":"wlt-937_payment_session_funding_rail_source_guard.sql","sha256":"a75485a5d593a028e95db3e79aa4b81f8256609d13f347cc5ba98daca289c78f","historicalPrefix":"937","state":"ACTIVE"}
+    {"ordinal":107,"file":"wlt-937_payment_session_funding_rail_source_guard.sql","sha256":"a75485a5d593a028e95db3e79aa4b81f8256609d13f347cc5ba98daca289c78f","historicalPrefix":"937","state":"ACTIVE"},
+    {"ordinal":108,"file":"wlt-938_payment_session_terminal_state_guard.sql","sha256":"bed45f2ce7b526a19797ac1b93c99b2639163d54b0a1ef2d0a4838e0eb47fb86","historicalPrefix":"938","state":"ACTIVE"}
   ]
 }

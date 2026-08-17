@@ -87,9 +87,6 @@ func configuredReadinessDuration(name string, fallback time.Duration) (time.Dura
 }
 
 func runtimeConfigurationReady() bool {
-	if strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID")) == "" {
-		return false
-	}
 	if !configuredRuntimeSecret("PLATFORM_CONTROL_DSH_SERVICE_TOKEN", minimumInternalServiceTokenLength) {
 		return false
 	}

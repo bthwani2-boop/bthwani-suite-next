@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	workforceauth "workforce-api/internal/auth"
 )
 
 func TestSearchActorsDecodesGovernedPageAndSendsServiceIdentity(t *testing.T) {
@@ -41,7 +43,7 @@ func TestSearchActorsDecodesGovernedPageAndSendsServiceIdentity(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token", "context-main")
-	actors, nextCursor, err := client.SearchActors(context.Background(), "field", "ali", "")
+	actors, nextCursor, err := client.SearchActors(workforceauth.WithOperatorContext(context.Background(), "context-main"), "field", "ali", "")
 	if err != nil {
 		t.Fatalf("SearchActors returned error: %v", err)
 	}
@@ -67,7 +69,7 @@ func TestClientSendsTrustedContextToEveryIdentityCall(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token", "context-main")
-	if _, _, err := client.SearchActors(context.Background(), "field", "", ""); err != nil {
+	if _, _, err := client.SearchActors(workforceauth.WithOperatorContext(context.Background(), "context-main"), "field", "", ""); err != nil {
 		t.Fatalf("SearchActors returned error: %v", err)
 	}
 }
@@ -90,7 +92,7 @@ func TestProvisionUsesTrustedContextInHeaderAndBody(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token", "context-main")
-	actor, err := client.Provision(context.Background(), ProvisionInput{
+	actor, err := client.Provision(workforceauth.WithOperatorContext(context.Background(), "context-main"), ProvisionInput{
 		Username: "field-1", PhoneE164: "+967770000001", Role: "field",
 	})
 	if err != nil {
@@ -109,7 +111,7 @@ func TestProvisionReplayDoesNotAuthorizeCompensation(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "service-token", "context-main")
-	actor, err := client.Provision(context.Background(), ProvisionInput{
+	actor, err := client.Provision(workforceauth.WithOperatorContext(context.Background(), "context-main"), ProvisionInput{
 		Username: "field-existing", PhoneE164: "+967770000002", Role: "field",
 	})
 	if err != nil {
@@ -123,16 +125,19 @@ func TestProvisionReplayDoesNotAuthorizeCompensation(t *testing.T) {
 func TestProvisionRejectsOperatorContextOverrideBeforeNetwork(t *testing.T) {
 	client := NewClient("https://identity.internal", "service-token", "operator-context-main")
 
-	_, err := client.Provision(context.Background(), ProvisionInput{OperatorContextID: "operator-context-other"})
+	_, err := client.Provision(workforceauth.WithOperatorContext(context.Background(), "operator-context-main"), ProvisionInput{OperatorContextID: "operator-context-other"})
 	if !errors.Is(err, ErrOperatorContextForbidden) {
 		t.Fatalf("expected ErrOperatorContextForbidden, got %v", err)
 	}
 }
 
 func TestClientFailsClosedWithoutRuntimeContext(t *testing.T) {
-	client := NewClient("https://identity.internal", "service-token", "")
-	if client.Configured() {
-		t.Fatal("expected identity client without operator context to be unconfigured")
+	client := NewClient("https://identity.internal", "service-token")
+	if !client.Configured() {
+		t.Fatal("endpoint configuration must be independent of request-scoped operator context")
+	}
+	if _, err := client.Actor(context.Background(), "field-1"); !errors.Is(err, ErrOperatorContextForbidden) {
+		t.Fatalf("expected missing request context to fail closed, got %v", err)
 	}
 }
 
@@ -146,14 +151,14 @@ func TestLifecycleMutationsSendGovernedRequestBody(t *testing.T) {
 			name: "deactivate",
 			path: "/internal/actors/field-1/deactivate",
 			call: func(client *Client) error {
-				return client.Deactivate(context.Background(), "field-1", "operator-1", "policy breach", "correlation-1")
+				return client.Deactivate(workforceauth.WithOperatorContext(context.Background(), "context-main"), "field-1", "operator-1", "policy breach", "correlation-1")
 			},
 		},
 		{
 			name: "reactivate",
 			path: "/internal/actors/field-1/reactivate",
 			call: func(client *Client) error {
-				return client.Reactivate(context.Background(), "field-1", "operator-1", "review complete", "correlation-2")
+				return client.Reactivate(workforceauth.WithOperatorContext(context.Background(), "context-main"), "field-1", "operator-1", "review complete", "correlation-2")
 			},
 		},
 	}

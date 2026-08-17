@@ -98,3 +98,17 @@ func TestLegalAuthoritativePaymentTransitions(t *testing.T) {
 		}
 	}
 }
+
+func TestTerminalPaymentStatusesAreFinal(t *testing.T) {
+	terminal := []string{"captured", "cod_collected", "failed", "expired"}
+	for _, current := range terminal {
+		for _, next := range append(append([]string{}, terminal...), "reference_created", "authorized", "provider_result_unknown") {
+			if current == next {
+				continue
+			}
+			if legalAuthoritativeTransition(current, next) {
+				t.Fatalf("terminal status %q must not transition to %q", current, next)
+			}
+		}
+	}
+}

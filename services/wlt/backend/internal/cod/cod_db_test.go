@@ -130,11 +130,11 @@ func TestCreateCodRecordUsesOperatorContextLocalWltSessionAndCollectorIdentity(t
 		CollectorID: "courier-cod-test", PartnerID: "partner-cod-test",
 		CheckoutIntentID: checkoutIntentID,
 	}
-	first, err := CreateCodRecordForOperatorContext(ctx, db, input)
+	first, _, err := CreateCodRecordForOperatorContext(ctx, db, input)
 	if err != nil {
 		t.Fatalf("create COD custody: %v", err)
 	}
-	second, err := CreateCodRecordForOperatorContext(ctx, db, input)
+	second, _, err := CreateCodRecordForOperatorContext(ctx, db, input)
 	if err != nil {
 		t.Fatalf("replay COD custody: %v", err)
 	}
@@ -171,7 +171,7 @@ func TestCreateCodRecordRejectsNonCodOperatorContextSession(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("create governed wallet payment session: %v", err)
 	}
-	_, err := CreateCodRecordForOperatorContext(ctx, db, CreateCodRecordInput{
+	_, _, err := CreateCodRecordForOperatorContext(ctx, db, CreateCodRecordInput{
 		OrderID:       fmt.Sprintf("order-wallet-%d", time.Now().UnixNano()),
 		CollectorType: "captain", CollectorID: "captain-wallet-test",
 		PartnerID: "partner-wallet-test", CheckoutIntentID: checkoutIntentID,

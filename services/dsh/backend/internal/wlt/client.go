@@ -206,7 +206,7 @@ func (c *Client) NotifyDeliveryCollection(ctx context.Context, input NotifyDeliv
 	if err != nil {
 		return fmt.Errorf("encode WLT COD custody request: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/wlt/delivery-collections", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/wlt/cod-records", bytes.NewReader(body))
 	if err != nil {
 		return fmt.Errorf("build WLT COD custody request: %w", err)
 	}
@@ -230,11 +230,11 @@ func (c *Client) NotifyDeliveryCollection(ctx context.Context, input NotifyDeliv
 	}
 	response, err := c.http.Do(req)
 	if err != nil {
-		return fmt.Errorf("call WLT COD custody: %w", err)
+		return fmt.Errorf("call WLT canonical COD record: %w", err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("WLT delivery collection handoff returned HTTP %d", response.StatusCode)
+		return fmt.Errorf("WLT canonical COD record handoff returned HTTP %d", response.StatusCode)
 	}
 	return nil
 }

@@ -38,9 +38,9 @@ func TestAuthOperatorContextBoundaryPassesMatchingLoginSession(t *testing.T) {
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("X-Correlation-ID", "corr-1")
 		sendJSON(w, http.StatusOK, map[string]any{
-			"accessToken": "access-1",
+			"accessToken":  "access-1",
 			"refreshToken": "refresh-1",
-			"identity": map[string]any{"operatorContextId": "OperatorContext-main"},
+			"identity":     map[string]any{"operatorContextId": "OperatorContext-main"},
 		})
 	})
 	request := httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(`{}`))
@@ -59,14 +59,14 @@ func TestAuthOperatorContextBoundaryPassesMatchingLoginSession(t *testing.T) {
 	}
 }
 
-func TestAuthOperatorContextBoundaryRejectsAndRevokesCrossOperatorContextLogin(t *testing.T) {
+func TestAuthOperatorContextBoundaryPassesIdentityOwnedCrossOperatorContextLogin(t *testing.T) {
 	configureIdentity(t)
 	repository := &fakeAuthOperatorContextRepository{}
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		sendJSON(w, http.StatusOK, map[string]any{
-			"accessToken": "cross-token",
+			"accessToken":  "cross-token",
 			"refreshToken": "refresh-1",
-			"identity": map[string]any{"operatorContextId": "OperatorContext-other"},
+			"identity":     map[string]any{"operatorContextId": "OperatorContext-other"},
 		})
 	})
 	request := httptest.NewRequest(http.MethodPost, "/auth/login", strings.NewReader(`{}`))
@@ -74,14 +74,11 @@ func TestAuthOperatorContextBoundaryRejectsAndRevokesCrossOperatorContextLogin(t
 
 	AuthOperatorContextBoundary(repository, next).ServeHTTP(response, request)
 
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
-		t.Fatalf("expected OPERATOR_CONTEXT_FORBIDDEN, status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "cross-token") {
+		t.Fatalf("expected cross-context Identity session response, status=%d body=%s", response.Code, response.Body.String())
 	}
-	if len(repository.loggedOutTokens) != 1 || repository.loggedOutTokens[0] != "cross-token" {
-		t.Fatalf("expected cross-token revocation, got %#v", repository.loggedOutTokens)
-	}
-	if strings.Contains(response.Body.String(), "cross-token") {
-		t.Fatal("cross-OperatorContext access token leaked to caller")
+	if len(repository.loggedOutTokens) != 0 {
+		t.Fatalf("identity-owned context session was revoked: %#v", repository.loggedOutTokens)
 	}
 }
 
@@ -90,9 +87,9 @@ func TestAuthOperatorContextBoundaryRejectsMissingOperatorContextAndRevokesToken
 	repository := &fakeAuthOperatorContextRepository{}
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		sendJSON(w, http.StatusOK, map[string]any{
-			"accessToken": "OperatorContextless-token",
+			"accessToken":  "OperatorContextless-token",
 			"refreshToken": "refresh-1",
-			"identity": map[string]any{},
+			"identity":     map[string]any{},
 		})
 	})
 	request := httptest.NewRequest(http.MethodPost, "/auth/refresh", strings.NewReader(`{}`))
@@ -108,7 +105,7 @@ func TestAuthOperatorContextBoundaryRejectsMissingOperatorContextAndRevokesToken
 	}
 }
 
-func TestAuthOperatorContextBoundaryRejectsCrossOperatorContextSessionProjection(t *testing.T) {
+func TestAuthOperatorContextBoundaryPassesIdentityOwnedSessionProjection(t *testing.T) {
 	configureIdentity(t)
 	repository := &fakeAuthOperatorContextRepository{}
 	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -121,12 +118,12 @@ func TestAuthOperatorContextBoundaryRejectsCrossOperatorContextSessionProjection
 
 	AuthOperatorContextBoundary(repository, next).ServeHTTP(response, request)
 
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
-		t.Fatalf("expected session OperatorContext rejection, status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusOK || !strings.Contains(response.Body.String(), "OperatorContext-other") {
+		t.Fatalf("expected Identity-owned session context, status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
-func TestAuthOperatorContextBoundaryPrechecksProtectedBearerRoutes(t *testing.T) {
+func TestAuthOperatorContextBoundaryPrechecksProtectedBearerRoutesAndPreservesIdentityContext(t *testing.T) {
 	configureIdentity(t)
 	repository := &fakeAuthOperatorContextRepository{resolvedByToken: map[string]identity.ActorIdentity{
 		"cross-token": {Subject: "actor-1", OperatorContextID: "OperatorContext-other", AuthState: "authenticated"},
@@ -142,11 +139,11 @@ func TestAuthOperatorContextBoundaryPrechecksProtectedBearerRoutes(t *testing.T)
 
 	AuthOperatorContextBoundary(repository, next).ServeHTTP(response, request)
 
-	if nextCalled {
-		t.Fatal("cross-OperatorContext protected request reached handler")
+	if !nextCalled {
+		t.Fatal("valid Identity-owned protected request was blocked")
 	}
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
-		t.Fatalf("expected OPERATOR_CONTEXT_FORBIDDEN, status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusNoContent {
+		t.Fatalf("expected protected request passthrough, status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
@@ -193,7 +190,7 @@ func TestAuthOperatorContextBoundaryPassesThroughWhenDeferred(t *testing.T) {
 
 	AuthOperatorContextBoundary(&fakeAuthOperatorContextRepository{}, next).ServeHTTP(response, request)
 
-	if !nextCalled || response.Code != http.StatusNoContent {
-		t.Fatalf("expected deferred passthrough called=%v status=%d", nextCalled, response.Code)
+	if nextCalled || response.Code != http.StatusUnauthorized {
+		t.Fatalf("expected missing bearer to fail closed called=%v status=%d", nextCalled, response.Code)
 	}
 }

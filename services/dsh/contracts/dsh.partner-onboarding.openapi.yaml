@@ -1553,8 +1553,13 @@ components:
           type: boolean
         partnerReadiness:
           type: string
-        publicationEligible:
-          type: boolean
+        publicationDecision:
+          type: string
+          enum: [PUBLISHED, BLOCKED]
+        blockingReasons:
+          type: array
+          items:
+            type: string
     FieldVisitRequest:
       type: object
       additionalProperties: false

@@ -3,7 +3,6 @@ package partner
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -14,10 +13,9 @@ import (
 type StorePublicationReadiness struct {
 	StoreID              string   `json:"storeId"`
 	DisplayName          string   `json:"displayName"`
-	CanPublishToClient   bool     `json:"canPublishToClient"`
+	PublicationDecision  string   `json:"publicationDecision"`
+	BlockingReasons      []string `json:"blockingReasons"`
 	IsClientVisible      bool     `json:"isClientVisible"`
-	BlockedReasonCodes   []string `json:"blockedReasonCodes"`
-	BlockedReasonMessage string   `json:"blockedReasonMessage,omitempty"`
 }
 
 type PartnerStoreReadinessSummary struct {
@@ -31,40 +29,15 @@ type AggregatedPartnerReadiness struct {
 	PartnerID                      string                       `json:"partnerId"`
 	CanActivate                    bool                         `json:"canActivate"`
 	CanActivatePartner             bool                         `json:"canActivatePartner"`
-	CanPublishStoreToClient        bool                         `json:"canPublishStoreToClient"`
 	IntakeComplete                 bool                         `json:"intakeComplete"`
-	PublicationReady               bool                         `json:"publicationReady"`
+	PublicationDecision            string                       `json:"publicationDecision"`
+	BlockingReasons                []string                     `json:"blockingReasons"`
 	BlockedReason                  string                       `json:"blockedReason,omitempty"`
 	PartnerActivationBlockedReason string                       `json:"partnerActivationBlockedReason,omitempty"`
-	StorePublicationBlockedReason  string                       `json:"storePublicationBlockedReason,omitempty"`
 	Checklist                      []ReadinessItem              `json:"checklist"`
 	StoreSummary                   PartnerStoreReadinessSummary `json:"storeSummary"`
 	Stores                         []StorePublicationReadiness  `json:"stores"`
 	GeneratedAt                    time.Time                    `json:"generatedAt"`
-}
-
-func storeBlockedReasonMessage(codes []string) string {
-	if len(codes) == 0 {
-		return ""
-	}
-	labels := map[string]string{
-		"STORE_INACTIVE":            "Ø­Ø§Ù„Ø© Ø§Ù„ÙØ±Ø¹ ØºÙŠØ± Ù†Ø´Ø·Ø©",
-		"STORE_HIDDEN":              "Ø§Ù„ÙØ±Ø¹ Ù…Ø®ÙÙŠ Ù…Ù† Ù„ÙˆØ­Ø© Ø§Ù„ØªØ­ÙƒÙ…",
-		"STORE_NOT_SERVICEABLE":     "Ø§Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…ØºØ·Ù‰ Ø¨Ø§Ù„Ø®Ø¯Ù…Ø©",
-		"PARTNER_READINESS_PENDING": "Ø¬Ø§Ù‡Ø²ÙŠØ© Ø§Ù„Ø´Ø±ÙŠÙƒ Ù„Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø©",
-		"CATALOG_NOT_APPROVED":      "ÙƒØªØ§Ù„ÙˆØ¬ Ø§Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…Ø¹ØªÙ…Ø¯",
-		"MARKETING_NOT_VISIBLE":     "Ø§Ù„Ø¸Ù‡ÙˆØ± Ø§Ù„ØªØ³ÙˆÙŠÙ‚ÙŠ ØºÙŠØ± Ù…ÙØ¹Ù„",
-		"PARTNER_NOT_ACTIVE":        "Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù†Ø´Ø·",
-	}
-	messages := make([]string, 0, len(codes))
-	for _, code := range codes {
-		if label, ok := labels[code]; ok {
-			messages = append(messages, label)
-		} else {
-			messages = append(messages, code)
-		}
-	}
-	return strings.Join(messages, "ØŒ ")
 }
 
 // LoadAggregatedPartnerReadiness computes partner activation separately from
@@ -81,8 +54,8 @@ func LoadAggregatedPartnerReadiness(db *sql.DB, partnerID string) (AggregatedPar
 	}
 
 	rows, err := db.Query(`
-		SELECT store_id, display_name, store_gates_passed, is_visible,
-		       blocked_reason_codes
+		SELECT store_id, display_name, publication_decision,
+		       blocking_reason_codes
 		FROM dsh_partner_store_readiness_v
 		WHERE partner_id = $1
 		ORDER BY display_name ASC, store_id ASC`, partnerID)
@@ -91,32 +64,25 @@ func LoadAggregatedPartnerReadiness(db *sql.DB, partnerID string) (AggregatedPar
 	}
 	defer rows.Close()
 
-	partnerActive := partnerState.ActivationStatus == StatusPartnerActive ||
-		partnerState.ActivationStatus == StatusClientVisible ||
-		partnerState.ActivationStatus == StatusClientHidden
 	stores := make([]StorePublicationReadiness, 0)
 	readyCount := 0
 	visibleCount := 0
 	for rows.Next() {
 		var item StorePublicationReadiness
-		var storeGatesPassed bool
-		var blockedCodes []string
+		var publicationDecision string
+		var blockingReasons []string
 		if err := rows.Scan(
 			&item.StoreID,
 			&item.DisplayName,
-			&storeGatesPassed,
-			&item.IsClientVisible,
-			pq.Array(&blockedCodes),
+			&publicationDecision,
+			pq.Array(&blockingReasons),
 		); err != nil {
 			return AggregatedPartnerReadiness{}, err
 		}
-		if !partnerActive {
-			blockedCodes = append(blockedCodes, "PARTNER_NOT_ACTIVE")
-		}
-		item.BlockedReasonCodes = blockedCodes
-		item.CanPublishToClient = storeGatesPassed && partnerActive
-		item.BlockedReasonMessage = storeBlockedReasonMessage(blockedCodes)
-		if item.CanPublishToClient {
+		item.PublicationDecision = publicationDecision
+		item.BlockingReasons = blockingReasons
+		item.IsClientVisible = publicationDecision == "PUBLISHED"
+		if item.PublicationDecision == "PUBLISHED" {
 			readyCount++
 		}
 		if item.IsClientVisible {
@@ -142,27 +108,23 @@ func LoadAggregatedPartnerReadiness(db *sql.DB, partnerID string) (AggregatedPar
 		allStoreGatesPassed,
 		allStoreGatesPassed,
 	)
-	base.CanPublishStoreToClient = allStoreGatesPassed
-	if !hasStore {
-		base.StorePublicationBlockedReason = "Ù„Ø§ ÙŠÙˆØ¬Ø¯ ÙØ±Ø¹ Ù…Ø±Ø¨ÙˆØ· Ø¨Ø§Ù„Ø´Ø±ÙŠÙƒ"
-	} else if readyCount < len(stores) {
-		base.StorePublicationBlockedReason = fmt.Sprintf(
-			"%d Ù…Ù† %d ÙØ±ÙˆØ¹ ØºÙŠØ± Ù…Ø³ØªÙˆÙÙŠØ© Ù„Ø¨ÙˆØ§Ø¨Ø§Øª Ø§Ù„Ù†Ø´Ø±",
-			len(stores)-readyCount,
-			len(stores),
-		)
+	base.PublicationDecision = "BLOCKED"
+	base.BlockingReasons = []string{"STORE_NOT_LINKED"}
+	if hasStore {
+		base.BlockingReasons = uniqueBlockingReasons(stores)
+		if allStoreGatesPassed {
+			base.PublicationDecision = "PUBLISHED"
+		}
 	}
-
 	return AggregatedPartnerReadiness{
 		PartnerID:                      base.PartnerID,
 		CanActivate:                    base.CanActivate,
 		CanActivatePartner:             base.CanActivatePartner,
-		CanPublishStoreToClient:        base.CanPublishStoreToClient,
 		IntakeComplete:                 base.IntakeComplete,
-		PublicationReady:               base.PublicationReady,
+		PublicationDecision:            string(base.PublicationDecision),
+		BlockingReasons:                base.BlockingReasons,
 		BlockedReason:                  base.BlockedReason,
 		PartnerActivationBlockedReason: base.PartnerActivationBlockedReason,
-		StorePublicationBlockedReason:  base.StorePublicationBlockedReason,
 		Checklist:                      base.Checklist,
 		StoreSummary: PartnerStoreReadinessSummary{
 			TotalStores:         len(stores),
@@ -173,6 +135,21 @@ func LoadAggregatedPartnerReadiness(db *sql.DB, partnerID string) (AggregatedPar
 		Stores:      stores,
 		GeneratedAt: time.Now().UTC(),
 	}, nil
+}
+
+func uniqueBlockingReasons(stores []StorePublicationReadiness) []string {
+	seen := make(map[string]struct{})
+	result := make([]string, 0)
+	for _, item := range stores {
+		for _, reason := range item.BlockingReasons {
+			if _, ok := seen[reason]; ok {
+				continue
+			}
+			seen[reason] = struct{}{}
+			result = append(result, reason)
+		}
+	}
+	return result
 }
 
 func writeAggregatedReadiness(w http.ResponseWriter, db *sql.DB, partnerID string) {
