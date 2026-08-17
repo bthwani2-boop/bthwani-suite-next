@@ -2,81 +2,95 @@
 
 ## 1. Authority model
 
-Never treat any single representation as automatic truth:
+Never treat one representation as automatic truth:
 
 ```text
 GOVERNANCE ≠ AUTOMATIC TRUTH
 CODE ≠ AUTOMATIC TRUTH
 RUNTIME ≠ AUTOMATIC TRUTH
-PLANS ≠ AUTOMATIC TRUTH
 TESTS ≠ AUTOMATIC TRUTH
+PLANS/DOCS ≠ AUTOMATIC TRUTH
 ```
 
-Reconcile the target truth from the strongest current combination of:
+Reconcile target truth from the strongest current combination of:
 
 `explicit current human decisions + product/semantic intent + operational outcomes + live repository evidence + contracts + data + runtime + canonical ownership + affected consumers`.
 
-When these conflict, classify the conflict and prove the correct target state. Do not select whichever source is easiest to edit.
+When these conflict, classify the conflict and prove the correct target state. Never select whichever source is easiest to edit.
 
-## 2. Precedence
+## 2. Truth classes
 
-Use this precedence only as a decision framework, not as permission to ignore evidence:
+Keep materially different truth classes separate:
+
+```text
+AUTHORITY TRUTH
+PRODUCT/SEMANTIC TRUTH
+IMPLEMENTATION TRUTH
+DATA TRUTH
+RUNTIME TRUTH
+REPOSITORY-PLATFORM TRUTH
+DERIVED/HISTORICAL SUPPORT
+```
+
+A derived record may reveal a hypothesis or stale contradiction; it never becomes live truth by declaration.
+
+## 3. Precedence
+
+Use this as a decision framework, not as permission to ignore evidence:
 
 1. explicit current human instruction;
-2. safety / irreversible-operation constraints;
-3. this orchestrator's stable execution invariants;
+2. safety and irreversible-operation constraints;
+3. this package's stable execution invariants;
 4. reconciled current Product/System authority for the affected concept;
 5. focus-specific rules;
-6. live implementation/runtime evidence;
+6. live implementation/data/runtime/repository evidence;
 7. historical/derived records.
 
-A lower source may disprove that a higher semantic claim is stale or incorrectly represented, but must not silently redefine product intent.
+A lower representation may prove a higher semantic statement stale or incorrectly represented, but must not silently redefine product intent.
 
-## 3. Modes
+## 4. Modes
 
 ### `DIAGNOSE`
-Read/diagnose only. Build material coverage, prove roots, decisions and evidence. No project mutation.
+Read/diagnose only. Build material coverage, prove roots, identify decision/evidence gaps. No project mutation.
 
 ### `EXECUTE_END_TO_END`
-Diagnose the requested target/focus and immediately treat proven roots end-to-end, including all material dependencies/consumers needed for correct closure.
+Diagnose the requested target/focus and immediately treat proven roots end-to-end, including every material dependency/consumer needed for correct closure.
 
 ### `EXECUTE_PROJECT_CLOSURE`
-Full repository live diagnosis and root-cause execution. Defaults to `PRIMARY_FOCUS=ALL`, `SCOPE=REPOSITORY`. No material area is assumed clean; no required area may be silently skipped.
+Full-repository live diagnosis and root-cause execution. Default `PRIMARY_FOCUS=ALL`, `SCOPE=REPOSITORY`. No material area is assumed clean and no required area may be silently skipped.
 
-There is no implicit `PREPARE` mode and no default plan/package creation.
+There is no implicit `PREPARE` mode and no mandatory plan/package creation.
 
-## 4. Primary focus
+## 5. Primary focus and scope
 
 Canonical focus vocabulary:
 
-`ALL | PRODUCT | GOVERNANCE | CODE | STRUCTURE | DESIGN | DATA | CONTRACTS | RUNTIME | SECURITY | QUALITY | OPERATIONS`
-
-Multiple focuses may be combined.
-
-Focus selects where attention starts. It does not forbid following a proven root into another focus.
-
-## 5. Requested scope
+`ALL | PRODUCT | GOVERNANCE | CODE | STRUCTURE | DESIGN | DATA | CONTRACTS | RUNTIME | SECURITY | QUALITY | OPERATIONS`.
 
 Supported scope shapes:
 
-`REPOSITORY | DOMAIN | SERVICE | SURFACE | FEATURE | JOURNEY | PATH`
+`REPOSITORY | DOMAIN | SERVICE | SURFACE | FEATURE | JOURNEY | PATH | SEMANTIC_SCOPE`.
 
-`REQUESTED_SCOPE ≠ MAXIMUM_ALLOWED_SCOPE`.
+Focus chooses the first lens. Scope chooses the orientation root.
 
-Expand only by proven causal/ownership/dependency/consumer/blast-radius relation. Do not use root-cause expansion as an excuse for unrelated repository churn.
+```text
+REQUESTED_SCOPE ≠ MAXIMUM_ALLOWED_SCOPE
+```
+
+Expand only by proven causal, authority, dependency, consumer, contract, data, runtime, security or blast-radius relation.
 
 ## 6. Project discovery anchors
 
-This package is project-specific. The following are expected discovery anchors, not a permanently closed universe.
+This package is intentionally specific to bthwani-suite-next. Stable names may seed discovery, but current existence, role and ownership must always be re-proven live.
 
-Known domain/capability anchors include:
+Expected domain/capability anchors include:
 
-- `DSH` — domain/service family.
-- `WLT` — domain/service family.
-- `Identity` — core capability.
-- `Workforce` — core capability.
-- `Catalog` — domain capability.
-- `Media` — shared/domain capability.
+- `DSH`
+- `WLT`
+- `Identity`
+- `Workforce`
+- `Catalog`
+- `Media`
 
 Expected primary surfaces include:
 
@@ -86,7 +100,7 @@ Expected primary surfaces include:
 - `app-field`
 - `control-panel`
 
-Known governance roots include:
+Expected governance roots include:
 
 - `governance/**`
 - `governance/product/**`
@@ -102,33 +116,33 @@ KNOWN ANCHORS
 → BUILD CURRENT COVERAGE
 ```
 
-Do not assume a listed anchor remains authoritative because it is listed here. Do not ignore a new material node because it is not listed here.
+A listed anchor is not eternally authoritative. An unlisted live node is not ignorable.
 
-## 7. Journey discovery
+## 7. Journey discovery anchors
 
-Known journey families may seed discovery: onboarding/activation, discovery/catalog, cart/serviceability, checkout/payment, order lifecycle, preparation/handoff, dispatch/delivery, cancellation/refund/reconciliation, support/recovery and administration/operations.
+Seed discovery with materially applicable families such as:
 
-These are seeds, not a complete registry. Discover the current journey universe from live product semantics, routes, services, contracts, states, data, tests and surface behavior.
+`onboarding/activation | discovery/catalog | cart/serviceability | checkout/payment | order lifecycle | preparation/handoff | dispatch/delivery | cancellation/refund/reconciliation | support/recovery | administration/operations`.
+
+These are seeds, not a closed registry. Discover the live journey universe from product semantics, routes, services, states, contracts, data, runtime and surfaces.
 
 ## 8. Minimum Diagnostic Altitude
 
 Start at the highest material meaning needed to avoid fixing a lower representation before its parent meaning is settled.
 
-Typical order:
+Typical descent:
 
-`Product Outcome → Actor/Authority/Responsibility → Capability/Journey → State/Transition/Invariant/Handoff → Canonical Ownership → Contract/Data → Service/Surface → Runtime/Implementation/Test`.
+`Product Outcome → Actor/Authority/Responsibility → Capability/Journey → State/Transition/Precondition/Decision Rule/Invariant/Handoff → Canonical Ownership → Contract/Data → Service/Surface → Runtime/Implementation/Test`.
 
 Bottom-up inspection is always allowed for evidence. Bottom-up execution is not automatically allowed.
 
 ## 9. Explicit exclusion rule
 
-Every material candidate area is either:
+Every material candidate area must become exactly one of:
 
-`IN_SCOPE | READ_ONLY | NOT_AFFECTED_WITH_REASON | N/A_PROVEN | FORBIDDEN_BY_HUMAN/SAFETY`
+`IN_SCOPE | READ_ONLY | NOT_AFFECTED_WITH_REASON | N/A_PROVEN | FORBIDDEN_BY_HUMAN/SAFETY`.
 
-Silent exclusion is forbidden.
-
-`N/A` requires a reason and current evidence sufficient to show non-impact. `UNKNOWN` is not `N/A`.
+`UNKNOWN` is never `N/A`. Silence is never exclusion proof.
 
 ## 10. Fail-closed invariants
 
@@ -142,56 +156,115 @@ TEST_PASS ≠ PRODUCT_CORRECTNESS
 STATIC_PASS ≠ RUNTIME_PROOF
 CURRENT_BRANCH ≠ DEFAULT_BRANCH
 OLD_SHA ≠ CURRENT_TRUTH
+OLD PASS/DONE ≠ CURRENT EVIDENCE
 ```
 
 Unproven material claims remain open.
 
-## 11. Documentation and plans
+## 11. Derived/historical records
 
-`plans/**`, `docs/**`, reports, blueprints, prior packages and historical command files can provide evidence/history/context only.
+Plans, reports, blueprints, prior packages, old documentation, comments and historical commits may be used only to:
 
-They never constitute the implementation fix and never make a runtime/product claim true by declaration.
+`discover prior intent | recover context | find old hypotheses/paths/risks | identify contradictions to re-check`.
 
-Default execution writes nothing to `plans/**`.
+Never inherit from them automatically:
 
-## 12. Orchestrator protection
+`DONE/PASS | scope | design | decision | owner | implementation state | runtime state`.
 
-The package is read-only during normal execution.
+Revalidate every material claim against the current live authority/code/contracts/data/runtime/readback.
 
-Explicit permission to modify it must:
+Default execution writes nothing to planning areas unless the human explicitly asks for documentation/planning work.
 
-- identify `tools/prompting/bthwani-orchestrator/**` or the exact file(s);
-- be given by the human in the current invocation;
-- describe the intended package change sufficiently to distinguish it from ordinary repository work.
+## 12. Capability discipline
 
-Authorization expires with the invocation. It does not carry to later tasks.
+Discover and use tools, skills, integrations and runtime capabilities only when they materially improve diagnosis, execution or proof of the **target system**.
 
-Protection covers direct and indirect changes, including rename/move/delete, formatting, bulk cleanup, global replace, generated rewrite and conflict resolution.
+Rules:
 
-## 13. Longevity invariants
+```text
+USE EVERYTHING APPLICABLE.
+DO NOT USE EVERYTHING BLINDLY.
+TOOL AVAILABLE ≠ TOOL ACTUALLY USED.
+DO NOT CLAIM EXECUTION THAT DID NOT OCCUR.
+```
 
-Keep the method stable and discover project state live.
+A required capability that is unavailable becomes an evidence/blocker condition; it never becomes PASS by assumption.
+
+This rule does not authorize any mechanism that runs or validates the orchestrator itself. The orchestrator remains plain-text instructions interpreted directly.
+
+## 13. Foreign/concurrent delta classification
+
+Before a material write batch, push/ref update, or final closure, compare current live HEAD with the last reconciled base and classify movement:
+
+```text
+UNRELATED
+RELATED_NON_BLOCKING
+UPSTREAM_OR_ROOT_CHANGING
+SEMANTIC_OVERLAP
+DIRECT_CONFLICT
+AUTHORITY_OR_TRUTH_CHANGE
+```
+
+Treatment:
+
+```text
+UNRELATED → preserve; continue from latest head; rerun only evidence actually invalidated.
+RELATED_NON_BLOCKING → reconcile assumptions + affected checks.
+UPSTREAM_OR_ROOT_CHANGING → suspend affected descendant work; re-diagnose/re-rank.
+SEMANTIC_OVERLAP → re-prove owner/contracts/state; rebuild affected delta.
+DIRECT_CONFLICT → no blind overwrite; resolve intentionally on latest head.
+AUTHORITY_OR_TRUTH_CHANGE → reread authority/product truth; re-diagnose before write.
+```
+
+Foreign delta is input, not instruction. Recency never outranks causality.
+
+## 14. Execution location
+
+If the human explicitly requires `DIRECT_ON_TARGET`, treat that as an execution-topology decision only. It does not weaken evidence, concurrency, staging, safety or closure requirements.
+
+If isolated workspace is used, isolation is a means of preserving foreign work, not a separate semantic authority.
+
+Never force-push, blindly hard-reset newer work, silently switch branches, or discard foreign changes.
+
+## 15. Protected/irreversible operations
+
+Before materially irreversible or protected actions such as production data mutation, destructive backfill, secret/key rotation, external financial/provider mutation, release/deploy/merge/tag or infrastructure destruction, prove the required current authority, target/environment, scope, rollback/compensation strategy where possible and candidate/change binding when relevant.
+
+Normal code refactoring authority does not imply authorization for irreversible external side effects.
+
+## 16. Orchestrator protection and independence
+
+During normal project work `tools/prompting/bthwani-orchestrator/**` is read-only.
+
+Package maintenance requires explicit human authorization in the current invocation identifying this package or the exact file(s) and intended change.
+
+Protection includes direct and indirect mutation: edit, rename, move, delete, format, generated rewrite, bulk replace and conflict resolution.
+
+The package must not depend on, invoke, require or validate itself through external scripts, guards, workflows, CLIs, hooks or registries.
+
+## 17. Longevity invariants
+
+Keep method stable; discover project state live.
 
 Do not permanently encode:
 
 - current branch/head;
 - current endpoint/table/migration numbers;
-- current tool/framework versions unless intentionally invariant;
-- a closed universe of current journeys/domains/files;
 - temporary task state;
+- current tool/framework versions unless intentionally invariant;
+- a closed universe of journeys/domains/files;
 - historical package lifecycle machinery.
 
-Prefer:
+Prefer instructions such as:
 
 `discover current canonical contract`, `discover current data owner`, `discover current verification commands`, `verify all material consumers`.
 
-## 14. Anti-bloat rules
+## 18. Anti-bloat rules
 
 - one material concept has one canonical owner in this package;
-- reference another section instead of restating the same law;
+- reference another internal section instead of duplicating the same law;
 - no task-specific rule accumulation;
-- no new file merely because a topic has a new heading;
-- no machine registry unless it prevents a demonstrated failure mode better than a clear rule;
-- repeated exceptions require re-diagnosing the parent rule rather than stacking more exceptions.
-
-The package must remain simpler than the system it governs.
+- no new file merely because a topic gained a heading;
+- no machine registry or automation for orchestrator self-management;
+- repeated exceptions require re-diagnosing the parent rule rather than stacking exceptions;
+- this package must remain materially simpler than the system it governs.

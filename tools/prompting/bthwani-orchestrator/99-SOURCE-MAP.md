@@ -1,86 +1,146 @@
-# Source Map — Orchestrator Consolidation Traceability
+# Internal Semantic Ownership Map
 
-STATUS: MIGRATION_RECORD_ONLY
+STATUS: INTERNAL_ACCOUNTING_ONLY
 RUNTIME_AUTHORITY: NO
+EXTERNAL_SOURCE_DEPENDENCY: NONE
+LEGACY_FILENAME_NOTE: this file keeps its repository filename for continuity, but its content is no longer a source-origin map.
 
 ## 1. Purpose
 
-This file records how materially valuable concepts from the existing command/prompt corpus and reviewed historical orchestration generations were consolidated into the protected 9-file orchestrator.
+This file records **where each material orchestration concept is owned inside this package** so the command set stays self-contained, cohesive and non-duplicative.
 
-It does **not** make historical sources executable authority and is not required to be loaded during normal project execution.
+It is not required to execute the orchestrator and it does not validate the orchestrator. No external prompt, command, script, guard, workflow, validator, CLI, plan package, registry or historical file is required to interpret any rule listed here.
 
-The human explicitly required the legacy files under `tools/prompting/**` and `tools/commandn` to remain present for now. Their retention is intentional and must not be interpreted as parallel executable authority.
+## 2. Independence statement
 
-## 2. Disposition vocabulary
+The package is intentionally independent:
 
-- `MIGRATED` — concept preserved in a canonical new owner.
-- `MERGED` — duplicate/overlapping concepts collapsed into one canonical rule.
-- `SUPERSEDED` — old mechanism replaced by a simpler/current mechanism while preserving the useful invariant.
-- `REJECTED_DOMAIN_SPECIFIC` — historical project-state/detail not suitable as permanent orchestrator law.
-- `REJECTED_OBSOLETE` — conflicts with current explicit human decisions or current execution model.
-- `REJECTED_OVERCOMPLEX` — useful goal preserved but historical machinery intentionally not carried forward.
+```text
+EXTERNAL PROMPT REQUIRED = NO
+EXTERNAL COMMAND FILE REQUIRED = NO
+PLAN/PACKAGE REQUIRED = NO
+SELF-VALIDATION SCRIPT REQUIRED = NO
+SELF-GUARD REQUIRED = NO
+SELF-WORKFLOW REQUIRED = NO
+SELF-VALIDATOR/CLI REQUIRED = NO
+MACHINE STATUS REGISTRY REQUIRED = NO
+```
 
-## 3. Current branch source corpus
+Project tests, CI, runtime commands, scanners and other project tools may still be used as evidence for the target system when materially relevant. They never become this package's execution engine or self-certification mechanism.
 
-| Source | Material concepts | Canonical destination | Disposition |
-|---|---|---|---|
-| `tools/prompting/01-diagnose-plan-package.md` | authority separation; exact ref/head; target as starting point; root/blast/consumer/dependency expansion; lean/risk-proportional diagnosis; competing hypotheses | `00`, `01`, `02`, `04` | MERGED |
-| `tools/prompting/02-execute-verify-close.md` | live source-of-fix; root treatment; consumer reconciliation; exact candidate evidence; cleanup; closure | `03`, `04` | MERGED |
-| `tools/prompting/03-end-to-end-fail-closed.md` | default-open/unproven-open; fail-closed closure; rebuild/refactor when root demands it; no docs-only closure | `00`, `03`, `04` | MERGED |
-| `tools/prompting/04-journey-multisurface-operational-diagnosis.md` | Journey Matrix; forward/reverse/temporal/cross-layer/cross-surface/negative-space/counterfactual/adversarial diagnosis | `02` | MIGRATED |
-| `tools/prompting/05-universal-deep-diagnose-prepare-execute-reconstruct.md` | universal diagnosis/reconstruction; preserve value; scope expansion; cleanup/cutover | `01`, `02`, `03` | MERGED |
-| `tools/commandn` | semantic-first; bottom-up evidence; highest systemic root; code/runtime treatment; no patch/parallel truth; re-diagnose loop | `00`–`04` | MERGED |
-| prior `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md` blob `47a00c666a55ac427eab594ba9cc73ab648bd4b0` | semantic root, coverage, HOLD, competitive deepening, systemic leverage, exact candidate proof, cleanup | `00`–`04` | MERGED |
-| prior V5 plan-package/CLI/task-branch machinery | `ONE_TASK_ONE_PACKAGE`, mandatory `plans/diagnose-implementing/**`, CLI-derived state, default Task Branch/Worktree | none as normal flow | REJECTED_OBSOLETE |
+## 3. Canonical semantic ownership
 
-## 4. Historical branch concepts intentionally harvested
+| Material concept | Canonical owner inside package |
+|---|---|
+| Governing law; live lifecycle; self-contained boundary; valid stop states | `00-ORCHESTRATOR.md` |
+| Truth classes; authority; scope; project anchors; exclusions; capability discipline; foreign delta; irreversible-operation authority | `01-SCOPE-AUTHORITY-RULES.md` |
+| Broad discovery; coverage; Journey Matrix; diagnostic angles; Findings Ledger; decision taxonomy; root proof/ranking; Source-of-Fix readiness | `02-DIAGNOSE-ROOT-CAUSE.md` |
+| Root treatment; reconstruction; migration; cutover; naming/placement; Git history; cleanup; test integrity; runtime freshness; mutation/concurrency discipline | `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` |
+| Candidate lifecycle; evidence binding/invalidation; failure classification; read-only final verification; zero-reference/reachability; adversarial closure | `04-VERIFY-REDIAGNOSE-CLOSE.md` |
+| Architecture/code/shared-frontend/structure/UI/UX/mobile/control-panel implementation | `focus/code-architecture-organization.md` |
+| Product meaning; governance reconciliation; product design; semantic drift | `focus/governance-product-design.md` |
+| Data/migrations/contracts/events/runtime/security/finance/compatibility/quality | `focus/data-contracts-runtime-security-quality.md` |
 
-| Historical family/source | Harvested invariant | Destination | Disposition |
-|---|---|---|---|
-| `task/v5-commandn-system-root-de1f700b` — `RECONSTRUCTION-MAP.md` | preserve proven value; fix ownership/context; migrate consumers; verify; delete superseded path; semantic structure before file moves | `03`, `focus/code-architecture-organization.md` | MIGRATED |
-| same V5 family — `COVERAGE.md` | missing material journey/surface/failure/evidence remains open | `02`, `04` | MIGRATED |
-| same V5 family — `CLEANUP.md` | canonical cutover sequence; switch writers/readers; remove fallback/dual truth; zero-reference/runtime proof | `03`, `04` | MIGRATED |
-| `task/orch/operational-first-v3-20260815` / related workspace family | Minimum Diagnostic Altitude; progressive narrowing; one owner rather than repeated rule text | `01`, `02` | MIGRATED |
-| `task/workspace-e2e-20260815-0938` / root-e2e family | Just-In-Time execution frontier; avoid speculative future sequences | `02` | MIGRATED |
-| `task/execution-speed-guard-cleanup` | smallest check that can prove the claim; risk-proportional escalation; static pass does not prove runtime/finance/security | `04` | MIGRATED |
-| `task/smar/unified-engineering-system-hardening` | verification strength by risk; contradictory state → need evidence rather than guess | `02`, `04` | MERGED |
-| `start` / `review` operational journey commands | explicit exclusion proof; surface must prove operational role; ambiguity becomes concrete missing evidence | `01`, `02` | MIGRATED |
-| `working_treating,02` master command | “100%” as measurable coverage/evidence rather than wording | `02`, `04` | MIGRATED |
-| `diagnostics/journy-factory-20260707-012609` | discover journey universe live; evidence escalation only for risk/claim that needs it | `01`, `02`, `04` | MIGRATED |
-| `journey/*`, `verification/*`, `integration/*` protocol family | minimal sufficient evidence; affected-surface accounting; frontend+backend vertical slice; no docs-only closure | `02`, `03`, `04` | MERGED |
-| `task/orchestrator-v5-final-hardening-20260815` | self-integrity concept: one orchestrator, no self-declared closure, adversarial final proof, protect against drift | `00`, `01`, `04` | MIGRATED |
-| historical large registries/schemas/matrix systems | machine-heavy state models, duplicated lifecycle enums, numerous evidence IDs/guards | invariant retained only where useful | REJECTED_OVERCOMPLEX |
-| historical fixed Journey IDs, finance-specific rows, hardcoded path/table/endpoint assumptions | project-state snapshots | live discovery instead | REJECTED_DOMAIN_SPECIFIC |
-| historical absolute `NO machine-readable` rule | generation-specific constraint | none | REJECTED_OBSOLETE |
-| historical rigid file line-count/naming templates | heuristic treated as universal law | semantic responsibility/naming rules | SUPERSEDED |
+## 4. Consolidated invariant inventory
 
-## 5. Current explicit human decisions incorporated
+The package itself now owns the following material invariants directly:
 
-The current orchestrator also incorporates these explicit decisions:
+### Semantic-first diagnosis
 
-- live End-to-End execution is the normal execution model;
-- no default implementation/diagnosis package creation;
-- no default writes to `plans/**`;
-- preserve existing `tools/prompting/**` and `tools/commandn` until the human removes them manually;
-- package is project-specific and may retain stable project vocabulary as discovery anchors;
-- anchor meaning/ownership must still be verified live;
-- package must remain reasonably sized: neither a mega-file nor a fragmented framework;
-- package becomes read-only after this authorized maintenance invocation and future package changes require explicit current human authorization.
+`Product Outcome → Actor/Authority/Responsibility → Journey/State/Handoff → Canonical Owner → Contract/Data → Runtime/Implementation` before lower findings receive execution authority.
 
-## 6. Anti-parallel-authority note
+### Bottom-up evidence
 
-Until the human deletes legacy sources, their physical presence is **historical/source-corpus retention only**.
+Any technical layer may be inspected to prove/disprove hypotheses, but technical discovery alone does not determine priority.
 
-For new executions, the canonical entry is:
+### Highest proven systemic root first
 
-`tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`.
+Prioritize upstream causal leverage, blocking power, canonical authority, blast radius, risk and unlock value rather than discovery order, file count or first failing check.
 
-Do not combine old prompts/commandn with the new orchestrator as co-equal instructions unless the human explicitly requests historical comparison.
+### Journey × multi-surface × cross-layer diagnosis
+
+Use forward, reverse, temporal, responsibility, invariant, counterfactual, negative-space, cross-layer, cross-surface, experimental and adversarial reasoning as materially applicable.
+
+### Fail-closed uncertainty
+
+`unknown`, `uninspected`, `unverified`, `contradicted` and `decision-required` material claims remain open.
+
+### Source-of-Fix requirement
+
+A root that requires source/runtime/data/contract mutation cannot close through reports or documentation.
+
+### Preserve proven value
+
+Reconstruction may move, merge, split, refactor, regenerate, rewrite, replace or delete, but must preserve correct product/design/data value when the defect is ownership/context rather than the value itself.
+
+### Canonical cutover
+
+Migrate writers/readers/consumers/data, prove readback, then eliminate unjustified parallel authority and reachable legacy paths.
+
+### No patch final state
+
+No symptom-only patch, hidden fallback, bypass, shadow state machine, dual truth, half migration or indefinite compatibility layer may represent final closure.
+
+### Forward-only migration discipline
+
+Correct persistence through forward migration/backfill/cutover and do not rewrite applied history merely for cosmetic cleanliness.
+
+### Failure/recovery semantics
+
+Where material, prove invalid/denied/stale/duplicate/replay/race/timeout/unknown-result/restart/compensation/reconciliation paths, not only happy path.
+
+### Runtime freshness
+
+Runtime proof must be attributable to the candidate/config/schema/environment actually claimed.
+
+### Exact-candidate evidence
+
+Material writes invalidate affected prior evidence; final closure proof binds to the exact candidate/live state being claimed.
+
+### Foreign delta preservation
+
+Latest HEAD is integration truth, not priority authority. Preserve unrelated work, classify related movement and never force stale truth over newer work.
+
+### Cleanup/finishing
+
+Dead/stale/duplicate/misplaced/unnecessary residue directly tied to the root/cutover remains part of treatment until proven removed or justified.
+
+### Git as historical archive
+
+Do not preserve obsolete active-tree copies merely as backups when no runtime/legal/migration requirement exists.
+
+### Decision discipline
+
+Derive facts from evidence; ask only true non-derivable semantic/product/business/architectural decisions, then re-diagnose the affected cone.
+
+### Closure by evidence, not confidence wording
+
+No percentage phrase creates closure. Closure means all materially required known items in proven scope have a justified disposition and current evidence on the correct candidate/runtime.
+
+## 5. Anti-duplication rule
+
+If the same law appears in multiple files, one file must remain the semantic owner and other files should only apply/reference it briefly.
+
+Do not add new files merely to restate existing concepts. Do not create a machine-readable mirror of the textual rules unless a future human explicitly changes the package architecture.
+
+## 6. Self-validation prohibition
+
+No future package maintenance should add a tool whose purpose is:
+
+- checking whether these Markdown instructions are valid;
+- generating their state;
+- deciding whether the orchestrator is PASS/READY/CLOSED;
+- enforcing them through a workflow/guard/hook/CLI;
+- converting them into a parallel machine authority.
+
+The package is maintained through deliberate human/agent review of the text under explicit authorization. Its effectiveness is judged by the correctness of target-system diagnosis/execution/evidence, not by a self-referential green check.
 
 ## 7. Accounting statement
 
-Within the reviewed command/orchestration corpus described above, all materially retained concepts identified during consolidation are assigned a canonical destination or an explicit rejection/supersession reason.
+All material command semantics intentionally retained by this revision have an internal canonical owner listed above.
 
-`UNACCOUNTED_REVIEWED_MATERIAL_CONCEPTS = 0`
+`KNOWN_REQUIRED_EXTERNAL_ORCHESTRATION_DEPENDENCIES = 0`
 
-This statement is intentionally limited to the reviewed orchestration/command corpus; it is not a claim that every historical product file in every branch was semantically audited.
+`KNOWN_ORCHESTRATOR_SELF_VALIDATION_AUTOMATION = 0`
+
+This accounting statement is limited to this command package. It is not a claim that the target repository/product itself has no defects.
