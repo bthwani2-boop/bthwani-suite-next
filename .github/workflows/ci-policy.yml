@@ -15,6 +15,12 @@ on:
       workflow_policy:
         type: string
         required: true
+      workflow_security_policy:
+        type: string
+        required: true
+      security_scan_policy:
+        type: string
+        required: true
       security_policy:
         type: string
         required: true
@@ -51,8 +57,6 @@ jobs:
 
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-        with:
-          materialize_generated: false
 
       - name: Verify canonical governance and SDLC gates
         if: ${{ inputs.governance_policy == 'true' }}
@@ -211,8 +215,6 @@ jobs:
 
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-        with:
-          materialize_generated: false
 
       - name: Verify CI source, repository hygiene, and portable tracked configuration
         if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' || inputs.infrastructure_policy == 'true' }}
@@ -223,7 +225,7 @@ jobs:
 
       - name: Verify workflow security preflight
         id: workflow_security
-        if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' }}
+        if: ${{ inputs.workflow_security_policy == 'true' }}
         continue-on-error: true
         run: pnpm run guard:workflow-security
 
@@ -241,20 +243,20 @@ jobs:
         run: exit 1
 
       - name: Test CI source immutability guard
-        if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' }}
+        if: ${{ inputs.workflow_security_policy == 'true' }}
         run: node --test tools/scripts/check-ci-source-immutability.test.mjs
 
       - name: Enforce verification-only CI source policy
-        if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' }}
+        if: ${{ inputs.workflow_security_policy == 'true' }}
         run: node tools/scripts/check-ci-source-immutability.mjs
 
       - name: Verify pinned actions
-        if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' }}
+        if: ${{ inputs.workflow_security_policy == 'true' }}
         run: pnpm run guard:actions-pin
 
       - name: Verify workflow syntax
         id: workflow_lint
-        if: ${{ inputs.workflow_policy == 'true' || inputs.security_policy == 'true' }}
+        if: ${{ inputs.workflow_security_policy == 'true' }}
         continue-on-error: true
         run: pnpm run guard:workflow-lint
 
@@ -276,16 +278,16 @@ jobs:
         run: pnpm run guard:opa-policies
 
       - name: Install locked security scanner binaries
-        if: ${{ inputs.security_policy == 'true' }}
+        if: ${{ inputs.security_scan_policy == 'true' }}
         run: bash tools/scripts/install-oss-toolchain-binaries.sh security
 
       - name: Verify patched dependency security regressions
-        if: ${{ inputs.security_policy == 'true' }}
+        if: ${{ inputs.security_scan_policy == 'true' }}
         run: pnpm run guard:image-size-security
 
       - name: Scan for committed secrets
         id: gitleaks
-        if: ${{ inputs.security_policy == 'true' }}
+        if: ${{ inputs.security_scan_policy == 'true' }}
         continue-on-error: true
         shell: bash
         run: |
@@ -310,7 +312,7 @@ jobs:
 
       - name: Scan filesystem for known vulnerabilities
         id: trivy
-        if: ${{ inputs.security_policy == 'true' }}
+        if: ${{ inputs.security_scan_policy == 'true' }}
         continue-on-error: true
         shell: bash
         run: |
@@ -335,7 +337,7 @@ jobs:
 
       - name: Scan dependencies for known vulnerabilities
         id: osv_scanner
-        if: ${{ inputs.security_policy == 'true' }}
+        if: ${{ inputs.security_scan_policy == 'true' }}
         continue-on-error: true
         shell: bash
         run: |

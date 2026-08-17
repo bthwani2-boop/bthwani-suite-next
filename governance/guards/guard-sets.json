@@ -10,6 +10,7 @@
   },
   "guardSets": {
     "foundation": [
+      "source-integrity",
       "governance-schema",
       "agent-governance",
       "authority-separation",

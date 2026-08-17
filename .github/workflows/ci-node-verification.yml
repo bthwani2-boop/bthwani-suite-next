@@ -5,7 +5,7 @@ on:
     inputs:
       base_sha: { type: string, required: true }
       head_sha: { type: string, required: true }
-      full_verification: { type: string, required: true }
+      full_scope: { type: string, required: true }
       frontend: { type: string, required: true }
       mobile: { type: string, required: true }
       heavy: { type: string, required: true }
@@ -70,7 +70,7 @@ jobs:
         env:
           NX_BASE: ${{ inputs.base_sha }}
           NX_HEAD: ${{ inputs.head_sha }}
-          FULL_VERIFICATION: ${{ inputs.full_verification }}
+          FULL_SCOPE: ${{ inputs.full_scope }}
           MOBILE: ${{ inputs.mobile }}
           VERIFICATION_TIER: ${{ inputs.verification_tier }}
           EXECUTION_PHASE: ${{ inputs.execution_phase }}
@@ -88,7 +88,7 @@ jobs:
           if [[ "${MOBILE}" == "true" ]]; then
             run_check node --test apps/mobile/tests/*.test.mjs || status=$?
           fi
-          if [[ "${FULL_VERIFICATION}" == "true" && ( "${EXECUTION_PHASE}" == "closure" || "${EXECUTION_PHASE}" == "master" ) ]]; then
+          if [[ "${FULL_SCOPE}" == "true" && ( "${EXECUTION_PHASE}" == "closure" || "${EXECUTION_PHASE}" == "master" ) ]]; then
             run_check pnpm exec nx run-many -t typecheck lint test build --all --outputStyle=stream || status=$?
           elif [[ "${VERIFICATION_TIER}" == "fast" ]]; then
             run_check node tools/scripts/run-affected-verification.mjs typecheck lint test || status=$?

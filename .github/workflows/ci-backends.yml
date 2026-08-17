@@ -9,7 +9,7 @@ on:
       head_sha:
         type: string
         required: true
-      full_verification:
+      full_scope:
         type: string
         required: true
       verification_tier:
@@ -107,7 +107,7 @@ jobs:
     env:
       CI_BASE_SHA: ${{ inputs.base_sha }}
       CI_HEAD_SHA: ${{ inputs.head_sha }}
-      CI_FULL_VERIFICATION: ${{ inputs.full_verification }}
+      CI_FULL_SCOPE: ${{ inputs.full_scope }}
       CI_VERIFICATION_TIER: ${{ inputs.verification_tier }}
       CI_EXECUTION_PHASE: ${{ inputs.execution_phase }}
       # Each matrix entry is a standalone Go module. A developer-local/partial
@@ -133,7 +133,7 @@ jobs:
           log="${RUNNER_TEMP}/${{ matrix.key }}-go-verification.log"
           changed_files="$(git diff --name-only "${CI_BASE_SHA}" "${CI_HEAD_SHA}" -- "${{ matrix.workdir }}")"
           full_backend=false
-          if [[ ("${CI_FULL_VERIFICATION}" == "true" && ("${CI_EXECUTION_PHASE}" == "closure" || "${CI_EXECUTION_PHASE}" == "master")) || "${CI_EXECUTION_PHASE}" == "closure" || "${CI_EXECUTION_PHASE}" == "master" ]]; then
+          if [[ ("${CI_FULL_SCOPE}" == "true" && ("${CI_EXECUTION_PHASE}" == "closure" || "${CI_EXECUTION_PHASE}" == "master")) || "${CI_EXECUTION_PHASE}" == "closure" || "${CI_EXECUTION_PHASE}" == "master" ]]; then
             full_backend=true
           elif grep -Eq '(^|/)(go\.mod|go\.sum)$|/migrations/' <<<"${changed_files}"; then
             full_backend=true
@@ -152,8 +152,11 @@ jobs:
             done <<<"${changed_files}"
           fi
 
-          if [[ "${full_backend}" == "true" || "${#package_args[@]}" -eq 0 ]]; then
+          if [[ "${full_backend}" == "true" ]]; then
             package_args=(./...)
+          elif [[ "${#package_args[@]}" -eq 0 ]]; then
+            printf 'backend verification mode=affected packages=none reason=no-package-in-semantic-cone\n' | tee "${log}"
+            exit 0
           fi
           printf 'backend verification mode=%s packages=%s\n' "$([[ "${full_backend}" == "true" ]] && echo full || echo affected)" "${package_args[*]}" | tee "${log}"
 

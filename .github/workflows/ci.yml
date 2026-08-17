@@ -65,6 +65,8 @@ jobs:
       base_sha: ${{ steps.scope.outputs.base_sha }}
       head_sha: ${{ steps.scope.outputs.head_sha }}
       full_verification: ${{ steps.scope.outputs.full_verification }}
+      full_scope: ${{ steps.scope.outputs.full_scope }}
+      verification_depth: ${{ steps.scope.outputs.verification_depth }}
       governance: ${{ steps.scope.outputs.governance }}
       workflow: ${{ steps.scope.outputs.workflow }}
       infrastructure: ${{ steps.scope.outputs.infrastructure }}
@@ -72,6 +74,8 @@ jobs:
       policy: ${{ steps.scope.outputs.policy }}
       governance_policy: ${{ steps.scope.outputs.governance_policy }}
       workflow_policy: ${{ steps.scope.outputs.workflow_policy }}
+      workflow_security_policy: ${{ steps.scope.outputs.workflow_security_policy }}
+      security_scan_policy: ${{ steps.scope.outputs.security_scan_policy }}
       security_policy: ${{ steps.scope.outputs.security_policy }}
       infrastructure_policy: ${{ steps.scope.outputs.infrastructure_policy }}
       nomenclature_required: ${{ steps.scope.outputs.nomenclature_required }}
@@ -198,12 +202,15 @@ jobs:
           fi
 
           FULL_VERIFICATION=false
+          FULL_SCOPE=false
           if [[ "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "master" && "${VERIFIED_PUSH_BASE}" != "true" ]]; then
             # No trusted successful ancestor means there is no safe affected-only
             # baseline. Establish one by running the full verification contract.
             FULL_VERIFICATION=true
+            FULL_SCOPE=true
           elif [[ "${EVENT_NAME}" == "workflow_dispatch" && "${DISPATCH_MODE:-affected}" == "full" ]]; then
             FULL_VERIFICATION=true
+            FULL_SCOPE=true
           elif git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" | grep -Fxq "${FULL_VERIFICATION_TRIGGER}"; then
             FULL_VERIFICATION=true
           elif git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" | grep -Eq '^\.github/workflows/'; then
@@ -214,11 +221,14 @@ jobs:
 
           printf '%s\n' "verification base=${BASE_SHA} head=${HEAD_SHA} trusted_push_base=${VERIFIED_PUSH_BASE} full=${FULL_VERIFICATION}"
 
-          MODE="${DISPATCH_MODE:-affected}"
-          if [[ "${FULL_VERIFICATION}" == "true" ]]; then MODE="full"; fi
+          MODE="affected"
+          if [[ "${FULL_SCOPE}" == "true" ]]; then MODE="full"; fi
+          VERIFICATION_DEPTH="affected"
+          if [[ "${FULL_VERIFICATION}" == "true" ]]; then VERIFICATION_DEPTH="full"; fi
           CI_BASE_SHA="${BASE_SHA}" \
           CI_HEAD_SHA="${HEAD_SHA}" \
           CI_MODE="${MODE}" \
+          CI_VERIFICATION_DEPTH="${VERIFICATION_DEPTH}" \
           CI_EXECUTION_PHASE="${EXECUTION_PHASE}" \
           CI_JOURNEY="${DISPATCH_JOURNEY:-}" \
           node tools/scripts/detect-ci-context.mjs
@@ -259,6 +269,8 @@ jobs:
       head_sha: ${{ needs.context.outputs.head_sha }}
       governance_policy: ${{ needs.context.outputs.governance_policy }}
       workflow_policy: ${{ needs.context.outputs.workflow_policy }}
+      workflow_security_policy: ${{ needs.context.outputs.workflow_security_policy }}
+      security_scan_policy: ${{ needs.context.outputs.security_scan_policy }}
       security_policy: ${{ needs.context.outputs.security_policy }}
       infrastructure_policy: ${{ needs.context.outputs.infrastructure_policy }}
       nomenclature_required: ${{ needs.context.outputs.nomenclature_required }}
@@ -285,12 +297,12 @@ jobs:
   verification:
     name: Node verification
     needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && (needs.context.outputs.full_verification == 'true' || needs.context.outputs.frontend == 'true' || needs.context.outputs.node == 'true' || needs.context.outputs.journey == 'true' || needs.context.outputs.platform_change_sets == 'true') }}
+    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && (needs.context.outputs.full_scope == 'true' || needs.context.outputs.frontend == 'true' || needs.context.outputs.node == 'true' || needs.context.outputs.journey == 'true' || needs.context.outputs.platform_change_sets == 'true') }}
     uses: ./.github/workflows/ci-node-verification.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
       head_sha: ${{ needs.context.outputs.head_sha }}
-      full_verification: ${{ needs.context.outputs.full_verification }}
+      full_scope: ${{ needs.context.outputs.full_scope }}
       frontend: ${{ needs.context.outputs.frontend }}
       mobile: ${{ needs.context.outputs.mobile }}
       heavy: ${{ needs.context.outputs.heavy }}
@@ -303,12 +315,12 @@ jobs:
   backends:
     name: Backend verification
     needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && (needs.context.outputs.full_verification == 'true' || needs.context.outputs.dsh == 'true' || needs.context.outputs.wlt == 'true' || needs.context.outputs.identity == 'true' || needs.context.outputs.workforce == 'true' || needs.context.outputs.platform == 'true' || needs.context.outputs.providers == 'true') }}
+    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && (needs.context.outputs.full_scope == 'true' || needs.context.outputs.dsh == 'true' || needs.context.outputs.wlt == 'true' || needs.context.outputs.identity == 'true' || needs.context.outputs.workforce == 'true' || needs.context.outputs.platform == 'true' || needs.context.outputs.providers == 'true') }}
     uses: ./.github/workflows/ci-backends.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
       head_sha: ${{ needs.context.outputs.head_sha }}
-      full_verification: ${{ needs.context.outputs.full_verification }}
+      full_scope: ${{ needs.context.outputs.full_scope }}
       verification_tier: ${{ needs.context.outputs.verification_tier }}
       execution_phase: ${{ needs.context.outputs.execution_phase }}
       database_changed: ${{ needs.context.outputs.database_changed }}
@@ -347,13 +359,14 @@ jobs:
           BACKENDS_RESULT: ${{ needs.backends.result }}
           RUNTIME_RESULT: ${{ needs.runtime.result }}
           FULL_VERIFICATION: ${{ needs.context.outputs.full_verification }}
+          FULL_SCOPE: ${{ needs.context.outputs.full_scope }}
           POLICY_REQUIRED: ${{ needs.context.outputs.policy }}
           DIAGNOSTICS_REQUIRED: ${{ needs.context.outputs.diagnostics }}
           FRONTEND_REQUIRED: ${{ needs.context.outputs.frontend }}
           NODE_REQUIRED: ${{ needs.context.outputs.node }}
           JOURNEY_REQUIRED: ${{ needs.context.outputs.journey }}
           PLATFORM_CHANGE_SETS_REQUIRED: ${{ needs.context.outputs.platform_change_sets }}
-          BACKEND_REQUIRED: ${{ needs.context.outputs.dsh == 'true' || needs.context.outputs.wlt == 'true' || needs.context.outputs.identity == 'true' || needs.context.outputs.workforce == 'true' || needs.context.outputs.platform == 'true' || needs.context.outputs.providers == 'true' }}
+          BACKEND_REQUIRED: ${{ needs.context.outputs.full_scope == 'true' || needs.context.outputs.dsh == 'true' || needs.context.outputs.wlt == 'true' || needs.context.outputs.identity == 'true' || needs.context.outputs.workforce == 'true' || needs.context.outputs.platform == 'true' || needs.context.outputs.providers == 'true' }}
           RUNTIME_REQUIRED: ${{ needs.context.outputs.runtime }}
           EXPLICIT_RUNTIME_PROOF: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
           SKIP_DUPLICATE_PUSH: ${{ needs.context.outputs.skip_duplicate_push }}
@@ -381,7 +394,7 @@ jobs:
           }
 
           verification_applicable=false
-          if [[ "${FULL_VERIFICATION}" == "true" || "${FRONTEND_REQUIRED}" == "true" || "${NODE_REQUIRED}" == "true" || "${JOURNEY_REQUIRED}" == "true" || "${PLATFORM_CHANGE_SETS_REQUIRED}" == "true" ]]; then
+          if [[ "${FULL_SCOPE}" == "true" || "${FRONTEND_REQUIRED}" == "true" || "${NODE_REQUIRED}" == "true" || "${JOURNEY_REQUIRED}" == "true" || "${PLATFORM_CHANGE_SETS_REQUIRED}" == "true" ]]; then
             verification_applicable=true
           fi
           runtime_applicable=false

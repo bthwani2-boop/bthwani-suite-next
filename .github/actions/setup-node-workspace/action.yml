@@ -1,5 +1,5 @@
 name: Setup BThwani Node workspace
-description: Install the repository-pinned PNPM and Node toolchain. The root postinstall materializes deterministic OpenAPI artifacts exactly once.
+description: Install the repository-pinned PNPM and Node toolchain. Contract materialization is owned by the Nx contracts target.
 
 inputs:
   node-version:
@@ -10,11 +10,6 @@ inputs:
     description: PNPM version required by the root package contract.
     required: false
     default: "10.34.0"
-  materialize_generated:
-    description: Run the root postinstall materializer when generated artifacts are in scope.
-    required: false
-    default: "true"
-
 runs:
   using: composite
   steps:
@@ -30,18 +25,14 @@ runs:
         cache: pnpm
         cache-dependency-path: pnpm-lock.yaml
 
-    - name: Install frozen workspace and materialize generated clients once
+    - name: Install frozen workspace without lifecycle generation
       id: install
       continue-on-error: true
       shell: bash
       run: |
         set -uo pipefail
         log="${RUNNER_TEMP}/pnpm-install.log"
-        if [[ "${{ inputs.materialize_generated }}" == "true" ]]; then
-          pnpm install --frozen-lockfile --prefer-offline --reporter=append-only >"${log}" 2>&1
-        else
-          pnpm install --frozen-lockfile --prefer-offline --ignore-scripts --reporter=append-only >"${log}" 2>&1
-        fi
+        pnpm install --frozen-lockfile --prefer-offline --ignore-scripts --reporter=append-only >"${log}" 2>&1
 
     - name: Upload PNPM installation failure log
       if: ${{ steps.install.outcome == 'failure' }}

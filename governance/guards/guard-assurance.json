@@ -2,6 +2,7 @@
   "schemaVersion": 2,
   "entries": [
     {"guardId":"foundation","assuranceClass":"SCOPED_REGRESSION","proves":["The registered foundation guard set completed without a fail-level finding"],"doesNotProve":["Runtime behavior","All repository behavior","Protected approval","Final closure"],"closureEligible":false},
+    {"guardId":"source-integrity","assuranceClass":"POLICY_ALIGNMENT","proves":["The Git index has no unresolved entries and tracked text sources have no unresolved conflict markers"],"doesNotProve":["Repository correctness","Runtime behavior","Protected approval","Final closure"],"closureEligible":false},
     {"guardId":"journey","assuranceClass":"SCOPED_REGRESSION","proves":["The registered static journey guard set completed for its selected scope"],"doesNotProve":["Runtime journey success","Every affected surface","Protected approval","Final closure"],"closureEligible":false},
     {"guardId":"journey-runtime","assuranceClass":"SCOPED_REGRESSION","proves":["The registered journey-runtime command completed its configured scoped checks"],"doesNotProve":["Production behavior","Unselected actors or surfaces","Protected approval","Final closure"],"closureEligible":false},
     {"guardId":"ui-kit-boundary","assuranceClass":"STATIC_BINDING","proves":["Configured reusable UI ownership and import boundaries are respected"],"doesNotProve":["Visual correctness","Runtime accessibility","Journey success","Final closure"],"closureEligible":false},

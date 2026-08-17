@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { appendFileSync } from "node:fs";
+import { appendFileSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -21,12 +21,48 @@ function uniqueSorted(values) {
   return [...new Set(values.filter(Boolean))].sort();
 }
 
+function uniqueInOrder(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+const repositoryRoot = resolve(fileURLToPath(import.meta.url), "../..");
+const FOUNDATION_GUARDS = JSON.parse(
+  readFileSync(resolve(repositoryRoot, "governance/guards/guard-sets.json"), "utf8"),
+).guardSets.foundation;
+
+function resolveFoundationGuards({
+  fullScope,
+  governance,
+  workflow,
+  infrastructure,
+  workspaceManifest,
+  ciRouter,
+  contractsChanged,
+  backendChanged,
+  frontend,
+}) {
+  if (fullScope || governance || workflow || infrastructure || workspaceManifest || ciRouter) {
+    return [...FOUNDATION_GUARDS];
+  }
+
+  const base = ["source-integrity", "required-command-integrity", "no-broken-imports"];
+  if (contractsChanged || backendChanged) {
+    return [...base, "runtime-config", "api-binding", "backend-api-binding"];
+  }
+  if (frontend) return [...base, "runtime-config", "ui-kit-boundary"];
+  return base;
+}
+
 export function classifyFiles(inputFiles, options = {}) {
   const files = uniqueSorted(inputFiles.map(normalizePath));
   const mode = String(options.mode ?? "affected").trim().toLowerCase();
+  const verificationDepth = String(options.verificationDepth ?? (mode === "full" ? "full" : "affected"))
+    .trim()
+    .toLowerCase();
   const executionPhase = String(options.executionPhase ?? "pr").trim().toLowerCase() || "pr";
   const manualJourney = normalizeJourney(options.journey);
-  const full = mode === "full";
+  const fullScope = mode === "full";
+  const full = fullScope;
   const has = (predicate) => files.some(predicate);
   const starts = (...prefixes) => has((file) => prefixes.some((prefix) => file.startsWith(prefix)));
   const equals = (...names) => has((file) => names.includes(file));
@@ -84,7 +120,16 @@ export function classifyFiles(inputFiles, options = {}) {
   );
 
   const frontend = full || mobileTooling || mobileRuntimeTransport || workspaceManifest || starts("apps/", "shared/") || includes("/frontend/", "/clients/generated/");
-  const contractsChanged = backendApiSurfaceChanged || starts("contracts/") || includes("/contracts/", "/clients/generated/") || has((file) => file.endsWith(".openapi.yaml"));
+  const materializationInputsChanged = full ||
+    (workspaceManifest && equals("pnpm-lock.yaml")) ||
+    equals(
+      "governance/contracts/generated-client-registry.json",
+      "tools/scripts/materialize-openapi-artifacts.mjs",
+      "tools/scripts/openapi-context-composer.mjs",
+    ) ||
+    starts("contracts/") ||
+    has((file) => /^(?:core|services)\/[^/]+\/contracts\//.test(file) || file.endsWith(".openapi.yaml"));
+  const contractsChanged = backendApiSurfaceChanged || materializationInputsChanged || includes("/clients/generated/");
   const databaseChanged = includes("/database/", "/migrations/") || starts("infra/docker/");
   const contracts = full || contractsChanged;
   const database = full || databaseChanged;
@@ -102,7 +147,9 @@ export function classifyFiles(inputFiles, options = {}) {
     "governance/product/contracts/bthwani-platform-model.product-truth.json"
   ) || has((file) => /(^|\/)(OperatorContext|operator-context|platform-context|tenancy|cross-OperatorContext)(\/|[-_.])/i.test(file));
   const protectedSecurityChanged = authChanged || sessionChanged || rbacChanged || privacyChanged || piiChanged || secretsChanged || operatorContextChanged;
-  const security = workflow || mobileRuntimeTransport || protectedSecurityChanged || equals("governance/policies/security.md") || starts("tools/security/");
+  const workflowSecurity = workflow;
+  const securityScan = mobileRuntimeTransport || protectedSecurityChanged || equals("governance/policies/security.md") || starts("tools/security/");
+  const security = workflowSecurity || securityScan;
 
   const financialChanged = full || wlt || starts(
     "services/dsh/backend/internal/wlt/",
@@ -183,7 +230,7 @@ export function classifyFiles(inputFiles, options = {}) {
   const policy = governancePolicy || workflowPolicy || securityPolicy || infrastructurePolicy;
   const node = frontend || contracts || journey || platformChangeSets;
   const backendChanged = dsh || wlt || identity || workforce || platform || providers;
-  const deepRisk = full || workflow || security || infrastructure || workspaceManifest || mobileTooling || mobileRuntimeTransport || runtimeTooling || financialChanged || migrationChanged || nativeChanged || recoveryChanged;
+  const deepRisk = full || verificationDepth !== "affected" || workflow || security || infrastructure || workspaceManifest || mobileTooling || mobileRuntimeTransport || runtimeTooling || financialChanged || migrationChanged || nativeChanged || recoveryChanged;
   const standardRisk = deepRisk || policy || sharedBrain || database || contracts || backendChanged || journey;
   const verificationTier = deepRisk ? "deep" : standardRisk ? "standard" : "fast";
   const heavy = verificationTier === "deep";
@@ -200,8 +247,23 @@ export function classifyFiles(inputFiles, options = {}) {
     platformChangeSets ? "platform-change-sets" : ""
   ]).join("-") || "none";
 
+  const foundationGuardIds = resolveFoundationGuards({
+    fullScope,
+    governance,
+    workflow,
+    infrastructure,
+    workspaceManifest,
+    ciRouter,
+    contractsChanged,
+    backendChanged,
+    frontend,
+  });
+
   return {
     changed_count: files.length,
+    full_scope: fullScope,
+    verification_depth: verificationDepth,
+    foundation_guard_ids: uniqueInOrder(foundationGuardIds),
     governance,
     workflow,
     infrastructure,
@@ -209,6 +271,8 @@ export function classifyFiles(inputFiles, options = {}) {
     policy,
     governance_policy: governancePolicy,
     workflow_policy: workflowPolicy,
+    workflow_security_policy: workflowSecurity,
+    security_scan_policy: securityScan,
     security_policy: securityPolicy,
     infrastructure_policy: infrastructurePolicy,
     nomenclature_required: nomenclatureRequired,
@@ -227,6 +291,7 @@ export function classifyFiles(inputFiles, options = {}) {
     database,
     database_changed: databaseChanged,
     contracts_changed: contractsChanged,
+    materialization_inputs_changed: materializationInputsChanged,
     runtime,
     runtime_required: runtimeRequired,
     runtime_profile: runtimeProfile,
@@ -284,11 +349,12 @@ function main() {
   const baseSha = String(process.env.CI_BASE_SHA ?? "").trim();
   const headSha = String(process.env.CI_HEAD_SHA ?? "HEAD").trim() || "HEAD";
   const mode = String(process.env.CI_MODE ?? "affected").trim() || "affected";
+  const verificationDepth = String(process.env.CI_VERIFICATION_DEPTH ?? "").trim() || undefined;
   const journey = String(process.env.CI_JOURNEY ?? "").trim();
   const providedFiles = String(process.env.CI_CHANGED_FILES ?? "").trim();
   const files = providedFiles ? providedFiles.split(/\r?\n/).map(normalizePath).filter(Boolean) : readChangedFiles(baseSha, headSha);
   const executionPhase = String(process.env.CI_EXECUTION_PHASE ?? "pr").trim() || "pr";
-  const classification = classifyFiles(files, { mode, journey, executionPhase });
+  const classification = classifyFiles(files, { mode, journey, executionPhase, verificationDepth });
   const outputs = { base_sha: baseSha, head_sha: headSha, mode, ...classification };
   writeGitHubOutputs(outputs);
   process.stdout.write(`${JSON.stringify({ files: uniqueSorted(files), ...outputs }, null, 2)}\n`);

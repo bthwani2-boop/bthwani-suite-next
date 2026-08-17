@@ -2,6 +2,7 @@
   "schemaVersion": 2,
   "entries": [
     {"id":"foundation","name":"Foundation Guard Set","kind":"AGGREGATE_GUARD","script":"guard:foundation","exit_level":"fail","description":"Runs the registered targeted foundation guard set; a pass is scoped static evidence only.","source_file":"tools/scripts/run-foundation-gate.ps1"},
+    {"id":"source-integrity","name":"Source Integrity Gate","kind":"EXECUTABLE_GUARD","script":"guard:source-integrity","exit_level":"fail","description":"Rejects unresolved Git index entries and conflict markers before verification starts.","source_file":"tools/guards/source-integrity-gate.mjs"},
     {"id":"journey","name":"Journey Guard Set","kind":"AGGREGATE_GUARD","script":"guard:journey","exit_level":"fail","description":"Runs the targeted journey guard set without implying runtime or final closure.","source_file":"tools/scripts/run-journey-gate.ps1"},
     {"id":"journey-runtime","name":"Journey Runtime Guard Set","kind":"AGGREGATE_GUARD","script":"guard:journey-runtime","exit_level":"fail","description":"Runs journey verification with explicit runtime scope; evidence remains candidate and scope bound.","source_file":"tools/scripts/run-journey-gate.ps1"},
     {"id":"ui-kit-boundary","name":"UI Kit Boundary Gate","kind":"EXECUTABLE_GUARD","script":"guard:ui-kit-boundary","exit_level":"fail","description":"Enforces reusable UI ownership and import boundaries.","source_file":"tools/guards/ui-kit-boundary-gate.mjs"},

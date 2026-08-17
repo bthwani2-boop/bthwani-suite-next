@@ -12,10 +12,27 @@ test("governance-only changes stay standard and avoid product checks", () => {
 
 test("workflow changes are deep security policy without runtime", () => {
   const result = classifyFiles([".github/workflows/ci.yml"]);
+  assert.equal(result.full_scope, false);
   assert.equal(result.workflow_policy, true);
   assert.equal(result.security_policy, true);
+  assert.equal(result.workflow_security_policy, true);
+  assert.equal(result.security_scan_policy, false);
+  assert.equal(result.dsh, false);
+  assert.equal(result.wlt, false);
+  assert.equal(result.identity, false);
+  assert.equal(result.foundation_guard_ids.includes("source-integrity"), true);
   assert.equal(result.verification_tier, "deep");
   assert.equal(result.runtime_profile, "none");
+});
+
+test("verification depth does not widen semantic scope", () => {
+  const result = classifyFiles([".github/workflows/ci.yml"], { verificationDepth: "full" });
+  assert.equal(result.full_scope, false);
+  assert.equal(result.verification_depth, "full");
+  assert.equal(result.dsh, false);
+  assert.equal(result.frontend, false);
+  assert.equal(result.contracts, false);
+  assert.equal(result.foundation_guard_ids.includes("governance-schema"), true);
 });
 
 test("isolated app code remains fast", () => {
@@ -53,6 +70,8 @@ test("identity authentication code is deep and uses identity security runtime", 
   const result = classifyFiles(["core/identity/backend/internal/auth/token_issuer.go"]);
   assert.equal(result.auth_changed, true);
   assert.equal(result.security_policy, true);
+  assert.equal(result.workflow_security_policy, false);
+  assert.equal(result.security_scan_policy, true);
   assert.equal(result.runtime_profile, "identity-security");
   assert.equal(result.verification_tier, "deep");
 });
@@ -142,6 +161,15 @@ test("migration changes are deep without forcing runtime unless another reason e
   assert.equal(result.runtime_profile, "none");
 });
 
+test("materialization input changes are routed explicitly", () => {
+  const lockfile = classifyFiles(["pnpm-lock.yaml"]);
+  assert.equal(lockfile.materialization_inputs_changed, true);
+  assert.equal(lockfile.contracts, true);
+
+  const packageManifest = classifyFiles(["package.json"]);
+  assert.equal(packageManifest.materialization_inputs_changed, false);
+});
+
 test("manual journey is targeted standard verification", () => {
   const result = classifyFiles([], { journey: "platform-change-sets" });
   assert.equal(result.journey_scope, "PLATFORM-CHANGE-SETS");
@@ -168,9 +196,9 @@ test("runtime is required only at closure or master phases", () => {
 test("classification exports every required routing key", () => {
   const result = classifyFiles(["README.md"]);
   const expected = [
-    "changed_count", "governance", "workflow", "infrastructure", "security", "policy",
-    "governance_policy", "workflow_policy", "security_policy", "infrastructure_policy", "nomenclature_required",
-    "frontend", "contracts", "journey", "journey_scope", "node", "node_scope",
+    "changed_count", "full_scope", "verification_depth", "foundation_guard_ids", "governance", "workflow", "infrastructure", "security", "policy",
+    "governance_policy", "workflow_policy", "workflow_security_policy", "security_scan_policy", "security_policy", "infrastructure_policy", "nomenclature_required",
+    "frontend", "contracts", "materialization_inputs_changed", "journey", "journey_scope", "node", "node_scope",
     "dsh", "wlt", "identity", "workforce", "platform", "providers", "database",
     "runtime", "runtime_required", "runtime_profile", "mobile", "database_changed", "contracts_changed", "shared_brain", "heavy", "verification_tier", "diagnostics",
     "platform_change_sets", "cleanup_changed", "native_changed", "visual_changed",

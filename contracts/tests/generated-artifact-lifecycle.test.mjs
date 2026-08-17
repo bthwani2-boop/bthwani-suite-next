@@ -65,9 +65,11 @@ test("materialization freshness binds sources, composed output, toolchain and ac
   assert.match(materializer, /toolchainDigests,\s*\n\}\)\);/);
   assert.doesNotMatch(materializer, /spawnSync|openapi:generate:all|shell\s*:/);
 
-  const postinstall = read("tools/scripts/postinstall-generate-clients.mjs");
-  assert.match(postinstall, /materialize-openapi-artifacts\.mjs/);
-  assert.doesNotMatch(postinstall, /spawnSync|shell\s*:/);
+  const packageJson = readJson("package.json");
+  assert.equal(Object.hasOwn(packageJson.scripts ?? {}, "postinstall"), false);
+  const workspaceAction = read(".github/actions/setup-node-workspace/action.yml");
+  assert.match(workspaceAction, /pnpm install --frozen-lockfile --prefer-offline --ignore-scripts/);
+  assert.doesNotMatch(workspaceAction, /materialize_generated|postinstall/);
 });
 
 test("contract verification composes from sovereign sources instead of requiring committed bundles", () => {
