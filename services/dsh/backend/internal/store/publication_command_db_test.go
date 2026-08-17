@@ -155,6 +155,20 @@ func TestMarketingPublicationCommandOwnsAtomicStorePublication(t *testing.T) {
 	if partnerStatus != "client_visible" {
 		t.Fatalf("expected owning partner client_visible, got %s", partnerStatus)
 	}
+	var partnerPublicationEvents int
+	if err := db.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM dsh_partner_activation_events
+		WHERE partner_id=$1
+		  AND from_status='partner_active'
+		  AND to_status='client_visible'
+		  AND actor_id=$2
+		  AND actor_surface='control-panel'`, fixture.partnerID, fixture.actorID).Scan(&partnerPublicationEvents); err != nil {
+		t.Fatalf("read partner publication activation audit: %v", err)
+	}
+	if partnerPublicationEvents != 1 {
+		t.Fatalf("expected one audited partner publication transition, got %d", partnerPublicationEvents)
+	}
 
 	replayed, err := PublishStore(ctx, db, nil, actor, fixture.storeID,
 		"marketing-publish-key", "marketing-publish-correlation", StorePublicationInput{

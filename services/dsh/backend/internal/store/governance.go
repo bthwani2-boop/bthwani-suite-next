@@ -603,11 +603,22 @@ func PublishStore(
 				if affected, _ := result.RowsAffected(); affected != 1 {
 					return ErrVersionConflict
 				}
-				if _, err := tx.ExecContext(ctx, `
+				partnerUpdate, err := tx.ExecContext(ctx, `
 					UPDATE dsh_partners
 					SET activation_status = 'client_visible', version = version + 1, updated_at = NOW()
-					WHERE id = $1 AND activation_status = 'partner_active'`, current.PartnerID); err != nil {
+					WHERE id = $1 AND activation_status = 'partner_active'`, current.PartnerID)
+				if err != nil {
 					return err
+				}
+				if affected, _ := partnerUpdate.RowsAffected(); affected == 1 {
+					if _, err := tx.ExecContext(ctx, `
+						INSERT INTO dsh_partner_activation_events
+							(partner_id, from_status, to_status, actor_id, actor_surface,
+							 reason, correlation_id, idempotency_key)
+						VALUES ($1, 'partner_active', 'client_visible', $2, 'control-panel', $3, $4, $5)`,
+						current.PartnerID, actor.ID, strings.TrimSpace(input.Reason), correlationID, key); err != nil {
+						return err
+					}
 				}
 			} else {
 				result, err := tx.ExecContext(ctx, `

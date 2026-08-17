@@ -326,10 +326,9 @@ if ($assortment.assortment.publicationStatus -ne "client_visible" -or -not $asso
   throw "Partner Onboarding & Store Publication approved assortment was not persisted"
 }
 
-# Partner activation and store publication have separate owners. The partner
-# transition is audited first; Marketing then owns the single publication
-# command that commits the store's published/visible projection.
-Invoke-PartnerTransition $partnerDraft.id "client_visible" | Out-Null
+# Marketing owns the canonical publication cutover. Its gate evaluation treats
+# partner_active as the next client_visible candidate, then atomically commits
+# the store publication and the partner activation transition with audit.
 $publicationWorkspace = Invoke-RestMethod "http://localhost:58080/dsh/operator/marketing/stores/$smokeStoreId/publication" -Headers $operatorHeaders -TimeoutSec 10
 $publicationHeaders = @{}
 foreach ($key in $operatorHeaders.Keys) {
