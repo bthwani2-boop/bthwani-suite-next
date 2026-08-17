@@ -99,9 +99,14 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to apply WLT payment event")
 			return
 		}
+		eventReference, err := specialrequests.WltPaymentEventReference(body.OperatorContextID, body.SpecialRequestID, body.PaymentSessionID, body.Status, body.EventID)
+		if err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to derive WLT event reference")
+			return
+		}
 		store.SendJSON(w, http.StatusOK, map[string]any{
 			"specialRequest": marshalSpecialRequest(req),
-			"eventReference": "wlt:" + body.EventID,
+			"eventReference": eventReference,
 			"replayed":       replayed,
 		})
 		return

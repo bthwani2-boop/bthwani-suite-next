@@ -86,6 +86,68 @@ func (s *Service) AttachWltPaymentSessionInOperatorContext(ctx context.Context, 
 
 var ErrWltEventReplayConflict = errors.New("special request WLT event replay conflict")
 
+// WltPaymentEventReference is the single owner of the durable reference used
+// for a WLT event receipt. The HTTP adapter must use this value verbatim so a
+// derived event (one without an upstream eventId) cannot acquire a second,
+// contradictory reference at the boundary.
+func WltPaymentEventReference(operatorContextID, id, paymentSessionID, wltStatus, eventID string) (string, error) {
+	eventKey, _, err := wltPaymentEventIdentity(operatorContextID, id, paymentSessionID, wltStatus, eventID)
+	return eventKey, err
+}
+
+func wltPaymentEventIdentity(operatorContextID, id, paymentSessionID, wltStatus, eventID string) (string, string, error) {
+	var err error
+	operatorContextID, err = requireOperatorContextID(operatorContextID)
+	if err != nil {
+		return "", "", err
+	}
+	if id == "" || paymentSessionID == "" || wltStatus == "" {
+		return "", "", fmt.Errorf("%w: id, paymentSessionId and status are required", ErrInvalid)
+	}
+	wltStatus = strings.TrimSpace(wltStatus)
+	eventID = strings.TrimSpace(eventID)
+	switch wltStatus {
+	case "captured", "cod_collected", "failed", "expired", "authorized", "reference_created", "cod_pending":
+	default:
+		return "", "", fmt.Errorf("%w: unsupported wltStatus %q", ErrInvalid, wltStatus)
+	}
+	if eventID != "" && (len(eventID) < 8 || len(eventID) > 200) {
+		return "", "", fmt.Errorf("%w: eventId must contain between 8 and 200 characters", ErrInvalid)
+	}
+	canonical := strings.Join([]string{operatorContextID, id, paymentSessionID, wltStatus}, "\x1f")
+	digest := sha256.Sum256([]byte(canonical))
+	payloadHash := hex.EncodeToString(digest[:])
+	if eventID != "" {
+		return "wlt:" + eventID, payloadHash, nil
+	}
+	return "wlt-derived:" + payloadHash, payloadHash, nil
+}
+
+// wltPaymentEventAdvancesProjection prevents a delayed event from moving the
+// DSH read model backwards. WLT remains the financial authority; this only
+// protects the DSH projection from transport reordering. Terminal outcomes
+// share the highest rank and therefore cannot replace one another.
+func wltPaymentEventAdvancesProjection(currentStatus, incomingStatus string) (bool, error) {
+	ranks := map[string]int{
+		"reference_created": 1,
+		"authorized":        2,
+		"cod_pending":       2,
+		"captured":          3,
+		"cod_collected":     3,
+		"failed":            3,
+		"expired":           3,
+	}
+	if strings.TrimSpace(currentStatus) == "" {
+		return true, nil
+	}
+	currentRank, currentOK := ranks[strings.TrimSpace(currentStatus)]
+	incomingRank, incomingOK := ranks[strings.TrimSpace(incomingStatus)]
+	if !currentOK || !incomingOK {
+		return false, fmt.Errorf("%w: unsupported WLT projection status transition %q -> %q", ErrConflict, currentStatus, incomingStatus)
+	}
+	return incomingRank > currentRank, nil
+}
+
 // ApplyWltPaymentEvent is retained for internal callers that do not have the
 // upstream event envelope. The HTTP webhook path uses the event-aware method
 // below so WLT delivery replay is durable and atomic.
@@ -110,20 +172,9 @@ func ApplyWltPaymentEventWithEvent(db *sql.DB, operatorContextID string, id, pay
 	wltStatus = strings.TrimSpace(wltStatus)
 	eventID = strings.TrimSpace(eventID)
 	correlationID = strings.TrimSpace(correlationID)
-	switch wltStatus {
-	case "captured", "cod_collected", "failed", "expired", "authorized", "reference_created", "cod_pending":
-	default:
-		return nil, false, fmt.Errorf("%w: unsupported wltStatus %q", ErrInvalid, wltStatus)
-	}
-	if eventID != "" && (len(eventID) < 8 || len(eventID) > 200) {
-		return nil, false, fmt.Errorf("%w: eventId must contain between 8 and 200 characters", ErrInvalid)
-	}
-	canonical := strings.Join([]string{operatorContextID, id, paymentSessionID, wltStatus}, "\x1f")
-	digest := sha256.Sum256([]byte(canonical))
-	payloadHash := hex.EncodeToString(digest[:])
-	eventKey := "wlt-derived:" + payloadHash
-	if eventID != "" {
-		eventKey = "wlt:" + eventID
+	eventKey, payloadHash, err := wltPaymentEventIdentity(operatorContextID, id, paymentSessionID, wltStatus, eventID)
+	if err != nil {
+		return nil, false, err
 	}
 
 	ctx := context.Background()
@@ -183,6 +234,29 @@ func ApplyWltPaymentEventWithEvent(db *sql.DB, operatorContextID string, id, pay
 	}
 	if insertedKey == "" {
 		return nil, false, fmt.Errorf("%w: WLT event receipt was not registered", ErrConflict)
+	}
+	currentWltStatus := ""
+	if current.LastWltStatus != nil {
+		currentWltStatus = *current.LastWltStatus
+	}
+	advances, err := wltPaymentEventAdvancesProjection(currentWltStatus, wltStatus)
+	if err != nil {
+		return nil, false, err
+	}
+	if !advances {
+		if err := WriteAuditEvent(tx, id, "wlt", "service", "wlt_payment_event_ignored_non_advancing", eventKey, correlationID, requestJSON(current), requestJSON(current)); err != nil {
+			return nil, false, err
+		}
+		if _, err := tx.ExecContext(ctx, `
+			UPDATE dsh_special_request_wlt_event_receipts
+			SET applied_at = COALESCE(applied_at, NOW()), last_received_at = NOW()
+			WHERE event_key = $1`, eventKey); err != nil {
+			return nil, false, err
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, false, err
+		}
+		return current, false, nil
 	}
 
 	lastStatus := wltStatus
