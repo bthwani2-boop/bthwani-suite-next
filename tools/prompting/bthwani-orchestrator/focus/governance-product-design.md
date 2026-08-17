@@ -12,7 +12,7 @@ Never apply “governance wins” or “code wins” universally.
 
 ## 2. Reconciliation target
 
-Prove intended target truth using available explicit decision, product outcome, actor expectations, operational evidence, contracts, data ownership, runtime behavior and canonical responsibility; then reconcile affected representations to that truth.
+Prove intended target truth using available explicit decision, product outcome, actor expectations, operational evidence, contracts, data ownership, runtime behavior, canonical responsibility and authoritative technical/standard evidence where needed; then reconcile affected representations to that truth.
 
 ## 3. Product semantics to model
 
@@ -71,16 +71,45 @@ Unique Current Responsibility
 
 If its value is duplicated, stale, superseded, purely ceremonial or creates more ambiguity/cost than assurance, simplify, merge, retire or delete it after blast-radius proof. Do not add a new registry/guard/policy merely to reconcile two existing sources of authority; resolve ownership instead.
 
-## 10. Historical/derived representations
+## 10. New control-artifact creation gate
+
+Before creating any new engineering-control artifact such as a:
+
+`guard | script | workflow | router | registry | policy | skill | hook | wrapper | adapter | generated control layer | verification layer`,
+
+prove all materially applicable conditions:
+
+```text
+UNIQUE CURRENT NEED
+AND NO EXISTING CANONICAL OWNER CAN ABSORB THE RESPONSIBILITY CLEANLY
+AND NO SIMPLER DESIGN CAN PROVIDE THE SAME REQUIRED ASSURANCE/DECISION VALUE
+AND A REAL CONSUMER EXISTS
+AND A REAL TRIGGER/EXECUTION POINT EXISTS
+AND THE SCOPE/BOUNDARY IS CLEAR
+AND OWNERSHIP/LIFECYCLE/RETIREMENT CONDITION ARE CLEAR
+AND THE NEW LAYER DOES NOT DUPLICATE EXISTING AUTHORITY OR ASSURANCE
+```
+
+If these conditions are not proven, **DO NOT CREATE THE ARTIFACT**. Prefer removal, consolidation, routing simplification or strengthening the canonical owner.
+
+A new control layer is not an acceptable way to make conflicting old layers coexist indefinitely.
+
+## 11. Historical/derived representations
 
 Old plans, prompts, branch documents, journey registries, reports and comments may inform diagnosis but cannot override current proven truth automatically.
 
 `PAST INSTRUCTION ≠ CURRENT AUTHORITY`.
 
-## 11. Decision boundary
+## 12. External research boundary
+
+External official/primary sources may establish technical, platform, security, standards or tool behavior and may inform design alternatives. They do not define BThwani product semantics.
+
+If multiple materially valid product/operational choices remain after evidence and research, use the decision boundary in `02` rather than importing an external convention as product truth.
+
+## 13. Decision boundary
 
 If multiple materially valid product/operational behaviors remain and evidence cannot choose, raise `DECISION_REQUIRED` using `02-DIAGNOSE-ROOT-CAUSE.md`. Do not convert product preference into an engineering guess.
 
-## 12. Closure for governance/product focus
+## 14. Closure for governance/product focus
 
 A semantic/governance root is not closed until materially affected representations are reconciled across governance, contracts/data, implementation, runtime and consuming surfaces, and no stale/parallel authority remains capable of misleading future execution.

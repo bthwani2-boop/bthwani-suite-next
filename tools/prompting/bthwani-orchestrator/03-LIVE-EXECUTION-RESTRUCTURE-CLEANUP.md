@@ -233,27 +233,79 @@ Correct sequence:
 
 If a test/check itself changes, prove it can still falsify the broken behavior and was not weakened.
 
+Existing tests are evidence sources, not the definition of correctness. Missing coverage does not make a missing behavior safe.
+
 ## 19. Runtime freshness
 
 Runtime proof is invalid if stale code/process/data may have produced it. Establish as applicable:
 
 `source/candidate identity | artifact/image/bundle provenance | process/container freshness | schema/migration version | seed/fixture provenance | intended endpoint/config/environment | canonical post-state readback`.
 
-## 20. Reviewable mutation boundaries
+## 20. Workspace and staging hygiene
+
+Before local mutation when a working tree is involved, record as applicable:
+
+```text
+current workspace/branch/ref
+pre-existing tracked and untracked changes
+intended paths/symbols/hunks
+known foreign/concurrent ownership
+```
+
+Foreign/pre-existing change is not this agent's change. Path ownership alone is insufficient because another writer may own a different hunk in the same file.
+
+When broad commands may capture or destroy foreign work, they are forbidden by default:
+
+```text
+git add .
+git add -A
+git commit -a
+git checkout -- .
+git restore .
+git reset --hard
+git clean -fd
+```
+
+Before every local commit:
+
+```text
+inventory working tree
+→ allowlist exact owned paths/hunks
+→ stage explicit paths/hunks
+→ inspect staged diff
+→ inspect untracked/foreign delta again
+→ commit one coherent logical boundary
+```
+
+Do not weaken this discipline merely because execution is `DIRECT_ON_TARGET`.
+
+## 21. Reviewable mutation boundaries
 
 Perform mutations in coherent logical units. Before commit/push/ref movement inspect intended files, foreign files, generated files, deletions, renames, migrations, contracts, runtime/config and tests.
 
-Do not blindly stage the whole workspace where it can capture foreign work. Own exact intended paths/hunks.
+Own exact intended paths/hunks and prove that unrelated/foreign work is excluded.
 
-## 21. Atomic/concurrent repository writes
+## 22. Atomic/concurrent repository writes
 
 Where supported, prefer an atomic multi-file commit built against the exact expected latest parent and a non-force fast-forward ref update.
+
+For GitHub/API multi-file writes, a per-file content SHA is not a branch-head compare-and-swap. Prefer:
+
+```text
+resolve latest head
+→ create blobs/tree against exact base
+→ create commit with exact expected parent
+→ re-resolve target ref
+→ non-force fast-forward ref update
+```
 
 If target moves:
 
 `do not overwrite → re-resolve → classify delta under 01 → reconcile → rebuild affected candidate → reverify invalidated evidence`.
 
-## 22. Re-rank after each root
+Partial multi-file writes are not closure; reconcile or complete them safely.
+
+## 23. Re-rank after each root
 
 After coherent root treatment:
 

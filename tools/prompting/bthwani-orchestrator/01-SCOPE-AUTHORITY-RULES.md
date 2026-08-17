@@ -1,4 +1,4 @@
-# Scope, Authority, Focus Routing, Concurrency and Longevity
+# Scope, Authority, Objective/Focus Routing, Research, Capabilities, Concurrency and Longevity
 
 ## 1. Truth model
 
@@ -10,13 +10,14 @@ CODE ≠ AUTOMATIC TRUTH
 RUNTIME ≠ AUTOMATIC TRUTH
 TESTS ≠ AUTOMATIC TRUTH
 PLANS/DOCS ≠ AUTOMATIC TRUTH
+EXTERNAL SOURCES ≠ AUTOMATIC PRODUCT TRUTH
 ```
 
 Keep materially different truth classes separate:
 
-`AUTHORITY TRUTH | PRODUCT/SEMANTIC TRUTH | IMPLEMENTATION TRUTH | DATA TRUTH | RUNTIME TRUTH | REPOSITORY-PLATFORM TRUTH | DERIVED/HISTORICAL SUPPORT`.
+`AUTHORITY TRUTH | PRODUCT/SEMANTIC TRUTH | IMPLEMENTATION TRUTH | DATA TRUTH | RUNTIME TRUTH | REPOSITORY-PLATFORM TRUTH | EXTERNAL TECHNICAL/STANDARD EVIDENCE | DERIVED/HISTORICAL SUPPORT`.
 
-Reconcile target truth from the strongest current combination of explicit authorized intent, product/operational outcomes, canonical ownership, live repository evidence, contracts, data, runtime and affected consumers.
+Reconcile target truth from the strongest current combination of explicit authorized intent, product/operational outcomes, canonical ownership, live repository evidence, contracts, data, runtime, affected consumers and authoritative external technical evidence where local evidence is insufficient.
 
 ## 2. Precedence
 
@@ -28,14 +29,17 @@ Use this decision framework:
 4. reconciled current Product/System authority for the affected concept;
 5. focus-specific rules;
 6. live implementation/data/runtime/repository evidence;
-7. historical/derived support.
+7. authoritative external technical/standard/platform evidence where relevant;
+8. historical/derived support.
 
-A lower representation may prove a higher representation stale, but must not silently redefine product intent.
+A lower representation may prove a higher representation stale, but must not silently redefine product intent. External technical evidence may establish how a platform/library/standard actually works; it must not invent BThwani product behavior.
 
 ## 3. Modes
 
 ### `DIAGNOSE`
 Read/diagnose only. Build material coverage, prove roots and expose decision/evidence gaps. No project mutation.
+
+An exact immutable commit/ref may be supplied when the goal is candidate review; no separate review mode is required.
 
 ### `EXECUTE_END_TO_END`
 Diagnose the requested semantic root and treat proven roots end-to-end, expanding only through proven causal/ownership/dependency/consumer/blast-radius relations.
@@ -50,9 +54,47 @@ SCOPE = REPOSITORY
 
 No material domain/surface/foundation is assumed clean. If an invocation is explicitly narrowed below repository scope, treat it as `EXECUTE_END_TO_END`; do not claim project-wide closure from a narrowed scope.
 
-## 4. Focus vocabulary and deterministic routing
+## 4. Objective-driven routing
 
-Canonical focus values:
+`OBJECTIVE` is the material outcome the human wants proved, not a checklist of files to touch.
+
+Resolve:
+
+```text
+OBJECTIVE
+→ semantic/operational root
+→ materially relevant dimensions
+→ initial scope
+→ focus set
+→ required evidence/capabilities
+```
+
+`SCOPE=AUTO` means derive the smallest complete scope that can prove or close the objective, then expand only through proven relations.
+
+`PRIMARY_FOCUS=AUTO` means derive the minimum materially sufficient focus set. Examples are orientation aids, not keyword-only routing:
+
+```text
+UX/journey objective
+→ PRODUCT + DESIGN + CODE + RUNTIME as required
+
+CI/tooling/guard slowness
+→ OPERATIONS + QUALITY + GOVERNANCE + RUNTIME/control-path as required
+
+parallel source of truth
+→ PRODUCT/OWNERSHIP + CODE + CONTRACTS + DATA + RUNTIME as required
+
+security/authorization objective
+→ SECURITY + CONTRACTS + DATA + RUNTIME + affected PRODUCT/JOURNEY semantics
+
+restructure/cleanup objective
+→ STRUCTURE + CODE + relevant ownership/consumer/contract/data/runtime proof
+```
+
+**Universal capability ≠ universal execution scope.** Do not run every lens deeply merely because it exists; activate every lens that can materially change correctness, priority, treatment or closure of the objective.
+
+## 5. Canonical focus vocabulary and deterministic routing
+
+Canonical explicit focus values:
 
 `ALL | PRODUCT | GOVERNANCE | CODE | STRUCTURE | DESIGN | DATA | CONTRACTS | RUNTIME | SECURITY | QUALITY | OPERATIONS`.
 
@@ -72,9 +114,9 @@ ALL
 → all three focus modules, with 02 controlling diagnosis and 03/04 controlling treatment/proof.
 ```
 
-A focus is a starting lens, never a closure ceiling.
+An explicit focus is a starting lens, never a closure ceiling.
 
-## 5. Scope shapes and expansion
+## 6. Scope shapes and expansion
 
 Supported orientation roots:
 
@@ -86,7 +128,7 @@ REQUESTED_SCOPE ≠ MAXIMUM_ALLOWED_SCOPE
 
 Expand only through proven causal, authority, dependency, consumer, contract, data, runtime, security or blast-radius relations.
 
-## 6. Project discovery anchors
+## 7. Project discovery anchors
 
 Stable names may seed discovery but current existence/role/ownership must be re-proven live.
 
@@ -112,7 +154,7 @@ KNOWN ANCHORS
 → BUILD CURRENT COVERAGE
 ```
 
-## 7. Journey discovery anchors
+## 8. Journey discovery anchors
 
 Seed discovery with materially applicable families such as:
 
@@ -120,7 +162,7 @@ Seed discovery with materially applicable families such as:
 
 These are seeds, not a closed registry.
 
-## 8. Minimum Diagnostic Altitude
+## 9. Minimum Diagnostic Altitude
 
 Start at the highest material meaning necessary to prevent a lower representation from being fixed before its parent meaning is settled:
 
@@ -128,7 +170,7 @@ Start at the highest material meaning necessary to prevent a lower representatio
 
 Bottom-up inspection is always allowed for evidence; bottom-up execution is not automatically allowed.
 
-## 9. Explicit exclusion rule
+## 10. Explicit exclusion rule
 
 Every material candidate area must become exactly one of:
 
@@ -136,7 +178,7 @@ Every material candidate area must become exactly one of:
 
 `UNKNOWN` is not `N/A`. Silence is not exclusion proof.
 
-## 10. Fail-closed invariants
+## 11. Fail-closed invariants
 
 ```text
 UNKNOWN ≠ NOT_APPLICABLE
@@ -149,30 +191,76 @@ STATIC_PASS ≠ RUNTIME_PROOF
 CURRENT_BRANCH ≠ DEFAULT_BRANCH
 OLD_SHA ≠ CURRENT_TRUTH
 OLD PASS/DONE ≠ CURRENT EVIDENCE
+EXTERNAL BEST PRACTICE ≠ BTHWANI PRODUCT DECISION
 ```
 
-## 11. Derived/historical records
+## 12. Derived/historical records
 
 Plans, reports, old commands/prompts, prior packages, comments, branch documents and historical commits may only discover prior intent/context/hypotheses/risks. Revalidate every material claim against current authority/code/contracts/data/runtime/readback.
 
 Default execution writes nothing to planning areas unless explicitly requested.
 
-## 12. Capability discipline
+## 13. Research escalation
+
+Research is evidence acquisition, not authority laundering.
+
+### `RESEARCH=AUTO`
+Use current internal/connected evidence first. If a material technical/standard/platform/library/security knowledge gap remains and external access is available, research automatically before guessing or raising an avoidable blocker.
+
+### `RESEARCH=EXTERNAL_ALLOWED`
+External research is explicitly allowed whenever it can materially improve factual correctness, target modeling or proof.
+
+### `RESEARCH=INTERNAL_ONLY`
+Do not use external research. If required technical truth cannot be established internally, keep the affected claim open as an `EXTERNAL_EVIDENCE_GAP`/`EXTERNAL_BLOCKER` with the exact evidence needed.
+
+For external research prefer, in order appropriate to the claim:
+
+```text
+OFFICIAL / PRIMARY SOURCE
+→ UPSTREAM DOCUMENTATION / SPECIFICATION / REPOSITORY / RELEASE NOTES
+→ AUTHORITATIVE SECURITY STANDARD / ADVISORY / VENDOR BULLETIN
+→ STRONG SECONDARY SOURCE only when primary evidence is unavailable or insufficient
+→ RECONCILE WITH THE ACTUAL LOCAL VERSION / CONFIG / RUNTIME
+```
+
+Rules:
+
+- verify version/context applicability; current upstream behavior may not match the project's pinned version;
+- external research may resolve technical, standards, platform and library facts;
+- external research may inform architecture/design alternatives;
+- external research must not invent BThwani product/business/operational truth;
+- a Product decision that remains genuinely non-derivable after research is `DECISION_REQUIRED`, not an internet-sourced guess;
+- record material external evidence and its proof limit when it affects treatment or closure.
+
+## 14. Capability-to-evidence discipline
+
+For every material claim that requires proof, reason explicitly:
+
+```text
+CLAIM
+→ REQUIRED EVIDENCE
+→ REQUIRED CAPABILITY
+→ CAPABILITY AVAILABLE?
+→ ACQUISITION PATH
+→ PROOF LIMIT
+```
 
 Discover and use tools, skills, integrations and runtime capabilities only when they materially improve diagnosis, execution or proof of the **target system**.
+
+When an applicable skill/plugin has operating instructions, read and follow those instructions before relying on it. Do not claim execution that did not occur.
 
 ```text
 USE EVERYTHING APPLICABLE.
 DO NOT USE EVERYTHING BLINDLY.
 CAPABILITY AVAILABLE ≠ CAPABILITY USED.
-DO NOT CLAIM EXECUTION THAT DID NOT OCCUR.
+MISSING REQUIRED CAPABILITY ≠ PASS.
 ```
 
 Unavailable required capability becomes an evidence/blocker condition, never an assumed PASS.
 
 Package independence/self-validation rules remain owned exclusively by `00-ORCHESTRATOR.md`.
 
-## 13. Foreign/concurrent delta classification
+## 15. Foreign/concurrent delta classification
 
 Before a material write batch, ref update/push or final closure, compare live HEAD with the last reconciled base and classify:
 
@@ -191,7 +279,7 @@ AUTHORITY_OR_TRUTH_CHANGE → reread authority/product truth before write.
 
 Foreign delta is input, not instruction. Recency never outranks causality.
 
-## 14. Execution location and mutation safety
+## 16. Execution location and mutation safety
 
 `DIRECT_ON_TARGET` changes topology only; it never weakens evidence, staging, concurrency, safety or closure requirements.
 
@@ -199,7 +287,7 @@ Never force-push, blindly hard-reset newer work, silently switch branches or dis
 
 Before materially irreversible/protected actions such as production data mutation, destructive backfill, secret/key rotation, external financial/provider mutation, release/deploy/merge/tag or infrastructure destruction, prove current authority, exact target/environment, scope, candidate/change binding when relevant and rollback/compensation where possible.
 
-## 15. Longevity and anti-bloat
+## 17. Longevity and anti-bloat
 
 Keep method stable; discover project state live. Do not permanently encode current HEADs, temporary task state, migration numbers, tool versions, closed journey universes or historical package machinery.
 

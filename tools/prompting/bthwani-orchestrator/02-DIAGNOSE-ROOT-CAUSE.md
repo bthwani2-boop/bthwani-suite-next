@@ -1,4 +1,4 @@
-# Diagnose, Coverage, Decisions and Root-Cause Protocol
+# Diagnose, Coverage, Decisions, Canonical Target and Root-Cause Protocol
 
 ## 1. Purpose
 
@@ -9,10 +9,12 @@ DISCOVER
 → MODEL
 → HYPOTHESIZE
 → CROSS-CHECK
+→ RESEARCH WHEN REQUIRED
 → CHALLENGE
 → PROVE / DISPROVE
 → CLUSTER
 → RANK
+→ MODEL CANONICAL TARGET
 → EXECUTE WHEN READY
 → RE-DIAGNOSE
 ```
@@ -31,7 +33,7 @@ Do not let the first TypeScript/Go error, failing test, endpoint, migration, tab
 
 Treat UX as the full reality lived by an actor:
 
-`entry → understanding → available actions → authorization → decision → state change → feedback → handoff → later readback → failure → recovery → terminal outcome`.
+`entry → understanding → discoverability → available actions → authorization → decision → state change → feedback → handoff → later readback → failure → recovery → terminal outcome`.
 
 A cross-surface discrepancy is material when it expresses a different state, authority, responsibility or canonical fact, even if each screen is locally functional.
 
@@ -41,7 +43,7 @@ Coverage is a live reasoning model, not a required repository file.
 
 Material nodes progress conceptually through:
 
-`UNKNOWN → DISCOVERED → INSPECTED → MODELED → FINDINGS_MAPPED → ROOTS_PROVEN → FIXED → VERIFIED → CLOSED`
+`UNKNOWN → DISCOVERED → INSPECTED → MODELED → FINDINGS_MAPPED → ROOTS_PROVEN → TARGET_DEFINED → FIXED → VERIFIED → CLOSED`
 
 or `N/A_PROVEN`.
 
@@ -72,6 +74,8 @@ Build the material landscape without asking for discoverable facts:
 `Product outcomes | Actors/identities | Roles/permissions/scopes | Authorities/responsibilities | Domains/capabilities | Surfaces/routes/screens/tabs/actions | Journeys | States/transitions/preconditions/invariants | Handoffs | Writers/readers/consumers | Contracts/APIs/events | Schemas/tables/constraints/migrations/backfills | Jobs/queues/providers/callbacks | Runtime/config/environment/networking | Observability/audit | Security/privacy/isolation | Tests/CI/release/rollback | Structure/ownership/naming/dependencies | Dead/stale/duplicate/legacy/fallback residue`.
 
 For repository-wide closure, a material domain/surface/foundation may be excluded only with current non-impact proof.
+
+When internal evidence leaves a material technical/platform/standard knowledge gap, apply the research escalation rules in `01` rather than guessing.
 
 ## 6. Journey Matrix
 
@@ -214,7 +218,27 @@ proof that treatment here removes cause rather than symptom
 
 Try to disprove the candidate before declaring it proven.
 
-## 11. Root clusters, graph and systemic leverage
+## 11. Parallel-truth root signals
+
+Treat the following as high-leverage root-cause signals, not mere cleanup smells, when they are authoritative/reachable:
+
+`PARALLEL_TRUTH | DUPLICATE_AUTHORITATIVE_WRITER | SHADOW_STATE | LOCAL_BUSINESS_TRUTH | DUPLICATE_CONTRACT_AUTHORITY | DUPLICATE_CONFIG_AUTHORITY | LEGACY_CANONICAL_PATH`.
+
+For any such signal prove:
+
+```text
+what concept is duplicated
+→ which owner is actually canonical
+→ every writer
+→ every reader/consumer
+→ synchronization/fallback/compatibility paths
+→ divergence/failure risk
+→ migration/cutover needed to leave one authority
+```
+
+Do not resolve duplicated authority by adding another synchronization layer unless a bounded mixed-version transition is itself proven necessary.
+
+## 12. Root clusters, graph and systemic leverage
 
 Cluster dependent findings under highest proven common causes and reason through a dependency/impact graph.
 
@@ -224,7 +248,9 @@ Prefer by material relevance:
 
 `upstream depth → blocking power → canonical/foundation importance → blast radius → user/operational impact → security/data/finance risk → unlock value → cross-surface/journey effect → recurrence → structural-debt multiplier → local cosmetic impact`.
 
-## 12. Competitive deepening
+Parallel/duplicate authority that can create divergent writes, states, contracts or decisions receives root-level priority proportional to its blast radius and recurrence risk.
+
+## 13. Competitive deepening
 
 Deepen only candidates that can materially change priority or treatment.
 
@@ -240,22 +266,22 @@ AND NO_KNOWN_HIGHER_ROOT_CAN_MATERIALLY_CHANGE_TREATMENT
 
 Then execute; do not keep wandering through details that cannot alter the next correct action.
 
-## 13. Decision taxonomy
+## 14. Decision taxonomy
 
 ```text
 DERIVABLE_FACT
-= resolve from evidence/code/contracts/data/runtime; do not ask.
+= resolve from evidence/code/contracts/data/runtime/research where valid; do not ask.
 
 TRUE_DECISION_GAP
 = multiple materially valid product/business/semantic/architectural behaviors remain and evidence cannot choose; ask.
 
 EXTERNAL_EVIDENCE_GAP
-= correctness requires an unavailable environment/provider/capability; keep the claim open with exact acquisition/unblock path.
+= correctness requires an unavailable environment/provider/capability/technical evidence source; keep the claim open with exact acquisition/unblock path.
 ```
 
 At a true Decision Boundary, batch overlapping questions, remove derivatives and order by unlock value. After a decision, re-diagnose the affected semantic cone before implementation.
 
-## 14. Source-of-fix readiness
+## 15. Source-of-fix readiness
 
 Before treating a material root identify:
 
@@ -278,6 +304,66 @@ REQUIRED VERIFICATION
 
 If a root requires source/runtime/data/contract mutation and the actual source of defect is still unknown, it is not executable yet.
 
-## 15. JIT execution frontier
+## 16. Canonical Target Model
+
+Before a material architectural/semantic/data/contract/state/ownership reconstruction, define enough of the target model to make the treatment non-random and falsifiable.
+
+As applicable establish:
+
+```text
+Target Product/Operational Outcome
+Canonical Owner
+Allowed Writers
+Readers / Projections / Consumers
+Actors / Permissions / Object Scope
+State Machine / Legal Transitions
+Invariants / Decision Rules
+API / Contract / Event Semantics
+Data Model / Persistence Ownership
+Transaction / Handoff Model
+Idempotency / Retry / Recovery / Unknown-Result Semantics
+Surface Readback / Cross-Surface Meaning
+Security / Audit Requirements
+Runtime / Configuration Ownership
+Observability / Correlation Requirements
+Migration / Backfill / Cutover Sequence
+Legacy/Parallel-Truth Removal Condition
+Verification That Can Falsify The Target
+```
+
+Model only what is material to the proven root; do not create speculative architecture for unrelated areas.
+
+`EXISTING ≠ CANONICAL`, `OLD ≠ DELETE`, and `NEW ≠ BETTER`. Preserve proven value while correcting ownership/context/boundaries.
+
+## 17. Patch-loop breaker
+
+Repeated descendant edits without a stronger falsifiable root hypothesis are a diagnostic failure mode.
+
+Trigger re-diagnosis when the pattern becomes materially like:
+
+```text
+local error
+→ local fix
+→ new related error
+→ another local fix
+→ compatibility/fallback/workaround
+→ another symptom
+```
+
+Then:
+
+```text
+STOP DESCENDANT PATCH LOOP
+→ CLUSTER RELATED SYMPTOMS
+→ RECONSTRUCT THE SHARED OPERATIONAL/OWNERSHIP PARENT
+→ RE-DIAGNOSE UPSTREAM
+→ PROVE OR DISPROVE A COMMON ROOT
+→ RE-RANK
+→ TREAT THE ROOT, NOT THE ERROR SEQUENCE
+```
+
+A new local fix is allowed only when evidence proves the issue is itself the highest relevant root or a minimal diagnostic blocker.
+
+## 18. JIT execution frontier
 
 Derive only the next coherent treatment frontier from the currently proven root and hard dependencies. Do not build speculative multi-root task forests whose assumptions may disappear after the current root is fixed. After treatment, re-diagnose and derive the next frontier from the new live state.

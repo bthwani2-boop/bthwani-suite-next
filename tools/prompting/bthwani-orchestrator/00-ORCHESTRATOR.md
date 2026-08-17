@@ -1,6 +1,6 @@
-# BThwani Self-Contained Live Root-Cause Execution Orchestrator
+# BThwani Self-Contained Goal-Driven Root-Cause Execution Orchestrator
 
-PACKAGE_REVISION: 3
+PACKAGE_REVISION: 4
 PACKAGE_CLASS: TEXTUAL_EXECUTION_COMMAND_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -12,25 +12,25 @@ DEFAULT_ORCHESTRATOR_MUTABILITY: READ_ONLY
 
 ## 0. Governing law
 
-> **TOP-DOWN SEMANTIC AUTHORITY; BOTTOM-UP EVIDENCE; HIGHEST PROVEN SYSTEMIC ROOT FIRST; ACTUAL CODE/DATA/CONTRACT/RUNTIME IS THE PLACE OF TREATMENT; COHERENT END-TO-END CUTOVER; ZERO UNJUSTIFIED PARALLEL TRUTH; ZERO UNJUSTIFIED REACHABLE LEGACY; ZERO DOCUMENTATION-ONLY CLOSURE.**
+> **GOAL-DRIVEN SEMANTIC AUTHORITY; TOP-DOWN DIAGNOSIS; BOTTOM-UP EVIDENCE; HIGHEST PROVEN SYSTEMIC ROOT FIRST; ACTUAL CODE/DATA/CONTRACT/RUNTIME IS THE PLACE OF TREATMENT; COHERENT END-TO-END CUTOVER; ZERO UNJUSTIFIED PARALLEL TRUTH; ZERO UNJUSTIFIED REACHABLE LEGACY; ZERO DOCUMENTATION-ONLY CLOSURE.**
 
 This directory is a textual command package interpreted directly by a human/agent. It is **not** application/runtime code, a framework, a CLI, a workflow, a validator, a guard system, a machine registry, or a generated state machine.
 
 Correct use of this package must not depend on any external prompt, legacy command, plan package, script, guard, workflow, validator, CLI, hook, machine status file, or generated orchestration representation.
 
-Project tooling may be used only as evidence or execution machinery for the **target project** when materially relevant. It never becomes an execution engine or self-certification mechanism for this package.
+Project tooling and external research may be used only as evidence or execution machinery for the **target system** when materially relevant. Neither becomes an execution engine or self-certification mechanism for this package.
 
 ## 1. Canonical internal ownership
 
 The package has exactly these semantic owners:
 
-1. `00-ORCHESTRATOR.md` — governing law, lifecycle, invocation, independence, protection and valid stop states.
-2. `01-SCOPE-AUTHORITY-RULES.md` — truth/authority, modes, scope, focus routing, exclusions, concurrency and longevity.
-3. `02-DIAGNOSE-ROOT-CAUSE.md` — coverage, journeys, findings, decisions, root proof/ranking and execution readiness.
+1. `00-ORCHESTRATOR.md` — governing law, goal-driven lifecycle, invocation, independence, protection and valid stop states.
+2. `01-SCOPE-AUTHORITY-RULES.md` — truth/authority, objective/scope/focus routing, research/capability discipline, exclusions, concurrency and longevity.
+3. `02-DIAGNOSE-ROOT-CAUSE.md` — coverage, journeys, findings, decisions, root proof/ranking, canonical target modeling and execution readiness.
 4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — actual treatment, reconstruction, migration, cutover, cleanup and mutation discipline.
-5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-candidate evidence, review provenance, re-diagnosis and fail-closed closure.
+5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-candidate evidence, repository-platform truth when required, review provenance, re-diagnosis and fail-closed closure.
 6. `focus/code-architecture-organization.md` — implementation architecture, repository structure, UI/UX and discoverability.
-7. `focus/governance-product-design.md` — product meaning, governance reconciliation and engineering-governance value.
+7. `focus/governance-product-design.md` — product meaning, governance reconciliation and engineering-governance/control-artifact value.
 8. `focus/data-contracts-runtime-security-quality.md` — data, contracts, runtime, security, finance, quality and engineering control-path efficiency.
 9. `99-SOURCE-MAP.md` — non-executable source-consolidation/disposition accounting only.
 
@@ -51,15 +51,47 @@ Use:
 ```text
 REPOSITORY: <owner/repo>
 BRANCH: <exact branch/ref>
+OBJECTIVE: <material outcome to diagnose/fix/restructure/clean/close; discovery itself may be the objective>
 MODE: <DIAGNOSE | EXECUTE_END_TO_END | EXECUTE_PROJECT_CLOSURE>
-PRIMARY_FOCUS: <optional>
-SCOPE: <optional>
+PRIMARY_FOCUS: <AUTO | optional explicit focus>
+SCOPE: <AUTO | repository/domain/service/surface/feature/journey/path/semantic scope>
+RESEARCH: <AUTO | INTERNAL_ONLY | EXTERNAL_ALLOWED>
 EXECUTION_LOCATION: <DIRECT_ON_TARGET | ISOLATED_WORKSPACE when explicitly required/allowed>
+```
+
+Defaults when omitted:
+
+```text
+PRIMARY_FOCUS = AUTO
+SCOPE = derive the smallest complete semantic scope from OBJECTIVE and proven relations
+RESEARCH = AUTO
+PLANS = NONE
+EXECUTION PRIORITY = HIGHEST PROVEN SYSTEMIC ROOT
 ```
 
 No `PREPARE` phase or repository plan/package is required. Internal reasoning may plan work; repository planning artifacts are created only when explicitly requested.
 
-## 4. Exact live target first
+## 4. Goal-driven execution, not checklist-driven execution
+
+`OBJECTIVE` is the desired material outcome, not a file list and not a license for an unrelated repository sweep.
+
+```text
+OBJECTIVE
+→ identify semantic/operational root
+→ derive relevant focus lenses
+→ derive initial scope
+→ expand only through proven authority/causal/dependency/consumer/contract/data/runtime/security/blast-radius relations
+→ prove the target state
+→ treat the highest proven root
+```
+
+Universal capability does **not** mean universal execution scope. The package is capable of diagnosing code, architecture, UX, governance, data, security, finance, runtime, CI/tooling or any combination, but it activates only the dimensions materially required by the objective and evidence.
+
+`PRIMARY_FOCUS=AUTO` means infer the smallest materially sufficient focus set from the objective and current findings. An explicit focus is an orientation, never permission to ignore a proven related dimension.
+
+`RESEARCH=AUTO` applies the research escalation rules in `01`: use current local/connected evidence first, then obtain authoritative external technical evidence when internal knowledge is materially insufficient and external access is allowed. External evidence may resolve technical/standard/platform facts or inform design options; it never invents BThwani Product Truth.
+
+## 5. Exact live target first
 
 Before diagnosis or mutation:
 
@@ -83,14 +115,17 @@ re-resolve live HEAD
 
 Latest HEAD is the integration baseline; recency is not execution priority.
 
-## 5. Governing lifecycle
+## 6. Governing lifecycle
 
 ```text
-RESOLVE LIVE TARGET
+UNDERSTAND OBJECTIVE
+→ RESOLVE LIVE TARGET
 → ESTABLISH AUTHORITY + PRODUCT/OPERATIONAL ROOT
+→ DERIVE RELEVANT FOCUS + INITIAL SCOPE
 → BUILD MATERIAL COVERAGE
 → START AT MINIMUM DIAGNOSTIC ALTITUDE
 → BROAD DISCOVERY
+→ RESEARCH WHEN MATERIAL KNOWLEDGE/EVIDENCE IS INSUFFICIENT
 → RECONSTRUCT JOURNEYS / OWNERS / STATES / HANDOFFS
 → COLLECT BOTTOM-UP EVIDENCE
 → BUILD FINDING + ROOT-CAUSE LANDSCAPE
@@ -111,7 +146,7 @@ RESOLVE LIVE TARGET
 
 Do not wait for an exhaustive low-level scan once the highest root is proven deeply enough to rank and treat. Do not execute a lower finding while a materially higher unresolved cause can change the correct treatment.
 
-## 6. Evidence does not grant execution authority
+## 7. Evidence does not grant execution authority
 
 A technical observation begins as `EVIDENCE/HOLD`.
 
@@ -128,7 +163,7 @@ Operational Parent
 
 The only exception is a proven `DIAGNOSTIC_BLOCKER` that prevents acquiring truth. Fix it minimally without redefining Product Semantics, then return immediately to the higher diagnosis.
 
-## 7. Root treatment law
+## 8. Root treatment law
 
 A patch is any change that makes a symptom disappear without eliminating its proven parent Root Cause.
 
@@ -140,11 +175,11 @@ Preferred treatment:
 
 Smallest does not mean local. Complete does not mean rewrite everything.
 
-## 8. Effective scope
+## 9. Effective scope
 
 ```text
 EFFECTIVE_SCOPE =
-REQUESTED_SCOPE
+REQUESTED/DERIVED_SCOPE
 + PROVEN_ROOT_CAUSES
 + PROVEN_DEPENDENCIES
 + PROVEN_CONSUMERS
@@ -155,7 +190,7 @@ REQUESTED_SCOPE
 
 Unrelated repository churn remains forbidden.
 
-## 9. Mandatory lenses
+## 10. Mandatory lenses
 
 Keep every materially applicable lens active:
 
@@ -163,7 +198,7 @@ Keep every materially applicable lens active:
 
 A lens may be `N/A_PROVEN`; it may never disappear silently.
 
-## 10. Decision boundary
+## 11. Decision boundary
 
 Derive every fact evidence can derive. Ask the human only for a material product/business/semantic/architectural choice that cannot safely be derived.
 
@@ -182,7 +217,7 @@ Affected roots/journeys/surfaces/contracts/data
 
 Stop only the dependent cone; continue all independent work. After a decision, propagate it, invalidate affected assumptions/evidence, re-diagnose the affected cone and re-rank if material.
 
-## 11. Legitimate stop states
+## 12. Legitimate stop states
 
 Only:
 
@@ -192,6 +227,6 @@ Only:
 
 `large scope`, `many findings`, `follow up later`, `write a plan`, `create a ticket`, or `CI is green` are not closure states.
 
-## 12. Closure authority
+## 13. Closure authority
 
 Only `04-VERIFY-REDIAGNOSE-CLOSE.md` defines final closure. If any materially required condition is unproven, the state remains `OPEN` unless a valid stop state above applies.
