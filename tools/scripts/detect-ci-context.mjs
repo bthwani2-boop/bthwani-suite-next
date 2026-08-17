@@ -32,7 +32,7 @@ const FOUNDATION_GUARDS = JSON.parse(
 
 function resolveFoundationGuards({
   fullScope,
-  governance,
+  changedFiles,
   workflow,
   infrastructure,
   workspaceManifest,
@@ -41,16 +41,36 @@ function resolveFoundationGuards({
   backendChanged,
   frontend,
 }) {
-  if (fullScope || governance || workflow || infrastructure || workspaceManifest || ciRouter) {
-    return [...FOUNDATION_GUARDS];
+  if (fullScope) return [...FOUNDATION_GUARDS];
+
+  const files = changedFiles.map(normalizePath);
+  const has = (predicate) => files.some(predicate);
+  const starts = (...prefixes) => has((file) => prefixes.some((prefix) => file.startsWith(prefix)));
+  const equals = (...names) => has((file) => names.includes(file));
+  const governanceFiles = starts("governance/", ".agents/") || equals("AGENTS.md", "CLAUDE.md", "GEMINI.md", "LEAN-CTX.md", "opencode.json");
+  const guardOrTooling = starts("tools/guards/", "tools/scripts/");
+
+  const selected = ["source-integrity"];
+  if (governanceFiles) {
+    selected.push(
+      "governance-schema",
+      "agent-governance",
+      "authority-separation",
+      "guard-registry",
+      "sdlc",
+      "cleanup-policy",
+    );
   }
 
-  const base = ["source-integrity", "required-command-integrity", "no-broken-imports"];
-  if (contractsChanged || backendChanged) {
-    return [...base, "runtime-config", "api-binding", "backend-api-binding"];
+  if (guardOrTooling || workflow || infrastructure || workspaceManifest || ciRouter || contractsChanged || backendChanged || frontend) {
+    selected.push("required-command-integrity", "no-broken-imports");
   }
-  if (frontend) return [...base, "runtime-config", "ui-kit-boundary"];
-  return base;
+  if (contractsChanged || backendChanged) {
+    selected.push("runtime-config", "api-binding", "backend-api-binding");
+  }
+  if (frontend) selected.push("runtime-config", "ui-kit-boundary");
+
+  return [...new Set(selected)];
 }
 
 export function classifyFiles(inputFiles, options = {}) {
@@ -67,6 +87,13 @@ export function classifyFiles(inputFiles, options = {}) {
   const starts = (...prefixes) => has((file) => prefixes.some((prefix) => file.startsWith(prefix)));
   const equals = (...names) => has((file) => names.includes(file));
   const includes = (...parts) => has((file) => parts.some((part) => file.includes(part)));
+  const productFiles = files.filter((file) =>
+    !file.startsWith("tools/guards/") &&
+    !file.startsWith("governance/") &&
+    !file.startsWith(".agents/") &&
+    !file.startsWith(".github/"),
+  );
+  const hasProduct = (predicate) => productFiles.some(predicate);
 
   const workspaceManifest = equals("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "nx.json");
   const ciRouter = has((file) => file === "tools/scripts/detect-ci-context.mjs" || file === "tools/scripts/detect-ci-context.test.mjs");
@@ -134,18 +161,18 @@ export function classifyFiles(inputFiles, options = {}) {
   const contracts = full || contractsChanged;
   const database = full || databaseChanged;
 
-  const authChanged = full || has((file) => file.startsWith("core/identity/") && /(^|\/)(auth|authentication|activation|otp|token|credential)(\/|[-_.])/i.test(file));
-  const sessionChanged = full || has((file) => /(^|\/)(session|sessions|refresh-token|revocation|device-fingerprint)(\/|[-_.])/i.test(file));
-  const rbacChanged = full || has((file) => /(^|\/)(rbac|role|roles|permission|permissions|authorization|policy-enforcement)(\/|[-_.])/i.test(file));
-  const privacyChanged = full || has((file) => /(^|\/)(privacy|consent|retention|redaction|anonymization)(\/|[-_.])/i.test(file));
-  const piiChanged = full || has((file) => /(^|\/)(pii|personal-data|national-id|identity-document)(\/|[-_.])/i.test(file));
-  const secretsChanged = full || equals("governance/policies/security.md") || starts("tools/security/") || has((file) => /(^|\/)(secret|secrets|credential|credentials|signing|keystore|certificate)(\/|[-_.])/i.test(file));
+  const authChanged = full || hasProduct((file) => file.startsWith("core/identity/") && /(^|\/)(auth|authentication|activation|otp|token|credential)(\/|[-_.])/i.test(file));
+  const sessionChanged = full || hasProduct((file) => /(^|\/)(session|sessions|refresh-token|revocation|device-fingerprint)(\/|[-_.])/i.test(file));
+  const rbacChanged = full || hasProduct((file) => /(^|\/)(rbac|role|roles|permission|permissions|authorization|policy-enforcement)(\/|[-_.])/i.test(file));
+  const privacyChanged = full || hasProduct((file) => /(^|\/)(privacy|consent|retention|redaction|anonymization)(\/|[-_.])/i.test(file));
+  const piiChanged = full || hasProduct((file) => /(^|\/)(pii|personal-data|national-id|identity-document)(\/|[-_.])/i.test(file));
+  const secretsChanged = full || equals("governance/policies/security.md") || starts("tools/security/") || hasProduct((file) => /(^|\/)(secret|secrets|credential|credentials|signing|keystore|certificate)(\/|[-_.])/i.test(file));
   const operatorContextChanged = full || equals(
     "governance/product/PRD.md",
     "governance/product/platform-model.yaml",
     "governance/policies/security.md",
     "governance/product/contracts/bthwani-platform-model.product-truth.json"
-  ) || has((file) => /(^|\/)(OperatorContext|operator-context|platform-context|tenancy|cross-OperatorContext)(\/|[-_.])/i.test(file));
+  ) || hasProduct((file) => /(^|\/)(OperatorContext|operator-context|platform-context|tenancy|cross-OperatorContext)(\/|[-_.])/i.test(file));
   const protectedSecurityChanged = authChanged || sessionChanged || rbacChanged || privacyChanged || piiChanged || secretsChanged || operatorContextChanged;
   const workflowSecurity = workflow;
   const securityScan = mobileRuntimeTransport || protectedSecurityChanged || equals("governance/policies/security.md") || starts("tools/security/");
@@ -158,7 +185,7 @@ export function classifyFiles(inputFiles, options = {}) {
     "tools/scripts/finance/",
     "tools/scripts/smoke-wlt-",
     "tools/scripts/smoke-wiremock-"
-  ) || has((file) =>
+  ) || hasProduct((file) =>
     /(^|\/)(finance|wallet|commission|settlement|payout|ledger|refund|payment|checkoutfinanceoutbox|fieldcommissionoutbox)(\/|[-_.])/i.test(file) ||
     /dsh-wlt-finance/i.test(file)
   );
@@ -249,7 +276,7 @@ export function classifyFiles(inputFiles, options = {}) {
 
   const foundationGuardIds = resolveFoundationGuards({
     fullScope,
-    governance,
+    changedFiles: files,
     workflow,
     infrastructure,
     workspaceManifest,

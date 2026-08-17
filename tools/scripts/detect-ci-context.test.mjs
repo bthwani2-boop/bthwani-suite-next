@@ -8,6 +8,38 @@ test("governance-only changes stay standard and avoid product checks", () => {
   assert.equal(result.workflow_policy, false);
   assert.equal(result.verification_tier, "standard");
   assert.equal(result.runtime_profile, "none");
+  assert.deepEqual(result.foundation_guard_ids, [
+    "source-integrity",
+    "governance-schema",
+    "agent-governance",
+    "authority-separation",
+    "guard-registry",
+    "sdlc",
+    "cleanup-policy",
+  ]);
+});
+
+test("guard implementation changes use only code-integrity foundation guards", () => {
+  const result = classifyFiles(["tools/guards/runtime-config-gate.mjs"]);
+  assert.deepEqual(result.foundation_guard_ids, [
+    "source-integrity",
+    "required-command-integrity",
+    "no-broken-imports",
+  ]);
+  assert.equal(result.foundation_guard_ids.includes("ui-kit-boundary"), false);
+  assert.equal(result.foundation_guard_ids.includes("backend-api-binding"), false);
+});
+
+test("guard directory names do not widen product risk scope", () => {
+  const result = classifyFiles([
+    "tools/guards/finance/obsolete-gate.mjs",
+    "tools/guards/privacy/obsolete-gate.mjs",
+  ]);
+  assert.equal(result.financial_changed, false);
+  assert.equal(result.privacy_changed, false);
+  assert.equal(result.security_scan_policy, false);
+  assert.equal(result.runtime_profile, "none");
+  assert.equal(result.verification_tier, "standard");
 });
 
 test("workflow changes are deep security policy without runtime", () => {
@@ -32,7 +64,11 @@ test("verification depth does not widen semantic scope", () => {
   assert.equal(result.dsh, false);
   assert.equal(result.frontend, false);
   assert.equal(result.contracts, false);
-  assert.equal(result.foundation_guard_ids.includes("governance-schema"), true);
+  assert.deepEqual(result.foundation_guard_ids, [
+    "source-integrity",
+    "required-command-integrity",
+    "no-broken-imports",
+  ]);
 });
 
 test("isolated app code remains fast", () => {
