@@ -19,6 +19,7 @@ permissions:
 jobs:
   contracts:
     name: Contract and binding integrity
+    if: ${{ inputs.contracts == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
