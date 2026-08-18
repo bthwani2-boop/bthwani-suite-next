@@ -5,42 +5,40 @@ import test from "node:test";
 
 const repoRoot = path.resolve(import.meta.dirname, "../..");
 const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
+const exists = (relativePath) => fs.existsSync(path.join(repoRoot, relativePath));
 
-test("CI workflow separates semantic scope from verification depth", () => {
+test("CI is code-only and has no governance policy bundle", () => {
   const workflow = read(".github/workflows/ci.yml");
-  assert.match(workflow, /CI_MODE="\$\{MODE\}"/u);
-  assert.match(workflow, /CI_VERIFICATION_DEPTH="\$\{VERIFICATION_DEPTH\}"/u);
-  assert.match(workflow, /verification_requirement:/u);
-  assert.match(workflow, /required_jobs:/u);
-  assert.match(workflow, /verification_required:/u);
-  assert.match(workflow, /backend_required:/u);
-  assert.doesNotMatch(workflow, /if:.*full_verification == 'true'.*frontend/u);
-  assert.doesNotMatch(workflow, /BACKEND_REQUIRED:.*full_scope/u);
-  assert.doesNotMatch(workflow, /verification_applicable/u);
-  assert.match(read("tools/scripts/detect-ci-context.mjs"), /full_scope: fullScope/u);
+  assert.equal(exists(".github/workflows/ci-policy.yml"), false);
+  assert.equal(exists(".github/workflows/manual-deep-verification.yml"), false);
+  assert.doesNotMatch(workflow, /ci-policy\.yml|guard:governance|guard:sdlc|guard:guard-registry/u);
+  assert.doesNotMatch(workflow, /governance\/\*\*|\.agents\/\*\*|AGENTS\.md/u);
+  assert.match(workflow, /ci-node-diagnostics\.yml/u);
+  assert.match(workflow, /ci-node-verification\.yml/u);
+  assert.match(workflow, /ci-backends\.yml/u);
+  assert.match(workflow, /ci-runtime\.yml/u);
 });
 
-test("workflow security and repository vulnerability scans have separate cadence inputs", () => {
-  const policy = read(".github/workflows/ci-policy.yml");
-  assert.match(policy, /workflow_security_policy:/u);
-  assert.match(policy, /security_scan_policy:/u);
-  assert.match(policy, /guard:workflow-security/u);
-  assert.match(policy, /security_scan_policy == 'true'/u);
+test("router exports code verification scope without governance control-plane fields", () => {
+  const router = read("tools/scripts/detect-ci-context.mjs");
+  assert.match(router, /foundation_guard_ids:/u);
+  assert.match(router, /verification_required:/u);
+  assert.match(router, /backend_required:/u);
+  assert.match(router, /runtime_required:/u);
+  assert.doesNotMatch(router, /governance_policy|policy_required|agent-governance|guard-registry|required-command-integrity|\bsdlc\b/u);
+});
+
+test("foundation routing has one code-only selector path", () => {
+  const foundation = read("tools/scripts/run-foundation-gate.ps1");
+  assert.match(foundation, /detect-ci-context\.mjs/u);
+  assert.match(foundation, /registeredFoundationSet\.Contains/u);
+  assert.doesNotMatch(foundation, /governance-schema|agent-governance|authority-separation|guard-registry|required-command-integrity|\bsdlc\b/u);
 });
 
 test("backend verification skips an empty development package cone", () => {
   const backend = read(".github/workflows/ci-backends.yml");
   assert.match(backend, /packages=none reason=no-package-in-semantic-cone/u);
   assert.equal(backend.includes('full_backend == "true" || "${#package_args[@]}" -eq 0'), false);
-});
-
-test("foundation and SDLC execution have one registered routing path", () => {
-  const foundation = read("tools/scripts/run-foundation-gate.ps1");
-  const sdlc = read("tools/guards/sdlc/Invoke-SdlcGate.ps1");
-  assert.match(foundation, /detect-ci-context\.mjs/u);
-  assert.doesNotMatch(foundation, /source-integrity-gate\.mjs|source-integrity-gate\.test\.mjs/u);
-  assert.doesNotMatch(sdlc, /governance-schema-gate|agent-governance-gate|authority-separation-gate|guard-registry-gate/u);
-  assert.match(read("governance/guards/guard-registry.json"), /"id":"source-integrity"/u);
 });
 
 test("OpenAPI materialization has no lifecycle-hook authority", () => {
@@ -50,11 +48,10 @@ test("OpenAPI materialization has no lifecycle-hook authority", () => {
   assert.doesNotMatch(read(".github/actions/setup-node-workspace/action.yml"), /materialize_generated|postinstall/u);
 });
 
-test("affected jobs use shallow checkout plus exact commit hydration", () => {
+test("affected code jobs use shallow checkout plus exact commit hydration", () => {
   for (const workflow of [
     ".github/workflows/ci-node-diagnostics.yml",
     ".github/workflows/ci-node-verification.yml",
-    ".github/workflows/ci-policy.yml",
     ".github/workflows/ci-backends.yml",
   ]) {
     const content = read(workflow);
@@ -62,12 +59,13 @@ test("affected jobs use shallow checkout plus exact commit hydration", () => {
     assert.match(content, /fetch-depth: 1/u, workflow);
   }
   assert.match(read(".github/actions/fetch-exact-commits/action.yml"), /git fetch --no-tags --depth=1/u);
-  for (const workflow of [
-    ".github/workflows/ci-node-diagnostics.yml",
-    ".github/workflows/ci-policy.yml",
-    ".github/workflows/manual-deep-verification.yml",
-    ".github/workflows/sonarqube.yml",
-  ]) {
-    assert.match(read(workflow), /pnpm exec nx run contracts:materialize/u, workflow);
+});
+
+test("package verification entrypoints contain no governance tail", () => {
+  const packageJson = JSON.parse(read("package.json"));
+  const scripts = packageJson.scripts ?? {};
+  assert.equal(scripts["verify:full"], "pnpm run workspace:verify");
+  for (const key of Object.keys(scripts)) {
+    assert.doesNotMatch(key, /^guard:(?:governance|sdlc|guard-registry|required-command-integrity|agent-governance|authority-separation|tools-v5)/u);
   }
 });
