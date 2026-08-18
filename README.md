@@ -4,26 +4,27 @@ Canonical implementation line for BThwani.
 
 ## Repository role
 
-The old `C:\bthwani-suite` repository is a donor/reference source only. This repository owns the active implementation. Runtime code must not depend on the donor repository, and no capability is closed without same-commit evidence.
+The old `C:\bthwani-suite` repository is donor/reference only. This repository owns the active implementation. Runtime code must not depend on the donor repository.
 
-## Canonical status sources
+## Current truth sources
 
-Human-readable status summaries in this README are intentionally avoided because they become stale and can overstate runtime readiness. Use the current owners instead:
+Avoid status prose that drifts. Read the current owner instead:
 
-- Product-wide requirements and ownership: `governance/product/PRD.md`
+- Product requirements and ownership: `governance/product/PRD.md`
 - Platform model: `governance/product/platform-model.yaml`
-- Capability-specific product truth: `governance/product/contracts/`
+- Capability Product Truth: `governance/product/contracts/`
 - DSH capability ownership: `services/dsh/capabilities.ts`
 - DSH surface posture: `services/dsh/surface-map.ts`
-- DSH runtime evidence state: `services/dsh/runtime-map.ts`
+- DSH runtime state: `services/dsh/runtime-map.ts`
 - DSH service manifest: `services/dsh/service.manifest.ts`
 - WLT service manifest: `services/wlt/service.manifest.ts`
-- Canonical decision vocabulary: `governance/contracts/decision-vocabulary.json`
-- SDLC machine contracts: `governance/contracts/sdlc/`
-- GitHub workflow intent: `governance/github/workflow-registry.json`
-- Desired master protection configuration: `governance/github/master-protection.ruleset.json`
-- Actual GitHub enforcement/check/review state: query GitHub live for the exact target branch and candidate SHA; no tracked snapshot is current proof.
+- Executable CI: `.github/workflows/`
+- Exact repository-platform enforcement/check state: query GitHub live for the target branch and candidate SHA.
 
-## Decision rule
+There is intentionally no guard registry, workflow registry, or SDLC stage control plane. Verification belongs to executable code, contracts, data, runtime, security, and executable CI.
 
-Static implementation, contract presence, historical evidence, fixtures, mocks, desired configuration, and successful narrow CI jobs do not imply runtime or production closure. `CLOSED_WITH_EVIDENCE` requires the applicable same-commit runtime, product, QA, security, finance, isolation, governance, CI, release, and production evidence defined by `governance/GOVERNANCE.md` and the governed SDLC contracts.
+## Working rule
+
+Use the smallest complete affected scope, fix the highest proven root cause, run only checks that add material assurance, and expand verification only when evidence or closure risk requires it.
+
+Static implementation or configuration does not imply runtime success. Historical evidence, fixtures, mocks, desired configuration, or a prior workflow run do not prove a newer candidate.
