@@ -75,7 +75,7 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
         fetchPartnerTaxonomy(),
         fetchPartnerMasterProducts({ limit: 100 }),
         fetchPartnerStoreAssortment(storeId),
-        fetchPartnerProductProposals({ limit: 100, offset: 0 }),
+        fetchPartnerProductProposals(storeId, { limit: 100, offset: 0 }),
       ]);
       setDomains(taxonomy.domains);
       setNodes(taxonomy.nodes);

@@ -437,18 +437,6 @@ func EvaluateProviderActivationReadiness(person Person, core ProviderOperational
 	return ActivationReadiness{Ready: len(missing) == 0, Missing: missing}
 }
 
-func (r *Repository) ActivationReadiness(ctx context.Context, actorID string) (ActivationReadiness, error) {
-	person, err := r.PersonByActorID(ctx, actorID)
-	if err != nil {
-		return ActivationReadiness{}, err
-	}
-	core, err := r.OperationalCoreByActorID(ctx, actorID)
-	if err != nil {
-		return ActivationReadiness{}, err
-	}
-	return EvaluateProviderActivationReadiness(person, core), nil
-}
-
 func (r *Repository) CreateAvailabilityNotice(ctx context.Context, actorID string, input CreateAvailabilityNoticeInput) (AvailabilityNotice, error) {
 	operatorContextID, err := operatorContextID(ctx)
 	if err != nil || !oneOf(input.NoticeType, "planned_unavailability", "immediate_unavailability", "short_break", "emergency", "temporary_restriction") || input.StartsAt.IsZero() || input.EndsAt.IsZero() || !input.EndsAt.After(input.StartsAt) || strings.TrimSpace(input.OperatorContextID) != operatorContextID {

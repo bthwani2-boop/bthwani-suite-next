@@ -22,11 +22,6 @@ type Client struct {
 	http         *http.Client
 }
 
-type FieldActivationReadiness struct {
-	IsReady bool   `json:"isReady"`
-	Reason  string `json:"reason,omitempty"`
-}
-
 type ActorScopes struct {
 	ActorID           string   `json:"actorId"`
 	Role              string   `json:"role"`

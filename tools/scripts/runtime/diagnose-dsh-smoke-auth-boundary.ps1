@@ -175,7 +175,7 @@ $proposalBody = @{
 $proposal = Invoke-CheckedJsonRequest `
   -Name "dsh-partner-catalog-proposal-create" `
   -Method "POST" `
-  -Uri "$DshBaseUrl/dsh/partner/catalog/product-proposals" `
+  -Uri "$DshBaseUrl/dsh/partner/catalog/product-proposals?storeId=$([Uri]::EscapeDataString($StoreId))" `
   -Headers (New-MutationHeaders -Token $partnerToken -Operation "diagnose-proposal") `
   -Body $proposalBody
 if ([string]::IsNullOrWhiteSpace([string]$proposal.proposal.id)) {

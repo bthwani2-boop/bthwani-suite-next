@@ -118,7 +118,7 @@ $proposalBody = @{
   brand = "الكبوس"
   sourceSurface = "app-partner"
 } | ConvertTo-Json
-$proposal = Invoke-RestMethod "http://localhost:58080/dsh/partner/catalog/product-proposals" -Method Post -Headers $partnerHeaders -ContentType "application/json" -Body $proposalBody -TimeoutSec 10
+$proposal = Invoke-RestMethod "http://localhost:58080/dsh/partner/catalog/product-proposals?storeId=$([uri]::EscapeDataString('store-test-grocery'))" -Method Post -Headers $partnerHeaders -ContentType "application/json" -Body $proposalBody -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($proposal.proposal.id)) { throw "product proposal create did not persist" }
 
 $operatorToken = Get-LocalActorToken (Get-LocalUsername "operator")

@@ -429,6 +429,7 @@ export async function fetchPartnerStoreAssortment(storeId: string): Promise<read
 
 
 export async function createPartnerProductProposal(input: {
+  readonly storeId: string;
   readonly proposedNameAr: string;
   readonly proposedNameEn: string;
   readonly domainId: string;
@@ -441,10 +442,18 @@ export async function createPartnerProductProposal(input: {
   readonly duplicateCandidates?: readonly string[] | undefined;
   readonly sourceSurface: "app-partner" | "control-panel" | "app-field";
 }): Promise<ProductProposal> {
-  const resp = await request<{ proposal: ProductProposal }>("/dsh/partner/catalog/product-proposals", {
-    method: "POST",
-    body: input,
-  });
+  const storeId = input.storeId.trim();
+  if (!storeId) {
+    throw new Error("storeId is required for partner product proposals");
+  }
+  const { storeId: _storeId, ...requestBody } = input;
+  const resp = await request<{ proposal: ProductProposal }>(
+    `/dsh/partner/catalog/product-proposals?storeId=${encodeURIComponent(storeId)}`,
+    {
+      method: "POST",
+      body: requestBody,
+    },
+  );
   return resp.proposal;
 }
 

@@ -14,6 +14,24 @@
 - Current phase: `AUDIT_PREPARE -> EXECUTE_CLOSE MASTER BLUEPRINT`.
 - `DECISION_REQUIRED`: `NONE` at plan creation; any later non-derivable Product/Business/Semantic/Architectural decision stops only its affected cone before mutation.
 
+### 0.1 Latest EXECUTE_CLOSE reconciliation — 2026-08-18
+
+- Revalidated branch truth: `HEAD = origin/b = 37984ca2acc6a1ce86279f35cba979859c15adc7` on `b`; working tree was clean before this record update.
+- `8a3b0e365542aab12aa19171503d55ca7792d5f5` is an ancestor. The later `37984ca2a` commit is a foreign/concurrent tooling delta that removes the OpenCode implementer and selects Antigravity; it is preserved and is not an instruction to touch OpenCode files.
+- Static/current-candidate evidence revalidated: readiness boundary tests, fullstack boundary, DSH OpenAPI, generated-client/contract/service/migration drift, runtime bindings, broken imports, mobile synchronization, WLT financial boundary, Identity session, cleanup policy, contract scope binding, OpenAPI provenance, and Captain/Field/DSH typechecks pass.
+- Runtime/DB evidence remains open: existing containers and migration ledgers predate `37984ca2a`; DSH PostgreSQL integration cannot run without the canonical runtime `DATABASE_URL`. No runtime health result is accepted as current-candidate provenance.
+- Root-01 cleanup finding: remove the unused `FieldActivationReadiness` client type and the unconsumed duplicate `Repository.ActivationReadiness` method. Retain the distinct live `CurrentProviderReadiness` and `GovernedActivationReadiness` contracts with their explicit owners and consumers.
+- Current execution state remains `OPEN`; no governance mutation, plan deletion, reset, full runtime, provider runtime, or OpenCode-file mutation is authorized by this reconciliation.
+
+### 0.2 Re-audit finding exposed by current scoped runtime smoke — 2026-08-19
+
+- Scoped runtime `up` completed for `identity,workforce,dsh,wlt`; governed migrations for all four services recorded `sourceSha=37984ca2acc6a1ce86279f35cba979859c15adc7` and the selected containers became ready.
+- Scoped smoke passed Identity/Workforce readiness and DSH health/readiness/catalog readback, then failed at partner product-proposal creation with `409 STORE_SCOPE_REQUIRED`.
+- Root cause is contract/consumer drift, not an authorization defect: the live DSH backend correctly resolves `dsh_store_actor_scopes` and rejects an implicit store when the partner has multiple active object scopes; local actor `partner-local-001` currently has eight active `partner` scopes in `local-dsh`, including `store-test-grocery`.
+- Affected consumers were identified: the partner product-proposal adapter/screen, partner proposal readback adapter/screen, the modular catalog contract/generated-client surface, the canonical catalog smoke, the partner multisurface journey, and the request-boundary diagnosis script. The UI already owns the selected `storeId` but the create/readback requests dropped it.
+- Root-correct treatment is explicit query-scope propagation (`storeId`) through contract → generated client → frontend adapters/screens → bounded runtime journeys. DSH authorization remains the sole object-authorization truth; no fallback or implicit first-store selection is introduced.
+- This finding keeps the task `OPEN` until the migrated consumers, DB-backed DSH tests, runtime smoke, provenance, and final negative-space/adversarial checks pass on the final candidate.
+
 This plan **supersedes as executable guidance**:
 
 1. `plans/diagnose-implementing/all-surfaces-services-root-closure-20260818.md`

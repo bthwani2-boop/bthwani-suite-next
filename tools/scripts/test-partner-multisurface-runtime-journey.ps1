@@ -197,7 +197,7 @@ $ProposalBody = @{
 if ($RequiresBarcode) {
   $ProposalBody.barcode = "628$($RunId.ToString().PadLeft(10, '0').Substring(0, 10))"
 }
-$Proposal = Invoke-Api POST "$DshBaseUrl/dsh/partner/catalog/product-proposals" (Headers $Partner "catalog-proposal") $ProposalBody
+$Proposal = Invoke-Api POST "$DshBaseUrl/dsh/partner/catalog/product-proposals?storeId=$([uri]::EscapeDataString($StoreId))" (Headers $Partner "catalog-proposal") $ProposalBody
 Require-Status $Proposal @(200, 201) "partner product proposal"
 $ProposalRecord = Get-Value $Proposal.Json 'proposal'
 $ProposalId = "$(Get-Value $ProposalRecord 'id')"

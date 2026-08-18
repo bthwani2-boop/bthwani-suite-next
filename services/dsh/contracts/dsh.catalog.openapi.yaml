@@ -578,6 +578,12 @@ paths:
         in: query
         schema:
           type: string
+      - name: storeId
+        in: query
+        description: Required when the authenticated partner has more than one active store scope.
+        schema:
+          type: string
+          minLength: 1
       - name: limit
         in: query
         schema:
@@ -606,6 +612,13 @@ paths:
       - CentralCatalog
       security:
       - bearerAuth: []
+      parameters:
+      - name: storeId
+        in: query
+        description: Required when the authenticated partner has more than one active store scope.
+        schema:
+          type: string
+          minLength: 1
       requestBody:
         required: true
         content:
