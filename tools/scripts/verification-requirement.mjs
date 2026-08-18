@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 const VERIFICATION_AUTHORITY_PREFIXES = [
   ".github/actions/",
   ".github/workflows/",
+  "tools/verification/",
 ];
 
 const VERIFICATION_AUTHORITY_FILES = new Set([
@@ -11,6 +12,7 @@ const VERIFICATION_AUTHORITY_FILES = new Set([
   "tools/scripts/detect-ci-context.mjs",
   "tools/scripts/detect-ci-context.test.mjs",
   "tools/scripts/run-foundation-gate.ps1",
+  "tools/scripts/run-journey-gate.ps1",
   "tools/scripts/verification-requirement.mjs",
 ]);
 
