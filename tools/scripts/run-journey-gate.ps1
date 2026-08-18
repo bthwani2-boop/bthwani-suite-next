@@ -1,51 +1,29 @@
 param(
   [switch]$Full,
   [switch]$Runtime,
-  [string]$Guard,
-  [string]$Journey,
-  [switch]$PlanOnly
+  [Parameter(Mandatory)][string]$Journey
 )
 
 Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $ErrorActionPreference = "Stop"
 
-$manifestPath = "tools\verification\verification-sets.json"
-if (-not (Test-Path -LiteralPath $manifestPath)) {
-  throw "Verification routing is missing: $manifestPath"
+$profilesPath = "tools\verification\journey-profiles.json"
+if (-not (Test-Path -LiteralPath $profilesPath)) {
+  throw "Journey verification profiles are missing: $profilesPath"
 }
 
-$manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
-$journeyProfiles = $manifest.journeyProfiles
-$journeySelectors = @($Journey -split ',' | ForEach-Object { [string]$_.Trim().ToUpperInvariant() } | Where-Object { $_ } | Select-Object -Unique)
-$guardSelectors = @($Guard -split ',' | ForEach-Object { [string]$_.Trim() } | Where-Object { $_ } | Select-Object -Unique)
+$profiles = (Get-Content -LiteralPath $profilesPath -Raw | ConvertFrom-Json).journeyProfiles
+$journeys = @($Journey -split ',' | ForEach-Object { [string]$_.Trim().ToUpperInvariant() } | Where-Object { $_ } | Select-Object -Unique)
+$guards = [System.Collections.Generic.List[string]]::new()
 
-if ($guardSelectors.Count -eq 0 -and $journeySelectors.Count -eq 0) {
-  throw "A Journey profile or explicit Guard selector is required; refusing an unbounded journey run."
-}
-
-$journeyGuards = [System.Collections.Generic.List[string]]::new()
-if ($guardSelectors.Count -gt 0) {
-  foreach ($guardName in $guardSelectors) {
-    if (-not $journeyGuards.Contains($guardName)) { $journeyGuards.Add($guardName) }
+foreach ($journeyId in $journeys) {
+  $property = $profiles.psobject.Properties[$journeyId]
+  if ($null -eq $property) {
+    throw "Unknown journey profile '$journeyId'. Available: $(@($profiles.psobject.Properties.Name) -join ', ')"
   }
-} else {
-  foreach ($selector in $journeySelectors) {
-    $profileProperty = $journeyProfiles.psobject.Properties[$selector]
-    $profile = if ($null -eq $profileProperty) { $null } else { $profileProperty.Value }
-    if ($null -eq $profile) {
-      $available = @($journeyProfiles.psobject.Properties.Name) -join ", "
-      throw "Journey profile is not registered: $selector. Available profiles: $available"
-    }
-    foreach ($guardName in @($profile)) {
-      if (-not $journeyGuards.Contains([string]$guardName)) { $journeyGuards.Add([string]$guardName) }
-    }
+  foreach ($guardName in @($property.Value)) {
+    if (-not $guards.Contains([string]$guardName)) { $guards.Add([string]$guardName) }
   }
-}
-$journeyGuards = @($journeyGuards)
-
-if ($PlanOnly) {
-  [ordered]@{ journeys = $journeySelectors; guards = $journeyGuards; count = $journeyGuards.Count } | ConvertTo-Json -Depth 4
-  exit 0
 }
 
 function Invoke-Step {
@@ -58,9 +36,8 @@ function Invoke-Step {
 }
 
 if ($Full) { Invoke-Step "workspace-verification" { pnpm run workspace:verify } }
-foreach ($guardName in $journeyGuards) {
-  $scriptName = "guard:$guardName"
-  Invoke-Step $scriptName { pnpm run $scriptName }
+foreach ($guardName in @($guards)) {
+  Invoke-Step "guard:$guardName" { pnpm run "guard:$guardName" }
 }
 
 if ($Runtime) {
@@ -73,7 +50,4 @@ if ($Runtime) {
   }
 }
 
-$scope = if ($Runtime) { "runtime" } else { "static" }
-$mode = if ($Full) { "full-explicit" } else { "targeted-default" }
-Write-Output ""
-Write-Output "RESULT: PASS scope=$scope mode=$mode journeys=$($journeySelectors -join ',')"
+Write-Output "RESULT: PASS journeys=$($journeys -join ',') runtime=$Runtime full=$Full"
