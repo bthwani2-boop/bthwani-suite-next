@@ -185,6 +185,156 @@ UNDERSTAND OBJECTIVE
 
 Do not wait for an exhaustive low-level scan once the highest root is proven deeply enough to rank and treat. Do not execute a lower finding while a materially higher unresolved cause can change the correct treatment.
 
+## 6.1 Maximum-safe-parallel execution law
+
+> **MAXIMUM SAFE PARALLELISM; ONE CANONICAL INTEGRATION TRUTH; ZERO REDUNDANT WORK; ZERO WEAKER PROOF.**
+
+Execution is sequential only where causality, authority, shared mutation, dependency or evidence requires sequentiality.
+
+Once multiple Root Causes are sufficiently proven and ranked, continuously derive the current executable frontier:
+
+```text
+PROVEN ROOT LANDSCAPE
+→ ROOT DEPENDENCIES
+→ AUTHORITY / WRITE OVERLAP
+→ READY INDEPENDENT ROOTS
+→ MAXIMUM SAFE PARALLEL SET
+→ EXECUTE
+→ VERIFY AFFECTED CLAIMS
+→ RECONCILE
+→ RE-AUDIT / RE-RANK
+→ IMMEDIATELY REFILL AVAILABLE CAPACITY
+```
+
+### Parallelization unit
+
+Parallelize by **coherent Root Cause ownership**, not by arbitrary file, application, frontend/backend, language or repository-folder partition.
+
+A worker that owns a Root Cause owns the smallest complete end-to-end treatment required for that root across all materially affected:
+
+`authority | contracts | data | backend | frontend | runtime | consumers | migration | cleanup | verification`.
+
+Do not split one coherent root between independent workers when doing so would create competing target models, duplicate authority or partial cutover.
+
+### Safe concurrency test
+
+Two work items may execute concurrently only when all are proven:
+
+```text
+NO unresolved causal dependency between them
+AND NO conflicting canonical-authority ownership
+AND NO unsafe overlapping write set
+AND NO shared migration/cutover requiring ordered mutation
+AND NO evidence dependency requiring one result before the other
+```
+
+Read overlap alone does not prohibit concurrency.
+
+When overlap is uncertain, treat it as non-parallel until proven safe.
+
+### Single integration authority
+
+Multiple workers may diagnose, execute and verify independent roots concurrently, but there must remain exactly one canonical integration authority for:
+
+```text
+live-HEAD reconciliation
+root landscape
+priority/ranking
+shared-authority decisions
+collision resolution
+candidate integration
+final closure state
+```
+
+No worker may silently redefine shared Product/System truth because of its local implementation.
+
+### Work-conserving scheduling
+
+Do not introduce artificial batch barriers.
+
+When any active root finishes:
+
+```text
+verify its materially affected claims
+→ reconcile its result with current live truth
+→ invalidate only affected evidence
+→ update root/dependency landscape
+→ unlock newly executable roots
+→ immediately assign available execution capacity
+```
+
+Do not wait for unrelated workers to finish before starting newly ready independent work.
+
+A `DECISION_REQUIRED`, blocker or long-running verification suspends only its dependent cone; all proven independent work continues.
+
+### Evidence and context reuse
+
+Previously acquired evidence remains reusable while its provenance and assumptions remain valid.
+
+Do not repeat repository-wide discovery, audit, inspection, research, builds, tests or runtime checks merely because another worker/session begins.
+
+```text
+VALID EVIDENCE → REUSE
+INVALIDATED EVIDENCE → REACQUIRE AFFECTED PROOF
+UNKNOWN VALIDITY → REVALIDATE THE MINIMUM REQUIRED ASSUMPTION
+```
+
+Resume from the latest reconciled state and current delta; restart broad diagnosis only when evidence proves that the governing baseline, authority model or material coverage has been invalidated.
+
+### No redundant execution
+
+Before beginning a work item, prove that it is not already:
+
+`treated | superseded | being treated by another owner | invalidated by a higher root | blocked by an unresolved parent | obsolete after current-head movement`.
+
+Do not allow multiple workers to independently solve the same symptom/root.
+
+### Higher-root preemption
+
+If execution exposes a newly proven Root Cause materially higher than the active treatment:
+
+```text
+STOP affected lower-level treatment
+→ preserve valid evidence/work
+→ promote the higher root
+→ invalidate affected descendant assumptions
+→ re-rank
+→ treat the higher root first
+```
+
+Do not continue accumulating descendant symptom fixes.
+
+### Speed/accuracy invariant
+
+Speed may come only from:
+
+```text
+safe parallelism
++ evidence/context reuse
++ affected-only verification
++ delta-first reconciliation
++ removal of redundant work
++ continuous scheduling
++ highest-root-first treatment
+```
+
+Speed must never come from:
+
+```text
+skipped material audit/inspection/diagnosis/analysis
+skipped authority or blast-radius proof
+skipped affected consumers
+weaker verification
+silent assumptions
+partial migration
+symptom treatment
+premature closure
+```
+
+If acceleration conflicts with correctness or proof, correctness and fail-closed proof win.
+
+Parallel execution changes scheduling only; it does not weaken any requirement owned by `01`, `02`, `03` or `04`.
+
 ## 7. Audit, inspection, diagnosis and analysis are distinct mandatory operations
 
 These terms are related but are **not interchangeable** and must not be silently collapsed into "diagnosis":
