@@ -6,472 +6,560 @@
 
 - Repository: `bthwani2-boop/bthwani-suite-next`
 - Branch: `b`
+- Task: `all-surfaces-services-root-closure`
 - Phase: `AUDIT_PREPARE`
 - State: `AUDIT_PREPARE_ACTIVE — MATERIAL ROOTS OPEN — NO TARGET EXECUTION IN THIS PHASE`
 - Audit authority entrypoint: `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`
-- Audited repository HEAD: `749a7c54f9c1552284a659dd180ef647cdc271b5`
-- Audited tree: `a208fafa1b325ee5a82101586363181edaea0005`
-- HEAD commit: `captain: remove obsolete local readiness policy`
-- Previous plan narrative that referred to `EXECUTE_CLOSE`, `0c03ebcbecc06c779281fd34b64eb973d382645b`, or an “uncommitted treatment” is **historical evidence only and is superseded for current-state claims**.
+- Target-system audited HEAD: `749a7c54f9c1552284a659dd180ef647cdc271b5`
+- Target-system audited tree: `a208fafa1b325ee5a82101586363181edaea0005`
+- Target-system HEAD commit: `captain: remove obsolete local readiness policy`
+- Concurrent branch movement observed during this audit: `c9673251cca60c7ced9f5638779b84879e2d1a39`.
+- Concurrent delta classification: `PLAN_ONLY`; it modified only this plan and had parent `749a7c54f9c1552284a659dd180ef647cdc271b5`. Therefore target-system evidence remains pinned to `749a7c54...` while the plan delta is accepted as input and reconciled here.
+- Previous plan narrative referring to earlier `EXECUTE_CLOSE`, uncommitted working-tree treatment, or older baselines is **historical evidence only**, not current closure proof.
 - `CURRENT CODE ≠ GOVERNANCE UPDATE AUTHORITY`.
 - `UNCERTAINTY = NO GOVERNANCE WRITE`.
-- `TARGET_SYSTEM_MUTATION = NONE` for this phase.
-- No source, runtime, DB, contract, package, lockfile, app, service, migration, governance, or generated-artifact treatment may be performed while this record remains in `AUDIT_PREPARE`.
+- `TARGET_SYSTEM_MUTATION_THIS_PHASE = NONE`.
+- No source, runtime, DB, contract, package, lockfile, app, service, migration, governance, generated artifact, or tool/guard treatment is authorized while this record remains in `AUDIT_PREPARE`.
 
 ### Phase law
 
-Audit proceeds as:
-
 `AUDIT + INSPECT + DIAGNOSE + ANALYZE → HIGHEST PROVEN ROOT → CANONICAL TARGET → ROOT-CORRECT TREATMENT DESIGN → BLAST RADIUS → MIGRATION/CUTOVER/CLEANUP PLAN → VERIFY PLAN → RE-AUDIT/RE-RANK`
 
-Execution is explicitly deferred. Build/test success, disappearance of an error, or a prior commit does not constitute closure.
+Execution is explicitly deferred. A previous commit, a passing build/test, or disappearance of an observed symptom does not constitute closure.
 
 ---
 
-## 1. Canonical owner matrix used by this audit
+## 1. Canonical owner matrix and invariants proven for this audit
 
-The current audit preserves the already-resolved separation of sovereign truth and rejects shared writable ownership:
+### Identity
 
-1. **Identity**
-   - actor identity, authentication, activation, roles/surfaces, sessions and identity lifecycle.
+Identity owns actor identity, authentication, activation, roles/surfaces, sessions and identity lifecycle.
 
-2. **Workforce**
-   - provider professional profile, engagement, professional/readiness prerequisites, workforce work scopes/operational assignments and other Workforce-owned eligibility facts.
-   - Workforce readiness may consume Identity lifecycle as a sovereign dependency, but must not manufacture DSH or WLT truth.
+### Workforce
 
-3. **DSH**
-   - store/business object authorization and store access, including the currently proven canonical DSH store-object scope path through `dsh_store_actor_scopes` / `store.ActorCanAccessStore`.
-   - store/visit/order/dispatch/fleet/presence/capacity/delivery operational context and state.
-   - journey-level operational aggregation where a DSH journey needs facts from multiple sovereign owners.
+Workforce owns workforce/professional profile, engagement, professional prerequisites, workforce-specific evidence, and **operational workforce assignments** used for staffing/scheduling/workforce operations.
 
-4. **WLT**
-   - wallet, ledger, balance, settlement, commission and financial eligibility/mutation truth.
+Workforce readiness may consume Identity lifecycle as a sovereign dependency, but Workforce must not manufacture DSH dispatch/store authorization truth or WLT financial truth.
 
-5. **Surfaces / app runtimes**
-   - consumers/composers only. They must not invent a local eligibility state or duplicate a domain decision.
+### DSH
 
-### Mandatory separation invariant
+DSH owns commerce and operational journey truth, stores, store-object authorization, catalog/checkout/order/dispatch/delivery/visit state, and journey-level aggregation when DSH needs facts from multiple sovereign owners.
 
-A Workforce operational/work-scope fact must not become a second DSH store-object authorization table, and a DSH store-object scope must not be presented as Workforce professional/readiness truth. Cross-domain readiness is composed at the owning journey boundary, not copied into each owner.
+The currently proven canonical DSH store authorization path remains `dsh_store_actor_scopes` / DSH store-scope authorization primitives.
+
+### WLT
+
+WLT exclusively owns authoritative wallet, ledger, balance, payment, refund, settlement, payout, commission, reconciliation and financial-eligibility/mutation truth.
+
+### Surfaces / app runtimes
+
+Surfaces are consumers/composers only. They may present owner decisions and technical failure states but must not invent local eligibility, readiness, authorization, wallet, or assignment truth.
+
+### Mandatory separation invariants
+
+1. `DSH authorization scope != Workforce operational assignment`.
+2. A Workforce operational assignment must not become a second DSH store-object authorization ledger.
+3. A DSH store authorization scope must not be presented as Workforce staffing/professional assignment truth.
+4. Cross-domain operational readiness belongs to the owning journey composition boundary, not to every sovereign service and not to the surface shell.
+5. `DEPENDENCY_UNAVAILABLE != BUSINESS_BLOCKED`.
+6. One durable fact has one authoritative writer/owner; projections/caches/read models never become parallel truth.
+7. Runtime source, contracts, generated clients, package manifests, lockfile and consumers must converge in the same cutover.
+
+These invariants are supported by current implementation/database comments and current `governance/product/PRD.md`; Governance is supporting evidence only and remains non-writable in this phase.
 
 ---
 
-## 2. Current exact-HEAD audit — readiness / ownership / package-boundary cone
+## 2. Exact-HEAD evidence and findings
 
-This section records evidence inspected directly on `749a7c54f9c1552284a659dd180ef647cdc271b5`.
+### 2.1 Workforce readiness implementation — ownership direction corrected, closure not proven
 
-### 2.1 Workforce readiness implementation — direction corrected, closure not yet proven
+Inspected current implementation under `core/workforce/backend/**`.
 
-Inspected:
+Current behavior proves:
 
-- `core/workforce/backend/internal/workforce/readiness.go`
-- `core/workforce/backend/internal/http/readiness_routes.go`
-- `core/workforce/backend/internal/workforce/readiness_identity_policy_test.go`
+- Workforce evaluates Workforce-owned provider/professional prerequisites and Identity lifecycle.
+- DSH dispatch and WLT financial blockers are no longer legitimate Workforce-owned blockers in runtime source.
+- sovereign readiness dependency failure is represented as `ErrReadinessDependencyUnavailable` and exposed as HTTP `503 WORKFORCE_READINESS_UNAVAILABLE` rather than silently becoming a normal `BLOCKED` decision.
 
-Current implementation has materially improved ownership:
+**Disposition:** canonical source direction is present, but public contract/generated/consumer propagation remains open.
 
-- Workforce evaluates Workforce-owned provider prerequisites and Identity lifecycle.
-- DSH dispatch blockers and WLT financial blockers are no longer fabricated inside Workforce readiness.
-- a sovereign dependency outage is represented as `ErrReadinessDependencyUnavailable` and exposed as HTTP `503 WORKFORCE_READINESS_UNAVAILABLE`, rather than converted into a normal business `BLOCKED` decision.
-
-**Audit disposition:** implementation direction is canonical, but the contract and every consumer must still match it before this root can be considered cut over.
-
-### 2.2 Workforce OpenAPI contract drift — PROVEN OPEN
+### 2.2 Workforce runtime ↔ OpenAPI ↔ frontend mirror drift — `PROVEN_OPEN`
 
 Inspected:
 
 - `core/workforce/contracts/workforce.openapi.yaml`
+- `services/dsh/frontend/shared/workforce/workforce.types.ts`
+- current Workforce readiness source/route.
 
-Current contract is stale relative to the implementation:
+Proven drift:
 
-- `/workforce/readiness/{actorId}` does **not** declare the new `503` readiness-dependency-unavailable response.
-- `ReadinessBlockerReason` still contains cross-domain/obsolete reasons including:
-  - `NO_ACTIVE_ASSIGNMENT`
-  - `SHIFT_INACTIVE`
-  - `OUTSIDE_ACTIVE_AREA`
-  - `FINANCIAL_ELIGIBILITY_BLOCKED`
-  - `ELIGIBILITY_UNAVAILABLE`
-- the implementation no longer owns the DSH/WLT meanings represented by those values.
+- actor readiness contract does not expose the runtime `503 WORKFORCE_READINESS_UNAVAILABLE` behavior.
+- public blocker vocabulary still retains stale cross-domain values including `FINANCIAL_ELIGIBILITY_BLOCKED`, `DISPATCH_OWNER_BLOCKED` and `ELIGIBILITY_UNAVAILABLE` alongside Workforce-owned values.
+- DSH frontend Workforce mirror still carries the same obsolete cross-domain blocker vocabulary.
 
-**Finding:** `IMPLEMENTATION ↔ CONTRACT PARALLEL TRUTH`.
+**Finding:** `IMPLEMENTATION ↔ PUBLIC CONTRACT ↔ DOWNSTREAM TYPE PARALLEL TRUTH`.
 
-**Root-correct later treatment:** contract schema must be rebuilt from the sovereign Workforce semantics, response behavior aligned to implementation, generated/bound clients regenerated, and every consumer migrated before obsolete reasons are deleted.
+**Highest root:** semantic ownership was corrected in source but not propagated through the complete contract/consumer graph.
 
-### 2.3 DSH captain aggregate readiness — canonical journey owner is present
+**Later root-correct treatment:** reduce the owner contract to Workforce-owned semantics, model `503` explicitly, regenerate generated artifacts, migrate all consumers, then delete obsolete types/reasons only after negative-space proof.
 
-Inspected:
+### 2.3 DSH Captain operational readiness owner exists — source direction canonical
 
-- `services/dsh/backend/internal/http/server.go`
-- `services/dsh/backend/internal/http/captain_readiness_closure.go`
-
-Current DSH route:
+Current DSH exposes:
 
 - `GET /dsh/captain/me/readiness`
 
-Current aggregate composes:
+The DSH Captain aggregate composes the relevant Workforce, DSH dispatch and WLT-backed financial facts. Dependency failure is surfaced as `503 CAPTAIN_READINESS_UNAVAILABLE`, not as business ineligibility.
 
-1. Workforce activation/readiness dependency.
-2. DSH dispatch profile/accreditation/suspension state.
-3. WLT-backed financial eligibility snapshot/refresh.
+**Disposition:** semantic owner is correct; package/contract/consumer/candidate closure remains open.
 
-Dependency failure is surfaced as `503 CAPTAIN_READINESS_UNAVAILABLE`; it is not converted to a normal “not eligible” business answer.
+### 2.4 Captain frontend/package cutover — `PROVEN_OPEN HALF-CUTOVER`
 
-**Audit disposition:** this is the correct semantic owner for captain start-work readiness. The remaining work is cutover completeness, contracts, consumers, package graph, negative space and verification.
+Current positive state:
 
-### 2.4 Captain frontend cutover — PARTIALLY IMPLEMENTED, HALF-CUTOVER STILL PROVEN
+- `services/dsh/frontend/app-captain/captain-readiness.api.ts` calls `/dsh/captain/me/readiness`.
+- `services/dsh/frontend/app-captain/index.ts` is the intended public Captain composition boundary.
+- `services/dsh/package.json` exports `./app-captain`.
+- `apps/app-captain/runtime/src/App.tsx` consumes `@bthwani/dsh/app-captain`.
+- obsolete local `captain-readiness.policy.ts` was deleted.
+- Captain outage is no longer fabricated into a normal business blocker in the app shell.
 
-Inspected current source:
-
-- `services/dsh/frontend/app-captain/captain-readiness.api.ts`
-- `services/dsh/frontend/app-captain/index.ts`
-- `services/dsh/package.json`
-- `apps/app-captain/runtime/package.json`
-- `apps/app-captain/runtime/src/App.tsx`
-- `apps/app-captain/runtime/src/features/readiness/ReadinessGateScreen.tsx`
-- deleted former `apps/app-captain/runtime/src/features/readiness/captain-readiness.policy.ts`
-- `pnpm-lock.yaml`
-
-Proven positive state:
-
-- app-captain now consumes `@bthwani/dsh/app-captain` rather than directly importing the readiness implementation by filesystem path.
-- the public DSH package exports `./app-captain`.
-- captain readiness frontend calls `/dsh/captain/me/readiness`.
-- the local captain readiness policy shadow was removed.
-- an unavailable aggregate is not synthesized into a business blocker in `App.tsx`.
-
-Proven incomplete state:
+Current incomplete state:
 
 - `apps/app-captain/runtime/package.json` declares `@bthwani/dsh: workspace:*`.
-- the corresponding `apps/app-captain/runtime` importer in `pnpm-lock.yaml` does **not** contain `@bthwani/dsh`.
+- the corresponding `apps/app-captain/runtime` importer in `pnpm-lock.yaml` does not contain `@bthwani/dsh`.
 
-**Finding:** deterministic clean-checkout dependency graph is stale. The cutover cannot be called complete while package manifest and lockfile disagree.
+**Finding:** package manifest and deterministic lock graph disagree. Clean-checkout/frozen-lockfile reproducibility is therefore not proven and the migration is incomplete.
 
-### 2.5 Field frontend readiness — PROVEN OPEN SHADOW/FALLBACK PATH
+### 2.5 Field frontend — local shadow readiness + deep service coupling — `PROVEN_OPEN`
 
 Inspected:
 
 - `apps/app-field/runtime/src/App.tsx`
 - `apps/app-field/runtime/package.json`
+- `apps/app-field/runtime/tsconfig.json`
+- `apps/app-field/runtime/metro.config.cjs`
 - `services/dsh/frontend/app-field/index.ts`
 - `services/dsh/package.json`
 
 Current Field runtime still:
 
-- imports DSH app-field and shared Workforce/session modules by deep relative filesystem paths such as `../../../../services/dsh/...`.
-- directly calls `fetchWorkforceReadiness(actorId)` from DSH shared Workforce client.
-- locally validates returned identity/kind and, on mismatch, synthesizes a normal `BLOCKED` response with `ELIGIBILITY_UNAVAILABLE`.
-- on request failure/outage, also synthesizes `BLOCKED + ELIGIBILITY_UNAVAILABLE`.
-- uses the stale Workforce `ReadinessGate` model that still exposes the obsolete cross-domain blocker vocabulary.
-- has no declared `@bthwani/dsh` dependency.
-- cannot consume a package-level `@bthwani/dsh/app-field` boundary because `services/dsh/package.json` currently exports `./app-captain` but not `./app-field`, even though `services/dsh/frontend/app-field/index.ts` already exists.
+- imports DSH internals through deep relative filesystem paths under `../../../../services/dsh/...`.
+- directly consumes Workforce readiness from DSH shared Workforce code.
+- on readiness request failure/outage synthesizes a normal `BLOCKED` decision with `ELIGIBILITY_UNAVAILABLE`.
+- can therefore claim business ineligibility when the actual state is merely unverifiable/unavailable.
+- has no declared `@bthwani/dsh` workspace dependency.
+- cannot consume `@bthwani/dsh/app-field` because DSH package exports `./app-captain` but not `./app-field`, even though `services/dsh/frontend/app-field/index.ts` already exists.
+- retains a TypeScript include into DSH app-field declaration files, which is part of the current filesystem-coupled composition and must be re-evaluated after package cutover.
 
 **Findings:**
 
-- `SILENT FAILURE → BUSINESS BLOCKED` semantic corruption.
-- `DEEP FILESYSTEM COUPLING` across package boundary.
-- `CONSUMER STILL BOUND TO STALE CONTRACT`.
-- `PARTIAL MULTI-SURFACE CUTOVER` because Captain and Field follow different composition rules.
+- `SILENT FAILURE → FALSE BUSINESS STATE`.
+- `SURFACE-LOCAL READINESS POLICY SHADOW`.
+- `DEEP FILESYSTEM PACKAGE-BOUNDARY BYPASS`.
+- `UNDECLARED WORKSPACE OWNERSHIP`.
+- `PARTIAL MULTI-SURFACE CUTOVER` because Captain and Field use different composition rules.
 
-**Canonical target:** Field must consume an explicit stable public owner boundary. A dependency outage must stay an unavailable/degraded technical state, never become a fabricated business ineligibility. Any DSH-specific Field operational gate must be owned/composed in DSH; Workforce-only readiness remains Workforce-only.
-
-### 2.6 Field backend authorization semantics — canonical implementation plus stale narrative
+### 2.6 DSH Field readiness primitive exists, but no public self-readiness boundary exists — `PROVEN_OPEN`
 
 Inspected:
 
-- `services/dsh/backend/internal/http/field_readiness_gate.go`
-- `services/dsh/backend/internal/fieldreadiness/authz.go`
 - `services/dsh/backend/internal/fieldreadiness/fieldreadiness.go`
+- `services/dsh/backend/internal/http/field_readiness_gate.go`
+- `services/dsh/backend/internal/http/field_readiness_closure_test.go`
+- `services/dsh/backend/internal/http/server.go`
 
-Proven implementation:
+Proven internal semantic primitive:
 
-- `fieldreadiness.AuthorizeStore` explicitly requires canonical DSH store access via `store.ActorCanAccessStore`.
-- field visit operations continue to validate DSH store-object scope; active visit stale detection references `dsh_store_actor_scopes`.
+- Workforce dependency `ERROR` is treated as unavailable/error, not as business denial.
+- missing Workforce assignment is represented as a business decision such as `MISSING_WORKFORCE_ASSIGNMENT`.
+- closure tests prove the intended distinction: dependency error → `503`; missing assignment → governed denial.
 
-Proven stale narrative:
+Proven boundary gap:
 
-- `field_readiness_gate.go` says store access resolves through “Workforce-backed authorization primitives”. That statement conflicts with the actual DSH authorization path and with the owner split.
-- `enforceFieldReadinessGate` currently performs only `requireActor(..., "field")`; it is not itself a full readiness evaluator. The name/comment therefore overstate what the wrapper does.
+- `server.go` has no `GET /dsh/field/me/readiness` route.
+- `server.go` has no `/dsh/field/readiness` route.
+- `enforceFieldReadinessGate` only checks `requireActor(..., "field")`; it is a role gate, not a readiness decision endpoint.
+- operational checks are therefore distributed across handlers while app-field independently queries/synthesizes readiness.
 
-**Finding:** misleading semantic naming/commentary can reintroduce ownership drift even though the active authorization function is currently canonical.
+**Highest root:** the Field journey has a useful internal semantic primitive but no single public application-facing readiness boundary, leaving the app shell to manufacture a shadow decision.
 
-**Later treatment:** rename/flatten/remove the wrapper if it has no independent responsibility, or make its name/comment reflect its exact role; do not create a second readiness policy merely to justify the existing name.
+**Canonical target for later execution:** one minimum DSH-owned Field operational readiness endpoint/client, backed by the existing semantic owner rather than a new parallel policy stack; technical dependency failure remains unavailable and business assignment denial remains business denial.
+
+### 2.7 Field role-gate naming/commentary contradicts actual authorization owner — `PROVEN_OPEN CLEANUP`
+
+`field_readiness_gate.go` describes store access as “Workforce-backed authorization primitives”, while current DSH store authorization is separately owned and implemented through DSH store-object access primitives.
+
+The wrapper name `enforceFieldReadinessGate` also overstates its behavior because it only performs a field-role check.
+
+**Finding:** stale semantic naming/commentary creates owner ambiguity and can cause future parallel-truth reintroduction.
+
+**Later treatment:** simplify/rename/remove the wrapper according to its real responsibility; do not add fake logic merely to justify the existing name.
+
+### 2.8 DSH store authorization vs Workforce operational assignment — owner split `INVARIANT_PROVEN`; consumer audit remains open
+
+Inspected:
+
+- `core/workforce/backend/internal/workforce/operational_assignments.go`
+- `services/dsh/database/migrations/dsh-990_workforce_assignment_cleanup.sql`
+- `services/dsh/contracts/dsh.workforce-scopes.openapi.yaml`
+
+Evidence converges on one split:
+
+- Workforce owns operational assignment records used by workforce operations.
+- DSH owns canonical store/area authorization scope.
+- the DSH cleanup migration explicitly removes old assignment-era DSH tables while preserving `dsh_store_actor_scopes` as authorization truth.
+- current DSH scope contract describes store-scoped authorization, not a Workforce assignment ledger.
+
+**Disposition:** ownership itself is **not** `DECISION_REQUIRED`.
+
+**Still required before closure:** enumerate every current writer/reader/API/table/consumer and prove no remaining dual writer, alias, stale mutation route, or UI model conflates these two meanings.
+
+### 2.9 Full-stack boundary guard does not enforce app-runtime → service-public-boundary rule — `PROVEN_OPEN SYSTEMIC GUARD GAP`
+
+Inspected:
+
+- `tools/guards/fullstack-boundary-gate.mjs`
+- root `package.json` guard wiring.
+
+The guard recognizes `apps/app-client`, `apps/app-partner`, `apps/app-captain`, and `apps/app-field` as mobile roots and blocks web/mobile ownership violations, cross-surface imports and backend/generated direct imports.
+
+However it does **not** reject an app runtime deep-relative import into the corresponding `services/dsh/frontend/...` implementation. Therefore the currently proven app-field filesystem bypass can exist without violating this guard.
+
+**Finding:** fixing current imports alone would be non-durable. The architectural invariant itself is not mechanically enforced.
+
+**Canonical target:** after package cutover, strengthen the existing boundary guard (minimum necessary mechanism) so runtime shells consume declared public package exports and cannot regress to service-internal filesystem traversal. Do not add a second overlapping guard if the existing one is the correct owner.
+
+### 2.10 Governance read-only impact — supporting evidence; mutation remains `HOLD`
+
+Inspected current `governance/product/PRD.md` and current product-contract directory read-only.
+
+The active PRD states:
+
+- the platform is one governed multi-surface system, not independent apps.
+- identity, business scope, workforce affiliation, operational ownership and financial ownership are separate concepts.
+- every durable fact has exactly one authoritative owner.
+- Workforce eligibility may be consumed by DSH, but Workforce must not become a parallel dispatch/assignment owner.
+- vertically complete implementation requires surface → adapter/client → contract → backend/domain → persistence/integration → canonical readback → affected consumers.
+
+No current Field-specific Product Truth contract was found in `governance/product/contracts` that authorizes the present surface-local readiness synthesis or deep service coupling.
+
+**Disposition:** Governance supports the owner-separation direction but is not being rewritten. `GOVERNANCE_WRITE = HOLD` under the mutation gate.
 
 ---
 
-## 3. Re-ranked root-cause landscape for AUDIT_PREPARE
+## 3. Re-ranked root-cause landscape
 
-Priority is based on highest proven systemic leverage, not easiest file fix.
+### ROOT-A — P0 — Readiness semantic ownership was only partially propagated — `PROVEN_OPEN`
 
-### ROOT-A — P0 — Readiness semantic ownership still has contract + consumer parallel truth — OPEN
+Cone: Workforce source → Workforce contract/generated types → DSH Captain/Field composition → app consumers.
 
-**Evidence cone:** Workforce implementation, Workforce OpenAPI, DSH Captain aggregate, Captain runtime, Field runtime.
+Highest proven root: source ownership changed without complete contract/consumer cutover.
 
-**Highest proven root:** the source-level ownership correction was only partially propagated across contracts and consumers. Multiple layers still encode the former meaning of “readiness”.
+Canonical target:
 
-**Canonical target:**
+- Workforce exposes Workforce-only readiness.
+- DSH owns DSH journey aggregates.
+- surface shells consume owner boundaries and never invent blocker meanings.
+- technical unavailable remains technical unavailable.
+- contracts/generated clients/types equal runtime semantics.
 
-- Workforce = Workforce-owned readiness + explicit dependency-unavailable error.
-- DSH journey aggregate = DSH operational composition when DSH + Workforce + WLT facts are needed.
-- surfaces = consumers only; no locally invented blocker.
-- generated contract/client vocabulary = identical to the sovereign owner.
+### ROOT-B — P0 — Public package cutover is structurally incomplete and non-reproducible — `PROVEN_OPEN`
 
-**Required later cutover order:** owner implementation → owner contract → generated/bound clients → DSH journey aggregate contracts → public frontend boundary → Captain/Field consumers → negative-space deletion.
+Evidence: Captain manifest/lockfile drift; Field lacks DSH dependency/export and uses deep relative imports.
 
-### ROOT-B — P0 — Package/public-boundary migration is not deterministic — OPEN
+Canonical target:
 
-**Evidence:** Captain package manifest changed but lockfile did not; Field still uses deep relative imports and has no exported app-field package boundary.
+- explicit `@bthwani/dsh/app-captain` and minimum justified `@bthwani/dsh/app-field` boundaries.
+- declared app dependencies.
+- regenerated lockfile from manifests.
+- clean/frozen install and Metro/TS/Expo resolution from checkout.
+- zero deep app-runtime traversal into DSH internals.
 
-**Canonical target:**
+### ROOT-C — P0 — Field operational readiness has no public journey boundary — `PROVEN_OPEN`
 
-- every app runtime declares the workspace packages it consumes.
-- lockfile is regenerated from manifests and exact workspace graph.
-- `@bthwani/dsh/app-captain` and the justified equivalent Field boundary are explicit package exports.
-- no app runtime reaches into `services/dsh` by filesystem traversal.
-- Metro/TypeScript/Expo resolution is proven from a clean checkout, not inferred from an existing workspace.
+Evidence: internal resolver exists and distinguishes error from denial, but no self-readiness HTTP route exists; app-field synthesizes its own result.
 
-### ROOT-C — P1 — Field outage handling fabricates business ineligibility — OPEN
+Canonical target: one DSH Field readiness boundary backed by the existing DSH/Workforce composition semantics, with no duplicate local policy.
 
-**Evidence:** `apps/app-field/runtime/src/App.tsx` catches readiness failure and creates `BLOCKED/ELIGIBILITY_UNAVAILABLE`.
+### ROOT-D — P1 — Architecture guard permits the exact package-boundary regression now present — `PROVEN_OPEN`
 
-**Canonical target:** unavailability is a distinct technical state. It may fail closed for starting work, but it must remain semantically `UNAVAILABLE`, not claim the provider is business-ineligible.
+Canonical target: extend the existing owner guard to reject app-runtime deep service imports after migration; avoid overlapping duplicate tooling.
 
-### ROOT-D — P1 — Store authorization vs Workforce operational scope language is drifting — OPEN CLEANUP ROOT
+### ROOT-E — P1 — Authorization/assignment semantics require negative-space proof and cleanup — `OPEN AUDIT ROOT`
 
-**Evidence:** actual Field authorization uses DSH store-object scope, while router commentary claims Workforce-backed authorization.
+Ownership split is proven; remaining task is to prove all readers/writers/aliases/contracts/UI models comply and delete any surviving duplicate/legacy truth.
 
-**Canonical target:** one owner per fact; comments, names, contracts, tables and APIs must describe the same owner split. No misleading aliasing or dual-write path.
+### ROOT-F — P1 — Prior systemic treatments require exact-current-HEAD revalidation — `OPEN AUDIT GATE`
 
-### ROOT-E — P1 — Prior large root treatments require exact-current-HEAD revalidation — OPEN AUDIT GATE
-
-The previous version of this plan recorded substantial treatment for:
-
-- parallel COD financial truth.
-- Workforce↔Identity provisioning.
-- mobile native capability ownership.
-- silent ETA approximation fallback.
-- derived contract/capability drift.
-- exact-candidate evidence.
-- governance disposition.
-
-Those records are retained as **historical execution evidence**, but the old plan used earlier baselines and described an uncommitted working tree. Under FAIL-CLOSED they cannot be promoted automatically to current closure claims.
-
-**Required AUDIT_PREPARE revalidation:** exact current `HEAD` must be inspected for the surviving writers/readers/contracts/data states/dependencies and negative space of each prior root. Any drift or regression becomes a current finding and is re-ranked by leverage.
+Historical execution evidence exists for COD financial truth, Workforce↔Identity provisioning, mobile native capability ownership, ETA fallback removal, derived contract/capability cleanup and candidate/governance gates. Earlier evidence cannot automatically close the current candidate.
 
 ---
 
 ## 4. Historical roots retained for current-head revalidation
 
-### HIST-01 — COD financial single truth
+### HIST-01 — COD financial single truth — `REVALIDATION_REQUIRED`
 
-Historical treatment claimed removal of active collect/remit financial paths, write fences for legacy custody semantics, contract regeneration and reconciliation evidence.
+Historical treatment claimed removal/fencing of DSH/WLT collect/remit financial paths and migration to WLT-owned authoritative semantics.
 
-**Current phase disposition:** `REVALIDATION_REQUIRED`. Do not reintroduce a collect/remit liability. WLT remains sole financial truth; DSH may retain operational delivery actor evidence only where it is not a second financial liability.
+Revalidate active writers/readers/contracts/migrations/data negative space. Never reintroduce DSH financial liability truth.
 
-### HIST-02 — Workforce ↔ Identity provisioning
+### HIST-02 — Workforce ↔ Identity provisioning — `REVALIDATION_REQUIRED`
 
-Historical treatment claimed canonical Workforce→Identity provisioning and successful tests.
+Revalidate creation inputs, role/surface derivation, idempotency, existing-actor linkage, activation/session path, obsolete provisioning-case APIs and source↔contract equality.
 
-**Current phase disposition:** `REVALIDATION_REQUIRED`, including creation inputs, role/surface derivation, idempotency, existing-actor linkage, activation, stale provisioning-case APIs and contract/runtime equality.
+### HIST-03 — Mobile native capability ownership — `REVALIDATION_REQUIRED`
 
-### HIST-03 — Mobile native capability ownership
+Revalidate typed runtime adapters, package ownership, Android/native evidence and any still-unproven iOS/device cone. Current Field/Captain package findings prove mobile composition is not globally closed.
 
-Historical treatment claimed runtime-owned typed adapters and successful Android exports, with Windows wrapper/iOS evidence gaps.
+### HIST-04 — ETA fallback — `REVALIDATION_REQUIRED`
 
-**Current phase disposition:** `REVALIDATION_REQUIRED`. The current package-boundary findings prove that mobile composition cleanup is not globally finished even if individual capability adapters were previously improved.
+Revalidate provider duration ownership, unavailable behavior, recovery and every surface consumer. No distance-based fabricated ETA may reappear as truth.
 
-### HIST-04 — ETA fallback
+### HIST-05 — Derived contracts/capabilities — `REOPENED_BY_CURRENT_EVIDENCE`
 
-Historical treatment claimed removal of distance-based ETA approximation and explicit unavailable behavior.
-
-**Current phase disposition:** `REVALIDATION_REQUIRED`, including provider error/no-duration/recovery and all consumer rendering.
-
-### HIST-05 — Derived contracts/capabilities and candidate evidence
-
-Historical treatment claimed regeneration and guard success.
-
-**Current phase disposition:** `REOPENED_BY_EVIDENCE` for at least Workforce readiness contract drift and Captain lockfile drift. A previous green contract/guard run does not cover later source changes.
+Workforce OpenAPI drift and Captain lockfile drift already prove previous derived-artifact/candidate evidence is stale for the current source state.
 
 ---
 
-## 5. Blast radius that must be included before EXECUTE_CLOSE
+## 5. Minimum blast radius before any EXECUTE_CLOSE
 
-The current readiness/package-boundary roots affect at minimum:
+Current proven cone includes at minimum:
 
 - `core/workforce/backend/**`
 - `core/workforce/contracts/**`
-- Workforce generated clients/bindings and contract guards.
-- `services/dsh/backend/internal/http/**` readiness composition.
-- `services/dsh/backend/internal/fieldreadiness/**` authorization/readiness semantics.
-- `services/dsh/contracts/**` and generated DSH API artifacts for Captain/Field readiness endpoints.
+- `core/workforce/clients/generated/**`
+- Workforce contract/client/binding tests and guards.
+- Workforce operational-assignment persistence/contracts/consumers.
+- `services/dsh/backend/internal/fieldreadiness/**`
+- `services/dsh/backend/internal/http/**` Captain/Field readiness and field routes.
+- DSH store authorization readers/writers and `dsh_store_actor_scopes`.
+- `services/dsh/contracts/**` and generated DSH API artifacts.
+- `services/dsh/frontend/shared/workforce/**`
 - `services/dsh/frontend/app-captain/**`
 - `services/dsh/frontend/app-field/**`
-- `services/dsh/frontend/shared/workforce/**`
-- `services/dsh/frontend/shared/session/**` only where package exposure/composition is involved.
-- `services/dsh/package.json` and TypeScript package graph.
+- `services/dsh/package.json`
 - `apps/app-captain/runtime/**`
 - `apps/app-field/runtime/**`
-- `pnpm-lock.yaml`
-- Metro/TypeScript/Expo workspace resolution and mobile source guards.
-- store-scope DB/access path (`dsh_store_actor_scopes`) only as required to prove no duplicate authorization truth is introduced.
-- Workforce operational assignment/work-scope persistence/contracts only as required to prove separation from DSH store-object authorization.
-- `governance/**` impact analysis only; no governance write in this phase.
+- their `package.json`, `tsconfig`, Metro/Expo composition and tests.
+- `pnpm-lock.yaml`.
+- `tools/guards/fullstack-boundary-gate.mjs` and affected guard registry/tests/wiring.
+- `governance/**` impact analysis read-only.
+- every consumer/dependency newly exposed by continued exact-ref audit.
 
-The blast radius remains open-ended: any consumer/dependency discovered by exact-ref inspection is added before execution.
-
----
-
-## 6. Root-correct treatment design for later EXECUTE_CLOSE — NOT AUTHORIZED YET
-
-This is treatment design only.
-
-### Wave 1 — contracts and semantics at sovereign owners
-
-1. Re-audit Workforce readiness implementation and contract together.
-2. reduce Workforce blocker vocabulary to facts Workforce actually owns.
-3. expose dependency-unavailable response in OpenAPI exactly as runtime behaves.
-4. regenerate/bind clients and prove no consumer depends on deleted obsolete reasons.
-5. audit DSH Captain readiness OpenAPI against `captain_readiness_closure.go` including `503 CAPTAIN_READINESS_UNAVAILABLE`.
-
-### Wave 2 — stable package/composition boundaries
-
-1. make the DSH Captain public package boundary complete and clean-checkout reproducible.
-2. create/export only the minimum justified Field public boundary from the existing DSH Field owner; do not create a parallel wrapper stack.
-3. move app-field imports from deep filesystem paths to package exports.
-4. declare exact workspace dependencies in app package manifests.
-5. regenerate `pnpm-lock.yaml`; no manual stale importer editing.
-6. prove Metro/TypeScript/Expo resolution from a clean dependency graph.
-
-### Wave 3 — Field fail-closed semantics without false truth
-
-1. remove local synthesis of `BLOCKED + ELIGIBILITY_UNAVAILABLE`.
-2. model loading / sovereign business decision / technical-unavailable distinctly.
-3. if Field requires DSH journey-level readiness beyond Workforce readiness, expose one DSH-owned aggregate; otherwise consume Workforce-only readiness without adding DSH/WLT meanings.
-4. preserve start-work fail-closed behavior while keeping the reason truthful.
-5. remove obsolete local readiness types/policies after all consumers migrate.
-
-### Wave 4 — authority cleanup / minimum necessary complexity
-
-1. prove DSH store-object authorization writers/readers and Workforce work-scope/assignment writers/readers.
-2. delete any duplicate/legacy mutation path that writes the same fact in both domains.
-3. correct or remove `enforceFieldReadinessGate` if it is only a role-gate naming layer.
-4. remove stale comments/names/aliases that imply a wrong owner.
-5. remove dead imports/exports/files/folders generated by the cutover.
-
-### Wave 5 — revalidate historical roots on the new exact candidate
-
-Re-run deep evidence for COD, provisioning, native capability ownership, ETA, contracts/capabilities, and governance impact. Any discovered regression is treated as a root/finding, not deferred.
+This is a minimum cone, not a fixed checklist. Blast radius expands automatically when evidence finds additional consumers.
 
 ---
 
-## 7. Verification matrix required before any future closure claim
+## 6. Root-correct treatment design for later EXECUTE_CLOSE — NOT AUTHORIZED IN THIS PHASE
 
-### Semantic / contract
+### Wave 1 — sovereign semantics and contracts
 
-- Workforce readiness implementation equals OpenAPI schema and error model.
-- DSH Captain readiness implementation equals DSH contract.
-- Field/Captain surfaces render business blockers versus technical unavailability distinctly.
-- no deleted blocker reason survives in generated clients, UI policies, tests or docs as an active canonical value.
+1. Re-pin latest target-system HEAD and reconcile concurrent deltas.
+2. make Workforce readiness runtime/OpenAPI/generated client/type vocabulary one truth.
+3. declare dependency-unavailable behavior explicitly; remove obsolete cross-domain Workforce blockers only after consumer migration proof.
+4. re-audit DSH Captain readiness contract against implementation, including unavailable semantics.
 
-### Dependency / package boundary
+### Wave 2 — Field journey owner boundary
 
-- package manifests and `pnpm-lock.yaml` agree.
-- clean install/frozen lockfile succeeds.
-- TypeScript resolution succeeds without deep `services/dsh` relative imports from app runtime.
-- Metro/Expo app builds resolve the public package boundary.
-- no app runtime depends on undeclared workspace modules.
+1. expose the minimum DSH Field self-readiness API backed by the existing readiness resolver/composition instead of building a second policy engine.
+2. business missing-assignment/readiness denial stays a business decision.
+3. Workforce/dependency outage stays `503`/unavailable.
+4. add the corresponding frontend client/export inside the DSH Field public boundary.
 
-### Authorization / ownership
+### Wave 3 — package cutover and deterministic dependency graph
 
-- DSH store-object authorization remains single-owner and cannot be bypassed by role labels.
-- Workforce operational work-scope/assignment truth does not become a second store-object authorization path.
-- no dual writer exists for the same canonical fact.
+1. export `./app-field` from `@bthwani/dsh` if exact audit confirms it is the minimum correct boundary.
+2. declare `@bthwani/dsh` in app-field.
+3. regenerate lockfile from manifests so both Captain and Field importers are deterministic.
+4. migrate app-field from all deep `services/dsh` relative imports to public package exports.
+5. remove declaration/path/Metro reachability workarounds that become unnecessary; preserve only monorepo configuration with proven purpose.
+6. prove clean frozen install + TypeScript + Metro/Expo resolution.
 
-### Runtime fail-closed
+### Wave 4 — durable architecture enforcement
 
-- Workforce dependency outage => 503/unavailable, never a fabricated business blocker.
-- DSH Captain aggregate dependency outage => 503/unavailable.
-- Captain surface => unavailable state on outage.
-- Field surface => unavailable state on outage after future treatment.
-- mismatch/corrupt response => rejected/unavailable, not converted to a false eligibility reason.
+1. extend the existing `fullstack-boundary-gate` so app runtimes cannot deep-import service implementation internals.
+2. add focused negative tests for the forbidden boundary.
+3. do not create a parallel overlapping guard if the current guard can own the invariant.
 
-### Cleanup / negative space
+### Wave 5 — assignment/scope authority and cleanup
 
-Search exact candidate for:
+1. enumerate all Workforce operational-assignment writers/readers and DSH authorization-scope writers/readers.
+2. prove no dual writer or alternate table/API owns the same fact.
+3. delete or migrate any surviving obsolete assignment-era DSH truth only with full blast-radius evidence.
+4. correct/remove misleading Field readiness/authorization naming and comments.
+5. remove dead/stale/duplicate imports, exports, aliases, files, folders, tests, generated mirrors, TODO/FIXME/HACK/fallback/workaround residue exposed by cutover.
 
-- direct app-runtime `../../../../services/dsh` imports.
-- direct Captain call to `/workforce/readiness/{actorId}`.
+### Wave 6 — historical-root revalidation and newly exposed findings
+
+Re-audit COD, Identity/Workforce provisioning, native capabilities, ETA, contracts/capabilities, governance impact and every finding exposed during Waves 1–5. Re-rank by highest systemic leverage and continue until no material open root remains.
+
+---
+
+## 7. Verification matrix required before a future closure claim
+
+### Contracts and semantic equality
+
+- Workforce runtime == Workforce OpenAPI == generated client == frontend/shared type vocabulary.
+- Workforce dependency outage produces explicit unavailable/error and never a fabricated business blocker.
+- DSH Captain runtime == DSH contract == public frontend client.
+- DSH Field runtime == DSH contract == public frontend client.
+- Captain/Field UIs distinguish business denial from technical unavailability.
+
+### Package/dependency reproducibility
+
+- app manifests and `pnpm-lock.yaml` agree.
+- canonical frozen/clean install succeeds.
+- `@bthwani/dsh/app-captain` resolves from a clean checkout.
+- `@bthwani/dsh/app-field` resolves from a clean checkout after justified export.
+- no runtime shell relies on undeclared workspace modules or filesystem accident.
+
+### Boundary enforcement
+
+- negative guard fixture/import proving `apps/** → services/dsh/frontend/**` deep traversal is rejected.
+- public package imports remain allowed.
+- existing cross-platform/mobile/web boundary checks remain green.
+
+### Authorization and assignment ownership
+
+- DSH store-object authorization is single-owner and enforced server-side.
+- Workforce operational assignment cannot authorize DSH objects by itself.
+- DSH authorization scope is not written as Workforce assignment truth.
+- no alternate legacy table/API/dual writer remains.
+
+### Runtime fail-closed/adversarial cases
+
+- Identity/readiness dependency outage.
+- missing Workforce assignment.
+- suspended/inactive Identity/Workforce state.
+- Captain dispatch blocked/suspended/profile missing.
+- Captain WLT financial eligibility blocked.
+- DSH/WLT/Workforce dependency outage/recovery.
+- malformed/mismatched readiness payload.
+- stale cached UI state.
+
+Every unavailable/degraded case must fail closed without claiming a false business reason.
+
+### Required builds/tests/guards
+
+Run the repository-canonical affected/full checks appropriate to the final blast radius, including at minimum:
+
+- Workforce Go tests/build and contract generation/verification.
+- DSH Go tests/build and contract generation/verification.
+- DSH TypeScript typecheck/build/tests.
+- app-captain typecheck/tests/build/export.
+- app-field typecheck/tests/build/export.
+- contract registry/generated-client/binding guards.
+- full-stack boundary guard and its new negative test.
+- DB/schema/contract checks for DSH authorization versus Workforce assignment separation.
+- canonical frozen install.
+
+### Negative-space search on exact candidate
+
+Prove absence of active unwanted truth for at least:
+
+- app-field deep `../../../../services/dsh` imports.
+- Captain deep DSH imports/readiness shadow remnants.
+- direct Captain app call to Workforce readiness.
 - obsolete `captain-readiness.policy` references.
-- `ELIGIBILITY_UNAVAILABLE` as a business blocker after Workforce schema cleanup.
-- obsolete cross-domain Workforce blockers.
-- stale package imports/exports.
-- duplicate readiness wrappers/policies.
-- TODO/FIXME/HACK/workaround/fallback tied to the affected cone.
-- misleading comments that state the wrong sovereign owner.
+- surface-local `ELIGIBILITY_UNAVAILABLE` fabrication.
+- stale cross-domain Workforce blockers in owner contracts/types.
+- duplicate Field readiness policies/wrappers.
+- undeclared `@bthwani/dsh` usage.
+- stale package exports/imports.
+- obsolete assignment-era DSH writers/tables/routes where migration says they are retired.
+- misleading ownership comments/names.
+- affected TODO/FIXME/HACK/workaround/fallback/dead/duplicate code.
 
-### Exact candidate
+### Exact-candidate rule
 
-Final verification must bind to one exact candidate SHA after the last source/config/contract/lockfile write. If the branch moves, re-pin and reconcile before using any earlier evidence.
+Final evidence binds to one exact candidate SHA after the **last target-system write**. If branch movement occurs, re-pin, classify/reconcile delta, and re-run affected evidence. Passing evidence from an older candidate is not closure proof.
 
 ---
 
 ## 8. Governance impact and mutation gate
 
-`governance/**` remains inside Impact Analysis but is not automatically trusted and is not writable in this phase.
+`governance/**` is included in Impact Analysis but remains read-only in `AUDIT_PREPARE`.
 
 Current disposition:
 
 - `GOVERNANCE_WRITE = HOLD`.
-- current code changes are not sufficient authority to rewrite governance.
-- if exact source/runtime audit proves governance drift later, the proposed governance change must be traced to canonical Product/System truth and the proven root before any mutation.
-- no approval metadata may be self-created merely to make a gate pass.
+- current `governance/product/PRD.md` supports one-owner-per-fact and DSH/Workforce/financial separation.
+- no current Field-specific Product Truth was found that authorizes app-local readiness synthesis or deep service coupling.
+- code alone is not authority to rewrite Governance.
+- if later exact evidence proves material governance drift, mutation requires proven canonical Product/System truth, root cause, blast radius, and no unresolved material decision.
+- no approval metadata may be manufactured to make a gate pass.
 
 ---
 
-## 9. Decision gate
+## 9. Decision register
 
-### Existing decisions sufficient for current audit
+### Material decisions currently required
 
-No new Product/Business/Semantic decision is required to classify the readiness/package-boundary findings above. The existing owner split is sufficient to determine the canonical direction.
+`NONE`.
 
-### Decision-required policy
+The owner split is sufficiently evidenced to classify the current readiness/package/assignment findings without a new Product/Business/Semantic choice.
 
-If later AUDIT_PREPARE work exposes a genuinely non-derivable Product/Business/Semantic/Architectural choice, execution remains prohibited and the issue must be recorded as:
+### If a new non-derivable decision appears
 
-`problem + required decision + options + recommendation/reason + impact/risk`
+Stop only the affected execution cone and record:
 
-No technical convenience may silently resolve such a decision.
+`problem + decision required + options + recommendation/reason + impact/risk`.
+
+Technical convenience, existing code, or stale Governance must not silently choose a Product/Business/Architectural outcome.
 
 ---
 
 ## 10. AUDIT_PREPARE continuation queue
 
-Continue read-only audit in this order, re-ranking if a higher systemic root appears:
+Continue read-only, re-ranking whenever a higher root appears:
 
-1. **Workforce readiness contract cone:** overlays/modules/generated clients/tests and every current consumer.
-2. **DSH Captain readiness contract cone:** OpenAPI/generated client/operator readiness consumer and negative-space search.
-3. **Field readiness cone:** app runtime, DSH field APIs, field visit/start-work operations, every readiness/authorization consumer.
-4. **Package graph:** app-captain/app-field package manifests, lockfile importers, DSH exports, tsconfig/Metro/mobile guards.
-5. **Assignment/scope authority:** all DSH store-object scope writers/readers versus Workforce work-scope/assignment writers/readers; prove no dual-writer/dual-authority.
-6. **Historical ROOT revalidation:** COD → Workforce/Identity provisioning → native capability ownership → ETA → derived contracts/capabilities.
-7. **Governance impact read-only pass.**
-8. **Negative-space/adversarial pass** over all newly exposed roots.
+1. complete Workforce readiness overlays/generated-client/all-consumer cone.
+2. complete DSH Captain OpenAPI/operator/public-client cone.
+3. complete DSH Field handler/visit/start-work/finance/catalog consumer cone around the missing public readiness boundary.
+4. enumerate exact app-client/app-partner/app-captain/app-field deep service imports to determine whether ROOT-D is broader than Field.
+5. enumerate all DSH store authorization writers/readers versus Workforce operational-assignment writers/readers.
+6. revalidate HIST-01 COD financial truth.
+7. revalidate HIST-02 Workforce↔Identity provisioning.
+8. revalidate HIST-03 native capability ownership.
+9. revalidate HIST-04 ETA semantics.
+10. revalidate generated contracts/capabilities and guard coverage.
+11. Governance read-only drift pass over affected Product Truth contracts.
+12. negative-space/adversarial re-check and root re-ranking.
 
-### Current phase exit condition
+No checklist item is closure by itself; each is evidence collection for highest-root reasoning.
+
+---
+
+## 11. Phase exit / closure law
 
 Do **not** switch to `EXECUTE_CLOSE` until:
 
-- current-head audit has covered every root above and its consumers/dependencies.
-- all material `DECISION_REQUIRED` items are zero or resolved.
-- canonical target and root-correct treatment are explicit for every open root.
-- migration/cutover and cleanup order prevents half migration and parallel truth.
-- verification matrix is sufficient to prove the exact candidate later.
+- current exact target-system audit covers every material root and affected consumer/dependency.
+- `DECISION_REQUIRED` is zero or resolved for the executable cone.
+- canonical target and root-correct treatment are explicit.
+- migration/cutover order prevents half migration and parallel truth.
+- cleanup/deletion scope is explicit.
+- verification matrix can prove the final exact candidate.
 
-Current status after this update:
+Under a future `EXECUTE_CLOSE`, continue:
+
+`Highest Root → Execute → Migrate/Cutover → Cleanup/Delete → Verify → Re-Audit/Re-Rank → Repeat`
+
+until every original and newly exposed material finding is `PROVEN_CLOSED` or `N/A_PROVEN`.
+
+Only after complete proven closure may this temporary PLAN file be deleted as the **last write**, followed by a new final candidate and final read-only Audit + Negative Space + Adversarial Re-check.
+
+### Current status
+
+`PHASE: AUDIT_PREPARE`
 
 `AUDIT_PREPARE_ACTIVE`
 
 `TARGET_SYSTEM_WRITES_THIS_PHASE: 0`
 
 `PLAN_RECORD_WRITE_ONLY: YES`
+
+`MATERIAL_DECISION_REQUIRED: 0`
 
 `READY_FOR_EXECUTION: NO — AUDIT CONTINUATION REQUIRED`
