@@ -1,6 +1,6 @@
 # BThwani Self-Contained Goal-Driven Audit, Inspection, Diagnosis, Analysis & Root-Cause Execution Orchestrator
 
-PACKAGE_REVISION: 5
+PACKAGE_REVISION: 6
 PACKAGE_CLASS: TEXTUAL_EXECUTION_COMMAND_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -24,11 +24,11 @@ Project tooling and external research may be used only as evidence or execution 
 
 The package has exactly these semantic owners:
 
-1. `00-ORCHESTRATOR.md` — governing law, goal-driven audit/execution lifecycle, invocation, independence, protection and valid stop states.
-2. `01-SCOPE-AUTHORITY-RULES.md` — truth/authority, objective/scope/focus routing, research/capability discipline, exclusions, concurrency and longevity.
+1. `00-ORCHESTRATOR.md` — governing law, goal-driven audit/execution lifecycle, invocation, optional phase handoff, independence, protection and valid stop states.
+2. `01-SCOPE-AUTHORITY-RULES.md` — truth/authority, objective/scope/focus routing, phase/mode authority, research/capability discipline, exclusions, concurrency and longevity.
 3. `02-DIAGNOSE-ROOT-CAUSE.md` — detailed audit/inspection/diagnosis/analysis protocol through coverage, journeys, findings, decisions, root proof/ranking, canonical target modeling and execution readiness.
-4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — actual treatment, reconstruction, migration, cutover, cleanup and mutation discipline.
-5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-candidate evidence, repository-platform truth when required, review provenance, post-treatment re-audit/re-inspection/re-diagnosis/re-analysis and fail-closed closure.
+4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — actual treatment, reconstruction, migration, cutover, continuity, simplification, cleanup and mutation discipline.
+5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-candidate evidence, repository-platform truth when required, review provenance, temporary-plan retirement, post-treatment re-audit/re-inspection/re-diagnosis/re-analysis and fail-closed closure.
 6. `focus/code-architecture-organization.md` — implementation architecture, repository structure, UI/UX and discoverability.
 7. `focus/governance-product-design.md` — product meaning, governance reconciliation and engineering-governance/control-artifact value.
 8. `focus/data-contracts-runtime-security-quality.md` — data, contracts, runtime, security, finance, quality and engineering control-path efficiency.
@@ -51,8 +51,11 @@ Use:
 ```text
 REPOSITORY: <owner/repo>
 BRANCH: <exact branch/ref>
+TASK: <optional stable task name>
 OBJECTIVE: <material outcome to audit/inspect/diagnose/analyze/fix/restructure/clean/close; discovery itself may be the objective>
-MODE: <DIAGNOSE | EXECUTE_END_TO_END | EXECUTE_PROJECT_CLOSURE>
+PHASE: <AUTO | AUDIT_PREPARE | EXECUTE_CLOSE>
+PLAN_FILE: <NONE | exact temporary plan path>
+MODE: <AUTO | DIAGNOSE | EXECUTE_END_TO_END | EXECUTE_PROJECT_CLOSURE>
 PRIMARY_FOCUS: <AUTO | optional explicit focus>
 SCOPE: <AUTO | repository/domain/service/surface/feature/journey/path/semantic scope>
 RESEARCH: <AUTO | INTERNAL_ONLY | EXTERNAL_ALLOWED>
@@ -62,17 +65,40 @@ EXECUTION_LOCATION: <DIRECT_ON_TARGET | ISOLATED_WORKSPACE when explicitly requi
 Defaults when omitted:
 
 ```text
+PHASE = AUTO
+PLAN_FILE = NONE
+MODE = resolve from explicit PHASE under 01; otherwise EXECUTE_END_TO_END
 PRIMARY_FOCUS = AUTO
 SCOPE = derive the smallest complete semantic scope from OBJECTIVE and proven relations
 RESEARCH = AUTO
-PLANS = NONE
+PLANS = NONE unless AUDIT_PREPARE explicitly requests its single temporary PLAN_FILE
 PRE-EXECUTION METHOD = AUDIT + INSPECT + DIAGNOSE + ANALYZE
 EXECUTION PRIORITY = HIGHEST PROVEN SYSTEMIC ROOT
 ```
 
-The invocation token `MODE=DIAGNOSE` is intentionally retained for compatibility and routing simplicity. It **does not mean diagnosis-only**. It means the full read-only `AUDIT + INSPECT + DIAGNOSE + ANALYZE` protocol governed here and detailed by `01`/`02`, without project mutation.
+The invocation token `MODE=DIAGNOSE` is intentionally retained for compatibility and routing simplicity. It **does not mean diagnosis-only**. It means the full read-only `AUDIT + INSPECT + DIAGNOSE + ANALYZE` protocol governed here and detailed by `01`/`02`, without target-system mutation.
 
-No `PREPARE` phase or repository plan/package is required. Internal reasoning may plan work; repository planning artifacts are created only when explicitly requested.
+No prepare phase is required by default. `PHASE` is an optional human-requested handoff overlay; its authority relationship to `MODE` and `PLAN_FILE` is owned by `01`.
+
+### 3.1 `AUDIT_PREPARE`
+
+Perform the full audit/inspection/diagnosis/analysis and prove roots, decisions, Canonical Target and Root-Correct Treatment without mutating the target system.
+
+If any material `DECISION_REQUIRED` can change the target/treatment, stop **before any plan-file write**, batch the material questions under §12, and wait for the decision. After decisions are supplied, propagate them and re-audit/re-inspect/re-diagnose/re-analyze the affected cone before preparing the handoff.
+
+Only when execution truth is sufficiently resolved may this phase create exactly one explicitly requested temporary file, normally:
+
+`plans/diagnose-implementing/<TASK>.md`
+
+The file records the material evidence, findings, proven roots, blast radius, resolved decisions, Canonical Target, Root-Correct Treatment, migrations/cutovers/cleanup, required governance dispositions that have passed the governance mutation gate, verification and closure criteria. It does not become authority; `01` owns that rule.
+
+After writing it, do not begin treatment. Report a **detailed human-readable summary in the conversation** covering what was audited/inspected/diagnosed/analyzed, the highest roots and gaps, the Canonical Target, material treatment/cleanup/governance impact, risks/dependencies, what the file contains and what remains to execute. End with `READY_FOR_EXECUTION` plus the exact `PLAN_FILE` path.
+
+### 3.2 `EXECUTE_CLOSE`
+
+Requires an existing `PLAN_FILE`. Before mutation, re-resolve latest live truth and revalidate the file rather than executing it mechanically. Correct stale assumptions/findings, add materially related newly exposed work, re-rank by the highest proven root, and raise any new true `DECISION_REQUIRED` before the dependent mutation.
+
+Then execute through `03` and verify/close through `04`. Continue the adaptive root loop until the entire proven affected cone is closed; the original plan list is not a stopping boundary. Keep the temporary file until the retirement conditions in `04` are met.
 
 ## 4. Goal-driven auditing and execution, not checklist-driven execution
 
@@ -265,6 +291,7 @@ Stop only the dependent cone; continue all independent work. After a decision, p
 Only:
 
 - `CLOSED` — exact-candidate closure conditions in `04` are proven.
+- `READY_FOR_EXECUTION` — valid completion only for `PHASE=AUDIT_PREPARE`; it is not system closure.
 - `DECISION_REQUIRED` — true non-derivable material decision.
 - `EXTERNAL_BLOCKER` — genuine external dependency/capability/authority gap with an exact unblock condition.
 
