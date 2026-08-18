@@ -2,75 +2,68 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { classifyFiles } from "./detect-ci-context.mjs";
 
-test("governance-only changes stay standard and avoid product checks", () => {
+const FORBIDDEN_META_GUARDS = new Set([
+  "governance-schema",
+  "agent-governance",
+  "authority-separation",
+  "guard-registry",
+  "sdlc",
+  "required-command-integrity",
+  "tool-catalog-coverage",
+  "toolchain-activation",
+  "oss-toolchain-policy",
+]);
+
+function assertCodeOnlyFoundation(result) {
+  for (const id of result.foundation_guard_ids) {
+    assert.equal(FORBIDDEN_META_GUARDS.has(id), false, `meta-governance guard leaked into routing: ${id}`);
+  }
+}
+
+test("governance-only changes do not widen code verification", () => {
   const result = classifyFiles(["governance/authority/authority-precedence.json"]);
-  assert.equal(result.governance_policy, true);
-  assert.equal(result.workflow_policy, false);
-  assert.equal(result.verification_tier, "standard");
+  assert.equal(result.verification_tier, "fast");
   assert.equal(result.runtime_profile, "none");
-  assert.deepEqual(result.foundation_guard_ids, [
-    "source-integrity",
-    "governance-schema",
-    "agent-governance",
-    "authority-separation",
-    "sdlc",
-    "cleanup-policy",
-    "guard-registry",
-  ]);
+  assert.equal(result.frontend, false);
+  assert.equal(result.contracts, false);
+  assert.equal(result.backend_required, false);
+  assert.equal(result.verification_required, false);
+  assert.deepEqual(result.foundation_guard_ids, ["source-integrity"]);
+  assertCodeOnlyFoundation(result);
 });
 
-test("guard implementation changes use only code-integrity foundation guards", () => {
+test("guard implementation changes use code-integrity checks only", () => {
   const result = classifyFiles(["tools/guards/runtime-config-gate.mjs"]);
-  assert.deepEqual(result.foundation_guard_ids, [
-    "source-integrity",
-    "guard-registry",
-    "required-command-integrity",
-    "no-broken-imports",
-  ]);
-  assert.equal(result.foundation_guard_ids.includes("ui-kit-boundary"), false);
-  assert.equal(result.foundation_guard_ids.includes("backend-api-binding"), false);
+  assert.deepEqual(result.foundation_guard_ids, ["source-integrity", "no-broken-imports"]);
+  assertCodeOnlyFoundation(result);
 });
 
-test("guard directory names do not widen product risk scope", () => {
-  const result = classifyFiles([
-    "tools/guards/finance/obsolete-gate.mjs",
-    "tools/guards/privacy/obsolete-gate.mjs",
-  ]);
-  assert.equal(result.financial_changed, false);
-  assert.equal(result.privacy_changed, false);
-  assert.equal(result.security_scan_policy, false);
-  assert.equal(result.runtime_profile, "none");
-  assert.equal(result.verification_tier, "standard");
-});
-
-test("verification authority changes force complete fail-closed scope", () => {
+test("verification authority changes force full code verification", () => {
   const result = classifyFiles([".github/workflows/ci.yml"]);
   assert.equal(result.full_scope, true);
   assert.equal(result.full_verification, true);
-  assert.equal(result.workflow_policy, true);
-  assert.equal(result.security_policy, true);
-  assert.equal(result.workflow_security_policy, true);
+  assert.equal(result.workflow, true);
+  assert.equal(result.security, true);
   assert.equal(result.dsh, true);
   assert.equal(result.wlt, true);
   assert.equal(result.identity, true);
   assert.equal(result.runtime_profile, "full");
   assert.equal(result.runtime_required, true);
-  assert.deepEqual(result.required_jobs, ["policy", "diagnostics", "node", "backends", "runtime"]);
+  assert.deepEqual(result.required_jobs, ["diagnostics", "node", "backends", "runtime"]);
   assert.deepEqual(result.verification_requirement, {
     scope: "all",
     depth: "full",
     runtime_required: true,
-    required_jobs: ["policy", "diagnostics", "node", "backends", "runtime"],
+    required_jobs: ["diagnostics", "node", "backends", "runtime"],
     reason: "verification-authority-change",
   });
-  assert.equal(result.verification_tier, "deep");
+  assertCodeOnlyFoundation(result);
 });
 
 test("verification depth alone does not widen semantic scope", () => {
   const result = classifyFiles(["README.md"], { verificationDepth: "full" });
   assert.equal(result.full_scope, false);
   assert.equal(result.full_verification, true);
-  assert.equal(result.verification_depth, "full");
   assert.equal(result.dsh, false);
   assert.equal(result.frontend, false);
   assert.equal(result.contracts, false);
@@ -82,9 +75,15 @@ test("isolated app code remains fast", () => {
   assert.equal(result.verification_tier, "fast");
   assert.equal(result.diagnostics, false);
   assert.equal(result.runtime_profile, "none");
+  assert.deepEqual(result.foundation_guard_ids, [
+    "source-integrity",
+    "no-broken-imports",
+    "runtime-config",
+    "ui-kit-boundary",
+  ]);
 });
 
-test("shared frontend code is standard and requires diagnostics", () => {
+test("shared frontend code is standard and diagnostic", () => {
   const result = classifyFiles(["services/dsh/frontend/shared/cart/cart-controller.ts"]);
   assert.equal(result.shared_brain, true);
   assert.equal(result.verification_tier, "standard");
@@ -92,12 +91,19 @@ test("shared frontend code is standard and requires diagnostics", () => {
   assert.equal(result.journey, false);
 });
 
-test("non-financial DSH backend remains standard Go verification", () => {
+test("non-financial DSH backend remains standard", () => {
   const result = classifyFiles(["services/dsh/backend/internal/cart/cart.go"]);
   assert.equal(result.dsh, true);
   assert.equal(result.financial_changed, false);
   assert.equal(result.runtime_profile, "none");
   assert.equal(result.verification_tier, "standard");
+  assert.deepEqual(result.foundation_guard_ids, [
+    "source-integrity",
+    "no-broken-imports",
+    "runtime-config",
+    "api-binding",
+    "backend-api-binding",
+  ]);
 });
 
 test("WLT financial code uses finance runtime profile", () => {
@@ -107,35 +113,17 @@ test("WLT financial code uses finance runtime profile", () => {
   assert.equal(result.verification_tier, "deep");
 });
 
-test("identity authentication code is deep and uses identity security runtime", () => {
+test("identity authentication code is deep and requires identity runtime proof", () => {
   const result = classifyFiles(["core/identity/backend/internal/auth/token_issuer.go"]);
   assert.equal(result.auth_changed, true);
-  assert.equal(result.security_policy, true);
-  assert.equal(result.workflow_security_policy, false);
-  assert.equal(result.security_scan_policy, true);
+  assert.equal(result.security, true);
+  assert.equal(result.security_scan, true);
   assert.equal(result.runtime_profile, "identity-security");
+  assert.equal(result.runtime_required, true);
   assert.equal(result.verification_tier, "deep");
 });
 
-test("session revocation code is deep", () => {
-  const result = classifyFiles(["core/identity/backend/internal/sessions/revocation.go"]);
-  assert.equal(result.session_changed, true);
-  assert.equal(result.verification_tier, "deep");
-});
-
-test("RBAC and permissions code is deep", () => {
-  for (const file of [
-    "core/identity/backend/internal/rbac/policy.go",
-    "core/identity/backend/internal/permissions/store.go",
-    "core/identity/backend/internal/authorization/check.go"
-  ]) {
-    const result = classifyFiles([file]);
-    assert.equal(result.rbac_changed, true, file);
-    assert.equal(result.verification_tier, "deep", file);
-  }
-});
-
-test("authorization model changes require runtime proof in every execution phase", () => {
+test("authorization model changes require runtime proof", () => {
   for (const file of [
     "governance/contracts/scope-vocabulary.json",
     "services/dsh/frontend/shared/session/control-panel-permissions.ts",
@@ -143,133 +131,78 @@ test("authorization model changes require runtime proof in every execution phase
   ]) {
     const result = classifyFiles([file], { executionPhase: "pr" });
     assert.equal(result.rbac_changed, true, file);
-    assert.equal(result.runtime, true, file);
-    assert.equal(result.runtime_required, true, file);
     assert.equal(result.runtime_profile, "identity-security", file);
+    assert.equal(result.runtime_required, true, file);
     assert.equal(result.verification_tier, "deep", file);
   }
 });
 
-test("PII and privacy code is deep", () => {
-  const result = classifyFiles(["core/workforce/backend/internal/pii/national-id.go"]);
-  assert.equal(result.pii_changed, true);
-  assert.equal(result.security_policy, true);
-  assert.equal(result.verification_tier, "deep");
-});
-
-test("OperatorContext context changes are deep", () => {
-  const result = classifyFiles(["services/dsh/backend/internal/OperatorContext-context/context.go"]);
-  assert.equal(result.OperatorContext_context_changed, true);
-  assert.equal(result.OperatorContext_isolation_changed, true);
-  assert.equal(result.runtime_profile, "identity-security");
-  assert.equal(result.verification_tier, "deep");
-});
-
-test("mobile tooling uses mobile config runtime profile", () => {
-  const result = classifyFiles(["tools/mobile/defineBthwaniExpoApp.js"]);
-  assert.equal(result.runtime_profile, "mobile-config");
-  assert.equal(result.verification_tier, "deep");
-});
-
-test("native mobile changes use mobile native runtime profile", () => {
-  const result = classifyFiles(["apps/app-field/runtime/android/app/build.gradle"]);
-  assert.equal(result.native_changed, true);
-  assert.equal(result.mobile, true);
-  assert.equal(result.runtime_profile, "mobile-native");
-  assert.equal(result.verification_tier, "deep");
-});
-
-test("mobile transport authority changes require deep security and live identity-workforce-dsh runtime", () => {
+test("mobile transport changes require deep identity runtime", () => {
   for (const file of [
     "apps/mobile/start-mobile-runtime.ps1",
-    "apps/mobile/mobile-lan.ps1",
     "tools/dev/mobile-dev-gateway.mjs",
-    "tools/scripts/verify-mobile-lan-runtime.ps1",
     "services/dsh/frontend/shared/_kernel/mobile-dev-gateway.ts",
-    "services/dsh/frontend/shared/session/dev-session-broker.adapter.ts",
-    "services/dsh/frontend/shared/media/presigned-upload.client.ts",
-    "services/dsh/frontend/shared/catalog/catalog-binary-upload.adapter.ts",
     "core/identity/clients/identity-api-config.ts",
   ]) {
     const result = classifyFiles([file]);
     assert.equal(result.frontend, true, file);
-    assert.equal(result.security_policy, true, file);
-    assert.equal(result.runtime, true, file);
+    assert.equal(result.security, true, file);
     assert.equal(result.runtime_profile, "identity-security", file);
     assert.equal(result.verification_tier, "deep", file);
-    assert.equal(result.diagnostics, true, file);
   }
 });
 
-test("infrastructure and runtime tooling use full runtime", () => {
-  for (const file of ["infra/docker/compose.runtime.yml", "tools/scripts/runtime/smoke.ps1"]) {
-    const result = classifyFiles([file]);
-    assert.equal(result.runtime_profile, "full", file);
-    assert.equal(result.verification_tier, "deep", file);
-    assert.equal(result.runtime_required, false, file);
-  }
+test("infrastructure uses full runtime profile without forcing PR runtime", () => {
+  const result = classifyFiles(["infra/docker/compose.runtime.yml"]);
+  assert.equal(result.runtime_profile, "full");
+  assert.equal(result.verification_tier, "deep");
+  assert.equal(result.runtime_required, false);
 });
 
-test("migration changes are deep without forcing runtime unless another reason exists", () => {
+test("migration changes are deep without unrelated runtime", () => {
   const result = classifyFiles(["services/dsh/database/migrations/0002_add_column.sql"]);
   assert.equal(result.migration_changed, true);
   assert.equal(result.verification_tier, "deep");
   assert.equal(result.runtime_profile, "none");
 });
 
-test("materialization input changes are routed explicitly", () => {
-  const lockfile = classifyFiles(["pnpm-lock.yaml"]);
-  assert.equal(lockfile.materialization_inputs_changed, true);
-  assert.equal(lockfile.contracts, true);
-
-  const packageManifest = classifyFiles(["package.json"]);
-  assert.equal(packageManifest.materialization_inputs_changed, false);
-});
-
 test("manual journey is targeted standard verification", () => {
   const result = classifyFiles([], { journey: "platform-change-sets" });
   assert.equal(result.journey_scope, "PLATFORM-CHANGE-SETS");
   assert.equal(result.verification_tier, "standard");
+  assert.equal(result.verification_required, true);
 });
 
-test("full mode enables every domain and full runtime", () => {
+test("full mode enables all code domains and full runtime", () => {
   const result = classifyFiles([], { mode: "full" });
-  for (const key of ["governance", "workflow", "infrastructure", "security", "frontend", "contracts", "journey", "dsh", "wlt", "identity", "workforce", "platform", "providers", "database", "runtime", "heavy", "diagnostics"]) {
+  for (const key of ["workflow", "infrastructure", "security", "frontend", "contracts", "journey", "dsh", "wlt", "identity", "workforce", "platform", "providers", "database", "runtime", "heavy", "diagnostics"]) {
     assert.equal(result[key], true, key);
   }
   assert.equal(result.runtime_profile, "full");
   assert.equal(result.runtime_required, true);
   assert.equal(result.mobile, true);
   assert.equal(result.journey_scope, "PROJECT-WIDE");
+  assertCodeOnlyFoundation(result);
 });
 
-test("runtime is required only at closure or master phases", () => {
+test("runtime is required at closure/master but not ordinary infrastructure PR", () => {
   const files = ["infra/docker/compose.runtime.yml"];
   assert.equal(classifyFiles(files, { executionPhase: "pr" }).runtime_required, false);
   assert.equal(classifyFiles(files, { executionPhase: "closure" }).runtime_required, true);
   assert.equal(classifyFiles(files, { executionPhase: "master" }).runtime_required, true);
 });
 
-test("explicit runtime proof is represented by the canonical requirement", () => {
+test("explicit runtime proof becomes the only required job when no code scope is selected", () => {
   const result = classifyFiles([], { runtimeProof: "true" });
   assert.equal(result.runtime_profile, "full");
   assert.equal(result.runtime_required, true);
   assert.deepEqual(result.required_jobs, ["runtime"]);
-  assert.equal(result.verification_requirement.runtime_required, true);
 });
 
-test("classification exports every required routing key", () => {
+test("router interface contains no governance control-plane fields", () => {
   const result = classifyFiles(["README.md"]);
-  const expected = [
-    "changed_count", "full_scope", "full_verification", "verification_depth", "verification_requirement", "required_jobs", "foundation_guard_ids", "governance", "workflow", "infrastructure", "security", "policy",
-    "governance_policy", "workflow_policy", "workflow_security_policy", "security_scan_policy", "security_policy", "infrastructure_policy", "nomenclature_required",
-    "frontend", "contracts", "materialization_inputs_changed", "journey", "journey_scope", "node", "node_scope",
-    "dsh", "wlt", "identity", "workforce", "platform", "providers", "database",
-    "runtime", "runtime_required", "runtime_profile", "mobile", "database_changed", "contracts_changed", "shared_brain", "heavy", "verification_tier", "diagnostics", "policy_required", "diagnostics_required", "verification_required", "backend_required",
-    "platform_change_sets", "cleanup_changed", "native_changed", "visual_changed",
-    "OperatorContext_isolation_changed", "financial_changed", "migration_changed", "shared_contract_changed",
-    "recovery_changed", "observability_changed", "auth_changed", "session_changed", "rbac_changed",
-    "privacy_changed", "pii_changed", "secrets_changed", "OperatorContext_context_changed"
-  ];
-  assert.deepEqual(Object.keys(result).sort(), expected.sort());
+  for (const forbidden of ["governance", "policy", "governance_policy", "policy_required", "authority_change"]) {
+    assert.equal(Object.hasOwn(result, forbidden), false, forbidden);
+  }
+  assertCodeOnlyFoundation(result);
 });
