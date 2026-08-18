@@ -1,5 +1,15 @@
 // UI surface
 export { DshPartnerSurface } from './DshPartnerSurface';
+export { PartnerFieldRatingGate } from './ratings/PartnerFieldRatingGate';
+export { IdentitySessionGate } from '../shared/session/IdentitySessionGate';
+export { useDshMobilePushRegistration } from '../shared/notifications/use-mobile-push-registration';
+export {
+  configureCatalogMobileFilePicker,
+} from '../shared/catalog';
+export type {
+  CatalogMobileFileKind,
+  UploadFileSource,
+} from '../shared/catalog';
 
 // UI-only types
 export type {

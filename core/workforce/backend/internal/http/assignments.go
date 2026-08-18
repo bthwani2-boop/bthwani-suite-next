@@ -16,12 +16,13 @@ type SetScopesRequest struct {
 	Inputs []workforce.OperationalAssignmentInput `json:"inputs"`
 }
 
-func (s *server) verifyAssignmentActorContext(ctx context.Context, actorID, operatorContextID string) (context.Context, error) {
+func (s *server) verifyAssignmentActorContext(ctx context.Context, actorID, operatorContextID, role string) (context.Context, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
+	role = strings.TrimSpace(role)
 	if s.identity == nil || !s.identity.Configured() {
 		return nil, identityclient.ErrUnavailable
 	}
-	if err := s.identity.VerifyActorInOperatorContext(ctx, actorID, operatorContextID); err != nil {
+	if err := s.identity.VerifyActorRoleInOperatorContext(ctx, actorID, operatorContextID, role); err != nil {
 		return nil, err
 	}
 	return auth.WithOperatorContext(ctx, operatorContextID), nil
@@ -48,7 +49,7 @@ func (s *server) handleGetActorScopes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	trustedContext, err := s.verifyAssignmentActorContext(r.Context(), actorID, operatorContextID)
+	trustedContext, err := s.verifyAssignmentActorContext(r.Context(), actorID, operatorContextID, role)
 	if err != nil {
 		writeAssignmentIdentityError(w, err)
 		return
@@ -82,7 +83,7 @@ func (s *server) handleSetActorScopes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	trustedContext, err := s.verifyAssignmentActorContext(r.Context(), actorID, operatorContextID)
+	trustedContext, err := s.verifyAssignmentActorContext(r.Context(), actorID, operatorContextID, req.Role)
 	if err != nil {
 		writeAssignmentIdentityError(w, err)
 		return

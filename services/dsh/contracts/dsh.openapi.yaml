@@ -61,6 +61,8 @@ x-bthwani-overlays:
 paths:
   /dsh/field/me/finance/wallet:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1me~1finance~1wallet"
+  /dsh/field/me/readiness:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1me~1readiness"
   /dsh/field/me/finance/commissions:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1me~1finance~1commissions"
   /dsh/field/me/finance/ledger-entries:
@@ -1442,6 +1444,8 @@ components:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshEscalationCategory"
     DshFieldVisit:
       $ref: "./components/schemas/field.schemas.yaml#/DshFieldVisit"
+    DshFieldOperationalReadiness:
+      $ref: "./components/schemas/field.schemas.yaml#/DshFieldOperationalReadiness"
     DshFieldVisitResponse:
       $ref: "./components/schemas/field.schemas.yaml#/DshFieldVisitResponse"
     DshFieldVisitsResponse:

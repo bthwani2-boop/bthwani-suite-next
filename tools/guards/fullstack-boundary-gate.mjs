@@ -3,6 +3,7 @@ import path from "node:path";
 import { fail, findImportSpecifiers, lineNumber, listCodeFiles, read, repoRoot, toPosix } from "./_guard-utils.mjs";
 import { parseIndexedContractModules, parseOpenApiContract } from "./_openapi-utils.mjs";
 import { MUTATION_METHODS, extractApiCallSites, pathsAreCompatible } from "./lib/api-operations.mjs";
+import { isForbiddenAppRuntimeDshImport } from "./lib/fullstack-boundary-rules.mjs";
 
 const guardId = "fullstack-boundary-gate";
 const violations = [];
@@ -27,6 +28,7 @@ const MOBILE_ROOTS = [
 ];
 const WEB_SHARED_ROOT = "services/dsh/frontend/shared/platform/web/";
 const MOBILE_SHARED_ROOT = "services/dsh/frontend/shared/platform/mobile/";
+const APP_RUNTIME_ROOT = "apps/";
 
 function startsWithAny(value, prefixes) {
   return prefixes.some((prefix) => value.startsWith(prefix));
@@ -142,6 +144,7 @@ for (const file of listCodeFiles()) {
   }
 
   const isDshFrontendOrAppRuntime = file.startsWith("services/dsh/frontend/") || file.startsWith("apps/");
+  const isAppRuntime = file.startsWith(APP_RUNTIME_ROOT);
   if (isDshFrontendOrAppRuntime) {
     for (const pattern of FINANCIAL_MUTATION_PATTERNS) {
       if (pattern.test(content)) {
@@ -210,6 +213,10 @@ for (const file of listCodeFiles()) {
       ) {
         violations.push({ file, line, message: `FORBIDDEN: importing backend/client/generated/controller-core directly (resolved: ${resolved})` });
       }
+    }
+
+    if (isAppRuntime && isForbiddenAppRuntimeDshImport(file, resolved)) {
+      violations.push({ file, line, message: `FORBIDDEN: app runtime imports DSH implementation directly; use an @bthwani/dsh public export (resolved: ${resolved})` });
     }
 
     if (isShared) {

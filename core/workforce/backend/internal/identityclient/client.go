@@ -139,8 +139,19 @@ func (c *Client) Actor(ctx context.Context, actorID string) (ActorView, error) {
 // boundary. The assertion is transport input; Identity remains the authority
 // for the actor-to-context relationship.
 func (c *Client) VerifyActorInOperatorContext(ctx context.Context, actorID, operatorContextID string) error {
+	return c.verifyActorInOperatorContext(ctx, actorID, operatorContextID, "")
+}
+
+// VerifyActorRoleInOperatorContext attests both the actor/context boundary and
+// the Identity-owned role before Workforce exposes role-scoped assignments.
+func (c *Client) VerifyActorRoleInOperatorContext(ctx context.Context, actorID, operatorContextID, expectedRole string) error {
+	return c.verifyActorInOperatorContext(ctx, actorID, operatorContextID, expectedRole)
+}
+
+func (c *Client) verifyActorInOperatorContext(ctx context.Context, actorID, operatorContextID, expectedRole string) error {
 	actorID = strings.TrimSpace(actorID)
 	operatorContextID = strings.TrimSpace(operatorContextID)
+	expectedRole = strings.TrimSpace(expectedRole)
 	if actorID == "" || operatorContextID == "" {
 		return ErrOperatorContextForbidden
 	}
@@ -159,6 +170,14 @@ func (c *Client) VerifyActorInOperatorContext(ctx context.Context, actorID, oper
 		return err
 	}
 	if strings.TrimSpace(view.ActorID) != actorID {
+		return ErrOperatorContextForbidden
+	}
+	if expectedRole != "" {
+		for _, role := range view.Roles {
+			if strings.EqualFold(strings.TrimSpace(role), expectedRole) {
+				return nil
+			}
+		}
 		return ErrOperatorContextForbidden
 	}
 	return nil

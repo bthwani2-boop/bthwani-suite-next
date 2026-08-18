@@ -12,8 +12,7 @@
       "frontend-feature-binding",
       "fullstack-boundary",
       "wlt-financial-boundary",
-      "runtime-real-bindings",
-      "field-surface-truth"
+      "runtime-real-bindings"
     ],
     "PLATFORM-CHANGE-SETS": [
       "no-broken-imports",

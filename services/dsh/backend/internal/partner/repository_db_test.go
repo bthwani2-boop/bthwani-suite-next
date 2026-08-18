@@ -63,6 +63,67 @@ func partnerStoreID(t *testing.T, db *sql.DB, partnerID string) string {
 	return storeID
 }
 
+func seedPartnerPublicationGates(t *testing.T, db *sql.DB, storeID string) {
+	t.Helper()
+	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+	domainID := "domain-partner-lifecycle-" + suffix
+	productID := "product-partner-lifecycle-" + suffix
+	assortmentID := "assortment-partner-lifecycle-" + suffix
+
+	if _, err := db.Exec(`
+		INSERT INTO dsh_catalog_domains (id, slug, name_ar, is_active, is_client_visible)
+		VALUES ($1, $1, 'نطاق اختبار دورة الشريك', TRUE, TRUE)`, domainID); err != nil {
+		t.Fatalf("insert partner publication domain: %v", err)
+	}
+	if _, err := db.Exec(`
+		UPDATE dsh_stores
+		SET status = 'published',
+		    is_visible = TRUE,
+		    serviceability_status = 'serviceable',
+		    partner_readiness = 'ready',
+		    catalog_approval_status = 'approved',
+		    marketing_visibility = 'visible',
+		    delivery_modes = ARRAY['delivery']::TEXT[],
+		    address_line = 'صنعاء',
+		    coverage_summary = 'نطاق صنعاء',
+		    operating_hours = '08:00-22:00',
+		    delivery_readiness = 'ready',
+		    hero_image_url = 'https://media.example/partner-lifecycle-cover.webp',
+		    logo_url = 'https://media.example/partner-lifecycle-logo.webp',
+		    catalog_domain_id = $2,
+		    version = version + 1,
+		    updated_at = NOW()
+		WHERE id = $1`, storeID, domainID); err != nil {
+		t.Fatalf("seed partner publication store gates: %v", err)
+	}
+	if _, err := db.Exec(`
+		INSERT INTO dsh_store_catalog_domains
+			(store_id, domain_id, status, approved_by, approved_at)
+		VALUES ($1, $2, 'approved', 'operator-local-001', NOW())`, storeID, domainID); err != nil {
+		t.Fatalf("approve partner publication domain: %v", err)
+	}
+	if _, err := db.Exec(`
+		INSERT INTO dsh_master_products
+			(id, domain_id, canonical_name_ar, approval_status, is_active)
+		VALUES ($1, $2, 'منتج اختبار دورة الشريك', 'approved', TRUE)`, productID, domainID); err != nil {
+		t.Fatalf("insert partner publication product: %v", err)
+	}
+	if _, err := db.Exec(`
+		INSERT INTO dsh_store_assortments
+			(id, store_id, master_product_id, unit_price, currency, available,
+			 stock_status, publication_status, approved_by)
+		VALUES ($1, $2, $3, 100, 'YER', TRUE, 'in_stock', 'client_visible', 'operator-local-001')`,
+		assortmentID, storeID, productID); err != nil {
+		t.Fatalf("insert partner publication assortment: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM dsh_store_assortments WHERE id = $1`, assortmentID)
+		_, _ = db.Exec(`DELETE FROM dsh_store_catalog_domains WHERE store_id = $1 AND domain_id = $2`, storeID, domainID)
+		_, _ = db.Exec(`DELETE FROM dsh_master_products WHERE id = $1`, productID)
+		_, _ = db.Exec(`DELETE FROM dsh_catalog_domains WHERE id = $1`, domainID)
+	})
+}
+
 func seedPartnerDocumentMedia(t *testing.T, db *sql.DB, partnerID, actorID, mediaRef string) {
 	t.Helper()
 	if _, err := db.Exec(`
@@ -75,10 +136,35 @@ func seedPartnerDocumentMedia(t *testing.T, db *sql.DB, partnerID, actorID, medi
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_media_refs WHERE media_ref = $1`, mediaRef) })
 }
 
+func cleanupPartnerLifecycleFixture(t *testing.T, db *sql.DB, partnerID, storeID string) {
+	t.Helper()
+	t.Cleanup(func() {
+		cleanup := []struct {
+			name  string
+			query string
+			args  []any
+		}{
+			{"field visits", `DELETE FROM dsh_partner_field_visits WHERE partner_id = $1`, []any{partnerID}},
+			{"activation events", `DELETE FROM dsh_partner_activation_events WHERE partner_id = $1`, []any{partnerID}},
+			{"store action audit", `DELETE FROM dsh_store_action_audit WHERE store_id = $1`, []any{storeID}},
+			{"first store reference", `DELETE FROM dsh_partner_first_stores WHERE partner_id = $1 AND store_id = $2`, []any{partnerID, storeID}},
+			{"store actor scopes", `DELETE FROM dsh_store_actor_scopes WHERE store_id = $1`, []any{storeID}},
+			{"store", `DELETE FROM dsh_stores WHERE id = $1`, []any{storeID}},
+			{"partner", `DELETE FROM dsh_partners WHERE id = $1`, []any{partnerID}},
+		}
+		for _, item := range cleanup {
+			if _, err := db.Exec(item.query, item.args...); err != nil {
+				t.Errorf("clean partner lifecycle %s: %v", item.name, err)
+			}
+		}
+	})
+}
+
 func TestPartnerLifecycleDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	p := createPartnerFixture(t, db, "IT")
 	storeID := partnerStoreID(t, db, p.ID)
+	cleanupPartnerLifecycleFixture(t, db, p.ID, storeID)
 
 	stores, err := LinkPartnerStoreForOperatorContext(db, partnerTestOperatorContextID, p.ID, storeID, "operator-local-001")
 	if err != nil {
@@ -100,22 +186,7 @@ func TestPartnerLifecycleDBIntegration(t *testing.T) {
 	}
 	for _, next := range chain {
 		if next == StatusClientVisible {
-			// The client-visible transition must prove every store publication
-			// gate, not merely partner readiness. Seed the same state that the
-			// owning governance sections would produce after independent review.
-			if _, err := db.Exec(`
-				UPDATE dsh_stores
-				SET status = 'published',
-				    is_visible = true,
-				    serviceability_status = 'serviceable',
-				    partner_readiness = 'ready',
-				    catalog_approval_status = 'approved',
-				    marketing_visibility = 'visible',
-				    version = version + 1,
-				    updated_at = NOW()
-				WHERE id = $1 AND operator_context_id = $2`, storeID, partnerTestOperatorContextID); err != nil {
-				t.Fatalf("failed to satisfy store publication gates: %v", err)
-			}
+			seedPartnerPublicationGates(t, db, storeID)
 		}
 		p, _, err = TransitionStatus(db, p.ID, TransitionInput{
 			ToStatus:     next,

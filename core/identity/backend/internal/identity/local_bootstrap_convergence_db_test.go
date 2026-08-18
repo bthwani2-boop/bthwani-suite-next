@@ -93,6 +93,15 @@ func TestLocalBootstrapConvergenceDetectsAndRepairsAnEmptiedDatabaseDBIntegratio
 
 	// This is the exact state a governed database rebuild leaves behind while
 	// identity-api keeps serving.
+	if _, err := db.Exec(`
+		DELETE FROM identity_activation_challenges AS challenge
+		USING identity_actors AS actor
+		WHERE challenge.issued_by_actor_id = actor.id
+		  AND actor.username = ANY($1)
+		  AND actor.operator_context_id = $2`,
+		pq.Array(localBootstrapSecurityUsernames()), input.OperatorContextID); err != nil {
+		t.Fatalf("clear canonical local activation issuers: %v", err)
+	}
 	if _, err := db.Exec(
 		`DELETE FROM identity_actors WHERE username = ANY($1)`,
 		pq.Array(localBootstrapSecurityUsernames()),

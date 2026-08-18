@@ -14,7 +14,7 @@ import {
   createDshExpoImagePickerAdapter,
   createDshExpoLocationAdapter,
   createDshExpoNotificationRuntime,
-} from "../../../../../services/dsh/frontend/shared/mobile-capabilities";
+} from "@bthwani/dsh/mobile-capabilities";
 
 const platform = Platform.OS === "android" || Platform.OS === "ios" ? Platform.OS : "web";
 

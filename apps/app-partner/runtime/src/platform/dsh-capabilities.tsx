@@ -7,6 +7,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
+import { colorRoles } from "@bthwani/ui-kit";
 import {
   configureDshImagePickerAdapter,
   configureDshLinkingAdapter,
@@ -19,7 +20,7 @@ import {
   createDshExpoNotificationRuntime,
   type DshMapCoordinate,
   type DshMapProps,
-} from "../../../../../services/dsh/frontend/shared/mobile-capabilities";
+} from "@bthwani/dsh/mobile-capabilities";
 
 const platform = Platform.OS === "android" || Platform.OS === "ios" ? Platform.OS : "web";
 
@@ -104,7 +105,7 @@ function DshRuntimeMap({
           {...(marker.description ? { description: marker.description } : {})}
         />
       ))}
-      {selected ? <Marker coordinate={selected} title="الموقع المحدد" pinColor="#0A7B83" /> : null}
+      {selected ? <Marker coordinate={selected} title="الموقع المحدد" pinColor={colorRoles.info} /> : null}
     </MapView>
   );
 }

@@ -139,8 +139,15 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 
 	if input.ToStatus == StatusClientVisible {
 		var storeCount, blockedStoreCount int
+		// The canonical readiness view includes the partner's current
+		// client-visible state. During this transition that one blocker is the
+		// transition's own projected result; every other canonical store gate
+		// must still pass before the status mutation is committed.
 		err = tx.QueryRow(`
-			SELECT COUNT(*), COUNT(*) FILTER (WHERE publication_decision <> 'PUBLISHED')
+			SELECT COUNT(*), COUNT(*) FILTER (
+				WHERE publication_decision <> 'PUBLISHED'
+				  AND NOT COALESCE('PARTNER_NOT_CLIENT_VISIBLE' = ANY(blocking_reason_codes), FALSE)
+			)
 			FROM dsh_partner_store_readiness_v
 			WHERE partner_id = $1`, partnerID,
 		).Scan(&storeCount, &blockedStoreCount)

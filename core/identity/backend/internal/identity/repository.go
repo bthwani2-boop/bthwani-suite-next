@@ -406,11 +406,21 @@ func (r *Repository) ConsumeActivation(ctx context.Context, input ConsumeActivat
 		return TokenPair{}, ErrInvalidActivation
 	}
 	if status != "pending" || !expiresAt.After(r.now()) {
-		_, _ = tx.ExecContext(ctx, `UPDATE identity_activation_challenges SET status = 'expired', updated_at = now() WHERE id = $1 AND status = 'pending'`, challengeID)
+		if _, err = tx.ExecContext(ctx, `UPDATE identity_activation_challenges SET status = 'expired', updated_at = now() WHERE id = $1 AND status = 'pending'`, challengeID); err != nil {
+			return TokenPair{}, err
+		}
+		if err = tx.Commit(); err != nil {
+			return TokenPair{}, err
+		}
 		return TokenPair{}, ErrInvalidActivation
 	}
 	if attempts >= 5 {
-		_, _ = tx.ExecContext(ctx, `UPDATE identity_activation_challenges SET status = 'locked', updated_at = now() WHERE id = $1`, challengeID)
+		if _, err = tx.ExecContext(ctx, `UPDATE identity_activation_challenges SET status = 'locked', updated_at = now() WHERE id = $1`, challengeID); err != nil {
+			return TokenPair{}, err
+		}
+		if err = tx.Commit(); err != nil {
+			return TokenPair{}, err
+		}
 		return TokenPair{}, ErrInvalidActivation
 	}
 	if !hmac.Equal([]byte(codeHash), []byte(r.activationCodeHash(actorType, phone, code))) {
@@ -419,10 +429,15 @@ func (r *Repository) ConsumeActivation(ctx context.Context, input ConsumeActivat
 		if nextAttempts >= 5 {
 			nextStatus = "locked"
 		}
-		_, _ = tx.ExecContext(ctx, `
+		if _, err = tx.ExecContext(ctx, `
 			UPDATE identity_activation_challenges
 			SET attempts = $2, status = $3, updated_at = now()
-			WHERE id = $1`, challengeID, nextAttempts, nextStatus)
+			WHERE id = $1`, challengeID, nextAttempts, nextStatus); err != nil {
+			return TokenPair{}, err
+		}
+		if err = tx.Commit(); err != nil {
+			return TokenPair{}, err
+		}
 		return TokenPair{}, ErrInvalidActivation
 	}
 
@@ -1122,6 +1137,9 @@ func (r *Repository) ReactivateActor(ctx context.Context, actorID, requestedByAc
 			return tx.Commit()
 		}
 		return ErrActorAlreadyActive
+	}
+	if status != ActorStatusSuspended {
+		return ErrInvalidActorTransition
 	}
 	_, err = tx.ExecContext(ctx, `UPDATE identity_actors SET status = 'ACTIVE', version = version + 1, updated_at = now() WHERE id = $1`, actorID)
 	if err != nil {

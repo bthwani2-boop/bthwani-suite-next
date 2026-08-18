@@ -14,7 +14,7 @@ import {
   createDshExpoLocationAdapter,
   createDshExpoNotificationRuntime,
   type DshVideoSurfaceProps,
-} from "../../../../../services/dsh/frontend/shared/mobile-capabilities";
+} from "@bthwani/dsh/mobile-capabilities";
 import { VideoView, useVideoPlayer } from "expo-video";
 
 const platform = Platform.OS === "android" || Platform.OS === "ios" ? Platform.OS : "web";

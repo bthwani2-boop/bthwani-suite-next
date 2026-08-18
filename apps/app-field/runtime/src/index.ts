@@ -18,7 +18,7 @@ import {
 import {
   clearFieldOfflineQueue,
   configureFieldOfflineQueueStorage,
-} from "../../../../services/dsh/frontend/shared/field-readiness";
+} from "@bthwani/dsh/app-field";
 import { initSentry } from "./observability/sentry";
 import App from "./App";
 

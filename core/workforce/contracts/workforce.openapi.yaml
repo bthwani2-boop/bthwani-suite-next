@@ -63,11 +63,11 @@ paths:
         - $ref: "#/components/parameters/ActorId"
       responses:
         "200":
-          description: Canonical Workforce readiness gate for the requested actor.
+          description: Current Workforce provider readiness for the requested actor. Activation evidence and cross-service operational gates are separate contracts.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ReadinessGate"
+                $ref: "#/components/schemas/CurrentProviderReadiness"
         "400":
           $ref: "#/components/responses/InvalidRequest"
         "401":
@@ -76,6 +76,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
         "500":
           $ref: "#/components/responses/InternalError"
   /workforce/field-agents:
@@ -1162,22 +1164,17 @@ components:
           type: string
         service:
           type: string
-    ReadinessStatus:
+    CurrentProviderReadinessStatus:
       type: string
       enum: [ ALLOWED, BLOCKED ]
-    ReadinessBlockerReason:
+    CurrentProviderReadinessBlockerReason:
       type: string
       enum:
         - IDENTITY_SUSPENDED
         - PROFILE_INCOMPLETE
         - DOCUMENTS_EXPIRED
-        - EMPLOYMENT_TERMINATED
-        - NO_ACTIVE_ASSIGNMENT
-        - SHIFT_INACTIVE
-        - OUTSIDE_ACTIVE_AREA
-        - FINANCIAL_ELIGIBILITY_BLOCKED
-        - ELIGIBILITY_UNAVAILABLE
-    ReadinessGate:
+        - ENGAGEMENT_INACTIVE
+    CurrentProviderReadiness:
       type: object
       additionalProperties: false
       required: [ actorId, workforceKind, status, blockerReasons, checkedAt ]
@@ -1189,11 +1186,11 @@ components:
           type: string
           minLength: 1
         status:
-          $ref: "#/components/schemas/ReadinessStatus"
+          $ref: "#/components/schemas/CurrentProviderReadinessStatus"
         blockerReasons:
           type: array
           items:
-            $ref: "#/components/schemas/ReadinessBlockerReason"
+            $ref: "#/components/schemas/CurrentProviderReadinessBlockerReason"
         checkedAt:
           type: string
           format: date-time

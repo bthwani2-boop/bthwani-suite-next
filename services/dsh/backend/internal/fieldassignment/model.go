@@ -174,8 +174,8 @@ func insert(ctx context.Context, tx *sql.Tx, operatorContextID, actorID string, 
 		          created_by_actor_id, created_at, updated_at`,
 		operatorContextID, input.FieldActorID, input.BusinessTaskKey, input.StoreNameHint, input.PhoneHint, input.AddressHint,
 		input.LocationLatitude, input.LocationLongitude, input.Priority, input.DueAt, input.SlaMinutes, actorID,
-	).Scan(&a.ID, &a.OperatorContextID, &a.FieldActorID, &a.StoreNameHint,
-		&a.BusinessTaskKey, &a.StoreNameHint, &a.PhoneHint, &a.AddressHint, &a.LocationLatitude, &a.LocationLongitude,
+	).Scan(&a.ID, &a.OperatorContextID, &a.FieldActorID, &a.BusinessTaskKey,
+		&a.StoreNameHint, &a.PhoneHint, &a.AddressHint, &a.LocationLatitude, &a.LocationLongitude,
 		&a.Status, &a.Priority, &a.DueAt, &a.SlaMinutes, &a.DraftPartnerID, &a.Version, &a.CreatedByActorID, &a.CreatedAt, &a.UpdatedAt)
 	applyDerived(&a)
 	return a, err

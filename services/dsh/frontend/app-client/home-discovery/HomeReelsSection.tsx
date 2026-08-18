@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   cardPosterScrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: alpha(colorRoles.shadowBase, 0.25),
   },
   playButton: {
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
     borderColor: alpha(neutralScale[0], 0.12),
   },
   slideScrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: alpha(colorRoles.shadowBase, 0.38),
   },
   slideHeader: {

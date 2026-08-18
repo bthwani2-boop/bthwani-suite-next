@@ -2,7 +2,7 @@ import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import { resolveWorkforceApiBaseUrl } from "../_kernel/workforce-api-base-url";
 import { classifyGovernedError, type GovernedProblem } from "../_kernel/governed-problem";
 import { workforceErrorCode, workforceErrorMessage } from "./workforce.api";
-import type { ReadinessGate, UpdateSelfInput, WorkforceMe } from "./workforce.types";
+import type { UpdateSelfInput, WorkforceMe } from "./workforce.types";
 
 // Native provider client: talks to the Workforce runtime directly with the
 // Identity bearer token (no browser BFF). Provider-facing profile/readiness
@@ -50,13 +50,6 @@ export async function fetchWorkforceMe(): Promise<WorkforceMeResult> {
   } catch (error) {
     return classifyError(error);
   }
-}
-
-export async function fetchWorkforceReadiness(actorId: string): Promise<ReadinessGate> {
-  if (!actorId.trim()) {
-    throw new Error("WORKFORCE_ACTOR_ID_REQUIRED");
-  }
-  return request<ReadinessGate>(`/workforce/readiness/${encodeURIComponent(actorId)}`);
 }
 
 export async function updateWorkforceMeSelf(input: UpdateSelfInput): Promise<WorkforceMeResult> {

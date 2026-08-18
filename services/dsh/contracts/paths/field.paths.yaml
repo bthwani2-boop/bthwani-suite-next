@@ -1,6 +1,23 @@
 # BThwani DSH OpenAPI path-items module: field.
 # Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
 
+/dsh/field/me/readiness:
+  get:
+    operationId: getDshFieldSelfReadiness
+    summary: Return the authenticated field agent's DSH start-work readiness.
+    description: Workforce activation is composed at this DSH boundary. Store and visit prerequisites remain action-specific and are enforced by their canonical handlers.
+    tags: [ DshFieldReadiness ]
+    security: [ { bearerAuth: [] } ]
+    responses:
+      "200":
+        description: Field start-work readiness returned successfully.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshFieldOperationalReadiness" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "503": { $ref: "../dsh.openapi.yaml#/components/responses/ServiceUnavailable" }
+
 /dsh/field/me/finance/wallet:
   get:
     operationId: getDshFieldMeWallet
@@ -287,6 +304,7 @@
       "201": { description: Field response created idempotently. }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+      "503": { $ref: "../dsh.openapi.yaml#/components/responses/ServiceUnavailable" }
 
 /dsh/field/finance/wallet:
   get:
@@ -303,6 +321,7 @@
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "503": { $ref: "../dsh.openapi.yaml#/components/responses/ServiceUnavailable" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
@@ -1064,6 +1083,7 @@
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+      "503": { $ref: "../dsh.openapi.yaml#/components/responses/ServiceUnavailable" }
 
 /dsh/operator/field-onboarding-assignments/{assignmentId}/cancel:
   post:
@@ -1093,6 +1113,7 @@
         content: { application/json: { schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshFieldOnboardingAssignmentListResponse" } } }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "503": { $ref: "../dsh.openapi.yaml#/components/responses/ServiceUnavailable" }
 
 /dsh/field/onboarding-assignments/{assignmentId}:
   get:
@@ -1104,7 +1125,9 @@
     responses:
       "200": { description: Assignment detail. }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "503": { $ref: "../dsh.openapi.yaml#/components/responses/ServiceUnavailable" }
 
 /dsh/field/onboarding-assignments/{assignmentId}/open:
   post:
@@ -1119,8 +1142,10 @@
     responses:
       "200": { description: Assignment opened. }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+      "503": { $ref: "../dsh.openapi.yaml#/components/responses/ServiceUnavailable" }
 
 /dsh/field/onboarding-assignments/{assignmentId}/draft:
   post:
@@ -1136,8 +1161,10 @@
       "201": { description: Draft linked to assignment. }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+      "503": { $ref: "../dsh.openapi.yaml#/components/responses/ServiceUnavailable" }
 
 /dsh/field/onboarding-assignments/{assignmentId}/draft/{partnerId}:
   post:
@@ -1154,3 +1181,4 @@
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+      "503": { $ref: "../dsh.openapi.yaml#/components/responses/ServiceUnavailable" }

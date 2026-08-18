@@ -1,6 +1,18 @@
 # BThwani DSH OpenAPI schemas module: field.
 # Source of truth. Referenced by ../dsh.openapi.yaml; do not add an openapi root here.
 
+DshFieldOperationalReadiness:
+  type: object
+  additionalProperties: false
+  required: [ready, missing]
+  properties:
+    ready:
+      type: boolean
+      description: True only when the canonical Workforce activation gate is satisfied.
+    missing:
+      type: array
+      items: { type: string }
+
 DshFieldPartnerStoreDraft:
   type: object
   required:

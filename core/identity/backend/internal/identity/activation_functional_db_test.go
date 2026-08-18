@@ -2,13 +2,41 @@ package identity
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"testing"
 )
 
+const activationTestIssuerID = "identity-db-test-issuer"
+
+func seedActivationTestIssuer(t *testing.T, db *sql.DB) {
+	t.Helper()
+	if _, err := db.Exec(`DELETE FROM identity_activation_challenges WHERE issued_by_actor_id = $1`, activationTestIssuerID); err != nil {
+		t.Fatalf("clean activation test issuer challenges: %v", err)
+	}
+	if _, err := db.Exec(`DELETE FROM identity_actors WHERE id = $1`, activationTestIssuerID); err != nil {
+		t.Fatalf("clean activation test issuer: %v", err)
+	}
+	if _, err := db.Exec(`
+		INSERT INTO identity_actors
+			(id, username, password_hash, operator_context_id, roles, permissions, status, version)
+		VALUES ($1, 'identity-db-test-issuer', '', 'local-dsh', '{operator}', '[]', 'ACTIVE', 1)`, activationTestIssuerID); err != nil {
+		t.Fatalf("seed activation test issuer: %v", err)
+	}
+	t.Cleanup(func() {
+		if _, err := db.Exec(`DELETE FROM identity_activation_challenges WHERE issued_by_actor_id = $1`, activationTestIssuerID); err != nil {
+			t.Errorf("clean activation test issuer challenges: %v", err)
+		}
+		if _, err := db.Exec(`DELETE FROM identity_actors WHERE id = $1`, activationTestIssuerID); err != nil {
+			t.Errorf("clean activation test issuer: %v", err)
+		}
+	})
+}
+
 func TestActivationFunctionalConsumeWrongSurface(t *testing.T) {
 	db := openIdentityTestDB(t)
 	repo := newOtpTestRepository(t, db)
+	seedActivationTestIssuer(t, db)
 
 	phone := "+967777000200"
 	cleanupTestPhone(t, db, phone)
@@ -18,15 +46,15 @@ func TestActivationFunctionalConsumeWrongSurface(t *testing.T) {
 	}
 
 	_, err = db.ExecContext(context.Background(), `
-		INSERT INTO identity_actors (id, username, phone_e164, roles, active, permissions)
-		VALUES ($1, $2, $3, '{field}', false, '[]')`,
+		INSERT INTO identity_actors (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version)
+		VALUES ($1, $2, '', 'local-dsh', $3, '{field}', '[]', 'PROVISIONED', 1)`,
 		actorID, "func_wrong_surf", phone)
 	if err != nil {
 		t.Fatalf("insert actor: %v", err)
 	}
 
 	res, err := repo.IssueActivationForActor(context.Background(), actorID, IssueActivationForActorInput{
-		IssuedByActorID:   "operator-1",
+		IssuedByActorID:   activationTestIssuerID,
 		ExpectedActorType: "field",
 		ExpectedSurface:   "app-field",
 	}, "idem-func-1", "corr-func-1")
@@ -48,6 +76,7 @@ func TestActivationFunctionalConsumeWrongSurface(t *testing.T) {
 func TestActivationFunctionalConsumeRevoked(t *testing.T) {
 	db := openIdentityTestDB(t)
 	repo := newOtpTestRepository(t, db)
+	seedActivationTestIssuer(t, db)
 
 	phone := "+967777000201"
 	cleanupTestPhone(t, db, phone)
@@ -57,15 +86,15 @@ func TestActivationFunctionalConsumeRevoked(t *testing.T) {
 	}
 
 	_, err = db.ExecContext(context.Background(), `
-		INSERT INTO identity_actors (id, username, phone_e164, roles, active, permissions)
-		VALUES ($1, $2, $3, '{field}', false, '[]')`,
+		INSERT INTO identity_actors (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version)
+		VALUES ($1, $2, '', 'local-dsh', $3, '{field}', '[]', 'PROVISIONED', 1)`,
 		actorID, "func_revoked", phone)
 	if err != nil {
 		t.Fatalf("insert actor: %v", err)
 	}
 
 	res, err := repo.IssueActivationForActor(context.Background(), actorID, IssueActivationForActorInput{
-		IssuedByActorID:   "operator-1",
+		IssuedByActorID:   activationTestIssuerID,
 		ExpectedActorType: "field",
 		ExpectedSurface:   "app-field",
 	}, "idem-func-2", "corr-func-2")
@@ -92,6 +121,7 @@ func TestActivationFunctionalConsumeRevoked(t *testing.T) {
 func TestActivationFunctionalConsumeExpired(t *testing.T) {
 	db := openIdentityTestDB(t)
 	repo := newOtpTestRepository(t, db)
+	seedActivationTestIssuer(t, db)
 
 	phone := "+967777000202"
 	cleanupTestPhone(t, db, phone)
@@ -101,15 +131,15 @@ func TestActivationFunctionalConsumeExpired(t *testing.T) {
 	}
 
 	_, err = db.ExecContext(context.Background(), `
-		INSERT INTO identity_actors (id, username, phone_e164, roles, active, permissions)
-		VALUES ($1, $2, $3, '{field}', false, '[]')`,
+		INSERT INTO identity_actors (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version)
+		VALUES ($1, $2, '', 'local-dsh', $3, '{field}', '[]', 'PROVISIONED', 1)`,
 		actorID, "func_expired", phone)
 	if err != nil {
 		t.Fatalf("insert actor: %v", err)
 	}
 
 	res, err := repo.IssueActivationForActor(context.Background(), actorID, IssueActivationForActorInput{
-		IssuedByActorID:   "operator-1",
+		IssuedByActorID:   activationTestIssuerID,
 		ExpectedActorType: "field",
 		ExpectedSurface:   "app-field",
 	}, "idem-func-3", "corr-func-3")
@@ -147,6 +177,7 @@ func TestActivationFunctionalConsumeExpired(t *testing.T) {
 func TestActivationFunctionalConsumeBruteForceLockout(t *testing.T) {
 	db := openIdentityTestDB(t)
 	repo := newOtpTestRepository(t, db)
+	seedActivationTestIssuer(t, db)
 
 	phone := "+967777000203"
 	cleanupTestPhone(t, db, phone)
@@ -156,15 +187,15 @@ func TestActivationFunctionalConsumeBruteForceLockout(t *testing.T) {
 	}
 
 	_, err = db.ExecContext(context.Background(), `
-		INSERT INTO identity_actors (id, username, phone_e164, roles, active, permissions)
-		VALUES ($1, $2, $3, '{field}', false, '[]')`,
+		INSERT INTO identity_actors (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version)
+		VALUES ($1, $2, '', 'local-dsh', $3, '{field}', '[]', 'PROVISIONED', 1)`,
 		actorID, "func_lockout", phone)
 	if err != nil {
 		t.Fatalf("insert actor: %v", err)
 	}
 
 	res, err := repo.IssueActivationForActor(context.Background(), actorID, IssueActivationForActorInput{
-		IssuedByActorID:   "operator-1",
+		IssuedByActorID:   activationTestIssuerID,
 		ExpectedActorType: "field",
 		ExpectedSurface:   "app-field",
 	}, "idem-func-4", "corr-func-4")

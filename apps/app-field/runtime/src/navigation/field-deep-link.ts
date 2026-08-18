@@ -1,4 +1,4 @@
-import type { DshFieldNavigationCommand } from "../../../../../services/dsh/frontend/app-field/dsh-field.routes";
+import type { DshFieldNavigationCommand } from "@bthwani/dsh/app-field";
 
 export const FIELD_APP_SCHEME = "bthwani-field-next";
 

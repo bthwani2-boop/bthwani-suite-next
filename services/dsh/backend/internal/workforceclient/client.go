@@ -11,7 +11,10 @@ import (
 	"time"
 )
 
-var ErrScopeReadbackMismatch = errors.New("workforce scope readback does not match the requested boundary")
+var (
+	ErrScopeReadbackMismatch = errors.New("workforce scope readback does not match the requested boundary")
+	ErrActorContextForbidden = errors.New("workforce actor is outside the requested operator context or role")
+)
 
 type Client struct {
 	baseURL      string
@@ -116,6 +119,9 @@ func (c *Client) GetActorScopes(ctx context.Context, actorID, operatorContextID,
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusForbidden {
+		return nil, ErrActorContextForbidden
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("workforce scopes returned HTTP %d", resp.StatusCode)
 	}
@@ -130,4 +136,11 @@ func (c *Client) GetActorScopes(ctx context.Context, actorID, operatorContextID,
 		return nil, fmt.Errorf("%w: actor=%q role=%q context=%q", ErrScopeReadbackMismatch, scopes.ActorID, scopes.Role, scopes.OperatorContextID)
 	}
 	return &scopes, nil
+}
+
+// VerifyActorInOperatorContext uses Workforce's Identity-attested role-scoped
+// assignment boundary without exposing assignment data to the caller.
+func (c *Client) VerifyActorInOperatorContext(ctx context.Context, actorID, operatorContextID, role string) error {
+	_, err := c.GetActorScopes(ctx, actorID, operatorContextID, role)
+	return err
 }

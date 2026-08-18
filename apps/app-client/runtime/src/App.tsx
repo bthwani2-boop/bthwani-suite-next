@@ -2,8 +2,12 @@ import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
-import { DshClientSurface } from "../../../../services/dsh/frontend/app-client";
-import { ClientOrderRatingGate } from "../../../../services/dsh/frontend/app-client/ratings/ClientOrderRatingGate";
+import {
+  ClientOrderRatingGate,
+  DshClientSurface,
+  IdentitySessionGate,
+  useDshMobilePushRegistration,
+} from "@bthwani/dsh/app-client";
 import {
   configureIdentityDeviceFingerprintProvider,
   configureIdentitySession,
@@ -12,8 +16,6 @@ import {
   resolveIdentityApiBaseUrl,
   useIdentitySession,
 } from "@bthwani/core-identity";
-import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
-import { useDshMobilePushRegistration } from "../../../../services/dsh/frontend/shared/notifications/use-mobile-push-registration";
 
 const CLIENT_DEVICE_FINGERPRINT_KEY = "bthwani.client.device-fingerprint.v1";
 

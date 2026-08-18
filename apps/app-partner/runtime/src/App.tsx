@@ -4,13 +4,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colorRoles } from "@bthwani/ui-kit";
 import { File as ExpoFile } from "expo-file-system";
 import * as DocumentPicker from "expo-document-picker";
-import { DshPartnerSurface } from "../../../../services/dsh/frontend/app-partner";
-import { PartnerFieldRatingGate } from "../../../../services/dsh/frontend/app-partner/ratings/PartnerFieldRatingGate";
 import {
   configureCatalogMobileFilePicker,
   type CatalogMobileFileKind,
   type UploadFileSource,
-} from "../../../../services/dsh/frontend/shared/catalog";
+} from "@bthwani/dsh/app-partner";
 import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
 import {
@@ -21,8 +19,12 @@ import {
   resolveIdentityApiBaseUrl,
   useIdentitySession,
 } from "@bthwani/core-identity";
-import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
-import { useDshMobilePushRegistration } from "../../../../services/dsh/frontend/shared/notifications/use-mobile-push-registration";
+import {
+  DshPartnerSurface,
+  IdentitySessionGate,
+  PartnerFieldRatingGate,
+  useDshMobilePushRegistration,
+} from "@bthwani/dsh/app-partner";
 
 const PARTNER_DEVICE_FINGERPRINT_KEY = "bthwani.partner.device-fingerprint.v1";
 

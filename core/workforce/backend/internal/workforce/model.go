@@ -225,35 +225,35 @@ type ActorScopes struct {
 	ShiftCodes        []string `json:"shiftCodes"`
 }
 
-// BlockerReason is restricted to facts owned by Workforce (plus Identity
+// CurrentProviderReadinessBlockerReason is restricted to facts owned by Workforce (plus Identity
 // lifecycle, which Workforce reads as a dependency). DSH assignment/area and
 // WLT financial reasons are intentionally not representable here; cross-service
 // journeys must compose those authorities at their own boundary.
-type BlockerReason string
+type CurrentProviderReadinessBlockerReason string
 
 const (
-	BlockerIdentitySuspended    BlockerReason = "IDENTITY_SUSPENDED"
-	BlockerProfileIncomplete    BlockerReason = "PROFILE_INCOMPLETE"
-	BlockerDocumentsExpired     BlockerReason = "DOCUMENTS_EXPIRED"
-	BlockerEngagementInactive   BlockerReason = "ENGAGEMENT_INACTIVE"
+	CurrentProviderBlockerIdentitySuspended  CurrentProviderReadinessBlockerReason = "IDENTITY_SUSPENDED"
+	CurrentProviderBlockerProfileIncomplete  CurrentProviderReadinessBlockerReason = "PROFILE_INCOMPLETE"
+	CurrentProviderBlockerDocumentsExpired   CurrentProviderReadinessBlockerReason = "DOCUMENTS_EXPIRED"
+	CurrentProviderBlockerEngagementInactive CurrentProviderReadinessBlockerReason = "ENGAGEMENT_INACTIVE"
 )
 
-// ReadinessStatus indicates the Workforce-owned readiness decision. Dependency
-// outages are errors, not BLOCKED decisions.
-type ReadinessStatus string
+// CurrentProviderReadinessStatus indicates the Workforce-owned current
+// provider decision. Dependency outages are errors, not BLOCKED decisions.
+type CurrentProviderReadinessStatus string
 
 const (
-	ReadinessAllowed ReadinessStatus = "ALLOWED"
-	ReadinessBlocked ReadinessStatus = "BLOCKED"
+	CurrentProviderReadinessAllowed CurrentProviderReadinessStatus = "ALLOWED"
+	CurrentProviderReadinessBlocked CurrentProviderReadinessStatus = "BLOCKED"
 )
 
-// ReadinessGate is the canonical Workforce-owned provider readiness decision.
+// CurrentProviderReadiness is the canonical Workforce-owned current provider decision.
 // It evaluates Identity lifecycle + Workforce engagement/profile only. It must
 // never fabricate DSH assignment/area state or WLT financial state.
-type ReadinessGate struct {
-	ActorID        string          `json:"actorId"`
-	WorkforceKind  string          `json:"workforceKind"`
-	Status         ReadinessStatus `json:"status"`
-	BlockerReasons []BlockerReason `json:"blockerReasons"`
-	CheckedAt      time.Time       `json:"checkedAt"`
+type CurrentProviderReadiness struct {
+	ActorID        string                                  `json:"actorId"`
+	WorkforceKind  string                                  `json:"workforceKind"`
+	Status         CurrentProviderReadinessStatus          `json:"status"`
+	BlockerReasons []CurrentProviderReadinessBlockerReason `json:"blockerReasons"`
+	CheckedAt      time.Time                               `json:"checkedAt"`
 }

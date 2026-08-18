@@ -8,11 +8,20 @@ import (
 	"dsh-api/internal/fieldassignment"
 	"dsh-api/internal/partner"
 	"dsh-api/internal/store"
+	"dsh-api/internal/workforceclient"
 )
 
-func (s *protectedStoreServer) ensureActiveField(w http.ResponseWriter, r *http.Request, actorID string) bool {
+func (s *protectedStoreServer) ensureActiveField(w http.ResponseWriter, r *http.Request, actorID, operatorContextID string) bool {
 	if s.workforce == nil || !s.workforce.Configured() {
 		store.SendError(w, http.StatusServiceUnavailable, "WORKFORCE_UNAVAILABLE", "field workforce authority is unavailable")
+		return false
+	}
+	if err := s.workforce.VerifyActorInOperatorContext(r.Context(), actorID, operatorContextID, "field"); err != nil {
+		if errors.Is(err, workforceclient.ErrActorContextForbidden) {
+			store.SendError(w, http.StatusForbidden, "FIELD_ACTOR_FORBIDDEN", "the selected field worker is outside the operator context")
+		} else {
+			store.SendError(w, http.StatusServiceUnavailable, "WORKFORCE_UNAVAILABLE", "field workforce authority is unavailable")
+		}
 		return false
 	}
 	readiness, err := s.workforce.FieldActivationReadiness(r.Context(), strings.TrimSpace(actorID))
@@ -57,7 +66,7 @@ func (s *protectedStoreServer) handleCreateFieldOnboardingAssignment(w http.Resp
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	if !s.ensureActiveField(w, r, input.FieldActorID) {
+	if !s.ensureActiveField(w, r, input.FieldActorID, actor.OperatorContextID) {
 		return
 	}
 	item, err := fieldassignment.Create(r.Context(), s.db, actor.OperatorContextID, actor.ID, input)
@@ -90,7 +99,7 @@ func (s *protectedStoreServer) handleReassignFieldOnboardingAssignment(w http.Re
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	if !s.ensureActiveField(w, r, input.FieldActorID) {
+	if !s.ensureActiveField(w, r, input.FieldActorID, actor.OperatorContextID) {
 		return
 	}
 	item, err := fieldassignment.Reassign(r.Context(), s.db, actor.OperatorContextID, r.PathValue("assignmentId"), actor.ID, input)
@@ -127,7 +136,7 @@ func (s *protectedStoreServer) fieldAssignmentActor(w http.ResponseWriter, r *ht
 		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 		return store.StoreActor{}, false
 	}
-	if !s.ensureActiveField(w, r, actor.ID) {
+	if !s.ensureActiveField(w, r, actor.ID, actor.OperatorContextID) {
 		return store.StoreActor{}, false
 	}
 	return actor, true

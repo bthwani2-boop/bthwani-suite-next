@@ -22,6 +22,7 @@ func RegisterFieldReadinessRoutes(
 ) {
 	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
 
+	mux.HandleFunc("GET /dsh/field/me/readiness", protected.handleGetFieldSelfReadiness)
 	mux.HandleFunc("POST /dsh/field/stores/{storeId}/visits", protected.handleCreateGovernedFieldVisit)
 	mux.HandleFunc("GET /dsh/field/stores/{storeId}/visits", protected.handleListFieldVisits)
 	mux.HandleFunc("GET /dsh/field/work-queue", protected.handleFieldWorkQueue)

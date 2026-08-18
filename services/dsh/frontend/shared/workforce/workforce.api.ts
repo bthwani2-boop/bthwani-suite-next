@@ -22,7 +22,6 @@ import type {
   WorkforceCity,
   WorkforceMe,
   WorkforceShift,
-  ReadinessGate,
 } from "./workforce.types";
 
 // Same-origin BFF proxy (browser control-panel). Native apps import
@@ -261,8 +260,4 @@ export async function getWorkforceMe(): Promise<WorkforceMe> {
 
 export async function updateWorkforceMe(input: UpdateSelfInput): Promise<WorkforceMe> {
   return request<WorkforceMe>("/workforce/me", { method: "PATCH", body: input });
-}
-
-export async function getReadinessGate(actorId: string): Promise<ReadinessGate> {
-  return request<ReadinessGate>(`/workforce/readiness/${encodeURIComponent(actorId)}`);
 }

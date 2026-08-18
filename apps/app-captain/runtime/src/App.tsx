@@ -20,7 +20,7 @@ import {
   type CaptainOperationalReadiness,
   type DshCaptainNavigationCommand,
 } from "@bthwani/dsh/app-captain";
-import { colorRoles } from "@bthwani/ui-kit";
+import { Button, colorRoles } from "@bthwani/ui-kit";
 
 import { ReadinessGateScreen } from "./features/readiness/ReadinessGateScreen";
 
@@ -84,6 +84,7 @@ function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
         <Text style={styles.readinessError}>
           تعذر التحقق من الجاهزية التشغيلية الآن. أعد المحاولة قبل بدء العمل.
         </Text>
+        <Button label="تحديث الحالة" onPress={() => setRefreshToken((value) => value + 1)} />
       </View>
     );
   }

@@ -327,22 +327,3 @@ export const ENGAGEMENT_TYPE_LABEL_AR: Record<EngagementType, string> = {
   independent_contractor: "مقدم خدمة مستقل",
   employee: "موظف رسمي",
 };
-
-export type BlockerReason =
-  | "IDENTITY_SUSPENDED"
-  | "PROFILE_INCOMPLETE"
-  | "DOCUMENTS_EXPIRED"
-  | "EMPLOYMENT_TERMINATED"
-  | "NO_ACTIVE_ASSIGNMENT"
-  | "SHIFT_INACTIVE"
-  | "OUTSIDE_ACTIVE_AREA"
-  | "FINANCIAL_ELIGIBILITY_BLOCKED"
-  | "ELIGIBILITY_UNAVAILABLE";
-
-export type ReadinessGate = {
-  readonly actorId: string;
-  readonly workforceKind: string;
-  readonly status: "ALLOWED" | "BLOCKED";
-  readonly blockerReasons: readonly BlockerReason[];
-  readonly checkedAt: string;
-};

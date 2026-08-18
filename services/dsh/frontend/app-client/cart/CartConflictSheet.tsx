@@ -46,7 +46,7 @@ export const CartConflictSheet: React.FC<CartConflictSheetProps> = ({
 
 const styles = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     zIndex: 50,
     alignItems: "center",
     justifyContent: "flex-end",

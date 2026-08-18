@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -90,16 +91,29 @@ func TestInternalAssignmentsContextIsAttestedByIdentity(t *testing.T) {
 			t.Fatalf("expected context-main at Identity, got %q", r.Header.Get("X-Operator-Context-ID"))
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(identityclient.ActorView{ActorID: "field-1"})
+		_ = json.NewEncoder(w).Encode(identityclient.ActorView{ActorID: "field-1", Roles: []string{"field"}})
 	}))
 	defer identityServer.Close()
 
 	server := &server{identity: identityclient.NewClient(identityServer.URL, "identity-token")}
-	trusted, err := server.verifyAssignmentActorContext(context.Background(), "field-1", "context-main")
+	trusted, err := server.verifyAssignmentActorContext(context.Background(), "field-1", "context-main", "field")
 	if err != nil {
 		t.Fatalf("expected verified assignment context, got %v", err)
 	}
 	if got, ok := auth.OperatorContextIDFromContext(trusted); !ok || got != "context-main" {
 		t.Fatalf("expected only the verified context to reach Workforce, got %q (ok=%v)", got, ok)
+	}
+}
+
+func TestInternalAssignmentsRejectRoleOutsideIdentityBoundary(t *testing.T) {
+	identityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(identityclient.ActorView{ActorID: "field-1", Roles: []string{"field"}})
+	}))
+	defer identityServer.Close()
+
+	server := &server{identity: identityclient.NewClient(identityServer.URL, "identity-token")}
+	if _, err := server.verifyAssignmentActorContext(context.Background(), "field-1", "context-main", "captain"); !errors.Is(err, identityclient.ErrOperatorContextForbidden) {
+		t.Fatalf("expected role boundary rejection, got %v", err)
 	}
 }

@@ -64,3 +64,15 @@ func TestGetActorScopesFailsClosedWithoutTrustedInputs(t *testing.T) {
 		t.Fatal("missing trusted operator context must fail closed")
 	}
 }
+
+func TestGetActorScopesMapsForbiddenToActorBoundaryError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "token")
+	if err := client.VerifyActorInOperatorContext(context.Background(), "field-1", "context-main", "field"); !errors.Is(err, ErrActorContextForbidden) {
+		t.Fatalf("expected actor boundary error, got %v", err)
+	}
+}

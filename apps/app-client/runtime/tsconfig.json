@@ -6,10 +6,6 @@
   "include": [
     "src/**/*.ts",
     "src/**/*.tsx",
-    "app.config.ts",
-    "../../../services/dsh/frontend/app-client/**/*.ts",
-    "../../../services/dsh/frontend/app-client/**/*.tsx",
-    "../../../services/dsh/frontend/shared/**/*.ts",
-    "../../../services/dsh/clients/**/*.ts"
+    "app.config.ts"
   ]
 }

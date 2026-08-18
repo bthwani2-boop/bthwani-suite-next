@@ -2,17 +2,19 @@ import { ActivityIndicator, Linking, Platform, StyleSheet, Text, View } from "re
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
-import { colorRoles } from "@bthwani/ui-kit";
+import { Button, colorRoles } from "@bthwani/ui-kit";
 
-import { DshFieldSurface } from "../../../../services/dsh/frontend/app-field";
-import type { DshFieldNavigationCommand } from "../../../../services/dsh/frontend/app-field/dsh-field.routes";
-import { DshFieldProfileCompletionScreen } from "../../../../services/dsh/frontend/app-field/account/DshFieldProfileCompletionScreen";
-import { useDshMobilePushRegistration } from "../../../../services/dsh/frontend/shared/notifications/use-mobile-push-registration";
 import {
+  DshFieldProfileCompletionScreen,
+  DshFieldSurface,
+  IdentitySessionGate,
   WorkforceAccessGate,
   WorkforceProfileProvider,
-  useWorkforceProfile,
-} from "../../../../services/dsh/frontend/shared/workforce";
+  fetchFieldOperationalReadiness,
+  useDshMobilePushRegistration,
+  type FieldOperationalReadiness,
+  type DshFieldNavigationCommand,
+} from "@bthwani/dsh/app-field";
 import {
   configureIdentityDeviceFingerprintProvider,
   configureIdentitySession,
@@ -21,9 +23,6 @@ import {
   resolveIdentityApiBaseUrl,
   useIdentitySession,
 } from "@bthwani/core-identity";
-import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
-import { fetchWorkforceReadiness } from "../../../../services/dsh/frontend/shared/workforce/workforce-me.api";
-import type { ReadinessGate } from "../../../../services/dsh/frontend/shared/workforce/workforce.types";
 import { ReadinessGateScreen } from "./features/readiness/ReadinessGateScreen";
 import { FIELD_APP_SCHEME, parseFieldDeepLink } from "./navigation/field-deep-link";
 
@@ -57,59 +56,38 @@ type InstallationState =
   | { readonly kind: "error" };
 
 function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
-  const workforce = useWorkforceProfile();
-  const [readiness, setReadiness] = useState<ReadinessGate | null>(null);
+  const [readiness, setReadiness] = useState<FieldOperationalReadiness | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
   const [readinessRefreshToken, setReadinessRefreshToken] = useState(0);
 
   useEffect(() => {
     let active = true;
     setReadiness(null);
+    setUnavailable(false);
 
-    if (workforce.state.kind !== "ready") {
-      return () => {
-        active = false;
-      };
-    }
-
-    const { actorId, workforceKind } = workforce.state.me;
-    void fetchWorkforceReadiness(actorId)
+    void fetchFieldOperationalReadiness()
       .then((gate) => {
-        if (!active) return;
-        if (gate.actorId !== actorId || gate.workforceKind !== workforceKind) {
-          setReadiness({
-            actorId,
-            workforceKind,
-            status: "BLOCKED",
-            blockerReasons: ["ELIGIBILITY_UNAVAILABLE"],
-            checkedAt: new Date().toISOString(),
-          });
-          return;
-        }
-        setReadiness(gate);
+        if (active) setReadiness(gate);
       })
       .catch(() => {
-        if (!active) return;
-        setReadiness({
-          actorId,
-          workforceKind,
-          status: "BLOCKED",
-          blockerReasons: ["ELIGIBILITY_UNAVAILABLE"],
-          checkedAt: new Date().toISOString(),
-        });
+        if (active) setUnavailable(true);
       });
 
     return () => {
       active = false;
     };
-  }, [readinessRefreshToken, workforce.state]);
+  }, [readinessRefreshToken]);
 
-  const currentReadiness = workforce.state.kind === "ready"
-    && readiness?.actorId === workforce.state.me.actorId
-    && readiness.workforceKind === workforce.state.me.workforceKind
-    ? readiness
-    : null;
+  if (unavailable) {
+    return (
+      <View style={styles.installationState}>
+        <Text style={styles.installationError}>تعذر التحقق من جاهزية العمل الآن.</Text>
+        <Button label="تحديث الحالة" onPress={() => setReadinessRefreshToken((value) => value + 1)} />
+      </View>
+    );
+  }
 
-  if (!currentReadiness) {
+  if (!readiness) {
     return (
       <View style={styles.installationState}>
         <ActivityIndicator accessibilityLabel="جارٍ التحقق من الجاهزية..." />
@@ -117,24 +95,16 @@ function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (currentReadiness.status === "BLOCKED") {
+  if (!readiness.ready) {
     return (
       <ReadinessGateScreen
-        readiness={currentReadiness}
+        readiness={readiness}
         onRefresh={() => setReadinessRefreshToken((value) => value + 1)}
       />
     );
   }
 
-  if (currentReadiness.status === "ALLOWED") {
-    return <>{children}</>;
-  }
-
-  return (
-    <View style={styles.installationState}>
-      <Text style={styles.installationError}>حالة جاهزية غير معروفة. يرجى المحاولة مرة أخرى.</Text>
-    </View>
-  );
+  return <>{children}</>;
 }
 
 function AppContent() {

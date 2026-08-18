@@ -1,34 +1,29 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Button, Text, useBThwaniAppearance } from '@bthwani/ui-kit';
-import type {
-  BlockerReason,
-  ReadinessGate,
-} from '../../../../../../services/dsh/frontend/shared/workforce/workforce.types';
+import type { FieldOperationalReadiness } from '@bthwani/dsh/app-field';
 
-const REASON_MESSAGES: Record<BlockerReason, string> = {
-  IDENTITY_SUSPENDED: "تم تعليق الهوية الرقمية الخاصة بك. يرجى مراجعة الإدارة.",
-  PROFILE_INCOMPLETE: "الملف الشخصي غير مكتمل. يرجى تحديث بياناتك.",
-  DOCUMENTS_EXPIRED: "هناك مستندات منتهية الصلاحية (مثل رخصة القيادة).",
-  EMPLOYMENT_TERMINATED: "حالة التوظيف معلقة أو منهية.",
-  NO_ACTIVE_ASSIGNMENT: "لا يوجد تكليف نشط حالياً. يرجى انتظار تعيين منطقة.",
-  SHIFT_INACTIVE: "لا توجد مناوبة فعالة حالياً.",
-  OUTSIDE_ACTIVE_AREA: "أنت خارج منطقة الخدمة المحددة.",
-  FINANCIAL_ELIGIBILITY_BLOCKED: "تم إيقاف الأهلية المالية. يرجى تسوية المستحقات أو التواصل مع المالية.",
-  ELIGIBILITY_UNAVAILABLE: "تعذر التحقق من الأهلية التشغيلية والمالية. يرجى المحاولة لاحقاً.",
+const REASON_MESSAGES: Readonly<Record<string, string>> = {
+  fieldProfile: "الملف المهني للميداني غير مكتمل.",
+  cityCode: "مدينة العمل غير محددة.",
+  serviceZoneId: "منطقة الخدمة غير محددة.",
+  supervisorActorId: "المشرف المسؤول غير محدد.",
+  nationalIdNumber: "بيانات الهوية الوطنية غير مكتملة.",
+  identityFrontMediaRef: "صورة الهوية غير مرفقة.",
+  identityApproved: "الهوية لم تعتمد بعد.",
+  contractMediaRef: "العقد غير مرفق.",
+  contractApproved: "العقد لم يعتمد بعد.",
 };
 
 interface Props {
-  readonly readiness: ReadinessGate;
+  readonly readiness: FieldOperationalReadiness;
   readonly onRefresh: () => void;
 }
 
 export function ReadinessGateScreen({ readiness, onRefresh }: Props) {
   const { tokens } = useBThwaniAppearance();
 
-  if (readiness.status === 'ALLOWED') {
-    return null; // Should not render if allowed
-  }
+  if (readiness.ready) return null;
 
   return (
     <View style={[styles.container, { backgroundColor: tokens.appBackground }]}>
@@ -36,7 +31,7 @@ export function ReadinessGateScreen({ readiness, onRefresh }: Props) {
       <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>الرجاء معالجة الملاحظات التالية قبل المتابعة:</Text>
 
       <View style={styles.reasonsContainer}>
-        {readiness.blockerReasons.map(reason => (
+        {readiness.missing.map(reason => (
           <View key={reason} style={[styles.reasonCard, { backgroundColor: tokens.surface, borderColor: tokens.border }]}>
             <Text style={[styles.reasonText, { color: tokens.textPrimary }]}>• {REASON_MESSAGES[reason] || reason}</Text>
           </View>

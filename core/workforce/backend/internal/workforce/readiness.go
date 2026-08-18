@@ -7,88 +7,88 @@ import (
 	"time"
 )
 
-var ErrReadinessDependencyUnavailable = errors.New("workforce readiness dependency unavailable")
+var ErrCurrentProviderReadinessDependencyUnavailable = errors.New("workforce current provider readiness dependency unavailable")
 
-func identityReadinessBlocker(active bool) (BlockerReason, bool) {
+func identityCurrentProviderReadinessBlocker(active bool) (CurrentProviderReadinessBlockerReason, bool) {
 	if !active {
-		return BlockerIdentitySuspended, true
+		return CurrentProviderBlockerIdentitySuspended, true
 	}
 	return "", false
 }
 
-// EvaluateReadiness evaluates only the Workforce-owned provider readiness
+// EvaluateCurrentProviderReadiness evaluates only the Workforce-owned current provider readiness
 // boundary: Identity lifecycle, engagement state, and the sovereign professional
 // profile. DSH assignment/area state and WLT financial eligibility are separate
 // authorities and cannot be represented by this decision.
 //
 // Dependency failure is not a business denial. If Identity cannot be verified,
-// the evaluation returns ErrReadinessDependencyUnavailable so the HTTP boundary
+// the evaluation returns ErrCurrentProviderReadinessDependencyUnavailable so the HTTP boundary
 // can expose 503 instead of fabricating a BLOCKED decision.
-func (s *Service) EvaluateReadiness(ctx context.Context, actorID string) (*ReadinessGate, error) {
+func (s *Service) EvaluateCurrentProviderReadiness(ctx context.Context, actorID string) (*CurrentProviderReadiness, error) {
 	person, err := s.repo.PersonByActorID(ctx, actorID)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
-			return &ReadinessGate{
+			return &CurrentProviderReadiness{
 				ActorID:        actorID,
-				Status:         ReadinessBlocked,
-				BlockerReasons: []BlockerReason{BlockerProfileIncomplete},
+				Status:         CurrentProviderReadinessBlocked,
+				BlockerReasons: []CurrentProviderReadinessBlockerReason{CurrentProviderBlockerProfileIncomplete},
 				CheckedAt:      time.Now(),
 			}, nil
 		}
 		return nil, err
 	}
 
-	gate := &ReadinessGate{
+	readiness := &CurrentProviderReadiness{
 		ActorID:        actorID,
 		WorkforceKind:  person.WorkforceKind,
-		Status:         ReadinessAllowed,
-		BlockerReasons: make([]BlockerReason, 0),
+		Status:         CurrentProviderReadinessAllowed,
+		BlockerReasons: make([]CurrentProviderReadinessBlockerReason, 0),
 		CheckedAt:      time.Now(),
 	}
 
 	actor, err := s.identity.Actor(ctx, actorID)
 	if err != nil {
-		return nil, fmt.Errorf("%w: identity: %v", ErrReadinessDependencyUnavailable, err)
+		return nil, fmt.Errorf("%w: identity: %v", ErrCurrentProviderReadinessDependencyUnavailable, err)
 	}
-	if reason, blocked := identityReadinessBlocker(actor.IsActive()); blocked {
-		gate.BlockerReasons = append(gate.BlockerReasons, reason)
+	if reason, blocked := identityCurrentProviderReadinessBlocker(actor.IsActive()); blocked {
+		readiness.BlockerReasons = append(readiness.BlockerReasons, reason)
 	}
 
 	if person.EngagementStatus == "terminated" || person.EngagementStatus == "suspended" {
-		gate.BlockerReasons = append(gate.BlockerReasons, BlockerEngagementInactive)
+		readiness.BlockerReasons = append(readiness.BlockerReasons, CurrentProviderBlockerEngagementInactive)
 	}
 
 	switch person.WorkforceKind {
 	case "captain":
 		profile := person.CaptainProfile
 		if profile == nil {
-			gate.BlockerReasons = append(gate.BlockerReasons, BlockerProfileIncomplete)
+			readiness.BlockerReasons = append(readiness.BlockerReasons, CurrentProviderBlockerProfileIncomplete)
 			break
 		}
 		if profile.LicenseStatus == "expired" ||
 			(profile.LicenseStatus == "valid" && !isLicenseNotExpired(profile.LicenseExpiresAt)) {
-			gate.BlockerReasons = append(gate.BlockerReasons, BlockerDocumentsExpired)
+			readiness.BlockerReasons = append(readiness.BlockerReasons, CurrentProviderBlockerDocumentsExpired)
 		} else if profile.LicenseStatus != "valid" {
-			gate.BlockerReasons = append(gate.BlockerReasons, BlockerProfileIncomplete)
+			readiness.BlockerReasons = append(readiness.BlockerReasons, CurrentProviderBlockerProfileIncomplete)
 		}
 		if len(profile.DocumentMediaRefs) == 0 || profile.VehicleType == "" || profile.ServiceZoneID == "" {
-			gate.BlockerReasons = append(gate.BlockerReasons, BlockerProfileIncomplete)
+			readiness.BlockerReasons = append(readiness.BlockerReasons, CurrentProviderBlockerProfileIncomplete)
 		}
 
 	case "field":
 		profile := person.FieldProfile
 		if profile == nil {
-			gate.BlockerReasons = append(gate.BlockerReasons, BlockerProfileIncomplete)
+			readiness.BlockerReasons = append(readiness.BlockerReasons, CurrentProviderBlockerProfileIncomplete)
 			break
 		}
 		if len(profile.DocumentMediaRefs) == 0 || profile.CityCode == "" || profile.ServiceZoneID == "" {
-			gate.BlockerReasons = append(gate.BlockerReasons, BlockerProfileIncomplete)
+			readiness.BlockerReasons = append(readiness.BlockerReasons, CurrentProviderBlockerProfileIncomplete)
 		}
 	}
 
-	if len(gate.BlockerReasons) > 0 {
-		gate.Status = ReadinessBlocked
+	if len(readiness.BlockerReasons) > 0 {
+		readiness.Status = CurrentProviderReadinessBlocked
 	}
 
-	return gate, nil
+	return readiness, nil
 }
