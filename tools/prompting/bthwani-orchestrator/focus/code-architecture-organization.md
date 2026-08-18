@@ -10,6 +10,8 @@ Inspect materially applicable domain/capability boundaries, canonical owners, pu
 
 Fix parent ownership/design causes before mass-moving leaf files.
 
+When implementation complexity itself is materially suspect, diagnose necessity under `02-DIAGNOSE-ROOT-CAUSE.md` and apply the canonical minimum-complexity treatment in `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md`; working or long-standing code is not sufficient justification for avoidable complexity.
+
 ## 3. Repository structure
 
 For affected folders/modules establish as needed:
