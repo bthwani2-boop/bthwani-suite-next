@@ -46,6 +46,8 @@ function Get-ProvisionedWorkforceActorToken {
 
     [string]$WorkforceBaseUrl = "http://localhost:58086",
     [string]$IdentityBaseUrl = "http://localhost:58082",
+    [string]$DshBaseUrl = "http://localhost:58080",
+    [string]$OperatorContextId = "local-dsh",
     [string]$DeviceFingerprint = "local-workforce-runtime",
     [string]$RegistryPath = $script:LocalWorkforceActorRegistryPath
   )
@@ -67,6 +69,30 @@ function Get-ProvisionedWorkforceActorToken {
     -ErrorAction Stop
   if ($null -eq $detail.version) {
     throw "Workforce '$Kind' detail did not return a version."
+  }
+
+  # Captain activation depends on a short-lived DSH/WLT financial decision.
+  # Refresh it at the issuance boundary so a long preceding smoke journey
+  # cannot turn an otherwise valid provider into a misleading PROFILE_INCOMPLETE
+  # failure. This is an explicit governed refresh, never a local fallback.
+  if ($Kind -eq "captain") {
+    $financialRefresh = Invoke-RestMethod `
+      -Method Post `
+      -Uri "$DshBaseUrl/dsh/operator/dispatch/captains/$encodedActorId/financial-eligibility/refresh" `
+      -Headers @{
+        Authorization = "Bearer $OperatorToken"
+        "X-Operator-Context-ID" = $OperatorContextId
+        "X-Correlation-ID" = "local-workforce-captain-financial-refresh-$([guid]::NewGuid().ToString('N'))"
+      } `
+      -ContentType "application/json" `
+      -Body "{}" `
+      -TimeoutSec 20 `
+      -ErrorAction Stop
+    $financialEligibility = $financialRefresh.financialEligibility
+    if ($null -eq $financialEligibility -or $financialEligibility.eligible -ne $true -or
+        [string]::IsNullOrWhiteSpace([string]$financialEligibility.expiresAt)) {
+      throw "DSH/WLT financial eligibility refresh was not eligible and time-bounded for captain '$($provider.actorId)'."
+    }
   }
 
   $attempt = [Guid]::NewGuid().ToString("N")

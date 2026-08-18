@@ -82,7 +82,9 @@ $scopedActors = @(
 foreach ($actor in $scopedActors) {
   $token = [string]$actor.token
   $headers = @{ Authorization = "Bearer $token" }
-  $context = Invoke-RestMethod "http://localhost:58080/dsh/store-context" -Headers $headers -TimeoutSec 10
+  # Store-context is an object-scoped read. Keep the smoke request explicit so
+  # a broad actor token can never turn into an implicit parallel scope.
+  $context = Invoke-RestMethod "http://localhost:58080/dsh/store-context?storeId=store-test-grocery" -Headers $headers -TimeoutSec 10
   if ($context.actorRole -ne $actor.expectedRole) { throw "wrong actor role for $($actor.label)" }
   if ([string]::IsNullOrWhiteSpace($context.store.id)) { throw "missing scoped store for $($actor.label)" }
 }
