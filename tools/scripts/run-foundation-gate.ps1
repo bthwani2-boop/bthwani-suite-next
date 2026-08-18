@@ -53,7 +53,8 @@ if (-not [string]::IsNullOrWhiteSpace($Guard)) {
     $routerOutput = node tools/scripts/detect-ci-context.mjs
     if ($LASTEXITCODE -ne 0) { throw "Canonical CI impact router failed with exit $LASTEXITCODE." }
     $router = ($routerOutput -join [Environment]::NewLine) | ConvertFrom-Json
-    $foundationGuards = @($router.foundation_guard_ids | ForEach-Object { [string]$_ } | Select-Object -Unique)
+    $routerGuards = @($router.foundation_guard_ids | ForEach-Object { [string]$_ } | Select-Object -Unique)
+    $foundationGuards = @($routerGuards | Where-Object { $registeredFoundationSet.Contains($_) })
   } finally {
     if ($null -eq $previousChangedFiles) { Remove-Item Env:CI_CHANGED_FILES -ErrorAction SilentlyContinue } else { $env:CI_CHANGED_FILES = $previousChangedFiles }
     if ($null -eq $previousMode) { Remove-Item Env:CI_MODE -ErrorAction SilentlyContinue } else { $env:CI_MODE = $previousMode }
