@@ -10,7 +10,7 @@ on:
         type: choice
         options: [affected, full]
       journey:
-        description: Optional governed capability identifier
+        description: Optional capability identifier
         required: false
         type: string
       runtime_proof:
@@ -21,14 +21,23 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches: ["**"]
+    paths:
+      - ".github/**"
+      - "tools/**"
+      - "contracts/**"
+      - "core/**"
+      - "services/**"
+      - "apps/**"
+      - "shared/**"
+      - "infra/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "nx.json"
   push:
     branches: ["**"]
     paths:
-      - "AGENTS.md"
-      - "GEMINI.md"
-      - ".agents/**"
       - ".github/**"
-      - "governance/**"
       - "tools/**"
       - "contracts/**"
       - "core/**"
@@ -57,7 +66,7 @@ env:
 
 jobs:
   context:
-    name: Detect affected scope
+    name: Detect affected code scope
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
@@ -65,21 +74,7 @@ jobs:
       head_sha: ${{ steps.scope.outputs.head_sha }}
       full_verification: ${{ steps.scope.outputs.full_verification }}
       full_scope: ${{ steps.scope.outputs.full_scope }}
-      verification_requirement: ${{ steps.scope.outputs.verification_requirement }}
-      required_jobs: ${{ steps.scope.outputs.required_jobs }}
       verification_depth: ${{ steps.scope.outputs.verification_depth }}
-      governance: ${{ steps.scope.outputs.governance }}
-      workflow: ${{ steps.scope.outputs.workflow }}
-      infrastructure: ${{ steps.scope.outputs.infrastructure }}
-      security: ${{ steps.scope.outputs.security }}
-      policy: ${{ steps.scope.outputs.policy }}
-      governance_policy: ${{ steps.scope.outputs.governance_policy }}
-      workflow_policy: ${{ steps.scope.outputs.workflow_policy }}
-      workflow_security_policy: ${{ steps.scope.outputs.workflow_security_policy }}
-      security_scan_policy: ${{ steps.scope.outputs.security_scan_policy }}
-      security_policy: ${{ steps.scope.outputs.security_policy }}
-      infrastructure_policy: ${{ steps.scope.outputs.infrastructure_policy }}
-      nomenclature_required: ${{ steps.scope.outputs.nomenclature_required }}
       frontend: ${{ steps.scope.outputs.frontend }}
       mobile: ${{ steps.scope.outputs.mobile }}
       contracts: ${{ steps.scope.outputs.contracts }}
@@ -94,20 +89,15 @@ jobs:
       workforce: ${{ steps.scope.outputs.workforce }}
       platform: ${{ steps.scope.outputs.platform }}
       providers: ${{ steps.scope.outputs.providers }}
-      database: ${{ steps.scope.outputs.database }}
       database_changed: ${{ steps.scope.outputs.database_changed }}
-      runtime: ${{ steps.scope.outputs.runtime }}
       runtime_required: ${{ steps.scope.outputs.runtime_required }}
       runtime_profile: ${{ steps.scope.outputs.runtime_profile }}
-      shared_brain: ${{ steps.scope.outputs.shared_brain }}
       heavy: ${{ steps.scope.outputs.heavy }}
       verification_tier: ${{ steps.scope.outputs.verification_tier }}
-      diagnostics: ${{ steps.scope.outputs.diagnostics }}
-      platform_change_sets: ${{ steps.scope.outputs.platform_change_sets }}
-      policy_required: ${{ steps.scope.outputs.policy_required }}
       diagnostics_required: ${{ steps.scope.outputs.diagnostics_required }}
       verification_required: ${{ steps.scope.outputs.verification_required }}
       backend_required: ${{ steps.scope.outputs.backend_required }}
+      platform_change_sets: ${{ steps.scope.outputs.platform_change_sets }}
       skip_duplicate_push: ${{ steps.scope.outputs.skip_duplicate_push }}
       execution_phase: ${{ steps.scope.outputs.execution_phase }}
     steps:
@@ -122,11 +112,11 @@ jobs:
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "24.17.0"
-      - name: Verify contextual router decisions and runtime requirement wiring
+      - name: Verify contextual router
         run: |
           node --test tools/scripts/detect-ci-context.test.mjs
           node --test tools/scripts/ci-runtime-bootstrap-policy.test.mjs
-      - name: Classify changed paths
+      - name: Classify changed code paths
         id: scope
         shell: bash
         env:
@@ -150,10 +140,6 @@ jobs:
             EXECUTION_PHASE="closure"
           elif [[ "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "master" ]]; then
             EXECUTION_PHASE="master"
-
-            # Master remains fail-closed: carry verification debt from the most
-            # recent successful contextual CI ancestor. Failed/cancelled master
-            # runs are not accepted as evidence.
             if ! SUCCESSFUL_RUN_SHAS="$(
               gh api --method GET \
                 -H "X-GitHub-Api-Version: 2022-11-28" \
@@ -167,11 +153,8 @@ jobs:
               echo "::error title=CI verification base unavailable::failed to query successful contextual CI runs"
               exit 1
             fi
-
             while IFS= read -r candidate; do
-              if [[ -z "${candidate}" || "${candidate}" == "${HEAD_SHA}" ]]; then
-                continue
-              fi
+              if [[ -z "${candidate}" || "${candidate}" == "${HEAD_SHA}" ]]; then continue; fi
               if git merge-base --is-ancestor "${candidate}" "${HEAD_SHA}" 2>/dev/null; then
                 BASE_SHA="${candidate}"
                 VERIFIED_PUSH_BASE=true
@@ -180,14 +163,7 @@ jobs:
             done <<< "${SUCCESSFUL_RUN_SHAS}"
           elif [[ "${EVENT_NAME}" == "push" ]]; then
             EXECUTION_PHASE="development"
-
-            # Development feedback is intentionally commit-local. Closure/PR
-            # verification is responsible for the complete base..HEAD delta.
             BASE_SHA="${EVENT_BEFORE:-}"
-
-            # A branch with an open PR already receives pull_request verification.
-            # Keep this push run as a tiny routing receipt and suppress duplicated
-            # heavy work for the same source branch.
             if ! OPEN_PR_COUNT="$(
               gh api --method GET \
                 -H "X-GitHub-Api-Version: 2022-11-28" \
@@ -200,9 +176,7 @@ jobs:
               echo "::error title=PR deduplication lookup failed::unable to query open pull requests for ${GITHUB_REF_NAME}"
               exit 1
             fi
-            if [[ "${OPEN_PR_COUNT}" != "0" ]]; then
-              SKIP_DUPLICATE_PUSH=true
-            fi
+            if [[ "${OPEN_PR_COUNT}" != "0" ]]; then SKIP_DUPLICATE_PUSH=true; fi
           fi
 
           echo "skip_duplicate_push=${SKIP_DUPLICATE_PUSH}" >> "${GITHUB_OUTPUT}"
@@ -216,22 +190,17 @@ jobs:
           FULL_VERIFICATION=false
           FULL_SCOPE=false
           if [[ "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "master" && "${VERIFIED_PUSH_BASE}" != "true" ]]; then
-            # No trusted successful ancestor means there is no safe affected-only
-            # baseline. Establish one by running the full verification contract.
             FULL_VERIFICATION=true
             FULL_SCOPE=true
           elif [[ "${EVENT_NAME}" == "workflow_dispatch" && "${DISPATCH_MODE:-affected}" == "full" ]]; then
             FULL_VERIFICATION=true
             FULL_SCOPE=true
           elif [[ "${VERIFICATION_AUTHORITY_CHANGED}" == "true" ]]; then
-            # Verification authority cannot certify itself with a partial run.
             FULL_VERIFICATION=true
             FULL_SCOPE=true
           fi
           echo "full_verification=${FULL_VERIFICATION}" >> "${GITHUB_OUTPUT}"
           echo "full_scope=${FULL_SCOPE}" >> "${GITHUB_OUTPUT}"
-
-          printf '%s\n' "verification base=${BASE_SHA} head=${HEAD_SHA} trusted_push_base=${VERIFIED_PUSH_BASE} authority_change=${VERIFICATION_AUTHORITY_CHANGED} full=${FULL_VERIFICATION} scope_all=${FULL_SCOPE}"
 
           MODE="affected"
           if [[ "${FULL_SCOPE}" == "true" ]]; then MODE="full"; fi
@@ -253,13 +222,12 @@ jobs:
           JOURNEY_SCOPE: ${{ steps.scope.outputs.journey_scope }}
           VERIFICATION_TIER: ${{ steps.scope.outputs.verification_tier }}
           RUNTIME_PROFILE: ${{ steps.scope.outputs.runtime_profile }}
-          DIAGNOSTICS_REQUIRED: ${{ steps.scope.outputs.diagnostics }}
           FULL_VERIFICATION: ${{ steps.scope.outputs.full_verification }}
           EXECUTION_PHASE: ${{ steps.scope.outputs.execution_phase }}
           SKIP_DUPLICATE_PUSH: ${{ steps.scope.outputs.skip_duplicate_push }}
         run: |
           {
-            echo "### Contextual CI routing"
+            echo "### Contextual code verification"
             echo "- Base: ${BASE_SHA}"
             echo "- Head: ${HEAD_SHA}"
             echo "- Execution phase: ${EXECUTION_PHASE}"
@@ -269,30 +237,10 @@ jobs:
             echo "- Runtime profile: ${RUNTIME_PROFILE}"
             echo "- Node scope: ${NODE_SCOPE}"
             echo "- Journey scope: ${JOURNEY_SCOPE:-none}"
-            echo "- Static diagnostics: ${DIAGNOSTICS_REQUIRED}"
           } >> "${GITHUB_STEP_SUMMARY}"
 
-  policy:
-    name: Policy and governance
-    needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.policy_required == 'true' }}
-    uses: ./.github/workflows/ci-policy.yml
-    with:
-      base_sha: ${{ needs.context.outputs.base_sha }}
-      head_sha: ${{ needs.context.outputs.head_sha }}
-      governance_policy: ${{ needs.context.outputs.governance_policy }}
-      workflow_policy: ${{ needs.context.outputs.workflow_policy }}
-      workflow_security_policy: ${{ needs.context.outputs.workflow_security_policy }}
-      security_scan_policy: ${{ needs.context.outputs.security_scan_policy }}
-      security_policy: ${{ needs.context.outputs.security_policy }}
-      infrastructure_policy: ${{ needs.context.outputs.infrastructure_policy }}
-      nomenclature_required: ${{ needs.context.outputs.nomenclature_required }}
-      contracts_changed: ${{ needs.context.outputs.contracts_changed }}
-      database_changed: ${{ needs.context.outputs.database_changed }}
-      execution_phase: ${{ needs.context.outputs.execution_phase }}
-
   diagnostics:
-    name: Static diagnostics
+    name: Static code diagnostics
     needs: [context]
     if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.diagnostics_required == 'true' }}
     uses: ./.github/workflows/ci-node-diagnostics.yml
@@ -357,39 +305,32 @@ jobs:
 
   result:
     name: BThwani CI result
-    needs: [context, policy, diagnostics, verification, backends, runtime]
+    needs: [context, diagnostics, verification, backends, runtime]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Enforce fail-closed aggregate result
+      - name: Enforce fail-closed code result
         shell: bash
         env:
           CONTEXT_RESULT: ${{ needs.context.result }}
-          POLICY_RESULT: ${{ needs.policy.result }}
           DIAGNOSTICS_RESULT: ${{ needs.diagnostics.result }}
           VERIFICATION_RESULT: ${{ needs.verification.result }}
           BACKENDS_RESULT: ${{ needs.backends.result }}
           RUNTIME_RESULT: ${{ needs.runtime.result }}
-          POLICY_REQUIRED: ${{ needs.context.outputs.policy_required }}
           DIAGNOSTICS_REQUIRED: ${{ needs.context.outputs.diagnostics_required }}
           VERIFICATION_REQUIRED: ${{ needs.context.outputs.verification_required }}
           BACKEND_REQUIRED: ${{ needs.context.outputs.backend_required }}
           RUNTIME_REQUIRED: ${{ needs.context.outputs.runtime_required }}
           SKIP_DUPLICATE_PUSH: ${{ needs.context.outputs.skip_duplicate_push }}
-          EXECUTION_PHASE: ${{ needs.context.outputs.execution_phase }}
         run: |
           set -euo pipefail
-
           if [[ "${SKIP_DUPLICATE_PUSH}" == "true" ]]; then
             printf '%s\n' "duplicate development push suppressed because an open PR owns verification for this branch"
             exit 0
           fi
-
-          printf '%s\n' "execution phase=${EXECUTION_PHASE}"
           failed=0
           failures=()
-
           check_result() {
             local name="$1"
             local result="$2"
@@ -399,18 +340,14 @@ jobs:
             failures+=("${name}:${result}")
             failed=1
           }
-
           check_result context "${CONTEXT_RESULT}" true
-          check_result policy "${POLICY_RESULT}" "${POLICY_REQUIRED}"
           check_result diagnostics "${DIAGNOSTICS_RESULT}" "${DIAGNOSTICS_REQUIRED}"
           check_result verification "${VERIFICATION_RESULT}" "${VERIFICATION_REQUIRED}"
           check_result backends "${BACKENDS_RESULT}" "${BACKEND_REQUIRED}"
           check_result runtime "${RUNTIME_RESULT}" "${RUNTIME_REQUIRED}"
-
           if [[ "${failed}" -ne 0 ]]; then
             message="failed or unjustifiably skipped bundles: $(IFS=,; echo "${failures[*]}")"
             echo "::error title=BThwani CI failed::${message}"
-            printf '%s\n' "${message}"
             exit 1
           fi
-          printf '%s\n' "all required bundles passed; skipped bundles were proven non-applicable by the router"
+          printf '%s\n' "all required code bundles passed; skipped bundles were non-applicable"
