@@ -31,7 +31,7 @@ function uniqueInOrder(values) {
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const FOUNDATION_GUARDS = JSON.parse(
-  readFileSync(resolve(repositoryRoot, "governance/guards/guard-sets.json"), "utf8"),
+  readFileSync(resolve(repositoryRoot, "tools/verification/verification-sets.json"), "utf8"),
 ).guardSets.foundation;
 const FOUNDATION_SET = new Set(FOUNDATION_GUARDS);
 
@@ -49,7 +49,7 @@ function resolveFoundationGuards({
   if (fullScope) return [...FOUNDATION_GUARDS];
 
   const selected = ["source-integrity"];
-  const toolingChanged = files.some((file) => file.startsWith("tools/guards/") || file.startsWith("tools/scripts/"));
+  const toolingChanged = files.some((file) => file.startsWith("tools/guards/") || file.startsWith("tools/scripts/") || file.startsWith("tools/verification/"));
 
   if (toolingChanged || workflow || infrastructure || workspaceManifest || contractsChanged || backendChanged || frontend) {
     selected.push("no-broken-imports");
@@ -92,6 +92,7 @@ export function classifyFiles(inputFiles, options = {}) {
     "tools/scripts/verification-requirement.mjs",
     "tools/scripts/ci-routing.test.mjs",
     "tools/scripts/ci-runtime-bootstrap-policy.test.mjs",
+    "tools/verification/verification-sets.json",
   );
   const workflow = full || starts(".github/") || ciRouter || has((file) =>
     ["tools/scripts/run-actionlint.mjs", "tools/scripts/run-zizmor.mjs", "tools/scripts/run-pinact.mjs"].includes(file)
@@ -144,19 +145,20 @@ export function classifyFiles(inputFiles, options = {}) {
     equals(
       "tools/scripts/materialize-openapi-artifacts.mjs",
       "tools/scripts/openapi-context-composer.mjs",
+      "tools/verification/generated-client-registry.json",
     ) ||
     starts("contracts/") ||
     has((file) => /^(?:core|services)\/[^/]+\/contracts\//.test(file) || file.endsWith(".openapi.yaml"));
   const contractsChanged = backendApiSurfaceChanged || materializationInputsChanged || includes("/clients/generated/");
   const contracts = full || contractsChanged;
-  const databaseChanged = full || includes("/database/", "/migrations/") || starts("infra/docker/");
+  const databaseChanged = full || includes("/database/", "/migrations/") || starts("infra/docker/") || equals("tools/verification/migration-amendments.json");
   const database = full || databaseChanged;
 
   const authChanged = full || starts("core/identity/backend/internal/identity/") || has((file) =>
     file.startsWith("core/identity/") && /(^|\/)(auth|authentication|activation|otp|token|credential)(\/|[-_.])/i.test(file)
   );
   const sessionChanged = full || has((file) => /(^|\/)(session|sessions|refresh-token|revocation|device-fingerprint)(\/|[-_.])/i.test(file));
-  const rbacChanged = full || starts("core/identity/backend/internal/identity/") || equals("governance/contracts/scope-vocabulary.json") || has((file) =>
+  const rbacChanged = full || starts("core/identity/backend/internal/identity/") || equals("tools/verification/security-scope-vocabulary.json") || has((file) =>
     /(^|\/)(?:[^/]*-)?(rbac|role|roles|permission|permissions|authorization|policy-enforcement)(\/|[-_.])/i.test(file)
   );
   const privacyChanged = full || has((file) => /(^|\/)(privacy|consent|retention|redaction|anonymization)(\/|[-_.])/i.test(file));
@@ -191,7 +193,7 @@ export function classifyFiles(inputFiles, options = {}) {
     file.endsWith("google-services.json") ||
     file.endsWith("GoogleService-Info.plist")
   );
-  const migrationChanged = full || includes("/migrations/");
+  const migrationChanged = full || includes("/migrations/") || equals("tools/verification/migration-amendments.json");
   const recoveryChanged = full || starts("docs/runbooks/") || has((file) => /backup|restore|recovery|rollback/i.test(file));
   const observabilityChanged = full || starts("tools/observability/") || has((file) => /observability|(^|\/)tracing\//i.test(file));
 
