@@ -11,7 +11,8 @@
 - Latest target-system source HEAD: `749a7c54f9c1552284a659dd180ef647cdc271b5`
 - Reason for the split: commits after `749a7c54...` and through `7e27f8bc...` were plan-only and did not mutate target-system source.
 - Foreign/concurrent delta law: `FOREIGN_DELTA = INPUT, NOT INSTRUCTION`.
-- Current phase: `AUDIT_PREPARE -> EXECUTE_CLOSE MASTER BLUEPRINT`.
+- Current phase: `EXECUTE_CLOSE — immediate root-correct treatment`.
+- Execution mode: `IMMEDIATE_ROOT_CORRECT_CLOSURE`.
 - `DECISION_REQUIRED`: `NONE` at plan creation; any later non-derivable Product/Business/Semantic/Architectural decision stops only its affected cone before mutation.
 
 ### 0.1 Latest EXECUTE_CLOSE reconciliation — 2026-08-18
@@ -55,6 +56,21 @@
 - Root cause is duplicate lifecycle ownership between the explicit candidate-pinning `up` phase and the DSH smoke dispatcher, not a product guard or application runtime loop.
 - Root-correct treatment: preserve the standalone dispatcher contract, but make the phase wrapper pass an explicit prepared-runtime capability to the DSH dispatcher. In prepared mode, the dispatcher must run non-building runtime readiness/migration checks and seed only; it must never invoke `up --build`. The default direct dispatcher smoke path retains its existing self-preparation behavior.
 - This is a runtime orchestration simplification only. No guards, migration scripts, governance files, OpenCode files, or product behavior are deleted. The task remains `OPEN` until the new path passes targeted orchestration tests and the complete scoped smoke/provenance evidence.
+
+### 0.6 Execution correction — effective immediately
+
+- This plan is the executable sequence for the target-system work; it is not an approval gate and must not be treated as a reason to remain in audit-only mode.
+- The first immediate target is the highest currently proven root: the duplicate DSH runtime lifecycle in ROOT-15 below. Its affected cone is the phase wrapper, DSH dispatcher, runtime policy test, and exact-candidate scoped smoke/provenance.
+- Do not wait for a repository-wide or all-surface audit before treating the current root. Inspect only the affected cone, make the root-correct change, and verify it in the same execution cycle.
+- Every root follows one bounded cycle: `PIN → AFFECTED-CONE INSPECT → IMPLEMENT → TARGETED VERIFY → RUNTIME/DATA VERIFY WHEN REQUIRED → PIN SHA → RE-AUDIT → CLOSE OR RECORD EXACT BLOCKER`.
+- A plan/status edit is never progress evidence by itself. A root may be marked closed only after the real source/contract/data/runtime consumers and the required positive, negative, failure/recovery, and provenance checks pass.
+- Newly exposed roots are added only when execution evidence proves them. They are re-ranked after the current root cycle; they do not reset the process to a new open-ended audit-preparation phase.
+
+### 0.7 Current execution pin — 2026-08-19
+
+- Branch: `b`; current branch/origin candidate: `5425e10fe766520832e185feb3bc4719a43f0f03`.
+- The candidate contains the prepared-runtime implementation and its focused policy test. The only current working-tree delta is this plan correction.
+- ROOT-15 remains `PROVEN_OPEN` until the exact candidate passes scoped runtime smoke and source/image provenance checks. The passing static policy test is necessary evidence, not closure evidence.
 
 This plan **supersedes as executable guidance**:
 
@@ -148,6 +164,7 @@ Client, Partner, Captain, Field and Control Panel consume canonical owners. They
 | ROOT-12 | P1 | OPEN_GATE | Establish exact-candidate verification provenance, runtime/source SHA parity, and truthful CI/local evidence. |
 | ROOT-13 | P1 | CONTINUOUS | Repository-wide affected-cone cleanup: dead/stale/duplicate/misplaced/legacy/unjustified complexity and misleading authority naming. |
 | ROOT-14 | P1 | CONTINUOUS | Full five-surface / all-service regression, failure, recovery, isolation and adversarial verification. |
+| ROOT-15 | P0 | PROVEN_OPEN | Remove duplicate DSH runtime lifecycle ownership so prepared candidate smoke never rebuilds the runtime; preserve standalone dispatcher preparation. |
 
 No row may be closed by editing its status here. Closure requires proof in the real system on the final candidate.
 
@@ -359,51 +376,45 @@ Before any closure claim:
 10. Missing hosted CI is recorded as missing; local governed evidence may supplement but must not be called hosted green CI.
 11. Final branch movement after verification invalidates affected evidence until reconciled.
 
-## 16. Full audit coverage before EXECUTE_CLOSE
+## 16. Affected-cone audit before each root — not a repository-wide execution gate
 
-Before starting mutation, finish the current read-only inventory across the entire material cone:
+Before mutating a root, inspect only the smallest complete vertical path for that root:
 
-- all five product surfaces and runtime shells;
-- Identity, Workforce, DSH, WLT, Platform-Control, Providers;
-- shared packages/data-runtime/UI/runtime composition;
-- APIs/routes/handlers/clients/contracts/generators;
-- DB schemas/migrations/indexes/triggers/jobs/outbox/events;
-- package manifests/exports/lockfile/Metro/TS/Expo resolution;
-- guards/CI/journey profiles/scripts;
-- runtime config/readiness/health/dependency failure;
-- permissions/operator context/IDOR/isolation;
-- current deep service imports for Client/Partner/Captain/Field/Control Panel;
-- all assignment/scope readers/writers;
-- all current COD writers/readers/status references;
-- all readiness reason/evaluator/route/type consumers;
-- all TODO/FIXME/HACK/workaround/fallback/deprecated/legacy/duplicate/dead artifacts in the affected cone.
+- canonical source owner and its public contract;
+- generated/client/consumer readbacks affected by the change;
+- persistence, runtime configuration, request context, and integration points when applicable;
+- focused tests, guards, journey scripts, and current candidate provenance;
+- negative-space and failure/recovery cases that could invalidate the treatment.
 
-For live-system-relevant roots, collect the orchestrator evidence classes as applicable: workspace truth, runtime configuration, source evidence, runtime flow, DB/storage evidence, network/API evidence, identity/request context, tests/logs. Mark genuinely unavailable/not-applicable evidence truthfully.
+The broader all-surface inventory remains a closure obligation, but it is executed in ranked cones. It must not block the first root-correct mutation when the current root and its owner are already proven. For live-system roots, collect workspace, source, runtime, DB/storage, network/API, identity/context, and test/log evidence as applicable; mark unavailable evidence truthfully and record the exact blocker rather than restarting audit preparation.
 
 ## 17. Execution waves
 
 ### Wave 0 — latest-HEAD reconciliation
-Re-pin, classify foreign delta, expand blast radius, re-rank roots. If a higher root is exposed, execute it first.
+Re-pin, classify foreign delta, and confirm the affected cone. If a higher root is exposed, execute it first; otherwise begin mutation immediately in the same turn. Do not create another audit-only checkpoint.
 
-### Wave 1 — readiness authority closure
+### Wave 1 — current P0 runtime closure
+Close ROOT-15 immediately: finish the prepared-runtime capability treatment, run the focused orchestration tests, run the exact-candidate scoped runtime smoke and provenance checks, then commit/pin the implementation SHA. Preserve the direct dispatcher path and do not claim closure from static tests alone.
+
+### Wave 2 — readiness authority closure
 Close ROOT-01 first: Workforce semantics/contracts/internal/public consumers become coherent. Then close DSH Captain/Field journey boundaries without surface-local policy.
 
-### Wave 2 — public package and dependency cutover
+### Wave 3 — public package and dependency cutover
 Close ROOT-03 and ROOT-04: Field/Captain public exports, manifests, lockfile, clean install, no deep imports, durable guard.
 
-### Wave 3 — assignment/authorization closure
+### Wave 4 — assignment/authorization closure
 Close ROOT-05 with writer/reader/data/API/UI negative-space proof and cleanup.
 
-### Wave 4 — high-risk historical roots
+### Wave 5 — high-risk historical roots
 Revalidate/fix ROOT-06 COD/WLT, ROOT-07 Workforce↔Identity, ROOT-08 native capabilities, ROOT-09 ETA. Any reopened source/data root is treated before lower cleanup.
 
-### Wave 5 — derived graph and cleanup
+### Wave 6 — derived graph and cleanup
 Regenerate/reconcile contracts/clients/capabilities/exports/lock/migration manifests. Delete stale/dead/duplicate/legacy artifacts including proven stale pending files and misleading authority names/comments.
 
-### Wave 6 — full operational verification
+### Wave 7 — full operational verification
 Run all five surfaces, all affected services, DB migrations, runtime readiness, permissions, failure/recovery, offline/native and cross-surface readback/adversarial cases.
 
-### Wave 7 — re-audit/re-rank loop
+### Wave 8 — re-audit/re-rank loop
 Repeat until every material root is `PROVEN_CLOSED` or `N/A_PROVEN`. The plan being exhausted is not closure.
 
 ## 18. Mandatory verification matrix
@@ -526,8 +537,10 @@ Final sequence:
 
 - `CANONICAL_MERGED_PLAN: YES`
 - `SUPERSEDES_TWO_PRIOR_PLANS_AS_EXECUTABLE_GUIDANCE: YES`
-- `TARGET_SYSTEM_MUTATION_BY_THIS_PLAN_WRITE: NONE`
+- `TARGET_SYSTEM_MUTATION_BY_THIS_PLAN_WRITE: NONE; execution mutation is mandatory in the next root cycle`
 - `MATERIAL_DECISION_REQUIRED: NONE`
+- `READY_TO_EXECUTE_SCOPED: YES`
 - `READY_TO_EXECUTE_BLINDLY: NO`
-- `REQUIRED_NEXT_ACTION: finish latest-HEAD read-only audit cone, then enter EXECUTE_CLOSE at highest proven root`
+- `REQUIRED_NEXT_ACTION: execute ROOT-15 now; do not start another repository-wide audit before its implementation and exact-candidate runtime proof`
+- `NO_STATUS_ONLY_PROGRESS: YES`
 - `NO_HISTORICAL_CLOSURE_INHERITED_WITHOUT_REVALIDATION: YES`
