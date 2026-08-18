@@ -156,6 +156,9 @@ When capabilities permit: `falsifiable hypothesis → smallest real check → ru
 ### Adversarial
 Assume the current explanation is wrong and search for contradictory evidence, hidden writers/readers, fallback, stale state, race, partial transaction, permission leak, contract/data drift, legacy path, missing consumer, wrong owner/handoff or unhandled failure/recovery.
 
+### Necessary complexity
+Inspect materially affected layers, abstractions, wrappers, adapters, indirection, state/flow machinery, configs, scripts, dependencies, files and folders for necessary purpose, owner, real consumer, requirement and measurable correctness/assurance/operational value. `WORKING ≠ JUSTIFIED` and `COMPLEX ≠ ROBUST`. If a materially simpler design can preserve required semantics, invariants, security, reliability, performance and compatibility, treat the excess complexity as a finding; do not simplify on aesthetics or intuition alone.
+
 ## 8. Full-stack operation trace
 
 A material operation should be traceable, where applicable, through:
