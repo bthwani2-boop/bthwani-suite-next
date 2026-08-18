@@ -7,7 +7,7 @@ const repoRoot = path.resolve(import.meta.dirname, "../..");
 const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 const exists = (relativePath) => fs.existsSync(path.join(repoRoot, relativePath));
 
-test("CI is code-only and has no governance policy bundle", () => {
+test("CI is code-only and has no governance workflow bundle", () => {
   const workflow = read(".github/workflows/ci.yml");
   assert.equal(exists(".github/workflows/ci-policy.yml"), false);
   assert.equal(exists(".github/workflows/manual-deep-verification.yml"), false);
@@ -19,20 +19,30 @@ test("CI is code-only and has no governance policy bundle", () => {
   assert.match(workflow, /ci-runtime\.yml/u);
 });
 
-test("router exports code verification scope without governance control-plane fields", () => {
+test("router owns scopes and jobs only", () => {
   const router = read("tools/scripts/detect-ci-context.mjs");
-  assert.match(router, /foundation_guard_ids:/u);
   assert.match(router, /verification_required:/u);
   assert.match(router, /backend_required:/u);
   assert.match(router, /runtime_required:/u);
+  assert.match(router, /diagnostics_required:/u);
+  assert.doesNotMatch(router, /foundation_guard_ids|guardSets|verification-sets\.json/u);
   assert.doesNotMatch(router, /governance_policy|policy_required|agent-governance|guard-registry|required-command-integrity|\bsdlc\b/u);
 });
 
-test("foundation routing has one code-only selector path", () => {
-  const foundation = read("tools/scripts/run-foundation-gate.ps1");
-  assert.match(foundation, /detect-ci-context\.mjs/u);
-  assert.match(foundation, /registeredFoundationSet\.Contains/u);
-  assert.doesNotMatch(foundation, /governance-schema|agent-governance|authority-separation|guard-registry|required-command-integrity|\bsdlc\b/u);
+test("workflow verification is targeted and direct", () => {
+  const workflow = read(".github/workflows/ci.yml");
+  assert.match(workflow, /run-actionlint\.mjs/u);
+  assert.match(workflow, /run-zizmor\.mjs/u);
+  assert.match(workflow, /run-pinact\.mjs --verify/u);
+  assert.doesNotMatch(workflow, /run-foundation-gate|guard:foundation/u);
+});
+
+test("verification authority is phase-gated", () => {
+  const router = read("tools/scripts/detect-ci-context.mjs");
+  assert.match(router, /verificationAuthorityChanged && \["closure", "master"\]\.includes\(executionPhase\)/u);
+  const tests = read("tools/scripts/detect-ci-context.test.mjs");
+  assert.match(tests, /verification authority stays targeted during PR development/u);
+  assert.match(tests, /verification authority forces full exact-candidate closure verification/u);
 });
 
 test("backend verification skips an empty development package cone", () => {
@@ -61,10 +71,15 @@ test("affected code jobs use shallow checkout plus exact commit hydration", () =
   assert.match(read(".github/actions/fetch-exact-commits/action.yml"), /git fetch --no-tags --depth=1/u);
 });
 
-test("package verification entrypoints contain no governance tail", () => {
-  const packageJson = JSON.parse(read("package.json"));
-  const scripts = packageJson.scripts ?? {};
+test("package exposes simple verification entrypoints without governance aliases", () => {
+  const scripts = JSON.parse(read("package.json")).scripts ?? {};
+  assert.equal(scripts.verify, "node tools/scripts/run-affected-verification.mjs");
   assert.equal(scripts["verify:full"], "pnpm run workspace:verify");
+  assert.equal(scripts["runtime:verify"], "pnpm run runtime:full:smoke");
+  assert.equal(Object.hasOwn(scripts, "guard:foundation"), false);
+  assert.equal(Object.hasOwn(scripts, "diagnose"), false);
+  assert.equal(Object.hasOwn(scripts, "guard:journey-runtime"), false);
+  assert.equal(Object.hasOwn(scripts, "guard:journey:full"), false);
   for (const key of Object.keys(scripts)) {
     assert.doesNotMatch(key, /^guard:(?:governance|sdlc|guard-registry|required-command-integrity|agent-governance|authority-separation|tools-v5)/u);
   }
