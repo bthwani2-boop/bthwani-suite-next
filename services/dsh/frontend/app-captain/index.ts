@@ -1,30 +1,41 @@
 /**
- * DSH Captain App Public API
+ * DSH Captain App Public API.
  *
- * This file defines the clean, intentional public API for the DSH captain surface.
- * Only components and types required by app-captain composition/shell are exported here.
+ * This is the only supported composition boundary for app-captain. Runtime
+ * shells must import through @bthwani/dsh/app-captain instead of reaching into
+ * services/dsh by relative filesystem path.
  */
 
-// Core Surface & Host
-export { DshCaptainSurface } from './DshCaptainSurface';
+export { DshCaptainSurface } from "./DshCaptainSurface";
 
-// Public Types required by Composition/Shell
 export type {
-	DshCaptainCommandTarget,
-	DshCaptainNavigationCommand,
-	DshCaptainRoute,
-	DshCaptainSurfaceProps,
-	DshCaptainState,
-	DshCaptainStateGroup,
-	DshCaptainStateMeta,
-	DshCaptainProfileSnapshot,
-} from './dsh-captain.types';
+  DshCaptainCommandTarget,
+  DshCaptainNavigationCommand,
+  DshCaptainRoute,
+  DshCaptainSurfaceProps,
+  DshCaptainState,
+  DshCaptainStateGroup,
+  DshCaptainStateMeta,
+  DshCaptainProfileSnapshot,
+} from "./dsh-captain.types";
 
-// Routing & Registry
 export type {
-	DshCaptainLegacyRoute,
-	DshCaptainRouteId,
-	DshCaptainRouteRecord,
-} from './dsh-captain.routes';
+  DshCaptainLegacyRoute,
+  DshCaptainRouteId,
+  DshCaptainRouteRecord,
+} from "./dsh-captain.routes";
 
-export type { DshCaptainScreenRegistryItem } from './dsh-captain.screen-registry';
+export type { DshCaptainScreenRegistryItem } from "./dsh-captain.screen-registry";
+
+export { captainNavigationTargetFromDeepLink } from "../shared/delivery/captain-deep-link";
+export { IdentitySessionGate } from "../shared/session/IdentitySessionGate";
+export { useDshMobilePushRegistration } from "../shared/notifications/use-mobile-push-registration";
+export {
+  WorkforceAccessGate,
+  WorkforceProfileProvider,
+  useWorkforceProfile,
+} from "../shared/workforce";
+export {
+  fetchCaptainOperationalReadiness,
+  type CaptainOperationalReadiness,
+} from "./captain-readiness.api";
