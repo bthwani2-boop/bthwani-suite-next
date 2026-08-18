@@ -148,11 +148,6 @@ export function classifyFiles(inputFiles, options = {}) {
     file === "services/dsh/frontend/control-panel/platform/PlatformChangeWorkflowPanel.tsx" ||
     file === "tools/guards/platform-change-sets-gate.mjs",
   );
-  const cleanupChanged = equals(
-    "tools/scripts/apply-repository-cleanup.mjs",
-    "tools/guards/cleanup-policy-gate.mjs",
-    "tools/scripts/check-repository-hygiene.mjs",
-  );
 
   const deepRisk = fullScope || workflow || security || infrastructure || workspace || mobileTooling || mobileTransport ||
     runtimeTooling || financialChanged || migrationChanged || nativeChanged;
@@ -222,7 +217,6 @@ export function classifyFiles(inputFiles, options = {}) {
     verification_required: verificationRequired,
     backend_required: backendRequired,
     platform_change_sets: platformChangeSets,
-    cleanup_changed: cleanupChanged,
     native_changed: nativeChanged,
     financial_changed: financialChanged,
     migration_changed: migrationChanged,
