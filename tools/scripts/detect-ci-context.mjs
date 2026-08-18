@@ -1,38 +1,15 @@
 import { execFileSync } from "node:child_process";
-import { appendFileSync, readFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { appendFileSync } from "node:fs";
 import { deriveVerificationRequirement, isVerificationAuthorityChange } from "./verification-requirement.mjs";
 
 const ZERO_SHA = /^0+$/;
-const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
-const verificationSets = JSON.parse(
-  readFileSync(resolve(repositoryRoot, "tools/verification/verification-sets.json"), "utf8"),
-);
-const FOUNDATION_GUARDS = verificationSets.guardSets.foundation;
-const FOUNDATION_SET = new Set(FOUNDATION_GUARDS);
-
 const normalizePath = (value) => String(value ?? "").trim().replaceAll("\\", "/").replace(/^\.\//, "");
-const unique = (values) => [...new Set(values.filter(Boolean))];
-const sorted = (values) => unique(values).sort();
+const sorted = (values) => [...new Set(values.filter(Boolean))].sort();
 const normalizeJourney = (value) => String(value ?? "")
   .trim()
   .toUpperCase()
   .replace(/[^A-Z0-9]+/g, "-")
   .replace(/^-+|-+$/g, "");
-
-function selectFoundationGuards({ fullScope, files, frontend, backend, contracts, infrastructure, workspace, cleanup }) {
-  if (fullScope) return [...FOUNDATION_GUARDS];
-  const selected = ["source-integrity"];
-  const tooling = files.some((file) =>
-    file.startsWith("tools/guards/") || file.startsWith("tools/scripts/") || file.startsWith("tools/verification/"),
-  );
-  if (tooling || frontend || backend || contracts || infrastructure || workspace) selected.push("no-broken-imports");
-  if (frontend) selected.push("runtime-config", "ui-kit-boundary");
-  if (backend || contracts) selected.push("runtime-config", "api-binding", "backend-api-binding");
-  if (cleanup) selected.push("cleanup-policy");
-  return unique(selected).filter((id) => FOUNDATION_SET.has(id));
-}
 
 export function classifyFiles(inputFiles, options = {}) {
   const files = sorted(inputFiles.map(normalizePath));
@@ -213,9 +190,6 @@ export function classifyFiles(inputFiles, options = {}) {
     verification_depth: fullVerification ? "full" : "affected",
     verification_requirement: verificationRequirement,
     required_jobs: verificationRequirement.required_jobs,
-    foundation_guard_ids: selectFoundationGuards({
-      fullScope, files, frontend, backend, contracts, infrastructure, workspace, cleanup: cleanupChanged,
-    }),
     workflow,
     infrastructure,
     security,
