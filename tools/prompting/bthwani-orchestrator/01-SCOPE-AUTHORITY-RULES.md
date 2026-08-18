@@ -54,6 +54,32 @@ SCOPE = REPOSITORY
 
 No material domain/surface/foundation is assumed clean. If an invocation is explicitly narrowed below repository scope, treat it as `EXECUTE_END_TO_END`; do not claim project-wide closure from a narrowed scope.
 
+### 3.1 Optional task-phase overlay
+
+`PHASE` is an invocation overlay, not a fourth mode and not a competing lifecycle.
+
+```text
+PHASE=AUDIT_PREPARE
+→ effective MODE=DIAGNOSE when MODE is omitted
+→ target system remains read-only
+→ after required decisions are resolved, one explicitly requested temporary PLAN_FILE may be written under the contract in 00
+
+PHASE=EXECUTE_CLOSE
+→ effective MODE=EXECUTE_END_TO_END when MODE is omitted
+→ use EXECUTE_PROJECT_CLOSURE only when repository-wide closure is explicitly requested
+→ PLAN_FILE is input evidence/accounting, not execution authority
+```
+
+A temporary `PLAN_FILE` is a derived, disposable execution record. It may capture findings, roots, decisions, canonical targets, treatment, governance dispositions, verification and closure criteria, but every material claim must be revalidated against current authority/code/contracts/data/runtime/readback before execution. Latest proven truth overrides stale plan content.
+
+```text
+PLAN_FILE ≠ SOURCE OF TRUTH
+OLD PLAN FINDING ≠ CURRENT FINDING
+PLAN EXHAUSTED ≠ CLOSURE
+```
+
+No `PLAN_FILE` may be created while an unresolved material `DECISION_REQUIRED` can change its canonical target/treatment. The plan-file retirement/final-candidate lifecycle is owned by `04`.
+
 ## 4. Objective-driven routing
 
 `OBJECTIVE` is the material outcome the human wants proved, not a checklist of files to touch.
