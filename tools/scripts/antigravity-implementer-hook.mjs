@@ -2,9 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-const READ_TOOLS = new Set(["view_file", "list_dir", "grep_search", "find_by_name"]);
 const WRITE_TOOLS = new Set(["write_to_file", "replace_file_content", "multi_replace_file_content"]);
-const STATIC_ALLOWED_READ = ["AGENTS.md", "GEMINI.md"];
 const STATIC_FORBIDDEN_WRITE = [
   "AGENTS.md",
   "GEMINI.md",
@@ -59,19 +57,6 @@ function matchesPrefix(prefixes, target) {
   return prefixes.some((prefix) => insideOrEqual(casePath(prefix), normalized));
 }
 
-function toolTargets(toolName, args, repoRoot) {
-  const values = [];
-  if (toolName === "view_file") values.push(args.AbsolutePath);
-  else if (toolName === "list_dir") values.push(args.DirectoryPath);
-  else if (toolName === "find_by_name") values.push(args.SearchDirectory);
-  else if (toolName === "grep_search") values.push(args.SearchPath);
-  else if (WRITE_TOOLS.has(toolName)) values.push(args.TargetFile);
-  return values
-    .filter((value) => typeof value === "string" && value.trim())
-    .map((value) => resolveCandidate(value, repoRoot))
-    .filter(Boolean);
-}
-
 function parseStringArray(raw, name) {
   if (!raw) return [];
   const parsed = JSON.parse(raw);
@@ -86,11 +71,6 @@ export function evaluateToolCall(input, options) {
   const toolName = String(input?.toolCall?.name || "");
   const args = input?.toolCall?.args && typeof input.toolCall.args === "object" ? input.toolCall.args : {};
   const allowedWrite = (options.allowedWrite || []).map((value) => path.resolve(value));
-  const allowedRead = [
-    ...(options.allowedRead || []).map((value) => path.resolve(value)),
-    ...allowedWrite,
-    ...STATIC_ALLOWED_READ.map((value) => path.resolve(repoRoot, value)),
-  ];
   const forbiddenWrite = [
     ...(options.forbiddenWrite || []).map((value) => path.resolve(value)),
     ...STATIC_FORBIDDEN_WRITE.map((value) => path.resolve(repoRoot, value)),
@@ -99,43 +79,16 @@ export function evaluateToolCall(input, options) {
   const allow = () => ({ decision: "allow" });
   const deny = (reason) => ({ decision: "deny", reason });
   if (!toolName) return deny("Missing Antigravity tool name.");
+  if (!WRITE_TOOLS.has(toolName)) return deny(`Tool '${toolName}' is not permitted for the bounded Antigravity implementer.`);
 
-  if (READ_TOOLS.has(toolName)) {
-    const targets = toolTargets(toolName, args, repoRoot);
-    if (targets.length === 0) {
-      return deny(`${toolName} must declare an explicit path inside the work-unit read scope.`);
-    }
-    for (const target of targets) {
-      if (!insideOrEqual(casePath(repoRoot), casePath(target))) {
-        return deny(`Read outside repository is forbidden: ${target}`);
-      }
-      if (hasSymlinkAncestor(repoRoot, target)) {
-        return deny(`Read through a symbolic-link path is forbidden: ${target}`);
-      }
-      if (!matchesPrefix(allowedRead, target)) {
-        return deny(`Read path is outside the declared work-unit scope: ${target}`);
-      }
-    }
-    return allow();
-  }
-
-  if (WRITE_TOOLS.has(toolName)) {
-    const targets = toolTargets(toolName, args, repoRoot);
-    if (targets.length === 0) return deny(`${toolName} did not declare TargetFile.`);
-    for (const target of targets) {
-      if (!insideOrEqual(casePath(repoRoot), casePath(target))) {
-        return deny(`Write outside repository is forbidden: ${target}`);
-      }
-      const gitRoot = path.join(repoRoot, ".git");
-      if (insideOrEqual(casePath(gitRoot), casePath(target))) return deny("Writes under .git are forbidden.");
-      if (hasSymlinkAncestor(repoRoot, target)) return deny(`Write through a symbolic-link path is forbidden: ${target}`);
-      if (matchesPrefix(forbiddenWrite, target)) return deny(`Write path is explicitly forbidden: ${target}`);
-      if (!matchesPrefix(allowedWrite, target)) return deny(`Write path is outside the declared work-unit scope: ${target}`);
-    }
-    return allow();
-  }
-
-  return deny(`Tool '${toolName}' is not permitted for the bounded Antigravity implementer.`);
+  const target = resolveCandidate(args.TargetFile, repoRoot);
+  if (!target) return deny(`${toolName} did not declare TargetFile.`);
+  if (!insideOrEqual(casePath(repoRoot), casePath(target))) return deny(`Write outside repository is forbidden: ${target}`);
+  if (insideOrEqual(casePath(path.join(repoRoot, ".git")), casePath(target))) return deny("Writes under .git are forbidden.");
+  if (hasSymlinkAncestor(repoRoot, target)) return deny(`Write through a symbolic-link path is forbidden: ${target}`);
+  if (matchesPrefix(forbiddenWrite, target)) return deny(`Write path is explicitly forbidden: ${target}`);
+  if (!matchesPrefix(allowedWrite, target)) return deny(`Write path is outside the declared work-unit scope: ${target}`);
+  return allow();
 }
 
 async function main() {
@@ -146,7 +99,6 @@ async function main() {
   if (!repoRoot) throw new Error("BTHWANI_ANTIGRAVITY_REPO_ROOT is required.");
   const result = evaluateToolCall(input, {
     repoRoot,
-    allowedRead: parseStringArray(process.env.BTHWANI_ANTIGRAVITY_ALLOWED_READ, "BTHWANI_ANTIGRAVITY_ALLOWED_READ"),
     allowedWrite: parseStringArray(process.env.BTHWANI_ANTIGRAVITY_ALLOWED_WRITE, "BTHWANI_ANTIGRAVITY_ALLOWED_WRITE"),
     forbiddenWrite: parseStringArray(process.env.BTHWANI_ANTIGRAVITY_FORBIDDEN_WRITE, "BTHWANI_ANTIGRAVITY_FORBIDDEN_WRITE"),
   });

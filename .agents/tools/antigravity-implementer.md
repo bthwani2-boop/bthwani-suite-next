@@ -2,51 +2,40 @@
 
 ## Purpose
 
-`antigravity-implementer` is the governed external implementation relay for two mutually exclusive routes:
+`antigravity-implementer` is the bounded external implementation relay for exactly one orchestrator-owned work unit:
 
-- `Codex orchestrator -> Antigravity CLI (agy) implementer with a Gemini model -> Codex verification`.
-- `Claude orchestrator -> Antigravity CLI (agy) implementer with a Gemini model -> Claude verification`.
+- `Codex -> Antigravity CLI (agy/Gemini) -> Codex verification`, or
+- `Claude -> Antigravity CLI (agy/Gemini) -> Claude verification`.
 
-Exactly one orchestrator owns a work unit. The routes never share a work unit and never run delegated Antigravity implementations concurrently. The relay owns no repository authority, product truth, approval, verification decision, commit, push, merge, release, or closure decision.
+The relay owns no Product Truth, approval, commit, push, merge, release, verification, or closure decision.
 
 ## Use when
 
-- the current task explicitly selects Codex + Google or Claude + Google delegated implementation;
-- the selected orchestrator pins repository, branch, and candidate head;
-- one bounded work unit has explicit allowed write prefixes, forbidden paths, acceptance criteria, and verification commands;
-- the working tree is clean;
-- no delegated Antigravity implementation is active;
-- an explicit Gemini model returned by `agy models` is selected.
+- the current task explicitly benefits from bounded Antigravity implementation;
+- the orchestrator pins repository, branch, and exact HEAD;
+- read/write prefixes, forbidden paths, acceptance criteria, and orchestrator verification are explicit;
+- the declared read/write cone has no pre-existing working-tree changes;
+- no other delegated Antigravity work unit is active;
+- an explicit Gemini model is selected.
 
-## Do not use when
-
-- the task is analysis-only, text-only, or small enough for direct execution;
-- write scope is repository-wide, ambiguous, or not attributable to one work unit;
-- the worktree is dirty or branch movement has not been reconciled;
-- another delegated implementation is active;
-- the work unit belongs to the other orchestrator route;
-- Antigravity would need to commit, push, merge, release, approve, or expand scope;
-- formal or independent approval is being requested.
+Do not use delegation for analysis-only work, trivial edits, ambiguous/repository-wide write scope, dirty overlapping scope, concurrent delegated writers, or any work that requires the implementer to commit/push/merge/release/approve/expand scope.
 
 ## Execution contract
 
-1. Exactly one orchestrator owns each work unit: Codex or Claude.
-2. Antigravity CLI (`agy`) is implementation-only and must use the explicitly supplied Gemini model.
-3. Codex invokes `tools/scripts/invoke-antigravity-implementer.mjs --orchestrator codex`. Claude invokes `tools/scripts/invoke-claude-antigravity-implementer.mjs`.
-4. Authentication is the local Antigravity CLI session backed by the user's subscription. The relay accepts no API-key argument and does not inject API credentials.
-5. The relay verifies `agy --version` and `agy models` before dispatch.
-6. Start from a clean Git working tree and require at least one repository-relative `--allow-write` prefix. Repository-root write scope is forbidden.
-7. The relay creates a temporary workspace `.agents/hooks.json` only for the duration of the run and refuses to overwrite an existing hook file.
-8. The Antigravity `PreToolUse` hook matches every tool. It allows only repository-scoped `view_file`, `list_dir`, `grep_search`, `find_by_name`, `write_to_file`, `replace_file_content`, and `multi_replace_file_content`. Shell, web, browser, permission, task, schedule, media, MCP, interactive-question, and subagent tools are denied by default.
-9. Writes are limited to declared prefixes and cannot touch `.git`, governance, adapters, agent control files, or delegation scripts. Symlink traversal is denied.
-10. The relay launches headless print mode with structured JSON and `--mode=accept-edits`; the hook remains the fail-closed write boundary.
-11. After exit, the relay verifies hook integrity/removal, unchanged branch and HEAD, changed-path scope, and `git diff --check`.
-12. Antigravity output is telemetry only. The selected orchestrator must inspect the complete diff, re-pin the branch/head, run required project gates, and decide rework or developer PASS.
-13. Neither Codex nor Claude may substitute for protected independent review or a formal approval authority.
+1. Exactly one orchestrator owns each work unit.
+2. Antigravity is implementation-only; the orchestrator owns diagnosis, reconciliation, diff review, verification and final decisions.
+3. Codex invokes `tools/scripts/invoke-antigravity-implementer.mjs --orchestrator codex`; Claude invokes `tools/scripts/invoke-claude-antigravity-implementer.mjs`.
+4. Authentication is the user's local Antigravity CLI session. The relay accepts no API key.
+5. Normal execution resolves the native `agy` executable and verifies its version, then dispatches once. It does not run `agy models` before every work unit; invalid authentication/model selection fails closed through the actual `agy` execution. `--diagnostic-only` performs the explicit `agy models` authentication/availability probe.
+6. Repository-root write scope is forbidden. Every write prefix and forbidden prefix is repository-relative and symlink-safe.
+7. The relay creates `.agents/hooks.json` only for the duration of the run and refuses to overwrite an existing hook configuration.
+8. Read-only Antigravity tools (`view_file`, `list_dir`, `grep_search`, `find_by_name`) do not spawn a hook process on every call. The work-unit prompt still bounds their intended read cone. Every non-read tool call is intercepted by the PreToolUse hook: only declared file-write tools inside allowed write prefixes are accepted; shell, web, browser, MCP, permission, task, schedule, media, interaction, subagent, and unknown/future non-read tools fail closed.
+9. Writes cannot touch `.git`, governance, agent/adaptor control files, delegation scripts, explicit forbidden prefixes, or paths outside declared write scope. Symlink traversal is denied.
+10. The relay runs headless JSON output with `--mode=accept-edits`; the hook remains the mutation boundary.
+11. Before dispatch, branch/HEAD and overlapping dirty scope are verified. After exit, the relay verifies hook integrity/removal, unchanged branch/HEAD, Git-visible changed paths, write-scope classification, and `git diff --check` for the allowed write cone.
+12. Antigravity output is telemetry only. The orchestrator must inspect the complete diff and run the project checks that add unique assurance for the affected code cone.
 
-## Brief requirements
-
-The brief must be self-contained and include:
+## Brief
 
 ```text
 work_unit_id:
@@ -62,11 +51,11 @@ verification_for_orchestrator:
 expected_report:
 ```
 
-Antigravity must stop and report insufficient scope instead of expanding it.
+If the bounded cone is insufficient, Antigravity stops and reports the missing scope instead of expanding it.
 
 ## Invocation
 
-Codex route:
+Codex:
 
 ```text
 node tools/scripts/invoke-antigravity-implementer.mjs \
@@ -74,31 +63,33 @@ node tools/scripts/invoke-antigravity-implementer.mjs \
   --work-unit <id> \
   --brief <brief-file> \
   --expected-branch <branch> \
+  --expected-head <40-char-sha> \
+  --allow-read <repo-relative-prefix> \
   --allow-write <repo-relative-prefix> \
-  --model "<Gemini model from agy models>" \
-  [--allow-write <another-prefix>] \
+  --model <gemini-model> \
   [--forbid-write <repo-relative-prefix>] \
   [--timeout 45m]
 ```
 
-Claude route:
+Claude:
 
 ```text
 node tools/scripts/invoke-claude-antigravity-implementer.mjs \
   --work-unit <id> \
   --brief <brief-file> \
   --expected-branch <branch> \
+  --expected-head <40-char-sha> \
+  --allow-read <repo-relative-prefix> \
   --allow-write <repo-relative-prefix> \
-  --model "<Gemini model from agy models>" \
-  [--allow-write <another-prefix>] \
+  --model <gemini-model> \
   [--forbid-write <repo-relative-prefix>] \
   [--timeout 45m]
 ```
 
-Use `--diagnostic-only` with either entry point to verify the native `agy` installation plus authenticated `agy models` access without dispatching work.
+Use `--diagnostic-only` only when the explicit CLI/auth/model inventory probe is needed.
 
 ## Evidence boundary
 
-The relay proves only its measured execution envelope: CLI/auth probe, clean pre-run tree, pinned local branch/head, single-run lock, temporary hook integrity, Antigravity process outcome, post-run Git-visible changed paths, unchanged HEAD, scope classification, `git diff --check`, and captured structured output.
+The relay proves only its execution envelope: CLI presence/version, pinned local branch/HEAD, bounded write enforcement, single-run lock, temporary hook integrity, process outcome, Git-visible changed-path classification, `git diff --check`, and captured structured output.
 
-It does not prove functional correctness, test success, runtime behavior, security, finance, QA, CI, release readiness, production readiness, or final closure.
+It does not prove functional correctness, tests, runtime behavior, security, finance, QA, CI, release readiness, production readiness, or final closure.

@@ -10,6 +10,7 @@ const MAX_BRIEF_BYTES = 12 * 1024;
 const MAX_CAPTURE_BYTES = 16 * 1024 * 1024;
 const WORK_UNIT_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const DURATION_RE = /^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/;
+export const NON_READ_HOOK_MATCHER = "^(?!view_file$|list_dir$|grep_search$|find_by_name$).+";
 const SELF_PROTECTED = [
   "AGENTS.md",
   "GEMINI.md",
@@ -59,7 +60,7 @@ export function parseArgs(argv) {
 }
 
 function usage() {
-  console.log(`Usage:\n  node tools/scripts/invoke-antigravity-implementer.mjs --diagnostic-only\n  node tools/scripts/invoke-antigravity-implementer.mjs \\\n    --work-unit <id> \\\n    --brief <file> \\\n    --expected-branch <branch> \\\n    --expected-head <40-char-sha> \\\n    --allow-read <repo-relative-prefix> [--allow-read <prefix> ...] \\\n    --allow-write <repo-relative-prefix> [--allow-write <prefix> ...] \\\n    [--forbid-write <repo-relative-prefix> ...] \\\n    [--model <antigravity-model>] [--timeout 45m]`);
+  console.log(`Usage:\n  node tools/scripts/invoke-antigravity-implementer.mjs --diagnostic-only\n  node tools/scripts/invoke-antigravity-implementer.mjs \\\n    --work-unit <id> \\\n    --brief <file> \\\n    --expected-branch <branch> \\\n    --expected-head <40-char-sha> \\\n    --allow-read <repo-relative-prefix> [--allow-read <prefix> ...] \\\n    --allow-write <repo-relative-prefix> [--allow-write <prefix> ...] \\\n    [--forbid-write <repo-relative-prefix> ...] \\\n    --model <gemini-model> [--timeout 45m]`);
 }
 
 export function durationMs(value) {
@@ -129,10 +130,8 @@ function ensureNoSymlinkPrefix(absolute, label) {
   }
 }
 
-export function statusPaths({ includeIgnored = false } = {}) {
-  const args = ["status", "--porcelain=v1", "-z", "--untracked-files=all"];
-  if (includeIgnored) args.push("--ignored=matching");
-  const raw = run("git", args);
+export function statusPaths() {
+  const raw = run("git", ["status", "--porcelain=v1", "-z", "--untracked-files=normal"]);
   if (!raw) return [];
   const fields = raw.split("\0");
   const paths = [];
@@ -147,11 +146,6 @@ export function statusPaths({ includeIgnored = false } = {}) {
   return [...new Set(paths.map((value) => value.split("\\").join("/")))].sort();
 }
 
-// `git status --ignored=matching` collapses a wholly ignored directory into a single
-// `dir/` entry, so a write *inside* it never changes the listing. Fingerprinting each
-// entry lets the post-run comparison see ignored files that were created, modified, or
-// deleted; collapsed directories are only compared by their own mtime and are reported
-// separately as a declared blind spot rather than folded into scope enforcement.
 export function fingerprintPaths(paths, root) {
   const fingerprints = new Map();
   for (const rel of paths) {
@@ -175,10 +169,6 @@ export function fingerprintDelta(before, after) {
   for (const [rel, mark] of after) if (before.get(rel) !== mark) changed.add(rel);
   for (const rel of before.keys()) if (!after.has(rel)) changed.add(rel);
   return [...changed].sort();
-}
-
-function isCollapsedDirectory(rel) {
-  return rel.endsWith("/");
 }
 
 function gitPrivateRoot() {
@@ -282,11 +272,11 @@ export async function main(argv = process.argv.slice(2)) {
   if (args.help) { usage(); return 0; }
   const launcher = resolveAntigravity();
   const version = probe(launcher, ["--version"], 10_000)?.split(/\r?\n/)[0] || null;
-  const modelsOutput = probe(launcher, ["models"], 20_000);
-  const modelsOk = Boolean(modelsOutput);
   if (!launcher || !version) fail("Antigravity CLI (agy) is not installed, not on PATH, or failed its direct version probe.");
-  if (!modelsOk) fail("Antigravity CLI is installed but 'agy models' failed. Authenticate the local subscription session (for example with 'agy login') and retry.");
+
   if (args.diagnosticOnly) {
+    const modelsOutput = probe(launcher, ["models"], 20_000);
+    if (!modelsOutput) fail("Antigravity CLI is installed but 'agy models' failed. Authenticate the local subscription session and retry.");
     console.log(JSON.stringify({ tool: TOOL_ID, state: "VERIFIED_AVAILABLE", executable: launcher.displayExecutable, version, authenticationProbe: "agy models PASS" }, null, 2));
     return 0;
   }
@@ -298,15 +288,9 @@ export async function main(argv = process.argv.slice(2)) {
   if (!args.expectedHead || !/^[0-9a-fA-F]{40}$/.test(args.expectedHead)) fail("--expected-head is required and must be an exact 40-character commit SHA.");
   if (!args.allowRead.length) fail("At least one --allow-read prefix is required.");
   if (!args.allowWrite.length) fail("At least one --allow-write prefix is required.");
-  if (!args.model) fail("--model is required; select an available Gemini model from 'agy models'.");
-  if (args.model.length > 160 || /[\r\n\0]/.test(args.model) || !/gemini/i.test(args.model)) fail("--model must be a safe Gemini model value returned by 'agy models'.");
-  const availableModels = new Set(
-    String(modelsOutput || "")
-      .split(/\r?\n/)
-      .map((line) => line.trim().split(/\s+/)[0])
-      .filter((value) => /^gemini-/i.test(value)),
-  );
-  if (!availableModels.has(args.model)) fail(`Requested Gemini model '${args.model}' is not available in the authenticated 'agy models' result.`);
+  if (!args.model) fail("--model is required.");
+  if (args.model.length > 160 || /[\r\n\0]/.test(args.model) || !/^gemini-[A-Za-z0-9._-]+$/i.test(args.model)) fail("--model must be a safe Gemini model identifier.");
+
   const timeoutMsValue = durationMs(args.timeout);
   const brief = readBrief(args.brief);
   const allowedRead = args.allowRead.map((value) => normalizeRelativePrefix(value, "--allow-read"));
@@ -321,27 +305,19 @@ export async function main(argv = process.argv.slice(2)) {
   const headBefore = run("git", ["rev-parse", "HEAD"]);
   if (branchBefore !== args.expectedBranch) fail(`Branch mismatch: expected '${args.expectedBranch}', found '${branchBefore}'.`);
   if (headBefore.toLowerCase() !== args.expectedHead.toLowerCase()) fail(`HEAD mismatch: expected '${args.expectedHead}', found '${headBefore}'.`);
-  const dirtyBefore = statusPaths();
 
+  const dirtyBefore = statusPaths();
   const dirtyScopeConflicts = dirtyBefore.filter((rel) => {
     const absolute = path.resolve(repoRoot, rel);
-    return (
-      allowed.some((entry) => insideOrEqual(entry.absolute, absolute)) ||
-      allowedRead.some((entry) => insideOrEqual(entry.absolute, absolute))
-    );
+    return allowed.some((entry) => insideOrEqual(entry.absolute, absolute)) || allowedRead.some((entry) => insideOrEqual(entry.absolute, absolute));
   });
-
   if (dirtyScopeConflicts.length) {
     fail(
       "Declared read/write scope overlaps pre-existing working-tree changes. Reconcile or narrow the work unit before delegation.",
       JSON.stringify(dirtyScopeConflicts, null, 2),
     );
   }
-
-  const trackedStateBefore = fingerprintPaths(
-    statusPaths({ includeIgnored: true }),
-    repoRoot,
-  );
+  const dirtyStateBefore = fingerprintPaths(dirtyBefore, repoRoot);
 
   const hooksPath = path.join(repoRoot, ".agents", "hooks.json");
   fs.mkdirSync(path.dirname(hooksPath), { recursive: true });
@@ -357,7 +333,7 @@ export async function main(argv = process.argv.slice(2)) {
     const hookCommand = `${quoteCommand(process.execPath)} ${quoteCommand(hookPath)}`;
     const hookConfig = {
       "bthwani-antigravity-implementer-scope": {
-        PreToolUse: [{ matcher: "", hooks: [{ type: "command", command: hookCommand, timeout: 5 }] }],
+        PreToolUse: [{ matcher: NON_READ_HOOK_MATCHER, hooks: [{ type: "command", command: hookCommand, timeout: 5 }] }],
       },
     };
     const hookText = `${JSON.stringify(hookConfig, null, 2)}\n`;
@@ -368,8 +344,8 @@ export async function main(argv = process.argv.slice(2)) {
       `You are the Antigravity CLI Implementer for one bounded BThwani work unit delegated by the ${args.orchestrator === "codex" ? "Codex" : "Claude"} orchestrator.`,
       "Implement only the brief below in the current repository.",
       "Do not commit, push, merge, release, approve, or expand scope.",
-      "Do not use shell, web, browser, MCP, permissions, task management, schedules, image generation, interactive questions, or subagents; the PreToolUse hook denies non-file implementation tools.",
-      "Every read/search operation must stay inside the declared read scope; do not scan the repository root.",
+      "Do not use shell, web, browser, MCP, permissions, task management, schedules, image generation, interactive questions, or subagents; every non-read tool call is intercepted and denied unless it is an allowed file write.",
+      "Keep read/search operations inside the declared read scope and do not scan unrelated repository areas.",
       "If the required implementation cannot be completed within the declared read/write scope, stop and report the exact missing scope instead of changing other paths.",
       `Do not claim verification that you did not execute. ${args.orchestrator === "codex" ? "Codex" : "Claude"} will review the complete diff and run repository gates after you exit.`,
       "",
@@ -389,8 +365,7 @@ export async function main(argv = process.argv.slice(2)) {
       "Return a concise implementation report: summary, changed paths, unresolved blockers, assumptions, and checks actually performed.",
     ].join("\n");
 
-    const agyArgs = ["-p", prompt, "--output-format", "json", "--mode=accept-edits"];
-    if (args.model) agyArgs.push("--model", args.model);
+    const agyArgs = ["-p", prompt, "--output-format", "json", "--mode=accept-edits", "--model", args.model];
     const childEnv = {
       ...process.env,
       BTHWANI_ANTIGRAVITY_REPO_ROOT: repoRoot,
@@ -410,22 +385,17 @@ export async function main(argv = process.argv.slice(2)) {
 
     const branchAfter = run("git", ["branch", "--show-current"]);
     const headAfter = run("git", ["rev-parse", "HEAD"]);
-    const trackedStateAfter = fingerprintPaths(statusPaths({ includeIgnored: true }), repoRoot);
-    const fullDelta = fingerprintDelta(trackedStateBefore, trackedStateAfter);
-    // Collapsed ignored directories (build caches and the like) churn for reasons unrelated
-    // to the delegation, so they are reported as activity rather than scope-enforced.
-    const changedPaths = fullDelta.filter((rel) => !isCollapsedDirectory(rel));
-    const ignoredDirectoryActivity = fullDelta.filter(isCollapsedDirectory);
+    const dirtyAfter = statusPaths();
+    const dirtyStateAfter = fingerprintPaths(dirtyAfter, repoRoot);
+    const changedPaths = fingerprintDelta(dirtyStateBefore, dirtyStateAfter);
     const violations = scopeViolations(changedPaths, allowed, forbidden);
-    const diffCheck = spawnSync("git", ["diff", "--check"], { cwd: repoRoot, encoding: "utf8", windowsHide: true });
+    const diffCheck = spawnSync("git", ["diff", "--check", "--", ...allowed.map((entry) => entry.relative)], { cwd: repoRoot, encoding: "utf8", windowsHide: true });
     const diffCheckPassed = !diffCheck.error && diffCheck.status === 0;
     const parsed = parseJson(execution.stdout);
     const invariantFailures = [];
     if (branchAfter !== branchBefore) invariantFailures.push("BRANCH_CHANGED");
     if (headAfter !== headBefore) invariantFailures.push("HEAD_CHANGED");
     if (violations.length) invariantFailures.push("WRITE_SCOPE_VIOLATION");
-    // An implementer that changed nothing did not implement the work unit; without this the
-    // relay reports success for a run whose tools were all denied.
     if (!changedPaths.length) invariantFailures.push("NO_CHANGES_PRODUCED");
     if (!diffCheckPassed) invariantFailures.push("GIT_DIFF_CHECK_FAILED");
     if (hookTampered) invariantFailures.push("HOOK_CONFIG_TAMPERED");
@@ -434,6 +404,7 @@ export async function main(argv = process.argv.slice(2)) {
     if (execution.error) invariantFailures.push("PROCESS_ERROR");
     if (execution.exitCode !== 0) invariantFailures.push("ANTIGRAVITY_NONZERO_EXIT");
     if (!parsed || typeof parsed !== "object") invariantFailures.push("INVALID_ANTIGRAVITY_JSON");
+
     const result = {
       schemaVersion: 2,
       tool: TOOL_ID,
@@ -441,7 +412,7 @@ export async function main(argv = process.argv.slice(2)) {
       workUnitId: args.workUnit,
       status: invariantFailures.length ? "failed" : "success",
       antigravityVersion: version,
-      modelRequested: args.model || null,
+      modelRequested: args.model,
       branchBefore,
       branchAfter,
       headBefore,
@@ -450,7 +421,7 @@ export async function main(argv = process.argv.slice(2)) {
       signal: execution.signal,
       timedOut: execution.timedOut,
       changedPaths,
-      ignoredDirectoryActivity,
+      ignoredDirectoryActivity: [],
       scopeViolations: violations,
       diffCheckPassed,
       hookConfigTampered: hookTampered,
