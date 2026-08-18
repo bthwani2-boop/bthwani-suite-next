@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Verifies that every authorization scope/permission enforced by Go route
-// guards has a matching entry in governance/contracts/scope-vocabulary.json,
+// guards has a matching entry in tools/verification/security-scope-vocabulary.json,
 // and that the vocabulary carries no stale entries.
 import fs from "node:fs";
 import path from "node:path";
@@ -14,13 +14,10 @@ import {
 } from "./lib/go-http-routes.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const vocabularyRelative = "governance/contracts/scope-vocabulary.json";
+const vocabularyRelative = "tools/verification/security-scope-vocabulary.json";
 const vocabulary = JSON.parse(fs.readFileSync(path.join(repositoryRoot, vocabularyRelative), "utf8"));
 const failures = [];
 
-// Scopes selected through a runtime decision helper rather than a literal at
-// the route/handler call site. Each entry is manually tied to the deciding
-// helper and remains subject to the same vocabulary strictness.
 const dynamicallyEnforcedScopes = new Map([
   [
     "catalog.proposal.adopt",
@@ -146,8 +143,6 @@ for (const target of scanTargets) {
   }
 }
 
-// Route-level withPermission is first-class authorization. Previous versions
-// of this gate ignored it and therefore reported valid permissions as stale.
 const dshHttpRoot = path.join(repositoryRoot, "services/dsh/backend/internal/http");
 const dshRoutes = collectHandleFuncRegistrations(dshHttpRoot, { recursive: true });
 for (const route of dshRoutes) {
