@@ -3,26 +3,168 @@ name: CodeQL
 on:
   pull_request:
     branches: ["**"]
+    paths:
+      - ".github/actions/**"
+      - ".github/workflows/**"
+      - "apps/**"
+      - "shared/**"
+      - "services/**"
+      - "core/**"
+      - "tools/**/*.js"
+      - "tools/**/*.mjs"
+      - "tools/**/*.cjs"
+      - "tools/**/*.ts"
+      - "tools/**/*.tsx"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "go.work"
+      - ".go-version"
   push:
-    branches: [master]
+    branches: ["**"]
+    paths:
+      - ".github/actions/**"
+      - ".github/workflows/**"
+      - "apps/**"
+      - "shared/**"
+      - "services/**"
+      - "core/**"
+      - "tools/**/*.js"
+      - "tools/**/*.mjs"
+      - "tools/**/*.cjs"
+      - "tools/**/*.ts"
+      - "tools/**/*.tsx"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "go.work"
+      - ".go-version"
   schedule:
     - cron: "17 3 * * 1"
   workflow_dispatch:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: codeql-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  # Keep the historic `analyze/language:*` configuration identity used by the
-  # master CodeQL baseline. Splitting this job into differently named jobs or
-  # per-module categories makes GitHub Advanced Security treat the base
-  # configurations as missing and can misattribute existing alerts to a PR.
+  scope:
+    name: Detect CodeQL scope
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      languages: ${{ steps.scope.outputs.languages }}
+      go_modules: ${{ steps.scope.outputs.go_modules }}
+      actions_required: ${{ steps.scope.outputs.actions_required }}
+      skip_duplicate_push: ${{ steps.scope.outputs.skip_duplicate_push }}
+    steps:
+      - name: Checkout candidate history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          show-progress: false
+      - name: Resolve affected CodeQL languages
+        id: scope
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          all_modules=(
+            services/dsh/backend
+            services/wlt/backend
+            core/identity/backend
+            core/workforce/backend
+            core/platform-control/backend
+            core/providers/backend
+          )
+          full=false
+          skip_duplicate=false
+          if [[ "${EVENT_NAME}" == "schedule" || "${EVENT_NAME}" == "workflow_dispatch" || ( "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "master" ) ]]; then
+            full=true
+          elif [[ "${EVENT_NAME}" == "push" ]]; then
+            open_pr_count="$(gh api --method GET \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "/repos/${GITHUB_REPOSITORY}/pulls" \
+              -f state=open \
+              -f head="${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}" \
+              -f per_page=1 \
+              --jq 'length')"
+            if [[ "${open_pr_count}" != "0" ]]; then skip_duplicate=true; fi
+          fi
+
+          js=false
+          go=false
+          actions=false
+          modules=()
+          add_module() {
+            local candidate="$1"
+            for existing in "${modules[@]:-}"; do
+              if [[ "${existing}" == "${candidate}" ]]; then return; fi
+            done
+            modules+=("${candidate}")
+          }
+
+          if [[ "${full}" == "true" ]]; then
+            js=true
+            go=true
+            actions=true
+            modules=("${all_modules[@]}")
+          elif [[ "${skip_duplicate}" != "true" ]]; then
+            head_sha="$(git rev-parse HEAD)"
+            base_sha="${PR_BASE_SHA:-${EVENT_BEFORE:-}}"
+            if [[ -z "${base_sha}" || "${base_sha}" =~ ^0+$ ]]; then
+              base_sha="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${head_sha}")"
+            fi
+            while IFS= read -r file; do
+              [[ -n "${file}" ]] || continue
+              case "${file}" in
+                .github/actions/*|.github/workflows/*) actions=true ;;
+              esac
+              case "${file}" in
+                *.js|*.jsx|*.ts|*.tsx|*.mjs|*.cjs|package.json|pnpm-lock.yaml) js=true ;;
+              esac
+              case "${file}" in
+                go.work|.go-version)
+                  go=true
+                  modules=("${all_modules[@]}")
+                  ;;
+                services/dsh/backend/*) go=true; add_module services/dsh/backend ;;
+                services/wlt/backend/*) go=true; add_module services/wlt/backend ;;
+                core/identity/backend/*) go=true; add_module core/identity/backend ;;
+                core/workforce/backend/*) go=true; add_module core/workforce/backend ;;
+                core/platform-control/backend/*) go=true; add_module core/platform-control/backend ;;
+                core/providers/backend/*) go=true; add_module core/providers/backend ;;
+              esac
+            done < <(git diff --name-only "${base_sha}" "${head_sha}")
+          fi
+
+          languages='[]'
+          if [[ "${js}" == "true" ]]; then languages="$(jq -c '. + [\"javascript-typescript\"]' <<<"${languages}")"; fi
+          if [[ "${go}" == "true" ]]; then languages="$(jq -c '. + [\"go\"]' <<<"${languages}")"; fi
+          go_modules="$(IFS=,; echo "${modules[*]:-}")"
+          echo "languages=${languages}" >> "${GITHUB_OUTPUT}"
+          echo "go_modules=${go_modules}" >> "${GITHUB_OUTPUT}"
+          echo "actions_required=${actions}" >> "${GITHUB_OUTPUT}"
+          echo "skip_duplicate_push=${skip_duplicate}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "### CodeQL scope"
+            echo "- Languages: ${languages}"
+            echo "- Go modules: ${go_modules:-none}"
+            echo "- Actions: ${actions}"
+            echo "- Duplicate development push skipped: ${skip_duplicate}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
   analyze:
     name: Analyze (${{ matrix.language }})
+    needs: [scope]
+    if: ${{ needs.scope.outputs.skip_duplicate_push != 'true' && needs.scope.outputs.languages != '[]' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -31,11 +173,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - language: javascript-typescript
-            build_mode: none
-          - language: go
-            build_mode: manual
+        language: ${{ fromJSON(needs.scope.outputs.languages) }}
     steps:
       - name: Checkout immutable candidate source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -61,39 +199,36 @@ jobs:
         uses: github/codeql-action/init@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
         with:
           languages: ${{ matrix.language }}
-          build-mode: ${{ matrix.build_mode }}
+          build-mode: ${{ matrix.language == 'go' && 'manual' || 'none' }}
           queries: security-extended
 
-      - name: Build all Go backends for one governed analysis database
+      - name: Build affected Go modules
         if: ${{ matrix.language == 'go' }}
         shell: bash
         env:
-          # Each backend is a standalone module, but the repository's go.work
-          # enumerates only two of them for local development. With that
-          # workspace active, `go build ./...` inside any other module fails
-          # with "directory prefix . does not contain modules listed in
-          # go.work", so the Go database was never built and CodeQL analyzed
-          # nothing. Backend verification already isolates modules this way.
           GOWORK: off
+          GO_MODULES: ${{ needs.scope.outputs.go_modules }}
         run: |
           set -euo pipefail
-          for workdir in \
-            services/dsh/backend \
-            services/wlt/backend \
-            core/identity/backend \
-            core/workforce/backend \
-            core/platform-control/backend \
-            core/providers/backend
-          do
+          IFS=',' read -ra modules <<< "${GO_MODULES}"
+          if [[ "${#modules[@]}" -eq 0 || -z "${modules[0]}" ]]; then
+            echo "::error title=CodeQL scope error::Go selected without any affected module"
+            exit 1
+          fi
+          for workdir in "${modules[@]}"; do
             echo "CodeQL build: ${workdir}"
             (cd "${workdir}" && go build ./...)
           done
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
+        with:
+          category: "/language:${{ matrix.language }}"
 
   analyze-actions:
     name: Analyze actions
+    needs: [scope]
+    if: ${{ needs.scope.outputs.skip_duplicate_push != 'true' && needs.scope.outputs.actions_required == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -106,14 +241,12 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
           show-progress: false
-
       - name: Initialize CodeQL
         uses: github/codeql-action/init@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
         with:
           languages: actions
           build-mode: none
           queries: security-extended
-
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
         with:
@@ -121,23 +254,38 @@ jobs:
 
   result:
     name: CodeQL result
-    needs: [analyze, analyze-actions]
+    needs: [scope, analyze, analyze-actions]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
     steps:
-      - name: Enforce CodeQL results
+      - name: Enforce applicable CodeQL results
         shell: bash
         env:
+          SCOPE_RESULT: ${{ needs.scope.result }}
           ANALYZE_RESULT: ${{ needs.analyze.result }}
           ACTIONS_RESULT: ${{ needs.analyze-actions.result }}
+          LANGUAGES: ${{ needs.scope.outputs.languages }}
+          ACTIONS_REQUIRED: ${{ needs.scope.outputs.actions_required }}
+          SKIP_DUPLICATE_PUSH: ${{ needs.scope.outputs.skip_duplicate_push }}
         run: |
           set -euo pipefail
-          printf 'analyze=%s actions=%s\n' "${ANALYZE_RESULT}" "${ACTIONS_RESULT}"
-          if [[ "${ANALYZE_RESULT}" != "success" || "${ACTIONS_RESULT}" != "success" ]]; then
-            echo "::error title=CodeQL analysis failed::one or more required analyzers did not complete successfully"
+          if [[ "${SCOPE_RESULT}" != "success" ]]; then
+            echo "::error title=CodeQL scope failed::scope resolution did not complete"
             exit 1
           fi
-          echo "CodeQL analysis passed with baseline-compatible configuration identities."
+          if [[ "${SKIP_DUPLICATE_PUSH}" == "true" ]]; then
+            echo "CodeQL development push skipped because an open PR owns the same branch analysis."
+            exit 0
+          fi
+          if [[ "${LANGUAGES}" != "[]" && "${ANALYZE_RESULT}" != "success" ]]; then
+            echo "::error title=CodeQL analysis failed::applicable source-language analysis failed"
+            exit 1
+          fi
+          if [[ "${ACTIONS_REQUIRED}" == "true" && "${ACTIONS_RESULT}" != "success" ]]; then
+            echo "::error title=CodeQL actions analysis failed::workflow analysis failed"
+            exit 1
+          fi
+          echo "All applicable CodeQL analyses passed."
