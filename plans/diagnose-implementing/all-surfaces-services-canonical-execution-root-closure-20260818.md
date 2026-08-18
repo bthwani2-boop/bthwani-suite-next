@@ -32,6 +32,14 @@
 - Root-correct treatment is explicit query-scope propagation (`storeId`) through contract → generated client → frontend adapters/screens → bounded runtime journeys. DSH authorization remains the sole object-authorization truth; no fallback or implicit first-store selection is introduced.
 - This finding keeps the task `OPEN` until the migrated consumers, DB-backed DSH tests, runtime smoke, provenance, and final negative-space/adversarial checks pass on the final candidate.
 
+### 0.3 Re-audit finding exposed by onboarding runtime smoke — 2026-08-19
+
+- Exact-candidate scoped runtime smoke was rerun after the catalog scope treatment on `51a16e7c17686dfb4bd931e98f77a56b22b1bedc`; Identity/Workforce smoke and the complete DSH catalog journey passed, including the explicit partner `storeId` contract path.
+- The next bounded journey failed while issuing a field activation code: `POST /workforce/field-agents/{actorId}/activation-codes` returned `500 WORKFORCE_INTERNAL_ERROR`; the Workforce log recorded `authoritative operator context is required`.
+- Root cause is proven in `OperationalCoreGateMiddleware`: for activation/reactivation paths it calls `Repository.GovernedActivationReadiness` before the downstream `operatorOnly` wrapper, but does not resolve the Identity session and bind its authoritative `operatorContextId` into the request context. The repository therefore correctly fails closed, while the unmapped error is incorrectly surfaced as a generic 500.
+- Root-correct treatment: bind the Identity-owned context in the gate before any repository readiness read; preserve downstream `operatorOnly` authorization and do not accept caller-supplied context headers or add a parallel readiness policy. Add middleware coverage proving the gate reads with the bound Identity context and fails closed when Identity context is absent.
+- This finding is confined to the Workforce activation/provisioning cone and remains `OPEN` pending the middleware treatment, targeted tests, exact-candidate scoped runtime smoke, provisioning idempotency/compensation/linking evidence, and re-audit.
+
 This plan **supersedes as executable guidance**:
 
 1. `plans/diagnose-implementing/all-surfaces-services-root-closure-20260818.md`

@@ -264,17 +264,12 @@ func OperationalCoreGateMiddleware(next http.Handler, repo *workforce.Repository
 			}
 		}
 		if r.Method == http.MethodGet && path == "/workforce/me" {
-			identity, err := authClient.Resolve(r.Context(), r.Header.Get("Authorization"))
-			if err != nil {
+			boundRequest, identity, bound := bindIdentityRequestContext(r, authClient)
+			if !bound {
 				next.ServeHTTP(w, r)
 				return
 			}
-			boundContext, bindErr := auth.BindIdentityContext(r.Context(), identity)
-			if bindErr != nil {
-				next.ServeHTTP(w, r)
-				return
-			}
-			r = r.WithContext(boundContext)
+			r = boundRequest
 			person, err := repo.PersonByActorID(r.Context(), identity.Subject)
 			if err == nil && (person.WorkforceKind == "field" || person.WorkforceKind == "captain") {
 				actorID = identity.Subject
@@ -282,6 +277,15 @@ func OperationalCoreGateMiddleware(next http.Handler, repo *workforce.Repository
 			}
 		}
 		if gate {
+			boundRequest, _, bound := bindIdentityRequestContext(r, authClient)
+			if !bound {
+				// Leave authentication and authorization to the canonical downstream
+				// operatorOnly wrapper. The gate must never inspect repository state
+				// without an Identity-owned operator context.
+				next.ServeHTTP(w, r)
+				return
+			}
+			r = boundRequest
 			readiness, err := repo.GovernedActivationReadiness(r.Context(), actorID)
 			if err != nil {
 				writeWorkforceError(w, err)
@@ -298,4 +302,19 @@ func OperationalCoreGateMiddleware(next http.Handler, repo *workforce.Repository
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func bindIdentityRequestContext(r *http.Request, authClient *auth.Client) (*http.Request, auth.Identity, bool) {
+	if r == nil || authClient == nil {
+		return r, auth.Identity{}, false
+	}
+	identity, err := authClient.Resolve(r.Context(), r.Header.Get("Authorization"))
+	if err != nil {
+		return r, auth.Identity{}, false
+	}
+	boundContext, err := auth.BindIdentityContext(r.Context(), identity)
+	if err != nil {
+		return r, auth.Identity{}, false
+	}
+	return r.WithContext(boundContext), identity, true
 }
