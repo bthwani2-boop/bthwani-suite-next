@@ -1,119 +1,95 @@
 # BThwani Agents
 
-`AGENTS.md` is a thin coding-agent adapter. Human developers and AI agents use the same authority and execution model in `governance/GOVERNANCE.md`.
+`AGENTS.md` is a thin coding-agent adapter. Keep execution code-first, affected-scope, and evidence-driven.
 
 ## Authority
 
-Resolve each task in this order:
+Resolve each task from the current authorized instruction, exact pinned repository/ref, applicable Product Truth/contracts, and actual implementation/runtime evidence. Do not create a parallel authority layer in prompts, plans, guards, workflows, or generated registries.
 
-1. current authorized task instruction;
-2. `governance/authority/authority-precedence.json`;
-3. `governance/GOVERNANCE.md`;
-4. `governance/product/PRD.md` and applicable Engineering/Security/Delivery policy;
-5. applicable capability Product Truth and machine contracts;
-6. exact pinned implementation and runtime evidence.
+Useful routing data:
 
-Registries:
-
-- decisions: `governance/contracts/decision-vocabulary.json`
-- agents: `governance/agents/agent-registry.json`
 - skills: `governance/skills/skills-registry.json`
 - tools: `governance/tools/agent-tool-registry.json`
-- guards: `governance/guards/guard-registry.json`
-- workflows: `governance/github/workflow-registry.json`
+- decisions: `governance/contracts/decision-vocabulary.json`
 
-## Truth boundaries
-
-**Authority truth** determines who owns policy, product semantics, writes, approvals, and evidence rules.
-
-**Product truth** determines capability behavior, actors, states, surfaces, invariants, and acceptance.
-
-**Implementation truth** is the exact pinned source, contracts, configuration, migrations, and tests.
-
-**Runtime truth** is actual candidate-bound runtime/readback evidence. No other truth class may be inferred from a plan, prompt, report, fixture, or historical result.
+There is intentionally no guard registry, workflow registry, SDLC stage registry, or governance-validation workflow.
 
 ## Execution
 
 Use `CODE_BASED_LEAN`:
 
-- pin the exact repository, user-named branch/ref, and remote SHA;
-- inspect the smallest complete affected vertical path;
-- identify the authoritative truth/write owner;
-- fix root cause at that owner;
-- migrate every affected consumer/readback;
-- remove obsolete or parallel behavior when safe;
-- run the smallest sufficient affected verification and expand only by proven risk;
-- re-run invalidated evidence after the final relevant write;
-- report only what the exact candidate proves.
+1. Pin the exact repository, user-named branch/ref, and live SHA.
+2. Inspect the smallest complete affected vertical path.
+3. Prove the highest material root cause before broadening scope.
+4. Fix the actual source owner: code, contract, data, configuration, runtime, or consumer.
+5. Migrate affected consumers/readbacks and remove obsolete parallel behavior.
+6. Run only verification that adds unique assurance for the affected code cone.
+7. Expand verification only when risk/evidence requires it.
+8. Re-pin after material writes and before the final remote claim.
 
-“Deep”, “complete”, and “100%” raise the evidence standard; they do not justify unrelated scans, every tool, or unsupported completeness claims.
+“Deep”, “complete”, and “100%” raise the evidence standard; they do not justify unrelated scans or every available tool.
+
+## Verification rule
+
+Guards and GitHub workflows are for executable engineering truth only:
+
+- source/code integrity;
+- architecture/import boundaries;
+- API/contracts/generated clients;
+- migrations/data ownership;
+- runtime/configuration;
+- frontend bindings/accessibility;
+- security/secrets/dependencies;
+- executable CI workflow syntax/security/pinning.
+
+Do not create guards or workflows whose purpose is to validate governance prose, agent instructions, prompt packages, approval bureaucracy, guard registries, workflow registries, SDLC stage metadata, or evidence bookkeeping.
+
+Prefer:
+
+`affected code → targeted checks → runtime proof when applicable → one full verification only when closure/risk requires it`
 
 ## Repository safety
 
-Re-resolve the user-named branch before every logical write batch and after the final write. Reconcile unexpected branch movement. Never substitute another branch, force/reset newer work, or merge/release/deploy without current-task authority.
+Before every logical write batch, re-resolve the user-named branch. Reconcile unexpected branch movement; never overwrite unrelated newer work. No force push unless the current human instruction explicitly requires and authorizes it.
 
-## Full-stack multi-surface
+## Full-stack multi-surface work
 
-For product behavior read `governance/product/PRD.md` plus the applicable `governance/product/contracts/*.product-truth.json`. Trace the full affected path:
+For product behavior, trace the complete affected path:
 
-`surface → shared controller/adapter → generated contract/client → backend/domain → persistence/events/integration → canonical readback → every affected required surface`
+`surface → shared controller/adapter → generated contract/client → backend/domain → persistence/events/integration → canonical readback → affected surfaces`
 
 A local UI success is not closure when persisted or cross-surface truth is required.
 
 ## Security and finance
 
-Use `governance/policies/security.md` whenever authentication, authorization, sessions, trusted context, PII, secrets, provider credentials, isolation, or privileged access is affected.
+Use the actual security and financial contracts/code as truth for affected work. Authentication, authorization, sessions, secrets, PII, provider credentials, isolation, and financial mutation paths require risk-appropriate verification.
 
 WLT remains the authoritative financial-truth owner. DSH and surfaces may use only bounded WLT-backed operations/projections permitted by current contracts.
 
-## Evidence and approvals
-
-Use `governance/policies/delivery.md`, `governance/contracts/sdlc/`, and `governance/contracts/decision-vocabulary.json`. Evidence is candidate-bound and scope-specific. Static success never implies runtime, visual, QA, security, finance, isolation, CI, release, production, or final closure.
-
-Logical approval authorities remain separated by the agent registry. An execution agent cannot impersonate the owner or self-grant a protected approval.
-
 ## Delegated implementation
 
-Two mutually exclusive external implementation backends are registered. The current authorized task selects exactly one backend and one orchestrator route for each bounded work unit.
+Delegation is optional and only for bounded work that materially benefits from it. Exactly one backend owns one work unit; overlapping concurrent writers are forbidden.
 
-OpenCode/NVIDIA routes:
+The selected orchestrator owns diagnosis, scope, complete diff review, branch/head re-pinning, verification, rework, commit, and push. Implementers own only their bounded edits.
 
-- `Codex orchestrator → OpenCode/NVIDIA implementer → Codex verification`.
-- `Claude orchestrator → OpenCode/NVIDIA implementer → Claude verification`.
-- Codex uses `tools/scripts/invoke-opencode-implementer.mjs --orchestrator codex`; Claude uses `tools/scripts/invoke-claude-opencode-implementer.mjs`.
-- Approved workers are fixed by the relay: `bthwani-agent-6` / Nemotron Ultra, `bthwani-agent-7` / GLM-5.2, and `bthwani-agent-8` / Nemotron Super.
-- The relay pins exact branch/HEAD, requires bounded read/write/forbidden paths, rejects dirty overlap with declared scope, preserves unrelated dirty work, enforces one active delegation, and validates post-run changed paths.
-- OpenCode runs with a default-deny runtime policy and `--pure`; the worker has path-scoped read/list/edit only. Shell, git, web, task, skill, LSP, external-directory, interactive, commit, push, merge, release, approval, and scope expansion are denied.
-- The selected orchestrator owns diagnosis, scope, the brief, complete diff review, branch/head re-pinning, developer verification, rework, commit, and push.
+## Skills and tools
 
-Antigravity/Gemini routes remain available only when a current authorized task explicitly selects them:
-
-- `Codex orchestrator → Antigravity CLI (agy) implementer using a Gemini model → Codex verification`.
-- `Claude orchestrator → Antigravity CLI (agy) implementer using a Gemini model → Claude verification`.
-- Codex uses `tools/scripts/invoke-antigravity-implementer.mjs --orchestrator codex`; Claude uses `tools/scripts/invoke-claude-antigravity-implementer.mjs`.
-- Antigravity remains implementation-only and uses the locally authenticated Antigravity subscription session.
-
-Exactly one delegated implementation route may own a work unit. Codex and Claude must not share or concurrently coordinate the same delegated work unit. Neither backend owns product truth, formal approval, protected independent review, release, production, or closure authority.
-
-## Plans, skills, and tools
-
-Planning artifacts live only under `plans/`. `.agents/INDEX.md` is the only derived routing index. Skills live under `.agents/skills/`; conditional tool policies live under `.agents/tools/`.
+Use `.agents/INDEX.md` only when routing is not obvious. Load the smallest relevant skill/tool set.
 
 Tool ladder:
 
 1. direct scoped inspection;
 2. focused search or existing command;
-3. one targeted registered guard;
-4. small idempotent helper for proven repetition;
-5. Nx affected when workspace impact must be computed;
-6. LeanCTX only when it materially reduces repeated reads/noise;
-7. Graphify only when ownership/dependency/duplication remains unresolved;
-8. OpenCodeReview for a bounded diff, commit, or range;
-9. runtime tooling only for runtime-changing or runtime-claimed work.
+3. one targeted code check when it adds unique assurance;
+4. Nx affected when workspace impact must be computed;
+5. runtime tooling for runtime-changing or runtime-claimed work;
+6. Graphify/LeanCTX/OpenCodeReview only when they materially reduce uncertainty or repeated work.
 
-Tools and adapters own no Product Truth or approval.
+`tools/prompting/bthwani-orchestrator/**` is a separate self-contained textual execution package. Treat it as read-only unless the current human instruction explicitly authorizes package maintenance.
 
 ## Final response
+
+Report only what the exact candidate proves:
 
 ```text
 repository:
@@ -124,5 +100,3 @@ checks_and_evidence:
 decision:
 remaining_risks_or_missing_evidence:
 ```
-
-Do not overclaim.
