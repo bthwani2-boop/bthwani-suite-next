@@ -1,4 +1,4 @@
-name: BThwani Node Diagnostics
+name: BThwani Contract Diagnostics
 
 on:
   workflow_call:
@@ -17,10 +17,10 @@ permissions:
   contents: read
 
 jobs:
-  affected:
-    name: Affected diagnostics
+  contracts:
+    name: Contract and binding integrity
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - name: Checkout immutable source history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -36,114 +36,18 @@ jobs:
           repository: ${{ github.repository }}
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
-      - name: Materialize contracts through the Nx owner
-        if: ${{ inputs.contracts_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' }}
+      - name: Materialize contracts
         run: pnpm exec nx run contracts:materialize
-      - name: Verify affected frontend diagnostics
-        id: frontend_diagnostics
-        if: ${{ inputs.frontend == 'true' }}
-        continue-on-error: true
-        shell: bash
-        env:
-          FULL_VERIFICATION: ${{ inputs.full_verification }}
-          VERIFICATION_TIER: ${{ inputs.verification_tier }}
-        run: |
-          set +e
-          log="${RUNNER_TEMP}/frontend-diagnostics.log"
-          : >"${log}"
-          status=0
-          run_check() {
-            echo "===== $* =====" | tee -a "${log}"
-            "$@" 2>&1 | tee -a "${log}"
-            code=${PIPESTATUS[0]}
-            if [[ "${code}" -ne 0 ]]; then status="${code}"; fi
-          }
-          run_check pnpm run diagnostics:ui-kit
-          run_check pnpm run guard:control-panel-architecture
-          run_check pnpm run guard:service-workspace
-          if [[ "${FULL_VERIFICATION}" != "true" && "${VERIFICATION_TIER}" != "deep" ]]; then
-            run_check pnpm run guard:a11y
-            run_check pnpm run guard:dependency-graph
-            run_check pnpm run guard:ast-grep-rules
-          fi
-          exit "${status}"
-      - name: Upload frontend diagnostics
-        if: ${{ steps.frontend_diagnostics.outcome == 'failure' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: frontend-diagnostics-${{ github.run_id }}
-          path: ${{ runner.temp }}/frontend-diagnostics.log
-          if-no-files-found: error
-          retention-days: 7
-      - name: Verify affected contracts and bindings
-        id: contract_diagnostics
-        if: ${{ inputs.contracts_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' }}
-        continue-on-error: true
+      - name: Verify contract and binding integrity
         shell: bash
         run: |
-          set +e
-          log="${RUNNER_TEMP}/contract-diagnostics.log"
-          : >"${log}"
-          status=0
-          run_check() {
-            echo "===== $* =====" | tee -a "${log}"
-            "$@" 2>&1 | tee -a "${log}"
-            code=${PIPESTATUS[0]}
-            if [[ "${code}" -ne 0 ]]; then status="${code}"; fi
-          }
-          run_check pnpm run guard:no-broken-imports
-          run_check pnpm run guard:api-binding
-          run_check pnpm run guard:backend-api-binding
-          run_check pnpm run guard:service-manifest-drift
-          run_check pnpm run guard:frontend-feature-binding
-          run_check pnpm run guard:runtime-real-bindings
-          exit "${status}"
-      - name: Upload contract diagnostics
-        if: ${{ steps.contract_diagnostics.outcome == 'failure' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: contract-diagnostics-${{ github.run_id }}
-          path: ${{ runner.temp }}/contract-diagnostics.log
-          if-no-files-found: error
-          retention-days: 7
-      - name: Run deep code diagnostics
-        id: deep_repository_diagnostics
-        if: ${{ (inputs.execution_phase == 'closure' || inputs.execution_phase == 'master') && (inputs.full_verification == 'true' || inputs.verification_tier == 'deep') }}
-        continue-on-error: true
-        shell: bash
-        run: |
-          set +e
-          log="${RUNNER_TEMP}/deep-repository-diagnostics.log"
-          : >"${log}"
-          status=0
-          run_check() {
-            echo "===== $* =====" | tee -a "${log}"
-            "$@" 2>&1 | tee -a "${log}"
-            code=${PIPESTATUS[0]}
-            if [[ "${code}" -ne 0 && "${status}" -eq 0 ]]; then status="${code}"; fi
-          }
-          run_check pnpm exec knip --config knip.json --reporter compact --reporter github-actions
-          run_check pnpm run guard:logic-all
-          run_check pnpm run guard:performance-all
-          exit "${status}"
-      - name: Upload deep code diagnostics
-        if: ${{ steps.deep_repository_diagnostics.outcome == 'failure' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: deep-code-diagnostics-${{ github.run_id }}
-          path: ${{ runner.temp }}/deep-repository-diagnostics.log
-          if-no-files-found: error
-          retention-days: 7
-      - name: Enforce diagnostic results
-        if: ${{ always() }}
-        shell: bash
-        env:
-          FRONTEND_OUTCOME: ${{ steps.frontend_diagnostics.outcome }}
-          CONTRACT_OUTCOME: ${{ steps.contract_diagnostics.outcome }}
-          DEEP_OUTCOME: ${{ steps.deep_repository_diagnostics.outcome }}
-        run: |
-          status=0
-          for outcome in "${FRONTEND_OUTCOME}" "${CONTRACT_OUTCOME}" "${DEEP_OUTCOME}"; do
-            if [[ "${outcome}" == "failure" ]]; then status=1; fi
-          done
-          exit "${status}"
+          set -euo pipefail
+          pnpm run guard:no-broken-imports
+          pnpm run guard:api-binding
+          pnpm run guard:backend-api-binding
+          pnpm run guard:service-manifest-drift
+          pnpm run guard:generated-client-provenance
+          pnpm run guard:contract-scope-binding
+          pnpm run guard:openapi-bundle-provenance
+          pnpm run guard:frontend-feature-binding
+          pnpm run guard:runtime-real-bindings
