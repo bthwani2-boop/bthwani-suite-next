@@ -4,7 +4,7 @@ import path from "node:path";
 import { fail, repoRoot } from "./_guard-utils.mjs";
 
 const guardId = "aggregate-ownership-gate";
-const registryRelative = "governance/contracts/aggregate-ownership.json";
+const registryRelative = "tools/verification/aggregate-ownership.json";
 const registryPath = path.join(repoRoot, registryRelative);
 const violations = [];
 
@@ -92,4 +92,3 @@ for (const aggregate of aggregates) {
 
 if (aggregates.length === 0) violations.push(`${registryRelative}: no aggregates declared`);
 fail(guardId, violations);
-
