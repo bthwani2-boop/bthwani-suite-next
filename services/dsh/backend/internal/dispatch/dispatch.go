@@ -468,7 +468,7 @@ func enqueueWltDeliveryCompletedNotification(tx *sql.Tx, orderID, captainID stri
 	if err != nil {
 		return fmt.Errorf("resolve delivery context for wlt outbox: %w", err)
 	}
-	if deliveryCtx.PaymentMethod != "cod" || deliveryCtx.PartnerID == "" {
+	if deliveryCtx.FulfillmentMode != "bthwani_delivery" || deliveryCtx.PaymentMethod != "cod" || deliveryCtx.PartnerID == "" {
 		return nil
 	}
 	return wltoutbox.Enqueue(tx, wltoutbox.EventTypeDeliveryCompleted, orderID, captainID, deliveryCtx.PartnerID, deliveryCtx.CheckoutIntentID)

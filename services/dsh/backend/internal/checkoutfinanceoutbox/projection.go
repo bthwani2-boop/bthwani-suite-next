@@ -25,9 +25,8 @@ func financialProjection(result DeliveryResult) (status, reference string, err e
 		status = "no_action"
 		reference = result.PaymentSessionID
 	case "cod_reservation_released":
-		// COD custody is a separate WLT-owned exposure. It must be recorded
-		// as a sent outbox result without pretending that the order's
-		// payment-session closure state changed.
+		// WLT owns the reservation release outcome. It is recorded as a sent
+		// financial result without changing the payment-session closure state.
 		status = "no_action"
 		reference = result.PaymentSessionID
 	default:

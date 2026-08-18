@@ -13,8 +13,6 @@ import (
 	"wlt-api/internal/shared"
 )
 
-var ErrCodCollectionRequiresCodRecord = errors.New("COD collection must be recorded through the sovereign COD record flow")
-
 // CaptureSessionWithProviderSovereign is the live capture path. Provider
 // success, payment-session state, double-entry posting and DSH notification are
 // committed as one WLT transaction. A captured session can therefore never be
@@ -107,16 +105,5 @@ func HandleCaptureSessionSovereign(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		shared.SendJSON(w, http.StatusOK, map[string]any{"paymentSession": session})
-	}
-}
-
-// HandleCodCollectionViaPaymentSessionBlocked prevents a second COD truth from
-// being created through the payment-session route. DSH must use the COD record
-// collection route, which identifies captain custody and posts the journal.
-func HandleCodCollectionViaPaymentSessionBlocked(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		_ = db
-		_ = r.PathValue("paymentSessionId")
-		shared.SendError(w, http.StatusConflict, "USE_COD_RECORD_FLOW", "COD collection must be posted through /wlt/cod-records/{codRecordId}/collect")
 	}
 }

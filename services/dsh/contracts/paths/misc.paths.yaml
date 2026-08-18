@@ -175,38 +175,6 @@
             schema: { type: object, additionalProperties: true }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
-/dsh/control-panel/finance/cod-records:
-  get:
-    operationId: listDshControlPanelFinanceCodRecords
-    summary: Operator reads the governed WLT COD records view through the DSH
-      finance proxy.
-    tags: [ DshFinanceProxy ]
-    security: [ { bearerAuth: [] } ]
-    parameters:
-      - name: captainId
-        in: query
-        required: false
-        schema: { type: string }
-      - name: orderId
-        in: query
-        required: false
-        schema: { type: string }
-      - name: limit
-        in: query
-        required: false
-        schema: { type: string }
-      - name: cursor
-        in: query
-        required: false
-        schema: { type: string }
-    responses:
-      "200":
-        description: WLT COD records view (verbatim passthrough).
-        content:
-          application/json:
-            schema: { type: object, additionalProperties: true }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-
 /dsh/control-panel/finance/commissions:
   get:
     operationId: listDshControlPanelFinanceCommissions

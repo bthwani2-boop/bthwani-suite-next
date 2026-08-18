@@ -5,8 +5,6 @@
 import React from 'react';
 import { Platform, Pressable, View, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
 import {
   Badge,
   Button,
@@ -40,6 +38,10 @@ import {
 import { resolvePartnerOnboardingFailureState } from '../../shared/partner';
 import { uploadFieldMedia } from '../../shared/media';
 import { useStoreOnboardingFeeReferenceController } from '../../shared/platform';
+import {
+  getDshDocumentPickerAdapter,
+  getDshImagePickerAdapter,
+} from '../../shared/mobile-capabilities';
 import {
   addFieldOnboardingMessage,
   getFieldOnboardingCollaboration,
@@ -192,7 +194,7 @@ export function DshFieldOnboardingScreen({
     fallbackName: string,
   ): Promise<PickedEvidenceFile | null> => {
     if (source === 'document') {
-      const result = await DocumentPicker.getDocumentAsync({
+      const result = await getDshDocumentPickerAdapter().getDocument({
         type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
         copyToCacheDirectory: true,
         multiple: false,
@@ -211,9 +213,10 @@ export function DshFieldOnboardingScreen({
     }
 
     if (source === 'camera') {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      const picker = getDshImagePickerAdapter();
+      const permission = await picker.requestCameraPermissions();
       if (!permission.granted) throw new Error('CAMERA_PERMISSION_DENIED');
-      const result = await ImagePicker.launchCameraAsync({ quality: 0.8, mediaTypes: ['images'] });
+      const result = await picker.launchCamera({ quality: 0.8, mediaTypes: ['images'] });
       const asset = result.canceled ? undefined : result.assets[0];
       if (!asset) return null;
       return {
@@ -223,9 +226,10 @@ export function DshFieldOnboardingScreen({
       };
     }
 
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const picker = getDshImagePickerAdapter();
+    const permission = await picker.requestMediaLibraryPermissions();
     if (!permission.granted) throw new Error('LIBRARY_PERMISSION_DENIED');
-    const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.8, mediaTypes: ['images'] });
+    const result = await picker.launchImageLibrary({ quality: 0.8, mediaTypes: ['images'] });
     const asset = result.canceled ? undefined : result.assets[0];
     if (!asset) return null;
     return {

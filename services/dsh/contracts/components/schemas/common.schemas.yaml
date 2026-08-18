@@ -33,7 +33,6 @@ DshDeliveryExceptionReasonCode:
     - vehicle_breakdown
     - accident
     - damaged_order
-    - cash_collection_issue
     - weather_or_road_block
     - proof_unavailable
     - handoff_shortage

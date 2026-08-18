@@ -70,10 +70,6 @@ func (s *employeeAccessServer) provision(w http.ResponseWriter, r *http.Request)
 		DepartmentScope:   request.DepartmentScope,
 		OperatorContextID: operatorContextID,
 	}
-	if err := s.repository.ValidateEmployeePhoneOperatorContext(r.Context(), input.PhoneE164, operatorContextID); err != nil {
-		writeInternalActorError(w, err)
-		return
-	}
 	view, err := s.repository.ProvisionEmployee(r.Context(), input)
 	if err != nil {
 		writeInternalActorError(w, err)

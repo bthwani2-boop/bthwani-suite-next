@@ -1,9 +1,9 @@
 openapi: 3.1.0
 info:
-  title: BThwani WLT COD Record Core API
+  title: BThwani WLT COD Reservation Core API
   version: 1.0.0
-  description: OperatorContext-scoped COD record creation and read surface. Amount
-    and currency are derived from WLT payment-session truth.
+  description: OperatorContext-scoped captain-funded COD reservation and finalization
+    surface. Amount and currency are derived from WLT payment-session truth.
 x-bthwani-owner: services/wlt
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: ENABLED
@@ -65,6 +65,33 @@ paths:
         '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
       security:
         - serviceBearer: []
+  /wlt/cod-reservations/finalize:
+    post:
+      operationId: finalizeWltCodReservation
+      tags: [ WltCodReservations ]
+      summary: Finalize captain-funded COD exposure after governed delivery completion.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FinalizeCodReservationRequest' }
+      responses:
+        '200':
+          description: Finalized or replayed idempotently.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReserveCodCapacityResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - serviceBearer: []
   /wlt/cod-reservations/{orderId}:
     get:
       operationId: getWltCodReservation
@@ -86,98 +113,17 @@ paths:
         '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
       security:
         - serviceBearer: []
-  /wlt/cod-records:
-    post:
-      operationId: createWltCodRecord
-      tags: [ WltCodRecords ]
-      summary: Create or replay OperatorContext-local COD custody from WLT payment
-        truth.
-      x-bthwani-mutation-approved: false
-      x-bthwani-default-enabled: false
-      parameters:
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/CreateCodRecordRequest' }
-      responses:
-        '201': { description: OperatorContext-local COD record created }
-        '200': { description: Exact replay of the existing COD record }
-        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
-        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
-        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
-      security:
-        - serviceBearer: []
-    get:
-      operationId: listWltCodRecords
-      tags: [ WltCodRecords ]
-      summary: List OperatorContext-local COD records by one governed filter.
-      parameters:
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
-        - name: captainId
-          in: query
-          schema: { type: string }
-        - name: partnerId
-          in: query
-          schema: { type: string }
-        - name: orderId
-          in: query
-          schema: { type: string }
-      responses:
-        '200': { description: OperatorContext-local COD records }
-        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
-        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
-        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
-      security:
-        - serviceBearer: []
-  /wlt/cod-records/{codRecordId}:
-    get:
-      operationId: getWltCodRecord
-      tags: [ WltCodRecords ]
-      summary: Read one OperatorContext-local COD record.
-      parameters:
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
-        - name: codRecordId
-          in: path
-          required: true
-          schema: { type: string, minLength: 1 }
-      responses:
-        '200': { description: OperatorContext-local COD record }
-        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
-        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
-        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
-      security:
-        - serviceBearer: []
 components:
   securitySchemes: {}
   schemas:
-    CreateCodRecordRequest:
-      type: object
-      additionalProperties: false
-      required: [ orderId, collectorType, collectorId, partnerId, checkoutIntentId ]
-      properties:
-        orderId: { type: string, minLength: 1 }
-        captainId: { type: string }
-        collectorType: { type: string, enum: [ captain, store_courier, partner_store ] }
-        collectorId: { type: string, minLength: 1 }
-        partnerId: { type: string, minLength: 1 }
-        checkoutIntentId: { type: string, minLength: 1 }
     CodReservation:
       type: object
-      required: [id, operatorContextId, orderId, captainId, amountMinorUnits, currency, status, idempotencyKey, createdAt, updatedAt]
+      required: [id, operatorContextId, orderId, checkoutIntentId, captainId, amountMinorUnits, currency, status, idempotencyKey, createdAt, updatedAt]
       properties:
         id: { type: string }
         operatorContextId: { type: string }
         orderId: { type: string }
+        checkoutIntentId: { type: string }
         captainId: { type: string }
         amountMinorUnits: { type: integer, format: int64 }
         currency: { type: string }
@@ -187,11 +133,13 @@ components:
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
         resolvedAt: { type: string, format: date-time }
+        finalizationLedgerTransactionId: { type: string }
     ReserveCodCapacityRequest:
       type: object
-      required: [orderId, captainId, amountMinorUnits, currency]
+      required: [orderId, checkoutIntentId, captainId, amountMinorUnits, currency]
       properties:
         orderId: { type: string }
+        checkoutIntentId: { type: string }
         captainId: { type: string }
         amountMinorUnits: { type: integer, format: int64 }
         currency: { type: string }
@@ -201,6 +149,13 @@ components:
       properties:
         codReservation: { $ref: '#/components/schemas/CodReservation' }
         replayed: { type: boolean }
+    FinalizeCodReservationRequest:
+      type: object
+      additionalProperties: false
+      required: [orderId, checkoutIntentId]
+      properties:
+        orderId: { type: string }
+        checkoutIntentId: { type: string }
     ReleaseCodReservationRequest:
       type: object
       required: [orderId, reason]

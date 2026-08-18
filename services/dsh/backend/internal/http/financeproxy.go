@@ -132,10 +132,6 @@ func (s *protectedStoreServer) handleFinanceFinancialSummary(w http.ResponseWrit
 	s.handleFacadeRead("finance.ledger.read", "/wlt/ledger/financial-summary", nil)(w, r)
 }
 
-func (s *protectedStoreServer) handleFinanceCodRecords(w http.ResponseWriter, r *http.Request) {
-	s.handleFacadeRead("finance.cod.read", "/wlt/cod-records", []string{"captainId", "orderId", "limit", "cursor"})(w, r)
-}
-
 func (s *protectedStoreServer) handleFinanceCommissions(w http.ResponseWriter, r *http.Request) {
 	s.handleFacadeRead("finance.ledger.read", "/wlt/commissions", []string{"orderId", "captainId", "limit", "cursor"})(w, r)
 }
@@ -154,23 +150,6 @@ func (s *protectedStoreServer) handleFinanceReferencesRefundStatus(w http.Respon
 
 func (s *protectedStoreServer) handleFinanceReferencesFieldCommission(w http.ResponseWriter, r *http.Request) {
 	s.handleFacadeRead("finance.ledger.read", "/wlt/references/field-commission", []string{"partnerId"})(w, r)
-}
-
-func (s *protectedStoreServer) handleCaptainFinanceCodRecords(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "captain")
-	if !ok {
-		return
-	}
-	query := url.Values{}
-	query.Set("captainId", actor.ID)
-	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.cod.read", "/wlt/cod-records", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
-	if err != nil {
-		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
 }
 
 func (s *protectedStoreServer) handleFinancePayoutRequests(w http.ResponseWriter, r *http.Request) {

@@ -41,7 +41,8 @@ type SovereignLeadershipRecord struct {
 type CreateSovereignLeaderInput struct {
 	FullNameAr           string   `json:"fullNameAr"`
 	FullNameEn           string   `json:"fullNameEn"`
-	ActorID              string   `json:"actorId"`
+	Username             string   `json:"username"`
+	PhoneE164            string   `json:"phoneE164"`
 	Department           string   `json:"department"`
 	PositionTitle        string   `json:"positionTitle"`
 	JobGrade             string   `json:"jobGrade"`
@@ -306,11 +307,13 @@ func itoa(value int) string {
 func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, input CreateSovereignLeaderInput, idempotencyKey, correlationID string) (SovereignLeadershipCreationResult, bool, error) {
 	input.FullNameAr = strings.TrimSpace(input.FullNameAr)
 	input.FullNameEn = strings.TrimSpace(input.FullNameEn)
+	input.Username = strings.TrimSpace(input.Username)
+	input.PhoneE164 = strings.TrimSpace(input.PhoneE164)
 	input.PositionTitle = strings.TrimSpace(input.PositionTitle)
 	input.PermissionBundle = strings.TrimSpace(input.PermissionBundle)
 	input.EmploymentClass = strings.TrimSpace(input.EmploymentClass)
 	department, err := normalizeSovereignDepartment(input.Department)
-	if err != nil || input.FullNameAr == "" || input.PositionTitle == "" {
+	if err != nil || input.FullNameAr == "" || input.Username == "" || input.PhoneE164 == "" || input.PositionTitle == "" {
 		return SovereignLeadershipCreationResult{}, false, ErrInvalidInput
 	}
 	input.Department = department
@@ -347,29 +350,52 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 	if err != nil {
 		return SovereignLeadershipCreationResult{}, false, err
 	}
-	// Identity roles must be handled by Administration. Assuming actor is pre-provisioned.
-	if input.ActorID == "" {
-		return SovereignLeadershipCreationResult{}, false, ErrInvalidInput
+	if s.identity == nil {
+		return SovereignLeadershipCreationResult{}, false, identityclient.ErrUnavailable
 	}
-	actorID := input.ActorID
-
+	actor, err := s.identity.ProvisionEmployee(ctx, identityclient.EmployeeProvisionInput{
+		Username: input.Username, PhoneE164: input.PhoneE164,
+		PermissionBundle: input.PermissionBundle, DepartmentScope: department,
+	})
 	if err != nil {
 		return SovereignLeadershipCreationResult{}, false, err
+	}
+	if strings.TrimSpace(actor.ActorID) == "" {
+		return SovereignLeadershipCreationResult{}, false, identityclient.ErrInvalidActor
+	}
+	actorID := actor.ActorID
+	identityCreated := actor.Created
+	compensate := func() {
+		if !identityCreated {
+			return
+		}
+		if compensationErr := s.identity.Deprovision(ctx, actorID); compensationErr != nil {
+			log.Printf("[workforce] leadership identity compensation failed actor=%s: %v", actorID, compensationErr)
+		}
+	}
+
+	if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
+		if existing.EmployeeProfile == nil {
+			return SovereignLeadershipCreationResult{}, false, ErrWorkforceKindConflict
+		}
+		return SovereignLeadershipCreationResult{}, false, identityclient.ErrProvisionConflict
+	}
+
+	if actorID == "" {
+		return SovereignLeadershipCreationResult{}, false, ErrInvalidInput
 	}
 
 	person, personErr := s.repo.PersonByActorID(ctx, actorID)
 	if errors.Is(personErr, ErrNotFound) {
-		person, personErr = s.repo.CreateEmployee(ctx, input.ActorID, workforceCode, CreateEmployeeInput{
-			FullNameAr: input.FullNameAr, FullNameEn: input.FullNameEn, ActorID: input.ActorID,
+		person, personErr = s.repo.CreateEmployee(ctx, actorID, workforceCode, CreateEmployeeInput{
+			FullNameAr: input.FullNameAr, FullNameEn: input.FullNameEn, Username: input.Username, PhoneE164: input.PhoneE164,
 			EngagementType: "employee", EngagementStartDate: input.EngagementStartDate,
 			Department: department, Role: input.PositionTitle, OfficeLocation: input.OfficeLocation,
 			SupervisorActorID: input.SupervisorActorID,
 		})
-	} else if personErr == nil {
-		return SovereignLeadershipCreationResult{}, false, identityclient.ErrPhoneAlreadyBound
 	}
 	if personErr != nil {
-		// _ = s.identity.Deactivate(ctx, actorID, operator.ActorID, "creation_failed_rollback", correlationID)
+		compensate()
 		return SovereignLeadershipCreationResult{}, false, personErr
 	}
 
@@ -377,7 +403,7 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 	if existing, err := s.repo.EmployeeGovernanceByActorID(ctx, actorID); err == nil {
 		governanceVersion = existing.Version
 	} else if !errors.Is(err, ErrNotFound) {
-		// _ = s.identity.Deactivate(ctx, actorID, operator.ActorID, "creation_failed_rollback", correlationID)
+		compensate()
 		return SovereignLeadershipCreationResult{}, false, err
 	}
 	governance, err := s.repo.UpsertEmployeeGovernance(ctx, actorID, operator.ActorID, UpsertEmployeeGovernanceInput{
@@ -388,7 +414,7 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 		ManagedDepartmentCodes: []string{department}, Notes: input.Notes,
 	})
 	if err != nil {
-		// _ = s.identity.Deactivate(ctx, actorID, operator.ActorID, "creation_failed_rollback", correlationID)
+		compensate()
 		return SovereignLeadershipCreationResult{}, false, err
 	}
 	assignmentVersion := 0
@@ -398,6 +424,7 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 	assignment, err := s.repo.UpsertSovereignAssignment(ctx, actorID, operator.ActorID, assignmentVersion,
 		input.PermissionBundle, department, input.AssignmentStartsOn, input.AssignmentEndsOn)
 	if err != nil {
+		compensate()
 		return SovereignLeadershipCreationResult{}, false, err
 	}
 	activation, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, "employee", "webapp", idempotencyKey+":activation", correlationID)
@@ -421,8 +448,10 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 func (s *Service) CreateDepartmentEmployee(ctx context.Context, operator Operator, input CreateEmployeeInput, idempotencyKey, correlationID string) (DepartmentEmployeeCreationResult, bool, error) {
 	input.FullNameAr = strings.TrimSpace(input.FullNameAr)
 	input.FullNameEn = strings.TrimSpace(input.FullNameEn)
+	input.Username = strings.TrimSpace(input.Username)
+	input.PhoneE164 = strings.TrimSpace(input.PhoneE164)
 	department, err := normalizeSovereignDepartment(input.Department)
-	if err != nil || input.FullNameAr == "" || strings.TrimSpace(input.Role) == "" {
+	if err != nil || input.FullNameAr == "" || input.Username == "" || input.PhoneE164 == "" || strings.TrimSpace(input.Role) == "" {
 		return DepartmentEmployeeCreationResult{}, false, ErrInvalidInput
 	}
 	input.Department = department
@@ -444,20 +473,42 @@ func (s *Service) CreateDepartmentEmployee(ctx context.Context, operator Operato
 	if err != nil {
 		return DepartmentEmployeeCreationResult{}, false, err
 	}
-	if input.ActorID == "" {
-		return DepartmentEmployeeCreationResult{}, false, ErrInvalidInput
+	if s.identity == nil {
+		return DepartmentEmployeeCreationResult{}, false, identityclient.ErrUnavailable
 	}
-	actorID := input.ActorID
+	actor, err := s.identity.ProvisionEmployee(ctx, identityclient.EmployeeProvisionInput{
+		Username: input.Username, PhoneE164: input.PhoneE164,
+		PermissionBundle: "staff", DepartmentScope: department,
+	})
+	if err != nil {
+		return DepartmentEmployeeCreationResult{}, false, err
+	}
+	if strings.TrimSpace(actor.ActorID) == "" {
+		return DepartmentEmployeeCreationResult{}, false, identityclient.ErrInvalidActor
+	}
+	actorID := actor.ActorID
+	identityCreated := actor.Created
+	compensate := func() {
+		if !identityCreated {
+			return
+		}
+		if compensationErr := s.identity.Deprovision(ctx, actorID); compensationErr != nil {
+			log.Printf("[workforce] employee identity compensation failed actor=%s: %v", actorID, compensationErr)
+		}
+	}
 	person, personErr := s.repo.PersonByActorID(ctx, actorID)
 	if errors.Is(personErr, ErrNotFound) {
 		person, personErr = s.repo.CreateEmployee(ctx, actorID, workforceCode, input)
+	} else if personErr == nil && person.EmployeeProfile == nil {
+		return DepartmentEmployeeCreationResult{}, false, ErrWorkforceKindConflict
 	}
 	if personErr != nil {
-		// _ = s.identity.Deactivate(ctx, actorID, operator.ActorID, "creation_failed_rollback", correlationID)
+		compensate()
 		return DepartmentEmployeeCreationResult{}, false, personErr
 	}
 	activation, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, "employee", "webapp", idempotencyKey+":activation", correlationID)
 	if err != nil {
+		compensate()
 		return DepartmentEmployeeCreationResult{}, false, err
 	}
 	result := DepartmentEmployeeCreationResult{Employee: person, Activation: activation}

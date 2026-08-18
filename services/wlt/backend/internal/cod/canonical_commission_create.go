@@ -46,7 +46,7 @@ func bindCanonicalCommissionFinancialTruth(
 		if err != nil {
 			return err
 		}
-		if status != "captured" && status != "cod_collected" {
+		if status != "captured" && status != "cod_collected" && status != "cod_finalized" {
 			return fmt.Errorf("payment session status %q is not commission-eligible", status)
 		}
 

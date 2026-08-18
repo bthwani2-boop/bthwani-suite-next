@@ -52,18 +52,8 @@ export type WltDshSettlementSummary = {
   readonly settlementCount: number;
 };
 
-export type WltCodStatus = components["schemas"]["CodRecord"]["status"];
 export type WltCommissionType = components["schemas"]["Commission"]["commissionType"];
 export type WltCommissionStatus = components["schemas"]["CommissionStatus"];
-export type WltCodCollectorType = components["schemas"]["CreateCodRecordRequest"]["collectorType"];
-
-/** CodRecord currently omits returned lifecycle timestamps from its named schema. */
-export type WltDshCodReference = components["schemas"]["CodRecord"] & {
-  readonly collectedAt?: string | null;
-  readonly remittedAt?: string | null;
-  readonly createdAt: string;
-  readonly updatedAt?: string;
-};
 
 export type WltDshCommissionReference = components["schemas"]["Commission"];
 export type WltLedgerDebitCredit = components["schemas"]["LedgerEntry"]["debitCredit"];

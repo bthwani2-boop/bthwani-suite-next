@@ -175,10 +175,10 @@ func TestNewClientTrimsTrailingSlash(t *testing.T) {
 	}
 }
 
-func TestNotifyDeliveryCollectionSendsGovernedCollectorHeaders(t *testing.T) {
+func TestFinalizeCodReservationSendsGovernedHeaders(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/wlt/cod-records" {
-			t.Fatalf("expected /wlt/cod-records, got %s", r.URL.Path)
+		if r.URL.Path != "/wlt/cod-reservations/finalize" {
+			t.Fatalf("expected /wlt/cod-reservations/finalize, got %s", r.URL.Path)
 		}
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
@@ -186,33 +186,29 @@ func TestNotifyDeliveryCollectionSendsGovernedCollectorHeaders(t *testing.T) {
 		if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-a" {
 			t.Fatalf("expected X-Operator-Context-ID=OperatorContext-a, got %q", r.Header.Get("X-Operator-Context-ID"))
 		}
-		var input NotifyDeliveryCollectionInput
+		var input map[string]string
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 			t.Fatalf("failed to decode request body: %v", err)
 		}
-		if input.OrderID != "order-1" || input.CheckoutIntentID != "intent-1" || input.CollectorType != "captain" || input.CollectorID != "captain-1" {
+		if input["orderId"] != "order-1" || input["checkoutIntentId"] != "intent-1" {
 			t.Fatalf("unexpected input: %+v", input)
 		}
-		w.WriteHeader(http.StatusCreated)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"codReservation":{"id":"reservation-1","status":"finalized"},"replayed":false}`))
 	}))
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	err := c.NotifyDeliveryCollection(trustedMutationTestContext(), NotifyDeliveryCollectionInput{
-		OrderID:          "order-1",
-		CollectorType:    "captain",
-		CollectorID:      "captain-1",
-		PartnerID:        "partner-1",
-		CheckoutIntentID: "intent-1",
-	})
+	_, _, err := c.FinalizeCodReservation(trustedMutationTestContext(), "order-1", "intent-1", "", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
-func TestNotifyDeliveryCollectionNotConfigured(t *testing.T) {
+func TestFinalizeCodReservationNotConfigured(t *testing.T) {
 	c := NewClient("", "")
-	err := c.NotifyDeliveryCollection(context.Background(), NotifyDeliveryCollectionInput{})
+	_, _, err := c.FinalizeCodReservation(context.Background(), "order-1", "intent-1", "", "")
 	if err == nil || !strings.Contains(err.Error(), "not configured") {
 		t.Fatalf("expected 'not configured' error, got: %v", err)
 	}
@@ -552,14 +548,14 @@ func TestCancelSessionForOrderNotConfigured(t *testing.T) {
 	}
 }
 
-func TestNotifyDeliveryCollectionNonSuccessStatus(t *testing.T) {
+func TestFinalizeCodReservationNonSuccessStatus(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	err := c.NotifyDeliveryCollection(trustedMutationTestContext(), NotifyDeliveryCollectionInput{OrderID: "order-1", CollectorType: "captain", CollectorID: "captain-1", PartnerID: "partner-1", CheckoutIntentID: "intent-1"})
+	_, _, err := c.FinalizeCodReservation(trustedMutationTestContext(), "order-1", "intent-1", "", "")
 	if err == nil || !strings.Contains(err.Error(), "500") {
 		t.Fatalf("expected error mentioning status 500, got: %v", err)
 	}

@@ -30,7 +30,6 @@ export type DshOperationalLifecycleSource =
   | 'dsh-store-preparation-record'
   | 'dsh-pickup-handoff-proof'
   | 'dsh-delivery-proof'
-  | 'dsh-cod-collection-event'
   | 'dsh-operational-exception'
   | 'dsh-support-escalation-link'
   | 'dsh-settlement-input-event'
@@ -247,27 +246,6 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     notes: 'PoD acceptance can become WLT evidence; PoD rejection can become audit candidate.',
   },
   {
-    id: 'cod-collection',
-    label: 'COD collection event',
-    entityKind: 'cod-collection-event',
-    ownerSurface: 'app-captain',
-    visibleSurfaces: ['app-captain', 'app-partner', 'control-panel', 'wlt-finance'],
-    lifecycleSource: 'dsh-cod-collection-event',
-    allowedActions: ['record-expected-amount', 'record-collected-amount', 'record-discrepancy', 'handoff-to-wlt'],
-    forbiddenActions: ['create-cod-liability-in-dsh', 'settle-captain', 'post-ledger-entry'],
-    requiredProof: ['cod-amount-snapshot', 'wlt-reference', 'audit-note'],
-    auditRequired: true,
-    rollbackRequired: true,
-    rollbackHint: 'wlt-review-required',
-    ...boundary('cod-liability-candidate', 'WLT_OWNS_FINAL_FINANCIAL_TRUTH'),
-    controlPanelWorkspace: 'cod-discrepancy-queue',
-    onDemandPolicy: 'detail-on-open',
-    dataClassification: 'WLT_READ_ONLY_REFERENCE',
-    currentClosureStatus: 'blocked-by-wlt',
-    currentEvidencePath: 'wlt/contracts/wlt.cod-custody.openapi.yaml',
-    notes: 'DSH records COD event only; WLT owns liability, ledger, reconciliation, and settlement.',
-  },
-  {
     id: 'operational-exception',
     label: 'Operational exception queue',
     entityKind: 'operational-exception',
@@ -318,7 +296,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     lifecycleSource: 'dsh-settlement-input-event',
     allowedActions: ['build-settlement-input-candidate', 'validate-operational-proof', 'send-readiness-to-wlt', 'record-wlt-rejection'],
     forbiddenActions: [...NO_FINANCIAL_MUTATION, 'accept-settlement-as-dsh-truth'],
-    requiredProof: ['pickup-code', 'photo-evidence', 'cod-amount-snapshot', 'wlt-reference', 'audit-note'],
+    requiredProof: ['pickup-code', 'photo-evidence', 'wlt-reference', 'audit-note'],
     auditRequired: true,
     rollbackRequired: true,
     rollbackHint: 'wlt-review-required',

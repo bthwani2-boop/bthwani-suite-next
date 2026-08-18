@@ -5,7 +5,6 @@ import { WltDshCaptainBridge, ActorWalletPanel, RepresentativeCommissionPanel, P
 import { CaptainFinancialEligibilityPanel } from '../../../../dsh/frontend/shared/dispatch';
 import { ProviderIncidentsPanel } from '../../../../dsh/frontend/shared/workforce/ProviderIncidentsPanel';
 import { DshOperationScreen } from '../../../../dsh/frontend/app-captain/DshOperationScreen';
-import { WltCaptainCodCustodyScreen } from './WltCaptainCodCustodyScreen';
 import type {
 	DshCaptainFinanceScreenState,
 	DshCaptainFinanceSection,
@@ -27,7 +26,6 @@ function EarningsContent({ actorId }: { readonly actorId: string | null | undefi
 			<CaptainCashInPanel actorId={actorId} />
 			<CaptainCollateralPanel embedded />
 			<ActorWalletPanel actorType="captain" title="الرصيد والضمانة المحمية والأرباح" embedded />
-			<WltCaptainCodCustodyScreen embedded />
 			<RepresentativeCommissionPanel actorType="captain" title="أجور وعمولات التوصيل" embedded />
 			<PayoutDestinationPanel actorType="captain" title="وجهة صرف الكابتن وطلبات الدفع" embedded />
 			<ProviderIncidentsPanel />
@@ -50,14 +48,10 @@ export function WltCaptainFinanceScreen({
 			<DshOperationScreen
 				state={state}
 				title="المالية"
-				subtitle="الضمانة المالية والمحفظة والدفتر وذمة COD والأجور والخصومات والصرف تُقرأ من المصادر المحكومة."
+			subtitle="الضمانة المالية والمحفظة والدفتر والأجور والخصومات والصرف تُقرأ من المصادر المحكومة."
 				onRetry={onRetry}
 			/>
 		);
-	}
-
-	if (section === 'cod-liability') {
-		return <WltCaptainCodCustodyScreen embedded={embedded} {...(onBack ? { onBack } : {})} />;
 	}
 
 	if (section === 'earnings') {
@@ -79,8 +73,4 @@ export function WltCaptainFinanceScreen({
 			{...(dshClientId !== undefined ? { dshClientId } : {})}
 		/>
 	);
-}
-
-export function WltCaptainCodBalanceScreen(props: Omit<WltCaptainFinanceScreenProps, 'section'> = {}) {
-	return <WltCaptainFinanceScreen {...props} section="cod-liability" />;
 }

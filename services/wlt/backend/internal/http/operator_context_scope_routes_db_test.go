@@ -148,44 +148,6 @@ func TestSettlementRoutesIsolateDelegatedFinancialScopes(t *testing.T) {
 	assertDelegatedScopeRoute(t, router, "/wlt/settlements/"+foreignID, "/wlt/settlements/"+ownID, "/wlt/settlements", foreignID, ownID, foreignScope)
 }
 
-func TestCodRecordRoutesIsolateDelegatedFinancialScopes(t *testing.T) {
-	db := getTestDB(t)
-	if db == nil {
-		return
-	}
-	defer db.Close()
-	requireTestTable(t, db, "wlt_cod_records")
-	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
-
-	suffix := uniqueSuffix()
-	serverScope := "server-cod-" + suffix
-	foreignScope := "foreign-cod-" + suffix
-	sharedPartnerID := "partner-shared-" + suffix
-	var ownID, foreignID string
-	if err := db.QueryRow(`
-		INSERT INTO wlt_cod_records (order_id, collector_type, collector_id, partner_id, amount_minor_units, currency, operator_context_id)
-		VALUES ($1, 'captain', $2, $3, 1000, 'YER', $4)
-		RETURNING id`, "order-own-"+suffix, "captain-own-"+suffix, sharedPartnerID, serverScope).Scan(&ownID); err != nil {
-		t.Fatalf("failed to insert server-owned COD record: %v", err)
-	}
-	if err := db.QueryRow(`
-		INSERT INTO wlt_cod_records (order_id, collector_type, collector_id, partner_id, amount_minor_units, currency, operator_context_id)
-		VALUES ($1, 'captain', $2, $3, 1000, 'YER', $4)
-		RETURNING id`, "order-foreign-"+suffix, "captain-foreign-"+suffix, sharedPartnerID, foreignScope).Scan(&foreignID); err != nil {
-		t.Fatalf("failed to insert foreign compatibility COD record: %v", err)
-	}
-	defer db.Exec(`DELETE FROM wlt_cod_records WHERE id IN ($1,$2)`, ownID, foreignID)
-
-	router := NewRouter(db, true, nil)
-	assertDelegatedScopeRoute(t, router,
-		"/wlt/cod-records/"+ownID,
-		"/wlt/cod-records/"+foreignID,
-		"/wlt/cod-records?partnerId="+sharedPartnerID,
-		ownID, foreignID, serverScope,
-	)
-	assertDelegatedScopeRoute(t, router, "/wlt/cod-records/"+foreignID, "/wlt/cod-records/"+ownID, "/wlt/cod-records?partnerId="+sharedPartnerID, foreignID, ownID, foreignScope)
-}
-
 func TestCommissionRoutesIsolateDelegatedFinancialScopes(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {

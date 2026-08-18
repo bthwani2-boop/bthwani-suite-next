@@ -124,6 +124,8 @@ func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r
 		Reason         string                             `json:"reason,omitempty"`
 		AvailableModes []cart.FulfillmentModeAvailability `json:"availableModes,omitempty"`
 		EtaWindow      *EtaWindow                         `json:"etaWindow,omitempty"`
+		EtaStatus      string                             `json:"etaStatus"`
+		EtaReasonCode  string                             `json:"etaReasonCode,omitempty"`
 		QuoteVersion   string                             `json:"quoteVersion,omitempty"`
 		ExpiresAt      *time.Time                         `json:"expiresAt,omitempty"`
 	}
@@ -133,6 +135,8 @@ func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r
 		Code:           result.Code,
 		Reason:         result.Reason,
 		AvailableModes: result.AvailableModes,
+		EtaStatus:      result.EtaStatus,
+		EtaReasonCode:  result.EtaReasonCode,
 		QuoteVersion:   result.QuoteVersion,
 		ExpiresAt:      result.ExpiresAt,
 	}

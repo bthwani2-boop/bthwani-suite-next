@@ -1,4 +1,4 @@
-import scopeVocabulary from "../../../../../governance/contracts/scope-vocabulary.json";
+import scopeVocabulary from "../../../../../tools/verification/security-scope-vocabulary.json";
 
 export type ControlPanelPermissionIdentity = {
   readonly permissions?: readonly {

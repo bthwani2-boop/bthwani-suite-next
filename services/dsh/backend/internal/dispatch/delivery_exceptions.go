@@ -22,7 +22,6 @@ const (
 	ExceptionVehicleBreakdown    DeliveryExceptionReasonCode = "vehicle_breakdown"
 	ExceptionAccident            DeliveryExceptionReasonCode = "accident"
 	ExceptionDamagedOrder        DeliveryExceptionReasonCode = "damaged_order"
-	ExceptionCashCollection      DeliveryExceptionReasonCode = "cash_collection_issue"
 	ExceptionWeatherRoadBlock    DeliveryExceptionReasonCode = "weather_or_road_block"
 	ExceptionProofUnavailable    DeliveryExceptionReasonCode = "proof_unavailable"
 	ExceptionOther               DeliveryExceptionReasonCode = "other"
@@ -88,7 +87,6 @@ var validDeliveryExceptionReasons = map[DeliveryExceptionReasonCode]bool{
 	ExceptionVehicleBreakdown:    true,
 	ExceptionAccident:            true,
 	ExceptionDamagedOrder:        true,
-	ExceptionCashCollection:      true,
 	ExceptionWeatherRoadBlock:    true,
 	ExceptionProofUnavailable:    true,
 	ExceptionOther:               true,
@@ -105,7 +103,7 @@ func severityForDeliveryException(reason DeliveryExceptionReasonCode) DeliveryEx
 	switch reason {
 	case ExceptionAccident, ExceptionUnsafeLocation:
 		return DeliveryExceptionCritical
-	case ExceptionDamagedOrder, ExceptionVehicleBreakdown, ExceptionCashCollection, ExceptionWeatherRoadBlock:
+	case ExceptionDamagedOrder, ExceptionVehicleBreakdown, ExceptionWeatherRoadBlock:
 		return DeliveryExceptionHigh
 	default:
 		return DeliveryExceptionMedium

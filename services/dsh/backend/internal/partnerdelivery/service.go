@@ -10,7 +10,6 @@ import (
 
 	"dsh-api/internal/operationaloutbox"
 	"dsh-api/internal/orders"
-	"dsh-api/internal/wltoutbox"
 	"dsh-api/internal/workforceclient"
 )
 
@@ -268,9 +267,6 @@ func (s *Service) SubmitProof(ctx context.Context, taskID string, expectedVersio
 	if err := enqueueEvent(tx, "partner_delivery_completed", updated, correlationID); err != nil {
 		return nil, err
 	}
-	if err := enqueueWltDeliveryCompletedNotification(tx, current.OrderID, current.StoreCourierID); err != nil {
-		return nil, err
-	}
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
@@ -382,24 +378,6 @@ func mapOrderError(err error) error {
 	default:
 		return err
 	}
-}
-
-func enqueueWltDeliveryCompletedNotification(tx *sql.Tx, orderID, courierID string) error {
-	deliveryCtx, err := orders.GetOrderDeliveryContext(tx, orderID)
-	if err != nil {
-		return fmt.Errorf("resolve partner delivery context for wlt outbox: %w", err)
-	}
-	if deliveryCtx.PaymentMethod != "cod" || deliveryCtx.PartnerID == "" {
-		return nil
-	}
-	return wltoutbox.Enqueue(
-		tx,
-		wltoutbox.EventTypeDeliveryCompleted,
-		orderID,
-		courierID,
-		deliveryCtx.PartnerID,
-		deliveryCtx.CheckoutIntentID,
-	)
 }
 
 func enqueueEvent(tx *sql.Tx, eventType string, task *PartnerDeliveryTask, correlationID string) error {

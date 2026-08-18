@@ -70,11 +70,6 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 1 }
-    CodRecordId:
-      name: codRecordId
-      in: path
-      required: true
-      schema: { type: string, minLength: 1 }
     PayoutId:
       name: payoutId
       in: path

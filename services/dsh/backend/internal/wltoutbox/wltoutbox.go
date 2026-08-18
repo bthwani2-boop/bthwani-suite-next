@@ -20,9 +20,7 @@ const (
 )
 
 const (
-	CollectorCaptain      = "captain"
-	CollectorStoreCourier = "store_courier"
-	CollectorPartnerStore = "partner_store"
+	CollectorCaptain = "captain"
 )
 
 type Event struct {
@@ -62,54 +60,31 @@ func resolveOperatorContext(tx *sql.Tx, checkoutIntentID string) (string, error)
 	return operatorContextID, nil
 }
 
-func validateCollector(collectorType, collectorID string) error {
-	collectorType = strings.TrimSpace(collectorType)
-	collectorID = strings.TrimSpace(collectorID)
-	if collectorID == "" {
-		return fmt.Errorf("collector id is required")
-	}
-	switch collectorType {
-	case CollectorCaptain, CollectorStoreCourier, CollectorPartnerStore:
-		return nil
-	default:
-		return fmt.Errorf("unsupported collector type %q", collectorType)
-	}
-}
-
-// EnqueueDeliveryCompleted persists the COD collection actor independently from
-// the fulfillment implementation. The amount is intentionally absent; WLT
-// derives it from checkoutIntentID.
+// EnqueueDeliveryCompleted persists the canonical captain-funded COD
+// completion event. WLT derives the immutable amount from checkoutIntentID.
 func EnqueueDeliveryCompleted(
 	tx *sql.Tx,
 	orderID,
-	collectorType,
-	collectorID,
+	captainID,
 	partnerID,
 	checkoutIntentID string,
 ) error {
 	if tx == nil {
 		return fmt.Errorf("enqueue wlt delivery event: transaction is required")
 	}
-	if err := validateCollector(collectorType, collectorID); err != nil {
-		return fmt.Errorf("enqueue wlt delivery event: %w", err)
-	}
-	if strings.TrimSpace(orderID) == "" || strings.TrimSpace(partnerID) == "" {
-		return fmt.Errorf("enqueue wlt delivery event: order and partner are required")
+	if strings.TrimSpace(orderID) == "" || strings.TrimSpace(captainID) == "" || strings.TrimSpace(partnerID) == "" {
+		return fmt.Errorf("enqueue wlt delivery event: order, captain, and partner are required")
 	}
 	operatorContextID, err := resolveOperatorContext(tx, checkoutIntentID)
 	if err != nil {
 		return fmt.Errorf("enqueue wlt delivery event: %w", err)
-	}
-	captainID := ""
-	if collectorType == CollectorCaptain {
-		captainID = collectorID
 	}
 	_, err = tx.Exec(`
 		INSERT INTO dsh_wlt_outbox_events
 		  (event_type,operator_context_id,order_id,captain_id,collector_type,collector_id,partner_id,checkout_intent_id)
 		VALUES ($1,$2,NULLIF($3,'')::uuid,NULLIF($4,''),$5,$6,$7,NULLIF($8,'')::uuid)
 		ON CONFLICT DO NOTHING`,
-		EventTypeDeliveryCompleted, operatorContextID, orderID, captainID, collectorType, collectorID, partnerID, checkoutIntentID,
+		EventTypeDeliveryCompleted, operatorContextID, orderID, captainID, CollectorCaptain, captainID, partnerID, checkoutIntentID,
 	)
 	if err != nil {
 		return fmt.Errorf("enqueue wlt delivery event: %w", err)
@@ -146,8 +121,8 @@ func Enqueue(tx *sql.Tx, eventType string, values ...string) error {
 		return fmt.Errorf("enqueue wlt outbox event: OperatorContext context is required")
 	}
 	if eventType == EventTypeDeliveryCompleted {
-		if err := validateCollector(CollectorCaptain, captainID); err != nil {
-			return fmt.Errorf("enqueue wlt outbox event: %w", err)
+		if strings.TrimSpace(captainID) == "" {
+			return fmt.Errorf("enqueue wlt outbox event: captain id is required")
 		}
 		_, err := tx.Exec(`
 			INSERT INTO dsh_wlt_outbox_events

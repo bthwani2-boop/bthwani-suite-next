@@ -249,7 +249,7 @@ func CreateGovernedRefund(ctx context.Context, db *sql.DB, input GovernedCreateR
 	if input.OperatorContextID != sessionOperatorContext || input.ClientID != sessionClient {
 		return nil, false, ErrRefundReferenceConflict
 	}
-	if sessionStatus != "captured" && sessionStatus != "cod_collected" {
+	if sessionStatus != "captured" && sessionStatus != "cod_collected" && sessionStatus != "cod_finalized" {
 		return nil, false, ErrSessionNotRefundable
 	}
 	if sessionCurrency == "" {

@@ -20,12 +20,6 @@ const SUPPORT_ENTRIES: ReadonlyArray<{
     description: "اقرأ الرسائل الحالية وحدّث حالة القراءة من المصدر الحاكم.",
     requiresOrder: true,
   },
-  {
-    id: "cod-liability",
-    title: "ذمة COD",
-    description: "اقرأ سجل العهدة والالتزامات من WLT دون إدخال قيم مالية محلية.",
-    requiresOrder: false,
-  },
 ];
 
 export function DshCaptainSupportDirectoryScreen({

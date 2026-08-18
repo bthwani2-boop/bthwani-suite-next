@@ -26,7 +26,6 @@ x-bthwani-contracts:
   clientAddress: ./dsh.client-address.openapi.yaml
   clientAddressPrivacy: ./dsh.client-address-privacy.openapi.yaml
   clientMap: ./dsh.client-map.openapi.yaml
-  codCustody: ./dsh.cod-custody.openapi.yaml
   deliveryExceptions: ./dsh.delivery-exceptions.openapi.yaml
   deliveryProofCompletion: ./dsh.delivery-proof-completion.openapi.yaml
   deliveryProofMedia: ./dsh.delivery-proof-media.openapi.yaml
@@ -376,16 +375,6 @@ paths:
     $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1payout-destination"
   /dsh/control-panel/finance/payout-requests/{payoutId}/audit:
     $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1audit"
-  /dsh/control-panel/finance/cod-reconciliation-cases:
-    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases"
-  /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign:
-    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases~1{caseId}~1assign"
-  /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/resolve:
-    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases~1{caseId}~1resolve"
-  /dsh/partner/me/finance/cod-records:
-    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1cod-records"
-  /dsh/partner/me/finance/cod-records/{recordId}/remit:
-    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1cod-records~1{recordId}~1remit"
   /dsh/control-panel/finance/commissions/{commissionId}:
     $ref: "./dsh.settlements-commissions.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}"
   /dsh/control-panel/finance/commissions/{commissionId}/adjust:
@@ -426,8 +415,6 @@ paths:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1ledger~1entries"
   /dsh/control-panel/finance/financial-summary:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1financial-summary"
-  /dsh/control-panel/finance/cod-records:
-    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1cod-records"
   /dsh/control-panel/finance/commissions:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1commissions"
   /dsh/control-panel/finance/payout-requests:
@@ -442,12 +429,6 @@ paths:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1settlements~1from-delivered-orders"
   /dsh/control-panel/finance/settlement-policies/{partnerId}:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1settlement-policies~1{partnerId}"
-  /dsh/captain/finance/cod-records:
-    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1captain~1finance~1cod-records"
-  /dsh/captain/finance/cod-records/{recordId}/collect:
-    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1captain~1finance~1cod-records~1{recordId}~1collect"
-  /dsh/captain/finance/cod-records/{recordId}/remit:
-    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1captain~1finance~1cod-records~1{recordId}~1remit"
   /dsh/captain/finance/commissions:
     $ref: "./paths/captain.paths.yaml#/~1dsh~1captain~1finance~1commissions"
   /dsh/captain/finance/payouts:

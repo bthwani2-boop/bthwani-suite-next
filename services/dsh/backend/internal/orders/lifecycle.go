@@ -214,6 +214,7 @@ func scanOrders(rows *sql.Rows) ([]Order, error) {
 
 type DeliveryCompletionContext struct {
 	CheckoutIntentID    string
+	FulfillmentMode     string
 	PaymentMethod       string
 	PartnerID           string
 	WltPaymentSessionID string
@@ -223,13 +224,13 @@ func GetOrderDeliveryContext(tx *sql.Tx, orderID string) (*DeliveryCompletionCon
 	var context DeliveryCompletionContext
 	var partnerID sql.NullString
 	err := tx.QueryRow(`
-		SELECT o.checkout_intent_id::text, ci.payment_method, s.partner_id, ci.wlt_payment_session_id
+		SELECT o.checkout_intent_id::text, ci.fulfillment_mode, ci.payment_method, s.partner_id, ci.wlt_payment_session_id
 		FROM dsh_orders o
 		JOIN dsh_checkout_intents ci ON ci.id = o.checkout_intent_id
 		JOIN dsh_stores s ON s.id = o.store_id
 		WHERE o.id = $1::uuid`,
 		orderID,
-	).Scan(&context.CheckoutIntentID, &context.PaymentMethod, &partnerID, &context.WltPaymentSessionID)
+	).Scan(&context.CheckoutIntentID, &context.FulfillmentMode, &context.PaymentMethod, &partnerID, &context.WltPaymentSessionID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}

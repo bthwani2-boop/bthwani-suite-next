@@ -89,7 +89,6 @@ function buildDshControlPanelOperationsSummary(): readonly DshControlPanelOperat
     { workspace: 'store-preparation-sla', purpose: 'Store preparation, item issue, substitution, ready, and handoff visibility.', records: byWorkspace('store-preparation-sla') },
     { workspace: 'pickup-handoff-monitor', purpose: 'Pickup code, QR/barcode/photo, mismatch, and store delay evidence.', records: byWorkspace('pickup-handoff-monitor') },
     { workspace: 'pod-review-queue', purpose: 'Proof of delivery submitted, accepted, rejected, and audit-required states.', records: byWorkspace('pod-review-queue') },
-    { workspace: 'cod-discrepancy-queue', purpose: 'COD expected, collected, discrepancy, and WLT handoff candidate visibility.', records: byWorkspace('cod-discrepancy-queue') },
     { workspace: 'exception-queue', purpose: 'Operational exceptions by type, severity, owner, status, action, and audit need.', records: byWorkspace('exception-queue') },
     { workspace: 'support-escalation-queue', purpose: 'Ticket, order, trip, exception, WLT reference, and rollback visibility.', records: byWorkspace('support-escalation-queue') },
     { workspace: 'settlement-inputs-snapshot', purpose: 'DSH settlement input events for WLT review only.', records: byWorkspace('settlement-inputs-snapshot') },
@@ -110,10 +109,6 @@ function buildDshTripSummaryForOrder(orderId: string): readonly DshOperationalSu
 
 function buildDshExceptionQueueSummary(): readonly DshOperationalSurfaceSummary[] {
   return byRegistryEntry('operational-exception');
-}
-
-function buildDshCodQueueSummary(): readonly DshOperationalSurfaceSummary[] {
-  return byRegistryEntry('cod-collection');
 }
 
 function buildDshPodReviewSummary(): readonly DshOperationalSurfaceSummary[] {

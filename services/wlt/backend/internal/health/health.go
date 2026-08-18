@@ -13,7 +13,7 @@ import (
 
 const (
 	wltMigrationServiceName = "wlt"
-	wltLatestMigration      = "wlt-938_payment_session_terminal_state_guard.sql"
+	wltLatestMigration      = "wlt-939_captain_cod_finalization.sql"
 	wltReadinessTimeout     = 2 * time.Second
 )
 
@@ -40,7 +40,7 @@ func (s sqlRuntimeReadinessStore) Ready(ctx context.Context) (bool, error) {
 			AND to_regclass('public.wlt_payment_sessions') IS NOT NULL
 			AND to_regclass('public.wlt_ledger_transactions') IS NOT NULL
 			AND to_regclass('public.wlt_ledger_lines') IS NOT NULL
-			AND to_regclass('public.wlt_cod_records') IS NOT NULL
+			AND to_regclass('public.wlt_cod_reservations') IS NOT NULL
 			AND to_regclass('public.wlt_settlements') IS NOT NULL
 			AND to_regclass('public.wlt_refunds') IS NOT NULL
 			AND to_regclass('public.wlt_payout_requests') IS NOT NULL

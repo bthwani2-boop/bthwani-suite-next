@@ -48,15 +48,6 @@ const DSH_CAPTAIN_SUPPORT_ESCALATION_MAP: readonly DshCaptainSupportEscalationCo
     priority: 'important',
     label: 'مشكلة عنوان — الدعم يتواصل مع العميل',
   },
-  {
-    escalationReason: 'cod_dispute',
-    captainRoute: 'account-finance',
-    controlPanelSection: 'support',
-    controlPanelWorkspace: 'customer-360',
-    signalKind: 'ticket_escalated',
-    priority: 'important',
-    label: 'نزاع COD — مراجعة مالية مطلوبة',
-  },
 ] as const;
 
 

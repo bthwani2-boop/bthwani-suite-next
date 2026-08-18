@@ -18,8 +18,6 @@ var financeReadAllowlist = map[string]struct{}{
 	"/wlt/refunds":                         {},
 	"/wlt/ledger/entries":                  {},
 	"/wlt/ledger/financial-summary":        {},
-	"/wlt/cod-records":                     {},
-	"/wlt/cod-reconciliation-cases":        {},
 	"/wlt/commissions":                     {},
 	"/wlt/references/wallet-status":        {},
 	"/wlt/references/payment-status":       {},
@@ -204,10 +202,9 @@ func financeWritePathAllowed(path string) bool {
 		return true
 	}
 	for prefix, actions := range map[string]map[string]struct{}{
-		"/wlt/payout-requests/":          {"approve": {}, "reject": {}, "process": {}, "complete": {}, "fail": {}, "reconcile": {}},
-		"/wlt/reconciliation-cases/":     {"assign": {}, "resolve": {}},
-		"/wlt/cod-reconciliation-cases/": {"assign": {}, "resolve": {}},
-		"/wlt/refunds/":                  {"approve": {}, "reject": {}, "complete": {}, "reconcile": {}},
+		"/wlt/payout-requests/":      {"approve": {}, "reject": {}, "process": {}, "complete": {}, "fail": {}, "reconcile": {}},
+		"/wlt/reconciliation-cases/": {"assign": {}, "resolve": {}},
+		"/wlt/refunds/":              {"approve": {}, "reject": {}, "complete": {}, "reconcile": {}},
 	} {
 		rest, ok := strings.CutPrefix(path, prefix)
 		if !ok {

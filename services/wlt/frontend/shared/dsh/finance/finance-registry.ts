@@ -81,7 +81,7 @@ export const FINANCE_CANONICAL_GROUPS: readonly FinanceGroupMeta[] = [
   {
     id: 'reconciliation-risk',
     label: 'المطابقة والمخاطر',
-    description: 'مطابقة النقد المحصل (COD)، كشف الفوارق المالية ومكافحة الاحتيال.',
+    description: 'مطابقة البيانات المالية، كشف الفوارق ومكافحة الاحتيال.',
     badge: 'Audit',
     subGroups: [
       { id: 'reconciliation', label: 'مطابقة البيانات' },
@@ -152,8 +152,6 @@ function normalizeFinanceLocation(workspace?: string, panel?: string): FinanceNo
     case 'refund-ledger':
     case 'refunds':
       return { kind: 'group', group: 'refunds-disputes-holds', subGroup: 'refunds', sourceWorkspace: workspace, panel: resolvedPanel };
-    case 'cod-cash':
-    case 'cod-reconciliation':
     case 'captain-eligibility':
       return { kind: 'group', group: 'reconciliation-risk', subGroup: 'reconciliation', sourceWorkspace: workspace, panel: resolvedPanel };
     case 'risk-audit':

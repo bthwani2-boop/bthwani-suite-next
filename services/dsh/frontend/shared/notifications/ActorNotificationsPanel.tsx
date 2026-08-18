@@ -1,7 +1,7 @@
 import React from "react";
-import { Linking } from "react-native";
 import { Badge, Box, Button, ListItem, StateView, Surface, Text } from "@bthwani/ui-kit";
 import { useNotificationsController } from "./use-notifications-controller";
+import { openDshNotificationActionUrl } from "./mobile-notification-action";
 import type {
   DshNotificationChannel,
   DshNotificationPreference,
@@ -50,16 +50,6 @@ function channelLabel(channel: DshNotificationChannel): string {
   return channel === "push" ? "Push" : "داخل التطبيق";
 }
 
-function resolveSafeNotificationUrl(actionUrl: string, appScheme: string): string | null {
-  const value = actionUrl.trim();
-  const scheme = appScheme.trim().replace(/:\/\/$/, "");
-  if (!value || !scheme) return null;
-  if (/^https?:\/\//i.test(value)) return value;
-  if (value.startsWith(`${scheme}://`)) return value;
-  if (value.includes(":")) return null;
-  return `${scheme}://${value.replace(/^\/+/, "")}`;
-}
-
 async function openNotificationAction(
   actionUrl: string,
   appScheme: string | undefined,
@@ -71,9 +61,7 @@ async function openNotificationAction(
     return;
   }
   if (!appScheme) return;
-  const resolvedUrl = resolveSafeNotificationUrl(actionUrl, appScheme);
-  if (!resolvedUrl || !(await Linking.canOpenURL(resolvedUrl))) return;
-  await Linking.openURL(resolvedUrl);
+  await openDshNotificationActionUrl(actionUrl, appScheme);
 }
 
 export function ActorNotificationsPanel({

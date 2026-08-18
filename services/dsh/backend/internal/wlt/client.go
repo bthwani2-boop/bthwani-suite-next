@@ -180,65 +180,6 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	return &envelope.PaymentSession, nil
 }
 
-type NotifyDeliveryCollectionInput struct {
-	OrderID          string `json:"orderId"`
-	CollectorType    string `json:"collectorType"`
-	CollectorID      string `json:"collectorId"`
-	PartnerID        string `json:"partnerId"`
-	CheckoutIntentID string `json:"checkoutIntentId"`
-	CorrelationID    string `json:"-"`
-	IdempotencyKey   string `json:"-"`
-}
-
-func (c *Client) NotifyDeliveryCollection(ctx context.Context, input NotifyDeliveryCollectionInput) error {
-	if !c.Configured() {
-		return fmt.Errorf("WLT COD custody handoff is not configured")
-	}
-	input.OrderID = strings.TrimSpace(input.OrderID)
-	input.CollectorType = strings.TrimSpace(input.CollectorType)
-	input.CollectorID = strings.TrimSpace(input.CollectorID)
-	input.PartnerID = strings.TrimSpace(input.PartnerID)
-	input.CheckoutIntentID = strings.TrimSpace(input.CheckoutIntentID)
-	if input.OrderID == "" || input.CollectorType == "" || input.CollectorID == "" || input.PartnerID == "" || input.CheckoutIntentID == "" {
-		return fmt.Errorf("order, collector, partner, and checkout intent are required for COD custody")
-	}
-	body, err := json.Marshal(input)
-	if err != nil {
-		return fmt.Errorf("encode WLT COD custody request: %w", err)
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/wlt/cod-records", bytes.NewReader(body))
-	if err != nil {
-		return fmt.Errorf("build WLT COD custody request: %w", err)
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
-	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
-		return fmt.Errorf("prepare WLT COD OperatorContext: %w", err)
-	}
-	correlationID := strings.TrimSpace(input.CorrelationID)
-	if correlationID == "" {
-		correlationID = input.OrderID
-	}
-	idempotencyKey := strings.TrimSpace(input.IdempotencyKey)
-	if idempotencyKey == "" {
-		idempotencyKey = deterministicMutationKey("delivery-collection-handoff", input.OrderID, input.CheckoutIntentID, input.CollectorType, input.CollectorID)
-	}
-	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
-		return fmt.Errorf("prepare WLT COD custody request: %w", err)
-	}
-	response, err := c.http.Do(req)
-	if err != nil {
-		return fmt.Errorf("call WLT canonical COD record: %w", err)
-	}
-	defer response.Body.Close()
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("WLT canonical COD record handoff returned HTTP %d", response.StatusCode)
-	}
-	return nil
-}
-
 type DeliverFieldCommissionInput struct {
 	BeneficiaryActorID   string `json:"beneficiaryActorId"`
 	BeneficiaryActorType string `json:"beneficiaryActorType"`

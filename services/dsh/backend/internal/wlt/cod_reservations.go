@@ -12,23 +12,26 @@ import (
 )
 
 type CodReservation struct {
-	ID                string     `json:"id"`
-	OperatorContextID string     `json:"operatorContextId"`
-	OrderID           string     `json:"orderId"`
-	CaptainID         string     `json:"captainId"`
-	AmountMinorUnits  int64      `json:"amountMinorUnits"`
-	Currency          string     `json:"currency"`
-	Status            string     `json:"status"`
-	IdempotencyKey    string     `json:"idempotencyKey"`
-	ReleaseReason     string     `json:"releaseReason,omitempty"`
-	CreatedAt         time.Time  `json:"createdAt"`
-	UpdatedAt         time.Time  `json:"updatedAt"`
-	ResolvedAt        *time.Time `json:"resolvedAt,omitempty"`
+	ID                              string     `json:"id"`
+	OperatorContextID               string     `json:"operatorContextId"`
+	OrderID                         string     `json:"orderId"`
+	CheckoutIntentID                string     `json:"checkoutIntentId"`
+	CaptainID                       string     `json:"captainId"`
+	AmountMinorUnits                int64      `json:"amountMinorUnits"`
+	Currency                        string     `json:"currency"`
+	Status                          string     `json:"status"`
+	IdempotencyKey                  string     `json:"idempotencyKey"`
+	ReleaseReason                   string     `json:"releaseReason,omitempty"`
+	CreatedAt                       time.Time  `json:"createdAt"`
+	UpdatedAt                       time.Time  `json:"updatedAt"`
+	ResolvedAt                      *time.Time `json:"resolvedAt,omitempty"`
+	FinalizationLedgerTransactionID string     `json:"finalizationLedgerTransactionId,omitempty"`
 }
 
 func (c *Client) ReserveCodCapacity(
 	ctx context.Context,
 	orderID string,
+	checkoutIntentID string,
 	captainID string,
 	amountMinorUnits int64,
 	currency string,
@@ -39,12 +42,14 @@ func (c *Client) ReserveCodCapacity(
 		return nil, false, fmt.Errorf("WLT integration is not configured")
 	}
 	orderID = strings.TrimSpace(orderID)
-	if orderID == "" {
-		return nil, false, fmt.Errorf("orderId is required")
+	checkoutIntentID = strings.TrimSpace(checkoutIntentID)
+	if orderID == "" || checkoutIntentID == "" {
+		return nil, false, fmt.Errorf("orderId and checkoutIntentId are required")
 	}
 
 	payload, err := json.Marshal(map[string]any{
 		"orderId":          orderID,
+		"checkoutIntentId": checkoutIntentID,
 		"captainId":        captainID,
 		"amountMinorUnits": amountMinorUnits,
 		"currency":         currency,
@@ -115,6 +120,69 @@ func (c *Client) ReserveCodCapacity(
 
 	if envelope.CodReservation == nil {
 		return nil, false, fmt.Errorf("missing reservation in response")
+	}
+	return envelope.CodReservation, envelope.Replayed, nil
+}
+
+func (c *Client) FinalizeCodReservation(
+	ctx context.Context,
+	orderID string,
+	checkoutIntentID string,
+	correlationID string,
+	idempotencyKey string,
+) (*CodReservation, bool, error) {
+	if !c.Configured() {
+		return nil, false, fmt.Errorf("WLT integration is not configured")
+	}
+	orderID = strings.TrimSpace(orderID)
+	checkoutIntentID = strings.TrimSpace(checkoutIntentID)
+	if orderID == "" || checkoutIntentID == "" {
+		return nil, false, fmt.Errorf("orderId and checkoutIntentId are required")
+	}
+	body, err := json.Marshal(map[string]string{
+		"orderId":          orderID,
+		"checkoutIntentId": checkoutIntentID,
+	})
+	if err != nil {
+		return nil, false, fmt.Errorf("encode request: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/wlt/cod-reservations/finalize", bytes.NewReader(body))
+	if err != nil {
+		return nil, false, fmt.Errorf("build request: %w", err)
+	}
+	setServiceHeaders(req, c.serviceToken)
+	c.setTrustedOperatorContextHeader(req, "")
+	correlationID = strings.TrimSpace(correlationID)
+	if correlationID == "" {
+		correlationID = orderID
+	}
+	if idempotencyKey = strings.TrimSpace(idempotencyKey); idempotencyKey == "" {
+		idempotencyKey = deterministicMutationKey("cod-finalize", orderID, checkoutIntentID)
+	}
+	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
+		return nil, false, fmt.Errorf("prepare WLT COD finalization mutation: %w", err)
+	}
+	response, err := c.http.Do(req)
+	if err != nil {
+		return nil, false, fmt.Errorf("call WLT: %w", err)
+	}
+	defer response.Body.Close()
+	bodyBytes, err := io.ReadAll(io.LimitReader(response.Body, 64<<10))
+	if err != nil {
+		return nil, false, fmt.Errorf("read response: %w", err)
+	}
+	if response.StatusCode != http.StatusOK {
+		return nil, false, fmt.Errorf("WLT COD finalization returned %s: %s", response.Status, string(bodyBytes))
+	}
+	var envelope struct {
+		CodReservation *CodReservation `json:"codReservation"`
+		Replayed       bool            `json:"replayed"`
+	}
+	if err := json.Unmarshal(bodyBytes, &envelope); err != nil {
+		return nil, false, fmt.Errorf("decode response: %w", err)
+	}
+	if envelope.CodReservation == nil {
+		return nil, false, fmt.Errorf("missing finalized reservation in response")
 	}
 	return envelope.CodReservation, envelope.Replayed, nil
 }

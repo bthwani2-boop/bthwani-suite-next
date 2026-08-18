@@ -182,6 +182,7 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 
 	var isCod bool
 	var sessionID string
+	var checkoutIntentID string
 	var orderAmount int64
 	var orderCurrency string
 
@@ -191,6 +192,7 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 		if err == nil && (deliveryCtx.PaymentMethod == "cod" || deliveryCtx.PaymentMethod == "mixed") && deliveryCtx.WltPaymentSessionID != "" {
 			isCod = true
 			sessionID = deliveryCtx.WltPaymentSessionID
+			checkoutIntentID = deliveryCtx.CheckoutIntentID
 		}
 		tx.Rollback()
 	}
@@ -210,7 +212,7 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 		orderAmount = session.TenderAllocation.CashOnDeliveryAmountMinorUnits
 		orderCurrency = session.Currency
 		if orderAmount > 0 {
-			_, _, err = s.wlt.ReserveCodCapacity(r.Context(), assignment.OrderID, actor.ID, orderAmount, orderCurrency, correlationID, "accept_"+assignment.ID)
+			_, _, err = s.wlt.ReserveCodCapacity(r.Context(), assignment.OrderID, checkoutIntentID, actor.ID, orderAmount, orderCurrency, correlationID, "accept_"+assignment.ID)
 			if err != nil {
 				if strings.Contains(err.Error(), "INSUFFICIENT") {
 					store.SendError(w, http.StatusConflict, "INSUFFICIENT_COD_CAPACITY", "insufficient COD capacity to accept this order")

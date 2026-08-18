@@ -40,7 +40,7 @@ func (c *Client) ReadbackOutboxEvent(ctx context.Context, input OutboxReadbackIn
 	ctx = WithOperatorContext(ctx, strings.TrimSpace(input.OperatorContextID))
 	switch input.EventType {
 	case "delivery_completed":
-		return c.readCodRecord(ctx, input)
+		return c.readDeliveryCompletion(ctx, input)
 	case "promotion_funding_commit", "promotion_funding_release", "promotion_funding_reverse":
 		return c.readPromotionFunding(ctx, input)
 	case "loyalty_earned", "loyalty_reversed":
@@ -80,22 +80,36 @@ func (c *Client) readJSON(ctx context.Context, path string, target any) (int, er
 	return resp.StatusCode, nil
 }
 
-func (c *Client) readCodRecord(ctx context.Context, input OutboxReadbackInput) (OutboxReadbackResult, error) {
-	query := url.Values{}
-	query.Set("orderId", input.OrderID)
-	var envelope struct {
-		Records []struct {
-			ID      string `json:"id"`
-			OrderID string `json:"orderId"`
-		} `json:"codRecords"`
+func (c *Client) readDeliveryCompletion(ctx context.Context, input OutboxReadbackInput) (OutboxReadbackResult, error) {
+	var reservationEnvelope struct {
+		CodReservation struct {
+			ID     string `json:"id"`
+			Status string `json:"status"`
+		} `json:"codReservation"`
 	}
-	_, err := c.readJSON(ctx, "/wlt/cod-records?"+query.Encode(), &envelope)
+	status, err := c.readJSON(ctx, "/wlt/cod-reservations/"+url.PathEscape(input.OrderID), &reservationEnvelope)
 	if err != nil {
 		return OutboxReadbackResult{}, err
 	}
-	for _, record := range envelope.Records {
-		if record.OrderID == input.OrderID {
-			return OutboxReadbackResult{Present: true, Reference: record.ID}, nil
+	if status == http.StatusNotFound || reservationEnvelope.CodReservation.Status != "finalized" {
+		return OutboxReadbackResult{Absent: true}, nil
+	}
+	query := url.Values{"sourceId": []string{input.OrderID}, "captainId": []string{input.CollectorID}, "limit": []string{"20"}}
+	var envelope struct {
+		Commissions []struct {
+			ID                   string `json:"id"`
+			BeneficiaryActorID   string `json:"beneficiaryActorId"`
+			BeneficiaryActorType string `json:"beneficiaryActorType"`
+			SourceID             string `json:"sourceId"`
+		} `json:"commissions"`
+	}
+	_, err = c.readJSON(ctx, "/wlt/commissions?"+query.Encode(), &envelope)
+	if err != nil {
+		return OutboxReadbackResult{}, err
+	}
+	for _, commission := range envelope.Commissions {
+		if commission.ID != "" && commission.SourceID == input.OrderID && commission.BeneficiaryActorID == input.CollectorID && commission.BeneficiaryActorType == "captain" {
+			return OutboxReadbackResult{Present: true, Reference: reservationEnvelope.CodReservation.ID + ":" + commission.ID}, nil
 		}
 	}
 	return OutboxReadbackResult{Absent: true}, nil

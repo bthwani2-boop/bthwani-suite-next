@@ -13,10 +13,10 @@ import (
 )
 
 type operationReceipt struct {
-	ID          string
-	OperatorContextID    string
-	RequestHash string
-	State       string
+	ID                string
+	OperatorContextID string
+	RequestHash       string
+	State             string
 }
 
 type bufferedResponseWriter struct {
@@ -89,7 +89,7 @@ func HandleGovernedPaymentOperation(db *sql.DB, operation string, next http.Hand
 			return
 		}
 		if session.PaymentMethod == "cod" {
-			shared.SendError(w, http.StatusConflict, "USE_COD_RECORD_FLOW", "COD collection must use the governed COD record flow")
+			shared.SendError(w, http.StatusConflict, "COD_FINALIZATION_REQUIRED", "COD completion must use the governed reservation finalization flow")
 			return
 		}
 
@@ -199,7 +199,7 @@ func replayPaymentOperation(w http.ResponseWriter, db *sql.DB, sessionID, receip
 		status = http.StatusConflict
 	}
 	shared.SendJSON(w, status, map[string]any{
-		"paymentSession":  session,
+		"paymentSession":   session,
 		"idempotentReplay": true,
 		"receiptState":     receiptState,
 	})

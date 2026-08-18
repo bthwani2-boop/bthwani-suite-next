@@ -383,6 +383,7 @@ components:
       additionalProperties: false
       required:
         - fullNameAr
+        - username
         - phoneE164
         - department
         - positionTitle
@@ -394,6 +395,9 @@ components:
           minLength: 1
         fullNameEn:
           type: string
+        username:
+          type: string
+          minLength: 1
         phoneE164:
           type: string
           pattern: '^\+[1-9][0-9]{7,14}$'
@@ -439,13 +443,16 @@ components:
     CreateDepartmentEmployeeRequest:
       type: object
       additionalProperties: false
-      required: [fullNameAr, phoneE164, department, role]
+      required: [fullNameAr, username, phoneE164, department, role]
       properties:
         fullNameAr:
           type: string
           minLength: 1
         fullNameEn:
           type: string
+        username:
+          type: string
+          minLength: 1
         phoneE164:
           type: string
           pattern: '^\+[1-9][0-9]{7,14}$'

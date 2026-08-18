@@ -317,6 +317,8 @@ type GovernedServiceabilityResult struct {
 
 	EtaMinMinutes *int       `json:"etaMinMinutes,omitempty"`
 	EtaMaxMinutes *int       `json:"etaMaxMinutes,omitempty"`
+	EtaStatus     string     `json:"etaStatus"`
+	EtaReasonCode string     `json:"etaReasonCode,omitempty"`
 	QuoteVersion  string     `json:"quoteVersion,omitempty"`
 	ExpiresAt     *time.Time `json:"expiresAt,omitempty"`
 }
@@ -362,6 +364,7 @@ func CheckGovernedServiceability(
 		ServiceabilityResult: base,
 		RequestedMode:        requestedMode,
 		CapacityState:        "unconfigured",
+		EtaStatus:            "not_requested",
 		CheckedAt:            time.Now().UTC(),
 	}
 
@@ -443,37 +446,39 @@ func CheckGovernedServiceability(
 	result.ExpiresAt = &expiry
 
 	if result.Serviceable && (requestedMode == ModeBthwaniDelivery || requestedMode == ModePartnerDelivery) && clientLat != nil && clientLng != nil {
+		result.EtaStatus = "unavailable"
 		var storeLat, storeLng float64
 		err := db.QueryRowContext(ctx, `SELECT latitude, longitude FROM dsh_stores WHERE id = $1`, storeID).Scan(&storeLat, &storeLng)
-		if err == nil {
-			var routeDuration float64 = 0
-			if mapClient != nil {
-				routeResponse, routeErr := mapClient.Route(ctx, "", mapproviders.RouteInput{
-					OriginLatitude:       storeLat,
-					OriginLongitude:      storeLng,
-					DestinationLatitude:  *clientLat,
-					DestinationLongitude: *clientLng,
-				})
-				if routeErr == nil {
-					routeDuration = routeResponse.DurationSeconds
+		if err != nil {
+			result.EtaReasonCode = "STORE_LOCATION_UNAVAILABLE"
+		} else if mapClient == nil {
+			result.EtaReasonCode = "ROUTE_PROVIDER_NOT_CONFIGURED"
+		} else {
+			routeResponse, routeErr := mapClient.Route(ctx, "", mapproviders.RouteInput{
+				OriginLatitude:       storeLat,
+				OriginLongitude:      storeLng,
+				DestinationLatitude:  *clientLat,
+				DestinationLongitude: *clientLng,
+			})
+			if routeErr != nil {
+				result.EtaReasonCode = "ROUTE_PROVIDER_UNAVAILABLE"
+			} else if routeResponse.DurationSeconds <= 0 {
+				result.EtaReasonCode = "ROUTE_DURATION_UNAVAILABLE"
+			} else {
+				routeMinutes := int(math.Ceil(routeResponse.DurationSeconds / 60.0))
+				if routeMinutes < 10 {
+					routeMinutes = 10
 				}
+				prepMinutes := 15
+				if decision.SLA.Configured && decision.SLA.MaxPrepMins > 0 {
+					prepMinutes = decision.SLA.MaxPrepMins
+				}
+				minETA := prepMinutes + routeMinutes
+				maxETA := minETA + 15
+				result.EtaMinMinutes = &minETA
+				result.EtaMaxMinutes = &maxETA
+				result.EtaStatus = "available"
 			}
-			if routeDuration <= 0 {
-				distKM := calculateDistanceKM(storeLat, storeLng, *clientLat, *clientLng)
-				routeDuration = distKM * 3.0 * 60.0
-			}
-			routeMinutes := int(math.Ceil(routeDuration / 60.0))
-			if routeMinutes < 10 {
-				routeMinutes = 10
-			}
-			prepMinutes := 15
-			if decision.SLA.Configured && decision.SLA.MaxPrepMins > 0 {
-				prepMinutes = decision.SLA.MaxPrepMins
-			}
-			minETA := prepMinutes + routeMinutes
-			maxETA := minETA + 15
-			result.EtaMinMinutes = &minETA
-			result.EtaMaxMinutes = &maxETA
 		}
 	}
 

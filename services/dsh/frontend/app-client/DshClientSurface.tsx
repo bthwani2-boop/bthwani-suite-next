@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { BackHandler, Linking, StyleSheet, View, TextInput } from "react-native";
+import { BackHandler, StyleSheet, View, TextInput } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppHeader } from "../../../../apps/app-client/runtime/src/shell/AppHeader";
 import {
@@ -38,6 +38,7 @@ import {
 import { generateSpecialRequestIdempotencyKey } from "../shared/special-requests/special-requests.idempotency";
 import type { DshHomeSpecialRequestTarget } from "../shared/home-discovery";
 import { notificationActionFromDeepLink } from "../shared/notifications/client-notification-deep-link";
+import { getDshLinkingAdapter } from "../shared/mobile-capabilities";
 import {
   useOrderTruthCollectionController,
   toOrderTruthSummary,
@@ -294,12 +295,13 @@ export function DshClientSurface() {
 
   useEffect(() => {
     let active = true;
-    void Linking.getInitialURL().then((url) => {
+    const linking = getDshLinkingAdapter();
+    void linking.getInitialUrl().then((url) => {
       if (!active || !url) return;
       const actionUrl = notificationActionFromDeepLink(url);
       if (actionUrl) openNotificationActionUrl(actionUrl);
     });
-    const subscription = Linking.addEventListener("url", ({ url }) => {
+    const subscription = linking.addUrlListener((url) => {
       const actionUrl = notificationActionFromDeepLink(url);
       if (actionUrl) openNotificationActionUrl(actionUrl);
     });

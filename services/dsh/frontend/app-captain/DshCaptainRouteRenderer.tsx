@@ -328,7 +328,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
   if (route === "support-directory") return <DshCaptainSupportDirectoryScreen activeOrderId={activeOrderId} onOpenScreen={(id) => onOpenSupportScreen(id as CaptainSupportRoute)} />;
 
     if (route === "support-screen" || route === "orderchat") {
-      if (!dshClientId) return <StateView title="هوية الكابتن غير مربوطة" description="لا يمكن تنفيذ الدعم التشغيلي أو COD دون معرف DSH موثق." tone="warning" actionLabel="العودة إلى الدليل" onActionPress={onOpenSupportDirectory} />;
+      if (!dshClientId) return <StateView title="هوية الكابتن غير مربوطة" description="لا يمكن تنفيذ الدعم التشغيلي دون معرف DSH موثق." tone="warning" actionLabel="العودة إلى الدليل" onActionPress={onOpenSupportDirectory} />;
       return <CaptainSupportScreenRouter selectedSupportScreen={selectedSupportScreen} onBack={onOpenSupportDirectory} onNavigate={onOpenSupportScreen} captainCollectsCod={captainCollectsCod} dshClientId={dshClientId} activeOrderId={activeOrderId} onAcceptTask={onAcceptTask} onDeclineTask={onDeclineTask} />;
     }
 
@@ -344,7 +344,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     "account-support": { title: "الإعدادات", subtitle: "المظهر وخيارات السطح." },
     account: { title: "حساب الكابتن", subtitle: "الهوية والمالية والتقييم والحالة المثبتة." },
     "support-directory": { title: "دليل الدعم", subtitle: "المسارات التشغيلية المسجلة." },
-    "support-screen": { title: selectedSupportScreen === "cod-liability" ? "ذمة الدفع عند الاستلام" : "الدعم", subtitle: "المسار المفتوح من الدليل." },
+    "support-screen": { title: "الدعم", subtitle: "المسار المفتوح من الدليل." },
   };
 
   const meta = accountRouteTitle[route] ?? routeHeaderMeta[route];

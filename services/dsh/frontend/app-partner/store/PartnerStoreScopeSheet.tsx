@@ -1,12 +1,12 @@
 import React from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, View } from "react-native";
-import * as Location from "expo-location";
 import { Button, Icon, Surface, Text, colorRoles, spacing } from "@bthwani/ui-kit";
 import type { DshPartnerOperationalScope } from "../../shared/partner/partner.types";
 import {
   BthwaniNativeMap,
   type BthwaniMapCoordinate,
 } from "../../shared/maps";
+import { getDshLocationAdapter } from "../../shared/mobile-capabilities";
 
 export function PartnerStoreScopeSheet({
   visible,
@@ -32,12 +32,13 @@ export function PartnerStoreScopeSheet({
     setLocating(true);
     setLocationError(null);
     try {
-      const permission = await Location.requestForegroundPermissionsAsync();
+      const location = getDshLocationAdapter();
+      const permission = await location.requestForegroundPermissions();
       if (!permission.granted) {
         setLocationError("صلاحية الموقع مطلوبة لعرض موقع الجهاز بالنسبة للفرع.");
         return;
       }
-      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      const position = await location.getCurrentPosition();
       if (position.mocked === true) {
         setLocationError("تم رفض موقع صادر من مزود وهمي.");
         return;

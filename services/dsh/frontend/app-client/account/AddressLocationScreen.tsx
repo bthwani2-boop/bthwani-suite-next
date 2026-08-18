@@ -1,6 +1,5 @@
 import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import * as Location from "expo-location";
 import {
   Badge,
   Button,
@@ -22,6 +21,7 @@ import {
   useClientMapController,
   type DshVerifiedMapLocation,
 } from "../../shared/client-map";
+import { getDshLocationAdapter } from "../../shared/mobile-capabilities";
 
 export type AddressLocationScreenProps = {
   readonly onBack?: () => void;
@@ -156,12 +156,13 @@ export function AddressLocationScreen({ onBack, onOpenCheckout }: AddressLocatio
     setCapturingLocation(true);
     setLocationError(null);
     try {
-      const permission = await Location.requestForegroundPermissionsAsync();
-      if (permission.status !== "granted") {
+      const location = getDshLocationAdapter();
+      const permission = await location.requestForegroundPermissions();
+      if (!permission.granted) {
         setLocationError("صلاحية الموقع مطلوبة لالتقاط الإحداثيات.");
         return;
       }
-      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      const position = await location.getCurrentPosition();
       if (position.mocked === true) {
         setLocationError("رفض DSH موقعًا صادرًا من مزود وهمي. استخدم موقع الجهاز الفعلي.");
         return;

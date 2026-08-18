@@ -7,16 +7,14 @@ export * from './chat';
 export * from './checkout';
 export * as clientProfile from './client-profile';
 
-// Delivery public surface is expanded explicitly here instead of re-exporting
-// the delivery barrel. This prevents native app-captain runtime dependencies
-// such as expo-location from leaking into app-partner and other surfaces.
+// Delivery public surface is expanded explicitly here so app runtime
+// capability ownership does not leak through the shared delivery barrel.
 export * from './delivery/delivery.contract';
 export * from './delivery/fulfillment';
 export * from './delivery/delivery.policy';
 export type * from './delivery/delivery.view-model';
 export type * from './delivery/delivery.adapters';
 export * from './delivery/captain.contract';
-export * from './delivery/captain.cod';
 export * from './delivery/captain.state';
 export * from './delivery/captain.surface-model';
 export type * from './delivery/captain-surface.binding';

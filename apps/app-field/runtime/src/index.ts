@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import "./platform/dsh-capabilities";
 import { Platform } from "react-native";
 import { registerRootComponent } from "expo";
 import * as SecureStore from "expo-secure-store";

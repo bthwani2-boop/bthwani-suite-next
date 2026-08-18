@@ -22,8 +22,7 @@ x-bthwani-contracts:
   settlementOperations: ./wlt.settlement-operations.openapi.yaml
   payoutsDestinations: ./wlt.payouts-destinations.openapi.yaml
   payoutFailureBoundary: ./wlt.payout-failure-boundary.openapi.yaml
-  codCustody: ./wlt.cod-custody.openapi.yaml
-  codRecords: ./wlt.cod-records.openapi.yaml
+  codReservations: ./wlt.cod-reservations.openapi.yaml
   captainCollateral: ./wlt.captain-collateral.openapi.yaml
   commercial: ./wlt.commercial.openapi.yaml
   commercialSummary: ./wlt.commercial-summary.openapi.yaml
@@ -399,6 +398,7 @@ components:
               captured,
               cod_pending,
               cod_collected,
+              cod_finalized,
               failed,
               expired,
               provider_result_unknown

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Platform } from 'react-native';
 import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle-client';
+import { getDshLocationAdapter } from '../mobile-capabilities';
 import {
   acceptDispatchAssignment,
   declineDispatchAssignment,
@@ -61,38 +61,12 @@ function governedAccuracy(value: number | null | undefined): number {
 }
 
 export async function readCaptainForegroundLocation(): Promise<DshCaptainCoordinates> {
-  if (Platform.OS === 'web') {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      throw new Error('خدمة الموقع غير متاحة على هذا الجهاز.');
-    }
-    return new Promise<DshCaptainCoordinates>((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          try {
-            resolve({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              accuracyMeters: governedAccuracy(position.coords.accuracy),
-            });
-          } catch (error) {
-            reject(error);
-          }
-        },
-        () => reject(new Error('تعذر قراءة الموقع الحالي. تحقق من صلاحية الموقع وحاول مجددًا.')),
-        { enableHighAccuracy: true, maximumAge: 5_000, timeout: 10_000 },
-      );
-    });
-  }
-
-  // @ts-ignore expo-location is supplied by the app-captain runtime on native devices.
-  const Location = await import('expo-location');
-  const permission = await Location.requestForegroundPermissionsAsync();
+  const location = getDshLocationAdapter();
+  const permission = await location.requestForegroundPermissions();
   if (!permission.granted) {
     throw new Error('صلاحية الموقع مطلوبة لتحديث موقع المهمة.');
   }
-  const position = await Location.getCurrentPositionAsync({
-    accuracy: Location.Accuracy.High,
-  });
+  const position = await location.getCurrentPosition();
   return {
     latitude: position.coords.latitude,
     longitude: position.coords.longitude,

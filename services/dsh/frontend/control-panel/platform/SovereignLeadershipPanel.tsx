@@ -63,6 +63,7 @@ export function SovereignLeadershipPanel() {
   const [created, setCreated] = useState<SovereignLeadershipCreationResult | null>(null);
 
   const [fullNameAr, setFullNameAr] = useState("");
+  const [username, setUsername] = useState("");
   const [phoneE164, setPhoneE164] = useState("");
   const [department, setDepartment] = useState("");
   const [positionTitle, setPositionTitle] = useState("");
@@ -139,6 +140,7 @@ export function SovereignLeadershipPanel() {
   const canSubmit = useMemo(
     () =>
       fullNameAr.trim().length > 0 &&
+      username.trim().length > 0 &&
       phoneE164.trim().length >= 9 &&
       positionTitle.trim().length > 0 &&
       employmentClass !== "" &&
@@ -146,7 +148,7 @@ export function SovereignLeadershipPanel() {
       department.trim().length > 1 &&
       dateError === null &&
       !submitting,
-    [dateError, department, employmentClass, fullNameAr, permissionBundle, phoneE164, positionTitle, submitting],
+    [dateError, department, employmentClass, fullNameAr, permissionBundle, phoneE164, positionTitle, submitting, username],
   );
 
   const submit = async () => {
@@ -167,6 +169,7 @@ export function SovereignLeadershipPanel() {
       const trimmedNotes = notes.trim();
       const result = await createSovereignLeader({
         fullNameAr: fullNameAr.trim(),
+        username: username.trim(),
         phoneE164: phoneE164.trim(),
         department: department.trim(),
         positionTitle: positionTitle.trim(),
@@ -183,6 +186,7 @@ export function SovereignLeadershipPanel() {
       });
       setCreated(result);
       setFullNameAr("");
+      setUsername("");
       setPhoneE164("");
       setDepartment("");
       setPositionTitle("");
@@ -220,6 +224,7 @@ export function SovereignLeadershipPanel() {
         <Text role="titleMd">إضافة موظف قيادي</Text>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: "12px" }}>
           <CpTextInput value={fullNameAr} onChange={setFullNameAr} aria-label="الاسم الكامل بالعربية" placeholder="الاسم الكامل بالعربية" />
+          <CpTextInput value={username} onChange={setUsername} aria-label="اسم المستخدم" placeholder="اسم المستخدم (Username)" />
           <CpTextInput value={phoneE164} onChange={setPhoneE164} aria-label="رقم الهاتف" placeholder="+967777123456" />
 
           <label style={fieldLabelStyle}>

@@ -114,7 +114,6 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	mutation("POST /wlt/payment-sessions/{paymentSessionId}/capture", payment.HandleGovernedPaymentOperation(db, "capture", payment.HandleCaptureSessionSovereign(db)))
 	mutation("POST /wlt/payment-sessions/{paymentSessionId}/refresh-provider-status", payment.HandleGovernedPaymentOperation(db, "provider_status_refresh", payment.HandleRefreshProviderStatus(db)))
 	mutation("POST /wlt/payment-sessions/{paymentSessionId}/expire", payment.HandleOperatorContextScopedPaymentSession(db, payment.HandleExpireSession(db)))
-	mutation("POST /wlt/payment-sessions/{paymentSessionId}/cod-collect", payment.HandleCodCollectionViaPaymentSessionBlocked(db))
 	mutation("POST /wlt/payment-sessions/{paymentSessionId}/cancel-for-order", payment.HandleOperatorContextScopedPaymentSession(db, payment.HandleGovernedSessionCancellation(db)))
 
 	// Cash-In wallet top-up (U002-T002): a distinct route namespace, not the
@@ -152,16 +151,8 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	mutation("PUT /wlt/settlement-policies/{partnerId}", settlement.HandleUpsertGovernedSettlementPolicyIdempotent(db))
 	mutation("POST /wlt/cod-reservations/reserve", cod.HandleReserveCodCapacity(db))
 	mutation("POST /wlt/cod-reservations/release", cod.HandleReleaseCodReservation(db))
+	mutation("POST /wlt/cod-reservations/finalize", cod.HandleFinalizeCodReservation(db))
 	read("GET /wlt/cod-reservations/{orderId}", cod.HandleGetCodReservation(db))
-
-	mutation("POST /wlt/cod-records", cod.HandleCreateCodRecordOperatorContext(db))
-	read("GET /wlt/cod-records/{codRecordId}", shared.RequireOperatorContextScope(db, shared.OperatorContextScopeConfig{Table: "wlt_cod_records", IDPathValue: "codRecordId"}, cod.HandleGetCodRecord(db)))
-	read("GET /wlt/cod-records", shared.RequireOperatorContextScope(db, shared.OperatorContextScopeConfig{Table: "wlt_cod_records", ListPath: "/wlt/cod-records"}, cod.HandleListCodRecords(db)))
-	mutation("POST /wlt/cod-records/{codRecordId}/collect", cod.HandleCollectCodSovereign(db))
-	mutation("POST /wlt/cod-records/{codRecordId}/remit", cod.HandleRemitCodSovereign(db))
-	read("GET /wlt/cod-reconciliation-cases", cod.HandleListCodReconciliationCases(db))
-	mutation("POST /wlt/cod-reconciliation-cases/{caseId}/assign", cod.HandleAssignCodReconciliationCase(db))
-	mutation("POST /wlt/cod-reconciliation-cases/{caseId}/resolve", cod.HandleResolveCodReconciliationCase(db))
 	mutation("PUT /wlt/commission-policies", cod.HandleUpsertGovernedCommissionPolicyIdempotent(db))
 	mutation("PUT /wlt/provider-penalty-policies/{policyId}", penalty.HandleUpsertPolicy(db))
 	mutation("POST /wlt/commissions", cod.HandleCreateCanonicalCommission(db))

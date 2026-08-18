@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import "./platform/dsh-capabilities";
 import { registerRootComponent } from "expo";
 import * as Sentry from "@sentry/react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";

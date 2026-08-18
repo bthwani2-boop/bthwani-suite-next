@@ -340,7 +340,7 @@ func releaseBlock(ctx context.Context, tx *sql.Tx, contextID, captainID string) 
 		return `WLT_COLLATERAL_RELEASE_HELD_FUNDS`, nil
 	}
 	if cod > 0 {
-		return `WLT_COLLATERAL_RELEASE_COD_CUSTODY_OPEN`, nil
+		return `WLT_COLLATERAL_RELEASE_COD_RESERVATION_OPEN`, nil
 	}
 	var debt int64
 	if err := tx.QueryRowContext(ctx, `SELECT COALESCE(SUM(outstanding_amount_minor_units),0) FROM wlt_provider_debts WHERE operator_context_id=$1 AND provider_actor_type='captain' AND provider_actor_id=$2 AND status IN ('open','partially_settled')`, contextID, captainID).Scan(&debt); err != nil {
@@ -476,7 +476,7 @@ func Read(ctx context.Context, db *sql.DB, captainID string) (*ReadResponse, err
 	} else if wallet.HeldMinorUnits > 0 {
 		response.ReleaseBlockedReason = `WLT_COLLATERAL_RELEASE_HELD_FUNDS`
 	} else if wallet.CodReservedMinorUnits > 0 {
-		response.ReleaseBlockedReason = `WLT_COLLATERAL_RELEASE_COD_CUSTODY_OPEN`
+		response.ReleaseBlockedReason = `WLT_COLLATERAL_RELEASE_COD_RESERVATION_OPEN`
 	} else if wallet.OutstandingDebtMinorUnits > 0 {
 		response.ReleaseBlockedReason = `WLT_COLLATERAL_RELEASE_PROVIDER_DEBT_OPEN`
 	}

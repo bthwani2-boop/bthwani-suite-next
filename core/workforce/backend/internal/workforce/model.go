@@ -1,9 +1,6 @@
 package workforce
 
-import (
-	"encoding/json"
-	"time"
-)
+import "time"
 
 // Person is the sovereign unified person profile. The workforce kind selects a
 // separate employee, captain or field projection. Independent providers are
@@ -78,7 +75,8 @@ type CreateFieldAgentInput struct {
 type CreateCaptainInput struct {
 	FullNameAr          string   `json:"fullNameAr"`
 	FullNameEn          string   `json:"fullNameEn"`
-	ActorID             string   `json:"actorId"`
+	Username            string   `json:"username"`
+	PhoneE164           string   `json:"phoneE164"`
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
 	PhotoMediaRef       string   `json:"photoMediaRef"`
@@ -123,7 +121,8 @@ type UpdateCaptainInput struct {
 type CreateEmployeeInput struct {
 	FullNameAr          string   `json:"fullNameAr"`
 	FullNameEn          string   `json:"fullNameEn"`
-	ActorID             string   `json:"actorId"`
+	Username            string   `json:"username"`
+	PhoneE164           string   `json:"phoneE164"`
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
 	PhotoMediaRef       string   `json:"photoMediaRef"`
@@ -132,6 +131,7 @@ type CreateEmployeeInput struct {
 	OfficeLocation      string   `json:"officeLocation"`
 	SupervisorActorID   string   `json:"supervisorActorId"`
 	DocumentMediaRefs   []string `json:"documentMediaRefs"`
+	PermissionBundle    string   `json:"-"`
 }
 
 type UpdateEmployeeInput struct {
@@ -223,25 +223,6 @@ type ActorScopes struct {
 	ServiceAreaCodes  []string `json:"serviceAreaCodes"`
 	PartnerIDs        []string `json:"partnerIds"`
 	ShiftCodes        []string `json:"shiftCodes"`
-}
-type ProvisioningCase struct {
-	ID                string          `json:"id"`
-	OperatorContextID string          `json:"operatorContextId"`
-	IdempotencyKey    string          `json:"idempotencyKey"`
-	Status            string          `json:"status"`
-	WorkforceKind     string          `json:"workforceKind"`
-	ActorID           string          `json:"actorId,omitempty"`
-	IdentityCreated   bool            `json:"identityCreated,omitempty"`
-	WorkforceCode     string          `json:"workforceCode,omitempty"`
-	Payload           json.RawMessage `json:"payload"`
-	FailureReason     string          `json:"failureReason,omitempty"`
-	CreatedAt         time.Time       `json:"createdAt"`
-	UpdatedAt         time.Time       `json:"updatedAt"`
-}
-
-type StartProvisioningInput struct {
-	WorkforceKind string          `json:"workforceKind"`
-	Payload       json.RawMessage `json:"payload"`
 }
 
 // BlockerReason represents a specific reason why an actor is blocked from operations.

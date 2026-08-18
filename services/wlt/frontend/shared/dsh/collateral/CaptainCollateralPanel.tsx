@@ -23,7 +23,6 @@ function blockerLabel(reason: string | undefined): string {
   const labels: Record<string, string> = {
     WLT_COLLATERAL_RELEASE_PENDING_FUNDS: "لا يمكن التحرير مع وجود أموال معلقة.",
     WLT_COLLATERAL_RELEASE_HELD_FUNDS: "لا يمكن التحرير مع وجود أموال محجوزة.",
-    WLT_COLLATERAL_RELEASE_COD_CUSTODY_OPEN: "لا يمكن التحرير مع وجود عهدة COD مفتوحة.",
     WLT_COLLATERAL_RELEASE_PROVIDER_DEBT_OPEN: "لا يمكن التحرير مع وجود ذمم مزود مفتوحة.",
   };
   return labels[reason ?? ""] ?? reason ?? "تحرير الفائض مشروط بسلامة كل التعرضات المالية.";

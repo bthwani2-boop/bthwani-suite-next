@@ -406,6 +406,7 @@ components:
           captured,
           cod_pending,
           cod_collected,
+          cod_finalized,
           failed,
           expired,
           provider_result_unknown

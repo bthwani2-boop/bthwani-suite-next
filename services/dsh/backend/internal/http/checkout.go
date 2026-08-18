@@ -132,6 +132,10 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		store.SendError(w, http.StatusBadRequest, "INVALID_PAYMENT_METHOD", "payment method is invalid")
 		return
 	}
+	if (paymentMethod == string(checkout.MethodCOD) || paymentMethod == string(checkout.MethodMixed)) && fulfillmentMode != string(checkout.ModeBthwaniDelivery) {
+		store.SendError(w, http.StatusUnprocessableEntity, "COD_REQUIRES_BTHWANI_DELIVERY", "cash on delivery is only available for BThwani delivery")
+		return
+	}
 
 	var address *clientaddress.Address
 	var serviceAreaCode string

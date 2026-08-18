@@ -700,7 +700,6 @@ func enqueueWltDeliveryCompletion(tx *sql.Tx, orderID, captainID string) error {
 	return wltoutbox.EnqueueDeliveryCompleted(
 		tx,
 		orderID,
-		wltoutbox.CollectorCaptain,
 		captainID,
 		ctx.PartnerID,
 		ctx.CheckoutIntentID,

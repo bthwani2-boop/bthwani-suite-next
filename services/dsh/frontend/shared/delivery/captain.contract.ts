@@ -13,7 +13,6 @@ export type CaptainAppMode = 'bthwani_captain_mode' | 'store_courier_mode';
 export type CaptainSupportRoute =
   | 'chat-read-ack'
   | 'chat-send'
-  | 'cod-liability'
   | 'order-accept'
   | 'order-deliver'
   | 'order-details'

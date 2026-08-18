@@ -83,6 +83,10 @@ export function OperationalPolicyDetails({
         <Text role="caption" style={styles.mutedText}>
           الوقت التقديري للتوصيل: {result.etaWindow.minMinutes} إلى {result.etaWindow.maxMinutes} دقيقة
         </Text>
+      ) : result.etaStatus === "unavailable" ? (
+        <Text role="caption" style={styles.mutedText}>
+          تعذر تقدير وقت التوصيل من مزود المسارات المحكوم حاليًا؛ لا نعرض وقتًا تقريبيًا.
+        </Text>
       ) : null}
     </View>
   );

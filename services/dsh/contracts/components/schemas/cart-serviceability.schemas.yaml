@@ -203,6 +203,14 @@ CartServiceabilityResult:
         minMinutes: { type: integer }
         maxMinutes: { type: integer }
       description: "Estimated time of arrival window for delivery modes."
+    etaStatus:
+      type: string
+      enum: [not_requested, available, unavailable]
+      description: "Whether a governed route-backed ETA is available; DSH never substitutes a distance heuristic."
+    etaReasonCode:
+      type: string
+      enum: [STORE_LOCATION_UNAVAILABLE, ROUTE_PROVIDER_NOT_CONFIGURED, ROUTE_PROVIDER_UNAVAILABLE, ROUTE_DURATION_UNAVAILABLE]
+      description: "Machine-readable reason when etaStatus is unavailable."
     quoteVersion: { type: string, description: "Unique token for this serviceability quote." }
     expiresAt: { type: string, format: date-time, description: "Expiration time for this quote." }
 

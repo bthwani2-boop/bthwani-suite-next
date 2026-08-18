@@ -8,10 +8,8 @@ import { OverviewPageFrame } from "@bthwani/control-panel/shell";
 import { useFinanceController } from '@bthwani/wlt/dsh';
 import { PayoutRequestsPanel } from "./PayoutRequestsPanel";
 import { ReconciliationCasesPanel } from "./ReconciliationCasesPanel";
-import { CodReconciliationCasesPanel } from "./CodReconciliationCasesPanel";
 import { RefundsCommandPanel } from "./RefundsCommandPanel";
 import { LedgerInspectorScreen } from "./LedgerInspectorScreen";
-import { CodInspectorScreen } from "./CodInspectorScreen";
 import { RepresentativeWalletLookup } from "./RepresentativeWalletLookup";
 import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from '@bthwani/wlt/dsh';
 
@@ -155,7 +153,6 @@ export function FinanceDashboardScreen() {
       if (activeSub === "ledger") return <LedgerInspectorScreen />;
     }
     if (activeGroup === "reconciliation-risk") {
-      if (activeSub === "reconciliation") return <CodInspectorScreen />;
     }
     if (activeGroup === "payments-wallets") {
       return (
@@ -166,7 +163,7 @@ export function FinanceDashboardScreen() {
     }
     if (activeGroup === "settlements-payouts") {
       const requests = runtimeFinance?.state === "runtime" ? runtimeFinance.data.payoutRequests : [];
-      return <><PayoutRequestsPanel requests={requests} reload={reload} /><CodReconciliationCasesPanel /><ReconciliationCasesPanel /></>;
+      return <><PayoutRequestsPanel requests={requests} reload={reload} /><ReconciliationCasesPanel /></>;
     }
     return (
       <Card style={{ padding: "2rem", alignItems: "center", justifyContent: "center" }}>

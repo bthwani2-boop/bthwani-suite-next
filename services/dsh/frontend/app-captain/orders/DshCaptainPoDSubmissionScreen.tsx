@@ -51,7 +51,6 @@ const DELIVERY_EXCEPTION_REASONS: ReadonlyArray<{
   { code: 'vehicle_breakdown', label: 'عطل المركبة', description: 'تعذر استمرار الرحلة بسبب عطل فعلي.' },
   { code: 'accident', label: 'حادث', description: 'حادث يتطلب تدخل العمليات فورًا.' },
   { code: 'damaged_order', label: 'تضرر الطلب', description: 'الطلب غير صالح للتسليم بحالته الحالية.' },
-  { code: 'cash_collection_issue', label: 'مشكلة تحصيل نقدي', description: 'تعذر إغلاق مبلغ COD وفق الحقيقة الفعلية.' },
   { code: 'weather_or_road_block', label: 'طقس أو طريق مغلق', description: 'عائق طريق أو طقس يمنع الوصول.' },
   { code: 'proof_unavailable', label: 'تعذر إثبات التسليم', description: 'لا يمكن إنشاء إثبات صالح رغم وجود المستلم.' },
   { code: 'other', label: 'سبب آخر', description: 'سبب تشغيلي غير مصنف يتطلب شرحًا واضحًا.' },

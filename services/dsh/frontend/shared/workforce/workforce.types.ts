@@ -111,7 +111,8 @@ export type UpdateFieldAgentInput = {
 export type CreateCaptainInput = {
   readonly fullNameAr: string;
   readonly fullNameEn?: string | undefined;
-  readonly actorId: string;
+  readonly username: string;
+  readonly phoneE164: string;
   readonly engagementType?: EngagementType | undefined;
   readonly engagementStartDate?: string | undefined;
   readonly photoMediaRef?: string | undefined;
@@ -144,7 +145,8 @@ export type UpdateCaptainInput = {
 export type CreateEmployeeInput = {
   readonly fullNameAr: string;
   readonly fullNameEn?: string | undefined;
-  readonly actorId: string;
+  readonly username: string;
+  readonly phoneE164: string;
   readonly engagementType?: "employee" | undefined;
   readonly engagementStartDate?: string | undefined;
   readonly photoMediaRef?: string | undefined;
@@ -324,27 +326,6 @@ export const ENGAGEMENT_STATUS_LABEL_AR: Record<EngagementStatus, string> = {
 export const ENGAGEMENT_TYPE_LABEL_AR: Record<EngagementType, string> = {
   independent_contractor: "مقدم خدمة مستقل",
   employee: "موظف رسمي",
-};
-
-export type ProvisioningCase = {
-  readonly id: string;
-  readonly idempotencyKey: string;
-  readonly status: string;
-  readonly workforceKind: string;
-  readonly actorId?: string;
-  readonly workforceCode?: string;
-  readonly failureReason?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type StartProvisioningInput = {
-  readonly workforceKind: string;
-  readonly username: string;
-  readonly phoneE164: string;
-  readonly role: string;
-  readonly operatorContextId: string;
-  readonly payload: Record<string, unknown>;
 };
 
 export type BlockerReason =

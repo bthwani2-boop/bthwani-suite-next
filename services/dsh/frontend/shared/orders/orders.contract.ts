@@ -360,7 +360,7 @@ export type DshSurfaceHandoffObservation = {
 };
 
 export type DshHandoffWltImpact = {
-  readonly eventKind: 'payment' | 'fee' | 'refund' | 'cod_accrual' | 'settlement_trigger' | 'none';
+  readonly eventKind: 'payment' | 'fee' | 'refund' | 'settlement_trigger' | 'none';
   readonly displayLabel: string;
   readonly isDebit: boolean;
   readonly isCredit: boolean;
@@ -516,7 +516,7 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
       { surfaceId: 'app-captain', label: 'شاشة التوصيل تُعرض — الخريطة + عنوان العميل', uiStateHint: 'pickup_dropoff', actionRequired: true, actionLabel: 'متابعة للتسليم', readOnly: false, applicableModes: ['bthwani_delivery'] },
       { surfaceId: 'control-panel', label: 'مرحلة: "الكابتن في الطريق" في Operations', uiStateHint: 'live_tracking', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: ['bthwani_delivery'] },
     ],
-    wltImpact: { eventKind: 'cod_accrual', displayLabel: 'COD في حيازة الكابتن — ذمة معلقة لـ WLT', isDebit: false, isCredit: false, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
+    wltImpact: NO_WLT_IMPACT,
     signalKind: 'picked_up',
     auditRequired: false,
   },
@@ -530,9 +530,9 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
     surfaceObservations: [
       { surfaceId: 'app-client', label: 'تتبع: "تم التسليم" + تقييم اختياري', uiStateHint: 'delivered', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: ['bthwani_delivery'] },
       { surfaceId: 'app-partner', label: 'الطلب يُغلق — حالة: "تم التوصيل"', uiStateHint: 'order_closed', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: ['bthwani_delivery'] },
-      { surfaceId: 'app-captain', label: 'شاشة ما بعد التسليم — COD + ملخص', uiStateHint: 'post_delivery', actionRequired: true, actionLabel: 'تأكيد إيداع COD', readOnly: false, applicableModes: ['bthwani_delivery'] },
-      { surfaceId: 'control-panel', label: 'الطلب يُغلق في Operations + يُضاف لقائمة COD المستحقة', uiStateHint: 'closed_pending_settlement', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: ['bthwani_delivery'] },
-      { surfaceId: 'wlt-finance', label: 'بدء احتساب تسوية الكابتن — COD + عمولة', uiStateHint: 'settlement_calculation', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: ['bthwani_delivery'] },
+      { surfaceId: 'app-captain', label: 'شاشة ما بعد التسليم — ملخص الطلب', uiStateHint: 'post_delivery', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: ['bthwani_delivery'] },
+      { surfaceId: 'control-panel', label: 'الطلب يُغلق في Operations', uiStateHint: 'closed_pending_settlement', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: ['bthwani_delivery'] },
+      { surfaceId: 'wlt-finance', label: 'بدء احتساب تسوية الكابتن من WLT', uiStateHint: 'settlement_calculation', actionRequired: false, actionLabel: '', readOnly: true, applicableModes: ['bthwani_delivery'] },
     ],
     wltImpact: { eventKind: 'settlement_trigger', displayLabel: 'PoD أكّد التسليم — WLT يبدأ احتساب التسوية', isDebit: false, isCredit: true, dshReadOnly: true, contractState: 'DSH_WLT_READ_ONLY_REFERENCE' },
     signalKind: 'delivered',

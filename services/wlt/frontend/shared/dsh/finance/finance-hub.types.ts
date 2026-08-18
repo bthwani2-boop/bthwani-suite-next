@@ -1,5 +1,4 @@
 export type WltLedgerEntryKind =
-  | 'cod-collection'
   | 'client-payment'
   | 'partner-settlement'
   | 'captain-earning'
