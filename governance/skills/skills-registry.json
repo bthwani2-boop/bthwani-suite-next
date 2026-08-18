@@ -2,24 +2,6 @@
   "schemaVersion": 3,
   "entries": [
     {
-      "id": "bthwani-agent-skill-integrity",
-      "name": "Agent Skill Integrity",
-      "path": ".agents/skills/bthwani-agent-skill-integrity",
-      "owner": "BThwani Governance Team",
-      "scope": "platform",
-      "evidence_required": true,
-      "contract_level": "governed",
-      "status": "conditional",
-      "version": "2026.08.06-v2",
-      "authority": ["skill_registry_integrity", "agent_contract_alignment"],
-      "depends_on": ["bthwani-current-workspace-authority"],
-      "conflicts_with": [],
-      "invoke_when": ["Agent, skill, tool-policy, adapter, registry, or routing-index files change."],
-      "do_not_invoke_when": ["No agent-system contract or routing file is affected."],
-      "risk_floor": "T2_SPECIALIST",
-      "output_contract": "Pinned ref, active and retired skill reconciliation, tool registration, agent mapping, checks, decision, and remaining gaps."
-    },
-    {
       "id": "bthwani-api-runtime-binding",
       "name": "API Runtime Binding",
       "path": ".agents/skills/bthwani-api-runtime-binding",
@@ -46,7 +28,7 @@
       "evidence_required": false,
       "contract_level": "governed",
       "status": "conditional",
-      "version": "2026.08.06-v3",
+      "version": "2026.08.18-v4",
       "authority": ["coordination", "work_unit_routing"],
       "depends_on": ["bthwani-current-workspace-authority", "bthwani-universal-task-router", "bthwani-evidence-gate-router"],
       "conflicts_with": ["bthwani-independent-implementation-reviewer"],
@@ -82,7 +64,7 @@
       "evidence_required": true,
       "contract_level": "governed",
       "status": "conditional",
-      "version": "2026.07.17-v1",
+      "version": "2026.08.18-v2",
       "authority": ["runtime_evidence", "docker_data_plane_verification"],
       "depends_on": ["bthwani-current-workspace-authority", "bthwani-evidence-gate-router"],
       "conflicts_with": [],
@@ -100,7 +82,7 @@
       "evidence_required": true,
       "contract_level": "governed",
       "status": "conditional",
-      "version": "2026.08.03-v2",
+      "version": "2026.08.18-v3",
       "authority": ["wlt_financial_truth", "dsh_wlt_finance_boundary"],
       "depends_on": ["bthwani-current-workspace-authority", "bthwani-evidence-gate-router"],
       "conflicts_with": [],
@@ -118,14 +100,14 @@
       "evidence_required": false,
       "contract_level": "governed",
       "status": "conditional",
-      "version": "2026.07.17-v1",
+      "version": "2026.08.18-v2",
       "authority": ["evidence_scope_routing"],
       "depends_on": ["bthwani-current-workspace-authority", "bthwani-universal-task-router"],
       "conflicts_with": [],
-      "invoke_when": ["A claim requires selection of static, product, runtime, visual, QA, security, finance, CI, release, or production evidence."],
+      "invoke_when": ["A claim requires selection of static/code, contracts/data, runtime, visual/accessibility, security/privacy, finance, CI, or release/production evidence."],
       "do_not_invoke_when": ["No verification or closure claim is requested."],
       "risk_floor": "T1_BALANCED",
-      "output_contract": "Required evidence scope, selected commands or sources, and permitted decision vocabulary."
+      "output_contract": "Required evidence scope, selected checks or sources, and scoped decision."
     },
     {
       "id": "bthwani-final-journey-closure-judge",
@@ -208,14 +190,14 @@
       "evidence_required": true,
       "contract_level": "governed",
       "status": "conditional",
-      "version": "2026.07.17-v1",
+      "version": "2026.08.18-v2",
       "authority": ["product_problem", "product_scope", "product_acceptance"],
       "depends_on": ["bthwani-current-workspace-authority"],
       "conflicts_with": [],
       "invoke_when": ["A user-visible, role-sensitive, cross-surface, commercial, or workflow capability changes."],
       "do_not_invoke_when": ["The change is a behavior-preserving internal refactor with product impact explicitly declared as none."],
       "risk_floor": "T2_SPECIALIST",
-      "output_contract": "Product Truth state, actors, surfaces, invariants, owner decisions, checks, and remaining risks."
+      "output_contract": "Product Truth state, actors, surfaces, invariants, checks, and remaining risks."
     },
     {
       "id": "bthwani-screen-flow-binding",
@@ -244,14 +226,14 @@
       "evidence_required": true,
       "contract_level": "governed",
       "status": "conditional",
-      "version": "2026.07.17-v1",
+      "version": "2026.08.18-v2",
       "authority": ["security_review_routing", "secret_privacy_protection"],
       "depends_on": ["bthwani-current-workspace-authority", "bthwani-evidence-gate-router"],
       "conflicts_with": [],
       "invoke_when": ["Authentication, authorization, sessions, secrets, credentials, PII, payment data, CORS, logs, or sensitive provider configuration changes."],
       "do_not_invoke_when": ["No security, privacy, secret, or sensitive-data boundary is affected."],
       "risk_floor": "T3_ADVISORY_MAX",
-      "output_contract": "Sanitized findings, affected paths, required security evidence, remediation, and residual risk."
+      "output_contract": "Sanitized findings, affected paths, security evidence, remediation, and residual risk."
     },
     {
       "id": "bthwani-service-fullstack-journey",
