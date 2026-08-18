@@ -16,7 +16,7 @@ const OPENAPI_TYPESCRIPT_HEADER = `/**
 `;
 const materializerPath = fileURLToPath(import.meta.url);
 const composerPath = path.join(repositoryRoot, "tools/scripts/openapi-context-composer.mjs");
-const registryPath = path.join(repositoryRoot, "governance/contracts/generated-client-registry.json");
+const registryPath = path.join(repositoryRoot, "tools/verification/generated-client-registry.json");
 const lockfilePath = path.join(repositoryRoot, "pnpm-lock.yaml");
 const stampPath = path.join(repositoryRoot, ".artifacts/openapi/materialization.json");
 

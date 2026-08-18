@@ -69,15 +69,13 @@ test("client discovery exposes real search, cached images, and a persistent dono
   const reels = assertMarkers(
     "services/dsh/frontend/app-client/home-discovery/HomeReelsSection.tsx",
     [
-      "expo-video",
-      "useVideoPlayer",
-      "useCaching: true",
-      "allowsPictureInPicture",
+      "getDshVideoRenderer",
+      "VideoSurface",
+      "active={active}",
       "FlatList",
       "pagingEnabled",
       "itemVisiblePercentThreshold: 80",
       "onViewableItemsChanged",
-      "player.pause()",
       "initialScrollIndex",
       "ReelsStateModal",
       "لا توجد فيديوهات معتمدة بعد",
@@ -88,6 +86,11 @@ test("client discovery exposes real search, cached images, and a persistent dono
     ],
   );
   assert.equal(reels.includes("expo-av"), false);
+  assert.equal(reels.includes("expo-video"), false);
+  assertMarkers(
+    "apps/app-client/runtime/src/platform/dsh-capabilities.tsx",
+    ["expo-video", "useVideoPlayer", "useCaching: true", "player.pause()", "allowsPictureInPicture"],
+  );
   assertMarkers(
     "services/dsh/frontend/app-client/home-discovery/HomePromoSection.tsx",
     ["promo.actionTarget.trim().length > 0", "hasQuickActions", 'label="فيديو"', "isVideo"],

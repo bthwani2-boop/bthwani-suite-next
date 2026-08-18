@@ -20,6 +20,7 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
@@ -36,6 +37,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ReserveCodCapacityResponse' }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { description: FEATURE_NOT_ENABLED when WLT_MUTATIONS_ENABLED is not true }
         '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
       security:
         - serviceBearer: []
@@ -47,6 +49,7 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
@@ -62,6 +65,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ReleaseCodReservationResponse' }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { description: FEATURE_NOT_ENABLED when WLT_MUTATIONS_ENABLED is not true }
         '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
       security:
         - serviceBearer: []
@@ -73,6 +77,7 @@ paths:
       x-bthwani-mutation-approved: false
       x-bthwani-default-enabled: false
       parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
@@ -89,6 +94,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ReserveCodCapacityResponse' }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { description: FEATURE_NOT_ENABLED when WLT_MUTATIONS_ENABLED is not true }
         '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
       security:
         - serviceBearer: []
@@ -98,6 +104,7 @@ paths:
       tags: [ WltCodReservations ]
       summary: Get COD reservation for an order.
       parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - name: orderId

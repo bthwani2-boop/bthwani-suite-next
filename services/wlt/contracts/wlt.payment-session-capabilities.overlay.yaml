@@ -38,7 +38,6 @@ actions:
                 - capture
                 - expire
                 - refresh_provider_status
-                - record_delivery_collection
                 - create_new_payment_session
                 - open_reconciliation
   - target: $.components.schemas.PaymentSession
