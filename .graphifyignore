@@ -15,14 +15,13 @@ Dockerfile
 .aiderignore
 .aiexclude
 .cursorignore
-tools/comand
-tools/drafthj
 
 # ── Custom Go caches (project-local) ─────────────────────────────────────────
 .gocache-dsh/
 .gocache-wlt/
 .gocache-identity/
 .gocache*/
+.gomodcache*/
 
 # ── Generated / cache / toolchain output ─────────────────────────────────────
 node_modules/
@@ -42,13 +41,6 @@ graphify-out/
 .expo/
 .yagni-out/
 .diagnostics/
-
-# ── Go caches ─────────────────────────────────────────────────────────────────
-.gocache*/
-.gomodcache*/
-
-# ── Registry / archived diagnostics ─────────────────────────────────────────
-tools/registry/runs/
 
 # ── Evidence / reports / generated operational records ───────────────────────
 evidence/
@@ -73,7 +65,6 @@ docs/
 **/docs/
 governance/
 infra/
-tools/trash/
 
 # ── Lockfiles (large, not meaningful for code graph) ─────────────────────────
 pnpm-lock.yaml
@@ -95,7 +86,6 @@ yarn.lock
 **/*.yml
 *.yaml
 **/*.yaml
-
 
 # ── Binary / media / archive ─────────────────────────────────────────────────
 *.zip
