@@ -1,36 +1,28 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { Button, Text, useBThwaniAppearance } from "@bthwani/ui-kit";
-import type {
-  BlockerReason,
-  ReadinessGate,
-} from "../../../../../../services/dsh/frontend/shared/workforce/workforce.types";
+import type { CaptainOperationalReadiness } from "@bthwani/dsh/app-captain";
 
-const REASON_MESSAGES: Record<BlockerReason, string> = {
+const REASON_MESSAGES: Readonly<Record<string, string>> = {
   IDENTITY_SUSPENDED: "تم تعليق الهوية الرقمية الخاصة بك. يرجى مراجعة الإدارة.",
-  PROFILE_INCOMPLETE: "الملف الشخصي غير مكتمل. يرجى تحديث بياناتك.",
-  DOCUMENTS_EXPIRED: "هناك مستندات منتهية الصلاحية (مثل رخصة القيادة).",
-  EMPLOYMENT_TERMINATED: "حالة التوظيف معلقة أو منهية.",
-  NO_ACTIVE_ASSIGNMENT: "لا يوجد تكليف نشط حالياً. يرجى انتظار تعيين منطقة.",
-  SHIFT_INACTIVE: "لا توجد مناوبة فعالة حالياً.",
-  OUTSIDE_ACTIVE_AREA: "أنت خارج منطقة الخدمة المحددة.",
-  FINANCIAL_ELIGIBILITY_BLOCKED:
-    "تم إيقاف الأهلية المالية. يرجى تسوية المستحقات أو التواصل مع المالية.",
-  ELIGIBILITY_UNAVAILABLE:
-    "تعذر التحقق من الأهلية التشغيلية والمالية. يرجى المحاولة لاحقاً.",
+  PROFILE_INCOMPLETE: "الملف المهني غير مكتمل. يرجى استكمال المتطلبات.",
+  DOCUMENTS_EXPIRED: "هناك مستندات تشغيلية منتهية الصلاحية.",
+  ENGAGEMENT_INACTIVE: "حالة الارتباط المهني لا تسمح ببدء العمل.",
+  DISPATCH_ACCREDITATION_REQUIRED: "اعتماد التشغيل للتوصيل غير مكتمل.",
+  DISPATCH_SUSPENDED: "حالة التشغيل للتوصيل موقوفة حالياً.",
+  DISPATCH_PROFILE_REQUIRED: "ملف التشغيل للتوصيل غير مكتمل.",
+  CAPTAIN_FINANCIAL_ELIGIBILITY_REQUIRED: "الأهلية المالية للكابتن غير مكتملة.",
 };
 
 interface Props {
-  readonly readiness: ReadinessGate;
+  readonly readiness: CaptainOperationalReadiness;
   readonly onRefresh: () => void;
 }
 
 export function ReadinessGateScreen({ readiness, onRefresh }: Props) {
   const { tokens } = useBThwaniAppearance();
 
-  if (readiness.status === "ALLOWED") {
-    return null;
-  }
+  if (readiness.ready) return null;
 
   return (
     <View style={[styles.container, { backgroundColor: tokens.appBackground }]}>
@@ -39,11 +31,11 @@ export function ReadinessGateScreen({ readiness, onRefresh }: Props) {
       </Text>
 
       <Text style={[styles.subtitle, { color: tokens.textSecondary }]}>
-        الرجاء معالجة الملاحظات التالية قبل المتابعة:
+        الرجاء معالجة المتطلبات التالية قبل المتابعة:
       </Text>
 
       <View style={styles.reasonsContainer}>
-        {readiness.blockerReasons.map((reason) => (
+        {readiness.missing.map((reason) => (
           <View
             key={reason}
             style={[
@@ -55,7 +47,7 @@ export function ReadinessGateScreen({ readiness, onRefresh }: Props) {
             ]}
           >
             <Text style={[styles.reasonText, { color: tokens.textPrimary }]}>
-              • {REASON_MESSAGES[reason] || reason}
+              • {REASON_MESSAGES[reason] ?? reason}
             </Text>
           </View>
         ))}
