@@ -9,25 +9,20 @@ import {
   resolveIdentityApiBaseUrl,
   useIdentitySession,
 } from "@bthwani/core-identity";
-import { colorRoles } from "@bthwani/ui-kit";
-
-import { DshCaptainSurface } from "../../../../services/dsh/frontend/app-captain";
-import { captainNavigationTargetFromDeepLink } from "../../../../services/dsh/frontend/shared/delivery/captain-deep-link";
-import type { DshCaptainNavigationCommand } from "../../../../services/dsh/frontend/shared/delivery/captain.surface.types";
-import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
-import { useDshMobilePushRegistration } from "../../../../services/dsh/frontend/shared/notifications/use-mobile-push-registration";
 import {
+  DshCaptainSurface,
+  IdentitySessionGate,
   WorkforceAccessGate,
   WorkforceProfileProvider,
-  useWorkforceProfile,
-} from "../../../../services/dsh/frontend/shared/workforce";
-import { fetchWorkforceReadiness } from "../../../../services/dsh/frontend/shared/workforce/workforce-me.api";
-import type { ReadinessGate } from "../../../../services/dsh/frontend/shared/workforce/workforce.types";
+  captainNavigationTargetFromDeepLink,
+  fetchCaptainOperationalReadiness,
+  useDshMobilePushRegistration,
+  type CaptainOperationalReadiness,
+  type DshCaptainNavigationCommand,
+} from "@bthwani/dsh/app-captain";
+import { colorRoles } from "@bthwani/ui-kit";
+
 import { ReadinessGateScreen } from "./features/readiness/ReadinessGateScreen";
-import {
-  classifyCaptainReadiness,
-  createCaptainEligibilityUnavailableGate,
-} from "./features/readiness/captain-readiness.policy";
 
 const CAPTAIN_DEVICE_FINGERPRINT_KEY = "bthwani.captain.device-fingerprint.v1";
 
@@ -49,48 +44,33 @@ if (Platform.OS !== "web") {
 }
 configureIdentitySession(resolveIdentityApiBaseUrl());
 
+type CaptainReadinessState =
+  | { readonly kind: "loading" }
+  | { readonly kind: "decision"; readonly readiness: CaptainOperationalReadiness }
+  | { readonly kind: "unavailable" };
+
 function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
-  const workforce = useWorkforceProfile();
-  const [readiness, setReadiness] = useState<ReadinessGate | null>(null);
-  const [readinessRefreshToken, setReadinessRefreshToken] = useState(0);
+  const [state, setState] = useState<CaptainReadinessState>({ kind: "loading" });
+  const [refreshToken, setRefreshToken] = useState(0);
 
   useEffect(() => {
     let active = true;
-    setReadiness(null);
-    if (workforce.state.kind !== "ready") {
-      return () => {
-        active = false;
-      };
-    }
+    setState({ kind: "loading" });
 
-    const { actorId, workforceKind } = workforce.state.me;
-    void fetchWorkforceReadiness(actorId)
-      .then((gate) => {
-        if (!active) return;
-        if (gate.actorId !== actorId || gate.workforceKind !== workforceKind) {
-          setReadiness(createCaptainEligibilityUnavailableGate({ actorId, workforceKind }));
-          return;
-        }
-        setReadiness(gate);
+    void fetchCaptainOperationalReadiness()
+      .then((readiness) => {
+        if (active) setState({ kind: "decision", readiness });
       })
       .catch(() => {
-        if (!active) return;
-        setReadiness(createCaptainEligibilityUnavailableGate({ actorId, workforceKind }));
+        if (active) setState({ kind: "unavailable" });
       });
 
     return () => {
       active = false;
     };
-  }, [readinessRefreshToken, workforce.state]);
+  }, [refreshToken]);
 
-  const currentReadiness = workforce.state.kind === "ready"
-    && readiness?.actorId === workforce.state.me.actorId
-    && readiness.workforceKind === workforce.state.me.workforceKind
-    ? readiness
-    : null;
-
-  const presentation = classifyCaptainReadiness(currentReadiness);
-  if (presentation === "loading") {
+  if (state.kind === "loading") {
     return (
       <View style={styles.readinessState}>
         <ActivityIndicator accessibilityLabel="جارٍ التحقق من جاهزية الكابتن..." />
@@ -98,24 +78,26 @@ function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (presentation === "blocked" && currentReadiness) {
+  if (state.kind === "unavailable") {
+    return (
+      <View style={styles.readinessState}>
+        <Text style={styles.readinessError}>
+          تعذر التحقق من الجاهزية التشغيلية الآن. أعد المحاولة قبل بدء العمل.
+        </Text>
+      </View>
+    );
+  }
+
+  if (!state.readiness.ready) {
     return (
       <ReadinessGateScreen
-        readiness={currentReadiness}
-        onRefresh={() => setReadinessRefreshToken((value) => value + 1)}
+        readiness={state.readiness}
+        onRefresh={() => setRefreshToken((value) => value + 1)}
       />
     );
   }
 
-  if (presentation === "allowed") {
-    return <>{children}</>;
-  }
-
-  return (
-    <View style={styles.readinessState}>
-      <Text style={styles.readinessError}>حالة جاهزية غير معروفة. يرجى المحاولة مرة أخرى.</Text>
-    </View>
-  );
+  return <>{children}</>;
 }
 
 function CaptainSessionEffects() {
