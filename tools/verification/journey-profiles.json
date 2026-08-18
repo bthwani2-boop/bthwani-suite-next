@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "journeyProfiles": {
+    "PROJECT-WIDE": [
+      "no-broken-imports",
+      "runtime-config",
+      "api-binding",
+      "backend-api-binding",
+      "service-manifest-drift",
+      "aggregate-ownership",
+      "migration-manifest-drift",
+      "frontend-feature-binding",
+      "fullstack-boundary",
+      "wlt-financial-boundary",
+      "runtime-real-bindings",
+      "field-surface-truth"
+    ],
+    "PLATFORM-CHANGE-SETS": [
+      "no-broken-imports",
+      "runtime-config",
+      "api-binding",
+      "backend-api-binding",
+      "service-manifest-drift",
+      "migration-manifest-drift",
+      "fullstack-boundary"
+    ]
+  }
+}
