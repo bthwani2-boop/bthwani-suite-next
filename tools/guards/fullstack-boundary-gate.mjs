@@ -11,6 +11,47 @@ const tsconfigPath = path.join(repoRoot, "tsconfig.base.json");
 const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, "utf8"));
 const aliases = tsconfig?.compilerOptions?.paths ?? {};
 
+const CONTROL_PANEL_ROOTS = [
+  "services/dsh/frontend/control-panel/",
+  "apps/control-panel/",
+];
+const MOBILE_ROOTS = [
+  "services/dsh/frontend/app-client/",
+  "services/dsh/frontend/app-partner/",
+  "services/dsh/frontend/app-captain/",
+  "services/dsh/frontend/app-field/",
+  "apps/app-client/",
+  "apps/app-partner/",
+  "apps/app-captain/",
+  "apps/app-field/",
+];
+const WEB_SHARED_ROOT = "services/dsh/frontend/shared/platform/web/";
+const MOBILE_SHARED_ROOT = "services/dsh/frontend/shared/platform/mobile/";
+
+function startsWithAny(value, prefixes) {
+  return prefixes.some((prefix) => value.startsWith(prefix));
+}
+
+function isNativePackage(specifier) {
+  return specifier === "react-native"
+    || specifier.startsWith("react-native/")
+    || specifier.startsWith("react-native-")
+    || specifier.startsWith("@react-native-")
+    || specifier.startsWith("expo-")
+    || specifier.startsWith("@expo/");
+}
+
+function isWebOnlyPackage(specifier) {
+  return specifier === "next"
+    || specifier.startsWith("next/")
+    || specifier === "react-dom"
+    || specifier.startsWith("react-dom/")
+    || specifier === "react-native-web"
+    || specifier.startsWith("react-native-web/")
+    || specifier === "@bthwani/control-panel"
+    || specifier.startsWith("@bthwani/control-panel/");
+}
+
 function resolveSpecifier(file, specifier) {
   for (const [alias, targets] of Object.entries(aliases)) {
     const target = targets[0];
@@ -30,12 +71,6 @@ function resolveSpecifier(file, specifier) {
 
 const wltSharedDshPath = "services/wlt/frontend/shared/dsh/";
 
-// services/wlt/frontend/shared/dsh is the WLT-side integration layer. It may
-// issue mutations, but only through the governed DSH facade: every mutating
-// call must resolve to a real operation on a canonical DSH contract. That is an
-// operation-level authority check, not a directory-level exemption, so a call
-// to WLT directly, to an unknown path, or with a runtime-computed method is
-// still a violation.
 const governedOperations = (() => {
   const masterContractPath = "contracts/openapi/index.yaml";
   try {
@@ -75,26 +110,14 @@ const FINANCIAL_MUTATION_PATTERNS = [
   /\bfinalizeRefund\b/,
 ];
 
-function sortedUnique(values) {
-  return [...new Set(values)].sort();
-}
-
-function extractBracketEnumValues(block) {
-  return sortedUnique([...block.matchAll(/^\s*([a-z][a-z0-9_]*)\s*,?\s*$/gm)].map((match) => match[1]));
-}
-
-function extractQuotedUnionValues(block) {
-  return sortedUnique([...block.matchAll(/"([^"]+)"/g)].map((match) => match[1]));
-}
-
-
-
 for (const file of listCodeFiles()) {
   const content = read(file);
   const surfaceMatch = file.match(/^services\/([^/]+)\/frontend\/([^/]+)\//);
   const isSurface = surfaceMatch && surfaceMatch[2] !== "shared";
   const currentSurface = isSurface ? surfaceMatch[2] : null;
   const isShared = file.startsWith("shared/") || file.includes("/frontend/shared/");
+  const isControlPanel = startsWithAny(file, CONTROL_PANEL_ROOTS);
+  const isMobile = startsWithAny(file, MOBILE_ROOTS);
 
   if (!file.startsWith("tools/guards/") && (/PUT\s+\/dsh\/operator\/workforce\/scopes\//.test(content) || /handleUpdateOperatorWorkforceScopes/.test(content))) {
     violations.push({
@@ -104,30 +127,16 @@ for (const file of listCodeFiles()) {
   }
 
   if (isSurface) {
-    if (/\bfetch\(/.test(content)) {
-      violations.push({ file, message: "direct fetch() call in surface — move to shared API adapter" });
-    }
-    if (/\baxios\b/.test(content)) {
-      violations.push({ file, message: "axios import in surface — move to shared API adapter" });
-    }
-    if (/process\.env/.test(content)) {
-      violations.push({ file, message: "direct process.env access in surface — move to shared brain config" });
-    }
-    if (/\bnew\s+URL\(/.test(content)) {
-      violations.push({ file, message: "direct new URL() call in surface — move to config/adapter" });
-    }
+    if (/\bfetch\(/.test(content)) violations.push({ file, message: "direct fetch() call in surface — move to shared API adapter" });
+    if (/\baxios\b/.test(content)) violations.push({ file, message: "axios import in surface — move to shared API adapter" });
+    if (/process\.env/.test(content)) violations.push({ file, message: "direct process.env access in surface — move to shared brain config" });
+    if (/\bnew\s+URL\(/.test(content)) violations.push({ file, message: "direct new URL() call in surface — move to config/adapter" });
 
     const lines = content.split(/\r?\n/);
-    for (let i = 0; i < lines.length; i++) {
+    for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i];
-      if (/https?:\/\//.test(line) && !/^\s*(\/\/|\/\*|\*)/.test(line)) {
-        if (!/https?:\/\/(?:\.\.\.|example\.com)/i.test(line)) {
-          violations.push({
-            file,
-            line: i + 1,
-            message: `hardcoded runtime URL in surface: "${line.trim()}"`,
-          });
-        }
+      if (/https?:\/\//.test(line) && !/^\s*(\/\/|\/\*|\*)/.test(line) && !/https?:\/\/(?:\.\.\.|example\.com)/i.test(line)) {
+        violations.push({ file, line: i + 1, message: `hardcoded runtime URL in surface: "${line.trim()}"` });
       }
     }
   }
@@ -144,94 +153,72 @@ for (const file of listCodeFiles()) {
   if (file.startsWith(wltSharedDshPath)) {
     for (const site of extractApiCallSites(file, content, { reportUnresolvedMutationPaths: true })) {
       if (site.path === null) {
-        violations.push({
-          file,
-          line: site.line,
-          message: `FORBIDDEN: ${site.method} to a runtime-computed path cannot be proven against a governed DSH operation; pass an explicit contract path`,
-        });
+        violations.push({ file, line: site.line, message: `FORBIDDEN: ${site.method} to a runtime-computed path cannot be proven against a governed DSH operation` });
         continue;
       }
-      // A computed method is unprovable, so it is rejected regardless of path.
       if (site.methodSource === "dynamic") {
-        violations.push({
-          file,
-          line: site.line,
-          message: `FORBIDDEN: runtime-computed HTTP method for '${site.path}' cannot be proven against a governed DSH operation`,
-        });
+        violations.push({ file, line: site.line, message: `FORBIDDEN: runtime-computed HTTP method for '${site.path}' cannot be proven against a governed DSH operation` });
         continue;
       }
-      // "absent" means a read helper such as tryGet(path, mapper): no options
-      // object, so the call carries no mutation intent.
       if (site.methodSource === "absent" || !MUTATION_METHODS.has(site.method)) continue;
-
       if (!site.path.startsWith("/dsh/")) {
-        violations.push({
-          file,
-          line: site.line,
-          message: `FORBIDDEN: ${site.method} ${site.path} does not go through the governed DSH facade; surfaces must never mutate WLT directly`,
-        });
+        violations.push({ file, line: site.line, message: `FORBIDDEN: ${site.method} ${site.path} bypasses the governed DSH facade` });
         continue;
       }
       if (!governedDshOperationExists(site.method, site.path)) {
-        violations.push({
-          file,
-          line: site.line,
-          message: `FORBIDDEN: ${site.method} ${site.path} is not a governed DSH contract operation`,
-        });
+        violations.push({ file, line: site.line, message: `FORBIDDEN: ${site.method} ${site.path} is not a governed DSH contract operation` });
       }
     }
   }
 
-  const specs = findImportSpecifiers(content);
-  for (const { specifier, index } of specs) {
+  for (const { specifier, index } of findImportSpecifiers(content)) {
     const resolved = resolveSpecifier(file, specifier);
     if (resolved.includes("node_modules/")) continue;
+    const line = lineNumber(content, index);
+
+    if (isControlPanel) {
+      if (isNativePackage(specifier)) {
+        violations.push({ file, line, message: `FORBIDDEN: control-panel imports native package '${specifier}' directly` });
+      }
+      if (startsWithAny(`${resolved}/`, MOBILE_ROOTS) || resolved.startsWith(MOBILE_SHARED_ROOT)) {
+        violations.push({ file, line, message: `FORBIDDEN: control-panel imports mobile-owned code '${specifier}' (resolved: ${resolved})` });
+      }
+    }
+
+    if (isMobile) {
+      if (isWebOnlyPackage(specifier)) {
+        violations.push({ file, line, message: `FORBIDDEN: mobile surface imports web-only package '${specifier}'` });
+      }
+      if (startsWithAny(`${resolved}/`, CONTROL_PANEL_ROOTS) || resolved.startsWith(WEB_SHARED_ROOT)) {
+        violations.push({ file, line, message: `FORBIDDEN: mobile surface imports web-owned code '${specifier}' (resolved: ${resolved})` });
+      }
+    }
 
     if (isSurface) {
       const resolvedSurfaceMatch = resolved.match(/^services\/([^/]+)\/frontend\/([^/]+)\//);
       if (resolvedSurfaceMatch) {
         const resolvedSurface = resolvedSurfaceMatch[2];
         if (resolvedSurface !== "shared" && resolvedSurface !== currentSurface) {
-          violations.push({
-            file,
-            line: lineNumber(content, index),
-            message: `FORBIDDEN: importing from other surface '${resolvedSurface}' (resolved: ${resolved})`,
-          });
+          violations.push({ file, line, message: `FORBIDDEN: importing from other surface '${resolvedSurface}' (resolved: ${resolved})` });
         }
       }
-
-      // Shared API adapters are the approved surface boundary. Surfaces still
-      // cannot reach backend/generated clients or internal controller cores.
       if (
         /^services\/[^/]+\/(backend|clients|generated)\//.test(resolved) ||
         resolved.endsWith(".controller-core") ||
         resolved.includes(".controller-core.") ||
         resolved.includes(".controller-core/")
       ) {
-        violations.push({
-          file,
-          line: lineNumber(content, index),
-          message: `FORBIDDEN: importing backend/client/generated/controller-core directly (resolved: ${resolved})`,
-        });
+        violations.push({ file, line, message: `FORBIDDEN: importing backend/client/generated/controller-core directly (resolved: ${resolved})` });
       }
     }
 
     if (isShared) {
       const resolvedSurfaceMatch = resolved.match(/^services\/([^/]+)\/frontend\/([^/]+)\//);
       if (resolvedSurfaceMatch && resolvedSurfaceMatch[2] !== "shared") {
-        violations.push({
-          file,
-          line: lineNumber(content, index),
-          message: `FORBIDDEN: shared brain importing from surface '${resolvedSurfaceMatch[2]}' (resolved: ${resolved})`,
-        });
+        violations.push({ file, line, message: `FORBIDDEN: shared brain importing from surface '${resolvedSurfaceMatch[2]}' (resolved: ${resolved})` });
       }
-
       if (resolved.startsWith("apps/")) {
-        violations.push({
-          file,
-          line: lineNumber(content, index),
-          message: `FORBIDDEN: shared brain importing from apps runtime (resolved: ${resolved})`,
-        });
+        violations.push({ file, line, message: `FORBIDDEN: shared brain importing from apps runtime (resolved: ${resolved})` });
       }
     }
   }
