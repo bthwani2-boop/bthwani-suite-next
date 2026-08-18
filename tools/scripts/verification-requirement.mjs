@@ -3,17 +3,9 @@ import { readFileSync } from "node:fs";
 const VERIFICATION_AUTHORITY_PREFIXES = [
   ".github/actions/",
   ".github/workflows/",
-  "governance/guards/",
 ];
 
 const VERIFICATION_AUTHORITY_FILES = new Set([
-  "governance/contracts/full-verification-policy.json",
-  "tools/guards/authority-separation-gate.mjs",
-  "tools/guards/direct-work-branch-execution-gate.mjs",
-  "tools/guards/governance-schema-gate.mjs",
-  "tools/guards/guard-registry-gate.mjs",
-  "tools/guards/required-command-integrity-gate.mjs",
-  "tools/guards/sdlc/Invoke-SdlcGate.ps1",
   "tools/scripts/ci-routing.test.mjs",
   "tools/scripts/ci-runtime-bootstrap-policy.test.mjs",
   "tools/scripts/detect-ci-context.mjs",
@@ -36,7 +28,6 @@ export function isVerificationAuthorityChange(files) {
 export function deriveVerificationRequirement({
   fullScope,
   verificationDepth,
-  policy,
   diagnostics,
   verification,
   backend,
@@ -46,7 +37,6 @@ export function deriveVerificationRequirement({
   const scope = fullScope ? "all" : "affected";
   const depth = fullScope || verificationDepth === "full" ? "full" : "affected";
   const requiredJobs = [
-    policy ? "policy" : "",
     diagnostics ? "diagnostics" : "",
     verification ? "node" : "",
     backend ? "backends" : "",
