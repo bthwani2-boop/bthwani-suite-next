@@ -387,7 +387,7 @@ var ErrPaymentSessionMismatch = errors.New("wlt payment session id does not matc
 
 func paymentEventTargetState(wltStatus string) (IntentState, bool, error) {
 	switch strings.TrimSpace(wltStatus) {
-	case "captured", "cod_collected":
+	case "captured", "cod_finalized":
 		return StateConfirmed, false, nil
 	case "failed":
 		return StateCancelled, false, nil

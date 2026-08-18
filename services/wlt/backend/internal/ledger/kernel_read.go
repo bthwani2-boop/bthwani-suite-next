@@ -10,9 +10,9 @@ import (
 	"wlt-api/internal/shared"
 )
 
-// Capture and COD collection/remittance are posted by the sovereign live
-// handlers. Keep this list empty unless a concrete financial event remains
-// outside the ledger kernel.
+// Payment capture and captain-funded COD finalization are posted by the
+// sovereign live handlers. Keep this list empty unless a concrete financial
+// event remains outside the ledger kernel.
 var knownDataGaps = []string{}
 
 type AccountBalance struct {

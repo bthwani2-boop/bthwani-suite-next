@@ -3,7 +3,7 @@
   "service": "wlt",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "wlt-933_provider_penalty_policy_authority.sql",
+  "cutover": "wlt-943_captain_cod_ledger_write_fence.sql",
   "migrations": [
     {"ordinal":1,"file":"wlt-000_financial_references.sql","sha256":"64a1bec63acf81e53521bb683ddc1fb1f46cc1d5cccc61af4aa95696159ce6fe","historicalPrefix":"000","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":2,"file":"wlt-001_payment_sessions.sql","sha256":"aa350f36c803d912b0e51874f9f4c0f93d3ccfb4c56f2db819f65b32c82bb07d","historicalPrefix":"001","state":"HISTORICAL_IMMUTABLE"},
@@ -113,6 +113,10 @@
     {"ordinal":106,"file":"wlt-936_special_request_quote_authority.sql","sha256":"cc4d753c3be9b44428601261c31e00593fa3f37408f8622e460f92435c1d1319","historicalPrefix":"936","state":"ACTIVE"},
     {"ordinal":107,"file":"wlt-937_payment_session_funding_rail_source_guard.sql","sha256":"a75485a5d593a028e95db3e79aa4b81f8256609d13f347cc5ba98daca289c78f","historicalPrefix":"937","state":"ACTIVE"},
     {"ordinal":108,"file":"wlt-938_payment_session_terminal_state_guard.sql","sha256":"bed45f2ce7b526a19797ac1b93c99b2639163d54b0a1ef2d0a4838e0eb47fb86","historicalPrefix":"938","state":"ACTIVE"},
-    {"ordinal":109,"file":"wlt-939_captain_cod_finalization.sql","sha256":"56b552db50a0d42bebd259a2eb4d11cc06c48892887656519b9fc2216cc7a7ce","historicalPrefix":"939","state":"ACTIVE"}
+    {"ordinal":109,"file":"wlt-939_captain_cod_finalization.sql","sha256":"56b552db50a0d42bebd259a2eb4d11cc06c48892887656519b9fc2216cc7a7ce","historicalPrefix":"939","state":"ACTIVE"},
+    {"ordinal":110,"file":"wlt-940_captain_cod_legacy_write_fence.sql","sha256":"b38cdc13547d99f99b2fbff09e8375fece310bb0788323dc53ddc335c6ec6318","historicalPrefix":"940","state":"ACTIVE"},
+    {"ordinal":111,"file":"wlt-941_captain_cod_refund_write_fence.sql","sha256":"7f912b730f7a704af722002a9a1f806dc3867b3ecece2c8805d2f30b73bb3262","historicalPrefix":"941","state":"ACTIVE"},
+    {"ordinal":112,"file":"wlt-942_captain_cod_historical_write_fence.sql","sha256":"aa313a53a5d5c91e636ccf7da299cf257c875bd890afbcafec0d0bc226ae7ab3","historicalPrefix":"942","state":"ACTIVE"},
+    {"ordinal":113,"file":"wlt-943_captain_cod_ledger_write_fence.sql","sha256":"fb62bcf6359d485121149ba1a65cfa353e555f9a647de8e9361f806dfb7f82a1","historicalPrefix":"943","state":"ACTIVE"}
   ]
 }

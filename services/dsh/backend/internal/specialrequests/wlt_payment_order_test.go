@@ -35,7 +35,7 @@ func TestWltPaymentEventAdvancesProjection(t *testing.T) {
 func TestWltPaymentEventDifferentTerminalOutcomeFailsClosed(t *testing.T) {
 	for _, pair := range [][2]string{
 		{"failed", "captured"},
-		{"expired", "cod_collected"},
+		{"expired", "cod_finalized"},
 		{"captured", "failed"},
 	} {
 		advances, err := wltPaymentEventAdvancesProjection(pair[0], pair[1])

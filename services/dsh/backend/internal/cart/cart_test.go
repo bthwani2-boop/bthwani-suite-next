@@ -5,6 +5,8 @@ import (
 	"errors"
 	"math"
 	"testing"
+
+	"dsh-api/internal/mapproviders"
 )
 
 func TestCalculateDistanceKMSamePoint(t *testing.T) {
@@ -19,6 +21,23 @@ func TestCalculateDistanceKMKnownPair(t *testing.T) {
 	d := calculateDistanceKM(15.3694, 44.1910, 12.7855, 45.0187)
 	if d < 270 || d > 320 {
 		t.Fatalf("expected distance between Sana'a and Aden to be ~270-320km, got %f", d)
+	}
+}
+
+func TestEtaFromRouteNeverFallsBackToDistance(t *testing.T) {
+	minETA, maxETA, reason := etaFromRoute(mapproviders.RouteResponse{
+		DistanceMeters:  300_000,
+		DurationSeconds: 0,
+	}, 15)
+	if minETA != nil || maxETA != nil || reason != "ROUTE_DURATION_UNAVAILABLE" {
+		t.Fatalf("expected unavailable ETA without provider duration, got min=%v max=%v reason=%q", minETA, maxETA, reason)
+	}
+}
+
+func TestEtaFromRouteUsesProviderDuration(t *testing.T) {
+	minETA, maxETA, reason := etaFromRoute(mapproviders.RouteResponse{DurationSeconds: 1800}, 20)
+	if reason != "" || minETA == nil || maxETA == nil || *minETA != 50 || *maxETA != 65 {
+		t.Fatalf("expected provider-backed ETA, got min=%v max=%v reason=%q", minETA, maxETA, reason)
 	}
 }
 

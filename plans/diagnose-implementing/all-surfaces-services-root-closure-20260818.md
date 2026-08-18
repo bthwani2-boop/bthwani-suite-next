@@ -1,4 +1,4 @@
-# AUDIT_PREPARE — All Surfaces / Services Root Closure — 2026-08-18
+# EXECUTE_CLOSE — All Surfaces / Services Root Closure — 2026-08-18
 
 > Temporary diagnosis/execution record only. This file is **not** Product/System Truth and must be deleted only after final proven closure under `EXECUTE_CLOSE`.
 
@@ -6,13 +6,39 @@
 
 - Repository: `bthwani2-boop/bthwani-suite-next`
 - Branch: `b`
-- Phase: `AUDIT_PREPARE`
+- Phase: `EXECUTE_CLOSE`
 - Audit authority entrypoint: `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`
 - Orchestrator package revision inspected: `6`
 - Final read-only audit HEAD before plan creation: `8cb71a76d0e379ab4540ee8f1a67ffdb62a543d1`
+- Current resolved repository HEAD: `0c03ebcbecc06c779281fd34b64eb973d382645b` on branch `b`.
+- The current treatment is intentionally uncommitted; therefore no exact final candidate SHA or source-provenance claim exists yet. The repository HEAD above is the last pinned base, not a claim that it contains the working-tree treatment.
 - Earlier baselines reconciled during this audit: `32dd0d8313ec477de8526ea9a80c542b207e2353`, `273cc39526cc8e7c6422cf1cc842ad9cc7dedd45`, `5d5374f072ebf6721b8c4a06cfb5c55a653260b5`, `8f86656f502c5db8c17b4e9cb725bc1a9635227a`.
-- `AUDIT_PREPARE` rule: no target-system treatment has been executed. This plan creation is the only allowed write in this phase.
-- State after this file is created: `READY_FOR_EXECUTION`, subject to mandatory latest-HEAD re-audit at `EXECUTE_CLOSE`.
+- Historical `AUDIT_PREPARE` note: no target-system treatment had been executed when this plan was created. That phase is now superseded by the execution evidence addendum below.
+- State: `EXECUTE_CLOSE`, with material closure gates still open where exact-candidate, independent approval, native-device, or production-reconciliation evidence is unavailable.
+
+## 0A. EXECUTE_CLOSE treatment and evidence addendum
+
+The following implementation treatment was applied to the current working tree and exercised against the local runtime. These results are evidence for the working tree only until a final candidate is pinned.
+
+| Root / finding | Treatment and current evidence | Closure state |
+|---|---|---|
+| ROOT-01 — parallel COD financial truth | Removed active DSH/WLT collection/remittance routes and contracts; migrated active status readers to `cod_finalized`; regenerated OpenAPI artifacts; added WLT/DSH legacy-status write fences; made historical COD custody/reconciliation relations read-only; rejected new `cash_in_transit` ledger accounts and postings; removed stale capability entries and the obsolete custody invariant test. Runtime migration, WLT/DSH Go tests, contract/manifest/boundary guards, and live negative write proof passed. Live WLT evidence showed zero `cash_in_transit` lines and no custody/reconciliation rows before the fence. DSH `delivery_completed` collector fields remain an operational actor projection, not a financial collect/remit route or liability. | IMPLEMENTED; OPEN pending final-candidate provenance, independent finance reconciliation/approval, and production acceptance evidence. |
+| ROOT-02 — Workforce / Identity provisioning | Existing canonical Workforce→Identity provisioning path remains the sole path; Workforce and Identity full Go tests, workforce contract generation, and backend API binding passed. | SUBSTANTIALLY IMPLEMENTED; OPEN pending same-candidate production/cross-context acceptance and independent evidence. |
+| ROOT-03 — mobile native capability ownership | Native capability ownership remains in app runtime typed adapters; mobile source/Expo/EAS guards and all four Android exports passed. The native verification wrapper cannot run on Windows because `spawnSync pnpm.cmd` returns `EINVAL`; iOS/Xcode evidence is unavailable on Windows. | IMPLEMENTED IN SOURCE; OPEN for native-device/iOS and wrapper evidence. |
+| ROOT-04 — ETA fallback | Removed distance-based ETA approximation; ETA now depends on provider route duration and returns an explicit unavailable reason when duration is unavailable. Cart/mapproviders/http tests passed. | IMPLEMENTED IN SOURCE; OPEN pending full provider failure/recovery journey proof. |
+| FINDING-06 — derived contract/capability drift | Removed stale COD capability operations, regenerated contracts, and passed contract lint, registry drift, service-manifest drift, full-stack boundary, financial boundary, API binding, and migration-manifest gates. | SUBSTANTIALLY REMEDIATED; OPEN pending exact-candidate negative-space recheck. |
+| FINDING-05 — exact candidate evidence | Local runtime readiness is proven (`WLT ready`, `DSH HEALTHY`), but the treatment is uncommitted and runtime source SHA remains the pinned base. | OPEN GATE. |
+| FINDING-07 — governance drift | No governance prose or approval metadata was mutated or self-approved. | HOLD / N/A for execution closure. |
+
+### Verification record
+
+- WLT and DSH: `go test ./...` passed; DSH full-suite proof used the local `DATABASE_URL` required by `internal/partnerfleet`.
+- TypeScript: `pnpm typecheck` passed in both `services/wlt` and `services/dsh` after the final frontend cleanup.
+- Contracts and generated artifacts: DSH/WLT OpenAPI verification, OpenAPI generation, contract lint, registry drift, backend API binding, and mobile contract synchronization passed.
+- Runtime/data: DSH `dsh-1030` and WLT `wlt-940` through `wlt-943` applied successfully; migration-manifest gates passed; WLT and DSH readiness passed after rebuilding the affected runtime profiles.
+- Negative-space/cleanup: active source references to deleted COD operations were removed; remaining `cod_collected`/legacy custody references are confined to immutable historical migrations, while database historical rows remain queryable but are write-fenced.
+- Mobile: four Android Expo exports passed; Windows native-wrapper failure and unavailable iOS proof remain explicitly recorded above.
+- No commit or push was performed. The plan file remains present because the final closure protocol requires every material gate to be proven before its deletion.
 
 ## 1. Resolved canonical Product decisions
 
@@ -364,7 +390,7 @@ Only when every material Root/Finding/Decision/Dependency/Consumer/Migration/Cut
 ## 12. Current readiness declaration
 
 - Material Product decisions required to prepare execution: **RESOLVED**.
-- Target-system mutation in AUDIT_PREPARE: **NONE**.
-- Material roots prepared with canonical treatment: **YES**.
-- Exact candidate production/runtime acceptance: **NOT YET PROVEN** and intentionally deferred to `EXECUTE_CLOSE` verification.
-- Phase result: **READY_FOR_EXECUTION**.
+- Target-system treatment: **EXECUTED** against the local DSH/WLT runtime; migration and readiness evidence is recorded in section `0A`.
+- Material roots have canonical source/data treatments applied: **YES**, with the remaining exact-candidate, independent approval, production reconciliation, and native-device gates explicitly open.
+- Exact candidate production/runtime acceptance: **NOT YET PROVEN** because the current treatment is uncommitted and the runtime source SHA is the pinned base SHA.
+- Phase result: **EXECUTE_CLOSE / OPEN_GATES**. The plan must remain until all material gates are proven closed.

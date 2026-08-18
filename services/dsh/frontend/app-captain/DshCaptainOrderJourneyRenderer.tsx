@@ -9,10 +9,7 @@ import {
 } from './DshCaptainRouteRenderer';
 import { OperationalCaptainExecutionScreen } from './orders/OperationalCaptainExecutionScreen';
 
-export type DshCaptainOrderJourneyRendererProps = Omit<
-  DshCaptainRouteRendererProps,
-  'captainCollectsCod'
-> & {
+export type DshCaptainOrderJourneyRendererProps = DshCaptainRouteRendererProps & {
   readonly setRoute: (route: DshCaptainRoute) => void;
   readonly activeDeliveryStatus: DshDeliveryStatus | '';
 };
@@ -35,7 +32,7 @@ export function DshCaptainOrderJourneyRenderer(
   }
 
   if (props.route !== 'map') {
-    return <DshCaptainRouteRenderer {...props} captainCollectsCod={false} />;
+    return <DshCaptainRouteRenderer {...props} />;
   }
 
   if (offerPending || !props.activeAssignmentId) {

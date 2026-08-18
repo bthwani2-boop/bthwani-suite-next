@@ -74,20 +74,20 @@ func TestGovernedRefundRuntimeDurableCompletionSurfacesOutcomePersistenceFailure
 	}
 }
 
-// TestCompleteGovernedRefundWithProvider_CodCollectedSourceBlockedFromRail
+// TestCompleteGovernedRefundWithProvider_CodFinalizedSourceBlockedFromRail
 // proves the U002-T003 source-aware guard: a refund whose original payment
-// session was funded via cod_collected (cash collected in person, no card
-// provider ever engaged) must never be routed through CashInRail.Refund --
-// there is no provider-side charge to reverse. It must fail closed with
+// session was funded via captain-funded COD finalization must never be routed
+// through CashInRail.Refund -- there is no provider-side charge to reverse.
+// It must fail closed with
 // ErrRefundSourceNotProviderBacked and the provider must never be called.
-func TestCompleteGovernedRefundWithProvider_CodCollectedSourceBlockedFromRail(t *testing.T) {
+func TestCompleteGovernedRefundWithProvider_CodFinalizedSourceBlockedFromRail(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
 	}
 	defer db.Close()
 
-	sessionID := insertTestSession(t, db, "cod_collected", 1200, "YER")
+	sessionID := insertTestSession(t, db, "cod_finalized", 1200, "YER")
 	orderID := fmt.Sprintf("cod-source-order-%d", time.Now().UnixNano())
 	approved := createGovernedRuntimeRefund(t, db, sessionID, orderID, 1200, "cod-source")
 

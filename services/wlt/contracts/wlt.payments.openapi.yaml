@@ -387,7 +387,6 @@ components:
           capture_pending,
           captured,
           cod_pending,
-          cod_collected,
           cod_finalized,
           failed,
           expired,

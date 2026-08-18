@@ -323,6 +323,25 @@ type GovernedServiceabilityResult struct {
 	ExpiresAt     *time.Time `json:"expiresAt,omitempty"`
 }
 
+// etaFromRoute accepts only provider-backed duration. Distance is deliberately
+// not an input to this calculation: a straight-line approximation must never
+// masquerade as a route ETA when the maps provider is unavailable.
+func etaFromRoute(route mapproviders.RouteResponse, prepMinutes int) (*int, *int, string) {
+	if route.DurationSeconds <= 0 {
+		return nil, nil, "ROUTE_DURATION_UNAVAILABLE"
+	}
+	if prepMinutes <= 0 {
+		prepMinutes = 15
+	}
+	routeMinutes := int(math.Ceil(route.DurationSeconds / 60.0))
+	if routeMinutes < 10 {
+		routeMinutes = 10
+	}
+	minETA := prepMinutes + routeMinutes
+	maxETA := minETA + 15
+	return &minETA, &maxETA, ""
+}
+
 func operationalPolicyServiceabilityFailure(decision platformpolicies.OperationalDecision) (string, string) {
 	if len(decision.ReasonCodes) == 0 {
 		return "policy_unavailable", "operational policy denied serviceability"
@@ -462,22 +481,19 @@ func CheckGovernedServiceability(
 			})
 			if routeErr != nil {
 				result.EtaReasonCode = "ROUTE_PROVIDER_UNAVAILABLE"
-			} else if routeResponse.DurationSeconds <= 0 {
-				result.EtaReasonCode = "ROUTE_DURATION_UNAVAILABLE"
 			} else {
-				routeMinutes := int(math.Ceil(routeResponse.DurationSeconds / 60.0))
-				if routeMinutes < 10 {
-					routeMinutes = 10
-				}
 				prepMinutes := 15
 				if decision.SLA.Configured && decision.SLA.MaxPrepMins > 0 {
 					prepMinutes = decision.SLA.MaxPrepMins
 				}
-				minETA := prepMinutes + routeMinutes
-				maxETA := minETA + 15
-				result.EtaMinMinutes = &minETA
-				result.EtaMaxMinutes = &maxETA
-				result.EtaStatus = "available"
+				minETA, maxETA, reason := etaFromRoute(routeResponse, prepMinutes)
+				if reason != "" {
+					result.EtaReasonCode = reason
+				} else {
+					result.EtaMinMinutes = minETA
+					result.EtaMaxMinutes = maxETA
+					result.EtaStatus = "available"
+				}
 			}
 		}
 	}

@@ -20,7 +20,7 @@ func TestCapabilitiesForStatusCoversCanonicalStatuses(t *testing.T) {
 		{"capture_pending", false, false, false, true},
 		{"captured", true, false, false, false},
 		{"cod_pending", false, false, false, false},
-		{"cod_collected", true, false, false, false},
+		{"cod_finalized", true, false, false, false},
 		{"failed", true, true, false, false},
 		{"expired", true, true, false, false},
 		{"provider_result_unknown", false, false, true, false},

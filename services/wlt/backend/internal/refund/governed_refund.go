@@ -23,7 +23,7 @@ var (
 	ErrRefundReconcileEvidence   = errors.New("refund reconciliation requires an evidence note")
 	// ErrRefundSourceNotProviderBacked is returned when a refund's original
 	// payment session was not actually captured through the card provider
-	// (e.g. it was funded via cod_collected, cash collected in person, with
+	// (e.g. it was funded via cod_finalized, with
 	// no provider charge to reverse). Routing such a refund through
 	// CashInRail.Refund would call a provider that never processed the
 	// original payment. This is an explicit blocked state requiring the
@@ -249,7 +249,7 @@ func CreateGovernedRefund(ctx context.Context, db *sql.DB, input GovernedCreateR
 	if input.OperatorContextID != sessionOperatorContext || input.ClientID != sessionClient {
 		return nil, false, ErrRefundReferenceConflict
 	}
-	if sessionStatus != "captured" && sessionStatus != "cod_collected" && sessionStatus != "cod_finalized" {
+	if sessionStatus != "captured" && sessionStatus != "cod_finalized" {
 		return nil, false, ErrSessionNotRefundable
 	}
 	if sessionCurrency == "" {
@@ -590,7 +590,7 @@ func resolveRefundSourceStatus(ctx context.Context, db *sql.DB, paymentSessionID
 // refund's original funding source (U002-T003): only a session that actually
 // reached 'captured' -- meaning its value was captured through the card
 // provider -- can be reversed through that same provider. A session funded
-// through any other terminal path (e.g. cod_collected, cash collected by a
+// through any other terminal path (e.g. cod_finalized,
 // captain with no provider charge behind it) fails closed with
 // ErrRefundSourceNotProviderBacked instead of calling a provider that never
 // processed the original payment.

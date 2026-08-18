@@ -39,7 +39,7 @@ func CapabilitiesForStatus(status string) PaymentSessionCapabilities {
 			OperationInProgress: true,
 			NextAllowedActions:  []string{"refresh_provider_status"},
 		}
-	case "captured", "cod_collected", "cod_finalized":
+	case "captured", "cod_finalized":
 		return PaymentSessionCapabilities{
 			Terminal:           true,
 			NextAllowedActions: []string{},

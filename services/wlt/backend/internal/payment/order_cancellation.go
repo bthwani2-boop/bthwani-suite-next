@@ -60,7 +60,7 @@ func CancelOrderFinancially(db *sql.DB, input GovernedOrderCancellationInput) (*
 			return nil, err
 		}
 		return &CancelForOrderResult{Action: "expired", PaymentSession: session}, nil
-	case "captured", "cod_collected", "cod_finalized":
+	case "captured", "cod_finalized":
 		created, _, err := refund.CreateRefundAtomic(db, refund.CreateRefundInput{
 			PaymentSessionID: input.PaymentSessionID,
 			OrderID:          input.OrderID,

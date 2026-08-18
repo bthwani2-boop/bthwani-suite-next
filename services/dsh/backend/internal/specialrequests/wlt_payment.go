@@ -109,7 +109,7 @@ func wltPaymentEventIdentity(operatorContextID, id, paymentSessionID, wltStatus,
 	wltStatus = strings.TrimSpace(wltStatus)
 	eventID = strings.TrimSpace(eventID)
 	switch wltStatus {
-	case "captured", "cod_collected", "failed", "expired", "authorized", "reference_created", "cod_pending":
+	case "captured", "cod_finalized", "failed", "expired", "authorized", "reference_created", "cod_pending":
 	default:
 		return "", "", fmt.Errorf("%w: unsupported wltStatus %q", ErrInvalid, wltStatus)
 	}
@@ -127,7 +127,7 @@ func wltPaymentEventIdentity(operatorContextID, id, paymentSessionID, wltStatus,
 
 func isWltTerminalStatus(status string) bool {
 	switch strings.TrimSpace(status) {
-	case "captured", "cod_collected", "failed", "expired":
+	case "captured", "cod_finalized", "failed", "expired":
 		return true
 	default:
 		return false
@@ -145,7 +145,7 @@ func wltPaymentEventAdvancesProjection(currentStatus, incomingStatus string) (bo
 		"authorized":        2,
 		"cod_pending":       2,
 		"captured":          3,
-		"cod_collected":     3,
+		"cod_finalized":     3,
 		"failed":            3,
 		"expired":           3,
 	}
@@ -218,7 +218,7 @@ func ApplyWltPaymentEventWithEvent(db *sql.DB, operatorContextID string, id, pay
 			WHERE operator_context_id = $1
 			  AND special_request_id = $2::uuid
 			  AND payment_session_id = $3
-			  AND wlt_status IN ('captured', 'cod_collected', 'failed', 'expired')
+			  AND wlt_status IN ('captured', 'cod_finalized', 'failed', 'expired')
 			ORDER BY received_at
 			LIMIT 1
 			FOR UPDATE`, operatorContextID, id, paymentSessionID).Scan(&existingTerminalEventKey, &existingTerminalStatus)
@@ -303,7 +303,7 @@ func ApplyWltPaymentEventWithEvent(db *sql.DB, operatorContextID string, id, pay
 	lastStatus := wltStatus
 	lastEventAt := time.Now().UTC()
 	update := UpdateInput{lastWltStatus: &lastStatus, lastWltEventAt: &lastEventAt}
-	if (wltStatus == "captured" || wltStatus == "cod_collected") && current.Status == StatusNeedsCustomerInput {
+	if (wltStatus == "captured" || wltStatus == "cod_finalized") && current.Status == StatusNeedsCustomerInput {
 		if current.WorkflowStage == nil || *current.WorkflowStage != "customer_approval" {
 			return nil, false, fmt.Errorf("%w: captured WLT event requires customer_approval stage", ErrConflict)
 		}

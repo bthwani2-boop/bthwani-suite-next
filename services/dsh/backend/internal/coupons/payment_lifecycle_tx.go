@@ -18,7 +18,7 @@ func ApplyPaymentOutcomeTx(
 		return ErrInvalid
 	}
 	switch status {
-	case "captured", "cod_collected":
+	case "captured", "cod_finalized":
 		_, err := tx.ExecContext(ctx, `
 			UPDATE dsh_coupon_redemptions
 			SET reserved_until=GREATEST(reserved_until,NOW()+INTERVAL '24 hours'),

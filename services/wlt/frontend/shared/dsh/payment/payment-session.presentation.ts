@@ -12,7 +12,6 @@ const COPY: Record<WltPaymentSessionStatus, WltPaymentSessionPresentation> = {
   capture_pending: { label: "جارٍ تثبيت التحصيل", description: "التحصيل قيد التنفيذ؛ لا تعِد إرساله.", tone: "warning" },
   captured: { label: "تم الدفع والتحصيل", description: "أكد WLT التحصيل والقيد المالي.", tone: "success" },
   cod_pending: { label: "الدفع عند الاستلام", description: "ينتظر WLT إكمال مسار COD المحكوم.", tone: "info" },
-  cod_collected: { label: "COD مكتمل تاريخيًا", description: "حالة محفوظة للتوافق مع السجلات القديمة.", tone: "success" },
   cod_finalized: { label: "تم إكمال COD", description: "أكد WLT إكمال التعرض الممول من الكابتن وقيده.", tone: "success" },
   failed: { label: "فشل الدفع", description: "أكد المزود فشل العملية.", tone: "danger" },
   expired: { label: "انتهت جلسة الدفع", description: "أغلق WLT الجلسة دون تحصيل.", tone: "info" },

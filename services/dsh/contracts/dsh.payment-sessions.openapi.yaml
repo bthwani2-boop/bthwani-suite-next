@@ -84,7 +84,7 @@ components:
   schemas:
     PaymentStatus:
       type: string
-      enum: [reference_created, pending_provider, authorization_pending, authorized, capture_pending, captured, cod_pending, cod_collected, cod_finalized, failed, expired, provider_result_unknown]
+      enum: [reference_created, pending_provider, authorization_pending, authorized, capture_pending, captured, cod_pending, cod_finalized, failed, expired, provider_result_unknown]
     PaymentSession:
       type: object
       required: [id, operatorContextId, clientId, storeId, paymentMethod, status, providerReference, amountMinorUnits, currency, createdAt, updatedAt]

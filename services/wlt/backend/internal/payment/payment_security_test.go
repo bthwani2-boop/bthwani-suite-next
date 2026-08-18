@@ -15,9 +15,9 @@ func TestPaymentOperationHashBindsOperatorContextSessionAndOperation(t *testing.
 		t.Fatalf("expected sha256 hex hash, got %q", base)
 	}
 	for name, candidate := range map[string]string{
-		"OperatorContext":    paymentOperationHash("OperatorContext-b", "ps-1", "authorize"),
-		"session":   paymentOperationHash("OperatorContext-a", "ps-2", "authorize"),
-		"operation": paymentOperationHash("OperatorContext-a", "ps-1", "capture"),
+		"OperatorContext": paymentOperationHash("OperatorContext-b", "ps-1", "authorize"),
+		"session":         paymentOperationHash("OperatorContext-a", "ps-2", "authorize"),
+		"operation":       paymentOperationHash("OperatorContext-a", "ps-1", "capture"),
 	} {
 		if candidate == base {
 			t.Fatalf("%s change must alter request hash", name)
@@ -89,7 +89,7 @@ func TestLegalAuthoritativePaymentTransitions(t *testing.T) {
 		{"captured", "expired"},
 		{"failed", "captured"},
 		{"expired", "authorized"},
-		{"cod_collected", "captured"},
+		{"cod_finalized", "captured"},
 		{"reference_created", "provider_result_unknown"},
 	}
 	for _, transition := range blocked {
@@ -100,7 +100,7 @@ func TestLegalAuthoritativePaymentTransitions(t *testing.T) {
 }
 
 func TestTerminalPaymentStatusesAreFinal(t *testing.T) {
-	terminal := []string{"captured", "cod_collected", "failed", "expired"}
+	terminal := []string{"captured", "cod_finalized", "failed", "expired"}
 	for _, current := range terminal {
 		for _, next := range append(append([]string{}, terminal...), "reference_created", "authorized", "provider_result_unknown") {
 			if current == next {

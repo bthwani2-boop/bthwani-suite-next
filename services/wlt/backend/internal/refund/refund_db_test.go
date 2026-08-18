@@ -41,7 +41,7 @@ func insertTestSession(t *testing.T, db *sql.DB, status string, amount int64, cu
 	t.Helper()
 	checkoutIntentID := fmt.Sprintf("test-checkout-refund-%d", time.Now().UnixNano())
 	var capturedAt *time.Time
-	if status == "captured" || status == "cod_collected" {
+	if status == "captured" || status == "cod_finalized" {
 		now := time.Now().UTC()
 		capturedAt = &now
 	}
@@ -121,17 +121,16 @@ func TestCreateRefund_SessionNotCaptured_Rejected(t *testing.T) {
 	}
 }
 
-// TestCreateRefund_CodCollected_Allowed verifies cod_collected -- the COD
-// "funds received" terminal state -- is also refundable, not just card
-// captures.
-func TestCreateRefund_CodCollected_Allowed(t *testing.T) {
+// TestCreateRefund_CodFinalized_Allowed verifies captain-funded COD
+// finalization is refundable, not just card captures.
+func TestCreateRefund_CodFinalized_Allowed(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
 	}
 	defer db.Close()
 
-	sessionID := insertTestSession(t, db, "cod_collected", 800, "YER")
+	sessionID := insertTestSession(t, db, "cod_finalized", 800, "YER")
 	orderID := fmt.Sprintf("order-%d", time.Now().UnixNano())
 
 	r, err := CreateRefund(db, CreateRefundInput{
@@ -141,7 +140,7 @@ func TestCreateRefund_CodCollected_Allowed(t *testing.T) {
 		Reason:           "cancelled COD order",
 	})
 	if err != nil {
-		t.Fatalf("expected refund creation to succeed for cod_collected session, got error: %v", err)
+		t.Fatalf("expected refund creation to succeed for cod_finalized session, got error: %v", err)
 	}
 	if r.AmountMinorUnits != 800 {
 		t.Errorf("expected amount 800, got %d", r.AmountMinorUnits)

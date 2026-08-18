@@ -149,6 +149,5 @@ DshWltPaymentSessionEvent:
         - reference_created
         - cod_pending
         - captured
-        - cod_collected
         - failed
         - expired

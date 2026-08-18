@@ -21,7 +21,6 @@ export type CaptainSupportScreenRouterProps = {
   selectedSupportScreen: CaptainSupportRoute;
   onBack: () => void;
   onNavigate: (screenId: CaptainSupportRoute) => void;
-  captainCollectsCod: boolean;
   dshClientId?: string | undefined;
   activeOrderId?: string | undefined;
   onAcceptTask: (orderId: string) => void;
@@ -32,7 +31,6 @@ export function CaptainSupportScreenRouter({
   selectedSupportScreen,
   onBack,
   onNavigate,
-  captainCollectsCod,
   dshClientId,
   activeOrderId,
   onAcceptTask,

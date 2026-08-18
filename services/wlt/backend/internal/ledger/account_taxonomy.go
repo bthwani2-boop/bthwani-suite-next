@@ -51,8 +51,9 @@ var accountTaxonomy = map[string]accountTaxonomyEntry{
 	"provider_clearing":              {Classification: "asset", Category: "asset", NormalBalanceSide: "debit"},
 	"provider_receivable":            {Classification: "asset", Category: "asset", NormalBalanceSide: "debit"},
 	"platform_commission_receivable": {Classification: "asset", Category: "asset", NormalBalanceSide: "debit"},
-	// Corrected by wlt-909: captain-held COD cash awaiting remittance is the
-	// platform's asset, not a liability.
+	// Historical-only account retained so old cash-custody ledger rows remain
+	// correctly readable after the captain-funded COD cutover. New postings are
+	// rejected by PostLedgerTransaction and the database write fence.
 	"cash_in_transit": {Classification: "asset", Category: "asset", NormalBalanceSide: "debit"},
 	// New in wlt-909, for U001-T002.
 	"external_settlement_cash":   {Classification: "asset", Category: "asset", NormalBalanceSide: "debit"},
