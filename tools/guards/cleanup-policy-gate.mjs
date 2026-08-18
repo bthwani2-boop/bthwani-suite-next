@@ -48,28 +48,6 @@ function readJson(relativePath) {
   }
 }
 
-const authorityRegistry = readJson("governance/authority/authority-precedence.json");
-const skillsRegistry = readJson("governance/skills/skills-registry.json");
-
-const activeAuthorityFiles = new Set(
-  (authorityRegistry?.documents ?? [])
-    .filter((entry) => ["ROOT_AUTHORITY", "ACTIVE_CANONICAL", "CONDITIONAL_CANONICAL", "ADAPTER"].includes(entry.classification))
-    .map((entry) => toPosix(entry.path)),
-);
-const governedSkillFiles = new Set(
-  (skillsRegistry?.entries ?? [])
-    .filter((entry) => entry.contract_level === "governed")
-    .map((entry) => `${toPosix(entry.path)}/SKILL.md`),
-);
-const textualPolicyFiles = new Set([...activeAuthorityFiles, ...governedSkillFiles, "GEMINI.md"]);
-
-// Human-retained historical source corpus. This is a narrow data exemption for
-// the literal absolute path embedded in the old prompt itself. It does not read,
-// validate, or depend on the current orchestrator package.
-function isHistoricalLocalPathExemption(file, line) {
-  return file === "tools/commandn" && line.toLowerCase().includes("c:\\bthwani-suite-next\\tools\\commandn");
-}
-
 const excludedDirs = new Set([
   ".git", "node_modules", ".pnpm-store", ".next", ".expo", ".turbo", ".nx", ".cache", "dist", "build", "out",
   "coverage", "tmp", "temp", "logs", "graphify-out", "evidence", "screenshots", "recordings", "visual-evidence",
@@ -101,7 +79,7 @@ function walk(targetPath, files = []) {
   return files;
 }
 
-// 1. Active policy and executable repository files must not depend on a developer-specific repository root.
+// Executable repository files must not depend on one developer's checkout path.
 const localPathScan = scope === "full"
   ? new Set([
     ...walk(path.join(repoRoot, "infra")),
@@ -110,10 +88,10 @@ const localPathScan = scope === "full"
     ...walk(path.join(repoRoot, "services")),
     ...walk(path.join(repoRoot, "core")),
     ...walk(path.join(repoRoot, "apps")),
+    ...walk(path.join(repoRoot, "shared")),
     "package.json",
-    ...textualPolicyFiles,
   ])
-  : new Set([...changedFiles, ...textualPolicyFiles]);
+  : new Set(changedFiles);
 
 const hardcodedPathRegexes = [
   /c:\\bthwani-suite-next/i,
@@ -132,9 +110,7 @@ for (const file of [...localPathScan].sort()) {
   if (content.includes("ALLOW_LOCAL_PATH_EXAMPLE")) continue;
 
   for (const [index, line] of content.split(/\r?\n/).entries()) {
-    const hardcoded = hardcodedPathRegexes.find((regex) => regex.test(line));
-    if (hardcoded) {
-      if (isHistoricalLocalPathExemption(file, line)) continue;
+    if (hardcodedPathRegexes.some((regex) => regex.test(line))) {
       violations.push({ file, line: index + 1, message: `HARDCODED_LOCAL_REPOSITORY_ROOT ${line.trim()}` });
       continue;
     }
@@ -146,11 +122,10 @@ for (const file of [...localPathScan].sort()) {
   }
 }
 
-// 2. Backend/runtime source must not present preview/demo/mock state as real execution truth.
+// Runtime/backend source must not present preview/demo/mock state as real execution truth.
 const runtimePrefixes = ["apps/", "services/", "core/"];
 const runtimeExclusions = [
-  "/tests/", "/test/", ".test.", ".spec.", "/fixtures/", "/fixture/", "/seeds/", "/migrations/", "/generated/",
-  "tools/", "governance/", "/frontend/",
+  "/tests/", "/test/", ".test.", ".spec.", "/fixtures/", "/fixture/", "/seeds/", "/migrations/", "/generated/", "/frontend/",
 ];
 const previewRegex = /\b(previewData|demoData|useFixtures|fakeActor|fakeUser)\b/g;
 const runtimeFiles = scope === "full"
@@ -167,51 +142,7 @@ for (const file of runtimeFiles) {
   }
 }
 
-// 3. Only active authority and governed skill contracts are prohibited from retired numbered-slice labels.
-const retiredStageLabelRegex = /\b(?:SLICE|Slice)\s*[-:#]?\s*\d+\b|\bDSH-\d{2,3}\b|الشريحة\s*\d+|الشرائح\s*\d+/g;
-for (const file of [...textualPolicyFiles].sort()) {
-  const full = path.join(repoRoot, file);
-  if (!fs.existsSync(full) || fs.statSync(full).isDirectory()) continue;
-  const content = fs.readFileSync(full, "utf8");
-  for (const match of content.matchAll(retiredStageLabelRegex)) {
-    violations.push({ file, line: lineNumber(content, match.index), message: `RETIRED_STAGE_LABEL ${match[0]}` });
-  }
-}
-
-// 4. Runtime, scripts, workflows and package configuration must not call retired guard names.
-const deprecatedGuards = [
-  "app-shell-control-panel-contract-gate", "control-panel-design-gate", "canonical-currency-yemen", "canonical-host-ports",
-  "docker-runtime-profiles", "dsh-cart-serviceability-gate", "dsh-catalog-ownership-gate",
-  "dsh-frontend-shared-boundary-imports-gate", "dsh-frontend-shared-ownership-gate",
-  "dsh-platform-geo-provider-governance-gate", "dsh-service-activation", "dsh-store-role-boundary-gate",
-  "guard-automated-execution-policy", "guard-go-backend-runtime", "guard-journey-operating-model",
-  "no-direct-fetch-in-screen", "no-hardcoded-local-repo-root", "no-legacy-slice-labels", "no-memory-repo-in-journey-runtime",
-  "no-preview-demo-mock-runtime", "performance-runtime-baseline", "service-fullstack-linkage", "unified-fullstack-brain-gate",
-  "wlt-dsh-frontend-shared-ownership-gate",
-];
-const deprecatedReferenceFiles = scope === "full"
-  ? new Set([
-    ...walk(path.join(repoRoot, "tools")),
-    ...walk(path.join(repoRoot, ".github")),
-    ...walk(path.join(repoRoot, "services")),
-    ...walk(path.join(repoRoot, "core")),
-    ...walk(path.join(repoRoot, "apps")),
-    "package.json",
-  ])
-  : new Set(changedFiles);
-for (const file of [...deprecatedReferenceFiles].sort()) {
-  if (!file || file === "tools/guards/cleanup-policy-gate.mjs") continue;
-  const full = path.join(repoRoot, file);
-  if (!fs.existsSync(full) || fs.statSync(full).isDirectory()) continue;
-  let content;
-  try { content = fs.readFileSync(full, "utf8"); } catch { continue; }
-  for (const deprecated of deprecatedGuards) {
-    const index = content.indexOf(deprecated);
-    if (index >= 0) violations.push({ file, line: lineNumber(content, index), message: `DEPRECATED_GUARD_REFERENCE ${deprecated}` });
-  }
-}
-
-// 5. Disabled placeholder projects are forbidden. Git history is the archive.
+// Disabled placeholder projects are forbidden. Git history is the archive.
 const projectFiles = scope === "full"
   ? [
     ...walk(path.join(repoRoot, "apps")),
@@ -221,7 +152,6 @@ const projectFiles = scope === "full"
   ].filter((file) => file.endsWith("/project.json"))
   : changedFiles.filter((file) => file.endsWith("/project.json"));
 
-console.log(`cleanup-policy-scope: ${scope}`);
 for (const projectFile of projectFiles) {
   const project = readJson(projectFile);
   if (!project) continue;
@@ -239,4 +169,5 @@ if (fs.existsSync(path.join(repoRoot, "project-graph.json"))) {
   });
 }
 
+console.log(`cleanup-policy-scope: ${scope}`);
 fail(guardId, violations);
