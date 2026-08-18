@@ -58,37 +58,46 @@ const excludedExtensions = new Set([
   "gz", "map", "log", "har", "sqlite", "db", "db-shm", "db-wal", "tsbuildinfo", "apk", "aab", "ipa",
 ]);
 
-function walk(targetPath, files = []) {
-  if (!fs.existsSync(targetPath)) return files;
-  const stat = fs.statSync(targetPath);
-  if (stat.isFile()) {
-    const rel = toPosix(path.relative(repoRoot, targetPath));
-    const ext = path.extname(targetPath).toLowerCase().slice(1);
-    if (!excludedExtensions.has(ext)) files.push(rel);
-    return files;
+let repositoryFilesCache;
+function repositoryFiles() {
+  if (repositoryFilesCache) return repositoryFilesCache;
+  const result = spawnSync("git", ["ls-files", "-z", "--cached", "--others", "--exclude-standard"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    windowsHide: true,
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (result.error || result.status !== 0) {
+    violations.push({
+      file: "tools/guards/cleanup-policy-gate.mjs",
+      line: 0,
+      message: `CLEANUP_INVENTORY_UNRESOLVED ${result.error?.message ?? result.status}`,
+    });
+    repositoryFilesCache = [];
+    return repositoryFilesCache;
   }
-  for (const entry of fs.readdirSync(targetPath, { withFileTypes: true })) {
-    if (entry.isDirectory() && excludedDirs.has(entry.name)) continue;
-    const full = path.join(targetPath, entry.name);
-    if (entry.isDirectory()) walk(full, files);
-    else {
-      const ext = path.extname(entry.name).toLowerCase().slice(1);
-      if (!excludedExtensions.has(ext)) files.push(toPosix(path.relative(repoRoot, full)));
-    }
-  }
-  return files;
+
+  repositoryFilesCache = [...new Set(String(result.stdout || "").split("\0").map(toPosix).filter(Boolean))]
+    .filter((file) => {
+      const parts = file.split("/");
+      if (parts.slice(0, -1).some((name) => excludedDirs.has(name))) return false;
+      const ext = path.posix.extname(file).toLowerCase().slice(1);
+      return !excludedExtensions.has(ext);
+    })
+    .filter((file) => fs.existsSync(path.join(repoRoot, file)))
+    .sort();
+  return repositoryFilesCache;
+}
+
+function filesUnder(...roots) {
+  const prefixes = roots.map((root) => toPosix(root).replace(/^\.\//, "").replace(/\/+$/, ""));
+  return repositoryFiles().filter((file) => prefixes.some((prefix) => file === prefix || file.startsWith(`${prefix}/`)));
 }
 
 // Executable repository files must not depend on one developer's checkout path.
 const localPathScan = scope === "full"
   ? new Set([
-    ...walk(path.join(repoRoot, "infra")),
-    ...walk(path.join(repoRoot, "tools")),
-    ...walk(path.join(repoRoot, ".github")),
-    ...walk(path.join(repoRoot, "services")),
-    ...walk(path.join(repoRoot, "core")),
-    ...walk(path.join(repoRoot, "apps")),
-    ...walk(path.join(repoRoot, "shared")),
+    ...filesUnder("infra", "tools", ".github", "services", "core", "apps", "shared"),
     "package.json",
   ])
   : new Set(changedFiles);
@@ -144,12 +153,7 @@ for (const file of runtimeFiles) {
 
 // Disabled placeholder projects are forbidden. Git history is the archive.
 const projectFiles = scope === "full"
-  ? [
-    ...walk(path.join(repoRoot, "apps")),
-    ...walk(path.join(repoRoot, "services")),
-    ...walk(path.join(repoRoot, "core")),
-    ...walk(path.join(repoRoot, "shared")),
-  ].filter((file) => file.endsWith("/project.json"))
+  ? filesUnder("apps", "services", "core", "shared").filter((file) => file.endsWith("/project.json"))
   : changedFiles.filter((file) => file.endsWith("/project.json"));
 
 for (const projectFile of projectFiles) {

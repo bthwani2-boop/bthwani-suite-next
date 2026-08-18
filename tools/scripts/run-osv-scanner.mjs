@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -35,51 +35,38 @@ const reportRel = ".diagnostics/security/osv-report.json";
 const reportPath = path.join(repoRoot, reportRel);
 fs.mkdirSync(path.dirname(reportPath), { recursive: true });
 
-// One scan produces both the table a reviewer reads and the JSON this script
-// adjudicates, so the two can never disagree about what was found. The scanner
-// is invoked without a shell so repository-controlled filenames cannot become
-// executable command syntax.
-console.log(`Running: osv-scanner ${baseArgs.map((arg) => JSON.stringify(arg)).join(" ")}`);
-let reportedFindings = false;
-try {
-  execFileSync("osv-scanner", [...baseArgs, "--format", "table"], {
-    cwd: repoRoot,
-    stdio: "inherit"
-  });
-} catch {
-  reportedFindings = true;
+// JSON is the single scan result used for both the exit decision and detailed
+// adjudication. OSV-Scanner returns 0 for no findings and 1 for findings; other
+// exit codes are scanner/input failures and must not be mistaken for findings.
+console.log(`Running: osv-scanner ${baseArgs.map((arg) => JSON.stringify(arg)).join(" ")} --format json`);
+const scan = spawnSync("osv-scanner", [...baseArgs, "--format", "json"], {
+  cwd: repoRoot,
+  encoding: "utf8",
+  maxBuffer: 128 * 1024 * 1024,
+  stdio: ["ignore", "pipe", "inherit"]
+});
+if (scan.error) {
+  console.error(`[OSV-SCANNER FAIL] scanner could not start: ${scan.error.message}`);
+  handleCommandFailure(toolId, true);
 }
 
-let reportJson = "";
-try {
-  reportJson = execFileSync("osv-scanner", [...baseArgs, "--format", "json"], {
-    cwd: repoRoot,
-    encoding: "utf8",
-    maxBuffer: 128 * 1024 * 1024,
-    stdio: ["ignore", "pipe", "inherit"]
-  });
-} catch (error) {
-  // osv-scanner exits non-zero whenever it reports findings. execFileSync still
-  // exposes the scanner's stdout on that error, so persist the exact JSON body
-  // without using shell redirection.
-  reportJson = typeof error?.stdout === "string"
-    ? error.stdout
-    : Buffer.isBuffer(error?.stdout)
-      ? error.stdout.toString("utf8")
-      : "";
-}
+const reportJson = String(scan.stdout || "");
 if (reportJson.trim()) {
   fs.writeFileSync(reportPath, reportJson, { encoding: "utf8", mode: 0o600 });
 }
 
-if (!reportedFindings) {
+if (scan.status === 0) {
   console.log("[OSV-SCANNER PASS] no known vulnerabilities in scanned dependencies.");
   process.exit(0);
+}
+if (scan.status !== 1) {
+  console.error(`[OSV-SCANNER FAIL] scanner failed with exit code ${String(scan.status)}`);
+  handleCommandFailure(toolId, true);
 }
 
 let report;
 try {
-  report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
+  report = JSON.parse(reportJson);
 } catch (error) {
   console.error(`[OSV-SCANNER FAIL] findings were reported but the JSON report is unreadable: ${error.message}`);
   handleCommandFailure(toolId, true);
@@ -96,13 +83,15 @@ function moduleImportGraph(goModAbsolutePath) {
   if (importGraphs.has(moduleDir)) return importGraphs.get(moduleDir);
   let graph = null;
   try {
-    const output = execFileSync("go", ["list", "-deps", "./..."], {
+    const output = spawnSync("go", ["list", "-deps", "./..."], {
       cwd: moduleDir,
       encoding: "utf8",
       maxBuffer: 128 * 1024 * 1024,
-      env: { ...process.env, GOWORK: "off" }
+      env: { ...process.env, GOWORK: "off" },
+      windowsHide: true,
     });
-    graph = new Set(output.split("\n").map((line) => line.trim()).filter(Boolean));
+    if (output.error || output.status !== 0) throw output.error || new Error(`exit ${output.status}`);
+    graph = new Set(String(output.stdout || "").split("\n").map((line) => line.trim()).filter(Boolean));
   } catch (error) {
     console.error(`[OSV-SCANNER] go list -deps failed in ${moduleDir}: ${error.message}`);
   }
