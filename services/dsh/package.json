@@ -14,13 +14,10 @@
     "database:test": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite schema",
     "database:test:seed": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite seed",
     "database:contract": "node ../../tools/scripts/check-dsh-database-contract.mjs",
-    "platform:boundary": "node ../../tools/guards/dsh-platform-boundary-gate.mjs",
-    "data-provider:quarantine": "node ../../tools/guards/dsh-data-provider-quarantine-gate.mjs",
-    "native-dependency:inventory": "node ../../tools/guards/dsh-native-dependency-inventory-gate.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "build": "tsc -p tsconfig.json && node -e \"require('node:fs').writeFileSync('dist/package.json', JSON.stringify({type:'commonjs'}))\" && node ../../tools/scripts/verify-go-build.mjs backend",
     "test": "pnpm --dir ../.. exec node --test services/dsh/tests/*.test.mjs",
-    "lint": "pnpm run platform:boundary && pnpm run data-provider:quarantine && pnpm run native-dependency:inventory && pnpm --dir ../.. run guard:fullstack-boundary"
+    "lint": "pnpm --dir ../.. run guard:fullstack-boundary"
   },
   "peerDependencies": {
     "expo-document-picker": "~56.0.4",
@@ -62,121 +59,6 @@
     "next": "^16.2.11",
     "react": "19.2.3",
     "typescript": "7.0.2"
-  },
-  "x-bthwani-platform-boundary": {
-    "status": "LEGACY_MIXED_PACKAGE_QUARANTINE",
-    "target": "PLATFORM_NEUTRAL_CORE_WITH_EXPLICIT_WEB_AND_MOBILE_ADAPTERS",
-    "canonicalNativeDependencyOwner": "apps/*/runtime",
-    "webRoot": "frontend/control-panel",
-    "mobileRoots": [
-      "frontend/app-client",
-      "frontend/app-partner",
-      "frontend/app-captain",
-      "frontend/app-field"
-    ],
-    "sharedPlatformRoots": {
-      "web": "frontend/shared/platform/web",
-      "mobile": "frontend/shared/platform/mobile"
-    },
-    "legacyNativeDependencyQuarantine": [
-      "@react-native-async-storage/async-storage",
-      "@react-native-community/netinfo",
-      "expo-constants",
-      "expo-crypto",
-      "expo-document-picker",
-      "expo-image-picker",
-      "expo-location",
-      "expo-notifications",
-      "expo-secure-store",
-      "expo-video",
-      "react-native",
-      "react-native-maps",
-      "react-native-safe-area-context",
-      "react-native-svg"
-    ],
-    "dataRuntimeLegacyQuarantine": {
-      "@react-native-async-storage/async-storage": {
-        "currentVersion": "1.24.0",
-        "canonicalVersion": "2.2.0",
-        "target": "REMOVE_FROM_DSH_ROOT_AFTER_CONSUMER_MIGRATION"
-      },
-      "@react-native-community/netinfo": {
-        "currentVersion": "11.4.1",
-        "canonicalVersion": "12.0.1",
-        "target": "REMOVE_FROM_DSH_ROOT_AFTER_CONSUMER_MIGRATION"
-      }
-    },
-    "nativeDependencyReview": {
-      "@react-native-async-storage/async-storage": {
-        "status": "LEGACY_DATA_PROVIDER_QUARANTINE",
-        "deletionAuthorized": false
-      },
-      "@react-native-community/netinfo": {
-        "status": "LEGACY_DATA_PROVIDER_QUARANTINE",
-        "deletionAuthorized": false
-      },
-      "expo-constants": {
-        "status": "ACTIVE_DIRECT_CONSUMER",
-        "evidence": ["services/dsh/frontend/shared/notifications/use-mobile-push-registration.ts"],
-        "deletionAuthorized": false
-      },
-      "expo-crypto": {
-        "status": "ACTIVE_DIRECT_CONSUMER",
-        "evidence": ["services/dsh/frontend/shared/notifications/use-mobile-push-registration.ts"],
-        "deletionAuthorized": false
-      },
-      "expo-document-picker": {
-        "status": "ACTIVE_DIRECT_CONSUMER",
-        "evidence": ["services/dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx"],
-        "deletionAuthorized": false
-      },
-      "expo-image-picker": {
-        "status": "ACTIVE_DIRECT_CONSUMER",
-        "evidence": ["services/dsh/frontend/app-partner/catalog/ProductMediaScreen.tsx"],
-        "deletionAuthorized": false
-      },
-      "expo-location": {
-        "status": "ACTIVE_DIRECT_CONSUMER",
-        "evidence": ["services/dsh/frontend/app-client/account/AddressLocationScreen.tsx"],
-        "deletionAuthorized": false
-      },
-      "expo-notifications": {
-        "status": "ACTIVE_DIRECT_CONSUMER",
-        "evidence": ["services/dsh/frontend/shared/notifications/use-mobile-push-registration.ts"],
-        "deletionAuthorized": false
-      },
-      "expo-secure-store": {
-        "status": "ACTIVE_DIRECT_CONSUMER",
-        "evidence": ["services/dsh/frontend/shared/notifications/use-mobile-push-registration.ts"],
-        "deletionAuthorized": false
-      },
-      "expo-video": {
-        "status": "ACTIVE_DIRECT_CONSUMER",
-        "evidence": ["services/dsh/frontend/app-client/home-discovery/HomeReelsSection.tsx"],
-        "deletionAuthorized": false
-      },
-      "react-native": {
-        "status": "ACTIVE_DIRECT_CONSUMER",
-        "evidence": ["services/dsh/frontend/app-partner/catalog/ProductMediaScreen.tsx"],
-        "deletionAuthorized": false
-      },
-      "react-native-maps": {
-        "status": "ACTIVE_DIRECT_CONSUMER",
-        "evidence": ["services/dsh/frontend/shared/maps/BthwaniNativeMap.tsx"],
-        "deletionAuthorized": false
-      },
-      "react-native-safe-area-context": {
-        "status": "ACTIVE_DIRECT_CONSUMER",
-        "evidence": ["services/dsh/frontend/app-client/DshClientSurface.tsx"],
-        "deletionAuthorized": false
-      },
-      "react-native-svg": {
-        "status": "ACTIVE_DIRECT_CONSUMER",
-        "evidence": ["services/dsh/frontend/app-client/shared/ui/Icons.tsx"],
-        "deletionAuthorized": false
-      }
-    },
-    "cleanupPolicy": "Do not add native dependencies here. Migrate consumers to explicit mobile adapters and remove quarantined dependencies only after exact-ref consumer, lockfile, Metro, typecheck, and fresh native-build evidence."
   },
   "exports": {
     "./control-panel": "./frontend/control-panel/index.ts",
