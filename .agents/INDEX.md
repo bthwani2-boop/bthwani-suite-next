@@ -37,8 +37,10 @@ Policies live directly under `.agents/tools/`:
 ## Constraints
 
 - Use the smallest materially sufficient skill/tool set.
-- Do not introduce a registry or validation layer just to describe these files again.
-- Verification guards/workflows exist only for executable code, contracts, data, runtime, security, and executable CI.
-- Exactly one delegated backend owns a bounded work unit.
-- Implementers own bounded edits; the selected orchestrator owns reconciliation, verification, commit, and push.
-- Tools and adapters own no Product Truth or approval.
+- Do not introduce a registry, validation layer, or routing metadata layer just to describe these files again.
+- Prefer compiler, typecheck, lint, tests, builds, database/runtime checks, contract tooling, and security tools directly.
+- Keep custom guards or workflows only when they add unique executable assurance that cannot be obtained more simply.
+- Parallel read-only investigation is allowed when useful.
+- At most one writer may modify an overlapping work unit at a time.
+- When delegation is used, use one integration/push owner for the combined result.
+- Implementers own only their bounded edits; tools and adapters own no Product Truth or approval.
