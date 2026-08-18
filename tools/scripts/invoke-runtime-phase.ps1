@@ -22,6 +22,25 @@ $DshSmokeDiagnosticScript = Join-Path $RepoRoot "tools/scripts/runtime/diagnose-
 $LogRoot = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [System.IO.Path]::GetTempPath() }
 $LogPath = Join-Path $LogRoot "bthwani-runtime-$Action.log"
 $ProfileList = @($Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
+$RuntimeContainerByProfile = @{
+  identity  = "bthwani-identity-api-runtime"
+  workforce = "bthwani-workforce-api-runtime"
+  dsh       = "bthwani-dsh-api-runtime"
+  wlt       = "bthwani-wlt-api-runtime"
+  providers = "bthwani-providers-api-runtime"
+  platform  = "bthwani-platform-control-api-runtime"
+}
+
+function Get-CurrentSourceSha {
+  $sha = (& git -C $RepoRoot rev-parse HEAD 2>$null).Trim()
+  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($sha)) {
+    throw "Unable to resolve current source commit SHA."
+  }
+  return $sha
+}
+
+$CurrentSourceSha = Get-CurrentSourceSha
+$PreparedRuntimeMarkerPath = Join-Path $LogRoot "bthwani-runtime-prepared-$CurrentSourceSha.json"
 
 function Import-CanonicalRuntimeEnvironment {
   if (-not (Test-Path -LiteralPath $script:RuntimeEnvFile -PathType Leaf)) {
@@ -116,6 +135,72 @@ function Invoke-RuntimeBasePhase {
   return [int]$LASTEXITCODE
 }
 
+function Get-RuntimeContainerImageId {
+  param([Parameter(Mandatory = $true)][string]$ContainerName)
+
+  $imageId = (& docker inspect $ContainerName --format "{{.Image}}" 2>$null).Trim()
+  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($imageId)) {
+    throw "Prepared runtime container is not inspectable: $ContainerName"
+  }
+  return $imageId
+}
+
+function Write-PreparedRuntimeMarker {
+  param([Parameter(Mandatory = $true)][string[]]$ProfilesToRecord)
+
+  $imageIds = [ordered]@{}
+  foreach ($profile in $ProfilesToRecord) {
+    if (-not $RuntimeContainerByProfile.ContainsKey($profile)) { continue }
+    $containerName = $RuntimeContainerByProfile[$profile]
+    $imageIds[$profile] = Get-RuntimeContainerImageId -ContainerName $containerName
+  }
+  if ($imageIds.Count -eq 0) {
+    return
+  }
+
+  $marker = [ordered]@{
+    schemaVersion = 1
+    sourceSha = $CurrentSourceSha
+    createdAt = [DateTimeOffset]::UtcNow.ToString("o")
+    profiles = @($ProfilesToRecord)
+    imageIds = $imageIds
+  }
+  $marker | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $PreparedRuntimeMarkerPath -Encoding UTF8
+  Write-Host "Prepared runtime marker: $PreparedRuntimeMarkerPath"
+}
+
+function Assert-PreparedRuntimeMarker {
+  if (-not (Test-Path -LiteralPath $PreparedRuntimeMarkerPath -PathType Leaf)) {
+    throw "Prepared runtime marker is missing for $CurrentSourceSha. Run the scoped runtime:up or runtime:bootstrap-dev phase before smoke."
+  }
+
+  try {
+    $marker = Get-Content -LiteralPath $PreparedRuntimeMarkerPath -Raw | ConvertFrom-Json
+  } catch {
+    throw "Prepared runtime marker is invalid: $PreparedRuntimeMarkerPath"
+  }
+  if ([string]$marker.sourceSha -ne $CurrentSourceSha) {
+    throw "Prepared runtime source SHA mismatch: expected $CurrentSourceSha, got $($marker.sourceSha)"
+  }
+
+  foreach ($profile in @($ProfileList | Where-Object { $RuntimeContainerByProfile.ContainsKey($_) })) {
+    $markerProperty = $marker.imageIds.PSObject.Properties[$profile]
+    if ($null -eq $markerProperty) {
+      throw "Prepared runtime marker does not cover requested profile '$profile'."
+    }
+    $containerName = $RuntimeContainerByProfile[$profile]
+    $running = (& docker inspect $containerName --format "{{.State.Running}}" 2>$null).Trim()
+    if ($LASTEXITCODE -ne 0 -or $running -ne "true") {
+      throw "Prepared runtime container is not running: $containerName"
+    }
+    $currentImageId = Get-RuntimeContainerImageId -ContainerName $containerName
+    if ($currentImageId -ne [string]$markerProperty.Value) {
+      throw "Prepared runtime image mismatch for ${profile}: marker=$($markerProperty.Value), running=$currentImageId"
+    }
+  }
+  Write-Host "Prepared runtime provenance: PASS sourceSha=$CurrentSourceSha"
+}
+
 function Test-TransientPostgresBootstrapRestart {
   if ($Action -ne "up" -or -not (Test-Path -LiteralPath $LogPath -PathType Leaf)) {
     return $false
@@ -149,6 +234,11 @@ if ($Force) { $runtimeParameters.Force = $true }
 try {
   Set-Location -LiteralPath $RepoRoot
 
+  if ($Action -eq "smoke" -and $ProfileList -contains "dsh") {
+    Assert-PreparedRuntimeMarker
+    $runtimeParameters.PreparedRuntime = $true
+  }
+
   if ($Action -eq "catalog-readback") {
     if ($ProfileList -notcontains "dsh") {
       "Catalog readback skipped: DSH profile is not active." | Tee-Object -FilePath $LogPath
@@ -172,6 +262,9 @@ try {
     }
     if ($runtimeExitCode -ne 0) {
       throw "Runtime script action '$Action' failed with exit code $runtimeExitCode"
+    }
+    if ($Action -in @("up", "bootstrap-dev")) {
+      Write-PreparedRuntimeMarker -ProfilesToRecord $ProfileList
     }
   } else {
     "Runtime base phase skipped: no non-WLT profiles remain for action '$Action'." | Tee-Object -FilePath $LogPath

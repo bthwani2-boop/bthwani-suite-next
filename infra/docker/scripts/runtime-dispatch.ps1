@@ -12,7 +12,11 @@ param(
 
   [string]$Service = "",
 
-  [switch]$Force
+  [switch]$Force,
+
+  # The phase wrapper sets this only after a candidate-bound runtime up or
+  # bootstrap-dev has completed. Prepared smoke must not rebuild the DSH image.
+  [switch]$PreparedRuntime
 )
 
 Set-StrictMode -Version Latest
@@ -127,7 +131,12 @@ if ($financialSimulatorsRequested) {
   Invoke-FinancialSimulatorHealthSmoke
 }
 
-Invoke-RuntimeEngine -EngineAction "up" -EngineProfiles "dsh,media"
+if ($PreparedRuntime) {
+  Write-Host "Prepared runtime supplied: skipping duplicate DSH image build"
+  Invoke-RuntimeEngine -EngineAction "smoke" -EngineProfiles "dsh,media"
+} else {
+  Invoke-RuntimeEngine -EngineAction "up" -EngineProfiles "dsh,media"
+}
 Invoke-RuntimeEngine -EngineAction "seed" -EngineProfiles "dsh,media"
 
 $statePath = Join-Path ([System.IO.Path]::GetTempPath()) "bthwani-dsh-smoke-$([Guid]::NewGuid().ToString('N')).json"

@@ -48,6 +48,14 @@
 - Root-correct treatment: accept an explicit optional `storeId` on both self-readback contracts, resolve the authenticated actor's owned store through the canonical DSH object-authorization function, derive the partner from that store, and thread the selected store through frontend controller/screen consumers and bounded journeys. Preserve ambiguity failure when no scope is selected; do not introduce first-store selection or another partner authority.
 - State remains `OPEN` pending contract/client/UI migration, DSH tests, exact-candidate onboarding smoke, and re-audit of all partner self consumers.
 
+### 0.5 Re-audit finding exposed by execution latency — 2026-08-19
+
+- The required sequence `runtime:up` followed by `runtime:smoke` is currently not a single-build sequence for DSH: `tools/scripts/invoke-runtime-phase.ps1` dispatches smoke to `infra/docker/scripts/runtime-dispatch.ps1`, whose DSH branch invokes `runtime.ps1 -Action up -Profiles dsh,media` before seeding and the DSH journeys.
+- That nested `up` executes `docker compose up -d --build` again. On the current candidate the DSH Go build alone took about 206 seconds; the scoped runtime build also spent additional time resolving Docker registry metadata. The interrupted smoke left its child PowerShell/Docker compose process alive until it was explicitly stopped.
+- Root cause is duplicate lifecycle ownership between the explicit candidate-pinning `up` phase and the DSH smoke dispatcher, not a product guard or application runtime loop.
+- Root-correct treatment: preserve the standalone dispatcher contract, but make the phase wrapper pass an explicit prepared-runtime capability to the DSH dispatcher. In prepared mode, the dispatcher must run non-building runtime readiness/migration checks and seed only; it must never invoke `up --build`. The default direct dispatcher smoke path retains its existing self-preparation behavior.
+- This is a runtime orchestration simplification only. No guards, migration scripts, governance files, OpenCode files, or product behavior are deleted. The task remains `OPEN` until the new path passes targeted orchestration tests and the complete scoped smoke/provenance evidence.
+
 This plan **supersedes as executable guidance**:
 
 1. `plans/diagnose-implementing/all-surfaces-services-root-closure-20260818.md`

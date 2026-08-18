@@ -7,6 +7,8 @@ import path from "node:path";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const workflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/ci-runtime.yml"), "utf8");
 const contextualWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/ci.yml"), "utf8");
+const runtimePhase = fs.readFileSync(path.join(repoRoot, "tools/scripts/invoke-runtime-phase.ps1"), "utf8");
+const runtimeDispatch = fs.readFileSync(path.join(repoRoot, "infra/docker/scripts/runtime-dispatch.ps1"), "utf8");
 
 test("DSH runtime profiles bootstrap exactly once before catalog readback and smoke", () => {
   const bootstrap = workflow.indexOf('Invoke-Phase "runtime:bootstrap-dev"');
@@ -26,6 +28,16 @@ test("identity-security includes WLT because local Workforce provisioning prepar
 test("profiles without DSH retain the non-mutating up path", () => {
   assert.match(workflow, /if \(\$requiresDshBootstrap\)[\s\S]*?else \{[\s\S]*?Invoke-Phase "runtime:up"/);
   assert.match(workflow, /-Action up -Profiles \$profiles/);
+});
+
+test("candidate-bound smoke skips the duplicate DSH image build", () => {
+  assert.match(runtimePhase, /PreparedRuntimeMarkerPath/);
+  assert.match(runtimePhase, /Assert-PreparedRuntimeMarker/);
+  assert.match(runtimePhase, /runtimeParameters\.PreparedRuntime = \$true/);
+  assert.match(runtimeDispatch, /\[switch\]\$PreparedRuntime/);
+  assert.match(runtimeDispatch, /if \(\$PreparedRuntime\)[\s\S]*?skipping duplicate DSH image build/);
+  assert.match(runtimeDispatch, /if \(\$PreparedRuntime\)[\s\S]*?Invoke-RuntimeEngine -EngineAction "smoke" -EngineProfiles "dsh,media"/);
+  assert.match(runtimeDispatch, /Invoke-RuntimeEngine -EngineAction "seed" -EngineProfiles "dsh,media"/);
 });
 
 test("aggregate runtime applicability follows the canonical runtime_required decision", () => {
