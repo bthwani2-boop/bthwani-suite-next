@@ -68,13 +68,13 @@ jobs:
   context:
     name: Detect affected code scope
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     outputs:
       base_sha: ${{ steps.scope.outputs.base_sha }}
       head_sha: ${{ steps.scope.outputs.head_sha }}
       full_verification: ${{ steps.scope.outputs.full_verification }}
       full_scope: ${{ steps.scope.outputs.full_scope }}
-      verification_depth: ${{ steps.scope.outputs.verification_depth }}
+      workflow: ${{ steps.scope.outputs.workflow }}
       frontend: ${{ steps.scope.outputs.frontend }}
       mobile: ${{ steps.scope.outputs.mobile }}
       contracts: ${{ steps.scope.outputs.contracts }}
@@ -112,17 +112,16 @@ jobs:
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "24.17.0"
-      - name: Verify contextual router
+      - name: Verify router behavior
         run: |
           node --test tools/scripts/detect-ci-context.test.mjs
           node --test tools/scripts/ci-runtime-bootstrap-policy.test.mjs
-      - name: Classify changed code paths
+      - name: Resolve execution phase and affected scope
         id: scope
         shell: bash
         env:
           EVENT_BEFORE: ${{ github.event.before }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           DISPATCH_MODE: ${{ inputs.mode }}
           DISPATCH_JOURNEY: ${{ inputs.journey }}
           DISPATCH_RUNTIME_PROOF: ${{ inputs.runtime_proof }}
@@ -130,90 +129,70 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          HEAD_SHA="$(git rev-parse HEAD)"
-          BASE_SHA="${PR_BASE_SHA:-${EVENT_BEFORE:-}}"
-          VERIFIED_PUSH_BASE=false
-          SKIP_DUPLICATE_PUSH=false
-          EXECUTION_PHASE="pr"
+          head_sha="$(git rev-parse HEAD)"
+          base_sha="${PR_BASE_SHA:-${EVENT_BEFORE:-}}"
+          phase=pr
+          mode=affected
+          skip_duplicate=false
 
           if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
-            EXECUTION_PHASE="closure"
+            phase=closure
+            mode="${DISPATCH_MODE:-affected}"
           elif [[ "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "master" ]]; then
-            EXECUTION_PHASE="master"
-            if ! SUCCESSFUL_RUN_SHAS="$(
-              gh api --method GET \
-                -H "X-GitHub-Api-Version: 2022-11-28" \
-                "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" \
-                -f branch="${GITHUB_REF_NAME}" \
-                -f event=push \
-                -f status=success \
-                -f per_page=100 \
-                --jq '.workflow_runs[].head_sha'
-            )"; then
-              echo "::error title=CI verification base unavailable::failed to query successful contextual CI runs"
-              exit 1
-            fi
+            phase=master
+            verified_base=""
             while IFS= read -r candidate; do
-              if [[ -z "${candidate}" || "${candidate}" == "${HEAD_SHA}" ]]; then continue; fi
-              if git merge-base --is-ancestor "${candidate}" "${HEAD_SHA}" 2>/dev/null; then
-                BASE_SHA="${candidate}"
-                VERIFIED_PUSH_BASE=true
+              [[ -n "${candidate}" && "${candidate}" != "${head_sha}" ]] || continue
+              if git merge-base --is-ancestor "${candidate}" "${head_sha}" 2>/dev/null; then
+                verified_base="${candidate}"
                 break
               fi
-            done <<< "${SUCCESSFUL_RUN_SHAS}"
+            done < <(gh api --method GET \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" \
+              -f branch="${GITHUB_REF_NAME}" \
+              -f event=push \
+              -f status=success \
+              -f per_page=100 \
+              --jq '.workflow_runs[].head_sha')
+            if [[ -n "${verified_base}" ]]; then base_sha="${verified_base}"; else mode=full; fi
           elif [[ "${EVENT_NAME}" == "push" ]]; then
-            EXECUTION_PHASE="development"
-            BASE_SHA="${EVENT_BEFORE:-}"
-            if ! OPEN_PR_COUNT="$(
-              gh api --method GET \
-                -H "X-GitHub-Api-Version: 2022-11-28" \
-                "/repos/${GITHUB_REPOSITORY}/pulls" \
-                -f state=open \
-                -f head="${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}" \
-                -f per_page=1 \
-                --jq 'length'
-            )"; then
-              echo "::error title=PR deduplication lookup failed::unable to query open pull requests for ${GITHUB_REF_NAME}"
-              exit 1
-            fi
-            if [[ "${OPEN_PR_COUNT}" != "0" ]]; then SKIP_DUPLICATE_PUSH=true; fi
+            phase=development
+            open_pr_count="$(gh api --method GET \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "/repos/${GITHUB_REPOSITORY}/pulls" \
+              -f state=open \
+              -f head="${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}" \
+              -f per_page=1 \
+              --jq 'length')"
+            if [[ "${open_pr_count}" != "0" ]]; then skip_duplicate=true; fi
           fi
 
-          echo "skip_duplicate_push=${SKIP_DUPLICATE_PUSH}" >> "${GITHUB_OUTPUT}"
-          echo "execution_phase=${EXECUTION_PHASE}" >> "${GITHUB_OUTPUT}"
-          if [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
-            BASE_SHA="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${HEAD_SHA}")"
+          if [[ -z "${base_sha}" || "${base_sha}" =~ ^0+$ ]]; then
+            base_sha="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${head_sha}")"
           fi
 
-          CHANGED_FILES="$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}")"
-          VERIFICATION_AUTHORITY_CHANGED="$(printf '%s\n' "${CHANGED_FILES}" | node tools/scripts/verification-requirement.mjs --authority-change)"
-          FULL_VERIFICATION=false
-          FULL_SCOPE=false
-          if [[ "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "master" && "${VERIFIED_PUSH_BASE}" != "true" ]]; then
-            FULL_VERIFICATION=true
-            FULL_SCOPE=true
-          elif [[ "${EVENT_NAME}" == "workflow_dispatch" && "${DISPATCH_MODE:-affected}" == "full" ]]; then
-            FULL_VERIFICATION=true
-            FULL_SCOPE=true
-          elif [[ "${VERIFICATION_AUTHORITY_CHANGED}" == "true" ]]; then
-            FULL_VERIFICATION=true
-            FULL_SCOPE=true
-          fi
-          echo "full_verification=${FULL_VERIFICATION}" >> "${GITHUB_OUTPUT}"
-          echo "full_scope=${FULL_SCOPE}" >> "${GITHUB_OUTPUT}"
-
-          MODE="affected"
-          if [[ "${FULL_SCOPE}" == "true" ]]; then MODE="full"; fi
-          VERIFICATION_DEPTH="affected"
-          if [[ "${FULL_VERIFICATION}" == "true" ]]; then VERIFICATION_DEPTH="full"; fi
-          CI_BASE_SHA="${BASE_SHA}" \
-          CI_HEAD_SHA="${HEAD_SHA}" \
-          CI_MODE="${MODE}" \
-          CI_VERIFICATION_DEPTH="${VERIFICATION_DEPTH}" \
-          CI_EXECUTION_PHASE="${EXECUTION_PHASE}" \
+          echo "skip_duplicate_push=${skip_duplicate}" >> "${GITHUB_OUTPUT}"
+          echo "execution_phase=${phase}" >> "${GITHUB_OUTPUT}"
+          CI_BASE_SHA="${base_sha}" \
+          CI_HEAD_SHA="${head_sha}" \
+          CI_MODE="${mode}" \
+          CI_EXECUTION_PHASE="${phase}" \
           CI_JOURNEY="${DISPATCH_JOURNEY:-}" \
           CI_RUNTIME_PROOF="${DISPATCH_RUNTIME_PROOF:-false}" \
           node tools/scripts/detect-ci-context.mjs
+      - name: Set up Go only for workflow lint fallback
+        if: ${{ steps.scope.outputs.workflow == 'true' && steps.scope.outputs.skip_duplicate_push != 'true' }}
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version: "1.25.7"
+          cache: false
+      - name: Verify changed workflow code
+        if: ${{ steps.scope.outputs.workflow == 'true' && steps.scope.outputs.skip_duplicate_push != 'true' }}
+        run: |
+          node tools/scripts/run-actionlint.mjs
+          node tools/scripts/run-zizmor.mjs
+          node tools/scripts/run-pinact.mjs --verify
       - name: Publish routing summary
         env:
           BASE_SHA: ${{ steps.scope.outputs.base_sha }}
@@ -230,17 +209,17 @@ jobs:
             echo "### Contextual code verification"
             echo "- Base: ${BASE_SHA}"
             echo "- Head: ${HEAD_SHA}"
-            echo "- Execution phase: ${EXECUTION_PHASE}"
+            echo "- Phase: ${EXECUTION_PHASE}"
             echo "- Duplicate push suppressed: ${SKIP_DUPLICATE_PUSH}"
             echo "- Full verification: ${FULL_VERIFICATION}"
-            echo "- Verification tier: ${VERIFICATION_TIER}"
-            echo "- Runtime profile: ${RUNTIME_PROFILE}"
+            echo "- Tier: ${VERIFICATION_TIER}"
+            echo "- Runtime: ${RUNTIME_PROFILE}"
             echo "- Node scope: ${NODE_SCOPE}"
-            echo "- Journey scope: ${JOURNEY_SCOPE:-none}"
+            echo "- Journey: ${JOURNEY_SCOPE:-none}"
           } >> "${GITHUB_STEP_SUMMARY}"
 
   diagnostics:
-    name: Static code diagnostics
+    name: Contract diagnostics
     needs: [context]
     if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.diagnostics_required == 'true' }}
     uses: ./.github/workflows/ci-node-diagnostics.yml
@@ -308,9 +287,9 @@ jobs:
     needs: [context, diagnostics, verification, backends, runtime]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
-      - name: Enforce fail-closed code result
+      - name: Enforce applicable results
         shell: bash
         env:
           CONTEXT_RESULT: ${{ needs.context.result }}
@@ -326,28 +305,23 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "${SKIP_DUPLICATE_PUSH}" == "true" ]]; then
-            printf '%s\n' "duplicate development push suppressed because an open PR owns verification for this branch"
+            echo "development push skipped because an open PR owns verification"
             exit 0
           fi
-          failed=0
           failures=()
           check_result() {
-            local name="$1"
-            local result="$2"
-            local applicable="$3"
-            if [[ "${result}" == "success" ]]; then return 0; fi
-            if [[ "${result}" == "skipped" && "${applicable}" != "true" ]]; then return 0; fi
+            local name="$1" result="$2" applicable="$3"
+            if [[ "${result}" == "success" ]]; then return; fi
+            if [[ "${result}" == "skipped" && "${applicable}" != "true" ]]; then return; fi
             failures+=("${name}:${result}")
-            failed=1
           }
           check_result context "${CONTEXT_RESULT}" true
           check_result diagnostics "${DIAGNOSTICS_RESULT}" "${DIAGNOSTICS_REQUIRED}"
           check_result verification "${VERIFICATION_RESULT}" "${VERIFICATION_REQUIRED}"
           check_result backends "${BACKENDS_RESULT}" "${BACKEND_REQUIRED}"
           check_result runtime "${RUNTIME_RESULT}" "${RUNTIME_REQUIRED}"
-          if [[ "${failed}" -ne 0 ]]; then
-            message="failed or unjustifiably skipped bundles: $(IFS=,; echo "${failures[*]}")"
-            echo "::error title=BThwani CI failed::${message}"
+          if [[ "${#failures[@]}" -ne 0 ]]; then
+            echo "::error title=BThwani CI failed::$(IFS=,; echo "${failures[*]}")"
             exit 1
           fi
-          printf '%s\n' "all required code bundles passed; skipped bundles were non-applicable"
+          echo "all applicable code verification passed"
