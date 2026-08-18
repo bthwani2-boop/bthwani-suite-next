@@ -67,16 +67,19 @@ $scopedActors = @(
     label = (Get-LocalUsername "partner")
     token = (Get-LocalActorToken (Get-LocalUsername "partner"))
     expectedRole = "partner"
+    storeId = "store-test-grocery"
   },
   @{
     label = "provisioned-field"
     token = (Get-ProvisionedWorkforceActorToken -Kind "field" -OperatorToken $operatorToken -DeviceFingerprint "dsh-client-home")
     expectedRole = "field"
+    storeId = "store-1002"
   },
   @{
     label = "provisioned-captain"
     token = (Get-ProvisionedWorkforceActorToken -Kind "captain" -OperatorToken $operatorToken -DeviceFingerprint "dsh-client-home")
     expectedRole = "captain"
+    storeId = "store-1005"
   }
 )
 foreach ($actor in $scopedActors) {
@@ -84,9 +87,10 @@ foreach ($actor in $scopedActors) {
   $headers = @{ Authorization = "Bearer $token" }
   # Store-context is an object-scoped read. Keep the smoke request explicit so
   # a broad actor token can never turn into an implicit parallel scope.
-  $context = Invoke-RestMethod "http://localhost:58080/dsh/store-context?storeId=store-test-grocery" -Headers $headers -TimeoutSec 10
+  $storeId = [Uri]::EscapeDataString([string]$actor.storeId)
+  $context = Invoke-RestMethod "http://localhost:58080/dsh/store-context?storeId=$storeId" -Headers $headers -TimeoutSec 10
   if ($context.actorRole -ne $actor.expectedRole) { throw "wrong actor role for $($actor.label)" }
-  if ([string]::IsNullOrWhiteSpace($context.store.id)) { throw "missing scoped store for $($actor.label)" }
+  if ([string]$context.store.id -ne [string]$actor.storeId) { throw "wrong scoped store for $($actor.label)" }
 }
 
 # Home Discovery: every visible card must resolve to an openable storefront and
