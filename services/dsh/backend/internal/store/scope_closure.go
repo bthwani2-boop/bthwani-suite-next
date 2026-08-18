@@ -36,9 +36,10 @@ func EnsurePartnerOwnerScopeTx(
 	return err
 }
 
-// EnsureFieldAssignedScopeTx is the canonical first-store assignment for the
-// field actor that owns the onboarding draft.
-func EnsureFieldAssignedScopeTx(
+// EnsureFieldStoreAccessScopeTx grants the field actor's DSH store-access
+// authorization for the onboarding draft. This is an authorization scope,
+// not a Workforce operational assignment.
+func EnsureFieldStoreAccessScopeTx(
 	ctx context.Context,
 	tx *sql.Tx,
 	operatorContextID string,

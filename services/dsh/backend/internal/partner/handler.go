@@ -317,7 +317,7 @@ func HandleListStoreCoverageZones(db *sql.DB) http.HandlerFunc {
 }
 
 // GET /dsh/partner/scopes — derives the caller's unique partner from all
-// active DSH store assignments, then lists that partner's stores as scopes.
+// active DSH store-access scopes, then lists that partner's stores as scopes.
 func HandleListPartnerScopes(db *sql.DB, authClient *auth.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID, ok := OperatorContextIDFromContext(r.Context())

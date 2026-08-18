@@ -39,8 +39,9 @@ func publicWorkforceScopeSnapshotFromInternal(scopes *workforceclient.ActorScope
 }
 
 // RegisterWorkforceScopesRoutes exposes Workforce scopes as a read-through
-// operational reference only. Workforce remains the sole owner of
-// assignment/scope mutations.
+// operational reference only. Workforce remains the sole owner of Workforce
+// operational-assignment mutations; DSH remains the sole owner of store-access
+// authorization. This route mutates neither authority.
 //
 // This was previously served by a standalone, unauthenticated server type
 // that took operatorContextId from the client query string -- a

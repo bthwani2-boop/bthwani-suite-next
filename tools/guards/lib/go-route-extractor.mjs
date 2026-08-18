@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
@@ -29,13 +30,42 @@ export function ensureGoRouteExtractor() {
     throw new Error("GO_ROUTE_EXTRACTOR_SOURCE_MISSING tools/guards/extract_routes.go");
   }
 
-  cachedTempDir = fs.mkdtempSync(path.join(os.tmpdir(), "bthwani-go-routes-"));
-  cachedBinaryPath = path.join(cachedTempDir, process.platform === "win32" ? "extract_routes.exe" : "extract_routes");
-  const build = run("go", ["build", "-o", cachedBinaryPath, extractorSource]);
+  const sourceDigest = crypto
+    .createHash("sha256")
+    .update(fs.readFileSync(extractorSource))
+    .update(goVersion.stdout || "")
+    .digest("hex")
+    .slice(0, 24);
+  const cacheDir = path.join(os.tmpdir(), "bthwani-go-routes-cache");
+  fs.mkdirSync(cacheDir, { recursive: true });
+  const cachedFile = path.join(
+    cacheDir,
+    `extract_routes-${process.platform}-${sourceDigest}${process.platform === "win32" ? ".exe" : ""}`,
+  );
+  if (fs.existsSync(cachedFile)) {
+    cachedBinaryPath = cachedFile;
+    return cachedBinaryPath;
+  }
+
+  cachedTempDir = fs.mkdtempSync(path.join(cacheDir, "build-"));
+  const builtFile = path.join(cachedTempDir, process.platform === "win32" ? "extract_routes.exe" : "extract_routes");
+  const build = run("go", ["build", "-o", builtFile, extractorSource]);
   if (build.status !== 0) {
+    fs.rmSync(cachedTempDir, { recursive: true, force: true });
+    cachedTempDir = undefined;
     throw new Error(`GO_ROUTE_EXTRACTOR_BUILD_FAILED ${build.stderr || build.stdout}`);
   }
 
+  try {
+    fs.renameSync(builtFile, cachedFile);
+  } catch (error) {
+    if (!fs.existsSync(cachedFile)) {
+      fs.rmSync(cachedTempDir, { recursive: true, force: true });
+      cachedTempDir = undefined;
+      throw error;
+    }
+  }
+  cachedBinaryPath = fs.existsSync(cachedFile) ? cachedFile : builtFile;
   return cachedBinaryPath;
 }
 

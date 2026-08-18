@@ -5,7 +5,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { resolvePackageManagerInvocation } from "../scripts/lib/package-manager-invocation.mjs";
 
 const repositoryRoot = path.resolve(new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"), "..", "..");
@@ -60,6 +60,7 @@ for (const root of registry.generatedRoots) {
 }
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "bthwani-generated-client-provenance-"));
+const generationJobs = [];
 
 for (const [relativeClient, entry] of registered) {
   const clientPath = path.join(repositoryRoot, relativeClient);
@@ -97,19 +98,45 @@ for (const [relativeClient, entry] of registered) {
     ["exec", "openapi-typescript", contractPath, "--output", outFile],
     process.env,
   );
-  const result = spawnSync(invocation.executable, invocation.args, {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-    shell: false,
-    windowsHide: true,
+  generationJobs.push({ relativeClient, contract: entry.contract, regenerateScript: entry.regenerateScript, materialized, outFile, invocation });
+}
+
+function generateClient(job) {
+  return new Promise((resolve) => {
+    const child = spawn(job.invocation.executable, job.invocation.args, {
+      cwd: repositoryRoot,
+      shell: false,
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout?.on("data", (chunk) => { stdout += chunk; });
+    child.stderr?.on("data", (chunk) => { stderr += chunk; });
+    child.once("error", (error) => resolve({ job, error }));
+    child.once("close", (status, signal) => resolve({ job, status, signal, stdout, stderr }));
   });
+}
+
+const generationResults = [];
+let nextGeneration = 0;
+async function generationWorker() {
+  while (nextGeneration < generationJobs.length) {
+    const job = generationJobs[nextGeneration];
+    nextGeneration += 1;
+    generationResults.push(await generateClient(job));
+  }
+}
+await Promise.all(Array.from({ length: Math.min(3, generationJobs.length) }, () => generationWorker()));
+
+for (const result of generationResults) {
+  const { job } = result;
   if (result.error || result.status !== 0) {
-    failures.push(`openapi-typescript failed for ${entry.contract}: ${result.error?.message ?? result.stderr ?? result.stdout ?? "unknown spawn failure"}`);
+    failures.push(`openapi-typescript failed for ${job.contract}: ${result.error?.message ?? result.stderr ?? result.stdout ?? (result.signal ? `signal ${result.signal}` : "unknown spawn failure")}`);
     continue;
   }
-
-  if (fs.readFileSync(outFile, "utf8") !== materialized) {
-    failures.push(`${relativeClient} is stale relative to ${entry.contract}; rerun pnpm run ${entry.regenerateScript}`);
+  if (fs.readFileSync(job.outFile, "utf8") !== job.materialized) {
+    failures.push(`${job.relativeClient} is stale relative to ${job.contract}; rerun pnpm run ${job.regenerateScript}`);
   }
 }
 

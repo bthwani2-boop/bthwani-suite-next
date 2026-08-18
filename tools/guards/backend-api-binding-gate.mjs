@@ -305,28 +305,20 @@ function operationFile(service, operation) {
 }
 
 function serviceGoRoutes(service) {
-  const files = [service.router];
-  if (service.routerDir) {
-    const dirPath = path.join(repoRoot, service.routerDir);
-    if (fs.existsSync(dirPath)) {
-      for (const entry of fs.readdirSync(dirPath)) {
-        if (!entry.endsWith(".go") || entry.endsWith("_test.go")) continue;
-        const relative = `${service.routerDir}/${entry}`;
-        if (!files.includes(relative)) files.push(relative);
-      }
-    }
-  }
-  const routes = [];
+  // extract_routes.go receives one file as the package entry point and then
+  // discovers every non-test Go file beside it. Calling it once per file
+  // re-parses the whole router package O(n²) and spawns hundreds of Go
+  // processes for the DSH router.
+  const routes = extractGoRoutes(service.router);
   const keys = new Set();
-  for (const file of files) {
-    for (const route of extractGoRoutes(file)) {
-      const key = routeKey(route);
-      if (keys.has(key)) continue;
-      keys.add(key);
-      routes.push({ ...route, file });
-    }
+  const uniqueRoutes = [];
+  for (const route of routes) {
+    const key = routeKey(route);
+    if (keys.has(key)) continue;
+    keys.add(key);
+    uniqueRoutes.push({ ...route, file: service.router });
   }
-  return routes;
+  return uniqueRoutes;
 }
 
 function hasRequiredHeader(operation, headerName) {

@@ -106,9 +106,9 @@ func (e *PublicationGateError) Error() string { return ErrPublicationGate.Error(
 
 func (e *PublicationGateError) Unwrap() error { return ErrPublicationGate }
 
-// DSH is the operational owner of store assignments. Workforce owns actor
-// lifecycle/profile truth, while dsh_store_actor_scopes is the canonical
-// store-access boundary enforced by DSH.
+// DSH owns store-object access authorization. Workforce owns actor
+// lifecycle/profile and operational-assignment truth, while
+// dsh_store_actor_scopes is the canonical DSH store-access boundary.
 func resolveStoreIDsForActor(ctx context.Context, db queryer, actorID, operatorContextID, role string) []string {
 	var storeIDs []string
 	if db != nil {
@@ -155,9 +155,10 @@ func ResolveActorStore(ctx context.Context, db *sql.DB, actor StoreActor) (*DshS
 	return row, scope, err
 }
 
-// ResolveActorStoreForID resolves the actor's canonical DSH store scope for a
-// specific storeID. An empty storeID is only valid when the actor has exactly
-// one active store assignment; no store is selected implicitly from a list.
+// ResolveActorStoreForID resolves the actor's canonical DSH store-access scope
+// for a specific storeID. An empty storeID is only valid when the actor has
+// exactly one active store-access scope; no store is selected implicitly from a
+// list.
 func ResolveActorStoreForID(ctx context.Context, db *sql.DB, actor StoreActor, storeID string) (*DshStoreRow, StoreScope, error) {
 	actorID := strings.TrimSpace(actor.ID)
 	role := strings.TrimSpace(actor.Role)
@@ -191,8 +192,8 @@ func ResolveActorStoreForID(ctx context.Context, db *sql.DB, actor StoreActor, s
 	return row, scope, err
 }
 
-// ResolveActorPartnerID derives a partner-level scope from every active store
-// assignment. Multiple stores belonging to one partner are valid; multiple
+// ResolveActorPartnerID derives a partner-level scope from every active store-
+// access scope. Multiple stores belonging to one partner are valid; multiple
 // partner identities are not silently collapsed into a first-store choice.
 func ResolveActorPartnerID(ctx context.Context, db *sql.DB, actor StoreActor) (string, error) {
 	actorID := strings.TrimSpace(actor.ID)

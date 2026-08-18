@@ -43,12 +43,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          pnpm run guard:no-broken-imports
-          pnpm run guard:api-binding
-          pnpm run guard:backend-api-binding
-          pnpm run guard:service-manifest-drift
-          pnpm run guard:generated-client-provenance
-          pnpm run guard:contract-scope-binding
-          pnpm run guard:openapi-bundle-provenance
-          pnpm run guard:frontend-feature-binding
-          pnpm run guard:runtime-real-bindings
+          node tools/scripts/run-guard-suite.mjs --concurrency 3 \
+            tools/guards/no-broken-imports.mjs \
+            tools/guards/api-binding-gate.mjs \
+            tools/guards/backend-api-binding-gate.mjs \
+            tools/guards/service-manifest-drift-gate.mjs \
+            tools/guards/generated-client-provenance-gate.mjs \
+            tools/guards/contract-scope-binding-gate.mjs \
+            tools/guards/openapi-bundle-provenance-gate.mjs \
+            tools/guards/frontend-feature-binding-gate.mjs \
+            tools/guards/runtime-real-bindings-gate.mjs

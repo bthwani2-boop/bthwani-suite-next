@@ -190,7 +190,7 @@ func createPartnerForOperatorContextTx(
 	p = SanitizePartnerForSurface(p)
 
 	// Partner creation owns its unpublished first store. Store authorization is
-	// closed in this same transaction: only app-field receives an assigned field
+	// closed in this same transaction: app-field receives a field store-access
 	// scope, while an already-bound partner owner receives canonical own access.
 	sRow, err := store.CreateDraftStore(tx, store.CreateDraftStoreInput{
 		PartnerID:       p.ID,
@@ -208,7 +208,7 @@ func createPartnerForOperatorContextTx(
 		return Partner{}, err
 	}
 	if input.CreatedBySurface == "app-field" {
-		if err := store.EnsureFieldAssignedScopeTx(ctx, tx, operatorContextID, sRow.ID, input.CreatedByActorID); err != nil {
+		if err := store.EnsureFieldStoreAccessScopeTx(ctx, tx, operatorContextID, sRow.ID, input.CreatedByActorID); err != nil {
 			return Partner{}, err
 		}
 	}
