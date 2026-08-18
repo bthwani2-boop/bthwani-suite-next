@@ -1,72 +1,68 @@
 ---
 name: bthwani-evidence-gate-router
-version: 2026.07.17-v1
-summary: Select the smallest sufficient canonical evidence scopes and checks without granting approval or closure.
+version: 2026.08.18-v2
+summary: Select the smallest sufficient evidence for the exact engineering claim without creating a stage or guard bureaucracy.
 ---
 
 # bthwani-evidence-gate-router
 
 ## Purpose
 
-Classify the evidence needed for a claim and route it through the canonical evidence scopes in `governance/contracts/decision-vocabulary.json`.
+Map a claim to the smallest set of evidence that can actually prove it.
 
 ## Invoke when
 
-- A task requests verification, readiness, closure, or a decision whose evidence scope is unclear.
-- A protected change requires independent or multi-scope evidence.
-- Another governed skill needs a precise verification route.
+- Verification, readiness, or closure is requested and the necessary evidence is unclear.
+- A material code/runtime/security/finance change spans more than one evidence type.
 
 ## Do not invoke when
 
-- The task is text-only and makes no implementation, readiness, or closure claim.
-- A specialist skill already defines the exact targeted check and no broader decision is requested.
+- A specialist route already defines the exact targeted check and no broader claim is requested.
+- The task is text-only and makes no implementation/runtime claim.
 
-## Authority boundary
+## Evidence scopes
 
-This skill owns evidence-scope routing only. It cannot approve its own evidence, change stage state, accept residual risk, approve product, governance, CI, finance, QA, security, release, production, or final closure.
+Use only scopes materially affected by the claim:
 
-## Canonical evidence scopes
-
-- `static`
-- `product`
+- `static/code`
+- `contracts/data`
 - `runtime`
-- `visual`
-- `qa`
-- `security`
+- `visual/accessibility`
+- `security/privacy`
 - `finance`
-- `isolation`
-- `governance`
 - `ci`
-- `release`
-- `production`
+- `release/production` only when explicitly claimed
 
-`static` is always applicable to repository implementation. Other scopes are derived from declared impact. Tests are evidence inside the scope they exercise; they are not separate closure scopes that bypass Product Truth, runtime, finance, security, or release ownership.
+Tests are evidence for the behavior they exercise; they are not ceremonial stages.
 
-Use `CODE_BASED_LEAN` for ordinary work. Escalate only when claim, risk, impact, or requested stage requires it. Read `governance/guards/guard-assurance.json` before treating a guard result as positive evidence.
+## Routing rule
+
+1. Pin the exact candidate SHA.
+2. Identify the claimed outcome and affected cone.
+3. Select targeted checks with unique assurance.
+4. Add runtime/readback only when runtime truth is affected or claimed.
+5. Add security/finance/visual evidence only when those risks are material.
+6. Expand to full verification only when closure risk or verification-authority changes justify it.
+7. Never consult or create guard-assurance registries, governance validation workflows, SDLC stages, or evidence-manifest bureaucracy.
 
 ## Forbidden
 
-- Using obsolete scope names such as `STATIC_CODE`, `SCHEMA_CONTRACT`, or `RUNTIME_SMOKE` as canonical artifact scopes.
-- Requiring broad builds, screenshots, or evidence packs for every small change.
-- Treating a generated report, declaration, runtime map, seed, fixture, or prior run as proof for a newer commit.
-- Mapping a scope-specific `PASS` directly to `CLOSED_WITH_EVIDENCE`.
-- Omitting `finance` for WLT impact or `isolation` for operator-context, organization, partner, store, actor, or other legally scoped data-boundary impact.
-- Treating a partner subscription or commercial model as independent platform instance evidence.
-- Producing or committing transient evidence by default.
+- Running every guard/tool by default.
+- Requiring screenshots, full builds, or evidence packs for every small change.
+- Treating a generated report, declaration, fixture, or prior run as proof for a newer commit.
+- Treating a scope-specific pass as proof for unrelated scopes.
+- Producing transient evidence artifacts by default.
 
 ## Required output
 
 ```text
 resolved_commit_sha:
 claim:
-impact:
-applicable_scopes:
+affected_scopes:
 selected_checks:
-guard_assurance_classes:
-same_commit_required:
-required_approvals:
+executed_evidence:
 missing_evidence:
 decision:
 ```
 
-Allowed decisions: `PASS`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `BLOCKED_EXTERNAL`, `OUT_OF_SCOPE_FOR_THIS_JOURNEY`, and `PROTOCOL_VIOLATION`.
+Allowed decisions: `PASS`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, and `BLOCKED_EXTERNAL`.
