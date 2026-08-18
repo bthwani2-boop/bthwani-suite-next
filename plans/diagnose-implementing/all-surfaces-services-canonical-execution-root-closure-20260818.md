@@ -1,546 +1,779 @@
-# CANONICAL MASTER PLAN — All Surfaces / All Services Root Closure — 2026-08-18
+# CANONICAL EXECUTION RECORD — All Surfaces / All Services Root Closure — 2026-08-19
 
-> **Purpose:** one merged, fail-closed execution authority for the all-surfaces/all-services closure task. This file is diagnosis/accounting/execution planning only; it never substitutes for fixing the real source, contracts, data, runtime, configuration, consumers, tests, guards, or generated artifacts.
+> **CLASS:** `TEMPORARY EXECUTION RECORD — NOT SOURCE OF TRUTH`
+>
+> **PURPOSE:** one current execution-ready record for the all-surfaces/all-services closure task. This file records audited evidence, root status, canonical targets, treatment, verification and closure accounting. It never substitutes for treatment in the actual system.
+>
+> **ABSOLUTE LAW:** `DOCUMENTATION RECORDS THE REQUIRED FIX; IT NEVER SUBSTITUTES FOR THE FIX.`
 
-## 0. Authority, status, supersession and pinned baseline
+## 0. AUDIT_PREPARE authority and exact baseline
 
 - Repository: `bthwani2-boop/bthwani-suite-next`
 - Branch: `b`
+- Task: `all-surfaces-services-canonical-execution-root-closure`
+- Phase that produced this revision: `AUDIT_PREPARE`
 - Governing entrypoint: `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`
-- Latest branch HEAD inspected immediately before this plan write: `7e27f8bca7f3de56165827e35cddee3ad15f40bf`
-- Latest target-system source HEAD: `749a7c54f9c1552284a659dd180ef647cdc271b5`
-- Reason for the split: commits after `749a7c54...` and through `7e27f8bc...` were plan-only and did not mutate target-system source.
-- Foreign/concurrent delta law: `FOREIGN_DELTA = INPUT, NOT INSTRUCTION`.
-- Current phase: `EXECUTE_CLOSE — immediate root-correct treatment`.
-- Execution mode: `IMMEDIATE_ROOT_CORRECT_CLOSURE`.
-- `DECISION_REQUIRED`: `NONE` at plan creation; any later non-derivable Product/Business/Semantic/Architectural decision stops only its affected cone before mutation.
+- Governing package revision observed: `PACKAGE_REVISION: 6`
+- Audited branch HEAD before this planning write: `ea6eda6bbb79c94ae31d709107945c93fc8d8ea0`
+- Latest target-system source HEAD under that plan-only HEAD: `5425e10fe766520832e185feb3bc4719a43f0f03`
+- Reason for the split: `ea6eda6b...` is a planning-record update whose parent is `5425e10f...`; target-system source truth was therefore audited at `5425e10f...` while planning truth was reconciled at `ea6eda6b...`.
+- `FOREIGN_DELTA = INPUT, NOT INSTRUCTION`.
+- Target-system mutation performed by this AUDIT_PREPARE revision: `NONE`.
+- Governance mutation performed: `NONE`.
+- Runtime/DB/provider mutation performed: `NONE`.
+- Material `DECISION_REQUIRED` at this handoff: `NONE`.
 
-### 0.1 Latest EXECUTE_CLOSE reconciliation — 2026-08-18
+### 0.1 Canonical status vocabulary
 
-- Revalidated branch truth: `HEAD = origin/b = 37984ca2acc6a1ce86279f35cba979859c15adc7` on `b`; working tree was clean before this record update.
-- `8a3b0e365542aab12aa19171503d55ca7792d5f5` is an ancestor. The later `37984ca2a` commit is a foreign/concurrent tooling delta that removes the OpenCode implementer and selects Antigravity; it is preserved and is not an instruction to touch OpenCode files.
-- Static/current-candidate evidence revalidated: readiness boundary tests, fullstack boundary, DSH OpenAPI, generated-client/contract/service/migration drift, runtime bindings, broken imports, mobile synchronization, WLT financial boundary, Identity session, cleanup policy, contract scope binding, OpenAPI provenance, and Captain/Field/DSH typechecks pass.
-- Runtime/DB evidence remains open: existing containers and migration ledgers predate `37984ca2a`; DSH PostgreSQL integration cannot run without the canonical runtime `DATABASE_URL`. No runtime health result is accepted as current-candidate provenance.
-- Root-01 cleanup finding: remove the unused `FieldActivationReadiness` client type and the unconsumed duplicate `Repository.ActivationReadiness` method. Retain the distinct live `CurrentProviderReadiness` and `GovernedActivationReadiness` contracts with their explicit owners and consumers.
-- Current execution state remains `OPEN`; no governance mutation, plan deletion, reset, full runtime, provider runtime, or OpenCode-file mutation is authorized by this reconciliation.
+Findings/roots in this record use only the orchestrator-compatible statuses:
 
-### 0.2 Re-audit finding exposed by current scoped runtime smoke — 2026-08-19
+`OPEN | EVIDENCE/HOLD | FIXED_PENDING_VERIFY | PROVEN_CLOSED | NOT_APPLICABLE_WITH_PROOF`.
 
-- Scoped runtime `up` completed for `identity,workforce,dsh,wlt`; governed migrations for all four services recorded `sourceSha=37984ca2acc6a1ce86279f35cba979859c15adc7` and the selected containers became ready.
-- Scoped smoke passed Identity/Workforce readiness and DSH health/readiness/catalog readback, then failed at partner product-proposal creation with `409 STORE_SCOPE_REQUIRED`.
-- Root cause is contract/consumer drift, not an authorization defect: the live DSH backend correctly resolves `dsh_store_actor_scopes` and rejects an implicit store when the partner has multiple active object scopes; local actor `partner-local-001` currently has eight active `partner` scopes in `local-dsh`, including `store-test-grocery`.
-- Affected consumers were identified: the partner product-proposal adapter/screen, partner proposal readback adapter/screen, the modular catalog contract/generated-client surface, the canonical catalog smoke, the partner multisurface journey, and the request-boundary diagnosis script. The UI already owns the selected `storeId` but the create/readback requests dropped it.
-- Root-correct treatment is explicit query-scope propagation (`storeId`) through contract → generated client → frontend adapters/screens → bounded runtime journeys. DSH authorization remains the sole object-authorization truth; no fallback or implicit first-store selection is introduced.
-- This finding keeps the task `OPEN` until the migrated consumers, DB-backed DSH tests, runtime smoke, provenance, and final negative-space/adversarial checks pass on the final candidate.
+Do not invent parallel status vocabularies such as `PROVEN_OPEN`, `REVALIDATION_REQUIRED`, `OPEN_GATE`, `CONTINUOUS`, `SOURCE_CLOSED`, or similar. A source fix whose final proof is incomplete is `FIXED_PENDING_VERIFY`. A claim blocked on evidence/capability is `EVIDENCE/HOLD`. A real untreated root is `OPEN`.
 
-### 0.3 Re-audit finding exposed by onboarding runtime smoke — 2026-08-19
+### 0.2 Scope / exclusion classification
 
-- Exact-candidate scoped runtime smoke was rerun after the catalog scope treatment on `51a16e7c17686dfb4bd931e98f77a56b22b1bedc`; Identity/Workforce smoke and the complete DSH catalog journey passed, including the explicit partner `storeId` contract path.
-- The next bounded journey failed while issuing a field activation code: `POST /workforce/field-agents/{actorId}/activation-codes` returned `500 WORKFORCE_INTERNAL_ERROR`; the Workforce log recorded `authoritative operator context is required`.
-- Root cause is proven in `OperationalCoreGateMiddleware`: for activation/reactivation paths it calls `Repository.GovernedActivationReadiness` before the downstream `operatorOnly` wrapper, but does not resolve the Identity session and bind its authoritative `operatorContextId` into the request context. The repository therefore correctly fails closed, while the unmapped error is incorrectly surfaced as a generic 500.
-- Root-correct treatment: bind the Identity-owned context in the gate before any repository readiness read; preserve downstream `operatorOnly` authorization and do not accept caller-supplied context headers or add a parallel readiness policy. Add middleware coverage proving the gate reads with the bound Identity context and fails closed when Identity context is absent.
-- This finding is confined to the Workforce activation/provisioning cone and remains `OPEN` pending the middleware treatment, targeted tests, exact-candidate scoped runtime smoke, provisioning idempotency/compensation/linking evidence, and re-audit.
+This record governs the materially proven affected cone of the all-surfaces/all-services closure task, including:
 
-### 0.4 Re-audit finding exposed by partner self-readback — 2026-08-19
+- `core/identity/**`
+- `core/workforce/**`
+- `core/providers/**` where provider/runtime truth is consumed
+- `services/dsh/**`
+- `services/wlt/**`
+- `apps/app-client/**`
+- `apps/app-partner/**`
+- `apps/app-captain/**`
+- `apps/app-field/**`
+- `apps/control-panel/**` or the current control-panel surface path when materially affected
+- contracts/OpenAPI/generated clients
+- package exports/manifests/lockfile
+- DB schemas/migrations/readback
+- runtime/orchestration/CI when materially required
+- `governance/**` as `READ_ONLY` impact evidence unless the governance mutation gate is independently satisfied during execution.
 
-- The exact-candidate smoke reached DSH partner onboarding after the Workforce gate treatment, but partner self activation status failed with `409 STORE_SCOPE_REQUIRED` at `/dsh/partner/activation/status`; the request carried no explicit store scope.
-- Live database evidence shows `partner-local-001` currently has nine active DSH store scopes in `local-dsh`, each linked to a distinct partner object. The DSH backend correctly refuses to collapse those objects to an arbitrary first store/partner.
-- Root cause is the partner self contract/consumer not carrying the selected store: `servePartnerSelfHandler` derives one partner from all active scopes, while `fetchPartnerSelfStatus` and `fetchPartnerSelfReadiness` omit `storeId`; the runtime onboarding smoke has the newly selected `$smokeStoreId` but drops it on both requests.
-- Root-correct treatment: accept an explicit optional `storeId` on both self-readback contracts, resolve the authenticated actor's owned store through the canonical DSH object-authorization function, derive the partner from that store, and thread the selected store through frontend controller/screen consumers and bounded journeys. Preserve ambiguity failure when no scope is selected; do not introduce first-store selection or another partner authority.
-- State remains `OPEN` pending contract/client/UI migration, DSH tests, exact-candidate onboarding smoke, and re-audit of all partner self consumers.
+Classification law:
 
-### 0.5 Re-audit finding exposed by execution latency — 2026-08-19
+`UNKNOWN != NOT_APPLICABLE_WITH_PROOF`
 
-- The required sequence `runtime:up` followed by `runtime:smoke` is currently not a single-build sequence for DSH: `tools/scripts/invoke-runtime-phase.ps1` dispatches smoke to `infra/docker/scripts/runtime-dispatch.ps1`, whose DSH branch invokes `runtime.ps1 -Action up -Profiles dsh,media` before seeding and the DSH journeys.
-- That nested `up` executes `docker compose up -d --build` again. On the current candidate the DSH Go build alone took about 206 seconds; the scoped runtime build also spent additional time resolving Docker registry metadata. The interrupted smoke left its child PowerShell/Docker compose process alive until it was explicitly stopped.
-- Root cause is duplicate lifecycle ownership between the explicit candidate-pinning `up` phase and the DSH smoke dispatcher, not a product guard or application runtime loop.
-- Root-correct treatment: preserve the standalone dispatcher contract, but make the phase wrapper pass an explicit prepared-runtime capability to the DSH dispatcher. In prepared mode, the dispatcher must run non-building runtime readiness/migration checks and seed only; it must never invoke `up --build`. The default direct dispatcher smoke path retains its existing self-preparation behavior.
-- This is a runtime orchestration simplification only. No guards, migration scripts, governance files, OpenCode files, or product behavior are deleted. The task remains `OPEN` until the new path passes targeted orchestration tests and the complete scoped smoke/provenance evidence.
+`NOT_INSPECTED != CLEAN`
 
-### 0.6 Execution correction — effective immediately
+`NO_SEARCH_RESULT != ABSENT`
 
-- This plan is the executable sequence for the target-system work; it is not an approval gate and must not be treated as a reason to remain in audit-only mode.
-- The first immediate target is the highest currently proven root: the duplicate DSH runtime lifecycle in ROOT-15 below. Its affected cone is the phase wrapper, DSH dispatcher, runtime policy test, and exact-candidate scoped smoke/provenance.
-- Do not wait for a repository-wide or all-surface audit before treating the current root. Inspect only the affected cone, make the root-correct change, and verify it in the same execution cycle.
-- Every root follows one bounded cycle: `PIN → AFFECTED-CONE INSPECT → IMPLEMENT → TARGETED VERIFY → RUNTIME/DATA VERIFY WHEN REQUIRED → PIN SHA → RE-AUDIT → CLOSE OR RECORD EXACT BLOCKER`.
-- A plan/status edit is never progress evidence by itself. A root may be marked closed only after the real source/contract/data/runtime consumers and the required positive, negative, failure/recovery, and provenance checks pass.
-- Newly exposed roots are added only when execution evidence proves them. They are re-ranked after the current root cycle; they do not reset the process to a new open-ended audit-preparation phase.
+No project-wide closure may be claimed from a narrower proof set.
 
-### 0.7 Current execution pin — 2026-08-19
+## 1. Retirement of prior parallel planning records
 
-- Branch: `b`; current branch/origin candidate: `5425e10fe766520832e185feb3bc4719a43f0f03`.
-- The candidate contains the prepared-runtime implementation and its focused policy test. The only current working-tree delta is this plan correction.
-- ROOT-15 remains `PROVEN_OPEN` until the exact candidate passes scoped runtime smoke and source/image provenance checks. The passing static policy test is necessary evidence, not closure evidence.
-
-This plan **supersedes as executable guidance**:
+This record fully supersedes these two older planning records:
 
 1. `plans/diagnose-implementing/all-surfaces-services-root-closure-20260818.md`
 2. `plans/diagnose-implementing/all-surfaces-services-post-execution-root-closure-20260818.md`
 
-Those two files remain historical evidence only. They must not be executed independently after this plan exists. No historical status (`OPEN`, `CLOSED`, `IMPLEMENTED`, `READY_FOR_EXECUTION`, or old SHA evidence) is inherited without current-HEAD revalidation.
+They are no longer useful as active files because they contain stale HEADs, superseded states, older root classifications, and execution-readiness assumptions that conflict with current source truth. Their material evidence has been consolidated here and Git history remains the forensic archive.
 
-The plan intentionally merges three evidence generations:
+Keeping them active would create `PARALLEL PLANNING TRUTH` and make a later executor vulnerable to following a stale root/status/order. They must therefore be deleted in the same atomic planning-only commit that writes this record.
 
-- the original systemic root landscape and canonical Product decisions;
-- the post-execution re-audit around COD/Workforce/native/ETA/data/runtime closure;
-- the latest readiness/Field/package/guard audit at target-system HEAD `749a7c54...`.
-
-## 1. Absolute execution law
-
-Execution must follow the orchestrator loop without checklist substitution:
-
-`AUDIT + INSPECT + DIAGNOSE + ANALYZE`
-→ `HIGHEST PROVEN SYSTEMIC ROOT`
-→ `CANONICAL TARGET`
-→ `ROOT-CORRECT TREATMENT`
-→ `MIGRATE/CUTOVER`
-→ `CLEANUP/DELETE`
-→ `VERIFY`
-→ `RE-AUDIT/RE-RANK`
-→ `REPEAT`
-→ `CLOSE`
-
-Mandatory rules:
-
-- Fix the real owner/source/runtime, never the plan file as a substitute.
-- No patch, workaround, silent fallback, symptom-only fix, half migration, permanent compatibility shim, dual write, or parallel truth.
-- A passing build/test is evidence, not closure.
-- A prior passing SHA is not evidence for a later SHA.
-- Never restore obsolete architecture merely to make a test pass.
-- Governance is impact-analyzed but not rewritten from code by default: `UNCERTAINTY = NO GOVERNANCE WRITE`.
-- Every newly exposed material root joins this same plan and is re-ranked by systemic leverage.
-- Time/truncation/task size is never a reason to silently defer a proven material root.
+Historical evidence is not erased by deletion; it remains reachable through Git history. No historical status is inherited without current proof.
 
 ## 2. Canonical owner matrix
 
 ### Identity
-Owns actor identity, authentication, activation, role/surface identity, sessions, trusted identity lifecycle and credential issuance semantics.
+
+Owns actor identity, authentication, trusted session/operator context, roles/permissions as defined by current Identity contracts, credential/activation semantics, and actor lifecycle identity facts.
 
 ### Workforce
-Owns professional/workforce profile, engagement, professional prerequisites, provider operational-core evidence, workforce lifecycle, and workforce operational assignments used for staffing/professional operations.
 
-Workforce may consume Identity lifecycle as a sovereign dependency. Workforce must not become DSH dispatch/store authorization truth or WLT financial truth.
+Owns professional/workforce profile, engagement, professional prerequisites, provider activation evidence, current provider professional readiness, workforce lifecycle, and Workforce operational assignments.
+
+Workforce may consume Identity lifecycle/context. Workforce must not own DSH store-object authorization, dispatch truth, or WLT financial truth.
 
 ### DSH
-Owns commerce and operational journey truth: stores, store-object authorization, catalog, cart, checkout, order, dispatch, delivery, visits, support/rescue/special-request operations, serviceability, operational aggregation, and DSH-owned readiness composition where multiple authorities are required.
 
-`dsh_store_actor_scopes` / the current DSH store-authorization primitives remain the canonical DSH object-authorization family unless current evidence proves a newer canonical owner.
+Owns commerce and DSH operational journey truth: stores, DSH store-object authorization, catalog, checkout/order, dispatch/delivery, field/partner journey orchestration, DSH operational readiness composition, serviceability and DSH operational projections.
+
+`dsh_store_actor_scopes` is a DSH-owned **store-access authorization scope** family. It is not Workforce staffing/operational assignment truth.
 
 ### WLT
-Owns all authoritative financial truth: wallets, balances, ledger, payment, refund, reversal, settlement, payout/withdrawal, commission, reconciliation and financial eligibility/mutation.
 
-### Platform-Control / Providers
-Platform-Control owns only governed live non-secret platform configuration requiring change governance. Provider credentials/configuration/health remain Provider-owned where applicable. Neither may silently absorb domain business truth.
+Owns authoritative financial truth: payment sessions, wallets, balances, ledger, COD custody semantics, capture/finalization, refund/reversal, settlement, reconciliation and financial eligibility.
 
-### App runtimes / surfaces
-Client, Partner, Captain, Field and Control Panel consume canonical owners. They may own presentation, local ephemeral UI state and native implementation composition, but must not create local authentication/readiness/authorization/financial/assignment truth.
+DSH may consume/project bounded WLT facts; it must not become a second financial ledger/writer.
 
-### Required invariants
+### Providers / platform-control
 
-1. `DSH authorization scope != Workforce operational assignment`.
-2. `DEPENDENCY_UNAVAILABLE != BUSINESS_BLOCKED`.
-3. One durable fact has one authoritative writer.
-4. A projection/cache/read model never becomes a second writer/authority.
-5. Runtime source, contract, generated client, package manifest, lockfile, imports and consumers converge in the same cutover.
-6. App runtime owns native capability implementation; shared DSH code owns typed contracts/shared behavior only where justified.
-7. Route ETA is provider-backed duration only unless Product explicitly defines a separately named/provenanced estimate.
-8. WLT is the sole financial ledger/custody truth; DSH may expose bounded operational facades, not a second ledger.
+Provider-backed route/duration truth remains provider-owned. Platform-control owns only governed platform configuration within its current authority; neither silently absorbs domain truth.
 
-## 3. Current root/finding ledger — merged and re-ranked
+### Mobile app runtimes
 
-| ID | Priority | State | Required outcome |
+Client/Partner/Captain/Field runtimes own native-module composition and concrete Expo/React-Native implementation. Shared DSH code owns typed capability contracts/factories/shared presentation where justified, not direct app-runtime native dependency ownership.
+
+### Surfaces
+
+Surfaces consume canonical owner decisions and own presentation/ephemeral UI state only. They must not manufacture authentication, readiness, authorization, assignment or financial truth.
+
+## 3. Required invariants
+
+1. `ONE DURABLE FACT = ONE CANONICAL OWNER + ONE AUTHORITATIVE WRITE PATH`.
+2. `DSH STORE AUTHORIZATION != WORKFORCE OPERATIONAL ASSIGNMENT`.
+3. `DEPENDENCY_UNAVAILABLE != BUSINESS_BLOCKED`.
+4. `PROJECTION/CACHE/FRONTEND STATE != AUTHORITY`.
+5. `CANONICAL CHANGE WITHOUT ALL MATERIAL CONSUMERS MIGRATED = INCOMPLETE`.
+6. `LOCAL FIX != SYSTEM FIX`.
+7. `ONE SURFACE PASS != END-TO-END PASS`.
+8. `BUILD PASS != SYSTEM CORRECTNESS`.
+9. `TEST PASS != ROOT CLOSED`.
+10. `COMMIT EXISTS != VERIFIED CANDIDATE`.
+11. `CURRENT CODE != AUTOMATIC PRODUCT/GOVERNANCE TRUTH`.
+12. `WORKING != JUSTIFIED; COMPLEX != ROBUST`.
+13. Route ETA is provider-backed duration; provider failure yields explicit unavailable state, not a silent geometric approximation.
+14. WLT is the sole money/custody/ledger truth.
+15. Runtime/contract/generated/package/lock/consumer graph must converge in one coherent cutover.
+
+## 4. Current source-treatment evidence ledger
+
+The following source treatments already exist on the current source lineage. EXECUTE_CLOSE must not reimplement them merely because older plans list their roots as open.
+
+| Commit | Proven source treatment | Current proof limit |
+|---|---|---|
+| `8a3b0e365542aab12aa19171503d55ca7792d5f5` | Workforce readiness semantic separation; DSH Field self-readiness; Captain/Field unavailable handling; four mobile public DSH boundaries; package/lock updates; fullstack deep-import guard; stale Docker pending file deletion; related contracts/generated artifacts | source diff/current-tree proof; exact final candidate runtime/full regression still required |
+| `51a16e7c17686dfb4bd931e98f77a56b22b1bedc` | partner catalog/proposal `storeId` propagation through contract/generated/frontend/journey | exact-candidate runtime/DB journey verification still required |
+| `075340518a8d63198c75994b7db2ac4518d4ab15` | authoritative Identity context bound before Workforce readiness gate | exact-candidate activation/provisioning runtime/security proof still required |
+| `9a0fbb962f815588da10666c1a8d0c69508e4b5a` | partner self-readbacks scoped by explicit store | exact-candidate onboarding/readback proof still required |
+| `5425e10fe766520832e185feb3bc4719a43f0f03` | candidate-bound prepared-runtime provenance and elimination of duplicate DSH rebuild during prepared smoke | targeted policy source exists; no current live CI status/PR workflow proof; runtime before/after/provenance evidence still required |
+
+Additional current exact source evidence:
+
+- `core/workforce/backend/internal/workforce/readiness.go` exposes `EvaluateCurrentProviderReadiness` and confines the decision to Identity lifecycle + Workforce professional state.
+- `core/workforce/backend/internal/http/readiness_routes.go` maps Identity/readiness dependency failure to `503 WORKFORCE_READINESS_UNAVAILABLE` instead of business `BLOCKED`.
+- `core/workforce/backend/internal/http/internal_readiness_routes.go` exposes explicitly named governed **activation** readiness for Captain/Field.
+- `core/workforce/backend/internal/workforce/activation_evidence.go` documents that activation evidence extends activation calculation rather than creating a second current-readiness state machine.
+- `services/dsh/backend/internal/http/field_readiness_routes.go` exposes `GET /dsh/field/me/readiness`.
+- all four mobile runtime shells consume public `@bthwani/dsh/app-*` boundaries on the audited source tree.
+- all four mobile runtime manifests declare `@bthwani/dsh: workspace:*` and the current lock graph contains the workspace DSH links.
+- `tools/guards/fullstack-boundary-gate.mjs` contains app-runtime deep-service import rejection.
+- `services/dsh/backend/DOCKERFILE_PENDING.md` is absent on current source truth.
+- `services/dsh/backend/internal/http/dispatch_live_tracking.go` obtains ETA from `mapproviders.Client.Route`; provider failure becomes `provider_unavailable` and leaves ETA absent rather than approximating distance/duration geometrically.
+- `apps/app-client/runtime/src/platform/dsh-capabilities.tsx` imports concrete Expo/React-Native modules and injects them into typed DSH capability interfaces.
+
+## 5. Canonical root ledger — current reclassification
+
+| ID | Priority | Status | Current disposition |
 |---|---:|---|---|
-| ROOT-01 | P0 | PROVEN_OPEN | Eliminate parallel Workforce readiness authorities/contracts and establish one Workforce-owned readiness semantic contract. |
-| ROOT-02 | P0 | PROVEN_OPEN | Complete Captain/Field DSH journey-readiness boundaries; no surface-local business-state synthesis. |
-| ROOT-03 | P0 | PROVEN_OPEN | Complete public package cutover and deterministic lock graph for Captain/Field; zero deep filesystem service imports. |
-| ROOT-04 | P1 | PROVEN_OPEN | Make architecture boundary enforcement mechanically reject app-runtime deep imports into service implementation. |
-| ROOT-05 | P1 | OPEN_AUDIT_ROOT | Prove and clean separation of Workforce operational assignments versus DSH object authorization, with zero dual writer/alias. |
-| ROOT-06 | P0 | REVALIDATION_REQUIRED | Re-prove COD/WLT single financial truth and production/historical reconciliation; no legacy financial writer. |
-| ROOT-07 | P1 | REVALIDATION_REQUIRED | Re-prove Workforce↔Identity provisioning unification, idempotency, compensation, linking and contract/runtime equality. |
-| ROOT-08 | P1 | REVALIDATION_REQUIRED | Re-prove native capability ownership across all four mobile runtimes and shared packages. |
-| ROOT-09 | P1 | REVALIDATION_REQUIRED | Re-prove provider-only ETA semantics and explicit unavailable/recovery behavior. |
-| ROOT-10 | P1 | PROVEN_OPEN | Reconcile runtime/OpenAPI/generated clients/types/capability maps/package exports/lockfile as one derived graph. |
-| ROOT-11 | P2 | PROVEN_OPEN_CLEANUP | Remove stale `services/dsh/backend/DOCKERFILE_PENDING.md` after final consumer proof; a live Dockerfile already exists. |
-| ROOT-12 | P1 | OPEN_GATE | Establish exact-candidate verification provenance, runtime/source SHA parity, and truthful CI/local evidence. |
-| ROOT-13 | P1 | CONTINUOUS | Repository-wide affected-cone cleanup: dead/stale/duplicate/misplaced/legacy/unjustified complexity and misleading authority naming. |
-| ROOT-14 | P1 | CONTINUOUS | Full five-surface / all-service regression, failure, recovery, isolation and adversarial verification. |
-| ROOT-15 | P0 | PROVEN_OPEN | Remove duplicate DSH runtime lifecycle ownership so prepared candidate smoke never rebuilds the runtime; preserve standalone dispatcher preparation. |
+| ROOT-01 | P0 | `FIXED_PENDING_VERIFY` | Workforce `CurrentProviderReadiness` and governed activation readiness are now explicitly separate semantics; verify contract/generated/consumer/runtime equality and zero stale blocker vocabulary. |
+| ROOT-02 | P0 | `FIXED_PENDING_VERIFY` | Captain + Field DSH operational readiness boundaries and unavailable semantics exist; verify both journeys on exact candidate. |
+| ROOT-03 | P0 | `FIXED_PENDING_VERIFY` | Client/Partner/Captain/Field public DSH package cutover + manifest/lock graph exist; verify clean frozen install, Metro/Expo/typecheck and no hidden deep imports. |
+| ROOT-04 | P1 | `FIXED_PENDING_VERIFY` | fullstack boundary guard contains deep app-runtime import enforcement; verify negative fixture can falsify regression. |
+| ROOT-05 | P0 | `OPEN` | DSH store-access authorization is materially separated from Workforce assignments, but current DSH naming/commentary still uses assignment terminology in places; remove semantic aliasing and prove zero dual writer/ambiguous owner. |
+| ROOT-06 | P0 | `EVIDENCE/HOLD` | COD/WLT source fences exist, but current production/historical reconciliation and exact-candidate migration/runtime proof are not available from this read-only audit. |
+| ROOT-07 | P1 | `FIXED_PENDING_VERIFY` | Workforce→Identity governed provisioning source carries Workforce actor ID and trusted operator context; verify idempotency/compensation/linking/current contract/runtime. |
+| ROOT-08 | P1 | `FIXED_PENDING_VERIFY` | native module composition is in app runtime and shared DSH is typed capability boundary; verify all four runtimes/device/platform behavior where material. |
+| ROOT-09 | P1 | `FIXED_PENDING_VERIFY` | ETA source uses provider route duration and explicit unavailable state; verify runtime failure/recovery/consumer semantics and zero hidden approximation elsewhere in affected cone. |
+| ROOT-10 | P1 | `FIXED_PENDING_VERIFY` | major OpenAPI/generated/package/capability cutovers exist; exact-candidate drift/contract/runtime graph verification remains. |
+| ROOT-11 | P2 | `FIXED_PENDING_VERIFY` | stale `DOCKERFILE_PENDING.md` is removed; verify zero references and active Docker/runtime path. |
+| ROOT-12 | P1 | `FIXED_PENDING_VERIFY` | partner catalog/proposal explicit `storeId` source cutover exists at `51a16e7c...`; verify DB-backed journey. |
+| ROOT-13 | P1 | `FIXED_PENDING_VERIFY` | Workforce gate trusted Identity context source treatment exists at `075340518...`; verify activation/provisioning + negative context paths. |
+| ROOT-14 | P1 | `FIXED_PENDING_VERIFY` | partner self-readback explicit store scoping exists at `9a0fbb962...`; verify onboarding/readback ambiguity and authorization. |
+| ROOT-15 | P1 | `FIXED_PENDING_VERIFY` | duplicate DSH prepared-smoke rebuild source treatment exists at `5425e10f...`; do **not** reimplement; prove candidate provenance and comparable before→after execution cost without assurance loss. |
 
-No row may be closed by editing its status here. Closure requires proof in the real system on the final candidate.
+The former plan's `ROOT-12 exact candidate`, `ROOT-13 continuous cleanup`, and `ROOT-14 full regression` were not causal roots. They are reclassified below as **closure gates/obligations** to prevent root-accounting distortion.
 
-## 4. ROOT-01 — Workforce readiness: eliminate parallel semantic authorities
+## 6. ROOT-05 — first actionable implementation root
 
-Current source contains two materially different Workforce readiness shapes/paths:
+### Problem
 
-- `Service.EvaluateReadiness(...)` / `ReadinessGate`: `ALLOWED|BLOCKED` + Workforce-owned `blockerReasons`, with Identity dependency outage returned as `ErrReadinessDependencyUnavailable`.
-- `Repository.GovernedActivationReadiness(...)` / internal captain+field routes: `ready/isActive + missing`, based on provider operational-core activation evidence.
+The source architecture materially distinguishes:
 
-This is not automatically wrong merely because two endpoints exist, but it is a **proven parallel-semantic risk** until the responsibilities are made explicit and non-overlapping. Public OpenAPI/frontend mirrors also still carry stale cross-domain blocker vocabulary.
+- Workforce-owned staffing/professional operational assignments; and
+- DSH-owned store-object access authorization in `dsh_store_actor_scopes`.
+
+`services/dsh/database/migrations/dsh-990_workforce_assignment_cleanup.sql` explicitly preserves `dsh_store_actor_scopes` because it is DSH authorization, while removing retired DSH-local Workforce-like assignment state. `services/dsh/backend/internal/http/workforce_scopes.go` exposes Workforce assignment/scope read-through with Workforce as mutation owner.
+
+However, `services/dsh/backend/internal/store/governance.go` and related naming/commentary still use assignment-oriented terminology for the DSH authorization family. That semantic alias is dangerous because it can cause future code/agents to treat authorization and Workforce assignment as one fact or recreate a parallel writer.
+
+`services/dsh/backend/internal/fieldassignment/**` is a separate DSH journey/task-assignment concept for field onboarding; it must remain explicitly distinct from Workforce staffing assignment and DSH store authorization.
 
 ### Canonical target
 
-- Define one explicit Workforce-owned professional/activation readiness model, or explicitly separate two uniquely named concepts with non-overlapping invariants and consumers.
-- No Workforce reason may claim DSH dispatch/store authorization or WLT finance truth.
-- Identity dependency failure is an error/unavailable state, never a normal Workforce business denial.
-- Public API, internal service API, OpenAPI, generated clients, frontend mirrors and tests must express the same semantic ownership.
-- Remove stale cross-domain blocker reasons only after every consumer is migrated.
+Use three unambiguous concepts:
+
+1. **Workforce operational assignment** — Workforce-owned staffing/professional assignment truth.
+2. **DSH store-access authorization scope** — DSH-owned object-access authorization (`dsh_store_actor_scopes`).
+3. **DSH field onboarding task assignment** — DSH-owned journey/task work allocation where that feature is still proven live.
+
+No alias, API/type/comment/symbol/table interpretation may imply these are interchangeable.
 
 ### Required treatment
 
-1. Inventory every readiness evaluator, route, type, reason code, caller, generated artifact, test, dashboard/surface and storage/read-model dependency.
-2. Build a responsibility matrix: `professional activation`, `professional current readiness`, `DSH operational start-work readiness`, `financial eligibility`.
-3. Collapse duplicate Workforce logic or rename/separate only where two concepts are genuinely required.
-4. Make internal DSH consumption use the canonical Workforce service contract rather than a second repository-only policy if both express the same decision.
-5. Update OpenAPI status/error contracts, including explicit 503 dependency-unavailable behavior.
-6. Regenerate clients/types and migrate all consumers.
-7. Negative-space prove stale blocker vocabulary, aliases and duplicate evaluators are gone or uniquely justified.
+EXECUTE_CLOSE must begin here unless a newer HEAD proves a materially higher root:
 
-## 5. ROOT-02 — DSH operational readiness: Captain and Field
+1. inventory all current writers/readers/contracts/types/comments/tests for the three concepts;
+2. prove exact authoritative writer for each;
+3. rename/move/reword ambiguous DSH authorization symbols/comments/contracts where needed;
+4. preserve persisted table compatibility only when real migration cost requires it; internal semantic naming should still become explicit;
+5. remove dead aliases/helpers/read paths that imply Workforce assignment ownership in DSH;
+6. preserve `dsh_store_actor_scopes` as authorization unless current direct evidence disproves that owner;
+7. preserve DSH field-onboarding task assignment only if live owner/consumer/value remain proven;
+8. update affected tests/contracts/generated artifacts/consumers in the same cutover;
+9. prove zero dual writer and zero caller-supplied authorization authority;
+10. negative-space search for `assignment` terminology that actually means store authorization and disposition each material occurrence.
 
-### Captain
+### Blast radius
 
-Current DSH owns `GET /dsh/captain/me/readiness` and composes Workforce + DSH dispatch + WLT-backed financial eligibility. Preserve this owner direction.
+At minimum re-evaluate:
 
-Required closure:
+- `services/dsh/backend/internal/store/**`
+- `services/dsh/backend/internal/http/workforce_scopes.go`
+- DSH authorization middleware/helpers/media/ratings/support/partner consumers of store scopes
+- `services/dsh/backend/internal/fieldassignment/**`
+- DSH migrations/contracts/tests referring to these concepts
+- Workforce assignment contracts/read-through consumers
+- control-panel/partner/field consumers if exposed naming or behavior changes
+- generated clients/types
+- security/IDOR/object-scope tests
+- governance impact as read-only unless its mutation gate is separately satisfied.
 
-- prove backend contract and frontend type/client equality;
-- preserve `503 CAPTAIN_READINESS_UNAVAILABLE` for unverifiable sovereign dependencies;
-- no surface-local reclassification of outage into business denial;
-- reason vocabulary must be typed/stable and presentation mapping must not become a second policy;
-- app unavailable UI must have an actual retry/recovery path, not text instructing retry without a retry action;
-- stale UI state must not allow protected work to render after readiness becomes invalid.
+### Verification
 
-### Field
+- exact writer inventory for each concept;
+- positive/negative DSH store authorization tests;
+- ambiguity/no-first-store behavior;
+- Workforce assignment read-through and mutation-owner proof;
+- field onboarding task semantics if retained;
+- IDOR/operator-context/actor isolation;
+- contract/generated drift;
+- zero material misleading alias/reference;
+- runtime readback where required.
 
-Current Field has an internal semantic primitive but no single public `GET /dsh/field/me/readiness` boundary, while app-field deep-couples into DSH/Workforce internals and can synthesize `BLOCKED/ELIGIBILITY_UNAVAILABLE` on failure.
+## 7. ROOT-01 — Workforce readiness semantics
 
-Required closure:
+Status: `FIXED_PENDING_VERIFY`.
 
-1. Define the minimum DSH Field start-work/readiness aggregate using existing canonical primitives; do not create a second policy engine.
-2. Expose one public self-readiness API if current exact audit confirms this is the minimum correct application boundary.
-3. Missing assignment/business prerequisite = business denial.
-4. Workforce/DSH dependency outage = unavailable/503.
-5. App-field consumes only the DSH public boundary and never synthesizes owner decisions.
-6. Rename/remove misleading `enforceFieldReadinessGate`-style wrappers/comments if they only perform role checks.
-7. Verify Field profile/readiness/assignment/visit/store-operation journeys end-to-end.
+Current target model:
 
-## 6. ROOT-03 — package/public-boundary and lockfile cutover
+- `CurrentProviderReadiness` = current Workforce professional-readiness decision.
+- `GovernedActivationReadiness` = activation/provisioning prerequisite evidence.
+- DSH Captain/Field operational readiness = DSH-owned composition of required authorities.
+- WLT financial eligibility remains WLT-owned.
 
-Proven current defects:
+Required EXECUTE_CLOSE action: **verify, do not redesign by default**.
 
-- `apps/app-captain/runtime/package.json` declares `@bthwani/dsh: workspace:*`, but the `apps/app-captain/runtime` importer in `pnpm-lock.yaml` does not contain `@bthwani/dsh`.
-- app-field still uses deep relative filesystem imports into `services/dsh` and lacks a declared equivalent public DSH package dependency/export path.
+Verification must prove:
 
-### Canonical target
+- public Workforce runtime/OpenAPI/generated/client types match exactly;
+- no stale DSH/WLT blocker reason remains in Workforce current-provider contract;
+- dependency unavailable yields 503/error, not business BLOCKED;
+- internal activation consumers consume only activation semantics;
+- no duplicate current-readiness evaluator or alternate authoritative writer is reachable;
+- exact-candidate tests and affected runtime journeys pass.
 
-- Runtime shells import only public package boundaries such as `@bthwani/dsh/app-captain` and the minimum justified `@bthwani/dsh/app-field`.
-- Every workspace import is declared in its manifest and represented in the lockfile.
-- Clean checkout + frozen install + TypeScript + Metro/Expo resolution all succeed without existing `node_modules` masking defects.
-- No tsconfig/Metro path hack exists solely to bypass a missing package boundary.
+If contradiction is found, reopen only the affected semantic cone and treat the proven root; do not restore the old parallel model.
 
-### Treatment order
+## 8. ROOT-02 — DSH Captain/Field operational readiness
 
-1. Complete exact import inventory for all four mobile apps and Control Panel.
-2. Export the minimum missing public DSH boundaries; do not export arbitrary internals.
-3. Declare dependencies in consuming package manifests.
-4. Migrate deep imports to public exports.
-5. Regenerate `pnpm-lock.yaml` from manifests using the repository-canonical package-manager flow.
-6. Inspect lock diff; no unrelated package churn is accepted without cause.
-7. Prove `pnpm install --frozen-lockfile` (or repository-canonical equivalent) from a clean dependency state.
-8. Remove obsolete path/include/Metro workarounds only after resolution proof.
-9. Run app-specific typecheck/test/build/export and package/source ESM-resolution parity checks.
+Status: `FIXED_PENDING_VERIFY`.
 
-Forbidden: deleting the lockfile, using a non-frozen bypass as closure evidence, or relying on pre-existing `node_modules`.
+Source target exists:
 
-## 7. ROOT-04 — mechanically enforce the architecture boundary
+- Captain: DSH operational aggregate consumes Workforce activation/professional evidence plus DSH dispatch and WLT financial truth as applicable.
+- Field: public `GET /dsh/field/me/readiness` boundary exists and app-field consumes the DSH boundary.
+- unavailable is distinct from blocked; surface retry/recovery paths exist in source treatment.
 
-The existing `tools/guards/fullstack-boundary-gate.mjs` does not currently reject the exact deep app-runtime → service-implementation traversal proven in app-field.
+Verify:
 
-Required treatment:
+- Captain and Field success/business-denied/unavailable/malformed/stale/retry/recovery;
+- no surface-local synthesis of `BLOCKED` for dependency failure;
+- no direct app-runtime deep service imports;
+- no raw blocker code leaks where a user-facing mapping is required;
+- exact contract/runtime/client equality;
+- authorization and actor isolation.
 
-- extend the existing guard, rather than adding an overlapping second owner;
-- forbid app runtimes from deep-importing `services/dsh/frontend/**` implementation paths;
-- allow the intended public package exports;
-- add focused negative fixtures/tests proving forbidden traversal fails;
-- re-run all existing boundary cases to prevent regressions.
+## 9. ROOT-03 / ROOT-04 / ROOT-10 — package, boundary and derived graph
 
-## 8. ROOT-05 — Workforce assignments vs DSH authorization scopes
+Statuses: `FIXED_PENDING_VERIFY`.
 
-Canonical split is already evidenced:
+Current source target:
 
-- Workforce operational assignments = staffing/professional operational assignment truth.
-- DSH store/service-area authorization = DSH object authorization truth.
+- `@bthwani/dsh/app-client`
+- `@bthwani/dsh/app-partner`
+- `@bthwani/dsh/app-captain`
+- `@bthwani/dsh/app-field`
+- `@bthwani/dsh/mobile-capabilities`
 
-Execution must still prove the entire writer/reader graph:
+The four mobile manifests declare the DSH workspace dependency; the current lock graph contains DSH workspace links; DSH package exports the public boundaries; the fullstack guard rejects app-runtime deep service imports.
 
-1. enumerate tables/migrations/repos/routes/services/jobs/UI forms/generated clients for both meanings;
-2. classify each as owner, projection, compatibility, stale, or duplicate;
-3. prove no Workforce assignment by itself authorizes a DSH object;
-4. prove no DSH authorization row is being used/written as workforce staffing truth;
-5. remove surviving assignment-era DSH writers/tables/routes/aliases only after consumer proof;
-6. preserve audit/history only where required and make it immutable/non-authoritative;
-7. verify operator context, role, scope and IDOR/permission negative paths.
+Required verification:
 
-## 9. ROOT-06 — COD/WLT financial single truth revalidation
+1. clean/frozen workspace install;
+2. package manifest ↔ lockfile equality;
+3. TypeScript/typecheck for all affected packages/surfaces;
+4. Metro/Expo resolution for all four mobile runtimes;
+5. fullstack boundary gate PASS;
+6. explicit negative fixture proves a deep service import fails the guard;
+7. zero hidden relative imports into `services/dsh/frontend/**` from app runtimes;
+8. OpenAPI/generated client drift guards;
+9. capability-map/runtime bindings;
+10. no stale exports/aliases/dependencies after cutover.
 
-Historical treatment removed/fenced active legacy captain COD collection/remittance/custody paths. This must be re-proven on current HEAD and the governed runtime/data environment.
+## 10. ROOT-06 — WLT/COD single financial truth and historical reconciliation
 
-Required verification/treatment if any gap remains:
+Status: `EVIDENCE/HOLD`.
 
-- WLT remains sole financial writer/ledger owner;
-- no DSH/WLT legacy `collect/remit`, `cash_in_transit`, old custody or `cod_collected` writer can create new truth;
-- current canonical lifecycle covers reserve/authorization/finalization/release/deduct/refund/reversal/settlement/reconciliation/idempotency;
-- commission/settlement/read models do not revive legacy status semantics;
-- migrations are ordered/applied and legacy writes fail closed;
-- historical rows reconcile; no orphan/double-post/unbalanced/refund/custody discrepancy survives;
-- DSH only exposes operational evidence/facades and never becomes a second financial ledger.
+Current exact source fences verified during this audit:
 
-Production/data evidence that is unavailable must be labeled unavailable; it cannot be represented as proven green.
+- `services/wlt/database/migrations/wlt-940_captain_cod_legacy_write_fence.sql`
+- `services/wlt/database/migrations/wlt-941_captain_cod_refund_write_fence.sql`
+- `services/wlt/database/migrations/wlt-942_captain_cod_historical_write_fence.sql`
+- `services/wlt/database/migrations/wlt-943_captain_cod_ledger_write_fence.sql`
+- `services/dsh/database/migrations/dsh-1030_captain_cod_legacy_write_fence.sql`
 
-## 10. ROOT-07 — Workforce ↔ Identity provisioning revalidation
+`wlt-940` preserves historical `cod_collected` rows for reconciliation while preventing the live payment-session state machine from writing that retired status. `wlt-943` rejects new `cash_in_transit` ledger accounts while preserving historical rows. `dsh-1030` rejects retired `cod_collected` in live DSH WLT projections while preserving historical rows via `NOT VALID` constraints.
 
-Prove one trusted professional provisioning model for Field/Captain/Employee/leadership paths:
+These source fences do **not** prove production/historical data reconciliation or exact-candidate migration application.
 
-- Identity owns actor/auth/session/role/surface identity;
-- Workforce owns provisioning intent/profile and derives allowed identity role/surface server-side;
-- no caller-controlled raw actor ID becomes provisioning authority;
-- exact-fingerprint idempotency, conflict semantics and compensation are correct;
-- rollback cannot leak an orphan Identity actor or orphan Workforce profile;
-- existing-actor linking is explicit and validated;
-- activation occurs only after required professional prerequisites;
-- contracts/runtime/generated clients/forms agree;
-- obsolete external provisioning-case routes, commented rollback code, dangling clients and duplicate employee-creation APIs are removed if no unique Product requirement remains.
+Required evidence before closure:
 
-## 11. ROOT-08 — native mobile capability ownership
+- migration manifest/order/current checksum truth;
+- fresh install + supported upgrade path where material;
+- exact-candidate migration ledger/readback;
+- no current code/SQL/job/provider path can write retired COD custody states;
+- historical `cod_collected` / `cash_in_transit` inventory and reconciliation disposition;
+- no orphan/double-post/unreconciled balance;
+- correct refund/reversal/settlement/finalization semantics;
+- WLT remains the sole authoritative financial writer;
+- DSH projections cannot become money authority;
+- current runtime readback on the claimed environment.
 
-Across Client/Partner/Captain/Field:
+If production data/provider access is unavailable, retain `EVIDENCE/HOLD`/exact blocker; never convert missing proof into PASS.
 
-- app runtime owns Expo/native implementation and dependency declarations;
-- DSH/shared packages consume typed capability interfaces/adapters only where needed;
-- no shared package silently re-acquires native implementation ownership;
-- every native dependency has a real app consumer and justified owner;
-- Android export/build/device evidence is run on the final candidate;
-- iOS evidence is produced only on an iOS-capable environment and otherwise explicitly marked external/unavailable, never faked;
-- offline/retry/background/permission-denied/device-capability failure behavior is tested where applicable.
+## 11. ROOT-07 — Workforce ↔ Identity provisioning
 
-## 12. ROOT-09 — ETA semantics
+Status: `FIXED_PENDING_VERIFY`.
 
-Re-prove:
+Current source evidence:
 
-- provider route duration is the only route ETA truth;
-- provider absent/error/no duration returns explicit unavailable/degraded semantics;
-- no geometric/distance-time approximation is silently presented as route ETA;
-- serviceability remains separately governed by DSH policy and is not changed by ETA unavailability;
-- provider failure → recovery journey is verified across API and affected surfaces.
+- Identity governed provisioning accepts the Workforce actor ID.
+- the HTTP boundary derives trusted operator context from the request instead of trusting `operatorContextId` from request JSON.
+- historical source commits hardened trusted-tenant and governed provisioning paths.
 
-## 13. ROOT-10 — derived graph convergence
+Required verification:
 
-After root treatment, reconcile all derived representations from canonical owners:
+- Workforce actor ID ↔ Identity actor ID linking;
+- create-only/idempotent semantics according to current contract;
+- retry and duplicate handling;
+- partial failure and compensation/reconciliation;
+- tenant/operator-context enforcement;
+- role/surface provisioning correctness;
+- no caller-supplied authority spoofing;
+- provisioning case persistence/restart semantics if still live;
+- exact-candidate Workforce→Identity runtime journey.
 
-- OpenAPI roots/modules/overlays/composed bundles;
-- generated Go/TS clients/types;
-- route binding/API registries;
-- capability maps and manifests;
-- service manifests;
-- package exports;
-- workspace manifests + `pnpm-lock.yaml`;
-- database migration manifests;
-- UI state/reason mappings;
-- tests/fixtures/guards.
+Do not create another provisioning authority to satisfy a failing test/runtime path.
 
-Any generated drift is fixed at the canonical generator/owner, not by hand-editing a downstream artifact as the root fix.
+## 12. ROOT-08 — native capability ownership
 
-## 14. ROOT-11 — stale/dead artifact cleanup
+Status: `FIXED_PENDING_VERIFY`.
 
-`services/dsh/backend/DOCKERFILE_PENDING.md` still states that a DSH Dockerfile should not yet exist, while `services/dsh/backend/Dockerfile` exists. Recheck all references/intent on latest HEAD; if no unique historical requirement exists, delete the pending artifact. Do not replace it with another status document.
+Current source model is correct in direction:
 
-Apply the same retention test to every touched/exposed artifact:
+- shared DSH exposes typed capability contracts/factories;
+- app runtime imports concrete Expo/React-Native native modules and configures DSH capabilities.
 
-`Necessary Purpose + Correct Owner + Real Consumer + Requirement + Proven Value + Correct Placement`.
+Required verification across materially affected mobile runtimes:
 
-If that proof fails: simplify, consolidate, move to the canonical owner, or delete after blast-radius proof.
+- Android/iOS capability registration as applicable;
+- location permission/services/current position;
+- notifications permission/token/link response;
+- SecureStore/device identity where used;
+- image/document picker/map/video bindings where consumed;
+- unavailable/permission-denied/recovery semantics;
+- web fallback only where explicitly supported;
+- no direct Expo/native imports reintroduced into shared DSH implementation paths that would violate runtime ownership.
 
-## 15. ROOT-12 — exact-candidate evidence and reproducibility
+Mock/static proof cannot close a real device claim.
 
-Before any closure claim:
+## 13. ROOT-09 — provider-only ETA
 
-1. Re-pin latest `b` HEAD before writes.
-2. Classify concurrent delta: disjoint / related / overlap / conflict / authority change.
-3. Reconcile onto latest HEAD; do not overwrite newer valid work.
-4. Stage only an explicit allowed set; never use `git add .` as uncontrolled closure staging.
-5. Inspect staged diff and generated/lockfile delta.
-6. Pin implementation candidate SHA after target-system writes.
-7. Run all required verification on that exact candidate/runtime build.
-8. If a bookkeeping/plan write follows, pin the new candidate and reconcile evidence.
-9. Runtime `sourceSha`/artifact provenance must match the candidate where supported.
-10. Missing hosted CI is recorded as missing; local governed evidence may supplement but must not be called hosted green CI.
-11. Final branch movement after verification invalidates affected evidence until reconciled.
+Status: `FIXED_PENDING_VERIFY`.
 
-## 16. Affected-cone audit before each root — not a repository-wide execution gate
+Current source `services/dsh/backend/internal/http/dispatch_live_tracking.go` obtains route distance/duration from the Providers route client. Provider failure sets `routeState=provider_unavailable` and leaves ETA absent. ETA duration is derived from provider `DurationSeconds`; there is no silent straight-line duration approximation in that path.
 
-Before mutating a root, inspect only the smallest complete vertical path for that root:
+Required verification:
 
-- canonical source owner and its public contract;
-- generated/client/consumer readbacks affected by the change;
-- persistence, runtime configuration, request context, and integration points when applicable;
-- focused tests, guards, journey scripts, and current candidate provenance;
-- negative-space and failure/recovery cases that could invalidate the treatment.
+- successful provider route → provider code/distance/duration/arrival readback;
+- provider unavailable → explicit unavailable state, no fabricated ETA;
+- destination unavailable/location stale/location lost/arrived semantics;
+- client/partner/control operational consumers express consistent meaning;
+- negative-space search across affected ETA paths for Haversine/geometric/speed-based silent substitute;
+- recovery after provider returns;
+- exact runtime/provider provenance where claimed.
 
-The broader all-surface inventory remains a closure obligation, but it is executed in ranked cones. It must not block the first root-correct mutation when the current root and its owner are already proven. For live-system roots, collect workspace, source, runtime, DB/storage, network/API, identity/context, and test/log evidence as applicable; mark unavailable evidence truthfully and record the exact blocker rather than restarting audit preparation.
+## 14. ROOT-11 — stale Docker pending artifact
 
-## 17. Execution waves
+Status: `FIXED_PENDING_VERIFY`.
 
-### Wave 0 — latest-HEAD reconciliation
-Re-pin, classify foreign delta, and confirm the affected cone. If a higher root is exposed, execute it first; otherwise begin mutation immediately in the same turn. Do not create another audit-only checkpoint.
+`services/dsh/backend/DOCKERFILE_PENDING.md` is absent on current source truth and a live DSH Dockerfile/runtime path exists.
 
-### Wave 1 — current P0 runtime closure
-Close ROOT-15 immediately: finish the prepared-runtime capability treatment, run the focused orchestration tests, run the exact-candidate scoped runtime smoke and provenance checks, then commit/pin the implementation SHA. Preserve the direct dispatcher path and do not claim closure from static tests alone.
+Verify zero references to the deleted artifact and that canonical runtime/compose points to the active Dockerfile. Do not recreate another status/pending file.
 
-### Wave 2 — readiness authority closure
-Close ROOT-01 first: Workforce semantics/contracts/internal/public consumers become coherent. Then close DSH Captain/Field journey boundaries without surface-local policy.
+## 15. ROOT-12 / ROOT-14 — partner store-scope contract cutovers
 
-### Wave 3 — public package and dependency cutover
-Close ROOT-03 and ROOT-04: Field/Captain public exports, manifests, lockfile, clean install, no deep imports, durable guard.
+Statuses: `FIXED_PENDING_VERIFY`.
 
-### Wave 4 — assignment/authorization closure
-Close ROOT-05 with writer/reader/data/API/UI negative-space proof and cleanup.
+Source treatments:
 
-### Wave 5 — high-risk historical roots
-Revalidate/fix ROOT-06 COD/WLT, ROOT-07 Workforce↔Identity, ROOT-08 native capabilities, ROOT-09 ETA. Any reopened source/data root is treated before lower cleanup.
+- catalog/product-proposal requests carry explicit `storeId`;
+- partner self activation/readiness readbacks carry explicit store scope;
+- DSH authorization remains the sole store-object access truth;
+- ambiguous multi-store actors must not collapse to a first-store fallback.
 
-### Wave 6 — derived graph and cleanup
-Regenerate/reconcile contracts/clients/capabilities/exports/lock/migration manifests. Delete stale/dead/duplicate/legacy artifacts including proven stale pending files and misleading authority names/comments.
+Verification:
 
-### Wave 7 — full operational verification
-Run all five surfaces, all affected services, DB migrations, runtime readiness, permissions, failure/recovery, offline/native and cross-surface readback/adversarial cases.
+- single-store and multi-store actors;
+- explicit selected store;
+- unauthorized store ID;
+- omitted store under ambiguity → expected fail-closed result;
+- generated client/query contract equality;
+- UI/controller selected-store propagation;
+- DB-backed catalog + onboarding journeys;
+- no alternate partner/store authority.
 
-### Wave 8 — re-audit/re-rank loop
-Repeat until every material root is `PROVEN_CLOSED` or `N/A_PROVEN`. The plan being exhausted is not closure.
+## 16. ROOT-13 — trusted Identity context before Workforce gate
 
-## 18. Mandatory verification matrix
+Status: `FIXED_PENDING_VERIFY`.
 
-### Semantics/contracts
+Verify:
 
-- Workforce runtime == internal/public API contract == OpenAPI == generated clients == frontend types.
-- Captain DSH readiness runtime == contract == client == UI state model.
-- Field DSH readiness runtime == contract == client == UI state model.
-- unavailable/error states never become false business denial.
+- activation/reactivation gate reads with Identity-owned operator context;
+- missing/unresolvable authoritative context fails closed;
+- caller-supplied context cannot override it;
+- downstream operator authorization remains enforced;
+- expected error mapping is semantic, not generic false-success/false-block;
+- exact-candidate provisioning journey passes.
 
-### Backend/services
+## 17. ROOT-15 — duplicate runtime-build orchestration
 
-- Go tests for Identity/Workforce/DSH/WLT/Platform-Control/Providers according to blast radius.
-- integration/database tests for readiness, provisioning, authorization, COD, settlement/refund/reversal, serviceability and migration invariants.
-- idempotency/concurrency/retry/duplicate-event/partial-failure/restart cases.
+Status: `FIXED_PENDING_VERIFY`.
 
-### Database/data
+The source treatment already exists at `5425e10fe766520832e185feb3bc4719a43f0f03`:
 
-- migration manifest/order/application on representative pre-change data;
-- financial before/after reconciliation and ledger balance;
-- actor/profile/linkage integrity;
-- assignment/scope single-writer proof;
-- no orphan rows/references or unintended dual writes.
+- candidate-bound runtime up/bootstrap writes a prepared-runtime marker bound to source SHA and running image IDs;
+- DSH prepared smoke validates that marker;
+- prepared smoke skips the duplicate DSH image build and performs non-building readiness/smoke before seed/journeys;
+- direct standalone dispatcher behavior remains self-preparing.
 
-### Frontend/mobile
+**Do not implement this again.**
 
-For Client, Partner, Captain, Field and Control Panel as applicable:
+Required proof:
 
-- typecheck/lint/test/build;
-- Metro/Expo resolution and mobile export;
-- real-device/native evidence where required;
-- auth/session/profile/readiness/permission unavailable+forbidden+conflict+stale/offline/recovery states;
-- no screen becomes usable before required owner decisions are proven.
+1. targeted orchestration policy test;
+2. candidate-bound `runtime:up`/`runtime:bootstrap-dev` writes valid marker;
+3. marker source SHA and image IDs match running containers;
+4. prepared `runtime:smoke` does not execute a second DSH `up --build`;
+5. direct standalone smoke retains intended self-preparation;
+6. interrupted/failed run does not leave misleading valid provenance;
+7. comparable before→after timing for the same scenario;
+8. prove required runtime assurance was preserved and cost was not merely shifted elsewhere;
+9. exact candidate runtime/readback.
 
-### Product journeys preserved
+Current GitHub inspection found no combined statuses and no PR-triggered workflow runs for `5425e10f...`; this is not a failure, but it means no live CI PASS is claimed from GitHub for that SHA.
 
-- Client: stores/catalog/cart/checkout/orders/tracking/special requests/support/wallet readback/addresses/serviceability.
-- Partner: store/catalog/orders/commercial/finance readback/support; no Awnak/SHEIN role unless Product changes it.
-- Captain: Workforce profile/readiness, availability/dispatch/pickup/delivery/proof, finance/COD, special-request dispatch.
-- Field: profile/readiness/assignments/visits/catalog/onboarding/finance; no Awnak/SHEIN role unless Product changes it.
-- Control Panel: Identity/Workforce administration, operations/rescue/special requests, governed configuration, finance readback/operator mutations, audit.
+## 18. Closure gates — not causal roots
 
-### Security/authority negative paths
+The following are mandatory closure obligations, not independent root causes.
 
-- wrong role/surface;
-- wrong operator context;
-- cross-actor/IDOR attempt;
-- absent/expired session;
-- unavailable sovereign dependency;
-- forged caller scope/actor ID/financial amount;
-- stale version/concurrency conflict;
-- direct frontend-to-WLT authority bypass;
-- deep app-runtime service import guard failure.
+### CG-01 Exact-candidate provenance
 
-### Negative-space scans
+Every material closure claim must bind to one immutable `FINAL_CANDIDATE`. Any material write creates a new candidate and invalidates affected evidence.
 
-Prove absence or uniquely justified retention of:
+As applicable prove:
 
-- deep `apps/** -> services/dsh/frontend/**` imports;
-- local Captain/Field readiness policy/evaluator remnants;
-- stale cross-domain Workforce blocker vocabulary;
-- `ELIGIBILITY_UNAVAILABLE` business-state fabrication;
-- undeclared workspace dependencies;
-- manifest/lock drift;
-- active legacy COD collect/remit/cash-in-transit writers;
-- obsolete provisioning-case clients/routes/commented rollback code;
-- duplicate assignment/authorization truth;
-- silent ETA fallback;
-- stale `DOCKERFILE_PENDING.md` after reference proof;
-- affected TODO/FIXME/HACK/workaround/fallback/deprecated/legacy/dead/duplicate files, aliases, exports and comments.
+`source SHA | image/container | process freshness | migration ledger | generated artifacts | runtime endpoint/profile/config | seed/fixture provenance | CI/workflow SHA | canonical readback`.
 
-## 19. Cleanup law
+### CG-02 Full affected-cone regression
 
-Cleanup continues through:
+Verify materially affected Client/Partner/Captain/Field/Control Panel and Identity/Workforce/DSH/WLT/Providers paths as required by each root.
 
-`line → branch → function → symbol → file → file-group → folder → package/module → service/surface/domain`.
+Do not run every heavy suite blindly; use nearest falsifiable proof first, then broaden where shared/public/high-risk boundaries changed.
 
-Do not delete complexity that protects a proven invariant: ledger balancing, idempotency, optimistic locking, maker-checker, trusted context, append-only audit, migration safety, offline/retry correctness or security isolation.
+### CG-03 Failure / recovery / security
 
-Do delete complexity whose only purpose is obsolete migration history, an abandoned workaround, duplicate authority, dead API, stale generated mirror, misleading naming, unused compatibility, or hidden fallback.
+Cover where material:
 
-## 20. Governance mutation gate
+`success | missing | malformed | unauthenticated | denied | wrong role/scope | IDOR | not found | stale/conflict | duplicate/replay | idempotency | race/concurrency | partial failure | DB/network/provider failure | timeout/unknown result | retry | restart/recovery | old/new data | compensation/reconciliation`.
 
-Governance stays read-only unless all are true before a write:
+### CG-04 Zero-tolerance finishing
 
-1. canonical Product/System truth is established independently;
-2. a specific governance statement is materially stale/incorrect/missing;
-3. root cause and blast radius are proven;
-4. no material decision remains unresolved;
-5. the write records proven truth and does not invent approval/authority.
+Every materially affected remaining artifact must justify:
 
-No agent may manufacture Product/QA/security/release approval metadata.
+`Necessary Purpose + Correct Owner + Real Consumer + Current Requirement + Proven Value + Correct Placement + Correct Naming/Context`.
 
-## 21. Closure protocol
+Remove dead/stale/duplicate/legacy/unused/orphan/misplaced aliases, imports/exports, TODO/FIXME/HACK, fallback/workaround, obsolete configs/scripts/dependencies/docs and unjustified compatibility residue tied to the affected cone.
 
-`CLOSED` is allowed only when:
+### CG-05 Live repository-platform truth
 
-- every original and newly exposed material root is `PROVEN_CLOSED` or `N/A_PROVEN`;
-- every required consumer is migrated and verified;
-- no material parallel/legacy truth survives;
-- all required data/native/runtime external evidence has a truthful disposition;
-- no material stale/dead/duplicate/misplaced artifact survives in the affected blast radius;
-- final candidate is clean and reproducible;
-- exact-candidate positive + negative + failure/recovery + adversarial evidence passes;
-- final re-audit finds no new higher root.
+Inspect GitHub checks/workflows/rulesets/reviews/settings only when a closure claim materially depends on them. Tracked workflow config is not live enforcement. A pass on another SHA is not proof.
 
-Final sequence:
+### CG-06 Negative-space + adversarial final pass
 
-1. finish last target-system treatment and cleanup;
-2. verify clean workspace/staging and pin implementation candidate;
+Search deliberately for missing consumers/writers/readers, reachable legacy, parallel truth, stale contracts/generated output, auth/isolation gaps, runtime/data mismatch, hidden fallback, stale naming/placement and affected regressions.
+
+## 19. EXECUTE_CLOSE start gate — no replanning
+
+This plan is execution-ready.
+
+At the start of EXECUTE_CLOSE:
+
+1. resolve exact branch `b` and latest HEAD;
+2. compare only the delta from this plan's preparation candidate;
+3. invalidate only assumptions/evidence the delta can materially change;
+4. do **not** restart AUDIT_PREPARE;
+5. do **not** rebuild the plan/root landscape from zero;
+6. do **not** reimplement any `FIXED_PENDING_VERIFY` source treatment unless current direct evidence proves the treatment is wrong;
+7. select the highest actionable `OPEN` root.
+
+### First execution target
+
+Unless newer live truth invalidates this conclusion:
+
+`HIGHEST ACTIONABLE PROVEN ROOT = ROOT-05`
+
+`ROOT-05 → EXECUTE IMMEDIATELY`.
+
+After ROOT-05 treatment, verification of independent `FIXED_PENDING_VERIFY` roots may proceed with maximum-safe parallelism, respecting shared write/migration/runtime dependencies.
+
+ROOT-06 is evidence/data gated and must not block independent source/verification work unless its financial truth materially gates a dependent journey.
+
+## 20. New findings during EXECUTE_CLOSE
+
+A new finding never automatically means a new planning phase.
+
+Classify:
+
+- descendant/same root → absorb and close in current treatment;
+- missing consumer/migration/cleanup → current blast radius; fix now;
+- independent root → add to execution accounting and rank;
+- proven higher parent root that invalidates current treatment → suspend dependent cone, treat parent, resume;
+- true non-derivable Product/Business/Semantic/Architectural decision → stop dependent cone only and raise `DECISION_REQUIRED`;
+- external evidence/capability gap → `EVIDENCE/HOLD` with exact acquisition path.
+
+Never use `NEW FINDING → NEW MASTER PLAN` as the default.
+
+## 21. Maximum-safe parallelism
+
+Parallelize by coherent root ownership, not arbitrary files/frontend/backend/language.
+
+Two work items may run concurrently only if proven:
+
+`NO unresolved causal dependency`
+
+AND `NO conflicting canonical authority`
+
+AND `NO unsafe write overlap`
+
+AND `NO ordered shared migration/cutover`
+
+AND `NO evidence dependency requiring sequence`.
+
+Maintain one canonical integration authority for live-HEAD reconciliation, root ranking, shared truth, collision resolution, candidate integration and final closure.
+
+`VALID EVIDENCE → REUSE`
+
+`INVALIDATED EVIDENCE → RECHECK AFFECTED PROOF ONLY`.
+
+## 22. Mutation / commit / branch-race discipline
+
+Before every material write batch:
+
+`RE-PIN HEAD → CLASSIFY FOREIGN DELTA → OWN EXACT PATHS/HUNKS → MUTATE COHERENT ROOT → VERIFY`.
+
+Never blindly use:
+
+`git add . | git add -A | git commit -a | git checkout -- . | git restore . | git reset --hard | git clean -fd`.
+
+Before commit:
+
+`inventory tree → allowlist owned paths/hunks → stage explicitly → inspect staged diff → exclude foreign/unrelated work → commit one coherent logical boundary`.
+
+For GitHub/API multi-file mutations prefer atomic blob/tree/commit against the exact expected parent and a non-force fast-forward ref update. If the branch moves, rebuild/reconcile rather than overwrite.
+
+## 23. Governance fail-closed
+
+`GOVERNANCE != AUTOMATIC TRUTH`
+
+`CURRENT CODE != GOVERNANCE UPDATE AUTHORITY`
+
+`UNCERTAINTY = NO GOVERNANCE WRITE`.
+
+Any governance mutation requires proof of:
+
+`Canonical Product/System Truth + Root Cause + Impact + Blast Radius + no material Decision Required`.
+
+Otherwise disposition remains `EVIDENCE/HOLD` or `DECISION_REQUIRED`. Do not edit governance merely to describe an unfixed ideal or mirror current implementation without authority proof.
+
+## 24. Protected / irreversible actions
+
+Before any production data mutation, destructive backfill, secret/key rotation, external financial/provider mutation, deploy/release/merge/tag or infrastructure destruction, prove:
+
+`current authority | exact environment/target | scope | candidate/change binding | rollback/compensation where possible | verification/readback | required human/safety gate`.
+
+This plan does not itself authorize a protected external/production mutation merely by naming it.
+
+## 25. Temporary compatibility
+
+Temporary compatibility is allowed only for a proven mixed-version/rollout requirement and must have:
+
+`one semantic authority | explicit scope | owner | consumer list | observability | failure behavior | expiry/removal condition | cutover proof`.
+
+Convenience is not a compatibility requirement. No permanent shim may be used to avoid a coherent cutover.
+
+## 26. Test / guard integrity
+
+Tests and guards encode correct semantics; do not weaken/disable/silence a valid test to make implementation green.
+
+If a test/guard is stale, first prove canonical semantics, then update it and prove it can still falsify the broken behavior.
+
+`MOCK PASS != REAL RUNTIME/PROVIDER PROOF` for a real operational claim.
+
+## 27. Verification matrix
+
+| Claim family | Minimum proof |
+|---|---|
+| Workforce readiness semantics | focused Go tests + OpenAPI/generated/type equality + 503 unavailable behavior + DSH consumer contract |
+| Captain/Field readiness | backend tests + surface typechecks + exact runtime success/block/unavailable/retry/recovery |
+| mobile public boundaries | frozen install + lock/manifests + all four typechecks/Metro/Expo + deep-import negative fixture |
+| assignment vs authorization | writer/reader inventory + authz/IDOR tests + contract/generated + runtime readback |
+| COD/WLT | migrations + manifest + DB data reconciliation + ledger/readback + no legacy writer |
+| provisioning | Identity/Workforce tests + trusted context/tenant + idempotency/compensation + runtime onboarding |
+| native | source ownership + device/platform evidence where claim requires it |
+| ETA | provider success/failure/recovery + negative-space no approximation + consumer semantics |
+| partner store scope | DB-backed multi-store contract/journey + unauthorized/omitted scope negatives |
+| runtime duplicate build | policy test + candidate marker/image provenance + smoke + before/after timing |
+| cleanup | reference/reachability/dependency/config/doc negative space |
+| final closure | exact candidate + affected regression + security/failure/recovery + final adversarial pass |
+
+## 28. Evidence provenance and invalidation
+
+Every material evidence item used for closure must remain reconstructable with enough of:
+
+`claim/root | exact SHA/source identity | command/run/job/path | environment/profile/device | result | what it proves | what it does not prove | freshness | invalidation trigger`.
+
+Examples:
+
+- contract/schema change invalidates generated/consumer proof;
+- data/migration owner change invalidates DB/runtime/readback proof;
+- auth change invalidates security/isolation proof;
+- shared canonical package change invalidates all affected consumer proof;
+- runtime/config change invalidates runtime evidence;
+- unrelated planning-only change may preserve target-system evidence only when independence is proven.
+
+## 29. Plan lifecycle and reopening after retirement
+
+Keep this file as the single temporary execution record through EXECUTE_CLOSE.
+
+When all material roots/findings are `PROVEN_CLOSED` or `NOT_APPLICABLE_WITH_PROOF`, all required `EVIDENCE/HOLD` conditions have been resolved or truthfully dispositioned according to the closure claim, and all closure gates pass:
+
+1. freeze remaining intended project writes;
+2. pin implementation candidate;
 3. run exact-candidate verification;
-4. re-audit/re-rank;
-5. retire/delete superseded temporary plan records only after all material closure proof is complete;
-6. pin the post-plan-deletion final candidate;
-7. perform final read-only `Audit + Inspect + Diagnose + Analyze + Negative Space + Adversarial Re-check`;
-8. if anything material appears, outcome returns to `OPEN`; otherwise outcome may be `CLOSED`.
+4. delete **this** plan as the last intended project-record write;
+5. that deletion creates a new candidate;
+6. run final read-only Audit + Inspect + Diagnose + Analyze + Negative Space + Adversarial Re-check on the new candidate;
+7. re-resolve live branch HEAD;
+8. declare `CLOSED` only if nothing material reopens.
 
-## 22. Current declaration
+If the post-deletion final pass exposes a material issue, closure is revoked. Before any further mutation, recreate/continue **this same canonical temporary execution record** from Git history/current evidence, rather than creating a new parallel master plan, then resume treatment.
 
-- `CANONICAL_MERGED_PLAN: YES`
-- `SUPERSEDES_TWO_PRIOR_PLANS_AS_EXECUTABLE_GUIDANCE: YES`
-- `TARGET_SYSTEM_MUTATION_BY_THIS_PLAN_WRITE: NONE; execution mutation is mandatory in the next root cycle`
-- `MATERIAL_DECISION_REQUIRED: NONE`
-- `READY_TO_EXECUTE_SCOPED: YES`
-- `READY_TO_EXECUTE_BLINDLY: NO`
-- `REQUIRED_NEXT_ACTION: execute ROOT-15 now; do not start another repository-wide audit before its implementation and exact-candidate runtime proof`
-- `NO_STATUS_ONLY_PROGRESS: YES`
-- `NO_HISTORICAL_CLOSURE_INHERITED_WITHOUT_REVALIDATION: YES`
+## 30. Closure equation
+
+`CLOSED` requires all materially applicable terms:
+
+`ZERO_UNKNOWN_REQUIRED_COVERAGE`
+
+AND `ZERO_UNINSPECTED_REQUIRED_NODES`
+
+AND `ZERO_KNOWN_MATERIAL_OPEN_ROOTS`
+
+AND `ZERO_UNRESOLVED_MATERIAL_FINDINGS`
+
+AND `ZERO_FIXED_PENDING_VERIFY_FINDINGS`
+
+AND `ZERO_UNRESOLVED_REQUIRED_DECISIONS`
+
+AND `ZERO_UNACCOUNTED_OR_UNMIGRATED_AFFECTED_CONSUMERS`
+
+AND `ZERO_UNINTENDED_AFFECTED_REGRESSIONS`
+
+AND `ZERO_CONTRADICTORY_CANONICAL_TRUTHS`
+
+AND `ZERO_DUPLICATE_AUTHORITATIVE_WRITERS`
+
+AND `ZERO_UNJUSTIFIED_PARALLEL_TRUTH`
+
+AND `ZERO_UNJUSTIFIED_REACHABLE_LEGACY`
+
+AND `ZERO_KNOWN_FINAL_PATCHES_WORKAROUNDS_SILENT_FALLBACKS`
+
+AND `ZERO_MATERIAL_MIGRATION_BACKFILL_CUTOVER_GAPS`
+
+AND `ZERO_MATERIAL_CONTRACT_GENERATED_BINDING_DRIFT`
+
+AND `ZERO_MATERIAL_AUTH_SCOPE_SECURITY_GAPS`
+
+AND `ZERO_UNRESOLVED_RUNTIME_DATA_STATE_REQUIRED_BY_CLAIM`
+
+AND `ZERO_PROVEN_GOVERNANCE_DRIFT_LEFT_IN_SCOPE`
+
+AND `ZERO_BROKEN_ORPHAN_STALE_REFERENCES`
+
+AND `ZERO_MATERIAL_CLEANUP_RESIDUE`
+
+AND `ZERO_MATERIAL_UNJUSTIFIED_COMPLEXITY`
+
+AND `ZERO_UNVERIFIED_MATERIAL_CLAIMS`
+
+AND `ZERO_REQUIRED_MISSING_OR_STALE_EVIDENCE`
+
+AND `ZERO_SILENT_EXCLUSIONS`
+
+AND `LATEST_REQUIRED_HEAD_RECONCILED`
+
+AND `FINAL_NEGATIVE_SPACE_PASS`
+
+AND `FINAL_ADVERSARIAL_REDIAGNOSIS_PASS`.
+
+A missing required capability/evidence is never PASS.
+
+## 31. EXECUTE_CLOSE required final report
+
+Report only evidence actually obtained:
+
+- repository/ref and starting/final observed HEAD;
+- final candidate relation;
+- roots actually treated vs verified-only roots;
+- canonical owner/cutover changes;
+- migrations/data work;
+- affected consumers/surfaces;
+- cleanup/removals;
+- verification performed and proof limits;
+- runtime/DB/native/provider evidence;
+- live repository-platform evidence if materially relied upon;
+- foreign-delta reconciliation;
+- remaining true blocker/decision, if any;
+- final state.
+
+Never label self-review independent. Never call `CLOSED` from a plan/status edit.
+
+## 32. AUDIT_PREPARE handoff declaration
+
+`AUDIT_PREPARE COMPLETE`
+
+`TARGET_SYSTEM_MUTATION: NONE`
+
+`MATERIAL_DECISION_REQUIRED: NONE`
+
+`PARALLEL_OLD_PLAN_RECORDS: RETIRE_IN_THIS_PLANNING_COMMIT`
+
+`HIGHEST_ACTIONABLE_PROVEN_ROOT_FOR_EXECUTE_CLOSE: ROOT-05`
+
+`READY_FOR_EXECUTION`
+
+`PLAN_FILE: plans/diagnose-implementing/all-surfaces-services-canonical-execution-root-closure-20260818.md`
