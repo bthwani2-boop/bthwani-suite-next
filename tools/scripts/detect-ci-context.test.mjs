@@ -3,7 +3,7 @@ import test from "node:test";
 import { classifyFiles } from "./detect-ci-context.mjs";
 
 function assertNoGovernanceControlPlane(result) {
-  for (const forbidden of ["governance", "policy", "governance_policy", "policy_required", "authority_change"]) {
+  for (const forbidden of ["governance", "policy", "governance_policy", "policy_required", "authority_change", "foundation_guard_ids"]) {
     assert.equal(Object.hasOwn(result, forbidden), false, forbidden);
   }
 }
@@ -15,7 +15,6 @@ test("governance text does not widen executable verification", () => {
   assert.equal(result.verification_required, false);
   assert.equal(result.backend_required, false);
   assert.equal(result.runtime_profile, "none");
-  assert.deepEqual(result.foundation_guard_ids, ["source-integrity"]);
 });
 
 test("verification authority stays targeted during PR development", () => {
@@ -46,8 +45,8 @@ test("verification authority forces full exact-candidate closure verification", 
   }
 });
 
-test("verification config itself follows the same phase gate", () => {
-  const file = "tools/verification/verification-sets.json";
+test("verification files follow the same phase gate", () => {
+  const file = "tools/verification/journey-profiles.json";
   assert.equal(classifyFiles([file], { executionPhase: "pr" }).full_scope, false);
   assert.equal(classifyFiles([file], { executionPhase: "closure" }).full_scope, true);
 });
@@ -58,12 +57,6 @@ test("isolated app code remains fast", () => {
   assert.equal(result.verification_tier, "fast");
   assert.equal(result.diagnostics, false);
   assert.equal(result.runtime_profile, "none");
-  assert.deepEqual(result.foundation_guard_ids, [
-    "source-integrity",
-    "no-broken-imports",
-    "runtime-config",
-    "ui-kit-boundary",
-  ]);
 });
 
 test("shared frontend code is standard without a second diagnostics job", () => {
@@ -87,13 +80,6 @@ test("non-financial backend remains standard and affected", () => {
   assert.equal(result.financial_changed, false);
   assert.equal(result.runtime_profile, "none");
   assert.equal(result.verification_tier, "standard");
-  assert.deepEqual(result.foundation_guard_ids, [
-    "source-integrity",
-    "no-broken-imports",
-    "runtime-config",
-    "api-binding",
-    "backend-api-binding",
-  ]);
 });
 
 test("WLT financial code selects finance runtime profile", () => {
@@ -152,6 +138,6 @@ test("explicit runtime proof runs runtime without widening code scope", () => {
   assert.deepEqual(result.required_jobs, ["runtime"]);
 });
 
-test("router interface has no governance control-plane fields", () => {
+test("router interface has no governance or nested guard-routing fields", () => {
   assertNoGovernanceControlPlane(classifyFiles(["README.md"]));
 });
