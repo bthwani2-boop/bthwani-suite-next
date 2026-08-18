@@ -26,6 +26,7 @@ DEFINE PROVEN TARGET TRUTH
 → PROVE FAILURE/IDEMPOTENCY/CONCURRENCY/RECOVERY
 → PROVE CANONICAL READBACK
 → CUT OVER ALL CALLERS
+→ PROVE REQUIRED PRE-EXISTING BEHAVIOR REMAINS VALID ACROSS THE AFFECTED CONE
 → PROVE ZERO USE OF OLD AUTHORITY
 → DELETE/RETIRE SUPERSEDED REACHABLE PATHS
 → REPAIR REFERENCES/CONSUMERS
@@ -46,6 +47,8 @@ problem removed from actual implementation/runtime/data
 + affected writers/readers/consumers migrated
 + affected surfaces use corrected truth
 + contracts/data/runtime aligned
++ required previously correct affected behavior still works or was intentionally migrated
++ no unintended affected regression or partial cutover remains
 + obsolete/parallel implementation no longer authoritative/reachable
 + runtime/readback proves intended behavior when required
 + directly related structural cleanup is complete
@@ -156,7 +159,7 @@ If treatment changes material actor, authority, responsibility, journey, state, 
 
 `IMPLEMENT SYSTEM CHANGE → PROVE BEHAVIOR/RUNTIME → ANALYZE GOVERNANCE IMPACT → RECONCILE AFFECTED GOVERNANCE → CROSS-CHECK GOVERNANCE ↔ SYSTEM`.
 
-Do not edit governance to describe an unfixed ideal and do not leave materially affected governance stale after a proven semantic change.
+Do not edit governance to describe an unfixed ideal and do not leave materially affected governance stale after a proven semantic change. Every governance mutation must also pass the fail-closed governance-write gate owned by `focus/governance-product-design.md`.
 
 ## 13. Data and migration treatment
 
@@ -207,11 +210,11 @@ Act on what is proven:
 
 `dead | unreachable | stale | obsolete | superseded | duplicate | misplaced | unused | legacy | temporary | debug | workaround | fallback | parallel truth | unjustified compatibility | generated noise`.
 
-For every suspicious artifact ask for:
+For every suspicious artifact require a defensible:
 
-`Responsibility + Purpose + Consumer + Requirement + Architectural Reason + Correct Owner/Placement`.
+`Necessary Purpose + Correct Owner + Real Consumer + Requirement + Proven Value + Correct Placement/Architectural Reason`.
 
-Static orphan/unused output is evidence, not deletion authority.
+If that justification is absent and safe treatment is proven, simplify, merge, move or delete the artifact at the correct structural level. Directly related cleanup is part of the root treatment and must not be deferred as “later polish”. Static orphan/unused output is evidence, not deletion authority.
 
 ## 17. Reference integrity after structural change
 
@@ -305,12 +308,42 @@ If target moves:
 
 Partial multi-file writes are not closure; reconcile or complete them safely.
 
-## 23. Re-rank after each root
+## 23. Adaptive root loop to saturation
 
-After coherent root treatment:
+After each coherent root treatment, continue from current live truth rather than an old task list:
 
-`read latest live truth → re-evaluate descendant findings → disposition symptoms eliminated by root → invalidate changed assumptions/evidence → discover newly exposed roots → rerank → choose next highest root`.
+```text
+READ LATEST LIVE TRUTH
+→ VERIFY TREATED ROOT
+→ RE-AUDIT / RE-INSPECT / RE-DIAGNOSE / RE-ANALYZE AFFECTED CONE
+→ DISPOSITION RESOLVED OR OBSOLETE DESCENDANT FINDINGS
+→ DISCOVER NEWLY EXPOSED MATERIAL FINDINGS/ROOTS
+→ UPDATE BLAST RADIUS / CONSUMERS / GOVERNANCE IMPACT
+→ RE-RANK
+→ SELECT HIGHEST PROVEN ROOT
+→ REPEAT
+```
 
-If a higher root appears, suspend affected lower work immediately. Sunk cost is not execution authority.
+The loop continues until all original material findings plus all materially related findings exposed by treatment, migrations, consumers, cleanup or governance impact are `PROVEN_CLOSED` or `NOT_APPLICABLE_WITH_PROOF`. Ending the original list, obtaining a green build/test, or removing the visible symptom is not saturation. Do not repeat the same loop without material progress; repeated related symptoms require upstream re-diagnosis under `02` rather than a patch loop. If a higher root appears, suspend affected lower work immediately. Sunk cost is not execution authority.
+
+## 24. Minimum necessary complexity
+
+The target state should use the simplest proven-correct design that satisfies the actual requirements. For materially affected `Layer | Abstraction | Wrapper | Adapter | Indirection | State/Flow | Config | Script | Dependency | File | Folder`, require a necessary purpose, correct owner, real consumer and proven correctness/assurance/operational value.
+
+If a simpler design preserves required product semantics, invariants, security, reliability, data integrity, performance and real compatibility needs, use `SIMPLIFY | FLATTEN | CONSOLIDATE | MOVE_TO_OWNER | REMOVE | RESTRUCTURE` as appropriate. Do not retain complexity because it already works, and do not remove complexity merely because simpler code looks cleaner.
+
+> **WORKING ≠ JUSTIFIED; COMPLEX ≠ ROBUST; PREFER THE SIMPLEST PROVEN-CORRECT DESIGN.**
+
+## 25. End-to-end continuity and no partial cutover
+
+A local correction is not a system correction. Any root treatment, migration, restructure or cutover must account for every materially affected owner, writer, reader, consumer, contract/API/event, data path, job/provider, runtime/config path and required surface/journey before the old path is retired.
+
+```text
+LOCAL FIX ≠ SYSTEM FIX
+ONE SURFACE PASS ≠ END-TO-END PASS
+CANONICAL CHANGE WITHOUT ALL AFFECTED CONSUMERS MIGRATED = INCOMPLETE
+```
+
+Preserve proven-valid behavior unless the Canonical Target intentionally changes it; intentional change requires explicit migration of every affected consumer to the new semantics. No unintended regression, missing consumer, partial migration or half cutover may be deferred as a separate future bug. If a treatment causes an affected app/service/journey to fail because migration or propagation was incomplete, the original root remains `OPEN` and treatment continues through the same blast-radius cone.
 
 Package protection/independence remains governed solely by `00-ORCHESTRATOR.md`.
