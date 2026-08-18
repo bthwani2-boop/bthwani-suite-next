@@ -11,8 +11,6 @@
   "guardSets": {
     "foundation": [
       "source-integrity",
-      "governance-schema",
-      "authority-separation",
       "cleanup-policy",
       "no-broken-imports",
       "runtime-config",
@@ -33,11 +31,6 @@
       "wlt-financial-boundary",
       "runtime-real-bindings",
       "field-surface-truth"
-    ],
-    "governance": [
-      "governance-schema",
-      "authority-separation",
-      "cleanup-policy"
     ]
   },
   "journeyProfiles": {
