@@ -20,7 +20,6 @@ Load only when the trigger matches:
 
 - `bthwani-universal-task-router` — task mode or risk is unclear.
 - `bthwani-evidence-gate-router` — verification, readiness, closure, or evidence scope is requested.
-- `bthwani-agent-skill-integrity` — agent/skill/tool routing itself changes.
 - `bthwani-api-runtime-binding` — API contract, generated client, route, or consumer binding changes.
 - `bthwani-ci-workflow-guardian` — executable GitHub Actions or CI code changes.
 - `bthwani-cost-aware-subagent-orchestrator` — two or more independent bounded work units justify delegation.
