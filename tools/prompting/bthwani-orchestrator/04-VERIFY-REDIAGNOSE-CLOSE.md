@@ -24,6 +24,8 @@ STATIC PASS ≠ RUNTIME PROOF
 MIGRATION APPLIED ≠ READBACK/IDEMPOTENCY/RESTART/COMPATIBILITY PROOF
 HIDDEN UI ≠ SERVER AUTHORIZATION
 ONE SURFACE PASS ≠ JOURNEY PASS
+LOCAL FIX ≠ SYSTEM FIX
+CANONICAL CHANGE WITHOUT ALL AFFECTED CONSUMERS MIGRATED ≠ COMPLETE
 MOCK PASS ≠ REAL PROVIDER/RUNTIME PASS
 DOC UPDATED ≠ IMPLEMENTATION FIXED
 TRACKED WORKFLOW CONFIG ≠ LIVE REPOSITORY ENFORCEMENT
@@ -98,6 +100,8 @@ Verify where material:
 - root cause actually removed and actual source corrected;
 - canonical owner/write path enforced;
 - affected writers/readers/consumers migrated;
+- required previously correct behavior preserved or intentionally migrated across the affected blast radius;
+- no unintended regression, missing consumer, partial migration or half cutover remains;
 - success/failure/recovery/unknown-result paths;
 - state transitions/invariants;
 - cross-surface semantic consistency;
@@ -110,6 +114,7 @@ Verify where material:
 - deletion/retirement of superseded reachable paths;
 - absence of new parallel truth;
 - preservation of proven design/value;
+- removal of materially unjustified complexity identified in scope without weakening required correctness/assurance;
 - naming/placement/reference integrity;
 - directly related cleanup residue removed;
 - engineering-control-path assurance/performance before→after when that root was treated;
@@ -195,15 +200,15 @@ Textual zero-reference search may be necessary but is insufficient alone; prove 
 
 `reinspect operational outcome → rerun affected journey/actor/state/handoff traces → rerun ownership/contract/data/runtime traces → invalidate descendant symptoms → discover exposed roots → rebuild affected coverage → rerank`.
 
-Never mechanically execute an old finding list after system truth changes.
+Never mechanically execute an old finding list after system truth changes. The adaptive treatment loop and saturation condition are owned by `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md`.
 
 ## 17. Final finishing gate
 
 Before freeze, every materially affected remaining artifact needs a defensible:
 
-`Responsibility | Purpose | Consumer | Requirement | Correct Owner | Correct Placement | Correct Naming/Context`.
+`Necessary Purpose | Correct Owner | Real Consumer | Requirement | Proven Value | Correct Placement | Correct Naming/Context`.
 
-Closure is blocked by known related dead/unreachable code, superseded implementation, duplicate authority, stale/orphan reference, old path/alias, misleading naming, wrong placement/ownership, unused dependency, obsolete config/env/flag/script, workaround/fallback, stale docs/comments/examples, debug/temp artifact or unjustified compatibility residue.
+Closure is blocked by known related dead/unreachable code, superseded implementation, duplicate authority, stale/orphan reference, old path/alias, misleading naming, wrong placement/ownership, unused dependency, obsolete config/env/flag/script, workaround/fallback, stale docs/comments/examples, debug/temp artifact, unjustified compatibility residue or materially unjustified complexity tied to scope.
 
 ## 18. Final freeze and branch-race gate
 
@@ -225,7 +230,7 @@ Unexplained material absence remains open.
 
 Assume closure is false and search for:
 
-`missed domain/capability | duplicate truth | stale/wrong governance | hidden consumer/writer | reachable old path | contract/data mismatch | cross-surface mismatch | failure/recovery gap | runtime divergence | stale process/data | unresolved semantic ambiguity | patch/workaround | race/idempotency issue | security/isolation issue | wrong placement/naming/context | orphan references | assurance loss/cost shift in tooling changes | stale/mismatched repository-platform evidence`.
+`missed domain/capability | duplicate truth | stale/wrong governance | hidden consumer/writer | reachable old path | contract/data mismatch | cross-surface mismatch | unintended affected regression | incomplete consumer migration | failure/recovery gap | runtime divergence | stale process/data | unresolved semantic ambiguity | patch/workaround | race/idempotency issue | security/isolation issue | wrong placement/naming/context | orphan references | unjustified complexity | assurance loss/cost shift in tooling changes | stale/mismatched repository-platform evidence`.
 
 Any material issue reopens diagnosis/treatment/verification.
 
@@ -247,6 +252,8 @@ AND ZERO_UNRESOLVED_MATERIAL_FINDINGS
 AND ZERO_FIXED_PENDING_VERIFY_FINDINGS
 AND ZERO_UNRESOLVED_REQUIRED_DECISIONS
 AND ZERO_UNACCOUNTED_AFFECTED_CONSUMERS
+AND ZERO_UNMIGRATED_AFFECTED_CONSUMERS
+AND ZERO_UNINTENDED_AFFECTED_REGRESSIONS
 AND ZERO_UNKNOWN_MATERIAL_DEPENDENCIES
 AND ZERO_CONTRADICTORY_CANONICAL_TRUTHS
 AND ZERO_DUPLICATE_AUTHORITATIVE_WRITERS
@@ -260,6 +267,7 @@ AND ZERO_UNRESOLVED_RUNTIME/DATA_STATE
 AND ZERO_PROVEN_GOVERNANCE_DRIFT_LEFT_IN_SCOPE
 AND ZERO_BROKEN/ORPHAN/STALE_REFERENCES_EXPOSED_BY_WORK
 AND ZERO_MATERIAL_CLEANUP_RESIDUE_TIED_TO_SCOPE
+AND ZERO_MATERIAL_UNJUSTIFIED_COMPLEXITY_TIED_TO_SCOPE
 AND ZERO_UNVERIFIED_MATERIAL_CLAIMS
 AND ZERO_REQUIRED_MISSING/STALE_EVIDENCE
 AND ZERO_REQUIRED_REPOSITORY_PLATFORM_TRUTH_GAPS
@@ -271,7 +279,23 @@ AND FINAL_ADVERSARIAL_REDIAGNOSIS_PASS
 
 If any conjunct is unproven, state is `OPEN` unless a valid `DECISION_REQUIRED` or `EXTERNAL_BLOCKER` applies.
 
-## 23. Final report
+## 23. Temporary plan-file closure lifecycle
+
+When the optional `PHASE=EXECUTE_CLOSE` overlay from `00` is active, `PLAN_FILE` remains a temporary execution record until every material item it carried and every materially related item exposed during treatment satisfies the closure requirements above. Do not delete it merely because its original checklist was exhausted.
+
+After all closure conditions are proven except the plan-file retirement/final read-only pass:
+
+```text
+DELETE PLAN_FILE AS THE LAST INTENDED PROJECT WRITE
+→ NEW FINAL_CANDIDATE
+→ FINAL READ-ONLY AUDIT / INSPECTION / DIAGNOSIS / ANALYSIS / NEGATIVE-SPACE PASS
+→ RE-RESOLVE LIVE HEAD
+→ CLOSED ONLY IF NOTHING MATERIAL REOPENS
+```
+
+The deletion is a write and therefore creates a new candidate. If the final read-only pass exposes a material issue, closure is revoked; recreate/continue the temporary execution record before further mutation and resume the normal treatment cycle.
+
+## 24. Final report
 
 Keep reporting concise and evidence-based: repository/ref, objective, starting/final observed HEAD, final candidate relation, highest roots treated, canonical owners, migrations/cutovers/cleanup, affected consumers/surfaces, verification actually performed and proof limits, runtime provenance/readback when claimed, repository-platform truth when materially relied upon, foreign-delta reconciliation, remaining true blocker/decision, and final state.
 
