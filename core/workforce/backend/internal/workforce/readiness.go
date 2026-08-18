@@ -3,27 +3,27 @@ package workforce
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 )
 
-func identityReadinessBlocker(active bool, err error) (BlockerReason, bool) {
-	if err != nil {
-		return BlockerEligibilityUnavailable, true
-	}
+var ErrReadinessDependencyUnavailable = errors.New("workforce readiness dependency unavailable")
+
+func identityReadinessBlocker(active bool) (BlockerReason, bool) {
 	if !active {
 		return BlockerIdentitySuspended, true
 	}
 	return "", false
 }
 
-// EvaluateReadiness orchestrates the Workforce-owned portion of provider
-// readiness: Identity activation state, engagement state, and the sovereign
-// professional profile. It deliberately fails closed when a role projection is
-// missing or incomplete.
+// EvaluateReadiness evaluates only the Workforce-owned provider readiness
+// boundary: Identity lifecycle, engagement state, and the sovereign professional
+// profile. DSH assignment/area state and WLT financial eligibility are separate
+// authorities and cannot be represented by this decision.
 //
-// DSH active-assignment and WLT financial-eligibility are separate authorities
-// and are not fabricated here. They must be composed by the operational journey
-// that owns those cross-service decisions.
+// Dependency failure is not a business denial. If Identity cannot be verified,
+// the evaluation returns ErrReadinessDependencyUnavailable so the HTTP boundary
+// can expose 503 instead of fabricating a BLOCKED decision.
 func (s *Service) EvaluateReadiness(ctx context.Context, actorID string) (*ReadinessGate, error) {
 	person, err := s.repo.PersonByActorID(ctx, actorID)
 	if err != nil {
@@ -46,15 +46,16 @@ func (s *Service) EvaluateReadiness(ctx context.Context, actorID string) (*Readi
 		CheckedAt:      time.Now(),
 	}
 
-	// Identity lifecycle truth comes from the canonical status field. Dependency
-	// failure is not a suspension: it blocks readiness as unavailable instead.
 	actor, err := s.identity.Actor(ctx, actorID)
-	if reason, blocked := identityReadinessBlocker(actor.IsActive(), err); blocked {
+	if err != nil {
+		return nil, fmt.Errorf("%w: identity: %v", ErrReadinessDependencyUnavailable, err)
+	}
+	if reason, blocked := identityReadinessBlocker(actor.IsActive()); blocked {
 		gate.BlockerReasons = append(gate.BlockerReasons, reason)
 	}
 
 	if person.EngagementStatus == "terminated" || person.EngagementStatus == "suspended" {
-		gate.BlockerReasons = append(gate.BlockerReasons, BlockerEmploymentTerminated)
+		gate.BlockerReasons = append(gate.BlockerReasons, BlockerEngagementInactive)
 	}
 
 	switch person.WorkforceKind {
