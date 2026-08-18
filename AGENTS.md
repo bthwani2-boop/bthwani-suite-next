@@ -4,15 +4,15 @@
 
 ## Authority
 
-Resolve each task from the current authorized instruction, exact pinned repository/ref, applicable Product Truth/contracts, and actual implementation/runtime evidence. Do not create a parallel authority layer in prompts, plans, guards, workflows, or generated registries.
+Resolve each task from the current human instruction, exact pinned repository/ref, applicable Product Truth/policy, and actual implementation/runtime evidence. Do not create a parallel authority layer in prompts, plans, guards, workflows, or registries.
 
-Useful routing data:
+Agent routing lives only in:
 
-- skills: `governance/skills/skills-registry.json`
-- tools: `governance/tools/agent-tool-registry.json`
-- decisions: `governance/contracts/decision-vocabulary.json`
+- `.agents/INDEX.md`
+- `.agents/skills/**`
+- `.agents/tools/**`
 
-There is intentionally no guard registry, workflow registry, SDLC stage registry, or governance-validation workflow.
+There is intentionally no agent-role registry, skill registry, tool registry, guard registry, workflow registry, SDLC stage registry, or governance-validation workflow.
 
 ## Execution
 
@@ -29,30 +29,21 @@ Use `CODE_BASED_LEAN`:
 
 “Deep”, “complete”, and “100%” raise the evidence standard; they do not justify unrelated scans or every available tool.
 
-## Verification rule
+## Verification
 
-Guards and GitHub workflows are for executable engineering truth only:
+Guards and GitHub workflows are for executable engineering truth only: source integrity, architecture/import boundaries, API/contracts/generated clients, migrations/data ownership, runtime/configuration, frontend binding/accessibility, security/dependencies, and executable CI.
 
-- source/code integrity;
-- architecture/import boundaries;
-- API/contracts/generated clients;
-- migrations/data ownership;
-- runtime/configuration;
-- frontend bindings/accessibility;
-- security/secrets/dependencies;
-- executable CI workflow syntax/security/pinning.
-
-Do not create guards or workflows whose purpose is to validate governance prose, agent instructions, prompt packages, approval bureaucracy, guard registries, workflow registries, SDLC stage metadata, or evidence bookkeeping.
+Do not create guards or workflows to validate governance prose, agent instructions, prompt packages, approval metadata, registries, stage metadata, or evidence bookkeeping.
 
 Prefer:
 
-`affected code → targeted checks → runtime proof when applicable → one full verification only when closure/risk requires it`
+`affected code → targeted checks → runtime proof when applicable → one broad/full verification only when closure/risk requires it`
 
 ## Repository safety
 
-Before every logical write batch, re-resolve the user-named branch. Reconcile unexpected branch movement; never overwrite unrelated newer work. No force push unless the current human instruction explicitly requires and authorizes it.
+Before every logical write batch, re-resolve the user-named branch. Reconcile unexpected branch movement; never overwrite unrelated newer work. No force push unless the current human instruction explicitly requires it.
 
-## Full-stack multi-surface work
+## Full-stack work
 
 For product behavior, trace the complete affected path:
 
@@ -62,28 +53,15 @@ A local UI success is not closure when persisted or cross-surface truth is requi
 
 ## Security and finance
 
-Use the actual security and financial contracts/code as truth for affected work. Authentication, authorization, sessions, secrets, PII, provider credentials, isolation, and financial mutation paths require risk-appropriate verification.
+Use actual security and financial contracts/code as truth. Authentication, authorization, sessions, secrets, PII, provider credentials, isolation, and financial mutation paths require risk-appropriate verification. WLT remains the authoritative financial-truth owner.
 
-WLT remains the authoritative financial-truth owner. DSH and surfaces may use only bounded WLT-backed operations/projections permitted by current contracts.
+## Delegation
 
-## Delegated implementation
+Delegation is optional and only for bounded work that materially benefits from it. Exactly one backend owns one work unit; overlapping concurrent writers are forbidden. The selected orchestrator owns diagnosis, scope, reconciliation, verification, commit, and push.
 
-Delegation is optional and only for bounded work that materially benefits from it. Exactly one backend owns one work unit; overlapping concurrent writers are forbidden.
+## Tools
 
-The selected orchestrator owns diagnosis, scope, complete diff review, branch/head re-pinning, verification, rework, commit, and push. Implementers own only their bounded edits.
-
-## Skills and tools
-
-Use `.agents/INDEX.md` only when routing is not obvious. Load the smallest relevant skill/tool set.
-
-Tool ladder:
-
-1. direct scoped inspection;
-2. focused search or existing command;
-3. one targeted code check when it adds unique assurance;
-4. Nx affected when workspace impact must be computed;
-5. runtime tooling for runtime-changing or runtime-claimed work;
-6. Graphify/LeanCTX/OpenCodeReview only when they materially reduce uncertainty or repeated work.
+Use `.agents/INDEX.md` only when routing is not obvious. Load the smallest relevant skill/tool set. Prefer direct scoped inspection and existing affected/runtime commands; use Graphify/LeanCTX/OpenCodeReview only when they materially reduce uncertainty or repeated work.
 
 `tools/prompting/bthwani-orchestrator/**` is a separate self-contained textual execution package. Treat it as read-only unless the current human instruction explicitly authorizes package maintenance.
 
