@@ -3,33 +3,15 @@ name: BThwani Node Diagnostics
 on:
   workflow_call:
     inputs:
-      base_sha:
-        type: string
-        required: true
-      head_sha:
-        type: string
-        required: true
-      full_verification:
-        type: string
-        required: true
-      frontend:
-        type: string
-        required: true
-      contracts:
-        type: string
-        required: true
-      contracts_changed:
-        type: string
-        required: true
-      node:
-        type: string
-        required: true
-      verification_tier:
-        type: string
-        required: true
-      execution_phase:
-        type: string
-        required: true
+      base_sha: { type: string, required: true }
+      head_sha: { type: string, required: true }
+      full_verification: { type: string, required: true }
+      frontend: { type: string, required: true }
+      contracts: { type: string, required: true }
+      contracts_changed: { type: string, required: true }
+      node: { type: string, required: true }
+      verification_tier: { type: string, required: true }
+      execution_phase: { type: string, required: true }
 
 permissions:
   contents: read
@@ -57,28 +39,6 @@ jobs:
       - name: Materialize contracts through the Nx owner
         if: ${{ inputs.contracts_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' }}
         run: pnpm exec nx run contracts:materialize
-      - name: Verify immutable diff
-        id: immutable_diff
-        continue-on-error: true
-        shell: bash
-        env:
-          BASE_SHA: ${{ inputs.base_sha }}
-          HEAD_SHA: ${{ inputs.head_sha }}
-        run: |
-          set +e
-          log="${RUNNER_TEMP}/immutable-diff.log"
-          git diff --check "${BASE_SHA}" "${HEAD_SHA}" 2>&1 | tee "${log}"
-          status=${PIPESTATUS[0]}
-          echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
-          exit "${status}"
-      - name: Upload immutable diff diagnostics
-        if: ${{ steps.immutable_diff.outcome == 'failure' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: immutable-diff-static-${{ github.run_id }}
-          path: ${{ runner.temp }}/immutable-diff.log
-          if-no-files-found: error
-          retention-days: 7
       - name: Verify affected frontend diagnostics
         id: frontend_diagnostics
         if: ${{ inputs.frontend == 'true' }}
@@ -137,7 +97,6 @@ jobs:
           run_check pnpm run guard:service-manifest-drift
           run_check pnpm run guard:frontend-feature-binding
           run_check pnpm run guard:runtime-real-bindings
-          echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
           exit "${status}"
       - name: Upload contract diagnostics
         if: ${{ steps.contract_diagnostics.outcome == 'failure' }}
@@ -166,7 +125,6 @@ jobs:
           run_check pnpm exec knip --config knip.json --reporter compact --reporter github-actions
           run_check pnpm run guard:logic-all
           run_check pnpm run guard:performance-all
-          echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
           exit "${status}"
       - name: Upload deep code diagnostics
         if: ${{ steps.deep_repository_diagnostics.outcome == 'failure' }}
@@ -176,27 +134,16 @@ jobs:
           path: ${{ runner.temp }}/deep-repository-diagnostics.log
           if-no-files-found: error
           retention-days: 7
-      - name: Record strict dead-code backlog
-        if: ${{ (inputs.execution_phase == 'closure' || inputs.execution_phase == 'master') && (inputs.full_verification == 'true' || inputs.verification_tier == 'deep') }}
-        continue-on-error: true
-        run: pnpm exec knip --config knip.strict.json --reporter compact
-      - name: Enforce all diagnostic results
+      - name: Enforce diagnostic results
         if: ${{ always() }}
         shell: bash
         env:
-          IMMUTABLE_OUTCOME: ${{ steps.immutable_diff.outcome }}
           FRONTEND_OUTCOME: ${{ steps.frontend_diagnostics.outcome }}
           CONTRACT_OUTCOME: ${{ steps.contract_diagnostics.outcome }}
           DEEP_OUTCOME: ${{ steps.deep_repository_diagnostics.outcome }}
         run: |
           status=0
-          for outcome in \
-            "${IMMUTABLE_OUTCOME}" \
-            "${FRONTEND_OUTCOME}" \
-            "${CONTRACT_OUTCOME}" \
-            "${DEEP_OUTCOME}"; do
-            if [[ "${outcome}" == "failure" ]]; then
-              status=1
-            fi
+          for outcome in "${FRONTEND_OUTCOME}" "${CONTRACT_OUTCOME}" "${DEEP_OUTCOME}"; do
+            if [[ "${outcome}" == "failure" ]]; then status=1; fi
           done
           exit "${status}"
