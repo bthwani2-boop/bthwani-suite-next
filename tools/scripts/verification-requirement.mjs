@@ -11,7 +11,6 @@ const VERIFICATION_AUTHORITY_FILES = new Set([
   "tools/scripts/ci-runtime-bootstrap-policy.test.mjs",
   "tools/scripts/detect-ci-context.mjs",
   "tools/scripts/detect-ci-context.test.mjs",
-  "tools/scripts/run-foundation-gate.ps1",
   "tools/scripts/run-journey-gate.ps1",
   "tools/scripts/verification-requirement.mjs",
 ]);
