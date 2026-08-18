@@ -225,22 +225,21 @@ type ActorScopes struct {
 	ShiftCodes        []string `json:"shiftCodes"`
 }
 
-// BlockerReason represents a specific reason why an actor is blocked from operations.
+// BlockerReason is restricted to facts owned by Workforce (plus Identity
+// lifecycle, which Workforce reads as a dependency). DSH assignment/area and
+// WLT financial reasons are intentionally not representable here; cross-service
+// journeys must compose those authorities at their own boundary.
 type BlockerReason string
 
 const (
-	BlockerIdentitySuspended      BlockerReason = "IDENTITY_SUSPENDED"
-	BlockerProfileIncomplete      BlockerReason = "PROFILE_INCOMPLETE"
-	BlockerDocumentsExpired       BlockerReason = "DOCUMENTS_EXPIRED"
-	BlockerEmploymentTerminated   BlockerReason = "EMPLOYMENT_TERMINATED"
-	BlockerNoActiveAssignment     BlockerReason = "NO_ACTIVE_ASSIGNMENT"
-	BlockerShiftInactive          BlockerReason = "SHIFT_INACTIVE"
-	BlockerOutsideActiveArea      BlockerReason = "OUTSIDE_ACTIVE_AREA"
-	BlockerFinancialEligibility   BlockerReason = "FINANCIAL_ELIGIBILITY_BLOCKED"
-	BlockerEligibilityUnavailable BlockerReason = "ELIGIBILITY_UNAVAILABLE"
+	BlockerIdentitySuspended    BlockerReason = "IDENTITY_SUSPENDED"
+	BlockerProfileIncomplete    BlockerReason = "PROFILE_INCOMPLETE"
+	BlockerDocumentsExpired     BlockerReason = "DOCUMENTS_EXPIRED"
+	BlockerEngagementInactive   BlockerReason = "ENGAGEMENT_INACTIVE"
 )
 
-// ReadinessStatus indicates the overall operational readiness.
+// ReadinessStatus indicates the Workforce-owned readiness decision. Dependency
+// outages are errors, not BLOCKED decisions.
 type ReadinessStatus string
 
 const (
@@ -248,7 +247,9 @@ const (
 	ReadinessBlocked ReadinessStatus = "BLOCKED"
 )
 
-// ReadinessGate aggregates readiness from Identity, Workforce, DSH, and Finance.
+// ReadinessGate is the canonical Workforce-owned provider readiness decision.
+// It evaluates Identity lifecycle + Workforce engagement/profile only. It must
+// never fabricate DSH assignment/area state or WLT financial state.
 type ReadinessGate struct {
 	ActorID        string          `json:"actorId"`
 	WorkforceKind  string          `json:"workforceKind"`
