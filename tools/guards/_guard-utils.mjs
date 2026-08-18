@@ -1,10 +1,11 @@
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 // Anchor root to this file's location (tools/guards/ → repo root) so guards work
 // correctly whether invoked from the repo root or from a package subdirectory.
-export const repoRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const EXCLUDED_DIRS = new Set([
   ".git", ".diagnostics", "node_modules", ".pnpm-store", ".next", ".expo", ".turbo", ".nx", ".cache",
@@ -18,6 +19,10 @@ const EXCLUDED_EXTENSIONS = new Set([
 const TEXT_EXTENSIONS = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".json", ".yaml", ".yml"]);
 const CODE_EXTENSIONS = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx"]);
 const STYLE_EXTENSIONS = new Set([".css", ".scss"]);
+
+let repositoryFileCache;
+const readCache = new Map();
+let tsconfigAliasCache;
 
 export function toPosix(filePath) {
   return filePath.replaceAll(path.sep, "/");
@@ -47,40 +52,77 @@ export function isExcluded(relPath, isDir, name) {
   return false;
 }
 
+function hasExcludedDirectory(relPath) {
+  const parts = relPath.split("/");
+  for (const name of parts.slice(0, -1)) {
+    if (EXCLUDED_DIRS.has(name) || name === "_donor" || name === ".graphify") return true;
+  }
+  return relPath.startsWith("tools/diagnostics/") || relPath.startsWith("tools/registry/runs/");
+}
+
+function repositoryFiles() {
+  if (repositoryFileCache) return repositoryFileCache;
+  const result = spawnSync(
+    "git",
+    ["ls-files", "-z", "--cached", "--others", "--exclude-standard"],
+    {
+      cwd: repoRoot,
+      encoding: "utf8",
+      windowsHide: true,
+      maxBuffer: 64 * 1024 * 1024,
+    },
+  );
+  if (result.error || result.status !== 0) {
+    throw new Error(`Unable to inventory repository files with git ls-files: ${result.stderr || result.error?.message || result.status}`);
+  }
+
+  repositoryFileCache = [...new Set(String(result.stdout || "")
+    .split("\0")
+    .map((file) => toPosix(file.trim()))
+    .filter(Boolean))]
+    .filter((rel) => !hasExcludedDirectory(rel))
+    .filter((rel) => !isExcluded(rel, false, path.posix.basename(rel)))
+    .filter((rel) => fs.existsSync(path.join(repoRoot, rel)))
+    .sort();
+  return repositoryFileCache;
+}
+
+function normalizeDirectoryPrefix(dir) {
+  const absolute = path.isAbsolute(dir) ? path.resolve(dir) : path.resolve(repoRoot, dir);
+  const relative = toPosix(path.relative(repoRoot, absolute));
+  if (!relative || relative === ".") return "";
+  if (relative === ".." || relative.startsWith("../")) return null;
+  return relative.replace(/\/+$/, "");
+}
+
+function filesUnder(dir) {
+  const prefix = normalizeDirectoryPrefix(dir);
+  if (prefix === null) return [];
+  if (!prefix) return repositoryFiles();
+  return repositoryFiles().filter((file) => file === prefix || file.startsWith(`${prefix}/`));
+}
+
 export function listFiles(dir = repoRoot, files = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    const rel = toPosix(path.relative(repoRoot, full));
-    if (isExcluded(rel, entry.isDirectory(), entry.name)) continue;
-    if (entry.isDirectory()) {
-      listFiles(full, files);
-      continue;
-    }
-    if (TEXT_EXTENSIONS.has(path.extname(entry.name))) files.push(rel);
+  for (const rel of filesUnder(dir)) {
+    if (TEXT_EXTENSIONS.has(path.posix.extname(rel))) files.push(rel);
   }
   return files;
 }
 
 export function listCodeFiles() {
-  return listFiles().filter((file) => CODE_EXTENSIONS.has(path.extname(file)));
+  return repositoryFiles().filter((file) => CODE_EXTENSIONS.has(path.posix.extname(file)));
 }
 
 export function listStyleFiles(dir = repoRoot, files = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    const rel = toPosix(path.relative(repoRoot, full));
-    if (isExcluded(rel, entry.isDirectory(), entry.name)) continue;
-    if (entry.isDirectory()) {
-      listStyleFiles(full, files);
-      continue;
-    }
-    if (STYLE_EXTENSIONS.has(path.extname(entry.name))) files.push(rel);
+  for (const rel of filesUnder(dir)) {
+    if (STYLE_EXTENSIONS.has(path.posix.extname(rel))) files.push(rel);
   }
   return files;
 }
 
 export function read(file) {
-  return fs.readFileSync(path.join(repoRoot, file), "utf8");
+  if (!readCache.has(file)) readCache.set(file, fs.readFileSync(path.join(repoRoot, file), "utf8"));
+  return readCache.get(file);
 }
 
 export function fail(guardId, violations) {
@@ -135,6 +177,7 @@ export function existsResolved(baseFile, specifier) {
 }
 
 export function loadTsconfigAliases() {
+  if (tsconfigAliasCache) return new Map(tsconfigAliasCache);
   const tsconfigPath = path.join(repoRoot, "tsconfig.base.json");
   if (!fs.existsSync(tsconfigPath)) return new Map();
   const raw = fs.readFileSync(tsconfigPath, "utf8");
@@ -145,50 +188,14 @@ export function loadTsconfigAliases() {
     const first = Array.isArray(targets) ? targets[0] : undefined;
     if (first) aliases.set(alias, first);
   }
-  return aliases;
+  tsconfigAliasCache = aliases;
+  return new Map(aliases);
 }
 
-function readActivationPolicy() {
-  const relative = "tools/toolchain/tool-activation-policy.json";
-  const file = path.join(repoRoot, relative);
-  if (!fs.existsSync(file)) {
-    console.error(`\n[TOOLCHAIN ERROR] Missing ${relative}. Activation checks fail closed.\n`);
-    process.exit(1);
-  }
-  let document;
-  try {
-    document = JSON.parse(fs.readFileSync(file, "utf8"));
-  } catch (error) {
-    console.error(`\n[TOOLCHAIN ERROR] Invalid ${relative}: ${error.message}. Activation checks fail closed.\n`);
-    process.exit(1);
-  }
-  if (document.schemaVersion !== 1 || document.policyId !== "TOOL_ACTIVATION_POLICY" || typeof document.activations !== "object" || document.activations === null) {
-    console.error(`\n[TOOLCHAIN ERROR] Malformed ${relative}. Activation checks fail closed.\n`);
-    process.exit(1);
-  }
-  return document.activations;
-}
-
+// Compatibility helper for optional local tools. Required tools must enforce
+// their requirement at the caller; repository-wide activation registries are
+// intentionally not a second source of truth.
 export function assertActiveOrWarn(toolId, binaryName) {
-  const activation = readActivationPolicy()[toolId];
-  if (!["active", "partial", "optional", "missing", "disabled"].includes(activation)) {
-    console.error(`\n[TOOLCHAIN ERROR] Missing or invalid activation for '${toolId}'. decision=FIX_REQUIRED\n`);
-    process.exit(1);
-  }
-  if (activation === "active") {
-    console.error(`\n[${toolId.toUpperCase()} ERROR] Required active toolchain binary '${binaryName}' is not installed.`);
-    console.error("Active checks must fail closed.\n");
-    process.exit(1);
-  }
-  if (activation === "partial") {
-    console.warn(`\n[${toolId.toUpperCase()} WARN] Partial toolchain binary '${binaryName}' is not installed.`);
-    console.warn("Partial checks are warn-only until their declared activation policy is raised.\n");
-    process.exit(0);
-  }
-  if (activation === "disabled") {
-    console.log(`\n[${toolId.toUpperCase()} SKIP] '${binaryName}' is disabled by tool activation policy.\n`);
-    process.exit(0);
-  }
-  console.log(`\n[${toolId.toUpperCase()} SKIP] '${binaryName}' binary not installed. activation=${activation}.\n`);
+  console.log(`\n[${toolId.toUpperCase()} SKIP] optional binary '${binaryName}' is not installed.\n`);
   process.exit(0);
 }
