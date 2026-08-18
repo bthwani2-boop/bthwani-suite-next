@@ -7,146 +7,129 @@
     "node": "24.17.0",
     "pnpm": "10.34.0",
     "runtimeTypeScript": "npm:@typescript/typescript6@6.0.2",
-    "capabilityModelVersion": 1,
-    "navigationArchitecture": {
-      "target": "expo-router",
-      "decision": "ADOPTED_TARGET_ARCHITECTURE",
-      "implementation": "DEFERRED_UNTIL_STABILITY",
-      "appliesTo": ["app-client", "app-partner", "app-captain", "app-field"],
-      "migrationMode": "ONE_APP_AT_A_TIME_FAIL_CLOSED",
-      "remoteBuildNow": false,
-      "migrationOrder": ["app-field", "app-captain", "app-partner", "app-client"],
-      "requiredStabilityGates": ["productJourneys", "backendContracts", "mobileAppShell", "deepLinksAndNotifications", "regressionBaseline", "routeContracts", "parityTests"]
-    },
-    "mediaArchitecture": {
-      "decision": "CAPABILITY_CONSOLIDATION_FIRST",
-      "remoteBuildNow": false,
-      "owners": {
-        "systemCameraPhotoCapture": { "package": "expo-image-picker", "status": "CANONICAL_ACTIVE" },
-        "imageLibraryPick": { "package": "expo-image-picker", "status": "CANONICAL_ACTIVE" },
-        "customCameraPreview": { "package": "expo-camera", "status": "REQUIREMENT_REVIEW_PENDING" },
-        "barcodeScanning": { "package": "expo-camera", "status": "REQUIREMENT_REVIEW_PENDING" },
-        "videoPlayback": { "package": "expo-video", "status": "CANONICAL_ACTIVE" },
-        "standaloneAudio": { "package": "expo-audio", "status": "REQUIREMENT_REVIEW_PENDING" },
-        "documentPick": { "package": "expo-document-picker", "status": "CANONICAL_ACTIVE" },
-        "fileOperations": { "package": "expo-file-system", "status": "CANONICAL_ACTIVE_WHERE_CONSUMED" },
-        "sharing": { "package": "expo-sharing", "status": "CANONICAL_ACTIVE_WHERE_CONSUMED" },
-        "imageRendering": { "package": "expo-image", "status": "CANONICAL_ACTIVE_WHERE_CONSUMED" },
-        "imageTransform": { "package": "expo-image-manipulator", "status": "CONSUMER_REVIEW_PENDING" }
-      },
-      "rules": {
-        "ordinaryPhotoCaptureMustNotRequireExpoCamera": true,
-        "broaderPackageWinsOnlyWhenMultipleRequiredCapabilitiesAreActuallyUsed": true,
-        "duplicateCapabilityOwnersRequireExplicitJustification": true,
-        "nativeRemovalDeferredToCleanupWindow": true,
-        "packageDeletionRequiresConsumerAndRequirementClosure": true
-      }
-    },
-    "mobilityArchitecture": {
-      "decision": "CAPABILITY_CONSOLIDATION_FIRST",
-      "remoteBuildNow": false,
-      "owners": {
-        "foregroundLocation": { "packages": ["expo-location"], "status": "CANONICAL_ACTIVE" },
-        "mapRendering": { "packages": ["react-native-maps"], "status": "CANONICAL_ACTIVE" },
-        "backgroundLocation": { "packages": ["expo-location", "expo-task-manager"], "status": "COMPOSITE_CAPABILITY" },
-        "deferredBackgroundSync": { "packages": ["expo-background-task", "expo-task-manager"], "status": "FIELD_DECLARED_ACTIVE" },
-        "powerAwareness": { "packages": ["expo-battery"], "status": "CANONICAL_ACTIVE_CAPTAIN_FIELD" },
-        "keepAwake": { "packages": ["expo-keep-awake"], "status": "REQUIREMENT_REVIEW_PENDING" }
-      },
-      "alignment": {
-        "app-captain.backgroundLocation": "REQUIRES_TASK_MANAGER_BEFORE_IMPLEMENTATION",
-        "app-field.deferredBackgroundSync": "DECLARED_WITH_TASK_MANAGER"
-      },
-      "rules": {
-        "backgroundLocationRequiresTopLevelTaskDefinition": true,
-        "backgroundLocationRequiresTaskManager": true,
-        "backgroundTaskMustNotReplaceLocationEngine": true,
-        "permissionAndNativeChangesDeferredToBuildWindow": true,
-        "packageDeletionRequiresConsumerAndRequirementClosure": true
-      }
-    },
-    "systemArchitecture": {
-      "decision": "CAPABILITY_CONSOLIDATION_FIRST",
-      "remoteBuildNow": false,
-      "owners": {
-        "sessionSecretStorage": { "package": "expo-secure-store", "status": "CANONICAL_ACTIVE" },
-        "ephemeralIdentifiers": { "package": "expo-crypto", "status": "CANONICAL_ACTIVE" },
-        "runtimeConstants": { "package": "expo-constants", "status": "INFRA_ACTIVE" },
-        "updatesRuntime": { "package": "expo-updates", "status": "INFRA_ACTIVE" },
-        "splashLifecycle": { "package": "expo-splash-screen", "status": "INFRA_ACTIVE" },
-        "deepLinking": { "package": "expo-linking", "status": "TARGET_ROUTER_SUPPORT" },
-        "biometricUnlock": { "package": "expo-local-authentication", "status": "REQUIREMENT_REVIEW_PENDING" },
-        "applicationMetadata": { "package": "expo-application", "status": "CONSUMER_REVIEW_PENDING" },
-        "deviceMetadata": { "package": "expo-device", "status": "CONSUMER_REVIEW_PENDING" },
-        "localization": { "package": "expo-localization", "status": "REQUIREMENT_REVIEW_PENDING" }
-      },
-      "alignment": {
-        "app-client.localAuthentication": "DECLARED_PENDING_PRODUCT_DECISION",
-        "app-partner.localAuthentication": "DECLARED_PENDING_PRODUCT_DECISION",
-        "app-field.localAuthentication": "DECLARED_PENDING_PRODUCT_DECISION",
-        "app-captain.localAuthentication": "NOT_DECLARED_REVIEW_PENDING"
-      },
-      "rules": {
-        "secureStoreOwnsSecretsNotGeneralCache": true,
-        "cryptoDoesNotOwnPersistence": true,
-        "routerTargetProtectsLinkingFromPrematureDeprecation": true,
-        "biometricUnlockIsLocalReauthOnly": true,
-        "biometricUnlockCannotCreateServerSession": true,
-        "biometricUnlockCannotBypassIdentityOrWorkforceGates": true,
-        "biometricFeatureBindingRequiresDecisionClosure": true,
-        "applicationMetadataCannotOwnInstallationIdentity": true,
-        "deviceMetadataCannotOwnStableInstallationIdentity": true,
-        "stableInstallationIdentityRemainsSecureStoreCrypto": true,
-        "metadataFeatureBindingRequiresConsumerProof": true,
-        "reviewPendingDoesNotAuthorizeDeletion": true,
-        "nativeRemovalDeferredToCleanupWindow": true
-      }
-    },
-    "toolingArchitecture": {
-      "decision": "EXPO_METRO_SINGLE_OWNER",
-      "remoteBuildNow": false,
-      "metro": {
-        "base": "expo/metro-config",
-        "sentryOwner": "@sentry/react-native/metro#getSentryExpoConfig",
-        "appConfigParity": "IDENTICAL_CURRENTLY",
-        "manualMonorepoResolution": {
-          "status": "COMPATIBILITY_QUARANTINE_PENDING_RUNTIME_PROOF",
-          "requiredProof": "expo start --clear plus runtime smoke for all four mobile apps before removal"
-        },
-        "directReactNativeMetroConfig": {
-          "package": "@react-native/metro-config",
-          "status": "DEPRECATION_CANDIDATE",
-          "removalGate": "explicit package approval plus package/lockfile update plus Metro smoke; no EAS build solely for this tooling dependency"
-        }
-      },
-      "rules": {
-        "expoMetroConfigIsCanonical": true,
-        "sentryMetroIntegrationMustRemain": true,
-        "manualMonorepoOverridesRequireRuntimeProofBeforeRemoval": true,
-        "reactNativeMetroConfigMustNotBeImportedByExpoApps": true,
-        "metadataOnlyGovernanceMustNotTriggerNativeBuild": true
-      }
-    }
+    "capabilityModelVersion": 1
   },
   "apps": {
     "app-client": {
-      "name": "بثواني", "slug": "app-client-next", "scheme": "bthwani-client-next", "androidPackage": "com.bthwani.client.next", "iosBundleIdentifier": "com.bthwani.client.next", "projectId": "abec897b-1f5f-409d-8286-607a5a6b69e2",
-      "productFeatures": { "identitySession": ["secureStore", "crypto"], "homeDiscovery": [], "reels": ["video"], "storeDiscovery": [], "search": [], "cart": [], "checkout": [], "orders": [], "orderTracking": ["maps"], "pickupSession": [], "specialRequests": ["imagePicker", "documentPicker"], "profile": [], "addresses": ["location", "maps"], "identityHub": [], "benefits": [], "preferences": [], "support": ["imagePicker", "documentPicker"], "notifications": ["notifications"], "ratings": [], "wallet": [] },
+      "name": "بثواني",
+      "slug": "app-client-next",
+      "scheme": "bthwani-client-next",
+      "androidPackage": "com.bthwani.client.next",
+      "iosBundleIdentifier": "com.bthwani.client.next",
+      "projectId": "abec897b-1f5f-409d-8286-607a5a6b69e2",
+      "productFeatures": {
+        "identitySession": ["secureStore", "crypto"],
+        "homeDiscovery": [],
+        "reels": ["video"],
+        "storeDiscovery": [],
+        "search": [],
+        "cart": [],
+        "checkout": [],
+        "orders": [],
+        "orderTracking": ["maps"],
+        "pickupSession": [],
+        "specialRequests": ["imagePicker", "documentPicker"],
+        "profile": [],
+        "addresses": ["location", "maps"],
+        "identityHub": [],
+        "benefits": [],
+        "preferences": [],
+        "support": ["imagePicker", "documentPicker"],
+        "notifications": ["notifications"],
+        "ratings": [],
+        "wallet": []
+      },
       "nativeCapabilities": ["router", "updates", "constants", "application", "device", "crypto", "image", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "imageManipulator", "sharing", "webBrowser", "sqlite", "location", "maps"]
     },
     "app-partner": {
-      "name": "بثواني الشريك", "slug": "app-partner-next", "scheme": "bthwani-partner-next", "androidPackage": "com.bthwani.partner.next", "iosBundleIdentifier": "com.bthwani.partner.next", "projectId": "4cde7be0-7582-4a6b-9ae0-d74f2d149580",
-      "productFeatures": { "identitySession": ["secureStore", "crypto"], "storeScope": [], "partnerOnboarding": ["documentPicker", "imagePicker"], "orders": [], "orderLifecycle": [], "timers": [], "inventory": [], "catalog": [], "categories": [], "products": [], "productMedia": ["camera", "imagePicker", "imageManipulator", "video"], "reels": ["video", "imagePicker"], "promotions": [], "ratings": [], "analytics": [], "commercial": [], "operations": [], "notifications": ["notifications"], "support": ["documentPicker", "imagePicker"], "wallet": [], "storeSettings": [] },
+      "name": "بثواني الشريك",
+      "slug": "app-partner-next",
+      "scheme": "bthwani-partner-next",
+      "androidPackage": "com.bthwani.partner.next",
+      "iosBundleIdentifier": "com.bthwani.partner.next",
+      "projectId": "4cde7be0-7582-4a6b-9ae0-d74f2d149580",
+      "productFeatures": {
+        "identitySession": ["secureStore", "crypto"],
+        "storeScope": [],
+        "partnerOnboarding": ["documentPicker", "imagePicker"],
+        "orders": [],
+        "orderLifecycle": [],
+        "timers": [],
+        "inventory": [],
+        "catalog": [],
+        "categories": [],
+        "products": [],
+        "productMedia": ["camera", "imagePicker", "imageManipulator", "video"],
+        "reels": ["video", "imagePicker"],
+        "promotions": [],
+        "ratings": [],
+        "analytics": [],
+        "commercial": [],
+        "operations": [],
+        "notifications": ["notifications"],
+        "support": ["documentPicker", "imagePicker"],
+        "wallet": [],
+        "storeSettings": []
+      },
       "nativeCapabilities": ["router", "updates", "constants", "application", "device", "crypto", "image", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "imageManipulator", "sharing", "webBrowser", "keepAwake", "sqlite", "location", "maps"]
     },
     "app-captain": {
-      "name": "بثواني الكابتن", "slug": "app-captain-next", "scheme": "bthwani-captain-next", "androidPackage": "com.bthwani.captain.next", "iosBundleIdentifier": "com.bthwani.captain.next", "projectId": "07382a76-4dc5-460f-b4a7-7105d724bae6",
-      "productFeatures": { "identitySession": ["secureStore", "crypto"], "workforce": [], "availability": [], "dispatch": ["notifications"], "assignment": [], "activeTask": [], "pickup": [], "delivery": [], "navigation": ["location", "backgroundLocation", "maps"], "gps": ["location"], "proofOfDelivery": ["camera", "imagePicker"], "support": [], "finance": [], "codCustody": [], "documents": ["documentPicker"], "rating": [], "account": [], "offlineSync": ["battery"] },
+      "name": "بثواني الكابتن",
+      "slug": "app-captain-next",
+      "scheme": "bthwani-captain-next",
+      "androidPackage": "com.bthwani.captain.next",
+      "iosBundleIdentifier": "com.bthwani.captain.next",
+      "projectId": "07382a76-4dc5-460f-b4a7-7105d724bae6",
+      "productFeatures": {
+        "identitySession": ["secureStore", "crypto"],
+        "workforce": [],
+        "availability": [],
+        "dispatch": ["notifications"],
+        "assignment": [],
+        "activeTask": [],
+        "pickup": [],
+        "delivery": [],
+        "navigation": ["location", "backgroundLocation", "maps"],
+        "gps": ["location"],
+        "proofOfDelivery": ["camera", "imagePicker"],
+        "support": [],
+        "finance": [],
+        "codCustody": [],
+        "documents": ["documentPicker"],
+        "rating": [],
+        "account": [],
+        "offlineSync": ["battery"]
+      },
       "nativeCapabilities": ["updates", "constants", "crypto", "battery", "splashScreen", "documentPicker", "imagePicker", "secureStore", "notifications", "camera", "location", "backgroundLocation", "maps"]
     },
     "app-field": {
-      "name": "بثواني الميدان", "slug": "app-field-next", "scheme": "bthwani-field-next", "androidPackage": "com.bthwani.field.next", "iosBundleIdentifier": "com.bthwani.field.next", "projectId": "08b6c8dc-80a2-4271-9904-d941a3d98914",
-      "productFeatures": { "identitySession": ["secureStore", "crypto"], "workforce": [], "profileCompletion": ["imagePicker"], "stores": [], "visit": ["location", "maps"], "checklist": [], "verification": ["camera", "imagePicker", "location"], "partnerOnboarding": ["camera", "imagePicker", "documentPicker", "location"], "evidence": ["camera", "imagePicker", "documentPicker"], "partnerProgress": [], "catalog": [], "products": [], "productsUpload": ["documentPicker", "imagePicker"], "assortment": [], "workQueue": [], "escalation": ["camera", "imagePicker", "documentPicker"], "offlineSync": ["battery", "taskManager", "backgroundTask"], "notifications": ["notifications"], "finance": [] },
+      "name": "بثواني الميدان",
+      "slug": "app-field-next",
+      "scheme": "bthwani-field-next",
+      "androidPackage": "com.bthwani.field.next",
+      "iosBundleIdentifier": "com.bthwani.field.next",
+      "projectId": "08b6c8dc-80a2-4271-9904-d941a3d98914",
+      "productFeatures": {
+        "identitySession": ["secureStore", "crypto"],
+        "workforce": [],
+        "profileCompletion": ["imagePicker"],
+        "stores": [],
+        "visit": ["location", "maps"],
+        "checklist": [],
+        "verification": ["camera", "imagePicker", "location"],
+        "partnerOnboarding": ["camera", "imagePicker", "documentPicker", "location"],
+        "evidence": ["camera", "imagePicker", "documentPicker"],
+        "partnerProgress": [],
+        "catalog": [],
+        "products": [],
+        "productsUpload": ["documentPicker", "imagePicker"],
+        "assortment": [],
+        "workQueue": [],
+        "escalation": ["camera", "imagePicker", "documentPicker"],
+        "offlineSync": ["battery", "taskManager", "backgroundTask"],
+        "notifications": ["notifications"],
+        "finance": []
+      },
       "nativeCapabilities": ["router", "updates", "constants", "application", "device", "crypto", "image", "battery", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "location", "maps", "imageManipulator", "sqlite", "taskManager", "backgroundTask", "sharing", "webBrowser"]
     }
   }
