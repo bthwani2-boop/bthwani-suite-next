@@ -1,31 +1,15 @@
-import { execFileSync } from "node:child_process";
-import { readFileSync, statSync } from "node:fs";
-import { extname, resolve } from "node:path";
+import { execFileSync, spawnSync } from "node:child_process";
 
-const TEXT_EXTENSIONS = new Set([
-  ".cjs",
-  ".css",
-  ".go",
-  ".html",
-  ".js",
-  ".json",
-  ".jsx",
-  ".mjs",
-  ".ps1",
-  ".scss",
-  ".sh",
-  ".sql",
-  ".toml",
-  ".ts",
-  ".tsx",
-  ".yaml",
-  ".yml",
-]);
+const TEXT_PATHS = [
+  "*.cjs", "*.css", "*.go", "*.html", "*.js", "*.json", "*.jsx", "*.mjs",
+  "*.ps1", "*.scss", "*.sh", "*.sql", "*.toml", "*.ts", "*.tsx", "*.yaml", "*.yml",
+];
+const CONFLICT_MARKER_PATTERN = "^(<<<<<<<|>>>>>>>)([[:space:]]|$)";
 
 function runGit(args, options = {}) {
   return execFileSync("git", args, {
     cwd: options.cwd,
-    encoding: options.encoding ?? "utf8",
+    encoding: "utf8",
     stdio: ["ignore", "pipe", "pipe"],
   });
 }
@@ -59,53 +43,32 @@ function assertIndexHasNoUnmergedEntries(root) {
   );
 }
 
-function trackedTextFiles(root) {
-  const output = runGit(["ls-files", "-z"], { cwd: root, encoding: "buffer" });
-  return output
-    .toString("utf8")
-    .split("\0")
-    .filter(Boolean)
-    .filter((path) => TEXT_EXTENSIONS.has(extname(path).toLowerCase()));
-}
-
-function conflictMarkers(content) {
-  const findings = [];
-  const lines = content.split(/\r?\n/u);
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    if (/^(?:<<<<<<<|>>>>>>>)(?:\s|$)/u.test(line)) {
-      findings.push({ line: index + 1, text: line.trim() });
-    }
-  }
-  return findings;
-}
-
 function assertTrackedSourcesHaveNoConflictMarkers(root) {
-  const findings = [];
+  // Git owns the tracked-file inventory and scans it natively in one process.
+  // This preserves the original repository-wide invariant without stat/readFile
+  // loops over every source file on every application startup.
+  const result = spawnSync(
+    "git",
+    ["grep", "-n", "-I", "-E", CONFLICT_MARKER_PATTERN, "--", ...TEXT_PATHS],
+    {
+      cwd: root,
+      encoding: "utf8",
+      windowsHide: true,
+      maxBuffer: 16 * 1024 * 1024,
+    },
+  );
 
-  for (const relativePath of trackedTextFiles(root)) {
-    const absolutePath = resolve(root, relativePath);
-    let size;
-    try {
-      size = statSync(absolutePath).size;
-    } catch {
-      continue;
-    }
-    if (size > 5 * 1024 * 1024) continue;
-
-    let content;
-    try {
-      content = readFileSync(absolutePath, "utf8");
-    } catch {
-      continue;
-    }
-
-    for (const marker of conflictMarkers(content)) {
-      findings.push(`${relativePath}:${marker.line}: ${marker.text}`);
-    }
+  if (result.error) {
+    throw new Error(`Unable to scan tracked source for conflict markers: ${result.error.message}`);
+  }
+  if (result.status === 1) return; // git grep: no matches
+  if (result.status !== 0) {
+    const detail = String(result.stderr || "").trim() || `exit ${String(result.status)}`;
+    throw new Error(`Unable to scan tracked source for conflict markers: ${detail}`);
   }
 
-  if (findings.length === 0) return;
+  const findings = String(result.stdout || "").split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
+  if (!findings.length) return;
 
   throw new Error(
     [
