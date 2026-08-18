@@ -9,9 +9,9 @@ param(
 Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $ErrorActionPreference = "Stop"
 
-$manifestPath = "governance\guards\guard-sets.json"
+$manifestPath = "tools\verification\verification-sets.json"
 if (-not (Test-Path -LiteralPath $manifestPath)) {
-  throw "Required verification routing is missing: $manifestPath"
+  throw "Verification routing is missing: $manifestPath"
 }
 
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
@@ -44,11 +44,7 @@ if ($guardSelectors.Count -gt 0) {
 $journeyGuards = @($journeyGuards)
 
 if ($PlanOnly) {
-  [ordered]@{
-    journeys = $journeySelectors
-    guards = $journeyGuards
-    count = $journeyGuards.Count
-  } | ConvertTo-Json -Depth 4
+  [ordered]@{ journeys = $journeySelectors; guards = $journeyGuards; count = $journeyGuards.Count } | ConvertTo-Json -Depth 4
   exit 0
 }
 
@@ -61,10 +57,7 @@ function Invoke-Step {
   Write-Host "[ OK  ] $Name"
 }
 
-if ($Full) {
-  Invoke-Step "workspace-verification" { pnpm run workspace:verify }
-}
-
+if ($Full) { Invoke-Step "workspace-verification" { pnpm run workspace:verify } }
 foreach ($guardName in $journeyGuards) {
   $scriptName = "guard:$guardName"
   Invoke-Step $scriptName { pnpm run $scriptName }
