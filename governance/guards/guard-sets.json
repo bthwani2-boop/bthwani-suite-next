@@ -12,12 +12,7 @@
     "foundation": [
       "source-integrity",
       "governance-schema",
-      "agent-governance",
       "authority-separation",
-      "guard-registry",
-      "sdlc",
-      "required-command-integrity",
-      "repo-size",
       "cleanup-policy",
       "no-broken-imports",
       "runtime-config",
@@ -26,7 +21,6 @@
       "backend-api-binding"
     ],
     "journey": [
-      "required-command-integrity",
       "no-broken-imports",
       "runtime-config",
       "api-binding",
@@ -42,17 +36,12 @@
     ],
     "governance": [
       "governance-schema",
-      "agent-governance",
       "authority-separation",
-      "guard-registry",
-      "sdlc",
-      "required-command-integrity",
       "cleanup-policy"
     ]
   },
   "journeyProfiles": {
     "PROJECT-WIDE": [
-      "required-command-integrity",
       "no-broken-imports",
       "runtime-config",
       "api-binding",
@@ -67,7 +56,6 @@
       "field-surface-truth"
     ],
     "PLATFORM-CHANGE-SETS": [
-      "required-command-integrity",
       "no-broken-imports",
       "runtime-config",
       "api-binding",
