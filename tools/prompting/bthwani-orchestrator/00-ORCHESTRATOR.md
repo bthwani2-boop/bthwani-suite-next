@@ -1,6 +1,6 @@
-# BThwani Self-Contained Goal-Driven Root-Cause Execution Orchestrator
+# BThwani Self-Contained Goal-Driven Audit, Inspection, Diagnosis, Analysis & Root-Cause Execution Orchestrator
 
-PACKAGE_REVISION: 4
+PACKAGE_REVISION: 5
 PACKAGE_CLASS: TEXTUAL_EXECUTION_COMMAND_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -12,7 +12,7 @@ DEFAULT_ORCHESTRATOR_MUTABILITY: READ_ONLY
 
 ## 0. Governing law
 
-> **GOAL-DRIVEN SEMANTIC AUTHORITY; TOP-DOWN DIAGNOSIS; BOTTOM-UP EVIDENCE; HIGHEST PROVEN SYSTEMIC ROOT FIRST; ACTUAL CODE/DATA/CONTRACT/RUNTIME IS THE PLACE OF TREATMENT; COHERENT END-TO-END CUTOVER; ZERO UNJUSTIFIED PARALLEL TRUTH; ZERO UNJUSTIFIED REACHABLE LEGACY; ZERO DOCUMENTATION-ONLY CLOSURE.**
+> **GOAL-DRIVEN SEMANTIC AUTHORITY; TOP-DOWN AUDIT + INSPECTION + DIAGNOSIS + ANALYSIS; BOTTOM-UP EVIDENCE; HIGHEST PROVEN SYSTEMIC ROOT FIRST; ACTUAL CODE/DATA/CONTRACT/RUNTIME IS THE PLACE OF TREATMENT; COHERENT END-TO-END CUTOVER; ZERO UNJUSTIFIED PARALLEL TRUTH; ZERO UNJUSTIFIED REACHABLE LEGACY; ZERO DOCUMENTATION-ONLY CLOSURE.**
 
 This directory is a textual command package interpreted directly by a human/agent. It is **not** application/runtime code, a framework, a CLI, a workflow, a validator, a guard system, a machine registry, or a generated state machine.
 
@@ -24,11 +24,11 @@ Project tooling and external research may be used only as evidence or execution 
 
 The package has exactly these semantic owners:
 
-1. `00-ORCHESTRATOR.md` — governing law, goal-driven lifecycle, invocation, independence, protection and valid stop states.
+1. `00-ORCHESTRATOR.md` — governing law, goal-driven audit/execution lifecycle, invocation, independence, protection and valid stop states.
 2. `01-SCOPE-AUTHORITY-RULES.md` — truth/authority, objective/scope/focus routing, research/capability discipline, exclusions, concurrency and longevity.
-3. `02-DIAGNOSE-ROOT-CAUSE.md` — coverage, journeys, findings, decisions, root proof/ranking, canonical target modeling and execution readiness.
+3. `02-DIAGNOSE-ROOT-CAUSE.md` — detailed audit/inspection/diagnosis/analysis protocol through coverage, journeys, findings, decisions, root proof/ranking, canonical target modeling and execution readiness.
 4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — actual treatment, reconstruction, migration, cutover, cleanup and mutation discipline.
-5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-candidate evidence, repository-platform truth when required, review provenance, re-diagnosis and fail-closed closure.
+5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-candidate evidence, repository-platform truth when required, review provenance, post-treatment re-audit/re-inspection/re-diagnosis/re-analysis and fail-closed closure.
 6. `focus/code-architecture-organization.md` — implementation architecture, repository structure, UI/UX and discoverability.
 7. `focus/governance-product-design.md` — product meaning, governance reconciliation and engineering-governance/control-artifact value.
 8. `focus/data-contracts-runtime-security-quality.md` — data, contracts, runtime, security, finance, quality and engineering control-path efficiency.
@@ -51,7 +51,7 @@ Use:
 ```text
 REPOSITORY: <owner/repo>
 BRANCH: <exact branch/ref>
-OBJECTIVE: <material outcome to diagnose/fix/restructure/clean/close; discovery itself may be the objective>
+OBJECTIVE: <material outcome to audit/inspect/diagnose/analyze/fix/restructure/clean/close; discovery itself may be the objective>
 MODE: <DIAGNOSE | EXECUTE_END_TO_END | EXECUTE_PROJECT_CLOSURE>
 PRIMARY_FOCUS: <AUTO | optional explicit focus>
 SCOPE: <AUTO | repository/domain/service/surface/feature/journey/path/semantic scope>
@@ -66,12 +66,15 @@ PRIMARY_FOCUS = AUTO
 SCOPE = derive the smallest complete semantic scope from OBJECTIVE and proven relations
 RESEARCH = AUTO
 PLANS = NONE
+PRE-EXECUTION METHOD = AUDIT + INSPECT + DIAGNOSE + ANALYZE
 EXECUTION PRIORITY = HIGHEST PROVEN SYSTEMIC ROOT
 ```
 
+The invocation token `MODE=DIAGNOSE` is intentionally retained for compatibility and routing simplicity. It **does not mean diagnosis-only**. It means the full read-only `AUDIT + INSPECT + DIAGNOSE + ANALYZE` protocol governed here and detailed by `01`/`02`, without project mutation.
+
 No `PREPARE` phase or repository plan/package is required. Internal reasoning may plan work; repository planning artifacts are created only when explicitly requested.
 
-## 4. Goal-driven execution, not checklist-driven execution
+## 4. Goal-driven auditing and execution, not checklist-driven execution
 
 `OBJECTIVE` is the desired material outcome, not a file list and not a license for an unrelated repository sweep.
 
@@ -80,12 +83,18 @@ OBJECTIVE
 → identify semantic/operational root
 → derive relevant focus lenses
 → derive initial scope
+→ audit material coverage/completeness/conformance/negative space
+→ inspect direct live evidence
+→ analyze truth, relations, contradictions, risk and systemic leverage
+→ diagnose causal/root structure
 → expand only through proven authority/causal/dependency/consumer/contract/data/runtime/security/blast-radius relations
 → prove the target state
 → treat the highest proven root
 ```
 
-Universal capability does **not** mean universal execution scope. The package is capable of diagnosing code, architecture, UX, governance, data, security, finance, runtime, CI/tooling or any combination, but it activates only the dimensions materially required by the objective and evidence.
+Universal capability does **not** mean universal execution scope. The package is capable of auditing, inspecting, diagnosing and analyzing code, architecture, UX, governance, data, security, finance, runtime, CI/tooling or any combination, but it activates only the dimensions materially required by the objective and evidence.
+
+For broad or repository-wide objectives, "audit everything" means complete material accounting across all applicable domains/surfaces/foundations and explicit proof for exclusions; it does not mean mechanically applying every expensive technique to every file.
 
 `PRIMARY_FOCUS=AUTO` means infer the smallest materially sufficient focus set from the objective and current findings. An explicit focus is an orientation, never permission to ignore a proven related dimension.
 
@@ -93,7 +102,7 @@ Universal capability does **not** mean universal execution scope. The package is
 
 ## 5. Exact live target first
 
-Before diagnosis or mutation:
+Before audit, inspection, diagnosis, analysis or mutation:
 
 ```text
 resolve exact REPOSITORY + BRANCH/ref
@@ -122,31 +131,65 @@ UNDERSTAND OBJECTIVE
 → RESOLVE LIVE TARGET
 → ESTABLISH AUTHORITY + PRODUCT/OPERATIONAL ROOT
 → DERIVE RELEVANT FOCUS + INITIAL SCOPE
-→ BUILD MATERIAL COVERAGE
+→ AUDIT MATERIAL COVERAGE / INVENTORY / CONFORMANCE / CONSISTENCY / NEGATIVE SPACE
+→ INSPECT DIRECT LIVE AUTHORITY / CODE / CONTRACT / DATA / RUNTIME / CONSUMER EVIDENCE
 → START AT MINIMUM DIAGNOSTIC ALTITUDE
 → BROAD DISCOVERY
+→ ANALYZE TRUTH CLASSES / RELATIONS / CONTRADICTIONS / PARALLEL TRUTH / RISK / BLAST RADIUS / LEVERAGE
 → RESEARCH WHEN MATERIAL KNOWLEDGE/EVIDENCE IS INSUFFICIENT
 → RECONSTRUCT JOURNEYS / OWNERS / STATES / HANDOFFS
 → COLLECT BOTTOM-UP EVIDENCE
+→ DIAGNOSE CAUSAL CHAINS + ROOT CANDIDATES
+→ CHALLENGE / FALSIFY COMPETING HYPOTHESES
 → BUILD FINDING + ROOT-CAUSE LANDSCAPE
 → COMPETITIVELY DEEPEN ROOTS THAT CAN CHANGE PRIORITY
 → SELECT HIGHEST PROVEN SYSTEMIC ROOT
-→ DEFINE CANONICAL TARGET STATE
+→ DEFINE CANONICAL TARGET STATE + ROOT-CORRECT TREATMENT
 → EXECUTE SMALLEST COMPLETE ROOT-CORRECT CHANGE
 → MIGRATE ALL MATERIAL WRITERS / READERS / CONSUMERS / DATA
 → CANONICAL CUTOVER
 → DELETE/RETIRE SUPERSEDED REACHABLE PATHS WHEN PROVEN SAFE
 → VERIFY WITH CLAIM-APPROPRIATE EVIDENCE
-→ RE-DIAGNOSE AFFECTED CONE
+→ RE-AUDIT + RE-INSPECT + RE-DIAGNOSE + RE-ANALYZE AFFECTED CONE
 → RE-RANK
 → REPEAT
-→ FINAL NEGATIVE-SPACE + ADVERSARIAL RE-DIAGNOSIS
+→ FINAL NEGATIVE-SPACE + ADVERSARIAL AUDIT / INSPECTION / DIAGNOSIS / ANALYSIS
 → CLOSE OR REMAIN OPEN
 ```
 
 Do not wait for an exhaustive low-level scan once the highest root is proven deeply enough to rank and treat. Do not execute a lower finding while a materially higher unresolved cause can change the correct treatment.
 
-## 7. Evidence does not grant execution authority
+## 7. Audit, inspection, diagnosis and analysis are distinct mandatory operations
+
+These terms are related but are **not interchangeable** and must not be silently collapsed into "diagnosis":
+
+```text
+AUDIT
+= establish materially complete accounting of what exists, what should exist, authority/conformance, consistency/divergence, duplication, legacy/reachability, omissions and negative space.
+
+INSPECTION
+= directly examine the exact live artifacts and behavior that can prove or disprove claims: authority, code, contracts, data, runtime, configuration, consumers, repository-platform state and other materially relevant evidence.
+
+DIAGNOSIS
+= explain observed or discovered defects through causal chains, operational parents, canonical owners/writers and the highest provable Root Cause.
+
+ANALYSIS
+= compare meanings, truth classes, hypotheses, alternatives, dependencies, consumers, blast radius, risk, recurrence, systemic leverage, target states and treatment tradeoffs before deciding what is correct.
+```
+
+Mandatory consequences:
+
+- `NOT_INSPECTED ≠ CLEAN`.
+- `NO FINDING YET ≠ AUDITED CLEAN`.
+- inventory without semantic/causal analysis is not sufficient audit proof.
+- a local defect explanation without completeness/negative-space inspection is not sufficient broad audit proof.
+- a broad scan without direct evidence and root analysis is not sufficient diagnosis.
+- a proposed treatment without canonical target analysis is not execution-ready.
+- a material area may be closed only when the applicable audit, inspection, diagnosis and analysis obligations are satisfied or explicitly `N/A_PROVEN` under `01`/`02`/`04`.
+
+The detailed techniques, coverage model, findings ledger, root proof and target modeling remain canonically owned by `02`; this section defines the non-optional semantic distinction and lifecycle obligation only.
+
+## 8. Evidence does not grant execution authority
 
 A technical observation begins as `EVIDENCE/HOLD`.
 
@@ -161,9 +204,9 @@ Operational Parent
 → Comparative Priority
 ```
 
-The only exception is a proven `DIAGNOSTIC_BLOCKER` that prevents acquiring truth. Fix it minimally without redefining Product Semantics, then return immediately to the higher diagnosis.
+The only exception is a proven `DIAGNOSTIC_BLOCKER` that prevents acquiring truth. Fix it minimally without redefining Product Semantics, then return immediately to the higher audit/inspection/diagnosis/analysis flow.
 
-## 8. Root treatment law
+## 9. Root treatment law
 
 A patch is any change that makes a symptom disappear without eliminating its proven parent Root Cause.
 
@@ -175,7 +218,7 @@ Preferred treatment:
 
 Smallest does not mean local. Complete does not mean rewrite everything.
 
-## 9. Effective scope
+## 10. Effective scope
 
 ```text
 EFFECTIVE_SCOPE =
@@ -190,15 +233,15 @@ REQUESTED/DERIVED_SCOPE
 
 Unrelated repository churn remains forbidden.
 
-## 10. Mandatory lenses
+## 11. Mandatory lenses
 
 Keep every materially applicable lens active:
 
-`PRODUCT/OPERATIONAL MEANING | ROOT CAUSE | DEPENDENCIES | CONSUMERS | DATA INTEGRITY | CONTRACT IMPACT | AUTH/AUTHZ | SECURITY | FINANCE | GOVERNANCE IMPACT | RUNTIME | FAILURE/RECOVERY | TESTING | UI/UX | STRUCTURE/NAMING | ENGINEERING EXECUTION COST | LEGACY/PARALLEL-TRUTH CLEANUP`.
+`PRODUCT/OPERATIONAL MEANING | COMPLETENESS/CONFORMANCE | CONSISTENCY/DIVERGENCE | DIRECT INSPECTION | NEGATIVE SPACE | ROOT CAUSE | DEPENDENCIES | CONSUMERS | DATA INTEGRITY | CONTRACT IMPACT | AUTH/AUTHZ | SECURITY | FINANCE | GOVERNANCE IMPACT | RUNTIME | FAILURE/RECOVERY | TESTING | UI/UX | STRUCTURE/NAMING | ENGINEERING EXECUTION COST | LEGACY/PARALLEL-TRUTH CLEANUP`.
 
 A lens may be `N/A_PROVEN`; it may never disappear silently.
 
-## 11. Decision boundary
+## 12. Decision boundary
 
 Derive every fact evidence can derive. Ask the human only for a material product/business/semantic/architectural choice that cannot safely be derived.
 
@@ -215,9 +258,9 @@ Impact/tradeoffs
 Affected roots/journeys/surfaces/contracts/data
 ```
 
-Stop only the dependent cone; continue all independent work. After a decision, propagate it, invalidate affected assumptions/evidence, re-diagnose the affected cone and re-rank if material.
+Stop only the dependent cone; continue all independent work. After a decision, propagate it, invalidate affected assumptions/evidence, re-audit/re-inspect/re-diagnose/re-analyze the affected cone and re-rank if material.
 
-## 12. Legitimate stop states
+## 13. Legitimate stop states
 
 Only:
 
@@ -227,6 +270,8 @@ Only:
 
 `large scope`, `many findings`, `follow up later`, `write a plan`, `create a ticket`, or `CI is green` are not closure states.
 
-## 13. Closure authority
+## 14. Closure authority
 
 Only `04-VERIFY-REDIAGNOSE-CLOSE.md` defines final closure. If any materially required condition is unproven, the state remains `OPEN` unless a valid stop state above applies.
+
+Where `02` or `04` use `diagnosis` / `re-diagnosis` as an umbrella lifecycle term, it must be interpreted under this governing law as including the materially required **audit + inspection + diagnosis + analysis** obligations, not diagnosis-only.
