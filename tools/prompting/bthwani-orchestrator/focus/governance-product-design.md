@@ -22,13 +22,23 @@ Inspect actors/identities and role boundaries, authorities/responsibilities, cap
 
 Look for governance→implementation drift, implementation→governance drift, policy→product contradiction, product→journey contradiction, journey→runtime contradiction, contract→implementation contradiction, data→contract contradiction, cross-surface semantic drift, duplicate governance authorities and stale documents still directing work toward obsolete owners/paths.
 
-## 5. Governance writes require system impact analysis
+## 5. Governance writes require system impact analysis and proven truth
 
 Before a material governance write establish:
 
-`claimed semantic change → affected actors/journeys/states/owners → implementation/contracts/data/runtime/surfaces impact → target truth → migration/cutover consequences`.
+`claimed semantic change → affected actors/journeys/states/owners → implementation/contracts/data/runtime/surfaces impact → canonical target truth → root cause → blast radius → migration/cutover consequences`.
 
-**NO GOVERNANCE WRITE WITHOUT SYSTEM IMPACT ANALYSIS.**
+A governance classification such as `STALE`, `WRONG` or `CONFLICTING` is evidence for investigation, not mutation authority. Before any `UPDATE | CORRECT | ADD | DELETE | MERGE | MOVE | RESTRUCTURE`, prove the affected Canonical Product/System Truth, the reason the current governance conflicts with it, the material impact/blast radius, and that no unresolved `DECISION_REQUIRED` or material semantic contradiction can change the write.
+
+```text
+UNCERTAINTY = NO GOVERNANCE WRITE
+CURRENT CODE ≠ GOVERNANCE UPDATE AUTHORITY
+SUSPECTED DRIFT ≠ DELETE/REWRITE AUTHORITY
+```
+
+If proof is incomplete, keep the governance unchanged and classify the affected claim as `EVIDENCE/HOLD` or `DECISION_REQUIRED` through `02` as appropriate.
+
+**NO GOVERNANCE WRITE WITHOUT PROVEN TARGET TRUTH + SYSTEM IMPACT ANALYSIS.**
 
 ## 6. System semantic changes require governance impact analysis
 
@@ -69,7 +79,7 @@ Unique Current Responsibility
 + Non-duplication with another layer
 ```
 
-If its value is duplicated, stale, superseded, purely ceremonial or creates more ambiguity/cost than assurance, simplify, merge, retire or delete it after blast-radius proof. Do not add a new registry/guard/policy merely to reconcile two existing sources of authority; resolve ownership instead.
+If its value is duplicated, stale, superseded, purely ceremonial or creates more ambiguity/cost than assurance, simplify, merge, retire or delete it only after satisfying the governance-write gate in §5. Do not add a new registry/guard/policy merely to reconcile two existing sources of authority; resolve ownership instead.
 
 ## 10. New control-artifact creation gate
 
