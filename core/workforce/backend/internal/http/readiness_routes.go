@@ -1,13 +1,16 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 
 	"workforce-api/internal/auth"
 	"workforce-api/internal/workforce"
 )
 
-// handleGetReadiness handles the GET /workforce/readiness/{actorId} request to evaluate a unified gate.
+// handleGetReadiness exposes only the Workforce-owned provider readiness
+// decision. Cross-service operational readiness is composed by the owning
+// journey (for example DSH captain readiness), never fabricated here.
 func (s *server) handleGetReadiness(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 	actorID := r.PathValue("actorId")
 	if actorID == "" {
@@ -15,7 +18,7 @@ func (s *server) handleGetReadiness(w http.ResponseWriter, r *http.Request, iden
 		return
 	}
 
-	// Prevent IDOR: users can only check their own readiness, unless they have provider:read:all
+	// Prevent IDOR: users can only check their own readiness, unless they have provider:read:all.
 	if actorID != identity.Subject && !identity.HasPermission("workforce", "provider:read", "all") {
 		sendError(w, http.StatusForbidden, "FORBIDDEN", "cannot read readiness of another actor")
 		return
@@ -23,11 +26,14 @@ func (s *server) handleGetReadiness(w http.ResponseWriter, r *http.Request, iden
 
 	gate, err := s.service.EvaluateReadiness(r.Context(), actorID)
 	if err != nil {
-		if err == workforce.ErrNotFound {
+		switch {
+		case errors.Is(err, workforce.ErrNotFound):
 			sendError(w, http.StatusNotFound, "NOT_FOUND", "actor not found in workforce")
-			return
+		case errors.Is(err, workforce.ErrReadinessDependencyUnavailable):
+			sendError(w, http.StatusServiceUnavailable, "WORKFORCE_READINESS_UNAVAILABLE", "a sovereign readiness dependency could not be verified")
+		default:
+			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "error evaluating readiness")
 		}
-		sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "error evaluating readiness")
 		return
 	}
 
