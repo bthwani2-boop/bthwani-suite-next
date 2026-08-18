@@ -1,15 +1,12 @@
-import { execSync } from "node:child_process";
+import { execFileSync, execSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { repoRoot } from "../guards/_guard-utils.mjs";
 
 export function hasBinary(binary) {
-  try {
-    execSync(process.platform === "win32" ? `where.exe ${binary}` : `which ${binary}`, { stdio: "ignore" });
-    return true;
-  } catch {
-    return false;
-  }
+  const locator = process.platform === "win32" ? "where.exe" : "which";
+  const result = spawnSync(locator, [binary], { stdio: "ignore", windowsHide: true });
+  return !result.error && result.status === 0;
 }
 
 export function ensureDir(rel) {
@@ -26,27 +23,30 @@ export function quoteRel(file) {
 }
 
 export function walkFiles(rootDirs, predicate) {
-  const out = [];
-  function walk(dir) {
-    let entries;
-    try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (["node_modules", "dist", "build", ".next", ".git", ".diagnostics", ".nx", ".turbo", ".cache"].includes(entry.name)) continue;
-        walk(full);
-      } else if (predicate(full, entry.name)) {
-        out.push(full);
-      }
+  const roots = [...new Set(rootDirs.map((root) => String(root).trim()).filter(Boolean))];
+  if (!roots.length) return [];
+  for (const root of roots) {
+    if (path.isAbsolute(root) || root === ".." || root.startsWith(`..${path.sep}`) || root.replaceAll("\\", "/").startsWith("../")) {
+      throw new Error(`walkFiles root must be repository-relative: ${root}`);
     }
   }
-  for (const root of rootDirs) {
-    const full = path.join(repoRoot, root);
-    if (fs.existsSync(full)) walk(full);
+
+  let raw;
+  try {
+    raw = execFileSync(
+      "git",
+      ["ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ...roots],
+      { cwd: repoRoot, encoding: "utf8", windowsHide: true, maxBuffer: 64 * 1024 * 1024 },
+    );
+  } catch (error) {
+    throw new Error(`Unable to inventory repository files: ${error?.message || String(error)}`);
+  }
+
+  const out = [];
+  for (const relative of String(raw).split("\0").filter(Boolean)) {
+    const full = path.join(repoRoot, relative);
+    if (!fs.existsSync(full) || !fs.statSync(full).isFile()) continue;
+    if (predicate(full, path.basename(relative))) out.push(full);
   }
   return out;
 }
