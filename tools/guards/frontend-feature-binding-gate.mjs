@@ -7,8 +7,8 @@ import { cleanupGoRouteExtractor, extractGoRoutes, routeKey } from "./lib/go-rou
 
 const guardId = "frontend-feature-binding-gate";
 const violations = [];
-const registryFile = "governance/guards/frontend-binding-registry.json";
-const schemaFile = "governance/guards/frontend-binding-registry.schema.json";
+const registryFile = "tools/verification/frontend-binding-registry.json";
+const schemaFile = "tools/verification/frontend-binding-registry.schema.json";
 const contractRegistryFile = "services/dsh/contracts/contract-registry.ts";
 const routerDir = "services/dsh/backend/internal/http";
 const sourceExtensions = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
