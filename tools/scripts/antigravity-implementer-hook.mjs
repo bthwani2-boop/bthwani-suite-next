@@ -8,7 +8,6 @@ const STATIC_FORBIDDEN_WRITE = [
   "GEMINI.md",
   "CLAUDE.md",
   "LEAN-CTX.md",
-  "opencode.json",
   ".agents",
   ".gemini",
   ".claude",

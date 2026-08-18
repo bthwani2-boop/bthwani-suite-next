@@ -28,7 +28,6 @@ Load only when the trigger matches:
 
 Policies live directly under `.agents/tools/`:
 
-- `opencode-implementer`
 - `antigravity-implementer`
 - `graphify`
 - `leanctx`

@@ -16,7 +16,6 @@ const SELF_PROTECTED = [
   "GEMINI.md",
   "CLAUDE.md",
   "LEAN-CTX.md",
-  "opencode.json",
   ".agents",
   ".gemini",
   ".claude",
