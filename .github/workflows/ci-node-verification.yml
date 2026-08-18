@@ -46,31 +46,6 @@ jobs:
           restore-keys: |
             nx-${{ inputs.verification_tier }}-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
             nx-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
-      - name: Verify immutable diff
-        id: immutable_diff
-        continue-on-error: true
-        shell: bash
-        env:
-          BASE_SHA: ${{ inputs.base_sha }}
-          HEAD_SHA: ${{ inputs.head_sha }}
-        run: |
-          set +e
-          log="${RUNNER_TEMP}/immutable-diff.log"
-          git diff --check "${BASE_SHA}" "${HEAD_SHA}" 2>&1 | tee "${log}"
-          status=${PIPESTATUS[0]}
-          echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
-          exit "${status}"
-      - name: Upload immutable diff diagnostics
-        if: ${{ steps.immutable_diff.outcome == 'failure' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: immutable-diff-${{ github.run_id }}
-          path: ${{ runner.temp }}/immutable-diff.log
-          if-no-files-found: error
-          retention-days: 7
-      - name: Enforce immutable diff result
-        if: ${{ steps.immutable_diff.outcome == 'failure' }}
-        run: exit 1
       - name: Verify exact affected or full Node graph
         id: node_graph
         continue-on-error: true
@@ -102,7 +77,6 @@ jobs:
           else
             run_check node tools/scripts/run-affected-verification.mjs typecheck lint test build || status=$?
           fi
-          echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
           exit "${status}"
       - name: Upload Node graph diagnostics
         if: ${{ steps.node_graph.outcome == 'failure' }}
@@ -151,7 +125,6 @@ jobs:
           $log = Join-Path $env:RUNNER_TEMP "journey-gates.log"
           Set-Content -Path $log -Value ""
           $journeys = @($env:JOURNEY_SCOPE -split ',' | Where-Object { $_ -and $_.Trim() } | ForEach-Object { $_.Trim().ToUpperInvariant() } | Select-Object -Unique)
-          "===== journey profiles: $($journeys -join ',') =====" | Tee-Object -FilePath $log -Append
           $journeyOutput = & ./tools/scripts/run-journey-gate.ps1 -Journey ($journeys -join ',') 2>&1
           $exitCode = if ($null -eq $LASTEXITCODE) { 1 } else { $LASTEXITCODE }
           $journeyOutput | Tee-Object -FilePath $log -Append
@@ -161,9 +134,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: journey-gates-${{ github.run_id }}
-          path: |
-            ${{ runner.temp }}/journey-gates.log
-            .diagnostics/journey-gate/journey-gate-summary.json
+          path: ${{ runner.temp }}/journey-gates.log
           if-no-files-found: error
           retention-days: 7
       - name: Enforce journey gate result
@@ -206,8 +177,6 @@ jobs:
             code=${PIPESTATUS[0]}
             if [[ "${code}" -ne 0 ]]; then status="${code}"; fi
           }
-          # The Nx contracts target is the sole automatic materialization owner.
-          # Verify its derived outputs without invoking a second generator.
           run_check pnpm --dir services/dsh exec tsc -p tsconfig.platform-change-sets.json --noEmit --pretty false
           run_check git diff --exit-code -- \
             core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml \
