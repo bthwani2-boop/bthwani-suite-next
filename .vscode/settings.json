@@ -1,11 +1,4 @@
 {
-  "archpulse.outputDirectory": "docs",
-  "archpulse.outputFormats": [
-    "drawio"
-  ],
-  "archpulse.autoGenerate": false,
-  "archpulse.showHealthInStatusBar": true,
-  "leanctx.binaryPath": "C:/Users/bassa/AppData/Roaming/npm/node_modules/lean-ctx-bin/bin/lean-ctx.exe",
   "files.watcherExclude": {
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
