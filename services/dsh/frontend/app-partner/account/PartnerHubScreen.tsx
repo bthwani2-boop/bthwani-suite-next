@@ -179,7 +179,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     readinessState: selfReadinessState,
     readinessViewModel: selfReadinessViewModel,
     reload: reloadSelfStatus,
-  } = usePartnerSelfController(identity.state.kind);
+  } = usePartnerSelfController(identity.state.kind, canonicalStoreId);
   const {
     hydrated: appearanceHydrated,
     mode: appearanceMode,

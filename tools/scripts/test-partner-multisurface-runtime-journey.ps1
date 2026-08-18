@@ -104,9 +104,9 @@ $Field = [pscustomobject]@{
     -DeviceFingerprint "partner-multisurface"
 }
 
-$PartnerStatus = Invoke-Api GET "$DshBaseUrl/dsh/partner/activation/status" (Headers $Partner "activation-status" -ReadOnly)
+$PartnerStatus = Invoke-Api GET "$DshBaseUrl/dsh/partner/activation/status?storeId=$([uri]::EscapeDataString($StoreId))" (Headers $Partner "activation-status" -ReadOnly)
 Require-Status $PartnerStatus @(200) "partner activation status"
-$PartnerReadiness = Invoke-Api GET "$DshBaseUrl/dsh/partner/activation/readiness" (Headers $Partner "activation-readiness" -ReadOnly)
+$PartnerReadiness = Invoke-Api GET "$DshBaseUrl/dsh/partner/activation/readiness?storeId=$([uri]::EscapeDataString($StoreId))" (Headers $Partner "activation-readiness" -ReadOnly)
 Require-Status $PartnerReadiness @(200) "partner activation readiness"
 $Scopes = Invoke-Api GET "$DshBaseUrl/dsh/partner/scopes" (Headers $Partner "scopes" -ReadOnly)
 Require-Status $Scopes @(200) "partner scopes"

@@ -676,10 +676,16 @@
 /dsh/partner/activation/status:
   get:
     operationId: getDshPartnerActivationStatus
-    summary: Partner reads their own current activation status.
+    summary: Partner reads their own current activation status for an explicitly selected store.
     tags: [DshPartnerActivation]
     security:
       - bearerAuth: []
+    parameters:
+      - name: storeId
+        in: query
+        required: false
+        description: Required when the authenticated partner spans multiple partner/store scopes; DSH derives the partner from this owned store.
+        schema: { type: string, minLength: 1 }
     responses:
       "200":
         description: Partner activation status.
@@ -687,6 +693,7 @@
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerActivationStatus" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
 /dsh/partner/stores/{storeId}/team:

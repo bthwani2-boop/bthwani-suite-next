@@ -360,8 +360,8 @@ if ($publicStore.store.id -ne $smokeStoreId -or $publicStore.store.publicationDe
 $publicCatalog = Invoke-RestMethod "http://localhost:58080/dsh/stores/$smokeStoreId/catalog" -TimeoutSec 10
 if (@($publicCatalog.products).Count -lt 1) { throw "Partner Onboarding & Store Publication app-client catalog is empty" }
 
-$partnerSelfStatus = Invoke-RestMethod "http://localhost:58080/dsh/partner/activation/status" -Headers $partnerHeaders -TimeoutSec 10
+$partnerSelfStatus = Invoke-RestMethod "http://localhost:58080/dsh/partner/activation/status?storeId=$([uri]::EscapeDataString($smokeStoreId))" -Headers $partnerHeaders -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($partnerSelfStatus.activationStatus)) { throw "Partner Onboarding & Store Publication partner self status missing activationStatus" }
-$partnerSelfReadiness = Invoke-RestMethod "http://localhost:58080/dsh/partner/activation/readiness" -Headers $partnerHeaders -TimeoutSec 10
+$partnerSelfReadiness = Invoke-RestMethod "http://localhost:58080/dsh/partner/activation/readiness?storeId=$([uri]::EscapeDataString($smokeStoreId))" -Headers $partnerHeaders -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($partnerSelfReadiness.partnerId)) { throw "Partner Onboarding & Store Publication partner self readiness missing partnerId" }
 Write-Host "  Partner Onboarding & Store Publication partner lifecycle smoke: PASS"

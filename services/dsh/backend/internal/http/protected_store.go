@@ -217,7 +217,21 @@ func (s *protectedStoreServer) servePartnerSelfHandler(
 	if !ok {
 		return
 	}
-	partnerID, err := store.ResolveActorPartnerID(r.Context(), s.db, actor)
+	storeID := strings.TrimSpace(r.URL.Query().Get("storeId"))
+	partnerID := ""
+	var err error
+	if storeID != "" {
+		row, _, resolveErr := store.ResolveActorStoreForID(r.Context(), s.db, actor, storeID)
+		err = resolveErr
+		if err == nil {
+			partnerID = strings.TrimSpace(row.PartnerID)
+			if partnerID == "" {
+				err = store.ErrScopedStoreNotFound
+			}
+		}
+	} else {
+		partnerID, err = store.ResolveActorPartnerID(r.Context(), s.db, actor)
+	}
 	if err != nil {
 		s.writeStoreError(w, err)
 		return

@@ -40,6 +40,14 @@
 - Root-correct treatment: bind the Identity-owned context in the gate before any repository readiness read; preserve downstream `operatorOnly` authorization and do not accept caller-supplied context headers or add a parallel readiness policy. Add middleware coverage proving the gate reads with the bound Identity context and fails closed when Identity context is absent.
 - This finding is confined to the Workforce activation/provisioning cone and remains `OPEN` pending the middleware treatment, targeted tests, exact-candidate scoped runtime smoke, provisioning idempotency/compensation/linking evidence, and re-audit.
 
+### 0.4 Re-audit finding exposed by partner self-readback — 2026-08-19
+
+- The exact-candidate smoke reached DSH partner onboarding after the Workforce gate treatment, but partner self activation status failed with `409 STORE_SCOPE_REQUIRED` at `/dsh/partner/activation/status`; the request carried no explicit store scope.
+- Live database evidence shows `partner-local-001` currently has nine active DSH store scopes in `local-dsh`, each linked to a distinct partner object. The DSH backend correctly refuses to collapse those objects to an arbitrary first store/partner.
+- Root cause is the partner self contract/consumer not carrying the selected store: `servePartnerSelfHandler` derives one partner from all active scopes, while `fetchPartnerSelfStatus` and `fetchPartnerSelfReadiness` omit `storeId`; the runtime onboarding smoke has the newly selected `$smokeStoreId` but drops it on both requests.
+- Root-correct treatment: accept an explicit optional `storeId` on both self-readback contracts, resolve the authenticated actor's owned store through the canonical DSH object-authorization function, derive the partner from that store, and thread the selected store through frontend controller/screen consumers and bounded journeys. Preserve ambiguity failure when no scope is selected; do not introduce first-store selection or another partner authority.
+- State remains `OPEN` pending contract/client/UI migration, DSH tests, exact-candidate onboarding smoke, and re-audit of all partner self consumers.
+
 This plan **supersedes as executable guidance**:
 
 1. `plans/diagnose-implementing/all-surfaces-services-root-closure-20260818.md`

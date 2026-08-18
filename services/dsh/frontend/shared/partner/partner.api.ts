@@ -158,12 +158,17 @@ export function fetchPartnerFieldVisits(partnerId: string): Promise<{ visits: Ds
 
 // ── Partner self-view ───────────────────────────────────────────────────────
 
-export function fetchPartnerSelfStatus(): Promise<DshGovernedPartner> {
-  return request("/dsh/partner/activation/status");
+function partnerSelfScopeQuery(storeId?: string): string {
+  const normalizedStoreId = storeId?.trim() ?? "";
+  return normalizedStoreId ? `?storeId=${encodeURIComponent(normalizedStoreId)}` : "";
 }
 
-export function fetchPartnerSelfReadiness(): Promise<DshPartnerReadiness> {
-  return request("/dsh/partner/activation/readiness");
+export function fetchPartnerSelfStatus(storeId?: string): Promise<DshGovernedPartner> {
+  return request(`/dsh/partner/activation/status${partnerSelfScopeQuery(storeId)}`);
+}
+
+export function fetchPartnerSelfReadiness(storeId?: string): Promise<DshPartnerReadiness> {
+  return request(`/dsh/partner/activation/readiness${partnerSelfScopeQuery(storeId)}`);
 }
 
 export function fetchPartnerScopes(): Promise<{ scopes: DshPartnerOperationalScope[] }> {
