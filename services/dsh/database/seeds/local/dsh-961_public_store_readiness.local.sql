@@ -1,6 +1,6 @@
 -- Local-only convergence for the complete public-store publication predicate.
 --
--- Earlier fixtures provided identity, governance, catalog and media truth but
+-- Earlier fixtures provided identity, governance, and catalog truth but
 -- predated the field-onboarding readiness columns. Keep the production
 -- predicate fail-closed and make the governed local fixtures complete instead.
 

@@ -1,71 +1,10 @@
 -- Local-only governed Home Discovery marketing fixtures.
 --
--- This seed runs after the canonical catalog and store-media seeds. It publishes
+-- This seed runs after the canonical catalog seeds. It publishes
 -- banners and promos explicitly because dsh-060 adds draft-by-default gates
--- before local rows are inserted. Media remains private in MinIO and is exposed
--- to app-client only through the DSH public media route.
+-- before local rows are inserted. Local media is optional.
 
-INSERT INTO dsh_catalog_assets (
-    id, object_key, public_url, original_file_name, mime_type, size_bytes,
-    width, height, checksum_sha256, alt_ar, alt_en, dominant_color,
-    status, source_surface, uploaded_by
-) VALUES
-    (
-      'asset-local-home-banner-restaurants',
-      'banners/banner-001.png',
-      NULL,
-      'banner-001.png',
-      'image/png', 844, 1200, 600,
-      'd1b5d40c767d0fce7673d56ce591b3f00e79d5bbd0f67210048ec238403415ec',
-      'مطاعم مختارة بعناية', 'Curated restaurants', '#ffffff',
-      'approved', 'system', 'system-seed'
-    ),
-    (
-      'asset-local-home-banner-offers',
-      'banners/banner-002.png',
-      NULL,
-      'banner-002.png',
-      'image/png', 637, 1200, 600,
-      '601ff490aa42e3ae767f4b141437d885d32ee6fc45b9ce89b7a46ee3613fbbb7',
-      'عروض يومية موفرة', 'Daily savings', '#ffffff',
-      'approved', 'system', 'system-seed'
-    ),
-    (
-      'asset-local-home-promo-free-delivery',
-      'banners/promo-001.png',
-      NULL,
-      'promo-001.png',
-      'image/png', 1359, 1200, 600,
-      '00e0d6d64c6597b362eb944eb3efd28e730c3683377bf68feaa522cadc88a936',
-      'عرض توصيل مجاني', 'Free delivery offer', '#ffffff',
-      'approved', 'system', 'system-seed'
-    ),
-    (
-      'asset-local-home-promo-top-rated',
-      'banners/promo-002.png',
-      NULL,
-      'promo-002.png',
-      'image/png', 1359, 1200, 600,
-      '00e0d6d64c6597b362eb944eb3efd28e730c3683377bf68feaa522cadc88a936',
-      'اختيار العملاء', 'Customers choice', '#ffffff',
-      'approved', 'system', 'system-seed'
-    )
-ON CONFLICT (id) DO UPDATE SET
-    object_key = EXCLUDED.object_key,
-    public_url = NULL,
-    original_file_name = EXCLUDED.original_file_name,
-    mime_type = EXCLUDED.mime_type,
-    size_bytes = EXCLUDED.size_bytes,
-    width = EXCLUDED.width,
-    height = EXCLUDED.height,
-    checksum_sha256 = EXCLUDED.checksum_sha256,
-    alt_ar = EXCLUDED.alt_ar,
-    alt_en = EXCLUDED.alt_en,
-    dominant_color = EXCLUDED.dominant_color,
-    status = 'approved',
-    source_surface = 'system',
-    uploaded_by = 'system-seed',
-    updated_at = NOW();
+
 
 INSERT INTO dsh_home_banners (
     id, title, subtitle, image_url, action_type, action_target, sort_order,

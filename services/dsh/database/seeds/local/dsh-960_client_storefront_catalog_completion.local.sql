@@ -1,7 +1,7 @@
 -- Local-only catalog completion for every store intentionally published to the
 -- app-client. Public discovery is fail-closed when no approved assortment can be
--- rendered, so these fixtures carry catalog truth only. Media is an explicit
--- local runtime overlay materialized from local-media.manifest.json.
+-- rendered, so these fixtures carry catalog truth only. Local media is
+-- strictly optional and relies on real user uploads rather than static seeds.
 
 INSERT INTO dsh_store_catalog_domains (store_id, domain_id, status)
 VALUES
