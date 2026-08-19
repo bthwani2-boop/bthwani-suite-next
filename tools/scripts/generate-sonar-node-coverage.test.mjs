@@ -10,24 +10,32 @@ import {
 
 const EXECUTABLE_SUITES = [
   "app-captain",
+  "app-client",
   "app-field",
+  "app-partner",
+  "control-panel",
   "control-panel-config",
   "data-runtime",
   "dsh",
   "identity",
+  "ui-kit",
   "wlt",
 ];
 
-test("coverage ownership is manifest-derived and exposes unresolved source authorities", () => {
+test("coverage ownership is manifest-derived and exposes executable source authorities", () => {
   const model = loadCoverageOwnershipModel();
   assert.deepEqual(model.allSuites, EXECUTABLE_SUITES);
   assert.equal(model.projects["app-captain"].strategy, "node-lcov");
+  assert.equal(model.projects["app-client"].strategy, "node-lcov");
+  assert.equal(model.projects["app-field"].strategy, "node-lcov");
+  assert.equal(model.projects["app-partner"].strategy, "node-lcov");
+  assert.equal(model.projects["control-panel"].strategy, "node-lcov");
   assert.equal(model.projects["control-panel-config"].strategy, "node-lcov");
-  assert.equal(model.projects["wlt"].strategy, "node-lcov");
-  assert.equal(model.projects["app-client"].strategy, "required");
-  assert.equal(model.projects["app-partner"].strategy, "required");
-  assert.equal(model.projects["control-panel"].strategy, "required");
-  assert.equal(model.projects["ui-kit"].strategy, "required");
+  assert.equal(model.projects["data-runtime"].strategy, "node-lcov");
+  assert.equal(model.projects.dsh.strategy, "node-lcov");
+  assert.equal(model.projects.identity.strategy, "node-lcov");
+  assert.equal(model.projects["ui-kit"].strategy, "node-lcov");
+  assert.equal(model.projects.wlt.strategy, "node-lcov");
 });
 
 test("coverage preparation is an ordered shell-free command contract", () => {
@@ -55,7 +63,7 @@ test("coverage planning is source-authority based rather than app-name based", (
   assert.deepEqual(planCoverageSuites(["apps/app-captain/runtime/src/App.tsx"]), ["app-captain"]);
   assert.deepEqual(
     planCoverageSuites(["apps/app-partner/runtime/tests/partner-order-runtime.execution.test.mjs"]),
-    ["dsh"],
+    ["app-partner", "dsh"],
   );
   assert.deepEqual(
     planCoverageSuites(["apps/app-field/runtime/tests/field-deep-link.execution.test.mjs"]),
@@ -67,11 +75,8 @@ test("coverage planning is source-authority based rather than app-name based", (
   );
 });
 
-test("changed executable product source without executable LCOV authority fails before Sonar", () => {
-  assert.throws(
-    () => planCoverageSuites(["apps/app-client/runtime/src/index.ts"]),
-    /app-client has no executable LCOV suite/,
-  );
+test("changed executable product source is covered or rejected before Sonar", () => {
+  assert.deepEqual(planCoverageSuites(["apps/app-client/runtime/src/index.ts"]), ["app-client"]);
   assert.throws(
     () => assertChangedExecutableCoverageOwnership(["apps/unknown-surface/src/a.ts"]),
     /no project owns this executable JS\/TS source/,
