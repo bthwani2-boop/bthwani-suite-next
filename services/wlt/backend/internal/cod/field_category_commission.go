@@ -306,8 +306,13 @@ func HandleUpsertFieldCategoryCommissionPolicy(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "authenticated OperatorContext context is required")
+			return
+		}
 		policy, err := UpsertFieldCategoryCommissionPolicy(
-			r.Context(), db, r.Header.Get("X-Delegated-Operator-Context"), r.PathValue("partnerCategory"), input, r.Header.Get("X-Correlation-ID"),
+			r.Context(), db, operatorContextID, r.PathValue("partnerCategory"), input, r.Header.Get("X-Correlation-ID"),
 		)
 		if errors.Is(err, ErrFieldCategoryPolicyConflict) {
 			shared.SendError(w, http.StatusConflict, "POLICY_VERSION_CONFLICT", err.Error())
@@ -328,8 +333,13 @@ func HandleCreateFieldCategoryCommission(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "authenticated OperatorContext context is required")
+			return
+		}
 		commission, err := CreateFieldCategoryCommission(
-			r.Context(), db, r.Header.Get("X-Delegated-Operator-Context"), input, r.Header.Get("X-Correlation-ID"),
+			r.Context(), db, operatorContextID, input, r.Header.Get("X-Correlation-ID"),
 		)
 		switch {
 		case errors.Is(err, ErrFieldCategoryPolicyMissing):
