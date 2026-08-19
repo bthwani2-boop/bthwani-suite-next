@@ -56,7 +56,7 @@ export function PartnerCatalogManagementScreen({ storeId }: Props) {
   const [masterProducts, setMasterProducts] = React.useState<readonly MasterProduct[]>([]);
   const [assortment, setAssortment] = React.useState<readonly StoreAssortment[]>([]);
   const [proposals, setProposals] = React.useState<readonly ProductProposal[]>([]);
-  
+
   // Edit modal state
   const [editingProductId, setEditingProductId] = React.useState<string | null>(null);
   const [editPrice, setEditPrice] = React.useState("");
