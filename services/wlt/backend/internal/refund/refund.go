@@ -1,19 +1,13 @@
 package refund
 
-import (
-	"context"
-	"database/sql"
-	"errors"
-	"fmt"
-	"strings"
-
-	"wlt-api/internal/provider"
-	"wlt-api/internal/shared"
-)
+import "errors"
 
 var ErrSessionNotRefundable = errors.New("payment session is not in a refundable state")
 var ErrRefundNotInExpectedState = errors.New("refund is not in the expected state for this transition")
 
+// Refund is the compact cancellation response projection retained for the
+// DSH order-cancellation envelope. WLT financial state itself is represented
+// by GovernedRefund and remains authoritative there.
 type Refund struct {
 	ID               string  `json:"id"`
 	PaymentSessionID string  `json:"paymentSessionId"`
@@ -33,93 +27,4 @@ type CreateRefundInput struct {
 	OrderID          string `json:"orderId"`
 	ClientID         string `json:"clientId"`
 	Reason           string `json:"reason"`
-}
-
-func trustedRefundContext(db *sql.DB, refundID string) (context.Context, error) {
-	refundID = strings.TrimSpace(refundID)
-	if refundID == "" {
-		return nil, fmt.Errorf("refundId is required")
-	}
-	var operatorContextID string
-	if err := db.QueryRow(`SELECT operator_context_id FROM wlt_refunds WHERE id=$1`, refundID).Scan(&operatorContextID); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	operatorContextID = strings.TrimSpace(operatorContextID)
-	if operatorContextID == "" {
-		return nil, fmt.Errorf("refund OperatorContext is missing")
-	}
-	return shared.WithOperatorContext(context.Background(), operatorContextID), nil
-}
-
-func CreateRefund(db *sql.DB, input CreateRefundInput) (*Refund, error) {
-	created, _, err := CreateRefundAtomic(db, input)
-	return created, err
-}
-
-func GetRefund(db *sql.DB, refundID string) (*Refund, error) {
-	item, err := GetGovernedRefund(db, refundID)
-	return legacyRefundView(item), err
-}
-
-func ListRefunds(db *sql.DB, orderID, clientID string) ([]*Refund, error) {
-	items, err := ListGovernedRefunds(db, orderID, clientID, "")
-	if err != nil {
-		return nil, err
-	}
-	out := make([]*Refund, 0, len(items))
-	for _, item := range items {
-		out = append(out, legacyRefundView(item))
-	}
-	return out, nil
-}
-
-// ApproveRefund is retained for internal tests and older callers. It derives
-// OperatorContext ownership only from WLT's persisted refund record before entering the
-// governed maker-checker transition.
-func ApproveRefund(db *sql.DB, refundID string) (*Refund, error) {
-	ctx, err := trustedRefundContext(db, refundID)
-	if err != nil || ctx == nil {
-		return nil, err
-	}
-	item, err := ApproveGovernedRefund(ctx, db, refundID, RefundDecisionInput{
-		OperatorID: "legacy-refund-checker", Reason: "legacy compatibility approval",
-		CorrelationID: "legacy-approve:" + refundID,
-	})
-	return legacyRefundView(item), err
-}
-
-// CompleteRefund is a provider-free compatibility seam used only by database
-// tests. It still executes the canonical ledger/reference/outbox transaction;
-// production HTTP execution always calls CompleteGovernedRefundWithProvider.
-func CompleteRefund(db *sql.DB, refundID string) (*Refund, error) {
-	ctx, err := trustedRefundContext(db, refundID)
-	if err != nil || ctx == nil {
-		return nil, err
-	}
-	item, err := finalizeGovernedRefundSuccess(
-		ctx, db, refundID, "legacy-refund-system", "system",
-		"legacy-refund:"+refundID, "legacy compatibility completion",
-		"legacy-complete:"+refundID, []string{"approved"},
-	)
-	return legacyRefundView(item), err
-}
-
-func CompleteRefundWithProvider(ctx context.Context, db *sql.DB, rail provider.CashInRail, refundID string, meta provider.RequestMeta) (*Refund, error) {
-	item, err := CompleteGovernedRefundWithProvider(ctx, db, rail, refundID, "legacy-refund-executor", meta.CorrelationID)
-	return legacyRefundView(item), err
-}
-
-func RejectRefund(db *sql.DB, refundID string) (*Refund, error) {
-	ctx, err := trustedRefundContext(db, refundID)
-	if err != nil || ctx == nil {
-		return nil, err
-	}
-	item, err := RejectGovernedRefund(ctx, db, refundID, RefundDecisionInput{
-		OperatorID: "legacy-refund-checker", Reason: "legacy compatibility rejection",
-		CorrelationID: "legacy-reject:" + refundID,
-	})
-	return legacyRefundView(item), err
 }
