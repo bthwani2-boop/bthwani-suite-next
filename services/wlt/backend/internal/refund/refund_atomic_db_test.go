@@ -1,12 +1,19 @@
 package refund
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sync"
 	"testing"
 	"time"
+
+	"wlt-api/internal/shared"
 )
+
+func trustedRefundTestContext() context.Context {
+	return shared.WithOperatorContext(context.Background(), "OperatorContext-test")
+}
 
 func TestCreateRefundAtomicConcurrentReplayCreatesOneRowDBIntegration(t *testing.T) {
 	db := getTestDB(t)
@@ -35,7 +42,7 @@ func TestCreateRefundAtomicConcurrentReplayCreatesOneRowDBIntegration(t *testing
 	for i := 0; i < 2; i++ {
 		go func() {
 			defer wg.Done()
-			refund, created, err := CreateRefundAtomic(db, input)
+			refund, created, err := CreateRefundAtomicForOperatorContext(trustedRefundTestContext(), db, input)
 			id := ""
 			if refund != nil {
 				id = refund.ID
@@ -81,7 +88,7 @@ func TestCreateRefundAtomicRejectsClientReferenceMismatchDBIntegration(t *testin
 	defer db.Close()
 
 	sessionID := insertTestSession(t, db, "captured", 900, "YER")
-	_, _, err := CreateRefundAtomic(db, CreateRefundInput{
+	_, _, err := CreateRefundAtomicForOperatorContext(trustedRefundTestContext(), db, CreateRefundInput{
 		PaymentSessionID: sessionID,
 		OrderID:          fmt.Sprintf("mismatch-order-%d", time.Now().UnixNano()),
 		ClientID:         "different-client",
@@ -100,12 +107,31 @@ func TestCreateRefundAtomicRequiresReasonDBIntegration(t *testing.T) {
 	defer db.Close()
 
 	sessionID := insertTestSession(t, db, "captured", 1200, "YER")
-	_, _, err := CreateRefundAtomic(db, CreateRefundInput{
+	_, _, err := CreateRefundAtomicForOperatorContext(trustedRefundTestContext(), db, CreateRefundInput{
 		PaymentSessionID: sessionID,
 		OrderID:          fmt.Sprintf("missing-reason-order-%d", time.Now().UnixNano()),
 		ClientID:         "client-test",
 	})
 	if err == nil {
 		t.Fatal("expected empty refund reason to be rejected")
+	}
+}
+
+func TestCreateRefundAtomicRejectsMissingTrustedContext(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	sessionID := insertTestSession(t, db, "captured", 1200, "YER")
+	_, _, err := CreateRefundAtomicForOperatorContext(context.Background(), db, CreateRefundInput{
+		PaymentSessionID: sessionID,
+		OrderID:          fmt.Sprintf("missing-context-order-%d", time.Now().UnixNano()),
+		ClientID:         "client-test",
+		Reason:           "must fail closed",
+	})
+	if err == nil {
+		t.Fatal("expected missing trusted OperatorContext to be rejected")
 	}
 }
