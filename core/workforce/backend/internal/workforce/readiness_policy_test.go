@@ -2,7 +2,7 @@ package workforce
 
 import "testing"
 
-func TestFieldActivationReadinessUsesServiceZoneAndSupervisorInsteadOfRetiredShift(t *testing.T) {
+func TestFieldActivationReadinessUsesServiceZoneAndSupervisor(t *testing.T) {
 	person := Person{
 		WorkforceKind: "field",
 		FullNameAr:    "مندوب اختبار",
@@ -10,7 +10,6 @@ func TestFieldActivationReadinessUsesServiceZoneAndSupervisorInsteadOfRetiredShi
 		FieldProfile: &FieldProfile{
 			CityCode:      "sana",
 			ServiceZoneID: "zone-local-001",
-			ShiftCode:     "",
 		},
 	}
 
@@ -24,7 +23,7 @@ func TestFieldActivationReadinessUsesServiceZoneAndSupervisorInsteadOfRetiredShi
 	}
 	person.FieldProfile.SupervisorActorID = "supervisor-1"
 	if readiness := EvaluateProviderActivationReadiness(person, core); !readiness.Ready {
-		t.Fatalf("field activation readiness must not depend on deprecated shift_code, missing=%v", readiness.Missing)
+		t.Fatalf("field activation readiness must use the governed service-zone and supervisor bindings, missing=%v", readiness.Missing)
 	}
 
 	person.FieldProfile.ServiceZoneID = ""
