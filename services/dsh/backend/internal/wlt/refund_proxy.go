@@ -39,7 +39,9 @@ func (c *Client) FinanceRefundWrite(
 	}
 	setServiceHeaders(req, c.serviceToken)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	if _, err := c.setDelegatedOperatorContextHeader(req, operatorContextID); err != nil {
+		return 0, nil, fmt.Errorf("prepare WLT refund OperatorContext: %w", err)
+	}
 	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
 		return 0, nil, fmt.Errorf("prepare WLT refund request: %w", err)
 	}
