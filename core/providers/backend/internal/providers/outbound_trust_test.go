@@ -2,7 +2,6 @@ package providers
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -35,12 +34,13 @@ func TestMapEndpointRejectsEmbeddedCredentials(t *testing.T) {
 
 func TestMapExecutionNeverFollowsProviderRedirect(t *testing.T) {
 	var targetHits atomic.Int32
+	var credentialLeaked atomic.Bool
 	target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		targetHits.Add(1)
 		if r.Header.Get("X-Api-Key") != "" {
-			t.Fatal("provider credential reached redirect target")
+			credentialLeaked.Store(true)
 		}
-		_ = json.NewEncoder(w).Encode(map[string]string{"status": "unexpected"})
+		w.WriteHeader(http.StatusOK)
 	}))
 	defer target.Close()
 
@@ -63,5 +63,8 @@ func TestMapExecutionNeverFollowsProviderRedirect(t *testing.T) {
 	}
 	if targetHits.Load() != 0 {
 		t.Fatalf("redirect target was contacted %d times", targetHits.Load())
+	}
+	if credentialLeaked.Load() {
+		t.Fatal("provider credential reached redirect target")
 	}
 }
