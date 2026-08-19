@@ -1,6 +1,7 @@
 package wlt
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -9,22 +10,42 @@ import (
 	"strings"
 )
 
-func (c *Client) actorFinanceReadRequest(ctx context.Context, path, correlationID, operatorContextID string) (int, []byte, error) {
+// actorFinanceRequest is the single actor-finance transport primitive. Reads may
+// omit correlation identity; mutations must carry governed correlation and
+// idempotency identity and every request must match the trusted OperatorContext
+// attached to the request context.
+func (c *Client) actorFinanceRequest(ctx context.Context, method, path string, body []byte, correlationID, idempotencyKey, operatorContextID string) (int, []byte, error) {
 	if !c.Configured() {
 		return 0, nil, fmt.Errorf("WLT integration is not configured")
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
-	if err != nil {
-		return 0, nil, fmt.Errorf("build WLT actor finance read request: %w", err)
+	var reader io.Reader
+	if len(body) > 0 {
+		reader = bytes.NewReader(body)
 	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
-	req.Header.Set("X-Service-Caller", "dsh")
+	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, reader)
+	if err != nil {
+		return 0, nil, fmt.Errorf("build WLT actor finance request: %w", err)
+	}
+	setServiceHeaders(req, c.serviceToken)
+	if len(body) > 0 {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	if _, err := c.setDelegatedOperatorContextHeader(req, operatorContextID); err != nil {
 		return 0, nil, fmt.Errorf("prepare WLT actor finance OperatorContext: %w", err)
 	}
-	if correlationID = strings.TrimSpace(correlationID); correlationID != "" {
-		req.Header.Set("X-Correlation-ID", correlationID)
+	correlationID = strings.TrimSpace(correlationID)
+	if method == http.MethodGet || method == http.MethodHead {
+		if correlationID != "" {
+			req.Header.Set("X-Correlation-ID", correlationID)
+		}
+	} else {
+		idempotencyKey = strings.TrimSpace(idempotencyKey)
+		if idempotencyKey == "" {
+			idempotencyKey = deterministicMutationKey("actor-finance", method, path, string(body), operatorContextID)
+		}
+		if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
+			return 0, nil, fmt.Errorf("prepare WLT actor finance mutation: %w", err)
+		}
 	}
 	response, err := c.http.Do(req)
 	if err != nil {
@@ -36,6 +57,10 @@ func (c *Client) actorFinanceReadRequest(ctx context.Context, path, correlationI
 		return 0, nil, fmt.Errorf("read WLT actor finance response: %w", err)
 	}
 	return response.StatusCode, responseBody, nil
+}
+
+func (c *Client) actorFinanceReadRequest(ctx context.Context, path, correlationID, operatorContextID string) (int, []byte, error) {
+	return c.actorFinanceRequest(ctx, http.MethodGet, path, nil, correlationID, "", operatorContextID)
 }
 
 func governedPayoutActorType(actorType string) (string, error) {
