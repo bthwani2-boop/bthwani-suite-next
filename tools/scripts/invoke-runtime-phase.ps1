@@ -66,59 +66,6 @@ function Import-CanonicalRuntimeEnvironment {
   }
 }
 
-function ConvertTo-StatusText {
-  param([string]$Value, [int]$Limit = 140)
-  $normalized = ($Value -replace "`r|`n", " " -replace "\s+", " ").Trim()
-  if ($normalized.Length -le $Limit) { return $normalized }
-  return $normalized.Substring(0, $Limit)
-}
-
-function Publish-RuntimeStatus {
-  param(
-    [ValidateSet("success", "failure", "error")]
-    [string]$State,
-    [string]$Description,
-    [string]$Subject = ""
-  )
-
-  if ([string]::IsNullOrWhiteSpace($env:BTHWANI_STATUS_TOKEN) -or
-      [string]::IsNullOrWhiteSpace($env:GITHUB_REPOSITORY) -or
-      [string]::IsNullOrWhiteSpace($env:GITHUB_SHA)) {
-    return
-  }
-
-  $cleanSubject = ($Subject -replace "[^A-Za-z0-9_.-]", "-").Trim("-")
-  if ($cleanSubject.Length -gt 48) { $cleanSubject = $cleanSubject.Substring(0, 48) }
-  $suffix = if ($cleanSubject) { "/$cleanSubject" } else { "" }
-  $context = "bthwani/runtime/$Action$suffix"
-  if ($context.Length -gt 100) { $context = $context.Substring(0, 100) }
-  $apiUrl = if ($env:GITHUB_API_URL) { $env:GITHUB_API_URL } else { "https://api.github.com" }
-  $serverUrl = if ($env:GITHUB_SERVER_URL) { $env:GITHUB_SERVER_URL } else { "https://github.com" }
-  $payload = @{
-    state = $State
-    context = $context
-    description = ConvertTo-StatusText -Value $Description
-  }
-  if ($env:GITHUB_RUN_ID) {
-    $payload.target_url = "$serverUrl/$($env:GITHUB_REPOSITORY)/actions/runs/$($env:GITHUB_RUN_ID)"
-  }
-
-  try {
-    Invoke-RestMethod `
-      -Uri "$apiUrl/repos/$($env:GITHUB_REPOSITORY)/statuses/$($env:GITHUB_SHA)" `
-      -Method Post `
-      -Headers @{
-        Accept = "application/vnd.github+json"
-        Authorization = "Bearer $($env:BTHWANI_STATUS_TOKEN)"
-        "X-GitHub-Api-Version" = "2022-11-28"
-      } `
-      -ContentType "application/json" `
-      -Body ($payload | ConvertTo-Json -Compress) | Out-Null
-  } catch {
-    Write-Warning "Runtime status publication failed: $($_.Exception.Message)"
-  }
-}
-
 function Invoke-RuntimeBasePhase {
   param(
     [Parameter(Mandatory = $true)][string]$ScriptPath,
@@ -212,7 +159,6 @@ function Test-TransientPostgresBootstrapRestart {
 Import-CanonicalRuntimeEnvironment
 foreach ($requiredScript in @($RuntimeScript, $RuntimeSmokeScript)) {
   if (-not (Test-Path -LiteralPath $requiredScript -PathType Leaf)) {
-    Publish-RuntimeStatus -State error -Description "runtime script is missing" -Subject "missing-script"
     throw "Runtime script not found: $requiredScript"
   }
 }
@@ -284,7 +230,6 @@ try {
   # bootstrap-dev is executed exactly once by runtime.ps1. No secondary seed,
   # media, or catalog pass is permitted here; that would recreate parallel
   # orchestration and conceal which pass produced the final database state.
-  Publish-RuntimeStatus -State success -Description "runtime $Action passed"
 } catch {
   $message = $_.Exception.Message
 
@@ -299,9 +244,6 @@ try {
     }
   }
 
-  $subject = ConvertTo-StatusText -Value $message -Limit 48
-  if ([string]::IsNullOrWhiteSpace($subject)) { $subject = "phase-failed" }
-  Publish-RuntimeStatus -State failure -Description $message -Subject $subject
   Write-Error "Runtime phase '$Action' failed: $message. Full log: $LogPath"
   if (Test-Path -LiteralPath $LogPath) {
     Write-Host "--- Runtime $Action final log lines ---"
