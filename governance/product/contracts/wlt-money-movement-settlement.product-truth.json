@@ -1,226 +1,74 @@
 {
   "schemaVersion": 1,
   "capabilityId": "WLT_MONEY_MOVEMENT_SETTLEMENT",
-  "state": "DISCOVERY",
   "problem": {
-    "statement": "BThwani needs one governed financial capability that preserves WLT-owned internal wallet truth while safely connecting official-wallet Cash-In, captain COD exposure, stakeholder earnings and manually executed external settlements without duplicate money movement, parallel ledgers, unverifiable completion, beneficiary-controlled payout master data, manual financial arithmetic or dependence on spreadsheets/operator memory.",
+    "statement": "BThwani needs one governed financial capability that preserves WLT-owned internal wallet truth while safely connecting official-wallet Cash-In, captain COD exposure, stakeholder earnings and governed external settlements without duplicate money movement, parallel ledgers, unverifiable completion, beneficiary-controlled payout master data or manual authoritative financial arithmetic.",
     "affectedActors": ["client", "captain", "partner", "field", "finance-operator", "system"],
-    "currentWorkaround": "The current implementation contains strong WLT ledger and finance boundaries but still mixes legacy provider-managed payout states, bank/manual destination semantics, beneficiary self-service destination submission/update paths, client-visible payout destination choice, COD collect/remit behavior, partial top-up/payment allocation support and separate finance inspectors. These create avoidable opportunities for financial-data drift or manual error and must converge on one WLT-owned automatic truth.",
     "frequency": "continuous",
-    "severity": "critical",
-    "evidenceState": "QUALITATIVE",
-    "evidenceReferences": [
-      "services/wlt/WLT_EXTERNAL_WALLET_SWITCH_ARCHITECTURE.md",
-      "services/wlt/backend/internal/ledger",
-      "services/wlt/backend/internal/provider",
-      "services/dsh/backend/internal/http/payout_finance_routes.go",
-      "services/dsh/backend/internal/http/representative_finance_routes.go",
-      "services/dsh/frontend/control-panel/finance/PayoutRequestsPanel.tsx",
-      "services/wlt/frontend/shared/dsh/actor-wallet"
-    ]
+    "severity": "critical"
   },
   "actors": [
-    {
-      "id": "client",
-      "role": "Customer funding or paying through supported WLT-governed payment paths and reading only their own internal financial state.",
-      "permittedActions": ["create governed Cash-In intent", "use supported order payment allocation", "read own internal wallet and ledger references"],
-      "forbiddenActions": ["assert top-up success", "directly mutate wallet balance", "select provider credentials", "supply authoritative financial totals", "withdraw internal balance unless a separately approved capability permits it"]
-    },
-    {
-      "id": "captain",
-      "role": "Captain using one WLT internal wallet for approved funding, order-specific COD financial exposure, automatically derived earnings and governed settlement requests.",
-      "permittedActions": ["top up through approved Cash-In", "accept financially authorized COD assignment", "receive governed delivery or commission earnings", "read masked current official-wallet destination state", "request eligible payout as FULL_AVAILABLE or SPECIFIED", "read own wallet and ledger"],
-      "forbiddenActions": ["accept COD exposure not atomically covered by the governed wallet rule", "mutate COD reserve or balance locally", "create or edit earning amount", "create update deactivate or select payout destination", "treat future earnings as existing COD capacity", "assume the visible balance is fully withdrawable", "complete external settlement locally"]
-    },
-    {
-      "id": "partner",
-      "role": "Partner receiving WLT-calculated governed proceeds and requesting settlement to the current server-resolved approved official-wallet destination.",
-      "permittedActions": ["read own wallet and settlement references", "read masked current official-wallet destination state", "request eligible payout as FULL_AVAILABLE or SPECIFIED"],
-      "forbiddenActions": ["create update deactivate or select payout destination", "select an arbitrary external provider", "activate an unverified destination", "supply authoritative payable totals", "edit an approved payout snapshot", "mark settlement paid"]
-    },
-    {
-      "id": "field",
-      "role": "Field actor receiving only automatically derived governed earned commissions and requesting eligible settlement to the current server-resolved approved official-wallet destination.",
-      "permittedActions": ["read own commissions and wallet", "read masked current official-wallet destination state", "request eligible payout as FULL_AVAILABLE or SPECIFIED"],
-      "forbiddenActions": ["self-create or edit commission value", "create update deactivate or select payout destination", "activate an unverified destination", "request more than server-owned withdrawal eligibility", "complete external settlement"]
-    },
-    {
-      "id": "finance-operator",
-      "role": "Permission-scoped operator reviewing automatically calculated financial truth and performing only governed master-data, approval, execution, evidence, reconciliation and close transitions assigned to their role.",
-      "permittedActions": ["initiate official-wallet destination provisioning or change when authorized with required reason and evidence", "verify or approve official-wallet destination according to separation-of-duties policy", "prepare or review payout according to role", "freeze approved settlement batch", "execute assigned manual transfer", "record required execution reference and evidence", "reconcile authoritative external statement", "resolve governed finance exception", "close a business date only when gates pass"],
-      "forbiddenActions": ["directly edit wallet or ledger balances", "manually calculate authoritative earnings fees balances holds payable amounts or payout totals", "type an authoritative monetary amount to override system truth", "change destination master data without reason evidence authorization and required approval", "change approved beneficiary destination or amount in place", "use a bare mark-paid transition", "silently bypass separation of duties", "treat XLSX or screenshot as financial truth", "close blocking unresolved exposure"]
-    },
-    {
-      "id": "system",
-      "role": "WLT-owned financial engine, provider adapters, reconciliation and policy enforcement producing canonical automatic ledger, payout and audit truth from trusted operational events and approved policies.",
-      "permittedActions": ["derive payment allocation", "derive earnings commissions fees holds balances and withdrawal eligibility", "reserve release and finalize governed COD exposure", "resolve current verified active payout destination", "resolve FULL_AVAILABLE and validate SPECIFIED payout amount transactionally", "normalize authoritative provider evidence", "post double-entry ledger transactions", "enforce idempotency and legal state transitions", "create reconciliation exceptions", "enforce financial close gates"],
-      "forbiddenActions": ["route an ambiguous money mutation to a second provider before the first outcome is authoritative", "credit from client claims or screenshots", "trust client or operator supplied financial totals over canonical events and policy", "use mock or sandbox as production fallback", "create parallel provider or stakeholder ledgers", "silently mutate historical financial evidence"]
-    }
+    {"id":"client","role":"Customer funding or paying through supported WLT-governed payment paths and reading only owned internal financial state.","permittedActions":["create governed Cash-In intent","use supported order payment allocation","read own internal wallet and ledger references"],"forbiddenActions":["assert top-up success","directly mutate wallet balance","select provider credentials","supply authoritative financial totals","withdraw internal balance unless a separately approved capability permits it"]},
+    {"id":"captain","role":"Captain using one WLT internal wallet for approved funding, order-specific COD exposure, automatically derived earnings and governed settlement requests.","permittedActions":["top up through approved Cash-In","accept financially authorized COD assignment","receive governed earnings","read masked current official-wallet destination state","request eligible payout as FULL_AVAILABLE or SPECIFIED","read own wallet and ledger"],"forbiddenActions":["accept uncovered COD exposure","mutate COD reserve or balance locally","create or edit earning amount","create update deactivate or select payout destination","treat future earnings as existing COD capacity","assume visible balance is fully withdrawable","complete external settlement locally"]},
+    {"id":"partner","role":"Partner receiving WLT-calculated governed proceeds and requesting settlement to the current server-resolved approved official-wallet destination.","permittedActions":["read own wallet and settlement references","read masked current official-wallet destination state","request eligible payout as FULL_AVAILABLE or SPECIFIED"],"forbiddenActions":["create update deactivate or select payout destination","select an arbitrary external provider","activate an unverified destination","supply authoritative payable totals","edit an approved payout snapshot","mark settlement paid"]},
+    {"id":"field","role":"Field actor receiving automatically derived governed commissions and requesting eligible settlement to the current server-resolved approved official-wallet destination.","permittedActions":["read own commissions and wallet","read masked current official-wallet destination state","request eligible payout as FULL_AVAILABLE or SPECIFIED"],"forbiddenActions":["self-create or edit commission value","create update deactivate or select payout destination","activate an unverified destination","request more than server-owned withdrawal eligibility","complete external settlement"]},
+    {"id":"finance-operator","role":"Permission-scoped operator reviewing automatically calculated financial truth and performing governed master-data, approval, execution, evidence, reconciliation and close transitions assigned to the role.","permittedActions":["initiate governed official-wallet destination provisioning or change","verify or approve destination according to separation-of-duties policy","prepare or review payout according to role","freeze approved settlement batch","execute assigned manual transfer","record execution reference and evidence","reconcile authoritative external statement","resolve governed finance exception","close a business date only when gates pass"],"forbiddenActions":["directly edit wallet or ledger balances","manually override authoritative monetary truth","change destination master data without governed reason evidence authorization and approval","change approved beneficiary destination or amount in place","use a bare mark-paid transition","silently bypass separation of duties","treat spreadsheets or screenshots as financial truth","close blocking unresolved exposure"]},
+    {"id":"system","role":"WLT-owned financial engine, provider adapters, reconciliation and policy enforcement producing canonical automatic ledger, payout and audit truth from trusted operational events and approved policies.","permittedActions":["derive payment allocation","derive earnings commissions fees holds balances and withdrawal eligibility","reserve release and finalize governed COD exposure","resolve current verified active payout destination","resolve FULL_AVAILABLE and validate SPECIFIED payout amount transactionally","normalize authoritative provider evidence","post double-entry ledger transactions","enforce idempotency and legal state transitions","create reconciliation exceptions","enforce financial close gates"],"forbiddenActions":["route an ambiguous money mutation to a second provider before the first outcome is authoritative","credit from client claims or screenshots","trust client or operator supplied financial totals over canonical events and policy","use mock or sandbox as production fallback","create parallel provider or stakeholder ledgers","silently mutate historical financial evidence"]}
   ],
   "surfaces": [
-    {
-      "id": "app-client",
-      "required": true,
-      "actors": ["client"],
-      "routesOrScreens": ["wallet and funding", "checkout payment"],
-      "operationIds": [],
-      "states": ["loading", "ready", "pending", "authoritative_success", "reconciliation_required", "failed", "offline", "forbidden", "error"],
-      "actions": ["create Cash-In intent", "select supported payment route", "read canonical result", "inspect wallet history"]
-    },
-    {
-      "id": "app-captain",
-      "required": true,
-      "actors": ["captain"],
-      "routesOrScreens": ["captain wallet", "captain top-up", "COD assignment", "read-only official-wallet destination", "captain settlement request"],
-      "operationIds": [],
-      "states": ["loading", "eligible", "insufficient_balance", "cod_reserved", "cod_released", "cod_finalized", "earning_posted", "destination_unavailable", "destination_verified", "payout_held", "payout_pending", "error"],
-      "actions": ["top up", "read balance", "accept eligible order", "read automatic COD and earning financial effects", "read masked payout destination", "request FULL_AVAILABLE or SPECIFIED payout"]
-    },
-    {
-      "id": "app-partner",
-      "required": true,
-      "actors": ["partner"],
-      "routesOrScreens": ["partner wallet", "read-only official-wallet destination", "settlement request and history"],
-      "operationIds": [],
-      "states": ["loading", "destination_unavailable", "destination_verified", "available", "held", "payout_pending", "completed", "error"],
-      "actions": ["read wallet", "read masked payout destination", "request FULL_AVAILABLE or SPECIFIED payout", "read payout state"]
-    },
-    {
-      "id": "app-field",
-      "required": true,
-      "actors": ["field"],
-      "routesOrScreens": ["field wallet", "commissions", "read-only official-wallet destination", "settlement request"],
-      "operationIds": [],
-      "states": ["loading", "commission_candidate", "earned", "destination_unavailable", "destination_verified", "held", "payout_pending", "completed", "error"],
-      "actions": ["read wallet", "read commission", "read masked payout destination", "request FULL_AVAILABLE or SPECIFIED payout", "read payout state"]
-    },
-    {
-      "id": "control-panel",
-      "required": true,
-      "actors": ["finance-operator"],
-      "routesOrScreens": ["finance command center", "internal wallets", "Cash-In operations", "COD finance", "official-wallet destination master data", "payout requests", "settlement batches", "manual execution workbench", "reconciliation", "finance exceptions", "treasury external accounts", "daily finance close", "ledger and audit"],
-      "operationIds": [],
-      "states": ["loading", "ready", "blocked", "needs_action", "awaiting_approval", "awaiting_execution", "awaiting_evidence", "awaiting_verification", "awaiting_reconciliation", "exception", "closed", "forbidden", "error"],
-      "actions": ["inspect server-calculated truth", "initiate governed destination provision or change with reason and evidence", "verify or approve destination when authorized", "prepare", "approve or reject when authorized", "freeze batch", "export controlled artifact", "record execution", "verify independently", "reconcile", "resolve exception", "close day when gates pass"]
-    },
-    {
-      "id": "backend",
-      "required": true,
-      "actors": ["client", "captain", "partner", "field", "finance-operator", "system"],
-      "routesOrScreens": ["DSH governed financial facade", "WLT wallet ledger payment COD payout settlement provider destination-master-data and reconciliation owners"],
-      "operationIds": ["createWltDestinationBoundPayoutRequest", "approveWltPayoutRequest", "completeWltPayoutRequest", "createWltSettlementBatch", "reserveWltCodCapacity", "createWltEvidenceBackedSettlement"],
-      "states": ["authenticated", "authorized", "idempotent", "reserved", "held", "approved", "frozen", "executed", "evidenced", "verified", "reconciled", "completed", "unknown_external_result", "blocked", "exception"],
-      "actions": ["derive trusted financial purpose", "derive monetary effects from canonical events and policy", "resolve payout amount and current verified destination", "enforce policy", "lock or reserve atomically", "post ledger", "normalize provider evidence", "hold payout", "freeze immutable batch", "record external execution", "reconcile", "audit", "fail closed"]
-    },
-    {
-      "id": "database",
-      "required": true,
-      "actors": ["system", "finance-operator"],
-      "routesOrScreens": ["WLT canonical ledger and wallet tables", "payment allocation", "destination versions and approval history", "payout and hold state", "settlement batch and immutable snapshot", "evidence and reconciliation", "finance exceptions", "daily close"],
-      "operationIds": [],
-      "states": ["balanced", "append_only", "versioned", "immutable_when_frozen", "reconcilable", "auditable", "operator_context_isolated"],
-      "actions": ["enforce uniqueness", "enforce balance invariants", "preserve history", "reject contradictory replay", "prevent in-place mutation of approved or frozen financial facts", "preserve destination version provenance"]
-    },
-    {
-      "id": "shared",
-      "required": true,
-      "actors": ["client", "captain", "partner", "field", "finance-operator"],
-      "routesOrScreens": ["generated financial contracts and shared presentation adapters"],
-      "operationIds": [],
-      "states": ["contract_aligned", "capability_driven", "no_local_truth"],
-      "actions": ["render server-owned state", "submit non-authoritative user intent", "refresh canonical readback"]
-    }
+    {"id":"app-client","required":true,"actors":["client"],"routesOrScreens":["wallet and funding","checkout payment"],"operationIds":[],"states":["loading","ready","pending","authoritative_success","reconciliation_required","failed","offline","forbidden","error"],"actions":["create Cash-In intent","select supported payment route","read canonical result","inspect wallet history"]},
+    {"id":"app-captain","required":true,"actors":["captain"],"routesOrScreens":["captain wallet","captain top-up","COD assignment","read-only official-wallet destination","captain settlement request"],"operationIds":[],"states":["loading","eligible","insufficient_balance","cod_reserved","cod_released","cod_finalized","earning_posted","destination_unavailable","destination_verified","payout_held","payout_pending","error"],"actions":["top up","read balance","accept eligible order","read automatic COD and earning effects","read masked payout destination","request FULL_AVAILABLE or SPECIFIED payout"]},
+    {"id":"app-partner","required":true,"actors":["partner"],"routesOrScreens":["partner wallet","read-only official-wallet destination","settlement request and history"],"operationIds":[],"states":["loading","destination_unavailable","destination_verified","available","held","payout_pending","completed","error"],"actions":["read wallet","read masked payout destination","request FULL_AVAILABLE or SPECIFIED payout","read payout state"]},
+    {"id":"app-field","required":true,"actors":["field"],"routesOrScreens":["field wallet","commissions","read-only official-wallet destination","settlement request"],"operationIds":[],"states":["loading","commission_candidate","earned","destination_unavailable","destination_verified","held","payout_pending","completed","error"],"actions":["read wallet","read commission","read masked payout destination","request FULL_AVAILABLE or SPECIFIED payout","read payout state"]},
+    {"id":"control-panel","required":true,"actors":["finance-operator"],"routesOrScreens":["finance command center","internal wallets","Cash-In operations","COD finance","official-wallet destination master data","payout requests","settlement batches","manual execution workbench","reconciliation","finance exceptions","treasury external accounts","daily finance close","ledger and audit"],"operationIds":[],"states":["loading","ready","blocked","needs_action","awaiting_approval","awaiting_execution","awaiting_evidence","awaiting_verification","awaiting_reconciliation","exception","closed","forbidden","error"],"actions":["inspect server-calculated truth","initiate governed destination provision or change","verify or approve when authorized","prepare","approve or reject when authorized","freeze batch","record execution","verify independently","reconcile","resolve exception","close day when gates pass"]},
+    {"id":"backend","required":true,"actors":["client","captain","partner","field","finance-operator","system"],"routesOrScreens":["DSH governed financial facade","WLT wallet ledger payment COD payout settlement provider destination-master-data and reconciliation owners"],"operationIds":["createWltDestinationBoundPayoutRequest","approveWltPayoutRequest","completeWltPayoutRequest","createWltSettlementBatch","reserveWltCodCapacity","createWltEvidenceBackedSettlement"],"states":["authenticated","authorized","idempotent","reserved","held","approved","frozen","executed","evidenced","verified","reconciled","completed","unknown_external_result","blocked","exception"],"actions":["derive trusted financial purpose","derive monetary effects from canonical events and policy","resolve payout amount and current verified destination","enforce policy","lock or reserve atomically","post ledger","normalize provider evidence","hold payout","freeze immutable batch","record external execution","reconcile","audit","fail closed"]},
+    {"id":"database","required":true,"actors":["system","finance-operator"],"routesOrScreens":["WLT canonical ledger and wallet tables","payment allocation","destination versions and approval history","payout and hold state","settlement batch and immutable snapshot","evidence and reconciliation","finance exceptions","daily close"],"operationIds":[],"states":["balanced","append_only","versioned","immutable_when_frozen","reconcilable","auditable","operator_context_isolated"],"actions":["enforce uniqueness","enforce balance invariants","preserve history","reject contradictory replay","prevent in-place mutation of approved or frozen financial facts","preserve destination version provenance"]},
+    {"id":"shared","required":true,"actors":["client","captain","partner","field","finance-operator"],"routesOrScreens":["generated financial contracts and shared presentation adapters"],"operationIds":[],"states":["contract_aligned","capability_driven","no_local_truth"],"actions":["render server-owned state","submit non-authoritative user intent","refresh canonical readback"]}
   ],
   "outcome": {
-    "statement": "Every BThwani money movement and stakeholder financial view is automatically derived from trusted operational events and approved WLT policy, attributable to one WLT-owned wallet/ledger truth and, where external money moves, to one authoritative provider or governed manual-settlement evidence chain from intent through reconciliation and close. Beneficiaries cannot mutate payout destination master data or authoritative monetary values, and Finance operates from system-calculated truth rather than manual arithmetic.",
-    "primaryMetric": "share of financial movements with complete automatically derived WLT ledger lineage and required external evidence/reconciliation lineage",
-    "guardrailMetrics": ["beneficiary financial-master-data mutation path count", "manual authoritative monetary override path count", "unverified-destination payout count", "duplicate financial effect count", "unreconciled completed payout count", "direct balance mutation path count", "ambiguous-provider duplicate attempt count", "blocking finance exposure at close", "cross-context financial disclosure count"],
-    "baselineState": "Canonical ledger and finance ownership exist, but important target Cash-In, COD allocation and manual external settlement controls are only partially implemented; beneficiary destination self-service and some legacy provider-payout/COD semantics remain.",
-    "targetState": "Cash-In, order allocation, captain COD, stakeholder earnings, verified destination master data, payout amount resolution, manual settlement batches, evidence, reconciliation and financial close all use one WLT-owned automatic governed state machine and evidence chain with zero beneficiary financial-master-data mutation.",
-    "observationWindow": "targeted static, contract, migration, concurrency, runtime simulator, cross-surface, finance-control, security and reconciliation verification on the same candidate"
+    "statement": "Every money movement and stakeholder financial view is derived from trusted operational events and approved WLT policy, attributable to one WLT-owned wallet and ledger truth and, where external money moves, to one authoritative provider or governed manual-settlement evidence chain through reconciliation and close.",
+    "primaryMetric": "share of financial movements with complete automatically derived WLT ledger lineage and required external evidence and reconciliation lineage",
+    "guardrailMetrics": ["beneficiary financial-master-data mutation path count","manual authoritative monetary override path count","unverified-destination payout count","duplicate financial effect count","unreconciled completed payout count","direct balance mutation path count","ambiguous-provider duplicate attempt count","blocking finance exposure at close","cross-context financial disclosure count"],
+    "targetState": "Cash-In, payment allocation, captain COD, stakeholder earnings, destination master data, payout eligibility, governed manual external settlement, evidence, reconciliation and financial close use one WLT-owned financial truth."
   },
   "acceptance": {
     "criteria": [
-      "WLT remains the sole writer of internal wallet balances, ledger transactions, payments, refunds, commissions, payouts, settlements and reconciliation truth.",
-      "Every authoritative monetary value including earnings, commissions, fees, holds, balances, payable amounts, payout eligibility and settlement totals is derived server-side from trusted events, canonical state and versioned policy; no beneficiary or finance UI may directly override those values.",
-      "Each actor has one canonical internal WLT wallet; held, pending, earned, settled and withdrawal-eligibility values are states/projections and do not create parallel wallets or ledgers.",
-      "Cash-In credits an internal wallet only after authoritative provider evidence is verified/normalized and the server-owned financial purpose selects the accounting destination.",
-      "Mock/sandbox provider behavior is retained for non-production testing but cannot be selected as a production fallback.",
-      "Every applicable order has one server-owned PaymentAllocation whose components conserve the governed order total and make delivery-fee treatment mechanically non-duplicative.",
-      "Captain COD authorization is order-specific and atomic; concurrent assignments cannot consume the same available balance, cancellation releases once, finalization debits once, and all resulting COD and earning effects appear from canonical events without captain-entered financial values.",
-      "The target captain-funded COD path cannot simultaneously create a second remittance liability for the same order value; any alternate custody/remittance model requires an explicit Product Truth and cannot coexist for the same financial effect.",
-      "One visible wallet balance does not imply full withdrawal eligibility; customer withdrawal and externally funded principal cash-out remain disabled unless an explicitly approved product/legal-financial policy enables them.",
+      "WLT remains the sole writer of wallet balances, ledger transactions, payments, refunds, commissions, payouts, settlements and reconciliation truth.",
+      "Authoritative monetary values are derived server-side from trusted events, canonical state and versioned policy; no beneficiary or finance UI directly overrides them.",
+      "Each actor has one canonical internal WLT wallet; held pending earned settled and withdrawal-eligibility values are states or projections, not parallel wallets.",
+      "Cash-In credits an internal wallet only after authoritative provider evidence is verified and normalized.",
+      "Mock or sandbox provider behavior cannot be selected as a production fallback.",
+      "Every applicable order has one server-owned payment allocation that conserves the governed order total and prevents duplicate delivery-fee treatment.",
+      "Captain COD authorization is order-specific, atomic and idempotent; cancellation releases once and finalization debits once.",
+      "The current captain-funded COD path cannot simultaneously create a second remittance liability for the same order value; any alternate custody model requires a separately approved Product Truth.",
+      "Customer withdrawal and cash-out of externally funded principal remain disabled unless a separately approved product, legal and financial policy enables them.",
       "Partner, captain and field payouts use one WLT-owned payout engine with stakeholder-specific eligibility expressed as policy rather than separate ledgers.",
-      "Partner, captain and field applications expose payout destination information read-only and cannot create, update, deactivate, replace or select official-wallet destination master data.",
-      "Official-wallet destination master data is WLT-owned, versioned, encrypted and masked; initial provisioning is performed through the governed onboarding/Finance workflow and only an independently verified active version is eligible for payout.",
-      "A destination creation or material change requires an authorized Finance maker action, mandatory reason and evidence, provider/account verification where available, and the required independent approval before the new version becomes ACTIVE_FOR_PAYOUT; the old version remains immutable history.",
-      "If no provider verification API exists, controlled Finance entry may capture the externally evidenced identifier, but it remains a governed master-data action and never beneficiary free-form self-service.",
-      "Beneficiary payout intent contains only amountMode FULL_AVAILABLE or SPECIFIED, amount only when SPECIFIED, and idempotency context; it does not accept beneficiary name, provider, wallet identifier or destinationId selected by the beneficiary.",
-      "For FULL_AVAILABLE, WLT calculates eligible available funds transactionally from canonical ledger state after holds, reservations, pending payout reservations, unsettled and restricted/disputed amounts; the client never converts a previously displayed balance into the authoritative payout amount.",
-      "For SPECIFIED, WLT validates the requested amount is positive and does not exceed current eligible available funds inside the authoritative transaction boundary.",
-      "When a payout request is accepted, WLT resolves the beneficiary and current VERIFIED ACTIVE_FOR_PAYOUT destination and pins the immutable destination version to the payout; a later destination change cannot rewrite an existing approved or held payout.",
-      "Approval binds beneficiary, destination version, resolved amount, currency and policy context to an immutable snapshot; a material change cannot edit the approved snapshot in place.",
-      "Approved payouts are grouped into immutable frozen settlement batches with exact row count/control total and integrity metadata; XLSX/export remains an audited execution artifact only.",
-      "Manual external execution records the required external reference and evidence and cannot expose a bare mark-paid transition.",
-      "Final payout completion requires the Product Truth-mandated agreement between approved payout, frozen batch row, execution evidence and authoritative external statement/record; mismatch creates a blocking reconciliation exception.",
-      "Financial separation of duties is enforced server-side for destination master-data changes, preparation, approval, execution, independent verification/reconciliation and close according to active policy; exceptions are explicit, bounded and audited.",
-      "Finance Control Center displays server-calculated balances, liabilities, commissions, payout eligibility, control totals, variances, exceptions and next legal actions so staff do not perform manual arithmetic to establish authoritative financial truth.",
-      "Any legitimate financial adjustment is a typed governed WLT event/transaction with reason, evidence, authorization and approval policy as applicable; there is no direct balance edit or generic monetary override field.",
-      "Blocking finance exceptions, missing required evidence, control-total mismatch or unresolved material reconciliation exposure prevent affected payout/batch/day completion.",
-      "Refund routing follows the authoritative original money source and does not silently convert external refunds to internal balance unless explicit product policy allows it.",
-      "An ambiguous external mutation result is reconciled before any new provider/route attempt can move the same money again.",
-      "External official-wallet account balances are reconciled as treasury/control facts without becoming a second internal wallet ledger.",
-      "All sensitive destination identifiers, external references, exports and financial audit data follow encryption, masking, least-privilege, integrity and retention rules from the active security policy."
+      "Beneficiary surfaces expose payout destination information read-only and cannot create, update, deactivate, replace or select destination master data.",
+      "Official-wallet destination master data is WLT-owned, versioned, encrypted and masked; only an independently verified active version is eligible for payout.",
+      "Beneficiary payout intent contains only amount mode, optional specified amount, and idempotency context; WLT resolves beneficiary, eligible funds and current verified destination transactionally.",
+      "Approved payout facts and frozen settlement batches are immutable; later destination changes cannot rewrite them.",
+      "The current production Cash-Out model is governed manual external official-wallet settlement; automated payout requires a separately approved capability.",
+      "Manual external execution records required reference and evidence and cannot expose a bare mark-paid transition.",
+      "Final completion requires agreement between approved payout, frozen batch row, execution evidence and authoritative external statement; mismatch creates a blocking reconciliation exception.",
+      "Financial separation of duties is enforced server-side according to active policy.",
+      "Legitimate adjustments are typed governed WLT events with reason, evidence and authorization; there is no direct balance edit or generic monetary override.",
+      "Blocking finance exceptions, missing required evidence, control-total mismatch or unresolved material reconciliation exposure prevent affected completion.",
+      "Refund routing follows the authoritative original money source unless an explicit product policy states otherwise.",
+      "An ambiguous external mutation result is reconciled before any new provider or route attempt can move the same money again.",
+      "External official-wallet account balances are treasury control facts and never a second internal wallet ledger."
     ],
-    "failureStates": ["parallel_financial_truth", "direct_balance_mutation", "manual_authoritative_financial_value", "beneficiary_destination_mutation", "beneficiary_selected_destination", "client_asserted_success", "client_computed_full_payout_amount", "payment_allocation_mismatch", "delivery_fee_double_count", "cod_overcommit", "cod_double_effect", "unverified_destination", "destination_change_without_governed_approval", "approved_snapshot_mutation", "frozen_batch_mutation", "bare_mark_paid", "duplicate_external_reference", "ambiguous_result_retried_elsewhere", "unreconciled_completion", "spreadsheet_as_truth", "self_approval_bypass", "blocking_exception_ignored", "mock_in_production", "source_unaware_refund", "financial_close_with_unresolved_exposure"],
-    "requiredChecks": ["product-truth schema validation", "WLT double-entry and account-classification tests", "server-derived monetary-value and no-direct-override tests", "PaymentAllocation conservation tests", "captain COD concurrency idempotency and automatic financial-readback tests", "Cash-In provider-event replay and unknown-result tests", "beneficiary payout-destination mutation authorization-negative tests", "Finance destination provisioning change reason evidence maker-checker and versioning tests", "payout FULL_AVAILABLE transactional resolution and race tests", "payout SPECIFIED positive/bounds/concurrency tests", "server-side current verified destination resolution and version pinning tests", "payout hold and withdrawal-eligibility tests", "settlement-batch immutability and control-total tests", "manual-transfer evidence and duplicate-reference tests", "provider-statement import idempotency tests", "four-way reconciliation tests", "DailyFinanceClose blocking-gate tests", "DSH-to-WLT financial boundary tests", "cross-operator-context isolation tests", "multi-surface read-only destination and financial binding checks", "runtime simulator scenarios", "independent financial-control review", "application-security review", "visual control-panel verification"],
-    "runtimeEvidenceRequired": true,
-    "visualEvidenceRequired": true
+    "failureStates": ["parallel_financial_truth","direct_balance_mutation","manual_authoritative_financial_value","beneficiary_destination_mutation","beneficiary_selected_destination","client_asserted_success","client_computed_full_payout_amount","payment_allocation_mismatch","delivery_fee_double_count","cod_overcommit","cod_double_effect","unverified_destination","approved_snapshot_mutation","frozen_batch_mutation","bare_mark_paid","duplicate_external_reference","ambiguous_result_retried_elsewhere","unreconciled_completion","spreadsheet_as_truth","self_approval_bypass","blocking_exception_ignored","mock_in_production","source_unaware_refund","financial_close_with_unresolved_exposure"]
   },
   "invariants": {
-    "business": [
-      "WLT is the sole internal financial truth owner and every value-changing movement is represented by the canonical double-entry ledger.",
-      "Authoritative monetary values are system-derived from trusted events and versioned policy; human actions express governed intent or evidence, not accounting arithmetic.",
-      "Official external wallets move external money but do not own internal BThwani balances, liabilities or settlement state.",
-      "There is one internal wallet per actor and one canonical payout engine for partner, captain and field.",
-      "Partner, captain and field payout destination data is read-only on beneficiary surfaces and is controlled as WLT-owned Finance master data.",
-      "Beneficiary payout intent is amount-mode based; WLT resolves current eligible amount and verified destination inside the authoritative server boundary.",
-      "Order payment composition and COD exposure are server-owned financial facts, not UI/provider labels.",
-      "The current production Cash-Out model is governed manual external official-wallet settlement; automated payout requires a separately approved capability.",
-      "Financial completion requires the evidence and reconciliation chain declared by the capability, not merely operator intent.",
-      "Unknown or conflicting external outcomes remain reconcilable until authoritative evidence resolves them."
-    ],
-    "negative": [
-      "No DSH or frontend component writes WLT balances or ledger truth.",
-      "No beneficiary surface creates updates deactivates replaces or selects official-wallet destination master data.",
-      "No client or finance surface directly supplies an authoritative earning commission fee balance hold payable settlement total or full-payout amount.",
-      "No provider name determines the internal ledger account or stakeholder entitlement.",
-      "No client screenshot, operator claim, spreadsheet edit or unverified file row creates financial success.",
-      "No unverified or silently changed official-wallet destination receives payout.",
-      "No destination change becomes active without the required authorization reason evidence verification and approval chain.",
-      "No frozen batch or approved payout snapshot is edited in place.",
-      "No required finance control silently disappears because a production environment variable is absent.",
-      "No second provider is invoked for the same ambiguous external mutation before reconciliation.",
-      "No legacy COD custody/remit path and captain-wallet debit path both account for the same order value.",
-      "No daily financial close hides unresolved blocking exposure or mismatched control totals."
-    ]
+    "business": ["WLT is the sole internal financial truth owner and every value-changing movement is represented by the canonical double-entry ledger.","Authoritative monetary values are system-derived from trusted events and versioned policy; human actions express governed intent or evidence, not accounting arithmetic.","Official external wallets move external money but do not own internal BThwani balances, liabilities or settlement state.","There is one internal wallet per actor and one canonical payout engine for partner, captain and field.","Payout destination data is read-only on beneficiary surfaces and controlled as WLT-owned Finance master data.","Order payment composition and COD exposure are server-owned financial facts.","The current production Cash-Out model is governed manual external official-wallet settlement; automated payout requires a separately approved capability.","Unknown or conflicting external outcomes remain reconcilable until authoritative evidence resolves them."],
+    "negative": ["No DSH or frontend component writes WLT balances or ledger truth.","No beneficiary surface mutates official-wallet destination master data.","No client or finance surface directly supplies an authoritative earning commission fee balance hold payable settlement total or full-payout amount.","No provider name determines the internal ledger account or stakeholder entitlement.","No screenshot spreadsheet or unverified file row creates financial success.","No unverified or silently changed destination receives payout.","No frozen batch or approved payout snapshot is edited in place.","No second provider is invoked for the same ambiguous external mutation before reconciliation.","No legacy COD custody/remit path and captain-wallet debit path both account for the same order value.","No daily financial close hides unresolved blocking exposure or mismatched control totals."]
   },
   "owners": {
-    "productManager": "WLT Financial Product Management",
-    "productOwner": "WLT Financial Truth Product Owner",
-    "uxJourneyOwner": "Multi-Surface Finance Experience Owner",
-    "engineeringOwner": "WLT DSH Full-Stack Engineering",
-    "productManagerApproval": "PENDING",
-    "productOwnerApproval": "PENDING",
-    "productAcceptanceDecision": "PENDING"
-  },
-  "execution": {
-    "appetite": "Consolidate all real-money and internal-money financial effects into one WLT-owned, automatically calculated, evidence-backed and reconcilable capability while preserving non-production simulator value and removing beneficiary financial-master-data mutation plus legacy parallel payout/COD semantics only after affected consumers are migrated.",
-    "fixedConstraints": ["WLT financial ownership", "one internal wallet per actor", "canonical double-entry ledger", "automatic server-derived monetary truth", "no beneficiary payout-destination mutation", "Finance-only governed destination master-data lifecycle", "amount-mode payout intent with server-resolved destination and eligibility", "server-owned payment allocation", "order-specific atomic COD authorization", "verified versioned official-wallet payout destinations", "manual governed external settlement as current Cash-Out model", "immutable approved payout and frozen batch facts", "authoritative external evidence and reconciliation", "fail-closed production provider behavior", "operator-context and actor isolation"],
-    "variableScope": ["which approved Cash-In provider is active", "batch grouping policy", "finance UI information density", "policy-driven amount/time thresholds", "destination verification method supported by operations", "statement import format adapters"],
-    "forbiddenScope": ["parallel ledger", "parallel actor wallet", "frontend balance mutation", "manual authoritative monetary override", "beneficiary destination create update deactivate replace or selection", "client-computed FULL_AVAILABLE payout amount", "provider-managed automated payout as current default", "bank/IBAN as the target stakeholder settlement model", "spreadsheet financial authority", "silent financial override", "unverified destination payout", "destination activation without governed maker-checker controls", "self-approved hidden SoD bypass", "mock/sandbox production fallback", "unsupported provider capability assumption", "production deployment or provider activation without separate authorization"],
-    "forecastRange": "multi-slice financial capability closure",
-    "confidence": "medium",
-    "unknowns": ["exact production Cash-In provider private contract and API semantics", "exact approved operational/provider method for destination verification", "final product/legal policy for withdrawal eligibility of externally funded principal", "final governed treatment of delivery cash versus separate WLT delivery earning", "future availability and approval of automated payout capabilities"]
+    "productManager": "PRODUCT_MANAGER_AUTHORITY",
+    "productOwner": "PRODUCT_OWNER_ACCEPTANCE_AUTHORITY",
+    "uxJourneyOwner": "UX_JOURNEY_AUTHORITY",
+    "financialTruthOwner": "WLT",
+    "applicationFacadeOwner": "DSH",
+    "identityTrustOwner": "IDENTITY"
   }
 }
