@@ -2,28 +2,36 @@ openapi: 3.1.0
 x-bthwani-owner: core/workforce
 x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
-  title: Workforce Reference Mutations Contract
-  version: 1.0.0
+  title: Workforce Reference and Affiliation Mutations Contract
+  version: 1.1.0
 paths:
   /workforce/reference/cities:
     post:
       tags: [ "workforce-reference" ]
       operationId: createWorkforceCity
-      summary: Create a governed workforce city reference
+      summary: Create Workforce-local display metadata for a city code
+      description: >-
+        Maintains local reference/display metadata only. DSH owns platform zones
+        and operational zone validity; this mutation cannot authorize or block a
+        field/captain service-zone assignment.
       x-bthwani-required-scope: reference:manage
       responses:
         '201': { description: Created }
         '400': { description: Invalid city reference input. }
         '401': { description: Authentication required. }
         '403': { description: reference:manage permission required. }
-        '409': { description: City code or version conflicts with existing truth. }
+        '409': { description: City code conflicts with existing local metadata. }
       security:
         - bearerAuth: []
   /workforce/reference/cities/{code}:
     patch:
       tags: [ "workforce-reference" ]
       operationId: updateWorkforceCity
-      summary: Update or activate/deactivate a workforce city reference
+      summary: Update Workforce-local city display metadata
+      description: >-
+        Updates local labels/visibility only. The active flag is presentation
+        state and is not an operational service-zone gate; DSH zone truth remains
+        authoritative.
       x-bthwani-required-scope: reference:manage
       parameters:
         - in: path
@@ -36,7 +44,66 @@ paths:
         '401': { description: Authentication required. }
         '403': { description: reference:manage permission required. }
         '404': { description: City reference not found. }
-        '409': { description: City reference version conflict. }
+      security:
+        - bearerAuth: []
+  /workforce/{collection}/{actorId}/affiliations:
+    patch:
+      tags: [ "workforce-affiliation" ]
+      operationId: replaceWorkforceProviderAffiliations
+      summary: Replace the provider's Workforce-owned affiliation scopes
+      description: >-
+        Canonical writer for Workforce affiliation/eligibility scopes such as
+        store, service area, partner, and shift. This is not DSH order dispatch
+        or delivery assignment truth. The complete affiliation set replaces the
+        currently active set atomically. X-Correlation-ID is required and is the
+        idempotency identity for an otherwise identical replacement request.
+      x-bthwani-required-scope: provider:update
+      parameters:
+        - in: path
+          name: collection
+          required: true
+          schema:
+            type: string
+            enum: [ field-agents, captains, employees ]
+        - in: path
+          name: actorId
+          required: true
+          schema: { type: string, minLength: 1 }
+        - in: header
+          name: X-Correlation-ID
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [ affiliations ]
+              properties:
+                affiliations:
+                  type: array
+                  maxItems: 500
+                  items:
+                    $ref: '#/components/schemas/AffiliationInput'
+      responses:
+        '200':
+          description: Canonical active affiliation set after replacement.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [ affiliations ]
+                properties:
+                  affiliations:
+                    $ref: '#/components/schemas/ActorAffiliations'
+        '400': { description: Invalid collection, actor kind, correlation id, scope type, target, or time range. }
+        '401': { description: Authentication required. }
+        '403': { description: provider:update permission required. }
+        '404': { description: Workforce profile not found. }
+        '409': { description: Correlation id replayed with different affiliation content. }
       security:
         - bearerAuth: []
   /workforce/{collection}/{actorId}/documents:
@@ -80,3 +147,43 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
+  schemas:
+    AffiliationInput:
+      type: object
+      additionalProperties: false
+      required: [ scopeType, scopeTargetId, startsOn ]
+      properties:
+        scopeType:
+          type: string
+          enum: [ store, area, partner, shift ]
+        scopeTargetId:
+          type: string
+          minLength: 1
+        startsOn:
+          type: string
+          format: date-time
+        endsOn:
+          type: string
+          format: date-time
+    ActorAffiliations:
+      type: object
+      additionalProperties: false
+      required: [ actorId, role, operatorContextId, storeIds, serviceAreaCodes, partnerIds, shiftCodes ]
+      properties:
+        actorId: { type: string }
+        role:
+          type: string
+          enum: [ field, captain, employee ]
+        operatorContextId: { type: string }
+        storeIds:
+          type: array
+          items: { type: string }
+        serviceAreaCodes:
+          type: array
+          items: { type: string }
+        partnerIds:
+          type: array
+          items: { type: string }
+        shiftCodes:
+          type: array
+          items: { type: string }
