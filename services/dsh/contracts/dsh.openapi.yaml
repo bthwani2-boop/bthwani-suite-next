@@ -147,8 +147,6 @@ paths:
     $ref: "./dsh.catalog-governance.openapi.yaml#/paths/~1dsh~1operator~1catalog~1master-products~1{productId}~1relationships"
   /dsh/operator/catalog/product-proposals:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1product-proposals"
-  /dsh/operator/catalog/product-proposals/{proposalId}/decision:
-    $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1product-proposals~1{proposalId}~1decision"
   /dsh/operator/catalog/product-proposals/{proposalId}/transition:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1product-proposals~1{proposalId}~1transition"
   /dsh/operator/catalog/platform-policies:
