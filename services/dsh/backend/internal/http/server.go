@@ -310,11 +310,6 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("PUT /dsh/operator/platform/store-onboarding-fee", protected.handleUpsertStoreOnboardingFeePolicy)
 	mux.HandleFunc("GET /dsh/platform/store-onboarding-fee", protected.handleGetStoreOnboardingFeeReference)
 
-	// Remaining explicit feature gaps. These routes intentionally fail closed
-	// until their own domain implementations exist; onboarding-fee policy is
-	// no longer part of this list because WLT is now its canonical authority.
-	mux.HandleFunc("PUT /dsh/operator/platform/sla-rules", protected.handleNotImplemented)
-	mux.HandleFunc("PUT /dsh/operator/platform/capacity", protected.handleNotImplemented)
 	mux.HandleFunc("GET /dsh/operator/admin/roles", protected.handleListRoles)
 	mux.HandleFunc("GET /dsh/operator/admin/staff", protected.handleListStaff)
 	mux.HandleFunc("POST /dsh/operator/admin/staff/{staffId}/roles", protected.handleCreateRoleAssignment)
