@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"wlt-api/internal/shared"
 )
 
 func TestNormalizeRepresentativeActorType(t *testing.T) {
@@ -30,14 +32,14 @@ func TestHandleGetWalletRejectsMissingOperatorContextBeforeDatabaseAccess(t *tes
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d: %s", rec.Code, rec.Body.String())
 	}
-	if !strings.Contains(rec.Body.String(), "OperatorContext_REQUIRED") {
+	if !strings.Contains(rec.Body.String(), "OPERATOR_CONTEXT_REQUIRED") {
 		t.Fatalf("expected OperatorContext-required error, got %s", rec.Body.String())
 	}
 }
 
 func TestHandleGetWalletRejectsUnsupportedActorBeforeDatabaseAccess(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/wlt/wallets/operator/op-1", nil)
-	req.Header.Set("X-Delegated-Operator-Context", "OperatorContext-a")
+	req = req.WithContext(shared.WithOperatorContext(req.Context(), "OperatorContext-a"))
 	req.SetPathValue("actorType", "operator")
 	req.SetPathValue("actorId", "op-1")
 	rec := httptest.NewRecorder()
@@ -54,7 +56,7 @@ func TestHandleGetWalletRejectsUnsupportedActorBeforeDatabaseAccess(t *testing.T
 
 func TestHandleGetWalletRejectsOversizedActorIDBeforeDatabaseAccess(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/wlt/wallets/client/value", nil)
-	req.Header.Set("X-Delegated-Operator-Context", "OperatorContext-a")
+	req = req.WithContext(shared.WithOperatorContext(req.Context(), "OperatorContext-a"))
 	req.SetPathValue("actorType", "client")
 	req.SetPathValue("actorId", strings.Repeat("x", 201))
 	rec := httptest.NewRecorder()
