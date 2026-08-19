@@ -127,7 +127,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
         "422":
-          description: INVALID_REFERENCE_CODE — unknown or inactive city/shift.
+          description: INVALID_REFERENCE_CODE — unknown or inactive service zone/city mapping.
           content:
             application/json:
               schema:
@@ -1448,8 +1448,6 @@ components:
         cityCode:
           type: string
         serviceZoneId:
-          type: string
-        shiftCode:
           type: string
         supervisorActorId:
           type: string
