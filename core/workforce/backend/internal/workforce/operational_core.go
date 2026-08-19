@@ -154,28 +154,31 @@ type CreateProviderIncidentInput struct {
 	PolicyID          string   `json:"policyId"`
 }
 
-func (r *Repository) ensureOperationalCore(ctx context.Context, actorID string) (string, error) {
+func (r *Repository) requireOperationalCore(ctx context.Context, actorID string) (string, error) {
 	operatorContextID, err := operatorContextID(ctx)
 	if err != nil {
 		return "", err
 	}
 	var kind string
-	if err := r.db.QueryRowContext(ctx, `SELECT workforce_kind FROM workforce_people WHERE operator_context_id=$1 AND actor_id=$2`, operatorContextID, actorID).Scan(&kind); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return "", ErrNotFound
-		}
+	var coreExists bool
+	var captainCoreExists bool
+	err = r.db.QueryRowContext(ctx, `
+		SELECT p.workforce_kind,
+		       EXISTS(SELECT 1 FROM workforce_provider_operational_core c WHERE c.operator_context_id=p.operator_context_id AND c.actor_id=p.actor_id),
+		       CASE WHEN p.workforce_kind='captain' THEN EXISTS(SELECT 1 FROM workforce_captain_activation_core c WHERE c.operator_context_id=p.operator_context_id AND c.actor_id=p.actor_id) ELSE true END
+		FROM workforce_people p
+		WHERE p.operator_context_id=$1 AND p.actor_id=$2`, operatorContextID, actorID).Scan(&kind, &coreExists, &captainCoreExists)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	if err != nil {
 		return "", err
 	}
 	if kind != "field" && kind != "captain" {
 		return "", ErrInvalidInput
 	}
-	if _, err := r.db.ExecContext(ctx, `INSERT INTO workforce_provider_operational_core(operator_context_id,actor_id) VALUES($1,$2) ON CONFLICT(actor_id) DO NOTHING`, operatorContextID, actorID); err != nil {
-		return "", err
-	}
-	if kind == "captain" {
-		if _, err := r.db.ExecContext(ctx, `INSERT INTO workforce_captain_activation_core(operator_context_id,actor_id) VALUES($1,$2) ON CONFLICT(actor_id) DO NOTHING`, operatorContextID, actorID); err != nil {
-			return "", err
-		}
+	if !coreExists || !captainCoreExists {
+		return "", fmt.Errorf("operational core invariant missing for actor %s", actorID)
 	}
 	return kind, nil
 }
@@ -185,7 +188,7 @@ func (r *Repository) OperationalCoreByActorID(ctx context.Context, actorID strin
 	if err != nil {
 		return ProviderOperationalCore{}, err
 	}
-	kind, err := r.ensureOperationalCore(ctx, actorID)
+	kind, err := r.requireOperationalCore(ctx, actorID)
 	if err != nil {
 		return ProviderOperationalCore{}, err
 	}
@@ -231,7 +234,7 @@ func (r *Repository) PatchOperationalCore(ctx context.Context, actorID, operator
 	if err != nil {
 		return ProviderOperationalCore{}, err
 	}
-	kind, err := r.ensureOperationalCore(ctx, actorID)
+	kind, err := r.requireOperationalCore(ctx, actorID)
 	if err != nil {
 		return ProviderOperationalCore{}, err
 	}
@@ -442,7 +445,7 @@ func (r *Repository) CreateAvailabilityNotice(ctx context.Context, actorID strin
 	if err != nil || !oneOf(input.NoticeType, "planned_unavailability", "immediate_unavailability", "short_break", "emergency", "temporary_restriction") || input.StartsAt.IsZero() || input.EndsAt.IsZero() || !input.EndsAt.After(input.StartsAt) || strings.TrimSpace(input.OperatorContextID) != operatorContextID {
 		return AvailabilityNotice{}, ErrInvalidInput
 	}
-	if _, err := r.ensureOperationalCore(ctx, actorID); err != nil {
+	if _, err := r.requireOperationalCore(ctx, actorID); err != nil {
 		return AvailabilityNotice{}, err
 	}
 	if strings.TrimSpace(input.ReasonCode) == "" {
