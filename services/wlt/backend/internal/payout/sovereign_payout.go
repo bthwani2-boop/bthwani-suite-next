@@ -195,6 +195,10 @@ func HandleRejectPayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to reject payout request")
 			return
 		}
+		if err := releasePayoutReservation(r.Context(), tx, req); err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "PAYOUT_RESERVATION_INCONSISTENT", "failed to release the canonical payout reservation")
+			return
+		}
 		if err := appendPayoutAudit(r.Context(), tx, "payout_request", req.ID, "payout.rejected", operatorID, "operator", "", correlationID, map[string]any{"status": "rejected", "reservationReleasedMinorUnits": req.AmountMinorUnits}); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout rejection")
 			return
@@ -304,6 +308,10 @@ func HandleCompletePayoutRequestSovereign(db *sql.DB) http.HandlerFunc {
 			WHERE operator_context_id = $1 AND id = $2
 			  AND canonical_ledger_transaction_id IS NULL`, operatorContextID, fourWayReconciliationID, ledgerTransactionID); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to bind payout reconciliation to canonical ledger transaction")
+			return
+		}
+		if err := settlePayoutReservation(r.Context(), tx, req); err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "PAYOUT_RESERVATION_INCONSISTENT", "failed to settle the canonical payout reservation")
 			return
 		}
 		updated, err := payoutAfterUpdate(r.Context(), tx,
