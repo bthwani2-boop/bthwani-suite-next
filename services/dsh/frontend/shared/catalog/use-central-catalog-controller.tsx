@@ -297,14 +297,6 @@ export function useCentralCatalogController(authKind = "unauthenticated") {
       };
     },
 
-    decideProposal: async (proposalId: string, input: Parameters<typeof api.decideProductProposal>[1]) => {
-      const expectedVersion = requireCatalogVersion(state.proposals.items, proposalId, "proposal");
-      return runMutationWithReadback(
-        () => occApi.decideProductProposalOCC(proposalId, { ...input, expectedVersion }),
-        loadProposals,
-      );
-    },
-
     transitionProposal: async (proposalId: string, input: Parameters<typeof api.transitionProductProposal>[1]) => {
       const expectedVersion = requireCatalogVersion(state.proposals.items, proposalId, "proposal");
       return runMutationWithReadback(
