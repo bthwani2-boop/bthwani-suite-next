@@ -21,8 +21,11 @@ func requireMutationHeaders(t *testing.T, r *http.Request) {
 	if strings.TrimSpace(r.Header.Get("Idempotency-Key")) == "" {
 		t.Fatal("missing Idempotency-Key")
 	}
-	if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-a" {
-		t.Fatalf("unexpected X-Operator-Context-ID %q", r.Header.Get("X-Operator-Context-ID"))
+	if r.Header.Get("X-Delegated-Operator-Context") != "OperatorContext-a" {
+		t.Fatalf("unexpected X-Delegated-Operator-Context %q", r.Header.Get("X-Delegated-Operator-Context"))
+	}
+	if got := r.Header.Get("X-Operator-Context-ID"); got != "" {
+		t.Fatalf("legacy X-Operator-Context-ID must not be emitted, got %q", got)
 	}
 }
 
