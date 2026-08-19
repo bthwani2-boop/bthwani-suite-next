@@ -27,15 +27,9 @@ actions:
   - target: $.paths['/dsh/operator/platform/sla-rules'].get
     update:
       x-bthwani-required-scope: dsh.fulfillment_sla.read
-  - target: $.paths['/dsh/operator/platform/sla-rules'].put
-    update:
-      x-bthwani-required-scope: dsh.fulfillment_sla.manage
   - target: $.paths['/dsh/operator/platform/capacity'].get
     update:
       x-bthwani-required-scope: dsh.dispatch_capacity.read
-  - target: $.paths['/dsh/operator/platform/capacity'].put
-    update:
-      x-bthwani-required-scope: dsh.dispatch_capacity.manage
   - target: $.paths['/dsh/operator/platform/store-onboarding-fee'].get
     update:
       x-bthwani-required-scope: partners.read
