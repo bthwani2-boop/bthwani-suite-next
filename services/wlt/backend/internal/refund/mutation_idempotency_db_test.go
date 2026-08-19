@@ -6,7 +6,13 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"wlt-api/internal/shared"
 )
+
+func withRefundMutationOperatorContext(r *http.Request) *http.Request {
+	return r.WithContext(shared.WithOperatorContext(r.Context(), "OperatorContext-dev-001"))
+}
 
 func TestGovernedRefundRuntimeMutationIdempotencyReplayAndConflict(t *testing.T) {
 	db := getTestDB(t)
@@ -27,8 +33,7 @@ func TestGovernedRefundRuntimeMutationIdempotencyReplayAndConflict(t *testing.T)
 	path := "/wlt/refunds/refund-idempotent/approve"
 
 	first := httptest.NewRecorder()
-	firstRequest := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"operatorId":"checker-1","reason":"independent approval"}`))
-	firstRequest.Header.Set("X-Delegated-Operator-Context", "OperatorContext-dev-001")
+	firstRequest := withRefundMutationOperatorContext(httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"operatorId":"checker-1","reason":"independent approval"}`)))
 	firstRequest.Header.Set("Idempotency-Key", key)
 	firstRequest.Header.Set("X-Correlation-ID", "corr-mutation-replay")
 	handler(first, firstRequest)
@@ -40,8 +45,7 @@ func TestGovernedRefundRuntimeMutationIdempotencyReplayAndConflict(t *testing.T)
 	}
 
 	second := httptest.NewRecorder()
-	secondRequest := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{ "reason": "independent approval", "operatorId": "checker-1" }`))
-	secondRequest.Header.Set("X-Delegated-Operator-Context", "OperatorContext-dev-001")
+	secondRequest := withRefundMutationOperatorContext(httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{ "reason": "independent approval", "operatorId": "checker-1" }`)))
 	secondRequest.Header.Set("Idempotency-Key", key)
 	secondRequest.Header.Set("X-Correlation-ID", "corr-mutation-replay-retry")
 	handler(second, secondRequest)
@@ -56,8 +60,7 @@ func TestGovernedRefundRuntimeMutationIdempotencyReplayAndConflict(t *testing.T)
 	}
 
 	changed := httptest.NewRecorder()
-	changedRequest := httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"operatorId":"checker-1","reason":"changed approval reason"}`))
-	changedRequest.Header.Set("X-Delegated-Operator-Context", "OperatorContext-dev-001")
+	changedRequest := withRefundMutationOperatorContext(httptest.NewRequest(http.MethodPost, path, strings.NewReader(`{"operatorId":"checker-1","reason":"changed approval reason"}`)))
 	changedRequest.Header.Set("Idempotency-Key", key)
 	changedRequest.Header.Set("X-Correlation-ID", "corr-mutation-conflict")
 	handler(changed, changedRequest)
