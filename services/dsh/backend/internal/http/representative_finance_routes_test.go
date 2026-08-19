@@ -81,10 +81,12 @@ func TestRepresentativeOwnWalletRoutesResolveAuthenticatedActor(t *testing.T) {
 			var mu sync.Mutex
 			gotPath := ""
 			gotOperatorContext := ""
+			gotLegacyOperatorContext := ""
 			router := representativeFinanceRouter(t, tc.actorType, tc.actorID, func(w http.ResponseWriter, r *http.Request) {
 				mu.Lock()
 				gotPath = r.URL.Path
-				gotOperatorContext = r.Header.Get("X-Operator-Context-ID")
+				gotOperatorContext = r.Header.Get("X-Delegated-Operator-Context")
+				gotLegacyOperatorContext = r.Header.Get("X-Operator-Context-ID")
 				mu.Unlock()
 				w.Header().Set("Content-Type", "application/json")
 				_, _ = w.Write([]byte(`{"wallet":{"actorId":"` + tc.actorID + `","actorType":"` + tc.actorType + `"}}`))
@@ -105,7 +107,10 @@ func TestRepresentativeOwnWalletRoutesResolveAuthenticatedActor(t *testing.T) {
 				t.Fatalf("expected WLT path %q, got %q", expected, gotPath)
 			}
 			if gotOperatorContext != "dsh" {
-				t.Fatalf("expected Identity OperatorContext dsh, got %q", gotOperatorContext)
+				t.Fatalf("expected delegated Identity OperatorContext dsh, got %q", gotOperatorContext)
+			}
+			if gotLegacyOperatorContext != "" {
+				t.Fatalf("legacy OperatorContext header must not be emitted, got %q", gotLegacyOperatorContext)
 			}
 			if rec.Header().Get("Cache-Control") != "private, no-store" {
 				t.Fatalf("expected no-store response, got %q", rec.Header().Get("Cache-Control"))
@@ -117,9 +122,11 @@ func TestRepresentativeOwnWalletRoutesResolveAuthenticatedActor(t *testing.T) {
 func TestRepresentativeOwnLedgerRoutesOverrideActorQuery(t *testing.T) {
 	var gotQuery string
 	var gotOperatorContext string
+	var gotLegacyOperatorContext string
 	router := representativeFinanceRouter(t, "captain", "captain-7", func(w http.ResponseWriter, r *http.Request) {
 		gotQuery = r.URL.RawQuery
-		gotOperatorContext = r.Header.Get("X-Operator-Context-ID")
+		gotOperatorContext = r.Header.Get("X-Delegated-Operator-Context")
+		gotLegacyOperatorContext = r.Header.Get("X-Operator-Context-ID")
 		_, _ = w.Write([]byte(`{"ledgerEntries":[]}`))
 	})
 
@@ -142,7 +149,10 @@ func TestRepresentativeOwnLedgerRoutesOverrideActorQuery(t *testing.T) {
 		t.Fatalf("frontend actor query must not pass through, got %q", gotQuery)
 	}
 	if gotOperatorContext != "dsh" {
-		t.Fatalf("expected Identity OperatorContext dsh, got %q", gotOperatorContext)
+		t.Fatalf("expected delegated Identity OperatorContext dsh, got %q", gotOperatorContext)
+	}
+	if gotLegacyOperatorContext != "" {
+		t.Fatalf("legacy OperatorContext header must not be emitted, got %q", gotLegacyOperatorContext)
 	}
 	if rec.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("expected no-store ledger response, got %q", rec.Header().Get("Cache-Control"))
@@ -152,10 +162,12 @@ func TestRepresentativeOwnLedgerRoutesOverrideActorQuery(t *testing.T) {
 func TestControlPanelRepresentativeWalletValidatesTypeAndUsesPermissionFallback(t *testing.T) {
 	var gotPath string
 	var gotOperatorContext string
+	var gotLegacyOperatorContext string
 	financePerm := auth.Permission{Service: "dsh", Surface: "control-panel", Action: FinancePermissionRead, Scope: "all"}
 	router := representativeFinanceRouterWithPermissions(t, "employee", "finance-1", []auth.Permission{financePerm}, func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
-		gotOperatorContext = r.Header.Get("X-Operator-Context-ID")
+		gotOperatorContext = r.Header.Get("X-Delegated-Operator-Context")
+		gotLegacyOperatorContext = r.Header.Get("X-Operator-Context-ID")
 		_, _ = w.Write([]byte(`{"wallet":{"actorId":"client-9","actorType":"client"}}`))
 	})
 
@@ -170,7 +182,10 @@ func TestControlPanelRepresentativeWalletValidatesTypeAndUsesPermissionFallback(
 		t.Fatalf("unexpected WLT wallet path %q", gotPath)
 	}
 	if gotOperatorContext != "dsh" {
-		t.Fatalf("expected Identity OperatorContext dsh, got %q", gotOperatorContext)
+		t.Fatalf("expected delegated Identity OperatorContext dsh, got %q", gotOperatorContext)
+	}
+	if gotLegacyOperatorContext != "" {
+		t.Fatalf("legacy OperatorContext header must not be emitted, got %q", gotLegacyOperatorContext)
 	}
 
 	invalid := httptest.NewRequest(http.MethodGet, "/dsh/control-panel/finance/wallets/operator/operator-2", nil)
@@ -186,11 +201,13 @@ func TestControlPanelRepresentativeLedgerPinsActorAndNoStore(t *testing.T) {
 	var gotPath string
 	var gotQuery string
 	var gotOperatorContext string
+	var gotLegacyOperatorContext string
 	financePerm := auth.Permission{Service: "dsh", Surface: "control-panel", Action: FinancePermissionRead, Scope: "all"}
 	router := representativeFinanceRouterWithPermissions(t, "employee", "finance-1", []auth.Permission{financePerm}, func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		gotQuery = r.URL.RawQuery
-		gotOperatorContext = r.Header.Get("X-Operator-Context-ID")
+		gotOperatorContext = r.Header.Get("X-Delegated-Operator-Context")
+		gotLegacyOperatorContext = r.Header.Get("X-Operator-Context-ID")
 		_, _ = w.Write([]byte(`{"ledgerEntries":[]}`))
 	})
 
@@ -219,7 +236,10 @@ func TestControlPanelRepresentativeLedgerPinsActorAndNoStore(t *testing.T) {
 		t.Fatalf("expected allowlisted ledger filters, got %q", gotQuery)
 	}
 	if gotOperatorContext != "dsh" {
-		t.Fatalf("expected Identity OperatorContext dsh, got %q", gotOperatorContext)
+		t.Fatalf("expected delegated Identity OperatorContext dsh, got %q", gotOperatorContext)
+	}
+	if gotLegacyOperatorContext != "" {
+		t.Fatalf("legacy OperatorContext header must not be emitted, got %q", gotLegacyOperatorContext)
 	}
 	if rec.Header().Get("Cache-Control") != "private, no-store" {
 		t.Fatalf("expected no-store cache header, got %q", rec.Header().Get("Cache-Control"))
