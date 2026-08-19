@@ -218,6 +218,14 @@ func ListGovernedRefunds(db *sql.DB, orderID, clientID, operatorContextID string
 
 func CreateGovernedRefund(ctx context.Context, db *sql.DB, input GovernedCreateRefundInput) (*GovernedRefund, bool, error) {
 	input = normalizeCreateInput(input)
+	trustedOperatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return nil, false, err
+	}
+	if input.OperatorContextID != "" && input.OperatorContextID != trustedOperatorContextID {
+		return nil, false, ErrRefundReferenceConflict
+	}
+	input.OperatorContextID = trustedOperatorContextID
 	if input.PaymentSessionID == "" || input.OrderID == "" || input.ClientID == "" || input.Reason == "" || input.EligibilityReference == "" || input.RequestedByOperatorID == "" || input.IdempotencyKey == "" {
 		return nil, false, fmt.Errorf("paymentSessionId, orderId, clientId, reason, eligibilityReference, requestedByOperatorId and Idempotency-Key are required")
 	}
@@ -242,9 +250,6 @@ func CreateGovernedRefund(ctx context.Context, db *sql.DB, input GovernedCreateR
 		return nil, false, fmt.Errorf("payment session not found")
 	} else if err != nil {
 		return nil, false, err
-	}
-	if input.OperatorContextID == "" {
-		input.OperatorContextID = sessionOperatorContext
 	}
 	if input.OperatorContextID != sessionOperatorContext || input.ClientID != sessionClient {
 		return nil, false, ErrRefundReferenceConflict
@@ -749,14 +754,6 @@ func HandleCreateGovernedRefund(db *sql.DB) http.HandlerFunc {
 		}
 		input.IdempotencyKey = r.Header.Get("Idempotency-Key")
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
-		trustedOperatorContext := strings.TrimSpace(r.Header.Get("X-Delegated-Operator-Context"))
-		if trustedOperatorContext != "" {
-			if input.OperatorContextID != "" && strings.TrimSpace(input.OperatorContextID) != trustedOperatorContext {
-				shared.SendError(w, http.StatusForbidden, "OperatorContext_MISMATCH", "refund OperatorContext does not match trusted DSH OperatorContext")
-				return
-			}
-			input.OperatorContextID = trustedOperatorContext
-		}
 		created, replayed, err := CreateGovernedRefund(r.Context(), db, input)
 		if err != nil {
 			if !sendGovernedRefundError(w, err) {
