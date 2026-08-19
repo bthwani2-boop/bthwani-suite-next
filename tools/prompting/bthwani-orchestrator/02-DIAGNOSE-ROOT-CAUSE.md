@@ -426,3 +426,31 @@ A new local fix is allowed only when evidence proves the issue is itself the hig
 Derive only the next coherent treatment frontier from the currently proven root and hard dependencies. Do not build speculative multi-root task forests whose assumptions may disappear after the current root is fixed. After treatment, revalidate touched project-frame claims, re-diagnose and derive the next frontier from the new live state.
 
 Different objectives, workers or sessions may advance independent roots only when they share the same reconciled project frame and single integration truth under `00`/`01`; no local worker target may become a competing canonical model.
+
+## 19. Durable-truth discovery and governance-clarity findings
+
+Diagnosis must distinguish facts needed only to fix the current implementation from durable knowledge that should improve future project understanding.
+
+For every newly proven material fact that can affect platform understanding, classify it under `01` as one of:
+
+`EPHEMERAL_IMPLEMENTATION_FACT | CURRENT_RUNTIME_FACT | TASK_LOCAL_FACT | DURABLE_PROJECT_TRUTH | DURABLE_POLICY_INVARIANT | DECISION_REQUIRED`.
+
+When a `DURABLE_PROJECT_TRUTH` or `DURABLE_POLICY_INVARIANT` is sufficiently proven and current governance is missing, materially incomplete or materially ambiguous about it, create/retain a `GOVERNANCE_CLARITY_GAP` finding when the gap can mislead future objectives, agents or sessions.
+
+A governance-clarity finding records at least:
+
+```text
+PROVEN DURABLE TRUTH
+EVIDENCE / PROOF LIMIT
+WHY IT IS DURABLE + REUSABLE
+CURRENT GOVERNANCE HOME / ABSENCE
+CURRENT CLASSIFICATION: CONFIRMED | STALE | WRONG | CONFLICTING | INCOMPLETE | MISSING_BUT_PROVEN | DECISION_REQUIRED
+FUTURE MISDIRECTION RISK
+CANONICAL GOVERNANCE HOME
+SYSTEM CHANGE REQUIRED? YES/NO
+GOVERNANCE TREATMENT AFTER SYSTEM PROOF
+```
+
+`GOVERNANCE_CLARITY_GAP` is not authority to write speculative documentation. The governance-write gate in the governance focus module still applies. If the truth is unresolved, keep the finding open/held or raise the true decision gap instead of manufacturing completeness.
+
+A bootstrap governance audit uses this same model against current live project truth. It should improve established durable context without turning governance into a task ledger, source-code mirror or exhaustive registry of implementation facts.

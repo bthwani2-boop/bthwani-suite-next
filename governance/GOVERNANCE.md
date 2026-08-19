@@ -4,14 +4,16 @@ Status: ACTIVE_CANONICAL
 
 ## Purpose
 
-`governance/` contains only durable human/product policy truth. It is not an execution engine and must not grow registries, guard catalogs, workflow catalogs, approval state machines, or SDLC bureaucracy.
+`governance/` contains durable human/product policy truth and acts as BThwani's progressively clarified **durable project memory**. It is not an execution engine and must not grow registries, guard catalogs, workflow catalogs, approval state machines, task state, implementation inventories, or SDLC bureaucracy.
 
 BThwani is governed as one platform. A current `OBJECTIVE` selects work priority inside that platform; it does not redefine Product/System truth, ownership, architecture or another journey around itself unless an explicit authorized semantic decision changes durable truth.
+
+Governance is expected to become clearer over time as execution proves reusable platform facts. Discovery alone never authorizes a governance write; only proven durable material truth that belongs in a canonical governance owner may be reconciled or added.
 
 ## Structure
 
 - `product/PRD.md` — platform-wide product meaning and ownership.
-- `product/platform-model.yaml` — compact platform model when machine-readable product context is useful.
+- `product/platform-model.yaml` — compact stable platform model when machine-readable product context is useful.
 - `product/contracts/` — capability-specific Product Truth.
 - `policies/engineering.md` — architecture, contracts, data, runtime, quality, and cleanup.
 - `policies/security.md` — authentication, authorization, secrets, privacy, isolation, and sensitive operations.
@@ -38,7 +40,8 @@ project-wide frame
 → direct root-correct fix
 → migrate all affected consumers/data/contracts/runtime
 → remove obsolete truth
-→ reconcile affected governance
+→ classify newly proven knowledge for durable project memory
+→ reconcile/enrich affected governance when required
 → affected verification + touched project-invariant proof
 → broader proof only when risk/closure requires it
 ```
@@ -55,9 +58,58 @@ For a concrete engineering/product claim, reconcile rather than blindly prefer o
 4. same-candidate runtime evidence when runtime behavior is claimed;
 5. authoritative external technical/standard evidence where required, without importing external product semantics.
 
-Governance may be `CONFIRMED | STALE | WRONG | CONFLICTING | INCOMPLETE | DECISION_REQUIRED` against current reconciled truth. Code may also be wrong. Neither representation wins by existence or recency alone.
+Governance may be `CONFIRMED | STALE | WRONG | CONFLICTING | INCOMPLETE | MISSING_BUT_PROVEN | DECISION_REQUIRED` against current reconciled truth. Code may also be wrong. Neither representation wins by existence or recency alone.
 
 Plans, prompts, fixtures, diagnostics, generated reports, and historical results are support/evidence only. They never substitute for implementation or runtime truth.
+
+## Progressive project memory
+
+Every materially relevant fact exposed by audit, diagnosis or execution is classified before it can become durable governance:
+
+```text
+EPHEMERAL_IMPLEMENTATION_FACT
+CURRENT_RUNTIME_FACT
+TASK_LOCAL_FACT
+DURABLE_PROJECT_TRUTH
+DURABLE_POLICY_INVARIANT
+DECISION_REQUIRED
+```
+
+A fact becomes a governance-enrichment candidate only when all materially applicable conditions hold:
+
+```text
+PROVEN
++ DURABLE ACROSS EXPECTED IMPLEMENTATION CHANGE
++ MATERIAL TO PRODUCT / OPERATIONS / OWNERSHIP / BOUNDARIES / POLICY
++ REUSABLE ACROSS OBJECTIVES / AGENTS / SESSIONS
++ ABSENCE OR AMBIGUITY CAN MATERIALLY MISLEAD FUTURE UNDERSTANDING OR EXECUTION
++ CANONICAL GOVERNANCE HOME EXISTS
++ NO UNRESOLVED CONTRADICTION OR DECISION GAP CAN CHANGE IT
+```
+
+`DISCOVERED ≠ GOVERNANCE WORTHY` and `CURRENT CODE ≠ DURABLE PROJECT TRUTH`.
+
+Examples of governance-worthy facts when proven include platform/surface identity, durable actors and role boundaries, authority/responsibility, canonical ownership, domain/service boundaries, durable journeys and handoffs, material state/invariant semantics, security/financial boundaries and stable product policy. Function names, SHAs, temporary paths, task status, bug lists, transient runtime state and replaceable implementation detail do not belong here merely because they were observed.
+
+Route durable knowledge to the smallest existing canonical owner:
+
+```text
+platform-wide meaning / surfaces / actors / durable ownership
+→ product/PRD.md
+
+compact stable platform model used for rapid orientation
+→ product/platform-model.yaml
+
+capability/journey-specific Product Truth
+→ product/contracts/*.product-truth.json
+
+durable engineering/security/delivery policy
+→ policies/**
+```
+
+Prefer enriching an existing canonical owner. Create a new governance file only when a distinct durable concept cannot be represented cleanly by an existing owner and the new artifact passes the same non-duplication/value discipline.
+
+Governance clarification is progressive, not exhaustive. Unknown or unresolved areas may remain explicit; they must never be filled with guesses simply to make the model look complete.
 
 ## One-source rules
 
@@ -74,13 +126,16 @@ Plans, prompts, fixtures, diagnostics, generated reports, and historical results
 
 A material semantic system change requires governance impact classification. If the proven Canonical Product/System truth changes an actor, authority, responsibility, journey, state, transition, invariant, canonical owner, API/data ownership or durable policy meaning, reconcile the affected governance after the actual system treatment is proven.
 
+The same convergence requirement applies when execution proves a durable material truth that was already true in the system but is missing, incomplete or materially ambiguous in governance. Governance clarification is therefore not limited to documenting newly changed semantics.
+
 ```text
 wrong system + corrected governance = NOT CLOSED
 correct system + materially stale/misleading governance = NOT CLOSED
+correct system + proven durable truth materially missing from governance = NOT CLOSED when the gap can mislead future execution
 correct system + reconciled governance + required evidence = closure candidate
 ```
 
-Do not update governance merely to mirror current code, and do not leave stale governance capable of directing future work toward an obsolete owner/path/semantic model.
+Do not update governance merely to mirror current code, and do not leave stale or materially incomplete governance capable of directing future work toward an obsolete or ambiguous owner/path/semantic model.
 
 ## Verification boundary
 

@@ -1,6 +1,6 @@
 # BThwani Self-Contained Goal-Driven Audit, Inspection, Diagnosis, Analysis & Root-Cause Execution Orchestrator
 
-PACKAGE_REVISION: 7
+PACKAGE_REVISION: 8
 PACKAGE_CLASS: TEXTUAL_EXECUTION_COMMAND_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -12,7 +12,7 @@ DEFAULT_ORCHESTRATOR_MUTABILITY: READ_ONLY
 
 ## 0. Governing law
 
-> **PROJECT-WIDE CANONICAL FRAME; OBJECTIVE IS CURRENT PRIORITY, NOT PROJECT TRUTH; GOAL-DRIVEN SEMANTIC AUTHORITY; TOP-DOWN AUDIT + INSPECTION + DIAGNOSIS + ANALYSIS; BOTTOM-UP EVIDENCE; HIGHEST PROVEN SYSTEMIC ROOT FIRST; ACTUAL CODE/DATA/CONTRACT/RUNTIME IS THE PLACE OF TREATMENT; COHERENT END-TO-END CUTOVER; ZERO UNJUSTIFIED PARALLEL TRUTH; ZERO UNJUSTIFIED REACHABLE LEGACY; ZERO DOCUMENTATION-ONLY CLOSURE.**
+> **PROJECT-WIDE CANONICAL FRAME; OBJECTIVE IS CURRENT PRIORITY, NOT PROJECT TRUTH; PROGRESSIVE GOVERNANCE CLARIFICATION; GOAL-DRIVEN SEMANTIC AUTHORITY; TOP-DOWN AUDIT + INSPECTION + DIAGNOSIS + ANALYSIS; BOTTOM-UP EVIDENCE; HIGHEST PROVEN SYSTEMIC ROOT FIRST; ACTUAL CODE/DATA/CONTRACT/RUNTIME IS THE PLACE OF TREATMENT; COHERENT END-TO-END CUTOVER; ZERO UNJUSTIFIED PARALLEL TRUTH; ZERO UNJUSTIFIED REACHABLE LEGACY; ZERO DOCUMENTATION-ONLY CLOSURE.**
 
 Every invocation operates inside one current project-wide canonical frame. The objective selects the present investigation/execution priority inside that frame; it never becomes a competing worldview, authority, architecture, scope ceiling or permission to regress another journey/domain/surface/invariant.
 
@@ -33,7 +33,9 @@ The project frame is reconstructed/revalidated from current authorized intent, a
 
 Every material focus dimension is considered for applicability on every invocation. Only dimensions capable of changing correctness, priority, treatment, blast radius or closure are deeply executed. Silence is not `N/A`.
 
-No material semantic system change may proceed without governance impact classification. No closure is valid while material governance drift can mislead current or future project work. Governance never wins blindly and implementation never wins blindly; both converge on reconciled Canonical Product/System Truth under `01`, `02`, the governance focus module and `04`.
+Governance is BThwani's durable project memory, not a task log or code mirror. Every newly proven material fact that can affect future platform understanding must be classified under `01`/`02`. A proven durable, material, reusable Product/System/Policy truth whose absence or ambiguity can materially mislead future objectives, agents or sessions must be reconciled into the smallest existing canonical governance owner after the actual system truth is proven. Discovery alone never authorizes a governance write.
+
+No material semantic system change may proceed without governance impact classification. No closure is valid while material governance drift or a materially missing proven durable truth can mislead current or future project work. Governance never wins blindly and implementation never wins blindly; both converge on reconciled Canonical Product/System Truth under `01`, `02`, the governance focus module, `03` and `04`.
 
 This directory is a textual command package interpreted directly by a human/agent. It is **not** application/runtime code, a framework, a CLI, a workflow, a validator, a guard system, a machine registry, or a generated state machine.
 
@@ -45,13 +47,13 @@ Project tooling and external research may be used only as evidence or execution 
 
 The package has exactly these semantic owners:
 
-1. `00-ORCHESTRATOR.md` — governing law, project-frame invariant, goal-driven audit/execution lifecycle, invocation, optional phase handoff, independence, protection and valid stop states.
-2. `01-SCOPE-AUTHORITY-RULES.md` — truth/authority, project-frame reconstruction, objective/working-scope/focus routing, phase/mode authority, research/capability discipline, exclusions, concurrency and longevity.
-3. `02-DIAGNOSE-ROOT-CAUSE.md` — detailed audit/inspection/diagnosis/analysis protocol through project orientation, coverage, journeys, findings, decisions, root proof/ranking, project-consistency target modeling and execution readiness.
-4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — actual treatment, reconstruction, migration, cutover, continuity, simplification, cleanup and mutation discipline.
-5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-candidate evidence, project-consistency proof, repository-platform truth when required, review provenance, temporary-plan retirement, post-treatment re-audit/re-inspection/re-diagnosis/re-analysis and fail-closed closure.
+1. `00-ORCHESTRATOR.md` — governing law, project-frame invariant, progressive-governance invariant, goal-driven audit/execution lifecycle, invocation, optional phase handoff, independence, protection and valid stop states.
+2. `01-SCOPE-AUTHORITY-RULES.md` — truth/authority, project-frame reconstruction, objective/working-scope/focus routing, durable project-memory routing, phase/mode authority, research/capability discipline, exclusions, concurrency and longevity.
+3. `02-DIAGNOSE-ROOT-CAUSE.md` — detailed audit/inspection/diagnosis/analysis protocol through project orientation, coverage, journeys, findings, decisions, root proof/ranking, durable-truth discovery, project-consistency target modeling and execution readiness.
+4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — actual treatment, reconstruction, migration, cutover, continuity, simplification, cleanup, progressive governance clarification and mutation discipline.
+5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-candidate evidence, project-consistency proof, durable project-memory closure, repository-platform truth when required, review provenance, temporary-plan retirement, post-treatment re-audit/re-inspection/re-diagnosis/re-analysis and fail-closed closure.
 6. `focus/code-architecture-organization.md` — implementation architecture, repository structure, UI/UX and discoverability.
-7. `focus/governance-product-design.md` — product meaning, governance reconciliation and engineering-governance/control-artifact value.
+7. `focus/governance-product-design.md` — product meaning, governance reconciliation, progressive durable-memory clarification and engineering-governance/control-artifact value.
 8. `focus/data-contracts-runtime-security-quality.md` — data, contracts, runtime, security, finance, quality and engineering control-path efficiency.
 9. `99-SOURCE-MAP.md` — non-executable source-consolidation/disposition accounting only.
 
@@ -121,7 +123,7 @@ If any material `DECISION_REQUIRED` can change the target/treatment, stop **befo
 
 Only when execution truth is sufficiently resolved may this phase create exactly one explicitly requested temporary file at the exact `PLAN_FILE` path supplied by the invocation. The path must not depend on a `TASK` field.
 
-The file records the material evidence, findings, proven roots, blast radius, resolved decisions, Canonical Target, Root-Correct Treatment, migrations/cutovers/cleanup, required governance dispositions that have passed the governance mutation gate, verification and closure criteria. It does not become authority; `01` owns that rule.
+The file records the material evidence, findings, proven roots, blast radius, resolved decisions, Canonical Target, Root-Correct Treatment, migrations/cutovers/cleanup, required governance dispositions that have passed the governance mutation gate, durable-truth clarification requirements, verification and closure criteria. It does not become authority; `01` owns that rule.
 
 After writing it, do not begin treatment. Report a **detailed human-readable summary in the conversation** covering what was audited/inspected/diagnosed/analyzed, the highest roots and gaps, the Canonical Target, material treatment/cleanup/governance impact, risks/dependencies, what the file contains and what remains to execute. End with `READY_FOR_EXECUTION` plus the exact `PLAN_FILE` path.
 
@@ -129,7 +131,7 @@ After writing it, do not begin treatment. Report a **detailed human-readable sum
 
 Requires an existing `PLAN_FILE`. Before mutation, re-resolve latest live truth, revalidate the project frame and revalidate the file rather than executing it mechanically. Correct stale assumptions/findings, add materially related newly exposed work, re-rank by the highest proven root, and raise any new true `DECISION_REQUIRED` before the dependent mutation.
 
-Then execute through `03` and verify/close through `04`. Continue the adaptive root loop until the entire proven affected cone is closed and all project-frame invariants materially touched by it are reconciled; the original plan list is not a stopping boundary. Keep the temporary file until the retirement conditions in `04` are met.
+Then execute through `03` and verify/close through `04`. Continue the adaptive root loop until the entire proven affected cone is closed, all project-frame invariants materially touched by it are reconciled and every newly proven durable material truth with future-governance value has been dispositioned; the original plan list is not a stopping boundary. Keep the temporary file until the retirement conditions in `04` are met.
 
 ## 4. Goal-driven auditing and execution, not checklist-driven execution
 
@@ -210,12 +212,15 @@ UNDERSTAND OBJECTIVE AS CURRENT PRIORITY
 → MIGRATE ALL MATERIAL WRITERS / READERS / CONSUMERS / DATA
 → CANONICAL CUTOVER
 → DELETE/RETIRE SUPERSEDED REACHABLE PATHS WHEN PROVEN SAFE
-→ RECONCILE MATERIAL GOVERNANCE IMPACT
+→ VERIFY ACTUAL SYSTEM TRUTH
+→ CLASSIFY NEWLY PROVEN MATERIAL KNOWLEDGE FOR DURABLE PROJECT MEMORY
+→ RECONCILE / ENRICH MATERIAL GOVERNANCE WHEN REQUIRED
+→ CROSS-CHECK GOVERNANCE ↔ SYSTEM ↔ PROJECT FRAME
 → VERIFY WITH CLAIM-APPROPRIATE EVIDENCE
 → RE-AUDIT + RE-INSPECT + RE-DIAGNOSE + RE-ANALYZE AFFECTED CONE + TOUCHED PROJECT INVARIANTS
 → RE-RANK
 → REPEAT
-→ FINAL PROJECT-CONSISTENCY + NEGATIVE-SPACE + ADVERSARIAL AUDIT / INSPECTION / DIAGNOSIS / ANALYSIS
+→ FINAL PROJECT-CONSISTENCY + DURABLE-TRUTH CLARITY + NEGATIVE-SPACE + ADVERSARIAL AUDIT / INSPECTION / DIAGNOSIS / ANALYSIS
 → CLOSE OR REMAIN OPEN
 ```
 
@@ -279,12 +284,13 @@ root landscape
 priority/ranking
 shared-authority decisions
 previously proven canonical closures
+durable project-memory reconciliation
 collision resolution
 candidate integration
 final closure state
 ```
 
-No worker may silently redefine shared Product/System truth, governance meaning or project architecture because of its local objective or implementation.
+No worker may silently redefine shared Product/System truth, governance meaning or project architecture because of its local objective or implementation. No worker may independently publish a competing governance interpretation of a durable fact.
 
 ### Work-conserving scheduling
 
@@ -295,6 +301,7 @@ When any active root finishes:
 ```text
 verify its materially affected claims
 → reconcile its result with current live truth and project frame
+→ classify any newly proven durable knowledge
 → invalidate only affected evidence
 → update root/dependency landscape
 → unlock newly executable roots
@@ -317,7 +324,7 @@ INVALIDATED EVIDENCE → REACQUIRE AFFECTED PROOF
 UNKNOWN VALIDITY → REVALIDATE THE MINIMUM REQUIRED ASSUMPTION
 ```
 
-Every new worker/session still re-resolves live HEAD and revalidates enough of the project frame to prove that reused evidence and prior canonical closures remain applicable. Restart broad diagnosis only when evidence proves that the governing baseline, authority model or material coverage has been invalidated.
+Every new worker/session still re-resolves live HEAD and revalidates enough of the project frame to prove that reused evidence, durable governance memory and prior canonical closures remain applicable. Restart broad diagnosis only when evidence proves that the governing baseline, authority model or material coverage has been invalidated.
 
 ### No redundant execution
 
@@ -351,6 +358,7 @@ REOPEN AFFECTED CLOSURE
 → PROVE HIGHER ROOT / TRUTH CHANGE
 → RECONCILE PROJECT FRAME
 → MIGRATE ALL AFFECTED AREAS
+→ RECONCILE DURABLE GOVERNANCE MEMORY
 → REVERIFY
 ```
 
@@ -377,6 +385,7 @@ skipped material audit/inspection/diagnosis/analysis
 skipped project-frame/authority or blast-radius proof
 skipped focus applicability disposition
 skipped affected consumers
+skipped durable-truth classification when material
 weaker verification
 silent assumptions
 partial migration
@@ -403,7 +412,7 @@ DIAGNOSIS
 = explain observed or discovered defects through causal chains, operational parents, canonical owners/writers and the highest provable Root Cause.
 
 ANALYSIS
-= compare meanings, truth classes, hypotheses, alternatives, dependencies, consumers, blast radius, risk, recurrence, systemic leverage, project-frame consistency, target states and treatment tradeoffs before deciding what is correct.
+= compare meanings, truth classes, hypotheses, alternatives, dependencies, consumers, blast radius, risk, recurrence, systemic leverage, project-frame consistency, durable-knowledge implications, target states and treatment tradeoffs before deciding what is correct.
 ```
 
 Mandatory consequences:
@@ -469,7 +478,7 @@ The project frame is not permission for repository-wide mutation. Unrelated repo
 
 Keep every materially applicable lens active:
 
-`PRODUCT/OPERATIONAL MEANING | COMPLETENESS/CONFORMANCE | CONSISTENCY/DIVERGENCE | DIRECT INSPECTION | NEGATIVE SPACE | ROOT CAUSE | DEPENDENCIES | CONSUMERS | DATA INTEGRITY | CONTRACT IMPACT | AUTH/AUTHZ | SECURITY | FINANCE | GOVERNANCE IMPACT | RUNTIME | FAILURE/RECOVERY | TESTING | UI/UX | STRUCTURE/NAMING | ENGINEERING EXECUTION COST | LEGACY/PARALLEL-TRUTH CLEANUP`.
+`PRODUCT/OPERATIONAL MEANING | COMPLETENESS/CONFORMANCE | CONSISTENCY/DIVERGENCE | DIRECT INSPECTION | NEGATIVE SPACE | ROOT CAUSE | DEPENDENCIES | CONSUMERS | DATA INTEGRITY | CONTRACT IMPACT | AUTH/AUTHZ | SECURITY | FINANCE | GOVERNANCE IMPACT | DURABLE-PROJECT-MEMORY IMPACT | RUNTIME | FAILURE/RECOVERY | TESTING | UI/UX | STRUCTURE/NAMING | ENGINEERING EXECUTION COST | LEGACY/PARALLEL-TRUTH CLEANUP`.
 
 Every lens receives an applicability disposition before closure. A lens may be `N/A_PROVEN`; it may never disappear silently. Deep work remains material/risk-driven.
 
@@ -508,3 +517,18 @@ Only:
 Only `04-VERIFY-REDIAGNOSE-CLOSE.md` defines final closure. If any materially required condition is unproven, the state remains `OPEN` unless a valid stop state above applies.
 
 Where `02` or `04` use `diagnosis` / `re-diagnosis` as an umbrella lifecycle term, it must be interpreted under this governing law as including the materially required **audit + inspection + diagnosis + analysis** obligations, not diagnosis-only.
+
+## 15. Progressive governance clarification invariant
+
+The package must make future executions better informed as durable truth is proven, without turning governance into a source-code mirror or execution ledger.
+
+```text
+DISCOVER ≠ GOVERN
+PROVE DURABLE TRUTH → CLASSIFY → ROUTE TO CANONICAL GOVERNANCE OWNER WHEN MATERIAL
+EPHEMERAL / TASK-LOCAL / TRANSIENT FACT → DO NOT PROMOTE
+UNRESOLVED TRUTH → DO NOT GUESS
+```
+
+A newly proven durable truth does not require a governance write when it is already represented clearly and correctly. It does require reconciliation when the existing representation is stale, wrong, conflicting, incomplete or missing in a way that can materially mislead future work.
+
+This law improves the **quality and completeness of durable project understanding over time**, not the volume of documentation. Detailed classification, write gating, routing and closure proof are owned by `01`, `02`, `focus/governance-product-design.md`, `03` and `04`.

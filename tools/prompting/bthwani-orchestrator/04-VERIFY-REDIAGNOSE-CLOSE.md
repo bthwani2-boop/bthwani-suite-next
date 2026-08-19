@@ -32,6 +32,7 @@ CANONICAL CHANGE WITHOUT ALL AFFECTED CONSUMERS MIGRATED ≠ COMPLETE
 MOCK PASS ≠ REAL PROVIDER/RUNTIME PASS
 DOC UPDATED ≠ IMPLEMENTATION FIXED
 GOVERNANCE UNCHANGED ≠ GOVERNANCE CONFIRMED
+GOVERNANCE PRESENT ≠ DURABLE PROJECT MEMORY COMPLETE FOR PROVEN MATERIAL TRUTH
 TRACKED WORKFLOW CONFIG ≠ LIVE REPOSITORY ENFORCEMENT
 EXTERNAL DOCUMENTATION ≠ LOCAL VERSION/RUNTIME PROOF
 ```
@@ -118,6 +119,7 @@ Verify where material:
 - previously proven canonical closures affected by the change remain valid or were explicitly reopened/reconciled;
 - every canonical focus family has an applicability disposition and every material one received sufficient proof;
 - governance/product/policy impact is classified and synchronized where required;
+- newly proven material knowledge has been classified for durable project-memory value and any required governance enrichment is complete;
 - deletion/retirement of superseded reachable paths;
 - absence of new parallel truth;
 - preservation of proven design/value;
@@ -208,7 +210,7 @@ Textual zero-reference search may be necessary but is insufficient alone; prove 
 
 ## 16. Re-diagnosis after every material root
 
-`reinspect operational outcome → rerun affected journey/actor/state/handoff traces → rerun ownership/contract/data/runtime traces → revalidate materially touched project-frame claims + governance impact + affected prior closures → invalidate descendant symptoms → discover exposed roots → rebuild affected coverage → rerank`.
+`reinspect operational outcome → rerun affected journey/actor/state/handoff traces → rerun ownership/contract/data/runtime traces → revalidate materially touched project-frame claims + governance impact + affected prior closures → classify newly proven durable knowledge → invalidate descendant symptoms → discover exposed roots → rebuild affected coverage → rerank`.
 
 If a treatment changes shared authority, Product/System semantics, cross-domain boundary or durable invariant, broaden re-diagnosis far enough to prove project-level consistency for that concept; do not confine proof to the objective that exposed the root.
 
@@ -222,7 +224,7 @@ Before freeze, every materially affected remaining artifact needs a defensible:
 
 Closure is blocked by known related dead/unreachable code, superseded implementation, duplicate authority, stale/orphan reference, old path/alias, misleading naming, wrong placement/ownership, unused dependency, obsolete config/env/flag/script, workaround/fallback, stale docs/comments/examples, debug/temp artifact, unjustified compatibility residue or materially unjustified complexity tied to scope.
 
-Material governance/product artifacts capable of directing future work toward a stale owner/path/semantic model are closure-blocking even if runtime currently works.
+Material governance/product artifacts capable of directing future work toward a stale owner/path/semantic model are closure-blocking even if runtime currently works. The same is true for a materially missing proven durable truth when its absence or ambiguity can direct future work incorrectly.
 
 ## 18. Final freeze and branch-race gate
 
@@ -236,7 +238,7 @@ Immediately before ref update/push and final decision re-resolve target HEAD and
 
 ## 19. Final negative-space pass
 
-Search deliberately for missing consumer/surface, route/handler/contract field, writer/readback, failure/recovery path, authorization boundary, handoff/intervention, migration/compatibility transition, hidden duplicate/legacy truth, missing project-frame relation/invariant impact, missing prior-closure reconciliation, missing focus applicability disposition, missing governance reconciliation, missing repository-platform proof when relied upon, and missing operational/audit evidence required by the claim.
+Search deliberately for missing consumer/surface, route/handler/contract field, writer/readback, failure/recovery path, authorization boundary, handoff/intervention, migration/compatibility transition, hidden duplicate/legacy truth, missing project-frame relation/invariant impact, missing prior-closure reconciliation, missing focus applicability disposition, missing governance reconciliation or durable-truth home, missing repository-platform proof when relied upon, and missing operational/audit evidence required by the claim.
 
 Unexplained material absence remains open.
 
@@ -244,7 +246,7 @@ Unexplained material absence remains open.
 
 Assume closure is false and search for:
 
-`missed domain/capability | objective-induced local optimization | project-frame contradiction | cross-objective regression | duplicate truth | stale/wrong governance | hidden consumer/writer | reachable old path | contract/data mismatch | cross-surface mismatch | unintended affected regression | incomplete consumer migration | failure/recovery gap | runtime divergence | stale process/data | unresolved semantic ambiguity | patch/workaround | race/idempotency issue | security/isolation issue | wrong placement/naming/context | orphan references | unjustified complexity | assurance loss/cost shift in tooling changes | stale/mismatched repository-platform evidence`.
+`missed domain/capability | objective-induced local optimization | project-frame contradiction | cross-objective regression | duplicate truth | stale/wrong/incomplete governance | material proven durable truth missing from governance | hidden consumer/writer | reachable old path | contract/data mismatch | cross-surface mismatch | unintended affected regression | incomplete consumer migration | failure/recovery gap | runtime divergence | stale process/data | unresolved semantic ambiguity | patch/workaround | race/idempotency issue | security/isolation issue | wrong placement/naming/context | orphan references | unjustified complexity | assurance loss/cost shift in tooling changes | stale/mismatched repository-platform evidence`.
 
 Any material issue reopens diagnosis/treatment/verification.
 
@@ -284,6 +286,7 @@ AND ZERO_MATERIAL_AUTH/SCOPE/SECURITY_GAPS
 AND ZERO_UNRESOLVED_RUNTIME/DATA_STATE
 AND ZERO_UNRECONCILED_MATERIAL_GOVERNANCE_IMPACT
 AND ZERO_MATERIAL_GOVERNANCE_DRIFT_CAPABLE_OF_MISLEADING CURRENT_OR_FUTURE_WORK
+AND ZERO_MATERIAL_DURABLE_TRUTH_CLARITY_GAPS_CAPABLE_OF_MISLEADING_FUTURE_EXECUTION
 AND ZERO_BROKEN/ORPHAN/STALE_REFERENCES_EXPOSED_BY_WORK
 AND ZERO_MATERIAL_CLEANUP_RESIDUE_TIED_TO_SCOPE
 AND ZERO_MATERIAL_UNJUSTIFIED_COMPLEXITY_TIED_TO_SCOPE
@@ -319,6 +322,14 @@ The deletion is a write and therefore creates a new candidate. If the final read
 
 ## 24. Final report
 
-Keep reporting concise and evidence-based: repository/ref, objective, starting/final observed HEAD, final candidate relation, relevant project-frame authority/invariants, highest roots treated, canonical owners, migrations/cutovers/cleanup, affected consumers/surfaces, governance disposition, verification actually performed and proof limits, runtime provenance/readback when claimed, repository-platform truth when materially relied upon, foreign-delta reconciliation, any prior closure reopened/reconciled, remaining true blocker/decision, and final state.
+Keep reporting concise and evidence-based: repository/ref, objective, starting/final observed HEAD, final candidate relation, relevant project-frame authority/invariants, highest roots treated, canonical owners, migrations/cutovers/cleanup, affected consumers/surfaces, governance disposition, durable-truth clarification performed when material, verification actually performed and proof limits, runtime provenance/readback when claimed, repository-platform truth when materially relied upon, foreign-delta reconciliation, any prior closure reopened/reconciled, remaining true blocker/decision, and final state.
+
+## 25. Durable project-memory closure gate
+
+Progressive governance clarification is **affected-knowledge scoped**, not an obligation to fully document every unknown area of the repository during every objective.
+
+Before closure, classify every newly proven material fact that can affect durable platform understanding under the vocabulary owned by `01` and the governance focus module. If it is proven durable/reusable truth and its absence or ambiguity can materially mislead future objectives, agents or sessions, its canonical governance home must be reconciled before `CLOSED`.
+
+Do not create documentation churn for ephemeral implementation facts. Do not use an unrelated unknown governance area to block a narrow objective when it cannot affect the claim. Do not declare closure while knowingly leaving a newly proven durable material truth absent or materially ambiguous in the governance surface future work is expected to rely on.
 
 Package independence/self-validation rules remain governed solely by `00-ORCHESTRATOR.md`.

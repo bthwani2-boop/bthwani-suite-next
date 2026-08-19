@@ -31,6 +31,8 @@ DEFINE PROVEN TARGET TRUTH
 → DELETE/RETIRE SUPERSEDED REACHABLE PATHS
 → REPAIR REFERENCES/CONSUMERS
 → VERIFY AFFECTED + BLAST-RADIUS BEHAVIOR
+→ CLASSIFY NEWLY PROVEN MATERIAL KNOWLEDGE FOR DURABLE PROJECT MEMORY
+→ RECONCILE / ENRICH AFFECTED GOVERNANCE WHEN REQUIRED
 → ADVERSARIALLY RE-DIAGNOSE ROOT
 ```
 
@@ -159,7 +161,9 @@ If treatment changes material actor, authority, responsibility, journey, state, 
 
 `IMPLEMENT SYSTEM CHANGE → PROVE BEHAVIOR/RUNTIME → ANALYZE GOVERNANCE IMPACT → RECONCILE AFFECTED GOVERNANCE → CROSS-CHECK GOVERNANCE ↔ SYSTEM`.
 
-Do not edit governance to describe an unfixed ideal and do not leave materially affected governance stale after a proven semantic change. Every governance mutation must also pass the fail-closed governance-write gate owned by `focus/governance-product-design.md`.
+Governance reconciliation is not limited to changed semantics. If treatment/diagnosis proves a durable material Project/System truth that was already true but is missing, incomplete or materially ambiguous in governance, classify it under the progressive-clarification law and enrich its canonical governance home when the omission can mislead future work.
+
+Do not edit governance to describe an unfixed ideal and do not leave materially affected governance stale or materially incomplete after proven truth is available. Every governance mutation must also pass the fail-closed governance-write gate owned by `focus/governance-product-design.md`.
 
 ## 13. Data and migration treatment
 
@@ -318,13 +322,13 @@ READ LATEST LIVE TRUTH
 → RE-AUDIT / RE-INSPECT / RE-DIAGNOSE / RE-ANALYZE AFFECTED CONE
 → DISPOSITION RESOLVED OR OBSOLETE DESCENDANT FINDINGS
 → DISCOVER NEWLY EXPOSED MATERIAL FINDINGS/ROOTS
-→ UPDATE BLAST RADIUS / CONSUMERS / GOVERNANCE IMPACT
+→ UPDATE BLAST RADIUS / CONSUMERS / GOVERNANCE IMPACT / DURABLE-TRUTH CLARITY IMPACT
 → RE-RANK
 → SELECT HIGHEST PROVEN ROOT
 → REPEAT
 ```
 
-The loop continues until all original material findings plus all materially related findings exposed by treatment, migrations, consumers, cleanup or governance impact are `PROVEN_CLOSED` or `NOT_APPLICABLE_WITH_PROOF`. Ending the original list, obtaining a green build/test, or removing the visible symptom is not saturation. Do not repeat the same loop without material progress; repeated related symptoms require upstream re-diagnosis under `02` rather than a patch loop. If a higher root appears, suspend affected lower work immediately. Sunk cost is not execution authority.
+The loop continues until all original material findings plus all materially related findings exposed by treatment, migrations, consumers, cleanup, governance impact or durable-truth clarification are `PROVEN_CLOSED` or `NOT_APPLICABLE_WITH_PROOF`. Ending the original list, obtaining a green build/test, or removing the visible symptom is not saturation. Do not repeat the same loop without material progress; repeated related symptoms require upstream re-diagnosis under `02` rather than a patch loop. If a higher root appears, suspend affected lower work immediately. Sunk cost is not execution authority.
 
 ## 24. Minimum necessary complexity
 
@@ -345,5 +349,24 @@ CANONICAL CHANGE WITHOUT ALL AFFECTED CONSUMERS MIGRATED = INCOMPLETE
 ```
 
 Preserve proven-valid behavior unless the Canonical Target intentionally changes it; intentional change requires explicit migration of every affected consumer to the new semantics. No unintended regression, missing consumer, partial migration or half cutover may be deferred as a separate future bug. If a treatment causes an affected app/service/journey to fail because migration or propagation was incomplete, the original root remains `OPEN` and treatment continues through the same blast-radius cone.
+
+## 26. Progressive governance clarification after proven work
+
+Every material root treatment or diagnosis may improve the platform's durable project memory, but governance enrichment occurs only after the relevant truth is proven.
+
+```text
+DISCOVER MATERIAL FACT
+→ PROVE / DISPROVE
+→ FIX ACTUAL SYSTEM FIRST WHEN WRONG
+→ VERIFY ACTUAL SYSTEM / READBACK WHEN REQUIRED
+→ CLASSIFY KNOWLEDGE UNDER 01 / GOVERNANCE FOCUS
+→ IF PROVEN + DURABLE + MATERIAL + REUSABLE AND GOVERNANCE-WORTHY:
+     RECONCILE / ENRICH THE SMALLEST EXISTING CANONICAL GOVERNANCE OWNER
+→ CROSS-CHECK GOVERNANCE ↔ SYSTEM ↔ PROJECT FRAME
+```
+
+This requirement applies both when treatment changes durable semantics and when work merely reveals an already-existing durable Project/System truth that governance failed to capture clearly.
+
+Do not copy task state, implementation detail, SHAs, bug lists, transient runtime facts or speculative model completion into governance. Do not create a new governance artifact when `PRD.md`, `platform-model.yaml`, an existing Product Truth contract or an existing policy can own the durable truth cleanly.
 
 Package protection/independence remains governed solely by `00-ORCHESTRATOR.md`.

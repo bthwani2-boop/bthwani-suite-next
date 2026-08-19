@@ -281,6 +281,7 @@ OLD_SHA ≠ CURRENT_TRUTH
 OLD PASS/DONE ≠ CURRENT EVIDENCE
 EXTERNAL BEST PRACTICE ≠ BTHWANI PRODUCT DECISION
 LOCAL OBJECTIVE PASS ≠ PROJECT CONSISTENCY
+DISCOVERED FACT ≠ DURABLE GOVERNANCE TRUTH
 ```
 
 ## 12. Derived/historical records
@@ -391,3 +392,47 @@ Rules:
 - durable project truth belongs in its proven governance/product owner, not in this method package;
 - repeated exceptions trigger re-diagnosis of the parent rule;
 - this package must remain materially simpler than the system it governs.
+
+## 18. Durable project-memory routing
+
+Every materially relevant fact newly established during audit, diagnosis, execution or verification is classified before it can be treated as durable governance knowledge:
+
+```text
+EPHEMERAL_IMPLEMENTATION_FACT
+CURRENT_RUNTIME_FACT
+TASK_LOCAL_FACT
+DURABLE_PROJECT_TRUTH
+DURABLE_POLICY_INVARIANT
+DECISION_REQUIRED
+```
+
+A fact is a governance-enrichment candidate only when all materially applicable conditions are proven:
+
+```text
+PROVEN
+AND DURABLE ACROSS EXPECTED IMPLEMENTATION CHANGE
+AND MATERIAL TO PRODUCT / OPERATIONS / OWNERSHIP / BOUNDARIES / POLICY
+AND REUSABLE ACROSS OBJECTIVES / AGENTS / SESSIONS
+AND ITS ABSENCE OR AMBIGUITY CAN MATERIALLY MISLEAD FUTURE UNDERSTANDING OR EXECUTION
+AND NO UNRESOLVED CONTRADICTION / DECISION_REQUIRED CAN CHANGE IT
+```
+
+Route proven durable truth to the smallest existing canonical owner:
+
+```text
+platform meaning / surfaces / actors / durable ownership
+→ governance/product/PRD.md
+
+compact stable orientation model
+→ governance/product/platform-model.yaml
+
+capability/journey-specific Product Truth
+→ governance/product/contracts/*.product-truth.json
+
+durable engineering/security/delivery policy
+→ governance/policies/**
+```
+
+Prefer enriching an existing canonical owner. A new governance file requires proof that no existing owner can represent the distinct durable concept cleanly and that the new artifact will not create duplicate authority.
+
+Do not block unrelated work because some project knowledge remains unknown. Do block closure for the affected cone when a newly proven durable material truth is knowingly absent or materially ambiguous in governance and that gap can mislead future work.

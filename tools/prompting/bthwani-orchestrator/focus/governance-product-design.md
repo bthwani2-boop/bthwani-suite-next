@@ -6,7 +6,7 @@ Start from current governance/product/policy roots that materially apply, then v
 
 Classify governance claims:
 
-`CONFIRMED | STALE | WRONG | CONFLICTING | INCOMPLETE | DECISION_REQUIRED`.
+`CONFIRMED | STALE | WRONG | CONFLICTING | INCOMPLETE | MISSING_BUT_PROVEN | DECISION_REQUIRED`.
 
 Never apply “governance wins” or “code wins” universally.
 
@@ -20,25 +20,26 @@ Inspect actors/identities and role boundaries, authorities/responsibilities, cap
 
 ## 4. Governance drift classes
 
-Look for governance→implementation drift, implementation→governance drift, policy→product contradiction, product→journey contradiction, journey→runtime contradiction, contract→implementation contradiction, data→contract contradiction, cross-surface semantic drift, duplicate governance authorities and stale documents still directing work toward obsolete owners/paths.
+Look for governance→implementation drift, implementation→governance drift, policy→product contradiction, product→journey contradiction, journey→runtime contradiction, contract→implementation contradiction, data→contract contradiction, cross-surface semantic drift, duplicate governance authorities, materially missing durable truth and stale documents still directing work toward obsolete owners/paths.
 
 ## 5. Governance writes require system impact analysis and proven truth
 
 Before a material governance write establish:
 
-`claimed semantic change → affected actors/journeys/states/owners → implementation/contracts/data/runtime/surfaces impact → canonical target truth → root cause → blast radius → migration/cutover consequences`.
+`claimed semantic change or clarification → affected actors/journeys/states/owners → implementation/contracts/data/runtime/surfaces evidence → canonical target truth → root/clarity cause → future-understanding impact → blast radius → migration/cutover consequences when any`.
 
-A governance classification such as `STALE`, `WRONG` or `CONFLICTING` is evidence for investigation, not mutation authority. Before any `UPDATE | CORRECT | ADD | DELETE | MERGE | MOVE | RESTRUCTURE`, prove the affected Canonical Product/System Truth, the reason the current governance conflicts with it, the material impact/blast radius, and that no unresolved `DECISION_REQUIRED` or material semantic contradiction can change the write.
+A governance classification such as `STALE`, `WRONG`, `CONFLICTING`, `INCOMPLETE` or `MISSING_BUT_PROVEN` is evidence for investigation, not mutation authority. Before any `UPDATE | CORRECT | ADD | DELETE | MERGE | MOVE | RESTRUCTURE`, prove the affected Canonical Product/System Truth, the reason the current governance conflicts with or materially omits it, the material impact/blast radius, and that no unresolved `DECISION_REQUIRED` or material semantic contradiction can change the write.
 
 ```text
 UNCERTAINTY = NO GOVERNANCE WRITE
 CURRENT CODE ≠ GOVERNANCE UPDATE AUTHORITY
 SUSPECTED DRIFT ≠ DELETE/REWRITE AUTHORITY
+DISCOVERED ≠ GOVERNANCE WORTHY
 ```
 
 If proof is incomplete, keep the governance unchanged and classify the affected claim as `EVIDENCE/HOLD` or `DECISION_REQUIRED` through `02` as appropriate.
 
-**NO GOVERNANCE WRITE WITHOUT PROVEN TARGET TRUTH + SYSTEM IMPACT ANALYSIS.**
+**NO GOVERNANCE WRITE WITHOUT PROVEN TARGET TRUTH + SYSTEM IMPACT/CLARITY ANALYSIS.**
 
 ## 6. System semantic changes require governance impact analysis
 
@@ -51,6 +52,7 @@ If treatment changes actor, authority, responsibility, journey, state, transitio
 ```text
 wrong system + corrected governance = NOT CLOSED
 correct system + materially stale governance = NOT CLOSED
+correct system + materially missing proven durable governance truth = NOT CLOSED when the gap can mislead future execution
 correct system + reconciled governance + required runtime proof = closure candidate
 ```
 
@@ -122,4 +124,63 @@ If multiple materially valid product/operational behaviors remain and evidence c
 
 ## 14. Closure for governance/product focus
 
-A semantic/governance root is not closed until materially affected representations are reconciled across governance, contracts/data, implementation, runtime and consuming surfaces, and no stale/parallel authority remains capable of misleading future execution.
+A semantic/governance root is not closed until materially affected representations are reconciled across governance, contracts/data, implementation, runtime and consuming surfaces, and no stale/parallel authority or material durable-truth clarity gap remains capable of misleading future execution.
+
+## 15. Progressive governance clarification and durable project memory
+
+Governance is progressively clarified by proven work; it is not populated by every observation.
+
+Classify newly exposed material knowledge as:
+
+```text
+EPHEMERAL_IMPLEMENTATION_FACT
+CURRENT_RUNTIME_FACT
+TASK_LOCAL_FACT
+DURABLE_PROJECT_TRUTH
+DURABLE_POLICY_INVARIANT
+DECISION_REQUIRED
+```
+
+A `DURABLE_PROJECT_TRUTH` or `DURABLE_POLICY_INVARIANT` becomes a governance-write candidate only when all materially applicable conditions are proven:
+
+```text
+PROVEN
+AND DURABLE ACROSS EXPECTED IMPLEMENTATION CHANGE
+AND MATERIAL TO PRODUCT / OPERATIONS / OWNERSHIP / BOUNDARIES / POLICY
+AND REUSABLE ACROSS OBJECTIVES / AGENTS / SESSIONS
+AND ITS ABSENCE OR AMBIGUITY CAN MATERIALLY MISLEAD FUTURE UNDERSTANDING OR EXECUTION
+AND AN EXISTING CANONICAL GOVERNANCE HOME CAN REPRESENT IT CLEANLY OR A NEW HOME IS UNIQUELY JUSTIFIED
+AND NO UNRESOLVED CONTRADICTION / DECISION_REQUIRED CAN CHANGE IT
+```
+
+Typical governance-worthy facts include proven platform/surface identity, durable actors/role boundaries, authorities/responsibilities, canonical owners, domain/service boundaries, durable journeys/handoffs, material state/invariant semantics, security/financial boundaries and durable product policy.
+
+Do not promote function names, SHAs, temporary paths, task status, bug/finding lists, transient runtime facts, replaceable implementation details, temporary rollout state or evidence bookkeeping into durable governance merely to make the model appear complete.
+
+Route the truth to the smallest existing canonical home:
+
+```text
+platform-wide meaning / surfaces / actors / durable ownership
+→ governance/product/PRD.md
+
+compact stable orientation model
+→ governance/product/platform-model.yaml
+
+capability/journey-specific Product Truth
+→ governance/product/contracts/*.product-truth.json
+
+durable engineering/security/delivery policy
+→ governance/policies/**
+```
+
+Prefer `ENRICH EXISTING CANONICAL OWNER` before `CREATE NEW GOVERNANCE ARTIFACT`.
+
+### Bootstrap governance audit
+
+When a bootstrap/reconciliation audit is materially required, compare current governance with proven live project truth and classify each material area as:
+
+`CONFIRMED | STALE | WRONG | CONFLICTING | INCOMPLETE | MISSING_BUT_PROVEN | DECISION_REQUIRED`.
+
+Correct/enrich only `STALE | WRONG | CONFLICTING | INCOMPLETE | MISSING_BUT_PROVEN` items whose target truth is sufficiently proven and whose write passes §5. Do not manufacture completeness for unresolved areas.
+
+The goal is compounding clarity: future objectives should begin from a more precise durable platform model than prior objectives, without turning governance into a copy of code or a historical execution ledger.
