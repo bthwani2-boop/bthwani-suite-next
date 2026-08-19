@@ -139,7 +139,7 @@ func (r *Repository) CreatePerson(ctx context.Context, actorID, workforceCode, c
 	}
 	defer tx.Rollback()
 
-	if err := validateReferenceTx(ctx, tx, "workforce_cities", cityCode); err != nil {
+	if err := validateProjectedCityTx(ctx, tx, cityCode); err != nil {
 		return Person{}, err
 	}
 
@@ -183,7 +183,7 @@ func (r *Repository) CreateCaptain(ctx context.Context, actorID, workforceCode, 
 	}
 	defer tx.Rollback()
 
-	if err := validateReferenceTx(ctx, tx, "workforce_cities", cityCode); err != nil {
+	if err := validateProjectedCityTx(ctx, tx, cityCode); err != nil {
 		return Person{}, err
 	}
 
@@ -530,7 +530,7 @@ func (r *Repository) UpdatePerson(ctx context.Context, actorID string, derivedCi
 	}
 
 	if derivedCityCode != nil {
-		if err := validateReferenceTx(ctx, tx, "workforce_cities", *derivedCityCode); err != nil {
+		if err := validateProjectedCityTx(ctx, tx, *derivedCityCode); err != nil {
 			return Person{}, err
 		}
 	}
@@ -591,7 +591,7 @@ func (r *Repository) UpdateCaptain(ctx context.Context, actorID string, derivedC
 		return Person{}, ErrVersionConflict
 	}
 	if derivedCityCode != nil {
-		if err := validateReferenceTx(ctx, tx, "workforce_cities", *derivedCityCode); err != nil {
+		if err := validateProjectedCityTx(ctx, tx, *derivedCityCode); err != nil {
 			return Person{}, err
 		}
 	}
@@ -734,11 +734,10 @@ func (r *Repository) MarkActiveIfPending(ctx context.Context, actorID string) er
 
 // ---- reference data ----
 
-// EnsureCity idempotently mirrors a DSH platform zone's city into
-// workforce_cities so the existing FK on city_code/operating_city_code
-// keeps working even though zone selection now happens in DSH, not here.
-// It never overwrites an existing row (an operator-managed city always
-// wins over an auto-mirrored one).
+// EnsureCity materializes display/reference metadata for the city code returned
+// by a DSH-owned platform zone. DSH zone validation is the operational gate;
+// workforce_cities.active is local presentation state and never authorizes or
+// blocks a field/captain service-zone assignment.
 func (r *Repository) EnsureCity(ctx context.Context, code, nameAr string) error {
 	if code == "" {
 		return nil
@@ -834,17 +833,22 @@ func (r *Repository) UpsertShift(ctx context.Context, shift Shift, create bool) 
 
 // ---- helpers ----
 
-func validateReferenceTx(ctx context.Context, tx *sql.Tx, table, code string) error {
+// validateProjectedCityTx verifies that the DSH-derived city code has a local
+// projection row for referential integrity. It deliberately ignores the local
+// active flag: DSH ValidateZone is the sole authority for zone availability.
+func validateProjectedCityTx(ctx context.Context, tx *sql.Tx, code string) error {
 	if code == "" {
 		return nil
 	}
-	var active bool
-	err := tx.QueryRowContext(ctx,
-		`SELECT active FROM `+table+` WHERE code = $1`, code).Scan(&active)
-	if errors.Is(err, sql.ErrNoRows) || (err == nil && !active) {
+	var exists bool
+	if err := tx.QueryRowContext(ctx,
+		`SELECT EXISTS (SELECT 1 FROM workforce_cities WHERE code = $1)`, code).Scan(&exists); err != nil {
+		return err
+	}
+	if !exists {
 		return ErrInvalidReference
 	}
-	return err
+	return nil
 }
 
 func mapPersonWriteError(err error) error {
