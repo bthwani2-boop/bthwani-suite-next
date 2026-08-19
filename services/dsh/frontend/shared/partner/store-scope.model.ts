@@ -26,7 +26,12 @@ export function useStoreScopeModel() {
       .then((res) => {
         if (!active) return;
         setScopes(res.scopes);
-        setSelectedStoreScopeId((current) => current ?? res.scopes[0]?.scopeId ?? null);
+        setSelectedStoreScopeId((current) => {
+          if (current && res.scopes.some((scope) => scope.scopeId === current)) {
+            return current;
+          }
+          return res.scopes.length === 1 ? res.scopes[0]?.scopeId ?? null : null;
+        });
         setIsLoadingScopes(false);
       })
       .catch(() => {
@@ -40,7 +45,7 @@ export function useStoreScopeModel() {
   }, []);
 
   const selectedStoreScope = React.useMemo(
-    () => scopes.find((scope) => scope.scopeId === selectedStoreScopeId) ?? scopes[0],
+    () => scopes.find((scope) => scope.scopeId === selectedStoreScopeId) ?? null,
     [scopes, selectedStoreScopeId],
   );
 
