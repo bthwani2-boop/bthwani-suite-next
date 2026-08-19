@@ -2,7 +2,7 @@ name: BThwani Lockfile Integrity
 
 on:
   pull_request:
-    branches: [master]
+    branches: [master, b]
     paths:
       - "package.json"
       - "pnpm-lock.yaml"
