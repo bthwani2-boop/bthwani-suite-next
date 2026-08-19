@@ -141,7 +141,7 @@ jobs:
           log="${RUNNER_TEMP}/${{ matrix.key }}-go-verification.log"
           changed_files="$(git diff --name-only "${CI_BASE_SHA}" "${CI_HEAD_SHA}" -- "${{ matrix.workdir }}")"
           full_backend=false
-          if [[ ("${CI_FULL_SCOPE}" == "true" && ("${CI_EXECUTION_PHASE}" == "closure" || "${CI_EXECUTION_PHASE}" == "master")) || "${CI_EXECUTION_PHASE}" == "closure" || "${CI_EXECUTION_PHASE}" == "master" ]]; then
+          if [[ ("${CI_FULL_SCOPE}" == "true" && ("${CI_EXECUTION_PHASE}" == "closure" || "${CI_EXECUTION_PHASE}" == "master" || "${CI_EXECUTION_PHASE}" == "b")) || "${CI_EXECUTION_PHASE}" == "closure" || "${CI_EXECUTION_PHASE}" == "master" || "${CI_EXECUTION_PHASE}" == "b" ]]; then
             full_backend=true
           elif grep -Eq '(^|/)(go\.mod|go\.sum)$|/migrations/' <<<"${changed_files}"; then
             full_backend=true
@@ -192,7 +192,7 @@ jobs:
   database:
     name: Verify ${{ matrix.key }} database safety
     needs: [plan]
-    if: ${{ needs.plan.outputs.count != '0' && (inputs.database_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master') }}
+    if: ${{ needs.plan.outputs.count != '0' && (inputs.database_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' || inputs.execution_phase == 'b') }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
@@ -259,7 +259,7 @@ jobs:
 
   dsh-database-contract:
     name: Verify DSH schema and seed contracts
-    if: ${{ inputs.dsh == 'true' && (inputs.database_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master') }}
+    if: ${{ inputs.dsh == 'true' && (inputs.database_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' || inputs.execution_phase == 'b') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     services:
