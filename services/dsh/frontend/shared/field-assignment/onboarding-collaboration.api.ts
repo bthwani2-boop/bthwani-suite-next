@@ -77,4 +77,3 @@ export async function listFieldOnboardingWorkload(): Promise<readonly FieldOnboa
   const result = await request<{ items: FieldOnboardingWorkloadItem[] }>("/dsh/field/onboarding/workload");
   return result.items;
 }
-
