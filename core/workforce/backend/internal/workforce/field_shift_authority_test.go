@@ -8,36 +8,62 @@ import (
 	"testing"
 )
 
-func TestFieldProviderShiftAuthorityRemainsInternal(t *testing.T) {
+func TestFieldProviderShiftAuthorityIsFullyRemoved(t *testing.T) {
 	t.Helper()
 
 	_, currentFile, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("resolve test source path")
 	}
-	sourceBytes, err := os.ReadFile(filepath.Join(filepath.Dir(currentFile), "repository.go"))
+	workforceDir := filepath.Dir(currentFile)
+
+	repositoryBytes, err := os.ReadFile(filepath.Join(workforceDir, "repository.go"))
 	if err != nil {
 		t.Fatalf("read repository source: %v", err)
 	}
-	source := string(sourceBytes)
-
-	createSection := sourceSection(t, source,
+	repositorySource := string(repositoryBytes)
+	createSection := sourceSection(t, repositorySource,
 		"func (r *Repository) CreatePerson(",
 		"func (r *Repository) CreateCaptain(",
 	)
-	if strings.Contains(createSection, "input.ShiftCode") {
-		t.Fatal("CreatePerson must not accept external shift authority")
-	}
-	if !strings.Contains(createSection, "'not_applicable'") {
-		t.Fatal("CreatePerson must persist the internal no-shift compatibility value")
-	}
-
-	updateSection := sourceSection(t, source,
+	updateSection := sourceSection(t, repositorySource,
 		"func (r *Repository) UpdatePerson(",
 		"func (r *Repository) UpdateCaptain(",
 	)
-	if strings.Contains(updateSection, "input.ShiftCode") {
-		t.Fatal("UpdatePerson must not restore external shift authority")
+	for _, forbidden := range []string{"shift_code", "not_applicable", "ShiftCode"} {
+		if strings.Contains(createSection, forbidden) {
+			t.Fatalf("CreatePerson must not retain field shift compatibility residue %q", forbidden)
+		}
+		if strings.Contains(updateSection, forbidden) {
+			t.Fatalf("UpdatePerson must not retain field shift compatibility residue %q", forbidden)
+		}
+	}
+
+	modelBytes, err := os.ReadFile(filepath.Join(workforceDir, "model.go"))
+	if err != nil {
+		t.Fatalf("read model source: %v", err)
+	}
+	modelSource := string(modelBytes)
+	fieldProfileSection := sourceSection(t, modelSource,
+		"type FieldProfile struct {",
+		"type CaptainProfile struct {",
+	)
+	createInputSection := sourceSection(t, modelSource,
+		"type CreateFieldAgentInput struct {",
+		"type CreateCaptainInput struct {",
+	)
+	updateInputSection := sourceSection(t, modelSource,
+		"type UpdateFieldAgentInput struct {",
+		"type UpdateCaptainInput struct {",
+	)
+	for name, section := range map[string]string{
+		"FieldProfile":          fieldProfileSection,
+		"CreateFieldAgentInput": createInputSection,
+		"UpdateFieldAgentInput": updateInputSection,
+	} {
+		if strings.Contains(section, "ShiftCode") {
+			t.Fatalf("%s must not expose or retain field shift authority", name)
+		}
 	}
 }
 
