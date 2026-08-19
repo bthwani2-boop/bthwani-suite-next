@@ -24,7 +24,8 @@
   "targetDefaults": {
     "typecheck": {
       "inputs": [
-        "default"
+        "default",
+        "^default"
       ],
       "dependsOn": [
         {
