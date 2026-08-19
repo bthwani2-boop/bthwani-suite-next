@@ -2,7 +2,8 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$StatePath,
 
-  [switch]$WltEnabled
+  [switch]$WltEnabled,
+  [switch]$MediaEnabled
 )
 
 Set-StrictMode -Version Latest
@@ -85,17 +86,15 @@ $scopedActors = @(
 foreach ($actor in $scopedActors) {
   $token = [string]$actor.token
   $headers = @{ Authorization = "Bearer $token" }
-  # Store-context is an object-scoped read. Keep the smoke request explicit so
-  # a broad actor token can never turn into an implicit parallel scope.
   $storeId = [Uri]::EscapeDataString([string]$actor.storeId)
   $context = Invoke-RestMethod "http://localhost:58080/dsh/store-context?storeId=$storeId" -Headers $headers -TimeoutSec 10
   if ($context.actorRole -ne $actor.expectedRole) { throw "wrong actor role for $($actor.label)" }
   if ([string]$context.store.id -ne [string]$actor.storeId) { throw "wrong scoped store for $($actor.label)" }
 }
 
-# Home Discovery: every visible card must resolve to an openable storefront and
-# a non-empty public catalog. This is the runtime closure for the historical
-# drift where home discovery returned stores rejected by store detail with 404.
+# Home banners/promos are local seed-media projections; categories/filters/store
+# discovery are DSH core. Prove both sides explicitly rather than treating a
+# missing optional overlay as a core failure.
 $homeDisc = Invoke-RestMethod "http://localhost:58080/dsh/home-discovery?limit=50" -TimeoutSec 10 -ErrorAction Stop
 $bannerCount    = if ($homeDisc.banners)    { $homeDisc.banners.Count }    else { 0 }
 $promoCount     = if ($homeDisc.promos)     { $homeDisc.promos.Count }     else { 0 }
@@ -103,33 +102,32 @@ $categoryCount  = if ($homeDisc.categories) { $homeDisc.categories.Count } else 
 $filterCount    = if ($homeDisc.filters)    { $homeDisc.filters.Count }    else { 0 }
 $homeStores     = @($homeDisc.stores)
 $homeStoreCount = $homeStores.Count
-Write-Host "  /dsh/home-discovery: banners=$bannerCount promos=$promoCount categories=$categoryCount filters=$filterCount stores=$homeStoreCount"
-if ($bannerCount    -eq 0) { throw "/dsh/home-discovery: 0 banners" }
-if ($promoCount     -eq 0) { throw "/dsh/home-discovery: 0 promos" }
+Write-Host "  /dsh/home-discovery: banners=$bannerCount promos=$promoCount categories=$categoryCount filters=$filterCount stores=$homeStoreCount media=$MediaEnabled"
+if ($MediaEnabled) {
+  if ($bannerCount -eq 0) { throw "/dsh/home-discovery: media overlay active but banners are absent" }
+  if ($promoCount -eq 0) { throw "/dsh/home-discovery: media overlay active but promos are absent" }
+} else {
+  if ($bannerCount -ne 0) { throw "/dsh/home-discovery: core mode leaked local-media banners" }
+  if ($promoCount -ne 0) { throw "/dsh/home-discovery: core mode leaked local-media promos" }
+}
 if ($categoryCount  -eq 0) { throw "/dsh/home-discovery: 0 categories" }
 if ($filterCount    -eq 0) { throw "/dsh/home-discovery: 0 filters" }
 if ($homeStoreCount -eq 0) { throw "/dsh/home-discovery: 0 stores" }
 
 foreach ($homeStore in $homeStores) {
   $storeId = [string]$homeStore.id
-  if ([string]::IsNullOrWhiteSpace($storeId)) {
-    throw "/dsh/home-discovery returned a store without id"
-  }
+  if ([string]::IsNullOrWhiteSpace($storeId)) { throw "/dsh/home-discovery returned a store without id" }
 
   $encodedStoreId = [uri]::EscapeDataString($storeId)
   $detail = Invoke-RestMethod "http://localhost:58080/dsh/stores/$encodedStoreId" -TimeoutSec 10 -ErrorAction Stop
-  if ($null -eq $detail.store) {
-    throw "/dsh/stores/$storeId response is missing store"
-  }
+  if ($null -eq $detail.store) { throw "/dsh/stores/$storeId response is missing store" }
   if ([string]$detail.store.id -ne $storeId) {
     throw "/dsh/stores/$storeId returned mismatched store id: $($detail.store.id)"
   }
 
   $catalog = Invoke-RestMethod "http://localhost:58080/dsh/stores/$encodedStoreId/catalog" -TimeoutSec 15 -ErrorAction Stop
   $productCount = if ($catalog.products) { @($catalog.products).Count } else { 0 }
-  if ($productCount -eq 0) {
-    throw "/dsh/stores/$storeId/catalog returned no client-visible products"
-  }
+  if ($productCount -eq 0) { throw "/dsh/stores/$storeId/catalog returned no client-visible products" }
   Write-Host "  storefront=$storeId detail=PASS catalogProducts=$productCount"
 }
 

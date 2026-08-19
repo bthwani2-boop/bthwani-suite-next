@@ -101,9 +101,7 @@ function Write-PreparedRuntimeMarker {
     $containerName = $RuntimeContainerByProfile[$profile]
     $imageIds[$profile] = Get-RuntimeContainerImageId -ContainerName $containerName
   }
-  if ($imageIds.Count -eq 0) {
-    return
-  }
+  if ($imageIds.Count -eq 0) { return }
 
   $marker = [ordered]@{
     schemaVersion = 1
@@ -149,9 +147,7 @@ function Assert-PreparedRuntimeMarker {
 }
 
 function Test-TransientPostgresBootstrapRestart {
-  if ($Action -ne "up" -or -not (Test-Path -LiteralPath $LogPath -PathType Leaf)) {
-    return $false
-  }
+  if ($Action -ne "up" -or -not (Test-Path -LiteralPath $LogPath -PathType Leaf)) { return $false }
   $logText = Get-Content -LiteralPath $LogPath -Raw
   return $logText -match "database system is shutting down|the database system is starting up"
 }
@@ -193,7 +189,9 @@ try {
         throw "Central catalog readback script not found: $CatalogReadbackScript"
       }
       Write-Host "`n=== runtime:catalog-readback ==="
-      $catalogExitCode = Invoke-RuntimeBasePhase -ScriptPath $CatalogReadbackScript -Parameters @{}
+      $catalogParameters = @{}
+      if ($ProfileList -contains "media") { $catalogParameters.RequireMedia = $true }
+      $catalogExitCode = Invoke-RuntimeBasePhase -ScriptPath $CatalogReadbackScript -Parameters $catalogParameters
       if ($catalogExitCode -ne 0) {
         throw "Central catalog readback failed with exit code $catalogExitCode"
       }

@@ -9,6 +9,7 @@ const manifestPath = path.join(repoRoot, "services/dsh/database/seeds/media/loca
 const mediaRoot = path.join(repoRoot, "services/dsh/database/seeds/local/media");
 const trackedMediaPath = "services/dsh/database/seeds/local/media";
 const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const safeRelativePath = /^[a-z0-9][a-z0-9._/-]*$/u;
 
 const modeArg = process.argv.find((argument) => argument.startsWith("--mode="));
 const modeIndex = process.argv.indexOf("--mode");
@@ -73,7 +74,9 @@ const requiredFields = [
 
 for (const item of manifest.media) {
   const fixtureId = String(item.fixtureId ?? "").trim();
-  const relativeSourcePath = String(item.relativeSourcePath ?? "").trim().replaceAll("\\", "/");
+  const declaredPath = String(item.relativeSourcePath ?? "").trim();
+  const relativeSourcePath = declaredPath.replaceAll("\\", "/");
+  const fileName = String(item.fileName ?? "").trim();
   const expectedChecksum = String(item.expectedChecksum ?? "").trim().toLowerCase();
 
   for (const field of requiredFields) {
@@ -85,14 +88,20 @@ for (const item of manifest.media) {
   else if (seenFixtureIds.has(fixtureId)) failures.push(`duplicate fixtureId: ${fixtureId}`);
   else seenFixtureIds.add(fixtureId);
 
-  if (!relativeSourcePath || relativeSourcePath.startsWith("/") || relativeSourcePath.includes("..") || relativeSourcePath.includes("\\")) {
-    failures.push(`${fixtureId || "<unknown>"}: invalid relativeSourcePath '${relativeSourcePath}'`);
+  if (
+    !relativeSourcePath || declaredPath !== relativeSourcePath || relativeSourcePath.startsWith("/") ||
+    relativeSourcePath.includes("..") || relativeSourcePath.includes("//") || !safeRelativePath.test(relativeSourcePath)
+  ) {
+    failures.push(`${fixtureId || "<unknown>"}: invalid or shell-unsafe relativeSourcePath '${declaredPath}'`);
     continue;
   }
   if (seenPaths.has(relativeSourcePath)) failures.push(`duplicate media path: ${relativeSourcePath}`);
   else seenPaths.add(relativeSourcePath);
 
-  if (path.posix.basename(relativeSourcePath) !== String(item.fileName ?? "")) {
+  if (!safeRelativePath.test(fileName) || fileName.includes("/")) {
+    failures.push(`${fixtureId}: invalid or shell-unsafe fileName '${fileName}'`);
+  }
+  if (path.posix.basename(relativeSourcePath) !== fileName) {
     failures.push(`${fixtureId}: fileName does not match relativeSourcePath basename`);
   }
   if (!/^[a-f0-9]{64}$/u.test(expectedChecksum)) failures.push(`${fixtureId}: expectedChecksum must be a SHA-256 digest`);

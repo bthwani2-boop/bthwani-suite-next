@@ -49,13 +49,16 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $profile = if ([string]::IsNullOrWhiteSpace($env:RUNTIME_PROFILE)) { "none" } else { $env:RUNTIME_PROFILE }
+          # CI needs MinIO for real upload/evidence flows, but it must never
+          # depend on workstation seed images. media-storage selects storage
+          # infrastructure only; the local seed-media overlay remains `media`.
           $profiles = switch ($profile) {
-            "identity-security" { "identity,workforce,dsh,wlt,media" }
-            "dsh" { "dsh,media" }
+            "identity-security" { "identity,workforce,dsh,wlt,media-storage" }
+            "dsh" { "dsh,media-storage" }
             "workforce" { "identity,workforce" }
             "wlt-finance" { "identity,dsh,wlt,financial-simulators" }
             "provider" { "wlt,financial-simulators" }
-            "full" { "identity,workforce,dsh,wlt,providers,platform,financial-simulators,mail,media" }
+            "full" { "identity,workforce,dsh,wlt,providers,platform,financial-simulators,mail,media-storage" }
             "mobile-config" { "" }
             "mobile-native" { "" }
             default { throw "Unsupported runtime profile: $profile" }
@@ -99,8 +102,6 @@ jobs:
             } elseif ($profile -eq "mobile-native") {
               Invoke-Phase "mobile:apps:check" { pnpm run mobile:apps:check }
               Invoke-Phase "mobile:expo:verify" { pnpm run mobile:expo:verify }
-              # Keep native development verification Android-only for the current phase.
-              # Apple/Xcode/Simulator proof remains deferred and must not fan out CI runners.
               Invoke-Phase "mobile:native:prebuild" { node apps/mobile/verify-mobile-native.mjs --platform android }
             } else {
               if ([string]::IsNullOrWhiteSpace($profiles)) {
@@ -123,7 +124,9 @@ jobs:
                 Invoke-Phase "dsh-operator-governance-preflight" {
                   & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/runtime/smoke-dsh-operator-governance-preflight.ps1
                 }
-                Invoke-Phase "runtime:full:smoke" { pnpm run runtime:full:smoke }
+                Invoke-Phase "runtime:full:smoke" {
+                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action smoke -Profiles $profiles
+                }
                 Invoke-Phase "mobile:four-app-dispatch-readiness" {
                   & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/prepare-dsh-runtime-captain-dispatch.ps1
                 }

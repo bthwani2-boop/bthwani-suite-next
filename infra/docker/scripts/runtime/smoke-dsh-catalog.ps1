@@ -1,6 +1,10 @@
 param(
   [Parameter(Mandatory = $true)]
-  [string]$StatePath
+  [string]$StatePath,
+
+  # Local seed-media is optional. Core smoke must not depend on a repository-
+  # tracked placeholder asset; media mode proves the canonical local overlay.
+  [switch]$MediaEnabled
 )
 
 Set-StrictMode -Version Latest
@@ -59,9 +63,7 @@ function Get-HttpFailureBody($Failure) {
     if ($null -eq $stream) { return "" }
     $reader = [System.IO.StreamReader]::new($stream)
     try { return $reader.ReadToEnd() } finally { $reader.Dispose() }
-  } catch {
-    return ""
-  }
+  } catch { return "" }
 }
 
 $operatorToken = Get-LocalActorToken (Get-LocalUsername "operator")
@@ -127,7 +129,6 @@ $operatorHeaders = @{
   "X-Correlation-ID" = "smoke-operator-$([guid]::NewGuid())"
 }
 
-# Transition to partner-review using the proposal version returned by create.
 $transBody1 = @{
   nextStatus = "partner-review"
   note = "smoke partner review"
@@ -135,7 +136,6 @@ $transBody1 = @{
 } | ConvertTo-Json
 $proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody1 -TimeoutSec 10
 
-# Transition to marketing-review using the version returned by partner review.
 $transBody2 = @{
   nextStatus = "marketing-review"
   note = "smoke marketing review"
@@ -143,7 +143,6 @@ $transBody2 = @{
 } | ConvertTo-Json
 $proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody2 -TimeoutSec 10
 
-# Transition to catalog-adopted using the version returned by marketing review.
 $transBody3 = @{
   nextStatus = "catalog-adopted"
   note = "smoke adopt"
@@ -152,18 +151,21 @@ $transBody3 = @{
 $proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody3 -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($proposal.proposal.adoptedMasterProductId)) { throw "master product was not created during adoption" }
 
-# Attach an image to the Master Product so it can be approved and client-visible.
-$imageBody = @{ assetId = "asset-node-canned-food" } | ConvertTo-Json
-$imageUrl = "http://localhost:58080/dsh/operator/catalog/master-products/$($proposal.proposal.adoptedMasterProductId)/images/canonical_product_image"
-try {
-  Invoke-RestMethod $imageUrl -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $imageBody -TimeoutSec 10 | Out-Null
-} catch {
-  $status = if ($null -ne $_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 0 }
-  $failureBody = Get-HttpFailureBody $_
-  throw "master product image attach failed: status=$status body=$failureBody"
+# The platform policy decides whether an image is needed. The local seed-media
+# overlay supplies a governed approved asset when explicitly enabled; core smoke
+# must never rely on an absent repository placeholder.
+if ($MediaEnabled) {
+  $imageBody = @{ assetId = "asset-node-canned-food" } | ConvertTo-Json
+  $imageUrl = "http://localhost:58080/dsh/operator/catalog/master-products/$($proposal.proposal.adoptedMasterProductId)/images/canonical_product_image"
+  try {
+    Invoke-RestMethod $imageUrl -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $imageBody -TimeoutSec 10 | Out-Null
+  } catch {
+    $status = if ($null -ne $_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 0 }
+    $failureBody = Get-HttpFailureBody $_
+    throw "master product image attach failed: status=$status body=$failureBody"
+  }
 }
 
-# Transition to catalog-approved using the version returned by adoption.
 $transBody4 = @{
   nextStatus = "catalog-approved"
   note = "smoke approve"
@@ -171,11 +173,6 @@ $transBody4 = @{
 } | ConvertTo-Json
 $proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody4 -TimeoutSec 10
 
-# Assortment metadata and commercial truth have separate authorities. Adoption
-# may already have created the store-product link, so never try to repair an
-# existing assortment by writing legacy unitPrice/available projections. Ensure
-# the metadata row exists, then configure normalized price and inventory through
-# their dedicated endpoints before attempting client-visible publication.
 $assortmentUrl = "http://localhost:58080/dsh/operator/stores/store-test-grocery/assortment/$($proposal.proposal.adoptedMasterProductId)"
 $assortmentList = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery/assortment" -Headers $operatorHeaders -TimeoutSec 10
 $currentAssortment = @($assortmentList.assortment) |
@@ -213,8 +210,6 @@ $inventoryBody = @{
 } | ConvertTo-Json
 Invoke-RestMethod "$assortmentUrl/inventory" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $inventoryBody -TimeoutSec 10 | Out-Null
 
-# Read back the authoritative normalized commercial projection and use its
-# current metadata version for the publication transition.
 $assortmentList = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery/assortment" -Headers $operatorHeaders -TimeoutSec 10
 $currentAssortment = @($assortmentList.assortment) |
   Where-Object { $_.masterProductId -eq $proposal.proposal.adoptedMasterProductId } |
@@ -240,7 +235,6 @@ if ($assortment.assortment.publicationStatus -ne "client_visible" -or -not $asso
   throw "normalized assortment publication was not persisted"
 }
 
-# Transition to client-visible using the version returned by catalog approval.
 $transBody5 = @{
   nextStatus = "client-visible"
   note = "smoke publish"
@@ -248,13 +242,10 @@ $transBody5 = @{
 } | ConvertTo-Json
 $proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody5 -TimeoutSec 10
 
-# Verify catalog client exposure
 $publishedCatalog = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-test-grocery/catalog" -TimeoutSec 10
 if ($publishedCatalog.products.Count -lt 1) { throw "approved catalog is not visible to app-client" }
 
 $smokeCatalogProductId = $proposal.proposal.adoptedMasterProductId
-
-@{
-  masterProductId = [string]$smokeCatalogProductId
-} | ConvertTo-Json | Set-Content -LiteralPath $StatePath -Encoding utf8
+@{ masterProductId = [string]$smokeCatalogProductId } |
+  ConvertTo-Json | Set-Content -LiteralPath $StatePath -Encoding utf8
 Write-Host "DSH catalog smoke: PASS"

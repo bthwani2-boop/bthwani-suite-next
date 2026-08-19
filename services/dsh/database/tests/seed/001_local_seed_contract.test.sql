@@ -1,9 +1,12 @@
 -- Local-only DSH seed contract.
--- Runs only after the canonical seed runner has completed.
+-- Runs after the canonical DSH seed runner. Media is a separate optional
+-- capability with its own dsh-media seed ledger; core storefront/catalog truth
+-- must remain valid without tracked or materialized media.
 
 DO $$
 DECLARE
   published_storefront_count INTEGER;
+  media_enabled BOOLEAN;
 BEGIN
   IF to_regclass('public.runtime_seed_history') IS NULL THEN
     RAISE EXCEPTION 'runtime_seed_history ledger is missing';
@@ -20,7 +23,7 @@ BEGIN
   IF EXISTS (
     SELECT 1
     FROM runtime_seed_history
-    WHERE service_name = 'dsh'
+    WHERE service_name IN ('dsh', 'dsh-media')
       AND (
         checksum !~ '^[0-9a-f]{64}$'
         OR run_count < 1
@@ -30,6 +33,10 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'runtime_seed_history contains invalid DSH seed provenance';
   END IF;
+
+  SELECT EXISTS (
+    SELECT 1 FROM runtime_seed_history WHERE service_name = 'dsh-media'
+  ) INTO media_enabled;
 
   IF NOT EXISTS (
     SELECT 1
@@ -87,8 +94,6 @@ BEGIN
     AND btrim(COALESCE(s.coverage_summary, '')) <> ''
     AND btrim(COALESCE(s.operating_hours, '')) <> ''
     AND s.delivery_readiness = 'ready'
-    AND btrim(COALESCE(s.hero_image_url, '')) <> ''
-    AND btrim(COALESCE(s.logo_url, '')) <> ''
     AND partner.activation_status = 'client_visible'
     AND partner.archived_at IS NULL
     AND EXISTS (
@@ -112,39 +117,81 @@ BEGIN
     );
 
   IF published_storefront_count <> 6 THEN
-    RAISE EXCEPTION 'expected 6 complete local client storefronts, found %', published_storefront_count;
+    RAISE EXCEPTION 'expected 6 complete media-neutral local client storefronts, found %', published_storefront_count;
   END IF;
 
-  -- A public assortment is not complete unless the API can derive
-  -- effectiveImage from an approved DAM link and approved asset. This protects
-  -- runtime readback from seed rows that are client_visible but unrenderable.
-  IF EXISTS (
-    SELECT 1
-    FROM dsh_store_assortments assortment
-    JOIN dsh_master_products product
-      ON product.id = assortment.master_product_id
-    WHERE assortment.publication_status = 'client_visible'
-      AND assortment.available = true
-      AND product.approval_status = 'approved'
-      AND product.is_active = true
-      AND NOT EXISTS (
-        SELECT 1
-        FROM dsh_catalog_asset_links link
-        JOIN dsh_catalog_assets asset ON asset.id = link.asset_id
-        WHERE link.status = 'approved'
-          AND asset.status = 'approved'
+  IF media_enabled THEN
+    -- Selecting the media overlay upgrades the optional media projection to a
+    -- fail-closed capability: every published local storefront and every
+    -- client-visible product must then resolve through approved DAM state.
+    IF EXISTS (
+      SELECT 1
+      FROM dsh_stores s
+      WHERE s.operator_context_id = 'local-dsh'
+        AND s.id IN (
+          'store-test-grocery', 'store-1002', 'store-1003',
+          'store-1005', 'store-1006', 'store-test-electronics'
+        )
+        AND (
+          btrim(COALESCE(s.hero_image_url, '')) = ''
+          OR btrim(COALESCE(s.logo_url, '')) = ''
+        )
+    ) THEN
+      RAISE EXCEPTION 'dsh-media capability is active but a published storefront is missing logo/hero media';
+    END IF;
+
+    IF EXISTS (
+      SELECT 1
+      FROM dsh_store_assortments assortment
+      JOIN dsh_master_products product
+        ON product.id = assortment.master_product_id
+      WHERE assortment.publication_status = 'client_visible'
+        AND assortment.available = true
+        AND product.approval_status = 'approved'
+        AND product.is_active = true
+        AND NOT EXISTS (
+          SELECT 1
+          FROM dsh_catalog_asset_links link
+          JOIN dsh_catalog_assets asset ON asset.id = link.asset_id
+          WHERE link.status = 'approved'
+            AND asset.status = 'approved'
+            AND (
+              (link.entity_type = 'master_product'
+               AND link.entity_id = product.id
+               AND link.role = 'canonical_product_image')
+              OR
+              (link.entity_type = 'store_assortment'
+               AND link.entity_id = assortment.id
+               AND link.role = 'partner_custom_product_image')
+            )
+        )
+    ) THEN
+      RAISE EXCEPTION 'dsh-media capability is active but a client-visible product has no approved DAM image';
+    END IF;
+  ELSE
+    -- Core mode must not accidentally retain legacy local-media truth. This is
+    -- the database-side proof that the optional overlay is not a hidden input.
+    IF EXISTS (
+      SELECT 1
+      FROM dsh_catalog_assets
+      WHERE (
+          uploaded_by = 'system-seed'
+          AND source_surface = 'system'
           AND (
-            (link.entity_type = 'master_product'
-             AND link.entity_id = product.id
-             AND link.role = 'canonical_product_image')
-            OR
-            (link.entity_type = 'store_assortment'
-             AND link.entity_id = assortment.id
-             AND link.role = 'partner_custom_product_image')
+            id LIKE 'asset-node-%'
+            OR id LIKE 'asset-local-store-%'
+            OR id LIKE 'asset-public-product-%'
           )
-      )
-  ) THEN
-    RAISE EXCEPTION 'local seed contains a client-visible product without an approved DAM image';
+        )
+        OR (
+          uploaded_by = 'system-migration'
+          AND source_surface = 'system'
+          AND id LIKE 'asset-bf-store-%'
+          AND object_key LIKE '/dsh-media/%'
+        )
+    ) THEN
+      RAISE EXCEPTION 'media-neutral DSH core retained legacy local-media DAM rows';
+    END IF;
   END IF;
 END
 $$;

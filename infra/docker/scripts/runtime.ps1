@@ -4,15 +4,19 @@
 
 .DESCRIPTION
   Owns lifecycle, readiness, local-only bootstrap, smoke, and diagnostics.
-  Database migrations, SQL seeds, MinIO policy creation, and the optional DSH
-  local-media overlay are delegated to their canonical governed implementations.
+  Database migrations, SQL seeds, MinIO storage, and the optional DSH local
+  seed-media overlay are delegated to their canonical governed implementations.
+
+  Logical media capabilities are intentionally split:
+    media-storage = MinIO/runtime upload infrastructure only; clean-clone safe.
+    media         = machine-local DSH seed-media overlay; implies MinIO storage
+                    and fails closed unless every manifest asset exists locally.
 #>
 
 param(
   [Parameter(Mandatory = $true)]
   [ValidateSet("up", "down", "reset", "status", "logs", "migrate", "seed", "smoke", "doctor", "all", "bootstrap-dev", "verify-catalog")]
   [string]$Action,
-
   [string]$Profiles = "",
   [string]$Service = "",
   [switch]$Force
@@ -67,8 +71,8 @@ if ($ProfileList.Count -eq 0 -and @("up", "reset", "smoke", "all", "bootstrap-de
 }
 
 $AllowedProfiles = @(
-  "identity", "workforce", "dsh", "media", "wlt", "financial-simulators",
-  "mail", "cache", "observability", "platform", "providers"
+  "identity", "workforce", "dsh", "media", "media-storage", "wlt",
+  "financial-simulators", "mail", "cache", "observability", "platform", "providers"
 )
 foreach ($profile in $ProfileList) {
   if ($AllowedProfiles -notcontains $profile) {
@@ -76,7 +80,7 @@ foreach ($profile in $ProfileList) {
   }
 }
 if ($ProfileList -contains "media" -and $ProfileList -notcontains "dsh") {
-  throw "The media profile is an explicit DSH local overlay and requires the dsh profile."
+  throw "The media profile is the DSH local seed-media overlay and requires the dsh profile."
 }
 if (($ProfileList -contains "dsh" -or $ProfileList -contains "workforce" -or
      $ProfileList -contains "wlt" -or $ProfileList -contains "platform" -or
@@ -85,26 +89,34 @@ if (($ProfileList -contains "dsh" -or $ProfileList -contains "workforce" -or
 }
 $ProfileList = @($ProfileList | Select-Object -Unique)
 
-# Selecting the media capability is an explicit assertion that the complete
-# machine-local media set is available. Fail before mutating runtime state; do
-# not start a partial MinIO/DSH stack and discover missing binaries later.
+function Test-MediaStorageSelected {
+  return [bool](($ProfileList -contains "media") -or ($ProfileList -contains "media-storage"))
+}
+
+# Selecting the local seed-media capability asserts that the complete machine-
+# local set is present. Validate before any Docker/database mutation.
 $MediaRuntimeActions = @("up", "reset", "bootstrap-dev", "seed", "smoke", "all")
 if (($ProfileList -contains "media") -and $MediaRuntimeActions.Contains($Action)) {
   $mediaValidator = Join-Path $RepoRoot "tools/scripts/check-local-media-contract.mjs"
   & node $mediaValidator --mode runtime
   if ($LASTEXITCODE -ne 0) {
-    throw "DSH local media capability was selected but its required local runtime state is incomplete (exit $LASTEXITCODE)."
+    throw "DSH local seed-media was selected but required workstation media is incomplete (exit $LASTEXITCODE)."
   }
 }
 
-function Test-ExplicitResetInvocation {
-  return [bool]$Force
-}
+function Test-ExplicitResetInvocation { return [bool]$Force }
 
 function Get-ComposeProfileArgs {
   $arguments = @()
+  $seen = @{}
   foreach ($profile in $script:ProfileList) {
-    $arguments += @("--profile", $profile)
+    # Both logical media capabilities are implemented by the existing Compose
+    # 'media' profile. The local overlay distinction belongs to runtime policy,
+    # not Docker service ownership.
+    $composeProfile = if ($profile -in @("media", "media-storage")) { "media" } else { $profile }
+    if ($seen.ContainsKey($composeProfile)) { continue }
+    $seen[$composeProfile] = $true
+    $arguments += @("--profile", $composeProfile)
   }
   return $arguments
 }
@@ -141,9 +153,7 @@ function Get-SelectedMigrationServices {
   if ($script:ProfileList -contains "dsh") { $services += "dsh" }
   if ($script:ProfileList -contains "providers") { $services += "providers" }
   if ($script:ProfileList -contains "platform") { $services += "platform-control" }
-  if ($services.Count -eq 0 -and @("migrate", "seed").Contains($Action)) {
-    $services += "dsh"
-  }
+  if ($services.Count -eq 0 -and @("migrate", "seed").Contains($Action)) { $services += "dsh" }
   return @($services | Select-Object -Unique)
 }
 
@@ -189,9 +199,7 @@ function Test-RuntimeDefaultSecrets {
     @{ Name = "IDENTITY_LOCAL_BOOTSTRAP_PASSWORD"; Value = Get-LocalPassword; Default = Get-LocalPasswordDefault }
   )
   $weak = @($defaults | Where-Object { $_.Value -eq $_.Default })
-  foreach ($item in $weak) {
-    Write-Warning "Runtime default secret in use: $($item.Name). Override it outside local-only development."
-  }
+  foreach ($item in $weak) { Write-Warning "Runtime default secret in use: $($item.Name). Override it outside local-only development." }
   if ($env:BTHWANI_REQUIRE_STRONG_SECRETS -eq "true" -and $weak.Count -gt 0) {
     throw "Strong secrets are required but defaults remain: $($weak.Name -join ', ')"
   }
@@ -228,8 +236,7 @@ function Wait-ForPostgres {
     if ($LASTEXITCODE -eq 0) {
       $missing = @()
       foreach ($database in $requiredDatabases) {
-        $result = docker compose @(Get-ComposeBase) exec -T postgres psql `
-          -U bthwani_runtime -d bthwani_runtime -tAc "SELECT 1 FROM pg_database WHERE datname = '$database';" 2>$null
+        $result = docker compose @(Get-ComposeBase) exec -T postgres psql -U bthwani_runtime -d bthwani_runtime -tAc "SELECT 1 FROM pg_database WHERE datname = '$database';" 2>$null
         if ($LASTEXITCODE -ne 0 -or (($result -join "").Trim()) -ne "1") { $missing += $database }
       }
       if ($missing.Count -eq 0) {
@@ -291,9 +298,7 @@ function Invoke-GovernedMinioInit {
 
 function Get-SourceCommitSha {
   $sha = (& git rev-parse HEAD).Trim()
-  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($sha)) {
-    throw "Unable to resolve source commit SHA."
-  }
+  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($sha)) { throw "Unable to resolve source commit SHA." }
   return $sha
 }
 
@@ -319,8 +324,7 @@ function Restart-MigratedApis {
 }
 
 function Assert-LocalIdentityBootstrapConverged {
-  if ($env:NODE_ENV -eq "production") { return }
-  if (-not ($ProfileList -contains "identity")) { return }
+  if ($env:NODE_ENV -eq "production" -or $ProfileList -notcontains "identity") { return }
   Write-Host "`n--- Verifying governed Identity local bootstrap ---"
   & node (Join-Path $RepoRoot "tools/dev/verify-local-identity-bootstrap.mjs")
   if ($LASTEXITCODE -ne 0) { throw "Identity local bootstrap has not converged (exit $LASTEXITCODE)" }
@@ -351,10 +355,10 @@ function Invoke-GovernedSeeds {
 
 function Invoke-DshLocalMediaOverlay {
   if ($ProfileList -notcontains "media") { return }
-  if ($ProfileList -notcontains "dsh") { throw "DSH local media overlay requires the dsh profile." }
-  Write-Host "`n--- Applying explicit DSH local media overlay ---"
+  if ($ProfileList -notcontains "dsh") { throw "DSH local seed-media overlay requires the dsh profile." }
+  Write-Host "`n--- Applying explicit DSH local seed-media overlay ---"
   & $script:GovernedDshMediaScript -SourceCommitSha (Get-SourceCommitSha)
-  if ($LASTEXITCODE -ne 0) { throw "DSH local media overlay failed (exit $LASTEXITCODE)" }
+  if ($LASTEXITCODE -ne 0) { throw "DSH local seed-media overlay failed (exit $LASTEXITCODE)" }
 }
 
 function Wait-ForSelectedApis {
@@ -376,7 +380,7 @@ function Wait-ForSelectedApis {
     docker compose @(Get-ComposeBase) exec -T valkey valkey-cli ping
     if ($LASTEXITCODE -ne 0) { throw "Valkey readiness failed" }
   }
-  if ($ProfileList -contains "media") { Wait-ForMinIO }
+  if (Test-MediaStorageSelected) { Wait-ForMinIO }
 }
 
 function Invoke-SelectedSmoke {
@@ -398,7 +402,7 @@ switch ($Action) {
     docker info | Out-Null
     Invoke-Compose up -d postgres
     Wait-ForPostgres
-    if ($ProfileList -contains "media") {
+    if (Test-MediaStorageSelected) {
       Invoke-Compose up -d minio
       Wait-ForMinIO
       Invoke-GovernedMinioInit
@@ -408,12 +412,10 @@ switch ($Action) {
     Wait-ForSelectedApis
     Write-Host "runtime:up: PASS"
   }
-
   "down" {
     Write-Host "=== runtime:down"
     Invoke-Compose down --remove-orphans
   }
-
   "reset" {
     if (-not (Test-ExplicitResetInvocation)) { throw "runtime reset is destructive. Provide -Force or invoke a named pnpm reset command." }
     Write-Host "=== runtime:reset (profiles: $($ProfileList -join ','))"
@@ -421,7 +423,7 @@ switch ($Action) {
     Invoke-Compose down -v --remove-orphans
     Invoke-Compose up -d postgres
     Wait-ForPostgres
-    if ($ProfileList -contains "media") {
+    if (Test-MediaStorageSelected) {
       Invoke-Compose up -d minio
       Wait-ForMinIO
       Invoke-GovernedMinioInit
@@ -437,7 +439,6 @@ switch ($Action) {
     Invoke-SelectedSmoke
     Write-Host "reset: PASS"
   }
-
   "bootstrap-dev" {
     if ($env:NODE_ENV -eq "production") { throw "bootstrap-dev is not allowed in production." }
     if (-not $Force) { throw "bootstrap-dev requires -Force." }
@@ -445,7 +446,7 @@ switch ($Action) {
     docker info | Out-Null
     Invoke-Compose up -d postgres
     Wait-ForPostgres
-    if ($ProfileList -contains "media") {
+    if (Test-MediaStorageSelected) {
       Invoke-Compose up -d minio
       Wait-ForMinIO
       Invoke-GovernedMinioInit
@@ -465,30 +466,26 @@ switch ($Action) {
     }
     Write-Host "runtime:bootstrap-dev: PASS"
   }
-
   "verify-catalog" {
     Write-Host "=== runtime:verify-catalog"
-    $global:LASTEXITCODE = 0
-    & (Join-Path $RepoRoot "tools/scripts/verify-catalog.ps1")
+    $parameters = @{}
+    if ($ProfileList -contains "media") { $parameters.RequireMedia = $true }
+    & (Join-Path $RepoRoot "tools/scripts/verify-catalog.ps1") @parameters
     if ($LASTEXITCODE -ne 0) { throw "verify-catalog failed (exit $LASTEXITCODE)" }
     Write-Host "verify-catalog: PASS"
   }
-
   "status" {
     Write-Host "=== runtime:status"
     Invoke-Compose ps
     Write-Host "`n--- docker ps ---"
     docker ps --format "table {{.Names}}`t{{.Image}}`t{{.Status}}`t{{.Ports}}"
   }
-
   "logs" {
     Write-Host "=== runtime:logs"
     if ([string]::IsNullOrWhiteSpace($Service)) { Invoke-Compose logs --tail=100 }
     else { Invoke-Compose logs --tail=100 $Service }
   }
-
   "doctor" { Write-RuntimeDoctor -Reason "manual doctor action" -TargetService $Service }
-
   "migrate" {
     Write-Host "=== runtime:migrate"
     Invoke-Compose up -d postgres
@@ -496,12 +493,11 @@ switch ($Action) {
     Invoke-GovernedMigrations
     Write-Host "runtime:migrate: PASS"
   }
-
   "seed" {
     Write-Host "=== runtime:seed"
     Invoke-Compose up -d postgres
     Wait-ForPostgres
-    if ($ProfileList -contains "media") {
+    if (Test-MediaStorageSelected) {
       Invoke-Compose up -d minio
       Wait-ForMinIO
       Invoke-GovernedMinioInit
@@ -511,7 +507,6 @@ switch ($Action) {
     Invoke-DshLocalMediaOverlay
     Write-Host "runtime:seed: PASS"
   }
-
   "smoke" {
     Write-Host "=== runtime:smoke (profiles: $($ProfileList -join ','))"
     if (@(Get-RequiredDatabaseNames).Count -gt 0) {
@@ -519,7 +514,7 @@ switch ($Action) {
       Wait-ForPostgres
       Invoke-GovernedMigrations
     }
-    if ($ProfileList -contains "media") {
+    if (Test-MediaStorageSelected) {
       Invoke-Compose up -d minio
       Wait-ForMinIO
       Invoke-GovernedMinioInit
@@ -527,7 +522,6 @@ switch ($Action) {
     Invoke-Compose up -d
     Invoke-SelectedSmoke
   }
-
   "all" {
     Write-Host "=== runtime:all (profiles: $($ProfileList -join ','))"
     docker info | Out-Null
@@ -535,7 +529,7 @@ switch ($Action) {
     Write-Host "down: OK"
     Invoke-Compose up -d --build postgres
     Wait-ForPostgres
-    if ($ProfileList -contains "media") {
+    if (Test-MediaStorageSelected) {
       Invoke-Compose up -d --build minio
       Wait-ForMinIO
       Invoke-GovernedMinioInit
