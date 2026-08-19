@@ -51,7 +51,7 @@ func TestInternalAssignmentsRequireConfiguredDSHServiceIdentity(t *testing.T) {
 }
 
 func TestInternalAssignmentsDSHBoundaryIsReadOnly(t *testing.T) {
-	router := NewRouter(nil, nil, nil, nil, nil, nil, "configured-dsh-token")
+	router := NewRouter(nil, nil, nil, nil, nil, "configured-dsh-token")
 	request := httptest.NewRequest(http.MethodPut, "/internal/assignments/field-1/scopes", nil)
 	request.Header.Set("Authorization", "Bearer configured-dsh-token")
 	request.Header.Set("X-Service-Caller", "dsh")
