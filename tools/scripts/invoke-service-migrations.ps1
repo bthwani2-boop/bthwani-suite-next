@@ -75,6 +75,16 @@ function Invoke-DatabaseSql {
     [switch]$Quiet
   )
 
+  # Workforce-020 consumes two migration-input relations from the dedicated
+  # migration namespace. Public remains first so every ordinary unqualified
+  # CREATE/ALTER/SELECT in governed migrations continues to own public service
+  # schema; the input schema is only a fallback for the reserved staging names.
+  $sqlToExecute = if ($ServiceKey -eq 'workforce') {
+    "SET search_path TO public, bthwani_migration_input;`n$Sql"
+  } else {
+    $Sql
+  }
+
   $arguments = @(
     $DatabaseUrl,
     "-X",
@@ -84,7 +94,7 @@ function Invoke-DatabaseSql {
   )
   if ($Quiet) { $arguments += "-q" }
 
-  $output = $Sql | & psql @arguments 2>&1
+  $output = $sqlToExecute | & psql @arguments 2>&1
   $exitCode = $LASTEXITCODE
   if ($exitCode -ne 0) {
     $message = (($output | ForEach-Object { "$_" }) -join "`n").Trim()
@@ -131,8 +141,10 @@ try {
 } finally {
   if ($ServiceKey -eq 'workforce') {
     Invoke-DatabaseSql -Sql @'
-DROP TABLE IF EXISTS workforce_identity_operator_context_import;
-DROP TABLE IF EXISTS workforce_identity_operator_context_import_proof;
+DROP TABLE IF EXISTS public.workforce_identity_operator_context_import;
+DROP TABLE IF EXISTS public.workforce_identity_operator_context_import_proof;
+DROP TABLE IF EXISTS bthwani_migration_input.workforce_identity_operator_context_import;
+DROP TABLE IF EXISTS bthwani_migration_input.workforce_identity_operator_context_import_proof;
 '@ -Quiet | Out-Null
   }
 }

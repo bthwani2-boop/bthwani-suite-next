@@ -8,6 +8,13 @@
   has a valid empty source scope; that state is represented by a separate proof
   row instead of fabricating an actor merely to make the migration non-empty.
 
+  Migration inputs live in the dedicated bthwani_migration_input schema rather
+  than public.workforce_* so the governed runner can continue treating every
+  public Workforce table without a ledger as untracked legacy schema. The
+  Workforce database owner creates and owns these inputs; Identity is read through
+  the configured administrative connection only because the runtime databases are
+  separate. This keeps staging ownership identical to the migration executor.
+
   Whenever Workforce has actors, every one must resolve to exactly one non-blank
   operator_context_id in the canonical Identity database or the cutover fails
   closed. No Workforce payload, assignment, environment value, default context,
@@ -32,6 +39,8 @@ param(
 
   [string]$PostgresAdminUser = "bthwani_runtime",
 
+  [string]$WorkforceDatabaseUser = "workforce_runtime",
+
   [string]$IdentityDatabaseName = "identity_runtime",
 
   [string]$WorkforceDatabaseName = "workforce_runtime"
@@ -41,6 +50,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $SourceCommitSha = $SourceCommitSha.ToLowerInvariant()
+$MigrationInputSchema = 'bthwani_migration_input'
 
 if ($UseDockerCompose) {
   if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
@@ -51,6 +61,9 @@ if ($UseDockerCompose) {
   }
   if ([string]::IsNullOrWhiteSpace($EnvFile) -or -not (Test-Path -LiteralPath $EnvFile -PathType Leaf)) {
     throw "Environment file is required for compose-backed Identity operator-context import: $EnvFile"
+  }
+  if ([string]::IsNullOrWhiteSpace($PostgresAdminUser) -or [string]::IsNullOrWhiteSpace($WorkforceDatabaseUser)) {
+    throw 'Compose-backed Identity import requires both PostgresAdminUser and WorkforceDatabaseUser.'
   }
 } else {
   if (-not (Get-Command psql -ErrorAction SilentlyContinue)) {
@@ -71,10 +84,11 @@ function Invoke-ImportDatabaseSql {
 
   if ($UseDockerCompose) {
     $databaseName = if ($Target -eq 'identity') { $IdentityDatabaseName } else { $WorkforceDatabaseName }
+    $databaseUser = if ($Target -eq 'identity') { $PostgresAdminUser } else { $WorkforceDatabaseUser }
     $arguments = @(
       'compose', '--env-file', $EnvFile, '-f', $ComposeFile,
       'exec', '-T', 'postgres', 'psql',
-      '-U', $PostgresAdminUser, '-d', $databaseName, '-X', '-v', 'ON_ERROR_STOP=1'
+      '-U', $databaseUser, '-d', $databaseName, '-X', '-v', 'ON_ERROR_STOP=1'
     )
     if ($TuplesOnly) { $arguments += '-qAt' }
     elseif ($Quiet) { $arguments += '-q' }
@@ -94,6 +108,24 @@ function Invoke-ImportDatabaseSql {
     throw "PostgreSQL import command failed for '$Target': $($output -join "`n")"
   }
   return (($output | ForEach-Object { "$_" }) -join "`n").Trim()
+}
+
+function Invoke-ComposeWorkforceAdminSql {
+  param([Parameter(Mandatory = $true)][string]$Sql)
+
+  if (-not $UseDockerCompose) {
+    throw 'Compose Workforce admin SQL is only available in compose mode.'
+  }
+  $arguments = @(
+    'compose', '--env-file', $EnvFile, '-f', $ComposeFile,
+    'exec', '-T', 'postgres', 'psql',
+    '-U', $PostgresAdminUser, '-d', $WorkforceDatabaseName,
+    '-X', '-q', '-v', 'ON_ERROR_STOP=1'
+  )
+  $output = @($Sql | & docker @arguments 2>&1)
+  if ($LASTEXITCODE -ne 0) {
+    throw "PostgreSQL legacy staging cleanup failed for Workforce: $($output -join "`n")"
+  }
 }
 
 function ConvertTo-SqlLiteral {
@@ -118,7 +150,7 @@ SELECT CASE WHEN EXISTS (
   $applied = Invoke-ImportDatabaseSql -Target workforce -TuplesOnly -Sql @"
 SELECT CASE WHEN EXISTS (
   SELECT 1
-  FROM schema_migrations
+  FROM public.schema_migrations
   WHERE service_name = 'workforce'
     AND migration_id = 'workforce-020_operator_context_scope_boundary.sql'
     AND success = true
@@ -128,11 +160,24 @@ SELECT CASE WHEN EXISTS (
   return $applied.Trim() -eq '1'
 }
 
-function Remove-WorkforceImportState {
-  Invoke-ImportDatabaseSql -Target workforce -Quiet -Sql @'
-DROP TABLE IF EXISTS workforce_identity_operator_context_import;
-DROP TABLE IF EXISTS workforce_identity_operator_context_import_proof;
-'@ | Out-Null
+function Reset-WorkforceImportState {
+  # The pre-release implementation placed staging in public and, in compose
+  # mode, created it as the PostgreSQL admin. Clean that exact obsolete state
+  # with the admin before the Workforce owner recreates the dedicated namespace.
+  $cleanupSql = @"
+DROP TABLE IF EXISTS public.workforce_identity_operator_context_import;
+DROP TABLE IF EXISTS public.workforce_identity_operator_context_import_proof;
+DROP TABLE IF EXISTS $MigrationInputSchema.workforce_identity_operator_context_import;
+DROP TABLE IF EXISTS $MigrationInputSchema.workforce_identity_operator_context_import_proof;
+DROP SCHEMA IF EXISTS $MigrationInputSchema;
+"@
+  if ($UseDockerCompose) {
+    Invoke-ComposeWorkforceAdminSql -Sql $cleanupSql
+  } else {
+    Invoke-ImportDatabaseSql -Target workforce -Quiet -Sql $cleanupSql | Out-Null
+  }
+
+  Invoke-ImportDatabaseSql -Target workforce -Quiet -Sql "CREATE SCHEMA $MigrationInputSchema;" | Out-Null
 }
 
 function Get-RequiredWorkforceActorIds {
@@ -144,7 +189,7 @@ SELECT CASE WHEN to_regclass('public.workforce_people') IS NULL THEN '0' ELSE '1
   $output = Invoke-ImportDatabaseSql -Target workforce -TuplesOnly -Sql @'
 COPY (
   SELECT DISTINCT actor_id::text
-  FROM workforce_people
+  FROM public.workforce_people
   WHERE NULLIF(BTRIM(actor_id), '') IS NOT NULL
   ORDER BY actor_id
 ) TO STDOUT;
@@ -154,10 +199,12 @@ COPY (
 }
 
 if (Test-WorkforceCutoverApplied) {
-  Remove-WorkforceImportState
+  Reset-WorkforceImportState
   Write-Host 'Identity operator-context staging: SKIP workforce-020 is already applied; residual staging was removed.'
   return
 }
+
+Reset-WorkforceImportState
 
 $requiredActorIds = @(Get-RequiredWorkforceActorIds)
 $normalized = @()
@@ -173,7 +220,7 @@ COPY (
   SELECT row_to_json(actor_row)
   FROM (
     SELECT id::text AS actor_id, operator_context_id::text AS operator_context_id
-    FROM identity_actors
+    FROM public.identity_actors
     WHERE id = ANY(ARRAY[$($actorLiterals -join ',')]::text[])
     ORDER BY id
   ) actor_row
@@ -227,6 +274,8 @@ try {
 
 $rowCount = $normalized.Count
 $commitLiteral = ConvertTo-SqlLiteral $SourceCommitSha
+$mappingTable = "$MigrationInputSchema.workforce_identity_operator_context_import"
+$proofTable = "$MigrationInputSchema.workforce_identity_operator_context_import_proof"
 $values = @(
   $normalized | ForEach-Object {
     $actorLiteral = ConvertTo-SqlLiteral $_.actor_id
@@ -238,7 +287,7 @@ $values = @(
 $mappingInsert = ''
 if ($values.Count -gt 0) {
   $mappingInsert = @"
-INSERT INTO workforce_identity_operator_context_import(
+INSERT INTO $mappingTable(
   actor_id, operator_context_id, source_commit_sha, source_row_count,
   source_checksum_md5, imported_at
 ) VALUES
@@ -248,7 +297,7 @@ $($values -join ",`n");
 
 $workforceSql = @"
 BEGIN;
-CREATE TABLE IF NOT EXISTS workforce_identity_operator_context_import (
+CREATE TABLE $mappingTable (
   actor_id text PRIMARY KEY,
   operator_context_id text NOT NULL CHECK (NULLIF(BTRIM(operator_context_id), '') IS NOT NULL),
   source_commit_sha text NOT NULL CHECK (source_commit_sha ~ '^[0-9a-f]{40}$'),
@@ -256,16 +305,14 @@ CREATE TABLE IF NOT EXISTS workforce_identity_operator_context_import (
   source_checksum_md5 text NOT NULL CHECK (source_checksum_md5 ~ '^[0-9a-f]{32}$'),
   imported_at timestamptz NOT NULL DEFAULT now()
 );
-CREATE TABLE IF NOT EXISTS workforce_identity_operator_context_import_proof (
+CREATE TABLE $proofTable (
   proof_id boolean PRIMARY KEY DEFAULT true CHECK (proof_id),
   source_commit_sha text NOT NULL CHECK (source_commit_sha ~ '^[0-9a-f]{40}$'),
   source_row_count integer NOT NULL CHECK (source_row_count >= 0),
   source_checksum_md5 text NOT NULL CHECK (source_checksum_md5 ~ '^[0-9a-f]{32}$'),
   imported_at timestamptz NOT NULL DEFAULT now()
 );
-DELETE FROM workforce_identity_operator_context_import;
-DELETE FROM workforce_identity_operator_context_import_proof;
-INSERT INTO workforce_identity_operator_context_import_proof(
+INSERT INTO $proofTable(
   proof_id, source_commit_sha, source_row_count, source_checksum_md5, imported_at
 ) VALUES (true, $commitLiteral, $rowCount, '$checksum', now());
 $mappingInsert
@@ -273,4 +320,4 @@ COMMIT;
 "@
 
 $null = Invoke-ImportDatabaseSql -Target workforce -Sql $workforceSql
-Write-Host "Identity operator-context staging: PASS requiredActors=$rowCount checksum=$checksum source=$SourceCommitSha"
+Write-Host "Identity operator-context staging: PASS requiredActors=$rowCount checksum=$checksum source=$SourceCommitSha schema=$MigrationInputSchema"

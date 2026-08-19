@@ -79,6 +79,15 @@ function Test-LocalDatabaseRebuildAllowed {
 function Invoke-ComposePsql {
   param([Parameter(Mandatory = $true)][string]$Sql, [switch]$Quiet)
 
+  # Workforce-020 reads its two migration inputs from a dedicated schema. Keep
+  # public first so normal service DDL/DML remains rooted in public; the input
+  # namespace only resolves the reserved staging relations absent from public.
+  $sqlToExecute = if ($Service -eq 'workforce') {
+    "SET search_path TO public, bthwani_migration_input;`n$Sql"
+  } else {
+    $Sql
+  }
+
   $arguments = @(
     "compose", "--env-file", $EnvFile, "-f", $ComposeFile,
     "exec", "-T", "postgres", "psql",
@@ -87,7 +96,7 @@ function Invoke-ComposePsql {
   )
   if ($Quiet) { $arguments += "-q" }
 
-  $output = @($Sql | & docker @arguments 2>&1)
+  $output = @($sqlToExecute | & docker @arguments 2>&1)
   $exitCode = $LASTEXITCODE
   $psqlOutput = ($output | ForEach-Object { [string]$_ }) -join "`n"
   foreach ($line in $output) { Write-Host ([string]$line) }
@@ -109,6 +118,7 @@ function Invoke-WorkforceIdentityImport {
     -ComposeFile $ComposeFile `
     -EnvFile $EnvFile `
     -PostgresAdminUser 'bthwani_runtime' `
+    -WorkforceDatabaseUser $config.User `
     -IdentityDatabaseName 'identity_runtime' `
     -WorkforceDatabaseName 'workforce_runtime' `
     -SourceCommitSha $SourceCommitSha
@@ -166,7 +176,10 @@ try {
   }
 } finally {
   if ($Service -eq 'workforce') {
-    Invoke-ComposePsql -Sql 'DROP TABLE IF EXISTS workforce_identity_operator_context_import;' -Quiet
+    Invoke-ComposePsql -Sql @'
+DROP TABLE IF EXISTS bthwani_migration_input.workforce_identity_operator_context_import;
+DROP TABLE IF EXISTS bthwani_migration_input.workforce_identity_operator_context_import_proof;
+'@ -Quiet
   }
 }
 
