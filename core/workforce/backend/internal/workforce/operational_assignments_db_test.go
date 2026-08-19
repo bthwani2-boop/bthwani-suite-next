@@ -33,7 +33,7 @@ func openWorkforceAssignmentsTestDB(t *testing.T) *sql.DB {
 	return db
 }
 
-func cleanupOperationalAssignmentActor(t *testing.T, db *sql.DB, actorID string) {
+func provisionAssignmentActor(t *testing.T, db *sql.DB, actorID, operatorContext, kind string) {
 	t.Helper()
 	clean := func() {
 		if _, err := db.Exec(`DELETE FROM workforce_operational_assignment_audit WHERE actor_id = $1`, actorID); err != nil {
@@ -42,8 +42,24 @@ func cleanupOperationalAssignmentActor(t *testing.T, db *sql.DB, actorID string)
 		if _, err := db.Exec(`DELETE FROM workforce_operational_assignments WHERE actor_id = $1`, actorID); err != nil {
 			t.Errorf("clean assignments: %v", err)
 		}
+		if _, err := db.Exec(`DELETE FROM workforce_people WHERE actor_id = $1`, actorID); err != nil {
+			t.Errorf("clean assignment actor: %v", err)
+		}
 	}
 	clean()
+	engagementType := "independent_contractor"
+	if kind == "employee" {
+		engagementType = "employee"
+	}
+	if _, err := db.Exec(`
+		INSERT INTO workforce_people(
+			operator_context_id, actor_id, full_name_ar, workforce_code, workforce_kind,
+			engagement_type, engagement_status
+		)
+		VALUES($1, $2, $3, $4, $5, $6, 'active')`,
+		operatorContext, actorID, "ممثل اختبار", "TEST-"+actorID, kind, engagementType); err != nil {
+		t.Fatalf("provision assignment actor: %v", err)
+	}
 	t.Cleanup(clean)
 }
 
@@ -72,7 +88,7 @@ func TestOperationalAssignmentsTrustedIsolationAndIdempotencyDBIntegration(t *te
 		shiftCode        = "shift-crosscut-assignments"
 	)
 	db := openWorkforceAssignmentsTestDB(t)
-	cleanupOperationalAssignmentActor(t, db, actorID)
+	provisionAssignmentActor(t, db, actorID, operatorContext, "field")
 	provisionAssignmentShift(t, db, shiftCode)
 	repository := NewRepository(db)
 	startsOn := time.Date(2026, 8, 2, 8, 0, 0, 0, time.UTC)
@@ -114,6 +130,16 @@ func TestOperationalAssignmentsTrustedIsolationAndIdempotencyDBIntegration(t *te
 	if len(foreign.StoreIDs)+len(foreign.ServiceAreaCodes)+len(foreign.PartnerIDs)+len(foreign.ShiftCodes) != 0 {
 		t.Fatalf("cross-context assignment leak: %#v", foreign)
 	}
+	if _, err := repository.SetOperationalScopes(
+		context.Background(), actorID, foreignContext, "field", different, requestingActor, "assignments-context-mismatch",
+	); err == nil {
+		t.Fatal("foreign OperatorContext must not be able to persist an affiliation")
+	}
+	if _, err := repository.SetOperationalScopes(
+		context.Background(), actorID, operatorContext, "captain", different, requestingActor, "assignments-kind-mismatch",
+	); err == nil {
+		t.Fatal("workforce kind mismatch must not be able to persist an affiliation")
+	}
 
 	if _, err := repository.SetOperationalScopes(
 		context.Background(), actorID, operatorContext, "field", different, requestingActor, "assignments-crosscut-2",
@@ -145,7 +171,7 @@ func TestOperationalShiftAffiliationRequiresActiveWorkforceReferenceDBIntegratio
 		shiftCode       = "shift-crosscut-integrity"
 	)
 	db := openWorkforceAssignmentsTestDB(t)
-	cleanupOperationalAssignmentActor(t, db, actorID)
+	provisionAssignmentActor(t, db, actorID, operatorContext, "field")
 	provisionAssignmentShift(t, db, shiftCode)
 	repository := NewRepository(db)
 	startsOn := time.Date(2026, 8, 2, 10, 0, 0, 0, time.UTC)
@@ -181,9 +207,12 @@ func TestOperationalShiftAffiliationRequiresActiveWorkforceReferenceDBIntegratio
 }
 
 func TestOperationalAssignmentsConcurrentExactReplayDBIntegration(t *testing.T) {
-	const actorID = "captain-crosscut-concurrent"
+	const (
+		actorID         = "captain-crosscut-concurrent"
+		operatorContext = "crosscut-context"
+	)
 	db := openWorkforceAssignmentsTestDB(t)
-	cleanupOperationalAssignmentActor(t, db, actorID)
+	provisionAssignmentActor(t, db, actorID, operatorContext, "captain")
 	db.SetMaxOpenConns(12)
 	repository := NewRepository(db)
 	inputs := []OperationalAssignmentInput{{
@@ -198,7 +227,7 @@ func TestOperationalAssignmentsConcurrentExactReplayDBIntegration(t *testing.T) 
 		go func() {
 			defer waitGroup.Done()
 			_, err := repository.SetOperationalScopes(
-				context.Background(), actorID, "crosscut-context", "captain", inputs,
+				context.Background(), actorID, operatorContext, "captain", inputs,
 				"operator-crosscut", "assignments-concurrent",
 			)
 			if err != nil {
