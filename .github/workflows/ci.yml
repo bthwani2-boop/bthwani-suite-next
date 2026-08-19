@@ -257,6 +257,7 @@ jobs:
     if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.runtime_required == 'true' }}
     uses: ./.github/workflows/ci-runtime.yml
     with:
+      head_sha: ${{ needs.context.outputs.head_sha }}
       full_verification: ${{ needs.context.outputs.full_verification }}
       runtime: ${{ needs.context.outputs.runtime_required }}
       runtime_profile: ${{ needs.context.outputs.runtime_profile }}

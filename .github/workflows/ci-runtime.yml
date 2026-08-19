@@ -3,6 +3,9 @@ name: BThwani Runtime Proof
 on:
   workflow_call:
     inputs:
+      head_sha:
+        type: string
+        required: true
       full_verification:
         type: string
         required: true
@@ -29,7 +32,7 @@ jobs:
       - name: Checkout immutable source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ inputs.head_sha }}
           fetch-depth: 1
           persist-credentials: false
       - name: Set up locked Node workspace
@@ -65,7 +68,7 @@ jobs:
         env:
           RUNTIME_PROFILE: ${{ inputs.runtime_profile }}
           RUNTIME_COMPONENTS: ${{ steps.runtime_scope.outputs.profiles }}
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          SOURCE_SHA: ${{ inputs.head_sha }}
         run: |
           $ErrorActionPreference = "Stop"
           $profile = if ([string]::IsNullOrWhiteSpace($env:RUNTIME_PROFILE)) { "none" } else { $env:RUNTIME_PROFILE }
