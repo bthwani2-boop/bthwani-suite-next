@@ -26,8 +26,8 @@ func HandleRefreshProviderStatus(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payment session not found")
 			return
 		}
-		trustedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Delegated-Operator-Context"))
-		if trustedOperatorContextID == "" || trustedOperatorContextID != session.OperatorContextID {
+		trustedOperatorContextID, err := shared.RequireOperatorContext(r.Context())
+		if err != nil || trustedOperatorContextID != session.OperatorContextID {
 			shared.SendError(w, http.StatusForbidden, "OperatorContext_MISMATCH", "payment session does not belong to the trusted OperatorContext")
 			return
 		}
@@ -65,7 +65,7 @@ func HandleRefreshProviderStatus(db *sql.DB) http.HandlerFunc {
 		hash := sha256.Sum256([]byte(payload))
 		application, err := ApplyAuthoritativeProviderEvent(r.Context(), db, ProviderEventInput{
 			EventID:            eventID,
-			OperatorContextID:           session.OperatorContextID,
+			OperatorContextID:  session.OperatorContextID,
 			PaymentSessionID:   session.ID,
 			EventType:          eventType,
 			ProviderStatus:     result.Status,
