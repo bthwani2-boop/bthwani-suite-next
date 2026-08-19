@@ -296,8 +296,8 @@ func minInt64(a, b int64) int64 {
 // that the beneficiary must not decide: the destination comes from the current
 // active verified official-wallet record, and FULL_AVAILABLE is resolved from
 // the locked WLT wallet/settlement projection. The resulting amount is reserved
-// atomically in held_balance_minor_units so concurrent requests cannot spend
-// the same entitlement twice.
+// atomically by moving it from available to held so concurrent requests cannot
+// spend the same entitlement twice.
 func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID, ok := requirePayoutOperatorContext(w, r)
@@ -422,7 +422,9 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 
 		reserveResult, err := tx.ExecContext(r.Context(), `
 			UPDATE wlt_wallets
-			SET held_balance_minor_units = held_balance_minor_units + $4, updated_at = now()
+			SET held_balance_minor_units = held_balance_minor_units + $4,
+			    available_balance_minor_units = available_balance_minor_units - $4,
+			    updated_at = now()
 			WHERE operator_context_id=$1 AND actor_id=$2 AND actor_type=$3
 			  AND status='active' AND currency=$5
 			  AND available_balance_minor_units >= $4
