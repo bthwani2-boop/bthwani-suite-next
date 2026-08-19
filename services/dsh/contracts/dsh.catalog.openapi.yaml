@@ -335,39 +335,6 @@ paths:
                 $ref: '#/components/schemas/ProposalListResponse'
         '401':
           $ref: '#/components/responses/Unauthenticated'
-  /dsh/operator/catalog/product-proposals/{proposalId}/decision:
-    post:
-      operationId: decideProductProposal
-      deprecated: true
-      tags:
-      - CentralCatalog
-      security:
-      - bearerAuth: []
-      parameters:
-      - $ref: '#/components/parameters/ProposalId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProposalDecisionRequest'
-      responses:
-        '200':
-          description: Proposal decided
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProposalResponse'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
   /dsh/operator/catalog/product-proposals/{proposalId}/transition:
     post:
       operationId: transitionProductProposal
@@ -1330,39 +1297,6 @@ paths:
                 $ref: '#/components/schemas/ProposalListResponse'
         '401':
           $ref: '#/components/responses/Unauthenticated'
-  /dsh/catalog/proposals/{proposalId}/decision:
-    post:
-      operationId: decideProductProposalLegacyPrefix
-      deprecated: true
-      tags:
-      - CentralCatalog
-      security:
-      - bearerAuth: []
-      parameters:
-      - $ref: '#/components/parameters/ProposalId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ProposalDecisionRequest'
-      responses:
-        '200':
-          description: Proposal decided
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ProposalResponse'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '409':
-          $ref: '#/components/responses/Conflict'
   /dsh/catalog/proposals/{proposalId}/transitions:
     post:
       operationId: transitionProductProposalLegacyPrefix
@@ -2446,28 +2380,6 @@ components:
           - string
           - 'null'
         imageObjectKey:
-          type:
-          - string
-          - 'null'
-    ProposalDecisionRequest:
-      type: object
-      required:
-      - expectedVersion
-      - decision
-      - reviewNote
-      properties:
-        expectedVersion:
-          $ref: '#/components/schemas/PositiveVersion'
-        decision:
-          type: string
-          enum:
-          - under_review
-          - adopted
-          - rejected
-          - needs_fix
-        reviewNote:
-          type: string
-        adoptedMasterProductId:
           type:
           - string
           - 'null'
