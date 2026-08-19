@@ -3,7 +3,7 @@
   "service": "workforce",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "workforce-018_financial_authority_cutover.sql",
+  "cutover": "workforce-025_operational_affiliation_context_integrity.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -171,6 +171,13 @@
       "file": "workforce-024_projection_creation_guard.sql",
       "sha256": "85efdf64a54ab1b825e3a82d41c9c21fec7ae544df79dbd97330c225cc7d25f1",
       "historicalPrefix": "024",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 25,
+      "file": "workforce-025_operational_affiliation_context_integrity.sql",
+      "sha256": "0770a7640b9a9ace937d81e238b238286e4d5000a37866dc57a1f4613c53fb6a",
+      "historicalPrefix": "025",
       "state": "ACTIVE"
     }
   ]
