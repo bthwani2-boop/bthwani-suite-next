@@ -134,7 +134,7 @@ export async function updateTicket(
 }
 
 export async function createIncident(input: DshCreateIncidentInput): Promise<DshIncident> {
-  const data = await request<{ incident: DshIncident }>("/dsh/operator/incidents", {
+  const data = await request<{ incident: DshIncident }>("/dsh/operator/support/incidents", {
     method: "POST",
     body: input,
   });
@@ -143,8 +143,8 @@ export async function createIncident(input: DshCreateIncidentInput): Promise<Dsh
 
 export async function fetchIncidents(statusFilter?: string): Promise<readonly DshIncident[]> {
   const path = statusFilter
-    ? `/dsh/operator/incidents?status=${encodeURIComponent(statusFilter)}`
-    : "/dsh/operator/incidents";
+    ? `/dsh/operator/support/incidents?status=${encodeURIComponent(statusFilter)}`
+    : "/dsh/operator/support/incidents";
   const data = await request<{ incidents: DshIncident[] }>(path);
   return data.incidents ?? [];
 }
@@ -154,7 +154,7 @@ export async function updateIncident(
   input: DshUpdateIncidentInput,
 ): Promise<DshIncident> {
   const data = await request<{ incident: DshIncident }>(
-    `/dsh/operator/incidents/${encodeURIComponent(incidentId)}`,
+    `/dsh/operator/support/incidents/${encodeURIComponent(incidentId)}`,
     { method: "PATCH", body: input },
   );
   return data.incident;
