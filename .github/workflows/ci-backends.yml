@@ -118,6 +118,7 @@ jobs:
       - name: Checkout immutable source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ inputs.head_sha }}
           fetch-depth: 1
           persist-credentials: false
           show-progress: false
@@ -220,6 +221,7 @@ jobs:
       - name: Checkout immutable source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ inputs.head_sha }}
           fetch-depth: 1
           persist-credentials: false
           show-progress: false
@@ -286,6 +288,7 @@ jobs:
       - name: Checkout immutable source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ inputs.head_sha }}
           fetch-depth: 1
           persist-credentials: false
           show-progress: false
