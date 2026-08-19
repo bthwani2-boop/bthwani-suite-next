@@ -43,7 +43,7 @@ func newBundleRegistryTestService(t *testing.T) (*Service, func()) {
 			},
 		})
 	}))
-	service := &Service{identity: identityclient.NewClient(server.URL, "test-token", "context-test")}
+	service := &Service{identity: identityclient.NewClient(server.URL, "test-token")}
 	return service, server.Close
 }
 
