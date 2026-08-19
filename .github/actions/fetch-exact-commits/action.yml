@@ -28,20 +28,39 @@ runs:
       run: |
         set -euo pipefail
         remote_url="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY_NAME}.git"
-        for sha in "${BASE_SHA}" "${HEAD_SHA}"; do
-          if [[ -z "${sha}" || "${sha}" =~ ^0+$ ]]; then
-            continue
-          fi
-          if git cat-file -e "${sha}^{commit}" 2>/dev/null; then
-            continue
-          fi
-          git fetch --no-tags --depth=1 "${remote_url}" "${sha}"
-        done
 
         if [[ -z "${HEAD_SHA}" || "${HEAD_SHA}" =~ ^0+$ ]]; then
           echo "::error::Exact verification head SHA is required."
           exit 1
         fi
+
+        fetch_shas=()
+        for sha in "${BASE_SHA}" "${HEAD_SHA}"; do
+          if [[ -z "${sha}" || "${sha}" =~ ^0+$ ]]; then
+            continue
+          fi
+          if ! git cat-file -e "${sha}^{commit}" 2>/dev/null; then
+            fetch_shas+=("${sha}")
+          fi
+        done
+
+        # A shallow checkout has one shared .git/shallow boundary. Fetch every
+        # missing immutable commit in one transaction so sequential shallow
+        # fetches cannot race while rewriting that boundary.
+        if (( ${#fetch_shas[@]} > 0 )); then
+          git fetch --no-tags --depth=1 "${remote_url}" "${fetch_shas[@]}"
+        fi
+
+        for sha in "${BASE_SHA}" "${HEAD_SHA}"; do
+          if [[ -z "${sha}" || "${sha}" =~ ^0+$ ]]; then
+            continue
+          fi
+          if ! git cat-file -e "${sha}^{commit}" 2>/dev/null; then
+            echo "::error::Exact verification commit is unavailable after fetch: ${sha}"
+            exit 1
+          fi
+        done
+
         git checkout --detach "${HEAD_SHA}"
         checked_out_sha="$(git rev-parse HEAD)"
         if [[ "${checked_out_sha}" != "${HEAD_SHA}" ]]; then
