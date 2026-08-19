@@ -85,6 +85,18 @@ if (($ProfileList -contains "dsh" -or $ProfileList -contains "workforce" -or
 }
 $ProfileList = @($ProfileList | Select-Object -Unique)
 
+# Selecting the media capability is an explicit assertion that the complete
+# machine-local media set is available. Fail before mutating runtime state; do
+# not start a partial MinIO/DSH stack and discover missing binaries later.
+$MediaRuntimeActions = @("up", "reset", "bootstrap-dev", "seed", "smoke", "all")
+if (($ProfileList -contains "media") -and $MediaRuntimeActions.Contains($Action)) {
+  $mediaValidator = Join-Path $RepoRoot "tools/scripts/check-local-media-contract.mjs"
+  & node $mediaValidator --mode runtime
+  if ($LASTEXITCODE -ne 0) {
+    throw "DSH local media capability was selected but its required local runtime state is incomplete (exit $LASTEXITCODE)."
+  }
+}
+
 function Test-ExplicitResetInvocation {
   return [bool]$Force
 }
