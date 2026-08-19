@@ -21,34 +21,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches: ["**"]
-    paths:
-      - ".github/**"
-      - "tools/**"
-      - "contracts/**"
-      - "core/**"
-      - "services/**"
-      - "apps/**"
-      - "shared/**"
-      - "infra/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "nx.json"
   push:
     branches: ["**"]
-    paths:
-      - ".github/**"
-      - "tools/**"
-      - "contracts/**"
-      - "core/**"
-      - "services/**"
-      - "apps/**"
-      - "shared/**"
-      - "infra/**"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "nx.json"
 
 permissions:
   actions: read
