@@ -42,7 +42,7 @@ func TestSearchActorsDecodesGovernedPageAndSendsServiceIdentity(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "service-token", "context-main")
+	client := NewClient(server.URL, "service-token")
 	actors, nextCursor, err := client.SearchActors(workforceauth.WithOperatorContext(context.Background(), "context-main"), "field", "ali", "")
 	if err != nil {
 		t.Fatalf("SearchActors returned error: %v", err)
@@ -68,7 +68,7 @@ func TestClientSendsTrustedContextToEveryIdentityCall(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "service-token", "context-main")
+	client := NewClient(server.URL, "service-token")
 	if _, _, err := client.SearchActors(workforceauth.WithOperatorContext(context.Background(), "context-main"), "field", "", ""); err != nil {
 		t.Fatalf("SearchActors returned error: %v", err)
 	}
@@ -91,7 +91,7 @@ func TestProvisionUsesTrustedContextInHeaderAndBody(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "service-token", "context-main")
+	client := NewClient(server.URL, "service-token")
 	actor, err := client.Provision(workforceauth.WithOperatorContext(context.Background(), "context-main"), ProvisionInput{
 		Username: "field-1", PhoneE164: "+967770000001", Role: "field",
 	})
@@ -110,7 +110,7 @@ func TestProvisionReplayDoesNotAuthorizeCompensation(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "service-token", "context-main")
+	client := NewClient(server.URL, "service-token")
 	actor, err := client.Provision(workforceauth.WithOperatorContext(context.Background(), "context-main"), ProvisionInput{
 		Username: "field-existing", PhoneE164: "+967770000002", Role: "field",
 	})
@@ -123,7 +123,7 @@ func TestProvisionReplayDoesNotAuthorizeCompensation(t *testing.T) {
 }
 
 func TestProvisionRejectsOperatorContextOverrideBeforeNetwork(t *testing.T) {
-	client := NewClient("https://identity.internal", "service-token", "operator-context-main")
+	client := NewClient("https://identity.internal", "service-token")
 
 	_, err := client.Provision(workforceauth.WithOperatorContext(context.Background(), "operator-context-main"), ProvisionInput{OperatorContextID: "operator-context-other"})
 	if !errors.Is(err, ErrOperatorContextForbidden) {
@@ -216,7 +216,7 @@ func TestLifecycleMutationsSendGovernedRequestBody(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client := NewClient(server.URL, "service-token", "context-main")
+			client := NewClient(server.URL, "service-token")
 			if err := test.call(client); err != nil {
 				t.Fatalf("lifecycle mutation returned error: %v", err)
 			}

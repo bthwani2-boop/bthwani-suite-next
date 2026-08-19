@@ -62,7 +62,7 @@ func TestDocumentLinkFailsClosedWhenMediaAuthorityIsUnavailable(t *testing.T) {
 	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "context-1")
 	identityServer := workforceIdentityServer(t)
 	defer identityServer.Close()
-	handler := ReferenceMutationMiddleware(http.NotFoundHandler(), nil, newAuthClient(identityServer.URL))
+	handler := ReferenceMutationMiddleware(http.NotFoundHandler(), nil, newAuthClient(identityServer.URL), nil)
 	req := httptest.NewRequest(http.MethodPost, "/workforce/captains/captain-1/documents", jsonBody(t, map[string]any{"expectedVersion": 1, "mediaRef": "media-1"}))
 	req.Header.Set("Authorization", "Bearer session-token")
 	recorder := httptest.NewRecorder()

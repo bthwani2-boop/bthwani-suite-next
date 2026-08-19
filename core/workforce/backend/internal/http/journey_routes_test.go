@@ -81,7 +81,7 @@ func TestWorkforceJourneyRouteMatrixIsCompleteAndUnique(t *testing.T) {
 }
 
 func TestWorkforceJourneyRoutesAreMounted(t *testing.T) {
-	router := NewRouter(nil, nil, nil, nil, nil, nil, "test-dsh-service-token")
+	router := NewRouter(nil, nil, nil, nil, nil, "test-dsh-service-token")
 	mux, ok := router.(*http.ServeMux)
 	if !ok {
 		t.Fatalf("expected workforce router to expose its governed ServeMux, got %T", router)
