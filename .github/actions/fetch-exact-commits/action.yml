@@ -1,5 +1,5 @@
 name: Fetch exact verification commits
-description: Fetch only the immutable base and head commits required by a verification job.
+description: Fetch the immutable base and head commits required by a verification job, then detach the worktree at the exact verification head.
 
 inputs:
   base_sha:
@@ -18,7 +18,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Fetch missing immutable commits only
+    - name: Fetch immutable commits and checkout exact verification head
       shell: bash
       env:
         BASE_SHA: ${{ inputs.base_sha }}
@@ -37,3 +37,14 @@ runs:
           fi
           git fetch --no-tags --depth=1 "${remote_url}" "${sha}"
         done
+
+        if [[ -z "${HEAD_SHA}" || "${HEAD_SHA}" =~ ^0+$ ]]; then
+          echo "::error::Exact verification head SHA is required."
+          exit 1
+        fi
+        git checkout --detach "${HEAD_SHA}"
+        checked_out_sha="$(git rev-parse HEAD)"
+        if [[ "${checked_out_sha}" != "${HEAD_SHA}" ]]; then
+          echo "::error::Verification checkout SHA mismatch: expected=${HEAD_SHA} actual=${checked_out_sha}"
+          exit 1
+        fi

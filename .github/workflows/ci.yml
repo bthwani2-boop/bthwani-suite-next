@@ -78,6 +78,7 @@ jobs:
       - name: Checkout immutable source history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           fetch-tags: false
           filter: blob:none
@@ -96,6 +97,7 @@ jobs:
         env:
           EVENT_BEFORE: ${{ github.event.before }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           DISPATCH_MODE: ${{ inputs.mode }}
           DISPATCH_JOURNEY: ${{ inputs.journey }}
           DISPATCH_RUNTIME_PROOF: ${{ inputs.runtime_proof }}
@@ -104,6 +106,10 @@ jobs:
         run: |
           set -euo pipefail
           head_sha="$(git rev-parse HEAD)"
+          if [[ -z "${EXPECTED_HEAD_SHA}" || "${head_sha}" != "${EXPECTED_HEAD_SHA}" ]]; then
+            echo "::error::Contextual CI checkout SHA mismatch: expected=${EXPECTED_HEAD_SHA:-<empty>} actual=${head_sha}"
+            exit 1
+          fi
           base_sha="${PR_BASE_SHA:-${EVENT_BEFORE:-}}"
           phase="pr"
           mode=affected
