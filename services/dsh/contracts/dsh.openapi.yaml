@@ -303,8 +303,6 @@ paths:
     $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1master-products~1{productId}"
   /dsh/catalog/proposals:
     $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1proposals"
-  /dsh/catalog/proposals/{proposalId}/decision:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1proposals~1{proposalId}~1decision"
   /dsh/catalog/proposals/{proposalId}/transitions:
     $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1proposals~1{proposalId}~1transitions"
   /dsh/catalog/policies:

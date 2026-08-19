@@ -317,25 +317,6 @@
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSlaRulesResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-  put:
-    operationId: upsertDshSlaRules
-    summary: Upsert SLA rules for a zone.
-    tags: [DshPlatformPolicies]
-    security:
-      - bearerAuth: []
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpsertSlaRulesRequest" }
-    responses:
-      "200":
-        description: SLA rules upserted.
-        content:
-          application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSlaRulesResponse" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
 /dsh/operator/platform/capacity:
   get:
@@ -357,25 +338,6 @@
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCapacityConfigResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-  put:
-    operationId: upsertDshCapacityConfig
-    summary: Upsert capacity configuration for a zone.
-    tags: [DshPlatformPolicies]
-    security:
-      - bearerAuth: []
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpsertCapacityConfigRequest" }
-    responses:
-      "200":
-        description: Capacity config upserted.
-        content:
-          application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCapacityConfigResponse" }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
 /dsh/operator/admin/roles:
   get:

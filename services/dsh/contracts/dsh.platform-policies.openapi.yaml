@@ -151,41 +151,6 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
-    put:
-      operationId: upsertDshSlaRules
-      tags:
-      - DshPlatformPolicies
-      security:
-      - bearerAuth: []
-      parameters:
-      - $ref: '#/components/parameters/IdempotencyKey'
-      - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DshUpsertSlaInput'
-      responses:
-        '200':
-          description: SLA rule created or version-updated.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - slaRule
-                properties:
-                  slaRule:
-                    $ref: '#/components/schemas/DshSlaRule'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          $ref: '#/components/responses/Conflict'
   /dsh/operator/platform/capacity:
     get:
       operationId: getDshCapacityConfig
@@ -218,41 +183,6 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-    put:
-      operationId: upsertDshCapacityConfig
-      tags:
-      - DshPlatformPolicies
-      security:
-      - bearerAuth: []
-      parameters:
-      - $ref: '#/components/parameters/IdempotencyKey'
-      - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DshUpsertCapacityInput'
-      responses:
-        '200':
-          description: Capacity configuration created or version-updated.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - capacityConfig
-                properties:
-                  capacityConfig:
-                    $ref: '#/components/schemas/DshCapacityConfig'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          $ref: '#/components/responses/Conflict'
   /dsh/operator/platform/serviceability/{zoneId}:
     get:
       operationId: getDshZoneServiceability
@@ -616,38 +546,6 @@ components:
         updatedAt:
           type: string
           format: date-time
-    DshUpsertSlaInput:
-      type: object
-      additionalProperties: false
-      required:
-      - zoneId
-      - category
-      - maxPrepMins
-      - maxDeliveryMins
-      - expectedVersion
-      - reason
-      properties:
-        zoneId:
-          type: string
-        category:
-          type: string
-          minLength: 1
-          maxLength: 120
-        maxPrepMins:
-          type: integer
-          minimum: 1
-          maximum: 1440
-        maxDeliveryMins:
-          type: integer
-          minimum: 1
-          maximum: 1440
-        expectedVersion:
-          type: integer
-          minimum: 0
-        reason:
-          type: string
-          minLength: 3
-          maxLength: 500
     DshCapacityConfig:
       type: object
       required:
@@ -680,36 +578,6 @@ components:
         updatedAt:
           type: string
           format: date-time
-    DshUpsertCapacityInput:
-      type: object
-      additionalProperties: false
-      required:
-      - zoneId
-      - maxConcurrentOrders
-      - maxCaptainsOnline
-      - throttleThreshold
-      - expectedVersion
-      - reason
-      properties:
-        zoneId:
-          type: string
-        maxConcurrentOrders:
-          type: integer
-          minimum: 1
-        maxCaptainsOnline:
-          type: integer
-          minimum: 0
-        throttleThreshold:
-          type: number
-          minimum: 0
-          maximum: 1
-        expectedVersion:
-          type: integer
-          minimum: 0
-        reason:
-          type: string
-          minLength: 3
-          maxLength: 500
     DshZoneServiceability:
       type: object
       required:
