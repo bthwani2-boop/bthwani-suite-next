@@ -37,9 +37,8 @@ $ObservabilityComposeFile = Join-Path $RepoRoot "infra/docker/compose.observabil
 $EnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
 $GovernedMigrationScript = Join-Path $RepoRoot "infra/docker/scripts/invoke-runtime-database-migrations.ps1"
 $GovernedSeedScript = Join-Path $RepoRoot "infra/docker/scripts/invoke-runtime-database-seeds.ps1"
-$GovernedDshMediaScript = Join-Path $RepoRoot "infra/docker/scripts/invoke-dsh-local-media.ps1"
 
-foreach ($requiredFile in @($ComposeFile, $EnvFile, $GovernedMigrationScript, $GovernedSeedScript, $GovernedDshMediaScript)) {
+foreach ($requiredFile in @($ComposeFile, $EnvFile, $GovernedMigrationScript, $GovernedSeedScript)) {
   if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
     throw "Required runtime authority not found: $requiredFile"
   }
@@ -91,17 +90,6 @@ $ProfileList = @($ProfileList | Select-Object -Unique)
 
 function Test-MediaStorageSelected {
   return [bool](($ProfileList -contains "media") -or ($ProfileList -contains "media-storage"))
-}
-
-# Selecting the local seed-media capability asserts that the complete machine-
-# local set is present. Validate before any Docker/database mutation.
-$MediaRuntimeActions = @("up", "reset", "bootstrap-dev", "seed", "smoke", "all")
-if (($ProfileList -contains "media") -and $MediaRuntimeActions.Contains($Action)) {
-  $mediaValidator = Join-Path $RepoRoot "tools/scripts/check-local-media-contract.mjs"
-  & node $mediaValidator --mode runtime
-  if ($LASTEXITCODE -ne 0) {
-    throw "DSH local seed-media was selected but required workstation media is incomplete (exit $LASTEXITCODE)."
-  }
 }
 
 function Test-ExplicitResetInvocation { return [bool]$Force }
@@ -353,32 +341,7 @@ function Invoke-GovernedSeeds {
   }
 }
 
-function Invoke-DshLocalMediaOverlay {
-  if (-not ($ProfileList -contains "dsh" -or $ProfileList -contains "media")) { return }
 
-  $mediaDirectoryPath = Join-Path $RepoRoot "services/dsh/database/seeds/local/media"
-  $manifestPath = Join-Path $mediaDirectoryPath "media-manifest.json"
-  if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
-    throw "DSH media seed manifest not found: $manifestPath"
-  }
-
-  $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
-  $expectedFiles = @($manifest.media | Select-Object -ExpandProperty relativeSourcePath)
-  if ($expectedFiles.Count -eq 0) {
-    throw "DSH media seed manifest has no media entries."
-  }
-  foreach ($relativePath in $expectedFiles) {
-    if (-not (Test-Path -LiteralPath (Join-Path $mediaDirectoryPath $relativePath) -PathType Leaf)) {
-      throw "DSH media seed missing expected file: $relativePath"
-    }
-  }
-
-  $rootUser = if ($env:BTHWANI_MINIO_ROOT_USER) { $env:BTHWANI_MINIO_ROOT_USER } else { "bthwani_minio" }
-  $rootPassword = if ($env:BTHWANI_MINIO_ROOT_PASSWORD) { $env:BTHWANI_MINIO_ROOT_PASSWORD } else { "bthwani_minio_password" }
-  Write-Host "`n--- Applying governed DSH media fixtures ---"
-  # MinIO upload disabled for local development. Media is served directly from the local directory.
-  Write-Host "DSH media seed: PASS ($($expectedFiles.Count) governed objects) (Skipped MinIO upload, serving locally)"
-}
 
 function Wait-ForSelectedApis {
   if ($ProfileList -contains "identity") { Wait-ForHttpStatus -Name "Identity API" -Url "http://localhost:58082/identity/readiness" -HealthyValues @("HEALTHY") | Out-Null }
@@ -453,7 +416,6 @@ switch ($Action) {
     Assert-LocalIdentityBootstrapConverged
     Invoke-LocalWorkforceProvisioning -DeferFinancialStanding
     Invoke-GovernedSeeds
-    Invoke-DshLocalMediaOverlay
     Invoke-LocalWorkforceProvisioning
     Invoke-SelectedSmoke
     Write-Host "reset: PASS"
@@ -477,7 +439,6 @@ switch ($Action) {
     Assert-LocalIdentityBootstrapConverged
     Invoke-LocalWorkforceProvisioning -DeferFinancialStanding
     Invoke-GovernedSeeds
-    Invoke-DshLocalMediaOverlay
     Invoke-LocalWorkforceProvisioning
     if ($ProfileList -contains "dsh") {
       node tools/scripts/mobile-dev-data.mjs --repair
@@ -524,7 +485,6 @@ switch ($Action) {
     }
     Invoke-GovernedMigrations
     Invoke-GovernedSeeds
-    Invoke-DshLocalMediaOverlay
     Write-Host "runtime:seed: PASS"
   }
   "smoke" {
@@ -556,7 +516,6 @@ switch ($Action) {
     }
     Invoke-GovernedMigrations
     Invoke-GovernedSeeds
-    Invoke-DshLocalMediaOverlay
     Invoke-Compose up -d --build
     Invoke-SelectedSmoke
     Write-Host "`nruntime:all: PASS"
