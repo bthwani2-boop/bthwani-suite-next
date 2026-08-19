@@ -36,9 +36,9 @@ func healthyProvidersRuntimeStore() providersRuntimeTestStore {
 		migrationID: providersLatestMigration,
 		success:     true,
 		relations: map[string]bool{
-			"external_providers":       true,
-			"providers_action_audit":   true,
-			"providers_idempotency":    true,
+			"external_providers":     true,
+			"providers_action_audit": true,
+			"providers_idempotency":  true,
 		},
 		databaseTime: time.Now(),
 	}
@@ -114,7 +114,7 @@ func TestProvidersOperationalRequestRequiresIdentityConfiguration(t *testing.T) 
 	}))
 
 	recorder := httptest.NewRecorder()
-	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/providers/health", nil))
+	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/providers", nil))
 	if recorder.Code != http.StatusServiceUnavailable || called {
 		t.Fatalf("missing identity configuration status=%d called=%v", recorder.Code, called)
 	}
