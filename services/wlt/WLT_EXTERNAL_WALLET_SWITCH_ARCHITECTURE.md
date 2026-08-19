@@ -1,9 +1,9 @@
 # WLT External Wallet & Settlement Architecture
 
-**Status:** Canonical target architecture / implementation decision record  
-**Service:** `WLT` — Wallet / Financial Truth  
-**Branch:** `BB`  
-**Updated:** 2026-08-13  
+**Status:** Canonical target architecture / implementation decision record
+**Service:** `WLT` — Wallet / Financial Truth
+**Branch:** `BB`
+**Updated:** 2026-08-13
 **Primary market:** Yemen official electronic wallets
 
 ---
