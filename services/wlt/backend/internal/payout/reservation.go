@@ -21,7 +21,9 @@ func releasePayoutReservation(ctx context.Context, tx *sql.Tx, req *PayoutReques
 	}
 	result, err := tx.ExecContext(ctx, `
 		UPDATE wlt_wallets
-		SET held_balance_minor_units = held_balance_minor_units - $4, updated_at = now()
+		SET held_balance_minor_units = held_balance_minor_units - $4,
+		    available_balance_minor_units = available_balance_minor_units + $4,
+		    updated_at = now()
 		WHERE operator_context_id=$1 AND actor_id=$2 AND actor_type=$3
 		  AND held_balance_minor_units >= $4`,
 		operatorContextID, req.BeneficiaryActorID, req.BeneficiaryActorType, req.AmountMinorUnits)
@@ -40,8 +42,11 @@ func releasePayoutReservation(ctx context.Context, tx *sql.Tx, req *PayoutReques
 
 // settlePayoutReservation atomically converts the held entitlement into a paid
 // wallet projection after the canonical double-entry payout journal is posted.
-// The caller owns the surrounding transaction, so ledger posting, wallet
-// projection and payout completion either commit together or all roll back.
+// Available balance was already reduced when the request reserved the amount;
+// completion therefore releases the hold into paid_total without debiting the
+// available projection a second time. The caller owns the surrounding
+// transaction, so ledger posting, wallet projection and payout completion
+// either commit together or all roll back.
 func settlePayoutReservation(ctx context.Context, tx *sql.Tx, req *PayoutRequest) error {
 	if req == nil || req.AmountMinorUnits <= 0 || req.BeneficiaryActorID == "" || req.BeneficiaryActorType == "" {
 		return fmt.Errorf("complete payout reservation identity is required")
@@ -53,12 +58,10 @@ func settlePayoutReservation(ctx context.Context, tx *sql.Tx, req *PayoutRequest
 	result, err := tx.ExecContext(ctx, `
 		UPDATE wlt_wallets
 		SET held_balance_minor_units = held_balance_minor_units - $4,
-		    available_balance_minor_units = available_balance_minor_units - $4,
 		    paid_total_minor_units = paid_total_minor_units + $4,
 		    updated_at = now()
 		WHERE operator_context_id=$1 AND actor_id=$2 AND actor_type=$3
-		  AND held_balance_minor_units >= $4
-		  AND available_balance_minor_units >= $4`,
+		  AND held_balance_minor_units >= $4`,
 		operatorContextID, req.BeneficiaryActorID, req.BeneficiaryActorType, req.AmountMinorUnits)
 	if err != nil {
 		return fmt.Errorf("settle payout wallet reservation: %w", err)
@@ -68,7 +71,7 @@ func settlePayoutReservation(ctx context.Context, tx *sql.Tx, req *PayoutRequest
 		return fmt.Errorf("read payout reservation settlement result: %w", err)
 	}
 	if rows != 1 {
-		return fmt.Errorf("payout wallet reservation is missing or wallet balance is inconsistent")
+		return fmt.Errorf("payout wallet reservation is missing or inconsistent")
 	}
 	return nil
 }
