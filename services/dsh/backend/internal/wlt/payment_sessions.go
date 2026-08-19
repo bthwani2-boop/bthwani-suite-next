@@ -24,7 +24,9 @@ func (c *Client) ReadPaymentSessionTimeline(ctx context.Context, operatorContext
 		return 0, nil, fmt.Errorf("build WLT payment timeline request: %w", err)
 	}
 	setServiceHeaders(req, c.serviceToken)
-	req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	if _, err := c.setDelegatedOperatorContextHeader(req, operatorContextID); err != nil {
+		return 0, nil, fmt.Errorf("prepare WLT payment timeline OperatorContext: %w", err)
+	}
 	if correlationID = strings.TrimSpace(correlationID); correlationID != "" {
 		req.Header.Set("X-Correlation-ID", correlationID)
 	}
@@ -46,7 +48,9 @@ func (c *Client) RefreshPaymentSessionProviderStatus(ctx context.Context, operat
 		return 0, nil, fmt.Errorf("build WLT provider status refresh request: %w", err)
 	}
 	setServiceHeaders(req, c.serviceToken)
-	req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	if _, err := c.setDelegatedOperatorContextHeader(req, operatorContextID); err != nil {
+		return 0, nil, fmt.Errorf("prepare WLT provider status refresh OperatorContext: %w", err)
+	}
 	if correlationID = strings.TrimSpace(correlationID); correlationID == "" {
 		correlationID = paymentSessionID
 	}
