@@ -2,6 +2,7 @@ package payment
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"testing"
 	"time"
@@ -9,17 +10,13 @@ import (
 	"wlt-api/internal/shared"
 )
 
-func cancellationContext(t *testing.T, db queryRower, sessionID string) context.Context {
+func cancellationContext(t *testing.T, db *sql.DB, sessionID string) context.Context {
 	t.Helper()
 	var operatorContextID string
 	if err := db.QueryRow(`SELECT operator_context_id FROM wlt_payment_sessions WHERE id=$1`, sessionID).Scan(&operatorContextID); err != nil {
 		t.Fatalf("read payment-session OperatorContext: %v", err)
 	}
 	return shared.WithOperatorContext(context.Background(), operatorContextID)
-}
-
-type queryRower interface {
-	QueryRow(query string, args ...any) *sql.Row
 }
 
 // TestCancelSessionForOrder_PreCapture_Expires verifies that cancelling an
