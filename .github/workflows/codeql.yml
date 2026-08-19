@@ -3,40 +3,8 @@ name: CodeQL
 on:
   pull_request:
     branches: ["**"]
-    paths:
-      - ".github/actions/**"
-      - ".github/workflows/**"
-      - "apps/**"
-      - "shared/**"
-      - "services/**"
-      - "core/**"
-      - "tools/**/*.js"
-      - "tools/**/*.mjs"
-      - "tools/**/*.cjs"
-      - "tools/**/*.ts"
-      - "tools/**/*.tsx"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "go.work"
-      - ".go-version"
   push:
     branches: ["**"]
-    paths:
-      - ".github/actions/**"
-      - ".github/workflows/**"
-      - "apps/**"
-      - "shared/**"
-      - "services/**"
-      - "core/**"
-      - "tools/**/*.js"
-      - "tools/**/*.mjs"
-      - "tools/**/*.cjs"
-      - "tools/**/*.ts"
-      - "tools/**/*.tsx"
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "go.work"
-      - ".go-version"
   schedule:
     - cron: "17 3 * * 1"
   workflow_dispatch:
