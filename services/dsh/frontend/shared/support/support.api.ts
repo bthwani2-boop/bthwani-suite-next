@@ -4,12 +4,9 @@ import type {
   DshSupportTicket,
   DshSupportMessage,
   DshSupportTicketEvent,
-  DshIncident,
   DshCreateTicketInput,
   DshAddMessageInput,
   DshUpdateTicketInput,
-  DshCreateIncidentInput,
-  DshUpdateIncidentInput,
 } from "./support.types";
 import type { SupportMutationContext } from "./support-mutation-attempt";
 
@@ -131,33 +128,6 @@ export async function updateTicket(
     },
   );
   return data.ticket;
-}
-
-export async function createIncident(input: DshCreateIncidentInput): Promise<DshIncident> {
-  const data = await request<{ incident: DshIncident }>("/dsh/operator/support/incidents", {
-    method: "POST",
-    body: input,
-  });
-  return data.incident;
-}
-
-export async function fetchIncidents(statusFilter?: string): Promise<readonly DshIncident[]> {
-  const path = statusFilter
-    ? `/dsh/operator/support/incidents?status=${encodeURIComponent(statusFilter)}`
-    : "/dsh/operator/support/incidents";
-  const data = await request<{ incidents: DshIncident[] }>(path);
-  return data.incidents ?? [];
-}
-
-export async function updateIncident(
-  incidentId: string,
-  input: DshUpdateIncidentInput,
-): Promise<DshIncident> {
-  const data = await request<{ incident: DshIncident }>(
-    `/dsh/operator/support/incidents/${encodeURIComponent(incidentId)}`,
-    { method: "PATCH", body: input },
-  );
-  return data.incident;
 }
 
 export function classifySupportError(error: unknown): {
