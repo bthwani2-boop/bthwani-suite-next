@@ -2,7 +2,6 @@
   "schemaVersion": "1.0.0",
   "journeyId": "105",
   "title": "العهدة الثنائية من المتجر إلى الكابتن",
-  "status": "COMPATIBILITY_PRODUCT_MODEL",
   "owner": "DSH",
   "purpose": "نقل عهدة الطلب من المتجر المالك إلى الكابتن المعين بتأكيدين مستقلين، ومنع الالتقاط المبكر، وتحويل النقص أو عدم التطابق إلى استثناء تشغيلي قابل للتدقيق والمعالجة.",
   "actors": ["partner", "captain", "operator", "system"],
@@ -16,8 +15,8 @@
   },
   "truthOwnership": {
     "custodyLifecycle": "DSH",
-    "assignmentTruth": "DSH dispatch",
-    "operationalExceptions": "DSH delivery exceptions",
+    "assignmentTruth": "DSH",
+    "operationalExceptions": "DSH",
     "financialTruth": "WLT",
     "surfaceResponsibility": "render, interact, navigate, and refresh only"
   },
@@ -49,28 +48,5 @@
     "لا توجد حقيقة عهدة أو استثناء داخل ملفات الأسطح.",
     "لا تستخدم الأسطح raw API calls أو بيانات demo أو fallback تشغيلي كحقيقة.",
     "لا ينشئ DSH حقيقة مالية موازية لـ WLT."
-  ],
-  "registeredFunctionalSlices": [
-    "product truth and ownership boundaries",
-    "custody database state and actor audit",
-    "captain arrival creates assignment-bound custody",
-    "partner scoped release confirmation",
-    "captain pickup guard and custody completion",
-    "idempotent command replay with payload validation",
-    "reassignment supersedes prior custody",
-    "handoff exception schema and reporter audit",
-    "partner and captain exception commands",
-    "exception blocks illegal confirmation and pickup",
-    "persistent partner exception readback and resolution release",
-    "persistent captain exception readback and resolution release",
-    "shared API controller and governed form",
-    "partner and captain execution surfaces",
-    "operator exception queue and legal resolutions",
-    "client unified lifecycle readback",
-    "OpenAPI security and WLT ownership boundary",
-    "targeted source database and CI gates"
-  ],
-  "evidenceRequired": ["static", "database", "contract", "backend", "runtime", "cross-surface", "security", "finance-boundary", "qa", "governance", "ci"],
-  "planningRegistry": "tools/plans/journeys/FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md",
-  "evidencePolicy": "Verification branches, workflow runs, historical SHAs, automated PASS snapshots and independent-review state are external evidence and are intentionally not stored as current truth in this compatibility Product Truth record."
+  ]
 }
