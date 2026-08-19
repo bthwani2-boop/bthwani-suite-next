@@ -13,7 +13,6 @@ import (
 
 	"workforce-api/internal/auth"
 	"workforce-api/internal/identityclient"
-	"workforce-api/internal/media"
 	"workforce-api/internal/workforce"
 )
 
@@ -23,13 +22,12 @@ type server struct {
 	repo             *workforce.Repository
 	auth             *auth.Client
 	identity         *identityclient.Client
-	media            *media.Provider
 	internalDSHToken string
 	readinessStore   workforceRuntimeReadinessStore
 }
 
-func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repository, authClient *auth.Client, identityClient *identityclient.Client, mediaProvider *media.Provider, internalDSHToken string) http.Handler {
-	s := &server{db: db, service: service, repo: repo, auth: authClient, identity: identityClient, media: mediaProvider, internalDSHToken: strings.TrimSpace(internalDSHToken)}
+func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repository, authClient *auth.Client, identityClient *identityclient.Client, internalDSHToken string) http.Handler {
+	s := &server{db: db, service: service, repo: repo, auth: authClient, identity: identityClient, internalDSHToken: strings.TrimSpace(internalDSHToken)}
 	if db != nil {
 		s.readinessStore = sqlWorkforceRuntimeReadinessStore{db: db}
 	}
@@ -37,10 +35,6 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux.HandleFunc("GET /workforce/health", s.health)
 	mux.HandleFunc("GET /workforce/readiness", s.readiness)
 	mux.HandleFunc("GET /workforce/readiness/{actorId}", s.anyAuthenticated(s.handleGetCurrentProviderReadiness))
-
-	//	mux.HandleFunc("POST /workforce/employees/{actorId}/media/uploads", s.operatorOnly("provider:update", s.handleMediaUpload))
-	//	mux.HandleFunc("POST /workforce/captains/{actorId}/media/uploads", s.operatorOnly("provider:update", s.handleMediaUpload))
-	//	mux.HandleFunc("POST /workforce/field-agents/{actorId}/media/uploads", s.operatorOnly("provider:update", s.handleMediaUpload))
 
 	mux.HandleFunc("POST /workforce/field-agents", s.operatorOnly("provider:create", s.createFieldAgent))
 	mux.HandleFunc("GET /workforce/field-agents", s.operatorOnly("provider:read", s.listFieldAgents))
