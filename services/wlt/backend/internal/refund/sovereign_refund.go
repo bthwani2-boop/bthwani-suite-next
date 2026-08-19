@@ -14,10 +14,10 @@ func CompleteRefundSovereign(ctx context.Context, db *sql.DB, refundID string) (
 		ctx, db, refundID, "wlt", "service", "legacy-refund:"+refundID,
 		"sovereign compatibility completion", "refund-"+refundID, []string{"approved"},
 	)
-	return legacyRefundView(item), err
+	return cancellationRefundView(item), err
 }
 
 func CompleteRefundWithProviderSovereign(ctx context.Context, db *sql.DB, rail provider.CashInRail, refundID string, meta provider.RequestMeta) (*Refund, error) {
 	item, err := CompleteGovernedRefundWithProvider(ctx, db, rail, refundID, "wlt-refund-executor", meta.CorrelationID)
-	return legacyRefundView(item), err
+	return cancellationRefundView(item), err
 }
