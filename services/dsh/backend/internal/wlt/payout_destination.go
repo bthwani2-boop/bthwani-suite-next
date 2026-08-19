@@ -23,12 +23,13 @@ func partnerPayoutDestinationPath(partnerID string) string {
 
 // PayoutDestinationUpsertInput is intentionally official-wallet-only. DSH may
 // relay the unmasked reference to WLT for this request, but must never persist
-// or return it. DestinationMethod is WLT-owned and therefore is not caller input.
+// or return it. CreatedByActorID is transport-only: WLT receives it as the
+// authenticated delegated finance principal, never as body-selected authority.
 type PayoutDestinationUpsertInput struct {
 	BeneficiaryName           string `json:"beneficiaryName"`
 	OfficialWalletProviderKey string `json:"officialWalletProviderKey"`
 	DestinationReference      string `json:"destinationReference"`
-	CreatedByActorID          string `json:"operatorId"`
+	CreatedByActorID          string `json:"-"`
 	CorrelationID             string `json:"-"`
 	IdempotencyKey            string `json:"-"`
 }
@@ -78,6 +79,10 @@ func (c *Client) UpsertPayoutDestination(ctx context.Context, partnerID string, 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
+		return nil, fmt.Errorf("prepare WLT payout destination OperatorContext: %w", err)
+	}
+	req.Header.Set("X-Delegated-Principal-ID", input.CreatedByActorID)
 	correlationID := strings.TrimSpace(input.CorrelationID)
 	if correlationID == "" {
 		correlationID = deterministicMutationKey("partner-payout-correlation", partnerID, input.CreatedByActorID)
@@ -123,6 +128,9 @@ func (c *Client) GetPayoutDestination(ctx context.Context, partnerID string) (*P
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
+		return nil, fmt.Errorf("prepare WLT payout readback OperatorContext: %w", err)
+	}
 	response, err := c.http.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("call WLT payout readback: %w", err)
@@ -173,6 +181,10 @@ func (c *Client) DeactivatePayoutDestination(ctx context.Context, partnerID, act
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
+		return fmt.Errorf("prepare WLT payout destination deactivation OperatorContext: %w", err)
+	}
+	req.Header.Set("X-Delegated-Principal-ID", actorID)
 	if strings.TrimSpace(correlationID) == "" {
 		correlationID = deterministicMutationKey("partner-payout-deactivate-correlation", partnerID, actorID)
 	}
