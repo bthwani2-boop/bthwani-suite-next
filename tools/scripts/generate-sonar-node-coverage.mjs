@@ -203,8 +203,8 @@ export function planCoverageSuites(inputFiles, { mode = "affected" } = {}) {
 function readChangedFiles(baseSha, headSha) {
   const validBase = baseSha && !ZERO_SHA.test(baseSha) && baseSha !== headSha;
   const args = validBase
-    ? ["diff", "--name-only", "--diff-filter=ACMRDTUXB", baseSha, headSha, "--"]
-    : ["show", "--pretty=format:", "--name-only", headSha || "HEAD", "--"];
+    ? ["diff", "--name-only", "--diff-filter=ACMRTUXB", baseSha, headSha, "--"]
+    : ["show", "--pretty=format:", "--name-only", "--diff-filter=ACMRTUXB", headSha || "HEAD", "--"];
   return execFileSync("git", args, { cwd: repoRoot, encoding: "utf8" })
     .split(/\r?\n/)
     .map(normalizePath)
