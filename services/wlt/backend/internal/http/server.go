@@ -21,27 +21,17 @@ import (
 	"wlt-api/internal/wallet"
 )
 
-// routeKind classifies how a registered WLT route is protected.
 type routeKind int
 
 const (
-	// routePublic needs no service caller and is reserved for health/readiness
-	// endpoints that carry no actor, order, wallet, settlement, refund or other
-	// financial state.
 	routePublic routeKind = iota
-	// routeRead requires an authenticated DSH service caller.
 	routeRead
-	// routeMutation additionally requires WLT_MUTATIONS_ENABLED and the
-	// finance kill switch.
 	routeMutation
 )
 
 type registeredRoute struct {
 	Pattern string
 	Kind    routeKind
-	// ServiceAuth is false only for the provider webhook, which is
-	// authenticated by provider signature inside its handler rather than by a
-	// BThwani service token.
 	ServiceAuth bool
 }
 
@@ -82,13 +72,11 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	public("GET /wlt/health", health.HandleHealth)
 	public("GET /wlt/readiness", health.HandleReadiness(db, ds))
 
-	// These are financial projections keyed by real orders/actors, not static
-	// vocabularies. They must never be reachable without the authenticated DSH
-	// financial-read boundary.
 	read("GET /wlt/references/payment-status", reference.HandleGetPaymentStatus(db))
 	read("GET /wlt/references/settlement-status", reference.HandleGetSettlementStatus(db))
 	read("GET /wlt/references/refund-status", reference.HandleGetRefundStatus(db))
 	read("GET /wlt/references/wallet-status", reference.HandleGetWalletStatus(db))
+	read("GET /wlt/references/field-commission", reference.HandleGetFieldCommission(db))
 
 	read("GET /wlt/wallets/{actorType}/{actorId}", wallet.HandleGetWallet(db))
 	read("GET /wlt/captain-collateral/{captainId}", collateral.HandleGet(db))
@@ -108,7 +96,6 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	mutation("POST /wlt/topup-sessions", reference.HandleCreateTopUpSessionTrustedDsh(db))
 	mutation("POST /wlt/topup-sessions/{paymentSessionId}/authorize", payment.HandleGovernedPaymentOperation(db, "authorize", payment.HandleAuthorizeTopUpSession(db)))
 	mutation("POST /wlt/topup-sessions/{paymentSessionId}/capture", payment.HandleGovernedPaymentOperation(db, "capture", payment.HandleCaptureTopUpSession(db)))
-
 	providerMutation("POST /wlt/provider/webhooks/payment", payment.HandlePaymentProviderWebhook(db))
 
 	mutation("POST /wlt/refunds", refund.RequireOperatorContextScope(db, refund.RequireMutationIdempotency(db, "create", refund.HandleCreateGovernedRefund(db))))

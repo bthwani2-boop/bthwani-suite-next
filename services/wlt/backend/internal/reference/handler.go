@@ -87,3 +87,23 @@ func HandleGetWalletStatus(db *sql.DB) http.HandlerFunc {
 		shared.SendJSON(w, http.StatusOK, map[string]any{"reference": ref})
 	}
 }
+
+func HandleGetFieldCommission(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		partnerID := r.URL.Query().Get("partnerId")
+		if partnerID == "" {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "partnerId query parameter is required")
+			return
+		}
+		ref, err := GetFieldCommissionRef(r.Context(), db, partnerID)
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
+			return
+		}
+		if ref == nil {
+			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "field commission reference not found")
+			return
+		}
+		shared.SendJSON(w, http.StatusOK, map[string]any{"reference": ref})
+	}
+}

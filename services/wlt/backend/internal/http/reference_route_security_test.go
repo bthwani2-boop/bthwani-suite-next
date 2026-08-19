@@ -9,6 +9,7 @@ func TestFinancialReferenceRoutesRequireAuthenticatedReadBoundary(t *testing.T) 
 		"GET /wlt/references/settlement-status": false,
 		"GET /wlt/references/refund-status":     false,
 		"GET /wlt/references/wallet-status":     false,
+		"GET /wlt/references/field-commission":  false,
 	}
 
 	for _, route := range routes {
