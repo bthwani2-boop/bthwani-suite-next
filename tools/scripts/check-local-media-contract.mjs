@@ -6,9 +6,31 @@ import { fileURLToPath } from "node:url";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const mediaRoot = path.join(repoRoot, "services/dsh/database/seeds/local/media");
 const manifestPath = path.join(mediaRoot, "media-manifest.json");
+const pngSignature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
 function sha256(buffer) {
   return crypto.createHash("sha256").update(buffer).digest("hex");
+}
+
+function validatePngStructure(buffer) {
+  if (buffer.length < 45 || !buffer.subarray(0, pngSignature.length).equals(pngSignature)) {
+    return "missing a complete PNG signature/chunk structure";
+  }
+  const ihdrLength = buffer.readUInt32BE(8);
+  const ihdrType = buffer.subarray(12, 16).toString("ascii");
+  if (ihdrLength !== 13 || ihdrType !== "IHDR") {
+    return "does not start with a canonical IHDR chunk";
+  }
+  const width = buffer.readUInt32BE(16);
+  const height = buffer.readUInt32BE(20);
+  if (width === 0 || height === 0) {
+    return "declares a zero-width or zero-height PNG";
+  }
+  const iendType = buffer.subarray(buffer.length - 8, buffer.length - 4).toString("ascii");
+  if (iendType !== "IEND") {
+    return "does not end with an IEND chunk";
+  }
+  return null;
 }
 
 if (!fs.existsSync(manifestPath)) {
@@ -56,9 +78,14 @@ for (const item of manifest.media) {
     failures.push(`${fixtureId}: expectedChecksum must be a SHA-256 digest`);
     continue;
   }
-  const actualChecksum = sha256(fs.readFileSync(absolutePath));
+  const contents = fs.readFileSync(absolutePath);
+  const actualChecksum = sha256(contents);
   if (actualChecksum !== expectedChecksum) {
     failures.push(`${fixtureId}: checksum mismatch for ${relativeSourcePath}; expected ${expectedChecksum}, received ${actualChecksum}`);
+  }
+  if (String(item.mimeType ?? "").trim().toLowerCase() === "image/png") {
+    const pngFailure = validatePngStructure(contents);
+    if (pngFailure) failures.push(`${fixtureId}: invalid PNG ${relativeSourcePath}; ${pngFailure}`);
   }
 }
 
