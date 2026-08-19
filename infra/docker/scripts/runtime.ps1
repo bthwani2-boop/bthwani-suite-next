@@ -470,6 +470,7 @@ switch ($Action) {
     Write-Host "=== runtime:verify-catalog"
     $parameters = @{}
     if ($ProfileList -contains "media") { $parameters.RequireMedia = $true }
+    $global:LASTEXITCODE = 0
     & (Join-Path $RepoRoot "tools/scripts/verify-catalog.ps1") @parameters
     if ($LASTEXITCODE -ne 0) { throw "verify-catalog failed (exit $LASTEXITCODE)" }
     Write-Host "verify-catalog: PASS"

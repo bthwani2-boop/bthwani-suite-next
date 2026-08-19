@@ -21,8 +21,15 @@ test("DSH runtime profiles bootstrap exactly once before catalog readback and sm
   assert.ok(smoke > readback, "smoke must follow catalog readback");
 });
 
-test("identity-security includes WLT because local Workforce provisioning prepares captain standing", () => {
-  assert.match(workflow, /"identity-security"\s*\{\s*"identity,workforce,dsh,wlt,media"\s*\}/g);
+test("identity-security includes WLT and clean-clone media storage without local seed media", () => {
+  assert.match(workflow, /"identity-security"\s*\{\s*"identity,workforce,dsh,wlt,media-storage"\s*\}/g);
+  assert.doesNotMatch(workflow, /"identity-security"\s*\{\s*"[^"]*(?:^|,)media(?:,|$)[^"]*"\s*\}/g);
+});
+
+test("CI runtime profiles never require workstation local seed media", () => {
+  assert.match(workflow, /"dsh"\s*\{\s*"dsh,media-storage"\s*\}/g);
+  assert.match(workflow, /"full"\s*\{\s*"identity,workforce,dsh,wlt,providers,platform,financial-simulators,mail,media-storage"\s*\}/g);
+  assert.doesNotMatch(workflow, /\{\s*"[^"\n]*(?:^|,)media(?:,|$)[^"\n]*"\s*\}/g);
 });
 
 test("profiles without DSH retain the non-mutating up path", () => {
@@ -30,14 +37,16 @@ test("profiles without DSH retain the non-mutating up path", () => {
   assert.match(workflow, /-Action up -Profiles \$profiles/);
 });
 
-test("candidate-bound smoke skips the duplicate DSH image build", () => {
+test("candidate-bound smoke reuses the prepared DSH image and preserves selected media capability", () => {
   assert.match(runtimePhase, /PreparedRuntimeMarkerPath/);
   assert.match(runtimePhase, /Assert-PreparedRuntimeMarker/);
   assert.match(runtimePhase, /runtimeParameters\.PreparedRuntime = \$true/);
   assert.match(runtimeDispatch, /\[switch\]\$PreparedRuntime/);
+  assert.match(runtimeDispatch, /\$dshProfileString = \$dshProfiles -join ","/);
   assert.match(runtimeDispatch, /if \(\$PreparedRuntime\)[\s\S]*?skipping duplicate DSH image build/);
-  assert.match(runtimeDispatch, /if \(\$PreparedRuntime\)[\s\S]*?Invoke-RuntimeEngine -EngineAction "smoke" -EngineProfiles "dsh,media"/);
-  assert.match(runtimeDispatch, /Invoke-RuntimeEngine -EngineAction "seed" -EngineProfiles "dsh,media"/);
+  assert.match(runtimeDispatch, /if \(\$PreparedRuntime\)[\s\S]*?Invoke-RuntimeEngine -EngineAction "smoke" -EngineProfiles \$dshProfileString/);
+  assert.match(runtimeDispatch, /Invoke-RuntimeEngine -EngineAction "seed" -EngineProfiles \$dshProfileString/);
+  assert.match(runtimeDispatch, /elseif \(\$hasMediaStorage\) \{ \$dshProfiles \+= "media-storage" \}/);
 });
 
 test("aggregate runtime applicability follows the canonical runtime_required decision", () => {
