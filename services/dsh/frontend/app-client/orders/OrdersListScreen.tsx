@@ -193,10 +193,10 @@ export function OrdersListScreen({ onOpenOrder, onOpenSpecialRequests, onBack, o
       />
       {onOpenSpecialRequests ? (
         <View style={styles.specialRequestsHeader}>
-          <Button 
-            label="تصفح طلباتك الخاصة (طلبات التوصيل الخاص وشي إن)" 
-            tone="secondary" 
-            onPress={onOpenSpecialRequests} 
+          <Button
+            label="تصفح طلباتك الخاصة (طلبات التوصيل الخاص وشي إن)"
+            tone="secondary"
+            onPress={onOpenSpecialRequests}
           />
         </View>
       ) : null}
