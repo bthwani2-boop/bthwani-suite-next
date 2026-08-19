@@ -19,7 +19,7 @@ type Client struct {
 	http    *http.Client
 }
 
-func NewClient(baseURL, token string, _ ...string) *Client {
+func NewClient(baseURL, token string) *Client {
 	return &Client{
 		baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
 		token:   strings.TrimSpace(token),
