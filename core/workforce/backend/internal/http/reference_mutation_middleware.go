@@ -104,29 +104,6 @@ func handleCityUpdate(w http.ResponseWriter, r *http.Request, repo *workforce.Re
 	sendJSON(w, http.StatusOK, city)
 }
 
-func (s *server) replaceProviderAffiliations(w http.ResponseWriter, r *http.Request) {
-	role, ok := workforceKindForCollection(r.PathValue("collection"))
-	actorID := strings.TrimSpace(r.PathValue("actorId"))
-	if !ok || actorID == "" {
-		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "provider collection and actor id are required")
-		return
-	}
-	handleAffiliationReplace(w, r, s.repo, s.auth, role, actorID)
-}
-
-func workforceKindForCollection(collection string) (string, bool) {
-	switch strings.TrimSpace(collection) {
-	case "field-agents":
-		return "field", true
-	case "captains":
-		return "captain", true
-	case "employees":
-		return "employee", true
-	default:
-		return "", false
-	}
-}
-
 func handleAffiliationReplace(w http.ResponseWriter, r *http.Request, repo *workforce.Repository, authClient *auth.Client, role, actorID string) {
 	identity, ok := resolveReferenceOperator(w, r, authClient, "provider:update")
 	if !ok {
