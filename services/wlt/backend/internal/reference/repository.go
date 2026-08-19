@@ -1,21 +1,28 @@
 package reference
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+
+	"wlt-api/internal/shared"
 )
 
-func GetPaymentStatusRef(db *sql.DB, orderID string) (*PaymentStatusRef, error) {
+func GetPaymentStatusRef(ctx context.Context, db *sql.DB, orderID string) (*PaymentStatusRef, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 	const q = `
 		SELECT id, order_id, status, updated_at
 		FROM wlt_payment_status_refs
-		WHERE order_id = $1
+		WHERE operator_context_id = $1 AND order_id = $2
 		ORDER BY updated_at DESC
 		LIMIT 1`
 
-	row := db.QueryRow(q, orderID)
+	row := db.QueryRowContext(ctx, q, operatorContextID, orderID)
 	var ref PaymentStatusRef
-	err := row.Scan(&ref.ID, &ref.OrderID, &ref.Status, &ref.UpdatedAt)
+	err = row.Scan(&ref.ID, &ref.OrderID, &ref.Status, &ref.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -25,17 +32,21 @@ func GetPaymentStatusRef(db *sql.DB, orderID string) (*PaymentStatusRef, error) 
 	return &ref, nil
 }
 
-func GetSettlementStatusRef(db *sql.DB, orderID string) (*SettlementStatusRef, error) {
+func GetSettlementStatusRef(ctx context.Context, db *sql.DB, orderID string) (*SettlementStatusRef, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 	const q = `
 		SELECT id, order_id, status, updated_at
 		FROM wlt_settlement_status_refs
-		WHERE order_id = $1
+		WHERE operator_context_id = $1 AND order_id = $2
 		ORDER BY updated_at DESC
 		LIMIT 1`
 
-	row := db.QueryRow(q, orderID)
+	row := db.QueryRowContext(ctx, q, operatorContextID, orderID)
 	var ref SettlementStatusRef
-	err := row.Scan(&ref.ID, &ref.OrderID, &ref.Status, &ref.UpdatedAt)
+	err = row.Scan(&ref.ID, &ref.OrderID, &ref.Status, &ref.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -45,17 +56,21 @@ func GetSettlementStatusRef(db *sql.DB, orderID string) (*SettlementStatusRef, e
 	return &ref, nil
 }
 
-func GetRefundStatusRef(db *sql.DB, orderID string) (*RefundStatusRef, error) {
+func GetRefundStatusRef(ctx context.Context, db *sql.DB, orderID string) (*RefundStatusRef, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 	const q = `
 		SELECT id, order_id, status, updated_at
 		FROM wlt_refund_status_refs
-		WHERE order_id = $1
+		WHERE operator_context_id = $1 AND order_id = $2
 		ORDER BY updated_at DESC
 		LIMIT 1`
 
-	row := db.QueryRow(q, orderID)
+	row := db.QueryRowContext(ctx, q, operatorContextID, orderID)
 	var ref RefundStatusRef
-	err := row.Scan(&ref.ID, &ref.OrderID, &ref.Status, &ref.UpdatedAt)
+	err = row.Scan(&ref.ID, &ref.OrderID, &ref.Status, &ref.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -65,17 +80,21 @@ func GetRefundStatusRef(db *sql.DB, orderID string) (*RefundStatusRef, error) {
 	return &ref, nil
 }
 
-func GetWalletStatusRef(db *sql.DB, actorID, actorType string) (*WalletStatusRef, error) {
+func GetWalletStatusRef(ctx context.Context, db *sql.DB, actorID, actorType string) (*WalletStatusRef, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 	const q = `
 		SELECT id, actor_id, actor_type, status, currency, updated_at
 		FROM wlt_wallet_refs
-		WHERE actor_id = $1 AND actor_type = $2
+		WHERE operator_context_id = $1 AND actor_id = $2 AND actor_type = $3
 		ORDER BY updated_at DESC
 		LIMIT 1`
 
-	row := db.QueryRow(q, actorID, actorType)
+	row := db.QueryRowContext(ctx, q, operatorContextID, actorID, actorType)
 	var ref WalletStatusRef
-	err := row.Scan(&ref.ID, &ref.ActorID, &ref.ActorType, &ref.Status, &ref.Currency, &ref.UpdatedAt)
+	err = row.Scan(&ref.ID, &ref.ActorID, &ref.ActorType, &ref.Status, &ref.Currency, &ref.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -85,18 +104,22 @@ func GetWalletStatusRef(db *sql.DB, actorID, actorType string) (*WalletStatusRef
 	return &ref, nil
 }
 
-func GetFieldCommissionRef(db *sql.DB, partnerID string) (*FieldCommissionRef, error) {
+func GetFieldCommissionRef(ctx context.Context, db *sql.DB, partnerID string) (*FieldCommissionRef, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return nil, err
+	}
 	const q = `
 		SELECT id, partner_id, partner_name, amount_minor_units, currency, status, description, evidence_required, settled_at, created_at, updated_at
 		FROM wlt_field_commission_refs
-		WHERE partner_id = $1
+		WHERE operator_context_id = $1 AND partner_id = $2
 		ORDER BY updated_at DESC
 		LIMIT 1`
 
-	row := db.QueryRow(q, partnerID)
+	row := db.QueryRowContext(ctx, q, operatorContextID, partnerID)
 	var ref FieldCommissionRef
 	var settledAt sql.NullString
-	err := row.Scan(
+	err = row.Scan(
 		&ref.ID,
 		&ref.PartnerID,
 		&ref.PartnerName,

@@ -3,7 +3,7 @@
   "service": "wlt",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "wlt-943_captain_cod_ledger_write_fence.sql",
+  "cutover": "wlt-944_financial_reference_operator_context.sql",
   "migrations": [
     {"ordinal":1,"file":"wlt-000_financial_references.sql","sha256":"64a1bec63acf81e53521bb683ddc1fb1f46cc1d5cccc61af4aa95696159ce6fe","historicalPrefix":"000","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":2,"file":"wlt-001_payment_sessions.sql","sha256":"aa350f36c803d912b0e51874f9f4c0f93d3ccfb4c56f2db819f65b32c82bb07d","historicalPrefix":"001","state":"HISTORICAL_IMMUTABLE"},
@@ -14,7 +14,7 @@
     {"ordinal":7,"file":"wlt-006_ledger.sql","sha256":"7cbf5076f036f657d7122ac873d21f0a97a5f0b11e2e0a6000e97bd3bf0450f4","historicalPrefix":"006","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":8,"file":"wlt-007_default_currency_yer.sql","sha256":"8ec7873e15bf457c7af581b688d462a68864d3711c31ba70ec981c8ed323425a","historicalPrefix":"007","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":9,"file":"wlt-008_payment_session_handoff_controls.sql","sha256":"3378ad0a769dfccee21a60cfb5ae84040c627973a24fa03bf89c7160c8a60797","historicalPrefix":"008","state":"HISTORICAL_IMMUTABLE"},
-    {"ordinal":10,"file":"wlt-009_dsh_notify_outbox.sql","sha256":"54e13ffac1f85bc33769f89eb31db9cb1d89577d87aab57ac0a089358628c58c","historicalPrefix":"009","state":"HISTORICAL_IMMUTABLE"},
+    {"ordinal":10,"file":"wlt-009_dsh_notify_outbox.sql","sha256":"54e13ff1c85bc33769f89eb31db9cb1d89577d87aab57ac0a089358628c58c","historicalPrefix":"009","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":11,"file":"wlt-010_payout_destinations.sql","sha256":"c2e2a7c71f08fb4d539b2f34d8b4ff446843cb1127b84f224f608aea465e1bfe","historicalPrefix":"010","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":12,"file":"wlt-011_field_finance.sql","sha256":"5b83a09a61ea1b568b03d7eb427dc35b780c1968ed9eebf78ef22edf32ce73b2","historicalPrefix":"011","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":13,"file":"wlt-012_payout_idempotency_hash.sql","sha256":"95e810c54ddc17d30cc8d9072e12827e7d51539a494f75d6b6f5c5905bbe0934","historicalPrefix":"012","state":"HISTORICAL_IMMUTABLE"},
@@ -117,6 +117,7 @@
     {"ordinal":110,"file":"wlt-940_captain_cod_legacy_write_fence.sql","sha256":"b38cdc13547d99f99b2fbff09e8375fece310bb0788323dc53ddc335c6ec6318","historicalPrefix":"940","state":"ACTIVE"},
     {"ordinal":111,"file":"wlt-941_captain_cod_refund_write_fence.sql","sha256":"7f912b730f7a704af722002a9a1f806dc3867b3ecece2c8805d2f30b73bb3262","historicalPrefix":"941","state":"ACTIVE"},
     {"ordinal":112,"file":"wlt-942_captain_cod_historical_write_fence.sql","sha256":"aa313a53a5d5c91e636ccf7da299cf257c875bd890afbcafec0d0bc226ae7ab3","historicalPrefix":"942","state":"ACTIVE"},
-    {"ordinal":113,"file":"wlt-943_captain_cod_ledger_write_fence.sql","sha256":"fb62bcf6359d485121149ba1a65cfa353e555f9a647de8e9361f806dfb7f82a1","historicalPrefix":"943","state":"ACTIVE"}
+    {"ordinal":113,"file":"wlt-943_captain_cod_ledger_write_fence.sql","sha256":"fb62bcf6359d485121149ba1a65cfa353e555f9a647de8e9361f806dfb7f82a1","historicalPrefix":"943","state":"ACTIVE"},
+    {"ordinal":114,"file":"wlt-944_financial_reference_operator_context.sql","sha256":"dda9438a11eb0831108e72590e75260977a25cc86ad6b34a2ce6e3c3819de9f4","historicalPrefix":"944","state":"ACTIVE"}
   ]
 }

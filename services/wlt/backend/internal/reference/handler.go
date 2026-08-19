@@ -11,21 +11,19 @@ func HandleGetPaymentStatus(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		orderID := r.URL.Query().Get("orderId")
 		if orderID == "" {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_PARAMETER", "orderId is required")
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderId query parameter is required")
 			return
 		}
-
-		ref, err := GetPaymentStatusRef(db, orderID)
+		ref, err := GetPaymentStatusRef(r.Context(), db, orderID)
 		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
 		}
 		if ref == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "no payment status reference for orderId: "+orderID)
+			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payment status reference not found")
 			return
 		}
-
-		shared.SendJSON(w, http.StatusOK, map[string]interface{}{"reference": ref})
+		shared.SendJSON(w, http.StatusOK, map[string]any{"reference": ref})
 	}
 }
 
@@ -33,21 +31,19 @@ func HandleGetSettlementStatus(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		orderID := r.URL.Query().Get("orderId")
 		if orderID == "" {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_PARAMETER", "orderId is required")
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderId query parameter is required")
 			return
 		}
-
-		ref, err := GetSettlementStatusRef(db, orderID)
+		ref, err := GetSettlementStatusRef(r.Context(), db, orderID)
 		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
 		}
 		if ref == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "no settlement status reference for orderId: "+orderID)
+			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "settlement status reference not found")
 			return
 		}
-
-		shared.SendJSON(w, http.StatusOK, map[string]interface{}{"reference": ref})
+		shared.SendJSON(w, http.StatusOK, map[string]any{"reference": ref})
 	}
 }
 
@@ -55,21 +51,19 @@ func HandleGetRefundStatus(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		orderID := r.URL.Query().Get("orderId")
 		if orderID == "" {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_PARAMETER", "orderId is required")
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "orderId query parameter is required")
 			return
 		}
-
-		ref, err := GetRefundStatusRef(db, orderID)
+		ref, err := GetRefundStatusRef(r.Context(), db, orderID)
 		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
 		}
 		if ref == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "no refund status reference for orderId: "+orderID)
+			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "refund status reference not found")
 			return
 		}
-
-		shared.SendJSON(w, http.StatusOK, map[string]interface{}{"reference": ref})
+		shared.SendJSON(w, http.StatusOK, map[string]any{"reference": ref})
 	}
 }
 
@@ -78,27 +72,18 @@ func HandleGetWalletStatus(db *sql.DB) http.HandlerFunc {
 		actorID := r.URL.Query().Get("actorId")
 		actorType := r.URL.Query().Get("actorType")
 		if actorID == "" || actorType == "" {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_PARAMETER", "actorId and actorType are required")
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "actorId and actorType query parameters are required")
 			return
 		}
-
-		switch actorType {
-		case "client", "partner", "captain", "field":
-		default:
-			shared.SendError(w, http.StatusBadRequest, "INVALID_PARAMETER", "actorType must be one of: client, partner, captain, field")
-			return
-		}
-
-		ref, err := GetWalletStatusRef(db, actorID, actorType)
+		ref, err := GetWalletStatusRef(r.Context(), db, actorID, actorType)
 		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
 		}
 		if ref == nil {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "no wallet reference for actorId: "+actorID)
+			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "wallet status reference not found")
 			return
 		}
-
-		shared.SendJSON(w, http.StatusOK, map[string]interface{}{"reference": ref})
+		shared.SendJSON(w, http.StatusOK, map[string]any{"reference": ref})
 	}
 }
