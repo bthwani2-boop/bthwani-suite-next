@@ -45,8 +45,9 @@ export function walkFiles(rootDirs, predicate) {
   const out = [];
   for (const relative of String(raw).split("\0").filter(Boolean)) {
     const full = path.join(repoRoot, relative);
+    if (!predicate(full, path.basename(relative))) continue;
     if (!fs.existsSync(full) || !fs.statSync(full).isFile()) continue;
-    if (predicate(full, path.basename(relative))) out.push(full);
+    out.push(full);
   }
   return out;
 }

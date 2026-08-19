@@ -47,9 +47,15 @@ jobs:
             tools/guards/no-broken-imports.mjs \
             tools/guards/api-binding-gate.mjs \
             tools/guards/backend-api-binding-gate.mjs \
-            tools/guards/service-manifest-drift-gate.mjs \
             tools/guards/generated-client-provenance-gate.mjs \
             tools/guards/contract-scope-binding-gate.mjs \
-            tools/guards/openapi-bundle-provenance-gate.mjs \
-            tools/guards/frontend-feature-binding-gate.mjs \
             tools/guards/runtime-real-bindings-gate.mjs
+      - name: Verify specialized binding integrity on full verification
+        if: ${{ inputs.full_verification == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          node tools/scripts/run-guard-suite.mjs --concurrency 2 \
+            tools/guards/service-manifest-drift-gate.mjs \
+            tools/guards/openapi-bundle-provenance-gate.mjs \
+            tools/guards/frontend-feature-binding-gate.mjs

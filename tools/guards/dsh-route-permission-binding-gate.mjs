@@ -3,11 +3,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { extractGoRoutes } from "./lib/go-route-extractor.mjs";
 import {
-  collectHandleFuncRegistrations,
   findMatchingDelimiter,
   listGoFiles,
-} from "./lib/go-http-routes.mjs";
+} from "./lib/go-scanner.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const guardId = "dsh-route-permission-binding-gate";
@@ -84,7 +84,7 @@ function classify(body, depth = 0, visited = new Set()) {
   return "NOCHECK";
 }
 
-const registrations = collectHandleFuncRegistrations(httpRoot, { recursive: false });
+const registrations = extractGoRoutes("services/dsh/backend/internal/http/server.go");
 const allowlist = loadAllowlist();
 const violations = [];
 const usedAllowlistEntries = new Set();

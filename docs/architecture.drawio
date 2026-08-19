@@ -950,9 +950,6 @@
           <mxCell id="tools-tools_guards_fullstack_boundary_gate_mjs" value="fullstack-boundary-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="970" y="180" width="160" height="50" as="geometry" />
           </mxCell>
-          <mxCell id="tools-tools_guards__workflow_registry_mjs" value="_workflow-registry" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="20" y="245" width="160" height="50" as="geometry" />
-          </mxCell>
           <mxCell id="tools-tools_guards_lib_go_http_routes_mjs" value="go-http-routes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="210" y="245" width="160" height="50" as="geometry" />
           </mxCell>
@@ -986,9 +983,6 @@
           <mxCell id="tools-tools_guards_go_routes_ci_mjs" value="go-routes-ci" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="970" y="310" width="160" height="50" as="geometry" />
           </mxCell>
-          <mxCell id="tools-tools_guards_guard_registry_gate_mjs" value="guard-registry-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="20" y="375" width="160" height="50" as="geometry" />
-          </mxCell>
           <mxCell id="tools-tools_guards_local_dev_actors_gate_mjs" value="local-dev-actors-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="210" y="375" width="160" height="50" as="geometry" />
           </mxCell>
@@ -1000,9 +994,6 @@
           </mxCell>
           <mxCell id="tools-tools_guards_openapi_bundle_provenance_gate_mjs" value="openapi-bundle-provenance-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="780" y="375" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_required_command_integrity_gate_mjs" value="required-command-integrity-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="970" y="375" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="tools-tools_guards_runtime_config_gate_mjs" value="runtime-config-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="20" y="440" width="160" height="50" as="geometry" />
@@ -1018,9 +1009,6 @@
           </mxCell>
           <mxCell id="tools-tools_guards_wlt_openapi_bundle_gate_mjs" value="wlt-openapi-bundle-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="780" y="440" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_workflow_temp_files_gate_mjs" value="workflow-temp-files-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="970" y="440" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="tools-tools_scripts_contracts_foundation_mjs" value="foundation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="20" y="505" width="160" height="50" as="geometry" />
@@ -1162,9 +1150,6 @@
           </mxCell>
           <mxCell id="tools-tools_guards_canonical_paths_gate_mjs" value="canonical-paths-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="780" y="960" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_cleanup_policy_gate_mjs" value="cleanup-policy-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="970" y="960" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="tools-tools_guards_contract_registry_drift_gate_mjs" value="contract-registry-drift-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="20" y="1025" width="160" height="50" as="geometry" />
@@ -4700,12 +4685,6 @@
           <mxCell id="edge-129" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_governance_schema_gate_mjs" target="tools-tools_guards__guard_utils_mjs">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
-          <mxCell id="edge-130" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_guard_registry_gate_mjs" target="tools-tools_guards__guard_utils_mjs">
-            <mxGeometry relative="1" as="geometry" />
-          </mxCell>
-          <mxCell id="edge-131" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_guard_registry_gate_mjs" target="tools-tools_guards__workflow_registry_mjs">
-            <mxGeometry relative="1" as="geometry" />
-          </mxCell>
           <mxCell id="edge-132" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_heavy_import_gate_mjs" target="tools-tools_guards__guard_utils_mjs">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
@@ -4757,12 +4736,6 @@
           <mxCell id="edge-148" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_repository_structure_gate_mjs" target="tools-tools_guards__guard_utils_mjs">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
-          <mxCell id="edge-149" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_required_command_integrity_gate_mjs" target="tools-tools_guards__guard_utils_mjs">
-            <mxGeometry relative="1" as="geometry" />
-          </mxCell>
-          <mxCell id="edge-150" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_required_command_integrity_gate_mjs" target="tools-tools_guards__workflow_registry_mjs">
-            <mxGeometry relative="1" as="geometry" />
-          </mxCell>
           <mxCell id="edge-151" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_runtime_config_gate_mjs" target="tools-tools_guards__guard_utils_mjs">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
@@ -4812,12 +4785,6 @@
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
           <mxCell id="edge-167" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_wlt_openapi_bundle_gate_mjs" target="tools-tools_scripts_openapi_composition_integrity_mjs">
-            <mxGeometry relative="1" as="geometry" />
-          </mxCell>
-          <mxCell id="edge-168" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_workflow_temp_files_gate_mjs" target="tools-tools_guards__guard_utils_mjs">
-            <mxGeometry relative="1" as="geometry" />
-          </mxCell>
-          <mxCell id="edge-169" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_workflow_temp_files_gate_mjs" target="tools-tools_guards__workflow_registry_mjs">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
           <mxCell id="edge-170" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards__openapi_utils_mjs" target="tools-tools_guards__guard_utils_mjs">

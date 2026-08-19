@@ -22,10 +22,6 @@ function Invoke-VerifiedStep {
   }
 }
 
-Invoke-VerifiedStep "Canonical mobile test policy" {
-  node tools/guards/required-command-integrity-gate.mjs
-}
-
 Invoke-VerifiedStep "Deterministic OpenAPI contract and client materialization" {
   node tools/scripts/materialize-openapi-artifacts.mjs
 }

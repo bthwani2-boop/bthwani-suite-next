@@ -94,6 +94,12 @@ export function extractGoRoutes(relativeFile) {
   return routes.map((route) => ({
     method: typeof route.method === "string" ? route.method.toUpperCase() : "",
     path: typeof route.path === "string" ? route.path : "",
+    route: route.route,
+    receiver: route.receiver,
+    handlerExpression: route.handlerExpression,
+    handler: route.handler,
+    filePath: route.filePath,
+    line: route.line,
   }));
 }
 

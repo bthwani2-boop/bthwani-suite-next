@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/parser"
+	"go/printer"
 	"go/token"
 	"os"
 	"path/filepath"
@@ -13,8 +15,22 @@ import (
 )
 
 type Route struct {
-	Method string `json:"method"`
-	Path   string `json:"path"`
+	Method            string   `json:"method"`
+	Path              string   `json:"path"`
+	Route             string   `json:"route"`
+	Receiver          string   `json:"receiver"`
+	HandlerExpression string   `json:"handlerExpression"`
+	Handler           *Handler `json:"handler"`
+	FilePath          string   `json:"filePath"`
+	Line              int      `json:"line"`
+}
+
+type Handler struct {
+	Kind                 string  `json:"kind"`
+	Receiver             *string `json:"receiver"`
+	HandlerName          *string `json:"handlerName"`
+	SurfaceExpression    *string `json:"surfaceExpression"`
+	PermissionExpression *string `json:"permissionExpression"`
 }
 
 var governedRouteHelpers = map[string]struct{}{
@@ -123,12 +139,55 @@ func parseRoutes(filePath string) ([]Route, error) {
 			return true
 		}
 		parts := strings.Fields(routeValue)
-		switch len(parts) {
-		case 2:
-			routes = append(routes, Route{Method: parts[0], Path: parts[1]})
-		case 1:
-			routes = append(routes, Route{Method: "", Path: parts[0]})
+
+		var handlerArg ast.Expr
+		if len(call.Args) > 1 {
+			handlerArg = call.Args[1]
 		}
+
+		var receiverName string
+		if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
+			if id, ok := sel.X.(*ast.Ident); ok {
+				receiverName = id.Name
+			}
+		}
+
+		handlerExprStr := ""
+		if handlerArg != nil {
+			handlerExprStr = nodeToString(fileSet, handlerArg)
+		}
+
+		handlerInfo := parseHandlerExpr(fileSet, handlerArg)
+
+		method := ""
+		path := routeValue
+		if len(parts) == 2 {
+			method = parts[0]
+			path = parts[1]
+		} else if len(parts) == 1 {
+			path = parts[0]
+		}
+
+		// Calculate relative path for output
+		relPath := filePath
+		if wd, err := os.Getwd(); err == nil {
+			if rel, err := filepath.Rel(wd, filePath); err == nil {
+				// Normalize path separator to forward slash for consistency with JS
+				relPath = filepath.ToSlash(rel)
+			}
+		}
+
+		routes = append(routes, Route{
+			Method:            method,
+			Path:              path,
+			Route:             routeValue,
+			Receiver:          receiverName,
+			HandlerExpression: handlerExprStr,
+			Handler:           handlerInfo,
+			FilePath:          relPath,
+			Line:              fileSet.Position(call.Pos()).Line,
+		})
+
 		return true
 	})
 	return routes, nil
@@ -146,10 +205,6 @@ func isRouteRegistration(fun ast.Expr) bool {
 	}
 }
 
-// strconvUnquote handles both interpreted and raw Go string literals without
-// accepting dynamically-computed route patterns. Keeping extraction literal-
-// only is intentional: registered runtime routes must remain statically
-// auditable by the binding gate.
 func strconvUnquote(value string) (string, error) {
 	if len(value) < 2 {
 		return "", fmt.Errorf("invalid string literal")
@@ -166,4 +221,64 @@ func strconvUnquote(value string) (string, error) {
 		return "", err
 	}
 	return decoded, nil
+}
+
+func nodeToString(fset *token.FileSet, node ast.Node) string {
+	var buf bytes.Buffer
+	printer.Fprint(&buf, fset, node)
+	return buf.String()
+}
+
+func parseHandlerExpr(fset *token.FileSet, expr ast.Expr) *Handler {
+	if expr == nil {
+		return nil
+	}
+
+	// Check if it's direct `s.HandlerName`
+	if sel, ok := expr.(*ast.SelectorExpr); ok {
+		if id, ok := sel.X.(*ast.Ident); ok {
+			receiver := id.Name
+			handlerName := sel.Sel.Name
+			return &Handler{
+				Kind:        "direct",
+				Receiver:    &receiver,
+				HandlerName: &handlerName,
+			}
+		}
+	}
+
+	// Check if it's `s.withPermission(...)`
+	if call, ok := expr.(*ast.CallExpr); ok {
+		if sel, ok := call.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == "withPermission" {
+			if id, ok := sel.X.(*ast.Ident); ok {
+				receiver := id.Name
+
+				var surfaceExpr, permExpr, handlerName *string
+				if len(call.Args) >= 1 {
+					s := nodeToString(fset, call.Args[0])
+					surfaceExpr = &s
+				}
+				if len(call.Args) >= 2 {
+					s := nodeToString(fset, call.Args[1])
+					permExpr = &s
+				}
+				if len(call.Args) >= 3 {
+					if hsel, ok := call.Args[2].(*ast.SelectorExpr); ok {
+						s := hsel.Sel.Name
+						handlerName = &s
+					}
+				}
+
+				return &Handler{
+					Kind:                 "withPermission",
+					Receiver:             &receiver,
+					HandlerName:          handlerName,
+					SurfaceExpression:    surfaceExpr,
+					PermissionExpression: permExpr,
+				}
+			}
+		}
+	}
+
+	return &Handler{Kind: "other"}
 }

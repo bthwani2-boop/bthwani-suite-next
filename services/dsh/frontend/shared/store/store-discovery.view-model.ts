@@ -148,7 +148,7 @@ export function toCardViewModel(dto: DshStoreSummaryDto): DshStoreCardViewModel 
     pointsMultiplier: dto.pointsMultiplier ?? null,
     isPopular: dto.isPopular,
     publicationDecision: dto.publicationDecision,
-    blockingReasons: [...dto.blockingReasons],
+    blockingReasons: [...(dto.blockingReasons || [])],
   };
 }
 

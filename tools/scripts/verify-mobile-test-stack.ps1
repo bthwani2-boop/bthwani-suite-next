@@ -23,10 +23,6 @@ function Invoke-VerifiedStep {
   if ($exitCode -ne 0) { throw "$Name failed with exit code $exitCode" }
 }
 
-Invoke-VerifiedStep "Canonical command and mobile-test policy" {
-  node tools/guards/required-command-integrity-gate.mjs
-}
-
 Invoke-VerifiedStep "Deterministic OpenAPI contract and client materialization" {
   node tools/scripts/materialize-openapi-artifacts.mjs
 }

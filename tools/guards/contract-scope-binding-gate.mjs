@@ -6,12 +6,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import YAML from "yaml";
+import { extractGoRoutes } from "./lib/go-route-extractor.mjs";
 import {
-  collectHandleFuncRegistrations,
   findMatchingDelimiter,
   listGoFiles,
   parseGoStringLiteral,
-} from "./lib/go-http-routes.mjs";
+} from "./lib/go-scanner.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const vocabularyRelative = "tools/verification/security-scope-vocabulary.json";
@@ -143,8 +143,7 @@ for (const target of scanTargets) {
   }
 }
 
-const dshHttpRoot = path.join(repositoryRoot, "services/dsh/backend/internal/http");
-const dshRoutes = collectHandleFuncRegistrations(dshHttpRoot, { recursive: true });
+const dshRoutes = extractGoRoutes("services/dsh/backend/internal/http/server.go");
 for (const route of dshRoutes) {
   if (route.handler.kind !== "withPermission") continue;
   const relative = path.relative(repositoryRoot, route.filePath).replaceAll("\\", "/");

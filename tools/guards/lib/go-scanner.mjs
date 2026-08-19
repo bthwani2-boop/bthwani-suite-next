@@ -126,87 +126,6 @@ export function parseGoStringLiteral(expression) {
   }
 }
 
-export function parseHandlerExpression(expression) {
-  const text = expression.trim();
-  const direct = text.match(/^([A-Za-z_]\w*)\.([A-Za-z_]\w*)$/);
-  if (direct) {
-    return {
-      kind: "direct",
-      receiver: direct[1],
-      handlerName: direct[2],
-      surfaceExpression: null,
-      permissionExpression: null,
-    };
-  }
-
-  const wrapped = text.match(/^([A-Za-z_]\w*)\.withPermission\s*\(/);
-  if (!wrapped) {
-    return {
-      kind: "other",
-      receiver: null,
-      handlerName: null,
-      surfaceExpression: null,
-      permissionExpression: null,
-    };
-  }
-  const openIndex = text.indexOf("(", wrapped[0].length - 1);
-  const closeIndex = findMatchingDelimiter(text, openIndex);
-  if (closeIndex !== text.length - 1) {
-    return {
-      kind: "other",
-      receiver: wrapped[1],
-      handlerName: null,
-      surfaceExpression: null,
-      permissionExpression: null,
-    };
-  }
-  const args = splitTopLevelArguments(text.slice(openIndex + 1, closeIndex));
-  const handler = args[2]?.match(/^([A-Za-z_]\w*)\.([A-Za-z_]\w*)$/);
-  return {
-    kind: "withPermission",
-    receiver: wrapped[1],
-    handlerName: handler?.[2] ?? null,
-    surfaceExpression: args[0] ?? null,
-    permissionExpression: args[1] ?? null,
-  };
-}
-
-export function parseHandleFuncRegistrations(source, { filePath = "" } = {}) {
-  const registrations = [];
-  const pattern = /\b([A-Za-z_]\w*)\.HandleFunc\s*\(/g;
-  let match;
-  while ((match = pattern.exec(source))) {
-    const openIndex = source.indexOf("(", match.index + match[0].lastIndexOf("HandleFunc"));
-    if (openIndex < 0) continue;
-    const closeIndex = findMatchingDelimiter(source, openIndex);
-    if (closeIndex < 0) continue;
-    const args = splitTopLevelArguments(source.slice(openIndex + 1, closeIndex));
-    if (args.length < 2) {
-      pattern.lastIndex = closeIndex + 1;
-      continue;
-    }
-    const routePattern = parseGoStringLiteral(args[0]);
-    const routeMatch = routePattern?.match(/^([A-Z]+)\s+(.+)$/);
-    if (!routeMatch) {
-      pattern.lastIndex = closeIndex + 1;
-      continue;
-    }
-    const handlerExpression = args[1].trim();
-    registrations.push({
-      receiver: match[1],
-      method: routeMatch[1],
-      path: routeMatch[2],
-      route: `${routeMatch[1]} ${routeMatch[2]}`,
-      handlerExpression,
-      handler: parseHandlerExpression(handlerExpression),
-      filePath,
-      line: source.slice(0, match.index).split("\n").length,
-    });
-    pattern.lastIndex = closeIndex + 1;
-  }
-  return registrations;
-}
-
 export function listGoFiles(directory, { recursive = true } = {}) {
   if (!fs.existsSync(directory)) return [];
   const files = [];
@@ -219,13 +138,4 @@ export function listGoFiles(directory, { recursive = true } = {}) {
     if (entry.name.endsWith(".go") && !entry.name.endsWith("_test.go")) files.push(fullPath);
   }
   return files;
-}
-
-export function collectHandleFuncRegistrations(directory, { recursive = true } = {}) {
-  const registrations = [];
-  for (const filePath of listGoFiles(directory, { recursive })) {
-    const source = fs.readFileSync(filePath, "utf8");
-    registrations.push(...parseHandleFuncRegistrations(source, { filePath }));
-  }
-  return registrations;
 }
