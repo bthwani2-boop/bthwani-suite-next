@@ -2,10 +2,10 @@ name: SonarQube Cloud
 
 on:
   pull_request:
-    branches: [master]
+    branches: [master, b]
     types: [opened, synchronize, reopened]
   push:
-    branches: [master]
+    branches: [master, b]
 
 permissions:
   contents: read
