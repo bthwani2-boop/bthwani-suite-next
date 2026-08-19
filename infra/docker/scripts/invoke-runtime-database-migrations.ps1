@@ -79,13 +79,23 @@ function Test-LocalDatabaseRebuildAllowed {
 function Invoke-ComposePsql {
   param([Parameter(Mandatory = $true)][string]$Sql, [switch]$Quiet)
 
-  # Workforce-020 reads its two migration inputs from a dedicated schema. Keep
-  # public first so normal service DDL/DML remains rooted in public; the input
-  # namespace only resolves the reserved staging relations absent from public.
-  $sqlToExecute = if ($Service -eq 'workforce') {
-    "SET search_path TO public, bthwani_migration_input;`n$Sql"
-  } else {
-    $Sql
+  $sqlToExecute = $Sql
+  if ($Service -eq 'workforce') {
+    $migrationMarker = '-- BEGIN GOVERNED MIGRATION: workforce-020_operator_context_scope_boundary.sql'
+    if ($Sql.Contains($migrationMarker)) {
+      # The import authority stages the canonical Identity snapshot outside
+      # public so the preflight cannot mistake migration inputs for untracked
+      # Workforce schema. Workforce-020 is historical/immutable and consumes
+      # unqualified staging relation names. Promote exactly those two inputs at
+      # its governed marker, after the runner has opened the migration
+      # transaction. A migration failure therefore rolls the promotion back;
+      # a success drops the promoted relations as part of the migration itself.
+      $handoff = @'
+ALTER TABLE bthwani_migration_input.workforce_identity_operator_context_import SET SCHEMA public;
+ALTER TABLE bthwani_migration_input.workforce_identity_operator_context_import_proof SET SCHEMA public;
+'@
+      $sqlToExecute = $Sql.Replace($migrationMarker, "$handoff`n$migrationMarker")
+    }
   }
 
   $arguments = @(
@@ -177,6 +187,8 @@ try {
 } finally {
   if ($Service -eq 'workforce') {
     Invoke-ComposePsql -Sql @'
+DROP TABLE IF EXISTS public.workforce_identity_operator_context_import;
+DROP TABLE IF EXISTS public.workforce_identity_operator_context_import_proof;
 DROP TABLE IF EXISTS bthwani_migration_input.workforce_identity_operator_context_import;
 DROP TABLE IF EXISTS bthwani_migration_input.workforce_identity_operator_context_import_proof;
 '@ -Quiet
