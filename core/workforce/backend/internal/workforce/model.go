@@ -27,7 +27,6 @@ type Person struct {
 type FieldProfile struct {
 	CityCode              string   `json:"cityCode,omitempty"`
 	ServiceZoneID         string   `json:"serviceZoneId,omitempty"`
-	ShiftCode             string   `json:"-"` // deprecated database compatibility only; field providers have no shifts
 	SupervisorActorID     string   `json:"supervisorActorId,omitempty"`
 	EmergencyContactName  string   `json:"emergencyContactName,omitempty"`
 	EmergencyContactPhone string   `json:"emergencyContactPhone,omitempty"`
@@ -66,7 +65,6 @@ type CreateFieldAgentInput struct {
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
 	ServiceZoneID       string   `json:"serviceZoneId"`
-	ShiftCode           string   `json:"-"` // ignored compatibility slot; never accepted from API
 	SupervisorActorID   string   `json:"supervisorActorId"`
 	PhotoMediaRef       string   `json:"photoMediaRef"`
 	DocumentMediaRefs   []string `json:"documentMediaRefs"`
@@ -97,7 +95,6 @@ type UpdateFieldAgentInput struct {
 	EngagementType      *string `json:"engagementType"`
 	EngagementStartDate *string `json:"engagementStartDate"`
 	ServiceZoneID       *string `json:"serviceZoneId"`
-	ShiftCode           *string `json:"-"` // ignored compatibility slot; never accepted from API
 	SupervisorActorID   *string `json:"supervisorActorId"`
 	PhotoMediaRef       *string `json:"photoMediaRef"`
 }
