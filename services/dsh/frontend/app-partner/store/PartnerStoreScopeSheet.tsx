@@ -65,7 +65,7 @@ export function PartnerStoreScopeSheet({
         <Pressable style={styles.backdrop} onPress={onClose} />
         <View style={styles.sheetContainer}>
           <View style={styles.dragHandle} />
-          
+
           <View style={styles.headerRow}>
             <Text role="titleMd" style={styles.sheetTitle}>{scopeLabel}</Text>
             <Pressable onPress={onClose} style={styles.closeButton}>
@@ -108,7 +108,7 @@ export function PartnerStoreScopeSheet({
               <Text role="bodyStrong" style={styles.sectionTitle}>
                 سياق الموقع · {selectedScope?.displayName ?? "لا يوجد فرع محدد"}
               </Text>
-              
+
               <Button
                 label={locating ? "جارٍ تحديد الموقع…" : "عرض موقعي الحالي على الخريطة"}
                 tone="secondary"
@@ -116,7 +116,7 @@ export function PartnerStoreScopeSheet({
                 disabled={locating}
                 onPress={() => void locateDevice()}
               />
-              
+
               {locationError ? (
                 <Text role="caption" tone="danger" style={styles.errorText}>
                   {locationError}
