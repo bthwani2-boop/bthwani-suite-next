@@ -1,6 +1,6 @@
 # BThwani Self-Contained Goal-Driven Audit, Inspection, Diagnosis, Analysis & Root-Cause Execution Orchestrator
 
-PACKAGE_REVISION: 6
+PACKAGE_REVISION: 7
 PACKAGE_CLASS: TEXTUAL_EXECUTION_COMMAND_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -12,7 +12,28 @@ DEFAULT_ORCHESTRATOR_MUTABILITY: READ_ONLY
 
 ## 0. Governing law
 
-> **GOAL-DRIVEN SEMANTIC AUTHORITY; TOP-DOWN AUDIT + INSPECTION + DIAGNOSIS + ANALYSIS; BOTTOM-UP EVIDENCE; HIGHEST PROVEN SYSTEMIC ROOT FIRST; ACTUAL CODE/DATA/CONTRACT/RUNTIME IS THE PLACE OF TREATMENT; COHERENT END-TO-END CUTOVER; ZERO UNJUSTIFIED PARALLEL TRUTH; ZERO UNJUSTIFIED REACHABLE LEGACY; ZERO DOCUMENTATION-ONLY CLOSURE.**
+> **PROJECT-WIDE CANONICAL FRAME; OBJECTIVE IS CURRENT PRIORITY, NOT PROJECT TRUTH; GOAL-DRIVEN SEMANTIC AUTHORITY; TOP-DOWN AUDIT + INSPECTION + DIAGNOSIS + ANALYSIS; BOTTOM-UP EVIDENCE; HIGHEST PROVEN SYSTEMIC ROOT FIRST; ACTUAL CODE/DATA/CONTRACT/RUNTIME IS THE PLACE OF TREATMENT; COHERENT END-TO-END CUTOVER; ZERO UNJUSTIFIED PARALLEL TRUTH; ZERO UNJUSTIFIED REACHABLE LEGACY; ZERO DOCUMENTATION-ONLY CLOSURE.**
+
+Every invocation operates inside one current project-wide canonical frame. The objective selects the present investigation/execution priority inside that frame; it never becomes a competing worldview, authority, architecture, scope ceiling or permission to regress another journey/domain/surface/invariant.
+
+```text
+PROJECT = PERMANENT CANONICAL FRAME
+OBJECTIVE = CURRENT PRIORITY
+WORKING_CONE = SMALLEST COMPLETE PROVEN DIAGNOSIS/MUTATION CONE
+
+PROJECT FRAME ≠ WORKING CONE
+GLOBAL CONTEXT ≠ GLOBAL MUTATION
+OBJECTIVE ≠ PROJECT TRUTH
+OBJECTIVE ≠ AUTHORITY
+OBJECTIVE ≠ ARCHITECTURAL EXCEPTION
+OBJECTIVE ≠ PERMISSION TO REGRESS PREVIOUSLY PROVEN CANONICAL CLOSURE
+```
+
+The project frame is reconstructed/revalidated from current authorized intent, applicable governance/product truth, live ownership/architecture, contracts, data, runtime, affected consumers and previously proven canonical closures. It may remain explicitly incomplete where evidence is insufficient; it must never be falsely completed. An unknown that can materially change the current target/treatment blocks only its dependent cone.
+
+Every material focus dimension is considered for applicability on every invocation. Only dimensions capable of changing correctness, priority, treatment, blast radius or closure are deeply executed. Silence is not `N/A`.
+
+No material semantic system change may proceed without governance impact classification. No closure is valid while material governance drift can mislead current or future project work. Governance never wins blindly and implementation never wins blindly; both converge on reconciled Canonical Product/System Truth under `01`, `02`, the governance focus module and `04`.
 
 This directory is a textual command package interpreted directly by a human/agent. It is **not** application/runtime code, a framework, a CLI, a workflow, a validator, a guard system, a machine registry, or a generated state machine.
 
@@ -24,17 +45,29 @@ Project tooling and external research may be used only as evidence or execution 
 
 The package has exactly these semantic owners:
 
-1. `00-ORCHESTRATOR.md` — governing law, goal-driven audit/execution lifecycle, invocation, optional phase handoff, independence, protection and valid stop states.
-2. `01-SCOPE-AUTHORITY-RULES.md` — truth/authority, objective/scope/focus routing, phase/mode authority, research/capability discipline, exclusions, concurrency and longevity.
-3. `02-DIAGNOSE-ROOT-CAUSE.md` — detailed audit/inspection/diagnosis/analysis protocol through coverage, journeys, findings, decisions, root proof/ranking, canonical target modeling and execution readiness.
+1. `00-ORCHESTRATOR.md` — governing law, project-frame invariant, goal-driven audit/execution lifecycle, invocation, optional phase handoff, independence, protection and valid stop states.
+2. `01-SCOPE-AUTHORITY-RULES.md` — truth/authority, project-frame reconstruction, objective/working-scope/focus routing, phase/mode authority, research/capability discipline, exclusions, concurrency and longevity.
+3. `02-DIAGNOSE-ROOT-CAUSE.md` — detailed audit/inspection/diagnosis/analysis protocol through project orientation, coverage, journeys, findings, decisions, root proof/ranking, project-consistency target modeling and execution readiness.
 4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — actual treatment, reconstruction, migration, cutover, continuity, simplification, cleanup and mutation discipline.
-5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-candidate evidence, repository-platform truth when required, review provenance, temporary-plan retirement, post-treatment re-audit/re-inspection/re-diagnosis/re-analysis and fail-closed closure.
+5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-candidate evidence, project-consistency proof, repository-platform truth when required, review provenance, temporary-plan retirement, post-treatment re-audit/re-inspection/re-diagnosis/re-analysis and fail-closed closure.
 6. `focus/code-architecture-organization.md` — implementation architecture, repository structure, UI/UX and discoverability.
 7. `focus/governance-product-design.md` — product meaning, governance reconciliation and engineering-governance/control-artifact value.
 8. `focus/data-contracts-runtime-security-quality.md` — data, contracts, runtime, security, finance, quality and engineering control-path efficiency.
 9. `99-SOURCE-MAP.md` — non-executable source-consolidation/disposition accounting only.
 
 **One material law has one canonical owner.** Other files apply or reference it; they must not create competing formulations.
+
+### 1.1 Package-completeness invariant
+
+`00` is the only invocation entry point, but execution of the package is not execution of this file alone.
+
+```text
+ALWAYS LOAD/APPLY: 00 + 01 + 02 + 03 + 04
+ALWAYS CONSIDER FOR APPLICABILITY: all three focus modules
+DEEPEN ONLY: materially applicable focus dimensions
+```
+
+A worker/session may not skip a canonical owner because the objective appears local, because an earlier worker summarized it, or because a nearby check is green. Previously acquired evidence may be reused only under its validity/provenance rules; package obligations themselves are not optional cached advice.
 
 ## 2. Package protection
 
@@ -51,7 +84,6 @@ Use:
 ```text
 REPOSITORY: <owner/repo>
 BRANCH: <exact branch/ref>
-TASK: <optional stable task name>
 OBJECTIVE: <material outcome to audit/inspect/diagnose/analyze/fix/restructure/clean/close; discovery itself may be the objective>
 PHASE: <AUTO | AUDIT_PREPARE | EXECUTE_CLOSE>
 PLAN_FILE: <NONE | exact temporary plan path>
@@ -69,9 +101,10 @@ PHASE = AUTO
 PLAN_FILE = NONE
 MODE = resolve from explicit PHASE under 01; otherwise EXECUTE_END_TO_END
 PRIMARY_FOCUS = AUTO
-SCOPE = derive the smallest complete semantic scope from OBJECTIVE and proven relations
+PROJECT_FRAME = repository-wide orientation/reconciliation under 01
+SCOPE = derive the smallest complete working cone from OBJECTIVE inside the project frame, then expand through proven relations
 RESEARCH = AUTO
-PLANS = NONE unless AUDIT_PREPARE explicitly requests its single temporary PLAN_FILE
+PLANS = NONE unless AUDIT_PREPARE explicitly requests its single exact temporary PLAN_FILE
 PRE-EXECUTION METHOD = AUDIT + INSPECT + DIAGNOSE + ANALYZE
 EXECUTION PRIORITY = HIGHEST PROVEN SYSTEMIC ROOT
 ```
@@ -86,9 +119,7 @@ Perform the full audit/inspection/diagnosis/analysis and prove roots, decisions,
 
 If any material `DECISION_REQUIRED` can change the target/treatment, stop **before any plan-file write**, batch the material questions under §12, and wait for the decision. After decisions are supplied, propagate them and re-audit/re-inspect/re-diagnose/re-analyze the affected cone before preparing the handoff.
 
-Only when execution truth is sufficiently resolved may this phase create exactly one explicitly requested temporary file, normally:
-
-`plans/diagnose-implementing/<TASK>.md`
+Only when execution truth is sufficiently resolved may this phase create exactly one explicitly requested temporary file at the exact `PLAN_FILE` path supplied by the invocation. The path must not depend on a `TASK` field.
 
 The file records the material evidence, findings, proven roots, blast radius, resolved decisions, Canonical Target, Root-Correct Treatment, migrations/cutovers/cleanup, required governance dispositions that have passed the governance mutation gate, verification and closure criteria. It does not become authority; `01` owns that rule.
 
@@ -96,33 +127,34 @@ After writing it, do not begin treatment. Report a **detailed human-readable sum
 
 ### 3.2 `EXECUTE_CLOSE`
 
-Requires an existing `PLAN_FILE`. Before mutation, re-resolve latest live truth and revalidate the file rather than executing it mechanically. Correct stale assumptions/findings, add materially related newly exposed work, re-rank by the highest proven root, and raise any new true `DECISION_REQUIRED` before the dependent mutation.
+Requires an existing `PLAN_FILE`. Before mutation, re-resolve latest live truth, revalidate the project frame and revalidate the file rather than executing it mechanically. Correct stale assumptions/findings, add materially related newly exposed work, re-rank by the highest proven root, and raise any new true `DECISION_REQUIRED` before the dependent mutation.
 
-Then execute through `03` and verify/close through `04`. Continue the adaptive root loop until the entire proven affected cone is closed; the original plan list is not a stopping boundary. Keep the temporary file until the retirement conditions in `04` are met.
+Then execute through `03` and verify/close through `04`. Continue the adaptive root loop until the entire proven affected cone is closed and all project-frame invariants materially touched by it are reconciled; the original plan list is not a stopping boundary. Keep the temporary file until the retirement conditions in `04` are met.
 
 ## 4. Goal-driven auditing and execution, not checklist-driven execution
 
-`OBJECTIVE` is the desired material outcome, not a file list and not a license for an unrelated repository sweep.
+`OBJECTIVE` is the desired material outcome and current priority inside the project-wide frame. It is not a file list, not the source of Product/System truth, not a license for an unrelated repository sweep and not permission to optimize the local target at the expense of the rest of the platform.
 
 ```text
-OBJECTIVE
+RECONSTRUCT / REVALIDATE PROJECT-WIDE CANONICAL FRAME
+→ locate OBJECTIVE inside that frame
 → identify semantic/operational root
-→ derive relevant focus lenses
-→ derive initial scope
+→ disposition all material focus dimensions for applicability
+→ derive deep focus set + initial working cone
 → audit material coverage/completeness/conformance/negative space
 → inspect direct live evidence
 → analyze truth, relations, contradictions, risk and systemic leverage
 → diagnose causal/root structure
 → expand only through proven authority/causal/dependency/consumer/contract/data/runtime/security/blast-radius relations
-→ prove the target state
+→ prove project-consistent target state
 → treat the highest proven root
 ```
 
-Universal capability does **not** mean universal execution scope. The package is capable of auditing, inspecting, diagnosing and analyzing code, architecture, UX, governance, data, security, finance, runtime, CI/tooling or any combination, but it activates only the dimensions materially required by the objective and evidence.
+Universal capability does **not** mean universal deep execution scope. All canonical focus dimensions are considered for material applicability; deeply execute only those that can change correctness, priority, target, treatment, blast radius or closure.
 
 For broad or repository-wide objectives, "audit everything" means complete material accounting across all applicable domains/surfaces/foundations and explicit proof for exclusions; it does not mean mechanically applying every expensive technique to every file.
 
-`PRIMARY_FOCUS=AUTO` means infer the smallest materially sufficient focus set from the objective and current findings. An explicit focus is an orientation, never permission to ignore a proven related dimension.
+`PRIMARY_FOCUS=AUTO` means infer the smallest materially sufficient deep focus set after the all-dimension applicability pass. An explicit focus is an orientation, never permission to ignore another materially relevant dimension.
 
 `RESEARCH=AUTO` applies the research escalation rules in `01`: use current local/connected evidence first, then obtain authoritative external technical evidence when internal knowledge is materially insufficient and external access is allowed. External evidence may resolve technical/standard/platform facts or inform design options; it never invents BThwani Product Truth.
 
@@ -144,7 +176,7 @@ Before every material write batch, before ref movement/push, and before final cl
 re-resolve live HEAD
 → compare with last reconciled HEAD
 → classify foreign/concurrent delta under 01
-→ invalidate/reconcile affected assumptions and evidence
+→ invalidate/reconcile affected assumptions, project-frame claims and evidence
 → continue only from current truth
 ```
 
@@ -153,14 +185,16 @@ Latest HEAD is the integration baseline; recency is not execution priority.
 ## 6. Governing lifecycle
 
 ```text
-UNDERSTAND OBJECTIVE
+UNDERSTAND OBJECTIVE AS CURRENT PRIORITY
 → RESOLVE LIVE TARGET
+→ RECONSTRUCT / REVALIDATE PROJECT-WIDE CANONICAL FRAME
 → ESTABLISH AUTHORITY + PRODUCT/OPERATIONAL ROOT
-→ DERIVE RELEVANT FOCUS + INITIAL SCOPE
+→ DISPOSITION ALL MATERIAL FOCUS DIMENSIONS FOR APPLICABILITY
+→ DERIVE DEEP FOCUS + INITIAL WORKING CONE
 → AUDIT MATERIAL COVERAGE / INVENTORY / CONFORMANCE / CONSISTENCY / NEGATIVE SPACE
-→ INSPECT DIRECT LIVE AUTHORITY / CODE / CONTRACT / DATA / RUNTIME / CONSUMER EVIDENCE
+→ INSPECT DIRECT LIVE AUTHORITY / GOVERNANCE / CODE / CONTRACT / DATA / RUNTIME / CONSUMER EVIDENCE
 → START AT MINIMUM DIAGNOSTIC ALTITUDE
-→ BROAD DISCOVERY
+→ BROAD DISCOVERY AS REQUIRED BY RISK/RELATIONS
 → ANALYZE TRUTH CLASSES / RELATIONS / CONTRADICTIONS / PARALLEL TRUTH / RISK / BLAST RADIUS / LEVERAGE
 → RESEARCH WHEN MATERIAL KNOWLEDGE/EVIDENCE IS INSUFFICIENT
 → RECONSTRUCT JOURNEYS / OWNERS / STATES / HANDOFFS
@@ -171,15 +205,17 @@ UNDERSTAND OBJECTIVE
 → COMPETITIVELY DEEPEN ROOTS THAT CAN CHANGE PRIORITY
 → SELECT HIGHEST PROVEN SYSTEMIC ROOT
 → DEFINE CANONICAL TARGET STATE + ROOT-CORRECT TREATMENT
+→ PROVE PROJECT-CONSISTENCY EXECUTION GATE
 → EXECUTE SMALLEST COMPLETE ROOT-CORRECT CHANGE
 → MIGRATE ALL MATERIAL WRITERS / READERS / CONSUMERS / DATA
 → CANONICAL CUTOVER
 → DELETE/RETIRE SUPERSEDED REACHABLE PATHS WHEN PROVEN SAFE
+→ RECONCILE MATERIAL GOVERNANCE IMPACT
 → VERIFY WITH CLAIM-APPROPRIATE EVIDENCE
-→ RE-AUDIT + RE-INSPECT + RE-DIAGNOSE + RE-ANALYZE AFFECTED CONE
+→ RE-AUDIT + RE-INSPECT + RE-DIAGNOSE + RE-ANALYZE AFFECTED CONE + TOUCHED PROJECT INVARIANTS
 → RE-RANK
 → REPEAT
-→ FINAL NEGATIVE-SPACE + ADVERSARIAL AUDIT / INSPECTION / DIAGNOSIS / ANALYSIS
+→ FINAL PROJECT-CONSISTENCY + NEGATIVE-SPACE + ADVERSARIAL AUDIT / INSPECTION / DIAGNOSIS / ANALYSIS
 → CLOSE OR REMAIN OPEN
 ```
 
@@ -187,7 +223,7 @@ Do not wait for an exhaustive low-level scan once the highest root is proven dee
 
 ## 6.1 Maximum-safe-parallel execution law
 
-> **MAXIMUM SAFE PARALLELISM; ONE CANONICAL INTEGRATION TRUTH; ZERO REDUNDANT WORK; ZERO WEAKER PROOF.**
+> **MAXIMUM SAFE PARALLELISM; ONE PROJECT FRAME; ONE CANONICAL INTEGRATION TRUTH; ZERO REDUNDANT WORK; ZERO WEAKER PROOF.**
 
 Execution is sequential only where causality, authority, shared mutation, dependency or evidence requires sequentiality.
 
@@ -237,16 +273,18 @@ When overlap is uncertain, treat it as non-parallel until proven safe.
 Multiple workers may diagnose, execute and verify independent roots concurrently, but there must remain exactly one canonical integration authority for:
 
 ```text
+project-wide canonical frame
 live-HEAD reconciliation
 root landscape
 priority/ranking
 shared-authority decisions
+previously proven canonical closures
 collision resolution
 candidate integration
 final closure state
 ```
 
-No worker may silently redefine shared Product/System truth because of its local implementation.
+No worker may silently redefine shared Product/System truth, governance meaning or project architecture because of its local objective or implementation.
 
 ### Work-conserving scheduling
 
@@ -256,7 +294,7 @@ When any active root finishes:
 
 ```text
 verify its materially affected claims
-→ reconcile its result with current live truth
+→ reconcile its result with current live truth and project frame
 → invalidate only affected evidence
 → update root/dependency landscape
 → unlock newly executable roots
@@ -279,7 +317,7 @@ INVALIDATED EVIDENCE → REACQUIRE AFFECTED PROOF
 UNKNOWN VALIDITY → REVALIDATE THE MINIMUM REQUIRED ASSUMPTION
 ```
 
-Resume from the latest reconciled state and current delta; restart broad diagnosis only when evidence proves that the governing baseline, authority model or material coverage has been invalidated.
+Every new worker/session still re-resolves live HEAD and revalidates enough of the project frame to prove that reused evidence and prior canonical closures remain applicable. Restart broad diagnosis only when evidence proves that the governing baseline, authority model or material coverage has been invalidated.
 
 ### No redundant execution
 
@@ -304,6 +342,20 @@ STOP affected lower-level treatment
 
 Do not continue accumulating descendant symptom fixes.
 
+### Cross-objective non-regression
+
+A successful current objective may not invalidate a previously proven Canonical closure or project invariant. If new evidence proves a previous closure/model wrong or incomplete:
+
+```text
+REOPEN AFFECTED CLOSURE
+→ PROVE HIGHER ROOT / TRUTH CHANGE
+→ RECONCILE PROJECT FRAME
+→ MIGRATE ALL AFFECTED AREAS
+→ REVERIFY
+```
+
+Do not preserve both interpretations.
+
 ### Speed/accuracy invariant
 
 Speed may come only from:
@@ -322,7 +374,8 @@ Speed must never come from:
 
 ```text
 skipped material audit/inspection/diagnosis/analysis
-skipped authority or blast-radius proof
+skipped project-frame/authority or blast-radius proof
+skipped focus applicability disposition
 skipped affected consumers
 weaker verification
 silent assumptions
@@ -344,13 +397,13 @@ AUDIT
 = establish materially complete accounting of what exists, what should exist, authority/conformance, consistency/divergence, duplication, legacy/reachability, omissions and negative space.
 
 INSPECTION
-= directly examine the exact live artifacts and behavior that can prove or disprove claims: authority, code, contracts, data, runtime, configuration, consumers, repository-platform state and other materially relevant evidence.
+= directly examine the exact live artifacts and behavior that can prove or disprove claims: authority, governance, code, contracts, data, runtime, configuration, consumers, repository-platform state and other materially relevant evidence.
 
 DIAGNOSIS
 = explain observed or discovered defects through causal chains, operational parents, canonical owners/writers and the highest provable Root Cause.
 
 ANALYSIS
-= compare meanings, truth classes, hypotheses, alternatives, dependencies, consumers, blast radius, risk, recurrence, systemic leverage, target states and treatment tradeoffs before deciding what is correct.
+= compare meanings, truth classes, hypotheses, alternatives, dependencies, consumers, blast radius, risk, recurrence, systemic leverage, project-frame consistency, target states and treatment tradeoffs before deciding what is correct.
 ```
 
 Mandatory consequences:
@@ -360,7 +413,7 @@ Mandatory consequences:
 - inventory without semantic/causal analysis is not sufficient audit proof.
 - a local defect explanation without completeness/negative-space inspection is not sufficient broad audit proof.
 - a broad scan without direct evidence and root analysis is not sufficient diagnosis.
-- a proposed treatment without canonical target analysis is not execution-ready.
+- a proposed treatment without canonical target and project-consistency analysis is not execution-ready.
 - a material area may be closed only when the applicable audit, inspection, diagnosis and analysis obligations are satisfied or explicitly `N/A_PROVEN` under `01`/`02`/`04`.
 
 The detailed techniques, coverage model, findings ledger, root proof and target modeling remain canonically owned by `02`; this section defines the non-optional semantic distinction and lifecycle obligation only.
@@ -374,6 +427,7 @@ Promotion requires enough proof of:
 ```text
 Operational Parent
 → Semantic Meaning
+→ Project-Frame Relation
 → Causal Chain
 → Highest Proven Root Cause
 → Affected Graph
@@ -390,14 +444,16 @@ Known final-state workaround, silent fallback, bypass, dual authoritative writer
 
 Preferred treatment:
 
-> **the smallest complete root-correct change that removes the proven cause, preserves proven value, reconciles the material blast radius, and leaves one canonical operational truth.**
+> **the smallest complete root-correct change that removes the proven cause, preserves proven value, reconciles the material blast radius, remains consistent with the project-wide Canonical frame, and leaves one canonical operational truth.**
 
 Smallest does not mean local. Complete does not mean rewrite everything.
 
 ## 10. Effective scope
 
 ```text
-EFFECTIVE_SCOPE =
+PROJECT_FRAME = repository-wide orientation / consistency context
+
+EFFECTIVE_WORKING_SCOPE =
 REQUESTED/DERIVED_SCOPE
 + PROVEN_ROOT_CAUSES
 + PROVEN_DEPENDENCIES
@@ -407,7 +463,7 @@ REQUESTED/DERIVED_SCOPE
 + PROVEN_BLAST_RADIUS
 ```
 
-Unrelated repository churn remains forbidden.
+The project frame is not permission for repository-wide mutation. Unrelated repository churn remains forbidden.
 
 ## 11. Mandatory lenses
 
@@ -415,7 +471,7 @@ Keep every materially applicable lens active:
 
 `PRODUCT/OPERATIONAL MEANING | COMPLETENESS/CONFORMANCE | CONSISTENCY/DIVERGENCE | DIRECT INSPECTION | NEGATIVE SPACE | ROOT CAUSE | DEPENDENCIES | CONSUMERS | DATA INTEGRITY | CONTRACT IMPACT | AUTH/AUTHZ | SECURITY | FINANCE | GOVERNANCE IMPACT | RUNTIME | FAILURE/RECOVERY | TESTING | UI/UX | STRUCTURE/NAMING | ENGINEERING EXECUTION COST | LEGACY/PARALLEL-TRUTH CLEANUP`.
 
-A lens may be `N/A_PROVEN`; it may never disappear silently.
+Every lens receives an applicability disposition before closure. A lens may be `N/A_PROVEN`; it may never disappear silently. Deep work remains material/risk-driven.
 
 ## 12. Decision boundary
 
@@ -434,7 +490,7 @@ Impact/tradeoffs
 Affected roots/journeys/surfaces/contracts/data
 ```
 
-Stop only the dependent cone; continue all independent work. After a decision, propagate it, invalidate affected assumptions/evidence, re-audit/re-inspect/re-diagnose/re-analyze the affected cone and re-rank if material.
+Stop only the dependent cone; continue all independent work. After a decision, propagate it, invalidate affected assumptions/evidence, revalidate the affected project-frame claims, re-audit/re-inspect/re-diagnose/re-analyze the affected cone and re-rank if material.
 
 ## 13. Legitimate stop states
 

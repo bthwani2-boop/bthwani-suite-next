@@ -1,4 +1,4 @@
-# Verification, Exact-Candidate Re-Diagnosis and Fail-Closed Closure
+# Verification, Project-Consistency Re-Diagnosis, Exact-Candidate Evidence and Fail-Closed Closure
 
 ## 1. Verification proves claims, not activity
 
@@ -10,9 +10,11 @@ Typical progression:
 
 Do not automatically run the heaviest suite and do not use a weak check to make a stronger claim.
 
+A locally correct objective is not closed until its materially touched project-frame invariants, governance impact and affected prior canonical closures are reconciled.
+
 ## 2. Risk-proportional escalation
 
-Escalate especially for public contracts/events, database/migrations, finance/provider outcomes, security/auth/privacy/isolation, runtime/infrastructure, structural move/delete, governance semantics, multi-surface journeys, repository-platform claims and release/production claims.
+Escalate especially for public contracts/events, database/migrations, finance/provider outcomes, security/auth/privacy/isolation, runtime/infrastructure, structural move/delete, governance semantics, shared project-frame authorities/invariants, multi-surface journeys, repository-platform claims and release/production claims.
 
 ## 3. Proof limits
 
@@ -25,9 +27,11 @@ MIGRATION APPLIED ≠ READBACK/IDEMPOTENCY/RESTART/COMPATIBILITY PROOF
 HIDDEN UI ≠ SERVER AUTHORIZATION
 ONE SURFACE PASS ≠ JOURNEY PASS
 LOCAL FIX ≠ SYSTEM FIX
+LOCAL OBJECTIVE PASS ≠ PROJECT CONSISTENCY
 CANONICAL CHANGE WITHOUT ALL AFFECTED CONSUMERS MIGRATED ≠ COMPLETE
 MOCK PASS ≠ REAL PROVIDER/RUNTIME PASS
 DOC UPDATED ≠ IMPLEMENTATION FIXED
+GOVERNANCE UNCHANGED ≠ GOVERNANCE CONFIRMED
 TRACKED WORKFLOW CONFIG ≠ LIVE REPOSITORY ENFORCEMENT
 EXTERNAL DOCUMENTATION ≠ LOCAL VERSION/RUNTIME PROOF
 ```
@@ -110,7 +114,10 @@ Verify where material:
 - data migration/backfill/cutover/readback;
 - idempotency/replay/concurrency/restart;
 - runtime/config/provider behavior;
-- governance/product/policy synchronization;
+- materially touched project-frame authorities/invariants remain consistent;
+- previously proven canonical closures affected by the change remain valid or were explicitly reopened/reconciled;
+- every canonical focus family has an applicability disposition and every material one received sufficient proof;
+- governance/product/policy impact is classified and synchronized where required;
 - deletion/retirement of superseded reachable paths;
 - absence of new parallel truth;
 - preservation of proven design/value;
@@ -125,6 +132,8 @@ Verify where material:
 Cover materially applicable:
 
 `success | empty/missing | invalid/malformed | unauthenticated | denied | wrong role/scope | IDOR | forbidden state | not found | stale/conflict | boundary/min/max | duplicate/replay | idempotency | race/concurrency | partial failure | dependency/database/network/provider failure | timeout/unknown result | retry/backoff/DLQ | offline/reconnect | restart/recovery | old/new data | mixed-version | rollback/roll-forward | compensation/reconciliation`.
+
+When shared meaning/authority changed, also verify a representative contradictory use from another affected journey/surface/domain cannot recreate the old or locally optimized truth.
 
 ## 10. CI/runtime failure classification
 
@@ -164,6 +173,7 @@ For each material evidence item reason about bound candidate, inputs/environment
 
 Examples:
 
+- product/governance/authority change → revalidate affected project-frame claims, target and consumers;
 - contract/schema change → reverify generators/consumers/integration;
 - data/migration owner change → reverify DB/runtime/readback;
 - runtime/config/network change → reverify affected runtime/E2E;
@@ -176,9 +186,9 @@ Rerun what is invalidated; do not rerun everything mechanically and do not retai
 
 ## 13. Affected-only first
 
-Begin with nearest proof. Broaden when shared/canonical ownership changed, multiple consumers depend on root, public contract/data/runtime boundary changed, targeted evidence leaves material uncertainty, or feature/project closure is claimed.
+Begin with nearest proof. Broaden when shared/canonical ownership changed, project-frame invariants changed, multiple consumers depend on root, public contract/data/runtime boundary changed, targeted evidence leaves material uncertainty, or feature/project closure is claimed.
 
-Speed comes from accurate scope, not weaker proof.
+Speed comes from accurate scope and valid reusable project context, not weaker proof.
 
 ## 14. Review provenance
 
@@ -198,7 +208,9 @@ Textual zero-reference search may be necessary but is insufficient alone; prove 
 
 ## 16. Re-diagnosis after every material root
 
-`reinspect operational outcome → rerun affected journey/actor/state/handoff traces → rerun ownership/contract/data/runtime traces → invalidate descendant symptoms → discover exposed roots → rebuild affected coverage → rerank`.
+`reinspect operational outcome → rerun affected journey/actor/state/handoff traces → rerun ownership/contract/data/runtime traces → revalidate materially touched project-frame claims + governance impact + affected prior closures → invalidate descendant symptoms → discover exposed roots → rebuild affected coverage → rerank`.
+
+If a treatment changes shared authority, Product/System semantics, cross-domain boundary or durable invariant, broaden re-diagnosis far enough to prove project-level consistency for that concept; do not confine proof to the objective that exposed the root.
 
 Never mechanically execute an old finding list after system truth changes. The adaptive treatment loop and saturation condition are owned by `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md`.
 
@@ -209,6 +221,8 @@ Before freeze, every materially affected remaining artifact needs a defensible:
 `Necessary Purpose | Correct Owner | Real Consumer | Requirement | Proven Value | Correct Placement | Correct Naming/Context`.
 
 Closure is blocked by known related dead/unreachable code, superseded implementation, duplicate authority, stale/orphan reference, old path/alias, misleading naming, wrong placement/ownership, unused dependency, obsolete config/env/flag/script, workaround/fallback, stale docs/comments/examples, debug/temp artifact, unjustified compatibility residue or materially unjustified complexity tied to scope.
+
+Material governance/product artifacts capable of directing future work toward a stale owner/path/semantic model are closure-blocking even if runtime currently works.
 
 ## 18. Final freeze and branch-race gate
 
@@ -222,7 +236,7 @@ Immediately before ref update/push and final decision re-resolve target HEAD and
 
 ## 19. Final negative-space pass
 
-Search deliberately for missing consumer/surface, route/handler/contract field, writer/readback, failure/recovery path, authorization boundary, handoff/intervention, migration/compatibility transition, hidden duplicate/legacy truth, missing repository-platform proof when relied upon, and missing operational/audit evidence required by the claim.
+Search deliberately for missing consumer/surface, route/handler/contract field, writer/readback, failure/recovery path, authorization boundary, handoff/intervention, migration/compatibility transition, hidden duplicate/legacy truth, missing project-frame relation/invariant impact, missing prior-closure reconciliation, missing focus applicability disposition, missing governance reconciliation, missing repository-platform proof when relied upon, and missing operational/audit evidence required by the claim.
 
 Unexplained material absence remains open.
 
@@ -230,15 +244,15 @@ Unexplained material absence remains open.
 
 Assume closure is false and search for:
 
-`missed domain/capability | duplicate truth | stale/wrong governance | hidden consumer/writer | reachable old path | contract/data mismatch | cross-surface mismatch | unintended affected regression | incomplete consumer migration | failure/recovery gap | runtime divergence | stale process/data | unresolved semantic ambiguity | patch/workaround | race/idempotency issue | security/isolation issue | wrong placement/naming/context | orphan references | unjustified complexity | assurance loss/cost shift in tooling changes | stale/mismatched repository-platform evidence`.
+`missed domain/capability | objective-induced local optimization | project-frame contradiction | cross-objective regression | duplicate truth | stale/wrong governance | hidden consumer/writer | reachable old path | contract/data mismatch | cross-surface mismatch | unintended affected regression | incomplete consumer migration | failure/recovery gap | runtime divergence | stale process/data | unresolved semantic ambiguity | patch/workaround | race/idempotency issue | security/isolation issue | wrong placement/naming/context | orphan references | unjustified complexity | assurance loss/cost shift in tooling changes | stale/mismatched repository-platform evidence`.
 
 Any material issue reopens diagnosis/treatment/verification.
 
 ## 21. Coverage vs closure
 
-`COVERAGE_COMPLETE` means required material nodes are accounted for and inspected or proven N/A.
+`COVERAGE_COMPLETE` means required material nodes are accounted for and inspected or proven N/A, including required project-frame/focus/governance dispositions for the claim.
 
-`CLOSURE_COMPLETE` additionally means all material roots/findings are treated and verified on the correct candidate/runtime.
+`CLOSURE_COMPLETE` additionally means all material roots/findings are treated and verified on the correct candidate/runtime and the treatment remains consistent with the project-wide Canonical frame.
 
 ## 22. Closure equation
 
@@ -247,6 +261,7 @@ Any material issue reopens diagnosis/treatment/verification.
 ```text
 ZERO_UNKNOWN_REQUIRED_COVERAGE
 AND ZERO_UNINSPECTED_REQUIRED_NODES
+AND ALL_MATERIAL_FOCUS_DIMENSIONS_DISPOSITIONED
 AND ZERO_KNOWN_MATERIAL_OPEN_ROOTS
 AND ZERO_UNRESOLVED_MATERIAL_FINDINGS
 AND ZERO_FIXED_PENDING_VERIFY_FINDINGS
@@ -254,7 +269,10 @@ AND ZERO_UNRESOLVED_REQUIRED_DECISIONS
 AND ZERO_UNACCOUNTED_AFFECTED_CONSUMERS
 AND ZERO_UNMIGRATED_AFFECTED_CONSUMERS
 AND ZERO_UNINTENDED_AFFECTED_REGRESSIONS
+AND ZERO_CROSS_OBJECTIVE_REGRESSIONS
+AND ZERO_PROJECT_INVARIANT_REGRESSIONS
 AND ZERO_UNKNOWN_MATERIAL_DEPENDENCIES
+AND ZERO_UNRECONCILED_PROJECT_FRAME_CONTRADICTIONS
 AND ZERO_CONTRADICTORY_CANONICAL_TRUTHS
 AND ZERO_DUPLICATE_AUTHORITATIVE_WRITERS
 AND ZERO_UNJUSTIFIED_PARALLEL_TRUTH
@@ -264,7 +282,8 @@ AND ZERO_MATERIAL_MIGRATION/BACKFILL/CUTOVER_GAPS
 AND ZERO_MATERIAL_CONTRACT/BINDING_DRIFT
 AND ZERO_MATERIAL_AUTH/SCOPE/SECURITY_GAPS
 AND ZERO_UNRESOLVED_RUNTIME/DATA_STATE
-AND ZERO_PROVEN_GOVERNANCE_DRIFT_LEFT_IN_SCOPE
+AND ZERO_UNRECONCILED_MATERIAL_GOVERNANCE_IMPACT
+AND ZERO_MATERIAL_GOVERNANCE_DRIFT_CAPABLE_OF_MISLEADING CURRENT_OR_FUTURE_WORK
 AND ZERO_BROKEN/ORPHAN/STALE_REFERENCES_EXPOSED_BY_WORK
 AND ZERO_MATERIAL_CLEANUP_RESIDUE_TIED_TO_SCOPE
 AND ZERO_MATERIAL_UNJUSTIFIED_COMPLEXITY_TIED_TO_SCOPE
@@ -273,11 +292,14 @@ AND ZERO_REQUIRED_MISSING/STALE_EVIDENCE
 AND ZERO_REQUIRED_REPOSITORY_PLATFORM_TRUTH_GAPS
 AND ZERO_SILENT_EXCLUSIONS
 AND LATEST_REQUIRED_HEAD_RECONCILED
+AND FINAL_PROJECT_CONSISTENCY_PASS
 AND FINAL_NEGATIVE_SPACE_PASS
 AND FINAL_ADVERSARIAL_REDIAGNOSIS_PASS
 ```
 
 If any conjunct is unproven, state is `OPEN` unless a valid `DECISION_REQUIRED` or `EXTERNAL_BLOCKER` applies.
+
+`FINAL_PROJECT_CONSISTENCY_PASS` means the current objective/root is proven compatible with the materially touched project-wide Product/System frame, shared authorities/invariants, affected governance and previously proven canonical closures. It does not require exhaustive proof of unrelated unknown areas.
 
 ## 23. Temporary plan-file closure lifecycle
 
@@ -288,7 +310,7 @@ After all closure conditions are proven except the plan-file retirement/final re
 ```text
 DELETE PLAN_FILE AS THE LAST INTENDED PROJECT WRITE
 → NEW FINAL_CANDIDATE
-→ FINAL READ-ONLY AUDIT / INSPECTION / DIAGNOSIS / ANALYSIS / NEGATIVE-SPACE PASS
+→ FINAL READ-ONLY PROJECT-CONSISTENCY / AUDIT / INSPECTION / DIAGNOSIS / ANALYSIS / NEGATIVE-SPACE PASS
 → RE-RESOLVE LIVE HEAD
 → CLOSED ONLY IF NOTHING MATERIAL REOPENS
 ```
@@ -297,6 +319,6 @@ The deletion is a write and therefore creates a new candidate. If the final read
 
 ## 24. Final report
 
-Keep reporting concise and evidence-based: repository/ref, objective, starting/final observed HEAD, final candidate relation, highest roots treated, canonical owners, migrations/cutovers/cleanup, affected consumers/surfaces, verification actually performed and proof limits, runtime provenance/readback when claimed, repository-platform truth when materially relied upon, foreign-delta reconciliation, remaining true blocker/decision, and final state.
+Keep reporting concise and evidence-based: repository/ref, objective, starting/final observed HEAD, final candidate relation, relevant project-frame authority/invariants, highest roots treated, canonical owners, migrations/cutovers/cleanup, affected consumers/surfaces, governance disposition, verification actually performed and proof limits, runtime provenance/readback when claimed, repository-platform truth when materially relied upon, foreign-delta reconciliation, any prior closure reopened/reconciled, remaining true blocker/decision, and final state.
 
 Package independence/self-validation rules remain governed solely by `00-ORCHESTRATOR.md`.
