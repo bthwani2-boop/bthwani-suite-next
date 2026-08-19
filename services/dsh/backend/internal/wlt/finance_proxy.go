@@ -116,8 +116,8 @@ func (c *Client) financeReadRequest(ctx context.Context, path string, query url.
 	if correlationID = strings.TrimSpace(correlationID); correlationID != "" {
 		req.Header.Set("X-Correlation-ID", correlationID)
 	}
-	if operatorContextID = strings.TrimSpace(operatorContextID); operatorContextID != "" {
-		req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	if _, err := c.setDelegatedOperatorContextHeader(req, operatorContextID); err != nil {
+		return 0, nil, fmt.Errorf("prepare WLT finance read OperatorContext: %w", err)
 	}
 	response, err := c.http.Do(req)
 	if err != nil {
@@ -170,8 +170,8 @@ func (c *Client) financeWriteWithOperatorContext(ctx context.Context, method, pa
 	}
 	setServiceHeaders(req, c.serviceToken)
 	req.Header.Set("Content-Type", "application/json")
-	if operatorContextID = strings.TrimSpace(operatorContextID); operatorContextID != "" {
-		req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	if _, err := c.setDelegatedOperatorContextHeader(req, operatorContextID); err != nil {
+		return 0, nil, fmt.Errorf("prepare WLT finance write OperatorContext: %w", err)
 	}
 	if delegatedPrincipalID = strings.TrimSpace(delegatedPrincipalID); delegatedPrincipalID != "" {
 		req.Header.Set("X-Delegated-Principal-ID", delegatedPrincipalID)
