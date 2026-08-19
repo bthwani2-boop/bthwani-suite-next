@@ -220,12 +220,28 @@ jobs:
             Write-Error "$env:BACKEND_KEY migration safety verification failed; complete output is retained as an artifact."
             exit $exitCode
           }
+      - name: Run WLT database integration tests
+        if: ${{ matrix.key == 'wlt' }}
+        working-directory: ${{ matrix.workdir }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          log="${RUNNER_TEMP}/wlt-database-go-verification.log"
+          printf 'database verification mode=integration packages=./...\n' | tee "${log}"
+          if ! go test ./... -count=1 >>"${log}" 2>&1; then
+            echo "::error title=WLT database integration verification failed::The complete log is stored as an artifact."
+            grep -E '^--- FAIL:|^FAIL([[:space:]]|$)|panic:|undefined:|cannot use|build failed|Error Trace:' "${log}" | tail -n 80 || true
+            tail -n 160 "${log}"
+            exit 1
+          fi
       - name: Upload database verification log
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: ${{ matrix.key }}-database-verification-${{ github.run_id }}
-          path: ${{ runner.temp }}/${{ matrix.key }}-migration.log
+          path: |
+            ${{ runner.temp }}/${{ matrix.key }}-migration.log
+            ${{ runner.temp }}/wlt-database-go-verification.log
           if-no-files-found: warn
           retention-days: 7
 
