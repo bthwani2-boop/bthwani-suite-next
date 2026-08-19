@@ -47,11 +47,12 @@ test("coverage preparation is an ordered shell-free command contract", () => {
     "run",
     "build:ts",
   ]);
+  assert.deepEqual(model.suites.dsh.testRoots, ["services/dsh/tests/coverage"]);
   assert.equal(model.suites.identity.prepare, null);
   assert.equal(model.suites["control-panel-config"].prepare, null);
 });
 
-test("coverage planning is source-authority based rather than app-name based", () => {
+test("coverage planning is source-authority based and keeps DSH LCOV separate from broad verification", () => {
   assert.deepEqual(planCoverageSuites(["services/dsh/frontend/shared/catalog/a.ts"]), ["dsh"]);
   assert.deepEqual(planCoverageSuites(["shared/data-runtime/src/a.ts"]), ["data-runtime"]);
   assert.deepEqual(planCoverageSuites(["core/identity/clients/identity-session-store.ts"]), ["identity"]);
@@ -61,15 +62,23 @@ test("coverage planning is source-authority based rather than app-name based", (
   assert.deepEqual(planCoverageSuites(["apps/app-captain/runtime/src/App.tsx"]), ["app-captain"]);
   assert.deepEqual(
     planCoverageSuites(["apps/app-partner/runtime/tests/partner-order-runtime.execution.test.mjs"]),
-    ["app-partner", "dsh"],
+    ["app-partner"],
   );
   assert.deepEqual(
     planCoverageSuites(["apps/app-field/runtime/tests/field-deep-link.execution.test.mjs"]),
-    ["app-field", "dsh"],
+    ["app-field"],
   );
   assert.deepEqual(
     planCoverageSuites(["apps/app-captain/runtime/tests/captain-readiness-policy.execution.test.mjs"]),
-    ["app-captain", "dsh"],
+    ["app-captain"],
+  );
+  assert.deepEqual(
+    planCoverageSuites(["services/dsh/tests/coverage/dsh-executable-coverage.test.mjs"]),
+    ["dsh"],
+  );
+  assert.deepEqual(
+    planCoverageSuites(["services/dsh/tests/platform-capability-authority.test.mjs"]),
+    [],
   );
 });
 
