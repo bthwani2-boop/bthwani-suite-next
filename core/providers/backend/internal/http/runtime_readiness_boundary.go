@@ -81,7 +81,7 @@ func configuredReadinessDuration(name string, fallback time.Duration) (time.Dura
 }
 
 func runtimeConfigurationReady() bool {
-	return true
+	return strings.TrimSpace(os.Getenv("PROVIDERS_IDENTITY_BASE_URL")) != ""
 }
 
 func RuntimeReadinessBoundary(next http.Handler, databases ...*sql.DB) http.Handler {
@@ -92,9 +92,17 @@ func RuntimeReadinessBoundary(next http.Handler, databases ...*sql.DB) http.Hand
 	return runtimeReadinessBoundary(store, next)
 }
 
+func isProvidersOperationalRequest(r *http.Request) bool {
+	if r.Method == http.MethodOptions || r.URL.Path == "/providers/readiness" {
+		return false
+	}
+	return r.URL.Path == "/providers" || strings.HasPrefix(r.URL.Path, "/providers/")
+}
+
 func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet || r.URL.Path != "/providers/readiness" {
+		isReadinessRequest := r.Method == http.MethodGet && r.URL.Path == "/providers/readiness"
+		if !isReadinessRequest && !isProvidersOperationalRequest(r) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -171,9 +179,15 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 			"success_total", successTotal,
 			"failure_total", readinessFailures.Load(),
 		)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"HEALTHY","service":"core-providers"}`))
+
+		if isReadinessRequest {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{"status":"HEALTHY","service":"core-providers"}`))
+			return
+		}
+		w.Header().Set("X-Providers-Runtime-Status", "HEALTHY")
+		next.ServeHTTP(w, r)
 	})
 }
 
