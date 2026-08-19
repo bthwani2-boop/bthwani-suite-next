@@ -41,18 +41,12 @@ type CaptainFinancialEligibility struct {
 	ExpiresAt           time.Time `json:"expiresAt"`
 }
 
-// NewClient accepts the service token and operator context as optional arguments to keep
-// compatibility with existing zone-validation tests while enabling the
-// authenticated Workforce -> DSH availability projection channel.
-func NewClient(baseURL string, optional ...string) *Client {
-	client := &Client{
+func NewClient(baseURL, serviceToken string) *Client {
+	return &Client{
 		baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
+		token:   strings.TrimSpace(serviceToken),
 		http:    &http.Client{Timeout: 10 * time.Second},
 	}
-	if len(optional) > 0 {
-		client.token = strings.TrimSpace(optional[0])
-	}
-	return client
 }
 
 func (c *Client) Configured() bool {
