@@ -68,6 +68,7 @@ if ([string]::IsNullOrWhiteSpace($SourceCommitSha)) {
 }
 
 . (Join-Path $RepoRoot "infra/docker/scripts/schema-migration-runner.ps1")
+. (Join-Path $RepoRoot "infra/docker/scripts/workforce-migration-input-handoff.ps1")
 
 function Invoke-DatabaseSql {
   param(
@@ -75,15 +76,7 @@ function Invoke-DatabaseSql {
     [switch]$Quiet
   )
 
-  # Workforce-020 consumes two migration-input relations from the dedicated
-  # migration namespace. Public remains first so every ordinary unqualified
-  # CREATE/ALTER/SELECT in governed migrations continues to own public service
-  # schema; the input schema is only a fallback for the reserved staging names.
-  $sqlToExecute = if ($ServiceKey -eq 'workforce') {
-    "SET search_path TO public, bthwani_migration_input;`n$Sql"
-  } else {
-    $Sql
-  }
+  $sqlToExecute = Resolve-BthwaniWorkforceMigrationInputHandoff -ServiceName $ServiceKey -Sql $Sql
 
   $arguments = @(
     $DatabaseUrl,

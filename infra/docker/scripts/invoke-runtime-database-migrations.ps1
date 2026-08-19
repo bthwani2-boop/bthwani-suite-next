@@ -55,6 +55,7 @@ if ([string]::IsNullOrWhiteSpace($SourceCommitSha)) {
 }
 
 . (Join-Path $ScriptDir "schema-migration-runner.ps1")
+. (Join-Path $ScriptDir "workforce-migration-input-handoff.ps1")
 
 # Local ledger recovery is destructive, so permission is an explicit contract
 # passed down from the bootstrap-dev phase -- never inferred from ambient state.
@@ -79,24 +80,7 @@ function Test-LocalDatabaseRebuildAllowed {
 function Invoke-ComposePsql {
   param([Parameter(Mandatory = $true)][string]$Sql, [switch]$Quiet)
 
-  $sqlToExecute = $Sql
-  if ($Service -eq 'workforce') {
-    $migrationMarker = '-- BEGIN GOVERNED MIGRATION: workforce-020_operator_context_scope_boundary.sql'
-    if ($Sql.Contains($migrationMarker)) {
-      # The import authority stages the canonical Identity snapshot outside
-      # public so the preflight cannot mistake migration inputs for untracked
-      # Workforce schema. Workforce-020 is historical/immutable and consumes
-      # unqualified staging relation names. Promote exactly those two inputs at
-      # its governed marker, after the runner has opened the migration
-      # transaction. A migration failure therefore rolls the promotion back;
-      # a success drops the promoted relations as part of the migration itself.
-      $handoff = @'
-ALTER TABLE bthwani_migration_input.workforce_identity_operator_context_import SET SCHEMA public;
-ALTER TABLE bthwani_migration_input.workforce_identity_operator_context_import_proof SET SCHEMA public;
-'@
-      $sqlToExecute = $Sql.Replace($migrationMarker, "$handoff`n$migrationMarker")
-    }
-  }
+  $sqlToExecute = Resolve-BthwaniWorkforceMigrationInputHandoff -ServiceName $Service -Sql $Sql
 
   $arguments = @(
     "compose", "--env-file", $EnvFile, "-f", $ComposeFile,
