@@ -57,13 +57,13 @@ func HandleGovernedPaymentOperation(db *sql.DB, operation string, next http.Hand
 		sessionID := strings.TrimSpace(r.PathValue("paymentSessionId"))
 		idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 		correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
-		trustedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Delegated-Operator-Context"))
+		trustedOperatorContextID, contextErr := shared.RequireOperatorContext(r.Context())
 		if sessionID == "" {
 			shared.SendError(w, http.StatusBadRequest, "MISSING_PAYMENT_SESSION_ID", "paymentSessionId is required")
 			return
 		}
-		if trustedOperatorContextID == "" {
-			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "X-Delegated-Operator-Context is required")
+		if contextErr != nil {
+			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "authenticated OperatorContext context is required")
 			return
 		}
 		if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
