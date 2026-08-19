@@ -1,7 +1,7 @@
 import React from 'react';
 import { ActivityIndicator, BackHandler, Platform, View, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Icon, Text, spacing, colorRoles, radius } from '@bthwani/ui-kit';
+import { Button, Icon, Text, spacing, colorRoles, radius } from '@bthwani/ui-kit';
 import type { DshPartnerSurfaceProps } from './dsh-partner.types';
 import { useDshPartnerSurfaceModel } from './useDshPartnerSurfaceModel';
 import { PlatformVarsProvider, usePlatformVars } from '../shared/platform';
@@ -114,6 +114,16 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
     return '';
   }, [route, accountHubSection]);
 
+  const storeScopeSheet = (
+    <PartnerStoreScopeSheet
+      visible={storeScopeVisible}
+      onClose={() => setStoreScopeVisible(false)}
+      options={scopes}
+      selectedId={selectedStoreScopeId ?? ''}
+      onSelect={setSelectedStoreScopeId}
+    />
+  );
+
   if (!selectedStoreScope) {
     if (isLoadingScopes) {
       return (
@@ -124,6 +134,25 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
         </View>
       );
     }
+
+    if (!scopesError && scopes.length > 1) {
+      return (
+        <View style={styles.shellContainer}>
+          <View style={styles.emptyStateContainer}>
+            <Icon name="storefront-outline" size={48} tone="brand" />
+            <Text role="bodyStrong" style={styles.emptyStateTitle}>
+              اختر الفرع النشط
+            </Text>
+            <Text role="body" style={styles.emptyStateDesc}>
+              لديك أكثر من فرع. يجب اختيار الفرع صراحةً قبل تنفيذ أي عملية تشغيلية.
+            </Text>
+            <Button label="اختيار الفرع" onPress={openStoreScope} />
+          </View>
+          {storeScopeSheet}
+        </View>
+      );
+    }
+
     return (
       <View style={styles.shellContainer}>
         <View style={styles.emptyStateContainer}>
@@ -164,16 +193,6 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
         </Pressable>
       </View>
     </View>
-  );
-
-  const storeScopeSheet = (
-    <PartnerStoreScopeSheet
-      visible={storeScopeVisible}
-      onClose={() => setStoreScopeVisible(false)}
-      options={scopes}
-      selectedId={selectedStoreScopeId ?? ''}
-      onSelect={setSelectedStoreScopeId}
-    />
   );
 
   const showBottomNav = route !== 'entry';
