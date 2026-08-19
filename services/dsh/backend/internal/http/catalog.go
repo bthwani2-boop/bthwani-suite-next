@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -69,6 +71,15 @@ func handlePublicMedia(db *sql.DB, mediaProvider *media.Provider) http.HandlerFu
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load media asset")
 			return
 		}
+
+		if localMediaDir := os.Getenv("DSH_LOCAL_MEDIA_PATH"); localMediaDir != "" {
+			localPath := filepath.Join(localMediaDir, asset.ObjectKey)
+			if stat, err := os.Stat(localPath); err == nil && !stat.IsDir() {
+				http.ServeFile(w, r, localPath)
+				return
+			}
+		}
+
 		signedURL, _, err := mediaClient.PresignGet(r.Context(), asset.ObjectKey, 2*time.Hour)
 		if err != nil {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to generate preview url")

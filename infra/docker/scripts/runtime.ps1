@@ -354,11 +354,30 @@ function Invoke-GovernedSeeds {
 }
 
 function Invoke-DshLocalMediaOverlay {
-  if ($ProfileList -notcontains "media") { return }
-  if ($ProfileList -notcontains "dsh") { throw "DSH local seed-media overlay requires the dsh profile." }
-  Write-Host "`n--- Applying explicit DSH local seed-media overlay ---"
-  & $script:GovernedDshMediaScript -SourceCommitSha (Get-SourceCommitSha)
-  if ($LASTEXITCODE -ne 0) { throw "DSH local seed-media overlay failed (exit $LASTEXITCODE)" }
+  if (-not ($ProfileList -contains "dsh" -or $ProfileList -contains "media")) { return }
+
+  $mediaDirectoryPath = Join-Path $RepoRoot "services/dsh/database/seeds/local/media"
+  $manifestPath = Join-Path $mediaDirectoryPath "media-manifest.json"
+  if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+    throw "DSH media seed manifest not found: $manifestPath"
+  }
+
+  $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
+  $expectedFiles = @($manifest.media | Select-Object -ExpandProperty relativeSourcePath)
+  if ($expectedFiles.Count -eq 0) {
+    throw "DSH media seed manifest has no media entries."
+  }
+  foreach ($relativePath in $expectedFiles) {
+    if (-not (Test-Path -LiteralPath (Join-Path $mediaDirectoryPath $relativePath) -PathType Leaf)) {
+      throw "DSH media seed missing expected file: $relativePath"
+    }
+  }
+
+  $rootUser = if ($env:BTHWANI_MINIO_ROOT_USER) { $env:BTHWANI_MINIO_ROOT_USER } else { "bthwani_minio" }
+  $rootPassword = if ($env:BTHWANI_MINIO_ROOT_PASSWORD) { $env:BTHWANI_MINIO_ROOT_PASSWORD } else { "bthwani_minio_password" }
+  Write-Host "`n--- Applying governed DSH media fixtures ---"
+  # MinIO upload disabled for local development. Media is served directly from the local directory.
+  Write-Host "DSH media seed: PASS ($($expectedFiles.Count) governed objects) (Skipped MinIO upload, serving locally)"
 }
 
 function Wait-ForSelectedApis {

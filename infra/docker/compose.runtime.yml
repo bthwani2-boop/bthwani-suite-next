@@ -298,6 +298,7 @@ services:
       DSH_MINIO_BUCKET: "dsh-media"
       DSH_MINIO_USE_SSL: "false"
       DSH_MINIO_PUBLIC_USE_SSL: "false"
+      DSH_LOCAL_MEDIA_PATH: "/local-media"
     ports:
       - "127.0.0.1:${BTHWANI_DSH_API_HOST_PORT:-58080}:8080"
     depends_on:
@@ -307,6 +308,8 @@ services:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
+    volumes:
+      - ../../services/dsh/database/seeds/local/media:/local-media:ro
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8080/dsh/readiness || exit 1"]
       interval: 5s
