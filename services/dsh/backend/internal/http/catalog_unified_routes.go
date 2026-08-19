@@ -151,7 +151,6 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("PUT /dsh/operator/catalog/master-products/{productId}/relationships", s.handleUpsertMasterProductRelationship)
 	mux.HandleFunc("DELETE /dsh/operator/catalog/master-products/{productId}/relationships/{relationshipId}", s.handleDeleteMasterProductRelationship)
 	mux.HandleFunc("GET /dsh/operator/catalog/product-proposals", s.handleListCatalogProposals)
-	mux.HandleFunc("POST /dsh/operator/catalog/product-proposals/{proposalId}/decision", s.handleDecideCatalogProposalExpected)
 	mux.HandleFunc("POST /dsh/operator/catalog/product-proposals/{proposalId}/transition", s.handleTransitionCatalogProposalExpected)
 	mux.HandleFunc("GET /dsh/operator/catalog/platform-policies", s.handleListCatalogPlatformPolicies)
 	mux.HandleFunc("PATCH /dsh/operator/catalog/platform-policies/{policyId}", s.handleUpdateCatalogPlatformPolicyAtomic)
