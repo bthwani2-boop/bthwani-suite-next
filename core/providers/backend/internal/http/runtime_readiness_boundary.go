@@ -93,7 +93,7 @@ func RuntimeReadinessBoundary(next http.Handler, databases ...*sql.DB) http.Hand
 }
 
 func isProvidersOperationalRequest(r *http.Request) bool {
-	if r.Method == http.MethodOptions || r.URL.Path == "/providers/readiness" {
+	if r.Method == http.MethodOptions || r.URL.Path == "/providers/readiness" || r.URL.Path == "/providers/health" {
 		return false
 	}
 	return r.URL.Path == "/providers" || strings.HasPrefix(r.URL.Path, "/providers/")
