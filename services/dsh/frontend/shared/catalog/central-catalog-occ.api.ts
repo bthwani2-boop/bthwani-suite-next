@@ -55,9 +55,24 @@ export async function updateMasterProductOCC(productId: string, input: ProductMu
 }
 
 export async function decideProductProposalOCC(proposalId: string, input: ProposalDecisionInput): Promise<ProductProposal> {
+  const nextStatus = {
+    under_review: "partner-review",
+    adopted: "catalog-adopted",
+    rejected: "rejected",
+    needs_fix: "needs-fix",
+  }[input.decision];
   const response = await request<{ proposal: ProductProposal }>(
-    `/dsh/operator/catalog/product-proposals/${encodeURIComponent(proposalId)}/decision`,
-    { method: "POST", body: input },
+    `/dsh/operator/catalog/product-proposals/${encodeURIComponent(proposalId)}/transition`,
+    {
+      method: "POST",
+      body: {
+        nextStatus,
+        note: input.reviewNote,
+        adoptedMasterProductId: input.adoptedMasterProductId,
+        createMasterProduct: input.adoptedMasterProductId == null,
+        expectedVersion: input.expectedVersion,
+      },
+    },
   );
   return response.proposal;
 }
