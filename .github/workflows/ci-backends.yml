@@ -135,44 +135,17 @@ jobs:
         working-directory: ${{ matrix.workdir }}
         shell: bash
         run: |
-          set -uo pipefail
+          set -euo pipefail
           log="${RUNNER_TEMP}/${{ matrix.key }}-go-verification.log"
-          changed_files="$(git diff --name-only "${CI_BASE_SHA}" "${CI_HEAD_SHA}" -- "${{ matrix.workdir }}")"
-          full_backend=false
-          if [[ ("${CI_FULL_SCOPE}" == "true" && ("${CI_EXECUTION_PHASE}" == "closure" || "${CI_EXECUTION_PHASE}" == "master" || "${CI_EXECUTION_PHASE}" == "b")) || "${CI_EXECUTION_PHASE}" == "closure" || "${CI_EXECUTION_PHASE}" == "master" || "${CI_EXECUTION_PHASE}" == "b" ]]; then
-            full_backend=true
-          elif grep -Eq '(^|/)(go\.mod|go\.sum)$|/migrations/' <<<"${changed_files}"; then
-            full_backend=true
-          fi
+          printf 'backend verification mode=selected-module packages=./...\n' | tee "${log}"
 
-          package_args=()
-          if [[ "${full_backend}" != "true" ]]; then
-            while IFS= read -r changed_file; do
-              [[ -z "${changed_file}" ]] && continue
-              relative="${changed_file#${{ matrix.workdir }}/}"
-              package_dir="./$(dirname "${relative}")"
-              package_import="$(go list -f '{{.ImportPath}}' "${package_dir}" 2>/dev/null || true)"
-              if [[ -n "${package_import}" && ! " ${package_args[*]} " == *" ${package_import} "* ]]; then
-                package_args+=("${package_import}")
-              fi
-            done <<<"${changed_files}"
-          fi
-
-          if [[ "${full_backend}" == "true" ]]; then
-            package_args=(./...)
-          elif [[ "${#package_args[@]}" -eq 0 ]]; then
-            printf 'backend verification mode=affected packages=none reason=no-package-in-semantic-cone\n' | tee "${log}"
-            exit 0
-          fi
-          printf 'backend verification mode=%s packages=%s\n' "$([[ "${full_backend}" == "true" ]] && echo full || echo affected)" "${package_args[*]}" | tee "${log}"
-
-          if ! go test "${package_args[@]}" -count=1 >>"${log}" 2>&1; then
+          if ! go test ./... -count=1 >>"${log}" 2>&1; then
             echo "::error title=${{ matrix.key }} Go verification failed::The complete log is stored as an artifact."
             grep -E '^--- FAIL:|^FAIL([[:space:]]|$)|panic:|undefined:|cannot use|build failed|Error Trace:' "${log}" | tail -n 80 || true
             tail -n 160 "${log}"
             exit 1
           fi
-          if ! go build "${package_args[@]}" >>"${log}" 2>&1; then
+          if ! go build ./... >>"${log}" 2>&1; then
             tail -n 160 "${log}"
             exit 1
           fi
