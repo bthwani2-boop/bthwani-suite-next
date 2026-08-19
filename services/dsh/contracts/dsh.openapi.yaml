@@ -519,10 +519,6 @@ paths:
     $ref: "./paths/support.paths.yaml#/~1dsh~1operator~1support~1tickets"
   /dsh/operator/support/tickets/{ticketId}:
     $ref: "./dsh.support-governance.openapi.yaml#/paths/~1dsh~1operator~1support~1tickets~1{ticketId}"
-  /dsh/operator/incidents:
-    $ref: "./paths/support.paths.yaml#/~1dsh~1operator~1incidents"
-  /dsh/operator/incidents/{incidentId}:
-    $ref: "./paths/support.paths.yaml#/~1dsh~1operator~1incidents~1{incidentId}"
   /dsh/operator/analytics/platform:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1platform"
   /dsh/operator/analytics/orders:
