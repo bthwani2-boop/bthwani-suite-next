@@ -393,31 +393,3 @@ func TransitionProposalAtomicExpected(
 	}
 	return updated, nil
 }
-
-func DecideProposalAtomicExpected(
-	ctx context.Context,
-	db *sql.DB,
-	actorID, actorRole, id string,
-	input ProposalDecisionOCCInput,
-) (ProductProposal, error) {
-	if err := validateExpectedVersion(input.ExpectedVersion); err != nil {
-		return ProductProposal{}, err
-	}
-	nextStatus, ok := legacyDecisionToPipelineStatus[input.Decision]
-	if !ok {
-		nextStatus, ok = input.Decision, validProposalStatus[input.Decision]
-	}
-	if !ok {
-		return ProductProposal{}, ErrInvalid
-	}
-	createMasterProduct := input.AdoptedMasterProductID == nil
-	return TransitionProposalAtomicExpected(ctx, db, actorID, actorRole, id, ProposalTransitionOCCInput{
-		ProposalTransitionInput: ProposalTransitionInput{
-			NextStatus:             nextStatus,
-			Note:                   input.ReviewNote,
-			AdoptedMasterProductID: input.AdoptedMasterProductID,
-			CreateMasterProduct:    &createMasterProduct,
-		},
-		ExpectedVersion: input.ExpectedVersion,
-	})
-}
