@@ -45,7 +45,7 @@ type Client struct {
 // NewClient configures the Identity service endpoint. Operator context is
 // request-scoped and must be bound from the authenticated Identity response;
 // it is never held as process state.
-func NewClient(baseURL, serviceToken string, _ ...string) *Client {
+func NewClient(baseURL, serviceToken string) *Client {
 	return &Client{
 		baseURL:      strings.TrimRight(baseURL, "/"),
 		serviceToken: serviceToken,
