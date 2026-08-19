@@ -25,9 +25,8 @@ func (c *Client) actorFinanceRequest(ctx context.Context, method, path string, b
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	operatorContextID = strings.TrimSpace(operatorContextID)
-	if operatorContextID != "" {
-		req.Header.Set("X-Operator-Context-Id", operatorContextID)
+	if _, err := c.setDelegatedOperatorContextHeader(req, operatorContextID); err != nil {
+		return 0, nil, fmt.Errorf("prepare WLT actor finance OperatorContext: %w", err)
 	}
 	if len(body) > 0 {
 		req.Header.Set("Content-Type", "application/json")
