@@ -203,7 +203,6 @@
         "frontend/shared/operations/dsh-operational-runtime-adapter.ts",
         "frontend/shared/partner-delivery/PartnerDeliveryStatusCard.tsx",
         "frontend/shared/partner/operator-delivery-pricing.tsx",
-        "frontend/shared/platform/use-operational-policy-editor.ts",
         "frontend/shared/workforce/WorkforceErrorState.tsx"
       ],
       "ignoreFiles": [
