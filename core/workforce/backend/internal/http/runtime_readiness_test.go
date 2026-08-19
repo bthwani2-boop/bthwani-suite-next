@@ -73,21 +73,25 @@ func TestWorkforceReadinessMigrationMatchesActiveManifest(t *testing.T) {
 		t.Fatal(err)
 	}
 	var manifest struct {
+		Cutover    string `json:"cutover"`
 		Migrations []struct {
-			File  string `json:"file"`
-			State string `json:"state"`
+			Ordinal int    `json:"ordinal"`
+			File    string `json:"file"`
+			State   string `json:"state"`
 		} `json:"migrations"`
 	}
 	if err := json.Unmarshal(content, &manifest); err != nil {
 		t.Fatal(err)
 	}
-	active := make([]string, 0, 1)
+	latestOrdinal := -1
+	latestRequired := manifest.Cutover
 	for _, migration := range manifest.Migrations {
-		if migration.State == "ACTIVE" {
-			active = append(active, migration.File)
+		if migration.State == "ACTIVE" && migration.Ordinal > latestOrdinal {
+			latestOrdinal = migration.Ordinal
+			latestRequired = migration.File
 		}
 	}
-	if len(active) != 1 || active[0] != workforceLatestMigration {
-		t.Fatalf("workforce readiness migration drift: active=%v runtime=%s", active, workforceLatestMigration)
+	if latestRequired != workforceLatestMigration {
+		t.Fatalf("workforce readiness migration drift: latest_required=%s runtime=%s", latestRequired, workforceLatestMigration)
 	}
 }
