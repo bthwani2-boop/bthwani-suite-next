@@ -68,7 +68,7 @@ export type DshPartnerSurfaceModel = {
   state: DshPartnerSurfaceState;
   actions: DshPartnerSurfaceActions;
   scopes: DshPartnerOperationalScope[];
-  selectedStoreScope: DshPartnerOperationalScope | undefined;
+  selectedStoreScope: DshPartnerOperationalScope | null;
   isLoadingScopes: boolean;
   scopesError: string | null;
   runtimePartnerProfile: {
