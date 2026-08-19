@@ -20,8 +20,11 @@ func TestEvaluateDispatchFinancialEligibilityUsesAbstractWltDecision(t *testing.
 		if r.Header.Get("Authorization") != "Bearer service-token" || r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("missing service authentication headers")
 		}
-		if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-a" {
-			t.Fatalf("missing trusted operator context")
+		if r.Header.Get("X-Delegated-Operator-Context") != "OperatorContext-a" {
+			t.Fatalf("missing trusted delegated operator context")
+		}
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "" {
+			t.Fatalf("legacy operator context header must not be emitted, got %q", got)
 		}
 		var body map[string]any
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {

@@ -48,8 +48,11 @@ func TestCreatePaymentSessionSuccess(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
-		if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-a" {
-			t.Fatalf("expected X-Operator-Context-ID=OperatorContext-a, got %q", r.Header.Get("X-Operator-Context-ID"))
+		if r.Header.Get("X-Delegated-Operator-Context") != "OperatorContext-a" {
+			t.Fatalf("expected X-Delegated-Operator-Context=OperatorContext-a, got %q", r.Header.Get("X-Delegated-Operator-Context"))
+		}
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "" {
+			t.Fatalf("legacy OperatorContext header must not be emitted, got %q", got)
 		}
 		if r.Header.Get("X-Correlation-ID") != "corr-1" {
 			t.Fatalf("expected X-Correlation-ID=corr-1, got %q", r.Header.Get("X-Correlation-ID"))
@@ -183,8 +186,11 @@ func TestFinalizeCodReservationSendsGovernedHeaders(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
-		if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-a" {
-			t.Fatalf("expected X-Operator-Context-ID=OperatorContext-a, got %q", r.Header.Get("X-Operator-Context-ID"))
+		if r.Header.Get("X-Delegated-Operator-Context") != "OperatorContext-a" {
+			t.Fatalf("expected X-Delegated-Operator-Context=OperatorContext-a, got %q", r.Header.Get("X-Delegated-Operator-Context"))
+		}
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "" {
+			t.Fatalf("legacy OperatorContext header must not be emitted, got %q", got)
 		}
 		var input map[string]string
 		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -227,8 +233,11 @@ func TestFinanceReadWalletWithOperatorContextBuildsPathAndHeaders(t *testing.T) 
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
-		if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-a" {
-			t.Fatalf("expected X-Operator-Context-ID=OperatorContext-a, got %q", r.Header.Get("X-Operator-Context-ID"))
+		if r.Header.Get("X-Delegated-Operator-Context") != "OperatorContext-a" {
+			t.Fatalf("expected X-Delegated-Operator-Context=OperatorContext-a, got %q", r.Header.Get("X-Delegated-Operator-Context"))
+		}
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "" {
+			t.Fatalf("legacy OperatorContext header must not be emitted, got %q", got)
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
@@ -338,8 +347,11 @@ func TestDeliverFieldCommissionSendsExactBodyAndHeaders(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
-		if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-a" {
-			t.Fatalf("expected X-Operator-Context-ID=OperatorContext-a, got %q", r.Header.Get("X-Operator-Context-ID"))
+		if r.Header.Get("X-Delegated-Operator-Context") != "OperatorContext-a" {
+			t.Fatalf("expected X-Delegated-Operator-Context=OperatorContext-a, got %q", r.Header.Get("X-Delegated-Operator-Context"))
+		}
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "" {
+			t.Fatalf("legacy OperatorContext header must not be emitted, got %q", got)
 		}
 		if r.Header.Get("X-Correlation-ID") != "corr-visit-1" {
 			t.Fatalf("expected X-Correlation-ID=corr-visit-1, got %q", r.Header.Get("X-Correlation-ID"))
@@ -417,8 +429,11 @@ func TestExpireSessionSendsServiceHeadersAndPath(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
-		if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-a" {
-			t.Fatalf("expected X-Operator-Context-ID=OperatorContext-a, got %q", r.Header.Get("X-Operator-Context-ID"))
+		if r.Header.Get("X-Delegated-Operator-Context") != "OperatorContext-a" {
+			t.Fatalf("expected X-Delegated-Operator-Context=OperatorContext-a, got %q", r.Header.Get("X-Delegated-Operator-Context"))
+		}
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "" {
+			t.Fatalf("legacy OperatorContext header must not be emitted, got %q", got)
 		}
 		if r.Header.Get("X-Correlation-ID") != "corr-1" {
 			t.Fatalf("expected X-Correlation-ID=corr-1, got %q", r.Header.Get("X-Correlation-ID"))
@@ -486,8 +501,11 @@ func TestCancelSessionForOrderSendsExactBodyAndHeaders(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected X-Service-Caller=dsh, got %q", r.Header.Get("X-Service-Caller"))
 		}
-		if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-a" {
-			t.Fatalf("expected X-Operator-Context-ID=OperatorContext-a, got %q", r.Header.Get("X-Operator-Context-ID"))
+		if r.Header.Get("X-Delegated-Operator-Context") != "OperatorContext-a" {
+			t.Fatalf("expected X-Delegated-Operator-Context=OperatorContext-a, got %q", r.Header.Get("X-Delegated-Operator-Context"))
+		}
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "" {
+			t.Fatalf("legacy OperatorContext header must not be emitted, got %q", got)
 		}
 		if r.Header.Get("X-Correlation-ID") != "order-cancellation-order-1" {
 			t.Fatalf("expected X-Correlation-ID=order-cancellation-order-1, got %q", r.Header.Get("X-Correlation-ID"))

@@ -13,8 +13,11 @@ func representativeWalletTestContext() context.Context {
 
 func TestFinanceReadWalletAllowsEveryRepresentativeActorType(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-main" {
-			t.Fatalf("expected OperatorContext-main, got %q", r.Header.Get("X-Operator-Context-ID"))
+		if got := r.Header.Get("X-Delegated-Operator-Context"); got != "OperatorContext-main" {
+			t.Fatalf("expected OperatorContext-main, got %q", got)
+		}
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "" {
+			t.Fatalf("legacy OperatorContext header must not be emitted, got %q", got)
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -44,8 +47,11 @@ func TestFinanceReadWalletNormalizesActorTypeCase(t *testing.T) {
 	var gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
-		if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-main" {
-			t.Fatalf("expected OperatorContext-main, got %q", r.Header.Get("X-Operator-Context-ID"))
+		if got := r.Header.Get("X-Delegated-Operator-Context"); got != "OperatorContext-main" {
+			t.Fatalf("expected OperatorContext-main, got %q", got)
+		}
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "" {
+			t.Fatalf("legacy OperatorContext header must not be emitted, got %q", got)
 		}
 		w.WriteHeader(http.StatusOK)
 	}))
