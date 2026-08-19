@@ -77,7 +77,9 @@ func (c *Client) promotionFundingRequest(
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	if _, err := c.setDelegatedOperatorContextHeader(req, operatorContextID); err != nil {
+		return nil, fmt.Errorf("prepare WLT promotion funding OperatorContext: %w", err)
+	}
 	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
 		return nil, fmt.Errorf("prepare WLT promotion funding mutation: %w", err)
 	}
