@@ -29,7 +29,6 @@ func TestFieldActivationReadinessHasNoShiftRequirement(t *testing.T) {
 		FieldProfile: &FieldProfile{
 			CityCode:          "SAH",
 			ServiceZoneID:     "zone-1",
-			ShiftCode:         "",
 			SupervisorActorID: "supervisor-1",
 		},
 	}
