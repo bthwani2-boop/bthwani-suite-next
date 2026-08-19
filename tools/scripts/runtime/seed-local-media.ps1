@@ -62,4 +62,3 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Local media fixtures: PASS"
-
