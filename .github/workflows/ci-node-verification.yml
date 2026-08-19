@@ -24,12 +24,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
-      - name: Checkout immutable source history
+      - name: Checkout immutable source candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
           persist-credentials: false
-      - name: Fetch exact verification commits
+      - name: Verify exact candidate and fetch base
         uses: ./.github/actions/fetch-exact-commits
         with:
           base_sha: ${{ inputs.base_sha }}
@@ -105,12 +106,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      - name: Checkout immutable source history
+      - name: Checkout immutable source candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
           persist-credentials: false
-      - name: Fetch exact verification commits
+      - name: Verify exact candidate and fetch base
         uses: ./.github/actions/fetch-exact-commits
         with:
           base_sha: ${{ inputs.base_sha }}
@@ -153,12 +155,13 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - name: Checkout immutable source history
+      - name: Checkout immutable source candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
           persist-credentials: false
-      - name: Fetch exact verification commits
+      - name: Verify exact candidate and fetch base
         uses: ./.github/actions/fetch-exact-commits
         with:
           base_sha: ${{ inputs.base_sha }}

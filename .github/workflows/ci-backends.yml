@@ -110,19 +110,16 @@ jobs:
       CI_FULL_SCOPE: ${{ inputs.full_scope }}
       CI_VERIFICATION_TIER: ${{ inputs.verification_tier }}
       CI_EXECUTION_PHASE: ${{ inputs.execution_phase }}
-      # Each matrix entry is a standalone Go module. A developer-local/partial
-      # go.work must never change which module CI verifies or mask module-local
-      # dependency/build failures.
       GOWORK: off
     steps:
-      - name: Checkout immutable source
+      - name: Checkout immutable source candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ inputs.head_sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
           persist-credentials: false
           show-progress: false
-      - name: Fetch exact verification commits
+      - name: Verify exact candidate and fetch base
         uses: ./.github/actions/fetch-exact-commits
         with:
           base_sha: ${{ inputs.base_sha }}
@@ -218,10 +215,10 @@ jobs:
       BTHWANI_OPERATOR_CONTEXT_ID: ${{ matrix.key == 'wlt' && 'ci-wlt' || '' }}
       GOWORK: off
     steps:
-      - name: Checkout immutable source
+      - name: Checkout immutable source candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ inputs.head_sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
           persist-credentials: false
           show-progress: false
@@ -285,10 +282,10 @@ jobs:
       DSH_REQUIRE_DB_TESTS: "true"
       DSH_TEST_operator_context_id: ci-dsh
     steps:
-      - name: Checkout immutable source
+      - name: Checkout immutable source candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ inputs.head_sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
           persist-credentials: false
           show-progress: false

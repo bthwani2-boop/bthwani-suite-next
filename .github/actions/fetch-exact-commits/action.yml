@@ -1,15 +1,15 @@
 name: Fetch exact verification commits
-description: Fetch the immutable base and head commits required by a verification job, then detach the worktree at the exact verification head.
+description: Verify the checked-out immutable candidate and fetch only the base commit required for diff-based verification.
 
 inputs:
   base_sha:
     description: Exact verification base commit.
     required: true
   head_sha:
-    description: Exact verification head commit.
+    description: Exact verification head commit expected to already be checked out from the GitHub event.
     required: true
   token:
-    description: Read-only GitHub token used when the shallow checkout lacks a commit.
+    description: Read-only GitHub token used when the shallow checkout lacks the base commit.
     required: true
   repository:
     description: GitHub repository in owner/name form.
@@ -18,7 +18,7 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Fetch immutable commits and checkout exact verification head
+    - name: Verify candidate checkout and fetch immutable base
       shell: bash
       env:
         BASE_SHA: ${{ inputs.base_sha }}
@@ -27,43 +27,23 @@ runs:
         GITHUB_REPOSITORY_NAME: ${{ inputs.repository }}
       run: |
         set -euo pipefail
-        remote_url="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY_NAME}.git"
-
         if [[ -z "${HEAD_SHA}" || "${HEAD_SHA}" =~ ^0+$ ]]; then
           echo "::error::Exact verification head SHA is required."
           exit 1
         fi
 
-        fetch_shas=()
-        for sha in "${BASE_SHA}" "${HEAD_SHA}"; do
-          if [[ -z "${sha}" || "${sha}" =~ ^0+$ ]]; then
-            continue
-          fi
-          if ! git cat-file -e "${sha}^{commit}" 2>/dev/null; then
-            fetch_shas+=("${sha}")
-          fi
-        done
-
-        # A shallow checkout has one shared .git/shallow boundary. Fetch every
-        # missing immutable commit in one transaction so sequential shallow
-        # fetches cannot race while rewriting that boundary.
-        if (( ${#fetch_shas[@]} > 0 )); then
-          git fetch --no-tags --depth=1 "${remote_url}" "${fetch_shas[@]}"
-        fi
-
-        for sha in "${BASE_SHA}" "${HEAD_SHA}"; do
-          if [[ -z "${sha}" || "${sha}" =~ ^0+$ ]]; then
-            continue
-          fi
-          if ! git cat-file -e "${sha}^{commit}" 2>/dev/null; then
-            echo "::error::Exact verification commit is unavailable after fetch: ${sha}"
-            exit 1
-          fi
-        done
-
-        git checkout --detach "${HEAD_SHA}"
         checked_out_sha="$(git rev-parse HEAD)"
         if [[ "${checked_out_sha}" != "${HEAD_SHA}" ]]; then
           echo "::error::Verification checkout SHA mismatch: expected=${HEAD_SHA} actual=${checked_out_sha}"
+          exit 1
+        fi
+
+        if [[ -n "${BASE_SHA}" && ! "${BASE_SHA}" =~ ^0+$ ]] && ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+          remote_url="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY_NAME}.git"
+          git fetch --no-tags --depth=1 "${remote_url}" "${BASE_SHA}"
+        fi
+
+        if [[ -n "${BASE_SHA}" && ! "${BASE_SHA}" =~ ^0+$ ]] && ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+          echo "::error::Exact verification base commit is unavailable after fetch: ${BASE_SHA}"
           exit 1
         fi
