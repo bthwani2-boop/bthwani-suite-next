@@ -48,6 +48,8 @@ test("coverage preparation is an ordered shell-free command contract", () => {
     "tsc",
     "-p",
     "tsconfig.json",
+    "--module",
+    "ESNext",
   ]);
   assert.equal(model.suites.identity.prepare, null);
   assert.equal(model.suites["control-panel-config"].prepare, null);
