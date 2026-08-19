@@ -11,17 +11,17 @@
 - Repository: `bthwani2-boop/bthwani-suite-next`
 - Branch: `b`
 - Task: `all-surfaces-services-canonical-execution-root-closure`
-- Phase that produced this revision: `AUDIT_PREPARE`
+- Phase that produced this revision: `EXECUTE_CLOSE`
 - Governing entrypoint: `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`
 - Governing package revision observed: `PACKAGE_REVISION: 6`
-- Audited branch HEAD before this planning write: `ea6eda6bbb79c94ae31d709107945c93fc8d8ea0`
-- Latest target-system source HEAD under that plan-only HEAD: `5425e10fe766520832e185feb3bc4719a43f0f03`
-- Reason for the split: `ea6eda6b...` is a planning-record update whose parent is `5425e10f...`; target-system source truth was therefore audited at `5425e10f...` while planning truth was reconciled at `ea6eda6b...`.
-- `FOREIGN_DELTA = INPUT, NOT INSTRUCTION`.
-- Target-system mutation performed by this AUDIT_PREPARE revision: `NONE`.
-- Governance mutation performed: `NONE`.
-- Runtime/DB/provider mutation performed: `NONE`.
-- Material `DECISION_REQUIRED` at this handoff: `NONE`.
+- Origin branch ref observed: `34ec61cb3ddfbf2ac2be8c9937afe92f40c83628`.
+- Local execution candidate observed: `9856c19aa17cbef287269307567e2f48bb7c5be4` on branch `b` (local branch is one commit ahead of `origin/b`).
+- The execution delta is preserved in history and includes `1152969c6` (activation-bound financial eligibility refresh), `b78003625` (canonical actor store scopes in runtime smoke), and `9856c19aa` (guard-suite parallelization/DSH store-access semantic cleanup).
+- `FOREIGN_DELTA = INPUT, NOT INSTRUCTION`: the three uncommitted post-candidate edits in `.github/workflows/ci-node-diagnostics.yml`, `services/dsh/backend/internal/partner/operator_context_scopes.go`, and `tools/scripts/run-guard-suite.mjs` were discovered after the candidate commit, inspected, preserved, and are not overwritten.
+- Target-system mutations performed during EXECUTE_CLOSE: `YES`, limited to the recorded source commits; no OpenCode files were touched.
+- Governance mutation performed: `NONE` (`governance/**` remains read-only evidence/hold).
+- Runtime/DB mutation performed: scoped local `runtime up/smoke` and required local database integration verification only; no providers/full runtime run.
+- Material `DECISION_REQUIRED`: `NONE`; material evidence holds remain.
 
 ### 0.1 Canonical status vocabulary
 
@@ -139,6 +139,9 @@ The following source treatments already exist on the current source lineage. EXE
 | `075340518a8d63198c75994b7db2ac4518d4ab15` | authoritative Identity context bound before Workforce readiness gate | exact-candidate activation/provisioning runtime/security proof still required |
 | `9a0fbb962f815588da10666c1a8d0c69508e4b5a` | partner self-readbacks scoped by explicit store | exact-candidate onboarding/readback proof still required |
 | `5425e10fe766520832e185feb3bc4719a43f0f03` | candidate-bound prepared-runtime provenance and elimination of duplicate DSH rebuild during prepared smoke | targeted policy source exists; no current live CI status/PR workflow proof; runtime before/after/provenance evidence still required |
+| `1152969c66b5912900b3590c9a76ff7714a87c65` | activation-bound refresh of DSH/WLT financial eligibility immediately before Captain activation issuance; fail-closed on missing/expired eligibility | exact-candidate scoped smoke now passes this boundary; provider failure/recovery and broader adversarial proof remain required |
+| `b78003625714745b5e58403872d7357152377d9f` | runtime actor smoke uses canonical store scopes (`partner=store-test-grocery`, `field=store-1002`, `captain=store-1005`) and asserts explicit store readback | exact-candidate DSH catalog/client smoke passes; negative authorization matrix remains separately required |
+| `9856c19aa17cbef287269307567e2f48bb7c5be4` | DSH store-access terminology is separated from Workforce assignments; expensive Go route extraction is cached/aggregated; guard suite is bounded and parallel; generated-client checks are bounded | exact candidate guard suite, boundary guard, DSH targeted tests, runtime marker and scoped smoke pass; final negative-space/closure gates remain open |
 
 Additional current exact source evidence:
 
@@ -154,6 +157,21 @@ Additional current exact source evidence:
 - `services/dsh/backend/internal/http/dispatch_live_tracking.go` obtains ETA from `mapproviders.Client.Route`; provider failure becomes `provider_unavailable` and leaves ETA absent rather than approximating distance/duration geometrically.
 - `apps/app-client/runtime/src/platform/dsh-capabilities.tsx` imports concrete Expo/React-Native modules and injects them into typed DSH capability interfaces.
 
+### 4.1 EXECUTE_CLOSE evidence re-audit at the current candidate
+
+The following evidence is bound to `9856c19aa17cbef287269307567e2f48bb7c5be4` unless explicitly marked otherwise:
+
+- Prepared-runtime marker exists at `%TEMP%/bthwani-runtime-prepared-9856c19aa17cbef287269307567e2f48bb7c5be4.json`; its `sourceSha` matches the candidate and records image IDs for identity, workforce, dsh and wlt.
+- `pwsh -File tools/scripts/invoke-runtime-phase.ps1 -Action up -Profiles identity,workforce,dsh,wlt` completed and wrote current migration/image provenance.
+- `pwsh -File tools/scripts/invoke-runtime-phase.ps1 -Action smoke -Profiles identity,workforce,dsh,wlt` passed in 375.6 seconds. Identity, Workforce, DSH catalog/onboarding/client-home, and authenticated WLT smoke all passed; prepared smoke explicitly skipped the duplicate DSH image build.
+- Runtime migration ledgers reported current `sourceSha` for identity (24 files), workforce (21 files), and dsh (268 files); DSH local seeds completed with current provenance.
+- With the runtime database URL, `DSH_REQUIRE_DB_TESTS=true`, and the required test operator context, `go test ./...` in `services/dsh/backend` passed, including PostgreSQL integration packages. This is local runtime-DB evidence, not production reconciliation evidence.
+- `node tools/scripts/run-guard-suite.mjs --concurrency 2` passed all nine CI diagnostics; `node tools/guards/fullstack-boundary-gate.mjs` passed; runtime policy tests passed 5/5; and `go test ./internal/http ./internal/partner ./internal/store` passed.
+- The bounded guard launcher and workflow changes were inspected as concurrent deltas. They preserve all nine guards and reduce resource contention; no guard, workflow, or OpenCode file was deleted.
+- Runtime warnings observed: local default secrets and two orphan containers (`bthwani-wiremock-financial-provider-runtime`, `bthwani-mailpit-runtime`). They are recorded as environment hygiene findings, not treated as health or closure proof.
+
+The evidence closes the candidate-provenance/runtime-smoke portion of the treatment but does not close the whole record. Frozen clean install/Metro/Expo, real device evidence, provider failure/recovery, historical financial reconciliation, and final adversarial negative-space work remain unproven below.
+
 ## 5. Canonical root ledger — current reclassification
 
 | ID | Priority | Status | Current disposition |
@@ -162,17 +180,17 @@ Additional current exact source evidence:
 | ROOT-02 | P0 | `FIXED_PENDING_VERIFY` | Captain + Field DSH operational readiness boundaries and unavailable semantics exist; verify both journeys on exact candidate. |
 | ROOT-03 | P0 | `FIXED_PENDING_VERIFY` | Client/Partner/Captain/Field public DSH package cutover + manifest/lock graph exist; verify clean frozen install, Metro/Expo/typecheck and no hidden deep imports. |
 | ROOT-04 | P1 | `FIXED_PENDING_VERIFY` | fullstack boundary guard contains deep app-runtime import enforcement; verify negative fixture can falsify regression. |
-| ROOT-05 | P0 | `OPEN` | DSH store-access authorization is materially separated from Workforce assignments, but current DSH naming/commentary still uses assignment terminology in places; remove semantic aliasing and prove zero dual writer/ambiguous owner. |
-| ROOT-06 | P0 | `EVIDENCE/HOLD` | COD/WLT source fences exist, but current production/historical reconciliation and exact-candidate migration/runtime proof are not available from this read-only audit. |
+| ROOT-05 | P0 | `FIXED_PENDING_VERIFY` | DSH store-access authorization is now named and tested as a separate DSH owner from Workforce assignments; exact-candidate targeted tests and guard/runtime readbacks pass. Final writer/reader negative-space and IDOR closure remain required. |
+| ROOT-06 | P0 | `EVIDENCE/HOLD` | Exact-candidate WLT authenticated smoke and DSH PostgreSQL integration tests pass, but historical COD reconciliation, balance reconciliation, and production/provider evidence remain unavailable. |
 | ROOT-07 | P1 | `FIXED_PENDING_VERIFY` | Workforce→Identity governed provisioning source carries Workforce actor ID and trusted operator context; verify idempotency/compensation/linking/current contract/runtime. |
-| ROOT-08 | P1 | `FIXED_PENDING_VERIFY` | native module composition is in app runtime and shared DSH is typed capability boundary; verify all four runtimes/device/platform behavior where material. |
+| ROOT-08 | P1 | `EVIDENCE/HOLD` | Native module ownership is source-correct and static/runtime-shell checks pass, but no physical iOS/device environment is available; device/platform behavior cannot be inferred from mocks or typechecks. |
 | ROOT-09 | P1 | `FIXED_PENDING_VERIFY` | ETA source uses provider route duration and explicit unavailable state; verify runtime failure/recovery/consumer semantics and zero hidden approximation elsewhere in affected cone. |
 | ROOT-10 | P1 | `FIXED_PENDING_VERIFY` | major OpenAPI/generated/package/capability cutovers exist; exact-candidate drift/contract/runtime graph verification remains. |
 | ROOT-11 | P2 | `FIXED_PENDING_VERIFY` | stale `DOCKERFILE_PENDING.md` is removed; verify zero references and active Docker/runtime path. |
 | ROOT-12 | P1 | `FIXED_PENDING_VERIFY` | partner catalog/proposal explicit `storeId` source cutover exists at `51a16e7c...`; verify DB-backed journey. |
 | ROOT-13 | P1 | `FIXED_PENDING_VERIFY` | Workforce gate trusted Identity context source treatment exists at `075340518...`; verify activation/provisioning + negative context paths. |
 | ROOT-14 | P1 | `FIXED_PENDING_VERIFY` | partner self-readback explicit store scoping exists at `9a0fbb962...`; verify onboarding/readback ambiguity and authorization. |
-| ROOT-15 | P1 | `FIXED_PENDING_VERIFY` | duplicate DSH prepared-smoke rebuild source treatment exists at `5425e10f...`; do **not** reimplement; prove candidate provenance and comparable before→after execution cost without assurance loss. |
+| ROOT-15 | P1 | `FIXED_PENDING_VERIFY` | Candidate-bound marker/image provenance, policy test, and exact-candidate prepared smoke pass; duplicate DSH build was skipped. Comparable timing and failed/interrupted-run invalidation evidence are still incomplete. |
 
 The former plan's `ROOT-12 exact candidate`, `ROOT-13 continuous cleanup`, and `ROOT-14 full regression` were not causal roots. They are reclassified below as **closure gates/obligations** to prevent root-accounting distortion.
 
@@ -242,6 +260,14 @@ At minimum re-evaluate:
 - contract/generated drift;
 - zero material misleading alias/reference;
 - runtime readback where required.
+
+### EXECUTE_CLOSE result at `9856c19aa`
+
+- DSH authorization terminology and comments now use **store access** semantics; Workforce assignment read-through remains explicitly Workforce-owned.
+- The renamed DSH helper and affected HTTP/partner/store packages compile and pass targeted Go tests.
+- The nine bounded guard diagnostics pass, including contract-scope and runtime-binding checks; the fullstack boundary negative guard also passes.
+- Negative-space search found no `EnsureFieldAssignedScopeTx` reference and no remaining generic-assignment comment in the affected authorization path.
+- No new writer or governance mutation was introduced. This remains `FIXED_PENDING_VERIFY` until the final writer/reader/IDOR/adversarial cone is re-audited.
 
 ## 7. ROOT-01 — Workforce readiness semantics
 
@@ -329,6 +355,8 @@ Current exact source fences verified during this audit:
 
 These source fences do **not** prove production/historical data reconciliation or exact-candidate migration application.
 
+EXECUTE_CLOSE updated evidence: the exact-candidate scoped runtime smoke passed authenticated WLT payment/wallet/session readbacks, and DSH PostgreSQL integration tests passed with the runtime database and required operator-context variable. This proves current local runtime behavior only; it does not prove historical inventory/reconciliation or production balances.
+
 Required evidence before closure:
 
 - migration manifest/order/current checksum truth;
@@ -366,6 +394,8 @@ Required verification:
 - provisioning case persistence/restart semantics if still live;
 - exact-candidate Workforce→Identity runtime journey.
 
+EXECUTE_CLOSE updated evidence: the exact-candidate identity/workforce/DSH/WLT smoke passed the local provisioning-dependent Captain path after the activation-bound financial eligibility refresh. Compensation, restart, duplicate/replay and partial-failure proofs remain pending.
+
 Do not create another provisioning authority to satisfy a failing test/runtime path.
 
 ## 12. ROOT-08 — native capability ownership
@@ -390,6 +420,8 @@ Required verification across materially affected mobile runtimes:
 
 Mock/static proof cannot close a real device claim.
 
+EXECUTE_CLOSE disposition: source ownership and all available static/runtime-shell checks pass, but device/iOS evidence is `EVIDENCE/HOLD` because no physical device/platform environment was available.
+
 ## 13. ROOT-09 — provider-only ETA
 
 Status: `FIXED_PENDING_VERIFY`.
@@ -405,6 +437,8 @@ Required verification:
 - negative-space search across affected ETA paths for Haversine/geometric/speed-based silent substitute;
 - recovery after provider returns;
 - exact runtime/provider provenance where claimed.
+
+EXECUTE_CLOSE disposition: static provider-only ETA proof is retained; exact-candidate provider success is covered only indirectly by the current runtime cone, while provider failure/recovery and consumer-state adversarial evidence remain unrun. No geometric fallback is authorized or added.
 
 ## 14. ROOT-11 — stale Docker pending artifact
 
@@ -476,6 +510,8 @@ Required proof:
 
 Current GitHub inspection found no combined statuses and no PR-triggered workflow runs for `5425e10f...`; this is not a failure, but it means no live CI PASS is claimed from GitHub for that SHA.
 
+EXECUTE_CLOSE evidence at `9856c19aa`: the policy test passed 5/5; the prepared-runtime marker bound all four scoped images to the candidate; the exact scoped smoke passed; and its DSH phase reported `Prepared runtime supplied: skipping duplicate DSH image build`. This proves the duplicate-build treatment on the local candidate. A comparable controlled before/after benchmark and interrupted-run invalidation proof are not yet available, so the root remains `FIXED_PENDING_VERIFY`.
+
 ## 18. Closure gates — not causal roots
 
 The following are mandatory closure obligations, not independent root causes.
@@ -530,17 +566,21 @@ At the start of EXECUTE_CLOSE:
 6. do **not** reimplement any `FIXED_PENDING_VERIFY` source treatment unless current direct evidence proves the treatment is wrong;
 7. select the highest actionable `OPEN` root.
 
-### First execution target
+### First execution target (completed)
 
 Unless newer live truth invalidates this conclusion:
 
 `HIGHEST ACTIONABLE PROVEN ROOT = ROOT-05`
 
-`ROOT-05 → EXECUTE IMMEDIATELY`.
+`ROOT-05 → EXECUTE IMMEDIATELY` was completed in the `9856c19aa` source treatment and its current targeted verification.
 
 After ROOT-05 treatment, verification of independent `FIXED_PENDING_VERIFY` roots may proceed with maximum-safe parallelism, respecting shared write/migration/runtime dependencies.
 
 ROOT-06 is evidence/data gated and must not block independent source/verification work unless its financial truth materially gates a dependent journey.
+
+### Current continuation state
+
+The highest remaining material work is verification/closure, not blind deletion of the execution infrastructure. The guard and workflow cone has been treated with bounded parallel execution and preserved assurance. The next required work is the remaining independent evidence cones: frozen install and Metro/Expo resolution, historical WLT/COD reconciliation, native device/platform evidence, provider failure/recovery and ETA consumer semantics, provisioning compensation/replay, and the final negative-space/adversarial audit. Any missing capability remains `EVIDENCE/HOLD`.
 
 ## 20. New findings during EXECUTE_CLOSE
 
@@ -762,18 +802,22 @@ Report only evidence actually obtained:
 
 Never label self-review independent. Never call `CLOSED` from a plan/status edit.
 
-## 32. AUDIT_PREPARE handoff declaration
+## 32. EXECUTE_CLOSE continuation declaration
 
-`AUDIT_PREPARE COMPLETE`
+`EXECUTE_CLOSE IN PROGRESS — OPEN`
 
-`TARGET_SYSTEM_MUTATION: NONE`
+`TARGET_SYSTEM_MUTATION: RECORDED_SOURCE_COMMITS_ONLY`
 
 `MATERIAL_DECISION_REQUIRED: NONE`
 
-`PARALLEL_OLD_PLAN_RECORDS: RETIRE_IN_THIS_PLANNING_COMMIT`
+`GOVERNANCE: READ_ONLY / EVIDENCE-HOLD`
 
-`HIGHEST_ACTIONABLE_PROVEN_ROOT_FOR_EXECUTE_CLOSE: ROOT-05`
+`FINAL_CANDIDATE: 9856c19aa17cbef287269307567e2f48bb7c5be4`
 
-`READY_FOR_EXECUTION`
+`RUNTIME_PROVENANCE: CURRENT_CANDIDATE / SCOPED IDENTITY-WORKFORCE-DSH-WLT`
+
+`HIGHEST_REMAINING_WORK: VERIFICATION_AND_EVIDENCE_GATES`
+
+`CLOSED: NO — required material evidence remains unproven`
 
 `PLAN_FILE: plans/diagnose-implementing/all-surfaces-services-canonical-execution-root-closure-20260818.md`

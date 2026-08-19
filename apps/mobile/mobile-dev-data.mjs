@@ -19,6 +19,8 @@ import {
 import { LOCAL_ACTORS, LOCAL_WORKFORCE_PROVIDERS } from '../../tools/dev/local-actors.mjs';
 
 const MODE = process.argv.includes('--repair') ? 'repair' : 'check';
+const LOCAL_PARTNER_STORE_ID =
+  process.env.BTHWANI_LOCAL_PARTNER_STORE_ID?.trim() || 'store-test-grocery';
 
 async function collectClientStorefrontFailures() {
   const failures = [];
@@ -140,9 +142,13 @@ async function collectReadinessFailures(operatorToken, providerTokens = {}) {
 
   try {
     const partnerToken = await getPasswordToken(LOCAL_ACTORS.partner.username);
-    const scopes = await requestJson('dsh:partner-scopes', `${DSH_API_BASE}/dsh/partner/scopes`, {
+    const scopes = await requestJson(
+      'dsh:partner-scopes',
+      `${DSH_API_BASE}/dsh/partner/scopes?storeId=${encodeURIComponent(LOCAL_PARTNER_STORE_ID)}`,
+      {
       headers: authorization(partnerToken),
-    });
+      },
+    );
     if (list(scopes?.scopes).length === 0) failures.push('app-partner: no governed store scopes');
   } catch (error) {
     failures.push(`app-partner: ${error.message}`);
