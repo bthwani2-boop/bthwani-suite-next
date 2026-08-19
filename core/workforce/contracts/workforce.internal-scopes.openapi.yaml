@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Workforce Internal DSH API
-  version: 1.3.0
+  version: 2.0.0
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/workforce
 paths:
@@ -64,7 +64,7 @@ paths:
   /internal/assignments/{actorId}/scopes:
     get:
       operationId: getInternalActorScopes
-      summary: Read active operational scopes in a trusted platform context.
+      summary: Read Workforce-owned active operational scopes in a trusted platform context.
       parameters:
         - $ref: '#/components/parameters/ActorId'
         - $ref: '#/components/parameters/Role'
@@ -89,48 +89,12 @@ paths:
       security:
         - bearerAuth: []
           serviceCaller: []
-    put:
-      operationId: updateInternalActorScopes
-      summary: Replace operational scopes with an audited trusted-context mutation.
-      parameters:
-        - $ref: '#/components/parameters/ActorId'
-        - $ref: '#/components/parameters/Authorization'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/OperatorContext'
-        - $ref: '#/components/parameters/RequestingActor'
-        - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SetActorScopesRequest'
-      responses:
-        '200':
-          description: Replaced actor scopes.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ActorScopes'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          $ref: '#/components/responses/Conflict'
-        '500':
-          $ref: '#/components/responses/InternalError'
-      security:
-        - bearerAuth: []
-          serviceCaller: []
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
-      description: DSH-to-Workforce service credential.
+      description: DSH-to-Workforce service credential for read-only internal consumption.
     serviceCaller:
       type: apiKey
       in: header
@@ -172,22 +136,6 @@ components:
       schema:
         type: string
         minLength: 1
-    RequestingActor:
-      in: header
-      name: X-Actor-ID
-      required: true
-      description: Identity-resolved actor assertion that Workforce independently verifies in the same operator context.
-      schema:
-        type: string
-        minLength: 1
-    CorrelationId:
-      in: header
-      name: X-Correlation-ID
-      required: true
-      schema:
-        type: string
-        minLength: 1
-        maxLength: 128
   responses:
     InvalidRequest:
       description: Request validation failed.
@@ -209,12 +157,6 @@ components:
             $ref: '#/components/schemas/ApiError'
     NotFound:
       description: Provider is not present for the requested Workforce kind.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ApiError'
-    Conflict:
-      description: The requested scopes overlap or conflict with durable state.
       content:
         application/json:
           schema:
@@ -260,36 +202,6 @@ components:
           type: array
           items:
             type: string
-    OperationalAssignmentInput:
-      type: object
-      additionalProperties: false
-      required: [scopeType, scopeTargetId, startsOn]
-      properties:
-        scopeType:
-          type: string
-          enum: [store, area, partner, shift]
-        scopeTargetId:
-          type: string
-          minLength: 1
-        startsOn:
-          type: string
-          format: date-time
-        endsOn:
-          type: string
-          format: date-time
-    SetActorScopesRequest:
-      type: object
-      additionalProperties: false
-      required: [role, inputs]
-      properties:
-        role:
-          type: string
-          enum: [field, captain, employee]
-        inputs:
-          type: array
-          maxItems: 500
-          items:
-            $ref: '#/components/schemas/OperationalAssignmentInput'
     ActorScopes:
       type: object
       additionalProperties: false

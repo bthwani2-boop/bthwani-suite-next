@@ -50,24 +50,19 @@ func TestInternalAssignmentsRequireConfiguredDSHServiceIdentity(t *testing.T) {
 	}
 }
 
-func TestInternalAssignmentsRejectClientSelectedOperatorContext(t *testing.T) {
-	server := &server{internalDSHToken: "configured-dsh-token"}
-	handler := server.internalOnly(server.handleSetActorScopes)
-	request := httptest.NewRequest(
-		http.MethodPut,
-		"/internal/assignments/field-1/scopes",
-		strings.NewReader(`{"role":"field","operatorContextId":"spoofed","inputs":[]}`),
-	)
-	request.SetPathValue("actorId", "field-1")
+func TestInternalAssignmentsDSHBoundaryIsReadOnly(t *testing.T) {
+	router := NewRouter(nil, nil, nil, nil, nil, nil, "configured-dsh-token")
+	request := httptest.NewRequest(http.MethodPut, "/internal/assignments/field-1/scopes", nil)
 	request.Header.Set("Authorization", "Bearer configured-dsh-token")
 	request.Header.Set("X-Service-Caller", "dsh")
-	request.Header.Set("X-Operator-Context-ID", "trusted-context")
-	request.Header.Set("X-Actor-ID", "operator-1")
-	request.Header.Set("X-Correlation-ID", "corr-1")
 	response := httptest.NewRecorder()
-	handler.ServeHTTP(response, request)
-	if response.Code != http.StatusBadRequest {
-		t.Fatalf("client-selected operatorContextId must be rejected, got %d", response.Code)
+	router.ServeHTTP(response, request)
+
+	if response.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("DSH must not have a Workforce assignment mutation route, got %d", response.Code)
+	}
+	if allow := response.Header().Get("Allow"); !strings.Contains(allow, http.MethodGet) || strings.Contains(allow, http.MethodPut) {
+		t.Fatalf("expected read-only assignment boundary, Allow=%q", allow)
 	}
 }
 
