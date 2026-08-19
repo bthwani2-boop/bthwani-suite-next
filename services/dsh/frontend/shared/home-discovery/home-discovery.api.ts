@@ -106,7 +106,7 @@ export async function fetchHomeDiscovery(params?: DshHomeDiscoveryParams): Promi
         return errorState(`DSH_HTTP_ERROR: ${clientErr.status} ${clientErr.message || clientErr.code || 'unknown'}`);
       }
     }
-    
+
     const errorMessage = err instanceof Error ? err.message : (typeof err === 'string' ? err : JSON.stringify(err));
     return errorState(`DSH_UNKNOWN_ERROR: unexpected error fetching home discovery (${errorMessage})`);
   }
