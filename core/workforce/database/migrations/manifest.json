@@ -157,6 +157,13 @@
       "file": "workforce-022_field_shift_legacy_cutover.sql",
       "sha256": "f35daeeb67cecad3b60564434eb3f4ed029c3c1867ad20d6aeb88679cca085a3",
       "historicalPrefix": "022",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 23,
+      "file": "workforce-023_projection_invariant_cutover.sql",
+      "sha256": "363476ad081f4b2da6b6dc0d6b4f582afefd4027235c8bacb6b8722caef021fb",
+      "historicalPrefix": "023",
       "state": "ACTIVE"
     }
   ]
