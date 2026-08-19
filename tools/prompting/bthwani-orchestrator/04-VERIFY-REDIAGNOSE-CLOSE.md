@@ -35,6 +35,7 @@ GOVERNANCE UNCHANGED ≠ GOVERNANCE CONFIRMED
 GOVERNANCE PRESENT ≠ DURABLE PROJECT MEMORY COMPLETE FOR PROVEN MATERIAL TRUTH
 TRACKED WORKFLOW CONFIG ≠ LIVE REPOSITORY ENFORCEMENT
 EXTERNAL DOCUMENTATION ≠ LOCAL VERSION/RUNTIME PROOF
+PLAN ABSENT ≠ EXECUTE_CLOSE BLOCKED
 ```
 
 State what material evidence proves and what it does not prove.
@@ -304,25 +305,27 @@ If any conjunct is unproven, state is `OPEN` unless a valid `DECISION_REQUIRED` 
 
 `FINAL_PROJECT_CONSISTENCY_PASS` means the current objective/root is proven compatible with the materially touched project-wide Product/System frame, shared authorities/invariants, affected governance and previously proven canonical closures. It does not require exhaustive proof of unrelated unknown areas.
 
-## 23. Temporary plan-file closure lifecycle
+## 23. Optional temporary plan-file lifecycle
 
-When the optional `PHASE=EXECUTE_CLOSE` overlay from `00` is active, `PLAN_FILE` remains a temporary execution record until every material item it carried and every materially related item exposed during treatment satisfies the closure requirements above. Do not delete it merely because its original checklist was exhausted.
+`EXECUTE_CLOSE` does not require a plan file and does not create one by default. If `PLAN_FILE=NONE` or is omitted, skip this section entirely; closure proceeds directly through the normal exact-candidate lifecycle.
 
-After all closure conditions are proven except the plan-file retirement/final read-only pass:
+If an existing temporary `PLAN_FILE` is explicitly supplied to `EXECUTE_CLOSE`, it is optional non-authoritative evidence/accounting only. Revalidate it against current live truth before use; its original finding list is not a stopping boundary.
+
+If that explicitly supplied file is owned by the current task and is intended to be disposable, retain it until every still-valid material item it carried and every materially related item exposed during treatment satisfies the closure requirements above. Then retire it as the last intended project write:
 
 ```text
-DELETE PLAN_FILE AS THE LAST INTENDED PROJECT WRITE
+DELETE EXPLICIT TEMPORARY PLAN_FILE
 → NEW FINAL_CANDIDATE
 → FINAL READ-ONLY PROJECT-CONSISTENCY / AUDIT / INSPECTION / DIAGNOSIS / ANALYSIS / NEGATIVE-SPACE PASS
 → RE-RESOLVE LIVE HEAD
 → CLOSED ONLY IF NOTHING MATERIAL REOPENS
 ```
 
-The deletion is a write and therefore creates a new candidate. If the final read-only pass exposes a material issue, closure is revoked; recreate/continue the temporary execution record before further mutation and resume the normal treatment cycle.
+Do not delete an unrelated, foreign or deliberately retained plan merely because a matching objective exists. If no explicit temporary plan was supplied, no plan deletion/recreation step exists.
 
 ## 24. Final report
 
-Keep reporting concise and evidence-based: repository/ref, objective, starting/final observed HEAD, final candidate relation, relevant project-frame authority/invariants, highest roots treated, canonical owners, migrations/cutovers/cleanup, affected consumers/surfaces, governance disposition, durable-truth clarification performed when material, verification actually performed and proof limits, runtime provenance/readback when claimed, repository-platform truth when materially relied upon, foreign-delta reconciliation, any prior closure reopened/reconciled, remaining true blocker/decision, and final state.
+Keep reporting concise and evidence-based: repository/ref, objective, starting/final observed HEAD, final candidate relation, relevant project-frame authority/invariants, highest roots treated, canonical owners, migrations/cutovers/cleanup, affected consumers/surfaces, governance disposition, durable-truth clarification performed when material, verification actually performed and proof limits, runtime provenance/readback when claimed, repository-platform truth when materially relied upon, foreign-delta reconciliation, any prior closure reopened/reconciled, optional plan disposition when one was explicitly supplied, remaining true blocker/decision, and final state.
 
 ## 25. Durable project-memory closure gate
 

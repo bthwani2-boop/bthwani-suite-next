@@ -1,13 +1,13 @@
 # BThwani Self-Contained Goal-Driven Audit, Inspection, Diagnosis, Analysis & Root-Cause Execution Orchestrator
 
-PACKAGE_REVISION: 8
+PACKAGE_REVISION: 9
 PACKAGE_CLASS: TEXTUAL_EXECUTION_COMMAND_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
 EXTERNAL_PROMPT_DEPENDENCIES: NONE
 SELF_VALIDATION_AUTOMATION: FORBIDDEN
 DEFAULT_EXECUTION: LIVE_END_TO_END
-DEFAULT_PLAN_ARTIFACTS: FORBIDDEN
+DEFAULT_PLAN_ARTIFACTS: PHASE_CONTROLLED
 DEFAULT_ORCHESTRATOR_MUTABILITY: READ_ONLY
 
 ## 0. Governing law
@@ -47,11 +47,11 @@ Project tooling and external research may be used only as evidence or execution 
 
 The package has exactly these semantic owners:
 
-1. `00-ORCHESTRATOR.md` — governing law, project-frame invariant, progressive-governance invariant, goal-driven audit/execution lifecycle, invocation, optional phase handoff, independence, protection and valid stop states.
-2. `01-SCOPE-AUTHORITY-RULES.md` — truth/authority, project-frame reconstruction, objective/working-scope/focus routing, durable project-memory routing, phase/mode authority, research/capability discipline, exclusions, concurrency and longevity.
+1. `00-ORCHESTRATOR.md` — governing law, project-frame invariant, progressive-governance invariant, goal-driven audit/execution lifecycle, invocation, phase semantics, independence, protection and valid stop states.
+2. `01-SCOPE-AUTHORITY-RULES.md` — truth/authority, project-frame reconstruction, objective/working-scope/focus routing, durable project-memory routing, phase/mode/plan authority, research/capability discipline, exclusions, concurrency and longevity.
 3. `02-DIAGNOSE-ROOT-CAUSE.md` — detailed audit/inspection/diagnosis/analysis protocol through project orientation, coverage, journeys, findings, decisions, root proof/ranking, durable-truth discovery, project-consistency target modeling and execution readiness.
 4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — actual treatment, reconstruction, migration, cutover, continuity, simplification, cleanup, progressive governance clarification and mutation discipline.
-5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-candidate evidence, project-consistency proof, durable project-memory closure, repository-platform truth when required, review provenance, temporary-plan retirement, post-treatment re-audit/re-inspection/re-diagnosis/re-analysis and fail-closed closure.
+5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-candidate evidence, project-consistency proof, durable project-memory closure, optional temporary-plan retirement, repository-platform truth when required, review provenance, post-treatment re-audit/re-inspection/re-diagnosis/re-analysis and fail-closed closure.
 6. `focus/code-architecture-organization.md` — implementation architecture, repository structure, UI/UX and discoverability.
 7. `focus/governance-product-design.md` — product meaning, governance reconciliation, progressive durable-memory clarification and engineering-governance/control-artifact value.
 8. `focus/data-contracts-runtime-security-quality.md` — data, contracts, runtime, security, finance, quality and engineering control-path efficiency.
@@ -87,8 +87,8 @@ Use:
 REPOSITORY: <owner/repo>
 BRANCH: <exact branch/ref>
 OBJECTIVE: <material outcome to audit/inspect/diagnose/analyze/fix/restructure/clean/close; discovery itself may be the objective>
-PHASE: <AUTO | AUDIT_PREPARE | EXECUTE_CLOSE>
-PLAN_FILE: <NONE | exact temporary plan path>
+PHASE: <AUDIT_PREPARE | EXECUTE_CLOSE | AUTO>
+PLAN_FILE: <AUTO | NONE | exact temporary plan path>
 MODE: <AUTO | DIAGNOSE | EXECUTE_END_TO_END | EXECUTE_PROJECT_CLOSURE>
 PRIMARY_FOCUS: <AUTO | optional explicit focus>
 SCOPE: <AUTO | repository/domain/service/surface/feature/journey/path/semantic scope>
@@ -100,38 +100,79 @@ Defaults when omitted:
 
 ```text
 PHASE = AUTO
-PLAN_FILE = NONE
 MODE = resolve from explicit PHASE under 01; otherwise EXECUTE_END_TO_END
 PRIMARY_FOCUS = AUTO
 PROJECT_FRAME = repository-wide orientation/reconciliation under 01
 SCOPE = derive the smallest complete working cone from OBJECTIVE inside the project frame, then expand through proven relations
 RESEARCH = AUTO
-PLANS = NONE unless AUDIT_PREPARE explicitly requests its single exact temporary PLAN_FILE
 PRE-EXECUTION METHOD = AUDIT + INSPECT + DIAGNOSE + ANALYZE
 EXECUTION PRIORITY = HIGHEST PROVEN SYSTEMIC ROOT
+
+IF PHASE=AUDIT_PREPARE:
+  PLAN_FILE = AUTO when omitted
+  PLAN ARTIFACT = MANDATORY after material decisions are resolved
+
+IF PHASE=EXECUTE_CLOSE:
+  PLAN_FILE = NONE when omitted
+  PLAN ARTIFACT CREATION = FORBIDDEN BY DEFAULT
+  EXISTING PLAN_FILE = OPTIONAL NON-AUTHORITATIVE INPUT ONLY WHEN EXPLICITLY SUPPLIED
 ```
 
 The invocation token `MODE=DIAGNOSE` is intentionally retained for compatibility and routing simplicity. It **does not mean diagnosis-only**. It means the full read-only `AUDIT + INSPECT + DIAGNOSE + ANALYZE` protocol governed here and detailed by `01`/`02`, without target-system mutation.
 
-No prepare phase is required by default. `PHASE` is an optional human-requested handoff overlay; its authority relationship to `MODE` and `PLAN_FILE` is owned by `01`.
+`PHASE` is a human-requested operating contract. Its authority relationship to `MODE` and `PLAN_FILE` is owned by `01`.
 
 ### 3.1 `AUDIT_PREPARE`
 
-Perform the full audit/inspection/diagnosis/analysis and prove roots, decisions, Canonical Target and Root-Correct Treatment without mutating the target system.
+This phase is a **full deep read-only preparation run** over the target system:
 
-If any material `DECISION_REQUIRED` can change the target/treatment, stop **before any plan-file write**, batch the material questions under §12, and wait for the decision. After decisions are supplied, propagate them and re-audit/re-inspect/re-diagnose/re-analyze the affected cone before preparing the handoff.
+```text
+AUDIT + INSPECT + DIAGNOSE + ANALYZE
+→ PROVE MATERIAL FINDINGS / ROOTS / BLAST RADIUS / DECISIONS
+→ DEFINE CANONICAL TARGET + ROOT-CORRECT TREATMENT
+→ DEFINE MIGRATIONS / CUTOVERS / CLEANUP / GOVERNANCE DISPOSITION
+→ DEFINE VERIFICATION + CLOSURE CRITERIA
+→ WRITE ONE TEMPORARY PLAN FILE
+→ REPORT
+→ READY_FOR_EXECUTION
+```
 
-Only when execution truth is sufficiently resolved may this phase create exactly one explicitly requested temporary file at the exact `PLAN_FILE` path supplied by the invocation. The path must not depend on a `TASK` field.
+The target system remains read-only throughout this phase. If any material `DECISION_REQUIRED` can change the target/treatment, stop **before writing the plan file**, batch the material questions under §12, and wait for the decision. After decisions are supplied, propagate them and re-audit/re-inspect/re-diagnose/re-analyze the affected cone before preparing the handoff.
 
-The file records the material evidence, findings, proven roots, blast radius, resolved decisions, Canonical Target, Root-Correct Treatment, migrations/cutovers/cleanup, required governance dispositions that have passed the governance mutation gate, durable-truth clarification requirements, verification and closure criteria. It does not become authority; `01` owns that rule.
+After all blocking material decisions are resolved, this phase **must create exactly one temporary execution record**:
 
-After writing it, do not begin treatment. Report a **detailed human-readable summary in the conversation** covering what was audited/inspected/diagnosed/analyzed, the highest roots and gaps, the Canonical Target, material treatment/cleanup/governance impact, risks/dependencies, what the file contains and what remains to execute. End with `READY_FOR_EXECUTION` plus the exact `PLAN_FILE` path.
+- when `PLAN_FILE` is an explicit path, use that exact path;
+- when `PLAN_FILE=AUTO` or is omitted, derive a concise filesystem-safe slug from `OBJECTIVE` and create a collision-safe path under `plans/diagnose-implementing/` without using any `TASK` field;
+- never overwrite unrelated existing work merely to satisfy automatic naming;
+- the file is derived evidence/accounting, not authority or Product Truth.
+
+The file records the material evidence, findings, proven roots, blast radius, resolved decisions, Canonical Target, Root-Correct Treatment, migrations/cutovers/cleanup, required governance dispositions that have passed the governance mutation gate, durable-truth clarification requirements, verification and closure criteria.
+
+After writing it, **do not begin treatment**. Report a detailed human-readable summary in the conversation covering what was audited/inspected/diagnosed/analyzed, the highest roots and gaps, the Canonical Target, material treatment/cleanup/governance impact, risks/dependencies, the exact generated `PLAN_FILE`, and what remains to execute. End with `READY_FOR_EXECUTION` plus the exact path.
 
 ### 3.2 `EXECUTE_CLOSE`
 
-Requires an existing `PLAN_FILE`. Before mutation, re-resolve latest live truth, revalidate the project frame and revalidate the file rather than executing it mechanically. Correct stale assumptions/findings, add materially related newly exposed work, re-rank by the highest proven root, and raise any new true `DECISION_REQUIRED` before the dependent mutation.
+This phase does **not require a plan file and does not create one by default**. It performs the same deep audit/inspection/diagnosis/analysis obligations needed to establish current truth, but couples them directly to root-correct treatment:
 
-Then execute through `03` and verify/close through `04`. Continue the adaptive root loop until the entire proven affected cone is closed, all project-frame invariants materially touched by it are reconciled and every newly proven durable material truth with future-governance value has been dispositioned; the original plan list is not a stopping boundary. Keep the temporary file until the retirement conditions in `04` are met.
+```text
+AUDIT + INSPECT + DIAGNOSE + ANALYZE CURRENT LIVE TRUTH
+→ PROVE / RANK HIGHEST CURRENT SYSTEMIC ROOT
+→ IF EXECUTABLE: TREAT ROOT IMMEDIATELY END-TO-END
+→ MIGRATE / CUTOVER / CLEAN / RECONCILE GOVERNANCE AS REQUIRED
+→ VERIFY
+→ RE-AUDIT / RE-INSPECT / RE-DIAGNOSE / RE-ANALYZE AFFECTED CONE
+→ RE-RANK
+→ TREAT NEXT HIGHEST PROVEN ROOT
+→ REPEAT UNTIL CLOSED OR A LEGITIMATE STOP STATE APPLIES
+```
+
+Do not perform a broad diagnosis merely to produce a report and then stop while an executable material root remains. Once the highest root is sufficiently proven and no unresolved higher root/decision can change the treatment, execute it immediately; then continue adaptively from the new live truth.
+
+If an existing `PLAN_FILE` is explicitly supplied, revalidate it against current live truth and use only still-valid material content as optional evidence/accounting. It is never required, never Source of Truth, never a scope ceiling, never an execution checklist, and its absence never blocks `EXECUTE_CLOSE`.
+
+A `DECISION_REQUIRED`, external blocker or long-running unavailable evidence source blocks only its dependent cone. Continue every independent proven executable root allowed by the current project frame and maximum-safe-parallel law.
+
+Then execute through `03` and verify/close through `04` until the entire proven affected cone is closed, all project-frame invariants materially touched by it are reconciled and every newly proven durable material truth with future-governance value has been dispositioned.
 
 ## 4. Goal-driven auditing and execution, not checklist-driven execution
 
@@ -149,7 +190,7 @@ RECONSTRUCT / REVALIDATE PROJECT-WIDE CANONICAL FRAME
 → diagnose causal/root structure
 → expand only through proven authority/causal/dependency/consumer/contract/data/runtime/security/blast-radius relations
 → prove project-consistent target state
-→ treat the highest proven root
+→ treat the highest proven root when phase/mode permits mutation
 ```
 
 Universal capability does **not** mean universal deep execution scope. All canonical focus dimensions are considered for material applicability; deeply execute only those that can change correctness, priority, target, treatment, blast radius or closure.
@@ -208,7 +249,7 @@ UNDERSTAND OBJECTIVE AS CURRENT PRIORITY
 → SELECT HIGHEST PROVEN SYSTEMIC ROOT
 → DEFINE CANONICAL TARGET STATE + ROOT-CORRECT TREATMENT
 → PROVE PROJECT-CONSISTENCY EXECUTION GATE
-→ EXECUTE SMALLEST COMPLETE ROOT-CORRECT CHANGE
+→ EXECUTE SMALLEST COMPLETE ROOT-CORRECT CHANGE WHEN PHASE/MODE PERMITS
 → MIGRATE ALL MATERIAL WRITERS / READERS / CONSUMERS / DATA
 → CANONICAL CUTOVER
 → DELETE/RETIRE SUPERSEDED REACHABLE PATHS WHEN PROVEN SAFE
@@ -269,9 +310,7 @@ AND NO shared migration/cutover requiring ordered mutation
 AND NO evidence dependency requiring one result before the other
 ```
 
-Read overlap alone does not prohibit concurrency.
-
-When overlap is uncertain, treat it as non-parallel until proven safe.
+Read overlap alone does not prohibit concurrency. When overlap is uncertain, treat it as non-parallel until proven safe.
 
 ### Single integration authority
 
@@ -294,9 +333,7 @@ No worker may silently redefine shared Product/System truth, governance meaning 
 
 ### Work-conserving scheduling
 
-Do not introduce artificial batch barriers.
-
-When any active root finishes:
+Do not introduce artificial batch barriers. When any active root finishes:
 
 ```text
 verify its materially affected claims
@@ -308,15 +345,11 @@ verify its materially affected claims
 → immediately assign available execution capacity
 ```
 
-Do not wait for unrelated workers to finish before starting newly ready independent work.
-
-A `DECISION_REQUIRED`, blocker or long-running verification suspends only its dependent cone; all proven independent work continues.
+Do not wait for unrelated workers to finish before starting newly ready independent work. A `DECISION_REQUIRED`, blocker or long-running verification suspends only its dependent cone; all proven independent work continues.
 
 ### Evidence and context reuse
 
 Previously acquired evidence remains reusable while its provenance and assumptions remain valid.
-
-Do not repeat repository-wide discovery, audit, inspection, research, builds, tests or runtime checks merely because another worker/session begins.
 
 ```text
 VALID EVIDENCE → REUSE

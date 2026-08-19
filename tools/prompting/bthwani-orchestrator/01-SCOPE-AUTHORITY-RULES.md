@@ -84,12 +84,10 @@ Project-wide orientation does not authorize repository-wide mutation or exhausti
 ## 3. Modes
 
 ### `DIAGNOSE`
-Read/diagnose only. Build material coverage, prove roots and expose decision/evidence gaps. No project mutation.
-
-An exact immutable commit/ref may be supplied when the goal is candidate review; no separate review mode is required.
+Read/diagnose only. Build material coverage, prove roots and expose decision/evidence gaps. No target-system mutation.
 
 ### `EXECUTE_END_TO_END`
-Diagnose the current objective inside the project-wide frame and treat proven roots end-to-end, expanding the working cone only through proven causal/ownership/dependency/consumer/blast-radius relations.
+Run the full audit/inspection/diagnosis/analysis obligations needed for current truth, then treat proven roots end-to-end, expanding the working cone only through proven causal/ownership/dependency/consumer/blast-radius relations.
 
 ### `EXECUTE_PROJECT_CLOSURE`
 Repository-wide closure by definition:
@@ -101,21 +99,32 @@ SCOPE = REPOSITORY
 
 No material domain/surface/foundation is assumed clean. If an invocation is explicitly narrowed below repository scope, treat it as `EXECUTE_END_TO_END`; do not claim project-wide closure from a narrowed working scope.
 
-### 3.1 Optional task-phase overlay
+### 3.1 Phase contract
 
-`PHASE` is an invocation overlay, not a fourth mode and not a competing lifecycle.
+`PHASE` selects one of two operating contracts. It is not a competing lifecycle.
 
 ```text
 PHASE=AUDIT_PREPARE
 → effective MODE=DIAGNOSE when MODE is omitted
 → target system remains read-only
-→ after required decisions are resolved, one explicitly requested temporary PLAN_FILE may be written under the contract in 00
+→ full AUDIT + INSPECT + DIAGNOSE + ANALYZE is mandatory
+→ blocking material DECISION_REQUIRED is resolved before plan write
+→ exactly one temporary PLAN_FILE is mandatory after blocking decisions are resolved
+→ PLAN_FILE=AUTO when omitted
+→ finish with READY_FOR_EXECUTION; no treatment begins
 
 PHASE=EXECUTE_CLOSE
 → effective MODE=EXECUTE_END_TO_END when MODE is omitted
 → use EXECUTE_PROJECT_CLOSURE only when repository-wide closure is explicitly requested
-→ PLAN_FILE is input evidence/accounting, not execution authority
+→ perform the same material AUDIT + INSPECT + DIAGNOSE + ANALYZE needed to establish current truth
+→ immediately treat the highest proven executable root; do not stop merely to produce a plan/report
+→ verify, re-audit/re-diagnose/re-rank and continue root-by-root until CLOSED or a legitimate stop state
+→ PLAN_FILE=NONE when omitted
+→ creation of a plan artifact is forbidden by default
+→ an explicitly supplied existing PLAN_FILE is optional evidence/accounting only, never execution authority
 ```
+
+### 3.2 Plan-file semantics
 
 A temporary `PLAN_FILE` is a derived, disposable execution record. It may capture findings, roots, decisions, canonical targets, treatment, governance dispositions, verification and closure criteria, but every material claim must be revalidated against the current project frame, authority/code/contracts/data/runtime/readback before execution. Latest proven truth overrides stale plan content.
 
@@ -123,9 +132,14 @@ A temporary `PLAN_FILE` is a derived, disposable execution record. It may captur
 PLAN_FILE ≠ SOURCE OF TRUTH
 OLD PLAN FINDING ≠ CURRENT FINDING
 PLAN EXHAUSTED ≠ CLOSURE
+PLAN ABSENT ≠ EXECUTE_CLOSE BLOCKED
 ```
 
-No `PLAN_FILE` may be created while an unresolved material `DECISION_REQUIRED` can change its canonical target/treatment. The plan-file retirement/final-candidate lifecycle is owned by `04`.
+For `AUDIT_PREPARE`, exactly one plan is required after blocking decisions are resolved. If no path is supplied, derive a concise collision-safe filesystem path from the objective under `plans/diagnose-implementing/`; do not use a `TASK` field and do not overwrite unrelated existing work.
+
+For `EXECUTE_CLOSE`, no plan is required and no plan is created unless the human explicitly requests one as a separate artifact. If an existing plan is explicitly supplied, it remains optional non-authoritative input and is subject to the optional retirement rules in `04`.
+
+No plan may be written while an unresolved material `DECISION_REQUIRED` can change its canonical target/treatment.
 
 ## 4. Objective-driven priority routing inside the project frame
 
@@ -290,7 +304,7 @@ Plans, reports, old commands/prompts, prior packages, comments, branch documents
 
 Previously proven canonical closures are reusable evidence/constraints only while their assumptions and affected authority remain valid on current truth. New evidence may legitimately reopen them; it must not create a second interpretation beside them.
 
-Default execution writes nothing to planning areas unless explicitly requested.
+Planning writes are governed strictly by the phase contract: `AUDIT_PREPARE` requires one temporary plan after blocking decisions are resolved; `EXECUTE_CLOSE` creates no plan by default.
 
 ## 13. Research escalation
 
