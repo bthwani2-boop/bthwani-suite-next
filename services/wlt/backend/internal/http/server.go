@@ -25,8 +25,9 @@ import (
 type routeKind int
 
 const (
-	// routePublic needs no service caller: health, readiness and static
-	// reference vocabularies carry no financial state.
+	// routePublic needs no service caller and is reserved for health/readiness
+	// endpoints that carry no actor, order, wallet, settlement, refund or other
+	// financial state.
 	routePublic routeKind = iota
 	// routeRead requires an authenticated DSH service caller.
 	routeRead
@@ -44,25 +45,13 @@ type registeredRoute struct {
 	ServiceAuth bool
 }
 
-// routeRegistrar is the only registration seam available to financial route
-// modules. It keeps route protection and the testable route inventory at the
-// router boundary rather than allowing modules to install independently gated
-// handlers on the mux.
 type routeRegistrar func(pattern string, handler http.HandlerFunc)
 
-// NewRouter builds the WLT HTTP router. Every broad financial read requires
-// an authenticated DSH service caller. Every mutation additionally requires
-// WLT_MUTATIONS_ENABLED and a permitting finance kill-switch decision, so
-// configuration, authorization and the runtime circuit breaker are three
-// independent fail-closed gates.
 func NewRouter(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionService) *http.ServeMux {
 	mux, _ := newRouterWithRoutes(db, mutationsEnabled, ds)
 	return mux
 }
 
-// newRouterWithRoutes also returns the route table so tests can assert that no
-// financial mutation escapes the gates. Registering a mutation through
-// mux.HandleFunc directly would bypass both the gates and that assertion.
 func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionService) (*http.ServeMux, []registeredRoute) {
 	mux := http.NewServeMux()
 	routes := make([]registeredRoute, 0, 128)
@@ -85,9 +74,6 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 		routes = append(routes, registeredRoute{Pattern: pattern, Kind: routeMutation, ServiceAuth: true})
 		mux.HandleFunc(pattern, gate(requireWorkforceMutationServiceAuth(killGate(handler))))
 	})
-	// providerMutation carries no service-token gate because the caller is the
-	// payment provider, authenticated by signature inside the handler. It is
-	// still a financial mutation, so configuration and kill switch apply.
 	providerMutation := routeRegistrar(func(pattern string, handler http.HandlerFunc) {
 		routes = append(routes, registeredRoute{Pattern: pattern, Kind: routeMutation})
 		mux.HandleFunc(pattern, gate(killGate(handler)))
@@ -96,10 +82,13 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	public("GET /wlt/health", health.HandleHealth)
 	public("GET /wlt/readiness", health.HandleReadiness(db, ds))
 
-	public("GET /wlt/references/payment-status", reference.HandleGetPaymentStatus(db))
-	public("GET /wlt/references/settlement-status", reference.HandleGetSettlementStatus(db))
-	public("GET /wlt/references/refund-status", reference.HandleGetRefundStatus(db))
-	public("GET /wlt/references/wallet-status", reference.HandleGetWalletStatus(db))
+	// These are financial projections keyed by real orders/actors, not static
+	// vocabularies. They must never be reachable without the authenticated DSH
+	// financial-read boundary.
+	read("GET /wlt/references/payment-status", reference.HandleGetPaymentStatus(db))
+	read("GET /wlt/references/settlement-status", reference.HandleGetSettlementStatus(db))
+	read("GET /wlt/references/refund-status", reference.HandleGetRefundStatus(db))
+	read("GET /wlt/references/wallet-status", reference.HandleGetWalletStatus(db))
 
 	read("GET /wlt/wallets/{actorType}/{actorId}", wallet.HandleGetWallet(db))
 	read("GET /wlt/captain-collateral/{captainId}", collateral.HandleGet(db))
@@ -116,11 +105,6 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	mutation("POST /wlt/payment-sessions/{paymentSessionId}/expire", payment.HandleOperatorContextScopedPaymentSession(db, payment.HandleExpireSession(db)))
 	mutation("POST /wlt/payment-sessions/{paymentSessionId}/cancel-for-order", payment.HandleOperatorContextScopedPaymentSession(db, payment.HandleGovernedSessionCancellation(db)))
 
-	// Cash-In wallet top-up (U002-T002): a distinct route namespace, not the
-	// order-payment authorize/capture routes above, because these route
-	// through provider.CashInRail (the capability-checked rail from
-	// U002-T001) instead of the raw provider client, and reject any session
-	// whose purpose is not customer_topup/captain_topup.
 	mutation("POST /wlt/topup-sessions", reference.HandleCreateTopUpSessionTrustedDsh(db))
 	mutation("POST /wlt/topup-sessions/{paymentSessionId}/authorize", payment.HandleGovernedPaymentOperation(db, "authorize", payment.HandleAuthorizeTopUpSession(db)))
 	mutation("POST /wlt/topup-sessions/{paymentSessionId}/capture", payment.HandleGovernedPaymentOperation(db, "capture", payment.HandleCaptureTopUpSession(db)))
@@ -194,12 +178,6 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	mutation("POST /wlt/external-provider-statements", payout.HandleImportAuthoritativeStatement(db))
 	mutation("POST /wlt/payout-requests/{payoutId}/fail", payout.HandleFailPayoutRequestClosed())
 
-	// WLT owns every money figure in a cart, so DSH sends operational inputs
-	// here and consumes the returned quote as-is. The handler existed and DSH
-	// already called this exact path, but nothing registered it: pricing
-	// answered 404 and DSH silently lost the sovereign quote. It is classified
-	// as a mutation because it is a POST on the financial surface, which keeps
-	// it behind service authentication and the finance kill switch.
 	mutation("POST /wlt/internal/quotes/calculate", HandleCalculateQuote(db))
 	read("GET /wlt/internal/quotes/checkout/{checkoutIntentId}", HandleGetCheckoutQuote(db))
 	mutation("POST /wlt/internal/quotes/special-request", HandleIssueSpecialRequestQuote(db))
@@ -226,9 +204,6 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	mutation("POST /wlt/promotion-funding/reservations/{reservationId}/release", promotionfunding.HandleRelease(db))
 	mutation("POST /wlt/promotion-funding/reservations/{reservationId}/reverse", promotionfunding.HandleReverse(db))
 
-	// These route modules share the same registry as every other financial
-	// mutation. They must not be added by main after this inventory is built,
-	// otherwise they could bypass the decision-service kill switch.
 	registerOrderCancellationRoutes(db, mutation)
 	registerFieldCategoryCommissionRoutes(db, mutation)
 
@@ -265,9 +240,6 @@ func requireInternalFinancialRead(next http.HandlerFunc) http.HandlerFunc {
 		if !shared.RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh") {
 			return
 		}
-		// RequireServiceCaller binds both the operator context and, when present,
-		// the Identity-authenticated delegated finance principal. Preserve that
-		// complete authenticated context for the handler.
 		next(w, r)
 	}
 }
