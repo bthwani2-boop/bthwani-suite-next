@@ -34,9 +34,6 @@ func TestReferenceReaderPreservesDistinctTrustedDshContexts(t *testing.T) {
 		if !RequireReferenceReader(response, request) {
 			t.Fatalf("trusted DSH request with caller context %q was rejected status=%d body=%s", callerContextID, response.Code, response.Body.String())
 		}
-		if got := request.Header.Get("X-Delegated-Operator-Context"); got != callerContextID {
-			t.Fatalf("delegated context %q changed to %q", callerContextID, got)
-		}
 		if contextualOperatorContext, ok := OperatorContextIDFromContext(request.Context()); !ok || contextualOperatorContext != callerContextID {
 			t.Fatalf("delegated OperatorContext was not installed: OperatorContext=%q ok=%v", contextualOperatorContext, ok)
 		}
@@ -56,7 +53,7 @@ func TestReferenceReaderFailsClosedWithoutDelegatedContext(t *testing.T) {
 	}
 }
 
-func TestReferenceReaderAcceptsIdentityOperatorContextAndInstallsIt(t *testing.T) {
+func TestReferenceReaderAcceptsIdentityOperatorContextAndInstallsContextOnly(t *testing.T) {
 	configureReferenceAuth(t)
 	identityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer user-token" {
@@ -75,30 +72,26 @@ func TestReferenceReaderAcceptsIdentityOperatorContextAndInstallsIt(t *testing.T
 	if !RequireReferenceReader(response, request) {
 		t.Fatalf("Identity session was rejected status=%d body=%s", response.Code, response.Body.String())
 	}
-	if request.Header.Get("X-Delegated-Operator-Context") != "OperatorContext-a" {
-		t.Fatalf("identity OperatorContext was not installed, got %q", request.Header.Get("X-Delegated-Operator-Context"))
+	if request.Header.Get("X-Delegated-Operator-Context") != "" {
+		t.Fatalf("end-user request must not receive internal delegation header")
+	}
+	if got, ok := OperatorContextIDFromContext(request.Context()); !ok || got != "OperatorContext-a" {
+		t.Fatalf("identity OperatorContext was not installed in context: got=%q ok=%v", got, ok)
 	}
 }
 
-func TestReferenceReaderRejectsHeaderThatConflictsWithIdentity(t *testing.T) {
+func TestReferenceReaderRejectsInternalDelegationHeaderOnEndUserRequest(t *testing.T) {
 	configureReferenceAuth(t)
-	identityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_ = json.NewEncoder(w).Encode(referenceIdentity{
-			Subject: "client-2", OperatorContextID: "OperatorContext-b", AuthState: "authenticated",
-		})
-	}))
-	defer identityServer.Close()
-	t.Setenv("IDENTITY_API_BASE_URL", identityServer.URL)
 	request := referenceRequest()
 	request.Header.Set("Authorization", "Bearer user-token")
 	request.Header.Set("X-Delegated-Operator-Context", "OperatorContext-a")
 	response := httptest.NewRecorder()
 
 	if RequireReferenceReader(response, request) {
-		t.Fatal("client header overrode Identity OperatorContext")
+		t.Fatal("end-user request carrying internal delegation header was accepted")
 	}
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
-		t.Fatalf("expected OPERATOR_CONTEXT_FORBIDDEN, status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "INTERNAL_DELEGATION_HEADER_FORBIDDEN") {
+		t.Fatalf("expected INTERNAL_DELEGATION_HEADER_FORBIDDEN, status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
@@ -154,7 +147,7 @@ func TestReferenceReaderAcceptsTrustedDshInDeferredMode(t *testing.T) {
 	if !RequireReferenceReader(response, request) {
 		t.Fatalf("deferred trusted service read rejected status=%d body=%s", response.Code, response.Body.String())
 	}
-	if got := request.Header.Get("X-Delegated-Operator-Context"); got != "OperatorContext-deferred" {
-		t.Fatalf("deferred delegated context changed: got %q", got)
+	if got, ok := OperatorContextIDFromContext(request.Context()); !ok || got != "OperatorContext-deferred" {
+		t.Fatalf("deferred delegated context not installed: got=%q ok=%v", got, ok)
 	}
 }
