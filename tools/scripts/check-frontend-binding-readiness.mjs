@@ -7,6 +7,8 @@
  * variables may override the host/base URL only when they are absolute HTTP(S)
  * URLs; relative same-origin BFF paths are ignored by this pre-start Node check.
  * Readiness paths and accepted status values always come from the contract.
+ * Contract-owned network defaults are restricted to loopback destinations so a
+ * repository-file change cannot redirect the preflight to an external host.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -63,58 +65,137 @@ const publicEnvPrefixByProfile = {
   platform: "PLATFORM_CONTROL",
 };
 
-function normalizeAbsoluteHttpUrl(value) {
+const httpOkPortEnvByProfile = {
+  media: "BTHWANI_MINIO_API_PORT",
+};
+
+function isLoopbackHostname(hostname) {
+  const normalized = String(hostname ?? "").trim().toLowerCase();
+  return normalized === "127.0.0.1" || normalized === "localhost" || normalized === "[::1]" || normalized === "::1";
+}
+
+function parseAbsoluteHttpUrl(value, label, { loopbackOnly = false } = {}) {
   const clean = String(value ?? "").trim();
-  if (!clean) return "";
+  if (!clean) return null;
+  let url;
   try {
-    const url = new URL(clean);
-    return url.protocol === "http:" || url.protocol === "https:" ? clean : "";
+    url = new URL(clean);
   } catch {
-    return "";
+    fail(`${label} must be an absolute HTTP(S) URL`);
   }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    fail(`${label} must use http or https`);
+  }
+  if (url.username || url.password) {
+    fail(`${label} must not contain URL credentials`);
+  }
+  if (loopbackOnly && !isLoopbackHostname(url.hostname)) {
+    fail(`${label} must remain on a loopback host; received '${url.hostname}'`);
+  }
+  return url.href.replace(/\/$/, "");
+}
+
+function normalizeReadinessPath(profile, value) {
+  const routePath = String(value ?? "").trim();
+  if (
+    !routePath.startsWith("/") ||
+    routePath.startsWith("//") ||
+    routePath.includes("\\") ||
+    routePath.includes("?") ||
+    routePath.includes("#") ||
+    routePath.includes("\0")
+  ) {
+    fail(`profile '${profile}' has an unsafe readiness path '${routePath}'`);
+  }
+  return routePath;
+}
+
+function joinBaseAndPath(baseUrl, routePath) {
+  const target = new URL(baseUrl);
+  const basePath = target.pathname.replace(/\/+$/, "");
+  target.pathname = `${basePath}${routePath}`;
+  target.search = "";
+  target.hash = "";
+  return target.href;
 }
 
 function resolveBaseUrl(profile, definition) {
   const publicPrefix = publicEnvPrefixByProfile[profile];
-  const publicCandidates = publicPrefix
-    ? [
-        process.env[`NEXT_PUBLIC_${publicPrefix}_API_BASE_URL`],
-        process.env[`EXPO_PUBLIC_${publicPrefix}_API_BASE_URL`],
-      ]
-    : [];
-  const ownerEnv = definition.baseUrlEnv ? process.env[definition.baseUrlEnv] : undefined;
-  return [...publicCandidates, ownerEnv, definition.defaultBaseUrl]
-    .map(normalizeAbsoluteHttpUrl)
-    .find(Boolean);
+  if (!publicPrefix) fail(`profile '${profile}' has no governed frontend URL prefix`);
+
+  const expectedOwnerEnv = `${publicPrefix}_API_BASE_URL`;
+  if (definition.baseUrlEnv !== expectedOwnerEnv) {
+    fail(`profile '${profile}' must use governed baseUrlEnv '${expectedOwnerEnv}'`);
+  }
+
+  const candidates = [
+    [`NEXT_PUBLIC_${publicPrefix}_API_BASE_URL`, process.env[`NEXT_PUBLIC_${publicPrefix}_API_BASE_URL`]],
+    [`EXPO_PUBLIC_${publicPrefix}_API_BASE_URL`, process.env[`EXPO_PUBLIC_${publicPrefix}_API_BASE_URL`]],
+    [expectedOwnerEnv, process.env[expectedOwnerEnv]],
+  ];
+  for (const [name, value] of candidates) {
+    if (!String(value ?? "").trim()) continue;
+    return parseAbsoluteHttpUrl(value, name);
+  }
+
+  const governedDefault = parseAbsoluteHttpUrl(
+    definition.defaultBaseUrl,
+    `profile '${profile}' defaultBaseUrl`,
+    { loopbackOnly: true },
+  );
+  if (!governedDefault) fail(`profile '${profile}' has no resolvable absolute HTTP(S) base URL`);
+  return governedDefault;
+}
+
+function normalizePort(profile, definition) {
+  const expectedPortEnv = httpOkPortEnvByProfile[profile];
+  if (!expectedPortEnv) fail(`profile '${profile}' has no governed http-ok port environment variable`);
+  if (definition.portEnv !== expectedPortEnv) {
+    fail(`profile '${profile}' must use governed portEnv '${expectedPortEnv}'`);
+  }
+  const configured = process.env[expectedPortEnv];
+  const rawPort = String(configured ?? definition.defaultPort ?? "").trim();
+  if (!/^\d{1,5}$/.test(rawPort)) fail(`profile '${profile}' has an invalid http-ok port '${rawPort}'`);
+  const port = Number(rawPort);
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    fail(`profile '${profile}' has an out-of-range http-ok port '${rawPort}'`);
+  }
+  return String(port);
+}
+
+function normalizeLoopbackHost(profile, value) {
+  const host = String(value ?? "").trim().toLowerCase();
+  if (host === "127.0.0.1") return "127.0.0.1";
+  if (host === "localhost") return "localhost";
+  if (host === "::1" || host === "[::1]") return "[::1]";
+  fail(`profile '${profile}' http-ok host must remain loopback; received '${host || "<empty>"}'`);
 }
 
 function resolveService(profile, definition) {
   if (definition.kind === "json-status") {
     const baseUrl = resolveBaseUrl(profile, definition);
-    if (!baseUrl) fail(`profile '${profile}' has no resolvable absolute HTTP(S) base URL`);
-    if (!definition.path || !Array.isArray(definition.healthyStatuses) || definition.healthyStatuses.length === 0) {
+    const readinessPath = normalizeReadinessPath(profile, definition.path);
+    if (!Array.isArray(definition.healthyStatuses) || definition.healthyStatuses.length === 0) {
       fail(`profile '${profile}' has an incomplete json-status readiness definition`);
     }
     return {
       profile,
       name: definition.name || profile,
       kind: definition.kind,
-      url: `${baseUrl.replace(/\/$/, "")}${definition.path}`,
+      url: joinBaseAndPath(baseUrl, readinessPath),
       healthyStatuses: definition.healthyStatuses.map(String),
     };
   }
 
   if (definition.kind === "http-ok") {
-    const port = String(
-      (definition.portEnv ? process.env[definition.portEnv] : undefined) ?? definition.defaultPort ?? "",
-    ).trim();
-    const host = String(definition.host ?? "").trim();
-    if (!host || !port || !definition.path) fail(`profile '${profile}' has an incomplete http-ok readiness definition`);
+    const host = normalizeLoopbackHost(profile, definition.host);
+    const port = normalizePort(profile, definition);
+    const readinessPath = normalizeReadinessPath(profile, definition.path);
     return {
       profile,
       name: definition.name || profile,
       kind: definition.kind,
-      url: `http://${host}:${port}${definition.path}`,
+      url: `http://${host}:${port}${readinessPath}`,
       healthyStatuses: [],
     };
   }

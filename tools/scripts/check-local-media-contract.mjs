@@ -65,20 +65,31 @@ for (const item of manifest.media) {
   if (item.required !== true) continue;
 
   const absolutePath = path.join(mediaRoot, relativeSourcePath);
-  if (!fs.existsSync(absolutePath)) {
-    failures.push(`${fixtureId}: required file is missing: ${relativeSourcePath}`);
-    continue;
+  let descriptor;
+  let stat;
+  let contents;
+  try {
+    descriptor = fs.openSync(absolutePath, "r");
+    stat = fs.fstatSync(descriptor);
+    if (!stat.isFile() || stat.size === 0) {
+      failures.push(`${fixtureId}: required file is empty or not a file: ${relativeSourcePath}`);
+      continue;
+    }
+    contents = fs.readFileSync(descriptor);
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      failures.push(`${fixtureId}: required file is missing: ${relativeSourcePath}`);
+      continue;
+    }
+    throw error;
+  } finally {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
   }
-  const stat = fs.statSync(absolutePath);
-  if (!stat.isFile() || stat.size === 0) {
-    failures.push(`${fixtureId}: required file is empty or not a file: ${relativeSourcePath}`);
-    continue;
-  }
+
   if (!/^[a-f0-9]{64}$/.test(expectedChecksum)) {
     failures.push(`${fixtureId}: expectedChecksum must be a SHA-256 digest`);
     continue;
   }
-  const contents = fs.readFileSync(absolutePath);
   const actualChecksum = sha256(contents);
   if (actualChecksum !== expectedChecksum) {
     failures.push(`${fixtureId}: checksum mismatch for ${relativeSourcePath}; expected ${expectedChecksum}, received ${actualChecksum}`);
