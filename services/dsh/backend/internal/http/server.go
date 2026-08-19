@@ -241,9 +241,6 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("POST /dsh/operator/support/tickets/{ticketId}/escalate", protected.withPermission("control-panel", SupportPermissionManage, protected.handleEscalateOperatorSupportTicket))
 	mux.HandleFunc("GET /dsh/operator/support/tickets/{ticketId}/export", protected.withPermission("control-panel", SupportPermissionRead, protected.handleExportOperatorSupportTicket))
 	mux.HandleFunc("GET /dsh/operator/support/canned-responses", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListCannedResponses))
-	mux.HandleFunc("POST /dsh/operator/incidents", protected.withPermission("control-panel", SupportPermissionManage, protected.handleCreateIncident))
-	mux.HandleFunc("GET /dsh/operator/incidents", protected.withPermission("control-panel", SupportPermissionRead, protected.handleListIncidents))
-	mux.HandleFunc("PATCH /dsh/operator/incidents/{incidentId}", protected.withPermission("control-panel", SupportPermissionManage, protected.handleUpdateIncident))
 	mux.HandleFunc("GET /dsh/operator/analytics/operations", protected.withPermission("control-panel", AnalyticsPermissionRead, protected.handleGetOperationsAnalytics))
 	mux.HandleFunc("GET /dsh/operator/analytics/support", protected.withPermission("control-panel", AnalyticsPermissionRead, protected.handleGetSupportAnalytics))
 
