@@ -296,7 +296,7 @@ func minInt64(a, b int64) int64 {
 // that the beneficiary must not decide: the destination comes from the current
 // active verified official-wallet record, and FULL_AVAILABLE is resolved from
 // the locked WLT wallet/settlement projection. The resulting amount is reserved
-// atomically in pending_balance_minor_units so concurrent requests cannot spend
+// atomically in held_balance_minor_units so concurrent requests cannot spend
 // the same entitlement twice.
 func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -420,6 +420,24 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			}
 		}
 
+		reserveResult, err := tx.ExecContext(r.Context(), `
+			UPDATE wlt_wallets
+			SET held_balance_minor_units = held_balance_minor_units + $4, updated_at = now()
+			WHERE operator_context_id=$1 AND actor_id=$2 AND actor_type=$3
+			  AND status='active' AND currency=$5
+			  AND available_balance_minor_units >= $4
+			  AND settled_total_minor_units - paid_total_minor_units - held_balance_minor_units >= $4`,
+			operatorContextID, input.BeneficiaryActorID, input.BeneficiaryActorType, amount, input.Currency)
+		if err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to reserve payout balance")
+			return
+		}
+		reservedRows, err := reserveResult.RowsAffected()
+		if err != nil || reservedRows != 1 {
+			shared.SendError(w, http.StatusConflict, "INSUFFICIENT_FUNDS", "payout balance changed before it could be reserved")
+			return
+		}
+
 		rows, err := tx.QueryContext(r.Context(), `INSERT INTO wlt_payout_requests
 			(operator_context_id,beneficiary_actor_id,beneficiary_actor_type,amount_minor_units,currency,status,
 			 idempotency_key,payload_hash,payout_destination_id,request_hash)
@@ -448,6 +466,7 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			"amountMode":          input.AmountMode,
 			"amountMinorUnits":    amount,
 			"currency":            input.Currency,
+			"reservationHeldMinorUnits": amount,
 		}); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout request")
 			return
