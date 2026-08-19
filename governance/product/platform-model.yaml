@@ -1,5 +1,4 @@
 schemaVersion: 2
-state: READY_FOR_IMPLEMENTATION
 classification: UNIFIED_MULTI_SURFACE_B2B2C_COMMERCE_FULFILLMENT_FINANCIAL_PLATFORM
 operatingModel: BTHWANI_OPERATED_PLATFORM
 softwareDeliveryModel: UNIFIED_PLATFORM
@@ -55,7 +54,3 @@ ownership:
   operationalTruth: DSH
   financialTruth: WLT
   applicationFinancialAccess: DSH_FACADE_ONLY
-approvals:
-  productManager: APPROVED_BY_CURRENT_OWNER_INSTRUCTION
-  productOwnerReadiness: APPROVED_BY_CURRENT_OWNER_INSTRUCTION
-  productAcceptance: PENDING_EXACT_COMMIT_EVIDENCE
