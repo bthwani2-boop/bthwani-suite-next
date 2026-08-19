@@ -57,8 +57,8 @@ func (c *Client) ExecuteFinanceWrite(ctx context.Context, opID string, method, p
 	}
 	setServiceHeaders(req, c.serviceToken)
 	req.Header.Set("Content-Type", "application/json")
-	if operatorContextID = strings.TrimSpace(operatorContextID); operatorContextID != "" {
-		req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	if _, err := c.setDelegatedOperatorContextHeader(req, operatorContextID); err != nil {
+		return 0, nil, fmt.Errorf("prepare WLT finance write OperatorContext: %w", err)
 	}
 	delegatedPrincipalID = strings.TrimSpace(delegatedPrincipalID)
 	if delegatedPrincipalID == "" {
