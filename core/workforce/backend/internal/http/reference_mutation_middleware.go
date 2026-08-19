@@ -19,11 +19,7 @@ type providerMediaVerifier interface {
 // ReferenceMutationMiddleware owns governed reference-data and document-link
 // mutations that cross the existing service boundary without duplicating the
 // main router.
-func ReferenceMutationMiddleware(next http.Handler, repo *workforce.Repository, authClient *auth.Client, verifiers ...providerMediaVerifier) http.Handler {
-	var mediaVerifier providerMediaVerifier
-	if len(verifiers) > 0 {
-		mediaVerifier = verifiers[0]
-	}
+func ReferenceMutationMiddleware(next http.Handler, repo *workforce.Repository, authClient *auth.Client, mediaVerifier providerMediaVerifier) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost && r.URL.Path == "/workforce/reference/cities" {
 			handleCityCreate(w, r, repo, authClient)
