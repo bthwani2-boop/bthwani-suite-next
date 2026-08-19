@@ -158,13 +158,10 @@ func (r *Repository) CreatePerson(ctx context.Context, actorID, workforceCode, c
 	if err != nil {
 		return Person{}, err
 	}
-	// Field providers are independent and do not own an externally selectable
-	// shift. Keep the historical column internal-only until it can be dropped;
-	// never accept shift authority from a request payload.
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO workforce_field_profiles
-			(operator_context_id, actor_id, city_code, service_zone_id, shift_code, supervisor_actor_id, document_media_refs)
-		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), 'not_applicable', NULLIF($5, ''), $6::jsonb)`,
+			(operator_context_id, actor_id, city_code, service_zone_id, supervisor_actor_id, document_media_refs)
+		VALUES ($1, $2, NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), $6::jsonb)`,
 		operatorContextID, actorID, cityCode, input.ServiceZoneID, input.SupervisorActorID, string(documents))
 	if err != nil {
 		return Person{}, mapPersonWriteError(err)
@@ -304,7 +301,7 @@ const personSelect = `
 	SELECT p.actor_id, p.operator_context_id, p.full_name_ar, COALESCE(p.full_name_en, ''), p.workforce_code, p.workforce_kind,
 	       p.engagement_type, COALESCE(p.engagement_start_date::text, ''), p.engagement_status,
 	       COALESCE(p.photo_media_ref, ''), p.version, p.created_at, p.updated_at,
-	       COALESCE(f.city_code, ''), COALESCE(f.service_zone_id, ''), COALESCE(f.shift_code, ''), COALESCE(f.supervisor_actor_id, ''),
+	       COALESCE(f.city_code, ''), COALESCE(f.service_zone_id, ''), COALESCE(f.supervisor_actor_id, ''),
 	       COALESCE(f.emergency_contact_name, ''), COALESCE(f.emergency_contact_phone, ''),
 	       COALESCE(f.preferred_language, ''), COALESCE(f.policy_consent_at::text, ''),
 	       COALESCE(f.document_media_refs, '[]'::jsonb), f.actor_id IS NOT NULL,
@@ -336,7 +333,7 @@ func scanPerson(row rowScanner) (Person, error) {
 		&person.ActorID, &person.OperatorContextID, &person.FullNameAr, &person.FullNameEn, &person.WorkforceCode, &person.WorkforceKind,
 		&person.EngagementType, &person.EngagementStartDate, &person.EngagementStatus,
 		&person.PhotoMediaRef, &person.Version, &person.CreatedAt, &person.UpdatedAt,
-		&profile.CityCode, &profile.ServiceZoneID, &profile.ShiftCode, &profile.SupervisorActorID,
+		&profile.CityCode, &profile.ServiceZoneID, &profile.SupervisorActorID,
 		&profile.EmergencyContactName, &profile.EmergencyContactPhone,
 		&profile.PreferredLanguage, &profile.PolicyConsentAt, &documentsJSON, &hasFieldProfile,
 		&captainProfile.VehicleType, &captainProfile.VehicleIdentifier, &captainProfile.LicenseStatus,
