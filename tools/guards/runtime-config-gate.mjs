@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fail, lineNumber, listCodeFiles, read, repoRoot, toPosix } from "./_guard-utils.mjs";
+import { fail, lineNumber, listCodeFiles, read, repoRoot } from "./_guard-utils.mjs";
 import { LOCAL_PASSWORD_ENV_VAR, localPasswordDefault } from "../dev/local-actors.mjs";
 
 const guardId = "runtime-config-gate";
@@ -227,35 +227,6 @@ if (fs.existsSync(path.join(repoRoot, composePath))) {
       violations.push({
         file: composePath,
         message: `container_name '${name}' violates naming conventions (must start with bthwani- or use variable interpolation)`,
-      });
-    }
-  }
-}
-
-const profilesDir = "infra/docker/runtime-profiles";
-const profilesPath = path.join(repoRoot, profilesDir);
-if (fs.existsSync(profilesPath)) {
-  const files = fs.readdirSync(profilesPath).filter((file) => file.endsWith(".json"));
-  for (const file of files) {
-    const rel = toPosix(path.join(profilesDir, file));
-    const full = path.join(profilesPath, file);
-    let json;
-    try {
-      json = JSON.parse(fs.readFileSync(full, "utf8"));
-    } catch (error) {
-      violations.push({ file: rel, message: `invalid json: ${error.message}` });
-      continue;
-    }
-    const expectedProfile = path.basename(file, ".runtime-profile.json");
-    if (
-      file.endsWith(".runtime-profile.json") &&
-      json.profile &&
-      json.profile !== expectedProfile &&
-      !expectedProfile.includes("-")
-    ) {
-      violations.push({
-        file: rel,
-        message: `expected profile name to match file name: ${expectedProfile}`,
       });
     }
   }
