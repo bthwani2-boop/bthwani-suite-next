@@ -69,6 +69,7 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux.HandleFunc("POST /workforce/reference/shifts", s.operatorOnly("reference:manage", s.createShift))
 	mux.HandleFunc("PATCH /workforce/reference/shifts/{code}", s.operatorOnly("reference:manage", s.updateShift))
 	mux.HandleFunc("GET /workforce/reference/supervisors", s.operatorOnly("provider:read", s.searchSupervisors))
+	mux.HandleFunc("PATCH /workforce/{collection}/{actorId}/affiliations", s.replaceProviderAffiliations)
 
 	// Internal routes
 	mux.HandleFunc("GET /internal/assignments/{actorId}/scopes", s.internalOnly(s.handleGetActorScopes))

@@ -17,8 +17,9 @@ type providerMediaVerifier interface {
 }
 
 // ReferenceMutationMiddleware owns governed Workforce mutations that augment
-// the primary provider router: local reference metadata, provider affiliation
-// replacement, and opaque document-link validation.
+// the primary provider router: local reference metadata and opaque document-link
+// validation. Provider affiliation replacement is registered canonically in
+// NewRouter so the active contract and HTTP route have one explicit owner.
 func ReferenceMutationMiddleware(next http.Handler, repo *workforce.Repository, authClient *auth.Client, mediaVerifier providerMediaVerifier) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost && r.URL.Path == "/workforce/reference/cities" {
@@ -28,12 +29,6 @@ func ReferenceMutationMiddleware(next http.Handler, repo *workforce.Repository, 
 		if r.Method == http.MethodPatch && strings.HasPrefix(r.URL.Path, "/workforce/reference/cities/") {
 			handleCityUpdate(w, r, repo, authClient)
 			return
-		}
-		if r.Method == http.MethodPatch && strings.HasSuffix(r.URL.Path, "/affiliations") {
-			if role, actorID, ok := parseProviderAffiliationPath(r.URL.Path); ok {
-				handleAffiliationReplace(w, r, repo, authClient, role, actorID)
-				return
-			}
 		}
 		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/documents") {
 			if kind, actorID, ok := parseProviderDocumentPath(r.URL.Path); ok {
@@ -109,23 +104,27 @@ func handleCityUpdate(w http.ResponseWriter, r *http.Request, repo *workforce.Re
 	sendJSON(w, http.StatusOK, city)
 }
 
-func parseProviderAffiliationPath(path string) (role string, actorID string, ok bool) {
-	parts := strings.Split(strings.Trim(path, "/"), "/")
-	if len(parts) != 4 || parts[0] != "workforce" || parts[3] != "affiliations" {
-		return "", "", false
+func (s *server) replaceProviderAffiliations(w http.ResponseWriter, r *http.Request) {
+	role, ok := workforceKindForCollection(r.PathValue("collection"))
+	actorID := strings.TrimSpace(r.PathValue("actorId"))
+	if !ok || actorID == "" {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "provider collection and actor id are required")
+		return
 	}
-	switch parts[1] {
+	handleAffiliationReplace(w, r, s.repo, s.auth, role, actorID)
+}
+
+func workforceKindForCollection(collection string) (string, bool) {
+	switch strings.TrimSpace(collection) {
 	case "field-agents":
-		role = "field"
+		return "field", true
 	case "captains":
-		role = "captain"
+		return "captain", true
 	case "employees":
-		role = "employee"
+		return "employee", true
 	default:
-		return "", "", false
+		return "", false
 	}
-	actorID = strings.TrimSpace(parts[2])
-	return role, actorID, actorID != ""
 }
 
 func handleAffiliationReplace(w http.ResponseWriter, r *http.Request, repo *workforce.Repository, authClient *auth.Client, role, actorID string) {

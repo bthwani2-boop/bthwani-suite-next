@@ -2,25 +2,23 @@ package http
 
 import "testing"
 
-func TestParseProviderAffiliationPath(t *testing.T) {
+func TestWorkforceKindForCollection(t *testing.T) {
 	tests := []struct {
-		path    string
-		role    string
-		actorID string
-		ok      bool
+		collection string
+		role       string
+		ok         bool
 	}{
-		{path: "/workforce/field-agents/field-1/affiliations", role: "field", actorID: "field-1", ok: true},
-		{path: "/workforce/captains/captain-1/affiliations", role: "captain", actorID: "captain-1", ok: true},
-		{path: "/workforce/employees/employee-1/affiliations", role: "employee", actorID: "employee-1", ok: true},
-		{path: "/workforce/captains/captain-1/assignments", ok: false},
-		{path: "/workforce/orders/order-1/affiliations", ok: false},
-		{path: "/workforce/captains//affiliations", ok: false},
+		{collection: "field-agents", role: "field", ok: true},
+		{collection: "captains", role: "captain", ok: true},
+		{collection: "employees", role: "employee", ok: true},
+		{collection: "orders", ok: false},
+		{collection: "", ok: false},
 	}
 	for _, test := range tests {
-		t.Run(test.path, func(t *testing.T) {
-			role, actorID, ok := parseProviderAffiliationPath(test.path)
-			if ok != test.ok || role != test.role || actorID != test.actorID {
-				t.Fatalf("parseProviderAffiliationPath(%q)=(%q,%q,%v), want (%q,%q,%v)", test.path, role, actorID, ok, test.role, test.actorID, test.ok)
+		t.Run(test.collection, func(t *testing.T) {
+			role, ok := workforceKindForCollection(test.collection)
+			if ok != test.ok || role != test.role {
+				t.Fatalf("workforceKindForCollection(%q)=(%q,%v), want (%q,%v)", test.collection, role, ok, test.role, test.ok)
 			}
 		})
 	}
