@@ -17,16 +17,23 @@ import (
 func collateralTestDB(t *testing.T) *sql.DB {
 	t.Helper()
 	url := os.Getenv("DATABASE_URL")
+	requireDB := os.Getenv("WLT_REQUIRE_DB_TESTS") == "true"
 	if url == "" {
 		url = "postgres://wlt_runtime:wlt_runtime_password@localhost:55432/wlt_runtime?sslmode=disable"
 	}
 	db, err := sql.Open("postgres", url)
 	if err != nil {
-		t.Fatal(err)
+		if requireDB {
+			t.Fatalf("failed to open collateral integration database: %v", err)
+		}
+		t.Skipf("skipping collateral database integration test: %v", err)
 	}
 	if err := db.Ping(); err != nil {
-		db.Close()
-		t.Fatal(err)
+		_ = db.Close()
+		if requireDB {
+			t.Fatalf("failed to ping collateral integration database: %v", err)
+		}
+		t.Skipf("skipping collateral database integration test: %v", err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
 	return db
