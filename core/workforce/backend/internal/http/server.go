@@ -44,6 +44,7 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux.HandleFunc("POST /workforce/field-agents/{actorId}/reactivate", s.operatorOnly("provider:reactivate", s.reactivateFieldAgent))
 	mux.HandleFunc("POST /workforce/field-agents/{actorId}/activation-codes", s.operatorOnly("provider.activation:issue", s.issueActivation))
 	mux.HandleFunc("DELETE /workforce/field-agents/{actorId}/activation-codes", s.operatorOnly("provider.activation:issue", s.revokeActivation))
+	mux.HandleFunc("PATCH /workforce/field-agents/{actorId}/affiliations", s.providerAffiliationRoute("field"))
 
 	mux.HandleFunc("POST /workforce/captains", s.operatorOnly("provider:create", s.createCaptain))
 	mux.HandleFunc("GET /workforce/captains", s.operatorOnly("provider:read", s.listCaptains))
@@ -53,6 +54,7 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux.HandleFunc("POST /workforce/captains/{actorId}/reactivate", s.operatorOnly("provider:reactivate", s.reactivateFieldAgent))
 	mux.HandleFunc("POST /workforce/captains/{actorId}/activation-codes", s.operatorOnly("provider.activation:issue", s.issueActivation))
 	mux.HandleFunc("DELETE /workforce/captains/{actorId}/activation-codes", s.operatorOnly("provider.activation:issue", s.revokeActivation))
+	mux.HandleFunc("PATCH /workforce/captains/{actorId}/affiliations", s.providerAffiliationRoute("captain"))
 
 	mux.HandleFunc("POST /workforce/employees", s.operatorOnly("provider:create", s.createEmployee))
 	mux.HandleFunc("GET /workforce/employees", s.operatorOnly("provider:read", s.listEmployees))
@@ -60,6 +62,7 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux.HandleFunc("PATCH /workforce/employees/{actorId}", s.operatorOnly("provider:update", s.updateEmployee))
 	mux.HandleFunc("POST /workforce/employees/{actorId}/suspend", s.operatorOnly("provider:suspend", s.suspendFieldAgent))
 	mux.HandleFunc("POST /workforce/employees/{actorId}/reactivate", s.operatorOnly("provider:reactivate", s.reactivateFieldAgent))
+	mux.HandleFunc("PATCH /workforce/employees/{actorId}/affiliations", s.providerAffiliationRoute("employee"))
 
 	mux.HandleFunc("GET /workforce/me", s.providerSelf("provider:read", s.me))
 	mux.HandleFunc("PATCH /workforce/me", s.providerSelf("provider:update", s.updateMe))
@@ -69,7 +72,6 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux.HandleFunc("POST /workforce/reference/shifts", s.operatorOnly("reference:manage", s.createShift))
 	mux.HandleFunc("PATCH /workforce/reference/shifts/{code}", s.operatorOnly("reference:manage", s.updateShift))
 	mux.HandleFunc("GET /workforce/reference/supervisors", s.operatorOnly("provider:read", s.searchSupervisors))
-	mux.HandleFunc("PATCH /workforce/{collection}/{actorId}/affiliations", s.replaceProviderAffiliations)
 
 	// Internal routes
 	mux.HandleFunc("GET /internal/assignments/{actorId}/scopes", s.internalOnly(s.handleGetActorScopes))
