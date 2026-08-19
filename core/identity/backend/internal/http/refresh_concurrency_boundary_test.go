@@ -14,22 +14,29 @@ import (
 )
 
 type fakeGovernedRefreshRepository struct {
-	pair identity.TokenPair
-	err  error
-	seen string
+	pair        identity.TokenPair
+	err         error
+	seenToken   string
+	seenDevice  string
 }
 
-func (f *fakeGovernedRefreshRepository) RefreshGoverned(_ context.Context, token string) (identity.TokenPair, error) {
-	f.seen = token
+func (f *fakeGovernedRefreshRepository) RefreshGovernedForDevice(
+	_ context.Context,
+	token string,
+	deviceFingerprint string,
+) (identity.TokenPair, error) {
+	f.seenToken = token
+	f.seenDevice = deviceFingerprint
 	return f.pair, f.err
 }
 
-func refreshRequest(token string) *http.Request {
-	return httptest.NewRequest(
-		http.MethodPost,
-		"/auth/refresh",
-		strings.NewReader(`{"refreshToken":"`+token+`"}`),
-	)
+func refreshRequest(token string, deviceFingerprint ...string) *http.Request {
+	body := map[string]string{"refreshToken": token}
+	if len(deviceFingerprint) > 0 {
+		body["deviceFingerprint"] = deviceFingerprint[0]
+	}
+	encoded, _ := json.Marshal(body)
+	return httptest.NewRequest(http.MethodPost, "/auth/refresh", strings.NewReader(string(encoded)))
 }
 
 func decodeRefreshError(t *testing.T, recorder *httptest.ResponseRecorder) identity.ApiError {
@@ -49,7 +56,7 @@ func TestGovernedRefreshBoundaryReturnsConflictWithoutMintingForConcurrentLoser(
 	}))
 
 	recorder := httptest.NewRecorder()
-	handler.ServeHTTP(recorder, refreshRequest("session.old-refresh"))
+	handler.ServeHTTP(recorder, refreshRequest("session.old-refresh", "device-1"))
 
 	if recorder.Code != http.StatusConflict {
 		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusConflict)
@@ -57,12 +64,42 @@ func TestGovernedRefreshBoundaryReturnsConflictWithoutMintingForConcurrentLoser(
 	if nextCalled {
 		t.Fatal("refresh request escaped governed boundary")
 	}
-	if repository.seen != "session.old-refresh" {
-		t.Fatalf("refresh token = %q", repository.seen)
+	if repository.seenToken != "session.old-refresh" || repository.seenDevice != "device-1" {
+		t.Fatalf("refresh boundary lost request binding: token=%q device=%q", repository.seenToken, repository.seenDevice)
 	}
 	body := decodeRefreshError(t, recorder)
 	if body.Code != "REFRESH_ALREADY_ROTATED" {
 		t.Fatalf("code = %q, want REFRESH_ALREADY_ROTATED", body.Code)
+	}
+}
+
+func TestGovernedRefreshBoundaryRejectsMissingDeviceProof(t *testing.T) {
+	repository := &fakeGovernedRefreshRepository{err: identity.ErrDeviceFingerprintRequired}
+	handler := GovernedRefreshBoundary(repository, http.NotFoundHandler())
+
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, refreshRequest("session.mobile"))
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusUnauthorized)
+	}
+	if body := decodeRefreshError(t, recorder); body.Code != "DEVICE_FINGERPRINT_REQUIRED" {
+		t.Fatalf("code = %q, want DEVICE_FINGERPRINT_REQUIRED", body.Code)
+	}
+}
+
+func TestGovernedRefreshBoundaryRejectsDeviceMismatch(t *testing.T) {
+	repository := &fakeGovernedRefreshRepository{err: identity.ErrDeviceFingerprintMismatch}
+	handler := GovernedRefreshBoundary(repository, http.NotFoundHandler())
+
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, refreshRequest("session.mobile", "other-device"))
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusUnauthorized)
+	}
+	if body := decodeRefreshError(t, recorder); body.Code != "DEVICE_FINGERPRINT_MISMATCH" {
+		t.Fatalf("code = %q, want DEVICE_FINGERPRINT_MISMATCH", body.Code)
 	}
 }
 
@@ -71,7 +108,7 @@ func TestGovernedRefreshBoundaryKeepsInvalidRefreshUnauthenticated(t *testing.T)
 	handler := GovernedRefreshBoundary(repository, http.NotFoundHandler())
 
 	recorder := httptest.NewRecorder()
-	handler.ServeHTTP(recorder, refreshRequest("session.invalid"))
+	handler.ServeHTTP(recorder, refreshRequest("session.invalid", "device-1"))
 
 	if recorder.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusUnauthorized)
@@ -87,7 +124,7 @@ func TestGovernedRefreshBoundaryKeepsInfrastructureFailureRetryable(t *testing.T
 	handler := GovernedRefreshBoundary(repository, http.NotFoundHandler())
 
 	recorder := httptest.NewRecorder()
-	handler.ServeHTTP(recorder, refreshRequest("session.current"))
+	handler.ServeHTTP(recorder, refreshRequest("session.current", "device-1"))
 
 	if recorder.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusServiceUnavailable)
@@ -144,7 +181,7 @@ func TestGovernedRefreshBoundaryDelegatesNonRefreshTraffic(t *testing.T) {
 	if recorder.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusNoContent)
 	}
-	if repository.seen != "" {
-		t.Fatalf("governed refresh repository called for non-refresh request: %q", repository.seen)
+	if repository.seenToken != "" || repository.seenDevice != "" {
+		t.Fatalf("governed refresh repository called for non-refresh request: token=%q device=%q", repository.seenToken, repository.seenDevice)
 	}
 }

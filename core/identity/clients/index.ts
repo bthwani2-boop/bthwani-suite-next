@@ -4,6 +4,7 @@ export * from "./identity-client.ts";
 export * from "./identity-session-policy.ts";
 export * from "./identity-session-storage.ts";
 export * from "./identity-session-store.ts";
+export { configureIdentityDeviceFingerprintProvider, configureIdentitySession } from "./identity-device-binding.ts";
 export * from "./use-identity-runtime-status.ts";
 export * from "./use-identity-session.ts";
 export type { paths, components } from "./generated/identity-api.ts";
