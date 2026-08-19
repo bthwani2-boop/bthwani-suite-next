@@ -3,7 +3,7 @@
   "service": "identity",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "identity-024_dsh_operational_policy_evaluation_permission.sql",
+  "cutover": "identity-025_canonical_access_projection.sql",
   "migrations": [
     {"ordinal":1,"file":"identity-001_sessions.sql","sha256":"993aec367346e43914a0b1d692c8d89b93840d06eea1bc9d952da2cf390147e9","historicalPrefix":"001","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":2,"file":"identity-002_activation_challenges.sql","sha256":"0b5bdd503a3327b547f00af71560c8eda7a1ecc7488542e4ceff0c88430145ac","historicalPrefix":"002","state":"HISTORICAL_IMMUTABLE"},
@@ -28,6 +28,7 @@
     {"ordinal":21,"file":"identity-021_actor_lifecycle_status.sql","sha256":"c9b2c315845623d1874e5d07c319361ee13403b826769a94f2f03d4db70cea10","historicalPrefix":"021","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":22,"file":"identity-022_refresh_rotation_concurrency.sql","sha256":"f7a08c031697a90d0c4f7dc717652ca59c85f05aaf8e988dfb8054709c00ea03","historicalPrefix":"022","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":23,"file":"identity-023_actor_lifecycle_suspension_audit.sql","sha256":"b8bb72bc084101e35c837240360107bd9252a39cba97e924160bf5f6d9a4c963","historicalPrefix":"023","state":"HISTORICAL_IMMUTABLE"},
-    {"ordinal":24,"file":"identity-024_dsh_operational_policy_evaluation_permission.sql","sha256":"36d3463d71367e34b31385913003bac41a4ce5f00f3825a447f0561c900c6fa4","historicalPrefix":"024","state":"ACTIVE"}
+    {"ordinal":24,"file":"identity-024_dsh_operational_policy_evaluation_permission.sql","sha256":"36d3463d71367e34b31385913003bac41a4ce5f00f3825a447f0561c900c6fa4","historicalPrefix":"024","state":"HISTORICAL_IMMUTABLE"},
+    {"ordinal":25,"file":"identity-025_canonical_access_projection.sql","sha256":"0f01513ea612b8f78aecdecb3e7f6b8f581040431c1d386d0c28194e94b65ca3","historicalPrefix":"025","state":"ACTIVE"}
   ]
 }
