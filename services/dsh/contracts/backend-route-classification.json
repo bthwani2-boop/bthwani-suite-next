@@ -66,13 +66,6 @@
       "retirementState": "DEPRECATED_SUPPORTED"
     },
     {
-      "route": "GET /dsh/operator/incidents",
-      "classification": "LEGACY_COMPATIBILITY",
-      "canonicalRoute": "GET /dsh/operator/support/incidents",
-      "owner": "governed-support",
-      "retirementState": "DEPRECATED_SUPPORTED"
-    },
-    {
       "route": "GET /dsh/partner/catalog/assortment",
       "classification": "LEGACY_COMPATIBILITY",
       "canonicalRoute": "GET /dsh/partner/stores/{storeId}/assortment",
@@ -129,13 +122,6 @@
       "retirementState": "DEPRECATED_SUPPORTED"
     },
     {
-      "route": "PATCH /dsh/operator/incidents/{incidentId}",
-      "classification": "LEGACY_COMPATIBILITY",
-      "canonicalRoute": "PATCH /dsh/operator/support/incidents/{incidentId}",
-      "owner": "governed-support",
-      "retirementState": "DEPRECATED_SUPPORTED"
-    },
-    {
       "route": "POST /dsh/catalog/domains",
       "classification": "LEGACY_COMPATIBILITY",
       "canonicalRoute": "POST /dsh/operator/catalog/domains",
@@ -168,13 +154,6 @@
       "classification": "LEGACY_COMPATIBILITY",
       "canonicalRoute": "POST /dsh/operator/catalog/product-proposals/{proposalId}/transition",
       "owner": "central-catalog",
-      "retirementState": "DEPRECATED_SUPPORTED"
-    },
-    {
-      "route": "POST /dsh/operator/incidents",
-      "classification": "LEGACY_COMPATIBILITY",
-      "canonicalRoute": "POST /dsh/operator/support/incidents",
-      "owner": "governed-support",
       "retirementState": "DEPRECATED_SUPPORTED"
     },
     {
