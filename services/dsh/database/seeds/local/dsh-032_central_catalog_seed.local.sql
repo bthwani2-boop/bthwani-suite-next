@@ -1,6 +1,8 @@
 -- Central catalog seed (idempotent UPSERT). Re-running this always converges
 -- stale/partial rows to the current canonical seed values, unlike dsh-030's
 -- ON CONFLICT DO NOTHING which silently no-ops once a row exists.
+-- Media metadata and links are intentionally absent: local media is an explicit
+-- overlay generated from services/dsh/database/seeds/media/local-media.manifest.json.
 
 INSERT INTO dsh_catalog_domains (id, slug, name_ar, name_en, icon, sort_order, requires_product_catalog, is_manual_request) VALUES
   ('domain-restaurants',    'restaurants',    'مطاعم',          'Restaurants',    '🍽️', 10, TRUE,  FALSE),
@@ -28,49 +30,35 @@ ON CONFLICT (id) DO UPDATE SET
   updated_at = NOW();
 
 INSERT INTO dsh_catalog_nodes (id, domain_id, parent_id, level, slug, name_ar, name_en, sort_order, requires_product_catalog, allows_store_product_custom_image) VALUES
-  -- groceries
   ('node-supermarket',        'domain-groceries', NULL, 'BUSINESS_SUBDOMAIN', 'supermarket',        'سوبر ماركت',        'Supermarket',        10, TRUE, FALSE),
   ('node-vegetables-fruits',  'domain-groceries', NULL, 'BUSINESS_SUBDOMAIN', 'vegetables_fruits',  'خضروات وفواكه',      'Vegetables & Fruits',20, TRUE, FALSE),
   ('node-meat-fish-poultry',  'domain-groceries', NULL, 'BUSINESS_SUBDOMAIN', 'meat_fish_poultry',  'لحوم وأسماك ودجاج',  'Meat, Fish & Poultry',30, TRUE, FALSE),
   ('node-roasters-spices',    'domain-groceries', NULL, 'BUSINESS_SUBDOMAIN', 'roasters_spices',    'محامص وبهارات',      'Roasters & Spices',  40, TRUE, FALSE),
   ('node-bakeries',           'domain-groceries', NULL, 'BUSINESS_SUBDOMAIN', 'bakeries',           'مخابز',             'Bakeries',           50, TRUE, TRUE),
   ('node-bundles-offers',     'domain-groceries', NULL, 'BUSINESS_SUBDOMAIN', 'bundles_offers',     'باكج عروضات',       'Bundles & Offers',   60, TRUE, TRUE),
-  -- sweets_juices
   ('node-fresh-juices', 'domain-sweets-juices', NULL, 'BUSINESS_SUBDOMAIN', 'fresh_juices', 'عصائر طازجة', 'Fresh Juices', 10, TRUE, TRUE),
   ('node-sweets',       'domain-sweets-juices', NULL, 'BUSINESS_SUBDOMAIN', 'sweets',       'حلويات',      'Sweets',       20, TRUE, TRUE),
   ('node-ice-cream',    'domain-sweets-juices', NULL, 'BUSINESS_SUBDOMAIN', 'ice_cream',    'آيسكريم',     'Ice Cream',    30, TRUE, FALSE),
-  -- elegance
   ('node-perfumes',           'domain-elegance', NULL, 'BUSINESS_SUBDOMAIN', 'perfumes',           'عطور',                 'Perfumes',              10, TRUE, FALSE),
   ('node-beauty-accessories', 'domain-elegance', NULL, 'BUSINESS_SUBDOMAIN', 'beauty_accessories', 'إكسسوارات وأدوات تجميل','Beauty Accessories',    20, TRUE, FALSE),
   ('node-clothing',           'domain-elegance', NULL, 'BUSINESS_SUBDOMAIN', 'clothing',           'ملابس',                'Clothing',              30, TRUE, FALSE),
   ('node-shein',   'domain-manual-request', NULL, 'BUSINESS_SUBDOMAIN', 'shein',   'شي ان',   'SHEIN',   10, FALSE, FALSE),
   ('node-awnak',   'domain-manual-request', NULL, 'BUSINESS_SUBDOMAIN', 'awnak',   'عونك',   'Awnak',   20, FALSE, FALSE),
-  -- sub-classifications under groceries (node-supermarket)
   ('node-dairy-cheese',       'domain-groceries', 'node-supermarket', 'PRODUCT_MAIN_CLASS', 'dairy_cheese',       'ألبان وأجبان',      'Dairy & Cheese',     11, TRUE, FALSE),
   ('node-canned-food',        'domain-groceries', 'node-supermarket', 'PRODUCT_MAIN_CLASS', 'canned_food',        'أغذية معلبة',       'Canned Food',        12, TRUE, FALSE),
-  -- sub-classifications under groceries (node-vegetables-fruits)
   ('node-local-vegetables',   'domain-groceries', 'node-vegetables-fruits', 'PRODUCT_MAIN_CLASS', 'local_vegetables',   'خضروات محلية',      'Local Vegetables',   21, TRUE, FALSE),
   ('node-imported-fruits',    'domain-groceries', 'node-vegetables-fruits', 'PRODUCT_MAIN_CLASS', 'imported_fruits',    'فواكه مستوردة',     'Imported Fruits',    22, TRUE, FALSE),
-  -- sub-classifications under sweets_juices (node-sweets)
   ('node-sweets-cake',        'domain-sweets-juices', 'node-sweets', 'PRODUCT_MAIN_CLASS', 'sweets_cake',        'كيك وتورتات',       'Cakes & Tortes',     21, TRUE, TRUE),
   ('node-sweets-chocolate',   'domain-sweets-juices', 'node-sweets', 'PRODUCT_MAIN_CLASS', 'sweets_chocolate',   'شوكولاتة فاخرة',     'Fine Chocolates',    22, TRUE, TRUE),
-  -- electronics
   ('node-phones-tablets',     'domain-electronics', NULL, 'BUSINESS_SUBDOMAIN', 'phones_tablets',     'هواتف وأجهزة لوحية',  'Phones & Tablets',   10, TRUE, FALSE),
-  -- sub-classifications under electronics (node-phones-tablets)
   ('node-smartphones',        'domain-electronics', 'node-phones-tablets', 'PRODUCT_MAIN_CLASS', 'smartphones',        'هواتف ذكية',         'Smartphones',        11, TRUE, FALSE),
-  -- sub-sub-classifications under electronics (node-smartphones)
   ('node-android-phones',     'domain-electronics', 'node-smartphones', 'PRODUCT_SUB_CLASS', 'android_phones',     'هواتف أندرويد',      'Android Phones',     12, TRUE, FALSE),
   ('node-ios-phones',         'domain-electronics', 'node-smartphones', 'PRODUCT_SUB_CLASS', 'ios_phones',         'هواتف آيفون',        'iOS Phones',         13, TRUE, FALSE),
-  -- pharmacy
   ('node-medications',        'domain-pharmacy', NULL, 'BUSINESS_SUBDOMAIN', 'medications',        'أدوية وعلاجات',      'Medications',        10, TRUE, FALSE),
   ('node-baby-care',          'domain-pharmacy', NULL, 'BUSINESS_SUBDOMAIN', 'baby_care',          'عناية بالطفل',        'Baby Care',          20, TRUE, FALSE),
-  -- sub-classifications under pharmacy (node-medications)
   ('node-pain-relief',        'domain-pharmacy', 'node-medications', 'PRODUCT_MAIN_CLASS', 'pain_relief',        'مسكنات الألم',       'Pain Relief',        11, TRUE, FALSE),
-  -- sub-classifications under pharmacy (node-baby-care)
   ('node-baby-milk',          'domain-pharmacy', 'node-baby-care', 'PRODUCT_MAIN_CLASS', 'baby_milk',          'حليب أطفال',         'Baby Milk',          21, TRUE, FALSE),
-  -- sub-sub-classifications under pharmacy (node-pain-relief)
   ('node-headache-migraine',  'domain-pharmacy', 'node-pain-relief', 'PRODUCT_SUB_CLASS', 'headache_migraine',  'صداع وشقيقة',        'Headache & Migraine',12, TRUE, FALSE),
-  -- sub-sub-classifications under pharmacy (node-baby-milk)
   ('node-infant-formula',     'domain-pharmacy', 'node-baby-milk', 'PRODUCT_SUB_CLASS', 'infant_formula',     'تركيبة الرضع',        'Infant Formula',     22, TRUE, FALSE)
 ON CONFLICT (id) DO UPDATE SET
   domain_id = EXCLUDED.domain_id,
@@ -119,18 +107,12 @@ VALUES
   ('store-1005', 'domain-restaurants', 'approved'),
   ('store-1006', 'domain-pharmacy', 'approved'),
   ('store-test-electronics', 'domain-electronics', 'approved'),
-  -- store-test-grocery is the sole dev-bootstrap partner's source store
-  -- (bootstrap-dev-data.mjs proposes every domain's fixture product through
-  -- this one partner token, so the proposal's source store is always this
-  -- one regardless of which store the product is later assorted to).
   ('store-test-grocery', 'domain-restaurants', 'approved'),
   ('store-test-grocery', 'domain-pharmacy', 'approved'),
   ('store-test-grocery', 'domain-electronics', 'approved'),
   ('store-test-grocery', 'domain-sweets-juices', 'approved')
 ON CONFLICT DO NOTHING;
 
--- Canonical local-development products. These are real sovereign master
--- products, not screen-local fixtures and not per-store product truth.
 INSERT INTO dsh_master_products
   (id, domain_id, category_node_id, canonical_name_ar, canonical_name_en,
    brand, sku, unit, measurement_type, approval_status, is_active,
@@ -188,8 +170,8 @@ VALUES
    1100, 'YER', TRUE, 'in_stock', 'حليب طازج', 'client_visible',
    'system-seed', 'system-seed'),
   ('assortment-store-test-grocery-apple', 'store-test-grocery', 'product-1001-apple',
-    1800, 'YER', TRUE, 'in_stock', 'تفاح طازج', 'client_visible',
-    'system-seed', 'system-seed')
+   1800, 'YER', TRUE, 'in_stock', 'تفاح طازج', 'client_visible',
+   'system-seed', 'system-seed')
 ON CONFLICT (store_id, master_product_id) DO UPDATE SET
   unit_price = EXCLUDED.unit_price,
   currency = EXCLUDED.currency,
@@ -199,76 +181,4 @@ ON CONFLICT (store_id, master_product_id) DO UPDATE SET
   publication_status = 'client_visible',
   submitted_by = EXCLUDED.submitted_by,
   approved_by = EXCLUDED.approved_by,
-  updated_at = NOW();
-
--- DAM assets for new subcategories and mock products.
---
--- object_key matches the flat filename Invoke-DshMediaSeed (infra/docker/scripts/runtime.ps1)
--- uploads from services/dsh/database/seeds/local/media/ into the dsh-media bucket, so these
--- rows only resolve to a real object once that script has actually run against a live MinIO --
--- unlike the previous version of this seed, which pointed 'approved' rows at localhost URLs
--- that were never backed by any uploaded file. public_url is left NULL: the runtime derives
--- the servable URL from object_key via GET /dsh/public/media/{assetId}/original
--- (see centralcatalog.publicMediaPath), so a stored public_url is unused legacy data.
--- size_bytes/checksum_sha256 are the real values of the checked-in placeholder PNGs
--- (generate with the same script used for `id`'s file if these are ever regenerated).
-INSERT INTO dsh_catalog_assets
-  (id, object_key, public_url, original_file_name, mime_type, size_bytes, width, height, checksum_sha256, alt_ar, alt_en, dominant_color, status, source_surface, uploaded_by)
-VALUES
-  ('asset-node-dairy-cheese', 'categories/node-dairy-cheese.png', NULL, 'node-dairy-cheese.png', 'image/png', 1385, 600, 600, '792746d4fc6f4c118025c932740e0d94df6ffcca9aa6a80529d4b33279b3e357', 'ألبان وأجبان',        'Dairy & Cheese',       '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-canned-food', 'categories/node-canned-food.png', NULL, 'node-canned-food.png', 'image/png', 1361, 600, 600, '6d429b7c291ab601caf1f7dd95d5c04b180f43dff30ee2815c90763507d27122', 'أغذية معلبة',         'Canned Food',          '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-local-vegetables', 'subcategories/node-local-vegetables.png', NULL, 'node-local-vegetables.png', 'image/png', 1385, 600, 600, '2977129d3d0d0f49c4322ccf5ebb2903b583bb94d4d5270d5a6e572b8b93418a', 'خضروات محلية',        'Local Vegetables',     '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-imported-fruits', 'subcategories/node-imported-fruits.png', NULL, 'node-imported-fruits.png', 'image/png', 406, 600, 600, '5fa4779ff7d43671019ab4a4097229a7360b3ff3d88603d8cbf6be58ec5a0f50', 'فواكه مستوردة',       'Imported Fruits',      '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-sweets-cake', 'subcategories/node-sweets-cake.png', NULL, 'node-sweets-cake.png', 'image/png', 665, 600, 600, '50b39bc1d4fe9975d1d4746ff4985531dc48477319a11024637d440cebd57431', 'كيك وتورتات',         'Cakes & Tortes',       '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-sweets-chocolate', 'subcategories/node-sweets-chocolate.png', NULL, 'node-sweets-chocolate.png', 'image/png', 1370, 600, 600, '188fa42f1dc5f1ad2527a949e9a541ddbb897e6445988338d15af4fa9050eb49', 'شوكولاتة فاخرة',      'Fine Chocolates',      '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-phones-tablets', 'categories/node-phones-tablets.png', NULL, 'node-phones-tablets.png', 'image/png', 1315, 600, 600, 'd0eb6e54f091df8dab5654c75292fd7f12191ccb1dbab01b30591cd561074cee', 'هواتف وأجهزة لوحية',  'Phones & Tablets',   '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-smartphones', 'subcategories/node-smartphones.png', NULL, 'node-smartphones.png', 'image/png', 1324, 600, 600, 'bced0f3f07d82a72b3a656348df3c6990271f17929b6d10b4cca34ce7d11bd3a', 'هواتف ذكية',         'Smartphones',        '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-android-phones', 'subcategories/node-android-phones.png', NULL, 'node-android-phones.png', 'image/png', 1385, 600, 600, '2977129d3d0d0f49c4322ccf5ebb2903b583bb94d4d5270d5a6e572b8b93418a', 'هواتف أندرويد',      'Android Phones',     '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-ios-phones', 'subcategories/node-ios-phones.png', NULL, 'node-ios-phones.png', 'image/png', 1361, 600, 600, 'cab344c57dac2424ddf8fc030fb2dddb57d6a581dfa382921961f092fad7f24a', 'هواتف آيفون',        'iOS Phones',         '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-medications', 'categories/node-medications.png', NULL, 'node-medications.png', 'image/png', 844, 600, 600, 'd1b5d40c767d0fce7673d56ce591b3f00e79d5bbd0f67210048ec238403415ec', 'أدوية وعلاجات',       'Medications',         '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-baby-care', 'categories/node-baby-care.png', NULL, 'node-baby-care.png', 'image/png', 665, 600, 600, '50b39bc1d4fe9975d1d4746ff4985531dc48477319a11024637d440cebd57431', 'عناية بالطفل',         'Baby Care',           '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-pain-relief', 'categories/node-pain-relief.png', NULL, 'node-pain-relief.png', 'image/png', 406, 600, 600, '5fa4779ff7d43671019ab4a4097229a7360b3ff3d88603d8cbf6be58ec5a0f50', 'مسكنات الألم',        'Pain Relief',         '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-baby-milk', 'subcategories/node-baby-milk.png', NULL, 'node-baby-milk.png', 'image/png', 1361, 600, 600, '9a46e9b9eea8f031ddbf7098810675068e2611a247b1062b111b553b1e8391b4', 'حليب أطفال',          'Baby Milk',           '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-headache-migraine', 'subcategories/node-headache-migraine.png', NULL, 'node-headache-migraine.png', 'image/png', 1334, 600, 600, 'f3b70183e437388e3c9054e09649024a3202ce7d26f0be806373a6f23fa3ddbc', 'صداع وشقيقة',         'Headache & Migraine', '#ffffff', 'approved', 'system', 'system-seed'),
-  ('asset-node-infant-formula', 'subcategories/node-infant-formula.png', NULL, 'node-infant-formula.png', 'image/png', 333, 600, 600, '6adfa1cb74a21092f1edb24ed3628be7824979699293c6fde6d5a65b6bf0f0d9', 'تركيبة الرضع',         'Infant Formula',      '#ffffff', 'approved', 'system', 'system-seed')
-ON CONFLICT (id) DO UPDATE SET
-  object_key = EXCLUDED.object_key,
-  public_url = EXCLUDED.public_url,
-  original_file_name = EXCLUDED.original_file_name,
-  mime_type = EXCLUDED.mime_type,
-  size_bytes = EXCLUDED.size_bytes,
-  width = EXCLUDED.width,
-  height = EXCLUDED.height,
-  checksum_sha256 = EXCLUDED.checksum_sha256,
-  alt_ar = EXCLUDED.alt_ar,
-  alt_en = EXCLUDED.alt_en,
-  dominant_color = EXCLUDED.dominant_color,
-  status = EXCLUDED.status,
-  source_surface = EXCLUDED.source_surface,
-  uploaded_by = EXCLUDED.uploaded_by,
-  updated_at = NOW();
-
--- DAM asset links for new subcategories and mock products
-INSERT INTO dsh_catalog_asset_links
-  (id, asset_id, entity_type, entity_id, role, sort_order, is_primary, status)
-VALUES
-  ('link-node-dairy-cheese',      'asset-node-dairy-cheese',      'node',           'node-dairy-cheese',      'cover',                   0, TRUE, 'approved'),
-  ('link-node-canned-food',       'asset-node-canned-food',       'node',           'node-canned-food',       'cover',                   0, TRUE, 'approved'),
-  ('link-node-local-vegetables',  'asset-node-local-vegetables',  'node',           'node-local-vegetables',  'cover',                   0, TRUE, 'approved'),
-  ('link-node-imported-fruits',   'asset-node-imported-fruits',   'node',           'node-imported-fruits',   'cover',                   0, TRUE, 'approved'),
-  ('link-node-sweets-cake',       'asset-node-sweets-cake',       'node',           'node-sweets-cake',       'cover',                   0, TRUE, 'approved'),
-  ('link-node-sweets-chocolate',  'asset-node-sweets-chocolate',  'node',           'node-sweets-chocolate',  'cover',                   0, TRUE, 'approved'),
-  ('link-node-phones-tablets',    'asset-node-phones-tablets',    'node',           'node-phones-tablets',    'cover',                   0, TRUE, 'approved'),
-  ('link-node-smartphones',       'asset-node-smartphones',       'node',           'node-smartphones',       'cover',                   0, TRUE, 'approved'),
-  ('link-node-android-phones',    'asset-node-android-phones',    'node',           'node-android-phones',    'cover',                   0, TRUE, 'approved'),
-  ('link-node-ios-phones',        'asset-node-ios-phones',        'node',           'node-ios-phones',        'cover',                   0, TRUE, 'approved'),
-  ('link-node-medications',        'asset-node-medications',        'node',           'node-medications',        'cover',                   0, TRUE, 'approved'),
-  ('link-node-baby-care',          'asset-node-baby-care',          'node',           'node-baby-care',          'cover',                   0, TRUE, 'approved'),
-  ('link-node-pain-relief',        'asset-node-pain-relief',        'node',           'node-pain-relief',        'cover',                   0, TRUE, 'approved'),
-  ('link-node-baby-milk',          'asset-node-baby-milk',          'node',           'node-baby-milk',          'cover',                   0, TRUE, 'approved'),
-  ('link-node-headache-migraine',  'asset-node-headache-migraine',  'node',           'node-headache-migraine',  'cover',                   0, TRUE, 'approved'),
-  ('link-node-infant-formula',     'asset-node-infant-formula',     'node',           'node-infant-formula',     'cover',                   0, TRUE, 'approved')
-ON CONFLICT (entity_type, entity_id, role, asset_id) DO UPDATE SET
-  is_primary = EXCLUDED.is_primary,
-  status = EXCLUDED.status,
   updated_at = NOW();

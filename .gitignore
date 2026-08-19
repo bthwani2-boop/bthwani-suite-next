@@ -51,11 +51,10 @@ graphify-out/
 !services/dsh/evidence/**/*.png
 services/dsh/evidence/DSH-002-home-discovery-fullstack/screenshots/
 
-# Canonical DSH seed media are required reproducible runtime inputs. They must
-# survive a clean clone because media-manifest.json validates them by checksum,
-# dimensions, and required=true before local seed/runtime proof can pass.
-!services/dsh/database/seeds/local/media/
-!services/dsh/database/seeds/local/media/**
+# DSH local seed media is workstation/runtime state. The tracked contract lives
+# at services/dsh/database/seeds/media/local-media.manifest.json; no binary or
+# manifest under the local runtime directory may enter repository history.
+services/dsh/database/seeds/local/media/
 
 # Native application identity assets are governed source inputs for Expo/EAS.
 !apps/*/runtime/assets/
