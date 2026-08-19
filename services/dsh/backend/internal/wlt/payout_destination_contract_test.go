@@ -45,8 +45,14 @@ func TestPartnerPayoutDestinationPathMatchesCanonicalContract(t *testing.T) {
 func TestUpsertPayoutDestinationSendsOfficialWalletIdentityOnly(t *testing.T) {
 	var gotPath string
 	var gotBody map[string]any
+	var gotDelegatedOperatorContext string
+	var gotDelegatedPrincipal string
+	var gotLegacyOperatorContext string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
+		gotDelegatedOperatorContext = r.Header.Get("X-Delegated-Operator-Context")
+		gotDelegatedPrincipal = r.Header.Get("X-Delegated-Principal-ID")
+		gotLegacyOperatorContext = r.Header.Get("X-Operator-Context-ID")
 		_ = json.NewDecoder(r.Body).Decode(&gotBody)
 		w.WriteHeader(http.StatusCreated)
 		_ = json.NewEncoder(w).Encode(map[string]any{
@@ -82,14 +88,23 @@ func TestUpsertPayoutDestinationSendsOfficialWalletIdentityOnly(t *testing.T) {
 	if gotPath != "/wlt/payout-destinations/partner/partner-1" {
 		t.Fatalf("unexpected upsert path: %s", gotPath)
 	}
+	if gotDelegatedOperatorContext != "OperatorContext-test" {
+		t.Fatalf("delegated OperatorContext was not sent: %q", gotDelegatedOperatorContext)
+	}
+	if gotDelegatedPrincipal != "operator-1" {
+		t.Fatalf("delegated principal was not sent: %q", gotDelegatedPrincipal)
+	}
+	if gotLegacyOperatorContext != "" {
+		t.Fatalf("legacy OperatorContext header must not be emitted: %q", gotLegacyOperatorContext)
+	}
 	if _, present := gotBody["destinationMethod"]; present {
 		t.Fatal("DSH still sends caller-controlled destinationMethod")
 	}
 	if _, present := gotBody["createdByActorId"]; present {
 		t.Fatal("request still sends the retired createdByActorId field")
 	}
-	if gotBody["operatorId"] != "operator-1" {
-		t.Fatalf("operatorId was not sent: %#v", gotBody)
+	if _, present := gotBody["operatorId"]; present {
+		t.Fatal("delegated finance principal must not be supplied in the request body")
 	}
 	if gotBody["officialWalletProviderKey"] != "bthwani_local_wallet" {
 		t.Fatalf("officialWalletProviderKey was not sent: %#v", gotBody)
