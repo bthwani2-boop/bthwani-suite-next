@@ -266,22 +266,6 @@ export async function fetchProductProposals(query?: Parameters<typeof fetchProdu
   return (await fetchProductProposalsPage(query)).items;
 }
 
-export async function decideProductProposal(
-  proposalId: string,
-  input: {
-    readonly decision: "under_review" | "adopted" | "rejected" | "needs_fix";
-    readonly reviewNote: string;
-    readonly adoptedMasterProductId?: string | null;
-    readonly expectedVersion?: number;
-  },
-): Promise<ProductProposal> {
-  const resp = await request<{ proposal: ProductProposal }>(`/dsh/operator/catalog/product-proposals/${encodeURIComponent(proposalId)}/decision`, {
-    method: "POST",
-    body: input,
-  });
-  return resp.proposal;
-}
-
 export async function transitionProductProposal(
   proposalId: string,
   input: {
