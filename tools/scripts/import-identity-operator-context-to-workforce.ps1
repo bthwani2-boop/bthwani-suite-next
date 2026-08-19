@@ -9,6 +9,13 @@
   staging table inside its governed transaction and drops it after recording the
   migration proof. No Workforce payload, assignment, environment, or fallback
   value is consulted.
+
+  In the compose-backed local runtime, a fresh Identity database may have the
+  canonical schema but no actors until identity-api executes its own governed
+  local bootstrap. The import therefore starts that canonical owner only when a
+  fresh snapshot is empty, waits for Identity to materialize its actors, and then
+  re-reads the authoritative database. Production and disabled-bootstrap modes
+  remain fail-closed; no actor or operator context is synthesized here.
 #>
 
 [CmdletBinding()]
@@ -90,6 +97,102 @@ function Invoke-ImportDatabaseSql {
   return (($output | ForEach-Object { "$_" }) -join "`n").Trim()
 }
 
+function Get-ConfiguredRuntimeValue {
+  param([Parameter(Mandatory = $true)][string]$Name)
+
+  $environmentValue = [System.Environment]::GetEnvironmentVariable($Name)
+  if (-not [string]::IsNullOrWhiteSpace($environmentValue)) {
+    return $environmentValue.Trim()
+  }
+  if (-not $UseDockerCompose) {
+    return ''
+  }
+
+  foreach ($rawLine in Get-Content -LiteralPath $EnvFile) {
+    $line = $rawLine.Trim()
+    if (-not $line -or $line.StartsWith('#') -or -not $line.Contains('=')) {
+      continue
+    }
+    $parts = $line.Split('=', 2)
+    if ($parts[0].Trim() -ne $Name) {
+      continue
+    }
+    $value = $parts[1].Trim()
+    if ($value.StartsWith('"') -and $value.EndsWith('"')) {
+      return $value.Substring(1, $value.Length - 2)
+    }
+    if ($value.StartsWith("'") -and $value.EndsWith("'")) {
+      return $value.Substring(1, $value.Length - 2)
+    }
+    return $value
+  }
+  return ''
+}
+
+function Test-ProductionRuntime {
+  foreach ($name in @('NODE_ENV', 'ENVIRONMENT', 'BTHWANI_ENVIRONMENT', 'BTHWANI_RUNTIME_MODE')) {
+    $value = Get-ConfiguredRuntimeValue -Name $name
+    if (-not [string]::IsNullOrWhiteSpace($value) -and $value.Trim().ToLowerInvariant() -eq 'production') {
+      return $true
+    }
+  }
+  return $false
+}
+
+function Get-IdentityActorCount {
+  $countText = Invoke-ImportDatabaseSql -Target identity -TuplesOnly -Sql 'SELECT count(*)::text FROM identity_actors;'
+  $actorCount = 0
+  if (-not [int]::TryParse($countText.Trim(), [ref]$actorCount) -or $actorCount -lt 0) {
+    throw "Identity actor count is not a valid non-negative integer: '$countText'"
+  }
+  return $actorCount
+}
+
+function Ensure-ComposeIdentitySnapshotReady {
+  if (-not $UseDockerCompose) {
+    return
+  }
+
+  $actorCount = Get-IdentityActorCount
+  if ($actorCount -gt 0) {
+    return
+  }
+
+  if (Test-ProductionRuntime) {
+    throw 'Identity snapshot contains no actors; local Identity bootstrap is forbidden in production.'
+  }
+
+  $bootstrapEnabled = Get-ConfiguredRuntimeValue -Name 'IDENTITY_LOCAL_BOOTSTRAP'
+  if (-not [string]::Equals($bootstrapEnabled, 'true', [System.StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Identity snapshot contains no actors and IDENTITY_LOCAL_BOOTSTRAP is not enabled; refusing to synthesize cutover state.'
+  }
+
+  Write-Host 'Identity snapshot is empty in the governed local runtime; starting identity-api so the Identity owner can converge its canonical actors.'
+  $composeArguments = @(
+    'compose', '--env-file', $EnvFile, '-f', $ComposeFile,
+    'up', '-d', '--build', 'identity-api'
+  )
+  $composeOutput = @(& docker @composeArguments 2>&1)
+  $composeExitCode = $LASTEXITCODE
+  foreach ($line in $composeOutput) {
+    Write-Host ([string]$line)
+  }
+  if ($composeExitCode -ne 0) {
+    throw "Identity local bootstrap owner failed to start (docker compose exit $composeExitCode)."
+  }
+
+  for ($attempt = 1; $attempt -le 40; $attempt++) {
+    Start-Sleep -Seconds 1
+    $actorCount = Get-IdentityActorCount
+    if ($actorCount -gt 0) {
+      Write-Host "Identity local bootstrap convergence: PASS actors=$actorCount"
+      return
+    }
+  }
+
+  throw 'Identity local bootstrap did not materialize any canonical actors; refusing an empty Workforce cutover.'
+}
+
 function Test-WorkforceCutoverApplied {
   $ledgerTable = Invoke-ImportDatabaseSql -Target workforce -TuplesOnly -Sql "SELECT COALESCE(to_regclass('public.schema_migrations')::text, '');"
   if ([string]::IsNullOrWhiteSpace($ledgerTable)) {
@@ -117,6 +220,8 @@ if (Test-WorkforceCutoverApplied) {
   Write-Host 'Identity operator-context staging: SKIP workforce-020 is already applied; residual staging was removed.'
   return
 }
+
+Ensure-ComposeIdentitySnapshotReady
 
 function ConvertTo-SqlLiteral {
   param([AllowNull()][string]$Value)
