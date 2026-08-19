@@ -13,7 +13,7 @@ import (
 
 const (
 	wltMigrationServiceName = "wlt"
-	wltLatestMigration      = "wlt-943_captain_cod_ledger_write_fence.sql"
+	wltLatestMigration      = "wlt-944_financial_reference_operator_context.sql"
 	wltReadinessTimeout     = 2 * time.Second
 )
 
