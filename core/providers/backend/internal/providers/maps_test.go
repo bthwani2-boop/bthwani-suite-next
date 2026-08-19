@@ -29,6 +29,12 @@ func TestSearchWithMapProviderUsesGovernedNominatimConfiguration(t *testing.T) {
 	}))
 	defer server.Close()
 
+	serverURL, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("parse test map provider URL: %v", err)
+	}
+	t.Setenv("PROVIDERS_OUTBOUND_ALLOWED_HOSTS", serverURL.Hostname())
+
 	parameters, _ := json.Marshal(map[string]any{
 		"protocol":     "nominatim",
 		"baseUrl":      server.URL,
@@ -55,22 +61,34 @@ func TestReverseWithMapProviderRejectsUnidentifiedClient(t *testing.T) {
 	}))
 	defer server.Close()
 
+	serverURL, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("parse test map provider URL: %v", err)
+	}
+	t.Setenv("PROVIDERS_OUTBOUND_ALLOWED_HOSTS", serverURL.Hostname())
+
 	parameters, _ := json.Marshal(map[string]any{"protocol": "nominatim", "baseUrl": server.URL})
 	provider := ExternalProvider{Code: "nominatim", Active: true, Parameters: parameters}
-	_, err := reverseWithMapProvider(context.Background(), provider, MapReverseInput{Latitude: 15.3, Longitude: 44.2})
+	_, err = reverseWithMapProvider(context.Background(), provider, MapReverseInput{Latitude: 15.3, Longitude: 44.2})
 	if err == nil || !strings.Contains(err.Error(), "userAgent") {
 		t.Fatalf("expected configured user-agent failure, got %v", err)
 	}
 }
 
-func TestMapEndpointRequiresTLSOutsideLocalhost(t *testing.T) {
+func TestMapEndpointRequiresTLSAndExplicitOutboundTrust(t *testing.T) {
+	t.Setenv("PROVIDERS_OUTBOUND_ALLOWED_HOSTS", "")
 	_, err := mapEndpoint("http://example.com", "/search")
 	if err == nil {
 		t.Fatal("expected non-local HTTP endpoint to fail")
 	}
+	if _, err := mapEndpoint("http://localhost:8080/api", "/search"); err == nil {
+		t.Fatal("expected unallowlisted localhost endpoint to fail")
+	}
+
+	t.Setenv("PROVIDERS_OUTBOUND_ALLOWED_HOSTS", "localhost")
 	endpoint, err := mapEndpoint("http://localhost:8080/api", "/search")
 	if err != nil {
-		t.Fatalf("local development endpoint should be allowed: %v", err)
+		t.Fatalf("explicitly allowlisted local development endpoint should be allowed: %v", err)
 	}
 	if endpoint.Path != "/api/search" {
 		t.Fatalf("unexpected path %q", endpoint.Path)
