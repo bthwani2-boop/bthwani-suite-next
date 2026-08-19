@@ -110,14 +110,7 @@ func main() {
 		mediaProvider,
 		pickupGuardedRouter,
 	)
-	governedIncidentRouter := dshHttp.GovernedIncidentMiddleware(
-		db,
-		identityClient,
-		wltClient,
-		mediaProvider,
-		deliveryExceptionGovernedRouter,
-	)
-	availabilityGuardedRouter := dshHttp.OperationsAvailabilityMiddleware(db, governedIncidentRouter)
+	availabilityGuardedRouter := dshHttp.OperationsAvailabilityMiddleware(db, deliveryExceptionGovernedRouter)
 	operatorContextGuardedRouter := dshHttp.TrustedOperatorContextMiddleware(identityClient, availabilityGuardedRouter)
 	handler := dshHttp.CorsMiddleware(authMode, operatorContextGuardedRouter)
 
