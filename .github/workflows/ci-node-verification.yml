@@ -27,7 +27,7 @@ jobs:
       - name: Checkout immutable source candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ inputs.head_sha }}
           fetch-depth: 1
           persist-credentials: false
       - name: Verify exact candidate and fetch base
@@ -49,7 +49,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .nx/cache
-          key: nx-${{ inputs.verification_tier }}-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-${{ github.sha }}
+          key: nx-${{ inputs.verification_tier }}-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-${{ inputs.head_sha }}
           restore-keys: |
             nx-${{ inputs.verification_tier }}-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
             nx-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
@@ -109,7 +109,7 @@ jobs:
       - name: Checkout immutable source candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ inputs.head_sha }}
           fetch-depth: 1
           persist-credentials: false
       - name: Verify exact candidate and fetch base
@@ -158,7 +158,7 @@ jobs:
       - name: Checkout immutable source candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ inputs.head_sha }}
           fetch-depth: 1
           persist-credentials: false
       - name: Verify exact candidate and fetch base
