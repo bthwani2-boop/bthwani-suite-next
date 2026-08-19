@@ -16,9 +16,9 @@ type providerMediaVerifier interface {
 	ValidateProviderDocumentMedia(context.Context, string, string, string) error
 }
 
-// ReferenceMutationMiddleware owns governed reference-data and document-link
-// mutations that cross the existing service boundary without duplicating the
-// main router.
+// ReferenceMutationMiddleware owns governed Workforce mutations that augment
+// the primary provider router: local reference metadata, provider affiliation
+// replacement, and opaque document-link validation.
 func ReferenceMutationMiddleware(next http.Handler, repo *workforce.Repository, authClient *auth.Client, mediaVerifier providerMediaVerifier) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodPost && r.URL.Path == "/workforce/reference/cities" {
@@ -28,6 +28,12 @@ func ReferenceMutationMiddleware(next http.Handler, repo *workforce.Repository, 
 		if r.Method == http.MethodPatch && strings.HasPrefix(r.URL.Path, "/workforce/reference/cities/") {
 			handleCityUpdate(w, r, repo, authClient)
 			return
+		}
+		if r.Method == http.MethodPatch && strings.HasSuffix(r.URL.Path, "/affiliations") {
+			if role, actorID, ok := parseProviderAffiliationPath(r.URL.Path); ok {
+				handleAffiliationReplace(w, r, repo, authClient, role, actorID)
+				return
+			}
 		}
 		if r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/documents") {
 			if kind, actorID, ok := parseProviderDocumentPath(r.URL.Path); ok {
@@ -101,6 +107,66 @@ func handleCityUpdate(w http.ResponseWriter, r *http.Request, repo *workforce.Re
 		return
 	}
 	sendJSON(w, http.StatusOK, city)
+}
+
+func parseProviderAffiliationPath(path string) (role string, actorID string, ok bool) {
+	parts := strings.Split(strings.Trim(path, "/"), "/")
+	if len(parts) != 4 || parts[0] != "workforce" || parts[3] != "affiliations" {
+		return "", "", false
+	}
+	switch parts[1] {
+	case "field-agents":
+		role = "field"
+	case "captains":
+		role = "captain"
+	case "employees":
+		role = "employee"
+	default:
+		return "", "", false
+	}
+	actorID = strings.TrimSpace(parts[2])
+	return role, actorID, actorID != ""
+}
+
+func handleAffiliationReplace(w http.ResponseWriter, r *http.Request, repo *workforce.Repository, authClient *auth.Client, role, actorID string) {
+	identity, ok := resolveReferenceOperator(w, r, authClient, "provider:update")
+	if !ok {
+		return
+	}
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	if correlationID == "" {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "X-Correlation-ID is required")
+		return
+	}
+	var input struct {
+		Affiliations []workforce.OperationalAssignmentInput `json:"affiliations"`
+	}
+	if !decodeReferenceMutationJSON(w, r, &input) {
+		return
+	}
+	person, err := repo.PersonByActorID(r.Context(), actorID)
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	if person.WorkforceKind != role {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "provider collection does not match workforce kind")
+		return
+	}
+	scopes, err := repo.SetOperationalScopes(
+		r.Context(),
+		actorID,
+		identity.OperatorContextID,
+		role,
+		input.Affiliations,
+		identity.Subject,
+		correlationID,
+	)
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]any{"affiliations": scopes})
 }
 
 func parseProviderDocumentPath(path string) (kind string, actorID string, ok bool) {
