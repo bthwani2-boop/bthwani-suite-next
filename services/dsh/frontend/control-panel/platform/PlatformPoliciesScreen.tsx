@@ -18,7 +18,6 @@ import {
 import { ClientAddressPrivacySection } from "./ClientAddressPrivacySection";
 import { OperationalPolicySection } from "./OperationalPolicySection";
 import { MapProviderHealthCard } from "./MapProviderHealthCard";
-import { OperationalPolicyGovernanceSection } from "./OperationalPolicyGovernanceSection";
 import { ServiceAreaGovernanceSection } from "./ServiceAreaGovernanceSection";
 import { StoreOnboardingFeePolicySection } from "./StoreOnboardingFeePolicySection";
 
@@ -93,14 +92,6 @@ export function PlatformPoliciesContent({ embedded = false }: PlatformPoliciesCo
       <ClientAddressPrivacySection
         canRead={canReadPlatformPolicy}
         canManage={canManagePlatformPolicy}
-      />
-      <OperationalPolicyGovernanceSection
-        canReadZones={hasAllControlPanelPermissions(identity, CONTROL_PANEL_CAPABILITIES.dshServiceAreasRead)}
-        canManageZones={hasAllControlPanelPermissions(identity, CONTROL_PANEL_CAPABILITIES.dshServiceAreasManage)}
-        canReadSla={hasAllControlPanelPermissions(identity, CONTROL_PANEL_CAPABILITIES.dshOperationalSlaRead)}
-        canManageSla={hasAllControlPanelPermissions(identity, CONTROL_PANEL_CAPABILITIES.dshOperationalSlaManage)}
-        canReadCapacity={hasAllControlPanelPermissions(identity, CONTROL_PANEL_CAPABILITIES.dshOperationalCapacityRead)}
-        canManageCapacity={hasAllControlPanelPermissions(identity, CONTROL_PANEL_CAPABILITIES.dshOperationalCapacityManage)}
       />
       <OperationalPolicySection
         canReadZones={hasAllControlPanelPermissions(identity, CONTROL_PANEL_CAPABILITIES.dshServiceAreasRead)}
