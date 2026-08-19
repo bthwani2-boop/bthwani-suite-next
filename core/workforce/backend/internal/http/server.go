@@ -76,8 +76,9 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux.HandleFunc("PATCH /workforce/reference/shifts/{code}", s.operatorOnly("reference:manage", s.updateShift))
 	mux.HandleFunc("GET /workforce/reference/supervisors", s.operatorOnly("provider:read", s.searchSupervisors))
 
-	// DSH consumes Workforce-owned operational assignments as read-only truth.
+	// Internal routes
 	mux.HandleFunc("GET /internal/assignments/{actorId}/scopes", s.internalOnly(s.handleGetActorScopes))
+	mux.HandleFunc("PUT /internal/assignments/{actorId}/scopes", s.internalOnly(s.handleSetActorScopes))
 	return mux
 }
 
@@ -296,4 +297,335 @@ func (s *server) issueActivation(w http.ResponseWriter, r *http.Request, identit
 		return
 	}
 	sendJSON(w, http.StatusCreated, code)
+}
+
+func activationActorType(r *http.Request) string {
+	if strings.Contains(r.URL.Path, "/workforce/captains/") {
+		return "captain"
+	}
+	if strings.Contains(r.URL.Path, "/workforce/employees/") {
+		return "employee"
+	}
+	return "field"
+}
+
+func activationSurface(r *http.Request) string {
+	actorType := activationActorType(r)
+	if actorType == "captain" {
+		return "app-captain"
+	}
+	if actorType == "employee" {
+		return "webapp"
+	}
+	return "app-field"
+}
+
+func (s *server) revokeActivation(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	if err := s.service.RevokeActivation(r.Context(), operatorOf(r, identity),
+		r.PathValue("actorId"), r.Header.Get("X-Correlation-ID")); err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ---- captains ----
+
+func (s *server) createCaptain(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	var input workforce.CreateCaptainInput
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if idempotencyKey == "" {
+		sendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key header is required")
+		return
+	}
+	person, replayed, err := s.service.CreateCaptain(r.Context(), operatorOf(r, identity), input,
+		idempotencyKey, r.Header.Get("X-Correlation-ID"))
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	status := http.StatusCreated
+	if replayed {
+		status = http.StatusOK
+	}
+	sendJSON(w, status, person)
+}
+
+func (s *server) listCaptains(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+	query := r.URL.Query()
+	limit, _ := strconv.Atoi(query.Get("limit"))
+	offset, _ := strconv.Atoi(query.Get("offset"))
+	people, err := s.repo.ListCaptains(r.Context(), workforce.ListFilter{
+		Status:   strings.TrimSpace(query.Get("status")),
+		CityCode: strings.TrimSpace(query.Get("city")),
+		Query:    strings.TrimSpace(query.Get("q")),
+		Limit:    limit,
+		Offset:   offset,
+	})
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]any{"captains": people})
+}
+
+func (s *server) getCaptain(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+	detail, err := s.service.CaptainByID(r.Context(), r.PathValue("actorId"))
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, detail)
+}
+
+func (s *server) updateCaptain(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	var input workforce.UpdateCaptainInput
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	person, err := s.service.UpdateCaptain(r.Context(), operatorOf(r, identity),
+		r.PathValue("actorId"), input, r.Header.Get("X-Correlation-ID"))
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, person)
+}
+
+// ---- self ----
+
+func (s *server) me(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	view, err := s.service.Me(r.Context(), identity.Subject)
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, view)
+}
+
+func (s *server) updateMe(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	var input workforce.UpdateSelfInput
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	view, err := s.service.UpdateMe(r.Context(), identity.Subject, input, r.Header.Get("X-Correlation-ID"))
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, view)
+}
+
+// ---- reference data ----
+
+func (s *server) listCities(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	cities, err := s.repo.ListCities(r.Context(), identity.HasRole("operator") && r.URL.Query().Get("includeInactive") == "true")
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]any{"cities": cities})
+}
+
+func (s *server) listShifts(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	shifts, err := s.repo.ListShifts(r.Context(), identity.HasRole("operator") && r.URL.Query().Get("includeInactive") == "true")
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]any{"shifts": shifts})
+}
+
+func (s *server) createShift(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+	var shift workforce.Shift
+	if !decodeJSON(w, r, &shift) {
+		return
+	}
+	if strings.TrimSpace(shift.Code) == "" || strings.TrimSpace(shift.NameAr) == "" {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "code and nameAr are required")
+		return
+	}
+	shift.Active = true
+	if err := s.repo.UpsertShift(r.Context(), shift, true); err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusCreated, shift)
+}
+
+func (s *server) searchSupervisors(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+	query := r.URL.Query()
+	candidates, err := s.service.SearchSupervisors(r.Context(), strings.TrimSpace(query.Get("kind")), strings.TrimSpace(query.Get("q")))
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]any{"supervisors": candidates})
+}
+
+func (s *server) updateShift(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+	var shift workforce.Shift
+	if !decodeJSON(w, r, &shift) {
+		return
+	}
+	shift.Code = r.PathValue("code")
+	if err := s.repo.UpsertShift(r.Context(), shift, false); err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, shift)
+}
+
+// ---- plumbing ----
+
+func operatorOf(r *http.Request, identity auth.Identity) workforce.Operator {
+	role := "operator"
+	if len(identity.Roles) > 0 {
+		role = identity.Roles[0]
+	}
+	return workforce.Operator{
+		ActorID: identity.Subject, Role: role, Token: r.Header.Get("Authorization"),
+		OperatorContextID: identity.OperatorContextID,
+	}
+}
+
+func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(target); err != nil {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
+		return false
+	}
+	return true
+}
+
+func sendJSON(w http.ResponseWriter, status int, body any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(body)
+}
+
+func sendError(w http.ResponseWriter, status int, code, message string) {
+	sendJSON(w, status, workforce.ApiError{Code: code, Message: message})
+}
+
+func writeWorkforceError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, workforce.ErrNotFound):
+		sendError(w, http.StatusNotFound, "PROFILE_NOT_PROVISIONED", "no provider profile exists for this actor")
+	case errors.Is(err, workforce.ErrVersionConflict):
+		sendError(w, http.StatusConflict, "VERSION_CONFLICT", "profile was modified by someone else; reload and retry")
+	case errors.Is(err, workforce.ErrOverlappingAssignment):
+		sendError(w, http.StatusConflict, "ASSIGNMENT_OVERLAP", "operational scopes contain a duplicate active assignment")
+	case errors.Is(err, workforce.ErrDuplicateWorkforceCode):
+		sendError(w, http.StatusConflict, "DUPLICATE_WORKFORCE_CODE", "workforce code is already used")
+	case errors.Is(err, workforce.ErrInvalidReference):
+		sendError(w, http.StatusUnprocessableEntity, "INVALID_REFERENCE_CODE", "city or shift code is unknown or inactive")
+	case errors.Is(err, workforce.ErrIdempotencyConflict):
+		sendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "idempotency key was reused with a different request")
+	case errors.Is(err, workforce.ErrReferenceExists):
+		sendError(w, http.StatusConflict, "REFERENCE_EXISTS", "reference code already exists")
+	case errors.Is(err, workforce.ErrReferenceInUse):
+		sendError(w, http.StatusConflict, "REFERENCE_IN_USE", "reference code is in use")
+	case errors.Is(err, workforce.ErrProfileIncomplete):
+		sendError(w, http.StatusUnprocessableEntity, "PROFILE_INCOMPLETE", "sovereign profile fields are incomplete")
+	case errors.Is(err, workforce.ErrSuspended):
+		sendError(w, http.StatusConflict, "ENGAGEMENT_SUSPENDED", "provider engagement is suspended")
+	case errors.Is(err, workforce.ErrStatusNotIssuable):
+		sendError(w, http.StatusConflict, "STATUS_NOT_ALLOWED", "engagement status does not allow this action")
+	case errors.Is(err, workforce.ErrInvalidInput):
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "input validation failed")
+	case errors.Is(err, workforce.ErrInvalidSupervisor):
+		sendError(w, http.StatusUnprocessableEntity, "INVALID_SUPERVISOR", "supervisor actor is missing, inactive, or invalid")
+	case errors.Is(err, workforce.ErrWorkforceKindConflict):
+		sendError(w, http.StatusConflict, "WORKFORCE_KIND_CONFLICT", "actor already holds a profile of another workforce kind")
+	case errors.Is(err, identityclient.ErrPhoneAlreadyBound):
+		sendError(w, http.StatusConflict, "DUPLICATE_PHONE", "phone is already bound to another actor")
+	case errors.Is(err, identityclient.ErrUsernameTaken):
+		sendError(w, http.StatusConflict, "DUPLICATE_WORKFORCE_CODE", "workforce code is already used as a username")
+	case errors.Is(err, identityclient.ErrActorNotFound):
+		sendError(w, http.StatusNotFound, "ACTOR_NOT_FOUND", "identity actor was not found")
+	case errors.Is(err, identityclient.ErrRateLimited):
+		sendError(w, http.StatusTooManyRequests, "ACTIVATION_RATE_LIMITED", "activation can be requested again later")
+	case errors.Is(err, identityclient.ErrInvalidActor):
+		sendError(w, http.StatusUnprocessableEntity, "INVALID_ACTOR_INPUT", "identity rejected the actor input")
+	case errors.Is(err, identityclient.ErrProvisionConflict):
+		sendError(w, http.StatusConflict, "ACTOR_PROVISION_CONFLICT", "phone is already provisioned to an actor with a different username or role")
+	case errors.Is(err, identityclient.ErrActorStateConflict):
+		sendError(w, http.StatusConflict, "STATUS_NOT_ALLOWED", "identity actor state does not allow this transition")
+	case errors.Is(err, identityclient.ErrUnavailable):
+		sendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
+	default:
+		// Unmapped errors become an opaque 500 for the caller. Log the underlying
+		// cause so the failure is diagnosable from the container logs.
+		log.Printf("[workforce] unmapped error: %v", err)
+		sendError(w, http.StatusInternalServerError, "WORKFORCE_INTERNAL_ERROR", "workforce request failed")
+	}
+}
+
+func (s *server) createEmployee(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	var input workforce.CreateEmployeeInput
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if idempotencyKey == "" {
+		sendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key header is required")
+		return
+	}
+	person, replayed, err := s.service.CreateEmployee(r.Context(), operatorOf(r, identity), input,
+		idempotencyKey, r.Header.Get("X-Correlation-ID"))
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	status := http.StatusCreated
+	if replayed {
+		status = http.StatusOK
+	}
+	sendJSON(w, status, person)
+}
+
+func (s *server) listEmployees(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+	query := r.URL.Query()
+	limit, _ := strconv.Atoi(query.Get("limit"))
+	offset, _ := strconv.Atoi(query.Get("offset"))
+	people, err := s.repo.ListEmployees(r.Context(), workforce.ListFilter{
+		Status:   strings.TrimSpace(query.Get("status")),
+		CityCode: strings.TrimSpace(query.Get("city")),
+		Query:    strings.TrimSpace(query.Get("q")),
+		Limit:    limit,
+		Offset:   offset,
+	})
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]any{"employees": people})
+}
+
+func (s *server) getEmployee(w http.ResponseWriter, r *http.Request, _ auth.Identity) {
+	detail, err := s.service.EmployeeByID(r.Context(), r.PathValue("actorId"))
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, detail)
+}
+
+func (s *server) updateEmployee(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	var input workforce.UpdateEmployeeInput
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	person, err := s.service.UpdateEmployee(r.Context(), operatorOf(r, identity),
+		r.PathValue("actorId"), input, r.Header.Get("X-Correlation-ID"))
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	sendJSON(w, http.StatusOK, person)
 }
