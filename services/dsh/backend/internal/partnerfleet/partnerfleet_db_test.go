@@ -14,9 +14,12 @@ import (
 
 func TestPartnerFleetLifecyclePostgres(t *testing.T) {
 	// The canonical fleet authority is dsh_captain_memberships after dsh-976.
+	if os.Getenv("DSH_REQUIRE_DB_TESTS") != "true" {
+		t.Skip("set DSH_REQUIRE_DB_TESTS=true to run DSH DB integration tests")
+	}
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
-		t.Fatal("DATABASE_URL is required for the PostgreSQL lifecycle proof")
+		t.Fatal("DATABASE_URL is required when DSH_REQUIRE_DB_TESTS=true")
 	}
 
 	db, err := sql.Open("postgres", databaseURL)
