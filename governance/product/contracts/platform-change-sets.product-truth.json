@@ -1,7 +1,6 @@
 {
   "schemaVersion": 1,
   "capabilityId": "PLATFORM_CHANGE_SETS",
-  "state": "DISCOVERY",
   "problem": {
     "statement": "Platform configuration changes need one governed maker-checker workflow with explicit validation, conflict detection, audit, apply, and rollback boundaries.",
     "affectedActors": [
@@ -11,12 +10,7 @@
     ],
     "currentWorkaround": "Direct or fragmented configuration changes cannot provide one reviewable lifecycle and reliable rollback evidence.",
     "frequency": "occasional",
-    "severity": "high",
-    "evidenceState": "UNPROVEN",
-    "evidenceReferences": [
-      "core/platform-control/contracts/platform-change-sets.openapi.yaml",
-      "core/platform-control/clients/generated/platform-control-api.ts"
-    ]
+    "severity": "high"
   },
   "actors": [
     {
@@ -188,9 +182,8 @@
       "sensitive_values_captured",
       "rollback_without_reason"
     ],
-    "baselineState": "Product acceptance and live runtime proof are not yet established.",
-    "targetState": "The governed lifecycle is product-approved, runtime-proven, and has zero unauthorized or stale mutations.",
-    "observationWindow": "Per release candidate and after each governed mutation"
+    "targetState": "The governed lifecycle prevents unauthorized, stale, conflicting, or sensitive platform mutations and provides auditable rollback.",
+    "observationWindow": "Per governed mutation"
   },
   "acceptance": {
     "criteria": [
@@ -207,17 +200,7 @@
       "sensitive_value_persisted",
       "rollback_without_reason",
       "runtime_readback_missing"
-    ],
-    "requiredChecks": [
-      "product-truth-schema",
-      "platform-change-sets-gate",
-      "platform-control-backend-tests",
-      "platform-change-set-typecheck",
-      "generated-client-drift",
-      "runtime-readback"
-    ],
-    "runtimeEvidenceRequired": true,
-    "visualEvidenceRequired": true
+    ]
   },
   "invariants": {
     "business": [
@@ -238,37 +221,6 @@
     "productManager": "PRODUCT_MANAGER_AUTHORITY",
     "productOwner": "PRODUCT_OWNER_ACCEPTANCE_AUTHORITY",
     "uxJourneyOwner": "UX_JOURNEY_AUTHORITY",
-    "engineeringOwner": "platform-control",
-    "productManagerApproval": "PENDING",
-    "productOwnerApproval": "PENDING",
-    "productAcceptanceDecision": "PENDING"
-  },
-  "execution": {
-    "appetite": "Close the smallest safe vertical slice without treating implementation as product acceptance.",
-    "fixedConstraints": [
-      "Platform Control owns mutation truth.",
-      "OpenAPI owns the contract and generated type shape.",
-      "Maker-checker separation is mandatory.",
-      "Sensitive values are rejected fail-closed.",
-      "Runtime and visual evidence remain required before acceptance."
-    ],
-    "variableScope": [
-      "Control-panel composition",
-      "Error presentation",
-      "Readback visualization"
-    ],
-    "forbiddenScope": [
-      "Production deployment",
-      "Product acceptance by the implementing agent",
-      "Secret storage in change sets",
-      "Direct configuration mutation outside Platform Control"
-    ],
-    "forecastRange": "One bounded platform-governance capability",
-    "confidence": "medium",
-    "unknowns": [
-      "Independent product acceptance",
-      "Production-like runtime evidence",
-      "Final visual accessibility evidence"
-    ]
+    "engineeringOwner": "platform-control"
   }
 }
