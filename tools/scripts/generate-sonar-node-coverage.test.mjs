@@ -44,12 +44,8 @@ test("coverage preparation is an ordered shell-free command contract", () => {
     "pnpm",
     "--dir",
     "services/dsh",
-    "exec",
-    "tsc",
-    "-p",
-    "tsconfig.json",
-    "--module",
-    "ESNext",
+    "run",
+    "build:ts",
   ]);
   assert.equal(model.suites.identity.prepare, null);
   assert.equal(model.suites["control-panel-config"].prepare, null);

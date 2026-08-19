@@ -31,7 +31,7 @@
       "coverage": {
         "strategy": "node-lcov",
         "cwd": ".",
-        "prepare": ["pnpm", "--dir", "services/dsh", "exec", "tsc", "-p", "tsconfig.json", "--module", "ESNext"],
+        "prepare": ["pnpm", "--dir", "services/dsh", "run", "build:ts"],
         "testRoots": [
           "services/dsh/tests",
           "apps/app-client/runtime/tests",

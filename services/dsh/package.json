@@ -15,7 +15,8 @@
     "database:test:seed": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite seed",
     "database:contract": "node ../../tools/scripts/check-dsh-database-contract.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "build": "tsc -p tsconfig.json && node -e \"require('node:fs').writeFileSync('dist/package.json', JSON.stringify({type:'commonjs'}))\" && node ../../tools/scripts/verify-go-build.mjs backend",
+    "build:ts": "tsc -p tsconfig.json && node -e \"require('node:fs').writeFileSync('dist/package.json', JSON.stringify({type:'commonjs'}))\"",
+    "build": "pnpm run build:ts && node ../../tools/scripts/verify-go-build.mjs backend",
     "test": "pnpm --dir ../.. exec node --test services/dsh/tests/*.test.mjs",
     "lint": "pnpm --dir ../.. run guard:fullstack-boundary"
   },
