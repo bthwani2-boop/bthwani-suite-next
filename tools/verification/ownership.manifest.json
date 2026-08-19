@@ -20,7 +20,14 @@
     "dsh": {
       "kind": "domain",
       "root": "services/dsh",
-      "sourcePrefixes": ["services/dsh/frontend/"],
+      "sourcePrefixes": [
+        "services/dsh/capability-map.extensions.ts",
+        "services/dsh/capability-map.ts",
+        "services/dsh/contracts/contract-registry.ts",
+        "services/dsh/frontend/",
+        "services/dsh/runtime-map.ts",
+        "services/dsh/service.manifest.ts"
+      ],
       "coverage": {
         "strategy": "node-lcov",
         "cwd": ".",
@@ -38,7 +45,7 @@
     "wlt": {
       "kind": "domain",
       "root": "services/wlt",
-      "sourcePrefixes": ["services/wlt/frontend/"],
+      "sourcePrefixes": ["services/wlt/frontend/", "services/wlt/service.manifest.ts"],
       "coverage": {
         "strategy": "node-lcov",
         "cwd": "services/wlt",
@@ -49,26 +56,26 @@
     "app-field": {
       "kind": "mobile-surface",
       "root": "apps/app-field/runtime",
-      "sourcePrefixes": ["apps/app-field/runtime/src/"],
+      "sourcePrefixes": ["apps/app-field/runtime/metro.config.cjs", "apps/app-field/runtime/src/"],
       "coverage": { "strategy": "node-lcov", "cwd": "apps/app-field/runtime", "testRoots": ["apps/app-field/runtime/tests"] }
     },
     "app-captain": {
       "kind": "mobile-surface",
       "root": "apps/app-captain/runtime",
-      "sourcePrefixes": ["apps/app-captain/runtime/src/"],
+      "sourcePrefixes": ["apps/app-captain/runtime/metro.config.cjs", "apps/app-captain/runtime/src/"],
       "coverage": { "strategy": "node-lcov", "cwd": "apps/app-captain/runtime", "testRoots": ["apps/app-captain/runtime/tests"] }
     },
     "app-client": {
       "kind": "mobile-surface",
       "root": "apps/app-client/runtime",
-      "sourcePrefixes": ["apps/app-client/runtime/src/"],
-      "coverage": { "strategy": "required", "reason": "No app-client-owned executable LCOV suite exists yet; source changes must not pass as uncovered ownership." }
+      "sourcePrefixes": ["apps/app-client/runtime/metro.config.cjs", "apps/app-client/runtime/src/"],
+      "coverage": { "strategy": "node-lcov", "cwd": "apps/app-client/runtime", "testRoots": ["apps/app-client/runtime/tests"] }
     },
     "app-partner": {
       "kind": "mobile-surface",
       "root": "apps/app-partner/runtime",
-      "sourcePrefixes": ["apps/app-partner/runtime/src/"],
-      "coverage": { "strategy": "required", "reason": "No app-partner-owned executable LCOV suite exists yet; source changes must not pass as uncovered ownership." }
+      "sourcePrefixes": ["apps/app-partner/runtime/metro.config.cjs", "apps/app-partner/runtime/src/"],
+      "coverage": { "strategy": "node-lcov", "cwd": "apps/app-partner/runtime", "testRoots": ["apps/app-partner/runtime/tests"] }
     },
     "control-panel-config": {
       "kind": "web-runtime-config",
@@ -84,13 +91,13 @@
       "kind": "web-surface",
       "root": "apps/control-panel/runtime",
       "sourcePrefixes": ["apps/control-panel/runtime/src/", "shared/control-panel/src/"],
-      "coverage": { "strategy": "required", "reason": "Control Panel Node contracts do not yet execute the browser application source as LCOV evidence." }
+      "coverage": { "strategy": "node-lcov", "cwd": ".", "testRoots": ["apps/control-panel/runtime/tests"] }
     },
     "ui-kit": {
       "kind": "shared-ui",
       "root": "shared/ui-kit",
       "sourcePrefixes": ["shared/ui-kit/src/"],
-      "coverage": { "strategy": "required", "reason": "UI kit has typecheck/boundary evidence but no executable LCOV owner yet." }
+      "coverage": { "strategy": "node-lcov", "cwd": ".", "testRoots": ["shared/ui-kit/tests"] }
     }
   },
   "sonar": {
@@ -105,7 +112,8 @@
       "core/identity/tests/",
       "services/dsh/tests/",
       "services/wlt/tests/",
-      "shared/data-runtime/tests/"
+      "shared/data-runtime/tests/",
+      "shared/ui-kit/tests/"
     ],
     "generatedPrefixes": ["services/dsh/clients/generated/", "services/wlt/clients/generated/"]
   }

@@ -25,8 +25,7 @@ import {
   PartnerFieldRatingGate,
   useDshMobilePushRegistration,
 } from "@bthwani/dsh/app-partner";
-
-const PARTNER_DEVICE_FINGERPRINT_KEY = "bthwani.partner.device-fingerprint.v1";
+import { getOrCreatePartnerDeviceFingerprint } from "./config/partner-device-fingerprint";
 
 function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   return {
@@ -34,14 +33,6 @@ function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
     setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
     removeItem: (key: string) => SecureStore.deleteItemAsync(key),
   };
-}
-
-async function getOrCreatePartnerDeviceFingerprint(): Promise<string> {
-  const existing = await SecureStore.getItemAsync(PARTNER_DEVICE_FINGERPRINT_KEY);
-  if (existing?.trim()) return existing;
-  const created = `partner-device:${Crypto.randomUUID()}`;
-  await SecureStore.setItemAsync(PARTNER_DEVICE_FINGERPRINT_KEY, created);
-  return created;
 }
 
 async function pickCatalogFile(kind: CatalogMobileFileKind): Promise<UploadFileSource | null> {
@@ -63,7 +54,15 @@ async function pickCatalogFile(kind: CatalogMobileFileKind): Promise<UploadFileS
 
 if (Platform.OS !== "web") {
   configureIdentitySessionStorage(createSecureStoreSessionStorageAdapter());
-  configureIdentityDeviceFingerprintProvider(getOrCreatePartnerDeviceFingerprint);
+  configureIdentityDeviceFingerprintProvider(() =>
+    getOrCreatePartnerDeviceFingerprint(
+      {
+        getItem: (key) => SecureStore.getItemAsync(key),
+        setItem: (key, value) => SecureStore.setItemAsync(key, value),
+      },
+      () => Crypto.randomUUID(),
+    ),
+  );
   configureCatalogMobileFilePicker(pickCatalogFile);
 }
 configureIdentitySession(resolveIdentityApiBaseUrl());

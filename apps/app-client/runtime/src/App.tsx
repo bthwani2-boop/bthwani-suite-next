@@ -16,8 +16,7 @@ import {
   resolveIdentityApiBaseUrl,
   useIdentitySession,
 } from "@bthwani/core-identity";
-
-const CLIENT_DEVICE_FINGERPRINT_KEY = "bthwani.client.device-fingerprint.v1";
+import { getOrCreateClientDeviceFingerprint } from "./config/client-device-fingerprint";
 
 function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   return {
@@ -27,17 +26,17 @@ function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   };
 }
 
-async function getOrCreateClientDeviceFingerprint(): Promise<string> {
-  const existing = await SecureStore.getItemAsync(CLIENT_DEVICE_FINGERPRINT_KEY);
-  if (existing?.trim()) return existing;
-  const created = `client-device:${Crypto.randomUUID()}`;
-  await SecureStore.setItemAsync(CLIENT_DEVICE_FINGERPRINT_KEY, created);
-  return created;
-}
-
 if (Platform.OS !== "web") {
   configureIdentitySessionStorage(createSecureStoreSessionStorageAdapter());
-  configureIdentityDeviceFingerprintProvider(getOrCreateClientDeviceFingerprint);
+  configureIdentityDeviceFingerprintProvider(() =>
+    getOrCreateClientDeviceFingerprint(
+      {
+        getItem: (key) => SecureStore.getItemAsync(key),
+        setItem: (key, value) => SecureStore.setItemAsync(key, value),
+      },
+      () => Crypto.randomUUID(),
+    ),
+  );
 }
 configureIdentitySession(resolveIdentityApiBaseUrl());
 
