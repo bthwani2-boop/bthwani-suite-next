@@ -150,6 +150,13 @@
       "file": "workforce-021_operator_context_identity_recovery.sql",
       "sha256": "80bf3c475142ed807ce8673474c20ca208061ebbd190165730028573f977ef58",
       "historicalPrefix": "021",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 22,
+      "file": "workforce-022_field_shift_legacy_cutover.sql",
+      "sha256": "f35daeeb67cecad3b60564434eb3f4ed029c3c1867ad20d6aeb88679cca085a3",
+      "historicalPrefix": "022",
       "state": "ACTIVE"
     }
   ]
