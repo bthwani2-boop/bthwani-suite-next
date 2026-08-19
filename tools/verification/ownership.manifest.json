@@ -32,14 +32,7 @@
         "strategy": "node-lcov",
         "cwd": ".",
         "prepare": ["pnpm", "--dir", "services/dsh", "run", "build:ts"],
-        "testRoots": [
-          "services/dsh/tests",
-          "apps/app-client/runtime/tests",
-          "apps/app-partner/runtime/tests",
-          "apps/app-captain/runtime/tests",
-          "apps/app-field/runtime/tests",
-          "apps/mobile/tests"
-        ]
+        "testRoots": ["services/dsh/tests/coverage"]
       }
     },
     "wlt": {
