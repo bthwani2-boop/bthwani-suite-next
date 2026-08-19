@@ -6,10 +6,11 @@ info:
     Canonical cross-contract transport components for the WLT service. Domain
     schemas remain owned by their journey contracts; authentication headers,
     correlation, idempotency and the runtime error envelope are defined exactly
-    once here. X-Operator-Context-ID is required on authenticated service calls
-    and is accepted only after the service credential and caller identity have
-    been verified. End-user reference reads derive the context from Identity
-    and do not accept a client-selected financial scope.
+    once here. X-Delegated-Operator-Context is the authenticated service-to-service
+    transport for the canonical OperatorContext and is accepted only after the
+    service credential and caller identity have been verified. End-user reference
+    reads derive OperatorContext from Identity and do not accept a client-selected
+    financial scope.
 x-bthwani-owner: services/wlt
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED
@@ -33,18 +34,15 @@ components:
       in: header
       required: true
       schema: { type: string, const: dsh }
-    DelegatedOperatorContextId:
+    OperatorContextId:
       name: X-Delegated-Operator-Context
       in: header
-      description: |
-        The canonical OperatorContext established upstream. WLT evaluates it
-        once here. X-Delegated-Operator-Context is required on authenticated service calls
-        that write or read representative financial data.
       required: true
-      schema:
-        type: string
-        minLength: 1
-        maxLength: 120
+      description: >-
+        Canonical OperatorContext delegated by an authenticated internal service.
+        Delegated describes the transport boundary only; the domain and persisted
+        financial ownership field remains operatorContextId.
+      schema: { type: string, minLength: 1, maxLength: 120 }
     DelegatedFinancePrincipalId:
       name: X-Delegated-Principal-ID
       in: header

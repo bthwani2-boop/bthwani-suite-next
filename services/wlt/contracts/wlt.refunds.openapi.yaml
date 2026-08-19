@@ -21,7 +21,7 @@ paths:
       summary: List OperatorContext-scoped refunds
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationIdOptional'
         - name: orderId
@@ -49,7 +49,7 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
@@ -84,7 +84,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationIdOptional'
       responses:
@@ -108,7 +108,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
@@ -139,7 +139,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
@@ -175,7 +175,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
@@ -214,7 +214,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
@@ -244,7 +244,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: '#/components/parameters/RefundId'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationIdOptional'
       responses:
@@ -288,7 +288,7 @@ components:
       required:
         [
           id,
-          DelegatedOperatorContextId,
+          operatorContextId,
           paymentSessionId,
           orderId,
           clientId,
@@ -306,7 +306,7 @@ components:
         ]
       properties:
         id: { type: string }
-        DelegatedOperatorContextId: { type: string }
+        operatorContextId: { type: string }
         paymentSessionId: { type: string }
         orderId: { type: string }
         clientId: { type: string }
@@ -335,7 +335,7 @@ components:
       additionalProperties: false
       required:
         [
-          DelegatedOperatorContextId,
+          operatorContextId,
           paymentSessionId,
           orderId,
           clientId,
@@ -345,7 +345,7 @@ components:
           requestedByOperatorId
         ]
       properties:
-        DelegatedOperatorContextId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         paymentSessionId: { type: string, minLength: 1 }
         orderId: { type: string, minLength: 1 }
         clientId: { type: string, minLength: 1 }
@@ -394,7 +394,7 @@ components:
         [
           id,
           refundId,
-          DelegatedOperatorContextId,
+          operatorContextId,
           eventType,
           actorId,
           actorType,
@@ -404,7 +404,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         refundId: { type: string }
-        DelegatedOperatorContextId: { type: string }
+        operatorContextId: { type: string }
         eventType: { type: string }
         actorId: { type: string }
         actorType: { type: string, enum: [ operator, service, provider, reconciler, system ] }

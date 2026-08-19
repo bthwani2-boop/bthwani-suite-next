@@ -18,7 +18,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - name: captainId
           in: path
           required: true

@@ -486,7 +486,7 @@ paths:
           schema: { type: string, minLength: 1, maxLength: 300 }
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
       responses:
         '200':
           description: Canonical loyalty entry identified by its idempotency key.

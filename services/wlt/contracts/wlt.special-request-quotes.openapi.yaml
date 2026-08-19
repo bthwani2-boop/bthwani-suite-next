@@ -20,7 +20,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       requestBody:
@@ -55,7 +55,7 @@ paths:
           schema: { type: string, format: uuid }
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
       responses:
         '200':
           description: Active WLT quote.
@@ -82,7 +82,7 @@ components:
       required: [id, specialRequestId, clientId, policyId, policyVersion, quoteVersion, amountMinorUnits, currency, quoteHash, status, expiresAt]
       properties:
         id: { type: string, format: uuid }
-        DelegatedOperatorContextId: { type: string }
+        operatorContextId: { type: string }
         specialRequestId: { type: string, format: uuid }
         clientId: { type: string, format: uuid }
         policyId: { type: string }

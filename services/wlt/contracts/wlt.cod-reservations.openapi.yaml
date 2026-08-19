@@ -22,7 +22,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
@@ -51,7 +51,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       requestBody:
         required: true
@@ -79,7 +79,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:
@@ -106,7 +106,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - name: orderId
           in: path
           required: true
@@ -125,10 +125,10 @@ components:
   schemas:
     CodReservation:
       type: object
-      required: [id, DelegatedOperatorContextId, orderId, checkoutIntentId, captainId, amountMinorUnits, currency, status, idempotencyKey, createdAt, updatedAt]
+      required: [id, operatorContextId, orderId, checkoutIntentId, captainId, amountMinorUnits, currency, status, idempotencyKey, createdAt, updatedAt]
       properties:
         id: { type: string }
-        DelegatedOperatorContextId: { type: string }
+        operatorContextId: { type: string }
         orderId: { type: string }
         checkoutIntentId: { type: string }
         captainId: { type: string }

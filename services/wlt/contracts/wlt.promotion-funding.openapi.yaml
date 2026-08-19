@@ -21,7 +21,7 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
       requestBody:
@@ -42,7 +42,7 @@ paths:
       security: [ { bearerAuth: [] } ]
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: '#/components/parameters/ReservationId'
       responses:
         '200': { $ref: '#/components/responses/ReservationResponse' }
@@ -59,7 +59,7 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/ReservationId'
@@ -84,7 +84,7 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/ReservationId'
@@ -109,7 +109,7 @@ paths:
       x-bthwani-default-enabled: false
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: '#/components/parameters/ReservationId'
@@ -156,7 +156,7 @@ components:
       additionalProperties: false
       required:
         [
-          DelegatedOperatorContextId,
+          operatorContextId,
           externalReference,
           checkoutIntentId,
           couponRedemptionId,
@@ -168,7 +168,7 @@ components:
           currency
         ]
       properties:
-        DelegatedOperatorContextId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         externalReference: { type: string, minLength: 1 }
         checkoutIntentId: { type: string, minLength: 1 }
         couponRedemptionId: { type: string, minLength: 1 }
@@ -182,23 +182,23 @@ components:
     CommitPromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [ DelegatedOperatorContextId, orderId ]
+      required: [ operatorContextId, orderId ]
       properties:
-        DelegatedOperatorContextId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         orderId: { type: string, minLength: 1 }
     ReleasePromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [ DelegatedOperatorContextId, reason ]
+      required: [ operatorContextId, reason ]
       properties:
-        DelegatedOperatorContextId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         reason: { type: string, minLength: 1 }
     ReversePromotionFundingRequest:
       type: object
       additionalProperties: false
-      required: [ DelegatedOperatorContextId, orderId, reason ]
+      required: [ operatorContextId, orderId, reason ]
       properties:
-        DelegatedOperatorContextId: { type: string, minLength: 1 }
+        operatorContextId: { type: string, minLength: 1 }
         orderId: { type: string, minLength: 1 }
         reason: { type: string, minLength: 1 }
     PromotionFundingReservation:
@@ -207,7 +207,7 @@ components:
       required:
         [
           id,
-          DelegatedOperatorContextId,
+          operatorContextId,
           externalReference,
           checkoutIntentId,
           couponRedemptionId,
@@ -223,7 +223,7 @@ components:
         ]
       properties:
         id: { type: string, pattern: '^pfr_[a-f0-9]{32}$' }
-        DelegatedOperatorContextId: { type: string }
+        operatorContextId: { type: string }
         externalReference: { type: string }
         checkoutIntentId: { type: string }
         couponRedemptionId: { type: string }
