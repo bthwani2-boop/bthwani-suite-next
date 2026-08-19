@@ -23,14 +23,14 @@ func normalizeRepresentativeActorType(value string) (string, bool) {
 
 func HandleGetWallet(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID := strings.TrimSpace(r.Header.Get("X-Delegated-Operator-Context"))
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "authenticated OperatorContext context is required for representative finance reads")
+			return
+		}
 		actorType, ok := normalizeRepresentativeActorType(r.PathValue("actorType"))
 		actorID := strings.TrimSpace(r.PathValue("actorId"))
 
-		if operatorContextID == "" {
-			shared.SendError(w, http.StatusBadRequest, "OperatorContext_REQUIRED", "X-Delegated-Operator-Context is required for representative finance reads")
-			return
-		}
 		if !ok {
 			shared.SendError(w, http.StatusBadRequest, "UNSUPPORTED_ACTOR_TYPE", "actorType must be client, partner, captain, or field")
 			return
