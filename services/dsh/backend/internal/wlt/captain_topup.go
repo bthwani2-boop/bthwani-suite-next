@@ -55,7 +55,9 @@ func (c *Client) captainTopUpRequest(ctx context.Context, method, path string, b
 	if operatorContextID == "" {
 		return 0, nil, fmt.Errorf("WLT Captain top-up OperatorContext is required")
 	}
-	req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	if _, err := c.setDelegatedOperatorContextHeader(req, operatorContextID); err != nil {
+		return 0, nil, fmt.Errorf("prepare WLT Captain top-up OperatorContext: %w", err)
+	}
 	if method != http.MethodGet {
 		if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
 			return 0, nil, fmt.Errorf("prepare WLT Captain top-up mutation: %w", err)
