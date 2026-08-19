@@ -143,14 +143,7 @@ func (r *Repository) EmployeeGovernanceByActorID(ctx context.Context, actorID st
 		if !exists {
 			return EmployeeGovernanceProfile{}, ErrNotFound
 		}
-		_, err = r.db.ExecContext(ctx, `INSERT INTO workforce_employee_governance(operator_context_id,actor_id,position_title,updated_by_actor_id)
-			SELECT operator_context_id,actor_id,COALESCE(role,''),'system' FROM workforce_employee_profiles WHERE operator_context_id=$1 AND actor_id=$2
-			ON CONFLICT(actor_id) DO NOTHING`, operatorContextID, actorID)
-		if err != nil {
-			return EmployeeGovernanceProfile{}, err
-		}
-		return scanEmployeeGovernance(r.db.QueryRowContext(ctx,
-			`SELECT `+employeeGovernanceColumns+` FROM workforce_employee_governance WHERE operator_context_id=$1 AND actor_id=$2`, operatorContextID, actorID))
+		return EmployeeGovernanceProfile{}, fmt.Errorf("employee governance invariant missing for actor %s", actorID)
 	}
 	return profile, err
 }
