@@ -76,7 +76,7 @@ ORDER BY s.display_name ASC`,
 		default:
 			// Delegated partner membership/role truth was moved out of the
 			// retired DSH team table. Do not guess manager/staff permissions
-			// from a generic store assignment.
+			// from a generic store-access scope.
 			return nil, fmt.Errorf(
 				"partner scope type %q requires authoritative delegated role projection",
 				scopeType,

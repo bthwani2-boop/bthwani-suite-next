@@ -43,7 +43,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          node tools/scripts/run-guard-suite.mjs --concurrency 3 \
+          node tools/scripts/run-guard-suite.mjs --concurrency 2 \
             tools/guards/no-broken-imports.mjs \
             tools/guards/api-binding-gate.mjs \
             tools/guards/backend-api-binding-gate.mjs \

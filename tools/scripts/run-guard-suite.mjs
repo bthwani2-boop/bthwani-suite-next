@@ -7,7 +7,7 @@ const repositoryRoot = path.resolve(import.meta.dirname, "../..");
 const MAX_CONCURRENCY = 8;
 
 function parseArguments(argv) {
-  let concurrency = 3;
+  let concurrency = 2;
   const guards = [];
 
   for (let index = 0; index < argv.length; index += 1) {

@@ -159,7 +159,7 @@ function Get-BthwaniAuthorizedHistoricalChecksums {
   )
 
   $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
-  $amendmentsPath = Join-Path $repositoryRoot 'governance/contracts/migration-amendments.json'
+  $amendmentsPath = Join-Path $repositoryRoot 'tools/verification/migration-amendments.json'
   if (-not (Test-Path -LiteralPath $amendmentsPath -PathType Leaf)) {
     return @()
   }
