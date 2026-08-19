@@ -38,34 +38,14 @@ jobs:
         if: ${{ inputs.runtime_profile != 'mobile-config' && inputs.runtime_profile != 'mobile-native' }}
         run: pnpm exec nx run contracts:materialize
 
-      - name: Execute selected runtime profile
-        id: runtime
+      - name: Resolve runtime component scope
+        id: runtime_scope
         shell: pwsh
         env:
           RUNTIME_PROFILE: ${{ inputs.runtime_profile }}
-          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           $ErrorActionPreference = "Stop"
           $profile = if ([string]::IsNullOrWhiteSpace($env:RUNTIME_PROFILE)) { "none" } else { $env:RUNTIME_PROFILE }
-          $sourceSha = if ([string]::IsNullOrWhiteSpace($env:SOURCE_SHA)) { throw "SOURCE_SHA is required" } else { $env:SOURCE_SHA }
-          $checkedOutSha = (git rev-parse HEAD).Trim()
-          if ($checkedOutSha -ne $sourceSha) {
-            throw "Runtime checkout SHA mismatch: expected $sourceSha, got $checkedOutSha"
-          }
-          $logPath = Join-Path $PWD "runtime-smoke.log"
-          $resultPath = Join-Path $PWD "runtime-proof.json"
-          "Runtime proof started for $sourceSha profile=$profile" | Set-Content -LiteralPath $logPath
-
-          function Invoke-Phase {
-            param([string] $Name, [scriptblock] $Command)
-            "=== $Name ===" | Tee-Object -FilePath $logPath -Append
-            $global:LASTEXITCODE = 0
-            & $Command *>&1 | Tee-Object -FilePath $logPath -Append
-            $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
-            "phase=$Name exitCode=$exitCode" | Tee-Object -FilePath $logPath -Append
-            if ($exitCode -ne 0) { throw "$Name failed with exit code $exitCode" }
-          }
-
           $profiles = switch ($profile) {
             "identity-security" { "identity,workforce,dsh,wlt,media" }
             "dsh" { "dsh,media" }
@@ -76,6 +56,37 @@ jobs:
             "mobile-config" { "" }
             "mobile-native" { "" }
             default { throw "Unsupported runtime profile: $profile" }
+          }
+          "profiles=$profiles" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Execute selected runtime profile
+        id: runtime
+        shell: pwsh
+        env:
+          RUNTIME_PROFILE: ${{ inputs.runtime_profile }}
+          RUNTIME_COMPONENTS: ${{ steps.runtime_scope.outputs.profiles }}
+          SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $profile = if ([string]::IsNullOrWhiteSpace($env:RUNTIME_PROFILE)) { "none" } else { $env:RUNTIME_PROFILE }
+          $profiles = if ($null -eq $env:RUNTIME_COMPONENTS) { "" } else { $env:RUNTIME_COMPONENTS.Trim() }
+          $sourceSha = if ([string]::IsNullOrWhiteSpace($env:SOURCE_SHA)) { throw "SOURCE_SHA is required" } else { $env:SOURCE_SHA }
+          $checkedOutSha = (git rev-parse HEAD).Trim()
+          if ($checkedOutSha -ne $sourceSha) {
+            throw "Runtime checkout SHA mismatch: expected $sourceSha, got $checkedOutSha"
+          }
+          $logPath = Join-Path $PWD "runtime-smoke.log"
+          $resultPath = Join-Path $PWD "runtime-proof.json"
+          "Runtime proof started for $sourceSha profile=$profile components=$profiles" | Set-Content -LiteralPath $logPath
+
+          function Invoke-Phase {
+            param([string] $Name, [scriptblock] $Command)
+            "=== $Name ===" | Tee-Object -FilePath $logPath -Append
+            $global:LASTEXITCODE = 0
+            & $Command *>&1 | Tee-Object -FilePath $logPath -Append
+            $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { [int]$LASTEXITCODE }
+            "phase=$Name exitCode=$exitCode" | Tee-Object -FilePath $logPath -Append
+            if ($exitCode -ne 0) { throw "$Name failed with exit code $exitCode" }
           }
 
           try {
@@ -89,6 +100,9 @@ jobs:
               # Apple/Xcode/Simulator proof remains deferred and must not fan out CI runners.
               Invoke-Phase "mobile:native:prebuild" { node apps/mobile/verify-mobile-native.mjs --platform android }
             } else {
+              if ([string]::IsNullOrWhiteSpace($profiles)) {
+                throw "Runtime profile '$profile' resolved to an empty component scope."
+              }
               $requiresDshBootstrap = @($profiles.Split(",") | ForEach-Object { $_.Trim() }) -contains "dsh"
               if ($requiresDshBootstrap) {
                 Invoke-Phase "runtime:bootstrap-dev" {
@@ -148,19 +162,10 @@ jobs:
         if: ${{ always() }}
         shell: pwsh
         env:
-          RUNTIME_PROFILE: ${{ inputs.runtime_profile }}
+          RUNTIME_COMPONENTS: ${{ steps.runtime_scope.outputs.profiles }}
         run: |
-          $profile = $env:RUNTIME_PROFILE
-          $profiles = switch ($profile) {
-            "identity-security" { "identity,workforce,dsh,wlt,media" }
-            "dsh" { "dsh,media" }
-            "workforce" { "identity,workforce" }
-            "wlt-finance" { "identity,dsh,wlt,financial-simulators" }
-            "provider" { "wlt,financial-simulators" }
-            "full" { "identity,workforce,dsh,wlt,providers,platform,financial-simulators,mail,media" }
-            default { "" }
-          }
-          if ($profiles) {
+          $profiles = if ($null -eq $env:RUNTIME_COMPONENTS) { "" } else { $env:RUNTIME_COMPONENTS.Trim() }
+          if (-not [string]::IsNullOrWhiteSpace($profiles)) {
             & pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles $profiles
           }
 
