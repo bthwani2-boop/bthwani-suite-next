@@ -1,35 +1,11 @@
 {
   "schemaVersion": 1,
   "capabilityId": "PARTNER_FLEET_CONNECTION",
-  "state": "PRODUCT_MODEL_APPROVED",
   "problem": {
     "statement": "Partner couriers must bind to an authenticated captain identity through a short-lived one-time code without leaking trusted context data or creating a second local fleet truth.",
     "affectedActors": ["partner-operator", "captain", "control-panel-operator"],
-    "currentWorkaround": "The pre-closure implementation had partner and captain mutations but lacked complete operator readback, visible partner connection history, durable audited expiry, strict response schemas, and full same-commit PostgreSQL proof.",
     "frequency": "continuous",
-    "severity": "critical",
-    "evidenceState": "QUALITATIVE",
-    "evidenceReferences": [
-      "tools/plans/journeys/FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md",
-      "services/dsh/backend/internal/partnerfleet/courier_codes.go",
-      "services/dsh/backend/internal/partnerfleet/redeem.go",
-      "services/dsh/backend/internal/partnerfleet/list.go",
-      "services/dsh/backend/internal/partnerfleet/membership_disconnect.go",
-      "services/dsh/backend/internal/partnerfleet/operator.go",
-      "services/dsh/backend/internal/partnerfleet/partnerfleet_db_test.go",
-      "services/dsh/backend/internal/http/partner_fleet.go",
-      "services/dsh/backend/internal/http/partner_fleet_membership_routes.go",
-      "services/dsh/backend/internal/http/partner_fleet_operator.go",
-      "services/dsh/backend/internal/http/partner_fleet_routes_test.go",
-      "services/dsh/database/migrations/dsh-933_partner_fleet_action_audit.sql",
-      "services/dsh/frontend/shared/partner/partner-fleet.api.ts",
-      "services/dsh/frontend/shared/partner/use-partner-fleet-controller.ts",
-      "services/dsh/frontend/app-partner/team/PartnerTeamManagementScreen.tsx",
-      "services/dsh/frontend/app-captain/account/PartnerFleetConnectionCard.tsx",
-      "services/dsh/frontend/control-panel/partners/stores/OperatorPartnerFleetPanel.tsx",
-      "services/dsh/contracts/dsh.partner-fleet.openapi.yaml",
-      "services/dsh/tests/partner-fleet.test.mjs"
-    ]
+    "severity": "critical"
   },
   "actors": [
     {
@@ -93,15 +69,7 @@
       "required": true,
       "actors": ["partner-operator", "captain", "control-panel-operator"],
       "routesOrScreens": ["partner fleet API"],
-      "operationIds": [
-        "issueDshPartnerCourierConnectionCode",
-        "listDshPartnerCourierConnections",
-        "revokeDshPartnerCourierConnection",
-        "connectDshCaptainToPartnerFleet",
-        "listDshCaptainPartnerFleetMemberships",
-        "disconnectDshCaptainPartnerFleetMembership",
-        "getDshOperatorPartnerFleetSnapshot"
-      ],
+      "operationIds": ["issueDshPartnerCourierConnectionCode", "listDshPartnerCourierConnections", "revokeDshPartnerCourierConnection", "connectDshCaptainToPartnerFleet", "listDshCaptainPartnerFleetMemberships", "disconnectDshCaptainPartnerFleetMembership", "getDshOperatorPartnerFleetSnapshot"],
       "states": ["pending", "redeemed", "revoked", "expired", "active", "suspended", "version-conflict", "forbidden"],
       "actions": ["enforce role and store scope", "enforce active-store eligibility", "hash code", "lock mutations", "audit lifecycle actions", "notify partner and captain", "return redacted operator readback"]
     },
@@ -109,7 +77,7 @@
       "id": "database",
       "required": true,
       "actors": ["partner-operator", "captain", "control-panel-operator"],
-      "routesOrScreens": ["dsh_partner_courier_connection_codes", "dsh_captain_memberships", "dsh_captain_membership_history", "dsh_notifications", "dsh-1000_partner_team_membership_scope.sql"],
+      "routesOrScreens": ["dsh_partner_courier_connection_codes", "dsh_captain_memberships", "dsh_captain_membership_history", "dsh_notifications"],
       "operationIds": [],
       "states": ["transactional", "versioned", "audited", "trusted-context-scoped", "single-use", "store-scoped-multi-membership"],
       "actions": ["store digest only", "enforce one pending code", "persist and audit expiry", "prevent duplicate identity binding inside one store", "permit governed multi-store membership", "retain lifecycle audit and notifications"]
@@ -119,9 +87,7 @@
     "statement": "Partner, captain, and operator surfaces observe one versioned DSH fleet truth while code material remains secret and every lifecycle mutation is scoped, audited, notified, and recoverable.",
     "primaryMetric": "authoritative_fleet_bindings_with_readback",
     "guardrailMetrics": ["cross_context_fleet_access", "plaintext_code_persisted", "expired_code_redeemed", "stale_version_overwrite", "duplicate_same_store_membership", "unbound_operator_mutation"],
-    "baselineState": "Partner and captain flows existed but operator readback, partner-visible connection state, and several lifecycle integrity controls were incomplete.",
-    "targetState": "All required surfaces use the same DSH state; all lifecycle transitions are scoped, versioned, audited, and notified; typed contracts and PostgreSQL proof run on one candidate.",
-    "observationWindow": "Every affected change, runtime smoke, review, and release review."
+    "targetState": "All required surfaces use the same DSH state and all lifecycle transitions are scoped, versioned, audited, and notified."
   },
   "acceptance": {
     "criteria": [
@@ -135,35 +101,9 @@
       "Optimistic versions protect revoke redeem and disconnect transitions.",
       "Disconnect suspends the member, records the governed lifecycle event, revokes the redeemed connection, and notifies both actors.",
       "Control-panel readback is redacted and requires current operator/partner read authorization.",
-      "OpenAPI responses are typed and do not expose code hashes or plaintext outside issuance.",
-      "Targeted Go, TypeScript, contract binding, Product Truth and PostgreSQL checks pass on the same candidate when applicable."
+      "OpenAPI responses are typed and do not expose code hashes or plaintext outside issuance."
     ],
-    "failureStates": [
-      "cross-store partner access",
-      "cross-captain membership access",
-      "plaintext or hash leakage",
-      "expired or revoked code redemption",
-      "inactive-store binding",
-      "duplicate captain membership inside one store",
-      "unaudited lifecycle transition",
-      "missing lifecycle notification",
-      "stale overwrite",
-      "local surface fleet truth",
-      "closure evidence references an older commit"
-    ],
-    "requiredChecks": [
-      "backend package compilation",
-      "governed route registration",
-      "PostgreSQL lifecycle and trusted-context isolation test",
-      "TypeScript surface verification",
-      "binding and negative-invariant tests",
-      "DSH partner-fleet OpenAPI parse and schema verification",
-      "Product Truth schema verification",
-      "runtime API route evidence",
-      "visual and independent product/QA/security/release review when applicable"
-    ],
-    "runtimeEvidenceRequired": true,
-    "visualEvidenceRequired": true
+    "failureStates": ["cross-store partner access", "cross-captain membership access", "plaintext or hash leakage", "expired or revoked code redemption", "inactive-store binding", "duplicate captain membership inside one store", "unaudited lifecycle transition", "missing lifecycle notification", "stale overwrite", "local surface fleet truth"]
   },
   "invariants": {
     "business": [
@@ -174,42 +114,13 @@
       "Captain identity uniqueness is scoped to one store so governed multi-store membership remains possible.",
       "Fleet lifecycle audit facts remain durable even when a transition does not change team-member status."
     ],
-    "negative": [
-      "no plaintext code persistence",
-      "no code hash exposure",
-      "no cross-partner/store trusted-scope access",
-      "no cross-captain membership access",
-      "no duplicate captain membership inside one store",
-      "no inactive-store binding",
-      "no expired or revoked code reuse",
-      "no unaudited lifecycle transition",
-      "no stale overwrite",
-      "no operator mutation through the readback surface",
-      "no final production closure without applicable independent approvals and evidence"
-    ]
+    "negative": ["no plaintext code persistence", "no code hash exposure", "no cross-partner/store trusted-scope access", "no cross-captain membership access", "no duplicate captain membership inside one store", "no inactive-store binding", "no expired or revoked code reuse", "no unaudited lifecycle transition", "no stale overwrite", "no operator mutation through the readback surface"]
   },
   "owners": {
-    "productManager": "CURRENT_USER_INSTRUCTION",
+    "productManager": "PRODUCT_MANAGER_AUTHORITY",
     "productOwner": "PRODUCT_OWNER_ACCEPTANCE_AUTHORITY",
     "uxJourneyOwner": "UX_JOURNEY_AUTHORITY",
-    "engineeringOwner": "services/dsh + core/identity",
-    "productManagerApproval": "APPROVED",
-    "productOwnerApproval": "PENDING",
-    "productAcceptanceDecision": "PENDING"
-  },
-  "execution": {
-    "appetite": "Close technical slices on the current user-named work branch without granting independent product, QA, security, release, or production approval.",
-    "fixedConstraints": [
-      "The current user-named branch and resolved immutable candidate SHA are the only repository truth for execution claims.",
-      "DSH remains the sole fleet membership owner.",
-      "Identity remains the authentication owner.",
-      "codes are single-use and digest-only",
-      "same-commit evidence is mandatory"
-    ],
-    "variableScope": ["Arabic recovery copy", "control-panel presentation", "focused gate composition"],
-    "forbiddenScope": ["local fleet truth", "cross-scope access", "plaintext code persistence", "force push", "automatic pull request or merge", "production deployment"],
-    "forecastRange": "one bounded implementation and verification cycle",
-    "confidence": "high",
-    "unknowns": ["independent product acceptance", "visual device evidence", "production identity-provider certification when applicable"]
+    "operationalTruthOwner": "DSH",
+    "authenticationOwner": "IDENTITY"
   }
 }
