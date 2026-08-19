@@ -3,7 +3,6 @@ package payment
 import (
 	"database/sql"
 	"net/http"
-	"strings"
 	"time"
 
 	"wlt-api/internal/shared"
@@ -171,9 +170,9 @@ func ReadPaymentSessionTimeline(db *sql.DB, operatorContextID, sessionID string)
 
 func HandleGetPaymentSessionTimeline(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID := strings.TrimSpace(r.Header.Get("X-Delegated-Operator-Context"))
-		if operatorContextID == "" {
-			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "X-Delegated-Operator-Context is required")
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "authenticated OperatorContext context is required")
 			return
 		}
 		timeline, err := ReadPaymentSessionTimeline(db, operatorContextID, r.PathValue("paymentSessionId"))
