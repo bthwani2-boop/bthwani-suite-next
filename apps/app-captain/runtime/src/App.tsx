@@ -22,17 +22,8 @@ import {
 } from "@bthwani/dsh/app-captain";
 import { Button, colorRoles } from "@bthwani/ui-kit";
 
+import { getOrCreateCaptainDeviceFingerprint } from "./config/captain-device-fingerprint";
 import { ReadinessGateScreen } from "./features/readiness/ReadinessGateScreen";
-
-const CAPTAIN_DEVICE_FINGERPRINT_KEY = "bthwani.captain.device-fingerprint.v1";
-
-async function getOrCreateCaptainDeviceFingerprint(): Promise<string> {
-  const existing = await SecureStore.getItemAsync(CAPTAIN_DEVICE_FINGERPRINT_KEY);
-  if (existing?.trim()) return existing;
-  const created = `captain-device:${Crypto.randomUUID()}`;
-  await SecureStore.setItemAsync(CAPTAIN_DEVICE_FINGERPRINT_KEY, created);
-  return created;
-}
 
 if (Platform.OS !== "web") {
   configureIdentitySessionStorage({
@@ -40,7 +31,15 @@ if (Platform.OS !== "web") {
     setItem: async (key: string, value: string) => SecureStore.setItemAsync(key, value),
     removeItem: async (key: string) => SecureStore.deleteItemAsync(key),
   });
-  configureIdentityDeviceFingerprintProvider(getOrCreateCaptainDeviceFingerprint);
+  configureIdentityDeviceFingerprintProvider(() =>
+    getOrCreateCaptainDeviceFingerprint(
+      {
+        getItem: (key) => SecureStore.getItemAsync(key),
+        setItem: (key, value) => SecureStore.setItemAsync(key, value),
+      },
+      () => Crypto.randomUUID(),
+    ),
+  );
 }
 configureIdentitySession(resolveIdentityApiBaseUrl());
 
