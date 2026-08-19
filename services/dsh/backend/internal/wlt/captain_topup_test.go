@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -25,8 +26,11 @@ func TestCreateCaptainTopUpSessionBindsActorAndMutationHeaders(t *testing.T) {
 		if got := r.Header.Get("X-Service-Caller"); got != "dsh" {
 			t.Fatalf("service caller=%q", got)
 		}
-		if got := r.Header.Get("X-Operator-Context-ID"); got != "operator-context-1" {
-			t.Fatalf("operator context=%q", got)
+		if got := r.Header.Get("X-Delegated-Operator-Context"); got != "operator-context-1" {
+			t.Fatalf("delegated operator context=%q", got)
+		}
+		if got := r.Header.Get("X-Operator-Context-ID"); got != "" {
+			t.Fatalf("legacy operator context header must not be emitted, got=%q", got)
 		}
 		if got := r.Header.Get("Idempotency-Key"); got != "idempotency-1" {
 			t.Fatalf("idempotency=%q", got)
@@ -59,6 +63,17 @@ func TestCreateCaptainTopUpSessionBindsActorAndMutationHeaders(t *testing.T) {
 	}
 	if status != http.StatusOK || !bytes.Contains(body, []byte("captain_topup")) {
 		t.Fatalf("status/body=%d/%s", status, body)
+	}
+}
+
+func TestCreateCaptainTopUpSessionRejectsOperatorContextMismatch(t *testing.T) {
+	client := NewClient("http://127.0.0.1:1", "service-token")
+	_, _, err := client.CreateCaptainTopUpSession(
+		WithOperatorContext(t.Context(), "trusted-operator-context"), "captain-1", "reference-1", 5000, "YER",
+		"correlation-1", "idempotency-1", "different-operator-context",
+	)
+	if err == nil || !strings.Contains(err.Error(), "does not match trusted request context") {
+		t.Fatalf("err=%v, want trusted OperatorContext mismatch", err)
 	}
 }
 
