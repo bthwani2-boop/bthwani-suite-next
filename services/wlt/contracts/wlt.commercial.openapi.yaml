@@ -333,11 +333,11 @@ components:
     SubscriptionPaymentSessionCreate:
       type: object
       additionalProperties: false
-      required: [ subscriptionPurchaseId, productReference, operatorContextId, clientId ]
+      required: [ subscriptionPurchaseId, productReference, DelegatedOperatorContextId, clientId ]
       properties:
         subscriptionPurchaseId: { type: string, minLength: 1 }
         productReference: { type: string, minLength: 1 }
-        operatorContextId: { type: string, minLength: 1 }
+        DelegatedOperatorContextId: { type: string, minLength: 1 }
         clientId: { type: string, minLength: 1 }
         paymentMethod: { type: string, enum: [ official_wallet ] }
     SubscriptionActivation:

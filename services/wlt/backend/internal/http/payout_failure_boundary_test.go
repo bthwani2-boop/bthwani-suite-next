@@ -20,7 +20,7 @@ func payoutFailureRequest(t *testing.T, path, body string) *http.Request {
 	req := httptest.NewRequest(http.MethodPost, path, strings.NewReader(body))
 	req.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Operator-Context-ID", "payout-failure-boundary-context")
+	req.Header.Set("X-Delegated-Operator-Context", "payout-failure-boundary-context")
 	req.Header.Set("X-Correlation-ID", "payout-failure-boundary-correlation")
 	req.Header.Set("Idempotency-Key", "payout-failure-boundary-key")
 	return req

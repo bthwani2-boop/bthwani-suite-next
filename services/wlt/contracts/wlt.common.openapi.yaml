@@ -33,14 +33,18 @@ components:
       in: header
       required: true
       schema: { type: string, const: dsh }
-    OperatorContextId:
-      name: X-Operator-Context-ID
+    DelegatedOperatorContextId:
+      name: X-Delegated-Operator-Context
       in: header
+      description: |
+        The canonical OperatorContext established upstream. WLT evaluates it
+        once here. X-Delegated-Operator-Context is required on authenticated service calls
+        that write or read representative financial data.
       required: true
-      description: >-
-        Trusted platform-isolation context delegated by an authenticated server
-        caller. This parameter is not valid as an end-user authorization claim.
-      schema: { type: string, minLength: 1, maxLength: 120 }
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 120
     DelegatedFinancePrincipalId:
       name: X-Delegated-Principal-ID
       in: header

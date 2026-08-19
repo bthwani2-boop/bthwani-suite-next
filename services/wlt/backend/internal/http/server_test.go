@@ -145,7 +145,7 @@ func TestEveryFinancialMutationIsKillSwitchGated(t *testing.T) {
 				req.Header.Set("X-Service-Caller", "workforce")
 				req.Header.Set("Authorization", "Bearer test-workforce-service-token")
 			}
-			req.Header.Set("X-Operator-Context-ID", "kill-switch-probe-context")
+			req.Header.Set("X-Delegated-Operator-Context", "kill-switch-probe-context")
 		}
 		rec := httptest.NewRecorder()
 		router.ServeHTTP(rec, req)

@@ -26,7 +26,8 @@
     "typescript": "7.0.2",
     "@typescript/typescript6": "6.0.2",
     "@expo/vector-icons": "15.1.1",
-    "@react-native/metro-config": "0.85.3"
+    "@react-native/metro-config": "0.85.3",
+    "react-native": "0.85.3"
   },
   "dependencies": {
     "@tamagui/config": "2.0.0-rc.41",

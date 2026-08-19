@@ -56,11 +56,3 @@ func (s *server) handleGetActorScopes(w http.ResponseWriter, r *http.Request) {
 	}
 	sendJSON(w, http.StatusOK, scopes)
 }
-
-// handleSetActorScopes is a fail-closed retirement shim for the historical
-// DSH mutation route. Workforce remains the only assignment mutation owner;
-// no request body is decoded and no repository write is reachable here.
-func (s *server) handleSetActorScopes(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Set("Allow", http.MethodGet)
-	sendError(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "DSH assignment mutation boundary is retired")
-}

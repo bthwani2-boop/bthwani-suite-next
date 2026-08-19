@@ -9,9 +9,9 @@ import (
 	"strings"
 )
 
-const legacyOperatorContextHeader = "X-Operator-Context-ID"
+const DelegatedOperatorContextHeader = "X-Delegated-Operator-Context"
 
-const delegatedFinancePrincipalHeader = "X-Delegated-Principal-ID"
+const DelegatedFinancePrincipalHeader = "X-Delegated-Principal-ID"
 
 type delegatedFinancePrincipalContextKey struct{}
 
@@ -64,15 +64,14 @@ func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, e
 		return false
 	}
 
-	operatorContextID := strings.TrimSpace(r.Header.Get(legacyOperatorContextHeader))
+	operatorContextID := strings.TrimSpace(r.Header.Get(DelegatedOperatorContextHeader))
 	if operatorContextID == "" {
-		SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "authenticated service delegation requires X-Operator-Context-ID")
+		SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "authenticated service delegation requires X-Delegated-Operator-Context")
 		return false
 	}
-	r.Header.Set(legacyOperatorContextHeader, operatorContextID)
 	ctx := WithOperatorContext(r.Context(), operatorContextID)
-	if principalID := strings.TrimSpace(r.Header.Get(delegatedFinancePrincipalHeader)); principalID != "" {
-		r.Header.Set(delegatedFinancePrincipalHeader, principalID)
+	if principalID := strings.TrimSpace(r.Header.Get(DelegatedFinancePrincipalHeader)); principalID != "" {
+		r.Header.Set(DelegatedFinancePrincipalHeader, principalID)
 		ctx = WithDelegatedFinancePrincipal(ctx, principalID)
 	}
 	*r = *r.WithContext(ctx)

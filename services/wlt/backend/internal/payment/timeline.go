@@ -171,9 +171,9 @@ func ReadPaymentSessionTimeline(db *sql.DB, operatorContextID, sessionID string)
 
 func HandleGetPaymentSessionTimeline(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		operatorContextID := strings.TrimSpace(r.Header.Get("X-Delegated-Operator-Context"))
 		if operatorContextID == "" {
-			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "X-Operator-Context-ID is required")
+			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "X-Delegated-Operator-Context is required")
 			return
 		}
 		timeline, err := ReadPaymentSessionTimeline(db, operatorContextID, r.PathValue("paymentSessionId"))

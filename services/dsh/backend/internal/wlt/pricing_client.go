@@ -140,7 +140,7 @@ func (c *Client) CalculateQuote(ctx context.Context, input CalculatePricingQuote
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
 
-	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
 		return nil, fmt.Errorf("prepare WLT pricing OperatorContext: %w", err)
 	}
 	correlationID := strings.TrimSpace(input.CheckoutIntentID)
@@ -189,7 +189,7 @@ func (c *Client) GetCheckoutQuote(ctx context.Context, checkoutIntentID string) 
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
 		return nil, fmt.Errorf("prepare WLT pricing OperatorContext: %w", err)
 	}
 	response, err := c.http.Do(req)

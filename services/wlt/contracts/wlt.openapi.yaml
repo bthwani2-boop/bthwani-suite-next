@@ -123,6 +123,19 @@ paths:
         '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
       security:
         - bearerAuth: []
+  /wlt/references/field-commission:
+    get:
+      operationId: getWltFieldCommissionReference
+      summary: Return the OperatorContext-bound field commission reference for a partner.
+      tags: [ WltReferences ]
+      parameters:
+        - $ref: '#/components/parameters/PartnerIdQuery'
+      responses:
+        '200': { $ref: '#/components/responses/ReferenceResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - bearerAuth: []
   /wlt/wallets/{actorType}/{actorId}:
     get:
       operationId: getWltWallet
@@ -132,7 +145,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
         - $ref: '#/components/parameters/ActorTypePath'
         - $ref: '#/components/parameters/ActorIdPath'
       responses:
@@ -152,7 +165,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
         - name: status
           in: query
           schema: { type: string, enum: [ open, resolved ] }
@@ -172,7 +185,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CaseId'
       responses:
         '200':
@@ -192,7 +205,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CaseId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
@@ -216,7 +229,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CaseId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
@@ -238,7 +251,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
         - name: actorId
           in: query
           schema: { type: string }
@@ -273,7 +286,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
         - name: entryId
           in: path
           required: true
@@ -294,7 +307,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
       responses:
         '200': { description: OperatorContext-local financial summary }
         '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
@@ -304,6 +317,11 @@ components:
   parameters:
     OrderIdQuery:
       name: orderId
+      in: query
+      required: true
+      schema: { type: string, minLength: 1 }
+    PartnerIdQuery:
+      name: partnerId
       in: query
       required: true
       schema: { type: string, minLength: 1 }

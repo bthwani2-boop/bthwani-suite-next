@@ -37,7 +37,7 @@ func TestHandleGetWalletRejectsMissingOperatorContextBeforeDatabaseAccess(t *tes
 
 func TestHandleGetWalletRejectsUnsupportedActorBeforeDatabaseAccess(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/wlt/wallets/operator/op-1", nil)
-	req.Header.Set("X-Operator-Context-ID", "OperatorContext-a")
+	req.Header.Set("X-Delegated-Operator-Context", "OperatorContext-a")
 	req.SetPathValue("actorType", "operator")
 	req.SetPathValue("actorId", "op-1")
 	rec := httptest.NewRecorder()
@@ -54,7 +54,7 @@ func TestHandleGetWalletRejectsUnsupportedActorBeforeDatabaseAccess(t *testing.T
 
 func TestHandleGetWalletRejectsOversizedActorIDBeforeDatabaseAccess(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/wlt/wallets/client/value", nil)
-	req.Header.Set("X-Operator-Context-ID", "OperatorContext-a")
+	req.Header.Set("X-Delegated-Operator-Context", "OperatorContext-a")
 	req.SetPathValue("actorType", "client")
 	req.SetPathValue("actorId", strings.Repeat("x", 201))
 	rec := httptest.NewRecorder()

@@ -60,7 +60,7 @@ func (c *Client) readJSON(ctx context.Context, path string, target any) (int, er
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
 		return 0, err
 	}
 	resp, err := c.http.Do(req)

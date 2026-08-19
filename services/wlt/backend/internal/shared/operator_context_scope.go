@@ -30,7 +30,7 @@ type OperatorContextScopeConfig struct {
 	ListPath string
 }
 
-// RequireOperatorContextScope makes the trusted DSH OperatorContext header (X-Operator-Context-ID)
+// RequireOperatorContextScope makes the trusted DSH OperatorContext header (X-Delegated-Operator-Context)
 // authoritative for one resource family. For id-scoped routes it looks up
 // the stored OperatorContext of the referenced row and returns 404 (never 403) on a
 // mismatch, so tenancy never becomes an identifier-enumeration oracle. For
@@ -50,7 +50,7 @@ func RequireOperatorContextScope(db *sql.DB, cfg OperatorContextScopeConfig, nex
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		operatorContextID := strings.TrimSpace(r.Header.Get("X-Delegated-Operator-Context"))
 		if operatorContextID == "" {
 			SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext is required")
 			return

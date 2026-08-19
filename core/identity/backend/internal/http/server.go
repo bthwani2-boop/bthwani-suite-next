@@ -41,6 +41,7 @@ func NewRouter(repository *identity.Repository) http.Handler {
 	mux.HandleFunc("POST /internal/actors/{actorId}/activations/reissue", s.serviceOnly(s.internalActorIssueActivation))
 	mux.HandleFunc("GET /internal/actors/{actorId}/activations/latest", s.serviceOnly(s.internalActorLatestActivation))
 	mux.HandleFunc("GET /internal/actors/{actorId}/sessions", s.serviceOnly(s.internalActorListSessions))
+	mux.HandleFunc("GET /internal/dsh/actors/{actorId}/sessions", s.dshServiceOnly(s.internalActorListSessions))
 	mux.HandleFunc("DELETE /internal/actors/{actorId}/sessions/{sessionId}", s.serviceOnly(s.internalActorRevokeSession))
 	mux.HandleFunc("DELETE /internal/actors/{actorId}/sessions", s.serviceOnly(s.internalActorRevokeAllSessions))
 	mux.HandleFunc("POST /internal/actors/{actorId}/activations/revoke", s.serviceOnly(s.internalActorRevokeActivations))

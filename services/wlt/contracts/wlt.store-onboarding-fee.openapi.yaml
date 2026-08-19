@@ -25,7 +25,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationIdOptional'
       responses:
         '200':
@@ -46,7 +46,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
       requestBody:

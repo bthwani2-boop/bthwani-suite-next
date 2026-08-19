@@ -28,13 +28,13 @@ func TestReferenceReaderPreservesDistinctTrustedDshContexts(t *testing.T) {
 	configureReferenceAuth(t)
 	for _, callerContextID := range []string{"OperatorContext-a", "OperatorContext-b"} {
 		request := trustedDshReferenceRequestForTest()
-		request.Header.Set("X-Operator-Context-ID", callerContextID)
+		request.Header.Set("X-Delegated-Operator-Context", callerContextID)
 		response := httptest.NewRecorder()
 
 		if !RequireReferenceReader(response, request) {
 			t.Fatalf("trusted DSH request with caller context %q was rejected status=%d body=%s", callerContextID, response.Code, response.Body.String())
 		}
-		if got := request.Header.Get("X-Operator-Context-ID"); got != callerContextID {
+		if got := request.Header.Get("X-Delegated-Operator-Context"); got != callerContextID {
 			t.Fatalf("delegated context %q changed to %q", callerContextID, got)
 		}
 		if contextualOperatorContext, ok := OperatorContextIDFromContext(request.Context()); !ok || contextualOperatorContext != callerContextID {
@@ -75,8 +75,8 @@ func TestReferenceReaderAcceptsIdentityOperatorContextAndInstallsIt(t *testing.T
 	if !RequireReferenceReader(response, request) {
 		t.Fatalf("Identity session was rejected status=%d body=%s", response.Code, response.Body.String())
 	}
-	if request.Header.Get("X-Operator-Context-ID") != "OperatorContext-a" {
-		t.Fatalf("identity OperatorContext was not installed, got %q", request.Header.Get("X-Operator-Context-ID"))
+	if request.Header.Get("X-Delegated-Operator-Context") != "OperatorContext-a" {
+		t.Fatalf("identity OperatorContext was not installed, got %q", request.Header.Get("X-Delegated-Operator-Context"))
 	}
 }
 
@@ -91,7 +91,7 @@ func TestReferenceReaderRejectsHeaderThatConflictsWithIdentity(t *testing.T) {
 	t.Setenv("IDENTITY_API_BASE_URL", identityServer.URL)
 	request := referenceRequest()
 	request.Header.Set("Authorization", "Bearer user-token")
-	request.Header.Set("X-Operator-Context-ID", "OperatorContext-a")
+	request.Header.Set("X-Delegated-Operator-Context", "OperatorContext-a")
 	response := httptest.NewRecorder()
 
 	if RequireReferenceReader(response, request) {
@@ -149,12 +149,12 @@ func TestReferenceReaderDoesNotBypassAuthInDeferredMode(t *testing.T) {
 func TestReferenceReaderAcceptsTrustedDshInDeferredMode(t *testing.T) {
 	configureReferenceAuth(t)
 	request := trustedDshReferenceRequestForTest()
-	request.Header.Set("X-Operator-Context-ID", "OperatorContext-deferred")
+	request.Header.Set("X-Delegated-Operator-Context", "OperatorContext-deferred")
 	response := httptest.NewRecorder()
 	if !RequireReferenceReader(response, request) {
 		t.Fatalf("deferred trusted service read rejected status=%d body=%s", response.Code, response.Body.String())
 	}
-	if got := request.Header.Get("X-Operator-Context-ID"); got != "OperatorContext-deferred" {
+	if got := request.Header.Get("X-Delegated-Operator-Context"); got != "OperatorContext-deferred" {
 		t.Fatalf("deferred delegated context changed: got %q", got)
 	}
 }

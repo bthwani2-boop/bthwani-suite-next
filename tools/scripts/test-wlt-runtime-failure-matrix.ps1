@@ -24,7 +24,7 @@ function Invoke-WltResponse {
   $Headers = @{
     Authorization = "Bearer $Token"
     "X-Service-Caller" = "dsh"
-    "X-Operator-Context-ID" = $OperatorContextId
+    "X-Delegated-Operator-Context" = $OperatorContextId
     "X-Correlation-ID" = $CorrelationId
   }
   if (-not $OmitIdempotency) {

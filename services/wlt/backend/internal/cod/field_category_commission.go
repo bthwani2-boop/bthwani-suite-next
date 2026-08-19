@@ -307,7 +307,7 @@ func HandleUpsertFieldCategoryCommissionPolicy(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		policy, err := UpsertFieldCategoryCommissionPolicy(
-			r.Context(), db, r.Header.Get("X-Operator-Context-ID"), r.PathValue("partnerCategory"), input, r.Header.Get("X-Correlation-ID"),
+			r.Context(), db, r.Header.Get("X-Delegated-Operator-Context"), r.PathValue("partnerCategory"), input, r.Header.Get("X-Correlation-ID"),
 		)
 		if errors.Is(err, ErrFieldCategoryPolicyConflict) {
 			shared.SendError(w, http.StatusConflict, "POLICY_VERSION_CONFLICT", err.Error())
@@ -329,7 +329,7 @@ func HandleCreateFieldCategoryCommission(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		commission, err := CreateFieldCategoryCommission(
-			r.Context(), db, r.Header.Get("X-Operator-Context-ID"), input, r.Header.Get("X-Correlation-ID"),
+			r.Context(), db, r.Header.Get("X-Delegated-Operator-Context"), input, r.Header.Get("X-Correlation-ID"),
 		)
 		switch {
 		case errors.Is(err, ErrFieldCategoryPolicyMissing):

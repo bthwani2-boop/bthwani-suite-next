@@ -18,7 +18,7 @@ func pricingQuoteRequest(t *testing.T, body string) *http.Request {
 	req := httptest.NewRequest(http.MethodPost, "/wlt/internal/quotes/calculate", strings.NewReader(body))
 	req.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Operator-Context-ID", "pricing-quote-context")
+	req.Header.Set("X-Delegated-Operator-Context", "pricing-quote-context")
 	req.Header.Set("Content-Type", "application/json")
 	return req
 }
@@ -109,7 +109,7 @@ func TestPricingQuoteRouteRequiresServiceAuth(t *testing.T) {
 	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
 	router := NewRouter(nil, true, openDecisionService{})
 	req := httptest.NewRequest(http.MethodPost, "/wlt/internal/quotes/calculate", strings.NewReader(pricingQuoteBody()))
-	req.Header.Set("X-Operator-Context-ID", "pricing-quote-context")
+	req.Header.Set("X-Delegated-Operator-Context", "pricing-quote-context")
 	rec := httptest.NewRecorder()
 
 	router.ServeHTTP(rec, req)

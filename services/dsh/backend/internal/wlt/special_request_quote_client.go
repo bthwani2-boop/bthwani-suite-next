@@ -58,7 +58,7 @@ func (c *Client) IssueSpecialRequestQuote(ctx context.Context, input SpecialRequ
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
 		return nil, fmt.Errorf("prepare WLT special-request quote scope: %w", err)
 	}
 	correlationID := strings.TrimSpace(input.CorrelationID)
@@ -107,7 +107,7 @@ func (c *Client) GetActiveSpecialRequestQuote(ctx context.Context, specialReques
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
 		return nil, fmt.Errorf("prepare WLT special-request quote scope: %w", err)
 	}
 	response, err := c.http.Do(req)

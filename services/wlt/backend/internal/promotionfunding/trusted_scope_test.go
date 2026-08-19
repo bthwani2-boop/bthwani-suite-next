@@ -14,7 +14,7 @@ import (
 // operator context from the authenticated service boundary only.
 //
 // The previous implementation returned the request body's operatorContextId as
-// authoritative and compared it against X-Operator-Context-ID only when that
+// authoritative and compared it against X-Delegated-Operator-Context only when that
 // header was present, so a caller who reached the route could name the
 // operator context whose promotion budget it spent.
 func TestPayloadCannotChooseFinancialScope(t *testing.T) {
@@ -72,7 +72,7 @@ func TestPayloadCannotChooseFinancialScope(t *testing.T) {
 	t.Run("reads fail closed without a trusted scope", func(t *testing.T) {
 		request := httptest.NewRequest(http.MethodGet, "/wlt/promotion-funding/reservations/pfr_1", nil)
 		// A raw header must not stand in for an authenticated scope.
-		request.Header.Set("X-Operator-Context-ID", "victim-operator-context")
+		request.Header.Set("X-Delegated-Operator-Context", "victim-operator-context")
 		response := httptest.NewRecorder()
 
 		HandleGet(nil)(response, request)

@@ -79,7 +79,7 @@ func (c *Client) request(ctx context.Context, method, path, idempotencyKey, corr
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("X-Service-Caller", "workforce")
-	req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	req.Header.Set("X-Delegated-Operator-Context", operatorContextID)
 	if strings.TrimSpace(idempotencyKey) != "" {
 		req.Header.Set("Idempotency-Key", idempotencyKey)
 	}

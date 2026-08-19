@@ -14,9 +14,9 @@ import (
 // grant.
 func HandleGetPaymentSessionTrustedDsh(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		trustedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		trustedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Delegated-Operator-Context"))
 		if trustedOperatorContextID == "" {
-			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "X-Operator-Context-ID is required")
+			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "X-Delegated-Operator-Context is required")
 			return
 		}
 		session, err := GetPaymentSession(db, r.PathValue("paymentSessionId"))

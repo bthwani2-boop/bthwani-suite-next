@@ -94,27 +94,26 @@ func (c *Client) Configured() bool {
 	return c != nil && c.baseURL != "" && c.serviceToken != ""
 }
 
-// resolveTrustedOperatorContext and setTrustedOperatorContextHeader are
-// temporary compatibility helpers for WLT routes not migrated yet. WLT
-// overwrites this deprecated transport value after service authentication.
-func (c *Client) resolveTrustedOperatorContext(ctx context.Context, requested string) (string, error) {
+// resolveDelegatedOperatorContext and setDelegatedOperatorContextHeader
+// propagate the canonical OperatorContext to WLT after service authentication.
+func (c *Client) resolveDelegatedOperatorContext(ctx context.Context, requested string) (string, error) {
 	requested = strings.TrimSpace(requested)
-	trustedOperatorContextID, hasTrustedOperatorContext := OperatorContextIDFromContext(ctx)
-	if !hasTrustedOperatorContext {
-		return "", fmt.Errorf("trusted OperatorContext context is required for this legacy WLT request")
+	delegatedOperatorContextID, hasDelegatedOperatorContext := OperatorContextIDFromContext(ctx)
+	if !hasDelegatedOperatorContext {
+		return "", fmt.Errorf("trusted OperatorContext context is required for this WLT request")
 	}
-	if requested != "" && requested != trustedOperatorContextID {
+	if requested != "" && requested != delegatedOperatorContextID {
 		return "", fmt.Errorf("requested OperatorContext does not match trusted request context")
 	}
-	return trustedOperatorContextID, nil
+	return delegatedOperatorContextID, nil
 }
 
-func (c *Client) setTrustedOperatorContextHeader(req *http.Request, requested string) (string, error) {
-	operatorContextID, err := c.resolveTrustedOperatorContext(req.Context(), requested)
+func (c *Client) setDelegatedOperatorContextHeader(req *http.Request, requested string) (string, error) {
+	operatorContextID, err := c.resolveDelegatedOperatorContext(req.Context(), requested)
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	req.Header.Set("X-Delegated-Operator-Context", operatorContextID)
 	return operatorContextID, nil
 }
 
@@ -134,8 +133,8 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
-		return nil, fmt.Errorf("prepare deprecated WLT payment scope bridge: %w", err)
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
+		return nil, fmt.Errorf("prepare WLT payment session OperatorContext: %w", err)
 	}
 	correlationID := strings.TrimSpace(input.CorrelationID)
 	if correlationID == "" {
@@ -220,7 +219,7 @@ func (c *Client) DeliverFieldCommission(ctx context.Context, input DeliverFieldC
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
 		return fmt.Errorf("prepare WLT commission OperatorContext: %w", err)
 	}
 	if err := setRequiredMutationHeaders(req, correlationID, input.IdempotencyKey); err != nil {
@@ -276,7 +275,7 @@ func (c *Client) DeliverCaptainCommission(ctx context.Context, input DeliverCapt
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
 		return fmt.Errorf("prepare WLT commission OperatorContext: %w", err)
 	}
 	if err := setRequiredMutationHeaders(req, correlationID, input.IdempotencyKey); err != nil {
@@ -308,7 +307,7 @@ func (c *Client) ExpireSession(ctx context.Context, paymentSessionID, correlatio
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
 		return fmt.Errorf("prepare WLT expire OperatorContext: %w", err)
 	}
 	if strings.TrimSpace(correlationID) == "" {

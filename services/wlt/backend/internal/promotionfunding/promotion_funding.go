@@ -464,7 +464,7 @@ func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
 // authenticated service boundary, never from the request body.
 //
 // This previously returned the payload value as authoritative and only
-// cross-checked the X-Operator-Context-ID header when that header happened to
+// cross-checked the X-Delegated-Operator-Context header when that header happened to
 // be present, so any caller who could reach the route could name the operator
 // context whose promotion budget it spent. A payload value is now accepted
 // only as a redundant assertion that must match the trusted scope.

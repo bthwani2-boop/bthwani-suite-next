@@ -45,7 +45,7 @@ actions:
     update:
       required:
         - id
-        - operatorContextId
+        - DelegatedOperatorContextId
         - clientId
         - storeId
         - paymentMethod

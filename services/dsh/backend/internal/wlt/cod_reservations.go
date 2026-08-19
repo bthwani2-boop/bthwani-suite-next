@@ -68,7 +68,7 @@ func (c *Client) ReserveCodCapacity(
 		return nil, false, fmt.Errorf("build request: %v", err)
 	}
 	setServiceHeaders(req, c.serviceToken)
-	c.setTrustedOperatorContextHeader(req, "")
+	c.setDelegatedOperatorContextHeader(req, "")
 	correlationID = strings.TrimSpace(correlationID)
 	if correlationID == "" {
 		correlationID = orderID
@@ -151,7 +151,7 @@ func (c *Client) FinalizeCodReservation(
 		return nil, false, fmt.Errorf("build request: %w", err)
 	}
 	setServiceHeaders(req, c.serviceToken)
-	c.setTrustedOperatorContextHeader(req, "")
+	c.setDelegatedOperatorContextHeader(req, "")
 	correlationID = strings.TrimSpace(correlationID)
 	if correlationID == "" {
 		correlationID = orderID
@@ -219,7 +219,7 @@ func (c *Client) ReleaseCodReservation(
 		return nil, fmt.Errorf("build request: %v", err)
 	}
 	setServiceHeaders(req, c.serviceToken)
-	c.setTrustedOperatorContextHeader(req, "")
+	c.setDelegatedOperatorContextHeader(req, "")
 	correlationID = strings.TrimSpace(correlationID)
 	if correlationID == "" {
 		correlationID = orderID

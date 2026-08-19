@@ -23,7 +23,7 @@ paths:
       parameters:
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
       requestBody:
         required: true
         content:
@@ -47,7 +47,7 @@ paths:
         - $ref: '#/components/parameters/CheckoutIntentId'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
-        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/DelegatedOperatorContextId'
       responses:
         '200':
           description: Immutable authoritative checkout quote.

@@ -197,7 +197,7 @@ func approvePayout(t *testing.T, db *sql.DB, operatorContextID, payoutID, operat
 	ctx := shared.WithOperatorContext(req.Context(), operatorContextID)
 	req = req.WithContext(shared.WithDelegatedFinancePrincipal(ctx, operatorID))
 	req.SetPathValue("payoutId", payoutID)
-	req.Header.Set("x-operator-context-id", operatorContextID)
+	req.Header.Set("X-Delegated-Operator-Context", operatorContextID)
 	req.Header.Set("x-correlation-id", "test-approve-corr")
 	res := httptest.NewRecorder()
 	HandleApprovePayoutRequestSovereign(db)(res, req)

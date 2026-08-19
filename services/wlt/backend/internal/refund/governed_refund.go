@@ -749,7 +749,7 @@ func HandleCreateGovernedRefund(db *sql.DB) http.HandlerFunc {
 		}
 		input.IdempotencyKey = r.Header.Get("Idempotency-Key")
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
-		trustedOperatorContext := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		trustedOperatorContext := strings.TrimSpace(r.Header.Get("X-Delegated-Operator-Context"))
 		if trustedOperatorContext != "" {
 			if input.OperatorContextID != "" && strings.TrimSpace(input.OperatorContextID) != trustedOperatorContext {
 				shared.SendError(w, http.StatusForbidden, "OperatorContext_MISMATCH", "refund OperatorContext does not match trusted DSH OperatorContext")

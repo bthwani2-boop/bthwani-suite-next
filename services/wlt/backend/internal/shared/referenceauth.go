@@ -82,12 +82,12 @@ func RequireReferenceReader(w http.ResponseWriter, r *http.Request) bool {
 		SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "identity session has no trusted OperatorContext context")
 		return false
 	}
-	requestOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+	requestOperatorContextID := strings.TrimSpace(r.Header.Get(DelegatedOperatorContextHeader))
 	if requestOperatorContextID != "" && requestOperatorContextID != identityOperatorContextID {
 		SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "client OperatorContext does not match the authenticated identity")
 		return false
 	}
-	r.Header.Set("X-Operator-Context-ID", identityOperatorContextID)
+	r.Header.Set(DelegatedOperatorContextHeader, identityOperatorContextID)
 	*r = *r.WithContext(WithOperatorContext(r.Context(), identityOperatorContextID))
 	return true
 }

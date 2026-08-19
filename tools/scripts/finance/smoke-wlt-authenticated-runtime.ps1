@@ -36,7 +36,7 @@ $serviceHeaders = @{
   Authorization = "Bearer $serviceToken"
   "X-Service-Caller" = "dsh"
   "X-Correlation-ID" = "wlt-runtime-$runIdentity"
-  "X-Operator-Context-ID" = $operatorContextId
+  "X-Delegated-Operator-Context" = $operatorContextId
 }
 
 function Invoke-WltRead {
@@ -78,7 +78,7 @@ $mutationHeaders = @{
   "X-Service-Caller" = "dsh"
   "X-Correlation-ID" = "wlt-session-$runIdentity"
   "Idempotency-Key" = "wlt-session-$runIdentity"
-  "X-Operator-Context-ID" = $operatorContextId
+  "X-Delegated-Operator-Context" = $operatorContextId
 }
 $expectedGateCode = if (-not $mutationsEnabled) {
   "MUTATIONS_DISABLED"

@@ -288,7 +288,7 @@ function wltHeaders(operation, idempotencyKey = '') {
   const headers = {
     Authorization: `Bearer ${WLT_DSH_SERVICE_TOKEN}`,
     'X-Service-Caller': 'dsh',
-    'X-Operator-Context-ID': LOCAL_OPERATOR_CONTEXT_ID,
+    'X-Delegated-Operator-Context': LOCAL_OPERATOR_CONTEXT_ID,
     'X-Correlation-ID': `mobile-dev-${operation}-${stableToken(operation)}`,
   };
   if (idempotencyKey) headers['Idempotency-Key'] = idempotencyKey;

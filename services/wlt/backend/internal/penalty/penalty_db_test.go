@@ -140,7 +140,7 @@ func TestPenaltyPostAndReverseUseCanonicalLedgerAsSoleBalanceWriter(t *testing.T
 func TestPenaltyHandlerDoesNotTrustRawOperatorContextHeader(t *testing.T) {
 	body := `{"incidentId":"incident-spoof","providerActorId":"captain-spoof","providerActorType":"captain","policyId":"penalty-default","reason":"spoof attempt","postedByActorId":"operator-spoof"}`
 	req := httptest.NewRequest(http.MethodPost, "/wlt/provider-penalties", strings.NewReader(body))
-	req.Header.Set("X-Operator-Context-ID", "attacker-controlled-context")
+	req.Header.Set("X-Delegated-Operator-Context", "attacker-controlled-context")
 	req.Header.Set("Idempotency-Key", "spoof-key-123")
 	res := httptest.NewRecorder()
 

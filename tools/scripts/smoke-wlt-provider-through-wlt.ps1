@@ -41,7 +41,7 @@ function Invoke-WltJson {
     "Idempotency-Key" = $OperationIdempotencyKey
     "Authorization" = "Bearer $ServiceToken"
     "X-Service-Caller" = "dsh"
-    "X-Operator-Context-ID" = $OperatorContextId
+    "X-Delegated-Operator-Context" = $OperatorContextId
   }
   $uri = "$BaseUrl$Path"
   try {

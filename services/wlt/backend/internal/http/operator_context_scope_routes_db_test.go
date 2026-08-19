@@ -62,7 +62,7 @@ func authenticatedFinancialRequest(method, path, callerScope string) *http.Reque
 	req.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	req.Header.Set("X-Service-Caller", "dsh")
 	if callerScope != "" {
-		req.Header.Set("X-Operator-Context-ID", callerScope)
+		req.Header.Set("X-Delegated-Operator-Context", callerScope)
 	}
 	return req
 }
@@ -85,7 +85,7 @@ func assertDelegatedScopeRoute(
 	if ownRec.Code != http.StatusOK {
 		t.Fatalf("delegated financial record was not readable: status=%d body=%s", ownRec.Code, ownRec.Body.String())
 	}
-	if got := ownReq.Header.Get("X-Operator-Context-ID"); got != delegatedScope {
+	if got := ownReq.Header.Get("X-Delegated-Operator-Context"); got != delegatedScope {
 		t.Fatalf("delegated scope changed after authentication: got=%q want=%q", got, delegatedScope)
 	}
 

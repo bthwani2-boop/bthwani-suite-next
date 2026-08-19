@@ -226,11 +226,12 @@ func (c *Client) IsSessionValid(ctx context.Context, actorID, sessionID string) 
 		return false, nil
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/internal/actors/"+actorID+"/sessions", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/internal/dsh/actors/"+actorID+"/sessions", nil)
 	if err != nil {
 		return false, ErrIdentityUnavailable
 	}
-	req.Header.Set("X-Service-Caller", c.internalServiceToken)
+	req.Header.Set("Authorization", "Bearer "+c.internalServiceToken)
+	req.Header.Set("X-Service-Caller", "dsh")
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return false, ErrIdentityUnavailable

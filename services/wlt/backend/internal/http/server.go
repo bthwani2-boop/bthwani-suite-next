@@ -211,7 +211,7 @@ func CorsMiddleware(authMode string, next http.Handler) http.Handler {
 		if localCorsOrigin != "" && origin == localCorsOrigin {
 			w.Header().Set("Access-Control-Allow-Origin", localCorsOrigin)
 			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, OPTIONS")
-			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Correlation-ID, Idempotency-Key, X-Service-Caller, X-Operator-Context-ID")
+			w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Correlation-ID, Idempotency-Key, X-Service-Caller, X-Delegated-Operator-Context")
 			w.Header().Set("Vary", "Origin")
 		}
 		if r.Method == http.MethodOptions {
