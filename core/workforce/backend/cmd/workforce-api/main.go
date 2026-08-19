@@ -17,7 +17,6 @@ import (
 	"workforce-api/internal/dshclient"
 	workforcehttp "workforce-api/internal/http"
 	"workforce-api/internal/identityclient"
-	"workforce-api/internal/media"
 	"workforce-api/internal/wltclient"
 	"workforce-api/internal/workforce"
 )
@@ -69,11 +68,7 @@ func main() {
 	service := workforce.NewService(repo, identity, dsh)
 	authClient := auth.NewClient(identityBaseURL)
 
-	appCtx, cancelApp := context.WithCancel(context.Background())
-	defer cancelApp()
-	mediaProvider := newMediaProvider(appCtx)
-
-	baseRouter := workforcehttp.NewRouter(db, service, repo, authClient, identity, mediaProvider, dshServiceToken)
+	baseRouter := workforcehttp.NewRouter(db, service, repo, authClient, identity, dshServiceToken)
 	workforcehttp.RegisterInternalReadinessRoutes(baseRouter, repo, dshServiceToken)
 	workforcehttp.RegisterOperationalCoreRoutes(baseRouter, repo, authClient)
 	workforcehttp.RegisterOperationalEnforcementRoutes(baseRouter, repo, authClient, wlt)
@@ -117,32 +112,4 @@ func envOr(name, fallback string) string {
 		return value
 	}
 	return fallback
-}
-
-func newMediaProvider(ctx context.Context) *media.Provider {
-	endpoint := os.Getenv("WORKFORCE_MINIO_ENDPOINT")
-	if endpoint == "" {
-		log.Println("[workforce-api] WORKFORCE_MINIO_ENDPOINT not set, media upload routes disabled")
-		return media.NewProvider(ctx, media.ProviderConfig{}, 15*time.Second)
-	}
-	accessKey := os.Getenv("WORKFORCE_MINIO_ACCESS_KEY")
-	secretKey := os.Getenv("WORKFORCE_MINIO_SECRET_KEY")
-	bucket := os.Getenv("WORKFORCE_MINIO_BUCKET")
-	if bucket == "" {
-		bucket = "workforce-media"
-	}
-	useSSL := os.Getenv("WORKFORCE_MINIO_USE_SSL") == "true"
-	publicEndpoint := os.Getenv("WORKFORCE_MINIO_PUBLIC_ENDPOINT")
-	publicUseSSL := os.Getenv("WORKFORCE_MINIO_PUBLIC_USE_SSL") == "true"
-
-	log.Println("[workforce-api] media provider configured; connecting with background retry")
-	return media.NewProvider(ctx, media.ProviderConfig{
-		Endpoint:       endpoint,
-		PublicEndpoint: publicEndpoint,
-		AccessKey:      accessKey,
-		SecretKey:      secretKey,
-		Bucket:         bucket,
-		UseSSL:         useSSL,
-		PublicUseSSL:   publicUseSSL,
-	}, 15*time.Second)
 }
