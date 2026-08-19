@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: BThwani Identity Support Sessions API
-  version: 0.1.0
+  version: 0.2.0
   description: >-
     Identity is the sole issuer of elevated, time-limited support sessions.
     A support session's Subject is the target actor being supported; the
@@ -12,7 +12,9 @@ info:
     lifetime is 15 minutes, enforced by a database constraint independent of
     this contract. DSH owns the maker-checker approval workflow around
     issuance; Identity enforces only that the initiator and target differ
-    and both are active actors.
+    and both are active actors. This DSH-facing session module also owns the
+    caller-specific active-session read used by DSH to validate a referenced
+    actor session against Identity's sovereign session store.
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/identity
 x-bthwani-runtime-dependency: true
@@ -21,6 +23,42 @@ servers:
   - url: http://localhost:58082
     description: Local Identity runtime
 paths:
+  /internal/dsh/actors/{actorId}/sessions:
+    get:
+      operationId: internalDshListActorSessions
+      tags: [internal-dsh-sessions]
+      summary: List active actor sessions for DSH session validation.
+      description: >-
+        Service-to-service only. DSH uses this caller-specific Identity boundary
+        to validate that a referenced actor session remains active. Identity
+        remains the sole owner of session state; DSH receives a read-only
+        projection and never mutates session truth through this route.
+      security:
+        - serviceToken: []
+      parameters:
+        - name: actorId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/DshServiceCaller'
+      responses:
+        '200':
+          description: Active sessions for the actor.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: './identity.openapi.yaml#/components/schemas/SessionInfo'
+        '401':
+          description: Invalid DSH service token.
+        '403':
+          description: Caller is forbidden.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
   /internal/support-sessions:
     post:
       operationId: issueSupportSession
