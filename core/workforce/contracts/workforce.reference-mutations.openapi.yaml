@@ -99,7 +99,7 @@ paths:
                 properties:
                   affiliations:
                     $ref: '#/components/schemas/ActorAffiliations'
-        '400': { description: Invalid collection, actor kind, correlation id, scope type, target, or time range. }
+        '400': { description: "Invalid collection, actor kind, correlation id, scope type, target, or time range." }
         '401': { description: Authentication required. }
         '403': { description: provider:update permission required. }
         '404': { description: Workforce profile not found. }
