@@ -14,7 +14,7 @@ import (
 
 const (
 	dshMigrationServiceName = "dsh"
-	dshLatestMigration      = "dsh-1030_captain_cod_legacy_write_fence.sql"
+	dshLatestMigration      = "dsh-1031_local_seed_media_optional.sql"
 	dshReadinessTimeout     = 2 * time.Second
 )
 
