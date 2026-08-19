@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "service": "dsh",
   "extends": "manifest.json",
   "migrations": [
@@ -204,6 +204,13 @@
       "file": "dsh-1030_captain_cod_legacy_write_fence.sql",
       "sha256": "2201caf7cc9867a46b11e7fc0e26be6e9cdbe776fbf955397bf779901e403e63",
       "historicalPrefix": "1030",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 269,
+      "file": "dsh-1031_local_seed_media_optional.sql",
+      "sha256": "b7a2d0b9eec5850425505dd2268d7dd9784120ba116e57ad1a753e8750a8fcc6",
+      "historicalPrefix": "1031",
       "state": "ACTIVE"
     }
   ]
