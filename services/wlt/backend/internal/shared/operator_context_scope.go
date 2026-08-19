@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// OperatorContextScopeConfig describes how to enforce the trusted DSH OperatorContext on one
+// OperatorContextScopeConfig describes how to enforce the trusted OperatorContext on one
 // resource family: which table/column stores the OperatorContext of record, which
 // path value (if any) carries the row id for id-scoped routes, and which
 // exact list path (if any) should receive an injected operatorContextId query filter.
@@ -30,36 +30,34 @@ type OperatorContextScopeConfig struct {
 	ListPath string
 }
 
-// RequireOperatorContextScope makes the trusted DSH OperatorContext header (X-Delegated-Operator-Context)
-// authoritative for one resource family. For id-scoped routes it looks up
-// the stored OperatorContext of the referenced row and returns 404 (never 403) on a
-// mismatch, so tenancy never becomes an identifier-enumeration oracle. For
-// the configured list route it injects (and never lets the caller override
-// away from) the trusted operatorContextId query filter.
-//
-// This is the generalized form of refund.RequireOperatorContextScope; both id-lookup
-// and list-injection semantics are preserved exactly.
+// RequireOperatorContextScope makes the authenticated request OperatorContext
+// authoritative for one resource family. Transport headers are consumed by the
+// service-auth boundary; domain scoping reads only the trusted request context.
+// For id-scoped routes it looks up the stored OperatorContext of the referenced
+// row and returns 404 (never 403) on a mismatch, so tenancy never becomes an
+// identifier-enumeration oracle. For the configured list route it injects (and
+// never lets the caller override away from) the trusted operatorContextId query filter.
 func RequireOperatorContextScope(db *sql.DB, cfg OperatorContextScopeConfig, next http.HandlerFunc) http.HandlerFunc {
 	idColumn := cfg.IDColumn
 	if idColumn == "" {
 		idColumn = "id"
 	}
-	OperatorContextColumn := cfg.OperatorContextColumn
-	if OperatorContextColumn == "" {
-		OperatorContextColumn = "operator_context_id"
+	operatorContextColumn := cfg.OperatorContextColumn
+	if operatorContextColumn == "" {
+		operatorContextColumn = "operator_context_id"
 	}
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID := strings.TrimSpace(r.Header.Get("X-Delegated-Operator-Context"))
-		if operatorContextID == "" {
-			SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext is required")
+		operatorContextID, err := RequireOperatorContext(r.Context())
+		if err != nil {
+			SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "authenticated OperatorContext context is required")
 			return
 		}
 
 		if cfg.IDPathValue != "" {
 			rowID := strings.TrimSpace(r.PathValue(cfg.IDPathValue))
 			if rowID != "" {
-				query := fmt.Sprintf(`SELECT %s FROM %s WHERE %s=$1`, OperatorContextColumn, cfg.Table, idColumn)
+				query := fmt.Sprintf(`SELECT %s FROM %s WHERE %s=$1`, operatorContextColumn, cfg.Table, idColumn)
 				var storedOperatorContext string
 				if err := db.QueryRowContext(r.Context(), query, rowID).Scan(&storedOperatorContext); err != nil {
 					if errors.Is(err, sql.ErrNoRows) {
@@ -70,8 +68,6 @@ func RequireOperatorContextScope(db *sql.DB, cfg OperatorContextScopeConfig, nex
 					return
 				}
 				if storedOperatorContext != operatorContextID {
-					// Deliberately return not found so OperatorContext boundaries do
-					// not become an identifier-enumeration oracle.
 					SendError(w, http.StatusNotFound, "NOT_FOUND", "resource not found")
 					return
 				}
@@ -81,7 +77,7 @@ func RequireOperatorContextScope(db *sql.DB, cfg OperatorContextScopeConfig, nex
 		if cfg.ListPath != "" && r.Method == http.MethodGet && r.URL.Path == cfg.ListPath {
 			query := r.URL.Query()
 			if requestedOperatorContext := strings.TrimSpace(query.Get("operatorContextId")); requestedOperatorContext != "" && requestedOperatorContext != operatorContextID {
-				SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_MISMATCH", "OperatorContext filter does not match trusted DSH OperatorContext")
+				SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_MISMATCH", "OperatorContext filter does not match authenticated OperatorContext")
 				return
 			}
 			query.Set("operatorContextId", operatorContextID)
