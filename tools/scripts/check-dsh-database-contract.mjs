@@ -277,25 +277,47 @@ if (rootPackage) {
   requireText(scripts["database:dsh:contract"] ?? "", "check-dsh-database-contract.mjs", "database:dsh:contract");
 }
 
-const workflow = read(".github/workflows/dsh-database.yml");
-requireText(workflow, runnerPath, "DSH database workflow");
-requireText(workflow, runnerVerificationPath, "DSH database workflow runner verification");
-requireText(workflow, "workflow_dispatch:", "DSH database workflow manual closure trigger");
-forbidText(workflow, "\n  push:", "DSH database workflow automatic push trigger");
-forbidText(workflow, "\n  pull_request:", "DSH database workflow automatic pull request trigger");
-requireText(workflow, "permissions:\n  contents: read", "DSH database workflow read-only permissions");
-requireText(workflow, "DSH_TEST_operator_context_id: ci-dsh", "DSH database workflow test OperatorContext");
-requireText(workflow, "Apply canonical DSH migrations", "DSH database workflow");
-requireText(workflow, "Re-run canonical DSH migrations", "DSH database workflow");
-requireText(workflow, "Verify DSH migration runner failure contracts", "DSH database workflow");
-requireText(workflow, "Apply DSH local seeds twice", "DSH database workflow");
-requireText(workflow, "Run DSH schema database contracts", "DSH database workflow");
-requireText(workflow, "Run DSH seed database contracts", "DSH database workflow");
-forbidText(workflow, "statuses: write", "DSH database workflow");
-forbidText(workflow, "gh api --method POST", "DSH database workflow");
-forbidText(workflow, "bthwani/dsh-database", "DSH database workflow");
-forbidText(workflow, "ALTER DATABASE dsh_runtime SET bthwani.operator_context_id", "DSH database workflow");
-forbidText(workflow, "Capture canonical contextual workflow source", "DSH database workflow");
+// DSH database CI has one canonical reusable authority. The retired standalone
+// dsh-database.yml workflow must not return: duplicating migration/seed closure
+// between two workflows creates parallel execution truth and race-prone drift.
+const retiredDatabaseWorkflowPath = ".github/workflows/dsh-database.yml";
+if (fs.existsSync(path.join(root, retiredDatabaseWorkflowPath))) {
+  fail(`retired parallel DSH database workflow must not exist: ${retiredDatabaseWorkflowPath}`);
+}
+
+const workflowPath = ".github/workflows/ci-backends.yml";
+const workflow = read(workflowPath);
+const workflowOwner = "canonical backend verification workflow";
+for (const token of [
+  "workflow_call:",
+  "permissions:\n  contents: read",
+  "dsh-database-contract:",
+  "Verify DSH schema and seed contracts",
+  "DSH_TEST_operator_context_id: ci-dsh",
+  "Validate governed DSH database contracts",
+  "check-local-media-contract.mjs",
+  "check-dsh-database-contract.mjs",
+  "Apply canonical DSH migrations",
+  "Re-run canonical DSH migrations",
+  "Verify DSH migration runner failure contracts",
+  runnerVerificationPath,
+  "Run DSH schema database contracts",
+  "Apply DSH local seeds twice",
+  "Run DSH seed database contracts",
+  runnerPath,
+  "ref: ${{ inputs.head_sha }}",
+  "persist-credentials: false",
+]) {
+  requireText(workflow, token, workflowOwner);
+}
+for (const forbiddenToken of [
+  "statuses: write",
+  "gh api --method POST",
+  "bthwani/dsh-database",
+  "ALTER DATABASE dsh_runtime SET bthwani.operator_context_id",
+]) {
+  forbidText(workflow, forbiddenToken, workflowOwner);
+}
 
 for (const retiredPath of [
   "apps/mobile/converge-local-runtime-database.ps1",

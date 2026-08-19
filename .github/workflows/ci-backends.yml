@@ -295,6 +295,9 @@ jobs:
       - name: Re-run canonical DSH migrations
         shell: pwsh
         run: ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action migrate -Transport url -DatabaseUrl $env:DATABASE_URL
+      - name: Verify DSH migration runner failure contracts
+        shell: pwsh
+        run: ./services/dsh/database/scripts/test-dsh-migration-runner.ps1 -DatabaseUrl $env:DATABASE_URL
       - name: Run DSH schema database contracts
         shell: pwsh
         run: ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action test -Transport url -DatabaseUrl $env:DATABASE_URL -TestSuite schema
