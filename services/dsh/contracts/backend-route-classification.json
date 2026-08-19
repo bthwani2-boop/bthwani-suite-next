@@ -143,13 +143,6 @@
       "retirementState": "DEPRECATED_SUPPORTED"
     },
     {
-      "route": "POST /dsh/catalog/proposals/{proposalId}/decision",
-      "classification": "LEGACY_COMPATIBILITY",
-      "canonicalRoute": "POST /dsh/operator/catalog/product-proposals/{proposalId}/decision",
-      "owner": "central-catalog",
-      "retirementState": "DEPRECATED_SUPPORTED"
-    },
-    {
       "route": "POST /dsh/catalog/proposals/{proposalId}/transitions",
       "classification": "LEGACY_COMPATIBILITY",
       "canonicalRoute": "POST /dsh/operator/catalog/product-proposals/{proposalId}/transition",
