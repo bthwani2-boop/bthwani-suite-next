@@ -12,7 +12,7 @@ import (
 
 var ErrRefundReferenceConflict = errors.New("refund references do not match the payment session")
 
-func legacyRefundView(item *GovernedRefund) *Refund {
+func cancellationRefundView(item *GovernedRefund) *Refund {
 	if item == nil {
 		return nil
 	}
@@ -44,11 +44,10 @@ func requireRefundOperatorContextForSession(ctx context.Context, db *sql.DB, pay
 	return operatorContextID, nil
 }
 
-// CreateRefundAtomicForOperatorContext preserves the order-cancellation response
-// shape while using the governed amount reservation, context isolation, audit
-// and idempotency engine. OperatorContext authority must already exist in the
-// authenticated request context and is independently checked against WLT's
-// payment-session record.
+// CreateRefundAtomicForOperatorContext is the sole order-cancellation refund
+// adapter. OperatorContext authority must already exist in the authenticated
+// request context and is independently checked against WLT's payment-session
+// record before the governed refund engine is entered.
 func CreateRefundAtomicForOperatorContext(ctx context.Context, db *sql.DB, input CreateRefundInput) (*Refund, bool, error) {
 	input.PaymentSessionID = strings.TrimSpace(input.PaymentSessionID)
 	input.OrderID = strings.TrimSpace(input.OrderID)
@@ -73,12 +72,5 @@ func CreateRefundAtomicForOperatorContext(ctx context.Context, db *sql.DB, input
 		IdempotencyKey:        key,
 		CorrelationID:         key,
 	})
-	return legacyRefundView(item), !replayed, err
-}
-
-// CreateRefundAtomic is retained as a compile-compatible fail-closed seam for
-// contextless legacy callers. Financial ownership must never be inferred from
-// paymentSessionID alone; callers must use CreateRefundAtomicForOperatorContext.
-func CreateRefundAtomic(db *sql.DB, input CreateRefundInput) (*Refund, bool, error) {
-	return nil, false, fmt.Errorf("authenticated OperatorContext context is required; use CreateRefundAtomicForOperatorContext")
+	return cancellationRefundView(item), !replayed, err
 }
