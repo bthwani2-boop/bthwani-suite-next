@@ -272,21 +272,6 @@
             schema:
               $ref: "../dsh.openapi.yaml#/components/schemas/DshProductProposalListResponse"
 
-/dsh/operator/catalog/product-proposals/{proposalId}/decision:
-  post:
-    operationId: decideProductProposal
-    tags: [CentralCatalog]
-    security: [{ bearerAuth: [] }]
-    parameters:
-      - name: proposalId
-        in: path
-        required: true
-        schema: { type: string }
-    responses:
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
-      "200": { description: Proposal moved to under_review/adopted/rejected/needs_fix. }
-
 /dsh/operator/catalog/product-proposals/{proposalId}/transition:
   post:
     operationId: transitionProductProposal
