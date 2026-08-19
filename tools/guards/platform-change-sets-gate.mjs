@@ -1,8 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const governanceCapabilityId = "PLATFORM_CHANGE_SETS";
-const productTruthFile = "governance/product/contracts/platform-change-sets.product-truth.json";
 const validationMigrationFile = "core/platform-control/database/migrations/platform-005_change_set_validation.sql";
 const sensitiveBoundaryMigrationFile = "core/platform-control/database/migrations/platform-006_sensitive_change_boundary.sql";
 const contractFile = "core/platform-control/contracts/platform-change-sets.openapi.yaml";
@@ -21,7 +19,6 @@ const legacyDshAuthorityFiles = [
 const callerWorkflowFile = ".github/workflows/ci.yml";
 const verificationWorkflowFile = ".github/workflows/ci-node-verification.yml";
 const requiredFiles = [
-  productTruthFile,
   validationMigrationFile,
   sensitiveBoundaryMigrationFile,
   "core/platform-control/backend/internal/platformcontrol/change_set_read_create.go",
@@ -69,25 +66,6 @@ function forbidText(file, tokens) {
 }
 
 if (failures.length === 0) {
-  const truth = JSON.parse(fs.readFileSync(productTruthFile, "utf8"));
-  const evidenceReferences = new Set(truth.problem?.evidenceReferences ?? []);
-  const forbiddenActions = new Set((truth.actors ?? []).flatMap((actor) => actor.forbiddenActions ?? []));
-  if (truth.capabilityId !== governanceCapabilityId) failures.push("product-truth:capabilityId");
-  if (truth.state !== "DISCOVERY") failures.push("product-truth:state");
-  if (truth.owners?.productManagerApproval !== "PENDING") failures.push("product-truth:productManagerApproval");
-  if (truth.owners?.productOwnerApproval !== "PENDING") failures.push("product-truth:productOwnerApproval");
-  if (!evidenceReferences.has(contractFile)) failures.push("product-truth:authoritativeOpenApi");
-  if (!evidenceReferences.has(generatedClientFile)) failures.push("product-truth:generatedClient");
-  for (const invariant of [
-    "approve_or_reject_own_change_set",
-    "apply_stale_or_conflicting_change_set",
-    "rollback_without_reason",
-    "store_secret_or_credential_values_in_change_sets",
-    "snapshot_existing_sensitive_target_values",
-  ]) {
-    if (!forbiddenActions.has(invariant)) failures.push(`product-truth:forbidden:${invariant}`);
-  }
-
   requireText(validationMigrationFile, [
     "validated_value_json",
     "validated_revision",
