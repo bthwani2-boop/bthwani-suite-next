@@ -5,12 +5,23 @@
 -- The import is populated by tools/scripts/import-identity-operator-context-to-workforce.ps1
 -- from the canonical Identity database before this migration is invoked. It is
 -- deliberately a migration input, not a runtime authority; it is dropped after
--- the verified cutover and only its proof metadata is retained.
+-- the verified cutover and only its proof metadata is retained. A fresh
+-- Workforce database may legitimately have zero actors to bind, so proof
+-- metadata is staged separately from actor mappings: zero rows is valid only
+-- when there are no Workforce actors requiring coverage.
 CREATE TABLE IF NOT EXISTS workforce_identity_operator_context_import (
   actor_id text PRIMARY KEY,
   operator_context_id text NOT NULL CHECK (NULLIF(BTRIM(operator_context_id), '') IS NOT NULL),
   source_commit_sha text NOT NULL CHECK (source_commit_sha ~ '^[0-9a-f]{40}$'),
   source_row_count integer NOT NULL CHECK (source_row_count > 0),
+  source_checksum_md5 text NOT NULL CHECK (source_checksum_md5 ~ '^[0-9a-f]{32}$'),
+  imported_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS workforce_identity_operator_context_import_proof (
+  proof_id boolean PRIMARY KEY DEFAULT true CHECK (proof_id),
+  source_commit_sha text NOT NULL CHECK (source_commit_sha ~ '^[0-9a-f]{40}$'),
+  source_row_count integer NOT NULL CHECK (source_row_count >= 0),
   source_checksum_md5 text NOT NULL CHECK (source_checksum_md5 ~ '^[0-9a-f]{32}$'),
   imported_at timestamptz NOT NULL DEFAULT now()
 );
@@ -60,29 +71,40 @@ ALTER TABLE workforce_provisioning_cases
 
 DO $$
 DECLARE
+  proof_rows bigint;
   imported_rows bigint;
   declared_rows bigint;
-  declared_commits integer;
-  declared_checksums integer;
-  calculated_checksum text;
+  declared_commit text;
   declared_checksum text;
+  calculated_checksum text;
+  row_metadata_conflict boolean;
   missing_actor boolean;
 BEGIN
+  SELECT count(*), max(source_row_count), max(source_commit_sha), max(source_checksum_md5)
+    INTO proof_rows, declared_rows, declared_commit, declared_checksum
+  FROM workforce_identity_operator_context_import_proof;
+
   SELECT count(*),
-         max(source_row_count),
-         count(DISTINCT source_commit_sha),
-         count(DISTINCT source_checksum_md5),
-         md5(string_agg(actor_id || ':' || operator_context_id, E'\n' ORDER BY actor_id)),
-         max(source_checksum_md5)
-    INTO imported_rows, declared_rows, declared_commits, declared_checksums, calculated_checksum, declared_checksum
+         COALESCE(md5(string_agg(actor_id || ':' || operator_context_id, E'\n' ORDER BY actor_id)), md5(''))
+    INTO imported_rows, calculated_checksum
   FROM workforce_identity_operator_context_import;
 
-  IF imported_rows = 0
+  SELECT EXISTS (
+    SELECT 1
+    FROM workforce_identity_operator_context_import imported
+    WHERE imported.source_commit_sha <> declared_commit
+       OR imported.source_row_count <> declared_rows
+       OR imported.source_checksum_md5 <> declared_checksum
+  ) INTO row_metadata_conflict;
+
+  IF proof_rows <> 1
      OR declared_rows IS NULL
+     OR declared_rows < 0
+     OR declared_commit IS NULL
+     OR declared_checksum IS NULL
      OR imported_rows <> declared_rows
-     OR declared_commits <> 1
-     OR declared_checksums <> 1
-     OR calculated_checksum <> declared_checksum THEN
+     OR calculated_checksum <> declared_checksum
+     OR row_metadata_conflict THEN
     RAISE EXCEPTION 'Identity operator-context import is missing or its proof metadata is inconsistent';
   END IF;
 
@@ -355,12 +377,13 @@ INSERT INTO workforce_operator_context_migration_proof(
 )
 SELECT
   'workforce-020_operator_context_scope_boundary.sql',
-  max(source_commit_sha),
-  max(source_row_count),
-  max(source_checksum_md5),
-  count(*),
+  proof.source_commit_sha,
+  proof.source_row_count,
+  proof.source_checksum_md5,
+  (SELECT count(*) FROM workforce_people),
   now()
-FROM workforce_identity_operator_context_import
+FROM workforce_identity_operator_context_import_proof proof
+WHERE proof.proof_id = true
 ON CONFLICT (migration_id) DO UPDATE SET
   source_commit_sha = EXCLUDED.source_commit_sha,
   source_row_count = EXCLUDED.source_row_count,
@@ -369,6 +392,7 @@ ON CONFLICT (migration_id) DO UPDATE SET
   completed_at = EXCLUDED.completed_at;
 
 DROP TABLE workforce_identity_operator_context_import;
+DROP TABLE workforce_identity_operator_context_import_proof;
 
 CREATE UNIQUE INDEX IF NOT EXISTS workforce_people_context_actor_unique
   ON workforce_people(operator_context_id, actor_id);

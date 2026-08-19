@@ -117,19 +117,20 @@
       "service": "workforce",
       "migrationId": "workforce-020_operator_context_scope_boundary.sql",
       "originalBlobSha": "8f8ea535494078a9d9cea5e09945ef9f0835f51b",
-      "replacementSha256": "267cef525a8b1a2398ad02f5f7b1cc289960aa92894844e0587af3ea014aec6d",
+      "replacementSha256": "af61eefcffc6a926f7ebdd9aa6ec4aace69a6baf55893fbbc9d27b3b62b2ae96",
       "acceptedHistoricalSha256": [
-        "ed2e079fbe4d5f2a386a847b17b30244af45f9be493a91c17960ac3487fe0caf"
+        "ed2e079fbe4d5f2a386a847b17b30244af45f9be493a91c17960ac3487fe0caf",
+        "267cef525a8b1a2398ad02f5f7b1cc289960aa92894844e0587af3ea014aec6d"
       ],
       "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
-      "reason": "The original migration added NOT NULL operator_context_id columns and attempted to derive child rows from workforce_people, but never established the parent actor-to-context mapping from the Identity authority. Historical workforce_people rows therefore fail the migration or can remain unbound. The corrected migration consumes a deterministic Identity snapshot, proves complete actor coverage and metadata integrity, rejects contradictory child context, then performs the cutover before enforcing NOT NULL.",
+      "reason": "The prior correction established the Identity mapping boundary but encoded proof metadata only on mapping rows and therefore made an authoritative zero-row source impossible. A fresh Workforce database has no actors to backfill, yet the migration required a non-empty Identity snapshot and forced unrelated local Identity bootstrap side effects. The corrected migration separates source proof from actor rows, permits a proved zero-row source only when Workforce has no actors, and retains complete fail-closed Identity coverage for every actual Workforce actor.",
       "evidence": {
         "cleanInstallCommitSha": "9e99f264ae3a93b842aaea6a83f62b680757efab",
         "cleanInstallResult": "INVARIANT_REVIEW_CONFIRMED_MISSING_IDENTITY_PARENT_BACKFILL",
         "sameCommitRuntimeEvidence": false,
         "productionApprovalEvidence": false
       },
-      "requiredCorrection": "Use import-identity-operator-context-to-workforce.ps1 to stage the exact Identity actor mapping, run corrected Workforce-020, and retain Workforce-021 as the governed forward recovery for any database that recorded the historical checksum. No payload, assignment, environment, or default fallback may supply context."
+      "requiredCorrection": "Use import-identity-operator-context-to-workforce.ps1 to stage a deterministic proof plus the exact Identity mappings for the Workforce actors that actually require cutover. A zero-row proof is valid only for zero Workforce actors; any real actor without a non-blank Identity operator context must fail closed. Retain Workforce-021 as forward recovery and accept both prior pre-release checksums. No payload, assignment, environment, default, synthetic actor, or local-bootstrap side effect may supply context."
     },
     {
       "service": "providers",

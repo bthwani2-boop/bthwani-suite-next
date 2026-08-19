@@ -103,28 +103,13 @@ $executeStatement = {
   Invoke-DatabaseSql -Sql $Sql -Quiet
 }
 
-function Test-WorkforceOperatorContextCutoverApplied {
-  $ledgerTable = Invoke-DatabaseSql -Sql "SELECT COALESCE(to_regclass('public.schema_migrations')::text, '');" -Quiet
-  if ([string]::IsNullOrWhiteSpace($ledgerTable)) { return $false }
-  $applied = Invoke-DatabaseSql -Sql @"
-SELECT CASE WHEN EXISTS (
-  SELECT 1
-  FROM schema_migrations
-  WHERE service_name = 'workforce'
-    AND migration_id = 'workforce-020_operator_context_scope_boundary.sql'
-    AND success = true
-    AND dirty = false
-) THEN '1' ELSE '0' END;
-"@ -Quiet
-  return $applied.Trim() -eq '1'
-}
-
 function Invoke-WorkforceIdentityImport {
-  if ($ServiceKey -ne 'workforce' -or (Test-WorkforceOperatorContextCutoverApplied)) { return }
-  if ([string]::IsNullOrWhiteSpace($IdentityDatabaseUrl)) {
-    throw 'IdentityDatabaseUrl is required before Workforce-020 can be applied; refusing an unbound cross-service migration.'
-  }
+  if ($ServiceKey -ne 'workforce') { return }
 
+  # The import script is the single owner of Workforce-020 scope discovery and
+  # already-applied detection. A fresh database has no schema_migrations table
+  # yet, so probing that ledger here created a second, order-sensitive authority
+  # and failed before the canonical runner could create it.
   $importScript = Join-Path $RepoRoot 'tools/scripts/import-identity-operator-context-to-workforce.ps1'
   if (-not (Test-Path -LiteralPath $importScript -PathType Leaf)) {
     throw "Identity-to-Workforce migration authority not found: $importScript"
@@ -145,7 +130,10 @@ try {
     -ExecuteStatement $executeStatement
 } finally {
   if ($ServiceKey -eq 'workforce') {
-    Invoke-DatabaseSql -Sql 'DROP TABLE IF EXISTS workforce_identity_operator_context_import;' -Quiet
+    Invoke-DatabaseSql -Sql @'
+DROP TABLE IF EXISTS workforce_identity_operator_context_import;
+DROP TABLE IF EXISTS workforce_identity_operator_context_import_proof;
+'@ -Quiet | Out-Null
   }
 }
 

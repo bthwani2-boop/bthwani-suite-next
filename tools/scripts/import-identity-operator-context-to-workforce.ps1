@@ -1,21 +1,17 @@
 <#
 .SYNOPSIS
-  Loads a verified Identity actor-to-operator-context snapshot for Workforce-020.
+  Stages the exact Identity operator-context mapping required by Workforce-020.
 
 .DESCRIPTION
-  Reads only identity_actors.id and identity_actors.operator_context_id from the
-  canonical Identity database, validates complete deterministic coverage, and
-  stages the snapshot in the Workforce database. Workforce-020 consumes this
-  staging table inside its governed transaction and drops it after recording the
-  migration proof. No Workforce payload, assignment, environment, or fallback
-  value is consulted.
+  The migration scope is owned by Workforce: only actor ids already present in
+  workforce_people need an Identity mapping. A fresh Workforce database therefore
+  has a valid empty source scope; that state is represented by a separate proof
+  row instead of fabricating an actor merely to make the migration non-empty.
 
-  In the compose-backed local runtime, a fresh Identity database may have the
-  canonical schema but no actors until identity-api executes its own governed
-  local bootstrap. The import therefore starts that canonical owner only when a
-  fresh snapshot is empty, waits for Identity to materialize its actors, and then
-  re-reads the authoritative database. Production and disabled-bootstrap modes
-  remain fail-closed; no actor or operator context is synthesized here.
+  Whenever Workforce has actors, every one must resolve to exactly one non-blank
+  operator_context_id in the canonical Identity database or the cutover fails
+  closed. No Workforce payload, assignment, environment value, default context,
+  local bootstrap side effect, or fallback may supply the mapping.
 #>
 
 [CmdletBinding()]
@@ -60,8 +56,8 @@ if ($UseDockerCompose) {
   if (-not (Get-Command psql -ErrorAction SilentlyContinue)) {
     throw 'psql is required to import the Identity operator-context snapshot.'
   }
-  if ([string]::IsNullOrWhiteSpace($IdentityDatabaseUrl) -or [string]::IsNullOrWhiteSpace($WorkforceDatabaseUrl)) {
-    throw 'IdentityDatabaseUrl and WorkforceDatabaseUrl are required for direct PostgreSQL import.'
+  if ([string]::IsNullOrWhiteSpace($WorkforceDatabaseUrl)) {
+    throw 'WorkforceDatabaseUrl is required for direct PostgreSQL import.'
   }
 }
 
@@ -82,13 +78,16 @@ function Invoke-ImportDatabaseSql {
     )
     if ($TuplesOnly) { $arguments += '-qAt' }
     elseif ($Quiet) { $arguments += '-q' }
-    $output = $Sql | & docker @arguments 2>&1
+    $output = @($Sql | & docker @arguments 2>&1)
   } else {
     $databaseUrl = if ($Target -eq 'identity') { $IdentityDatabaseUrl } else { $WorkforceDatabaseUrl }
+    if ([string]::IsNullOrWhiteSpace($databaseUrl)) {
+      throw "Database URL for '$Target' is required by the non-empty migration scope."
+    }
     $arguments = @($databaseUrl, '-X', '-v', 'ON_ERROR_STOP=1')
     if ($TuplesOnly) { $arguments += '-qAt' }
     elseif ($Quiet) { $arguments += '-q' }
-    $output = $Sql | & psql @arguments 2>&1
+    $output = @($Sql | & psql @arguments 2>&1)
   }
 
   if ($LASTEXITCODE -ne 0) {
@@ -97,107 +96,25 @@ function Invoke-ImportDatabaseSql {
   return (($output | ForEach-Object { "$_" }) -join "`n").Trim()
 }
 
-function Get-ConfiguredRuntimeValue {
-  param([Parameter(Mandatory = $true)][string]$Name)
-
-  $environmentValue = [System.Environment]::GetEnvironmentVariable($Name)
-  if (-not [string]::IsNullOrWhiteSpace($environmentValue)) {
-    return $environmentValue.Trim()
-  }
-  if (-not $UseDockerCompose) {
-    return ''
-  }
-
-  foreach ($rawLine in Get-Content -LiteralPath $EnvFile) {
-    $line = $rawLine.Trim()
-    if (-not $line -or $line.StartsWith('#') -or -not $line.Contains('=')) {
-      continue
-    }
-    $parts = $line.Split('=', 2)
-    if ($parts[0].Trim() -ne $Name) {
-      continue
-    }
-    $value = $parts[1].Trim()
-    if ($value.StartsWith('"') -and $value.EndsWith('"')) {
-      return $value.Substring(1, $value.Length - 2)
-    }
-    if ($value.StartsWith("'") -and $value.EndsWith("'")) {
-      return $value.Substring(1, $value.Length - 2)
-    }
-    return $value
-  }
-  return ''
-}
-
-function Test-ProductionRuntime {
-  foreach ($name in @('NODE_ENV', 'ENVIRONMENT', 'BTHWANI_ENVIRONMENT', 'BTHWANI_RUNTIME_MODE')) {
-    $value = Get-ConfiguredRuntimeValue -Name $name
-    if (-not [string]::IsNullOrWhiteSpace($value) -and $value.Trim().ToLowerInvariant() -eq 'production') {
-      return $true
-    }
-  }
-  return $false
-}
-
-function Get-IdentityActorCount {
-  $countText = Invoke-ImportDatabaseSql -Target identity -TuplesOnly -Sql 'SELECT count(*)::text FROM identity_actors;'
-  $actorCount = 0
-  if (-not [int]::TryParse($countText.Trim(), [ref]$actorCount) -or $actorCount -lt 0) {
-    throw "Identity actor count is not a valid non-negative integer: '$countText'"
-  }
-  return $actorCount
-}
-
-function Ensure-ComposeIdentitySnapshotReady {
-  if (-not $UseDockerCompose) {
-    return
-  }
-
-  $actorCount = Get-IdentityActorCount
-  if ($actorCount -gt 0) {
-    return
-  }
-
-  if (Test-ProductionRuntime) {
-    throw 'Identity snapshot contains no actors; local Identity bootstrap is forbidden in production.'
-  }
-
-  $bootstrapEnabled = Get-ConfiguredRuntimeValue -Name 'IDENTITY_LOCAL_BOOTSTRAP'
-  if (-not [string]::Equals($bootstrapEnabled, 'true', [System.StringComparison]::OrdinalIgnoreCase)) {
-    throw 'Identity snapshot contains no actors and IDENTITY_LOCAL_BOOTSTRAP is not enabled; refusing to synthesize cutover state.'
-  }
-
-  Write-Host 'Identity snapshot is empty in the governed local runtime; starting identity-api so the Identity owner can converge its canonical actors.'
-  $composeArguments = @(
-    'compose', '--env-file', $EnvFile, '-f', $ComposeFile,
-    'up', '-d', '--build', 'identity-api'
-  )
-  $composeOutput = @(& docker @composeArguments 2>&1)
-  $composeExitCode = $LASTEXITCODE
-  foreach ($line in $composeOutput) {
-    Write-Host ([string]$line)
-  }
-  if ($composeExitCode -ne 0) {
-    throw "Identity local bootstrap owner failed to start (docker compose exit $composeExitCode)."
-  }
-
-  for ($attempt = 1; $attempt -le 40; $attempt++) {
-    Start-Sleep -Seconds 1
-    $actorCount = Get-IdentityActorCount
-    if ($actorCount -gt 0) {
-      Write-Host "Identity local bootstrap convergence: PASS actors=$actorCount"
-      return
-    }
-  }
-
-  throw 'Identity local bootstrap did not materialize any canonical actors; refusing an empty Workforce cutover.'
+function ConvertTo-SqlLiteral {
+  param([AllowNull()][string]$Value)
+  if ($null -eq $Value) { return 'NULL' }
+  return "'$( $Value.Replace("'", "''") )'"
 }
 
 function Test-WorkforceCutoverApplied {
-  $ledgerTable = Invoke-ImportDatabaseSql -Target workforce -TuplesOnly -Sql "SELECT COALESCE(to_regclass('public.schema_migrations')::text, '');"
-  if ([string]::IsNullOrWhiteSpace($ledgerTable)) {
-    return $false
-  }
+  $ledgerExists = Invoke-ImportDatabaseSql -Target workforce -TuplesOnly -Sql @'
+SELECT CASE WHEN EXISTS (
+  SELECT 1
+  FROM pg_catalog.pg_class c
+  JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public'
+    AND c.relname = 'schema_migrations'
+    AND c.relkind IN ('r','p')
+) THEN '1' ELSE '0' END;
+'@
+  if ($ledgerExists.Trim() -ne '1') { return $false }
+
   $applied = Invoke-ImportDatabaseSql -Target workforce -TuplesOnly -Sql @"
 SELECT CASE WHEN EXISTS (
   SELECT 1
@@ -211,73 +128,92 @@ SELECT CASE WHEN EXISTS (
   return $applied.Trim() -eq '1'
 }
 
-function Remove-WorkforceImportTable {
-  Invoke-ImportDatabaseSql -Target workforce -Quiet -Sql 'DROP TABLE IF EXISTS workforce_identity_operator_context_import;'
+function Remove-WorkforceImportState {
+  Invoke-ImportDatabaseSql -Target workforce -Quiet -Sql @'
+DROP TABLE IF EXISTS workforce_identity_operator_context_import;
+DROP TABLE IF EXISTS workforce_identity_operator_context_import_proof;
+'@ | Out-Null
+}
+
+function Get-RequiredWorkforceActorIds {
+  $peopleTableExists = Invoke-ImportDatabaseSql -Target workforce -TuplesOnly -Sql @'
+SELECT CASE WHEN to_regclass('public.workforce_people') IS NULL THEN '0' ELSE '1' END;
+'@
+  if ($peopleTableExists.Trim() -ne '1') { return @() }
+
+  $output = Invoke-ImportDatabaseSql -Target workforce -TuplesOnly -Sql @'
+COPY (
+  SELECT DISTINCT actor_id::text
+  FROM workforce_people
+  WHERE NULLIF(BTRIM(actor_id), '') IS NOT NULL
+  ORDER BY actor_id
+) TO STDOUT;
+'@
+  if ([string]::IsNullOrWhiteSpace($output)) { return @() }
+  return @($output -split "`r?`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
 }
 
 if (Test-WorkforceCutoverApplied) {
-  Remove-WorkforceImportTable
+  Remove-WorkforceImportState
   Write-Host 'Identity operator-context staging: SKIP workforce-020 is already applied; residual staging was removed.'
   return
 }
 
-Ensure-ComposeIdentitySnapshotReady
+$requiredActorIds = @(Get-RequiredWorkforceActorIds)
+$normalized = @()
 
-function ConvertTo-SqlLiteral {
-  param([AllowNull()][string]$Value)
-  if ($null -eq $Value) {
-    return 'NULL'
+if ($requiredActorIds.Count -gt 0) {
+  if (-not $UseDockerCompose -and [string]::IsNullOrWhiteSpace($IdentityDatabaseUrl)) {
+    throw 'IdentityDatabaseUrl is required because Workforce contains actors that must be authoritatively bound.'
   }
-  return "'$( $Value.Replace("'", "''") )'"
-}
 
-$identityQuery = @'
+  $actorLiterals = @($requiredActorIds | ForEach-Object { ConvertTo-SqlLiteral $_ })
+  $identityQuery = @"
 COPY (
   SELECT row_to_json(actor_row)
   FROM (
     SELECT id::text AS actor_id, operator_context_id::text AS operator_context_id
     FROM identity_actors
+    WHERE id = ANY(ARRAY[$($actorLiterals -join ',')]::text[])
     ORDER BY id
   ) actor_row
-) TO STDOUT
-'@
-
-$identityOutput = Invoke-ImportDatabaseSql -Target identity -TuplesOnly -Sql $identityQuery
-
-$records = @(
-  foreach ($line in $identityOutput) {
-    if ([string]::IsNullOrWhiteSpace([string]$line)) {
-      continue
-    }
-    try {
-      $line | ConvertFrom-Json
-    } catch {
-      throw "Identity snapshot returned a non-JSON row."
-    }
+) TO STDOUT;
+"@
+  $identityOutput = Invoke-ImportDatabaseSql -Target identity -TuplesOnly -Sql $identityQuery
+  $records = @()
+  if (-not [string]::IsNullOrWhiteSpace($identityOutput)) {
+    $records = @(
+      $identityOutput -split "`r?`n" | ForEach-Object {
+        $line = [string]$_
+        if ([string]::IsNullOrWhiteSpace($line)) { return }
+        try { $line | ConvertFrom-Json }
+        catch { throw 'Identity snapshot returned a non-JSON row.' }
+      }
+    )
   }
-)
 
-if ($records.Count -eq 0) {
-  throw 'Identity snapshot contains no actors; refusing an empty authoritative cutover.'
-}
+  $normalized = @(
+    $records | ForEach-Object {
+      $actorId = [string]$_.actor_id
+      $contextId = [string]$_.operator_context_id
+      if ([string]::IsNullOrWhiteSpace($actorId) -or [string]::IsNullOrWhiteSpace($contextId)) {
+        throw 'Identity snapshot contains a blank actor or operator context; refusing to guess.'
+      }
+      [pscustomobject]@{ actor_id = $actorId; operator_context_id = $contextId }
+    } | Sort-Object actor_id
+  )
 
-$normalized = @(
-  $records | ForEach-Object {
-    $actorId = [string]$_.actor_id
-    $contextId = [string]$_.operator_context_id
-    if ([string]::IsNullOrWhiteSpace($actorId) -or [string]::IsNullOrWhiteSpace($contextId)) {
-      throw 'Identity snapshot contains a blank actor or operator context; refusing to guess.'
-    }
-    [pscustomobject]@{
-      actor_id = $actorId
-      operator_context_id = $contextId
-    }
-  } | Sort-Object actor_id
-)
+  $duplicateActor = @($normalized | Group-Object actor_id | Where-Object Count -gt 1)
+  if ($duplicateActor.Count -gt 0) {
+    throw 'Identity snapshot contains duplicate actor identifiers.'
+  }
 
-$duplicateActor = @($normalized | Group-Object actor_id | Where-Object Count -gt 1)
-if ($duplicateActor.Count -gt 0) {
-  throw 'Identity snapshot contains duplicate actor identifiers.'
+  $resolvedIds = @($normalized | ForEach-Object { $_.actor_id })
+  $missingIds = @($requiredActorIds | Where-Object { $resolvedIds -notcontains $_ })
+  $unexpectedIds = @($resolvedIds | Where-Object { $requiredActorIds -notcontains $_ })
+  if ($missingIds.Count -gt 0 -or $unexpectedIds.Count -gt 0 -or $normalized.Count -ne $requiredActorIds.Count) {
+    throw "Identity snapshot does not exactly cover Workforce actors: missing=[$($missingIds -join ',')] unexpected=[$($unexpectedIds -join ',')]."
+  }
 }
 
 $canonicalLines = @($normalized | ForEach-Object { "$($_.actor_id):$($_.operator_context_id)" })
@@ -290,14 +226,25 @@ try {
 }
 
 $rowCount = $normalized.Count
+$commitLiteral = ConvertTo-SqlLiteral $SourceCommitSha
 $values = @(
   $normalized | ForEach-Object {
     $actorLiteral = ConvertTo-SqlLiteral $_.actor_id
     $contextLiteral = ConvertTo-SqlLiteral $_.operator_context_id
-    $commitLiteral = ConvertTo-SqlLiteral $SourceCommitSha
     "($actorLiteral, $contextLiteral, $commitLiteral, $rowCount, '$checksum', now())"
   }
 )
+
+$mappingInsert = ''
+if ($values.Count -gt 0) {
+  $mappingInsert = @"
+INSERT INTO workforce_identity_operator_context_import(
+  actor_id, operator_context_id, source_commit_sha, source_row_count,
+  source_checksum_md5, imported_at
+) VALUES
+$($values -join ",`n");
+"@
+}
 
 $workforceSql = @"
 BEGIN;
@@ -309,15 +256,21 @@ CREATE TABLE IF NOT EXISTS workforce_identity_operator_context_import (
   source_checksum_md5 text NOT NULL CHECK (source_checksum_md5 ~ '^[0-9a-f]{32}$'),
   imported_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE TABLE IF NOT EXISTS workforce_identity_operator_context_import_proof (
+  proof_id boolean PRIMARY KEY DEFAULT true CHECK (proof_id),
+  source_commit_sha text NOT NULL CHECK (source_commit_sha ~ '^[0-9a-f]{40}$'),
+  source_row_count integer NOT NULL CHECK (source_row_count >= 0),
+  source_checksum_md5 text NOT NULL CHECK (source_checksum_md5 ~ '^[0-9a-f]{32}$'),
+  imported_at timestamptz NOT NULL DEFAULT now()
+);
 DELETE FROM workforce_identity_operator_context_import;
-INSERT INTO workforce_identity_operator_context_import(
-  actor_id, operator_context_id, source_commit_sha, source_row_count,
-  source_checksum_md5, imported_at
-) VALUES
-$($values -join ",`n");
+DELETE FROM workforce_identity_operator_context_import_proof;
+INSERT INTO workforce_identity_operator_context_import_proof(
+  proof_id, source_commit_sha, source_row_count, source_checksum_md5, imported_at
+) VALUES (true, $commitLiteral, $rowCount, '$checksum', now());
+$mappingInsert
 COMMIT;
 "@
 
 $null = Invoke-ImportDatabaseSql -Target workforce -Sql $workforceSql
-
-Write-Host "Identity operator-context staging: PASS actors=$rowCount checksum=$checksum source=$SourceCommitSha"
+Write-Host "Identity operator-context staging: PASS requiredActors=$rowCount checksum=$checksum source=$SourceCommitSha"
