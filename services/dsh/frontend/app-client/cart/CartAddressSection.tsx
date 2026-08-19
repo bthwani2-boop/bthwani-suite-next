@@ -56,8 +56,8 @@ export function ServiceabilityStatus({ state }: { readonly state: DshServiceabil
         </View>
       );
     case "blocked":
-      const reasonText = state.reason === "routing provider could not estimate ETA" 
-        ? "تعذر تقدير وقت التوصيل في الوقت الحالي" 
+      const reasonText = state.reason === "routing provider could not estimate ETA"
+        ? "تعذر تقدير وقت التوصيل في الوقت الحالي"
         : (state.reason ?? state.code);
       return (
         <View style={styles.policyBox}>
