@@ -78,12 +78,25 @@ foreach ($store in $homeDisc.stores) {
             throw "Catalog product in store $($store.id) is missing canonical id"
         }
 
+        # Go's omitempty omits a nil effectiveImage field from the JSON object.
+        # Read optional response properties through PSObject so StrictMode does
+        # not turn a valid media-neutral catalog response into a false failure.
+        $effectiveImageProperty = $product.PSObject.Properties["effectiveImage"]
+        $effectiveImage = if ($null -ne $effectiveImageProperty) { $effectiveImageProperty.Value } else { $null }
+        $effectiveImageUrl = ""
+        if ($null -ne $effectiveImage) {
+            $effectiveImageUrlProperty = $effectiveImage.PSObject.Properties["url"]
+            if ($null -ne $effectiveImageUrlProperty) {
+                $effectiveImageUrl = [string]$effectiveImageUrlProperty.Value
+            }
+        }
+
         if ($RequireMedia) {
-            if ($null -eq $product.effectiveImage -or [string]::IsNullOrWhiteSpace($product.effectiveImage.url)) {
+            if ($null -eq $effectiveImage -or [string]::IsNullOrWhiteSpace($effectiveImageUrl)) {
                 throw "Product $($product.id) in store $($store.id) missing effectiveImage.url in media-overlay mode"
             }
-            Assert-ImageReachable -Value ([string]$product.effectiveImage.url) -Label "Product $($product.id)"
-        } elseif ($null -ne $product.effectiveImage) {
+            Assert-ImageReachable -Value $effectiveImageUrl -Label "Product $($product.id)"
+        } elseif ($null -ne $effectiveImage) {
             throw "Core catalog proof found a local-media effectiveImage without the media capability: product=$($product.id) store=$($store.id)"
         }
     }

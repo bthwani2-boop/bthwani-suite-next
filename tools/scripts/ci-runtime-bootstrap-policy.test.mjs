@@ -38,6 +38,13 @@ test("unavailable local seed media fails closed instead of reaching DSH smoke", 
   assert.match(runtimeAuthority, /Use media-storage for MinIO\/runtime upload infrastructure/);
 });
 
+test("catalog readback tolerates omitted optional effectiveImage fields", () => {
+  const catalogVerifier = fs.readFileSync(path.join(repoRoot, "tools/scripts/verify-catalog.ps1"), "utf8");
+  assert.match(catalogVerifier, /PSObject\.Properties\["effectiveImage"\]/);
+  assert.match(catalogVerifier, /effectiveImageUrlProperty/);
+  assert.match(catalogVerifier, /Go's omitempty omits a nil effectiveImage field/);
+});
+
 test("profiles without DSH retain the non-mutating up path", () => {
   assert.match(workflow, /if \(\$requiresDshBootstrap\)[\s\S]*?else \{[\s\S]*?Invoke-Phase "runtime:up"/);
   assert.match(workflow, /-Action up -Profiles \$profiles/);
