@@ -12,7 +12,10 @@
 
 ALTER TABLE dsh_stores
   ALTER COLUMN hero_image_url DROP NOT NULL,
-  ALTER COLUMN logo_url DROP NOT NULL;
+  ALTER COLUMN logo_url DROP NOT NULL,
+  ALTER COLUMN storefront_photo_ref DROP NOT NULL,
+  ALTER COLUMN interior_photo_ref DROP NOT NULL,
+  ALTER COLUMN signage_photo_ref DROP NOT NULL;
 
 DROP INDEX IF EXISTS idx_dsh_stores_public_discovery_gate;
 CREATE INDEX idx_dsh_stores_public_discovery_gate
@@ -29,6 +32,7 @@ CREATE INDEX idx_dsh_stores_public_discovery_gate
     AND NULLIF(btrim(operating_hours), '') IS NOT NULL
     AND delivery_readiness = 'ready';
 
+DROP VIEW IF EXISTS dsh_partner_store_readiness_v;
 CREATE OR REPLACE VIEW dsh_partner_store_readiness_v AS
 SELECT
   s.id AS store_id,

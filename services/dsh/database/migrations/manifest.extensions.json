@@ -209,7 +209,7 @@
     {
       "ordinal": 269,
       "file": "dsh-1031_local_seed_media_optional.sql",
-      "sha256": "b7a2d0b9eec5850425505dd2268d7dd9784120ba116e57ad1a753e8750a8fcc6",
+      "sha256": "a82caefb57c9c673392dce3f7194da25e78c898a9ae24a2b990741a05d95c7a6",
       "historicalPrefix": "1031",
       "state": "ACTIVE"
     }
