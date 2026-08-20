@@ -9,7 +9,7 @@ function read(relativePath) {
   return fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 }
 
-const scopeVocabulary = JSON.parse(read("governance/contracts/scope-vocabulary.json"));
+const scopeVocabulary = JSON.parse(read("tools/verification/security-scope-vocabulary.json"));
 const declaredScopes = new Set(
   scopeVocabulary.families.flatMap((family) => family.scopes.map(({ scope }) => scope)),
 );
