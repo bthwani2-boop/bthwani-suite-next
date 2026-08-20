@@ -12,7 +12,7 @@ $FinancialComposeFile = Join-Path $RepoRoot "infra/docker/compose.financial-simu
 $EnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
 $EvidenceDirectory = Join-Path $RepoRoot "artifacts"
 $EvidencePath = Join-Path $EvidenceDirectory "lian-runtime-closure-evidence.json"
-$CoreProfiles = "identity,workforce,dsh,wlt,financial-simulators,mail,media"
+$CoreProfiles = "identity,workforce,dsh,wlt,financial-simulators,mail,media-storage"
 $MigrationRunner = Join-Path $RepoRoot "infra/docker/scripts/schema-migration-runner.ps1"
 New-Item -ItemType Directory -Path $EvidenceDirectory -Force | Out-Null
 
@@ -213,7 +213,7 @@ try {
   Invoke-Compose @("down", "-v", "--remove-orphans") -Financial
   Invoke-Runtime "up" $CoreProfiles
   Invoke-Runtime "seed" $CoreProfiles
-  Invoke-Runtime "bootstrap-dev" "dsh,media" -Force
+  Invoke-Runtime "bootstrap-dev" "dsh,media-storage" -Force
 
   Wait-Database "providers_runtime"
   Wait-Database "platform_control_runtime"

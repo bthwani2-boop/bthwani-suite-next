@@ -90,7 +90,7 @@ try {
     if ($Full) {
       Invoke-Checked -Description "full governed development bootstrap" -Command {
         & pwsh -NoProfile -ExecutionPolicy Bypass -File $RuntimeScript `
-          -Action bootstrap-dev -Profiles "identity,workforce,dsh,wlt,media" -Force
+          -Action bootstrap-dev -Profiles "identity,workforce,dsh,wlt,media-storage" -Force
       }
     } else {
       Invoke-Checked -Description "rebuild current Identity and Workforce services" -Command {
@@ -103,7 +103,7 @@ try {
       if (-not $dshHealthy -or -not $wltHealthy) {
         Invoke-Checked -Description "restore unhealthy DSH/WLT dependencies" -Command {
           & pwsh -NoProfile -ExecutionPolicy Bypass -File $RuntimeScript `
-            -Action up -Profiles "identity,dsh,wlt,media"
+            -Action up -Profiles "identity,dsh,wlt,media-storage"
         }
       }
 

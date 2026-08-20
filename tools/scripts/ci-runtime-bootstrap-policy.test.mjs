@@ -9,6 +9,7 @@ const workflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/ci-runti
 const contextualWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflows/ci.yml"), "utf8");
 const runtimePhase = fs.readFileSync(path.join(repoRoot, "tools/scripts/invoke-runtime-phase.ps1"), "utf8");
 const runtimeDispatch = fs.readFileSync(path.join(repoRoot, "infra/docker/scripts/runtime-dispatch.ps1"), "utf8");
+const runtimeAuthority = fs.readFileSync(path.join(repoRoot, "infra/docker/scripts/runtime.ps1"), "utf8");
 
 test("DSH runtime profiles bootstrap exactly once before catalog readback and smoke", () => {
   const bootstrap = workflow.indexOf('Invoke-Phase "runtime:bootstrap-dev"');
@@ -30,6 +31,11 @@ test("CI runtime profiles never require workstation local seed media", () => {
   assert.match(workflow, /"dsh"\s*\{\s*"dsh,media-storage"\s*\}/g);
   assert.match(workflow, /"full"\s*\{\s*"identity,workforce,dsh,wlt,providers,platform,financial-simulators,mail,media-storage"\s*\}/g);
   assert.doesNotMatch(workflow, /\{\s*"[^"\n]*(?:^|,)media(?:,|$)[^"\n]*"\s*\}/g);
+});
+
+test("unavailable local seed media fails closed instead of reaching DSH smoke", () => {
+  assert.match(runtimeAuthority, /services\/dsh\/database\/seeds\/media\/local-media\.manifest\.json/);
+  assert.match(runtimeAuthority, /Use media-storage for MinIO\/runtime upload infrastructure/);
 });
 
 test("profiles without DSH retain the non-mutating up path", () => {

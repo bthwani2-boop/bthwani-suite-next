@@ -87,7 +87,7 @@ func GetWalletStatusRef(ctx context.Context, db *sql.DB, actorID, actorType stri
 	}
 	const q = `
 		SELECT id, actor_id, actor_type, status, currency, updated_at
-		FROM wlt_wallet_refs
+		FROM wlt_wallets
 		WHERE operator_context_id = $1 AND actor_id = $2 AND actor_type = $3
 		ORDER BY updated_at DESC
 		LIMIT 1`

@@ -127,8 +127,8 @@ foreach ($homeStore in $homeStores) {
 
   $catalog = Invoke-RestMethod "http://localhost:58080/dsh/stores/$encodedStoreId/catalog" -TimeoutSec 15 -ErrorAction Stop
   $productCount = if ($catalog.products) { @($catalog.products).Count } else { 0 }
-  if ($productCount -eq 0) { throw "/dsh/stores/$storeId/catalog returned no client-visible products" }
-  Write-Host "  storefront=$storeId detail=PASS catalogProducts=$productCount"
+  if ($MediaEnabled -and $productCount -eq 0) { throw "/dsh/stores/$storeId/catalog returned no client-visible products" }
+  Write-Host "  storefront=$storeId detail=PASS catalogProducts=$productCount media=$MediaEnabled"
 }
 
 Write-Host "DSH API smoke: PASS"

@@ -222,28 +222,33 @@ if ([math]::Abs(([double]$currentAssortment.unitPrice) - 10.00) -gt 0.000001 -or
   throw "normalized assortment effective price was not persisted"
 }
 
+$expectedPublicationStatus = if ($MediaEnabled) { "client_visible" } else { "approved" }
 $publishAssortmentBody = @{
   unitPrice = [double]$currentAssortment.unitPrice
   currency = [string]$currentAssortment.currency
   available = [bool]$currentAssortment.available
   stockStatus = [string]$currentAssortment.stockStatus
-  publicationStatus = "client_visible"
+  publicationStatus = $expectedPublicationStatus
   expectedVersion = [int]$currentAssortment.version
 } | ConvertTo-Json
 $assortment = Invoke-RestMethod $assortmentUrl -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $publishAssortmentBody -TimeoutSec 10
-if ($assortment.assortment.publicationStatus -ne "client_visible" -or -not $assortment.assortment.available) {
+if ($assortment.assortment.publicationStatus -ne $expectedPublicationStatus -or -not $assortment.assortment.available) {
   throw "normalized assortment publication was not persisted"
 }
 
-$transBody5 = @{
-  nextStatus = "client-visible"
-  note = "smoke publish"
-  expectedVersion = [int]$proposal.proposal.version
-} | ConvertTo-Json
-$proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody5 -TimeoutSec 10
+if ($MediaEnabled) {
+  $transBody5 = @{
+    nextStatus = "client-visible"
+    note = "smoke publish"
+    expectedVersion = [int]$proposal.proposal.version
+  } | ConvertTo-Json
+  $proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody5 -TimeoutSec 10
 
-$publishedCatalog = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-test-grocery/catalog" -TimeoutSec 10
-if ($publishedCatalog.products.Count -lt 1) { throw "approved catalog is not visible to app-client" }
+  $publishedCatalog = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-test-grocery/catalog" -TimeoutSec 10
+  if ($publishedCatalog.products.Count -lt 1) { throw "approved catalog is not visible to app-client" }
+} else {
+  Write-Host "  DSH catalog media-neutral mode: client-visible cutover skipped because no governed product image overlay is active."
+}
 
 $smokeCatalogProductId = $proposal.proposal.adoptedMasterProductId
 @{ masterProductId = [string]$smokeCatalogProductId } |

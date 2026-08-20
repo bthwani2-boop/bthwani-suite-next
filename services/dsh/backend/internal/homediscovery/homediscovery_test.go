@@ -24,6 +24,21 @@ func TestDefaultFilters(t *testing.T) {
 	}
 }
 
+func TestEnsureHomeMarketingContentRequiresHeroMedia(t *testing.T) {
+	withoutMedia := []HomeStore{{ID: "store-without-media", DisplayName: "Media-neutral store"}}
+	banners, promos := ensureHomeMarketingContent(nil, nil, withoutMedia)
+	if len(banners) != 0 || len(promos) != 0 {
+		t.Fatalf("media-neutral stores must not derive marketing content: banners=%d promos=%d", len(banners), len(promos))
+	}
+
+	heroURL := "/dsh/public/media/approved-store-hero/card"
+	withMedia := []HomeStore{{ID: "store-with-media", DisplayName: "Media store", HeroImageURL: &heroURL}}
+	banners, promos = ensureHomeMarketingContent(nil, nil, withMedia)
+	if len(banners) != 1 || len(promos) != 1 {
+		t.Fatalf("store hero media should derive one banner and promo: banners=%d promos=%d", len(banners), len(promos))
+	}
+}
+
 func TestValidateAdminInputByContentKind(t *testing.T) {
 	valid := AdminContentInput{
 		Title: "عرض صالح", ImageURL: "https://example.test/image.jpg",

@@ -13,7 +13,7 @@ import (
 
 const (
 	wltMigrationServiceName = "wlt"
-	wltLatestMigration      = "wlt-944_financial_reference_operator_context.sql"
+	wltLatestMigration      = "wlt-945_wallet_reference_view_operator_context.sql"
 	wltReadinessTimeout     = 2 * time.Second
 )
 

@@ -16,7 +16,7 @@ $RuntimePhase = Join-Path $RepoRoot "tools/scripts/invoke-runtime-phase.ps1"
 $MobileData = Join-Path $RepoRoot "apps/mobile/mobile-dev-data.mjs"
 $MigrationGuard = Join-Path $RepoRoot "tools/guards/migration-manifest-drift-gate.mjs"
 $CatalogVerify = Join-Path $RepoRoot "tools/scripts/verify-catalog.ps1"
-$Profiles = "identity,workforce,dsh,wlt,media"
+$Profiles = "identity,workforce,dsh,wlt,media-storage"
 
 foreach ($required in @($RuntimePhase, $MobileData, $MigrationGuard, $CatalogVerify)) {
   if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {

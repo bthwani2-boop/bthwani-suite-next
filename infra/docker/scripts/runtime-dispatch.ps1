@@ -117,7 +117,9 @@ try {
   if ($hasLocalSeedMedia) { $catalogParameters.MediaEnabled = $true }
   Invoke-DshSmokeScript -Name "DSH catalog smoke" -ScriptPath $DshCatalogSmoke -Parameters $catalogParameters
 
-  Invoke-DshSmokeScript -Name "DSH partner onboarding smoke" -ScriptPath $DshPartnerSmoke -Parameters @{ StatePath = $statePath }
+  $partnerParameters = @{ StatePath = $statePath }
+  if ($hasLocalSeedMedia) { $partnerParameters.MediaEnabled = $true }
+  Invoke-DshSmokeScript -Name "DSH partner onboarding smoke" -ScriptPath $DshPartnerSmoke -Parameters $partnerParameters
 
   $clientParameters = @{ StatePath = $statePath }
   if ($profileList -contains "wlt") { $clientParameters.WltEnabled = $true }

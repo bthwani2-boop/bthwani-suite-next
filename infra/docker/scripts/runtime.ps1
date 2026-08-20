@@ -81,6 +81,12 @@ foreach ($profile in $ProfileList) {
 if ($ProfileList -contains "media" -and $ProfileList -notcontains "dsh") {
   throw "The media profile is the DSH local seed-media overlay and requires the dsh profile."
 }
+if ($ProfileList -contains "media") {
+  $MediaManifest = Join-Path $RepoRoot "services/dsh/database/seeds/media/local-media.manifest.json"
+  if (-not (Test-Path -LiteralPath $MediaManifest -PathType Leaf)) {
+    throw "The media profile requires the unavailable local DSH seed-media overlay. Use media-storage for MinIO/runtime upload infrastructure."
+  }
+}
 if (($ProfileList -contains "dsh" -or $ProfileList -contains "workforce" -or
      $ProfileList -contains "wlt" -or $ProfileList -contains "platform" -or
      $ProfileList -contains "providers") -and $ProfileList -notcontains "identity") {

@@ -3,7 +3,7 @@
 # ─────────────────────────────────────────────────────────────────────────────
 # Starts the local production-like stack using a securely generated env file.
 # Run generate-local-production-env.ps1 first if the env file does not exist.
-# Usage: .\infra\docker\scripts\up-local-production.ps1 [-Profiles dsh,media]
+# Usage: .\infra\docker\scripts\up-local-production.ps1 [-Profiles dsh,media-storage]
 # ─────────────────────────────────────────────────────────────────────────────
 
 param(
@@ -42,10 +42,10 @@ if ($Profiles -ne "") {
   $ProfileList = $Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ }
 }
 
-$AllowedProfiles = @("media", "dsh")
+$AllowedProfiles = @("media-storage", "dsh")
 foreach ($profile in $ProfileList) {
   if ($AllowedProfiles -notcontains $profile) {
-    throw "Unsupported profile: $profile. Allowed: media, dsh"
+    throw "Unsupported profile: $profile. Allowed: media-storage, dsh"
   }
 }
 

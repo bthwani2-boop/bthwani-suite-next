@@ -131,3 +131,30 @@ func TestCaptainCollateralAllocationAndSafeRelease(t *testing.T) {
 		t.Fatal("expected protected minimum release to be blocked")
 	}
 }
+
+func TestCaptainCollateralReadBootstrapsBeforeWalletMaterialization(t *testing.T) {
+	db := collateralTestDB(t)
+	contextID := testsupport.UniqueID("collateral-empty-context")
+	captainID := testsupport.UniqueID("collateral-empty-captain")
+	ctx := shared.WithOperatorContext(context.Background(), contextID)
+	if _, err := UpsertPolicy(ctx, db, upsertPolicyInput{
+		PolicyID: "captain-collateral-local-v1", Enabled: true,
+		MinimumCollateralMinorUnits: 1000, Currency: "YER",
+		ChangeReason: "wallet bootstrap integration test", UpdatedByActorID: "test-operator",
+	}); err != nil {
+		t.Fatalf("upsert policy: %v", err)
+	}
+	readback, err := Read(ctx, db, captainID)
+	if err != nil {
+		t.Fatalf("read collateral before wallet materialization: %v", err)
+	}
+	if readback.Policy == nil || readback.Policy.MinimumCollateralMinorUnits != 1000 {
+		t.Fatalf("expected configured policy, got %+v", readback.Policy)
+	}
+	if readback.Wallet != (WalletSummary{}) {
+		t.Fatalf("expected zero wallet summary before materialization, got %+v", readback.Wallet)
+	}
+	if len(readback.Positions) != 0 {
+		t.Fatalf("expected no collateral positions before materialization, got %d", len(readback.Positions))
+	}
+}

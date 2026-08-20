@@ -446,10 +446,13 @@ func Read(ctx context.Context, db *sql.DB, captainID string) (*ReadResponse, err
 	if err != nil {
 		return nil, err
 	}
+	if policy == nil {
+		return nil, ErrPolicyNotConfigured
+	}
 	var wallet WalletSummary
 	err = db.QueryRowContext(ctx, `SELECT collateral_reserved_balance_minor_units,available_balance_minor_units,pending_balance_minor_units,held_balance_minor_units,COALESCE(cod_reserved_balance_minor_units,0),COALESCE((SELECT SUM(outstanding_amount_minor_units) FROM wlt_provider_debts d WHERE d.operator_context_id=w.operator_context_id AND d.provider_actor_type='captain' AND d.provider_actor_id=w.actor_id AND d.currency=w.currency AND d.status IN ('open','partially_settled')),0),CASE WHEN pending_balance_minor_units=0 AND held_balance_minor_units=0 AND COALESCE(cod_reserved_balance_minor_units,0)=0 AND NOT EXISTS(SELECT 1 FROM wlt_provider_debts d WHERE d.operator_context_id=w.operator_context_id AND d.provider_actor_type='captain' AND d.provider_actor_id=w.actor_id AND d.currency=w.currency AND d.status IN ('open','partially_settled')) THEN GREATEST(collateral_reserved_balance_minor_units-COALESCE((SELECT minimum_collateral_minor_units FROM wlt_captain_collateral_policies cp WHERE cp.operator_context_id=w.operator_context_id AND cp.enabled),0),0) ELSE 0 END FROM wlt_wallets w WHERE w.operator_context_id=$1 AND w.actor_type='captain' AND w.actor_id=$2`, contextID, captainID).Scan(&wallet.CollateralReservedMinorUnits, &wallet.AvailableMinorUnits, &wallet.PendingMinorUnits, &wallet.HeldMinorUnits, &wallet.CodReservedMinorUnits, &wallet.OutstandingDebtMinorUnits, &wallet.ReleasableExcessMinorUnits)
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrPositionNotFound
+		err = nil
 	}
 	if err != nil {
 		return nil, err
@@ -490,8 +493,8 @@ func HandleGet(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, `INVALID_CAPTAIN_ID`, `captainId is invalid`)
 			return
 		}
-		if errors.Is(err, ErrPositionNotFound) {
-			shared.SendError(w, http.StatusNotFound, `NOT_FOUND`, `captain wallet not found`)
+		if errors.Is(err, ErrPolicyNotConfigured) {
+			shared.SendError(w, http.StatusServiceUnavailable, `WLT_COLLATERAL_POLICY_NOT_CONFIGURED`, `captain collateral policy is not configured`)
 			return
 		}
 		if err != nil {
