@@ -1,13 +1,7 @@
 // wlt-115_ledger_immutability.sql enforces J082: wlt_ledger_transactions,
 // wlt_ledger_lines and wlt_ledger_entries reject UPDATE and DELETE outright.
-//
-// Regression origin: representative-wallets.local.sql deleted its ledger rows
-// and re-upserted them with ON CONFLICT DO UPDATE. On an empty database the
-// DELETE matched nothing and the INSERT never conflicted, so a first seed
-// succeeded -- but every re-seed hit the immutability trigger and failed with
-// "Ledger records are immutable", which broke bootstrap-dev idempotency.
-//
-// A seed must post to the ledger, never rewrite it.
+// Any WLT seed that exists must therefore remain append-only; the canonical
+// runtime seed authority may explicitly declare an empty local seed set.
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -67,7 +61,6 @@ test("no WLT seed updates or deletes an immutable ledger table", () => {
         if (new RegExp(`UPDATE\\s+${table}\\b`, "i").test(statement)) {
           offenders.push(`${path.relative(repoRoot, file)}: UPDATE ${table}`);
         }
-        // ON CONFLICT ... DO UPDATE against a ledger table is a disguised UPDATE.
         const insertBlock = new RegExp(
           `INSERT\\s+INTO\\s+${table}\\b[\\s\\S]*?ON\\s+CONFLICT[\\s\\S]*?DO\\s+UPDATE`,
           "i",
@@ -84,25 +77,4 @@ test("no WLT seed updates or deletes an immutable ledger table", () => {
     [],
     `ledger tables are append-only; post a new entry instead of rewriting:\n${offenders.join("\n")}`,
   );
-});
-
-test("the representative wallet fixture dedups on the natural posting key", () => {
-  const fixture = path.join(seedRoot, "local/representative-wallets.local.sql");
-  const sql = fs.readFileSync(fixture, "utf8");
-
-  assert.match(
-    sql,
-    /ON CONFLICT \(\s*operator_context_id,\s*transaction_type,\s*reference_type,\s*reference_id\s*\)[\s\S]*?DO NOTHING/,
-    "re-seeding must be a no-op on the ledger's unique posting key",
-  );
-
-  // Runtime-provisioned actors must yield a new posting rather than a rewrite,
-  // so their entry id and idempotency key both derive from the actor id.
-  for (const token of ["@@CAPTAIN_ACTOR_ID@@", "@@FIELD_ACTOR_ID@@"]) {
-    assert.ok(
-      sql.includes(`'wlt-wallet-captain-' || '${token}'`) ||
-        sql.includes(`'wlt-wallet-field-' || '${token}'`),
-      `${token} ledger reference must derive from the provisioned actor`,
-    );
-  }
 });
