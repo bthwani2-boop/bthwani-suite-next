@@ -14,7 +14,9 @@ import (
 
 const (
 	dshMigrationServiceName = "dsh"
-	dshLatestMigration      = "dsh-1032_store_publication_readiness_contract.sql"
+	// dsh-1000 is the final migration in the canonical extension manifest (ordinal 271).
+	// Its historical prefix predates dsh-1032, but its manifest ordinal is authoritative.
+	dshLatestMigration      = "dsh-1000_order_delivery_geofence_snapshot.sql"
 	dshReadinessTimeout     = 2 * time.Second
 )
 
