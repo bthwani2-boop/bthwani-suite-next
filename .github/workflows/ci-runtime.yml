@@ -69,7 +69,7 @@ jobs:
             "identity-security" { "identity,workforce,dsh,wlt,media-storage" }
             "dsh" { "dsh,media-storage" }
             "workforce" { "identity,workforce" }
-            "wlt-finance" { "identity,dsh,wlt,financial-simulators" }
+            "wlt-finance" { "identity,workforce,dsh,wlt,financial-simulators" }
             "provider" { "wlt,financial-simulators" }
             "full" { "identity,workforce,dsh,wlt,providers,platform,financial-simulators,mail,media-storage" }
             "mobile-config" { "" }

@@ -28,6 +28,14 @@ test("identity-security includes WLT and clean-clone media storage without local
   assert.doesNotMatch(workflow, /"identity-security"\s*\{\s*"[^"]*(?:^|,)media(?:,|$)[^"]*"\s*\}/g);
 });
 
+test("wlt-finance provisions Workforce before DSH seeds consume provider actor placeholders", () => {
+  assert.match(
+    workflow,
+    /"wlt-finance"\s*\{\s*"identity,workforce,dsh,wlt,financial-simulators"\s*\}/g,
+    "WLT finance runtime proof must include Workforce because DSH local seeds bind its generated actors",
+  );
+});
+
 test("CI runtime profiles never require workstation local seed media", () => {
   assert.match(workflow, /"dsh"\s*\{\s*"dsh,media-storage"\s*\}/g);
   assert.match(workflow, /"full"\s*\{\s*"identity,workforce,dsh,wlt,providers,platform,financial-simulators,mail,media-storage"\s*\}/g);
