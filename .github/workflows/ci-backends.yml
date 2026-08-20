@@ -43,6 +43,9 @@ on:
 permissions:
   contents: read
 
+env:
+  CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 jobs:
   plan:
     name: Select affected backends
@@ -106,16 +109,26 @@ jobs:
     timeout-minutes: 60
     env:
       CI_BASE_SHA: ${{ inputs.base_sha }}
-      CI_HEAD_SHA: ${{ inputs.head_sha }}
+      CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       CI_FULL_SCOPE: ${{ inputs.full_scope }}
       CI_VERIFICATION_TIER: ${{ inputs.verification_tier }}
       CI_EXECUTION_PHASE: ${{ inputs.execution_phase }}
       GOWORK: off
     steps:
+      - name: Verify routed candidate identity
+        shell: bash
+        env:
+          ROUTED_HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CANDIDATE_SHA}" || "${ROUTED_HEAD_SHA}" != "${CANDIDATE_SHA}" ]]; then
+            echo "::error::Routed head SHA mismatch: routed=${ROUTED_HEAD_SHA:-<empty>} event=${CANDIDATE_SHA:-<empty>}"
+            exit 1
+          fi
       - name: Checkout immutable source candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ inputs.head_sha }}
+          ref: ${{ env.CANDIDATE_SHA }}
           fetch-depth: 1
           persist-credentials: false
           show-progress: false
@@ -123,7 +136,7 @@ jobs:
         uses: ./.github/actions/fetch-exact-commits
         with:
           base_sha: ${{ inputs.base_sha }}
-          head_sha: ${{ inputs.head_sha }}
+          head_sha: ${{ env.CANDIDATE_SHA }}
           token: ${{ github.token }}
           repository: ${{ github.repository }}
       - name: Set up locked Go runtime
@@ -188,10 +201,20 @@ jobs:
       BTHWANI_OPERATOR_CONTEXT_ID: ${{ matrix.key == 'wlt' && 'ci-wlt' || '' }}
       GOWORK: off
     steps:
+      - name: Verify routed candidate identity
+        shell: bash
+        env:
+          ROUTED_HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CANDIDATE_SHA}" || "${ROUTED_HEAD_SHA}" != "${CANDIDATE_SHA}" ]]; then
+            echo "::error::Routed head SHA mismatch: routed=${ROUTED_HEAD_SHA:-<empty>} event=${CANDIDATE_SHA:-<empty>}"
+            exit 1
+          fi
       - name: Checkout immutable source candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ inputs.head_sha }}
+          ref: ${{ env.CANDIDATE_SHA }}
           fetch-depth: 1
           persist-credentials: false
           show-progress: false
@@ -271,10 +294,20 @@ jobs:
       DSH_REQUIRE_DB_TESTS: "true"
       DSH_TEST_operator_context_id: ci-dsh
     steps:
+      - name: Verify routed candidate identity
+        shell: bash
+        env:
+          ROUTED_HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CANDIDATE_SHA}" || "${ROUTED_HEAD_SHA}" != "${CANDIDATE_SHA}" ]]; then
+            echo "::error::Routed head SHA mismatch: routed=${ROUTED_HEAD_SHA:-<empty>} event=${CANDIDATE_SHA:-<empty>}"
+            exit 1
+          fi
       - name: Checkout immutable source candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ inputs.head_sha }}
+          ref: ${{ env.CANDIDATE_SHA }}
           fetch-depth: 1
           persist-credentials: false
           show-progress: false
