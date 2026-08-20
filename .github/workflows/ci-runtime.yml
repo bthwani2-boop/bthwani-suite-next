@@ -164,6 +164,35 @@ jobs:
             throw
           }
 
+      - name: Capture runtime failure diagnostics
+        if: ${{ failure() }}
+        shell: bash
+        run: |
+          set +e
+          log="runtime-container-diagnostics.log"
+          : >"${log}"
+          {
+            echo "=== docker ps -a ==="
+            docker ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}'
+            for container in \
+              bthwani-identity-api-runtime \
+              bthwani-workforce-api-runtime \
+              bthwani-dsh-api-runtime \
+              bthwani-wlt-api-runtime \
+              bthwani-providers-api-runtime \
+              bthwani-platform-control-api-runtime; do
+              if ! docker inspect "${container}" >/dev/null 2>&1; then
+                continue
+              fi
+              echo
+              echo "=== ${container} state ==="
+              docker inspect "${container}" --format 'status={{.State.Status}} running={{.State.Running}} exitCode={{.State.ExitCode}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}'
+              echo "=== ${container} logs ==="
+              docker logs --tail 250 "${container}" 2>&1
+            done
+          } | tee -a "${log}"
+          exit 0
+
       - name: Stop runtime
         if: ${{ always() }}
         shell: pwsh
@@ -183,7 +212,8 @@ jobs:
           path: |
             runtime-smoke.log
             runtime-proof.json
-          if-no-files-found: error
+            runtime-container-diagnostics.log
+          if-no-files-found: warn
           retention-days: 7
 
   not-required:
