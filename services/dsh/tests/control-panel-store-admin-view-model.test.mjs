@@ -33,6 +33,11 @@ const makeDto = (overrides = {}) => ({
   hasCouponBadge: false,
   pointsMultiplier: 2,
   isPopular: true,
+  partnerReadiness: "ready",
+  catalogApprovalStatus: "approved",
+  marketingVisibility: "visible",
+  publicationDecision: "PUBLISHED",
+  blockingReasons: [],
   ...overrides,
 });
 
@@ -40,6 +45,7 @@ const makeDetailDto = (overrides = {}) => ({
   ...makeDto(),
   createdAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-06-01T00:00:00Z",
+  version: 1,
   ...overrides,
 });
 
@@ -87,6 +93,12 @@ describe("toAdminTableRow", () => {
     assert.deepEqual([...row.deliveryModes], ["delivery", "pickup"]);
   });
 
+  test("publication blockers are copied from the required DTO contract", () => {
+    const row = toAdminTableRow(makeDto({ publicationDecision: "BLOCKED", blockingReasons: ["CATALOG_NOT_APPROVED"] }));
+    assert.equal(row.publicationDecision, "BLOCKED");
+    assert.deepEqual([...row.blockingReasons], ["CATALOG_NOT_APPROVED"]);
+  });
+
   test("no financial fields in row", () => {
     const row = toAdminTableRow(makeDto());
     assert.equal("paymentStatus" in row, false);
@@ -104,6 +116,7 @@ describe("toAdminDetail", () => {
     assert.equal(detail.id, "store-001");
     assert.equal(detail.createdAt, "2026-01-01T00:00:00Z");
     assert.equal(detail.updatedAt, "2026-06-01T00:00:00Z");
+    assert.equal(detail.version, 1);
     assert.equal(detail.isFreeDelivery, true);
     assert.equal(detail.hasProBadge, true);
     assert.equal(detail.isPopular, true);
@@ -145,9 +158,9 @@ describe("toAdminKpiSummary", () => {
 
 describe("applyAdminFilters", () => {
   const rows = [
-    makeDto({ id: "s1", status: "active", isVisible: true, category: "restaurant", displayName: "البيت" }),
-    makeDto({ id: "s2", status: "inactive", isVisible: false, category: "grocery", displayName: "السوق" }),
-    makeDto({ id: "s3", status: "active", isVisible: true, category: "pharmacy", displayName: "الصيدلية" }),
+    makeDto({ id: "s1", status: "published", isVisible: true, category: "restaurant", displayName: "البيت" }),
+    makeDto({ id: "s2", status: "paused", isVisible: false, category: "grocery", displayName: "السوق" }),
+    makeDto({ id: "s3", status: "published", isVisible: true, category: "pharmacy", displayName: "الصيدلية" }),
   ].map(toAdminTableRow);
 
   const noFilters = { status: null, isVisible: null, category: null, search: null };
@@ -158,9 +171,9 @@ describe("applyAdminFilters", () => {
   });
 
   test("status filter narrows results", () => {
-    const result = applyAdminFilters(rows, { ...noFilters, status: "active" });
+    const result = applyAdminFilters(rows, { ...noFilters, status: "published" });
     assert.equal(result.length, 2);
-    assert.ok(result.every((r) => r.status === "active"));
+    assert.ok(result.every((r) => r.status === "published"));
   });
 
   test("isVisible filter narrows results", () => {
@@ -184,7 +197,7 @@ describe("applyAdminFilters", () => {
 
   test("combined filters apply all predicates", () => {
     const result = applyAdminFilters(rows, {
-      status: "active",
+      status: "published",
       isVisible: true,
       category: null,
       search: null,
@@ -193,7 +206,7 @@ describe("applyAdminFilters", () => {
   });
 
   test("pagination summary can be computed from filtered result length", () => {
-    const filtered = applyAdminFilters(rows, { ...noFilters, status: "active" });
+    const filtered = applyAdminFilters(rows, { ...noFilters, status: "published" });
     assert.equal(filtered.length, 2);
   });
 });
