@@ -155,6 +155,60 @@ func TestSubmitPoDEnqueuesWltOutboxEventForCodOrderDBIntegration(t *testing.T) {
 	}
 }
 
+func TestSubmitDeliveryProofOTPDoesNotUseChallengeAsMediaReferenceDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	assignmentID, captainID, orderID, _, _ := seedArrivedCustomerFixture(t, db, "cod")
+	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_wlt_outbox_events WHERE order_id = $1::uuid`, orderID) })
+
+	var clientID string
+	if err := db.QueryRow(`SELECT client_id FROM dsh_orders WHERE id = $1::uuid`, orderID).Scan(&clientID); err != nil {
+		t.Fatalf("failed to resolve OTP fixture client: %v", err)
+	}
+	issued, err := IssueDeliveryPIN(db, orderID, clientID)
+	if err != nil {
+		t.Fatalf("IssueDeliveryPIN failed: %v", err)
+	}
+
+	proof, err := SubmitDeliveryProof(db, assignmentID, captainID, SubmitDeliveryProofInput{
+		Method:                DeliveryProofOTP,
+		PIN:                   issued.PIN,
+		RecipientRelationship: "customer",
+		IdempotencyKey:        "otp-proof-" + orderID,
+	})
+	if err != nil {
+		t.Fatalf("SubmitDeliveryProof OTP failed: %v", err)
+	}
+	if proof.Status != DeliveryProofAccepted {
+		t.Fatalf("expected OTP proof to be accepted, got %q", proof.Status)
+	}
+
+	var deliveryStatus string
+	var podReference sql.NullString
+	if err := db.QueryRow(`
+		SELECT status, pod_reference
+		FROM dsh_deliveries
+		WHERE assignment_id = $1::uuid`, assignmentID).Scan(&deliveryStatus, &podReference); err != nil {
+		t.Fatalf("failed to read completed OTP delivery: %v", err)
+	}
+	if deliveryStatus != "delivered" {
+		t.Fatalf("expected OTP delivery to be delivered, got %q", deliveryStatus)
+	}
+	if podReference.Valid && podReference.String != "" {
+		t.Fatalf("OTP-only delivery must not store a challenge id as pod_reference, got %q", podReference.String)
+	}
+
+	var outboxCount int
+	if err := db.QueryRow(`
+		SELECT COUNT(*)
+		FROM dsh_wlt_outbox_events
+		WHERE order_id = $1::uuid AND event_type = 'delivery_completed'`, orderID).Scan(&outboxCount); err != nil {
+		t.Fatalf("failed to read OTP completion outbox: %v", err)
+	}
+	if outboxCount != 1 {
+		t.Fatalf("expected one OTP completion outbox event, got %d", outboxCount)
+	}
+}
+
 func TestSubmitPoDDoesNotEnqueueOutboxForNonCodOrderDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	assignmentID, captainID, orderID, _, partnerID := seedArrivedCustomerFixture(t, db, "wallet")

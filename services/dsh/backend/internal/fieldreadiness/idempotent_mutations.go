@@ -72,6 +72,9 @@ func CreateGovernedVisitIdempotent(
 	if err != nil {
 		return Visit{}, err
 	}
+	if err := snapshotChecklistPolicyTx(ctx, tx, created.ID, created.StoreID); err != nil {
+		return Visit{}, err
+	}
 	if err := storeMutationReceiptTx(
 		ctx,
 		tx,

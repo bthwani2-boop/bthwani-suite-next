@@ -22,9 +22,10 @@ func (s *protectedStoreServer) handlePushDispatchLocation(w http.ResponseWriter,
 		return
 	}
 	var body struct {
-		Latitude   float64 `json:"latitude"`
-		Longitude  float64 `json:"longitude"`
-		RecordedAt string  `json:"recordedAt"`
+		Latitude       float64  `json:"latitude"`
+		Longitude      float64  `json:"longitude"`
+		RecordedAt     string   `json:"recordedAt"`
+		AccuracyMeters *float64 `json:"accuracyMeters"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return

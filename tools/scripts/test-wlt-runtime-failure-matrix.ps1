@@ -18,14 +18,19 @@ function Invoke-WltResponse {
     [object]$Body = $null,
     [string]$IdempotencyKey = "",
     [string]$Token = $ServiceToken,
+    [string]$RequestCorrelationId = "",
     [switch]$OmitIdempotency
   )
+
+  if ([string]::IsNullOrWhiteSpace($RequestCorrelationId)) {
+    $RequestCorrelationId = $CorrelationId
+  }
 
   $Headers = @{
     Authorization = "Bearer $Token"
     "X-Service-Caller" = "dsh"
     "X-Delegated-Operator-Context" = $OperatorContextId
-    "X-Correlation-ID" = $CorrelationId
+    "X-Correlation-ID" = $RequestCorrelationId
   }
   if (-not $OmitIdempotency) {
     if ([string]::IsNullOrWhiteSpace($IdempotencyKey)) {
@@ -114,7 +119,7 @@ function New-CanonicalSessionBody {
     checkoutIntentId = $CheckoutIntentId
     clientId = $ClientId
     storeId = "store-test-grocery"
-    paymentMethod = "official_wallet"
+    paymentMethod = "wallet"
     amountMinorUnits = [int64]$quoteResponse.Json.quote.totalMinorUnits
     currency = [string]$quoteResponse.Json.quote.currency
     cartSnapshotHash = $cartSnapshotHash
@@ -129,6 +134,29 @@ if ($Health.Json.status -ne "healthy") { throw "WLT health payload is not health
 $CheckoutIntentId = "checkout-runtime-matrix-$Timestamp"
 $ClientId = "client-runtime-matrix-$Timestamp"
 $CreateKey = "wlt-runtime-matrix-create-$Timestamp"
+$TopupCorrelationId = "$CorrelationId-topup"
+$TopupReference = "topup-runtime-matrix-$Timestamp"
+
+$TopupCreate = Invoke-WltResponse -Method POST -Path "/wlt/topup-sessions" -Body ([ordered]@{
+  actorType = "customer"
+  actorId = $ClientId
+  topupReference = $TopupReference
+  amountMinorUnits = 5000
+  currency = "YER"
+}) -IdempotencyKey "wlt-runtime-matrix-topup-create-$Timestamp" -RequestCorrelationId $TopupCorrelationId
+Assert-Status -Response $TopupCreate -Expected @(201) -Name "client wallet topup create"
+$TopupSessionId = "$($TopupCreate.Json.paymentSession.id)"
+if ([string]::IsNullOrWhiteSpace($TopupSessionId)) { throw "topup create returned no paymentSession.id" }
+
+$TopupAuthorized = Invoke-WltResponse -Method POST -Path "/wlt/topup-sessions/$TopupSessionId/authorize" `
+  -IdempotencyKey "wlt-runtime-matrix-topup-authorize-$Timestamp" -RequestCorrelationId $TopupCorrelationId
+Assert-Status -Response $TopupAuthorized -Expected @(200) -Name "client wallet topup authorize"
+
+$TopupCaptured = Invoke-WltResponse -Method POST -Path "/wlt/topup-sessions/$TopupSessionId/capture" `
+  -IdempotencyKey "wlt-runtime-matrix-topup-capture-$Timestamp" -RequestCorrelationId $TopupCorrelationId
+Assert-Status -Response $TopupCaptured -Expected @(200) -Name "client wallet topup capture"
+if ($TopupCaptured.Json.paymentSession.status -ne "captured") { throw "client wallet topup did not reach captured" }
+
 $Body = New-CanonicalSessionBody -CheckoutIntentId $CheckoutIntentId -ClientId $ClientId
 
 $CreateFirst = Invoke-WltResponse -Method POST -Path "/wlt/payment-sessions" -Body $Body -IdempotencyKey $CreateKey
@@ -207,7 +235,7 @@ foreach ($Record in @($Journal.requests)) {
   $CorrelationProperty = $Headers.PSObject.Properties["X-Correlation-ID"]
   if ($null -eq $CorrelationProperty) { $CorrelationProperty = $Headers.PSObject.Properties["x-correlation-id"] }
   $CorrelationHeader = if ($null -ne $CorrelationProperty) { $CorrelationProperty.Value } else { $null }
-  if ($null -eq $CorrelationHeader -or "$CorrelationHeader" -notlike "*$CorrelationId*") { continue }
+  if ($null -eq $CorrelationHeader -or "$CorrelationHeader" -ne $CorrelationId) { continue }
   if ($Request.url -eq "/financial/card/authorize" -and $Request.method -eq "POST") { $AuthorizeCalls++ }
   if ($Request.url -eq "/financial/card/capture" -and $Request.method -eq "POST") { $CaptureCalls++ }
 }

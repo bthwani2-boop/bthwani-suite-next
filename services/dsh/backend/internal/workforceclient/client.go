@@ -52,14 +52,27 @@ func (c *Client) Configured() bool {
 }
 
 func (c *Client) ActivationReadiness(ctx context.Context, actorID string) (GovernedActivationReadiness, error) {
-	return c.getReadiness(ctx, fmt.Sprintf("%s/internal/captains/%s/readiness", c.baseURL, actorID))
+	return c.getReadiness(ctx, "", fmt.Sprintf("%s/internal/captains/%s/readiness", c.baseURL, actorID))
 }
 
 func (c *Client) FieldActivationReadiness(ctx context.Context, actorID string) (GovernedActivationReadiness, error) {
-	return c.getReadiness(ctx, fmt.Sprintf("%s/internal/fields/%s/readiness", c.baseURL, actorID))
+	return c.getReadiness(ctx, "", fmt.Sprintf("%s/internal/fields/%s/readiness", c.baseURL, actorID))
 }
 
-func (c *Client) getReadiness(ctx context.Context, endpoint string) (GovernedActivationReadiness, error) {
+// ActivationReadinessInOperatorContext is the governed service-to-service
+// boundary used by DSH request handlers. Workforce readiness is scoped by the
+// trusted OperatorContext, not by a browser-controlled header or actor id alone.
+func (c *Client) ActivationReadinessInOperatorContext(ctx context.Context, operatorContextID, actorID string) (GovernedActivationReadiness, error) {
+	return c.getReadiness(ctx, operatorContextID, fmt.Sprintf("%s/internal/captains/%s/readiness", c.baseURL, actorID))
+}
+
+// FieldActivationReadinessInOperatorContext is the field counterpart to
+// ActivationReadinessInOperatorContext.
+func (c *Client) FieldActivationReadinessInOperatorContext(ctx context.Context, operatorContextID, actorID string) (GovernedActivationReadiness, error) {
+	return c.getReadiness(ctx, operatorContextID, fmt.Sprintf("%s/internal/fields/%s/readiness", c.baseURL, actorID))
+}
+
+func (c *Client) getReadiness(ctx context.Context, operatorContextID, endpoint string) (GovernedActivationReadiness, error) {
 	if !c.Configured() {
 		return GovernedActivationReadiness{}, fmt.Errorf("workforce client not configured")
 	}
@@ -71,6 +84,9 @@ func (c *Client) getReadiness(ctx context.Context, endpoint string) (GovernedAct
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
+	if strings.TrimSpace(operatorContextID) != "" {
+		req.Header.Set("X-Operator-Context-ID", strings.TrimSpace(operatorContextID))
+	}
 
 	resp, err := c.http.Do(req)
 	if err != nil {

@@ -219,6 +219,13 @@
       "sha256": "9a1f9d7886e5aad92434ae164fcbe07191d23ebb5d845512dde93da2fb2be295",
       "historicalPrefix": "1032",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 271,
+      "file": "dsh-1000_order_delivery_geofence_snapshot.sql",
+      "sha256": "201180fe0191f3a5cec0e78c0fa37b7e74d3fffe68e8ef663d97ac22b40db555",
+      "historicalPrefix": "1000",
+      "state": "ACTIVE"
     }
   ]
 }

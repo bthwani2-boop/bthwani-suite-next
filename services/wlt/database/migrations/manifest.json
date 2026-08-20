@@ -3,7 +3,7 @@
   "service": "wlt",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "wlt-944_financial_reference_operator_context.sql",
+  "cutover": "wlt-946_cod_pending_initial_state.sql",
   "migrations": [
     {"ordinal":1,"file":"wlt-000_financial_references.sql","sha256":"64a1bec63acf81e53521bb683ddc1fb1f46cc1d5cccc61af4aa95696159ce6fe","historicalPrefix":"000","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":2,"file":"wlt-001_payment_sessions.sql","sha256":"aa350f36c803d912b0e51874f9f4c0f93d3ccfb4c56f2db819f65b32c82bb07d","historicalPrefix":"001","state":"HISTORICAL_IMMUTABLE"},
@@ -119,6 +119,7 @@
     {"ordinal":112,"file":"wlt-942_captain_cod_historical_write_fence.sql","sha256":"aa313a53a5d5c91e636ccf7da299cf257c875bd890afbcafec0d0bc226ae7ab3","historicalPrefix":"942","state":"ACTIVE"},
     {"ordinal":113,"file":"wlt-943_captain_cod_ledger_write_fence.sql","sha256":"fb62bcf6359d485121149ba1a65cfa353e555f9a647de8e9361f806dfb7f82a1","historicalPrefix":"943","state":"ACTIVE"},
     {"ordinal":114,"file":"wlt-944_financial_reference_operator_context.sql","sha256":"dda9438a11eb0831108e72590e75260977a25cc86ad6b34a2ce6e3c3819de9f4","historicalPrefix":"944","state":"ACTIVE"},
-    {"ordinal":115,"file":"wlt-945_wallet_reference_view_operator_context.sql","sha256":"b666f9ae8020619f275e01820a3151a51947d2f0aa11246ed132e7be9835342c","historicalPrefix":"945","state":"ACTIVE"}
+    {"ordinal":115,"file":"wlt-945_wallet_reference_view_operator_context.sql","sha256":"b666f9ae8020619f275e01820a3151a51947d2f0aa11246ed132e7be9835342c","historicalPrefix":"945","state":"ACTIVE"},
+    {"ordinal":116,"file":"wlt-946_cod_pending_initial_state.sql","sha256":"517ffc443f5e3ea1bf2e0a5db7cce660c2634c7a60aae6851d73f8808d481797","historicalPrefix":"946","state":"ACTIVE"}
   ]
 }

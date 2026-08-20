@@ -37,6 +37,10 @@ const IDENTITY_WORKFORCE_SERVICE_TOKEN =
   process.env.IDENTITY_WORKFORCE_SERVICE_TOKEN ||
   'LOCAL_ONLY_replace_with_workforce_internal_service_token';
 const LOCAL_OPERATOR_CONTEXT_ID = process.env.BTHWANI_OPERATOR_CONTEXT_ID || 'local-dsh';
+// The local COD journey must have spendable wallet capacity in addition to the
+// protected collateral position. This is a governed development top-up, not a
+// direct wallet write; production balances remain WLT-owned.
+export const LOCAL_CAPTAIN_DISPATCH_CAPACITY_MINOR_UNITS = 5_000_000;
 // The local platform-owner actor is the governed supervisor for both provider
 // kinds. This is a local fixture binding, not a Workforce fallback: Identity
 // must expose the matching workforce.supervise.* roles before any profile can
@@ -386,6 +390,47 @@ async function ensureCaptainFinancialStanding(captainId) {
   );
   if (!verifiedPosition) {
     throw new Error(`captain WLT collateral readback remained incomplete: ${JSON.stringify(verified)}`);
+  }
+
+  await ensureCaptainDispatchCapacity(captainId);
+}
+
+async function ensureCaptainDispatchCapacity(captainId) {
+  const reference = `local-captain-dispatch-capacity-${stableToken(captainId)}`;
+  const createHeaders = wltHeaders('captain-dispatch-capacity-topup-create', `mobile-dev-${reference}`);
+  const created = await requestJson(
+    'wlt:captain-dispatch-capacity:topup-create',
+    `${WLT_API_BASE}/wlt/topup-sessions`,
+    {
+      method: 'POST',
+      headers: createHeaders,
+      body: JSON.stringify({
+        actorType: 'captain',
+        actorId: captainId,
+        topupReference: reference,
+        amountMinorUnits: LOCAL_CAPTAIN_DISPATCH_CAPACITY_MINOR_UNITS,
+        currency: 'YER',
+      }),
+    },
+  );
+  const paymentSessionId = created?.paymentSession?.id;
+  if (!paymentSessionId) {
+    throw new Error('WLT captain dispatch capacity top-up returned no payment session');
+  }
+
+  for (const operation of ['authorize', 'capture']) {
+    await requestJson(
+      `wlt:captain-dispatch-capacity:topup-${operation}`,
+      `${WLT_API_BASE}/wlt/topup-sessions/${encodeURIComponent(paymentSessionId)}/${operation}`,
+      {
+        method: 'POST',
+        headers: wltHeaders(
+          `captain-dispatch-capacity-topup-${operation}`,
+          `mobile-dev-${reference}-${operation}`,
+        ),
+        body: '{}',
+      },
+    );
   }
 }
 

@@ -24,7 +24,7 @@ func (s *protectedStoreServer) ensureActiveField(w http.ResponseWriter, r *http.
 		}
 		return false
 	}
-	readiness, err := s.workforce.FieldActivationReadiness(r.Context(), strings.TrimSpace(actorID))
+	readiness, err := s.workforce.FieldActivationReadinessInOperatorContext(r.Context(), operatorContextID, strings.TrimSpace(actorID))
 	if err != nil {
 		store.SendError(w, http.StatusServiceUnavailable, "WORKFORCE_UNAVAILABLE", "field workforce readiness is unavailable")
 		return false

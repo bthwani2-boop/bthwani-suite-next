@@ -17,11 +17,11 @@ type AggregatedFieldReadiness struct {
 	Missing []string `json:"missing"`
 }
 
-func (s *protectedStoreServer) getFieldAggregatedReadiness(r *http.Request, actorID string) (AggregatedFieldReadiness, error) {
+func (s *protectedStoreServer) getFieldAggregatedReadiness(r *http.Request, operatorContextID, actorID string) (AggregatedFieldReadiness, error) {
 	if s.workforce == nil || !s.workforce.Configured() {
 		return AggregatedFieldReadiness{}, fmt.Errorf("workforce readiness unavailable: client not configured")
 	}
-	workforceReadiness, err := s.workforce.FieldActivationReadiness(r.Context(), strings.TrimSpace(actorID))
+	workforceReadiness, err := s.workforce.FieldActivationReadinessInOperatorContext(r.Context(), operatorContextID, strings.TrimSpace(actorID))
 	if err != nil {
 		return AggregatedFieldReadiness{}, fmt.Errorf("workforce readiness unavailable: %w", err)
 	}
@@ -50,7 +50,7 @@ func (s *protectedStoreServer) handleGetFieldSelfReadiness(w http.ResponseWriter
 	if !ok {
 		return
 	}
-	readiness, err := s.getFieldAggregatedReadiness(r, actor.ID)
+	readiness, err := s.getFieldAggregatedReadiness(r, actor.OperatorContextID, actor.ID)
 	if err != nil {
 		writeFieldOperationalReadinessError(w, err)
 		return

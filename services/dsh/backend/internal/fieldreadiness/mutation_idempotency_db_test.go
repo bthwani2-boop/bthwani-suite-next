@@ -58,6 +58,14 @@ func TestCreateGovernedVisitIdempotentReturnsOriginalVisitAndRejectsConflict(t *
 		t.Fatalf("first create governed visit: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_visits WHERE id = $1`, first.ID) })
+	var requirementCount int
+	if err := db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM dsh_visit_checklist_requirements WHERE visit_id = $1`, first.ID).Scan(&requirementCount); err != nil {
+		t.Fatalf("count idempotent visit checklist requirements: %v", err)
+	}
+	if requirementCount == 0 {
+		t.Fatal("idempotent visit creation must snapshot the governed checklist policy")
+	}
 	second, err := CreateGovernedVisitIdempotent(ctx, db, actor, input, mutation)
 	if err != nil {
 		t.Fatalf("replay create governed visit: %v", err)

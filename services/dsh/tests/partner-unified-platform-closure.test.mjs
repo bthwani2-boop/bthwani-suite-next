@@ -32,6 +32,7 @@ describe("partner unified multi-surface platform closure", () => {
     assert.match(seed, /store-1002'.*prt_partner_local_002|prt_partner_local_002'.*store-1002/s);
     assert.match(seed, /store-1005'.*prt_partner_local_005|prt_partner_local_005'.*store-1005/s);
     assert.match(seed, /partner-local-007'.*store-test-electronics/s);
+    assert.match(seed, /DELETE FROM dsh_store_actor_scopes[\s\S]*actor_id = 'partner-local-001'[\s\S]*operator_context_id = 'local-dsh'[\s\S]*store_id <> 'store-test-grocery'/);
   });
 
   test("enforces OperatorContext/category pagination and governed ownership transfer", () => {

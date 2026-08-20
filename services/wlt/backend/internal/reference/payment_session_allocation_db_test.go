@@ -106,6 +106,9 @@ func TestCreatePaymentSession_DerivesPurposeAndPersistsConservingAllocation(t *t
 	if session.FinancialPurpose != string(payment.PurposeOrderPayment) {
 		t.Fatalf("expected server-derived purpose %q, got %q", payment.PurposeOrderPayment, session.FinancialPurpose)
 	}
+	if session.Status != "cod_pending" {
+		t.Fatalf("expected COD session to enter cod_pending, got %q", session.Status)
+	}
 	if len(session.Allocation) != 2 {
 		t.Fatalf("expected 2 allocation components on create, got %d", len(session.Allocation))
 	}
@@ -171,6 +174,9 @@ func TestCreatePaymentSession_PersistsExactMixedTenderAllocation(t *testing.T) {
 	}
 	if session.TenderAllocation.WalletAmountMinorUnits != 2000 || session.TenderAllocation.CashOnDeliveryAmountMinorUnits != 3000 {
 		t.Fatalf("unexpected mixed tender allocation: %#v", session.TenderAllocation)
+	}
+	if session.Status != "cod_pending" {
+		t.Fatalf("expected mixed COD session to enter cod_pending, got %q", session.Status)
 	}
 }
 

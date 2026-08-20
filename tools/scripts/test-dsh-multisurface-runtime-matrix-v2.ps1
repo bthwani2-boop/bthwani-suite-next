@@ -168,7 +168,11 @@ function Headers([object]$Actor, [string]$Operation, [switch]$ReadOnly) {
 }
 
 function Find-Id([object[]]$Items, [string]$Id) {
-  return @($Items | Where-Object { "$(Get-Value $_ 'id')" -eq $Id })
+  # PowerShell unwraps a one-element function result into a scalar. Keep the
+  # governed readback shape collection-valued so callers can safely inspect
+  # .Count for zero, one, or many matches under StrictMode.
+  $Matches = @($Items | Where-Object { "$(Get-Value $_ 'id')" -eq $Id })
+  return ,$Matches
 }
 
 function Ensure-ClientAddress([object]$Client, [object]$ServicePoint) {
@@ -387,6 +391,7 @@ Require ((Find-Id @((Get-Value $CaptainAssignments.Json 'assignments')) $Assignm
 $BeforeAcceptLocation = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/location" (Headers $Captain "location-before-accept") @{
   latitude = $StorePoint.Latitude
   longitude = $StorePoint.Longitude
+  accuracyMeters = 5
   recordedAt = [DateTimeOffset]::UtcNow.ToString("o")
 }
 Require-Status $BeforeAcceptLocation @(409) "location before accept"
@@ -397,16 +402,23 @@ Require-Status $Accept @(200) "captain accept"
 $InvalidLocation = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/location" (Headers $Captain "location-invalid") @{
   latitude = 95
   longitude = $StorePoint.Longitude
+  accuracyMeters = 5
   recordedAt = [DateTimeOffset]::UtcNow.ToString("o")
 }
 Require-Status $InvalidLocation @(400) "invalid captain latitude"
 
-$OutOfOrder = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" (Headers $Captain "pickup-before-arrival") @{ status = "picked_up" }
+$OutOfOrderHeaders = Headers $Captain "pickup-before-arrival"
+$OutOfOrderHeaders["If-Match-Version"] = "$(Get-Value (Get-Value $Accept.Json 'assignment') 'version')"
+$OutOfOrder = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" $OutOfOrderHeaders @{
+  status = "picked_up"
+  version = [int](Get-Value (Get-Value $Accept.Json 'assignment') 'version')
+}
 Require-Status $OutOfOrder @(409) "pickup before store arrival"
 
 $Location = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/location" (Headers $Captain "location-valid") @{
   latitude = $StorePoint.Latitude
   longitude = $StorePoint.Longitude
+  accuracyMeters = 5
   recordedAt = [DateTimeOffset]::UtcNow.ToString("o")
 }
 Require-Status $Location @(200) "valid captain location"
@@ -414,16 +426,25 @@ Require-Status $Location @(200) "valid captain location"
 $Tracking = Invoke-Api GET "$DshBaseUrl/dsh/client/orders/$OrderId/tracking" (Headers $Client "tracking" -ReadOnly)
 Require-Status $Tracking @(200) "client tracking"
 $TrackingAssignment = Get-Value $Tracking.Json 'assignment'
-Require ([math]::Abs([double](Get-Value $TrackingAssignment 'lastLatitude') - $StorePoint.Latitude) -lt 0.000001) "tracking latitude mismatch"
+Require ("$(Get-Value (Get-Value $Tracking.Json 'tracking') 'locationVisibility')" -eq "hidden_until_pickup") "tracking exposed captain location before pickup"
+Require ($null -eq (Get-Value $TrackingAssignment 'lastLatitude')) "tracking exposed captain latitude before pickup"
 
-$ArrivedStore = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" (Headers $Captain "arrived-store") @{
+$ArrivedStoreHeaders = Headers $Captain "arrived-store"
+$ArrivedStoreHeaders["If-Match-Version"] = "$(Get-Value (Get-Value $Location.Json 'assignment') 'version')"
+$ArrivedStore = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" $ArrivedStoreHeaders @{
   status = "driver_arrived_store"
   latitude = $StorePoint.Latitude
   longitude = $StorePoint.Longitude
+  version = [int](Get-Value (Get-Value $Location.Json 'assignment') 'version')
 }
 Require-Status $ArrivedStore @(200) "captain store arrival"
 
-$PickupWithoutHandoff = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" (Headers $Captain "pickup-without-handoff") @{ status = "picked_up" }
+$PickupWithoutHandoffHeaders = Headers $Captain "pickup-without-handoff"
+$PickupWithoutHandoffHeaders["If-Match-Version"] = "$(Get-Value (Get-Value $ArrivedStore.Json 'assignment') 'version')"
+$PickupWithoutHandoff = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" $PickupWithoutHandoffHeaders @{
+  status = "picked_up"
+  version = [int](Get-Value (Get-Value $ArrivedStore.Json 'assignment') 'version')
+}
 Require-Status $PickupWithoutHandoff @(409) "pickup without partner handoff"
 Require ("$(Get-Value $PickupWithoutHandoff.Json 'code')" -eq "STORE_HANDOFF_REQUIRED") "pickup without handoff did not fail closed"
 
@@ -433,13 +454,27 @@ $HandoffBody = Get-Value $Handoff.Json 'handoff'
 Require ("$(Get-Value $HandoffBody 'assignmentId')" -eq $AssignmentId) "handoff assignment mismatch"
 Require ("$(Get-Value $HandoffBody 'status')" -eq "partner_confirmed") "handoff status mismatch"
 
-$PickedUp = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" (Headers $Captain "picked-up") @{ status = "picked_up" }
+$PickedUpHeaders = Headers $Captain "picked-up"
+$PickedUpHeaders["If-Match-Version"] = "$(Get-Value (Get-Value $ArrivedStore.Json 'assignment') 'version')"
+$PickedUp = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" $PickedUpHeaders @{
+  status = "picked_up"
+  version = [int](Get-Value (Get-Value $ArrivedStore.Json 'assignment') 'version')
+}
 Require-Status $PickedUp @(200) "captain pickup after handoff"
 
-$ArrivedCustomer = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" (Headers $Captain "arrived-customer") @{
+$TrackingAfterPickup = Invoke-Api GET "$DshBaseUrl/dsh/client/orders/$OrderId/tracking" (Headers $Client "tracking-after-pickup" -ReadOnly)
+Require-Status $TrackingAfterPickup @(200) "client tracking after pickup"
+Require ("$(Get-Value (Get-Value $TrackingAfterPickup.Json 'tracking') 'locationVisibility')" -eq "delivery_window_rounded") "tracking did not expose captain location after pickup"
+$TrackingAfterPickupAssignment = Get-Value $TrackingAfterPickup.Json 'assignment'
+Require ([math]::Abs([double](Get-Value $TrackingAfterPickupAssignment 'lastLatitude') - $StorePoint.Latitude) -lt 0.000001) "tracking latitude mismatch after pickup"
+
+$ArrivedCustomerHeaders = Headers $Captain "arrived-customer"
+$ArrivedCustomerHeaders["If-Match-Version"] = "$(Get-Value (Get-Value $PickedUp.Json 'assignment') 'version')"
+$ArrivedCustomer = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assignments/$AssignmentId/status" $ArrivedCustomerHeaders @{
   status = "arrived_customer"
   latitude = $StorePoint.Latitude
   longitude = $StorePoint.Longitude
+  version = [int](Get-Value (Get-Value $PickedUp.Json 'assignment') 'version')
 }
 Require-Status $ArrivedCustomer @(200) "captain customer arrival"
 
@@ -506,8 +541,6 @@ Require ([int]$OutboxCount -eq 1) "delivery did not create exactly one WLT outbo
 
 $MockedVisit = Invoke-Api POST "$DshBaseUrl/dsh/field/stores/store-test-grocery/visits" (Headers $Field "field-mocked") @{
   visitType = "periodic"
-  storeLatitude = $StorePoint.Latitude
-  storeLongitude = $StorePoint.Longitude
   startLocation = @{
     latitude = $StorePoint.Latitude
     longitude = $StorePoint.Longitude
@@ -523,8 +556,6 @@ Require ("$(Get-Value $MockedVisit.Json 'code')" -eq "LOCATION_MOCKED") "mocked 
 
 $ValidVisit = Invoke-Api POST "$DshBaseUrl/dsh/field/stores/store-test-grocery/visits" (Headers $Field "field-visit") @{
   visitType = "periodic"
-  storeLatitude = $StorePoint.Latitude
-  storeLongitude = $StorePoint.Longitude
   startLocation = @{
     latitude = $StorePoint.Latitude
     longitude = $StorePoint.Longitude

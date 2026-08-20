@@ -265,7 +265,7 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 			 cart_snapshot_hash, pricing_quote_id, pricing_quote_hash, pricing_quote_version,
 			 pricing_quote_expires_at, idempotency_key, correlation_id)
 		VALUES (NULLIF($1, ''), NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''),
-			$7, $8, $9, $10, 'reference_created', $11, $12, $13, $14, $15,
+			$7, $8, $9, $10, CASE WHEN $10 IN ('cod', 'mixed') THEN 'cod_pending' ELSE 'reference_created' END, $11, $12, $13, $14, $15,
 			$16, NULLIF($17, ''), NULLIF($18, ''), NULLIF($19, 0), NULLIF($20, '')::timestamptz,
 			$21, $22)
 		RETURNING ` + paymentSessionCols

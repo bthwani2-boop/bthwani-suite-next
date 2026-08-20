@@ -46,6 +46,8 @@ type Client struct {
 	partnerBundlesLoaded bool
 }
 
+const identityResolveAttempts = 3
+
 func NewClient(baseURL string) *Client {
 	return NewClientWithInternalAccess(baseURL, "", "")
 }
@@ -71,32 +73,50 @@ func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, e
 	if !strings.HasPrefix(strings.TrimSpace(authorization), "Bearer ") {
 		return Identity{}, ErrUnauthenticated
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/auth/session", nil)
-	if err != nil {
-		return Identity{}, ErrIdentityUnavailable
+	for attempt := 1; attempt <= identityResolveAttempts; attempt++ {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/auth/session", nil)
+		if err != nil {
+			return Identity{}, ErrIdentityUnavailable
+		}
+		req.Header.Set("Authorization", authorization)
+		resp, err := c.http.Do(req)
+		if err != nil {
+			if attempt < identityResolveAttempts && ctx.Err() == nil {
+				continue
+			}
+			return Identity{}, ErrIdentityUnavailable
+		}
+
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			resp.Body.Close()
+			return Identity{}, ErrUnauthenticated
+		}
+		if resp.StatusCode != http.StatusOK {
+			_, _ = io.Copy(io.Discard, resp.Body)
+			resp.Body.Close()
+			if attempt < identityResolveAttempts && (resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= http.StatusInternalServerError) {
+				continue
+			}
+			return Identity{}, ErrIdentityUnavailable
+		}
+
+		var identity Identity
+		decodeErr := json.NewDecoder(resp.Body).Decode(&identity)
+		resp.Body.Close()
+		if decodeErr != nil {
+			if attempt < identityResolveAttempts && ctx.Err() == nil {
+				continue
+			}
+			return Identity{}, ErrIdentityUnavailable
+		}
+		if identity.AuthState != "authenticated" || strings.TrimSpace(identity.Subject) == "" || strings.TrimSpace(identity.OperatorContextID) == "" {
+			return Identity{}, ErrUnauthenticated
+		}
+		identity.Subject = strings.TrimSpace(identity.Subject)
+		identity.OperatorContextID = strings.TrimSpace(identity.OperatorContextID)
+		return identity, nil
 	}
-	req.Header.Set("Authorization", authorization)
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return Identity{}, ErrIdentityUnavailable
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		return Identity{}, ErrUnauthenticated
-	}
-	if resp.StatusCode != http.StatusOK {
-		return Identity{}, ErrIdentityUnavailable
-	}
-	var identity Identity
-	if err := json.NewDecoder(resp.Body).Decode(&identity); err != nil {
-		return Identity{}, ErrIdentityUnavailable
-	}
-	if identity.AuthState != "authenticated" || strings.TrimSpace(identity.Subject) == "" || strings.TrimSpace(identity.OperatorContextID) == "" {
-		return Identity{}, ErrUnauthenticated
-	}
-	identity.Subject = strings.TrimSpace(identity.Subject)
-	identity.OperatorContextID = strings.TrimSpace(identity.OperatorContextID)
-	return identity, nil
+	return Identity{}, ErrIdentityUnavailable
 }
 
 func (i Identity) HasRole(role string) bool {

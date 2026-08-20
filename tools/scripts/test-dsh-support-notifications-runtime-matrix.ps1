@@ -67,14 +67,15 @@ function Headers([object]$Actor, [string]$Operation, [switch]$ReadOnly) {
 }
 
 function Contains-Id([object[]]$Items, [string]$Id) {
-  return @($Items | Where-Object { "$(Get-Value $_ 'id')" -eq $Id }).Count -eq 1
+  $ExpectedId = $Id.Trim()
+  return @($Items | Where-Object { "$(Get-Value $_ 'id')".Trim() -eq $ExpectedId }).Count -eq 1
 }
 
 function Invoke-DshScalar([string]$Sql) {
   $Result = docker compose --env-file infra/docker/env/runtime.env.example -f infra/docker/compose.runtime.yml exec -T postgres `
     psql -U dsh_runtime -d dsh_runtime -v ON_ERROR_STOP=1 -tAc $Sql
   if ($LASTEXITCODE -ne 0) { throw "DSH SQL failed" }
-  return ($Result -join "").Trim()
+  return ([string]($Result | Select-Object -First 1)).Trim()
 }
 
 function Escape-Sql([string]$Value) { return $Value.Replace("'", "''") }
@@ -111,21 +112,28 @@ Require-Status $PartnerMessages @(404) "partner cross-ticket message list"
 $OperatorTickets = Invoke-Api GET "$DshBaseUrl/dsh/operator/support/tickets" (Headers $Operator "operator-ticket-list" -ReadOnly)
 Require-Status $OperatorTickets @(200) "operator support list"
 Require (Contains-Id @((Get-Value $OperatorTickets.Json 'tickets')) $TicketId) "operator support list missed ticket"
+$OperatorTicket = @((Get-Value $OperatorTickets.Json 'tickets') | Where-Object { "$(Get-Value $_ 'id')" -eq $TicketId } | Select-Object -First 1)
+Require ($OperatorTicket.Count -eq 1) "operator support list returned no current ticket snapshot"
+$OperatorTicketVersion = [int](Get-Value $OperatorTicket[0] 'version')
+$OperatorTicketStatus = "$(Get-Value $OperatorTicket[0] 'status')"
+Require ($OperatorTicketVersion -gt 0 -and -not [string]::IsNullOrWhiteSpace($OperatorTicketStatus)) "operator ticket snapshot omitted optimistic-concurrency state"
 
 $InReview = Invoke-Api PATCH "$DshBaseUrl/dsh/operator/support/tickets/$TicketId" (Headers $Operator "ticket-in-review") @{
+  expectedStatus = $OperatorTicketStatus
+  expectedVersion = $OperatorTicketVersion
   status = "in_review"
   assignedTo = $Operator.Subject
 }
 Require-Status $InReview @(200) "operator ticket assignment"
 Require ("$(Get-Value (Get-Value $InReview.Json 'ticket') 'status')" -eq "in_review") "ticket did not enter in_review"
 
-$Internal = Invoke-Api POST "$DshBaseUrl/dsh/support/tickets/$TicketId/messages" (Headers $Operator "internal-message") @{
+$Internal = Invoke-Api POST "$DshBaseUrl/dsh/operator/support/tickets/$TicketId/messages" (Headers $Operator "internal-message") @{
   body = "internal investigation note $RunId"
   isInternal = $true
 }
 Require-Status $Internal @(201) "operator internal message"
 $InternalId = "$(Get-Value (Get-Value $Internal.Json 'message') 'id')"
-$Public = Invoke-Api POST "$DshBaseUrl/dsh/support/tickets/$TicketId/messages" (Headers $Operator "public-message") @{
+$Public = Invoke-Api POST "$DshBaseUrl/dsh/operator/support/tickets/$TicketId/messages" (Headers $Operator "public-message") @{
   body = "public support response $RunId"
   isInternal = $false
 }
@@ -138,11 +146,15 @@ $ClientMessageItems = @((Get-Value $ClientMessages.Json 'messages'))
 Require (Contains-Id $ClientMessageItems $PublicId) "client did not receive public support message"
 Require (-not (Contains-Id $ClientMessageItems $InternalId)) "internal support message leaked to client"
 
-$OperatorMessages = Invoke-Api GET "$DshBaseUrl/dsh/support/tickets/$TicketId/messages" (Headers $Operator "operator-message-list" -ReadOnly)
+$OperatorMessages = Invoke-Api GET "$DshBaseUrl/dsh/operator/support/tickets/$TicketId/messages" (Headers $Operator "operator-message-list" -ReadOnly)
 Require-Status $OperatorMessages @(200) "operator support messages"
 $OperatorMessageItems = @((Get-Value $OperatorMessages.Json 'messages'))
 Require (Contains-Id $OperatorMessageItems $PublicId) "operator message list missed public message"
 Require (Contains-Id $OperatorMessageItems $InternalId) "operator message list missed internal message"
+
+$InReviewTicket = Get-Value $InReview.Json 'ticket'
+$InReviewVersion = [int](Get-Value $InReviewTicket 'version')
+Require ($InReviewVersion -gt $OperatorTicketVersion) "operator ticket version did not advance after assignment"
 
 $ClientReply = Invoke-Api POST "$DshBaseUrl/dsh/support/tickets/$TicketId/messages" (Headers $Client "client-reply") @{
   body = "client confirmation reply $RunId"
@@ -152,6 +164,8 @@ Require-Status $ClientReply @(201) "client support reply"
 Require (-not [bool](Get-Value (Get-Value $ClientReply.Json 'message') 'isInternal')) "client was able to create an internal message"
 
 $Resolved = Invoke-Api PATCH "$DshBaseUrl/dsh/operator/support/tickets/$TicketId" (Headers $Operator "ticket-resolve") @{
+  expectedStatus = "in_review"
+  expectedVersion = $InReviewVersion
   status = "resolved"
   assignedTo = $Operator.Subject
 }
@@ -180,25 +194,26 @@ Require ([bool](Get-Value (Get-Value $Preference.Json 'preference') 'enabled')) 
 
 $ClientIdSql = Escape-Sql $Client.Subject
 $TicketIdSql = Escape-Sql $TicketId
-$NotificationId = Invoke-DshScalar @"
+$NotificationId = (Invoke-DshScalar @"
 INSERT INTO dsh_notifications (actor_id, actor_type, topic, title, body, action_url)
 VALUES ('$ClientIdSql', 'client', '$Topic', 'Support ticket updated', 'Ticket $TicketIdSql resolved', '/support/tickets/$TicketIdSql')
 RETURNING id::text;
-"@
+"@).Trim()
 Require (-not [string]::IsNullOrWhiteSpace($NotificationId)) "notification insert returned no id"
 
 $ClientNotifications = Invoke-Api GET "$DshBaseUrl/dsh/notifications" (Headers $Client "client-notifications" -ReadOnly)
 Require-Status $ClientNotifications @(200) "client notifications"
-Require (Contains-Id @((Get-Value $ClientNotifications.Json 'notifications')) $NotificationId) "client did not receive inserted notification"
+$ClientNotificationItems = @((Get-Value $ClientNotifications.Json 'notifications'))
+Require (Contains-Id $ClientNotificationItems $NotificationId) "client did not receive inserted notification"
 Require ([int](Get-Value $ClientNotifications.Json 'unreadCount') -ge 1) "client unread count did not increase"
 
 $PartnerNotifications = Invoke-Api GET "$DshBaseUrl/dsh/notifications" (Headers $Partner "partner-notifications" -ReadOnly)
 Require-Status $PartnerNotifications @(200) "partner notifications"
 Require (-not (Contains-Id @((Get-Value $PartnerNotifications.Json 'notifications')) $NotificationId)) "client notification leaked to partner"
-$PartnerMarkRead = Invoke-Api POST "$DshBaseUrl/dsh/notifications/$NotificationId/read" (Headers $Partner "partner-mark-client-notification")
+$PartnerMarkRead = Invoke-Api POST "$DshBaseUrl/dsh/notifications/items/$NotificationId/read" (Headers $Partner "partner-mark-client-notification")
 Require-Status $PartnerMarkRead @(404) "partner marking client notification"
 
-$MarkRead = Invoke-Api POST "$DshBaseUrl/dsh/notifications/$NotificationId/read" (Headers $Client "client-mark-read")
+$MarkRead = Invoke-Api POST "$DshBaseUrl/dsh/notifications/items/$NotificationId/read" (Headers $Client "client-mark-read")
 Require-Status $MarkRead @(200) "client mark notification read"
 Require ([bool](Get-Value (Get-Value $MarkRead.Json 'notification') 'isRead')) "notification did not become read"
 

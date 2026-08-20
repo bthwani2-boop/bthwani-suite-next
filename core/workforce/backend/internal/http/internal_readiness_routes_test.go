@@ -30,6 +30,16 @@ func TestInternalReadinessRoutesRequireDSHServiceIdentity(t *testing.T) {
 			request.Header.Set("X-Service-Caller", "dsh")
 			response = httptest.NewRecorder()
 			mux.ServeHTTP(response, request)
+			if response.Code != http.StatusBadRequest {
+				t.Fatalf("authenticated route must require trusted OperatorContext, got %d", response.Code)
+			}
+
+			request = httptest.NewRequest(http.MethodGet, path, nil)
+			request.Header.Set("Authorization", "Bearer configured-dsh-token")
+			request.Header.Set("X-Service-Caller", "dsh")
+			request.Header.Set("X-Operator-Context-ID", "context-main")
+			response = httptest.NewRecorder()
+			mux.ServeHTTP(response, request)
 			if response.Code != http.StatusServiceUnavailable {
 				t.Fatalf("authenticated route must reach readiness handler, got %d", response.Code)
 			}

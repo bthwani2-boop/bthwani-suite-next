@@ -10,8 +10,22 @@ import (
 	"testing"
 	"time"
 
+	"dsh-api/internal/wlt"
 	_ "github.com/lib/pq"
 )
+
+type captureWltQuoter struct {
+	input wlt.CalculatePricingQuoteRequest
+}
+
+func (c *captureWltQuoter) CalculateQuote(_ context.Context, input wlt.CalculatePricingQuoteRequest) (*wlt.WltPricingQuote, error) {
+	c.input = input
+	return &wlt.WltPricingQuote{
+		Hash:             "cart-readback-quote-hash",
+		ExpiresAt:        func() *time.Time { value := time.Now().Add(time.Minute); return &value }(),
+		CartSnapshotHash: input.CartSnapshotHash,
+	}, nil
+}
 
 func openRequiredDB(t *testing.T) *sql.DB {
 	t.Helper()
@@ -33,6 +47,45 @@ func openRequiredDB(t *testing.T) *sql.DB {
 	return db
 }
 
+func TestFetchDeliveryFeeMinorUnitsUsesCanonicalModeScopedPolicyDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	ctx := context.Background()
+	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+	storeID := "cart-delivery-policy-store-" + suffix
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_stores
+			(id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, delivery_modes)
+		VALUES ($1, $1, 'Cart Delivery Policy Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true,
+			ARRAY['express', 'delivery', 'pickup']::text[])`, storeID); err != nil {
+		t.Fatalf("failed to insert delivery policy test store: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_delivery_pricing WHERE store_id = $1`, storeID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID)
+	})
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_store_delivery_pricing
+			(store_id, fulfillment_mode, pricing_mode, fee_minor_units, currency, pricing_config, status, pricing_source,
+			 created_by_actor_id, approved_by_actor_id, approved_at)
+		VALUES
+			($1, 'bthwani_delivery', 'bthwani_pricing', 95000, 'YER', '{}'::jsonb, 'active', 'platform_default', 'test', 'test', NOW()),
+			($1, 'partner_delivery', 'partner_fixed_pricing', 120000, 'YER', '{}'::jsonb, 'active', 'platform_default', 'test', 'test', NOW()),
+			($1, 'pickup', 'free_delivery', 0, 'YER', '{}'::jsonb, 'active', 'platform_default', 'test', 'test', NOW())`, storeID); err != nil {
+		t.Fatalf("failed to insert delivery policies: %v", err)
+	}
+
+	fee, err := FetchDeliveryFeeMinorUnits(ctx, db, storeID, ModeBthwaniDelivery)
+	if err != nil || fee != 95000 {
+		t.Fatalf("expected bthwani delivery fee 95000 from canonical mode policy, got fee=%d err=%v", fee, err)
+	}
+	fee, err = FetchDeliveryFeeMinorUnits(ctx, db, storeID, ModePartnerDelivery)
+	if err != nil || fee != 120000 {
+		t.Fatalf("expected partner delivery fee 120000 from canonical mode policy, got fee=%d err=%v", fee, err)
+	}
+}
+
 func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
@@ -44,11 +97,12 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	assortmentID := "assortment-" + suffix
 
 	if _, err := db.ExecContext(ctx, `
-		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible)
-		VALUES ($1, $1, 'Cart Price Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true)`, storeID); err != nil {
+		INSERT INTO dsh_stores (id, slug, display_name, status, city_code, service_area_code, serviceability_status, is_visible, delivery_modes)
+		VALUES ($1, $1, 'Cart Price Test Store', 'published', 'SAN', 'SAN-1', 'serviceable', true, ARRAY['express']::text[])`, storeID); err != nil {
 		t.Fatalf("failed to insert test store: %v", err)
 	}
 	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_delivery_pricing WHERE store_id = $1`, storeID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_cart_items WHERE cart_id IN (SELECT id FROM dsh_carts WHERE store_id = $1)`, storeID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_carts WHERE store_id = $1`, storeID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_assortments WHERE store_id = $1`, storeID)
@@ -57,6 +111,13 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_catalog_domains WHERE id = $1`, domainID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id = $1`, storeID)
 	})
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_store_delivery_pricing
+			(store_id, fulfillment_mode, pricing_mode, fee_minor_units, currency, pricing_config, status, pricing_source,
+			 created_by_actor_id, approved_by_actor_id, approved_at)
+		VALUES ($1, 'bthwani_delivery', 'free_delivery', 0, 'USD', '{}'::jsonb, 'active', 'platform_default', 'test', 'test', NOW())`, storeID); err != nil {
+		t.Fatalf("failed to insert cart quote delivery policy: %v", err)
+	}
 
 	if err := db.QueryRowContext(ctx, `
 		INSERT INTO dsh_catalog_domains (id, slug, name_ar)
@@ -116,6 +177,14 @@ func TestComputeCheckoutSnapshotDBIntegration(t *testing.T) {
 	}
 	if snapshot.AmountMinorUnits != 7650 || snapshot.Currency != "USD" || snapshot.SnapshotHash == "" {
 		t.Fatalf("unexpected checkout snapshot: %#v", snapshot)
+	}
+	quoter := &captureWltQuoter{}
+	loadedCart, err := GetCart(ctx, db, quoter, clientID, storeID)
+	if err != nil {
+		t.Fatalf("GetCart quote readback failed: %v", err)
+	}
+	if loadedCart.Quote == nil || loadedCart.Quote.Hash == "" || loadedCart.Quote.ExpiresAt == nil || quoter.input.CartSnapshotHash != snapshot.SnapshotHash {
+		t.Fatalf("expected cart readback to pass canonical snapshot correlation to WLT, quote=%#v input=%#v snapshot=%#v", loadedCart.Quote, quoter.input, snapshot)
 	}
 
 	// Both callers confirm the same cart version. The row lock in UpsertItem

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"dsh-api/internal/checkout"
 	"dsh-api/internal/wlt"
 	"github.com/lib/pq"
 )
@@ -69,25 +70,28 @@ type Cart struct {
 	UpdatedAt time.Time            `json:"updatedAt"`
 }
 
-// FetchDeliveryFeeMinorUnits reads the store's persisted delivery fee from the
-// DSH operational database. This is a DSH concern (logistics configuration),
-// not a financial computation — WLT receives it as a raw input.
-func FetchDeliveryFeeMinorUnits(ctx context.Context, db *sql.DB, storeID string) (int64, error) {
-	if db == nil || strings.TrimSpace(storeID) == "" {
+// FetchDeliveryFeeMinorUnits resolves the active, mode-scoped delivery policy
+// through checkout's canonical resolver. DSH owns the operational input, but
+// the policy table and its store/mode eligibility rules have one authority.
+func FetchDeliveryFeeMinorUnits(ctx context.Context, db *sql.DB, storeID string, fulfillmentMode FulfillmentMode) (int64, error) {
+	if db == nil || strings.TrimSpace(storeID) == "" || strings.TrimSpace(string(fulfillmentMode)) == "" {
 		return 0, fmt.Errorf("%w: delivery fee store scope is missing", ErrFinancialUnavailable)
 	}
-	var fee int64
-	err := db.QueryRowContext(ctx,
-		"SELECT delivery_fee_minor FROM dsh_store_delivery_settings WHERE store_id = $1",
-		storeID,
-	).Scan(&fee)
+
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return 0, fmt.Errorf("%w: read delivery fee: %v", ErrFinancialUnavailable, err)
+		return 0, fmt.Errorf("%w: begin delivery policy read: %v", ErrFinancialUnavailable, err)
 	}
-	if fee < 0 {
-		return 0, fmt.Errorf("%w: delivery fee is negative", ErrFinancialUnavailable)
+	defer tx.Rollback() //nolint:errcheck
+
+	policy, err := checkout.ResolveDeliveryPricingTx(ctx, tx, storeID, string(fulfillmentMode))
+	if err != nil {
+		return 0, fmt.Errorf("%w: resolve delivery policy: %v", ErrFinancialUnavailable, err)
 	}
-	return fee, nil
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("%w: commit delivery policy read: %v", ErrFinancialUnavailable, err)
+	}
+	return policy.FeeMinorUnits, nil
 }
 
 // FetchWltQuote calls WLT's sovereign pricing engine. DSH passes operational
@@ -124,17 +128,26 @@ func FetchWltQuote(ctx context.Context, db *sql.DB, wltClient interface {
 		return nil, fmt.Errorf("%w: WLT pricing client is not configured", ErrFinancialUnavailable)
 	}
 
-	deliveryFee, err := FetchDeliveryFeeMinorUnits(ctx, db, c.StoreID)
+	// Cart readback has no checkout intent yet, but WLT still requires a stable
+	// mutation correlation. Reuse the canonical priced-cart snapshot hash so the
+	// correlation changes exactly when the immutable cart pricing inputs change.
+	snapshot, err := computeCheckoutSnapshotFromItems(c.ID, c.Items)
+	if err != nil {
+		return nil, fmt.Errorf("%w: compute cart pricing snapshot: %v", ErrFinancialUnavailable, err)
+	}
+
+	deliveryFee, err := FetchDeliveryFeeMinorUnits(ctx, db, c.StoreID, c.FulfillmentMode)
 	if err != nil {
 		return nil, err
 	}
 
 	quote, err := wltClient.CalculateQuote(ctx, wlt.CalculatePricingQuoteRequest{
-		ClientID:    c.ClientID,
-		StoreID:     c.StoreID,
-		Currency:    currency,
-		CartVersion: c.Version,
-		Lines:       lines,
+		ClientID:         c.ClientID,
+		StoreID:          c.StoreID,
+		Currency:         currency,
+		CartVersion:      c.Version,
+		CartSnapshotHash: snapshot.SnapshotHash,
+		Lines:            lines,
 		PricingEvidence: wlt.PricingEvidence{
 			Version:               c.Version,
 			DeliveryFeeMinorUnits: deliveryFee,
@@ -144,8 +157,11 @@ func FetchWltQuote(ctx context.Context, db *sql.DB, wltClient interface {
 	if err != nil {
 		return nil, fmt.Errorf("%w: WLT pricing quote: %v", ErrFinancialUnavailable, err)
 	}
-	if quote == nil || strings.TrimSpace(quote.ID) == "" {
-		return nil, fmt.Errorf("%w: WLT returned an empty quote", ErrFinancialUnavailable)
+	// Cart readback uses WLT's non-issued preview quote, which intentionally has
+	// no persisted ID. Its immutable financial proof is the quote hash plus a
+	// live expiry; issued checkout quotes are validated more strictly at checkout.
+	if quote == nil || strings.TrimSpace(quote.Hash) == "" || quote.ExpiresAt == nil || !quote.ExpiresAt.After(time.Now().UTC()) {
+		return nil, fmt.Errorf("%w: WLT returned an empty or expired quote", ErrFinancialUnavailable)
 	}
 	return quote, nil
 }
@@ -807,6 +823,10 @@ func ComputeCheckoutSnapshot(ctx context.Context, db *sql.DB, cartID string) (*C
 	if err != nil {
 		return nil, err
 	}
+	return computeCheckoutSnapshotFromItems(cartID, items)
+}
+
+func computeCheckoutSnapshotFromItems(cartID string, items []CartItem) (*CartSnapshot, error) {
 	if len(items) == 0 {
 		return nil, fmt.Errorf("%w: cart has no items", ErrInvalid)
 	}

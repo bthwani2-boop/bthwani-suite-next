@@ -31,6 +31,9 @@ func TestGetFieldAggregatedReadinessUsesWorkforceActivationBoundary(t *testing.T
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("Workforce readiness caller = %q", r.Header.Get("X-Service-Caller"))
 		}
+		if r.Header.Get("X-Operator-Context-ID") != "context-main" {
+			t.Fatalf("Workforce readiness context = %q", r.Header.Get("X-Operator-Context-ID"))
+		}
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"activationReadiness": map[string]any{
@@ -42,7 +45,7 @@ func TestGetFieldAggregatedReadinessUsesWorkforceActivationBoundary(t *testing.T
 	defer upstream.Close()
 
 	server := &protectedStoreServer{workforce: workforceclient.NewClient(upstream.URL, "service-token")}
-	readiness, err := server.getFieldAggregatedReadiness(httptest.NewRequest(http.MethodGet, "/dsh/field/me/readiness", nil), "field-1")
+	readiness, err := server.getFieldAggregatedReadiness(httptest.NewRequest(http.MethodGet, "/dsh/field/me/readiness", nil), "context-main", "field-1")
 	if err != nil {
 		t.Fatalf("getFieldAggregatedReadiness() error = %v", err)
 	}
@@ -56,7 +59,7 @@ func TestGetFieldAggregatedReadinessUsesWorkforceActivationBoundary(t *testing.T
 
 func TestGetFieldAggregatedReadinessFailsClosedWhenWorkforceUnavailable(t *testing.T) {
 	server := &protectedStoreServer{}
-	_, err := server.getFieldAggregatedReadiness(httptest.NewRequest(http.MethodGet, "/dsh/field/me/readiness", nil), "field-1")
+	_, err := server.getFieldAggregatedReadiness(httptest.NewRequest(http.MethodGet, "/dsh/field/me/readiness", nil), "context-main", "field-1")
 	if err == nil || !strings.Contains(err.Error(), "workforce readiness unavailable") {
 		t.Fatalf("getFieldAggregatedReadiness() error = %v, want unavailable error", err)
 	}
@@ -78,6 +81,9 @@ func TestEnsureActiveFieldAttestsOperatorContextBeforeReadiness(t *testing.T) {
 					return
 				}
 				if r.URL.Path == "/internal/fields/field-1/readiness" {
+					if r.Header.Get("X-Operator-Context-ID") != "context-main" {
+						t.Fatalf("readiness boundary context = %q", r.Header.Get("X-Operator-Context-ID"))
+					}
 					_ = json.NewEncoder(w).Encode(map[string]any{"activationReadiness": map[string]any{"isActive": true}})
 					return
 				}

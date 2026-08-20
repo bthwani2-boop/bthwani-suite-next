@@ -647,9 +647,9 @@ func finalizeAcceptedDeliveryProof(tx *sql.Tx, current *Assignment, proof *Deliv
 	if proofReference == "" {
 		proofReference = proof.SignatureMediaRef
 	}
-	if proofReference == "" {
-		proofReference = proof.VerificationChallengeID
-	}
+	// OTP evidence is already captured canonically by delivery_proof_id and
+	// verification_challenge_id. pod_reference is reserved for captain-owned
+	// delivery-proof media because the database trigger validates that contract.
 	deliveryResult, err := tx.Exec(`
 		UPDATE dsh_deliveries
 		SET status='delivered', pod_method=$1, pod_reference=$2, delivery_proof_id=$3::uuid,
@@ -725,6 +725,7 @@ func deliveryProofSelectSQL() string {
 	return `SELECT p.id::text,p.assignment_id::text,p.order_id::text,p.captain_id,
 		COALESCE(p.verification_challenge_id::text,''),p.method,p.status,
 		COALESCE(p.photo_media_ref,''),COALESCE(p.signature_media_ref,''),
+		p.recipient_relationship,COALESCE(p.recipient_name,''),
 		p.captured_latitude,p.captured_longitude,p.captured_at,p.submitted_at,p.reviewed_at,
 		COALESCE(p.reviewed_by_actor_id,''),COALESCE(p.review_reason,''),p.accepted_at,p.rejected_at,
 		p.idempotency_key,p.request_fingerprint,p.version,p.created_at,p.updated_at

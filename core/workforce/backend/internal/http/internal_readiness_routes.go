@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	"workforce-api/internal/auth"
 	"workforce-api/internal/workforce"
 )
 
@@ -39,12 +40,18 @@ func (s *server) handleInternalProviderReadiness(w http.ResponseWriter, r *http.
 		sendError(w, http.StatusBadRequest, "BAD_REQUEST", "missing actorId")
 		return
 	}
+	operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+	if operatorContextID == "" {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "trusted operator context is required")
+		return
+	}
 	if s.repo == nil {
 		sendError(w, http.StatusServiceUnavailable, "WORKFORCE_UNAVAILABLE", "workforce readiness store is unavailable")
 		return
 	}
+	trustedContext := auth.WithOperatorContext(r.Context(), operatorContextID)
 
-	person, err := s.repo.PersonByActorID(r.Context(), actorID)
+	person, err := s.repo.PersonByActorID(trustedContext, actorID)
 	if err != nil {
 		writeWorkforceError(w, err)
 		return
@@ -54,7 +61,7 @@ func (s *server) handleInternalProviderReadiness(w http.ResponseWriter, r *http.
 		return
 	}
 
-	readiness, err := s.repo.GovernedActivationReadiness(r.Context(), actorID)
+	readiness, err := s.repo.GovernedActivationReadiness(trustedContext, actorID)
 	if err != nil {
 		writeWorkforceError(w, err)
 		return

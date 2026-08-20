@@ -97,6 +97,33 @@ func TestResolveOtherErrorStatus(t *testing.T) {
 	}
 }
 
+func TestResolveRetriesTransientIdentityFailure(t *testing.T) {
+	requestCount := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requestCount++
+		if requestCount == 1 {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(Identity{
+			Subject:           "user-1",
+			OperatorContextID: "operator-a",
+			Roles:             []string{"captain"},
+			AuthState:         "authenticated",
+		})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL)
+	identity, err := client.Resolve(context.Background(), "Bearer token-1")
+	if err != nil {
+		t.Fatalf("expected transient identity failure to be retried, got %v", err)
+	}
+	if identity.Subject != "user-1" || requestCount != 2 {
+		t.Fatalf("unexpected retry result identity=%#v requests=%d", identity, requestCount)
+	}
+}
+
 func TestResolveRejectsUnauthenticatedState(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)

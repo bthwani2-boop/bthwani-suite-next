@@ -104,15 +104,18 @@ func (c *Client) ReserveCodCapacity(
 	}
 
 	if response.StatusCode == http.StatusConflict {
-		// Return error but with the response details if possible?
-		// But in typical WLT client, conflict implies error.
 		var errEnvelope struct {
-			Error struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+			Error   *struct {
 				Code    string `json:"code"`
 				Message string `json:"message"`
-			} `json:"error"`
+			} `json:"error,omitempty"`
 		}
-		if err := json.Unmarshal(body, &errEnvelope); err == nil && errEnvelope.Error.Code != "" {
+		if err := json.Unmarshal(body, &errEnvelope); err == nil && errEnvelope.Code != "" {
+			return nil, false, fmt.Errorf("WLT reserve error: %s: %s", errEnvelope.Code, errEnvelope.Message)
+		}
+		if errEnvelope.Error != nil && errEnvelope.Error.Code != "" {
 			return nil, false, fmt.Errorf("WLT reserve error: %s: %s", errEnvelope.Error.Code, errEnvelope.Error.Message)
 		}
 		return nil, false, fmt.Errorf("WLT reserve conflict")

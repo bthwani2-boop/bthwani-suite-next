@@ -123,8 +123,47 @@ foreach ($Database in $Databases) {
   docker cp $DumpPath "${PostgresContainer}:${ContainerDump}"
   if ($LASTEXITCODE -ne 0) { throw "Could not copy dump for $($Database.name)" }
   try {
-    docker exec @DockerEnv $PostgresContainer pg_restore -U $PostgresUser --role=$($Database.owner) -d $Database.name --no-owner --no-privileges --exit-on-error $ContainerDump
+    # pg_restore must stay connected as the governed PostgreSQL administrator:
+    # PostGIS is a privileged extension and cannot be created after SET ROLE to
+    # the application owner. Ownership is transferred explicitly after restore.
+    docker exec @DockerEnv $PostgresContainer pg_restore -U $PostgresUser -d $Database.name --no-owner --no-privileges --exit-on-error $ContainerDump
     if ($LASTEXITCODE -ne 0) { throw "pg_restore failed for $($Database.name)" }
+    $OwnershipSql = @'
+DO $$
+DECLARE
+  object_row record;
+BEGIN
+  FOR object_row IN
+    SELECT n.nspname AS schema_name, c.relname AS object_name, c.relkind
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relowner = (SELECT oid FROM pg_roles WHERE rolname = '__ADMIN_ROLE__')
+      AND c.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
+  LOOP
+    IF object_row.relkind = 'S' THEN
+      EXECUTE format('ALTER SEQUENCE %I.%I OWNER TO %I', object_row.schema_name, object_row.object_name, '__OWNER_ROLE__');
+    ELSE
+      EXECUTE format('ALTER TABLE %I.%I OWNER TO %I', object_row.schema_name, object_row.object_name, '__OWNER_ROLE__');
+    END IF;
+  END LOOP;
+
+  FOR object_row IN
+    SELECT n.nspname AS schema_name,
+           p.proname AS object_name,
+           pg_get_function_identity_arguments(p.oid) AS arguments
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proowner = (SELECT oid FROM pg_roles WHERE rolname = '__ADMIN_ROLE__')
+  LOOP
+    EXECUTE format('ALTER FUNCTION %I.%I(%s) OWNER TO %I', object_row.schema_name, object_row.object_name, object_row.arguments, '__OWNER_ROLE__');
+  END LOOP;
+END $$;
+'@
+    $OwnershipSql = $OwnershipSql.Replace('__ADMIN_ROLE__', $PostgresUser).Replace('__OWNER_ROLE__', $Database.owner)
+    docker exec @DockerEnv $PostgresContainer psql -U $PostgresUser -d $Database.name -v ON_ERROR_STOP=1 -c $OwnershipSql | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Could not transfer restored object ownership for $($Database.name)" }
   } finally { docker exec $PostgresContainer rm -f $ContainerDump | Out-Null }
 
   $TableCount = docker exec @DockerEnv $PostgresContainer psql -U $PostgresUser -d $Database.name -tAc "SELECT COUNT(*) FROM pg_tables WHERE schemaname = 'public';"

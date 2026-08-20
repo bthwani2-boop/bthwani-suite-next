@@ -35,6 +35,8 @@ func localOperatorDevelopmentPermissions() []Permission {
 		{Service: "dsh", Surface: "control-panel", Action: "operations.special_requests.dispatch", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "marketing.read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "marketing.manage", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "support.read", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "support.manage", Scope: "all"},
 
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.service_zones.read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.service_zones.manage", Scope: "all"},

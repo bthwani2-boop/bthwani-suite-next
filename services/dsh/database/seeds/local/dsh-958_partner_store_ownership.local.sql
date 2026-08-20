@@ -134,12 +134,16 @@ FROM updated;
 SELECT set_config('bthwani.governed_store_partner_transfer', 'off', true);
 
 -- Keep the canonical local partner actor scoped only to the legal entity/store
--- represented by its session. OperatorContext ownership is derived through dsh_stores,
--- matching the canonical scope table and backend authorization queries.
+-- represented by its session. Runtime onboarding smoke creates a fresh transient
+-- store on every run, so this reconciliation must remove every non-canonical local
+-- scope rather than enumerating yesterday's generated store IDs. OperatorContext
+-- ownership is derived through dsh_stores, matching the canonical scope table and
+-- backend authorization queries.
 DELETE FROM dsh_store_actor_scopes
 WHERE actor_id = 'partner-local-001'
   AND actor_role = 'partner'
-  AND store_id IN ('store-1002', 'store-1003', 'store-1005', 'store-1006', 'store-test-electronics');
+  AND operator_context_id = 'local-dsh'
+  AND store_id <> 'store-test-grocery';
 
 INSERT INTO dsh_store_actor_scopes (
     actor_id, actor_role, store_id, scope_type, active
@@ -151,6 +155,19 @@ INSERT INTO dsh_store_actor_scopes (
     ('partner-local-006', 'partner', 'store-1006', 'own', true),
     ('partner-local-007', 'partner', 'store-test-electronics', 'own', true)
 ON CONFLICT (actor_id, actor_role, store_id) DO UPDATE SET
+    scope_type = EXCLUDED.scope_type,
+    active = true;
+
+-- The canonical field journey starts from the same governed grocery store as
+-- the client/partner journey. Grant the provisioned field actor an explicit
+-- store scope; field authorization is object-scoped and must not infer access
+-- from partner ownership or service-area membership.
+INSERT INTO dsh_store_actor_scopes (
+    operator_context_id, actor_id, actor_role, store_id, scope_type, active
+) VALUES
+    ('local-dsh', '@@FIELD_ACTOR_ID@@', 'field', 'store-test-grocery', 'assigned', true)
+ON CONFLICT (actor_id, actor_role, store_id) DO UPDATE SET
+    operator_context_id = EXCLUDED.operator_context_id,
     scope_type = EXCLUDED.scope_type,
     active = true;
 

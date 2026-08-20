@@ -62,6 +62,23 @@ function Invoke-WltJson {
 $health = Invoke-WltJson -Method "GET" -Path "/wlt/health"
 if ($health.status -ne "healthy") { throw "WLT health failed" }
 
+$mainCorrelationId = $CorrelationId
+$CorrelationId = "$mainCorrelationId-topup"
+$topup = Invoke-WltJson -Method "POST" -Path "/wlt/topup-sessions" -OperationIdempotencyKey "$IdempotencyKey-topup-create" -Body @{
+  actorType = "customer"
+  actorId = $ClientId
+  topupReference = "topup-provider-smoke-$timestamp"
+  amountMinorUnits = 5000
+  currency = "YER"
+}
+if ([string]::IsNullOrWhiteSpace([string]$topup.paymentSession.id)) { throw "WLT did not create client wallet topup session" }
+$topupSessionId = $topup.paymentSession.id
+$topupAuthorized = Invoke-WltJson -Method "POST" -Path "/wlt/topup-sessions/$topupSessionId/authorize" -OperationIdempotencyKey "$IdempotencyKey-topup-authorize"
+if ($topupAuthorized.paymentSession.status -ne "authorized") { throw "WLT topup authorize did not return authorized status" }
+$topupCaptured = Invoke-WltJson -Method "POST" -Path "/wlt/topup-sessions/$topupSessionId/capture" -OperationIdempotencyKey "$IdempotencyKey-topup-capture"
+if ($topupCaptured.paymentSession.status -ne "captured") { throw "WLT topup capture did not return captured status" }
+$CorrelationId = $mainCorrelationId
+
 $pricingEvidenceSecret = [string]$env:WLT_DSH_PRICING_EVIDENCE_SECRET
 if ([string]::IsNullOrWhiteSpace($pricingEvidenceSecret)) {
   throw "WLT_DSH_PRICING_EVIDENCE_SECRET is required for the canonical payment-session quote"
@@ -97,7 +114,7 @@ $session = Invoke-WltJson -Method "POST" -Path "/wlt/payment-sessions" -Body @{
   checkoutIntentId = $CheckoutIntentId
   clientId = $ClientId
   storeId = "store-test-grocery"
-  paymentMethod = "official_wallet"
+  paymentMethod = "wallet"
   amountMinorUnits = 1000
   currency = "YER"
   cartSnapshotHash = "provider-smoke-$timestamp"
