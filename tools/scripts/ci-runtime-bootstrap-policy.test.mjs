@@ -10,6 +10,7 @@ const contextualWorkflow = fs.readFileSync(path.join(repoRoot, ".github/workflow
 const runtimePhase = fs.readFileSync(path.join(repoRoot, "tools/scripts/invoke-runtime-phase.ps1"), "utf8");
 const runtimeDispatch = fs.readFileSync(path.join(repoRoot, "infra/docker/scripts/runtime-dispatch.ps1"), "utf8");
 const runtimeAuthority = fs.readFileSync(path.join(repoRoot, "infra/docker/scripts/runtime.ps1"), "utf8");
+const partnerSmoke = fs.readFileSync(path.join(repoRoot, "infra/docker/scripts/runtime/smoke-dsh-partner-onboarding.ps1"), "utf8");
 
 test("DSH runtime profiles bootstrap exactly once before catalog readback and smoke", () => {
   const bootstrap = workflow.indexOf('Invoke-Phase "runtime:bootstrap-dev"');
@@ -43,6 +44,11 @@ test("catalog readback tolerates omitted optional effectiveImage fields", () => 
   assert.match(catalogVerifier, /PSObject\.Properties\["effectiveImage"\]/);
   assert.match(catalogVerifier, /effectiveImageUrlProperty/);
   assert.match(catalogVerifier, /Go's omitempty omits a nil effectiveImage field/);
+});
+
+test("partner onboarding evidence uses a cross-platform temporary directory", () => {
+  assert.match(partnerSmoke, /\$smokeTempPath = \[System\.IO\.Path\]::GetTempPath\(\)/);
+  assert.doesNotMatch(partnerSmoke, /\$env:TEMP/);
 });
 
 test("profiles without DSH retain the non-mutating up path", () => {
