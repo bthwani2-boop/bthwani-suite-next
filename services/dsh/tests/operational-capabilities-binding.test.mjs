@@ -159,10 +159,14 @@ describe("campaigns, tickers, and partner offers", () => {
 });
 
 describe("operational capability verification hygiene", () => {
-  const verifierPath = "../../../.github/workflows/manual-deep-verification.yml";
+  const retiredVerifierPath = "../../../.github/workflows/manual-deep-verification.yml";
+  const contextualCi = source("../../../.github/workflows/ci.yml");
+  const nodeVerification = source("../../../.github/workflows/ci-node-verification.yml");
+  const dshPackage = JSON.parse(source("../package.json"));
+  const wltPackage = JSON.parse(source("../../wlt/package.json"));
 
-  it("uses the generic permanent verifier and removes capability-specific repair workflows", () => {
-    assert.equal(exists(verifierPath), true);
+  it("keeps retired verification workflows removed and routes verification through contextual CI", () => {
+    assert.equal(exists(retiredVerifierPath), false);
     for (const workflow of [
       "025-sambassam-verify.yml",
       "025-boundary-diagnostic.yml",
@@ -172,13 +176,18 @@ describe("operational capability verification hygiene", () => {
     ]) {
       assert.equal(exists(`../../../.github/workflows/${workflow}`), false, `${workflow} must remain removed`);
     }
+    assert.match(contextualCi, /name: BThwani Contextual CI/);
+    assert.match(contextualCi, /uses: \.\/\.github\/workflows\/ci-node-verification\.yml/);
+    assert.match(contextualCi, /BThwani CI result/);
   });
 
-  it("keeps both sovereign boundary gates in the generic read-only verifier", () => {
-    const verifier = source(verifierPath);
-    assert.match(verifier, /guard:fullstack-boundary/);
-    assert.match(verifier, /guard:wlt-financial-boundary/);
-    assert.match(verifier, /Reject tracked source mutation/);
-    assert.match(verifier, /read-only-exact-sha-verification/);
+  it("preserves sovereign boundary assurance on the immutable contextual verification path", () => {
+    assert.match(nodeVerification, /Checkout immutable source candidate/);
+    assert.match(nodeVerification, /persist-credentials: false/);
+    assert.match(nodeVerification, /Verify exact candidate and fetch base/);
+    assert.match(nodeVerification, /run-affected-verification\.mjs typecheck lint test/);
+    assert.match(dshPackage.scripts.lint, /guard:fullstack-boundary/);
+    assert.match(wltPackage.scripts.lint, /guard:fullstack-boundary/);
+    assert.match(wltPackage.scripts.lint, /guard:wlt-financial-boundary/);
   });
 });
