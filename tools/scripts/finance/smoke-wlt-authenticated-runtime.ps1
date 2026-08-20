@@ -214,9 +214,9 @@ if ([string]::IsNullOrWhiteSpace($sessionId)) {
 }
 
 $sessionRead = Invoke-WltRead -Path "/wlt/payment-sessions/$([Uri]::EscapeDataString($sessionId))"
-if ([string]$sessionRead.paymentSession.status -ne "reference_created") {
+if ([string]$sessionRead.paymentSession.status -ne "cod_pending") {
   throw "/wlt/payment-sessions readback wrong status: $($sessionRead.paymentSession.status)"
 }
-Write-Host "  authenticated payment-session readback: reference_created"
+Write-Host "  authenticated payment-session readback: cod_pending"
 
 Write-Host "WLT authenticated runtime smoke: PASS"
