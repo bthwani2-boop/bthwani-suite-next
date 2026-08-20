@@ -34,6 +34,9 @@ SET address_line = CASE id
       WHEN status = 'published' THEN 'ready'
       ELSE 'paused'
     END,
+    partner_readiness = 'ready',
+    catalog_approval_status = 'approved',
+    marketing_visibility = 'visible',
     updated_at = NOW()
 WHERE operator_context_id = 'local-dsh'
   AND id IN (
