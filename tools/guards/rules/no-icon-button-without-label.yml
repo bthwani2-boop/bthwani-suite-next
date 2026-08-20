@@ -9,13 +9,10 @@ rule:
         <Pressable $$$>
           <$ICON />
         </Pressable>
-      constraints:
-        ICON:
-          regex: "Icon|Svg|svg$"
     - pattern: |
         <TouchableOpacity $$$>
           <$ICON />
         </TouchableOpacity>
-      constraints:
-        ICON:
-          regex: "Icon|Svg|svg$"
+constraints:
+  ICON:
+    regex: "Icon|Svg|svg$"

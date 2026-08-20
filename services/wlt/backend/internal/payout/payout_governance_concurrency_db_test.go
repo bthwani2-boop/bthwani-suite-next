@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 
@@ -22,7 +23,7 @@ func TestConcurrentPayoutRequestsCannotOverReserveWallet(t *testing.T) {
 		return
 	}
 	defer db.Close()
-	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", "concurrency-test-key-32-bytes-long")
+	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", strings.Repeat("t", 32))
 
 	operatorContextID, actorID, _ := destinationTestContext(t)
 	t.Cleanup(func() { cleanupDestinationContext(t, operatorContextID, actorID) })
@@ -76,7 +77,7 @@ func TestFullAvailablePayoutIsResolvedInsideLockedWallet(t *testing.T) {
 		return
 	}
 	defer db.Close()
-	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", "concurrency-test-key-32-bytes-long")
+	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", strings.Repeat("t", 32))
 
 	operatorContextID, actorID, _ := destinationTestContext(t)
 	t.Cleanup(func() { cleanupDestinationContext(t, operatorContextID, actorID) })
@@ -111,7 +112,7 @@ func TestApprovedPayoutSnapshotIsImmutable(t *testing.T) {
 		return
 	}
 	defer db.Close()
-	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", "concurrency-test-key-32-bytes-long")
+	t.Setenv("WLT_PAYOUT_ENCRYPTION_KEY", strings.Repeat("t", 32))
 
 	operatorContextID, actorID, _ := destinationTestContext(t)
 	t.Cleanup(func() { cleanupDestinationContext(t, operatorContextID, actorID) })

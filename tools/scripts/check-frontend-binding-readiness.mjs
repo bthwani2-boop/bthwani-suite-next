@@ -95,6 +95,18 @@ function parseAbsoluteHttpUrl(value, label, { loopbackOnly = false } = {}) {
   return url.href.replace(/\/$/, "");
 }
 
+function isSameOriginPath(value) {
+  const clean = String(value ?? "").trim();
+  return (
+    clean.startsWith("/") &&
+    !clean.startsWith("//") &&
+    !clean.includes("\\") &&
+    !clean.includes("?") &&
+    !clean.includes("#") &&
+    !clean.includes("\0")
+  );
+}
+
 function normalizeReadinessPath(profile, value) {
   const routePath = String(value ?? "").trim();
   if (
@@ -135,6 +147,9 @@ function resolveBaseUrl(profile, definition) {
   ];
   for (const [name, value] of candidates) {
     if (!String(value ?? "").trim()) continue;
+    if ((name.startsWith("NEXT_PUBLIC_") || name.startsWith("EXPO_PUBLIC_")) && isSameOriginPath(value)) {
+      continue;
+    }
     return parseAbsoluteHttpUrl(value, name);
   }
 
