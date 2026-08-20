@@ -17,7 +17,7 @@ import type {
   DshClientAddressDraft,
 } from "./client-address.types";
 import { validateClientAddressDraft } from "./client-address.validation";
-import { secureRandomId } from "../_kernel/secure-random";
+import { secureRandomId } from "../_kernel/secure-random.ts";
 
 export type ClientAddressState =
   | { readonly kind: "loading" }

@@ -1,6 +1,6 @@
 import type { DshPartnerActivationStatus } from "./partner-activation.model";
 import type { DshPartner, DshPartnerReadiness } from "./partner.types";
-import { secureRandomId } from "../_kernel/secure-random";
+import { secureRandomId } from "../_kernel/secure-random.ts";
 
 export type DshPartnerAllowedAction =
   | "read_owned_draft"

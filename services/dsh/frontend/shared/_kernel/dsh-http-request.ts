@@ -3,7 +3,7 @@ import {
   getIdentityAccessToken,
   refreshIdentitySession,
 } from "@bthwani/core-identity";
-import { secureCorrelationId } from "./secure-random";
+import { secureCorrelationId } from "./secure-random.ts";
 
 export type DshRequestMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 

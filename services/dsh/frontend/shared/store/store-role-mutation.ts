@@ -1,5 +1,5 @@
 import type { DshMutationAuth } from "../_kernel/dsh-http-request";
-import { secureRandomId } from "../_kernel/secure-random";
+import { secureRandomId } from "../_kernel/secure-random.ts";
 import type { StoreRoleAction } from "./store-discovery.types";
 
 function uniquePart(): string {

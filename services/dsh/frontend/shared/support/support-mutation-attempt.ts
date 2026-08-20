@@ -1,5 +1,5 @@
 import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/native-data-adapters";
-import { secureRandomId } from "../_kernel/secure-random";
+import { secureRandomId } from "../_kernel/secure-random.ts";
 
 export type SupportMutationContext = {
   readonly idempotencyKey: string;

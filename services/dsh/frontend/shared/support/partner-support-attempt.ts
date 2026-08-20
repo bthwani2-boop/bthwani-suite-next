@@ -1,7 +1,7 @@
 import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/native-data-adapters";
 import type { DshCreateTicketInput } from "./support.types";
 import type { PartnerSupportMutationContext } from "./partner-support.api";
-import { secureRandomId } from "../_kernel/secure-random";
+import { secureRandomId } from "../_kernel/secure-random.ts";
 
 const CREATE_ATTEMPT_KEY = "@bthwani/dsh/partner-support/create-attempt/v1";
 const MESSAGE_ATTEMPT_PREFIX = "@bthwani/dsh/partner-support/message-attempt/v1/";

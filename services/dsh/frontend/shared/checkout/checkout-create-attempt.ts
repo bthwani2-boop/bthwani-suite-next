@@ -1,6 +1,6 @@
 import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/native-data-adapters";
 import type { DshCreateIntentInput } from "./checkout.types";
-import { secureRandomId } from "../_kernel/secure-random";
+import { secureRandomId } from "../_kernel/secure-random.ts";
 
 const STORAGE_KEY = "@bthwani/checkout-create-attempt:v1";
 

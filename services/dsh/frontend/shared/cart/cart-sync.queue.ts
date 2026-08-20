@@ -1,4 +1,4 @@
-import { secureRandomId } from "../_kernel/secure-random";
+import { secureRandomId } from "../_kernel/secure-random.ts";
 
 export type CartMutationCommand =
   | { kind: "add"; storeId: string; masterProductId: string; quantity: number; options: string[]; note: string }

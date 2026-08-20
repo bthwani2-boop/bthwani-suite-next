@@ -3,7 +3,7 @@ import type {
   CreateOrderTruthInput,
   OrderTruthMutationContext,
 } from "./order-truth.types";
-import { secureRandomId } from "../_kernel/secure-random";
+import { secureRandomId } from "../_kernel/secure-random.ts";
 
 const STORAGE_KEY = "@bthwani/order-truth-create-attempt:v1";
 

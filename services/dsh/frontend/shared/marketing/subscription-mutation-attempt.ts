@@ -1,7 +1,7 @@
 import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/native-data-adapters";
 
 import type { SubscriptionPaymentMethod } from "./subscription-lifecycle.types";
-import { secureRandomId } from "../_kernel/secure-random";
+import { secureRandomId } from "../_kernel/secure-random.ts";
 
 export type SubscriptionMutationOperation = "purchase" | "activate" | "renew" | "cancel";
 

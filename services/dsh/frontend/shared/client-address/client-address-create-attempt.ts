@@ -1,6 +1,6 @@
 import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/native-data-adapters";
 import type { DshAddressMutationContext, DshClientAddressDraft } from "./client-address.types";
-import { secureRandomId } from "../_kernel/secure-random";
+import { secureRandomId } from "../_kernel/secure-random.ts";
 
 const STORAGE_KEY = "@bthwani/client-address-create-attempt:v1";
 

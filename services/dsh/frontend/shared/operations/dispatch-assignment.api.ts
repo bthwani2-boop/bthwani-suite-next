@@ -1,5 +1,5 @@
 import { createDshHttpClient } from '../_kernel/dsh-http-request';
-import { secureRandomId } from '../_kernel/secure-random';
+import { secureRandomId } from '../_kernel/secure-random.ts';
 import type { DshDispatchAssignment } from '../dispatch/dispatch.types';
 
 const { request } = createDshHttpClient('/api/dsh', 'operator-dispatch-assignment', 15000);
