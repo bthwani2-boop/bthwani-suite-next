@@ -340,7 +340,7 @@ $ClientOrders = Invoke-Api GET "$DshBaseUrl/dsh/client/orders" (Headers $Client 
 Require-Status $ClientOrders @(200) "client orders"
 Require ((Find-Id @((Get-Value $ClientOrders.Json 'orders')) $OrderId).Count -eq 1) "client order list missed created order"
 
-$PartnerWorkboard = Invoke-Api GET "$DshBaseUrl/dsh/partner/order-workboard" (Headers $Partner "partner-workboard" -ReadOnly)
+$PartnerWorkboard = Invoke-Api GET "$DshBaseUrl/dsh/partner/order-workboard?storeId=store-test-grocery" (Headers $Partner "partner-workboard" -ReadOnly)
 Require-Status $PartnerWorkboard @(200) "partner order workboard"
 $PartnerOrder = Find-Id @((Get-Value $PartnerWorkboard.Json 'orders')) $OrderId
 Require ($PartnerOrder.Count -eq 1) "partner workboard did not receive order"
@@ -530,7 +530,7 @@ $FinalClient = Invoke-Api GET "$DshBaseUrl/dsh/client/orders/$OrderId" (Headers 
 Require-Status $FinalClient @(200) "client delivered readback"
 Require ("$(Get-Value (Get-Value $FinalClient.Json 'order') 'status')" -eq "delivered") "client did not read delivered status"
 
-$FinalPartner = Invoke-Api GET "$DshBaseUrl/dsh/partner/order-workboard" (Headers $Partner "partner-final" -ReadOnly)
+$FinalPartner = Invoke-Api GET "$DshBaseUrl/dsh/partner/order-workboard?storeId=store-test-grocery" (Headers $Partner "partner-final" -ReadOnly)
 Require-Status $FinalPartner @(200) "partner delivered readback"
 $PartnerFinalMatch = Find-Id @((Get-Value $FinalPartner.Json 'orders')) $OrderId
 Require ($PartnerFinalMatch.Count -eq 1 -and "$(Get-Value $PartnerFinalMatch[0] 'status')" -eq "delivered") "partner did not read delivered status"

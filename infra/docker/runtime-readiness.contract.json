@@ -49,7 +49,7 @@
       "path": "/platform/readiness",
       "healthyStatuses": ["HEALTHY"]
     },
-    "media": {
+    "media-storage": {
       "name": "MinIO",
       "kind": "http-ok",
       "host": "127.0.0.1",
@@ -60,7 +60,7 @@
   },
   "bundles": {
     "frontendDefault": ["identity", "dsh"],
-    "mobileDevelopment": ["identity", "workforce", "dsh", "wlt", "media"],
+    "mobileDevelopment": ["identity", "workforce", "dsh", "wlt", "media-storage"],
     "controlPanelDevelopment": ["identity", "workforce", "dsh", "wlt", "providers", "platform"]
   }
 }
