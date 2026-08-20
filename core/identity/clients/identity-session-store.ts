@@ -12,6 +12,7 @@ import {
   defaultSessionStorageAdapter,
   type SessionStorageAdapter,
 } from "./identity-session-storage.ts";
+import { secureRandomId } from "./secure-random.ts";
 
 export type IdentitySessionState =
   | { readonly kind: "unconfigured" }
@@ -37,7 +38,7 @@ export type StoredSession = {
 };
 
 const STORAGE_KEY = "bthwani-identity-session";
-const RUNTIME_DEVICE_FINGERPRINT = `bthwani-runtime-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+const runtimeDeviceFingerprint = (): string => `bthwani-runtime-${secureRandomId()}`;
 const INITIAL_BOOTSTRAP_RETRY_MS = 1_000;
 const MAX_BOOTSTRAP_RETRY_MS = 30_000;
 
@@ -45,7 +46,7 @@ let client: IdentityClient | null = null;
 let state: IdentitySessionState = { kind: "unconfigured" };
 let stored: StoredSession | null = null;
 let storageAdapter: SessionStorageAdapter = defaultSessionStorageAdapter();
-let deviceFingerprintProvider: IdentityDeviceFingerprintProvider = () => RUNTIME_DEVICE_FINGERPRINT;
+let deviceFingerprintProvider: IdentityDeviceFingerprintProvider = runtimeDeviceFingerprint;
 let bootstrapInFlight: Promise<void> | null = null;
 let nextBootstrapAttemptAt = 0;
 let bootstrapRetryMs = INITIAL_BOOTSTRAP_RETRY_MS;

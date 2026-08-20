@@ -1,6 +1,7 @@
 import {
   configureIdentityClientDeviceFingerprintProvider,
 } from "./identity-client.ts";
+import { secureRandomId } from "./secure-random.ts";
 import {
   configureIdentityDeviceFingerprintProvider as configureSessionStoreDeviceFingerprintProvider,
   configureIdentitySession as configureSessionStore,
@@ -8,7 +9,10 @@ import {
 } from "./identity-session-store.ts";
 
 const DEFAULT_DEVICE_FINGERPRINT_STORAGE_KEY = "bthwani.identity.device-fingerprint.v1";
-const FALLBACK_RUNTIME_DEVICE_FINGERPRINT = `identity-runtime-device:${globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`}`;
+
+function runtimeDeviceFingerprint(): string {
+  return `identity-runtime-device:${secureRandomId()}`;
+}
 
 let deviceBindingConfigured = false;
 
@@ -17,11 +21,11 @@ function defaultDeviceFingerprint(): string {
     const storage = globalThis.localStorage;
     const existing = storage?.getItem(DEFAULT_DEVICE_FINGERPRINT_STORAGE_KEY)?.trim();
     if (existing) return existing;
-    const created = `browser-device:${globalThis.crypto?.randomUUID?.() ?? FALLBACK_RUNTIME_DEVICE_FINGERPRINT}`;
+    const created = `browser-device:${secureRandomId()}`;
     storage?.setItem(DEFAULT_DEVICE_FINGERPRINT_STORAGE_KEY, created);
     return created;
   } catch {
-    return FALLBACK_RUNTIME_DEVICE_FINGERPRINT;
+    return runtimeDeviceFingerprint();
   }
 }
 
