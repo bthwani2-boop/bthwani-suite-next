@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 
+	"wlt-api/internal/reference"
 	"wlt-api/internal/shared"
 )
 
@@ -26,44 +27,37 @@ func bindCanonicalCommissionFinancialTruth(
 		if input.BeneficiaryActorType != "captain" && input.BeneficiaryActorType != "partner" {
 			return fmt.Errorf("order commissions are supported only for captain or partner beneficiaries")
 		}
-		paymentSessionID := strings.TrimSpace(input.SourceEvidenceID)
-		if paymentSessionID == "" {
+		checkoutIntentID := strings.TrimSpace(input.SourceEvidenceID)
+		if checkoutIntentID == "" {
 			return ErrCommissionSourceFinancialTruthMissing
 		}
-		var amountMinorUnits int64
-		var currency, status string
-		err := db.QueryRow(`
-			SELECT amount_minor_units, currency, status
-			FROM wlt_payment_sessions
-			WHERE operator_context_id=$1 AND id=$2`, operatorContextID, paymentSessionID).Scan(
-			&amountMinorUnits,
-			&currency,
-			&status,
-		)
-		if errors.Is(err, sql.ErrNoRows) {
+		session, err := reference.GetPaymentSessionByCheckoutIntentForOperatorContext(db, operatorContextID, checkoutIntentID)
+		if errors.Is(err, sql.ErrNoRows) || session == nil {
 			return ErrCommissionSourceFinancialTruthMissing
 		}
 		if err != nil {
 			return err
 		}
-		if status != "captured" && status != "cod_finalized" {
-			return fmt.Errorf("payment session status %q is not commission-eligible", status)
+		if session.Status != "captured" && session.Status != "cod_finalized" {
+			return fmt.Errorf("payment session status %q is not commission-eligible", session.Status)
 		}
 
+		amountMinorUnits := session.AmountMinorUnits
+		currency := session.Currency
 		if input.CommissionType == "delivery_fee" {
-			var allocAmount int64
-			errAlloc := db.QueryRow(`
-				SELECT amount_minor_units
-				FROM wlt_payment_allocation_components
-				WHERE operator_context_id=$1 AND payment_session_id=$2 AND component=$3`,
-				operatorContextID, paymentSessionID, input.CommissionType).Scan(&allocAmount)
-			if errAlloc == nil {
-				amountMinorUnits = allocAmount
-			} else if errors.Is(errAlloc, sql.ErrNoRows) {
-				return fmt.Errorf("commission requires payment allocation component %q which is missing", input.CommissionType)
-			} else {
-				return errAlloc
+			var allocationAmount int64
+			foundAllocation := false
+			for _, allocation := range session.Allocation {
+				if string(allocation.Component) == input.CommissionType {
+					allocationAmount = allocation.AmountMinorUnits
+					foundAllocation = true
+					break
+				}
 			}
+			if !foundAllocation {
+				return fmt.Errorf("commission requires payment allocation component %q which is missing", input.CommissionType)
+			}
+			amountMinorUnits = allocationAmount
 		}
 
 		if amountMinorUnits <= 0 || len(strings.TrimSpace(currency)) != 3 {
@@ -71,6 +65,22 @@ func bindCanonicalCommissionFinancialTruth(
 		}
 		input.GrossBasisMinorUnits = amountMinorUnits
 		input.Currency = strings.ToUpper(strings.TrimSpace(currency))
+		canonicalEvidenceHash := hashCommissionParts(
+			"order-payment",
+			input.SourceID,
+			checkoutIntentID,
+			session.ID,
+			session.Status,
+			fmt.Sprint(amountMinorUnits),
+			input.CommissionType,
+		)
+		if suppliedHash := strings.TrimSpace(input.SourceEvidenceHash); suppliedHash != "" && suppliedHash != canonicalEvidenceHash {
+			return fmt.Errorf("source evidence hash does not match WLT payment truth")
+		}
+		input.SourceEvidenceHash = canonicalEvidenceHash
+		if strings.TrimSpace(input.SourceEvidenceStatus) == "" {
+			input.SourceEvidenceStatus = "completed"
+		}
 		return nil
 	case "field_visit":
 		return fmt.Errorf("field visit commissions must use POST /wlt/field-commissions")
