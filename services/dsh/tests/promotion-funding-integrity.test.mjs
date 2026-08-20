@@ -53,7 +53,9 @@ const cases = [
     assert.match(concurrencyProof, /concurrent transitions produced more than one financial event/);
     assert.doesNotMatch(wltJSON, /IdempotencyKey\s+string/);
     assert.doesNotMatch(serviceAuth, /BTHWANI_OPERATOR_CONTEXT_ID/);
-    assert.match(serviceAuth, /r\.Header\.Get\(legacyOperatorContextHeader\)/);
+    assert.match(serviceAuth, /DelegatedOperatorContextHeader = "X-Delegated-Operator-Context"/);
+    assert.match(serviceAuth, /r\.Header\.Get\(DelegatedOperatorContextHeader\)/);
+    assert.doesNotMatch(serviceAuth, /legacyOperatorContextHeader/);
     assert.match(serviceAuth, /WithOperatorContext\(r\.Context\(\), operatorContextID\)/);
     assert.doesNotMatch(serviceAuth, /MISSING_operator_context_id/);
   }],
