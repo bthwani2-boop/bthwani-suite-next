@@ -29,6 +29,7 @@
     {"ordinal":22,"file":"identity-022_refresh_rotation_concurrency.sql","sha256":"f7a08c031697a90d0c4f7dc717652ca59c85f05aaf8e988dfb8054709c00ea03","historicalPrefix":"022","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":23,"file":"identity-023_actor_lifecycle_suspension_audit.sql","sha256":"b8bb72bc084101e35c837240360107bd9252a39cba97e924160bf5f6d9a4c963","historicalPrefix":"023","state":"HISTORICAL_IMMUTABLE"},
     {"ordinal":24,"file":"identity-024_dsh_operational_policy_evaluation_permission.sql","sha256":"36d3463d71367e34b31385913003bac41a4ce5f00f3825a447f0561c900c6fa4","historicalPrefix":"024","state":"HISTORICAL_IMMUTABLE"},
-    {"ordinal":25,"file":"identity-025_canonical_access_projection.sql","sha256":"0f01513ea612b8f78aecdecb3e7f6b8f581040431c1d386d0c28194e94b65ca3","historicalPrefix":"025","state":"ACTIVE"}
+    {"ordinal":25,"file":"identity-025_canonical_access_projection.sql","sha256":"0f01513ea612b8f78aecdecb3e7f6b8f581040431c1d386d0c28194e94b65ca3","historicalPrefix":"025","state":"HISTORICAL_IMMUTABLE"},
+    {"ordinal":26,"file":"identity-026_canonical_access_projection_permission_capture_repair.sql","sha256":"61f6cd3c272a89f132d375af6f4b3983f0c78de4f6a3a8ba6992c12f3e27db59","historicalPrefix":"026","state":"ACTIVE"}
   ]
 }
