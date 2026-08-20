@@ -108,7 +108,7 @@ function validateSharedRuntimeReadinessContract() {
     '"frontendDefault"',
     "healthyStatuses.includes",
     "BTHWANI_FRONTEND_READINESS_BUNDLE",
-    "normalizeAbsoluteHttpUrl",
+    "parseAbsoluteHttpUrl",
     'process.argv.indexOf("--bundle")',
   ]) requireMarker("check-frontend-binding-readiness.mjs", frontendText, marker);
 
