@@ -34,36 +34,6 @@ SET address_line = CASE id
       WHEN status = 'published' THEN 'ready'
       ELSE 'paused'
     END,
-    storefront_photo_ref = CASE id
-      WHEN 'store-test-grocery' THEN '/dsh-media/storefronts/store-test-grocery-hero.png'
-      WHEN 'store-1002' THEN '/dsh-media/storefronts/store-1002-hero.png'
-      WHEN 'store-1003' THEN '/dsh-media/storefronts/store-1003-hero.png'
-      WHEN 'store-1004' THEN '/dsh-media/storefronts/store-1004-hero.png'
-      WHEN 'store-1005' THEN '/dsh-media/storefronts/store-1005-hero.png'
-      WHEN 'store-1006' THEN '/dsh-media/storefronts/store-1006-hero.png'
-      WHEN 'store-test-electronics' THEN '/dsh-media/storefronts/store-test-electronics-hero.png'
-      ELSE storefront_photo_ref
-    END,
-    interior_photo_ref = CASE id
-      WHEN 'store-test-grocery' THEN '/dsh-media/storefronts/store-test-grocery-hero.png'
-      WHEN 'store-1002' THEN '/dsh-media/storefronts/store-1002-hero.png'
-      WHEN 'store-1003' THEN '/dsh-media/storefronts/store-1003-hero.png'
-      WHEN 'store-1004' THEN '/dsh-media/storefronts/store-1004-hero.png'
-      WHEN 'store-1005' THEN '/dsh-media/storefronts/store-1005-hero.png'
-      WHEN 'store-1006' THEN '/dsh-media/storefronts/store-1006-hero.png'
-      WHEN 'store-test-electronics' THEN '/dsh-media/storefronts/store-test-electronics-hero.png'
-      ELSE interior_photo_ref
-    END,
-    signage_photo_ref = CASE id
-      WHEN 'store-test-grocery' THEN '/dsh-media/logos/store-test-grocery-logo.png'
-      WHEN 'store-1002' THEN '/dsh-media/logos/store-1002-logo.png'
-      WHEN 'store-1003' THEN '/dsh-media/logos/store-1003-logo.png'
-      WHEN 'store-1004' THEN '/dsh-media/logos/store-1004-logo.png'
-      WHEN 'store-1005' THEN '/dsh-media/logos/store-1005-logo.png'
-      WHEN 'store-1006' THEN '/dsh-media/logos/store-1006-logo.png'
-      WHEN 'store-test-electronics' THEN '/dsh-media/logos/store-test-electronics-logo.png'
-      ELSE signage_photo_ref
-    END,
     updated_at = NOW()
 WHERE operator_context_id = 'local-dsh'
   AND id IN (
@@ -95,21 +65,6 @@ SET address_line = CASE
       ELSE operating_hours
     END,
     delivery_readiness = 'ready',
-    storefront_photo_ref = CASE
-      WHEN btrim(COALESCE(storefront_photo_ref, '')) = ''
-        THEN COALESCE(NULLIF(hero_image_url, ''), '/dsh-media/storefronts/' || id || '-hero.png')
-      ELSE storefront_photo_ref
-    END,
-    interior_photo_ref = CASE
-      WHEN btrim(COALESCE(interior_photo_ref, '')) = ''
-        THEN COALESCE(NULLIF(hero_image_url, ''), '/dsh-media/storefronts/' || id || '-hero.png')
-      ELSE interior_photo_ref
-    END,
-    signage_photo_ref = CASE
-      WHEN btrim(COALESCE(signage_photo_ref, '')) = ''
-        THEN COALESCE(NULLIF(logo_url, ''), '/dsh-media/logos/' || id || '-logo.png')
-      ELSE signage_photo_ref
-    END,
     updated_at = NOW()
 WHERE operator_context_id = 'local-dsh'
   AND status = 'published'
