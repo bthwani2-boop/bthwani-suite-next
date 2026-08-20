@@ -209,8 +209,15 @@
     {
       "ordinal": 269,
       "file": "dsh-1031_local_seed_media_optional.sql",
-      "sha256": "1dd172a08d2f61674b6e11d429d5de998856b6ad9b23fefc8537505240bb2205",
+      "sha256": "a82caefb57c9c673392dce3f7194da25e78c898a9ae24a2b990741a05d95c7a6",
       "historicalPrefix": "1031",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 270,
+      "file": "dsh-1032_store_publication_readiness_contract.sql",
+      "sha256": "9a1f9d7886e5aad92434ae164fcbe07191d23ebb5d845512dde93da2fb2be295",
+      "historicalPrefix": "1032",
       "state": "ACTIVE"
     }
   ]

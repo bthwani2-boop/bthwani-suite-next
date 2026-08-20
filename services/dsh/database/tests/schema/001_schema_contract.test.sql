@@ -96,5 +96,22 @@ BEGIN
      OR readiness_view_definition LIKE '%status = ''active''::text%' THEN
     RAISE EXCEPTION 'dsh_partner_store_readiness_v must use only the canonical published lifecycle, found %', readiness_view_definition;
   END IF;
+
+  -- Compile the exact view columns consumed by the partner backend so a
+  -- migration cannot silently replace the runtime contract with a parallel
+  -- readiness shape.
+  PERFORM
+    store_id,
+    display_name,
+    publication_decision,
+    blocking_reason_codes
+  FROM dsh_partner_store_readiness_v
+  WHERE partner_id = '__schema_contract_probe__'
+  LIMIT 1;
+
+  IF readiness_view_definition LIKE '%STORE_LOGO_MISSING%'
+     OR readiness_view_definition LIKE '%STORE_COVER_MISSING%' THEN
+    RAISE EXCEPTION 'dsh_partner_store_readiness_v must not make optional media a publication prerequisite';
+  END IF;
 END
 $$;
