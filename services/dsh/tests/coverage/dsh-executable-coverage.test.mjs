@@ -10,6 +10,8 @@ const executableCoverageTests = [
   "../captain-route-registry.test.mjs",
   "../catalog-controller-core.test.mjs",
   "../checkout-controller-core.test.mjs",
+  "../control-panel-store-admin-state.test.mjs",
+  "../control-panel-store-admin-view-model.test.mjs",
   "../dispatch-controller-core.test.mjs",
   "../dsh-api-base-url.test.mjs",
   "../field-onboarding-validation.test.mjs",

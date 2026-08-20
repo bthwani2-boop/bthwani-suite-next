@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode"
 
 	"wlt-api/internal/shared"
 )
@@ -110,7 +111,14 @@ func normalizePolicyInput(input upsertPolicyInput) (upsertPolicyInput, error) {
 	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
 	input.ChangeReason = strings.TrimSpace(input.ChangeReason)
 	input.UpdatedByActorID = strings.TrimSpace(input.UpdatedByActorID)
-	if input.PolicyID == "" || input.ExpectedVersion < 0 || input.MinimumCollateralMinorUnits < 0 || len(input.Currency) != 3 || input.ChangeReason == "" || input.UpdatedByActorID == "" {
+	validCurrency := len(input.Currency) == 3
+	for _, r := range input.Currency {
+		if !unicode.IsUpper(r) || !unicode.IsLetter(r) {
+			validCurrency = false
+			break
+		}
+	}
+	if input.PolicyID == "" || input.ExpectedVersion < 0 || input.MinimumCollateralMinorUnits < 0 || !validCurrency || input.ChangeReason == "" || input.UpdatedByActorID == "" {
 		return input, ErrInvalidInput
 	}
 	return input, nil

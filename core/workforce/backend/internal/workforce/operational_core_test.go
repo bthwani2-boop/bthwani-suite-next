@@ -6,6 +6,52 @@ import (
 	"time"
 )
 
+func TestValidateOperationalCorePatchEnforcesCanonicalVocabulary(t *testing.T) {
+	valid := OperationalCorePatch{
+		ReferralSourceType:         stringPtr("employee"),
+		IdentityVerificationStatus: stringPtr("approved"),
+		ContractReviewStatus:       stringPtr("under_review"),
+		OnboardingStage:            stringPtr("activation_ready"),
+		Captain: &CaptainActivationCorePatch{
+			Classification:                stringPtr("joker"),
+			DeliveryBagCustodyStatus:      stringPtr("issued"),
+			MandatoryPurchasesStatus:      stringPtr("paid_and_delivered"),
+			TrainingStatus:                stringPtr("passed"),
+			OperationsAccreditationStatus: stringPtr("approved"),
+		},
+	}
+	if err := validateOperationalCorePatch("captain", valid); err != nil {
+		t.Fatalf("valid operational patch rejected: %v", err)
+	}
+	if err := validateOperationalCorePatch("field", OperationalCorePatch{}); err != nil {
+		t.Fatalf("empty progressive field patch rejected: %v", err)
+	}
+
+	cases := []struct {
+		name  string
+		kind  string
+		patch OperationalCorePatch
+	}{
+		{name: "referral", kind: "field", patch: OperationalCorePatch{ReferralSourceType: stringPtr("unknown")}},
+		{name: "identity", kind: "field", patch: OperationalCorePatch{IdentityVerificationStatus: stringPtr("verified")}},
+		{name: "contract", kind: "field", patch: OperationalCorePatch{ContractReviewStatus: stringPtr("accepted")}},
+		{name: "stage", kind: "field", patch: OperationalCorePatch{OnboardingStage: stringPtr("ready")}},
+		{name: "captain block on field", kind: "field", patch: OperationalCorePatch{Captain: &CaptainActivationCorePatch{Classification: stringPtr("joker")}}},
+		{name: "classification", kind: "captain", patch: OperationalCorePatch{Captain: &CaptainActivationCorePatch{Classification: stringPtr("senior")}}},
+		{name: "bag custody", kind: "captain", patch: OperationalCorePatch{Captain: &CaptainActivationCorePatch{DeliveryBagCustodyStatus: stringPtr("active")}}},
+		{name: "purchases", kind: "captain", patch: OperationalCorePatch{Captain: &CaptainActivationCorePatch{MandatoryPurchasesStatus: stringPtr("complete")}}},
+		{name: "training", kind: "captain", patch: OperationalCorePatch{Captain: &CaptainActivationCorePatch{TrainingStatus: stringPtr("certified")}}},
+		{name: "accreditation", kind: "captain", patch: OperationalCorePatch{Captain: &CaptainActivationCorePatch{OperationsAccreditationStatus: stringPtr("active")}}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := validateOperationalCorePatch(tc.kind, tc.patch); err != ErrInvalidInput {
+				t.Fatalf("validateOperationalCorePatch() error=%v, want %v", err, ErrInvalidInput)
+			}
+		})
+	}
+}
+
 func readyCommonCore(kind string) ProviderOperationalCore {
 	return ProviderOperationalCore{
 		WorkforceKind:              kind,
@@ -20,6 +66,8 @@ func readyCommonCore(kind string) ProviderOperationalCore {
 		OnboardingStage:            "activation_ready",
 	}
 }
+
+func stringPtr(value string) *string { return &value }
 
 func TestFieldActivationReadinessHasNoShiftRequirement(t *testing.T) {
 	person := Person{
