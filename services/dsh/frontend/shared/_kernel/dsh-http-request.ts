@@ -3,6 +3,7 @@ import {
   getIdentityAccessToken,
   refreshIdentitySession,
 } from "@bthwani/core-identity";
+import { secureCorrelationId } from "./secure-random";
 
 export type DshRequestMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
@@ -25,13 +26,8 @@ export type DshSessionRequestResult<T> = {
   readonly message?: string;
 };
 
-let correlationFallbackSequence = 0;
-
 export function corrId(prefix: string): string {
-  const uuid = globalThis.crypto?.randomUUID?.();
-  if (uuid) return `${prefix}-${uuid}`;
-  correlationFallbackSequence += 1;
-  return `${prefix}-${Date.now().toString(36)}-${correlationFallbackSequence.toString(36)}`;
+  return secureCorrelationId(prefix);
 }
 
 async function fetchWithControlPanelSessionRetry(

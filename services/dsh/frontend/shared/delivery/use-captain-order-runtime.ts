@@ -123,7 +123,7 @@ export function useCaptainOrderRuntime() {
       return reportDeliveryException(assignmentId, {
         reasonCode: draft.reasonCode,
         note: draft.note.trim(),
-        correlationId: `${assignmentId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        correlationId: corrId('captain-delivery-exception'),
         ...(coordinates ? { latitude: coordinates.latitude, longitude: coordinates.longitude } : {}),
       });
     },

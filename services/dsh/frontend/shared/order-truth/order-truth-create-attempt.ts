@@ -3,9 +3,9 @@ import type {
   CreateOrderTruthInput,
   OrderTruthMutationContext,
 } from "./order-truth.types";
+import { secureRandomId } from "../_kernel/secure-random";
 
 const STORAGE_KEY = "@bthwani/order-truth-create-attempt:v1";
-let fallbackSequence = 0;
 
 type StoredOrderTruthAttempt = {
   readonly fingerprint: string;
@@ -13,10 +13,7 @@ type StoredOrderTruthAttempt = {
 };
 
 function uniquePart(): string {
-  const uuid = globalThis.crypto?.randomUUID?.();
-  if (uuid) return uuid;
-  fallbackSequence += 1;
-  return `${Date.now().toString(36)}-${fallbackSequence.toString(36)}`;
+  return secureRandomId();
 }
 
 export function fingerprintOrderTruthInput(input: CreateOrderTruthInput): string {

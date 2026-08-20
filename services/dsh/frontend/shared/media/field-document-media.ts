@@ -6,6 +6,7 @@
 
 import { getIdentityAccessToken } from "@bthwani/core-identity";
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
+import { corrId } from "../_kernel/dsh-http-request";
 
 export type FieldMediaPickResult = {
   readonly uri: string;
@@ -72,7 +73,7 @@ export async function uploadProviderMedia(
     method: "POST",
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      "X-Correlation-ID": `provider-media-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`,
+      "X-Correlation-ID": corrId("provider-media"),
       "X-Operator-Context-ID": operatorContextId,
     },
     body: form,
@@ -106,7 +107,7 @@ async function uploadFieldMediaForOwner(
     method: "POST",
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      "X-Correlation-ID": `field-media-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`,
+      "X-Correlation-ID": corrId("field-media"),
     },
     body: form,
     ...(cookieMode ? { credentials: "include" as const } : {}),

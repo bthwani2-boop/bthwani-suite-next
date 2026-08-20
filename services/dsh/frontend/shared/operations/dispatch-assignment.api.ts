@@ -1,4 +1,5 @@
 import { createDshHttpClient } from '../_kernel/dsh-http-request';
+import { secureRandomId } from '../_kernel/secure-random';
 import type { DshDispatchAssignment } from '../dispatch/dispatch.types';
 
 const { request } = createDshHttpClient('/api/dsh', 'operator-dispatch-assignment', 15000);
@@ -17,7 +18,7 @@ export type AssignOrderToCaptainInput = {
 export function buildDispatchAssignmentIdempotencyKey(
   orderId: string,
   captainId: string,
-  nonce = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`,
+  nonce = secureRandomId(),
 ): string {
   return `dispatch:${orderId.trim()}:${captainId.trim()}:${nonce}`;
 }

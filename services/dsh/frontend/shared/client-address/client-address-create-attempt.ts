@@ -1,8 +1,8 @@
 import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/native-data-adapters";
 import type { DshAddressMutationContext, DshClientAddressDraft } from "./client-address.types";
+import { secureRandomId } from "../_kernel/secure-random";
 
 const STORAGE_KEY = "@bthwani/client-address-create-attempt:v1";
-let fallbackSequence = 0;
 
 type StoredAttempt = {
   readonly fingerprint: string;
@@ -10,10 +10,7 @@ type StoredAttempt = {
 };
 
 function uniquePart(): string {
-  const uuid = globalThis.crypto?.randomUUID?.();
-  if (uuid) return uuid;
-  fallbackSequence += 1;
-  return `${Date.now().toString(36)}-${fallbackSequence.toString(36)}`;
+  return secureRandomId();
 }
 
 export function fingerprintClientAddressDraft(input: DshClientAddressDraft): string {

@@ -1,5 +1,6 @@
 import type { DshPartnerActivationStatus } from "./partner-activation.model";
 import type { DshPartner, DshPartnerReadiness } from "./partner.types";
+import { secureRandomId } from "../_kernel/secure-random";
 
 export type DshPartnerAllowedAction =
   | "read_owned_draft"
@@ -76,13 +77,8 @@ export type PartnerOnboardingViewModel = {
   readonly readinessBlockers: readonly string[];
 };
 
-let attemptSequence = 0;
-
 function randomToken(): string {
-  const uuid = globalThis.crypto?.randomUUID?.();
-  if (uuid) return uuid;
-  attemptSequence += 1;
-  return `${Date.now().toString(36)}-${attemptSequence.toString(36)}`;
+  return secureRandomId();
 }
 
 export function createPartnerMutationContext(

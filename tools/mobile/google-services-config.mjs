@@ -99,16 +99,18 @@ export function validateGoogleServicesConfigFile(file, expectedPackage) {
   if (!nonEmptyString(expectedPackage)) throw validationError(["expected Android package is required"]);
 
   const absolutePath = path.resolve(file);
-  if (!fs.existsSync(absolutePath)) {
-    throw validationError([`file does not exist: ${absolutePath}`]);
-  }
-  if (!fs.statSync(absolutePath).isFile()) {
-    throw validationError([`path is not a file: ${absolutePath}`]);
+  let raw;
+  try {
+    raw = fs.readFileSync(absolutePath, "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") throw validationError([`file does not exist: ${absolutePath}`]);
+    if (error?.code === "EISDIR") throw validationError([`path is not a file: ${absolutePath}`]);
+    throw validationError([`file cannot be read: ${error?.message ?? String(error)}`]);
   }
 
   let parsed;
   try {
-    parsed = JSON.parse(fs.readFileSync(absolutePath, "utf8"));
+    parsed = JSON.parse(raw);
   } catch (error) {
     throw validationError([`file is not valid JSON: ${error.message}`]);
   }

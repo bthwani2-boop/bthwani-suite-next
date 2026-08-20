@@ -1,6 +1,7 @@
 import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/native-data-adapters";
 
 import type { SubscriptionPaymentMethod } from "./subscription-lifecycle.types";
+import { secureRandomId } from "../_kernel/secure-random";
 
 export type SubscriptionMutationOperation = "purchase" | "activate" | "renew" | "cancel";
 
@@ -19,13 +20,9 @@ type StoredAttempt = {
 
 const PREFIX = "@bthwani/dsh/subscription-mutation/v1/";
 const LATEST_PURCHASE_KEY = `${PREFIX}purchase/latest`;
-let fallbackSequence = 0;
 
 function nextPart(): string {
-  const uuid = globalThis.crypto?.randomUUID?.();
-  if (uuid) return uuid;
-  fallbackSequence += 1;
-  return `${Date.now().toString(36)}-${fallbackSequence.toString(36)}`;
+  return secureRandomId();
 }
 
 function storageKey(operation: SubscriptionMutationOperation, subject: string): string {

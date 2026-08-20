@@ -426,9 +426,10 @@ export function createDshExpoNotificationRuntime(modules: {
       const storageKey = `${deviceKeyPrefix}-${appKey}`;
       const existing = await secureStore.getItemAsync(storageKey);
       if (existing) return existing;
-      const unique = typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+      if (typeof crypto.randomUUID !== "function") {
+        throw new DshNativeCapabilityUnavailable("secure random UUID");
+      }
+      const unique = crypto.randomUUID();
       const generated = `${appKey}-${unique}`;
       await secureStore.setItemAsync(storageKey, generated);
       return generated;
