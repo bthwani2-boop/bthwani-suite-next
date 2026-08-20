@@ -36,6 +36,10 @@ param(
   # runtime_seed_history keyed to the stable template.
   [string]$PlaceholderFile = "",
 
+  # Additional short-lived placeholders supplied by a trusted runtime adapter.
+  # Values remain in process memory and are never persisted to the seed file.
+  [hashtable]$AdditionalPlaceholders = @{},
+
   [switch]$AllowLocalSeeds,
   [switch]$AllowEmptySeedSet
 )
@@ -165,6 +169,20 @@ if (-not [string]::IsNullOrWhiteSpace($PlaceholderFile)) {
     }
     $placeholders[$entry.Name] = $value
   }
+}
+
+foreach ($entry in $AdditionalPlaceholders.GetEnumerator()) {
+  if ($entry.Key -cnotmatch '^[A-Z][A-Z0-9_]*$') {
+    throw "Invalid additional seed placeholder name '$($entry.Key)'."
+  }
+  $value = [string]$entry.Value
+  if ([string]::IsNullOrWhiteSpace($value)) {
+    throw "Additional seed placeholder '$($entry.Key)' resolved to an empty value."
+  }
+  if ($value -match "['\\]") {
+    throw "Additional seed placeholder '$($entry.Key)' contains quote or backslash characters and cannot be substituted safely."
+  }
+  $placeholders[$entry.Key] = $value
 }
 
 # Substitution runs on the SQL sent to psql, never on the checksummed template,
