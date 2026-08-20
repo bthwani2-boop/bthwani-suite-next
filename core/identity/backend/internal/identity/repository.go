@@ -589,7 +589,7 @@ func (r *Repository) ResolveAccessToken(ctx context.Context, token string) (Acto
 	var sessionSurface string
 	var expiresAt time.Time
 	err := r.db.QueryRowContext(ctx, `
-		SELECT a.id, a.username, a.password_hash, a.operator_context_id, a.phone_e164, a.roles, a.permissions, a.status, a.version,
+		SELECT a.id, a.username, a.password_hash, a.operator_context_id, COALESCE(a.phone_e164, ''), a.roles, a.permissions, a.status, a.version,
 		       s.id, s.surface, s.access_expires_at
 		FROM identity_sessions s
 		JOIN identity_actors a ON a.id = s.actor_id

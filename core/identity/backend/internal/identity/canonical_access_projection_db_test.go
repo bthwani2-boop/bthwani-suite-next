@@ -114,7 +114,6 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 	); err != nil {
 		t.Fatalf("insert session: %v", err)
 	}
-
 	before, err := repository.ResolveAccessToken(context.Background(), accessToken)
 	if err != nil {
 		t.Fatalf("resolve before grant: %v", err)
