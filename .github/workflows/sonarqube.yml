@@ -18,7 +18,68 @@ jobs:
   scan:
     name: SonarQube Cloud scan
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 60
+    services:
+      postgres-dsh:
+        image: postgis/postgis:16-3.4-alpine
+        env:
+          POSTGRES_USER: dsh_runtime
+          POSTGRES_PASSWORD: dsh_runtime_password
+          POSTGRES_DB: dsh_runtime
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U dsh_runtime -d dsh_runtime"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      postgres-wlt:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wlt_runtime
+          POSTGRES_PASSWORD: wlt_runtime_password
+          POSTGRES_DB: wlt_runtime
+        ports: ["5434:5432"]
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U wlt_runtime -d wlt_runtime"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      postgres-identity:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: identity_runtime
+          POSTGRES_PASSWORD: identity_runtime_password
+          POSTGRES_DB: identity_runtime
+        ports: ["5435:5432"]
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U identity_runtime -d identity_runtime"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      postgres-workforce:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: workforce_runtime
+          POSTGRES_PASSWORD: workforce_runtime_password
+          POSTGRES_DB: workforce_runtime
+        ports: ["5436:5432"]
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U workforce_runtime -d workforce_runtime"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      postgres-platform:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: platform_control_runtime
+          POSTGRES_PASSWORD: platform_control_runtime_password
+          POSTGRES_DB: platform_control_runtime
+        ports: ["5437:5432"]
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U platform_control_runtime -d platform_control_runtime"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      postgres-providers:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: providers_runtime
+          POSTGRES_PASSWORD: providers_runtime_password
+          POSTGRES_DB: providers_runtime
+        ports: ["5438:5432"]
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U providers_runtime -d providers_runtime"
+          --health-interval 5s --health-timeout 5s --health-retries 20
 
     steps:
       - name: Checkout immutable candidate source with full history
@@ -110,6 +171,76 @@ jobs:
           go-version-file: services/dsh/backend/go.mod
           cache: false
 
+      - name: Provision governed databases for affected Go coverage
+        if: ${{ steps.scope.outputs.dsh == 'true' || steps.scope.outputs.wlt == 'true' || steps.scope.outputs.identity == 'true' || steps.scope.outputs.workforce == 'true' || steps.scope.outputs.platform == 'true' || steps.scope.outputs.providers == 'true' }}
+        shell: bash
+        env:
+          DSH: ${{ steps.scope.outputs.dsh }}
+          WLT: ${{ steps.scope.outputs.wlt }}
+          IDENTITY: ${{ steps.scope.outputs.identity }}
+          WORKFORCE: ${{ steps.scope.outputs.workforce }}
+          PLATFORM: ${{ steps.scope.outputs.platform }}
+          PROVIDERS: ${{ steps.scope.outputs.providers }}
+          SONAR_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client >/dev/null
+
+          identity_url='postgres://identity_runtime:identity_runtime_password@127.0.0.1:5435/identity_runtime?sslmode=disable'
+          actor_placeholders="$RUNNER_TEMP/go-coverage-actor-placeholders.json"
+          cat > "$actor_placeholders" <<'JSON'
+          {
+            "FIELD_ACTOR_ID": "ci-field-actor-001",
+            "CAPTAIN_ACTOR_ID": "ci-captain-actor-001",
+            "WLT_PAYOUT_ENCRYPTION_KEY": "ci-sonar-coverage-payout-encryption-key"
+          }
+          JSON
+          migrate() {
+            local service="$1"
+            local directory="$2"
+            local database_url="$3"
+            local identity_database_url="${4:-}"
+            echo "Applying governed $service migrations for Sonar coverage"
+            if [[ "$service" == "workforce" ]]; then
+              pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-service-migrations.ps1 \
+                -ServiceKey "$service" -MigrationDirectory "$directory" \
+                -DatabaseUrl "$database_url" -IdentityDatabaseUrl "$identity_database_url" \
+                -SourceCommitSha "$SONAR_SOURCE_SHA"
+            else
+              pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-service-migrations.ps1 \
+                -ServiceKey "$service" -MigrationDirectory "$directory" \
+                -DatabaseUrl "$database_url" -SourceCommitSha "$SONAR_SOURCE_SHA"
+            fi
+          }
+
+          if [[ "$IDENTITY" == "true" || "$WORKFORCE" == "true" ]]; then
+            migrate identity core/identity/database/migrations "$identity_url"
+          fi
+          [[ "$WORKFORCE" == "true" ]] && migrate workforce core/workforce/database/migrations \
+            'postgres://workforce_runtime:workforce_runtime_password@127.0.0.1:5436/workforce_runtime?sslmode=disable' "$identity_url"
+          [[ "$DSH" == "true" ]] && migrate dsh services/dsh/database/migrations \
+            'postgres://dsh_runtime:dsh_runtime_password@127.0.0.1:5433/dsh_runtime?sslmode=disable'
+          [[ "$WLT" == "true" ]] && migrate wlt services/wlt/database/migrations \
+            'postgres://wlt_runtime:wlt_runtime_password@127.0.0.1:5434/wlt_runtime?sslmode=disable'
+          [[ "$PLATFORM" == "true" ]] && migrate platform-control core/platform-control/database/migrations \
+            'postgres://platform_control_runtime:platform_control_runtime_password@127.0.0.1:5437/platform_control_runtime?sslmode=disable'
+          [[ "$PROVIDERS" == "true" ]] && migrate providers core/providers/database/migrations \
+            'postgres://providers_runtime:providers_runtime_password@127.0.0.1:5438/providers_runtime?sslmode=disable'
+
+          if [[ "$DSH" == "true" ]]; then
+            BTHWANI_ENVIRONMENT=ci pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-service-seeds.ps1 \
+              -ServiceKey dsh -SeedDirectory services/dsh/database/seeds/local -Transport url \
+              -DatabaseUrl 'postgres://dsh_runtime:dsh_runtime_password@127.0.0.1:5433/dsh_runtime?sslmode=disable' \
+              -PlaceholderFile "$actor_placeholders" -AllowLocalSeeds -SourceCommitSha "$SONAR_SOURCE_SHA"
+          fi
+          if [[ "$WLT" == "true" ]]; then
+            BTHWANI_ENVIRONMENT=ci pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-service-seeds.ps1 \
+              -ServiceKey wlt -SeedDirectory services/wlt/database/seeds/local -Transport url \
+              -DatabaseUrl 'postgres://wlt_runtime:wlt_runtime_password@127.0.0.1:5434/wlt_runtime?sslmode=disable' \
+              -PlaceholderFile "$actor_placeholders" -AllowLocalSeeds -SourceCommitSha "$SONAR_SOURCE_SHA"
+          fi
+
       - name: Generate affected Go coverage reports
         id: go_coverage
         if: ${{ steps.scope.outputs.dsh == 'true' || steps.scope.outputs.wlt == 'true' || steps.scope.outputs.identity == 'true' || steps.scope.outputs.workforce == 'true' || steps.scope.outputs.platform == 'true' || steps.scope.outputs.providers == 'true' }}
@@ -138,7 +269,35 @@ jobs:
             mkdir -p "$(dirname "$report")"
             (
               cd "$module"
-              go test ./... -coverprofile="$raw_report"
+              case "$module" in
+                core/identity/backend)
+                  IDENTITY_REQUIRE_DB_TESTS=true DATABASE_URL='postgres://identity_runtime:identity_runtime_password@127.0.0.1:5435/identity_runtime?sslmode=disable' \
+                    go test ./... -coverprofile="$raw_report"
+                  ;;
+                core/workforce/backend)
+                  WORKFORCE_REQUIRE_DB_TESTS=true DATABASE_URL='postgres://workforce_runtime:workforce_runtime_password@127.0.0.1:5436/workforce_runtime?sslmode=disable' \
+                    go test ./... -coverprofile="$raw_report"
+                  ;;
+                services/dsh/backend)
+                  DSH_REQUIRE_DB_TESTS=true DSH_TEST_operator_context_id=local-dsh DATABASE_URL='postgres://dsh_runtime:dsh_runtime_password@127.0.0.1:5433/dsh_runtime?sslmode=disable' \
+                    go test ./... -coverprofile="$raw_report"
+                  ;;
+                services/wlt/backend)
+                  WLT_REQUIRE_DB_TESTS=true BTHWANI_OPERATOR_CONTEXT_ID=local-dsh DATABASE_URL='postgres://wlt_runtime:wlt_runtime_password@127.0.0.1:5434/wlt_runtime?sslmode=disable' \
+                    go test ./... -coverprofile="$raw_report"
+                  ;;
+                core/platform-control/backend)
+                  DATABASE_URL='postgres://platform_control_runtime:platform_control_runtime_password@127.0.0.1:5437/platform_control_runtime?sslmode=disable' \
+                    go test ./... -coverprofile="$raw_report"
+                  ;;
+                core/providers/backend)
+                  DATABASE_TEST=1 DATABASE_URL='postgres://providers_runtime:providers_runtime_password@127.0.0.1:5438/providers_runtime?sslmode=disable' \
+                    go test ./... -coverprofile="$raw_report"
+                  ;;
+                *)
+                  go test ./... -coverprofile="$raw_report"
+                  ;;
+              esac
             )
             module_name="$(cd "$module" && go list -m)"
             : > "$report"
