@@ -6,6 +6,9 @@ import { fileURLToPath } from "node:url";
 import { resolvePackageManagerInvocation } from "./lib/package-manager-invocation.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const mobileAppsManifest = JSON.parse(
+  fs.readFileSync(path.join(repoRoot, "tools/mobile/mobile-apps.manifest.json"), "utf8"),
+);
 const appIndex = process.argv.indexOf("--app");
 const appKey = appIndex >= 0 ? process.argv[appIndex + 1] : "";
 const appDir = path.join(repoRoot, "apps", appKey, "runtime");
@@ -24,7 +27,9 @@ function filesUnder(directory) {
 }
 
 try {
-  if (!appKey || !fs.existsSync(appDir)) fail(`unknown or missing app runtime: ${appKey || "<none>"}`);
+  if (!appKey || !mobileAppsManifest.apps?.[appKey] || !fs.existsSync(appDir)) {
+    fail(`unknown or missing app runtime: ${appKey || "<none>"}`);
+  }
   const args = ["--dir", appDir, "exec", "expo", "export", "--platform", "android", "--output-dir", outputDir];
   const environment = { ...process.env, CI: "1", EXPO_NO_TELEMETRY: "1", COREPACK_ENABLE_DOWNLOAD_PROMPT: "0" };
   const invocation = resolvePackageManagerInvocation("pnpm", args, environment);

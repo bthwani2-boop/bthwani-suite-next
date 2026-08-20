@@ -557,7 +557,7 @@ func writeWorkforceError(w http.ResponseWriter, err error) {
 	default:
 		// Unmapped errors become an opaque 500 for the caller. Log the underlying
 		// cause so the failure is diagnosable from the container logs.
-		log.Printf("[workforce] unmapped error: %v", err)
+		log.Printf("[workforce] unmapped error (error_type %T)", err)
 		sendError(w, http.StatusInternalServerError, "WORKFORCE_INTERNAL_ERROR", "workforce request failed")
 	}
 }

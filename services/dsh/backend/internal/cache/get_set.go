@@ -32,10 +32,10 @@ func (c *Client) SetJSON(ctx context.Context, key string, val any, ttl time.Dura
 	}
 	raw, err := json.Marshal(val)
 	if err != nil {
-		log.Printf("[cache] marshal failed for key %s: %v", key, err)
+		log.Printf("[cache] marshal failed (error_type %T)", err)
 		return
 	}
 	if err := c.rdb.Set(ctx, key, raw, ttl).Err(); err != nil {
-		log.Printf("[cache] set failed for key %s: %v", key, err)
+		log.Printf("[cache] set failed (error_type %T)", err)
 	}
 }

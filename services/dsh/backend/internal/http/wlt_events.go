@@ -190,8 +190,7 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 			// this projection is eventually consistent and is repaired by replay.
 			// It is still recorded, because a silently dropped projection error would
 			// leave DSH's read model diverged from WLT with no operator signal.
-			log.Printf("[wlt-events] order payment projection failed for order %s (session %s, correlation %s): %v",
-				body.OrderID, body.PaymentSessionID, body.CorrelationID, err)
+			log.Printf("[wlt-events] order payment projection failed (error_type %T)", err)
 		}
 	}
 
