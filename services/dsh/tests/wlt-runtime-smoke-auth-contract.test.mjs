@@ -44,7 +44,7 @@ describe("authenticated WLT runtime smoke", () => {
   it("proves mutation idempotency and canonical readback", () => {
     assert.match(smoke, /"Idempotency-Key" = "wlt-session-\$runIdentity"/);
     assert.match(smoke, /checkoutIntentId = "checkout-\$runIdentity"/);
-    assert.match(smoke, /status -ne "reference_created"/);
+    assert.match(smoke, /status -ne "cod_pending"/);
     assert.match(smoke, /WLT authenticated runtime smoke: PASS/);
   });
 
