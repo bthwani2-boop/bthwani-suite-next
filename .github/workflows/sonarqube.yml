@@ -5,7 +5,7 @@ on:
     branches: [master, b, c]
     types: [opened, synchronize, reopened]
   push:
-    branches: [master, b, c]
+    branches: [master]
 
 permissions:
   contents: read
