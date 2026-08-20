@@ -128,11 +128,22 @@ function Get-GovernedLedgerCount {
 function Write-TestMigrationManifest {
   param(
     [Parameter(Mandatory = $true)][string]$Directory,
-    [Parameter(Mandatory = $true)][string]$ManifestServiceKey
+    [Parameter(Mandatory = $true)][string]$ManifestServiceKey,
+    [string[]]$OrderedFileNames = @()
   )
 
-  $files = @(Get-ChildItem -LiteralPath $Directory -File -Filter "*.sql" |
-    Sort-Object { $_.Name.ToLowerInvariant() }, Name)
+  $files = if ($OrderedFileNames.Count -gt 0) {
+    @($OrderedFileNames | ForEach-Object {
+      $path = Join-Path $Directory $_
+      if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        throw "Ordered test migration file not found: $path"
+      }
+      Get-Item -LiteralPath $path
+    })
+  } else {
+    @(Get-ChildItem -LiteralPath $Directory -File -Filter "*.sql" |
+      Sort-Object { $_.Name.ToLowerInvariant() }, Name)
+  }
   if ($files.Count -eq 0) {
     throw "Cannot write an empty test migration manifest: $Directory"
   }
@@ -153,18 +164,20 @@ function Write-TestMigrationManifest {
     schemaVersion = 1
     service = $ManifestServiceKey
     ordering = "explicit"
-    orderingSource = "test-generated"
+    orderingSource = if ($OrderedFileNames.Count -gt 0) { "canonical-manifest-prefix" } else { "test-generated" }
     cutover = $files[-1].Name
     migrations = $entries
   }
   $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $Directory "manifest.json")
 }
 
-$canonicalFiles = @(Get-ChildItem -LiteralPath $MigrationPath -File -Filter "*.sql" |
-  Sort-Object { $_.Name.ToLowerInvariant() }, Name)
-if ($canonicalFiles.Count -eq 0) {
+$discoveredCanonicalFiles = @(Get-ChildItem -LiteralPath $MigrationPath -File -Filter "*.sql")
+if ($discoveredCanonicalFiles.Count -eq 0) {
   throw "No canonical migrations found for '$ServiceKey'."
 }
+$canonicalFiles = @(Resolve-BthwaniGovernedMigrationPlan `
+  -ServiceName $ServiceKey `
+  -MigrationFiles $discoveredCanonicalFiles)
 
 $temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) "bthwani-migration-$ServiceKey-$([guid]::NewGuid().ToString('N'))"
 $previousDirectory = Join-Path $temporaryRoot "previous-version"
@@ -197,10 +210,14 @@ ON CONFLICT (id) DO UPDATE SET operator_context_id = EXCLUDED.operator_context_i
   Write-Host "--- ${ServiceKey}: previous-version database with existing data ---"
   $previousCount = [Math]::Max(0, $canonicalFiles.Count - 1)
   if ($previousCount -gt 0) {
-    foreach ($file in $canonicalFiles[0..($previousCount - 1)]) {
+    $previousFiles = @($canonicalFiles[0..($previousCount - 1)])
+    foreach ($file in $previousFiles) {
       Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $previousDirectory $file.Name)
     }
-    Write-TestMigrationManifest -Directory $previousDirectory -ManifestServiceKey $ServiceKey
+    Write-TestMigrationManifest `
+      -Directory $previousDirectory `
+      -ManifestServiceKey $ServiceKey `
+      -OrderedFileNames @($previousFiles | ForEach-Object { $_.Name })
     Invoke-RunnerProcess -Directory $previousDirectory -ExpectSuccess $true
 
     $previousLedgerCount = Get-GovernedLedgerCount -LedgerServiceKeySql $ServiceKeySql
