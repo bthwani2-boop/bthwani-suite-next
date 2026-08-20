@@ -13,7 +13,8 @@ import (
 
 const (
 	wltMigrationServiceName = "wlt"
-	wltLatestMigration      = "wlt-945_wallet_reference_view_operator_context.sql"
+	// wlt-946 is the canonical manifest cutover and must gate readiness after COD initialization.
+	wltLatestMigration      = "wlt-946_cod_pending_initial_state.sql"
 	wltReadinessTimeout     = 2 * time.Second
 )
 
