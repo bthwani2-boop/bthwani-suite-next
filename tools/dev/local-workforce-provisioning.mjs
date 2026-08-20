@@ -224,12 +224,13 @@ export function fieldCreatePayload(zoneId) {
   };
 }
 
-export function captainCreatePayload(zoneId, actorId) {
+export function captainCreatePayload(zoneId) {
   const fixture = LOCAL_WORKFORCE_PROVIDERS.captain;
   return {
     fullNameAr: fixture.fullNameAr,
     fullNameEn: fixture.fullNameEn,
-    actorId,
+    username: 'local-captain-001',
+    phoneE164: fixture.phoneE164,
     engagementType: 'independent_contractor',
     engagementStartDate: '2026-01-01',
     photoMediaRef: 'local-dev/workforce/captain-profile.jpg',
@@ -581,7 +582,7 @@ async function provisionOne(operatorToken, kind, zone, { deferFinancialStanding 
       }
       actorId = identityActor.actorId;
       assertIdentityBinding(kind, actorId, identityActor);
-      person = await createProvider(operatorToken, kind, captainCreatePayload(zone.id, actorId));
+      person = await createProvider(operatorToken, kind, captainCreatePayload(zone.id));
     }
     if (!person?.actorId) throw new Error(`workforce:${kind} provisioning returned no actorId`);
     if (person.actorId !== actorId) {
