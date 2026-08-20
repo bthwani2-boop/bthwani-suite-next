@@ -118,7 +118,7 @@ jobs:
           if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
             phase=closure
             mode="${DISPATCH_MODE:-affected}"
-          elif [[ "${EVENT_NAME}" == "push" && ( "${GITHUB_REF_NAME}" == "master" || "${GITHUB_REF_NAME}" == "b" ) ]]; then
+          elif [[ "${EVENT_NAME}" == "push" && ( "${GITHUB_REF_NAME}" == "master" || "${GITHUB_REF_NAME}" == "b" || "${GITHUB_REF_NAME}" == "c" ) ]]; then
             phase=master
             verified_base=""
             while IFS= read -r candidate; do

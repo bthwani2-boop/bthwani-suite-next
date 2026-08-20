@@ -56,7 +56,7 @@ jobs:
           )
           full=false
           skip_duplicate=false
-          if [[ "${EVENT_NAME}" == "schedule" || "${EVENT_NAME}" == "workflow_dispatch" || ( "${EVENT_NAME}" == "push" && ( "${GITHUB_REF_NAME}" == "master" || "${GITHUB_REF_NAME}" == "b" ) ) ]]; then
+          if [[ "${EVENT_NAME}" == "schedule" || "${EVENT_NAME}" == "workflow_dispatch" || ( "${EVENT_NAME}" == "push" && ( "${GITHUB_REF_NAME}" == "master" || "${GITHUB_REF_NAME}" == "b" || "${GITHUB_REF_NAME}" == "c" ) ) ]]; then
             full=true
           elif [[ "${EVENT_NAME}" == "push" ]]; then
             open_pr_count="$(gh api --method GET \

@@ -2,10 +2,10 @@ name: Dependency Review
 
 on:
   pull_request:
-    branches: [master, b]
+    branches: [master, b, c]
     types: [opened, synchronize, reopened, ready_for_review]
   push:
-    branches: [master, b]
+    branches: [master, b, c]
 
 permissions:
   contents: read

@@ -179,7 +179,7 @@ jobs:
   database:
     name: Verify ${{ matrix.key }} database safety
     needs: [plan]
-    if: ${{ needs.plan.outputs.count != '0' && (inputs.database_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' || inputs.execution_phase == 'b') }}
+    if: ${{ needs.plan.outputs.count != '0' && (inputs.database_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' || inputs.execution_phase == 'b' || inputs.execution_phase == 'c') }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
@@ -273,7 +273,7 @@ jobs:
 
   dsh-database-contract:
     name: Verify DSH schema and seed contracts
-    if: ${{ inputs.dsh == 'true' && (inputs.database_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' || inputs.execution_phase == 'b') }}
+    if: ${{ inputs.dsh == 'true' && (inputs.database_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' || inputs.execution_phase == 'b' || inputs.execution_phase == 'c') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     services:
