@@ -350,17 +350,17 @@ Require (@((Get-Value $PartnerOrder[0] 'allowedActions')) -contains "accept") "p
 
 $DecisionHeaders = Headers $Partner "partner-accept"
 $DecisionHeaders["If-Match-Version"] = "$OrderVersion"
-$Accepted = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/decision" $DecisionHeaders @{ decision = "accept" }
+$Accepted = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/decision?storeId=store-test-grocery" $DecisionHeaders @{ decision = "accept" }
 Require-Status $Accepted @(200) "partner governed accept"
 Require ("$(Get-Value (Get-Value $Accepted.Json 'order') 'status')" -eq "store_accepted") "partner accept status mismatch"
 
 $PreparingHeaders = Headers $Partner "partner-preparing"
 $PreparingHeaders["If-Match-Version"] = "$(Get-Value (Get-Value $Accepted.Json 'order') 'version')"
-$Preparing = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/preparing" $PreparingHeaders
+$Preparing = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/preparing?storeId=store-test-grocery" $PreparingHeaders
 Require-Status $Preparing @(200) "partner preparing"
 $ReadyHeaders = Headers $Partner "partner-ready"
 $ReadyHeaders["If-Match-Version"] = "$(Get-Value (Get-Value $Preparing.Json 'order') 'version')"
-$Ready = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/ready" $ReadyHeaders
+$Ready = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/ready?storeId=store-test-grocery" $ReadyHeaders
 Require-Status $Ready @(200) "partner ready"
 Require ("$(Get-Value (Get-Value $Ready.Json 'order') 'status')" -eq "ready_for_pickup") "ready status mismatch"
 
@@ -448,7 +448,7 @@ $PickupWithoutHandoff = Invoke-Api POST "$DshBaseUrl/dsh/captain/dispatch/assign
 Require-Status $PickupWithoutHandoff @(409) "pickup without partner handoff"
 Require ("$(Get-Value $PickupWithoutHandoff.Json 'code')" -eq "STORE_HANDOFF_REQUIRED") "pickup without handoff did not fail closed"
 
-$Handoff = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/captain-handoff/confirm" (Headers $Partner "partner-handoff")
+$Handoff = Invoke-Api POST "$DshBaseUrl/dsh/partner/orders/$OrderId/captain-handoff/confirm?storeId=store-test-grocery" (Headers $Partner "partner-handoff")
 Require-Status $Handoff @(200) "partner captain handoff"
 $HandoffBody = Get-Value $Handoff.Json 'handoff'
 Require ("$(Get-Value $HandoffBody 'assignmentId')" -eq $AssignmentId) "handoff assignment mismatch"
