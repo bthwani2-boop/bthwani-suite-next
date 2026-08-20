@@ -78,9 +78,8 @@ test("closure migration is atomic, gated, and archives legacy records", () => {
 });
 
 
-
 test("central verification fails hard instead of only printing results", () => {
-  const verify = read("database/seeds/local/verify-central-catalog-seed.sql");
+  const verify = read("database/tests/seed/002_verify-central-catalog-seed.test.sql");
   for (const check of [
     "legacy_archive_table_exists",
     "legacy_audit_archived",
