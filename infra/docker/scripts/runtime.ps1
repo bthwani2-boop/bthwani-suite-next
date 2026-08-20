@@ -37,9 +37,8 @@ $ObservabilityComposeFile = Join-Path $RepoRoot "infra/docker/compose.observabil
 $EnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
 $GovernedMigrationScript = Join-Path $RepoRoot "infra/docker/scripts/invoke-runtime-database-migrations.ps1"
 $GovernedSeedScript = Join-Path $RepoRoot "infra/docker/scripts/invoke-runtime-database-seeds.ps1"
-$GovernedDshMediaScript = Join-Path $RepoRoot "infra/docker/scripts/invoke-dsh-local-media.ps1"
 
-foreach ($requiredFile in @($ComposeFile, $EnvFile, $GovernedMigrationScript, $GovernedSeedScript, $GovernedDshMediaScript)) {
+foreach ($requiredFile in @($ComposeFile, $EnvFile, $GovernedMigrationScript, $GovernedSeedScript)) {
   if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
     throw "Required runtime authority not found: $requiredFile"
   }
@@ -376,6 +375,25 @@ function Invoke-DshLocalMediaOverlay {
   $rootUser = if ($env:BTHWANI_MINIO_ROOT_USER) { $env:BTHWANI_MINIO_ROOT_USER } else { "bthwani_minio" }
   $rootPassword = if ($env:BTHWANI_MINIO_ROOT_PASSWORD) { $env:BTHWANI_MINIO_ROOT_PASSWORD } else { "bthwani_minio_password" }
   Write-Host "`n--- Applying governed DSH media fixtures ---"
+  
+  $Materializer = Join-Path $RepoRoot "tools/scripts/materialize-dsh-local-media.mjs"
+  & node $Materializer
+  if ($LASTEXITCODE -ne 0) { throw "DSH local seed-media SQL materialization failed (exit $LASTEXITCODE)" }
+
+  $sourceCommitSha = Get-SourceCommitSha
+  $GeneratedSeedDirectory = Join-Path $RepoRoot ".artifacts/local-dev/dsh-media-seed"
+  & $script:GovernedSeedScript `
+    -ServiceKey "dsh-media" `
+    -SeedDirectory $GeneratedSeedDirectory `
+    -Transport docker `
+    -DockerUser "dsh_runtime" `
+    -DockerDatabase "dsh_runtime" `
+    -ComposeFile $script:ComposeFile `
+    -EnvFile $script:EnvFile `
+    -SourceCommitSha $sourceCommitSha `
+    -AllowLocalSeeds
+  if ($LASTEXITCODE -ne 0) { throw "Canonical DSH local seed-media metadata seed failed (exit $LASTEXITCODE)" }
+
   # MinIO upload disabled for local development. Media is served directly from the local directory.
   Write-Host "DSH media seed: PASS ($($expectedFiles.Count) governed objects) (Skipped MinIO upload, serving locally)"
 }
