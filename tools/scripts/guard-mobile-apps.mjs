@@ -281,8 +281,12 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   }
 
   const metro = fs.readFileSync(path.join(dir, "metro.config.cjs"), "utf8");
+  const metroFactory = fs.readFileSync(path.join(root, "tools/mobile/metro.config.factory.cjs"), "utf8");
+  if (!metro.includes("createBthwaniMetroConfig")) {
+    fail(`${key}: Metro config must delegate to the canonical Metro config factory`);
+  }
   for (const marker of ["getSentryExpoConfig"]) {
-    if (!metro.includes(marker)) fail(`${key}: Metro marker missing: ${marker}`);
+    if (!metroFactory.includes(marker)) fail(`canonical Metro config factory marker missing: ${marker}`);
   }
   const appRoot = fs.readFileSync(path.join(dir, "src", "index.ts"), "utf8");
   for (const marker of ["persistenceKey", "createBthwaniOfflineMutationQueue", "clearBthwaniQueryClient", "registerIdentityBeforeSessionEndHook"]) {
