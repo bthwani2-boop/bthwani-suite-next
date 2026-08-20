@@ -304,7 +304,7 @@ for (const token of [
   "Apply DSH local seeds twice",
   "Run DSH seed database contracts",
   runnerPath,
-  "CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}",
+  "CANDIDATE_SHA: ${{ github.sha }}",
   "Verify routed candidate identity",
   "ROUTED_HEAD_SHA: ${{ inputs.head_sha }}",
   "ref: ${{ env.CANDIDATE_SHA }}",

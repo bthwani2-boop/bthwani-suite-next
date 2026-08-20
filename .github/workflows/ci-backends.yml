@@ -44,7 +44,7 @@ permissions:
   contents: read
 
 env:
-  CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  CANDIDATE_SHA: ${{ github.sha }}
 
 jobs:
   plan:
@@ -97,6 +97,9 @@ jobs:
           count="$(jq 'length' <<< "${entries}")"
           echo "count=${count}" >> "${GITHUB_OUTPUT}"
           echo "matrix={\"include\":${entries}}" >> "${GITHUB_OUTPUT}"
+          if [[ "${count}" == "0" ]]; then
+            echo "packages=none reason=no-package-in-semantic-cone" >> "${GITHUB_STEP_SUMMARY}"
+          fi
 
   verify:
     name: Verify ${{ matrix.key }} backend
@@ -109,7 +112,7 @@ jobs:
     timeout-minutes: 60
     env:
       CI_BASE_SHA: ${{ inputs.base_sha }}
-      CI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      CI_HEAD_SHA: ${{ github.sha }}
       CI_FULL_SCOPE: ${{ inputs.full_scope }}
       CI_VERIFICATION_TIER: ${{ inputs.verification_tier }}
       CI_EXECUTION_PHASE: ${{ inputs.execution_phase }}

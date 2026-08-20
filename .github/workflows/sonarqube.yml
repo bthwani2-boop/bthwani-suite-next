@@ -24,7 +24,7 @@ jobs:
       - name: Checkout immutable candidate source with full history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ github.sha }}
           persist-credentials: false
           show-progress: false
           fetch-depth: 0
@@ -50,7 +50,7 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          EXPECTED_HEAD_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           HEAD_SHA="$(git rev-parse HEAD)"
