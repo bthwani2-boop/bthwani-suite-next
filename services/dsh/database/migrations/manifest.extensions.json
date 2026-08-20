@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 1,
   "service": "dsh",
   "extends": "manifest.json",
   "migrations": [
@@ -209,7 +209,7 @@
     {
       "ordinal": 269,
       "file": "dsh-1031_local_seed_media_optional.sql",
-      "sha256": "a82caefb57c9c673392dce3f7194da25e78c898a9ae24a2b990741a05d95c7a6",
+      "sha256": "bd6a7e1e34616889dc8fc9a4af3be949e826f79de17a88aa6f1423c4552c68ac",
       "historicalPrefix": "1031",
       "state": "ACTIVE"
     }

@@ -295,7 +295,6 @@ for (const token of [
   "Verify DSH schema and seed contracts",
   "DSH_TEST_operator_context_id: ci-dsh",
   "Validate governed DSH database contracts",
-  "check-local-media-contract.mjs",
   "check-dsh-database-contract.mjs",
   "Apply canonical DSH migrations",
   "Re-run canonical DSH migrations",

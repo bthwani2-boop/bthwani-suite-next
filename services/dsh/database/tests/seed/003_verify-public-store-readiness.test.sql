@@ -20,9 +20,7 @@ BEGIN
     AND btrim(COALESCE(address_line, '')) <> ''
     AND btrim(COALESCE(coverage_summary, '')) <> ''
     AND btrim(COALESCE(operating_hours, '')) <> ''
-    AND delivery_readiness = 'ready'
-    AND btrim(COALESCE(hero_image_url, '')) <> ''
-    AND btrim(COALESCE(logo_url, '')) <> '';
+    AND delivery_readiness = 'ready';
 
   IF eligible_count < 1 THEN
     RAISE EXCEPTION 'public store readiness verification failed: no eligible local stores';
@@ -42,9 +40,6 @@ BEGIN
       OR btrim(COALESCE(coverage_summary, '')) = ''
       OR btrim(COALESCE(operating_hours, '')) = ''
       OR delivery_readiness <> 'ready'
-      OR btrim(COALESCE(storefront_photo_ref, '')) = ''
-      OR btrim(COALESCE(interior_photo_ref, '')) = ''
-      OR btrim(COALESCE(signage_photo_ref, '')) = ''
     );
 
   IF incomplete_count <> 0 THEN

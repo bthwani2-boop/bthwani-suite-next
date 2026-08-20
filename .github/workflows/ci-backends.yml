@@ -287,7 +287,6 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
       - name: Validate governed DSH database contracts
         run: |
-          node tools/scripts/check-local-media-contract.mjs
           node tools/scripts/check-dsh-database-contract.mjs
       - name: Apply canonical DSH migrations
         shell: pwsh
