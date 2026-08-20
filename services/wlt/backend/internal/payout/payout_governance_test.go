@@ -6,6 +6,20 @@ func int64Pointer(value int64) *int64 {
 	return &value
 }
 
+func TestIsSHA256AcceptsOnlyLowercaseCanonicalHex(t *testing.T) {
+	valid := "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	if !isSHA256(valid) {
+		t.Fatal("valid lowercase SHA-256 was rejected")
+	}
+	for _, value := range []string{
+		"", valid[:63], valid + "0", "0123456789ABCDEF0123456789abcdef0123456789abcdef0123456789abcdef", "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdeg",
+	} {
+		if isSHA256(value) {
+			t.Fatalf("invalid SHA-256 %q was accepted", value)
+		}
+	}
+}
+
 func TestNormalizeGovernedOwner(t *testing.T) {
 	t.Parallel()
 

@@ -5,7 +5,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"testing"
+	"time"
+
+	"wlt-api/internal/payment"
 )
 
 const pricingTestSecret = "pricing-test-secret"
@@ -126,4 +130,100 @@ func TestCalculateQuoteAllowsFreeLine(t *testing.T) {
 	if quote.TotalMinorUnits != 0 {
 		t.Fatalf("expected total 0, got %d", quote.TotalMinorUnits)
 	}
+}
+
+func TestCheckoutAllocationDerivesOnlyPositiveTenderComponents(t *testing.T) {
+	quote := &WltPricingQuote{
+		SubtotalMinorUnits: 1000, DeliveryFeeMinorUnits: 100, ServiceFeeMinorUnits: 10,
+		TaxMinorUnits: 5, DiscountMinorUnits: 50, TotalMinorUnits: 1065,
+	}
+	allocation, err := checkoutAllocation(quote)
+	if err != nil {
+		t.Fatalf("checkout allocation: %v", err)
+	}
+	if len(allocation) != 5 {
+		t.Fatalf("allocation length=%d, want 5: %#v", len(allocation), allocation)
+	}
+	if allocation[0].Component != payment.AllocationGoodsSubtotal || allocation[0].AmountMinorUnits != 1000 {
+		t.Fatalf("goods allocation was not preserved: %#v", allocation[0])
+	}
+	if allocation[4].Component != payment.AllocationDiscount || allocation[4].AmountMinorUnits != -50 {
+		t.Fatalf("discount allocation was not represented as a negative line: %#v", allocation[4])
+	}
+
+	quote.RoundingMinorUnits = 1
+	if _, err := checkoutAllocation(quote); err == nil {
+		t.Fatal("rounding without an explicit allocation component was accepted")
+	}
+	quote.RoundingMinorUnits = 0
+	quote.TotalMinorUnits = 999
+	if _, err := checkoutAllocation(quote); err == nil {
+		t.Fatal("allocation with a mismatched total was accepted")
+	}
+}
+
+func TestRequireCheckoutQuoteRequestRequiresScopedImmutableInputs(t *testing.T) {
+	valid := CalculateQuoteRequest{CheckoutIntentID: "intent-1", CartSnapshotHash: "snapshot-1", CartVersion: 1}
+	if err := requireCheckoutQuoteRequest("context-1", valid); err != nil {
+		t.Fatalf("valid checkout quote request rejected: %v", err)
+	}
+	for _, testCase := range []struct {
+		name string
+		ctx  string
+		req  CalculateQuoteRequest
+	}{
+		{name: "missing context", ctx: " ", req: valid},
+		{name: "missing intent", ctx: "context-1", req: CalculateQuoteRequest{CartSnapshotHash: "snapshot-1", CartVersion: 1}},
+		{name: "missing snapshot", ctx: "context-1", req: CalculateQuoteRequest{CheckoutIntentID: "intent-1", CartVersion: 1}},
+		{name: "zero cart version", ctx: "context-1", req: CalculateQuoteRequest{CheckoutIntentID: "intent-1", CartSnapshotHash: "snapshot-1"}},
+		{name: "negative cart version", ctx: "context-1", req: CalculateQuoteRequest{CheckoutIntentID: "intent-1", CartSnapshotHash: "snapshot-1", CartVersion: -1}},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			if err := requireCheckoutQuoteRequest(testCase.ctx, testCase.req); err == nil {
+				t.Fatal("invalid checkout quote request was accepted")
+			}
+		})
+	}
+}
+
+func TestScanCheckoutQuoteDecodesCanonicalJSON(t *testing.T) {
+	expires := time.Now().UTC().Add(time.Hour)
+	linesJSON, _ := json.Marshal([]QuoteOutputLine{{MasterProductID: "product-1", Quantity: 1, UnitPriceMinorUnits: 100, TotalMinorUnits: 100}})
+	allocationJSON, _ := json.Marshal([]payment.AllocationLine{{Component: payment.AllocationGoodsSubtotal, AmountMinorUnits: 100}})
+	row := fakeCheckoutQuoteScanner{values: []any{"quote-1", "context-1", "intent-1", "client-1", "store-1", "snapshot-1", "hash-1", 1, expires, int64(100), int64(0), int64(0), int64(0), int64(0), int64(0), int64(100), "YER", linesJSON, allocationJSON}}
+	quote, err := scanCheckoutQuote(row)
+	if err != nil {
+		t.Fatalf("scan checkout quote: %v", err)
+	}
+	if quote.ID != "quote-1" || quote.CartSnapshotHash != "snapshot-1" || quote.WltPricingQuote.CartSnapshotHash != "snapshot-1" || len(quote.Lines) != 1 || len(quote.Allocation) != 1 {
+		t.Fatalf("decoded quote lost canonical fields: %#v", quote)
+	}
+
+	row.values[17] = []byte("not-json")
+	if _, err := scanCheckoutQuote(row); err == nil {
+		t.Fatal("invalid quote lines JSON was accepted")
+	}
+}
+
+type fakeCheckoutQuoteScanner struct{ values []any }
+
+func (s fakeCheckoutQuoteScanner) Scan(dest ...any) error {
+	for index := range dest {
+		switch target := dest[index].(type) {
+		case *string:
+			*target = s.values[index].(string)
+		case *int:
+			*target = s.values[index].(int)
+		case *int64:
+			*target = s.values[index].(int64)
+		case **time.Time:
+			value := s.values[index].(time.Time)
+			*target = &value
+		case *[]byte:
+			*target = s.values[index].([]byte)
+		default:
+			return fmt.Errorf("unsupported scanner target %T", dest[index])
+		}
+	}
+	return nil
 }
