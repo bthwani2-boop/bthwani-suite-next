@@ -113,9 +113,10 @@ test('Android development client launch is owned only by the ADB transport', () 
 test('Sentry root instrumentation is conditional on successful initialization', () => {
   for (const app of mobileApps) {
     const indexSource = read(`apps/${app}/runtime/src/index.ts`);
+    const layoutSource = read(`apps/${app}/runtime/app/_layout.tsx`);
     const sentrySource = read(`apps/${app}/runtime/src/observability/sentry.ts`);
     assert.match(indexSource, /const sentryEnabled = initSentry\(\);/);
-    assert.match(indexSource, /registerRootComponent\(sentryEnabled \? Sentry\.wrap\(Root\) : Root\);/);
+    assert.match(layoutSource, /export default sentryEnabled \? Sentry\.wrap\(RootLayout\) : RootLayout;/);
     assert.match(sentrySource, /export function initSentry\(\): boolean/);
     assert.match(sentrySource, /return false;/);
     assert.match(sentrySource, /return true;/);

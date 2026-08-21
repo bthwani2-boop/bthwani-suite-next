@@ -1,7 +1,7 @@
 // app-field — DshFieldSurface
 // Consolidated entrypoint surface for field partner onboarding app.
 import React from 'react';
-import { BackHandler, Platform, View, StatusBar } from 'react-native';
+import { View, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { spacing, colorRoles, InlineNotice, StateView, TabBar, type TabBarItem } from '@bthwani/ui-kit';
 import { DshFieldProblemState } from './DshFieldProblemNotice';
@@ -19,14 +19,6 @@ import {
   reconcileFieldMutation,
 } from '../../shared/field-readiness';
 
-function useAndroidBackHandler(onBackPress: () => boolean) {
-  React.useEffect(() => {
-    if (Platform.OS !== 'android') return undefined;
-    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-    return () => subscription.remove();
-  }, [onBackPress]);
-}
-
 const FIELD_TAB_BAR_ITEMS: readonly TabBarItem[] = [
   { id: 'stores', label: 'الرئيسية', icon: 'home-outline', activeIcon: 'home' },
   { id: 'work-queue', label: 'المهام', icon: 'list-outline', activeIcon: 'list' },
@@ -34,14 +26,14 @@ const FIELD_TAB_BAR_ITEMS: readonly TabBarItem[] = [
   { id: 'profile', label: 'حسابي', icon: 'person-outline', activeIcon: 'person' },
 ];
 
-export function DshFieldSurface({ command, onExit, installationId }: DshFieldSurfaceProps = {}) {
-  const fieldSurface = useDshFieldSurfaceModel(command);
+export function DshFieldSurface({ route, navigation, installationId }: DshFieldSurfaceProps) {
+  const fieldSurface = useDshFieldSurfaceModel(route);
   const onboardingController = useFieldPartnerOnboardingController();
   const identity = useIdentitySession();
   const insets = useSafeAreaInsets();
   const openAssignment = React.useCallback((assignmentId: string) => {
-    fieldSurface.actions.pushRoute({ kind: 'onboarding', assignmentId });
-  }, [fieldSurface.actions]);
+    navigation.navigate({ kind: 'onboarding', assignmentId });
+  }, [navigation]);
   const offlineScope = identity.state.kind === 'authenticated' && installationId
     ? {
         actorId: identity.state.identity.subject,
@@ -105,20 +97,6 @@ export function DshFieldSurface({ command, onExit, installationId }: DshFieldSur
       : undefined,
   );
 
-  useAndroidBackHandler(
-    React.useCallback(() => {
-      if (fieldSurface.model.routeStackDepth > 1) {
-        fieldSurface.actions.popRoute();
-        return true;
-      }
-      if (onExit) {
-        onExit();
-        return true;
-      }
-      return false;
-    }, [fieldSurface.actions, fieldSurface.model.routeStackDepth, onExit]),
-  );
-
   if (identity.state.kind !== 'authenticated') {
     return (
       <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase, justifyContent: 'center', padding: spacing[4] }}>
@@ -171,7 +149,7 @@ export function DshFieldSurface({ command, onExit, installationId }: DshFieldSur
       >
         <DshFieldRouteRenderer
           model={fieldSurface.model}
-          actions={fieldSurface.actions}
+          navigation={navigation}
           onboardingController={onboardingController}
           identity={identity}
           onOpenAssignment={openAssignment}
@@ -185,10 +163,10 @@ export function DshFieldSurface({ command, onExit, installationId }: DshFieldSur
             activeId={fieldSurface.model.bottomNav.activeId}
             bottomInset={insets.bottom}
             onSelect={(id: string) => {
-              if (id === 'stores') fieldSurface.actions.resetToStores();
-              if (id === 'work-queue') fieldSurface.actions.pushRoute({ kind: 'work-queue' });
-              if (id === 'finance') fieldSurface.actions.pushRoute({ kind: 'finance' });
-              if (id === 'profile') fieldSurface.actions.pushRoute({ kind: 'account' });
+              if (id === 'stores') navigation.navigate({ kind: 'stores' }, 'replace');
+              if (id === 'work-queue') navigation.navigate({ kind: 'work-queue' });
+              if (id === 'finance') navigation.navigate({ kind: 'finance' });
+              if (id === 'profile') navigation.navigate({ kind: 'account' });
             }}
           />
         </View>

@@ -154,7 +154,11 @@ for (const [pattern, message] of [
   }
 }
 
-requireMarkers(clientSurfacePath, ["BenefitsHubScreen", "onOpenBenefits", 'profileRoute === "benefits"']);
+requireMarkers(clientSurfacePath, ["BenefitsHubScreen", "onOpenBenefits", 'case "profile-benefits":']);
+requireMarkers("apps/app-client/runtime/app/profile/benefits.tsx", [
+  "ClientRouteScreen",
+  'route={{ kind: "profile-benefits" }}',
+]);
 requireMarkers("services/dsh/frontend/app-client/account/BenefitsHubScreen.tsx", ["useSubscriptionLifecycleController", "controller.reload"]);
 requireMarkers("services/dsh/frontend/shared/marketing/marketing.api.ts", [
   "/dsh/operator/marketing/loyalty-tiers",

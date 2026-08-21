@@ -220,3 +220,37 @@ func TestListFieldOnboardingAssignmentsReadsCanonicalDBRowsAfterWorkforceAttesta
 		t.Fatalf("canonical field readback drifted: %#v", payload.Assignments)
 	}
 }
+
+func TestGetFieldOnboardingAssignmentReadsCanonicalDBRowWithinFieldScope(t *testing.T) {
+	db := openTestDB(t)
+	operatorContextID := "local-dsh"
+	fieldActorID := "field-http-detail-" + fmt.Sprint(time.Now().UnixNano())
+	assignment, err := fieldassignment.Create(t.Context(), db, operatorContextID, "operator-1", fieldassignment.CreateInput{
+		FieldActorID: fieldActorID, BusinessTaskKey: "http-detail-" + fmt.Sprint(time.Now().UnixNano()), StoreNameHint: "HTTP Detail Store", PhoneHint: "+967770000093",
+	})
+	if err != nil {
+		t.Fatalf("create assignment fixture: %v", err)
+	}
+	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM dsh_field_onboarding_assignments WHERE id = $1`, assignment.ID) })
+
+	s := fieldAssignmentFieldServer(t, fieldActorID, operatorContextID)
+	s.db = db
+	request := httptest.NewRequest(http.MethodGet, "/dsh/field/onboarding-assignments/"+assignment.ID, nil)
+	request.Header.Set("Authorization", "Bearer [REDACTED:Bearer token]")
+	response := httptest.NewRecorder()
+
+	s.handleGetFieldOnboardingAssignment(response, request)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("status=%d, body=%s", response.Code, response.Body.String())
+	}
+	var payload struct {
+		Assignment fieldassignment.Assignment `json:"assignment"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.Assignment.ID != assignment.ID || payload.Assignment.FieldActorID != fieldActorID {
+		t.Fatalf("canonical field detail readback drifted: %#v", payload.Assignment)
+	}
+}

@@ -5,7 +5,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { Header, StateView, colorRoles } from '@bthwani/ui-kit';
 import {
-  listFieldOnboardingAssignments,
+  getFieldOnboardingAssignment,
   openFieldOnboardingAssignment,
   type FieldOnboardingAssignment,
 } from '../../shared/field-assignment';
@@ -25,8 +25,7 @@ type Props = {
 };
 
 async function resolveCurrentAssignment(assignmentId: string): Promise<FieldOnboardingAssignment> {
-  const assignments = await listFieldOnboardingAssignments();
-  const assignment = assignments.find((candidate) => candidate.id === assignmentId);
+  const assignment = await getFieldOnboardingAssignment(assignmentId);
   if (!assignment || assignment.status === 'cancelled') {
     throw new Error('ASSIGNMENT_NOT_AVAILABLE');
   }

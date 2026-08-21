@@ -242,6 +242,13 @@ DshFieldOnboardingAssignmentListResponse:
       type: array
       items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshFieldOnboardingAssignment" }
 
+DshFieldOnboardingAssignmentResponse:
+  type: object
+  additionalProperties: false
+  required: [assignment]
+  properties:
+    assignment: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshFieldOnboardingAssignment" }
+
 DshCreateFieldOnboardingAssignmentRequest:
   type: object
   additionalProperties: false

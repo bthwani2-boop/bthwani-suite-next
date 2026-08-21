@@ -178,14 +178,17 @@ export function DshClientSurface({ route, navigation }: DshClientSurfaceProps) {
         else if (activeCartDiscovery === "error") content = <StateView tone="danger" title="تعذر تحميل السلة" description="تعذر اكتشاف السلة المحفوظة من DSH." actionLabel="إعادة المحاولة" onActionPress={() => setCartRetryToken((value) => value + 1)} />;
         else content = <StateView title="السلة فارغة" description="لم توجد سلة نشطة. أضف منتجًا من كتالوج أحد المتاجر." actionLabel="تصفح المتاجر" onActionPress={() => navigate({ kind: "stores" })} />;
       } else {
-        content = <ClientCheckoutRoute storeId={route.storeId} onBack={navigation.back} onBrowseCatalog={() => navigate({ kind: "stores" })} onManageAddresses={() => navigate({ kind: "profile-addresses", returnStoreId: route.storeId })} onSuccess={openOrderTracking} />;
+        content = <ClientCheckoutRoute storeId={route.storeId} onBack={navigation.back} onBrowseCatalog={() => navigate({ kind: "stores" })} onManageAddresses={() => navigate({ kind: "profile-addresses", ...(route.storeId ? { returnStoreId: route.storeId } : {}) })} onSuccess={openOrderTracking} />;
       }
       break;
     case "profile-commercial":
       content = <MyProfileScreen onBack={navigation.back} />;
       break;
     case "profile-addresses":
-      content = <AddressLocationScreen onBack={navigation.back} {...(route.returnStoreId ? { onOpenCheckout: () => navigate({ kind: "cart", storeId: route.returnStoreId }, "replace") } : {})} />;
+      {
+        const returnStoreId = route.returnStoreId;
+        content = <AddressLocationScreen onBack={navigation.back} {...(returnStoreId ? { onOpenCheckout: () => navigate({ kind: "cart", storeId: returnStoreId }, "replace") } : {})} />;
+      }
       break;
     case "profile-identity":
       content = <IdentityHubScreen onBack={navigation.back} />;

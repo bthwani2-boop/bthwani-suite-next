@@ -4,9 +4,11 @@ export { DshFieldSurface } from './components/DshFieldSurface';
 export type {
   DshFieldRoute,
   DshFieldRouteState,
-  DshFieldNavigationCommand,
+  DshFieldNavigationMode,
+  DshFieldNavigation,
   DshFieldSurfaceProps,
 } from './dsh-field.routes';
+export { dshFieldRouteToPath } from './dsh-field.routes';
 
 export { DshFieldProfileCompletionScreen } from './account/DshFieldProfileCompletionScreen';
 export { IdentitySessionGate } from '../shared/session/IdentitySessionGate';

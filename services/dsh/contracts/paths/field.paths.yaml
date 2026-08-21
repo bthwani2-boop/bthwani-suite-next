@@ -1123,7 +1123,9 @@
     security: [{ bearerAuth: [] }]
     parameters: [{ name: assignmentId, in: path, required: true, schema: { type: string, format: uuid } }]
     responses:
-      "200": { description: Assignment detail. }
+      "200":
+        description: Assignment detail.
+        content: { application/json: { schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshFieldOnboardingAssignmentResponse" } } }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }

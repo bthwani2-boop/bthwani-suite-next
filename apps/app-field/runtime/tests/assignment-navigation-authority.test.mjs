@@ -17,18 +17,21 @@ test("field navigation carries assignment identity only", async () => {
   ]);
 
   assert.match(routes, /kind:\s*'onboarding'; partnerId\?: string; assignmentId\?: string/);
+  assert.match(routes, /DshFieldNavigation/);
+  assert.match(routes, /dshFieldRouteToPath/);
   assert.doesNotMatch(routes, /assignmentPrefill|storeNameHint|phoneHint|addressHint|locationLatitude|locationLongitude/);
-  assert.match(surface, /pushRoute\(\{ kind: 'onboarding', assignmentId \}\)/);
-  assert.doesNotMatch(surface, /storeNameHint|phoneHint|addressHint|locationLatitude|locationLongitude/);
+  assert.match(surface, /navigation\.navigate\(\{ kind: 'onboarding', assignmentId \}\)/);
+  assert.doesNotMatch(`${surface}\n${renderer}\n${model}`, /routeStack|pushRoute|popRoute|resetToStores|BackHandler|navCommand/);
+  const platform = await source("apps/app-field/runtime/src/platform/dsh-capabilities.tsx");
+  assert.doesNotMatch(platform, /configureDshLinkingAdapter|getInitialURL|addUrlListener|addEventListener\("url"/);
   assert.match(renderer, /onOpenAssignment\(assignment\.id\)/);
-  assert.match(model, /left\.assignmentId === right\.assignmentId/);
 });
 
 test("assignment onboarding re-reads current DSH truth and fails closed", async () => {
   const resolver = await source("services/dsh/frontend/app-field/onboarding/DshFieldAssignmentOnboardingScreen.tsx");
 
-  assert.match(resolver, /listFieldOnboardingAssignments\(\)/);
-  assert.match(resolver, /assignments\.find\(\(candidate\) => candidate\.id === assignmentId\)/);
+  assert.match(resolver, /getFieldOnboardingAssignment\(assignmentId\)/);
+  assert.doesNotMatch(resolver, /listFieldOnboardingAssignments\(\)|assignments\.find\(\(candidate\) => candidate\.id === assignmentId\)/);
   assert.match(resolver, /openFieldOnboardingAssignment\(assignment\.id, \{ expectedVersion: assignment\.version \}\)/);
   assert.match(resolver, /ASSIGNMENT_NOT_AVAILABLE/);
   assert.match(resolver, /ASSIGNMENT_DRAFT_LINK_INCONSISTENT/);

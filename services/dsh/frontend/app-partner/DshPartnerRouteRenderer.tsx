@@ -39,6 +39,7 @@ import type {
   DshPartnerOrderAlertItem,
   DshPartnerOrderAlertId,
 } from "../shared/orders/orders.contract";
+import type { GovernedPartnerOrderItem } from "../shared/partner/partner.adapters";
 
 type PartnerSupportSource = NonNullable<DshPartnerSupportCommandContext["source"]>;
 
@@ -53,7 +54,7 @@ export type DshPartnerRouteRendererProps = {
     | "offline"
     | "disabled"
     | "partial";
-  readonly partnerOrders: readonly PartnerOrderItem[];
+  readonly partnerOrders: readonly GovernedPartnerOrderItem[];
   readonly runtimePartnerProfile: {
     readonly storeName: string;
     readonly branchLabel: string;

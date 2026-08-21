@@ -1472,6 +1472,8 @@ components:
       $ref: "./components/schemas/field.schemas.yaml#/DshFieldOnboardingAssignment"
     DshFieldOnboardingAssignmentListResponse:
       $ref: "./components/schemas/field.schemas.yaml#/DshFieldOnboardingAssignmentListResponse"
+    DshFieldOnboardingAssignmentResponse:
+      $ref: "./components/schemas/field.schemas.yaml#/DshFieldOnboardingAssignmentResponse"
     DshCreateFieldOnboardingAssignmentRequest:
       $ref: "./components/schemas/field.schemas.yaml#/DshCreateFieldOnboardingAssignmentRequest"
     DshFieldOnboardingAssignmentTransitionRequest:

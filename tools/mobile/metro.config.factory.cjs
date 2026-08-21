@@ -1,9 +1,9 @@
 // Metro configuration factory for Expo in the pnpm monorepo.
-const { getSentryExpoConfig } = require("@sentry/react-native/metro");
 const path = require("path");
 
 function createBthwaniMetroConfig(projectRoot) {
   const workspaceRoot = path.resolve(projectRoot, "../../..");
+  const { getSentryExpoConfig } = require(require.resolve("@sentry/react-native/metro", { paths: [projectRoot] }));
 
   // Drop-in replacement for Expo's getDefaultConfig. It adds Debug IDs and
   // source-map metadata used by Sentry for EAS Build and EAS Update bundles.

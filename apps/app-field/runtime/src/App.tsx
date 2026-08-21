@@ -1,4 +1,4 @@
-import { ActivityIndicator, Linking, Platform, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
@@ -13,7 +13,8 @@ import {
   fetchFieldOperationalReadiness,
   useDshMobilePushRegistration,
   type FieldOperationalReadiness,
-  type DshFieldNavigationCommand,
+  type DshFieldNavigation,
+  type DshFieldRouteState,
 } from "@bthwani/dsh/app-field";
 import {
   configureIdentityDeviceFingerprintProvider,
@@ -24,9 +25,9 @@ import {
   useIdentitySession,
 } from "@bthwani/core-identity";
 import { ReadinessGateScreen } from "./features/readiness/ReadinessGateScreen";
-import { FIELD_APP_SCHEME, parseFieldDeepLink } from "./navigation/field-deep-link";
 
 const FIELD_DEVICE_FINGERPRINT_KEY = "bthwani.field.device-fingerprint.v1";
+const FIELD_APP_SCHEME = "bthwani-field-next";
 
 function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   return {
@@ -107,12 +108,11 @@ function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function AppContent() {
+function AppContent({ route, navigation }: { readonly route: DshFieldRouteState; readonly navigation: DshFieldNavigation }) {
   const identity = useIdentitySession();
   useDshMobilePushRegistration(identity.state.kind, "app-field", FIELD_APP_SCHEME);
 
   const [installationState, setInstallationState] = useState<InstallationState>({ kind: "loading" });
-  const [navCommand, setNavCommand] = useState<DshFieldNavigationCommand | undefined>();
 
   useEffect(() => {
     let active = true;
@@ -130,24 +130,6 @@ function AppContent() {
 
     return () => {
       active = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    void Linking.getInitialURL().then((url) => {
-      if (url) {
-        const cmd = parseFieldDeepLink(url);
-        if (cmd) setNavCommand(cmd);
-      }
-    });
-
-    const linkSub = Linking.addEventListener("url", ({ url }) => {
-      const cmd = parseFieldDeepLink(url);
-      if (cmd) setNavCommand(cmd);
-    });
-
-    return () => {
-      linkSub.remove();
     };
   }, []);
 
@@ -180,7 +162,8 @@ function AppContent() {
           >
             <UnifiedReadinessWrapper>
               <DshFieldSurface
-                {...(navCommand ? { command: navCommand } : {})}
+                route={route}
+                navigation={navigation}
                 installationId={installationState.installationId}
               />
             </UnifiedReadinessWrapper>
@@ -191,10 +174,10 @@ function AppContent() {
   );
 }
 
-export default function App() {
+export default function App({ route, navigation }: { readonly route: DshFieldRouteState; readonly navigation: DshFieldNavigation }) {
   return (
     <WorkforceProfileProvider>
-      <AppContent />
+      <AppContent route={route} navigation={navigation} />
     </WorkforceProfileProvider>
   );
 }

@@ -16,6 +16,7 @@ import { DshFieldProfileCompletionScreen } from '../account/DshFieldProfileCompl
 import { WltFieldFinanceScreen } from '../finance/WltFieldFinanceScreen';
 import { DshFieldCatalogOperationsScreen } from './DshFieldCatalogOperationsScreen';
 import type { useDshFieldSurfaceModel } from '../field.surface-model';
+import type { DshFieldNavigation } from '../dsh-field.routes';
 import type { FieldOnboardingController } from '../../shared/field-onboarding';
 import type { useIdentitySession } from '@bthwani/core-identity';
 
@@ -23,23 +24,23 @@ type FieldSurfaceBinding = ReturnType<typeof useDshFieldSurfaceModel>;
 
 type Props = {
   readonly model: FieldSurfaceBinding['model'];
-  readonly actions: FieldSurfaceBinding['actions'];
+  readonly navigation: DshFieldNavigation;
   readonly onboardingController: FieldOnboardingController;
   readonly identity: ReturnType<typeof useIdentitySession>;
   readonly onOpenAssignment: (assignmentId: string) => void;
 };
 
-export function DshFieldRouteRenderer({ model, actions, onboardingController, identity, onOpenAssignment }: Props): React.ReactElement {
+export function DshFieldRouteRenderer({ model, navigation, onboardingController, identity, onOpenAssignment }: Props): React.ReactElement {
   const { route } = model;
 
   if (route.kind === 'onboarding') {
-    const openProducts = (partnerId: string) => actions.pushRoute({ kind: 'products-upload', partnerId });
+    const openProducts = (partnerId: string) => navigation.navigate({ kind: 'products-upload', partnerId });
     if (route.assignmentId) {
       return (
         <DshFieldAssignmentOnboardingScreen
           assignmentId={route.assignmentId}
           controller={onboardingController}
-          onBack={actions.popRoute}
+          onBack={navigation.back}
           onOpenProducts={openProducts}
         />
       );
@@ -48,7 +49,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
       <DshFieldOnboardingScreen
         controller={onboardingController}
         {...(route.partnerId ? { partnerId: route.partnerId } : {})}
-        onBack={actions.popRoute}
+        onBack={navigation.back}
         onOpenProducts={openProducts}
       />
     );
@@ -58,16 +59,16 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
     return (
       <DshFieldVisitScreen
         storeId={route.storeId}
-        onBack={actions.popRoute}
+        onBack={navigation.back}
         onGoToChecklist={(visitId: string) =>
-          actions.pushRoute({
+          navigation.navigate({
             kind: 'checklist',
             visitId,
             storeId: route.storeId,
           })
         }
         onGoToVerification={(visitId: string) =>
-          actions.pushRoute({
+          navigation.navigate({
             kind: 'verification',
             visitId,
             storeId: route.storeId,
@@ -81,7 +82,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
       <DshFieldStoreVerificationScreen
         storeId={route.storeId}
         visitId={route.visitId}
-        onBack={actions.popRoute}
+        onBack={navigation.back}
       />
     );
   }
@@ -90,10 +91,10 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
     return (
       <DshFieldPartnerProgressScreen
         partnerId={route.partnerId}
-        onBack={actions.popRoute}
-        onOpenProducts={(partnerId) => actions.pushRoute({ kind: 'products-upload', partnerId })}
-        onOpenVisit={(storeId) => actions.pushRoute({ kind: 'visit', storeId })}
-        onOpenEscalation={(storeId) => actions.pushRoute({ kind: 'escalation', storeId })}
+        onBack={navigation.back}
+        onOpenProducts={(partnerId) => navigation.navigate({ kind: 'products-upload', partnerId })}
+        onOpenVisit={(storeId) => navigation.navigate({ kind: 'visit', storeId })}
+        onOpenEscalation={(storeId) => navigation.navigate({ kind: 'escalation', storeId })}
       />
     );
   }
@@ -103,7 +104,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
       <DshFieldReadinessChecklistScreen
         storeId={route.storeId}
         visitId={route.visitId}
-        onBack={actions.popRoute}
+        onBack={navigation.back}
       />
     );
   }
@@ -112,40 +113,40 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
     const handleLogout = async () => {
       await identity.logout();
       onboardingController.reset();
-      actions.resetToStores();
+      navigation.navigate({ kind: 'stores' }, 'replace');
     };
     return (
       <DshFieldProfileHomeScreen
-        onBack={actions.popRoute}
-        onOpenProfile={() => actions.pushRoute({ kind: 'profile' })}
-        onOpenProfileCompletion={() => actions.pushRoute({ kind: 'profile-completion' })}
-        onOpenFinance={() => actions.pushRoute({ kind: 'finance' })}
-        onOpenVerification={() => actions.pushRoute({ kind: 'work-queue' })}
+        onBack={navigation.back}
+        onOpenProfile={() => navigation.navigate({ kind: 'profile' })}
+        onOpenProfileCompletion={() => navigation.navigate({ kind: 'profile-completion' })}
+        onOpenFinance={() => navigation.navigate({ kind: 'finance' })}
+        onOpenVerification={() => navigation.navigate({ kind: 'work-queue' })}
         onLogout={() => void handleLogout()}
       />
     );
   }
 
   if (route.kind === 'profile') {
-    return <DshFieldProfileScreen onBack={actions.popRoute} />;
+    return <DshFieldProfileScreen onBack={navigation.back} />;
   }
 
   if (route.kind === 'profile-completion') {
     const handleLogout = async () => {
       await identity.logout();
       onboardingController.reset();
-      actions.resetToStores();
+      navigation.navigate({ kind: 'stores' }, 'replace');
     };
     return (
       <DshFieldProfileCompletionScreen
-        onBack={actions.popRoute}
+        onBack={navigation.back}
         onLogout={() => void handleLogout()}
       />
     );
   }
 
   if (route.kind === 'finance') {
-    return <WltFieldFinanceScreen onBack={actions.popRoute} />;
+    return <WltFieldFinanceScreen onBack={navigation.back} />;
   }
 
   if (route.kind === 'escalation') {
@@ -153,7 +154,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
       <DshFieldEscalationScreen
         storeId={route.storeId}
         {...(route.visitId ? { visitId: route.visitId } : {})}
-        onBack={actions.popRoute}
+        onBack={navigation.back}
       />
     );
   }
@@ -161,9 +162,9 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
   if (route.kind === 'work-queue') {
     return (
       <DshFieldWorkQueueScreen
-        onOpenVisit={(storeId) => actions.pushRoute({ kind: 'visit', storeId })}
+        onOpenVisit={(storeId) => navigation.navigate({ kind: 'visit', storeId })}
         onOpenEscalation={(storeId, visitId) =>
-          actions.pushRoute({ kind: 'escalation', storeId, ...(visitId ? { visitId } : {}) })
+          navigation.navigate({ kind: 'escalation', storeId, ...(visitId ? { visitId } : {}) })
         }
         onOpenAssignment={(assignment) => onOpenAssignment(assignment.id)}
       />
@@ -173,7 +174,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
     return (
       <DshFieldCatalogOperationsScreen
         partnerId={route.partnerId}
-        onBack={actions.popRoute}
+        onBack={navigation.back}
       />
     );
   }
@@ -181,15 +182,15 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
   return (
     <DshFieldPartnersScreen
       onOpenPartner={(partnerId, activationStatus) =>
-        actions.pushRoute(
+        navigation.navigate(
           activationStatus === 'draft'
             ? { kind: 'onboarding', partnerId }
             : { kind: 'partner-progress', partnerId }
         )
       }
-      onOpenAccount={() => actions.pushRoute({ kind: 'account' })}
-      onCreatePartner={() => actions.pushRoute({ kind: 'onboarding' })}
-      onOpenWorkQueue={() => actions.pushRoute({ kind: 'work-queue' })}
+      onOpenAccount={() => navigation.navigate({ kind: 'account' })}
+      onCreatePartner={() => navigation.navigate({ kind: 'onboarding' })}
+      onOpenWorkQueue={() => navigation.navigate({ kind: 'work-queue' })}
       onOpenAssignment={(assignment) => onOpenAssignment(assignment.id)}
     />
   );

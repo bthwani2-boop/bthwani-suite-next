@@ -43,6 +43,11 @@ export async function listFieldOnboardingAssignments(): Promise<readonly FieldOn
   return result.assignments;
 }
 
+export async function getFieldOnboardingAssignment(id: string): Promise<FieldOnboardingAssignment> {
+  const result = await request<{ assignment: FieldOnboardingAssignment }>(`/dsh/field/onboarding-assignments/${encodeURIComponent(id)}`);
+  return result.assignment;
+}
+
 export function openFieldOnboardingAssignment(id: string, input: FieldOnboardingAssignmentTransitionInput): Promise<FieldOnboardingAssignment> {
   return request<{ assignment: FieldOnboardingAssignment }>(`/dsh/field/onboarding-assignments/${encodeURIComponent(id)}/open`, {
     method: "POST",

@@ -243,10 +243,5 @@
     "size-limit": "^11.1.6",
     "typescript": "7.0.2",
     "yaml": "2.8.3"
-  },
-  "dependencies": {
-    "@react-native-async-storage/async-storage": "2.2.0",
-    "@react-native-community/netinfo": "12.0.1",
-    "expo-linking": "57.0.3"
   }
 }
