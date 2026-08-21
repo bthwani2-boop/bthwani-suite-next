@@ -3,7 +3,6 @@ import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Icon, Text, spacing, colorRoles } from '@bthwani/ui-kit';
 import type { DshPartnerSurfaceProps, PartnerHubSection } from './dsh-partner.types';
-import { dshPartnerLegacyRoute } from './partner-navigation';
 import { useDshPartnerSurfaceModel } from './useDshPartnerSurfaceModel';
 import { PlatformVarsProvider, usePlatformVars } from '../shared/platform';
 import { PartnerStoreScopeSheet } from './store/PartnerStoreScopeSheet';
@@ -52,7 +51,7 @@ function DshPartnerSurfaceInner({ route, navigation }: DshPartnerSurfaceProps) {
     teamMembers,
     isTeamLoading,
     teamError,
-  } = useDshPartnerSurfaceModel(dshPartnerLegacyRoute(route));
+  } = useDshPartnerSurfaceModel(route.kind);
 
   const accountHubSection: PartnerHubSection = route.kind === 'home' ? route.section : 'hub';
   const bottomActiveId = React.useMemo(() => {
