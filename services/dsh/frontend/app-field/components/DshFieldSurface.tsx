@@ -10,7 +10,6 @@ import type { DshFieldSurfaceProps } from '../dsh-field.routes';
 import { DshFieldRouteRenderer } from './DshFieldRouteRenderer';
 import { useIdentitySession } from '@bthwani/core-identity';
 import { useFieldPartnerOnboardingController } from '../../shared/field-onboarding';
-import type { FieldOnboardingAssignment } from '../../shared/field-assignment';
 import {
   useFieldOfflineSync,
   createFieldVisit,
@@ -40,15 +39,8 @@ export function DshFieldSurface({ command, onExit, installationId }: DshFieldSur
   const onboardingController = useFieldPartnerOnboardingController();
   const identity = useIdentitySession();
   const insets = useSafeAreaInsets();
-  const openAssignment = React.useCallback((assignment: FieldOnboardingAssignment) => {
-    fieldSurface.actions.pushRoute({ kind: 'onboarding', assignmentPrefill: {
-      id: assignment.id,
-      storeNameHint: assignment.storeNameHint,
-      ...(assignment.phoneHint ? { phoneHint: assignment.phoneHint } : {}),
-      ...(assignment.addressHint ? { addressHint: assignment.addressHint } : {}),
-      ...(assignment.locationLatitude !== undefined ? { locationLatitude: assignment.locationLatitude } : {}),
-      ...(assignment.locationLongitude !== undefined ? { locationLongitude: assignment.locationLongitude } : {}),
-    } });
+  const openAssignment = React.useCallback((assignmentId: string) => {
+    fieldSurface.actions.pushRoute({ kind: 'onboarding', assignmentId });
   }, [fieldSurface.actions]);
   const offlineScope = identity.state.kind === 'authenticated' && installationId
     ? {
