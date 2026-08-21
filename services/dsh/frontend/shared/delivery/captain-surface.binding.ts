@@ -32,8 +32,12 @@ export function useDshCaptainSurfaceBinding(
   const chatModel = useCaptainChatModel();
   const inboxModel = useCaptainInboxModel(captainRuntimeId);
 
-  const contextAssignmentId = routeAssignmentId || inboxModel.operationalAssignment?.id || '';
   const operationalAssignmentId = inboxModel.operationalAssignment?.id || '';
+  const contextAssignmentId = routeAssignmentId || operationalAssignmentId;
+  const operationalCommandAssignmentId =
+    operationalAssignmentId && (!routeAssignmentId || routeAssignmentId === operationalAssignmentId)
+      ? operationalAssignmentId
+      : '';
   const operationalAssignment = operationalAssignmentId
     ? inboxModel.findAssignment(operationalAssignmentId)
     : undefined;
@@ -64,7 +68,7 @@ export function useDshCaptainSurfaceBinding(
 
   const deliveryActions = useCaptainDeliveryActions({
     captainRuntimeId,
-    activeAssignmentId: contextAssignmentId,
+    activeAssignmentId: operationalCommandAssignmentId,
     captainPodPhotoUri: podUpload.captainPodPhotoUri,
     captainPodMediaKey: podUpload.captainPodMediaKey,
     captainAppMode: profileModel.captainAppMode,

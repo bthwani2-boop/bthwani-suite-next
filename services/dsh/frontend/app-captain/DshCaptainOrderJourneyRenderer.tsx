@@ -10,19 +10,23 @@ import { OperationalCaptainExecutionScreen } from './orders/OperationalCaptainEx
 
 export type DshCaptainOrderJourneyRendererProps = DshCaptainRouteRendererProps & {
   readonly activeDeliveryStatus: DshDeliveryStatus | '';
+  readonly isActiveAssignmentOperational: boolean;
   readonly onOpenPod: () => void;
 };
 
 export function DshCaptainOrderJourneyRenderer(
   props: DshCaptainOrderJourneyRendererProps,
 ): React.ReactElement {
-  const offerPending = props.activeDeliveryStatus === 'assigned';
+  const requiresOperationalAssignment =
+    props.route === 'map'
+    || props.route === 'pickup-dropoff'
+    || props.route === 'pod-submission';
 
-  if (props.route === 'detail' && offerPending) {
+  if (props.route === 'detail' && !props.isActiveAssignmentOperational) {
     return (
       <StateView
-        title="العرض ينتظر قرارك"
-        description="لا يمكن بدء الاستلام أو التسليم قبل قبول عرض الإسناد من اللوحة أعلاه."
+        title="المهمة ليست المهمة التشغيلية المقبولة"
+        description="يمكن عرض تفاصيل المهمة، لكن لا يمكن بدء الاستلام أو التسليم قبل أن يثبت DSH أنها المهمة المقبولة والنشطة."
         tone="warning"
         actionLabel="العودة إلى صندوق الطلبات"
         onActionPress={props.onGoToInbox}
@@ -30,20 +34,23 @@ export function DshCaptainOrderJourneyRenderer(
     );
   }
 
-  if (props.route !== 'map') {
-    return <DshCaptainRouteRenderer {...props} />;
-  }
-
-  if (offerPending || !props.activeAssignmentId) {
+  if (
+    requiresOperationalAssignment
+    && (!props.isActiveAssignmentOperational || !props.activeAssignmentId)
+  ) {
     return (
       <StateView
-        title="الخريطة التنفيذية غير متاحة"
-        description="يجب قبول عرض الإسناد قبل فتح مسار التنفيذ والموقع."
+        title="مسار التنفيذ غير متاح"
+        description="لا يمكن فتح الاستلام أو التسليم أو إثبات التسليم إلا للمهمة الوحيدة التي يثبت DSH أنها مقبولة ونشطة."
         tone="warning"
         actionLabel="فتح صندوق الطلبات"
         onActionPress={props.onGoToInbox}
       />
     );
+  }
+
+  if (props.route !== 'map') {
+    return <DshCaptainRouteRenderer {...props} />;
   }
 
   return (

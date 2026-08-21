@@ -119,6 +119,12 @@ function AuthenticatedCaptainSurface({
   const camera = useCameraPhotoCapture();
   const [cameraError, setCameraError] = React.useState<string | null>(null);
   const [appearanceMode, setAppearanceMode] = React.useState<AppearanceMode>("lightPremium");
+  const isActiveAssignmentOperational = Boolean(
+    activeAssignment?.id
+      && operationalAssignmentId
+      && activeAssignment.id === operationalAssignmentId
+      && !operationalAssignmentAmbiguous,
+  );
 
   const goToInbox = React.useCallback(() => navigation.navigate({ kind: "inbox" }), [navigation]);
   const goToAccount = React.useCallback(() => navigation.navigate({ kind: "account" }), [navigation]);
@@ -262,12 +268,13 @@ function AuthenticatedCaptainSurface({
           activeAssignmentId={state.activeAssignmentId}
           activeOrderId={state.activeOrderId}
           activeDeliveryStatus={state.activeDeliveryStatus}
+          isActiveAssignmentOperational={isActiveAssignmentOperational}
           activeOrderDisplayId={derived.activeOrderDisplayId}
           activeSummary={state.activeAssignmentId ? derived.activeSummary : null}
           inboxItems={state.inboxItems}
           inboxState={state.inboxState}
           captainRuntimeId={captainId}
-          captainPodRequired={derived.captainPodRequired}
+          captainPodRequired={derived.captainPodRequired && isActiveAssignmentOperational}
           isStoreCourierMode={derived.isStoreCourierMode}
           isCaptainAvailable={derived.isCaptainAvailable}
           selectedSupportScreen={state.selectedSupportScreen}
@@ -294,14 +301,23 @@ function AuthenticatedCaptainSurface({
           onConfirmPickup={() => void actions.confirmPickup()}
           onConfirmDelivery={() => {
             void actions.confirmDelivery().then((readyForProof) => {
-              if (readyForProof && state.activeAssignmentId) {
-                navigation.navigate({ kind: "pod-submission", assignmentId: state.activeAssignmentId });
+              if (
+                readyForProof
+                && operationalAssignmentId
+                && !operationalAssignmentAmbiguous
+              ) {
+                navigation.navigate({ kind: "pod-submission", assignmentId: operationalAssignmentId });
+              } else if (readyForProof) {
+                goToInbox();
               }
             });
           }}
           onOpenPod={() => {
-            if (state.activeAssignmentId) navigation.navigate({ kind: "pod-submission", assignmentId: state.activeAssignmentId });
-            else goToInbox();
+            if (isActiveAssignmentOperational && operationalAssignmentId) {
+              navigation.navigate({ kind: "pod-submission", assignmentId: operationalAssignmentId });
+            } else {
+              goToInbox();
+            }
           }}
           onConfirmPodSubmission={() => void actions.confirmPodSubmission()}
           onReportPodFailure={(draft) => actions.reportPodFailure(draft)}

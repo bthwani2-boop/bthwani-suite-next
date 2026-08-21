@@ -67,9 +67,30 @@ test("captain has real file-system routes and fail-closed dynamic parameter guar
 test("captain operational assignment truth remains DSH-owned instead of URL-owned", () => {
   const inbox = read("services/dsh/frontend/shared/delivery/captain-inbox.model.ts");
   const binding = read("services/dsh/frontend/shared/delivery/captain-surface.binding.ts");
+  const journey = read("services/dsh/frontend/app-captain/DshCaptainOrderJourneyRenderer.tsx");
+  const surface = read("services/dsh/frontend/app-captain/DshCaptainSurface.tsx");
+
   assert.match(inbox, /assignment\.status !== 'accepted'/);
   assert.match(inbox, /operationalAssignments\.length === 1/);
   assert.match(inbox, /operationalAssignmentAmbiguous/);
-  assert.match(binding, /routeAssignmentId \|\| inboxModel\.operationalAssignment\?\.id \|\| ''/);
-  assert.match(binding, /activeAssignmentId: operationalAssignmentId/);
+  assert.match(binding, /const operationalAssignmentId = inboxModel\.operationalAssignment\?\.id \|\| '';/);
+  assert.match(binding, /const contextAssignmentId = routeAssignmentId \|\| operationalAssignmentId;/);
+  assert.match(binding, /const operationalCommandAssignmentId =/);
+  assert.match(binding, /routeAssignmentId === operationalAssignmentId/);
+
+  const actionBindingStart = binding.indexOf("const deliveryActions = useCaptainDeliveryActions");
+  const actionBindingEnd = binding.indexOf("const pushLocation", actionBindingStart);
+  assert.ok(actionBindingStart >= 0 && actionBindingEnd > actionBindingStart);
+  const actionBinding = binding.slice(actionBindingStart, actionBindingEnd);
+  assert.match(actionBinding, /activeAssignmentId: operationalCommandAssignmentId/);
+  assert.doesNotMatch(actionBinding, /activeAssignmentId: contextAssignmentId/);
+
+  assert.match(journey, /isActiveAssignmentOperational/);
+  assert.match(journey, /props\.route === 'pickup-dropoff'/);
+  assert.match(journey, /props\.route === 'pod-submission'/);
+  assert.doesNotMatch(journey, /activeDeliveryStatus === 'assigned'/);
+
+  assert.match(surface, /activeAssignment\.id === operationalAssignmentId/);
+  assert.match(surface, /captainPodRequired=\{derived\.captainPodRequired && isActiveAssignmentOperational\}/);
+  assert.match(surface, /assignmentId: operationalAssignmentId/);
 });
