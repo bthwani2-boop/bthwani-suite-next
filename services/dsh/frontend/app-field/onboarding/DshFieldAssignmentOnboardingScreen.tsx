@@ -126,7 +126,7 @@ export function DshFieldAssignmentOnboardingScreen({
   }
 
   const assignment = resolution.assignment;
-  const activePartnerId = controller.state.partnerId ?? assignment.draftPartnerId?.trim() || undefined;
+  const activePartnerId = (controller.state.partnerId ?? assignment.draftPartnerId?.trim()) || undefined;
 
   return (
     <DshFieldOnboardingScreen
