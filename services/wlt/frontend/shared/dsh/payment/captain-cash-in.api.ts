@@ -1,4 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { bthwaniKeyValueStorage } from "@bthwani/data-runtime";
 import { corrId, createDshHttpClient } from "../dsh-link/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
 
@@ -94,7 +94,7 @@ export async function getOrCreateCaptainCashInMutationContext(input: {
   readonly fingerprint: string;
 }): Promise<{ readonly topupReference: string; readonly idempotencyKey: string; readonly correlationId: string }> {
   const key = mutationStorageKey(input.operation, input.sessionId);
-  const raw = await AsyncStorage.getItem(key);
+  const raw = await bthwaniKeyValueStorage.getItem(key);
   if (raw) {
     try {
       const stored = JSON.parse(raw) as StoredMutationContext;
@@ -106,12 +106,12 @@ export async function getOrCreateCaptainCashInMutationContext(input: {
     }
   }
   const context = newCaptainCashInContext();
-  await AsyncStorage.setItem(key, JSON.stringify({ fingerprint: input.fingerprint, ...context } satisfies StoredMutationContext));
+  await bthwaniKeyValueStorage.setItem(key, JSON.stringify({ fingerprint: input.fingerprint, ...context } satisfies StoredMutationContext));
   return context;
 }
 
 export async function clearCaptainCashInMutationContext(operation: "create" | "authorize" | "capture" | "allocateCollateral", sessionId?: string): Promise<void> {
-  await AsyncStorage.removeItem(mutationStorageKey(operation, sessionId));
+  await bthwaniKeyValueStorage.removeItem(mutationStorageKey(operation, sessionId));
 }
 
 export async function createCaptainCashInSession(input: {
@@ -158,12 +158,12 @@ export async function mutateCaptainCashInSession(input: {
 }
 
 export async function loadStoredCaptainCashInSession(actorId: string): Promise<CaptainCashInSession | null> {
-  const raw = await AsyncStorage.getItem(ACTIVE_SESSION_KEY);
+  const raw = await bthwaniKeyValueStorage.getItem(ACTIVE_SESSION_KEY);
   if (!raw) return null;
   try {
     const stored = JSON.parse(raw) as StoredSession;
     if (stored.actorId !== actorId) {
-      await AsyncStorage.removeItem(ACTIVE_SESSION_KEY);
+      await bthwaniKeyValueStorage.removeItem(ACTIVE_SESSION_KEY);
       return null;
     }
     return stored.id ? stored : null;
@@ -173,9 +173,9 @@ export async function loadStoredCaptainCashInSession(actorId: string): Promise<C
 }
 
 export async function storeCaptainCashInSession(actorId: string, session: CaptainCashInSession): Promise<void> {
-  await AsyncStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({ ...session, actorId } satisfies StoredSession));
+  await bthwaniKeyValueStorage.setItem(ACTIVE_SESSION_KEY, JSON.stringify({ ...session, actorId } satisfies StoredSession));
 }
 
 export async function clearCaptainCashInSession(): Promise<void> {
-  await AsyncStorage.removeItem(ACTIVE_SESSION_KEY);
+  await bthwaniKeyValueStorage.removeItem(ACTIVE_SESSION_KEY);
 }
