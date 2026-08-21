@@ -3,7 +3,6 @@ import {
   DSH_PARTNER_SUPPORT_ISSUE_CATEGORY_IDS,
   DSH_PARTNER_SUPPORT_ROUTE_IDS,
   type DshPartnerOperationalFlowId,
-  type DshPartnerRoute,
   type DshPartnerSupportCommandContext,
   type DshPartnerSupportCommandFilterId,
   type DshPartnerSupportIssueCategoryId,
@@ -122,10 +121,6 @@ export function dshPartnerRouteToPath(route: DshPartnerNavigationRoute): string 
     case "commercial-model": return "/commercial";
     case "team": return "/team";
   }
-}
-
-export function dshPartnerLegacyRoute(route: DshPartnerNavigationRoute): DshPartnerRoute {
-  return route.kind;
 }
 
 export function buildDshPartnerSupportDirectoryRoute(
