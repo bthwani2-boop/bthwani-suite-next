@@ -7,8 +7,9 @@ import type {
   DshPartnerSupportRouteId,
   PartnerHubSection,
 } from '../shared/partner/partner.types';
+import type { DshPartnerNavigation, DshPartnerNavigationRoute } from './partner-navigation';
 import type { PartnerTeamMember } from './team/partner-team.types';
-// Re-export domain types from shared so consumers can import from one place.
+
 export type {
   DshPartnerOperationalFlowId,
   DshPartnerSupportCommandContext,
@@ -31,12 +32,11 @@ export {
 } from '../shared/partner/partner.flow-maps';
 
 export type DshPartnerSurfaceProps = {
-  initialRoute?: DshPartnerRoute;
-  initialOrderId?: string;
+  readonly route: DshPartnerNavigationRoute;
+  readonly navigation: DshPartnerNavigation;
 };
 
 export type PartnerDshSurfaceState = 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 'disabled';
-
 export type DshPartnerSurfaceId = DshPartnerRoute | 'wallet-bridge' | 'detail';
 
 export type DshPartnerHubSurfaceProps = {

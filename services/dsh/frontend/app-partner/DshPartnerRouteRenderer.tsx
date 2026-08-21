@@ -2,12 +2,13 @@ import React from "react";
 import { StateView } from "@bthwani/ui-kit";
 import type {
   DshPartnerOperationalFlowId,
-  DshPartnerRoute,
   DshPartnerSupportCommandContext,
   DshPartnerSupportRouteId,
   PartnerHubSection,
 } from "./dsh-partner.types";
 import type { DshPartnerOperationalScope } from "../shared/partner/partner.types";
+import { defaultSupportCommandContext } from "../shared/support/support.partner-context";
+import { isCommandCenterInlineManagedRoute } from "../shared/support/support.partner-policies";
 import { DshPartnerHubSurface } from "./account/PartnerHubScreen";
 import { AuctionStatusUpdateScreen } from "./account/AuctionStatusUpdateScreen";
 import { ConversationScreen } from "./orders/PartnerConversationScreen";
@@ -15,7 +16,6 @@ import { InventoryActionScreen } from "./catalog/InventoryActionScreen";
 import { NotificationsScreen } from "./account/NotificationsScreen";
 import { OrderActionScreen } from "./orders/OrderActionScreen";
 import { OrderIssueScreen } from "./orders/OrderIssueScreen";
-
 import { DshPartnerStoreCourierScreen } from "./store/DshPartnerStoreCourierScreen";
 import { PartnerTeamManagementScreen } from "./team/PartnerTeamManagementScreen";
 import { PartnerEntryScreen } from "./account/PartnerEntryScreen";
@@ -26,29 +26,26 @@ import { ProductEditScreen } from "./catalog/ProductEditScreen";
 import { CategoryManagementScreen } from "./catalog/CategoryManagementScreen";
 import { ProductMediaScreen } from "./catalog/ProductMediaScreen";
 import { ProductOverridesScreen } from "./catalog/ProductOverridesScreen";
-import { DSH_PARTNER_BINDING_CONTRACTS } from "./dsh-partner-binding.contracts";
+import { hasDshPartnerBindingContract } from "./dsh-partner-binding.contracts";
+import {
+  buildDshPartnerSupportDirectoryRoute,
+  buildDshPartnerSupportDirectoryRouteFromFlow,
+  buildDshPartnerSupportScreenRoute,
+  type DshPartnerNavigation,
+  type DshPartnerNavigationRoute,
+} from "./partner-navigation";
 import type {
   PartnerOrderItem,
   DshPartnerOrderAlertItem,
   DshPartnerOrderAlertId,
 } from "../shared/orders/orders.contract";
 
-function hasRouteBindingContract(route: DshPartnerRoute): boolean {
-  return DSH_PARTNER_BINDING_CONTRACTS.some(
-    (contract) => contract.surfaceId === route,
-  );
-}
+type PartnerSupportSource = NonNullable<DshPartnerSupportCommandContext["source"]>;
 
-type Props = {
-  route: DshPartnerRoute;
-  initialOrderId: string;
-  activeOrderId: string;
-  ordersSearchMode: boolean;
-  accountHubSection: PartnerHubSection;
-  editingProductId: string | undefined;
-  selectedSupportScreen: DshPartnerSupportRouteId;
-  supportCommandContext: DshPartnerSupportCommandContext;
-  partnerOrdersState:
+export type DshPartnerRouteRendererProps = {
+  readonly route: DshPartnerNavigationRoute;
+  readonly navigation: DshPartnerNavigation;
+  readonly partnerOrdersState:
     | "ready"
     | "loading"
     | "empty"
@@ -56,70 +53,36 @@ type Props = {
     | "offline"
     | "disabled"
     | "partial";
-  partnerOrders: readonly PartnerOrderItem[];
-  runtimePartnerProfile: {
-    storeName: string;
-    branchLabel: string;
-    cityLabel: string;
-    managerLabel: string;
-    todayHoursLabel: string;
-    activeZoneLabel: string;
+  readonly partnerOrders: readonly PartnerOrderItem[];
+  readonly runtimePartnerProfile: {
+    readonly storeName: string;
+    readonly branchLabel: string;
+    readonly cityLabel: string;
+    readonly managerLabel: string;
+    readonly todayHoursLabel: string;
+    readonly activeZoneLabel: string;
   };
-  selectedStoreScope: DshPartnerOperationalScope;
-  selectedStoreScopeId: string;
-  deliveryOpsSummary: {
-    outForDelivery: number;
-    handoffReady: number;
-    deliveredToday: number;
-    delayedRisk: number;
+  readonly selectedStoreScope: DshPartnerOperationalScope;
+  readonly deliveryOpsSummary: {
+    readonly outForDelivery: number;
+    readonly handoffReady: number;
+    readonly deliveredToday: number;
+    readonly delayedRisk: number;
   };
-  dshClientId: string | undefined;
-  renderMainShell: (content: React.ReactNode) => React.ReactElement;
-  renderSurfaceShell: (content: React.ReactNode) => React.ReactElement;
-  setRoute: (route: DshPartnerRoute) => void;
-  setActiveOrderId: (id: string) => void;
-  setOrdersSearchMode: (value: boolean) => void;
-  setAccountHubSection: (section: PartnerHubSection) => void;
-  setEditingProductId: (id: string | undefined) => void;
-  setSupportState: (next: {
-    screenId: DshPartnerSupportRouteId;
-    commandContext: DshPartnerSupportCommandContext;
-  }) => void;
-  openOrdersBoard: () => void;
-  openOrdersSearch: () => void;
-  openAccountHub: (section: PartnerHubSection) => void;
-  goBackToHub: () => void;
-  openSupportDirectory: (
-    context?: Partial<DshPartnerSupportCommandContext>,
-  ) => void;
-  returnToSupportDirectory: () => void;
-  openSupportScreen: (
-    screenId: DshPartnerSupportRouteId,
-    source?: DshPartnerSupportCommandContext["source"],
-  ) => void;
-  openInventoryManagement: () => void;
-  openStoreCourier: () => void;
-  openStoreScope: () => void;
-  openSupportCommandFromOperationalFlow: (
-    flowId: DshPartnerOperationalFlowId,
-    source?: DshPartnerSupportCommandContext["source"],
-  ) => void;
-  handleMarkReady: (orderId: string) => void;
-  refreshOrders: () => void;
-  teamMembers: readonly import("./team/partner-team.types").PartnerTeamMember[];
-  isTeamLoading?: boolean;
-  teamError?: string | null;
-  onInviteMember: (
-    identity: string,
-  ) => Promise<import("./team/usePartnerTeamModel").PartnerTeamMutationResult>;
-  onMemberAction: (
-    memberId: string,
-    action: string,
-  ) => Promise<import("./team/usePartnerTeamModel").PartnerTeamMutationResult>;
-  scopes: readonly import("../shared/partner/partner.types").DshPartnerOperationalScope[];
+  readonly dshClientId?: string;
+  readonly renderMainShell: (content: React.ReactNode) => React.ReactElement;
+  readonly renderSurfaceShell: (content: React.ReactNode) => React.ReactElement;
+  readonly openStoreScope: () => void;
+  readonly refreshOrders: () => void | Promise<void>;
+  readonly teamMembers: readonly import("./team/partner-team.types").PartnerTeamMember[];
+  readonly isTeamLoading: boolean;
+  readonly teamError: string | null;
+  readonly onInviteMember: (identity: string) => Promise<import("./team/usePartnerTeamModel").PartnerTeamMutationResult>;
+  readonly onMemberAction: (memberId: string, action: string) => Promise<import("./team/usePartnerTeamModel").PartnerTeamMutationResult>;
+  readonly scopes: readonly DshPartnerOperationalScope[];
 };
 
-const STORE_SCOPED_ROUTES = new Set<DshPartnerRoute>([
+const STORE_SCOPED_ROUTES = new Set<DshPartnerNavigationRoute["kind"]>([
   "inventory-management",
   "product-edit",
   "category-management",
@@ -129,21 +92,18 @@ const STORE_SCOPED_ROUTES = new Set<DshPartnerRoute>([
   "team",
 ]);
 
-const PRODUCT_SCOPED_ROUTES = new Set<DshPartnerRoute>([
-  "product-edit",
-  "product-media",
-  "product-overrides",
+const ORDER_BOUND_SUPPORT_ROUTES = new Set<DshPartnerSupportRouteId>([
+  "order-handoff",
+  "order-ready",
 ]);
 
 function derivePartnerOrderAlerts(orders: readonly PartnerOrderItem[]): DshPartnerOrderAlertItem[] {
   const alerts: DshPartnerOrderAlertItem[] = [];
-
   orders.forEach((order) => {
     let alertId: DshPartnerOrderAlertId | undefined;
     let title = '';
     let description = '';
     let urgent = false;
-
     if (order.status === 'needs_accept') {
       alertId = 'order_needs_accept';
       title = 'طلب يحتاج قبولًا فوريًا';
@@ -168,7 +128,6 @@ function derivePartnerOrderAlerts(orders: readonly PartnerOrderItem[]): DshPartn
       title = 'تسليم للكابتن بانتظار الإغلاق';
       description = 'الطلب بانتظار تثبيت التسليم للكابتن.';
     }
-
     if (alertId) {
       alerts.push({
         id: `alert-${order.id}-${alertId}`,
@@ -182,20 +141,13 @@ function derivePartnerOrderAlerts(orders: readonly PartnerOrderItem[]): DshPartn
       });
     }
   });
-
   return alerts;
 }
 
-export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
+export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): React.ReactElement {
   const {
     route,
-    initialOrderId,
-    activeOrderId,
-    ordersSearchMode,
-    accountHubSection,
-    editingProductId,
-    selectedSupportScreen,
-    supportCommandContext,
+    navigation,
     partnerOrdersState,
     partnerOrders,
     runtimePartnerProfile,
@@ -204,22 +156,6 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
     dshClientId,
     renderMainShell,
     renderSurfaceShell,
-    setRoute,
-    setActiveOrderId,
-    setOrdersSearchMode,
-    openOrdersBoard,
-    openOrdersSearch,
-    openAccountHub,
-    goBackToHub,
-    openSupportDirectory,
-    returnToSupportDirectory,
-    openSupportScreen,
-    openInventoryManagement,
-    openStoreCourier,
-    openSupportCommandFromOperationalFlow,
-    handleMarkReady,
-    setEditingProductId,
-    selectedStoreScopeId,
     openStoreScope,
     refreshOrders,
     teamMembers,
@@ -230,30 +166,58 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
     scopes,
   } = props;
 
-  const activeStoreRuntimeId =
-    selectedStoreScopeId === "all" ? undefined : selectedStoreScopeId;
-  const scopedStoreId = activeStoreRuntimeId ?? "";
-  const scopedProductId = editingProductId ?? "";
-  const activePartnerOrder = React.useMemo(
-    () =>
-      partnerOrders.find((order) => order.id === activeOrderId) ??
-      partnerOrders[0],
-    [activeOrderId, partnerOrders],
-  );
+  const scopedStoreId = selectedStoreScope.storeId;
+  const productId = route.kind === "product-edit" || route.kind === "product-media" || route.kind === "product-overrides"
+    ? route.productId
+    : undefined;
+  const activeOrderId = "orderId" in route ? route.orderId : undefined;
+  const supportCommandContext = route.kind === "support-directory" || route.kind === "support-screen"
+    ? route.context
+    : defaultSupportCommandContext;
+  const selectedSupportScreen = route.kind === "support-screen"
+    ? route.screenId
+    : supportCommandContext.preferredSupportRouteId ?? "order-issue-queue";
+  const activePartnerOrder = activeOrderId
+    ? partnerOrders.find((order) => order.id === activeOrderId)
+    : undefined;
 
-  if (!hasRouteBindingContract(route)) {
+  const openOrdersBoard = () => navigation.navigate({ kind: "inbox" });
+  const openOrdersSearch = () => navigation.navigate({ kind: "inbox", search: true });
+  const openAccountHub = (section: PartnerHubSection) => navigation.navigate({ kind: "home", section });
+  const openSupportDirectory = (context?: Partial<DshPartnerSupportCommandContext>, orderId = activeOrderId) => {
+    navigation.navigate(buildDshPartnerSupportDirectoryRoute(context, orderId));
+  };
+  const openSupportScreen = (
+    screenId: DshPartnerSupportRouteId,
+    source: PartnerSupportSource = supportCommandContext.source ?? "operations",
+    orderId = activeOrderId,
+  ) => navigation.navigate(buildDshPartnerSupportScreenRoute(screenId, source, orderId));
+  const openSupportFlow = (
+    flowId: DshPartnerOperationalFlowId,
+    source: PartnerSupportSource = supportCommandContext.source ?? "operations",
+    orderId = activeOrderId,
+  ) => navigation.navigate(buildDshPartnerSupportDirectoryRouteFromFlow(flowId, source, orderId));
+  const returnToSupportDirectory = () => {
+    navigation.navigate({
+      kind: "support-directory",
+      context: supportCommandContext,
+      ...(activeOrderId ? { orderId: activeOrderId } : {}),
+    }, "replace");
+  };
+
+  if (!hasDshPartnerBindingContract(route.kind)) {
     return renderSurfaceShell(
       <StateView
         title="المسار غير مربوط"
-        description={`لا يملك المسار ${route} عقد ربط مسجلاً، ولذلك تم إيقافه بدلاً من عرضه جزئيًا.`}
+        description={`لا يملك المسار ${route.kind} عقد ربط مسجلاً، ولذلك تم إيقافه بدلاً من عرضه جزئيًا.`}
         tone="danger"
         actionLabel="العودة إلى لوحة الشريك"
-        onActionPress={goBackToHub}
+        onActionPress={() => navigation.navigate({ kind: "home", section: "hub" }, "replace")}
       />,
     );
   }
 
-  if (STORE_SCOPED_ROUTES.has(route) && !scopedStoreId) {
+  if (STORE_SCOPED_ROUTES.has(route.kind) && !scopedStoreId) {
     return renderSurfaceShell(
       <StateView
         title="اختر متجرًا محددًا"
@@ -265,23 +229,23 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
     );
   }
 
-  if (PRODUCT_SCOPED_ROUTES.has(route) && !scopedProductId) {
+  if ((route.kind === "product-edit" || route.kind === "product-media" || route.kind === "product-overrides") && !productId?.trim()) {
     return renderSurfaceShell(
       <StateView
         title="اختر منتجًا"
         description="هذه العملية تحتاج منتجًا مركزيًا محددًا من كتالوج المتجر."
         tone="warning"
         actionLabel="فتح إدارة الكتالوج"
-        onActionPress={() => setRoute("inventory-management")}
+        onActionPress={() => navigation.navigate({ kind: "inventory-management" }, "replace")}
       />,
     );
   }
 
-  if (route === "home") {
+  if (route.kind === "home") {
     return renderSurfaceShell(
       <DshPartnerHubSurface
-        section={accountHubSection}
-        onSectionChange={props.setAccountHubSection}
+        section={route.section}
+        onSectionChange={(section) => navigation.navigate({ kind: "home", section }, "replace")}
         storeName={runtimePartnerProfile.storeName}
         branchLabel={selectedStoreScope.displayName}
         cityLabel={runtimePartnerProfile.cityLabel}
@@ -290,123 +254,87 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
         activeZoneLabel={runtimePartnerProfile.activeZoneLabel}
         storeOpen={false}
         listingEnabled={false}
-        activeOrdersCount={
-          deliveryOpsSummary.outForDelivery + deliveryOpsSummary.handoffReady
-        }
+        activeOrdersCount={deliveryOpsSummary.outForDelivery + deliveryOpsSummary.handoffReady}
         urgentOrdersCount={deliveryOpsSummary.delayedRisk}
         pendingActionsCount={deliveryOpsSummary.handoffReady}
         onOpenOrdersBoard={openOrdersBoard}
         onOpenOrdersSearch={openOrdersSearch}
-        onOpenInventoryManagement={openInventoryManagement}
+        onOpenInventoryManagement={() => navigation.navigate({ kind: "inventory-management" })}
         onOpenStoreScope={openStoreScope}
-        onOpenSupportDirectory={() =>
-          openSupportDirectory({ source: "hub" })
-        }
+        onOpenSupportDirectory={() => openSupportDirectory({ source: "hub" })}
         onOpenWalletHub={() => openAccountHub("wallet")}
-        onOpenBell={() => {
-          setActiveOrderId(initialOrderId);
-          setRoute("bell");
-        }}
-        onOpenOperationalFlow={(flowId) =>
-          openSupportCommandFromOperationalFlow(flowId, "hub")
-        }
-        onOpenSupportScreen={(screenId) =>
-          openSupportScreen(screenId, "hub")
-        }
-        onOpenStoreCourierSetup={openStoreCourier}
-        {...(activeStoreRuntimeId
-          ? { canonicalStoreId: activeStoreRuntimeId }
-          : {})}
+        onOpenBell={() => navigation.navigate({ kind: "bell" })}
+        onOpenOperationalFlow={(flowId) => openSupportFlow(flowId, "hub")}
+        onOpenSupportScreen={(screenId) => openSupportScreen(screenId, "hub")}
+        onOpenStoreCourierSetup={() => navigation.navigate({ kind: "store-courier" })}
+        onOpenTeamManagement={() => navigation.navigate({ kind: "team" })}
+        onOpenCommercialModel={() => navigation.navigate({ kind: "commercial-model" })}
+        canonicalStoreId={scopedStoreId}
         dshClientId={dshClientId ?? null}
       />,
     );
   }
 
-  if (route === "entry") {
+  if (route.kind === "entry") {
     return renderSurfaceShell(
       <PartnerEntryScreen
         state={partnerOrdersState}
         onOpenOrdersBoardPress={openOrdersBoard}
         onOpenOrderDetailPress={openOrdersBoard}
         onOpenMaintenancePress={() => openAccountHub("profile")}
-        onOpenIssueQueuePress={() =>
-          openSupportCommandFromOperationalFlow("order-issue-queue", "orders")
-        }
+        onOpenIssueQueuePress={() => openSupportFlow("order-issue-queue", "orders")}
       />,
     );
   }
 
-  if (route === "bell") {
+  if (route.kind === "bell") {
     return renderSurfaceShell(
       <NotificationsScreen
-        {...(activeOrderId && activeOrderId !== initialOrderId
-          ? { activeOrderId }
-          : {})}
+        {...(route.orderId ? { activeOrderId: route.orderId } : {})}
         alerts={derivePartnerOrderAlerts(partnerOrders)}
         onOpenInbox={openOrdersBoard}
-        onOpenOrderSupport={(orderId) => {
-          setActiveOrderId(orderId);
-          openSupportCommandFromOperationalFlow("order-alerts", "bell");
-        }}
-        onOpenAlertsSupport={(flowId) =>
-          openSupportCommandFromOperationalFlow(flowId, "bell")
-        }
-        onBack={openOrdersBoard}
-        onRetry={() => setRoute("bell")}
+        onOpenOrderSupport={(orderId) => openSupportFlow("order-alerts", "bell", orderId)}
+        onOpenAlertsSupport={(flowId) => openSupportFlow(flowId, "bell", route.orderId)}
+        onBack={navigation.back}
+        onRetry={() => void refreshOrders()}
       />,
     );
   }
 
-  if (route === "inventory-management") {
-    return renderSurfaceShell(
-      <PartnerCatalogManagementScreen storeId={scopedStoreId} />,
-    );
+  if (route.kind === "inventory-management") {
+    return renderSurfaceShell(<PartnerCatalogManagementScreen storeId={scopedStoreId} />);
   }
 
-  if (route === "product-edit") {
+  if (route.kind === "product-edit") {
     return renderSurfaceShell(
       <ProductEditScreen
         storeId={scopedStoreId}
-        productId={scopedProductId}
-        onBack={() => setRoute("inventory-management")}
-        onSaved={() => {
-          setEditingProductId(undefined);
-          setRoute("inventory-management");
-        }}
+        productId={route.productId}
+        onBack={navigation.back}
+        onSaved={() => navigation.navigate({ kind: "inventory-management" }, "replace")}
       />,
     );
   }
 
-  if (route === "category-management") {
+  if (route.kind === "category-management") {
     return renderSurfaceShell(
-      <CategoryManagementScreen
-        storeId={scopedStoreId}
-        onBack={() => setRoute("inventory-management")}
-      />,
+      <CategoryManagementScreen storeId={scopedStoreId} onBack={navigation.back} />,
     );
   }
 
-  if (route === "product-media") {
+  if (route.kind === "product-media") {
     return renderSurfaceShell(
-      <ProductMediaScreen
-        productId={scopedProductId}
-        storeId={scopedStoreId}
-        onBack={() => setRoute("inventory-management")}
-      />,
+      <ProductMediaScreen productId={route.productId} storeId={scopedStoreId} onBack={navigation.back} />,
     );
   }
 
-  if (route === "product-overrides") {
+  if (route.kind === "product-overrides") {
     return renderSurfaceShell(
-      <ProductOverridesScreen
-        storeId={scopedStoreId}
-        productId={scopedProductId}
-        onBack={() => setRoute("inventory-management")}
-      />,
+      <ProductOverridesScreen storeId={scopedStoreId} productId={route.productId} onBack={navigation.back} />,
     );
   }
 
-  if (route === "store-courier") {
+  if (route.kind === "store-courier") {
     return renderSurfaceShell(
       <DshPartnerStoreCourierScreen
         storeId={scopedStoreId}
@@ -416,57 +344,72 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
     );
   }
 
-  if (route === "team") {
+  if (route.kind === "team") {
     return renderSurfaceShell(
       <PartnerTeamManagementScreen
         storeId={scopedStoreId}
         storeName={runtimePartnerProfile.storeName}
         branchLabel={runtimePartnerProfile.branchLabel}
         members={teamMembers}
-        isLoading={isTeamLoading ?? false}
-        error={teamError ?? null}
+        isLoading={isTeamLoading}
+        error={teamError}
         onInviteMember={onInviteMember}
         onMemberAction={onMemberAction}
       />,
     );
   }
 
-  if (route === "commercial-model") {
+  if (route.kind === "commercial-model") {
     return renderSurfaceShell(
-      <PartnerCommercialSummaryScreen
-        storeId={scopedStoreId || null}
-        onBack={() => openAccountHub("operations")} // or setRoute("home") depending on where it came from
-      />
+      <PartnerCommercialSummaryScreen storeId={scopedStoreId || null} onBack={() => openAccountHub("operations")} />,
     );
   }
 
-  if (route === "support-directory") {
+  if (route.kind === "support-directory") {
     return renderSurfaceShell(
       <PartnerSupportScreen
-        onBack={goBackToHub}
-        onOpenScreen={openSupportScreen}
-        initialFilterId={supportCommandContext.filterId}
-        initialCaseId={supportCommandContext.highlightedCaseId ?? null}
-        initialIssueCategoryId={
-          supportCommandContext.highlightedIssueCategoryId ?? null
-        }
-        initialSupportRouteId={
-          supportCommandContext.preferredSupportRouteId ?? null
-        }
+        onBack={navigation.back}
+        onOpenScreen={(screenId) => {
+          const next = buildDshPartnerSupportScreenRoute(
+            screenId,
+            route.context.source ?? "operations",
+            route.orderId,
+          );
+          if (isCommandCenterInlineManagedRoute(screenId)) {
+            navigation.navigate({
+              kind: "support-directory",
+              context: next.context,
+              ...(route.orderId ? { orderId: route.orderId } : {}),
+            }, "replace");
+          } else {
+            navigation.navigate(next);
+          }
+        }}
+        initialFilterId={route.context.filterId}
+        initialCaseId={route.context.highlightedCaseId ?? null}
+        initialIssueCategoryId={route.context.highlightedIssueCategoryId ?? null}
+        initialSupportRouteId={route.context.preferredSupportRouteId ?? null}
       />,
     );
   }
 
-  if (route === "support-screen") {
-    const categoryId =
-      supportCommandContext.highlightedIssueCategoryId ??
-      "partner-reject-request";
+  if (route.kind === "support-screen") {
+    if (ORDER_BOUND_SUPPORT_ROUTES.has(route.screenId) && !route.orderId) {
+      return renderSurfaceShell(
+        <StateView
+          title="حدد الطلب أولًا"
+          description="هذه العملية تحتاج معرّف طلب صريحًا في Route ولا يجوز تخمين الطلب من القائمة."
+          tone="warning"
+          actionLabel="العودة إلى الطلبات"
+          onActionPress={() => navigation.navigate({ kind: "inbox" }, "replace")}
+        />,
+      );
+    }
+
+    const categoryId = route.context.highlightedIssueCategoryId ?? "partner-reject-request";
     const screens: Record<DshPartnerSupportRouteId, React.ReactNode> = {
       "auction-status-update": (
-        <AuctionStatusUpdateScreen
-          onBack={returnToSupportDirectory}
-          onSecondaryAction={returnToSupportDirectory}
-        />
+        <AuctionStatusUpdateScreen onBack={returnToSupportDirectory} onSecondaryAction={returnToSupportDirectory} />
       ),
       "chat-read-ack": (
         <ConversationScreen
@@ -527,10 +470,8 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
       "order-handoff": (
         <OrderActionScreen
           activeFlowId="order-handoff"
-          orderId={activePartnerOrder?.id ?? activeOrderId}
-          {...(activePartnerOrder?.orderMode
-            ? { fulfillmentMode: activePartnerOrder.orderMode }
-            : {})}
+          orderId={route.orderId ?? ""}
+          {...(activePartnerOrder?.orderMode ? { fulfillmentMode: activePartnerOrder.orderMode } : {})}
           teamMembers={teamMembers}
           onBack={returnToSupportDirectory}
           onOpenScreen={openSupportScreen}
@@ -565,10 +506,8 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
       "order-ready": (
         <OrderActionScreen
           activeFlowId="order-ready"
-          orderId={activePartnerOrder?.id ?? activeOrderId}
-          {...(activePartnerOrder?.orderMode
-            ? { fulfillmentMode: activePartnerOrder.orderMode }
-            : {})}
+          orderId={route.orderId ?? ""}
+          {...(activePartnerOrder?.orderMode ? { fulfillmentMode: activePartnerOrder.orderMode } : {})}
           teamMembers={teamMembers}
           onBack={returnToSupportDirectory}
           onOpenScreen={openSupportScreen}
@@ -623,10 +562,10 @@ export function DshPartnerRouteRenderer(props: Props): React.ReactElement {
   return renderSurfaceShell(
     <StateView
       title="مسار شريك غير معروف"
-      description={`لم يُعرّف renderer صالح للمسار ${route}.`}
+      description={`لم يُعرّف renderer صالح للمسار ${route.kind}.`}
       tone="danger"
       actionLabel="العودة إلى لوحة الشريك"
-      onActionPress={goBackToHub}
+      onActionPress={() => navigation.navigate({ kind: "home", section: "hub" }, "replace")}
     />,
   );
 }

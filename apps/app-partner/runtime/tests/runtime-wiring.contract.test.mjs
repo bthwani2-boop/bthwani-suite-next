@@ -5,13 +5,13 @@ import test from "node:test";
 const root = new URL("../../../../", import.meta.url);
 const read = (relative) => readFile(new URL(relative, root), "utf8");
 
-test("partner app composes canonical identity, rating, catalog media, and push boundaries", async () => {
+test("partner app composes canonical identity, rating, catalog media, push, and router boundaries", async () => {
   const source = await read("apps/app-partner/runtime/src/App.tsx");
 
   assert.match(source, /requiredRole="partner"/);
   assert.match(source, /requiredSurface="app-partner"/);
   assert.match(source, /<PartnerFieldRatingGate>/);
-  assert.match(source, /<DshPartnerSurface \/>/);
+  assert.match(source, /<DshPartnerSurface route=\{route\} navigation=\{navigation\} \/>/);
   assert.match(source, /configureCatalogMobileFilePicker\(pickCatalogFile\)/);
   assert.match(source, /DocumentPicker\.getDocumentAsync/);
   assert.match(source, /copyToCacheDirectory: true/);
@@ -45,20 +45,22 @@ test("partner order mutations carry server version and durable idempotency heade
   assert.match(decisionScreen, /commands\.execute\('accept', orderId, order\?\.version\)/);
 });
 
-test("partner surface exposes explicit store-scope loading, empty, error, and operational navigation", async () => {
+test("partner surface keeps store scope explicit while navigation is router-owned", async () => {
   const source = await read("services/dsh/frontend/app-partner/DshPartnerSurface.tsx");
+  const model = await read("services/dsh/frontend/app-partner/useDshPartnerSurfaceModel.ts");
 
   assert.match(source, /if \(!selectedStoreScope\)/);
   assert.match(source, /if \(isLoadingScopes\)/);
   assert.match(source, /<ActivityIndicator/);
   assert.match(source, /scopesError \? 'حدث خطأ أثناء تحميل الفروع' : 'لا يوجد فروع مسجلة'/);
   assert.match(source, /refreshOrders=\{actions\.refreshOrders\}/);
-  assert.match(source, /openInventoryManagement/);
-  assert.match(source, /openOrdersBoard/);
-  assert.match(source, /openStoreScope/);
+  assert.match(source, /navigation\.navigate\(\{ kind: 'inventory-management' \}\)/);
+  assert.match(source, /navigation\.navigate\(\{ kind: 'inbox'/);
   assert.match(source, /id: 'wallet'/);
   assert.match(source, /id: 'orders'/);
   assert.match(source, /id: 'inventory'/);
+  assert.doesNotMatch(source, /BackHandler|hardwareBackPress/);
+  assert.doesNotMatch(model, /routeHistoryRef|handleHardwareBackPress|usePartnerProfileModel|usePartnerSupportModel/);
 });
 
 test("partner client visibility keeps unknown serviceability and store-open state closed", async () => {
