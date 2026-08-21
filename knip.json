@@ -13,21 +13,12 @@
     "**/contracts/generated/**"
   ],
   "ignoreDependencies": [
-    "@react-native/metro-config",
-    "@react-native-async-storage/async-storage",
     "@react-native-community/netinfo",
-    "expo-file-system",
-    "expo-haptics",
-    "expo-image-picker",
-    "expo-location",
+    "expo-battery",
+    "expo-dev-client",
+    "expo-splash-screen",
     "expo-system-ui",
     "expo-updates",
-    "react-native-gesture-handler",
-    "react-native-maps",
-    "react-native-reanimated",
-    "react-native-screens",
-    "react-native-svg",
-    "react-native-worklets",
     "react-native-web",
     "@expo/vector-icons",
     "@types/react",
@@ -91,63 +82,21 @@
     "apps/app-client/runtime": {
       "entry": [
         "fingerprint.config.js"
-      ],
-      "ignoreDependencies": [
-        "@expo/fingerprint",
-        "@tanstack/react-query",
-        "expo-application",
-        "expo-crypto",
-        "expo-device",
-        "expo-image",
-        "expo-image-manipulator",
-        "expo-localization"
       ]
     },
     "apps/app-partner/runtime": {
       "entry": [
         "fingerprint.config.js"
-      ],
-      "ignoreDependencies": [
-        "@expo/fingerprint",
-        "@tanstack/react-query",
-        "expo-application",
-        "expo-crypto",
-        "expo-device",
-        "expo-image",
-        "expo-image-manipulator",
-        "expo-keep-awake",
-        "expo-localization"
       ]
     },
     "apps/app-captain/runtime": {
       "entry": [
         "fingerprint.config.js"
-      ],
-      "ignoreDependencies": [
-        "@expo/fingerprint",
-        "expo-application",
-        "expo-battery",
-        "expo-crypto",
-        "expo-device",
-        "expo-image",
-        "expo-image-manipulator",
-        "expo-keep-awake",
-        "expo-localization"
       ]
     },
     "apps/app-field/runtime": {
       "entry": [
         "fingerprint.config.js"
-      ],
-      "ignoreDependencies": [
-        "@expo/fingerprint",
-        "expo-application",
-        "expo-battery",
-        "expo-crypto",
-        "expo-device",
-        "expo-image",
-        "expo-image-manipulator",
-        "expo-localization"
       ]
     },
     "services/dsh": {
