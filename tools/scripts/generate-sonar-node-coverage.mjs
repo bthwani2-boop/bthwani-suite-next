@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolvePackageManagerInvocation } from "./lib/package-manager-invocation.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const ZERO_SHA = /^0+$/;
@@ -235,16 +236,17 @@ function discoverSuiteTests(definition) {
   );
 }
 
-function executableFor(command) {
-  if (process.platform !== "win32") return command;
-  if (command === "pnpm") return "pnpm.cmd";
-  return command;
+export function resolveCoverageCommandInvocation(command, args, environment = process.env) {
+  return resolvePackageManagerInvocation(command, args, environment);
 }
 
 function runCommand(command, args, options = {}) {
-  const executable = executableFor(command);
-  process.stdout.write(`===== ${executable} ${args.join(" ")} =====\n`);
-  const result = spawnSync(executable, args, {
+  const invocation = resolveCoverageCommandInvocation(command, args, {
+    ...process.env,
+    ...(options.env ?? {}),
+  });
+  process.stdout.write(`===== ${invocation.executable} ${invocation.args.join(" ")} =====\n`);
+  const result = spawnSync(invocation.executable, invocation.args, {
     cwd: options.cwd ?? repoRoot,
     env: { ...process.env, CI: "1", ...options.env },
     stdio: "inherit",

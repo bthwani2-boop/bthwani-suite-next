@@ -6,6 +6,7 @@ import {
   loadCoverageOwnershipModel,
   mergeLcovRecords,
   planCoverageSuites,
+  resolveCoverageCommandInvocation,
 } from "./generate-sonar-node-coverage.mjs";
 
 const EXECUTABLE_SUITES = [
@@ -50,6 +51,17 @@ test("coverage preparation is an ordered shell-free command contract", () => {
   assert.deepEqual(model.suites.dsh.testRoots, ["services/dsh/tests/coverage"]);
   assert.equal(model.suites.identity.prepare, null);
   assert.equal(model.suites["control-panel-config"].prepare, null);
+});
+
+test("coverage preparation resolves package-manager commands through the canonical cross-platform invoker", () => {
+  const invocation = resolveCoverageCommandInvocation("pnpm", ["--version"]);
+  assert.notEqual(invocation.executable, "pnpm.cmd");
+  if (process.platform === "win32") {
+    assert.equal(invocation.executable.toLowerCase().endsWith("cmd.exe"), true);
+    assert.deepEqual(invocation.args.slice(0, 3), ["/d", "/s", "/c"]);
+  } else {
+    assert.equal(invocation.executable, "pnpm");
+  }
 });
 
 test("coverage planning is source-authority based and keeps DSH LCOV separate from broad verification", () => {
