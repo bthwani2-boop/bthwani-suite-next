@@ -1,1 +1,2 @@
-export { default } from "../src/App";
+import { ClientRouteScreen } from "../src/navigation/ClientRouteScreen";
+export default function HomeRoute() { return <ClientRouteScreen route={{ kind: "home" }} />; }

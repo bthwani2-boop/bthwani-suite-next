@@ -7,6 +7,8 @@ import {
   DshClientSurface,
   IdentitySessionGate,
   useDshMobilePushRegistration,
+  type DshClientNavigation,
+  type DshClientRoute,
 } from "@bthwani/dsh/app-client";
 import {
   configureIdentityDeviceFingerprintProvider,
@@ -40,27 +42,27 @@ if (Platform.OS !== "web") {
 }
 configureIdentitySession(resolveIdentityApiBaseUrl());
 
-function AppContent() {
+export type ClientAppProps = {
+  readonly route: DshClientRoute;
+  readonly navigation: DshClientNavigation;
+};
+
+function AppContent({ route, navigation }: ClientAppProps) {
   const identity = useIdentitySession();
   useDshMobilePushRegistration(identity.state.kind, "app-client", "bthwani-client-next");
-
   return (
     <View style={styles.root}>
       <IdentitySessionGate requiredRole="client" requiredSurface="app-client">
         <ClientOrderRatingGate>
-          <DshClientSurface />
+          <DshClientSurface route={route} navigation={navigation} />
         </ClientOrderRatingGate>
       </IdentitySessionGate>
     </View>
   );
 }
 
-export default function App() {
-  return <AppContent />;
+export default function App(props: ClientAppProps) {
+  return <AppContent {...props} />;
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-});
+const styles = StyleSheet.create({ root: { flex: 1 } });
