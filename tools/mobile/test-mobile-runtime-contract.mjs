@@ -137,7 +137,7 @@ for (const script of ["typecheck", "lint", "test:app", "test:runtime", "test", "
 }
 
 const expectedTestApp = "node --test tests/*.test.mjs";
-const expectedTestRuntime = `node ../../mobile/test-mobile-runtime-contract.mjs --app ${appKey}`;
+const expectedTestRuntime = `node ../../../tools/mobile/test-mobile-runtime-contract.mjs --app ${appKey}`;
 const expectedTest = "pnpm run test:app && pnpm run test:runtime";
 if (pkg.scripts["test:app"] !== expectedTestApp) fail(`${appKey}: test:app must run the complete owned test suite`);
 if (pkg.scripts["test:runtime"] !== expectedTestRuntime) fail(`${appKey}: test:runtime command drift`);
