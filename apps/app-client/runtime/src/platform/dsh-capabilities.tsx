@@ -12,7 +12,6 @@ import { colorRoles } from "@bthwani/ui-kit";
 import {
   configureDshDocumentPickerAdapter,
   configureDshImagePickerAdapter,
-  configureDshLinkingAdapter,
   configureDshLocationAdapter,
   configureDshMapRenderer,
   configureDshMobileNotificationRuntime,
@@ -33,10 +32,6 @@ const platform = Platform.OS === "android" || Platform.OS === "ios" ? Platform.O
 configureDshLocationAdapter(
   platform === "web" ? createDshBrowserLocationAdapter() : createDshExpoLocationAdapter(Location),
 );
-configureDshLinkingAdapter({
-  getInitialUrl: () => Linking.getInitialURL(),
-  addUrlListener: (listener) => Linking.addEventListener("url", ({ url }) => listener(url)),
-});
 configureDshImagePickerAdapter(createDshExpoImagePickerAdapter(ImagePicker));
 configureDshDocumentPickerAdapter(createDshExpoDocumentPickerAdapter(DocumentPicker));
 configureDshMobileNotificationRuntime(createDshExpoNotificationRuntime({
