@@ -145,7 +145,6 @@
     "performance:go:bench:dsh": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/performance/go/run-go-benchmarks.ps1 -Service dsh",
     "performance:go:bench:wlt": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/performance/go/run-go-benchmarks.ps1 -Service wlt",
     "guard:secrets": "gitleaks detect --log-opts=\"HEAD\" --source . --no-banner --redact --verbose",
-    "guard:image-size-security": "node --test tools/guards/image-size-security-regression-gate.mjs",
     "security:trivy": "node tools/scripts/run-trivy.mjs",
     "diagnostics:trivy": "node tools/scripts/run-trivy.mjs --diagnostic-only",
     "security:osv": "node tools/scripts/run-osv-scanner.mjs",

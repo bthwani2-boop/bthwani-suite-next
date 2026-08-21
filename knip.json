@@ -20,7 +20,6 @@
     "expo-system-ui",
     "expo-updates",
     "react-native-web",
-    "@expo/vector-icons",
     "@types/react",
     "@ast-grep/cli",
     "@redocly/cli",

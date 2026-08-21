@@ -6,7 +6,6 @@ const APP_RUNTIME_INFRASTRUCTURE_DEPENDENCIES = Object.freeze([
   "@bthwani/data-runtime",
   "@bthwani/dsh",
   "@bthwani/ui-kit",
-  "@expo/vector-icons",
   "@react-native-community/netinfo",
   "@sentry/react-native",
   "expo",

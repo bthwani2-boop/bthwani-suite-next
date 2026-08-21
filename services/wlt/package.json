@@ -15,7 +15,7 @@
     "@bthwani/core-identity": "workspace:*",
     "@bthwani/data-runtime": "workspace:*",
     "@bthwani/ui-kit": "workspace:*",
-    "@tanstack/react-query": "^5.64.0",
+    "@tanstack/react-query": "5.90.2",
     "react": "19.2.3"
   },
   "devDependencies": {

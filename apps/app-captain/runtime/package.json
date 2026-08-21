@@ -22,7 +22,6 @@
     "@bthwani/data-runtime": "workspace:*",
     "@bthwani/dsh": "workspace:*",
     "@bthwani/ui-kit": "workspace:*",
-    "@expo/vector-icons": "^15.1.1",
     "@react-native-community/netinfo": "12.0.1",
     "@sentry/react-native": "~7.11.0",
     "expo": "^57.0.0",
