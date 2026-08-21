@@ -40,6 +40,14 @@ test("app-client keeps every Expo capability used by the operational experience"
   }
 });
 
+test("client native wiring leaves inbound URL navigation to Expo Router", () => {
+  const platform = source("apps/app-client/runtime/src/platform/dsh-capabilities.tsx");
+
+  assert.doesNotMatch(platform, /configureDshLinkingAdapter|getInitialURL|getInitialUrl|addUrlListener|addEventListener\("url"/);
+  assert.match(platform, /configureDshMobileNotificationRuntime\(createDshExpoNotificationRuntime/);
+  assert.match(platform, /linking: Linking/);
+});
+
 test("client discovery exposes real search, cached images, and a persistent donor-style reels launcher", () => {
   const discovery = assertMarkers(
     "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx",
