@@ -18,7 +18,28 @@ function validateGlobal(globalConfig) {
   for (const key of ["owner", "appLine", "sourceRepo", "version", "node", "pnpm", "runtimeTypeScript"]) {
     assert(typeof globalConfig[key] === "string" && globalConfig[key].trim(), `mobile global.${key} is required`);
   }
-  assert(globalConfig.capabilityModelVersion === 1, "mobile capability model version must be 1");
+  assert(globalConfig.capabilityModelVersion === 2, "mobile capability model version must be 2");
+}
+
+function validateOwnershipMap(appKey, ownerKind, ownership, nativeCapabilities, options = {}) {
+  const { allowEmptyCapabilities = false } = options;
+  assert(isPlainObject(ownership) && Object.keys(ownership).length > 0, `${appKey}: ${ownerKind} must be a non-empty object`);
+
+  const ownedCapabilities = new Set();
+  for (const [ownerId, requiredCapabilities] of Object.entries(ownership)) {
+    assert(/^[a-z][A-Za-z0-9]*$/.test(ownerId), `${appKey}: invalid ${ownerKind} id '${ownerId}'`);
+    assert(Array.isArray(requiredCapabilities), `${appKey}: ${ownerKind} '${ownerId}' must map to an array`);
+    if (!allowEmptyCapabilities) {
+      assert(requiredCapabilities.length > 0, `${appKey}: ${ownerKind} '${ownerId}' must own at least one capability`);
+    }
+    assert(new Set(requiredCapabilities).size === requiredCapabilities.length, `${appKey}: ${ownerKind} '${ownerId}' has duplicate capability requirements`);
+    for (const capability of requiredCapabilities) {
+      assert(KNOWN_NATIVE_CAPABILITIES.has(capability), `${appKey}: ${ownerKind} '${ownerId}' references unknown capability '${capability}'`);
+      assert(nativeCapabilities.includes(capability), `${appKey}: ${ownerKind} '${ownerId}' requires undeclared capability '${capability}'`);
+      ownedCapabilities.add(capability);
+    }
+  }
+  return ownedCapabilities;
 }
 
 function validateApp(appKey, app) {
@@ -26,7 +47,7 @@ function validateApp(appKey, app) {
   for (const key of ["name", "slug", "scheme", "androidPackage", "iosBundleIdentifier", "projectId"]) {
     assert(typeof app[key] === "string" && app[key].trim(), `${appKey}: ${key} is required`);
   }
-  assert(!Object.prototype.hasOwnProperty.call(app, "features"), `${appKey}: legacy 'features' is forbidden; use productFeatures + nativeCapabilities`);
+  assert(!Object.prototype.hasOwnProperty.call(app, "features"), `${appKey}: legacy 'features' is forbidden; use productFeatures + runtimeConcerns + nativeCapabilities`);
 
   const nativeCapabilities = app.nativeCapabilities;
   assert(Array.isArray(nativeCapabilities) && nativeCapabilities.length > 0, `${appKey}: nativeCapabilities must be a non-empty array`);
@@ -35,15 +56,26 @@ function validateApp(appKey, app) {
     assert(KNOWN_NATIVE_CAPABILITIES.has(capability), `${appKey}: unknown native capability '${capability}'`);
   }
 
-  assert(isPlainObject(app.productFeatures) && Object.keys(app.productFeatures).length > 0, `${appKey}: productFeatures must be a non-empty object`);
-  for (const [productFeature, requiredCapabilities] of Object.entries(app.productFeatures)) {
-    assert(/^[a-z][A-Za-z0-9]*$/.test(productFeature), `${appKey}: invalid product feature id '${productFeature}'`);
-    assert(Array.isArray(requiredCapabilities), `${appKey}: product feature '${productFeature}' must map to an array`);
-    assert(new Set(requiredCapabilities).size === requiredCapabilities.length, `${appKey}: product feature '${productFeature}' has duplicate capability requirements`);
-    for (const capability of requiredCapabilities) {
-      assert(KNOWN_NATIVE_CAPABILITIES.has(capability), `${appKey}: product feature '${productFeature}' references unknown capability '${capability}'`);
-      assert(nativeCapabilities.includes(capability), `${appKey}: product feature '${productFeature}' requires undeclared capability '${capability}'`);
-    }
+  const productOwnedCapabilities = validateOwnershipMap(
+    appKey,
+    "productFeatures",
+    app.productFeatures,
+    nativeCapabilities,
+    { allowEmptyCapabilities: true },
+  );
+  const runtimeOwnedCapabilities = validateOwnershipMap(
+    appKey,
+    "runtimeConcerns",
+    app.runtimeConcerns,
+    nativeCapabilities,
+  );
+
+  const justifiedCapabilities = new Set([...productOwnedCapabilities, ...runtimeOwnedCapabilities]);
+  for (const capability of nativeCapabilities) {
+    assert(
+      justifiedCapabilities.has(capability),
+      `${appKey}: native capability '${capability}' has no product feature or runtime concern owner`,
+    );
   }
 }
 

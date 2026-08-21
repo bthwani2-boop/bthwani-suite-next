@@ -7,7 +7,7 @@
     "node": "24.17.0",
     "pnpm": "10.34.0",
     "runtimeTypeScript": "npm:@typescript/typescript6@6.0.2",
-    "capabilityModelVersion": 1
+    "capabilityModelVersion": 2
   },
   "apps": {
     "app-client": {
@@ -39,6 +39,11 @@
         "notifications": ["notifications"],
         "ratings": [],
         "wallet": []
+      },
+      "runtimeConcerns": {
+        "platformLifecycle": ["updates", "constants", "splashScreen"],
+        "remoteImageRendering": ["image"],
+        "platformActions": ["fileSystem", "sharing", "webBrowser", "haptics"]
       },
       "nativeCapabilities": ["router", "updates", "constants", "crypto", "image", "splashScreen", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "video", "sharing", "webBrowser", "haptics", "location", "maps"]
     },
@@ -73,6 +78,10 @@
         "wallet": [],
         "storeSettings": []
       },
+      "runtimeConcerns": {
+        "platformLifecycle": ["updates", "constants", "splashScreen"],
+        "catalogFileTransport": ["fileSystem"]
+      },
       "nativeCapabilities": ["router", "updates", "constants", "crypto", "splashScreen", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "location", "maps"]
     },
     "app-captain": {
@@ -102,6 +111,9 @@
         "rating": [],
         "account": [],
         "offlineSync": ["battery"]
+      },
+      "runtimeConcerns": {
+        "platformLifecycle": ["updates", "constants", "splashScreen"]
       },
       "nativeCapabilities": ["router", "updates", "constants", "crypto", "battery", "splashScreen", "documentPicker", "imagePicker", "secureStore", "notifications", "location", "maps"]
     },
@@ -133,6 +145,9 @@
         "offlineSync": ["battery"],
         "notifications": ["notifications"],
         "finance": []
+      },
+      "runtimeConcerns": {
+        "platformLifecycle": ["updates", "constants", "splashScreen"]
       },
       "nativeCapabilities": ["router", "updates", "constants", "crypto", "battery", "splashScreen", "documentPicker", "imagePicker", "secureStore", "notifications", "location", "maps"]
     }
