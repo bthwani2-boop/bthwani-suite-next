@@ -11,7 +11,6 @@ export {
   buildDshPartnerSupportDirectoryRoute,
   buildDshPartnerSupportDirectoryRouteFromFlow,
   buildDshPartnerSupportScreenRoute,
-  dshPartnerLegacyRoute,
   dshPartnerRouteToPath,
   parseDshPartnerHubSection,
   parseDshPartnerSupportContext,
