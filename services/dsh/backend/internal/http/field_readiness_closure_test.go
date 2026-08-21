@@ -2,11 +2,13 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"dsh-api/internal/fieldassignment"
 	"dsh-api/internal/workforceclient"
 )
 
@@ -102,6 +104,75 @@ func TestEnsureActiveFieldAttestsOperatorContextBeforeReadiness(t *testing.T) {
 			}
 			if !ok || response.Code != http.StatusOK {
 				t.Fatalf("verified field should pass readiness boundary: ok=%v status=%d body=%s", ok, response.Code, response.Body.String())
+			}
+		})
+	}
+}
+
+func TestEnsureActiveFieldFailsClosedForUnavailableInactiveOrBrokenReadiness(t *testing.T) {
+	response := httptest.NewRecorder()
+	if (&protectedStoreServer{}).ensureActiveField(response, httptest.NewRequest(http.MethodPost, "/", nil), "field-1", "context-main") || response.Code != http.StatusServiceUnavailable || !strings.Contains(response.Body.String(), "WORKFORCE_UNAVAILABLE") {
+		t.Fatalf("missing Workforce authority must fail closed: ok=%v status=%d body=%s", response.Code == http.StatusOK, response.Code, response.Body.String())
+	}
+
+	for name, readinessStatus := range map[string]int{"inactive": http.StatusOK, "readiness unavailable": http.StatusServiceUnavailable} {
+		t.Run(name, func(t *testing.T) {
+			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/internal/assignments/field-1/scopes" {
+					_ = json.NewEncoder(w).Encode(workforceclient.ActorScopes{ActorID: "field-1", Role: "field", OperatorContextID: "context-main"})
+					return
+				}
+				if r.URL.Path == "/internal/fields/field-1/readiness" {
+					if readinessStatus != http.StatusOK {
+						http.Error(w, "unavailable", readinessStatus)
+						return
+					}
+					_ = json.NewEncoder(w).Encode(map[string]any{"activationReadiness": map[string]any{"isActive": false}})
+					return
+				}
+				http.NotFound(w, r)
+			}))
+			defer upstream.Close()
+
+			server := &protectedStoreServer{workforce: workforceclient.NewClient(upstream.URL, "service-token")}
+			response := httptest.NewRecorder()
+			ok := server.ensureActiveField(response, httptest.NewRequest(http.MethodPost, "/", nil), "field-1", "context-main")
+			if ok {
+				t.Fatal("invalid Workforce readiness was accepted")
+			}
+			wantStatus := http.StatusForbidden
+			wantCode := "FIELD_NOT_ACTIVE"
+			if readinessStatus != http.StatusOK {
+				wantStatus = http.StatusServiceUnavailable
+				wantCode = "WORKFORCE_UNAVAILABLE"
+			}
+			if response.Code != wantStatus || !strings.Contains(response.Body.String(), wantCode) {
+				t.Fatalf("readiness result status=%d body=%s, want status=%d code=%s", response.Code, response.Body.String(), wantStatus, wantCode)
+			}
+		})
+	}
+}
+
+func TestWriteFieldAssignmentErrorPreservesCanonicalHTTPMapping(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		code int
+		body string
+	}{
+		{name: "invalid", err: fieldassignment.ErrInvalid, code: http.StatusBadRequest, body: "INVALID_REQUEST"},
+		{name: "not found", err: fieldassignment.ErrNotFound, code: http.StatusNotFound, body: "NOT_FOUND"},
+		{name: "forbidden", err: fieldassignment.ErrForbidden, code: http.StatusForbidden, body: "FORBIDDEN"},
+		{name: "version conflict", err: fieldassignment.ErrVersionConflict, code: http.StatusConflict, body: "VERSION_CONFLICT"},
+		{name: "invalid transition", err: fieldassignment.ErrInvalidTransition, code: http.StatusConflict, body: "INVALID_TRANSITION"},
+		{name: "unknown", err: errors.New("database unavailable"), code: http.StatusInternalServerError, body: "INTERNAL_ERROR"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			response := httptest.NewRecorder()
+			writeFieldAssignmentError(response, tc.err)
+			if response.Code != tc.code || !strings.Contains(response.Body.String(), tc.body) {
+				t.Fatalf("error mapping status=%d body=%s, want status=%d body code=%s", response.Code, response.Body.String(), tc.code, tc.body)
 			}
 		})
 	}
