@@ -163,3 +163,71 @@ func mustNewCartID(t *testing.T, db *sql.DB) string {
 	}
 	return id
 }
+
+func TestRefreshAndValidateIntentPersistCanonicalDependencyStateDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	storeID := seedStore(t, db)
+	operatorContextID := uniqueID("checkout-validation-OperatorContext")
+	clientID := uniqueID("checkout-validation-client")
+	cartID := mustNewCartID(t, db)
+	addressID := uniqueID("checkout-validation-address")
+	if _, err := db.Exec(`INSERT INTO dsh_client_addresses (id,client_id,label,recipient_name,phone_e164,address_line,service_area_code,latitude,longitude,create_idempotency_key) VALUES ($1,$2,'home','Checkout Client','+967770000001','Validation Address','haddah',15.34,44.19,$3)`, addressID, clientID, uniqueID("checkout-validation-address-key")); err != nil {
+		t.Fatalf("insert validation address: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO dsh_carts (id,client_id,store_id,fulfillment_mode,state) VALUES ($1::uuid,$2,$3,'bthwani_delivery','active')`, cartID, clientID, storeID); err != nil {
+		t.Fatalf("insert validation cart: %v", err)
+	}
+	intent, err := CreateIntent(db, CreateIntentInput{
+		ID: mustNewIntentID(t, db), OperatorContextID: operatorContextID, ClientID: clientID,
+		CartID: cartID, StoreID: storeID, FulfillmentMode: ModeBthwaniDelivery, PaymentMethod: MethodCOD,
+	})
+	if err != nil {
+		t.Fatalf("create validation intent: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM dsh_checkout_intents WHERE id=$1::uuid`, intent.ID)
+		_, _ = db.Exec(`DELETE FROM dsh_carts WHERE id=$1::uuid`, cartID)
+		_, _ = db.Exec(`DELETE FROM dsh_client_addresses WHERE id=$1`, addressID)
+	})
+
+	blocked, err := RefreshIntent(db, RefreshIntentInput{
+		IntentID: intent.ID, OperatorContextID: operatorContextID, ClientID: clientID,
+		AddressID: addressID, AddressSnapshot: `{"id":"` + addressID + `","serviceAreaCode":"haddah"}`,
+		Mode: ModeBthwaniDelivery, Dependencies: IntentDependencyValidation{CartCode: "CART_EMPTY", ServiceabilityCode: "STORE_PAUSED"},
+	})
+	if err != nil {
+		t.Fatalf("refresh blocked intent: %v", err)
+	}
+	if blocked.State != StateBlocked || blocked.DeliveryAddress != `{"id":"`+addressID+`","serviceAreaCode":"haddah"}` || blocked.Version != 2 || blocked.PreviewHash == "" {
+		t.Fatalf("unexpected blocked refresh readback: %+v", blocked)
+	}
+	if len(blocked.ValidationIssues) != 2 || blocked.ValidationIssues[0].Code != "CART_EMPTY" || blocked.ValidationIssues[1].Code != "STORE_PAUSED" {
+		t.Fatalf("blocked dependency issues drifted: %#v", blocked.ValidationIssues)
+	}
+
+	ready, err := ValidateIntent(db, intent.ID, operatorContextID, clientID, IntentDependencyValidation{CartReady: true, Serviceable: true})
+	if err != nil {
+		t.Fatalf("validate ready intent: %v", err)
+	}
+	if ready.State != StateReady || len(ready.ValidationIssues) != 0 || ready.Version != 3 {
+		t.Fatalf("unexpected ready validation readback: %+v", ready)
+	}
+	unchanged, err := ValidateIntent(db, intent.ID, operatorContextID, clientID, IntentDependencyValidation{CartReady: true, Serviceable: true})
+	if err != nil {
+		t.Fatalf("repeat ready validation: %v", err)
+	}
+	if unchanged.Version != ready.Version {
+		t.Fatalf("idempotent ready validation changed version: before=%d after=%d", ready.Version, unchanged.Version)
+	}
+
+	if _, err := db.Exec(`UPDATE dsh_checkout_intents SET state='confirmed' WHERE id=$1::uuid`, intent.ID); err != nil {
+		t.Fatalf("set terminal intent state: %v", err)
+	}
+	terminal, err := ValidateIntent(db, intent.ID, operatorContextID, clientID, IntentDependencyValidation{})
+	if err != nil {
+		t.Fatalf("validate terminal intent: %v", err)
+	}
+	if terminal.State != StateConfirmed || terminal.Version != unchanged.Version {
+		t.Fatalf("terminal intent was mutated by validation: %+v", terminal)
+	}
+}
