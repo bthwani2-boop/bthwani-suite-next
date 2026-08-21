@@ -9,6 +9,7 @@ const exists = (relative) => existsSync(new URL(relative, root));
 test("captain uses Expo Router as the sole navigation authority", () => {
   const app = read("apps/app-captain/runtime/src/App.tsx");
   const screen = read("apps/app-captain/runtime/src/navigation/CaptainRouteScreen.tsx");
+  const capabilities = read("apps/app-captain/runtime/src/platform/dsh-capabilities.tsx");
   const surface = read("services/dsh/frontend/app-captain/DshCaptainSurface.tsx");
   const binding = read("services/dsh/frontend/shared/delivery/captain-surface.binding.ts");
   const deliveryActions = read("services/dsh/frontend/shared/delivery/delivery.actions.ts");
@@ -19,6 +20,9 @@ test("captain uses Expo Router as the sole navigation authority", () => {
   assert.match(screen, /router\.replace/);
   assert.match(screen, /router\.back/);
   assert.doesNotMatch(app, /\bLinking\b|DshCaptainNavigationCommand|navigationCommand/);
+  assert.doesNotMatch(capabilities, /configureDshLinkingAdapter|getInitialURL|getInitialUrl|addUrlListener|addEventListener\("url"/);
+  assert.match(capabilities, /configureDshMobileNotificationRuntime\(createDshExpoNotificationRuntime/);
+  assert.match(capabilities, /linking: Linking/);
   assert.doesNotMatch(surface, /setRoute\(|routeHistoryRef|DshCaptainNavigationCommand/);
   assert.doesNotMatch(binding, /useState<DshCaptainRoute>|useCaptainNavigationModel|setRoute/);
   assert.doesNotMatch(deliveryActions, /setRoute|DshCaptainRoute/);
