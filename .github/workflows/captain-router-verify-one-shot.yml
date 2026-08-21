@@ -11,7 +11,7 @@ permissions:
 
 concurrency:
   group: captain-router-verify-c
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   verify:
@@ -38,35 +38,54 @@ jobs:
           cache: pnpm
           cache-dependency-path: pnpm-lock.yaml
 
-      - name: Verify immutable workspace
+      - name: Execute exact Captain verification and record every gate
+        id: verify
         shell: bash
         run: |
-          set -euo pipefail
-          test "$(node --version)" = "v24.17.0"
-          test "$(pnpm --version)" = "10.34.0"
-          pnpm install --frozen-lockfile --ignore-scripts
-          node tools/scripts/guard-mobile-expo-sdk56-versions.mjs
+          set -uo pipefail
+          report="${RUNNER_TEMP}/captain-router-verification.log"
+          : >"${report}"
+          failed=0
 
-      - name: Verify Captain and DSH graph
-        shell: bash
-        run: |
-          set -euo pipefail
-          pnpm --dir apps/app-captain/runtime run typecheck
-          pnpm --dir apps/app-captain/runtime run lint
-          pnpm --dir apps/app-captain/runtime run test
-          pnpm --dir services/dsh run typecheck
-          pnpm --dir services/dsh run test
+          run_gate() {
+            local name="$1"
+            shift
+            {
+              echo
+              echo "===== ${name} ====="
+              echo "+ $*"
+            } | tee -a "${report}"
+            "$@" >>"${report}" 2>&1
+            local rc=$?
+            echo "exit=${rc}" | tee -a "${report}"
+            if [[ ${rc} -ne 0 ]]; then
+              failed=1
+            fi
+            return 0
+          }
 
-      - name: Verify Captain export and Expo configs
-        shell: bash
-        run: |
-          set -euo pipefail
-          pnpm --dir apps/app-captain/runtime run build
-          for app in app-client app-partner app-captain app-field; do
-            pnpm --dir "apps/${app}/runtime" exec expo config --type public >/dev/null
-          done
+          run_gate "node-version" bash -lc 'test "$(node --version)" = "v24.17.0"'
+          run_gate "pnpm-version" bash -lc 'test "$(pnpm --version)" = "10.34.0"'
+          run_gate "frozen-install" pnpm install --frozen-lockfile --ignore-scripts
 
-      - name: Retire one-shot workflow after exact verification
+          if [[ ${failed} -eq 0 ]]; then
+            run_gate "sdk56-guard" node tools/scripts/guard-mobile-expo-sdk56-versions.mjs
+            run_gate "captain-typecheck" pnpm --dir apps/app-captain/runtime run typecheck
+            run_gate "captain-lint" pnpm --dir apps/app-captain/runtime run lint
+            run_gate "captain-tests" pnpm --dir apps/app-captain/runtime run test
+            run_gate "dsh-typecheck" pnpm --dir services/dsh run typecheck
+            run_gate "dsh-tests" pnpm --dir services/dsh run test
+            run_gate "captain-export" pnpm --dir apps/app-captain/runtime run build
+            for app in app-client app-partner app-captain app-field; do
+              run_gate "expo-config-${app}" pnpm --dir "apps/${app}/runtime" exec expo config --type public
+            done
+          fi
+
+          echo "failed=${failed}" >>"${GITHUB_OUTPUT}"
+          cp "${report}" captain-router-verification.log
+          exit 0
+
+      - name: Publish durable result and retire verifier
         shell: bash
         run: |
           set -euo pipefail
@@ -77,9 +96,21 @@ jobs:
             echo "c moved while Captain verification was running: remote=${remote_head} local=${local_head}"
             exit 1
           fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git rm .github/workflows/captain-router-verify-one-shot.yml
+
+          if [[ "${{ steps.verify.outputs.failed }}" == "1" ]]; then
+            mkdir -p plans/diagnose-implementing
+            mv captain-router-verification.log plans/diagnose-implementing/captain-router-verification-failure.log
+            git add plans/diagnose-implementing/captain-router-verification-failure.log
+            message="diagnose(captain): record Router verification failure"
+          else
+            rm -f captain-router-verification.log
+            message="chore(ci): retire successful Captain Router verification"
+          fi
+
           git diff --cached --check
-          git commit -m "chore(ci): retire Captain Router verification"
+          git commit -m "${message}"
           git push origin HEAD:c
