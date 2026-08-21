@@ -57,7 +57,7 @@
       "productFeatures": {
         "navigationFoundation": ["router"],
         "identitySession": ["secureStore", "crypto"],
-        "storeScope": [],
+        "storeScope": ["location", "maps"],
         "partnerOnboarding": ["documentPicker", "imagePicker"],
         "orders": [],
         "orderLifecycle": [],
