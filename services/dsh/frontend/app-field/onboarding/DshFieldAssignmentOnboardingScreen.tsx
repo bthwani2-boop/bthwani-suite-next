@@ -13,9 +13,9 @@ import type { FieldOnboardingController } from '../../shared/field-onboarding';
 import { DshFieldOnboardingScreen } from './DshFieldOnboardingScreen';
 
 type AssignmentResolutionState =
-  | { readonly kind: 'loading' }
-  | { readonly kind: 'ready'; readonly assignment: FieldOnboardingAssignment }
-  | { readonly kind: 'error'; readonly message: string; readonly retryable: boolean };
+  | { readonly kind: 'loading'; readonly assignmentId: string }
+  | { readonly kind: 'ready'; readonly assignmentId: string; readonly assignment: FieldOnboardingAssignment }
+  | { readonly kind: 'error'; readonly assignmentId: string; readonly message: string; readonly retryable: boolean };
 
 type Props = {
   readonly assignmentId: string;
@@ -44,11 +44,12 @@ async function resolveCurrentAssignment(assignmentId: string): Promise<FieldOnbo
   return current;
 }
 
-function assignmentErrorState(cause: unknown): AssignmentResolutionState {
+function assignmentErrorState(assignmentId: string, cause: unknown): AssignmentResolutionState {
   const code = cause instanceof Error ? cause.message : '';
   if (code === 'ASSIGNMENT_NOT_AVAILABLE') {
     return {
       kind: 'error',
+      assignmentId,
       message: 'هذه المهمة لم تعد مسندة إليك أو تم إلغاؤها. ارجع إلى قائمة المهام لتحميل الحقيقة الحالية.',
       retryable: false,
     };
@@ -56,12 +57,14 @@ function assignmentErrorState(cause: unknown): AssignmentResolutionState {
   if (code === 'ASSIGNMENT_DRAFT_LINK_INCONSISTENT') {
     return {
       kind: 'error',
+      assignmentId,
       message: 'حالة المهمة غير متسقة مع المسودة المرتبطة في DSH. لا يمكن متابعة المهمة قبل تصحيح الحالة من المصدر.',
       retryable: false,
     };
   }
   return {
     kind: 'error',
+    assignmentId,
     message: 'تعذر تحميل أحدث حالة للمهمة من DSH. تحقق من الاتصال ثم أعد المحاولة.',
     retryable: true,
   };
@@ -74,26 +77,27 @@ export function DshFieldAssignmentOnboardingScreen({
   onOpenProducts,
 }: Props): React.ReactElement {
   const [refreshToken, setRefreshToken] = React.useState(0);
-  const [resolution, setResolution] = React.useState<AssignmentResolutionState>({ kind: 'loading' });
+  const [resolution, setResolution] = React.useState<AssignmentResolutionState>({ kind: 'loading', assignmentId });
 
   React.useEffect(() => {
     let active = true;
-    setResolution({ kind: 'loading' });
+    controller.reset();
+    setResolution({ kind: 'loading', assignmentId });
     void resolveCurrentAssignment(assignmentId)
       .then((assignment) => {
         if (!active) return;
-        setResolution({ kind: 'ready', assignment });
+        setResolution({ kind: 'ready', assignmentId, assignment });
       })
       .catch((cause: unknown) => {
         if (!active) return;
-        setResolution(assignmentErrorState(cause));
+        setResolution(assignmentErrorState(assignmentId, cause));
       });
     return () => {
       active = false;
     };
-  }, [assignmentId, refreshToken]);
+  }, [assignmentId, controller, refreshToken]);
 
-  if (resolution.kind === 'loading') {
+  if (resolution.assignmentId !== assignmentId || resolution.kind === 'loading') {
     return (
       <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
         <Header title="جارٍ تحميل المهمة" />
@@ -122,12 +126,12 @@ export function DshFieldAssignmentOnboardingScreen({
   }
 
   const assignment = resolution.assignment;
-  const linkedPartnerId = assignment.draftPartnerId?.trim() || undefined;
+  const activePartnerId = controller.state.partnerId ?? assignment.draftPartnerId?.trim() || undefined;
 
   return (
     <DshFieldOnboardingScreen
       controller={controller}
-      {...(linkedPartnerId ? { partnerId: linkedPartnerId } : {})}
+      {...(activePartnerId ? { partnerId: activePartnerId } : {})}
       assignmentPrefill={assignment}
       {...(onBack ? { onBack } : {})}
       {...(onOpenProducts ? { onOpenProducts } : {})}
