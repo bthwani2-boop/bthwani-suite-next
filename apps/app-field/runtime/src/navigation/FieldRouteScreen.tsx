@@ -6,24 +6,25 @@ import {
   type DshFieldRouteState,
 } from '@bthwani/dsh/app-field';
 import App from '../App';
+import {
+  resolveFieldRouterBack,
+  resolveFieldRouterNavigation,
+} from './field-router-policy';
 
-export function singleRouteParam(value: string | string[] | undefined): string | undefined {
-  const resolved = Array.isArray(value) ? value[0] : value;
-  const normalized = resolved?.trim();
-  return normalized ? normalized : undefined;
-}
+export { singleRouteParam } from './field-router-policy';
 
 export function FieldRouteScreen({ route }: { readonly route: DshFieldRouteState }) {
   const router = useRouter();
   const navigation = React.useMemo<DshFieldNavigation>(() => ({
     navigate(nextRoute, mode = 'push') {
-      const href = dshFieldRouteToPath(nextRoute) as Href;
-      if (mode === 'replace') router.replace(href);
-      else router.push(href);
+      const operation = resolveFieldRouterNavigation(dshFieldRouteToPath(nextRoute), mode);
+      if (operation.method === 'replace') router.replace(operation.href as Href);
+      else router.push(operation.href as Href);
     },
     back() {
-      if (router.canGoBack()) router.back();
-      else router.replace('/' as Href);
+      const operation = resolveFieldRouterBack(router.canGoBack());
+      if (operation.method === 'back') router.back();
+      else router.replace(operation.href as Href);
     },
   }), [router]);
 
