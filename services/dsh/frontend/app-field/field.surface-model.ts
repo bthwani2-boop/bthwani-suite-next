@@ -19,7 +19,7 @@ function isSameRoute(left: DshFieldRouteState, right: DshFieldRouteState): boole
     return left.storeId === right.storeId && left.visitId === right.visitId;
   }
   if (left.kind === 'onboarding' && right.kind === 'onboarding') {
-    return left.partnerId === right.partnerId && left.assignmentPrefill?.id === right.assignmentPrefill?.id;
+    return left.partnerId === right.partnerId && left.assignmentId === right.assignmentId;
   }
   if (left.kind === 'partner-progress' && right.kind === 'partner-progress') {
     return left.partnerId === right.partnerId;
