@@ -51,6 +51,8 @@ overrides:
   sharp@<0.35.0: '>=0.35.0'
   shell-quote@<=1.8.4: '>=1.9.0'
   uuid@<11.1.1: '>=11.1.1'
+patchedDependencies:
+  image-size@1.2.1: tools/patches/image-size-1.2.1.patch
 saveExact: true
 sharedWorkspaceLockfile: true
 strictPeerDependencies: false

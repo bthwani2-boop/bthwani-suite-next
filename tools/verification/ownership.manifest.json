@@ -73,7 +73,7 @@
     "control-panel-config": {
       "kind": "web-runtime-config",
       "root": "apps/control-panel/runtime",
-      "sourcePrefixes": ["apps/control-panel/runtime/next.config.mjs"],
+      "sourcePrefixes": ["apps/control-panel/runtime/next.config.mjs", "apps/control-panel/runtime/stubs/"],
       "coverage": {
         "strategy": "node-lcov",
         "cwd": ".",
