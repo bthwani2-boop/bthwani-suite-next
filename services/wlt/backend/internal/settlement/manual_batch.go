@@ -167,7 +167,7 @@ func CreateSettlementBatch(ctx context.Context, db *sql.DB, input CreateSettleme
 	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_finance_audit_events
 		(operator_context_id,aggregate_type,aggregate_id,action,actor_id,actor_type,correlation_id,metadata)
 		VALUES($1,'settlement_batch',$2,'batch_created',$3,'operator',$4,
-		jsonb_build_object('providerId',$5,'currency',$6,'rowCount',$7,'controlTotalMinorUnits',$8,'monetarySource','approved_snapshots'))`,
+		jsonb_build_object('providerId',$5::text,'currency',$6::text,'rowCount',$7::integer,'controlTotalMinorUnits',$8::bigint,'monetarySource','approved_snapshots'))`,
 		operatorContextID, batch.ID, operatorID, correlationID, input.ProviderID, input.Currency, batch.RowCount, batch.ControlTotalMinorUnits); err != nil { return nil, err }
 	if err := tx.Commit(); err != nil { return nil, err }
 	return batch, nil
