@@ -79,4 +79,3 @@ catch {
   Write-Host "  Found at $codeqlExe but failed to run: $_"
   exit 1
 }
-
