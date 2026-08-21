@@ -101,6 +101,21 @@ function validateGoogleServicesFile(appKey, file, expectedPackage) {
   }
 }
 
+const mobileUiProvider = fs.readFileSync(
+  path.join(root, "shared", "ui-kit", "src", "mobile.tsx"),
+  "utf8",
+);
+
+for (const marker of [
+  "useColorScheme",
+  'colorScheme === "dark"',
+  "MobileUiProvider",
+]) {
+  if (!mobileUiProvider.includes(marker)) {
+    fail(`canonical MobileUiProvider marker missing: ${marker}`);
+  }
+}
+
 const rootPkg = readJson("package.json");
 
 if (rootPkg.packageManager !== `pnpm@${manifest.global.pnpm}`) {
@@ -185,7 +200,14 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   if (expo.updates?.fallbackToCacheTimeout !== 0) fail(`${key}: update fallback timeout must be zero`);
   if (Array.isArray(expo.platforms) && expo.platforms.includes("web")) fail(`${key}: web is forbidden in Expo mobile config`);
 
+  if (expo.userInterfaceStyle !== "automatic") {
+    fail(`${key}: userInterfaceStyle must be automatic`);
+  }
+
   const plugins = pluginMap(expo.plugins);
+  if (!plugins.has("expo-system-ui")) {
+    fail(`${key}: expo-system-ui plugin is required for automatic appearance`);
+  }
   const sentryNativeConfigured = expo.extra?.sentry?.nativeConfigured === true;
   const sentryEnabled = expo.extra?.sentry?.enabled === true;
   const hasSentryPlugin = plugins.has("@sentry/react-native/expo");
@@ -254,6 +276,18 @@ for (const [key, app] of Object.entries(manifest.apps)) {
     if (!metroFactory.includes(marker)) fail(`canonical Metro config factory marker missing: ${marker}`);
   }
   const appRoot = fs.readFileSync(path.join(dir, "src", "index.ts"), "utf8");
+  if (!appRoot.includes('from "@bthwani/ui-kit/mobile"')) {
+    fail(`${key}: mobile runtime must import @bthwani/ui-kit/mobile`);
+  }
+  if (!appRoot.includes("MobileUiProvider")) {
+    fail(`${key}: MobileUiProvider is required`);
+  }
+  if (appRoot.includes("BthwaniUiProvider")) {
+    fail(`${key}: direct BthwaniUiProvider usage is forbidden in mobile runtime`);
+  }
+  if (appRoot.includes('defaultTheme: "light"') || appRoot.includes('defaultTheme: "dark"')) {
+    fail(`${key}: app-owned fixed mobile theme is forbidden`);
+  }
   for (const marker of ["persistenceKey", "createBthwaniOfflineMutationQueue", "clearBthwaniQueryClient", "registerIdentityBeforeSessionEndHook"]) {
     if (!appRoot.includes(marker)) fail(`${key}: OperatorContext-safe data runtime marker missing: ${marker}`);
   }

@@ -91,6 +91,7 @@ function buildPlugins(appKey, capabilities, sentry) {
   }
   if (capabilities.includes("router")) plugins.push("expo-router");
   if (capabilities.includes("updates")) plugins.push("expo-updates");
+  plugins.push("expo-system-ui");
   if (capabilities.includes("splashScreen")) {
     const splashIcon = appAsset(appKey, "splash-icon.png");
     plugins.push(splashIcon ? ["expo-splash-screen", { image: splashIcon, imageWidth: 220, resizeMode: "contain", backgroundColor: "#FFFFFF" }] : "expo-splash-screen");
@@ -136,6 +137,7 @@ function defineBthwaniExpoApp(appKey) {
     runtimeVersion: { policy: "appVersion" },
     updates: { url: `https://u.expo.dev/${app.projectId}`, checkAutomatically: "ON_LOAD", fallbackToCacheTimeout: 0 },
     orientation: "portrait",
+    userInterfaceStyle: "automatic",
     android: buildAndroidConfig(appKey, app, capabilities, googleServicesFile),
     ios: buildIosConfig(appKey, app, capabilities),
     plugins: buildPlugins(appKey, capabilities, sentry),

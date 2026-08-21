@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import "./platform/dsh-capabilities";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { BthwaniUiProvider } from "@bthwani/ui-kit";
+import { MobileUiProvider } from "@bthwani/ui-kit/mobile";
 import { registerIdentityBeforeSessionEndHook } from "@bthwani/core-identity";
 import {
   BthwaniQueryProvider,
@@ -40,7 +40,7 @@ export function MobileRuntimeProviders({ children }: { readonly children: React.
     React.createElement(
       BthwaniQueryProvider,
       { client: queryClient, persistenceKey: queryPersistenceKey },
-      React.createElement(BthwaniUiProvider, null, children),
+      React.createElement(MobileUiProvider, null, children),
     ),
   );
 }

@@ -3,7 +3,7 @@ import "./platform/dsh-capabilities";
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { BthwaniUiProvider } from "@bthwani/ui-kit";
+import { MobileUiProvider } from "@bthwani/ui-kit/mobile";
 import { registerIdentityBeforeSessionEndHook } from "@bthwani/core-identity";
 import {
   BthwaniQueryProvider,
@@ -55,7 +55,7 @@ export function MobileRuntimeProviders({ children }: { readonly children: React.
     React.createElement(
       BthwaniQueryProvider,
       { client: queryClient, persistenceKey: queryPersistenceKey },
-      React.createElement(BthwaniUiProvider, null, children),
+      React.createElement(MobileUiProvider, null, children),
     ),
   );
 }

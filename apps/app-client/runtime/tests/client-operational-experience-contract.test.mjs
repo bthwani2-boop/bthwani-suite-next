@@ -342,7 +342,7 @@ test("subscription mutations persist one governed attempt across retries and res
   );
 });
 
-test("incomplete appearance controls stay absent without redundant system UI config while video PiP remains configured", () => {
+test("client does not own mobile appearance while video PiP remains configured", () => {
   assert.equal(
     fs.existsSync(path.join(repoRoot, "apps/app-client/runtime/src/preferences/client-appearance.tsx")),
     false,
@@ -355,9 +355,5 @@ test("incomplete appearance controls stay absent without redundant system UI con
     "apps/app-client/runtime/app.config.ts",
     ["supportsPictureInPicture: true", "ExpoConfig"],
   );
-  const factory = source("tools/mobile/defineBthwaniExpoApp.js");
-  const packageJson = JSON.parse(source("apps/app-client/runtime/package.json"));
   assert.equal(config.includes("userInterfaceStyle"), false);
-  assert.equal(factory.includes("userInterfaceStyle"), false);
-  assert.equal(typeof packageJson.dependencies?.["expo-system-ui"], "undefined");
 });

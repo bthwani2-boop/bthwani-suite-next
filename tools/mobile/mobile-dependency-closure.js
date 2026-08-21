@@ -11,6 +11,7 @@ const APP_RUNTIME_INFRASTRUCTURE_DEPENDENCIES = Object.freeze([
   "expo",
   "expo-dev-client",
   "expo-font",
+  "expo-system-ui",
   "react",
   "react-native",
   "react-native-gesture-handler",
