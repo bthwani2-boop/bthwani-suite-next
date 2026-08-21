@@ -39,7 +39,24 @@
         "ratings": [],
         "wallet": []
       },
-      "nativeCapabilities": ["router", "updates", "constants", "application", "device", "crypto", "image", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "imageManipulator", "sharing", "webBrowser", "sqlite", "location", "maps"]
+      "nativeCapabilities": [
+        "updates",
+        "constants",
+        "crypto",
+        "image",
+        "splashScreen",
+        "fileSystem",
+        "documentPicker",
+        "imagePicker",
+        "secureStore",
+        "notifications",
+        "video",
+        "sharing",
+        "webBrowser",
+        "haptics",
+        "location",
+        "maps"
+      ]
     },
     "app-partner": {
       "name": "بثواني الشريك",
@@ -59,8 +76,8 @@
         "catalog": [],
         "categories": [],
         "products": [],
-        "productMedia": ["camera", "imagePicker", "imageManipulator", "video"],
-        "reels": ["video", "imagePicker"],
+        "productMedia": ["imagePicker", "documentPicker"],
+        "reels": ["imagePicker", "documentPicker"],
         "promotions": [],
         "ratings": [],
         "analytics": [],
@@ -71,7 +88,19 @@
         "wallet": [],
         "storeSettings": []
       },
-      "nativeCapabilities": ["router", "updates", "constants", "application", "device", "crypto", "image", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "imageManipulator", "sharing", "webBrowser", "keepAwake", "sqlite", "location", "maps"]
+      "nativeCapabilities": [
+        "updates",
+        "constants",
+        "crypto",
+        "splashScreen",
+        "fileSystem",
+        "documentPicker",
+        "imagePicker",
+        "secureStore",
+        "notifications",
+        "location",
+        "maps"
+      ]
     },
     "app-captain": {
       "name": "بثواني الكابتن",
@@ -89,9 +118,9 @@
         "activeTask": [],
         "pickup": [],
         "delivery": [],
-        "navigation": ["location", "backgroundLocation", "maps"],
+        "navigation": ["location", "maps"],
         "gps": ["location"],
-        "proofOfDelivery": ["camera", "imagePicker"],
+        "proofOfDelivery": ["imagePicker"],
         "support": [],
         "finance": [],
         "codCustody": [],
@@ -100,7 +129,19 @@
         "account": [],
         "offlineSync": ["battery"]
       },
-      "nativeCapabilities": ["updates", "constants", "crypto", "battery", "splashScreen", "documentPicker", "imagePicker", "secureStore", "notifications", "camera", "location", "backgroundLocation", "maps"]
+      "nativeCapabilities": [
+        "updates",
+        "constants",
+        "crypto",
+        "battery",
+        "splashScreen",
+        "documentPicker",
+        "imagePicker",
+        "secureStore",
+        "notifications",
+        "location",
+        "maps"
+      ]
     },
     "app-field": {
       "name": "بثواني الميدان",
@@ -116,21 +157,33 @@
         "stores": [],
         "visit": ["location", "maps"],
         "checklist": [],
-        "verification": ["camera", "imagePicker", "location"],
-        "partnerOnboarding": ["camera", "imagePicker", "documentPicker", "location"],
-        "evidence": ["camera", "imagePicker", "documentPicker"],
+        "verification": ["imagePicker", "location"],
+        "partnerOnboarding": ["imagePicker", "documentPicker", "location"],
+        "evidence": ["imagePicker", "documentPicker"],
         "partnerProgress": [],
         "catalog": [],
         "products": [],
         "productsUpload": ["documentPicker", "imagePicker"],
         "assortment": [],
         "workQueue": [],
-        "escalation": ["camera", "imagePicker", "documentPicker"],
-        "offlineSync": ["battery", "taskManager", "backgroundTask"],
+        "escalation": ["imagePicker", "documentPicker"],
+        "offlineSync": ["battery"],
         "notifications": ["notifications"],
         "finance": []
       },
-      "nativeCapabilities": ["router", "updates", "constants", "application", "device", "crypto", "image", "battery", "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "audio", "camera", "video", "location", "maps", "imageManipulator", "sqlite", "taskManager", "backgroundTask", "sharing", "webBrowser"]
+      "nativeCapabilities": [
+        "updates",
+        "constants",
+        "crypto",
+        "battery",
+        "splashScreen",
+        "documentPicker",
+        "imagePicker",
+        "secureStore",
+        "notifications",
+        "location",
+        "maps"
+      ]
     }
   }
 }
