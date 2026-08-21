@@ -45,18 +45,21 @@ function appEnvSuffix(appKey) {
   return appKey.replaceAll("-", "_").toUpperCase();
 }
 
-test("all four mobile apps keep the required provider capabilities", () => {
+test("all four mobile apps keep required foreground provider capabilities", () => {
   for (const appKey of mobileApps) {
     const capabilities = manifest.apps[appKey].nativeCapabilities;
     assert.ok(capabilities.includes("notifications"), `${appKey}: notifications are required`);
-    assert.ok(capabilities.includes("location"), `${appKey}: location is required`);
+    assert.ok(capabilities.includes("location"), `${appKey}: foreground location is required`);
     assert.ok(capabilities.includes("maps"), `${appKey}: native maps are required`);
+    assert.equal(capabilities.includes("backgroundLocation"), false, `${appKey}: background location is not part of the current product contract`);
   }
 
-  assert.equal(manifest.apps["app-client"].nativeCapabilities.includes("backgroundLocation"), false);
-  assert.equal(manifest.apps["app-partner"].nativeCapabilities.includes("backgroundLocation"), false);
-  assert.equal(manifest.apps["app-field"].nativeCapabilities.includes("backgroundLocation"), false);
-  assert.equal(manifest.apps["app-captain"].nativeCapabilities.includes("backgroundLocation"), true);
+  const captainTransport = fs.readFileSync(
+    path.join(repoRoot, "services/dsh/frontend/shared/dispatch/dispatch-location.api.ts"),
+    "utf8",
+  );
+  assert.ok(captainTransport.includes("Callers must invoke this from foreground-only logic."));
+  assert.ok(captainTransport.includes("backend keeps no route history"));
 });
 
 test("each app receives its own scoped Android Maps key", () => {
