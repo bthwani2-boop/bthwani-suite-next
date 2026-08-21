@@ -17,7 +17,7 @@ const APP_RUNTIME_INFRASTRUCTURE_DEPENDENCIES = Object.freeze([
 ]);
 
 const NATIVE_CAPABILITY_DEPENDENCIES = Object.freeze({
-  router: ["expo-router"],
+  router: ["expo-router", "expo-linking", "expo-status-bar", "react-native-screens"],
   updates: ["expo-updates"],
   constants: ["expo-constants"],
   application: ["expo-application"],
@@ -52,9 +52,7 @@ const NATIVE_CAPABILITY_DEPENDENCIES = Object.freeze({
 function expectedRuntimeDependencies(app) {
   const expected = new Set(APP_RUNTIME_INFRASTRUCTURE_DEPENDENCIES);
   for (const capability of app.nativeCapabilities ?? []) {
-    for (const dependency of NATIVE_CAPABILITY_DEPENDENCIES[capability] ?? []) {
-      expected.add(dependency);
-    }
+    for (const dependency of NATIVE_CAPABILITY_DEPENDENCIES[capability] ?? []) expected.add(dependency);
   }
   return [...expected].sort();
 }
@@ -79,9 +77,7 @@ function validateMobileDependencyClosure(manifest, repoRoot = path.resolve(__dir
     }
   }
 
-  if (failures.length > 0) {
-    throw new Error(`mobile dependency closure drift\n - ${failures.join("\n - ")}`);
-  }
+  if (failures.length > 0) throw new Error(`mobile dependency closure drift\n - ${failures.join("\n - ")}`);
 }
 
 module.exports = {

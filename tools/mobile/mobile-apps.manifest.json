@@ -18,6 +18,7 @@
       "iosBundleIdentifier": "com.bthwani.client.next",
       "projectId": "abec897b-1f5f-409d-8286-607a5a6b69e2",
       "productFeatures": {
+        "navigationFoundation": ["router"],
         "identitySession": ["secureStore", "crypto"],
         "homeDiscovery": [],
         "reels": ["video"],
@@ -39,24 +40,7 @@
         "ratings": [],
         "wallet": []
       },
-      "nativeCapabilities": [
-        "updates",
-        "constants",
-        "crypto",
-        "image",
-        "splashScreen",
-        "fileSystem",
-        "documentPicker",
-        "imagePicker",
-        "secureStore",
-        "notifications",
-        "video",
-        "sharing",
-        "webBrowser",
-        "haptics",
-        "location",
-        "maps"
-      ]
+      "nativeCapabilities": ["router", "updates", "constants", "crypto", "image", "splashScreen", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "video", "sharing", "webBrowser", "haptics", "location", "maps"]
     },
     "app-partner": {
       "name": "بثواني الشريك",
@@ -66,6 +50,7 @@
       "iosBundleIdentifier": "com.bthwani.partner.next",
       "projectId": "4cde7be0-7582-4a6b-9ae0-d74f2d149580",
       "productFeatures": {
+        "navigationFoundation": ["router"],
         "identitySession": ["secureStore", "crypto"],
         "storeScope": [],
         "partnerOnboarding": ["documentPicker", "imagePicker"],
@@ -88,19 +73,7 @@
         "wallet": [],
         "storeSettings": []
       },
-      "nativeCapabilities": [
-        "updates",
-        "constants",
-        "crypto",
-        "splashScreen",
-        "fileSystem",
-        "documentPicker",
-        "imagePicker",
-        "secureStore",
-        "notifications",
-        "location",
-        "maps"
-      ]
+      "nativeCapabilities": ["router", "updates", "constants", "crypto", "splashScreen", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "location", "maps"]
     },
     "app-captain": {
       "name": "بثواني الكابتن",
@@ -110,6 +83,7 @@
       "iosBundleIdentifier": "com.bthwani.captain.next",
       "projectId": "07382a76-4dc5-460f-b4a7-7105d724bae6",
       "productFeatures": {
+        "navigationFoundation": ["router"],
         "identitySession": ["secureStore", "crypto"],
         "workforce": [],
         "availability": [],
@@ -129,19 +103,7 @@
         "account": [],
         "offlineSync": ["battery"]
       },
-      "nativeCapabilities": [
-        "updates",
-        "constants",
-        "crypto",
-        "battery",
-        "splashScreen",
-        "documentPicker",
-        "imagePicker",
-        "secureStore",
-        "notifications",
-        "location",
-        "maps"
-      ]
+      "nativeCapabilities": ["router", "updates", "constants", "crypto", "battery", "splashScreen", "documentPicker", "imagePicker", "secureStore", "notifications", "location", "maps"]
     },
     "app-field": {
       "name": "بثواني الميدان",
@@ -151,6 +113,7 @@
       "iosBundleIdentifier": "com.bthwani.field.next",
       "projectId": "08b6c8dc-80a2-4271-9904-d941a3d98914",
       "productFeatures": {
+        "navigationFoundation": ["router"],
         "identitySession": ["secureStore", "crypto"],
         "workforce": [],
         "profileCompletion": ["imagePicker"],
@@ -171,19 +134,7 @@
         "notifications": ["notifications"],
         "finance": []
       },
-      "nativeCapabilities": [
-        "updates",
-        "constants",
-        "crypto",
-        "battery",
-        "splashScreen",
-        "documentPicker",
-        "imagePicker",
-        "secureStore",
-        "notifications",
-        "location",
-        "maps"
-      ]
+      "nativeCapabilities": ["router", "updates", "constants", "crypto", "battery", "splashScreen", "documentPicker", "imagePicker", "secureStore", "notifications", "location", "maps"]
     }
   }
 }
