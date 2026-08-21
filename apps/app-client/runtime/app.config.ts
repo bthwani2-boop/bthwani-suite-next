@@ -11,7 +11,6 @@ const plugins = (config.plugins ?? []).map<ExpoPlugin>((plugin: ExpoPlugin) =>
 
 const appConfig: ExpoConfig = {
   ...config,
-  userInterfaceStyle: "light",
   plugins,
 };
 
