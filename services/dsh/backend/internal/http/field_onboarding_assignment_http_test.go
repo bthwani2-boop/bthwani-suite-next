@@ -236,6 +236,7 @@ func TestGetFieldOnboardingAssignmentReadsCanonicalDBRowWithinFieldScope(t *test
 	s := fieldAssignmentFieldServer(t, fieldActorID, operatorContextID)
 	s.db = db
 	request := httptest.NewRequest(http.MethodGet, "/dsh/field/onboarding-assignments/"+assignment.ID, nil)
+	request.SetPathValue("assignmentId", assignment.ID)
 	request.Header.Set("Authorization", "Bearer [REDACTED:Bearer token]")
 	response := httptest.NewRecorder()
 
