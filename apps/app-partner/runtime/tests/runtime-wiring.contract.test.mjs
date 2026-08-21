@@ -21,6 +21,14 @@ test("partner app composes canonical identity, rating, catalog media, push, and 
   assert.match(source, /useDshMobilePushRegistration\(identity\.state\.kind, "app-partner", "bthwani-partner-next"\)/);
 });
 
+test("partner native wiring leaves inbound URL navigation to Expo Router", async () => {
+  const source = await read("apps/app-partner/runtime/src/platform/dsh-capabilities.tsx");
+
+  assert.doesNotMatch(source, /configureDshLinkingAdapter|getInitialURL|getInitialUrl|addUrlListener|addEventListener\("url"/);
+  assert.match(source, /configureDshMobileNotificationRuntime\(createDshExpoNotificationRuntime/);
+  assert.match(source, /linking: Linking/);
+});
+
 test("partner field rating keeps failures visible and confirms canonical completion readback", async () => {
   const source = await read("services/dsh/frontend/app-partner/ratings/PartnerFieldRatingGate.tsx");
 
