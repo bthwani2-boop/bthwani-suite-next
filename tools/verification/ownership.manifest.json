@@ -49,25 +49,25 @@
     "app-field": {
       "kind": "mobile-surface",
       "root": "apps/app-field/runtime",
-      "sourcePrefixes": ["apps/app-field/runtime/metro.config.cjs", "apps/app-field/runtime/src/"],
+      "sourcePrefixes": ["apps/app-field/runtime/"],
       "coverage": { "strategy": "node-lcov", "cwd": "apps/app-field/runtime", "testRoots": ["apps/app-field/runtime/tests"] }
     },
     "app-captain": {
       "kind": "mobile-surface",
       "root": "apps/app-captain/runtime",
-      "sourcePrefixes": ["apps/app-captain/runtime/metro.config.cjs", "apps/app-captain/runtime/src/"],
+      "sourcePrefixes": ["apps/app-captain/runtime/"],
       "coverage": { "strategy": "node-lcov", "cwd": "apps/app-captain/runtime", "testRoots": ["apps/app-captain/runtime/tests"] }
     },
     "app-client": {
       "kind": "mobile-surface",
       "root": "apps/app-client/runtime",
-      "sourcePrefixes": ["apps/app-client/runtime/metro.config.cjs", "apps/app-client/runtime/src/"],
+      "sourcePrefixes": ["apps/app-client/runtime/"],
       "coverage": { "strategy": "node-lcov", "cwd": "apps/app-client/runtime", "testRoots": ["apps/app-client/runtime/tests"] }
     },
     "app-partner": {
       "kind": "mobile-surface",
       "root": "apps/app-partner/runtime",
-      "sourcePrefixes": ["apps/app-partner/runtime/metro.config.cjs", "apps/app-partner/runtime/src/"],
+      "sourcePrefixes": ["apps/app-partner/runtime/"],
       "coverage": { "strategy": "node-lcov", "cwd": "apps/app-partner/runtime", "testRoots": ["apps/app-partner/runtime/tests"] }
     },
     "control-panel-config": {

@@ -72,6 +72,8 @@ test("coverage planning is source-authority based and keeps DSH LCOV separate fr
   assert.deepEqual(planCoverageSuites(["services/wlt/frontend/shared/dsh/finance/a.ts"]), ["wlt"]);
   assert.deepEqual(planCoverageSuites(["apps/app-field/runtime/src/navigation/field-deep-link.ts"]), ["app-field"]);
   assert.deepEqual(planCoverageSuites(["apps/app-captain/runtime/src/App.tsx"]), ["app-captain"]);
+  assert.deepEqual(planCoverageSuites(["apps/app-client/runtime/app.config.ts"]), ["app-client"]);
+  assert.deepEqual(planCoverageSuites(["apps/app-partner/runtime/fingerprint.config.js"]), ["app-partner"]);
   assert.deepEqual(
     planCoverageSuites(["apps/app-partner/runtime/tests/partner-order-runtime.execution.test.mjs"]),
     ["app-partner"],
@@ -96,6 +98,10 @@ test("coverage planning is source-authority based and keeps DSH LCOV separate fr
 
 test("changed executable product source is covered or rejected before Sonar", () => {
   assert.deepEqual(planCoverageSuites(["apps/app-client/runtime/src/index.ts"]), ["app-client"]);
+  assert.doesNotThrow(() => assertChangedExecutableCoverageOwnership([
+    "apps/app-client/runtime/app.config.ts",
+    "apps/app-partner/runtime/fingerprint.config.js",
+  ]));
   assert.throws(
     () => assertChangedExecutableCoverageOwnership(["apps/unknown-surface/src/a.ts"]),
     /no project owns this executable JS\/TS source/,

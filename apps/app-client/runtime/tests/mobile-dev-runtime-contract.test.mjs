@@ -85,7 +85,7 @@ test('every mobile launcher reaches the shared preflight before Metro', () => {
     const appWrapper = read(`apps/${app}/runtime/mobile.ps1`);
     assert.match(start, /mobile\.ps1/);
     assert.match(appWrapper, /tools\\mobile\\mobile\.ps1/);
-    assert.match(appWrapper, /tools\\mobile\\mobile\.ps1/);
+    assert.match(appWrapper, new RegExp(`-App\\s+'${app}'`));
   }
 });
 
