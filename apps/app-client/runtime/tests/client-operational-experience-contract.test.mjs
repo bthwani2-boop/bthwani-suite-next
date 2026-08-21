@@ -135,7 +135,9 @@ test("manual request categories are server-routed sovereign destinations", () =>
     [
       "DshHomeSpecialRequestTarget",
       "openSpecialRequestType",
-      'requestType === "SHEIN_ASSISTED_PURCHASE" ? "shein" : "awnak"',
+      "kind: requestType === 'SHEIN_ASSISTED_PURCHASE'",
+      "'special-request-shein'",
+      "'special-request-awnak'",
       "onSpecialRequestPress={openSpecialRequestType}",
     ],
   );
@@ -189,12 +191,13 @@ test("client commercial profile is reachable from My Space and has no inert priv
   const surface = assertMarkers(
     "services/dsh/frontend/app-client/DshClientSurface.tsx",
     [
-      '"commercial-profile"',
+      "'profile-commercial'",
       "MyProfileScreen",
-      "onOpenProfile={() => setProfileRoute(\"commercial-profile\")}",
+      "onOpenProfile={() => navigation.navigate({ kind: 'profile-commercial' })}",
     ],
   );
-  assert.match(surface, /profileRoute === "commercial-profile"/);
+  assert.match(surface, /case 'profile-commercial':/);
+  assert.doesNotMatch(surface, /setProfileRoute|commercial-profile/);
   const profile = assertMarkers(
     "services/dsh/frontend/app-client/account/MyProfileScreen.tsx",
     ["fetchClientProfile", "upsertClientProfilePreferences", "upsertClientProfileConsents", "serverProfile"],
