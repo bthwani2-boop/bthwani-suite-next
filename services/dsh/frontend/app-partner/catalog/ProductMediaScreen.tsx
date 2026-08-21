@@ -29,8 +29,6 @@ export type ProductMediaScreenProps = Readonly<{
   productId: string;
   /** The store assortment owns the custom image; product identity remains central. */
   storeId: string;
-  /** Retained for route compatibility. Authentication comes from the Identity session. */
-  partnerId?: string;
   onBack?: () => void;
 }>;
 
