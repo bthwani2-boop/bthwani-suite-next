@@ -3,6 +3,7 @@ package collateral
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"os"
 	"testing"
 
@@ -156,5 +157,151 @@ func TestCaptainCollateralReadBootstrapsBeforeWalletMaterialization(t *testing.T
 	}
 	if len(readback.Positions) != 0 {
 		t.Fatalf("expected no collateral positions before materialization, got %d", len(readback.Positions))
+	}
+}
+
+func TestCaptainCollateralRejectsDisabledAndInvalidSources(t *testing.T) {
+	db := collateralTestDB(t)
+	contextID := testsupport.UniqueID("collateral-reject-context")
+	captainID := testsupport.UniqueID("collateral-reject-captain")
+	ctx := shared.WithOperatorContext(context.Background(), contextID)
+
+	if _, err := UpsertPolicy(ctx, db, upsertPolicyInput{
+		PolicyID: "captain-collateral-reject-v1", Enabled: false,
+		MinimumCollateralMinorUnits: 500, Currency: "YER",
+		ChangeReason: "disabled policy integration test", UpdatedByActorID: "test-operator",
+	}); err != nil {
+		t.Fatalf("upsert disabled policy: %v", err)
+	}
+	if _, err := Allocate(ctx, db, "disabled-allocation", allocateInput{
+		CaptainID: captainID, PaymentSessionID: "missing-session", AllocatedByActorID: captainID,
+	}); !errors.Is(err, ErrPolicyDisabled) {
+		t.Fatalf("allocate with disabled policy error=%v, want %v", err, ErrPolicyDisabled)
+	}
+	if _, err := UpsertPolicy(ctx, db, upsertPolicyInput{
+		PolicyID: "captain-collateral-reject-v1", ExpectedVersion: 1, Enabled: true,
+		MinimumCollateralMinorUnits: 500, Currency: "YER",
+		ChangeReason: "enable policy for source validation", UpdatedByActorID: "test-operator",
+	}); err != nil {
+		t.Fatalf("enable policy: %v", err)
+	}
+	if _, err := Allocate(ctx, db, "missing-source", allocateInput{
+		CaptainID: captainID, PaymentSessionID: "missing-session", AllocatedByActorID: captainID,
+	}); !errors.Is(err, ErrSourceNotCaptured) {
+		t.Fatalf("allocate with missing source error=%v, want %v", err, ErrSourceNotCaptured)
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ledger.PostOpeningBalance(ctx, tx, "captain", captainID, "YER", 1000, testsupport.UniqueID("collateral-reject-opening"), ledger.Actor{ID: "collateral-test", Type: "test"}); err != nil {
+		_ = tx.Rollback()
+		t.Fatalf("post opening balance: %v", err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	sessionID := seedCapturedCaptainTopUp(t, db, ctx, contextID, captainID, 2000)
+	if _, err := db.ExecContext(ctx, `UPDATE wlt_wallets SET held_balance_minor_units=2500 WHERE operator_context_id=$1 AND actor_type='captain' AND actor_id=$2`, contextID, captainID); err != nil {
+		t.Fatalf("create insufficient spendable wallet: %v", err)
+	}
+	if _, err := Allocate(ctx, db, "insufficient-funds", allocateInput{
+		CaptainID: captainID, PaymentSessionID: sessionID, AllocatedByActorID: captainID,
+	}); !errors.Is(err, ErrCollateralFundsUnavailable) {
+		t.Fatalf("allocate with insufficient funds error=%v, want %v", err, ErrCollateralFundsUnavailable)
+	}
+}
+
+func TestCaptainCollateralReleaseBlocksOnEveryOpenExposure(t *testing.T) {
+	db := collateralTestDB(t)
+	contextID := testsupport.UniqueID("collateral-block-context")
+	captainID := testsupport.UniqueID("collateral-block-captain")
+	ctx := shared.WithOperatorContext(context.Background(), contextID)
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ledger.PostOpeningBalance(ctx, tx, "captain", captainID, "YER", 5000, testsupport.UniqueID("collateral-block-opening"), ledger.Actor{ID: "collateral-test", Type: "test"}); err != nil {
+		_ = tx.Rollback()
+		t.Fatalf("post opening balance: %v", err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := UpsertPolicy(ctx, db, upsertPolicyInput{
+		PolicyID: "captain-collateral-block-v1", Enabled: true,
+		MinimumCollateralMinorUnits: 500, Currency: "YER",
+		ChangeReason: "release blocker integration test", UpdatedByActorID: "test-operator",
+	}); err != nil {
+		t.Fatalf("upsert policy: %v", err)
+	}
+	sessionID := seedCapturedCaptainTopUp(t, db, ctx, contextID, captainID, 2000)
+	position, err := Allocate(ctx, db, "block-allocation", allocateInput{CaptainID: captainID, PaymentSessionID: sessionID, AllocatedByActorID: captainID})
+	if err != nil {
+		t.Fatalf("allocate collateral: %v", err)
+	}
+
+	blockers := []struct {
+		name   string
+		set    string
+		reason string
+	}{
+		{name: "pending", set: "pending_balance_minor_units", reason: "WLT_COLLATERAL_RELEASE_PENDING_FUNDS"},
+		{name: "held", set: "held_balance_minor_units", reason: "WLT_COLLATERAL_RELEASE_HELD_FUNDS"},
+		{name: "cod", set: "cod_reserved_balance_minor_units", reason: "WLT_COLLATERAL_RELEASE_COD_RESERVATION_OPEN"},
+	}
+	for _, blocker := range blockers {
+		if _, err := db.ExecContext(ctx, `UPDATE wlt_wallets SET pending_balance_minor_units=0,held_balance_minor_units=0,cod_reserved_balance_minor_units=0 WHERE operator_context_id=$1 AND actor_type='captain' AND actor_id=$2`, contextID, captainID); err != nil {
+			t.Fatalf("reset wallet for %s blocker: %v", blocker.name, err)
+		}
+		if _, err := db.ExecContext(ctx, `UPDATE wlt_wallets SET `+blocker.set+`=1 WHERE operator_context_id=$1 AND actor_type='captain' AND actor_id=$2`, contextID, captainID); err != nil {
+			t.Fatalf("set %s blocker: %v", blocker.name, err)
+		}
+		if _, err := Release(ctx, db, testsupport.UniqueID("blocked-release"), releaseInput{CaptainID: captainID, PositionID: position.ID, ReleaseReason: "blocked by open exposure", ReleasedByActorID: captainID}); !errors.Is(err, ErrReleaseBlocked) || err.Error() == ErrReleaseBlocked.Error() {
+			t.Fatalf("%s release error=%v, want wrapped %v", blocker.name, err, ErrReleaseBlocked)
+		}
+		readback, err := Read(ctx, db, captainID)
+		if err != nil {
+			t.Fatalf("read %s blocker: %v", blocker.name, err)
+		}
+		if readback.ReleaseBlockedReason != blocker.reason {
+			t.Fatalf("read %s blocker reason=%q, want %q", blocker.name, readback.ReleaseBlockedReason, blocker.reason)
+		}
+	}
+
+	if _, err := db.ExecContext(ctx, `UPDATE wlt_wallets SET pending_balance_minor_units=0,held_balance_minor_units=0,cod_reserved_balance_minor_units=0 WHERE operator_context_id=$1 AND actor_type='captain' AND actor_id=$2`, contextID, captainID); err != nil {
+		t.Fatal(err)
+	}
+	tx, err = db.BeginTx(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ledgerID, err := ledger.PostLedgerTransaction(ctx, tx, "provider_penalty_posted", "provider_incident", testsupport.UniqueID("collateral-debt-source"), []ledger.LedgerLine{
+		{AccountType: "provider_receivable", DebitCredit: "debit", AmountMinorUnits: 700, Currency: "YER"},
+		{AccountType: "platform_revenue", DebitCredit: "credit", AmountMinorUnits: 700, Currency: "YER"},
+	}, ledger.Actor{ID: "collateral-test", Type: "operator"})
+	if err != nil {
+		_ = tx.Rollback()
+		t.Fatalf("post provider debt ledger: %v", err)
+	}
+	debtSourceID := testsupport.UniqueID("collateral-debt-source-row")
+	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_provider_debts(operator_context_id,provider_actor_id,provider_actor_type,source_type,source_id,policy_id,policy_version,original_amount_minor_units,outstanding_amount_minor_units,currency,ledger_transaction_id) VALUES($1,$2,'captain','provider_penalty',$3,'collateral-test','v1',700,700,'YER',$4)`, contextID, captainID, debtSourceID, ledgerID); err != nil {
+		_ = tx.Rollback()
+		t.Fatalf("insert provider debt: %v", err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Release(ctx, db, testsupport.UniqueID("debt-blocked-release"), releaseInput{CaptainID: captainID, PositionID: position.ID, ReleaseReason: "blocked by provider debt", ReleasedByActorID: captainID}); !errors.Is(err, ErrReleaseBlocked) || err.Error() == ErrReleaseBlocked.Error() {
+		t.Fatalf("provider debt release error=%v, want wrapped %v", err, ErrReleaseBlocked)
+	}
+	readback, err := Read(ctx, db, captainID)
+	if err != nil {
+		t.Fatalf("read provider debt blocker: %v", err)
+	}
+	if readback.ReleaseBlockedReason != "WLT_COLLATERAL_RELEASE_PROVIDER_DEBT_OPEN" {
+		t.Fatalf("provider debt blocker reason=%q", readback.ReleaseBlockedReason)
 	}
 }
