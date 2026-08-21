@@ -23,7 +23,7 @@ jobs:
       - name: Checkout governed dependency-closure branch
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.event.pull_request.head.ref }}
+          ref: automation/mobile-dependency-closure-20260821
           fetch-depth: 1
 
       - name: Setup repository-pinned PNPM
@@ -52,4 +52,4 @@ jobs:
           git add -- pnpm-lock.yaml
           test "$(git diff --cached --name-only)" = "pnpm-lock.yaml"
           git commit -m "chore(mobile): synchronize dependency lockfile"
-          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+          git push origin "HEAD:automation/mobile-dependency-closure-20260821"
