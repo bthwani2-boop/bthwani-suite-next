@@ -16,7 +16,7 @@ $ErrorActionPreference = "Stop"
 $global:OutputEncoding = [Text.UTF8Encoding]::new($false)
 
 $script:SentryCliPackage = "sentry@0.38.0"
-$script:EasCliPackage = "eas-cli@latest"
+$script:EasCliPackage = "eas-cli@22.2.0"
 $script:SentryUrl = "https://sentry.io"
 $script:SentryApiBase = "$script:SentryUrl/api/0"
 $script:SentryToken = $null

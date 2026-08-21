@@ -66,7 +66,7 @@ function Invoke-EasCommand {
     Push-Location -LiteralPath $WorkingDirectory
     try {
         $global:LASTEXITCODE = 0
-        $output = & pnpm dlx eas-cli@latest @Arguments 2>&1
+        $output = & pnpm dlx eas-cli@22.2.0 @Arguments 2>&1
         $exitCode = if ($null -eq $global:LASTEXITCODE) { 0 } else { [int]$global:LASTEXITCODE }
         $text = (($output | ForEach-Object { [string]$_ }) -join "`n").Trim()
         foreach ($secretValue in $SecretValues) {

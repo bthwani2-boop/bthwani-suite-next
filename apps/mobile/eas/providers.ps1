@@ -187,7 +187,7 @@ function Set-EasVariable {
     )
 
     Invoke-EasEnvironmentCommand -Arguments @(
-        'dlx', 'eas-cli@latest', 'env:set', 'development',
+        'dlx', 'eas-cli@22.2.0', 'env:set', 'development',
         '--name', $Name, '--value', $Value, '--type', $Type,
         '--visibility', $Visibility, '--scope', 'project', '--non-interactive'
     ) -SecretValues $SecretValues | Out-Null

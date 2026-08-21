@@ -190,7 +190,7 @@ for (const key of targets) {
 
   const args = [
     "dlx",
-    "eas-cli@latest",
+    "eas-cli@22.2.0",
     "build",
     "--platform",
     platform,
