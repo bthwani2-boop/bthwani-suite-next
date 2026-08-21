@@ -240,7 +240,7 @@ export function resolveCoverageCommandInvocation(command, args, environment = pr
   return resolvePackageManagerInvocation(command, args, environment);
 }
 
-function runCommand(command, args, options = {}) {
+export function runCommand(command, args, options = {}) {
   const invocation = resolveCoverageCommandInvocation(command, args, {
     ...process.env,
     ...(options.env ?? {}),
@@ -254,7 +254,7 @@ function runCommand(command, args, options = {}) {
     shell: false,
   });
   if (result.error) throw result.error;
-  if (result.status !== 0) throw new Error(`${executable} exited with status ${result.status}`);
+  if (result.status !== 0) throw new Error(`${invocation.executable} exited with status ${result.status}`);
 }
 
 function resolveLcovSource(source, suiteCwd) {

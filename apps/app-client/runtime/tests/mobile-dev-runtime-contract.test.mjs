@@ -22,7 +22,7 @@ test('mobile development data has one canonical implementation and checks all go
 
   const compatibility = fs.readFileSync(compatibilityPath, 'utf8');
   const canonical = fs.readFileSync(canonicalPath, 'utf8');
-  assert.match(compatibility, /tools\/mobile\/mobile-dev-data\.mjs/);
+  assert.equal(compatibility.trim(), 'import "../mobile/mobile-dev-data.mjs";');
   assert.equal(compatibility.split(/\r?\n/).filter(Boolean).length, 1);
 
   for (const required of [
@@ -45,7 +45,7 @@ test('mobile preflight delegates lifecycle to runtime and repair logic to the ca
   const phaseAdapter = read('tools/mobile/invoke-runtime-phase.ps1');
   const runtimeAuthority = read('infra/docker/scripts/runtime.ps1');
 
-  assert.match(compatibility, /tools\\mobile\\ensure-mobile-dev-runtime\.ps1/);
+  assert.match(compatibility, /\.\.\\mobile\\ensure-mobile-dev-runtime\.ps1/);
   for (const marker of [
     '-Action", "up"',
     '-Action", "bootstrap-dev"',
@@ -92,7 +92,7 @@ test('every mobile launcher reaches the shared preflight before Metro', () => {
 test('Android development client launch is owned only by the ADB transport', () => {
   const compatibility = read('tools/scripts/start-mobile-runtime.ps1');
   const source = read('tools/mobile/start-mobile-runtime.ps1');
-  assert.match(compatibility, /tools\\mobile\\start-mobile-runtime\.ps1/);
+  assert.match(compatibility, /\.\.\\mobile\\start-mobile-runtime\.ps1/);
 
   const argumentsStart = source.indexOf('$expoArguments = @(');
   const argumentsEnd = source.indexOf('$androidLaunchJob = $null', argumentsStart);

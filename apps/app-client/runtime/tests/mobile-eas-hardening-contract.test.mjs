@@ -129,7 +129,7 @@ test("package-manager governance checks the active executor and canonical helper
   assert.ok(wrappersStart >= 0 && wrappersEnd > wrappersStart);
   const wrappersBlock = guard.slice(wrappersStart, wrappersEnd);
   assert.ok(wrappersBlock.includes('"tools/scripts/eas-build-mobile.mjs"'));
-  assert.ok(wrappersBlock.includes("tools/mobile/eas-build-mobile.mjs"));
+  assert.ok(wrappersBlock.includes('../mobile/eas-build-mobile.mjs'));
   assert.ok(guard.includes('const canonicalHelperPath = "tools/mobile/lib/package-manager-invocation.mjs"'));
 });
 
