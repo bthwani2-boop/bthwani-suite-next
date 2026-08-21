@@ -95,7 +95,7 @@ export function DshFieldAssignmentOnboardingScreen({
     return () => {
       active = false;
     };
-  }, [assignmentId, controller, refreshToken]);
+  }, [assignmentId, controller.reset, refreshToken]);
 
   if (resolution.assignmentId !== assignmentId || resolution.kind === 'loading') {
     return (
