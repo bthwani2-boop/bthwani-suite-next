@@ -137,3 +137,92 @@ func TestInventoryMutationSynchronizesAssortmentProjectionDBIntegration(t *testi
 	}
 	assertProjection(false, "out_of_stock")
 }
+
+func TestAssortmentMetadataUsesNormalizedRuntimeTruthAndImageGateDBIntegration(t *testing.T) {
+	db := openAssortmentRuntimeTruthDB(t)
+	ctx := context.Background()
+	suffix := strconv.FormatInt(time.Now().UnixNano(), 10)
+	storeID := "metadata-truth-store-" + suffix
+	domainID := "metadata-truth-domain-" + suffix
+	productID := "metadata-truth-product-" + suffix
+	operatorContextID := "metadata-truth-context-" + suffix
+
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_stores (
+			id, slug, display_name, status, city_code, service_area_code,
+			serviceability_status, is_visible, operator_context_id
+		) VALUES ($1,$1,'Metadata Truth Store','published','SAN','SAN-1','serviceable',true,$2)`, storeID, operatorContextID); err != nil {
+		t.Fatalf("insert governed store: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_catalog_domains (id, slug, name_ar)
+		VALUES ($1,$1,'Metadata Truth Domain')`, domainID); err != nil {
+		t.Fatalf("insert domain: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_master_products (
+			id, domain_id, canonical_name_ar, approval_status, is_active
+		) VALUES ($1,$2,'Metadata Truth Product','approved',true)`, productID, domainID); err != nil {
+		t.Fatalf("insert product: %v", err)
+	}
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_store_catalog_domains (store_id, domain_id, status, approved_at)
+		VALUES ($1,$2,'approved',NOW())`, storeID, domainID); err != nil {
+		t.Fatalf("approve governed store domain: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_assortment_inventory WHERE store_assortment_id IN (SELECT id FROM dsh_store_assortments WHERE store_id=$1)`, storeID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_assortment_prices WHERE store_assortment_id IN (SELECT id FROM dsh_store_assortments WHERE store_id=$1)`, storeID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_assortments WHERE store_id=$1`, storeID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_master_products WHERE id=$1`, productID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_store_catalog_domains WHERE store_id=$1`, storeID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_catalog_domains WHERE id=$1`, domainID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_stores WHERE id=$1`, storeID)
+	})
+
+	_, err := UpsertStoreAssortmentWithRuntimeTruth(ctx, db, storeID, productID, "operator-test", StoreAssortmentInput{
+		UnitPrice: 12.50, Currency: "yer", Available: true, StockStatus: "in_stock", PublicationStatus: "client_visible",
+	}, false)
+	if err == nil {
+		t.Fatal("client-visible assortment without an approved image was accepted")
+	}
+
+	created, err := UpsertStoreAssortmentWithRuntimeTruth(ctx, db, storeID, productID, "operator-test", StoreAssortmentInput{
+		UnitPrice: 12.50, Currency: "yer", Available: true, StockStatus: "in_stock", LocalNote: "initial metadata", PublicationStatus: "draft",
+	}, false)
+	if err != nil {
+		t.Fatalf("create assortment metadata: %v", err)
+	}
+	if created.ID == "" || created.Version != 1 || created.UnitPrice != 12.50 || created.Currency != "YER" || !created.Available || created.StockStatus != "in_stock" {
+		t.Fatalf("unexpected normalized assortment creation: %+v", created)
+	}
+
+	staleCommercialPayload := 999.99
+	updated, err := UpsertStoreAssortmentWithRuntimeTruth(ctx, db, storeID, productID, "operator-test", StoreAssortmentInput{
+		UnitPrice: staleCommercialPayload, Currency: "USD", Available: false, StockStatus: "out_of_stock", LocalNote: "metadata-only edit", PublicationStatus: "draft", ExpectedVersion: &created.Version,
+	}, false)
+	if err != nil {
+		t.Fatalf("metadata-only edit: %v", err)
+	}
+	if updated.Version != 2 || updated.UnitPrice != 12.50 || updated.Currency != "YER" || !updated.Available || updated.StockStatus != "in_stock" {
+		t.Fatalf("metadata edit overwrote normalized runtime truth: %+v", updated)
+	}
+	if _, err := UpsertStoreAssortmentWithRuntimeTruth(ctx, db, storeID, productID, "operator-test", StoreAssortmentInput{
+		UnitPrice: 12.50, Currency: "YER", Available: true, StockStatus: "in_stock", PublicationStatus: "draft",
+	}, false); err == nil {
+		t.Fatal("existing assortment update without expectedVersion was accepted")
+	}
+
+	if _, err := db.ExecContext(ctx, `UPDATE dsh_master_products SET canonical_image_object_key='catalog/metadata-truth.png' WHERE id=$1`, productID); err != nil {
+		t.Fatalf("approve canonical image: %v", err)
+	}
+	visible, err := UpsertStoreAssortmentWithRuntimeTruth(ctx, db, storeID, productID, "operator-test", StoreAssortmentInput{
+		UnitPrice: 1, Currency: "YER", Available: false, StockStatus: "out_of_stock", PublicationStatus: "client_visible", ExpectedVersion: &updated.Version,
+	}, false)
+	if err != nil {
+		t.Fatalf("publish assortment with canonical image: %v", err)
+	}
+	if visible.PublicationStatus != "client_visible" || visible.UnitPrice != 12.50 || visible.Currency != "YER" || !visible.Available {
+		t.Fatalf("client-visible projection drifted from runtime truth: %+v", visible)
+	}
+}
