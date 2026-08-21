@@ -27,7 +27,7 @@ overrides:
   "@opentelemetry/exporter-trace-otlp-http": "^0.217.0"
   '@opentelemetry/propagator-jaeger@<2.9.0': '>=2.9.0'
   "@opentelemetry/sdk-node": "^0.217.0"
-  "@react-native/metro-config": 0.85.3
+  "@react-native/metro-config": 0.86.2
   '@redocly/openapi-core@*>js-yaml': 4.3.1
   '@yarnpkg/parsers@*>js-yaml': 5.2.2
   brace-expansion@>=2.0.0 <3.0.0: 2.1.4
@@ -46,8 +46,8 @@ overrides:
   protobufjs: "^8.4.1"
   react: 19.2.3
   react-dom: 19.2.3
-  react-native: 0.85.3
-  react-native-worklets: 0.8.3
+  react-native: 0.86.2
+  react-native-worklets: 0.10.1
   sharp@<0.35.0: '>=0.35.0'
   shell-quote@<=1.8.4: '>=1.9.0'
   uuid@<11.1.1: '>=11.1.1'

@@ -11,9 +11,13 @@ const APP_RUNTIME_INFRASTRUCTURE_DEPENDENCIES = Object.freeze([
   "@sentry/react-native",
   "expo",
   "expo-dev-client",
+  "expo-font",
   "react",
   "react-native",
+  "react-native-gesture-handler",
+  "react-native-reanimated",
   "react-native-safe-area-context",
+  "react-native-worklets",
 ]);
 
 const NATIVE_CAPABILITY_DEPENDENCIES = Object.freeze({

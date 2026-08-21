@@ -7,7 +7,7 @@
     "node": "24.17.0",
     "pnpm": "10.34.0",
     "runtimeTypeScript": "npm:@typescript/typescript6@6.0.2",
-    "expoSdk": 56,
+    "expoSdk": 57,
     "capabilityModelVersion": 2
   },
   "apps": {
@@ -19,34 +19,83 @@
       "iosBundleIdentifier": "com.bthwani.client.next",
       "projectId": "abec897b-1f5f-409d-8286-607a5a6b69e2",
       "productFeatures": {
-        "navigationFoundation": ["router"],
-        "identitySession": ["secureStore", "crypto"],
+        "navigationFoundation": [
+          "router"
+        ],
+        "identitySession": [
+          "secureStore",
+          "crypto"
+        ],
         "homeDiscovery": [],
-        "reels": ["video"],
+        "reels": [
+          "video"
+        ],
         "storeDiscovery": [],
         "search": [],
         "cart": [],
         "checkout": [],
         "orders": [],
-        "orderTracking": ["maps"],
+        "orderTracking": [
+          "maps"
+        ],
         "pickupSession": [],
-        "specialRequests": ["imagePicker", "documentPicker"],
+        "specialRequests": [
+          "imagePicker",
+          "documentPicker"
+        ],
         "profile": [],
-        "addresses": ["location", "maps"],
+        "addresses": [
+          "location",
+          "maps"
+        ],
         "identityHub": [],
         "benefits": [],
         "preferences": [],
-        "support": ["imagePicker", "documentPicker"],
-        "notifications": ["notifications"],
+        "support": [
+          "imagePicker",
+          "documentPicker"
+        ],
+        "notifications": [
+          "notifications"
+        ],
         "ratings": [],
         "wallet": []
       },
       "runtimeConcerns": {
-        "platformLifecycle": ["updates", "constants", "splashScreen"],
-        "remoteImageRendering": ["image"],
-        "platformActions": ["fileSystem", "sharing", "webBrowser", "haptics"]
+        "platformLifecycle": [
+          "updates",
+          "constants",
+          "splashScreen"
+        ],
+        "remoteImageRendering": [
+          "image"
+        ],
+        "platformActions": [
+          "fileSystem",
+          "sharing",
+          "webBrowser",
+          "haptics"
+        ]
       },
-      "nativeCapabilities": ["router", "updates", "constants", "crypto", "image", "splashScreen", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "video", "sharing", "webBrowser", "haptics", "location", "maps"]
+      "nativeCapabilities": [
+        "router",
+        "updates",
+        "constants",
+        "crypto",
+        "image",
+        "splashScreen",
+        "fileSystem",
+        "documentPicker",
+        "imagePicker",
+        "secureStore",
+        "notifications",
+        "video",
+        "sharing",
+        "webBrowser",
+        "haptics",
+        "location",
+        "maps"
+      ]
     },
     "app-partner": {
       "name": "بثواني الشريك",
@@ -56,10 +105,21 @@
       "iosBundleIdentifier": "com.bthwani.partner.next",
       "projectId": "4cde7be0-7582-4a6b-9ae0-d74f2d149580",
       "productFeatures": {
-        "navigationFoundation": ["router"],
-        "identitySession": ["secureStore", "crypto"],
-        "storeScope": ["location", "maps"],
-        "partnerOnboarding": ["documentPicker", "imagePicker"],
+        "navigationFoundation": [
+          "router"
+        ],
+        "identitySession": [
+          "secureStore",
+          "crypto"
+        ],
+        "storeScope": [
+          "location",
+          "maps"
+        ],
+        "partnerOnboarding": [
+          "documentPicker",
+          "imagePicker"
+        ],
         "orders": [],
         "orderLifecycle": [],
         "timers": [],
@@ -67,23 +127,53 @@
         "catalog": [],
         "categories": [],
         "products": [],
-        "productMedia": ["imagePicker", "documentPicker"],
-        "reels": ["imagePicker", "documentPicker"],
+        "productMedia": [
+          "imagePicker",
+          "documentPicker"
+        ],
+        "reels": [
+          "imagePicker",
+          "documentPicker"
+        ],
         "promotions": [],
         "ratings": [],
         "analytics": [],
         "commercial": [],
         "operations": [],
-        "notifications": ["notifications"],
-        "support": ["documentPicker", "imagePicker"],
+        "notifications": [
+          "notifications"
+        ],
+        "support": [
+          "documentPicker",
+          "imagePicker"
+        ],
         "wallet": [],
         "storeSettings": []
       },
       "runtimeConcerns": {
-        "platformLifecycle": ["updates", "constants", "splashScreen"],
-        "catalogFileTransport": ["fileSystem"]
+        "platformLifecycle": [
+          "updates",
+          "constants",
+          "splashScreen"
+        ],
+        "catalogFileTransport": [
+          "fileSystem"
+        ]
       },
-      "nativeCapabilities": ["router", "updates", "constants", "crypto", "splashScreen", "fileSystem", "documentPicker", "imagePicker", "secureStore", "notifications", "location", "maps"]
+      "nativeCapabilities": [
+        "router",
+        "updates",
+        "constants",
+        "crypto",
+        "splashScreen",
+        "fileSystem",
+        "documentPicker",
+        "imagePicker",
+        "secureStore",
+        "notifications",
+        "location",
+        "maps"
+      ]
     },
     "app-captain": {
       "name": "بثواني الكابتن",
@@ -93,31 +183,66 @@
       "iosBundleIdentifier": "com.bthwani.captain.next",
       "projectId": "07382a76-4dc5-460f-b4a7-7105d724bae6",
       "productFeatures": {
-        "navigationFoundation": ["router"],
-        "identitySession": ["secureStore", "crypto"],
+        "navigationFoundation": [
+          "router"
+        ],
+        "identitySession": [
+          "secureStore",
+          "crypto"
+        ],
         "workforce": [],
         "availability": [],
-        "dispatch": ["notifications"],
+        "dispatch": [
+          "notifications"
+        ],
         "assignment": [],
         "activeTask": [],
         "pickup": [],
         "delivery": [],
-        "navigation": ["location", "maps"],
-        "gps": ["location"],
-        "proofOfDelivery": ["imagePicker"],
+        "navigation": [
+          "location",
+          "maps"
+        ],
+        "gps": [
+          "location"
+        ],
+        "proofOfDelivery": [
+          "imagePicker"
+        ],
         "support": [],
         "finance": [],
         "codCustody": [],
-        "documents": ["documentPicker"],
+        "documents": [
+          "documentPicker"
+        ],
         "rating": [],
         "account": [],
         "offlineSync": []
       },
       "runtimeConcerns": {
-        "platformLifecycle": ["updates", "constants", "splashScreen"],
-        "powerAwareOfflineSync": ["battery"]
+        "platformLifecycle": [
+          "updates",
+          "constants",
+          "splashScreen"
+        ],
+        "powerAwareOfflineSync": [
+          "battery"
+        ]
       },
-      "nativeCapabilities": ["router", "updates", "constants", "crypto", "battery", "splashScreen", "documentPicker", "imagePicker", "secureStore", "notifications", "location", "maps"]
+      "nativeCapabilities": [
+        "router",
+        "updates",
+        "constants",
+        "crypto",
+        "battery",
+        "splashScreen",
+        "documentPicker",
+        "imagePicker",
+        "secureStore",
+        "notifications",
+        "location",
+        "maps"
+      ]
     },
     "app-field": {
       "name": "بثواني الميدان",
@@ -127,32 +252,79 @@
       "iosBundleIdentifier": "com.bthwani.field.next",
       "projectId": "08b6c8dc-80a2-4271-9904-d941a3d98914",
       "productFeatures": {
-        "navigationFoundation": ["router"],
-        "identitySession": ["secureStore", "crypto"],
+        "navigationFoundation": [
+          "router"
+        ],
+        "identitySession": [
+          "secureStore",
+          "crypto"
+        ],
         "workforce": [],
-        "profileCompletion": ["imagePicker"],
+        "profileCompletion": [
+          "imagePicker"
+        ],
         "stores": [],
-        "visit": ["location", "maps"],
+        "visit": [
+          "location",
+          "maps"
+        ],
         "checklist": [],
-        "verification": ["imagePicker", "location"],
-        "partnerOnboarding": ["imagePicker", "documentPicker", "location"],
-        "evidence": ["imagePicker", "documentPicker"],
+        "verification": [
+          "imagePicker",
+          "location"
+        ],
+        "partnerOnboarding": [
+          "imagePicker",
+          "documentPicker",
+          "location"
+        ],
+        "evidence": [
+          "imagePicker",
+          "documentPicker"
+        ],
         "partnerProgress": [],
         "catalog": [],
         "products": [],
-        "productsUpload": ["documentPicker", "imagePicker"],
+        "productsUpload": [
+          "documentPicker",
+          "imagePicker"
+        ],
         "assortment": [],
         "workQueue": [],
-        "escalation": ["imagePicker", "documentPicker"],
+        "escalation": [
+          "imagePicker",
+          "documentPicker"
+        ],
         "offlineSync": [],
-        "notifications": ["notifications"],
+        "notifications": [
+          "notifications"
+        ],
         "finance": []
       },
       "runtimeConcerns": {
-        "platformLifecycle": ["updates", "constants", "splashScreen"],
-        "powerAwareOfflineSync": ["battery"]
+        "platformLifecycle": [
+          "updates",
+          "constants",
+          "splashScreen"
+        ],
+        "powerAwareOfflineSync": [
+          "battery"
+        ]
       },
-      "nativeCapabilities": ["router", "updates", "constants", "crypto", "battery", "splashScreen", "documentPicker", "imagePicker", "secureStore", "notifications", "location", "maps"]
+      "nativeCapabilities": [
+        "router",
+        "updates",
+        "constants",
+        "crypto",
+        "battery",
+        "splashScreen",
+        "documentPicker",
+        "imagePicker",
+        "secureStore",
+        "notifications",
+        "location",
+        "maps"
+      ]
     }
   }
 }

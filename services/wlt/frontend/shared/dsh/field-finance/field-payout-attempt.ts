@@ -1,4 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { bthwaniKeyValueStorage } from "@bthwani/data-runtime";
 
 const STORAGE_KEY = "@bthwani/field-payout-attempt:v1";
 const MAX_ATTEMPT_AGE_MS = 24 * 60 * 60 * 1000;
@@ -58,7 +58,7 @@ export async function getOrCreateFieldPayoutAttempt(
   if (!normalizedCurrency) throw new Error("field payout currency is required");
 
   const signature = `${normalizedActorId}|${amountMinorUnits}|${normalizedCurrency}`;
-  const existing = parseStoredAttempt(await AsyncStorage.getItem(STORAGE_KEY));
+  const existing = parseStoredAttempt(await bthwaniKeyValueStorage.getItem(STORAGE_KEY));
   const now = Date.now();
   if (
     existing &&
@@ -73,13 +73,13 @@ export async function getOrCreateFieldPayoutAttempt(
     idempotencyKey: buildAttemptKey(signature),
     createdAtMs: now,
   };
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(attempt));
+  await bthwaniKeyValueStorage.setItem(STORAGE_KEY, JSON.stringify(attempt));
   return attempt;
 }
 
 export async function clearFieldPayoutAttempt(idempotencyKey: string): Promise<void> {
-  const existing = parseStoredAttempt(await AsyncStorage.getItem(STORAGE_KEY));
+  const existing = parseStoredAttempt(await bthwaniKeyValueStorage.getItem(STORAGE_KEY));
   if (existing?.idempotencyKey === idempotencyKey) {
-    await AsyncStorage.removeItem(STORAGE_KEY);
+    await bthwaniKeyValueStorage.removeItem(STORAGE_KEY);
   }
 }

@@ -30,7 +30,7 @@ test("canonical app dependencies are exact and SDK-aligned", () => {
 
 test("undeclared native package fails closed", () => {
   const root = fixture((appKey, pkg) => {
-    if (appKey === "app-client") pkg.dependencies["expo-av"] = "~56.0.0";
+    if (appKey === "app-client") pkg.dependencies["expo-av"] = `~${manifest.global.expoSdk}.0.0`;
   });
   try {
     assert.throws(
@@ -43,13 +43,14 @@ test("undeclared native package fails closed", () => {
 });
 
 test("mixed Expo SDK packages fail closed", () => {
+  const mismatchedSdk = manifest.global.expoSdk - 1;
   const root = fixture((appKey, pkg) => {
-    if (appKey === "app-field") pkg.dependencies.expo = "~57.0.0";
+    if (appKey === "app-field") pkg.dependencies.expo = `~${mismatchedSdk}.0.0`;
   });
   try {
     assert.throws(
       () => validateMobileDependencyClosure(manifest, root),
-      /app-field: expo must belong to Expo SDK 56, found ~57\.0\.0/,
+      new RegExp(`app-field: expo must belong to Expo SDK ${manifest.global.expoSdk}, found ~${mismatchedSdk}\\.0\\.0`),
     );
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
