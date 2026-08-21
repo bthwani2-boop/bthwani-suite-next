@@ -16,7 +16,6 @@ import { WltFieldFinanceScreen } from '../finance/WltFieldFinanceScreen';
 import { DshFieldCatalogOperationsScreen } from './DshFieldCatalogOperationsScreen';
 import type { useDshFieldSurfaceModel } from '../field.surface-model';
 import type { FieldOnboardingController } from '../../shared/field-onboarding';
-import type { FieldOnboardingAssignment } from '../../shared/field-assignment';
 import type { useIdentitySession } from '@bthwani/core-identity';
 
 type FieldSurfaceBinding = ReturnType<typeof useDshFieldSurfaceModel>;
@@ -26,7 +25,7 @@ type Props = {
   readonly actions: FieldSurfaceBinding['actions'];
   readonly onboardingController: FieldOnboardingController;
   readonly identity: ReturnType<typeof useIdentitySession>;
-  readonly onOpenAssignment: (assignment: FieldOnboardingAssignment) => void;
+  readonly onOpenAssignment: (assignmentId: string) => void;
 };
 
 export function DshFieldRouteRenderer({ model, actions, onboardingController, identity, onOpenAssignment }: Props): React.ReactElement {
@@ -37,7 +36,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
       <DshFieldOnboardingScreen
         controller={onboardingController}
         {...(route.partnerId ? { partnerId: route.partnerId } : {})}
-        {...(route.assignmentPrefill ? { assignmentPrefill: route.assignmentPrefill } : {})}
+        {...(route.assignmentId ? { assignmentId: route.assignmentId } : {})}
         onBack={actions.popRoute}
         onOpenProducts={(partnerId) => actions.pushRoute({ kind: 'products-upload', partnerId })}
       />
