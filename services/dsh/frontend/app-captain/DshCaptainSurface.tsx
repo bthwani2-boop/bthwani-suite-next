@@ -5,43 +5,59 @@ import { useIdentitySession } from "@bthwani/core-identity";
 import { DshCaptainOrderJourneyRenderer } from "./DshCaptainOrderJourneyRenderer";
 import { useDshCaptainSurfaceModel } from "./useDshCaptainSurfaceModel";
 import type { DshCaptainRoute } from "./dsh-captain.types";
-import type { DshCaptainNavigationCommand } from "../shared/delivery/captain.surface.types";
+import type { DshCaptainSurfaceProps } from "./dsh-captain.types";
+import {
+  dshCaptainLegacyRoute,
+  dshCaptainRouteAssignmentId,
+  dshCaptainRouteSupportScreen,
+  type DshCaptainAccountSection,
+  type DshCaptainNavigation,
+} from "./captain-navigation";
 import { useCameraPhotoCapture } from "../shared/media/useCameraPhotoCapture";
 import { CaptainAssignmentOfferPanel } from "./orders/CaptainAssignmentOfferPanel";
 import { BottomNavBar } from "./components/BottomNavBar";
 import { ModernPremiumHeader } from "./components/ModernPremiumHeader";
 
-export type DshCaptainSurfaceProps = {
-  readonly captainId?: string;
-  readonly command?: DshCaptainNavigationCommand;
-};
+export type { DshCaptainSurfaceProps } from "./dsh-captain.types";
 
 type IconName = React.ComponentProps<typeof Icon>["name"];
 type AppearanceMode = "lightPremium" | "darkPremium";
 
-const ACCOUNT_ITEMS: ReadonlyArray<{
-  readonly route: DshCaptainRoute;
+type CaptainAccountItem = {
+  readonly section: DshCaptainAccountSection;
   readonly title: string;
   readonly subtitle: string;
   readonly badgeLabel: string;
   readonly icon: IconName;
-}> = [
-  { route: "account-profile", title: "بيانات الكابتن", subtitle: "الهوية والحالة والتقييم المثبت", badgeLabel: "هوية", icon: "person-outline" },
-  { route: "account-orders", title: "المهمة الحالية", subtitle: "العرض أو التكليف النشط من DSH", badgeLabel: "تشغيل", icon: "bag-outline" },
-  { route: "account-finance", title: "المالية", subtitle: "المحفظة والمستحقات والخصومات من WLT", badgeLabel: "WLT", icon: "wallet-outline" },
-  { route: "account-docs", title: "الوثائق والتقييم", subtitle: "اعتمادات Workforce وتقييم العملاء", badgeLabel: "Workforce", icon: "document-text-outline" },
-  { route: "account-shifts", title: "التوفر وعدم التوفر", subtitle: "إبلاغ الفترات دون ورديات أو حضور", badgeLabel: "تغطية", icon: "calendar-outline" },
-  { route: "account-support", title: "الإعدادات", subtitle: "المظهر ووضع موصل المتجر", badgeLabel: "إعدادات", icon: "settings-outline" },
+};
+
+const ACCOUNT_ITEMS: readonly CaptainAccountItem[] = [
+  { section: "profile", title: "بيانات الكابتن", subtitle: "الهوية والحالة والتقييم المثبت", badgeLabel: "هوية", icon: "person-outline" },
+  { section: "orders", title: "المهمة الحالية", subtitle: "العرض أو التكليف النشط من DSH", badgeLabel: "تشغيل", icon: "bag-outline" },
+  { section: "finance", title: "المالية", subtitle: "المحفظة والمستحقات والخصومات من WLT", badgeLabel: "WLT", icon: "wallet-outline" },
+  { section: "docs", title: "الوثائق والتقييم", subtitle: "اعتمادات Workforce وتقييم العملاء", badgeLabel: "Workforce", icon: "document-text-outline" },
+  { section: "shifts", title: "التوفر وعدم التوفر", subtitle: "إبلاغ الفترات دون ورديات أو حضور", badgeLabel: "تغطية", icon: "calendar-outline" },
+  { section: "support", title: "الإعدادات", subtitle: "المظهر ووضع موصل المتجر", badgeLabel: "إعدادات", icon: "settings-outline" },
 ];
+
+function bottomTabForRoute(route: DshCaptainRoute): "entry" | "inbox" | "bell" | "account" | "" {
+  if (route === "home" || route === "entry") return "entry";
+  if (route === "inbox") return "inbox";
+  if (route === "bell") return "bell";
+  if (route === "account" || route.startsWith("account-")) return "account";
+  return "";
+}
 
 function CaptainBottomNavigation({
   route,
-  setRoute,
-  openActiveTask,
+  navigation,
+  operationalAssignmentId,
+  operationalAssignmentAmbiguous,
 }: {
   readonly route: DshCaptainRoute;
-  readonly setRoute: (route: DshCaptainRoute) => void;
-  readonly openActiveTask: () => void;
+  readonly navigation: DshCaptainNavigation;
+  readonly operationalAssignmentId: string;
+  readonly operationalAssignmentAmbiguous: boolean;
 }) {
   const items = [
     { id: "entry", label: "الرئيسية", icon: "home-outline", activeIcon: "home" },
@@ -49,17 +65,30 @@ function CaptainBottomNavigation({
     { id: "bell", label: "التنبيهات", icon: "notifications-outline", activeIcon: "notifications" },
     { id: "account", label: "الحساب", icon: "person-outline", activeIcon: "person" },
   ] as const;
-  const launcherActive = route === "detail" || route === "map" || route === "pod-submission";
+  const launcherActive = route === "detail" || route === "map" || route === "pickup-dropoff" || route === "pod-submission";
+
+  const openOperationalAssignment = () => {
+    if (operationalAssignmentId && !operationalAssignmentAmbiguous) {
+      navigation.navigate({ kind: "detail", assignmentId: operationalAssignmentId });
+      return;
+    }
+    navigation.navigate({ kind: "inbox" });
+  };
 
   return (
     <View style={styles.bottomNavShell}>
       <BottomNavBar
-        activeId={route}
+        activeId={bottomTabForRoute(route)}
         launcherLabel="المهمة"
         launcherIcon="navigate"
         launcherActive={launcherActive}
-        onLauncherPress={openActiveTask}
-        onSelect={(id) => setRoute(id as DshCaptainRoute)}
+        onLauncherPress={openOperationalAssignment}
+        onSelect={(id) => {
+          if (id === "entry") navigation.navigate({ kind: "home" });
+          else if (id === "inbox") navigation.navigate({ kind: "inbox" });
+          else if (id === "bell") navigation.navigate({ kind: "bell" });
+          else navigation.navigate({ kind: "account" });
+        }}
         items={items}
       />
     </View>
@@ -68,21 +97,51 @@ function CaptainBottomNavigation({
 
 function AuthenticatedCaptainSurface({
   captainId,
-  command,
+  route,
+  navigation,
 }: {
   readonly captainId: string;
-  readonly command: DshCaptainNavigationCommand;
+  readonly route: DshCaptainSurfaceProps["route"];
+  readonly navigation: DshCaptainNavigation;
 }) {
+  const legacyRoute = dshCaptainLegacyRoute(route);
+  const routeAssignmentId = dshCaptainRouteAssignmentId(route) ?? "";
+  const selectedSupportScreen = dshCaptainRouteSupportScreen(route);
   const {
     state,
     actions,
     derived,
     activeAssignment,
     assignmentClosureNotice,
-  } = useDshCaptainSurfaceModel(captainId, command);
+    operationalAssignmentId,
+    operationalAssignmentAmbiguous,
+  } = useDshCaptainSurfaceModel(captainId, legacyRoute, routeAssignmentId, selectedSupportScreen);
   const camera = useCameraPhotoCapture();
   const [cameraError, setCameraError] = React.useState<string | null>(null);
   const [appearanceMode, setAppearanceMode] = React.useState<AppearanceMode>("lightPremium");
+
+  const goToInbox = React.useCallback(() => navigation.navigate({ kind: "inbox" }), [navigation]);
+  const goToAccount = React.useCallback(() => navigation.navigate({ kind: "account" }), [navigation]);
+  const openSupportDirectory = React.useCallback(() => {
+    navigation.navigate({
+      kind: "support-directory",
+      ...(state.activeAssignmentId ? { assignmentId: state.activeAssignmentId } : {}),
+    });
+  }, [navigation, state.activeAssignmentId]);
+  const openSupportScreen = React.useCallback((screenId: Parameters<typeof dshCaptainRouteSupportScreen>[0] extends never ? never : typeof selectedSupportScreen) => {
+    navigation.navigate({
+      kind: "support-screen",
+      screenId,
+      ...(state.activeAssignmentId ? { assignmentId: state.activeAssignmentId } : {}),
+    });
+  }, [navigation, state.activeAssignmentId]);
+  const openOperationalAssignment = React.useCallback(() => {
+    if (operationalAssignmentId && !operationalAssignmentAmbiguous) {
+      navigation.navigate({ kind: "detail", assignmentId: operationalAssignmentId });
+    } else {
+      goToInbox();
+    }
+  }, [goToInbox, navigation, operationalAssignmentAmbiguous, operationalAssignmentId]);
 
   const accountNavItems = React.useMemo(
     () => ACCOUNT_ITEMS.map((item) => ({
@@ -90,16 +149,17 @@ function AuthenticatedCaptainSurface({
       subtitle: item.subtitle,
       badgeLabel: item.badgeLabel,
       icon: item.icon,
-      onPress: () => actions.openCaptainAccountSection(item.route),
+      onPress: () => navigation.navigate({ kind: "account-section", section: item.section }),
     })),
-    [actions],
+    [navigation],
   );
 
   const bottomNav = (
     <CaptainBottomNavigation
       route={state.route}
-      setRoute={actions.setRoute}
-      openActiveTask={() => actions.setRoute(activeAssignment ? "detail" : "inbox")}
+      navigation={navigation}
+      operationalAssignmentId={operationalAssignmentId}
+      operationalAssignmentAmbiguous={operationalAssignmentAmbiguous}
     />
   );
 
@@ -107,7 +167,22 @@ function AuthenticatedCaptainSurface({
   const offerError = state.inboxState === "error" || state.declineSheetState === "error"
     ? "تغيرت حالة العرض أو تعذر الوصول إلى DSH. حدّث صندوق المهام ثم أعد القرار."
     : undefined;
-  const activeStageLabel = derived.activeSummary?.currentStageLabel;
+
+  const handleTickerPress = () => {
+    if (derived.homeTicker.action === "toggle-availability") {
+      actions.toggleAvailability();
+      return;
+    }
+    if (derived.homeTicker.action === "reset-inbox") {
+      void actions.refreshInbox();
+      return;
+    }
+    if (derived.homeTicker.action === "toggle-order") {
+      openOperationalAssignment();
+      return;
+    }
+    goToInbox();
+  };
 
   return (
     <View style={styles.root}>
@@ -119,21 +194,29 @@ function AuthenticatedCaptainSurface({
             id: "notifications",
             accessibilityLabel: "فتح تنبيهات الكابتن",
             icon: <Icon name="notifications-outline" size={21} color={colorRoles.surfaceBase} />,
-            onPress: () => actions.setRoute("bell"),
+            onPress: () => navigation.navigate({ kind: "bell" }),
           },
           {
             id: "account",
             accessibilityLabel: "فتح حساب الكابتن",
             icon: <Icon name="person-outline" size={21} color={colorRoles.surfaceBase} />,
-            onPress: actions.openCaptainAccount,
+            onPress: goToAccount,
           },
         ]}
-        tickerStatus={activeAssignment ? "مهمة نشطة" : "جاهزية"}
-        tickerMessage={activeAssignment
-          ? `${derived.activeOrderDisplayId} · ${activeStageLabel ?? "مهمة قيد التنفيذ"}`
-          : "لا توجد مهمة نشطة. تتم مزامنة صندوق العروض من DSH."}
-        onTickerPress={() => actions.setRoute(activeAssignment ? "detail" : "inbox")}
+        tickerStatus={derived.homeTicker.statusLabel}
+        tickerMessage={derived.homeTicker.message}
+        onTickerPress={handleTickerPress}
       />
+
+      {operationalAssignmentAmbiguous ? (
+        <StateView
+          title="توجد أكثر من مهمة تشغيلية نشطة"
+          description="لن يختار التطبيق مهمة افتراضيًا. افتح صندوق الطلبات وحدد المهمة صراحةً."
+          tone="warning"
+          actionLabel="فتح صندوق الطلبات"
+          onActionPress={goToInbox}
+        />
+      ) : null}
 
       {assignmentClosureNotice ? (
         <StateView
@@ -150,8 +233,16 @@ function AuthenticatedCaptainSurface({
           assignment={activeAssignment}
           busy={offerBusy}
           {...(offerError ? { errorMessage: offerError } : {})}
-          onAccept={(assignmentId) => void actions.handleAcceptTask(assignmentId)}
-          onDecline={(assignmentId, reason) => void actions.handleDeclineConfirm(assignmentId, reason)}
+          onAccept={(assignmentId) => {
+            void actions.handleAcceptTask(assignmentId).then((accepted) => {
+              if (accepted) navigation.navigate({ kind: "detail", assignmentId }, "replace");
+            });
+          }}
+          onDecline={(assignmentId, reason) => {
+            void actions.handleDeclineConfirm(assignmentId, reason).then((declined) => {
+              if (declined) navigation.navigate({ kind: "inbox" }, "replace");
+            });
+          }}
         />
       ) : null}
 
@@ -168,7 +259,6 @@ function AuthenticatedCaptainSurface({
       <View style={styles.content}>
         <DshCaptainOrderJourneyRenderer
           route={state.route}
-          setRoute={actions.setRoute}
           activeAssignmentId={state.activeAssignmentId}
           activeOrderId={state.activeOrderId}
           activeDeliveryStatus={state.activeDeliveryStatus}
@@ -199,10 +289,20 @@ function AuthenticatedCaptainSurface({
           appearanceHydrated
           appearanceMode={appearanceMode}
           wltSummaryLabel="الرصيد من WLT"
-          onOpenOrder={actions.openOrderDetail}
+          onOpenOrder={(assignmentId) => navigation.navigate({ kind: "detail", assignmentId })}
           onRetryInbox={() => void actions.refreshInbox()}
           onConfirmPickup={() => void actions.confirmPickup()}
-          onConfirmDelivery={() => void actions.confirmDelivery()}
+          onConfirmDelivery={() => {
+            void actions.confirmDelivery().then((readyForProof) => {
+              if (readyForProof && state.activeAssignmentId) {
+                navigation.navigate({ kind: "pod-submission", assignmentId: state.activeAssignmentId });
+              }
+            });
+          }}
+          onOpenPod={() => {
+            if (state.activeAssignmentId) navigation.navigate({ kind: "pod-submission", assignmentId: state.activeAssignmentId });
+            else goToInbox();
+          }}
           onConfirmPodSubmission={() => void actions.confirmPodSubmission()}
           onReportPodFailure={(draft) => actions.reportPodFailure(draft)}
           onCapturePhoto={() => {
@@ -213,23 +313,46 @@ function AuthenticatedCaptainSurface({
             });
           }}
           onRetryPod={() => actions.setCaptainPodState("ready")}
-          onBack={() => void actions.goBack()}
-          onGoToInbox={actions.goToInbox}
-          onGoToAccount={actions.openCaptainAccount}
+          onBack={navigation.back}
+          onGoToInbox={goToInbox}
+          onGoToAccount={goToAccount}
           onClosePickupSheet={() => actions.setIsPickupSheetVisible(false)}
           onCloseDeliverySheet={() => actions.setIsDeliverySheetVisible(false)}
           onCloseDeclineSheet={() => actions.setIsDeclineSheetVisible(false)}
-          onConfirmDecline={(assignmentId, reason) => void actions.handleDeclineConfirm(assignmentId, reason)}
-          onAcceptTask={(assignmentId) => void actions.handleAcceptTask(assignmentId)}
+          onConfirmDecline={(assignmentId, reason) => {
+            void actions.handleDeclineConfirm(assignmentId, reason).then((declined) => {
+              if (declined) navigation.navigate({ kind: "inbox" }, "replace");
+            });
+          }}
+          onAcceptTask={(assignmentId) => {
+            void actions.handleAcceptTask(assignmentId).then((accepted) => {
+              if (accepted) navigation.navigate({ kind: "detail", assignmentId }, "replace");
+            });
+          }}
           onDeclineTask={(assignmentId) => {
             actions.setDeclineOrderId(assignmentId);
             actions.setIsDeclineSheetVisible(true);
           }}
-          onOpenSupportScreen={actions.openCaptainSupportScreen}
-          onOpenSupportDirectory={actions.openSupportDirectory}
-          onOpenCaptainAccountSection={actions.openCaptainAccountSection}
+          onOpenSupportScreen={openSupportScreen}
+          onOpenSupportDirectory={openSupportDirectory}
+          onOpenCaptainAccountSection={(nextRoute) => {
+            const sectionByRoute: Partial<Record<DshCaptainRoute, DshCaptainAccountSection>> = {
+              "account-profile": "profile",
+              "account-finance": "finance",
+              "account-orders": "orders",
+              "account-docs": "docs",
+              "account-shifts": "shifts",
+              "account-support": "support",
+            };
+            const section = sectionByRoute[nextRoute];
+            if (section) navigation.navigate({ kind: "account-section", section });
+            else goToAccount();
+          }}
           onSetAppearanceMode={setAppearanceMode}
-          onToggleStoreCourierMode={actions.toggleStoreCourierMode}
+          onToggleStoreCourierMode={(next) => {
+            actions.toggleStoreCourierMode(next);
+            navigation.navigate({ kind: "home" }, "replace");
+          }}
           onToggleAvailability={(available) => actions.setCaptainAvailabilityStatus(available ? "available" : "unavailable")}
           onPushLocation={actions.pushLocation}
         />
@@ -238,7 +361,7 @@ function AuthenticatedCaptainSurface({
   );
 }
 
-export function DshCaptainSurface({ captainId, command }: DshCaptainSurfaceProps) {
+export function DshCaptainSurface({ captainId, route, navigation }: DshCaptainSurfaceProps) {
   const identity = useIdentitySession();
 
   if (identity.state.kind !== "authenticated") {
@@ -262,7 +385,7 @@ export function DshCaptainSurface({ captainId, command }: DshCaptainSurfaceProps
     );
   }
 
-  return <AuthenticatedCaptainSurface captainId={resolvedCaptainId} command={command ?? { token: 0, target: "home" }} />;
+  return <AuthenticatedCaptainSurface captainId={resolvedCaptainId} route={route} navigation={navigation} />;
 }
 
 const styles = StyleSheet.create({

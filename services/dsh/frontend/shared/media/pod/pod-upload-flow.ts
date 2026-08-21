@@ -1,9 +1,8 @@
 // Canonical location: dsh/frontend/shared/media/pod/pod-upload-flow.ts
-// Authority: dsh/frontend/shared/media — Proof of Delivery (PoD) state and flow trigger.
-// No JSX. No ui-kit. No Tamagui.
+// Authority: dsh/frontend/shared/media — Proof of Delivery (PoD) state only.
+// Navigation is owned by the app Router.
 
 import React from 'react';
-import { getCaptainLifecycleForOrderStage } from '../../delivery/delivery.policy';
 
 export type CaptainPodState =
   | 'ready'
@@ -24,11 +23,6 @@ export function usePodUploadFlow() {
     setCaptainPodMediaKey(undefined);
   }, []);
 
-  const openStoreCourierProof = React.useCallback((setRoute: (r: any) => void) => {
-    setCaptainPodState('ready');
-    setRoute(getCaptainLifecycleForOrderStage('proof', false).captainRoute);
-  }, []);
-
   return {
     captainPodState,
     setCaptainPodState,
@@ -37,6 +31,5 @@ export function usePodUploadFlow() {
     captainPodMediaKey,
     setCaptainPodMediaKey,
     resetPodFields,
-    openStoreCourierProof,
   };
 }

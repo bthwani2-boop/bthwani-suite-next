@@ -9,8 +9,6 @@
 export { DshCaptainSurface } from "./DshCaptainSurface";
 
 export type {
-  DshCaptainCommandTarget,
-  DshCaptainNavigationCommand,
   DshCaptainRoute,
   DshCaptainSurfaceProps,
   DshCaptainState,
@@ -18,6 +16,23 @@ export type {
   DshCaptainStateMeta,
   DshCaptainProfileSnapshot,
 } from "./dsh-captain.types";
+
+export {
+  DSH_CAPTAIN_ACCOUNT_SECTIONS,
+  DSH_CAPTAIN_SUPPORT_ROUTES,
+  dshCaptainLegacyRoute,
+  dshCaptainRouteAssignmentId,
+  dshCaptainRouteSupportScreen,
+  dshCaptainRouteToPath,
+  parseDshCaptainAccountSection,
+  parseDshCaptainSupportRoute,
+} from "./captain-navigation";
+export type {
+  DshCaptainAccountSection,
+  DshCaptainNavigation,
+  DshCaptainNavigationMode,
+  DshCaptainNavigationRoute,
+} from "./captain-navigation";
 
 export type {
   DshCaptainLegacyRoute,
@@ -27,7 +42,6 @@ export type {
 
 export type { DshCaptainScreenRegistryItem } from "./dsh-captain.screen-registry";
 
-export { captainNavigationTargetFromDeepLink } from "../shared/delivery/captain-deep-link";
 export { IdentitySessionGate } from "../shared/session/IdentitySessionGate";
 export { useDshMobilePushRegistration } from "../shared/notifications/use-mobile-push-registration";
 export {

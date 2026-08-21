@@ -2,7 +2,6 @@ import React from 'react';
 import { View } from 'react-native';
 import { StateView, spacing } from '@bthwani/ui-kit';
 import type { DshDeliveryStatus } from '../shared/dispatch';
-import type { DshCaptainRoute } from './dsh-captain.types';
 import {
   DshCaptainRouteRenderer,
   type DshCaptainRouteRendererProps,
@@ -10,8 +9,8 @@ import {
 import { OperationalCaptainExecutionScreen } from './orders/OperationalCaptainExecutionScreen';
 
 export type DshCaptainOrderJourneyRendererProps = DshCaptainRouteRendererProps & {
-  readonly setRoute: (route: DshCaptainRoute) => void;
   readonly activeDeliveryStatus: DshDeliveryStatus | '';
+  readonly onOpenPod: () => void;
 };
 
 export function DshCaptainOrderJourneyRenderer(
@@ -61,7 +60,7 @@ export function DshCaptainOrderJourneyRenderer(
           onRefresh={props.onRetryInbox}
           onConfirmPickup={props.onConfirmPickup}
           onConfirmDelivery={props.onConfirmDelivery}
-          onOpenPod={() => props.setRoute('pod-submission')}
+          onOpenPod={props.onOpenPod}
           onPushLocation={props.onPushLocation}
         />
       </View>

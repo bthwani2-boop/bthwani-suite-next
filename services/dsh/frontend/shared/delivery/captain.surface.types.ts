@@ -1,15 +1,16 @@
 import type { CaptainSupportRoute, CompactOrderChatMessage, CaptainAvailabilityStatus, CaptainGpsStatus, CaptainAppMode, CaptainServiceType, CaptainAvailabilityMeta } from './captain.contract';
-import type { DshCaptainRoute, DshCaptainCommandTarget } from './captain.contract';
+import type { DshCaptainRoute } from './captain.contract';
 import type { ActiveOrderPhase, StoreCourierStage } from './delivery.contract';
 import type { DshDeliveryStatus } from '../dispatch';
 import type { DshCaptainOrderBellItem, DshCaptainOrderDetailSummary } from '../orders';
 import type { CaptainPodState } from '../media/pod/pod-upload-flow';
 export type { ActiveOrderPhase, StoreCourierStage } from './delivery.contract';
 
-export type DshCaptainNavigationCommand = {
-  token: number;
-  target: DshCaptainCommandTarget;
-};
+export type CaptainHomeTickerAction =
+  | 'toggle-availability'
+  | 'go-inbox'
+  | 'reset-inbox'
+  | 'toggle-order';
 
 export type DshCaptainSurfaceState = {
   activeServiceType: CaptainServiceType;
@@ -52,7 +53,7 @@ export type DshCaptainSurfaceDerived = {
   homeTicker: {
     statusLabel: string;
     message: string;
-    onPress: () => void;
+    action: CaptainHomeTickerAction;
     marquee: boolean;
   };
 };

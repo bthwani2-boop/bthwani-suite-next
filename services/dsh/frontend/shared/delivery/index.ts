@@ -23,7 +23,6 @@ export * from './captain.contract';
 export * from './captain.state';
 export * from './captain.surface-model';
 export type * from './captain-surface.binding';
-export * from './captain-navigation.model';
 export * from './captain-service-mode.model';
 export * from './captain-availability.model';
 export * from './captain-gps.model';

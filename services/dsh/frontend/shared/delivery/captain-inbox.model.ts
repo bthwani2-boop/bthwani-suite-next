@@ -18,6 +18,13 @@ export {
 
 export type CaptainInboxFetchState = Extract<DshCaptainOrdersScreenState, 'ready' | 'loading' | 'empty' | 'error'>;
 
+function isOperationalAssignment(assignment: DshDispatchAssignment): boolean {
+  if (assignment.status !== 'accepted') return false;
+  return assignment.delivery.status !== 'delivered'
+    && assignment.delivery.status !== 'cancelled'
+    && assignment.delivery.status !== 'returned_to_store';
+}
+
 export function useCaptainInboxModel(captainId: string) {
   const [assignments, setAssignments] = React.useState<readonly DshDispatchAssignment[]>([]);
   const [fetchState, setFetchState] = React.useState<CaptainInboxFetchState>('loading');
@@ -60,10 +67,24 @@ export function useCaptainInboxModel(captainId: string) {
   }, [captainId, refresh]);
 
   const items = React.useMemo(() => assignments.map(toBellItem), [assignments]);
+  const operationalAssignments = React.useMemo(
+    () => assignments.filter(isOperationalAssignment),
+    [assignments],
+  );
+  const operationalAssignment = operationalAssignments.length === 1 ? operationalAssignments[0] : undefined;
+  const operationalAssignmentAmbiguous = operationalAssignments.length > 1;
   const findAssignment = React.useCallback(
     (assignmentId: string) => assignments.find((assignment) => assignment.id === assignmentId),
     [assignments],
   );
 
-  return { assignments, items, fetchState, refresh, findAssignment };
+  return {
+    assignments,
+    items,
+    fetchState,
+    refresh,
+    findAssignment,
+    operationalAssignment,
+    operationalAssignmentAmbiguous,
+  };
 }

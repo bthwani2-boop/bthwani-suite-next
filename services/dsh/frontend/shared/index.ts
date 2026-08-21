@@ -18,7 +18,6 @@ export * from './delivery/captain.contract';
 export * from './delivery/captain.state';
 export * from './delivery/captain.surface-model';
 export type * from './delivery/captain-surface.binding';
-export * from './delivery/captain-navigation.model';
 export * from './delivery/captain-service-mode.model';
 export * from './delivery/captain-availability.model';
 export * from './delivery/captain-gps.model';

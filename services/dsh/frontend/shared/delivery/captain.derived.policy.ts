@@ -1,17 +1,11 @@
 import type { CaptainAvailabilityMeta, DshCaptainRoute } from './captain.contract';
-import type { DshCaptainSurfaceState } from './captain.surface.types';
+import type { CaptainHomeTickerAction, DshCaptainSurfaceState } from './captain.surface.types';
 import type {
   DshAssignmentStatus,
   DshDeliveryStatus,
   DshDispatchAssignment,
 } from '../dispatch/dispatch.types';
 import type { DshCaptainOrderDetailSummary } from '../orders';
-
-export type CaptainHomeTickerAction =
-  | 'toggle-availability'
-  | 'go-inbox'
-  | 'reset-inbox'
-  | 'toggle-order';
 
 export type CaptainHomeTickerPolicy = {
   readonly statusLabel: string;
@@ -132,10 +126,6 @@ export function buildCaptainPresentationPolicy(
   const isStoreCourierMode = state.captainAppMode === 'store_courier_mode';
   const isCaptainAvailable = state.captainAvailabilityStatus === 'available';
   const isGpsEnabled = state.gpsStatus !== 'disabled';
-  // A local service-mode toggle is presentation-only. Whether this Captain
-  // assignment requires delivery proof is owned by the DSH assignment/proof
-  // contract; without a server-authorized exception, an active assignment
-  // must keep the PoD path reachable.
   const captainPodRequired = hasActiveAssignment;
   const showBottomNav = isStoreCourierMode
     ? state.route === 'home' || state.route === 'entry' || state.route === 'account'

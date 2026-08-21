@@ -30,8 +30,7 @@ describe("support conversation and order rescue", () => {
   const deliveryRoutes = source("../backend/internal/http/support_message_delivery_routes.go");
   const migration = source("../database/migrations/dsh-096_support_message_delivery.sql");
   const conversation = source("../frontend/app-captain/orders/CaptainOrderSupportConversationScreen.tsx");
-  const navigation = source("../frontend/shared/delivery/captain-navigation.model.ts");
-  const policy = source("../frontend/shared/delivery/delivery.policy.ts");
+  const navigation = source("../frontend/app-captain/captain-navigation.ts");
   const apiMain = source("../backend/cmd/dsh-api/main.go");
 
   it("uses governed actor support routes for captain conversations", () => {
@@ -55,10 +54,11 @@ describe("support conversation and order rescue", () => {
     assert.match(apiMain, /RegisterSupportMessageDeliveryRoutes\(router/);
   });
 
-  it("routes the order chat command to the live support screen", () => {
-    assert.match(policy, /orderchat: 'support-screen'/);
-    assert.match(navigation, /command\.target === 'orderchat'/);
-    assert.match(navigation, /setSelectedSupportScreen\('chat-send'\)/);
+  it("routes captain chat through the typed Router support route", () => {
+    assert.match(navigation, /screenId: CaptainSupportRoute/);
+    assert.match(navigation, /case "support-screen"/);
+    assert.match(navigation, /\/support\/\$\{segment\(route\.screenId\)\}/);
+    assert.doesNotMatch(navigation, /command\.target|routeHistoryRef|setSelectedSupportScreen/);
   });
 });
 

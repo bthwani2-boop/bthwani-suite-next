@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, Linking, Platform, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
 import {
@@ -14,11 +14,11 @@ import {
   IdentitySessionGate,
   WorkforceAccessGate,
   WorkforceProfileProvider,
-  captainNavigationTargetFromDeepLink,
   fetchCaptainOperationalReadiness,
   useDshMobilePushRegistration,
   type CaptainOperationalReadiness,
-  type DshCaptainNavigationCommand,
+  type DshCaptainNavigation,
+  type DshCaptainNavigationRoute,
 } from "@bthwani/dsh/app-captain";
 import { Button, colorRoles } from "@bthwani/ui-kit";
 
@@ -106,26 +106,8 @@ function CaptainSessionEffects() {
   return null;
 }
 
-function AppContent() {
+function AppContent({ route, navigation }: { readonly route: DshCaptainNavigationRoute; readonly navigation: DshCaptainNavigation }) {
   const identity = useIdentitySession();
-  const [navigationCommand, setNavigationCommand] = useState<DshCaptainNavigationCommand>({ token: 0, target: "home" });
-
-  useEffect(() => {
-    let active = true;
-    const consumeDeepLink = (url: string) => {
-      const target = captainNavigationTargetFromDeepLink(url);
-      if (!active || !target) return;
-      setNavigationCommand({ token: Date.now(), target });
-    };
-    void Linking.getInitialURL().then((url) => {
-      if (url) consumeDeepLink(url);
-    });
-    const subscription = Linking.addEventListener("url", ({ url }) => consumeDeepLink(url));
-    return () => {
-      active = false;
-      subscription.remove();
-    };
-  }, []);
 
   const logout = () => {
     void identity.logout();
@@ -137,7 +119,7 @@ function AppContent() {
         <WorkforceAccessGate expectedKind="captain" onLogout={logout}>
           <CaptainSessionEffects />
           <UnifiedReadinessWrapper>
-            <DshCaptainSurface command={navigationCommand} />
+            <DshCaptainSurface route={route} navigation={navigation} />
           </UnifiedReadinessWrapper>
         </WorkforceAccessGate>
       </IdentitySessionGate>
@@ -145,10 +127,10 @@ function AppContent() {
   );
 }
 
-export default function App() {
+export default function App({ route, navigation }: { readonly route: DshCaptainNavigationRoute; readonly navigation: DshCaptainNavigation }) {
   return (
     <WorkforceProfileProvider>
-      <AppContent />
+      <AppContent route={route} navigation={navigation} />
     </WorkforceProfileProvider>
   );
 }
