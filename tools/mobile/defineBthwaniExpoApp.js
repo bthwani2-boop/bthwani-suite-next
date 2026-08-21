@@ -136,7 +136,6 @@ function defineBthwaniExpoApp(appKey) {
     runtimeVersion: { policy: "appVersion" },
     updates: { url: `https://u.expo.dev/${app.projectId}`, checkAutomatically: "ON_LOAD", fallbackToCacheTimeout: 0 },
     orientation: "portrait",
-    userInterfaceStyle: "light",
     android: buildAndroidConfig(appKey, app, capabilities, googleServicesFile),
     ios: buildIosConfig(appKey, app, capabilities),
     plugins: buildPlugins(appKey, capabilities, sentry),
