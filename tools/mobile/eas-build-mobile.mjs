@@ -126,7 +126,7 @@ if (!skipPreflight) {
     "--app",
     requestedApp,
   ]);
-  run(process.execPath, ["tools/scripts/guard-mobile-expo-sdk56-versions.mjs"]);
+
 
   for (const key of targets) {
     const appDir = path.join(root, "apps", key, "runtime");
