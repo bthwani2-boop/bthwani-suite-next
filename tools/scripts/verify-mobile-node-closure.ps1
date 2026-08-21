@@ -27,7 +27,7 @@ Invoke-VerifiedStep "Deterministic OpenAPI contract and client materialization" 
 }
 
 Invoke-VerifiedStep "Shared mobile contracts, Nx ownership, and control-panel propagation" {
-  node --test apps/mobile/tests/*.test.mjs
+  node --test tools/mobile/tests/*.test.mjs
 }
 
 foreach ($App in @("app-client", "app-partner", "app-captain", "app-field")) {

@@ -13,7 +13,7 @@ $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $RuntimePhase = Join-Path $RepoRoot "tools/scripts/invoke-runtime-phase.ps1"
-$MobileData = Join-Path $RepoRoot "apps/mobile/mobile-dev-data.mjs"
+$MobileData = Join-Path $RepoRoot "tools/mobile/mobile-dev-data.mjs"
 $MigrationGuard = Join-Path $RepoRoot "tools/guards/migration-manifest-drift-gate.mjs"
 $CatalogVerify = Join-Path $RepoRoot "tools/scripts/verify-catalog.ps1"
 $Profiles = "identity,workforce,dsh,wlt,media-storage"

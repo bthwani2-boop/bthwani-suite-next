@@ -28,7 +28,7 @@ Invoke-VerifiedStep "Deterministic OpenAPI contract and client materialization" 
 }
 
 Invoke-VerifiedStep "Shared mobile contracts and application-surface ownership" {
-  node --test apps/mobile/tests/*.test.mjs
+  node --test tools/mobile/tests/*.test.mjs
 }
 
 $Apps = @("app-client", "app-partner", "app-captain", "app-field")
@@ -45,7 +45,7 @@ Invoke-VerifiedStep "control-panel owned tests" {
 $requiresRuntime = $Integration -or $LanRuntime -or $Full
 if ($requiresRuntime) {
   Invoke-VerifiedStep "Governed mobile backend/data readiness" {
-    & pwsh -NoProfile -ExecutionPolicy Bypass -File apps/mobile/ensure-mobile-dev-runtime.ps1
+    & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/mobile/ensure-mobile-dev-runtime.ps1
   }
   Invoke-VerifiedStep "Full governed runtime smoke" { pnpm run runtime:full:smoke }
 }

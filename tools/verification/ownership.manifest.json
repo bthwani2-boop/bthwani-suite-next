@@ -96,7 +96,7 @@
   "sonar": {
     "governedJavaScriptTypeScriptRoots": ["apps/", "core/", "services/", "shared/"],
     "verificationPrefixes": [
-      "apps/mobile/",
+      "tools/mobile/",
       "apps/app-client/runtime/tests/",
       "apps/app-partner/runtime/tests/",
       "apps/app-captain/runtime/tests/",

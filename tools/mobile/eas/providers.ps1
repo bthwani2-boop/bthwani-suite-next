@@ -68,7 +68,7 @@ function Stage-ProviderInputs {
 
     $suffix = Get-AppSuffix
     @(
-        '# Generated locally by apps/mobile/eas/workflow.ps1.',
+        '# Generated locally by tools/mobile/eas/workflow.ps1.',
         'GOOGLE_SERVICES_JSON=./google-services.json',
         "GOOGLE_SERVICES_JSON_$suffix=./google-services.json",
         "GOOGLE_MAPS_ANDROID_API_KEY=$mapsKey",

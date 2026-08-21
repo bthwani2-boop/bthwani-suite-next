@@ -20,6 +20,6 @@ param(
     [switch] $DryRun
 )
 
-$target = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\apps\mobile\eas\maps.ps1')).Path
+$target = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\tools\mobile\eas\maps.ps1')).Path
 & $target @PSBoundParameters
 exit $LASTEXITCODE

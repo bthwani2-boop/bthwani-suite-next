@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 $RuntimeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
-$DataScript = Join-Path $RepoRoot "apps/mobile/mobile-dev-data.mjs"
+$DataScript = Join-Path $RepoRoot "tools/mobile/mobile-dev-data.mjs"
 $ArtifactRoot = Join-Path $RepoRoot ".artifacts/local-runtime-repair"
 
 foreach ($requiredPath in @($RuntimeScript, $DataScript)) {

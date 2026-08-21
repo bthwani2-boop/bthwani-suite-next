@@ -80,17 +80,17 @@ test("one governed command owns Android EAS initialization, preflight, and build
   const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8"));
   assert.equal(
     packageJson.scripts["mobile:eas"],
-    "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/mobile-eas.ps1",
+    "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/mobile/eas.ps1",
   );
 
   const easAliases = Object.keys(packageJson.scripts).filter((name) => name.startsWith("mobile:eas:"));
   assert.deepEqual(easAliases, []);
 
   const compatibilityEntrypoint = fs.readFileSync(path.join(repoRoot, "tools/scripts/mobile-eas.ps1"), "utf8");
-  const sharedEntrypoint = fs.readFileSync(path.join(repoRoot, "apps/mobile.ps1"), "utf8");
-  const easEntrypoint = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas.ps1"), "utf8");
-  const workflow = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas/workflow.ps1"), "utf8");
-  const providers = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas/providers.ps1"), "utf8");
+  const sharedEntrypoint = fs.readFileSync(path.join(repoRoot, "tools/mobile/mobile.ps1"), "utf8");
+  const easEntrypoint = fs.readFileSync(path.join(repoRoot, "tools/mobile/eas.ps1"), "utf8");
+  const workflow = fs.readFileSync(path.join(repoRoot, "tools/mobile/eas/workflow.ps1"), "utf8");
+  const providers = fs.readFileSync(path.join(repoRoot, "tools/mobile/eas/providers.ps1"), "utf8");
   for (const appKey of mobileApps) {
     assert.ok(compatibilityEntrypoint.includes(`'${appKey}'`));
     assert.ok(sharedEntrypoint.includes(`'${appKey}'`));

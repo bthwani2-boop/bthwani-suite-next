@@ -60,10 +60,10 @@
   "workspaces": {
     ".": {
       "entry": [
-        "apps/mobile/eas-build-mobile.mjs",
-        "apps/mobile/mobile-dev-data.mjs",
-        "apps/mobile/sentry-env.js",
-        "apps/mobile/verify-mobile-native.mjs",
+        "tools/mobile/eas-build-mobile.mjs",
+        "tools/mobile/mobile-dev-data.mjs",
+        "tools/mobile/sentry-env.js",
+        "tools/mobile/verify-mobile-native.mjs",
         "tools/guards/**/*.mjs",
         "tools/scripts/*.mjs",
         "tools/scripts/**/*.mjs",

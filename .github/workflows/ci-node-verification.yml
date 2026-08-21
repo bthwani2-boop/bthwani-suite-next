@@ -89,7 +89,7 @@ jobs:
           }
           status=0
           if [[ "${MOBILE}" == "true" ]]; then
-            run_check node --test apps/mobile/tests/*.test.mjs || status=$?
+            run_check node --test tools/mobile/tests/*.test.mjs || status=$?
           fi
           if [[ "${FULL_SCOPE}" == "true" && ( "${EXECUTION_PHASE}" == "closure" || "${EXECUTION_PHASE}" == "master" || "${EXECUTION_PHASE}" == "b" || "${EXECUTION_PHASE}" == "c" ) ]]; then
             run_check pnpm exec nx run-many -t typecheck lint test build --all --outputStyle=stream || status=$?

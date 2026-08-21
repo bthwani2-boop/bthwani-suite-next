@@ -47,8 +47,8 @@ export function classifyFiles(inputFiles, options = {}) {
     "tools/scripts/eas-build-mobile.mjs",
   );
   const mobileTransport = equals(
-    "apps/mobile/start-mobile-runtime.ps1",
-    "apps/mobile/mobile-lan.ps1",
+    "tools/mobile/start-mobile-runtime.ps1",
+    "tools/mobile/mobile-lan.ps1",
     "tools/dev/mobile-dev-gateway.mjs",
     "tools/scripts/verify-mobile-lan-runtime.ps1",
     "services/dsh/frontend/shared/_kernel/mobile-dev-gateway.ts",
@@ -59,7 +59,7 @@ export function classifyFiles(inputFiles, options = {}) {
     "services/dsh/frontend/shared/catalog/catalog-binary-upload.adapter.ts",
     "core/identity/clients/identity-api-config.ts",
   );
-  const nativeChanged = starts("apps/mobile/") || has((file) =>
+  const nativeChanged = starts("tools/mobile/") || has((file) =>
     /(^|\/)(android|ios)\//.test(file) || /(^|\/)(app|eas)\.json$/.test(file) ||
     file.endsWith("google-services.json") || file.endsWith("GoogleService-Info.plist"),
   );

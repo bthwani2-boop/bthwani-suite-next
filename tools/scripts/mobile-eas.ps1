@@ -1,4 +1,6 @@
-# Compatibility entrypoint. The shared implementation lives under apps/mobile.
+# Compatibility entrypoint only.
+# Canonical mobile EAS implementation lives under tools/mobile.
+
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
@@ -15,6 +17,11 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$SharedMobile = (Resolve-Path (Join-Path $PSScriptRoot '..\..\apps\mobile.ps1')).Path
-& $SharedMobile -App $App -Mode $Mode -ClearCache:$ClearCache
+$CanonicalEas = (
+    Resolve-Path (
+        Join-Path $PSScriptRoot '..\mobile\eas.ps1'
+    )
+).Path
+
+& $CanonicalEas @PSBoundParameters
 exit $LASTEXITCODE

@@ -28,9 +28,9 @@ const appBoundaryFiles = [
       !file.includes(".spec."),
   ),
   "apps/control-panel/runtime/start.ps1",
-  "apps/mobile/ensure-mobile-dev-runtime.ps1",
-  "apps/mobile/reverse-all.ps1",
-  "apps/mobile/start-mobile-runtime.ps1",
+  "tools/mobile/ensure-mobile-dev-runtime.ps1",
+  "tools/mobile/reverse-all.ps1",
+  "tools/mobile/start-mobile-runtime.ps1",
 ];
 for (const file of new Set(appBoundaryFiles)) {
   const content = read(file);

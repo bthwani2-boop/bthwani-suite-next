@@ -5,7 +5,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
-$LanHelper = Join-Path $RepoRoot "apps/mobile/mobile-lan.ps1"
+$LanHelper = Join-Path $RepoRoot "tools/mobile/mobile-lan.ps1"
 if (-not (Test-Path -LiteralPath $LanHelper -PathType Leaf)) {
     throw "LAN transport helper not found: $LanHelper"
 }

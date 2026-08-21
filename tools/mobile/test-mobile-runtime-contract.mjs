@@ -8,7 +8,7 @@ const appIndex = process.argv.indexOf("--app");
 const appKey = appIndex >= 0 ? process.argv[appIndex + 1] : "";
 const manifestPath = path.join(repoRoot, "tools/mobile/mobile-apps.manifest.json");
 const readinessContractPath = path.join(repoRoot, "infra/docker/runtime-readiness.contract.json");
-const mobileBootstrapPath = path.join(repoRoot, "apps/mobile/ensure-mobile-dev-runtime.ps1");
+const mobileBootstrapPath = path.join(repoRoot, "tools/mobile/ensure-mobile-dev-runtime.ps1");
 const frontendReadinessPath = path.join(repoRoot, "tools/scripts/check-frontend-binding-readiness.mjs");
 const controlPanelPackagePath = path.join(repoRoot, "apps/control-panel/runtime/package.json");
 const runtimeAuthorityPath = path.join(repoRoot, "infra/docker/scripts/runtime.ps1");

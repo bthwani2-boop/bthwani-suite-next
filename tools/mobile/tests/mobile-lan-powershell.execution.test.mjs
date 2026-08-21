@@ -5,7 +5,7 @@ import path from "node:path";
 import test from "node:test";
 
 const repoRoot = path.resolve(import.meta.dirname, "../../..");
-const helper = path.join(repoRoot, "apps/mobile/mobile-lan.ps1");
+const helper = path.join(repoRoot, "tools/mobile/mobile-lan.ps1");
 
 test("LAN gateway functions never collide with PowerShell's read-only Host automatic variable", (t) => {
   const pwsh = process.platform === "win32" ? "pwsh.exe" : "pwsh";

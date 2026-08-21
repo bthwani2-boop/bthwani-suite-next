@@ -7,12 +7,12 @@
   "types": "src/index.ts",
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "node ../../mobile/verify-mobile-source.mjs --app app-partner",
+    "lint": "node ../../../tools/mobile/verify-mobile-source.mjs --app app-partner",
     "test:app": "node --test tests/*.test.mjs",
-    "test:runtime": "node ../../mobile/test-mobile-runtime-contract.mjs --app app-partner",
+    "test:runtime": "node ../../../tools/mobile/test-mobile-runtime-contract.mjs --app app-partner",
     "test": "pnpm run test:app && pnpm run test:runtime",
-    "build": "node ../../mobile/verify-mobile-export.mjs --app app-partner",
-    "eas-build-pre-install": "node ../../mobile/verify-eas-provider-inputs.mjs --app app-partner"
+    "build": "node ../../../tools/mobile/verify-mobile-export.mjs --app app-partner",
+    "eas-build-pre-install": "node ../../../tools/mobile/verify-eas-provider-inputs.mjs --app app-partner"
   },
   "devDependencies": {
     "typescript": "npm:@typescript/typescript6@6.0.2"

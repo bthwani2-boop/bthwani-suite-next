@@ -115,7 +115,7 @@ jobs:
             } elseif ($profile -eq "mobile-native") {
               Invoke-Phase "mobile:apps:check" { pnpm run mobile:apps:check }
               Invoke-Phase "mobile:expo:verify" { pnpm run mobile:expo:verify }
-              Invoke-Phase "mobile:native:prebuild" { node apps/mobile/verify-mobile-native.mjs --platform android }
+              Invoke-Phase "mobile:native:prebuild" { node tools/mobile/verify-mobile-native.mjs --platform android }
             } else {
               if ([string]::IsNullOrWhiteSpace($profiles)) {
                 throw "Runtime profile '$profile' resolved to an empty component scope."

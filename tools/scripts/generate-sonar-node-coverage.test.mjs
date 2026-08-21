@@ -104,10 +104,10 @@ test("changed executable product source is covered or rejected before Sonar", ()
 
 test("verification tooling is not misclassified as uncovered product source", () => {
   assert.doesNotThrow(() => assertChangedExecutableCoverageOwnership([
-    "apps/mobile/test-mobile-runtime-contract.mjs",
-    "apps/mobile/tests/mobile-runtime-transport.contract.test.mjs",
+    "tools/mobile/test-mobile-runtime-contract.mjs",
+    "tools/mobile/tests/mobile-runtime-transport.contract.test.mjs",
   ]));
-  assert.deepEqual(planCoverageSuites(["apps/mobile/test-mobile-runtime-contract.mjs"]), []);
+  assert.deepEqual(planCoverageSuites(["tools/mobile/test-mobile-runtime-contract.mjs"]), []);
 });
 
 test("coverage self-verification and full mode derive suites from the manifest", () => {

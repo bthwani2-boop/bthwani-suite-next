@@ -4,7 +4,7 @@ import path from "node:path";
 const root = process.cwd();
 const helperImport = "./lib/package-manager-invocation.mjs";
 const governedFiles = [
-  "apps/mobile/eas-build-mobile.mjs",
+  "tools/mobile/eas-build-mobile.mjs",
   "tools/scripts/export-mobile-app.mjs",
   "tools/scripts/guard-mobile-apps.mjs",
   "tools/scripts/sync-mobile-apps.mjs",
@@ -13,14 +13,14 @@ const governedFiles = [
 const compatibilityWrappers = [
   {
     relativePath: "tools/scripts/eas-build-mobile.mjs",
-    expectedSource: 'await import("../../apps/mobile/eas-build-mobile.mjs");',
+    expectedSource: 'await import("../mobile/eas-build-mobile.mjs");',
   },
 ];
 const helperBridge = {
   relativePath: "tools/scripts/lib/package-manager-invocation.mjs",
-  expectedSource: 'export { resolvePackageManagerInvocation } from "../../../apps/mobile/lib/package-manager-invocation.mjs";',
+  expectedSource: 'export { resolvePackageManagerInvocation } from "../../mobile/lib/package-manager-invocation.mjs";',
 };
-const canonicalHelperPath = "apps/mobile/lib/package-manager-invocation.mjs";
+const canonicalHelperPath = "tools/mobile/lib/package-manager-invocation.mjs";
 const failures = [];
 
 function readSource(relativePath) {
@@ -51,7 +51,7 @@ for (const wrapper of compatibilityWrappers) {
   const source = readSource(wrapper.relativePath);
   if (source === undefined) continue;
   if (source.trim() !== wrapper.expectedSource) {
-    failures.push(`${wrapper.relativePath}: compatibility wrapper must delegate only to apps/mobile/eas-build-mobile.mjs`);
+    failures.push(`${wrapper.relativePath}: compatibility wrapper must delegate only to tools/mobile/eas-build-mobile.mjs`);
   }
 }
 
@@ -67,7 +67,7 @@ if (canonicalHelper !== undefined) {
 
 const bridgeSource = readSource(helperBridge.relativePath);
 if (bridgeSource !== undefined && bridgeSource.trim() !== helperBridge.expectedSource) {
-  failures.push(`${helperBridge.relativePath}: must re-export the canonical apps/mobile helper only`);
+  failures.push(`${helperBridge.relativePath}: must re-export the canonical tools/mobile helper only`);
 }
 
 if (failures.length > 0) {

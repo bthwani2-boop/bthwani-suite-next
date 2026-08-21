@@ -123,7 +123,7 @@ if (!envDefault) {
 
 // --- 4. No script may re-hardcode the password or a login username ------------
 
-const scannedRoots = ["tools/scripts", "tools/guards", "infra/docker/scripts", "apps/mobile"];
+const scannedRoots = ["tools/scripts", "tools/guards", "infra/docker/scripts", "tools/mobile"];
 const scannedExtensions = new Set([".ps1", ".mjs", ".js"]);
 const allowedFiles = new Set([registryFile, "tools/dev/local-actors.mjs", "tools/dev/local-actors.ps1", `tools/guards/${path.basename(import.meta.url)}`]);
 

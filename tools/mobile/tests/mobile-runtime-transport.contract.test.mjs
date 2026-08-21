@@ -15,7 +15,7 @@ const mobileApps = new Map([
 ]);
 
 test("all mobile wrappers stay thin and bind canonical fixed Metro ports", () => {
-  const shared = read("apps/mobile/mobile.ps1");
+  const shared = read("tools/mobile/mobile.ps1");
   for (const [appKey, port] of mobileApps) {
     const start = read(`apps/${appKey}/runtime/start.ps1`);
     const appWrapper = read(`apps/${appKey}/runtime/mobile.ps1`);
@@ -28,8 +28,8 @@ test("all mobile wrappers stay thin and bind canonical fixed Metro ports", () =>
 });
 
 test("mobile runtime defaults to auto, resolves LAN before platform-aware Android fallback, and keeps backend lifecycle outside transport", () => {
-  const shared = read("apps/mobile/mobile.ps1");
-  const launcher = read("apps/mobile/start-mobile-runtime.ps1");
+  const shared = read("tools/mobile/mobile.ps1");
+  const launcher = read("tools/mobile/start-mobile-runtime.ps1");
 
   assert.match(shared, /ensure-mobile-dev-runtime\.ps1/);
   assert.match(shared, /start-mobile-runtime\.ps1/);
@@ -52,7 +52,7 @@ test("mobile runtime defaults to auto, resolves LAN before platform-aware Androi
 });
 
 test("LAN runtime branch contains no ADB execution path", () => {
-  const launcher = read("apps/mobile/start-mobile-runtime.ps1");
+  const launcher = read("tools/mobile/start-mobile-runtime.ps1");
   const start = launcher.indexOf('if ($resolvedTransport -eq "lan") {');
   const end = launcher.indexOf("} else {", start);
   assert.ok(start >= 0 && end > start, "LAN branch must be explicit");
@@ -83,7 +83,7 @@ test("LAN runtime branch contains no ADB execution path", () => {
 });
 
 test("LAN helper rejects unsafe addressing and owns one versioned singleton gateway", () => {
-  const lan = read("apps/mobile/mobile-lan.ps1");
+  const lan = read("tools/mobile/mobile-lan.ps1");
   for (const marker of [
     "BTHWANI_MOBILE_LAN_HOST",
     "BTHWANI_MOBILE_ALLOW_PUBLIC_NETWORK",
@@ -144,8 +144,8 @@ test("developer session and presigned media clients use the governed gateway onl
 });
 
 test("ADB remains an explicit Android fallback with verified reverse mappings and preserves explicit device selection", () => {
-  const helper = read("apps/mobile/mobile-adb.ps1");
-  const launcher = read("apps/mobile/start-mobile-runtime.ps1");
+  const helper = read("tools/mobile/mobile-adb.ps1");
+  const launcher = read("tools/mobile/start-mobile-runtime.ps1");
   for (const marker of [
     "BTHWANI_ANDROID_TRANSPORT",
     "Assert-BthwaniAdbReverse",
@@ -170,7 +170,7 @@ test("ADB remains an explicit Android fallback with verified reverse mappings an
 });
 
 test("runtime contract executes Expo through the governed pnpm CLI without shell parsing", () => {
-  const contract = read("apps/mobile/test-mobile-runtime-contract.mjs");
+  const contract = read("tools/mobile/test-mobile-runtime-contract.mjs");
   assert.match(contract, /process\.env\.npm_execpath/);
   assert.match(contract, /spawnSync\(\s*process\.execPath/);
   assert.doesNotMatch(contract, /shell\s*:/);
@@ -211,12 +211,12 @@ test("PowerShell parses every governed mobile launcher and transport verifier", 
     "tools/scripts/verify-mobile-runtime-closure.ps1",
     "tools/scripts/verify-mobile-android-smoke.ps1",
     "tools/scripts/verify-mobile-lan-runtime.ps1",
-    "apps/mobile/mobile-adb.ps1",
-    "apps/mobile/mobile-lan.ps1",
-    "apps/mobile/start-mobile-runtime.ps1",
-    "apps/mobile/mobile.ps1",
-    "apps/reverse-all.ps1",
-    "apps/mobile/reverse-all.ps1",
+    "tools/mobile/mobile-adb.ps1",
+    "tools/mobile/mobile-lan.ps1",
+    "tools/mobile/start-mobile-runtime.ps1",
+    "tools/mobile/mobile.ps1",
+    "tools/mobile/reverse-all.ps1",
+    "tools/mobile/reverse-all.ps1",
     ...[...mobileApps.keys()].flatMap((appKey) => [
       `apps/${appKey}/runtime/start.ps1`,
       `apps/${appKey}/runtime/mobile.ps1`,

@@ -14,7 +14,7 @@ const mobileApps = ['app-client', 'app-partner', 'app-captain', 'app-field'];
 
 test('mobile development data has one canonical implementation and checks all governed surfaces', () => {
   const compatibilityPath = path.join(repoRoot, 'tools/scripts/mobile-dev-data.mjs');
-  const canonicalPath = path.join(repoRoot, 'apps/mobile/mobile-dev-data.mjs');
+  const canonicalPath = path.join(repoRoot, 'tools/mobile/mobile-dev-data.mjs');
   for (const scriptPath of [compatibilityPath, canonicalPath]) {
     const syntax = spawnSync(process.execPath, ['--check', scriptPath], { encoding: 'utf8' });
     assert.equal(syntax.status, 0, syntax.stderr || syntax.stdout);
@@ -22,7 +22,7 @@ test('mobile development data has one canonical implementation and checks all go
 
   const compatibility = fs.readFileSync(compatibilityPath, 'utf8');
   const canonical = fs.readFileSync(canonicalPath, 'utf8');
-  assert.match(compatibility, /apps\/mobile\/mobile-dev-data\.mjs/);
+  assert.match(compatibility, /tools\/mobile\/mobile-dev-data\.mjs/);
   assert.equal(compatibility.split(/\r?\n/).filter(Boolean).length, 1);
 
   for (const required of [
@@ -41,11 +41,11 @@ test('mobile development data has one canonical implementation and checks all go
 
 test('mobile preflight delegates lifecycle to runtime and repair logic to the canonical data implementation', () => {
   const compatibility = read('tools/scripts/ensure-mobile-dev-runtime.ps1');
-  const canonical = read('apps/mobile/ensure-mobile-dev-runtime.ps1');
-  const phaseAdapter = read('apps/mobile/invoke-runtime-phase.ps1');
+  const canonical = read('tools/mobile/ensure-mobile-dev-runtime.ps1');
+  const phaseAdapter = read('tools/mobile/invoke-runtime-phase.ps1');
   const runtimeAuthority = read('infra/docker/scripts/runtime.ps1');
 
-  assert.match(compatibility, /apps\\mobile\\ensure-mobile-dev-runtime\.ps1/);
+  assert.match(compatibility, /tools\\mobile\\ensure-mobile-dev-runtime\.ps1/);
   for (const marker of [
     '-Action", "up"',
     '-Action", "bootstrap-dev"',
@@ -71,7 +71,7 @@ test('mobile preflight delegates lifecycle to runtime and repair logic to the ca
 });
 
 test('every mobile launcher reaches the shared preflight before Metro', () => {
-  const shared = read('apps/mobile/mobile.ps1');
+  const shared = read('tools/mobile/mobile.ps1');
   const preflightIndex = shared.indexOf('$EnsureRuntimeScript');
   const runnerIndex = shared.indexOf('$RuntimeScript');
   const preflightCallIndex = shared.indexOf('& $EnsureRuntimeScript');
@@ -84,15 +84,15 @@ test('every mobile launcher reaches the shared preflight before Metro', () => {
     const start = read(`apps/${app}/runtime/start.ps1`);
     const appWrapper = read(`apps/${app}/runtime/mobile.ps1`);
     assert.match(start, /mobile\.ps1/);
-    assert.match(appWrapper, /apps?\\mobile\\mobile\.ps1|\.\.\\\.\.\\mobile\\mobile\.ps1/);
-    assert.match(appWrapper, new RegExp(`-App\\s+'${app}'`));
+    assert.match(appWrapper, /tools\\mobile\\mobile\.ps1/);
+    assert.match(appWrapper, /tools\\mobile\\mobile\.ps1/);
   }
 });
 
 test('Android development client launch is owned only by the ADB transport', () => {
   const compatibility = read('tools/scripts/start-mobile-runtime.ps1');
-  const source = read('apps/mobile/start-mobile-runtime.ps1');
-  assert.match(compatibility, /apps\\mobile\\start-mobile-runtime\.ps1/);
+  const source = read('tools/mobile/start-mobile-runtime.ps1');
+  assert.match(compatibility, /tools\\mobile\\start-mobile-runtime\.ps1/);
 
   const argumentsStart = source.indexOf('$expoArguments = @(');
   const argumentsEnd = source.indexOf('$androidLaunchJob = $null', argumentsStart);

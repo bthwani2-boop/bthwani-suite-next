@@ -1,1 +1,1 @@
-await import("../../apps/mobile/eas-build-mobile.mjs");
+await import("../mobile/eas-build-mobile.mjs");

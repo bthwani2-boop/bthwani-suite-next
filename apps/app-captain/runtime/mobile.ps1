@@ -8,6 +8,6 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-$SharedMobile = (Resolve-Path (Join-Path $PSScriptRoot '..\..\mobile\mobile.ps1')).Path
+$SharedMobile = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\tools\mobile\mobile.ps1')).Path
 & $SharedMobile -App 'app-captain' -Mode $Mode -ClearCache:$ClearCache
 exit $LASTEXITCODE

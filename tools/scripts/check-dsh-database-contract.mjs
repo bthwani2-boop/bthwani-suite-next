@@ -324,8 +324,8 @@ for (const forbiddenToken of [
 }
 
 for (const retiredPath of [
-  "apps/mobile/converge-local-runtime-database.ps1",
-  "apps/mobile/repair-wlt-migration-ledger.ps1",
+  "tools/mobile/converge-local-runtime-database.ps1",
+  "tools/mobile/repair-wlt-migration-ledger.ps1",
 ]) {
   if (fs.existsSync(path.join(root, retiredPath))) {
     fail(`retired database repair authority must not exist: ${retiredPath}`);

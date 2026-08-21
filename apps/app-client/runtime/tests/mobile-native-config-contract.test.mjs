@@ -66,9 +66,9 @@ test("Android Firebase configuration is isolated per application", () => {
 
 test("mobile startup keeps backend preflight outside transport and ADB launch transport-scoped", () => {
   const compatibility = fs.readFileSync(path.join(repoRoot, "tools/scripts/start-mobile-runtime.ps1"), "utf8");
-  const shared = fs.readFileSync(path.join(repoRoot, "apps/mobile/mobile.ps1"), "utf8");
-  const launcher = fs.readFileSync(path.join(repoRoot, "apps/mobile/start-mobile-runtime.ps1"), "utf8");
-  assert.match(compatibility, /apps\\mobile\\start-mobile-runtime\.ps1/);
+  const shared = fs.readFileSync(path.join(repoRoot, "tools/mobile/mobile.ps1"), "utf8");
+  const launcher = fs.readFileSync(path.join(repoRoot, "tools/mobile/start-mobile-runtime.ps1"), "utf8");
+  assert.match(compatibility, /tools\\mobile\\start-mobile-runtime\.ps1/);
 
   const preflightCall = shared.indexOf("& $EnsureRuntimeScript");
   const transportCall = shared.indexOf("& $RuntimeScript");
