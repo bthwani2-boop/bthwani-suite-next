@@ -1,7 +1,12 @@
 export type FieldRouterNavigationMode = "push" | "replace";
 
+export type FieldRouterPathOperation = {
+  readonly method: FieldRouterNavigationMode;
+  readonly href: string;
+};
+
 export type FieldRouterOperation =
-  | { readonly method: "push" | "replace"; readonly href: string }
+  | FieldRouterPathOperation
   | { readonly method: "back" };
 
 export function singleRouteParam(value: string | string[] | undefined): string | undefined {
@@ -20,7 +25,7 @@ function requireAbsoluteHref(href: string): string {
 export function resolveFieldRouterNavigation(
   href: string,
   mode: FieldRouterNavigationMode = "push",
-): FieldRouterOperation {
+): FieldRouterPathOperation {
   return { method: mode, href: requireAbsoluteHref(href) };
 }
 
