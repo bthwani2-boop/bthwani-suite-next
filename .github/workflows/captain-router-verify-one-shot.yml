@@ -64,8 +64,8 @@ jobs:
             return 0
           }
 
-          run_gate "node-version" bash -lc 'test "$(node --version)" = "v24.17.0"'
-          run_gate "pnpm-version" bash -lc 'test "$(pnpm --version)" = "10.34.0"'
+          run_gate "node-version" test "$(node --version)" = "v24.17.0"
+          run_gate "pnpm-version" test "$(pnpm --version)" = "10.34.0"
           run_gate "frozen-install" pnpm install --frozen-lockfile --ignore-scripts
 
           if [[ ${failed} -eq 0 ]]; then
