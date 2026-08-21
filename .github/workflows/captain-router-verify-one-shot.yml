@@ -1,0 +1,85 @@
+name: Captain Router Verify One Shot
+
+on:
+  push:
+    branches: [c]
+    paths:
+      - .github/workflows/captain-router-verify-one-shot.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: captain-router-verify-c
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact c candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: c
+          fetch-depth: 1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093
+        with:
+          version: 10.34.0
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24.17.0
+          check-latest: false
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Verify immutable workspace
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = "v24.17.0"
+          test "$(pnpm --version)" = "10.34.0"
+          pnpm install --frozen-lockfile --ignore-scripts
+          node tools/scripts/guard-mobile-expo-sdk56-versions.mjs
+
+      - name: Verify Captain and DSH graph
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --dir apps/app-captain/runtime run typecheck
+          pnpm --dir apps/app-captain/runtime run lint
+          pnpm --dir apps/app-captain/runtime run test
+          pnpm --dir services/dsh run typecheck
+          pnpm --dir services/dsh run test
+
+      - name: Verify Captain export and Expo configs
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --dir apps/app-captain/runtime run build
+          for app in app-client app-partner app-captain app-field; do
+            pnpm --dir "apps/${app}/runtime" exec expo config --type public >/dev/null
+          done
+
+      - name: Retire one-shot workflow after exact verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin c --depth=1
+          remote_head="$(git rev-parse origin/c)"
+          local_head="$(git rev-parse HEAD)"
+          if [[ "${remote_head}" != "${local_head}" ]]; then
+            echo "c moved while Captain verification was running: remote=${remote_head} local=${local_head}"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/captain-router-verify-one-shot.yml
+          git diff --cached --check
+          git commit -m "chore(ci): retire Captain Router verification"
+          git push origin HEAD:c
