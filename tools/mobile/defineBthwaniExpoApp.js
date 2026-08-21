@@ -2,13 +2,15 @@ const fs = require("fs");
 const path = require("path");
 const manifest = require("./mobile-apps.manifest.json");
 const { validateMobileFeatureCapabilityManifest } = require("./mobile-feature-capability-model.js");
+const { validateMobileDependencyClosure } = require("./mobile-dependency-closure.js");
 const { appEnvSuffix, resolveGoogleServicesFile, resolveSentryEnvironment } = require("./sentry-env.js");
 
 validateMobileFeatureCapabilityManifest(manifest);
+validateMobileDependencyClosure(manifest);
 
 const PERMISSION_TEXT = {
   photos: "نحتاج الوصول إلى معرض الصور لاختيار الصور ومشاركتها.",
-  camera: "نحتاج الوصول إلى الكاميرا لالتقاط الصور ومسح الباركود وتوثيق الطلب عند الحاجة.",
+  camera: "نحتاج الوصول إلى الكاميرا لالتقاط الصور أو الفيديو عند الحاجة.",
   microphone: "نحتاج الوصول إلى الميكروفون لتسجيل الرسائل الصوتية أو الفيديو المرتبط بالطلب.",
   locationWhenInUse: "نحتاج الوصول إلى موقعك لعرض أقرب الخدمات وتتبع الطلبات.",
   locationAlwaysAndWhenInUse: "نحتاج الوصول إلى الموقع في الخلفية لتتبع مسار المهمة النشطة وتحديد وصول الكابتن.",
@@ -27,6 +29,7 @@ function resolveAppEnvironmentValue(baseName, appKey) {
 }
 
 function mediaCapabilities(capabilities) {
+  const hasImagePicker = capabilities.includes("imagePicker");
   const hasCamera = capabilities.includes("camera");
   const hasAudioRecording = capabilities.includes("audio");
   const hasVideoPlayback = capabilities.includes("video");
@@ -37,6 +40,7 @@ function mediaCapabilities(capabilities) {
     hasAudioRecording,
     hasVideoPlayback,
     hasVideoRecording,
+    needsCameraPermission: hasImagePicker || hasCamera,
     needsMicrophone: hasAudioRecording || hasVideoRecording,
   };
 }
@@ -63,11 +67,11 @@ function hasRuntimeDependency(appKey, packageName) {
 }
 
 function buildInfoPlist(capabilities) {
-  const { hasCamera, needsMicrophone } = mediaCapabilities(capabilities);
+  const { needsCameraPermission, needsMicrophone } = mediaCapabilities(capabilities);
   const infoPlist = {};
 
   if (capabilities.includes("imagePicker")) infoPlist.NSPhotoLibraryUsageDescription = PERMISSION_TEXT.photos;
-  if (hasCamera) infoPlist.NSCameraUsageDescription = PERMISSION_TEXT.camera;
+  if (needsCameraPermission) infoPlist.NSCameraUsageDescription = PERMISSION_TEXT.camera;
   if (needsMicrophone) infoPlist.NSMicrophoneUsageDescription = PERMISSION_TEXT.microphone;
   if (capabilities.includes("location")) infoPlist.NSLocationWhenInUseUsageDescription = PERMISSION_TEXT.locationWhenInUse;
   if (capabilities.includes("backgroundLocation")) {
@@ -144,6 +148,7 @@ function buildPlugins(appKey, capabilities, sentry) {
     hasCamera,
     hasAudioRecording,
     hasVideoPlayback,
+    needsCameraPermission,
     needsMicrophone,
   } = mediaCapabilities(capabilities);
 
@@ -154,7 +159,7 @@ function buildPlugins(appKey, capabilities, sentry) {
       "expo-image-picker",
       {
         photosPermission: PERMISSION_TEXT.photos,
-        cameraPermission: hasCamera ? PERMISSION_TEXT.camera : false,
+        cameraPermission: needsCameraPermission ? PERMISSION_TEXT.camera : false,
         microphonePermission: needsMicrophone ? PERMISSION_TEXT.microphone : false,
       },
     ]);

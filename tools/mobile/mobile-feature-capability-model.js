@@ -2,7 +2,7 @@ const KNOWN_NATIVE_CAPABILITIES = new Set([
   "router", "updates", "constants", "application", "device", "crypto", "image", "battery",
   "splashScreen", "localization", "localAuthentication", "fileSystem", "documentPicker", "imagePicker",
   "secureStore", "notifications", "audio", "camera", "video", "imageManipulator", "sharing", "webBrowser",
-  "keepAwake", "sqlite", "location", "backgroundLocation", "maps", "taskManager", "backgroundTask",
+  "haptics", "keepAwake", "sqlite", "location", "backgroundLocation", "maps", "taskManager", "backgroundTask",
 ]);
 
 function assert(condition, message) {

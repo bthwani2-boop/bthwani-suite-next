@@ -20,10 +20,14 @@
   },
   "peerDependencies": {
     "react": "19.2.3",
-    "@react-native-community/netinfo": "*"
+    "@react-native-community/netinfo": "*",
+    "expo-battery": "*"
   },
   "peerDependenciesMeta": {
     "@react-native-community/netinfo": {
+      "optional": true
+    },
+    "expo-battery": {
       "optional": true
     }
   },

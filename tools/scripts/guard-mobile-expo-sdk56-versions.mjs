@@ -11,17 +11,35 @@ const appPackagePaths = [
   "apps/app-field/runtime/package.json",
 ];
 
+// Exact direct-runtime versions approved for the Expo SDK 56 mobile line.
+// The dependency-closure guard decides whether a package belongs to an app;
+// this policy decides the only allowed version when that package is present.
 const expoSdk56Policy = Object.freeze({
   expo: "~56.0.19",
-  "expo-background-task": "~56.0.23",
+  "expo-battery": "~56.0.4",
   "expo-constants": "~56.0.23",
-  "expo-linking": "~56.0.16",
-  "expo-router": "~56.2.18",
-  "expo-task-manager": "~56.0.23",
+  "expo-crypto": "~56.0.4",
+  "expo-dev-client": "~56.0.24",
+  "expo-document-picker": "~56.0.4",
+  "expo-file-system": "~56.0.9",
+  "expo-haptics": "~56.0.3",
+  "expo-image": "~56.0.11",
+  "expo-image-picker": "~56.0.23",
+  "expo-location": "~56.0.23",
+  "expo-notifications": "~56.0.23",
+  "expo-secure-store": "~56.0.4",
+  "expo-sharing": "~56.0.24",
+  "expo-splash-screen": "~56.0.14",
+  "expo-updates": "~56.0.24",
+  "expo-video": "~56.1.4",
+  "expo-web-browser": "~56.0.6",
   "react-native": "0.85.3",
   "react-native-maps": "1.27.2",
 });
 
+// Transitive resolution safeguards. These entries do not install a package by
+// themselves; they only prevent an SDK-57 transitive from entering the SDK-56
+// graph when an upstream Expo package references one of them.
 const forcedPnpmPolicy = Object.freeze({
   "expo-background-task": "~56.0.23",
   "expo-constants": "~56.0.23",
@@ -68,6 +86,9 @@ function checkPackage(relativePath, pkg, failures) {
     if (!section) continue;
 
     for (const [dependencyName, version] of Object.entries(section)) {
+      if (dependencyName.startsWith("expo-") && !Object.hasOwn(expoSdk56Policy, dependencyName)) {
+        failures.push(`${relativePath}: ungoverned direct Expo package '${dependencyName}' (${version})`);
+      }
       if (dependencyName.startsWith("expo-") && /(?:^|[~^>=< ])57\./.test(String(version))) {
         failures.push(`${relativePath}: ${dependencyName} points at Expo 57 (${version}); current mobile line is SDK 56`);
       }
@@ -104,4 +125,4 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log("PASS: mobile Expo packages are pinned to the approved SDK 56 policy");
+console.log("PASS: canonical mobile Expo packages are pinned to the approved SDK 56 policy");
