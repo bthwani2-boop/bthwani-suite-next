@@ -7,6 +7,7 @@
     "node": "24.17.0",
     "pnpm": "10.34.0",
     "runtimeTypeScript": "npm:@typescript/typescript6@6.0.2",
+    "expoSdk": 56,
     "capabilityModelVersion": 2
   },
   "apps": {
@@ -110,10 +111,11 @@
         "documents": ["documentPicker"],
         "rating": [],
         "account": [],
-        "offlineSync": ["battery"]
+        "offlineSync": []
       },
       "runtimeConcerns": {
-        "platformLifecycle": ["updates", "constants", "splashScreen"]
+        "platformLifecycle": ["updates", "constants", "splashScreen"],
+        "powerAwareOfflineSync": ["battery"]
       },
       "nativeCapabilities": ["router", "updates", "constants", "crypto", "battery", "splashScreen", "documentPicker", "imagePicker", "secureStore", "notifications", "location", "maps"]
     },
@@ -142,12 +144,13 @@
         "assortment": [],
         "workQueue": [],
         "escalation": ["imagePicker", "documentPicker"],
-        "offlineSync": ["battery"],
+        "offlineSync": [],
         "notifications": ["notifications"],
         "finance": []
       },
       "runtimeConcerns": {
-        "platformLifecycle": ["updates", "constants", "splashScreen"]
+        "platformLifecycle": ["updates", "constants", "splashScreen"],
+        "powerAwareOfflineSync": ["battery"]
       },
       "nativeCapabilities": ["router", "updates", "constants", "crypto", "battery", "splashScreen", "documentPicker", "imagePicker", "secureStore", "notifications", "location", "maps"]
     }

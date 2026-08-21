@@ -15,7 +15,12 @@ const clone = (value) => JSON.parse(JSON.stringify(value));
 
 test("canonical mobile manifest justifies every native capability", () => {
   const manifest = readManifest();
+  assert.equal(manifest.global.expoSdk, 56);
   assert.equal(manifest.global.capabilityModelVersion, 2);
+  assert.deepEqual(manifest.apps["app-captain"].productFeatures.offlineSync, []);
+  assert.deepEqual(manifest.apps["app-captain"].runtimeConcerns.powerAwareOfflineSync, ["battery"]);
+  assert.deepEqual(manifest.apps["app-field"].productFeatures.offlineSync, []);
+  assert.deepEqual(manifest.apps["app-field"].runtimeConcerns.powerAwareOfflineSync, ["battery"]);
   assert.doesNotThrow(() => validateMobileFeatureCapabilityManifest(manifest));
 });
 
@@ -38,5 +43,14 @@ test("runtime concern cannot claim an undeclared capability", () => {
   assert.throws(
     () => validateMobileFeatureCapabilityManifest(manifest),
     /runtimeConcerns 'platformLifecycle' requires undeclared capability 'application'/,
+  );
+});
+
+test("Expo SDK target must be explicit canonical state", () => {
+  const manifest = clone(readManifest());
+  delete manifest.global.expoSdk;
+  assert.throws(
+    () => validateMobileFeatureCapabilityManifest(manifest),
+    /mobile global\.expoSdk must be an integer >= 50/,
   );
 });

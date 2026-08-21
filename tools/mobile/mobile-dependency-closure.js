@@ -49,20 +49,54 @@ const NATIVE_CAPABILITY_DEPENDENCIES = Object.freeze({
   backgroundTask: ["expo-background-task"],
 });
 
+const GOVERNED_EXPO_INSTALL_EXCLUDES = Object.freeze(["typescript"]);
+const SDK_ALIGNMENT_DEPENDENCIES = Object.freeze(["expo", "react", "react-native"]);
+
 function expectedRuntimeDependencies(app) {
   const expected = new Set(APP_RUNTIME_INFRASTRUCTURE_DEPENDENCIES);
   for (const capability of app.nativeCapabilities ?? []) {
-    for (const dependency of NATIVE_CAPABILITY_DEPENDENCIES[capability] ?? []) expected.add(dependency);
+    const dependencies = NATIVE_CAPABILITY_DEPENDENCIES[capability];
+    if (!dependencies) throw new Error(`native capability '${capability}' has no canonical dependency mapping`);
+    for (const dependency of dependencies) expected.add(dependency);
   }
   return [...expected].sort();
 }
 
-function validateMobileDependencyClosure(manifest, repoRoot = path.resolve(__dirname, "../..")) {
+function versionMajor(specifier) {
+  if (typeof specifier !== "string") return null;
+  const match = specifier.match(/(?:^|[^0-9])(\d+)\./);
+  return match ? Number(match[1]) : null;
+}
+
+function isExpoSdkDependency(name) {
+  return name === "expo" || name.startsWith("expo-");
+}
+
+function validateMobileDependencyClosure(manifest, repoRoot = path.resolve(__dirname, "../.."), options = {}) {
   const failures = [];
-  for (const [appKey, app] of Object.entries(manifest.apps ?? {})) {
+  const requestedAppKeys = options.appKeys ?? Object.keys(manifest.apps ?? {});
+  const baselineSdkSpecifiers = new Map();
+
+  if (!Number.isInteger(manifest.global?.expoSdk)) {
+    failures.push("mobile global.expoSdk must be an integer");
+  }
+
+  for (const appKey of requestedAppKeys) {
+    const app = manifest.apps?.[appKey];
+    if (!app) {
+      failures.push(`unknown mobile app '${appKey}'`);
+      continue;
+    }
+
     const packagePath = path.join(repoRoot, "apps", appKey, "runtime", "package.json");
     const pkg = JSON.parse(fs.readFileSync(packagePath, "utf8"));
-    const expected = expectedRuntimeDependencies(app);
+    let expected;
+    try {
+      expected = expectedRuntimeDependencies(app);
+    } catch (error) {
+      failures.push(`${appKey}: ${error.message}`);
+      continue;
+    }
     const actual = Object.keys(pkg.dependencies ?? {}).sort();
     const missing = expected.filter((dependency) => !actual.includes(dependency));
     const extra = actual.filter((dependency) => !expected.includes(dependency));
@@ -75,6 +109,32 @@ function validateMobileDependencyClosure(manifest, repoRoot = path.resolve(__dir
     if (JSON.stringify(pkg.devDependencies ?? {}) !== JSON.stringify(expectedDevDependencies)) {
       failures.push(`${appKey}: devDependencies must contain only the governed runtime TypeScript alias`);
     }
+
+    const installExcludes = pkg.expo?.install?.exclude ?? [];
+    if (JSON.stringify(installExcludes) !== JSON.stringify(GOVERNED_EXPO_INSTALL_EXCLUDES)) {
+      failures.push(`${appKey}: expo.install.exclude must contain only ${GOVERNED_EXPO_INSTALL_EXCLUDES.join(", ")}`);
+    }
+
+    const expectedSdk = manifest.global?.expoSdk;
+    for (const [dependency, specifier] of Object.entries(pkg.dependencies ?? {})) {
+      if (!isExpoSdkDependency(dependency)) continue;
+      const major = versionMajor(specifier);
+      if (major !== expectedSdk) {
+        failures.push(`${appKey}: ${dependency} must belong to Expo SDK ${expectedSdk}, found ${specifier}`);
+      }
+    }
+
+    for (const dependency of SDK_ALIGNMENT_DEPENDENCIES) {
+      const specifier = pkg.dependencies?.[dependency];
+      if (!baselineSdkSpecifiers.has(dependency)) {
+        baselineSdkSpecifiers.set(dependency, { appKey, specifier });
+        continue;
+      }
+      const baseline = baselineSdkSpecifiers.get(dependency);
+      if (specifier !== baseline.specifier) {
+        failures.push(`${appKey}: ${dependency} ${specifier ?? "<missing>"} does not match ${baseline.appKey} ${baseline.specifier ?? "<missing>"}`);
+      }
+    }
   }
 
   if (failures.length > 0) throw new Error(`mobile dependency closure drift\n - ${failures.join("\n - ")}`);
@@ -83,6 +143,8 @@ function validateMobileDependencyClosure(manifest, repoRoot = path.resolve(__dir
 module.exports = {
   APP_RUNTIME_INFRASTRUCTURE_DEPENDENCIES,
   NATIVE_CAPABILITY_DEPENDENCIES,
+  GOVERNED_EXPO_INSTALL_EXCLUDES,
+  SDK_ALIGNMENT_DEPENDENCIES,
   expectedRuntimeDependencies,
   validateMobileDependencyClosure,
 };

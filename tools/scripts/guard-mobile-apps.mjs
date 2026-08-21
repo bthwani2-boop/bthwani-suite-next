@@ -8,6 +8,7 @@ import { resolvePackageManagerInvocation } from "./lib/package-manager-invocatio
 const require = createRequire(import.meta.url);
 const { appEnvSuffix, resolveGoogleServicesFile } = require("../mobile/sentry-env.js");
 const { validateMobileFeatureCapabilityManifest } = require("../mobile/mobile-feature-capability-model.js");
+const { validateMobileDependencyClosure } = require("../mobile/mobile-dependency-closure.js");
 
 const root = process.cwd();
 const requireBuildSecrets = process.argv.includes("--require-build-secrets");
@@ -39,6 +40,7 @@ function fail(message) {
 const manifest = readJson("tools/mobile/mobile-apps.manifest.json");
 try {
   validateMobileFeatureCapabilityManifest(manifest);
+  validateMobileDependencyClosure(manifest, root, requestedApp ? { appKeys: [requestedApp] } : undefined);
 } catch (error) {
   fail(error.message);
 }
@@ -223,43 +225,6 @@ for (const [key, app] of Object.entries(manifest.apps)) {
       if (!siblingCapabilityUsesSamePlugin) {
         fail(`${key}: plugin '${plugin}' has no declared native capability`);
       }
-    }
-  }
-
-  const capabilityDependencies = {
-    router: "expo-router",
-    updates: "expo-updates",
-    constants: "expo-constants",
-    application: "expo-application",
-    device: "expo-device",
-    crypto: "expo-crypto",
-    image: "expo-image",
-    battery: "expo-battery",
-    splashScreen: "expo-splash-screen",
-    localization: "expo-localization",
-    localAuthentication: "expo-local-authentication",
-    fileSystem: "expo-file-system",
-    documentPicker: "expo-document-picker",
-    imagePicker: "expo-image-picker",
-    audio: "expo-audio",
-    camera: "expo-camera",
-    video: "expo-video",
-    imageManipulator: "expo-image-manipulator",
-    sharing: "expo-sharing",
-    webBrowser: "expo-web-browser",
-    keepAwake: "expo-keep-awake",
-    sqlite: "expo-sqlite",
-    taskManager: "expo-task-manager",
-    backgroundTask: "expo-background-task",
-    location: "expo-location",
-    backgroundLocation: "expo-location",
-    maps: "react-native-maps",
-    notifications: "expo-notifications",
-    secureStore: "expo-secure-store",
-  };
-  for (const [capability, dependency] of Object.entries(capabilityDependencies)) {
-    if (nativeCapabilities.includes(capability) && !pkg.dependencies?.[dependency]) {
-      fail(`${key}: native capability '${capability}' requires dependency '${dependency}'`);
     }
   }
 

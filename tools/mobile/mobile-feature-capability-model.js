@@ -18,6 +18,7 @@ function validateGlobal(globalConfig) {
   for (const key of ["owner", "appLine", "sourceRepo", "version", "node", "pnpm", "runtimeTypeScript"]) {
     assert(typeof globalConfig[key] === "string" && globalConfig[key].trim(), `mobile global.${key} is required`);
   }
+  assert(Number.isInteger(globalConfig.expoSdk) && globalConfig.expoSdk >= 50, "mobile global.expoSdk must be an integer >= 50");
   assert(globalConfig.capabilityModelVersion === 2, "mobile capability model version must be 2");
 }
 
