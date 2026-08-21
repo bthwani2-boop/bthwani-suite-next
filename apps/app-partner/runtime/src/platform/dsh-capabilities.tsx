@@ -3,18 +3,21 @@ import { Linking, Platform } from "react-native";
 import MapView, { Marker, PROVIDER_GOOGLE, type MapPressEvent, type Region } from "react-native-maps";
 import * as Constants from "expo-constants";
 import * as Crypto from "expo-crypto";
+import * as DocumentPicker from "expo-document-picker";
 import * as ImagePicker from "expo-image-picker";
 import * as Location from "expo-location";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 import { colorRoles } from "@bthwani/ui-kit";
 import {
+  configureDshDocumentPickerAdapter,
   configureDshImagePickerAdapter,
   configureDshLinkingAdapter,
   configureDshLocationAdapter,
   configureDshMapRenderer,
   configureDshMobileNotificationRuntime,
   createDshBrowserLocationAdapter,
+  createDshExpoDocumentPickerAdapter,
   createDshExpoImagePickerAdapter,
   createDshExpoLocationAdapter,
   createDshExpoNotificationRuntime,
@@ -32,6 +35,7 @@ configureDshLinkingAdapter({
   addUrlListener: (listener) => Linking.addEventListener("url", ({ url }) => listener(url)),
 });
 configureDshImagePickerAdapter(createDshExpoImagePickerAdapter(ImagePicker));
+configureDshDocumentPickerAdapter(createDshExpoDocumentPickerAdapter(DocumentPicker));
 configureDshMobileNotificationRuntime(createDshExpoNotificationRuntime({
   platform,
   notifications: Notifications,
