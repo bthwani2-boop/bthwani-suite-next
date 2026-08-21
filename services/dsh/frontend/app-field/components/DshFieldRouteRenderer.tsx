@@ -154,7 +154,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
         onOpenEscalation={(storeId, visitId) =>
           actions.pushRoute({ kind: 'escalation', storeId, ...(visitId ? { visitId } : {}) })
         }
-        onOpenAssignment={onOpenAssignment}
+        onOpenAssignment={(assignment) => onOpenAssignment(assignment.id)}
       />
     );
   }
@@ -179,7 +179,7 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
       onOpenAccount={() => actions.pushRoute({ kind: 'account' })}
       onCreatePartner={() => actions.pushRoute({ kind: 'onboarding' })}
       onOpenWorkQueue={() => actions.pushRoute({ kind: 'work-queue' })}
-      onOpenAssignment={onOpenAssignment}
+      onOpenAssignment={(assignment) => onOpenAssignment(assignment.id)}
     />
   );
 }
