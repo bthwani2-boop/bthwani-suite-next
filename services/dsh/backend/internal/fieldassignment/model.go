@@ -168,7 +168,7 @@ func insert(ctx context.Context, tx *sql.Tx, operatorContextID, actorID string, 
 			(operator_context_id, field_actor_id, business_task_key, store_name_hint, phone_hint, address_hint,
 			 location_latitude, location_longitude, status, priority, due_at, sla_minutes, created_by_actor_id)
 		VALUES ($1,$2,$3,$4,NULLIF($5,''),NULLIF($6,''),$7,$8,'assigned',$9,$10,$11,$12)
-		RETURNING id, operator_context_id, field_actor_id, business_task_key, store_name_hint,
+		RETURNING id, operator_context_id, field_actor_id, COALESCE(business_task_key,''), store_name_hint,
 		          COALESCE(phone_hint,''), COALESCE(address_hint,''), location_latitude,
 			location_longitude, status, priority, due_at, sla_minutes, COALESCE(draft_partner_id,''), version,
 		          created_by_actor_id, created_at, updated_at`,
@@ -184,7 +184,7 @@ func insert(ctx context.Context, tx *sql.Tx, operatorContextID, actorID string, 
 func Get(ctx context.Context, db *sql.DB, operatorContextID, id string) (Assignment, error) {
 	var a Assignment
 	err := db.QueryRowContext(ctx, `
-		SELECT id, operator_context_id, field_actor_id, business_task_key, store_name_hint,
+		SELECT id, operator_context_id, field_actor_id, COALESCE(business_task_key,''), store_name_hint,
 		       COALESCE(phone_hint,''), COALESCE(address_hint,''), location_latitude,
 		       location_longitude, status, priority, due_at, sla_minutes, COALESCE(draft_partner_id,''), version,
 		       created_by_actor_id, created_at, updated_at
@@ -210,7 +210,7 @@ func ListForField(ctx context.Context, db *sql.DB, operatorContextID, fieldActor
 
 func list(ctx context.Context, db *sql.DB, where string, args ...any) ([]Assignment, error) {
 	rows, err := db.QueryContext(ctx, `
-		SELECT id, operator_context_id, field_actor_id, business_task_key, store_name_hint,
+		SELECT id, operator_context_id, field_actor_id, COALESCE(business_task_key,''), store_name_hint,
 		       COALESCE(phone_hint,''), COALESCE(address_hint,''), location_latitude,
 		       location_longitude, status, priority, due_at, sla_minutes, COALESCE(draft_partner_id,''), version,
 		       created_by_actor_id, created_at, updated_at
@@ -278,7 +278,7 @@ func Reassign(ctx context.Context, db *sql.DB, operatorContextID, id, actorID st
 		UPDATE dsh_field_onboarding_assignments
 		SET field_actor_id=$3, status=$5, version=version+1, updated_at=NOW()
 		WHERE id=$1 AND operator_context_id=$2 AND version=$4 AND status IN ('assigned','in_progress')
-		RETURNING id, operator_context_id, field_actor_id, business_task_key, store_name_hint, COALESCE(phone_hint,''),
+		RETURNING id, operator_context_id, field_actor_id, COALESCE(business_task_key,''), store_name_hint, COALESCE(phone_hint,''),
 		          COALESCE(address_hint,''), location_latitude, location_longitude, status, priority, due_at, sla_minutes,
 		          COALESCE(draft_partner_id,''), version, created_by_actor_id, created_at, updated_at`,
 		id, operatorContextID, strings.TrimSpace(input.FieldActorID), input.ExpectedVersion, string(nextStatus)).Scan(
@@ -312,7 +312,7 @@ func LinkDraft(ctx context.Context, db *sql.DB, operatorContextID, id, fieldActo
 	defer tx.Rollback() //nolint:errcheck
 	var a Assignment
 	err = tx.QueryRowContext(ctx, `
-		SELECT id, operator_context_id, field_actor_id, business_task_key, store_name_hint, COALESCE(phone_hint,''),
+		SELECT id, operator_context_id, field_actor_id, COALESCE(business_task_key,''), store_name_hint, COALESCE(phone_hint,''),
 		       COALESCE(address_hint,''), location_latitude, location_longitude, status,
 		       priority, due_at, sla_minutes, COALESCE(draft_partner_id,''), version, created_by_actor_id, created_at, updated_at
 		FROM dsh_field_onboarding_assignments
@@ -341,7 +341,7 @@ func LinkDraft(ctx context.Context, db *sql.DB, operatorContextID, id, fieldActo
 		SET status='draft_linked', draft_partner_id=$4, version=version+1, updated_at=NOW()
 		WHERE id=$1 AND operator_context_id=$2 AND field_actor_id=$3
 		  AND version=$5 AND status='in_progress' AND draft_partner_id IS NULL
-		RETURNING id, operator_context_id, field_actor_id, business_task_key, store_name_hint, COALESCE(phone_hint,''),
+		RETURNING id, operator_context_id, field_actor_id, COALESCE(business_task_key,''), store_name_hint, COALESCE(phone_hint,''),
 		          COALESCE(address_hint,''), location_latitude, location_longitude, status, priority, due_at, sla_minutes,
 		          COALESCE(draft_partner_id,''), version, created_by_actor_id, created_at, updated_at`,
 		id, operatorContextID, fieldActorID, partnerID, a.Version).Scan(
@@ -394,7 +394,7 @@ func transition(ctx context.Context, db *sql.DB, operatorContextID, id, actorID 
 		return Assignment{}, err
 	}
 	args = append(args, string(next))
-	err = tx.QueryRowContext(ctx, `UPDATE dsh_field_onboarding_assignments SET status=$`+fmt.Sprint(len(args))+`, version=version+1, updated_at=NOW() WHERE `+where+` RETURNING id, operator_context_id, field_actor_id, business_task_key, store_name_hint, COALESCE(phone_hint,''), COALESCE(address_hint,''), location_latitude, location_longitude, status, priority, due_at, sla_minutes, COALESCE(draft_partner_id,''), version, created_by_actor_id, created_at, updated_at`, args...).Scan(
+	err = tx.QueryRowContext(ctx, `UPDATE dsh_field_onboarding_assignments SET status=$`+fmt.Sprint(len(args))+`, version=version+1, updated_at=NOW() WHERE `+where+` RETURNING id, operator_context_id, field_actor_id, COALESCE(business_task_key,''), store_name_hint, COALESCE(phone_hint,''), COALESCE(address_hint,''), location_latitude, location_longitude, status, priority, due_at, sla_minutes, COALESCE(draft_partner_id,''), version, created_by_actor_id, created_at, updated_at`, args...).Scan(
 		&a.ID, &a.OperatorContextID, &a.FieldActorID, &a.BusinessTaskKey, &a.StoreNameHint, &a.PhoneHint, &a.AddressHint,
 		&a.LocationLatitude, &a.LocationLongitude, &a.Status, &a.Priority, &a.DueAt, &a.SlaMinutes, &a.DraftPartnerID, &a.Version,
 		&a.CreatedByActorID, &a.CreatedAt, &a.UpdatedAt)
