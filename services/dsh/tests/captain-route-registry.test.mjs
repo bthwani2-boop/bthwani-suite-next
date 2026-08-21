@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 const contract = await import("../dist/services/dsh/frontend/shared/delivery/captain.contract.js");
-const deepLink = await import("../dist/services/dsh/frontend/shared/delivery/captain-deep-link.js");
+const navigation = await import("../dist/services/dsh/frontend/app-captain/captain-navigation.js");
 
 describe("Captain route and screen registry", () => {
   it("keeps every live route canonical and screen-registered", () => {
@@ -38,10 +38,24 @@ describe("Captain route and screen registry", () => {
     }
   });
 
-  it("resolves only declared Captain deep links to navigation commands", () => {
-    assert.equal(deepLink.captainNavigationTargetFromDeepLink("bthwani-captain-next://captain/dsh"), "home");
-    assert.equal(deepLink.captainNavigationTargetFromDeepLink("bthwani-captain-next://captain/dsh/orders/map"), "map");
-    assert.equal(deepLink.captainNavigationTargetFromDeepLink("bthwani-client-next://captain/dsh/orders/map"), null);
-    assert.equal(deepLink.captainNavigationTargetFromDeepLink("bthwani-captain-next://captain/dsh/orders/map?assignment=other"), "map");
+  it("binds Captain task destinations to canonical Router paths with assignment identity", () => {
+    const assignmentId = "assignment / 42";
+    const encodedId = "assignment%20%2F%2042";
+    const routes = [
+      [{ kind: "detail", assignmentId }, `/orders/${encodedId}`],
+      [{ kind: "map", assignmentId }, `/orders/${encodedId}/map`],
+      [{ kind: "pickup-dropoff", assignmentId }, `/orders/${encodedId}/execution`],
+      [{ kind: "pod-submission", assignmentId }, `/orders/${encodedId}/proof`],
+    ];
+
+    for (const [route, expectedPath] of routes) {
+      assert.equal(navigation.dshCaptainRouteToPath(route), expectedPath);
+      assert.equal(navigation.dshCaptainRouteAssignmentId(route), assignmentId);
+    }
+
+    assert.equal(
+      navigation.dshCaptainRouteToPath({ kind: "support-directory", assignmentId }),
+      `/support?assignmentId=${encodedId}`,
+    );
   });
 });
