@@ -2,6 +2,7 @@
 // Routes renderer that maps the current route state to the correct screen component.
 import React from 'react';
 import { DshFieldOnboardingScreen } from '../onboarding/DshFieldOnboardingScreen';
+import { DshFieldAssignmentOnboardingScreen } from '../onboarding/DshFieldAssignmentOnboardingScreen';
 import { DshFieldVisitScreen } from '../escalation/DshFieldVisitScreen';
 import { DshFieldReadinessChecklistScreen } from '../escalation/DshFieldReadinessChecklistScreen';
 import { DshFieldEscalationScreen } from '../escalation/DshFieldEscalationScreen';
@@ -32,13 +33,23 @@ export function DshFieldRouteRenderer({ model, actions, onboardingController, id
   const { route } = model;
 
   if (route.kind === 'onboarding') {
+    const openProducts = (partnerId: string) => actions.pushRoute({ kind: 'products-upload', partnerId });
+    if (route.assignmentId) {
+      return (
+        <DshFieldAssignmentOnboardingScreen
+          assignmentId={route.assignmentId}
+          controller={onboardingController}
+          onBack={actions.popRoute}
+          onOpenProducts={openProducts}
+        />
+      );
+    }
     return (
       <DshFieldOnboardingScreen
         controller={onboardingController}
         {...(route.partnerId ? { partnerId: route.partnerId } : {})}
-        {...(route.assignmentId ? { assignmentId: route.assignmentId } : {})}
         onBack={actions.popRoute}
-        onOpenProducts={(partnerId) => actions.pushRoute({ kind: 'products-upload', partnerId })}
+        onOpenProducts={openProducts}
       />
     );
   }
