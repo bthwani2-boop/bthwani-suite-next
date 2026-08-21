@@ -1,4 +1,2 @@
-import { registerRootComponent } from 'expo';
-import App from './src/App';
-
-registerRootComponent(App);
+// Canonical Expo entrypoint. The typed bootstrap owns registration and runtime wiring.
+import "./src/index.ts";
