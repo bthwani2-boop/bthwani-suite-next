@@ -164,8 +164,8 @@ func Invite(ctx context.Context, db *sql.DB, storeID, identity, role, actorID st
 		return partner.StoreTeamMember{}, err
 	}
 	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO dsh_captain_membership_history (membership_id, action_label, actor_id, from_status, to_status)
-		VALUES ($1, 'partner_team_invite', $2, '', 'invited')`, memberID, actorID); err != nil {
+		INSERT INTO dsh_captain_membership_history (membership_id, action_label, actor_id, from_status, to_status, idempotency_key, correlation_id)
+		VALUES ($1, 'partner_team_invite', $2, '', 'invited', '', '')`, memberID, actorID); err != nil {
 		return partner.StoreTeamMember{}, err
 	}
 	member, err := scanMember(tx.QueryRowContext(ctx, `
@@ -261,7 +261,7 @@ func ExecuteAction(ctx context.Context, db *sql.DB, storeID, memberID, actorID s
 		return partner.StoreTeamMember{}, ErrVersionConflict
 	}
 	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO dsh_captain_membership_history (membership_id, action_label, actor_id, from_status, to_status)
+		INSERT INTO dsh_captain_membership_history (membership_id, action_label, actor_id, from_status, to_status, idempotency_key, correlation_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`, memberID, "partner_team_"+input.Action, actorID, oldStatus, newStatus, input.IdempotencyKey, input.CorrelationID); err != nil {
 		return partner.StoreTeamMember{}, err
 	}
