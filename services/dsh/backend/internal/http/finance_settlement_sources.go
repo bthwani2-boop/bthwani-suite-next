@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"dsh-api/internal/store"
+	"dsh-api/internal/wlt"
 )
 
 type financeSettlementOrderSource struct {
@@ -139,7 +140,8 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode governed settlement")
 		return
 	}
-	status, responseBody, err := s.wlt.FinanceWriteSettlement(r.Context(), http.MethodPost, "/wlt/settlements", payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
+	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	status, responseBody, err := s.wlt.FinanceWriteSettlement(trustedContext, http.MethodPost, "/wlt/settlements", payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT governed settlement call failed")
 		return
@@ -195,7 +197,8 @@ func (s *protectedStoreServer) handleUpsertFinanceSettlementPolicy(w http.Respon
 		return
 	}
 	path := "/wlt/settlement-policies/" + url.PathEscape(partnerID)
-	status, responseBody, err := s.wlt.FinanceWriteSettlement(r.Context(), http.MethodPut, path, bytes.Clone(payload), r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
+	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
+	status, responseBody, err := s.wlt.FinanceWriteSettlement(trustedContext, http.MethodPut, path, bytes.Clone(payload), r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", fmt.Sprintf("WLT settlement policy call failed: %v", err))
 		return
