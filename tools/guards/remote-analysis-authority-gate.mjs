@@ -12,6 +12,7 @@ const read = (path) => {
 
 const expectedUrl = "https://api.sonarcloud.io/mcp";
 const expectedOrg = "bthwani2-boop";
+const tokenReference = "Bearer ${SONARQUBE_TOKEN}";
 
 const antigravity = JSON.parse(read(".agents/mcp_config.json"));
 const antigravitySonar = antigravity?.mcpServers?.sonarqube;
@@ -20,22 +21,48 @@ if (antigravitySonar.serverUrl !== expectedUrl) fail("Antigravity must use the S
 if ("command" in antigravitySonar || "args" in antigravitySonar) fail("Antigravity must not launch a local SonarQube MCP process");
 if (antigravitySonar.headers?.SONARQUBE_ORG !== expectedOrg) fail("Antigravity SonarQube organization is not pinned");
 if (antigravitySonar.headers?.SONARQUBE_READ_ONLY !== "true") fail("Antigravity SonarQube MCP must remain read-only");
-if (antigravitySonar.headers?.Authorization !== "Bearer ${SONARQUBE_TOKEN}") fail("Antigravity token must remain an environment reference, never a committed credential");
+if (antigravitySonar.headers?.Authorization !== tokenReference) fail("Antigravity token must remain an environment reference, never a committed credential");
 
-const generic = JSON.parse(read(".mcp.json"));
-const genericSonar = generic?.mcpServers?.sonarqube;
-if (!genericSonar) fail("generic SonarQube MCP definition is missing");
-if (genericSonar.serverUrl !== expectedUrl) fail("generic MCP config must use the SonarQube Cloud-hosted endpoint");
-if ("command" in genericSonar || "args" in genericSonar) fail("generic MCP config must not launch a local SonarQube MCP process");
+const projectMcp = JSON.parse(read(".mcp.json"));
+const projectSonar = projectMcp?.mcpServers?.sonarqube;
+if (!projectSonar) fail("project SonarQube MCP definition is missing");
+if (projectSonar.type !== "http" || projectSonar.url !== expectedUrl) fail("project MCP config must use hosted SonarQube HTTP transport");
+if ("command" in projectSonar || "args" in projectSonar || "serverUrl" in projectSonar) fail("project MCP config must not launch or emulate a local SonarQube MCP process");
+if (projectSonar.headers?.SONARQUBE_ORG !== expectedOrg) fail("project SonarQube organization is not pinned");
+if (projectSonar.headers?.SONARQUBE_READ_ONLY !== "true") fail("project SonarQube MCP must remain read-only");
+if (projectSonar.headers?.Authorization !== tokenReference) fail("project token must remain an environment reference, never a committed credential");
 
 const codex = read(".codex/config.toml");
-for (const forbidden of ["sonar.exe", "mcp/sonarqube", "sonarsource/sonarqube-mcp", "localhost:9000"]) {
+for (const forbidden of ["sonar.exe", "mcp/sonarqube", "sonarsource/sonarqube-mcp", "localhost:9000", "command = \"sonar"]) {
   if (codex.includes(forbidden)) fail(`Codex config contains forbidden local SonarQube reference: ${forbidden}`);
 }
 if (!codex.includes(`url = "${expectedUrl}"`)) fail("Codex must use the SonarQube Cloud-hosted MCP endpoint");
 if (!codex.includes('bearer_token_env_var = "SONARQUBE_TOKEN"')) fail("Codex must source the SonarQube bearer token from the environment");
 if (!codex.includes(`"SONARQUBE_ORG" = "${expectedOrg}"`)) fail("Codex SonarQube organization is not pinned");
 if (!codex.includes('"SONARQUBE_READ_ONLY" = "true"')) fail("Codex SonarQube MCP must remain read-only");
+
+const forbiddenLocalSonarPaths = [
+  ".agents/hooks.json",
+  ".agents/rules/sonar-prompt-secrets.md",
+  ".agents/sonar/hooks/pretool-secrets.ps1",
+  ".codex/hooks.json",
+  ".codex/hooks/sonar-secrets/build-scripts/prompt-secrets.ps1",
+  ".claude/hooks/sonar-secrets/build-scripts/prompt-secrets.ps1",
+  ".claude/hooks/sonar-secrets/build-scripts/pretool-secrets.ps1"
+];
+for (const path of forbiddenLocalSonarPaths) {
+  if (fs.existsSync(path)) fail(`local Sonar hook path must not exist: ${path}`);
+}
+
+const agents = read("AGENTS.md");
+for (const forbidden of ["sonar analyze secrets", "sonar hook ", "Get-Command sonar"]) {
+  if (agents.includes(forbidden)) fail(`AGENTS.md contains forbidden local Sonar instruction: ${forbidden}`);
+}
+
+const claude = read(".claude/settings.json");
+if (claude.includes("sonar-secrets") || claude.includes("PreToolUse") || claude.includes("UserPromptSubmit")) {
+  fail("Claude settings must not invoke local Sonar hooks");
+}
 
 const sonarWorkflow = read(".github/workflows/sonarqube.yml");
 for (const forbidden of ["localhost:9000", "SONAR_HOST_URL"]) {
@@ -47,4 +74,9 @@ const codeqlWorkflow = read(".github/workflows/codeql.yml");
 if (!codeqlWorkflow.includes("github/codeql-action/init@")) fail("CodeQL must run through GitHub code scanning on hosted CI");
 if (!codeqlWorkflow.includes("github/codeql-action/analyze@")) fail("CodeQL analysis action is missing");
 
-console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] SonarQube MCP is remote-only; SonarQube Cloud and GitHub CodeQL remain canonical remote authorities.");
+const remoteSecurityWorkflow = read(".github/workflows/security-remote.yml");
+for (const required of ["gitleaks detect", "run-osv-scanner.mjs", "run-trivy.mjs", "runs-on: ubuntu-24.04"]) {
+  if (!remoteSecurityWorkflow.includes(required)) fail(`remote security workflow is missing: ${required}`);
+}
+
+console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] SonarQube MCP is hosted-only; SonarQube Cloud, GitHub CodeQL, and GitHub-hosted supply-chain scans are canonical remote authorities.");
