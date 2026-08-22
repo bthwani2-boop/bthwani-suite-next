@@ -35,7 +35,8 @@ GOVERNANCE UNCHANGED ≠ GOVERNANCE CONFIRMED
 GOVERNANCE PRESENT ≠ DURABLE PROJECT MEMORY COMPLETE FOR PROVEN MATERIAL TRUTH
 TRACKED WORKFLOW CONFIG ≠ LIVE REPOSITORY ENFORCEMENT
 EXTERNAL DOCUMENTATION ≠ LOCAL VERSION/RUNTIME PROOF
-PLAN ABSENT ≠ EXECUTE_CLOSE BLOCKED
+PLAN_DIR ABSENT ≠ EXECUTE_CLOSE BLOCKED
+PLAN_DIR UPDATED ≠ TARGET SYSTEM FIXED
 ```
 
 State what material evidence proves and what it does not prove.
@@ -90,6 +91,38 @@ Invalidation trigger
 ```
 
 Evidence without sufficient candidate/environment provenance cannot support a stronger claim than its provenance allows.
+
+### 6.1 Task-specific verification/closure contract for `AUDIT_PREPARE`
+
+When `02` constructs `02-VERIFICATION-CLOSURE.md`, instantiate only the materially required claims from this file; do not copy this generic doctrine into every plan.
+
+Use stable IDs sufficient for cross-file traceability:
+
+```text
+V-*
+CLAIM
+REQUIRED_PROOF
+REQUIRED_CAPABILITY
+CANDIDATE_BINDING
+ENVIRONMENT / PROFILE when relevant
+PASS_CONDITION
+PROOF_LIMIT
+INVALIDATION_TRIGGER
+
+AC-*
+FALSIFIABLE_ACCEPTANCE_CONDITION
+MAPPED_ROOT(S)
+MAPPED_VERIFICATION(S)
+
+CE-*
+CLOSURE_EVIDENCE_REQUIRED_FROM_EXECUTION
+MAPPED_ACCEPTANCE / VERIFICATION
+PROVENANCE_REQUIRED
+```
+
+The prepared contract defines what evidence must be produced; it does not pre-declare results. `EXECUTE_CLOSE` fills/proves those claims through actual target-system evidence, not by editing the prepared plan directory.
+
+Every materially applicable execution step must be able to trace forward to sufficient `V-*`/`AC-*`/`CE-*` proof through the chain owned by `02`.
 
 ## 7. Runtime provenance/freshness
 
@@ -286,7 +319,7 @@ AND ZERO_MATERIAL_CONTRACT/BINDING_DRIFT
 AND ZERO_MATERIAL_AUTH/SCOPE/SECURITY_GAPS
 AND ZERO_UNRESOLVED_RUNTIME/DATA_STATE
 AND ZERO_UNRECONCILED_MATERIAL_GOVERNANCE_IMPACT
-AND ZERO_MATERIAL_GOVERNANCE_DRIFT_CAPABLE_OF_MISLEADING CURRENT_OR_FUTURE_WORK
+AND ZERO_MATERIAL_GOVERNANCE_DRIFT_CAPABLE_OF_MISLEADING_CURRENT_OR_FUTURE_WORK
 AND ZERO_MATERIAL_DURABLE_TRUTH_CLARITY_GAPS_CAPABLE_OF_MISLEADING_FUTURE_EXECUTION
 AND ZERO_BROKEN/ORPHAN/STALE_REFERENCES_EXPOSED_BY_WORK
 AND ZERO_MATERIAL_CLEANUP_RESIDUE_TIED_TO_SCOPE
@@ -305,27 +338,29 @@ If any conjunct is unproven, state is `OPEN` unless a valid `DECISION_REQUIRED` 
 
 `FINAL_PROJECT_CONSISTENCY_PASS` means the current objective/root is proven compatible with the materially touched project-wide Product/System frame, shared authorities/invariants, affected governance and previously proven canonical closures. It does not require exhaustive proof of unrelated unknown areas.
 
-## 23. Optional temporary plan-file lifecycle
+## 23. Optional temporary plan-directory lifecycle
 
-`EXECUTE_CLOSE` does not require a plan file and does not create one by default. If `PLAN_FILE=NONE` or is omitted, skip this section entirely; closure proceeds directly through the normal exact-candidate lifecycle.
+`EXECUTE_CLOSE` does not require a plan directory and does not create or mutate one by default. If `PLAN_DIR=NONE` or is omitted, skip this section entirely; closure proceeds directly through the normal exact-candidate lifecycle.
 
-If an existing temporary `PLAN_FILE` is explicitly supplied to `EXECUTE_CLOSE`, it is optional non-authoritative evidence/accounting only. Revalidate it against current live truth before use; its original finding list is not a stopping boundary.
+If an existing temporary `PLAN_DIR` is explicitly supplied to `EXECUTE_CLOSE`, it is read-only optional handoff/evidence input. Revalidate it against current live truth before use; its original finding/root list is not a stopping boundary and must not be edited as a substitute for treatment.
 
-If that explicitly supplied file is owned by the current task and is intended to be disposable, retain it until every still-valid material item it carried and every materially related item exposed during treatment satisfies the closure requirements above. Then retire it as the last intended project write:
+If new material evidence invalidates the handoff, stop only the affected execution cone and re-enter preparation/diagnosis under `02`; do not silently rewrite the plan directory while claiming continuous execution.
+
+If the explicitly supplied directory is owned by the current objective and intended to be disposable, retain it until every still-valid material item it carried and every materially related item exposed during treatment satisfies the closure requirements above. Then retire the **entire owned directory** as the last intended project write:
 
 ```text
-DELETE EXPLICIT TEMPORARY PLAN_FILE
+DELETE OWNED TEMPORARY PLAN_DIR
 → NEW FINAL_CANDIDATE
 → FINAL READ-ONLY PROJECT-CONSISTENCY / AUDIT / INSPECTION / DIAGNOSIS / ANALYSIS / NEGATIVE-SPACE PASS
 → RE-RESOLVE LIVE HEAD
 → CLOSED ONLY IF NOTHING MATERIAL REOPENS
 ```
 
-Do not delete an unrelated, foreign or deliberately retained plan merely because a matching objective exists. If no explicit temporary plan was supplied, no plan deletion/recreation step exists.
+Do not delete an unrelated, foreign or deliberately retained plan directory merely because a matching objective exists. If no explicit temporary plan directory was supplied, no plan deletion/recreation step exists.
 
 ## 24. Final report
 
-Keep reporting concise and evidence-based: repository/ref, objective, starting/final observed HEAD, final candidate relation, relevant project-frame authority/invariants, highest roots treated, canonical owners, migrations/cutovers/cleanup, affected consumers/surfaces, governance disposition, durable-truth clarification performed when material, verification actually performed and proof limits, runtime provenance/readback when claimed, repository-platform truth when materially relied upon, foreign-delta reconciliation, any prior closure reopened/reconciled, optional plan disposition when one was explicitly supplied, remaining true blocker/decision, and final state.
+Keep reporting concise and evidence-based: repository/ref, objective, starting/final observed HEAD, final candidate relation, relevant project-frame authority/invariants, highest roots treated, canonical owners, migrations/cutovers/cleanup, affected consumers/surfaces, governance disposition, durable-truth clarification performed when material, verification actually performed and proof limits, runtime provenance/readback when claimed, repository-platform truth when materially relied upon, foreign-delta reconciliation, any prior closure reopened/reconciled, optional plan-directory disposition when one was explicitly supplied, remaining true blocker/decision, and final state.
 
 ## 25. Durable project-memory closure gate
 

@@ -4,6 +4,38 @@
 
 In `EXECUTE_END_TO_END` and `EXECUTE_PROJECT_CLOSURE`, a proven executable root proceeds directly to treatment. No diagnosis package, planning package or repository task ledger is required first.
 
+When `EXECUTE_CLOSE` is explicitly supplied with a prepared `PLAN_DIR`, that directory is read-only handoff/evidence input under `01`; it does not replace current-truth revalidation and is never a writable execution target.
+
+### 1.1 Prepared-handoff consumption protocol
+
+When a valid prepared handoff is supplied:
+
+```text
+READ 00-AUDIT-TRUTH.md
+→ READ 01-EXECUTION-CONTRACT.md
+→ READ 02-VERIFICATION-CLOSURE.md
+→ RE-RESOLVE CURRENT TARGET HEAD
+→ CLASSIFY DELTA UNDER 01
+→ REVALIDATE MATERIAL ROOT / AUTHORITY / TARGET / INVARIANT / MIGRATION / CUTOVER ASSUMPTIONS
+→ RESOLVE CURRENT EXECUTION FRONTIER
+→ MUTATE THE ACTUAL TARGET SYSTEM
+```
+
+Still-valid resolved decisions constrain execution; they do not authorize blind execution against stale truth. Local equivalent implementation choices may proceed within the freedom/change cone recorded under `01`/`02`.
+
+If execution discovers new material evidence that changes a proven root, Canonical Truth, authority/ownership, domain/data/security boundary, invariant, public semantic contract, migration/cutover strategy or material blast radius:
+
+```text
+STOP THE AFFECTED EXECUTION CONE
+→ PRESERVE VALID WORK/EVIDENCE
+→ CAPTURE THE INVALIDATING EVIDENCE
+→ DO NOT PATCH AROUND THE CONFLICT
+→ RE-ENTER DIAGNOSIS/HANDOFF PREPARATION UNDER 02
+→ RESUME ONLY AFTER READINESS IS RE-ESTABLISHED
+```
+
+Do not silently edit `PLAN_DIR` during `EXECUTE_CLOSE`. A handoff correction is preparation work; it is not treatment of the target system.
+
 ## 2. Root-correct treatment sequence
 
 For every proven root:
@@ -36,7 +68,7 @@ DEFINE PROVEN TARGET TRUTH
 → ADVERSARIALLY RE-DIAGNOSE ROOT
 ```
 
-If a root requires source/runtime/data/contract mutation and none occurred, documentation cannot close it.
+If a root requires source/runtime/data/contract/schema/config mutation and none occurred at the proven Source-of-Fix, planning/documentation/governance/report/comment edits cannot close it and count as zero treatment progress for that root. The root remains `OPEN`.
 
 ## 3. Definition of a real fix
 
