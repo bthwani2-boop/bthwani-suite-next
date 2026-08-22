@@ -1,0 +1,330 @@
+name: BThwani Remote Toolchain
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: Exact live branch name
+        required: true
+        type: string
+      target_sha:
+        description: Exact live branch SHA
+        required: true
+        type: string
+      base_ref:
+        description: Exact trusted comparison base SHA
+        required: true
+        type: string
+      include_runtime:
+        description: Include full runtime proof through contextual CI
+        required: true
+        default: true
+        type: boolean
+
+permissions: {}
+
+concurrency:
+  group: remote-toolchain-${{ inputs.target_ref }}
+  cancel-in-progress: false
+
+jobs:
+  target:
+    name: Verify immutable toolchain target
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      target_ref: ${{ steps.target.outputs.target_ref }}
+      target_sha: ${{ steps.target.outputs.target_sha }}
+      base_sha: ${{ steps.target.outputs.base_sha }}
+    steps:
+      - name: Verify branch and comparison base
+        id: target
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_REF: ${{ inputs.target_ref }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+          BASE_REF: ${{ inputs.base_ref }}
+        run: |
+          set -euo pipefail
+          git check-ref-format --branch "${TARGET_REF}" >/dev/null
+          [[ "${TARGET_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::target_sha must be a full SHA"; exit 1; }
+          encoded_ref="$(jq -rn --arg value "${TARGET_REF}" '$value|@uri')"
+          live_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/branches/${encoded_ref}" --jq '.commit.sha')"
+          [[ "${live_sha}" == "${TARGET_SHA}" ]] || { echo "::error::target moved: ${TARGET_REF} expected=${TARGET_SHA} live=${live_sha}"; exit 1; }
+          base_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/commits/${BASE_REF}" --jq '.sha')"
+          [[ "${base_sha}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::base_ref did not resolve to a commit"; exit 1; }
+          {
+            echo "target_ref=${TARGET_REF}"
+            echo "target_sha=${TARGET_SHA}"
+            echo "base_sha=${base_sha}"
+          } >> "${GITHUB_OUTPUT}"
+
+  tools:
+    name: ${{ matrix.key }}
+    needs: [target]
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        include:
+          - { key: ci-full, workflow: ci.yml }
+          - { key: codeql-full, workflow: codeql.yml }
+          - { key: codeql-hygiene-audit, workflow: codeql-hygiene.yml }
+          - { key: sonar-full, workflow: sonarqube.yml }
+          - { key: security-full, workflow: security-remote.yml }
+          - { key: dependency-review, workflow: dependency-review.yml }
+          - { key: lockfile-integrity, workflow: lockfile-integrity.yml }
+          - { key: opencodereview, workflow: open-code-review.yml }
+          - { key: semgrep-full, workflow: semgrep.yml }
+          - { key: dependabot-audit, workflow: dependabot-audit.yml }
+    runs-on: ubuntu-24.04
+    timeout-minutes: 200
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Wait for conflicting branch run to settle
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW: ${{ matrix.workflow }}
+          TARGET_REF: ${{ needs.target.outputs.target_ref }}
+        run: |
+          set -euo pipefail
+          encoded_ref="$(jq -rn --arg value "${TARGET_REF}" '$value|@uri')"
+          for _ in $(seq 1 720); do
+            active="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW}/runs?branch=${encoded_ref}&per_page=100" \
+              --jq '[.workflow_runs[] | select(.status != "completed" and (.event == "push" or .event == "workflow_dispatch"))] | length')"
+            [[ "${active}" == "0" ]] && exit 0
+            sleep 10
+          done
+          echo "::error::timed out waiting for conflicting ${WORKFLOW} runs"
+          exit 1
+
+      - name: Snapshot existing dispatch runs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW: ${{ matrix.workflow }}
+          TARGET_REF: ${{ needs.target.outputs.target_ref }}
+        run: |
+          set -euo pipefail
+          encoded_ref="$(jq -rn --arg value "${TARGET_REF}" '$value|@uri')"
+          gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW}/runs?branch=${encoded_ref}&event=workflow_dispatch&per_page=100" \
+            --jq '.workflow_runs[].id' > "${RUNNER_TEMP}/before.txt"
+
+      - name: Dispatch canonical authority
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEY: ${{ matrix.key }}
+          WORKFLOW: ${{ matrix.workflow }}
+          TARGET_REF: ${{ needs.target.outputs.target_ref }}
+          TARGET_SHA: ${{ needs.target.outputs.target_sha }}
+          BASE_SHA: ${{ needs.target.outputs.base_sha }}
+          INCLUDE_RUNTIME: ${{ inputs.include_runtime }}
+        run: |
+          set -euo pipefail
+          case "${KEY}" in
+            ci-full)
+              payload="$(jq -n --arg ref "${TARGET_REF}" --argjson runtime "${INCLUDE_RUNTIME}" '{ref:$ref,inputs:{mode:"full",journey:"",runtime_proof:$runtime}}')"
+              ;;
+            codeql-hygiene-audit)
+              payload="$(jq -n --arg ref "${TARGET_REF}" '{ref:$ref,inputs:{mode:"audit"}}')"
+              ;;
+            security-full)
+              payload="$(jq -n --arg ref "${TARGET_REF}" '{ref:$ref,inputs:{tool:"all"}}')"
+              ;;
+            dependency-review)
+              payload="$(jq -n --arg ref "${TARGET_REF}" --arg base "${BASE_SHA}" --arg head "${TARGET_SHA}" '{ref:$ref,inputs:{base_ref:$base,head_ref:$head}}')"
+              ;;
+            opencodereview)
+              payload="$(jq -n --arg ref "${TARGET_REF}" --arg base "${BASE_SHA}" --arg head "${TARGET_SHA}" '{ref:$ref,inputs:{base_ref:$base,head_sha:$head,model:"openai/gpt-4o"}}')"
+              ;;
+            semgrep-full)
+              payload="$(jq -n --arg ref "${TARGET_REF}" '{ref:$ref,inputs:{mode:"full",base_ref:""}}')"
+              ;;
+            *)
+              payload="$(jq -n --arg ref "${TARGET_REF}" '{ref:$ref}')"
+              ;;
+          esac
+          printf '%s' "${payload}" | gh api --method POST \
+            -H 'Accept: application/vnd.github+json' \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW}/dispatches" \
+            --input - >/dev/null
+
+      - name: Correlate exact dispatched run
+        id: run
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW: ${{ matrix.workflow }}
+          TARGET_REF: ${{ needs.target.outputs.target_ref }}
+          TARGET_SHA: ${{ needs.target.outputs.target_sha }}
+        run: |
+          set -euo pipefail
+          encoded_ref="$(jq -rn --arg value "${TARGET_REF}" '$value|@uri')"
+          run_id=""
+          for _ in $(seq 1 90); do
+            while IFS= read -r candidate_id; do
+              [[ -n "${candidate_id}" ]] || continue
+              grep -qx "${candidate_id}" "${RUNNER_TEMP}/before.txt" && continue
+              candidate_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/runs/${candidate_id}" --jq '.head_sha')"
+              if [[ "${candidate_sha}" == "${TARGET_SHA}" ]]; then run_id="${candidate_id}"; break; fi
+            done < <(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW}/runs?branch=${encoded_ref}&event=workflow_dispatch&per_page=30" \
+              --jq '.workflow_runs[].id')
+            [[ -n "${run_id}" ]] && break
+            sleep 5
+          done
+          [[ -n "${run_id}" ]] || { echo "::error::could not correlate ${WORKFLOW} run"; exit 1; }
+          echo "run_id=${run_id}" >> "${GITHUB_OUTPUT}"
+          echo "run_url=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${run_id}" >> "${GITHUB_OUTPUT}"
+
+      - name: Wait for canonical result
+        id: result
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.run.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          conclusion=""
+          for _ in $(seq 1 1080); do
+            status="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.status')"
+            if [[ "${status}" == "completed" ]]; then
+              conclusion="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.conclusion')"
+              break
+            fi
+            sleep 10
+          done
+          [[ -n "${conclusion}" ]] || { echo "::error::timed out waiting for ${RUN_ID}"; exit 1; }
+          echo "conclusion=${conclusion}" >> "${GITHUB_OUTPUT}"
+          echo "${{ matrix.key }} -> ${conclusion}: ${{ steps.run.outputs.run_url }}"
+
+      - name: Record tool run evidence pointer
+        if: ${{ always() }}
+        shell: bash
+        env:
+          KEY: ${{ matrix.key }}
+          WORKFLOW: ${{ matrix.workflow }}
+          RUN_ID: ${{ steps.run.outputs.run_id }}
+          RUN_URL: ${{ steps.run.outputs.run_url }}
+          CONCLUSION: ${{ steps.result.outputs.conclusion }}
+          TARGET_SHA: ${{ needs.target.outputs.target_sha }}
+        run: |
+          mkdir -p "${RUNNER_TEMP}/tool-pointer"
+          jq -n --arg key "${KEY}" --arg workflow "${WORKFLOW}" --arg runId "${RUN_ID}" --arg runUrl "${RUN_URL}" --arg conclusion "${CONCLUSION}" --arg sha "${TARGET_SHA}" \
+            '{schemaVersion:1,key:$key,workflow:$workflow,runId:$runId,runUrl:$runUrl,conclusion:$conclusion,targetSha:$sha}' \
+            > "${RUNNER_TEMP}/tool-pointer/${KEY}.json"
+
+      - name: Upload tool pointer
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: remote-tool-pointer-${{ matrix.key }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/tool-pointer
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Enforce canonical result
+        if: ${{ always() }}
+        shell: bash
+        env:
+          CONCLUSION: ${{ steps.result.outputs.conclusion }}
+        run: |
+          set -euo pipefail
+          [[ "${CONCLUSION:-}" == "success" ]]
+
+  evidence:
+    name: Deep remote evidence read-back
+    needs: [target, tools]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 70
+    permissions:
+      actions: write
+      contents: read
+    steps:
+      - name: Dispatch exact-SHA evidence collector
+        id: dispatch
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_REF: ${{ needs.target.outputs.target_ref }}
+          TARGET_SHA: ${{ needs.target.outputs.target_sha }}
+          BASE_SHA: ${{ needs.target.outputs.base_sha }}
+        run: |
+          set -euo pipefail
+          encoded_ref="$(jq -rn --arg value "${TARGET_REF}" '$value|@uri')"
+          gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/actions/workflows/remote-analysis-evidence.yml/runs?branch=${encoded_ref}&event=workflow_dispatch&per_page=100" \
+            --jq '.workflow_runs[].id' > "${RUNNER_TEMP}/before.txt"
+          payload="$(jq -n --arg ref "${TARGET_REF}" --arg sha "${TARGET_SHA}" --arg base "${BASE_SHA}" '{ref:$ref,inputs:{target_ref:$ref,target_sha:$sha,base_ref:$base}}')"
+          printf '%s' "${payload}" | gh api --method POST \
+            -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/actions/workflows/remote-analysis-evidence.yml/dispatches" --input - >/dev/null
+          run_id=""
+          for _ in $(seq 1 90); do
+            while IFS= read -r candidate_id; do
+              [[ -n "${candidate_id}" ]] || continue
+              grep -qx "${candidate_id}" "${RUNNER_TEMP}/before.txt" && continue
+              candidate_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/runs/${candidate_id}" --jq '.head_sha')"
+              if [[ "${candidate_sha}" == "${TARGET_SHA}" ]]; then run_id="${candidate_id}"; break; fi
+            done < <(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/actions/workflows/remote-analysis-evidence.yml/runs?branch=${encoded_ref}&event=workflow_dispatch&per_page=30" --jq '.workflow_runs[].id')
+            [[ -n "${run_id}" ]] && break
+            sleep 5
+          done
+          [[ -n "${run_id}" ]] || { echo "::error::could not correlate remote evidence run"; exit 1; }
+          echo "run_id=${run_id}" >> "${GITHUB_OUTPUT}"
+
+      - name: Wait for evidence collector
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.dispatch.outputs.run_id }}
+        run: |
+          set -euo pipefail
+          conclusion=""
+          for _ in $(seq 1 420); do
+            status="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.status')"
+            if [[ "${status}" == "completed" ]]; then
+              conclusion="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.conclusion')"
+              break
+            fi
+            sleep 10
+          done
+          echo "Remote evidence run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID} conclusion=${conclusion:-timeout}"
+          [[ "${conclusion}" == "success" ]]
+
+  result:
+    name: Remote toolchain result
+    needs: [target, tools, evidence]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Enforce toolchain completion
+        shell: bash
+        env:
+          TARGET_RESULT: ${{ needs.target.result }}
+          TOOLS_RESULT: ${{ needs.tools.result }}
+          EVIDENCE_RESULT: ${{ needs.evidence.result }}
+        run: |
+          set -euo pipefail
+          failures=()
+          [[ "${TARGET_RESULT}" == "success" ]] || failures+=("target:${TARGET_RESULT}")
+          [[ "${TOOLS_RESULT}" == "success" ]] || failures+=("tools:${TOOLS_RESULT}")
+          [[ "${EVIDENCE_RESULT}" == "success" ]] || failures+=("evidence:${EVIDENCE_RESULT}")
+          if [[ "${#failures[@]}" -ne 0 ]]; then
+            echo "::error title=Remote toolchain failed::$(IFS=,; echo "${failures[*]}")"
+            exit 1
+          fi
+          echo "All canonical remote tools and evidence read-back passed."
