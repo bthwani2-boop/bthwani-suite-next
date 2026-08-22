@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
-import { hasBinary, repoRoot } from "./_external-tool-runner.mjs";
+import { hasBinary, repoRoot, requireRemoteExecution } from "./_external-tool-runner.mjs";
+
+requireRemoteExecution("zizmor");
 
 // v1.27.0 must never be used: it could emit configured GitHub credentials in
 // cleartext logs. Keep this pin aligned with the first patched release.

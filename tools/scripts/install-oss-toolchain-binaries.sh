@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "${GITHUB_ACTIONS:-}" != "true" ]]; then
+  echo "ERROR: security tool installation is Remote-only and must run on a GitHub Actions runner." >&2
+  exit 1
+fi
+
 MODE="${1:-governance}"
 
 readonly ACTIONLINT_VERSION="v1.7.12"
 readonly PINACT_VERSION="v0.1.2"
-readonly ZIZMOR_VERSION="1.27.0"
+readonly ZIZMOR_VERSION="1.28.0"
 readonly REGAL_VERSION="v0.25.0"
 readonly CONFTEST_VERSION="v0.55.0"
 readonly HADOLINT_VERSION="v2.12.0"
@@ -93,9 +98,14 @@ if [[ "${MODE}" == "governance" || "${MODE}" == "ci" ]]; then
 fi
 
 if [[ "${MODE}" == "security" ]]; then
+  sudo apt-get update
+  sudo apt-get install -y shellcheck yamllint python3-pip
+  install_hadolint
   install_trivy
   install_osv_scanner
   install_gitleaks
+  python3 -m pip install --user "zizmor==${ZIZMOR_VERSION}"
+  echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 fi
 
 echo "Locked OSS toolchain binary installation completed."
