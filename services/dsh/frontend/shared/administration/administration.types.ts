@@ -7,15 +7,19 @@ export type DshAdministrationSurface =
   | "webapp"
   | "website";
 
+export type DshRolePermission = {
+  readonly service: string;
+  readonly surface: string;
+  readonly action: string;
+  readonly scope: string;
+};
+
 export type DshRole = {
   readonly id: string;
   readonly name: string;
   readonly description: string;
-  readonly permissions: readonly string[];
-  readonly surfaces: readonly DshAdministrationSurface[];
-  readonly active: boolean;
-  readonly version: number;
-  readonly createdAt: string;
+  readonly permissions: readonly DshRolePermission[];
+  readonly surfaces: readonly string[];
 };
 
 export type DshStaffMember = {
