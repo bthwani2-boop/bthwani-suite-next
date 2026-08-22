@@ -36,6 +36,11 @@ cd330e743feb1ebadb562f4ce595a7cfbab0a84e:infra/docker/env/runtime.local-producti
 cd330e743feb1ebadb562f4ce595a7cfbab0a84e:infra/docker/env/runtime.local-production.env:generic-api-key:57
 cd330e743feb1ebadb562f4ce595a7cfbab0a84e:infra/docker/env/runtime.local-production.env:generic-api-key:81
 
+# Historical DSH finance test idempotency key. The matched value is a synthetic
+# deterministic request-deduplication identifier, not a credential. The exact
+# immutable fingerprint is ignored; changed values or new occurrences still fail.
+44dfcdebd3bff00181659bc9d3ec4ea636ea9f49:services/dsh/backend/internal/http/finance_settlement_sources_test.go:generic-api-key:63
+
 # Historical WLT payout DB-test encryption literals reviewed during PR #239.
 # The source values are explicit synthetic test strings, not credentials. These
 # exact immutable fingerprints are ignored; any changed value/line/commit stays
