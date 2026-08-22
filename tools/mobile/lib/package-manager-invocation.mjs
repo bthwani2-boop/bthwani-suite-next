@@ -1,35 +1,54 @@
-import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 
-function existingNodeCli(environment) {
-  const candidate = environment.npm_execpath;
-  return candidate && fs.existsSync(candidate) ? candidate : undefined;
+const windowsBridgePath = fileURLToPath(new URL("./invoke-package-manager.ps1", import.meta.url));
+const allowedPackageManagers = new Set(["pnpm", "npx"]);
+const allowedDirectCommands = new Map([
+  ["node", () => process.execPath],
+  ["git", () => "git"],
+]);
+
+function normalizeArgs(args) {
+  if (!Array.isArray(args)) throw new TypeError("command arguments must be an array");
+  return args.map((arg) => String(arg));
 }
 
-function windowsCommandInvocation(command, args, environment) {
-  return {
-    executable: environment.ComSpec || process.env.ComSpec || "cmd.exe",
-    args: ["/d", "/s", "/c", command, ...args],
-  };
-}
+export function resolvePackageManagerInvocation(
+  command,
+  args,
+  environment = process.env,
+  platform = process.platform,
+) {
+  void environment;
+  const normalizedArgs = normalizeArgs(args);
 
-export function resolvePackageManagerInvocation(command, args, environment = process.env) {
-  if (command === "pnpm") {
-    const pnpmCli = existingNodeCli(environment);
-    if (pnpmCli) {
-      return { executable: process.execPath, args: [pnpmCli, ...args] };
-    }
-    if (process.platform === "win32") {
-      return windowsCommandInvocation("pnpm", args, environment);
-    }
-    return { executable: "pnpm", args };
+  if (command === process.execPath) {
+    return { executable: process.execPath, args: normalizedArgs };
   }
 
-  if (command === "npx") {
-    if (process.platform === "win32") {
-      return windowsCommandInvocation("npx", args, environment);
-    }
-    return { executable: "npx", args };
+  const directExecutable = allowedDirectCommands.get(command);
+  if (directExecutable) {
+    return { executable: directExecutable(), args: normalizedArgs };
   }
 
-  return { executable: command, args };
+  if (!allowedPackageManagers.has(command)) {
+    throw new Error(`Unsupported governed command '${command}'`);
+  }
+
+  if (platform === "win32") {
+    return {
+      executable: "pwsh",
+      args: [
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        windowsBridgePath,
+        command,
+        ...normalizedArgs,
+      ],
+    };
+  }
+
+  return { executable: command, args: normalizedArgs };
 }

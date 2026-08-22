@@ -2,11 +2,16 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const helperImport = "./lib/package-manager-invocation.mjs";
 const governedFiles = [
   "tools/mobile/eas-build-mobile.mjs",
+  "tools/mobile/upgrade-mobile-packages.mjs",
+  "tools/scripts/contracts/typecheck.mjs",
   "tools/scripts/export-mobile-app.mjs",
+  "tools/scripts/generate-sonar-node-coverage.mjs",
   "tools/scripts/guard-mobile-apps.mjs",
+  "tools/scripts/run-affected-verification.mjs",
+  "tools/scripts/run-command-check.mjs",
+  "tools/scripts/run-tsc-check.mjs",
   "tools/scripts/sync-mobile-apps.mjs",
   "tools/scripts/verify-mobile-prebuild.mjs",
 ];
@@ -21,6 +26,7 @@ const helperBridge = {
   expectedSource: 'export { resolvePackageManagerInvocation } from "../../mobile/lib/package-manager-invocation.mjs";',
 };
 const canonicalHelperPath = "tools/mobile/lib/package-manager-invocation.mjs";
+const windowsBridgePath = "tools/mobile/lib/invoke-package-manager.ps1";
 const failures = [];
 
 function readSource(relativePath) {
@@ -35,34 +41,47 @@ function readSource(relativePath) {
 for (const relativePath of governedFiles) {
   const source = readSource(relativePath);
   if (source === undefined) continue;
-
-  if (!source.includes(helperImport)) {
-    failures.push(`${relativePath}: must use the canonical package-manager invocation helper`);
-  }
-  if (source.includes("npm_execpath")) {
-    failures.push(`${relativePath}: direct npm_execpath coupling is forbidden`);
-  }
-  if (/shell\s*:\s*true/.test(source)) {
-    failures.push(`${relativePath}: shell:true is forbidden in the mobile build pipeline`);
-  }
+  if (/shell\s*:\s*true/.test(source)) failures.push(`${relativePath}: shell:true is forbidden`);
+  if (/\b(?:exec|execSync)\s*\(/.test(source)) failures.push(`${relativePath}: string command execution is forbidden`);
 }
 
 for (const wrapper of compatibilityWrappers) {
   const source = readSource(wrapper.relativePath);
-  if (source === undefined) continue;
-  if (source.trim() !== wrapper.expectedSource) {
+  if (source !== undefined && source.trim() !== wrapper.expectedSource) {
     failures.push(`${wrapper.relativePath}: compatibility wrapper must delegate only to tools/mobile/eas-build-mobile.mjs`);
   }
 }
 
 const canonicalHelper = readSource(canonicalHelperPath);
 if (canonicalHelper !== undefined) {
-  if (!canonicalHelper.includes("export function resolvePackageManagerInvocation")) {
-    failures.push(`${canonicalHelperPath}: canonical helper export is missing`);
+  for (const forbidden of ["cmd.exe", "ComSpec", '"/c"', "npm_execpath", "shell: true"]) {
+    if (canonicalHelper.includes(forbidden)) failures.push(`${canonicalHelperPath}: forbidden shell/ambient executable coupling: ${forbidden}`);
   }
-  if (/shell\s*:\s*true/.test(canonicalHelper)) {
-    failures.push(`${canonicalHelperPath}: shell:true is forbidden`);
+  for (const required of [
+    "invoke-package-manager.ps1",
+    'allowedPackageManagers = new Set(["pnpm", "npx"])',
+    '["node", () => process.execPath]',
+    '["git", () => "git"]',
+    'executable: "pwsh"',
+    "Unsupported governed command",
+  ]) {
+    if (!canonicalHelper.includes(required)) failures.push(`${canonicalHelperPath}: missing fixed invocation invariant: ${required}`);
   }
+}
+
+const windowsBridge = readSource(windowsBridgePath);
+if (windowsBridge !== undefined) {
+  for (const forbidden of ["Invoke-Expression", "Start-Process", "cmd.exe", "/c", "-Command"]) {
+    if (windowsBridge.includes(forbidden)) failures.push(`${windowsBridgePath}: forbidden command-string execution marker: ${forbidden}`);
+  }
+  for (const required of ["ValidateSet('pnpm', 'npx')", "& $Command @Arguments"]) {
+    if (!windowsBridge.includes(required)) failures.push(`${windowsBridgePath}: missing argv invocation invariant: ${required}`);
+  }
+}
+
+const commandCheck = readSource("tools/scripts/run-command-check.mjs");
+if (commandCheck !== undefined && !commandCheck.includes('["pnpm", "npx"].includes(command)')) {
+  failures.push("tools/scripts/run-command-check.mjs: arbitrary executable names must be rejected");
 }
 
 const bridgeSource = readSource(helperBridge.relativePath);
@@ -71,9 +90,9 @@ if (bridgeSource !== undefined && bridgeSource.trim() !== helperBridge.expectedS
 }
 
 if (failures.length > 0) {
-  console.error("FAIL: mobile package-manager invocation policy drift detected");
+  console.error("FAIL: governed command invocation policy drift detected");
   for (const failure of failures) console.error(` - ${failure}`);
   process.exit(1);
 }
 
-console.log("PASS: mobile package-manager invocation is centralized and shell-independent");
+console.log("PASS: governed command execution is allowlisted, argv-only, and free of cmd.exe /c indirection");
