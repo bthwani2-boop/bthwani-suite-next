@@ -4,6 +4,16 @@ on:
   pull_request:
     branches: ["**"]
     types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: Base commit/ref for dependency delta
+        required: true
+        type: string
+      head_ref:
+        description: Exact head commit SHA for dependency delta
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -16,13 +26,39 @@ jobs:
   dependency-review:
     name: Dependency review
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
+      - name: Validate exact dispatched candidate
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        env:
+          REQUESTED_HEAD: ${{ inputs.head_ref }}
+          EVENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          [[ "${REQUESTED_HEAD}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::head_ref must be a full SHA"; exit 1; }
+          [[ "${REQUESTED_HEAD}" == "${EVENT_SHA}" ]] || { echo "::error::dispatched dependency head drift: requested=${REQUESTED_HEAD} event=${EVENT_SHA}"; exit 1; }
+
       - name: Reject newly introduced vulnerable dependencies
-        if: ${{ github.event_name == 'pull_request' }}
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           fail-on-severity: low
           show-patched-versions: true
+          base-ref: ${{ github.event_name == 'workflow_dispatch' && inputs.base_ref || github.event.pull_request.base.sha }}
+          head-ref: ${{ github.event_name == 'workflow_dispatch' && inputs.head_ref || github.event.pull_request.head.sha }}
+
+      - name: Publish dependency evidence scope
+        if: ${{ always() }}
+        shell: bash
+        env:
+          BASE_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.base_ref || github.event.pull_request.base.sha }}
+          HEAD_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.head_ref || github.event.pull_request.head.sha }}
+        run: |
+          {
+            echo "### Dependency Review"
+            echo "- Base: \`${BASE_REF}\`"
+            echo "- Head: \`${HEAD_REF}\`"
+            echo "- Blocking threshold: \`low\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
