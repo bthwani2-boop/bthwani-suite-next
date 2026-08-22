@@ -1,6 +1,7 @@
 name: SonarQube Cloud
 
 on:
+  workflow_dispatch:
   pull_request:
     branches: [master, b, c]
     types: [opened, synchronize, reopened]
