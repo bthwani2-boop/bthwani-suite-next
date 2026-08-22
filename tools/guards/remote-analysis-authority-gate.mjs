@@ -48,7 +48,7 @@ const forbiddenLocalSonarPaths = [
   ".codex/hooks.json",
   ".codex/hooks/sonar-secrets/build-scripts/prompt-secrets.ps1",
   ".claude/hooks/sonar-secrets/build-scripts/prompt-secrets.ps1",
-  ".claude/hooks/sonar-secrets/build-scripts/pretool-secrets.ps1"
+  ".claude/hooks/sonar-secrets/build-scripts/pretool-secrets.ps1",
 ];
 for (const path of forbiddenLocalSonarPaths) {
   if (fs.existsSync(path)) fail(`local Sonar hook path must not exist: ${path}`);
@@ -79,4 +79,68 @@ for (const required of ["gitleaks detect", "run-osv-scanner.mjs", "run-trivy.mjs
   if (!remoteSecurityWorkflow.includes(required)) fail(`remote security workflow is missing: ${required}`);
 }
 
-console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] SonarQube MCP is hosted-only; SonarQube Cloud, GitHub CodeQL, and GitHub-hosted supply-chain scans are canonical remote authorities.");
+const codeqlHygiene = read(".github/workflows/codeql-hygiene.yml");
+for (const required of [
+  'workflows: ["CodeQL"]',
+  "security-events: write",
+  "codeql-hygiene.mjs",
+  "github.event.workflow_run.head_sha",
+  "branches/master",
+]) {
+  if (!codeqlHygiene.includes(required)) fail(`CodeQL metadata hygiene is missing invariant: ${required}`);
+}
+for (const forbidden of [
+  "github/codeql-action/init@",
+  "github/codeql-action/analyze@",
+  "gitleaks detect",
+  "run-osv-scanner.mjs",
+  "run-trivy.mjs",
+  "sonar-scanner",
+]) {
+  if (codeqlHygiene.includes(forbidden)) fail(`CodeQL metadata hygiene must not become a scanner authority: ${forbidden}`);
+}
+
+const remoteEvidence = read(".github/workflows/remote-analysis-evidence.yml");
+for (const required of [
+  "collect-remote-analysis-evidence.mjs",
+  "Remote Analysis Evidence",
+  "statuses: write",
+  "workflow_run:",
+]) {
+  if (!remoteEvidence.includes(required)) fail(`remote analysis evidence is missing read-back invariant: ${required}`);
+}
+for (const forbidden of [
+  "github/codeql-action/init@",
+  "github/codeql-action/analyze@",
+  "gitleaks detect",
+  "run-osv-scanner.mjs",
+  "run-trivy.mjs",
+  "sonar-scanner",
+]) {
+  if (remoteEvidence.includes(forbidden)) fail(`remote analysis evidence must remain read-back only: ${forbidden}`);
+}
+
+const remoteCommand = read(".github/workflows/remote-command.yml");
+for (const required of [
+  "issues:",
+  "actions: write",
+  "expected_sha",
+  "git check-ref-format --branch",
+  "unsupported remote command",
+  "actions/workflows/${WORKFLOW}/dispatches",
+]) {
+  if (!remoteCommand.includes(required)) fail(`remote command ingress is missing safety invariant: ${required}`);
+}
+for (const forbidden of [
+  "github/codeql-action/init@",
+  "github/codeql-action/analyze@",
+  "gitleaks detect",
+  "run-osv-scanner.mjs",
+  "run-trivy.mjs",
+  "sonar-scanner",
+  "Invoke-Expression",
+]) {
+  if (remoteCommand.includes(forbidden)) fail(`remote command ingress must dispatch authorities, not execute them: ${forbidden}`);
+}
+
+console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] Hosted SonarQube, GitHub CodeQL, GitHub-hosted security scans, read-only evidence, metadata hygiene, and SHA-pinned remote dispatch remain separated canonical responsibilities.");
