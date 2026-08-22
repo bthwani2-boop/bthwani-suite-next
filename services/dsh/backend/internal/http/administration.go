@@ -1,6 +1,7 @@
 package http
 
 import (
+	"errors"
 	"net/http"
 
 	"dsh-api/internal/administration"
@@ -14,19 +15,21 @@ const (
 
 // GET /dsh/operator/admin/roles
 func (s *protectedStoreServer) handleListRoles(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
+	_, ok := s.requireAdministrationPermission(w, r, "administration.role.read")
 	if !ok {
 		return
 	}
-	roles, err := administration.ListRoles(s.db)
+	roles, err := administration.ListRoles(r.Context(), s.identity)
 	if err != nil {
+		if errors.Is(err, administration.ErrIdentityUnavailable) {
+			store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
+			return
+		}
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list roles")
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"roles": roles})
 }
-
-
 
 // GET /dsh/operator/admin/partners
 func (s *protectedStoreServer) handleListPartnerActivations(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +39,7 @@ func (s *protectedStoreServer) handleListPartnerActivations(w http.ResponseWrite
 	}
 	activations, err := administration.ListPartnerActivations(s.db, r.URL.Query().Get("status"))
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list partner activations")
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list activations")
 		return
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"activations": activations})
