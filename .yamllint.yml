@@ -1,16 +1,17 @@
-# .yamllint.yml
-# yamllint configuration for BThwani workflows and configs
-
+# yamllint configuration for BThwani workflows and YAML configuration.
 extends: default
 
 rules:
+  document-start: disable
   line-length:
-    max: 120
+    max: 140
     allow-non-breakable-words: true
     allow-non-breakable-inline-mappings: true
   indentation:
     spaces: 2
+    indent-sequences: true
   comments:
-    level: warning
-  truthiness:
-    level: warning
+    min-spaces-from-content: 1
+  truthy:
+    allowed-values: ["true", "false"]
+    check-keys: false

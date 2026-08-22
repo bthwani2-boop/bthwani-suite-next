@@ -10,13 +10,14 @@ const option = (name, fallback = "") => {
 };
 
 const input = option("--input", ".diagnostics/opencodereview/result.json");
+const previewPath = option("--preview", ".diagnostics/opencodereview/preview.json");
 const summaryJson = option("--summary-json", ".diagnostics/opencodereview/summary.json");
 const markdown = option("--markdown", ".diagnostics/opencodereview/summary.md");
 const blockSeverity = option("--block-severity", "high").toLowerCase();
 const targetSha = String(process.env.OCR_TARGET_SHA || "").trim();
 const baseSha = String(process.env.OCR_BASE_SHA || "").trim();
-const mode = String(process.env.OCR_MODE || "").trim();
-const model = String(process.env.OCR_MODEL || "").trim();
+const mode = String(process.env.OCR_MODE || "delegation").trim();
+const model = String(process.env.OCR_MODEL || "copilot-auto").trim();
 
 function fail(message, exitCode = 1) {
   console.error(`[OPENCODEREVIEW FAIL] ${message}`);
@@ -27,22 +28,41 @@ if (process.env.GITHUB_ACTIONS !== "true") {
   fail("OpenCodeReview result adjudication is Remote-only and must run on GitHub Actions.");
 }
 if (!fs.existsSync(input)) fail(`missing OpenCodeReview JSON result: ${input}`);
+if (!fs.existsSync(previewPath)) fail(`missing OpenCodeReview delegation preview: ${previewPath}`);
 
 let report;
+let preview;
 try {
   report = JSON.parse(fs.readFileSync(input, "utf8"));
+  preview = JSON.parse(fs.readFileSync(previewPath, "utf8"));
 } catch (error) {
-  fail(`invalid OpenCodeReview JSON: ${error.message}`);
+  fail(`invalid OpenCodeReview evidence JSON: ${error.message}`);
+}
+
+const expectedFiles = Array.isArray(preview?.reviewable_files)
+  ? preview.reviewable_files.map((entry) => String(entry?.path || "").trim()).filter(Boolean)
+  : [];
+if (!Array.isArray(preview?.reviewable_files)) {
+  fail("delegation preview is missing reviewable_files");
+}
+if (new Set(expectedFiles).size !== expectedFiles.length) {
+  fail("delegation preview contains duplicate reviewable file paths");
 }
 
 const status = String(report?.status || "").trim().toLowerCase();
 if (!["complete", "completed", "success"].includes(status)) {
-  fail(`unexpected OpenCodeReview status '${status || "missing"}'`);
+  fail(`unexpected OpenCodeReview host-agent status '${status || "missing"}'`);
 }
 if (!Array.isArray(report?.comments)) {
-  fail("OpenCodeReview result is missing the comments array");
+  fail("OpenCodeReview host-agent result is missing the comments array");
 }
 
+const filesReviewed = Number(report?.summary?.files_reviewed);
+if (!Number.isInteger(filesReviewed) || filesReviewed !== expectedFiles.length) {
+  fail(`review coverage mismatch: expected=${expectedFiles.length} reported=${Number.isFinite(filesReviewed) ? filesReviewed : "missing"}`);
+}
+
+const allowedPaths = new Set(expectedFiles);
 const rank = new Map([
   ["critical", 4],
   ["high", 3],
@@ -57,14 +77,20 @@ if (threshold === undefined) fail(`unsupported --block-severity '${blockSeverity
 const comments = report.comments.map((comment, index) => {
   const severityRaw = String(comment?.severity || "unknown").trim().toLowerCase();
   const severity = rank.has(severityRaw) ? severityRaw : "unknown";
+  const findingPath = String(comment?.path || "").trim();
+  if (!findingPath || !allowedPaths.has(findingPath)) {
+    fail(`finding ${index + 1} references a path outside the delegated review scope: '${findingPath || "missing"}'`);
+  }
+  const content = String(comment?.content || comment?.message || "").trim();
+  if (!content) fail(`finding ${index + 1} has no content`);
   return {
     index: index + 1,
-    path: String(comment?.path || "").trim(),
+    path: findingPath,
     startLine: Number.isFinite(Number(comment?.start_line)) ? Number(comment.start_line) : null,
     endLine: Number.isFinite(Number(comment?.end_line)) ? Number(comment.end_line) : null,
     severity,
     category: String(comment?.category || "other").trim().toLowerCase() || "other",
-    content: String(comment?.content || comment?.message || "").trim(),
+    content,
   };
 });
 
@@ -73,13 +99,14 @@ for (const comment of comments) counts[comment.severity] += 1;
 const blocking = comments.filter((comment) => (rank.get(comment.severity) || 0) >= threshold);
 
 const summary = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   status,
   targetSha,
   baseSha,
   mode,
   model,
-  filesReviewed: Number(report?.summary?.files_reviewed ?? 0),
+  expectedFiles,
+  filesReviewed,
   commentsTotal: comments.length,
   counts,
   blockingThreshold: blockSeverity,
@@ -97,8 +124,8 @@ const lines = [
   `- Candidate: \`${targetSha || "unknown"}\``,
   `- Base: \`${baseSha || "n/a"}\``,
   `- Mode: \`${mode || "unknown"}\``,
-  `- Model: \`${model || "unknown"}\``,
-  `- Files reviewed: ${summary.filesReviewed}`,
+  `- Host model: \`${model || "unknown"}\``,
+  `- Files reviewed: ${filesReviewed}/${expectedFiles.length}`,
   `- Findings: ${comments.length} (critical ${counts.critical}, high ${counts.high}, medium ${counts.medium}, low ${counts.low}, info ${counts.info}, unknown ${counts.unknown})`,
   `- Blocking threshold: ${blockSeverity} (${blocking.length} blocking)`,
   "",
@@ -110,11 +137,9 @@ if (!comments.length) {
   lines.push("### Findings", "");
   const maxBody = 56000;
   for (const comment of comments) {
-    const location = comment.path
-      ? `${comment.path}${comment.startLine ? `:${comment.startLine}${comment.endLine && comment.endLine !== comment.startLine ? `-${comment.endLine}` : ""}` : ""}`
-      : "repository";
+    const location = `${comment.path}${comment.startLine ? `:${comment.startLine}${comment.endLine && comment.endLine !== comment.startLine ? `-${comment.endLine}` : ""}` : ""}`;
     const content = comment.content.replace(/\s+/g, " ").slice(0, 1200);
-    const entry = `- **${comment.severity.toUpperCase()} / ${comment.category}** \`${location}\` — ${content || "No message supplied."}`;
+    const entry = `- **${comment.severity.toUpperCase()} / ${comment.category}** \`${location}\` — ${content}`;
     if ([...lines, entry].join("\n").length > maxBody) {
       lines.push("", "_Additional findings are retained in the OpenCodeReview workflow artifact._");
       break;
@@ -125,9 +150,9 @@ if (!comments.length) {
 
 fs.writeFileSync(markdown, `${lines.join("\n")}\n`, { encoding: "utf8", mode: 0o600 });
 
-console.log(`[OPENCODEREVIEW] findings=${comments.length} critical=${counts.critical} high=${counts.high} medium=${counts.medium} low=${counts.low}`);
+console.log(`[OPENCODEREVIEW] coverage=${filesReviewed}/${expectedFiles.length} findings=${comments.length} critical=${counts.critical} high=${counts.high} medium=${counts.medium} low=${counts.low}`);
 if (blocking.length) {
   console.error(`[OPENCODEREVIEW FIX_REQUIRED] ${blocking.length} finding(s) meet blocking threshold ${blockSeverity}.`);
   process.exit(2);
 }
-console.log("[OPENCODEREVIEW PASS] no finding meets the blocking threshold.");
+console.log("[OPENCODEREVIEW PASS] complete delegated coverage and no finding meets the blocking threshold.");

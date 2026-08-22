@@ -10,6 +10,7 @@ runFilesTool({
   toolId: "hadolint",
   binary: "hadolint",
   files,
+  required: true,
   noFilesMessage: "No Dockerfiles found.",
   makeCommand: (items) => {
     const config = fs.existsSync(path.join(repoRoot, ".hadolint.yaml")) ? "--config .hadolint.yaml " : "";

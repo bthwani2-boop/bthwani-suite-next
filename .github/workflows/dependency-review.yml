@@ -40,6 +40,7 @@ jobs:
         env:
           EXPECTED_SHA: ${{ inputs.expected_sha }}
           HEAD_REF: ${{ inputs.head_ref }}
+          BASE_REF: ${{ inputs.base_ref }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
@@ -61,7 +62,7 @@ jobs:
           }
           {
             echo "### Dependency Review manual scope"
-            echo "- Base: ${{ inputs.base_ref }}"
+            echo "- Base: ${BASE_REF}"
             echo "- Head: ${resolved_head}"
           } >> "${GITHUB_STEP_SUMMARY}"
 

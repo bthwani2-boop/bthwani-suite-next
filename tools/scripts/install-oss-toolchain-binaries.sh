@@ -10,7 +10,8 @@ MODE="${1:-governance}"
 SELECTED_TOOL="${2:-all}"
 
 readonly ACTIONLINT_VERSION="v1.7.12"
-readonly PINACT_VERSION="v4.1.1"
+readonly PINACT_VERSION="v4.1.0"
+readonly PINACT_LINUX_AMD64_SHA256="8fcbf1b3e95551c82fd995535e3c1defa70e23299ce36eb3afd6c98778de6ca0"
 readonly ZIZMOR_VERSION="1.28.0"
 readonly REGAL_VERSION="v0.42.0"
 readonly CONFTEST_VERSION="v0.68.2"
@@ -47,10 +48,15 @@ install_actionlint() {
 }
 
 install_pinact() {
-  require_go
-  go install "github.com/suzuki-shunsuke/pinact/v4/cmd/pinact@${PINACT_VERSION}"
-  echo "$HOME/go/bin" >> "$GITHUB_PATH"
-  export PATH="$HOME/go/bin:$PATH"
+  command -v pinact >/dev/null 2>&1 && return 0
+  local archive="pinact_linux_amd64.tar.gz"
+  local url="https://github.com/suzuki-shunsuke/pinact/releases/download/${PINACT_VERSION}/${archive}"
+  curl -fsSL -o "${archive}" "${url}"
+  echo "${PINACT_LINUX_AMD64_SHA256}  ${archive}" | sha256sum --check -
+  tar -zxf "${archive}" pinact
+  sudo mv pinact /usr/local/bin/pinact
+  sudo chmod +x /usr/local/bin/pinact
+  pinact --version
 }
 
 install_hadolint() {
@@ -62,25 +68,25 @@ install_hadolint() {
 
 install_regal() {
   command -v regal >/dev/null 2>&1 && return 0
-  local archive="regal_${REGAL_VERSION#v}_Linux_x86_64.tar.gz"
-  curl -fsSLO "https://github.com/open-policy-agent/regal/releases/download/${REGAL_VERSION}/${archive}"
-  tar -zxf "${archive}" regal
-  sudo mv regal /usr/local/bin/regal
-  sudo chmod +x /usr/local/bin/regal
+  require_go
+  GOBIN="${RUNNER_TEMP}/bthwani-tools/bin" go install "github.com/open-policy-agent/regal@${REGAL_VERSION}"
+  sudo install -m 0755 "${RUNNER_TEMP}/bthwani-tools/bin/regal" /usr/local/bin/regal
+  regal version
 }
 
 install_conftest() {
   command -v conftest >/dev/null 2>&1 && return 0
   local version="${CONFTEST_VERSION#v}"
   local archive="conftest_${version}_Linux_x86_64.tar.gz"
-  local checksums="checksums.txt"
+  local checksums="conftest-${version}-checksums.txt"
   local base_url="https://github.com/open-policy-agent/conftest/releases/download/${CONFTEST_VERSION}"
-  curl -fsSLO "${base_url}/${archive}"
+  curl -fsSL -o "${archive}" "${base_url}/${archive}"
   curl -fsSL -o "${checksums}" "${base_url}/checksums.txt"
   grep " ${archive}$" "${checksums}" | sha256sum --check -
   tar -zxf "${archive}" conftest
   sudo mv conftest /usr/local/bin/conftest
   sudo chmod +x /usr/local/bin/conftest
+  conftest --version
 }
 
 install_gitleaks() {

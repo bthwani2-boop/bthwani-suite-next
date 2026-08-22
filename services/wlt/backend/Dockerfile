@@ -9,10 +9,12 @@ WORKDIR /app
 COPY services/wlt/backend/ ./services/wlt/backend/
 
 WORKDIR /app/services/wlt/backend
-RUN CGO_ENABLED=0 GOOS=linux go build -o wlt-api cmd/wlt-api/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o wlt-api cmd/wlt-api/main.go
 
-FROM alpine:latest AS runtime
-RUN apk --no-cache add ca-certificates tzdata
+FROM alpine:3.22 AS runtime
+RUN apk add --no-cache \
+      ca-certificates=20260611-r0 \
+      tzdata=2026c-r0
 
 WORKDIR /app
 COPY --from=build /app/services/wlt/backend/wlt-api /app/wlt-api

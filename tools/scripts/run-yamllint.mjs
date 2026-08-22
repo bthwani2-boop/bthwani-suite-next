@@ -10,6 +10,7 @@ runFilesTool({
   toolId: "yamllint",
   binary: "yamllint",
   files,
+  required: true,
   noFilesMessage: "No YAML files found.",
   makeCommand: (items) => {
     const config = fs.existsSync(path.join(repoRoot, ".yamllint.yml")) ? "-c .yamllint.yml " : "";
