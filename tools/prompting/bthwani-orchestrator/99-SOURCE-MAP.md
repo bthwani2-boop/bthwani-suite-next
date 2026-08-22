@@ -1,7 +1,7 @@
 # Source Consolidation and Atomic Semantic Disposition Record
 
 STATUS: CONSOLIDATION_RECORD_ONLY
-ATOMIC_SOURCE_AUDIT_REVISION: 5
+ATOMIC_SOURCE_AUDIT_REVISION: 6
 RUNTIME_AUTHORITY: NO
 EXECUTION_AUTHORITY: NO
 EXTERNAL_SOURCE_DEPENDENCY: NONE
@@ -12,7 +12,7 @@ This file records how material execution semantics were consolidated into the se
 
 It is **not** a validator, guard, registry, runtime dependency, plan package or execution entry point. Normal execution does not need to read it.
 
-The legacy files listed below remain physically present only because the human explicitly required temporary retention. Their presence is historical/source-corpus retention only; they are not executable authority and may be deleted later after repository-wide reference/reachability proof and explicit authorization.
+Legacy source files listed below, when still physically present, are historical/source-corpus material only unless current live reference/reachability evidence proves another purpose. Their continued presence is not protected merely because they are old. Ordinary repository cleanup/deletion is governed by the proof/disposition law in `02`/`03`/`04`; this record does not impose a second human deletion-approval gate. Explicit current human retention instructions and protected/irreversible actions still outrank that cleanup rule under `01`.
 
 This revision records source material at **material semantic-atom** granularity rather than relying only on broad concept families. A semantic atom is a materially distinct law, constraint, procedure, failure mode, evidence rule, safety rule, scope rule, execution rule, exception or closure rule. Literal wording and repeated emphasis are not separate atoms when they express the same law.
 
@@ -61,11 +61,11 @@ REJECTED_AS_RIGID_NUMERIC_RULE
 
 | Concept owner | Responsibility |
 |---|---|
-| `00-ORCHESTRATOR.md` | Governing law; objective-driven lifecycle; phase semantics; invocation; independence/protection; valid stop states. |
-| `01-SCOPE-AUTHORITY-RULES.md` | Authority/truth; objective/focus/scope routing; plan-directory topology/semantics; executor and branch/workspace boundaries; research/capability discipline; exclusions; concurrency; longevity. |
-| `02-DIAGNOSE-ROOT-CAUSE.md` | Coverage; journeys; diagnostic angles; findings; decisions; root proof/ranking; canonical target model; phase-scoped handoff construction/readiness. |
-| `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` | Actual treatment; prepared-handoff consumption; reconstruction; cutover; cleanup; migrations; engineering-control-path treatment; workspace/staging/mutation discipline. |
-| `04-VERIFY-REDIAGNOSE-CLOSE.md` | Task-specific verification/acceptance/closure-contract semantics; candidate/evidence provenance; repository-platform truth when required; verification; re-diagnosis; temporary-plan-directory retirement; closure. |
+| `00-ORCHESTRATOR.md` | Governing law; objective-driven lifecycle; phase semantics; invocation; hierarchy invariant; independence/protection; valid stop states. |
+| `01-SCOPE-AUTHORITY-RULES.md` | Authority/truth; objective/focus/scope routing; plan-directory topology/semantics; executor boundaries; human-only branch authority; capability saturation; primary-coordinator/subagent authority; exclusions; concurrency; longevity. |
+| `02-DIAGNOSE-ROOT-CAUSE.md` | Coverage; journeys; diagnostic angles; findings; decisions; root proof/ranking; canonical target model; phase-scoped handoff construction/readiness; capability ledger; artifact/deletion disposition. |
+| `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` | Actual treatment; prepared-handoff consumption; deterministic execution velocity; reconstruction; cutover; mandatory proven cleanup/deletion; migrations; engineering-control-path treatment; workspace/staging/mutation discipline. |
+| `04-VERIFY-REDIAGNOSE-CLOSE.md` | Task-specific verification/acceptance/closure-contract semantics; candidate/evidence provenance; deletion/reachability proof; repository-platform truth when required; verification; re-diagnosis; temporary-plan-directory retirement; closure. |
 | `focus/code-architecture-organization.md` | Code/architecture/structure/UI/UX/discoverability application. |
 | `focus/governance-product-design.md` | Product/governance semantics; engineering-governance value; new-control-artifact gate. |
 | `focus/data-contracts-runtime-security-quality.md` | Data/contracts/runtime/security/finance/quality/control-path efficiency application. |
@@ -241,7 +241,7 @@ REJECTED_AS_RIGID_NUMERIC_RULE
 | §0 PREPARE_ONLY/EXECUTE_END_TO_END invocation and semantic TARGET | semantic target/objective generalized to `00`/`01`; historical PREPARE_ONLY default lifecycle rejected; current explicit `AUDIT_PREPARE` is phase-scoped |
 | §1 unified semantic-first/root-first/live-treatment command | `00`-`04` + focus modules — `MERGED` |
 | §2 authority/source hierarchy and derived historical records | `01` §§1-2,12 — `MIGRATED` |
-| §3 capabilities/Git/safety/isolation/staging | capability/safety/staging = `01`/`03`; mandatory task-branch topology generalized into authorized `EXECUTION_LOCATION`/branch strategy under `01` |
+| §3 capabilities/Git/safety/isolation/staging | capability/safety/staging = `01`/`03`; historical automatic task-branch topology is superseded by human-only branch creation in `01` |
 | §4 broad discovery from highest meaning | `02` §§2,5 — `MIGRATED` |
 | §5 journey/multi-surface/failure paths | `02` §§6-8, `04` §9 — `MIGRATED` |
 | §6 product/UI/shared/contracts/backend/data/integration/security/runtime/repository lenses | focus modules + `02`/`03`/`04` — `MIGRATED` |
@@ -271,6 +271,8 @@ These are current human-directed requirements discovered during consolidation/ha
 | `RESEARCH=AUTO/INTERNAL_ONLY/EXTERNAL_ALLOWED` with primary-source preference | `00` §§3-4; `01` §13 |
 | External research can resolve technical facts but cannot invent BThwani Product Truth | `01` §§1-2,13; governance focus §12 |
 | Capability→Evidence→Acquisition→Proof Limit | `01` §14; `04` §6 |
+| `AUDIT_PREPARE` maximizes material evidence/handoff saturation; all applicable available capabilities are classified/used before readiness | `00` §3.1; `01` §§3.1,14.1; `02` §§13,20 |
+| One primary coordinator with subordinate agents only; no peer primary/integration authorities | `00` §6.1; `01` §14.2 |
 | Canonical Target Model before major reconstruction | `02` §16 |
 | Explicit patch-loop breaker | `02` §17 |
 | Parallel truth as high-leverage root class | `02` §11 |
@@ -282,9 +284,11 @@ These are current human-directed requirements discovered during consolidation/ha
 | `AUDIT_PREPARE`: one objective → one temporary `PLAN_DIR` → exactly `00-AUDIT-TRUTH.md`, `01-EXECUTION-CONTRACT.md`, `02-VERIFICATION-CLOSURE.md` | `00` §3.1; `01` §3; `02` §20; `04` §6.1 |
 | Handoff semantics are non-machine, non-authoritative, single-owner-per-fact and baseline-bound | `01` §3.2; `02` §20 |
 | Prepared handoff is read-only during `EXECUTE_CLOSE`; plan-only changes never count as treatment | `00` §3.2; `01` §3.2; actual treatment law in `03` §§1-3 |
+| Prepared execution reuses valid evidence and avoids repeated broad rediscovery/tool reruns unless invalidated | `00` §3.2/6.1; `03` §§1.2,23; `04` §§12-13 |
 | Source-of-Fix + exact treatment + `R0..R3` remaining ambiguity + traceability chain | `02` §§15-20 |
+| Artifact disposition/deletion manifest; proven `DELETE_REQUIRED` is mandatory and closure requires zero remaining deletion obligations | `02` §20.2; `03` §16; `04` §§15,17,22 |
 | Task-specific V/AC/CE contract and whole-directory retirement after proven closure | `04` §§6.1,23 |
-| Branch creation is not a generic lifecycle side effect; branch/workspace authority belongs to `01` | `00` §6.2; `01` §16 |
+| Branch creation authority is human-only; explicit existing `BRANCH` remains baseline/write/integration target unless the human changes it | `00` §§3,5,6.2; `01` §16.1 |
 
 ## 13. Explicitly rejected historical machinery
 
@@ -293,6 +297,8 @@ The following were reviewed and are intentionally not missing:
 - mandatory PREPARE/package generator/schema/frontier/ledger lifecycle as a prerequisite to ordinary execution;
 - mandatory package files or planning artifacts for every task;
 - orchestrator self-validator, self-guard, self-workflow, self-CLI, machine status or generated orchestration representation;
+- automatic task/fix/closure/integration branch creation by agents;
+- peer primary agents with competing integration/closure authority inside one objective;
 - rigid numeric topology such as “exactly one registry/router” when multiple distinct authority boundaries can be legitimate;
 - heavy mandatory Evidence/Approval matrices for every task;
 - permanent historical task-branch names, current HEADs, fixed tool versions or closed journey universes in the method;
@@ -313,14 +319,16 @@ KNOWN_ORCHESTRATOR_SELF_VALIDATION_AUTOMATION_REQUIRED = 0
 
 This statement proves consolidation accounting for the textual command package only. It does not claim the target product/repository has no defects, and it does not by itself authorize deletion of retained legacy files.
 
-Before any later deletion of the six retained legacy sources:
+Before any later deletion of retained legacy sources, use the same canonical proof-based cleanup path as any other repository artifact:
 
 ```text
 resolve exact current target branch/ref
 → repository-wide reference/reachability scan
 → classify every consumer/reference
 → prove current orchestrator no longer depends on the source
-→ require explicit human deletion authorization
-→ remove safely
-→ reverify affected repository references
+→ assign artifact disposition under 02
+→ if DELETE_REQUIRED and prerequisites are satisfied: remove safely under 03
+→ reverify affected repository references/behavior under 04
 ```
+
+No extra human deletion confirmation is imposed by this non-executable record for ordinary repository artifacts. A current explicit human retention instruction or a genuinely protected/irreversible action remains governed by `01`.
