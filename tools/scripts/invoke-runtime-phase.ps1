@@ -20,7 +20,8 @@ $CatalogReadbackScript = Join-Path $RepoRoot "tools/scripts/verify-catalog.ps1"
 $AuthenticatedWltSmokeScript = Join-Path $RepoRoot "tools/scripts/finance/smoke-wlt-authenticated-runtime.ps1"
 $DshSmokeDiagnosticScript = Join-Path $RepoRoot "tools/scripts/runtime/diagnose-dsh-smoke-auth-boundary.ps1"
 $LogRoot = if ($env:RUNNER_TEMP) { $env:RUNNER_TEMP } else { [System.IO.Path]::GetTempPath() }
-$LogPath = Join-Path $LogRoot "bthwani-runtime-$Action.log"
+$InvocationId = "{0}-{1}" -f $PID, [Guid]::NewGuid().ToString("N")
+$LogPath = Join-Path $LogRoot "bthwani-runtime-$Action-$InvocationId.log"
 $ProfileList = @($Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 $RuntimeContainerByProfile = @{
   identity  = "bthwani-identity-api-runtime"
@@ -114,15 +115,49 @@ function Write-PreparedRuntimeMarker {
   Write-Host "Prepared runtime marker: $PreparedRuntimeMarkerPath"
 }
 
-function Assert-PreparedRuntimeMarker {
+function Read-PreparedRuntimeMarker {
   if (-not (Test-Path -LiteralPath $PreparedRuntimeMarkerPath -PathType Leaf)) {
-    throw "Prepared runtime marker is missing for $CurrentSourceSha. Run the scoped runtime:up or runtime:bootstrap-dev phase before smoke."
+    return $null
+  }
+  try {
+    return Get-Content -LiteralPath $PreparedRuntimeMarkerPath -Raw | ConvertFrom-Json
+  } catch {
+    return $null
+  }
+}
+
+function Test-PreparedRuntimeCoverage {
+  $marker = Read-PreparedRuntimeMarker
+  if ($null -eq $marker -or [string]$marker.sourceSha -ne $CurrentSourceSha) {
+    return $false
   }
 
-  try {
-    $marker = Get-Content -LiteralPath $PreparedRuntimeMarkerPath -Raw | ConvertFrom-Json
-  } catch {
-    throw "Prepared runtime marker is invalid: $PreparedRuntimeMarkerPath"
+  foreach ($profile in @($ProfileList | Where-Object { $RuntimeContainerByProfile.ContainsKey($_) })) {
+    $markerProperty = $marker.imageIds.PSObject.Properties[$profile]
+    if ($null -eq $markerProperty) {
+      return $false
+    }
+    $containerName = $RuntimeContainerByProfile[$profile]
+    $running = (& docker inspect $containerName --format "{{.State.Running}}" 2>$null).Trim()
+    if ($LASTEXITCODE -ne 0 -or $running -ne "true") {
+      return $false
+    }
+    try {
+      $currentImageId = Get-RuntimeContainerImageId -ContainerName $containerName
+    } catch {
+      return $false
+    }
+    if ($currentImageId -ne [string]$markerProperty.Value) {
+      return $false
+    }
+  }
+  return $true
+}
+
+function Assert-PreparedRuntimeMarker {
+  $marker = Read-PreparedRuntimeMarker
+  if ($null -eq $marker) {
+    throw "Prepared runtime marker is missing or invalid for $CurrentSourceSha. Run the scoped runtime:up or runtime:bootstrap-dev phase before smoke."
   }
   if ([string]$marker.sourceSha -ne $CurrentSourceSha) {
     throw "Prepared runtime source SHA mismatch: expected $CurrentSourceSha, got $($marker.sourceSha)"
@@ -173,7 +208,20 @@ $runtimeParameters = @{
 }
 if ($Force) { $runtimeParameters.Force = $true }
 
+$RuntimePhaseMutex = [System.Threading.Mutex]::new($false, "bthwani-runtime-phase-serialization")
+$RuntimePhaseLockAcquired = $false
+$RuntimePhaseFailureMessage = $null
+
 try {
+  try {
+    $RuntimePhaseLockAcquired = $RuntimePhaseMutex.WaitOne([TimeSpan]::FromMinutes(10))
+  } catch [System.Threading.AbandonedMutexException] {
+    $RuntimePhaseLockAcquired = $true
+  }
+  if (-not $RuntimePhaseLockAcquired) {
+    throw "Timed out waiting for the canonical runtime phase lock. Another runtime mutation has not completed."
+  }
+
   Set-Location -LiteralPath $RepoRoot
 
   if ($Action -eq "smoke" -and $ProfileList -contains "dsh") {
@@ -197,18 +245,22 @@ try {
       }
     }
   } elseif (-not [string]::IsNullOrWhiteSpace($runtimeProfiles)) {
-    $runtimeExitCode = Invoke-RuntimeBasePhase -ScriptPath $phaseRuntimeScript -Parameters $runtimeParameters
-    if ($runtimeExitCode -ne 0 -and (Test-TransientPostgresBootstrapRestart)) {
-      Write-Warning "PostgreSQL bootstrap performed its expected temporary-server restart. Retrying runtime:up once after stabilization."
-      "=== transient-postgres-bootstrap-retry: one retry ===" | Add-Content -LiteralPath $LogPath
-      Start-Sleep -Seconds 5
-      $runtimeExitCode = Invoke-RuntimeBasePhase -ScriptPath $phaseRuntimeScript -Parameters $runtimeParameters -Append
-    }
-    if ($runtimeExitCode -ne 0) {
-      throw "Runtime script action '$Action' failed with exit code $runtimeExitCode"
-    }
-    if ($Action -in @("up", "bootstrap-dev")) {
-      Write-PreparedRuntimeMarker -ProfilesToRecord $ProfileList
+    if ($Action -eq "up" -and -not $Force -and (Test-PreparedRuntimeCoverage)) {
+      "Prepared runtime reuse: PASS sourceSha=$CurrentSourceSha profiles=$Profiles" | Tee-Object -FilePath $LogPath | Out-Host
+    } else {
+      $runtimeExitCode = Invoke-RuntimeBasePhase -ScriptPath $phaseRuntimeScript -Parameters $runtimeParameters
+      if ($runtimeExitCode -ne 0 -and (Test-TransientPostgresBootstrapRestart)) {
+        Write-Warning "PostgreSQL bootstrap performed its expected temporary-server restart. Retrying runtime:up once after stabilization."
+        "=== transient-postgres-bootstrap-retry: one retry ===" | Add-Content -LiteralPath $LogPath
+        Start-Sleep -Seconds 5
+        $runtimeExitCode = Invoke-RuntimeBasePhase -ScriptPath $phaseRuntimeScript -Parameters $runtimeParameters -Append
+      }
+      if ($runtimeExitCode -ne 0) {
+        throw "Runtime script action '$Action' failed with exit code $runtimeExitCode"
+      }
+      if ($Action -in @("up", "bootstrap-dev")) {
+        Write-PreparedRuntimeMarker -ProfilesToRecord $ProfileList
+      }
     }
   } else {
     "Runtime base phase skipped: no non-WLT profiles remain for action '$Action'." | Tee-Object -FilePath $LogPath
@@ -229,7 +281,7 @@ try {
   # media, or catalog pass is permitted here; that would recreate parallel
   # orchestration and conceal which pass produced the final database state.
 } catch {
-  $message = $_.Exception.Message
+  $RuntimePhaseFailureMessage = $_.Exception.Message
 
   if ($Action -eq "smoke" -and $ProfileList -contains "dsh" -and
       (Test-Path -LiteralPath $DshSmokeDiagnosticScript -PathType Leaf)) {
@@ -241,8 +293,15 @@ try {
       ($_ | Format-List * -Force | Out-String) | Add-Content -LiteralPath $LogPath
     }
   }
+} finally {
+  if ($RuntimePhaseLockAcquired) {
+    try { $RuntimePhaseMutex.ReleaseMutex() } catch { }
+  }
+  $RuntimePhaseMutex.Dispose()
+}
 
-  Write-Error "Runtime phase '$Action' failed: $message. Full log: $LogPath"
+if ($null -ne $RuntimePhaseFailureMessage) {
+  Write-Error "Runtime phase '$Action' failed: $RuntimePhaseFailureMessage. Full log: $LogPath" -ErrorAction Continue
   if (Test-Path -LiteralPath $LogPath) {
     Write-Host "--- Runtime $Action final log lines ---"
     Get-Content -LiteralPath $LogPath -Tail 160
