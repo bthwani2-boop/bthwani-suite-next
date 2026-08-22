@@ -84,6 +84,7 @@ func main() {
 	baseRouter := identityhttp.NewRouter(repository)
 	identityhttp.RegisterEmployeeAccessRoutes(baseRouter, repository)
 	identityhttp.RegisterPartnerAccessRoutes(baseRouter, repository)
+	baseRouter = identityhttp.RbacDefinitionBoundary(repository, baseRouter)
 	router := identityhttp.GovernedRefreshBoundary(repository, baseRouter)
 	authRouter := identityhttp.AuthOperatorContextBoundary(repository, router)
 	issuerScopedRouter := identityhttp.ActivationIssuerBoundary(db, authRouter)
