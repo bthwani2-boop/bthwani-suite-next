@@ -1,35 +1,58 @@
-import fs from "node:fs";
+import { fileURLToPath } from "node:url";
 
-function existingNodeCli(environment) {
-  const candidate = environment.npm_execpath;
-  return candidate && fs.existsSync(candidate) ? candidate : undefined;
+const pnpmWindowsBridge = fileURLToPath(new URL("./invoke-pnpm.ps1", import.meta.url));
+const allowedDirectCommands = new Map([
+  ["node", process.execPath],
+  ["git", "git"],
+]);
+
+function normalizeArguments(args) {
+  if (!Array.isArray(args)) {
+    throw new TypeError("package-manager invocation arguments must be an array");
+  }
+  return args.map((arg) => String(arg));
 }
 
-function windowsCommandInvocation(command, args, environment) {
-  return {
-    executable: environment.ComSpec || process.env.ComSpec || "cmd.exe",
-    args: ["/d", "/s", "/c", command, ...args],
-  };
+function encodeArguments(args) {
+  return Buffer.from(JSON.stringify(args), "utf8").toString("base64");
 }
 
-export function resolvePackageManagerInvocation(command, args, environment = process.env) {
-  if (command === "pnpm") {
-    const pnpmCli = existingNodeCli(environment);
-    if (pnpmCli) {
-      return { executable: process.execPath, args: [pnpmCli, ...args] };
-    }
-    if (process.platform === "win32") {
-      return windowsCommandInvocation("pnpm", args, environment);
-    }
-    return { executable: "pnpm", args };
+export function resolvePackageManagerInvocation(
+  command,
+  args,
+  environment = process.env,
+  platform = process.platform,
+) {
+  void environment;
+  const normalizedArgs = normalizeArguments(args);
+
+  if (command === process.execPath) {
+    return { executable: process.execPath, args: normalizedArgs };
   }
 
-  if (command === "npx") {
-    if (process.platform === "win32") {
-      return windowsCommandInvocation("npx", args, environment);
-    }
-    return { executable: "npx", args };
+  const directExecutable = allowedDirectCommands.get(command);
+  if (directExecutable) {
+    return { executable: directExecutable, args: normalizedArgs };
   }
 
-  return { executable: command, args };
+  if (command !== "pnpm") {
+    throw new Error(`Unsupported governed command '${command}'`);
+  }
+
+  if (platform === "win32") {
+    return {
+      executable: "pwsh",
+      args: [
+        "-NoProfile",
+        "-NonInteractive",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        pnpmWindowsBridge,
+        encodeArguments(normalizedArgs),
+      ],
+    };
+  }
+
+  return { executable: "pnpm", args: normalizedArgs };
 }
