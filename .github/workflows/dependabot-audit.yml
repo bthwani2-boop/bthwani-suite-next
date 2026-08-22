@@ -1,0 +1,118 @@
+name: Dependabot State Audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "11 7 * * 1"
+
+permissions:
+  contents: read
+  pull-requests: read
+  security-events: read
+
+concurrency:
+  group: dependabot-state-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Audit Dependabot configuration and findings
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout immutable candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          show-progress: false
+
+      - name: Validate governed Dependabot coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s .github/dependabot.yml
+          for required in \
+            'package-ecosystem: "npm"' \
+            'directory: "/services/dsh/backend"' \
+            'directory: "/services/wlt/backend"' \
+            'directory: "/core/identity/backend"' \
+            'directory: "/core/workforce/backend"' \
+            'directory: "/core/platform-control/backend"' \
+            'directory: "/core/providers/backend"' \
+            'package-ecosystem: "github-actions"'
+          do
+            grep -Fq "${required}" .github/dependabot.yml || { echo "::error::Dependabot coverage missing: ${required}"; exit 1; }
+          done
+
+      - name: Collect Dependabot remote state
+        id: collect
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}/dependabot-evidence"
+          gh api --paginate \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/dependabot/alerts?state=open&per_page=100" \
+            | jq -s 'flatten' > "${RUNNER_TEMP}/dependabot-evidence/open-alerts.json"
+          gh api --paginate \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/pulls?state=open&per_page=100" \
+            | jq -s '[.[][] | select(.user.login == "dependabot[bot]")]' \
+            > "${RUNNER_TEMP}/dependabot-evidence/open-prs.json"
+          cp .github/dependabot.yml "${RUNNER_TEMP}/dependabot-evidence/dependabot.yml"
+
+          critical="$(jq '[.[] | select((.security_advisory.severity // "") == "critical")] | length' "${RUNNER_TEMP}/dependabot-evidence/open-alerts.json")"
+          high="$(jq '[.[] | select((.security_advisory.severity // "") == "high")] | length' "${RUNNER_TEMP}/dependabot-evidence/open-alerts.json")"
+          medium="$(jq '[.[] | select((.security_advisory.severity // "") == "medium")] | length' "${RUNNER_TEMP}/dependabot-evidence/open-alerts.json")"
+          low="$(jq '[.[] | select((.security_advisory.severity // "") == "low")] | length' "${RUNNER_TEMP}/dependabot-evidence/open-alerts.json")"
+          prs="$(jq 'length' "${RUNNER_TEMP}/dependabot-evidence/open-prs.json")"
+          jq -n \
+            --arg sha "${GITHUB_SHA}" \
+            --argjson critical "${critical}" \
+            --argjson high "${high}" \
+            --argjson medium "${medium}" \
+            --argjson low "${low}" \
+            --argjson openPrs "${prs}" \
+            '{schemaVersion:1,candidateSha:$sha,openAlerts:{critical:$critical,high:$high,medium:$medium,low:$low},openDependabotPrs:$openPrs}' \
+            > "${RUNNER_TEMP}/dependabot-evidence/summary.json"
+          {
+            echo "### Dependabot State Audit"
+            echo "- Candidate: \`${GITHUB_SHA}\`"
+            echo "- Critical alerts: \`${critical}\`"
+            echo "- High alerts: \`${high}\`"
+            echo "- Medium alerts: \`${medium}\`"
+            echo "- Low alerts: \`${low}\`"
+            echo "- Open Dependabot PRs: \`${prs}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
+          echo "critical=${critical}" >> "${GITHUB_OUTPUT}"
+          echo "high=${high}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload complete Dependabot evidence
+        id: artifact
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dependabot-evidence-${{ github.sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/dependabot-evidence
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Enforce material Dependabot findings
+        if: ${{ always() }}
+        shell: bash
+        env:
+          CRITICAL: ${{ steps.collect.outputs.critical }}
+          HIGH: ${{ steps.collect.outputs.high }}
+          ARTIFACT: ${{ steps.artifact.outcome }}
+        run: |
+          set -euo pipefail
+          [[ "${ARTIFACT}" == "success" ]] || { echo "::error::Dependabot evidence upload failed"; exit 1; }
+          [[ "${CRITICAL:-0}" == "0" && "${HIGH:-0}" == "0" ]] || {
+            echo "::error::Dependabot has material open alerts: critical=${CRITICAL:-unknown} high=${HIGH:-unknown}"
+            exit 1
+          }
