@@ -1,11 +1,14 @@
 package administration
 
 import (
+	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
+	"sort"
 	"strings"
 	"time"
+
+	"dsh-api/internal/auth"
 )
 
 var (
@@ -21,57 +24,62 @@ var (
 	ErrCanonicalMutationFailed = errors.New("canonical authorization mutation failed")
 )
 
-// Role is the governed DSH authorization role projection. Identity owns the
-// authenticated actor and session, while these permissions own only DSH
-// administration actions after an independently approved assignment.
+// Role is a DSH API view of the complete Identity-owned role definition.
+// Permissions are canonical service/surface/action/scope bindings. Surfaces is
+// derived from those bindings for presentation only and is never persisted as
+// an independent authorization authority in DSH.
 type Role struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Permissions []string  `json:"permissions"`
-	Surfaces    []string  `json:"surfaces"`
-	Active      bool      `json:"active"`
-	Version     int       `json:"version"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID          string            `json:"id"`
+	Name        string            `json:"name"`
+	Description string            `json:"description"`
+	Permissions []auth.Permission `json:"permissions"`
+	Surfaces    []string          `json:"surfaces"`
 }
 
-func ListRoles(db *sql.DB) ([]Role, error) {
-	if db == nil {
-		return nil, ErrInvalid
+func roleFromCanonical(definition auth.RbacRoleDefinition) Role {
+	surfaceSet := make(map[string]struct{}, len(definition.Permissions))
+	for _, permission := range definition.Permissions {
+		if surface := strings.TrimSpace(permission.Surface); surface != "" {
+			surfaceSet[surface] = struct{}{}
+		}
 	}
-	rows, err := db.Query(`
-		SELECT id, name, COALESCE(description,''), permissions, surfaces,
-		       active, version, created_at
-		FROM dsh_admin_roles ORDER BY active DESC, name`)
+	surfaces := make([]string, 0, len(surfaceSet))
+	for surface := range surfaceSet {
+		surfaces = append(surfaces, surface)
+	}
+	sort.Strings(surfaces)
+	permissions := append([]auth.Permission(nil), definition.Permissions...)
+	if permissions == nil {
+		permissions = []auth.Permission{}
+	}
+	return Role{
+		ID:          definition.ID,
+		Name:        definition.Name,
+		Description: definition.Description,
+		Permissions: permissions,
+		Surfaces:    surfaces,
+	}
+}
+
+// ListRoles reads role shells and each complete definition from Identity. DSH
+// no longer reads dsh_admin_roles as a role-definition truth source.
+func ListRoles(ctx context.Context, identityClient *auth.Client) ([]Role, error) {
+	if identityClient == nil {
+		return nil, ErrIdentityUnavailable
+	}
+	shells, err := identityClient.ListRoles(ctx)
 	if err != nil {
-		return nil, err
+		return nil, ErrIdentityUnavailable
 	}
-	defer rows.Close()
-	out := make([]Role, 0)
-	for rows.Next() {
-		var role Role
-		var permissionsJSON, surfacesJSON []byte
-		if err := rows.Scan(
-			&role.ID, &role.Name, &role.Description, &permissionsJSON, &surfacesJSON,
-			&role.Active, &role.Version, &role.CreatedAt,
-		); err != nil {
-			return nil, err
+	out := make([]Role, 0, len(shells))
+	for _, shell := range shells {
+		definition, err := identityClient.GetRoleDefinition(ctx, shell.Name)
+		if err != nil {
+			return nil, ErrIdentityUnavailable
 		}
-		if err := json.Unmarshal(permissionsJSON, &role.Permissions); err != nil {
-			return nil, err
-		}
-		if err := json.Unmarshal(surfacesJSON, &role.Surfaces); err != nil {
-			return nil, err
-		}
-		if role.Permissions == nil {
-			role.Permissions = []string{}
-		}
-		if role.Surfaces == nil {
-			role.Surfaces = []string{}
-		}
-		out = append(out, role)
+		out = append(out, roleFromCanonical(definition))
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
 // AdministrationPermissionCandidates keeps legacy broad permissions working
