@@ -14,9 +14,6 @@ import (
 
 const (
 	dshMigrationServiceName = "dsh"
-	// dsh-1000 is the final migration in the canonical extension manifest (ordinal 271).
-	// Its historical prefix predates dsh-1032, but its manifest ordinal is authoritative.
-	dshLatestMigration      = "dsh-1000_order_delivery_geofence_snapshot.sql"
 	dshReadinessTimeout     = 2 * time.Second
 )
 
@@ -32,11 +29,7 @@ func (s sqlRuntimeReadinessStore) Ready(ctx context.Context) (bool, error) {
 	var ready bool
 	err := s.db.QueryRowContext(ctx, `
 		SELECT
-			EXISTS (
-				SELECT 1 FROM schema_migrations
-				 WHERE service_name = $1 AND migration_id = $2 AND success AND NOT dirty
-			)
-			AND NOT EXISTS (
+			NOT EXISTS (
 				SELECT 1 FROM schema_migrations
 				 WHERE service_name = $1 AND (dirty OR NOT success)
 			)
@@ -45,9 +38,12 @@ func (s sqlRuntimeReadinessStore) Ready(ctx context.Context) (bool, error) {
 			AND to_regclass('public.dsh_wlt_outbox_events') IS NOT NULL
 			AND to_regclass('public.dsh_service_area_versions') IS NOT NULL
 			AND to_regclass('public.dsh_partner_brands') IS NOT NULL
-			AND to_regclass('public.dsh_captain_financial_eligibility') IS NOT NULL`,
+			AND to_regclass('public.dsh_captain_financial_eligibility') IS NOT NULL
+			AND to_regclass('public.dsh_admin_approval_requests') IS NOT NULL
+			AND to_regclass('public.dsh_admin_role_definition_requests') IS NOT NULL
+			AND to_regclass('public.dsh_admin_canonical_mutation_intents') IS NOT NULL
+			AND to_regclass('public.uq_dsh_admin_pending_role_change_by_actor_role') IS NOT NULL`,
 		dshMigrationServiceName,
-		dshLatestMigration,
 	).Scan(&ready)
 	return ready, err
 }
