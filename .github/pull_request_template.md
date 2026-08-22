@@ -46,9 +46,9 @@ Rollback / roll-forward plan: <!-- required when impact warrants it -->
 
 ## Verification
 
-Use affected verification plus evidence-driven risk expansion. Do not check commands that are not applicable merely to satisfy this template.
+Use affected verification plus evidence-driven risk expansion. Do not check commands that are not applicable merely to satisfy this template. Scanner/reviewer evidence must come from the canonical GitHub-hosted authorities for the exact candidate; local CodeQL, Sonar, Semgrep, OpenCodeReview, Gitleaks, OSV, Trivy, workflow-lint, or dependency-analysis output is not repository evidence.
 
-| Evidence scope | Applicable? | Command/run/evidence | Candidate-bound result |
+| Evidence scope | Applicable? | Remote authority/run/evidence | Candidate-bound result |
 |---|---|---|---|
 | static | yes |  |  |
 | product |  |  |  |
@@ -56,6 +56,7 @@ Use affected verification plus evidence-driven risk expansion. Do not check comm
 | visual |  |  |  |
 | qa |  |  |  |
 | security |  |  |  |
+| semantic review |  | OpenCodeReview / Remote Analysis Evidence |  |
 | finance |  |  |  |
 | isolation |  |  |  |
 | governance |  |  |  |
@@ -63,13 +64,15 @@ Use affected verification plus evidence-driven risk expansion. Do not check comm
 | release |  |  |  |
 | production |  |  |  |
 
-Do not commit transient logs, screenshots, generated diagnostics, or evidence packages unless a canonical retention contract explicitly requires a durable artifact.
+Do not commit transient logs, screenshots, generated diagnostics, or evidence packages unless a canonical retention contract explicitly requires a durable artifact. GitHub Actions artifacts, Code Scanning records, SonarQube Cloud records, PR reviews, and the `Remote Analysis Evidence` exact-SHA status are the canonical remote evidence surfaces.
 
 ## Reviews and protected approvals
 
 Required independent/protected approvals: <!-- none or list authority domains -->
 
 Approval/review evidence: <!-- exact candidate-bound references -->
+
+OpenCodeReview and other automated analyzers are evidence/review inputs; they are not independent human or protected approval.
 
 ## Decision
 

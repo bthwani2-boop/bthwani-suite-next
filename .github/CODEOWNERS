@@ -4,10 +4,11 @@
 
 *                                                   @bthwani2-boop
 
-# Governance, agents, skills, guards, and workflows
+# Governance, agents, skills, guards, review policy, and workflows
 AGENTS.md                                           @bthwani2-boop
 GEMINI.md                                           @bthwani2-boop
 .agents/**                                          @bthwani2-boop
+.opencodereview/**                                  @bthwani2-boop
 governance/**                                       @bthwani2-boop
 tools/guards/**                                     @bthwani2-boop
 .github/workflows/**                                @bthwani2-boop

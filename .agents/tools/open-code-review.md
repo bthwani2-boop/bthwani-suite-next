@@ -1,31 +1,49 @@
+# OpenCodeReview Remote Tool Policy
 
-# OpenCodeReview Tool Policy
+## Authority
 
-## Purpose
+OpenCodeReview is a remote semantic-review authority executed only by `.github/workflows/opencodereview.yml` on GitHub-hosted runners. `.opencodereview/rule.json` is the repository review policy consumed by that workflow.
 
-OpenCodeReview (`ocr`) selects a deterministic bounded review scope and resolves project review rules.
-The host agent performs advisory reasoning.
+Agents and IDE extensions are controllers and evidence readers only. They MUST NOT install or execute `ocr` locally, MUST NOT start an OpenCodeReview MCP/CLI process on the workstation, and MUST NOT present a local OpenCodeReview result as repository evidence.
 
-## Use when
+## Automatic execution
 
-- reviewing a dirty workspace, one commit, or a branch range;
-- deterministic inclusion, exclusion, and rule mapping is useful;
-- a bounded pre-review is requested.
+- Pull requests receive exact-head diff review automatically.
+- Development pushes receive diff review unless an open PR already owns that candidate review.
+- The scheduled run performs a full repository semantic scan.
+- Critical and High findings block the OpenCodeReview workflow; all raw JSON, stderr, and normalized summaries are retained as GitHub Actions artifacts.
 
-## Do not use when
+## Remote invocation from ChatGPT, Codex, Claude, or IDE extensions
 
-- no code review is requested;
-- the CLI is unavailable and installation is outside scope;
-- formal product, finance, governance, CI, QA, security, release, risk, or final approval is required;
-- the same author is presenting the result as independent approval.
+Use the governed GitHub remote-command ingress rather than a local shell. Create an issue titled exactly `[remote-command]` whose body is one JSON object.
 
-## Workflow
+Full semantic scan:
 
-1. Pin the exact review subject.
-2. Preview with `.opencodereview/rule.json`.
-3. Record included and excluded paths.
-4. Inspect exact diffs and only the necessary surrounding context.
-5. Report grounded Critical, High, and Medium findings.
-6. Keep registered guards, tests, runtime proof, and independent approval separate.
+```json
+{
+  "schema_version": 2,
+  "command": "opencodereview-full",
+  "target_ref": "c",
+  "expected_sha": "<40-character exact candidate SHA>"
+}
+```
 
-OpenCodeReview owns no approval or repository authority and may not mutate source during review.
+Diff review against a base ref:
+
+```json
+{
+  "schema_version": 2,
+  "command": "opencodereview-diff",
+  "target_ref": "c",
+  "expected_sha": "<40-character exact candidate SHA>",
+  "base_ref": "master"
+}
+```
+
+The ingress validates collaborator permission, exact branch syntax, live SHA equality, command schema, and then dispatches the canonical workflow. The issue is only a remote control envelope; it is not execution authority.
+
+## Evidence read-back
+
+Review the exact-SHA `OpenCodeReview` workflow conclusion, the `opencodereview-<SHA>` artifact, and any PR review posted for the same candidate. Remote Analysis Evidence records the corresponding workflow/artifact metadata so ChatGPT/Codex can correlate semantic review with CodeQL, Semgrep, SonarQube, and the remaining remote authorities.
+
+OpenCodeReview is not independent human approval and does not replace product, finance, security, QA, release, or risk authority.

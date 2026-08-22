@@ -7,6 +7,7 @@ if [[ "${GITHUB_ACTIONS:-}" != "true" ]]; then
 fi
 
 MODE="${1:-governance}"
+SELECTED_TOOL="${2:-all}"
 
 readonly ACTIONLINT_VERSION="v1.7.12"
 readonly PINACT_VERSION="v0.1.2"
@@ -16,8 +17,13 @@ readonly CONFTEST_VERSION="v0.55.0"
 readonly HADOLINT_VERSION="v2.12.0"
 readonly GITLEAKS_VERSION="v8.23.0"
 readonly OSV_SCANNER_VERSION="v2.4.0"
+readonly SEMGREP_VERSION="1.172.0"
 
-echo "Installing locked OSS toolchain binaries for mode: ${MODE}"
+echo "Installing locked OSS toolchain binaries for mode=${MODE} tool=${SELECTED_TOOL}"
+
+matches_tool() {
+  [[ "${SELECTED_TOOL}" == "all" || "${SELECTED_TOOL}" == "$1" ]]
+}
 
 require_go() {
   if ! command -v go >/dev/null 2>&1; then
@@ -34,12 +40,23 @@ install_osv_scanner() {
   export PATH="$HOME/go/bin:$PATH"
 }
 
-install_github_action_go_tools() {
+install_actionlint() {
   require_go
   go install "github.com/rhysd/actionlint/cmd/actionlint@${ACTIONLINT_VERSION}"
+  echo "$HOME/go/bin" >> "$GITHUB_PATH"
+  export PATH="$HOME/go/bin:$PATH"
+}
+
+install_pinact() {
+  require_go
   go install "github.com/suzuki-shunsuke/pinact/cmd/pinact@${PINACT_VERSION}"
   echo "$HOME/go/bin" >> "$GITHUB_PATH"
   export PATH="$HOME/go/bin:$PATH"
+}
+
+install_github_action_go_tools() {
+  install_actionlint
+  install_pinact
 }
 
 install_hadolint() {
@@ -85,27 +102,46 @@ install_trivy() {
   sudo chmod +x /usr/local/bin/trivy
 }
 
+install_zizmor() {
+  python3 -m pip install --user --disable-pip-version-check "zizmor==${ZIZMOR_VERSION}"
+  echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+  export PATH="$HOME/.local/bin:$PATH"
+}
+
+install_semgrep() {
+  local venv="${RUNNER_TEMP}/bthwani-semgrep-${SEMGREP_VERSION}"
+  python3 -m venv "${venv}"
+  "${venv}/bin/python" -m pip install --disable-pip-version-check "semgrep==${SEMGREP_VERSION}"
+  echo "${venv}/bin" >> "$GITHUB_PATH"
+  export PATH="${venv}/bin:$PATH"
+  semgrep --version
+}
+
 if [[ "${MODE}" == "governance" || "${MODE}" == "ci" ]]; then
   sudo apt-get update
-  sudo apt-get install -y shellcheck yamllint python3-pip
+  sudo apt-get install -y shellcheck yamllint python3-pip python3-venv
   install_hadolint
   install_osv_scanner
   install_github_action_go_tools
   install_regal
-  python3 -m pip install --user "zizmor==${ZIZMOR_VERSION}"
-  echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+  install_zizmor
   install_conftest
 fi
 
 if [[ "${MODE}" == "security" ]]; then
   sudo apt-get update
-  sudo apt-get install -y shellcheck yamllint python3-pip
-  install_hadolint
-  install_trivy
-  install_osv_scanner
-  install_gitleaks
-  python3 -m pip install --user "zizmor==${ZIZMOR_VERSION}"
-  echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+  sudo apt-get install -y python3-pip python3-venv
+
+  if matches_tool shellcheck; then sudo apt-get install -y shellcheck; fi
+  if matches_tool yamllint; then sudo apt-get install -y yamllint; fi
+  if matches_tool hadolint; then install_hadolint; fi
+  if matches_tool trivy; then install_trivy; fi
+  if matches_tool osv; then install_osv_scanner; fi
+  if matches_tool gitleaks; then install_gitleaks; fi
+  if matches_tool actionlint; then install_actionlint; fi
+  if matches_tool pinact; then install_pinact; fi
+  if matches_tool zizmor; then install_zizmor; fi
+  if matches_tool semgrep; then install_semgrep; fi
 fi
 
 echo "Locked OSS toolchain binary installation completed."

@@ -28,7 +28,7 @@ const expectedCodeqlCategories = [
 ];
 
 const evidence = {
-  schemaVersion: 2,
+  schemaVersion: 3,
   repository,
   targetSha,
   targetRef,
@@ -38,7 +38,10 @@ const evidence = {
   policyStatus: "BLOCKED",
   policyFailures: [],
   workflows: null,
+  workflowArtifacts: {},
+  auxiliaryRuns: {},
   codeql: null,
+  semgrep: null,
   sonar: null,
   normalizedFindings: [],
   error: null,
@@ -143,6 +146,7 @@ function expectedWorkflows() {
     { name: "CodeQL", path: ".github/workflows/codeql.yml" },
     { name: "SonarQube Cloud", path: ".github/workflows/sonarqube.yml" },
     { name: "Remote Security", path: ".github/workflows/security-remote.yml" },
+    { name: "OpenCodeReview", path: ".github/workflows/opencodereview.yml" },
   ];
 }
 
@@ -192,6 +196,49 @@ async function waitForExactWorkflows() {
   }
 }
 
+async function collectWorkflowArtifacts() {
+  const selected = evidence.workflows?.selected || {};
+  for (const [name, run] of Object.entries(selected)) {
+    const response = await gh(`/actions/runs/${run.id}/artifacts?per_page=100`);
+    const artifacts = Array.isArray(response?.artifacts) ? response.artifacts : [];
+    evidence.workflowArtifacts[name] = artifacts.map((artifact) => ({
+      id: artifact.id,
+      name: artifact.name,
+      sizeInBytes: artifact.size_in_bytes,
+      expired: artifact.expired,
+      createdAt: artifact.created_at,
+      expiresAt: artifact.expires_at,
+      archiveDownloadUrl: artifact.archive_download_url,
+    }));
+  }
+}
+
+async function collectAuxiliaryRuns() {
+  const response = await gh(
+    `/actions/runs?head_sha=${encodeURIComponent(targetSha)}` +
+    `&branch=${encodeURIComponent(targetBranch)}` +
+    "&per_page=100",
+  );
+  const runs = Array.isArray(response?.workflow_runs)
+    ? response.workflow_runs.filter((run) => run.head_sha === targetSha && run.head_branch === targetBranch)
+    : [];
+  for (const name of ["Dependency Review", "BThwani Lockfile Integrity"]) {
+    const run = runs
+      .filter((candidate) => candidate.name === name)
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))[0];
+    if (run) {
+      evidence.auxiliaryRuns[name] = {
+        id: run.id,
+        event: run.event,
+        status: run.status,
+        conclusion: run.conclusion,
+        htmlUrl: run.html_url,
+        createdAt: run.created_at,
+      };
+    }
+  }
+}
+
 async function collectCodeql() {
   const analyses = await ghPaged(`/code-scanning/analyses?ref=${encodeURIComponent(targetRef)}&tool_name=CodeQL`);
   const exactAnalyses = analyses.filter((analysis) => analysis?.commit_sha === targetSha);
@@ -220,6 +267,40 @@ async function collectCodeql() {
     exactAnalyses,
     alerts,
     openInstances,
+  };
+}
+
+function isSemgrepToolName(value) {
+  return String(value || "").toLowerCase().includes("semgrep");
+}
+
+function semgrepAlertIsMaterial(alert) {
+  const securitySeverity = String(alert?.rule?.security_severity_level || "").toLowerCase();
+  const severity = String(alert?.rule?.severity || "").toLowerCase();
+  return ["critical", "high"].includes(securitySeverity) || severity === "error";
+}
+
+async function collectSemgrep() {
+  const deadline = Date.now() + Math.min(waitSeconds, 600) * 1000;
+  let exactAnalyses = [];
+  let allAnalyses = [];
+  while (true) {
+    allAnalyses = await ghPaged(`/code-scanning/analyses?ref=${encodeURIComponent(targetRef)}`);
+    exactAnalyses = allAnalyses.filter((analysis) =>
+      analysis?.commit_sha === targetSha && isSemgrepToolName(analysis?.tool?.name),
+    );
+    if (exactAnalyses.length) break;
+    if (Date.now() >= deadline) fail(`Semgrep has no exact-SHA code-scanning analysis for ${targetSha}`);
+    await new Promise((resolve) => setTimeout(resolve, pollSeconds * 1000));
+  }
+
+  const openAlerts = (await ghPaged(`/code-scanning/alerts?state=open&ref=${encodeURIComponent(targetRef)}`))
+    .filter((alert) => isSemgrepToolName(alert?.tool?.name));
+  const materialOpenAlerts = openAlerts.filter(semgrepAlertIsMaterial);
+  evidence.semgrep = {
+    exactAnalyses,
+    openAlerts,
+    materialOpenAlerts,
   };
 }
 
@@ -265,6 +346,8 @@ async function collectSonar(project) {
 
 function finalizePolicy() {
   const openAlerts = evidence.codeql?.alerts?.open || [];
+  const semgrepAlerts = evidence.semgrep?.openAlerts || [];
+  const materialSemgrepAlerts = evidence.semgrep?.materialOpenAlerts || [];
   const sonarIssues = evidence.sonar?.issues || [];
   const materialIssues = sonarIssues.filter(sonarIssueIsMaterial);
   const hotspots = evidence.sonar?.hotspots || [];
@@ -278,6 +361,13 @@ function finalizePolicy() {
       path: alert?.most_recent_instance?.location?.path || "", line: alert?.most_recent_instance?.location?.start_line ?? null,
       commitSha: alert?.most_recent_instance?.commit_sha || "", message: alert?.rule?.description || "", url: alert?.html_url || "",
       material: true,
+    })),
+    ...semgrepAlerts.map((alert) => ({
+      source: "semgrep", id: String(alert.number), state: alert.state,
+      rule: alert?.rule?.id || "", severity: alert?.rule?.security_severity_level || alert?.rule?.severity || "",
+      path: alert?.most_recent_instance?.location?.path || "", line: alert?.most_recent_instance?.location?.start_line ?? null,
+      commitSha: alert?.most_recent_instance?.commit_sha || "", message: alert?.rule?.description || "", url: alert?.html_url || "",
+      material: semgrepAlertIsMaterial(alert),
     })),
     ...sonarIssues.map((issue) => ({
       source: "sonar", id: issue?.key || "", state: issue?.status || "", rule: issue?.rule || "",
@@ -296,7 +386,7 @@ function finalizePolicy() {
     Object.entries(selectedWorkflows).map(([name, run]) => [name, run?.conclusion || "unknown"]),
   );
 
-  for (const name of ["BThwani Contextual CI", "CodeQL", "Remote Security"]) {
+  for (const name of ["BThwani Contextual CI", "CodeQL", "Remote Security", "OpenCodeReview"]) {
     if (workflowConclusions[name] !== "success") {
       evidence.policyFailures.push(
         `workflow_${name.replace(/[^A-Za-z0-9]+/g, "_").toLowerCase()}=${workflowConclusions[name] || "missing"}`,
@@ -308,7 +398,14 @@ function finalizePolicy() {
     evidence.policyFailures.push(`workflow_sonarqube_cloud=${workflowConclusions["SonarQube Cloud"] || "missing"}`);
   }
 
+  for (const [name, run] of Object.entries(evidence.auxiliaryRuns)) {
+    if (run.status === "completed" && run.conclusion && run.conclusion !== "success" && run.conclusion !== "skipped") {
+      evidence.policyFailures.push(`auxiliary_${name.replace(/[^A-Za-z0-9]+/g, "_").toLowerCase()}=${run.conclusion}`);
+    }
+  }
+
   if (openAlerts.length) evidence.policyFailures.push(`codeql_open_alerts=${openAlerts.length}`);
+  if (materialSemgrepAlerts.length) evidence.policyFailures.push(`semgrep_material_open_alerts=${materialSemgrepAlerts.length}`);
   if (qualityGate !== "OK") evidence.policyFailures.push(`sonar_quality_gate=${qualityGate}`);
   if (materialIssues.length) evidence.policyFailures.push(`sonar_material_issues=${materialIssues.length}`);
   if (unreviewedHotspots.length) evidence.policyFailures.push(`sonar_unreviewed_hotspots=${unreviewedHotspots.length}`);
@@ -320,12 +417,21 @@ function finalizePolicy() {
     defaultBranch,
     evidenceComplete: true,
     workflows: workflowConclusions,
+    workflowArtifacts: Object.fromEntries(
+      Object.entries(evidence.workflowArtifacts).map(([name, artifacts]) => [name, artifacts.map((artifact) => artifact.name)]),
+    ),
+    auxiliaryRuns: evidence.auxiliaryRuns,
     policyStatus: evidence.policyFailures.length ? "FAIL" : "PASS",
     policyFailures: evidence.policyFailures,
     codeql: {
       exactAnalysisCount: evidence.codeql.exactAnalyses.length,
       openAlerts: openAlerts.length,
       totalAlertRecords: Object.values(evidence.codeql.alerts).reduce((count, rows) => count + rows.length, 0),
+    },
+    semgrep: {
+      exactAnalysisCount: evidence.semgrep.exactAnalyses.length,
+      openAlerts: semgrepAlerts.length,
+      materialOpenAlerts: materialSemgrepAlerts.length,
     },
     sonar: {
       revision: evidence.sonar.exactAnalyses[0]?.revision || null,
@@ -344,7 +450,10 @@ async function main() {
   assertInputs();
   const project = readSonarProject();
   await waitForExactWorkflows();
+  await collectWorkflowArtifacts();
+  await collectAuxiliaryRuns();
   await collectCodeql();
+  await collectSemgrep();
   await collectSonar(project);
   finalizePolicy();
   emit(evidence.policyFailures.length ? 1 : 0);
