@@ -1,6 +1,6 @@
 # BThwani Self-Contained Goal-Driven Audit, Inspection, Diagnosis, Analysis & Root-Cause Execution Orchestrator
 
-PACKAGE_REVISION: 9
+PACKAGE_REVISION: 10
 PACKAGE_CLASS: TEXTUAL_EXECUTION_COMMAND_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -429,6 +429,41 @@ premature closure
 If acceleration conflicts with correctness or proof, correctness and fail-closed proof win.
 
 Parallel execution changes scheduling only; it does not weaken any requirement owned by `01`, `02`, `03` or `04`.
+
+## 6.2 Canonical integration-branch closure loop
+
+For project-wide closure or any objective whose success must be integrated back into the repository's canonical integration branch, use that branch as the **audit baseline and integration truth, not as the treatment workspace**. For this repository that branch is normally `master` unless the human explicitly establishes another canonical integration baseline.
+
+```text
+PIN CANONICAL_BASE_HEAD
+→ READ-ONLY PROJECT-WIDE ORIENTATION / AUDIT AS MATERIAL
+→ BUILD / REFRESH ROOT + DEPENDENCY LANDSCAPE
+→ RANK HIGHEST PROVEN ACTIONABLE ROOTS
+→ SELECT ATOMIC_CLOSURE_UNIT
+→ DERIVE SMALLEST COMPLETE WORKING CONE
+→ CREATE SHORT-LIVED CLOSURE BRANCH FROM EXACT CANONICAL_BASE_HEAD
+→ ROOT-CORRECT TREATMENT
+→ MIGRATION / BACKFILL / WRITER-READER-CONSUMER MIGRATION
+→ CANONICAL CUTOVER
+→ LEGACY / DUPLICATE / DEAD / SHADOW-TRUTH CLEANUP
+→ EXACT-CANDIDATE + NEGATIVE-SPACE VERIFICATION
+→ RECONCILE CURRENT CANONICAL HEAD
+→ MERGE ONLY A PROVEN FRESH FINAL CANDIDATE
+→ POST-MERGE VERIFY / REBASELINE CANONICAL HEAD
+→ INVALIDATE STALE EVIDENCE / FINDINGS
+→ REFRESH / RE-RANK ROOT LANDSCAPE
+→ REPEAT UNTIL FINAL CANONICAL CLOSURE IS PROVEN
+```
+
+`ATOMIC_CLOSURE_UNIT` is the smallest coherent root or tightly coupled root set that requires one end-to-end cutover boundary. Do not split it merely by file, service, frontend/backend layer or agent when that would create an intermediate broken state, half migration, compatibility path or parallel authority.
+
+Before merge, re-resolve the canonical integration branch. If it moved materially since `CANONICAL_BASE_HEAD`, reconcile/rebase the closure branch, re-audit the affected intersection, invalidate stale proof and rerun every materially affected gate. A stale candidate may not be merged because its earlier CI or verification was green.
+
+Merge is permitted only for the exact fresh candidate when every applicable closure claim is proven or explicitly `N/A_PROVEN`, all affected writers/readers/consumers and data are migrated, the canonical cutover is complete, negative space is clean, and no known material finding, half migration, unjustified parallel truth or superseded reachable legacy remains inside the closure unit. Delete the temporary closure branch after safe integration when it has no remaining purpose.
+
+After merge, the new canonical HEAD becomes the only integration baseline. Revalidate the affected system truth, invalidate findings/evidence that are `RESOLVED | SUPERSEDED | INVALIDATED`, retain only `STILL_OPEN | N/A_PROVEN` as justified, refresh the root/dependency landscape and select the next highest actionable root. Reuse still-valid evidence incrementally, but preserve global awareness for newly exposed higher roots; do not trust a stale checklist and do not restart an indiscriminate repository scan without evidence that it is required.
+
+Project closure is not "all planned branches merged". Final `CLOSED` requires `04` to prove on the latest canonical integration HEAD that known material roots are exhausted within the effective project objective, Canonical Authorities/Truth are consistent, no material parallel truth/half migration/drift remains, and the final master candidate satisfies all materially applicable end-to-end proof obligations.
 
 ## 7. Audit, inspection, diagnosis and analysis are distinct mandatory operations
 
