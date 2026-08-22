@@ -1,11 +1,11 @@
 # AUDIT_PREPARE — Canonical Authorization Authority End-to-End Closure
 
-**Status:** `READY_FOR_EXECUTION`  
-**Package:** `tools/prompting/bthwani-orchestrator/**` — `PACKAGE_REVISION: 9`  
-**Repository:** `bthwani2-boop/bthwani-suite-next`  
-**Branch:** `c`  
-**Audited target-system HEAD:** `0099b9d574693aadd5fe102d384921c56b252871`  
-**Audit mode:** Target System Read-Only; this plan file is the sole AUDIT_PREPARE write.  
+**Status:** `READY_FOR_EXECUTION`
+**Package:** `tools/prompting/bthwani-orchestrator/**` — `PACKAGE_REVISION: 9`
+**Repository:** `bthwani2-boop/bthwani-suite-next`
+**Branch:** `c`
+**Audited target-system HEAD:** `0099b9d574693aadd5fe102d384921c56b252871`
+**Audit mode:** Target System Read-Only; this plan file is the sole AUDIT_PREPARE write.
 **Primary root:** `RC-AUTH-001`
 
 ## 1. Audit objective and governing method
@@ -41,8 +41,8 @@ Relevant governing evidence includes:
 
 ### RC-AUTH-001 — Authorization ownership and canonical cutover are incomplete across Identity ↔ DSH Administration
 
-**Classification:** Material architectural/semantic/security root cause  
-**Confidence:** High / source-proven on exact audited HEAD  
+**Classification:** Material architectural/semantic/security root cause
+**Confidence:** High / source-proven on exact audited HEAD
 **Treatment order:** Owner first; migrate all writers/readers/consumers; canonical cutover; delete legacy paths.
 
 The system declares Identity the sole roles/permissions owner, but the actual role-definition and enforcement lifecycle does not converge on that owner:
