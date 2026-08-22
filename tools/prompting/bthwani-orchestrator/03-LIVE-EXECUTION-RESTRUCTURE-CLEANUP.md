@@ -36,6 +36,31 @@ STOP THE AFFECTED EXECUTION CONE
 
 Do not silently edit `PLAN_DIR` during `EXECUTE_CLOSE`. A handoff correction is preparation work; it is not treatment of the target system.
 
+### 1.2 Prepared-execution velocity protocol
+
+A prepared `R0/R1` handoff exists specifically to front-load reasoning. Do not spend execution time repeatedly rediscovering what the valid handoff already proved.
+
+At execution start:
+
+```text
+READ + INDEX THE THREE CONTRACTS ONCE
+→ BUILD CURRENT IN-MEMORY ROOT / STEP / DEPENDENCY / WRITE-SET FRONTIER
+→ REVALIDATE HEAD + ONLY MATERIAL HANDOFF ASSUMPTIONS
+→ EXECUTE COHERENT ROOT-CORRECT MUTATION BATCHES
+→ RUN NEAREST AFFECTED PROOF AT COHERENT BOUNDARIES
+→ REUSE STILL-VALID AUDIT EVIDENCE
+→ BROADEN / RE-DIAGNOSE ONLY ON AN INVALIDATION OR NEW HIGHER-ROOT SIGNAL
+→ RUN HEAVY CLAIM-APPROPRIATE FINAL/CUTOVER GATES WHEN REQUIRED
+```
+
+Forbidden execution-time drag without material cause:
+
+`re-reading the entire plan before every file | restarting repository-wide discovery after each edit | rerunning every audit tool after every small mutation | rebuilding a root already proven and still valid | updating plan/status files as progress | serializing independent read-only checks | tiny per-file checkpoints that break one coherent treatment into bookkeeping`.
+
+Use the hierarchy in `01 §14.2` to keep the primary coordinator focused: delegate independent read-only inspection, long-running applicable tools, negative-space searches and verification to subagents when available; continuously consume returned evidence while safe mutation continues. Target writes remain under the coordinator's collision/ref authority.
+
+For `R2`, additional local engineering reasoning is expected, but it must stay inside the settled change cone. For any class, new material evidence—not elapsed time or model uncertainty—is what triggers broad re-diagnosis.
+
 ## 2. Root-correct treatment sequence
 
 For every proven root:
@@ -250,7 +275,21 @@ For every suspicious artifact require a defensible:
 
 `Necessary Purpose + Correct Owner + Real Consumer + Requirement + Proven Value + Correct Placement/Architectural Reason`.
 
-If that justification is absent and safe treatment is proven, simplify, merge, move or delete the artifact at the correct structural level. Directly related cleanup is part of the root treatment and must not be deferred as “later polish”. Static orphan/unused output is evidence, not deletion authority.
+Static orphan/unused output is evidence, not deletion authority **by itself**. Deletion authority is established by the proof/disposition process in `02 §20.2` or by equivalent live proof during direct execution.
+
+Once an ordinary repository artifact inside the authorized working cone is proven `DELETE_REQUIRED`, deletion is mandatory treatment after its recorded prerequisites are satisfied. It does not require a second human confirmation merely because the operation is a file/code deletion; Git is the repository history. The executor may defer/skip it only when new material evidence invalidates the disposition, a recorded prerequisite is not yet satisfied, the artifact is foreign/outside the authorized cone, or a genuinely protected/irreversible platform action under `01` is involved.
+
+```text
+PROVEN DELETE_REQUIRED + PREREQUISITES SATISFIED
+→ DELETE
+→ REPAIR REFERENCES / CONFIG / TESTS / GENERATED CONSUMERS
+→ PROVE ZERO REACHABILITY / ZERO REQUIRED VALUE LOSS
+
+NO-DELETE BIAS ≠ SAFETY.
+UNEXECUTED DELETE_REQUIRED = ROOT/CLEANUP STILL OPEN.
+```
+
+Do not silently downgrade `DELETE_REQUIRED` to `KEEP`, leave a duplicate file “just in case”, rename residue to `legacy/old/archive`, or retain a superseded wrapper as a fallback. If evidence changes, stop/reclassify through the canonical diagnosis path; otherwise execute the deletion. Directly related cleanup is part of root treatment and must not be deferred as “later polish”.
 
 ## 17. Reference integrity after structural change
 
@@ -360,7 +399,11 @@ READ LATEST LIVE TRUTH
 → REPEAT
 ```
 
-The loop continues until all original material findings plus all materially related findings exposed by treatment, migrations, consumers, cleanup, governance impact or durable-truth clarification are `PROVEN_CLOSED` or `NOT_APPLICABLE_WITH_PROOF`. Ending the original list, obtaining a green build/test, or removing the visible symptom is not saturation. Do not repeat the same loop without material progress; repeated related symptoms require upstream re-diagnosis under `02` rather than a patch loop. If a higher root appears, suspend affected lower work immediately. Sunk cost is not execution authority.
+The loop continues until all original material findings plus all materially related findings exposed by treatment, migrations, consumers, cleanup, governance impact or durable-truth clarification are `PROVEN_CLOSED` or `NOT_APPLICABLE_WITH_PROOF`. Ending the original list, obtaining a green build/test, or removing the visible symptom is not saturation.
+
+For a still-valid prepared `R0/R1` handoff, “re-audit/re-diagnose” here means the **smallest affected revalidation capable of detecting invalidation**, not a mandatory restart of the expensive `AUDIT_PREPARE` discovery/tool-saturation pass. Reuse valid evidence and broaden only when the result exposes a new higher root, contradiction, authority change, unexpected blast radius, or failed assumption.
+
+Do not repeat the same loop without material progress; repeated related symptoms require upstream re-diagnosis under `02` rather than a patch loop. If a higher root appears, suspend affected lower work immediately. Sunk cost is not execution authority.
 
 ## 24. Minimum necessary complexity
 
