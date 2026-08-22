@@ -1,13 +1,3 @@
 {
-  "mcpServers": {
-    "sonarqube": {
-      "command": "sonar.exe",
-      "args": [
-        "run",
-        "mcp",
-        "--project",
-        "bthwani2-boop_bthwani-suite-next"
-      ]
-    }
-  }
+  "mcpServers": {}
 }
