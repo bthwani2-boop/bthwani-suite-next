@@ -150,203 +150,71 @@ Do not silence scanners or weaken checks to obtain green; prove false positives 
 
 ## 18. Tool routing and evidence authority
 
-Project tools are **evidence producers, reviewers, remediation mechanisms or evidence aggregators**. They are never Product/System Truth, never orchestration authority and never permission to replace root-correct treatment with a green check.
-
-The tool set is discovered and revalidated from the exact live target. A name listed here defines the intended responsibility boundary; it does not prove that the tool is installed, connected, configured, enabled, current or applicable on a particular candidate.
-
-### 18.1 Core routing law
-
-For every materially applicable assurance concern:
+Tools are evidence/review/remediation controls, never Product/System Truth or orchestration authority.
 
 ```text
-DERIVE ASSURANCE NEED FROM THE PROVEN WORKING CONE
-→ DISCOVER CURRENT CANONICAL TOOL / CONTROL LIVE
-→ PROVE INSTALLATION / CONFIGURATION / TRIGGER / SCOPE AS RELEVANT
-→ BIND EXECUTION TO EXACT CANDIDATE SHA / REF / ARTIFACT
-→ RUN OR READ THE MINIMUM COMPLETE APPLICABLE ASSURANCE SET
-→ CLASSIFY FINDINGS BY MATERIAL EFFECT AND ROOT CAUSE
-→ DEDUPLICATE CROSS-TOOL SYMPTOMS WITHOUT LOSING CORROBORATION
-→ TREAT THE HIGHEST PROVEN ROOT IN THE ACTUAL SYSTEM
-→ RE-RUN ONLY INVALIDATED / APPLICABLE ASSURANCE
-→ READ BACK REMOTE EVIDENCE WHEN THE CLAIM DEPENDS ON REMOTE STATE
-→ CLOSE ONLY FROM FINAL-CANDIDATE EVIDENCE
+ASSURANCE NEED FROM WORKING CONE
+→ DISCOVER LIVE CANONICAL CAPABILITY
+→ PROVE ENABLEMENT + EFFECTIVE SCOPE
+→ RUN/READ MINIMUM COMPLETE APPLICABLE SET ON EXACT CANDIDATE
+→ NORMALIZE FINDINGS
+→ PROVE/RANK ROOTS
+→ FIX ACTUAL OWNER ONCE
+→ RE-RUN ONLY INVALIDATED AUTHORITIES
+→ REMOTE READ-BACK WHEN REQUIRED
+→ CLOSE FROM FINAL-CANDIDATE EVIDENCE
 ```
 
-Do **not** mechanically run every tool on every objective. Completeness means every material assurance concern is covered by its correct authority, not maximum invocation count.
+Do not run every tool blindly. `LISTED ≠ INSTALLED ≠ ENABLED ≠ APPLICABLE`, and `GREEN ≠ CLOSED`.
 
-### 18.2 Canonical responsibility map
+### 18.1 Responsibility map
 
-The expected project control set is routed as follows. Availability and activation must still be proven live before relying on any row.
+| Concern | Canonical capability |
+| --- | --- |
+| Deep/data-flow SAST | CodeQL |
+| Fast/custom/diff SAST | Semgrep Code Remote |
+| Quality/coverage/maintainability | SonarQube Cloud |
+| Secrets | Gitleaks |
+| Dependency CVEs | OSV Scanner |
+| Supply chain/config/container | Trivy |
+| PR dependency admission | GitHub Dependency Review |
+| Lockfile determinism | Lockfile Integrity |
+| GitHub Actions correctness | actionlint |
+| GitHub Actions security | zizmor |
+| Immutable Action pins | pinact |
+| Shell | ShellCheck |
+| Dockerfile | Hadolint |
+| YAML | yamllint |
+| Semantic/architecture review | OpenCodeReview |
+| Dependency maintenance | Dependabot |
+| CodeQL stale metadata | CodeQL Metadata Hygiene |
+| Final remote evidence | Remote Analysis Evidence |
 
-| Assurance concern | Canonical tool/control | Intended responsibility | Authority class |
-| --- | --- | --- | --- |
-| Deep source security / data-flow SAST | CodeQL | Deep supported-language and GitHub Actions security analysis | Blocking security evidence when applicable |
-| Fast/custom/diff-aware SAST | Semgrep Code Remote | Fast project-specific static analysis and PR/diff findings | **Conditional capability; not active evidence until remote integration is proven live** |
-| Code quality / maintainability / coverage | SonarQube Cloud | Quality, reliability, maintainability, coverage and configured security analysis | Blocking remote quality evidence when applicable |
-| Secrets | Gitleaks | Secret detection | Canonical secret-scanning evidence |
-| Dependency vulnerability intelligence | OSV Scanner | Known vulnerable dependency detection | Canonical dependency-vulnerability evidence |
-| Supply-chain / repository / container/config security | Trivy | Complementary supply-chain, dependency, image/config security where configured | Complementary security evidence |
-| New dependency admission on PR | GitHub Dependency Review | Reject newly introduced vulnerable dependencies under governed severity policy | PR admission gate |
-| Dependency determinism | Lockfile Integrity | Frozen-lockfile reproducibility and rejection of source mutation during verification | Determinism/integrity gate |
-| GitHub Actions correctness | actionlint | Workflow syntax and semantic correctness | Workflow correctness evidence |
-| GitHub Actions security | zizmor | Workflow trust-boundary/security analysis | Workflow security evidence |
-| Immutable GitHub Actions references | pinact | Verify governed action SHA pinning | Supply-chain integrity evidence |
-| Shell correctness | ShellCheck | Shell script/static correctness | Language-specific quality evidence |
-| Dockerfile quality | Hadolint | Dockerfile correctness/quality | Container-build quality evidence |
-| YAML correctness | yamllint | YAML formatting/structural quality under project policy | Configuration quality evidence |
-| Semantic/deep review | OpenCodeReview | Rule-guided semantic, architectural, cross-boundary and negative-space review | Review evidence; **not a remote CI gate unless proven live as one** |
-| Automated dependency maintenance | Dependabot | Propose dependency updates/remediation | Asynchronous remediation mechanism, not proof of safety |
-| CodeQL metadata hygiene | CodeQL Metadata Hygiene | Retire proven stale/obsolete CodeQL analysis metadata and preserve canonical analysis identity | Hygiene control subordinate to CodeQL, not a scanner |
-| Final remote read-back | Remote Analysis Evidence | Aggregate/read back declared remote analysis for an exact live candidate and reject stale/superseded evidence | Evidence aggregator/gate, not a scanner |
+Semgrep Code Remote is conditional until its official remote integration and exact-candidate result path are proven live. OpenCodeReview is semantic review unless a remote gate is separately proven. Dependabot is remediation, CodeQL Metadata Hygiene is subordinate hygiene, and Remote Analysis Evidence is an aggregator/read-back gate—not scanners.
 
-A capability may be replaced only after proving the replacement covers its required responsibility with equal or stronger assurance and after all callers, checks, rules, secrets, required statuses and evidence consumers are migrated.
+### 18.2 Applicability and evidence
 
-### 18.3 Applicability router
+Route by changed semantics + proven blast radius, not filename alone. Typical sets:
 
-Route from changed semantics and proven blast radius, not filename alone. File classes are evidence hints, never scope ceilings.
+- source behavior → CodeQL + SonarQube + semantic review + proven/applicable Semgrep;
+- GitHub Actions → actionlint + zizmor + pinact + applicable CodeQL Actions;
+- dependencies/lockfile → OSV + applicable Trivy + Dependency Review on PR + Lockfile Integrity;
+- Docker/runtime/config → applicable Hadolint/Trivy/language-specific checks + required runtime proof.
 
-Typical routing includes:
+Material tool evidence must establish enough provenance for its claim: `tool/control + responsibility + effective scope + exact SHA/ref/artifact + relevant config/rules provenance + run/check/artifact identity + result/findings + freshness + suppression state`.
 
-- application/backend/frontend source change → supported CodeQL scope + SonarQube scope + semantic review; Semgrep Code only when its live remote capability is proven and applicable;
-- GitHub Actions change → actionlint + zizmor + pinact + applicable CodeQL Actions analysis + semantic trust-boundary review;
-- dependency manifest/lockfile change → OSV Scanner + Trivy where applicable + GitHub Dependency Review on PR + Lockfile Integrity; Dependabot is maintenance context, not verification;
-- secret-sensitive/config/auth change → Gitleaks plus the relevant code/security authorities and adversarial authorization/isolation proof;
-- Docker/container change → Hadolint + Trivy plus runtime/security verification materially required by the change;
-- shell change → ShellCheck plus any security/runtime review implied by what the script can mutate or expose;
-- YAML/config change → yamllint plus the domain-specific authority for the configuration being changed;
-- architecture, authority, contracts, migrations, finance, lifecycle or cross-surface semantic change → OpenCodeReview may provide review evidence, but executable tests/runtime/data/contract proof remain mandatory;
-- final closure that depends on remote CodeQL/Sonar or other declared remote authorities → perform exact-candidate remote read-back through the canonical evidence path rather than trusting an earlier job summary.
+Superseded, stale, differently scoped, failed or unproven execution is not PASS.
 
-When several tools overlap, preserve only **proven complementary value**. One root may explain findings from multiple tools; fix it once at the correct owner and re-run every affected authority.
+### 18.3 Findings, suppression and lifecycle
 
-### 18.4 Evidence contract and provenance
+`MULTIPLE TOOL FINDINGS ≠ MULTIPLE ROOTS.` Validate/falsify, correlate and deduplicate symptoms, prove distinct material roots, fix each actual owner once, then rerun every invalidated authority.
 
-Material tool evidence used for a decision or closure must establish enough provenance to answer, as applicable:
+Suppression/ignore/exclusion is fail-closed: never silence a material finding merely to obtain green. A material suppression requires a proven false positive or authorized intentional condition, the narrowest exact scope, correct owner/rationale, no safer root-correct treatment, no hidden affected path or weakened authority, and an expiry/removal condition when temporary.
 
-```text
-tool/control identity
-assurance responsibility
-installation/integration/configuration state
-exact source SHA/ref or immutable artifact identity
-rules/query/profile/config revision or discoverable provenance
-trigger/event and effective analyzed scope
-run/check/status/artifact identifier or reproducible local invocation provenance
-result and material findings
-suppression/exclusion state
-collection/read-back time and freshness
-whether the evidence is blocking, advisory, review, remediation or aggregation
-```
-
-Evidence for a superseded SHA, stale configuration, different branch, incomplete scope, failed collector or unknown rule set cannot prove the final candidate.
-
-Cross-tool agreement raises confidence but does not transform correlated tools into independent Product Truth. Cross-tool disagreement is a finding to diagnose, not a reason to choose the greener result.
-
-### 18.5 Finding normalization and root treatment
-
-Do not create separate execution tracks merely because different scanners reported the same defect.
-
-Normalize materially relevant findings by affected authority/asset, semantic defect, exploit/failure condition, consumer impact and likely causal root. Then:
-
-```text
-RAW FINDINGS
-→ VALIDATE / FALSIFY
-→ GROUP CORRELATED SYMPTOMS
-→ IDENTIFY DISTINCT MATERIAL ROOTS
-→ RANK ROOTS BY SYSTEMIC LEVERAGE / RISK
-→ FIX ACTUAL OWNER
-→ MIGRATE / CUT OVER / CLEAN WHEN REQUIRED
-→ RE-RUN INVALIDATED AUTHORITIES
-→ VERIFY NEGATIVE SPACE
-```
-
-A tool-specific workaround is invalid when the underlying defect remains reachable.
-
-### 18.6 Suppression, ignore and exclusion are fail-closed
-
-No finding may be silenced merely to make CI green.
-
-Any material suppression/ignore/exclusion must prove all applicable items:
-
-- the finding is a demonstrated false positive or an explicitly authorized intentional condition;
-- the scope is the smallest exact scope that excludes only the proven condition;
-- the correct owner and rationale are identifiable;
-- no safer root-correct treatment is reasonably available now;
-- no affected writer/reader/consumer/security path is hidden by the suppression;
-- the suppression does not weaken another canonical authority;
-- expiry/removal trigger or durable justification exists when the condition is not permanent;
-- final verification proves the suppression itself did not create material negative space.
-
-Broad path exclusions, severity downgrades, disabled rules, `continue-on-error`, ignored exit codes or non-blocking conversions require the same proof when they can alter closure semantics.
-
-### 18.7 Activation, onboarding and retirement
-
-A listed tool becomes an active evidence authority only after its real integration is proven end-to-end: correct account/repository ownership where external, least-required permissions, canonical configuration, intended event/scope routing, exact-candidate execution, discoverable results and correct blocking/advisory semantics.
-
-Specific invariants:
-
-- **Semgrep Code Remote** is a planned/conditional SAST capability until its official remote integration, repository access, scans and result path are proven. Do not claim Semgrep coverage before that proof.
-- **Semgrep Secrets** and **Semgrep Supply Chain** are not default canonical authorities while Gitleaks and OSV/Trivy already own those responsibilities; adopting them requires a proven material coverage gap and a no-duplicate-authority migration design.
-- **OpenCodeReview** remains semantic review tooling unless a separate live remote gate is explicitly proven; its rule output cannot substitute for tests, runtime or scanner evidence.
-- **Dependabot** proposes remediation; an update PR still passes the same applicable verification authorities as any other change.
-- **CodeQL Metadata Hygiene** may mutate only proven obsolete CodeQL metadata under its live-target safety rules; it cannot redefine analysis results.
-- **Remote Analysis Evidence** may aggregate only evidence it can prove for the exact target. It cannot manufacture missing evidence or convert unavailable/failed upstream analysis into success.
-
-Retiring or replacing a tool requires complete consumer cleanup as applicable:
-
-`workflow/config/rules → secrets/variables/app installation → required checks/statuses → scripts/wrappers → documentation/governance references → evidence collectors → stale metadata/artifacts → all callers/consumers`.
-
-Do not leave inert configuration or a registered external app as shadow authority after cutover.
-
-### 18.8 Efficiency and scheduling
-
-Use the **smallest complete assurance set** for the candidate.
-
-Prefer, where semantics permit:
-
-- cheap deterministic checks early;
-- independent remote/deep analyses in maximum-safe parallelism;
-- affected routing before full-workspace execution, with full scans for default-branch/scheduled/high-risk cases where governed;
-- push-vs-PR deduplication when one event already owns equivalent verification;
-- reuse of valid immutable exact-candidate evidence instead of ceremonial re-execution;
-- one evidence read-back layer instead of several collectors re-querying the same remote truth;
-- no local duplication of a remote-only authority merely to obtain the same result sooner.
-
-Performance optimization may change ordering, routing, caching or fan-out only when assurance strength is preserved or improved.
-
-### 18.9 Tool failure and external blockers
-
-Distinguish:
-
-```text
-FINDING = tool successfully proved a material problem
-TOOL_FAILURE = applicable tool could not produce trustworthy evidence
-NOT_APPLICABLE = material responsibility genuinely does not apply
-EXTERNAL_BLOCKER = required external authority/evidence is unavailable and cannot be repaired from the current execution context
-STALE_EVIDENCE = evidence exists but does not bind to the final candidate/configuration
-```
-
-Never convert `TOOL_FAILURE`, `EXTERNAL_BLOCKER` or `STALE_EVIDENCE` into a pass. They block only the dependent claim/cone; independent proven work continues under the governing lifecycle.
-
-### 18.10 Addition of new tools
-
-Do not add another scanner/reviewer/automation because it is popular or because more tools appear safer.
-
-Before adoption prove:
-
-```text
-MATERIAL COVERAGE GAP
-→ EXISTING AUTHORITIES CANNOT ADEQUATELY CLOSE IT
-→ CANDIDATE TOOL PROVIDES UNIQUE OR MATERIALly STRONGER ASSURANCE
-→ OVERLAP / COST / FALSE-POSITIVE / PERMISSION / DATA-EXPOSURE IMPACT UNDERSTOOD
-→ CANONICAL RESPONSIBILITY BOUNDARY DEFINED
-→ INTEGRATION + FAILURE + RETIREMENT MODEL DEFINED
-→ END-TO-END PILOT PROVES VALUE
-```
-
-If unique value is not proven, do not add the tool. Prefer strengthening or correctly routing an existing authority.
+Adding, replacing or retiring a tool requires proof of unique/materially stronger assurance, overlap/cost/permissions/data-exposure impact, one responsibility boundary, integration/failure model, migration of checks/config/secrets/apps/callers/evidence consumers, and final negative-space verification. Do not leave inert configuration, stale metadata or external app registration as shadow authority.
 
 ## 19. Closure for this focus
 
-Close only when canonical data/contract/runtime/security/finance truth is consistent through materially affected consumers, migration/cutover and failure/recovery are proven, runtime provenance matches the claim, obsolete authority is removed, verification strength matches risk, every materially applicable tool/control has trustworthy final-candidate evidence or a legitimate dependent-cone blocker is reported, unresolved tool findings have been traced to and treated at their real roots, suppressions satisfy the fail-closed proof above, remote read-back is complete when required, and any engineering-control-path root has comparable before/after evidence with preserved assurance and no material cost shift.
+Close only when canonical data/contract/runtime/security/finance truth is consistent through materially affected consumers, migration/cutover and failure/recovery are proven, runtime provenance matches the claim, obsolete authority is removed, verification strength matches risk, all materially applicable assurance has trustworthy final-candidate evidence or a legitimate dependent-cone blocker is reported, unresolved tool findings are treated at their real roots, suppressions satisfy the fail-closed law, remote read-back is complete when required, and any engineering-control-path root has comparable before/after evidence with preserved assurance and no material cost shift.
 
 Package independence/self-validation rules remain governed solely by `00-ORCHESTRATOR.md`.
