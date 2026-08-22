@@ -11,7 +11,7 @@ jobs:
     name: Validate and dispatch canonical remote command
     if: ${{ github.event.issue.title == '[remote-command]' && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 130
     permissions:
       actions: write
       contents: read
@@ -23,6 +23,7 @@ jobs:
       command: ${{ steps.request.outputs.command }}
       target_ref: ${{ steps.request.outputs.target_ref }}
       expected_sha: ${{ steps.request.outputs.expected_sha }}
+      base_sha: ${{ steps.request.outputs.base_sha }}
       workflow: ${{ steps.route.outputs.workflow }}
       run_id: ${{ steps.run.outputs.run_id }}
       run_url: ${{ steps.run.outputs.run_url }}
@@ -37,73 +38,65 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          permission="$(gh api \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/collaborators/${REQUEST_ACTOR}/permission" \
-            --jq '.permission')"
-          case "${permission}" in
-            admin|maintain|write) ;;
-            *)
-              echo "::error::remote commands require write, maintain, or admin repository permission"
-              exit 1
-              ;;
-          esac
+          permission="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/collaborators/${REQUEST_ACTOR}/permission" --jq '.permission')"
+          case "${permission}" in admin|maintain|write) ;; *) echo "::error::remote commands require write, maintain, or admin repository permission"; exit 1 ;; esac
 
           printf '%s' "${REQUEST_BODY}" > "${RUNNER_TEMP}/remote-command.json"
           jq -e '
             type == "object" and
-            .schema_version == 1 and
+            (.schema_version == 1 or .schema_version == 2) and
             (.command | type == "string" and length > 0) and
             (.target_ref | type == "string" and length > 0) and
             (.expected_sha | type == "string" and test("^[0-9a-fA-F]{40}$")) and
             ((.journey // "") | type == "string") and
-            ((keys - ["command", "expected_sha", "journey", "schema_version", "target_ref"]) | length == 0)
+            ((.base_ref // "") | type == "string") and
+            ((.model // "") | type == "string") and
+            ((keys - ["base_ref","command","expected_sha","journey","model","schema_version","target_ref"]) | length == 0)
           ' "${RUNNER_TEMP}/remote-command.json" >/dev/null
 
           command="$(jq -r '.command' "${RUNNER_TEMP}/remote-command.json")"
           target_ref="$(jq -r '.target_ref' "${RUNNER_TEMP}/remote-command.json")"
           expected_sha="$(jq -r '.expected_sha' "${RUNNER_TEMP}/remote-command.json")"
           journey="$(jq -r '.journey // ""' "${RUNNER_TEMP}/remote-command.json")"
+          base_ref="$(jq -r '.base_ref // ""' "${RUNNER_TEMP}/remote-command.json")"
+          model="$(jq -r '.model // ""' "${RUNNER_TEMP}/remote-command.json")"
 
           case "${command}" in
-            ci-affected|ci-full|ci-runtime|ci-journey|codeql-full|codeql-hygiene|sonar-full|security-full|lockfile-integrity|remote-evidence) ;;
-            *)
-              echo "::error::unsupported remote command: ${command}"
-              exit 1
-              ;;
+            ci-affected|ci-full|ci-runtime|ci-journey|codeql-full|codeql-hygiene|codeql-hygiene-audit|codeql-hygiene-repair|sonar-full|security-full|gitleaks|osv|trivy|actionlint|zizmor|pinact|shellcheck|hadolint|yamllint|dependency-review|lockfile-integrity|opencodereview|semgrep-full|semgrep-diff|dependabot-audit|remote-evidence|toolchain-full) ;;
+            *) echo "::error::unsupported remote command: ${command}"; exit 1 ;;
           esac
 
           git check-ref-format --branch "${target_ref}" >/dev/null
-          if [[ "${command}" == "ci-journey" && -z "${journey}" ]]; then
-            echo "::error::ci-journey requires a non-empty journey"
-            exit 1
-          fi
-          default_branch="$(gh api \
-            -H "X-GitHub-Api-Version: 2022-11-28" \
-            "/repos/${GITHUB_REPOSITORY}" \
-            --jq '.default_branch')"
-
-          if [[ "${command}" == "codeql-hygiene" && "${target_ref}" != "${default_branch}" ]]; then
-            echo "::error::codeql-hygiene is restricted to the repository default branch ${default_branch}"
-            exit 1
-          fi
-
+          [[ "${command}" != "ci-journey" || -n "${journey}" ]] || { echo "::error::ci-journey requires journey"; exit 1; }
+          default_branch="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}" --jq '.default_branch')"
           encoded_ref="$(jq -rn --arg value "${target_ref}" '$value|@uri')"
-          actual_sha="$(gh api \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/branches/${encoded_ref}" \
-            --jq '.commit.sha')"
-          if [[ "${actual_sha}" != "${expected_sha}" ]]; then
-            echo "::error::target moved: ${target_ref} expected=${expected_sha} actual=${actual_sha}"
+          actual_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/branches/${encoded_ref}" --jq '.commit.sha')"
+          [[ "${actual_sha}" == "${expected_sha}" ]] || { echo "::error::target moved: ${target_ref} expected=${expected_sha} actual=${actual_sha}"; exit 1; }
+
+          if [[ -z "${base_ref}" ]]; then
+            if [[ "${target_ref}" == "${default_branch}" ]]; then
+              base_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/commits/${expected_sha}" --jq '.parents[0].sha // .sha')"
+            else
+              base_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/commits/${default_branch}" --jq '.sha')"
+            fi
+          else
+            base_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/commits/${base_ref}" --jq '.sha')"
+          fi
+          [[ "${base_sha}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::comparison base did not resolve to a full SHA"; exit 1; }
+
+          if [[ "${command}" == "codeql-hygiene" ]]; then command=codeql-hygiene-audit; fi
+          if [[ "${command}" == "codeql-hygiene-repair" && "${target_ref}" != "${default_branch}" ]]; then
+            echo "::error::CodeQL hygiene repair is restricted to ${default_branch}; use codeql-hygiene-audit on ${target_ref}"
             exit 1
           fi
-
+          model="${model:-openai/gpt-4o}"
           {
             echo "command=${command}"
             echo "target_ref=${target_ref}"
             echo "expected_sha=${expected_sha}"
+            echo "base_sha=${base_sha}"
             echo "journey=${journey}"
+            echo "model=${model}"
           } >> "${GITHUB_OUTPUT}"
 
       - name: Resolve canonical workflow
@@ -116,13 +109,35 @@ jobs:
           case "${COMMAND}" in
             ci-affected|ci-full|ci-runtime|ci-journey) workflow="ci.yml" ;;
             codeql-full) workflow="codeql.yml" ;;
-            codeql-hygiene) workflow="codeql-hygiene.yml" ;;
+            codeql-hygiene-audit|codeql-hygiene-repair) workflow="codeql-hygiene.yml" ;;
             sonar-full) workflow="sonarqube.yml" ;;
-            security-full) workflow="security-remote.yml" ;;
+            security-full|gitleaks|osv|trivy|actionlint|zizmor|pinact|shellcheck|hadolint|yamllint) workflow="security-remote.yml" ;;
+            dependency-review) workflow="dependency-review.yml" ;;
             lockfile-integrity) workflow="lockfile-integrity.yml" ;;
+            opencodereview) workflow="open-code-review.yml" ;;
+            semgrep-full|semgrep-diff) workflow="semgrep.yml" ;;
+            dependabot-audit) workflow="dependabot-audit.yml" ;;
             remote-evidence) workflow="remote-analysis-evidence.yml" ;;
+            toolchain-full) workflow="remote-toolchain.yml" ;;
           esac
           echo "workflow=${workflow}" >> "${GITHUB_OUTPUT}"
+
+      - name: Wait for conflicting branch run to settle
+        shell: bash
+        env:
+          WORKFLOW: ${{ steps.route.outputs.workflow }}
+          TARGET_REF: ${{ steps.request.outputs.target_ref }}
+        run: |
+          set -euo pipefail
+          encoded_ref="$(jq -rn --arg value "${TARGET_REF}" '$value|@uri')"
+          for _ in $(seq 1 720); do
+            active="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW}/runs?branch=${encoded_ref}&per_page=100" \
+              --jq '[.workflow_runs[] | select(.status != "completed" and (.event == "push" or .event == "workflow_dispatch"))] | length')"
+            [[ "${active}" == "0" ]] && exit 0
+            sleep 10
+          done
+          echo "::error::timed out waiting for conflicting ${WORKFLOW} run"
+          exit 1
 
       - name: Snapshot existing dispatch runs
         shell: bash
@@ -132,9 +147,7 @@ jobs:
         run: |
           set -euo pipefail
           encoded_ref="$(jq -rn --arg value "${TARGET_REF}" '$value|@uri')"
-          gh api \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW}/runs?branch=${encoded_ref}&event=workflow_dispatch&per_page=100" \
+          gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW}/runs?branch=${encoded_ref}&event=workflow_dispatch&per_page=100" \
             --jq '.workflow_runs[].id' > "${RUNNER_TEMP}/before-run-ids.txt"
 
       - name: Dispatch existing canonical workflow
@@ -143,37 +156,32 @@ jobs:
           COMMAND: ${{ steps.request.outputs.command }}
           TARGET_REF: ${{ steps.request.outputs.target_ref }}
           EXPECTED_SHA: ${{ steps.request.outputs.expected_sha }}
+          BASE_SHA: ${{ steps.request.outputs.base_sha }}
           JOURNEY: ${{ steps.request.outputs.journey }}
+          MODEL: ${{ steps.request.outputs.model }}
           WORKFLOW: ${{ steps.route.outputs.workflow }}
         run: |
           set -euo pipefail
-          payload=""
           case "${COMMAND}" in
-            ci-affected)
-              payload="$(jq -n --arg ref "${TARGET_REF}" '{ref:$ref,inputs:{mode:"affected",journey:"",runtime_proof:false}}')"
-              ;;
-            ci-full)
-              payload="$(jq -n --arg ref "${TARGET_REF}" '{ref:$ref,inputs:{mode:"full",journey:"",runtime_proof:false}}')"
-              ;;
-            ci-runtime)
-              payload="$(jq -n --arg ref "${TARGET_REF}" '{ref:$ref,inputs:{mode:"full",journey:"",runtime_proof:true}}')"
-              ;;
-            ci-journey)
-              payload="$(jq -n --arg ref "${TARGET_REF}" --arg journey "${JOURNEY}" '{ref:$ref,inputs:{mode:"affected",journey:$journey,runtime_proof:false}}')"
-              ;;
-            remote-evidence)
-              payload="$(jq -n --arg ref "${TARGET_REF}" --arg sha "${EXPECTED_SHA}" '{ref:$ref,inputs:{target_ref:$ref,target_sha:$sha}}')"
-              ;;
-            *)
-              payload="$(jq -n --arg ref "${TARGET_REF}" '{ref:$ref}')"
-              ;;
+            ci-affected) payload="$(jq -n --arg ref "${TARGET_REF}" '{ref:$ref,inputs:{mode:"affected",journey:"",runtime_proof:false}}')" ;;
+            ci-full) payload="$(jq -n --arg ref "${TARGET_REF}" '{ref:$ref,inputs:{mode:"full",journey:"",runtime_proof:false}}')" ;;
+            ci-runtime) payload="$(jq -n --arg ref "${TARGET_REF}" '{ref:$ref,inputs:{mode:"full",journey:"",runtime_proof:true}}')" ;;
+            ci-journey) payload="$(jq -n --arg ref "${TARGET_REF}" --arg journey "${JOURNEY}" '{ref:$ref,inputs:{mode:"affected",journey:$journey,runtime_proof:false}}')" ;;
+            codeql-hygiene-audit) payload="$(jq -n --arg ref "${TARGET_REF}" '{ref:$ref,inputs:{mode:"audit"}}')" ;;
+            codeql-hygiene-repair) payload="$(jq -n --arg ref "${TARGET_REF}" '{ref:$ref,inputs:{mode:"repair"}}')" ;;
+            security-full) payload="$(jq -n --arg ref "${TARGET_REF}" '{ref:$ref,inputs:{tool:"all"}}')" ;;
+            gitleaks|osv|trivy|actionlint|zizmor|pinact|shellcheck|hadolint|yamllint)
+              payload="$(jq -n --arg ref "${TARGET_REF}" --arg tool "${COMMAND}" '{ref:$ref,inputs:{tool:$tool}}')" ;;
+            dependency-review) payload="$(jq -n --arg ref "${TARGET_REF}" --arg base "${BASE_SHA}" --arg head "${EXPECTED_SHA}" '{ref:$ref,inputs:{base_ref:$base,head_ref:$head}}')" ;;
+            opencodereview) payload="$(jq -n --arg ref "${TARGET_REF}" --arg base "${BASE_SHA}" --arg head "${EXPECTED_SHA}" --arg model "${MODEL}" '{ref:$ref,inputs:{base_ref:$base,head_sha:$head,model:$model}}')" ;;
+            semgrep-full) payload="$(jq -n --arg ref "${TARGET_REF}" '{ref:$ref,inputs:{mode:"full",base_ref:""}}')" ;;
+            semgrep-diff) payload="$(jq -n --arg ref "${TARGET_REF}" --arg base "${BASE_SHA}" '{ref:$ref,inputs:{mode:"diff",base_ref:$base}}')" ;;
+            remote-evidence) payload="$(jq -n --arg ref "${TARGET_REF}" --arg sha "${EXPECTED_SHA}" --arg base "${BASE_SHA}" '{ref:$ref,inputs:{target_ref:$ref,target_sha:$sha,base_ref:$base}}')" ;;
+            toolchain-full) payload="$(jq -n --arg ref "${TARGET_REF}" --arg sha "${EXPECTED_SHA}" --arg base "${BASE_SHA}" '{ref:$ref,inputs:{target_ref:$ref,target_sha:$sha,base_ref:$base,include_runtime:true}}')" ;;
+            *) payload="$(jq -n --arg ref "${TARGET_REF}" '{ref:$ref}')" ;;
           esac
-          printf '%s' "${payload}" | gh api \
-            --method POST \
-            -H 'Accept: application/vnd.github+json' \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW}/dispatches" \
-            --input - >/dev/null
+          printf '%s' "${payload}" | gh api --method POST -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW}/dispatches" --input - >/dev/null
 
       - name: Correlate dispatched run
         id: run
@@ -186,36 +194,19 @@ jobs:
           set -euo pipefail
           encoded_ref="$(jq -rn --arg value "${TARGET_REF}" '$value|@uri')"
           run_id=""
-          for _ in $(seq 1 60); do
+          for _ in $(seq 1 90); do
             while IFS= read -r candidate_id; do
               [[ -n "${candidate_id}" ]] || continue
-              if grep -qx "${candidate_id}" "${RUNNER_TEMP}/before-run-ids.txt"; then
-                continue
-              fi
-              candidate_sha="$(gh api \
-                -H 'X-GitHub-Api-Version: 2022-11-28' \
-                "/repos/${GITHUB_REPOSITORY}/actions/runs/${candidate_id}" \
-                --jq '.head_sha')"
-              if [[ "${candidate_sha}" == "${EXPECTED_SHA}" ]]; then
-                run_id="${candidate_id}"
-                break
-              fi
-            done < <(gh api \
-              -H 'X-GitHub-Api-Version: 2022-11-28' \
-              "/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW}/runs?branch=${encoded_ref}&event=workflow_dispatch&per_page=20" \
-              --jq '.workflow_runs[].id')
+              grep -qx "${candidate_id}" "${RUNNER_TEMP}/before-run-ids.txt" && continue
+              candidate_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/runs/${candidate_id}" --jq '.head_sha')"
+              if [[ "${candidate_sha}" == "${EXPECTED_SHA}" ]]; then run_id="${candidate_id}"; break; fi
+            done < <(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW}/runs?branch=${encoded_ref}&event=workflow_dispatch&per_page=30" --jq '.workflow_runs[].id')
             [[ -n "${run_id}" ]] && break
             sleep 5
           done
-          if [[ -z "${run_id}" ]]; then
-            echo "::error::could not correlate the newly dispatched ${WORKFLOW} run"
-            exit 1
-          fi
-          run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${run_id}"
-          {
-            echo "run_id=${run_id}"
-            echo "run_url=${run_url}"
-          } >> "${GITHUB_OUTPUT}"
+          [[ -n "${run_id}" ]] || { echo "::error::could not correlate the newly dispatched ${WORKFLOW} run"; exit 1; }
+          echo "run_id=${run_id}" >> "${GITHUB_OUTPUT}"
+          echo "run_url=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${run_id}" >> "${GITHUB_OUTPUT}"
 
       - name: Publish accepted request
         shell: bash
@@ -225,15 +216,13 @@ jobs:
           EXPECTED_SHA: ${{ steps.request.outputs.expected_sha }}
           RUN_URL: ${{ steps.run.outputs.run_url }}
         run: |
-          set -euo pipefail
-          gh issue comment "${ISSUE_NUMBER}" --repo "${GITHUB_REPOSITORY}" \
-            --body "Accepted remote command \`${COMMAND}\` for \`${TARGET_REF}@${EXPECTED_SHA}\`. Canonical run: ${RUN_URL}"
+          gh issue comment "${ISSUE_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body "Accepted remote command \`${COMMAND}\` for \`${TARGET_REF}@${EXPECTED_SHA}\`. Canonical run: ${RUN_URL}"
 
   wait:
     name: Wait for canonical remote result
     needs: [dispatch]
     runs-on: ubuntu-24.04
-    timeout-minutes: 190
+    timeout-minutes: 360
     permissions:
       actions: read
       issues: write
@@ -251,24 +240,15 @@ jobs:
         run: |
           set -euo pipefail
           conclusion=""
-          for _ in $(seq 1 1080); do
-            status="$(gh api \
-              -H 'X-GitHub-Api-Version: 2022-11-28' \
-              "/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" \
-              --jq '.status')"
+          for _ in $(seq 1 2100); do
+            status="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.status')"
             if [[ "${status}" == "completed" ]]; then
-              conclusion="$(gh api \
-                -H 'X-GitHub-Api-Version: 2022-11-28' \
-                "/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" \
-                --jq '.conclusion')"
+              conclusion="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" --jq '.conclusion')"
               break
             fi
             sleep 10
           done
-          if [[ -z "${conclusion}" ]]; then
-            echo "::error::timed out waiting for run ${RUN_ID}"
-            exit 1
-          fi
+          [[ -n "${conclusion}" ]] || { echo "::error::timed out waiting for run ${RUN_ID}"; exit 1; }
           echo "conclusion=${conclusion}" >> "${GITHUB_OUTPUT}"
 
       - name: Publish remote result
@@ -279,11 +259,8 @@ jobs:
         run: |
           set -euo pipefail
           conclusion="${CONCLUSION:-failed-before-completion}"
-          gh issue comment "${ISSUE_NUMBER}" --repo "${GITHUB_REPOSITORY}" \
-            --body "Remote command \`${COMMAND}\` for \`${EXPECTED_SHA}\` completed with **${conclusion}**. Canonical run: ${RUN_URL}"
-          if [[ "${conclusion}" == "success" ]]; then
-            gh issue close "${ISSUE_NUMBER}" --repo "${GITHUB_REPOSITORY}" --reason completed
-          fi
+          gh issue comment "${ISSUE_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body "Remote command \`${COMMAND}\` for \`${EXPECTED_SHA}\` completed with **${conclusion}**. Canonical run: ${RUN_URL}"
+          if [[ "${conclusion}" == "success" ]]; then gh issue close "${ISSUE_NUMBER}" --repo "${GITHUB_REPOSITORY}" --reason completed; fi
 
       - name: Enforce canonical run result
         if: ${{ always() }}
