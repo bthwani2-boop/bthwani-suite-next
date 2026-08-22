@@ -9,6 +9,18 @@ on:
   schedule:
     - cron: "41 4 * * 1"
   workflow_dispatch:
+    inputs:
+      profile:
+        description: Remote security execution profile
+        required: true
+        default: full
+        type: choice
+        options: [full, tool]
+      tool:
+        description: Analyzer for profile=tool
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -36,18 +48,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          skip=false
+          skip="false"
           if [[ "${EVENT_NAME}" == "push" && "${BRANCH}" != "${DEFAULT_BRANCH}" ]]; then
             open_pr_count="$(gh api --method GET \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
+              -H 'X-GitHub-Api-Version: 2026-03-10' \
               "/repos/${GITHUB_REPOSITORY}/pulls" \
               -f state=open \
               -f head="${GITHUB_REPOSITORY_OWNER}:${BRANCH}" \
               -f per_page=1 \
               --jq 'length')"
-            if [[ "${open_pr_count}" != "0" ]]; then
-              skip=true
-            fi
+            [[ "${open_pr_count}" == "0" ]] || skip="true"
           fi
           echo "skip_duplicate_push=${skip}" >> "${GITHUB_OUTPUT}"
 
@@ -71,6 +81,23 @@ jobs:
         with:
           node-version: "24.17.0"
 
+      - name: Validate requested analyzer
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        env:
+          PROFILE: ${{ inputs.profile }}
+          TOOL: ${{ inputs.tool }}
+        run: |
+          set -euo pipefail
+          if [[ "${PROFILE}" == "full" ]]; then
+            [[ -z "${TOOL}" ]] || { echo "::error::tool must be empty when profile=full"; exit 1; }
+          else
+            [[ "${TOOL}" =~ ^(gitleaks|osv|trivy|actionlint|zizmor|pinact|shellcheck|hadolint|yamllint|regal|conftest)$ ]] || {
+              echo "::error::unsupported Remote Security tool '${TOOL}'"
+              exit 1
+            }
+          fi
+
       - name: Enforce remote-only Sonar and CodeQL authority
         run: node tools/guards/remote-analysis-authority-gate.mjs
 
@@ -80,10 +107,13 @@ jobs:
 
   security:
     name: Remote security and workflow hygiene
-    needs: [ownership]
-    if: ${{ needs.ownership.outputs.skip_duplicate_push != 'true' }}
+    needs: [ownership, authority]
+    if: ${{ needs.ownership.outputs.skip_duplicate_push != 'true' && needs.authority.result == 'success' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 70
+    env:
+      PROFILE: ${{ github.event_name == 'workflow_dispatch' && inputs.profile || 'full' }}
+      TOOL: ${{ inputs.tool }}
     steps:
       - name: Checkout immutable candidate with history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
@@ -104,37 +134,256 @@ jobs:
           go-version-file: services/dsh/backend/go.mod
           cache: false
 
-      - name: Install locked remote security toolchain
+      - name: Prepare evidence directory
         shell: bash
-        run: bash tools/scripts/install-oss-toolchain-binaries.sh security
+        run: mkdir -p .diagnostics/security
+
+      - name: Install locked remote security toolchain
+        id: install
+        continue-on-error: true
+        shell: bash
+        run: |
+          selected="all"
+          if [[ "${PROFILE}" == "tool" ]]; then selected="${TOOL}"; fi
+          bash tools/scripts/install-oss-toolchain-binaries.sh security "${selected}"
 
       - name: Run Gitleaks
+        id: gitleaks
+        if: ${{ always() && (env.PROFILE == 'full' || env.TOOL == 'gitleaks') }}
+        continue-on-error: true
         shell: bash
-        run: gitleaks detect --gitleaks-ignore-path .gitleaksignore --log-opts="HEAD" --source . --no-banner --redact --verbose
+        run: |
+          set -o pipefail
+          gitleaks detect \
+            --gitleaks-ignore-path .gitleaksignore \
+            --log-opts="HEAD" \
+            --source . \
+            --no-banner \
+            --redact \
+            --verbose \
+            --report-format json \
+            --report-path .diagnostics/security/gitleaks.json \
+            2>&1 | tee .diagnostics/security/gitleaks.log
 
       - name: Run OSV Scanner
-        run: node tools/scripts/run-osv-scanner.mjs
+        id: osv
+        if: ${{ always() && (env.PROFILE == 'full' || env.TOOL == 'osv') }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/scripts/run-osv-scanner.mjs 2>&1 | tee .diagnostics/security/osv.log
 
       - name: Run Trivy
-        run: node tools/scripts/run-trivy.mjs
+        id: trivy
+        if: ${{ always() && (env.PROFILE == 'full' || env.TOOL == 'trivy') }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/scripts/run-trivy.mjs 2>&1 | tee .diagnostics/security/trivy.log
 
       - name: Run actionlint
-        run: node tools/scripts/run-actionlint.mjs
+        id: actionlint
+        if: ${{ always() && (env.PROFILE == 'full' || env.TOOL == 'actionlint') }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/scripts/run-actionlint.mjs 2>&1 | tee .diagnostics/security/actionlint.log
 
       - name: Run zizmor
-        run: node tools/scripts/run-zizmor.mjs
+        id: zizmor
+        if: ${{ always() && (env.PROFILE == 'full' || env.TOOL == 'zizmor') }}
+        continue-on-error: true
+        shell: bash
+        env:
+          BTHWANI_ZIZMOR_REPORT: .diagnostics/security/zizmor.json
+        run: |
+          set -o pipefail
+          node tools/scripts/run-zizmor.mjs 2>&1 | tee .diagnostics/security/zizmor.log
 
-      - name: Verify action pins
-        run: node tools/scripts/run-pinact.mjs --verify
+      - name: Verify action pins with pinact
+        id: pinact
+        if: ${{ always() && (env.PROFILE == 'full' || env.TOOL == 'pinact') }}
+        continue-on-error: true
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          set -o pipefail
+          pinact run -fix=false -no-api 2>&1 | tee .diagnostics/security/pinact.log
 
       - name: Run ShellCheck
-        run: node tools/scripts/run-shellcheck.mjs
+        id: shellcheck
+        if: ${{ always() && (env.PROFILE == 'full' || env.TOOL == 'shellcheck') }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/scripts/run-shellcheck.mjs 2>&1 | tee .diagnostics/security/shellcheck.log
 
       - name: Run Hadolint
-        run: node tools/scripts/run-hadolint.mjs
+        id: hadolint
+        if: ${{ always() && (env.PROFILE == 'full' || env.TOOL == 'hadolint') }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/scripts/run-hadolint.mjs 2>&1 | tee .diagnostics/security/hadolint.log
 
       - name: Run yamllint
-        run: node tools/scripts/run-yamllint.mjs
+        id: yamllint
+        if: ${{ always() && (env.PROFILE == 'full' || env.TOOL == 'yamllint') }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/scripts/run-yamllint.mjs 2>&1 | tee .diagnostics/security/yamllint.log
+
+      - name: Lint Rego policies with Regal
+        id: regal
+        if: ${{ always() && (env.PROFILE == 'full' || env.TOOL == 'regal') }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          regal lint --format json policy \
+            > .diagnostics/security/regal.json \
+            2> >(tee .diagnostics/security/regal.stderr.log >&2)
+
+      - name: Verify and enforce configuration policy with Conftest
+        id: conftest
+        if: ${{ always() && (env.PROFILE == 'full' || env.TOOL == 'conftest') }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          set -o pipefail
+          conftest verify --policy policy/docker 2>&1 | tee .diagnostics/security/conftest-verify.log
+          verify_status=${PIPESTATUS[0]}
+          conftest test \
+            --policy policy/docker \
+            --output json \
+            infra/docker/compose.runtime.yml \
+            infra/docker/compose.financial-simulators.yml \
+            infra/docker/compose.observability.yml \
+            > .diagnostics/security/conftest.json
+          test_status=$?
+          set -e
+          [[ "${verify_status}" -eq 0 && "${test_status}" -eq 0 ]]
+
+      - name: Record normalized analyzer outcomes
+        if: ${{ always() }}
+        shell: bash
+        env:
+          INSTALL: ${{ steps.install.outcome }}
+          GITLEAKS: ${{ steps.gitleaks.outcome }}
+          OSV: ${{ steps.osv.outcome }}
+          TRIVY: ${{ steps.trivy.outcome }}
+          ACTIONLINT: ${{ steps.actionlint.outcome }}
+          ZIZMOR: ${{ steps.zizmor.outcome }}
+          PINACT: ${{ steps.pinact.outcome }}
+          SHELLCHECK: ${{ steps.shellcheck.outcome }}
+          HADOLINT: ${{ steps.hadolint.outcome }}
+          YAMLLINT: ${{ steps.yamllint.outcome }}
+          REGAL: ${{ steps.regal.outcome }}
+          CONFTEST: ${{ steps.conftest.outcome }}
+        run: |
+          jq -n \
+            --arg candidate "${GITHUB_SHA}" \
+            --arg profile "${PROFILE}" \
+            --arg tool "${TOOL}" \
+            --arg install "${INSTALL}" \
+            --arg gitleaks "${GITLEAKS}" \
+            --arg osv "${OSV}" \
+            --arg trivy "${TRIVY}" \
+            --arg actionlint "${ACTIONLINT}" \
+            --arg zizmor "${ZIZMOR}" \
+            --arg pinact "${PINACT}" \
+            --arg shellcheck "${SHELLCHECK}" \
+            --arg hadolint "${HADOLINT}" \
+            --arg yamllint "${YAMLLINT}" \
+            --arg regal "${REGAL}" \
+            --arg conftest "${CONFTEST}" \
+            '{
+              schemaVersion: 2,
+              candidateSha: $candidate,
+              profile: $profile,
+              tool: $tool,
+              install: $install,
+              analyzers: {
+                gitleaks: $gitleaks,
+                osv: $osv,
+                trivy: $trivy,
+                actionlint: $actionlint,
+                zizmor: $zizmor,
+                pinact: $pinact,
+                shellcheck: $shellcheck,
+                hadolint: $hadolint,
+                yamllint: $yamllint,
+                regal: $regal,
+                conftest: $conftest
+              }
+            }' > .diagnostics/security/outcomes.json
+          cat .diagnostics/security/outcomes.json >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload complete remote-security evidence
+        id: artifact
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: remote-security-${{ github.sha }}-${{ github.run_id }}
+          path: .diagnostics/security/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Enforce all applicable analyzer results
+        if: ${{ always() }}
+        shell: bash
+        env:
+          INSTALL: ${{ steps.install.outcome }}
+          GITLEAKS: ${{ steps.gitleaks.outcome }}
+          OSV: ${{ steps.osv.outcome }}
+          TRIVY: ${{ steps.trivy.outcome }}
+          ACTIONLINT: ${{ steps.actionlint.outcome }}
+          ZIZMOR: ${{ steps.zizmor.outcome }}
+          PINACT: ${{ steps.pinact.outcome }}
+          SHELLCHECK: ${{ steps.shellcheck.outcome }}
+          HADOLINT: ${{ steps.hadolint.outcome }}
+          YAMLLINT: ${{ steps.yamllint.outcome }}
+          REGAL: ${{ steps.regal.outcome }}
+          CONFTEST: ${{ steps.conftest.outcome }}
+          ARTIFACT: ${{ steps.artifact.outcome }}
+        run: |
+          set -euo pipefail
+          failures=()
+          [[ "${INSTALL}" == "success" ]] || failures+=("install=${INSTALL}")
+          check() {
+            local name="$1"
+            local outcome="$2"
+            if [[ "${PROFILE}" == "full" || "${TOOL}" == "${name}" ]]; then
+              [[ "${outcome}" == "success" ]] || failures+=("${name}=${outcome}")
+            fi
+          }
+          check gitleaks "${GITLEAKS}"
+          check osv "${OSV}"
+          check trivy "${TRIVY}"
+          check actionlint "${ACTIONLINT}"
+          check zizmor "${ZIZMOR}"
+          check pinact "${PINACT}"
+          check shellcheck "${SHELLCHECK}"
+          check hadolint "${HADOLINT}"
+          check yamllint "${YAMLLINT}"
+          check regal "${REGAL}"
+          check conftest "${CONFTEST}"
+          [[ "${ARTIFACT}" == "success" ]] || failures+=("artifact=${ARTIFACT}")
+          if ((${#failures[@]})); then
+            printf '::error title=Remote security failed::%s\n' "$(IFS=,; echo "${failures[*]}")"
+            exit 1
+          fi
+          echo "All applicable remote security analyzers passed."
 
   result:
     name: Remote security result
@@ -153,22 +402,19 @@ jobs:
         run: |
           set -euo pipefail
           [[ "${OWNERSHIP_RESULT}" == "success" ]] || {
-            echo "::error title=Remote security ownership failed::ownership:${OWNERSHIP_RESULT}"
+            echo "::error::remote security ownership=${OWNERSHIP_RESULT}"
             exit 1
           }
-
           if [[ "${SKIP_DUPLICATE_PUSH}" == "true" ]]; then
             echo "development push skipped because an open PR owns security verification"
             exit 0
           fi
-
-          failures=()
-          [[ "${AUTHORITY_RESULT}" == "success" ]] || failures+=("authority:${AUTHORITY_RESULT}")
-          [[ "${SECURITY_RESULT}" == "success" ]] || failures+=("security:${SECURITY_RESULT}")
-
-          if [[ "${#failures[@]}" -ne 0 ]]; then
-            echo "::error title=Remote security failed::$(IFS=,; echo "${failures[*]}")"
+          [[ "${AUTHORITY_RESULT}" == "success" ]] || {
+            echo "::error::remote security authority=${AUTHORITY_RESULT}"
             exit 1
-          fi
-
+          }
+          [[ "${SECURITY_RESULT}" == "success" ]] || {
+            echo "::error::remote security analyzers=${SECURITY_RESULT}"
+            exit 1
+          }
           echo "All remote security gates passed."
