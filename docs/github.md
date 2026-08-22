@@ -1,61 +1,103 @@
 # GitHub and CI Operations
 
-This document is operational guidance. It does not override `governance/GOVERNANCE.md`, `governance/policies/delivery.md`, or the machine contracts under `governance/github/` and `governance/contracts/`.
+This document is operational guidance. It does not override `AGENTS.md`, `governance/GOVERNANCE.md`, or `governance/policies/delivery.md`.
 
-## Sources of truth
+## Live authority model
 
-- Workflow inventory and lifecycle: `governance/github/workflow-registry.json`.
-- Desired `master` protection configuration: `governance/github/master-protection.ruleset.json`.
-- Full-verification routing: `governance/contracts/full-verification-policy.json`.
-- Direct-work write rules: `governance/authority/direct-work-branch-execution-policy.json`.
-- Required evidence/approval semantics: `governance/policies/delivery.md` and `governance/contracts/sdlc/`.
-- Actual branch protection, rulesets, required checks, workflow outcomes, reviews, and approval freshness: query GitHub live for the exact target branch and candidate SHA.
+Do not maintain a second workflow, guard, agent, or SDLC registry as repository truth. The repository intentionally has no workflow registry. Executable authority is the current implementation plus live GitHub state on the exact candidate SHA.
 
-A desired ruleset file does not prove GitHub is enforcing it. No tracked snapshot is current repository-platform truth. Claims about live protection, required checks, same-commit CI, or independent review require current GitHub readback.
+The primary GitHub execution authorities are:
+
+- contextual routing and aggregate CI result: `.github/workflows/ci.yml`;
+- reusable Node diagnostics and verification: `.github/workflows/ci-node-diagnostics.yml` and `.github/workflows/ci-node-verification.yml`;
+- reusable backend verification: `.github/workflows/ci-backends.yml`;
+- reusable runtime proof: `.github/workflows/ci-runtime.yml`;
+- canonical CodeQL scanner authority: `.github/workflows/codeql.yml`;
+- CodeQL metadata maintenance after successful canonical master analysis: `.github/workflows/codeql-hygiene.yml`;
+- SonarQube Cloud scan: `.github/workflows/sonarqube.yml`;
+- remote security scans: `.github/workflows/security-remote.yml`;
+- dependency delta review: `.github/workflows/dependency-review.yml`;
+- frozen lockfile verification: `.github/workflows/lockfile-integrity.yml`;
+- exact-master remote CodeQL/Sonar read-back: `.github/workflows/remote-analysis-evidence.yml`;
+- authenticated SHA-pinned command ingress: `.github/workflows/remote-command.yml`.
+
+This list describes executable entry points; it is not a registry and must not be copied into another machine-authority layer.
+
+Actual branch protection, rulesets, required checks, workflow outcomes, reviews, code-scanning state, and approval freshness must be read from GitHub live for the exact target branch and candidate SHA.
 
 ## Repository flow
 
-Use the exact user-named target branch/ref and current remote SHA. The current task and direct-work policy decide whether work is written directly, committed/pushed, or routed through a PR. Do not invent a mandatory branch/PR workflow from this guide.
+Before every material write:
 
-For every write batch:
-
-1. resolve the current target SHA;
+1. resolve the current user-named target ref and live SHA;
 2. reconcile unexpected branch movement;
 3. write only the authorized logical change;
-4. never force/reset newer work;
-5. re-resolve after the final write.
+4. never force/reset newer unrelated work;
+5. re-resolve after the write and before any merge or closure claim.
 
-`master` is the protected release target by policy intent. Whether that protection is currently enforced must be verified live before relying on it.
+`master` is the release target. A tracked file cannot prove that GitHub currently enforces a particular ruleset or required-check set.
 
-## CI
+## Remote analysis and security
 
-CI is read-only with respect to tracked source and must evaluate the exact candidate it claims to prove. Use `governance/github/workflow-registry.json` rather than a hardcoded historical workflow list in documentation.
+Canonical static/security analysis is remote-owned:
 
-Rules:
+- CodeQL executes through GitHub Code Scanning on GitHub-hosted runners;
+- SonarQube uses SonarQube Cloud and the hosted MCP endpoint for IDE/agent read access;
+- repository security gates execute on GitHub-hosted runners;
+- local CodeQL, SonarQube server/CLI/MCP, Trivy, OSV Scanner, or Gitleaks execution is not a prerequisite for repository closure.
 
-- run affected verification plus risk-based expansion;
-- full verification is controlled by `governance/contracts/full-verification-policy.json` and current impact;
-- skipped jobs are acceptable only when routing proves non-applicability;
-- cancelled, superseded, or older-SHA runs are not PASS for the current candidate;
-- a workflow result proves only its declared evidence scope;
-- required-check names and GitHub enforcement are verified from current GitHub state, not copied from an old document.
+`codeql-hygiene.yml` is metadata maintenance, not a second scanner authority. It may retire only analyses produced by obsolete `.github/workflows/codeql.yml` analysis keys, and only when the triggering successful CodeQL run is still the exact live `master` SHA. It never dismisses current findings and never deletes history from a still-canonical analysis key.
 
-## Reviews and approvals
+## Remote command ingress
 
-`CODEOWNERS` routes review requests but does not itself prove independent approval. Logical approval domains are defined by `governance/agents/agent-registry.json`, `governance/authority/single-owner-mode.json`, and `governance/contracts/sdlc/roles-and-authority.yaml`.
+`remote-command.yml` is a thin control ingress, not another CI implementation. It accepts only an allowlisted JSON envelope from a repository writer/maintainer/admin, verifies the exact branch SHA, dispatches an existing canonical workflow, correlates the resulting run, and reports the result back to the request issue.
 
-An execution agent cannot self-grant protected approvals. `CLOSED_WITH_EVIDENCE` requires all applicable candidate-bound evidence scopes and required approvals under the canonical decision vocabulary.
+The issue title is exactly:
 
-## Current enforcement status
+```text
+[remote-command]
+```
 
-Never persist a “current enforcement” snapshot in governance and treat it as live truth. For a consequential claim, resolve the exact branch/candidate and read GitHub directly. If desired repository configuration differs from live enforcement, report the drift explicitly and keep the desired configuration file as intent only.
+The body is JSON:
 
-## Change procedure
+```json
+{
+  "schema_version": 1,
+  "command": "ci-full",
+  "target_ref": "master",
+  "expected_sha": "<40-character live SHA>"
+}
+```
 
-When changing workflows, rulesets, CODEOWNERS, or CI routing:
+Supported command intents are intentionally bounded to contextual CI, runtime proof, CodeQL, CodeQL metadata hygiene, SonarQube Cloud, remote security, lockfile integrity, and exact-master remote evidence read-back. No arbitrary shell command is accepted.
 
-1. update the authoritative machine contract/configuration;
-2. update executable consumers/guards in the same logical change;
-3. run applicable workflow-policy/static validation;
-4. verify live GitHub state when the change concerns enforcement;
-5. record only candidate-bound evidence outside durable governance unless a canonical machine contract explicitly requires persistence.
+Dependency Review remains pull-request-bound because its meaningful authority is the dependency delta between PR base and head.
+
+## Remote evidence
+
+`remote-analysis-evidence.yml` is read-back only. It does not run a second CodeQL or Sonar scanner. After canonical master CI completes, it reads CodeQL and Sonar evidence for the exact live master SHA, emits a short-lived artifact, and publishes the `Remote Analysis Evidence` commit status whose target URL points to the exact evidence run.
+
+This status provides a stable bridge for connected GitHub clients:
+
+```text
+exact master SHA
+  -> Remote Analysis Evidence status
+  -> exact GitHub Actions run
+  -> candidate-bound artifact/read-back
+```
+
+Logs, screenshots, reports, and evidence artifacts are candidate-bound operational evidence. Do not commit them as durable Product/System Truth.
+
+## Verification and change procedure
+
+When changing CI/security authority:
+
+1. pin the exact source SHA;
+2. inspect all callers, required checks, and live rulesets before changing ownership or check names;
+3. migrate all consumers in the same logical change;
+4. remove obsolete duplicate execution only after live protection dependencies are proven safe;
+5. use targeted local compiler/test/static checks only where they do not violate remote-analysis ownership;
+6. let GitHub-hosted workflows provide canonical security/runtime evidence;
+7. verify the exact final candidate and live GitHub result before merge or closure.
+
+Skipped jobs are acceptable only when routing proves non-applicability. Cancelled, superseded, or older-SHA runs are not PASS for a current candidate.
