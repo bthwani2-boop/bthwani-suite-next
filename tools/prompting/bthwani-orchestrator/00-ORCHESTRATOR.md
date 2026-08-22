@@ -1,12 +1,12 @@
 # BThwani Self-Contained Goal-Driven Audit, Inspection, Diagnosis, Analysis & Root-Cause Execution Orchestrator
 
-PACKAGE_REVISION: 12
+PACKAGE_REVISION: 13
 PACKAGE_CLASS: TEXTUAL_EXECUTION_COMMAND_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
 EXTERNAL_PROMPT_DEPENDENCIES: NONE
 SELF_VALIDATION_AUTOMATION: FORBIDDEN
-DEFAULT_EXECUTION: LIVE_END_TO_END
+DEFAULT_PHASE: EXECUTE_CLOSE
 DEFAULT_PLAN_ARTIFACTS: PHASE_CONTROLLED
 DEFAULT_ORCHESTRATOR_MUTABILITY: READ_ONLY
 
@@ -47,8 +47,8 @@ Project tooling and external research may be used only as evidence or execution 
 
 The package has exactly these semantic owners:
 
-1. `00-ORCHESTRATOR.md` — governing law, project-frame invariant, progressive-governance invariant, goal-driven audit/execution lifecycle, invocation, phase semantics, hierarchy invariant, independence, protection and valid stop states.
-2. `01-SCOPE-AUTHORITY-RULES.md` — truth/authority, project-frame reconstruction, objective/working-scope/focus routing, phase/mode/plan-directory authority, handoff topology, executor boundary, human-only branch authority, capability saturation, hierarchical coordinator/subagent authority, exclusions, concurrency and longevity.
+1. `00-ORCHESTRATOR.md` — governing law, project-frame invariant, progressive-governance invariant, goal-driven audit/execution lifecycle, invocation, phase semantics, root-closure continuity, hierarchy invariant, independence, protection and valid stop states.
+2. `01-SCOPE-AUTHORITY-RULES.md` — truth/authority, project-frame reconstruction, objective/working-scope/focus routing, phase/scope/plan-directory authority, handoff topology, executor boundary, human-only branch authority, capability saturation, hierarchical coordinator/subagent authority, exclusions, concurrency and longevity.
 3. `02-DIAGNOSE-ROOT-CAUSE.md` — detailed audit/inspection/diagnosis/analysis protocol through project orientation, coverage, journeys, findings, decisions, root proof/ranking, durable-truth discovery, project-consistency target modeling, `AUDIT_PREPARE` handoff construction, artifact/deletion disposition and execution readiness.
 4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — actual treatment, prepared-handoff consumption, execution-velocity discipline, reconstruction, migration, cutover, continuity, mandatory proven cleanup/deletion, simplification, progressive governance clarification and mutation discipline.
 5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — task-specific verification/acceptance/closure contract semantics, exact-candidate evidence, deletion/reachability closure, project-consistency proof, durable project-memory closure, optional temporary-plan-directory retirement, repository-platform truth when required, review provenance, post-treatment re-audit/re-inspection/re-diagnosis/re-analysis and fail-closed closure.
@@ -87,9 +87,8 @@ Use:
 REPOSITORY: <owner/repo>
 BRANCH: <exact existing branch/ref>
 OBJECTIVE: <material outcome to audit/inspect/diagnose/analyze/fix/restructure/clean/close; discovery itself may be the objective>
-PHASE: <AUDIT_PREPARE | EXECUTE_CLOSE | AUTO>
+PHASE: <AUDIT_PREPARE | EXECUTE_CLOSE>
 PLAN_DIR: <AUTO | NONE | exact temporary objective-plan directory>
-MODE: <AUTO | DIAGNOSE | EXECUTE_END_TO_END | EXECUTE_PROJECT_CLOSURE>
 PRIMARY_FOCUS: <AUTO | optional explicit focus>
 SCOPE: <AUTO | repository/domain/service/surface/feature/journey/path/semantic scope>
 RESEARCH: <AUTO | INTERNAL_ONLY | EXTERNAL_ALLOWED>
@@ -99,8 +98,7 @@ EXECUTION_LOCATION: <DIRECT_ON_TARGET | ISOLATED_WORKSPACE when explicitly human
 Defaults when omitted:
 
 ```text
-PHASE = AUTO
-MODE = resolve from explicit PHASE under 01; otherwise EXECUTE_END_TO_END
+PHASE = EXECUTE_CLOSE
 PRIMARY_FOCUS = AUTO
 PROJECT_FRAME = repository-wide orientation/reconciliation under 01
 SCOPE = derive the smallest complete working cone from OBJECTIVE inside the project frame, then expand through proven relations
@@ -118,9 +116,38 @@ IF PHASE=EXECUTE_CLOSE:
   EXISTING PLAN_DIR = OPTIONAL READ-ONLY HANDOFF/EVIDENCE INPUT ONLY WHEN EXPLICITLY SUPPLIED
 ```
 
-The invocation token `MODE=DIAGNOSE` is intentionally retained for compatibility and routing simplicity. It **does not mean diagnosis-only**. It means the full read-only `AUDIT + INSPECT + DIAGNOSE + ANALYZE` protocol governed here and detailed by `01`/`02`, without target-system mutation.
+`PHASE` is the **only operating-contract authority**. There are exactly two operating contracts: `AUDIT_PREPARE` and `EXECUTE_CLOSE`. Do not create, infer or preserve a parallel `MODE` layer for diagnosis, end-to-end execution or project closure. `SCOPE` and the proven working cone determine breadth; repository-wide closure is `PHASE=EXECUTE_CLOSE` with repository-wide scope/claim, not a third execution mode.
 
-`PHASE` is a human-requested operating contract. Its authority relationship to `MODE` and `PLAN_DIR` is owned by `01`.
+### 3.0 Root-cause closure continuity invariant
+
+Any required cleanup, deletion, retirement, deduplication, reference repair, legacy removal or equivalent structural residue that is proven either during `AUDIT_PREPARE` or exposed during `EXECUTE_CLOSE` as part of the current Root Cause / Affected Cone is part of the **same Root-Cause Closure**.
+
+```text
+AUDIT_PREPARE
+→ DISCOVER / PROVE / CLASSIFY / RECORD THE OBLIGATION
+→ DO NOT MUTATE THE TARGET SYSTEM
+
+EXECUTE_CLOSE
+→ EXECUTE EVERY STILL-VALID PREPARED OBLIGATION
+→ CLASSIFY + RESOLVE MATERIALLY RELATED OBLIGATIONS NEWLY EXPOSED BY LIVE EXECUTION
+→ SATISFY MIGRATION / CUTOVER PREREQUISITES BEFORE DESTRUCTIVE REMOVAL
+→ REPAIR REFERENCES / CONSUMERS
+→ VERIFY ZERO REQUIRED VALUE LOSS / ZERO STALE REACHABILITY
+```
+
+No materially related obligation may be ignored, silently left unclassified, deferred, externalized, downgraded for convenience, or converted into a later cleanup phase/task/objective/campaign merely to complete the current execution.
+
+```text
+SUSPICIOUS ≠ DELETE AUTHORITY
+PROVEN OBSOLETE / SUPERSEDED / DEAD WITHIN THE AFFECTED CONE ≠ OPTIONAL
+UNCLASSIFIED MATERIAL CLEANUP RESIDUE = NOT CLOSED
+UNEXECUTED STILL-VALID CLEANUP/DELETION OBLIGATION = NOT CLOSED
+UNVERIFIED CLEANUP/DELETION OUTCOME = NOT CLOSED
+```
+
+If newly exposed evidence materially changes the Root Cause, Canonical Target, authority/ownership, migration/cutover strategy or Affected Cone, stop only the affected execution cone and re-enter the canonical diagnosis/readiness path under `02` before continuing that cone. Independent proven work may continue under the normal parallelism law.
+
+Cleanup is therefore a **closure property and treatment consequence**, never a separate lifecycle stage. `02` owns proof/disposition, `03` owns live execution, and `04` owns final proof/closure; none may create a competing cleanup lifecycle.
 
 ### 3.1 `AUDIT_PREPARE`
 
@@ -181,6 +208,7 @@ ESTABLISH / REVALIDATE CURRENT LIVE TRUTH
 → PROVE / REVALIDATE HIGHEST CURRENT SYSTEMIC ROOT
 → IF EXECUTABLE: TREAT ROOT IMMEDIATELY END-TO-END IN THE ACTUAL SYSTEM
 → MIGRATE / CUTOVER / CLEAN / DELETE REQUIRED RESIDUE / RECONCILE GOVERNANCE AS REQUIRED
+→ CLASSIFY + RESOLVE MATERIALLY RELATED CLEANUP/DELETION RESIDUE EXPOSED BY EXECUTION
 → VERIFY AFFECTED CLAIMS
 → REVALIDATE ONLY THE AFFECTED / INVALIDATED CONE
 → RE-RANK
@@ -212,7 +240,7 @@ RECONSTRUCT / REVALIDATE PROJECT-WIDE CANONICAL FRAME
 → diagnose causal/root structure
 → expand only through proven authority/causal/dependency/consumer/contract/data/runtime/security/blast-radius relations
 → prove project-consistent target state
-→ treat the highest proven root when phase/mode permits mutation
+→ treat the highest proven root when PHASE permits mutation
 ```
 
 Universal capability does **not** mean universal deep execution scope. All canonical focus dimensions are considered for material applicability; deeply execute only those that can change correctness, priority, target, treatment, blast radius or closure.
@@ -271,10 +299,11 @@ UNDERSTAND OBJECTIVE AS CURRENT PRIORITY
 → SELECT HIGHEST PROVEN SYSTEMIC ROOT
 → DEFINE CANONICAL TARGET STATE + ROOT-CORRECT TREATMENT
 → PROVE PROJECT-CONSISTENCY EXECUTION GATE
-→ EXECUTE SMALLEST COMPLETE ROOT-CORRECT CHANGE WHEN PHASE/MODE PERMITS
+→ EXECUTE SMALLEST COMPLETE ROOT-CORRECT CHANGE WHEN PHASE PERMITS
 → MIGRATE ALL MATERIAL WRITERS / READERS / CONSUMERS / DATA
 → CANONICAL CUTOVER
 → DELETE/RETIRE SUPERSEDED REACHABLE PATHS WHEN PROVEN REQUIRED/SAFE
+→ CLASSIFY + RESOLVE MATERIALLY RELATED CLEANUP/DELETION RESIDUE EXPOSED BY EXECUTION
 → VERIFY ACTUAL SYSTEM TRUTH
 → CLASSIFY NEWLY PROVEN MATERIAL KNOWLEDGE FOR DURABLE PROJECT MEMORY
 → RECONCILE / ENRICH MATERIAL GOVERNANCE WHEN REQUIRED

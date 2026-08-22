@@ -81,31 +81,23 @@ WORKING_SCOPE = SMALLEST COMPLETE PROVEN CONE NEEDED TO PROVE/TREAT CURRENT ROOT
 
 Project-wide orientation does not authorize repository-wide mutation or exhaustive deep scanning. A narrow working scope does not authorize a narrow worldview.
 
-## 3. Modes
+## 3. Phase and scope authority
 
-### `DIAGNOSE`
-Read/diagnose only. Build material coverage, prove roots and expose decision/evidence gaps. No target-system mutation.
-
-### `EXECUTE_END_TO_END`
-Run the full audit/inspection/diagnosis/analysis obligations needed for current truth, then treat proven roots end-to-end, expanding the working cone only through proven causal/ownership/dependency/consumer/blast-radius relations.
-
-### `EXECUTE_PROJECT_CLOSURE`
-Repository-wide closure by definition:
+`PHASE` is the sole operating-contract selector. There are exactly two operating contracts:
 
 ```text
-PRIMARY_FOCUS = ALL
-SCOPE = REPOSITORY
+AUDIT_PREPARE
+EXECUTE_CLOSE
 ```
 
-No material domain/surface/foundation is assumed clean. If an invocation is explicitly narrowed below repository scope, treat it as `EXECUTE_END_TO_END`; do not claim project-wide closure from a narrowed working scope.
+Do not create or infer a parallel execution `MODE`. Diagnosis, end-to-end execution and repository-wide closure are behaviors determined by `PHASE`, `SCOPE`, the objective and the proven working cone—not separate operating modes.
+
+`SCOPE` determines breadth. Repository-wide closure is expressed by a repository-wide objective/claim with `SCOPE=REPOSITORY` under `PHASE=EXECUTE_CLOSE`; it is not a third operating contract. `PRIMARY_FOCUS=ALL` is normally required when the closure claim itself is repository-wide, but focus breadth never substitutes for repository-scope proof.
 
 ### 3.1 Phase contract
 
-`PHASE` selects one of two operating contracts. It is not a competing lifecycle.
-
 ```text
 PHASE=AUDIT_PREPARE
-→ effective MODE=DIAGNOSE when MODE is omitted
 → target system remains read-only
 → full AUDIT + INSPECT + DIAGNOSE + ANALYZE is mandatory
 → optimize for material evidence completeness + handoff determinism, not fastest readiness
@@ -114,18 +106,21 @@ PHASE=AUDIT_PREPARE
 → exactly one temporary PLAN_DIR is mandatory after blocking decisions are resolved
 → PLAN_DIR=AUTO when omitted
 → PLAN_DIR contains exactly the three canonical Markdown contracts owned below
+→ discover/prove/classify/record cleanup/deletion obligations but do not mutate the target system
 → finish with READY_FOR_EXECUTION only after the handoff-readiness gate in 02 is proven; no treatment begins
 
 PHASE=EXECUTE_CLOSE
-→ effective MODE=EXECUTE_END_TO_END when MODE is omitted
-→ use EXECUTE_PROJECT_CLOSURE only when repository-wide closure is explicitly requested
 → perform only the material revalidation/audit needed to establish current truth or respond to invalidation
 → immediately treat the highest proven executable root; do not stop merely to produce a plan/report
+→ execute every still-valid prepared cleanup/deletion obligation after its prerequisites are satisfied
+→ classify and resolve materially related cleanup/deletion obligations newly exposed by live execution
 → verify, re-audit/re-diagnose/re-rank and continue root-by-root until CLOSED or a legitimate stop state
 → PLAN_DIR=NONE when omitted
 → creation or mutation of a plan artifact is forbidden by default
 → an explicitly supplied existing PLAN_DIR is optional read-only handoff/evidence input, never execution authority
 ```
+
+The root-cause closure continuity invariant is owned by `00`. This file applies its authority/scope consequences only: materially related cleanup cannot be excluded merely because it was not listed in the initial handoff, and unrelated repository cleanup cannot be pulled into the mutation cone without a proven relation.
 
 ### 3.2 Plan-directory semantics and ownership
 
@@ -376,6 +371,7 @@ OLD PASS/DONE ≠ CURRENT EVIDENCE
 EXTERNAL BEST PRACTICE ≠ BTHWANI PRODUCT DECISION
 LOCAL OBJECTIVE PASS ≠ PROJECT CONSISTENCY
 DISCOVERED FACT ≠ DURABLE GOVERNANCE TRUTH
+UNCLASSIFIED MATERIAL CLEANUP RESIDUE ≠ CLOSED
 ```
 
 ## 12. Derived/historical records

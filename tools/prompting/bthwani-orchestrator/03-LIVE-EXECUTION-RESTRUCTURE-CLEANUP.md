@@ -2,7 +2,7 @@
 
 ## 1. Execution is live by default
 
-In `EXECUTE_END_TO_END` and `EXECUTE_PROJECT_CLOSURE`, a proven executable root proceeds directly to treatment. No diagnosis package, planning package or repository task ledger is required first.
+In `PHASE=EXECUTE_CLOSE`, a proven executable root proceeds directly to treatment. No diagnosis package, planning package or repository task ledger is required first.
 
 When `EXECUTE_CLOSE` is explicitly supplied with a prepared `PLAN_DIR`, that directory is read-only handoff/evidence input under `01`; it does not replace current-truth revalidation and is never a writable execution target.
 
@@ -86,6 +86,7 @@ DEFINE PROVEN TARGET TRUTH
 → PROVE REQUIRED PRE-EXISTING BEHAVIOR REMAINS VALID ACROSS THE AFFECTED CONE
 → PROVE ZERO USE OF OLD AUTHORITY
 → DELETE/RETIRE SUPERSEDED REACHABLE PATHS
+→ CLASSIFY + RESOLVE MATERIALLY RELATED CLEANUP/DELETION OBLIGATIONS EXPOSED BY EXECUTION
 → REPAIR REFERENCES/CONSUMERS
 → VERIFY AFFECTED + BLAST-RADIUS BEHAVIOR
 → CLASSIFY NEWLY PROVEN MATERIAL KNOWLEDGE FOR DURABLE PROJECT MEMORY
@@ -263,6 +264,8 @@ Do not claim a performance/tooling root closed merely because code is shorter or
 
 ## 16. Cleanup is treatment, not polish
 
+Apply the root-cause closure continuity invariant owned by `00`: cleanup/deletion obligations proven in preparation and materially related obligations newly exposed by live execution belong to the same Root-Cause Closure. A newly exposed related residue must be classified and resolved; it cannot be ignored because it was absent from the prepared deletion manifest.
+
 Inspect at the necessary structural level:
 
 `line → condition/branch → function/method → type/component/helper → file → file group → folder → module/package → service/surface → domain → route/contract/config/dependency/data/runtime/tooling path`.
@@ -286,10 +289,12 @@ PROVEN DELETE_REQUIRED + PREREQUISITES SATISFIED
 → PROVE ZERO REACHABILITY / ZERO REQUIRED VALUE LOSS
 
 NO-DELETE BIAS ≠ SAFETY.
+UNCLASSIFIED MATERIAL CLEANUP RESIDUE = ROOT STILL OPEN.
 UNEXECUTED DELETE_REQUIRED = ROOT/CLEANUP STILL OPEN.
+UNVERIFIED CLEANUP/DELETION OUTCOME = ROOT STILL OPEN.
 ```
 
-Do not silently downgrade `DELETE_REQUIRED` to `KEEP`, leave a duplicate file “just in case”, rename residue to `legacy/old/archive`, or retain a superseded wrapper as a fallback. If evidence changes, stop/reclassify through the canonical diagnosis path; otherwise execute the deletion. Directly related cleanup is part of root treatment and must not be deferred as “later polish”.
+Do not silently downgrade `DELETE_REQUIRED` to `KEEP`, leave a duplicate file “just in case”, rename residue to `legacy/old/archive`, or retain a superseded wrapper as a fallback. If evidence changes, stop/reclassify through the canonical diagnosis path; otherwise execute the deletion. Directly related cleanup is part of root treatment and must not be deferred as “later polish”, a separate task, or a future cleanup campaign.
 
 ## 17. Reference integrity after structural change
 

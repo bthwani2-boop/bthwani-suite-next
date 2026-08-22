@@ -38,6 +38,7 @@ EXTERNAL DOCUMENTATION ≠ LOCAL VERSION/RUNTIME PROOF
 PLAN_DIR ABSENT ≠ EXECUTE_CLOSE BLOCKED
 PLAN_DIR UPDATED ≠ TARGET SYSTEM FIXED
 DELETE_REQUIRED RECORDED ≠ ARTIFACT DELETED
+UNCLASSIFIED MATERIAL CLEANUP RESIDUE ≠ CLOSED
 ```
 
 State what material evidence proves and what it does not prove.
@@ -156,6 +157,7 @@ Verify where material:
 - governance/product/policy impact is classified and synchronized where required;
 - newly proven material knowledge has been classified for durable project-memory value and any required governance enrichment is complete;
 - deletion/retirement of superseded reachable paths and exhaustion of every still-valid `DELETE_REQUIRED` item;
+- classification and resolution of materially related cleanup/deletion obligations newly exposed during execution;
 - absence of new parallel truth;
 - preservation of proven design/value;
 - removal of materially unjustified complexity identified in scope without weakening required correctness/assurance;
@@ -271,6 +273,8 @@ Before freeze, every materially affected remaining artifact needs a defensible:
 
 Closure is blocked by known related dead/unreachable code, superseded implementation, duplicate authority, stale/orphan reference, old path/alias, misleading naming, wrong placement/ownership, unused dependency, obsolete config/env/flag/script, workaround/fallback, stale docs/comments/examples, debug/temp artifact, unjustified compatibility residue or materially unjustified complexity tied to scope.
 
+Every materially related cleanup/deletion residue exposed during execution must have an explicit current disposition before freeze. Leaving it unclassified because it was absent from the prepared handoff is closure-blocking.
+
 Every still-valid `DELETE_REQUIRED` artifact must be absent; every `RETIRE_AFTER_CUTOVER` item whose cutover condition is satisfied must have been promoted/executed as deletion. A retained item requires new evidence and an explicit reclassification, not executor preference or deletion avoidance.
 
 Material governance/product artifacts capable of directing future work toward a stale owner/path/semantic model are closure-blocking even if runtime currently works. The same is true for a materially missing proven durable truth when its absence or ambiguity can direct future work incorrectly.
@@ -287,7 +291,7 @@ Immediately before ref update/push and final decision re-resolve target HEAD and
 
 ## 19. Final negative-space pass
 
-Search deliberately for missing consumer/surface, route/handler/contract field, writer/readback, failure/recovery path, authorization boundary, handoff/intervention, migration/compatibility transition, hidden duplicate/legacy truth, unexecuted `DELETE_REQUIRED` residue, missing project-frame relation/invariant impact, missing prior-closure reconciliation, missing focus applicability disposition, missing governance reconciliation or durable-truth home, missing repository-platform proof when relied upon, and missing operational/audit evidence required by the claim.
+Search deliberately for missing consumer/surface, route/handler/contract field, writer/readback, failure/recovery path, authorization boundary, handoff/intervention, migration/compatibility transition, hidden duplicate/legacy truth, unexecuted `DELETE_REQUIRED` residue, unclassified materially related cleanup/deletion residue exposed by execution, missing project-frame relation/invariant impact, missing prior-closure reconciliation, missing focus applicability disposition, missing governance reconciliation or durable-truth home, missing repository-platform proof when relied upon, and missing operational/audit evidence required by the claim.
 
 Unexplained material absence remains open.
 
@@ -295,7 +299,7 @@ Unexplained material absence remains open.
 
 Assume closure is false and search for:
 
-`missed domain/capability | objective-induced local optimization | project-frame contradiction | cross-objective regression | duplicate truth | stale/wrong/incomplete governance | material proven durable truth missing from governance | hidden consumer/writer | reachable old path | retained DELETE_REQUIRED artifact | contract/data mismatch | cross-surface mismatch | unintended affected regression | incomplete consumer migration | failure/recovery gap | runtime divergence | stale process/data | unresolved semantic ambiguity | patch/workaround | race/idempotency issue | security/isolation issue | wrong placement/naming/context | orphan references | unjustified complexity | assurance loss/cost shift in tooling changes | stale/mismatched repository-platform evidence`.
+`missed domain/capability | objective-induced local optimization | project-frame contradiction | cross-objective regression | duplicate truth | stale/wrong/incomplete governance | material proven durable truth missing from governance | hidden consumer/writer | reachable old path | retained DELETE_REQUIRED artifact | unclassified related cleanup/deletion residue | contract/data mismatch | cross-surface mismatch | unintended affected regression | incomplete consumer migration | failure/recovery gap | runtime divergence | stale process/data | unresolved semantic ambiguity | patch/workaround | race/idempotency issue | security/isolation issue | wrong placement/naming/context | orphan references | unjustified complexity | assurance loss/cost shift in tooling changes | stale/mismatched repository-platform evidence`.
 
 Any material issue reopens diagnosis/treatment/verification.
 
@@ -329,6 +333,8 @@ AND ZERO_DUPLICATE_AUTHORITATIVE_WRITERS
 AND ZERO_UNJUSTIFIED_PARALLEL_TRUTH
 AND ZERO_UNJUSTIFIED_REACHABLE_LEGACY_PATHS
 AND ZERO_UNEXECUTED_DELETE_REQUIRED_ARTIFACTS
+AND ZERO_UNCLASSIFIED_MATERIAL_CLEANUP_RESIDUE_TIED_TO_SCOPE
+AND ZERO_UNVERIFIED_MATERIAL_CLEANUP_DELETION_OUTCOMES
 AND ZERO_KNOWN_FINAL_PATCHES/WORKAROUNDS/FALLBACKS
 AND ZERO_MATERIAL_MIGRATION/BACKFILL/CUTOVER_GAPS
 AND ZERO_MATERIAL_CONTRACT/BINDING_DRIFT
