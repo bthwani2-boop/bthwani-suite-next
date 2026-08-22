@@ -135,7 +135,7 @@ jobs:
       pull-requests: write
     env:
       OCR_VERSION: "1.9.5"
-      OCR_MODEL: "openai/gpt-5"
+      OCR_LLM_MODEL: "openai/gpt-5"
       OCR_LLM_URL: "https://models.github.ai/inference/chat/completions"
       OCR_USE_ANTHROPIC: "false"
       OCR_LLM_TIMEOUT: "180"
@@ -206,7 +206,7 @@ jobs:
           OCR_TARGET_SHA: ${{ needs.scope.outputs.head_sha }}
           OCR_BASE_SHA: ${{ needs.scope.outputs.base_sha }}
           OCR_MODE: ${{ needs.scope.outputs.mode }}
-          OCR_MODEL: ${{ env.OCR_MODEL }}
+          OCR_MODEL: ${{ env.OCR_LLM_MODEL }}
         run: >-
           node tools/scripts/evaluate-opencodereview.mjs
           --input .diagnostics/opencodereview/result.json
