@@ -12,7 +12,7 @@ permissions:
 jobs:
   dispatch:
     name: Validate and dispatch canonical remote command
-    if: ${{ github.event.issue.title == '[remote-command]' }}
+    if: ${{ github.event.issue.title == '[remote-command]' && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     concurrency:
@@ -182,7 +182,7 @@ jobs:
           set -euo pipefail
           encoded_ref="$(jq -rn --arg value "${TARGET_REF}" '$value|@uri')"
           run_id=""
-          for attempt in $(seq 1 60); do
+          for _ in $(seq 1 60); do
             while IFS= read -r candidate_id; do
               [[ -n "${candidate_id}" ]] || continue
               if grep -qx "${candidate_id}" "${RUNNER_TEMP}/before-run-ids.txt"; then
@@ -248,7 +248,7 @@ jobs:
         run: |
           set -euo pipefail
           conclusion=""
-          for attempt in $(seq 1 1080); do
+          for _ in $(seq 1 1080); do
             status="$(gh api \
               -H 'X-GitHub-Api-Version: 2022-11-28' \
               "/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}" \
