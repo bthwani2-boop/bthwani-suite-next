@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-import fs from "node:fs";
-
 const repository = String(process.env.GITHUB_REPOSITORY || "").trim();
 const token = String(process.env.GH_TOKEN || process.env.GITHUB_TOKEN || "").trim();
 const githubApi = String(process.env.GITHUB_API_URL || "https://api.github.com").replace(/\/$/, "");
@@ -9,31 +7,45 @@ const targetSha = String(process.env.TARGET_SHA || "").trim();
 const targetRef = String(process.env.TARGET_REF || "").trim();
 const targetBranch = targetRef.startsWith("refs/heads/") ? targetRef.slice("refs/heads/".length) : "";
 const baseSha = String(process.env.BASE_SHA || "").trim();
+const evidenceMode = String(process.env.EVIDENCE_MODE || "manual-full").trim();
 const sonarToken = String(process.env.SONAR_TOKEN || "").trim();
 const sonarHost = String(process.env.SONAR_HOST_URL || "https://sonarcloud.io").replace(/\/$/, "");
 const waitSeconds = Number(process.env.WAIT_FOR_WORKFLOWS_SECONDS || "1200");
 const pollSeconds = Number(process.env.WORKFLOW_POLL_SECONDS || "10");
 
-const expected = [
-  ["BThwani Contextual CI", ".github/workflows/ci.yml"],
-  ["CodeQL", ".github/workflows/codeql.yml"],
-  ["CodeQL Metadata Hygiene", ".github/workflows/codeql-hygiene.yml"],
-  ["SonarQube Cloud", ".github/workflows/sonarqube.yml"],
-  ["Remote Security", ".github/workflows/security-remote.yml"],
-  ["Dependency Review", ".github/workflows/dependency-review.yml"],
-  ["BThwani Lockfile Integrity", ".github/workflows/lockfile-integrity.yml"],
-  ["OpenCodeReview", ".github/workflows/open-code-review.yml"],
-  ["Semgrep Code Remote", ".github/workflows/semgrep.yml"],
-  ["Dependabot State Audit", ".github/workflows/dependabot-audit.yml"],
-].map(([name, path]) => ({ name, path }));
+const workflowCatalog = {
+  ci: ["BThwani Contextual CI", ".github/workflows/ci.yml"],
+  codeql: ["CodeQL", ".github/workflows/codeql.yml"],
+  codeqlHygiene: ["CodeQL Metadata Hygiene", ".github/workflows/codeql-hygiene.yml"],
+  sonar: ["SonarQube Cloud", ".github/workflows/sonarqube.yml"],
+  security: ["Remote Security", ".github/workflows/security-remote.yml"],
+  dependencyReview: ["Dependency Review", ".github/workflows/dependency-review.yml"],
+  lockfile: ["BThwani Lockfile Integrity", ".github/workflows/lockfile-integrity.yml"],
+  ocr: ["OpenCodeReview", ".github/workflows/open-code-review.yml"],
+  semgrep: ["Semgrep Code Remote", ".github/workflows/semgrep.yml"],
+  dependabot: ["Dependabot State Audit", ".github/workflows/dependabot-audit.yml"],
+};
+function spec(key) {
+  const [name, path] = workflowCatalog[key];
+  return { key, name, path };
+}
+function expectedWorkflows() {
+  if (evidenceMode === "push") {
+    return ["ci", "codeql", "codeqlHygiene", "sonar", "security", "semgrep"].map(spec);
+  }
+  if (evidenceMode !== "manual-full") throw new Error(`unsupported EVIDENCE_MODE=${evidenceMode}`);
+  return Object.keys(workflowCatalog).map(spec);
+}
+const expected = expectedWorkflows();
 
 const evidence = {
-  schemaVersion: 3,
+  schemaVersion: 4,
   repository,
   targetSha,
   targetRef,
   targetBranch,
   baseSha,
+  evidenceMode,
   generatedAtUtc: null,
   evidenceComplete: false,
   policyStatus: "BLOCKED",
@@ -88,9 +100,9 @@ async function ghPaged(pathname, property = null, maxPages = 50) {
 async function sonar(endpoint, params = {}) {
   if (!sonarToken) fail("SONAR_TOKEN is required for Sonar read-back");
   const url = new URL(endpoint, `${sonarHost}/`);
-  Object.entries(params).forEach(([key, value]) => {
+  for (const [key, value] of Object.entries(params)) {
     if (value !== undefined && value !== null && String(value) !== "") url.searchParams.set(key, String(value));
-  });
+  }
   return json(url.toString(), { headers: { Accept: "application/json", Authorization: `Bearer ${sonarToken}` } });
 }
 async function sonarPaged(endpoint, params, property, pageSize = 500, maxPages = 20) {
@@ -105,9 +117,13 @@ async function sonarPaged(endpoint, params, property, pageSize = 500, maxPages =
   }
   fail(`Sonar pagination limit exceeded for ${endpoint}`);
 }
-function readSonarProject() {
+async function readSonarProject() {
+  const encodedSha = encodeURIComponent(targetSha);
+  const body = await gh(`/contents/sonar-project.properties?ref=${encodedSha}`);
+  if (body?.encoding !== "base64" || typeof body?.content !== "string") fail("unable to read sonar-project.properties from target SHA");
+  const text = Buffer.from(body.content.replace(/\n/g, ""), "base64").toString("utf8");
   const props = new Map();
-  for (const raw of fs.readFileSync("sonar-project.properties", "utf8").split(/\r?\n/)) {
+  for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
     if (!line || line.startsWith("#")) continue;
     const i = line.indexOf("=");
@@ -120,7 +136,9 @@ function readSonarProject() {
 }
 
 function runPreference(run) {
-  const eventRank = { workflow_dispatch: 3, pull_request: 2, push: 1, schedule: 0 }[run.event] ?? -1;
+  const eventRank = evidenceMode === "manual-full"
+    ? ({ workflow_dispatch: 4, pull_request: 3, push: 2, schedule: 1 }[run.event] ?? 0)
+    : ({ push: 4, workflow_dispatch: 3, pull_request: 2, schedule: 1 }[run.event] ?? 0);
   return [eventRank, String(run.created_at || "")];
 }
 function newerPreferred(a, b) {
@@ -138,12 +156,12 @@ async function waitForExactRuns() {
       : [];
     const missing = [];
     const pending = [];
-    for (const spec of expected) {
-      const matches = runs.filter((run) => run.name === spec.name && run.path === spec.path).sort(newerPreferred);
+    for (const workflow of expected) {
+      const matches = runs.filter((run) => run.name === workflow.name && run.path === workflow.path).sort(newerPreferred);
       const selected = matches[0];
-      if (!selected) missing.push(spec.name);
-      else if (selected.status !== "completed") pending.push(spec.name);
-      else evidence.workflows.selected[spec.name] = selected;
+      if (!selected) missing.push(workflow.name);
+      else if (selected.status !== "completed") pending.push(workflow.name);
+      else evidence.workflows.selected[workflow.name] = selected;
     }
     if (!missing.length && !pending.length) break;
     if (Date.now() >= deadline) {
@@ -155,9 +173,9 @@ async function waitForExactRuns() {
   }
 
   for (const [name, run] of Object.entries(evidence.workflows.selected)) {
-    run.jobs = await ghPaged(`/actions/runs/${run.id}/jobs`, "jobs");
-    run.artifacts = await ghPaged(`/actions/runs/${run.id}/artifacts`, "artifacts");
-    run.jobs = run.jobs.map((job) => ({
+    const jobs = await ghPaged(`/actions/runs/${run.id}/jobs`, "jobs");
+    const artifacts = await ghPaged(`/actions/runs/${run.id}/artifacts`, "artifacts");
+    run.jobs = jobs.map((job) => ({
       id: job.id,
       name: job.name,
       status: job.status,
@@ -166,7 +184,7 @@ async function waitForExactRuns() {
       completed_at: job.completed_at,
       steps: Array.isArray(job.steps) ? job.steps.map((step) => ({ number: step.number, name: step.name, status: step.status, conclusion: step.conclusion })) : [],
     }));
-    run.artifacts = run.artifacts.map((a) => ({ id: a.id, name: a.name, size_in_bytes: a.size_in_bytes, expired: a.expired, created_at: a.created_at, expires_at: a.expires_at }));
+    run.artifacts = artifacts.map((a) => ({ id: a.id, name: a.name, size_in_bytes: a.size_in_bytes, expired: a.expired, created_at: a.created_at, expires_at: a.expires_at }));
     if (run.conclusion !== "success") evidence.policyFailures.push(`workflow:${name}:${run.conclusion || "unknown"}`);
   }
 }
@@ -177,7 +195,7 @@ async function collectCodeql() {
   const alerts = await ghPaged(`/code-scanning/alerts?state=open&ref=${encodeURIComponent(targetRef)}&tool_name=CodeQL`);
   evidence.codeql = { exactAnalyses: exact, openAlerts: alerts };
   for (const alert of alerts) {
-    const finding = {
+    evidence.normalizedFindings.push({
       source: "codeql",
       id: String(alert.number),
       severity: alert?.rule?.security_severity_level || alert?.rule?.severity || "",
@@ -187,8 +205,7 @@ async function collectCodeql() {
       url: alert?.html_url || "",
       commitSha: alert?.most_recent_instance?.commit_sha || "",
       material: true,
-    };
-    evidence.normalizedFindings.push(finding);
+    });
   }
   if (!exact.length) evidence.policyFailures.push("codeql:missing-exact-sha-analysis");
   if (alerts.length) evidence.policyFailures.push(`codeql:open-alerts:${alerts.length}`);
@@ -197,10 +214,10 @@ async function collectCodeql() {
 function sonarMaterial(issue) {
   if (String(issue?.type || "").toUpperCase() === "VULNERABILITY") return true;
   if (["BLOCKER", "CRITICAL"].includes(String(issue?.severity || "").toUpperCase())) return true;
-  return Array.isArray(issue?.impacts) && issue.impacts.some((i) => ["BLOCKER", "HIGH"].includes(String(i?.severity || "").toUpperCase()));
+  return Array.isArray(issue?.impacts) && issue.impacts.some((impact) => ["BLOCKER", "HIGH"].includes(String(impact?.severity || "").toUpperCase()));
 }
 async function collectSonar() {
-  const project = readSonarProject();
+  const project = await readSonarProject();
   const analyses = (await sonarPaged("/api/project_analyses/search", { project: project.projectKey, branch: targetBranch }, "analyses", 100))
     .sort((a, b) => String(b.date).localeCompare(String(a.date)));
   const latest = analyses[0] || null;
@@ -229,15 +246,15 @@ async function collectSonar() {
       material,
     });
   }
-  const unreviewed = hotspots.filter((h) => String(h?.status || "").toUpperCase() !== "REVIEWED");
-  for (const h of unreviewed) {
+  const unreviewed = hotspots.filter((hotspot) => String(hotspot?.status || "").toUpperCase() !== "REVIEWED");
+  for (const hotspot of unreviewed) {
     evidence.normalizedFindings.push({
       source: "sonar-hotspot",
-      id: h?.key || "",
-      severity: h?.vulnerabilityProbability || "",
-      path: h?.component || "",
-      line: h?.line ?? null,
-      message: h?.message || "",
+      id: hotspot?.key || "",
+      severity: hotspot?.vulnerabilityProbability || "",
+      path: hotspot?.component || "",
+      line: hotspot?.line ?? null,
+      message: hotspot?.message || "",
       commitSha: targetSha,
       material: true,
     });
