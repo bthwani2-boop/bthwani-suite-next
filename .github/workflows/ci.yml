@@ -283,7 +283,7 @@ jobs:
         run: pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/check-sonarqube-config.ps1
       - name: Run Gitleaks remotely
         shell: bash
-        run: gitleaks detect --log-opts="HEAD" --source . --no-banner --redact --verbose
+        run: gitleaks detect --gitleaks-ignore-path .gitleaksignore --log-opts="HEAD" --source . --no-banner --redact --verbose
       - name: Run Trivy remotely
         run: node tools/scripts/run-trivy.mjs
       - name: Run OSV Scanner remotely
