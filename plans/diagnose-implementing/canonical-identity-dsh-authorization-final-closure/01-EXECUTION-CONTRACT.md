@@ -1,260 +1,313 @@
-# EXECUTION CONTRACT — Canonical Identity/DSH Authorization Final Closure
+# Canonical Identity / DSH Authorization — Execution Contract
 
-## Execution entry
+PLAN_ID: `canonical-identity-dsh-authorization-final-closure`  
+REPOSITORY: `bthwani2-boop/bthwani-suite-next`  
+TARGET_REF: `c`  
+AUDITED_SOURCE_HEAD: `262a80ad889963e8d950178c075b3272176e2b5c`  
+PHASE_TO_EXECUTE: `EXECUTE_CLOSE`  
+SOURCE_OF_TRUTH: `00-AUDIT-TRUTH.md`  
+BRANCH_RULE: `Execute on branch c only; do not create an implementation branch.`
 
-`EXECUTE_CLOSE` must begin by re-pinning branch `c`, PR `#284` head SHA, and current `master`, then revalidating all material assumptions from `00-AUDIT-TRUTH.md` against live source and runtime truth.
+## 1. Execution law
 
-This plan is handoff/evidence only, never Source of Truth or a scope ceiling.
+At `EXECUTE_CLOSE` start:
 
-Do not mutate `tools/prompting/bthwani-orchestrator/**` in this objective. Do not merge PR `#284` until the complete closure contract in `02-VERIFICATION-CLOSURE.md` is satisfied.
+1. resolve the newest real `c` HEAD;
+2. reread `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md` and governed modules from that exact HEAD;
+3. compare the new HEAD to `AUDITED_SOURCE_HEAD`;
+4. prove that any intervening changes are only plan-document mutations or re-audit every material source delta before writing source;
+5. pin one candidate SHA and keep all mutation/evidence tied to it;
+6. fix the highest proven root from its canonical owner, migrate all consumers, verify, re-audit, re-rank, and repeat;
+7. after the final source change, rerun every required exact-candidate verification tool; any later source mutation invalidates those results and requires rerun.
 
-## Ordered root treatment
+No `CLOSED` status is legal while a material finding, unexecuted migration, old authority, failed/missing exact-candidate tool, unresolved PR review, or unproven negative-space condition remains.
 
-### 1. RC0 — Enforce Product/Security separation-of-duties server-side
+## 2. Parallelism and integration authority
 
-Treat this first because it is the highest proven semantic/security root.
+One integration authority owns branch `c`. Parallel work is allowed only for independently writable cones with no file/data/schema collision.
 
-Canonical invariants already owned by Product Truth:
+The first safe parallel lanes are:
+
+- **Lane A — verification infrastructure:** repair the proven Sonar Go coverage blocker in `.github/workflows/sonarqube.yml` and its focused tests/validation;
+- **Lane B — authorization SoD:** repair maker/beneficiary/checker invariants in DSH administration and focused tests.
+
+Do not parallelize schema/state-machine changes with other mutations in the same DSH administration/data cone. Lane B must merge into the single integration trunk before RC-1 lifecycle restructuring begins if there is any shared file collision.
+
+## 3. Batch A — repair Sonar remote verification blocker first
+
+### Source of fix
+
+`.github/workflows/sonarqube.yml` and only helper/test files already justified by that workflow.
+
+### Required treatment
+
+1. Remove the invalid conversion path that concatenates `go test -coverprofile` legacy text files and feeds them to `go tool covdata textfmt`.
+2. Choose exactly one valid Go coverage representation:
+   - use a single valid legacy coverprofile if repository/module topology permits a correct unified command; or
+   - generate real covdata directories via `GOCOVERDIR` and convert them with `go tool covdata textfmt`.
+3. If multiple profiles must be combined, preserve exactly one `mode:` header and merge only data rows with deterministic, collision-free paths; never key temporary files only by package basename.
+4. Assert that the resulting report exists and is non-empty.
+5. Parse/validate it with the relevant Go coverage tool before the Sonar scanner.
+6. Keep all failures fail-closed; do not skip Go coverage, mark it continue-on-error, substitute an empty report, or downgrade the Quality Gate.
+7. Run Sonar remotely on the exact candidate and record:
+   - workflow/run identity;
+   - resolved candidate SHA;
+   - project key;
+   - scanner completion;
+   - coverage import evidence;
+   - Quality Gate status and conditions;
+   - issues/hotspots materially affecting this cone.
+
+### Exit criterion
+
+The historical failure mechanism is no longer reachable and a fresh exact-candidate Sonar run reaches the scanner and Quality Gate successfully. If Sonar reveals a material product/source finding, that finding preempts closure and is routed to its real source owner.
+
+## 4. Batch B — RC-0 Separation of Duties
+
+### Source of fix
+
+`services/dsh/backend/internal/administration` domain/use-case layer. HTTP and UI may consume the rule but cannot own it.
+
+### Required invariant
+
+Create or centralize one semantic validation path for governed authorization mutation actor relationships. It must enforce:
+
+#### Assignment / role mutation
 
 - maker != beneficiary;
-- maker != checker;
-- beneficiary != checker;
-- rollback maker != rollback checker;
-- rollback beneficiary != rollback checker;
-- rollback source/original checker != rollback checker.
+- checker != maker;
+- checker != beneficiary.
 
-Required treatment:
+#### Rollback / revocation
 
-1. Introduce one small DSH Administration domain-level separation-of-duties validator/helper with explicit intent-specific inputs; do not scatter inconsistent checks across handlers/UI.
-2. Apply it to role-assignment/revocation review and rollback review before any canonical mutation is enqueued or Identity is called.
-3. Preserve existing role-definition self-review prohibition and verify whether role-definition beneficiary semantics are applicable; do not invent a beneficiary where the Product model has none.
-4. Return stable domain errors distinguishable from generic validation/version/dependency failures and map them through the existing HTTP/contract/frontend error path.
-5. Ensure worker/replay code cannot bypass the same invariants merely because a durable intent already exists. Persist the checker identity required for replay/audit only if not already sufficient; do not create a second authorization source.
-6. Keep UI prevention as usability only; backend remains authoritative.
-7. Add focused adversarial tests proving beneficiary review and original-checker rollback review are denied even when the actor otherwise has exact checker permission.
+- rollback maker != beneficiary;
+- rollback checker != rollback maker;
+- rollback checker != beneficiary;
+- rollback checker != original source checker.
 
-Acceptance for RC0:
+### Required treatment
 
-- beneficiary cannot approve or reject their own role assignment/revocation;
-- original source checker cannot approve or reject rollback of their own decision;
-- rollback beneficiary cannot check rollback;
-- maker/checker negative cases remain enforced;
-- no alternate route, worker or direct domain caller bypasses the checks.
+1. Apply the invariant before any remote Identity mutation is possible.
+2. Return one explicit domain error/classification that HTTP maps consistently.
+3. Ensure rejection leaves no mutation intent and no partial local transition.
+4. Add focused negative tests for every forbidden equality and positive tests for valid independent actors.
+5. Verify direct use-case invocation, not only HTTP/UI flows.
+6. Update frontend action availability/error feedback only if the current UI can expose an action that the backend will now reject; backend remains authoritative.
 
-### 2. RC1 — Rebuild canonical mutation lifecycle as one coherent governed operation
+### Exit criterion
 
-Required coherent lifecycle:
+No valid execution path permits self-benefit approval or non-independent rollback review, including direct use-case calls and retries.
 
-`maker/checker request → durable canonical operation → deterministic claim → Identity idempotent mutation → canonical readback → atomic DSH request + operation finalization → user/read-model readback`
+## 5. Batch C — RC-1 Canonical mutation lifecycle redesign in place
 
-Required invariants:
+### Architectural constraint
 
-1. A governed request cannot be terminal `approved` while required canonical-operation bookkeeping remains non-terminal because of split local transactions.
-2. A canonical operation cannot remain indefinitely retryable after canonical success and governed finalization.
-3. Every mutation keeps one stable operation identity/idempotency key across HTTP retries, worker replay and process restart.
-4. Identity remains the sole role/permission mutation authority; no local fallback/shadow role writer may be introduced.
-5. Multi-replica workers must have deterministic claim/lease ownership.
-6. Retryable upstream failures use bounded/exponential scheduling with a cap; no unbounded 5-second hot loop.
-7. Unknown-result windows are resolved by stable replay/canonical readback, not by fabricating success or minting a new mutation identity.
-8. Permanent version/idempotency/contract conflicts become explicit terminal/actionable reconciliation states.
-9. Audit history remains append-only/redacted and correlation/idempotency provenance is preserved.
+Do not add a second queue, alternate mutation table, permanent compatibility processor, or shadow state machine. Repair the existing DSH authorization orchestration into one coherent lifecycle.
 
-Expected root-correct treatment shape after live reinspection:
+### Required semantic states
 
-- add only forward DSH migration(s) if schema changes are required; never rewrite applied migrations;
-- evolve `dsh_admin_canonical_mutation_intents` into a real outbox/saga operation record with explicit non-terminal/terminal state, attempt scheduling and claim/lease metadata as needed;
-- atomically finalize governed request status and canonical-operation terminal state inside one DSH transaction after Identity result/readback is proven;
-- if Identity succeeded but DSH died before local finalization, replay the same idempotency key and close both local states deterministically;
-- use row claim/locking semantics safe for multiple replicas, e.g. transactional claim with `FOR UPDATE SKIP LOCKED` or an equivalent proven mechanism;
-- classify and reconcile all existing pending/failed/orphan rows during migration/cutover;
-- expose privacy-safe reconciliation state/counts through governed administration readback/diagnostics;
-- make synchronous and worker execution call the same finalization/business path rather than duplicating transition rules.
+The exact names may follow repository conventions, but the lifecycle must distinguish the following semantic facts durably:
 
-### 3. RC2 — Remove residual aliases and superseded RBAC helpers
+1. **accepted/pending application** — local governed request and stable operation idempotency exist;
+2. **claimed** — one worker/caller owns a bounded lease for the attempt;
+3. **remote applied / readback pending or confirmed** — Identity mutation has succeeded or canonical readback proves desired truth;
+4. **local finalized** — governed request/audit projection reflects the canonical result;
+5. **retryable failure** — attempt failed with next eligible time and retained cause;
+6. **terminal/manual-reconciliation-required** only for explicitly non-retryable conditions with auditable cause;
+7. **complete/applied** — remote canonical truth and local governed projection are reconciled.
 
-#### `platform.read` vs `platform:read`
+Do not encode success as a status that can be reached before the remote canonical result is proven.
 
-- prove the live canonical spelling from actual consumers;
-- migrate any legitimate consumer to one action;
-- forward-migrate/reconcile stale vocabulary, role bindings, direct grants and projections if persisted;
-- remove the stale bootstrap permission and stale tests/comments;
-- final invariant: one capability → one canonical action.
+### Claim / lease contract
 
-#### Legacy RBAC helpers
+Implement durable exclusivity using the repository's PostgreSQL model, for example a transactional claim with `FOR UPDATE SKIP LOCKED` plus persisted lease/claim metadata. The final implementation must prove:
 
-Inventory all callers of:
+- one due operation has at most one live owner;
+- crash/restart causes an expired claim to become safely recoverable;
+- a stale worker cannot finalize after losing ownership;
+- worker concurrency does not duplicate local transitions;
+- stable remote idempotency prevents duplicate Identity side effects.
 
-- Identity `PermissionEnforcer.UpsertRoleDefinition(...)` legacy helper;
-- DSH `Client.GrantRole(...)` and `Client.RevokeRole(...)` legacy helpers.
+### Retry contract
 
-Migrate legitimate callers to explicit versioned/idempotent APIs with stable operation identity, or delete the wrappers if zero legitimate callers remain. Do not preserve `legacy-*` operation IDs merely as indefinite compatibility.
+1. Classify transient vs terminal conflicts explicitly.
+2. Persist attempt count and last failure class/details suitable for operations without leaking secrets.
+3. Use bounded exponential backoff with jitter or an equivalent deterministic governed policy; never reschedule all failures at `NOW()`.
+4. Set an upper policy for retry/terminal escalation that does not silently drop an operation.
+5. Preserve recovery after process restart.
 
-### 4. Re-prove the historical Identity/DSH authorization cutover
+### Crash-window reconciliation
 
-Do not rewrite working treatment; re-audit it:
+Explicitly cover and test:
 
-- Identity owns exact vocabulary, role definitions, actor-role assignments and resolution;
-- DSH has no local role registry/authority;
-- broad `administration.read/manage/approve` vocabulary/bindings/consumers are absent after migration;
-- every administration endpoint has exact server-side authorization;
-- all separation-of-duties invariants now hold server-side;
-- payout verify/deactivate remain WLT-financial operations with DSH only routing/enforcing exact authorization;
-- UI never owns role/permission truth or fabricates post-mutation success.
+- crash before remote call;
+- remote call times out but may have applied;
+- remote applied, process crashes before local request finalization;
+- local request finalized, intent-completion update fails;
+- Identity unavailable across repeated attempts;
+- request/version changed while operation is in flight;
+- worker loses lease during slow remote call.
 
-## Data migration and reconciliation contract
+Canonical Identity readback must decide ambiguous remote outcomes. Never issue a compensating opposite mutation merely to guess what happened.
 
-For every persisted change use:
+### Request/intention convergence
 
-`forward expand → classify existing rows → deterministic backfill/reconcile → switch writer/worker/readers → canonical readback → prove zero old writer → contract/delete obsolete path`
+The worker must not require `request.status = pending` as the only way to reconcile an existing intent. If a local request is already approved but the intent is not complete, the system must be able to prove Identity truth and converge the intent/local projection rather than orphaning the operation.
 
-Required upgrade fixtures:
+Where local request finalization and intent transition share the same PostgreSQL database, make their local state transition atomic in one transaction where semantically possible. The remote Identity operation remains outside that transaction and is bridged by durable idempotent orchestration/readback.
 
-- no canonical intents;
-- retryable pending/failed intents;
-- Identity already succeeded while request remains pending;
-- request approved while intent remains non-applied;
-- stale/malformed/unknown operation payload/type;
-- old alias vocabulary/grants;
-- source approval where rollback original-checker identity must remain available for the new separation check.
+### Data migration / backfill
 
-Fresh install and representative upgrade must converge to the same invariants.
+If schema columns/states are added:
 
-## Contract/API/frontend contract
+1. create forward migration under the canonical existing migration authority;
+2. classify every existing intent/request row into the new state machine deterministically;
+3. backfill next-attempt/lease/reconciliation fields without inventing success;
+4. treat ambiguous existing `approved + intent != applied` rows as reconciliation-required until Identity readback proves truth;
+5. add constraints/indexes supporting unique operation identity, valid states, due-work lookup, and claim semantics;
+6. prove migration from fresh DB and from representative pre-change schema/data;
+7. do not leave old state values/readers/writers reachable after cutover.
 
-For role definition, assignment/revocation and rollback, trace:
+### Exit criterion
 
-`UI → controller → API contract → exact auth → separation-of-duties → DSH durable operation → Identity canonical writer → canonical readback → DSH terminal model → UI readback`.
+Every reachable local/remote crash window converges to one canonical result without duplicate authority, retry storm, orphaned intent, or false success.
 
-Required UX semantics:
+## 6. Batch D — RC-2 Authorization vocabulary and helper cutover
 
-- distinct permission denial vs separation-of-duties denial vs version conflict vs dependency failure vs reconciling vs terminal failure vs success;
-- submitting state prevents duplicate clicks;
-- queued/reconciling work is not reported as terminal success or generic terminal failure;
-- canonical refresh after terminal success;
-- no local optimistic role/permission state;
-- existing Arabic/RTL/accessibility and component-system behavior preserved.
+### Canonical survivor
 
-If contracts/error enums/types change, update their canonical owner and regenerate/rebind derived clients through repository-owned tooling; do not hand-edit generated truth.
+`platform:read` is the sole surviving Platform Control read capability.
 
-## Testing contract
+### Consumer migration
 
-Add focused tests at minimum for:
+Inventory exact references at the execution HEAD across:
 
-### Separation-of-duties
+- Identity permission vocabulary/bootstrap;
+- Identity role-permission bindings and persisted actor/session projections where applicable;
+- Platform Control backend;
+- Control Panel runtime/navigation/platform screens;
+- DSH authorization/session test fixtures;
+- contracts/generated clients only if they contain the literal capability;
+- seed/test data.
 
-1. maker cannot review own assignment/revocation request;
-2. beneficiary cannot review their assignment/revocation request;
-3. rollback maker cannot review own rollback request;
-4. rollback beneficiary cannot review rollback;
-5. original source checker cannot review rollback;
-6. unrelated exact-permission checker can review;
-7. negative checks apply on both approve and reject decisions.
+Migrate every legitimate `platform.read` reference to `platform:read`. If a persisted vocabulary row/binding exists for `platform.read`, backfill bindings to the canonical vocabulary entry before deletion. Reconcile actor/session projections through the canonical Identity mechanism rather than mutating client state independently.
 
-### Lifecycle/reconciliation
+After all consumers have moved and readback is proven:
 
-8. Identity unavailable → durable retry with bounded backoff;
-9. restart before Identity call → worker applies once;
-10. Identity success then process dies before DSH finalization → same replay result and exactly-once local finalization;
-11. request/operation terminal state cannot diverge;
-12. two workers cannot concurrently own one claim;
-13. stale lease recovers safely;
-14. permanent conflict stops hot retry with actionable state;
-15. role-definition, assignment and rollback all use same lifecycle invariants;
-16. migration reconciles representative legacy/orphan rows.
+- delete `platform.read` from bootstrap/vocabulary/bindings/data;
+- prove no duplicate alias remains.
 
-## Security and privacy contract
+### Legacy grant/revoke wrappers
 
-- fail closed when Identity authorization dependency is unavailable;
-- no broad role/operator bypass;
-- exact service/surface/action/scope remains enforced;
-- no direct projection/local-role write;
-- no sensitive operation payload, phone/document/session/secret value appears in audit/diagnostics/errors;
-- replay/concurrency cannot create duplicate effective grants/revokes;
-- self/beneficiary/original-checker prohibitions are enforced in the domain, not presentation only.
+Inventory all callers of convenience wrappers that synthesize `legacy-grant:` / `legacy-revoke:`. Migrate them to explicit-idempotency APIs using operation/request-derived stable idempotency keys. Then delete the wrappers and any tests/comments built around the legacy path.
 
-## Tool/evidence execution contract
+No permanent alias, deprecated wrapper, dual-read, or dual-write period remains after the atomic cutover.
 
-Use tools selectively as evidence authorities, never as Product Truth.
+### Exit criterion
 
-### CodeQL
+Search plus runtime/readback evidence proves one vocabulary and one grant/revoke API path.
 
-- run canonical `.github/workflows/codeql.yml` on exact final PR head;
-- require all applicable language analyses to succeed;
-- inspect/open-alert evidence, not workflow conclusion alone;
-- no unresolved material exact-candidate CodeQL alert may remain.
+## 7. Batch E — UX / contract truth propagation
 
-### SonarQube Cloud
+Only after domain/lifecycle truth is correct, align affected Control Panel/API behavior.
 
-- run canonical `.github/workflows/sonarqube.yml` on exact final PR head;
-- require exact revision and `Quality Gate = OK` (`sonar.qualitygate.wait=true` is canonical config);
-- inspect unresolved issues, material impacts, coverage, duplication and security hotspots;
-- every material issue/hotspot must be fixed or proven false/non-applicable with grounded evidence, never silently suppressed to obtain green.
+For the governed authorization journeys, prove each state has accurate:
 
-### Remote Security
+- entry/context;
+- allowed actions;
+- maker/checker eligibility;
+- validation feedback;
+- applying/progress indication;
+- retryable failure and recovery;
+- reconciliation-required state if materially reachable;
+- success after canonical readback;
+- later readback after refresh/relogin;
+- unavailable/Identity outage behavior.
 
-Require successful exact-candidate run of canonical `security-remote.yml`: Gitleaks, OSV, Trivy, actionlint, zizmor, pinact, ShellCheck, Hadolint, yamllint and analysis-authority/config checks.
+No frontend state may manufacture role assignment success. No backend response may claim terminal success before the canonical transition. If API schema must expose operation/reconciliation state, update the canonical contract first and regenerate all generated bindings, then migrate all consumers in the same batch.
 
-### OpenCodeReview / semantic review
+## 8. Batch F — security and quality affected-cone re-audit
 
-- pin exact PR diff/base/head;
-- apply `.opencodereview/rule.json` bounded rules;
-- record included/excluded paths and grounded Critical/High/Medium issues;
-- OCR remains advisory and cannot self-approve the author's work;
-- if OCR execution is unavailable in the host, obtain an equivalent independent semantic review and record the limitation; do not fabricate an OCR result.
+After source treatment, inspect the exact affected cone for:
 
-### CodeRabbit / Codex Security
+- authorization bypasses and confused-deputy paths;
+- operator-context trust boundary;
+- idempotency/replay behavior;
+- race/concurrency hazards;
+- SQL constraints/transaction boundaries;
+- sensitive audit/log leakage;
+- stale compatibility code;
+- unreachable/dead states;
+- performance of due-intent indexes and worker queries;
+- frontend inaccessible/ambiguous failure states where material.
 
-Use if execution backend is available. Treat CodeRabbit as independent semantic PR review and Codex Security as diff security coverage. Never relabel manual review as those tools.
+Any higher-root material finding discovered here preempts the current order and is fixed from its owner before proceeding.
 
-## Repository/artifact disposition
+## 9. Batch G — exact-final-candidate remote evidence
 
-KEEP/EVOLVE:
-- Identity normalized RBAC and operation ledger;
-- DSH maker/checker/audit records;
-- one canonical DSH operation/outbox lifecycle;
-- exact permission gate;
-- governed contracts/controllers/UI.
+After the **last source change**, pin `FINAL_CANDIDATE_SHA` and do not accept any result for another SHA.
 
-DELETE_REQUIRED after proof:
-- stale permission alias(es);
-- superseded legacy RBAC convenience helpers;
-- obsolete split-intent lifecycle branches/helpers;
-- stale tests/comments/contract names;
-- any reachable broad/local/shadow authorization path.
+Run the materially required governed remote toolchain. At minimum for this task:
 
-TEMPORARY:
-- this three-file handoff directory; retire it only according to Orchestrator closure rules.
+1. canonical CI/build/typecheck/tests relevant to affected services/surfaces;
+2. CodeQL;
+3. Semgrep;
+4. SonarQube Cloud;
+5. Remote Security including applicable Gitleaks, OSV, Trivy, actionlint, zizmor, pinact, ShellCheck, Hadolint, yamllint and governed policy checks;
+6. Dependency Review and lockfile integrity when dependency/lockfile scope or governing baseline requires it;
+7. OpenCodeReview semantic review;
+8. CodeRabbit/PR review evidence if it is part of the active PR completion contract;
+9. runtime/journey verification for Identity + DSH + Control Panel affected flows.
 
-PROTECTED:
-- `tools/prompting/bthwani-orchestrator/**`.
+For each tool record:
 
-## Safe parallelism
+- tool/workflow name;
+- run ID/URL identity;
+- resolved ref and exact SHA;
+- effective scope/mode;
+- conclusion;
+- findings/suppressions;
+- artifact/provenance evidence;
+- freshness after last source mutation.
 
-- RC0 backend invariant/test work precedes UX-only adjustments.
-- RC1 schema/domain/worker contract is one overlapping work unit with one writer.
-- RC2 consumer discovery may run in parallel read-only; destructive cleanup follows proof.
-- remote scanners/reviews may run in parallel on one immutable candidate.
-- one integration/push owner reconciles all concurrent deltas before final push.
+A tool failure is not waived because another scanner is green. Diagnose its first material failure from logs, fix the source/tooling root, produce a new candidate SHA, then rerun all evidence invalidated by that source change.
 
-## PR/master integration contract
+## 10. PR / integration contract
 
-Use existing PR `#284` only.
+The active PR was `#284` during audit and was draft/non-mergeable. Execute phase must not assume that remains true.
 
-Before ready/merge:
+Before integration:
 
-1. PR head equals declared final candidate SHA;
-2. compare against current `master` and classify concurrent delta;
-3. PR is mergeable without unauthorized Orchestrator conflict resolution;
-4. exact PR-head CI + CodeQL + Sonar + Remote Security + semantic review evidence is closed;
-5. all material review threads/findings are resolved;
-6. merge uses `expected_head_sha` protection;
-7. after merge, re-pin landed `master` SHA and run/read **Remote Analysis Evidence** there because that workflow is branch-push/default-branch readback authority, not a substitute for pre-merge PR evidence;
-8. if landed-SHA readback reveals a material issue, `CLOSED` is revoked/forbidden and treatment resumes.
+1. verify PR head exactly equals `FINAL_CANDIDATE_SHA`;
+2. verify base is the intended current `master`;
+3. inspect all unresolved review threads/comments and classify each material item;
+4. prove required checks/evidence are green for the exact head;
+5. prove mergeability after updating/reconciling with current base if required;
+6. do not merge merely to obtain a green default-branch run;
+7. after merge, verify the resulting default-branch candidate and rerun post-merge checks required by governance;
+8. only then allow final closure bookkeeping.
 
-## Per-root acceptance
+Branch `c` is not protected at audit time, so protection cannot be treated as an enforcement guarantee. The execution contract itself must remain fail-closed.
 
-- RC0: all Product Truth separation invariants are enforced server-side with negative tests and no bypass.
-- RC1: no request/operation divergence, no unowned duplicate workers, bounded retry, historical rows reconciled, recovery visible.
-- RC2: one canonical vocabulary per capability and zero unjustified legacy helper consumer/reachability.
-- Historical cutover: every writer/reader/consumer uses Identity canonical authority with no broad/local/shadow truth.
-- Integration: exact PR-head evidence is clean, PR is mergeable, and exact landed-master evidence is clean after merge.
+## 11. Mandatory cleanup after cutover
+
+Delete within the proven scope after consumers migrate:
+
+- `platform.read` alias and bindings/data residue;
+- legacy grant/revoke wrappers and their legacy idempotency-key path;
+- old mutation lifecycle branches/states/queries made unreachable by the new state machine;
+- duplicate helper functions or fallback retry paths;
+- stale tests/fixtures that encode superseded behavior;
+- comments/documentation that still describe the old truth.
+
+Do not retain any of these “for safety”. Safety is provided by migration, readback, tests, and exact-candidate evidence, not parallel truth.
+
+## 12. Re-audit loop
+
+After each root batch:
+
+`AUDIT -> INSPECT -> DIAGNOSE -> ANALYZE -> VERIFY -> RE-AUDIT AFFECTED CONE + NEGATIVE SPACE -> RE-RANK`
+
+If the original root exposes a higher Product/System/Semantic/Architectural root, preempt lower work and fix the higher source first.
+
+Stop only at the state defined by `02-VERIFICATION-CLOSURE.md`. Until all closure evidence exists, the legal status is not `CLOSED`.
