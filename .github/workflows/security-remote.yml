@@ -1,0 +1,105 @@
+name: Remote Security
+
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [master]
+  schedule:
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: remote-security-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  authority:
+    name: Remote analysis authority
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout immutable candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          show-progress: false
+
+      - name: Set up locked Node runtime
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24.17.0"
+
+      - name: Enforce remote-only Sonar and CodeQL authority
+        run: node tools/guards/remote-analysis-authority-gate.mjs
+
+      - name: Verify SonarQube Cloud CI configuration
+        shell: pwsh
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/check-sonarqube-config.ps1
+
+  supply-chain:
+    name: Remote supply-chain and secret scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout immutable candidate with history
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+          show-progress: false
+
+      - name: Set up locked Node runtime
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24.17.0"
+
+      - name: Set up locked Go runtime
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache: false
+
+      - name: Install locked remote security toolchain
+        shell: bash
+        run: bash tools/scripts/install-oss-toolchain-binaries.sh security
+
+      - name: Scan committed candidate for secrets
+        shell: bash
+        run: gitleaks detect --log-opts="HEAD" --source . --no-banner --redact --verbose
+
+      - name: Scan dependency graph with OSV
+        run: node tools/scripts/run-osv-scanner.mjs
+
+      - name: Scan repository with Trivy
+        run: node tools/scripts/run-trivy.mjs
+
+  result:
+    name: Remote security result
+    needs: [authority, supply-chain]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Enforce remote security results
+        shell: bash
+        env:
+          AUTHORITY_RESULT: ${{ needs.authority.result }}
+          SUPPLY_CHAIN_RESULT: ${{ needs.supply-chain.result }}
+        run: |
+          set -euo pipefail
+          failures=()
+          [[ "${AUTHORITY_RESULT}" == "success" ]] || failures+=("authority:${AUTHORITY_RESULT}")
+          [[ "${SUPPLY_CHAIN_RESULT}" == "success" ]] || failures+=("supply-chain:${SUPPLY_CHAIN_RESULT}")
+          if [[ "${#failures[@]}" -ne 0 ]]; then
+            echo "::error title=Remote security failed::$(IFS=,; echo "${failures[*]}")"
+            exit 1
+          fi
+          echo "All remote security gates passed."
