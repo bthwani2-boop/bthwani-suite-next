@@ -3,7 +3,7 @@ name: BThwani Lockfile Integrity
 on:
   workflow_dispatch:
   pull_request:
-    branches: [master, b, c]
+    branches: ["**"]
     paths:
       - "package.json"
       - "pnpm-lock.yaml"

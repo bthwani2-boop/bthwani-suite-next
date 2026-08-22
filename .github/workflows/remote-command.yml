@@ -79,11 +79,14 @@ jobs:
             echo "::error::ci-journey requires a non-empty journey"
             exit 1
           fi
-          if [[ "${command}" == "codeql-hygiene" || "${command}" == "remote-evidence" ]]; then
-            if [[ "${target_ref}" != "master" ]]; then
-              echo "::error::${command} is restricted to canonical master"
-              exit 1
-            fi
+          default_branch="$(gh api \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "/repos/${GITHUB_REPOSITORY}" \
+            --jq '.default_branch')"
+
+          if [[ "${command}" == "codeql-hygiene" && "${target_ref}" != "${default_branch}" ]]; then
+            echo "::error::codeql-hygiene is restricted to the repository default branch ${default_branch}"
+            exit 1
           fi
 
           encoded_ref="$(jq -rn --arg value "${target_ref}" '$value|@uri')"
@@ -159,7 +162,7 @@ jobs:
               payload="$(jq -n --arg ref "${TARGET_REF}" --arg journey "${JOURNEY}" '{ref:$ref,inputs:{mode:"affected",journey:$journey,runtime_proof:false}}')"
               ;;
             remote-evidence)
-              payload="$(jq -n --arg ref "${TARGET_REF}" --arg sha "${EXPECTED_SHA}" '{ref:$ref,inputs:{target_sha:$sha}}')"
+              payload="$(jq -n --arg ref "${TARGET_REF}" --arg sha "${EXPECTED_SHA}" '{ref:$ref,inputs:{target_ref:$ref,target_sha:$sha}}')"
               ;;
             *)
               payload="$(jq -n --arg ref "${TARGET_REF}" '{ref:$ref}')"

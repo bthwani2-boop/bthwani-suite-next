@@ -3,21 +3,56 @@ name: SonarQube Cloud
 on:
   workflow_dispatch:
   pull_request:
-    branches: [master, b, c]
-    types: [opened, synchronize, reopened]
+    branches: ["**"]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
-    branches: [master]
+    branches: ["**"]
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: sonarqube-cloud-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
+  ownership:
+    name: Resolve branch event ownership
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      skip_duplicate_push: ${{ steps.owner.outputs.skip_duplicate_push }}
+    steps:
+      - name: Resolve push versus PR ownership
+        id: owner
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BRANCH: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          skip=false
+          if [[ "${EVENT_NAME}" == "push" && "${BRANCH}" != "${DEFAULT_BRANCH}" ]]; then
+            open_pr_count="$(gh api --method GET \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "/repos/${GITHUB_REPOSITORY}/pulls" \
+              -f state=open \
+              -f head="${GITHUB_REPOSITORY_OWNER}:${BRANCH}" \
+              -f per_page=1 \
+              --jq 'length')"
+            if [[ "${open_pr_count}" != "0" ]]; then
+              skip=true
+            fi
+          fi
+          echo "skip_duplicate_push=${skip}" >> "${GITHUB_OUTPUT}"
+
   scan:
     name: SonarQube Cloud scan
+    needs: [ownership]
+    if: ${{ needs.ownership.outputs.skip_duplicate_push != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     services:
@@ -111,8 +146,10 @@ jobs:
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
+          EVENT_BEFORE: ${{ github.event.before }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           EXPECTED_HEAD_SHA: ${{ github.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
           HEAD_SHA="$(git rev-parse HEAD)"
@@ -121,15 +158,14 @@ jobs:
             exit 1
           fi
 
-          BASE_SHA="${PR_BASE_SHA:-}"
+          BASE_SHA="${PR_BASE_SHA:-${EVENT_BEFORE:-}}"
           MODE=affected
 
-          if [[ "${EVENT_NAME}" == "push" || "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" || ( "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ) ]]; then
             MODE=full
             BASE_SHA="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${HEAD_SHA}")"
-          elif [[ -z "${BASE_SHA}" ]]; then
-            echo "::error::PR base SHA is required for affected Sonar analysis"
-            exit 1
+          elif [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
+            BASE_SHA="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${HEAD_SHA}")"
           fi
 
           CI_BASE_SHA="${BASE_SHA}" \

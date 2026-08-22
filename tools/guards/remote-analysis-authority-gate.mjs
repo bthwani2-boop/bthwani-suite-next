@@ -84,13 +84,20 @@ for (const required of [
   'workflows: ["CodeQL"]',
   "security-events: write",
   "github.event.workflow_run.head_sha",
-  "branches/master",
+  "github.event.repository.default_branch",
   "/code-scanning/analyses",
   "confirm_delete=true",
   "/code-scanning/alerts",
   "Verify canonical CodeQL workflow metadata without checkout",
 ]) {
   if (!codeqlHygiene.includes(required)) fail(`CodeQL metadata hygiene is missing invariant: ${required}`);
+}
+for (const forbidden of [
+  "branches/master",
+  "refs/heads/master",
+  "/branches/master",
+]) {
+  if (codeqlHygiene.includes(forbidden)) fail(`CodeQL metadata hygiene must not hard-code the default branch: ${forbidden}`);
 }
 for (const forbidden of [
   "actions/checkout@",

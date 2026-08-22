@@ -9,7 +9,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: codeql-metadata-hygiene-master
+  group: codeql-metadata-hygiene-default
   cancel-in-progress: true
 
 jobs:
@@ -17,11 +17,11 @@ jobs:
     name: Retire obsolete CodeQL configuration
     if: >-
       ${{
-        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master') ||
+        (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) ||
         (github.event_name == 'workflow_run' &&
          github.event.workflow_run.conclusion == 'success' &&
          github.event.workflow_run.event == 'push' &&
-         github.event.workflow_run.head_branch == 'master')
+         github.event.workflow_run.head_branch == github.event.repository.default_branch)
       }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
@@ -29,7 +29,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - name: Resolve exact live master candidate
+      - name: Resolve exact live default-branch candidate
         id: target
         shell: bash
         env:
@@ -37,6 +37,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           TRIGGER_SHA: ${{ github.event.workflow_run.head_sha }}
           DISPATCH_SHA: ${{ github.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
           if [[ "${EVENT_NAME}" == "workflow_run" ]]; then
@@ -48,18 +49,19 @@ jobs:
             echo "::error::CodeQL hygiene candidate must be a full SHA"
             exit 1
           }
-          live_master="$(gh api \
+          encoded_default_branch="$(jq -rn --arg value "${DEFAULT_BRANCH}" '$value|@uri')"
+          live_default="$(gh api \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/branches/master" \
+            "/repos/${GITHUB_REPOSITORY}/branches/${encoded_default_branch}" \
             --jq '.commit.sha')"
           superseded=false
-          if [[ "${candidate_sha}" != "${live_master}" ]]; then
+          if [[ "${candidate_sha}" != "${live_default}" ]]; then
             superseded=true
-            echo "Candidate ${candidate_sha} is superseded by live master ${live_master}; no CodeQL metadata will be mutated."
+            echo "Candidate ${candidate_sha} is superseded by live default branch ${live_default}; no CodeQL metadata will be mutated."
           fi
           {
             echo "sha=${candidate_sha}"
-            echo "live_master=${live_master}"
+            echo "live_default=${live_default}"
             echo "superseded=${superseded}"
           } >> "${GITHUB_OUTPUT}"
 
@@ -98,23 +100,25 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           CANDIDATE_SHA: ${{ steps.target.outputs.sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
-          master_ref='refs/heads/master'
+          default_ref="refs/heads/${DEFAULT_BRANCH}"
+          encoded_default_branch="$(jq -rn --arg value "${DEFAULT_BRANCH}" '$value|@uri')"
           prefix='.github/workflows/codeql.yml:'
           key_js='.github/workflows/codeql.yml:analyze-javascript-typescript'
           key_go='.github/workflows/codeql.yml:analyze-go'
           key_actions='.github/workflows/codeql.yml:analyze-actions'
           deleted=0
 
-          assert_live_master() {
+          assert_live_default() {
             local live
             live="$(gh api \
               -H 'X-GitHub-Api-Version: 2022-11-28' \
-              "/repos/${GITHUB_REPOSITORY}/branches/master" \
+              "/repos/${GITHUB_REPOSITORY}/branches/${encoded_default_branch}" \
               --jq '.commit.sha')"
             if [[ "${live}" != "${CANDIDATE_SHA}" ]]; then
-              echo "::error::master moved during CodeQL hygiene: candidate=${CANDIDATE_SHA} live=${live:-<unknown>}"
+              echo "::error::default branch moved during CodeQL hygiene: candidate=${CANDIDATE_SHA} live=${live:-<unknown>}"
               exit 1
             fi
           }
@@ -123,7 +127,7 @@ jobs:
             gh api --paginate --method GET \
               -H 'X-GitHub-Api-Version: 2022-11-28' \
               "/repos/${GITHUB_REPOSITORY}/code-scanning/analyses" \
-              -f ref="${master_ref}" \
+              -f ref="${default_ref}" \
               -f tool_name=CodeQL \
               -f per_page=100 | jq -s \
                 --arg prefix "${prefix}" \
@@ -138,7 +142,7 @@ jobs:
               -H 'X-GitHub-Api-Version: 2022-11-28' \
               "/repos/${GITHUB_REPOSITORY}/code-scanning/alerts" \
               -f state=open \
-              -f ref="${master_ref}" \
+              -f ref="${default_ref}" \
               -f tool_name=CodeQL \
               -f per_page=100 | jq -s \
                 --arg prefix "${prefix}" \
@@ -148,9 +152,9 @@ jobs:
                 '[.[][] | select((((.most_recent_instance.analysis_key // "") | startswith($prefix))) and .most_recent_instance.analysis_key != $js and .most_recent_instance.analysis_key != $go and .most_recent_instance.analysis_key != $actions)]'
           }
 
-          assert_live_master
+          assert_live_default
           for _ in $(seq 1 1000); do
-            assert_live_master
+            assert_live_default
             obsolete="$(obsolete_analyses)"
             count="$(jq 'length' <<<"${obsolete}")"
             if [[ "${count}" == "0" ]]; then
@@ -162,14 +166,14 @@ jobs:
               jq -c '.[] | {id,analysis_key,category,commit_sha,deletable}' <<<"${obsolete}" >&2
               exit 1
             fi
-            assert_live_master
+            assert_live_default
             gh api --method DELETE \
               -H 'X-GitHub-Api-Version: 2022-11-28' \
               "/repos/${GITHUB_REPOSITORY}/code-scanning/analyses/${target_id}?confirm_delete=true" >/dev/null
             deleted=$((deleted + 1))
           done
 
-          assert_live_master
+          assert_live_default
           remaining="$(obsolete_analyses)"
           remaining_count="$(jq 'length' <<<"${remaining}")"
           if [[ "${remaining_count}" != "0" ]]; then
@@ -179,7 +183,7 @@ jobs:
 
           remaining_alerts='[]'
           for attempt in $(seq 1 12); do
-            assert_live_master
+            assert_live_default
             remaining_alerts="$(obsolete_open_alerts)"
             [[ "$(jq 'length' <<<"${remaining_alerts}")" == "0" ]] && break
             [[ "${attempt}" == "12" ]] || sleep 5
@@ -204,13 +208,13 @@ jobs:
         shell: bash
         env:
           CANDIDATE_SHA: ${{ steps.target.outputs.sha }}
-          LIVE_MASTER: ${{ steps.target.outputs.live_master }}
+          LIVE_DEFAULT: ${{ steps.target.outputs.live_default }}
           SUPERSEDED: ${{ steps.target.outputs.superseded }}
         run: |
           {
             echo "### CodeQL Metadata Hygiene"
             echo "- Candidate: \`${CANDIDATE_SHA:-unresolved}\`"
-            echo "- Live master: \`${LIVE_MASTER:-unresolved}\`"
+            echo "- Live default branch: \`${LIVE_DEFAULT:-unresolved}\`"
             echo "- Superseded without mutation: \`${SUPERSEDED:-unknown}\`"
             echo "- Repository source is never checked out or executed by this privileged metadata workflow."
             echo "- Canonical scanner authority remains \`.github/workflows/codeql.yml\`."
