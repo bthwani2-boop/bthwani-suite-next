@@ -1,6 +1,6 @@
 # BThwani Self-Contained Goal-Driven Audit, Inspection, Diagnosis, Analysis & Root-Cause Execution Orchestrator
 
-PACKAGE_REVISION: 11
+PACKAGE_REVISION: 12
 PACKAGE_CLASS: TEXTUAL_EXECUTION_COMMAND_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -47,11 +47,11 @@ Project tooling and external research may be used only as evidence or execution 
 
 The package has exactly these semantic owners:
 
-1. `00-ORCHESTRATOR.md` — governing law, project-frame invariant, progressive-governance invariant, goal-driven audit/execution lifecycle, invocation, phase semantics, independence, protection and valid stop states.
-2. `01-SCOPE-AUTHORITY-RULES.md` — truth/authority, project-frame reconstruction, objective/working-scope/focus routing, phase/mode/plan-directory authority, handoff topology, executor boundary, branch/workspace authority, research/capability discipline, exclusions, concurrency and longevity.
-3. `02-DIAGNOSE-ROOT-CAUSE.md` — detailed audit/inspection/diagnosis/analysis protocol through project orientation, coverage, journeys, findings, decisions, root proof/ranking, durable-truth discovery, project-consistency target modeling, `AUDIT_PREPARE` handoff construction and execution readiness.
-4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — actual treatment, prepared-handoff consumption, reconstruction, migration, cutover, continuity, simplification, cleanup, progressive governance clarification and mutation discipline.
-5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — task-specific verification/acceptance/closure contract semantics, exact-candidate evidence, project-consistency proof, durable project-memory closure, optional temporary-plan-directory retirement, repository-platform truth when required, review provenance, post-treatment re-audit/re-inspection/re-diagnosis/re-analysis and fail-closed closure.
+1. `00-ORCHESTRATOR.md` — governing law, project-frame invariant, progressive-governance invariant, goal-driven audit/execution lifecycle, invocation, phase semantics, hierarchy invariant, independence, protection and valid stop states.
+2. `01-SCOPE-AUTHORITY-RULES.md` — truth/authority, project-frame reconstruction, objective/working-scope/focus routing, phase/mode/plan-directory authority, handoff topology, executor boundary, human-only branch authority, capability saturation, hierarchical coordinator/subagent authority, exclusions, concurrency and longevity.
+3. `02-DIAGNOSE-ROOT-CAUSE.md` — detailed audit/inspection/diagnosis/analysis protocol through project orientation, coverage, journeys, findings, decisions, root proof/ranking, durable-truth discovery, project-consistency target modeling, `AUDIT_PREPARE` handoff construction, artifact/deletion disposition and execution readiness.
+4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — actual treatment, prepared-handoff consumption, execution-velocity discipline, reconstruction, migration, cutover, continuity, mandatory proven cleanup/deletion, simplification, progressive governance clarification and mutation discipline.
+5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — task-specific verification/acceptance/closure contract semantics, exact-candidate evidence, deletion/reachability closure, project-consistency proof, durable project-memory closure, optional temporary-plan-directory retirement, repository-platform truth when required, review provenance, post-treatment re-audit/re-inspection/re-diagnosis/re-analysis and fail-closed closure.
 6. `focus/code-architecture-organization.md` — implementation architecture, repository structure, UI/UX and discoverability.
 7. `focus/governance-product-design.md` — product meaning, governance reconciliation, progressive durable-memory clarification and engineering-governance/control-artifact value.
 8. `focus/data-contracts-runtime-security-quality.md` — data, contracts, runtime, security, finance, quality and engineering control-path efficiency.
@@ -85,7 +85,7 @@ Use:
 
 ```text
 REPOSITORY: <owner/repo>
-BRANCH: <exact branch/ref>
+BRANCH: <exact existing branch/ref>
 OBJECTIVE: <material outcome to audit/inspect/diagnose/analyze/fix/restructure/clean/close; discovery itself may be the objective>
 PHASE: <AUDIT_PREPARE | EXECUTE_CLOSE | AUTO>
 PLAN_DIR: <AUTO | NONE | exact temporary objective-plan directory>
@@ -93,7 +93,7 @@ MODE: <AUTO | DIAGNOSE | EXECUTE_END_TO_END | EXECUTE_PROJECT_CLOSURE>
 PRIMARY_FOCUS: <AUTO | optional explicit focus>
 SCOPE: <AUTO | repository/domain/service/surface/feature/journey/path/semantic scope>
 RESEARCH: <AUTO | INTERNAL_ONLY | EXTERNAL_ALLOWED>
-EXECUTION_LOCATION: <DIRECT_ON_TARGET | ISOLATED_WORKSPACE when explicitly required/allowed>
+EXECUTION_LOCATION: <DIRECT_ON_TARGET | ISOLATED_WORKSPACE when explicitly human-authorized and already available>
 ```
 
 Defaults when omitted:
@@ -124,19 +124,25 @@ The invocation token `MODE=DIAGNOSE` is intentionally retained for compatibility
 
 ### 3.1 `AUDIT_PREPARE`
 
-This phase is a **full deep read-only preparation run** over the target system:
+This phase is a **maximum-depth, read-only preparation run over every materially relevant part of the target system**. Its optimization target is evidence completeness and deterministic execution handoff, not wall-clock speed or the earliest possible executable root.
 
 ```text
 AUDIT + INSPECT + DIAGNOSE + ANALYZE
+→ DISCOVER + USE ALL MATERIALLY APPLICABLE AVAILABLE CAPABILITIES UNDER 01
 → PROVE MATERIAL FINDINGS / ROOTS / BLAST RADIUS / DECISIONS
+→ FALSIFY COMPETING HYPOTHESES + SEARCH NEGATIVE SPACE
 → DEFINE CANONICAL TARGET + ROOT-CORRECT TREATMENT
-→ DEFINE MIGRATIONS / CUTOVERS / CLEANUP / GOVERNANCE DISPOSITION
+→ INVENTORY WRITERS / READERS / CONSUMERS + MATERIAL ARTIFACT DISPOSITION
+→ DEFINE MIGRATIONS / CUTOVERS / CLEANUP / REQUIRED DELETIONS / GOVERNANCE DISPOSITION
 → DEFINE VERIFICATION + CLOSURE CRITERIA
+→ CONTINUE UNTIL MATERIAL EVIDENCE/HANDOFF SATURATION UNDER 01/02
 → PROVE HANDOFF READINESS UNDER 02
 → WRITE ONE TEMPORARY PLAN DIRECTORY WITH EXACTLY THREE CANONICAL MARKDOWN CONTRACTS
 → REPORT
 → READY_FOR_EXECUTION
 ```
+
+Do not impose an artificial time budget, first-tool stop, first-green-check stop or first-executable-root stop on this phase. Continue while a materially applicable available evidence source, tool, subagent investigation, negative-space search or competing hypothesis can reasonably change the Root Landscape, Canonical Target, working cone/blast radius, writer/reader/consumer inventory, artifact disposition, execution frontier or verification contract. Stop deepening only at the evidence-saturation/readiness boundary owned by `01`/`02`; do not waste time on clearly immaterial work merely to make the run longer.
 
 The target system remains read-only throughout this phase. If any material `DECISION_REQUIRED` can change the target/treatment, stop **before writing the plan directory**, batch the material questions under §12, and wait for the decision. After decisions are supplied, propagate them and re-audit/re-inspect/re-diagnose/re-analyze the affected cone before preparing the handoff.
 
@@ -166,15 +172,17 @@ PLANNING-ARTIFACT MUTATION ≠ TARGET-SYSTEM TREATMENT ≠ ROOT-CAUSE PROGRESS �
 
 ### 3.2 `EXECUTE_CLOSE`
 
-This phase does **not require a plan directory and does not create or mutate one by default**. It performs the same deep audit/inspection/diagnosis/analysis obligations needed to establish current truth, but couples them directly to root-correct treatment:
+This phase does **not require a plan directory and does not create or mutate one by default**.
+
+Without a prepared handoff, perform the audit/inspection/diagnosis/analysis needed to establish current truth and then couple it directly to root-correct treatment. With a valid prepared handoff, front-loaded evidence is reused: revalidate HEAD/material assumptions, then execute; do not repeat the full `AUDIT_PREPARE` capability-saturation pass unless invalidating evidence makes it necessary.
 
 ```text
-AUDIT + INSPECT + DIAGNOSE + ANALYZE CURRENT LIVE TRUTH
-→ PROVE / RANK HIGHEST CURRENT SYSTEMIC ROOT
+ESTABLISH / REVALIDATE CURRENT LIVE TRUTH
+→ PROVE / REVALIDATE HIGHEST CURRENT SYSTEMIC ROOT
 → IF EXECUTABLE: TREAT ROOT IMMEDIATELY END-TO-END IN THE ACTUAL SYSTEM
-→ MIGRATE / CUTOVER / CLEAN / RECONCILE GOVERNANCE AS REQUIRED
-→ VERIFY
-→ RE-AUDIT / RE-INSPECT / RE-DIAGNOSE / RE-ANALYZE AFFECTED CONE
+→ MIGRATE / CUTOVER / CLEAN / DELETE REQUIRED RESIDUE / RECONCILE GOVERNANCE AS REQUIRED
+→ VERIFY AFFECTED CLAIMS
+→ REVALIDATE ONLY THE AFFECTED / INVALIDATED CONE
 → RE-RANK
 → TREAT NEXT HIGHEST PROVEN ROOT
 → REPEAT UNTIL CLOSED OR A LEGITIMATE STOP STATE APPLIES
@@ -220,12 +228,12 @@ For broad or repository-wide objectives, "audit everything" means complete mater
 Before audit, inspection, diagnosis, analysis or mutation:
 
 ```text
-resolve exact REPOSITORY + BRANCH/ref
+resolve exact REPOSITORY + explicit BRANCH/ref
 → PIN STARTING_LIVE_HEAD
 → inspect that exact truth
 ```
 
-Never substitute a default branch for an explicitly named ref. Never infer branch-specific absence from a search index that does not prove that ref.
+Never substitute a default branch for an explicitly named ref. An explicit `BRANCH` is the baseline/write/integration target for the invocation unless the human explicitly changes it. Never infer branch-specific absence from a search index that does not prove that ref. Branch creation is human-only under `01`.
 
 Before every material write batch, before ref movement/push, and before final closure:
 
@@ -237,7 +245,7 @@ re-resolve live HEAD
 → continue only from current truth
 ```
 
-Latest HEAD is the integration baseline; recency is not execution priority.
+Latest HEAD of the explicitly authorized target is the integration baseline; recency elsewhere is not execution priority.
 
 ## 6. Governing lifecycle
 
@@ -266,7 +274,7 @@ UNDERSTAND OBJECTIVE AS CURRENT PRIORITY
 → EXECUTE SMALLEST COMPLETE ROOT-CORRECT CHANGE WHEN PHASE/MODE PERMITS
 → MIGRATE ALL MATERIAL WRITERS / READERS / CONSUMERS / DATA
 → CANONICAL CUTOVER
-→ DELETE/RETIRE SUPERSEDED REACHABLE PATHS WHEN PROVEN SAFE
+→ DELETE/RETIRE SUPERSEDED REACHABLE PATHS WHEN PROVEN REQUIRED/SAFE
 → VERIFY ACTUAL SYSTEM TRUTH
 → CLASSIFY NEWLY PROVEN MATERIAL KNOWLEDGE FOR DURABLE PROJECT MEMORY
 → RECONCILE / ENRICH MATERIAL GOVERNANCE WHEN REQUIRED
@@ -279,11 +287,13 @@ UNDERSTAND OBJECTIVE AS CURRENT PRIORITY
 → CLOSE OR REMAIN OPEN
 ```
 
-Do not wait for an exhaustive low-level scan once the highest root is proven deeply enough to rank and treat. Do not execute a lower finding while a materially higher unresolved cause can change the correct treatment.
+In `EXECUTE_CLOSE`, do not wait for an exhaustive low-level scan once the highest root is proven deeply enough to rank and treat. In `AUDIT_PREPARE`, do not stop at the first executable root while materially applicable evidence can still improve or change the handoff. Do not execute a lower finding while a materially higher unresolved cause can change the correct treatment.
 
 ## 6.1 Maximum-safe-parallel execution law
 
-> **MAXIMUM SAFE PARALLELISM; ONE PROJECT FRAME; ONE CANONICAL INTEGRATION TRUTH; ZERO REDUNDANT WORK; ZERO WEAKER PROOF.**
+> **MAXIMUM SAFE PARALLELISM; ONE PRIMARY COORDINATOR; ONE PROJECT FRAME; ONE CANONICAL INTEGRATION TRUTH; ZERO REDUNDANT WORK; ZERO WEAKER PROOF.**
+
+When subordinate-agent capability exists, there is exactly one `PRIMARY_COORDINATOR`; all delegated agents are `SUBAGENT`s under the authority model in `01 §14.2`. Parallelism changes scheduling/evidence throughput, never Canonical Truth ownership, branch authority or final readiness/closure authority.
 
 Execution is sequential only where causality, authority, shared mutation, dependency or evidence requires sequentiality.
 
@@ -306,7 +316,7 @@ PROVEN ROOT LANDSCAPE
 
 Parallelize by **coherent Root Cause ownership**, not by arbitrary file, application, frontend/backend, language or repository-folder partition.
 
-A worker that owns a Root Cause owns the smallest complete end-to-end treatment required for that root across all materially affected:
+A delegated execution unit owns the smallest complete end-to-end treatment required for its root across all materially affected:
 
 `authority | contracts | data | backend | frontend | runtime | consumers | migration | cleanup | verification`.
 
@@ -328,7 +338,7 @@ Read overlap alone does not prohibit concurrency. When overlap is uncertain, tre
 
 ### Single integration authority
 
-Multiple workers may diagnose, execute and verify independent roots concurrently, but there must remain exactly one canonical integration authority for:
+Subagents may diagnose, execute and verify delegated independent roots concurrently as permitted by `01`, but the primary coordinator remains the only integration authority for:
 
 ```text
 project-wide canonical frame
@@ -339,11 +349,11 @@ shared-authority decisions
 previously proven canonical closures
 durable project-memory reconciliation
 collision resolution
-candidate integration
-final closure state
+candidate integration/ref movement
+readiness/final closure state
 ```
 
-No worker may silently redefine shared Product/System truth, governance meaning or project architecture because of its local objective or implementation. No worker may independently publish a competing governance interpretation of a durable fact.
+No subagent may silently redefine shared Product/System truth, governance meaning or project architecture because of its local objective or implementation. No subagent may independently publish a competing governance interpretation of a durable fact.
 
 ### Work-conserving scheduling
 
@@ -359,7 +369,7 @@ verify its materially affected claims
 → immediately assign available execution capacity
 ```
 
-Do not wait for unrelated workers to finish before starting newly ready independent work. A `DECISION_REQUIRED`, blocker or long-running verification suspends only its dependent cone; all proven independent work continues.
+Do not wait for unrelated subagents to finish before starting newly ready independent work. A `DECISION_REQUIRED`, blocker or long-running verification suspends only its dependent cone; all proven independent work continues.
 
 ### Evidence and context reuse
 
@@ -371,7 +381,7 @@ INVALIDATED EVIDENCE → REACQUIRE AFFECTED PROOF
 UNKNOWN VALIDITY → REVALIDATE THE MINIMUM REQUIRED ASSUMPTION
 ```
 
-Every new worker/session still re-resolves live HEAD and revalidates enough of the project frame to prove that reused evidence, durable governance memory and prior canonical closures remain applicable. Restart broad diagnosis only when evidence proves that the governing baseline, authority model or material coverage has been invalidated.
+Every new subagent/session still re-resolves enough live context to prove that reused evidence and constraints apply to its delegated cone. Restart broad diagnosis only when evidence proves that the governing baseline, authority model or material coverage has been invalidated.
 
 ### No redundant execution
 
@@ -379,7 +389,7 @@ Before beginning a work item, prove that it is not already:
 
 `treated | superseded | being treated by another owner | invalidated by a higher root | blocked by an unresolved parent | obsolete after current-head movement`.
 
-Do not allow multiple workers to independently solve the same symptom/root.
+Do not allow multiple subagents to independently solve the same symptom/root.
 
 ### Higher-root preemption
 
@@ -413,10 +423,10 @@ Do not preserve both interpretations.
 
 ### Speed/accuracy invariant
 
-Speed may come only from:
+In `AUDIT_PREPARE`, speed is subordinate to evidence saturation and handoff quality. In `EXECUTE_CLOSE`, speed should come from the already-prepared deterministic contract plus:
 
 ```text
-safe parallelism
+safe hierarchical parallelism
 + evidence/context reuse
 + affected-only verification
 + delta-first reconciliation
@@ -432,7 +442,7 @@ skipped material audit/inspection/diagnosis/analysis
 skipped project-frame/authority or blast-radius proof
 skipped focus applicability disposition
 skipped affected consumers
-skipped durable-truth classification when material
+skipped required artifact deletion/cleanup
 weaker verification
 silent assumptions
 partial migration
@@ -444,42 +454,42 @@ If acceleration conflicts with correctness or proof, correctness and fail-closed
 
 Parallel execution changes scheduling only; it does not weaken any requirement owned by `01`, `02`, `03` or `04`.
 
-## 6.2 Canonical integration-branch closure loop
+## 6.2 Canonical integration-target closure loop
 
-For project-wide closure or any objective whose success must be integrated back into the repository's canonical integration branch, use that branch as the **audit baseline and integration truth**. For this repository that branch is normally `master` unless the human explicitly establishes another canonical integration baseline.
+For project-wide closure or any objective whose success must be integrated into a repository target, the **explicit human-selected `BRANCH`/ref for the invocation is the audit baseline and integration truth**. Never substitute the repository default branch, `master`, another integration branch, or an automatically created branch for an explicit target.
 
-Execution workspace/branch strategy is resolved exclusively under `01`; this section does not independently authorize branch creation or branch switching.
+Branch creation is human-only under `01`. This lifecycle may use only an already-existing human-authorized branch/workspace; it never creates one.
 
 ```text
-PIN CANONICAL_BASE_HEAD
+PIN EXPLICIT TARGET_BASE_HEAD
 → READ-ONLY PROJECT-WIDE ORIENTATION / AUDIT AS MATERIAL
 → BUILD / REFRESH ROOT + DEPENDENCY LANDSCAPE
 → RANK HIGHEST PROVEN ACTIONABLE ROOTS
 → SELECT ATOMIC_CLOSURE_UNIT
 → DERIVE SMALLEST COMPLETE WORKING CONE
-→ RESOLVE AUTHORIZED EXECUTION WORKSPACE / BRANCH STRATEGY UNDER 01
+→ CONFIRM EXISTING HUMAN-AUTHORIZED EXECUTION TARGET / WORKSPACE UNDER 01
 → ROOT-CORRECT TREATMENT
 → MIGRATION / BACKFILL / WRITER-READER-CONSUMER MIGRATION
 → CANONICAL CUTOVER
-→ LEGACY / DUPLICATE / DEAD / SHADOW-TRUTH CLEANUP
+→ LEGACY / DUPLICATE / DEAD / SHADOW-TRUTH CLEANUP + REQUIRED DELETION
 → EXACT-CANDIDATE + NEGATIVE-SPACE VERIFICATION
-→ RECONCILE CURRENT CANONICAL HEAD
-→ INTEGRATE ONLY A PROVEN FRESH FINAL CANDIDATE WHEN INTEGRATION IS AUTHORIZED/REQUIRED
-→ POST-INTEGRATION VERIFY / REBASELINE CANONICAL HEAD
+→ RECONCILE CURRENT EXPLICIT TARGET HEAD
+→ UPDATE/INTEGRATE ONLY THE PROVEN FRESH FINAL CANDIDATE WHEN AUTHORIZED
+→ POST-INTEGRATION VERIFY / REBASELINE EXPLICIT TARGET HEAD
 → INVALIDATE STALE EVIDENCE / FINDINGS
 → REFRESH / RE-RANK ROOT LANDSCAPE
-→ REPEAT UNTIL FINAL CANONICAL CLOSURE IS PROVEN
+→ REPEAT UNTIL FINAL TARGET CLOSURE IS PROVEN
 ```
 
 `ATOMIC_CLOSURE_UNIT` is the smallest coherent root or tightly coupled root set that requires one end-to-end cutover boundary. Do not split it merely by file, service, frontend/backend layer or agent when that would create an intermediate broken state, half migration, compatibility path or parallel authority.
 
-Before integration, re-resolve the canonical integration branch. If it moved materially since `CANONICAL_BASE_HEAD`, reconcile the candidate/workspace as allowed by the authorized topology, re-audit the affected intersection, invalidate stale proof and rerun every materially affected gate. A stale candidate may not be integrated because its earlier CI or verification was green.
+Before integration/ref movement, re-resolve the explicit target. If it moved materially since `TARGET_BASE_HEAD`, reconcile the candidate/workspace as allowed by the authorized topology, re-audit the affected intersection, invalidate stale proof and rerun every materially affected gate. A stale candidate may not be integrated because its earlier CI or verification was green.
 
-Integration is permitted only for the exact fresh candidate when every applicable closure claim is proven or explicitly `N/A_PROVEN`, all affected writers/readers/consumers and data are migrated, the canonical cutover is complete, negative space is clean, and no known material finding, half migration, unjustified parallel truth or superseded reachable legacy remains inside the closure unit. Retire any temporary execution branch/workspace after safe integration only when it was authorized, is owned by the work and has no remaining purpose.
+Integration/update is permitted only for the exact fresh candidate when every applicable closure claim is proven or explicitly `N/A_PROVEN`, all affected writers/readers/consumers and data are migrated, the canonical cutover is complete, required artifact deletion/cleanup is complete, negative space is clean, and no known material finding, half migration, unjustified parallel truth or superseded reachable legacy remains inside the closure unit.
 
-After integration, the new canonical HEAD becomes the only integration baseline. Revalidate the affected system truth, invalidate findings/evidence that are `RESOLVED | SUPERSEDED | INVALIDATED`, retain only `STILL_OPEN | N/A_PROVEN` as justified, refresh the root/dependency landscape and select the next highest actionable root. Reuse still-valid evidence incrementally, but preserve global awareness for newly exposed higher roots; do not trust a stale checklist and do not restart an indiscriminate repository scan without evidence that it is required.
+After integration/update, the new explicit target HEAD becomes the only integration baseline. Revalidate the affected system truth, invalidate findings/evidence that are `RESOLVED | SUPERSEDED | INVALIDATED`, retain only `STILL_OPEN | N/A_PROVEN` as justified, refresh the root/dependency landscape and select the next highest actionable root. Reuse still-valid evidence incrementally, but preserve global awareness for newly exposed higher roots; do not trust a stale checklist and do not restart an indiscriminate repository scan without evidence that it is required.
 
-Project closure is not "all planned branches merged". Final `CLOSED` requires `04` to prove on the latest canonical integration HEAD that known material roots are exhausted within the effective project objective, Canonical Authorities/Truth are consistent, no material parallel truth/half migration/drift remains, and the final canonical candidate satisfies all materially applicable end-to-end proof obligations.
+Project closure is not "all planned branches merged". Final `CLOSED` requires `04` to prove on the latest explicitly selected target HEAD that known material roots are exhausted within the effective project objective, Canonical Authorities/Truth are consistent, no material parallel truth/half migration/drift remains, and the final candidate satisfies all materially applicable end-to-end proof obligations.
 
 ## 7. Audit, inspection, diagnosis and analysis are distinct mandatory operations
 
@@ -593,6 +603,7 @@ Only:
 - `READY_FOR_EXECUTION` — valid completion only for `PHASE=AUDIT_PREPARE`; it is not system closure.
 - `DECISION_REQUIRED` — true non-derivable material decision.
 - `EXTERNAL_BLOCKER` — genuine external dependency/capability/authority gap with an exact unblock condition.
+- `HUMAN_ACTION_REQUIRED` — only when a human-only repository/topology action such as creating/selecting a required branch must occur; it blocks only the dependent mutation cone.
 
 `large scope`, `many findings`, `follow up later`, `write a plan`, `create a ticket`, or `CI is green` are not closure states.
 
