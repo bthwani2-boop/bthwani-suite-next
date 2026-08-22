@@ -2,106 +2,70 @@
 
 Status: ACTIVE_CANONICAL
 
-## 1. Scope
+## Architecture and ownership
 
-This policy governs architecture, service boundaries, contracts, data, runtime, frontend/shared code, integrations, testing, observability, performance, and technical cleanup for the entire repository.
+- Every durable fact and mutation has one authoritative owner.
+- Cross-domain access uses explicit contracts; no direct cross-service table mutation or copied business logic.
+- Projections, caches, read models, mocks, and surface-local state never become parallel truth.
+- Reusable logic lives at the smallest stable shared owner.
+- Prefer vertical end-to-end closure of one outcome over horizontal layer-by-layer work that leaves the outcome incomplete.
+- Do not add abstractions, services, files, dependencies, registries, or wrappers without a proven need.
 
-## 2. Architecture
+## Contracts and APIs
 
-- One authoritative owner exists for every durable fact and mutation.
-- Cross-domain access uses explicit contracts, not direct table coupling or copied business logic.
-- A projection/cache/read model never becomes a parallel source of truth.
-- Reusable logic belongs at the smallest stable shared owner; surface code owns presentation and interaction, not duplicated business state.
-- Prefer vertical full-stack closure of one outcome over horizontal frontend/backend/database batching that leaves the outcome unproven.
-- Do not add new abstractions, services, files, dependencies, or registries without a proven ownership or reuse need.
-
-## 3. Contracts and API binding
-
-- OpenAPI/service contracts are the canonical external interface for registered bounded contexts.
-- Generated clients must be reproducible from canonical composed contracts and must not be hand-maintained as parallel truth.
-- Backend route registration, generated-client operation IDs, consumers, and compatibility policy must stay aligned.
-- Breaking changes require an explicit compatibility/migration plan; silent contract drift is a defect.
+- OpenAPI/service contracts are the canonical external interface for bounded contexts that expose them.
+- Generated clients are reproducible artifacts from canonical contracts, never hand-maintained parallel truth.
+- Backend routes, operation IDs, generated clients, and consumers must remain aligned.
+- Breaking changes require explicit consumer migration/cutover.
 - Client-controlled values may express intent but never trusted authorization context.
 
-## 4. Data and PostgreSQL
+## Data and migrations
 
-- Each service owns exactly one schema/migration history; cross-service schema mutation is forbidden.
-- Schema changes are forward, reviewable, deterministic, ordered, and tested against the supported upgrade path. Applied migration history is immutable; change it only through a new forward migration.
-- Migration ledgers/checksums, where used by the runtime, are enforcement records and may not be bypassed or rewritten to hide drift.
-- Constraints, foreign keys, unique indexes, checks, locking/versioning, idempotency, and transaction boundaries encode durable invariants close to the data when appropriate.
-- DDL that lacks native `IF NOT EXISTS` semantics must use an explicit deterministic existence guard when repeat execution is a supported failure/recovery case.
-- Destructive or narrowing change requires proven consumers/data impact, retention requirements, a forward-safe rollout/rollback or roll-forward path, and database evidence on a representative upgrade path—not only a fresh empty database.
-- A migration must not silently discard balances, ledger rows, payouts, settlements, refunds, commissions, audit facts, or other regulated/business-critical data. Conflicting financial records are reconciled under WLT ownership; deletion is not a reconciliation strategy.
-- Before an authorized destructive data transformation, quantify affected rows, preserve the required audit/recovery record, define the reconciliation/rollback behavior, and obtain every protected approval required by Delivery/Security/Finance policy.
-- Non-trivially reversible migrations document their recovery/roll-forward strategy in the migration itself or its canonical release artifact.
-- Seeds and fixtures are development support only and never commercial or production truth.
+- Each service owns one migration history and its data mutations.
+- Migration order/checksums are deterministic and immutable after apply; corrections use an explicit forward-safe path.
+- Constraints, idempotency, concurrency control, transactions, outbox/event rules, and ownership should encode durable invariants close to the data where appropriate.
+- Destructive or narrowing changes require proven consumer/data impact and a safe rollout/recovery path.
+- Financial/audit/business-critical records are reconciled by their owner; deletion is not reconciliation.
+- Seeds and fixtures are development support only.
 
-## 5. Concurrency, idempotency, events and jobs
+## DSH/WLT
 
-- Retriable mutations use stable idempotency identity where duplicate effects are possible.
-- Optimistic concurrency or locking protects state that can be overwritten by stale actors.
-- Unknown external outcomes remain reconcilable and do not create a second mutation with a new identity until authoritative status is known.
-- State mutation plus required outbox/event/audit effects follow one transactional discipline where consistency requires it.
-- Event consumers are idempotent and reject contradictory reuse of an event identity.
-- Retry, backoff, dead-letter, lease, and reconciliation behavior is explicit and observable.
+- DSH owns operational commerce/fulfillment truth.
+- WLT exclusively owns wallet, ledger, payment, refund, settlement, payout, commission, and financial reconciliation truth.
+- DSH/frontends may hold only contract-permitted references/projections and must not reproduce WLT calculations or writes.
 
-## 6. DSH/WLT boundary
+## Frontend and shared code
 
-- DSH owns operational commerce/fulfillment truth and only bounded WLT-backed references/projections allowed by current contracts.
-- WLT exclusively owns authoritative financial mutation and truth: wallet, ledger, payment, refund, settlement, payout, commission, and reconciliation.
-- No DSH/frontend calculation or database write may substitute for WLT financial truth.
-- Provider financial operations remain behind WLT and server-side service authentication.
+- Surfaces consume canonical contracts/controllers and shared coordination where reuse is real.
+- No live business behavior may depend on local mock/fallback arrays or duplicated state machines.
+- Persisted outcomes require canonical readback when product behavior depends on them.
+- Loading, empty, offline, forbidden, conflict, error, recovery, accessibility, localization/RTL, and weak-network behavior are implemented when applicable to the affected surface.
 
-## 7. Frontend and shared code
+## Runtime and providers
 
-- Every required surface consumes canonical contracts and shared coordination where reuse is real.
-- Do not create surface-local arrays, stores, mocks, fallback truth, or copied state machines for live business behavior.
-- UI state distinguishes applicable loading, empty, offline, forbidden, conflict, partial, error, recovery, and success states.
-- Successful mutation requires canonical readback when the product outcome depends on persisted state.
-- Shared UI primitives/design tokens remain presentation infrastructure and cannot own domain truth.
-- Navigation, RTL, localization, accessibility, focus/keyboard, large-text, and weak-network behavior are part of affected implementation quality.
+- Runtime configuration is explicit, environment-scoped, and fail-closed when required values are missing.
+- Secrets never live in source, client-visible config, or logs.
+- Provider integrations define owner, auth, timeout/retry/idempotency, error mapping, observability, and recovery.
+- Provider configuration is not proof of provider health; runtime/provider claims need runtime evidence.
 
-## 8. Runtime and configuration
+## Verification
 
-- Runtime configuration is explicit, environment-scoped, and validated; it may not redefine product/domain ownership.
-- Required configuration fails closed rather than silently selecting insecure/mock defaults.
-- Secrets stay in approved secret/runtime stores and never in source, governance text, client-visible environment variables, or logs.
-- Local simulators/mocks are bounded development tools and cannot be represented as provider, release, or production evidence.
-- Runtime ports, service dependencies, and health/readiness behavior follow current repository manifests/scripts.
-
-## 9. External providers
-
-- Every provider integration has an owner, capability boundary, authentication method, timeout/retry/idempotency model, error mapping, observability, and recovery path.
-- Provider “configured” is not provider “healthy”. Runtime/provider evidence is required for health claims.
-- Webhooks require signature/replay protection, schema validation, event identity, and trusted scope.
-- A provider outage may degrade only as explicitly permitted by the owning Product Truth; mutations requiring authoritative success fail closed.
-
-## 10. Testing and verification
-
-Use the smallest sufficient affected verification and expand by proven risk:
+Use the smallest check that proves the affected invariant, then expand only by evidence/risk:
 
 1. targeted unit/domain tests;
 2. type/lint/static checks;
 3. contract/generated-client/binding checks;
 4. migration/database integration checks;
 5. cross-service/integration tests;
-6. targeted runtime smoke/readback;
-7. visual/device/accessibility/performance evidence when claimed;
-8. full workspace/runtime only when impact requires it.
+6. runtime/readback;
+7. visual/accessibility/performance when affected;
+8. full workspace/runtime only when closure or broad shared impact requires it.
 
-Verification runs after the final relevant edit. Evidence from an earlier candidate becomes stale when a later mutation can affect the claim.
+Do not create meta-guards, guard registries, workflow registries, or duplicate diagnostics to validate the existence/text of other checks.
 
-## 11. Observability and performance
+## Cleanup
 
-- Log/trace/metric fields use stable correlation identities and avoid secrets/PII.
-- Operational alerts and SLOs come from active configuration/observability contracts, not copied numbers in documentation.
-- Performance budgets are measured for affected API, bundle, render, database, or job paths appropriate to the change.
-- Diagnostics are read-only unless the tool is explicitly a governed repair operation.
-
-## 12. Cleanup and repository quality
-
-- Prefer reuse, consolidation, and deletion of proven obsolete code over adding compatibility layers indefinitely.
-- Before move/delete/merge, prove references, consumers, generated outputs, CI/runtime dependencies, and retained-data implications.
-- Git history is the default archive; do not create duplicate archive/backup trees without a contractual retention need.
-- Generated diagnostics, logs, screenshots, and temporary task artifacts remain untracked by default.
-- Task/process terminology must not leak into product code identifiers or runtime architecture.
+- Prefer deletion/consolidation of proven obsolete code over compatibility layers.
+- Before move/delete/merge, prove consumers and runtime/generated dependencies.
+- Git history is the archive; temporary diagnostics, logs, screenshots, reports, caches, and task artifacts stay untracked.
+- Task/process terminology must not leak into product/runtime architecture.

@@ -132,32 +132,7 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 			{Service: "dsh", Surface: actor.surface, Action: "store:write", Scope: actor.scope},
 		}
 		if actor.role == "operator" {
-			actorPermissions = append(actorPermissions,
-				Permission{Service: "workforce", Surface: "control-panel", Action: "provider:read", Scope: "all"},
-				Permission{Service: "workforce", Surface: "control-panel", Action: "provider:create", Scope: "all"},
-				Permission{Service: "workforce", Surface: "control-panel", Action: "provider:update", Scope: "all"},
-				Permission{Service: "workforce", Surface: "control-panel", Action: "provider:suspend", Scope: "all"},
-				Permission{Service: "workforce", Surface: "control-panel", Action: "provider:reactivate", Scope: "all"},
-				Permission{Service: "workforce", Surface: "control-panel", Action: "provider.activation:issue", Scope: "all"},
-				Permission{Service: "workforce", Surface: "control-panel", Action: "reference:manage", Scope: "all"},
-				Permission{Service: "workforce", Surface: "control-panel", Action: "audit:read", Scope: "all"},
-				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:read", Scope: "all"},
-				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:variables:propose", Scope: "all"},
-				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:variables:approve", Scope: "all"},
-				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:variables:apply", Scope: "all"},
-				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:variables:rollback", Scope: "all"},
-				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:flags:manage", Scope: "all"},
-				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:rollouts:manage", Scope: "all"},
-				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:services:manage", Scope: "all"},
-				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:health:read", Scope: "all"},
-				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:health:acknowledge", Scope: "all"},
-				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:audit:read", Scope: "all"},
-				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:audit:export", Scope: "all"},
-				Permission{Service: "dsh", Surface: "control-panel", Action: "platform:wlt-policy:read", Scope: "all"},
-				Permission{Service: "providers", Surface: "control-panel", Action: "provider:read", Scope: "all"},
-				Permission{Service: "providers", Surface: "control-panel", Action: "provider:update", Scope: "all"},
-				Permission{Service: "providers", Surface: "control-panel", Action: "provider:test", Scope: "all"},
-			)
+			actorPermissions = localOperatorDevelopmentPermissions()
 		}
 		permissions, marshalErr := json.Marshal(actorPermissions)
 		if marshalErr != nil {
@@ -431,11 +406,21 @@ func (r *Repository) ConsumeActivation(ctx context.Context, input ConsumeActivat
 		return TokenPair{}, ErrInvalidActivation
 	}
 	if status != "pending" || !expiresAt.After(r.now()) {
-		_, _ = tx.ExecContext(ctx, `UPDATE identity_activation_challenges SET status = 'expired', updated_at = now() WHERE id = $1 AND status = 'pending'`, challengeID)
+		if _, err = tx.ExecContext(ctx, `UPDATE identity_activation_challenges SET status = 'expired', updated_at = now() WHERE id = $1 AND status = 'pending'`, challengeID); err != nil {
+			return TokenPair{}, err
+		}
+		if err = tx.Commit(); err != nil {
+			return TokenPair{}, err
+		}
 		return TokenPair{}, ErrInvalidActivation
 	}
 	if attempts >= 5 {
-		_, _ = tx.ExecContext(ctx, `UPDATE identity_activation_challenges SET status = 'locked', updated_at = now() WHERE id = $1`, challengeID)
+		if _, err = tx.ExecContext(ctx, `UPDATE identity_activation_challenges SET status = 'locked', updated_at = now() WHERE id = $1`, challengeID); err != nil {
+			return TokenPair{}, err
+		}
+		if err = tx.Commit(); err != nil {
+			return TokenPair{}, err
+		}
 		return TokenPair{}, ErrInvalidActivation
 	}
 	if !hmac.Equal([]byte(codeHash), []byte(r.activationCodeHash(actorType, phone, code))) {
@@ -444,10 +429,15 @@ func (r *Repository) ConsumeActivation(ctx context.Context, input ConsumeActivat
 		if nextAttempts >= 5 {
 			nextStatus = "locked"
 		}
-		_, _ = tx.ExecContext(ctx, `
+		if _, err = tx.ExecContext(ctx, `
 			UPDATE identity_activation_challenges
 			SET attempts = $2, status = $3, updated_at = now()
-			WHERE id = $1`, challengeID, nextAttempts, nextStatus)
+			WHERE id = $1`, challengeID, nextAttempts, nextStatus); err != nil {
+			return TokenPair{}, err
+		}
+		if err = tx.Commit(); err != nil {
+			return TokenPair{}, err
+		}
 		return TokenPair{}, ErrInvalidActivation
 	}
 
@@ -599,7 +589,7 @@ func (r *Repository) ResolveAccessToken(ctx context.Context, token string) (Acto
 	var sessionSurface string
 	var expiresAt time.Time
 	err := r.db.QueryRowContext(ctx, `
-		SELECT a.id, a.username, a.password_hash, a.operator_context_id, a.phone_e164, a.roles, a.permissions, a.status, a.version,
+		SELECT a.id, a.username, a.password_hash, a.operator_context_id, COALESCE(a.phone_e164, ''), a.roles, a.permissions, a.status, a.version,
 		       s.id, s.surface, s.access_expires_at
 		FROM identity_sessions s
 		JOIN identity_actors a ON a.id = s.actor_id
@@ -1114,14 +1104,13 @@ func (r *Repository) ReactivateActor(ctx context.Context, actorID, requestedByAc
 
 	var status ActorLifecycleStatus
 	var version int
-	var passwordHash string
 	var operatorContextID string
 	var roles pq.StringArray
 	err = tx.QueryRowContext(ctx, `
-		SELECT status, version, password_hash, operator_context_id, roles
+		SELECT status, version, operator_context_id, roles
 		FROM identity_actors
 		WHERE id = $1
-		FOR UPDATE`, actorID).Scan(&status, &version, &passwordHash, &operatorContextID, &roles)
+		FOR UPDATE`, actorID).Scan(&status, &version, &operatorContextID, &roles)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return ErrActorNotFound
@@ -1149,10 +1138,9 @@ func (r *Repository) ReactivateActor(ctx context.Context, actorID, requestedByAc
 		}
 		return ErrActorAlreadyActive
 	}
-	if strings.TrimSpace(passwordHash) == "" {
+	if status != ActorStatusSuspended {
 		return ErrInvalidActorTransition
 	}
-
 	_, err = tx.ExecContext(ctx, `UPDATE identity_actors SET status = 'ACTIVE', version = version + 1, updated_at = now() WHERE id = $1`, actorID)
 	if err != nil {
 		return err
@@ -1312,7 +1300,7 @@ func (r *Repository) ListSessions(ctx context.Context, actorID string) ([]Sessio
 	rows, err := r.db.QueryContext(ctx, `
 		SELECT id, COALESCE(device_fingerprint, ''), surface, version, created_at, access_expires_at, last_used_at, compromised_at
 		FROM identity_sessions
-		WHERE actor_id = $1 AND revoked_at IS NULL
+		WHERE actor_id = $1 AND revoked_at IS NULL AND refresh_expires_at > now()
 		ORDER BY created_at DESC`, actorID)
 	if err != nil {
 		return nil, err

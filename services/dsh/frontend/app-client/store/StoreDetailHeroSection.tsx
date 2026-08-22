@@ -57,8 +57,9 @@ export function StoreDetailHeroSection({
       coverImage={store.heroImageSource}
       logoImage={store.logoImageSource}
       name={store.displayName}
-      locationLabel={store.locationLabel}
+      locationLabel={store.addressLine ? store.addressLine : store.locationLabel}
       isOpen={store.isOpen}
+      operatingHours={store.operatingHours}
       hasBthwaniPro={store.hasProBadge}
       distanceLabel={store.distanceLabel ?? undefined}
       deliveryTimeLabel={store.etaLabel ?? undefined}

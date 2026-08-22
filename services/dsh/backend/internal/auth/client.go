@@ -39,7 +39,6 @@ type Identity struct {
 type Client struct {
 	baseURL              string
 	internalServiceToken string
-	operatorContextID    string
 	http                 *http.Client
 
 	mu                   sync.RWMutex
@@ -47,18 +46,19 @@ type Client struct {
 	partnerBundlesLoaded bool
 }
 
+const identityResolveAttempts = 3
+
 func NewClient(baseURL string) *Client {
 	return NewClientWithInternalAccess(baseURL, "", "")
 }
 
 // NewClientWithInternalAccess configures the DSH-to-Identity trust boundary.
-// The service token and operator context are server-owned configuration and are
-// never sourced from an application request.
-func NewClientWithInternalAccess(baseURL, serviceToken, operatorContextID string) *Client {
+// The service token is server-owned configuration. The operator context is
+// resolved per request from the trusted Identity boundary.
+func NewClientWithInternalAccess(baseURL, serviceToken, _ string) *Client {
 	return &Client{
 		baseURL:              strings.TrimRight(strings.TrimSpace(baseURL), "/"),
 		internalServiceToken: strings.TrimSpace(serviceToken),
-		operatorContextID:    strings.TrimSpace(operatorContextID),
 		http:                 &http.Client{Timeout: 3 * time.Second},
 	}
 }
@@ -73,32 +73,50 @@ func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, e
 	if !strings.HasPrefix(strings.TrimSpace(authorization), "Bearer ") {
 		return Identity{}, ErrUnauthenticated
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/auth/session", nil)
-	if err != nil {
-		return Identity{}, ErrIdentityUnavailable
+	for attempt := 1; attempt <= identityResolveAttempts; attempt++ {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/auth/session", nil)
+		if err != nil {
+			return Identity{}, ErrIdentityUnavailable
+		}
+		req.Header.Set("Authorization", authorization)
+		resp, err := c.http.Do(req)
+		if err != nil {
+			if attempt < identityResolveAttempts && ctx.Err() == nil {
+				continue
+			}
+			return Identity{}, ErrIdentityUnavailable
+		}
+
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			resp.Body.Close()
+			return Identity{}, ErrUnauthenticated
+		}
+		if resp.StatusCode != http.StatusOK {
+			_, _ = io.Copy(io.Discard, resp.Body)
+			resp.Body.Close()
+			if attempt < identityResolveAttempts && (resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= http.StatusInternalServerError) {
+				continue
+			}
+			return Identity{}, ErrIdentityUnavailable
+		}
+
+		var identity Identity
+		decodeErr := json.NewDecoder(resp.Body).Decode(&identity)
+		resp.Body.Close()
+		if decodeErr != nil {
+			if attempt < identityResolveAttempts && ctx.Err() == nil {
+				continue
+			}
+			return Identity{}, ErrIdentityUnavailable
+		}
+		if identity.AuthState != "authenticated" || strings.TrimSpace(identity.Subject) == "" || strings.TrimSpace(identity.OperatorContextID) == "" {
+			return Identity{}, ErrUnauthenticated
+		}
+		identity.Subject = strings.TrimSpace(identity.Subject)
+		identity.OperatorContextID = strings.TrimSpace(identity.OperatorContextID)
+		return identity, nil
 	}
-	req.Header.Set("Authorization", authorization)
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return Identity{}, ErrIdentityUnavailable
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-		return Identity{}, ErrUnauthenticated
-	}
-	if resp.StatusCode != http.StatusOK {
-		return Identity{}, ErrIdentityUnavailable
-	}
-	var identity Identity
-	if err := json.NewDecoder(resp.Body).Decode(&identity); err != nil {
-		return Identity{}, ErrIdentityUnavailable
-	}
-	if identity.AuthState != "authenticated" || strings.TrimSpace(identity.Subject) == "" || strings.TrimSpace(identity.OperatorContextID) == "" {
-		return Identity{}, ErrUnauthenticated
-	}
-	identity.Subject = strings.TrimSpace(identity.Subject)
-	identity.OperatorContextID = strings.TrimSpace(identity.OperatorContextID)
-	return identity, nil
+	return Identity{}, ErrIdentityUnavailable
 }
 
 func (i Identity) HasRole(role string) bool {
@@ -146,7 +164,8 @@ func (c *Client) FetchPartnerPermissionBundles(ctx context.Context) ([]PartnerPe
 	if c.partnerBundlesLoaded {
 		return clonePartnerPermissionBundles(c.partnerBundles), nil
 	}
-	if c.baseURL == "" || c.internalServiceToken == "" || c.operatorContextID == "" {
+	operatorContextID, ok := OperatorContextIDFromContext(ctx)
+	if c.baseURL == "" || c.internalServiceToken == "" || !ok {
 		return nil, ErrIdentityUnavailable
 	}
 
@@ -156,7 +175,7 @@ func (c *Client) FetchPartnerPermissionBundles(ctx context.Context) ([]PartnerPe
 	}
 	req.Header.Set("Authorization", "Bearer "+c.internalServiceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Operator-Context-ID", c.operatorContextID)
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
 
 	resp, err := c.http.Do(req)
 	if err != nil {
@@ -227,11 +246,12 @@ func (c *Client) IsSessionValid(ctx context.Context, actorID, sessionID string) 
 		return false, nil
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/internal/actors/"+actorID+"/sessions", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/internal/dsh/actors/"+actorID+"/sessions", nil)
 	if err != nil {
 		return false, ErrIdentityUnavailable
 	}
-	req.Header.Set("X-Service-Caller", c.internalServiceToken)
+	req.Header.Set("Authorization", "Bearer "+c.internalServiceToken)
+	req.Header.Set("X-Service-Caller", "dsh")
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return false, ErrIdentityUnavailable

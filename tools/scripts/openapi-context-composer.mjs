@@ -318,6 +318,7 @@ function applyOverlay(document, overlay, overlayPath) {
 function resolveModularFragments(document, rootSourceFile) {
   const output = clone(document);
   const docCache = new Map();
+  const resolutionStack = new Set();
   const isAbsoluteReference = (value) =>
     /^[a-z][a-z0-9+.-]*:/i.test(value) || value.startsWith("//");
 
@@ -362,18 +363,69 @@ function resolveModularFragments(document, rootSourceFile) {
 
             const tokens = fragment.split("/");
             let fragmentValue = targetDocument;
+            let fragmentFound = true;
             for (const token of tokens) {
               const decoded = token.replace(/~1/g, "/").replace(/~0/g, "~");
               if (fragmentValue && Object.hasOwn(fragmentValue, decoded)) {
                 fragmentValue = fragmentValue[decoded];
               } else {
-                fragmentValue = null;
+                fragmentFound = false;
                 break;
               }
             }
 
-            if (fragmentValue) {
-              return resolve(fragmentValue, targetFile);
+            let resolvedTargetFile = targetFile;
+            let resolvedReference = rewrittenItem;
+
+            // Satellite path fragments historically use both true local refs and
+            // bare refs to components owned by the modular entry document. Prefer
+            // the satellite file, then resolve the latter against the entry root;
+            // never leave a missing pointer for rewriteExternalRefs to turn into a
+            // self-reference in the composed bundle.
+            if (
+              !fragmentFound &&
+              isBareSameDocumentRef &&
+              currentSourceFile !== rootSourceFile
+            ) {
+              const rootDocument = docCache.get(rootSourceFile) ??
+                parse(readText(rootSourceFile));
+              docCache.set(rootSourceFile, rootDocument);
+              fragmentValue = rootDocument;
+              fragmentFound = true;
+              for (const token of tokens) {
+                const decoded = token.replace(/~1/g, "/").replace(/~0/g, "~");
+                if (fragmentValue && Object.hasOwn(fragmentValue, decoded)) {
+                  fragmentValue = fragmentValue[decoded];
+                } else {
+                  fragmentFound = false;
+                  break;
+                }
+              }
+              resolvedTargetFile = rootSourceFile;
+              resolvedReference = `${path.basename(rootSourceFile)}${item}`;
+            }
+
+            if (!fragmentFound) {
+              throw new Error(
+                `Unresolved OpenAPI fragment ${rewrittenItem} from ${relative(currentSourceFile)}; ` +
+                `target ${relative(targetFile)} does not contain the requested JSON Pointer.` +
+                (isBareSameDocumentRef && currentSourceFile !== rootSourceFile
+                  ? ` Entry document ${relative(rootSourceFile)} does not contain it either.`
+                  : ""),
+              );
+            }
+
+            const resolutionKey = `${resolvedTargetFile}\0${resolvedReference}`;
+            if (resolutionStack.has(resolutionKey)) {
+              resolvedObject[key] = resolvedReference;
+              continue;
+            }
+
+            resolutionStack.add(resolutionKey);
+            try {
+              return resolve(fragmentValue, resolvedTargetFile);
+            } finally {
+              resolutionStack.delete(resolutionKey);
             }
           }
         }

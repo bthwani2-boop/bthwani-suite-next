@@ -35,3 +35,15 @@ cd330e743feb1ebadb562f4ce595a7cfbab0a84e:infra/docker/env/runtime.local-producti
 cd330e743feb1ebadb562f4ce595a7cfbab0a84e:infra/docker/env/runtime.local-production.env:generic-api-key:51
 cd330e743feb1ebadb562f4ce595a7cfbab0a84e:infra/docker/env/runtime.local-production.env:generic-api-key:57
 cd330e743feb1ebadb562f4ce595a7cfbab0a84e:infra/docker/env/runtime.local-production.env:generic-api-key:81
+
+# Historical WLT payout DB-test encryption literals reviewed during PR #239.
+# The source values are explicit synthetic test strings, not credentials. These
+# exact immutable fingerprints are ignored; any changed value/line/commit stays
+# fail-closed and will be reported again.
+ccde6be162bad7127a5049b279ce74bb97e050c1:services/wlt/backend/internal/payout/payout_governance_concurrency_db_test.go:generic-api-key:28
+ccde6be162bad7127a5049b279ce74bb97e050c1:services/wlt/backend/internal/payout/payout_governance_concurrency_db_test.go:generic-api-key:98
+bee8e9cfe1762cef39690f0b254fdf0b6855e1a9:services/wlt/backend/internal/payout/payout_governance_concurrency_db_test.go:generic-api-key:98
+e4b85f4be6ede7e33d1fbb81ffa7baa2410c6b87:services/wlt/backend/internal/payout/official_wallet_destination_db_test.go:generic-api-key:28
+e4b85f4be6ede7e33d1fbb81ffa7baa2410c6b87:services/wlt/backend/internal/payout/official_wallet_destination_db_test.go:generic-api-key:47
+e4b85f4be6ede7e33d1fbb81ffa7baa2410c6b87:services/wlt/backend/internal/payout/official_wallet_destination_db_test.go:generic-api-key:118
+e4b85f4be6ede7e33d1fbb81ffa7baa2410c6b87:services/wlt/backend/internal/payout/official_wallet_destination_db_test.go:generic-api-key:146

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -18,7 +17,6 @@ import (
 	"workforce-api/internal/dshclient"
 	workforcehttp "workforce-api/internal/http"
 	"workforce-api/internal/identityclient"
-	"workforce-api/internal/media"
 	"workforce-api/internal/wltclient"
 	"workforce-api/internal/workforce"
 )
@@ -53,11 +51,6 @@ func main() {
 	if wltServiceToken == "" {
 		log.Fatal("[workforce-api] WORKFORCE_WLT_SERVICE_TOKEN is required")
 	}
-	operatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
-	if operatorContextID == "" {
-		log.Fatal("[workforce-api] BTHWANI_OPERATOR_CONTEXT_ID is required; silent operator context fallback is forbidden")
-	}
-
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
 		log.Fatalf("[workforce-api] open database: %v", err)
@@ -69,25 +62,21 @@ func main() {
 	}
 
 	repo := workforce.NewRepository(db)
-	identity := identityclient.NewClient(identityBaseURL, serviceToken, operatorContextID)
-	dsh := dshclient.NewClient(dshBaseURL, dshServiceToken, operatorContextID)
-	wlt := wltclient.NewClient(wltBaseURL, wltServiceToken, operatorContextID)
+	identity := identityclient.NewClient(identityBaseURL, serviceToken)
+	dsh := dshclient.NewClient(dshBaseURL, dshServiceToken)
+	wlt := wltclient.NewClient(wltBaseURL, wltServiceToken)
 	service := workforce.NewService(repo, identity, dsh)
 	authClient := auth.NewClient(identityBaseURL)
 
-	appCtx, cancelApp := context.WithCancel(context.Background())
-	defer cancelApp()
-	mediaProvider := newMediaProvider(appCtx)
-
-	baseRouter := workforcehttp.NewRouter(db, service, repo, authClient, mediaProvider, dshServiceToken)
+	baseRouter := workforcehttp.NewRouter(db, service, repo, authClient, identity, dshServiceToken)
+	workforcehttp.RegisterInternalReadinessRoutes(baseRouter, repo, dshServiceToken)
 	workforcehttp.RegisterOperationalCoreRoutes(baseRouter, repo, authClient)
 	workforcehttp.RegisterOperationalEnforcementRoutes(baseRouter, repo, authClient, wlt)
 	workforcehttp.RegisterEmployeeGovernanceRoutes(baseRouter, repo, authClient)
 	workforcehttp.RegisterSovereignLeadershipRoutes(baseRouter, service, repo, authClient)
 	workforcehttp.RegisterSovereignLeadershipReferenceRoutes(baseRouter, service, authClient)
-	workforcehttp.RegisterProvisioningRoutes(baseRouter, repo, identity, service, authClient)
 	operationalCoreRouter := workforcehttp.OperationalCoreGateMiddleware(baseRouter, repo, authClient)
-	referenceMutationRouter := workforcehttp.ReferenceMutationMiddleware(operationalCoreRouter, repo, authClient)
+	referenceMutationRouter := workforcehttp.ReferenceMutationMiddleware(operationalCoreRouter, repo, authClient, dsh)
 
 	workerCtx, cancelWorker := context.WithCancel(context.Background())
 	go availabilityoutbox.RunWorker(workerCtx, db, dsh, 15*time.Second)
@@ -123,32 +112,4 @@ func envOr(name, fallback string) string {
 		return value
 	}
 	return fallback
-}
-
-func newMediaProvider(ctx context.Context) *media.Provider {
-	endpoint := os.Getenv("WORKFORCE_MINIO_ENDPOINT")
-	if endpoint == "" {
-		log.Println("[workforce-api] WORKFORCE_MINIO_ENDPOINT not set, media upload routes disabled")
-		return media.NewProvider(ctx, media.ProviderConfig{}, 15*time.Second)
-	}
-	accessKey := os.Getenv("WORKFORCE_MINIO_ACCESS_KEY")
-	secretKey := os.Getenv("WORKFORCE_MINIO_SECRET_KEY")
-	bucket := os.Getenv("WORKFORCE_MINIO_BUCKET")
-	if bucket == "" {
-		bucket = "workforce-media"
-	}
-	useSSL := os.Getenv("WORKFORCE_MINIO_USE_SSL") == "true"
-	publicEndpoint := os.Getenv("WORKFORCE_MINIO_PUBLIC_ENDPOINT")
-	publicUseSSL := os.Getenv("WORKFORCE_MINIO_PUBLIC_USE_SSL") == "true"
-
-	log.Println("[workforce-api] media provider configured; connecting with background retry")
-	return media.NewProvider(ctx, media.ProviderConfig{
-		Endpoint:       endpoint,
-		PublicEndpoint: publicEndpoint,
-		AccessKey:      accessKey,
-		SecretKey:      secretKey,
-		Bucket:         bucket,
-		UseSSL:         useSSL,
-		PublicUseSSL:   publicUseSSL,
-	}, 15*time.Second)
 }

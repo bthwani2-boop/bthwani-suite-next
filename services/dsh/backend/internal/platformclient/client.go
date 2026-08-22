@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"dsh-api/internal/wlt"
 )
 
 type Client struct {
@@ -45,7 +47,12 @@ func (c *Client) GetVariable(ctx context.Context, key, scopeType, scopeId string
 		return nil, fmt.Errorf("platform-control integration is not configured")
 	}
 
-	reqURL := fmt.Sprintf("%s/platform/v1/variables/%s?scopeType=%s&scopeId=%s",
+	operatorContextID, ok := wlt.OperatorContextIDFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("trusted operator context is required for platform-control requests")
+	}
+
+	reqURL := fmt.Sprintf("%s/platform/internal/v1/variables/%s?scopeType=%s&scopeId=%s",
 		c.baseURL,
 		url.PathEscape(key),
 		url.QueryEscape(scopeType),
@@ -61,6 +68,7 @@ func (c *Client) GetVariable(ctx context.Context, key, scopeType, scopeId string
 	// DSH uses service-to-service auth for Platform Control
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
 
 	resp, err := c.http.Do(req)
 	if err != nil {

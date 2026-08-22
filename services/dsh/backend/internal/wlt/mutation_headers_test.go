@@ -3,7 +3,6 @@ package wlt
 import (
 	"context"
 	"encoding/json"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -22,8 +21,11 @@ func requireMutationHeaders(t *testing.T, r *http.Request) {
 	if strings.TrimSpace(r.Header.Get("Idempotency-Key")) == "" {
 		t.Fatal("missing Idempotency-Key")
 	}
-	if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-a" {
-		t.Fatalf("unexpected X-Operator-Context-ID %q", r.Header.Get("X-Operator-Context-ID"))
+	if r.Header.Get("X-Delegated-Operator-Context") != "OperatorContext-a" {
+		t.Fatalf("unexpected X-Delegated-Operator-Context %q", r.Header.Get("X-Delegated-Operator-Context"))
+	}
+	if got := r.Header.Get("X-Operator-Context-ID"); got != "" {
+		t.Fatalf("legacy X-Operator-Context-ID must not be emitted, got %q", got)
 	}
 }
 
@@ -52,24 +54,45 @@ func TestRequiredMutationHeadersRejectMissingValues(t *testing.T) {
 	}
 }
 
-func TestNotifyDeliveryCollectionAddsDeterministicHeaders(t *testing.T) {
+func TestActorFinanceMutationRejectsMissingCorrelation(t *testing.T) {
+	called := false
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		called = true
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "token")
+	_, _, err := client.actorFinanceRequest(
+		trustedMutationTestContext(),
+		http.MethodPost,
+		"/wlt/commissions",
+		[]byte(`{"proofReference":"proof-1"}`),
+		"",
+		"idem-1",
+		"OperatorContext-a",
+	)
+	if err == nil {
+		t.Fatal("expected actor finance mutation to reject missing correlation")
+	}
+	if called {
+		t.Fatal("actor finance mutation reached WLT without correlation")
+	}
+}
+
+func TestFinalizeCodReservationAddsDeterministicHeaders(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requireMutationHeaders(t, r)
 		if r.Header.Get("X-Correlation-ID") != "order-1" {
 			t.Fatalf("unexpected correlation id %q", r.Header.Get("X-Correlation-ID"))
 		}
-		w.WriteHeader(http.StatusCreated)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"codReservation":{"id":"reservation-1","status":"finalized"},"replayed":false}`))
 	}))
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	if err := client.NotifyDeliveryCollection(trustedMutationTestContext(), NotifyDeliveryCollectionInput{
-		OrderID:          "order-1",
-		CollectorType:    "captain",
-		CollectorID:      "captain-1",
-		PartnerID:        "partner-1",
-		CheckoutIntentID: "checkout-1",
-	}); err != nil {
+	if _, _, err := client.FinalizeCodReservation(trustedMutationTestContext(), "order-1", "checkout-1", "", ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
@@ -95,31 +118,6 @@ func TestDeliverFieldCommissionUsesSameBodyAndHeaderIdempotencyKey(t *testing.T)
 		SourceID:           "visit-1",
 	}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestActorFinanceCodMutationAddsFallbackCorrelation(t *testing.T) {
-	proof := []byte(`{"proofReference":"proof-1"}`)
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requireMutationHeaders(t, r)
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			t.Fatalf("read COD evidence body: %v", err)
-		}
-		if string(body) != string(proof) {
-			t.Fatalf("unexpected COD evidence body %q", body)
-		}
-		w.WriteHeader(http.StatusOK)
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "token")
-	status, _, err := client.FinanceWriteCodRecord(trustedMutationTestContext(), "cod-1", "collect", proof, "", "")
-	if err != nil {
-		t.Fatalf("expected governed fallback correlation: %v", err)
-	}
-	if status != http.StatusOK {
-		t.Fatalf("expected 200, got %d", status)
 	}
 }
 
@@ -189,6 +187,7 @@ func TestSubscriptionPaymentSessionAddsFallbackHeaders(t *testing.T) {
 		SubscriptionPurchaseID: "purchase-1",
 		ProductReference:       "plus",
 		ClientID:               "client-1",
+		PaymentMethod:          "official_wallet",
 	}, "", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

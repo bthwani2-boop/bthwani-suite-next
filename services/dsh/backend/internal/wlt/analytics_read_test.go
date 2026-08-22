@@ -22,8 +22,11 @@ func TestReadAnalyticsFinancialSnapshotIsAuthenticatedReadOnly(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("service caller=%q", r.Header.Get("X-Service-Caller"))
 		}
-		if r.Header.Get("X-Operator-Context-ID") != operatorContextID {
-			t.Fatalf("OperatorContext=%q", r.Header.Get("X-Operator-Context-ID"))
+		if r.Header.Get("X-Delegated-Operator-Context") != operatorContextID {
+			t.Fatalf("OperatorContext=%q", r.Header.Get("X-Delegated-Operator-Context"))
+		}
+		if r.Header.Get("X-Operator-Context-ID") != "" {
+			t.Fatalf("legacy OperatorContext header must not be emitted")
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"financialSummary":{"currencies":[{"currency":"YER","assetsMinorUnits":10,"liabilitiesMinorUnits":4,"revenueMinorUnits":2,"expensesMinorUnits":0,"netPositionMinorUnits":6,"accounts":[]}],"dataCompleteness":[]}}`))

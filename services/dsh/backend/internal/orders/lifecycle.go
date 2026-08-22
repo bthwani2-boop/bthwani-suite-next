@@ -26,29 +26,16 @@ func CancelOrderByOperator(db *sql.DB, orderID, actorID, reason string) (*Order,
 	})
 }
 
-// MarkPreparing is the compatibility entry point used by partner surfaces.
-// The governed implementation records preparation_started_at atomically with
-// the lifecycle transition.
-func MarkPreparing(db *sql.DB, orderID, actorID string) (*Order, error) {
-	return MarkPreparingWithTiming(db, orderID, actorID)
-}
-
-// MarkReadyForPickup delegates to the governed issue gate so open missing-item,
-// substitution, or quality issues cannot coexist with a ready order. The gate
-// records ready_at and the lifecycle transition in the same transaction.
-func MarkReadyForPickup(db *sql.DB, orderID, actorID string) (*Order, error) {
-	return MarkReadyWithIssueGuard(db, orderID, actorID)
-}
-
 func TransitionDispatchOrder(
 	db *sql.Tx,
 	orderID,
+	actorID,
 	actorRole string,
 	allowedFrom []OrderStatus,
 	toStatus OrderStatus,
 	note string,
 ) (*Order, error) {
-	return transitionOrderTx(db, orderID, actorRole, allowedFrom, toStatus, note)
+	return transitionOrderTx(db, orderID, actorID, actorRole, allowedFrom, toStatus, note)
 }
 
 func transitionOrder(
@@ -69,7 +56,7 @@ func transitionOrder(
 	}
 	defer tx.Rollback()
 
-	order, err := transitionOrderTx(tx, orderID, actorRole, allowedFrom, toStatus, note)
+	order, err := transitionOrderTx(tx, orderID, actorID, actorRole, allowedFrom, toStatus, note)
 	if err != nil {
 		return nil, err
 	}
@@ -82,11 +69,17 @@ func transitionOrder(
 func transitionOrderTx(
 	tx *sql.Tx,
 	orderID,
+	actorID,
 	actorRole string,
 	allowedFrom []OrderStatus,
 	toStatus OrderStatus,
 	note string,
 ) (*Order, error) {
+	actorID = strings.TrimSpace(actorID)
+	actorRole = strings.TrimSpace(actorRole)
+	if strings.TrimSpace(orderID) == "" || actorID == "" || actorRole == "" || len(allowedFrom) == 0 {
+		return nil, ErrInvalid
+	}
 	var fromStatus string
 	err := tx.QueryRow(`
 		SELECT status
@@ -115,7 +108,7 @@ func transitionOrderTx(
 		UPDATE dsh_orders
 		SET status = $1, updated_at = NOW()
 		WHERE id = $2::uuid AND status = $3
-		RETURNING id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
+		RETURNING id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status, version,
 		          COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at`,
 		string(toStatus),
 		orderID,
@@ -129,9 +122,10 @@ func transitionOrderTx(
 	}
 
 	if _, err = tx.Exec(`
-		INSERT INTO dsh_order_status_events (order_id, actor_role, from_status, to_status, note)
-		VALUES ($1::uuid, $2, $3, $4, NULLIF($5, ''))`,
+		INSERT INTO dsh_order_status_events (order_id, actor_id, actor_role, from_status, to_status, note)
+		VALUES ($1::uuid, $2, $3, $4, $5, NULLIF($6, ''))`,
 		order.ID,
+		actorID,
 		actorRole,
 		fromStatus,
 		string(toStatus),
@@ -180,6 +174,7 @@ func scanOrderRow(row *sql.Row) (*Order, error) {
 		&order.FulfillmentMode,
 		&order.ClientID,
 		&order.Status,
+		&order.Version,
 		&order.RejectionReason,
 		&order.WltPaymentRefID,
 		&order.Currency,
@@ -203,6 +198,7 @@ func scanOrders(rows *sql.Rows) ([]Order, error) {
 			&order.FulfillmentMode,
 			&order.ClientID,
 			&order.Status,
+			&order.Version,
 			&order.RejectionReason,
 			&order.WltPaymentRefID,
 			&order.Currency,
@@ -218,6 +214,7 @@ func scanOrders(rows *sql.Rows) ([]Order, error) {
 
 type DeliveryCompletionContext struct {
 	CheckoutIntentID    string
+	FulfillmentMode     string
 	PaymentMethod       string
 	PartnerID           string
 	WltPaymentSessionID string
@@ -227,13 +224,13 @@ func GetOrderDeliveryContext(tx *sql.Tx, orderID string) (*DeliveryCompletionCon
 	var context DeliveryCompletionContext
 	var partnerID sql.NullString
 	err := tx.QueryRow(`
-		SELECT o.checkout_intent_id::text, ci.payment_method, s.partner_id, ci.wlt_payment_session_id
+		SELECT o.checkout_intent_id::text, ci.fulfillment_mode, ci.payment_method, s.partner_id, ci.wlt_payment_session_id
 		FROM dsh_orders o
 		JOIN dsh_checkout_intents ci ON ci.id = o.checkout_intent_id
 		JOIN dsh_stores s ON s.id = o.store_id
 		WHERE o.id = $1::uuid`,
 		orderID,
-	).Scan(&context.CheckoutIntentID, &context.PaymentMethod, &partnerID, &context.WltPaymentSessionID)
+	).Scan(&context.CheckoutIntentID, &context.FulfillmentMode, &context.PaymentMethod, &partnerID, &context.WltPaymentSessionID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}

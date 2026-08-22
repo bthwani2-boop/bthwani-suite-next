@@ -133,14 +133,14 @@ func CreatePartnerTicket(db *sql.DB, input PartnerCreateTicketInput) (Ticket, er
 		return Ticket{}, err
 	}
 
-	row := tx.QueryRow(`
-		SELECT id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		       status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at
-		FROM dsh_support_tickets
+	row := tx.QueryRow(ticketSelect+`
 		WHERE reporter_id = $1 AND reporter_role = 'partner' AND create_idempotency_key = $2`,
 		input.ActorID, input.IdempotencyKey,
 	)
 	if existing, scanErr := scanTicket(row); scanErr == nil {
+		if !ticketReplayMatches(existing, input.ActorID, RolePartner, input.StoreID, input.OrderID, input.Subject, input.Description, input.Category, input.Priority) {
+			return Ticket{}, ErrConflict
+		}
 		if err := tx.Commit(); err != nil {
 			return Ticket{}, err
 		}
@@ -166,8 +166,7 @@ func CreatePartnerTicket(db *sql.DB, input PartnerCreateTicketInput) (Ticket, er
 			store_id, reporter_id, reporter_role, subject, description, category, priority,
 			order_id, create_idempotency_key, correlation_id
 		) VALUES ($1, $2, 'partner', $3, $4, $5, $6, $7, $8, $9)
-		RETURNING id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		          status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at`,
+		RETURNING `+ticketColumns,
 		nullableStoreID, input.ActorID, input.Subject, input.Description, input.Category,
 		input.Priority, nullableOrderID, input.IdempotencyKey, input.CorrelationID,
 	))
@@ -190,10 +189,7 @@ func ListPartnerTickets(db *sql.DB, actorID string, limit int) ([]Ticket, error)
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
-	rows, err := db.Query(`
-		SELECT id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		       status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at
-		FROM dsh_support_tickets
+	rows, err := db.Query(ticketSelect+`
 		WHERE reporter_id = $1 AND reporter_role = 'partner'
 		ORDER BY created_at DESC
 		LIMIT $2`, actorID, limit)
@@ -205,10 +201,7 @@ func ListPartnerTickets(db *sql.DB, actorID string, limit int) ([]Ticket, error)
 }
 
 func GetPartnerTicket(db *sql.DB, actorID, ticketID string) (Ticket, error) {
-	ticket, err := scanTicket(db.QueryRow(`
-		SELECT id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		       status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at
-		FROM dsh_support_tickets
+	ticket, err := scanTicket(db.QueryRow(ticketSelect+`
 		WHERE id = $1 AND reporter_id = $2 AND reporter_role = 'partner'`, ticketID, actorID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Ticket{}, ErrNotFound
@@ -258,6 +251,9 @@ func AddPartnerMessage(db *sql.DB, input PartnerAddMessageInput) (Message, error
 		input.TicketID, input.ActorID, input.IdempotencyKey,
 	).Scan(&existing.ID, &existing.TicketID, &existing.SenderID, &existing.SenderRole, &existing.Body, &existing.IsInternal, &existing.CreatedAt)
 	if err == nil {
+		if existing.Body != input.Body || existing.SenderID != input.ActorID || existing.TicketID != input.TicketID || existing.IsInternal {
+			return Message{}, ErrConflict
+		}
 		if commitErr := tx.Commit(); commitErr != nil {
 			return Message{}, commitErr
 		}

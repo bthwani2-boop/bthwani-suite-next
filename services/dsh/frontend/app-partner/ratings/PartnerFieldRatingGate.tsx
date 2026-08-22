@@ -14,12 +14,21 @@ export function PartnerFieldRatingGate({ children }: { readonly children: React.
   const [submitting, setSubmitting] = React.useState(false);
   const [dismissed, setDismissed] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [promptError, setPromptError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let cancelled = false;
     void fetchPartnerFieldRatingPrompt()
-      .then((next) => { if (!cancelled) setPrompt(next); })
-      .catch(() => { if (!cancelled) setPrompt(null); });
+      .then((next) => {
+        if (cancelled) return;
+        setPrompt(next);
+        setPromptError(null);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setPrompt(null);
+        setPromptError("تعذر تحميل حالة التقييم. يمكنك متابعة التطبيق والمحاولة لاحقًا.");
+      });
     return () => { cancelled = true; };
   }, []);
 
@@ -31,7 +40,12 @@ export function PartnerFieldRatingGate({ children }: { readonly children: React.
     setError(null);
     try {
       await submitPartnerFieldRating(score, comment.trim());
-      setPrompt((current) => current ? { ...current, completed: true } : current);
+      const committedPrompt = await fetchPartnerFieldRatingPrompt();
+      if (!committedPrompt.completed) {
+        throw new Error("rating completion readback did not confirm the committed state");
+      }
+      setPrompt(committedPrompt);
+      setPromptError(null);
     } catch {
       setError("تعذر حفظ التقييم. تحقق من الاتصال وحاول مجددًا.");
     } finally {
@@ -42,6 +56,11 @@ export function PartnerFieldRatingGate({ children }: { readonly children: React.
   return (
     <>
       {children}
+      {promptError ? (
+        <View accessibilityLiveRegion="polite">
+          <Text role="caption" tone="danger">{promptError}</Text>
+        </View>
+      ) : null}
       <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setDismissed(true)}>
         <View style={styles.overlay}>
           <View style={styles.card} accessibilityViewIsModal>

@@ -1,8 +1,6 @@
 // shared/ui-kit — Icon Component
 import React from 'react';
-// We import from @expo/vector-icons/Ionicons since the platform runtime is Expo/React Native.
-// Direct dependency is bypassed for this specific UI Kit Component.
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { colorRoles } from '../../tokens';
 
 export type IconProps = {
@@ -32,7 +30,7 @@ export function Icon({ name, size = 24, tone, color, style, mirrored, accessibil
 
   return (
     <Ionicons
-      name={name as any}
+      name={name as React.ComponentProps<typeof Ionicons>["name"]}
       size={size}
       color={resolvedColor}
       style={[transform ? { transform } : null, style]}

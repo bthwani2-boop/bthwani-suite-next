@@ -11,9 +11,8 @@ import { AuthLoginCard } from "../../shared/auth/AuthLoginCard";
 import { useStoreDetailController } from "../../shared/store";
 import { useClientAddressController } from "../../shared/client-address";
 import { CartScreen } from "../cart";
-import { GovernedCheckoutScreen as CheckoutScreen } from "./GovernedCheckoutScreen";
-import type { DshCart } from "../../shared/cart";
-import type { DshPaymentMethod } from "../../shared/checkout";
+import { useCheckoutToOrderFlow } from "../../shared/checkout";
+import type { DshCreateIntentInput } from "../../shared/checkout";
 
 type Props = {
   readonly storeId: string;
@@ -21,14 +20,6 @@ type Props = {
   readonly onManageAddresses?: () => void;
   readonly onBack?: () => void;
   readonly onSuccess?: (orderId: string) => void;
-};
-
-type CheckoutData = {
-  readonly cart: DshCart;
-  readonly deliveryAddressId: string;
-  readonly note: string;
-  readonly paymentMethod: DshPaymentMethod;
-  readonly couponCode: string;
 };
 
 function AuthenticatedCheckout({
@@ -39,7 +30,14 @@ function AuthenticatedCheckout({
   onSuccess,
 }: Props) {
   const addressController = useClientAddressController();
-  const [checkoutData, setCheckoutData] = React.useState<CheckoutData | null>(null);
+  const flow = useCheckoutToOrderFlow();
+  const navigatedOrderId = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    if (flow.state.kind !== "order_ready" || !onSuccess || navigatedOrderId.current === flow.state.orderId) return;
+    navigatedOrderId.current = flow.state.orderId;
+    onSuccess(flow.state.orderId);
+  }, [flow.state, onSuccess]);
 
   if (addressController.state.kind === "loading") {
     return <LoadingState title="جاري تحميل عنوان التسليم الافتراضي…" />;
@@ -56,31 +54,32 @@ function AuthenticatedCheckout({
     );
   }
 
-  if (checkoutData) {
-    return (
-      <CheckoutScreen
-        cart={checkoutData.cart}
-        deliveryAddressId={checkoutData.deliveryAddressId}
-        note={checkoutData.note}
-        paymentMethod={checkoutData.paymentMethod}
-        couponCode={checkoutData.couponCode}
-        onCancel={() => setCheckoutData(null)}
-        {...(onSuccess ? { onSuccess } : {})}
-      />
-    );
-  }
-
   return (
     <CartScreen
       storeId={storeId}
       selectedAddress={addressController.selectedAddress}
       authKind="authenticated"
-      onProceedToCheckout={(cart, deliveryAddressId, note, paymentMethod, couponCode) =>
-        setCheckoutData({ cart, deliveryAddressId, note, paymentMethod, couponCode })
-      }
+      onProceedToCheckout={(cart, deliveryAddressId, note, paymentMethod, couponCode) => {
+        const input: DshCreateIntentInput = {
+          cartId: cart.id,
+          storeId: cart.storeId,
+          expectedCartVersion: cart.version,
+          fulfillmentMode: cart.fulfillmentMode,
+          paymentMethod,
+          ...(deliveryAddressId ? { deliveryAddressId } : {}),
+          ...(note ? { note } : {}),
+          ...(couponCode.trim() ? { couponCode: couponCode.trim().toUpperCase() } : {}),
+        };
+        flow.start(input);
+      }}
       {...(onManageAddresses ? { onManageAddresses } : {})}
       {...(onBrowseCatalog ? { onBrowseCatalog } : {})}
       {...(onBack ? { onBack } : {})}
+      checkoutState={flow.state}
+      onResetCheckout={flow.reset}
+      onCancelCheckout={flow.cancel}
+      onRefreshCheckout={flow.refresh}
+      onRetryOrder={flow.retryOrder}
     />
   );
 }

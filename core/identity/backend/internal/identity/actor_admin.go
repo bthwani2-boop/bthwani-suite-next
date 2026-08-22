@@ -148,7 +148,7 @@ func (r *Repository) ProvisionActorGoverned(ctx context.Context, input Provision
 	}
 	return ActorAdminView{
 		ActorID: actorID, Username: username, PhoneE164: phone,
-		Roles: []string{role}, Status: ActorStatusProvisioned, Version: 1,
+		Roles: []string{role}, Status: ActorStatusProvisioned, Version: 1, Created: true,
 	}, nil
 }
 

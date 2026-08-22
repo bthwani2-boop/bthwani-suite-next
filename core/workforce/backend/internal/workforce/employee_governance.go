@@ -125,33 +125,34 @@ const employeeGovernanceColumns = `actor_id, position_title, job_grade, employme
 	managed_department_codes, notes, updated_by_actor_id, version, created_at, updated_at`
 
 func (r *Repository) EmployeeGovernanceByActorID(ctx context.Context, actorID string) (EmployeeGovernanceProfile, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return EmployeeGovernanceProfile{}, err
+	}
 	actorID = strings.TrimSpace(actorID)
 	if actorID == "" {
 		return EmployeeGovernanceProfile{}, ErrInvalidInput
 	}
 	profile, err := scanEmployeeGovernance(r.db.QueryRowContext(ctx,
-		`SELECT `+employeeGovernanceColumns+` FROM workforce_employee_governance WHERE actor_id=$1`, actorID))
+		`SELECT `+employeeGovernanceColumns+` FROM workforce_employee_governance WHERE operator_context_id=$1 AND actor_id=$2`, operatorContextID, actorID))
 	if errors.Is(err, sql.ErrNoRows) {
 		var exists bool
-		if queryErr := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM workforce_employee_profiles WHERE actor_id=$1)`, actorID).Scan(&exists); queryErr != nil {
+		if queryErr := r.db.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM workforce_employee_profiles WHERE operator_context_id=$1 AND actor_id=$2)`, operatorContextID, actorID).Scan(&exists); queryErr != nil {
 			return EmployeeGovernanceProfile{}, queryErr
 		}
 		if !exists {
 			return EmployeeGovernanceProfile{}, ErrNotFound
 		}
-		_, err = r.db.ExecContext(ctx, `INSERT INTO workforce_employee_governance(actor_id,position_title,updated_by_actor_id)
-			SELECT actor_id,COALESCE(role,''),'system' FROM workforce_employee_profiles WHERE actor_id=$1
-			ON CONFLICT(actor_id) DO NOTHING`, actorID)
-		if err != nil {
-			return EmployeeGovernanceProfile{}, err
-		}
-		return scanEmployeeGovernance(r.db.QueryRowContext(ctx,
-			`SELECT `+employeeGovernanceColumns+` FROM workforce_employee_governance WHERE actor_id=$1`, actorID))
+		return EmployeeGovernanceProfile{}, fmt.Errorf("employee governance invariant missing for actor %s", actorID)
 	}
 	return profile, err
 }
 
 func (r *Repository) UpsertEmployeeGovernance(ctx context.Context, actorID, operatorID string, input UpsertEmployeeGovernanceInput) (EmployeeGovernanceProfile, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return EmployeeGovernanceProfile{}, err
+	}
 	actorID = strings.TrimSpace(actorID)
 	operatorID = strings.TrimSpace(operatorID)
 	if actorID == "" || operatorID == "" {
@@ -175,7 +176,7 @@ func (r *Repository) UpsertEmployeeGovernance(ctx context.Context, actorID, oper
 	}
 	defer tx.Rollback() //nolint:errcheck
 	var employeeExists bool
-	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM workforce_employee_profiles WHERE actor_id=$1)`, actorID).Scan(&employeeExists); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM workforce_employee_profiles WHERE operator_context_id=$1 AND actor_id=$2)`, operatorContextID, actorID).Scan(&employeeExists); err != nil {
 		return EmployeeGovernanceProfile{}, err
 	}
 	if !employeeExists {
@@ -183,16 +184,16 @@ func (r *Repository) UpsertEmployeeGovernance(ctx context.Context, actorID, oper
 	}
 
 	var currentVersion int
-	err = tx.QueryRowContext(ctx, `SELECT version FROM workforce_employee_governance WHERE actor_id=$1 FOR UPDATE`, actorID).Scan(&currentVersion)
+	err = tx.QueryRowContext(ctx, `SELECT version FROM workforce_employee_governance WHERE operator_context_id=$1 AND actor_id=$2 FOR UPDATE`, operatorContextID, actorID).Scan(&currentVersion)
 	if errors.Is(err, sql.ErrNoRows) {
 		if input.ExpectedVersion != 0 {
 			return EmployeeGovernanceProfile{}, ErrVersionConflict
 		}
 		_, err = tx.ExecContext(ctx, `INSERT INTO workforce_employee_governance(
-			actor_id,position_title,job_grade,employment_class,guarantee_type,guarantee_status,
+			operator_context_id,actor_id,position_title,job_grade,employment_class,guarantee_type,guarantee_status,
 			guarantee_reference,responsibility_scopes,managed_department_codes,notes,updated_by_actor_id)
-			VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb,$10,$11)`,
-			actorID, input.PositionTitle, input.JobGrade, input.EmploymentClass, input.GuaranteeType,
+			VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11,$12)`,
+			operatorContextID, actorID, input.PositionTitle, input.JobGrade, input.EmploymentClass, input.GuaranteeType,
 			input.GuaranteeStatus, input.GuaranteeReference, string(responsibilityJSON),
 			string(departmentsJSON), input.Notes, operatorID)
 	} else if err != nil {
@@ -205,8 +206,8 @@ func (r *Repository) UpsertEmployeeGovernance(ctx context.Context, actorID, oper
 			position_title=$2,job_grade=$3,employment_class=$4,guarantee_type=$5,
 			guarantee_status=$6,guarantee_reference=$7,responsibility_scopes=$8::jsonb,
 			managed_department_codes=$9::jsonb,notes=$10,updated_by_actor_id=$11,
-			version=version+1,updated_at=now() WHERE actor_id=$1`,
-			actorID, input.PositionTitle, input.JobGrade, input.EmploymentClass, input.GuaranteeType,
+			version=version+1,updated_at=now() WHERE operator_context_id=$1 AND actor_id=$2`,
+			operatorContextID, actorID, input.PositionTitle, input.JobGrade, input.EmploymentClass, input.GuaranteeType,
 			input.GuaranteeStatus, input.GuaranteeReference, string(responsibilityJSON),
 			string(departmentsJSON), input.Notes, operatorID)
 	}

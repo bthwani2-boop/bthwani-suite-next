@@ -13,21 +13,20 @@ import (
 const maxFinanceProxyResponseBytes = 4 << 20
 
 var financeReadAllowlist = map[string]struct{}{
-	"/wlt/settlements":                  {},
-	"/wlt/settlements/summary":          {},
-	"/wlt/refunds":                      {},
-	"/wlt/ledger/entries":               {},
-	"/wlt/ledger/financial-summary":     {},
-	"/wlt/cod-records":                  {},
-	"/wlt/cod-reconciliation-cases":     {},
-	"/wlt/commissions":                  {},
-	"/wlt/references/wallet-status":     {},
-	"/wlt/references/payment-status":    {},
-	"/wlt/references/settlement-status": {},
-	"/wlt/references/refund-status":     {},
-	"/wlt/references/field-commission":  {},
-	"/wlt/payout-requests":              {},
-	"/wlt/reconciliation-cases":         {},
+	"/wlt/settlements":                     {},
+	"/wlt/settlements/summary":             {},
+	"/wlt/refunds":                         {},
+	"/wlt/ledger/entries":                  {},
+	"/wlt/ledger/financial-summary":        {},
+	"/wlt/commissions":                     {},
+	"/wlt/references/wallet-status":        {},
+	"/wlt/references/payment-status":       {},
+	"/wlt/references/settlement-status":    {},
+	"/wlt/references/refund-status":        {},
+	"/wlt/references/field-commission":     {},
+	"/wlt/payout-requests":                 {},
+	"/wlt/reconciliation-cases":            {},
+	"/wlt/commercial/store-onboarding-fee": {},
 }
 
 func financeReadPathAllowed(path string) bool {
@@ -37,6 +36,9 @@ func financeReadPathAllowed(path string) bool {
 	if rest, ok := strings.CutPrefix(path, "/wlt/refunds/"); ok {
 		parts := strings.Split(rest, "/")
 		return (len(parts) == 1 || (len(parts) == 2 && parts[1] == "audit")) && strings.TrimSpace(parts[0]) != ""
+	}
+	if rest, ok := strings.CutPrefix(path, "/wlt/captain-collateral/"); ok {
+		return strings.TrimSpace(rest) != "" && !strings.Contains(rest, "/")
 	}
 	if rest, ok := strings.CutPrefix(path, "/wlt/payout-requests/"); ok {
 		parts := strings.Split(rest, "/")
@@ -114,8 +116,8 @@ func (c *Client) financeReadRequest(ctx context.Context, path string, query url.
 	if correlationID = strings.TrimSpace(correlationID); correlationID != "" {
 		req.Header.Set("X-Correlation-ID", correlationID)
 	}
-	if operatorContextID = strings.TrimSpace(operatorContextID); operatorContextID != "" {
-		req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	if _, err := c.setDelegatedOperatorContextHeader(req, operatorContextID); err != nil {
+		return 0, nil, fmt.Errorf("prepare WLT finance read OperatorContext: %w", err)
 	}
 	response, err := c.http.Do(req)
 	if err != nil {
@@ -134,6 +136,21 @@ func (c *Client) FinanceWrite(ctx context.Context, method, path string, body []b
 }
 
 func (c *Client) FinanceWriteWithOperatorContext(ctx context.Context, method, path string, body []byte, correlationID, idempotencyKey, operatorContextID string) (int, []byte, error) {
+	return c.financeWriteWithOperatorContext(ctx, method, path, body, correlationID, idempotencyKey, operatorContextID, "")
+}
+
+// FinanceWriteWithOperatorContextAndPrincipal is the bounded proxy used by
+// control-panel payout transitions. WLT authenticates the delegated principal
+// separately from the platform/operator context; it must never be smuggled in
+// the request body.
+func (c *Client) FinanceWriteWithOperatorContextAndPrincipal(ctx context.Context, method, path string, body []byte, correlationID, idempotencyKey, operatorContextID, delegatedPrincipalID string) (int, []byte, error) {
+	if strings.TrimSpace(delegatedPrincipalID) == "" {
+		return 0, nil, fmt.Errorf("Identity-authenticated delegated finance principal is required")
+	}
+	return c.financeWriteWithOperatorContext(ctx, method, path, body, correlationID, idempotencyKey, operatorContextID, delegatedPrincipalID)
+}
+
+func (c *Client) financeWriteWithOperatorContext(ctx context.Context, method, path string, body []byte, correlationID, idempotencyKey, operatorContextID, delegatedPrincipalID string) (int, []byte, error) {
 	if !c.Configured() {
 		return 0, nil, fmt.Errorf("WLT integration is not configured")
 	}
@@ -153,8 +170,11 @@ func (c *Client) FinanceWriteWithOperatorContext(ctx context.Context, method, pa
 	}
 	setServiceHeaders(req, c.serviceToken)
 	req.Header.Set("Content-Type", "application/json")
-	if operatorContextID = strings.TrimSpace(operatorContextID); operatorContextID != "" {
-		req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	if _, err := c.setDelegatedOperatorContextHeader(req, operatorContextID); err != nil {
+		return 0, nil, fmt.Errorf("prepare WLT finance write OperatorContext: %w", err)
+	}
+	if delegatedPrincipalID = strings.TrimSpace(delegatedPrincipalID); delegatedPrincipalID != "" {
+		req.Header.Set("X-Delegated-Principal-ID", delegatedPrincipalID)
 	}
 
 	idempotencyKey = strings.TrimSpace(idempotencyKey)
@@ -178,14 +198,13 @@ func (c *Client) FinanceWriteWithOperatorContext(ctx context.Context, method, pa
 }
 
 func financeWritePathAllowed(path string) bool {
-	if path == "/wlt/payout-requests" || path == "/wlt/refunds" {
+	if path == "/wlt/payout-requests" || path == "/wlt/refunds" || path == "/wlt/commercial/store-onboarding-fee" {
 		return true
 	}
 	for prefix, actions := range map[string]map[string]struct{}{
-		"/wlt/payout-requests/":          {"approve": {}, "reject": {}, "process": {}, "complete": {}, "fail": {}, "reconcile": {}},
-		"/wlt/reconciliation-cases/":     {"assign": {}, "resolve": {}},
-		"/wlt/cod-reconciliation-cases/": {"assign": {}, "resolve": {}},
-		"/wlt/refunds/":                  {"approve": {}, "reject": {}, "complete": {}, "reconcile": {}},
+		"/wlt/payout-requests/":      {"approve": {}, "reject": {}, "process": {}, "complete": {}, "fail": {}, "reconcile": {}},
+		"/wlt/reconciliation-cases/": {"assign": {}, "resolve": {}},
+		"/wlt/refunds/":              {"approve": {}, "reject": {}, "complete": {}, "reconcile": {}},
 	} {
 		rest, ok := strings.CutPrefix(path, prefix)
 		if !ok {
@@ -197,6 +216,9 @@ func financeWritePathAllowed(path string) bool {
 		}
 		_, allowed := actions[parts[1]]
 		return allowed
+	}
+	if path == "/wlt/captain-collateral/allocate" || path == "/wlt/captain-collateral/release" {
+		return true
 	}
 	return false
 }

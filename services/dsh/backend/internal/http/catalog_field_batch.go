@@ -81,7 +81,7 @@ func failedFieldBatchResult(index int, masterProductID string, err error) fieldA
 // item is governed independently: an invalid/conflicting row never rolls back
 // successful rows, and OCC remains mandatory for edits to existing rows.
 func (s *protectedStoreServer) handleFieldUpsertStoreAssortmentBatch(w http.ResponseWriter, r *http.Request) {
-	actorID, resolvedStoreID, ok := s.fieldPartnerStore(w, r)
+	actor, resolvedStoreID, ok := s.fieldPartnerStore(w, r)
 	if !ok {
 		return
 	}
@@ -158,7 +158,7 @@ func (s *protectedStoreServer) handleFieldUpsertStoreAssortmentBatch(w http.Resp
 			ExpectedVersion:   item.ExpectedVersion,
 		}
 		assortment, err := centralcatalog.UpsertStoreAssortmentAtomic(
-			r.Context(), s.db, resolvedStoreID, masterProductID, actorID, input, policy.AllowsStoreProductCustomImage,
+			r.Context(), s.db, resolvedStoreID, masterProductID, actor.ID, input, policy.AllowsStoreProductCustomImage,
 		)
 		if err != nil {
 			response.Results = append(response.Results, failedFieldBatchResult(index, masterProductID, err))

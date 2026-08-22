@@ -7,7 +7,6 @@ import {
   StyleSheet,
   View,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
 import {
   Button,
   StateView,
@@ -18,6 +17,7 @@ import {
   spacing,
 } from "@bthwani/ui-kit";
 import type { DshMediaAsset } from "../../shared/media/dsh-media-api.client";
+import { getDshImagePickerAdapter } from "../../shared/mobile-capabilities";
 import {
   listPartnerProductMedia,
   readCatalogNativeUriAsBlob,
@@ -29,8 +29,6 @@ export type ProductMediaScreenProps = Readonly<{
   productId: string;
   /** The store assortment owns the custom image; product identity remains central. */
   storeId: string;
-  /** Retained for route compatibility. Authentication comes from the Identity session. */
-  partnerId?: string;
   onBack?: () => void;
 }>;
 
@@ -120,12 +118,13 @@ async function pickWebImage(): Promise<PickedImage | null> {
 }
 
 async function pickNativeImage(): Promise<PickedImage | null> {
-  const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  const picker = getDshImagePickerAdapter();
+  const permission = await picker.requestMediaLibraryPermissions();
   if (!permission.granted) {
     throw new Error("يلزم السماح بالوصول إلى معرض الصور.");
   }
 
-  const result = await ImagePicker.launchImageLibraryAsync({
+  const result = await picker.launchImageLibrary({
     mediaTypes: ["images"],
     quality: 1,
   });

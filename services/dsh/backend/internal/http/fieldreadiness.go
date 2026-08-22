@@ -8,7 +8,6 @@ import (
 	"dsh-api/internal/store"
 )
 
-
 // GET /dsh/field/stores/{storeId}/visits
 func (s *protectedStoreServer) handleListFieldVisits(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "field")
@@ -16,7 +15,7 @@ func (s *protectedStoreServer) handleListFieldVisits(w http.ResponseWriter, r *h
 		return
 	}
 	storeID := r.PathValue("storeId")
-	visits, err := fieldreadiness.ListStoreVisits(r.Context(), s.db, s.workforce, actor, storeID, 50)
+	visits, err := fieldreadiness.ListStoreVisits(r.Context(), s.db, actor, storeID, 50)
 	if err != nil {
 		s.writeFieldReadinessError(w, err)
 		return
@@ -55,7 +54,42 @@ func (s *protectedStoreServer) handleFieldWorkQueue(w http.ResponseWriter, r *ht
 	store.SendJSON(w, http.StatusOK, map[string]any{"visits": visitResult, "escalations": escalationResult})
 }
 
-
+// GET /dsh/field/mutations/{operation}/{idempotencyKey}
+// Returns only the authenticated actor's committed receipt. A missing receipt
+// is an explicit not-committed result, allowing the client to retry safely.
+func (s *protectedStoreServer) handleFieldMutationReconciliation(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireActor(w, r, "field")
+	if !ok {
+		return
+	}
+	operation, err := fieldreadiness.ParseMutationOperation(r.PathValue("operation"))
+	if err != nil {
+		s.writeFieldReadinessError(w, err)
+		return
+	}
+	receipt, err := fieldreadiness.FindMutationReceipt(
+		r.Context(),
+		s.db,
+		actor.ID,
+		operation,
+		r.PathValue("idempotencyKey"),
+	)
+	if errors.Is(err, fieldreadiness.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "MUTATION_NOT_COMMITTED", "no committed field mutation receipt exists for this actor and key")
+		return
+	}
+	if err != nil {
+		s.writeFieldReadinessError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]any{
+		"status":         "committed",
+		"operation":      receipt.Operation,
+		"idempotencyKey": receipt.IdempotencyKey,
+		"correlationId":  receipt.CorrelationID,
+		"response":       receipt.ResponseJSON,
+	})
+}
 
 // GET /dsh/field/visits/{visitId}/checks
 func (s *protectedStoreServer) handleListVisitChecks(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +98,7 @@ func (s *protectedStoreServer) handleListVisitChecks(w http.ResponseWriter, r *h
 		return
 	}
 	visitID := r.PathValue("visitId")
-	checks, err := fieldreadiness.ListVisitChecks(r.Context(), s.db, s.workforce, actor, visitID)
+	checks, err := fieldreadiness.ListVisitChecks(r.Context(), s.db, actor, visitID)
 	if err != nil {
 		s.writeFieldReadinessError(w, err)
 		return
@@ -76,15 +110,14 @@ func (s *protectedStoreServer) handleListVisitChecks(w http.ResponseWriter, r *h
 	store.SendJSON(w, http.StatusOK, map[string]any{"checks": result})
 }
 
-
 // GET /dsh/operator/field-readiness/escalations
 func (s *protectedStoreServer) handleListOperatorEscalations(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.ActorFromContext(r.Context())
+	actor, ok := s.ActorFromContext(r.Context())
 	if !ok {
 		return
 	}
 	statusFilter := r.URL.Query().Get("status")
-	list, err := fieldreadiness.ListOperatorEscalations(r.Context(), s.db, statusFilter, 100)
+	list, err := fieldreadiness.ListOperatorEscalations(r.Context(), s.db, actor.OperatorContextID, statusFilter, 100)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list escalations")
 		return
@@ -96,8 +129,6 @@ func (s *protectedStoreServer) handleListOperatorEscalations(w http.ResponseWrit
 	store.SendJSON(w, http.StatusOK, map[string]any{"escalations": result})
 }
 
-
-
 func (s *protectedStoreServer) writeFieldReadinessError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, fieldreadiness.ErrNotFound):
@@ -106,12 +137,16 @@ func (s *protectedStoreServer) writeFieldReadinessError(w http.ResponseWriter, e
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "actor cannot access this store or visit")
 	case errors.Is(err, fieldreadiness.ErrChecklistIncomplete):
 		store.SendError(w, http.StatusConflict, "CHECKLIST_INCOMPLETE", "not all required readiness checks have passed")
+	case errors.Is(err, fieldreadiness.ErrChecklistPolicyMissing):
+		store.SendError(w, http.StatusConflict, "CHECKLIST_POLICY_MISSING", "no governed readiness checklist policy is configured for this store")
 	case errors.Is(err, fieldreadiness.ErrEvidenceRequired):
 		store.SendError(w, http.StatusConflict, "EVIDENCE_REQUIRED", "required readiness evidence is missing")
 	case errors.Is(err, fieldreadiness.ErrOpenEscalation):
 		store.SendError(w, http.StatusConflict, "OPEN_ESCALATION", "visit has an open blocking escalation")
 	case errors.Is(err, fieldreadiness.ErrVisitAlreadyComplete):
 		store.SendError(w, http.StatusConflict, "VISIT_ALREADY_COMPLETE", "visit is already complete")
+	case errors.Is(err, fieldreadiness.ErrVisitNotActive):
+		store.SendError(w, http.StatusConflict, "VISIT_NOT_ACTIVE", "visit is no longer active")
 	case errors.Is(err, fieldreadiness.ErrConflict):
 		store.SendError(w, http.StatusConflict, "VISIT_ALREADY_IN_PROGRESS", "store or agent already has an in-progress visit")
 	case errors.Is(err, fieldreadiness.ErrLocationRequired):
@@ -172,16 +207,20 @@ func marshalVisit(v fieldreadiness.Visit) map[string]any {
 
 func marshalCheck(c fieldreadiness.ReadinessCheck) map[string]any {
 	return map[string]any{
-		"id":          c.ID,
-		"visitId":     c.VisitID,
-		"storeId":     c.StoreID,
-		"checkType":   c.CheckType,
-		"status":      c.Status,
-		"evidenceUrl": c.EvidenceURL,
-		"notes":       c.Notes,
-		"verifiedBy":  c.VerifiedBy,
-		"createdAt":   c.CreatedAt,
-		"updatedAt":   c.UpdatedAt,
+		"id":           c.ID,
+		"visitId":      c.VisitID,
+		"storeId":      c.StoreID,
+		"checkType":    c.CheckType,
+		"status":       c.Status,
+		"evidenceUrl":  c.EvidenceURL,
+		"notes":        c.Notes,
+		"verifiedBy":   c.VerifiedBy,
+		"createdAt":    c.CreatedAt,
+		"updatedAt":    c.UpdatedAt,
+		"labelAr":      c.LabelAR,
+		"required":     c.Required,
+		"critical":     c.Critical,
+		"displayOrder": c.DisplayOrder,
 	}
 }
 

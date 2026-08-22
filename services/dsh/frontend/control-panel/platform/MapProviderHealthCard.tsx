@@ -5,8 +5,19 @@ import { WebStyleSheet as StyleSheet, WebView as View } from "@bthwani/ui-kit/we
 import { CpBadge, CpButton, CpRetryButton, CpStatePanel, CpStateView } from "@bthwani/control-panel/components";
 import { useMapProviderHealthController } from "../../shared/client-map";
 
-export function MapProviderHealthCard() {
-  const controller = useMapProviderHealthController(true);
+export function MapProviderHealthCard({ canRead }: { readonly canRead: boolean }) {
+  const controller = useMapProviderHealthController(canRead);
+
+  if (!canRead) {
+    return (
+      <CpStatePanel
+        role="status"
+        title="صلاحية قراءة صحة الخرائط مطلوبة"
+        description="لن يطلب هذا القسم حالة مزود الخرائط قبل تحقق صلاحية platform.read."
+        code="DSH_PLATFORM_READ_REQUIRED"
+      />
+    );
+  }
 
   if (controller.state.kind === "loading") {
     return <CpStateView kind="loading" title="جارٍ فحص مزود الخرائط…" />;

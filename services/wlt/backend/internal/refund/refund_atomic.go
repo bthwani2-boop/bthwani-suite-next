@@ -12,7 +12,7 @@ import (
 
 var ErrRefundReferenceConflict = errors.New("refund references do not match the payment session")
 
-func legacyRefundView(item *GovernedRefund) *Refund {
+func cancellationRefundView(item *GovernedRefund) *Refund {
 	if item == nil {
 		return nil
 	}
@@ -24,29 +24,30 @@ func legacyRefundView(item *GovernedRefund) *Refund {
 	}
 }
 
-func refundOperatorContextForSession(ctx context.Context, db *sql.DB, paymentSessionID string) (context.Context, string, error) {
-	if operatorContextID, ok := shared.OperatorContextIDFromContext(ctx); ok {
-		return ctx, operatorContextID, nil
+func requireRefundOperatorContextForSession(ctx context.Context, db *sql.DB, paymentSessionID string) (string, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return "", err
 	}
-	var operatorContextID string
+	var storedOperatorContextID string
 	if err := db.QueryRowContext(ctx, `
-		SELECT operator_context_id FROM wlt_payment_sessions WHERE id=$1`, paymentSessionID).Scan(&operatorContextID); err != nil {
+		SELECT operator_context_id FROM wlt_payment_sessions WHERE id=$1`, paymentSessionID).Scan(&storedOperatorContextID); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return ctx, "", fmt.Errorf("payment session not found")
+			return "", fmt.Errorf("payment session not found")
 		}
-		return ctx, "", err
+		return "", err
 	}
-	operatorContextID = strings.TrimSpace(operatorContextID)
-	if operatorContextID == "" {
-		return ctx, "", fmt.Errorf("payment session OperatorContext is missing")
+	storedOperatorContextID = strings.TrimSpace(storedOperatorContextID)
+	if storedOperatorContextID == "" || storedOperatorContextID != operatorContextID {
+		return "", ErrRefundReferenceConflict
 	}
-	return shared.WithOperatorContext(ctx, operatorContextID), operatorContextID, nil
+	return operatorContextID, nil
 }
 
-// CreateRefundAtomicForOperatorContext preserves order-cancellation compatibility while
-// using the governed amount reservation, context isolation, audit and idempotency
-// engine. OperatorContext ownership comes from the authenticated request context. The
-// compatibility path may derive it only from WLT's own payment-session record.
+// CreateRefundAtomicForOperatorContext is the sole order-cancellation refund
+// adapter. OperatorContext authority must already exist in the authenticated
+// request context and is independently checked against WLT's payment-session
+// record before the governed refund engine is entered.
 func CreateRefundAtomicForOperatorContext(ctx context.Context, db *sql.DB, input CreateRefundInput) (*Refund, bool, error) {
 	input.PaymentSessionID = strings.TrimSpace(input.PaymentSessionID)
 	input.OrderID = strings.TrimSpace(input.OrderID)
@@ -55,27 +56,21 @@ func CreateRefundAtomicForOperatorContext(ctx context.Context, db *sql.DB, input
 	if input.PaymentSessionID == "" || input.OrderID == "" || input.ClientID == "" || input.Reason == "" {
 		return nil, false, fmt.Errorf("paymentSessionId, orderId, clientId, and reason are required")
 	}
-	trustedCtx, operatorContextID, err := refundOperatorContextForSession(ctx, db, input.PaymentSessionID)
+	operatorContextID, err := requireRefundOperatorContextForSession(ctx, db, input.PaymentSessionID)
 	if err != nil {
 		return nil, false, err
 	}
 	key := "order-cancellation:" + input.PaymentSessionID + ":" + input.OrderID
-	item, replayed, err := CreateGovernedRefund(trustedCtx, db, GovernedCreateRefundInput{
-		OperatorContextID: operatorContextID,
-		PaymentSessionID: input.PaymentSessionID,
-		OrderID: input.OrderID,
-		ClientID: input.ClientID,
-		Reason: input.Reason,
-		EligibilityReference: "order-cancellation:" + input.OrderID,
+	item, replayed, err := CreateGovernedRefund(ctx, db, GovernedCreateRefundInput{
+		OperatorContextID:     operatorContextID,
+		PaymentSessionID:      input.PaymentSessionID,
+		OrderID:               input.OrderID,
+		ClientID:              input.ClientID,
+		Reason:                input.Reason,
+		EligibilityReference:  "order-cancellation:" + input.OrderID,
 		RequestedByOperatorID: "dsh-order-cancellation",
-		IdempotencyKey: key,
-		CorrelationID: key,
+		IdempotencyKey:        key,
+		CorrelationID:         key,
 	})
-	return legacyRefundView(item), !replayed, err
-}
-
-// CreateRefundAtomic is the package-level compatibility adapter. It never
-// invents a OperatorContext; it resolves ownership from the referenced WLT session.
-func CreateRefundAtomic(db *sql.DB, input CreateRefundInput) (*Refund, bool, error) {
-	return CreateRefundAtomicForOperatorContext(context.Background(), db, input)
+	return cancellationRefundView(item), !replayed, err
 }

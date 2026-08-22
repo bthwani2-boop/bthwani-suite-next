@@ -68,17 +68,141 @@ function Assert-CommandExists {
     }
 }
 
+function Normalize-AllowedReferrers {
+    param([Parameter(Mandatory)][string[]] $Referrers)
+
+    $normalized = [System.Collections.Generic.List[string]]::new()
+    $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+
+    foreach ($entry in $Referrers) {
+        if ([string]::IsNullOrWhiteSpace($entry)) {
+            throw 'Allowed referrers cannot contain an empty value.'
+        }
+
+        # pwsh -File receives comma-separated array syntax as one native argument.
+        # Accept that representation as well as a real PowerShell string array.
+        foreach ($candidate in ([string]$entry -split ',')) {
+            $value = $candidate.Trim()
+            while ($value.Length -ge 2 -and (
+                ($value.StartsWith('"') -and $value.EndsWith('"')) -or
+                ($value.StartsWith("'") -and $value.EndsWith("'"))
+            )) {
+                $value = $value.Substring(1, $value.Length - 2).Trim()
+            }
+
+            if ([string]::IsNullOrWhiteSpace($value)) {
+                throw 'Allowed referrers cannot contain an empty value.'
+            }
+            if ($value -notmatch '^https?://[^\s]+$') {
+                throw "Allowed referrer must start with http:// or https:// and contain no whitespace: $value"
+            }
+            if ($seen.Add($value)) {
+                [void] $normalized.Add($value)
+            }
+        }
+    }
+
+    if ($normalized.Count -eq 0) {
+        throw 'At least one allowed referrer is required.'
+    }
+    return [string[]] $normalized.ToArray()
+}
+
+function Get-BalancedJsonDocument {
+    param(
+        [Parameter(Mandatory)][string] $Text,
+        [Parameter(Mandatory)][int] $Start
+    )
+
+    if ($Start -lt 0 -or $Start -ge $Text.Length) { return $null }
+    $first = $Text[$Start]
+    if ($first -ne '{' -and $first -ne '[') { return $null }
+
+    $stack = [System.Collections.Generic.Stack[char]]::new()
+    $inString = $false
+    $escaped = $false
+
+    for ($index = $Start; $index -lt $Text.Length; $index++) {
+        $char = $Text[$index]
+
+        if ($inString) {
+            if ($escaped) {
+                $escaped = $false
+            } elseif ($char -eq '\') {
+                $escaped = $true
+            } elseif ($char -eq '"') {
+                $inString = $false
+            }
+            continue
+        }
+
+        if ($char -eq '"') {
+            $inString = $true
+            continue
+        }
+
+        if ($char -eq '{' -or $char -eq '[') {
+            $stack.Push($char)
+            continue
+        }
+
+        if ($char -eq '}' -or $char -eq ']') {
+            if ($stack.Count -eq 0) { return $null }
+            $opening = $stack.Peek()
+            $expected = if ($opening -eq '{') { '}' } else { ']' }
+            if ($char -ne $expected) { return $null }
+            [void] $stack.Pop()
+            if ($stack.Count -eq 0) {
+                return $Text.Substring($Start, $index - $Start + 1)
+            }
+        }
+    }
+
+    return $null
+}
+
 function ConvertFrom-JsonSafe {
     param([Parameter(Mandatory)][string] $Text)
-    $arrayStart = $Text.IndexOf('[')
-    $objectStart = $Text.IndexOf('{')
-    $start = if ($arrayStart -ge 0 -and ($objectStart -lt 0 -or $arrayStart -lt $objectStart)) {
-        $arrayStart
-    } else {
-        $objectStart
+
+    $lastError = $null
+    for ($index = 0; $index -lt $Text.Length; $index++) {
+        $char = $Text[$index]
+        if ($char -ne '{' -and $char -ne '[') { continue }
+
+        $candidate = Get-BalancedJsonDocument -Text $Text -Start $index
+        if ([string]::IsNullOrWhiteSpace($candidate)) { continue }
+
+        try {
+            return $candidate | ConvertFrom-Json -Depth 100
+        } catch {
+            $lastError = $_.Exception.Message
+        }
     }
-    if ($start -lt 0) { throw 'Expected JSON output but no JSON start was found.' }
-    return $Text.Substring($start) | ConvertFrom-Json -Depth 100
+
+    $previewLength = [Math]::Min(1000, $Text.Length)
+    $preview = if ($previewLength -gt 0) { $Text.Substring(0, $previewLength) } else { '<empty>' }
+    throw "Expected parseable JSON in gcloud output. Last parse error: $lastError`nOutput preview:`n$preview"
+}
+
+function Get-KeyNamesByDisplayName {
+    param(
+        [Parameter(Mandatory)][string] $Name,
+        [Parameter(Mandatory)][string] $Project
+    )
+
+    $text = Invoke-CommandChecked -Command 'gcloud' -Arguments @(
+        'services', 'api-keys', 'list',
+        '--project', $Project,
+        '--filter', "displayName='$Name'",
+        '--format=value(name)'
+    ) -CaptureOnly
+
+    if ([string]::IsNullOrWhiteSpace($text)) { return @() }
+    return @(
+        $text -split '\r?\n' |
+            ForEach-Object { $_.Trim() } |
+            Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+    )
 }
 
 function Get-KeyNameByDisplayName {
@@ -87,29 +211,38 @@ function Get-KeyNameByDisplayName {
         [Parameter(Mandatory)][string] $Project
     )
 
-    $json = Invoke-CommandChecked -Command 'gcloud' -Arguments @(
-        'services', 'api-keys', 'list',
-        '--project', $Project,
-        '--format=json'
-    ) -CaptureOnly
-    if ([string]::IsNullOrWhiteSpace($json)) { return $null }
-    $items = @(ConvertFrom-JsonSafe -Text $json)
-    $match = $items | Where-Object { $_.displayName -eq $Name } | Select-Object -First 1
-    if ($null -eq $match) { return $null }
-    return [string]$match.name
+    $matches = @(Get-KeyNamesByDisplayName -Name $Name -Project $Project)
+    if ($matches.Count -gt 1) {
+        throw "Multiple API keys use display name '$Name'. Refusing an ambiguous update; keep exactly one governed browser Maps key."
+    }
+    if ($matches.Count -eq 0) { return $null }
+    return [string] $matches[0]
 }
 
 function Get-KeyString {
     param([Parameter(Mandatory)][string] $KeyName)
 
-    $json = Invoke-CommandChecked -Command 'gcloud' -Arguments @(
+    $text = Invoke-CommandChecked -Command 'gcloud' -Arguments @(
         'services', 'api-keys', 'get-key-string', $KeyName,
-        '--format=json'
+        '--format=value(keyString)'
     ) -CaptureOnly
-    $parsed = ConvertFrom-JsonSafe -Text $json
-    if ($parsed.keyString) { return [string]$parsed.keyString }
-    if ($parsed.response.keyString) { return [string]$parsed.response.keyString }
-    throw 'Unable to read the API key string from gcloud output.'
+    $value = ([string]$text).Trim()
+
+    if ([string]::IsNullOrWhiteSpace($value)) {
+        $json = Invoke-CommandChecked -Command 'gcloud' -Arguments @(
+            'services', 'api-keys', 'get-key-string', $KeyName,
+            '--format=json'
+        ) -CaptureOnly
+        $parsed = ConvertFrom-JsonSafe -Text $json
+        if ($parsed.keyString) { $value = [string]$parsed.keyString }
+        elseif ($parsed.response.keyString) { $value = [string]$parsed.response.keyString }
+    }
+
+    $value = ([string]$value).Trim()
+    if ($value -notmatch '^AIza[0-9A-Za-z_-]{20,}$') {
+        throw 'Unable to read a usable Google API key string from gcloud output.'
+    }
+    return $value
 }
 
 function Get-CreatedKeyName {
@@ -128,18 +261,42 @@ function Get-CreatedKeyString {
     return $null
 }
 
-function Assert-AllowedReferrers {
-    param([Parameter(Mandatory)][string[]] $Referrers)
+function Set-EnvironmentFileValue {
+    param(
+        [Parameter(Mandatory)][string] $Path,
+        [Parameter(Mandatory)][string] $Name,
+        [Parameter(Mandatory)][string] $Value
+    )
 
-    foreach ($referrer in $Referrers) {
-        if ([string]::IsNullOrWhiteSpace($referrer)) {
-            throw 'Allowed referrers cannot contain an empty value.'
-        }
-        if ($referrer -notmatch '^https?://') {
-            throw "Allowed referrer must start with http:// or https://: $referrer"
+    $resolvedPath = [System.IO.Path]::GetFullPath($Path)
+    $parent = Split-Path -Parent $resolvedPath
+    if (-not [string]::IsNullOrWhiteSpace($parent)) {
+        New-Item -ItemType Directory -Force -Path $parent | Out-Null
+    }
+
+    $lines = if (Test-Path -LiteralPath $resolvedPath -PathType Leaf) {
+        @(Get-Content -LiteralPath $resolvedPath)
+    } else {
+        @()
+    }
+    $prefix = "$Name="
+    $updated = $false
+    $next = foreach ($line in $lines) {
+        if ($line.TrimStart().StartsWith($prefix, [System.StringComparison]::Ordinal)) {
+            $updated = $true
+            "$Name=$Value"
+        } else {
+            $line
         }
     }
+    if (-not $updated) {
+        $next = @($next) + "$Name=$Value"
+    }
+    $next | Set-Content -LiteralPath $resolvedPath -Encoding UTF8
+    return $resolvedPath
 }
+
+$AllowedReferrers = Normalize-AllowedReferrers -Referrers $AllowedReferrers
 
 Write-Host '============================================================' -ForegroundColor Cyan
 Write-Host ' BTHWANI CONTROL-PANEL GOOGLE MAPS BROWSER KEY' -ForegroundColor Cyan
@@ -152,7 +309,6 @@ Write-Host "Write env file: $WriteEnvironmentFile"
 Write-Host "Dry run:        $DryRun"
 
 Assert-CommandExists -Name 'gcloud'
-Assert-AllowedReferrers -Referrers $AllowedReferrers
 
 Write-Step 'Select project and enable required services'
 Invoke-CommandChecked -Command 'gcloud' -Arguments @('config', 'set', 'project', $ProjectId) | Out-Null
@@ -191,10 +347,20 @@ if ($keyName) {
         '--project', $ProjectId,
         '--format=json'
     ) -CaptureOnly
+
     if (-not $DryRun) {
-        $payload = ConvertFrom-JsonSafe -Text $createOutput
-        $keyName = Get-CreatedKeyName -Payload $payload
-        $keyString = Get-CreatedKeyString -Payload $payload
+        try {
+            $payload = ConvertFrom-JsonSafe -Text $createOutput
+            $keyName = Get-CreatedKeyName -Payload $payload
+            $keyString = Get-CreatedKeyString -Payload $payload
+        } catch {
+            if ($ForceNewKey) { throw }
+            # Some gcloud versions emit operation progress around the result.
+            # Re-listing by the unique governed display name is deterministic.
+            $keyName = Get-KeyNameByDisplayName -Name $DisplayName -Project $ProjectId
+            if ([string]::IsNullOrWhiteSpace($keyName)) { throw }
+        }
+
         if ([string]::IsNullOrWhiteSpace($keyString)) {
             $keyString = Get-KeyString -KeyName $keyName
         }
@@ -216,13 +382,8 @@ Write-Host 'Key string: intentionally not printed.'
 Write-Host "PowerShell process assignment: `$env:${EnvironmentVariableName} = '<key-string>'" -ForegroundColor Yellow
 
 if (-not [string]::IsNullOrWhiteSpace($WriteEnvironmentFile)) {
-    $resolvedPath = [System.IO.Path]::GetFullPath($WriteEnvironmentFile)
-    $parent = Split-Path -Parent $resolvedPath
-    if (-not [string]::IsNullOrWhiteSpace($parent)) {
-        New-Item -ItemType Directory -Force -Path $parent | Out-Null
-    }
-    "$EnvironmentVariableName=$keyString" | Set-Content -LiteralPath $resolvedPath -Encoding UTF8
-    Write-Host "Local ignored environment file written: $resolvedPath" -ForegroundColor Green
+    $writtenPath = Set-EnvironmentFileValue -Path $WriteEnvironmentFile -Name $EnvironmentVariableName -Value $keyString
+    Write-Host "Local ignored environment file updated: $writtenPath" -ForegroundColor Green
 }
 
 Write-Host "`nPASS: browser key is restricted to Maps JavaScript API and the approved referrers." -ForegroundColor Green

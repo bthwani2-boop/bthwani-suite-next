@@ -1,0 +1,176 @@
+openapi: 3.1.0
+info:
+  title: BThwani WLT COD Reservation Core API
+  version: 1.0.0
+  description: OperatorContext-scoped captain-funded COD reservation and finalization
+    surface. Amount and currency are derived from WLT payment-session truth.
+x-bthwani-owner: services/wlt
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: ENABLED
+x-bthwani-runtime-dependency: true
+x-bthwani-financial-owner: true
+servers:
+  - url: http://localhost:58083
+paths:
+  /wlt/cod-reservations/reserve:
+    post:
+      operationId: reserveWltCodCapacity
+      tags: [ WltCodReservations ]
+      summary: Reserve COD capacity for an order.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReserveCodCapacityRequest' }
+      responses:
+        '200':
+          description: Reserved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReserveCodCapacityResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { description: FEATURE_NOT_ENABLED when WLT_MUTATIONS_ENABLED is not true }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - serviceBearer: []
+  /wlt/cod-reservations/release:
+    post:
+      operationId: releaseWltCodReservation
+      tags: [ WltCodReservations ]
+      summary: Release COD capacity for an order.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReleaseCodReservationRequest' }
+      responses:
+        '200':
+          description: Released.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReleaseCodReservationResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { description: FEATURE_NOT_ENABLED when WLT_MUTATIONS_ENABLED is not true }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - serviceBearer: []
+  /wlt/cod-reservations/finalize:
+    post:
+      operationId: finalizeWltCodReservation
+      tags: [ WltCodReservations ]
+      summary: Finalize captain-funded COD exposure after governed delivery completion.
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/FinalizeCodReservationRequest' }
+      responses:
+        '200':
+          description: Finalized or replayed idempotently.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReserveCodCapacityResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { description: FEATURE_NOT_ENABLED when WLT_MUTATIONS_ENABLED is not true }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - serviceBearer: []
+  /wlt/cod-reservations/{orderId}:
+    get:
+      operationId: getWltCodReservation
+      tags: [ WltCodReservations ]
+      summary: Get COD reservation for an order.
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - name: orderId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Retrieved.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReleaseCodReservationResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - serviceBearer: []
+components:
+  securitySchemes: {}
+  schemas:
+    CodReservation:
+      type: object
+      required: [id, operatorContextId, orderId, checkoutIntentId, captainId, amountMinorUnits, currency, status, idempotencyKey, createdAt, updatedAt]
+      properties:
+        id: { type: string }
+        operatorContextId: { type: string }
+        orderId: { type: string }
+        checkoutIntentId: { type: string }
+        captainId: { type: string }
+        amountMinorUnits: { type: integer, format: int64 }
+        currency: { type: string }
+        status: { type: string }
+        idempotencyKey: { type: string }
+        releaseReason: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        resolvedAt: { type: string, format: date-time }
+        finalizationLedgerTransactionId: { type: string }
+    ReserveCodCapacityRequest:
+      type: object
+      required: [orderId, checkoutIntentId, captainId, amountMinorUnits, currency]
+      properties:
+        orderId: { type: string }
+        checkoutIntentId: { type: string }
+        captainId: { type: string }
+        amountMinorUnits: { type: integer, format: int64 }
+        currency: { type: string }
+    ReserveCodCapacityResponse:
+      type: object
+      required: [codReservation, replayed]
+      properties:
+        codReservation: { $ref: '#/components/schemas/CodReservation' }
+        replayed: { type: boolean }
+    FinalizeCodReservationRequest:
+      type: object
+      additionalProperties: false
+      required: [orderId, checkoutIntentId]
+      properties:
+        orderId: { type: string }
+        checkoutIntentId: { type: string }
+    ReleaseCodReservationRequest:
+      type: object
+      required: [orderId, reason]
+      properties:
+        orderId: { type: string }
+        reason: { type: string }
+    ReleaseCodReservationResponse:
+      type: object
+      required: [codReservation]
+      properties:
+        codReservation: { $ref: '#/components/schemas/CodReservation' }

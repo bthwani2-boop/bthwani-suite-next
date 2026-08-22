@@ -26,10 +26,6 @@ func TestPostOpeningBalance_RejectsNonPositiveAmount(t *testing.T) {
 	}
 }
 
-// TestPostOpeningBalance_IsIdempotentAndSourced proves an opening balance is
-// a typed ledger fact: it lands in exactly one wallet account, retrying the
-// same reference does not double it, and the projection read back matches
-// what the ledger actually holds -- not a separately maintained number.
 func TestPostOpeningBalance_IsIdempotentAndSourced(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
@@ -57,18 +53,10 @@ func TestPostOpeningBalance_IsIdempotentAndSourced(t *testing.T) {
 		t.Fatalf("expected retry to return the original transaction, first=%s second=%s", firstID, secondID)
 	}
 
-	// A different amount against the same reference is a different financial
-	// claim, not a retry, and must be rejected -- never silently summed.
 	if _, err := PostOpeningBalance(ctx, tx, "captain", actorID, "YER", 20000, referenceID, Actor{ID: "admin", Type: "operator"}); !errors.Is(err, ErrLedgerReferenceConflict) {
 		t.Fatalf("expected ErrLedgerReferenceConflict for a changed-amount replay, got %v", err)
 	}
 
-	// wlt_ledger_accounts.balance_minor_units is raw debit-minus-credit
-	// storage; a wallet is credit-normal, so crediting it (a top-up) makes
-	// the raw column negative. See GetWalletLedgerProjection's doc comment
-	// for the full explanation -- this assertion is on the raw column
-	// specifically, to prove PostLedgerTransaction wrote what the accounting
-	// convention requires, not the human-facing sign.
 	var rawBalance int64
 	if err := tx.QueryRowContext(ctx, "SELECT balance_minor_units FROM wlt_ledger_accounts WHERE operator_context_id=$1 AND account_type='wallet' AND actor_type='captain' AND actor_id=$2 AND currency='YER'", "OperatorContext-ledger-tests", actorID).Scan(&rawBalance); err != nil {
 		t.Fatalf("read wallet balance: %v", err)
@@ -78,9 +66,6 @@ func TestPostOpeningBalance_IsIdempotentAndSourced(t *testing.T) {
 	}
 }
 
-// TestPostFinancialCorrection_RejectsZeroDelta proves a no-op correction
-// cannot consume a reference and produce a transaction with no financial
-// effect.
 func TestPostFinancialCorrection_RejectsZeroDelta(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
@@ -99,11 +84,6 @@ func TestPostFinancialCorrection_RejectsZeroDelta(t *testing.T) {
 	}
 }
 
-// TestPostFinancialCorrection_ReversesWithoutRewritingHistory proves a
-// correction is a second, distinct ledger transaction rather than an edit of
-// the transaction it corrects: after crediting then reversing the same
-// amount, both transactions exist as separate rows and the wallet nets back
-// to zero.
 func TestPostFinancialCorrection_ReversesWithoutRewritingHistory(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
@@ -149,8 +129,6 @@ func TestPostFinancialCorrection_ReversesWithoutRewritingHistory(t *testing.T) {
 	}
 }
 
-// TestGetWalletLedgerProjection_MatchesPostedBalance proves the projection is
-// derived, not an independent counter: it reads exactly what PostLedgerTransaction wrote.
 func TestGetWalletLedgerProjection_MatchesPostedBalance(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
@@ -171,7 +149,7 @@ func TestGetWalletLedgerProjection_MatchesPostedBalance(t *testing.T) {
 		t.Fatalf("commit: %v", err)
 	}
 
-	projection, err := GetWalletLedgerProjection(db, "captain", actorID, "YER")
+	projection, err := GetWalletLedgerProjection(ctx, db, "captain", actorID, "YER")
 	if err != nil {
 		t.Fatalf("GetWalletLedgerProjection: %v", err)
 	}
@@ -181,17 +159,18 @@ func TestGetWalletLedgerProjection_MatchesPostedBalance(t *testing.T) {
 	if projection.BalanceMinorUnits != 7500 {
 		t.Fatalf("expected projection balance 7500, got %d", projection.BalanceMinorUnits)
 	}
+	if projection.OperatorContextID != "OperatorContext-ledger-tests" {
+		t.Fatalf("expected OperatorContext-scoped projection, got %q", projection.OperatorContextID)
+	}
 }
 
-// TestGetWalletLedgerProjection_NoActivityReturnsNil proves "no wallet
-// account created yet" is a legitimate not-found state, not an error a caller
-// has to special-case around a synthetic zero value.
 func TestGetWalletLedgerProjection_NoActivityReturnsNil(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
 	}
-	projection, err := GetWalletLedgerProjection(db, "captain", uniqueActorID("never-funded"), "YER")
+	ctx := trustedLedgerTestContext()
+	projection, err := GetWalletLedgerProjection(ctx, db, "captain", uniqueActorID("never-funded"), "YER")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

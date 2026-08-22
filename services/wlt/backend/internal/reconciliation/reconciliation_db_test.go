@@ -11,6 +11,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"wlt-api/internal/shared"
+	"wlt-api/internal/testsupport"
 )
 
 const reconciliationTestOperatorContext = "OperatorContext-reconciliation-tests"
@@ -44,14 +45,21 @@ func reconciliationTestContext() context.Context {
 }
 
 func insertTestCase(t *testing.T, db *sql.DB) string {
+	t.Helper()
 	checkoutIntentID := fmt.Sprintf("test-checkout-recon-%d", time.Now().UnixNano())
-	var sessionID string
-	err := db.QueryRow(`
-		INSERT INTO wlt_payment_sessions (operator_context_id, checkout_intent_id, client_id, store_id, payment_method, status, amount_minor_units, currency, financial_purpose)
-		VALUES ($1, $2, 'client-test', 'store-test', 'official_wallet', 'provider_result_unknown', 1000, 'YER', 'order_payment')
-		RETURNING id`, reconciliationTestOperatorContext, checkoutIntentID).Scan(&sessionID)
+	sessionID, err := testsupport.SeedCanonicalCheckoutPaymentSession(context.Background(), db, testsupport.CheckoutPaymentSession{
+		OperatorContextID: reconciliationTestOperatorContext,
+		CheckoutIntentID:  checkoutIntentID,
+		ClientID:          "client-test",
+		StoreID:           "store-test",
+		PaymentMethod:     "wallet",
+		Status:            "provider_result_unknown",
+		AmountMinorUnits:  1000,
+		Currency:          "YER",
+		FinancialPurpose:  "order_payment",
+	})
 	if err != nil {
-		t.Fatalf("failed to insert test session: %v", err)
+		t.Fatalf("seed canonical payment session: %v", err)
 	}
 	var caseID string
 	err = db.QueryRow(`

@@ -2,13 +2,14 @@ package store
 
 import (
 	"context"
+	"os"
+	"strings"
 	"testing"
 )
 
 func TestActorCanAccessStoreFailsClosedWithoutDatabase(t *testing.T) {
 	allowed, err := ActorCanAccessStore(
 		context.Background(),
-		nil,
 		nil,
 		StoreActor{ID: "field-1", Role: "field", OperatorContextID: "operator-context-1"},
 		"store-1",
@@ -24,7 +25,6 @@ func TestActorCanAccessStoreFailsClosedWithoutDatabase(t *testing.T) {
 func TestActorCanAccessStoreFailsClosedWithoutTrustedOperatorContext(t *testing.T) {
 	allowed, err := ActorCanAccessStore(
 		context.Background(),
-		nil,
 		nil,
 		StoreActor{ID: "field-1", Role: "field"},
 		"store-1",
@@ -56,5 +56,16 @@ func TestPermissionScopeAllowsOnlyExplicitStoreOrAll(t *testing.T) {
 				t.Fatalf("permissionScopeAllowsStore(%q, %q)=%v want %v", tc.scope, tc.storeID, got, tc.want)
 			}
 		})
+	}
+}
+
+func TestActorStoreScopeDoesNotAcceptBlankOperatorContextCompatibilityRows(t *testing.T) {
+	source, err := os.ReadFile("governance.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(source)
+	if strings.Contains(text, "operator_context_id = $3 OR operator_context_id = ''") {
+		t.Fatal("store scope resolution must reject blank operator-context compatibility rows")
 	}
 }

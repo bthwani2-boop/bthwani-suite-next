@@ -129,13 +129,15 @@ func (s *Service) ensureServiceZoneCity(ctx context.Context, cityCode string) er
 func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input CreateFieldAgentInput, idempotencyKey, correlationID string) (Person, bool, error) {
 	input.FullNameAr = strings.TrimSpace(input.FullNameAr)
 	input.FullNameEn = strings.TrimSpace(input.FullNameEn)
+	input.Username = strings.TrimSpace(input.Username)
+	input.PhoneE164 = strings.TrimSpace(input.PhoneE164)
 	if input.EngagementType == "" {
 		input.EngagementType = "independent_contractor"
 	}
-	if input.FullNameAr == "" {
+	if input.FullNameAr == "" || input.Username == "" || input.PhoneE164 == "" {
 		return Person{}, false, ErrInvalidInput
 	}
-	if input.EngagementType != "independent_contractor" && input.EngagementType != "employee" {
+	if input.EngagementType != "independent_contractor" {
 		return Person{}, false, ErrInvalidInput
 	}
 	if err := s.validateSupervisor(ctx, input.SupervisorActorID, "", "field"); err != nil {
@@ -168,25 +170,46 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 		return Person{}, false, err
 	}
 
-	if input.ActorID == "" {
-		return Person{}, false, ErrInvalidInput
+	if s.identity == nil {
+		return Person{}, false, identityclient.ErrUnavailable
 	}
+	actor, err := s.identity.Provision(ctx, identityclient.ProvisionInput{
+		Username:  input.Username,
+		PhoneE164: input.PhoneE164,
+		Role:      "field",
+	})
+	if err != nil {
+		return Person{}, false, err
+	}
+	if strings.TrimSpace(actor.ActorID) == "" {
+		return Person{}, false, identityclient.ErrInvalidActor
+	}
+	actorID := actor.ActorID
+	// Identity is idempotent. Only the response from a genuinely new
+	// provision authorizes saga compensation; a replay may point at an
+	// existing inactive actor that belongs to a retry already in flight.
+	provisionedIdentity := actor.Created
 
-	if existing, lookupErr := s.repo.PersonByActorID(ctx, input.ActorID); lookupErr == nil {
+	if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
 		return existing, true, nil
 	}
 
-	person, err := s.repo.CreatePerson(ctx, input.ActorID, workforceCode, zone.CityCode, input)
+	person, err := s.repo.CreatePerson(ctx, actorID, workforceCode, zone.CityCode, input)
 	if err != nil {
 		if errors.Is(err, ErrDuplicateWorkforceCode) {
-			if existing, lookupErr := s.repo.PersonByActorID(ctx, input.ActorID); lookupErr == nil {
+			if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
 				return existing, true, nil
+			}
+		}
+		if provisionedIdentity {
+			if compensationErr := s.identity.Deprovision(ctx, actorID); compensationErr != nil {
+				log.Printf("[workforce] field identity compensation failed actor=%s: %v", actorID, compensationErr)
 			}
 		}
 		return Person{}, false, err
 	}
 
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, input.ActorID,
+	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
 		"field_agent.created", nil, person, "", correlationID); err != nil {
 		log.Printf("[workforce] RecordAudit error in CreateFieldAgent: %v", err)
 	}
@@ -199,10 +222,12 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input CreateCaptainInput, idempotencyKey, correlationID string) (Person, bool, error) {
 	input.FullNameAr = strings.TrimSpace(input.FullNameAr)
 	input.FullNameEn = strings.TrimSpace(input.FullNameEn)
+	input.Username = strings.TrimSpace(input.Username)
+	input.PhoneE164 = strings.TrimSpace(input.PhoneE164)
 	if input.EngagementType == "" {
 		input.EngagementType = "independent_contractor"
 	}
-	if input.FullNameAr == "" {
+	if input.FullNameAr == "" || input.Username == "" || input.PhoneE164 == "" {
 		return Person{}, false, ErrInvalidInput
 	}
 	if input.EngagementType != "independent_contractor" && input.EngagementType != "employee" {
@@ -238,24 +263,47 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 		return Person{}, false, err
 	}
 
-	if input.ActorID == "" {
-		return Person{}, false, ErrInvalidInput
+	if s.identity == nil {
+		return Person{}, false, identityclient.ErrUnavailable
+	}
+	actor, err := s.identity.Provision(ctx, identityclient.ProvisionInput{
+		Username: input.Username, PhoneE164: input.PhoneE164, Role: "captain",
+	})
+	if err != nil {
+		return Person{}, false, err
+	}
+	if strings.TrimSpace(actor.ActorID) == "" {
+		return Person{}, false, identityclient.ErrInvalidActor
+	}
+	actorID := actor.ActorID
+	identityCreated := actor.Created
+	compensate := func() {
+		if !identityCreated {
+			return
+		}
+		if compensationErr := s.identity.Deprovision(ctx, actorID); compensationErr != nil {
+			log.Printf("[workforce] captain identity compensation failed actor=%s: %v", actorID, compensationErr)
+		}
 	}
 
-	if existing, lookupErr := s.repo.PersonByActorID(ctx, input.ActorID); lookupErr == nil {
+	if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
+		if existing.CaptainProfile == nil {
+			return Person{}, false, ErrWorkforceKindConflict
+		}
 		return existing, true, nil
 	}
 
-	person, err := s.repo.CreateCaptain(ctx, input.ActorID, workforceCode, zone.CityCode, input)
+	person, err := s.repo.CreateCaptain(ctx, actorID, workforceCode, zone.CityCode, input)
 	if err != nil {
 		if errors.Is(err, ErrDuplicateWorkforceCode) {
-			if existing, lookupErr := s.repo.PersonByActorID(ctx, input.ActorID); lookupErr == nil {
+			if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
 				return existing, true, nil
 			}
 		}
+		compensate()
 		return Person{}, false, err
 	}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, input.ActorID,
+	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
 		"captain.created", nil, person, "", correlationID); err != nil {
 		log.Printf("[workforce] RecordAudit error in CreateCaptain: %v", err)
 	}
@@ -268,10 +316,12 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 func (s *Service) CreateEmployee(ctx context.Context, operator Operator, input CreateEmployeeInput, idempotencyKey, correlationID string) (Person, bool, error) {
 	input.FullNameAr = strings.TrimSpace(input.FullNameAr)
 	input.FullNameEn = strings.TrimSpace(input.FullNameEn)
+	input.Username = strings.TrimSpace(input.Username)
+	input.PhoneE164 = strings.TrimSpace(input.PhoneE164)
 	if input.EngagementType == "" {
 		input.EngagementType = "employee"
 	}
-	if input.FullNameAr == "" {
+	if input.FullNameAr == "" || input.Username == "" || input.PhoneE164 == "" {
 		return Person{}, false, ErrInvalidInput
 	}
 	if input.EngagementType != "independent_contractor" && input.EngagementType != "employee" {
@@ -297,24 +347,48 @@ func (s *Service) CreateEmployee(ctx context.Context, operator Operator, input C
 		return Person{}, false, err
 	}
 
-	if input.ActorID == "" {
-		return Person{}, false, ErrInvalidInput
+	if s.identity == nil {
+		return Person{}, false, identityclient.ErrUnavailable
+	}
+	actor, err := s.identity.ProvisionEmployee(ctx, identityclient.EmployeeProvisionInput{
+		Username: input.Username, PhoneE164: input.PhoneE164,
+		PermissionBundle: input.PermissionBundle, DepartmentScope: input.Department,
+	})
+	if err != nil {
+		return Person{}, false, err
+	}
+	if strings.TrimSpace(actor.ActorID) == "" {
+		return Person{}, false, identityclient.ErrInvalidActor
+	}
+	actorID := actor.ActorID
+	identityCreated := actor.Created
+	compensate := func() {
+		if !identityCreated {
+			return
+		}
+		if compensationErr := s.identity.Deprovision(ctx, actorID); compensationErr != nil {
+			log.Printf("[workforce] employee identity compensation failed actor=%s: %v", actorID, compensationErr)
+		}
 	}
 
-	if existing, lookupErr := s.repo.PersonByActorID(ctx, input.ActorID); lookupErr == nil {
+	if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
+		if existing.EmployeeProfile == nil {
+			return Person{}, false, ErrWorkforceKindConflict
+		}
 		return existing, true, nil
 	}
 
-	person, err := s.repo.CreateEmployee(ctx, input.ActorID, workforceCode, input)
+	person, err := s.repo.CreateEmployee(ctx, actorID, workforceCode, input)
 	if err != nil {
 		if errors.Is(err, ErrDuplicateWorkforceCode) {
-			if existing, lookupErr := s.repo.PersonByActorID(ctx, input.ActorID); lookupErr == nil {
+			if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
 				return existing, true, nil
 			}
 		}
+		compensate()
 		return Person{}, false, err
 	}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, input.ActorID,
+	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
 		"employee.created", nil, person, "", correlationID); err != nil {
 		log.Printf("[workforce] RecordAudit error in CreateEmployee: %v", err)
 	}
@@ -325,9 +399,10 @@ func (s *Service) CreateEmployee(ctx context.Context, operator Operator, input C
 }
 
 type Operator struct {
-	ActorID string
-	Role    string
-	Token   string
+	ActorID           string
+	Role              string
+	Token             string
+	OperatorContextID string
 }
 
 // UpdateFieldAgent applies sovereign edits under optimistic locking.
@@ -335,6 +410,9 @@ func (s *Service) UpdateFieldAgent(ctx context.Context, operator Operator, actor
 	before, err := s.repo.PersonByActorID(ctx, actorID)
 	if err != nil {
 		return Person{}, err
+	}
+	if input.EngagementType != nil && *input.EngagementType != "independent_contractor" {
+		return Person{}, ErrInvalidInput
 	}
 	if input.SupervisorActorID != nil {
 		if err := s.validateSupervisor(ctx, *input.SupervisorActorID, actorID, "field"); err != nil {
@@ -499,8 +577,31 @@ func (s *Service) IssueActivation(ctx context.Context, operator Operator, actorI
 	default:
 		return identityclient.ActivationCode{}, ErrStatusNotIssuable
 	}
-	if !sovereignFieldsComplete(person) {
+	if expectedActorType == "field" {
+		readiness, readinessErr := s.repo.GovernedActivationReadiness(ctx, actorID)
+		if readinessErr != nil {
+			return identityclient.ActivationCode{}, readinessErr
+		}
+		actor, actorErr := s.identity.Actor(ctx, actorID)
+		if actorErr != nil {
+			return identityclient.ActivationCode{}, actorErr
+		}
+		if strings.TrimSpace(actor.PhoneE164) == "" {
+			return identityclient.ActivationCode{}, ErrProfileIncomplete
+		}
+		if !readiness.Ready {
+			return identityclient.ActivationCode{}, ErrProfileIncomplete
+		}
+	} else if !sovereignFieldsComplete(person) {
 		return identityclient.ActivationCode{}, ErrProfileIncomplete
+	} else {
+		if s.dsh == nil {
+			return identityclient.ActivationCode{}, ErrProfileIncomplete
+		}
+		decision, decisionErr := s.dsh.CaptainFinancialEligibility(ctx, actorID)
+		if decisionErr != nil || !decision.Eligible || !decision.ExpiresAt.After(time.Now().UTC()) {
+			return identityclient.ActivationCode{}, ErrProfileIncomplete
+		}
 	}
 	code, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, expectedActorType, expectedSurface, idempotencyKey, correlationID)
 	if err != nil {
@@ -618,12 +719,14 @@ func (s *Service) FieldAgentByID(ctx context.Context, actorID string) (FieldAgen
 		return FieldAgentDetail{}, err
 	}
 	detail := FieldAgentDetail{
-		Person:       person,
-		ReadyToIssue: person.EngagementStatus == "pending_activation" && sovereignFieldsComplete(person),
+		Person: person,
 	}
 	if actor, err := s.identity.Actor(ctx, actorID); err == nil {
 		detail.PhoneMasked = maskPhone(actor.PhoneE164)
 		detail.AuthActive = actor.IsActive()
+		if readiness, readinessErr := s.repo.GovernedActivationReadiness(ctx, actorID); readinessErr == nil {
+			detail.ReadyToIssue = person.EngagementStatus == "pending_activation" && readiness.Ready && strings.TrimSpace(actor.PhoneE164) != ""
+		}
 	}
 	if meta, err := s.identity.LatestActivation(ctx, actorID); err == nil && meta != nil {
 		detail.LatestActivation = meta

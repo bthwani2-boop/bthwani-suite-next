@@ -230,18 +230,33 @@ func isUniqueViolation(err error) bool {
 	return err != nil && strings.Contains(err.Error(), `duplicate key value violates unique constraint`)
 }
 
-// GetActorPermissions resolves all active permissions for an actor from the relational model.
+// GetActorPermissions resolves the actor's complete executable authority from
+// the canonical access model: actor-specific direct grants plus every grant
+// inherited through an assigned role. The identity_actors.permissions column
+// is only a materialized read projection and is never queried here as an
+// independent source of truth.
 func (e *PermissionEnforcer) GetActorPermissions(ctx context.Context, actorID string) ([]Permission, error) {
 	if strings.TrimSpace(actorID) == `` {
 		return nil, fmt.Errorf(`actorID is required`)
 	}
 
 	rows, err := e.db.QueryContext(ctx, `
-		SELECT v.service, v.surface, v.action, rp.scope
-		FROM identity_actor_roles ar
-		JOIN identity_role_permissions rp ON ar.role_id = rp.role_id
-		JOIN identity_permission_vocabulary v ON rp.permission_id = v.id
-		WHERE ar.actor_id = $1`, actorID)
+		SELECT service, surface, action, scope
+		FROM (
+			SELECT v.service, v.surface, v.action, direct_permission.scope
+			FROM identity_actor_direct_permissions direct_permission
+			JOIN identity_permission_vocabulary v ON v.id = direct_permission.permission_id
+			WHERE direct_permission.actor_id = $1
+
+			UNION
+
+			SELECT v.service, v.surface, v.action, role_permission.scope
+			FROM identity_actor_roles actor_role
+			JOIN identity_role_permissions role_permission ON actor_role.role_id = role_permission.role_id
+			JOIN identity_permission_vocabulary v ON v.id = role_permission.permission_id
+			WHERE actor_role.actor_id = $1
+		) effective_permission
+		ORDER BY service, surface, action, scope`, actorID)
 	if err != nil {
 		return nil, err
 	}

@@ -12,12 +12,9 @@ import (
 // consumer; they are restored here byte-for-byte from their last known-good
 // implementation because TestPostgresLifecycle (postgres_test.go) exercises
 // the full zone → SLA → capacity → rollback → idempotency chain through them,
-// and no replacement exists. HTTP mutation routes are intentionally NOT
-// re-registered for these: platform zone mutations are governed through the
-// change-set draft/review/approve/apply workflow
-// (platform_changesets_routes.go) so there is exactly one write authority per
-// J015, and these functions remain the mutation primitives that workflow's
-// apply step is expected to call.
+// and no replacement exists. HTTP mutation routes are intentionally not
+// re-registered for these primitives here; the owning contract must provide
+// the sole governed write path for any mutation that uses them.
 type CreateZoneInput struct {
 	ID          string `json:"id,omitempty"`
 	Name        string `json:"name"`

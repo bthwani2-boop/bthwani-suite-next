@@ -16,7 +16,7 @@ func TestOperatorRoleCannotBypassFieldVisitOwnership(t *testing.T) {
 	operatorID := uniqueID("operator-reader")
 	seedFieldStore(t, db, storeID, fieldID)
 
-	visit, err := CreateVisit(ctx, db, nil, testFieldActor(t, fieldID), CreateVisitInput{
+	visit, err := CreateVisit(ctx, db, testFieldActor(t, fieldID), CreateVisitInput{
 		StoreID:       storeID,
 		FieldAgentID:  fieldID,
 		StartLocation: testValidLocation(),
@@ -43,7 +43,7 @@ func TestOperatorRoleCannotBypassFieldVisitOwnership(t *testing.T) {
 		Role:              "operator",
 		OperatorContextID: requiredTestOperatorContextID(t),
 	}
-	if _, err := GetOwnedVisit(ctx, db, nil, operator, visit.ID); !errors.Is(err, ErrForbidden) {
+	if _, err := GetOwnedVisit(ctx, db, operator, visit.ID); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected role-only operator access to fail closed, got %v", err)
 	}
 }

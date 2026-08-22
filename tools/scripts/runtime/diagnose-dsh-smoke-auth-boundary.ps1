@@ -103,11 +103,15 @@ $detail = Invoke-CheckedJsonRequest `
   -Method "GET" `
   -Uri "$DshBaseUrl/dsh/operator/stores/$([Uri]::EscapeDataString($StoreId))" `
   -Headers $operatorHeaders
+$serviceabilityStatus = [string]$detail.store.serviceability.status
+if ([string]::IsNullOrWhiteSpace($serviceabilityStatus)) {
+  throw "dsh-operator-store-detail returned no canonical serviceability status"
+}
 
 $governanceBody = @{
   expectedVersion = [int]$detail.store.version
-  action = "visibility"
-  value = if ([bool]$detail.store.isVisible) { "visible" } else { "hidden" }
+  action = "serviceability"
+  value = $serviceabilityStatus
   reason = "runtime smoke request-boundary diagnosis"
 } | ConvertTo-Json
 $governance = Invoke-CheckedJsonRequest `
@@ -122,14 +126,13 @@ if ([string]$governance.audit.actorRole -ne "operator") {
 
 $hideBody = @{
   expectedVersion = [int]$governance.store.version
-  action = "marketing-visibility"
-  value = "hidden"
+  decision = "hide"
   reason = "runtime publication gate diagnosis"
 } | ConvertTo-Json
 $hidden = Invoke-CheckedJsonRequest `
   -Name "dsh-store-marketing-hide" `
   -Method "POST" `
-  -Uri "$DshBaseUrl/dsh/operator/stores/$([Uri]::EscapeDataString($StoreId))/governance" `
+  -Uri "$DshBaseUrl/dsh/operator/marketing/stores/$([Uri]::EscapeDataString($StoreId))/publication" `
   -Headers (New-MutationHeaders -Token $operatorToken -Operation "diagnose-hide") `
   -Body $hideBody
 
@@ -141,14 +144,13 @@ Invoke-CheckedJsonRequest `
 
 $showBody = @{
   expectedVersion = [int]$hidden.store.version
-  action = "marketing-visibility"
-  value = "visible"
+  decision = "publish"
   reason = "restore runtime publication gate after diagnosis"
 } | ConvertTo-Json
 $visible = Invoke-CheckedJsonRequest `
   -Name "dsh-store-marketing-show" `
   -Method "POST" `
-  -Uri "$DshBaseUrl/dsh/operator/stores/$([Uri]::EscapeDataString($StoreId))/governance" `
+  -Uri "$DshBaseUrl/dsh/operator/marketing/stores/$([Uri]::EscapeDataString($StoreId))/publication" `
   -Headers (New-MutationHeaders -Token $operatorToken -Operation "diagnose-show") `
   -Body $showBody
 
@@ -156,24 +158,24 @@ $publicStore = Invoke-CheckedJsonRequest `
   -Name "dsh-public-store-restored-readback" `
   -Method "GET" `
   -Uri "$DshBaseUrl/dsh/stores/$([Uri]::EscapeDataString($StoreId))"
-if (-not [bool]$publicStore.store.publicationEligible) {
-  throw "dsh-public-store-restored-readback is not publication eligible"
+if ($publicStore.store.publicationDecision -ne "PUBLISHED") {
+  throw "dsh-public-store-restored-readback is not published"
 }
 
 $partnerToken = Get-ActorToken -Username (Get-LocalUsername "partner")
 $diagnosticSuffix = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
 $proposalBody = @{
-  proposedNameAr = "منتج تشخيص $diagnosticSuffix"
-  proposedNameEn = "Runtime Diagnostic Product $diagnosticSuffix"
+  proposedNameAr = "تونة قطع لحم أبيض في زيت دوار الشمس 185 جم"
+  proposedNameEn = "Goody White Meat Tuna Chunks in Sunflower Oil 185g"
   domainId = "domain-groceries"
   categoryNodeId = "node-supermarket"
-  brand = "بثواني"
+  brand = "قودي"
   sourceSurface = "app-partner"
 } | ConvertTo-Json
 $proposal = Invoke-CheckedJsonRequest `
   -Name "dsh-partner-catalog-proposal-create" `
   -Method "POST" `
-  -Uri "$DshBaseUrl/dsh/partner/catalog/product-proposals" `
+  -Uri "$DshBaseUrl/dsh/partner/catalog/product-proposals?storeId=$([Uri]::EscapeDataString($StoreId))" `
   -Headers (New-MutationHeaders -Token $partnerToken -Operation "diagnose-proposal") `
   -Body $proposalBody
 if ([string]::IsNullOrWhiteSpace([string]$proposal.proposal.id)) {

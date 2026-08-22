@@ -1,29 +1,23 @@
-import type {
-  DshCaptainRoute,
-  DshCaptainCommandTarget,
-} from '../shared/delivery';
+import type { DshCaptainRoute } from "../shared/delivery";
+import type { DshCaptainNavigation, DshCaptainNavigationRoute } from "./captain-navigation";
 
-export type { DshCaptainRoute, DshCaptainCommandTarget };
-
-export type DshCaptainNavigationCommand = {
-  token: number;
-  target: DshCaptainCommandTarget;
-};
+export type { DshCaptainRoute };
 
 export type DshCaptainSurfaceProps = {
-  command: DshCaptainNavigationCommand;
-  captainId?: string;
-  onExit?: () => void;
-  onOpenService?: (serviceId: string) => void;
-  walletBalanceLabel?: string;
+  readonly route: DshCaptainNavigationRoute;
+  readonly navigation: DshCaptainNavigation;
+  readonly captainId?: string;
+  readonly onExit?: () => void;
+  readonly onOpenService?: (serviceId: string) => void;
+  readonly walletBalanceLabel?: string;
 };
 
 export type {
   DshCaptainState,
   DshCaptainStateGroup,
   DshCaptainStateMeta,
-} from '../shared/delivery';
+} from "../shared/delivery";
 
 export type {
   DshCaptainProfileSnapshot,
-} from './dsh-captain-binding.contracts';
+} from "./dsh-captain-binding.contracts";

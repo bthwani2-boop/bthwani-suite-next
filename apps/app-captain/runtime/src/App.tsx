@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
 import {
@@ -9,29 +9,21 @@ import {
   resolveIdentityApiBaseUrl,
   useIdentitySession,
 } from "@bthwani/core-identity";
-import { colorRoles } from "@bthwani/ui-kit";
-
-import { DshCaptainSurface } from "../../../../services/dsh/frontend/app-captain";
-import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
-import { useDshMobilePushRegistration } from "../../../../services/dsh/frontend/shared/notifications/use-mobile-push-registration";
 import {
+  DshCaptainSurface,
+  IdentitySessionGate,
   WorkforceAccessGate,
   WorkforceProfileProvider,
-  useWorkforceProfile,
-} from "../../../../services/dsh/frontend/shared/workforce";
-import { fetchWorkforceReadiness } from "../../../../services/dsh/frontend/shared/workforce/workforce-me.api";
-import type { ReadinessGate } from "../../../../services/dsh/frontend/shared/workforce/workforce.types";
+  fetchCaptainOperationalReadiness,
+  useDshMobilePushRegistration,
+  type CaptainOperationalReadiness,
+  type DshCaptainNavigation,
+  type DshCaptainNavigationRoute,
+} from "@bthwani/dsh/app-captain";
+import { Button, colorRoles } from "@bthwani/ui-kit";
+
+import { getOrCreateCaptainDeviceFingerprint } from "./config/captain-device-fingerprint";
 import { ReadinessGateScreen } from "./features/readiness/ReadinessGateScreen";
-
-const CAPTAIN_DEVICE_FINGERPRINT_KEY = "bthwani.captain.device-fingerprint.v1";
-
-async function getOrCreateCaptainDeviceFingerprint(): Promise<string> {
-  const existing = await SecureStore.getItemAsync(CAPTAIN_DEVICE_FINGERPRINT_KEY);
-  if (existing?.trim()) return existing;
-  const created = `captain-device:${Crypto.randomUUID()}`;
-  await SecureStore.setItemAsync(CAPTAIN_DEVICE_FINGERPRINT_KEY, created);
-  return created;
-}
 
 if (Platform.OS !== "web") {
   configureIdentitySessionStorage({
@@ -39,49 +31,83 @@ if (Platform.OS !== "web") {
     setItem: async (key: string, value: string) => SecureStore.setItemAsync(key, value),
     removeItem: async (key: string) => SecureStore.deleteItemAsync(key),
   });
-  configureIdentityDeviceFingerprintProvider(getOrCreateCaptainDeviceFingerprint);
+  configureIdentityDeviceFingerprintProvider(() =>
+    getOrCreateCaptainDeviceFingerprint(
+      {
+        getItem: (key) => SecureStore.getItemAsync(key),
+        setItem: (key, value) => SecureStore.setItemAsync(key, value),
+      },
+      () => Crypto.randomUUID(),
+    ),
+  );
 }
 configureIdentitySession(resolveIdentityApiBaseUrl());
 
-function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
-  const workforce = useWorkforceProfile();
-  const [readiness, setReadiness] = useState<ReadinessGate | null>(null);
+type CaptainReadinessState =
+  | { readonly kind: "loading" }
+  | { readonly kind: "decision"; readonly readiness: CaptainOperationalReadiness }
+  | { readonly kind: "unavailable" };
 
-  const fetchReadiness = async () => {
-    if (workforce.state.kind === "ready") {
-      try {
-        const gate = await fetchWorkforceReadiness(workforce.state.me.actorId);
-        setReadiness(gate);
-      } catch (err) {
-        setReadiness({
-          actorId: workforce.state.me.actorId,
-          workforceKind: workforce.state.me.workforceKind,
-          status: "BLOCKED",
-          blockerReasons: ["ELIGIBILITY_UNAVAILABLE"],
-          checkedAt: new Date().toISOString(),
-        });
-      }
-    }
-  };
+function UnifiedReadinessWrapper({ children }: { children: React.ReactNode }) {
+  const [state, setState] = useState<CaptainReadinessState>({ kind: "loading" });
+  const [refreshToken, setRefreshToken] = useState(0);
 
   useEffect(() => {
-    fetchReadiness();
-  }, [workforce.state]);
+    let active = true;
+    setState({ kind: "loading" });
 
-  if (readiness && readiness.status === "BLOCKED") {
-    return <ReadinessGateScreen readiness={readiness} onRefresh={fetchReadiness} />;
+    void fetchCaptainOperationalReadiness()
+      .then((readiness) => {
+        if (active) setState({ kind: "decision", readiness });
+      })
+      .catch(() => {
+        if (active) setState({ kind: "unavailable" });
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [refreshToken]);
+
+  if (state.kind === "loading") {
+    return (
+      <View style={styles.readinessState}>
+        <ActivityIndicator accessibilityLabel="جارٍ التحقق من جاهزية الكابتن..." />
+      </View>
+    );
   }
 
-  // Only render the operational surface after Workforce explicitly allows it.
-  if (readiness && readiness.status === "ALLOWED") {
-    return <>{children}</>;
+  if (state.kind === "unavailable") {
+    return (
+      <View style={styles.readinessState}>
+        <Text style={styles.readinessError}>
+          تعذر التحقق من الجاهزية التشغيلية الآن. أعد المحاولة قبل بدء العمل.
+        </Text>
+        <Button label="تحديث الحالة" onPress={() => setRefreshToken((value) => value + 1)} />
+      </View>
+    );
   }
+
+  if (!state.readiness.ready) {
+    return (
+      <ReadinessGateScreen
+        readiness={state.readiness}
+        onRefresh={() => setRefreshToken((value) => value + 1)}
+      />
+    );
+  }
+
+  return <>{children}</>;
+}
+
+function CaptainSessionEffects() {
+  const identity = useIdentitySession();
+  useDshMobilePushRegistration(identity.state.kind, "app-captain", "bthwani-captain-next");
   return null;
 }
 
-function AppContent() {
+function AppContent({ route, navigation }: { readonly route: DshCaptainNavigationRoute; readonly navigation: DshCaptainNavigation }) {
   const identity = useIdentitySession();
-  useDshMobilePushRegistration(identity.state.kind, "app-captain", "bthwani-captain-next");
 
   const logout = () => {
     void identity.logout();
@@ -91,8 +117,9 @@ function AppContent() {
     <View style={styles.root}>
       <IdentitySessionGate requiredRole="captain" requiredSurface="app-captain">
         <WorkforceAccessGate expectedKind="captain" onLogout={logout}>
+          <CaptainSessionEffects />
           <UnifiedReadinessWrapper>
-            <DshCaptainSurface command={{ token: 0, target: "home" }} />
+            <DshCaptainSurface route={route} navigation={navigation} />
           </UnifiedReadinessWrapper>
         </WorkforceAccessGate>
       </IdentitySessionGate>
@@ -100,10 +127,10 @@ function AppContent() {
   );
 }
 
-export default function App() {
+export default function App({ route, navigation }: { readonly route: DshCaptainNavigationRoute; readonly navigation: DshCaptainNavigation }) {
   return (
     <WorkforceProfileProvider>
-      <AppContent />
+      <AppContent route={route} navigation={navigation} />
     </WorkforceProfileProvider>
   );
 }
@@ -112,5 +139,15 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colorRoles.surfaceBase,
+  },
+  readinessState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    backgroundColor: colorRoles.surfaceBase,
+  },
+  readinessError: {
+    textAlign: "center",
   },
 });

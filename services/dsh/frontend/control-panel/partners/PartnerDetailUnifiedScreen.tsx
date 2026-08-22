@@ -29,21 +29,25 @@ import {
   usePartnerVisitsController,
   type DshPartnerActivationStatus,
   type DshPartnerReadiness,
+  getDshBusinessVerticalLabel,
+  getDshPartnerActivationStatusLabel,
+  DOCUMENT_TYPE_LABELS,
+  DOCUMENT_REVIEW_STATUS_LABELS,
+  PARTNER_FIELD_VISIT_STATUS_LABELS,
 } from "../../shared/partner";
 import { OperatorDeliveryPricingPanel } from "./stores/OperatorDeliveryPricingPanel";
 import { PartnerStoreCreateWizard } from "./stores/PartnerStoreCreateWizard";
 import { PartnerCommercialModelPanel } from "./PartnerCommercialModelPanel";
 
 type Tab = "overview" | "documents" | "visits" | "stores" | "readiness" | "audit" | "commercial_model";
-type DocumentDecision = "rejected" | "needs_resubmit";
+type DocumentDecision = "approved" | "rejected" | "needs_resubmit";
 
 type StoreReadiness = Readonly<{
   storeId: string;
   displayName: string;
-  canPublishToClient: boolean;
+  publicationDecision: "PUBLISHED" | "BLOCKED";
+  blockingReasons: readonly string[];
   isClientVisible: boolean;
-  blockedReasonCodes: readonly string[];
-  blockedReasonMessage?: string;
 }>;
 
 type AggregatedReadiness = DshPartnerReadiness & Readonly<{
@@ -67,7 +71,7 @@ const TAB_LABELS: Record<Tab, string> = {
   readiness: "الجاهزية متعددة الفروع",
   audit: "سجل التدقيق",
 };
-const REASON_REQUIRED = new Set<string>(["ops_rejected", "partner_deactivated", "client_hidden"]);
+const REASON_REQUIRED = new Set<string>(["ops_rejected", "partner_terminated", "client_hidden"]);
 
 function toBadgeTone(tone: "success" | "warning" | "danger" | "info" | "muted"): CpBadgeTone {
   return tone === "muted" ? "neutral" : tone;
@@ -220,10 +224,10 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                 <CpDescriptionRow label="الاسم الظاهر">{viewModel.displayName}</CpDescriptionRow>
                 <CpDescriptionRow label="نوع الهوية">{viewModel.legalIdentityType}</CpDescriptionRow>
                 <CpDescriptionRow label="رقم الهوية">{viewModel.legalIdentityNumber}</CpDescriptionRow>
-                <CpDescriptionRow label="Actor ID">{viewModel.ownerActorId}</CpDescriptionRow>
-                <CpDescriptionRow label="Workforce ID">{viewModel.workforcePersonId}</CpDescriptionRow>
+                <CpDescriptionRow label="معرّف حساب المالك">{viewModel.ownerActorId}</CpDescriptionRow>
+                <CpDescriptionRow label="معرّف العامل الميداني">{viewModel.workforcePersonId}</CpDescriptionRow>
                 <CpDescriptionRow label="الهاتف">{viewModel.primaryPhone}</CpDescriptionRow>
-                <CpDescriptionRow label="الفئة">{viewModel.category}</CpDescriptionRow>
+                <CpDescriptionRow label="مجال النشاط">{getDshBusinessVerticalLabel(viewModel.businessVerticalId, viewModel.category)}</CpDescriptionRow>
                 <CpDescriptionRow label="الإصدار">{partner.version}</CpDescriptionRow>
               </CpDescriptionList>
             ))}
@@ -231,7 +235,7 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
               <div style={{ display: "grid", gap: 10 }}>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   {viewModel.allowedNextStatuses.map((status) => (
-                    <CpButton key={status} onClick={() => { setTransitionTarget(status); setTransitionReason(""); }}>{status}</CpButton>
+                    <CpButton key={status} onClick={() => { setTransitionTarget(status); setTransitionReason(""); }}>{getDshPartnerActivationStatusLabel(status)}</CpButton>
                   ))}
                 </div>
                 {transitionTarget ? (
@@ -275,10 +279,10 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                       <thead><tr><CpTableHeaderCell>النوع</CpTableHeaderCell><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>الإجراءات</CpTableHeaderCell></tr></thead>
                       <tbody>{documents.state.documents.map((document) => (
                         <tr key={document.id}>
-                          <CpTableCell>{document.documentType}</CpTableCell>
-                          <CpTableCell>{document.documentStatus}</CpTableCell>
+                          <CpTableCell>{DOCUMENT_TYPE_LABELS[document.documentType as keyof typeof DOCUMENT_TYPE_LABELS] ?? "نوع وثيقة غير معروف"}</CpTableCell>
+                          <CpTableCell>{DOCUMENT_REVIEW_STATUS_LABELS[document.reviewStatus] ?? "حالة غير معروفة"}</CpTableCell>
                           <CpTableCell><div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                            <CpButton disabled={document.documentStatus === "approved" || documents.actionState.kind === "loading"} onClick={() => void documents.review(document.id, { decision: "approved" }).then(() => readiness.reload())}>اعتماد</CpButton>
+                            <CpButton disabled={document.reviewStatus === "verified" || documents.actionState.kind === "loading"} onClick={() => { setDocumentDecision({ id: document.id, decision: "approved" }); setDocumentReason(""); }}>اعتماد</CpButton>
                             <CpButton onClick={() => { setDocumentDecision({ id: document.id, decision: "rejected" }); setDocumentReason(""); }}>رفض</CpButton>
                             <CpButton onClick={() => { setDocumentDecision({ id: document.id, decision: "needs_resubmit" }); setDocumentReason(""); }}>إعادة الرفع</CpButton>
                           </div></CpTableCell>
@@ -302,7 +306,7 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
           visits.state.kind === "loading" || visits.state.kind === "idle" ? <CpStateView kind="loading" title="جاري تحميل الزيارات…" />
             : visits.state.kind === "empty" ? <CpStatePanel role="status" title="لا توجد زيارات ميدانية." />
               : visits.state.kind === "error" ? <CpStateView kind="error" title="تعذر تحميل الزيارات" code={visits.state.message} />
-                : <CpTable aria-label="الزيارات الميدانية"><thead><tr><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>الفرع</CpTableHeaderCell><CpTableHeaderCell>الملاحظات</CpTableHeaderCell><CpTableHeaderCell>التاريخ</CpTableHeaderCell></tr></thead><tbody>{visits.state.visits.map((visit) => <tr key={visit.id}><CpTableCell>{visit.visitStatus}</CpTableCell><CpTableCell>{visit.storeId || "—"}</CpTableCell><CpTableCell>{visit.visitNotes || "—"}</CpTableCell><CpTableCell>{visit.submittedAt ? new Date(visit.submittedAt).toLocaleString("ar-SA") : "—"}</CpTableCell></tr>)}</tbody></CpTable>
+                : <CpTable aria-label="الزيارات الميدانية"><thead><tr><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>الفرع</CpTableHeaderCell><CpTableHeaderCell>الملاحظات</CpTableHeaderCell><CpTableHeaderCell>التاريخ</CpTableHeaderCell></tr></thead><tbody>{visits.state.visits.map((visit) => <tr key={visit.id}><CpTableCell>{PARTNER_FIELD_VISIT_STATUS_LABELS[visit.visitStatus] ?? "حالة غير معروفة"}</CpTableCell><CpTableCell>{visit.storeId || "—"}</CpTableCell><CpTableCell>{visit.visitNotes || "—"}</CpTableCell><CpTableCell>{visit.submittedAt ? new Date(visit.submittedAt).toLocaleString("ar-SA") : "—"}</CpTableCell></tr>)}</tbody></CpTable>
         ) : null}
 
         {tab === "stores" ? (
@@ -341,7 +345,7 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                 <div style={{ display: "grid", gap: 12 }}>
                   {aggregate.storeSummary ? section("ملخص الفروع", <CpDescriptionList><CpDescriptionRow label="إجمالي الفروع">{aggregate.storeSummary.totalStores}</CpDescriptionRow><CpDescriptionRow label="جاهزة للنشر">{aggregate.storeSummary.readyStores}</CpDescriptionRow><CpDescriptionRow label="محجوبة">{aggregate.storeSummary.blockedStores}</CpDescriptionRow><CpDescriptionRow label="ظاهرة للعملاء">{aggregate.storeSummary.clientVisibleStores}</CpDescriptionRow></CpDescriptionList>) : null}
                   {section("جاهزية الشريك", <div style={{ display: "grid", gap: 8 }}>{aggregate.checklist.map((item) => <CpStatePanel key={item.id} role="status" title={`${item.satisfied ? "مستوفى" : "غير مستوفى"}: ${item.label}`} {...(item.blockedReason ? { code: item.blockedReason } : {})} />)}</div>)}
-                  {aggregate.stores?.length ? section("جاهزية كل فرع", <CpTable aria-label="جاهزية الفروع"><thead><tr><CpTableHeaderCell>الفرع</CpTableHeaderCell><CpTableHeaderCell>النشر</CpTableHeaderCell><CpTableHeaderCell>الظهور</CpTableHeaderCell><CpTableHeaderCell>أسباب الحظر</CpTableHeaderCell></tr></thead><tbody>{aggregate.stores.map((store) => <tr key={store.storeId}><CpTableCell>{store.displayName}</CpTableCell><CpTableCell>{store.canPublishToClient ? "جاهز" : "محجوب"}</CpTableCell><CpTableCell>{store.isClientVisible ? "ظاهر" : "مخفي"}</CpTableCell><CpTableCell>{store.blockedReasonMessage || "—"}</CpTableCell></tr>)}</tbody></CpTable>) : null}
+                  {aggregate.stores?.length ? section("جاهزية كل فرع", <CpTable aria-label="جاهزية الفروع"><thead><tr><CpTableHeaderCell>الفرع</CpTableHeaderCell><CpTableHeaderCell>النشر</CpTableHeaderCell><CpTableHeaderCell>الظهور</CpTableHeaderCell><CpTableHeaderCell>أسباب الحظر</CpTableHeaderCell></tr></thead><tbody>{aggregate.stores.map((store) => <tr key={store.storeId}><CpTableCell>{store.displayName}</CpTableCell><CpTableCell>{store.publicationDecision === "PUBLISHED" ? "منشور" : "محجوب"}</CpTableCell><CpTableCell>{store.isClientVisible ? "ظاهر" : "مخفي"}</CpTableCell><CpTableCell>{store.blockingReasons.length > 0 ? store.blockingReasons.join("، ") : "—"}</CpTableCell></tr>)}</tbody></CpTable>) : null}
                 </div>
               ) : null
         ) : null}

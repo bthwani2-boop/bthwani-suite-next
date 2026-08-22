@@ -8,8 +8,7 @@ import (
 	"testing"
 )
 
-func TestWorkforceAuthAcceptsMatchingActiveContext(t *testing.T) {
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "context-main")
+func TestWorkforceAuthAcceptsIdentityOwnedContext(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(Identity{
 			Subject: "operator-1", OperatorContextID: "context-main", AuthState: "authenticated",
@@ -22,8 +21,7 @@ func TestWorkforceAuthAcceptsMatchingActiveContext(t *testing.T) {
 	}
 }
 
-func TestWorkforceAuthRejectsCrossOperatorContextIdentity(t *testing.T) {
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "context-main")
+func TestWorkforceAuthAcceptsAnotherIdentityOwnedContext(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(Identity{
 			Subject: "operator-2", OperatorContextID: "context-other", AuthState: "authenticated",
@@ -31,14 +29,18 @@ func TestWorkforceAuthRejectsCrossOperatorContextIdentity(t *testing.T) {
 	}))
 	defer server.Close()
 
-	if _, err := NewClient(server.URL).Resolve(context.Background(), "Bearer token-2"); err != ErrUnauthenticated {
-		t.Fatalf("expected ErrUnauthenticated, got %v", err)
+	if identity, err := NewClient(server.URL).Resolve(context.Background(), "Bearer token-2"); err != nil || identity.OperatorContextID != "context-other" {
+		t.Fatalf("expected Identity-owned context, identity=%#v err=%v", identity, err)
 	}
 }
 
-func TestWorkforceAuthFailsClosedWithoutActiveContext(t *testing.T) {
+func TestWorkforceAuthFailsClosedWithoutIdentityContext(t *testing.T) {
 	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
-	if _, err := NewClient("https://identity.internal").Resolve(context.Background(), "Bearer token-1"); err != ErrIdentityUnavailable {
-		t.Fatalf("expected ErrIdentityUnavailable, got %v", err)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(Identity{Subject: "operator-1", AuthState: "authenticated"})
+	}))
+	defer server.Close()
+	if _, err := NewClient(server.URL).Resolve(context.Background(), "Bearer token-1"); err != ErrUnauthenticated {
+		t.Fatalf("expected ErrUnauthenticated, got %v", err)
 	}
 }

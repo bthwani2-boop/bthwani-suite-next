@@ -15,6 +15,7 @@ import (
 	"wlt-api/internal/dshnotify"
 	"wlt-api/internal/dshoutbox"
 	wltHttp "wlt-api/internal/http"
+	"wlt-api/internal/wallet"
 )
 
 func main() {
@@ -48,11 +49,12 @@ func main() {
 	}
 	log.Println("[wlt-api] database connected successfully")
 
+	decisionService, err := wallet.NewConfiguredDecisionServiceFromEnv()
+	if err != nil {
+		log.Fatalf("[wlt-api] financial kill-switch authority is invalid: %v", err)
+	}
 	mutationsEnabled := os.Getenv("WLT_MUTATIONS_ENABLED") == "true"
-	router := wltHttp.NewRouter(db, mutationsEnabled, nil)
-	wltHttp.RegisterDeliveryCollectionRoutes(router, db, mutationsEnabled)
-	wltHttp.RegisterOrderCancellationRoutes(router, db, mutationsEnabled)
-	wltHttp.RegisterFieldCategoryCommissionRoutes(router, db, mutationsEnabled)
+	router := wltHttp.NewRouter(db, mutationsEnabled, decisionService)
 	wltHttp.RegisterDispatchFinancialEligibilityRoutes(router, db)
 	referenceScopedRouter := wltHttp.ReferenceReadBoundary(router)
 	handler := wltHttp.CorsMiddleware(authMode, referenceScopedRouter)

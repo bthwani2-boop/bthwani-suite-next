@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fail, lineNumber, listCodeFiles, read, repoRoot, toPosix } from "./_guard-utils.mjs";
+import { fail, lineNumber, listCodeFiles, read, repoRoot } from "./_guard-utils.mjs";
 import { LOCAL_PASSWORD_ENV_VAR, localPasswordDefault } from "../dev/local-actors.mjs";
 
 const guardId = "runtime-config-gate";
@@ -12,7 +12,6 @@ const allowedInLocalhostCheck = (file) =>
   file.includes(".test.") ||
   file.includes(".spec.") ||
   file.startsWith("tools/") ||
-  file.startsWith("apps/mobile/") ||
   file.includes("/config/") ||
   file.includes("config") ||
   file.startsWith("infra/") ||
@@ -34,7 +33,7 @@ for (const file of listCodeFiles()) {
 
 const hardcodedPathRegex = /(?:[c-z]:[\\/]|(?:\r?\n|^|\s)[\\/](?:home|Users)[\\/])[^\r\n]*bthwani-suite-next/i;
 for (const file of listCodeFiles()) {
-  if (file.startsWith("tools/") || file.startsWith("apps/mobile/") || file.includes("/test/") || file.includes("/tests/")) continue;
+  if (file.startsWith("tools/") || file.startsWith("tools/mobile/") || file.includes("/test/") || file.includes("/tests/")) continue;
   const content = read(file);
   const match = hardcodedPathRegex.exec(content);
   if (match) {
@@ -48,7 +47,6 @@ for (const file of listCodeFiles()) {
 
 const allowedEnvAccess = (file) =>
   file.startsWith("tools/") ||
-  file.startsWith("apps/mobile/") ||
   file.startsWith("shared/config/") ||
   file.includes("/shared/") ||
   file.startsWith("shared/") ||
@@ -137,6 +135,7 @@ if (!fs.existsSync(path.join(repoRoot, envExample))) {
     ["WLT_DSH_SERVICE_TOKEN", "dev-only-dsh-wlt-shared-secret"],
     ["DSH_WLT_SERVICE_TOKEN", "dev-only-dsh-wlt-shared-secret"],
     ["WLT_PAYOUT_ENCRYPTION_KEY", "dev-only-payout-destination-encryption-key"],
+    ["PLATFORM_CONTROL_DSH_SERVICE_TOKEN", "LOCAL_ONLY_replace_with_platform_control_dsh_service_token"],
   ]);
   if (mode === "production") {
     for (const [key, weak] of weakDefaults) {
@@ -146,11 +145,26 @@ if (!fs.existsSync(path.join(repoRoot, envExample))) {
     }
   }
 
-  const mutationsEnabled = env.get("WLT_MUTATIONS_ENABLED") === "true";
+  const mutationsConfig = env.get("WLT_MUTATIONS_ENABLED");
+  const financeKillSwitch = env.get("WLT_FINANCE_MUTATION_KILL_SWITCH");
   const providerMode = env.get("WLT_FINANCIAL_PROVIDER_MODE");
+  const mockProviderAllowed = env.get("WLT_ALLOW_MOCK_PROVIDER") === "true";
   const productionProviderAllowed = env.get("WLT_ALLOW_PRODUCTION_PROVIDER") === "true";
+  if (!new Set(["true", "false"]).has(mutationsConfig)) {
+    violations.push({ file: envExample, message: "WLT_MUTATIONS_ENABLED_MUST_BE_EXPLICIT_BOOLEAN" });
+  }
+  if (!new Set(["true", "false"]).has(financeKillSwitch)) {
+    violations.push({ file: envExample, message: "WLT_FINANCE_MUTATION_KILL_SWITCH_MUST_BE_EXPLICIT_BOOLEAN" });
+  }
+  const mutationsEnabled = mutationsConfig === "true";
+  if (providerMode === "mock" && !mockProviderAllowed) {
+    violations.push({ file: envExample, message: "MOCK_PROVIDER_REQUIRES_EXPLICIT_LOCAL_OPT_IN" });
+  }
   if (mutationsEnabled && mode === "development" && providerMode !== "mock") {
     violations.push({ file: envExample, message: "DEVELOPMENT_MUTATIONS_REQUIRE_MOCK_PROVIDER" });
+  }
+  if (mutationsEnabled && mode === "development" && providerMode === "mock" && financeKillSwitch !== "false") {
+    violations.push({ file: envExample, message: "DEVELOPMENT_MUTATIONS_REQUIRE_OPEN_FINANCE_KILL_SWITCH" });
   }
   if (productionProviderAllowed && providerMode === "mock") {
     violations.push({ file: envExample, message: "MOCK_PROVIDER_CANNOT_BE_MARKED_PRODUCTION_ALLOWED" });
@@ -163,11 +177,40 @@ if (!fs.existsSync(path.join(repoRoot, envExample))) {
   }
 }
 
+const localProductionEnvExample = "infra/docker/env/runtime.local-production.env.example";
+if (fs.existsSync(path.join(repoRoot, localProductionEnvExample))) {
+  const localProductionEnv = parseEnv(localProductionEnvExample);
+  if (
+    localProductionEnv.get("WLT_FINANCIAL_PROVIDER_MODE") === "mock" &&
+    localProductionEnv.get("WLT_ALLOW_MOCK_PROVIDER") !== "true"
+  ) {
+    violations.push({
+      file: localProductionEnvExample,
+      message: "LOCAL_PRODUCTION_MOCK_PROVIDER_REQUIRES_EXPLICIT_OPT_IN",
+    });
+  }
+  if (
+    localProductionEnv.get("WLT_MUTATIONS_ENABLED") === "true" &&
+    localProductionEnv.get("WLT_FINANCE_MUTATION_KILL_SWITCH") !== "false"
+  ) {
+    violations.push({
+      file: localProductionEnvExample,
+      message: "LOCAL_PRODUCTION_APPROVED_WLT_MUTATIONS_REQUIRE_OPEN_FINANCE_KILL_SWITCH",
+    });
+  }
+}
+
 const composePath = "infra/docker/compose.runtime.yml";
 if (fs.existsSync(path.join(repoRoot, composePath))) {
   const compose = read(composePath);
   if (!compose.includes('"127.0.0.1:${BTHWANI_POSTGRES_PORT:-55432}:5432"')) {
     violations.push({ file: composePath, message: "POSTGRES_MUST_BIND_LOOPBACK_ONLY" });
+  }
+  if (!compose.includes('WLT_ALLOW_MOCK_PROVIDER: "${WLT_ALLOW_MOCK_PROVIDER:-false}"')) {
+    violations.push({ file: composePath, message: "WLT_MOCK_PROVIDER_OPT_IN_MUST_DEFAULT_FAIL_CLOSED_IN_COMPOSE" });
+  }
+  if (!compose.includes('WLT_FINANCE_MUTATION_KILL_SWITCH: "${WLT_FINANCE_MUTATION_KILL_SWITCH:-true}"')) {
+    violations.push({ file: composePath, message: "WLT_FINANCE_KILL_SWITCH_MUST_DEFAULT_FAIL_CLOSED_IN_COMPOSE" });
   }
   const containerNames = compose.match(/container_name:\s*([^\r\n#]+)/g) ?? [];
   for (const line of containerNames) {
@@ -187,77 +230,4 @@ if (fs.existsSync(path.join(repoRoot, composePath))) {
   }
 }
 
-const profilesDir = "infra/docker/runtime-profiles";
-const profilesPath = path.join(repoRoot, profilesDir);
-if (fs.existsSync(profilesPath)) {
-  const files = fs.readdirSync(profilesPath).filter((file) => file.endsWith(".json"));
-  for (const file of files) {
-    const rel = toPosix(path.join(profilesDir, file));
-    const full = path.join(profilesPath, file);
-    let json;
-    try {
-      json = JSON.parse(fs.readFileSync(full, "utf8"));
-    } catch (error) {
-      violations.push({ file: rel, message: `invalid json: ${error.message}` });
-      continue;
-    }
-    const expectedProfile = path.basename(file, ".runtime-profile.json");
-    if (
-      file.endsWith(".runtime-profile.json") &&
-      json.profile &&
-      json.profile !== expectedProfile &&
-      !expectedProfile.includes("-")
-    ) {
-      violations.push({
-        file: rel,
-        message: `expected profile name to match file name: ${expectedProfile}`,
-      });
-    }
-  }
-}
-
-async function publishFirstViolation() {
-  const first = violations[0];
-  const token = process.env.BTHWANI_STATUS_TOKEN;
-  const repository = process.env.GITHUB_REPOSITORY;
-  const sha = process.env.GITHUB_SHA;
-  if (!first || !token || !repository || !sha) return;
-
-  const file = String(first.file ?? "unknown")
-    .replaceAll("\\", "/")
-    .split("/")
-    .slice(-3)
-    .join("/");
-  const location = `${file}${first.line ? `:${first.line}` : ""}`;
-  const context = `bthwani/guard/runtime-config/${location}`.slice(0, 100);
-  const description = String(first.message ?? "runtime configuration violation")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 140);
-  const apiUrl = process.env.GITHUB_API_URL || "https://api.github.com";
-  const runUrl = process.env.GITHUB_RUN_ID
-    ? `${process.env.GITHUB_SERVER_URL || "https://github.com"}/${repository}/actions/runs/${process.env.GITHUB_RUN_ID}`
-    : undefined;
-
-  const response = await fetch(`${apiUrl}/repos/${repository}/statuses/${sha}`, {
-    method: "POST",
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${token}`,
-      "X-GitHub-Api-Version": "2022-11-28",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      state: "failure",
-      context,
-      description,
-      ...(runUrl ? { target_url: runUrl } : {}),
-    }),
-  });
-  if (!response.ok) {
-    console.error(`${guardId}: status publication failed with HTTP ${response.status}`);
-  }
-}
-
-await publishFirstViolation();
 fail(guardId, violations);

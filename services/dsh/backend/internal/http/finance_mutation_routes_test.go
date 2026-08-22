@@ -14,10 +14,7 @@ func TestGovernedFinanceMutationRoutesAreRegisteredExactlyOnce(t *testing.T) {
 	}{
 		{method: http.MethodPost, path: "/dsh/control-panel/finance/payout-requests/payout-1/approve", pattern: "POST /dsh/control-panel/finance/payout-requests/{payoutId}/approve"},
 		{method: http.MethodPost, path: "/dsh/control-panel/finance/payout-requests/payout-1/reject", pattern: "POST /dsh/control-panel/finance/payout-requests/{payoutId}/reject"},
-		{method: http.MethodPost, path: "/dsh/control-panel/finance/payout-requests/payout-1/process", pattern: "POST /dsh/control-panel/finance/payout-requests/{payoutId}/process"},
 		{method: http.MethodPost, path: "/dsh/control-panel/finance/payout-requests/payout-1/complete", pattern: "POST /dsh/control-panel/finance/payout-requests/{payoutId}/complete"},
-		{method: http.MethodPost, path: "/dsh/control-panel/finance/payout-requests/payout-1/fail", pattern: "POST /dsh/control-panel/finance/payout-requests/{payoutId}/fail"},
-		{method: http.MethodPost, path: "/dsh/control-panel/finance/payout-requests/payout-1/reconcile", pattern: "POST /dsh/control-panel/finance/payout-requests/{payoutId}/reconcile"},
 		{method: http.MethodGet, path: "/dsh/control-panel/finance/payout-requests/payout-1/audit", pattern: "GET /dsh/control-panel/finance/payout-requests/{payoutId}/audit"},
 		{method: http.MethodPost, path: "/dsh/control-panel/finance/reconciliation-cases/case-1/assign", pattern: "POST /dsh/control-panel/finance/reconciliation-cases/{caseId}/assign"},
 		{method: http.MethodPost, path: "/dsh/control-panel/finance/reconciliation-cases/case-1/resolve", pattern: "POST /dsh/control-panel/finance/reconciliation-cases/{caseId}/resolve"},

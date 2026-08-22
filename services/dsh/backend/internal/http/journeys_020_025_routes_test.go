@@ -54,6 +54,7 @@ func TestJourneys020To025ExposeGovernedRoutes(t *testing.T) {
 		{journey: " create visit", method: http.MethodPost, path: "/dsh/field/stores/store-1/visits", pattern: "POST /dsh/field/stores/{storeId}/visits"},
 		{journey: " list visits", method: http.MethodGet, path: "/dsh/field/stores/store-1/visits", pattern: "GET /dsh/field/stores/{storeId}/visits"},
 		{journey: " work queue", method: http.MethodGet, path: "/dsh/field/work-queue", pattern: "GET /dsh/field/work-queue"},
+		{journey: " reconcile field mutation", method: http.MethodGet, path: "/dsh/field/mutations/complete_visit/idem-1", pattern: "GET /dsh/field/mutations/{operation}/{idempotencyKey}"},
 		{journey: " complete visit", method: http.MethodPost, path: "/dsh/field/visits/visit-1/complete", pattern: "POST /dsh/field/visits/{visitId}/complete"},
 		{journey: " write check", method: http.MethodPut, path: "/dsh/field/visits/visit-1/checks", pattern: "PUT /dsh/field/visits/{visitId}/checks"},
 		{journey: " read checks", method: http.MethodGet, path: "/dsh/field/visits/visit-1/checks", pattern: "GET /dsh/field/visits/{visitId}/checks"},

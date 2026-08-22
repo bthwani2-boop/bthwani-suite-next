@@ -16,6 +16,7 @@ export * from "./use-governed-campaigns-controller";
 export * from "./dsh-signal-layer.model";
 export * from "./marketing-registry";
 export * from "./marketing.api";
+export * from "./store-publication.api";
 export * from "./loyalty-subscriptions.types";
 export * from "./use-commercial-programs-controller";
 export * from "./subscription-lifecycle.types";

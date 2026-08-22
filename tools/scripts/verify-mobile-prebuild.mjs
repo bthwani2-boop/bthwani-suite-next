@@ -113,7 +113,7 @@ for (const appKey of appKeys) {
     }
   } finally {
     for (const nativeDir of nativeDirs) {
-      fs.rmSync(path.join(appDir, nativeDir), { recursive: true, force: true });
+      fs.rmSync(path.join(appDir, nativeDir), { recursive: true, force: true, maxRetries: 30, retryDelay: 250 });
     }
     restorePrebuildTrackedFiles(appKey);
   }

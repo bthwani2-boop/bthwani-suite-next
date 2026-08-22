@@ -11,9 +11,6 @@ import {
   fetchOperatorTicketEvents,
   addOperatorTicketMessage,
   updateTicket,
-  createIncident,
-  fetchIncidents,
-  updateIncident,
   classifySupportError,
 } from "./support.api";
 import {
@@ -42,22 +39,11 @@ import {
   messageActionSubmitting,
   messageActionSuccess,
   messageActionError,
-  incidentListIdle,
-  incidentListLoading,
-  incidentListSuccess,
-  incidentListEmpty,
-  incidentListError,
-  incidentActionIdle,
-  incidentActionSubmitting,
-  incidentActionSuccess,
-  incidentActionError,
 } from "./support.states";
 import type {
   DshCreateTicketInput,
   DshAddMessageInput,
   DshUpdateTicketInput,
-  DshCreateIncidentInput,
-  DshUpdateIncidentInput,
   DshSupportTicketEvent,
 } from "./support.types";
 
@@ -298,49 +284,4 @@ export function useTicketDetailController(
     sendMessage,
     resetMessageAction,
   };
-}
-
-export function useSupportIncidentController(authKind = "unauthenticated") {
-  const [listState, setListState] = useState(incidentListIdle());
-  const [actionState, setActionState] = useState(incidentActionIdle());
-
-  const load = useCallback(async (statusFilter?: string) => {
-    setListState(incidentListLoading());
-    try {
-      const incidents = await fetchIncidents(statusFilter);
-      setListState(incidents.length === 0 ? incidentListEmpty() : incidentListSuccess(incidents));
-    } catch (err) {
-      setListState(incidentListError(resolveMessage(err)));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (isAuthenticated(authKind)) void load();
-  }, [authKind, load]);
-
-  const raiseIncident = useCallback(async (input: DshCreateIncidentInput) => {
-    setActionState(incidentActionSubmitting());
-    try {
-      const incident = await createIncident(input);
-      setActionState(incidentActionSuccess(incident));
-      await load();
-    } catch (err) {
-      setActionState(incidentActionError(resolveMessage(err)));
-    }
-  }, [load]);
-
-  const resolveIncident = useCallback(async (incidentId: string, input: DshUpdateIncidentInput) => {
-    setActionState(incidentActionSubmitting());
-    try {
-      const incident = await updateIncident(incidentId, input);
-      setActionState(incidentActionSuccess(incident));
-      await load();
-    } catch (err) {
-      setActionState(incidentActionError(resolveMessage(err)));
-    }
-  }, [load]);
-
-  const resetAction = useCallback(() => setActionState(incidentActionIdle()), []);
-
-  return { listState, actionState, reload: load, raiseIncident, resolveIncident, resetAction };
 }

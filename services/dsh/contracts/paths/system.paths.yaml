@@ -63,10 +63,16 @@
 /dsh/partner/activation/readiness:
   get:
     operationId: getDshPartnerSelfReadiness
-    summary: Get own partner readiness status.
+    summary: Get own partner readiness status for an explicitly selected store.
     tags: [DshPartner]
     security:
       - bearerAuth: []
+    parameters:
+      - name: storeId
+        in: query
+        required: false
+        description: Required when the authenticated partner spans multiple partner/store scopes; DSH derives the partner from this owned store.
+        schema: { type: string, minLength: 1 }
     responses:
       "200":
         description: Readiness object.
@@ -74,6 +80,7 @@
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerReadiness" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
 /dsh/field/partners/{partnerId}/readiness:
   get:

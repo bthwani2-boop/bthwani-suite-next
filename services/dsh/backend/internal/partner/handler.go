@@ -6,10 +6,8 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"dsh-api/internal/auth"
-	"dsh-api/internal/store"
 )
 
 // â”€â”€â”€ JSON helpers (reuse store.SendJSON pattern) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -41,9 +39,9 @@ func actorFromContext(r *http.Request) (actorID, surface string) {
 	return actorID, surface
 }
 
-func storeIDFromContext(r *http.Request) string {
-	storeID, _ := r.Context().Value("store_id").(string)
-	return storeID
+func partnerIDFromContext(r *http.Request) string {
+	partnerID, _ := r.Context().Value("partner_id").(string)
+	return partnerID
 }
 
 func partnerIDFromPath(r *http.Request) string {
@@ -87,57 +85,7 @@ func requireFieldOwnsPartner(w http.ResponseWriter, db *sql.DB, partnerID, actor
 
 func readinessHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		pid := partnerIDFromPath(r)
-		p, err := GetPartner(db, pid)
-		if errors.Is(err, ErrNotFound) {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
-			return
-		}
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to get partner")
-			return
-		}
-		total, approved, err := CountApprovedDocuments(db, pid)
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to count documents")
-			return
-		}
-
-		var hasStore bool
-		var storePublished bool
-		var storeServiceable bool
-		var storePartnerReadinessReady bool
-		var storeCatalogApproved bool
-		var storeMarketingVisible bool
-		var storeIsVisible bool
-
-		linkedStore, err := store.GetStoreByPartnerID(db, pid)
-		if err == nil && linkedStore != nil {
-			hasStore = true
-			storePublished = linkedStore.Status == store.StatusPublished
-			storeServiceable = (linkedStore.ServiceabilityStatus == store.ServiceabilityServiceable || linkedStore.ServiceabilityStatus == store.ServiceabilityLimited)
-			storePartnerReadinessReady = (linkedStore.PartnerReadiness == "ready")
-			storeCatalogApproved = (linkedStore.CatalogApprovalStatus == "approved")
-			storeMarketingVisible = (linkedStore.MarketingVisibility == "visible")
-			storeIsVisible = linkedStore.IsVisible
-		}
-
-		readiness := ComputeReadiness(
-			p, total, approved,
-			hasStore, storePublished, storeServiceable,
-			storePartnerReadinessReady, storeCatalogApproved,
-			storeMarketingVisible, storeIsVisible,
-		)
-		if linkedStore != nil {
-			diagnostics := store.DiagnoseStorePublicationReadiness(*linkedStore)
-			readiness.CanPublishStoreToClient = diagnostics.IsReady
-			if diagnostics.IsReady {
-				readiness.StorePublicationBlockedReason = ""
-			} else {
-				readiness.StorePublicationBlockedReason = strings.Join(diagnostics.Blockers, "; ")
-			}
-		}
-		sendJSON(w, http.StatusOK, readiness)
+		writeAggregatedReadiness(w, db, partnerIDFromPath(r))
 	}
 }
 
@@ -293,21 +241,12 @@ func HandleAddDocument(db *sql.DB) http.HandlerFunc {
 // GET /dsh/partner/me  â€” partner reads their own profile
 func HandlePartnerMe(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		storeID := storeIDFromContext(r)
-		if storeID == "" {
-			sendError(w, http.StatusForbidden, "FORBIDDEN", "no store context")
+		partnerID := partnerIDFromContext(r)
+		if partnerID == "" {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "no partner context")
 			return
 		}
-		var partnerID sql.NullString
-		if err := db.QueryRow(`SELECT partner_id FROM dsh_stores WHERE id = $1`, storeID).Scan(&partnerID); err != nil {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "store not found")
-			return
-		}
-		if !partnerID.Valid || partnerID.String == "" {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "no partner linked to this store")
-			return
-		}
-		p, err := GetPartner(db, partnerID.String)
+		p, err := GetPartner(db, partnerID)
 		if errors.Is(err, ErrNotFound) {
 			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
 			return
@@ -377,8 +316,8 @@ func HandleListStoreCoverageZones(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-// GET /dsh/partner/scopes â€” resolves the caller's own default store to find
-// their partner, then lists all of that partner's stores as scopes.
+// GET /dsh/partner/scopes — derives the caller's unique partner from all
+// active DSH store-access scopes, then lists that partner's stores as scopes.
 func HandleListPartnerScopes(db *sql.DB, authClient *auth.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID, ok := OperatorContextIDFromContext(r.Context())
@@ -386,21 +325,12 @@ func HandleListPartnerScopes(db *sql.DB, authClient *auth.Client) http.HandlerFu
 			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
 			return
 		}
-		storeID := storeIDFromContext(r)
-		if storeID == "" {
-			sendError(w, http.StatusForbidden, "FORBIDDEN", "no store context")
+		partnerID := partnerIDFromContext(r)
+		if partnerID == "" {
+			sendError(w, http.StatusForbidden, "FORBIDDEN", "no partner context")
 			return
 		}
 		actorID, _ := actorFromContext(r)
-		var partnerID sql.NullString
-		if err := db.QueryRow(`SELECT partner_id FROM dsh_stores WHERE id = $1 AND operator_context_id = $2`, storeID, operatorContextID).Scan(&partnerID); err != nil {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "store not found")
-			return
-		}
-		if !partnerID.Valid || partnerID.String == "" {
-			sendJSON(w, http.StatusOK, map[string]any{"scopes": []OperationalScope{}})
-			return
-		}
 
 		bundles, err := authClient.FetchPartnerPermissionBundles(r.Context())
 		if err != nil {
@@ -412,7 +342,7 @@ func HandleListPartnerScopes(db *sql.DB, authClient *auth.Client) http.HandlerFu
 			resolver[bundle.Code] = bundle.Actions
 		}
 
-		scopes, err := ListPartnerScopesForActorForOperatorContext(db, operatorContextID, partnerID.String, actorID, resolver)
+		scopes, err := ListPartnerScopesForActorForOperatorContext(db, operatorContextID, partnerID, actorID, resolver)
 		if err != nil {
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to list partner scopes")
 			return

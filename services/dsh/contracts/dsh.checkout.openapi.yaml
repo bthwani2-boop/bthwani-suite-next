@@ -154,19 +154,23 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                additionalProperties: false
-                required:
-                - intent
-                - eventReference
-                - replayed
-                properties:
-                  intent:
-                    $ref: ./dsh.openapi.yaml#/components/schemas/DshCheckoutIntent
-                  eventReference:
-                    type: string
-                  replayed:
-                    type: boolean
+                oneOf:
+                - type: object
+                  additionalProperties: false
+                  required: [intent, eventReference, replayed]
+                  properties:
+                    intent:
+                      $ref: ./dsh.openapi.yaml#/components/schemas/DshCheckoutIntent
+                    eventReference: { type: string }
+                    replayed: { type: boolean }
+                - type: object
+                  additionalProperties: false
+                  required: [specialRequest, eventReference, replayed]
+                  properties:
+                    specialRequest:
+                      $ref: ./dsh.openapi.yaml#/components/schemas/DshSpecialRequestResponse
+                    eventReference: { type: string }
+                    replayed: { type: boolean }
         '409':
           $ref: '#/components/responses/ErrorResponse'
 components:

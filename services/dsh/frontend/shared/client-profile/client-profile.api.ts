@@ -1,4 +1,5 @@
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import type {
   ClientProfile,
   ClientProfilePreferencesInput,
@@ -6,7 +7,7 @@ import type {
 } from "./client-profile.types";
 
 // For client-facing operations, use standard client session.
-const { request } = createDshHttpClient("", "dsh-client-profile");
+const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "dsh-client-profile");
 
 export async function fetchClientProfile(): Promise<ClientProfile> {
   const resp = await request<{ profile: ClientProfile }>("/dsh/client/me/profile");

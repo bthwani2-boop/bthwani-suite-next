@@ -1,5 +1,5 @@
--- WLT-102 OperatorContext isolation schema contract for settlements, COD records,
--- commissions and payout requests. Mirrors the style of
+-- WLT-102 OperatorContext isolation schema contract for settlements, commissions
+-- and payout requests. Mirrors the style of
 -- services/dsh/database/tests/schema/002_OperatorContext_isolation_contract.test.sql:
 -- verify the operator_context_id column shape, then verify every existing row carries
 -- a real or legacy-unscoped OperatorContext (never NULL/blank).
@@ -14,7 +14,6 @@ DECLARE
   default_value TEXT;
   OperatorContext_tables TEXT[] := ARRAY[
     'wlt_settlements',
-    'wlt_cod_records',
     'wlt_commissions',
     'wlt_payout_requests'
   ];
@@ -51,11 +50,6 @@ BEGIN
 
   IF NOT EXISTS (
     SELECT 1 FROM pg_indexes
-    WHERE schemaname = 'public' AND indexname = 'wlt_cod_records_operatorcontext_partner_idx'
-  ) THEN RAISE EXCEPTION 'wlt_cod_records_OperatorContext_partner_idx is missing'; END IF;
-
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_indexes
     WHERE schemaname = 'public' AND indexname = 'wlt_commissions_operatorcontext_beneficiary_idx'
   ) THEN RAISE EXCEPTION 'wlt_commissions_OperatorContext_beneficiary_idx is missing'; END IF;
 
@@ -66,10 +60,6 @@ BEGIN
 
   IF EXISTS (SELECT 1 FROM wlt_settlements WHERE operator_context_id IS NULL OR btrim(operator_context_id) = '') THEN
     RAISE EXCEPTION 'wlt_settlements contains unowned OperatorContext rows';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM wlt_cod_records WHERE operator_context_id IS NULL OR btrim(operator_context_id) = '') THEN
-    RAISE EXCEPTION 'wlt_cod_records contains unowned OperatorContext rows';
   END IF;
 
   IF EXISTS (SELECT 1 FROM wlt_commissions WHERE operator_context_id IS NULL OR btrim(operator_context_id) = '') THEN

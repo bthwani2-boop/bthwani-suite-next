@@ -1,26 +1,15 @@
 #!/usr/bin/env node
 // Proves the provenance of every materialized file under a */clients/generated/
-// directory, per VC-150. Generated clients are deterministic build artifacts;
-// canonical entry contracts, modules, overlays and manifests are the only
-// tracked API truth.
-//
-// Two things are enforced:
-//   1. No orphans. Every file in a declared generated root is registered in
-//      governance/contracts/generated-client-registry.json, and every registered
-//      client exists after workspace materialization.
-//   2. Regenerate-diff = 0 for OPENAPI_TYPESCRIPT entries. The materialized
-//      client must be byte-identical to a fresh openapi-typescript run against
-//      its materialized canonical bundle.
-//
-// Exactly six bounded-context clients are allowed. Hand-authored or
-// module-scoped files under a generated root are always a failure.
+// directory. Generated clients are deterministic build artifacts; canonical
+// entry contracts, modules, overlays and manifests are the only tracked API truth.
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
+import { resolvePackageManagerInvocation } from "../scripts/lib/package-manager-invocation.mjs";
 
 const repositoryRoot = path.resolve(new URL(".", import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, "$1"), "..", "..");
-const registryRelative = "governance/contracts/generated-client-registry.json";
+const registryRelative = "tools/verification/generated-client-registry.json";
 const packageScripts = JSON.parse(fs.readFileSync(path.join(repositoryRoot, "package.json"), "utf8")).scripts ?? {};
 const registry = JSON.parse(fs.readFileSync(path.join(repositoryRoot, registryRelative), "utf8"));
 
@@ -54,7 +43,6 @@ for (const entry of registry.entries) {
 }
 for (const context of requiredContexts) failures.push(`${registryRelative}: missing bounded context '${context}'`);
 
-// 1. Orphan detection in both directions after deterministic materialization.
 const ignored = new Set(registry.ignoredFiles ?? []);
 for (const root of registry.generatedRoots) {
   const absoluteRoot = path.join(repositoryRoot, root);
@@ -72,6 +60,7 @@ for (const root of registry.generatedRoots) {
 }
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "bthwani-generated-client-provenance-"));
+const generationJobs = [];
 
 for (const [relativeClient, entry] of registered) {
   const clientPath = path.join(repositoryRoot, relativeClient);
@@ -104,19 +93,50 @@ for (const [relativeClient, entry] of registered) {
   }
 
   const outFile = path.join(tmpDir, relativeClient.replaceAll("/", "__"));
-  const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
-  const result = spawnSync(pnpm, ["exec", "openapi-typescript", contractPath, "--output", outFile], {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-    shell: process.platform === "win32",
+  const invocation = resolvePackageManagerInvocation(
+    "pnpm",
+    ["exec", "openapi-typescript", contractPath, "--output", outFile],
+    process.env,
+  );
+  generationJobs.push({ relativeClient, contract: entry.contract, regenerateScript: entry.regenerateScript, materialized, outFile, invocation });
+}
+
+function generateClient(job) {
+  return new Promise((resolve) => {
+    const child = spawn(job.invocation.executable, job.invocation.args, {
+      cwd: repositoryRoot,
+      shell: false,
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout?.on("data", (chunk) => { stdout += chunk; });
+    child.stderr?.on("data", (chunk) => { stderr += chunk; });
+    child.once("error", (error) => resolve({ job, error }));
+    child.once("close", (status, signal) => resolve({ job, status, signal, stdout, stderr }));
   });
+}
+
+const generationResults = [];
+let nextGeneration = 0;
+async function generationWorker() {
+  while (nextGeneration < generationJobs.length) {
+    const job = generationJobs[nextGeneration];
+    nextGeneration += 1;
+    generationResults.push(await generateClient(job));
+  }
+}
+await Promise.all(Array.from({ length: Math.min(3, generationJobs.length) }, () => generationWorker()));
+
+for (const result of generationResults) {
+  const { job } = result;
   if (result.error || result.status !== 0) {
-    failures.push(`openapi-typescript failed for ${entry.contract}: ${result.error?.message ?? result.stderr ?? result.stdout ?? "unknown spawn failure"}`);
+    failures.push(`openapi-typescript failed for ${job.contract}: ${result.error?.message ?? result.stderr ?? result.stdout ?? (result.signal ? `signal ${result.signal}` : "unknown spawn failure")}`);
     continue;
   }
-
-  if (fs.readFileSync(outFile, "utf8") !== materialized) {
-    failures.push(`${relativeClient} is stale relative to ${entry.contract}; rerun pnpm run ${entry.regenerateScript}`);
+  if (fs.readFileSync(job.outFile, "utf8") !== job.materialized) {
+    failures.push(`${job.relativeClient} is stale relative to ${job.contract}; rerun pnpm run ${job.regenerateScript}`);
   }
 }
 

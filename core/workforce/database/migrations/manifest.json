@@ -3,7 +3,7 @@
   "service": "workforce",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "workforce-016_provisioning_cases.sql",
+  "cutover": "workforce-025_operational_affiliation_context_integrity.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -115,6 +115,69 @@
       "file": "workforce-016_provisioning_cases.sql",
       "sha256": "1d365c309420eed09c7b27c589a55768100b1379702404338216fafcf36b80dc",
       "historicalPrefix": "016",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 17,
+      "file": "workforce-017_provisioning_identity_creation_marker.sql",
+      "sha256": "f954d31db7ea8accc17e2fd5f7ceb831f5d7b6b2806a70a7b4cee66ab13a30a5",
+      "historicalPrefix": "017",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 18,
+      "file": "workforce-018_financial_authority_cutover.sql",
+      "sha256": "1c4f97f56b5b2a461687755c2217b715f256393f7f84cd22926aaa862960515b",
+      "historicalPrefix": "018",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 19,
+      "file": "workforce-019_identity_operator_context_cutover.sql",
+      "sha256": "aa771abd50d56a686f10e8e726f17facbccf6e6a43cdd84bf23cc92061267b9d",
+      "historicalPrefix": "019",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 20,
+      "file": "workforce-020_operator_context_scope_boundary.sql",
+      "sha256": "af61eefcffc6a926f7ebdd9aa6ec4aace69a6baf55893fbbc9d27b3b62b2ae96",
+      "historicalPrefix": "020",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 21,
+      "file": "workforce-021_operator_context_identity_recovery.sql",
+      "sha256": "80bf3c475142ed807ce8673474c20ca208061ebbd190165730028573f977ef58",
+      "historicalPrefix": "021",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 22,
+      "file": "workforce-022_field_shift_legacy_cutover.sql",
+      "sha256": "f35daeeb67cecad3b60564434eb3f4ed029c3c1867ad20d6aeb88679cca085a3",
+      "historicalPrefix": "022",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 23,
+      "file": "workforce-023_projection_invariant_cutover.sql",
+      "sha256": "363476ad081f4b2da6b6dc0d6b4f582afefd4027235c8bacb6b8722caef021fb",
+      "historicalPrefix": "023",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 24,
+      "file": "workforce-024_projection_creation_guard.sql",
+      "sha256": "85efdf64a54ab1b825e3a82d41c9c21fec7ae544df79dbd97330c225cc7d25f1",
+      "historicalPrefix": "024",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 25,
+      "file": "workforce-025_operational_affiliation_context_integrity.sql",
+      "sha256": "0770a7640b9a9ace937d81e238b238286e4d5000a37866dc57a1f4613c53fb6a",
+      "historicalPrefix": "025",
       "state": "ACTIVE"
     }
   ]

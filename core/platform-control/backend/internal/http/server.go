@@ -20,6 +20,7 @@ func NewRouter(service *platformcontrol.Service, authClient *auth.Client) http.H
 	s := &server{service: service, auth: authClient}
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("GET /platform/internal/v1/variables/{key}", s.serviceOnly("dsh", s.internalVariable))
 	mux.HandleFunc("GET /platform/v1/runtime-config", s.operatorOnly("platform:read", s.runtimeConfig))
 	mux.HandleFunc("GET /platform/v1/runtime-config/effective", s.operatorOnly("platform:read", s.effectiveRuntimeConfig))
 	mux.HandleFunc("GET /platform/v1/variables", s.operatorOnly("platform:read", s.variables))
@@ -98,19 +99,10 @@ func (s *server) operatorOnly(action string, next guardedHandler) http.HandlerFu
 }
 
 func enforceOperatorContext(w http.ResponseWriter, r *http.Request, identity auth.Identity) bool {
-	defaultOperatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
 	identityOperatorContextID := strings.TrimSpace(identity.OperatorContextID)
 
-	if defaultOperatorContextID == "" {
-		sendError(w, http.StatusServiceUnavailable, "OPERATOR_CONTEXT_CONFIG_INVALID", "missing runtime operator context configuration")
-		return false
-	}
 	if identityOperatorContextID == "" {
 		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "authenticated identity has no trusted operator context")
-		return false
-	}
-	if identityOperatorContextID != defaultOperatorContextID {
-		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "identity operator context does not match the active runtime operator context")
 		return false
 	}
 	requestedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))

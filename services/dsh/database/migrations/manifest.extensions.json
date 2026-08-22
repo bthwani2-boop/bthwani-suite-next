@@ -1,0 +1,231 @@
+{
+  "schemaVersion": 1,
+  "service": "dsh",
+  "extends": "manifest.json",
+  "migrations": [
+    {
+      "ordinal": 240,
+      "file": "dsh-981_client_address_postgis_geofence_binding.sql",
+      "sha256": "b4ee961db0e7668fe3ea9e57baec7872bc0fd88e09674f3700e3ecfb06d2c9ec",
+      "historicalPrefix": "981",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 241,
+      "file": "dsh-982_wlt_outbox_unknown_result.sql",
+      "sha256": "8abd9b38138675bff4c1283d60467dd0ce9f7cfdc84a8b7ae0d543d9ed0e1c5c",
+      "historicalPrefix": "982",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 242,
+      "file": "dsh-999z_field_onboarding_assignments.sql",
+      "sha256": "2ab23d657f24ca8f1083fa3a2584849ad9a0382181fd5476357d83bcc75cb7ac",
+      "historicalPrefix": "999z",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 243,
+      "file": "dsh-999a_partner_business_vertical_binding.sql",
+      "sha256": "3273032059cf2d18e3f5b39b8408f01d4c58b27ac488bc774b2d072582f91c1a",
+      "historicalPrefix": "999a",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 244,
+      "file": "dsh-999b_partner_evidence_lifecycle.sql",
+      "sha256": "3a1064a6686613f8a72c73ff0d749b672dd1adc693d2b38ec63a514506fb0110",
+      "historicalPrefix": "999b",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 245,
+      "file": "dsh-999c_onboarding_collaboration.sql",
+      "sha256": "39dba4cbba9c40837edd43a342ea30805fc68d71d498c9cca5a13d091d114181",
+      "historicalPrefix": "999c",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 246,
+      "file": "dsh-1000_partner_team_membership_scope.sql",
+      "sha256": "a001a56a1b863815e331ee667342843db4298436b5c024a88b82c3037628f210",
+      "historicalPrefix": "1000",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 247,
+      "file": "dsh-999d_partner_order_transition_receipts.sql",
+      "sha256": "56856bc81331adde0f0fb83818781c5e54e39c6cda39a0d238486b4810e660f5",
+      "historicalPrefix": "999d",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 248,
+      "file": "dsh-1001_partner_fleet_lifecycle_idempotency.sql",
+      "sha256": "fcfd9ae269e835bfeccec7010fa1970e317c0444fdac618cad5b94437da03764",
+      "historicalPrefix": "1001",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 249,
+      "file": "dsh-1002_partner_fleet_redeem_receipts.sql",
+      "sha256": "4ede685de48cccda94662c8cc1f52d3148f5bccec9b4e1a4dbfeca43a21c7eb0",
+      "historicalPrefix": "1002",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 250,
+      "file": "dsh-1003_field_assignment_governance.sql",
+      "sha256": "ff607b3ad288d984257e724a71f9672ccd4cde3e5bc6554498b969ef526007c5",
+      "historicalPrefix": "1003",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 251,
+      "file": "dsh-1004_field_readiness_checklist_policy.sql",
+      "sha256": "74e2aea8be1ecf940d8175613aa5ceb002ea5da59f14c45770b89d3ef9d2c5e2",
+      "historicalPrefix": "1004",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 252,
+      "file": "dsh-1005_field_readiness_checklist_policy_seed.sql",
+      "sha256": "6587f17981af79a1c4682602c922cc45aa0bcfc4876dd54f76da02a9c3c57630",
+      "historicalPrefix": "1005",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 253,
+      "file": "dsh-1006_field_readiness_checklist_policy_audit.sql",
+      "sha256": "195db04e1acf6b2ece30b59ac490d05fd42e02910261837203397a231a03258f",
+      "historicalPrefix": "1006",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 254,
+      "file": "dsh-1007_marketing_store_publication_command.sql",
+      "sha256": "1c23e8a2bc5105992756800402dfa393372641776c6b6f1f18ea710d8e22a262",
+      "historicalPrefix": "1007",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 255,
+      "file": "dsh-1008_checkout_order_item_snapshot_truth.sql",
+      "sha256": "b39a61bff9bf38ce9bb4432a3253dc506e7b2fbafdabb1b357791114f40f185f",
+      "historicalPrefix": "1008",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 256,
+      "file": "dsh-1009_checkout_payment_method_canonicalization.sql",
+      "sha256": "169620df23d0b7454ef1032f8fef59cca1a21dccf0d3cde0fd5f6f83b3b72752",
+      "historicalPrefix": "1009",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 257,
+      "file": "dsh-1010_dispatch_cod_reservation_release_outbox.sql",
+      "sha256": "2fa1e907f34ff33e89ff558cfd0748ecef1f5bae6ad94d6c6c68e5a96c30f61c",
+      "historicalPrefix": "1010",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 258,
+      "file": "dsh-1011_promotion_funding_reserve_reconciliation.sql",
+      "sha256": "ae9f603233cde3b08f46d60e2092bf57f993f55bb65af57c0567b6e7fcbeb5f4",
+      "historicalPrefix": "1011",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 259,
+      "file": "dsh-1012_wlt_special_request_quote_projection.sql",
+      "sha256": "da176aa81815b9ed0cd4392988df972b2b026e265ce3410f0f250d596fb02306",
+      "historicalPrefix": "1012",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 260,
+      "file": "dsh-1013_remove_legacy_platform_change_sets.sql",
+      "sha256": "920188999ef0f887ade0ec0a281960f790f47c199f5af062573e1256ade15e14",
+      "historicalPrefix": "1013",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 261,
+      "file": "dsh-1014_remove_legacy_platform_providers.sql",
+      "sha256": "94302ebf6ff89cbff4b4159a8d5b3c1e47aca71c04013533fcc551957983141b",
+      "historicalPrefix": "1014",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 262,
+      "file": "dsh-1015_special_request_wlt_event_receipts.sql",
+      "sha256": "7c376e6450a0e921215fbc021cf36066bf7395349f91eeb647701a503a1a354d",
+      "historicalPrefix": "1015",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 263,
+      "file": "dsh-1016_special_request_wlt_terminal_outcome_guard.sql",
+      "sha256": "222dde3ccfd3c71981a445f2015cd856353cb9fc74fdfa366eae0d2e670db9de",
+      "historicalPrefix": "1016",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 264,
+      "file": "dsh-1017_canonical_store_publication_decision.sql",
+      "sha256": "5983e1337a258a4ce7f843aa0ce690c3c2e720eadf79413f41af09540d7a78e4",
+      "historicalPrefix": "1017",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 265,
+      "file": "dsh-1018_wlt_terminal_outcome_canonical_guard.sql",
+      "sha256": "f67c3be5af2d06704472d09f40dc1e62d9ac72b353463a0b83ffcf7221b645ac",
+      "historicalPrefix": "1018",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 266,
+      "file": "dsh-1019_remove_partner_deactivated_state.sql",
+      "sha256": "3948092bbf69be3c27b991e4b19d0eee04345b7fa1eccec3f5c4d6f449d768c0",
+      "historicalPrefix": "1019",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 267,
+      "file": "dsh-1020_partner_first_store_identity.sql",
+      "sha256": "edce1ea3bd7246518cadbc706a987af5eef22185f09d9505967c5c1e866ed702",
+      "historicalPrefix": "1020",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 268,
+      "file": "dsh-1030_captain_cod_legacy_write_fence.sql",
+      "sha256": "2201caf7cc9867a46b11e7fc0e26be6e9cdbe776fbf955397bf779901e403e63",
+      "historicalPrefix": "1030",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 269,
+      "file": "dsh-1031_local_seed_media_optional.sql",
+      "sha256": "a82caefb57c9c673392dce3f7194da25e78c898a9ae24a2b990741a05d95c7a6",
+      "historicalPrefix": "1031",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 270,
+      "file": "dsh-1032_store_publication_readiness_contract.sql",
+      "sha256": "9a1f9d7886e5aad92434ae164fcbe07191d23ebb5d845512dde93da2fb2be295",
+      "historicalPrefix": "1032",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 271,
+      "file": "dsh-1000_order_delivery_geofence_snapshot.sql",
+      "sha256": "201180fe0191f3a5cec0e78c0fa37b7e74d3fffe68e8ef663d97ac22b40db555",
+      "historicalPrefix": "1000",
+      "state": "ACTIVE"
+    }
+  ]
+}

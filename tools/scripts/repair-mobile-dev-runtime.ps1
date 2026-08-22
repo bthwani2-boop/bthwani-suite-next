@@ -33,7 +33,7 @@ $RuntimeScript = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
 $RuntimePhase = Join-Path $RepoRoot "tools/scripts/invoke-runtime-phase.ps1"
 $VerifyScript = Join-Path $RepoRoot "tools/scripts/verify-mobile-dev-runtime.ps1"
 $MigrationGuard = Join-Path $RepoRoot "tools/guards/migration-manifest-drift-gate.mjs"
-$Profiles = "identity,workforce,dsh,wlt,media"
+$Profiles = "identity,workforce,dsh,wlt,media-storage"
 $ArtifactRoot = Join-Path $RepoRoot ".artifacts/diagnostics"
 $LogPath = Join-Path $ArtifactRoot ("mobile-runtime-root-repair-{0}.log" -f (Get-Date -Format "yyyyMMdd-HHmmss"))
 

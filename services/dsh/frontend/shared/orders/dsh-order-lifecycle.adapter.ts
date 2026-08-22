@@ -2,7 +2,6 @@ import type { DshOrderStatus } from './orders.types';
 import type {
   DshOrderRecord,
   DshOrderItemRecord,
-  DshCreateOrderResponse,
   DshOrderDetailsResponse,
   DshListOrdersResponse,
   DshOrderApiOfflineError,
@@ -138,8 +137,16 @@ export function normalizeOrder(raw: BackendOrder): DshOrderRecord {
       message: `missing fulfillment_mode for DSH order "${orderId}" — backend/frontend contract drift must be fixed, not defaulted`,
     } as DshOrderApiContractError;
   }
+  const version = Number(raw.version);
+  if (!Number.isInteger(version) || version < 1) {
+    throw {
+      kind: 'contract',
+      message: `missing valid version for DSH order "${orderId}" — optimistic concurrency must fail closed`,
+    } as DshOrderApiContractError;
+  }
   return {
     id: orderId,
+    version,
     store_id: String(raw.store_id ?? raw.storeId ?? ''),
     fulfillment_mode: fulfillmentMode,
     client_id: String(raw.client_id ?? raw.clientId ?? ''),
@@ -154,7 +161,9 @@ export function normalizeOrder(raw: BackendOrder): DshOrderRecord {
   };
 }
 
-export function normalizeOrderResponse<T extends { readonly order?: BackendOrder }>(resp: T): DshCreateOrderResponse {
+type DshOrderResponse = { readonly order: DshOrderRecord };
+
+export function normalizeOrderResponse<T extends { readonly order?: BackendOrder }>(resp: T): DshOrderResponse {
   return { order: normalizeOrder(resp.order ?? {}) };
 }
 

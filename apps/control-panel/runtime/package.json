@@ -2,23 +2,23 @@
   "dependencies": {
     "@bthwani/control-panel": "workspace:*",
     "@bthwani/core-identity": "workspace:*",
+    "@bthwani/data-runtime": "workspace:*",
     "@bthwani/dsh": "workspace:*",
     "@bthwani/ui-kit": "workspace:*",
     "next": "^16.2.11",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "react-native-web": "^0.19.13"
+    "react-native-web": "0.21.2"
   },
   "devDependencies": {
     "@types/node": "24.10.1",
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
-    "@types/react-native": "^0.73.0",
     "typescript": "npm:@typescript/typescript6@6.0.2"
   },
   "scripts": {
-    "typecheck": "next typegen && tsc --noEmit -p tsconfig.json",
-    "dev": "next dev --port 13000",
+    "typecheck": "next typegen && tsc6 --noEmit -p tsconfig.json",
+    "dev": "node ../../../tools/scripts/check-frontend-binding-readiness.mjs --bundle controlPanelDevelopment && pwsh -NoProfile -ExecutionPolicy Bypass -File ./assert-google-maps-env.ps1 && next dev --port 13000",
     "build": "next build",
     "lint": "pnpm --dir ../../.. run guard:ui-kit-boundary",
     "test": "node --test tests/*.test.mjs"

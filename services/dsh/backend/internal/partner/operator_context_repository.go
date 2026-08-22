@@ -30,6 +30,7 @@ func normalizePartnerCreationInput(input CreatePartnerInput) CreatePartnerInput 
 	if strings.TrimSpace(input.CreatedBySurface) == "" {
 		input.CreatedBySurface = "app-field"
 	}
+	input.BusinessVerticalID = canonicalBusinessVerticalID(input.BusinessVerticalID, input.Category)
 	return input
 }
 
@@ -46,6 +47,7 @@ type partnerCreationFingerprint struct {
 	SecondaryPhone      string `json:"secondaryPhone"`
 	Email               string `json:"email"`
 	Category            string `json:"category"`
+	BusinessVerticalID  string `json:"businessVerticalId"`
 	Notes               string `json:"notes"`
 	CreatedByActorID    string `json:"createdByActorId"`
 	CreatedBySurface    string `json:"createdBySurface"`
@@ -65,6 +67,7 @@ func hashPartnerCreation(operatorContextID string, input CreatePartnerInput) (st
 		SecondaryPhone:      input.SecondaryPhone,
 		Email:               input.Email,
 		Category:            input.Category,
+		BusinessVerticalID:  input.BusinessVerticalID,
 		Notes:               input.Notes,
 		CreatedByActorID:    input.CreatedByActorID,
 		CreatedBySurface:    input.CreatedBySurface,
@@ -132,6 +135,17 @@ func createPartnerForOperatorContextTx(
 	operatorContextID string,
 	input CreatePartnerInput,
 ) (Partner, error) {
+	if input.BusinessVerticalID != "" {
+		var active bool
+		if err := tx.QueryRowContext(ctx, `
+			SELECT is_active FROM dsh_catalog_domains WHERE id = $1`, input.BusinessVerticalID).Scan(&active); errors.Is(err, sql.ErrNoRows) {
+			return Partner{}, ErrInvalid
+		} else if err != nil {
+			return Partner{}, err
+		} else if !active {
+			return Partner{}, ErrInvalid
+		}
+	}
 	if err := lockPartnerCreationUniqueness(ctx, tx, operatorContextID, input); err != nil {
 		return Partner{}, err
 	}
@@ -143,12 +157,12 @@ func createPartnerForOperatorContextTx(
 			legal_name_ar, legal_name_en, display_name,
 			legal_identity_type, legal_identity_number,
 			owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
-			category, notes, created_by_actor_id, created_by_surface, onboarding_case_status
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'draft')
+			category, business_vertical_id, notes, created_by_actor_id, created_by_surface, onboarding_case_status
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,NULLIF($16,''),'draft')
 		RETURNING id, legal_name_ar, legal_name_en, display_name,
 		          legal_identity_type, legal_identity_number,
 		          owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
-		          category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
+		          category, COALESCE(business_vertical_id,''), activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 		          notes,
 		          COALESCE(payout_destination_id,''), COALESCE(destination_method,''),
 		          COALESCE(masked_destination_reference,''), COALESCE(destination_verification_status,''),
@@ -157,12 +171,12 @@ func createPartnerForOperatorContextTx(
 		input.LegalNameAr, input.LegalNameEn, input.DisplayName,
 		input.LegalIdentityType, input.LegalIdentityNumber,
 		input.OwnerActorID, input.WorkforcePersonID, input.PrimaryPhone, input.SecondaryPhone, input.Email,
-		input.Category, input.Notes, input.CreatedByActorID, input.CreatedBySurface,
+		input.Category, input.BusinessVerticalID, input.Notes, input.CreatedByActorID, input.CreatedBySurface,
 	).Scan(
 		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
 		&p.LegalIdentityType, &p.LegalIdentityNumber,
 		&p.OwnerActorID, &p.WorkforcePersonID, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
-		&p.Category, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
+		&p.Category, &p.BusinessVerticalID, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
 		&p.PayoutDestinationID, &p.DestinationMethod, &p.MaskedDestinationReference, &p.DestinationVerificationStatus,
 		&p.Version, &p.CreatedAt, &p.UpdatedAt,
@@ -176,12 +190,13 @@ func createPartnerForOperatorContextTx(
 	p = SanitizePartnerForSurface(p)
 
 	// Partner creation owns its unpublished first store. Store authorization is
-	// closed in this same transaction: only app-field receives an assigned field
+	// closed in this same transaction: app-field receives a field store-access
 	// scope, while an already-bound partner owner receives canonical own access.
 	sRow, err := store.CreateDraftStore(tx, store.CreateDraftStoreInput{
-		PartnerID:   p.ID,
-		DisplayName: p.DisplayName,
-		Category:    p.Category,
+		PartnerID:       p.ID,
+		DisplayName:     p.DisplayName,
+		Category:        p.Category,
+		CatalogDomainID: p.BusinessVerticalID,
 	})
 	if err != nil {
 		return Partner{}, err
@@ -189,8 +204,11 @@ func createPartnerForOperatorContextTx(
 	if _, err = tx.ExecContext(ctx, `UPDATE dsh_stores SET operator_context_id = $1 WHERE id = $2`, operatorContextID, sRow.ID); err != nil {
 		return Partner{}, err
 	}
+	if err := store.EnsurePartnerFirstStoreReferenceTx(ctx, tx, p.ID, sRow.ID, operatorContextID); err != nil {
+		return Partner{}, err
+	}
 	if input.CreatedBySurface == "app-field" {
-		if err := store.EnsureFieldAssignedScopeTx(ctx, tx, operatorContextID, sRow.ID, input.CreatedByActorID); err != nil {
+		if err := store.EnsureFieldStoreAccessScopeTx(ctx, tx, operatorContextID, sRow.ID, input.CreatedByActorID); err != nil {
 			return Partner{}, err
 		}
 	}
@@ -355,7 +373,7 @@ func GetPartnerForOperatorContext(db *sql.DB, operatorContextID, partnerID strin
 		SELECT id, legal_name_ar, legal_name_en, display_name,
 		       legal_identity_type, legal_identity_number,
 		       owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
-		       category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
+		       category, COALESCE(business_vertical_id,''), activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 		       notes,
 		       COALESCE(payout_destination_id,''), COALESCE(destination_method,''),
 		       COALESCE(masked_destination_reference,''), COALESCE(destination_verification_status,''),
@@ -366,7 +384,7 @@ func GetPartnerForOperatorContext(db *sql.DB, operatorContextID, partnerID strin
 		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
 		&p.LegalIdentityType, &p.LegalIdentityNumber,
 		&p.OwnerActorID, &p.WorkforcePersonID, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
-		&p.Category, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
+		&p.Category, &p.BusinessVerticalID, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
 		&p.PayoutDestinationID, &p.DestinationMethod, &p.MaskedDestinationReference, &p.DestinationVerificationStatus,
 		&p.Version, &p.CreatedAt, &p.UpdatedAt,
@@ -414,7 +432,7 @@ func ListPartnersForOperatorContext(db *sql.DB, operatorContextID string, q Part
 
 	args = append(args, q.Limit, q.Offset)
 	rows, err := db.Query(`
-		SELECT id, display_name, legal_name_ar, category, activation_status, primary_phone, created_at, updated_at
+		SELECT id, display_name, legal_name_ar, category, COALESCE(business_vertical_id,''), activation_status, primary_phone, created_at, updated_at
 		FROM dsh_partners`+where+`
 		ORDER BY created_at DESC
 		LIMIT $`+itoa(next)+` OFFSET $`+itoa(next+1), args...)
@@ -427,7 +445,7 @@ func ListPartnersForOperatorContext(db *sql.DB, operatorContextID string, q Part
 	for rows.Next() {
 		var item PartnerSummary
 		if err := rows.Scan(&item.ID, &item.DisplayName, &item.LegalNameAr, &item.Category,
-			&item.ActivationStatus, &item.PrimaryPhone, &item.CreatedAt, &item.UpdatedAt); err != nil {
+			&item.BusinessVerticalID, &item.ActivationStatus, &item.PrimaryPhone, &item.CreatedAt, &item.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
 		list = append(list, item)

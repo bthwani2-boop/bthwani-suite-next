@@ -89,8 +89,14 @@ function formatBounds(area: DshServiceArea): string {
   return `${bounds.minLongitude.toFixed(4)}, ${bounds.minLatitude.toFixed(4)} → ${bounds.maxLongitude.toFixed(4)}, ${bounds.maxLatitude.toFixed(4)}`;
 }
 
-export function ServiceAreaGovernanceSection() {
-  const controller = useServiceAreaController(true);
+export function ServiceAreaGovernanceSection({
+  canRead,
+  canManage,
+}: {
+  readonly canRead: boolean;
+  readonly canManage: boolean;
+}) {
+  const controller = useServiceAreaController(canRead);
   const [form, setForm] = React.useState<FormState>(EMPTY_FORM);
   const [validationError, setValidationError] = React.useState<string | null>(null);
 
@@ -173,6 +179,17 @@ export function ServiceAreaGovernanceSection() {
     active: area.active,
   }));
 
+  if (!canRead) {
+    return (
+      <CpStatePanel
+        role="status"
+        title="صلاحية قراءة مناطق الخدمة مطلوبة"
+        description="لن يطلب هذا القسم مناطق الخدمة قبل تحقق صلاحية dsh.service_zones.read."
+        code="DSH_SERVICE_ZONES_READ_REQUIRED"
+      />
+    );
+  }
+
   return (
     <View style={styles.section}>
       <View style={styles.headerRow}>
@@ -182,13 +199,13 @@ export function ServiceAreaGovernanceSection() {
             Google Maps تعرض المكان؛ DSH هو المصدر الوحيد لاعتماد رمز منطقة الخدمة والتحقق من بنية المضلع.
           </Text>
         </View>
-        <CpButton variant="secondary" onClick={reset}>منطقة جديدة</CpButton>
+        {canManage ? <CpButton variant="secondary" onClick={reset}>منطقة جديدة</CpButton> : null}
       </View>
 
       <GoogleMapsWebCanvas
         polygons={mapPolygons}
         height={460}
-        onMapClick={appendMapPoint}
+        {...(canManage ? { onMapClick: appendMapPoint } : {})}
         ariaLabel="خريطة إدارة مناطق الخدمة في بثواني"
       />
       <Text role="caption" tone="muted">
@@ -219,7 +236,7 @@ export function ServiceAreaGovernanceSection() {
             </thead>
             <tbody>
               {tableRows.map((row) => (
-                <tr key={row.serviceAreaCode} onClick={() => edit(row)}>
+                <tr key={row.serviceAreaCode} onClick={canManage ? () => edit(row) : undefined}>
                   <CpTableCell>{row.displayName}</CpTableCell>
                   <CpTableCell>{row.serviceAreaCode}</CpTableCell>
                   <CpTableCell>{String(row.priority)}</CpTableCell>
@@ -234,27 +251,36 @@ export function ServiceAreaGovernanceSection() {
         )
       ) : null}
 
-      <Card style={styles.formCard}>
-        <Text role="titleSm">{form.expectedVersion > 0 ? "تعديل المنطقة" : "إنشاء منطقة"}</Text>
-        {form.expectedVersion > 0 ? <CpBadge tone="info">{`الإصدار ${form.expectedVersion}`}</CpBadge> : null}
-        <CpTextInput aria-label="رمز منطقة الخدمة" value={form.serviceAreaCode} disabled={form.expectedVersion > 0} onChange={(serviceAreaCode) => setForm((current) => ({ ...current, serviceAreaCode }))} placeholder="sanaa-old-city" />
-        <CpTextInput aria-label="الاسم المعروض" value={form.displayName} onChange={(displayName) => setForm((current) => ({ ...current, displayName }))} />
-        <TextField label="المضلع [longitude, latitude]" value={form.polygonText} onChangeText={(polygonText) => setForm((current) => ({ ...current, polygonText }))} multiline placeholder={'[[44.1,15.3],[44.2,15.3],[44.2,15.4]]'} />
-        <CpTextInput aria-label="الأولوية عند تداخل المضلعات" value={form.priority} onChange={(priority) => setForm((current) => ({ ...current, priority }))} />
-        <View style={styles.actions}>
-          <CpButton variant={form.active ? "primary" : "secondary"} onClick={() => setForm((current) => ({ ...current, active: !current.active }))}>
-            {form.active ? "المنطقة نشطة" : "المنطقة معطلة"}
-          </CpButton>
-          <CpButton variant="secondary" onClick={() => setForm((current) => ({ ...current, polygonText: "[]" }))}>مسح النقاط</CpButton>
-        </View>
-        <CpTextInput aria-label="سبب التغيير" value={form.reason} onChange={(reason) => setForm((current) => ({ ...current, reason }))} placeholder="سبب تشغيلي قابل للتدقيق" />
-        {validationError ? <Text tone="danger">{validationError}</Text> : null}
-        {controller.mutationError ? <Text tone="danger">{controller.mutationError}</Text> : null}
-        <View style={styles.actions}>
-          <CpButton variant="primary" disabled={controller.mutating} onClick={() => void save()}>{controller.mutating ? "جارٍ الحفظ…" : "حفظ المنطقة"}</CpButton>
-          <CpButton variant="ghost" disabled={controller.mutating} onClick={reset}>إلغاء</CpButton>
-        </View>
-      </Card>
+      {canManage ? (
+        <Card style={styles.formCard}>
+          <Text role="titleSm">{form.expectedVersion > 0 ? "تعديل المنطقة" : "إنشاء منطقة"}</Text>
+          {form.expectedVersion > 0 ? <CpBadge tone="info">{`الإصدار ${form.expectedVersion}`}</CpBadge> : null}
+          <CpTextInput aria-label="رمز منطقة الخدمة" value={form.serviceAreaCode} disabled={form.expectedVersion > 0} onChange={(serviceAreaCode) => setForm((current) => ({ ...current, serviceAreaCode }))} placeholder="sanaa-old-city" />
+          <CpTextInput aria-label="الاسم المعروض" value={form.displayName} onChange={(displayName) => setForm((current) => ({ ...current, displayName }))} />
+          <TextField label="المضلع [longitude, latitude]" value={form.polygonText} onChangeText={(polygonText) => setForm((current) => ({ ...current, polygonText }))} multiline placeholder={'[[44.1,15.3],[44.2,15.3],[44.2,15.4]]'} />
+          <CpTextInput aria-label="الأولوية عند تداخل المضلعات" value={form.priority} onChange={(priority) => setForm((current) => ({ ...current, priority }))} />
+          <View style={styles.actions}>
+            <CpButton variant={form.active ? "primary" : "secondary"} onClick={() => setForm((current) => ({ ...current, active: !current.active }))}>
+              {form.active ? "المنطقة نشطة" : "المنطقة معطلة"}
+            </CpButton>
+            <CpButton variant="secondary" onClick={() => setForm((current) => ({ ...current, polygonText: "[]" }))}>مسح النقاط</CpButton>
+          </View>
+          <CpTextInput aria-label="سبب التغيير" value={form.reason} onChange={(reason) => setForm((current) => ({ ...current, reason }))} placeholder="سبب تشغيلي قابل للتدقيق" />
+          {validationError ? <Text tone="danger">{validationError}</Text> : null}
+          {controller.mutationError ? <Text tone="danger">{controller.mutationError}</Text> : null}
+          <View style={styles.actions}>
+            <CpButton variant="primary" disabled={controller.mutating} onClick={() => void save()}>{controller.mutating ? "جارٍ الحفظ…" : "حفظ المنطقة"}</CpButton>
+            <CpButton variant="ghost" disabled={controller.mutating} onClick={reset}>إلغاء</CpButton>
+          </View>
+        </Card>
+      ) : (
+        <CpStatePanel
+          role="status"
+          title="العرض للقراءة فقط"
+          description="تتطلب إدارة مناطق الخدمة صلاحية dsh.service_zones.manage."
+          code="DSH_SERVICE_ZONES_MANAGE_REQUIRED"
+        />
+      )}
     </View>
   );
 }

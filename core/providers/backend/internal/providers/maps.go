@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -254,7 +255,12 @@ func executeMapJSON(ctx context.Context, providerCode, endpoint string, params m
 	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Accept", "application/json")
 	applyAPIKey(nil, req.Header, creds)
-	client := &http.Client{Timeout: timeout}
+	client := &http.Client{
+		Timeout: timeout,
+		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
@@ -289,13 +295,35 @@ func supportsNominatim(provider ExternalProvider, params mapProviderParameters) 
 	return protocol == "nominatim" || code == "nominatim" || strings.Contains(code, "nominatim")
 }
 
+func configuredProviderOutboundHosts() map[string]struct{} {
+	hosts := map[string]struct{}{}
+	for _, value := range strings.Split(os.Getenv("PROVIDERS_OUTBOUND_ALLOWED_HOSTS"), ",") {
+		host := strings.ToLower(strings.TrimSpace(value))
+		if host != "" {
+			hosts[host] = struct{}{}
+		}
+	}
+	return hosts
+}
+
+func providerOutboundHostAllowed(host string) bool {
+	_, allowed := configuredProviderOutboundHosts()[strings.ToLower(strings.TrimSpace(host))]
+	return allowed
+}
+
 func mapEndpoint(baseURL, path string) (*url.URL, error) {
 	parsed, err := url.Parse(strings.TrimSpace(baseURL))
 	if err != nil || parsed.Host == "" || (parsed.Scheme != "https" && parsed.Scheme != "http") {
 		return nil, fmt.Errorf("invalid map provider baseUrl")
 	}
+	if parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return nil, fmt.Errorf("map provider baseUrl must not contain credentials, query parameters, or fragments")
+	}
 	if parsed.Scheme == "http" && parsed.Hostname() != "localhost" && parsed.Hostname() != "127.0.0.1" && parsed.Hostname() != "::1" {
 		return nil, fmt.Errorf("non-local map provider must use https")
+	}
+	if !providerOutboundHostAllowed(parsed.Hostname()) {
+		return nil, fmt.Errorf("map provider baseUrl host is not allowlisted")
 	}
 	parsed.Path = strings.TrimRight(parsed.Path, "/") + "/" + strings.TrimLeft(path, "/")
 	parsed.RawQuery = ""

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
 )
 
 // ProductProposalPatchOCCInput requires the caller to prove which proposal
@@ -89,95 +88,21 @@ func GetStoreAssortmentByKey(ctx context.Context, db *sql.DB, storeID, masterPro
 		FROM dsh_store_assortments WHERE store_id=$1 AND master_product_id=$2`, storeID, masterProductID))
 }
 
-// UpsertStoreAssortmentAtomic is create-only when expectedVersion is omitted,
-// and update-only when it is supplied. An existing row can never be overwritten
-// by a caller that did not read its current version first.
+// UpsertStoreAssortmentAtomic is the compatibility/OCC entry point used by the
+// existing operator, partner and field handlers. The implementation is
+// intentionally delegated to the sole runtime-truth writer so OCC semantics,
+// normalized price/inventory bootstrap, publication gating and metadata
+// updates cannot drift into a second source of truth.
 func UpsertStoreAssortmentAtomic(ctx context.Context, db *sql.DB, storeID, masterProductID, actorID string, input StoreAssortmentInput, allowCustomImage bool) (StoreAssortment, error) {
-	if strings.TrimSpace(storeID) == "" || strings.TrimSpace(masterProductID) == "" || input.UnitPrice < 0 {
-		return StoreAssortment{}, ErrInvalid
-	}
-	stockStatus := input.StockStatus
-	if stockStatus == "" {
-		stockStatus = "in_stock"
-	}
-	if !validStockStatus[stockStatus] {
-		return StoreAssortment{}, ErrInvalid
-	}
-	publicationStatus := input.PublicationStatus
-	if publicationStatus == "" {
-		publicationStatus = "draft"
-	}
-	if !validPublicationStatus[publicationStatus] {
-		return StoreAssortment{}, ErrInvalid
-	}
-	currency := strings.TrimSpace(input.Currency)
-	if currency == "" {
-		currency = "YER"
-	}
-	if input.CustomImageObjectKey != nil && strings.TrimSpace(*input.CustomImageObjectKey) != "" && !allowCustomImage {
-		return StoreAssortment{}, ErrForbidden
-	}
-	if publicationStatus == "client_visible" {
-		var masterImage *string
-		if err := db.QueryRowContext(ctx, `SELECT canonical_image_object_key FROM dsh_master_products WHERE id=$1`, masterProductID).Scan(&masterImage); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return StoreAssortment{}, ErrNotFound
-			}
-			return StoreAssortment{}, err
-		}
-		hasCustomImage := input.CustomImageObjectKey != nil && strings.TrimSpace(*input.CustomImageObjectKey) != ""
-		hasMasterImage := masterImage != nil && strings.TrimSpace(*masterImage) != ""
-		if !hasCustomImage && !hasMasterImage {
-			return StoreAssortment{}, fmt.Errorf("%w: cannot publish assortment without an approved image", ErrInvalid)
-		}
-	}
-
-	if input.ExpectedVersion == nil {
-		id := entityID("assortment")
-		row := db.QueryRowContext(ctx, `INSERT INTO dsh_store_assortments
-			(id, store_id, master_product_id, unit_price, currency, available, stock_status, local_note,
-			 custom_image_object_key, publication_status, submitted_by)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-			ON CONFLICT (store_id, master_product_id) DO NOTHING
-			RETURNING `+assortmentColumns,
-			id, storeID, masterProductID, input.UnitPrice, currency, input.Available, stockStatus,
-			input.LocalNote, input.CustomImageObjectKey, publicationStatus, actorID)
-		created, err := scanAssortment(row)
-		if !errors.Is(err, ErrNotFound) {
-			return created, err
-		}
-		current, currentErr := GetStoreAssortmentByKey(ctx, db, storeID, masterProductID)
-		if currentErr != nil {
-			return StoreAssortment{}, currentErr
-		}
-		return StoreAssortment{}, &ConflictError{
-			EntityID: current.ID, ExpectedVersion: nil, CurrentVersion: current.Version,
-			Message: "assortment already exists; expectedVersion is required",
-		}
-	}
-	if err := validateExpectedVersion(input.ExpectedVersion); err != nil {
-		return StoreAssortment{}, err
-	}
-
-	row := db.QueryRowContext(ctx, `UPDATE dsh_store_assortments SET
-		unit_price=$1, currency=$2, available=$3, stock_status=$4, local_note=$5,
-		custom_image_object_key=$6, publication_status=$7, submitted_by=$8,
-		updated_at=now(), version=version+1
-		WHERE store_id=$9 AND master_product_id=$10 AND version=$11
-		RETURNING `+assortmentColumns,
-		input.UnitPrice, currency, input.Available, stockStatus, input.LocalNote,
-		input.CustomImageObjectKey, publicationStatus, actorID, storeID, masterProductID, *input.ExpectedVersion)
-	updated, err := scanAssortment(row)
-	if !errors.Is(err, ErrNotFound) {
-		return updated, err
-	}
-	current, currentErr := GetStoreAssortmentByKey(ctx, db, storeID, masterProductID)
-	if currentErr != nil {
-		return StoreAssortment{}, currentErr
-	}
-	return StoreAssortment{}, &ConflictError{
-		EntityID: current.ID, ExpectedVersion: input.ExpectedVersion, CurrentVersion: current.Version, Message: "version mismatch",
-	}
+	return UpsertStoreAssortmentWithRuntimeTruth(
+		ctx,
+		db,
+		storeID,
+		masterProductID,
+		actorID,
+		input,
+		allowCustomImage,
+	)
 }
 
 // AssetUpdateOCCInput prevents two catalog operators from silently replacing

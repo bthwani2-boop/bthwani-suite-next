@@ -13,7 +13,7 @@ func ApplyPaymentOutcome(db *sql.DB, checkoutIntentID, status string) error {
 		return ErrInvalid
 	}
 	switch status {
-	case "captured", "cod_collected":
+	case "captured", "cod_finalized":
 		_, err := db.Exec(`UPDATE dsh_coupon_redemptions
 			SET reserved_until=GREATEST(reserved_until,NOW()+INTERVAL '24 hours'),updated_at=NOW()
 			WHERE checkout_intent_id=$1::uuid AND status='reserved'`, checkoutIntentID)

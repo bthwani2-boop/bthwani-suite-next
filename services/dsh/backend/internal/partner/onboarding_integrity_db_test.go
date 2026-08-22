@@ -122,13 +122,47 @@ func TestUpdatePartnerGovernedPersistsOnlyWltReferenceDBIntegration(t *testing.T
 	}
 }
 
-func TestCreateFieldVisitGovernedBindsFirstStoreDBIntegration(t *testing.T) {
+func TestClearOwnerPayoutDestinationProjectionUsesValidAbsentStateDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	partner := createPartnerFixture(t, db, "CLEAR-PAYOUT")
+	if _, err := db.Exec(`
+		UPDATE dsh_partners
+		SET payout_destination_id = 'wpd-clear-test',
+		    destination_method = 'official_wallet',
+		    masked_destination_reference = '******0001',
+		    destination_verification_status = 'verified'
+		WHERE id = $1`, partner.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := ClearOwnerPayoutDestinationProjection(context.Background(), db, partnerTestOperatorContextID, partner.OwnerActorID); err != nil {
+		t.Fatal(err)
+	}
+
+	var destinationID, method, masked, verificationStatus string
+	if err := db.QueryRow(`
+		SELECT payout_destination_id, destination_method,
+		       masked_destination_reference, destination_verification_status
+		FROM dsh_partners WHERE id = $1`, partner.ID).
+		Scan(&destinationID, &method, &masked, &verificationStatus); err != nil {
+		t.Fatal(err)
+	}
+	if destinationID != "" || method != "" || masked != "" {
+		t.Fatalf("absent payout projection retained data: id=%q method=%q masked=%q", destinationID, method, masked)
+	}
+	if verificationStatus != payoutDestinationVerificationStatusWhenAbsent {
+		t.Fatalf("absent payout verification status = %q, want %q", verificationStatus, payoutDestinationVerificationStatusWhenAbsent)
+	}
+}
+
+func TestCreateFieldVisitGovernedRequiresExplicitStoreIDDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	partner := createPartnerFixture(t, db, "VISIT-STORE")
 	wantStoreID := partnerStoreID(t, db, partner.ID)
 	visit, err := CreateFieldVisitGoverned(db, CreateFieldVisitInput{
 		PartnerID:    partner.ID,
 		FieldActorID: "field-local-001",
+		StoreID:      wantStoreID,
 		VisitNotes:   "evidence-bearing visit",
 	})
 	if err != nil {
@@ -136,6 +170,17 @@ func TestCreateFieldVisitGovernedBindsFirstStoreDBIntegration(t *testing.T) {
 	}
 	if visit.StoreID != wantStoreID {
 		t.Fatalf("field visit store = %q, want %q", visit.StoreID, wantStoreID)
+	}
+}
+
+func TestCreateFieldVisitGovernedRejectsMissingStoreID(t *testing.T) {
+	_, err := CreateFieldVisitGoverned(nil, CreateFieldVisitInput{
+		PartnerID:    "partner-under-test",
+		FieldActorID: "field-under-test",
+		VisitNotes:   "evidence-bearing visit",
+	})
+	if !errors.Is(err, ErrStoreIDRequired) {
+		t.Fatalf("expected explicit store id requirement, got %v", err)
 	}
 }
 

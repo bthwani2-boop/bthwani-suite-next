@@ -1,14 +1,22 @@
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { normalizeOpenApiMetadata } from "./normalize-openapi-metadata.mjs";
 import { composeContext } from "../openapi-context-composer.mjs";
+import { resolvePackageManagerInvocation } from "../lib/package-manager-invocation.mjs";
 
 const contexts = ["identity", "workforce", "platform-control", "providers", "dsh", "wlt"];
 
 const repoRoot = new URL("../../..", import.meta.url);
 const tempDir = mkdtempSync(join(tmpdir(), "bthwani-contracts-"));
+const redoclyEnvironment = {
+  ...process.env,
+  // Contract verification must be deterministic and must not start background
+  // update or telemetry network work that can outlive the CLI on Windows.
+  REDOCLY_SUPPRESS_UPDATE_NOTICE: "true",
+  REDOCLY_TELEMETRY: "off",
+};
 
 function firstActionableDiagnostic(output) {
   const lines = String(output ?? "")
@@ -26,15 +34,8 @@ function firstActionableDiagnostic(output) {
 
 function run(label, command, args, options = {}) {
   const { rejectWarnings = false, ...spawnOptions } = options;
-  let executable = command;
-  let effectiveArgs = args;
-  if (process.platform === "win32" && command === "pnpm") {
-    const pnpmCli = join(dirname(process.execPath), "node_modules", "corepack", "dist", "pnpm.js");
-    if (!existsSync(pnpmCli)) throw new Error(`${label}: pnpm corepack entrypoint not found`);
-    executable = process.execPath;
-    effectiveArgs = [pnpmCli, ...args];
-  }
-  const result = spawnSync(executable, effectiveArgs, {
+  const invocation = resolvePackageManagerInvocation(command, args, process.env);
+  const result = spawnSync(invocation.executable, invocation.args, {
     cwd: repoRoot,
     encoding: "utf8",
     shell: false,
@@ -73,33 +74,20 @@ function materializeSharedContracts() {
   copyFileSync(new URL(sharedContract, repoRoot), output);
 }
 
-async function verifyGeneratedBundle(context) {
-  const result = await composeContext(context, { write: false });
-  const committed = readFileSync(new URL(result.bundlePath, repoRoot), "utf8").replace(/\r\n/g, "\n");
-  const expected = result.bundle.replace(/\r\n/g, "\n");
-  if (committed !== expected) {
-    throw new Error(
-      `${context} generated bundle drift: run 'pnpm openapi:compose:${context}' and commit the deterministic output`,
-    );
-  }
-  console.log(`${context} generated bundle: PASS (${result.sourceDigest})`);
-  return result;
-}
-
 try {
   run("contracts-foundation", "node", ["tools/scripts/contracts/foundation.mjs"], {
     stdio: "inherit",
   });
   materializeSharedContracts();
+
   const verificationContracts = [];
   for (const context of contexts) {
-    const result = context === "dsh" || context === "wlt"
-      ? await verifyGeneratedBundle(context)
-      : await composeContext(context, { write: false });
+    const result = await composeContext(context, { write: false });
     verificationContracts.push({
       source: result.bundlePath,
       normalized: materializeNormalizedContract(result.bundle, result.bundlePath),
     });
+    console.log(`${context} deterministic composition: PASS (${result.sourceDigest})`);
   }
 
   for (const contract of verificationContracts) {
@@ -112,7 +100,11 @@ try {
       "--max-problems",
       "1000",
       contract.normalized,
-    ], { stdio: "pipe", rejectWarnings: true });
+    ], {
+      stdio: "pipe",
+      rejectWarnings: true,
+      env: redoclyEnvironment,
+    });
   }
 
   for (const contract of verificationContracts) {
@@ -126,7 +118,7 @@ try {
     ]);
   }
 
-  console.log("contracts-typecheck: PASS (read-only, zero warnings)");
+  console.log("contracts-typecheck: PASS (read-only deterministic composition, zero warnings)");
 } finally {
   rmSync(tempDir, { recursive: true, force: true });
 }

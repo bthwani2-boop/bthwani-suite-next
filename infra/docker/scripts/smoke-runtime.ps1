@@ -1,5 +1,5 @@
 param(
-  [string]$Profiles = "dsh,media"
+  [string]$Profiles = "dsh,media-storage"
 )
 
 $ErrorActionPreference = "Stop"

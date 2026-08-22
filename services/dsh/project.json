@@ -24,12 +24,9 @@
     },
     "test": {
       "executor": "nx:run-commands",
+      "dependsOn": ["build"],
       "options": {
-        "commands": [
-          "node tools/scripts/run-command-check.mjs --label dsh-build -- pnpm --dir services/dsh build",
-          "node tools/scripts/run-command-check.mjs --label dsh-contracts -- node --test services/dsh/tests/*.test.mjs"
-        ],
-        "parallel": false
+        "command": "node tools/scripts/run-command-check.mjs --label dsh-contracts -- pnpm --dir services/dsh test"
       }
     }
   },

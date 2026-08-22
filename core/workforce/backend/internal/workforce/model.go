@@ -1,15 +1,13 @@
 package workforce
 
-import (
-	"encoding/json"
-	"time"
-)
+import "time"
 
 // Person is the sovereign unified person profile. The workforce kind selects a
 // separate employee, captain or field projection. Independent providers are
 // not employees; compensation and all monetary truth are owned by WLT.
 type Person struct {
 	ActorID             string           `json:"actorId"`
+	OperatorContextID   string           `json:"operatorContextId"`
 	FullNameAr          string           `json:"fullNameAr"`
 	FullNameEn          string           `json:"fullNameEn,omitempty"`
 	WorkforceCode       string           `json:"workforceCode"`
@@ -29,7 +27,6 @@ type Person struct {
 type FieldProfile struct {
 	CityCode              string   `json:"cityCode,omitempty"`
 	ServiceZoneID         string   `json:"serviceZoneId,omitempty"`
-	ShiftCode             string   `json:"-"` // deprecated database compatibility only; field providers have no shifts
 	SupervisorActorID     string   `json:"supervisorActorId,omitempty"`
 	EmergencyContactName  string   `json:"emergencyContactName,omitempty"`
 	EmergencyContactPhone string   `json:"emergencyContactPhone,omitempty"`
@@ -63,11 +60,11 @@ type EmployeeProfile struct {
 type CreateFieldAgentInput struct {
 	FullNameAr          string   `json:"fullNameAr"`
 	FullNameEn          string   `json:"fullNameEn"`
-	ActorID             string   `json:"actorId"`
+	Username            string   `json:"username"`
+	PhoneE164           string   `json:"phoneE164"`
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
 	ServiceZoneID       string   `json:"serviceZoneId"`
-	ShiftCode           string   `json:"-"` // ignored compatibility slot; never accepted from API
 	SupervisorActorID   string   `json:"supervisorActorId"`
 	PhotoMediaRef       string   `json:"photoMediaRef"`
 	DocumentMediaRefs   []string `json:"documentMediaRefs"`
@@ -76,7 +73,8 @@ type CreateFieldAgentInput struct {
 type CreateCaptainInput struct {
 	FullNameAr          string   `json:"fullNameAr"`
 	FullNameEn          string   `json:"fullNameEn"`
-	ActorID             string   `json:"actorId"`
+	Username            string   `json:"username"`
+	PhoneE164           string   `json:"phoneE164"`
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
 	PhotoMediaRef       string   `json:"photoMediaRef"`
@@ -97,7 +95,6 @@ type UpdateFieldAgentInput struct {
 	EngagementType      *string `json:"engagementType"`
 	EngagementStartDate *string `json:"engagementStartDate"`
 	ServiceZoneID       *string `json:"serviceZoneId"`
-	ShiftCode           *string `json:"-"` // ignored compatibility slot; never accepted from API
 	SupervisorActorID   *string `json:"supervisorActorId"`
 	PhotoMediaRef       *string `json:"photoMediaRef"`
 }
@@ -121,7 +118,8 @@ type UpdateCaptainInput struct {
 type CreateEmployeeInput struct {
 	FullNameAr          string   `json:"fullNameAr"`
 	FullNameEn          string   `json:"fullNameEn"`
-	ActorID             string   `json:"actorId"`
+	Username            string   `json:"username"`
+	PhoneE164           string   `json:"phoneE164"`
 	EngagementType      string   `json:"engagementType"`
 	EngagementStartDate string   `json:"engagementStartDate"`
 	PhotoMediaRef       string   `json:"photoMediaRef"`
@@ -130,6 +128,7 @@ type CreateEmployeeInput struct {
 	OfficeLocation      string   `json:"officeLocation"`
 	SupervisorActorID   string   `json:"supervisorActorId"`
 	DocumentMediaRefs   []string `json:"documentMediaRefs"`
+	PermissionBundle    string   `json:"-"`
 }
 
 type UpdateEmployeeInput struct {
@@ -222,51 +221,36 @@ type ActorScopes struct {
 	PartnerIDs        []string `json:"partnerIds"`
 	ShiftCodes        []string `json:"shiftCodes"`
 }
-type ProvisioningCase struct {
-	ID             string          `json:"id"`
-	IdempotencyKey string          `json:"idempotencyKey"`
-	Status         string          `json:"status"`
-	WorkforceKind  string          `json:"workforceKind"`
-	ActorID        string          `json:"actorId,omitempty"`
-	WorkforceCode  string          `json:"workforceCode,omitempty"`
-	Payload        json.RawMessage `json:"payload"`
-	FailureReason  string          `json:"failureReason,omitempty"`
-	CreatedAt      time.Time       `json:"createdAt"`
-	UpdatedAt      time.Time       `json:"updatedAt"`
-}
 
-type StartProvisioningInput struct {
-	WorkforceKind string          `json:"workforceKind"`
-	Payload       json.RawMessage `json:"payload"`
-}
-// BlockerReason represents a specific reason why an actor is blocked from operations.
-type BlockerReason string
+// CurrentProviderReadinessBlockerReason is restricted to facts owned by Workforce (plus Identity
+// lifecycle, which Workforce reads as a dependency). DSH assignment/area and
+// WLT financial reasons are intentionally not representable here; cross-service
+// journeys must compose those authorities at their own boundary.
+type CurrentProviderReadinessBlockerReason string
 
 const (
-	BlockerIdentitySuspended      BlockerReason = "IDENTITY_SUSPENDED"
-	BlockerProfileIncomplete      BlockerReason = "PROFILE_INCOMPLETE"
-	BlockerDocumentsExpired       BlockerReason = "DOCUMENTS_EXPIRED"
-	BlockerEmploymentTerminated   BlockerReason = "EMPLOYMENT_TERMINATED"
-	BlockerNoActiveAssignment     BlockerReason = "NO_ACTIVE_ASSIGNMENT"
-	BlockerShiftInactive          BlockerReason = "SHIFT_INACTIVE"
-	BlockerOutsideActiveArea      BlockerReason = "OUTSIDE_ACTIVE_AREA"
-	BlockerFinancialEligibility   BlockerReason = "FINANCIAL_ELIGIBILITY_BLOCKED"
-	BlockerEligibilityUnavailable BlockerReason = "ELIGIBILITY_UNAVAILABLE"
+	CurrentProviderBlockerIdentitySuspended  CurrentProviderReadinessBlockerReason = "IDENTITY_SUSPENDED"
+	CurrentProviderBlockerProfileIncomplete  CurrentProviderReadinessBlockerReason = "PROFILE_INCOMPLETE"
+	CurrentProviderBlockerDocumentsExpired   CurrentProviderReadinessBlockerReason = "DOCUMENTS_EXPIRED"
+	CurrentProviderBlockerEngagementInactive CurrentProviderReadinessBlockerReason = "ENGAGEMENT_INACTIVE"
 )
 
-// ReadinessStatus indicates the overall operational readiness.
-type ReadinessStatus string
+// CurrentProviderReadinessStatus indicates the Workforce-owned current
+// provider decision. Dependency outages are errors, not BLOCKED decisions.
+type CurrentProviderReadinessStatus string
 
 const (
-	ReadinessAllowed ReadinessStatus = "ALLOWED"
-	ReadinessBlocked ReadinessStatus = "BLOCKED"
+	CurrentProviderReadinessAllowed CurrentProviderReadinessStatus = "ALLOWED"
+	CurrentProviderReadinessBlocked CurrentProviderReadinessStatus = "BLOCKED"
 )
 
-// ReadinessGate aggregates readiness from Identity, Workforce, DSH, and Finance.
-type ReadinessGate struct {
-	ActorID        string          `json:"actorId"`
-	WorkforceKind  string          `json:"workforceKind"`
-	Status         ReadinessStatus `json:"status"`
-	BlockerReasons []BlockerReason `json:"blockerReasons"`
-	CheckedAt      time.Time       `json:"checkedAt"`
+// CurrentProviderReadiness is the canonical Workforce-owned current provider decision.
+// It evaluates Identity lifecycle + Workforce engagement/profile only. It must
+// never fabricate DSH assignment/area state or WLT financial state.
+type CurrentProviderReadiness struct {
+	ActorID        string                                  `json:"actorId"`
+	WorkforceKind  string                                  `json:"workforceKind"`
+	Status         CurrentProviderReadinessStatus          `json:"status"`
+	BlockerReasons []CurrentProviderReadinessBlockerReason `json:"blockerReasons"`
+	CheckedAt      time.Time                               `json:"checkedAt"`
 }

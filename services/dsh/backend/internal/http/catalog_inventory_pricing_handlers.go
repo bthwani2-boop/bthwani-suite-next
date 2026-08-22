@@ -59,7 +59,7 @@ func (s *protectedStoreServer) upsertAssortmentInventory(w http.ResponseWriter, 
 		return
 	}
 
-	inv, err := centralcatalog.UpsertAssortmentInventoryAtomic(r.Context(), s.db, storeID, masterProductID, actorID, input)
+	inv, err := centralcatalog.UpsertAssortmentInventoryWithRuntimeTruthAtomic(r.Context(), s.db, storeID, masterProductID, actorID, input)
 	if err != nil {
 		s.writeCatalogMutationError(w, err)
 		return

@@ -12,7 +12,6 @@ import {
 import { ActorWalletPanel } from "../actor-wallet";
 import { RepresentativeCommissionPanel } from "../commissions";
 import { PayoutDestinationPanel } from "../payouts";
-import { PartnerCodCustodyPanel } from "../wlt-cod/PartnerCodCustodyPanel";
 
 export type WltDshPartnerBridgeProps = {
   readonly title?: string | undefined;
@@ -44,7 +43,7 @@ export function WltDshPartnerBridge({
 }: WltDshPartnerBridgeProps) {
   const resolvedTitle = title ?? branchLabel ?? "مالية الشريك";
   const resolvedSubtitle =
-    subtitle ?? activeZoneLabel ?? "المحفظة والتسويات وعهدة COD من WLT";
+    subtitle ?? activeZoneLabel ?? "المحفظة والتسويات من WLT";
   const resolvedOnPress = onPress ?? onBack;
   const theme = useTheme() as any;
   const styles = React.useMemo(
@@ -102,7 +101,6 @@ export function WltDshPartnerBridge({
         </Pressable>
       ) : null}
 
-      <PartnerCodCustodyPanel />
       <ActorWalletPanel actorType="partner" title="محفظة الشريك" embedded />
       <RepresentativeCommissionPanel
         actorType="partner"

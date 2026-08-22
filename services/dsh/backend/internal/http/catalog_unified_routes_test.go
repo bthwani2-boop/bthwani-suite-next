@@ -28,7 +28,6 @@ func TestUnifiedCatalogRoutesAreRegistered(t *testing.T) {
 		{http.MethodPost, "/dsh/operator/catalog/master-products", "POST /dsh/operator/catalog/master-products"},
 		{http.MethodPatch, "/dsh/operator/catalog/master-products/product-1", "PATCH /dsh/operator/catalog/master-products/{productId}"},
 		{http.MethodGet, "/dsh/operator/catalog/product-proposals", "GET /dsh/operator/catalog/product-proposals"},
-		{http.MethodPost, "/dsh/operator/catalog/product-proposals/proposal-1/decision", "POST /dsh/operator/catalog/product-proposals/{proposalId}/decision"},
 		{http.MethodPost, "/dsh/operator/catalog/product-proposals/proposal-1/transition", "POST /dsh/operator/catalog/product-proposals/{proposalId}/transition"},
 		{http.MethodGet, "/dsh/operator/catalog/platform-policies", "GET /dsh/operator/catalog/platform-policies"},
 		{http.MethodPatch, "/dsh/operator/catalog/platform-policies/policy-1", "PATCH /dsh/operator/catalog/platform-policies/{policyId}"},
@@ -75,6 +74,24 @@ func TestUnifiedCatalogRoutesAreRegistered(t *testing.T) {
 			_, pattern := mux.Handler(req)
 			if pattern != tc.pattern {
 				t.Fatalf("route mismatch: got %q, want %q", pattern, tc.pattern)
+			}
+		})
+	}
+}
+
+func TestRemovedCatalogDecisionRoutesAreNotRegistered(t *testing.T) {
+	t.Parallel()
+
+	mux := NewRouter(nil, nil, nil, nil, nil, nil)
+	for _, path := range []string{
+		"/dsh/operator/catalog/product-proposals/proposal-1/decision",
+		"/dsh/catalog/proposals/proposal-1/decision",
+	} {
+		t.Run(path, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodPost, path, nil)
+			_, pattern := mux.Handler(req)
+			if pattern != "" {
+				t.Fatalf("removed catalog decision route is still registered: path=%q pattern=%q", path, pattern)
 			}
 		})
 	}

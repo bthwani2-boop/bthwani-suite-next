@@ -89,7 +89,7 @@ func employeeDshPermissions(bundle string) []Permission {
 			"dsh.fulfillment_sla.read", "dsh.fulfillment_sla.manage",
 			"dsh.dispatch_capacity.read", "dsh.dispatch_capacity.manage",
 			"dsh.dispatch_financial_eligibility.read", "dsh.dispatch_financial_eligibility.manage",
-			"dsh.operational_policy.audit.read", "dsh.operational_policy.rollback",
+			"dsh.operational_policy.audit.read", "dsh.operational_policy.evaluate", "dsh.operational_policy.rollback",
 			"operations.special_requests.read", "operations.special_requests.transition", "operations.special_requests.dispatch",
 			"support.read", "support.manage",
 			"administration.read", "administration.manage",
@@ -107,6 +107,7 @@ func employeeDshPermissions(bundle string) []Permission {
 			"dsh.dispatch_capacity.read",
 			"dsh.dispatch_financial_eligibility.read",
 			"dsh.operational_policy.audit.read",
+			"dsh.operational_policy.evaluate",
 		)
 	case EmployeeBundleOperationsManager:
 		return grant(
@@ -116,6 +117,7 @@ func employeeDshPermissions(bundle string) []Permission {
 			"dsh.dispatch_capacity.read", "dsh.dispatch_capacity.manage",
 			"dsh.dispatch_financial_eligibility.read", "dsh.dispatch_financial_eligibility.manage",
 			"dsh.operational_policy.audit.read",
+			"dsh.operational_policy.evaluate",
 			"operations.special_requests.read", "operations.special_requests.transition", "operations.special_requests.dispatch",
 			"analytics.read",
 		)
@@ -232,6 +234,13 @@ func mergeEmployeeRoles(existing []string, bundle string) []string {
 	if bundle != EmployeeBundleStaff && !hasRole(result, "workforce.supervise.employee") {
 		result = append(result, "workforce.supervise.employee")
 	}
+	if bundle == EmployeeBundleOperationsManager || bundle == EmployeeBundlePlatformOwner {
+		for _, required := range []string{"workforce.supervise.field", "workforce.supervise.captain"} {
+			if !hasRole(result, required) {
+				result = append(result, required)
+			}
+		}
+	}
 	return result
 }
 
@@ -300,12 +309,27 @@ func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvis
 	}
 	defer tx.Rollback() //nolint:errcheck
 
-	_, err = actorByPhoneAnyRoleTx(ctx, tx, phone)
+	existing, err := actorByPhoneAnyRoleTx(ctx, tx, phone)
 	if err == nil {
-		return ActorAdminView{}, ErrPhoneAlreadyBound
+		if existing.Username != username || existing.OperatorContextID != operatorContextID || !hasRole(existing.Roles, "employee") {
+			return ActorAdminView{}, ErrPhoneAlreadyBound
+		}
+		if !samePermissionSet(existing.Permissions, permissions) {
+			return ActorAdminView{}, ErrProvisionConflict
+		}
+		view := toAdminView(existing)
+		return view, nil
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
 		return ActorAdminView{}, err
+	}
+	if existingUsername, usernameErr := actorByUsernameForUpdateTx(ctx, tx, strings.ToLower(username)); usernameErr == nil {
+		if existingUsername.PhoneE164 != phone || existingUsername.OperatorContextID != operatorContextID {
+			return ActorAdminView{}, ErrUsernameTaken
+		}
+		return ActorAdminView{}, ErrProvisionConflict
+	} else if !errors.Is(usernameErr, sql.ErrNoRows) {
+		return ActorAdminView{}, usernameErr
 	}
 
 	suffix, err := randomToken(9)
@@ -329,7 +353,23 @@ func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvis
 	if err := tx.Commit(); err != nil {
 		return ActorAdminView{}, err
 	}
-	return ActorAdminView{ActorID: actorID, Username: username, PhoneE164: phone, Roles: roles, Status: ActorStatusProvisioned, Version: 1}, nil
+	return ActorAdminView{ActorID: actorID, Username: username, PhoneE164: phone, Roles: roles, Status: ActorStatusProvisioned, Version: 1, Created: true}, nil
+}
+
+func samePermissionSet(left, right []Permission) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	seen := make(map[string]struct{}, len(left))
+	for _, permission := range left {
+		seen[permissionIdentityKey(permission)] = struct{}{}
+	}
+	for _, permission := range right {
+		if _, ok := seen[permissionIdentityKey(permission)]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 // BootstrapSovereignLeadershipAccess upgrades only the explicit local operator

@@ -2,7 +2,6 @@
 // Screen for managing governed field visits and GPS evidence.
 import React, { useCallback, useMemo, useState } from "react";
 import { StyleSheet, View, ScrollView } from "react-native";
-import * as Location from "expo-location";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
@@ -28,6 +27,7 @@ import {
   DshFieldProblemNotice,
   DshFieldProblemState,
 } from "../components/DshFieldProblemNotice";
+import { getDshLocationAdapter } from "../../shared/mobile-capabilities";
 
 type Props = {
   readonly storeId: string;
@@ -60,13 +60,14 @@ function rejectLocation(code: string, message?: string): never {
 }
 
 async function captureGovernedLocation(): Promise<DshLocationEvidence> {
-  const services = await Location.hasServicesEnabledAsync();
+  const location = getDshLocationAdapter();
+  const services = await location.hasServicesEnabled();
   if (!services) rejectLocation("LOCATION_SERVICES_DISABLED");
 
-  const permission = await Location.requestForegroundPermissionsAsync();
-  if (permission.status !== "granted") rejectLocation("LOCATION_PERMISSION_DENIED");
+  const permission = await location.requestForegroundPermissions();
+  if (!permission.granted) rejectLocation("LOCATION_PERMISSION_DENIED");
 
-  const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+  const position = await location.getCurrentPosition();
   if (position.mocked === true) rejectLocation("LOCATION_MOCKED");
 
   const { latitude, longitude, accuracy } = position.coords;

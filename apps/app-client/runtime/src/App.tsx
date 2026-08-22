@@ -2,8 +2,14 @@ import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
-import { DshClientSurface } from "../../../../services/dsh/frontend/app-client";
-import { ClientOrderRatingGate } from "../../../../services/dsh/frontend/app-client/ratings/ClientOrderRatingGate";
+import {
+  ClientOrderRatingGate,
+  DshClientSurface,
+  IdentitySessionGate,
+  useDshMobilePushRegistration,
+  type DshClientNavigation,
+  type DshClientRoute,
+} from "@bthwani/dsh/app-client";
 import {
   configureIdentityDeviceFingerprintProvider,
   configureIdentitySession,
@@ -12,10 +18,7 @@ import {
   resolveIdentityApiBaseUrl,
   useIdentitySession,
 } from "@bthwani/core-identity";
-import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
-import { useDshMobilePushRegistration } from "../../../../services/dsh/frontend/shared/notifications/use-mobile-push-registration";
-
-const CLIENT_DEVICE_FINGERPRINT_KEY = "bthwani.client.device-fingerprint.v1";
+import { getOrCreateClientDeviceFingerprint } from "./config/client-device-fingerprint";
 
 function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   return {
@@ -25,41 +28,41 @@ function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   };
 }
 
-async function getOrCreateClientDeviceFingerprint(): Promise<string> {
-  const existing = await SecureStore.getItemAsync(CLIENT_DEVICE_FINGERPRINT_KEY);
-  if (existing?.trim()) return existing;
-  const created = `client-device:${Crypto.randomUUID()}`;
-  await SecureStore.setItemAsync(CLIENT_DEVICE_FINGERPRINT_KEY, created);
-  return created;
-}
-
 if (Platform.OS !== "web") {
   configureIdentitySessionStorage(createSecureStoreSessionStorageAdapter());
-  configureIdentityDeviceFingerprintProvider(getOrCreateClientDeviceFingerprint);
+  configureIdentityDeviceFingerprintProvider(() =>
+    getOrCreateClientDeviceFingerprint(
+      {
+        getItem: (key) => SecureStore.getItemAsync(key),
+        setItem: (key, value) => SecureStore.setItemAsync(key, value),
+      },
+      () => Crypto.randomUUID(),
+    ),
+  );
 }
 configureIdentitySession(resolveIdentityApiBaseUrl());
 
-function AppContent() {
+export type ClientAppProps = {
+  readonly route: DshClientRoute;
+  readonly navigation: DshClientNavigation;
+};
+
+function AppContent({ route, navigation }: ClientAppProps) {
   const identity = useIdentitySession();
   useDshMobilePushRegistration(identity.state.kind, "app-client", "bthwani-client-next");
-
   return (
     <View style={styles.root}>
       <IdentitySessionGate requiredRole="client" requiredSurface="app-client">
         <ClientOrderRatingGate>
-          <DshClientSurface />
+          <DshClientSurface route={route} navigation={navigation} />
         </ClientOrderRatingGate>
       </IdentitySessionGate>
     </View>
   );
 }
 
-export default function App() {
-  return <AppContent />;
+export default function App(props: ClientAppProps) {
+  return <AppContent {...props} />;
 }
 
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-});
+const styles = StyleSheet.create({ root: { flex: 1 } });

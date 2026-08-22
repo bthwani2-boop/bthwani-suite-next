@@ -36,7 +36,46 @@ function errorMessage(error: unknown, fallback: string): string {
 
 function formatDate(value: string): string {
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString("ar");
+  return Number.isNaN(date.getTime())
+    ? value
+    : date.toLocaleDateString("ar-YE", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+}
+
+function formatDeviceName(fingerprint: string | undefined, isCurrent: boolean): string {
+  if (isCurrent) return "هذا الجهاز (الجلسة الحالية)";
+  if (!fingerprint || fingerprint.trim() === "") return "هاتف ذكي";
+  const lower = fingerprint.toLowerCase();
+  if (
+    lower.includes("cart-diagnose") ||
+    lower.includes("runtime-multisurface") ||
+    lower.includes("u001-") ||
+    lower.includes("dsh-")
+  ) {
+    return "جلسة متصلة سابقة";
+  }
+  if (
+    lower.includes("client-device") ||
+    lower.includes("android") ||
+    lower.includes("iphone") ||
+    lower.includes("mobile")
+  ) {
+    return "هاتف ذكي (تطبيق العميل)";
+  }
+  if (
+    lower.includes("web") ||
+    lower.includes("browser") ||
+    lower.includes("chrome") ||
+    lower.includes("safari")
+  ) {
+    return "متصفح الويب";
+  }
+  return "هاتف محمول";
 }
 
 export function IdentityHubScreen({ onBack, onDeleteAccount }: IdentityHubScreenProps) {
@@ -64,11 +103,17 @@ export function IdentityHubScreen({ onBack, onDeleteAccount }: IdentityHubScreen
     setSessionsMessage("");
     try {
       const current = await listSessions();
-      setSessions(current);
+      // Filter out invalid/expired sessions
+      const now = Date.now();
+      const valid = current.filter((s) => {
+        const exp = new Date(s.expiresAt).getTime();
+        return Number.isNaN(exp) || exp > now;
+      });
+      setSessions(valid);
       setSessionsState("idle");
     } catch (error) {
       setSessionsState("error");
-      setSessionsMessage(errorMessage(error, "تعذر تحميل الجلسات النشطة."));
+      setSessionsMessage(errorMessage(error, "تعذر تحميل الأجهزة المتصلة."));
     }
   }, [listSessions, sessionState]);
 
@@ -79,7 +124,7 @@ export function IdentityHubScreen({ onBack, onDeleteAccount }: IdentityHubScreen
   if (sessionState.kind !== "authenticated") {
     return (
       <ScrollScreen>
-        <Header title="الهوية والجلسات" subtitle="يلزم تسجيل الدخول لعرض بيانات الحساب." />
+        <Header title="الأمان والحساب" subtitle="يلزم تسجيل الدخول لعرض بيانات الحساب." />
       </ScrollScreen>
     );
   }
@@ -101,9 +146,9 @@ export function IdentityHubScreen({ onBack, onDeleteAccount }: IdentityHubScreen
       await changePassword(password);
       setPassword("");
       setConfirmPassword("");
-      setPasswordMessage("تم تغيير كلمة المرور.");
+      setPasswordMessage("تم حفظ كلمة المرور بنجاح.");
     } catch (error) {
-      setPasswordMessage(errorMessage(error, "تعذر تغيير كلمة المرور."));
+      setPasswordMessage(errorMessage(error, "تعذر حفظ كلمة المرور."));
     } finally {
       setPasswordSaving(false);
     }
@@ -113,9 +158,11 @@ export function IdentityHubScreen({ onBack, onDeleteAccount }: IdentityHubScreen
     setSessionsMessage("");
     try {
       await revokeSession(sessionId);
-      if (sessionId !== identity.sessionId) await refreshSessions();
+      if (sessionId !== identity.sessionId) {
+        await refreshSessions();
+      }
     } catch (error) {
-      setSessionsMessage(errorMessage(error, "تعذر سحب الجلسة."));
+      setSessionsMessage(errorMessage(error, "تعذر إنهاء الجلسة."));
     }
   };
 
@@ -136,33 +183,25 @@ export function IdentityHubScreen({ onBack, onDeleteAccount }: IdentityHubScreen
 
   return (
     <ScrollScreen>
-      <Header title="الهوية والجلسات" subtitle="بيانات الهوية السيادية والتحكم في الوصول" />
+      <Header title="الأمان والحساب" subtitle="إدارة بيانات الدخول والأجهزة المتصلة" />
       <View style={styles.container}>
         {onBack ? <Button label="رجوع" tone="ghost" onPress={onBack} /> : null}
 
         <Card style={styles.card}>
-          <Text role="titleMd" style={styles.sectionTitle}>بيانات الهوية</Text>
-          <View style={styles.detailRow}>
-            <Text role="caption" tone="muted">المعرّف</Text>
-            <Text role="body">{identity.subject}</Text>
-          </View>
+          <Text role="titleMd" style={styles.sectionTitle}>بيانات الحساب</Text>
           <View style={styles.detailRow}>
             <Text role="caption" tone="muted">رقم الهاتف</Text>
-            <Text role="body">{identity.phoneE164}</Text>
+            <Text role="body">{identity.phoneE164 || "غير مسجل"}</Text>
           </View>
           <View style={styles.detailRow}>
-            <Text role="caption" tone="muted">الأدوار</Text>
-            <Text role="body">{identity.roles.join("، ")}</Text>
-          </View>
-          <View style={styles.detailRow}>
-            <Text role="caption" tone="muted">انتهاء الجلسة الحالية</Text>
-            <Text role="body">{formatDate(identity.expiresAt)}</Text>
+            <Text role="caption" tone="muted">حالة الحساب</Text>
+            <Text role="body" style={styles.statusActive}>نشط وموثق</Text>
           </View>
         </Card>
 
         <Card style={styles.card}>
           <View style={styles.cardHeader}>
-            <Text role="titleMd" style={styles.sectionTitle}>الجلسات النشطة</Text>
+            <Text role="titleMd" style={styles.sectionTitle}>الأجهزة المتصلة</Text>
             <Button
               label={sessionsState === "loading" ? "جاري التحديث" : "تحديث"}
               tone="ghost"
@@ -172,7 +211,7 @@ export function IdentityHubScreen({ onBack, onDeleteAccount }: IdentityHubScreen
           </View>
 
           {sessions.length === 0 && sessionsState !== "loading" ? (
-            <Text role="body" tone="muted" style={styles.message}>لا توجد جلسات نشطة أخرى.</Text>
+            <Text role="body" tone="muted" style={styles.message}>لا توجد أجهزة متصلة أخرى.</Text>
           ) : null}
 
           {sessions.map((session) => {
@@ -181,17 +220,14 @@ export function IdentityHubScreen({ onBack, onDeleteAccount }: IdentityHubScreen
               <View key={session.sessionId} style={styles.sessionRow}>
                 <View style={styles.sessionInfo}>
                   <Text role="body" style={styles.sessionTitle}>
-                    {isCurrent ? "هذه الجلسة" : session.deviceFingerprint || "جهاز غير مسمى"}
+                    {formatDeviceName(session.deviceFingerprint, isCurrent)}
                   </Text>
                   <Text role="caption" tone="muted">
-                    أُنشئت: {formatDate(session.createdAt)}
-                  </Text>
-                  <Text role="caption" tone="muted">
-                    تنتهي: {formatDate(session.expiresAt)}
+                    آخر تسجيل: {formatDate(session.createdAt)}
                   </Text>
                 </View>
                 <Button
-                  label={isCurrent ? "تسجيل الخروج" : "سحب الجلسة"}
+                  label={isCurrent ? "تسجيل الخروج" : "إنهاء الجلسة"}
                   tone={isCurrent ? "secondary" : "danger"}
                   onPress={() => revoke(session.sessionId)}
                 />
@@ -205,7 +241,7 @@ export function IdentityHubScreen({ onBack, onDeleteAccount }: IdentityHubScreen
         </Card>
 
         <Card style={styles.card}>
-          <Text role="titleMd" style={styles.sectionTitle}>تغيير كلمة المرور</Text>
+          <Text role="titleMd" style={styles.sectionTitle}>كلمة المرور والأمان</Text>
           <TextField
             value={password}
             onChangeText={setPassword}
@@ -219,7 +255,7 @@ export function IdentityHubScreen({ onBack, onDeleteAccount }: IdentityHubScreen
             secureTextEntry
           />
           <Button
-            label={passwordSaving ? "جاري الحفظ" : "حفظ كلمة المرور"}
+            label={passwordSaving ? "جاري الحفظ" : "تحديث كلمة المرور"}
             tone="primary"
             disabled={passwordSaving}
             onPress={savePassword}
@@ -232,7 +268,7 @@ export function IdentityHubScreen({ onBack, onDeleteAccount }: IdentityHubScreen
         <Card style={[styles.card, styles.dangerCard]}>
           <Text role="titleMd" style={styles.dangerTitle}>حذف الحساب</Text>
           <Text role="body" style={styles.dangerText}>
-            سيُخفى الحساب وتُسحب جلساته وتُنشأ عملية الحذف في outbox. اكتب «حذف» للتأكيد.
+            عند تأكيد حذف الحساب، سيتم إغلاق حسابك نهائياً وإنهاء كافة الجلسات النشطة وحذف بياناتك وفقاً لسياسة الخصوصية. اكتب كلمة «حذف» للمتابعة.
           </Text>
           <TextField
             value={deleteConfirm}
@@ -240,7 +276,7 @@ export function IdentityHubScreen({ onBack, onDeleteAccount }: IdentityHubScreen
             placeholder="اكتب حذف"
           />
           <Button
-            label={deleting ? "جاري الحذف" : "حذف الحساب"}
+            label={deleting ? "جاري الحذف" : "حذف الحساب نهائياً"}
             tone="danger"
             disabled={deleting || deleteConfirm !== "حذف"}
             onPress={removeAccount}
@@ -276,6 +312,9 @@ const styles = StyleSheet.create({
   detailRow: {
     gap: spacing[1],
     alignItems: "flex-end",
+  },
+  statusActive: {
+    color: colorRoles.brandAction,
   },
   sessionRow: {
     flexDirection: "row-reverse",

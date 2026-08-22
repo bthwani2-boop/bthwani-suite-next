@@ -156,7 +156,12 @@ func ProcessPushOnce(ctx context.Context, db *sql.DB, provider PushProvider, ver
 				// For critical OTP pushes or in general, verify session if a verifier is provided
 				if verifier != nil && ep.IdentitySessionID != "" {
 					valid, vErr := verifier.IsSessionValid(ctx, delivery.ActorID, ep.IdentitySessionID)
-					if vErr == nil && !valid {
+					if vErr != nil {
+						tokens = nil
+						err = fmt.Errorf("session verification failed for %s: %w", ep.ID, vErr)
+						break
+					}
+					if !valid {
 						// Deactivate the token locally
 						_ = deactivatePushEndpointByID(db, ep.ID)
 						continue

@@ -22,7 +22,7 @@ func TestHealthReturnsOnlyMapProviderState(t *testing.T) {
 	}))
 	defer server.Close()
 
-	snapshot, err := NewClient(server.URL, nil).Health(context.Background(), "Bearer operator")
+	snapshot, err := NewClient(server.URL).Health(context.Background(), "Bearer operator")
 	if err != nil {
 		t.Fatalf("Health() error = %v", err)
 	}
@@ -45,7 +45,7 @@ func TestProviderTimeoutIsClassifiedSeparately(t *testing.T) {
 }
 
 func TestHealthFailsClosedWhenRuntimeIsNotConfigured(t *testing.T) {
-	snapshot, err := NewClient("", nil).Health(context.Background(), "")
+	snapshot, err := NewClient("").Health(context.Background(), "")
 	if !errors.Is(err, ErrNotConfigured) || snapshot.Configured || snapshot.Status != "not_configured" {
 		t.Fatalf("snapshot=%+v error=%v", snapshot, err)
 	}

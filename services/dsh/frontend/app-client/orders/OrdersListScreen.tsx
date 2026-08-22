@@ -60,7 +60,9 @@ function shareableOrderSummary(order: OrderTruth): string {
 
 type Props = {
   readonly onOpenOrder?: (orderId: string) => void;
+  readonly onOpenSpecialRequests?: () => void;
   readonly onBack?: () => void;
+  readonly onOpenNotifications?: () => void;
 };
 
 function OrderCard({ order, onOpenOrder }: { order: OrderTruth; onOpenOrder?: (id: string) => void }) {
@@ -161,12 +163,43 @@ function OrderCard({ order, onOpenOrder }: { order: OrderTruth; onOpenOrder?: (i
   );
 }
 
-export function OrdersListScreen({ onOpenOrder, onBack }: Props) {
+export function OrdersListScreen({ onOpenOrder, onOpenSpecialRequests, onBack, onOpenNotifications }: Props) {
   const { state, reload } = useOrderTruthCollectionController("client", { limit: 100 });
   const visibleOrders = state.kind === "success" || state.kind === "partial" ? state.orders : [];
   return (
     <View style={styles.container}>
-      <TopBar title="طلباتي" {...(onBack ? { onBack } : {})} />
+      <TopBar
+        title="طلباتي"
+        {...(onBack ? { onBack } : {})}
+        rightSlot={
+          onOpenNotifications ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="الإشعارات"
+              onPress={onOpenNotifications}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: colorRoles.surfaceMuted,
+              }}
+            >
+              <Icon name="notifications-outline" size={20} color={colorRoles.textPrimary} />
+            </Pressable>
+          ) : undefined
+        }
+      />
+      {onOpenSpecialRequests ? (
+        <View style={styles.specialRequestsHeader}>
+          <Button
+            label="تصفح طلباتك الخاصة (طلبات التوصيل الخاص وشي إن)"
+            tone="secondary"
+            onPress={onOpenSpecialRequests}
+          />
+        </View>
+      ) : null}
       {state.kind === "idle" || state.kind === "loading" ? (
         <View style={styles.center}><Text role="body">جارٍ تحميل حقيقة طلباتك من DSH…</Text></View>
       ) : state.kind === "offline" || state.kind === "forbidden" || state.kind === "error" ? (
@@ -199,6 +232,7 @@ export function OrdersListScreen({ onOpenOrder, onBack }: Props) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colorRoles.surfaceWarm },
   scrollContent: { paddingBottom: spacing[12] },
+  specialRequestsHeader: { padding: spacing[4], backgroundColor: colorRoles.surfaceBase, borderBottomWidth: 1, borderBottomColor: colorRoles.borderSubtle },
   center: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing[6], gap: spacing[2] },
   retryButton: { marginTop: spacing[4] },
   warningText: { color: colorRoles.warning },

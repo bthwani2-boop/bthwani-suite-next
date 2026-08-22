@@ -23,12 +23,13 @@ describe("authenticated WLT runtime smoke", () => {
     assert.match(phase, /Authenticated WLT runtime smoke failed with exit code/);
   });
 
-  it("requires the governed DSH service identity and its trusted operator context", () => {
+  it("requires the governed DSH service identity and its delegated operator context", () => {
     assert.match(smoke, /WLT_DSH_SERVICE_TOKEN is required/);
     assert.match(smoke, /Authorization = "Bearer \$serviceToken"/);
     assert.match(smoke, /"X-Service-Caller" = "dsh"/);
     assert.match(smoke, /BTHWANI_OPERATOR_CONTEXT_ID/);
-    assert.match(smoke, /"X-Operator-Context-ID" = \$operatorContextId/);
+    assert.match(smoke, /"X-Delegated-Operator-Context" = \$operatorContextId/);
+    assert.doesNotMatch(smoke, /"X-Operator-Context-ID"\s*=/);
     assert.match(smoke, /Invoke-WltRead -Path "\/wlt\/references\/payment-status/);
     assert.match(smoke, /Invoke-WltRead -Path "\/wlt\/references\/wallet-status/);
     assert.match(smoke, /Invoke-WltRead -Path "\/wlt\/payment-sessions\/\$\(\[Uri\]::EscapeDataString/);
@@ -43,7 +44,16 @@ describe("authenticated WLT runtime smoke", () => {
   it("proves mutation idempotency and canonical readback", () => {
     assert.match(smoke, /"Idempotency-Key" = "wlt-session-\$runIdentity"/);
     assert.match(smoke, /checkoutIntentId = "checkout-\$runIdentity"/);
-    assert.match(smoke, /status -ne "reference_created"/);
+    assert.match(smoke, /status -ne "cod_pending"/);
     assert.match(smoke, /WLT authenticated runtime smoke: PASS/);
+  });
+
+  it("handles success and error envelopes without StrictMode property faults", () => {
+    assert.match(smoke, /\$createStatus = \[int\]\$createResponse\.StatusCode/);
+    assert.match(smoke, /\$codeProperty = \$createBody\.PSObject\.Properties\["code"\]/);
+    assert.doesNotMatch(smoke, /\$createCode\s*=\s*\[string\]\$createBody\.code/);
+    assert.match(smoke, /if \(\$createStatus -ne 201\)/);
+    assert.match(smoke, /\$paymentSessionProperty = \$createBody\.PSObject\.Properties\["paymentSession"\]/);
+    assert.match(smoke, /returned HTTP 201 without paymentSession\.id/);
   });
 });

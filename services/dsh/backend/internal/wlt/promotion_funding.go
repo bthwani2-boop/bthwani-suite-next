@@ -12,7 +12,7 @@ import (
 
 type PromotionFundingReservation struct {
 	ID                       string  `json:"id"`
-	OperatorContextID                 string  `json:"operatorContextId"`
+	OperatorContextID        string  `json:"operatorContextId"`
 	ExternalReference        string  `json:"externalReference"`
 	CheckoutIntentID         string  `json:"checkoutIntentId"`
 	CouponRedemptionID       string  `json:"couponRedemptionId"`
@@ -30,7 +30,7 @@ type PromotionFundingReservation struct {
 }
 
 type ReservePromotionFundingInput struct {
-	OperatorContextID                 string `json:"operatorContextId"`
+	OperatorContextID        string `json:"operatorContextId"`
 	ExternalReference        string `json:"externalReference"`
 	CheckoutIntentID         string `json:"checkoutIntentId"`
 	CouponRedemptionID       string `json:"couponRedemptionId"`
@@ -45,8 +45,8 @@ type ReservePromotionFundingInput struct {
 
 type PromotionFundingTransitionInput struct {
 	OperatorContextID string `json:"operatorContextId"`
-	OrderID  string `json:"orderId,omitempty"`
-	Reason   string `json:"reason,omitempty"`
+	OrderID           string `json:"orderId,omitempty"`
+	Reason            string `json:"reason,omitempty"`
 }
 
 func (c *Client) promotionFundingRequest(
@@ -77,7 +77,9 @@ func (c *Client) promotionFundingRequest(
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	if _, err := c.setDelegatedOperatorContextHeader(req, operatorContextID); err != nil {
+		return nil, fmt.Errorf("prepare WLT promotion funding OperatorContext: %w", err)
+	}
 	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
 		return nil, fmt.Errorf("prepare WLT promotion funding mutation: %w", err)
 	}
@@ -111,11 +113,12 @@ func (c *Client) promotionFundingRequest(
 	return &envelope.Reservation, nil
 }
 
-func (c *Client) ReservePromotionFunding(
+func (c *Client) reservePromotionFunding(
 	ctx context.Context,
 	input ReservePromotionFundingInput,
 	idempotencyKey string,
 	correlationID string,
+	allowedStatuses ...string,
 ) (*PromotionFundingReservation, error) {
 	if strings.TrimSpace(idempotencyKey) == "" {
 		idempotencyKey = deterministicMutationKey("promotion-funding-reserve", input.ExternalReference, input.CheckoutIntentID, input.CouponRedemptionID)
@@ -135,10 +138,32 @@ func (c *Client) ReservePromotionFunding(
 	if err != nil {
 		return nil, err
 	}
-	if err := validatePromotionFundingReserveResponse(reservation, input); err != nil {
+	if err := validatePromotionFundingReserveResponseStatuses(reservation, input, allowedStatuses...); err != nil {
 		return nil, err
 	}
 	return reservation, nil
+}
+
+func (c *Client) ReservePromotionFunding(
+	ctx context.Context,
+	input ReservePromotionFundingInput,
+	idempotencyKey string,
+	correlationID string,
+) (*PromotionFundingReservation, error) {
+	return c.reservePromotionFunding(ctx, input, idempotencyKey, correlationID, "reserved")
+}
+
+// ReconcilePromotionFundingReserve repeats the original reserve mutation with
+// its original idempotency key. A previously released reservation is already
+// a closed outcome for the reserve-then-release compensation path and must be
+// treated as reconciled; ordinary checkout reserve callers remain strict.
+func (c *Client) ReconcilePromotionFundingReserve(
+	ctx context.Context,
+	input ReservePromotionFundingInput,
+	idempotencyKey string,
+	correlationID string,
+) (*PromotionFundingReservation, error) {
+	return c.reservePromotionFunding(ctx, input, idempotencyKey, correlationID, "reserved", "released")
 }
 
 func (c *Client) transitionPromotionFunding(

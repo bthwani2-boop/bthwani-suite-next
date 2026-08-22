@@ -87,6 +87,12 @@ actions:
       - $ref: '#/components/parameters/Authorization'
       - $ref: '#/components/parameters/ServiceCaller'
       - $ref: '#/components/parameters/OperatorContext'
+  - target: $.paths['/internal/actors/{actorId}'].delete.parameters
+    update:
+      - $ref: '#/components/parameters/ActorId'
+      - $ref: '#/components/parameters/Authorization'
+      - $ref: '#/components/parameters/ServiceCaller'
+      - $ref: '#/components/parameters/OperatorContext'
   - target: $.paths['/internal/actors/{actorId}/deactivate'].post.parameters
     update:
       - $ref: '#/components/parameters/ActorId'

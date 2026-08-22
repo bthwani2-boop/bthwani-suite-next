@@ -26,8 +26,11 @@ func TestReadPaymentSessionTimelineForwardsGovernedHeaders(t *testing.T) {
 		if r.Header.Get("X-Service-Caller") != "dsh" {
 			t.Fatalf("expected DSH service caller")
 		}
-		if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-main" {
-			t.Fatalf("expected OperatorContext-main, got %q", r.Header.Get("X-Operator-Context-ID"))
+		if r.Header.Get("X-Delegated-Operator-Context") != "OperatorContext-main" {
+			t.Fatalf("expected OperatorContext-main, got %q", r.Header.Get("X-Delegated-Operator-Context"))
+		}
+		if r.Header.Get("X-Operator-Context-ID") != "" {
+			t.Fatalf("legacy OperatorContext header must not be emitted, got %q", r.Header.Get("X-Operator-Context-ID"))
 		}
 		if r.Header.Get("X-Correlation-ID") != "corr-1" {
 			t.Fatalf("expected corr-1, got %q", r.Header.Get("X-Correlation-ID"))
@@ -57,8 +60,11 @@ func TestRefreshPaymentSessionProviderStatusBuildsReplaySafeMutation(t *testing.
 		if r.URL.EscapedPath() != "/wlt/payment-sessions/payment-session-2/refresh-provider-status" {
 			t.Fatalf("unexpected path %q", r.URL.EscapedPath())
 		}
-		if r.Header.Get("X-Operator-Context-ID") != "OperatorContext-main" {
+		if r.Header.Get("X-Delegated-Operator-Context") != "OperatorContext-main" {
 			t.Fatalf("expected OperatorContext-main")
+		}
+		if r.Header.Get("X-Operator-Context-ID") != "" {
+			t.Fatalf("legacy OperatorContext header must not be emitted")
 		}
 		if r.Header.Get("X-Correlation-ID") != "payment-session-2" {
 			t.Fatalf("empty correlation must fall back to the payment session id, got %q", r.Header.Get("X-Correlation-ID"))

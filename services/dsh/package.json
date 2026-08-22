@@ -1,5 +1,6 @@
 {
   "name": "@bthwani/dsh",
+  "type": "module",
   "description": "BThwani DSH service workspace.",
   "version": "0.0.0",
   "private": true,
@@ -13,25 +14,14 @@
     "database:test": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite schema",
     "database:test:seed": "pwsh -NoProfile -ExecutionPolicy Bypass -File database/scripts/invoke-dsh-database.ps1 -Action test -Transport auto -TestSuite seed",
     "database:contract": "node ../../tools/scripts/check-dsh-database-contract.mjs",
-    "pretypecheck": "pnpm run openapi:generate",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "prebuild": "pnpm run openapi:generate",
-    "build": "tsc -p tsconfig.json && node ../../tools/scripts/verify-go-build.mjs backend",
-    "test": "pnpm run build && pnpm --dir ../.. exec node --test services/dsh/tests/*.test.mjs",
+    "build:ts": "tsc -p tsconfig.json && node -e \"require('node:fs').writeFileSync('dist/package.json', JSON.stringify({type:'commonjs'}))\"",
+    "build": "pnpm run build:ts && node ../../tools/scripts/verify-go-build.mjs backend",
+    "test": "pnpm --dir ../.. exec node --test services/dsh/tests/*.test.mjs",
     "lint": "pnpm --dir ../.. run guard:fullstack-boundary"
   },
   "peerDependencies": {
-    "expo-document-picker": "~56.0.4",
-    "expo-video": "~56.1.4",
     "react": "19.2.3"
-  },
-  "peerDependenciesMeta": {
-    "expo-document-picker": {
-      "optional": true
-    },
-    "expo-video": {
-      "optional": true
-    }
   },
   "dependencies": {
     "@bthwani/control-panel": "workspace:*",
@@ -41,16 +31,7 @@
     "@bthwani/data-runtime": "workspace:*",
     "@bthwani/ui-kit": "workspace:*",
     "@bthwani/wlt": "workspace:*",
-    "@react-native-async-storage/async-storage": "1.24.0",
-    "@react-native-community/netinfo": "11.4.1",
-    "expo-constants": "~56.0.22",
-    "expo-crypto": "~56.0.4",
-    "expo-image-picker": "~56.0.22",
-    "expo-location": "~56.0.22",
-    "expo-notifications": "~56.0.22",
-    "expo-secure-store": "~56.0.4",
-    "react-native": "0.85.3",
-    "react-native-maps": "1.27.2",
+    "react-native": "0.86.2",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "15.15.4"
   },
@@ -62,6 +43,11 @@
     "typescript": "7.0.2"
   },
   "exports": {
+    "./mobile-capabilities": "./frontend/shared/mobile-capabilities.ts",
+    "./app-client": "./frontend/app-client/index.ts",
+    "./app-field": "./frontend/app-field/index.ts",
+    "./app-partner": "./frontend/app-partner/index.ts",
+    "./app-captain": "./frontend/app-captain/index.ts",
     "./control-panel": "./frontend/control-panel/index.ts",
     "./control-panel/finance": "./frontend/control-panel/finance/index.ts",
     "./control-panel/navigation": "./frontend/control-panel/navigation.ts",

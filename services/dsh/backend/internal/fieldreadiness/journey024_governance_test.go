@@ -67,7 +67,7 @@ func TestGovernedInputEnumsRejectUnknownValues(t *testing.T) {
 	if err := validateVisitType(VisitType("unknown")); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected invalid visit type, got %v", err)
 	}
-	if err := validateCheckInput(UpdateCheckInput{CheckType: "unknown", Status: CheckPassed}); !errors.Is(err, ErrInvalid) {
+	if err := validateCheckInput(UpdateCheckInput{CheckType: "Unknown Bad!", Status: CheckPassed}); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected invalid check type, got %v", err)
 	}
 	if err := validateCheckInput(UpdateCheckInput{CheckType: "location_verified", Status: CheckStatus("unknown")}); !errors.Is(err, ErrInvalid) {

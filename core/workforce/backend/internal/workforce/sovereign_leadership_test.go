@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	workforceauth "workforce-api/internal/auth"
 	"workforce-api/internal/identityclient"
 )
 
@@ -24,25 +25,25 @@ func newBundleRegistryTestService(t *testing.T) (*Service, func()) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"permissionBundles": []map[string]any{
 				{
-					"code": "platform_owner",
-					"nameAr": "مالك المنصة ومدير المشروع",
-					"nameEn": "Platform owner and project manager",
-					"allowedEmploymentClasses": []string{"project_manager"},
-					"defaultDepartmentScope": "platform",
+					"code":                       "platform_owner",
+					"nameAr":                     "مالك المنصة ومدير المشروع",
+					"nameEn":                     "Platform owner and project manager",
+					"allowedEmploymentClasses":   []string{"project_manager"},
+					"defaultDepartmentScope":     "platform",
 					"departmentSelectionAllowed": false,
 				},
 				{
-					"code": "operations_manager",
-					"nameAr": "مدير العمليات",
-					"nameEn": "Operations manager",
-					"allowedEmploymentClasses": []string{"department_manager"},
-					"defaultDepartmentScope": "operations",
+					"code":                       "operations_manager",
+					"nameAr":                     "مدير العمليات",
+					"nameEn":                     "Operations manager",
+					"allowedEmploymentClasses":   []string{"department_manager"},
+					"defaultDepartmentScope":     "operations",
 					"departmentSelectionAllowed": false,
 				},
 			},
 		})
 	}))
-	service := &Service{identity: identityclient.NewClient(server.URL, "test-token", "context-test")}
+	service := &Service{identity: identityclient.NewClient(server.URL, "test-token")}
 	return service, server.Close
 }
 
@@ -50,7 +51,8 @@ func TestLeadershipBundleResolutionUsesIdentityRegistry(t *testing.T) {
 	service, closeServer := newBundleRegistryTestService(t)
 	defer closeServer()
 
-	bundle, err := service.resolveLeadershipBundle(context.Background(), "operations_manager", "department_manager", "operations")
+	requestContext := workforceauth.WithOperatorContext(context.Background(), "context-test")
+	bundle, err := service.resolveLeadershipBundle(requestContext, "operations_manager", "department_manager", "operations")
 	if err != nil {
 		t.Fatalf("resolveLeadershipBundle: %v", err)
 	}
@@ -58,13 +60,13 @@ func TestLeadershipBundleResolutionUsesIdentityRegistry(t *testing.T) {
 		t.Fatalf("unexpected bundle: %+v", bundle)
 	}
 
-	if _, err := service.resolveLeadershipBundle(context.Background(), "operations_manager", "project_manager", "operations"); err == nil {
+	if _, err := service.resolveLeadershipBundle(requestContext, "operations_manager", "project_manager", "operations"); err == nil {
 		t.Fatal("expected Identity registry employment-class mismatch to be rejected")
 	}
-	if _, err := service.resolveLeadershipBundle(context.Background(), "operations_manager", "department_manager", "finance"); err == nil {
+	if _, err := service.resolveLeadershipBundle(requestContext, "operations_manager", "department_manager", "finance"); err == nil {
 		t.Fatal("expected Identity-owned manager department mismatch to be rejected")
 	}
-	if _, err := service.resolveLeadershipBundle(context.Background(), "platform_owner", "project_manager", "operations"); err == nil {
+	if _, err := service.resolveLeadershipBundle(requestContext, "platform_owner", "project_manager", "operations"); err == nil {
 		t.Fatal("expected fixed Identity department scope mismatch to be rejected")
 	}
 }

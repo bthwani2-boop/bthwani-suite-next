@@ -13,7 +13,7 @@ export type DshDispatchAssignment = components["schemas"]["DshDispatchAssignment
   cancelledAt?: string | null;
   cancelledBy?: string;
   supersedesAssignmentId?: string;
-  version?: number;
+  version: number;
 };
 export type DshAssignmentStatus = components["schemas"]["DshAssignmentStatus"];
 export type DshDeliveryStatus = components["schemas"]["DshDeliveryStatus"];
@@ -88,6 +88,14 @@ export type DshCaptainDispatchCandidate = {
 export type DshCaptainReadiness = {
   readonly ready: boolean;
   readonly missing: readonly string[];
+};
+
+export type DshCaptainAvailabilityStatus = "available" | "unavailable" | "break" | "planned-leave";
+
+export type DshCaptainAvailability = {
+  readonly status: DshCaptainAvailabilityStatus;
+  readonly version: number;
+  readonly updatedAt: string;
 };
 
 export type DshReassignAssignmentInput = Omit<DshGovernedCreateAssignmentInput, "orderId"> & {

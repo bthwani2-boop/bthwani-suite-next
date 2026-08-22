@@ -1,0 +1,122 @@
+openapi: 3.1.0
+info:
+  title: BThwani WLT Captain Collateral API
+  version: 1.0.0
+  description: WLT-owned protected captain collateral inside the canonical wallet.
+x-bthwani-owner: services/wlt
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: ENABLED
+x-bthwani-runtime-dependency: true
+x-bthwani-financial-owner: true
+paths:
+  /wlt/captain-collateral/{captainId}:
+    get:
+      operationId: getCaptainCollateral
+      summary: Read the WLT captain collateral position and release state.
+      tags: [WltCaptainCollateral]
+      security: [ { serviceBearer: [] } ]
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - name: captainId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        '200': { description: WLT captain collateral readback., content: { application/json: { schema: { $ref: '#/components/schemas/CollateralReadResponse' } } } }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '503': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+  /wlt/captain-collateral-policy:
+    put:
+      operationId: upsertCaptainCollateralPolicy
+      summary: Create or version the WLT captain collateral policy.
+      tags: [WltCaptainCollateral]
+      security: [ { serviceBearer: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PolicyInput' }
+      responses:
+        '200': { description: Versioned policy., content: { application/json: { schema: { type: object, required: [policy], properties: { policy: { $ref: '#/components/schemas/Policy' } } } } } }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+  /wlt/captain-collateral/allocate:
+    post:
+      operationId: allocateCaptainCollateral
+      summary: Allocate a captured captain Cash-In into protected WLT collateral.
+      tags: [WltCaptainCollateral]
+      security: [ { serviceBearer: [] } ]
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AllocationInput' }
+      responses:
+        '200': { description: Created or replayed collateral position., content: { application/json: { schema: { type: object, required: [position], properties: { position: { $ref: '#/components/schemas/Position' } } } } } }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '503': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+  /wlt/captain-collateral/release:
+    post:
+      operationId: releaseCaptainCollateral
+      summary: Release a safe protected collateral position back to spendable wallet funds.
+      tags: [WltCaptainCollateral]
+      security: [ { serviceBearer: [] } ]
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReleaseInput' }
+      responses:
+        '200': { description: Released or replayed collateral position., content: { application/json: { schema: { type: object, required: [position], properties: { position: { $ref: '#/components/schemas/Position' } } } } } }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '503': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+components:
+  securitySchemes: {}
+  schemas:
+    PolicyInput:
+      type: object
+      additionalProperties: false
+      required: [policyId, expectedVersion, enabled, minimumCollateralMinorUnits, currency, changeReason, updatedByActorId]
+      properties:
+        policyId: { type: string, minLength: 1, maxLength: 200 }
+        expectedVersion: { type: integer, format: int64, minimum: 0 }
+        enabled: { type: boolean }
+        minimumCollateralMinorUnits: { type: integer, format: int64, minimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        changeReason: { type: string, minLength: 1, maxLength: 500 }
+        updatedByActorId: { type: string, minLength: 1, maxLength: 200 }
+    AllocationInput:
+      type: object
+      additionalProperties: false
+      required: [captainId, paymentSessionId, allocatedByActorId]
+      properties:
+        captainId: { type: string, minLength: 1, maxLength: 200 }
+        paymentSessionId: { type: string, minLength: 1, maxLength: 200 }
+        allocatedByActorId: { type: string, minLength: 1, maxLength: 200 }
+    ReleaseInput:
+      type: object
+      additionalProperties: false
+      required: [captainId, positionId, releaseReason, releasedByActorId]
+      properties:
+        captainId: { type: string, minLength: 1, maxLength: 200 }
+        positionId: { type: string, minLength: 1, maxLength: 200 }
+        releaseReason: { type: string, minLength: 1, maxLength: 500 }
+        releasedByActorId: { type: string, minLength: 1, maxLength: 200 }
+    Policy:
+      type: object
+      additionalProperties: true
+    Position:
+      type: object
+      additionalProperties: true
+    CollateralReadResponse:
+      type: object
+      additionalProperties: true

@@ -151,6 +151,34 @@ export function ActorWalletPanel({
         ))}
       </View>
 
+      {actorType === "captain" ? (
+        <>
+          <Divider />
+          <View style={{ gap: spacing[2] }}>
+            <Text role="titleSm" style={{ textAlign: "right" }}>الضمانة المحمية</Text>
+            <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
+              تخصيصات WLT المقيدة لا تُعد رصيدًا متاحًا ولا تُحرر أثناء وجود تعرض مالي.
+            </Text>
+            <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: spacing[3] }}>
+              {[
+                ["المحجوز", wallet.collateralReservedBalanceMinorUnits],
+                ["الحد المحمي", wallet.protectedMinimumCollateralMinorUnits],
+                ["الفائض القابل للتحرير", wallet.releasableCollateralExcessMinorUnits],
+                ["الذمم المفتوحة", wallet.outstandingDebtMinorUnits],
+              ].map(([label, value]) => (
+                <View key={String(label)} style={{ minWidth: 130, flexGrow: 1, alignItems: "flex-end" }}>
+                  <Text role="caption" tone="muted">{String(label)}</Text>
+                  <Text role="bodyStrong">{amountLabel(Number(value), wallet.currency)}</Text>
+                </View>
+              ))}
+            </View>
+            <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
+              المراكز النشطة: {wallet.activeCollateralPositionCount}
+            </Text>
+          </View>
+        </>
+      ) : null}
+
       <Text role="caption" tone="muted" style={{ textAlign: "right" }}>
         آخر تحديث: {wallet.updatedAt ?? "غير متاح"} · آخر قيد: {wallet.lastLedgerEntryAt ?? "لا يوجد"}
       </Text>

@@ -175,6 +175,7 @@ components:
       required:
         [
           expectedStatus,
+          expectedVersion,
           status,
           reason,
           owner,
@@ -185,6 +186,7 @@ components:
         ]
       properties:
         expectedStatus: { $ref: '#/components/schemas/RescueStatus' }
+        expectedVersion: { type: integer, format: int64, minimum: 1 }
         status: { $ref: '#/components/schemas/RescueStatus' }
         reason: { $ref: '#/components/schemas/RescueReason' }
         owner: { $ref: '#/components/schemas/RescueOwner' }

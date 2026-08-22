@@ -96,6 +96,7 @@ export function SupportDashboardScreen() {
     if (targetStatus !== selectedTicketRaw.status) {
       await ticketCtrl.operatorUpdateTicket(selectedTicketRaw.id, {
         expectedStatus: selectedTicketRaw.status,
+        expectedVersion: selectedTicketRaw.version,
         status: targetStatus,
       });
     }
@@ -105,6 +106,7 @@ export function SupportDashboardScreen() {
     if (!selectedTicketRaw) return;
     await ticketCtrl.operatorUpdateTicket(selectedTicketRaw.id, {
       expectedStatus: selectedTicketRaw.status,
+      expectedVersion: selectedTicketRaw.version,
       status: "resolved",
     });
     await detailCtrl.reloadDetail();
@@ -113,7 +115,7 @@ export function SupportDashboardScreen() {
 
   const resolveSelectedIncident = async () => {
     if (!selectedIncident) return;
-    await incidentCtrl.resolveIncident(selectedIncident.id, { status: "resolved" });
+    await incidentCtrl.resolveIncident(selectedIncident.id, { status: "resolved", expectedVersion: selectedIncident.version });
   };
 
   return (

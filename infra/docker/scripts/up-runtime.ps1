@@ -9,10 +9,10 @@ $Profiles = if ($ProfileArgIndex -ge 0 -and ($ProfileArgIndex + 1) -lt $args.Cou
   @()
 }
 
-$AllowedProfiles = @("media", "dsh")
+$AllowedProfiles = @("media-storage", "dsh")
 foreach ($profile in $Profiles) {
   if ($AllowedProfiles -notcontains $profile) {
-    throw "Unsupported runtime profile: $profile. Allowed: media, dsh. Postgres runs by default without a profile."
+    throw "Unsupported runtime profile: $profile. Allowed: media-storage, dsh. Postgres runs by default without a profile."
   }
 }
 

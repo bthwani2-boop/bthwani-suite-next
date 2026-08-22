@@ -4,8 +4,8 @@ info:
   version: 1.0.0
   description: >-
     Authoritative financial pricing engine for carts and checkouts. DSH provides
-    operational inputs (items, raw delivery fee distances), and WLT returns the
-    sovereign Quote containing taxes, fees, discounts, and rounding policies.
+    item identities plus signed catalog evidence; WLT verifies the evidence and
+    returns the sovereign quote containing taxes, fees, discounts, and rounding policies.
 x-bthwani-owner: services/wlt
 x-bthwani-capability: governed-pricing
 x-bthwani-contract-state: CONTRACT_ACTIVE
@@ -17,10 +17,11 @@ paths:
   /wlt/internal/quotes/calculate:
     post:
       operationId: calculateWltPricingQuote
-      summary: Calculate the sovereign financial quote from operational inputs.
+      summary: Calculate the sovereign financial quote from verified pricing evidence.
       tags: [ WltPricing ]
       security: [ { serviceBearer: [] } ]
       parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
         - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
       requestBody:
@@ -36,20 +37,44 @@ paths:
               schema: { $ref: '#/components/schemas/PricingQuoteResponse' }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+  /wlt/internal/quotes/checkout/{checkoutIntentId}:
+    get:
+      operationId: getWltCanonicalCheckoutPricingQuote
+      summary: Read the immutable WLT quote bound to a checkout intent.
+      tags: [ WltPricing ]
+      security: [ { serviceBearer: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/CheckoutIntentId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+      responses:
+        '200':
+          description: Immutable authoritative checkout quote.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PricingQuoteResponse' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
 
 components:
   schemas:
     CalculateQuoteRequest:
       type: object
       additionalProperties: false
-      required: [ clientId, storeId, currency, lines ]
+      required: [ clientId, storeId, currency, lines, pricingEvidence ]
       properties:
         clientId: { type: string, minLength: 1 }
         storeId: { type: string, minLength: 1 }
+        checkoutIntentId:
+          type: string
+          description: When supplied with cartSnapshotHash, causes WLT to issue exactly one immutable checkout quote.
+        cartSnapshotHash:
+          type: string
+          description: Frozen cart fingerprint. Required whenever checkoutIntentId is supplied.
         currency: { type: string, minLength: 3, maxLength: 3 }
-        deliveryFeeInputMinorUnits: { type: integer, format: int64, default: 0 }
-        serviceFeeInputMinorUnits: { type: integer, format: int64, default: 0 }
         cartVersion: { type: integer, default: 0 }
+        pricingEvidence: { $ref: '#/components/schemas/PricingEvidence' }
         lines:
           type: array
           minItems: 1
@@ -58,12 +83,35 @@ components:
     QuoteInputLine:
       type: object
       additionalProperties: false
-      required: [ masterProductId, quantity, unitPriceMinorUnits ]
+      required: [ masterProductId, quantity ]
       properties:
         masterProductId: { type: string, minLength: 1 }
         productName: { type: string }
         quantity: { type: integer, minimum: 1 }
+
+    PricingEvidence:
+      type: object
+      additionalProperties: false
+      required: [ version, lines, deliveryFeeMinorUnits, serviceFeeMinorUnits, signature ]
+      properties:
+        version: { type: integer, minimum: 1 }
+        lines:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/QuoteEvidenceLine' }
+        deliveryFeeMinorUnits: { type: integer, format: int64, minimum: 0 }
+        serviceFeeMinorUnits: { type: integer, format: int64, minimum: 0 }
+        discountMinorUnits: { type: integer, format: int64, minimum: 0 }
+        signature: { type: string, minLength: 64, maxLength: 64 }
+
+    QuoteEvidenceLine:
+      type: object
+      additionalProperties: false
+      required: [ masterProductId, unitPriceMinorUnits, currency ]
+      properties:
+        masterProductId: { type: string, minLength: 1 }
         unitPriceMinorUnits: { type: integer, format: int64, minimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
 
     PricingQuoteResponse:
       type: object
@@ -89,6 +137,12 @@ components:
           version
         ]
       properties:
+        id:
+          type: string
+          description: Present only for an immutable quote issued for a checkout intent.
+        cartSnapshotHash:
+          type: string
+          description: Immutable cart snapshot identity bound to an issued checkout quote.
         lines:
           type: array
           items: { $ref: '#/components/schemas/QuoteOutputLine' }
@@ -105,7 +159,20 @@ components:
           items: { type: string }
         hash: { type: string }
         version: { type: integer }
-        expiresAt: { type: string, format: date-time, nullable: true }
+        # OpenAPI 3.1 expresses an absent expiry as a union with null; the 3.0
+        # `nullable` keyword is not valid here and failed contract validation.
+        expiresAt: { type: [ string, "null" ], format: date-time }
+        allocation:
+          type: array
+          description: WLT-derived, conserved payment allocation for an issued checkout quote.
+          items: { $ref: '#/components/schemas/QuoteAllocationLine' }
+
+    QuoteAllocationLine:
+      type: object
+      required: [ component, amountMinorUnits ]
+      properties:
+        component: { type: string, enum: [ goods_subtotal, delivery_fee, service_fee, tax, discount, tip ] }
+        amountMinorUnits: { type: integer, format: int64 }
 
     QuoteOutputLine:
       type: object
@@ -116,3 +183,10 @@ components:
         quantity: { type: integer }
         unitPriceMinorUnits: { type: integer, format: int64 }
         totalMinorUnits: { type: integer, format: int64 }
+
+  parameters:
+    CheckoutIntentId:
+      name: checkoutIntentId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1 }

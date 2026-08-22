@@ -56,7 +56,7 @@ modules:
 ```
 
 `modules` must equal the entry's `x-bthwani-contracts` exactly, and `client` must
-be registered in `governance/contracts/generated-client-registry.json`.
+be registered in `tools/verification/generated-client-registry.json`.
 
 ## Derived diagnostics
 

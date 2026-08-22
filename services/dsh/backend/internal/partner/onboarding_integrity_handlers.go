@@ -4,15 +4,29 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"dsh-api/internal/wlt"
 )
 
-func HandleGovernedFieldUpdatePartner(db *sql.DB, wltClient *wlt.Client) http.HandlerFunc {
+type governedFieldPartnerUpdateRequest struct {
+	DisplayName       string `json:"displayName"`
+	OwnerActorID      string `json:"ownerActorId"`
+	WorkforcePersonID string `json:"workforcePersonId"`
+	PrimaryPhone      string `json:"primaryPhone"`
+	SecondaryPhone    string `json:"secondaryPhone"`
+	Email             string `json:"email"`
+	Notes             string `json:"notes"`
+}
+
+// HandleGovernedFieldUpdatePartner owns operational onboarding edits only.
+// Payout destinations are WLT-owned and are mutated exclusively through the
+// governed actor finance payout-destination route, which then synchronizes the
+// masked DSH readiness projection. Keeping finance out of this handler prevents
+// a second write authority and makes legacy bank/IBAN/mobile fields fail closed
+// as unknown request properties.
+func HandleGovernedFieldUpdatePartner(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		actorID, _ := actorFromContext(r)
 		partnerID := partnerIDFromPath(r)
@@ -25,11 +39,14 @@ func HandleGovernedFieldUpdatePartner(db *sql.DB, wltClient *wlt.Client) http.Ha
 			return
 		}
 
-		var input UpdatePartnerInput
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
+		var request governedFieldPartnerUpdateRequest
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&request); err != nil {
+			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "partner draft accepts operational fields only; configure payout destinations through the governed finance surface")
 			return
 		}
+
 		current, err := GetPartner(db, partnerID)
 		if errors.Is(err, ErrNotFound) {
 			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
@@ -39,76 +56,25 @@ func HandleGovernedFieldUpdatePartner(db *sql.DB, wltClient *wlt.Client) http.Ha
 			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load partner")
 			return
 		}
-
-		rawAccount := unmaskedPayoutValue(input.BankAccountNumber)
-		rawIBAN := unmaskedPayoutValue(input.BankIBAN)
-		rawMobile := unmaskedPayoutValue(input.PayoutMobileNumber)
-		preference, preferenceOK := normalizeDshPayoutPreference(input.SettlementPreference)
-
-		metadataChanged := false
-		if preference != "" && preference != current.DestinationMethod {
-			metadataChanged = true
+		if current.Version != expectedVersion {
+			sendError(w, http.StatusConflict, "VERSION_CONFLICT", "partner was modified concurrently")
+			return
+		}
+		if !IsFieldPartnerEditableStatus(current.ActivationStatus) {
+			sendError(w, http.StatusConflict, "FIELD_EDIT_LOCKED", "ملف الشريك قيد مراجعة الشركاء ولا يمكن تعديله ميدانيًا حتى إعادته للتعديلات")
+			return
 		}
 
-		payoutMutation := rawAccount != "" || rawIBAN != "" || rawMobile != "" || metadataChanged
-
-		if payoutMutation {
-			if !preferenceOK {
-				sendError(w, http.StatusUnprocessableEntity, "PAYOUT_DESTINATION_INVALID", "select a supported settlement preference")
-				return
-			}
-			if rawAccount == "" && rawMobile == "" {
-				sendError(w, http.StatusUnprocessableEntity, "PAYOUT_DETAILS_REENTRY_REQUIRED", "re-enter the payout account or mobile number before changing payout metadata")
-				return
-			}
-			if wltClient == nil || !wltClient.Configured() {
-				sendError(w, http.StatusServiceUnavailable, "WLT_UNAVAILABLE", "WLT payout destination service is not configured")
-				return
-			}
-			idempotency := strings.TrimSpace(idempotencyKey(r))
-			if idempotency == "" {
-				idempotency = governedMutationKey(
-					"partner-payout", partnerID, strconv.Itoa(expectedVersion),
-					rawAccount, rawIBAN, rawMobile, preference,
-				)
-			}
-			correlation := strings.TrimSpace(correlationID(r))
-			if correlation == "" {
-				correlation = governedMutationKey("partner-payout-correlation", partnerID, idempotency)
-			}
-			var destinationReference string
-			var destinationMethod string = preference
-
-			if destinationMethod == "bank" {
-				if rawIBAN != "" {
-					destinationReference = rawIBAN
-				} else {
-					destinationReference = rawAccount
-				}
-			} else if destinationMethod == "mobile_money" {
-				destinationReference = rawMobile
-			}
-
-			ref, handoffErr := wltClient.UpsertPayoutDestination(r.Context(), partnerID, wlt.PayoutDestinationUpsertInput{
-				BeneficiaryName:      input.BeneficiaryName,
-				DestinationMethod:    destinationMethod,
-				DestinationReference: destinationReference,
-				CreatedByActorID:     actorID,
-				CorrelationID:        correlation,
-				IdempotencyKey:       idempotency,
-			})
-			if handoffErr != nil {
-				sendError(w, http.StatusBadGateway, "WLT_PAYOUT_HANDOFF_FAILED", handoffErr.Error())
-				return
-			}
-			input.PayoutDestinationID = ref.ID
-			input.DestinationMethod = ref.DestinationMethod
-			input.MaskedDestinationReference = ref.MaskedDestinationReference
-			input.DestinationVerificationStatus = ref.DestinationVerificationStatus
-			input.BeneficiaryName = ref.BeneficiaryName
+		input := UpdatePartnerInput{
+			DisplayName:       request.DisplayName,
+			OwnerActorID:      request.OwnerActorID,
+			WorkforcePersonID: request.WorkforcePersonID,
+			PrimaryPhone:      request.PrimaryPhone,
+			SecondaryPhone:    request.SecondaryPhone,
+			Email:             request.Email,
+			Notes:             request.Notes,
+			UpdatedByActorID:  actorID,
 		}
-		input.UpdatedByActorID = actorID
-
 		updated, err := UpdatePartnerGoverned(db, partnerID, input, expectedVersion)
 		if errors.Is(err, ErrExpectedVersionRequired) {
 			sendError(w, http.StatusPreconditionRequired, "EXPECTED_VERSION_REQUIRED", err.Error())
@@ -130,7 +96,7 @@ func HandleGovernedFieldUpdatePartner(db *sql.DB, wltClient *wlt.Client) http.Ha
 	}
 }
 
-func HandleGovernedActivationTransition(db *sql.DB, wltClient *wlt.Client) http.HandlerFunc {
+func HandleGovernedActivationTransition(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		actorID, surface := actorFromContext(r)
 		partnerID := partnerIDFromPath(r)
@@ -140,7 +106,9 @@ func HandleGovernedActivationTransition(db *sql.DB, wltClient *wlt.Client) http.
 			return
 		}
 		var input TransitionInput
-		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		decoder := json.NewDecoder(r.Body)
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&input); err != nil {
 			sendError(w, http.StatusBadRequest, "VALIDATION_ERROR", "invalid request body")
 			return
 		}
@@ -152,33 +120,15 @@ func HandleGovernedActivationTransition(db *sql.DB, wltClient *wlt.Client) http.
 			input.IdempotencyKey = governedMutationKey("partner-transition", partnerID, strconv.Itoa(expectedVersion), string(input.ToStatus), input.Reason)
 		}
 
-		current, err := GetPartner(db, partnerID)
-		if errors.Is(err, ErrNotFound) {
-			sendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
-			return
-		}
-		if err != nil {
-			sendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load partner")
-			return
-		}
-		if (input.ToStatus == StatusPartnerSuspended || input.ToStatus == StatusPartnerTerminated) && current.PayoutDestinationID != "" && (wltClient == nil || !wltClient.Configured()) {
-			sendError(w, http.StatusServiceUnavailable, "WLT_UNAVAILABLE", "WLT is required before suspending or terminating a partner with an active payout destination")
-			return
-		}
-
+		// Partner lifecycle is business-Partner state. The canonical payout
+		// destination belongs to the authenticated partner actor in WLT and can be
+		// shared by multiple Partner businesses inside the same OperatorContext.
+		// Suspending or terminating one business must therefore never deactivate
+		// the actor-level destination. Destination lifecycle stays on the explicit
+		// partner finance endpoint; this transition mutates DSH business state only.
 		updated, event, err := TransitionStatusGoverned(r.Context(), db, partnerID, input, expectedVersion)
 		if writeGovernedTransitionError(w, err) {
 			return
-		}
-
-		if (input.ToStatus == StatusPartnerSuspended || input.ToStatus == StatusPartnerTerminated) && updated.PayoutDestinationID != "" {
-			if err := wltClient.DeactivatePayoutDestination(
-				r.Context(), partnerID, actorID, input.CorrelationID,
-				governedMutationKey("partner-payout-deactivate", partnerID, event.ID),
-			); err != nil {
-				sendError(w, http.StatusBadGateway, "PAYOUT_DEACTIVATION_PENDING", "partner is deactivated in DSH; retry to complete WLT payout deactivation")
-				return
-			}
 		}
 		sendJSON(w, http.StatusOK, map[string]any{"partner": updated, "event": event})
 	}
@@ -249,6 +199,10 @@ func HandleGovernedFieldCreateVisit(db *sql.DB) http.HandlerFunc {
 		input.PartnerID = partnerID
 		input.FieldActorID = actorID
 		visit, err := CreateFieldVisitGoverned(db, input)
+		if errors.Is(err, ErrStoreIDRequired) {
+			sendError(w, http.StatusUnprocessableEntity, "STORE_ID_REQUIRED", "field visit requires an explicit storeId")
+			return
+		}
 		if errors.Is(err, ErrInvalid) || errors.Is(err, ErrReadinessGate) {
 			sendError(w, http.StatusUnprocessableEntity, "FIELD_VISIT_EVIDENCE_REQUIRED", err.Error())
 			return
@@ -295,43 +249,3 @@ func expectedPartnerVersion(r *http.Request) int {
 	version, _ := strconv.Atoi(strings.TrimSpace(r.Header.Get("If-Match-Version")))
 	return version
 }
-
-func unmaskedPayoutValue(value string) string {
-	value = strings.TrimSpace(value)
-	if strings.Contains(value, "*") || strings.Contains(value, "â€¢") {
-		return ""
-	}
-	return value
-}
-
-func normalizeDshPayoutPreference(value string) (string, bool) {
-	switch strings.TrimSpace(value) {
-	case "bank_transfer", "bank":
-		return "bank", true
-	case "mobile_wallet", "mobile_money":
-		return "mobile_money", true
-	case "manual":
-		return "manual", true
-	default:
-		return "", false
-	}
-}
-
-func dshPayoutPreference(value string) string {
-	switch value {
-	case "bank":
-		return "bank_transfer"
-	case "mobile_money":
-		return "mobile_wallet"
-	case "manual":
-		return ""
-	default:
-		return ""
-	}
-}
-
-func boolValue(value *bool) bool {
-	return value != nil && *value
-}
-
-var _ = fmt.Sprintf

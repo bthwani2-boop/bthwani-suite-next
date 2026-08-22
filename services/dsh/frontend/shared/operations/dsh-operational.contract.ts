@@ -38,7 +38,6 @@ export type DshOperationalEntityId =
   | 'store-preparation'
   | 'pickup-handoff'
   | 'proof-of-delivery'
-  | 'cod-collection'
   | 'operational-exception'
   | 'support-escalation'
   | 'settlement-input-bridge'
@@ -53,7 +52,6 @@ export type DshOperationalEntityKind =
   | 'store-preparation-record'
   | 'pickup-handoff-proof'
   | 'delivery-proof'
-  | 'cod-collection-event'
   | 'operational-exception'
   | 'support-escalation-link'
   | 'settlement-input-event'
@@ -76,7 +74,6 @@ export type DshOperationalProofRequirement =
   | 'photo-evidence'
   | 'otp-or-pin'
   | 'signature'
-  | 'cod-amount-snapshot'
   | 'support-ticket-reference'
   | 'audit-note'
   | 'wlt-reference';
@@ -102,7 +99,6 @@ export type DshOperationalWltImpact =
   | 'payment-status-read-only'
   | 'eligibility-read-only'
   | 'settlement-input-candidate'
-  | 'cod-liability-candidate'
   | 'refund-review-candidate'
   | 'audit-candidate'
   | 'wlt-owned-financial-truth';
@@ -137,7 +133,6 @@ export type DshControlPanelOperationalWorkspace =
   | 'store-preparation-sla'
   | 'pickup-handoff-monitor'
   | 'pod-review-queue'
-  | 'cod-discrepancy-queue'
   | 'exception-queue'
   | 'support-escalation-queue'
   | 'settlement-inputs-snapshot'
@@ -291,7 +286,6 @@ export type DshOrderOperationalRecord = DshOperationalBaseRecord & {
   readonly slaState: string;
   readonly exceptionState: string;
   readonly supportState: string;
-  readonly codState: string;
   readonly proofState: string;
   readonly settlementInputState: string;
 };
@@ -337,7 +331,6 @@ export type DshDeliveryTrip = DshOperationalBaseRecord & {
   readonly proofRequired: boolean;
   readonly proofStatus: string;
   readonly codRequired: boolean;
-  readonly codState: string;
   readonly exceptionState: string;
 };
 
@@ -460,34 +453,6 @@ export type DshDeliveryProof = DshOperationalBaseRecord & {
   readonly customerVisible: boolean;
 };
 
-export type DshCodCollectionStatus =
-  | 'not-required'
-  | 'expected'
-  | 'collected-full'
-  | 'collected-partial'
-  | 'not-collected'
-  | 'discrepancy-detected'
-  | 'handoff-to-wlt-pending'
-  | 'handoff-to-wlt-completed'
-  | 'audit-required';
-
-export type DshCodCollectionEvent = DshOperationalBaseRecord & {
-  readonly entityKind: 'cod-collection-event';
-  readonly codEventId: string;
-  readonly orderId: string;
-  readonly tripId?: string;
-  readonly expectedAmountMinor: number;
-  readonly collectedAmountMinor: number;
-  readonly currency: 'YER';
-  readonly collectorType: 'captain' | 'partner-courier';
-  readonly collectorId: string;
-  readonly collectionStatus: DshCodCollectionStatus;
-  readonly discrepancyAmountMinor: number;
-  readonly discrepancyReason?: string;
-  readonly handoffToWltStatus: string;
-  readonly wltReference?: string;
-};
-
 export type DshOperationalExceptionType =
   | 'store-closed'
   | 'item-unavailable'
@@ -501,7 +466,6 @@ export type DshOperationalExceptionType =
   | 'delivery-failed'
   | 'unsafe-delivery'
   | 'payment-failed'
-  | 'cod-shortage'
   | 'pod-rejected'
   | 'system-outage';
 
@@ -567,8 +531,6 @@ export type DshSettlementInputEventType =
   | 'DSH_TRIP_COMPLETED'
   | 'DSH_PARTNER_ORDER_COMPLETED'
   | 'DSH_PARTNER_DELIVERY_COMPLETED'
-  | 'DSH_COD_COLLECTED'
-  | 'DSH_COD_SHORTAGE'
   | 'DSH_POD_ACCEPTED'
   | 'DSH_POD_REJECTED'
   | 'DSH_PICKUP_HANDOFF_VERIFIED'
@@ -634,7 +596,6 @@ type DshAnyOperationalRecord =
   | DshStorePreparationRecord
   | DshPickupHandoffProof
   | DshDeliveryProof
-  | DshCodCollectionEvent
   | DshOperationalException
   | DshSupportEscalationLink
   | DshSettlementInputEvent

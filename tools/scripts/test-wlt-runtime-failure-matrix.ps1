@@ -18,14 +18,19 @@ function Invoke-WltResponse {
     [object]$Body = $null,
     [string]$IdempotencyKey = "",
     [string]$Token = $ServiceToken,
+    [string]$RequestCorrelationId = "",
     [switch]$OmitIdempotency
   )
+
+  if ([string]::IsNullOrWhiteSpace($RequestCorrelationId)) {
+    $RequestCorrelationId = $CorrelationId
+  }
 
   $Headers = @{
     Authorization = "Bearer $Token"
     "X-Service-Caller" = "dsh"
-    "X-Operator-Context-ID" = $OperatorContextId
-    "X-Correlation-ID" = $CorrelationId
+    "X-Delegated-Operator-Context" = $OperatorContextId
+    "X-Correlation-ID" = $RequestCorrelationId
   }
   if (-not $OmitIdempotency) {
     if ([string]::IsNullOrWhiteSpace($IdempotencyKey)) {
@@ -69,21 +74,56 @@ function Assert-Status {
   }
 }
 
-function New-SessionBody {
+function New-CanonicalSessionBody {
   param(
     [Parameter(Mandatory = $true)][string]$CheckoutIntentId,
     [Parameter(Mandatory = $true)][string]$ClientId,
     [int64]$AmountMinorUnits = 2500
   )
-  return @{
+
+  $pricingEvidenceSecret = [string]$env:WLT_DSH_PRICING_EVIDENCE_SECRET
+  if ([string]::IsNullOrWhiteSpace($pricingEvidenceSecret)) {
+    throw "WLT_DSH_PRICING_EVIDENCE_SECRET is required for the canonical runtime quote."
+  }
+  $evidence = [ordered]@{
+    version = 1
+    lines = @([ordered]@{ masterProductId = "runtime-matrix-product"; unitPriceMinorUnits = $AmountMinorUnits; currency = "YER" })
+    deliveryFeeMinorUnits = 0
+    serviceFeeMinorUnits = 0
+    discountMinorUnits = 0
+    signature = ""
+  }
+  $unsignedEvidence = $evidence | ConvertTo-Json -Compress -Depth 8
+  $hmac = [System.Security.Cryptography.HMACSHA256]::new([Text.Encoding]::UTF8.GetBytes($pricingEvidenceSecret))
+  try {
+    $evidence.signature = [Convert]::ToHexString($hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($unsignedEvidence))).ToLowerInvariant()
+  } finally {
+    $hmac.Dispose()
+  }
+  $cartSnapshotHash = "wlt-runtime-matrix-$CheckoutIntentId"
+  $quoteResponse = Invoke-WltResponse -Method POST -Path "/wlt/internal/quotes/calculate" -Body ([ordered]@{
     checkoutIntentId = $CheckoutIntentId
-    operatorContextId = $OperatorContextId
+    cartSnapshotHash = $cartSnapshotHash
     clientId = $ClientId
     storeId = "store-test-grocery"
-    paymentMethod = "official_wallet"
-    amountMinorUnits = $AmountMinorUnits
     currency = "YER"
-    cartSnapshotHash = "wlt-runtime-matrix-$CheckoutIntentId"
+    cartVersion = 1
+    lines = @([ordered]@{ masterProductId = "runtime-matrix-product"; productName = "Runtime matrix product"; quantity = 1 })
+    pricingEvidence = $evidence
+  }) -IdempotencyKey "wlt-runtime-matrix-quote-$CheckoutIntentId"
+  Assert-Status -Response $quoteResponse -Expected @(200) -Name "canonical checkout quote"
+  if ($null -eq $quoteResponse.Json.quote -or [string]::IsNullOrWhiteSpace([string]$quoteResponse.Json.quote.id)) {
+    throw "canonical checkout quote returned no quote identity: $($quoteResponse.Content)"
+  }
+  return [ordered]@{
+    checkoutIntentId = $CheckoutIntentId
+    clientId = $ClientId
+    storeId = "store-test-grocery"
+    paymentMethod = "wallet"
+    amountMinorUnits = [int64]$quoteResponse.Json.quote.totalMinorUnits
+    currency = [string]$quoteResponse.Json.quote.currency
+    cartSnapshotHash = $cartSnapshotHash
+    pricingQuoteId = [string]$quoteResponse.Json.quote.id
   }
 }
 
@@ -94,7 +134,30 @@ if ($Health.Json.status -ne "healthy") { throw "WLT health payload is not health
 $CheckoutIntentId = "checkout-runtime-matrix-$Timestamp"
 $ClientId = "client-runtime-matrix-$Timestamp"
 $CreateKey = "wlt-runtime-matrix-create-$Timestamp"
-$Body = New-SessionBody -CheckoutIntentId $CheckoutIntentId -ClientId $ClientId
+$TopupCorrelationId = "$CorrelationId-topup"
+$TopupReference = "topup-runtime-matrix-$Timestamp"
+
+$TopupCreate = Invoke-WltResponse -Method POST -Path "/wlt/topup-sessions" -Body ([ordered]@{
+  actorType = "customer"
+  actorId = $ClientId
+  topupReference = $TopupReference
+  amountMinorUnits = 5000
+  currency = "YER"
+}) -IdempotencyKey "wlt-runtime-matrix-topup-create-$Timestamp" -RequestCorrelationId $TopupCorrelationId
+Assert-Status -Response $TopupCreate -Expected @(201) -Name "client wallet topup create"
+$TopupSessionId = "$($TopupCreate.Json.paymentSession.id)"
+if ([string]::IsNullOrWhiteSpace($TopupSessionId)) { throw "topup create returned no paymentSession.id" }
+
+$TopupAuthorized = Invoke-WltResponse -Method POST -Path "/wlt/topup-sessions/$TopupSessionId/authorize" `
+  -IdempotencyKey "wlt-runtime-matrix-topup-authorize-$Timestamp" -RequestCorrelationId $TopupCorrelationId
+Assert-Status -Response $TopupAuthorized -Expected @(200) -Name "client wallet topup authorize"
+
+$TopupCaptured = Invoke-WltResponse -Method POST -Path "/wlt/topup-sessions/$TopupSessionId/capture" `
+  -IdempotencyKey "wlt-runtime-matrix-topup-capture-$Timestamp" -RequestCorrelationId $TopupCorrelationId
+Assert-Status -Response $TopupCaptured -Expected @(200) -Name "client wallet topup capture"
+if ($TopupCaptured.Json.paymentSession.status -ne "captured") { throw "client wallet topup did not reach captured" }
+
+$Body = New-CanonicalSessionBody -CheckoutIntentId $CheckoutIntentId -ClientId $ClientId
 
 $CreateFirst = Invoke-WltResponse -Method POST -Path "/wlt/payment-sessions" -Body $Body -IdempotencyKey $CreateKey
 Assert-Status -Response $CreateFirst -Expected @(201) -Name "first payment-session create"
@@ -107,18 +170,20 @@ if ("$($CreateReplay.Json.paymentSession.id)" -ne $SessionId) {
   throw "payment-session replay created a different session"
 }
 
-$ChangedBody = New-SessionBody -CheckoutIntentId $CheckoutIntentId -ClientId $ClientId -AmountMinorUnits 2600
+$ChangedBody = [ordered]@{}
+foreach ($property in $Body.GetEnumerator()) { $ChangedBody[$property.Key] = $property.Value }
+$ChangedBody.amountMinorUnits = [int64]$Body.amountMinorUnits + 100
 $Conflict = Invoke-WltResponse -Method POST -Path "/wlt/payment-sessions" -Body $ChangedBody -IdempotencyKey "wlt-runtime-matrix-conflict-$Timestamp"
-Assert-Status -Response $Conflict -Expected @(409) -Name "changed-payload source replay"
-if ($Conflict.Json.code -ne "IDEMPOTENCY_CONFLICT") { throw "changed-payload replay did not return IDEMPOTENCY_CONFLICT" }
+Assert-Status -Response $Conflict -Expected @(400) -Name "tampered quote-bound payment create"
+if ($Conflict.Json.code -ne "INVALID_REQUEST") { throw "tampered quote-bound payment create did not fail validation" }
 
 $MissingIdempotency = Invoke-WltResponse -Method POST -Path "/wlt/payment-sessions" `
-  -Body (New-SessionBody -CheckoutIntentId "checkout-missing-idempotency-$Timestamp" -ClientId $ClientId) `
+  -Body (New-CanonicalSessionBody -CheckoutIntentId "checkout-missing-idempotency-$Timestamp" -ClientId $ClientId) `
   -OmitIdempotency
 Assert-Status -Response $MissingIdempotency -Expected @(400) -Name "missing idempotency key"
 
 $WrongAuth = Invoke-WltResponse -Method POST -Path "/wlt/payment-sessions" `
-  -Body (New-SessionBody -CheckoutIntentId "checkout-wrong-auth-$Timestamp" -ClientId $ClientId) `
+  -Body $Body `
   -IdempotencyKey "wlt-runtime-matrix-wrong-auth-$Timestamp" -Token "wrong-token"
 Assert-Status -Response $WrongAuth -Expected @(401, 403) -Name "wrong service token"
 
@@ -132,7 +197,10 @@ Assert-Status -Response $Authorized -Expected @(200) -Name "authorize"
 if ($Authorized.Json.paymentSession.status -ne "authorized") { throw "authorize did not reach authorized" }
 
 $AuthorizeReplay = Invoke-WltResponse -Method POST -Path "/wlt/payment-sessions/$SessionId/authorize" -IdempotencyKey $AuthorizeKey
-Assert-Status -Response $AuthorizeReplay -Expected @(409) -Name "authorize replay fail-closed"
+Assert-Status -Response $AuthorizeReplay -Expected @(200) -Name "authorize idempotent replay"
+if ($AuthorizeReplay.Json.idempotentReplay -ne $true -or $AuthorizeReplay.Json.paymentSession.status -ne "authorized") {
+  throw "authorize replay did not return the canonical completed operation result"
+}
 
 $AfterAuthorize = Invoke-WltResponse -Method GET -Path "/wlt/payment-sessions/$SessionId"
 Assert-Status -Response $AfterAuthorize -Expected @(200) -Name "authorized readback"
@@ -144,7 +212,10 @@ Assert-Status -Response $Captured -Expected @(200) -Name "capture"
 if ($Captured.Json.paymentSession.status -ne "captured") { throw "capture did not reach captured" }
 
 $CaptureReplay = Invoke-WltResponse -Method POST -Path "/wlt/payment-sessions/$SessionId/capture" -IdempotencyKey $CaptureKey
-Assert-Status -Response $CaptureReplay -Expected @(400) -Name "capture replay fail-closed"
+Assert-Status -Response $CaptureReplay -Expected @(200) -Name "capture idempotent replay"
+if ($CaptureReplay.Json.idempotentReplay -ne $true -or $CaptureReplay.Json.paymentSession.status -ne "captured") {
+  throw "capture replay did not return the canonical completed operation result"
+}
 
 $ExpireCaptured = Invoke-WltResponse -Method POST -Path "/wlt/payment-sessions/$SessionId/expire" `
   -IdempotencyKey "wlt-runtime-matrix-expire-captured-$Timestamp"
@@ -161,8 +232,10 @@ $CaptureCalls = 0
 foreach ($Record in @($Journal.requests)) {
   $Request = $Record.request
   $Headers = $Request.headers
-  $CorrelationHeader = if ($Headers.'X-Correlation-ID') { $Headers.'X-Correlation-ID' } else { $Headers.'x-correlation-id' }
-  if ($null -eq $CorrelationHeader -or "$CorrelationHeader" -notlike "*$CorrelationId*") { continue }
+  $CorrelationProperty = $Headers.PSObject.Properties["X-Correlation-ID"]
+  if ($null -eq $CorrelationProperty) { $CorrelationProperty = $Headers.PSObject.Properties["x-correlation-id"] }
+  $CorrelationHeader = if ($null -ne $CorrelationProperty) { $CorrelationProperty.Value } else { $null }
+  if ($null -eq $CorrelationHeader -or "$CorrelationHeader" -ne $CorrelationId) { continue }
   if ($Request.url -eq "/financial/card/authorize" -and $Request.method -eq "POST") { $AuthorizeCalls++ }
   if ($Request.url -eq "/financial/card/capture" -and $Request.method -eq "POST") { $CaptureCalls++ }
 }
@@ -177,8 +250,8 @@ if ($CaptureCalls -ne 1) { throw "capture duplicate protection failed; provider 
   missingIdempotencyRejected = $true
   wrongServiceTokenRejected = $true
   captureBeforeAuthorizeRejected = $true
-  authorizeReplayFailedClosed = $true
-  captureReplayFailedClosed = $true
+  authorizeReplayReturnedCanonical = $true
+  captureReplayReturnedCanonical = $true
   capturedSessionCouldNotExpire = $true
   authorizeProviderCalls = $AuthorizeCalls
   captureProviderCalls = $CaptureCalls

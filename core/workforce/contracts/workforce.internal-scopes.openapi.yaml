@@ -1,14 +1,70 @@
 openapi: 3.1.0
 info:
-  title: Workforce Internal Scopes API
-  version: 1.1.0
+  title: Workforce Internal DSH API
+  version: 2.0.0
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/workforce
 paths:
+  /internal/captains/{actorId}/readiness:
+    get:
+      operationId: getInternalCaptainReadiness
+      summary: Read governed captain activation readiness through DSH service identity.
+      parameters:
+        - $ref: '#/components/parameters/ActorId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+      responses:
+        '200':
+          description: Governed captain activation readiness.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalActivationReadinessResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: []
+          serviceCaller: []
+  /internal/fields/{actorId}/readiness:
+    get:
+      operationId: getInternalFieldReadiness
+      summary: Read governed field activation readiness through DSH service identity.
+      parameters:
+        - $ref: '#/components/parameters/ActorId'
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/ServiceCaller'
+      responses:
+        '200':
+          description: Governed field activation readiness.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InternalActivationReadinessResponse'
+        '400':
+          $ref: '#/components/responses/InvalidRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+      security:
+        - bearerAuth: []
+          serviceCaller: []
   /internal/assignments/{actorId}/scopes:
     get:
       operationId: getInternalActorScopes
-      summary: Read active operational scopes in a trusted platform context.
+      summary: Read Workforce-owned active operational scopes in a trusted platform context.
       parameters:
         - $ref: '#/components/parameters/ActorId'
         - $ref: '#/components/parameters/Role'
@@ -26,40 +82,8 @@ paths:
           $ref: '#/components/responses/InvalidRequest'
         '401':
           $ref: '#/components/responses/Unauthenticated'
-        '500':
-          $ref: '#/components/responses/InternalError'
-      security:
-        - bearerAuth: []
-          serviceCaller: []
-    put:
-      operationId: updateInternalActorScopes
-      summary: Replace operational scopes with an audited trusted-context mutation.
-      parameters:
-        - $ref: '#/components/parameters/ActorId'
-        - $ref: '#/components/parameters/Authorization'
-        - $ref: '#/components/parameters/ServiceCaller'
-        - $ref: '#/components/parameters/OperatorContext'
-        - $ref: '#/components/parameters/RequestingActor'
-        - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/SetActorScopesRequest'
-      responses:
-        '200':
-          description: Replaced actor scopes.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ActorScopes'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '409':
-          $ref: '#/components/responses/Conflict'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalError'
       security:
@@ -70,7 +94,7 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      description: DSH-to-Workforce service credential.
+      description: DSH-to-Workforce service credential for read-only internal consumption.
     serviceCaller:
       type: apiKey
       in: header
@@ -108,26 +132,10 @@ components:
       in: header
       name: X-Operator-Context-ID
       required: true
-      description: Trusted platform context resolved by DSH from Identity.
+      description: Context assertion resolved by DSH from Identity and independently attested by Workforce against Identity before use.
       schema:
         type: string
         minLength: 1
-    RequestingActor:
-      in: header
-      name: X-Actor-ID
-      required: true
-      description: Identity-resolved actor that requested the mutation.
-      schema:
-        type: string
-        minLength: 1
-    CorrelationId:
-      in: header
-      name: X-Correlation-ID
-      required: true
-      schema:
-        type: string
-        minLength: 1
-        maxLength: 128
   responses:
     InvalidRequest:
       description: Request validation failed.
@@ -141,8 +149,20 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ApiError'
-    Conflict:
-      description: The requested scopes overlap or conflict with durable state.
+    Forbidden:
+      description: The asserted actor or operator context is not a verified Identity relationship.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Provider is not present for the requested Workforce kind.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unavailable:
+      description: Workforce readiness truth cannot currently be evaluated.
       content:
         application/json:
           schema:
@@ -163,36 +183,25 @@ components:
           type: string
         message:
           type: string
-    OperationalAssignmentInput:
+    InternalActivationReadinessResponse:
       type: object
       additionalProperties: false
-      required: [scopeType, scopeTargetId, startsOn]
+      required: [activationReadiness]
       properties:
-        scopeType:
-          type: string
-          enum: [store, area, partner, shift]
-        scopeTargetId:
-          type: string
-          minLength: 1
-        startsOn:
-          type: string
-          format: date-time
-        endsOn:
-          type: string
-          format: date-time
-    SetActorScopesRequest:
+        activationReadiness:
+          $ref: '#/components/schemas/InternalActivationReadiness'
+    InternalActivationReadiness:
       type: object
       additionalProperties: false
-      required: [role, inputs]
+      required: [isActive, missing]
       properties:
-        role:
-          type: string
-          enum: [field, captain, employee]
-        inputs:
+        isActive:
+          type: boolean
+          description: True only when all governed Workforce activation requirements are satisfied.
+        missing:
           type: array
-          maxItems: 500
           items:
-            $ref: '#/components/schemas/OperationalAssignmentInput'
+            type: string
     ActorScopes:
       type: object
       additionalProperties: false

@@ -1,3 +1,5 @@
+import { rewriteMobileDevPresignedMediaUrl } from "../_kernel/mobile-dev-gateway";
+
 export async function uploadCatalogBinary(input: {
   readonly uploadUrl: string;
   readonly body: Blob;
@@ -6,7 +8,7 @@ export async function uploadCatalogBinary(input: {
 }): Promise<void> {
   let response: Response;
   try {
-    response = await globalThis.fetch(input.uploadUrl, {
+    response = await globalThis.fetch(rewriteMobileDevPresignedMediaUrl(input.uploadUrl), {
       method: "PUT",
       headers: { "Content-Type": input.mimeType },
       body: input.body,

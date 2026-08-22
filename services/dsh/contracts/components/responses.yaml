@@ -36,6 +36,13 @@ Conflict:
       schema:
         $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
 
+InternalError:
+  description: An internal DSH operation failed.
+  content:
+    application/json:
+      schema:
+        $ref: "../dsh.openapi.yaml#/components/schemas/DshErrorResponse"
+
 ServiceUnavailable:
   description: Identity or DSH dependency is unavailable.
   content:

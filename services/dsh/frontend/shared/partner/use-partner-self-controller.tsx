@@ -21,7 +21,7 @@ function resolveMessage(err: unknown): string {
   return "حدث خطأ، يرجى المحاولة مجدداً";
 }
 
-export function usePartnerSelfController(authKind: string) {
+export function usePartnerSelfController(authKind: string, storeId?: string) {
   const [statusState, setStatusState] = useState<DshPartnerDetailState>({ kind: "idle" });
   const [readinessState, setReadinessState] = useState<DshPartnerReadinessState>({ kind: "idle" });
   const isAuth = authKind === "authenticated";
@@ -30,7 +30,7 @@ export function usePartnerSelfController(authKind: string) {
     if (!isAuth) return;
     setStatusState({ kind: "loading" });
     try {
-      const partner = await fetchPartnerSelfStatus();
+      const partner = await fetchPartnerSelfStatus(storeId);
       setStatusState({ kind: "success", partner });
     } catch (err) {
       // app-partner Product Truth exposes one recoverable error state rather
@@ -38,18 +38,18 @@ export function usePartnerSelfController(authKind: string) {
       // precise explanation while routing both through the Hub retry boundary.
       setStatusState(partnerSelfErrorState(err));
     }
-  }, [isAuth]);
+  }, [isAuth, storeId]);
 
   const loadReadiness = useCallback(async () => {
     if (!isAuth) return;
     setReadinessState({ kind: "loading" });
     try {
-      const readiness = await fetchPartnerSelfReadiness();
+      const readiness = await fetchPartnerSelfReadiness(storeId);
       setReadinessState({ kind: "success", readiness });
     } catch (err) {
       setReadinessState(partnerSelfErrorState(err));
     }
-  }, [isAuth]);
+  }, [isAuth, storeId]);
 
   useEffect(() => {
     void loadStatus();

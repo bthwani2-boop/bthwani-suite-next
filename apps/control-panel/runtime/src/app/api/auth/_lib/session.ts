@@ -1,5 +1,8 @@
 import type { ActorIdentity, TokenResponse } from "@bthwani/core-identity/server";
-import { identityServerClient } from "./identity-server";
+import {
+  identityServerClient,
+  isIdentityServerInvalidSessionError,
+} from "./identity-server";
 
 export type ResolvedSession = {
   readonly identity: ActorIdentity;
@@ -7,30 +10,12 @@ export type ResolvedSession = {
   readonly rotated: TokenResponse | null;
 };
 
-// Best-effort single-flight de-duplication of concurrent refreshes for the
-// same refresh token. This only dedupes within a single Node process; it is
-// not a cross-instance lock. Acceptable for the control-panel's traffic
-// shape, called out as a follow-up if multi-instance deployment is added.
-const inFlightRefresh = new Map<string, Promise<TokenResponse>>();
-
-function refreshOnce(refreshToken: string): Promise<TokenResponse> {
-  const existing = inFlightRefresh.get(refreshToken);
-  if (existing) return existing;
-
-  const promise = identityServerClient()
-    .refresh(refreshToken)
-    .finally(() => {
-      inFlightRefresh.delete(refreshToken);
-    });
-  inFlightRefresh.set(refreshToken, promise);
-  return promise;
-}
-
 /**
- * Resolves the caller's identity from cookie-held tokens: verifies the
- * access token first, and falls back to a single, deduplicated refresh
- * attempt if it has expired. Throws if neither token yields a valid
- * session, so callers can clear cookies and return 401.
+ * Resolves the caller's identity from cookie-held tokens: verifies the access
+ * token first, then asks Identity's distributed refresh boundary to rotate the
+ * refresh token only when the access session is authoritatively invalid.
+ * Availability/infrastructure failures are propagated unchanged so callers
+ * preserve credentials instead of manufacturing a logout.
  */
 export async function resolveSession(
   accessToken: string | undefined,
@@ -40,8 +25,8 @@ export async function resolveSession(
     try {
       const identity = await identityServerClient().session(accessToken);
       return { identity, rotated: null };
-    } catch {
-      // fall through to refresh
+    } catch (error) {
+      if (!isIdentityServerInvalidSessionError(error)) throw error;
     }
   }
 
@@ -49,6 +34,6 @@ export async function resolveSession(
     throw new Error("IDENTITY_SESSION_INVALID");
   }
 
-  const rotated = await refreshOnce(refreshToken);
+  const rotated = await identityServerClient().refresh(refreshToken);
   return { identity: rotated.identity, rotated };
 }

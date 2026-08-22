@@ -1,8 +1,10 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshCaptainDispatchCandidate,
   DshCaptainDispatchProfileInput,
+  DshCaptainAvailability,
+  DshCaptainAvailabilityStatus,
   DshCaptainReadiness,
   DshDeliveryException,
   DshDeliveryExceptionResolutionAction,
@@ -20,6 +22,20 @@ const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "dispatch");
 
 export function fetchOwnCaptainReadiness(): Promise<DshCaptainReadiness> {
   return request<DshCaptainReadiness>("/dsh/captain/me/readiness");
+}
+
+export function fetchOwnCaptainAvailability(): Promise<DshCaptainAvailability> {
+  return request<DshCaptainAvailability>("/dsh/captain/dispatch/availability");
+}
+
+export function setOwnCaptainAvailability(
+  status: Extract<DshCaptainAvailabilityStatus, "available" | "unavailable">,
+  expectedVersion: number,
+): Promise<DshCaptainAvailability> {
+  return request<DshCaptainAvailability>("/dsh/captain/dispatch/availability", {
+    method: "PATCH",
+    body: { status, expectedVersion },
+  });
 }
 
 export function fetchOperatorCaptainReadiness(captainId: string): Promise<DshCaptainReadiness> {
@@ -136,10 +152,31 @@ export async function fetchDispatchDecisions(input: {
   return data.decisions ?? [];
 }
 
-export async function updateDeliveryStatus(assignmentId: string, status: DshDeliveryStatus): Promise<DshDispatchAssignment> {
+export type DshDeliveryStatusUpdateOptions = {
+  readonly expectedVersion: number;
+  readonly latitude?: number;
+  readonly longitude?: number;
+  readonly idempotencyKey?: string;
+};
+
+export async function updateDeliveryStatus(
+  assignmentId: string,
+  status: DshDeliveryStatus,
+  options: DshDeliveryStatusUpdateOptions,
+): Promise<DshDispatchAssignment> {
   const data = await request<{ assignment: DshDispatchAssignment }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/status`,
-    { method: "POST", body: { status } },
+    {
+      method: "POST",
+      body: {
+        status,
+        version: options.expectedVersion,
+        ...(options.latitude !== undefined ? { latitude: options.latitude } : {}),
+        ...(options.longitude !== undefined ? { longitude: options.longitude } : {}),
+      },
+      expectedVersion: options.expectedVersion,
+      idempotencyKey: options.idempotencyKey ?? corrId("captain-delivery-status"),
+    },
   );
   return data.assignment;
 }
@@ -169,7 +206,7 @@ export async function reportCaptainHandoffException(
 ): Promise<DshDeliveryException> {
   const data = await request<{ exception: DshDeliveryException }>(
     `/dsh/captain/dispatch/assignments/${encodeURIComponent(assignmentId)}/handoff-exceptions`,
-    { method: "POST", body: input },
+    { method: "POST", body: input, idempotencyKey: input.correlationId },
   );
   return data.exception;
 }

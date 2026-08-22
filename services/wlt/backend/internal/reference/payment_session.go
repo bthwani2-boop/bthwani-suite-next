@@ -1,14 +1,17 @@
 package reference
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"wlt-api/internal/payment"
+	"wlt-api/internal/pricing"
 	"wlt-api/internal/shared"
 )
 
@@ -17,34 +20,47 @@ var ErrIdempotencyConflict = errors.New("payment session idempotency conflict")
 const paymentSessionCols = `id, checkout_intent_id, special_request_id,
 	 subscription_purchase_id, commercial_product_reference,
 	 topup_reference, topup_actor_type,
-	 operator_context_id,
-	 client_id, store_id, payment_method, status, provider_reference, amount_minor_units,
-	 currency, financial_purpose, captured_at, created_at, updated_at`
+	operator_context_id,
+	client_id, store_id, payment_method, status, provider_reference, amount_minor_units,
+	currency, wallet_amount_minor_units, cash_on_delivery_amount_minor_units, financial_purpose,
+	COALESCE(pricing_quote_id, ''), COALESCE(pricing_quote_hash, ''),
+	 COALESCE(pricing_quote_version, 0), pricing_quote_expires_at, captured_at, created_at, updated_at`
 
 type PaymentSession struct {
-	ID                         string  `json:"id"`
-	CheckoutIntentID           *string `json:"checkoutIntentId,omitempty"`
-	SpecialRequestID           *string `json:"specialRequestId,omitempty"`
-	SubscriptionPurchaseID     *string `json:"subscriptionPurchaseId,omitempty"`
-	CommercialProductReference *string `json:"commercialProductReference,omitempty"`
-	TopUpReference             *string `json:"topupReference,omitempty"`
-	TopUpActorType             *string `json:"topupActorType,omitempty"`
-	OperatorContextID          string  `json:"operatorContextId"`
-	ClientID                   string  `json:"clientId"`
-	StoreID                    string  `json:"storeId"`
-	PaymentMethod              string  `json:"paymentMethod"`
-	Status                     string  `json:"status"`
-	ProviderReference          string  `json:"providerReference"`
-	AmountMinorUnits           int64   `json:"amountMinorUnits"`
-	Currency                   string  `json:"currency"`
+	ID                         string            `json:"id"`
+	CheckoutIntentID           *string           `json:"checkoutIntentId,omitempty"`
+	SpecialRequestID           *string           `json:"specialRequestId,omitempty"`
+	SubscriptionPurchaseID     *string           `json:"subscriptionPurchaseId,omitempty"`
+	CommercialProductReference *string           `json:"commercialProductReference,omitempty"`
+	TopUpReference             *string           `json:"topupReference,omitempty"`
+	TopUpActorType             *string           `json:"topupActorType,omitempty"`
+	OperatorContextID          string            `json:"operatorContextId"`
+	ClientID                   string            `json:"clientId"`
+	StoreID                    string            `json:"storeId"`
+	PaymentMethod              string            `json:"paymentMethod"`
+	Status                     string            `json:"status"`
+	ProviderReference          string            `json:"providerReference"`
+	AmountMinorUnits           int64             `json:"amountMinorUnits"`
+	Currency                   string            `json:"currency"`
+	TenderAllocation           *TenderAllocation `json:"tenderAllocation,omitempty"`
 	// FinancialPurpose is server-derived and read-only to every caller. It is
 	// exposed so an auditor can see why the money moved without joining back to
 	// whichever source system created the session.
-	FinancialPurpose string                   `json:"financialPurpose"`
-	Allocation       []payment.AllocationLine `json:"allocation,omitempty"`
-	CapturedAt       *string                  `json:"capturedAt,omitempty"`
-	CreatedAt        string                   `json:"createdAt"`
-	UpdatedAt        string                   `json:"updatedAt"`
+	FinancialPurpose      string                   `json:"financialPurpose"`
+	PricingQuoteID        string                   `json:"pricingQuoteId,omitempty"`
+	PricingQuoteHash      string                   `json:"pricingQuoteHash,omitempty"`
+	PricingQuoteVersion   int                      `json:"pricingQuoteVersion,omitempty"`
+	PricingQuoteExpiresAt *string                  `json:"pricingQuoteExpiresAt,omitempty"`
+	Allocation            []payment.AllocationLine `json:"allocation,omitempty"`
+	CapturedAt            *string                  `json:"capturedAt,omitempty"`
+	CreatedAt             string                   `json:"createdAt"`
+	UpdatedAt             string                   `json:"updatedAt"`
+}
+
+type TenderAllocation struct {
+	WalletAmountMinorUnits         int64  `json:"walletAmountMinorUnits"`
+	CashOnDeliveryAmountMinorUnits int64  `json:"cashOnDeliveryAmountMinorUnits"`
+	Currency                       string `json:"currency"`
 }
 
 // Exactly one source identifier must be present. A subscription purchase also
@@ -70,6 +86,13 @@ type CreatePaymentSessionInput struct {
 	AmountMinorUnits  int64  `json:"amountMinorUnits"`
 	Currency          string `json:"currency"`
 	CartSnapshotHash  string `json:"cartSnapshotHash"`
+	// PricingQuoteID is an opaque WLT-issued identity. The handler does not
+	// accept quote totals, hashes, versions, expiries, or allocations from DSH;
+	// it derives all of them from this immutable record inside WLT.
+	PricingQuoteID        string `json:"pricingQuoteId"`
+	PricingQuoteHash      string `json:"-"`
+	PricingQuoteVersion   int    `json:"-"`
+	PricingQuoteExpiresAt string `json:"-"`
 	// Allocation is the caller's price breakdown of AmountMinorUnits. DSH owns
 	// what an order costs and therefore supplies the numbers; WLT owns what
 	// those numbers mean and rejects any set that does not conserve the total.
@@ -117,13 +140,21 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 		return nil, fmt.Errorf("financial compatibility scope, clientId and storeId are required")
 	}
 	if input.PaymentMethod == "" {
+		if input.CheckoutIntentID != "" {
+			return nil, fmt.Errorf("paymentMethod is required for checkout; supported checkout methods are cod, wallet and mixed")
+		}
 		input.PaymentMethod = "official_wallet"
 	}
 	if input.Currency == "" {
 		input.Currency = "YER"
 	}
+	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
 	switch input.PaymentMethod {
-	case "cod", "wallet", "mixed", "official_wallet":
+	case "cod", "wallet", "mixed":
+	case "official_wallet":
+		if input.CheckoutIntentID != "" {
+			return nil, fmt.Errorf("official_wallet is a wallet funding rail and is not a checkout payment method")
+		}
 	default:
 		return nil, fmt.Errorf("unsupported paymentMethod: %s", input.PaymentMethod)
 	}
@@ -135,6 +166,30 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	}
 	if input.AmountMinorUnits <= 0 {
 		return nil, fmt.Errorf("amountMinorUnits must be greater than 0")
+	}
+	if input.CheckoutIntentID != "" && strings.TrimSpace(input.PricingQuoteID) == "" {
+		return nil, fmt.Errorf("checkout payment sessions require a canonical pricing quote")
+	}
+	if input.SpecialRequestID != "" {
+		if strings.TrimSpace(input.PricingQuoteID) == "" {
+			return nil, fmt.Errorf("special-request payment sessions require a canonical WLT pricing quote")
+		}
+		quote, err := pricing.LoadSpecialRequestQuote(context.Background(), db, input.OperatorContextID, input.PricingQuoteID)
+		if err != nil {
+			return nil, err
+		}
+		if quote.SpecialRequestID != input.SpecialRequestID || quote.ClientID != input.ClientID {
+			return nil, pricing.ErrSpecialRequestQuoteConflict
+		}
+		if quote.AmountMinorUnits != input.AmountMinorUnits || quote.Currency != input.Currency {
+			return nil, pricing.ErrSpecialRequestQuoteConflict
+		}
+		input.PricingQuoteHash = quote.QuoteHash
+		input.PricingQuoteVersion = quote.QuoteVersion
+		input.PricingQuoteExpiresAt = quote.ExpiresAt.UTC().Format(time.RFC3339Nano)
+	}
+	if input.CheckoutIntentID != "" && len(input.Allocation) != 0 {
+		return nil, fmt.Errorf("checkout payment allocation is derived from the canonical pricing quote")
 	}
 
 	// The purpose is resolved from the source identity the caller has already
@@ -149,10 +204,23 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	if err != nil {
 		return nil, err
 	}
+	if input.CheckoutIntentID != "" {
+		quote, err := pricing.LoadCheckoutQuote(context.Background(), db, input.OperatorContextID, input.PricingQuoteID)
+		if err != nil {
+			return nil, err
+		}
+		if quote.CheckoutIntentID != input.CheckoutIntentID || quote.ClientID != input.ClientID || quote.StoreID != input.StoreID ||
+			quote.CartSnapshotHash != input.CartSnapshotHash || quote.TotalMinorUnits != input.AmountMinorUnits || quote.Currency != input.Currency {
+			return nil, pricing.ErrCheckoutQuoteConflict
+		}
+		input.PricingQuoteHash = quote.Hash
+		input.PricingQuoteVersion = quote.Version
+		input.PricingQuoteExpiresAt = quote.ExpiresAt.UTC().Format(time.RFC3339Nano)
+		input.Allocation = quote.Allocation
+	}
 	if err := payment.ValidatePaymentAllocation(input.Allocation, input.AmountMinorUnits); err != nil {
 		return nil, err
 	}
-
 	var existing *PaymentSession
 	switch {
 	case input.CheckoutIntentID != "":
@@ -178,6 +246,7 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 			existing.PaymentMethod != input.PaymentMethod ||
 			existing.AmountMinorUnits != input.AmountMinorUnits ||
 			existing.Currency != input.Currency ||
+			existing.PricingQuoteID != input.PricingQuoteID ||
 			stringValue(existing.CommercialProductReference) != input.CommercialProductReference ||
 			stringValue(existing.TopUpActorType) != input.TopUpActorType ||
 			!sameAllocation(existing.Allocation, input.Allocation) {
@@ -191,10 +260,14 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 			(checkout_intent_id, special_request_id, subscription_purchase_id,
 			 commercial_product_reference, topup_reference, topup_actor_type,
 			 operator_context_id, client_id, store_id,
-			 payment_method, status, amount_minor_units, currency, financial_purpose,
-			 cart_snapshot_hash, idempotency_key, correlation_id)
+			 payment_method, status, amount_minor_units, currency,
+			 wallet_amount_minor_units, cash_on_delivery_amount_minor_units, financial_purpose,
+			 cart_snapshot_hash, pricing_quote_id, pricing_quote_hash, pricing_quote_version,
+			 pricing_quote_expires_at, idempotency_key, correlation_id)
 		VALUES (NULLIF($1, ''), NULLIF($2, ''), NULLIF($3, ''), NULLIF($4, ''), NULLIF($5, ''), NULLIF($6, ''),
-			$7, $8, $9, $10, 'reference_created', $11, $12, $13, $14, $15, $16)
+			$7, $8, $9, $10, CASE WHEN $10 IN ('cod', 'mixed') THEN 'cod_pending' ELSE 'reference_created' END, $11, $12, $13, $14, $15,
+			$16, NULLIF($17, ''), NULLIF($18, ''), NULLIF($19, 0), NULLIF($20, '')::timestamptz,
+			$21, $22)
 		RETURNING ` + paymentSessionCols
 
 	// The session and its allocation are one financial fact and are written in
@@ -206,6 +279,39 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 		return nil, err
 	}
 	defer func() { _ = tx.Rollback() }()
+	if input.CheckoutIntentID != "" {
+		quote, err := pricing.LoadCheckoutQuoteForSession(context.Background(), tx, input.OperatorContextID, input.PricingQuoteID)
+		if err != nil {
+			return nil, err
+		}
+		if quote.CheckoutIntentID != input.CheckoutIntentID || quote.ClientID != input.ClientID || quote.StoreID != input.StoreID ||
+			quote.CartSnapshotHash != input.CartSnapshotHash || quote.TotalMinorUnits != input.AmountMinorUnits || quote.Currency != input.Currency {
+			return nil, pricing.ErrCheckoutQuoteConflict
+		}
+		input.PricingQuoteHash = quote.Hash
+		input.PricingQuoteVersion = quote.Version
+		input.PricingQuoteExpiresAt = quote.ExpiresAt.UTC().Format(time.RFC3339Nano)
+		input.Allocation = quote.Allocation
+	}
+	if input.SpecialRequestID != "" {
+		quote, err := pricing.LoadSpecialRequestQuoteForSession(context.Background(), tx, input.OperatorContextID, input.PricingQuoteID)
+		if err != nil {
+			return nil, err
+		}
+		if quote.SpecialRequestID != input.SpecialRequestID || quote.ClientID != input.ClientID || quote.AmountMinorUnits != input.AmountMinorUnits || quote.Currency != input.Currency {
+			return nil, pricing.ErrSpecialRequestQuoteConflict
+		}
+		input.PricingQuoteHash = quote.QuoteHash
+		input.PricingQuoteVersion = quote.QuoteVersion
+		input.PricingQuoteExpiresAt = quote.ExpiresAt.UTC().Format(time.RFC3339Nano)
+	}
+	if err := payment.ValidatePaymentAllocation(input.Allocation, input.AmountMinorUnits); err != nil {
+		return nil, err
+	}
+	tenderAllocation, err := deriveCheckoutTenderAllocation(context.Background(), tx, input)
+	if err != nil {
+		return nil, err
+	}
 
 	session, err := scanPaymentSession(tx.QueryRow(q,
 		input.CheckoutIntentID,
@@ -220,8 +326,14 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 		input.PaymentMethod,
 		input.AmountMinorUnits,
 		input.Currency,
+		tenderAmount(tenderAllocation, "wallet"),
+		tenderAmount(tenderAllocation, "cash_on_delivery"),
 		string(purpose),
 		input.CartSnapshotHash,
+		input.PricingQuoteID,
+		input.PricingQuoteHash,
+		input.PricingQuoteVersion,
+		input.PricingQuoteExpiresAt,
 		input.IdempotencyKey,
 		input.CorrelationID,
 	))
@@ -248,7 +360,72 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 		return nil, err
 	}
 	session.Allocation = append([]payment.AllocationLine(nil), input.Allocation...)
+	session.TenderAllocation = tenderAllocation
 	return session, nil
+}
+
+func deriveCheckoutTenderAllocation(ctx context.Context, tx *sql.Tx, input CreatePaymentSessionInput) (*TenderAllocation, error) {
+	if input.CheckoutIntentID == "" {
+		return nil, nil
+	}
+
+	allocation := &TenderAllocation{Currency: input.Currency}
+	switch input.PaymentMethod {
+	case "cod":
+		allocation.CashOnDeliveryAmountMinorUnits = input.AmountMinorUnits
+	case "wallet", "mixed":
+		var available int64
+		var status, currency string
+		err := tx.QueryRowContext(ctx, `
+			SELECT status, currency, available_balance_minor_units
+			FROM wlt_wallets
+			WHERE operator_context_id = $1 AND actor_type = 'client' AND actor_id = $2
+			FOR UPDATE`, input.OperatorContextID, input.ClientID).Scan(&status, &currency, &available)
+		if errors.Is(err, sql.ErrNoRows) {
+			if input.PaymentMethod == "wallet" {
+				return nil, fmt.Errorf("client wallet is required for wallet checkout")
+			}
+			allocation.CashOnDeliveryAmountMinorUnits = input.AmountMinorUnits
+			return allocation, nil
+		}
+		if err != nil {
+			return nil, fmt.Errorf("load client wallet for checkout tender allocation: %w", err)
+		}
+		if currency != input.Currency {
+			return nil, fmt.Errorf("client wallet currency %s does not match checkout currency %s", currency, input.Currency)
+		}
+		if status != "active" {
+			if input.PaymentMethod == "wallet" {
+				return nil, fmt.Errorf("client wallet is not active for wallet checkout")
+			}
+			allocation.CashOnDeliveryAmountMinorUnits = input.AmountMinorUnits
+			return allocation, nil
+		}
+		if available < 0 {
+			available = 0
+		}
+		if input.PaymentMethod == "wallet" && available < input.AmountMinorUnits {
+			return nil, fmt.Errorf("client wallet balance is insufficient for wallet checkout")
+		}
+		if available > input.AmountMinorUnits {
+			available = input.AmountMinorUnits
+		}
+		allocation.WalletAmountMinorUnits = available
+		allocation.CashOnDeliveryAmountMinorUnits = input.AmountMinorUnits - available
+	default:
+		return nil, fmt.Errorf("unsupported checkout payment method %q", input.PaymentMethod)
+	}
+	return allocation, nil
+}
+
+func tenderAmount(allocation *TenderAllocation, kind string) any {
+	if allocation == nil {
+		return nil
+	}
+	if kind == "wallet" {
+		return allocation.WalletAmountMinorUnits
+	}
+	return allocation.CashOnDeliveryAmountMinorUnits
 }
 
 // sameAllocation compares two breakdowns as sets: the wire order of components
@@ -340,6 +517,10 @@ func HandleCreatePaymentSession(db *sql.DB) http.HandlerFunc {
 		}
 		var input CreatePaymentSessionInput
 		if !decodeJSON(w, r, &input) {
+			return
+		}
+		if input.CheckoutIntentID != "" && input.PricingQuoteID == "" {
+			shared.SendError(w, http.StatusBadRequest, "PRICING_QUOTE_REQUIRED", "checkout payment sessions require a canonical WLT pricing quote identity")
 			return
 		}
 		compatibilityScope, err := shared.RequireOperatorContext(r.Context())
@@ -441,6 +622,7 @@ func requireDshServiceCaller(w http.ResponseWriter, r *http.Request) bool {
 
 func scanPaymentSession(row *sql.Row) (*PaymentSession, error) {
 	var session PaymentSession
+	var walletAmount, cashOnDeliveryAmount sql.NullInt64
 	err := row.Scan(
 		&session.ID,
 		&session.CheckoutIntentID,
@@ -457,13 +639,29 @@ func scanPaymentSession(row *sql.Row) (*PaymentSession, error) {
 		&session.ProviderReference,
 		&session.AmountMinorUnits,
 		&session.Currency,
+		&walletAmount,
+		&cashOnDeliveryAmount,
 		&session.FinancialPurpose,
+		&session.PricingQuoteID,
+		&session.PricingQuoteHash,
+		&session.PricingQuoteVersion,
+		&session.PricingQuoteExpiresAt,
 		&session.CapturedAt,
 		&session.CreatedAt,
 		&session.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
+	}
+	if walletAmount.Valid != cashOnDeliveryAmount.Valid {
+		return nil, fmt.Errorf("payment session has a partial checkout tender allocation")
+	}
+	if walletAmount.Valid {
+		session.TenderAllocation = &TenderAllocation{
+			WalletAmountMinorUnits:         walletAmount.Int64,
+			CashOnDeliveryAmountMinorUnits: cashOnDeliveryAmount.Int64,
+			Currency:                       session.Currency,
+		}
 	}
 	return &session, nil
 }

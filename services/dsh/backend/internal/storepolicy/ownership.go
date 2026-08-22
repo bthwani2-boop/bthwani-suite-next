@@ -8,7 +8,7 @@ import "strings"
 // terminated partners cannot gain new operational ownership authority.
 func PartnerStatusAllowsStoreOwnership(status string) bool {
 	switch strings.TrimSpace(status) {
-	case "", "ops_rejected", "partner_deactivated", "partner_suspended", "partner_terminated":
+	case "", "ops_rejected", "partner_suspended", "partner_terminated":
 		return false
 	default:
 		return true

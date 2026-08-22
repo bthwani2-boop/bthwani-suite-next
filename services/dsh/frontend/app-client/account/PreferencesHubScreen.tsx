@@ -56,7 +56,7 @@ export function PreferencesHubScreen({ onBack }: PreferencesHubScreenProps) {
         timezone: preference.timezone,
       });
       if (!accepted) {
-        setLocalActionError("تعذر حفظ التفضيل في DSH. لم يُعرض نجاح قبل القراءة الراجعة.");
+        setLocalActionError("تعذر حفظ التفضيل، يرجى المحاولة لاحقاً.");
       }
       setSavingTopic(null);
     },
@@ -70,7 +70,7 @@ export function PreferencesHubScreen({ onBack }: PreferencesHubScreenProps) {
     <ScrollScreen>
       <Header
         title="تفضيلات الإشعارات"
-        subtitle="إعدادات حساب محفوظة في DSH ومقروءة بعد كل تعديل"
+        subtitle="تخصيص الإشعارات والتنبيهات المستلمة"
       />
 
       <View style={styles.content}>
@@ -89,7 +89,7 @@ export function PreferencesHubScreen({ onBack }: PreferencesHubScreenProps) {
           <StateView
             tone="warning"
             title="يلزم تسجيل الدخول"
-            description="لا يمكن قراءة تفضيلات حساب دون جلسة عميل موثوقة."
+            description="يرجى تسجيل الدخول للوصول إلى تفضيلات الإشعارات."
           />
         ) : null}
 
@@ -121,8 +121,8 @@ export function PreferencesHubScreen({ onBack }: PreferencesHubScreenProps) {
         {preferenceState.kind === "success" && preferenceState.preferences.length === 0 ? (
           <StateView
             tone="neutral"
-            title="لا توجد تفضيلات مخصصة"
-            description="تُطبق إعدادات الإشعارات الافتراضية للمنصة. لن تُعرض مفاتيح وهمية قبل وجود موضوعات محفوظة للحساب."
+            title="الإعدادات الافتراضية مفعّلة"
+            description="تُطبق إعدادات الإشعارات الافتراضية لجميع التنبيهات والطلبات."
           />
         ) : null}
 
@@ -137,9 +137,6 @@ export function PreferencesHubScreen({ onBack }: PreferencesHubScreenProps) {
                     </Text>
                     <Text role="bodySm" tone="muted" style={styles.preferenceDescription}>
                       {channelsLabel(preference)} · {preference.locale === "ar" ? "العربية" : "English"}
-                    </Text>
-                    <Text role="caption" tone="muted" style={styles.topicCode}>
-                      {preference.topic}
                     </Text>
                   </View>
                   <Switch

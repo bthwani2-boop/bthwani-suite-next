@@ -10,18 +10,21 @@ import (
 	"fmt"
 	"math"
 	"sort"
+	"strings"
 	"time"
 
+	"dsh-api/internal/checkout"
 	"dsh-api/internal/wlt"
 	"github.com/lib/pq"
 )
 
 var (
-	ErrNotFound  = errors.New("cart not found")
-	ErrConflict  = errors.New("cart version conflict")
-	ErrInvalid   = errors.New("invalid cart input")
-	ErrStoreGone = errors.New("store no longer active")
-	ErrOutOfArea = errors.New("store outside serviceable area")
+	ErrNotFound             = errors.New("cart not found")
+	ErrConflict             = errors.New("cart version conflict")
+	ErrInvalid              = errors.New("invalid cart input")
+	ErrStoreGone            = errors.New("store no longer active")
+	ErrOutOfArea            = errors.New("store outside serviceable area")
+	ErrFinancialUnavailable = errors.New("canonical financial quote is unavailable")
 )
 
 type FulfillmentMode string
@@ -67,26 +70,40 @@ type Cart struct {
 	UpdatedAt time.Time            `json:"updatedAt"`
 }
 
-// FetchDeliveryFeeMinorUnits reads the store's persisted delivery fee from the
-// DSH operational database. This is a DSH concern (logistics configuration),
-// not a financial computation — WLT receives it as a raw input.
-func FetchDeliveryFeeMinorUnits(ctx context.Context, db *sql.DB, storeID string) int64 {
-	var fee int64
-	_ = db.QueryRowContext(ctx,
-		"SELECT COALESCE(delivery_fee_minor, 0) FROM dsh_store_delivery_settings WHERE store_id = $1",
-		storeID,
-	).Scan(&fee)
-	return fee
+// FetchDeliveryFeeMinorUnits resolves the active, mode-scoped delivery policy
+// through checkout's canonical resolver. DSH owns the operational input, but
+// the policy table and its store/mode eligibility rules have one authority.
+func FetchDeliveryFeeMinorUnits(ctx context.Context, db *sql.DB, storeID string, fulfillmentMode FulfillmentMode) (int64, error) {
+	if db == nil || strings.TrimSpace(storeID) == "" || strings.TrimSpace(string(fulfillmentMode)) == "" {
+		return 0, fmt.Errorf("%w: delivery fee store scope is missing", ErrFinancialUnavailable)
+	}
+
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("%w: begin delivery policy read: %v", ErrFinancialUnavailable, err)
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	policy, err := checkout.ResolveDeliveryPricingTx(ctx, tx, storeID, string(fulfillmentMode))
+	if err != nil {
+		return 0, fmt.Errorf("%w: resolve delivery policy: %v", ErrFinancialUnavailable, err)
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("%w: commit delivery policy read: %v", ErrFinancialUnavailable, err)
+	}
+	return policy.FeeMinorUnits, nil
 }
 
 // FetchWltQuote calls WLT's sovereign pricing engine. DSH passes operational
 // inputs; WLT owns all arithmetic, rounding, tax, and discount logic.
-// If wltClient is nil (unconfigured) it returns nil so callers can handle gracefully.
+// A non-empty cart cannot be represented as an ordinary nil quote when WLT or
+// its operational fee dependency is unavailable; callers must surface the
+// typed financial-unavailability error and block checkout readiness.
 func FetchWltQuote(ctx context.Context, db *sql.DB, wltClient interface {
 	CalculateQuote(context.Context, wlt.CalculatePricingQuoteRequest) (*wlt.WltPricingQuote, error)
 }, c *Cart) (*wlt.WltPricingQuote, error) {
-	if wltClient == nil {
-		return nil, nil
+	if c == nil {
+		return nil, fmt.Errorf("%w: cart is missing", ErrFinancialUnavailable)
 	}
 
 	var currency string
@@ -107,18 +124,46 @@ func FetchWltQuote(ctx context.Context, db *sql.DB, wltClient interface {
 		// Empty cart — no quote needed yet
 		return nil, nil
 	}
+	if wltClient == nil {
+		return nil, fmt.Errorf("%w: WLT pricing client is not configured", ErrFinancialUnavailable)
+	}
 
-	deliveryFee := FetchDeliveryFeeMinorUnits(ctx, db, c.StoreID)
+	// Cart readback has no checkout intent yet, but WLT still requires a stable
+	// mutation correlation. Reuse the canonical priced-cart snapshot hash so the
+	// correlation changes exactly when the immutable cart pricing inputs change.
+	snapshot, err := computeCheckoutSnapshotFromItems(c.ID, c.Items)
+	if err != nil {
+		return nil, fmt.Errorf("%w: compute cart pricing snapshot: %v", ErrFinancialUnavailable, err)
+	}
 
-	return wltClient.CalculateQuote(ctx, wlt.CalculatePricingQuoteRequest{
-		ClientID:                   c.ClientID,
-		StoreID:                    c.StoreID,
-		Currency:                   currency,
-		DeliveryFeeInputMinorUnits: deliveryFee,
-		ServiceFeeInputMinorUnits:  0,
-		CartVersion:                c.Version,
-		Lines:                      lines,
+	deliveryFee, err := FetchDeliveryFeeMinorUnits(ctx, db, c.StoreID, c.FulfillmentMode)
+	if err != nil {
+		return nil, err
+	}
+
+	quote, err := wltClient.CalculateQuote(ctx, wlt.CalculatePricingQuoteRequest{
+		ClientID:         c.ClientID,
+		StoreID:          c.StoreID,
+		Currency:         currency,
+		CartVersion:      c.Version,
+		CartSnapshotHash: snapshot.SnapshotHash,
+		Lines:            lines,
+		PricingEvidence: wlt.PricingEvidence{
+			Version:               c.Version,
+			DeliveryFeeMinorUnits: deliveryFee,
+			ServiceFeeMinorUnits:  0,
+		},
 	})
+	if err != nil {
+		return nil, fmt.Errorf("%w: WLT pricing quote: %v", ErrFinancialUnavailable, err)
+	}
+	// Cart readback uses WLT's non-issued preview quote, which intentionally has
+	// no persisted ID. Its immutable financial proof is the quote hash plus a
+	// live expiry; issued checkout quotes are validated more strictly at checkout.
+	if quote == nil || strings.TrimSpace(quote.Hash) == "" || quote.ExpiresAt == nil || !quote.ExpiresAt.After(time.Now().UTC()) {
+		return nil, fmt.Errorf("%w: WLT returned an empty or expired quote", ErrFinancialUnavailable)
+	}
+	return quote, nil
 }
 
 type ServiceabilityResult struct {
@@ -169,6 +214,10 @@ type UpsertItemInput struct {
 	Options         []string `json:"options"`
 	Note            string   `json:"note"`
 	ExpectedVersion *int     `json:"expectedVersion,omitempty"`
+	// FulfillmentMode is applied with the item mutation when the caller owns
+	// the cart. Keeping it in this transaction prevents a failed item write
+	// from leaving a mode change behind.
+	FulfillmentMode *FulfillmentMode `json:"-"`
 }
 
 func hashOptions(options []string) string {
@@ -210,8 +259,10 @@ func GetOrCreateActiveCart(ctx context.Context, db *sql.DB, wc wltQuoter, client
 		return nil, err
 	}
 	c.Items = items
-	// WLT is the sovereign owner of the quote. Ignore quote fetch errors gracefully.
-	c.Quote, _ = FetchWltQuote(ctx, db, wc, &c)
+	c.Quote, err = FetchWltQuote(ctx, db, wc, &c)
+	if err != nil {
+		return nil, err
+	}
 	return &c, nil
 }
 
@@ -235,8 +286,42 @@ func GetCart(ctx context.Context, db *sql.DB, wc wltQuoter, clientID, storeID st
 		return nil, err
 	}
 	c.Items = items
-	// WLT is the sovereign owner of the quote. Ignore quote fetch errors gracefully.
-	c.Quote, _ = FetchWltQuote(ctx, db, wc, &c)
+	c.Quote, err = FetchWltQuote(ctx, db, wc, &c)
+	if err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+// GetActiveCartForClient reads the single active cart owned by the client
+// without requiring the UI to guess or persist the store scope. The partial
+// unique index on dsh_carts is the database authority for the single-cart
+// invariant; this read only exposes that canonical owner to the client.
+func GetActiveCartForClient(ctx context.Context, db *sql.DB, wc wltQuoter, clientID string) (*Cart, error) {
+	var c Cart
+	err := db.QueryRowContext(ctx,
+		`SELECT id, client_id, store_id, fulfillment_mode, state, note, version, created_at, updated_at
+		 FROM dsh_carts
+		 WHERE client_id = $1 AND state = 'active'
+		 ORDER BY updated_at DESC, id DESC
+		 LIMIT 1`,
+		clientID,
+	).Scan(&c.ID, &c.ClientID, &c.StoreID, &c.FulfillmentMode, &c.State, &c.Note, &c.Version, &c.CreatedAt, &c.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	items, err := listItems(ctx, db, c.ID)
+	if err != nil {
+		return nil, err
+	}
+	c.Items = items
+	c.Quote, err = FetchWltQuote(ctx, db, wc, &c)
+	if err != nil {
+		return nil, err
+	}
 	return &c, nil
 }
 
@@ -247,38 +332,85 @@ func UpsertItem(ctx context.Context, db *sql.DB, storeID, cartID string, input U
 	if len(input.Note) > 500 {
 		return nil, ErrInvalid
 	}
-
-	// ETag/If-Match version check
-	if input.ExpectedVersion != nil {
-		var currentVersion int
-		err := db.QueryRowContext(ctx, `SELECT version FROM dsh_carts WHERE id = $1`, cartID).Scan(&currentVersion)
-		if err != nil {
-			return nil, err
-		}
-		if currentVersion != *input.ExpectedVersion {
-			return nil, ErrConflict
-		}
+	if input.FulfillmentMode != nil &&
+		*input.FulfillmentMode != ModeBthwaniDelivery &&
+		*input.FulfillmentMode != ModePartnerDelivery &&
+		*input.FulfillmentMode != ModePickup {
+		return nil, ErrInvalid
 	}
 
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback() //nolint:errcheck
+
+	// Lock the cart before checking its version and resolving the assortment
+	// snapshot. A pre-check on db followed by a later transaction lets two
+	// concurrent mutations pass the same expected version.
+	var currentVersion int
+	err = tx.QueryRowContext(ctx, `
+		SELECT version
+		FROM dsh_carts
+		WHERE id = $1 AND store_id = $2 AND state = 'active'
+		FOR UPDATE`, cartID, storeID).Scan(&currentVersion)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	if input.ExpectedVersion != nil && currentVersion != *input.ExpectedVersion {
+		return nil, ErrConflict
+	}
+
+	// Resolve one deterministic current assortment snapshot. The primitive is
+	// fail-closed itself: it verifies the active cart belongs to the store,
+	// storefront publication/approval, effective price, and the full inventory
+	// quantity policy. Callers cannot bypass these rules by skipping an HTTP
+	// handler-level precheck.
 	var assortmentID, name, currency string
 	var unitPriceMinorUnits int64
 	var available bool
-	err := db.QueryRowContext(ctx,
-		`SELECT a.id, mp.canonical_name_ar, COALESCE(p.amount_minor, 0), COALESCE(p.currency, ''),
+	err = tx.QueryRowContext(ctx, `
+		SELECT
+			a.id,
+			mp.canonical_name_ar,
+			COALESCE(p.amount_minor, 0),
+			COALESCE(p.currency, ''),
 			CASE
-				WHEN p.amount_minor IS NULL THEN false
-				WHEN i.policy_type = 'signal' AND i.quantity > 0 THEN true
-				WHEN i.policy_type = 'quantity' AND (i.quantity - i.reserved_quantity) >= $3 THEN true
-				WHEN i.policy_type = 'infinite' THEN true
-				ELSE false
+				WHEN c.id IS NULL THEN FALSE
+				WHEN a.publication_status <> 'client_visible' OR a.available IS NOT TRUE THEN FALSE
+				WHEN mp.approval_status <> 'approved' OR mp.is_active IS NOT TRUE THEN FALSE
+				WHEN p.amount_minor IS NULL OR p.amount_minor <= 0 OR length(trim(p.currency)) <> 3 THEN FALSE
+				WHEN i.store_assortment_id IS NULL OR i.step_quantity < 1 THEN FALSE
+				WHEN $3 < i.min_order_quantity OR $3 > i.max_order_quantity THEN FALSE
+				WHEN MOD($3 - i.min_order_quantity, i.step_quantity) <> 0 THEN FALSE
+				WHEN i.policy_type = 'signal' AND i.quantity > 0 THEN TRUE
+				WHEN i.policy_type = 'quantity' AND (i.quantity - i.reserved_quantity) >= $3 THEN TRUE
+				WHEN i.policy_type = 'infinite' THEN TRUE
+				ELSE FALSE
 			END AS available
-		 FROM dsh_store_assortments a
-		 JOIN dsh_master_products mp ON mp.id = a.master_product_id
-		 LEFT JOIN dsh_store_assortment_prices p ON p.store_assortment_id = a.id AND p.effective_from <= NOW() AND (p.effective_until IS NULL OR p.effective_until > NOW())
-		 LEFT JOIN dsh_store_assortment_inventory i ON i.store_assortment_id = a.id
-		 WHERE a.store_id = $1 AND a.master_product_id = $2
-		 ORDER BY p.effective_from DESC LIMIT 1`,
-		storeID, input.MasterProductID, input.Quantity,
+		FROM dsh_store_assortments a
+		JOIN dsh_master_products mp ON mp.id = a.master_product_id
+		LEFT JOIN dsh_carts c
+		  ON c.id = $4::uuid
+		 AND c.store_id = a.store_id
+		 AND c.state = 'active'
+		LEFT JOIN LATERAL (
+			SELECT price.amount_minor, price.currency
+			FROM dsh_store_assortment_prices price
+			WHERE price.store_assortment_id = a.id
+			  AND price.effective_from <= NOW()
+			  AND (price.effective_until IS NULL OR price.effective_until > NOW())
+			ORDER BY price.effective_from DESC, price.version DESC, price.id DESC
+			LIMIT 1
+		) p ON TRUE
+		LEFT JOIN dsh_store_assortment_inventory i ON i.store_assortment_id = a.id
+		WHERE a.store_id = $1
+		  AND a.master_product_id = $2
+		LIMIT 1`,
+		storeID, input.MasterProductID, input.Quantity, cartID,
 	).Scan(&assortmentID, &name, &unitPriceMinorUnits, &currency, &available)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrInvalid
@@ -294,12 +426,6 @@ func UpsertItem(ctx context.Context, db *sql.DB, storeID, cartID string, input U
 	if input.Options == nil {
 		optionsJSON = []byte("[]")
 	}
-
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
 
 	var item CartItem
 	var optsBytes []byte
@@ -327,7 +453,14 @@ func UpsertItem(ctx context.Context, db *sql.DB, storeID, cartID string, input U
 		item.Options = []string{}
 	}
 
-	_, err = tx.ExecContext(ctx, `UPDATE dsh_carts SET version = version + 1, updated_at = NOW() WHERE id = $1`, cartID)
+	if input.FulfillmentMode != nil {
+		_, err = tx.ExecContext(ctx, `
+			UPDATE dsh_carts
+			SET fulfillment_mode = $1, version = version + 1, updated_at = NOW()
+			WHERE id = $2`, *input.FulfillmentMode, cartID)
+	} else {
+		_, err = tx.ExecContext(ctx, `UPDATE dsh_carts SET version = version + 1, updated_at = NOW() WHERE id = $1`, cartID)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -448,6 +581,27 @@ func calculateDistanceKM(lat1, lon1, lat2, lon2 float64) float64 {
 }
 
 // CheckServiceability verifies that the store is active and in the serviceable state,
+func normalizeCityCode(code string) string {
+	code = strings.ToLower(strings.TrimSpace(code))
+	switch code {
+	case "sana", "sanaa", "sana'a", "صنعاء", "haddah", "maeen", "sabeen", "taiz-st", "zubairi", "old-city", "sanaa-haddah":
+		return "sana"
+	case "aden", "عدن":
+		return "aden"
+	case "taiz", "تعز":
+		return "taiz"
+	case "ibb", "إب":
+		return "ibb"
+	case "mukalla", "المكلا":
+		return "mukalla"
+	case "hodeidah", "الحديدة":
+		return "hodeidah"
+	default:
+		return code
+	}
+}
+
+// CheckServiceability determines if a store is active, published, and within physical range of a client,
 // and reports which canonical checkout fulfillment modes are actually usable for this
 // store+location combination. DSH only checks store-level and zone-level availability —
 // delivery fee and zone pricing are WLT concerns.
@@ -487,10 +641,18 @@ func CheckServiceability(ctx context.Context, db *sql.DB, storeID, serviceAreaCo
 		calculatedDistance = distanceKM
 	}
 
-	// Check if store is within delivery range (<= 5.0 km) or matches the zone/city name fallback
-	isWithinDistance := calculatedDistance != nil && *calculatedDistance > 0 && *calculatedDistance <= 5.0
+	// Delivery coverage is at the city level:
+	// A store can deliver across its entire city (e.g. Sana'a city-wide delivery within 35 km).
+	normStoreCity := normalizeCityCode(storeCity)
+	if normStoreCity == "" {
+		normStoreCity = normalizeCityCode(storeServiceArea)
+	}
+	normClientCity := normalizeCityCode(serviceAreaCode)
+
+	isSameCity := normStoreCity != "" && normClientCity != "" && normStoreCity == normClientCity
+	isWithinDistance := calculatedDistance == nil || *calculatedDistance <= 35.0
 	matchesZone := serviceAreaCode != "" && (storeServiceArea == serviceAreaCode || storeCity == serviceAreaCode)
-	inZone := isWithinDistance || matchesZone
+	inZone := isSameCity || matchesZone || isWithinDistance
 
 	availableModes := computeFulfillmentModeAvailability(deliveryModes, inZone)
 
@@ -639,6 +801,8 @@ type CartSnapshot struct {
 	AmountMinorUnits int64
 	Currency         string
 	SnapshotHash     string
+	CartVersion      int
+	Lines            []CheckoutSnapshotLine
 }
 
 var (
@@ -659,6 +823,10 @@ func ComputeCheckoutSnapshot(ctx context.Context, db *sql.DB, cartID string) (*C
 	if err != nil {
 		return nil, err
 	}
+	return computeCheckoutSnapshotFromItems(cartID, items)
+}
+
+func computeCheckoutSnapshotFromItems(cartID string, items []CartItem) (*CartSnapshot, error) {
 	if len(items) == 0 {
 		return nil, fmt.Errorf("%w: cart has no items", ErrInvalid)
 	}

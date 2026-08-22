@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"wlt-api/internal/shared"
+	"wlt-api/internal/testsupport"
 )
 
 func seedRefundLedgerReference(t *testing.T, operatorContextID string) (*sqlTestReference, func()) {
@@ -18,23 +19,29 @@ func seedRefundLedgerReference(t *testing.T, operatorContextID string) (*sqlTest
 		return nil, func() {}
 	}
 	ctx := context.Background()
-	tx, err := db.BeginTx(ctx, nil)
-	if err != nil {
-		t.Fatalf("begin refund ledger fixture: %v", err)
-	}
 	suffix := fmt.Sprint(time.Now().UnixNano())
-	sessionID := "refund-session-" + suffix
 	refundID := "refund-ledger-" + suffix
 	orderID := "refund-order-" + suffix
 	clientID := "refund-client-" + suffix
-	if _, err := tx.ExecContext(ctx, `
-		INSERT INTO wlt_payment_sessions
-			(id,operator_context_id,checkout_intent_id,client_id,store_id,payment_method,status,amount_minor_units,currency,financial_purpose)
-		VALUES($1,$2,$3,$4,'store-refund-ledger','official_wallet','captured',1000,'YER','order_payment')`,
-		sessionID, operatorContextID, "checkout-"+suffix, clientID); err != nil {
-		_ = tx.Rollback()
+	sessionID, err := testsupport.SeedCanonicalCheckoutPaymentSession(ctx, db, testsupport.CheckoutPaymentSession{
+		OperatorContextID: operatorContextID,
+		CheckoutIntentID:  "checkout-" + suffix,
+		ClientID:          clientID,
+		StoreID:           "store-refund-ledger",
+		PaymentMethod:     "wallet",
+		Status:            "captured",
+		AmountMinorUnits:  1000,
+		Currency:          "YER",
+		FinancialPurpose:  "order_payment",
+	})
+	if err != nil {
 		_ = db.Close()
-		t.Fatalf("seed payment session: %v", err)
+		t.Fatalf("seed canonical payment session: %v", err)
+	}
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		_ = db.Close()
+		t.Fatalf("begin refund ledger fixture: %v", err)
 	}
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO wlt_refunds

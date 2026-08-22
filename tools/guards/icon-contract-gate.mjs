@@ -35,7 +35,7 @@ for (const file of listCodeFiles()) {
   // 1. Check forbidden direct icon pack imports
   const imports = findImportSpecifiers(content);
   for (const imp of imports) {
-    if (FORBIDDEN_ICON_PACKS.has(imp.specifier) || imp.specifier.startsWith("react-native-vector-icons/")) {
+    if (FORBIDDEN_ICON_PACKS.has(imp.specifier) || imp.specifier.startsWith("react-native-vector-icons/") || imp.specifier.startsWith("@react-native-vector-icons/")) {
       violations.push({
         file,
         line: lineNumber(content, imp.index),

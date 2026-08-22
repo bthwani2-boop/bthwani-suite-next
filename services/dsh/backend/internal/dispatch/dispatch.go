@@ -55,6 +55,7 @@ type Assignment struct {
 	CompletedAt        *time.Time
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
+	Version            int
 	LastLatitude       *float64
 	LastLongitude      *float64
 	LocationRecordedAt *time.Time
@@ -117,7 +118,7 @@ func CreateAssignment(db *sql.DB, input CreateAssignmentInput) (*Assignment, err
 		return nil, fmt.Errorf("%w: only bthwani_delivery orders can be assigned to platform captains", ErrConflict)
 	}
 
-	if _, err = orders.TransitionDispatchOrder(tx, input.OrderID, "operator",
+	if _, err = orders.TransitionDispatchOrder(tx, input.OrderID, input.ActorID, "operator",
 		[]orders.OrderStatus{orders.StatusReadyForPickup}, orders.StatusDriverAssigned, "captain assigned"); err != nil {
 		if errors.Is(err, orders.ErrNotFound) {
 			return nil, ErrNotFound
@@ -132,7 +133,7 @@ func CreateAssignment(db *sql.DB, input CreateAssignmentInput) (*Assignment, err
 		INSERT INTO dsh_assignments (order_id, captain_id, assigned_by, status, response_deadline_at)
 		VALUES ($1::uuid, $2, $3, $4, NOW() + INTERVAL '90 seconds')
 		RETURNING id::text, order_id::text, captain_id, assigned_by, status,
-		          response_deadline_at, accepted_at, declined_at, completed_at, created_at, updated_at`,
+		          response_deadline_at, accepted_at, declined_at, completed_at, created_at, updated_at, version`,
 		input.OrderID, input.CaptainID, input.ActorID, string(AssignmentOffered)))
 	if err != nil {
 		return nil, err
@@ -160,7 +161,7 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 		return nil, fmt.Errorf("%w: specialRequestId, captainId, and actor are required", ErrInvalid)
 	}
 	if input.OperatorContextID == "" {
-		input.OperatorContextID = specialrequests.DefaultOperatorContextID
+		return nil, fmt.Errorf("%w: OperatorContext is required for special-request assignment", ErrInvalid)
 	}
 	tx, err := db.Begin()
 	if err != nil {
@@ -168,11 +169,25 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 	}
 	defer tx.Rollback()
 
-	if err = specialrequests.CheckSheinDispatchReadiness(tx, input.OperatorContextID, input.SpecialRequestID); err != nil {
-		return nil, mapSpecialRequestError(err)
+	var existingAssignmentID, existingCaptainID string
+	err = tx.QueryRow(`
+		SELECT id::text, captain_id
+		FROM dsh_assignments
+		WHERE special_request_id = $1::uuid AND status IN ('offered', 'accepted')
+		FOR UPDATE`, input.SpecialRequestID).Scan(&existingAssignmentID, &existingCaptainID)
+	if err == nil {
+		if existingCaptainID != input.CaptainID {
+			return nil, fmt.Errorf("%w: special request already has an active assignment for another captain", ErrConflict)
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return GetCaptainAssignment(db, existingAssignmentID, input.CaptainID)
 	}
-	if err = specialrequests.TransitionDispatchStatusInOperatorContext(tx, input.OperatorContextID, input.SpecialRequestID,
-		[]specialrequests.RequestStatus{specialrequests.StatusApproved}, specialrequests.StatusAssigned); err != nil {
+	if err != sql.ErrNoRows {
+		return nil, err
+	}
+	if err = specialrequests.CheckSheinDispatchReadiness(tx, input.OperatorContextID, input.SpecialRequestID); err != nil {
 		return nil, mapSpecialRequestError(err)
 	}
 
@@ -180,7 +195,7 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 		INSERT INTO dsh_assignments (special_request_id, captain_id, assigned_by, status, response_deadline_at)
 		VALUES ($1::uuid, $2, $3, $4, NOW() + INTERVAL '90 seconds')
 		RETURNING id::text, COALESCE(order_id::text, ''), captain_id, assigned_by, status,
-		          response_deadline_at, accepted_at, declined_at, completed_at, created_at, updated_at`,
+		          response_deadline_at, accepted_at, declined_at, completed_at, created_at, updated_at, version`,
 		input.SpecialRequestID, input.CaptainID, input.ActorID, string(AssignmentOffered)))
 	if err != nil {
 		if pqErr, ok := err.(*pq.Error); ok && pqErr.Code == "23505" {
@@ -206,11 +221,32 @@ func CreateAssignmentForSpecialRequest(db *sql.DB, input CreateAssignmentInput) 
 	delivery.SpecialRequestID = input.SpecialRequestID
 	assignment.Delivery = *delivery
 
-	if _, err = tx.Exec(`
+	if err = specialrequests.TransitionDispatchStatusInOperatorContextWithMetadata(tx, input.OperatorContextID, input.SpecialRequestID,
+		[]specialrequests.RequestStatus{specialrequests.StatusApproved}, specialrequests.StatusAssigned,
+		specialrequests.DispatchTransitionMetadata{
+			ActorID: input.ActorID, ActorRole: "operator", Action: "assign_captain", Reason: "captain assigned",
+		}); err != nil {
+		return nil, mapSpecialRequestError(err)
+	}
+
+	result, err := tx.Exec(`
 		UPDATE dsh_special_requests
-		SET dispatch_assignment_id = $1, version = version + 1
+		SET dispatch_assignment_id = $1,
+		    captain_assigned_at = COALESCE(captain_assigned_at, NOW()),
+		    version = version + 1, updated_at = NOW()
 		WHERE id = $2 AND operator_context_id = $3`,
-		assignment.ID, input.SpecialRequestID, input.OperatorContextID); err != nil {
+		assignment.ID, input.SpecialRequestID, input.OperatorContextID)
+	if err != nil {
+		return nil, err
+	}
+	if affected, err := result.RowsAffected(); err != nil || affected != 1 {
+		if err != nil {
+			return nil, err
+		}
+		return nil, ErrConflict
+	}
+	if err = specialrequests.RecordDispatchAssignmentLink(tx, input.OperatorContextID, input.SpecialRequestID, assignment.ID,
+		specialrequests.DispatchTransitionMetadata{ActorID: input.ActorID, ActorRole: "operator", Action: "link_dispatch_assignment"}); err != nil {
 		return nil, err
 	}
 
@@ -383,13 +419,18 @@ func SubmitPoD(db *sql.DB, assignmentID, captainID string, input PoDInput) (*Ass
 		return nil, fmt.Errorf("%w: proof requires arrived_customer state", ErrConflict)
 	}
 	if current.OrderID != "" {
-		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, "captain",
+		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, captainID, "captain",
 			[]orders.OrderStatus{orders.StatusArrivedCustomer}, orders.StatusDelivered, "proof of delivery submitted"); err != nil {
 			return nil, mapOrderError(err)
 		}
 	} else if current.SpecialRequestID != "" {
-		if err = specialrequests.TransitionDispatchStatus(tx, current.SpecialRequestID,
-			[]specialrequests.RequestStatus{specialrequests.StatusInProgress}, specialrequests.StatusCompleted); err != nil {
+		operatorContextID, contextErr := specialRequestOperatorContextID(tx, current.SpecialRequestID)
+		if contextErr != nil {
+			return nil, mapSpecialRequestError(contextErr)
+		}
+		if err = specialrequests.TransitionDispatchStatusInOperatorContextWithMetadata(tx, operatorContextID, current.SpecialRequestID,
+			[]specialrequests.RequestStatus{specialrequests.StatusInProgress}, specialrequests.StatusCompleted,
+			specialrequests.DispatchTransitionMetadata{ActorID: captainID, ActorRole: "captain", Action: "submit_proof", Reason: "proof of delivery submitted"}); err != nil {
 			return nil, mapSpecialRequestError(err)
 		}
 	}
@@ -427,7 +468,7 @@ func enqueueWltDeliveryCompletedNotification(tx *sql.Tx, orderID, captainID stri
 	if err != nil {
 		return fmt.Errorf("resolve delivery context for wlt outbox: %w", err)
 	}
-	if deliveryCtx.PaymentMethod != "cod" || deliveryCtx.PartnerID == "" {
+	if deliveryCtx.FulfillmentMode != "bthwani_delivery" || deliveryCtx.PaymentMethod != "cod" || deliveryCtx.PartnerID == "" {
 		return nil
 	}
 	return wltoutbox.Enqueue(tx, wltoutbox.EventTypeDeliveryCompleted, orderID, captainID, deliveryCtx.PartnerID, deliveryCtx.CheckoutIntentID)
@@ -461,18 +502,24 @@ func updateAssignmentStatus(db *sql.DB, assignmentID, captainID string, status A
 	}
 	if current.OrderID != "" {
 		allowedOrderStatus := []orders.OrderStatus{orders.StatusDriverAssigned}
-		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, "captain", allowedOrderStatus, orderStatus, note); err != nil {
+		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, captainID, "captain", allowedOrderStatus, orderStatus, note); err != nil {
 			return nil, mapOrderError(err)
 		}
 	} else if current.SpecialRequestID != "" {
+		operatorContextID, contextErr := specialRequestOperatorContextID(tx, current.SpecialRequestID)
+		if contextErr != nil {
+			return nil, mapSpecialRequestError(contextErr)
+		}
 		if status == AssignmentAccepted {
-			if err = specialrequests.TransitionDispatchStatus(tx, current.SpecialRequestID,
-				[]specialrequests.RequestStatus{specialrequests.StatusAssigned}, specialrequests.StatusInProgress); err != nil {
+			if err = specialrequests.TransitionDispatchStatusInOperatorContextWithMetadata(tx, operatorContextID, current.SpecialRequestID,
+				[]specialrequests.RequestStatus{specialrequests.StatusAssigned}, specialrequests.StatusInProgress,
+				specialrequests.DispatchTransitionMetadata{ActorID: captainID, ActorRole: "captain", Action: "captain_accept", Reason: "captain accepted assignment"}); err != nil {
 				return nil, mapSpecialRequestError(err)
 			}
 		} else if status == AssignmentDeclined {
-			if err = specialrequests.TransitionDispatchStatus(tx, current.SpecialRequestID,
-				[]specialrequests.RequestStatus{specialrequests.StatusAssigned}, specialrequests.StatusApproved); err != nil {
+			if err = specialrequests.TransitionDispatchStatusInOperatorContextWithMetadata(tx, operatorContextID, current.SpecialRequestID,
+				[]specialrequests.RequestStatus{specialrequests.StatusAssigned}, specialrequests.StatusApproved,
+				specialrequests.DispatchTransitionMetadata{ActorID: captainID, ActorRole: "captain", Action: "captain_decline", Reason: note}); err != nil {
 				return nil, mapSpecialRequestError(err)
 			}
 		}
@@ -507,6 +554,10 @@ func updateAssignmentStatus(db *sql.DB, assignmentID, captainID string, status A
 }
 
 func updateDeliveryProgress(db *sql.DB, assignmentID, captainID string, allowed []DeliveryStatus, next DeliveryStatus, orderStatus orders.OrderStatus) (*Assignment, error) {
+	return updateDeliveryProgressVersioned(db, assignmentID, captainID, allowed, next, orderStatus, 0)
+}
+
+func updateDeliveryProgressVersioned(db *sql.DB, assignmentID, captainID string, allowed []DeliveryStatus, next DeliveryStatus, orderStatus orders.OrderStatus, expectedVersion int) (*Assignment, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
@@ -518,6 +569,9 @@ func updateDeliveryProgress(db *sql.DB, assignmentID, captainID string, allowed 
 	}
 	if current.Status == AssignmentCancelled || current.Delivery.Status == DeliveryCancelled {
 		return nil, fmt.Errorf("%w: assignment was cancelled with the order", ErrConflict)
+	}
+	if expectedVersion > 0 && current.Version != expectedVersion {
+		return nil, fmt.Errorf("%w: assignment version changed", ErrConflict)
 	}
 	if err = ensureNoOpenDeliveryException(tx, assignmentID); err != nil {
 		return nil, err
@@ -536,10 +590,16 @@ func updateDeliveryProgress(db *sql.DB, assignmentID, captainID string, allowed 
 		return nil, fmt.Errorf("%w: delivery cannot move from %s to %s", ErrConflict, current.Delivery.Status, next)
 	}
 	if current.OrderID != "" {
-		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, "captain",
+		if _, err = orders.TransitionDispatchOrder(tx, current.OrderID, captainID, "captain",
 			[]orders.OrderStatus{orders.OrderStatus(current.Delivery.Status)}, orderStatus, string(next)); err != nil {
 			return nil, mapOrderError(err)
 		}
+	}
+	_, err = tx.Exec(`
+		UPDATE dsh_assignments SET version=version+1, updated_at=NOW()
+		WHERE id=$1::uuid AND captain_id=$2`, assignmentID, captainID)
+	if err != nil {
+		return nil, err
 	}
 	_, err = tx.Exec(`
 		UPDATE dsh_deliveries SET status=$1, updated_at=NOW()

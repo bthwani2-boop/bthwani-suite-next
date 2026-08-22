@@ -18,8 +18,8 @@ const retiredAuthorities = [
   "infra/docker/scripts/wlt-migration-probes.ps1",
   "services/wlt/tests/wlt-migration-probes.test.mjs",
   "tools/scripts/test-wlt-migration-ledger.ps1",
-  "apps/mobile/repair-wlt-migration-ledger.ps1",
-  "apps/mobile/converge-local-runtime-database.ps1",
+  "tools/mobile/repair-wlt-migration-ledger.ps1",
+  "tools/mobile/converge-local-runtime-database.ps1",
 ];
 
 describe("WLT database authority", () => {

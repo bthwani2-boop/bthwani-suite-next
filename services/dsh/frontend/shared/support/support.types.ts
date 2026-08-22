@@ -10,7 +10,7 @@ export type DshTicketCategory =
   | "other";
 
 export type DshSenderRole = "client" | "partner" | "captain" | "operator" | "system";
-export type DshIncidentStatus = "open" | "monitoring" | "resolved";
+export type DshIncidentStatus = "open" | "triaged" | "containing" | "mitigating" | "monitoring" | "resolved" | "closed";
 export type DshIncidentSeverity = "low" | "medium" | "high" | "critical";
 export type DshIncidentScope = "delivery" | "stores" | "payments" | "platform" | "unknown";
 export type DshSupportMediaKind = "image" | "audio" | "video" | "document";
@@ -32,6 +32,7 @@ export type DshSupportTicket = {
   readonly closedAt?: string | null | undefined;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly version: number;
 };
 
 export type DshSupportMessageAttachment = {
@@ -87,6 +88,7 @@ export type DshIncident = {
   readonly postmortemUrl: string;
   readonly createdAt: string;
   readonly updatedAt: string;
+  readonly version: number;
 };
 
 export type DshCreateTicketInput = {
@@ -118,6 +120,7 @@ export type DshAddMessageInput = {
 
 export type DshUpdateTicketInput = {
   readonly expectedStatus?: DshTicketStatus | undefined;
+  readonly expectedVersion: number;
   readonly status: DshTicketStatus;
   readonly assignedTo?: string | undefined;
 };
@@ -131,6 +134,7 @@ export type DshCreateIncidentInput = {
 
 export type DshUpdateIncidentInput = {
   readonly status: DshIncidentStatus;
+  readonly expectedVersion: number;
   readonly postmortemUrl?: string | undefined;
 };
 
@@ -168,8 +172,12 @@ export const INCIDENT_SEVERITY_LABELS: Record<DshIncidentSeverity, string> = {
 
 export const INCIDENT_STATUS_LABELS: Record<DshIncidentStatus, string> = {
   open: "مفتوح",
+  triaged: "تم فرزه",
+  containing: "قيد الاحتواء",
+  mitigating: "قيد المعالجة",
   monitoring: "قيد المراقبة",
   resolved: "محلول",
+  closed: "مغلق",
 };
 
 export const INCIDENT_SCOPE_LABELS: Record<DshIncidentScope, string> = {

@@ -5,10 +5,16 @@ import {
   confirmStoreCaptainHandoff,
   markOrderPreparing,
   markOrderReady,
+  type PartnerOrderMutationOptions,
 } from './orders.api';
-import type { DshPartnerOrderAction } from './orders.types';
+import { corrId } from '../_kernel/dsh-http-request';
+import {
+  type PartnerOrderMutationCommand,
+  resolvePartnerOrderMutation,
+} from './partner-order-mutation.policy';
 
-export type PartnerOrderMutationCommand = 'accept' | 'prepare' | 'ready' | 'handoff';
+export { resolvePartnerOrderMutation } from './partner-order-mutation.policy';
+export type { PartnerOrderMutationCommand } from './partner-order-mutation.policy';
 
 export type PartnerOrderCommandState =
   | { readonly kind: 'idle' }
@@ -17,24 +23,9 @@ export type PartnerOrderCommandState =
       readonly kind: 'success';
       readonly command: PartnerOrderMutationCommand;
       readonly orderId: string;
-      readonly readback: 'fresh' | 'stale';
-      readonly message?: string;
+      readonly readback: 'fresh';
     }
   | { readonly kind: 'error'; readonly command: PartnerOrderMutationCommand; readonly orderId: string; readonly message: string };
-
-export function resolvePartnerOrderMutation(
-  actionId: string,
-  allowedActions: readonly DshPartnerOrderAction[],
-): PartnerOrderMutationCommand | null {
-  if (actionId === 'accept' && allowedActions.includes('accept')) return 'accept';
-  if (actionId === 'ready' && allowedActions.includes('ready')) return 'ready';
-  if (actionId === 'handoff' && allowedActions.includes('handoff')) return 'handoff';
-  if (actionId === 'prepare') {
-    if (allowedActions.includes('prepare')) return 'prepare';
-    if (allowedActions.includes('ready')) return 'ready';
-  }
-  return null;
-}
 
 function resolveErrorMessage(error: unknown): string {
   const classified = classifyOrderError(error);
@@ -45,6 +36,14 @@ function resolveErrorMessage(error: unknown): string {
   return classified.message ?? 'تعذر تنفيذ عملية الطلب.';
 }
 
+function resolveReadbackFailureMessage(error: unknown): string {
+  const classified = classifyOrderError(error);
+  if (classified.kind === 'offline') return 'تعذر الاتصال لإعادة قراءة الحالة canonical.';
+  if (classified.kind === 'permission_denied') return 'انتهت صلاحية الجلسة أو لم تعد تملك نطاق المتجر.';
+  if (classified.kind === 'not_found') return 'لم يعد الطلب ضمن نطاق المتجر أثناء إعادة القراءة.';
+  return classified.message ?? 'تعذر إعادة قراءة الحالة canonical.';
+}
+
 /** Shared mutation/readback controller for partner order preparation and handoff. */
 export function usePartnerOrderCommands(refreshOrders: () => void | Promise<void>) {
   const [state, setState] = React.useState<PartnerOrderCommandState>({ kind: 'idle' });
@@ -52,37 +51,49 @@ export function usePartnerOrderCommands(refreshOrders: () => void | Promise<void
   const execute = React.useCallback(async (
     command: PartnerOrderMutationCommand,
     orderId: string,
+    expectedVersion?: number,
   ): Promise<boolean> => {
-    if (!orderId) return false;
+    const hasExpectedVersion = Number.isInteger(expectedVersion) && (expectedVersion ?? 0) >= 1;
+    if (!orderId || (command !== 'handoff' && !hasExpectedVersion)) return false;
+
+    const resolvedExpectedVersion = expectedVersion;
+    const mutationOptions: PartnerOrderMutationOptions = {
+      expectedVersion: resolvedExpectedVersion as number,
+      idempotencyKey: corrId('partner-order-command'),
+    };
 
     setState({ kind: 'submitting', command, orderId });
     try {
-      if (command === 'accept') await acceptOrder(orderId);
-      else if (command === 'prepare') await markOrderPreparing(orderId);
-      else if (command === 'ready') await markOrderReady(orderId);
+      if (command === 'accept') await acceptOrder(orderId, mutationOptions);
+      else if (command === 'prepare') await markOrderPreparing(orderId, mutationOptions);
+      else if (command === 'ready') await markOrderReady(orderId, mutationOptions);
       else await confirmStoreCaptainHandoff(orderId);
     } catch (error) {
       setState({ kind: 'error', command, orderId, message: resolveErrorMessage(error) });
       try {
         await refreshOrders();
-      } catch {
-        // Preserve the canonical mutation failure; readback failure is secondary.
+      } catch (readbackError) {
+        setState({
+          kind: 'error',
+          command,
+          orderId,
+          message: `${resolveErrorMessage(error)} ${resolveReadbackFailureMessage(readbackError)}`,
+        });
       }
       return false;
     }
 
-    setState({ kind: 'success', command, orderId, readback: 'stale' });
     try {
       await refreshOrders();
       setState({ kind: 'success', command, orderId, readback: 'fresh' });
-    } catch {
+    } catch (readbackError) {
       setState({
-        kind: 'success',
+        kind: 'error',
         command,
         orderId,
-        readback: 'stale',
-        message: 'تم تنفيذ الإجراء، لكن تعذر تحديث القائمة. أعد المحاولة من شاشة الطلبات.',
+        message: `تم إرسال الإجراء، لكن لم يمكن تأكيد الحالة من DSH. ${resolveReadbackFailureMessage(readbackError)}`,
       });
+      return false;
     }
     return true;
   }, [refreshOrders]);

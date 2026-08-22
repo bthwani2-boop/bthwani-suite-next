@@ -53,7 +53,7 @@ function flattenStyle(style) {
  * Browser-safe Ionicons compatibility renderer. It preserves visible controls
  * and accessible labels without loading Expo native font modules in Next.js.
  */
-export default function Ionicons({ name, size = 18, color = "currentColor", style, ...props }) {
+export function Ionicons({ name, size = 18, color = "currentColor", style, ...props }) {
   const normalized = normalizeName(name);
   const glyph = glyphs[normalized] ?? "◆";
   return React.createElement(
@@ -78,3 +78,5 @@ export default function Ionicons({ name, size = 18, color = "currentColor", styl
     glyph,
   );
 }
+
+export default Ionicons;

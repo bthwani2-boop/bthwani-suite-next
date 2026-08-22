@@ -297,21 +297,13 @@ func TransitionProposalAtomicExpected(
 		if !storePublished || !storeVisible {
 			return ProductProposal{}, fmt.Errorf("%w: store must be active and visible", ErrForbidden)
 		}
-		var available bool
-		var unitPrice float64
-		assortmentErr := tx.QueryRowContext(ctx, `SELECT available, unit_price
-			FROM dsh_store_assortments WHERE store_id=$1 AND master_product_id=$2`,
-			*proposal.SourceStoreID, *proposal.AdoptedMasterProductID).Scan(&available, &unitPrice)
-		if assortmentErr != nil {
-			if errors.Is(assortmentErr, sql.ErrNoRows) {
-				return ProductProposal{}, fmt.Errorf("%w: store assortment not found", ErrNotFound)
-			}
+		if _, assortmentErr := validateProposalClientVisibilityTruth(
+			ctx,
+			tx,
+			*proposal.SourceStoreID,
+			*proposal.AdoptedMasterProductID,
+		); assortmentErr != nil {
 			return ProductProposal{}, assortmentErr
-		}
-		if !available || unitPrice <= 0 {
-			return ProductProposal{}, fmt.Errorf(
-				"%w: store assortment price must be greater than 0 and available=true", ErrInvalid,
-			)
 		}
 		policy, policyErr := ResolveEffectivePolicy(ctx, db, proposal.DomainID, categoryNodeID)
 		if policyErr != nil {
@@ -400,32 +392,4 @@ func TransitionProposalAtomicExpected(
 		return ProductProposal{}, err
 	}
 	return updated, nil
-}
-
-func DecideProposalAtomicExpected(
-	ctx context.Context,
-	db *sql.DB,
-	actorID, actorRole, id string,
-	input ProposalDecisionOCCInput,
-) (ProductProposal, error) {
-	if err := validateExpectedVersion(input.ExpectedVersion); err != nil {
-		return ProductProposal{}, err
-	}
-	nextStatus, ok := legacyDecisionToPipelineStatus[input.Decision]
-	if !ok {
-		nextStatus, ok = input.Decision, validProposalStatus[input.Decision]
-	}
-	if !ok {
-		return ProductProposal{}, ErrInvalid
-	}
-	createMasterProduct := input.AdoptedMasterProductID == nil
-	return TransitionProposalAtomicExpected(ctx, db, actorID, actorRole, id, ProposalTransitionOCCInput{
-		ProposalTransitionInput: ProposalTransitionInput{
-			NextStatus:             nextStatus,
-			Note:                   input.ReviewNote,
-			AdoptedMasterProductID: input.AdoptedMasterProductID,
-			CreateMasterProduct:    &createMasterProduct,
-		},
-		ExpectedVersion: input.ExpectedVersion,
-	})
 }

@@ -7,12 +7,15 @@ import type {
   ClientBenefitsPayload,
   SubscriptionPlanRecord,
 } from "../../shared/marketing/loyalty-subscriptions.types";
+import type { SubscriptionPaymentMethod } from "../../shared/marketing/subscription-lifecycle.types";
 
 export type BenefitsSection = "loyalty" | "subscription" | "offers";
 export type BenefitsHubScreenProps = {
   readonly initialSection?: BenefitsSection;
   readonly onBack?: () => void;
 };
+
+const SUBSCRIPTION_PAYMENT_METHOD: SubscriptionPaymentMethod = "official_wallet";
 
 type BenefitRow = {
   readonly id: string;
@@ -42,7 +45,7 @@ function rowsFor(
               subtitle: benefits.loyaltyAccount.tier
                 ? `المستوى الحالي: ${benefits.loyaltyAccount.tier.nameAr}`
                 : "لا يوجد مستوى حالي",
-              badge: "رصيد WLT",
+              badge: "رصيد النقاط",
             },
           ]
         : []),
@@ -131,7 +134,7 @@ export function BenefitsHubScreen({ initialSection = "loyalty", onBack }: Benefi
     setCancellationInputError(null);
     Alert.alert(
       "تأكيد إلغاء الاشتراك",
-      "ستتوقف المنافع المدفوعة، وقد ينشأ تعويض مالي قيد المراجعة في WLT.",
+      "ستتوقف منافع الاشتراك ومزايا التوصيل بعد الإلغاء.",
       [
         { text: "تراجع", style: "cancel" },
         {
@@ -152,7 +155,7 @@ export function BenefitsHubScreen({ initialSection = "loyalty", onBack }: Benefi
     <View style={styles.root}>
       <TopBar
         title={LABELS[section]}
-        subtitle="بيانات معتمدة من DSH وWLT"
+        subtitle="عروض ومكافآت حصرية لك"
         {...(onBack ? { onBack } : {})}
       />
       <ScrollScreen>
@@ -247,7 +250,7 @@ export function BenefitsHubScreen({ initialSection = "loyalty", onBack }: Benefi
                       accessibilityLabel="تجديد الاشتراك"
                       disabled={busy}
                       style={[styles.primaryAction, busy && styles.disabled]}
-                      onPress={() => runAction(() => controller.renew(benefits.activeSubscription!.id))}
+                      onPress={() => runAction(() => controller.renew(benefits.activeSubscription!.id, SUBSCRIPTION_PAYMENT_METHOD))}
                     >
                       <Text style={styles.primaryActionText}>بدء التجديد والدفع</Text>
                     </TouchableOpacity>
@@ -326,7 +329,7 @@ export function BenefitsHubScreen({ initialSection = "loyalty", onBack }: Benefi
                       key={plan.id}
                       plan={plan}
                       disabled={busy}
-                      onPurchase={() => runAction(() => controller.purchase(plan.id))}
+                      onPurchase={() => runAction(() => controller.purchase(plan.id, SUBSCRIPTION_PAYMENT_METHOD))}
                     />
                   ))
                 : null}

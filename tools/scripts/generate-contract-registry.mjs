@@ -9,7 +9,7 @@ import { read, repoRoot, toPosix } from "../guards/_guard-utils.mjs";
 import { parseIndexedContractModules, parseOpenApiContract } from "../guards/_openapi-utils.mjs";
 
 const canonicalIndex = "contracts/openapi/index.yaml";
-const clientRegistryPath = "governance/contracts/generated-client-registry.json";
+const clientRegistryPath = "tools/verification/generated-client-registry.json";
 const outputFlagIndex = process.argv.indexOf("--output");
 if (outputFlagIndex >= 0 && !process.argv[outputFlagIndex + 1]) {
   throw new Error("--output requires a path");

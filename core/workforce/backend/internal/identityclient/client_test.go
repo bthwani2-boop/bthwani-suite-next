@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	workforceauth "workforce-api/internal/auth"
 )
 
 func TestSearchActorsDecodesGovernedPageAndSendsServiceIdentity(t *testing.T) {
@@ -40,8 +42,8 @@ func TestSearchActorsDecodesGovernedPageAndSendsServiceIdentity(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "service-token", "context-main")
-	actors, nextCursor, err := client.SearchActors(context.Background(), "field", "ali", "")
+	client := NewClient(server.URL, "service-token")
+	actors, nextCursor, err := client.SearchActors(workforceauth.WithOperatorContext(context.Background(), "context-main"), "field", "ali", "")
 	if err != nil {
 		t.Fatalf("SearchActors returned error: %v", err)
 	}
@@ -66,8 +68,8 @@ func TestClientSendsTrustedContextToEveryIdentityCall(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "service-token", "context-main")
-	if _, _, err := client.SearchActors(context.Background(), "field", "", ""); err != nil {
+	client := NewClient(server.URL, "service-token")
+	if _, _, err := client.SearchActors(workforceauth.WithOperatorContext(context.Background(), "context-main"), "field", "", ""); err != nil {
 		t.Fatalf("SearchActors returned error: %v", err)
 	}
 }
@@ -85,31 +87,90 @@ func TestProvisionUsesTrustedContextInHeaderAndBody(t *testing.T) {
 			t.Fatalf("expected context-main body, got %q", input.OperatorContextID)
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_ = json.NewEncoder(w).Encode(ActorView{ActorID: "field-1"})
+		_ = json.NewEncoder(w).Encode(ActorView{ActorID: "field-1", Created: true})
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "service-token", "context-main")
-	if _, err := client.Provision(context.Background(), ProvisionInput{
+	client := NewClient(server.URL, "service-token")
+	actor, err := client.Provision(workforceauth.WithOperatorContext(context.Background(), "context-main"), ProvisionInput{
 		Username: "field-1", PhoneE164: "+967770000001", Role: "field",
-	}); err != nil {
+	})
+	if err != nil {
 		t.Fatalf("Provision returned error: %v", err)
+	}
+	if !actor.Created {
+		t.Fatal("Provision must preserve Identity's new-actor marker")
+	}
+}
+
+func TestProvisionReplayDoesNotAuthorizeCompensation(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(ActorView{ActorID: "field-existing", Status: "PROVISIONED"})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "service-token")
+	actor, err := client.Provision(workforceauth.WithOperatorContext(context.Background(), "context-main"), ProvisionInput{
+		Username: "field-existing", PhoneE164: "+967770000002", Role: "field",
+	})
+	if err != nil {
+		t.Fatalf("Provision replay returned error: %v", err)
+	}
+	if actor.Created {
+		t.Fatal("replayed provision must not authorize deprovision compensation")
 	}
 }
 
 func TestProvisionRejectsOperatorContextOverrideBeforeNetwork(t *testing.T) {
-	client := NewClient("https://identity.internal", "service-token", "operator-context-main")
+	client := NewClient("https://identity.internal", "service-token")
 
-	_, err := client.Provision(context.Background(), ProvisionInput{OperatorContextID: "operator-context-other"})
+	_, err := client.Provision(workforceauth.WithOperatorContext(context.Background(), "operator-context-main"), ProvisionInput{OperatorContextID: "operator-context-other"})
 	if !errors.Is(err, ErrOperatorContextForbidden) {
 		t.Fatalf("expected ErrOperatorContextForbidden, got %v", err)
 	}
 }
 
 func TestClientFailsClosedWithoutRuntimeContext(t *testing.T) {
-	client := NewClient("https://identity.internal", "service-token", "")
-	if client.Configured() {
-		t.Fatal("expected identity client without operator context to be unconfigured")
+	client := NewClient("https://identity.internal", "service-token")
+	if !client.Configured() {
+		t.Fatal("endpoint configuration must be independent of request-scoped operator context")
+	}
+	if _, err := client.Actor(context.Background(), "field-1"); !errors.Is(err, ErrOperatorContextForbidden) {
+		t.Fatalf("expected missing request context to fail closed, got %v", err)
+	}
+}
+
+func TestVerifyActorInOperatorContextAttestsIdentityBoundary(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/internal/actors/field-1" {
+			t.Fatalf("unexpected actor path %q", r.URL.Path)
+		}
+		if r.Header.Get("X-Operator-Context-ID") != "context-main" {
+			t.Fatalf("expected context-main assertion, got %q", r.Header.Get("X-Operator-Context-ID"))
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(ActorView{ActorID: "field-1"})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "service-token")
+	if err := client.VerifyActorInOperatorContext(context.Background(), "field-1", "context-main"); err != nil {
+		t.Fatalf("expected Identity attestation to succeed, got %v", err)
+	}
+}
+
+func TestVerifyActorInOperatorContextRejectsActorOutsideBoundary(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte(`{"code":"ACTOR_NOT_FOUND","message":"not found"}`))
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "service-token")
+	if err := client.VerifyActorInOperatorContext(context.Background(), "field-1", "context-main"); !errors.Is(err, ErrOperatorContextForbidden) {
+		t.Fatalf("expected boundary rejection, got %v", err)
 	}
 }
 
@@ -123,14 +184,14 @@ func TestLifecycleMutationsSendGovernedRequestBody(t *testing.T) {
 			name: "deactivate",
 			path: "/internal/actors/field-1/deactivate",
 			call: func(client *Client) error {
-				return client.Deactivate(context.Background(), "field-1", "operator-1", "policy breach", "correlation-1")
+				return client.Deactivate(workforceauth.WithOperatorContext(context.Background(), "context-main"), "field-1", "operator-1", "policy breach", "correlation-1")
 			},
 		},
 		{
 			name: "reactivate",
 			path: "/internal/actors/field-1/reactivate",
 			call: func(client *Client) error {
-				return client.Reactivate(context.Background(), "field-1", "operator-1", "review complete", "correlation-2")
+				return client.Reactivate(workforceauth.WithOperatorContext(context.Background(), "context-main"), "field-1", "operator-1", "review complete", "correlation-2")
 			},
 		},
 	}
@@ -155,7 +216,7 @@ func TestLifecycleMutationsSendGovernedRequestBody(t *testing.T) {
 			}))
 			defer server.Close()
 
-			client := NewClient(server.URL, "service-token", "context-main")
+			client := NewClient(server.URL, "service-token")
 			if err := test.call(client); err != nil {
 				t.Fatalf("lifecycle mutation returned error: %v", err)
 			}

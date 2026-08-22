@@ -32,6 +32,29 @@ func UpdateDeliveryStatusGovernedIdempotent(
 	captainID string,
 	status DeliveryStatus,
 ) (*Assignment, error) {
+	return updateDeliveryStatusGovernedIdempotent(db, assignmentID, captainID, status, 0)
+}
+
+func UpdateDeliveryStatusGovernedIdempotentVersioned(
+	db *sql.DB,
+	assignmentID string,
+	captainID string,
+	status DeliveryStatus,
+	expectedVersion int,
+) (*Assignment, error) {
+	if expectedVersion < 1 {
+		return nil, fmt.Errorf("%w: assignment version is required", ErrInvalid)
+	}
+	return updateDeliveryStatusGovernedIdempotent(db, assignmentID, captainID, status, expectedVersion)
+}
+
+func updateDeliveryStatusGovernedIdempotent(
+	db *sql.DB,
+	assignmentID string,
+	captainID string,
+	status DeliveryStatus,
+	expectedVersion int,
+) (*Assignment, error) {
 	switch status {
 	case DeliveryArrivedStore, DeliveryPickedUp, DeliveryArrivedCustomer:
 	default:
@@ -48,6 +71,9 @@ func UpdateDeliveryStatusGovernedIdempotent(
 		}
 	}
 	if current.Delivery.Status != status {
+		if expectedVersion > 0 {
+			return UpdateDeliveryStatusGovernedVersioned(db, assignmentID, captainID, status, expectedVersion)
+		}
 		return UpdateDeliveryStatusGoverned(db, assignmentID, captainID, status)
 	}
 

@@ -1,3 +1,5 @@
+import { secureRandomId } from "../_kernel/secure-random.ts";
+
 export type CartMutationCommand =
   | { kind: "add"; storeId: string; masterProductId: string; quantity: number; options: string[]; note: string }
   | { kind: "remove"; cartId: string; itemId: string }
@@ -52,12 +54,8 @@ export function clearCartSyncQueue(): void {
   }
 }
 
-// Generate an idempotency key if not available
 export function generateIdempotencyKey(): string {
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return globalThis.crypto.randomUUID();
-  }
-  throw new Error("SECURE_RANDOM_UNAVAILABLE");
+  return `idemp-${secureRandomId()}`;
 }
 
 export function getDeviceId(): string {

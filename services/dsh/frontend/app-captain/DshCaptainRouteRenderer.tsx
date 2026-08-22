@@ -28,13 +28,11 @@ import {
   CaptainOrdersInboxScreen,
   CaptainPickupConfirmSheet,
 } from "./orders/DshCaptainOrdersScreen";
-import { DshCaptainMapScreen } from "./orders/DshCaptainMapScreen";
 import { DshCaptainPoDSubmissionScreen } from "./orders/DshCaptainPoDSubmissionScreen";
 import { WltCaptainFinanceScreen } from "./finance/WltCaptainFinanceScreen";
 import { DshCaptainSupportDirectoryScreen } from "./account/DshCaptainOperationsScreen";
 import { DshCaptainAccountSettingsContent } from "./account/DshCaptainAccountSettingsContent";
 import { CaptainAccountNavRow } from "./account/CaptainAccountNavRow";
-import { CaptainStorePickupContextScreen } from "./store/CaptainStorePickupContextScreen";
 import { OfferDeclineSheet } from "./orders/OfferDeclineSheet";
 import { CaptainSupportScreenRouter } from "./account/CaptainSupportScreenRouter";
 import type { DshCaptainOrderBellItem, DshCaptainOrdersScreenState } from "../shared/orders";
@@ -59,7 +57,6 @@ export type DshCaptainRouteRendererProps = {
   readonly inboxState: CaptainOrdersInboxScreenState;
   readonly captainRuntimeId: string;
   readonly captainPodRequired: boolean;
-  readonly captainCollectsCod: boolean;
   readonly isStoreCourierMode: boolean;
   readonly isCaptainAvailable: boolean;
   readonly selectedSupportScreen: CaptainSupportRoute;
@@ -120,7 +117,6 @@ const routeHeaderMeta: Partial<Record<DshCaptainRoute, { readonly title: string;
   map: { title: "خريطة المهمة", subtitle: "الموقع الحي للمهمة الحالية." },
   "pod-submission": { title: "إثبات التسليم", subtitle: "التقاط وإرسال الإثبات المطلوب." },
   "pickup-dropoff": { title: "الاستلام والتسليم", subtitle: "لا تُعرض بيانات غير مربوطة." },
-  "store-pickup-context": { title: "سياق استلام المتجر", subtitle: "قراءة سياقية من DSH." },
   bell: { title: "الإشعارات", subtitle: "تنبيهات الطلبات والعروض." },
 };
 
@@ -153,7 +149,6 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     inboxState,
     captainRuntimeId,
     captainPodRequired,
-    captainCollectsCod,
     isStoreCourierMode,
     isCaptainAvailable,
     selectedSupportScreen,
@@ -204,7 +199,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
   const captainEntryState = inboxState === "loading" ? "loading" : inboxState === "error" ? "error" : "ready";
 
   function renderFlow(): React.ReactNode {
-    if (route === "entry") {
+    if (route === "home" || route === "entry") {
       return (
         <DshEntryScreen
           state={captainEntryState}
@@ -225,7 +220,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
       return <CaptainOrdersInboxScreen state={inboxState} items={[...inboxItems]} onRetry={onRetryInbox} onOpenOrder={onOpenOrder} onOpenNextOrder={onOpenOrder} />;
     }
 
-    if (route === "detail") {
+    if (route === "detail" || route === "pickup-dropoff") {
       if (!activeSummary) return <MissingAssignment onGoToInbox={onGoToInbox} />;
       return (
         <>
@@ -248,26 +243,11 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
       );
     }
 
-    if (route === "orderchat") {
-      return <StateView title="مراسلات الطلب غير مفعلة" description="لا يوجد عقد محادثة حي ومثبت للكابتن في هذه الرحلة." tone="warning" actionLabel="العودة إلى المهمة" onActionPress={onBack} />;
-    }
-
-    if (route === "map") {
-      if (!hasActiveAssignment) return <MissingAssignment onGoToInbox={onGoToInbox} />;
-      return <DshCaptainMapScreen assignmentId={activeAssignmentId} orderId={activeOrderId} captainId={captainRuntimeId} currentStageLabel={activeSummary?.currentStageLabel ?? "مهمة نشطة"} onBack={onBack} onPushLocation={onPushLocation} />;
-    }
-
-    if (route === "pickup-dropoff") {
-      return <StateView title="تفاصيل الاستلام غير مكتملة" description="عدد الأصناف واسم العميل ومرحلة الاستلام لا تُستنتج محليًا. استخدم تفاصيل المهمة الحية." tone="warning" actionLabel="فتح تفاصيل المهمة" onActionPress={() => (hasActiveAssignment ? onOpenOrder(activeAssignmentId) : onGoToInbox())} />;
-    }
-
-    if (route === "store-pickup-context") return <CaptainStorePickupContextScreen />;
-
     if (route === "pod-submission") {
       if (!hasActiveAssignment || !captainPodRequired) {
         return <StateView title="إثبات التسليم غير مطلوب" description="لم تعد المهمة الحية متطلب PoD صالحًا لهذا الكابتن." tone="warning" actionLabel="العودة إلى المهمة" onActionPress={onBack} />;
       }
-      return <DshCaptainPoDSubmissionScreen state={captainPodState} assignmentId={activeAssignmentId} orderId={activeOrderId} exceptionReportingEnabled={!isStoreCourierMode} onCapturePhoto={onCapturePhoto} onConfirm={onConfirmPodSubmission} onReportFailure={onReportPodFailure} onRetry={onRetryPod} onBack={captainPodState === "success" ? onGoToInbox : onBack} {...(captainPodPhotoUri ? { photoUri: captainPodPhotoUri } : {})} />;
+      return <DshCaptainPoDSubmissionScreen state={captainPodState} assignmentId={activeAssignmentId} orderId={activeOrderId} exceptionReportingEnabled onCapturePhoto={onCapturePhoto} onConfirm={onConfirmPodSubmission} onReportFailure={onReportPodFailure} onRetry={onRetryPod} onBack={captainPodState === "success" ? onGoToInbox : onBack} {...(captainPodPhotoUri ? { photoUri: captainPodPhotoUri } : {})} />;
     }
 
     if (route === "account-finance") {
@@ -343,11 +323,11 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
       );
     }
 
-    if (route === "support-directory") return <DshCaptainSupportDirectoryScreen onOpenScreen={(id) => onOpenSupportScreen(id as CaptainSupportRoute)} />;
+  if (route === "support-directory") return <DshCaptainSupportDirectoryScreen activeOrderId={activeOrderId} onOpenScreen={(id) => onOpenSupportScreen(id as CaptainSupportRoute)} />;
 
-    if (route === "support-screen") {
-      if (!dshClientId) return <StateView title="هوية الكابتن غير مربوطة" description="لا يمكن تنفيذ الدعم التشغيلي أو COD دون معرف DSH موثق." tone="warning" actionLabel="العودة إلى الدليل" onActionPress={onOpenSupportDirectory} />;
-      return <CaptainSupportScreenRouter selectedSupportScreen={selectedSupportScreen} onBack={onOpenSupportDirectory} onNavigate={onOpenSupportScreen} captainCollectsCod={captainCollectsCod} dshClientId={dshClientId} activeOrderId={activeOrderId} onAcceptTask={onAcceptTask} onDeclineTask={onDeclineTask} />;
+    if (route === "support-screen" || route === "orderchat") {
+      if (!dshClientId) return <StateView title="هوية الكابتن غير مربوطة" description="لا يمكن تنفيذ الدعم التشغيلي دون معرف DSH موثق." tone="warning" actionLabel="العودة إلى الدليل" onActionPress={onOpenSupportDirectory} />;
+      return <CaptainSupportScreenRouter selectedSupportScreen={selectedSupportScreen} onBack={onOpenSupportDirectory} onNavigate={onOpenSupportScreen} dshClientId={dshClientId} activeOrderId={activeOrderId} onAcceptTask={onAcceptTask} onDeclineTask={onDeclineTask} />;
     }
 
     return <StateView title="مسار كابتن غير معروف" description={`لم يُربط المسار ${route} بقدرة تشغيلية.`} tone="danger" actionLabel="فتح صندوق الطلبات" onActionPress={onGoToInbox} />;
@@ -362,7 +342,7 @@ export function DshCaptainRouteRenderer(props: DshCaptainRouteRendererProps) {
     "account-support": { title: "الإعدادات", subtitle: "المظهر وخيارات السطح." },
     account: { title: "حساب الكابتن", subtitle: "الهوية والمالية والتقييم والحالة المثبتة." },
     "support-directory": { title: "دليل الدعم", subtitle: "المسارات التشغيلية المسجلة." },
-    "support-screen": { title: selectedSupportScreen === "cod-liability" ? "ذمة الدفع عند الاستلام" : "الدعم", subtitle: "المسار المفتوح من الدليل." },
+    "support-screen": { title: "الدعم", subtitle: "المسار المفتوح من الدليل." },
   };
 
   const meta = accountRouteTitle[route] ?? routeHeaderMeta[route];

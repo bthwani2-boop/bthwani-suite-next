@@ -2,7 +2,7 @@ name: SonarQube Cloud
 
 on:
   pull_request:
-    branches: [master]
+    branches: [master, b, c]
     types: [opened, synchronize, reopened]
   push:
     branches: [master]
@@ -18,12 +18,74 @@ jobs:
   scan:
     name: SonarQube Cloud scan
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 60
+    services:
+      postgres-dsh:
+        image: postgis/postgis:16-3.4-alpine
+        env:
+          POSTGRES_USER: dsh_runtime
+          POSTGRES_PASSWORD: ${{ secrets.BTHWANI_CI_POSTGRES_PASSWORD }}
+          POSTGRES_DB: dsh_runtime
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U dsh_runtime -d dsh_runtime"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      postgres-wlt:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wlt_runtime
+          POSTGRES_PASSWORD: ${{ secrets.BTHWANI_CI_POSTGRES_PASSWORD }}
+          POSTGRES_DB: wlt_runtime
+        ports: ["5434:5432"]
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U wlt_runtime -d wlt_runtime"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      postgres-identity:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: identity_runtime
+          POSTGRES_PASSWORD: ${{ secrets.BTHWANI_CI_POSTGRES_PASSWORD }}
+          POSTGRES_DB: identity_runtime
+        ports: ["5435:5432"]
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U identity_runtime -d identity_runtime"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      postgres-workforce:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: workforce_runtime
+          POSTGRES_PASSWORD: ${{ secrets.BTHWANI_CI_POSTGRES_PASSWORD }}
+          POSTGRES_DB: workforce_runtime
+        ports: ["5436:5432"]
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U workforce_runtime -d workforce_runtime"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      postgres-platform:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: platform_control_runtime
+          POSTGRES_PASSWORD: ${{ secrets.BTHWANI_CI_POSTGRES_PASSWORD }}
+          POSTGRES_DB: platform_control_runtime
+        ports: ["5437:5432"]
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U platform_control_runtime -d platform_control_runtime"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      postgres-providers:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: providers_runtime
+          POSTGRES_PASSWORD: ${{ secrets.BTHWANI_CI_POSTGRES_PASSWORD }}
+          POSTGRES_DB: providers_runtime
+        ports: ["5438:5432"]
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U providers_runtime -d providers_runtime"
+          --health-interval 5s --health-timeout 5s --health-retries 20
 
     steps:
-      - name: Checkout immutable source with full history
+      - name: Checkout immutable candidate source with full history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
           show-progress: false
           fetch-depth: 0
@@ -49,9 +111,15 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EXPECTED_HEAD_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           HEAD_SHA="$(git rev-parse HEAD)"
+          if [[ -z "${EXPECTED_HEAD_SHA}" || "${HEAD_SHA}" != "${EXPECTED_HEAD_SHA}" ]]; then
+            echo "::error::Sonar checkout SHA mismatch: expected=${EXPECTED_HEAD_SHA:-<empty>} actual=${HEAD_SHA}"
+            exit 1
+          fi
+
           BASE_SHA="${PR_BASE_SHA:-}"
           MODE=affected
 
@@ -59,7 +127,8 @@ jobs:
             MODE=full
             BASE_SHA="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${HEAD_SHA}")"
           elif [[ -z "${BASE_SHA}" ]]; then
-            BASE_SHA="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${HEAD_SHA}")"
+            echo "::error::PR base SHA is required for affected Sonar analysis"
+            exit 1
           fi
 
           CI_BASE_SHA="${BASE_SHA}" \
@@ -83,6 +152,10 @@ jobs:
         if: ${{ steps.node_coverage_plan.outputs.required == 'true' }}
         uses: ./.github/actions/setup-node-workspace
 
+      - name: Materialize contracts through the Nx owner
+        if: ${{ steps.node_coverage_plan.outputs.required == 'true' }}
+        run: pnpm exec nx run contracts:materialize
+
       - name: Generate affected Node LCOV
         id: node_coverage
         if: ${{ steps.node_coverage_plan.outputs.required == 'true' }}
@@ -98,6 +171,77 @@ jobs:
           go-version-file: services/dsh/backend/go.mod
           cache: false
 
+      - name: Provision governed databases for affected Go coverage
+        if: ${{ steps.scope.outputs.dsh == 'true' || steps.scope.outputs.wlt == 'true' || steps.scope.outputs.identity == 'true' || steps.scope.outputs.workforce == 'true' || steps.scope.outputs.platform == 'true' || steps.scope.outputs.providers == 'true' }}
+        shell: bash
+        env:
+          DSH: ${{ steps.scope.outputs.dsh }}
+          WLT: ${{ steps.scope.outputs.wlt }}
+          IDENTITY: ${{ steps.scope.outputs.identity }}
+          WORKFORCE: ${{ steps.scope.outputs.workforce }}
+          PLATFORM: ${{ steps.scope.outputs.platform }}
+          PROVIDERS: ${{ steps.scope.outputs.providers }}
+          BTHWANI_CI_POSTGRES_PASSWORD: ${{ secrets.BTHWANI_CI_POSTGRES_PASSWORD }}
+          SONAR_SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client >/dev/null
+
+          identity_url="postgres://identity_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5435/identity_runtime?sslmode=disable"
+          actor_placeholders="$RUNNER_TEMP/go-coverage-actor-placeholders.json"
+          cat > "$actor_placeholders" <<'JSON'
+          {
+            "FIELD_ACTOR_ID": "ci-field-actor-001",
+            "CAPTAIN_ACTOR_ID": "ci-captain-actor-001",
+            "WLT_PAYOUT_ENCRYPTION_KEY": "ci-sonar-coverage-payout-encryption-key"
+          }
+          JSON
+          migrate() {
+            local service="$1"
+            local directory="$2"
+            local database_url="$3"
+            local identity_database_url="${4:-}"
+            echo "Applying governed $service migrations for Sonar coverage"
+            if [[ "$service" == "workforce" ]]; then
+              pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-service-migrations.ps1 \
+                -ServiceKey "$service" -MigrationDirectory "$directory" \
+                -DatabaseUrl "$database_url" -IdentityDatabaseUrl "$identity_database_url" \
+                -SourceCommitSha "$SONAR_SOURCE_SHA"
+            else
+              pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-service-migrations.ps1 \
+                -ServiceKey "$service" -MigrationDirectory "$directory" \
+                -DatabaseUrl "$database_url" -SourceCommitSha "$SONAR_SOURCE_SHA"
+            fi
+          }
+
+          if [[ "$IDENTITY" == "true" || "$WORKFORCE" == "true" ]]; then
+            migrate identity core/identity/database/migrations "$identity_url"
+          fi
+          [[ "$WORKFORCE" == "true" ]] && migrate workforce core/workforce/database/migrations \
+            "postgres://workforce_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5436/workforce_runtime?sslmode=disable" "$identity_url"
+          [[ "$DSH" == "true" ]] && migrate dsh services/dsh/database/migrations \
+            "postgres://dsh_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5433/dsh_runtime?sslmode=disable"
+          [[ "$WLT" == "true" ]] && migrate wlt services/wlt/database/migrations \
+            "postgres://wlt_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5434/wlt_runtime?sslmode=disable"
+          [[ "$PLATFORM" == "true" ]] && migrate platform-control core/platform-control/database/migrations \
+            "postgres://platform_control_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5437/platform_control_runtime?sslmode=disable"
+          [[ "$PROVIDERS" == "true" ]] && migrate providers core/providers/database/migrations \
+            "postgres://providers_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5438/providers_runtime?sslmode=disable"
+
+          if [[ "$DSH" == "true" ]]; then
+            BTHWANI_ENVIRONMENT=ci pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-service-seeds.ps1 \
+              -ServiceKey dsh -SeedDirectory services/dsh/database/seeds/local -Transport url \
+              -DatabaseUrl "postgres://dsh_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5433/dsh_runtime?sslmode=disable" \
+              -PlaceholderFile "$actor_placeholders" -AllowLocalSeeds -SourceCommitSha "$SONAR_SOURCE_SHA"
+          fi
+          if [[ "$WLT" == "true" ]]; then
+            BTHWANI_ENVIRONMENT=ci pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-service-seeds.ps1 \
+              -ServiceKey wlt -SeedDirectory services/wlt/database/seeds/local -Transport url \
+              -DatabaseUrl "postgres://wlt_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5434/wlt_runtime?sslmode=disable" \
+              -PlaceholderFile "$actor_placeholders" -AllowLocalSeeds -SourceCommitSha "$SONAR_SOURCE_SHA"
+          fi
+
       - name: Generate affected Go coverage reports
         id: go_coverage
         if: ${{ steps.scope.outputs.dsh == 'true' || steps.scope.outputs.wlt == 'true' || steps.scope.outputs.identity == 'true' || steps.scope.outputs.workforce == 'true' || steps.scope.outputs.platform == 'true' || steps.scope.outputs.providers == 'true' }}
@@ -109,6 +253,7 @@ jobs:
           WORKFORCE: ${{ steps.scope.outputs.workforce }}
           PLATFORM: ${{ steps.scope.outputs.platform }}
           PROVIDERS: ${{ steps.scope.outputs.providers }}
+          BTHWANI_CI_POSTGRES_PASSWORD: ${{ secrets.BTHWANI_CI_POSTGRES_PASSWORD }}
         run: |
           set -euo pipefail
           modules=()
@@ -126,10 +271,48 @@ jobs:
             mkdir -p "$(dirname "$report")"
             (
               cd "$module"
-              go test ./... -coverprofile="$raw_report"
+              case "$module" in
+                core/identity/backend)
+                  IDENTITY_REQUIRE_DB_TESTS=true DATABASE_URL="postgres://identity_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5435/identity_runtime?sslmode=disable" \
+                    go test ./... -coverprofile="$raw_report"
+                  ;;
+                core/workforce/backend)
+                  WORKFORCE_REQUIRE_DB_TESTS=true DATABASE_URL="postgres://workforce_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5436/workforce_runtime?sslmode=disable" \
+                    go test ./... -coverprofile="$raw_report"
+                  ;;
+                services/dsh/backend)
+                  DSH_REQUIRE_DB_TESTS=true DSH_TEST_operator_context_id=local-dsh DATABASE_URL="postgres://dsh_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5433/dsh_runtime?sslmode=disable" \
+                    go test ./... -coverprofile="$raw_report"
+                  ;;
+                services/wlt/backend)
+                  WLT_REQUIRE_DB_TESTS=true BTHWANI_OPERATOR_CONTEXT_ID=local-dsh DATABASE_URL="postgres://wlt_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5434/wlt_runtime?sslmode=disable" \
+                    go test ./... -coverprofile="$raw_report"
+                  ;;
+                core/platform-control/backend)
+                  DATABASE_URL="postgres://platform_control_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5437/platform_control_runtime?sslmode=disable" \
+                    go test ./... -coverprofile="$raw_report"
+                  ;;
+                core/providers/backend)
+                  DATABASE_TEST=1 DATABASE_URL="postgres://providers_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5438/providers_runtime?sslmode=disable" \
+                    go test ./... -coverprofile="$raw_report"
+                  ;;
+                *)
+                  go test ./... -coverprofile="$raw_report"
+                  ;;
+              esac
             )
             module_name="$(cd "$module" && go list -m)"
-            sed "s#^${module_name}/#${module}/#" "$raw_report" > "$report"
+            : > "$report"
+            while IFS= read -r coverage_line; do
+              case "$coverage_line" in
+                "${module_name}/"*)
+                  printf '%s/%s\n' "$module" "${coverage_line#"${module_name}/"}" >> "$report"
+                  ;;
+                *)
+                  printf '%s\n' "$coverage_line" >> "$report"
+                  ;;
+              esac
+            done < "$raw_report"
           done
           echo 'scan_args=-Dsonar.go.coverage.reportPaths=**/.sonar/coverage.out' >> "$GITHUB_OUTPUT"
 

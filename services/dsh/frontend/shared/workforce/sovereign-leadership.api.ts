@@ -61,6 +61,7 @@ export type SovereignLeadershipRecord = {
 export type CreateSovereignLeaderInput = {
   readonly fullNameAr: string;
   readonly fullNameEn?: string;
+  readonly username: string;
   readonly phoneE164: string;
   readonly department: string;
   readonly positionTitle: string;

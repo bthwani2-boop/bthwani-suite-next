@@ -2,7 +2,6 @@
   "schemaVersion": "1.0.0",
   "journeyId": "102",
   "title": "إسناد الكابتن والتوزيع",
-  "owner": "services/dsh",
   "truthOwner": "DSH",
   "financialBoundary": "WLT_REFERENCE_ONLY",
   "surfaces": [
@@ -33,29 +32,5 @@
     "لا بيانات عميل أو عنوان أو قيمة مالية ثابتة أو وهمية في تطبيق الكابتن.",
     "لا تعديل رصيد أو عمولة أو تسوية داخل DSH.",
     "لا اعتبار الرحلة مغلقة إنتاجيًا دون مراجعات QA والأمن والمنتج المستقلة."
-  ],
-  "sliceClosureRegistry": "services/dsh/contracts/slice-closure.json",
-  "evidenceRequired": [
-    "static",
-    "database",
-    "contract",
-    "backend",
-    "runtime",
-    "cross-surface",
-    "security",
-    "isolation",
-    "qa",
-    "governance",
-    "ci"
-  ],
-  "statusContext": "dispatch-governance",
-  "internalZeroGate": "PENDING_AUTOMATED_VERIFICATION",
-  "openCodeGaps": [],
-  "independentReviewPending": [
-    "product-owner",
-    "qa-device-accessibility",
-    "security",
-    "release-production"
-  ],
-  "decision": "IMPLEMENTED_PENDING_VERIFICATION"
+  ]
 }

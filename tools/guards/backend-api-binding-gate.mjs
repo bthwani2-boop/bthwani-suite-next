@@ -77,10 +77,6 @@ const boundaryInterceptedRoutes = new Map([
     "Providers",
     new Map([
       [
-        "GET /providers/health",
-        "intercepted by RuntimeReadinessBoundary (core/providers/backend/internal/http/runtime_readiness_boundary.go) before the router",
-      ],
-      [
         "GET /providers/readiness",
         "intercepted by RuntimeReadinessBoundary (core/providers/backend/internal/http/runtime_readiness_boundary.go) before the router",
       ],
@@ -267,22 +263,21 @@ const gatedWltMutationRoutes = new Set([
   "POST /wlt/payment-sessions/{paymentSessionId}/authorize",
   "POST /wlt/payment-sessions/{paymentSessionId}/capture",
   "POST /wlt/payment-sessions/{paymentSessionId}/expire",
-  "POST /wlt/payment-sessions/{paymentSessionId}/cod-collect",
+  "POST /wlt/cod-reservations/reserve",
+  "POST /wlt/cod-reservations/release",
+  "POST /wlt/cod-reservations/finalize",
   "POST /wlt/refunds",
   "POST /wlt/refunds/{refundId}/approve",
   "POST /wlt/refunds/{refundId}/complete",
   "POST /wlt/refunds/{refundId}/reject",
   "POST /wlt/settlements",
   "POST /wlt/settlements/{settlementId}/post",
-  "POST /wlt/cod-records/{codRecordId}/collect",
-  "POST /wlt/cod-records/{codRecordId}/remit",
-  "POST /wlt/delivery-collections/{codRecordId}/collect",
-  "POST /wlt/delivery-collections/{codRecordId}/remit",
   "POST /wlt/commissions",
   "POST /wlt/commercial/products",
   "PATCH /wlt/commercial/products/{productReference}",
   "POST /wlt/commercial/loyalty-entries",
   "POST /wlt/commercial/subscriptions",
+  "PUT /wlt/commercial/store-onboarding-fee",
 ]);
 const approvedWltMutationScopes = new Set(["POST /wlt/settlements"]);
 const wltFinancialReadRoutes = new Set([
@@ -291,16 +286,14 @@ const wltFinancialReadRoutes = new Set([
   "GET /wlt/settlements",
   "GET /wlt/settlements/{settlementId}",
   "GET /wlt/settlements/summary",
-  "GET /wlt/cod-records",
-  "GET /wlt/cod-records/{codRecordId}",
-  "GET /wlt/delivery-collections",
-  "GET /wlt/delivery-collections/{codRecordId}",
+  "GET /wlt/cod-reservations/{orderId}",
   "GET /wlt/commissions",
   "GET /wlt/ledger/entries",
   "GET /wlt/ledger/entries/{entryId}",
   "GET /wlt/commercial/summary",
   "GET /wlt/commercial/products/{productReference}",
   "GET /wlt/commercial/clients/{clientId}/benefits",
+  "GET /wlt/commercial/store-onboarding-fee",
 ]);
 
 function contractFiles(service) {
@@ -312,28 +305,20 @@ function operationFile(service, operation) {
 }
 
 function serviceGoRoutes(service) {
-  const files = [service.router];
-  if (service.routerDir) {
-    const dirPath = path.join(repoRoot, service.routerDir);
-    if (fs.existsSync(dirPath)) {
-      for (const entry of fs.readdirSync(dirPath)) {
-        if (!entry.endsWith(".go") || entry.endsWith("_test.go")) continue;
-        const relative = `${service.routerDir}/${entry}`;
-        if (!files.includes(relative)) files.push(relative);
-      }
-    }
-  }
-  const routes = [];
+  // extract_routes.go receives one file as the package entry point and then
+  // discovers every non-test Go file beside it. Calling it once per file
+  // re-parses the whole router package O(n²) and spawns hundreds of Go
+  // processes for the DSH router.
+  const routes = extractGoRoutes(service.router);
   const keys = new Set();
-  for (const file of files) {
-    for (const route of extractGoRoutes(file)) {
-      const key = routeKey(route);
-      if (keys.has(key)) continue;
-      keys.add(key);
-      routes.push({ ...route, file });
-    }
+  const uniqueRoutes = [];
+  for (const route of routes) {
+    const key = routeKey(route);
+    if (keys.has(key)) continue;
+    keys.add(key);
+    uniqueRoutes.push({ ...route, file: service.router });
   }
-  return routes;
+  return uniqueRoutes;
 }
 
 function hasRequiredHeader(operation, headerName) {

@@ -229,7 +229,7 @@ func Reconcile(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 		readCtx := wlt.WithOperatorContext(ctx, partner.OperatorContextID)
 		ref, readErr := client.GetPayoutDestination(readCtx, partner.PartnerID)
 		if errors.Is(readErr, wlt.ErrPayoutDestinationNotFound) {
-			if partner.PayoutDestination != "" && partner.ActivationStatus != "partner_deactivated" {
+			if partner.PayoutDestination != "" && partner.ActivationStatus != "partner_terminated" {
 				if err := upsertCase(ctx, db, partner, "wlt_destination_missing", nil); err != nil {
 					return err
 				}

@@ -13,8 +13,9 @@ paths:
       operationId: getWorkforceActorScopes
       summary: Get workforce scope snapshot for a field or captain actor
       description: 'Read-through proxy to Workforce. DSH exposes this as an operational
-        reference only. Workforce remains the sole owner of assignment and scope mutations.
-        Returns the current store and service-area assignments for the given actor.
+        reference only. Workforce remains the sole owner of Workforce operational-assignment
+        mutations, while DSH remains the sole owner of store-access authorization. Returns
+        the current Workforce-assigned store and service-area data for the given actor.
 
         '
       x-bthwani-required-scope: workforce.scopes.read

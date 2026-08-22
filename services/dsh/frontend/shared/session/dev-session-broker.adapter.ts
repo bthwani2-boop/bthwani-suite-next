@@ -1,11 +1,34 @@
 import { Platform } from "react-native";
 import type { TokenResponse } from "@bthwani/core-identity";
 import { isDshDeviceLoopbackBridgeEnabled } from "../_kernel/dsh-api-base-url";
+import {
+  resolveMobileDevGatewayBaseUrl,
+  resolveMobileDevGatewayCapability,
+} from "../_kernel/mobile-dev-gateway";
 
-function brokerBaseUrl(): string {
-  return Platform.OS === "web" || isDshDeviceLoopbackBridgeEnabled()
-    ? "http://127.0.0.1:58100"
-    : "http://10.0.2.2:58100";
+type BrokerTarget = {
+  readonly baseUrl: string;
+  readonly headers: Readonly<Record<string, string>>;
+};
+
+function brokerTarget(): BrokerTarget {
+  const gateway = resolveMobileDevGatewayBaseUrl();
+  if (gateway) {
+    const capability = resolveMobileDevGatewayCapability();
+    if (!capability) throw new Error("MOBILE_DEV_GATEWAY_CAPABILITY_MISSING");
+    return {
+      baseUrl: `${gateway}/__dev-session`,
+      headers: { "X-Bthwani-Dev-Capability": capability },
+    };
+  }
+
+  return {
+    baseUrl:
+      Platform.OS === "web" || isDshDeviceLoopbackBridgeEnabled()
+        ? "http://127.0.0.1:58100"
+        : "http://10.0.2.2:58100",
+    headers: {},
+  };
 }
 
 function brokerErrorCode(body: unknown): string {
@@ -25,9 +48,13 @@ export async function requestDevelopmentSession(input: {
   readonly surface: string;
   readonly deviceFingerprint: string;
 }): Promise<TokenResponse> {
-  const response = await fetch(`${brokerBaseUrl()}/session`, {
+  const target = brokerTarget();
+  const response = await fetch(`${target.baseUrl}/session`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...target.headers,
+    },
     body: JSON.stringify(input),
   });
   const body: unknown = await response.json().catch(() => null);

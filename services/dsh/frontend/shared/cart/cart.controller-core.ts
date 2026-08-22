@@ -14,34 +14,39 @@ import {
   serviceabilityServiceableState,
   successState,
 } from "./cart.states";
+import {
+  classifyCartLoad,
+  classifyCartLoadError,
+  classifyServiceability,
+  resolveQuantityRemoval,
+  shouldLoadCart,
+} from "./cart.policy";
 
-export function shouldLoadCart(authKind: string, storeId: string | undefined): boolean {
-  return authKind === "authenticated" && storeId !== undefined && storeId !== "";
-}
+export { resolveQuantityRemoval, shouldLoadCart } from "./cart.policy";
 
 export function resolveCartLoadState(cart: DshCart | null): DshCartState {
-  if (!cart || cart.items.length === 0) return emptyState();
-  return successState(cart);
+  return classifyCartLoad(cart) === "empty" ? emptyState() : successState(cart as DshCart);
 }
 
 export function resolveCartLoadError(error: { kind?: string; status?: number }): DshCartState {
-  if (error.kind === "network") return offlineState();
-  if (error.kind === "http" && (error.status === 401 || error.status === 403)) {
-    return permissionDeniedState();
+  switch (classifyCartLoadError(error)) {
+    case "offline":
+      return offlineState();
+    case "permission_denied":
+      return permissionDeniedState();
+    default:
+      return errorState("تعذر تحميل السلة.");
   }
-  return errorState("تعذر تحميل السلة.");
 }
 
 export function resolveServiceabilityState(result: DshServiceabilityResult): DshServiceabilityState {
   const availableModes = result.availableModes ?? [];
-  if (result.serviceable) return serviceabilityServiceableState(result, availableModes);
+  if (classifyServiceability(result) === "serviceable") {
+    return serviceabilityServiceableState(result, availableModes);
+  }
   return serviceabilityBlockedState(result, result.code, availableModes, result.reason);
 }
 
 export function resolveServiceabilityError(): DshServiceabilityState {
   return serviceabilityErrorState("تعذر التحقق من توفر الخدمة.");
-}
-
-export function resolveQuantityRemoval(currentQuantity: number, newQuantity: number): "remove" | "update" {
-  return newQuantity < 1 && currentQuantity >= 1 ? "remove" : "update";
 }

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"dsh-api/internal/coupons"
+	"dsh-api/internal/promotionfundingoutbox"
 	wltclient "dsh-api/internal/wlt"
 )
 
@@ -24,6 +25,65 @@ func fundingOperatorContext(requested string, projection *coupons.FundingProject
 		return ""
 	}
 	return strings.TrimSpace(projection.OperatorContextID)
+}
+
+func (s *protectedStoreServer) enqueueCouponFundingRelease(
+	ctx context.Context,
+	projection *coupons.FundingProjection,
+	operatorContextID string,
+	reason string,
+	correlationID string,
+) error {
+	if projection == nil || strings.TrimSpace(projection.WLTReservationID) == "" {
+		return fmt.Errorf("coupon funding release requires a WLT reservation")
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := promotionfundingoutbox.Enqueue(tx, promotionfundingoutbox.EnqueueInput{
+		EventType:          promotionfundingoutbox.EventRelease,
+		OperatorContextID:  operatorContextID,
+		CheckoutIntentID:   projection.CheckoutIntentID,
+		CouponRedemptionID: projection.RedemptionID,
+		WLTReservationID:   projection.WLTReservationID,
+		Reason:             strings.TrimSpace(reason),
+		IdempotencyKey:     "dsh-promotion-funding-release:" + projection.RedemptionID + ":" + strings.TrimSpace(reason),
+		CorrelationID:      fundingCorrelation(correlationID, projection.CheckoutIntentID),
+	}); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (s *protectedStoreServer) enqueueCouponFundingReserveThenRelease(
+	ctx context.Context,
+	projection *coupons.FundingProjection,
+	operatorContextID string,
+	reason string,
+	correlationID string,
+) error {
+	if projection == nil || strings.TrimSpace(projection.RedemptionID) == "" {
+		return fmt.Errorf("coupon funding reserve reconciliation requires a redemption")
+	}
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err := promotionfundingoutbox.Enqueue(tx, promotionfundingoutbox.EnqueueInput{
+		EventType:          promotionfundingoutbox.EventReserveThenRelease,
+		OperatorContextID:  operatorContextID,
+		CheckoutIntentID:   projection.CheckoutIntentID,
+		CouponRedemptionID: projection.RedemptionID,
+		Reason:             strings.TrimSpace(reason),
+		IdempotencyKey:     "dsh-promotion-funding-reserve-release:" + projection.RedemptionID,
+		CorrelationID:      fundingCorrelation(correlationID, projection.CheckoutIntentID),
+	}); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (s *protectedStoreServer) reserveCouponFunding(
@@ -48,7 +108,7 @@ func (s *protectedStoreServer) reserveCouponFunding(
 	}
 	correlationID = fundingCorrelation(correlationID, checkoutIntentID)
 	reservation, err := s.wlt.ReservePromotionFunding(ctx, wltclient.ReservePromotionFundingInput{
-		OperatorContextID:                 operatorContextID,
+		OperatorContextID:        operatorContextID,
 		ExternalReference:        "dsh-coupon-redemption:" + projection.RedemptionID,
 		CheckoutIntentID:         projection.CheckoutIntentID,
 		CouponRedemptionID:       projection.RedemptionID,
@@ -61,8 +121,13 @@ func (s *protectedStoreServer) reserveCouponFunding(
 		Currency:                 projection.Currency,
 	}, "dsh-promotion-funding:"+projection.RedemptionID, correlationID)
 	if err != nil {
-		_ = coupons.MarkFundingFailed(ctx, s.db, projection.RedemptionID, "wlt_reserve_failed")
-		return nil, err
+		if markErr := coupons.MarkFundingFailed(ctx, s.db, projection.RedemptionID, "wlt_reserve_failed"); markErr != nil {
+			return nil, fmt.Errorf("WLT promotion funding reserve failed: %v; marking DSH funding failed also failed: %w", err, markErr)
+		}
+		if queueErr := s.enqueueCouponFundingReserveThenRelease(ctx, projection, operatorContextID, "wlt_reserve_outcome_unknown", correlationID); queueErr != nil {
+			return nil, fmt.Errorf("WLT promotion funding reserve failed: %v; durable reserve reconciliation enqueue failed: %w", err, queueErr)
+		}
+		return nil, fmt.Errorf("WLT promotion funding reserve failed; durable reserve reconciliation queued: %w", err)
 	}
 	if reservation.OperatorContextID != operatorContextID ||
 		reservation.CheckoutIntentID != projection.CheckoutIntentID ||
@@ -73,15 +138,41 @@ func (s *protectedStoreServer) reserveCouponFunding(
 		reservation.PlatformFundedMinorUnits != projection.PlatformFundedMinorUnits ||
 		reservation.PartnerFundedMinorUnits != projection.PartnerFundedMinorUnits ||
 		reservation.Currency != projection.Currency {
-		_ = coupons.MarkFundingFailed(ctx, s.db, projection.RedemptionID, "wlt_reserve_mismatch")
+		projection.WLTReservationID = reservation.ID
+		releaseErr := error(nil)
+		_, releaseErr = s.wlt.ReleasePromotionFunding(ctx, reservation.ID, wltclient.PromotionFundingTransitionInput{
+			OperatorContextID: operatorContextID,
+			Reason:            "dsh_reserve_response_mismatch",
+		}, "dsh-promotion-funding-release:"+projection.RedemptionID+":mismatch", correlationID)
+		if releaseErr != nil {
+			releaseErr = s.enqueueCouponFundingRelease(ctx, projection, operatorContextID, "dsh_reserve_response_mismatch", correlationID)
+		}
+		if markErr := coupons.MarkFundingFailed(ctx, s.db, projection.RedemptionID, "wlt_reserve_mismatch"); markErr != nil {
+			if releaseErr != nil {
+				return nil, fmt.Errorf("WLT promotion funding response mismatch; release failed or could not be queued: %v; marking DSH funding failed also failed: %w", releaseErr, markErr)
+			}
+			return nil, fmt.Errorf("WLT promotion funding response mismatch; marking DSH funding failed also failed: %w", markErr)
+		}
+		if releaseErr != nil {
+			return nil, fmt.Errorf("WLT promotion funding response mismatch; durable release could not be completed or queued: %w", releaseErr)
+		}
 		return nil, fmt.Errorf("WLT promotion funding response does not match DSH reservation")
 	}
 	if err := coupons.AttachWLTReservation(ctx, s.db, projection.RedemptionID, reservation.ID, operatorContextID); err != nil {
-		_, _ = s.wlt.ReleasePromotionFunding(ctx, reservation.ID, wltclient.PromotionFundingTransitionInput{
+		projection.WLTReservationID = reservation.ID
+		_, releaseErr := s.wlt.ReleasePromotionFunding(ctx, reservation.ID, wltclient.PromotionFundingTransitionInput{
 			OperatorContextID: operatorContextID,
-			Reason:   "dsh_projection_attach_failed",
+			Reason:            "dsh_projection_attach_failed",
 		}, "dsh-promotion-funding-release:"+projection.RedemptionID+":attach", correlationID)
-		_ = coupons.MarkFundingFailed(ctx, s.db, projection.RedemptionID, "dsh_projection_attach_failed")
+		if releaseErr != nil {
+			releaseErr = s.enqueueCouponFundingRelease(ctx, projection, operatorContextID, "dsh_projection_attach_failed", correlationID)
+		}
+		if markErr := coupons.MarkFundingFailed(ctx, s.db, projection.RedemptionID, "dsh_projection_attach_failed"); markErr != nil {
+			return nil, fmt.Errorf("attach WLT funding reservation failed: %v; marking DSH funding failed also failed: %w", err, markErr)
+		}
+		if releaseErr != nil {
+			return nil, fmt.Errorf("attach WLT funding reservation failed; durable release could not be completed or queued: %w", releaseErr)
+		}
 		return nil, err
 	}
 	projection.OperatorContextID = operatorContextID
@@ -114,15 +205,28 @@ func (s *protectedStoreServer) releaseCouponFunding(
 	correlationID = fundingCorrelation(correlationID, checkoutIntentID)
 	reservation, err := s.wlt.ReleasePromotionFunding(ctx, projection.WLTReservationID, wltclient.PromotionFundingTransitionInput{
 		OperatorContextID: operatorContextID,
-		Reason:   strings.TrimSpace(reason),
+		Reason:            strings.TrimSpace(reason),
 	}, "dsh-promotion-funding-release:"+projection.RedemptionID+":"+strings.TrimSpace(reason), correlationID)
 	if err != nil {
-		return err
+		if queueErr := s.enqueueCouponFundingRelease(ctx, projection, operatorContextID, reason, correlationID); queueErr != nil {
+			return fmt.Errorf("WLT promotion funding release failed: %v; durable release enqueue failed: %w", err, queueErr)
+		}
+		return fmt.Errorf("WLT promotion funding release failed; durable release queued: %w", err)
 	}
 	if reservation.Status != "released" || reservation.OperatorContextID != operatorContextID {
-		return fmt.Errorf("WLT promotion funding release response is invalid")
+		responseErr := fmt.Errorf("WLT promotion funding release response is invalid")
+		if queueErr := s.enqueueCouponFundingRelease(ctx, projection, operatorContextID, reason, correlationID); queueErr != nil {
+			return fmt.Errorf("%v; durable release enqueue failed: %w", responseErr, queueErr)
+		}
+		return fmt.Errorf("%v; durable release queued", responseErr)
 	}
-	return coupons.MarkFundingProjection(ctx, s.db, projection.WLTReservationID, "released")
+	if err := coupons.MarkFundingProjection(ctx, s.db, projection.WLTReservationID, "released"); err != nil {
+		if queueErr := s.enqueueCouponFundingRelease(ctx, projection, operatorContextID, reason, correlationID); queueErr != nil {
+			return fmt.Errorf("WLT promotion funding released but DSH projection update failed: %v; durable release enqueue failed: %w", err, queueErr)
+		}
+		return fmt.Errorf("WLT promotion funding released but DSH projection update failed; durable release queued: %w", err)
+	}
+	return nil
 }
 
 func (s *protectedStoreServer) commitCouponFunding(
@@ -146,7 +250,7 @@ func (s *protectedStoreServer) commitCouponFunding(
 	correlationID = fundingCorrelation(correlationID, orderID)
 	reservation, err := s.wlt.CommitPromotionFunding(ctx, projection.WLTReservationID, wltclient.PromotionFundingTransitionInput{
 		OperatorContextID: operatorContextID,
-		OrderID:  orderID,
+		OrderID:           orderID,
 	}, "dsh-promotion-funding-commit:"+projection.RedemptionID, correlationID)
 	if err != nil {
 		return err
@@ -182,8 +286,8 @@ func (s *protectedStoreServer) reverseCouponFunding(
 	correlationID = fundingCorrelation(correlationID, orderID)
 	reservation, err := s.wlt.ReversePromotionFunding(ctx, projection.WLTReservationID, wltclient.PromotionFundingTransitionInput{
 		OperatorContextID: operatorContextID,
-		OrderID:  orderID,
-		Reason:   strings.TrimSpace(reason),
+		OrderID:           orderID,
+		Reason:            strings.TrimSpace(reason),
 	}, "dsh-promotion-funding-reverse:"+projection.RedemptionID, correlationID)
 	if err != nil {
 		return err

@@ -13,10 +13,12 @@ import (
 func TestDispatchPreservesPersistedCancellationCorrelation(t *testing.T) {
 	const operatorContextID = "OperatorContext-a"
 	var gotCorrelation string
-	var gotOperatorContextID string
+	var gotDelegatedOperatorContextID string
+	var gotLegacyOperatorContextID string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotCorrelation = r.Header.Get("X-Correlation-ID")
-		gotOperatorContextID = r.Header.Get("X-Operator-Context-ID")
+		gotDelegatedOperatorContextID = r.Header.Get("X-Delegated-Operator-Context")
+		gotLegacyOperatorContextID = r.Header.Get("X-Operator-Context-ID")
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"action":        "none",
@@ -42,8 +44,11 @@ func TestDispatchPreservesPersistedCancellationCorrelation(t *testing.T) {
 	if gotCorrelation != "cancel-command-19" {
 		t.Fatalf("X-Correlation-ID=%q want cancel-command-19", gotCorrelation)
 	}
-	if gotOperatorContextID != operatorContextID {
-		t.Fatalf("X-Operator-Context-ID=%q want %q", gotOperatorContextID, operatorContextID)
+	if gotDelegatedOperatorContextID != operatorContextID {
+		t.Fatalf("X-Delegated-Operator-Context=%q want %q", gotDelegatedOperatorContextID, operatorContextID)
+	}
+	if gotLegacyOperatorContextID != "" {
+		t.Fatalf("legacy X-Operator-Context-ID must not be emitted, got %q", gotLegacyOperatorContextID)
 	}
 	if result.Action != "none" || result.SessionStatus != "cancelled" {
 		t.Fatalf("unexpected delivery result: %+v", result)

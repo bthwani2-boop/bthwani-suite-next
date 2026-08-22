@@ -1,6 +1,6 @@
 -- Local-only convergence for the complete public-store publication predicate.
 --
--- Earlier fixtures provided identity, governance, catalog and media truth but
+-- Earlier fixtures provided identity, governance, and catalog truth but
 -- predated the field-onboarding readiness columns. Keep the production
 -- predicate fail-closed and make the governed local fixtures complete instead.
 
@@ -34,36 +34,9 @@ SET address_line = CASE id
       WHEN status = 'published' THEN 'ready'
       ELSE 'paused'
     END,
-    storefront_photo_ref = CASE id
-      WHEN 'store-test-grocery' THEN '/dsh-media/realistic/store-test-grocery-hero.jpg'
-      WHEN 'store-1002' THEN '/dsh-media/realistic/store-test-sweets-hero.jpg'
-      WHEN 'store-1003' THEN '/dsh-media/realistic/store-test-grocery-hero.jpg'
-      WHEN 'store-1004' THEN '/dsh-media/realistic/store-test-grocery-hero.jpg'
-      WHEN 'store-1005' THEN '/dsh-media/realistic/store-test-restaurant-hero.jpg'
-      WHEN 'store-1006' THEN '/dsh-media/realistic/store-test-pharmacy-hero.jpg'
-      WHEN 'store-test-electronics' THEN '/dsh-media/realistic/store-test-electronics-hero.jpg'
-      ELSE storefront_photo_ref
-    END,
-    interior_photo_ref = CASE id
-      WHEN 'store-test-grocery' THEN '/dsh-media/realistic/store-test-grocery-interior.jpg'
-      WHEN 'store-1002' THEN '/dsh-media/realistic/store-test-sweets-interior.jpg'
-      WHEN 'store-1003' THEN '/dsh-media/realistic/store-test-grocery-interior.jpg'
-      WHEN 'store-1004' THEN '/dsh-media/realistic/store-test-grocery-interior.jpg'
-      WHEN 'store-1005' THEN '/dsh-media/realistic/store-test-restaurant-interior.jpg'
-      WHEN 'store-1006' THEN '/dsh-media/realistic/store-test-pharmacy-interior.jpg'
-      WHEN 'store-test-electronics' THEN '/dsh-media/realistic/store-test-electronics-interior.jpg'
-      ELSE interior_photo_ref
-    END,
-    signage_photo_ref = CASE id
-      WHEN 'store-test-grocery' THEN '/dsh-media/realistic/store-test-grocery-logo.jpg'
-      WHEN 'store-1002' THEN '/dsh-media/realistic/store-test-sweets-logo.jpg'
-      WHEN 'store-1003' THEN '/dsh-media/realistic/store-test-grocery-logo.jpg'
-      WHEN 'store-1004' THEN '/dsh-media/realistic/store-test-grocery-logo.jpg'
-      WHEN 'store-1005' THEN '/dsh-media/realistic/store-test-restaurant-logo.jpg'
-      WHEN 'store-1006' THEN '/dsh-media/realistic/store-test-pharmacy-logo.jpg'
-      WHEN 'store-test-electronics' THEN '/dsh-media/realistic/store-test-electronics-logo.jpg'
-      ELSE signage_photo_ref
-    END,
+    partner_readiness = 'ready',
+    catalog_approval_status = 'approved',
+    marketing_visibility = 'visible',
     updated_at = NOW()
 WHERE operator_context_id = 'local-dsh'
   AND id IN (
@@ -95,21 +68,6 @@ SET address_line = CASE
       ELSE operating_hours
     END,
     delivery_readiness = 'ready',
-    storefront_photo_ref = CASE
-      WHEN btrim(COALESCE(storefront_photo_ref, '')) = ''
-        THEN COALESCE(NULLIF(hero_image_url, ''), '/dsh-media/realistic/' || id || '-hero.jpg')
-      ELSE storefront_photo_ref
-    END,
-    interior_photo_ref = CASE
-      WHEN btrim(COALESCE(interior_photo_ref, '')) = ''
-        THEN COALESCE(NULLIF(hero_image_url, ''), '/dsh-media/realistic/' || id || '-interior.jpg')
-      ELSE interior_photo_ref
-    END,
-    signage_photo_ref = CASE
-      WHEN btrim(COALESCE(signage_photo_ref, '')) = ''
-        THEN COALESCE(NULLIF(logo_url, ''), '/dsh-media/realistic/' || id || '-logo.jpg')
-      ELSE signage_photo_ref
-    END,
     updated_at = NOW()
 WHERE operator_context_id = 'local-dsh'
   AND status = 'published'

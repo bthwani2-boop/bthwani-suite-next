@@ -1,19 +1,11 @@
 {
   "schemaVersion": 1,
   "capabilityId": "IDENTITY_ACTIVATION_SESSIONS",
-  "state": "DISCOVERY",
   "problem": {
     "statement": "Every BThwani surface needs one sovereign actor, activation, and session model without duplicate identities, client-selected trust context, or surface-local authentication truth.",
     "affectedActors": ["customer", "partner", "captain", "field", "operator"],
-    "currentWorkaround": "Identity code and OpenAPI implement most flows, while the former Markdown product record used a non-canonical decision and could not be schema-validated or independently accepted.",
     "frequency": "continuous",
-    "severity": "critical",
-    "evidenceState": "VALIDATED",
-    "evidenceReferences": [
-      "core/identity/contracts/identity.openapi.yaml",
-      "core/identity/backend/internal/identity/actor_admin.go",
-      "core/identity/backend/internal/http/runtime_readiness_boundary.go"
-    ]
+    "severity": "critical"
   },
   "actors": [
     {
@@ -131,9 +123,7 @@
     "statement": "One Identity actor and session source serves every required surface with governed provisioning, exact idempotency, trusted context, and durable readback.",
     "primaryMetric": "identity_truth_and_cross_actor_violations",
     "guardrailMetrics": ["duplicate_actor_count", "cross_context_actor_reads", "activation_replays", "false_ready_responses", "session_token_leaks"],
-    "baselineState": "Implementation existed alongside a non-schema Markdown declaration and incomplete same-commit evidence.",
-    "targetState": "Zero duplicate actors, context overrides, cross-actor reads, activation replays, false readiness, and parallel Identity truth.",
-    "observationWindow": "Every affected static check, database test, HTTP runtime probe, same-commit CI run, and independent product and security review."
+    "targetState": "Zero duplicate actors, context overrides, cross-actor reads, activation replays, false readiness, and parallel Identity truth."
   },
   "acceptance": {
     "criteria": [
@@ -145,10 +135,7 @@
       "Refresh rotates atomically, reuse is rejected, and logout or deactivation revokes applicable sessions.",
       "Every required surface exposes explicit loading, expired, forbidden, blocked, unavailable, and recovery states."
     ],
-    "failureStates": ["duplicate_actor", "provisioning_fingerprint_mutation", "client_context_override", "cross_context_read", "stale_migration_ready", "activation_replay", "refresh_reuse", "secret_or_pii_leak", "parallel_identity_truth"],
-    "requiredChecks": ["product-truth schema validation", "Identity OpenAPI and generated-client drift", "Go unit and database integration tests", "provisioning concurrency and isolation tests", "readiness dependency failure and recovery runtime test", "multi-surface route and state verification", "same-commit CI", "independent product acceptance", "independent QA and security review"],
-    "runtimeEvidenceRequired": true,
-    "visualEvidenceRequired": true
+    "failureStates": ["duplicate_actor", "provisioning_fingerprint_mutation", "client_context_override", "cross_context_read", "stale_migration_ready", "activation_replay", "refresh_reuse", "secret_or_pii_leak", "parallel_identity_truth"]
   },
   "invariants": {
     "business": [
@@ -169,18 +156,6 @@
     "productManager": "BThwani Product Management",
     "productOwner": "BThwani Product Owner",
     "uxJourneyOwner": "BThwani Multi-Surface UX",
-    "engineeringOwner": "core/identity",
-    "productManagerApproval": "PENDING",
-    "productOwnerApproval": "PENDING",
-    "productAcceptanceDecision": "PENDING"
-  },
-  "execution": {
-    "appetite": "Complete Identity journeys sequentially with root-cause fixes and evidence proportional to trust risk.",
-    "fixedConstraints": ["Identity is the only actor and session owner.", "Trusted context is server-derived.", "Historical applied migrations are immutable.", "Protected approvals remain independent."],
-    "variableScope": ["Internal query shape and pagination", "Runtime probe implementation", "Generated client consumers"],
-    "forbiddenScope": ["Client-selected trust context", "Role expansion through provisioning retry", "Parallel identity storage", "Self-granted protected approval"],
-    "forecastRange": "J001 through J006 plus cross-cutting verification",
-    "confidence": "high",
-    "unknowns": ["Independent product acceptance", "Independent security and QA outcomes", "Production runtime evidence"]
+    "engineeringOwner": "IDENTITY"
   }
 }

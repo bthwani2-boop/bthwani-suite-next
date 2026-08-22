@@ -37,13 +37,38 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 		return err
 	}
 	for _, event := range events {
+		if event.Status == "unknown" {
+			readbackCtx, readbackCancel := context.WithTimeout(ctx, notifyTimeout)
+			readback, readbackErr := client.ReadbackOutboxEvent(readbackCtx, wlt.OutboxReadbackInput{
+				EventType: event.EventType, OperatorContextID: event.OperatorContextID, OrderID: event.OrderID, CollectorType: event.CollectorType,
+				CollectorID: event.CollectorID, PartnerID: event.PartnerID, ClientID: event.ClientID,
+				CheckoutIntentID: event.CheckoutIntentID, Payload: event.Payload,
+			})
+			readbackCancel()
+			if readbackErr == nil && readback.Present {
+				if markErr := MarkSentWithReference(db, event.ID, readback.Reference); markErr != nil {
+					log.Printf("[wlt-outbox] mark readback-proven event sent failed for %s: %v", event.ID, markErr)
+				}
+				continue
+			}
+			if readbackErr == nil && readback.Absent {
+				if markErr := MarkFailed(db, event.ID, event.AttemptCount, fmt.Errorf("canonical WLT readback proved event absent")); markErr != nil {
+					log.Printf("[wlt-outbox] retry state failed after absent readback for %s: %v", event.ID, markErr)
+				}
+				continue
+			}
+			if markErr := MarkUnknown(db, event.ID, event.AttemptCount, readbackErr); markErr != nil {
+				log.Printf("[wlt-outbox] unknown-result readback state failed for %s: %v", event.ID, markErr)
+			}
+			continue
+		}
 		notifyCtx, cancel := context.WithTimeout(ctx, notifyTimeout)
 		externalReference, deliverErr := deliverEvent(notifyCtx, client, event)
 		cancel()
 		if deliverErr != nil {
 			log.Printf("[wlt-outbox] event %s/%s failed (attempt %d): %v", event.ID, event.EventType, event.AttemptCount+1, deliverErr)
-			if markErr := MarkFailed(db, event.ID, event.AttemptCount, deliverErr); markErr != nil {
-				log.Printf("[wlt-outbox] retry state failed for %s: %v", event.ID, markErr)
+			if markErr := MarkUnknown(db, event.ID, event.AttemptCount, deliverErr); markErr != nil {
+				log.Printf("[wlt-outbox] unknown-result state failed for %s: %v", event.ID, markErr)
 			}
 			continue
 		}
@@ -62,29 +87,18 @@ func deliverEvent(ctx context.Context, client *wlt.Client, event Event) (string,
 
 	switch event.EventType {
 	case EventTypeDeliveryCompleted:
-		collectorType := event.CollectorType
-		collectorID := event.CollectorID
-		if collectorType == "" && event.CaptainID != "" {
-			collectorType = CollectorCaptain
-			collectorID = event.CaptainID
+		if event.CaptainID == "" || event.CheckoutIntentID == "" {
+			return "", fmt.Errorf("delivery completion requires captain and checkout intent")
 		}
-		if err := client.NotifyDeliveryCollection(ctx, wlt.NotifyDeliveryCollectionInput{
+		if _, _, err := client.FinalizeCodReservation(ctx, event.OrderID, event.CheckoutIntentID, event.OrderID, "delivery-completed:"+event.OrderID+":cod-finalize"); err != nil {
+			return "", err
+		}
+		if err := client.DeliverCaptainCommission(ctx, wlt.DeliverCaptainCommissionInput{
+			CaptainID:        event.CaptainID,
 			OrderID:          event.OrderID,
-			CollectorType:    collectorType,
-			CollectorID:      collectorID,
-			PartnerID:        event.PartnerID,
 			CheckoutIntentID: event.CheckoutIntentID,
 		}); err != nil {
 			return "", err
-		}
-		if event.CaptainID != "" {
-			if err := client.DeliverCaptainCommission(ctx, wlt.DeliverCaptainCommissionInput{
-				CaptainID:        event.CaptainID,
-				OrderID:          event.OrderID,
-				CheckoutIntentID: event.CheckoutIntentID,
-			}); err != nil {
-				return "", err
-			}
 		}
 		return "", nil
 	case EventTypeLoyaltyEarned:

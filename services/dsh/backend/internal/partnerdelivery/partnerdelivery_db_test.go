@@ -120,6 +120,14 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 	}
 
 	f.courierID = "courier-" + suffix
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_captain_memberships
+		  (id, captain_actor_id, affiliation, partner_id, store_id, status,
+		   branch_assignment, delivery_assignment)
+		VALUES ($1,$1,'PARTNER',$2,$3,'active','branch-test','partner-delivery')`,
+		f.courierID, f.partnerID, f.storeID); err != nil {
+		t.Fatalf("failed to insert governed store courier membership: %v", err)
+	}
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_media_refs (
@@ -136,6 +144,7 @@ func seedFixture(t *testing.T, db *sql.DB, orderStatus string) fixture {
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_partner_delivery_audit_events WHERE entity_id IN (SELECT id FROM dsh_partner_delivery_tasks WHERE order_id = $1::uuid)`, f.orderID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_operational_outbox_events WHERE entity_type = 'partner_delivery_task' AND entity_id IN (SELECT id FROM dsh_partner_delivery_tasks WHERE order_id = $1::uuid)`, f.orderID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_partner_delivery_tasks WHERE order_id = $1::uuid`, f.orderID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_captain_memberships WHERE id = $1`, f.courierID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_orders WHERE id = $1::uuid`, f.orderID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_checkout_intents WHERE id = $1::uuid`, checkoutIntentID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_carts WHERE id = $1::uuid`, cartID)

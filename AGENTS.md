@@ -1,105 +1,94 @@
 # BThwani Agents
 
-`AGENTS.md` is a thin coding-agent adapter. Human developers and AI agents use the same authority and execution model in `governance/GOVERNANCE.md`.
+`AGENTS.md` is a thin coding-agent adapter. Keep work direct, affected-scope, and evidence-driven.
 
 ## Authority
 
-Resolve each task in this order:
+Resolve each task from the current human instruction, the exact pinned repository/ref, canonical Product/System Truth where applicable, and actual implementation/runtime evidence.
 
-1. current authorized task instruction;
-2. `governance/authority/authority-precedence.json`;
-3. `governance/GOVERNANCE.md`;
-4. `governance/product/PRD.md` and applicable Engineering/Security/Delivery policy;
-5. applicable capability Product Truth and machine contracts;
-6. exact pinned implementation and runtime evidence.
+Do not create a parallel authority layer in prompts, plans, guards, workflows, registries, or agent metadata.
 
-Registries:
+Agent routing lives only in:
 
-- decisions: `governance/contracts/decision-vocabulary.json`
-- agents: `governance/agents/agent-registry.json`
-- skills: `governance/skills/skills-registry.json`
-- tools: `governance/tools/agent-tool-registry.json`
-- guards: `governance/guards/guard-registry.json`
-- workflows: `governance/github/workflow-registry.json`
+- `.agents/INDEX.md`
+- `.agents/skills/**`
+- `.agents/tools/**`
 
-## Truth boundaries
-
-**Authority truth** determines who owns policy, product semantics, writes, approvals, and evidence rules.
-
-**Product truth** determines capability behavior, actors, states, surfaces, invariants, and acceptance.
-
-**Implementation truth** is the exact pinned source, contracts, configuration, migrations, and tests.
-
-**Runtime truth** is actual candidate-bound runtime/readback evidence. No other truth class may be inferred from a plan, prompt, report, fixture, or historical result.
+There is intentionally no agent-role registry, skill registry, tool registry, guard registry, workflow registry, SDLC stage registry, or governance-validation workflow.
 
 ## Execution
 
-Use `CODE_BASED_LEAN`:
+1. Pin the exact repository, user-named branch/ref, and live SHA.
+2. Inspect the smallest complete affected vertical path.
+3. Prove the highest material root cause before broadening scope.
+4. Fix the actual source owner: code, contract, data, configuration, runtime, or consumer.
+5. Migrate affected consumers/readbacks and remove obsolete parallel behavior.
+6. Run the smallest verification set that adds unique assurance for the affected code cone.
+7. Expand verification only when risk or evidence requires it.
+8. Re-pin after material writes and before the final remote claim.
 
-- pin the exact repository, user-named branch/ref, and remote SHA;
-- inspect the smallest complete affected vertical path;
-- identify the authoritative truth/write owner;
-- fix root cause at that owner;
-- migrate every affected consumer/readback;
-- remove obsolete or parallel behavior when safe;
-- run the smallest sufficient affected verification and expand only by proven risk;
-- re-run invalidated evidence after the final relevant write;
-- report only what the exact candidate proves.
+“Deep”, “complete”, and “100%” raise the evidence standard; they do not justify unrelated scans, every available tool, or repository-wide verification by default.
 
-“Deep”, “complete”, and “100%” raise the evidence standard; they do not justify unrelated scans, every tool, or unsupported completeness claims.
+## Verification
+
+Do not create repository-specific guards, verification scripts, or workflows by default.
+
+Prefer existing compiler, typecheck, lint, test, build, database, runtime, contract, and security-tool capabilities directly. Keep custom automation only when it provides unique executable assurance that cannot be obtained more simply and when its ongoing cost is justified.
+
+Do not create guards or workflows to validate governance prose, agent instructions, prompt packages, approval metadata, registries, stage metadata, or evidence bookkeeping.
+
+Prefer:
+
+`affected code → targeted checks → runtime proof when applicable → broad/full verification only when closure or risk requires it`
 
 ## Repository safety
 
-Re-resolve the user-named branch before every logical write batch and after the final write. Reconcile unexpected branch movement. Never substitute another branch, force/reset newer work, or merge/release/deploy without current-task authority.
+Before every logical write batch, re-resolve the user-named branch. Reconcile unexpected branch movement; never overwrite unrelated newer work. No force push unless the current human instruction explicitly requires it.
 
-## Full-stack multi-surface
+## Full-stack work
 
-For product behavior read `governance/product/PRD.md` plus the applicable `governance/product/contracts/*.product-truth.json`. Trace the full affected path:
+For product behavior, trace the complete affected path when the behavior actually crosses those layers:
 
-`surface → shared controller/adapter → generated contract/client → backend/domain → persistence/events/integration → canonical readback → every affected required surface`
+`surface → shared controller/adapter → generated contract/client → backend/domain → persistence/events/integration → canonical readback → affected surfaces`
 
 A local UI success is not closure when persisted or cross-surface truth is required.
 
-## Security and finance
+## Security, finance, and domain ownership
 
-Use `governance/policies/security.md` whenever authentication, authorization, sessions, trusted context, PII, secrets, provider credentials, isolation, or privileged access is affected.
+Derive security, financial, and domain ownership from the current canonical implementation/contracts and explicit Product/System Truth. Do not restate mutable domain authority in this adapter.
 
-WLT remains the authoritative financial-truth owner. DSH and surfaces may use only bounded WLT-backed operations/projections permitted by current contracts.
+Authentication, authorization, sessions, secrets, PII, provider credentials, isolation, and financial mutation paths require risk-appropriate verification.
 
-## Evidence and approvals
+## Delegation
 
-Use `governance/policies/delivery.md`, `governance/contracts/sdlc/`, and `governance/contracts/decision-vocabulary.json`. Evidence is candidate-bound and scope-specific. Static success never implies runtime, visual, QA, security, finance, isolation, CI, release, production, or final closure.
+Delegation is optional and only for bounded work that materially benefits from it.
 
-Logical approval authorities remain separated by the agent registry. An execution agent cannot impersonate the owner or self-grant a protected approval.
+Parallel read-only investigation is allowed when useful. At most one writer may modify an overlapping work unit at a time. When delegation is used, use one integration/push owner for the combined result.
 
-## Plans, skills, and tools
+The active executor owns reconciliation and final verification unless those responsibilities are explicitly assigned within a delegated workflow.
 
-Planning artifacts live only under `plans/`. `.agents/INDEX.md` is the only derived routing index. Skills live under `.agents/skills/`; conditional tool policies live under `.agents/tools/`.
+## Tools
 
-Tool ladder:
+Use `.agents/INDEX.md` only when routing is not obvious. Load the smallest relevant skill/tool set. Prefer direct scoped inspection and existing affected/runtime commands; use Graphify, LeanCTX, or OpenCodeReview only when they materially reduce uncertainty or repeated work.
 
-1. direct scoped inspection;
-2. focused search or existing command;
-3. one targeted registered guard;
-4. small idempotent helper for proven repetition;
-5. Nx affected when workspace impact must be computed;
-6. LeanCTX only when it materially reduces repeated reads/noise;
-7. Graphify only when ownership/dependency/duplication remains unresolved;
-8. OpenCodeReview for a bounded diff/commit/range;
-9. runtime tooling only for runtime-changing or runtime-claimed work.
-
-Tools and adapters own no Product Truth or approval.
+`tools/prompting/bthwani-orchestrator/**` is a separate self-contained textual execution package. It is not implicit repository authority. Use it only when the current human instruction explicitly invokes it, and treat it as read-only unless package maintenance is explicitly authorized.
 
 ## Final response
 
-```text
-repository:
-target_branch:
-resolved_commit_sha:
-changed_paths:
-checks_and_evidence:
-decision:
-remaining_risks_or_missing_evidence:
+For repository writes, report the exact target branch/SHA, changed paths, verification performed, and any remaining unproven risk. Do not claim more than the exact candidate proves.
+
+<!-- sonar:begin:codex-secrets-on-read -->
+# SonarQube secrets scanning for files protocol
+
+Before reading any file in this workspace, scan it for secrets with the deterministic scanner:
+
+```bash
+sonar analyze secrets <path/to/file>
 ```
 
-Do not overclaim.
+If the command reports that the file contains a secret, **do not read the file**. Instead:
+
+1. Inform the user that the file appears to contain a secret or credential and that reading it would expose the value in chat history, logs, and any downstream telemetry.
+2. Advise them to rotate the leaked credential at its source of truth and remove it from the file.
+3. Do not proceed with the original request until the secret has been removed.
+<!-- sonar:end:codex-secrets-on-read -->

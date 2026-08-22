@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"dsh-api/internal/store"
 )
 
 var (
@@ -36,7 +38,6 @@ const (
 	StatusOpsApproved           ActivationStatus = "ops_approved"
 	StatusOpsRejected           ActivationStatus = "ops_rejected"
 	StatusPartnerActive         ActivationStatus = "partner_active"
-	StatusPartnerDeactivated    ActivationStatus = "partner_deactivated" // Legacy, kept for backwards compatibility parsing if needed
 	StatusPartnerSuspended      ActivationStatus = "partner_suspended"
 	StatusPartnerTerminated     ActivationStatus = "partner_terminated"
 	StatusClientVisible         ActivationStatus = "client_visible"
@@ -72,7 +73,6 @@ var allowedTransitions = map[ActivationStatus][]ActivationStatus{
 	StatusOpsApproved:           {StatusPartnerActive},
 	StatusOpsRejected:           {StatusSubmitted, StatusDocumentsMissing},
 	StatusPartnerActive:         {StatusClientVisible, StatusClientHidden, StatusPartnerSuspended, StatusPartnerTerminated},
-	StatusPartnerDeactivated:    {StatusOpsReview, StatusSubmitted}, // Legacy
 	StatusPartnerSuspended:      {StatusPartnerActive, StatusPartnerTerminated},
 	StatusPartnerTerminated:     {}, // Terminal state
 	StatusClientVisible:         {StatusClientHidden, StatusPartnerSuspended, StatusPartnerTerminated},
@@ -113,6 +113,7 @@ type Partner struct {
 	SecondaryPhone       string               `json:"secondaryPhone"`
 	Email                string               `json:"email"`
 	Category             string               `json:"category"`
+	BusinessVerticalID   string               `json:"businessVerticalId"`
 	ActivationStatus     ActivationStatus     `json:"activationStatus"`
 	OnboardingCaseStatus OnboardingCaseStatus `json:"onboardingCaseStatus"`
 	CreatedByActorID     string               `json:"createdByActorId"`
@@ -130,30 +131,37 @@ type Partner struct {
 }
 
 type PartnerSummary struct {
-	ID               string           `json:"id"`
-	DisplayName      string           `json:"displayName"`
-	LegalNameAr      string           `json:"legalNameAr"`
-	Category         string           `json:"category"`
-	ActivationStatus ActivationStatus `json:"activationStatus"`
-	PrimaryPhone     string           `json:"primaryPhone"`
-	CreatedAt        time.Time        `json:"createdAt"`
-	UpdatedAt        time.Time        `json:"updatedAt"`
+	ID                 string           `json:"id"`
+	DisplayName        string           `json:"displayName"`
+	LegalNameAr        string           `json:"legalNameAr"`
+	Category           string           `json:"category"`
+	BusinessVerticalID string           `json:"businessVerticalId"`
+	ActivationStatus   ActivationStatus `json:"activationStatus"`
+	PrimaryPhone       string           `json:"primaryPhone"`
+	CreatedAt          time.Time        `json:"createdAt"`
+	UpdatedAt          time.Time        `json:"updatedAt"`
 }
 
 // â”€â”€â”€ Document â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type Document struct {
-	ID                string    `json:"id"`
-	PartnerID         string    `json:"partnerId"`
-	DocumentType      string    `json:"documentType"`
-	DocumentStatus    string    `json:"documentStatus"`
-	UploadedByActorID string    `json:"uploadedByActorId"`
-	MediaRef          string    `json:"mediaRef"`
-	Notes             string    `json:"notes"`
-	RejectionReason   string    `json:"rejectionReason"`
-	Version           int       `json:"version"`
-	CreatedAt         time.Time `json:"createdAt"`
-	UpdatedAt         time.Time `json:"updatedAt"`
+	ID                   string     `json:"id"`
+	PartnerID            string     `json:"partnerId"`
+	DocumentType         string     `json:"documentType"`
+	UploadStatus         string     `json:"uploadStatus"`
+	ReviewStatus         string     `json:"reviewStatus"`
+	DocumentStatus       string     `json:"documentStatus"`
+	UploadedByActorID    string     `json:"uploadedByActorId"`
+	MediaRef             string     `json:"mediaRef"`
+	Notes                string     `json:"notes"`
+	RejectionReason      string     `json:"rejectionReason"`
+	ReviewedByActorID    string     `json:"reviewedByActorId,omitempty"`
+	ReviewedAt           *time.Time `json:"reviewedAt,omitempty"`
+	LastReviewReason     string     `json:"lastReviewReason"`
+	SupersedesDocumentID string     `json:"supersedesDocumentId,omitempty"`
+	Version              int        `json:"version"`
+	CreatedAt            time.Time  `json:"createdAt"`
+	UpdatedAt            time.Time  `json:"updatedAt"`
 }
 
 // â”€â”€â”€ Document review â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -210,28 +218,52 @@ type ReadinessItem struct {
 }
 
 type PartnerReadiness struct {
-	PartnerID                      string          `json:"partnerId"`
-	CanActivate                    bool            `json:"canActivate"`
-	CanActivatePartner             bool            `json:"canActivatePartner"`
-	CanPublishStoreToClient        bool            `json:"canPublishStoreToClient"`
-	BlockedReason                  string          `json:"blockedReason,omitempty"`
-	PartnerActivationBlockedReason string          `json:"partnerActivationBlockedReason,omitempty"`
-	StorePublicationBlockedReason  string          `json:"storePublicationBlockedReason,omitempty"`
-	Checklist                      []ReadinessItem `json:"checklist"`
+	PartnerID                      string                    `json:"partnerId"`
+	CanActivate                    bool                      `json:"canActivate"`
+	CanActivatePartner             bool                      `json:"canActivatePartner"`
+	IntakeComplete                 bool                      `json:"intakeComplete"`
+	PublicationDecision            store.PublicationDecision `json:"publicationDecision"`
+	BlockingReasons                []string                  `json:"blockingReasons"`
+	BlockedReason                  string                    `json:"blockedReason,omitempty"`
+	PartnerActivationBlockedReason string                    `json:"partnerActivationBlockedReason,omitempty"`
+	Checklist                      []ReadinessItem           `json:"checklist"`
 }
 
 func ComputeReadiness(
 	p Partner,
 	documentCount, approvedDocCount int,
 	hasStore bool,
-	storePublished bool,
-	storeServiceable bool,
-	storePartnerReadinessReady bool,
-	storeCatalogApproved bool,
-	storeMarketingVisible bool,
-	storeIsVisible bool,
+	canonicalPublicationDecision store.PublicationDecision,
+	canonicalBlockingReasons []string,
 ) PartnerReadiness {
 	docsDone := approvedDocCount > 0
+	blockingReasons := append([]string(nil), canonicalBlockingReasons...)
+	if !hasStore {
+		canonicalPublicationDecision = store.PublicationBlocked
+		blockingReasons = []string{"STORE_NOT_LINKED"}
+	}
+	if canonicalPublicationDecision == "" {
+		canonicalPublicationDecision = store.PublicationBlocked
+		if len(blockingReasons) == 0 {
+			blockingReasons = []string{"CANONICAL_PUBLICATION_DECISION_MISSING"}
+		}
+	} else if canonicalPublicationDecision != store.PublicationPublished && len(blockingReasons) == 0 {
+		blockingReasons = []string{"CANONICAL_PUBLICATION_BLOCKED_REASON_MISSING"}
+	}
+	canonicalGateBlocked := func(code string) bool {
+		for _, reason := range blockingReasons {
+			if reason == code {
+				return true
+			}
+		}
+		return !hasStore
+	}
+	storePublished := !canonicalGateBlocked("STORE_NOT_PUBLISHED")
+	storeServiceable := !canonicalGateBlocked("STORE_NOT_SERVICEABLE")
+	storePartnerReadinessReady := !canonicalGateBlocked("PARTNER_NOT_READY")
+	storeCatalogApproved := !canonicalGateBlocked("CATALOG_NOT_APPROVED")
+	storeMarketingVisible := !canonicalGateBlocked("MARKETING_HIDDEN")
+	storeIsVisible := !canonicalGateBlocked("STORE_HIDDEN")
 
 	opsApprovedDone := p.ActivationStatus == StatusOpsApproved ||
 		p.ActivationStatus == StatusPartnerActive ||
@@ -245,12 +277,7 @@ func ComputeReadiness(
 	canActivatePartner := docsDone && hasStore && IsTransitionAllowed(p.ActivationStatus, StatusPartnerActive)
 
 	canPublishStoreToClient := hasStore &&
-		storePublished &&
-		storeIsVisible &&
-		storeServiceable &&
-		storePartnerReadinessReady &&
-		storeCatalogApproved &&
-		storeMarketingVisible &&
+		canonicalPublicationDecision == store.PublicationPublished &&
 		partnerActiveDone
 
 	partnerActivationBlockedReason := ""
@@ -264,33 +291,26 @@ func ComputeReadiness(
 		}
 	}
 
-	storePublicationBlockedReason := ""
-	if !hasStore {
-		storePublicationBlockedReason = "Ù„Ø§ ÙŠÙˆØ¬Ø¯ ÙØ±Ø¹ Ù…Ø±Ø¨ÙˆØ· Ø¨Ø§Ù„Ø´Ø±ÙŠÙƒ"
-	} else if !partnerActiveDone {
-		storePublicationBlockedReason = "Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù†Ø´Ø· Ø­Ø§Ù„ÙŠØ§Ù‹"
-	} else if !storePublished {
-		storePublicationBlockedReason = "حالة الفرع غير منشورة"
-	} else if !storeIsVisible {
-		storePublicationBlockedReason = "Ø§Ù„ÙØ±Ø¹ Ù…Ø®ÙÙŠ Ù…Ù† Ù„ÙˆØ­Ø© Ø§Ù„ØªØ­ÙƒÙ…"
-	} else if !storeServiceable {
-		storePublicationBlockedReason = "Ø§Ù„ÙØ±Ø¹ Ø®Ø§Ø±Ø¬ Ø§Ù„Ø®Ø¯Ù…Ø© Ø£Ùˆ ØºÙŠØ± Ù…ØªÙˆÙØ± Ø­Ø§Ù„ÙŠØ§Ù‹"
-	} else if !storePartnerReadinessReady {
-		storePublicationBlockedReason = "Ø¬Ø§Ù‡Ø²ÙŠØ© Ø§Ù„Ø´Ø±ÙŠÙƒ ØºÙŠØ± Ù…ÙƒØªÙ…Ù„Ø© Ù„Ù„ÙØ±Ø¹"
-	} else if !storeCatalogApproved {
-		storePublicationBlockedReason = "Ø§Ù„ÙƒØªØ§Ù„ÙˆØ¬ Ø§Ù„Ø®Ø§Øµ Ø¨Ø§Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…Ø¹ØªÙ…Ø¯"
-	} else if !storeMarketingVisible {
-		storePublicationBlockedReason = "Ø§Ù„Ø¸Ù‡ÙˆØ± Ø§Ù„ØªØ³ÙˆÙŠÙ‚ÙŠ Ù„Ù„ÙØ±Ø¹ ØºÙŠØ± Ù…ÙØ¹Ù„"
+	publicationDecision := canonicalPublicationDecision
+	if canPublishStoreToClient {
+		publicationDecision = store.PublicationPublished
+		blockingReasons = []string{}
+	} else if publicationDecision == store.PublicationPublished {
+		publicationDecision = store.PublicationBlocked
+		if len(blockingReasons) == 0 {
+			blockingReasons = []string{"PARTNER_NOT_CLIENT_VISIBLE"}
+		}
 	}
 
 	return PartnerReadiness{
 		PartnerID:                      p.ID,
 		CanActivate:                    canActivatePartner,
 		CanActivatePartner:             canActivatePartner,
-		CanPublishStoreToClient:        canPublishStoreToClient,
+		IntakeComplete:                 docsDone && hasStore && strings.TrimSpace(p.BusinessVerticalID) != "",
 		BlockedReason:                  partnerActivationBlockedReason,
 		PartnerActivationBlockedReason: partnerActivationBlockedReason,
-		StorePublicationBlockedReason:  storePublicationBlockedReason,
+		PublicationDecision:            publicationDecision,
+		BlockingReasons:                blockingReasons,
 		Checklist: []ReadinessItem{
 			{
 				ID:            "documents",
@@ -370,6 +390,7 @@ type CreatePartnerInput struct {
 	SecondaryPhone      string `json:"secondaryPhone"`
 	Email               string `json:"email"`
 	Category            string `json:"category"`
+	BusinessVerticalID  string `json:"businessVerticalId"`
 	Notes               string `json:"notes"`
 	CreatedByActorID    string `json:"-"`
 	CreatedBySurface    string `json:"-"`
@@ -469,14 +490,16 @@ type CreateFieldVisitInput struct {
 }
 
 type PartnerLinkedStore struct {
-	ID          string `json:"id"`
-	PartnerID   string `json:"partnerId"`
-	Slug        string `json:"slug"`
-	DisplayName string `json:"displayName"`
-	Status      string `json:"status"`
-	IsVisible   bool   `json:"isVisible"`
-	CityCode    string `json:"cityCode"`
-	CreatedAt   string `json:"createdAt"`
+	ID                  string   `json:"id"`
+	PartnerID           string   `json:"partnerId"`
+	Slug                string   `json:"slug"`
+	DisplayName         string   `json:"displayName"`
+	Status              string   `json:"status"`
+	IsVisible           bool     `json:"isVisible"`
+	CityCode            string   `json:"cityCode"`
+	PublicationDecision string   `json:"publicationDecision"`
+	BlockingReasons     []string `json:"blockingReasons"`
+	CreatedAt           string   `json:"createdAt"`
 }
 
 type PartnerListQuery struct {
@@ -507,6 +530,7 @@ type StoreTeamMember struct {
 	AuditNote          string `json:"auditNote"`
 	InlineAction       string `json:"inlineAction"`
 	InlineActionLabel  string `json:"inlineActionLabel"`
+	Version            int    `json:"version"`
 }
 
 type InviteTeamMemberInput struct {

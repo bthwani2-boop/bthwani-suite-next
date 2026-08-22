@@ -67,7 +67,6 @@ test("named WLT financial records and lifecycle states come from OpenAPI", () =>
     'components["schemas"]["RefundStatus"]',
     'components["schemas"]["GovernedRefund"]',
     'components["schemas"]["SettlementListItem"]',
-    'components["schemas"]["CodRecord"]',
     'components["schemas"]["CommissionStatus"]',
     'components["schemas"]["Commission"]',
     'components["schemas"]["LedgerEntry"]',
@@ -93,15 +92,6 @@ test("named WLT financial records and lifecycle states come from OpenAPI", () =>
   assert.match(commissionApi, /@bthwani\/wlt-openapi/);
   assert.doesNotMatch(commissionApi, /export type Commission\s*=\s*\{/);
   assert.doesNotMatch(commissionApi, /export type CommissionDetail\s*=\s*\{/);
-
-  const reconciliationApi = read(
-    "services/wlt/frontend/shared/dsh/finance/cod-reconciliation.api.ts",
-  );
-  assert.match(reconciliationApi, /@bthwani\/wlt-openapi/);
-  assert.doesNotMatch(
-    reconciliationApi,
-    /export type CodReconciliationCase\s*=\s*\{/,
-  );
 
   const walletApi = read(
     "services/wlt/frontend/shared/dsh/actor-wallet/actor-wallet.api.ts",

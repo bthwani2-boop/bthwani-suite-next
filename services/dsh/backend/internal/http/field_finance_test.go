@@ -22,7 +22,7 @@ func fieldFinanceServer(t *testing.T, actorID string, wltHandler http.HandlerFun
 	identityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(auth.Identity{
-			Subject:   actorID,
+			Subject:           actorID,
 			OperatorContextID: "dsh",
 			Roles:             []string{"field"},
 			AuthState:         "authenticated",
@@ -42,8 +42,11 @@ func fieldFinanceServer(t *testing.T, actorID string, wltHandler http.HandlerFun
 
 func requireFieldFinanceOperatorContext(t *testing.T, r *http.Request) {
 	t.Helper()
-	if got := r.Header.Get("X-Operator-Context-ID"); got != "dsh" {
-		t.Fatalf("expected Identity OperatorContext dsh, got %q", got)
+	if got := r.Header.Get("X-Delegated-Operator-Context"); got != "dsh" {
+		t.Fatalf("expected delegated Identity OperatorContext dsh, got %q", got)
+	}
+	if got := r.Header.Get("X-Operator-Context-ID"); got != "" {
+		t.Fatalf("legacy OperatorContext header must not be emitted, got %q", got)
 	}
 }
 

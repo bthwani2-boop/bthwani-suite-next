@@ -1,21 +1,23 @@
 import fs from "node:fs";
-import path from "node:path";
 
-const governanceCapabilityId = "PLATFORM_CHANGE_SETS";
-const productTruthFile = "governance/product/contracts/platform-change-sets.product-truth.json";
 const validationMigrationFile = "core/platform-control/database/migrations/platform-005_change_set_validation.sql";
 const sensitiveBoundaryMigrationFile = "core/platform-control/database/migrations/platform-006_sensitive_change_boundary.sql";
 const contractFile = "core/platform-control/contracts/platform-change-sets.openapi.yaml";
 const generatedClientFile = "core/platform-control/clients/generated/platform-control-api.ts";
+const generatedBundleFile = "core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml";
 const typecheckFile = "services/dsh/tsconfig.platform-change-sets.json";
 const visualizationProofFile = "services/dsh/tests/platform-governance-visualization.test.mjs";
 const strictBoundaryProofFile = "core/platform-control/backend/internal/platformcontrol/change_set_strict_boundary_test.go";
 const databaseProofFile = "core/platform-control/backend/internal/platformcontrol/change_set_database_sensitive_guard_test.go";
 const httpProofFile = "core/platform-control/backend/internal/http/change_set_workflow_handlers_test.go";
+const legacyDshRemovalMigrationFile = "services/dsh/database/migrations/dsh-1013_remove_legacy_platform_change_sets.sql";
+const legacyDshAuthorityFiles = [
+  "services/dsh/backend/internal/platform/changeset/changeset.go",
+  "services/dsh/backend/internal/http/platform_changesets_routes.go",
+];
 const callerWorkflowFile = ".github/workflows/ci.yml";
 const verificationWorkflowFile = ".github/workflows/ci-node-verification.yml";
 const requiredFiles = [
-  productTruthFile,
   validationMigrationFile,
   sensitiveBoundaryMigrationFile,
   "core/platform-control/backend/internal/platformcontrol/change_set_read_create.go",
@@ -28,6 +30,7 @@ const requiredFiles = [
   "core/platform-control/backend/internal/http/workflow_handlers.go",
   httpProofFile,
   contractFile,
+  generatedBundleFile,
   generatedClientFile,
   typecheckFile,
   "services/dsh/frontend/shared/platform/platform-control.api.ts",
@@ -36,11 +39,15 @@ const requiredFiles = [
   visualizationProofFile,
   callerWorkflowFile,
   verificationWorkflowFile,
+  legacyDshRemovalMigrationFile,
 ];
 
 const failures = [];
 for (const file of requiredFiles) {
   if (!fs.existsSync(file)) failures.push(`missing:${file}`);
+}
+for (const file of legacyDshAuthorityFiles) {
+  if (fs.existsSync(file)) failures.push(`legacy-dsh-authority-present:${file}`);
 }
 
 function requireText(file, tokens) {
@@ -50,26 +57,14 @@ function requireText(file, tokens) {
   }
 }
 
-if (failures.length === 0) {
-  const truth = JSON.parse(fs.readFileSync(productTruthFile, "utf8"));
-  const evidenceReferences = new Set(truth.problem?.evidenceReferences ?? []);
-  const forbiddenActions = new Set((truth.actors ?? []).flatMap((actor) => actor.forbiddenActions ?? []));
-  if (truth.capabilityId !== governanceCapabilityId) failures.push("product-truth:capabilityId");
-  if (truth.state !== "DISCOVERY") failures.push("product-truth:state");
-  if (truth.owners?.productManagerApproval !== "PENDING") failures.push("product-truth:productManagerApproval");
-  if (truth.owners?.productOwnerApproval !== "PENDING") failures.push("product-truth:productOwnerApproval");
-  if (!evidenceReferences.has(contractFile)) failures.push("product-truth:authoritativeOpenApi");
-  if (!evidenceReferences.has(generatedClientFile)) failures.push("product-truth:generatedClient");
-  for (const invariant of [
-    "approve_or_reject_own_change_set",
-    "apply_stale_or_conflicting_change_set",
-    "rollback_without_reason",
-    "store_secret_or_credential_values_in_change_sets",
-    "snapshot_existing_sensitive_target_values",
-  ]) {
-    if (!forbiddenActions.has(invariant)) failures.push(`product-truth:forbidden:${invariant}`);
+function forbidText(file, tokens) {
+  const content = fs.readFileSync(file, "utf8");
+  for (const token of tokens) {
+    if (content.includes(token)) failures.push(`forbidden-token:${file}:${token}`);
   }
+}
 
+if (failures.length === 0) {
   requireText(validationMigrationFile, [
     "validated_value_json",
     "validated_revision",
@@ -81,6 +76,23 @@ if (failures.length === 0) {
     "sensitive",
     "confidential",
     "existing sensitive platform variable cannot enter a change set",
+  ]);
+  requireText(legacyDshRemovalMigrationFile, [
+    "DROP TABLE IF EXISTS dsh_platform_change_sets",
+    "Platform Control is the sole canonical owner",
+  ]);
+  forbidText("services/dsh/backend/internal/http/server.go", [
+    "/dsh/operator/platform/change-sets",
+    "handleCreateChangeSet",
+    "handleApplyChangeSet",
+  ]);
+  forbidText("services/dsh/contracts/dsh.openapi.yaml", [
+    "/dsh/operator/platform/change-sets",
+    "DshChangeSet",
+  ]);
+  forbidText("services/dsh/contracts/dsh.platform-policies.openapi.yaml", [
+    "/dsh/operator/platform/change-sets",
+    "DshChangeSet",
   ]);
   requireText("core/platform-control/backend/internal/platformcontrol/change_set_workflow.go", [
     "ensureNoActiveTargetConflict",
@@ -187,8 +199,13 @@ if (failures.length === 0) {
     "platform_change_sets:",
     "name: Verify platform change-set binding",
     "pnpm --dir services/dsh exec tsc -p tsconfig.platform-change-sets.json --noEmit --pretty false",
-    "openapi-typescript ../../core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml",
+    "git diff --exit-code --",
+    generatedBundleFile,
+    generatedClientFile,
     "node tools/guards/platform-change-sets-gate.mjs",
+  ]);
+  forbidText(verificationWorkflowFile, [
+    "openapi-typescript ../../core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml",
   ]);
 }
 

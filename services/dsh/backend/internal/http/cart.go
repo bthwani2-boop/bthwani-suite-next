@@ -124,6 +124,8 @@ func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r
 		Reason         string                             `json:"reason,omitempty"`
 		AvailableModes []cart.FulfillmentModeAvailability `json:"availableModes,omitempty"`
 		EtaWindow      *EtaWindow                         `json:"etaWindow,omitempty"`
+		EtaStatus      string                             `json:"etaStatus"`
+		EtaReasonCode  string                             `json:"etaReasonCode,omitempty"`
 		QuoteVersion   string                             `json:"quoteVersion,omitempty"`
 		ExpiresAt      *time.Time                         `json:"expiresAt,omitempty"`
 	}
@@ -133,6 +135,8 @@ func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r
 		Code:           result.Code,
 		Reason:         result.Reason,
 		AvailableModes: result.AvailableModes,
+		EtaStatus:      result.EtaStatus,
+		EtaReasonCode:  result.EtaReasonCode,
 		QuoteVersion:   result.QuoteVersion,
 		ExpiresAt:      result.ExpiresAt,
 	}
@@ -146,20 +150,27 @@ func (s *protectedStoreServer) handleCartServiceability(w http.ResponseWriter, r
 	store.SendJSON(w, http.StatusOK, resp)
 }
 
-// GET /dsh/client/cart?storeId=xxx
+// GET /dsh/client/cart?storeId=xxx (storeId is optional when discovering the
+// one active cart owned by the authenticated client.)
 func (s *protectedStoreServer) handleGetCart(w http.ResponseWriter, r *http.Request) {
 	actor, ok := s.requireActor(w, r, "client")
 	if !ok {
 		return
 	}
 	storeID := r.URL.Query().Get("storeId")
-	if storeID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId query parameter is required")
-		return
+	var current *cart.Cart
+	var err error
+	if strings.TrimSpace(storeID) == "" {
+		current, err = cart.GetActiveCartForClient(r.Context(), s.db, s.wlt, actor.ID)
+	} else {
+		current, err = cart.GetCart(r.Context(), s.db, s.wlt, actor.ID, storeID)
 	}
-	current, err := cart.GetCart(r.Context(), s.db, s.wlt, actor.ID, storeID)
 	if errors.Is(err, cart.ErrNotFound) {
 		store.SendJSON(w, http.StatusOK, map[string]any{"cart": nil})
+		return
+	}
+	if errors.Is(err, cart.ErrFinancialUnavailable) {
+		store.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_QUOTE_UNAVAILABLE", "canonical financial pricing is temporarily unavailable")
 		return
 	}
 	if err != nil {
@@ -202,7 +213,16 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 	if mode != cart.ModeBthwaniDelivery && mode != cart.ModePartnerDelivery && mode != cart.ModePickup {
 		mode = cart.ModeBthwaniDelivery
 	}
-	current, err := cart.GetOrCreateSingleStoreCart(r.Context(), s.db, actor.ID, body.StoreID, mode)
+	var expectedVersion *int
+	if match := r.Header.Get("If-Match-Version"); match != "" {
+		var v int
+		if _, err := fmt.Sscanf(match, "%d", &v); err != nil || v < 1 {
+			store.SendError(w, http.StatusBadRequest, "INVALID_VERSION", "If-Match-Version must be a positive integer")
+			return
+		}
+		expectedVersion = &v
+	}
+	current, err := cart.GetOrCreateSingleStoreCart(r.Context(), s.db, actor.ID, body.StoreID, mode, expectedVersion)
 	if errors.Is(err, cart.ErrStoreConflict) {
 		conflict := &cart.StoreConflictError{}
 		if errors.As(err, &conflict) {
@@ -221,18 +241,14 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cart store or fulfillment mode is invalid")
 		return
 	}
+	if errors.Is(err, cart.ErrConflict) {
+		store.SendError(w, http.StatusPreconditionFailed, "VERSION_CONFLICT", "cart has been updated by another request")
+		return
+	}
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "could not resolve cart")
 		return
 	}
-	var expectedVersion *int
-	if match := r.Header.Get("If-Match-Version"); match != "" {
-		var v int
-		if _, err := fmt.Sscanf(match, "%d", &v); err == nil {
-			expectedVersion = &v
-		}
-	}
-
 	// Check idempotency early
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	if idempotencyKey != "" {
@@ -248,12 +264,17 @@ func (s *protectedStoreServer) handleUpsertCartItem(w http.ResponseWriter, r *ht
 		}
 	}
 
+	// Use the exact cart readback from the single-cart boundary. This keeps a
+	// mode change performed by this request and the item mutation in one OCC
+	// sequence, while UpsertItem locks again before writing.
+	mutationVersion := current.Version
 	item, err := cart.UpsertOwnedItem(r.Context(), s.db, actor.ID, body.StoreID, current.ID, cart.UpsertItemInput{
 		MasterProductID: body.MasterProductID,
 		Quantity:        body.Quantity,
 		Options:         body.Options,
 		Note:            body.Note,
-		ExpectedVersion: expectedVersion,
+		ExpectedVersion: &mutationVersion,
+		FulfillmentMode: &mode,
 	})
 	if errors.Is(err, cart.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "active cart not found")
@@ -358,6 +379,10 @@ func (s *protectedStoreServer) handleClearCart(w http.ResponseWriter, r *http.Re
 		current, err := cart.GetCart(r.Context(), s.db, s.wlt, actor.ID, storeID)
 		if errors.Is(err, cart.ErrNotFound) {
 			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		if errors.Is(err, cart.ErrFinancialUnavailable) {
+			store.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_QUOTE_UNAVAILABLE", "canonical financial pricing is temporarily unavailable")
 			return
 		}
 		if err != nil {

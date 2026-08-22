@@ -89,13 +89,11 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
   const [incidentDescription, setIncidentDescription] = React.useState("");
   const [incidentSeverity, setIncidentSeverity] = React.useState<"minor" | "major" | "critical">("minor");
   const [incidentPolicyId, setIncidentPolicyId] = React.useState("");
-  const [incidentPenalty, setIncidentPenalty] = React.useState("0");
   const [incidentEvidence, setIncidentEvidence] = React.useState("");
 
   const [selectedIncidentId, setSelectedIncidentId] = React.useState<string | null>(null);
   const [nextStatus, setNextStatus] = React.useState<ProviderIncidentStatus | "">("");
   const [resolutionNote, setResolutionNote] = React.useState("");
-  const [wltReference, setWltReference] = React.useState("");
 
   const load = React.useCallback(async () => {
     setLoading(true);
@@ -149,14 +147,13 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
   };
 
   const createIncident = async () => {
-    const penalty = Number(incidentPenalty);
     const evidence = parseEvidenceRefs(incidentEvidence);
-    if (incidentCode.trim().length < 2 || incidentDescription.trim().length < 3 || !Number.isSafeInteger(penalty) || penalty < 0) {
-      setError("أدخل رمز المخالفة ووصفها وقيمة مقترحة صحيحة.");
+    if (incidentCode.trim().length < 2 || incidentDescription.trim().length < 3) {
+      setError("أدخل رمز المخالفة ووصفها.");
       return;
     }
-    if (penalty > 0 && (incidentPolicyId.trim() === "" || evidence.length === 0)) {
-      setError("المخالفة ذات الخصم المالي تحتاج سياسة ودليلًا قبل تسجيلها.");
+    if (incidentPolicyId.trim() !== "" && evidence.length === 0) {
+      setError("اختيار سياسة مالية يحتاج دليلًا قبل تسجيل القضية.");
       return;
     }
     setBusy(true);
@@ -170,15 +167,12 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
         evidenceMediaRefs: evidence,
         severity: incidentSeverity,
         policyId: incidentPolicyId.trim() || undefined,
-        proposedPenaltyMinorUnits: penalty,
-        currency: "YER",
       });
       setIncidents((current) => [incident, ...current]);
       setSuccess("تم تسجيل المخالفة كقضية، ولم ينفذ أي خصم مالي.");
       setIncidentCode("");
       setIncidentDescription("");
       setIncidentPolicyId("");
-      setIncidentPenalty("0");
       setIncidentEvidence("");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "تعذر تسجيل المخالفة.");
@@ -192,7 +186,6 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
     setSelectedIncidentId(incident.id);
     setNextStatus(NEXT_INCIDENT_STATUSES[status]?.[0] ?? "");
     setResolutionNote("");
-    setWltReference("");
   };
 
   const applyIncidentTransition = async () => {
@@ -202,10 +195,6 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
       setError("اكتب سبب القرار قبل تنفيذ الانتقال.");
       return;
     }
-    if (nextStatus === "financial_action_posted" && wltReference.trim() === "") {
-      setError("لا يمكن تسجيل الخصم المالي دون مرجع قيد WLT.");
-      return;
-    }
     setBusy(true);
     setError(null);
     setSuccess(null);
@@ -213,13 +202,11 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
       const result = await transitionProviderIncident(selectedIncidentId, {
         toStatus: nextStatus,
         resolutionNote: resolutionNote.trim() || undefined,
-        wltLedgerReference: wltReference.trim() || undefined,
       });
       setIncidents((current) => current.map((incident) => incident.id === result.incident.id ? result.incident : incident));
       setSelectedIncidentId(null);
       setNextStatus("");
       setResolutionNote("");
-      setWltReference("");
       setSuccess("تم حفظ قرار المخالفة وسجل الانتقال.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "تعذر تغيير حالة المخالفة.");
@@ -263,10 +250,10 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
           <select value={incidentSeverity} onChange={(event) => setIncidentSeverity(event.target.value as typeof incidentSeverity)} style={selectStyle} aria-label="خطورة المخالفة">
             <option value="minor">بسيطة</option><option value="major">جسيمة</option><option value="critical">حرجة</option>
           </select>
-          <CpTextInput value={incidentPolicyId} onChange={setIncidentPolicyId} placeholder="معرف السياسة عند وجود خصم" aria-label="سياسة المخالفة" />
-          <CpTextInput value={incidentPenalty} onChange={setIncidentPenalty} placeholder="الخصم المقترح بوحدات العملة الصغرى" aria-label="الخصم المقترح" />
+          <CpTextInput value={incidentPolicyId} onChange={setIncidentPolicyId} placeholder="معرف سياسة WLT عند الحاجة" aria-label="سياسة WLT للمخالفة" />
           <CpTextInput value={incidentEvidence} onChange={setIncidentEvidence} placeholder="مراجع الأدلة" aria-label="أدلة المخالفة" />
-          <CpButton variant="danger" disabled={busy} onClick={() => void createIncident()}>تسجيل القضية دون خصم مباشر</CpButton>
+          <CpMutedInline>المبلغ والعملة لا يدخلهما المستخدم؛ WLT يقرأ السياسة ويحدد الأثر المالي عند اعتماد الإجراء.</CpMutedInline>
+          <CpButton variant="danger" disabled={busy} onClick={() => void createIncident()}>تسجيل القضية دون أثر مالي مباشر</CpButton>
         </Section>
       ) : null}
 
@@ -279,7 +266,7 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
               <Text role="bodyStrong">{incident.incidentCode} · {INCIDENT_STATUS_LABELS[status] ?? incident.status}</Text>
               <Text role="bodySm">{incident.description}</Text>
               <CpMutedInline>
-                {incident.proposedPenaltyMinorUnits > 0 ? `خصم مقترح: ${incident.proposedPenaltyMinorUnits} ${incident.currency}` : "دون خصم مالي"}
+                {incident.policyId ? `سياسة WLT: ${incident.policyId}` : "دون سياسة خصم محددة"}
                 {incident.wltLedgerReference ? ` · قيد WLT: ${incident.wltLedgerReference}` : ""}
               </CpMutedInline>
               {canManage && available.length > 0 ? <CpButton variant="secondary" disabled={busy} onClick={() => selectIncident(incident)}>إدارة القرار</CpButton> : null}
@@ -296,9 +283,7 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
               ))}
             </select>
             <CpTextInput value={resolutionNote} onChange={setResolutionNote} placeholder="سبب القرار" aria-label="سبب القرار" />
-            {nextStatus === "financial_action_posted" ? (
-              <CpTextInput value={wltReference} onChange={setWltReference} placeholder="مرجع قيد WLT الإلزامي" aria-label="مرجع قيد WLT" />
-            ) : null}
+            {nextStatus === "financial_action_posted" ? <CpMutedInline>سيُنشئ WLT مرجع القيد ويعيده؛ لا يُقبل إدخاله من المتصفح.</CpMutedInline> : null}
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <CpButton variant="primary" disabled={busy} onClick={() => void applyIncidentTransition()}>حفظ القرار</CpButton>
               <CpButton variant="ghost" disabled={busy} onClick={() => setSelectedIncidentId(null)}>إلغاء</CpButton>

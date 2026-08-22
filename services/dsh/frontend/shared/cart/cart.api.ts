@@ -9,11 +9,16 @@ import type {
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "cart");
 
-export async function fetchCart(storeId: string): Promise<DshCart | null> {
+export async function fetchCart(storeId?: string): Promise<DshCart | null> {
+  const query = storeId ? `?storeId=${encodeURIComponent(storeId)}` : "";
   const data = await request<{ cart: DshCart | null }>(
-    `/dsh/client/cart?storeId=${encodeURIComponent(storeId)}`,
+    `/dsh/client/cart${query}`,
   );
   return data.cart;
+}
+
+export async function fetchActiveCart(): Promise<DshCart | null> {
+  return fetchCart();
 }
 
 // productName/priceReference are accepted here for caller convenience (e.g.

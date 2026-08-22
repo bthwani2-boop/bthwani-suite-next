@@ -26,7 +26,9 @@ param(
   [ValidateRange(1, 120)]
   [int]$StatementTimeoutMinutes = 15,
 
-  [string]$SourceCommitSha = ""
+  [string]$SourceCommitSha = "",
+
+  [string]$IdentityDatabaseUrl = ""
 )
 
 Set-StrictMode -Version Latest
@@ -66,12 +68,15 @@ if ([string]::IsNullOrWhiteSpace($SourceCommitSha)) {
 }
 
 . (Join-Path $RepoRoot "infra/docker/scripts/schema-migration-runner.ps1")
+. (Join-Path $RepoRoot "infra/docker/scripts/workforce-migration-input-handoff.ps1")
 
 function Invoke-DatabaseSql {
   param(
     [Parameter(Mandatory = $true)][string]$Sql,
     [switch]$Quiet
   )
+
+  $sqlToExecute = Resolve-BthwaniWorkforceMigrationInputHandoff -ServiceName $ServiceKey -Sql $Sql
 
   $arguments = @(
     $DatabaseUrl,
@@ -82,7 +87,7 @@ function Invoke-DatabaseSql {
   )
   if ($Quiet) { $arguments += "-q" }
 
-  $output = $Sql | & psql @arguments 2>&1
+  $output = $sqlToExecute | & psql @arguments 2>&1
   $exitCode = $LASTEXITCODE
   if ($exitCode -ne 0) {
     $message = (($output | ForEach-Object { "$_" }) -join "`n").Trim()
@@ -101,11 +106,40 @@ $executeStatement = {
   Invoke-DatabaseSql -Sql $Sql -Quiet
 }
 
-Invoke-BthwaniGovernedMigrations `
-  -ServiceName $ServiceKey `
-  -MigrationFiles $MigrationFiles `
-  -SourceCommitSha $SourceCommitSha `
-  -ExecuteBatch $executeBatch `
-  -ExecuteStatement $executeStatement
+function Invoke-WorkforceIdentityImport {
+  if ($ServiceKey -ne 'workforce') { return }
+
+  # The import script is the single owner of Workforce-020 scope discovery and
+  # already-applied detection. A fresh database has no schema_migrations table
+  # yet, so probing that ledger here created a second, order-sensitive authority
+  # and failed before the canonical runner could create it.
+  $importScript = Join-Path $RepoRoot 'tools/scripts/import-identity-operator-context-to-workforce.ps1'
+  if (-not (Test-Path -LiteralPath $importScript -PathType Leaf)) {
+    throw "Identity-to-Workforce migration authority not found: $importScript"
+  }
+  & $importScript `
+    -IdentityDatabaseUrl $IdentityDatabaseUrl `
+    -WorkforceDatabaseUrl $DatabaseUrl `
+    -SourceCommitSha $SourceCommitSha
+}
+
+try {
+  Invoke-WorkforceIdentityImport
+  Invoke-BthwaniGovernedMigrations `
+    -ServiceName $ServiceKey `
+    -MigrationFiles $MigrationFiles `
+    -SourceCommitSha $SourceCommitSha `
+    -ExecuteBatch $executeBatch `
+    -ExecuteStatement $executeStatement
+} finally {
+  if ($ServiceKey -eq 'workforce') {
+    Invoke-DatabaseSql -Sql @'
+DROP TABLE IF EXISTS public.workforce_identity_operator_context_import;
+DROP TABLE IF EXISTS public.workforce_identity_operator_context_import_proof;
+DROP TABLE IF EXISTS bthwani_migration_input.workforce_identity_operator_context_import;
+DROP TABLE IF EXISTS bthwani_migration_input.workforce_identity_operator_context_import_proof;
+'@ -Quiet | Out-Null
+  }
+}
 
 Write-Host "Governed service migrations: PASS service=$ServiceKey files=$($MigrationFiles.Count) sha=$SourceCommitSha"

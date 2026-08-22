@@ -26,7 +26,7 @@ function roleLabel(role: DshPartnerOperationalScope["role"]): string {
  * completeness gate blocks rendering instead of inventing operational truth.
  */
 export function buildPartnerRuntimeProfile(
-  scope: DshPartnerOperationalScope | undefined,
+  scope: DshPartnerOperationalScope | null,
   store: DshStoreAdminDetail | null,
 ): PartnerRuntimeProfile {
   if (!scope || !store || scope.storeId !== store.id) return EMPTY_PROFILE;

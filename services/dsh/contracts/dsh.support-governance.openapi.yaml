@@ -643,9 +643,13 @@ components:
       type: object
       required:
       - status
+      - expectedVersion
       properties:
         expectedStatus:
           $ref: '#/components/schemas/TicketStatus'
+        expectedVersion:
+          type: integer
+          minimum: 1
         status:
           $ref: '#/components/schemas/TicketStatus'
         assignedTo:

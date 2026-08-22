@@ -24,7 +24,15 @@
   "targetDefaults": {
     "typecheck": {
       "inputs": [
-        "default"
+        "default",
+        "^default"
+      ],
+      "dependsOn": [
+        {
+          "projects": ["contracts"],
+          "target": "materialize",
+          "params": "ignore"
+        }
       ],
       "cache": true
     },
@@ -34,6 +42,11 @@
         "^production"
       ],
       "dependsOn": [
+        {
+          "projects": ["contracts"],
+          "target": "materialize",
+          "params": "ignore"
+        },
         "^build"
       ],
       "cache": true,
@@ -47,11 +60,25 @@
       "inputs": [
         "default"
       ],
+      "dependsOn": [
+        {
+          "projects": ["contracts"],
+          "target": "materialize",
+          "params": "ignore"
+        }
+      ],
       "cache": true
     },
     "test": {
       "inputs": [
         "default"
+      ],
+      "dependsOn": [
+        {
+          "projects": ["contracts"],
+          "target": "materialize",
+          "params": "ignore"
+        }
       ],
       "cache": true,
       "outputs": [

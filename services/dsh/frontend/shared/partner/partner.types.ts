@@ -13,20 +13,16 @@ export type DshPartner = {
   readonly secondaryPhone: string;
   readonly email: string;
   readonly category: string;
+  readonly businessVerticalId: string;
+  readonly onboardingCaseStatus?: string;
   readonly activationStatus: DshPartnerActivationStatus;
   readonly notes: string;
-  // Bank account metadata — Partner-level readiness/metadata captured by
-  // app-field onboarding. Never a WLT mutation; WLT stays the sole owner
-  // of financial truth. Control-panel masks these on display.
-  readonly beneficiaryName: string;
-  readonly bankName: string;
-  readonly bankBranch: string;
-  readonly accountNumber: string;
-  readonly iban: string;
-  readonly payoutMobileNumber: string;
-  readonly settlementPreference: string;
-  readonly bankAccountHolderMatchesOwner: boolean;
-  readonly bankNotes: string;
+  // DSH caches only the WLT-owned masked readiness projection. Raw payout
+  // identifiers, provider policy, verification and settlement truth stay in WLT.
+  readonly payoutDestinationId: string;
+  readonly destinationMethod: string;
+  readonly maskedDestinationReference: string;
+  readonly destinationVerificationStatus: string;
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -37,6 +33,7 @@ export type DshPartnerSummary = {
   readonly displayName: string;
   readonly legalNameAr: string;
   readonly category: string;
+  readonly businessVerticalId: string;
   readonly activationStatus: DshPartnerActivationStatus;
   readonly primaryPhone: string;
   readonly createdAt: string;
@@ -47,11 +44,17 @@ export type DshPartnerDocument = {
   readonly id: string;
   readonly partnerId: string;
   readonly documentType: string;
+  readonly uploadStatus: 'uploaded';
+  readonly reviewStatus: 'pending' | 'under_review' | 'verified' | 'rejected' | 'reupload_required';
   readonly documentStatus: 'pending' | 'under_review' | 'approved' | 'rejected';
   readonly uploadedByActorId: string;
   readonly mediaRef: string;
   readonly notes: string;
   readonly rejectionReason: string;
+  readonly reviewedByActorId?: string;
+  readonly reviewedAt?: string;
+  readonly lastReviewReason: string;
+  readonly supersedesDocumentId?: string;
   readonly version: number;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -83,10 +86,11 @@ export type DshPartnerReadiness = {
   readonly partnerId: string;
   readonly canActivate: boolean;
   readonly canActivatePartner: boolean;
-  readonly canPublishStoreToClient: boolean;
+  readonly intakeComplete: boolean;
+  readonly publicationDecision: "PUBLISHED" | "BLOCKED";
+  readonly blockingReasons: readonly string[];
   readonly blockedReason?: string;
   readonly partnerActivationBlockedReason?: string;
-  readonly storePublicationBlockedReason?: string;
   readonly checklist: DshPartnerReadinessItem[];
 };
 
@@ -160,6 +164,7 @@ export type DshCreatePartnerInput = {
   readonly secondaryPhone?: string;
   readonly email?: string;
   readonly category?: string;
+  readonly businessVerticalId?: string;
   readonly notes?: string;
 };
 
@@ -171,16 +176,6 @@ export type DshUpdatePartnerRequest = {
   readonly secondaryPhone?: string;
   readonly email?: string;
   readonly notes?: string;
-  // Bank account metadata (readiness/metadata only — never a WLT mutation).
-  readonly beneficiaryName?: string;
-  readonly bankName?: string;
-  readonly bankBranch?: string;
-  readonly accountNumber?: string;
-  readonly iban?: string;
-  readonly payoutMobileNumber?: string;
-  readonly settlementPreference?: "" | "bank_transfer" | "mobile_wallet";
-  readonly bankAccountHolderMatchesOwner?: boolean;
-  readonly bankNotes?: string;
 };
 
 export type DshPartnerTransitionInput = {
@@ -200,7 +195,7 @@ export type DshReviewDocumentInput = {
 };
 
 export type DshCreatePartnerFieldVisitRequest = {
-  readonly storeId?: string;
+  readonly storeId: string;
   readonly visitNotes?: string;
   readonly locationLatitude?: number;
   readonly locationLongitude?: number;
@@ -219,6 +214,7 @@ export type DshPartnerListResponse = {
 export type DshPartnerDocumentType =
   | "national_id"
   | "commercial_register"
+  | "freelancer_certificate"
   | "lease_agreement"
   | "health_certificate"
   | "store_photo"
@@ -233,11 +229,27 @@ export const REQUIRED_DOCUMENT_TYPES: DshPartnerDocumentType[] = [
 export const DOCUMENT_TYPE_LABELS: Record<DshPartnerDocumentType, string> = {
   national_id: "الهوية الوطنية",
   commercial_register: "السجل التجاري",
+  freelancer_certificate: "وثيقة العمل الحر",
   lease_agreement: "عقد الإيجار أو الملكية",
   health_certificate: "شهادة صحة / ترخيص",
   store_photo: "صورة المتجر",
   owner_photo: "صورة المالك",
   other: "مستند آخر",
+};
+
+export const DOCUMENT_REVIEW_STATUS_LABELS: Record<string, string> = {
+  pending: "بانتظار المراجعة",
+  under_review: "قيد المراجعة",
+  verified: "تم التحقق",
+  rejected: "مرفوض",
+  reupload_required: "يلزم إعادة الرفع",
+};
+
+export const PARTNER_FIELD_VISIT_STATUS_LABELS: Record<string, string> = {
+  draft: "مسودة",
+  in_progress: "قيد التنفيذ",
+  submitted: "مُرسلة للمراجعة",
+  escalated: "مصعّدة",
 };
 
 export const DSH_PARTNER_OPERATIONAL_FLOW_IDS = [
@@ -393,6 +405,7 @@ export type DshPartnerTeamMember = {
   readonly operationalImpact: string;
   readonly auditNote: string;
   readonly inlineActionLabel: string;
+  readonly version: number;
 };
 
 export type DshPartnerStoreCourierSettings = {
@@ -543,13 +556,4 @@ type UiAuditRow = {
   id: string; who: string; why: string; when: string; permissionResult: string;
   slaBreachReason: string; supportTicketLink: string; proofRequired: string;
   evidenceState: string; resolutionPath: string; note: string; statusTone: string;
-};
-
-export type DshPartnerPerformanceResponse = {
-  readonly storeId: string;
-  readonly totalOrders: number;
-  readonly acceptedOrders: number;
-  readonly rejectedOrders: number;
-  readonly period: string;
-  readonly generatedAt: string;
 };

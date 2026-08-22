@@ -14,6 +14,7 @@ import (
 var ErrUnbalancedTransaction = errors.New("ledger transaction is not balanced")
 var ErrLedgerReferenceConflict = errors.New("ledger reference already exists with a different posting payload")
 var ErrLedgerOperatorContextConflict = errors.New("ledger reference does not belong to the trusted OperatorContext")
+var ErrRetiredAccountType = errors.New("ledger account type is retired for new postings")
 
 type LedgerLine struct {
 	AccountType      string
@@ -97,6 +98,9 @@ func PostLedgerTransaction(ctx context.Context, tx *sql.Tx, transactionType, ref
 		}
 		if line.AccountType == "" {
 			return "", fmt.Errorf("line %d: accountType is required", i)
+		}
+		if line.AccountType == "cash_in_transit" {
+			return "", fmt.Errorf("line %d: %w: %q", i, ErrRetiredAccountType, line.AccountType)
 		}
 		if line.AccountType == "wallet" && (line.ActorType == "" || line.ActorID == "") {
 			return "", fmt.Errorf("line %d: actorType and actorId are required for wallet accounts", i)

@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "authority": "BThwani repository verification ownership",
+  "references": {
+    "mobile": "tools/mobile/mobile-apps.manifest.json"
+  },
+  "projects": {
+    "identity": {
+      "kind": "shared-service-client",
+      "root": "core/identity",
+      "sourcePrefixes": ["core/identity/clients/"],
+      "coverage": { "strategy": "node-lcov", "cwd": "core/identity", "testRoots": ["core/identity/tests"] }
+    },
+    "data-runtime": {
+      "kind": "shared-runtime",
+      "root": "shared/data-runtime",
+      "sourcePrefixes": ["shared/data-runtime/src/"],
+      "coverage": { "strategy": "node-lcov", "cwd": "shared/data-runtime", "testRoots": ["shared/data-runtime/tests"] }
+    },
+    "dsh": {
+      "kind": "domain",
+      "root": "services/dsh",
+      "sourcePrefixes": [
+        "services/dsh/capability-map.extensions.ts",
+        "services/dsh/capability-map.ts",
+        "services/dsh/contracts/contract-registry.ts",
+        "services/dsh/frontend/",
+        "services/dsh/runtime-map.ts",
+        "services/dsh/service.manifest.ts"
+      ],
+      "coverage": {
+        "strategy": "node-lcov",
+        "cwd": ".",
+        "prepare": ["pnpm", "--dir", "services/dsh", "run", "build:ts"],
+        "testRoots": ["services/dsh/tests/coverage"]
+      }
+    },
+    "wlt": {
+      "kind": "domain",
+      "root": "services/wlt",
+      "sourcePrefixes": ["services/wlt/frontend/", "services/wlt/service.manifest.ts"],
+      "coverage": {
+        "strategy": "node-lcov",
+        "cwd": "services/wlt",
+        "nodeOptions": ["--experimental-loader", "./tests/ts-loader.mjs"],
+        "testRoots": ["services/wlt/tests"]
+      }
+    },
+    "app-field": {
+      "kind": "mobile-surface",
+      "root": "apps/app-field/runtime",
+      "sourcePrefixes": ["apps/app-field/runtime/"],
+      "coverage": { "strategy": "node-lcov", "cwd": "apps/app-field/runtime", "testRoots": ["apps/app-field/runtime/tests"] }
+    },
+    "app-captain": {
+      "kind": "mobile-surface",
+      "root": "apps/app-captain/runtime",
+      "sourcePrefixes": ["apps/app-captain/runtime/"],
+      "coverage": { "strategy": "node-lcov", "cwd": "apps/app-captain/runtime", "testRoots": ["apps/app-captain/runtime/tests"] }
+    },
+    "app-client": {
+      "kind": "mobile-surface",
+      "root": "apps/app-client/runtime",
+      "sourcePrefixes": ["apps/app-client/runtime/"],
+      "coverage": { "strategy": "node-lcov", "cwd": "apps/app-client/runtime", "testRoots": ["apps/app-client/runtime/tests"] }
+    },
+    "app-partner": {
+      "kind": "mobile-surface",
+      "root": "apps/app-partner/runtime",
+      "sourcePrefixes": ["apps/app-partner/runtime/"],
+      "coverage": { "strategy": "node-lcov", "cwd": "apps/app-partner/runtime", "testRoots": ["apps/app-partner/runtime/tests"] }
+    },
+    "control-panel-config": {
+      "kind": "web-runtime-config",
+      "root": "apps/control-panel/runtime",
+      "sourcePrefixes": ["apps/control-panel/runtime/next.config.mjs", "apps/control-panel/runtime/stubs/"],
+      "coverage": {
+        "strategy": "node-lcov",
+        "cwd": ".",
+        "testRoots": ["apps/control-panel/runtime/tests"]
+      }
+    },
+    "control-panel": {
+      "kind": "web-surface",
+      "root": "apps/control-panel/runtime",
+      "sourcePrefixes": ["apps/control-panel/runtime/src/", "shared/control-panel/src/"],
+      "coverage": { "strategy": "node-lcov", "cwd": ".", "testRoots": ["apps/control-panel/runtime/tests"] }
+    },
+    "ui-kit": {
+      "kind": "shared-ui",
+      "root": "shared/ui-kit",
+      "sourcePrefixes": ["shared/ui-kit/src/"],
+      "coverage": { "strategy": "node-lcov", "cwd": ".", "testRoots": ["shared/ui-kit/tests"] }
+    }
+  },
+  "sonar": {
+    "governedJavaScriptTypeScriptRoots": ["apps/", "core/", "services/", "shared/"],
+    "verificationPrefixes": [
+      "tools/mobile/",
+      "apps/app-client/runtime/tests/",
+      "apps/app-partner/runtime/tests/",
+      "apps/app-captain/runtime/tests/",
+      "apps/app-field/runtime/tests/",
+      "apps/control-panel/runtime/tests/",
+      "core/identity/tests/",
+      "services/dsh/tests/",
+      "services/wlt/tests/",
+      "shared/data-runtime/tests/",
+      "shared/ui-kit/tests/"
+    ],
+    "generatedPrefixes": ["services/dsh/clients/generated/", "services/wlt/clients/generated/"]
+  }
+}

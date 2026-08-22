@@ -7,10 +7,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"math"
 )
 
-var ErrVersionConflict = errors.New("cart version conflict")
+var ErrVersionConflict = ErrConflict
 
 // GovernedCheckoutSnapshot is the OCC-locked, server-priced cart snapshot used
 // by checkout. Amounts and currency are snapshotted from DSH catalog truth and
@@ -21,11 +20,23 @@ type GovernedCheckoutSnapshot struct {
 	SnapshotHash       string
 	ItemCount          int
 	CartVersion        int
+	Lines              []CheckoutSnapshotLine
+}
+
+// CheckoutSnapshotLine is the immutable catalog-price input that DSH submits
+// to WLT for its sovereign checkout quote. It is collected while the cart is
+// locked, so a later cart mutation cannot alter this handoff.
+type CheckoutSnapshotLine struct {
+	MasterProductID     string
+	Quantity            int
+	UnitPriceMinorUnits int64
+	Currency            string
 }
 
 // ComputeCheckoutSnapshotTx locks the authenticated active cart, verifies the
-// caller's expected version, then prices every item from the persisted cart
-// snapshot. It fails before checkout creation if the cart changed concurrently.
+// caller's expected version, then prices every item from the canonical integer
+// minor-unit snapshot written at add-to-cart time. It fails before checkout
+// creation if the cart changed concurrently or contains an unpriced item.
 func ComputeCheckoutSnapshotTx(
 	ctx context.Context,
 	tx *sql.Tx,
@@ -54,7 +65,7 @@ func ComputeCheckoutSnapshotTx(
 	}
 
 	rows, err := tx.QueryContext(ctx, `
-		SELECT product_id,quantity,unit_price,currency
+		SELECT product_id,quantity,unit_price_minor,currency
 		FROM dsh_cart_items
 		WHERE cart_id=$1::uuid
 		ORDER BY created_at,id`, cartID)
@@ -67,17 +78,18 @@ func ComputeCheckoutSnapshotTx(
 	var subtotal int64
 	currency := ""
 	itemCount := 0
+	lines := make([]CheckoutSnapshotLine, 0)
 	hasher := sha256.New()
 	hasher.Write([]byte(fmt.Sprintf("%s|%s|%s|v%d", cartID, clientID, lockedStoreID, currentVersion)))
 	for rows.Next() {
 		var productID string
 		var quantity int
-		var unitPrice float64
+		var unitMinorUnits int64
 		var itemCurrency string
-		if err := rows.Scan(&productID, &quantity, &unitPrice, &itemCurrency); err != nil {
+		if err := rows.Scan(&productID, &quantity, &unitMinorUnits, &itemCurrency); err != nil {
 			return nil, err
 		}
-		if quantity <= 0 || unitPrice <= 0 || math.IsNaN(unitPrice) || math.IsInf(unitPrice, 0) {
+		if quantity <= 0 || unitMinorUnits <= 0 {
 			return nil, ErrCartItemMissingPrice
 		}
 		if itemCurrency == "" {
@@ -88,9 +100,8 @@ func ComputeCheckoutSnapshotTx(
 		} else if currency != itemCurrency {
 			return nil, ErrCartItemCurrency
 		}
-		unitMinorUnits := int64(math.Round(unitPrice * 100))
-		if unitMinorUnits <= 0 || int64(quantity) > maxInt64/unitMinorUnits {
-			return nil, ErrCartItemMissingPrice
+		if int64(quantity) > maxInt64/unitMinorUnits {
+			return nil, fmt.Errorf("%w: cart line total exceeds supported range", ErrInvalid)
 		}
 		lineTotal := unitMinorUnits * int64(quantity)
 		if lineTotal > maxInt64-subtotal {
@@ -98,6 +109,7 @@ func ComputeCheckoutSnapshotTx(
 		}
 		subtotal += lineTotal
 		hasher.Write([]byte(fmt.Sprintf("|%s:%d:%d:%s", productID, quantity, unitMinorUnits, itemCurrency)))
+		lines = append(lines, CheckoutSnapshotLine{MasterProductID: productID, Quantity: quantity, UnitPriceMinorUnits: unitMinorUnits, Currency: itemCurrency})
 		itemCount++
 	}
 	if err := rows.Err(); err != nil {
@@ -112,37 +124,6 @@ func ComputeCheckoutSnapshotTx(
 		SnapshotHash:       hex.EncodeToString(hasher.Sum(nil)),
 		ItemCount:          itemCount,
 		CartVersion:        currentVersion,
-	}, nil
-}
-
-// ComputeCheckoutSnapshotForClientTx is retained for existing callers that do
-// not yet carry an expected version. It still locks and scopes the cart, but
-// new checkout code must use ComputeCheckoutSnapshotTx.
-func ComputeCheckoutSnapshotForClientTx(
-	ctx context.Context,
-	tx *sql.Tx,
-	cartID, clientID, storeID string,
-) (*CartSnapshot, error) {
-	if cartID == "" || clientID == "" || storeID == "" {
-		return nil, ErrInvalid
-	}
-	var version int
-	if err := tx.QueryRowContext(ctx, `
-		SELECT version FROM dsh_carts
-		WHERE id=$1::uuid AND client_id=$2 AND store_id=$3 AND state='active'
-		FOR UPDATE`, cartID, clientID, storeID).Scan(&version); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNotFound
-		}
-		return nil, err
-	}
-	governed, err := ComputeCheckoutSnapshotTx(ctx, tx, clientID, cartID, storeID, version)
-	if err != nil {
-		return nil, err
-	}
-	return &CartSnapshot{
-		AmountMinorUnits: governed.SubtotalMinorUnits,
-		Currency:         governed.Currency,
-		SnapshotHash:     governed.SnapshotHash,
+		Lines:              lines,
 	}, nil
 }

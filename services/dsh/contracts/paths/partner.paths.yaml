@@ -125,10 +125,14 @@
 /dsh/partner/orders:
   get:
     operationId: listDshPartnerOrders
-    summary: List orders for a partner's store. Default status filter is pending.
+    summary: List orders for the authenticated partner's selected store. A storeId query is required when the actor owns multiple stores.
     tags: [DshOrders]
     security: [{ bearerAuth: [] }]
     parameters:
+      - name: storeId
+        in: query
+        required: false
+        schema: { type: string, minLength: 1 }
       - name: status
         in: query
         required: false
@@ -143,6 +147,7 @@
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOrdersResponse" }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
 /dsh/partner/orders/{orderId}/accept:
   post:
@@ -163,7 +168,100 @@
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOrderResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/field-onboarding/workload:
+  get:
+    operationId: listDshOperatorFieldOnboardingWorkload
+    summary: List field onboarding workload with scoped collaboration counters.
+    tags: [DshPartnerActivation]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Operator-scoped field workload.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOnboardingWorkloadResponse" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+
+/dsh/operator/partners/{partnerId}/collaboration:
+  get:
+    operationId: getDshOperatorOnboardingCollaboration
+    summary: Read the object-scoped field onboarding collaboration thread.
+    tags: [DshPartnerActivation]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - { name: partnerId, in: path, required: true, schema: { type: string } }
+      - { name: assignmentId, in: query, required: false, schema: { type: string, format: uuid } }
+      - { name: documentId, in: query, required: false, schema: { type: string } }
+    responses:
+      "200":
+        description: Contextual collaboration readback.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOnboardingCollaborationResponse" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/partners/{partnerId}/collaboration/messages:
+  post:
+    operationId: addDshOperatorOnboardingCollaborationMessage
+    summary: Add an operator comment to the object-scoped onboarding thread.
+    tags: [DshPartnerActivation]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - { name: partnerId, in: path, required: true, schema: { type: string } }
+      - { name: assignmentId, in: query, required: false, schema: { type: string, format: uuid } }
+      - { name: documentId, in: query, required: false, schema: { type: string } }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOnboardingCollaborationMessageRequest" }
+    responses:
+      "201": { description: Comment created idempotently. }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/operator/partners/{partnerId}/collaboration/change-requests:
+  post:
+    operationId: createDshOnboardingChangeRequest
+    summary: Return a field onboarding object for documented changes.
+    tags: [DshPartnerActivation]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - { name: partnerId, in: path, required: true, schema: { type: string } }
+      - { name: assignmentId, in: query, required: false, schema: { type: string, format: uuid } }
+      - { name: documentId, in: query, required: false, schema: { type: string } }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOnboardingChangeRequestRequest" }
+    responses:
+      "201": { description: Change request and lifecycle transition created. }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/operator/partners/{partnerId}/collaboration/read:
+  post:
+    operationId: markDshOperatorOnboardingCollaborationRead
+    summary: Advance the operator read cursor for an onboarding thread.
+    tags: [DshPartnerActivation]
+    security: [{ bearerAuth: [] }]
+    parameters:
+      - { name: partnerId, in: path, required: true, schema: { type: string } }
+      - { name: threadId, in: query, required: true, schema: { type: string, format: uuid } }
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [sequence]
+            properties:
+              sequence: { type: integer, minimum: 0 }
+    responses:
+      "200": { description: Read cursor advanced. }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
 /dsh/partner/orders/{orderId}/reject:
   post:
@@ -256,6 +354,7 @@
           application/json:
             schema: { type: object, additionalProperties: true }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
 /dsh/partner/me/finance/settlements/summary:
   get:
@@ -270,53 +369,6 @@
           application/json:
             schema: { type: object, additionalProperties: true }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-
-/dsh/partner/me/finance/cod-records:
-  get:
-    operationId: listDshPartnerFinanceCodRecords
-    summary: Partner reads their own governed WLT COD liability records.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
-    responses:
-      "200":
-        description: WLT COD records view (verbatim passthrough).
-        content:
-          application/json:
-            schema: { type: object, additionalProperties: true }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-
-/dsh/partner/me/finance/cod-records/{recordId}/remit:
-  post:
-    operationId: remitDshPartnerCodRecord
-    summary: Partner records remittance of collected COD cash.
-    tags: [DshFinanceProxy]
-    security: [{ bearerAuth: [] }]
-    parameters:
-      - name: recordId
-        in: path
-        required: true
-        schema: { type: string }
-      - $ref: "../dsh.openapi.yaml#/components/parameters/IdempotencyKey"
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [ proofReference ]
-            properties:
-              proofReference: { type: string, minLength: 1, maxLength: 512 }
-              note: { type: string, maxLength: 4000 }
-    responses:
-      "200":
-        {
-          description: COD remittance recorded (verbatim passthrough),
-          content: { application/json: { schema: { type: object, additionalProperties: true } } }
-        }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
 /dsh/operator/platform/store-onboarding-fee:
@@ -624,10 +676,16 @@
 /dsh/partner/activation/status:
   get:
     operationId: getDshPartnerActivationStatus
-    summary: Partner reads their own current activation status.
+    summary: Partner reads their own current activation status for an explicitly selected store.
     tags: [DshPartnerActivation]
     security:
       - bearerAuth: []
+    parameters:
+      - name: storeId
+        in: query
+        required: false
+        description: Required when the authenticated partner spans multiple partner/store scopes; DSH derives the partner from this owned store.
+        schema: { type: string, minLength: 1 }
     responses:
       "200":
         description: Partner activation status.
@@ -635,6 +693,7 @@
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerActivationStatus" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
 /dsh/partner/stores/{storeId}/team:
@@ -685,7 +744,10 @@
             properties:
               identity:
                 type: string
-            required: [identity]
+              role:
+                type: string
+                enum: [manager, supervisor, staff]
+            required: [identity, role]
     responses:
       "200":
         description: Invite sent.

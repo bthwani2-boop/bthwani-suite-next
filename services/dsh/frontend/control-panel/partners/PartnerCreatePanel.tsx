@@ -1,8 +1,10 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { CpButton, CpStatePanel, CpTextInput } from "@bthwani/control-panel/components";
 import { usePartnerWorkspaceListController } from "../../shared/partner";
+import { fetchCatalogDomains } from "../../shared/catalog/central-catalog.api";
+import type { CentralCatalogDomain } from "../../shared/catalog/central-catalog.types";
 
 type Controller = ReturnType<typeof usePartnerWorkspaceListController>;
 
@@ -29,14 +31,30 @@ export function PartnerCreatePanel({ controller, onClose, onCreated }: Props) {
   const [ownerActorId, setOwnerActorId] = useState("");
   const [workforcePersonId, setWorkforcePersonId] = useState("");
   const [primaryPhone, setPrimaryPhone] = useState("");
-  const [category, setCategory] = useState("default");
+  const [businessVerticalId, setBusinessVerticalId] = useState("");
+  const [businessVerticals, setBusinessVerticals] = useState<readonly CentralCatalogDomain[]>([]);
+  const [businessVerticalsError, setBusinessVerticalsError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
 
   const valid = legalNameAr.trim().length > 1
     && displayName.trim().length > 1
     && legalIdentityNumber.trim().length > 2
     && (ownerActorId.trim().length > 0 || workforcePersonId.trim().length > 0)
-    && primaryPhone.trim().length >= 8;
+    && primaryPhone.trim().length >= 8
+    && businessVerticalId.trim().length > 0;
+
+  useEffect(() => {
+    let active = true;
+    void fetchCatalogDomains()
+      .then((domains) => {
+        if (!active) return;
+        setBusinessVerticals(domains.filter((domain) => domain.isActive));
+      })
+      .catch(() => {
+        if (active) setBusinessVerticalsError("تعذر تحميل مجالات النشاط المركزية");
+      });
+    return () => { active = false; };
+  }, []);
 
   async function submit() {
     if (!valid || controller.mutationState.kind === "loading") return;
@@ -48,7 +66,7 @@ export function PartnerCreatePanel({ controller, onClose, onCreated }: Props) {
       ownerActorId: ownerActorId.trim(),
       workforcePersonId: workforcePersonId.trim(),
       primaryPhone: primaryPhone.trim(),
-      category: category.trim() || "default",
+      businessVerticalId: businessVerticalId.trim(),
       ...(notes.trim() ? { notes: notes.trim() } : {}),
     });
     if (partner) {
@@ -73,17 +91,22 @@ export function PartnerCreatePanel({ controller, onClose, onCreated }: Props) {
       <LabeledField label="رقم السجل التجاري">
         <CpTextInput value={legalIdentityNumber} onChange={setLegalIdentityNumber} aria-label="رقم السجل التجاري" />
       </LabeledField>
-      <LabeledField label="Actor ID (المالك)">
+      <LabeledField label="معرّف حساب المالك">
         <CpTextInput value={ownerActorId} onChange={setOwnerActorId} aria-label="Actor ID" />
       </LabeledField>
-      <LabeledField label="Workforce ID (المالك)">
+      <LabeledField label="معرّف العامل الميداني">
         <CpTextInput value={workforcePersonId} onChange={setWorkforcePersonId} aria-label="Workforce ID" />
       </LabeledField>
       <LabeledField label="رقم الجوال">
         <CpTextInput value={primaryPhone} onChange={setPrimaryPhone} aria-label="رقم الجوال" />
       </LabeledField>
-      <LabeledField label="الفئة: restaurant / grocery / pharmacy / bakery / default">
-        <CpTextInput value={category} onChange={setCategory} aria-label="الفئة" />
+      <LabeledField label="مجال نشاط المتجر">
+        {businessVerticals.length > 0 ? (
+          <select value={businessVerticalId} onChange={(event) => setBusinessVerticalId(event.target.value)} aria-label="مجال نشاط المتجر">
+            <option value="">اختر مجال النشاط</option>
+            {businessVerticals.map((domain) => <option key={domain.id} value={domain.id}>{domain.nameAr}</option>)}
+          </select>
+        ) : <span>{businessVerticalsError ?? "جارٍ تحميل مجالات النشاط…"}</span>}
       </LabeledField>
       <LabeledField label="ملاحظات">
         <CpTextInput value={notes} onChange={setNotes} aria-label="ملاحظات" />

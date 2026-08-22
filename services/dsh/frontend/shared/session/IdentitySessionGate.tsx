@@ -14,6 +14,7 @@ import {
 import {
   getIdentityDeviceFingerprint,
   identityErrorPresentation,
+  identitySessionAuthorizesSurface,
   useIdentitySession,
   type ActivationActorType,
   type ActorIdentity,
@@ -285,17 +286,18 @@ export function IdentitySessionGate({
 
     case "authenticated": {
       const hasRole = state.identity.roles.includes(requiredRole);
-      const hasSurfaceAccess =
-        requiredSurface === undefined || state.identity.surfaceAccess[requiredSurface] === true;
+      const surfaceAuthorized = requiredSurface === undefined
+        ? hasRole
+        : identitySessionAuthorizesSurface(state.identity, requiredRole, requiredSurface);
 
-      if (!hasRole || !hasSurfaceAccess) {
+      if (!surfaceAuthorized) {
         return (
           <PermissionState
             title="لا تملك صلاحية الوصول"
             description={
               !hasRole
                 ? `هذه الواجهة مخصصة لدور "${requiredRole}" ولا يملكه المستخدم الحالي.`
-                : `المستخدم الحالي لا يملك صلاحية الوصول إلى سطح "${requiredSurface}".`
+                : `الجلسة الحالية ليست جلسة موثوقة لسطح "${requiredSurface}".`
             }
           />
         );

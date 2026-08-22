@@ -49,6 +49,47 @@
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshDispatchAssignmentsResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
+/dsh/captain/dispatch/availability:
+  get:
+    operationId: getOwnCaptainAvailability
+    summary: Captain reads the DSH-owned availability state and Workforce absence projection.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    responses:
+      "200":
+        description: Canonical Captain availability readback.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshCaptainAvailability"
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+      "500": { $ref: "../dsh.openapi.yaml#/components/responses/InternalError" }
+  patch:
+    operationId: setOwnCaptainAvailability
+    summary: Captain changes only their available or unavailable operational state.
+    tags: [DshDispatch]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "../dsh.openapi.yaml#/components/schemas/DshSetCaptainAvailabilityRequest"
+    responses:
+      "200":
+        description: Canonical availability mutation readback.
+        content:
+          application/json:
+            schema:
+              $ref: "../dsh.openapi.yaml#/components/schemas/DshCaptainAvailability"
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+      "500": { $ref: "../dsh.openapi.yaml#/components/responses/InternalError" }
+
 /dsh/captain/dispatch/assignments/{assignmentId}/accept:
   post:
     operationId: acceptDshAssignment
@@ -107,6 +148,14 @@
         in: path
         required: true
         schema: { type: string }
+      - name: Idempotency-Key
+        in: header
+        required: true
+        schema: { type: string, minLength: 8, maxLength: 200 }
+      - name: If-Match-Version
+        in: header
+        required: true
+        schema: { type: integer, minimum: 1 }
     requestBody:
       required: true
       content:

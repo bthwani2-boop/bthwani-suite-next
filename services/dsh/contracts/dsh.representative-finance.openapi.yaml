@@ -164,6 +164,121 @@ paths:
         '502': { $ref: '#/components/responses/WltUnavailable' }
       security:
         - bearerAuth: []
+  /dsh/captain/me/finance/topup-sessions:
+    post:
+      operationId: createDshCaptainOwnTopUpSession
+      tags: [ representative-finance ]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        $ref: '#/components/requestBodies/TopUpRequestBody'
+      responses:
+        '201': { $ref: '#/components/responses/TopUpSessionResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
+  /dsh/captain/me/finance/topup-sessions/{topUpSessionId}:
+    get:
+      operationId: getDshCaptainOwnTopUpSession
+      tags: [ representative-finance ]
+      parameters:
+        - $ref: '#/components/parameters/TopUpSessionId'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200': { $ref: '#/components/responses/TopUpSessionResponse' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '404': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
+  /dsh/captain/me/finance/topup-sessions/{topUpSessionId}/{operation}:
+    post:
+      operationId: mutateDshCaptainOwnTopUpSession
+      tags: [ representative-finance ]
+      parameters:
+        - $ref: '#/components/parameters/TopUpSessionId'
+        - $ref: '#/components/parameters/TopUpOperation'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      responses:
+        '200': { $ref: '#/components/responses/TopUpSessionResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '404': { $ref: '#/components/responses/ValidationError' }
+        '409': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
+  /dsh/captain/me/finance/collateral:
+    get:
+      operationId: getDshCaptainOwnCollateral
+      tags: [ representative-finance ]
+      responses:
+        '200': { $ref: '#/components/responses/ReferenceItemResponse' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
+  /dsh/captain/me/finance/collateral/allocate:
+    post:
+      operationId: allocateDshCaptainOwnCollateral
+      tags: [ representative-finance ]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ paymentSessionId ]
+              properties:
+                paymentSessionId: { type: string, minLength: 1, maxLength: 200 }
+              additionalProperties: false
+      responses:
+        '200': { $ref: '#/components/responses/ReferenceItemResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '409': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
+  /dsh/captain/me/finance/collateral/release:
+    post:
+      operationId: releaseDshCaptainOwnCollateral
+      tags: [ representative-finance ]
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CorrelationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ positionId, releaseReason ]
+              properties:
+                positionId: { type: string, minLength: 1, maxLength: 200 }
+                releaseReason: { type: string, minLength: 1, maxLength: 500 }
+              additionalProperties: false
+      responses:
+        '200': { $ref: '#/components/responses/ReferenceItemResponse' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/AuthError' }
+        '403': { $ref: '#/components/responses/AuthError' }
+        '409': { $ref: '#/components/responses/ValidationError' }
+        '502': { $ref: '#/components/responses/WltUnavailable' }
+      security:
+        - bearerAuth: []
   /dsh/field/me/finance/wallet:
     get:
       operationId: getDshFieldMeWallet
@@ -303,12 +418,32 @@ components:
       in: header
       required: true
       schema: { type: string, minLength: 8, maxLength: 200 }
+    CorrelationId:
+      name: X-Correlation-ID
+      in: header
+      required: true
+      schema: { type: string, minLength: 8, maxLength: 200 }
+    TopUpSessionId:
+      name: topUpSessionId
+      in: path
+      required: true
+      schema: { type: string, minLength: 1, maxLength: 200 }
+    TopUpOperation:
+      name: operation
+      in: path
+      required: true
+      schema: { type: string, enum: [ authorize, capture ] }
   requestBodies:
     PayoutRequestBody:
       required: true
       content:
         application/json:
           schema: { $ref: '#/components/schemas/PayoutRequestInput' }
+    TopUpRequestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/TopUpRequestInput' }
   responses:
     WalletResponse:
       description: WLT-owned representative wallet.
@@ -350,6 +485,20 @@ components:
       content:
         application/json:
           schema: { type: object, additionalProperties: true }
+    TopUpSessionResponse:
+      description: WLT-owned Captain Cash-In session and canonical readback.
+      headers:
+        Cache-Control:
+          schema: { type: string, example: 'private, no-store' }
+        Pragma:
+          schema: { type: string, example: 'no-cache' }
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [ paymentSession ]
+            properties:
+              paymentSession: { $ref: '#/components/schemas/CaptainTopUpSession' }
     AuthError:
       description: Authentication or authorization failed.
       content:
@@ -380,6 +529,11 @@ components:
         - earnedTotalMinorUnits
         - settledTotalMinorUnits
         - paidTotalMinorUnits
+        - collateralReservedBalanceMinorUnits
+        - protectedMinimumCollateralMinorUnits
+        - releasableCollateralExcessMinorUnits
+        - outstandingDebtMinorUnits
+        - activeCollateralPositionCount
       properties:
         id: { type: string }
         actorId: { type: string }
@@ -392,6 +546,11 @@ components:
         earnedTotalMinorUnits: { type: integer, format: int64 }
         settledTotalMinorUnits: { type: integer, format: int64 }
         paidTotalMinorUnits: { type: integer, format: int64 }
+        collateralReservedBalanceMinorUnits: { type: integer, format: int64 }
+        protectedMinimumCollateralMinorUnits: { type: integer, format: int64 }
+        releasableCollateralExcessMinorUnits: { type: integer, format: int64 }
+        outstandingDebtMinorUnits: { type: integer, format: int64 }
+        activeCollateralPositionCount: { type: integer, format: int32, minimum: 0 }
         lastLedgerEntryAt: { type: [string, 'null'], format: date-time }
         updatedAt: { type: [string, 'null'], format: date-time }
     RepresentativeLedgerEntry:
@@ -430,6 +589,29 @@ components:
         amountMinorUnits: { type: integer, format: int64, minimum: 1 }
         currency: { type: string, minLength: 3, maxLength: 3 }
       additionalProperties: false
+    TopUpRequestInput:
+      type: object
+      required: [ topupReference, amountMinorUnits, currency ]
+      properties:
+        topupReference: { type: string, minLength: 1, maxLength: 200 }
+        amountMinorUnits: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+      additionalProperties: false
+    CaptainTopUpSession:
+      type: object
+      required: [ id, clientId, topupActorType, financialPurpose, status, amountMinorUnits, currency ]
+      properties:
+        id: { type: string }
+        clientId: { type: string }
+        topupReference: { type: [ string, 'null' ] }
+        topupActorType: { type: [ string, 'null' ], enum: [ captain, null ] }
+        financialPurpose: { type: string, enum: [ captain_topup ] }
+        paymentMethod: { type: string, enum: [ official_wallet ] }
+        status: { type: string }
+        providerReference: { type: string }
+        amountMinorUnits: { type: integer, format: int64 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        capturedAt: { type: [ string, 'null' ], format: date-time }
     ErrorResponse:
       type: object
       required: [ code, message ]

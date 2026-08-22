@@ -8,6 +8,14 @@ const source = fs.readFileSync(
   new URL("../clients/generated/dsh-api.ts", import.meta.url),
   "utf8",
 );
+const server = fs.readFileSync(
+  new URL("../backend/internal/http/server.go", import.meta.url),
+  "utf8",
+);
+const platformPolicyContract = fs.readFileSync(
+  new URL("../contracts/dsh.platform-policies.openapi.yaml", import.meta.url),
+  "utf8",
+);
 
 const operations = parseOpenApiContract("services/dsh/contracts/dsh.openapi.yaml");
 
@@ -110,10 +118,24 @@ describe("generated DSH API client parity", () => {
     assert.match(callback, /\brequestBody:\s*\{/);
   });
 
+  test("keeps Workforce financial eligibility projection bound to service headers", () => {
+    const projection = operationEntryBlock("getWorkforceCaptainFinancialEligibility");
+    assert.match(projection, /\bAuthorization:\s*string;/);
+    assert.match(projection, /"X-Service-Caller":\s*"workforce";/);
+    assert.match(projection, /"X-Operator-Context-ID":\s*string;/);
+    assert.match(projection, /\bcaptainId:\s*string;/);
+  });
+
   test("keeps retired marketing banners and promos out of the generated client", () => {
     assert.doesNotMatch(source, /listDshMarketingBanners/);
     assert.doesNotMatch(source, /listDshMarketingPromos/);
     assert.doesNotMatch(source, /DshMarketingBanner/);
     assert.doesNotMatch(source, /DshMarketingPromo/);
+  });
+
+  test("does not expose the retired DSH change-set authority", () => {
+    assert.doesNotMatch(server, /platform\/change-sets|handle(Create|Get|Submit|Approve|Apply|Reject)ChangeSet/);
+    assert.doesNotMatch(platformPolicyContract, /platform\/change-sets|DshChangeSet|Dsh.*ChangeSet/);
+    assert.doesNotMatch(source, /createDshChangeSet|getDshChangeSet|submitDshChangeSet|approveDshChangeSet|applyDshChangeSet|rejectDshChangeSet/);
   });
 });

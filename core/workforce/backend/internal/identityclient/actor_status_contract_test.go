@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	workforceauth "workforce-api/internal/auth"
 )
 
 func TestActorDecodesCanonicalIdentityLifecycleWithoutLegacyActiveField(t *testing.T) {
@@ -25,8 +27,8 @@ func TestActorDecodesCanonicalIdentityLifecycleWithoutLegacyActiveField(t *testi
 	}))
 	defer server.Close()
 
-	client := NewClient(server.URL, "service-token", "local-dsh")
-	actor, err := client.Actor(context.Background(), "field-1")
+	client := NewClient(server.URL, "service-token")
+	actor, err := client.Actor(workforceauth.WithOperatorContext(context.Background(), "local-dsh"), "field-1")
 	if err != nil {
 		t.Fatalf("Actor returned error: %v", err)
 	}

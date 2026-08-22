@@ -25,7 +25,10 @@ import {
   type PlatformControlResource,
   type PlatformMainTabId,
 } from "../../shared/platform";
-import { hasControlPanelPermission } from "../../shared/session/control-panel-permissions";
+import {
+  CONTROL_PANEL_CAPABILITIES,
+  hasAllControlPanelPermissions,
+} from "../../shared/session/control-panel-permissions";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { PlatformChangeWorkflowPanel } from "./PlatformChangeWorkflowPanel";
 import { PlatformGovernanceVisual } from "./PlatformGovernanceVisual";
@@ -369,9 +372,18 @@ export function PlatformDashboardScreen({
   const [mainTab, setMainTab] = useState<ExecutiveTabId>(initialTab);
   const { state } = useIdentitySession();
   const identity = state.kind === "authenticated" ? state.identity : null;
-  const canReadPlatform = hasControlPanelPermission(identity, "platform:read");
-  const canReadHealth = hasControlPanelPermission(identity, "platform:health:read");
-  const canReadAudit = hasControlPanelPermission(identity, "platform:audit:read");
+  const canReadPlatform = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.platformControlRead,
+  );
+  const canReadHealth = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.platformControlHealthRead,
+  );
+  const canReadAudit = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.platformControlAuditRead,
+  );
 
   const runtime = usePlatformControlRuntimeController({
     enabled: canReadPlatform,

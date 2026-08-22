@@ -5,78 +5,22 @@ import test from "node:test";
 
 const read = (path) => readFile(new URL(`../../../${path}`, import.meta.url), "utf8");
 
-test.skip(" binds actor-specific activation and the full session lifecycle", async () => {
-  const [client, store, hook, gate, account] = await Promise.all([
-    read("core/identity/clients/identity-client.ts"),
-    read("core/identity/clients/identity-session-store.ts"),
-    read("core/identity/clients/use-identity-session.ts"),
+test("all product session gates consume the canonical surface policy", async () => {
+  const [mobileGate, controlPanelBoundary, devSession, sessionStore] = await Promise.all([
     read("services/dsh/frontend/shared/session/IdentitySessionGate.tsx"),
-    read("services/dsh/frontend/app-client/account/IdentityHubScreen.tsx"),
+    read("services/dsh/frontend/shared/session/ControlPanelAuthBoundary.tsx"),
+    read("apps/control-panel/runtime/src/app/api/auth/dev-session/route.ts"),
+    read("core/identity/clients/identity-session-store.ts"),
   ]);
 
-  for (const operation of ["requestOtp", "listSessions", "revokeSession"]) {
-    assert.match(client, new RegExp(`\\b${operation}\\b`), `${operation} must exist in the sovereign client`);
-    assert.match(hook, new RegExp(`\\b${operation}\\b`), `${operation} must be exposed by the shared hook`);
-  }
-
-  assert.match(store, /activateIdentity\(\s*actorType: ActivationActorType,/s);
-  assert.match(store, /actorType,\s*phone,\s*code,/s);
-  assert.doesNotMatch(store, /actorType:\s*["']field["']/);
-  assert.match(gate, /requestOtp\(requiredRole, phone\.trim\(\)\)/);
-  assert.match(gate, /activate\(requiredRole, phone\.trim\(\), code\.trim\(\)\)/);
-  assert.match(gate, /keyboardType="numeric"/);
-  assert.doesNotMatch(gate, /maxLength=\{6\}/);
-  assert.match(account, /identity\.phoneE164/);
-  assert.match(account, /listSessions\(\)/);
-  assert.match(account, /revokeSession\(sessionId\)/);
-  assert.doesNotMatch(account, /@bthwani\.yemen/);
+  assert.match(mobileGate, /identitySessionAuthorizesSurface/);
+  assert.match(controlPanelBoundary, /identitySessionIsBoundToSurface/);
+  assert.match(devSession, /identitySessionAuthorizesSurface/);
+  assert.doesNotMatch(sessionStore, /commitAuthenticatedSession\(saved,\s*false\)/);
+  assert.doesNotMatch(sessionStore, /client\.logout\(accessToken\)\.catch\(\(\) => undefined\)/);
 });
 
-test.skip(" keeps HTTP, CORS, OpenAPI, and Workforce actor search aligned", async () => {
-  const [server, main, browserCors, contract, workforceClient] = await Promise.all([
-    read("core/identity/backend/internal/http/server.go"),
-    read("core/identity/backend/cmd/identity-api/main.go"),
-    read("core/identity/backend/internal/http/browser_cors.go"),
-    read("core/identity/contracts/identity.openapi.yaml"),
-    read("core/workforce/backend/internal/identityclient/client.go"),
-  ]);
-
-  assert.match(server, /Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS"/);
-  assert.match(server, /sendJSON\(w, http\.StatusOK, views\)/);
-  assert.doesNotMatch(server, /map\[string\]any\{"actors": views\}/);
-  assert.match(main, /BrowserOriginGuard/);
-  assert.match(main, /CorsMiddleware/);
-  assert.doesNotMatch(main, /BrowserCorsMiddleware/);
-  assert.match(browserCors, /BrowserOriginGuard/);
-  assert.match(browserCors, /CORS_ORIGIN_FORBIDDEN/);
-  assert.match(browserCors, /allowedCorsOrigins/);
-  assert.doesNotMatch(browserCors, /Access-Control-Allow-Methods/);
-  assert.match(contract, /\/internal\/actors\/search:/);
-  assert.match(contract, /type: array/);
-  assert.match(workforceClient, /var result \[\]ActorView/);
-});
-
-test.skip(" typechecks every identity-consuming runtime", async () => {
-  const packageJson = JSON.parse(await read("core/identity/package.json"));
-  const script = packageJson.scripts?.typecheck ?? "";
-
-  for (const runtime of [
-    "apps/app-client/runtime",
-    "apps/app-partner/runtime",
-    "apps/app-captain/runtime",
-    "apps/app-field/runtime",
-    "apps/control-panel/runtime",
-  ]) {
-    assert.ok(script.includes(runtime), `identity typecheck must cover ${runtime}`);
-  }
-});
-
-
-test(" removes stale declarations, temporary diagnostics, and unbound session artifacts", async () => {
-  // Asserted against the TypeScript sources, not against emitted .d.ts files:
-  // core/identity/tsconfig.json sets noEmit and the package resolves through
-  // clients/index.ts, so committed declaration output was stale build artifact
-  // with no consumer (removed in VC-150b).
+test("removes stale declarations, temporary diagnostics, and unbound session artifacts", async () => {
   const [clientSource, storeSource, hookSource, model] = await Promise.all([
     read("core/identity/clients/identity-client.ts"),
     read("core/identity/clients/identity-session-store.ts"),
@@ -91,10 +35,11 @@ test(" removes stale declarations, temporary diagnostics, and unbound session ar
   assert.doesNotMatch(model, /SupportSession/);
   assert.doesNotMatch(model, /SessionKind/);
 
+  assert.match(await read("core/identity/backend/internal/identity/support_session.go"), /ResolveSupportSession/);
+  assert.match(await read("core/identity/backend/internal/http/support_sessions.go"), /internalSupportSessionsIssue/);
+
   for (const removedPath of [
     ".github/workflows/tmp-diagnostics.yml",
-    "core/identity/backend/internal/identity/support_sessions.go",
-    "core/identity/backend/internal/http/support_sessions.go",
     "core/identity/clients/generated/identity-api.d.ts",
     "core/identity/clients/generated/identity-api.d.ts.map",
     "core/identity/clients/generated/identity-api.js",

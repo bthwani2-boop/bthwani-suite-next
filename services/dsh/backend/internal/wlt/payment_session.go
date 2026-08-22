@@ -17,21 +17,24 @@ var ErrNotConfigured = errors.New("WLT client is not configured")
 // response) because it carries fields — Method, a parsed UpdatedAt, refund
 // and failure detail — that only exist once WLT has processed the session.
 type PaymentSessionDetail struct {
-	ID              string     `json:"id"`
-	IdempotencyKey  string     `json:"idempotencyKey"`
-	ActorID         string     `json:"actorId"`
-	StoreID         string     `json:"storeId"`
-	Method          string     `json:"method"`
-	Amount          int64      `json:"amount"`
-	Currency        string     `json:"currency"`
-	Status          string     `json:"status"`
-	Reference       string     `json:"reference"`
-	CreatedAt       time.Time  `json:"createdAt"`
-	UpdatedAt       time.Time  `json:"updatedAt"`
-	ExpiresAt       *time.Time `json:"expiresAt,omitempty"`
-	RefundReference string     `json:"refundReference,omitempty"`
-	FailureCode     string     `json:"failureCode,omitempty"`
-	FailureMessage  string     `json:"failureMessage,omitempty"`
+	ID               string                   `json:"id"`
+	IdempotencyKey   string                   `json:"idempotencyKey"`
+	ActorID          string                   `json:"actorId"`
+	StoreID          string                   `json:"storeId"`
+	Method           string                   `json:"method"`
+	Amount           int64                    `json:"amount"`
+	PaymentMethod    string                   `json:"paymentMethod"`
+	AmountMinorUnits int64                    `json:"amountMinorUnits"`
+	Currency         string                   `json:"currency"`
+	TenderAllocation *PaymentTenderAllocation `json:"tenderAllocation,omitempty"`
+	Status           string                   `json:"status"`
+	Reference        string                   `json:"reference"`
+	CreatedAt        time.Time                `json:"createdAt"`
+	UpdatedAt        time.Time                `json:"updatedAt"`
+	ExpiresAt        *time.Time               `json:"expiresAt,omitempty"`
+	RefundReference  string                   `json:"refundReference,omitempty"`
+	FailureCode      string                   `json:"failureCode,omitempty"`
+	FailureMessage   string                   `json:"failureMessage,omitempty"`
 }
 
 // GetPaymentSession reads the current state of a previously created payment

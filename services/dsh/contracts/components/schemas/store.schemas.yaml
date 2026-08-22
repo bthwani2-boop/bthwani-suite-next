@@ -33,7 +33,8 @@ DshStoreSummary:
     - partnerReadiness
     - catalogApprovalStatus
     - marketingVisibility
-    - publicationEligible
+    - publicationDecision
+    - blockingReasons
   properties:
     id:
       type: string
@@ -99,8 +100,13 @@ DshStoreSummary:
     marketingVisibility:
       type: string
       enum: [hidden, visible]
-    publicationEligible:
-      type: boolean
+    publicationDecision:
+      type: string
+      enum: [PUBLISHED, BLOCKED]
+    blockingReasons:
+      type: array
+      items:
+        type: string
 
 DshStoreDeliveryMode:
   type: string
@@ -187,7 +193,8 @@ OperatorStoreGovernanceRequest:
       minimum: 1
     action:
       type: string
-      enum: [lifecycle, visibility, serviceability, partner-readiness, catalog-approval, marketing-visibility]
+      description: Publication and visibility are owned by the Marketing publication command.
+      enum: [lifecycle, serviceability, partner-readiness, catalog-approval]
     value:
       type: string
       minLength: 1
@@ -206,6 +213,65 @@ DshStoreActionResponse:
       $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreAuditEvent"
     replayed:
       type: boolean
+
+StorePublicationDiagnostics:
+  type: object
+  additionalProperties: false
+  required: [isReady, blockers, blockerCodes]
+  properties:
+    isReady:
+      type: boolean
+    blockers:
+      type: array
+      items: { type: string }
+    blockerCodes:
+      type: array
+      items: { type: string, pattern: '^[A-Z][A-Z0-9_]*$' }
+
+StorePublicationOverridePolicy:
+  type: object
+  additionalProperties: false
+  required: [enabled, allowedBlockerCodes]
+  properties:
+    enabled:
+      type: boolean
+    allowedBlockerCodes:
+      type: array
+      items: { type: string, pattern: '^[A-Z][A-Z0-9_]*$' }
+
+StorePublicationWorkspaceResponse:
+  type: object
+  additionalProperties: false
+  required: [store, diagnostics, overridePolicy]
+  properties:
+    store:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshStoreDetail"
+    diagnostics:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/StorePublicationDiagnostics"
+    overridePolicy:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/StorePublicationOverridePolicy"
+
+StorePublicationRequest:
+  type: object
+  additionalProperties: false
+  required: [expectedVersion, decision, reason]
+  properties:
+    expectedVersion:
+      type: integer
+      minimum: 1
+    decision:
+      type: string
+      enum: [publish, hide]
+    reason:
+      type: string
+      minLength: 3
+      maxLength: 500
+    override:
+      type: boolean
+      default: false
+    overrideReason:
+      type: string
+      maxLength: 500
 
 DshStoreAuditEvent:
   type: object

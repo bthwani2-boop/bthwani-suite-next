@@ -28,7 +28,7 @@ func (c *Client) ExecuteFinanceRead(ctx context.Context, opID string, path strin
 	return c.financeReadRequest(ctx, path, query, correlationID, operatorContextID)
 }
 
-func (c *Client) ExecuteFinanceWrite(ctx context.Context, opID string, method, path string, body []byte, correlationID, idempotencyKey, operatorContextID string) (int, []byte, error) {
+func (c *Client) ExecuteFinanceWrite(ctx context.Context, opID string, method, path string, body []byte, correlationID, idempotencyKey, operatorContextID, delegatedPrincipalID string) (int, []byte, error) {
 	if !c.Configured() {
 		return 0, nil, fmt.Errorf("WLT integration is not configured")
 	}
@@ -57,9 +57,14 @@ func (c *Client) ExecuteFinanceWrite(ctx context.Context, opID string, method, p
 	}
 	setServiceHeaders(req, c.serviceToken)
 	req.Header.Set("Content-Type", "application/json")
-	if operatorContextID = strings.TrimSpace(operatorContextID); operatorContextID != "" {
-		req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	if _, err := c.setDelegatedOperatorContextHeader(req, operatorContextID); err != nil {
+		return 0, nil, fmt.Errorf("prepare WLT finance write OperatorContext: %w", err)
 	}
+	delegatedPrincipalID = strings.TrimSpace(delegatedPrincipalID)
+	if delegatedPrincipalID == "" {
+		return 0, nil, fmt.Errorf("Identity-authenticated delegated finance principal is required")
+	}
+	req.Header.Set("X-Delegated-Principal-ID", delegatedPrincipalID)
 
 	idempotencyKey = strings.TrimSpace(idempotencyKey)
 	if idempotencyKey == "" && op.Idempotent {

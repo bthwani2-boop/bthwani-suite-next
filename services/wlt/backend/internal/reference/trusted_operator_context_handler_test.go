@@ -22,7 +22,7 @@ func TestGenericPaymentSessionRouteRejectsSubscriptionSource(t *testing.T) {
 	}`))
 	request.Header.Set("Authorization", "Bearer test-service-token")
 	request.Header.Set("X-Service-Caller", "dsh")
-	request.Header.Set("X-Operator-Context-ID", "OperatorContext-test")
+	request.Header.Set("X-Delegated-Operator-Context", "OperatorContext-test")
 	request.Header.Set("Idempotency-Key", "generic-subscription-source")
 	request.Header.Set("X-Correlation-ID", "subp-1")
 	response := httptest.NewRecorder()

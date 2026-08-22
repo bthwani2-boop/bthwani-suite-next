@@ -300,19 +300,19 @@ func (s *protectedStoreServer) handleListFieldAssortmentPauses(w http.ResponseWr
 }
 
 func (s *protectedStoreServer) handlePauseFieldAssortment(w http.ResponseWriter, r *http.Request) {
-	actorID, storeID, ok := s.fieldPartnerStore(w, r)
+	actor, storeID, ok := s.fieldPartnerStore(w, r)
 	if !ok {
 		return
 	}
-	s.pauseAssortment(w, r, actorID, storeID)
+	s.pauseAssortment(w, r, actor.ID, storeID)
 }
 
 func (s *protectedStoreServer) handleResumeFieldAssortment(w http.ResponseWriter, r *http.Request) {
-	actorID, storeID, ok := s.fieldPartnerStore(w, r)
+	actor, storeID, ok := s.fieldPartnerStore(w, r)
 	if !ok {
 		return
 	}
-	s.resumeAssortment(w, r, actorID, storeID)
+	s.resumeAssortment(w, r, actor.ID, storeID)
 }
 
 // ── Retire assortment (permanent, requires reason) ──────────────────────────

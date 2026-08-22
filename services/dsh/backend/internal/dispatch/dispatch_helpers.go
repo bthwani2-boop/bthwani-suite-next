@@ -19,6 +19,22 @@ func lockAssignment(tx *sql.Tx, assignmentID, captainID string) (*Assignment, er
 	return assignment, err
 }
 
+func specialRequestOperatorContextID(tx *sql.Tx, requestID string) (string, error) {
+	var operatorContextID string
+	err := tx.QueryRow(`
+		SELECT operator_context_id
+		FROM dsh_special_requests
+		WHERE id = $1::uuid
+		FOR UPDATE`, requestID).Scan(&operatorContextID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	return operatorContextID, nil
+}
+
 func mapOrderError(err error) error {
 	if errors.Is(err, orders.ErrNotFound) {
 		return ErrNotFound
@@ -42,7 +58,7 @@ func mapSpecialRequestError(err error) error {
 func assignmentSelectSQL() string {
 	return `
 		SELECT a.id::text, COALESCE(a.order_id::text, ''), a.captain_id, a.assigned_by, a.status,
-		       a.response_deadline_at, a.accepted_at, a.declined_at, a.completed_at, a.created_at, a.updated_at,
+		       a.response_deadline_at, a.accepted_at, a.declined_at, a.completed_at, a.created_at, a.updated_at, a.version,
 		       a.last_latitude, a.last_longitude, a.location_recorded_at,
 		       COALESCE(a.special_request_id::text, ''),
 		       COALESCE(sr.request_type::text, ''),
@@ -89,6 +105,7 @@ func scanAssignmentRow(row *sql.Row) (*Assignment, error) {
 		&assignment.CompletedAt,
 		&assignment.CreatedAt,
 		&assignment.UpdatedAt,
+		&assignment.Version,
 	)
 	return &assignment, err
 }
@@ -129,6 +146,7 @@ func scanAssignmentScanner(row scanner) (*Assignment, error) {
 		&assignment.CompletedAt,
 		&assignment.CreatedAt,
 		&assignment.UpdatedAt,
+		&assignment.Version,
 		&assignment.LastLatitude,
 		&assignment.LastLongitude,
 		&assignment.LocationRecordedAt,

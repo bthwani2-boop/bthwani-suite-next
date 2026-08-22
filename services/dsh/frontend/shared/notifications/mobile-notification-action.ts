@@ -1,4 +1,4 @@
-import { Linking } from "react-native";
+import { getDshMobileNotificationRuntime } from "../mobile-capabilities";
 
 let activeMobileAppScheme: string | null = null;
 
@@ -24,8 +24,8 @@ export async function openDshNotificationActionUrl(
   appScheme: string,
 ): Promise<void> {
   const resolvedUrl = resolveSafeDshNotificationActionUrl(actionUrl, appScheme);
-  if (!resolvedUrl || !(await Linking.canOpenURL(resolvedUrl))) return;
-  await Linking.openURL(resolvedUrl);
+  if (!resolvedUrl) return;
+  await getDshMobileNotificationRuntime().openUrl(resolvedUrl);
 }
 
 export async function openDshMobileNotificationActionUrl(actionUrl: string): Promise<void> {

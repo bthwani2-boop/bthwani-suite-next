@@ -13,8 +13,6 @@ export * from './commissions/wlt-field-commission.types';
 export * from './commissions/wlt-field-commission.states';
 export * from './commissions/wlt-field-commission.view-model';
 export * from './commissions/use-wlt-field-commission-reference-controller';
-export * from './wlt-cod/wlt-captain-cod.states';
-export * from './wlt-cod/use-wlt-captain-cod-reference-controller';
 export * from './finance/finance.types';
 export * from './finance/finance-registry';
 
@@ -35,14 +33,14 @@ export * from './presentation/partner-finance.copy';
 
 export * from './commissions';
 export * from './payouts';
-export * from './wlt-cod/wlt-cod.api';
-export * from './wlt-cod/CaptainCodCustodyActions';
-export * from './wlt-cod/PartnerCodCustodyPanel';
 export * from './finance/finance.controller';
 export * from './finance/finance-hub.types';
-export * from './finance/cod-reconciliation.api';
 // Canonical DSH HTTP utilities. The retired dsh-http compatibility wrapper
 // must not return; this barrel exposes the single transport path.
 export * from './dsh-link/dsh-api-base-url';
 export * from './dsh-link/dsh-http-request';
 export * from './payment/payment-session-runtime.api';
+export * from './payment/captain-cash-in.api';
+export * from './payment/CaptainCashInPanel';
+export * from './collateral/captain-collateral.api';
+export * from './collateral/CaptainCollateralPanel';

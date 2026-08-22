@@ -20,7 +20,7 @@ func (s *protectedStoreServer) getCaptainAggregatedReadiness(r *http.Request, op
 	var missing []string
 
 	// 1. Workforce Activation Readiness
-	workforceReadiness, err := s.workforce.ActivationReadiness(r.Context(), captainID)
+	workforceReadiness, err := s.workforce.ActivationReadinessInOperatorContext(r.Context(), operatorContextID, captainID)
 	if err != nil {
 		return AggregatedCaptainReadiness{}, fmt.Errorf("workforce readiness unavailable: %w", err)
 	}

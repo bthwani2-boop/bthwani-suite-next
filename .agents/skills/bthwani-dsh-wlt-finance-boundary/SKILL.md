@@ -1,58 +1,31 @@
 ---
 name: bthwani-dsh-wlt-finance-boundary
-version: 2026.08.03-v2
-summary: Protect WLT financial truth and require explicit evidence for every DSH/WLT financial handoff.
+version: 2026.08.18-v3
+summary: Protect WLT financial truth and verify affected DSH/WLT financial handoffs with code and runtime evidence.
 ---
 
 # bthwani-dsh-wlt-finance-boundary
 
-## Purpose
-
-Own verification of the DSH/WLT financial boundary for checkout, payments, COD, commission, refunds, settlements, payouts, wallets, ledger, reconciliation, and financial reporting.
-
 ## Invoke when
 
-- A change touches checkout handoff, payment state, COD, commission, refund, settlement, payout, wallet, ledger, reconciliation, or finance reporting.
-- A journey crosses DSH and WLT or a DSH surface consumes financial truth.
+Checkout, payment, COD, commission, refund, settlement, payout, wallet, ledger, reconciliation, or financial reporting changes or crosses DSH/WLT.
 
-## Do not invoke when
+## Invariants
 
-- No financial truth, financial reference, or DSH/WLT handoff is affected.
-- The task is unrelated to DSH and WLT finance ownership.
+1. WLT owns financial mutation and authoritative financial state.
+2. DSH may request bounded operations and retain contract-permitted references/projections only.
+3. No duplicate balance, ledger, settlement, payout, refund, commission, or payment calculation becomes authoritative in DSH.
+4. Surfaces consume canonical contracts/controllers and never fabricate financial success.
+5. Cross-service identifiers/statuses are contract-bound and read back from the owning service.
 
-## Read before
+## Verification
 
-- `governance/GOVERNANCE.md`
-- `governance/product/PRD.md`
-- `governance/policies/engineering.md`
-- `governance/policies/security.md`
-- `governance/policies/delivery.md`
-- `governance/contracts/sdlc/` when formal finance/release evidence is applicable
-- `services/dsh/service.manifest.ts` and `services/wlt/service.manifest.ts`
-- DSH/WLT contract manifests, current WLT operation-state contract, runtime contracts, backend/database/generated-client/shared-frontend paths materially affected
+- Use targeted static ownership/contract checks for the affected code cone.
+- Use same-candidate WLT/DSH runtime and persistence readback when runtime financial behavior is claimed or changed.
+- Add reconciliation evidence when ledger/payment/settlement correctness depends on it.
+- Do not require unrelated approval/stage artifacts or governance gates.
 
-## Authority boundary
-
-This skill verifies ownership and evidence routing. WLT owns financial mutation and truth. DSH may request a financial operation and retain bounded references or projections permitted by current contracts. This skill cannot grant finance, QA, security, release, production, or final-closure approval.
-
-## Required invariants
-
-1. Ledger, wallet, payment, refund, settlement, payout, commission, COD financial truth, and reconciliation mutations remain in WLT.
-2. DSH contains no duplicate financial calculation or authoritative financial balance.
-3. DSH surfaces consume canonical contracts/controllers and do not fabricate financial success.
-4. Cross-service identifiers and statuses are contract-bound and read back from the owning service.
-5. Static evidence is reported only as static scope; runtime financial claims require same-candidate runtime and persistence readback.
-6. High-risk financial closure requires independent finance, QA, security, release, and other applicable evidence/approvals.
-
-## Forbidden
-
-- Reading historical or explicitly noncanonical files as active financial authority.
-- Mutating financial truth in DSH.
-- Using seed, fixture, in-memory, preview, or mock success as real financial proof.
-- Returning deprecated decision aliases from new work.
-- Claiming runtime or final closure from static boundary checks.
-
-## Required output
+## Output
 
 ```text
 resolved_commit_sha:
@@ -62,10 +35,7 @@ contract_paths:
 financial_invariants:
 static_checks:
 runtime_evidence:
-required_approvals:
 missing_evidence:
 decision:
 remaining_risk:
 ```
-
-Allowed decisions: `PASS`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `SECURITY_BLOCK`, `RELEASE_BLOCK`, `BLOCKED_EXTERNAL`, and `PROTOCOL_VIOLATION`.

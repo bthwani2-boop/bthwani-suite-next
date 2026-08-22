@@ -1,13 +1,11 @@
 import React from 'react';
 import { useDeliveryLifecycle } from './delivery.lifecycle';
 import { useCaptainDeliveryActions } from './delivery.actions';
-import { getRouteForCommandTarget } from './delivery.policy';
 import { usePodUploadFlow } from '../media/pod/pod-upload-flow';
 import { useCaptainOrderModel } from '../orders/captain-order.model';
 import { useCaptainChatModel } from '../chat';
 import { useCaptainAvailabilityModel } from './captain-availability.model';
 import { useCaptainGpsModel } from './captain-gps.model';
-import { useCaptainNavigationModel } from './captain-navigation.model';
 import { useCaptainProfileModel } from './captain-profile.model';
 import { useCaptainServiceModeModel } from './captain-service-mode.model';
 import { useCaptainInboxModel } from './captain-inbox.model';
@@ -17,19 +15,14 @@ import {
   useCaptainOrderRuntime,
   type DshCaptainLocationPush,
 } from './use-captain-order-runtime';
-import {
-  useDshCaptainSurfaceModel as useDshCaptainSurfacePresenterModel,
-  type DshCaptainNavigationCommand,
-} from './captain.surface-model';
+import { useDshCaptainSurfaceModel as useDshCaptainSurfacePresenterModel } from './captain.surface-model';
 
 export function useDshCaptainSurfaceBinding(
-  command: DshCaptainNavigationCommand | undefined,
   captainRuntimeId: string,
+  route: DshCaptainRoute,
+  routeAssignmentId: string,
+  selectedSupportScreen: CaptainSupportRoute,
 ) {
-  const safeCommand = (command || { target: 'inbox' }) as DshCaptainNavigationCommand;
-  const [route, setRoute] = React.useState<DshCaptainRoute>(getRouteForCommandTarget(safeCommand.target));
-  const [selectedSupportScreen, setSelectedSupportScreen] = React.useState<CaptainSupportRoute>('orders-list');
-
   const availabilityModel = useCaptainAvailabilityModel();
   const gpsModel = useCaptainGpsModel();
   const profileModel = useCaptainProfileModel();
@@ -38,28 +31,27 @@ export function useDshCaptainSurfaceBinding(
   const orderModel = useCaptainOrderModel();
   const chatModel = useCaptainChatModel();
   const inboxModel = useCaptainInboxModel(captainRuntimeId);
-  const activeAssignment = inboxModel.findAssignment(orderModel.activeAssignmentId);
+
+  const operationalAssignmentId = inboxModel.operationalAssignment?.id || '';
+  const contextAssignmentId = routeAssignmentId || operationalAssignmentId;
+  const operationalCommandAssignmentId =
+    operationalAssignmentId && (!routeAssignmentId || routeAssignmentId === operationalAssignmentId)
+      ? operationalAssignmentId
+      : '';
+  const operationalAssignment = operationalAssignmentId
+    ? inboxModel.findAssignment(operationalAssignmentId)
+    : undefined;
 
   const captainOrderRuntime = useCaptainOrderRuntime();
   useCaptainActiveLocationPush({
-    activeAssignmentId: orderModel.activeAssignmentId,
+    activeAssignmentId: operationalAssignmentId,
     captainId: captainRuntimeId,
-    lifecycleStatus: activeAssignment?.delivery.status,
-  });
-
-  const navModel = useCaptainNavigationModel({
-    command: safeCommand,
-    route,
-    setRoute,
-    setActiveAssignmentId: orderModel.setActiveAssignmentId,
-    setSelectedSupportScreen,
+    lifecycleStatus: operationalAssignment?.delivery.status,
   });
 
   const serviceModeModel = useCaptainServiceModeModel({
     setActiveServiceType: profileModel.setActiveServiceType,
-    setRoute,
     setInboxState: lifecycle.setInboxState,
-    setActiveAssignmentId: orderModel.setActiveAssignmentId,
     setActiveOrderExpanded: orderModel.setActiveOrderExpanded,
     setIsPickupSheetVisible: lifecycle.setIsPickupSheetVisible,
     setIsDeliverySheetVisible: lifecycle.setIsDeliverySheetVisible,
@@ -76,12 +68,10 @@ export function useDshCaptainSurfaceBinding(
 
   const deliveryActions = useCaptainDeliveryActions({
     captainRuntimeId,
-    activeAssignmentId: orderModel.activeAssignmentId,
-    setActiveAssignmentId: orderModel.setActiveAssignmentId,
+    activeAssignmentId: operationalCommandAssignmentId,
     captainPodPhotoUri: podUpload.captainPodPhotoUri,
     captainPodMediaKey: podUpload.captainPodMediaKey,
     captainAppMode: profileModel.captainAppMode,
-    setRoute,
     resetOrderState,
     refreshInbox: inboxModel.refresh,
     inboxState: lifecycle.inboxState,
@@ -102,12 +92,10 @@ export function useDshCaptainSurfaceBinding(
   }, [captainOrderRuntime]);
 
   return useDshCaptainSurfacePresenterModel({
-    command: safeCommand,
     captainRuntimeId,
     route,
-    setRoute,
+    activeAssignmentId: contextAssignmentId,
     selectedSupportScreen,
-    setSelectedSupportScreen,
     availabilityModel,
     gpsModel,
     profileModel,
@@ -115,7 +103,6 @@ export function useDshCaptainSurfaceBinding(
     podUpload,
     orderModel,
     chatModel,
-    navModel,
     serviceModeModel,
     deliveryActions,
     pushLocation,

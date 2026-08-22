@@ -5,10 +5,12 @@ on:
     inputs:
       base_sha: { type: string, required: true }
       head_sha: { type: string, required: true }
-      full_verification: { type: string, required: true }
+      full_scope: { type: string, required: true }
       frontend: { type: string, required: true }
+      mobile: { type: string, required: true }
       heavy: { type: string, required: true }
       verification_tier: { type: string, required: true }
+      execution_phase: { type: string, required: true }
       journey: { type: string, required: true }
       journey_scope: { type: string, required: false, default: "" }
       platform_change_sets: { type: string, required: true }
@@ -16,60 +18,65 @@ on:
 permissions:
   contents: read
 
+env:
+  CANDIDATE_SHA: ${{ github.sha }}
+
 jobs:
   verify:
     name: ${{ inputs.verification_tier }} Node verification
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
-      - name: Checkout immutable source history
+      - name: Verify routed candidate identity
+        shell: bash
+        env:
+          ROUTED_HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CANDIDATE_SHA}" || "${ROUTED_HEAD_SHA}" != "${CANDIDATE_SHA}" ]]; then
+            echo "::error::Routed head SHA mismatch: routed=${ROUTED_HEAD_SHA:-<empty>} event=${CANDIDATE_SHA:-<empty>}"
+            exit 1
+          fi
+      - name: Checkout immutable source candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          fetch-depth: 0
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 1
           persist-credentials: false
-      - name: Set up locked Node workspace
-        uses: ./.github/actions/setup-node-workspace
-      - name: Restore Nx computation cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Verify exact candidate and fetch base
+        uses: ./.github/actions/fetch-exact-commits
         with:
-          path: .nx/cache
-          key: nx-${{ inputs.verification_tier }}-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-${{ github.sha }}
-          restore-keys: |
-            nx-${{ inputs.verification_tier }}-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
-            nx-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
-      - name: Verify immutable diff
-        id: immutable_diff
-        continue-on-error: true
+          base_sha: ${{ inputs.base_sha }}
+          head_sha: ${{ env.CANDIDATE_SHA }}
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+      - name: Verify patch whitespace
         shell: bash
         env:
           BASE_SHA: ${{ inputs.base_sha }}
-          HEAD_SHA: ${{ inputs.head_sha }}
-        run: |
-          set +e
-          log="${RUNNER_TEMP}/immutable-diff.log"
-          git diff --check "${BASE_SHA}" "${HEAD_SHA}" 2>&1 | tee "${log}"
-          status=${PIPESTATUS[0]}
-          echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
-          exit "${status}"
-      - name: Upload immutable diff diagnostics
-        if: ${{ steps.immutable_diff.outcome == 'failure' }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+          HEAD_SHA: ${{ env.CANDIDATE_SHA }}
+        run: git diff --check "${BASE_SHA}" "${HEAD_SHA}"
+      - name: Set up locked Node workspace
+        uses: ./.github/actions/setup-node-workspace
+      - name: Restore Nx computation cache
+        if: ${{ github.event_name != 'pull_request' }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          name: immutable-diff-${{ github.run_id }}
-          path: ${{ runner.temp }}/immutable-diff.log
-          if-no-files-found: error
-          retention-days: 7
-      - name: Enforce immutable diff result
-        if: ${{ steps.immutable_diff.outcome == 'failure' }}
-        run: exit 1
+          path: .nx/cache
+          key: nx-${{ inputs.verification_tier }}-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-${{ env.CANDIDATE_SHA }}
+          restore-keys: |
+            nx-${{ inputs.verification_tier }}-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
+            nx-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
       - name: Verify exact affected or full Node graph
         id: node_graph
         continue-on-error: true
         env:
           NX_BASE: ${{ inputs.base_sha }}
-          NX_HEAD: ${{ inputs.head_sha }}
-          FULL_VERIFICATION: ${{ inputs.full_verification }}
+          NX_HEAD: ${{ env.CANDIDATE_SHA }}
+          FULL_SCOPE: ${{ inputs.full_scope }}
+          MOBILE: ${{ inputs.mobile }}
           VERIFICATION_TIER: ${{ inputs.verification_tier }}
+          EXECUTION_PHASE: ${{ inputs.execution_phase }}
         shell: bash
         run: |
           set +e
@@ -81,19 +88,16 @@ jobs:
             return "${PIPESTATUS[0]}"
           }
           status=0
-          if [[ "${FULL_VERIFICATION}" == "true" ]]; then
-            run_check pnpm run nx:typecheck || status=$?
-            run_check pnpm run nx:lint || status=$?
-            run_check pnpm exec nx run-many -t test --all --outputStyle=stream || status=$?
-            run_check pnpm run nx:build || status=$?
-          elif [[ "${VERIFICATION_TIER}" == "fast" ]]; then
-            run_check node tools/scripts/run-affected-verification.mjs typecheck lint || status=$?
-            run_check pnpm exec nx affected -t test --outputStyle=stream || status=$?
-          else
-            run_check node tools/scripts/run-affected-verification.mjs typecheck lint build || status=$?
-            run_check pnpm exec nx affected -t test --outputStyle=stream || status=$?
+          if [[ "${MOBILE}" == "true" ]]; then
+            run_check node --test tools/mobile/tests/*.test.mjs || status=$?
           fi
-          echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
+          if [[ "${FULL_SCOPE}" == "true" && ( "${EXECUTION_PHASE}" == "closure" || "${EXECUTION_PHASE}" == "master" || "${EXECUTION_PHASE}" == "b" || "${EXECUTION_PHASE}" == "c" ) ]]; then
+            run_check pnpm exec nx run-many -t typecheck lint test build --all --outputStyle=stream || status=$?
+          elif [[ "${VERIFICATION_TIER}" == "fast" ]]; then
+            run_check node tools/scripts/run-affected-verification.mjs typecheck lint test || status=$?
+          else
+            run_check node tools/scripts/run-affected-verification.mjs typecheck lint test build || status=$?
+          fi
           exit "${status}"
       - name: Upload Node graph diagnostics
         if: ${{ steps.node_graph.outcome == 'failure' }}
@@ -116,13 +120,33 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      - name: Checkout immutable source history
+      - name: Verify routed candidate identity
+        shell: bash
+        env:
+          ROUTED_HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CANDIDATE_SHA}" || "${ROUTED_HEAD_SHA}" != "${CANDIDATE_SHA}" ]]; then
+            echo "::error::Routed head SHA mismatch: routed=${ROUTED_HEAD_SHA:-<empty>} event=${CANDIDATE_SHA:-<empty>}"
+            exit 1
+          fi
+      - name: Checkout immutable source candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          fetch-depth: 0
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 1
           persist-credentials: false
+      - name: Verify exact candidate and fetch base
+        uses: ./.github/actions/fetch-exact-commits
+        with:
+          base_sha: ${{ inputs.base_sha }}
+          head_sha: ${{ env.CANDIDATE_SHA }}
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
+      - name: Materialize contracts through the Nx owner
+        run: pnpm exec nx run contracts:materialize
       - name: Run detected journey gates
         id: journey_gates
         continue-on-error: true
@@ -132,27 +156,17 @@ jobs:
         run: |
           $log = Join-Path $env:RUNNER_TEMP "journey-gates.log"
           Set-Content -Path $log -Value ""
-          $exitCode = 0
-          $journeys = $env:JOURNEY_SCOPE -split ',' | Where-Object { $_ -and $_.Trim() }
-          foreach ($journey in $journeys) {
-            "===== $($journey.Trim()) =====" | Tee-Object -FilePath $log -Append
-            $journeyOutput = & ./tools/scripts/run-journey-gate.ps1 -Journey $journey.Trim() 2>&1
-            $journeyExitCode = $LASTEXITCODE
-            $journeyOutput | Tee-Object -FilePath $log -Append
-            if ($journeyExitCode -ne 0) {
-              $exitCode = $journeyExitCode
-              break
-            }
-          }
+          $journeys = @($env:JOURNEY_SCOPE -split ',' | Where-Object { $_ -and $_.Trim() } | ForEach-Object { $_.Trim().ToUpperInvariant() } | Select-Object -Unique)
+          $journeyOutput = & ./tools/scripts/run-journey-gate.ps1 -Journey ($journeys -join ',') 2>&1
+          $exitCode = if ($null -eq $LASTEXITCODE) { 1 } else { $LASTEXITCODE }
+          $journeyOutput | Tee-Object -FilePath $log -Append
           exit $exitCode
       - name: Upload journey gate diagnostics
         if: ${{ steps.journey_gates.outcome == 'failure' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: journey-gates-${{ github.run_id }}
-          path: |
-            ${{ runner.temp }}/journey-gates.log
-            .diagnostics/journey-gate/journey-gate-summary.json
+          path: ${{ runner.temp }}/journey-gates.log
           if-no-files-found: error
           retention-days: 7
       - name: Enforce journey gate result
@@ -165,13 +179,33 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - name: Checkout immutable source history
+      - name: Verify routed candidate identity
+        shell: bash
+        env:
+          ROUTED_HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CANDIDATE_SHA}" || "${ROUTED_HEAD_SHA}" != "${CANDIDATE_SHA}" ]]; then
+            echo "::error::Routed head SHA mismatch: routed=${ROUTED_HEAD_SHA:-<empty>} event=${CANDIDATE_SHA:-<empty>}"
+            exit 1
+          fi
+      - name: Checkout immutable source candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          fetch-depth: 0
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 1
           persist-credentials: false
+      - name: Verify exact candidate and fetch base
+        uses: ./.github/actions/fetch-exact-commits
+        with:
+          base_sha: ${{ inputs.base_sha }}
+          head_sha: ${{ env.CANDIDATE_SHA }}
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
+      - name: Materialize contracts through the Nx owner
+        run: pnpm exec nx run contracts:materialize
       - name: Verify platform change-set binding
         id: platform_change_sets
         continue-on-error: true
@@ -179,7 +213,6 @@ jobs:
         run: |
           set +e
           log="${RUNNER_TEMP}/platform-change-sets.log"
-          generated="${RUNNER_TEMP}/platform-control-api.ts"
           status=0
           run_check() {
             echo "===== $* =====" | tee -a "${log}"
@@ -188,8 +221,9 @@ jobs:
             if [[ "${code}" -ne 0 ]]; then status="${code}"; fi
           }
           run_check pnpm --dir services/dsh exec tsc -p tsconfig.platform-change-sets.json --noEmit --pretty false
-          run_check pnpm --dir services/dsh exec openapi-typescript ../../core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml -o "${generated}"
-          run_check diff -u core/platform-control/clients/generated/platform-control-api.ts "${generated}"
+          run_check git diff --exit-code -- \
+            core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml \
+            core/platform-control/clients/generated/platform-control-api.ts
           run_check node tools/guards/platform-change-sets-gate.mjs
           exit "${status}"
       - name: Upload platform change-set diagnostics
@@ -197,9 +231,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: platform-change-sets-${{ github.run_id }}
-          path: |
-            ${{ runner.temp }}/platform-change-sets.log
-            ${{ runner.temp }}/platform-control-api.ts
+          path: ${{ runner.temp }}/platform-change-sets.log
           if-no-files-found: error
           retention-days: 7
       - name: Enforce platform change-set result

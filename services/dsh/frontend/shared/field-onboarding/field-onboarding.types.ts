@@ -13,6 +13,7 @@ export type FieldPartnerDraftForm = {
   primaryPhone: string;
   secondaryPhone: string;
   email: string;
+  businessVerticalId: string;
   category: "restaurant" | "grocery" | "pharmacy" | "bakery" | "default";
   notes: string;
 
@@ -30,20 +31,6 @@ export type FieldPartnerDraftForm = {
   // ── Operational readiness ──────────────────────────────────────────
   operatingHours: string;
   deliveryReadiness: string;
-
-  // ── Optional settlement metadata ───────────────────────────────────
-  // These fields remain readable for backward compatibility, but app-field
-  // no longer blocks partner intake on sensitive payout data. The partner or
-  // an authorized operator completes and verifies it after intake.
-  beneficiaryName: string;
-  bankName: string;
-  bankBranch: string;
-  accountNumber: string;
-  iban: string;
-  payoutMobileNumber: string;
-  settlementPreference: "" | "bank_transfer" | "mobile_wallet";
-  bankAccountHolderMatchesOwner: boolean;
-  bankNotes: string;
 };
 
 export type FieldPartnerDraftStep =
@@ -77,9 +64,7 @@ export type FieldRequiredDocument = {
 
 /**
  * Required evidence follows the legal identity selected in the same draft.
- * The current database contract has no dedicated freelancer-certificate
- * document enum, so that certificate is stored as `other` with a precise UI
- * label until the cross-surface document taxonomy is versioned centrally.
+ * The document type comes from the canonical DSH legal-document taxonomy.
  */
 export function getRequiredPartnerDocuments(
   form: Partial<FieldPartnerDraftForm>,
@@ -92,7 +77,7 @@ export function getRequiredPartnerDocuments(
     case "freelancer_certificate":
       return [
         { key: "identity_proof", documentType: "national_id", label: "الهوية الوطنية للمالك" },
-        { key: "freelancer_certificate", documentType: "other", label: "وثيقة العمل الحر" },
+        { key: "freelancer_certificate", documentType: "freelancer_certificate", label: "وثيقة العمل الحر" },
       ];
     case "commercial_register":
     default:
@@ -108,6 +93,7 @@ export type FieldOnboardingLoadStatus = "idle" | "hydrating" | "ready" | "error"
 export type FieldOnboardingDraftState = {
   partnerId: string | null;
   partnerVersion: number | null;
+  firstStoreId: string | null;
   step: FieldPartnerDraftStep;
   form: Partial<FieldPartnerDraftForm>;
   visitNotes: string;
@@ -131,9 +117,11 @@ export function initialDraftState(): FieldOnboardingDraftState {
   return {
     partnerId: null,
     partnerVersion: null,
+    firstStoreId: null,
     step: "basics_profile",
     form: {
       legalIdentityType: "commercial_register",
+      businessVerticalId: "",
       category: "default",
     },
     visitNotes: "",
@@ -167,6 +155,7 @@ export function validateIdentityStep(form: Partial<FieldPartnerDraftForm>): Fiel
 export function validateOwnerStep(form: Partial<FieldPartnerDraftForm>): FieldOnboardingValidationErrors {
   const errors: FieldOnboardingValidationErrors = {};
   if (!form.primaryPhone?.trim()) errors.primaryPhone = "رقم جوال المالك مطلوب للتواصل المباشر";
+  if (!form.businessVerticalId?.trim()) errors.businessVerticalId = "اختر مجال نشاط المتجر من التصنيف المركزي";
   return errors;
 }
 
@@ -175,6 +164,7 @@ export function getBasicsProfileMissingCount(form: Partial<FieldPartnerDraftForm
   if (!form.legalNameAr?.trim()) count++;
   if (!form.legalIdentityNumber?.trim()) count++;
   if (!form.primaryPhone?.trim()) count++;
+  if (!form.businessVerticalId?.trim()) count++;
   return count;
 }
 
@@ -192,11 +182,6 @@ export function getDocumentsMissingCount(
   return getRequiredPartnerDocuments(form).filter(
     (item) => !uploadedDocumentTypes.includes(item.documentType),
   ).length;
-}
-
-/** Settlement data is intentionally optional during field intake. */
-export function getBankAccountMissingCount(_form: Partial<FieldPartnerDraftForm>): number {
-  return 0;
 }
 
 /** Catalog setup is accelerated in the same visit but does not block intake. */
@@ -225,6 +210,7 @@ export function getFieldRequiredMissingItems(
   if (!form.legalNameAr?.trim()) missing.push("اسم المتجر");
   if (!form.legalIdentityNumber?.trim()) missing.push("رقم الهوية القانونية");
   if (!form.primaryPhone?.trim()) missing.push("جوال المالك");
+  if (!form.businessVerticalId?.trim()) missing.push("مجال نشاط المتجر");
   if (!form.city?.trim()) missing.push("المدينة");
   if (!form.addressLine?.trim()) missing.push("العنوان");
   for (const document of getRequiredPartnerDocuments(form)) {

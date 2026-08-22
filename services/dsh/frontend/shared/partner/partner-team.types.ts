@@ -23,6 +23,7 @@ export type PartnerTeamMember = {
   readonly auditNote: string;
   readonly inlineAction: string;
   readonly inlineActionLabel: string;
+  readonly version: number;
 };
 
 /** Map of team role identifiers to Arabic labels */
@@ -79,5 +80,6 @@ export function toPartnerTeamMember(raw: unknown): PartnerTeamMember | null {
     auditNote: stringOr(record.auditNote, ''),
     inlineAction: stringOr(record.inlineAction, ''),
     inlineActionLabel: stringOr(record.inlineActionLabel, ''),
+    version: typeof record.version === 'number' && Number.isInteger(record.version) && record.version >= 1 ? record.version : 0,
   };
 }

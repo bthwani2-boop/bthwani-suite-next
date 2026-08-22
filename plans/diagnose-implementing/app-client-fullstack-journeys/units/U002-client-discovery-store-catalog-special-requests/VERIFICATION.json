@@ -1,9 +1,0 @@
-{
-  "schemaVersion": 3,
-  "unitId": "U002",
-  "checks": [
-    {"verificationId":"V201","type":"static","command":"rg -n \"HomeDiscovery|StoreDiscovery|StoreDetail|special_request|SHEIN_ASSISTED_PURCHASE|AWNAK_ERRAND|destinationType\" services/dsh/frontend/app-client services/dsh/frontend/shared services/dsh/backend/internal/homediscovery services/dsh/contracts","proves":"Maps discovery/store/special-request routing.","doesNotProve":"Does not prove publication authorization or runtime serviceability.","passCriteria":"All destinations and visible entities resolve through DSH canonical contracts.","failCriteria":"Hardcoded/local catalog or fake destination truth is found.","required":true},
-    {"verificationId":"V202","type":"frontend","command":"pnpm --dir apps/app-client/runtime test","proves":"Exercises registered client discovery and special-request source invariants.","doesNotProve":"Does not prove live publication/database state.","passCriteria":"Command exits zero.","failCriteria":"Any client operational contract fails.","required":true},
-    {"verificationId":"V203","type":"backend","command":"cd services/dsh/backend && go test ./...","proves":"Tests DSH discovery/store backend packages in repository suite.","doesNotProve":"Does not prove visual/device behavior.","passCriteria":"Command exits zero.","failCriteria":"Any Go test fails.","required":true}
-  ]
-}

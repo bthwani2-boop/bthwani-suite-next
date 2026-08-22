@@ -16,7 +16,6 @@ const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "central-catalog
 type DomainMutationInput = NonNullable<operations["updateCatalogDomain"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
 type NodeMutationInput = NonNullable<operations["updateCatalogNode"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
 type ProductMutationInput = NonNullable<operations["updateMasterProduct"]["requestBody"]>["content"]["application/json"] & { readonly expectedVersion: number };
-type ProposalDecisionInput = Parameters<typeof catalogApi.decideProductProposal>[1] & { readonly expectedVersion: number };
 type ProposalTransitionInput = Parameters<typeof catalogApi.transitionProductProposal>[1] & { readonly expectedVersion: number };
 type AssortmentMutationInput = Parameters<typeof catalogApi.upsertOperatorStoreAssortment>[2] & { readonly expectedVersion?: number };
 type ProposalMutationInput = {
@@ -52,14 +51,6 @@ export async function updateMasterProductOCC(productId: string, input: ProductMu
     { method: "PATCH", body: input },
   );
   return response.masterProduct;
-}
-
-export async function decideProductProposalOCC(proposalId: string, input: ProposalDecisionInput): Promise<ProductProposal> {
-  const response = await request<{ proposal: ProductProposal }>(
-    `/dsh/operator/catalog/product-proposals/${encodeURIComponent(proposalId)}/decision`,
-    { method: "POST", body: input },
-  );
-  return response.proposal;
 }
 
 export type ProductProposalTransitionOCCInput = Omit<

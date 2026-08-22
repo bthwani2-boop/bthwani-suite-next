@@ -24,7 +24,7 @@ export type ProductEditScreenProps = {
 };
 
 export function ProductEditScreen({
-  storeId: _storeId,
+  storeId,
   productId,
   onBack,
   onSaved,
@@ -119,6 +119,7 @@ export function ProductEditScreen({
     setErrorMessage(null);
     try {
       const proposal = await createPartnerProductProposal({
+        storeId,
         proposedNameAr: proposedNameAr.trim(),
         proposedNameEn: proposedNameEn.trim(),
         domainId: selectedDomainId,

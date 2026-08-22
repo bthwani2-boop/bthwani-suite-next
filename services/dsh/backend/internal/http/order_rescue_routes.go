@@ -83,33 +83,35 @@ func (s *protectedStoreServer) handleUpdateOrderRescueCase(w http.ResponseWriter
 		return
 	}
 	var body struct {
-		ExpectedStatus string `json:"expectedStatus"`
-		Status         string `json:"status"`
-		Reason         string `json:"reason"`
-		Owner          string `json:"owner"`
-		NextAction     string `json:"nextAction"`
-		OperatorNote   string `json:"operatorNote"`
-		AffectedEntity string `json:"affectedEntity"`
-		AssignedTo     string `json:"assignedTo"`
-		ResolutionNote string `json:"resolutionNote"`
+		ExpectedStatus  string `json:"expectedStatus"`
+		ExpectedVersion int64  `json:"expectedVersion"`
+		Status          string `json:"status"`
+		Reason          string `json:"reason"`
+		Owner           string `json:"owner"`
+		NextAction      string `json:"nextAction"`
+		OperatorNote    string `json:"operatorNote"`
+		AffectedEntity  string `json:"affectedEntity"`
+		AssignedTo      string `json:"assignedTo"`
+		ResolutionNote  string `json:"resolutionNote"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
 	item, err := support.UpdateOrderRescueCase(s.db, support.UpdateOrderRescueInput{
-		ActorID:        actor.ID,
-		CaseID:         r.PathValue("caseId"),
-		ExpectedStatus: support.OrderRescueStatus(body.ExpectedStatus),
-		Status:         support.OrderRescueStatus(body.Status),
-		Reason:         support.OrderRescueReason(body.Reason),
-		Owner:          support.OrderRescueOwner(body.Owner),
-		NextAction:     support.OrderRescueNextAction(body.NextAction),
-		OperatorNote:   body.OperatorNote,
-		AffectedEntity: body.AffectedEntity,
-		AssignedTo:     body.AssignedTo,
-		ResolutionNote: body.ResolutionNote,
-		IdempotencyKey: idempotencyKey,
-		CorrelationID:  correlationID,
+		ActorID:         actor.ID,
+		CaseID:          r.PathValue("caseId"),
+		ExpectedStatus:  support.OrderRescueStatus(body.ExpectedStatus),
+		ExpectedVersion: body.ExpectedVersion,
+		Status:          support.OrderRescueStatus(body.Status),
+		Reason:          support.OrderRescueReason(body.Reason),
+		Owner:           support.OrderRescueOwner(body.Owner),
+		NextAction:      support.OrderRescueNextAction(body.NextAction),
+		OperatorNote:    body.OperatorNote,
+		AffectedEntity:  body.AffectedEntity,
+		AssignedTo:      body.AssignedTo,
+		ResolutionNote:  body.ResolutionNote,
+		IdempotencyKey:  idempotencyKey,
+		CorrelationID:   correlationID,
 	})
 	if err != nil {
 		sendGovernedSupportError(w, err, "failed to update order rescue case")
@@ -187,14 +189,15 @@ func (s *protectedStoreServer) handleExecuteOrderRescueAction(w http.ResponseWri
 	if !ok {
 		return
 	}
-	_, correlationID, ok := partnerSupportMutationHeaders(w, r)
+	idempotencyKey, correlationID, ok := partnerSupportMutationHeaders(w, r)
 	if !ok {
 		return
 	}
 	item, err := support.ExecuteOrderRescueAction(s.db, support.ExecuteOrderRescueActionInput{
-		ActorID:       actor.ID,
-		ActionID:      r.PathValue("actionId"),
-		CorrelationID: correlationID,
+		ActorID:        actor.ID,
+		ActionID:       r.PathValue("actionId"),
+		IdempotencyKey: idempotencyKey,
+		CorrelationID:  correlationID,
 	})
 	if err != nil {
 		sendGovernedSupportError(w, err, "failed to execute order rescue action")

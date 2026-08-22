@@ -2,15 +2,15 @@ package http
 
 import (
 	"database/sql"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	_ "github.com/lib/pq"
+
+	"wlt-api/internal/testsupport"
 )
 
 func getTestDB(t *testing.T) *sql.DB {
@@ -40,7 +40,7 @@ func getTestDB(t *testing.T) *sql.DB {
 }
 
 func uniqueSuffix() string {
-	return fmt.Sprintf("%d", time.Now().UnixNano())
+	return testsupport.UniqueSuffix()
 }
 
 func requireTestTable(t *testing.T, db *sql.DB, table string) {
@@ -62,7 +62,7 @@ func authenticatedFinancialRequest(method, path, callerScope string) *http.Reque
 	req.Header.Set("Authorization", "Bearer test-dsh-service-token")
 	req.Header.Set("X-Service-Caller", "dsh")
 	if callerScope != "" {
-		req.Header.Set("X-Operator-Context-ID", callerScope)
+		req.Header.Set("X-Delegated-Operator-Context", callerScope)
 	}
 	return req
 }
@@ -85,7 +85,7 @@ func assertDelegatedScopeRoute(
 	if ownRec.Code != http.StatusOK {
 		t.Fatalf("delegated financial record was not readable: status=%d body=%s", ownRec.Code, ownRec.Body.String())
 	}
-	if got := ownReq.Header.Get("X-Operator-Context-ID"); got != delegatedScope {
+	if got := ownReq.Header.Get("X-Delegated-Operator-Context"); got != delegatedScope {
 		t.Fatalf("delegated scope changed after authentication: got=%q want=%q", got, delegatedScope)
 	}
 
@@ -146,44 +146,6 @@ func TestSettlementRoutesIsolateDelegatedFinancialScopes(t *testing.T) {
 		ownID, foreignID, serverScope,
 	)
 	assertDelegatedScopeRoute(t, router, "/wlt/settlements/"+foreignID, "/wlt/settlements/"+ownID, "/wlt/settlements", foreignID, ownID, foreignScope)
-}
-
-func TestCodRecordRoutesIsolateDelegatedFinancialScopes(t *testing.T) {
-	db := getTestDB(t)
-	if db == nil {
-		return
-	}
-	defer db.Close()
-	requireTestTable(t, db, "wlt_cod_records")
-	t.Setenv("WLT_DSH_SERVICE_TOKEN", "test-dsh-service-token")
-
-	suffix := uniqueSuffix()
-	serverScope := "server-cod-" + suffix
-	foreignScope := "foreign-cod-" + suffix
-	sharedPartnerID := "partner-shared-" + suffix
-	var ownID, foreignID string
-	if err := db.QueryRow(`
-		INSERT INTO wlt_cod_records (order_id, collector_type, collector_id, partner_id, amount_minor_units, currency, operator_context_id)
-		VALUES ($1, 'captain', $2, $3, 1000, 'YER', $4)
-		RETURNING id`, "order-own-"+suffix, "captain-own-"+suffix, sharedPartnerID, serverScope).Scan(&ownID); err != nil {
-		t.Fatalf("failed to insert server-owned COD record: %v", err)
-	}
-	if err := db.QueryRow(`
-		INSERT INTO wlt_cod_records (order_id, collector_type, collector_id, partner_id, amount_minor_units, currency, operator_context_id)
-		VALUES ($1, 'captain', $2, $3, 1000, 'YER', $4)
-		RETURNING id`, "order-foreign-"+suffix, "captain-foreign-"+suffix, sharedPartnerID, foreignScope).Scan(&foreignID); err != nil {
-		t.Fatalf("failed to insert foreign compatibility COD record: %v", err)
-	}
-	defer db.Exec(`DELETE FROM wlt_cod_records WHERE id IN ($1,$2)`, ownID, foreignID)
-
-	router := NewRouter(db, true, nil)
-	assertDelegatedScopeRoute(t, router,
-		"/wlt/cod-records/"+ownID,
-		"/wlt/cod-records/"+foreignID,
-		"/wlt/cod-records?partnerId="+sharedPartnerID,
-		ownID, foreignID, serverScope,
-	)
-	assertDelegatedScopeRoute(t, router, "/wlt/cod-records/"+foreignID, "/wlt/cod-records/"+ownID, "/wlt/cod-records?partnerId="+sharedPartnerID, foreignID, ownID, foreignScope)
 }
 
 func TestCommissionRoutesIsolateDelegatedFinancialScopes(t *testing.T) {

@@ -87,8 +87,11 @@ func (r *Repository) SetOperationalScopes(ctx context.Context, actorID, operator
 	if !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
+	if err := validateActiveShiftScopesTx(ctx, tx, inputs); err != nil {
+		return nil, err
+	}
 
-	// Deactivate existing assignments
+	// Deactivate existing affiliations before installing the complete replacement set.
 	if _, err := tx.ExecContext(ctx, `
 		UPDATE workforce_operational_assignments
 		SET active = false, ends_on = NOW()
@@ -97,7 +100,6 @@ func (r *Repository) SetOperationalScopes(ctx context.Context, actorID, operator
 	}
 
 	for _, input := range inputs {
-		// Overlap validation (though we deactivated all, we enforce it structurally)
 		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO workforce_operational_assignments
 			(actor_id, operator_context_id, role, scope_type, scope_target_id, starts_on, ends_on, active, assigned_by)
@@ -156,6 +158,23 @@ func (r *Repository) SetOperationalScopes(ctx context.Context, actorID, operator
 	return r.GetOperationalScopes(ctx, actorID, operatorContextID, role)
 }
 
+func validateActiveShiftScopesTx(ctx context.Context, tx *sql.Tx, inputs []OperationalAssignmentInput) error {
+	for _, input := range inputs {
+		if input.ScopeType != "shift" {
+			continue
+		}
+		var active bool
+		err := tx.QueryRowContext(ctx, `SELECT active FROM workforce_shifts WHERE code = $1`, input.ScopeTargetID).Scan(&active)
+		if errors.Is(err, sql.ErrNoRows) || (err == nil && !active) {
+			return ErrInvalidReference
+		}
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (r *Repository) GetOperationalScopes(ctx context.Context, actorID, operatorContextID, role string) (*ActorScopes, error) {
 	actorID = strings.TrimSpace(actorID)
 	operatorContextID = strings.TrimSpace(operatorContextID)
@@ -174,9 +193,15 @@ func (r *Repository) GetOperationalScopes(ctx context.Context, actorID, operator
 	}
 
 	rows, err := r.db.QueryContext(ctx, `
-		SELECT scope_type, scope_target_id
-		FROM workforce_operational_assignments
-		WHERE actor_id = $1 AND operator_context_id = $2 AND role = $3 AND active = true`, actorID, operatorContextID, role)
+		SELECT a.scope_type, a.scope_target_id
+		FROM workforce_operational_assignments a
+		LEFT JOIN workforce_shifts s
+		  ON a.scope_type = 'shift' AND s.code = a.scope_target_id
+		WHERE a.actor_id = $1
+		  AND a.operator_context_id = $2
+		  AND a.role = $3
+		  AND a.active = true
+		  AND (a.scope_type <> 'shift' OR s.active = true)`, actorID, operatorContextID, role)
 	if err != nil {
 		return nil, err
 	}

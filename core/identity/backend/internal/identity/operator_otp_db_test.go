@@ -84,12 +84,12 @@ func TestRequestOtpForOperatorContextIssuesChallengeForNewConsumerDBIntegration(
 		t.Fatalf("self-service challenge must be self-issued, got issuedBy=%q actorID=%q", issuedBy, actorID)
 	}
 
-	var active bool
-	if err := db.QueryRow(`SELECT active FROM identity_actors WHERE id = $1`, actorID).Scan(&active); err != nil {
+	var status ActorLifecycleStatus
+	if err := db.QueryRow(`SELECT status FROM identity_actors WHERE id = $1`, actorID).Scan(&status); err != nil {
 		t.Fatalf("read back the bootstrapped actor: %v", err)
 	}
-	if active {
-		t.Fatal("an actor bootstrapped by an OTP request must stay inactive until the code is consumed")
+	if status != ActorStatusPendingActivation {
+		t.Fatalf("an actor bootstrapped by an OTP request must remain pending until the code is consumed, got %q", status)
 	}
 }
 

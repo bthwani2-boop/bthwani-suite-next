@@ -5,20 +5,18 @@ import test from "node:test";
 const root = new URL("../../../../", import.meta.url);
 const read = (relative) => readFile(new URL(relative, root), "utf8");
 
-test("native provider apps use the direct Workforce readiness transport", async () => {
-  const [fieldApp, captainApp, nativeWorkforce] = await Promise.all([
+test("field app uses the canonical DSH readiness boundary", async () => {
+  const [fieldApp, fieldReadinessApi, nativeWorkforce] = await Promise.all([
     read("apps/app-field/runtime/src/App.tsx"),
-    read("apps/app-captain/runtime/src/App.tsx"),
+    read("services/dsh/frontend/app-field/field-operational-readiness.api.ts"),
     read("services/dsh/frontend/shared/workforce/workforce-me.api.ts"),
   ]);
 
-  for (const source of [fieldApp, captainApp]) {
-    assert.match(source, /workforce-me\.api/);
-    assert.match(source, /fetchWorkforceReadiness/);
-    assert.doesNotMatch(source, /getReadinessGate/);
-    assert.doesNotMatch(source, /workforce\.api";/);
-  }
+  assert.match(fieldApp, /from "@bthwani\/dsh\/app-field"/);
+  assert.match(fieldApp, /fetchFieldOperationalReadiness/);
+  assert.doesNotMatch(fieldApp, /workforce-me\.api|fetchWorkforceReadiness|getReadinessGate/);
 
-  assert.match(nativeWorkforce, /resolveWorkforceApiBaseUrl\(\)/);
-  assert.match(nativeWorkforce, /\/workforce\/readiness\/\$\{encodeURIComponent\(actorId\)\}/);
+  assert.match(fieldReadinessApi, /\/dsh\/field\/me\/readiness/);
+  assert.match(fieldReadinessApi, /createDshHttpClient/);
+  assert.doesNotMatch(nativeWorkforce, /\/workforce\/readiness\/\$\{encodeURIComponent\(actorId\)\}/);
 });

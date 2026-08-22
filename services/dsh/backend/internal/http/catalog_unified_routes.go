@@ -33,38 +33,66 @@ func (s *protectedStoreServer) writeCatalogMutationError(w http.ResponseWriter, 
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogDomainAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok { return }
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok {
+		return
+	}
 	var input centralcatalog.DomainPatchInput
-	if !decodeProtectedJSON(w, r, &input) { return }
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
 	domain, err := centralcatalog.UpdateDomainAtomic(r.Context(), s.db, r.PathValue("domainId"), input)
-	if err != nil { s.writeCatalogMutationError(w, err); return }
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"domain": domain})
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogNodeAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok { return }
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionTaxonomyManage); !ok {
+		return
+	}
 	var input centralcatalog.NodePatchInput
-	if !decodeProtectedJSON(w, r, &input) { return }
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
 	node, err := centralcatalog.UpdateNodeAtomic(r.Context(), s.db, r.PathValue("nodeId"), input)
-	if err != nil { s.writeCatalogMutationError(w, err); return }
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"node": node})
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogMasterProductAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductManage); !ok { return }
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionProductManage); !ok {
+		return
+	}
 	var input centralcatalog.MasterProductPatchInput
-	if !decodeProtectedJSON(w, r, &input) { return }
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
 	product, err := centralcatalog.UpdateMasterProductAtomic(r.Context(), s.db, r.PathValue("productId"), input)
-	if err != nil { s.writeCatalogMutationError(w, err); return }
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"masterProduct": product})
 }
 
 func (s *protectedStoreServer) handleUpdateCatalogPlatformPolicyAtomic(w http.ResponseWriter, r *http.Request) {
-	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionPolicyManage); !ok { return }
+	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionPolicyManage); !ok {
+		return
+	}
 	var input centralcatalog.CatalogPolicyPatchInput
-	if !decodeProtectedJSON(w, r, &input) { return }
+	if !decodeProtectedJSON(w, r, &input) {
+		return
+	}
 	policy, err := centralcatalog.UpdateCatalogPolicyAtomic(r.Context(), s.db, r.PathValue("policyId"), input)
-	if err != nil { s.writeCatalogMutationError(w, err); return }
+	if err != nil {
+		s.writeCatalogMutationError(w, err)
+		return
+	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"policy": policy})
 }
 
@@ -97,12 +125,6 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/operator/platform/capacity", s.withPermission("control-panel", DshDispatchCapacityPermissionRead, s.handleGetCapacityConfig))
 	mux.HandleFunc("GET /dsh/operator/platform/serviceability/{zoneId}", s.withPermission("control-panel", DshServiceZonesPermissionRead, s.handleGetZoneServiceability))
 
-	// Platform change sets are registered by RegisterRoutes against the
-	// changeset service in platform_changesets_routes.go. They were also
-	// registered here against a second, separate implementation, which made
-	// ServeMux panic on the duplicate pattern and split approval authority
-	// across two owners.
-
 	// Operator taxonomy, products, attributes, relationships, proposals,
 	// policies, assortments, audit and rollback.
 	mux.HandleFunc("GET /dsh/operator/catalog/domains", s.handleListCatalogDomains)
@@ -129,7 +151,6 @@ func registerUnifiedCatalogRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("PUT /dsh/operator/catalog/master-products/{productId}/relationships", s.handleUpsertMasterProductRelationship)
 	mux.HandleFunc("DELETE /dsh/operator/catalog/master-products/{productId}/relationships/{relationshipId}", s.handleDeleteMasterProductRelationship)
 	mux.HandleFunc("GET /dsh/operator/catalog/product-proposals", s.handleListCatalogProposals)
-	mux.HandleFunc("POST /dsh/operator/catalog/product-proposals/{proposalId}/decision", s.handleDecideCatalogProposalExpected)
 	mux.HandleFunc("POST /dsh/operator/catalog/product-proposals/{proposalId}/transition", s.handleTransitionCatalogProposalExpected)
 	mux.HandleFunc("GET /dsh/operator/catalog/platform-policies", s.handleListCatalogPlatformPolicies)
 	mux.HandleFunc("PATCH /dsh/operator/catalog/platform-policies/{policyId}", s.handleUpdateCatalogPlatformPolicyAtomic)

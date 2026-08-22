@@ -22,6 +22,10 @@ func (r *Repository) AppendProviderDocument(
 	expectedVersion int,
 	correlationID string,
 ) (Person, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil {
+		return Person{}, err
+	}
 	actorID = strings.TrimSpace(actorID)
 	kind = strings.TrimSpace(kind)
 	mediaRef = strings.TrimSpace(mediaRef)
@@ -52,8 +56,8 @@ func (r *Repository) AppendProviderDocument(
 	if err := tx.QueryRowContext(ctx, `
 		SELECT version, workforce_kind
 		FROM workforce_people
-		WHERE actor_id = $1
-		FOR UPDATE`, actorID).Scan(&currentVersion, &currentKind); errors.Is(err, sql.ErrNoRows) {
+		WHERE operator_context_id = $2 AND actor_id = $1
+		FOR UPDATE`, actorID, operatorContextID).Scan(&currentVersion, &currentKind); errors.Is(err, sql.ErrNoRows) {
 		return Person{}, ErrNotFound
 	} else if err != nil {
 		return Person{}, err
@@ -71,8 +75,8 @@ func (r *Repository) AppendProviderDocument(
 			ELSE document_media_refs || jsonb_build_array($2::text)
 		END,
 		updated_at = now()
-		WHERE actor_id = $1`
-	result, err := tx.ExecContext(ctx, query, actorID, mediaRef)
+		WHERE operator_context_id = $3 AND actor_id = $1`
+	result, err := tx.ExecContext(ctx, query, actorID, mediaRef, operatorContextID)
 	if err != nil {
 		return Person{}, err
 	}
@@ -83,7 +87,7 @@ func (r *Repository) AppendProviderDocument(
 	result, err = tx.ExecContext(ctx, `
 		UPDATE workforce_people
 		SET version = version + 1, updated_at = now()
-		WHERE actor_id = $1 AND version = $2`, actorID, expectedVersion)
+		WHERE operator_context_id = $3 AND actor_id = $1 AND version = $2`, actorID, expectedVersion, operatorContextID)
 	if err != nil {
 		return Person{}, err
 	}
@@ -94,9 +98,9 @@ func (r *Repository) AppendProviderDocument(
 	toState, _ := json.Marshal(map[string]string{"mediaRef": mediaRef, "kind": kind})
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO workforce_action_audit
-			(actor_id, actor_role, target_actor_id, action, to_state, correlation_id)
-		VALUES ($1, $2, $3, 'provider.document_linked', $4::jsonb, NULLIF($5, ''))`,
-		operatorActorID, operatorRole, actorID, string(toState), correlationID); err != nil {
+			(operator_context_id, actor_id, actor_role, target_actor_id, action, to_state, correlation_id)
+		VALUES ($6, $1, $2, $3, 'provider.document_linked', $4::jsonb, NULLIF($5, ''))`,
+		operatorActorID, operatorRole, actorID, string(toState), correlationID, operatorContextID); err != nil {
 		return Person{}, err
 	}
 

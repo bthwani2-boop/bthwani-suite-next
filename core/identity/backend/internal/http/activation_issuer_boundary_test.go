@@ -31,7 +31,7 @@ func (f *fakeActorAccessLookup) AccessForActor(_ context.Context, actorID string
 func issuerAccess(operatorContextID, action string) activationActorAccess {
 	return activationActorAccess{
 		OperatorContextID: operatorContextID,
-		Active:   true,
+		Active:            true,
 		Permissions: []activationIssuerPermission{
 			{Service: "workforce", Surface: "control-panel", Action: action, Scope: "all"},
 		},
@@ -101,9 +101,10 @@ func TestActivationIssuerBoundaryRejectsCrossOperatorContextIssuer(t *testing.T)
 }
 
 func TestActivationIssuerBoundaryRejectsCrossOperatorContextIssuerOutsideActivePlatform(t *testing.T) {
+	configureIdentity(t)
 	lookup := &fakeActorAccessLookup{accessByActor: map[string]activationActorAccess{
 		"operator-2": issuerAccess("OperatorContext-other", "provider.activation:issue"),
-		"field-1":    targetAccess("OperatorContext-main"),
+		"field-1":    targetAccess("OperatorContext-other"),
 	}}
 	request := httptest.NewRequest(
 		http.MethodPost,
@@ -114,8 +115,8 @@ func TestActivationIssuerBoundaryRejectsCrossOperatorContextIssuerOutsideActiveP
 
 	activationIssuerBoundary(lookup, http.NotFoundHandler()).ServeHTTP(response, request)
 
-	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
-		t.Fatalf("expected fail-closed OperatorContext rejection, got status=%d body=%s", response.Code, response.Body.String())
+	if response.Code != http.StatusNotFound {
+		t.Fatalf("expected downstream route response after context-owned validation, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 

@@ -1,32 +1,17 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import MapView, {
-  Marker,
-  PROVIDER_GOOGLE,
-  type MapPressEvent,
-  type Region,
-} from "react-native-maps";
 import { Text, colorRoles, radius, spacing } from "@bthwani/ui-kit";
+import {
+  getDshMapRenderer,
+  type DshMapCoordinate,
+  type DshMapMarker,
+  type DshMapProps,
+} from "../mobile-capabilities";
 
-export type BthwaniMapCoordinate = {
-  readonly latitude: number;
-  readonly longitude: number;
-};
+export type BthwaniMapCoordinate = DshMapCoordinate;
+export type BthwaniMapMarker = DshMapMarker;
 
-export type BthwaniMapMarker = BthwaniMapCoordinate & {
-  readonly id: string;
-  readonly title: string;
-  readonly description?: string;
-};
-
-export type BthwaniNativeMapProps = {
-  readonly selectedCoordinate?: BthwaniMapCoordinate | null;
-  readonly markers?: readonly BthwaniMapMarker[];
-  readonly onCoordinatePress?: (coordinate: BthwaniMapCoordinate) => void;
-  readonly showsUserLocation?: boolean;
-  readonly height?: number;
-  readonly latitudeDelta?: number;
-  readonly longitudeDelta?: number;
+export type BthwaniNativeMapProps = DshMapProps & {
   readonly emptyLabel?: string;
   readonly accessibilityLabel?: string;
 };
@@ -50,19 +35,6 @@ function isFiniteCoordinate(
   );
 }
 
-function mapRegion(
-  coordinate: BthwaniMapCoordinate,
-  latitudeDelta: number,
-  longitudeDelta: number,
-): Region {
-  return {
-    latitude: coordinate.latitude,
-    longitude: coordinate.longitude,
-    latitudeDelta,
-    longitudeDelta,
-  };
-}
-
 export function BthwaniNativeMap({
   selectedCoordinate,
   markers = [],
@@ -74,69 +46,33 @@ export function BthwaniNativeMap({
   emptyLabel = "حدد موقعًا لعرضه على الخريطة.",
   accessibilityLabel = "خريطة بثواني التفاعلية",
 }: BthwaniNativeMapProps): React.ReactElement {
-  const mapRef = React.useRef<MapView | null>(null);
+  const MapRenderer = getDshMapRenderer();
   const firstMarker = markers.find(isFiniteCoordinate);
   const center = isFiniteCoordinate(selectedCoordinate)
     ? selectedCoordinate
     : firstMarker ?? DEFAULT_CENTER;
-
-  React.useEffect(() => {
-    if (!isFiniteCoordinate(selectedCoordinate)) return;
-    mapRef.current?.animateToRegion(
-      mapRegion(selectedCoordinate, latitudeDelta, longitudeDelta),
-      300,
-    );
-  }, [latitudeDelta, longitudeDelta, selectedCoordinate]);
-
-  const handlePress = React.useCallback((event: MapPressEvent) => {
-    if (!onCoordinatePress) return;
-    const coordinate = event.nativeEvent.coordinate;
-    if (!isFiniteCoordinate(coordinate)) return;
-    onCoordinatePress({
-      latitude: coordinate.latitude,
-      longitude: coordinate.longitude,
-    });
-  }, [onCoordinatePress]);
 
   const validMarkers = markers.filter(isFiniteCoordinate);
   const hasSelectedCoordinate = isFiniteCoordinate(selectedCoordinate);
 
   return (
     <View style={styles.container} accessibilityLabel={accessibilityLabel}>
-      <MapView
-        ref={mapRef}
-        provider={PROVIDER_GOOGLE}
-        initialRegion={mapRegion(center, latitudeDelta, longitudeDelta)}
-        onPress={handlePress}
-        showsUserLocation={showsUserLocation}
-        showsMyLocationButton={showsUserLocation}
-        showsCompass
-        toolbarEnabled={false}
-        loadingEnabled
-        style={[styles.map, { height }]}
-      >
-        {validMarkers.map((marker) => (
-          <Marker
-            key={marker.id}
-            coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
-            title={marker.title}
-            {...(marker.description ? { description: marker.description } : {})}
-          />
-        ))}
-        {hasSelectedCoordinate ? (
-          <Marker
-            coordinate={{
-              latitude: selectedCoordinate.latitude,
-              longitude: selectedCoordinate.longitude,
-            }}
-            title="الموقع المحدد"
-            pinColor={colorRoles.brandAction}
-          />
-        ) : null}
-      </MapView>
-      {!hasSelectedCoordinate && validMarkers.length === 0 ? (
+      {MapRenderer ? (
+        <MapRenderer
+          {...(selectedCoordinate !== undefined ? { selectedCoordinate } : {})}
+          markers={validMarkers}
+          {...(onCoordinatePress ? { onCoordinatePress } : {})}
+          showsUserLocation={showsUserLocation}
+          height={height}
+          latitudeDelta={latitudeDelta}
+          longitudeDelta={longitudeDelta}
+        />
+      ) : null}
+      {(!MapRenderer || (!hasSelectedCoordinate && validMarkers.length === 0)) ? (
         <View pointerEvents="none" style={styles.emptyOverlay}>
-          <Text role="bodySm" tone="muted" style={styles.rtl}>{emptyLabel}</Text>
+          <Text role="bodySm" tone="muted" style={styles.rtl}>
+            {MapRenderer ? emptyLabel : "الخريطة غير متاحة في هذا runtime."}
+          </Text>
         </View>
       ) : null}
     </View>
@@ -151,9 +87,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colorRoles.borderSubtle,
     backgroundColor: colorRoles.surfaceMuted,
-  },
-  map: {
-    width: "100%",
   },
   emptyOverlay: {
     position: "absolute",

@@ -1,5 +1,6 @@
 import type { DshPartnerActivationStatus } from "./partner-activation.model";
 import type { DshPartner, DshPartnerReadiness } from "./partner.types";
+import { secureRandomId } from "../_kernel/secure-random.ts";
 
 export type DshPartnerAllowedAction =
   | "read_owned_draft"
@@ -18,7 +19,7 @@ export type DshPartnerAllowedAction =
   | "approve_partner"
   | "reject_partner"
   | "activate_partner"
-  | "deactivate_partner"
+  | "terminate_partner"
   | "publish_store"
   | "hide_store"
   | "read_own_status"
@@ -28,10 +29,6 @@ export type DshPartnerAllowedAction =
   | string;
 
 export type DshGovernedPartner = DshPartner & {
-  readonly payoutDestinationId?: string;
-  readonly maskedAccountNumber?: string;
-  readonly maskedIban?: string;
-  readonly maskedMobileNumber?: string;
   readonly allowedActions?: readonly DshPartnerAllowedAction[];
   readonly allowedTransitions?: readonly DshPartnerActivationStatus[];
 };
@@ -80,13 +77,8 @@ export type PartnerOnboardingViewModel = {
   readonly readinessBlockers: readonly string[];
 };
 
-let attemptSequence = 0;
-
 function randomToken(): string {
-  const uuid = globalThis.crypto?.randomUUID?.();
-  if (uuid) return uuid;
-  attemptSequence += 1;
-  return `${Date.now().toString(36)}-${attemptSequence.toString(36)}`;
+  return secureRandomId();
 }
 
 export function createPartnerMutationContext(
@@ -110,11 +102,12 @@ export function derivePartnerOnboardingViewModel(
   const allowedActions = partner.allowedActions ?? [];
   const allowedTransitions = partner.allowedTransitions ?? [];
   const has = (action: DshPartnerAllowedAction) => allowedActions.includes(action);
-  const payoutDisplay =
-  partner.maskedAccountNumber ||
-  partner.maskedIban ||
-  partner.maskedMobileNumber ||
-  "";
+  const payoutConfigured = Boolean(
+    partner.payoutDestinationId &&
+    partner.destinationMethod === "official_wallet" &&
+    partner.maskedDestinationReference,
+  );
+  const payoutDisplay = payoutConfigured ? partner.maskedDestinationReference : "";
   const readinessBlockers = readiness?.checklist
     .filter((item) => !item.satisfied)
     .map((item) => item.blockedReason || item.label) ?? [];
@@ -129,7 +122,7 @@ export function derivePartnerOnboardingViewModel(
     canSubmit: has("submit_for_review") && readinessBlockers.length === 0,
     canApprove: has("approve_partner"),
     canPublish: has("publish_store"),
-    payoutConfigured: Boolean(partner.payoutDestinationId || payoutDisplay),
+    payoutConfigured,
     payoutDisplay,
     readinessBlockers,
   };

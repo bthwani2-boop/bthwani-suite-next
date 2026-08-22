@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
-	"os"
 	"strings"
 
 	"identity-api/internal/identity"
@@ -85,9 +84,9 @@ func authRequestRequiresBearerOperatorContextCheck(r *http.Request) bool {
 
 func operatorContextFromAuthResponse(body []byte) (operatorContextID, accessToken string) {
 	var payload struct {
-		OperatorContextID    string `json:"operatorContextId"`
-		AccessToken string `json:"accessToken"`
-		Identity    struct {
+		OperatorContextID string `json:"operatorContextId"`
+		AccessToken       string `json:"accessToken"`
+		Identity          struct {
 			OperatorContextID string `json:"operatorContextId"`
 		} `json:"identity"`
 	}
@@ -105,7 +104,6 @@ func requireBearerOperatorContext(
 	w http.ResponseWriter,
 	r *http.Request,
 	repository authOperatorContextRepository,
-	operatorContextID string,
 ) bool {
 	token, ok := bearerToken(r)
 	if !ok {
@@ -117,8 +115,8 @@ func requireBearerOperatorContext(
 		sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 		return false
 	}
-	if strings.TrimSpace(resolved.OperatorContextID) != operatorContextID {
-		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "session belongs to another operator context")
+	if strings.TrimSpace(resolved.OperatorContextID) == "" {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "session has no operator context")
 		return false
 	}
 	return true
@@ -129,12 +127,11 @@ func requireBearerOperatorContext(
 // cross-context sessions are immediately revoked before the response is hidden.
 func AuthOperatorContextBoundary(repository authOperatorContextRepository, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
-		if operatorContextID == "" || !strings.HasPrefix(r.URL.Path, "/auth/") {
+		if !strings.HasPrefix(r.URL.Path, "/auth/") {
 			next.ServeHTTP(w, r)
 			return
 		}
-		if authRequestRequiresBearerOperatorContextCheck(r) && !requireBearerOperatorContext(w, r, repository, operatorContextID) {
+		if authRequestRequiresBearerOperatorContextCheck(r) && !requireBearerOperatorContext(w, r, repository) {
 			return
 		}
 		if !authResponseRequiresOperatorContextCheck(r) {
@@ -158,13 +155,6 @@ func AuthOperatorContextBoundary(repository authOperatorContextRepository, next 
 				_ = repository.Logout(r.Context(), accessToken)
 			}
 			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "identity response has no trusted operator context")
-			return
-		}
-		if responseOperatorContextID != operatorContextID {
-			if accessToken != "" {
-				_ = repository.Logout(r.Context(), accessToken)
-			}
-			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "identity belongs to another operator context")
 			return
 		}
 		flushBufferedResponse(w, buffered)

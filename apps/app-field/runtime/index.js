@@ -1,2 +1,3 @@
-// Canonical Expo entrypoint. The typed bootstrap owns registration and runtime wiring.
+// Canonical Expo Router bootstrap: initialize runtime services before Router registration.
 import "./src/index.ts";
+import "expo-router/entry";

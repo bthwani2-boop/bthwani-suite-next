@@ -3,9 +3,15 @@ package wlt
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"os"
+	"strings"
 	"time"
 )
 
@@ -19,18 +25,34 @@ type QuotePricingInputLine struct {
 	MasterProductID     string `json:"masterProductId"`
 	ProductName         string `json:"productName"`
 	Quantity            int    `json:"quantity"`
+	UnitPriceMinorUnits int64  `json:"-"`
+}
+
+type QuotePricingEvidenceLine struct {
+	MasterProductID     string `json:"masterProductId"`
 	UnitPriceMinorUnits int64  `json:"unitPriceMinorUnits"`
+	Currency            string `json:"currency"`
+}
+
+type PricingEvidence struct {
+	Version               int                        `json:"version"`
+	Lines                 []QuotePricingEvidenceLine `json:"lines"`
+	DeliveryFeeMinorUnits int64                      `json:"deliveryFeeMinorUnits"`
+	ServiceFeeMinorUnits  int64                      `json:"serviceFeeMinorUnits"`
+	DiscountMinorUnits    int64                      `json:"discountMinorUnits"`
+	Signature             string                     `json:"signature"`
 }
 
 // CalculatePricingQuoteRequest is the operational payload DSH sends to WLT.
 type CalculatePricingQuoteRequest struct {
-	ClientID                   string                  `json:"clientId"`
-	StoreID                    string                  `json:"storeId"`
-	Currency                   string                  `json:"currency"`
-	DeliveryFeeInputMinorUnits int64                   `json:"deliveryFeeInputMinorUnits"`
-	ServiceFeeInputMinorUnits  int64                   `json:"serviceFeeInputMinorUnits"`
-	CartVersion                int                     `json:"cartVersion"`
-	Lines                      []QuotePricingInputLine `json:"lines"`
+	CheckoutIntentID string                  `json:"checkoutIntentId,omitempty"`
+	CartSnapshotHash string                  `json:"cartSnapshotHash,omitempty"`
+	ClientID         string                  `json:"clientId"`
+	StoreID          string                  `json:"storeId"`
+	Currency         string                  `json:"currency"`
+	CartVersion      int                     `json:"cartVersion"`
+	Lines            []QuotePricingInputLine `json:"lines"`
+	PricingEvidence  PricingEvidence         `json:"pricingEvidence"`
 }
 
 // QuotePricingOutputLine is the per-product line WLT returns with its computed totals.
@@ -45,6 +67,8 @@ type QuotePricingOutputLine struct {
 // WltPricingQuote is the authoritative financial quote owned by WLT.
 // DSH attaches this directly to the Cart response — no re-computation allowed.
 type WltPricingQuote struct {
+	ID                    string                   `json:"id,omitempty"`
+	CartSnapshotHash      string                   `json:"cartSnapshotHash,omitempty"`
 	Lines                 []QuotePricingOutputLine `json:"lines"`
 	SubtotalMinorUnits    int64                    `json:"subtotalMinorUnits"`
 	DeliveryFeeMinorUnits int64                    `json:"deliveryFeeMinorUnits"`
@@ -58,6 +82,12 @@ type WltPricingQuote struct {
 	Hash                  string                   `json:"hash"`
 	Version               int                      `json:"version"`
 	ExpiresAt             *time.Time               `json:"expiresAt"`
+	Allocation            []PaymentAllocationLine  `json:"allocation,omitempty"`
+}
+
+type PaymentAllocationLine struct {
+	Component        string `json:"component"`
+	AmountMinorUnits int64  `json:"amountMinorUnits"`
 }
 
 // CalculateQuote calls the WLT sovereign pricing engine and returns the
@@ -67,6 +97,33 @@ func (c *Client) CalculateQuote(ctx context.Context, input CalculatePricingQuote
 	if !c.Configured() {
 		return nil, fmt.Errorf("WLT pricing handoff is not configured")
 	}
+
+	secret := os.Getenv("DSH_WLT_PRICING_EVIDENCE_SECRET")
+	if secret == "" {
+		return nil, fmt.Errorf("DSH pricing evidence signer is not configured")
+	}
+	evidence := PricingEvidence{
+		Version:               input.CartVersion,
+		DeliveryFeeMinorUnits: input.PricingEvidence.DeliveryFeeMinorUnits,
+		ServiceFeeMinorUnits:  input.PricingEvidence.ServiceFeeMinorUnits,
+		DiscountMinorUnits:    input.PricingEvidence.DiscountMinorUnits,
+		Lines:                 make([]QuotePricingEvidenceLine, 0, len(input.Lines)),
+	}
+	for _, line := range input.Lines {
+		evidence.Lines = append(evidence.Lines, QuotePricingEvidenceLine{
+			MasterProductID: line.MasterProductID, UnitPriceMinorUnits: line.UnitPriceMinorUnits, Currency: input.Currency,
+		})
+	}
+	unsigned := evidence
+	unsigned.Signature = ""
+	encoded, err := json.Marshal(unsigned)
+	if err != nil {
+		return nil, fmt.Errorf("encode DSH pricing evidence: %w", err)
+	}
+	mac := hmac.New(sha256.New, []byte(secret))
+	_, _ = mac.Write(encoded)
+	evidence.Signature = hex.EncodeToString(mac.Sum(nil))
+	input.PricingEvidence = evidence
 
 	body, err := json.Marshal(input)
 	if err != nil {
@@ -83,8 +140,15 @@ func (c *Client) CalculateQuote(ctx context.Context, input CalculatePricingQuote
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
 
-	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
 		return nil, fmt.Errorf("prepare WLT pricing OperatorContext: %w", err)
+	}
+	correlationID := strings.TrimSpace(input.CheckoutIntentID)
+	if correlationID == "" {
+		correlationID = strings.TrimSpace(input.CartSnapshotHash)
+	}
+	if err := setRequiredMutationHeaders(req, correlationID, deterministicMutationKey("pricing-quote", input.CheckoutIntentID, input.CartSnapshotHash, input.ClientID)); err != nil {
+		return nil, fmt.Errorf("prepare WLT pricing mutation: %w", err)
 	}
 
 	response, err := c.http.Do(req)
@@ -104,5 +168,49 @@ func (c *Client) CalculateQuote(ctx context.Context, input CalculatePricingQuote
 		return nil, fmt.Errorf("decode WLT pricing quote response: %w", err)
 	}
 
+	return &envelope.Quote, nil
+}
+
+// GetCheckoutQuote is the canonical readback used by an idempotent checkout
+// retry. It recovers the WLT-owned immutable fact rather than regenerating a
+// price from a cart that may have changed after the original handoff.
+func (c *Client) GetCheckoutQuote(ctx context.Context, checkoutIntentID string) (*WltPricingQuote, error) {
+	if !c.Configured() {
+		return nil, fmt.Errorf("WLT pricing handoff is not configured")
+	}
+	checkoutIntentID = strings.TrimSpace(checkoutIntentID)
+	if checkoutIntentID == "" {
+		return nil, fmt.Errorf("checkout intent id is required")
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/wlt/internal/quotes/checkout/"+url.PathEscape(checkoutIntentID), nil)
+	if err != nil {
+		return nil, fmt.Errorf("build WLT checkout quote read: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
+	req.Header.Set("X-Service-Caller", "dsh")
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
+		return nil, fmt.Errorf("prepare WLT pricing OperatorContext: %w", err)
+	}
+	response, err := c.http.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("read WLT checkout quote: %w", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode == http.StatusNotFound || response.StatusCode == http.StatusConflict {
+		return nil, fmt.Errorf("canonical WLT checkout quote is unavailable (HTTP %d)", response.StatusCode)
+	}
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		return nil, fmt.Errorf("WLT checkout quote read returned HTTP %d", response.StatusCode)
+	}
+	var envelope struct {
+		Quote WltPricingQuote `json:"quote"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&envelope); err != nil {
+		return nil, fmt.Errorf("decode WLT checkout quote read: %w", err)
+	}
+	if strings.TrimSpace(envelope.Quote.ID) == "" {
+		return nil, fmt.Errorf("WLT checkout quote read omitted canonical quote id")
+	}
 	return &envelope.Quote, nil
 }

@@ -179,7 +179,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
     readinessState: selfReadinessState,
     readinessViewModel: selfReadinessViewModel,
     reload: reloadSelfStatus,
-  } = usePartnerSelfController(identity.state.kind);
+  } = usePartnerSelfController(identity.state.kind, canonicalStoreId);
   const {
     hydrated: appearanceHydrated,
     mode: appearanceMode,
@@ -487,8 +487,8 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
             {...(selfStatusState.partner.legalIdentityType ? { legalIdentityType: selfStatusState.partner.legalIdentityType } : {})}
             {...(selfStatusState.partner.legalIdentityNumber ? { legalIdentityNumber: selfStatusState.partner.legalIdentityNumber } : {})}
             {...(onOpenStoreScope ? { onOpenStoreScope } : {})}
-            {...(onOpenSupportScreen
-              ? { onOpenSupportScreen: () => { onOpenSupportScreen('support-directory' as any); } }
+            {...(onOpenSupportDirectory
+              ? { onOpenSupportScreen: onOpenSupportDirectory }
               : {})}
           />
         </HubSectionShell>
@@ -510,7 +510,7 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
               description="الشريك نشط داخليًا، لكن المتجر غير ظاهر للعملاء حتى اكتمال بوابات النشر."
             />
           ) : (
-            <AnalyticsInsightsPanel storeName={storeName} />
+            <AnalyticsInsightsPanel storeName={storeName} canonicalStoreId={canonicalStoreId} />
           )}
         </HubSectionShell>
       );
@@ -600,9 +600,6 @@ export function DshPartnerHubSurface(props: DshPartnerHubSurfaceProps) {
           onBack={() => updateSection("hub")}
           {...(onOpenStoreCourierSetup ? { onOpenStoreCourierSetup } : {})}
           {...(onOpenCommercialModel ? { onOpenCommercialModel } : {})}
-          {...(onOpenSupportScreen
-            ? { onOpenSupportScreen: () => { onOpenSupportScreen('support-directory' as any); } }
-            : {})}
           {...(props.onOpenTeamManagement
             ? { onOpenTeamManagement: props.onOpenTeamManagement }
             : {})}

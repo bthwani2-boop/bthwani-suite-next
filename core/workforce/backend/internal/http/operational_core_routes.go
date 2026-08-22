@@ -47,6 +47,12 @@ func (s *operationalCoreServer) withIdentity(next guardedHandler) http.HandlerFu
 			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 			return
 		}
+		boundContext, bindErr := auth.BindIdentityContext(r.Context(), identity)
+		if bindErr != nil {
+			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "identity operator context is missing")
+			return
+		}
+		r = r.WithContext(boundContext)
 		next(w, r, identity)
 	}
 }
@@ -127,6 +133,7 @@ func (s *operationalCoreServer) createOwnAvailabilityNotice(w http.ResponseWrite
 	if !decodeJSON(w, r, &input) {
 		return
 	}
+	input.OperatorContextID, _ = auth.OperatorContextIDFromContext(r.Context())
 	notice, err := s.repo.CreateAvailabilityNotice(r.Context(), identity.Subject, input)
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -152,6 +159,9 @@ func (s *operationalCoreServer) createProviderIncident(w http.ResponseWriter, r 
 	if !decodeJSON(w, r, &input) {
 		return
 	}
+	if !s.isCaptain(w, r, strings.TrimSpace(input.ActorID)) {
+		return
+	}
 	incident, err := s.repo.CreateProviderIncident(r.Context(), identity.Subject, input)
 	if err != nil {
 		writeWorkforceError(w, err)
@@ -168,6 +178,9 @@ func (s *operationalCoreServer) listProviderIncidents(w http.ResponseWriter, r *
 		sendError(w, http.StatusBadRequest, "INVALID_INPUT", "actorId query parameter is required")
 		return
 	}
+	if !s.isCaptain(w, r, actorID) {
+		return
+	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	incidents, err := s.repo.ListProviderIncidents(r.Context(), actorID, limit)
 	if err != nil {
@@ -178,6 +191,9 @@ func (s *operationalCoreServer) listProviderIncidents(w http.ResponseWriter, r *
 }
 
 func (s *operationalCoreServer) listOwnIncidents(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	if !s.isCaptain(w, r, identity.Subject) {
+		return
+	}
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	incidents, err := s.repo.ListProviderIncidents(r.Context(), identity.Subject, limit)
 	if err != nil {
@@ -188,6 +204,9 @@ func (s *operationalCoreServer) listOwnIncidents(w http.ResponseWriter, r *http.
 }
 
 func (s *operationalCoreServer) appealOwnIncident(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	if !s.isCaptain(w, r, identity.Subject) {
+		return
+	}
 	var input struct {
 		Note string `json:"note"`
 	}
@@ -202,6 +221,23 @@ func (s *operationalCoreServer) appealOwnIncident(w http.ResponseWriter, r *http
 	_ = s.repo.RecordAudit(r.Context(), identity.Subject, firstRole(identity), identity.Subject,
 		"provider.incident.appealed", nil, incident, input.Note, r.Header.Get("X-Correlation-ID"))
 	sendJSON(w, http.StatusOK, map[string]any{"incident": incident})
+}
+
+// isCaptain keeps the legacy incident/appeal capability isolated to its only
+// remaining product consumer. Field finance deliberately has no incident or
+// penalty surface; the server must enforce that boundary even for direct API
+// callers and stale mobile clients.
+func (s *operationalCoreServer) isCaptain(w http.ResponseWriter, r *http.Request, actorID string) bool {
+	person, err := s.repo.PersonByActorID(r.Context(), actorID)
+	if err != nil {
+		writeWorkforceError(w, err)
+		return false
+	}
+	if person.WorkforceKind != "captain" {
+		sendError(w, http.StatusForbidden, "FIELD_CAPABILITY_REMOVED", "provider incidents are not available to this provider kind")
+		return false
+	}
+	return true
 }
 
 func firstRole(identity auth.Identity) string {
@@ -228,11 +264,12 @@ func OperationalCoreGateMiddleware(next http.Handler, repo *workforce.Repository
 			}
 		}
 		if r.Method == http.MethodGet && path == "/workforce/me" {
-			identity, err := authClient.Resolve(r.Context(), r.Header.Get("Authorization"))
-			if err != nil {
+			boundRequest, identity, bound := bindIdentityRequestContext(r, authClient)
+			if !bound {
 				next.ServeHTTP(w, r)
 				return
 			}
+			r = boundRequest
 			person, err := repo.PersonByActorID(r.Context(), identity.Subject)
 			if err == nil && (person.WorkforceKind == "field" || person.WorkforceKind == "captain") {
 				actorID = identity.Subject
@@ -240,6 +277,15 @@ func OperationalCoreGateMiddleware(next http.Handler, repo *workforce.Repository
 			}
 		}
 		if gate {
+			boundRequest, _, bound := bindIdentityRequestContext(r, authClient)
+			if !bound {
+				// Leave authentication and authorization to the canonical downstream
+				// operatorOnly wrapper. The gate must never inspect repository state
+				// without an Identity-owned operator context.
+				next.ServeHTTP(w, r)
+				return
+			}
+			r = boundRequest
 			readiness, err := repo.GovernedActivationReadiness(r.Context(), actorID)
 			if err != nil {
 				writeWorkforceError(w, err)
@@ -256,4 +302,19 @@ func OperationalCoreGateMiddleware(next http.Handler, repo *workforce.Repository
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func bindIdentityRequestContext(r *http.Request, authClient *auth.Client) (*http.Request, auth.Identity, bool) {
+	if r == nil || authClient == nil {
+		return r, auth.Identity{}, false
+	}
+	identity, err := authClient.Resolve(r.Context(), r.Header.Get("Authorization"))
+	if err != nil {
+		return r, auth.Identity{}, false
+	}
+	boundContext, err := auth.BindIdentityContext(r.Context(), identity)
+	if err != nil {
+		return r, auth.Identity{}, false
+	}
+	return r.WithContext(boundContext), identity, true
 }

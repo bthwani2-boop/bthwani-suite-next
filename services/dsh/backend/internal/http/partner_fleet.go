@@ -3,6 +3,7 @@ package http
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"dsh-api/internal/partnerfleet"
@@ -17,6 +18,8 @@ func writePartnerFleetError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusGone, "CONNECTION_CODE_EXPIRED", "courier connection code expired")
 	case errors.Is(err, partnerfleet.ErrAlreadyBound):
 		store.SendError(w, http.StatusConflict, "COURIER_ALREADY_BOUND", "courier or captain identity is already bound")
+	case errors.Is(err, partnerfleet.ErrAlreadyIssued):
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "request was already applied; reload the fleet state")
 	case errors.Is(err, partnerfleet.ErrVersionConflict):
 		store.SendError(w, http.StatusConflict, "VERSION_CONFLICT", "courier connection changed; reload before retrying")
 	case errors.Is(err, partnerfleet.ErrCourierIneligible):
@@ -28,6 +31,19 @@ func writePartnerFleetError(w http.ResponseWriter, err error) {
 	default:
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "courier connection action failed")
 	}
+}
+
+func partnerFleetMutationHeaders(w http.ResponseWriter, r *http.Request) (string, string, bool) {
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if len(idempotencyKey) < 8 || len(idempotencyKey) > 240 {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "Idempotency-Key must contain 8 to 240 characters")
+		return "", "", false
+	}
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	if correlationID == "" {
+		correlationID = idempotencyKey
+	}
+	return idempotencyKey, correlationID, true
 }
 
 func (s *protectedStoreServer) resolvedPartnerFleetStore(w http.ResponseWriter, r *http.Request) (store.StoreActor, string, bool) {
@@ -49,6 +65,10 @@ func (s *protectedStoreServer) handleIssuePartnerCourierConnectionCode(w http.Re
 	if !ok {
 		return
 	}
+	idempotencyKey, correlationID, ok := partnerFleetMutationHeaders(w, r)
+	if !ok {
+		return
+	}
 	var body struct {
 		ExpiresInHours int `json:"expiresInHours"`
 	}
@@ -56,10 +76,14 @@ func (s *protectedStoreServer) handleIssuePartnerCourierConnectionCode(w http.Re
 		return
 	}
 	ttl := 24 * time.Hour
+	if body.ExpiresInHours < 0 || body.ExpiresInHours > 48 {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "expiresInHours must be between 1 and 48 hours")
+		return
+	}
 	if body.ExpiresInHours > 0 {
 		ttl = time.Duration(body.ExpiresInHours) * time.Hour
 	}
-	issued, err := partnerfleet.IssueCode(r.Context(), s.db, storeID, r.PathValue("memberId"), actor.ID, ttl)
+	issued, err := partnerfleet.IssueCode(r.Context(), s.db, storeID, r.PathValue("memberId"), actor.ID, ttl, idempotencyKey, correlationID)
 	if err != nil {
 		writePartnerFleetError(w, err)
 		return
@@ -88,13 +112,17 @@ func (s *protectedStoreServer) handleRevokePartnerCourierConnection(w http.Respo
 	if !ok {
 		return
 	}
+	idempotencyKey, correlationID, ok := partnerFleetMutationHeaders(w, r)
+	if !ok {
+		return
+	}
 	var body struct {
 		ExpectedVersion int `json:"expectedVersion"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	connection, err := partnerfleet.RevokeCode(r.Context(), s.db, storeID, r.PathValue("connectionId"), actor.ID, body.ExpectedVersion)
+	connection, err := partnerfleet.RevokeCode(r.Context(), s.db, storeID, r.PathValue("connectionId"), actor.ID, body.ExpectedVersion, idempotencyKey, correlationID)
 	if err != nil {
 		writePartnerFleetError(w, err)
 		return
@@ -108,13 +136,17 @@ func (s *protectedStoreServer) handleCaptainConnectPartnerFleet(w http.ResponseW
 	if !ok {
 		return
 	}
+	idempotencyKey, correlationID, ok := partnerFleetMutationHeaders(w, r)
+	if !ok {
+		return
+	}
 	var body struct {
 		Code string `json:"code"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
-	membership, err := partnerfleet.RedeemCode(r.Context(), s.db, actor.ID, body.Code)
+	membership, err := partnerfleet.RedeemCode(r.Context(), s.db, actor.ID, body.Code, idempotencyKey, correlationID)
 	if err != nil {
 		writePartnerFleetError(w, err)
 		return

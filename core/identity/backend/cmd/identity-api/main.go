@@ -81,15 +81,14 @@ func main() {
 		log.Printf("[identity-api] local bootstrap cannot converge until a database is configured; readiness remains fail-closed")
 	}
 
-	router := identityhttp.NewRouter(repository)
-
-	identityhttp.RegisterEmployeeAccessRoutes(router, repository)
-	identityhttp.RegisterPartnerAccessRoutes(router, repository)
+	baseRouter := identityhttp.NewRouter(repository)
+	identityhttp.RegisterEmployeeAccessRoutes(baseRouter, repository)
+	identityhttp.RegisterPartnerAccessRoutes(baseRouter, repository)
+	router := identityhttp.GovernedRefreshBoundary(repository, baseRouter)
 	authRouter := identityhttp.AuthOperatorContextBoundary(repository, router)
 	issuerScopedRouter := identityhttp.ActivationIssuerBoundary(db, authRouter)
 	operatorScopedRouter := identityhttp.OperatorBoundary(db, issuerScopedRouter)
-	internalTrustRouter := identityhttp.RuntimeOperatorContextBoundary(operatorScopedRouter)
-	otpScopedRouter := identityhttp.OtpBoundary(repository, internalTrustRouter)
+	otpScopedRouter := identityhttp.OtpBoundary(repository, operatorScopedRouter)
 	// Readiness is the outer persistence boundary so no authentication,
 	// activation, operator-context, or service middleware can touch persistence
 	// before the authoritative fail-closed gate has passed.

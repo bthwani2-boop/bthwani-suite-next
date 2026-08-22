@@ -87,7 +87,7 @@ func TestPartnerDeactivationTriggerAndOutboxDeliveryDBIntegration(t *testing.T) 
 		INSERT INTO dsh_partner_activation_events (
 			partner_id, from_status, to_status, actor_id, actor_surface,
 			reason, correlation_id, idempotency_key, request_hash
-		) VALUES ($1,'partner_active','partner_deactivated','operator-db','control-panel',
+		) VALUES ($1,'partner_active','partner_terminated','operator-db','control-panel',
 		          'integration deactivation','partner-deactivation-correlation',
 		          'partner-deactivation-transition-key','partner-deactivation-hash')
 		RETURNING id`, partnerID,
@@ -134,6 +134,12 @@ func TestPartnerDeactivationTriggerAndOutboxDeliveryDBIntegration(t *testing.T) 
 func TestPartnerWltReconciliationCreatesAndResolvesMaskedReadbackCaseDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	partnerID := seedPartner(t, db, "RECON")
+	// Reconcile is deliberately bounded to the oldest 500 partners. Anchor this
+	// fixture at the front of that deterministic window so a reused developer DB
+	// cannot make the test depend on unrelated accumulated rows.
+	if _, err := db.Exec(`UPDATE dsh_partners SET updated_at='1900-01-01'::timestamptz WHERE id=$1`, partnerID); err != nil {
+		t.Fatal(err)
+	}
 
 	active := true
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -151,12 +157,12 @@ func TestPartnerWltReconciliationCreatesAndResolvesMaskedReadbackCaseDBIntegrati
 				"id":                            "wpd-reconciliation-ref",
 				"ownerActorId":                  partnerID,
 				"ownerActorType":                "partner",
-				"destinationMethod":             "bank",
+				"officialWalletProviderKey":     "test_official_wallet",
+				"destinationVersion":            1,
+				"destinationMethod":             "official_wallet",
 				"maskedDestinationReference":    "********5678",
 				"destinationVerificationStatus": "unverified",
 				"beneficiaryName":               "Partner Owner",
-				"bankName":                      "Test Bank",
-				"bankBranch":                    "Main",
 				"active":                        active,
 				"updatedAt":                     time.Now().UTC().Format(time.RFC3339Nano),
 			},
@@ -183,7 +189,7 @@ func TestPartnerWltReconciliationCreatesAndResolvesMaskedReadbackCaseDBIntegrati
 	if _, err := db.Exec(`
 		UPDATE dsh_partners SET
 			payout_destination_id = 'wpd-reconciliation-ref',
-			destination_method = 'bank',
+			destination_method = 'official_wallet',
 			masked_destination_reference = '********5678',
 			destination_verification_status = 'unverified'
 		WHERE id = $1`, partnerID); err != nil {

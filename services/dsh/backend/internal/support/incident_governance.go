@@ -29,13 +29,14 @@ type GovernedIncidentCreateInput struct {
 }
 
 type GovernedIncidentTransitionInput struct {
-	ActorID        string
-	IncidentID     string
-	ExpectedStatus IncidentStatus
-	Status         IncidentStatus
-	PostmortemURL  string
-	IdempotencyKey string
-	CorrelationID  string
+	ActorID         string
+	IncidentID      string
+	ExpectedStatus  IncidentStatus
+	ExpectedVersion int64
+	Status          IncidentStatus
+	PostmortemURL   string
+	IdempotencyKey  string
+	CorrelationID   string
 }
 
 func validIncidentStatus(status IncidentStatus) bool {
@@ -166,11 +167,13 @@ func CreateGovernedIncident(db *sql.DB, input GovernedIncidentCreateInput) (Inci
 	}
 
 	existing, err := scanIncident(tx.QueryRow(`
-		SELECT id, title, description, severity, status, affected_scope, raised_by,
-		       COALESCE(resolved_by,''), resolved_at, COALESCE(postmortem_url,''), created_at, updated_at
+		SELECT `+incidentColumns+`
 		FROM dsh_incidents
 		WHERE raised_by = $1 AND create_idempotency_key = $2`, input.ActorID, idempotencyKey))
 	if err == nil {
+		if existing.Title != input.Title || existing.Description != input.Description || existing.Severity != input.Severity || existing.AffectedScope != input.AffectedScope {
+			return Incident{}, ErrConflict
+		}
 		if commitErr := tx.Commit(); commitErr != nil {
 			return Incident{}, commitErr
 		}
@@ -185,8 +188,7 @@ func CreateGovernedIncident(db *sql.DB, input GovernedIncidentCreateInput) (Inci
 			title, description, severity, affected_scope, raised_by,
 			create_idempotency_key, correlation_id
 		) VALUES ($1, $2, $3, $4, $5, $6, $7)
-		RETURNING id, title, description, severity, status, affected_scope, raised_by,
-		          COALESCE(resolved_by,''), resolved_at, COALESCE(postmortem_url,''), created_at, updated_at`,
+		RETURNING `+incidentColumns,
 		input.Title, input.Description, input.Severity, input.AffectedScope,
 		input.ActorID, idempotencyKey, correlationID,
 	))
@@ -207,8 +209,7 @@ func GetGovernedIncident(db *sql.DB, incidentID string) (Incident, error) {
 		return Incident{}, ErrInvalid
 	}
 	incident, err := scanIncident(db.QueryRow(`
-		SELECT id, title, description, severity, status, affected_scope, raised_by,
-		       COALESCE(resolved_by,''), resolved_at, COALESCE(postmortem_url,''), created_at, updated_at
+		SELECT `+incidentColumns+`
 		FROM dsh_incidents WHERE id = $1::uuid`, strings.TrimSpace(incidentID)))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Incident{}, ErrNotFound
@@ -254,13 +255,42 @@ func UpdateGovernedIncident(db *sql.DB, input GovernedIncidentTransitionInput) (
 
 	var currentStatus IncidentStatus
 	var currentPostmortem string
+	var currentVersion int64
 	if err = tx.QueryRow(`
-		SELECT status, COALESCE(postmortem_url,'')
+		SELECT status, COALESCE(postmortem_url,''), version
 		FROM dsh_incidents WHERE id = $1::uuid FOR UPDATE`, input.IncidentID,
-	).Scan(&currentStatus, &currentPostmortem); errors.Is(err, sql.ErrNoRows) {
+	).Scan(&currentStatus, &currentPostmortem, &currentVersion); errors.Is(err, sql.ErrNoRows) {
 		return Incident{}, ErrNotFound
 	} else if err != nil {
 		return Incident{}, err
+	}
+	var replayActor, replayToStatus, replayFromStatus string
+	replayErr := tx.QueryRow(`
+		SELECT actor_id, to_status, COALESCE(from_status,'')
+		FROM dsh_incident_events
+		WHERE incident_id = $1::uuid AND correlation_id = $2 AND event_type <> 'created'
+		ORDER BY created_at DESC LIMIT 1`, input.IncidentID, correlationID).
+		Scan(&replayActor, &replayToStatus, &replayFromStatus)
+	if replayErr == nil {
+		if replayActor != input.ActorID || replayToStatus != string(input.Status) ||
+			(input.ExpectedStatus != "" && replayFromStatus != string(input.ExpectedStatus)) ||
+			(input.PostmortemURL != "" && currentPostmortem != input.PostmortemURL) {
+			return Incident{}, ErrConflict
+		}
+		updated, err := scanIncident(tx.QueryRow(incidentSelect+` WHERE id = $1::uuid`, input.IncidentID))
+		if err != nil {
+			return Incident{}, err
+		}
+		if err := tx.Commit(); err != nil {
+			return Incident{}, err
+		}
+		return updated, nil
+	}
+	if !errors.Is(replayErr, sql.ErrNoRows) {
+		return Incident{}, replayErr
+	}
+	if input.ExpectedVersion < 1 || input.ExpectedVersion != currentVersion {
+		return Incident{}, ErrConflict
 	}
 	if input.ExpectedStatus != "" && input.ExpectedStatus != currentStatus {
 		return Incident{}, ErrConflict
@@ -299,7 +329,7 @@ func UpdateGovernedIncident(db *sql.DB, input GovernedIncidentTransitionInput) (
 			    postmortem_url = NULLIF($4, ''),
 			    version = version + 1,
 			    updated_at = NOW()
-			WHERE id = $1::uuid`, input.IncidentID, input.Status, input.ActorID, postmortem)
+			WHERE id = $1::uuid AND version = $5`, input.IncidentID, input.Status, input.ActorID, postmortem, input.ExpectedVersion)
 		if err != nil {
 			return Incident{}, err
 		}
@@ -316,10 +346,7 @@ func UpdateGovernedIncident(db *sql.DB, input GovernedIncidentTransitionInput) (
 		}
 	}
 
-	updated, err := scanIncident(tx.QueryRow(`
-		SELECT id, title, description, severity, status, affected_scope, raised_by,
-		       COALESCE(resolved_by,''), resolved_at, COALESCE(postmortem_url,''), created_at, updated_at
-		FROM dsh_incidents WHERE id = $1::uuid`, input.IncidentID))
+	updated, err := scanIncident(tx.QueryRow(incidentSelect+` WHERE id = $1::uuid`, input.IncidentID))
 	if err != nil {
 		return Incident{}, err
 	}

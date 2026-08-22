@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"wlt-api/internal/ledger"
 	"wlt-api/internal/shared"
 )
 
@@ -39,10 +40,14 @@ type policyRecord struct {
 }
 
 type walletRecord struct {
-	ID                         string
-	Status                     string
-	Currency                   string
-	AvailableBalanceMinorUnits int64
+	ID                                   string
+	Status                               string
+	Currency                             string
+	AvailableBalanceMinorUnits           int64
+	OutstandingDebtMinorUnits            int64
+	CollateralReservedBalanceMinorUnits  int64
+	ProtectedMinimumCollateralMinorUnits int64
+	ActiveCollateralPositionCount        int64
 }
 
 type evaluation struct {
@@ -90,6 +95,19 @@ func evaluateFinancialEligibility(now time.Time, policy *policyRecord, wallet *w
 	}
 	if !strings.EqualFold(strings.TrimSpace(wallet.Currency), strings.TrimSpace(policy.Currency)) {
 		result.ReasonCode = "WLT_WALLET_CURRENCY_MISMATCH"
+		return result
+	}
+	if wallet.OutstandingDebtMinorUnits > 0 {
+		result.ReasonCode = "WLT_PROVIDER_DEBT_OUTSTANDING"
+		return result
+	}
+	if wallet.ProtectedMinimumCollateralMinorUnits < 0 ||
+		wallet.CollateralReservedBalanceMinorUnits < wallet.ProtectedMinimumCollateralMinorUnits {
+		result.ReasonCode = "WLT_CAPTAIN_COLLATERAL_BELOW_PROTECTED_MINIMUM"
+		return result
+	}
+	if wallet.ActiveCollateralPositionCount <= 0 {
+		result.ReasonCode = "WLT_CAPTAIN_COLLATERAL_NOT_FUNDED"
 		return result
 	}
 
@@ -244,17 +262,48 @@ func loadPolicy(ctx context.Context, tx *sql.Tx, operatorContextID string) (*pol
 
 func loadCaptainWallet(ctx context.Context, tx *sql.Tx, operatorContextID, captainID string) (*walletRecord, error) {
 	var wallet walletRecord
+	var pending, held, codReserved int64
 	err := tx.QueryRowContext(ctx, `
-		SELECT id,status,currency,available_balance_minor_units
+		SELECT id,status,currency,pending_balance_minor_units,
+		       held_balance_minor_units,cod_reserved_balance_minor_units,
+		       collateral_reserved_balance_minor_units,
+		       COALESCE((SELECT minimum_collateral_minor_units
+		           FROM wlt_captain_collateral_policies cp
+		           WHERE cp.operator_context_id=wlt_wallets.operator_context_id
+		             AND cp.enabled),0),
+		       COALESCE((SELECT COUNT(*)
+		           FROM wlt_captain_collateral_positions p
+		           WHERE p.operator_context_id=wlt_wallets.operator_context_id
+		             AND p.captain_id=wlt_wallets.actor_id
+		             AND p.currency=wlt_wallets.currency
+		             AND p.status='active'),0),
+		       COALESCE((SELECT SUM(d.outstanding_amount_minor_units)
+				FROM wlt_provider_debts d
+				WHERE d.operator_context_id=wlt_wallets.operator_context_id
+				  AND d.provider_actor_type='captain'
+				  AND d.provider_actor_id=wlt_wallets.actor_id
+				  AND d.currency=wlt_wallets.currency
+				  AND d.status IN ('open','partially_settled')),0)
 		FROM wlt_wallets
 		WHERE operator_context_id=$1 AND actor_type='captain' AND actor_id=$2
 		FOR SHARE`, operatorContextID, captainID,
-	).Scan(&wallet.ID, &wallet.Status, &wallet.Currency, &wallet.AvailableBalanceMinorUnits)
+	).Scan(&wallet.ID, &wallet.Status, &wallet.Currency, &pending, &held, &codReserved,
+		&wallet.CollateralReservedBalanceMinorUnits,
+		&wallet.ProtectedMinimumCollateralMinorUnits,
+		&wallet.ActiveCollateralPositionCount,
+		&wallet.OutstandingDebtMinorUnits)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("load WLT captain wallet: %w", err)
+	}
+	projection, err := ledger.GetWalletLedgerProjection(ctx, tx, "captain", captainID, wallet.Currency)
+	if err != nil {
+		return nil, fmt.Errorf("load canonical WLT captain wallet projection: %w", err)
+	}
+	if projection != nil {
+		wallet.AvailableBalanceMinorUnits = projection.BalanceMinorUnits - pending - held - codReserved
 	}
 	return &wallet, nil
 }

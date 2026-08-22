@@ -12,6 +12,7 @@
     },
     "build": {
       "executor": "nx:run-commands",
+      "dependsOn": ["typecheck"],
       "options": {
         "command": "pnpm --dir services/wlt build"
       }

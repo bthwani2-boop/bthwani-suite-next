@@ -1,8 +1,0 @@
-{
-  "_instructions": "CRITICAL: Do not leak task administration terms (e.g., 'unit', 'jrn', 'package', 'coverage', 'execution') into product code names, variables, paths, or features.",
-  "schemaVersion": 3,
-  "taskId": "TASK_PACKAGE_ID",
-  "assessmentStatus": "IN_PROGRESS",
-  "evidenceIndex": [],
-  "entries": []
-}

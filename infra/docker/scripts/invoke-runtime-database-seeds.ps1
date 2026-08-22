@@ -56,6 +56,16 @@ $placeholderFile = if (Test-Path -LiteralPath $GeneratedActorRegistry -PathType 
   ""
 }
 
+$additionalPlaceholders = @{}
+if ($Service -eq "wlt") {
+  $runtimeEnvLines = Get-Content -LiteralPath (Join-Path $RepoRoot "infra/docker/env/runtime.env.example")
+  $encryptionLine = $runtimeEnvLines | Where-Object { $_ -match '^WLT_PAYOUT_ENCRYPTION_KEY=(.+)$' } | Select-Object -First 1
+  if ($null -eq $encryptionLine -or $encryptionLine -notmatch '^WLT_PAYOUT_ENCRYPTION_KEY=(.+)$') {
+    throw "WLT_PAYOUT_ENCRYPTION_KEY is missing from the governed local runtime environment."
+  }
+  $additionalPlaceholders.WLT_PAYOUT_ENCRYPTION_KEY = $Matches[1]
+}
+
 $parameters = @{
   ServiceKey = $Service
   SeedDirectory = $config.Directory
@@ -66,6 +76,7 @@ $parameters = @{
   EnvFile = "infra/docker/env/runtime.env.example"
   SourceCommitSha = $SourceCommitSha
   PlaceholderFile = $placeholderFile
+  AdditionalPlaceholders = $additionalPlaceholders
   AllowLocalSeeds = [bool]$AllowLocalSeeds
   AllowEmptySeedSet = [bool]$config.AllowEmptySeedSet
 }

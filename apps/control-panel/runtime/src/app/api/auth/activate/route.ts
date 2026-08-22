@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { identitySessionIsBoundToSurface } from "@bthwani/core-identity/session-policy";
 import { isSameOriginRequest, setSessionCookies } from "../_lib/cookies";
 import { resolveIdentityServerBaseUrl } from "../_lib/env";
 import { activateEmployeeAccessCode } from "../_lib/identity-activation.api";
@@ -47,15 +48,12 @@ export async function POST(request: Request): Promise<NextResponse> {
   if (!activation.ok) {
     return NextResponse.json(
       { code: activation.code },
-      {
-        status: activation.status,
-        headers: { "Cache-Control": "no-store" },
-      },
+      { status: activation.status, headers: { "Cache-Control": "no-store" } },
     );
   }
 
   const { tokens } = activation;
-  if (!tokens.identity.roles.includes("operator")) {
+  if (!identitySessionIsBoundToSurface(tokens.identity, "control-panel")) {
     return NextResponse.json(
       { code: "CONTROL_PANEL_FORBIDDEN" },
       { status: 403, headers: { "Cache-Control": "no-store" } },

@@ -142,27 +142,40 @@ func completeStoreCaptainHandoff(tx *sql.Tx, assignmentID, captainID string) err
 // UpdateDeliveryStatusGoverned preserves the existing captain lifecycle while
 // enforcing a two-actor custody boundary for platform deliveries.
 func UpdateDeliveryStatusGoverned(db *sql.DB, assignmentID, captainID string, status DeliveryStatus) (*Assignment, error) {
+	return updateDeliveryStatusGoverned(db, assignmentID, captainID, status, 0)
+}
+
+func UpdateDeliveryStatusGovernedVersioned(db *sql.DB, assignmentID, captainID string, status DeliveryStatus, expectedVersion int) (*Assignment, error) {
+	if expectedVersion < 1 {
+		return nil, fmt.Errorf("%w: assignment version is required", ErrInvalid)
+	}
+	return updateDeliveryStatusGoverned(db, assignmentID, captainID, status, expectedVersion)
+}
+
+func updateDeliveryStatusGoverned(db *sql.DB, assignmentID, captainID string, status DeliveryStatus, expectedVersion int) (*Assignment, error) {
 	switch status {
 	case DeliveryArrivedStore:
-		return updateDeliveryProgressWithStoreHandoff(
+		return updateDeliveryProgressWithStoreHandoffVersioned(
 			db,
 			assignmentID,
 			captainID,
 			[]DeliveryStatus{DeliveryDriverAssigned},
 			status,
 			orders.StatusArrivedStore,
+			expectedVersion,
 		)
 	case DeliveryPickedUp:
-		return updateDeliveryProgressWithStoreHandoff(
+		return updateDeliveryProgressWithStoreHandoffVersioned(
 			db,
 			assignmentID,
 			captainID,
 			[]DeliveryStatus{DeliveryArrivedStore},
 			status,
 			orders.StatusPickedUp,
+			expectedVersion,
 		)
 	case DeliveryArrivedCustomer:
-		return updateDeliveryProgress(db, assignmentID, captainID, []DeliveryStatus{DeliveryPickedUp}, status, orders.StatusArrivedCustomer)
+		return updateDeliveryProgressVersioned(db, assignmentID, captainID, []DeliveryStatus{DeliveryPickedUp}, status, orders.StatusArrivedCustomer, expectedVersion)
 	default:
 		return nil, fmt.Errorf("%w: unsupported delivery status", ErrInvalid)
 	}
@@ -176,6 +189,18 @@ func updateDeliveryProgressWithStoreHandoff(
 	next DeliveryStatus,
 	orderStatus orders.OrderStatus,
 ) (*Assignment, error) {
+	return updateDeliveryProgressWithStoreHandoffVersioned(db, assignmentID, captainID, allowed, next, orderStatus, 0)
+}
+
+func updateDeliveryProgressWithStoreHandoffVersioned(
+	db *sql.DB,
+	assignmentID string,
+	captainID string,
+	allowed []DeliveryStatus,
+	next DeliveryStatus,
+	orderStatus orders.OrderStatus,
+	expectedVersion int,
+) (*Assignment, error) {
 	tx, err := db.Begin()
 	if err != nil {
 		return nil, err
@@ -188,6 +213,9 @@ func updateDeliveryProgressWithStoreHandoff(
 	}
 	if current.Status == AssignmentCancelled || current.Delivery.Status == DeliveryCancelled {
 		return nil, fmt.Errorf("%w: assignment was cancelled with the order", ErrConflict)
+	}
+	if expectedVersion > 0 && current.Version != expectedVersion {
+		return nil, fmt.Errorf("%w: assignment version changed", ErrConflict)
 	}
 	if err = ensureNoOpenDeliveryException(tx, assignmentID); err != nil {
 		return nil, err
@@ -226,6 +254,7 @@ func updateDeliveryProgressWithStoreHandoff(
 		if _, err = orders.TransitionDispatchOrder(
 			tx,
 			current.OrderID,
+			captainID,
 			"captain",
 			allowedOrderStatuses,
 			orderStatus,
@@ -235,6 +264,12 @@ func updateDeliveryProgressWithStoreHandoff(
 		}
 	}
 
+	if _, err = tx.Exec(`
+		UPDATE dsh_assignments
+		SET version = version + 1, updated_at = NOW()
+		WHERE id = $1::uuid AND captain_id = $2`, assignmentID, captainID); err != nil {
+		return nil, err
+	}
 	if _, err = tx.Exec(`
 		UPDATE dsh_deliveries
 		SET status = $1, updated_at = NOW()
@@ -335,6 +370,7 @@ func ConfirmStoreCaptainHandoff(db *sql.DB, orderID, storeID, actorID string) (*
 		if _, err = orders.TransitionDispatchOrder(
 			tx,
 			orderID,
+			actorID,
 			"partner",
 			[]orders.OrderStatus{orders.StatusArrivedStore},
 			orders.StatusStoreHandoffConfirmed,

@@ -76,7 +76,7 @@ export function DshCaptainHomeOrderPanel({
 }: Props) {
   const panelPadding = activeOrderExpanded ? 3 : 2;
   const panelMinHeightStyle = !activeOrderExpanded ? { minHeight: 72 } : {};
-  const activeOrderCompactRouteLabel = 'Burger Lab → العميل';
+  const activeOrderCompactRouteLabel = `${activeSummary.pickupLabel} → ${activeSummary.dropoffLabel}`;
   const activeOrderStageLabel = activeOrderPhase === 'pickup' ? activeSummary.currentStageLabel : 'في الطريق إلى التسليم';
   const activeOrderNextActionLabel = activeOrderPhase === 'pickup' ? activeSummary.nextActionLabel : 'أكد التسليم بعد الوصول إلى العميل';
 

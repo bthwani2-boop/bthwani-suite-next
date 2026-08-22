@@ -1,15 +1,36 @@
 package http
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"strings"
 
-	"workforce-api/internal/workforce"
+	"workforce-api/internal/auth"
+	"workforce-api/internal/identityclient"
 )
 
-type SetScopesRequest struct {
-	Role   string                                 `json:"role"`
-	Inputs []workforce.OperationalAssignmentInput `json:"inputs"`
+func (s *server) verifyAssignmentActorContext(ctx context.Context, actorID, operatorContextID, role string) (context.Context, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	role = strings.TrimSpace(role)
+	if s.identity == nil || !s.identity.Configured() {
+		return nil, identityclient.ErrUnavailable
+	}
+	if err := s.identity.VerifyActorRoleInOperatorContext(ctx, actorID, operatorContextID, role); err != nil {
+		return nil, err
+	}
+	return auth.WithOperatorContext(ctx, operatorContextID), nil
+}
+
+func writeAssignmentIdentityError(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, identityclient.ErrOperatorContextForbidden):
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "actor is outside the verified operator context")
+	case errors.Is(err, identityclient.ErrUnavailable):
+		sendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity context authority is unavailable")
+	default:
+		sendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity context authority could not verify the actor")
+	}
 }
 
 func (s *server) handleGetActorScopes(w http.ResponseWriter, r *http.Request) {
@@ -22,35 +43,13 @@ func (s *server) handleGetActorScopes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	scopes, err := s.repo.GetOperationalScopes(r.Context(), actorID, operatorContextID, role)
+	trustedContext, err := s.verifyAssignmentActorContext(r.Context(), actorID, operatorContextID, role)
 	if err != nil {
-		writeWorkforceError(w, err)
-		return
-	}
-	sendJSON(w, http.StatusOK, scopes)
-}
-
-func (s *server) handleSetActorScopes(w http.ResponseWriter, r *http.Request) {
-	actorID := r.PathValue("actorId")
-	if actorID == "" {
-		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "actorId is required")
+		writeAssignmentIdentityError(w, err)
 		return
 	}
 
-	var req SetScopesRequest
-	if !decodeJSON(w, r, &req) {
-		return
-	}
-
-	operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
-	changedBy := strings.TrimSpace(r.Header.Get("X-Actor-ID"))
-	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
-	if operatorContextID == "" || changedBy == "" || correlationID == "" {
-		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "trusted operator context, actor, and correlation headers are required")
-		return
-	}
-
-	scopes, err := s.repo.SetOperationalScopes(r.Context(), actorID, operatorContextID, req.Role, req.Inputs, changedBy, correlationID)
+	scopes, err := s.repo.GetOperationalScopes(trustedContext, actorID, operatorContextID, role)
 	if err != nil {
 		writeWorkforceError(w, err)
 		return

@@ -22,9 +22,10 @@ func (s *protectedStoreServer) handlePushDispatchLocation(w http.ResponseWriter,
 		return
 	}
 	var body struct {
-		Latitude   float64 `json:"latitude"`
-		Longitude  float64 `json:"longitude"`
-		RecordedAt string  `json:"recordedAt"`
+		Latitude       float64  `json:"latitude"`
+		Longitude      float64  `json:"longitude"`
+		RecordedAt     string   `json:"recordedAt"`
+		AccuracyMeters *float64 `json:"accuracyMeters"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -138,7 +139,7 @@ func marshalDeliveryException(item *dispatch.DeliveryException) map[string]any {
 		"returnedAt":              item.ReturnedAt,
 		"returnAcceptedByActorId": item.ReturnAcceptedByActorID,
 		"version":                 item.Version, "createdAt": item.CreatedAt, "updatedAt": item.UpdatedAt,
-		"proofMediaRef": item.ProofMediaRef,
+		"proofMediaRef":    item.ProofMediaRef,
 		"policyNextAction": item.PolicyNextAction,
 	}
 }
@@ -266,6 +267,7 @@ func marshalDispatchAssignment(a dispatch.Assignment) map[string]any {
 		"completedAt":        a.CompletedAt,
 		"createdAt":          a.CreatedAt,
 		"updatedAt":          a.UpdatedAt,
+		"version":            a.Version,
 		// Only the latest foreground location sample is ever retained (no
 		// history, purged on closure) — see dsh-039 migration.
 		"lastLatitude":       a.LastLatitude,

@@ -44,24 +44,36 @@ type CreatePaymentSessionInput struct {
 	AmountMinorUnits  int64  `json:"amountMinorUnits"`
 	Currency          string `json:"currency"`
 	CartSnapshotHash  string `json:"cartSnapshotHash"`
+	PricingQuoteID    string `json:"pricingQuoteId"`
 	CorrelationID     string `json:"-"`
 	IdempotencyKey    string `json:"-"`
 }
 
 type PaymentSession struct {
-	ID                string `json:"id"`
-	CheckoutIntentID  string `json:"checkoutIntentId"`
-	SpecialRequestID  string `json:"specialRequestId"`
-	OperatorContextID string `json:"operatorContextId"`
-	ClientID          string `json:"clientId"`
-	StoreID           string `json:"storeId"`
-	PaymentMethod     string `json:"paymentMethod"`
-	Status            string `json:"status"`
-	ProviderReference string `json:"providerReference"`
-	AmountMinorUnits  int64  `json:"amountMinorUnits"`
-	Currency          string `json:"currency"`
-	CreatedAt         string `json:"createdAt"`
-	UpdatedAt         string `json:"updatedAt"`
+	ID                    string                   `json:"id"`
+	CheckoutIntentID      string                   `json:"checkoutIntentId"`
+	SpecialRequestID      string                   `json:"specialRequestId"`
+	OperatorContextID     string                   `json:"operatorContextId"`
+	ClientID              string                   `json:"clientId"`
+	StoreID               string                   `json:"storeId"`
+	PaymentMethod         string                   `json:"paymentMethod"`
+	Status                string                   `json:"status"`
+	ProviderReference     string                   `json:"providerReference"`
+	AmountMinorUnits      int64                    `json:"amountMinorUnits"`
+	Currency              string                   `json:"currency"`
+	TenderAllocation      *PaymentTenderAllocation `json:"tenderAllocation,omitempty"`
+	CreatedAt             string                   `json:"createdAt"`
+	UpdatedAt             string                   `json:"updatedAt"`
+	PricingQuoteID        string                   `json:"pricingQuoteId,omitempty"`
+	PricingQuoteHash      string                   `json:"pricingQuoteHash,omitempty"`
+	PricingQuoteVersion   int                      `json:"pricingQuoteVersion,omitempty"`
+	PricingQuoteExpiresAt string                   `json:"pricingQuoteExpiresAt,omitempty"`
+}
+
+type PaymentTenderAllocation struct {
+	WalletAmountMinorUnits         int64  `json:"walletAmountMinorUnits"`
+	CashOnDeliveryAmountMinorUnits int64  `json:"cashOnDeliveryAmountMinorUnits"`
+	Currency                       string `json:"currency"`
 }
 
 // NewClient builds the authenticated DSH-to-WLT service client. Financial
@@ -82,27 +94,26 @@ func (c *Client) Configured() bool {
 	return c != nil && c.baseURL != "" && c.serviceToken != ""
 }
 
-// resolveTrustedOperatorContext and setTrustedOperatorContextHeader are
-// temporary compatibility helpers for WLT routes not migrated yet. WLT
-// overwrites this deprecated transport value after service authentication.
-func (c *Client) resolveTrustedOperatorContext(ctx context.Context, requested string) (string, error) {
+// resolveDelegatedOperatorContext and setDelegatedOperatorContextHeader
+// propagate the canonical OperatorContext to WLT after service authentication.
+func (c *Client) resolveDelegatedOperatorContext(ctx context.Context, requested string) (string, error) {
 	requested = strings.TrimSpace(requested)
-	trustedOperatorContextID, hasTrustedOperatorContext := OperatorContextIDFromContext(ctx)
-	if !hasTrustedOperatorContext {
-		return "", fmt.Errorf("trusted OperatorContext context is required for this legacy WLT request")
+	delegatedOperatorContextID, hasDelegatedOperatorContext := OperatorContextIDFromContext(ctx)
+	if !hasDelegatedOperatorContext {
+		return "", fmt.Errorf("trusted OperatorContext context is required for this WLT request")
 	}
-	if requested != "" && requested != trustedOperatorContextID {
+	if requested != "" && requested != delegatedOperatorContextID {
 		return "", fmt.Errorf("requested OperatorContext does not match trusted request context")
 	}
-	return trustedOperatorContextID, nil
+	return delegatedOperatorContextID, nil
 }
 
-func (c *Client) setTrustedOperatorContextHeader(req *http.Request, requested string) (string, error) {
-	operatorContextID, err := c.resolveTrustedOperatorContext(req.Context(), requested)
+func (c *Client) setDelegatedOperatorContextHeader(req *http.Request, requested string) (string, error) {
+	operatorContextID, err := c.resolveDelegatedOperatorContext(req.Context(), requested)
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	req.Header.Set("X-Delegated-Operator-Context", operatorContextID)
 	return operatorContextID, nil
 }
 
@@ -122,8 +133,8 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
-		return nil, fmt.Errorf("prepare deprecated WLT payment scope bridge: %w", err)
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
+		return nil, fmt.Errorf("prepare WLT payment session OperatorContext: %w", err)
 	}
 	correlationID := strings.TrimSpace(input.CorrelationID)
 	if correlationID == "" {
@@ -168,65 +179,6 @@ func (c *Client) CreatePaymentSession(ctx context.Context, input CreatePaymentSe
 	return &envelope.PaymentSession, nil
 }
 
-type NotifyDeliveryCollectionInput struct {
-	OrderID          string `json:"orderId"`
-	CollectorType    string `json:"collectorType"`
-	CollectorID      string `json:"collectorId"`
-	PartnerID        string `json:"partnerId"`
-	CheckoutIntentID string `json:"checkoutIntentId"`
-	CorrelationID    string `json:"-"`
-	IdempotencyKey   string `json:"-"`
-}
-
-func (c *Client) NotifyDeliveryCollection(ctx context.Context, input NotifyDeliveryCollectionInput) error {
-	if !c.Configured() {
-		return fmt.Errorf("WLT COD custody handoff is not configured")
-	}
-	input.OrderID = strings.TrimSpace(input.OrderID)
-	input.CollectorType = strings.TrimSpace(input.CollectorType)
-	input.CollectorID = strings.TrimSpace(input.CollectorID)
-	input.PartnerID = strings.TrimSpace(input.PartnerID)
-	input.CheckoutIntentID = strings.TrimSpace(input.CheckoutIntentID)
-	if input.OrderID == "" || input.CollectorType == "" || input.CollectorID == "" || input.PartnerID == "" || input.CheckoutIntentID == "" {
-		return fmt.Errorf("order, collector, partner, and checkout intent are required for COD custody")
-	}
-	body, err := json.Marshal(input)
-	if err != nil {
-		return fmt.Errorf("encode WLT COD custody request: %w", err)
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/wlt/delivery-collections", bytes.NewReader(body))
-	if err != nil {
-		return fmt.Errorf("build WLT COD custody request: %w", err)
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
-	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
-		return fmt.Errorf("prepare WLT COD OperatorContext: %w", err)
-	}
-	correlationID := strings.TrimSpace(input.CorrelationID)
-	if correlationID == "" {
-		correlationID = input.OrderID
-	}
-	idempotencyKey := strings.TrimSpace(input.IdempotencyKey)
-	if idempotencyKey == "" {
-		idempotencyKey = deterministicMutationKey("delivery-collection-handoff", input.OrderID, input.CheckoutIntentID, input.CollectorType, input.CollectorID)
-	}
-	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
-		return fmt.Errorf("prepare WLT COD custody request: %w", err)
-	}
-	response, err := c.http.Do(req)
-	if err != nil {
-		return fmt.Errorf("call WLT COD custody: %w", err)
-	}
-	defer response.Body.Close()
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("WLT delivery collection handoff returned HTTP %d", response.StatusCode)
-	}
-	return nil
-}
-
 type DeliverFieldCommissionInput struct {
 	BeneficiaryActorID   string `json:"beneficiaryActorId"`
 	BeneficiaryActorType string `json:"beneficiaryActorType"`
@@ -267,7 +219,7 @@ func (c *Client) DeliverFieldCommission(ctx context.Context, input DeliverFieldC
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
 		return fmt.Errorf("prepare WLT commission OperatorContext: %w", err)
 	}
 	if err := setRequiredMutationHeaders(req, correlationID, input.IdempotencyKey); err != nil {
@@ -323,7 +275,7 @@ func (c *Client) DeliverCaptainCommission(ctx context.Context, input DeliverCapt
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
 		return fmt.Errorf("prepare WLT commission OperatorContext: %w", err)
 	}
 	if err := setRequiredMutationHeaders(req, correlationID, input.IdempotencyKey); err != nil {
@@ -355,7 +307,7 @@ func (c *Client) ExpireSession(ctx context.Context, paymentSessionID, correlatio
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setTrustedOperatorContextHeader(req, ""); err != nil {
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
 		return fmt.Errorf("prepare WLT expire OperatorContext: %w", err)
 	}
 	if strings.TrimSpace(correlationID) == "" {

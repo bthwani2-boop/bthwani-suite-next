@@ -10,6 +10,7 @@ import (
 
 	"wlt-api/internal/dshoutbox"
 	"wlt-api/internal/provider"
+	"wlt-api/internal/shared"
 )
 
 type governedRuntimeProvider struct {
@@ -43,7 +44,8 @@ func createGovernedRuntimeRefund(t *testing.T, db *sql.DB, sessionID, orderID st
 		t.Fatalf("read runtime payment session identity: %v", err)
 	}
 	key := fmt.Sprintf("runtime-%s-%d", suffix, time.Now().UnixNano())
-	created, replayed, err := CreateGovernedRefund(context.Background(), db, GovernedCreateRefundInput{
+	refundCtx := shared.WithOperatorContext(context.Background(), operatorContextID)
+	created, replayed, err := CreateGovernedRefund(refundCtx, db, GovernedCreateRefundInput{
 		OperatorContextID:     operatorContextID,
 		PaymentSessionID:      sessionID,
 		OrderID:               orderID,
@@ -253,7 +255,7 @@ func TestGovernedRefundRuntimeAmbiguousResultRequiresReconciliationAndNoRetry(t 
 	if completed.Status != "completed" {
 		t.Fatalf("expected reconciled refund to complete, got %q", completed.Status)
 	}
-	assertRuntimeFinancialArtifacts(t, db, approved.ID, approved.AmountMinorUnits, 1)
+	assertRuntimeFinancialArtifacts(t, db, approved.ID, completed.AmountMinorUnits, 1)
 	var caseStatus, resolution string
 	if err := db.QueryRow(`SELECT status,COALESCE(resolution,'') FROM wlt_reconciliation_cases WHERE id=$1`, unknown.ReconciliationCaseID).Scan(&caseStatus, &resolution); err != nil {
 		t.Fatalf("read resolved reconciliation case: %v", err)
@@ -291,7 +293,8 @@ func TestGovernedRefundRuntimePartialThenRemainingFullPreventsOverRefund(t *test
 	if err := db.QueryRow(`SELECT operator_context_id,client_id FROM wlt_payment_sessions WHERE id=$1`, sessionID).Scan(&operatorContextID, &clientID); err != nil {
 		t.Fatalf("read completed session identity: %v", err)
 	}
-	_, _, err := CreateGovernedRefund(context.Background(), db, GovernedCreateRefundInput{
+	overRefundCtx := shared.WithOperatorContext(context.Background(), operatorContextID)
+	_, _, err := CreateGovernedRefund(overRefundCtx, db, GovernedCreateRefundInput{
 		OperatorContextID: operatorContextID, PaymentSessionID: sessionID, OrderID: orderID, ClientID: clientID,
 		AmountMinorUnits: 1, Reason: "over refund", EligibilityReference: "runtime-over-refund",
 		RequestedByOperatorID: "maker-over-refund", IdempotencyKey: fmt.Sprintf("over-refund-%d", time.Now().UnixNano()),

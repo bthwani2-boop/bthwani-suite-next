@@ -90,3 +90,18 @@ func TestCreatePaymentSessionRejectsNonPositiveAmount(t *testing.T) {
 		}
 	}
 }
+
+func TestCreatePaymentSessionRejectsProviderFundingRailForCheckout(t *testing.T) {
+	_, err := CreatePaymentSession(nil, CreatePaymentSessionInput{
+		CheckoutIntentID:  "checkout-1",
+		OperatorContextID: "OperatorContext-1",
+		ClientID:          "client-1",
+		StoreID:           "store-1",
+		PaymentMethod:     "official_wallet",
+		AmountMinorUnits:  1000,
+		PricingQuoteID:    "quote-1",
+	})
+	if err == nil || !strings.Contains(err.Error(), "not a checkout payment method") {
+		t.Fatalf("expected provider funding rail to be rejected for checkout, got %v", err)
+	}
+}

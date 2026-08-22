@@ -7,8 +7,6 @@ import type {
   DshOrderAuthContext,
   DshOrderApiOfflineError,
   DshOrderApiHttpError,
-  DshCreateOrderRequest,
-  DshCreateOrderResponse,
   DshOrderDetailsResponse,
   DshUpdateOrderStatusRequest,
   DshOrderRecord,
@@ -113,18 +111,6 @@ export function createDshOrderLifecycleHttpClient(
       );
       return normalizeOrderList(resp);
     },
-    createOrder: async (req) => {
-      if (!baseUrl) throw { kind: 'offline' } as DshOrderApiOfflineError;
-      const resp = await doFetch<{ order?: BackendOrder }>(
-        baseUrl,
-        fetchFn,
-        'POST',
-        '/dsh/client/orders',
-        { checkoutIntentId: req.checkout_intent_id },
-        orderAuthHeaders(auth),
-      );
-      return normalizeOrderResponse(resp);
-    },
     getOrder: async (orderId) => {
       if (!baseUrl) throw { kind: 'offline' } as DshOrderApiOfflineError;
       const resp = await doFetch<{ order?: BackendOrder }>(
@@ -140,6 +126,9 @@ export function createDshOrderLifecycleHttpClient(
     updateOrderStatus: async (orderId, req) => {
       if (!baseUrl) throw { kind: 'offline' } as DshOrderApiOfflineError;
       if (req.actor === 'partner') {
+        if (!Number.isInteger(req.expectedVersion) || req.expectedVersion < 1 || req.idempotencyKey.trim().length < 8) {
+          unsupportedTransition('partner order mutations require expectedVersion and Idempotency-Key');
+        }
         const partnerPath =
           req.status === 'store_accepted'
             ? 'accept'
@@ -155,7 +144,11 @@ export function createDshOrderLifecycleHttpClient(
           'POST',
           `/dsh/partner/orders/${encodeURIComponent(orderId)}/${partnerPath}`,
           undefined,
-          orderAuthHeaders(auth),
+          {
+            ...orderAuthHeaders(auth),
+            'Idempotency-Key': req.idempotencyKey,
+            'If-Match-Version': String(req.expectedVersion),
+          },
         );
         return normalizeOrderResponse(resp).order;
       }

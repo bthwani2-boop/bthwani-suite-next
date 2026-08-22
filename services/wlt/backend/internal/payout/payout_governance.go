@@ -9,10 +9,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 
-	"wlt-api/internal/provider"
 	"wlt-api/internal/shared"
 )
 
@@ -22,10 +20,17 @@ var governedPayoutActorTypes = map[string]struct{}{
 	"field":   {},
 }
 
+const (
+	payoutAmountModeFullAvailable = "FULL_AVAILABLE"
+	payoutAmountModeSpecified     = "SPECIFIED"
+)
+
 type governedDestinationRef struct {
 	ID                            string `json:"id"`
 	OwnerActorID                  string `json:"ownerActorId"`
 	OwnerActorType                string `json:"ownerActorType"`
+	OfficialWalletProviderKey     string `json:"officialWalletProviderKey"`
+	DestinationVersion            int    `json:"destinationVersion"`
 	DestinationMethod             string `json:"destinationMethod"`
 	MaskedDestinationReference    string `json:"maskedDestinationReference"`
 	DestinationVerificationStatus string `json:"destinationVerificationStatus"`
@@ -34,21 +39,13 @@ type governedDestinationRef struct {
 	UpdatedAt                     string `json:"updatedAt"`
 }
 
-type governedDestinationInput struct {
-	BeneficiaryName      string `json:"beneficiaryName"`
-	DestinationMethod    string `json:"destinationMethod"`
-	DestinationReference string `json:"destinationReference"`
-	OperatorID           string `json:"operatorId"`
-}
-
 type governedCreatePayoutInput struct {
 	BeneficiaryActorID   string `json:"beneficiaryActorId"`
 	BeneficiaryActorType string `json:"beneficiaryActorType"`
-	PayoutDestinationID  string `json:"payoutDestinationId"`
-	AmountMinorUnits     int64  `json:"amountMinorUnits"`
+	AmountMode           string `json:"amountMode"`
+	AmountMinorUnits     *int64 `json:"amountMinorUnits,omitempty"`
 	Currency             string `json:"currency"`
 	IdempotencyKey       string `json:"idempotencyKey"`
-	OperatorID           string `json:"operatorId"`
 }
 
 type payoutReconciliationInput struct {
@@ -75,13 +72,48 @@ func governedCorrelationID(r *http.Request) (string, error) {
 	return correlationID, nil
 }
 
+func (input *governedCreatePayoutInput) normalize() error {
+	var err error
+	input.BeneficiaryActorType, input.BeneficiaryActorID, err = normalizeGovernedOwner(input.BeneficiaryActorType, input.BeneficiaryActorID)
+	if err != nil {
+		return err
+	}
+	input.AmountMode = strings.ToUpper(strings.TrimSpace(input.AmountMode))
+	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
+	input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
+	if input.AmountMode != payoutAmountModeFullAvailable && input.AmountMode != payoutAmountModeSpecified {
+		return fmt.Errorf("amountMode must be FULL_AVAILABLE or SPECIFIED")
+	}
+	if input.AmountMode == payoutAmountModeFullAvailable && input.AmountMinorUnits != nil {
+		return fmt.Errorf("FULL_AVAILABLE must not include amountMinorUnits")
+	}
+	if input.AmountMode == payoutAmountModeSpecified && (input.AmountMinorUnits == nil || *input.AmountMinorUnits <= 0) {
+		return fmt.Errorf("SPECIFIED requires positive amountMinorUnits")
+	}
+	if len(input.Currency) != 3 {
+		return fmt.Errorf("currency must be a three-letter code")
+	}
+	if len(input.IdempotencyKey) < 8 || len(input.IdempotencyKey) > 200 {
+		return fmt.Errorf("idempotencyKey must contain 8 to 200 characters")
+	}
+	return nil
+}
+
+// governedPayoutHash binds the idempotency key to beneficiary intent, not to
+// mutable server state. FULL_AVAILABLE therefore hashes the mode rather than a
+// precomputed client amount; the first successful request persists the exact
+// server-resolved destination and eligible amount, and all replays return it.
 func governedPayoutHash(operatorContextID string, input governedCreatePayoutInput) string {
+	amount := ""
+	if input.AmountMinorUnits != nil {
+		amount = fmt.Sprintf("%d", *input.AmountMinorUnits)
+	}
 	sum := sha256.Sum256([]byte(strings.Join([]string{
 		strings.TrimSpace(operatorContextID),
 		input.BeneficiaryActorType,
 		input.BeneficiaryActorID,
-		input.PayoutDestinationID,
-		fmt.Sprintf("%d", input.AmountMinorUnits),
+		input.AmountMode,
+		amount,
 		input.Currency,
 	}, "|")))
 	return hex.EncodeToString(sum[:])
@@ -104,25 +136,37 @@ func appendPayoutAudit(ctx context.Context, tx *sql.Tx, aggregateType, aggregate
 	return err
 }
 
-func scanGovernedDestination(row *sql.Row) (*governedDestinationRef, error) {
-	var destination governedDestinationRef
+func scanGovernedDestinationInto(row *sql.Row, destination *governedDestinationRef, materialHash *string) error {
+	var providerKey sql.NullString
 	var updatedAt string
 	err := row.Scan(
 		&destination.ID,
 		&destination.OwnerActorID,
 		&destination.OwnerActorType,
+		&providerKey,
+		&destination.DestinationVersion,
 		&destination.DestinationMethod,
 		&destination.MaskedDestinationReference,
 		&destination.DestinationVerificationStatus,
 		&destination.BeneficiaryName,
 		&destination.Active,
 		&updatedAt,
+		materialHash,
 	)
+	destination.OfficialWalletProviderKey = providerKey.String
 	destination.UpdatedAt = updatedAt
+	return err
+}
+
+func scanGovernedDestination(row *sql.Row) (*governedDestinationRef, error) {
+	var destination governedDestinationRef
+	var materialHash string
+	err := scanGovernedDestinationInto(row, &destination, &materialHash)
 	return &destination, err
 }
 
-const governedDestinationReturning = `id, owner_actor_id, owner_actor_type, destination_method,
+const governedDestinationReturning = `id, owner_actor_id, owner_actor_type, official_wallet_provider_key,
+	destination_version, destination_method,
 	masked_destination_reference, destination_verification_status, beneficiary_name, active, updated_at::text`
 
 func requirePayoutOperatorContext(w http.ResponseWriter, r *http.Request) (string, bool) {
@@ -134,96 +178,13 @@ func requirePayoutOperatorContext(w http.ResponseWriter, r *http.Request) (strin
 	return operatorContextID, true
 }
 
-func HandleUpsertTypedPayoutDestination(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID, ok := requirePayoutOperatorContext(w, r)
-		if !ok {
-			return
-		}
-		actorType, actorID, err := normalizeGovernedOwner(r.PathValue("actorType"), r.PathValue("actorId"))
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		correlationID, err := governedCorrelationID(r)
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", err.Error())
-			return
-		}
-		var input governedDestinationInput
-		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 64*1024))
-		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&input); err != nil {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payout destination body is invalid")
-			return
-		}
-		input.DestinationMethod = strings.TrimSpace(input.DestinationMethod)
-		if input.DestinationMethod == "" {
-			input.DestinationMethod = "bank"
-		}
-		if input.DestinationMethod != "bank" && input.DestinationMethod != "mobile_money" && input.DestinationMethod != "manual" {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "unsupported destinationMethod")
-			return
-		}
-		if strings.TrimSpace(input.BeneficiaryName) == "" {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "beneficiaryName is required")
-			return
-		}
-		if input.DestinationMethod != "manual" && strings.TrimSpace(input.DestinationReference) == "" {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "destinationReference is required for non-manual payout methods")
-			return
-		}
-		key, err := payoutEncryptionKey()
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "WLT_INTERNAL_ERROR", "payout encryption is not configured")
-			return
-		}
-		tx, err := db.BeginTx(r.Context(), nil)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to start destination transaction")
-			return
-		}
-		defer tx.Rollback() //nolint:errcheck
-		if _, err := tx.ExecContext(r.Context(), `
-			UPDATE wlt_payout_destinations
-			SET active=false, updated_at=now()
-			WHERE operator_context_id=$1 AND owner_actor_type=$2 AND owner_actor_id=$3 AND active=true`, operatorContextID, actorType, actorID); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to retire current payout destination")
-			return
-		}
-		operatorID := strings.TrimSpace(input.OperatorID)
-		if operatorID == "" {
-			operatorID = actorID
-		}
-		row := tx.QueryRowContext(r.Context(), `
-			INSERT INTO wlt_payout_destinations
-				(operator_context_id, partner_id, owner_actor_id, owner_actor_type, beneficiary_name,
-				 destination_reference_encrypted,
-				 destination_method, masked_destination_reference, destination_verification_status, active, created_by_actor_id)
-			VALUES ($1,$2,$2,$3,$4,
-				pgp_sym_encrypt($5,$6),
-				$7,$8,'unverified',true,$9)
-			RETURNING `+governedDestinationReturning,
-			operatorContextID, actorID, actorType, strings.TrimSpace(input.BeneficiaryName),
-			strings.TrimSpace(input.DestinationReference), key,
-			input.DestinationMethod, maskLast4(input.DestinationReference), operatorID)
-		destination, err := scanGovernedDestination(row)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to persist payout destination")
-			return
-		}
-		if err := appendPayoutAudit(r.Context(), tx, "payout_destination", destination.ID, "destination.upserted", operatorID, actorType, "", correlationID, map[string]any{
-			"ownerActorId": actorID, "ownerActorType": actorType, "destinationMethod": destination.DestinationMethod,
-		}); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout destination")
-			return
-		}
-		if err := tx.Commit(); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to commit payout destination")
-			return
-		}
-		shared.SendJSON(w, http.StatusCreated, map[string]any{"payoutDestination": destination})
+func requireDelegatedFinancePrincipal(w http.ResponseWriter, r *http.Request) (string, bool) {
+	principalID, ok := shared.DelegatedFinancePrincipalFromContext(r.Context())
+	if !ok || strings.TrimSpace(principalID) == "" {
+		shared.SendError(w, http.StatusForbidden, "FINANCE_OPERATOR_PRINCIPAL_REQUIRED", "an Identity-authenticated delegated finance operator is required")
+		return "", false
 	}
+	return strings.TrimSpace(principalID), true
 }
 
 func HandleGetCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
@@ -238,6 +199,7 @@ func HandleGetCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		row := db.QueryRowContext(r.Context(), `SELECT `+governedDestinationReturning+`
+			, material_identity_hash
 			FROM wlt_payout_destinations
 			WHERE operator_context_id=$1 AND owner_actor_type=$2 AND owner_actor_id=$3 AND active=true
 			ORDER BY created_at DESC LIMIT 1`, operatorContextID, actorType, actorID)
@@ -260,6 +222,10 @@ func HandleDeactivateCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 		if !ok {
 			return
 		}
+		operatorID, ok := requireDelegatedFinancePrincipal(w, r)
+		if !ok {
+			return
+		}
 		actorType, actorID, err := normalizeGovernedOwner(r.PathValue("actorType"), r.PathValue("actorId"))
 		if err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
@@ -270,6 +236,22 @@ func HandleDeactivateCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", err.Error())
 			return
 		}
+		var input struct {
+			Reason            string `json:"reason"`
+			EvidenceReference string `json:"evidenceReference"`
+		}
+		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16*1024))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&input); err != nil {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "destination deactivation body is invalid")
+			return
+		}
+		input.Reason = strings.TrimSpace(input.Reason)
+		input.EvidenceReference = strings.TrimSpace(input.EvidenceReference)
+		if input.Reason == "" || input.EvidenceReference == "" {
+			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "reason and evidenceReference are required")
+			return
+		}
 		tx, err := db.BeginTx(r.Context(), nil)
 		if err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to start destination transaction")
@@ -278,7 +260,7 @@ func HandleDeactivateCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 		defer tx.Rollback() //nolint:errcheck
 		var destinationID string
 		err = tx.QueryRowContext(r.Context(), `
-			UPDATE wlt_payout_destinations SET active=false,updated_at=now()
+			UPDATE wlt_payout_destinations SET active=false,superseded_at=now(),updated_at=now()
 			WHERE operator_context_id=$1 AND owner_actor_type=$2 AND owner_actor_id=$3 AND active=true
 			RETURNING id`, operatorContextID, actorType, actorID).Scan(&destinationID)
 		if errors.Is(err, sql.ErrNoRows) {
@@ -289,8 +271,8 @@ func HandleDeactivateCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to deactivate payout destination")
 			return
 		}
-		if err := appendPayoutAudit(r.Context(), tx, "payout_destination", destinationID, "destination.deactivated", actorID, actorType, "", correlationID, map[string]any{
-			"ownerActorId": actorID, "ownerActorType": actorType,
+		if err := appendPayoutAudit(r.Context(), tx, "payout_destination", destinationID, "destination.deactivated", operatorID, "operator", input.Reason, correlationID, map[string]any{
+			"ownerActorId": actorID, "ownerActorType": actorType, "evidenceReference": input.EvidenceReference,
 		}); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout destination")
 			return
@@ -303,6 +285,19 @@ func HandleDeactivateCanonicalPayoutDestination(db *sql.DB) http.HandlerFunc {
 	}
 }
 
+func minInt64(a, b int64) int64 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+// HandleCreateGovernedPayoutRequest derives every financially material value
+// that the beneficiary must not decide: the destination comes from the current
+// active verified official-wallet record, and FULL_AVAILABLE is resolved from
+// the locked WLT wallet/settlement projection. The resulting amount is reserved
+// atomically by moving it from available to held so concurrent requests cannot
+// spend the same entitlement twice.
 func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID, ok := requirePayoutOperatorContext(w, r)
@@ -321,16 +316,8 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payout request body is invalid")
 			return
 		}
-		input.BeneficiaryActorType, input.BeneficiaryActorID, err = normalizeGovernedOwner(input.BeneficiaryActorType, input.BeneficiaryActorID)
-		if err != nil {
+		if err := input.normalize(); err != nil {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		input.PayoutDestinationID = strings.TrimSpace(input.PayoutDestinationID)
-		input.IdempotencyKey = strings.TrimSpace(input.IdempotencyKey)
-		input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
-		if input.PayoutDestinationID == "" || input.IdempotencyKey == "" || input.Currency == "" || input.AmountMinorUnits <= 0 {
-			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutDestinationId, positive amountMinorUnits, currency and idempotencyKey are required")
 			return
 		}
 		requestHash := governedPayoutHash(operatorContextID, input)
@@ -340,6 +327,11 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		defer tx.Rollback() //nolint:errcheck
+
+		if _, err := tx.ExecContext(r.Context(), `SELECT pg_advisory_xact_lock(hashtextextended($1,0))`, operatorContextID+"\x1f"+input.IdempotencyKey); err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to lock payout request identity")
+			return
+		}
 
 		var existingHash sql.NullString
 		var existingID string
@@ -352,7 +344,9 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			}
 			rows, queryErr := tx.QueryContext(r.Context(), "SELECT "+requestCols+" FROM wlt_payout_requests WHERE operator_context_id=$1 AND id=$2", operatorContextID, existingID)
 			if queryErr != nil || !rows.Next() {
-				if rows != nil { rows.Close() }
+				if rows != nil {
+					rows.Close()
+				}
 				shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read idempotent payout request")
 				return
 			}
@@ -362,7 +356,6 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 				shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to decode idempotent payout request")
 				return
 			}
-			existing.PayoutDestinationID = input.PayoutDestinationID
 			shared.SendJSON(w, http.StatusOK, PayoutRequestResponse{PayoutRequest: existing})
 			return
 		}
@@ -371,25 +364,31 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		var active bool
-		err = tx.QueryRowContext(r.Context(), `SELECT active FROM wlt_payout_destinations
-			WHERE operator_context_id=$1 AND id=$2 AND owner_actor_type=$3 AND owner_actor_id=$4 FOR UPDATE`,
-			operatorContextID, input.PayoutDestinationID, input.BeneficiaryActorType, input.BeneficiaryActorID).Scan(&active)
+		var destinationID string
+		var destinationVersion int
+		var verificationStatus string
+		err = tx.QueryRowContext(r.Context(), `SELECT id,destination_version,destination_verification_status
+			FROM wlt_payout_destinations
+			WHERE operator_context_id=$1 AND owner_actor_type=$2 AND owner_actor_id=$3 AND active=true
+			ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, operatorContextID, input.BeneficiaryActorType, input.BeneficiaryActorID).Scan(&destinationID, &destinationVersion, &verificationStatus)
 		if errors.Is(err, sql.ErrNoRows) {
-			shared.SendError(w, http.StatusForbidden, "PAYOUT_DESTINATION_FORBIDDEN", "payout destination is not owned by the beneficiary in the trusted OperatorContext")
+			shared.SendError(w, http.StatusConflict, "PAYOUT_DESTINATION_REQUIRED", "finance must configure an active official-wallet destination before payout can be requested")
 			return
 		}
 		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to verify payout destination")
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to resolve payout destination")
 			return
 		}
-		if !active {
-			shared.SendError(w, http.StatusConflict, "PAYOUT_DESTINATION_INACTIVE", "payout destination is inactive")
+		if verificationStatus != verificationVerified {
+			shared.SendError(w, http.StatusConflict, "PAYOUT_DESTINATION_UNVERIFIED", "finance must verify the active official-wallet destination before payout can be requested")
 			return
 		}
+
+		var walletStatus, walletCurrency string
 		var available, settled, paid, held int64
-		err = tx.QueryRowContext(r.Context(), `SELECT available_balance_minor_units, settled_total_minor_units, paid_total_minor_units, held_balance_minor_units FROM wlt_wallets
-			WHERE operator_context_id=$1 AND actor_id=$2 AND actor_type=$3 FOR UPDATE`, operatorContextID, input.BeneficiaryActorID, input.BeneficiaryActorType).Scan(&available, &settled, &paid, &held)
+		err = tx.QueryRowContext(r.Context(), `SELECT status,currency,available_balance_minor_units,settled_total_minor_units,paid_total_minor_units,held_balance_minor_units
+			FROM wlt_wallets WHERE operator_context_id=$1 AND actor_id=$2 AND actor_type=$3 FOR UPDATE`, operatorContextID, input.BeneficiaryActorID, input.BeneficiaryActorType).
+			Scan(&walletStatus, &walletCurrency, &available, &settled, &paid, &held)
 		if errors.Is(err, sql.ErrNoRows) {
 			shared.SendError(w, http.StatusBadRequest, "NO_WALLET", "wallet not found")
 			return
@@ -398,34 +397,60 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read wallet")
 			return
 		}
-		withdrawable := settled - paid - held
-		if available < input.AmountMinorUnits || withdrawable < input.AmountMinorUnits {
-			shared.SendError(w, http.StatusConflict, "INSUFFICIENT_FUNDS", "insufficient withdrawable balance")
+		if walletStatus != "active" {
+			shared.SendError(w, http.StatusConflict, "WALLET_NOT_ACTIVE", "wallet is not active")
 			return
 		}
-		result, err := tx.ExecContext(r.Context(), `UPDATE wlt_wallets
-			SET available_balance_minor_units=available_balance_minor_units-$1,
-			    held_balance_minor_units=held_balance_minor_units+$1,
-			    updated_at=now()
-			WHERE operator_context_id=$2 AND actor_id=$3 AND actor_type=$4 AND available_balance_minor_units>=$1 AND (settled_total_minor_units - paid_total_minor_units - held_balance_minor_units) >= $1`,
-			input.AmountMinorUnits, operatorContextID, input.BeneficiaryActorID, input.BeneficiaryActorType)
+		if strings.ToUpper(walletCurrency) != input.Currency {
+			shared.SendError(w, http.StatusConflict, "CURRENCY_MISMATCH", "requested currency does not match the canonical wallet currency")
+			return
+		}
+		settlementEligible := settled - paid - held
+		eligible := minInt64(available, settlementEligible)
+		if eligible <= 0 {
+			shared.SendError(w, http.StatusConflict, "NO_WITHDRAWABLE_BALANCE", "no settled eligible balance is available for payout")
+			return
+		}
+		amount := eligible
+		if input.AmountMode == payoutAmountModeSpecified {
+			amount = *input.AmountMinorUnits
+			if amount > eligible {
+				shared.SendError(w, http.StatusConflict, "INSUFFICIENT_FUNDS", "specified amount exceeds the current eligible payout balance")
+				return
+			}
+		}
+
+		reserveResult, err := tx.ExecContext(r.Context(), `
+			UPDATE wlt_wallets
+			SET held_balance_minor_units = held_balance_minor_units + $4,
+			    available_balance_minor_units = available_balance_minor_units - $4,
+			    updated_at = now()
+			WHERE operator_context_id=$1 AND actor_id=$2 AND actor_type=$3
+			  AND status='active' AND currency=$5
+			  AND available_balance_minor_units >= $4
+			  AND settled_total_minor_units - paid_total_minor_units - held_balance_minor_units >= $4`,
+			operatorContextID, input.BeneficiaryActorID, input.BeneficiaryActorType, amount, input.Currency)
 		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to hold payout funds")
+			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to reserve payout balance")
 			return
 		}
-		if affected, _ := result.RowsAffected(); affected != 1 {
-			shared.SendError(w, http.StatusConflict, "INSUFFICIENT_FUNDS", "available balance changed before payout hold")
+		reservedRows, err := reserveResult.RowsAffected()
+		if err != nil || reservedRows != 1 {
+			shared.SendError(w, http.StatusConflict, "INSUFFICIENT_FUNDS", "payout balance changed before it could be reserved")
 			return
 		}
+
 		rows, err := tx.QueryContext(r.Context(), `INSERT INTO wlt_payout_requests
 			(operator_context_id,beneficiary_actor_id,beneficiary_actor_type,amount_minor_units,currency,status,
-			 idempotency_key,payload_hash,payout_destination_id,request_hash,operator_id)
-			VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,$8,$7,NULLIF($9,''))
+			 idempotency_key,payload_hash,payout_destination_id,request_hash)
+			VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,$8,$7)
 			RETURNING `+requestCols,
-			operatorContextID, input.BeneficiaryActorID, input.BeneficiaryActorType, input.AmountMinorUnits, input.Currency,
-			input.IdempotencyKey, requestHash, input.PayoutDestinationID, strings.TrimSpace(input.OperatorID))
+			operatorContextID, input.BeneficiaryActorID, input.BeneficiaryActorType, amount, input.Currency,
+			input.IdempotencyKey, requestHash, destinationID)
 		if err != nil || !rows.Next() {
-			if rows != nil { rows.Close() }
+			if rows != nil {
+				rows.Close()
+			}
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to create payout request")
 			return
 		}
@@ -435,10 +460,15 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to decode payout request")
 			return
 		}
-		created.PayoutDestinationID = input.PayoutDestinationID
+
 		created.ReconciliationStatus = "not_required"
 		if err := appendPayoutAudit(r.Context(), tx, "payout_request", created.ID, "payout.requested", input.BeneficiaryActorID, input.BeneficiaryActorType, "", correlationID, map[string]any{
-			"payoutDestinationId": input.PayoutDestinationID, "amountMinorUnits": input.AmountMinorUnits, "currency": input.Currency,
+			"payoutDestinationId": destinationID,
+			"destinationVersion":  destinationVersion,
+			"amountMode":          input.AmountMode,
+			"amountMinorUnits":    amount,
+			"currency":            input.Currency,
+			"reservationHeldMinorUnits": amount,
 		}); err != nil {
 			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout request")
 			return
@@ -448,181 +478,6 @@ func HandleCreateGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
 			return
 		}
 		shared.SendJSON(w, http.StatusCreated, PayoutRequestResponse{PayoutRequest: created})
-	}
-}
-
-func HandleReconcileGovernedPayoutRequest(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID, ok := requirePayoutOperatorContext(w, r)
-		if !ok {
-			return
-		}
-		correlationID, err := governedCorrelationID(r)
-		if err != nil {
-			shared.SendError(w, http.StatusBadRequest, "CORRELATION_REQUIRED", err.Error())
-			return
-		}
-		var input payoutReconciliationInput
-		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16*1024))
-		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&input); err != nil || strings.TrimSpace(input.OperatorID) == "" {
-			shared.SendError(w, http.StatusBadRequest, "OPERATOR_REQUIRED", "operatorId is required")
-			return
-		}
-		input.OperatorID = strings.TrimSpace(input.OperatorID)
-		payoutID := strings.TrimSpace(r.PathValue("payoutId"))
-		client, err := provider.NewDefaultPaymentProvider()
-		if err != nil {
-			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
-			return
-		}
-
-		tx, err := db.BeginTx(r.Context(), nil)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to start payout reconciliation")
-			return
-		}
-		defer tx.Rollback() //nolint:errcheck
-		req, err := lockedPayout(r.Context(), tx, payoutID)
-		if errors.Is(err, sql.ErrNoRows) {
-			shared.SendError(w, http.StatusNotFound, "NOT_FOUND", "payout request not found")
-			return
-		}
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read payout request")
-			return
-		}
-		if req.Status != "provider_result_unknown" && req.Status != "provider_pending" {
-			shared.SendError(w, http.StatusConflict, "INVALID_STATUS", "only an unresolved provider payout can be reconciled")
-			return
-		}
-		if req.ApprovedByOperatorID == "" || req.ProcessedByOperatorID == "" || input.OperatorID == req.ApprovedByOperatorID || input.OperatorID == req.ProcessedByOperatorID {
-			shared.SendError(w, http.StatusForbidden, "MAKER_CHECKER_VIOLATION", "reconciliation operator must differ from payout approver and processor")
-			return
-		}
-		if _, err := tx.ExecContext(r.Context(), `UPDATE wlt_payout_requests SET reconciliation_status='inquiry_pending'
-			WHERE operator_context_id=$1 AND id=$2 AND status IN ('provider_result_unknown','provider_pending')`, operatorContextID, payoutID); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to claim payout reconciliation")
-			return
-		}
-		if err := tx.Commit(); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to commit payout reconciliation claim")
-			return
-		}
-
-		providerReference := strings.TrimSpace(req.ProviderReference)
-		if providerReference == "" {
-			providerReference = req.ID
-		}
-		inquiry := provider.PayoutInquiry{Status: "unknown", ProviderReference: providerReference}
-		query := url.Values{}
-		query.Set("providerReference", providerReference)
-		query.Set("payoutRequestId", req.ID)
-		query.Set("operatorContextId", operatorContextID)
-		var providerErr error
-		inquiry, providerErr = client.InquirePayout(r.Context(), query)
-		if providerErr != nil {
-			inquiry.Status = "unknown"
-			inquiry.ProviderReference = providerReference
-			inquiry.ResponseCode = "PROVIDER_INQUIRY_ERROR"
-		}
-
-		finalTx, err := db.BeginTx(r.Context(), nil)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to finalize payout reconciliation")
-			return
-		}
-		defer finalTx.Rollback() //nolint:errcheck
-		current, err := lockedPayout(r.Context(), finalTx, payoutID)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to reload payout request")
-			return
-		}
-		if current.ReconciliationStatus != "inquiry_pending" {
-			shared.SendError(w, http.StatusConflict, "RECONCILIATION_CONFLICT", "payout reconciliation is no longer pending")
-			return
-		}
-		var reconciliationID string
-		resultStatus := strings.ToLower(strings.TrimSpace(inquiry.Status))
-		if resultStatus == "" {
-			resultStatus = "unknown"
-		}
-		err = finalTx.QueryRowContext(r.Context(), `INSERT INTO wlt_payout_reconciliations
-			(operator_context_id,payout_request_id,provider_reference,provider_status,provider_response_code,
-			 queried_by_operator_id,request_snapshot,response_snapshot)
-			VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,$8::jsonb) RETURNING id`,
-			operatorContextID, payoutID, strings.TrimSpace(inquiry.ProviderReference), resultStatus,
-			strings.TrimSpace(inquiry.ResponseCode), input.OperatorID,
-			mustJSON(map[string]any{"payoutRequestId": payoutID, "providerReference": providerReference, "operatorContextId": operatorContextID}),
-			mustJSON(inquiry)).Scan(&reconciliationID)
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to persist payout reconciliation evidence")
-			return
-		}
-
-		finalStatus := current.Status
-		reconciliationStatus := "open"
-		action := "payout.reconciliation_opened"
-		if resultStatus == "succeeded" || resultStatus == "completed" {
-			finalStatus = "completed"
-			reconciliationStatus = "resolved"
-			action = "payout.reconciled_completed"
-			if _, err := finalTx.ExecContext(r.Context(), `UPDATE wlt_wallets
-				SET held_balance_minor_units=held_balance_minor_units-$1,
-				    paid_total_minor_units=paid_total_minor_units+$1,updated_at=now()
-				WHERE operator_context_id=$2 AND actor_id=$3 AND actor_type=$4 AND held_balance_minor_units>=$1`,
-				current.AmountMinorUnits, operatorContextID, current.BeneficiaryActorID, current.BeneficiaryActorType); err != nil {
-				shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to finalize reconciled payout wallet")
-				return
-			}
-		} else if resultStatus == "failed" || resultStatus == "declined" {
-			finalStatus = "failed"
-			reconciliationStatus = "resolved"
-			action = "payout.reconciled_failed"
-			if _, err := finalTx.ExecContext(r.Context(), `UPDATE wlt_wallets
-				SET held_balance_minor_units=held_balance_minor_units-$1,
-				    available_balance_minor_units=available_balance_minor_units+$1,updated_at=now()
-				WHERE operator_context_id=$2 AND actor_id=$3 AND actor_type=$4 AND held_balance_minor_units>=$1`,
-				current.AmountMinorUnits, operatorContextID, current.BeneficiaryActorID, current.BeneficiaryActorType); err != nil {
-				shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to release reconciled payout wallet")
-				return
-			}
-		}
-		_, err = finalTx.ExecContext(r.Context(), `UPDATE wlt_payout_requests
-			SET status=$3,reconciliation_status=$4,reconciled_at=CASE WHEN $4='resolved' THEN now() ELSE reconciled_at END,
-			    reconciled_by_operator_id=$5,provider_status=$6,provider_reference=COALESCE(NULLIF($7,''),provider_reference),
-			    provider_processed_at=now(),updated_at=now()
-			WHERE operator_context_id=$1 AND id=$2`, operatorContextID, payoutID, finalStatus, reconciliationStatus, input.OperatorID, resultStatus, strings.TrimSpace(inquiry.ProviderReference))
-		if err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to update reconciled payout request")
-			return
-		}
-		if reconciliationStatus == "resolved" {
-			if _, err := finalTx.ExecContext(r.Context(), `UPDATE wlt_payout_reconciliations
-				SET resolved_at=now() WHERE operator_context_id=$1 AND id=$2`, operatorContextID, reconciliationID); err != nil {
-				shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to close payout reconciliation")
-				return
-			}
-		}
-		if err := appendPayoutAudit(r.Context(), finalTx, "payout_reconciliation", payoutID, action, input.OperatorID, "operator", "", correlationID, map[string]any{
-			"providerStatus": resultStatus, "providerResponseCode": inquiry.ResponseCode, "reconciliationId": reconciliationID,
-		}); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to audit payout reconciliation")
-			return
-		}
-		if err := finalTx.Commit(); err != nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to commit payout reconciliation")
-			return
-		}
-		updated, err := GetPayoutRequest(db, payoutID)
-		if err != nil || updated == nil {
-			shared.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to read reconciled payout request")
-			return
-		}
-		updated.ReconciliationStatus = reconciliationStatus
-		updated.ProviderStatus = resultStatus
-		updated.ProviderReference = strings.TrimSpace(inquiry.ProviderReference)
-		shared.SendJSON(w, http.StatusOK, map[string]any{"payoutRequest": updated, "reconciliationId": reconciliationID})
 	}
 }
 

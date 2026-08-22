@@ -18,7 +18,7 @@ const (
 	minimumActivationHMACSecretLength = 32
 	minimumInternalServiceTokenLength = 32
 	identityMigrationServiceName      = "identity"
-	identityLatestMigration           = "identity-021_actor_lifecycle_status.sql"
+	identityLatestMigration           = "identity-027_operator_support_permissions.sql"
 	defaultReadinessProbeTimeout      = 2 * time.Second
 	defaultReadinessCheckTimeout      = 750 * time.Millisecond
 	defaultClockSkewLimit             = 5 * time.Second
@@ -209,7 +209,7 @@ func configurationChecks() runtimeReadinessResult {
 		reasonCode string
 	}{
 		{"activation_signing_key", configuredRuntimeSecret("IDENTITY_ACTIVATION_HMAC_SECRET", minimumActivationHMACSecretLength), reasonSigningKeyInvalid},
-		{"operator_context", strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID")) != "", reasonConfigurationInvalid},
+		{"operator_context", !strings.EqualFold(strings.TrimSpace(os.Getenv("IDENTITY_LOCAL_BOOTSTRAP")), "true") || strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID")) != "", reasonConfigurationInvalid},
 		{"workforce_service_auth", configuredRuntimeSecret("IDENTITY_WORKFORCE_SERVICE_TOKEN", minimumInternalServiceTokenLength), reasonConfigurationInvalid},
 		{"dsh_service_auth", configuredRuntimeSecret("IDENTITY_DSH_SERVICE_TOKEN", minimumInternalServiceTokenLength), reasonConfigurationInvalid},
 	}
@@ -327,6 +327,11 @@ func evaluateRuntimeReadiness(
 			"identity_sessions",
 			"identity_activation_challenges",
 			"identity_login_attempts",
+			"identity_roles",
+			"identity_actor_roles",
+			"identity_permission_vocabulary",
+			"identity_role_permissions",
+			"identity_actor_direct_permissions",
 		} {
 			exists, relationErr := store.RelationExists(checkContext, relation)
 			if relationErr != nil {
@@ -532,7 +537,6 @@ func writeReadinessSuccess(result runtimeReadinessResult, startedAt time.Time, c
 		"identity readiness probe",
 		"service", "core-identity",
 		"result", "ready",
-		"correlation_id", correlationID,
 		"duration_ms", snapshot.DurationMS,
 		"success_total", successTotal,
 		"failure_total", readinessFailures.Load(),
@@ -560,7 +564,6 @@ func writeReadinessFailure(
 		"check", result.failedCheck,
 		"reason", reason,
 		"reason_code", result.reasonCode,
-		"correlation_id", correlationID,
 		"duration_ms", snapshot.DurationMS,
 		"success_total", readinessSuccesses.Load(),
 		"failure_total", failureTotal,

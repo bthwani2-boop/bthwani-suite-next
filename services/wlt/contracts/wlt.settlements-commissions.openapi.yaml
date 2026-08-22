@@ -434,11 +434,7 @@ components:
           sourceType,
           sourceId,
           commissionType,
-          sourceEvidenceId,
-          sourceEvidenceHash,
-          sourceEvidenceStatus,
-          grossBasisMinorUnits,
-          currency
+          sourceEvidenceId
         ]
       properties:
         beneficiaryActorId: { type: string, minLength: 1 }
@@ -448,11 +444,11 @@ components:
         visitId: { type: [string, 'null'] }
         storeId: { type: [string, 'null'] }
         commissionType: { type: string, minLength: 1 }
-        sourceEvidenceId: { type: string, minLength: 1 }
-        sourceEvidenceHash: { type: string, minLength: 1 }
-        sourceEvidenceStatus: { type: string, enum: [ completed, delivered, approved ] }
-        grossBasisMinorUnits: { type: integer, minimum: 0 }
-        currency: { type: string, minLength: 1 }
+        sourceEvidenceId: { type: string, minLength: 1, description: "For order commissions, the canonical checkoutIntentId whose WLT payment truth is resolved by the server." }
+        sourceEvidenceHash: { type: string, minLength: 1, description: "Optional for order commissions; WLT derives and verifies the hash from the canonical payment session." }
+        sourceEvidenceStatus: { type: string, enum: [ completed, delivered, approved ], description: "Optional for order commissions; WLT defaults the status to completed after payment truth is verified." }
+        grossBasisMinorUnits: { type: integer, minimum: 0, description: "Optional for order commissions; WLT derives the basis from the canonical payment allocation." }
+        currency: { type: string, minLength: 1, description: "Optional for order commissions; WLT derives the currency from the canonical payment session." }
     Settlement:
       type: object
       required: [ id, partnerId, grossAmount, platformFee, netAmount, currency, status ]

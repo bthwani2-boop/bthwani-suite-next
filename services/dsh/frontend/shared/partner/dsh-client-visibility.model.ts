@@ -145,7 +145,8 @@ function inferDeliveryModesReady(options: DshStoreClientVisibilityOptions): bool
 
 function inferServiceabilityAvailable(options: DshStoreClientVisibilityOptions): boolean {
   if (typeof options.serviceabilityAvailable === 'boolean') return options.serviceabilityAvailable;
-  return true;
+  if (typeof options.inZone === 'boolean') return options.inZone;
+  return false;
 }
 
 function resolveStoreBlockedReason(
@@ -207,7 +208,7 @@ export function resolveDshStoreClientVisibility(
   
   const badge = getDshPartnerVisibilityBadge(
     activationStatus,
-    options.storeOpen ?? true,
+    options.storeOpen ?? false,
     options.busy ?? false,
     options.inZone ?? serviceabilityAvailable,
   );

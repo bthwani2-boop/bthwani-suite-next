@@ -75,13 +75,13 @@ export function StateView({
         alignItems="center"
         gap="$3"
         maxWidth={520}
-        accessibilityLiveRegion={isUrgent ? "assertive" : "polite"}
+        aria-live={isUrgent ? "assertive" : "polite"}
       >
         {resolvedLoading ? <Spinner size="large" color="$action" /> : icon}
         <Block
           accessible
-          accessibilityRole={isUrgent ? "alert" : "text"}
-          accessibilityLabel={announcement}
+          role={isUrgent ? "alert" : undefined}
+          aria-label={announcement}
           alignItems="center"
           gap="$2"
         >

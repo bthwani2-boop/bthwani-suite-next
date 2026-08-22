@@ -1,4 +1,5 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/native-data-adapters";
+import { secureRandomId } from "../_kernel/secure-random.ts";
 
 export type SupportMutationContext = {
   readonly idempotencyKey: string;
@@ -13,13 +14,9 @@ type StoredAttempt = {
 type SupportMutationScope = "actor" | "client" | "operator" | "partner";
 
 const PREFIX = "@bthwani/dsh/support-mutation/v1/";
-let fallbackSequence = 0;
 
 function nextPart(): string {
-  const uuid = globalThis.crypto?.randomUUID?.();
-  if (uuid) return uuid;
-  fallbackSequence += 1;
-  return `${Date.now().toString(36)}-${fallbackSequence.toString(36)}`;
+  return secureRandomId();
 }
 
 function keyFor(scope: string, operation: string, entityId?: string): string {

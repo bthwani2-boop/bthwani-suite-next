@@ -11,7 +11,6 @@ import {
   DshCaptainProofUploadScreen,
 } from '../orders/DshCaptainOrdersScreen';
 import { CaptainOrderSupportConversationScreen } from '../orders/CaptainOrderSupportConversationScreen';
-import { WltCaptainCodBalanceScreen } from '../finance/WltCaptainFinanceScreen';
 import {
   DshCaptainProfileGetScreen,
   DshCaptainTierEvaluateScreen,
@@ -22,7 +21,6 @@ export type CaptainSupportScreenRouterProps = {
   selectedSupportScreen: CaptainSupportRoute;
   onBack: () => void;
   onNavigate: (screenId: CaptainSupportRoute) => void;
-  captainCollectsCod: boolean;
   dshClientId?: string | undefined;
   activeOrderId?: string | undefined;
   onAcceptTask: (orderId: string) => void;
@@ -33,7 +31,6 @@ export function CaptainSupportScreenRouter({
   selectedSupportScreen,
   onBack,
   onNavigate,
-  captainCollectsCod,
   dshClientId,
   activeOrderId,
   onAcceptTask,
@@ -58,8 +55,6 @@ export function CaptainSupportScreenRouter({
           onBack={onBack}
         />
       );
-    case 'cod-liability':
-      return <WltCaptainCodBalanceScreen onBack={onBack} embedded={false} />;
     case 'order-accept':
       return (
         <DshCaptainOrderAcceptScreen

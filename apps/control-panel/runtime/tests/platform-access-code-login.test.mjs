@@ -19,7 +19,8 @@ test("employee platform access code has a same-origin HttpOnly BFF route", () =>
   assert.match(identityActivation, /deviceFingerprint:\s*"control-panel-access-code"/);
   assert.match(identityActivation, /postIdentityServerJson/);
   assert.match(identityTransport, /cache:\s*"no-store"/);
-  assert.match(route, /tokens\.identity\.roles\.includes\("operator"\)/);
+  assert.match(route, /identitySessionIsBoundToSurface\(tokens\.identity,\s*"control-panel"\)/);
+  assert.doesNotMatch(route, /roles\.includes\("operator"\)/);
   assert.match(route, /setSessionCookies\(response, tokens\)/);
   assert.match(route, /Cache-Control":\s*"no-store"/);
   assert.doesNotMatch(`${route}\n${identityActivation}\n${identityTransport}`, /localStorage|sessionStorage/);

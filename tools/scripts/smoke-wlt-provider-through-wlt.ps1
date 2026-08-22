@@ -41,7 +41,7 @@ function Invoke-WltJson {
     "Idempotency-Key" = $OperationIdempotencyKey
     "Authorization" = "Bearer $ServiceToken"
     "X-Service-Caller" = "dsh"
-    "X-Operator-Context-ID" = $OperatorContextId
+    "X-Delegated-Operator-Context" = $OperatorContextId
   }
   $uri = "$BaseUrl$Path"
   try {
@@ -62,15 +62,63 @@ function Invoke-WltJson {
 $health = Invoke-WltJson -Method "GET" -Path "/wlt/health"
 if ($health.status -ne "healthy") { throw "WLT health failed" }
 
-$session = Invoke-WltJson -Method "POST" -Path "/wlt/payment-sessions" -Body @{
+$mainCorrelationId = $CorrelationId
+$CorrelationId = "$mainCorrelationId-topup"
+$topup = Invoke-WltJson -Method "POST" -Path "/wlt/topup-sessions" -OperationIdempotencyKey "$IdempotencyKey-topup-create" -Body @{
+  actorType = "customer"
+  actorId = $ClientId
+  topupReference = "topup-provider-smoke-$timestamp"
+  amountMinorUnits = 5000
+  currency = "YER"
+}
+if ([string]::IsNullOrWhiteSpace([string]$topup.paymentSession.id)) { throw "WLT did not create client wallet topup session" }
+$topupSessionId = $topup.paymentSession.id
+$topupAuthorized = Invoke-WltJson -Method "POST" -Path "/wlt/topup-sessions/$topupSessionId/authorize" -OperationIdempotencyKey "$IdempotencyKey-topup-authorize"
+if ($topupAuthorized.paymentSession.status -ne "authorized") { throw "WLT topup authorize did not return authorized status" }
+$topupCaptured = Invoke-WltJson -Method "POST" -Path "/wlt/topup-sessions/$topupSessionId/capture" -OperationIdempotencyKey "$IdempotencyKey-topup-capture"
+if ($topupCaptured.paymentSession.status -ne "captured") { throw "WLT topup capture did not return captured status" }
+$CorrelationId = $mainCorrelationId
+
+$pricingEvidenceSecret = [string]$env:WLT_DSH_PRICING_EVIDENCE_SECRET
+if ([string]::IsNullOrWhiteSpace($pricingEvidenceSecret)) {
+  throw "WLT_DSH_PRICING_EVIDENCE_SECRET is required for the canonical payment-session quote"
+}
+$pricingEvidence = [ordered]@{
+  version = 1
+  lines = @([ordered]@{ masterProductId = "provider-smoke-product"; unitPriceMinorUnits = 1000; currency = "YER" })
+  deliveryFeeMinorUnits = 0
+  serviceFeeMinorUnits = 0
+  discountMinorUnits = 0
+  signature = ""
+}
+$unsignedPricingEvidence = $pricingEvidence | ConvertTo-Json -Compress -Depth 8
+$hmac = [System.Security.Cryptography.HMACSHA256]::new([Text.Encoding]::UTF8.GetBytes($pricingEvidenceSecret))
+try {
+  $pricingEvidence.signature = [Convert]::ToHexString($hmac.ComputeHash([Text.Encoding]::UTF8.GetBytes($unsignedPricingEvidence))).ToLowerInvariant()
+} finally {
+  $hmac.Dispose()
+}
+$quote = Invoke-WltJson -Method "POST" -Path "/wlt/internal/quotes/calculate" -Body @{
   checkoutIntentId = $CheckoutIntentId
-  operatorContextId = $OperatorContextId
+  cartSnapshotHash = "provider-smoke-$timestamp"
   clientId = $ClientId
   storeId = "store-test-grocery"
-  paymentMethod = "official_wallet"
+  currency = "YER"
+  cartVersion = 1
+  lines = @(@{ masterProductId = "provider-smoke-product"; productName = "Provider smoke product"; quantity = 1 })
+  pricingEvidence = $pricingEvidence
+}
+if ([string]::IsNullOrWhiteSpace([string]$quote.quote.id)) { throw "WLT did not create a canonical pricing quote" }
+
+$session = Invoke-WltJson -Method "POST" -Path "/wlt/payment-sessions" -Body @{
+  checkoutIntentId = $CheckoutIntentId
+  clientId = $ClientId
+  storeId = "store-test-grocery"
+  paymentMethod = "wallet"
   amountMinorUnits = 1000
   currency = "YER"
   cartSnapshotHash = "provider-smoke-$timestamp"
+  pricingQuoteId = [string]$quote.quote.id
 }
 if ([string]::IsNullOrWhiteSpace($session.paymentSession.id)) { throw "WLT did not create payment session" }
 $sessionId = $session.paymentSession.id
@@ -127,7 +175,9 @@ $foundRefund = $false
 foreach ($record in $wmResponse.requests) {
   $req = $record.request
   $headers = $req.headers
-  $corrHeader = if ($headers.'X-Correlation-ID') { $headers.'X-Correlation-ID' } else { $headers.'x-correlation-id' }
+  $corrHeader = $null
+  if ($headers.PSObject.Properties.Name -contains 'X-Correlation-ID') { $corrHeader = $headers.'X-Correlation-ID' }
+  elseif ($headers.PSObject.Properties.Name -contains 'x-correlation-id') { $corrHeader = $headers.'x-correlation-id' }
   if ($null -eq $corrHeader -or "$corrHeader" -notlike "*$CorrelationId*") { continue }
   if ($req.url -eq "/financial/card/authorize" -and $req.method -eq "POST") { $foundAuthorize = $true }
   if ($req.url -eq "/financial/card/capture" -and $req.method -eq "POST") { $foundCapture = $true }

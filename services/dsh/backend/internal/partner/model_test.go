@@ -1,6 +1,10 @@
 package partner
 
-import "testing"
+import (
+	"testing"
+
+	"dsh-api/internal/store"
+)
 
 // ---------------------------------------------------------------------------
 // State machine
@@ -93,7 +97,7 @@ func TestIsClientVisible(t *testing.T) {
 
 func TestComputeReadiness_canActivate(t *testing.T) {
 	p := Partner{ID: "prt_001", ActivationStatus: StatusOpsApproved}
-	r := ComputeReadiness(p, 2, 1, true, true, true, true, true, true, true)
+	r := ComputeReadiness(p, 2, 1, true, store.PublicationPublished, nil)
 	if !r.CanActivate {
 		t.Fatalf("expected CanActivate=true for ops_approved with docs+store, got blocked: %s", r.BlockedReason)
 	}
@@ -104,7 +108,7 @@ func TestComputeReadiness_canActivate(t *testing.T) {
 
 func TestComputeReadiness_blockedNoDocs(t *testing.T) {
 	p := Partner{ID: "prt_002", ActivationStatus: StatusOpsApproved}
-	r := ComputeReadiness(p, 0, 0, true, true, true, true, true, true, true)
+	r := ComputeReadiness(p, 0, 0, true, store.PublicationPublished, nil)
 	if r.CanActivate {
 		t.Fatal("cannot activate without approved documents")
 	}
@@ -115,7 +119,7 @@ func TestComputeReadiness_blockedNoDocs(t *testing.T) {
 
 func TestComputeReadiness_blockedNoStore(t *testing.T) {
 	p := Partner{ID: "prt_003", ActivationStatus: StatusOpsApproved}
-	r := ComputeReadiness(p, 2, 1, false, false, false, false, false, false, false)
+	r := ComputeReadiness(p, 2, 1, false, store.PublicationBlocked, nil)
 	if r.CanActivate {
 		t.Fatal("cannot activate without a linked store")
 	}
@@ -126,7 +130,7 @@ func TestComputeReadiness_blockedNoStore(t *testing.T) {
 
 func TestComputeReadiness_blockedWrongStatus(t *testing.T) {
 	p := Partner{ID: "prt_004", ActivationStatus: StatusDocumentsMissing}
-	r := ComputeReadiness(p, 2, 1, true, true, true, true, true, true, true)
+	r := ComputeReadiness(p, 2, 1, true, store.PublicationPublished, nil)
 	if r.CanActivate {
 		t.Fatal("cannot activate when status is documents_missing")
 	}
@@ -134,7 +138,7 @@ func TestComputeReadiness_blockedWrongStatus(t *testing.T) {
 
 func TestComputeReadiness_checklistStructure(t *testing.T) {
 	p := Partner{ID: "prt_005", ActivationStatus: StatusOpsApproved}
-	r := ComputeReadiness(p, 2, 2, true, true, true, true, true, true, true)
+	r := ComputeReadiness(p, 2, 2, true, store.PublicationPublished, nil)
 	if len(r.Checklist) == 0 {
 		t.Fatal("checklist must not be empty")
 	}
@@ -163,7 +167,7 @@ func TestComputeReadiness_checklistStructure(t *testing.T) {
 
 func TestComputeReadiness_partnerIDPropagated(t *testing.T) {
 	p := Partner{ID: "prt_006", ActivationStatus: StatusDraft}
-	r := ComputeReadiness(p, 0, 0, false, false, false, false, false, false, false)
+	r := ComputeReadiness(p, 0, 0, false, store.PublicationBlocked, nil)
 	if r.PartnerID != "prt_006" {
 		t.Errorf("expected PartnerID='prt_006', got %q", r.PartnerID)
 	}
@@ -182,6 +186,37 @@ func TestCreatePartnerInput_valid(t *testing.T) {
 	}
 	if err := input.Validate(); err != nil {
 		t.Fatalf("expected valid input, got error: %v", err)
+	}
+}
+
+func TestCanonicalBusinessVerticalIDUsesCentralDomainIDs(t *testing.T) {
+	cases := map[string]string{
+		"restaurant": "domain-restaurants",
+		"grocery":    "domain-groceries",
+		"bakery":     "domain-groceries",
+		"pharmacy":   "domain-pharmacy",
+		"default":    "",
+	}
+	for category, want := range cases {
+		if got := canonicalBusinessVerticalID("", category); got != want {
+			t.Fatalf("category %q mapped to %q, want %q", category, got, want)
+		}
+	}
+	if got := canonicalBusinessVerticalID("domain-pharmacy", "restaurant"); got != "domain-pharmacy" {
+		t.Fatalf("explicit central vertical was rewritten to %q", got)
+	}
+}
+
+func TestFieldPartnerEditableStatusIsFailClosed(t *testing.T) {
+	for _, status := range []ActivationStatus{StatusDraft, StatusFieldVisitScheduled, StatusDocumentsMissing, StatusOpsRejected} {
+		if !IsFieldPartnerEditableStatus(status) {
+			t.Fatalf("expected field editing to be allowed for %q", status)
+		}
+	}
+	for _, status := range []ActivationStatus{StatusSubmitted, StatusDocumentsUploaded, StatusOpsReview, StatusPartnerActive, StatusClientVisible} {
+		if IsFieldPartnerEditableStatus(status) {
+			t.Fatalf("expected field editing to be locked for %q", status)
+		}
 	}
 }
 
@@ -303,10 +338,10 @@ func TestFieldSurfaceCannotActivate(t *testing.T) {
 
 func TestDeactivationRemovesClientVisibility(t *testing.T) {
 	if !IsTransitionAllowed(StatusClientVisible, StatusPartnerTerminated) {
-		t.Fatal("client_visible â†’ partner_deactivated must be allowed for immediate hide")
+		t.Fatal("client_visible -> partner_terminated must be allowed for immediate hide")
 	}
 	if IsClientVisible(StatusPartnerTerminated) {
-		t.Fatal("deactivated partner must not be client_visible")
+		t.Fatal("terminated partner must not be client_visible")
 	}
 }
 
@@ -388,15 +423,49 @@ func TestComputeReadiness_storePublicationGates(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			p := Partner{ID: "prt_gate", ActivationStatus: tc.status}
-			r := ComputeReadiness(p, 2, 1, tc.hasStore, tc.storePublished, tc.storeServiceable, tc.storePartnerReadiness, tc.storeCatalog, tc.storeMarketing, tc.storeVisible)
-			if r.CanPublishStoreToClient != tc.wantPublish {
-				t.Fatalf("CanPublishStoreToClient=%v, want %v (blocked: %q)", r.CanPublishStoreToClient, tc.wantPublish, r.StorePublicationBlockedReason)
+			blockingReasons := make([]string, 0)
+			if !tc.hasStore {
+				blockingReasons = append(blockingReasons, "STORE_NOT_LINKED")
+			} else {
+				if !tc.storePublished {
+					blockingReasons = append(blockingReasons, "STORE_NOT_PUBLISHED")
+				}
+				if !tc.storeVisible {
+					blockingReasons = append(blockingReasons, "STORE_HIDDEN")
+				}
+				if !tc.storeServiceable {
+					blockingReasons = append(blockingReasons, "STORE_NOT_SERVICEABLE")
+				}
+				if !tc.storePartnerReadiness {
+					blockingReasons = append(blockingReasons, "PARTNER_NOT_READY")
+				}
+				if !tc.storeCatalog {
+					blockingReasons = append(blockingReasons, "CATALOG_NOT_APPROVED")
+				}
+				if !tc.storeMarketing {
+					blockingReasons = append(blockingReasons, "MARKETING_HIDDEN")
+				}
+				if tc.status != StatusPartnerActive && tc.status != StatusClientVisible && tc.status != StatusClientHidden {
+					blockingReasons = append(blockingReasons, "PARTNER_NOT_CLIENT_VISIBLE")
+				}
 			}
-			if !tc.wantPublish && r.StorePublicationBlockedReason == "" {
-				t.Fatal("expected StorePublicationBlockedReason when publication is blocked")
+			publicationDecision := store.PublicationBlocked
+			if len(blockingReasons) == 0 {
+				publicationDecision = store.PublicationPublished
 			}
-			if tc.wantPublish && r.StorePublicationBlockedReason != "" {
-				t.Fatalf("expected no blocked reason, got %q", r.StorePublicationBlockedReason)
+			r := ComputeReadiness(p, 2, 1, tc.hasStore, publicationDecision, blockingReasons)
+			wantDecision := store.PublicationBlocked
+			if tc.wantPublish {
+				wantDecision = store.PublicationPublished
+			}
+			if r.PublicationDecision != wantDecision {
+				t.Fatalf("PublicationDecision=%q, want %q (blocking reasons: %v)", r.PublicationDecision, wantDecision, r.BlockingReasons)
+			}
+			if tc.wantPublish && len(r.BlockingReasons) != 0 {
+				t.Fatalf("expected no blocking reasons, got %v", r.BlockingReasons)
+			}
+			if !tc.wantPublish && len(r.BlockingReasons) == 0 {
+				t.Fatal("expected blocking reasons when publication is blocked")
 			}
 		})
 	}

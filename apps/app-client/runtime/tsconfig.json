@@ -1,15 +1,5 @@
 {
   "extends": "../../../tsconfig.base.json",
-  "compilerOptions": {
-    "noEmit": true
-  },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx",
-    "app.config.ts",
-    "../../../services/dsh/frontend/app-client/**/*.ts",
-    "../../../services/dsh/frontend/app-client/**/*.tsx",
-    "../../../services/dsh/frontend/shared/**/*.ts",
-    "../../../services/dsh/clients/**/*.ts"
-  ]
+  "compilerOptions": { "noEmit": true },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "app/**/*.ts", "app/**/*.tsx", "app.config.ts"]
 }

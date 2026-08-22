@@ -50,9 +50,11 @@ graphify-out/
 *.ico
 !services/dsh/evidence/**/*.png
 services/dsh/evidence/DSH-002-home-discovery-fullstack/screenshots/
+
+# DSH local seed media is workstation/runtime state. The tracked contract lives
+# at services/dsh/database/seeds/media/local-media.manifest.json; no binary or
+# manifest under the local runtime directory may enter repository history.
 services/dsh/database/seeds/local/media/
-!services/dsh/database/seeds/local/media/fixtures/
-!services/dsh/database/seeds/local/media/fixtures/**
 
 # Native application identity assets are governed source inputs for Expo/EAS.
 !apps/*/runtime/assets/
@@ -73,6 +75,8 @@ services/dsh/database/seeds/local/media/
 # live outside this directory; generated inventories and command output must
 # never become repository truth or same-commit closure evidence.
 .diagnostics/
+.sonar/
+knip-report.json
 tools/diagnostics/graph.json
 tools/diagnostics/*.raw.json
 tools/diagnostics/*.full.json
@@ -145,3 +149,4 @@ node-gates*.log
 *.p12
 .artifacts/
 .codeatlas/
+scratch/

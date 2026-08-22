@@ -20,6 +20,11 @@
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCheckoutIntentResponse" }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "409":
+        description: The confirmed cart version is stale; the response contains canonical cart readback.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCheckoutCartVersionConflict" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "503": { description: WLT payment-session handoff is unavailable. }
 

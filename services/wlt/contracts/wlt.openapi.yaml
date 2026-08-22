@@ -17,14 +17,13 @@ x-bthwani-financial-owner: true
 x-bthwani-contracts:
   common: ./wlt.common.openapi.yaml
   payments: ./wlt.payments.openapi.yaml
-  deliveryCollections: ./wlt.delivery-collections.openapi.yaml
   refunds: ./wlt.refunds.openapi.yaml
   settlementsCommissions: ./wlt.settlements-commissions.openapi.yaml
   settlementOperations: ./wlt.settlement-operations.openapi.yaml
   payoutsDestinations: ./wlt.payouts-destinations.openapi.yaml
   payoutFailureBoundary: ./wlt.payout-failure-boundary.openapi.yaml
-  codCustody: ./wlt.cod-custody.openapi.yaml
-  codRecords: ./wlt.cod-records.openapi.yaml
+  codReservations: ./wlt.cod-reservations.openapi.yaml
+  captainCollateral: ./wlt.captain-collateral.openapi.yaml
   commercial: ./wlt.commercial.openapi.yaml
   commercialSummary: ./wlt.commercial-summary.openapi.yaml
   promotionFunding: ./wlt.promotion-funding.openapi.yaml
@@ -118,6 +117,19 @@ paths:
           in: query
           required: true
           schema: { type: string, minLength: 1 }
+      responses:
+        '200': { $ref: '#/components/responses/ReferenceResponse' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '404': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+      security:
+        - bearerAuth: []
+  /wlt/references/field-commission:
+    get:
+      operationId: getWltFieldCommissionReference
+      summary: Return the OperatorContext-bound field commission reference for a partner.
+      tags: [ WltReferences ]
+      parameters:
+        - $ref: '#/components/parameters/PartnerIdQuery'
       responses:
         '200': { $ref: '#/components/responses/ReferenceResponse' }
         '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
@@ -308,6 +320,11 @@ components:
       in: query
       required: true
       schema: { type: string, minLength: 1 }
+    PartnerIdQuery:
+      name: partnerId
+      in: query
+      required: true
+      schema: { type: string, minLength: 1 }
     ActorTypePath:
       name: actorType
       in: path
@@ -398,7 +415,7 @@ components:
               capture_pending,
               captured,
               cod_pending,
-              cod_collected,
+              cod_finalized,
               failed,
               expired,
               provider_result_unknown

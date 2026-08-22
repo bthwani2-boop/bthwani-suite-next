@@ -46,13 +46,35 @@ if (-not $codeqlExe) {
 }
 
 try {
-  $versionJson = & $codeqlExe version --format=json 2>&1 | Out-String
-  $versionObj = $versionJson | ConvertFrom-Json
-  Write-Host "CODEQL_LOCAL: PASS"
-  Write-Host "  version: $($versionObj.version)"
-  Write-Host "  path:    $codeqlExe"
-  exit 0
-} catch {
+  $stderrFile = [System.IO.Path]::GetTempFileName()
+
+  try {
+    $versionOutput = & $codeqlExe version --format=json 2>$stderrFile
+    $exitCode = $LASTEXITCODE
+
+    if ($exitCode -ne 0) {
+      $stderr = Get-Content -LiteralPath $stderrFile -Raw -ErrorAction SilentlyContinue
+      throw "CodeQL exited with code $exitCode. $stderr"
+    }
+
+    $versionJson = $versionOutput -join "`n"
+
+    if ([string]::IsNullOrWhiteSpace($versionJson)) {
+      throw "CodeQL returned empty version JSON."
+    }
+
+    $versionObj = $versionJson | ConvertFrom-Json
+
+    Write-Host "CODEQL_LOCAL: PASS"
+    Write-Host "  version: $($versionObj.version)"
+    Write-Host "  path:    $codeqlExe"
+    exit 0
+  }
+  finally {
+    Remove-Item -LiteralPath $stderrFile -Force -ErrorAction SilentlyContinue
+  }
+}
+catch {
   Write-Host "CODEQL_LOCAL: FAIL"
   Write-Host "  Found at $codeqlExe but failed to run: $_"
   exit 1

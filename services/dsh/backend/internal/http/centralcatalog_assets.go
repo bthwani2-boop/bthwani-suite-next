@@ -133,13 +133,13 @@ func (s *protectedStoreServer) authorizeAssetLinkEntity(w http.ResponseWriter, r
 			s.writeCentralCatalogError(w, err)
 			return false
 		}
-		if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, s.workforce, actor, assortment.StoreID); err != nil {
+		if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, assortment.StoreID); err != nil {
 			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store assortment does not belong to you")
 			return false
 		}
 		return true
 	case "store":
-		if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, s.workforce, actor, entityID); err != nil {
+		if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, entityID); err != nil {
 			store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this store does not belong to you")
 			return false
 		}

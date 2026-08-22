@@ -133,6 +133,8 @@ export type DshServiceabilityResult = {
   readonly reason?: string;
   readonly availableModes?: readonly DshFulfillmentModeAvailability[];
   readonly etaWindow?: { minMinutes: number; maxMinutes: number };
+  readonly etaStatus: "not_requested" | "available" | "unavailable";
+  readonly etaReasonCode?: string;
   readonly quoteVersion?: string;
   readonly expiresAt?: string;
   readonly addressId?: string;

@@ -45,18 +45,21 @@ function appEnvSuffix(appKey) {
   return appKey.replaceAll("-", "_").toUpperCase();
 }
 
-test("all four mobile apps keep the required provider capabilities", () => {
+test("all four mobile apps keep required foreground provider capabilities", () => {
   for (const appKey of mobileApps) {
-    const features = manifest.apps[appKey].features;
-    assert.ok(features.includes("notifications"), `${appKey}: notifications are required`);
-    assert.ok(features.includes("location"), `${appKey}: location is required`);
-    assert.ok(features.includes("maps"), `${appKey}: native maps are required`);
+    const capabilities = manifest.apps[appKey].nativeCapabilities;
+    assert.ok(capabilities.includes("notifications"), `${appKey}: notifications are required`);
+    assert.ok(capabilities.includes("location"), `${appKey}: foreground location is required`);
+    assert.ok(capabilities.includes("maps"), `${appKey}: native maps are required`);
+    assert.equal(capabilities.includes("backgroundLocation"), false, `${appKey}: background location is not part of the current product contract`);
   }
 
-  assert.equal(manifest.apps["app-client"].features.includes("backgroundLocation"), false);
-  assert.equal(manifest.apps["app-partner"].features.includes("backgroundLocation"), false);
-  assert.equal(manifest.apps["app-field"].features.includes("backgroundLocation"), false);
-  assert.equal(manifest.apps["app-captain"].features.includes("backgroundLocation"), true);
+  const captainTransport = fs.readFileSync(
+    path.join(repoRoot, "services/dsh/frontend/shared/dispatch/dispatch-location.api.ts"),
+    "utf8",
+  );
+  assert.ok(captainTransport.includes("Callers must invoke this from foreground-only logic."));
+  assert.ok(captainTransport.includes("backend keeps no route history"));
 });
 
 test("each app receives its own scoped Android Maps key", () => {
@@ -80,17 +83,17 @@ test("one governed command owns Android EAS initialization, preflight, and build
   const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8"));
   assert.equal(
     packageJson.scripts["mobile:eas"],
-    "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/mobile-eas.ps1",
+    "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/mobile/eas.ps1",
   );
 
   const easAliases = Object.keys(packageJson.scripts).filter((name) => name.startsWith("mobile:eas:"));
   assert.deepEqual(easAliases, []);
 
   const compatibilityEntrypoint = fs.readFileSync(path.join(repoRoot, "tools/scripts/mobile-eas.ps1"), "utf8");
-  const sharedEntrypoint = fs.readFileSync(path.join(repoRoot, "apps/mobile.ps1"), "utf8");
-  const easEntrypoint = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas.ps1"), "utf8");
-  const workflow = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas/workflow.ps1"), "utf8");
-  const providers = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas/providers.ps1"), "utf8");
+  const sharedEntrypoint = fs.readFileSync(path.join(repoRoot, "tools/mobile/mobile.ps1"), "utf8");
+  const easEntrypoint = fs.readFileSync(path.join(repoRoot, "tools/mobile/eas.ps1"), "utf8");
+  const workflow = fs.readFileSync(path.join(repoRoot, "tools/mobile/eas/workflow.ps1"), "utf8");
+  const providers = fs.readFileSync(path.join(repoRoot, "tools/mobile/eas/providers.ps1"), "utf8");
   for (const appKey of mobileApps) {
     assert.ok(compatibilityEntrypoint.includes(`'${appKey}'`));
     assert.ok(sharedEntrypoint.includes(`'${appKey}'`));

@@ -3,7 +3,6 @@
 // the field agent records location and address but never invents a zone code.
 import React, { useState } from "react";
 import { View } from "react-native";
-import * as Location from "expo-location";
 import {
   TextField,
   Text,
@@ -21,6 +20,7 @@ import {
   BthwaniNativeMap,
   type BthwaniMapCoordinate,
 } from "../../shared/maps";
+import { getDshLocationAdapter } from "../../shared/mobile-capabilities";
 
 type Props = {
   readonly form: Partial<FieldPartnerDraftForm>;
@@ -60,14 +60,13 @@ export function OnboardingLocationSection({
     setLocateError(null);
     setLocating(true);
     try {
-      const permission = await Location.requestForegroundPermissionsAsync();
+      const location = getDshLocationAdapter();
+      const permission = await location.requestForegroundPermissions();
       if (!permission.granted) {
         setLocateError("لم يُسمح بالوصول لموقع الجهاز. فعّل صلاحية الموقع للمتابعة.");
         return;
       }
-      const position = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
+      const position = await location.getCurrentPosition();
       if (position.mocked === true) {
         setLocateError("تم رفض موقع صادر من مزود وهمي. استخدم موقع الجهاز الفعلي.");
         return;

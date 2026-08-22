@@ -1,5 +1,13 @@
 import { cookies } from "next/headers";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import type { TokenResponse } from "@bthwani/core-identity/server";
+import { identitySessionIsBoundToSurface } from "@bthwani/core-identity/session-policy";
+import {
+  identityServerClient,
+  isConcurrentRefreshError,
+  isIdentityServerAvailabilityError,
+  isIdentityServerInvalidSessionError,
+} from "../app/api/auth/_lib/identity-server";
 import {
   ACCESS_TOKEN_COOKIE,
   REFRESH_TOKEN_COOKIE,
@@ -12,6 +20,7 @@ export const BFF_REFRESH_COOKIE = REFRESH_TOKEN_COOKIE;
 export const BFF_OPAQUE_TOKEN = "BFF_HTTP_ONLY_COOKIE_SESSION";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 const FORWARDED_REQUEST_HEADERS = [
   "accept",
   "accept-language",
@@ -23,29 +32,15 @@ const FORWARDED_REQUEST_HEADERS = [
 ] as const;
 
 const SERVICE_CONFIG = {
-  dsh: {
-    env: "DSH_API_BASE_URL",
-    fallback: "http://127.0.0.1:58080",
-  },
-  identity: {
-    env: "IDENTITY_API_BASE_URL",
-    fallback: "http://127.0.0.1:58082",
-  },
-  workforce: {
-    env: "WORKFORCE_API_BASE_URL",
-    fallback: "http://127.0.0.1:58086",
-  },
-  providers: {
-    env: "PROVIDERS_API_BASE_URL",
-    fallback: "http://127.0.0.1:58087",
-  },
-  "platform-control": {
-    env: "PLATFORM_CONTROL_API_BASE_URL",
-    fallback: "http://127.0.0.1:58088",
-  },
+  dsh: { env: "DSH_API_BASE_URL", fallback: "http://127.0.0.1:58080" },
+  identity: { env: "IDENTITY_API_BASE_URL", fallback: "http://127.0.0.1:58082" },
+  workforce: { env: "WORKFORCE_API_BASE_URL", fallback: "http://127.0.0.1:58086" },
+  providers: { env: "PROVIDERS_API_BASE_URL", fallback: "http://127.0.0.1:58087" },
+  "platform-control": { env: "PLATFORM_CONTROL_API_BASE_URL", fallback: "http://127.0.0.1:58088" },
 } as const;
 
 export type ControlPanelBffService = keyof typeof SERVICE_CONFIG;
+type ControlPanelTokenPair = TokenResponse;
 
 function serviceBaseUrl(service: ControlPanelBffService): string | null {
   const config = SERVICE_CONFIG[service];
@@ -55,30 +50,58 @@ function serviceBaseUrl(service: ControlPanelBffService): string | null {
   return config.fallback;
 }
 
-function requestIsSameSite(request: NextRequest): boolean {
+/** Shared strict origin policy for authentication and state-changing BFF calls. */
+export function isSameOriginRequest(request: Request): boolean {
   const origin = request.headers.get("origin");
-  if (origin && origin !== request.nextUrl.origin) return false;
+  if (!origin) return true;
+  try {
+    return new URL(request.url).origin === new URL(origin).origin;
+  } catch {
+    return false;
+  }
+}
+
+function requestIsSameSite(request: Request): boolean {
+  if (!isSameOriginRequest(request)) return false;
   const fetchSite = request.headers.get("sec-fetch-site");
   return !fetchSite || ["same-origin", "same-site", "none"].includes(fetchSite);
 }
 
-function jsonError(status: number, code: string, message: string): NextResponse {
-  return NextResponse.json(
-    { code, message },
-    { status, headers: { "Cache-Control": "no-store" } },
+function pathIsSafe(path: readonly string[]): boolean {
+  return (
+    path.length > 0 &&
+    path.every(
+      (segment) =>
+        segment.length > 0 &&
+        segment !== "." &&
+        segment !== ".." &&
+        !segment.includes("/") &&
+        !segment.includes("\\"),
+    )
   );
 }
 
-function buildUpstreamHeaders(
-  request: NextRequest,
-  accessToken: string | undefined,
-): Headers {
+function noStoreJson(body: unknown, status: number): NextResponse {
+  return NextResponse.json(body, {
+    status,
+    headers: { "Cache-Control": "no-store" },
+  });
+}
+
+function jsonError(status: number, code: string, message: string): NextResponse {
+  return noStoreJson({ code, message }, status);
+}
+
+function buildUpstreamHeaders(request: Request, accessToken: string | undefined): Headers {
   const headers = new Headers();
   for (const name of FORWARDED_REQUEST_HEADERS) {
     const value = request.headers.get(name);
     if (value) headers.set(name, value);
   }
   if (!headers.has("accept")) headers.set("accept", "application/json");
+  if (!headers.has("x-correlation-id")) {
+    headers.set("x-correlation-id", `cp-bff-${globalThis.crypto.randomUUID()}`);
+  }
   if (accessToken) headers.set("authorization", `Bearer ${accessToken}`);
   return headers;
 }
@@ -99,88 +122,81 @@ function isTokenResponse(value: unknown): value is {
 } {
   if (!value || typeof value !== "object") return false;
   const candidate = value as { accessToken?: unknown; refreshToken?: unknown };
-  return (
-    typeof candidate.accessToken === "string" &&
-    candidate.accessToken.length > 0 &&
-    typeof candidate.refreshToken === "string" &&
-    candidate.refreshToken.length > 0
-  );
+  return typeof candidate.accessToken === "string"
+    && candidate.accessToken.length > 0
+    && typeof candidate.refreshToken === "string"
+    && candidate.refreshToken.length > 0;
 }
 
-function tokenResponseHasOperatorIdentity(value: {
-  identity?: unknown;
-}): boolean {
-  if (!value.identity || typeof value.identity !== "object") return false;
-  const roles = (value.identity as { roles?: unknown }).roles;
-  return Array.isArray(roles) && roles.includes("operator");
+function tokenResponseHasGovernedControlPanelIdentity(value: { identity?: unknown }): boolean {
+  return identitySessionIsBoundToSurface(value.identity, "control-panel");
+}
+
+function isGovernedControlPanelIdentity(identity: unknown): boolean {
+  return identitySessionIsBoundToSurface(identity, "control-panel");
+}
+
+function logoutRevocationConfirmed(upstream: Response): boolean {
+  return upstream.ok || upstream.status === 401;
+}
+
+function expiredSessionResponse(status = 401): NextResponse {
+  const response = noStoreJson(
+    { code: status === 403 ? "CONTROL_PANEL_FORBIDDEN" : "SESSION_EXPIRED" },
+    status,
+  );
+  clearSessionCookies(response);
+  return response;
+}
+
+function refreshFailureResponse(error: unknown): NextResponse {
+  if (isConcurrentRefreshError(error)) {
+    return noStoreJson({ code: "REFRESH_ALREADY_ROTATED" }, 409);
+  }
+  if (isIdentityServerAvailabilityError(error) || !isIdentityServerInvalidSessionError(error)) {
+    return noStoreJson({ code: "IDENTITY_UNAVAILABLE" }, 503);
+  }
+  return expiredSessionResponse();
+}
+
+async function rotateControlPanelSession(
+  refreshToken: string,
+): Promise<ControlPanelTokenPair | null> {
+  const rotated = await identityServerClient().refresh(refreshToken);
+  if (!identitySessionIsBoundToSurface(rotated.identity, "control-panel")) return null;
+  return rotated;
 }
 
 async function requestBody(
-  request: NextRequest,
+  request: Request,
   service: ControlPanelBffService,
   upstreamPath: string,
   refreshToken: string | undefined,
 ): Promise<BodyInit | undefined> {
   if (SAFE_METHODS.has(request.method)) return undefined;
-
   if (service === "identity" && upstreamPath === "/auth/refresh") {
     if (!refreshToken) return undefined;
     return JSON.stringify({ refreshToken });
   }
-
   const body = await request.arrayBuffer();
   return body.byteLength > 0 ? body : undefined;
 }
 
-export async function proxyControlPanelRequest(
-  request: NextRequest,
+async function tryForward(
+  request: Request,
   service: ControlPanelBffService,
-  pathSegments: readonly string[],
-): Promise<NextResponse> {
-  if (!SAFE_METHODS.has(request.method) && !requestIsSameSite(request)) {
-    return jsonError(403, "BFF_CROSS_SITE_FORBIDDEN", "Cross-site mutation is forbidden.");
-  }
-
-  const cookieStore = await cookies();
-  const accessToken = cookieStore.get(BFF_ACCESS_COOKIE)?.value;
-  const refreshToken = cookieStore.get(BFF_REFRESH_COOKIE)?.value;
-  const upstreamPath = `/${pathSegments.map(encodeURIComponent).join("/")}`;
-
-  if (
-    service === "identity" &&
-    upstreamPath === "/auth/refresh" &&
-    !refreshToken
-  ) {
-    return jsonError(401, "IDENTITY_REFRESH_COOKIE_MISSING", "Refresh session is unavailable.");
-  }
-
-  const baseUrl = serviceBaseUrl(service);
-  if (!baseUrl) {
-    return jsonError(
-      503,
-      "BFF_UPSTREAM_NOT_CONFIGURED",
-      "The requested upstream service is not configured.",
-    );
-  }
-
-  const upstreamUrl = new URL(
-    `${upstreamPath}${request.nextUrl.search}`,
-    `${baseUrl}/`,
-  );
-  const body = await requestBody(
-    request,
-    service,
-    upstreamPath,
-    refreshToken,
-  );
-  const headers = buildUpstreamHeaders(request, accessToken);
-  if (body !== undefined && !headers.has("content-type")) {
-    headers.set("content-type", "application/json");
-  }
-
-  let upstream: Response;
+  upstreamPath: string,
+  upstreamUrl: URL,
+  accessToken: string | undefined,
+  refreshToken: string | undefined,
+): Promise<Response | null> {
   try {
-    upstream = await fetch(upstreamUrl, {
+    const body = await requestBody(request, service, upstreamPath, refreshToken);
+    const headers = buildUpstreamHeaders(request, accessToken);
+    if (body !== undefined && !headers.has("content-type")) {
+      headers.set("content-type", "application/json");
+    }
+    return await fetch(upstreamUrl, {
       method: request.method,
       headers,
       body,
@@ -189,16 +205,20 @@ export async function proxyControlPanelRequest(
       signal: AbortSignal.timeout(15_000),
     });
   } catch {
-    return jsonError(
-      502,
-      "BFF_UPSTREAM_UNAVAILABLE",
-      "The requested upstream service is temporarily unavailable.",
-    );
+    return null;
   }
+}
 
+async function responseFromUpstream(
+  upstream: Response,
+  service: ControlPanelBffService,
+  upstreamPath: string,
+  rotatedCookies: ControlPanelTokenPair | null,
+): Promise<NextResponse> {
   const contentType = upstream.headers.get("content-type") ?? "";
-  const shouldInspectIdentityResponse =
-    service === "identity" && contentType.includes("application/json");
+  const shouldInspectIdentityResponse = service === "identity" && contentType.includes("application/json");
+  const isIdentitySession = service === "identity" && upstreamPath === "/auth/session";
+  const isIdentityLogout = service === "identity" && upstreamPath === "/auth/logout";
 
   if (shouldInspectIdentityResponse) {
     const text = await upstream.text();
@@ -209,22 +229,19 @@ export async function proxyControlPanelRequest(
       parsed = null;
     }
 
+    if (upstream.ok && isIdentitySession && !isGovernedControlPanelIdentity(parsed)) {
+      const response = jsonError(403, "CONTROL_PANEL_FORBIDDEN", "Identity session is not bound to the control panel.");
+      clearSessionCookies(response);
+      return response;
+    }
+
     if (upstream.ok && isTokenResponse(parsed)) {
-      if (!tokenResponseHasOperatorIdentity(parsed)) {
-        const response = jsonError(
-          403,
-          "CONTROL_PANEL_FORBIDDEN",
-          "Identity is not authorized for the control panel.",
-        );
+      if (!tokenResponseHasGovernedControlPanelIdentity(parsed)) {
+        const response = jsonError(403, "CONTROL_PANEL_FORBIDDEN", "Identity session is not bound to the control panel.");
         clearSessionCookies(response);
         return response;
       }
-
-      const publicBody = {
-        ...parsed,
-        accessToken: BFF_OPAQUE_TOKEN,
-        refreshToken: BFF_OPAQUE_TOKEN,
-      };
+      const publicBody = { ...parsed, accessToken: BFF_OPAQUE_TOKEN, refreshToken: BFF_OPAQUE_TOKEN };
       const response = NextResponse.json(publicBody, {
         status: upstream.status,
         headers: copyResponseHeaders(upstream),
@@ -237,19 +254,92 @@ export async function proxyControlPanelRequest(
       status: upstream.status,
       headers: copyResponseHeaders(upstream),
     });
-    if (upstreamPath === "/auth/logout") clearSessionCookies(response);
+    if (rotatedCookies) setSessionCookies(response, rotatedCookies);
+    if (isIdentityLogout && logoutRevocationConfirmed(upstream)) clearSessionCookies(response);
     return response;
   }
 
-  const response = new NextResponse(
-    upstream.status === 204 ? null : await upstream.arrayBuffer(),
-    {
-      status: upstream.status,
-      headers: copyResponseHeaders(upstream),
-    },
-  );
-  if (service === "identity" && upstreamPath === "/auth/logout") {
-    clearSessionCookies(response);
-  }
+  const response = new NextResponse(upstream.status === 204 ? null : await upstream.arrayBuffer(), {
+    status: upstream.status,
+    headers: copyResponseHeaders(upstream),
+  });
+  if (rotatedCookies) setSessionCookies(response, rotatedCookies);
+  if (isIdentityLogout && logoutRevocationConfirmed(upstream)) clearSessionCookies(response);
   return response;
+}
+
+export async function proxyControlPanelRequest(
+  request: Request,
+  service: ControlPanelBffService,
+  pathSegments: readonly string[],
+): Promise<NextResponse> {
+  if (!pathIsSafe(pathSegments)) {
+    return jsonError(404, "BFF_PATH_NOT_ALLOWED", "The requested path is outside the governed service namespace.");
+  }
+  if (MUTATING_METHODS.has(request.method) && !requestIsSameSite(request)) {
+    return jsonError(403, "BFF_CROSS_SITE_FORBIDDEN", "Cross-site mutation is forbidden.");
+  }
+
+  const cookieStore = await cookies();
+  const refreshToken = cookieStore.get(BFF_REFRESH_COOKIE)?.value;
+  let accessToken = cookieStore.get(BFF_ACCESS_COOKIE)?.value;
+  let rotatedCookies: ControlPanelTokenPair | null = null;
+  const upstreamPath = `/${pathSegments.map(encodeURIComponent).join("/")}`;
+  const isIdentityRefresh = service === "identity" && upstreamPath === "/auth/refresh";
+
+  if (isIdentityRefresh && !refreshToken) {
+    return jsonError(401, "IDENTITY_REFRESH_COOKIE_MISSING", "Refresh session is unavailable.");
+  }
+
+  const baseUrl = serviceBaseUrl(service);
+  if (!baseUrl) {
+    return jsonError(503, "BFF_UPSTREAM_NOT_CONFIGURED", "The requested upstream service is not configured.");
+  }
+  const requestUrl = new URL(request.url);
+  const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, `${baseUrl}/`);
+
+  if (!isIdentityRefresh && !accessToken) {
+    if (!refreshToken) return noStoreJson({ code: "SESSION_NOT_FOUND" }, 401);
+    try {
+      rotatedCookies = await rotateControlPanelSession(refreshToken);
+      if (!rotatedCookies) return expiredSessionResponse(403);
+      accessToken = rotatedCookies.accessToken;
+    } catch (error) {
+      return refreshFailureResponse(error);
+    }
+  }
+
+  let upstream = await tryForward(
+    request.clone(),
+    service,
+    upstreamPath,
+    upstreamUrl,
+    accessToken,
+    refreshToken,
+  );
+  if (!upstream) {
+    return jsonError(502, "BFF_UPSTREAM_UNAVAILABLE", "The requested upstream service is temporarily unavailable.");
+  }
+
+  if (!isIdentityRefresh && upstream.status === 401 && refreshToken && !rotatedCookies) {
+    try {
+      rotatedCookies = await rotateControlPanelSession(refreshToken);
+      if (!rotatedCookies) return expiredSessionResponse(403);
+      upstream = await tryForward(
+        request.clone(),
+        service,
+        upstreamPath,
+        upstreamUrl,
+        rotatedCookies.accessToken,
+        refreshToken,
+      );
+      if (!upstream) {
+        return jsonError(502, "BFF_UPSTREAM_UNAVAILABLE", "The requested upstream service is temporarily unavailable.");
+      }
+    } catch (error) {
+      return refreshFailureResponse(error);
+    }
+  }
+
+  return responseFromUpstream(upstream, service, upstreamPath, rotatedCookies);
 }

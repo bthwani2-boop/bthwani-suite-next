@@ -1,6 +1,5 @@
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import * as ImagePicker from "expo-image-picker";
 import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
@@ -17,7 +16,6 @@ import {
 import {
   useFieldChecklistController,
   buildChecklistViewModel,
-  CHECK_TYPE_LABELS,
   VISIT_STATUS_LABELS,
   classifyGovernedError,
   type DshCheckType,
@@ -26,6 +24,7 @@ import {
 } from "../../shared/field-readiness";
 import { uploadFieldStoreMedia } from "../../shared/media";
 import { DshFieldReferenceTag } from "../components/DshFieldReferenceTag";
+import { getDshImagePickerAdapter } from "../../shared/mobile-capabilities";
 import {
   DshFieldProblemNotice,
   DshFieldProblemState,
@@ -80,16 +79,17 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
     setUploadingEvidence(true);
     setUploadProblem(null);
     try {
+      const picker = getDshImagePickerAdapter();
       const permission = source === "camera"
-        ? await ImagePicker.requestCameraPermissionsAsync()
-        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+        ? await picker.requestCameraPermissions()
+        : await picker.requestMediaLibraryPermissions();
       if (!permission.granted) {
         setUploadProblem(classifyGovernedError({ code: "MEDIA_PERMISSION_DENIED" }));
         return;
       }
       const result = source === "camera"
-        ? await ImagePicker.launchCameraAsync({ quality: 0.8 })
-        : await ImagePicker.launchImageLibraryAsync({ quality: 0.8 });
+        ? await picker.launchCamera({ quality: 0.8 })
+        : await picker.launchImageLibrary({ quality: 0.8 });
       if (result.canceled || !result.assets?.[0]) return;
       const asset = result.assets[0];
       const mediaRef = await uploadFieldStoreMedia(storeId, {
@@ -250,7 +250,7 @@ export function DshFieldReadinessChecklistScreen({ storeId, visitId, onBack }: P
           <View style={styles.notice}>
             <Text role="titleSm" tone="warning">بنود غير مكتملة</Text>
             {vm.blockers.map((blocker) => (
-              <Text key={blocker} role="caption" tone="muted">• {CHECK_TYPE_LABELS[blocker]}</Text>
+              <Text key={blocker.checkType} role="caption" tone="muted">• {blocker.label}</Text>
             ))}
           </View>
         </Card>

@@ -1,13 +1,9 @@
 import type { DshMutationAuth } from "../_kernel/dsh-http-request";
+import { secureRandomId } from "../_kernel/secure-random.ts";
 import type { StoreRoleAction } from "./store-discovery.types";
 
-let storeRoleMutationSequence = 0;
-
 function uniquePart(): string {
-  const uuid = globalThis.crypto?.randomUUID?.();
-  if (uuid) return uuid;
-  storeRoleMutationSequence += 1;
-  return `${Date.now().toString(36)}-${storeRoleMutationSequence.toString(36)}`;
+  return secureRandomId();
 }
 
 export function fingerprintStoreRoleAction(action: StoreRoleAction): string {

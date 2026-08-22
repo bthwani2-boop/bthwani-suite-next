@@ -9,6 +9,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
 Set-Location -LiteralPath $RepoRoot
+. (Join-Path $RepoRoot "tools/dev/local-actors.ps1")
 
 function Import-RuntimeEnv {
   param([string]$Path)
@@ -114,7 +115,7 @@ ON CONFLICT (singleton) DO UPDATE SET probe_value = EXCLUDED.probe_value, update
     $QuiescedContainers += $Container
   }
 
-  & pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/backup-runtime.ps1 `
+  & pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/export-runtime-snapshot.ps1 `
     -BackupDir $BackupDir -EnvFile $EnvFile -ConsistencyMode Quiesced
   if ($LASTEXITCODE -ne 0) { throw "Governed quiesced backup failed." }
   $Manifest = Get-Content -LiteralPath (Join-Path $BackupDir "backup-manifest.json") -Raw | ConvertFrom-Json
@@ -144,7 +145,17 @@ ON CONFLICT (singleton) DO UPDATE SET probe_value = EXCLUDED.probe_value, update
   Wait-Status "dsh" "http://127.0.0.1:58080/dsh/health" "healthy"
   Wait-Status "wlt" "http://127.0.0.1:58083/wlt/health" "healthy"
   Wait-Status "platform-control" "http://127.0.0.1:58088/platform/health" "healthy"
-  $Providers = Invoke-RestMethod -Uri "http://127.0.0.1:58087/providers/health" -TimeoutSec 10
+  $OperatorLogin = Invoke-RestMethod -Method POST -Uri "http://127.0.0.1:58082/auth/login" `
+    -ContentType "application/json" `
+    -Body (@{
+      username = Get-LocalUsername -Key "operator"
+      password = Get-LocalPassword
+      deviceFingerprint = "runtime-backup-restore-$Probe"
+    } | ConvertTo-Json -Depth 6) `
+    -TimeoutSec 10
+  if ([string]::IsNullOrWhiteSpace([string]$OperatorLogin.accessToken)) { throw "Could not obtain a governed operator token after restore." }
+  $Providers = Invoke-RestMethod -Uri "http://127.0.0.1:58087/providers/health" `
+    -Headers @{ Authorization = "Bearer $($OperatorLogin.accessToken)" } -TimeoutSec 10
   if (@($Providers.providers).Count -lt 8) { throw "Providers did not recover its governed health matrix after restore." }
 
   [ordered]@{

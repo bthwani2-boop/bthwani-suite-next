@@ -1,25 +1,137 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  assertChangedExecutableCoverageOwnership,
   filterLcov,
+  loadCoverageOwnershipModel,
   mergeLcovRecords,
   planCoverageSuites,
+  resolveCoverageCommandInvocation,
+  runCommand,
 } from "./generate-sonar-node-coverage.mjs";
 
-test("coverage planning stays contextual and forces self-verification", () => {
+const EXECUTABLE_SUITES = [
+  "app-captain",
+  "app-client",
+  "app-field",
+  "app-partner",
+  "control-panel",
+  "control-panel-config",
+  "data-runtime",
+  "dsh",
+  "identity",
+  "ui-kit",
+  "wlt",
+];
+
+test("coverage ownership is manifest-derived and exposes executable source authorities", () => {
+  const model = loadCoverageOwnershipModel();
+  assert.deepEqual(model.allSuites, EXECUTABLE_SUITES);
+  assert.equal(model.projects["app-captain"].strategy, "node-lcov");
+  assert.equal(model.projects["app-client"].strategy, "node-lcov");
+  assert.equal(model.projects["app-field"].strategy, "node-lcov");
+  assert.equal(model.projects["app-partner"].strategy, "node-lcov");
+  assert.equal(model.projects["control-panel"].strategy, "node-lcov");
+  assert.equal(model.projects["control-panel-config"].strategy, "node-lcov");
+  assert.equal(model.projects["data-runtime"].strategy, "node-lcov");
+  assert.equal(model.projects.dsh.strategy, "node-lcov");
+  assert.equal(model.projects.identity.strategy, "node-lcov");
+  assert.equal(model.projects["ui-kit"].strategy, "node-lcov");
+  assert.equal(model.projects.wlt.strategy, "node-lcov");
+});
+
+test("coverage preparation is an ordered shell-free command contract", () => {
+  const model = loadCoverageOwnershipModel();
+  assert.deepEqual(model.suites.dsh.prepare, [
+    "pnpm",
+    "--dir",
+    "services/dsh",
+    "run",
+    "build:ts",
+  ]);
+  assert.deepEqual(model.suites.dsh.testRoots, ["services/dsh/tests/coverage"]);
+  assert.equal(model.suites.identity.prepare, null);
+  assert.equal(model.suites["control-panel-config"].prepare, null);
+});
+
+test("coverage preparation resolves package-manager commands through the canonical cross-platform invoker", () => {
+  const invocation = resolveCoverageCommandInvocation("pnpm", ["--version"]);
+  assert.notEqual(invocation.executable, "pnpm.cmd");
+  if (process.platform === "win32") {
+    assert.equal(invocation.executable.toLowerCase().endsWith("cmd.exe"), true);
+    assert.deepEqual(invocation.args.slice(0, 3), ["/d", "/s", "/c"]);
+  } else {
+    assert.equal(invocation.executable, "pnpm");
+  }
+});
+
+test("coverage command failure reports the resolved executable without masking the status", () => {
+  assert.throws(
+    () => runCommand(process.execPath, ["-e", "process.exit(7)"]),
+    (error) => {
+      assert.match(error.message, /exited with status 7/);
+      assert.ok(error.message.includes(process.execPath));
+      assert.equal(error.message.includes("executable is not defined"), false);
+      return true;
+    },
+  );
+});
+
+test("coverage planning is source-authority based and keeps DSH LCOV separate from broad verification", () => {
   assert.deepEqual(planCoverageSuites(["services/dsh/frontend/shared/catalog/a.ts"]), ["dsh"]);
   assert.deepEqual(planCoverageSuites(["shared/data-runtime/src/a.ts"]), ["data-runtime"]);
   assert.deepEqual(planCoverageSuites(["core/identity/clients/identity-session-store.ts"]), ["identity"]);
-  assert.deepEqual(planCoverageSuites(["apps/app-client/runtime/src/App.tsx"]), []);
-  assert.deepEqual(planCoverageSuites(["services/wlt/frontend/shared/dsh/finance/a.ts"]), []);
+  assert.deepEqual(planCoverageSuites(["apps/control-panel/runtime/next.config.mjs"]), ["control-panel-config"]);
+  assert.deepEqual(planCoverageSuites(["services/wlt/frontend/shared/dsh/finance/a.ts"]), ["wlt"]);
+  assert.deepEqual(planCoverageSuites(["apps/app-field/runtime/src/navigation/field-deep-link.ts"]), ["app-field"]);
+  assert.deepEqual(planCoverageSuites(["apps/app-captain/runtime/src/App.tsx"]), ["app-captain"]);
+  assert.deepEqual(planCoverageSuites(["apps/app-client/runtime/app.config.ts"]), ["app-client"]);
+  assert.deepEqual(planCoverageSuites(["apps/app-partner/runtime/fingerprint.config.js"]), ["app-partner"]);
   assert.deepEqual(
-    planCoverageSuites([".github/workflows/sonarqube.yml"]),
-    ["identity", "data-runtime", "dsh"],
+    planCoverageSuites(["apps/app-partner/runtime/tests/partner-order-runtime.execution.test.mjs"]),
+    ["app-partner"],
   );
   assert.deepEqual(
-    planCoverageSuites([], { mode: "full" }),
-    ["identity", "data-runtime", "dsh"],
+    planCoverageSuites(["apps/app-field/runtime/tests/field-deep-link.execution.test.mjs"]),
+    ["app-field"],
   );
+  assert.deepEqual(
+    planCoverageSuites(["apps/app-captain/runtime/tests/captain-readiness-policy.execution.test.mjs"]),
+    ["app-captain"],
+  );
+  assert.deepEqual(
+    planCoverageSuites(["services/dsh/tests/coverage/dsh-executable-coverage.test.mjs"]),
+    ["dsh"],
+  );
+  assert.deepEqual(
+    planCoverageSuites(["services/dsh/tests/platform-capability-authority.test.mjs"]),
+    [],
+  );
+});
+
+test("changed executable product source is covered or rejected before Sonar", () => {
+  assert.deepEqual(planCoverageSuites(["apps/app-client/runtime/src/index.ts"]), ["app-client"]);
+  assert.doesNotThrow(() => assertChangedExecutableCoverageOwnership([
+    "apps/app-client/runtime/app.config.ts",
+    "apps/app-partner/runtime/fingerprint.config.js",
+  ]));
+  assert.throws(
+    () => assertChangedExecutableCoverageOwnership(["apps/unknown-surface/src/a.ts"]),
+    /no project owns this executable JS\/TS source/,
+  );
+});
+
+test("verification tooling is not misclassified as uncovered product source", () => {
+  assert.doesNotThrow(() => assertChangedExecutableCoverageOwnership([
+    "tools/mobile/test-mobile-runtime-contract.mjs",
+    "tools/mobile/tests/mobile-runtime-transport.contract.test.mjs",
+  ]));
+  assert.deepEqual(planCoverageSuites(["tools/mobile/test-mobile-runtime-contract.mjs"]), []);
+});
+
+test("coverage self-verification and full mode derive suites from the manifest", () => {
+  assert.deepEqual(planCoverageSuites(["tools/verification/ownership.manifest.json"]), EXECUTABLE_SUITES);
+  assert.deepEqual(planCoverageSuites([], { mode: "full" }), EXECUTABLE_SUITES);
 });
 
 test("LCOV filtering retains only real source records owned by the selected suite", () => {

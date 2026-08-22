@@ -13,28 +13,23 @@ import type {
 type Props = {
   readonly store: DshStoreAdminDetail;
   readonly actionState: StoreActionState;
-  readonly diagnosticsState?: any; // DshStorePublicationDiagnosticsState
   readonly onSubmit: (input: OperatorStoreGovernanceRequest) => Promise<void>;
 };
 
-export function StoreGovernanceActions({ store, actionState, diagnosticsState, onSubmit }: Props) {
+export function StoreGovernanceActions({ store, actionState, onSubmit }: Props) {
   const [action, setAction] = useState<OperatorStoreGovernanceRequest["action"]>("lifecycle");
-  const [value, setValue] = useState("published");
+  const [value, setValue] = useState("paused");
   const [reason, setReason] = useState("");
 
   const options = action === "lifecycle"
     ? [
-        { value: "published", label: "نشر" },
+        { value: "draft", label: "مسودة" },
+        { value: "ready", label: "جاهز للتسويق" },
         { value: "paused", label: "إيقاف مؤقت" },
         { value: "suspended", label: "تعليق" },
         { value: "closed", label: "إغلاق دائم" },
       ]
-    : action === "visibility" || action === "marketing-visibility"
-      ? [
-          { value: "visible", label: "ظاهر للعملاء" },
-          { value: "hidden", label: "مخفي عن العملاء" },
-        ]
-      : action === "partner-readiness"
+    : action === "partner-readiness"
         ? [
             { value: "pending", label: "بانتظار الجاهزية" },
             { value: "ready", label: "جاهز" },
@@ -78,21 +73,18 @@ export function StoreGovernanceActions({ store, actionState, diagnosticsState, o
           aria-label="نوع إجراء الحوكمة"
           options={[
             { value: "lifecycle", label: "دورة حياة المتجر" },
-            { value: "visibility", label: "الرؤية للعملاء" },
             { value: "serviceability", label: "قابلية الخدمة" },
             { value: "partner-readiness", label: "جاهزية الشريك" },
             { value: "catalog-approval", label: "اعتماد الكتالوج" },
-            { value: "marketing-visibility", label: "الظهور التسويقي" },
           ]}
           onChange={(next) => {
             const nextAction = next as OperatorStoreGovernanceRequest["action"];
             setAction(nextAction);
             setValue(
-              nextAction === "visibility" || nextAction === "marketing-visibility" ? "visible"
-                : nextAction === "serviceability" ? "serviceable"
+              nextAction === "serviceability" ? "serviceable"
                 : nextAction === "partner-readiness" ? "pending"
                 : nextAction === "catalog-approval" ? "draft"
-                : "published",
+                : "paused",
             );
           }}
         />
@@ -113,8 +105,7 @@ export function StoreGovernanceActions({ store, actionState, diagnosticsState, o
         <CpButton
           disabled={
             reason.trim().length < 3 ||
-            actionState.kind === "submitting" ||
-            (action === "lifecycle" && value === "published" && diagnosticsState?.kind === "success" && !diagnosticsState.isReady)
+            actionState.kind === "submitting"
           }
           onClick={() => void onSubmit({
             expectedVersion: store.version,
@@ -133,11 +124,6 @@ export function StoreGovernanceActions({ store, actionState, diagnosticsState, o
       {action === "lifecycle" && (value === "paused" || value === "suspended" || value === "closed") && (
         <div style={{ marginTop: "0.75rem", padding: "0.5rem", background: "var(--bthwani-control-panel-surface-muted)", color: "var(--bthwani-control-panel-danger)", borderRadius: "0.25rem" }}>
           <strong>تنبيه:</strong> سيؤثر هذا الإجراء فوراً على المتجر ولن يظهر للعملاء الجدد. سيتم إلغاء الطلبات غير المكتملة بناءً على الإجراء.
-        </div>
-      )}
-      {action === "lifecycle" && value === "published" && diagnosticsState?.kind === "success" && !diagnosticsState.isReady && (
-        <div style={{ marginTop: "0.75rem", padding: "0.5rem", background: "var(--bthwani-control-panel-surface-muted)", color: "var(--bthwani-control-panel-danger)", borderRadius: "0.25rem" }}>
-          <strong>لا يمكن النشر:</strong> يرجى إكمال متطلبات الجاهزية (موانع النشر: {diagnosticsState.blockers.join("، ")}).
         </div>
       )}
     </section>

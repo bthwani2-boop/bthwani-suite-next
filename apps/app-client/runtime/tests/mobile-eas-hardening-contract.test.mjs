@@ -7,17 +7,17 @@ import { fileURLToPath } from "node:url";
 const testDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(testDirectory, "../../../..");
 const apps = ["app-client", "app-partner", "app-captain", "app-field"];
-const wrapper = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas.ps1"), "utf8");
-const workflow = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas/workflow.ps1"), "utf8");
-const providers = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas/providers.ps1"), "utf8");
-const signing = fs.readFileSync(path.join(repoRoot, "apps/mobile/eas/signing.ps1"), "utf8");
-const firebaseHelperPath = path.join(repoRoot, "apps/mobile/eas/firebase.ps1");
-const mapsHelperPath = path.join(repoRoot, "apps/mobile/eas/maps.ps1");
-const easEnginePath = path.join(repoRoot, "apps/mobile/eas-build-mobile.mjs");
+const wrapper = fs.readFileSync(path.join(repoRoot, "tools/mobile/eas.ps1"), "utf8");
+const workflow = fs.readFileSync(path.join(repoRoot, "tools/mobile/eas/workflow.ps1"), "utf8");
+const providers = fs.readFileSync(path.join(repoRoot, "tools/mobile/eas/providers.ps1"), "utf8");
+const signing = fs.readFileSync(path.join(repoRoot, "tools/mobile/eas/signing.ps1"), "utf8");
+const firebaseHelperPath = path.join(repoRoot, "tools/mobile/eas/firebase.ps1");
+const mapsHelperPath = path.join(repoRoot, "tools/mobile/eas/maps.ps1");
+const easEnginePath = path.join(repoRoot, "tools/mobile/eas-build-mobile.mjs");
 const legacyEasEnginePath = path.join(repoRoot, "tools/scripts/eas-build-mobile.mjs");
 const packageManagerGuardPath = path.join(repoRoot, "tools/scripts/guard-mobile-package-manager-invocation.mjs");
 const packageManagerBridgePath = path.join(repoRoot, "tools/scripts/lib/package-manager-invocation.mjs");
-const canonicalPackageManagerHelperPath = path.join(repoRoot, "apps/mobile/lib/package-manager-invocation.mjs");
+const canonicalPackageManagerHelperPath = path.join(repoRoot, "tools/mobile/lib/package-manager-invocation.mjs");
 const firebaseHelper = fs.readFileSync(firebaseHelperPath, "utf8");
 
 function runtimePackage(app) {
@@ -88,16 +88,16 @@ test("EAS provider synchronization is isolated, idempotent, and secret-preservin
   for (const line of listAdds) assert.match(line, /\[void\]\s+\$candidates\.Add/);
 });
 
-test("active mobile build executors live under apps/mobile", () => {
+test("active mobile build executors live under tools/mobile", () => {
   for (const file of [firebaseHelperPath, mapsHelperPath, easEnginePath]) {
     assert.ok(fs.existsSync(file), `missing active mobile executor: ${file}`);
   }
   const oldFirebase = fs.readFileSync(path.join(repoRoot, "tools/scripts/mobile-eas/ensure-firebase-app.ps1"), "utf8");
   const oldMaps = fs.readFileSync(path.join(repoRoot, "tools/scripts/google-cloud/create-android-maps-api-key.ps1"), "utf8");
   const oldEngine = fs.readFileSync(legacyEasEnginePath, "utf8");
-  assert.ok(oldFirebase.includes("apps\\mobile\\eas\\firebase.ps1"));
-  assert.ok(oldMaps.includes("apps\\mobile\\eas\\maps.ps1"));
-  assert.equal(oldEngine.trim(), 'await import("../../apps/mobile/eas-build-mobile.mjs");');
+  assert.ok(oldFirebase.includes("tools\\mobile\\eas\\firebase.ps1"));
+  assert.ok(oldMaps.includes("tools\\mobile\\eas\\maps.ps1"));
+  assert.equal(oldEngine.trim(), 'await import("../mobile/eas-build-mobile.mjs");');
   assert.ok(oldFirebase.split(/\r?\n/).length < 30);
   assert.ok(oldMaps.split(/\r?\n/).length < 40);
   assert.ok(oldEngine.split(/\r?\n/).length < 5);
@@ -114,14 +114,14 @@ test("package-manager governance checks the active executor and canonical helper
   assert.ok(canonicalHelper.includes("export function resolvePackageManagerInvocation"));
   assert.equal(
     bridge.trim(),
-    'export { resolvePackageManagerInvocation } from "../../../apps/mobile/lib/package-manager-invocation.mjs";',
+    'export { resolvePackageManagerInvocation } from "../../mobile/lib/package-manager-invocation.mjs";',
   );
 
   const governedStart = guard.indexOf("const governedFiles = [");
   const governedEnd = guard.indexOf("];", governedStart);
   assert.ok(governedStart >= 0 && governedEnd > governedStart);
   const governedBlock = guard.slice(governedStart, governedEnd);
-  assert.ok(governedBlock.includes('"apps/mobile/eas-build-mobile.mjs"'));
+  assert.ok(governedBlock.includes('"tools/mobile/eas-build-mobile.mjs"'));
   assert.equal(governedBlock.includes('"tools/scripts/eas-build-mobile.mjs"'), false);
 
   const wrappersStart = guard.indexOf("const compatibilityWrappers = [");
@@ -129,8 +129,8 @@ test("package-manager governance checks the active executor and canonical helper
   assert.ok(wrappersStart >= 0 && wrappersEnd > wrappersStart);
   const wrappersBlock = guard.slice(wrappersStart, wrappersEnd);
   assert.ok(wrappersBlock.includes('"tools/scripts/eas-build-mobile.mjs"'));
-  assert.ok(wrappersBlock.includes("apps/mobile/eas-build-mobile.mjs"));
-  assert.ok(guard.includes('const canonicalHelperPath = "apps/mobile/lib/package-manager-invocation.mjs"'));
+  assert.ok(wrappersBlock.includes('../mobile/eas-build-mobile.mjs'));
+  assert.ok(guard.includes('const canonicalHelperPath = "tools/mobile/lib/package-manager-invocation.mjs"'));
 });
 
 test("Firebase Android configuration uses the official Management REST API", () => {
@@ -151,7 +151,7 @@ test("Firebase Android configuration uses the official Management REST API", () 
 });
 
 test("every remote Android build verifies Firebase and Maps on the EAS worker", () => {
-  const validator = path.join(repoRoot, "apps/mobile/verify-eas-provider-inputs.mjs");
+  const validator = path.join(repoRoot, "tools/mobile/verify-eas-provider-inputs.mjs");
   assert.ok(fs.existsSync(validator));
   const text = fs.readFileSync(validator, "utf8");
   for (const marker of [
@@ -163,7 +163,7 @@ test("every remote Android build verifies Firebase and Maps on the EAS worker", 
   for (const app of apps) {
     assert.equal(
       runtimePackage(app).scripts["eas-build-pre-install"],
-      `node ../../mobile/verify-eas-provider-inputs.mjs --app ${app}`,
+      `node ../../../tools/mobile/verify-eas-provider-inputs.mjs --app ${app}`,
     );
   }
 });

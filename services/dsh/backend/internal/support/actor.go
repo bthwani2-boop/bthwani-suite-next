@@ -139,10 +139,7 @@ func CreateActorTicket(db *sql.DB, input ActorCreateTicketInput) (Ticket, error)
 		return Ticket{}, err
 	}
 
-	existing, err := scanTicket(tx.QueryRow(`
-		SELECT id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		       status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at
-		FROM dsh_support_tickets
+	existing, err := scanTicket(tx.QueryRow(ticketSelect+`
 		WHERE reporter_id = $1 AND reporter_role = $2 AND create_idempotency_key = $3`,
 		input.ActorID, input.ActorRole, idempotencyKey,
 	))
@@ -172,8 +169,7 @@ func CreateActorTicket(db *sql.DB, input ActorCreateTicketInput) (Ticket, error)
 			store_id, reporter_id, reporter_role, subject, description, category, priority,
 			order_id, create_idempotency_key, correlation_id
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-		RETURNING id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		          status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at`,
+		RETURNING `+ticketColumns,
 		nullableStoreID, input.ActorID, input.ActorRole, input.Subject, input.Description,
 		input.Category, input.Priority, nullableOrderID, idempotencyKey, correlationID,
 	))
@@ -196,10 +192,7 @@ func ListActorTickets(db *sql.DB, actorID string, role ReporterRole, limit int) 
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
-	rows, err := db.Query(`
-		SELECT id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		       status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at
-		FROM dsh_support_tickets
+	rows, err := db.Query(ticketSelect+`
 		WHERE reporter_id = $1 AND reporter_role = $2
 		ORDER BY created_at DESC LIMIT $3`, actorID, role, limit)
 	if err != nil {
@@ -210,10 +203,7 @@ func ListActorTickets(db *sql.DB, actorID string, role ReporterRole, limit int) 
 }
 
 func GetActorTicket(db *sql.DB, actorID string, role ReporterRole, ticketID string) (Ticket, error) {
-	ticket, err := scanTicket(db.QueryRow(`
-		SELECT id, COALESCE(store_id::text,''), reporter_id, reporter_role, subject, description, category, priority,
-		       status, COALESCE(assigned_to,''), COALESCE(order_id::text,''), resolved_at, closed_at, created_at, updated_at
-		FROM dsh_support_tickets
+	ticket, err := scanTicket(db.QueryRow(ticketSelect+`
 		WHERE id = $1 AND reporter_id = $2 AND reporter_role = $3`, ticketID, actorID, role))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Ticket{}, ErrNotFound

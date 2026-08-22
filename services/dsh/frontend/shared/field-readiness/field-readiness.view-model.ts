@@ -1,6 +1,6 @@
 import type { DshFieldVisit, DshReadinessCheck, DshOnboardingStatus, DshCheckType } from "./field-readiness.types";
-import { CHECK_TYPE_LABELS, VISIT_STATUS_LABELS } from "./field-readiness.types";
-import { ALL_CHECK_TYPES, canCompleteVisit, visitCompletionBlockers } from "./field-readiness.policy";
+import { VISIT_STATUS_LABELS } from "./field-readiness.types";
+import { canCompleteVisit } from "./field-readiness.policy";
 
 export type DshFieldVisitViewModel = {
   readonly id: string;
@@ -20,7 +20,7 @@ export type DshChecklistViewModel = {
   readonly passedCount: number;
   readonly totalCount: number;
   readonly canComplete: boolean;
-  readonly blockers: readonly DshCheckType[];
+  readonly blockers: readonly DshCheckItemViewModel[];
 };
 
 export type DshCheckItemViewModel = {
@@ -29,6 +29,8 @@ export type DshCheckItemViewModel = {
   readonly status: "pending" | "passed" | "failed";
   readonly evidenceUrl: string;
   readonly notes: string;
+  readonly required: boolean;
+  readonly critical: boolean;
 };
 
 export type DshOnboardingStatusViewModel = {
@@ -54,26 +56,29 @@ export function buildVisitViewModel(visit: DshFieldVisit): DshFieldVisitViewMode
 }
 
 export function buildChecklistViewModel(visit: DshFieldVisit, checks: readonly DshReadinessCheck[]): DshChecklistViewModel {
-  const checkMap = Object.fromEntries(checks.map((c) => [c.checkType, c]));
-  const items: DshCheckItemViewModel[] = ALL_CHECK_TYPES.map((ct) => {
-    const check = checkMap[ct];
-    return {
-      checkType: ct,
-      label: CHECK_TYPE_LABELS[ct],
-      status: check?.status ?? "pending",
-      evidenceUrl: check?.evidenceUrl ?? "",
-      notes: check?.notes ?? "",
-    };
-  });
-  const passedCount = items.filter((i) => i.status === "passed").length;
+  const items: DshCheckItemViewModel[] = [...checks]
+    .sort((left, right) => left.displayOrder - right.displayOrder)
+    .map((check) => ({
+      checkType: check.checkType,
+      label: check.labelAr,
+      status: check.status,
+      evidenceUrl: check.evidenceUrl,
+      notes: check.notes,
+      required: check.required,
+      critical: check.critical,
+    }));
+  const requiredItems = items.filter((item) => item.required);
+  const passedCount = requiredItems.filter((item) => item.status === "passed").length;
   return {
     visitId: visit.id,
     checks: items,
-    allPassed: passedCount === ALL_CHECK_TYPES.length,
+    allPassed: requiredItems.length > 0 && passedCount === requiredItems.length,
     passedCount,
-    totalCount: ALL_CHECK_TYPES.length,
+    totalCount: requiredItems.length,
     canComplete: canCompleteVisit(visit, checks),
-    blockers: visitCompletionBlockers(visit, checks),
+    blockers: visit.status === "in_progress"
+      ? requiredItems.filter((item) => item.status !== "passed")
+      : [],
   };
 }
 

@@ -33,7 +33,15 @@ func EvaluateOnboardingCaseStatus(ctx context.Context, tx *sql.Tx, partnerID str
 	required := requiredDocumentsForCategory(category)
 
 	// Query uploaded documents for this partner
-	rows, err := tx.QueryContext(ctx, `SELECT document_type FROM dsh_partner_documents WHERE partner_id = $1`, partnerID)
+	rows, err := tx.QueryContext(ctx, `
+		SELECT document_type
+		FROM (
+			SELECT DISTINCT ON (document_type) document_type, review_status
+			FROM dsh_partner_documents
+			WHERE partner_id = $1
+			ORDER BY document_type, created_at DESC
+		) latest
+		WHERE review_status IN ('pending', 'under_review', 'verified')`, partnerID)
 	if err != nil {
 		return err
 	}

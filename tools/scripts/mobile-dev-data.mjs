@@ -1,1 +1,1 @@
-import "../../apps/mobile/mobile-dev-data.mjs";
+import "../mobile/mobile-dev-data.mjs";

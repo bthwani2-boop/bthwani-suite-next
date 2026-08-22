@@ -20,7 +20,7 @@ func GetPartner(db *sql.DB, partnerID string) (Partner, error) {
 		SELECT id, legal_name_ar, legal_name_en, display_name,
 		       legal_identity_type, legal_identity_number,
 		       owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
-		       category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
+		       category, COALESCE(business_vertical_id,''), activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 		       notes,
 		       COALESCE(payout_destination_id,''), COALESCE(destination_method,''),
 		       COALESCE(masked_destination_reference,''), COALESCE(destination_verification_status,''),
@@ -30,7 +30,7 @@ func GetPartner(db *sql.DB, partnerID string) (Partner, error) {
 		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
 		&p.LegalIdentityType, &p.LegalIdentityNumber,
 		&p.OwnerActorID, &p.WorkforcePersonID, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
-		&p.Category, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
+		&p.Category, &p.BusinessVerticalID, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
 		&p.PayoutDestinationID, &p.DestinationMethod, &p.MaskedDestinationReference, &p.DestinationVerificationStatus,
 		&p.Version, &p.CreatedAt, &p.UpdatedAt,
@@ -78,7 +78,7 @@ func ListPartners(db *sql.DB, q PartnerListQuery) ([]PartnerSummary, int, error)
 
 	args = append(args, q.Limit, q.Offset)
 	rows, err := db.Query(`
-		SELECT id, display_name, legal_name_ar, category, activation_status, primary_phone, created_at, updated_at
+		SELECT id, display_name, legal_name_ar, category, COALESCE(business_vertical_id,''), activation_status, primary_phone, created_at, updated_at
 		FROM dsh_partners`+where+`
 		ORDER BY created_at DESC
 		LIMIT $`+itoa(i)+` OFFSET $`+itoa(i+1),
@@ -93,7 +93,7 @@ func ListPartners(db *sql.DB, q PartnerListQuery) ([]PartnerSummary, int, error)
 	for rows.Next() {
 		var s PartnerSummary
 		if err := rows.Scan(&s.ID, &s.DisplayName, &s.LegalNameAr, &s.Category,
-			&s.ActivationStatus, &s.PrimaryPhone, &s.CreatedAt, &s.UpdatedAt); err != nil {
+			&s.BusinessVerticalID, &s.ActivationStatus, &s.PrimaryPhone, &s.CreatedAt, &s.UpdatedAt); err != nil {
 			return nil, 0, err
 		}
 		list = append(list, s)
@@ -133,36 +133,31 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		return Partner{}, ActivationEvent{}, ErrInvalidTransition
 	}
 
-	if (input.ToStatus == StatusOpsRejected || input.ToStatus == StatusPartnerDeactivated) && strings.TrimSpace(input.Reason) == "" {
+	if input.ToStatus == StatusOpsRejected && strings.TrimSpace(input.Reason) == "" {
 		return Partner{}, ActivationEvent{}, ErrInvalid
 	}
 
 	if input.ToStatus == StatusClientVisible {
-		var storeID string
-		var storeStatus string
-		var storeIsVisible bool
-		var storeServiceability string
-		var storePartnerReadiness string
-		var storeCatalogApproval string
-		var storeMarketingVisibility string
-
+		var storeCount, blockedStoreCount int
+		// The canonical readiness view includes the partner's current
+		// client-visible state. During this transition that one blocker is the
+		// transition's own projected result; every other canonical store gate
+		// must still pass before the status mutation is committed.
 		err = tx.QueryRow(`
-			SELECT id, status, is_visible, serviceability_status, partner_readiness, catalog_approval_status, marketing_visibility
-			FROM dsh_stores WHERE partner_id = $1 ORDER BY created_at ASC LIMIT 1`, partnerID,
-		).Scan(&storeID, &storeStatus, &storeIsVisible, &storeServiceability, &storePartnerReadiness, &storeCatalogApproval, &storeMarketingVisibility)
-		if errors.Is(err, sql.ErrNoRows) {
-			return Partner{}, ActivationEvent{}, errors.New("store publication gates failed: no linked store found")
-		}
+			SELECT COUNT(*), COUNT(*) FILTER (
+				WHERE publication_decision <> 'PUBLISHED'
+				  AND NOT COALESCE('PARTNER_NOT_CLIENT_VISIBLE' = ANY(blocking_reason_codes), FALSE)
+			)
+			FROM dsh_partner_store_readiness_v
+			WHERE partner_id = $1`, partnerID,
+		).Scan(&storeCount, &blockedStoreCount)
 		if err != nil {
 			return Partner{}, ActivationEvent{}, err
 		}
-
-		if storeStatus != "published" ||
-			!storeIsVisible ||
-			(storeServiceability != "serviceable" && storeServiceability != "limited") ||
-			storePartnerReadiness != "ready" ||
-			storeCatalogApproval != "approved" ||
-			storeMarketingVisibility != "visible" {
+		if storeCount == 0 {
+			return Partner{}, ActivationEvent{}, errors.New("store publication gates failed: no linked store found")
+		}
+		if blockedStoreCount > 0 {
 			return Partner{}, ActivationEvent{}, ErrStorePublicationGatesFailed
 		}
 	}
@@ -177,7 +172,7 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		RETURNING id, legal_name_ar, legal_name_en, display_name,
 		          legal_identity_type, legal_identity_number,
 		          owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
-		          category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
+		          category, COALESCE(business_vertical_id,''), activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 		          notes,
 		          COALESCE(payout_destination_id,''), COALESCE(destination_method,''),
 		          COALESCE(masked_destination_reference,''), COALESCE(destination_verification_status,''),
@@ -187,7 +182,7 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		&updated.ID, &updated.LegalNameAr, &updated.LegalNameEn, &updated.DisplayName,
 		&updated.LegalIdentityType, &updated.LegalIdentityNumber,
 		&updated.OwnerActorID, &updated.WorkforcePersonID, &updated.PrimaryPhone, &updated.SecondaryPhone, &updated.Email,
-		&updated.Category, &updated.ActivationStatus, &updated.OnboardingCaseStatus, &updated.CreatedByActorID, &updated.CreatedBySurface,
+		&updated.Category, &updated.BusinessVerticalID, &updated.ActivationStatus, &updated.OnboardingCaseStatus, &updated.CreatedByActorID, &updated.CreatedBySurface,
 		&updated.Notes,
 		&updated.PayoutDestinationID, &updated.DestinationMethod, &updated.MaskedDestinationReference, &updated.DestinationVerificationStatus,
 		&updated.Version, &updated.CreatedAt, &updated.UpdatedAt,
@@ -222,23 +217,18 @@ func TransitionStatus(db *sql.DB, partnerID string, input TransitionInput, expec
 		}
 
 		// Write to dsh_store_action_audit
-		var storeID string
-		_ = tx.QueryRow(`SELECT id FROM dsh_stores WHERE partner_id = $1 ORDER BY created_at ASC LIMIT 1`, partnerID).Scan(&storeID)
-		if storeID != "" {
-			auditID := "evt-" + itoa(int(time.Now().UnixNano()))
-			action := "store_partner_readiness_updated"
-			reason := "partner transition to " + string(input.ToStatus)
-			role := "operator"
-			if input.ActorSurface == "app-field" {
-				role = "field"
-			}
-			_, _ = tx.Exec(`
-				INSERT INTO dsh_store_action_audit
-				  (id, actor_id, actor_role, store_id, action, from_state, to_state, reason, correlation_id, created_at)
-				VALUES ($1,$2,$3,$4,$5,'{}'::jsonb,'{}'::jsonb,$6,$7,NOW())`,
-				auditID, input.ActorID, role, storeID, action, reason, input.CorrelationID,
-			)
+		role := "operator"
+		if input.ActorSurface == "app-field" {
+			role = "field"
 		}
+		_, _ = tx.Exec(`
+			INSERT INTO dsh_store_action_audit
+			  (id, actor_id, actor_role, store_id, action, from_state, to_state, reason, correlation_id, created_at)
+			SELECT 'evt-' || md5($1 || s.id), $2, $3, s.id,
+			       'store_partner_readiness_updated','{}'::jsonb,'{}'::jsonb,$4,$5,NOW()
+			FROM dsh_stores s WHERE s.partner_id = $6`,
+			evt.ID, input.ActorID, role, "partner transition to "+string(input.ToStatus), input.CorrelationID, partnerID,
+		)
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -251,7 +241,7 @@ func partnerReadinessForActivationStatus(status ActivationStatus) (string, bool)
 	switch status {
 	case StatusClientVisible:
 		return "ready", true
-	case StatusClientHidden, StatusPartnerDeactivated, StatusPartnerSuspended, StatusPartnerTerminated:
+	case StatusClientHidden, StatusPartnerSuspended, StatusPartnerTerminated:
 		return "blocked", true
 	default:
 		return "", false
@@ -264,31 +254,45 @@ func UploadDocument(db *sql.DB, partnerID string, input UploadDocumentInput) (Do
 	if err := input.Validate(); err != nil {
 		return Document{}, err
 	}
-	// verify partner exists
-	var exists bool
-	if err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM dsh_partners WHERE id=$1)`, partnerID).Scan(&exists); err != nil {
-		return Document{}, err
-	}
-	if !exists {
-		return Document{}, ErrNotFound
-	}
-
 	tx, err := db.Begin()
 	if err != nil {
 		return Document{}, err
 	}
 	defer tx.Rollback() //nolint:errcheck
 
+	var exists bool
+	if err := tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM dsh_partners WHERE id=$1)`, partnerID).Scan(&exists); err != nil {
+		return Document{}, err
+	}
+	if !exists {
+		return Document{}, ErrNotFound
+	}
+	if err := validateLegalDocumentType(tx, input.DocumentType); err != nil {
+		return Document{}, err
+	}
+	if err := validateLegalDocumentMedia(tx, partnerID, input.MediaRef); err != nil {
+		return Document{}, err
+	}
+
+	var supersedesID sql.NullString
+	_ = tx.QueryRow(`
+		SELECT id FROM dsh_partner_documents
+		WHERE partner_id = $1 AND document_type = $2 AND review_status = 'reupload_required'
+		ORDER BY created_at DESC LIMIT 1`, partnerID, input.DocumentType).Scan(&supersedesID)
+
 	var d Document
 	err = tx.QueryRow(`
 		INSERT INTO dsh_partner_documents
-			(partner_id, document_type, media_ref, notes, uploaded_by_actor_id)
-		VALUES ($1,$2,$3,$4,$5)
-		RETURNING id, partner_id, document_type, document_status, uploaded_by_actor_id,
-		          media_ref, notes, rejection_reason, version, created_at, updated_at`,
-		partnerID, input.DocumentType, input.MediaRef, input.Notes, input.UploadedByActorID,
-	).Scan(&d.ID, &d.PartnerID, &d.DocumentType, &d.DocumentStatus, &d.UploadedByActorID,
-		&d.MediaRef, &d.Notes, &d.RejectionReason, &d.Version, &d.CreatedAt, &d.UpdatedAt)
+			(partner_id, document_type, media_ref, notes, uploaded_by_actor_id, upload_status,
+			 review_status, supersedes_document_id)
+		VALUES ($1,$2,$3,$4,$5,'uploaded','pending',$6)
+		RETURNING id, partner_id, document_type, upload_status, review_status, document_status,
+		          uploaded_by_actor_id, media_ref, notes, rejection_reason,
+		          COALESCE(reviewed_by_actor_id,''),
+		          reviewed_at, last_review_reason, COALESCE(supersedes_document_id,''),
+		          version, created_at, updated_at`,
+		partnerID, input.DocumentType, input.MediaRef, input.Notes, input.UploadedByActorID, supersedesID,
+	).Scan(documentScanArgs(&d)...)
 	if err != nil {
 		return Document{}, err
 	}
@@ -307,8 +311,11 @@ func UploadDocument(db *sql.DB, partnerID string, input UploadDocumentInput) (Do
 
 func ListDocuments(db *sql.DB, partnerID string) ([]Document, error) {
 	rows, err := db.Query(`
-		SELECT id, partner_id, document_type, document_status, uploaded_by_actor_id,
-		       media_ref, notes, rejection_reason, version, created_at, updated_at
+		SELECT id, partner_id, document_type, upload_status, review_status, document_status,
+		       uploaded_by_actor_id, media_ref, notes, rejection_reason,
+		       COALESCE(reviewed_by_actor_id,''),
+		       reviewed_at, last_review_reason, COALESCE(supersedes_document_id,''),
+		       version, created_at, updated_at
 		FROM dsh_partner_documents WHERE partner_id = $1 ORDER BY created_at ASC`, partnerID)
 	if err != nil {
 		return nil, err
@@ -317,9 +324,7 @@ func ListDocuments(db *sql.DB, partnerID string) ([]Document, error) {
 	var list []Document
 	for rows.Next() {
 		var d Document
-		if err := rows.Scan(&d.ID, &d.PartnerID, &d.DocumentType, &d.DocumentStatus,
-			&d.UploadedByActorID, &d.MediaRef, &d.Notes, &d.RejectionReason,
-			&d.Version, &d.CreatedAt, &d.UpdatedAt); err != nil {
+		if err := rows.Scan(documentScanArgs(&d)...); err != nil {
 			return nil, err
 		}
 		list = append(list, d)
@@ -341,28 +346,41 @@ func ReviewDocument(db *sql.DB, partnerID, documentID string, input ReviewDocume
 	}
 	defer tx.Rollback() //nolint:errcheck
 
-	// Map decision to document_status
+	// document_status remains a compatibility projection; review_status is canonical.
 	newDocStatus := "under_review"
+	newReviewStatus := "under_review"
 	switch input.Decision {
 	case "approved":
 		newDocStatus = "approved"
+		newReviewStatus = "verified"
 	case "rejected", "needs_resubmit":
 		newDocStatus = "rejected"
+		if input.Decision == "needs_resubmit" {
+			newReviewStatus = "reupload_required"
+		} else {
+			newReviewStatus = "rejected"
+		}
 	}
 
 	var d Document
 	err = tx.QueryRow(`
 		UPDATE dsh_partner_documents SET
 			document_status  = $3,
-			rejection_reason = CASE WHEN $3='approved' THEN '' ELSE $4 END,
+			review_status    = $4,
+			rejection_reason = CASE WHEN $3='approved' THEN '' ELSE $6 END,
+			reviewed_by_actor_id = $5,
+			reviewed_at      = NOW(),
+			last_review_reason = $6,
 			version          = version + 1,
 			updated_at       = NOW()
 		WHERE id = $1 AND partner_id = $2
-		RETURNING id, partner_id, document_type, document_status, uploaded_by_actor_id,
-		          media_ref, notes, rejection_reason, version, created_at, updated_at`,
-		documentID, partnerID, newDocStatus, input.Reason,
-	).Scan(&d.ID, &d.PartnerID, &d.DocumentType, &d.DocumentStatus, &d.UploadedByActorID,
-		&d.MediaRef, &d.Notes, &d.RejectionReason, &d.Version, &d.CreatedAt, &d.UpdatedAt)
+		RETURNING id, partner_id, document_type, upload_status, review_status, document_status,
+		          uploaded_by_actor_id, media_ref, notes, rejection_reason,
+		          COALESCE(reviewed_by_actor_id,''),
+		          reviewed_at, last_review_reason, COALESCE(supersedes_document_id,''),
+		          version, created_at, updated_at`,
+		documentID, partnerID, newDocStatus, newReviewStatus, input.ReviewedByActorID, input.Reason,
+	).Scan(documentScanArgs(&d)...)
 	if errors.Is(err, sql.ErrNoRows) {
 		return Document{}, DocumentReview{}, ErrNotFound
 	}
@@ -391,6 +409,49 @@ func ReviewDocument(db *sql.DB, partnerID, documentID string, input ReviewDocume
 		return Document{}, DocumentReview{}, err
 	}
 	return d, rev, nil
+}
+
+func documentScanArgs(d *Document) []any {
+	return []any{
+		&d.ID, &d.PartnerID, &d.DocumentType, &d.UploadStatus, &d.ReviewStatus,
+		&d.DocumentStatus, &d.UploadedByActorID, &d.MediaRef, &d.Notes,
+		&d.RejectionReason, &d.ReviewedByActorID, &d.ReviewedAt, &d.LastReviewReason,
+		&d.SupersedesDocumentID, &d.Version, &d.CreatedAt, &d.UpdatedAt,
+	}
+}
+
+func validateLegalDocumentMedia(tx *sql.Tx, partnerID, mediaRef string) error {
+	var valid bool
+	err := tx.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM dsh_media_refs
+			WHERE media_ref = $1 AND partner_id = $2
+			  AND purpose = 'partner_document'
+			  AND scan_status NOT IN ('failed', 'quarantined')
+			  AND content_type IN ('application/pdf', 'image/jpeg', 'image/png', 'image/webp')
+		)`, mediaRef, partnerID).Scan(&valid)
+	if err != nil {
+		return err
+	}
+	if !valid {
+		return ErrInvalid
+	}
+	return nil
+}
+
+func validateLegalDocumentType(tx *sql.Tx, documentType string) error {
+	var valid bool
+	if err := tx.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM dsh_partner_document_taxonomy
+			WHERE document_type = $1 AND document_family = 'legal' AND active = TRUE
+		)`, strings.TrimSpace(documentType)).Scan(&valid); err != nil {
+		return err
+	}
+	if !valid {
+		return ErrInvalid
+	}
+	return nil
 }
 
 // â”€â”€â”€ Field visits â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -425,10 +486,7 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 		lonSQL = sql.NullFloat64{Float64: *input.LocationLongitude, Valid: true}
 	}
 
-	mediaRefs := input.EvidenceMediaRefs
-	if mediaRefs == nil {
-		mediaRefs = []string{}
-	}
+	mediaRefs := uniqueTrimmedMediaRefs(input.EvidenceMediaRefs)
 
 	tx, err := db.Begin()
 	if err != nil {
@@ -454,6 +512,19 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 	if err != nil {
 		return FieldVisit{}, err
 	}
+	for _, mediaRef := range mediaRefs {
+		if err := validateVisitMedia(tx, input.PartnerID, input.StoreID, input.FieldActorID, mediaRef); err != nil {
+			return FieldVisit{}, err
+		}
+		if _, err := tx.Exec(`
+			INSERT INTO dsh_partner_field_visit_media
+				(partner_id, visit_id, store_id, media_ref, captured_by_actor_id, context)
+			VALUES ($1,$2,$3,$4,$5,'partner_onboarding')
+			ON CONFLICT (visit_id, media_ref) DO NOTHING`,
+			input.PartnerID, v.ID, storeIDSQL, mediaRef, input.FieldActorID); err != nil {
+			return FieldVisit{}, err
+		}
+	}
 	if err := recordActivationEvent(tx, input.PartnerID, "field_visit_submitted", input.FieldActorID, "app-field", input.VisitNotes); err != nil {
 		return FieldVisit{}, err
 	}
@@ -470,6 +541,7 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 		v.SubmittedAt = &submittedAt.Time
 	}
 	v.StoreID = storeIDOut.String
+	v.EvidenceMediaRefs = mediaRefs
 	if v.EvidenceMediaRefs == nil {
 		v.EvidenceMediaRefs = []string{}
 	}
@@ -478,7 +550,10 @@ func CreateFieldVisit(db *sql.DB, input CreateFieldVisitInput) (FieldVisit, erro
 
 func ListPartnerStores(db *sql.DB, partnerID string) ([]PartnerLinkedStore, error) {
 	rows, err := db.Query(`
-		SELECT id, partner_id, slug, display_name, status, is_visible, city_code, created_at
+		SELECT id, partner_id, slug, display_name, status, is_visible, city_code,
+		       COALESCE((SELECT publication_decision FROM dsh_partner_store_readiness_v readiness WHERE readiness.store_id = dsh_stores.id), 'BLOCKED'),
+		       COALESCE((SELECT blocking_reason_codes FROM dsh_partner_store_readiness_v readiness WHERE readiness.store_id = dsh_stores.id), ARRAY[]::text[]),
+		       created_at
 		FROM dsh_stores
 		WHERE partner_id = $1
 		ORDER BY display_name ASC`, partnerID)
@@ -491,7 +566,7 @@ func ListPartnerStores(db *sql.DB, partnerID string) ([]PartnerLinkedStore, erro
 	for rows.Next() {
 		var s PartnerLinkedStore
 		var createdAt time.Time
-		if err := rows.Scan(&s.ID, &s.PartnerID, &s.Slug, &s.DisplayName, &s.Status, &s.IsVisible, &s.CityCode, &createdAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.PartnerID, &s.Slug, &s.DisplayName, &s.Status, &s.IsVisible, &s.CityCode, &s.PublicationDecision, pq.Array(&s.BlockingReasons), &createdAt); err != nil {
 			return nil, err
 		}
 		s.CreatedAt = createdAt.UTC().Format(time.RFC3339Nano)
@@ -530,9 +605,12 @@ func LinkPartnerStore(db *sql.DB, partnerID, storeID, actorID string) ([]Partner
 func ListFieldVisits(db *sql.DB, partnerID string) ([]FieldVisit, error) {
 	rows, err := db.Query(`
 		SELECT id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
-		       visit_notes, location_latitude, location_longitude, evidence_media_refs,
+		       visit_notes, location_latitude, location_longitude,
+		       COALESCE((SELECT array_agg(media_ref ORDER BY created_at ASC)
+		                  FROM dsh_partner_field_visit_media vm
+		                  WHERE vm.visit_id = v.id AND vm.status = 'uploaded'), ARRAY[]::TEXT[]),
 		       version, created_at, submitted_at
-		FROM dsh_partner_field_visits WHERE partner_id = $1 ORDER BY created_at DESC`, partnerID)
+		FROM dsh_partner_field_visits v WHERE partner_id = $1 ORDER BY created_at DESC`, partnerID)
 	if err != nil {
 		return nil, err
 	}
@@ -583,7 +661,8 @@ func SubmitFieldVisit(db *sql.DB, partnerID, visitID, actorID string) (FieldVisi
 			version      = version + 1
 		WHERE id = $1 AND partner_id = $2 AND field_actor_id = $3 AND visit_status IN ('draft','in_progress')
 		RETURNING id, partner_id, COALESCE(store_id,''), field_actor_id, visit_status,
-		          visit_notes, location_latitude, location_longitude, evidence_media_refs,
+		          visit_notes, location_latitude, location_longitude,
+		          ARRAY[]::TEXT[],
 		          version, created_at, submitted_at`,
 		visitID, partnerID, actorID, now,
 	).Scan(&v.ID, &v.PartnerID, &storeIDOut, &v.FieldActorID, &v.VisitStatus,
@@ -606,10 +685,67 @@ func SubmitFieldVisit(db *sql.DB, partnerID, visitID, actorID string) (FieldVisi
 		v.SubmittedAt = &t
 	}
 	v.StoreID = storeIDOut.String
-	if v.EvidenceMediaRefs == nil {
-		v.EvidenceMediaRefs = []string{}
+	v.EvidenceMediaRefs, err = listVisitMedia(db, v.ID)
+	if err != nil {
+		return FieldVisit{}, err
 	}
 	return v, nil
+}
+
+func uniqueTrimmedMediaRefs(refs []string) []string {
+	seen := make(map[string]struct{}, len(refs))
+	result := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		ref = strings.TrimSpace(ref)
+		if ref == "" {
+			continue
+		}
+		if _, exists := seen[ref]; exists {
+			continue
+		}
+		seen[ref] = struct{}{}
+		result = append(result, ref)
+	}
+	return result
+}
+
+func validateVisitMedia(tx *sql.Tx, partnerID, storeID, actorID, mediaRef string) error {
+	var valid bool
+	err := tx.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM dsh_media_refs
+			WHERE media_ref = $1 AND partner_id = $2
+			  AND purpose = 'field_readiness_evidence'
+			  AND owner_actor_id = $3 AND owner_actor_role = 'field'
+			  AND scan_status NOT IN ('failed', 'quarantined')
+			  AND ($4 = '' AND store_id IS NULL OR $4 <> '' AND store_id = $4)
+		)`, mediaRef, partnerID, actorID, storeID).Scan(&valid)
+	if err != nil {
+		return err
+	}
+	if !valid {
+		return ErrInvalid
+	}
+	return nil
+}
+
+func listVisitMedia(db *sql.DB, visitID string) ([]string, error) {
+	rows, err := db.Query(`
+		SELECT media_ref FROM dsh_partner_field_visit_media
+		WHERE visit_id = $1 AND status = 'uploaded' ORDER BY created_at ASC`, visitID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	refs := []string{}
+	for rows.Next() {
+		var ref string
+		if err := rows.Scan(&ref); err != nil {
+			return nil, err
+		}
+		refs = append(refs, ref)
+	}
+	return refs, rows.Err()
 }
 
 // â”€â”€â”€ Activation audit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

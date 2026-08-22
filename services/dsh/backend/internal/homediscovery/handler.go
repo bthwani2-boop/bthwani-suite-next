@@ -140,6 +140,9 @@ func deriveLiveStorePromos(stores []HomeStore) []HomePromo {
 	promos := []HomePromo{}
 	for _, store := range stores {
 		imageURL := homeStoreHeroImageURL(store)
+		if imageURL == "" {
+			continue
+		}
 		promos = append(promos, HomePromo{
 			ID:           "derived-store-promo-" + store.ID,
 			Title:        "اختيارات قريبة منك",

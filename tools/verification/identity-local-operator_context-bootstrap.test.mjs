@@ -7,7 +7,7 @@ const read = (path) => readFileSync(path, "utf8");
 const main = read("core/identity/backend/cmd/identity-api/main.go");
 const repository = read("core/identity/backend/internal/identity/repository.go");
 const platformBootstrap = read("core/identity/backend/internal/identity/platform_local_bootstrap.go");
-const migration = read("core/identity/database/migrations/identity-007_local_actor_OperatorContext_repair.sql");
+const migration = read("core/identity/database/migrations/identity-007_local_actor_operator_context_repair.sql");
 const compose = read("infra/docker/compose.runtime.yml");
 
 test("identity binds the configured OperatorContext before every local bootstrap write", () => {

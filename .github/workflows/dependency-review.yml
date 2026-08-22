@@ -2,10 +2,10 @@ name: Dependency Review
 
 on:
   pull_request:
-    branches: [master]
+    branches: [master, b, c]
     types: [opened, synchronize, reopened, ready_for_review]
   push:
-    branches: [master]
+    branches: [master, b, c]
 
 permissions:
   contents: read
@@ -29,9 +29,9 @@ jobs:
           fail-on-severity: low
           show-patched-versions: true
 
-      - name: Record protected-branch applicability
+      - name: Record tracked-branch applicability
         if: ${{ github.event_name == 'push' }}
         shell: bash
         run: |
           echo "Dependency Review is enforced on pull requests before merge."
-          echo "This push check exists so the protected master SHA has the same required context inventory."
+          echo "This push check keeps the tracked CI branch SHA aligned with the same dependency-review context inventory."

@@ -3,6 +3,10 @@
   "root": "apps/app-captain/runtime",
   "sourceRoot": "apps/app-captain/runtime",
   "projectType": "application",
+  "implicitDependencies": [
+    "dsh",
+    "wlt"
+  ],
   "targets": {
     "typecheck": {
       "executor": "nx:run-commands",
@@ -13,7 +17,7 @@
     "test": {
       "executor": "nx:run-commands",
       "options": {
-        "command": "node tools/scripts/run-command-check.mjs --label app-captain-config -- node tools/scripts/guard-mobile-apps.mjs"
+        "command": "node tools/scripts/run-command-check.mjs --label app-captain-tests -- pnpm --dir apps/app-captain/runtime test"
       }
     },
     "build": {

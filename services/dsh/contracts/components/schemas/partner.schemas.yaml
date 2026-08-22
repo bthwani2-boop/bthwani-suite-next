@@ -46,18 +46,29 @@ PartnerStoreSettingsRequest:
 
 DshPartnerPerformanceResponse:
   type: object
-  required: [storeId, totalOrders, acceptedOrders, rejectedOrders, period, generatedAt]
+  additionalProperties: false
+  required: [storeId, readState, sourceSystem, readOnly, windowFrom, windowTo, generatedAt, freshnessSeconds, lineage, totalOrders, acceptedOrders, rejectedOrders, period]
   properties:
     storeId: { type: string }
+    readState: { type: string, enum: [available, no_data] }
+    sourceSystem: { type: string, enum: [DSH] }
+    readOnly: { type: boolean, const: true }
+    windowFrom: { type: string, format: date-time }
+    windowTo: { type: string, format: date-time }
+    generatedAt: { type: [string, 'null'], format: date-time }
+    freshnessSeconds: { type: [integer, 'null'], minimum: 0 }
+    lineage:
+      type: array
+      minItems: 1
+      items: { type: string, minLength: 1 }
     totalOrders: { type: integer }
     acceptedOrders: { type: integer }
     rejectedOrders: { type: integer }
     period: { type: string }
-    generatedAt: { type: string, format: date-time }
 
 DshPartner:
   type: object
-  required: [id, legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerActorId, workforcePersonId, primaryPhone, category, activationStatus, version, createdAt, updatedAt]
+  required: [id, legalNameAr, displayName, legalIdentityType, legalIdentityNumber, ownerActorId, workforcePersonId, primaryPhone, category, businessVerticalId, activationStatus, payoutDestinationId, destinationMethod, maskedDestinationReference, destinationVerificationStatus, version, createdAt, updatedAt]
   properties:
     id: { type: string }
     legalNameAr: { type: string }
@@ -72,6 +83,7 @@ DshPartner:
     secondaryPhone: { type: string }
     email: { type: string }
     category: { type: string, enum: [restaurant, grocery, pharmacy, bakery, default] }
+    businessVerticalId: { type: string }
     activationStatus:
       type: string
       enum:
@@ -90,24 +102,20 @@ DshPartner:
         - ops_approved
         - ops_rejected
         - partner_active
-        - partner_deactivated
+        - partner_terminated
         - client_visible
         - client_hidden
     rejectionReason: { type: string }
     createdBy: { type: string }
     assignedFieldAgent: { type: string }
-    # Bank account metadata — Partner-level readiness/metadata captured by
-    # app-field onboarding. Never a WLT mutation; WLT stays the sole owner
-    # of financial truth. Control-panel masks these on display.
-    beneficiaryName: { type: string }
-    bankName: { type: string }
-    bankBranch: { type: string }
-    accountNumber: { type: string }
-    iban: { type: string }
-    payoutMobileNumber: { type: string }
-    settlementPreference: { type: string, enum: ["", bank_transfer, mobile_wallet] }
-    bankAccountHolderMatchesOwner: { type: boolean }
-    bankNotes: { type: string }
+    # WLT is the only payout-destination truth. DSH stores/returns only the
+    # durable WLT id and masked readiness projection needed by onboarding.
+    payoutDestinationId: { type: string }
+    destinationMethod: { type: string, enum: ["", official_wallet] }
+    maskedDestinationReference: { type: string }
+    destinationVerificationStatus:
+      type: string
+      enum: ["", unverified, verified, requires_reverification, rejected]
     version: { type: integer }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
@@ -139,7 +147,7 @@ DshPartnerListResponse:
 DshCreatePartnerRequest:
   type: object
   additionalProperties: false
-  required: [legalNameAr, displayName, legalIdentityType, legalIdentityNumber, primaryPhone, category]
+  required: [legalNameAr, displayName, legalIdentityType, legalIdentityNumber, primaryPhone, businessVerticalId]
   properties:
     legalNameAr: { type: string, minLength: 1 }
     legalNameEn: { type: string }
@@ -152,6 +160,7 @@ DshCreatePartnerRequest:
     secondaryPhone: { type: string }
     email: { type: string }
     category: { type: string, enum: [restaurant, grocery, pharmacy, bakery, other] }
+    businessVerticalId: { type: string, minLength: 1 }
     notes: { type: string }
 
 DshPartnerTransitionRequest:
@@ -202,7 +211,8 @@ DshPartnerTeamMember:
     operationalImpact: { type: string }
     auditNote: { type: string }
     inlineActionLabel: { type: string }
-  required: [id, name, role, roleLabel, status, statusLabel, branchAssignment, permissionsSummary, deliveryAssignment, inviteLifecycle, operationalImpact, auditNote, inlineActionLabel]
+    version: { type: integer, minimum: 1 }
+  required: [id, name, role, roleLabel, status, statusLabel, branchAssignment, permissionsSummary, deliveryAssignment, inviteLifecycle, operationalImpact, auditNote, inlineActionLabel, version]
 
 DshPartnerStoreCourierSettings:
   type: object
@@ -240,13 +250,19 @@ DshPartnerCoverageZone:
 
 DshPartnerDocument:
   type: object
-  required: [id, partnerId, documentType, documentStatus, uploadedByActorId, mediaRef, version, createdAt, updatedAt]
+  required: [id, partnerId, documentType, uploadStatus, reviewStatus, documentStatus, uploadedByActorId, mediaRef, notes, rejectionReason, lastReviewReason, version, createdAt, updatedAt]
   properties:
     id: { type: string }
     partnerId: { type: string }
     documentType:
       type: string
-      enum: [national_id, commercial_register, lease_agreement, health_certificate, store_photo, owner_photo, other]
+      enum: [national_id, commercial_register, freelancer_certificate, lease_agreement, health_certificate, store_photo, owner_photo, other]
+    uploadStatus:
+      type: string
+      enum: [uploaded]
+    reviewStatus:
+      type: string
+      enum: [pending, under_review, verified, rejected, reupload_required]
     documentStatus:
       type: string
       enum: [pending, under_review, approved, rejected]
@@ -254,6 +270,10 @@ DshPartnerDocument:
     mediaRef: { type: string }
     notes: { type: string }
     rejectionReason: { type: string }
+    reviewedByActorId: { type: [string, "null"] }
+    reviewedAt: { type: [string, "null"], format: date-time }
+    lastReviewReason: { type: string }
+    supersedesDocumentId: { type: [string, "null"] }
     version: { type: integer }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
@@ -272,14 +292,14 @@ DshAddPartnerDocumentRequest:
   properties:
     documentType:
       type: string
-      enum: [national_id, commercial_register, lease_agreement, health_certificate, store_photo, owner_photo, other]
+      enum: [national_id, commercial_register, freelancer_certificate, lease_agreement, health_certificate]
     mediaRef: { type: string, minLength: 1 }
     notes: { type: string }
 
 DshReviewPartnerDocumentRequest:
   type: object
-  required: [decision]
-  description: reason is mandatory when decision is rejected or needs_resubmit.
+  required: [decision, reason]
+  description: Every server-side document decision is audited with a reason.
   properties:
     decision: { type: string, enum: [approved, rejected, needs_resubmit] }
     reason: { type: string, minLength: 1 }
@@ -357,6 +377,8 @@ DshPartnerAuditEventsListResponse:
 
 DshUpdatePartnerRequest:
   type: object
+  additionalProperties: false
+  description: Operational partner-draft fields only. Payout destinations are mutated through the governed WLT finance route and synchronized back as a masked DSH projection.
   properties:
     displayName: { type: string }
     ownerActorId: { type: string }
@@ -365,16 +387,6 @@ DshUpdatePartnerRequest:
     secondaryPhone: { type: string }
     email: { type: string }
     notes: { type: string }
-    # Forwarded to WLT for payout-destination mutation; raw values are never persisted in DSH.
-    beneficiaryName: { type: string }
-    bankName: { type: string }
-    bankBranch: { type: string }
-    accountNumber: { type: string }
-    iban: { type: string }
-    payoutMobileNumber: { type: string }
-    settlementPreference: { type: string, enum: ["", bank_transfer, mobile_wallet] }
-    bankAccountHolderMatchesOwner: { type: boolean }
-    bankNotes: { type: string }
 
 DshPartnerOffer:
   type: object

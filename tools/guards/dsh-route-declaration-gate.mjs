@@ -6,11 +6,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse } from "yaml";
 import { composeContext } from "../scripts/openapi-context-composer.mjs";
-import { collectHandleFuncRegistrations } from "./lib/go-http-routes.mjs";
+import { extractGoRoutes } from "./lib/go-route-extractor.mjs";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const guardId = "dsh-route-declaration-gate";
-const backendRoot = path.join(repositoryRoot, "services/dsh/backend/internal");
+const backendRouterEntry = "services/dsh/backend/internal/http/server.go";
 const allowlistPath = path.join(repositoryRoot, "tools/guards/dsh-route-declaration-allowlist.json");
 
 // Routes in this set are intentionally retired. They are allowed to remain in
@@ -46,7 +46,7 @@ function collectDeclaredPaths() {
 
 function collectRegisteredRoutes() {
   return new Set(
-    collectHandleFuncRegistrations(backendRoot, { recursive: true }).map((registration) => registration.route),
+    extractGoRoutes(backendRouterEntry).map((registration) => registration.route),
   );
 }
 

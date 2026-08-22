@@ -1,9 +1,0 @@
-{
-  "schemaVersion": 3,
-  "unitId": "U001",
-  "checks": [
-    {"verificationId":"V101","type":"static","command":"rg -n \"IdentitySessionGate|useIdentitySession|useDshMobilePushRegistration|useClientAddressController|serviceArea|geofence\" apps/app-client services/dsh/frontend/app-client/account services/dsh/frontend/shared/client-address services/dsh/backend/internal/clientaddress","proves":"Maps client identity/address ownership paths.","doesNotProve":"Does not prove runtime isolation or database constraints.","passCriteria":"Every client session/address path resolves to Identity/DSH owners with no client-trusted authorization context.","failCriteria":"Local auth/address truth or client-trusted scope is found.","required":true},
-    {"verificationId":"V102","type":"frontend","command":"pnpm --dir apps/app-client/runtime test","proves":"Runs app-client registered runtime/operational contract tests.","doesNotProve":"Does not prove live backend/PostgreSQL behavior.","passCriteria":"Command exits zero on final candidate.","failCriteria":"Any client runtime contract test fails.","required":true},
-    {"verificationId":"V103","type":"backend","command":"cd services/dsh/backend && go test ./...","proves":"Compiles and tests DSH backend including client address handlers/services.","doesNotProve":"Does not prove physical-device session recovery.","passCriteria":"Command exits zero.","failCriteria":"Any DSH backend test fails.","required":true}
-  ]
-}

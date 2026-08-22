@@ -47,6 +47,7 @@ type Order struct {
 	FulfillmentMode  string
 	ClientID         string
 	Status           OrderStatus
+	Version          int
 	RejectionReason  string
 	WltPaymentRefID  string
 	Currency         string
@@ -57,7 +58,7 @@ type Order struct {
 
 func GetOrder(db *sql.DB, orderID string) (*Order, error) {
 	order, err := scanOrderRow(db.QueryRow(`
-		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
+		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status, version,
 		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at
 		FROM dsh_orders
 		WHERE id = $1::uuid`, orderID))
@@ -77,7 +78,7 @@ func GetOrder(db *sql.DB, orderID string) (*Order, error) {
 
 func GetClientOrder(db *sql.DB, orderID, operatorContextID, clientID string) (*Order, error) {
 	order, err := scanOrderRow(db.QueryRow(`
-		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status,
+		SELECT id::text, checkout_intent_id::text, store_id, fulfillment_mode, client_id, status, version,
 		       COALESCE(rejection_reason, ''), wlt_payment_ref_id, currency, created_at, updated_at
 		FROM dsh_orders
 		WHERE id = $1::uuid AND operator_context_id=$2 AND client_id = $3`, orderID, operatorContextID, clientID))

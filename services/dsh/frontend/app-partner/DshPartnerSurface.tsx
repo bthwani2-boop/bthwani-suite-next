@@ -1,22 +1,21 @@
 import React from 'react';
-import { ActivityIndicator, BackHandler, Platform, View, Pressable, StyleSheet, I18nManager } from 'react-native';
-import { Icon, Text, spacing, colorRoles } from '@bthwani/ui-kit';
-import type { DshPartnerSurfaceProps } from './dsh-partner.types';
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Button, Icon, Text, spacing, colorRoles } from '@bthwani/ui-kit';
+import type { DshPartnerSurfaceProps, PartnerHubSection } from './dsh-partner.types';
 import { useDshPartnerSurfaceModel } from './useDshPartnerSurfaceModel';
 import { PlatformVarsProvider, usePlatformVars } from '../shared/platform';
 import { PartnerStoreScopeSheet } from './store/PartnerStoreScopeSheet';
 import { DshPartnerOrderJourneyRenderer } from './DshPartnerOrderJourneyRenderer';
 
 const COLORS = {
-  background: colorRoles.surfaceBase,
+  background: colorRoles.surfaceMuted,
   surface: colorRoles.surfaceBase,
-  text: colorRoles.brandStructure,
-  textMuted: colorRoles.brandStructure,
-  brand: colorRoles.brandStructure,
-  brandAction: colorRoles.brandAction,
-  line: colorRoles.surfaceBase,
-  success: colorRoles.brandStructure,
-  white: colorRoles.surfaceBase,
+  text: colorRoles.textPrimary,
+  textMuted: colorRoles.textMuted,
+  brand: colorRoles.brandAction,
+  brandSoft: colorRoles.brandActionSoft,
+  line: colorRoles.borderSubtle,
 };
 
 type PartnerNavIconName = React.ComponentProps<typeof Icon>['name'];
@@ -35,9 +34,9 @@ export function DshPartnerSurface(props: DshPartnerSurfaceProps) {
   );
 }
 
-function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }: DshPartnerSurfaceProps = {}) {
+function DshPartnerSurfaceInner({ route, navigation }: DshPartnerSurfaceProps) {
+  const insets = useSafeAreaInsets();
   const { dshClientId } = usePlatformVars();
-
   const {
     state,
     actions,
@@ -51,72 +50,67 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
     deliveryOpsSummary,
     teamMembers,
     isTeamLoading,
-  } = useDshPartnerSurfaceModel(initialRoute, initialOrderId);
+    teamError,
+  } = useDshPartnerSurfaceModel(route.kind);
 
-  const {
-    route,
-    storeScopeVisible,
-    accountHubSection,
-    ordersSearchMode,
-    selectedStoreScopeId,
-    editingProductId,
-    activeOrderId,
-    supportNav,
-  } = state;
-
-  const selectedSupportScreen = supportNav.screen;
-  const supportCommandContext = supportNav.context;
-
-  const setRoute = actions.setRoute;
-  const setActiveOrderId = actions.setActiveOrderId;
-  const setOrdersSearchMode = actions.setOrdersSearchMode;
-  const setAccountHubSection = actions.setAccountHubSection;
-  const setEditingProductId = actions.setEditingProductId;
-
-  const openStoreScope = actions.openStoreScope;
-  const setStoreScopeVisible = actions.setStoreScopeVisible;
-  const setSelectedStoreScopeId = actions.setSelectedStoreScopeId;
-  const setSelectedSupportScreen = actions.setSelectedSupportScreen;
-  const setSupportCommandContext = actions.setSupportCommandContext;
-  const openOrdersBoard = actions.openOrdersBoard;
-  const openOrdersSearch = actions.openOrdersSearch;
-  const openAccountHub = actions.openAccountHub;
-  const goBackToHub = actions.goBackToHub;
-  const openSupportDirectory = actions.openSupportDirectory;
-  const returnToSupportDirectory = actions.returnToSupportDirectory;
-  const openSupportScreen = actions.openSupportScreen;
-  const openInventoryManagement = actions.openInventoryManagement;
-  const openStoreCourier = actions.openStoreCourier;
-  const openSupportCommandFromOperationalFlow = actions.handleOperationalFlowNavigation;
-
-  React.useEffect(() => {
-    if (Platform.OS !== 'android') return undefined;
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      return actions.handleHardwareBackPress();
-    });
-    return () => subscription.remove();
-  }, [actions]);
-
+  const accountHubSection: PartnerHubSection = route.kind === 'home' ? route.section : 'hub';
   const bottomActiveId = React.useMemo(() => {
-    if (route === 'inbox') return 'orders';
-    if (route === 'home') {
+    if (route.kind === 'inbox') return 'orders';
+    if (route.kind === 'home') {
       if (accountHubSection === 'wallet') return 'wallet';
       if (accountHubSection === 'operations') return 'operations';
       if (accountHubSection === 'inventory') return 'inventory';
       return 'profile';
     }
-    if (route === 'inventory-management') return 'inventory';
-    if (route === 'support-directory' || route === 'support-screen' || route === 'order-rejection') return 'operations';
+    if (
+      route.kind === 'inventory-management'
+      || route.kind === 'product-edit'
+      || route.kind === 'category-management'
+      || route.kind === 'product-media'
+      || route.kind === 'product-overrides'
+    ) return 'inventory';
+    if (
+      route.kind === 'support-directory'
+      || route.kind === 'support-screen'
+      || route.kind === 'order-rejection'
+      || route.kind === 'store-courier'
+      || route.kind === 'commercial-model'
+    ) return 'operations';
     return '';
   }, [route, accountHubSection]);
+
+  const storeScopeSheet = (
+    <PartnerStoreScopeSheet
+      visible={state.storeScopeVisible}
+      onClose={() => actions.setStoreScopeVisible(false)}
+      options={scopes}
+      selectedId={state.selectedStoreScopeId}
+      onSelect={actions.setSelectedStoreScopeId}
+    />
+  );
 
   if (!selectedStoreScope) {
     if (isLoadingScopes) {
       return (
         <View style={styles.shellContainer}>
           <View style={styles.centerLoading}>
-            <ActivityIndicator color={COLORS.brand} />
+            <ActivityIndicator size="large" color={COLORS.brand} />
           </View>
+        </View>
+      );
+    }
+    if (!scopesError && scopes.length > 1) {
+      return (
+        <View style={styles.shellContainer}>
+          <View style={styles.emptyStateContainer}>
+            <Icon name="storefront-outline" size={48} tone="brand" />
+            <Text role="bodyStrong" style={styles.emptyStateTitle}>اختر الفرع النشط</Text>
+            <Text role="body" style={styles.emptyStateDesc}>
+              لديك أكثر من فرع. يجب اختيار الفرع صراحةً قبل تنفيذ أي عملية تشغيلية.
+            </Text>
+            <Button label="اختيار الفرع" onPress={actions.openStoreScope} />
+          </View>
+          {storeScopeSheet}
         </View>
       );
     }
@@ -135,45 +129,42 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
     );
   }
 
-  const isRTL = I18nManager.isRTL;
-  const rowDirection = isRTL ? 'row-reverse' : 'row';
-
   const topBar = (
-    <View style={[styles.headerContainer, { flexDirection: rowDirection }]}>
-      <Pressable onPress={() => openAccountHub('profile')} style={styles.profileButton}>
-        <Icon name="person-circle-outline" size={28} tone="brand" />
-      </Pressable>
-
-      <Pressable onPress={openStoreScope} style={[styles.storeScopeButton, { alignItems: isRTL ? 'flex-end' : 'flex-start' }]}>
-        <Text role="bodyStrong" style={styles.storeNameText}>{runtimePartnerProfile.storeName}</Text>
-        <View style={[styles.storeScopeDetails, { flexDirection: rowDirection }]}>
-          <Text role="caption" tone="muted">{`${selectedStoreScope.displayName} · ${runtimePartnerProfile.activeZoneLabel}`}</Text>
-          <Icon name="chevron-down" size={12} tone="muted" />
+    <View style={[styles.headerContainer, { paddingTop: Math.max(insets.top, 12) + 6 }]}>
+      <Pressable
+        onPress={() => navigation.navigate({ kind: 'home', section: 'profile' })}
+        style={styles.profileButton}
+        accessibilityLabel="الملف التعريفي للمتجر"
+      >
+        <View style={styles.profileAvatar}>
+          <Icon name="storefront-outline" size={22} tone="brand" />
         </View>
       </Pressable>
-
-      <View style={[styles.headerActions, { flexDirection: rowDirection }]}>
-        <Pressable accessibilityLabel="البحث عن الطلبات" onPress={openOrdersSearch}>
-          <Icon name="search-outline" size={24} tone="brand" />
+      <Pressable onPress={actions.openStoreScope} style={styles.storeScopeButton} accessibilityLabel="تغيير الفرع النشط">
+        <Text role="bodyStrong" style={styles.storeNameText}>{runtimePartnerProfile.storeName}</Text>
+        <View style={styles.storeScopeDetails}>
+          <Text role="caption" tone="muted">{`${selectedStoreScope.displayName} · ${runtimePartnerProfile.activeZoneLabel}`}</Text>
+          <Icon name="chevron-down" size={14} tone="muted" />
+        </View>
+      </Pressable>
+      <View style={styles.headerActions}>
+        <Pressable
+          accessibilityLabel="البحث عن الطلبات"
+          onPress={() => navigation.navigate({ kind: 'inbox', search: true })}
+          style={styles.headerActionButton}
+        >
+          <Icon name="search-outline" size={22} tone="brand" />
         </Pressable>
-        <Pressable accessibilityLabel="الإشعارات" onPress={() => { setActiveOrderId(initialOrderId); setRoute('bell'); }}>
-          <Icon name="notifications-outline" size={24} tone="brand" />
+        <Pressable
+          accessibilityLabel="الإشعارات"
+          onPress={() => navigation.navigate({ kind: 'bell' })}
+          style={styles.headerActionButton}
+        >
+          <Icon name="notifications-outline" size={22} tone="brand" />
         </Pressable>
       </View>
     </View>
   );
-
-  const storeScopeSheet = (
-    <PartnerStoreScopeSheet
-      visible={storeScopeVisible}
-      onClose={() => setStoreScopeVisible(false)}
-      options={scopes}
-      selectedId={selectedStoreScopeId ?? ''}
-      onSelect={setSelectedStoreScopeId}
-    />
-  );
-
-  const showBottomNav = route !== 'entry';
 
   const navItems: readonly PartnerNavItem[] = [
     { id: 'operations', label: 'العمليات', icon: 'people-outline', activeIcon: 'people' },
@@ -184,32 +175,36 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
   ];
 
   const handleNavSelect = (id: PartnerNavItem['id']) => {
-    if (id === 'orders') openOrdersBoard();
-    else if (id === 'profile') openAccountHub('hub');
-    else if (id === 'wallet') openAccountHub('wallet');
-    else if (id === 'inventory') openInventoryManagement();
-    else if (id === 'operations') openSupportDirectory({ source: 'operations' });
+    if (id === 'orders') navigation.navigate({ kind: 'inbox' });
+    else if (id === 'profile') navigation.navigate({ kind: 'home', section: 'hub' });
+    else if (id === 'wallet') navigation.navigate({ kind: 'home', section: 'wallet' });
+    else if (id === 'inventory') navigation.navigate({ kind: 'inventory-management' });
+    else navigation.navigate({ kind: 'support-directory', context: {
+      filterId: 'all',
+      highlightedCaseId: null,
+      highlightedIssueCategoryId: null,
+      preferredOperationalFlowId: null,
+      preferredSupportRouteId: null,
+      source: 'operations',
+    } });
   };
 
-  const bottomNavBar = showBottomNav ? (
-    <View style={[styles.bottomNavContainer, { flexDirection: rowDirection }]}>
+  const bottomNavBar = route.kind !== 'entry' ? (
+    <View style={[styles.bottomNavContainer, { paddingBottom: Math.max(insets.bottom, 6) }]}>
       {navItems.map((item) => {
         const isActive = bottomActiveId === item.id;
-        const iconName = isActive ? item.activeIcon : item.icon;
         return (
           <Pressable
             key={item.id}
             onPress={() => handleNavSelect(item.id)}
-            style={styles.navTab}
+            style={[styles.navTab, isActive && styles.navTabActive]}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isActive }}
           >
-            <Icon name={iconName} size={20} tone={isActive ? 'brand' : 'muted'} />
-            <Text
-              role="caption"
-              style={[
-                styles.navTabText,
-                isActive ? styles.navTabTextActive : styles.navTabTextInactive,
-              ]}
-            >
+            <View style={[styles.navIconWrapper, isActive && styles.navIconWrapperActive]}>
+              <Icon name={isActive ? item.activeIcon : item.icon} size={22} tone={isActive ? 'brand' : 'muted'} />
+            </View>
+            <Text role="caption" style={[styles.navTabText, isActive ? styles.navTabTextActive : styles.navTabTextInactive]}>
               {item.label}
             </Text>
           </Pressable>
@@ -221,19 +216,14 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
   const renderMainShell = (content: React.ReactNode): React.ReactElement => (
     <View style={styles.shellContainer}>
       {topBar}
-      <View style={styles.mainContentContainer}>
-        {content}
-      </View>
+      <View style={styles.mainContentContainer}>{content}</View>
       {storeScopeSheet}
       {bottomNavBar}
     </View>
   );
-
   const renderSurfaceShell = (content: React.ReactNode): React.ReactElement => (
     <View style={styles.shellContainer}>
-      <View style={styles.surfaceContentContainer}>
-        {content}
-      </View>
+      <View style={styles.surfaceContentContainer}>{content}</View>
       {storeScopeSheet}
       {bottomNavBar}
     </View>
@@ -242,45 +232,20 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
   return (
     <DshPartnerOrderJourneyRenderer
       route={route}
-      initialOrderId={initialOrderId}
-      activeOrderId={activeOrderId}
-      ordersSearchMode={ordersSearchMode}
-      accountHubSection={accountHubSection}
-      editingProductId={editingProductId}
-      selectedSupportScreen={selectedSupportScreen}
-      supportCommandContext={supportCommandContext}
+      navigation={navigation}
       partnerOrdersState={partnerOrdersState}
       partnerOrders={partnerOrders}
       runtimePartnerProfile={runtimePartnerProfile}
       selectedStoreScope={selectedStoreScope}
-      selectedStoreScopeId={selectedStoreScopeId}
       deliveryOpsSummary={deliveryOpsSummary}
-      dshClientId={dshClientId ?? undefined}
+      {...(dshClientId ? { dshClientId } : {})}
       renderMainShell={renderMainShell}
       renderSurfaceShell={renderSurfaceShell}
-      setRoute={setRoute}
-      setActiveOrderId={setActiveOrderId}
-      setOrdersSearchMode={setOrdersSearchMode}
-      setAccountHubSection={setAccountHubSection}
-      setEditingProductId={setEditingProductId}
-      setSupportState={({ screenId, commandContext }) => {
-        setSelectedSupportScreen(screenId);
-        setSupportCommandContext(commandContext);
-      }}
-      openOrdersBoard={openOrdersBoard}
-      openOrdersSearch={openOrdersSearch}
-      openAccountHub={openAccountHub}
-      goBackToHub={goBackToHub}
-      openSupportDirectory={openSupportDirectory}
-      returnToSupportDirectory={returnToSupportDirectory}
-      openSupportScreen={openSupportScreen}
-      openInventoryManagement={openInventoryManagement}
-      openStoreCourier={openStoreCourier}
-      openStoreScope={() => setStoreScopeVisible(true)}
-      openSupportCommandFromOperationalFlow={openSupportCommandFromOperationalFlow}
+      openStoreScope={actions.openStoreScope}
       refreshOrders={actions.refreshOrders}
       teamMembers={teamMembers}
       isTeamLoading={isTeamLoading}
+      teamError={teamError}
       onInviteMember={actions.onInviteMember}
       onMemberAction={actions.onMemberAction}
       scopes={scopes}
@@ -289,106 +254,74 @@ function DshPartnerSurfaceInner({ initialRoute = 'inbox', initialOrderId = '' }:
 }
 
 const styles = StyleSheet.create({
-  shellContainer: {
-    flex: 1,
-    position: 'relative',
-    backgroundColor: COLORS.background,
-  },
+  shellContainer: { flex: 1, position: 'relative', backgroundColor: COLORS.background },
   headerContainer: {
     backgroundColor: COLORS.surface,
-    paddingTop: Platform.OS === 'ios' ? 48 : 16,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
+    paddingBottom: spacing[3],
+    paddingHorizontal: spacing[4],
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
     borderBottomColor: COLORS.line,
+    shadowColor: colorRoles.shadowBase,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 2,
+    zIndex: 10,
   },
-  profileButton: {
+  profileButton: { justifyContent: 'center', alignItems: 'center' },
+  profileAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.brandSoft,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  storeScopeButton: {
-    flex: 1,
-    gap: 2,
-  },
-  storeNameText: {
-    color: COLORS.text,
-  },
-  storeScopeDetails: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  headerActions: {
-    alignItems: 'center',
-    gap: spacing[3],
-  },
-  centerLoading: {
-    flex: 1,
+  storeScopeButton: { flex: 1, marginHorizontal: spacing[3], gap: 2 },
+  storeNameText: { color: COLORS.text, fontSize: 15 },
+  storeScopeDetails: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
+  headerActionButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: COLORS.brandSoft,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emptyStateContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  emptyStateTitle: {
-    color: COLORS.text,
-    marginTop: 16,
-    textAlign: 'center',
-  },
-  emptyStateDesc: {
-    color: COLORS.textMuted,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  mainContentContainer: {
-    flex: 1,
-    marginTop: -2,
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    overflow: 'visible',
-    paddingBottom: Platform.OS === 'android' ? 72 : 80,
-  },
-  surfaceContentContainer: {
-    flex: 1,
-    overflow: 'visible',
-    paddingBottom: Platform.OS === 'android' ? 72 : 80,
-  },
+  centerLoading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  emptyStateContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing[6], gap: spacing[2] },
+  emptyStateTitle: { color: COLORS.text, textAlign: 'center' },
+  emptyStateDesc: { color: COLORS.textMuted, textAlign: 'center', lineHeight: 20 },
+  mainContentContainer: { flex: 1, paddingBottom: 76 },
+  surfaceContentContainer: { flex: 1, paddingBottom: 76 },
   bottomNavContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    height: 64,
     backgroundColor: COLORS.surface,
     borderTopWidth: 1,
     borderTopColor: COLORS.line,
+    flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
     zIndex: 1000,
-    paddingBottom: Platform.OS === 'ios' ? 12 : 0,
+    shadowColor: colorRoles.shadowBase,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 8,
+    paddingTop: spacing[2],
   },
-  navTab: {
-    flex: 1,
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: 2,
-  },
-  navTabText: {
-    fontSize: 10,
-  },
-  navTabTextActive: {
-    color: COLORS.brand,
-    fontWeight: '700',
-  },
-  navTabTextInactive: {
-    color: COLORS.textMuted,
-    fontWeight: '400',
-  },
+  navTab: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 3, paddingVertical: 2 },
+  navTabActive: {},
+  navIconWrapper: { width: 36, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  navIconWrapperActive: { backgroundColor: COLORS.brandSoft },
+  navTabText: { fontSize: 11 },
+  navTabTextActive: { color: COLORS.brand, fontWeight: '700' },
+  navTabTextInactive: { color: COLORS.textMuted, fontWeight: '500' },
 });
-
-// export default DshPartnerSurface; // Unused default export

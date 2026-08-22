@@ -178,9 +178,6 @@ func (s *protectedStoreServer) handleSubmitGovernedDeliveryProof(w http.Response
 		writeDeliveryProofError(w, err)
 		return
 	}
-	if proof.Status == dispatch.DeliveryProofAccepted {
-		_, _ = s.wlt.FinalizeCodReservation(r.Context(), proof.OrderID, r.Header.Get("X-Correlation-Id"))
-	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"proof": marshalDeliveryProof(proof, true)})
 }
 

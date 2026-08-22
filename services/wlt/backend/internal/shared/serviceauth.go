@@ -1,13 +1,44 @@
 package shared
 
 import (
+	"context"
 	"crypto/subtle"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
 )
 
-const legacyOperatorContextHeader = "X-Operator-Context-ID"
+const DelegatedOperatorContextHeader = "X-Delegated-Operator-Context"
+
+const DelegatedFinancePrincipalHeader = "X-Delegated-Principal-ID"
+
+type delegatedFinancePrincipalContextKey struct{}
+
+// WithDelegatedFinancePrincipal records an Identity-authenticated operator
+// delegated by an already authenticated internal service.
+func WithDelegatedFinancePrincipal(ctx context.Context, principalID string) context.Context {
+	return context.WithValue(ctx, delegatedFinancePrincipalContextKey{}, principalID)
+}
+
+// DelegatedFinancePrincipalFromContext returns the operator identity that was
+// authenticated by DSH and bound to this service-authenticated request.
+func DelegatedFinancePrincipalFromContext(ctx context.Context) (string, bool) {
+	principalID, ok := ctx.Value(delegatedFinancePrincipalContextKey{}).(string)
+	principalID = strings.TrimSpace(principalID)
+	return principalID, ok && principalID != ""
+}
+
+// RequireDelegatedFinancePrincipal is the fail-closed domain boundary for
+// sensitive finance actions. Callers must never substitute a body field for
+// the Identity-authenticated principal bound by RequireServiceCaller.
+func RequireDelegatedFinancePrincipal(ctx context.Context) (string, error) {
+	principalID, ok := DelegatedFinancePrincipalFromContext(ctx)
+	if !ok {
+		return "", fmt.Errorf("Identity-authenticated delegated finance principal is required")
+	}
+	return principalID, nil
+}
 
 // RequireServiceCaller validates the shared-secret bearer token and expected
 // service identity before accepting the delegated OperatorContext. The context
@@ -33,12 +64,16 @@ func RequireServiceCaller(w http.ResponseWriter, r *http.Request, tokenEnvVar, e
 		return false
 	}
 
-	operatorContextID := strings.TrimSpace(r.Header.Get(legacyOperatorContextHeader))
+	operatorContextID := strings.TrimSpace(r.Header.Get(DelegatedOperatorContextHeader))
 	if operatorContextID == "" {
-		SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "authenticated service delegation requires X-Operator-Context-ID")
+		SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "authenticated service delegation requires X-Delegated-Operator-Context")
 		return false
 	}
-	r.Header.Set(legacyOperatorContextHeader, operatorContextID)
-	*r = *r.WithContext(WithOperatorContext(r.Context(), operatorContextID))
+	ctx := WithOperatorContext(r.Context(), operatorContextID)
+	if principalID := strings.TrimSpace(r.Header.Get(DelegatedFinancePrincipalHeader)); principalID != "" {
+		r.Header.Set(DelegatedFinancePrincipalHeader, principalID)
+		ctx = WithDelegatedFinancePrincipal(ctx, principalID)
+	}
+	*r = *r.WithContext(ctx)
 	return true
 }

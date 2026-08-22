@@ -13,7 +13,6 @@ import (
 
 	"workforce-api/internal/auth"
 	"workforce-api/internal/identityclient"
-	"workforce-api/internal/media"
 	"workforce-api/internal/workforce"
 )
 
@@ -22,24 +21,20 @@ type server struct {
 	service          *workforce.Service
 	repo             *workforce.Repository
 	auth             *auth.Client
-	media            *media.Provider
+	identity         *identityclient.Client
 	internalDSHToken string
 	readinessStore   workforceRuntimeReadinessStore
 }
 
-func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repository, authClient *auth.Client, mediaProvider *media.Provider, internalDSHToken string) http.Handler {
-	s := &server{db: db, service: service, repo: repo, auth: authClient, media: mediaProvider, internalDSHToken: strings.TrimSpace(internalDSHToken)}
+func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repository, authClient *auth.Client, identityClient *identityclient.Client, internalDSHToken string) http.Handler {
+	s := &server{db: db, service: service, repo: repo, auth: authClient, identity: identityClient, internalDSHToken: strings.TrimSpace(internalDSHToken)}
 	if db != nil {
 		s.readinessStore = sqlWorkforceRuntimeReadinessStore{db: db}
 	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /workforce/health", s.health)
 	mux.HandleFunc("GET /workforce/readiness", s.readiness)
-	mux.HandleFunc("GET /workforce/readiness/{actorId}", s.anyAuthenticated(s.handleGetReadiness))
-
-	//	mux.HandleFunc("POST /workforce/employees/{actorId}/media/uploads", s.operatorOnly("provider:update", s.handleMediaUpload))
-	//	mux.HandleFunc("POST /workforce/captains/{actorId}/media/uploads", s.operatorOnly("provider:update", s.handleMediaUpload))
-	//	mux.HandleFunc("POST /workforce/field-agents/{actorId}/media/uploads", s.operatorOnly("provider:update", s.handleMediaUpload))
+	mux.HandleFunc("GET /workforce/readiness/{actorId}", s.anyAuthenticated(s.handleGetCurrentProviderReadiness))
 
 	mux.HandleFunc("POST /workforce/field-agents", s.operatorOnly("provider:create", s.createFieldAgent))
 	mux.HandleFunc("GET /workforce/field-agents", s.operatorOnly("provider:read", s.listFieldAgents))
@@ -49,6 +44,7 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux.HandleFunc("POST /workforce/field-agents/{actorId}/reactivate", s.operatorOnly("provider:reactivate", s.reactivateFieldAgent))
 	mux.HandleFunc("POST /workforce/field-agents/{actorId}/activation-codes", s.operatorOnly("provider.activation:issue", s.issueActivation))
 	mux.HandleFunc("DELETE /workforce/field-agents/{actorId}/activation-codes", s.operatorOnly("provider.activation:issue", s.revokeActivation))
+	mux.HandleFunc("PATCH /workforce/field-agents/{actorId}/affiliations", s.providerAffiliationRoute("field"))
 
 	mux.HandleFunc("POST /workforce/captains", s.operatorOnly("provider:create", s.createCaptain))
 	mux.HandleFunc("GET /workforce/captains", s.operatorOnly("provider:read", s.listCaptains))
@@ -58,6 +54,7 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux.HandleFunc("POST /workforce/captains/{actorId}/reactivate", s.operatorOnly("provider:reactivate", s.reactivateFieldAgent))
 	mux.HandleFunc("POST /workforce/captains/{actorId}/activation-codes", s.operatorOnly("provider.activation:issue", s.issueActivation))
 	mux.HandleFunc("DELETE /workforce/captains/{actorId}/activation-codes", s.operatorOnly("provider.activation:issue", s.revokeActivation))
+	mux.HandleFunc("PATCH /workforce/captains/{actorId}/affiliations", s.providerAffiliationRoute("captain"))
 
 	mux.HandleFunc("POST /workforce/employees", s.operatorOnly("provider:create", s.createEmployee))
 	mux.HandleFunc("GET /workforce/employees", s.operatorOnly("provider:read", s.listEmployees))
@@ -65,6 +62,7 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 	mux.HandleFunc("PATCH /workforce/employees/{actorId}", s.operatorOnly("provider:update", s.updateEmployee))
 	mux.HandleFunc("POST /workforce/employees/{actorId}/suspend", s.operatorOnly("provider:suspend", s.suspendFieldAgent))
 	mux.HandleFunc("POST /workforce/employees/{actorId}/reactivate", s.operatorOnly("provider:reactivate", s.reactivateFieldAgent))
+	mux.HandleFunc("PATCH /workforce/employees/{actorId}/affiliations", s.providerAffiliationRoute("employee"))
 
 	mux.HandleFunc("GET /workforce/me", s.providerSelf("provider:read", s.me))
 	mux.HandleFunc("PATCH /workforce/me", s.providerSelf("provider:update", s.updateMe))
@@ -77,7 +75,6 @@ func NewRouter(db *sql.DB, service *workforce.Service, repo *workforce.Repositor
 
 	// Internal routes
 	mux.HandleFunc("GET /internal/assignments/{actorId}/scopes", s.internalOnly(s.handleGetActorScopes))
-	mux.HandleFunc("PUT /internal/assignments/{actorId}/scopes", s.internalOnly(s.handleSetActorScopes))
 	return mux
 }
 
@@ -170,6 +167,12 @@ func (s *server) withIdentity(next guardedHandler) http.HandlerFunc {
 			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "session is invalid or expired")
 			return
 		}
+		boundContext, bindErr := auth.BindIdentityContext(r.Context(), identity)
+		if bindErr != nil {
+			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "identity operator context is missing")
+			return
+		}
+		r = r.WithContext(boundContext)
 		next(w, r, identity)
 	}
 }
@@ -479,7 +482,10 @@ func operatorOf(r *http.Request, identity auth.Identity) workforce.Operator {
 	if len(identity.Roles) > 0 {
 		role = identity.Roles[0]
 	}
-	return workforce.Operator{ActorID: identity.Subject, Role: role, Token: r.Header.Get("Authorization")}
+	return workforce.Operator{
+		ActorID: identity.Subject, Role: role, Token: r.Header.Get("Authorization"),
+		OperatorContextID: identity.OperatorContextID,
+	}
 }
 
 func decodeJSON(w http.ResponseWriter, r *http.Request, target any) bool {
@@ -551,7 +557,7 @@ func writeWorkforceError(w http.ResponseWriter, err error) {
 	default:
 		// Unmapped errors become an opaque 500 for the caller. Log the underlying
 		// cause so the failure is diagnosable from the container logs.
-		log.Printf("[workforce] unmapped error: %v", err)
+		log.Printf("[workforce] unmapped error (error_type %T)", err)
 		sendError(w, http.StatusInternalServerError, "WORKFORCE_INTERNAL_ERROR", "workforce request failed")
 	}
 }

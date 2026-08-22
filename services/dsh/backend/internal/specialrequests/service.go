@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/url"
 	"strings"
 	"time"
@@ -23,11 +22,11 @@ var terminalStatuses = map[RequestStatus]bool{
 
 var validStatusTransitions = map[RequestStatus][]RequestStatus{
 	StatusSubmitted:          {StatusUnderReview, StatusCancelled},
-	StatusUnderReview:        {StatusNeedsCustomerInput, StatusApproved, StatusRejected, StatusCancelled},
-	StatusNeedsCustomerInput: {StatusUnderReview, StatusApproved, StatusCancelled},
-	StatusApproved:           {StatusAssigned, StatusCancelled},
-	StatusAssigned:           {StatusInProgress, StatusApproved, StatusCancelled},
-	StatusInProgress:         {StatusCompleted, StatusCancelled},
+	StatusUnderReview:        {StatusNeedsCustomerInput, StatusRejected, StatusCancelled},
+	StatusNeedsCustomerInput: {StatusUnderReview, StatusCancelled},
+	StatusApproved:           {StatusCancelled},
+	StatusAssigned:           {StatusCancelled},
+	StatusInProgress:         {StatusCancelled},
 }
 
 // clientCancellableStatuses are the statuses from which a client-initiated
@@ -37,13 +36,6 @@ var clientCancellableStatuses = map[RequestStatus]bool{
 	StatusUnderReview:        true,
 	StatusNeedsCustomerInput: true,
 	StatusApproved:           true,
-}
-
-// moneyEditableStatuses are the statuses during which estimated-amount /
-// currency fields may be set by an operator.
-var moneyEditableStatuses = map[RequestStatus]bool{
-	StatusUnderReview:        true,
-	StatusNeedsCustomerInput: true,
 }
 
 // stageRule binds a workflowStage value to the global status it is valid
@@ -169,11 +161,8 @@ func NewService(repo *PostgresRepository) *Service {
 	return &Service{repo: repo}
 }
 
-// SetWltClient wires an optional WLT client onto the service so
-// CancelForClient can make a best-effort attempt to expire a dangling WLT
-// payment session on cancellation. It is a setter rather than a constructor
-// parameter to avoid touching NewService's other call sites (get/list/
-// operator-transition/dispatch handlers), which never need WLT awareness.
+// SetWltClient wires the WLT owner onto the service so cancellation can expire
+// an attached payment session before the DSH cancellation commits.
 func (s *Service) SetWltClient(c *wlt.Client) {
 	s.wltClient = c
 }
@@ -183,25 +172,29 @@ const (
 	maxAddressLength = 500
 )
 
-const DefaultOperatorContextID = "OperatorContext-dev-001"
-
-func OperatorContextOrDefault(operatorContextID string) string {
-	if strings.TrimSpace(operatorContextID) == "" {
-		return DefaultOperatorContextID
+func requireOperatorContextID(operatorContextID string) (string, error) {
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	if operatorContextID == "" {
+		return "", fmt.Errorf("%w: OperatorContext is required", ErrInvalid)
 	}
-	return strings.TrimSpace(operatorContextID)
+	return operatorContextID, nil
 }
 
 func (s *Service) Create(ctx context.Context, clientID string, in CreateInput) (*SpecialRequest, error) {
-	return s.CreateInOperatorContext(ctx, OperatorContextOrDefault(in.OperatorContextID), clientID, in)
+	return s.CreateInOperatorContext(ctx, in.OperatorContextID, clientID, in)
 }
 
 func (s *Service) CreateInOperatorContext(ctx context.Context, operatorContextID string, clientID string, in CreateInput) (*SpecialRequest, error) {
-	if operatorContextID == "" {
-		return nil, fmt.Errorf("%w: OperatorContext is required", ErrInvalid)
+	var err error
+	operatorContextID, err = requireOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
 	}
 	if clientID == "" {
 		return nil, fmt.Errorf("%w: client is required", ErrInvalid)
+	}
+	if strings.TrimSpace(in.IdempotencyKey) == "" {
+		return nil, fmt.Errorf("%w: idempotencyKey is required", ErrInvalid)
 	}
 	if in.RequestType != TypeSheinAssistedPurchase && in.RequestType != TypeAwnakErrand {
 		return nil, fmt.Errorf("%w: requestType must be SHEIN_ASSISTED_PURCHASE or AWNAK_ERRAND", ErrInvalid)
@@ -276,9 +269,15 @@ func (s *Service) CreateInOperatorContext(ctx context.Context, operatorContextID
 	}
 	defer tx.Rollback()
 
-	req, err := s.repo.CreateTx(ctx, tx, in)
+	req, created, err := s.repo.CreateTxWithReplay(ctx, tx, in)
 	if err != nil {
 		return nil, err
+	}
+	if !created {
+		if err := tx.Commit(); err != nil {
+			return nil, err
+		}
+		return req, nil
 	}
 
 	correlationID := ""
@@ -330,10 +329,13 @@ func validateTextField(field string, value *string, maxLen int) error {
 }
 
 func (s *Service) GetForClient(ctx context.Context, id, clientID string) (*SpecialRequest, error) {
-	return s.GetForClientInOperatorContext(ctx, DefaultOperatorContextID, id, clientID)
+	return s.GetForClientInOperatorContext(ctx, "", id, clientID)
 }
 
 func (s *Service) GetForClientInOperatorContext(ctx context.Context, operatorContextID string, id, clientID string) (*SpecialRequest, error) {
+	if _, err := requireOperatorContextID(operatorContextID); err != nil {
+		return nil, err
+	}
 	req, err := s.repo.GetInOperatorContext(ctx, operatorContextID, id)
 	if err != nil {
 		return nil, err
@@ -345,26 +347,35 @@ func (s *Service) GetForClientInOperatorContext(ctx context.Context, operatorCon
 }
 
 func (s *Service) ListForClient(ctx context.Context, clientID string, limit, offset int) ([]SpecialRequest, int, error) {
-	return s.ListForClientInOperatorContext(ctx, DefaultOperatorContextID, clientID, limit, offset)
+	return s.ListForClientInOperatorContext(ctx, "", clientID, limit, offset)
 }
 
 func (s *Service) ListForClientInOperatorContext(ctx context.Context, operatorContextID string, clientID string, limit, offset int) ([]SpecialRequest, int, error) {
+	if _, err := requireOperatorContextID(operatorContextID); err != nil {
+		return nil, 0, err
+	}
 	return s.repo.ListByClientInOperatorContext(ctx, operatorContextID, clientID, limit, offset)
 }
 
 func (s *Service) GetForOperator(ctx context.Context, id string) (*SpecialRequest, error) {
-	return s.GetForOperatorInOperatorContext(ctx, DefaultOperatorContextID, id)
+	return s.GetForOperatorInOperatorContext(ctx, "", id)
 }
 
 func (s *Service) GetForOperatorInOperatorContext(ctx context.Context, operatorContextID string, id string) (*SpecialRequest, error) {
+	if _, err := requireOperatorContextID(operatorContextID); err != nil {
+		return nil, err
+	}
 	return s.repo.GetInOperatorContext(ctx, operatorContextID, id)
 }
 
 func (s *Service) ListForOperator(ctx context.Context, reqType, status, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error) {
-	return s.ListForOperatorInOperatorContext(ctx, DefaultOperatorContextID, reqType, status, workflowStage, limit, offset)
+	return s.ListForOperatorInOperatorContext(ctx, "", reqType, status, workflowStage, limit, offset)
 }
 
 func (s *Service) ListForOperatorInOperatorContext(ctx context.Context, operatorContextID string, reqType, status, workflowStage *string, limit, offset int) ([]SpecialRequest, int, error) {
+	if _, err := requireOperatorContextID(operatorContextID); err != nil {
+		return nil, 0, err
+	}
 	if reqType != nil && *reqType != "" {
 		rt := RequestType(*reqType)
 		if rt != TypeSheinAssistedPurchase && rt != TypeAwnakErrand {
@@ -390,10 +401,15 @@ func isValidStatus(status RequestStatus) bool {
 }
 
 func (s *Service) CancelForClient(ctx context.Context, id, clientID string, expectedVersion *int) (*SpecialRequest, error) {
-	return s.CancelForClientInOperatorContext(ctx, DefaultOperatorContextID, id, clientID, expectedVersion)
+	return s.CancelForClientInOperatorContext(ctx, "", id, clientID, expectedVersion)
 }
 
 func (s *Service) CancelForClientInOperatorContext(ctx context.Context, operatorContextID string, id, clientID string, expectedVersion *int) (*SpecialRequest, error) {
+	var err error
+	operatorContextID, err = requireOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	current, err := s.repo.GetInOperatorContext(ctx, operatorContextID, id)
 	if err != nil {
 		return nil, err
@@ -431,6 +447,18 @@ func (s *Service) CancelForClientInOperatorContext(ctx context.Context, operator
 	if current.CorrelationID != nil {
 		correlationID = *current.CorrelationID
 	}
+	// A request with a WLT session cannot become cancelled while the session
+	// remains active. Expiry is performed before the DSH transaction commits;
+	// any WLT failure rolls back the cancellation instead of creating a
+	// cancelled-request/active-payment split truth.
+	if current.WltPaymentSessionID != nil {
+		if s.wltClient == nil || !s.wltClient.Configured() {
+			return nil, fmt.Errorf("%w: WLT payment session expiry is unavailable", ErrConflict)
+		}
+		if err := s.wltClient.ExpireSession(ctx, *current.WltPaymentSessionID, correlationID); err != nil {
+			return nil, fmt.Errorf("%w: WLT payment session expiry failed: %v", ErrConflict, err)
+		}
+	}
 	if err := WriteAuditEvent(tx, id, clientID, "client", "cancel", "", correlationID, requestJSON(current), requestJSON(updated)); err != nil {
 		return nil, fmt.Errorf("write audit event: %w", err)
 	}
@@ -446,25 +474,19 @@ func (s *Service) CancelForClientInOperatorContext(ctx context.Context, operator
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
-
-	// Best-effort: if a WLT payment session was attached, ask WLT to expire
-	// it so it doesn't dangle forever. This is a synchronous, lower-durability
-	// interim compared to checkout's durable outbox (checkoutfinanceoutbox);
-	// a failure here is logged and ignored rather than failing the cancel.
-	if s.wltClient != nil && current.WltPaymentSessionID != nil {
-		if err := s.wltClient.ExpireSession(ctx, *current.WltPaymentSessionID, correlationID); err != nil {
-			log.Printf("[special-requests] failed to expire WLT payment session %s for request %s: %v", *current.WltPaymentSessionID, id, err)
-		}
-	}
-
 	return updated, nil
 }
 
 func (s *Service) ApplyOperatorTransition(ctx context.Context, id string, expectedVersion int, in UpdateInput) (*SpecialRequest, error) {
-	return s.ApplyOperatorTransitionInOperatorContext(ctx, DefaultOperatorContextID, id, expectedVersion, in)
+	return s.ApplyOperatorTransitionInOperatorContext(ctx, "", id, expectedVersion, in)
 }
 
 func (s *Service) ApplyOperatorTransitionInOperatorContext(ctx context.Context, operatorContextID string, id string, expectedVersion int, in UpdateInput) (*SpecialRequest, error) {
+	var err error
+	operatorContextID, err = requireOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
 	current, err := s.repo.GetInOperatorContext(ctx, operatorContextID, id)
 	if err != nil {
 		return nil, err
@@ -474,9 +496,25 @@ func (s *Service) ApplyOperatorTransitionInOperatorContext(ctx context.Context, 
 	}
 
 	newStatus := current.Status
+	sameStatus := false
 	if in.Status != nil {
+		sameStatus = *in.Status == current.Status
+		if sameStatus {
+			// Only the approved SHEIN fulfillment milestones are allowed as
+			// same-status operator updates, plus an explicit retry of the WLT
+			// quote command while the request remains at customer_approval.
+			quoteRetry := in.QuoteProposalRequested &&
+				current.Status == StatusNeedsCustomerInput &&
+				current.WorkflowStage != nil && *current.WorkflowStage == "customer_approval" &&
+				in.WorkflowStage != nil && *in.WorkflowStage == "customer_approval"
+			if (current.Status != StatusApproved || in.WorkflowStage == nil) && !quoteRetry {
+				return nil, fmt.Errorf("%w: operator cannot mutate %s without a governed milestone command", ErrConflict, current.Status)
+			}
+		} else if *in.Status == StatusApproved || *in.Status == StatusAssigned || *in.Status == StatusInProgress || *in.Status == StatusCompleted {
+			return nil, fmt.Errorf("%w: %s is owned by WLT or dispatch", ErrConflict, *in.Status)
+		}
 		allowed := validStatusTransitions[current.Status]
-		ok := false
+		ok := sameStatus
 		for _, s := range allowed {
 			if s == *in.Status {
 				ok = true
@@ -511,34 +549,24 @@ func (s *Service) ApplyOperatorTransitionInOperatorContext(ctx context.Context, 
 		targetStage = defaultStageFor(current.RequestType, newStatus)
 	}
 
-	if in.EstimatedAmountMinorUnits != nil || in.Currency != nil {
-		if !moneyEditableStatuses[newStatus] {
-			return nil, fmt.Errorf("%w: money fields can only be set while under review", ErrConflict)
-		}
-	}
-
 	update := UpdateInput{
-		WorkflowStage:             targetStage,
-		AssignedOperatorID:        in.AssignedOperatorID,
-		RejectionReason:           in.RejectionReason,
-		EstimatedAmountMinorUnits: in.EstimatedAmountMinorUnits,
-		Currency:                  in.Currency,
-		WltPaymentSessionID:       in.WltPaymentSessionID,
-		QuotePreparedAt:           in.QuotePreparedAt,
-		CustomerApprovedAt:        in.CustomerApprovedAt,
-		PurchaseBatchID:           in.PurchaseBatchID,
-		PurchasedAt:               in.PurchasedAt,
-		InboundReference:          in.InboundReference,
-		InboundReceivedAt:         in.InboundReceivedAt,
-		SortingStartedAt:          in.SortingStartedAt,
-		SortingCompletedAt:        in.SortingCompletedAt,
-		FulfillmentPreparedAt:     in.FulfillmentPreparedAt,
-		ReadyForDeliveryAt:        in.ReadyForDeliveryAt,
-		CaptainAssignedAt:         in.CaptainAssignedAt,
-		PickedUpAt:                in.PickedUpAt,
-		DeliveredAt:               in.DeliveredAt,
+		WorkflowStage:         targetStage,
+		AssignedOperatorID:    in.AssignedOperatorID,
+		RejectionReason:       in.RejectionReason,
+		CustomerApprovedAt:    in.CustomerApprovedAt,
+		PurchaseBatchID:       in.PurchaseBatchID,
+		PurchasedAt:           in.PurchasedAt,
+		InboundReference:      in.InboundReference,
+		InboundReceivedAt:     in.InboundReceivedAt,
+		SortingStartedAt:      in.SortingStartedAt,
+		SortingCompletedAt:    in.SortingCompletedAt,
+		FulfillmentPreparedAt: in.FulfillmentPreparedAt,
+		ReadyForDeliveryAt:    in.ReadyForDeliveryAt,
+		CaptainAssignedAt:     in.CaptainAssignedAt,
+		PickedUpAt:            in.PickedUpAt,
+		DeliveredAt:           in.DeliveredAt,
 	}
-	if in.Status != nil {
+	if in.Status != nil && !sameStatus {
 		update.Status = in.Status
 		update.setCompletedAt = newStatus == StatusCompleted && current.Status != StatusCompleted
 		update.setCancelledAt = newStatus == StatusCancelled && current.Status != StatusCancelled
@@ -559,7 +587,11 @@ func (s *Service) ApplyOperatorTransitionInOperatorContext(ctx context.Context, 
 	if current.CorrelationID != nil {
 		correlationID = *current.CorrelationID
 	}
-	if err := WriteAuditEvent(tx, id, "operator", "operator", "transition", "", correlationID, requestJSON(current), requestJSON(updated)); err != nil {
+	actorID := strings.TrimSpace(in.ActorID)
+	if actorID == "" {
+		actorID = "operator"
+	}
+	if err := WriteAuditEvent(tx, id, actorID, "operator", "transition", "", correlationID, requestJSON(current), requestJSON(updated)); err != nil {
 		return nil, fmt.Errorf("write audit event: %w", err)
 	}
 
@@ -584,5 +616,70 @@ func (s *Service) ApplyOperatorTransitionInOperatorContext(ctx context.Context, 
 		return nil, err
 	}
 
+	return updated, nil
+}
+
+// AttachWltQuoteInOperatorContext stores only the WLT-issued quote projection.
+// No operator transition can populate these fields, so DSH remains an
+// operational owner while WLT remains the sole monetary authority.
+func (s *Service) AttachWltQuoteInOperatorContext(ctx context.Context, operatorContextID, id string, expectedVersion int, quote *wlt.SpecialRequestQuote) (*SpecialRequest, error) {
+	var err error
+	operatorContextID, err = requireOperatorContextID(operatorContextID)
+	if err != nil {
+		return nil, err
+	}
+	if quote == nil || strings.TrimSpace(quote.ID) == "" || quote.SpecialRequestID != id || quote.OperatorContextID != operatorContextID || quote.AmountMinorUnits <= 0 || strings.TrimSpace(quote.Currency) == "" || quote.Status != "active" || !time.Now().Before(quote.ExpiresAt) {
+		return nil, fmt.Errorf("%w: WLT quote readback is invalid or expired", ErrInvalid)
+	}
+	current, err := s.repo.GetInOperatorContext(ctx, operatorContextID, id)
+	if err != nil {
+		return nil, err
+	}
+	if current.ClientID != quote.ClientID {
+		return nil, fmt.Errorf("%w: WLT quote client does not match special request", ErrForbidden)
+	}
+	if current.Status != StatusNeedsCustomerInput || current.WorkflowStage == nil || *current.WorkflowStage != "customer_approval" {
+		return nil, fmt.Errorf("%w: WLT quote can only be attached at customer_approval", ErrConflict)
+	}
+	quotePreparedAt := quote.CreatedAt
+	if quotePreparedAt.IsZero() {
+		quotePreparedAt = time.Now().UTC()
+	}
+	update := UpdateInput{
+		wltQuoteID:               &quote.ID,
+		wltQuotePolicyID:         &quote.PolicyID,
+		wltQuotePolicyVersion:    &quote.PolicyVersion,
+		wltQuoteVersion:          &quote.QuoteVersion,
+		wltQuoteAmountMinorUnits: &quote.AmountMinorUnits,
+		wltQuoteCurrency:         &quote.Currency,
+		wltQuoteHash:             &quote.QuoteHash,
+		wltQuoteExpiresAt:        &quote.ExpiresAt,
+		quotePreparedAt:          &quotePreparedAt,
+	}
+	tx, err := s.repo.DB().Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	updated, err := s.repo.UpdateInOperatorContextTx(ctx, tx, operatorContextID, id, expectedVersion, update)
+	if err != nil {
+		return nil, err
+	}
+	correlationID := ""
+	if current.CorrelationID != nil {
+		correlationID = *current.CorrelationID
+	}
+	if err := WriteAuditEvent(tx, id, "wlt", "service", "wlt_quote_attached", quote.ID, correlationID, requestJSON(current), requestJSON(updated)); err != nil {
+		return nil, fmt.Errorf("write audit event: %w", err)
+	}
+	if err := operationaloutbox.Enqueue(tx, operationaloutbox.EnqueueInput{
+		EventType: "special_request_wlt_quote_attached", EntityType: "special_request", EntityID: id,
+		Payload: requestJSON(updated), CorrelationID: correlationID,
+	}); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
 	return updated, nil
 }

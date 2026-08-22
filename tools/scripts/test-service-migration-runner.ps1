@@ -71,6 +71,7 @@ $ProbeTwoFile = "$ProbePrefix-992_followup.sql"
 $PartialProbeServiceKey = "$ServiceKey-partial-probe"
 $PartialProbeServiceKeySql = ConvertTo-SqlLiteral $PartialProbeServiceKey
 $SentinelCreated = $false
+$IdentityFixtureCreated = $false
 
 function Invoke-DatabaseSql {
   param(
@@ -96,10 +97,16 @@ function Invoke-RunnerProcess {
     [string]$RunnerServiceKey = $ServiceKey
   )
 
-  $output = & pwsh -NoProfile -ExecutionPolicy Bypass -File $RunnerPath `
-    -ServiceKey $RunnerServiceKey `
-    -MigrationDirectory $Directory `
-    -DatabaseUrl $DatabaseUrl 2>&1
+  $runnerArguments = @(
+    '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $RunnerPath,
+    '-ServiceKey', $RunnerServiceKey,
+    '-MigrationDirectory', $Directory,
+    '-DatabaseUrl', $DatabaseUrl
+  )
+  if ($ServiceKey -eq 'workforce') {
+    $runnerArguments += @('-IdentityDatabaseUrl', $DatabaseUrl)
+  }
+  $output = & pwsh @runnerArguments 2>&1
   $exitCode = $LASTEXITCODE
 
   if ($ExpectSuccess -and $exitCode -ne 0) {
@@ -121,11 +128,22 @@ function Get-GovernedLedgerCount {
 function Write-TestMigrationManifest {
   param(
     [Parameter(Mandatory = $true)][string]$Directory,
-    [Parameter(Mandatory = $true)][string]$ManifestServiceKey
+    [Parameter(Mandatory = $true)][string]$ManifestServiceKey,
+    [string[]]$OrderedFileNames = @()
   )
 
-  $files = @(Get-ChildItem -LiteralPath $Directory -File -Filter "*.sql" |
-    Sort-Object { $_.Name.ToLowerInvariant() }, Name)
+  $files = if ($OrderedFileNames.Count -gt 0) {
+    @($OrderedFileNames | ForEach-Object {
+      $path = Join-Path $Directory $_
+      if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        throw "Ordered test migration file not found: $path"
+      }
+      Get-Item -LiteralPath $path
+    })
+  } else {
+    @(Get-ChildItem -LiteralPath $Directory -File -Filter "*.sql" |
+      Sort-Object { $_.Name.ToLowerInvariant() }, Name)
+  }
   if ($files.Count -eq 0) {
     throw "Cannot write an empty test migration manifest: $Directory"
   }
@@ -146,18 +164,20 @@ function Write-TestMigrationManifest {
     schemaVersion = 1
     service = $ManifestServiceKey
     ordering = "explicit"
-    orderingSource = "test-generated"
+    orderingSource = if ($OrderedFileNames.Count -gt 0) { "canonical-manifest-prefix" } else { "test-generated" }
     cutover = $files[-1].Name
     migrations = $entries
   }
   $manifest | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Join-Path $Directory "manifest.json")
 }
 
-$canonicalFiles = @(Get-ChildItem -LiteralPath $MigrationPath -File -Filter "*.sql" |
-  Sort-Object { $_.Name.ToLowerInvariant() }, Name)
-if ($canonicalFiles.Count -eq 0) {
+$discoveredCanonicalFiles = @(Get-ChildItem -LiteralPath $MigrationPath -File -Filter "*.sql")
+if ($discoveredCanonicalFiles.Count -eq 0) {
   throw "No canonical migrations found for '$ServiceKey'."
 }
+$canonicalFiles = @(Resolve-BthwaniGovernedMigrationPlan `
+  -ServiceName $ServiceKey `
+  -MigrationFiles $discoveredCanonicalFiles)
 
 $temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) "bthwani-migration-$ServiceKey-$([guid]::NewGuid().ToString('N'))"
 $previousDirectory = Join-Path $temporaryRoot "previous-version"
@@ -170,6 +190,19 @@ New-Item -ItemType Directory -Path $partialDirectory -Force | Out-Null
 New-Item -ItemType Directory -Path $missingManifestDirectory -Force | Out-Null
 
 try {
+  if ($ServiceKey -eq 'workforce') {
+    Invoke-DatabaseSql -Sql @"
+CREATE TABLE IF NOT EXISTS identity_actors (
+  id text PRIMARY KEY,
+  operator_context_id text NOT NULL
+);
+INSERT INTO identity_actors (id, operator_context_id)
+VALUES ('ci-workforce-actor', 'ci-workforce-context')
+ON CONFLICT (id) DO UPDATE SET operator_context_id = EXCLUDED.operator_context_id;
+"@ | Out-Null
+    $IdentityFixtureCreated = $true
+  }
+
   Write-Host "--- ${ServiceKey}: manifest is mandatory and authoritative ---"
   Copy-Item -LiteralPath $canonicalFiles[0].FullName -Destination (Join-Path $missingManifestDirectory $canonicalFiles[0].Name)
   Invoke-RunnerProcess -Directory $missingManifestDirectory -ExpectSuccess $false
@@ -177,10 +210,14 @@ try {
   Write-Host "--- ${ServiceKey}: previous-version database with existing data ---"
   $previousCount = [Math]::Max(0, $canonicalFiles.Count - 1)
   if ($previousCount -gt 0) {
-    foreach ($file in $canonicalFiles[0..($previousCount - 1)]) {
+    $previousFiles = @($canonicalFiles[0..($previousCount - 1)])
+    foreach ($file in $previousFiles) {
       Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $previousDirectory $file.Name)
     }
-    Write-TestMigrationManifest -Directory $previousDirectory -ManifestServiceKey $ServiceKey
+    Write-TestMigrationManifest `
+      -Directory $previousDirectory `
+      -ManifestServiceKey $ServiceKey `
+      -OrderedFileNames @($previousFiles | ForEach-Object { $_.Name })
     Invoke-RunnerProcess -Directory $previousDirectory -ExpectSuccess $true
 
     $previousLedgerCount = Get-GovernedLedgerCount -LedgerServiceKeySql $ServiceKeySql
@@ -303,6 +340,9 @@ INSERT INTO $ProbeTwoTable (id, payload) VALUES (1, 'recovered');
 
   Write-Host "service-migration-wrapper-test: PASS service=$ServiceKey files=$($canonicalFiles.Count) ledger=schema_migrations manifest=authoritative"
 } finally {
+  if ($IdentityFixtureCreated) {
+    Invoke-DatabaseSql -Sql 'DROP TABLE IF EXISTS identity_actors;' | Out-Null
+  }
   if (Test-Path -LiteralPath $temporaryRoot) {
     Remove-Item -LiteralPath $temporaryRoot -Recurse -Force
   }

@@ -68,7 +68,6 @@ const DELIVERY_EXCEPTION_REASON_LABELS: Record<DshDeliveryException['reasonCode'
   vehicle_breakdown: 'عطل المركبة',
   accident: 'حادث',
   damaged_order: 'تضرر الطلب',
-  cash_collection_issue: 'تعذر تحصيل النقد',
   weather_or_road_block: 'طقس أو طريق مغلق',
   proof_unavailable: 'تعذر إثبات التسليم',
   handoff_shortage: 'نقص في محتوى عهدة المتجر والكابتن',

@@ -200,10 +200,10 @@ func copyRefundMutationResponse(w http.ResponseWriter, response *bufferedRefundR
 // reaches the business handler or provider.
 func RequireMutationIdempotency(db *sql.DB, operation string, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		operatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		operatorContextID, contextErr := shared.RequireOperatorContext(r.Context())
 		idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
-		if operatorContextID == "" || idempotencyKey == "" {
-			shared.SendError(w, http.StatusBadRequest, "REFUND_IDEMPOTENCY_REQUIRED", "refund OperatorContext and Idempotency-Key are required")
+		if contextErr != nil || idempotencyKey == "" {
+			shared.SendError(w, http.StatusBadRequest, "REFUND_IDEMPOTENCY_REQUIRED", "authenticated refund OperatorContext and Idempotency-Key are required")
 			return
 		}
 

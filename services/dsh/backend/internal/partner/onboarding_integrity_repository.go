@@ -19,12 +19,13 @@ var (
 	ErrExpectedVersionRequired = errors.New("positive partner version is required")
 	ErrIdempotencyConflict     = errors.New("idempotency key reused with different partner transition")
 	ErrStoreOwnershipConflict  = errors.New("store already belongs to another partner")
+	ErrStoreIDRequired         = errors.New("explicit store id is required for a partner field visit")
 )
 
 const governedPartnerColumns = `id, legal_name_ar, legal_name_en, display_name,
 	legal_identity_type, legal_identity_number,
 	owner_actor_id, workforce_person_id, primary_phone, secondary_phone, email,
-	category, activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
+	category, COALESCE(business_vertical_id,''), activation_status, onboarding_case_status, created_by_actor_id, created_by_surface,
 	notes,
 	COALESCE(payout_destination_id,''), COALESCE(destination_method,''),
 	COALESCE(masked_destination_reference,''), COALESCE(destination_verification_status,''),
@@ -44,7 +45,7 @@ func scanGovernedPartner(row partnerScanner) (Partner, error) {
 		&p.ID, &p.LegalNameAr, &p.LegalNameEn, &p.DisplayName,
 		&p.LegalIdentityType, &p.LegalIdentityNumber,
 		&p.OwnerActorID, &p.WorkforcePersonID, &p.PrimaryPhone, &p.SecondaryPhone, &p.Email,
-		&p.Category, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
+		&p.Category, &p.BusinessVerticalID, &p.ActivationStatus, &p.OnboardingCaseStatus, &p.CreatedByActorID, &p.CreatedBySurface,
 		&p.Notes,
 		&p.PayoutDestinationID, &p.DestinationMethod, &p.MaskedDestinationReference, &p.DestinationVerificationStatus,
 		&p.Version, &p.CreatedAt, &p.UpdatedAt,
@@ -141,6 +142,10 @@ func UpdatePartnerGoverned(db *sql.DB, partnerID string, input UpdatePartnerInpu
 // performs idempotent replay, optimistic concurrency, readiness checks, the
 // partner update, store-readiness propagation, and audit writes in one DB tx.
 func TransitionStatusGoverned(ctx context.Context, db *sql.DB, partnerID string, input TransitionInput, expectedVersion int) (Partner, ActivationEvent, error) {
+	return transitionStatusGoverned(ctx, db, partnerID, input, expectedVersion, nil)
+}
+
+func transitionStatusGoverned(ctx context.Context, db *sql.DB, partnerID string, input TransitionInput, expectedVersion int, onEvent func(*sql.Tx) error) (Partner, ActivationEvent, error) {
 	if expectedVersion < 1 {
 		return Partner{}, ActivationEvent{}, ErrExpectedVersionRequired
 	}
@@ -205,7 +210,7 @@ func TransitionStatusGoverned(ctx context.Context, db *sql.DB, partnerID string,
 	if !IsTransitionAllowed(current.ActivationStatus, input.ToStatus) {
 		return Partner{}, ActivationEvent{}, ErrInvalidTransition
 	}
-	if (input.ToStatus == StatusOpsRejected || input.ToStatus == StatusPartnerDeactivated || input.ToStatus == StatusPartnerSuspended || input.ToStatus == StatusPartnerTerminated) && strings.TrimSpace(input.Reason) == "" {
+	if (input.ToStatus == StatusOpsRejected || input.ToStatus == StatusPartnerSuspended || input.ToStatus == StatusPartnerTerminated) && strings.TrimSpace(input.Reason) == "" {
 		return Partner{}, ActivationEvent{}, ErrInvalid
 	}
 	if err := validateTransitionReadinessTx(ctx, tx, current, input.ToStatus); err != nil {
@@ -248,6 +253,11 @@ func TransitionStatusGoverned(ctx context.Context, db *sql.DB, partnerID string,
 	if err != nil {
 		return Partner{}, ActivationEvent{}, err
 	}
+	if onEvent != nil {
+		if err := onEvent(tx); err != nil {
+			return Partner{}, ActivationEvent{}, err
+		}
+	}
 
 	if readiness, ok := partnerReadinessForActivationStatus(input.ToStatus); ok {
 		if _, err = tx.ExecContext(ctx, `
@@ -256,24 +266,22 @@ func TransitionStatusGoverned(ctx context.Context, db *sql.DB, partnerID string,
 			WHERE partner_id = $1`, partnerID, readiness); err != nil {
 			return Partner{}, ActivationEvent{}, err
 		}
-		var storeID string
-		_ = tx.QueryRowContext(ctx, `SELECT id FROM dsh_stores WHERE partner_id = $1 ORDER BY created_at ASC LIMIT 1`, partnerID).Scan(&storeID)
-		if storeID != "" {
-			role := "operator"
-			if input.ActorSurface == "app-field" {
-				role = "field"
-			}
-			_, err = tx.ExecContext(ctx, `
-				INSERT INTO dsh_store_action_audit
-					(id, actor_id, actor_role, store_id, action, from_state, to_state,
-					 reason, correlation_id, created_at)
-				VALUES ($1,$2,$3,$4,'store_partner_readiness_updated','{}'::jsonb,'{}'::jsonb,$5,$6,NOW())`,
-				"evt-"+event.ID, input.ActorID, role, storeID,
-				"partner transition to "+string(input.ToStatus), input.CorrelationID,
-			)
-			if err != nil {
-				return Partner{}, ActivationEvent{}, err
-			}
+		role := "operator"
+		if input.ActorSurface == "app-field" {
+			role = "field"
+		}
+		_, err = tx.ExecContext(ctx, `
+			INSERT INTO dsh_store_action_audit
+				(id, actor_id, actor_role, store_id, action, from_state, to_state,
+				 reason, correlation_id, created_at)
+			SELECT 'evt-' || md5($1 || s.id), $2, $3, s.id,
+			       'store_partner_readiness_updated','{}'::jsonb,'{}'::jsonb,$4,$5,NOW()
+			FROM dsh_stores s WHERE s.partner_id = $6`,
+			event.ID, input.ActorID, role,
+			"partner transition to "+string(input.ToStatus), input.CorrelationID, partnerID,
+		)
+		if err != nil {
+			return Partner{}, ActivationEvent{}, err
 		}
 	}
 
@@ -297,12 +305,11 @@ func LinkPartnerStoreGoverned(ctx context.Context, db *sql.DB, partnerID, storeI
 	}
 	defer tx.Rollback() //nolint:errcheck
 
-	var partnerExists bool
-	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM dsh_partners WHERE id = $1)`, partnerID).Scan(&partnerExists); err != nil {
-		return nil, err
-	}
-	if !partnerExists {
+	var partnerOperatorContextID string
+	if err := tx.QueryRowContext(ctx, `SELECT operator_context_id FROM dsh_partners WHERE id = $1`, partnerID).Scan(&partnerOperatorContextID); errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
+	} else if err != nil {
+		return nil, err
 	}
 
 	var currentPartnerID sql.NullString
@@ -325,6 +332,9 @@ func LinkPartnerStoreGoverned(ctx context.Context, db *sql.DB, partnerID, storeI
 		if err := recordActivationEvent(tx, partnerID, "store_linked:"+storeID, actorID, "control-panel", ""); err != nil {
 			return nil, err
 		}
+		if err := store.EnsurePartnerFirstStoreReferenceTx(ctx, tx, partnerID, storeID, partnerOperatorContextID); err != nil {
+			return nil, err
+		}
 	}
 	if err := tx.Commit(); err != nil {
 		return nil, err
@@ -340,15 +350,7 @@ func CreateFieldVisitGoverned(db *sql.DB, input CreateFieldVisitInput) (FieldVis
 		return FieldVisit{}, fmt.Errorf("%w: field visit requires notes, location, or evidence", ErrInvalid)
 	}
 	if strings.TrimSpace(input.StoreID) == "" {
-		if err := db.QueryRow(`
-			SELECT id FROM dsh_stores
-			WHERE partner_id = $1
-			ORDER BY created_at ASC
-			LIMIT 1`, input.PartnerID).Scan(&input.StoreID); errors.Is(err, sql.ErrNoRows) {
-			return FieldVisit{}, fmt.Errorf("%w: partner has no linked store", ErrReadinessGate)
-		} else if err != nil {
-			return FieldVisit{}, err
-		}
+		return FieldVisit{}, ErrStoreIDRequired
 	}
 	return CreateFieldVisit(db, input)
 }
@@ -382,27 +384,47 @@ func loadPartnerTx(ctx context.Context, tx *sql.Tx, partnerID string, forUpdate 
 	return p, err
 }
 
-func loadOnboardingStoreGateTx(ctx context.Context, tx *sql.Tx, partnerID string) (store.DshStoreRow, error) {
-	row, err := store.GetStoreByPartnerIDContext(ctx, tx, partnerID)
+func loadOnboardingStoreGatesTx(ctx context.Context, tx *sql.Tx, partnerID string) ([]store.DshStoreRow, error) {
+	rows, err := store.ListStoresByPartnerIDContext(ctx, tx, partnerID)
 	if err != nil {
-		return store.DshStoreRow{}, err
+		return nil, err
 	}
-	if row == nil {
-		return store.DshStoreRow{}, fmt.Errorf("%w: no store is linked to the partner", ErrReadinessGate)
+	if len(rows) == 0 {
+		return nil, fmt.Errorf("%w: no store is linked to the partner", ErrReadinessGate)
 	}
-	return *row, nil
+	return rows, nil
 }
 
 func validateTransitionReadinessTx(ctx context.Context, tx *sql.Tx, p Partner, target ActivationStatus) error {
+	if target != StatusDraft {
+		verticalID := strings.TrimSpace(p.BusinessVerticalID)
+		if verticalID == "" {
+			return fmt.Errorf("%w: a central business vertical is required before review", ErrReadinessGate)
+		}
+		var active bool
+		var clientVisible bool
+		if err := tx.QueryRowContext(ctx, `
+			SELECT is_active, is_client_visible
+			FROM dsh_catalog_domains
+			WHERE id = $1`, verticalID).Scan(&active, &clientVisible); errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("%w: the selected business vertical does not exist", ErrReadinessGate)
+		} else if err != nil {
+			return err
+		} else if !active {
+			return fmt.Errorf("%w: the selected business vertical is inactive", ErrReadinessGate)
+		} else if target == StatusClientVisible && !clientVisible {
+			return fmt.Errorf("%w: the selected business vertical is not enabled for client publication", ErrReadinessGate)
+		}
+	}
 	requiresProfile := target == StatusSubmitted || target == StatusOpsReview || target == StatusPartnerActive
 	requiresDocuments := target == StatusDocumentsVerified || target == StatusOpsReview || target == StatusPartnerActive
 	requiresVisit := target == StatusPartnerActive
 	requiresPublication := target == StatusClientVisible
 
-	var gate store.DshStoreRow
+	var gates []store.DshStoreRow
 	var err error
 	if requiresProfile || requiresVisit || requiresPublication {
-		gate, err = loadOnboardingStoreGateTx(ctx, tx, p.ID)
+		gates, err = loadOnboardingStoreGatesTx(ctx, tx, p.ID)
 		if err != nil {
 			return err
 		}
@@ -415,13 +437,18 @@ func validateTransitionReadinessTx(ctx context.Context, tx *sql.Tx, p Partner, t
 			strings.TrimSpace(p.PrimaryPhone) == "" {
 			return fmt.Errorf("%w: legal identity, owner, and primary phone must be complete", ErrReadinessGate)
 		}
-		if strings.TrimSpace(gate.DisplayName) == "" ||
-			strings.TrimSpace(gate.CityCode) == "" ||
-			strings.TrimSpace(gate.ServiceAreaCode) == "" ||
-			strings.TrimSpace(gate.AddressLine) == "" ||
-			strings.TrimSpace(gate.OperatingHours) == "" ||
-			strings.TrimSpace(gate.DeliveryReadiness) == "" {
-			return fmt.Errorf("%w: store location and operating profile must be complete", ErrReadinessGate)
+		for _, gate := range gates {
+			if strings.TrimSpace(gate.DisplayName) == "" ||
+				strings.TrimSpace(gate.CityCode) == "" ||
+				strings.TrimSpace(gate.ServiceAreaCode) == "" ||
+				strings.TrimSpace(gate.AddressLine) == "" ||
+				strings.TrimSpace(gate.OperatingHours) == "" ||
+				strings.TrimSpace(gate.DeliveryReadiness) == "" {
+				return fmt.Errorf("%w: every linked store must have complete location and operating profile", ErrReadinessGate)
+			}
+			if gate.Category != store.DshStoreCategory(p.BusinessVerticalID) {
+				return fmt.Errorf("%w: every linked store must use the partner business vertical", ErrReadinessGate)
+			}
 		}
 		if strings.TrimSpace(p.PayoutDestinationID) == "" {
 			return fmt.Errorf("%w: an active WLT payout destination is required", ErrReadinessGate)
@@ -432,8 +459,13 @@ func validateTransitionReadinessTx(ctx context.Context, tx *sql.Tx, p Partner, t
 		var total, approved int
 		if err := tx.QueryRowContext(ctx, `
 			SELECT COUNT(*), COUNT(*) FILTER (WHERE document_status = 'approved')
-			FROM dsh_partner_documents
-			WHERE partner_id = $1`, p.ID).Scan(&total, &approved); err != nil {
+			FROM (
+				SELECT DISTINCT ON (document_type) review_status,
+				       CASE WHEN review_status = 'verified' THEN 'approved' ELSE document_status END AS document_status
+				FROM dsh_partner_documents
+				WHERE partner_id = $1
+				ORDER BY document_type, created_at DESC
+			) latest`, p.ID).Scan(&total, &approved); err != nil {
 			return err
 		}
 		if total == 0 || approved != total {
@@ -462,10 +494,16 @@ func validateTransitionReadinessTx(ctx context.Context, tx *sql.Tx, p Partner, t
 	}
 
 	if requiresPublication {
-		candidate := gate
-		candidate.PartnerActivationStatus = string(StatusClientVisible)
-		if diagnostics := store.DiagnoseStorePublication(candidate); !diagnostics.IsReady {
-			return ErrStorePublicationGatesFailed
+		// The database view owns all publication rules. The only blockers that
+		// may disappear as part of this transition are the partner-state facts
+		// propagated by this same transaction; every store gate must already pass.
+		for _, gate := range gates {
+			diagnostics := store.DiagnoseStorePublication(gate)
+			for _, code := range diagnostics.BlockerCodes {
+				if code != "PARTNER_NOT_CLIENT_VISIBLE" && code != "PARTNER_NOT_READY" {
+					return ErrStorePublicationGatesFailed
+				}
+			}
 		}
 	}
 	return nil

@@ -151,25 +151,25 @@ func TestSameStoreAssignedAgentCannotAccessAnotherAgentsVisit(t *testing.T) {
 	actorA := testFieldActor(t, agentA)
 	actorB := testFieldActor(t, agentB)
 
-	visit, err := CreateVisit(ctx, db, nil, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA, StartLocation: testValidLocation()})
+	visit, err := CreateVisit(ctx, db, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA, StartLocation: testValidLocation()})
 	if err != nil {
 		t.Fatalf("create owner visit: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_visits WHERE id = $1`, visit.ID) })
 
-	if _, err := GetOwnedVisit(ctx, db, nil, actorB, visit.ID); !errors.Is(err, ErrForbidden) {
+	if _, err := GetOwnedVisit(ctx, db, actorB, visit.ID); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden reading same-store peer visit, got %v", err)
 	}
-	if _, err := ListVisitChecks(ctx, db, nil, actorB, visit.ID); !errors.Is(err, ErrForbidden) {
+	if _, err := ListVisitChecks(ctx, db, actorB, visit.ID); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden listing same-store peer checks, got %v", err)
 	}
-	if _, err := UpsertReadinessCheck(ctx, db, nil, actorB, visit.ID, UpdateCheckInput{CheckType: "location_verified", Status: CheckPassed}); !errors.Is(err, ErrForbidden) {
+	if _, err := UpsertReadinessCheck(ctx, db, actorB, visit.ID, UpdateCheckInput{CheckType: "location_verified", Status: CheckPassed}); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden upserting same-store peer check, got %v", err)
 	}
-	if _, err := CompleteVisit(ctx, db, nil, actorB, visit.ID, testCompleteInput()); !errors.Is(err, ErrForbidden) {
+	if _, err := CompleteVisit(ctx, db, actorB, visit.ID, testCompleteInput()); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden completing same-store peer visit, got %v", err)
 	}
-	if _, err := CreateEscalation(ctx, db, nil, actorB, CreateEscalationInput{
+	if _, err := CreateEscalation(ctx, db, actorB, CreateEscalationInput{
 		VisitID: visit.ID, StoreID: storeA, RaisedBy: agentB, Severity: SeverityLow, Category: CategoryOther, Description: "peer escalation",
 	}); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden escalating same-store peer visit, got %v", err)
@@ -190,33 +190,33 @@ func TestActorCannotAccessOtherStoreVisits(t *testing.T) {
 	actorA := testFieldActor(t, agentA)
 	actorB := testFieldActor(t, agentB)
 
-	visit, err := CreateVisit(ctx, db, nil, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA, StartLocation: testValidLocation()})
+	visit, err := CreateVisit(ctx, db, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA, StartLocation: testValidLocation()})
 	if err != nil {
 		t.Fatalf("create visit for owner: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_visits WHERE id = $1`, visit.ID) })
 
-	if _, err := CreateVisit(ctx, db, nil, actorB, CreateVisitInput{StoreID: storeA, FieldAgentID: agentB, StartLocation: testValidLocation()}); !errors.Is(err, ErrForbidden) {
+	if _, err := CreateVisit(ctx, db, actorB, CreateVisitInput{StoreID: storeA, FieldAgentID: agentB, StartLocation: testValidLocation()}); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden creating visit on foreign store, got %v", err)
 	}
 
-	if _, err := ListStoreVisits(ctx, db, nil, actorB, storeA, 10); !errors.Is(err, ErrForbidden) {
+	if _, err := ListStoreVisits(ctx, db, actorB, storeA, 10); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden listing visits on foreign store, got %v", err)
 	}
 
-	if _, err := GetOwnedVisit(ctx, db, nil, actorB, visit.ID); !errors.Is(err, ErrForbidden) {
+	if _, err := GetOwnedVisit(ctx, db, actorB, visit.ID); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden reading foreign-owned visit, got %v", err)
 	}
 
-	if _, err := CompleteVisit(ctx, db, nil, actorB, visit.ID, testCompleteInput()); !errors.Is(err, ErrForbidden) {
+	if _, err := CompleteVisit(ctx, db, actorB, visit.ID, testCompleteInput()); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden completing foreign-owned visit, got %v", err)
 	}
 
-	if _, err := UpsertReadinessCheck(ctx, db, nil, actorB, visit.ID, UpdateCheckInput{CheckType: "location_verified", Status: CheckPassed}); !errors.Is(err, ErrForbidden) {
+	if _, err := UpsertReadinessCheck(ctx, db, actorB, visit.ID, UpdateCheckInput{CheckType: "location_verified", Status: CheckPassed}); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden upserting check on foreign-owned visit, got %v", err)
 	}
 
-	if _, err := CreateEscalation(ctx, db, nil, actorB, CreateEscalationInput{
+	if _, err := CreateEscalation(ctx, db, actorB, CreateEscalationInput{
 		VisitID: visit.ID, StoreID: storeA, RaisedBy: agentB, Severity: SeverityLow, Category: CategoryOther, Description: "x",
 	}); !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected ErrForbidden creating escalation on foreign store, got %v", err)
@@ -232,13 +232,13 @@ func TestConcurrentInProgressVisitRejected(t *testing.T) {
 	seedFieldStore(t, db, storeA, agentA)
 	actorA := testFieldActor(t, agentA)
 
-	visit, err := CreateVisit(ctx, db, nil, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA, StartLocation: testValidLocation()})
+	visit, err := CreateVisit(ctx, db, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA, StartLocation: testValidLocation()})
 	if err != nil {
 		t.Fatalf("create first visit: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_visits WHERE id = $1`, visit.ID) })
 
-	if _, err := CreateVisit(ctx, db, nil, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA, StartLocation: testValidLocation()}); !errors.Is(err, ErrConflict) {
+	if _, err := CreateVisit(ctx, db, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA, StartLocation: testValidLocation()}); !errors.Is(err, ErrConflict) {
 		t.Fatalf("expected ErrConflict for second in-progress visit on same store/agent, got %v", err)
 	}
 }
@@ -253,24 +253,24 @@ func TestCompleteVisitRequiresChecklistAndNoOpenEscalation(t *testing.T) {
 	seedFieldStore(t, db, storeA, agentA)
 	actorA := testFieldActor(t, agentA)
 
-	visit, err := CreateVisit(ctx, db, nil, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA, StartLocation: testValidLocation()})
+	visit, err := CreateVisit(ctx, db, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA, StartLocation: testValidLocation()})
 	if err != nil {
 		t.Fatalf("create visit: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_visits WHERE id = $1`, visit.ID) })
 
-	if _, err := CompleteVisit(ctx, db, nil, actorA, visit.ID, testCompleteInput()); !errors.Is(err, ErrChecklistIncomplete) {
+	if _, err := CompleteVisit(ctx, db, actorA, visit.ID, testCompleteInput()); !errors.Is(err, ErrChecklistIncomplete) {
 		t.Fatalf("expected ErrChecklistIncomplete with no checks recorded, got %v", err)
 	}
 
-	for _, ct := range RequiredCheckTypes {
+	for _, ct := range policyCheckTypes(t, db, visit.ID) {
 		mediaRef := seedFieldMediaRef(t, db, partnerID, agentA)
-		if _, err := UpsertReadinessCheck(ctx, db, nil, actorA, visit.ID, UpdateCheckInput{CheckType: ct, Status: CheckPassed, EvidenceURL: mediaRef}); err != nil {
+		if _, err := UpsertReadinessCheck(ctx, db, actorA, visit.ID, UpdateCheckInput{CheckType: ct, Status: CheckPassed, EvidenceURL: mediaRef}); err != nil {
 			t.Fatalf("upsert check %s: %v", ct, err)
 		}
 	}
 
-	esc, err := CreateEscalation(ctx, db, nil, actorA, CreateEscalationInput{
+	esc, err := CreateEscalation(ctx, db, actorA, CreateEscalationInput{
 		VisitID: visit.ID, StoreID: storeA, RaisedBy: agentA, Severity: SeverityHigh, Category: CategoryOther, Description: "blocking issue",
 	})
 	if err != nil {
@@ -278,7 +278,7 @@ func TestCompleteVisitRequiresChecklistAndNoOpenEscalation(t *testing.T) {
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_readiness_escalations WHERE id = $1`, esc.ID) })
 
-	if _, err := CompleteVisit(ctx, db, nil, actorA, visit.ID, testCompleteInput()); !errors.Is(err, ErrOpenEscalation) {
+	if _, err := CompleteVisit(ctx, db, actorA, visit.ID, testCompleteInput()); !errors.Is(err, ErrOpenEscalation) {
 		t.Fatalf("expected ErrOpenEscalation with an open escalation, got %v", err)
 	}
 
@@ -286,7 +286,7 @@ func TestCompleteVisitRequiresChecklistAndNoOpenEscalation(t *testing.T) {
 		t.Fatalf("resolve escalation: %v", err)
 	}
 
-	completed, err := CompleteVisit(ctx, db, nil, actorA, visit.ID, testCompleteInput())
+	completed, err := CompleteVisit(ctx, db, actorA, visit.ID, testCompleteInput())
 	if err != nil {
 		t.Fatalf("expected completion to succeed once checklist passed and escalation resolved, got %v", err)
 	}
@@ -294,11 +294,11 @@ func TestCompleteVisitRequiresChecklistAndNoOpenEscalation(t *testing.T) {
 		t.Fatalf("expected visit status complete, got %s", completed.Status)
 	}
 
-	if _, err := CompleteVisit(ctx, db, nil, actorA, visit.ID, testCompleteInput()); !errors.Is(err, ErrVisitAlreadyComplete) {
+	if _, err := CompleteVisit(ctx, db, actorA, visit.ID, testCompleteInput()); !errors.Is(err, ErrVisitAlreadyComplete) {
 		t.Fatalf("expected ErrVisitAlreadyComplete on repeat completion, got %v", err)
 	}
 
-	if _, err := UpsertReadinessCheck(ctx, db, nil, actorA, visit.ID, UpdateCheckInput{CheckType: "location_verified", Status: CheckFailed}); !errors.Is(err, ErrVisitAlreadyComplete) {
+	if _, err := UpsertReadinessCheck(ctx, db, actorA, visit.ID, UpdateCheckInput{CheckType: "location_verified", Status: CheckFailed}); !errors.Is(err, ErrVisitAlreadyComplete) {
 		t.Fatalf("expected ErrVisitAlreadyComplete when editing checks after completion, got %v", err)
 	}
 }
@@ -314,13 +314,13 @@ func TestCreateEscalationRejectsVisitStoreMismatch(t *testing.T) {
 	seedFieldStore(t, db, storeB, agentA)
 	actorA := testFieldActor(t, agentA)
 
-	visit, err := CreateVisit(ctx, db, nil, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA, StartLocation: testValidLocation()})
+	visit, err := CreateVisit(ctx, db, actorA, CreateVisitInput{StoreID: storeA, FieldAgentID: agentA, StartLocation: testValidLocation()})
 	if err != nil {
 		t.Fatalf("create visit: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_visits WHERE id = $1`, visit.ID) })
 
-	if _, err := CreateEscalation(ctx, db, nil, actorA, CreateEscalationInput{
+	if _, err := CreateEscalation(ctx, db, actorA, CreateEscalationInput{
 		VisitID: visit.ID, StoreID: storeB, RaisedBy: agentA, Severity: SeverityLow, Category: CategoryOther, Description: "mismatch",
 	}); !errors.Is(err, ErrInvalid) {
 		t.Fatalf("expected ErrInvalid for visit/store mismatch, got %v", err)

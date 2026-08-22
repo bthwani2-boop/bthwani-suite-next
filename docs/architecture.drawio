@@ -542,9 +542,6 @@
           <mxCell id="frontend-apps_app_partner_runtime_src_App_tsx" value="App" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3498db;strokeColor=#0165a8;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-frontend">
             <mxGeometry x="400" y="50" width="160" height="50" as="geometry" />
           </mxCell>
-          <mxCell id="frontend-apps_control_panel_runtime_src_app_api_adapters_upstream_proxy_adapter_ts" value="upstream-proxy.adapter" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3498db;strokeColor=#0165a8;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-frontend">
-            <mxGeometry x="590" y="50" width="160" height="50" as="geometry" />
-          </mxCell>
           <mxCell id="frontend-apps_control_panel_runtime_src_app_api_auth__lib_cookies_ts" value="cookies" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3498db;strokeColor=#0165a8;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-frontend">
             <mxGeometry x="780" y="50" width="160" height="50" as="geometry" />
           </mxCell>
@@ -730,9 +727,6 @@
           </mxCell>
           <mxCell id="frontend-apps_control_panel_runtime_src_app__shell__layout_tsx" value="layout" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3498db;strokeColor=#0165a8;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-frontend">
             <mxGeometry x="970" y="700" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="frontend-apps_control_panel_runtime_src_app_api__kernel_upstream_http_request_ts" value="upstream-http-request" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3498db;strokeColor=#0165a8;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-frontend">
-            <mxGeometry x="20" y="765" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="frontend-apps_control_panel_runtime_src_app_api_auth__lib_identity_server_http_adapter_ts" value="identity-server-http.adapter" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#3498db;strokeColor=#0165a8;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-frontend">
             <mxGeometry x="210" y="765" width="160" height="50" as="geometry" />
@@ -956,9 +950,6 @@
           <mxCell id="tools-tools_guards_fullstack_boundary_gate_mjs" value="fullstack-boundary-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="970" y="180" width="160" height="50" as="geometry" />
           </mxCell>
-          <mxCell id="tools-tools_guards__workflow_registry_mjs" value="_workflow-registry" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="20" y="245" width="160" height="50" as="geometry" />
-          </mxCell>
           <mxCell id="tools-tools_guards_lib_go_http_routes_mjs" value="go-http-routes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="210" y="245" width="160" height="50" as="geometry" />
           </mxCell>
@@ -992,9 +983,6 @@
           <mxCell id="tools-tools_guards_go_routes_ci_mjs" value="go-routes-ci" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="970" y="310" width="160" height="50" as="geometry" />
           </mxCell>
-          <mxCell id="tools-tools_guards_guard_registry_gate_mjs" value="guard-registry-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="20" y="375" width="160" height="50" as="geometry" />
-          </mxCell>
           <mxCell id="tools-tools_guards_local_dev_actors_gate_mjs" value="local-dev-actors-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="210" y="375" width="160" height="50" as="geometry" />
           </mxCell>
@@ -1006,9 +994,6 @@
           </mxCell>
           <mxCell id="tools-tools_guards_openapi_bundle_provenance_gate_mjs" value="openapi-bundle-provenance-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="780" y="375" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_required_command_integrity_gate_mjs" value="required-command-integrity-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="970" y="375" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="tools-tools_guards_runtime_config_gate_mjs" value="runtime-config-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="20" y="440" width="160" height="50" as="geometry" />
@@ -1024,9 +1009,6 @@
           </mxCell>
           <mxCell id="tools-tools_guards_wlt_openapi_bundle_gate_mjs" value="wlt-openapi-bundle-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="780" y="440" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_workflow_temp_files_gate_mjs" value="workflow-temp-files-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="970" y="440" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="tools-tools_scripts_contracts_foundation_mjs" value="foundation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="20" y="505" width="160" height="50" as="geometry" />
@@ -1169,9 +1151,6 @@
           <mxCell id="tools-tools_guards_canonical_paths_gate_mjs" value="canonical-paths-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="780" y="960" width="160" height="50" as="geometry" />
           </mxCell>
-          <mxCell id="tools-tools_guards_cleanup_policy_gate_mjs" value="cleanup-policy-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="970" y="960" width="160" height="50" as="geometry" />
-          </mxCell>
           <mxCell id="tools-tools_guards_contract_registry_drift_gate_mjs" value="contract-registry-drift-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="20" y="1025" width="160" height="50" as="geometry" />
           </mxCell>
@@ -1268,44 +1247,14 @@
           <mxCell id="tools-tools_scripts_lib_mobile_app_key_test_mjs" value="mobile-app-key.test" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="210" y="1350" width="160" height="50" as="geometry" />
           </mxCell>
-          <mxCell id="tools-tools_guards_captain_captain_surface_truth_gate_mjs" value="captain-surface-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="400" y="1350" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_client_commerce_client_address_retry_truth_gate_mjs" value="client-address-retry-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="590" y="1350" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_control_panel_control_panel_runtime_truth_gate_mjs" value="control-panel-runtime-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="780" y="1350" width="160" height="50" as="geometry" />
-          </mxCell>
           <mxCell id="tools-tools_guards_field_field_surface_truth_gate_mjs" value="field-surface-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="970" y="1350" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_fullstack_surface_runtime_truth_gate_mjs" value="surface-runtime-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="20" y="1415" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="tools-tools_guards_lib_api_operations_test_mjs" value="api-operations.test" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="210" y="1415" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="tools-tools_guards_lib_typescript_compiler_test_mjs" value="typescript-compiler.test" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="400" y="1415" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_maps_map_platform_truth_gate_mjs" value="map-platform-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="590" y="1415" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_partner_partner_support_truth_gate_mjs" value="partner-support-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="780" y="1415" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_partner_partner_surface_truth_gate_mjs" value="partner-surface-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="970" y="1415" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_platform_operational_policy_ui_truth_gate_mjs" value="operational-policy-ui-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="20" y="1480" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_privacy_client_address_privacy_integration_gate_mjs" value="client-address-privacy-integration-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="210" y="1480" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_privacy_client_address_privacy_truth_gate_mjs" value="client-address-privacy-truth-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="400" y="1480" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="tools-tools_guards_sdlc_validate_financial_and_evidence_scopes_mjs" value="validate-financial-and-evidence-scopes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="590" y="1480" width="160" height="50" as="geometry" />
@@ -1334,9 +1283,6 @@
           <mxCell id="tools-tools_guards_sdlc_validate_traceability_mjs" value="validate-traceability" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="970" y="1545" width="160" height="50" as="geometry" />
           </mxCell>
-          <mxCell id="tools-tools_guards_ui_actions_ui_action_binding_gate_mjs" value="ui-action-binding-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="20" y="1610" width="160" height="50" as="geometry" />
-          </mxCell>
           <mxCell id="tools-tools_mobile_defineBthwaniExpoApp_d_ts" value="defineBthwaniExpoApp.d" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="210" y="1610" width="160" height="50" as="geometry" />
           </mxCell>
@@ -1345,9 +1291,6 @@
           </mxCell>
           <mxCell id="tools-tools_scripts_apply_repository_ruleset_mjs" value="apply-repository-ruleset" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="590" y="1610" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_scripts_auto_declare_routes_v2_mjs" value="auto-declare-routes-v2" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="780" y="1610" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="tools-tools_scripts_build_swagger_static_mjs" value="build-swagger-static" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="970" y="1610" width="160" height="50" as="geometry" />
@@ -1373,17 +1316,8 @@
           <mxCell id="tools-tools_scripts_ci_runtime_bootstrap_policy_test_mjs" value="ci-runtime-bootstrap-policy.test" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="20" y="1740" width="160" height="50" as="geometry" />
           </mxCell>
-          <mxCell id="tools-tools_scripts_fix_one_route_mjs" value="fix-one-route" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="210" y="1740" width="160" height="50" as="geometry" />
-          </mxCell>
           <mxCell id="tools-tools_scripts_generate_migration_manifest_mjs" value="generate-migration-manifest" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="400" y="1740" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_scripts_generate_realistic_images_mjs" value="generate-realistic-images" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="590" y="1740" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_scripts_generate_security_openapi_mjs" value="generate-security-openapi" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="780" y="1740" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="tools-tools_scripts_guard_mobile_apps_test_mjs" value="guard-mobile-apps.test" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="970" y="1740" width="160" height="50" as="geometry" />
@@ -1444,9 +1378,6 @@
           </mxCell>
           <mxCell id="tools-tools_performance_k6_wlt_smoke_js" value="wlt-smoke" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="20" y="2000" width="160" height="50" as="geometry" />
-          </mxCell>
-          <mxCell id="tools-tools_guards_finance_dsh_wlt_mutation_idempotency_gate_mjs" value="dsh-wlt-mutation-idempotency-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
-            <mxGeometry x="210" y="2000" width="160" height="50" as="geometry" />
           </mxCell>
           <mxCell id="tools-tools_guards_sdlc_invoke_sdlc_gate_mjs" value="invoke-sdlc-gate" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#bdc3c7;strokeColor=#8a9094;strokeWidth=1;fontColor=#ffffff;fontSize=12;fontStyle=0;arcSize=10;shadow=1" vertex="1" parent="layer-tools">
             <mxGeometry x="400" y="2000" width="160" height="50" as="geometry" />
@@ -4754,12 +4685,6 @@
           <mxCell id="edge-129" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_governance_schema_gate_mjs" target="tools-tools_guards__guard_utils_mjs">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
-          <mxCell id="edge-130" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_guard_registry_gate_mjs" target="tools-tools_guards__guard_utils_mjs">
-            <mxGeometry relative="1" as="geometry" />
-          </mxCell>
-          <mxCell id="edge-131" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_guard_registry_gate_mjs" target="tools-tools_guards__workflow_registry_mjs">
-            <mxGeometry relative="1" as="geometry" />
-          </mxCell>
           <mxCell id="edge-132" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_heavy_import_gate_mjs" target="tools-tools_guards__guard_utils_mjs">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
@@ -4811,12 +4736,6 @@
           <mxCell id="edge-148" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_repository_structure_gate_mjs" target="tools-tools_guards__guard_utils_mjs">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
-          <mxCell id="edge-149" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_required_command_integrity_gate_mjs" target="tools-tools_guards__guard_utils_mjs">
-            <mxGeometry relative="1" as="geometry" />
-          </mxCell>
-          <mxCell id="edge-150" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_required_command_integrity_gate_mjs" target="tools-tools_guards__workflow_registry_mjs">
-            <mxGeometry relative="1" as="geometry" />
-          </mxCell>
           <mxCell id="edge-151" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_runtime_config_gate_mjs" target="tools-tools_guards__guard_utils_mjs">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
@@ -4866,12 +4785,6 @@
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
           <mxCell id="edge-167" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_wlt_openapi_bundle_gate_mjs" target="tools-tools_scripts_openapi_composition_integrity_mjs">
-            <mxGeometry relative="1" as="geometry" />
-          </mxCell>
-          <mxCell id="edge-168" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_workflow_temp_files_gate_mjs" target="tools-tools_guards__guard_utils_mjs">
-            <mxGeometry relative="1" as="geometry" />
-          </mxCell>
-          <mxCell id="edge-169" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards_workflow_temp_files_gate_mjs" target="tools-tools_guards__workflow_registry_mjs">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
           <mxCell id="edge-170" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="tools-tools_guards__openapi_utils_mjs" target="tools-tools_guards__guard_utils_mjs">
@@ -12968,13 +12881,10 @@
           <mxCell id="edge-2867" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="services-services_wlt_frontend_shared_dsh_wlt_settlement_wlt_settlement_api_ts" target="services-services_wlt_frontend_shared_dsh_wlt_settlement_wlt_settlement_types_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
-          <mxCell id="edge-2868" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_adapters_upstream_proxy_adapter_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_cookies_ts">
+          <mxCell id="edge-2868" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_server_bff_proxy_adapter_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_cookies_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
-          <mxCell id="edge-2869" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_adapters_upstream_proxy_adapter_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_identity_server_ts">
-            <mxGeometry relative="1" as="geometry" />
-          </mxCell>
-          <mxCell id="edge-2870" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_adapters_upstream_proxy_adapter_ts" target="frontend-apps_control_panel_runtime_src_app_api__kernel_upstream_http_request_ts">
+          <mxCell id="edge-2869" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_server_bff_proxy_adapter_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_identity_server_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
           <mxCell id="edge-2871" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_auth_activate_route_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_cookies_ts">
@@ -13025,25 +12935,25 @@
           <mxCell id="edge-2886" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_auth__lib_session_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_identity_server_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
-          <mxCell id="edge-2887" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_dsh_____path__route_ts" target="frontend-apps_control_panel_runtime_src_app_api_adapters_upstream_proxy_adapter_ts">
+          <mxCell id="edge-2887" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_dsh_____path__route_ts" target="frontend-apps_control_panel_runtime_src_server_bff_proxy_adapter_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
           <mxCell id="edge-2888" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_dsh_____path__route_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_env_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
-          <mxCell id="edge-2889" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_platform_control_____path__route_ts" target="frontend-apps_control_panel_runtime_src_app_api_adapters_upstream_proxy_adapter_ts">
+          <mxCell id="edge-2889" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_platform_control_____path__route_ts" target="frontend-apps_control_panel_runtime_src_server_bff_proxy_adapter_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
           <mxCell id="edge-2890" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_platform_control_____path__route_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_env_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
-          <mxCell id="edge-2891" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_providers_____path__route_ts" target="frontend-apps_control_panel_runtime_src_app_api_adapters_upstream_proxy_adapter_ts">
+          <mxCell id="edge-2891" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_providers_____path__route_ts" target="frontend-apps_control_panel_runtime_src_server_bff_proxy_adapter_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
           <mxCell id="edge-2892" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_providers_____path__route_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_env_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
-          <mxCell id="edge-2893" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_workforce_____path__route_ts" target="frontend-apps_control_panel_runtime_src_app_api_adapters_upstream_proxy_adapter_ts">
+          <mxCell id="edge-2893" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_workforce_____path__route_ts" target="frontend-apps_control_panel_runtime_src_server_bff_proxy_adapter_ts">
             <mxGeometry relative="1" as="geometry" />
           </mxCell>
           <mxCell id="edge-2894" value="" style="edgeStyle=elbowEdgeStyle;elbow=vertical;curved=1;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#666666;strokeWidth=1;endArrow=block;endFill=1;fontSize=10;fontColor=#666666" edge="1" parent="1" source="frontend-apps_control_panel_runtime_src_app_api_workforce_____path__route_ts" target="frontend-apps_control_panel_runtime_src_app_api_auth__lib_env_ts">

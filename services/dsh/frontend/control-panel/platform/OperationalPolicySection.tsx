@@ -17,7 +17,7 @@ import {
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import {
-  evaluateDshOperationalPolicy,
+  evaluateDshOperatorOperationalPolicy,
   fetchDshOperationalDeliveryModes,
   fetchDshOperationalPolicyAudit,
   fetchDshOperationalProfile,
@@ -109,8 +109,26 @@ function currentVersionForEvent(
   }
 }
 
-export function OperationalPolicySection() {
-  const zones = useZonesController("authenticated");
+export function OperationalPolicySection({
+  canReadZones,
+  canReadProfile,
+  canManageProfile,
+  canReadDeliveryModes,
+  canManageDeliveryModes,
+  canEvaluate,
+  canReadAudit,
+  canRollback,
+}: {
+  readonly canReadZones: boolean;
+  readonly canReadProfile: boolean;
+  readonly canManageProfile: boolean;
+  readonly canReadDeliveryModes: boolean;
+  readonly canManageDeliveryModes: boolean;
+  readonly canEvaluate: boolean;
+  readonly canReadAudit: boolean;
+  readonly canRollback: boolean;
+}) {
+  const zones = useZonesController(canReadZones ? "authenticated" : "restricted");
   const [selectedZoneId, setSelectedZoneId] = React.useState<string | null>(null);
   const [profile, setProfile] = React.useState<DshOperationalProfile | null>(null);
   const [modes, setModes] = React.useState<DshDeliveryModePolicy[]>([]);
@@ -143,12 +161,16 @@ export function OperationalPolicySection() {
     setLoading(true);
     setError(null);
     try {
-      const [profileResponse, modesResponse, auditResponse] = await Promise.all([
-        fetchDshOperationalProfile(selectedZoneId),
-        fetchDshOperationalDeliveryModes(selectedZoneId),
-        fetchDshOperationalPolicyAudit({ limit: 100 }),
+      const [profileResponse, modesResponse] = await Promise.all([
+        canReadProfile ? fetchDshOperationalProfile(selectedZoneId) : null,
+        canReadDeliveryModes
+          ? fetchDshOperationalDeliveryModes(selectedZoneId)
+          : { deliveryModes: [] as DshDeliveryModePolicy[] },
       ]);
-      const nextProfile = profileResponse.profile;
+      const auditResponse = canReadAudit
+        ? await fetchDshOperationalPolicyAudit({ limit: 100 })
+        : { events: [] as DshOperationalPolicyAuditEvent[] };
+      const nextProfile = profileResponse?.profile ?? null;
       setProfile(nextProfile);
       setModes(modesResponse.deliveryModes);
       setAudit(
@@ -160,31 +182,33 @@ export function OperationalPolicySection() {
             modesResponse.deliveryModes.some((mode) => mode.id === event.aggregateId),
         ),
       );
-      setForm({
-        slaCategory: nextProfile.sla.category ?? "default",
-        maxPrepMins: String(nextProfile.sla.maxPrepMins ?? 20),
-        maxAssignmentMins: String(nextProfile.sla.maxAssignmentMins ?? 10),
-        maxDeliveryMins: String(nextProfile.sla.maxDeliveryMins ?? 45),
-        maxConcurrentOrders: String(nextProfile.capacity.maxConcurrentOrders ?? 100),
-        maxCaptainsOnline: String(nextProfile.capacity.maxCaptainsOnline ?? 30),
-        throttleThreshold: String(nextProfile.capacity.throttleThreshold ?? 0.8),
-        isPaused: nextProfile.capacity.isPaused,
-        pauseReason: nextProfile.capacity.pauseReason ?? "",
-        reason: "",
-      });
+      if (nextProfile) {
+        setForm({
+          slaCategory: nextProfile.sla.category ?? "default",
+          maxPrepMins: String(nextProfile.sla.maxPrepMins ?? 20),
+          maxAssignmentMins: String(nextProfile.sla.maxAssignmentMins ?? 10),
+          maxDeliveryMins: String(nextProfile.sla.maxDeliveryMins ?? 45),
+          maxConcurrentOrders: String(nextProfile.capacity.maxConcurrentOrders ?? 100),
+          maxCaptainsOnline: String(nextProfile.capacity.maxCaptainsOnline ?? 30),
+          throttleThreshold: String(nextProfile.capacity.throttleThreshold ?? 0.8),
+          isPaused: nextProfile.capacity.isPaused,
+          pauseReason: nextProfile.capacity.pauseReason ?? "",
+          reason: "",
+        });
+      }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "تعذر تحميل السياسات التشغيلية.");
     } finally {
       setLoading(false);
     }
-  }, [selectedZoneId]);
+  }, [canReadAudit, canReadDeliveryModes, canReadProfile, selectedZoneId]);
 
   React.useEffect(() => {
     void load();
   }, [load]);
 
   const saveProfile = React.useCallback(async () => {
-    if (!selectedZoneId) return;
+    if (!canManageProfile || !selectedZoneId) return;
     try {
       const reason = requiredReason(form.reason);
       if (form.isPaused && form.pauseReason.trim().length < 3) {
@@ -212,11 +236,11 @@ export function OperationalPolicySection() {
     } finally {
       setLoading(false);
     }
-  }, [form, load, profile, selectedZoneId]);
+  }, [canManageProfile, form, load, profile, selectedZoneId]);
 
   const toggleMode = React.useCallback(
     async (mode: DshDeliveryModePolicy) => {
-      if (!selectedZoneId) return;
+      if (!canManageDeliveryModes || !selectedZoneId) return;
       try {
         setLoading(true);
         setError(null);
@@ -233,15 +257,15 @@ export function OperationalPolicySection() {
         setLoading(false);
       }
     },
-    [load, selectedZoneId],
+    [canManageDeliveryModes, load, selectedZoneId],
   );
 
   const evaluate = React.useCallback(async () => {
-    if (!selectedZoneId) return;
+    if (!canEvaluate || !selectedZoneId) return;
     try {
       setLoading(true);
       setError(null);
-      const response = await evaluateDshOperationalPolicy({
+      const response = await evaluateDshOperatorOperationalPolicy({
         zoneId: selectedZoneId,
         ...(selectedZone?.cityCode ? { serviceAreaCode: selectedZone.cityCode } : {}),
         fulfillmentMode: evaluationMode,
@@ -255,10 +279,10 @@ export function OperationalPolicySection() {
     } finally {
       setLoading(false);
     }
-  }, [activeOrders, captainsOnline, evaluationMode, form.slaCategory, selectedZone, selectedZoneId]);
+  }, [activeOrders, canEvaluate, captainsOnline, evaluationMode, form.slaCategory, selectedZone, selectedZoneId]);
 
   const rollback = React.useCallback(async () => {
-    if (!selectedAudit) return;
+    if (!canRollback || !selectedAudit) return;
     const version = currentVersionForEvent(selectedAudit, profile, modes, selectedZone);
     if (version == null) {
       setError("هذا السجل لا يملك إصدارًا حاليًا قابلًا للتراجع من هذه الواجهة.");
@@ -279,13 +303,24 @@ export function OperationalPolicySection() {
     } finally {
       setLoading(false);
     }
-  }, [load, modes, profile, rollbackReason, selectedAudit, selectedZone, zones]);
+  }, [canRollback, load, modes, profile, rollbackReason, selectedAudit, selectedZone, zones]);
 
   const zoneRows = zones.state.kind === "success"
     ? (zones.state.data as (DshZone & Record<string, unknown>)[])
     : [];
   const modeRows = modes as (DshDeliveryModePolicy & Record<string, unknown>)[];
   const auditRows = audit as (DshOperationalPolicyAuditEvent & Record<string, unknown>)[];
+
+  if (!canReadZones) {
+    return (
+      <CpStatePanel
+        role="status"
+        title="صلاحية قراءة السياسة التشغيلية مطلوبة"
+        description="لن يطلب هذا القسم الملف التشغيلي أو أنماط التنفيذ قبل تحقق صلاحيات القراءة التشغيلية."
+        code="DSH_OPERATIONAL_POLICY_READ_REQUIRED"
+      />
+    );
+  }
 
   return (
     <View style={styles.section}>
@@ -334,34 +369,35 @@ export function OperationalPolicySection() {
         </CpTable>
       ) : null}
 
-      {selectedZoneId ? (
+      {selectedZoneId && canReadProfile && profile ? (
         <Card style={styles.card}>
           <Text role="titleSm">SLA والسعة والإيقاف</Text>
           <View style={styles.grid}>
-            <CpTextInput aria-label="فئة SLA" value={form.slaCategory} onChange={(slaCategory) => setForm((current) => ({ ...current, slaCategory }))} />
-            <CpTextInput aria-label="حد التحضير (د)" value={form.maxPrepMins} onChange={(maxPrepMins) => setForm((current) => ({ ...current, maxPrepMins }))} />
-            <CpTextInput aria-label="حد الإسناد (د)" value={form.maxAssignmentMins} onChange={(maxAssignmentMins) => setForm((current) => ({ ...current, maxAssignmentMins }))} />
-            <CpTextInput aria-label="حد التوصيل (د)" value={form.maxDeliveryMins} onChange={(maxDeliveryMins) => setForm((current) => ({ ...current, maxDeliveryMins }))} />
-            <CpTextInput aria-label="الطلبات المتزامنة" value={form.maxConcurrentOrders} onChange={(maxConcurrentOrders) => setForm((current) => ({ ...current, maxConcurrentOrders }))} />
-            <CpTextInput aria-label="الحد الأعلى للكباتن" value={form.maxCaptainsOnline} onChange={(maxCaptainsOnline) => setForm((current) => ({ ...current, maxCaptainsOnline }))} />
-            <CpTextInput aria-label="عتبة الضغط 0..1" value={form.throttleThreshold} onChange={(throttleThreshold) => setForm((current) => ({ ...current, throttleThreshold }))} />
+            <CpTextInput disabled={!canManageProfile} aria-label="فئة SLA" value={form.slaCategory} onChange={(slaCategory) => setForm((current) => ({ ...current, slaCategory }))} />
+            <CpTextInput disabled={!canManageProfile} aria-label="حد التحضير (د)" value={form.maxPrepMins} onChange={(maxPrepMins) => setForm((current) => ({ ...current, maxPrepMins }))} />
+            <CpTextInput disabled={!canManageProfile} aria-label="حد الإسناد (د)" value={form.maxAssignmentMins} onChange={(maxAssignmentMins) => setForm((current) => ({ ...current, maxAssignmentMins }))} />
+            <CpTextInput disabled={!canManageProfile} aria-label="حد التوصيل (د)" value={form.maxDeliveryMins} onChange={(maxDeliveryMins) => setForm((current) => ({ ...current, maxDeliveryMins }))} />
+            <CpTextInput disabled={!canManageProfile} aria-label="الطلبات المتزامنة" value={form.maxConcurrentOrders} onChange={(maxConcurrentOrders) => setForm((current) => ({ ...current, maxConcurrentOrders }))} />
+            <CpTextInput disabled={!canManageProfile} aria-label="الحد الأعلى للكباتن" value={form.maxCaptainsOnline} onChange={(maxCaptainsOnline) => setForm((current) => ({ ...current, maxCaptainsOnline }))} />
+            <CpTextInput disabled={!canManageProfile} aria-label="عتبة الضغط 0..1" value={form.throttleThreshold} onChange={(throttleThreshold) => setForm((current) => ({ ...current, throttleThreshold }))} />
           </View>
           <View style={styles.headerRow}>
             <CpBadge tone={form.isPaused ? "danger" : "success"}>{form.isPaused ? "المنطقة متوقفة" : "المنطقة تعمل"}</CpBadge>
             <CpButton
               variant={form.isPaused ? "secondary" : "danger"}
+              disabled={!canManageProfile}
               onClick={() => setForm((current) => ({ ...current, isPaused: !current.isPaused, pauseReason: current.isPaused ? "" : current.pauseReason }))}
             >
               {form.isPaused ? "إلغاء الإيقاف" : "إيقاف تشغيلي"}
             </CpButton>
           </View>
-          {form.isPaused ? <CpTextInput aria-label="سبب الإيقاف" value={form.pauseReason} onChange={(pauseReason) => setForm((current) => ({ ...current, pauseReason }))} /> : null}
-          <CpTextInput aria-label="سبب تغيير السياسة" value={form.reason} onChange={(reason) => setForm((current) => ({ ...current, reason }))} />
-          <CpButton onClick={() => void saveProfile()} disabled={loading}>حفظ SLA والسعة</CpButton>
+          {form.isPaused ? <CpTextInput disabled={!canManageProfile} aria-label="سبب الإيقاف" value={form.pauseReason} onChange={(pauseReason) => setForm((current) => ({ ...current, pauseReason }))} /> : null}
+          <CpTextInput disabled={!canManageProfile} aria-label="سبب تغيير السياسة" value={form.reason} onChange={(reason) => setForm((current) => ({ ...current, reason }))} />
+          <CpButton onClick={() => void saveProfile()} disabled={!canManageProfile || loading}>حفظ SLA والسعة</CpButton>
         </Card>
       ) : null}
 
-      <Card style={styles.card}>
+      {canReadDeliveryModes ? <Card style={styles.card}>
         <Text role="titleSm">أنماط التوصيل والتنفيذ</Text>
         {modeRows.length === 0 ? <CpStatePanel role="status" title="لا توجد أنماط معرفة" description="طبّق هجرة السياسة التشغيلية ثم حدّث البيانات." /> : (
           <CpTable aria-label="أنماط التوصيل والتنفيذ">
@@ -375,7 +411,7 @@ export function OperationalPolicySection() {
             </thead>
             <tbody>
               {modeRows.map((row) => (
-                <tr key={row.id} onClick={() => void toggleMode(row)}>
+                <tr key={row.id} onClick={canManageDeliveryModes ? () => void toggleMode(row) : undefined}>
                   <CpTableCell>{MODE_LABELS[row.fulfillmentMode]}</CpTableCell>
                   <CpTableCell>{row.slaCategory}</CpTableCell>
                   <CpTableCell>{String(row.version)}</CpTableCell>
@@ -387,9 +423,9 @@ export function OperationalPolicySection() {
             </tbody>
           </CpTable>
         )}
-      </Card>
+      </Card> : null}
 
-      <Card style={styles.card}>
+      {canEvaluate ? <Card style={styles.card}>
         <Text role="titleSm">محاكاة الأثر على السلة وCheckout والطلب والتوزيع</Text>
         <View style={styles.modeRow}>
           {(Object.keys(MODE_LABELS) as DshFulfillmentMode[]).map((mode) => (
@@ -402,7 +438,7 @@ export function OperationalPolicySection() {
           <CpTextInput aria-label="الطلبات الحالية" value={activeOrders} onChange={setActiveOrders} />
           <CpTextInput aria-label="الكباتن المتصلون" value={captainsOnline} onChange={setCaptainsOnline} />
         </View>
-        <CpButton onClick={() => void evaluate()} disabled={!selectedZoneId || loading}>تقييم القرار</CpButton>
+        <CpButton onClick={() => void evaluate()} disabled={!canEvaluate || !selectedZoneId || loading}>تقييم القرار</CpButton>
         {decision ? (
           <View style={styles.result}>
             <CpBadge tone={decision.serviceable ? "success" : "danger"}>{decision.serviceable ? "قابل للخدمة" : decision.decision}</CpBadge>
@@ -413,7 +449,7 @@ export function OperationalPolicySection() {
             </Text>
           </View>
         ) : null}
-      </Card>
+      </Card> : null}
 
       <Card style={styles.card}>
         <Text role="titleSm">التدقيق والإصدارات والتراجع</Text>
@@ -430,7 +466,7 @@ export function OperationalPolicySection() {
             </thead>
             <tbody>
               {auditRows.map((row) => (
-                <tr key={row.id} onClick={() => setSelectedAudit(row)}>
+                  <tr key={row.id} onClick={canRollback ? () => setSelectedAudit(row) : undefined}>
                   <CpTableCell>{row.aggregateType}</CpTableCell>
                   <CpTableCell>{row.action}</CpTableCell>
                   <CpTableCell>{String(row.toVersion)}</CpTableCell>
@@ -441,7 +477,7 @@ export function OperationalPolicySection() {
             </tbody>
           </CpTable>
         )}
-        {selectedAudit ? (
+        {selectedAudit && canRollback ? (
           <View style={styles.result}>
             <Text role="caption">العودة إلى الحدث {selectedAudit.toVersion} من {selectedAudit.aggregateType}</Text>
             <CpTextInput aria-label="سبب التراجع" value={rollbackReason} onChange={setRollbackReason} />

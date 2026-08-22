@@ -32,7 +32,6 @@ export type DshContractRegistration = {
     | "dsh-payment-sessions"
     | "dsh-settlement-commissions"
     | "dsh-payout-destinations"
-    | "dsh-cod-custody"
     | "dsh-marketing-commercial"
     | "dsh-partner-commercial"
     | "dsh-partner-fleet"
@@ -227,14 +226,6 @@ export const DSH_CONTRACT_REGISTRY = [
   {
     id: "dsh-payout-destinations",
     path: "contracts/dsh.payouts-destinations.openapi.yaml",
-    state: "CONTRACT_ACTIVE",
-    runtimeDependency: true,
-    clientStrategy: "PARENT_GENERATED_SUBSET",
-    generatedClient: "clients/generated/dsh-api.ts",
-  },
-  {
-    id: "dsh-cod-custody",
-    path: "contracts/dsh.cod-custody.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
     clientStrategy: "PARENT_GENERATED_SUBSET",

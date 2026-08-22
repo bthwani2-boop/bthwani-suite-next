@@ -52,43 +52,50 @@ let totalErrors = 0;
 let totalWarnings = 0;
 for (const ruleFile of ruleFiles) {
   const ruleName = path.basename(ruleFile, path.extname(ruleFile));
-  for (const scanDir of SCAN_DIRS) {
-    const result = spawnSync(astGrepBin, ["scan", "--rule", ruleFile, "--json", scanDir], {
-      encoding: "utf8",
-      cwd: repoRoot,
-      maxBuffer: 10 * 1024 * 1024,
-      shell: isWin,
-    });
+  const result = spawnSync(astGrepBin, ["scan", "--rule", ruleFile, "--json", ...SCAN_DIRS], {
+    encoding: "utf8",
+    cwd: repoRoot,
+    maxBuffer: 20 * 1024 * 1024,
+    shell: isWin,
+  });
 
-    let matches = [];
-    try {
-      if (result.stdout?.trim()) matches = JSON.parse(result.stdout);
-    } catch {
-      if (result.status && result.status !== 0) {
-        console.error(`${guardId}: FAIL — invalid ast-grep output for ${ruleName}/${scanDir}`);
-        process.exit(1);
-      }
-    }
-    if (!Array.isArray(matches) || matches.length === 0) continue;
+  if (result.error) {
+    console.error(`${guardId}: FAIL — ast-grep could not start for ${ruleName}: ${result.error.message}`);
+    process.exit(1);
+  }
 
-    for (const match of matches) {
-      const severity = match.severity ?? "error";
-      const file = path.relative(repoRoot, match.file ?? "").replaceAll("\\", "/");
-      const line = match.range?.start?.line ?? 0;
-      const message = `[${ruleName}] ${file}:${line + 1} — ${match.message ?? match.text ?? "match found"}`;
-      if (severity === "error") {
-        console.error(`  ERROR: ${message}`);
-        totalErrors += 1;
-      } else {
-        console.warn(`  WARN:  ${message}`);
-        totalWarnings += 1;
-      }
+  let matches = [];
+  try {
+    if (result.stdout?.trim()) matches = JSON.parse(result.stdout);
+  } catch {
+    console.error(`${guardId}: FAIL — invalid ast-grep JSON for ${ruleName}`);
+    process.exit(1);
+  }
+
+  if (result.status !== 0 && (!Array.isArray(matches) || matches.length === 0)) {
+    console.error(`${guardId}: FAIL — ast-grep scan failed for ${ruleName}: ${String(result.stderr || "").trim() || `exit ${result.status}`}`);
+    process.exit(1);
+  }
+  if (!Array.isArray(matches) || matches.length === 0) continue;
+
+  for (const match of matches) {
+    const severity = match.severity ?? "error";
+    const file = path.relative(repoRoot, match.file ?? "").replaceAll("\\", "/");
+    const line = match.range?.start?.line ?? 0;
+    const message = `[${ruleName}] ${file}:${line + 1} — ${match.message ?? match.text ?? "match found"}`;
+    if (severity === "error") {
+      console.error(`  ERROR: ${message}`);
+      totalErrors += 1;
+    } else {
+      console.warn(`  WARN:  ${message}`);
+      totalWarnings += 1;
     }
   }
 }
 
 console.log(`\n  Rules scanned: ${ruleFiles.length}`);
 console.log(`  Directories:   ${SCAN_DIRS.length}`);
+console.log(`  Processes:     ${ruleFiles.length}`);
 console.log(`  Errors:        ${totalErrors}`);
 console.log(`  Warnings:      ${totalWarnings}`);
 if (totalErrors > 0) {

@@ -15,7 +15,7 @@ test('Control Panel startup restores only the governed frozen lockfile', () => {
 });
 
 test('mobile development bootstrap reports failures without immediate process termination', () => {
-  const source = read('apps/mobile/mobile-dev-data.mjs');
+  const source = read('tools/mobile/mobile-dev-data.mjs');
   assert.doesNotMatch(source, /process\.exit\s*\(/);
   assert.match(source, /process\.exitCode = 1/);
   assert.match(source, /return token/);

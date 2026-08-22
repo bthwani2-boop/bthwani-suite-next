@@ -88,30 +88,9 @@ function isKnownOperation(method, rawPath) {
   );
 }
 
-function extractApiPathLiterals(file, content) {
+function extractApiBindings(file, content) {
   const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindForFile(file));
   const paths = new Set();
-
-  function record(value) {
-    const normalized = value.replace(/[?#].*$/, "");
-    if (/^\/(?:dsh|wlt|identity|providers)\//.test(normalized)) paths.add(normalized);
-  }
-
-  function visit(node) {
-    if (ts.isStringLiteralLike(node)) {
-      record(node.text);
-    } else if (ts.isTemplateExpression(node)) {
-      record(materializeTemplatePath(node));
-    }
-    ts.forEachChild(node, visit);
-  }
-
-  visit(sourceFile);
-  return paths;
-}
-
-function extractApiOperationCalls(file, content) {
-  const sourceFile = ts.createSourceFile(file, content, ts.ScriptTarget.Latest, true, scriptKindForFile(file));
   const operations = new Map();
   const approvedCallNames = new Set([
     "fetch",
@@ -124,7 +103,18 @@ function extractApiOperationCalls(file, content) {
     "head",
   ]);
 
+  function record(value) {
+    const normalized = value.replace(/[?#].*$/, "");
+    if (/^\/(?:dsh|wlt|identity|providers)\//.test(normalized)) paths.add(normalized);
+  }
+
   function visit(node) {
+    if (ts.isStringLiteralLike(node)) {
+      record(node.text);
+    } else if (ts.isTemplateExpression(node)) {
+      record(materializeTemplatePath(node));
+    }
+
     if (ts.isCallExpression(node) && node.arguments.length > 0) {
       const name = callName(node).toLowerCase();
       if (approvedCallNames.has(name)) {
@@ -140,13 +130,14 @@ function extractApiOperationCalls(file, content) {
   }
 
   visit(sourceFile);
-  return [...operations.values()];
+  return { paths, operations: [...operations.values()] };
 }
 
 const DSH_HTTP_CLIENT_PATTERN = /\bcreate(?:Dsh|DshPublic|DshFlexible|DshRaw)HttpClient\b/;
 const RAW_FETCH_PATTERN = /\bfetch\s*\(/g;
 const MOCK_RESOLVE_PATTERN = /\breturn\s+Promise\.resolve\s*\(\s*[\[{]/;
 const HARDCODED_URL_PATTERN = /https?:\/\/(?!localhost|127\.0\.0\.1|\.\.\.|example\.com)/;
+const REGISTERED_API_PATH_PATTERN = /\/(?:dsh|wlt|identity|providers)\//;
 
 const apiFiles = listCodeFiles().filter((file) => {
   if (file.endsWith("-registry.ts")) return false;
@@ -208,22 +199,29 @@ for (const file of apiFiles) {
   }
 
   if (isDshAdapter || isWltAdapter) {
-    for (const rawPath of extractApiPathLiterals(file, content)) {
-      if (!isKnownPath(rawPath)) {
-        violations.push({
-          file,
-          message: `UNREGISTERED PATH: "${rawPath}" not found in master-indexed OpenAPI contracts`,
-        });
+    // Both AST checks only accept paths beginning with one of the registered
+    // service prefixes. Avoid constructing a full TypeScript AST for adapter
+    // files that cannot contain a candidate path; textual checks above still
+    // run for every selected adapter.
+    if (REGISTERED_API_PATH_PATTERN.test(content)) {
+      const { paths, operations } = extractApiBindings(file, content);
+      for (const rawPath of paths) {
+        if (!isKnownPath(rawPath)) {
+          violations.push({
+            file,
+            message: `UNREGISTERED PATH: "${rawPath}" not found in master-indexed OpenAPI contracts`,
+          });
+        }
       }
-    }
 
-    for (const operation of extractApiOperationCalls(file, content)) {
-      if (!operation.method) continue;
-      if (!isKnownOperation(operation.method, operation.path)) {
-        violations.push({
-          file,
-          message: `UNREGISTERED OPERATION: "${operation.method} ${operation.path}" not found in master-indexed OpenAPI contracts`,
-        });
+      for (const operation of operations) {
+        if (!operation.method) continue;
+        if (!isKnownOperation(operation.method, operation.path)) {
+          violations.push({
+            file,
+            message: `UNREGISTERED OPERATION: "${operation.method} ${operation.path}" not found in master-indexed OpenAPI contracts`,
+          });
+        }
       }
     }
   }

@@ -28,6 +28,7 @@ func TestPostgresLifecycle(t *testing.T) {
 	}
 
 	ctx := context.Background()
+	operatorContextID := "local-dsh"
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
 	actorID := "test-operator-" + suffix
 	storeID := "store-" + suffix
@@ -64,15 +65,15 @@ func TestPostgresLifecycle(t *testing.T) {
 
 	_, err = db.Exec(`
 		INSERT INTO dsh_stores (
-			id, slug, display_name, status, city_code, service_area_code,
+			id, operator_context_id, slug, display_name, status, city_code, service_area_code,
 			serviceability_status, is_visible, partner_readiness,
 			catalog_approval_status, marketing_visibility
 		)
 		VALUES (
-			$1, $2, $3, 'published', $4, $4, 'serviceable', TRUE,
+			$1, $5, $2, $3, 'published', $4, $4, 'serviceable', TRUE,
 			'ready', 'approved', 'visible'
 		)`,
-		storeID, storeID, " Store", cityCode,
+		storeID, storeID, " Store", cityCode, operatorContextID,
 	)
 	if err != nil {
 		t.Fatalf("insert visible store: %v", err)

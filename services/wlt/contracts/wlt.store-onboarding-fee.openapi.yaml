@@ -1,0 +1,129 @@
+openapi: 3.1.0
+info:
+  title: BThwani WLT Store Onboarding Fee Policy API
+  version: 1.0.0
+  description: >-
+    Canonical WLT-owned store onboarding fee policy. Monetary values are exact
+    integer minor units and every policy is isolated by the authenticated
+    OperatorContext delegated by DSH. Policy writes are immutable version
+    creation with optimistic concurrency and idempotent replay.
+x-bthwani-owner: services/wlt
+x-bthwani-parent-contract: services/wlt/contracts/wlt.openapi.yaml
+x-bthwani-contract-state: CONTRACT_ACTIVE
+x-bthwani-client-generation: DISABLED
+x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
+x-bthwani-runtime-dependency: true
+x-bthwani-financial-owner: true
+x-bthwani-mutation-scope-approved: true
+x-bthwani-deployment-gate: WLT_MUTATIONS_ENABLED
+paths:
+  /wlt/commercial/store-onboarding-fee:
+    get:
+      operationId: getWltStoreOnboardingFeePolicy
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationIdOptional'
+      responses:
+        '200':
+          description: Current canonical policy or an explicit unconfigured sentinel.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreOnboardingFeePolicyEnvelope' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '500': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+    put:
+      operationId: upsertWltStoreOnboardingFeePolicy
+      tags: [ WltCommercialBenefits ]
+      security: [ { bearerAuth: [] } ]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StoreOnboardingFeePolicyWrite' }
+      responses:
+        '200':
+          description: Canonical policy version, including idempotent replay.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StoreOnboardingFeePolicyEnvelope' }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '401': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '500': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer }
+  schemas:
+    StoreOnboardingFeePolicy:
+      type: object
+      additionalProperties: false
+      required:
+        - enabled
+        - amountMinorUnits
+        - currency
+        - appliesTo
+        - chargeTiming
+        - actorCharged
+        - notes
+        - updatedBy
+        - updatedAt
+        - version
+        - isConfigured
+      properties:
+        enabled: { type: boolean }
+        amountMinorUnits: { type: integer, format: int64, minimum: 0 }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        appliesTo: { type: string, enum: [ first_store, additional_store, all_stores ] }
+        chargeTiming: { type: string, enum: [ on_approval, on_publication, on_first_order, manual ] }
+        actorCharged: { type: string, const: partner }
+        effectiveFrom: { type: [ string, 'null' ], format: date-time }
+        notes: { type: string, maxLength: 1000 }
+        updatedBy: { type: string, maxLength: 200 }
+        updatedAt: { type: string, format: date-time }
+        version: { type: integer, minimum: 0 }
+        isConfigured: { type: boolean }
+        blockedReason: { type: string, enum: [ POLICY_NOT_CONFIGURED ] }
+    StoreOnboardingFeePolicyEnvelope:
+      type: object
+      additionalProperties: false
+      required: [ policy ]
+      properties:
+        policy: { $ref: '#/components/schemas/StoreOnboardingFeePolicy' }
+    StoreOnboardingFeePolicyWrite:
+      type: object
+      additionalProperties: false
+      required:
+        - enabled
+        - amountMinorUnits
+        - currency
+        - appliesTo
+        - chargeTiming
+        - expectedVersion
+        - reason
+        - createdByActorId
+      properties:
+        enabled: { type: boolean }
+        amountMinorUnits: { type: integer, format: int64, minimum: 0 }
+        currency: { type: string, pattern: '^[A-Z]{3}$' }
+        appliesTo: { type: string, enum: [ first_store, additional_store, all_stores ] }
+        chargeTiming: { type: string, enum: [ on_approval, on_publication, on_first_order, manual ] }
+        effectiveFrom: { type: string, format: date-time }
+        notes: { type: string, maxLength: 1000 }
+        expectedVersion: { type: integer, minimum: 0 }
+        reason: { type: string, minLength: 3, maxLength: 1000 }
+        createdByActorId: { type: string, minLength: 1, maxLength: 200 }

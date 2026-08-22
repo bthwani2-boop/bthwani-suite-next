@@ -10,6 +10,6 @@ param(
     [string] $SecretsRoot = 'C:\bthwani-secrets\firebase'
 )
 
-$target = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\apps\mobile\eas\firebase.ps1')).Path
+$target = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\tools\mobile\eas\firebase.ps1')).Path
 & $target -App $App -Sha1Fingerprint $Sha1Fingerprint -ProjectId $ProjectId -SecretsRoot $SecretsRoot
 exit $LASTEXITCODE

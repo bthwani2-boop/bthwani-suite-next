@@ -441,44 +441,10 @@ func captureSessionAndNotify(db *sql.DB, sessionID, providerReference string) (*
 
 // sendProviderError is handled by shared.SendProviderError.
 
-func MarkCodPending(db *sql.DB, sessionID string) (*PaymentSession, error) {
-	if sessionID == "" {
-		return nil, fmt.Errorf("paymentSessionId is required")
-	}
-	const q = `
-		UPDATE wlt_payment_sessions
-		SET status = 'cod_pending', updated_at = NOW()
-		WHERE id = $1
-		RETURNING ` + sessionCols
-	row := db.QueryRow(q, sessionID)
-	s, err := scanSession(row)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	return s, err
-}
-
-func MarkCodCollected(db *sql.DB, sessionID string) (*PaymentSession, error) {
-	if sessionID == "" {
-		return nil, fmt.Errorf("paymentSessionId is required")
-	}
-	const q = `
-		UPDATE wlt_payment_sessions
-		SET status = 'cod_collected', captured_at = NOW(), updated_at = NOW()
-		WHERE id = $1
-		RETURNING ` + sessionCols
-	row := db.QueryRow(q, sessionID)
-	s, err := scanSession(row)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	return s, err
-}
-
 // ExpireSession commits the expired transition and enqueues the DSH outbox
 // event atomically. Only sessions in reference_created, pending_provider, or
 // authorized may be expired; anything else (already captured, already
-// expired, failed, cod_collected, etc.) returns ErrNotExpirable instead of
+// expired, failed, or COD-finalized, etc.) returns ErrNotExpirable instead of
 // unconditionally overwriting the session's true status.
 func ExpireSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
 	if sessionID == "" {
@@ -552,7 +518,7 @@ type CancelForOrderResult struct {
 // yet captured) or refunded (already captured) -- that decision belongs to
 // WLT, which owns the session's true state:
 //   - reference_created/pending_provider/authorized: expire the session.
-//   - captured/cod_collected (funds already received): create a
+//   - captured/cod_finalized (funds already received): create a
 //     requested-status refund for human review (never auto-completes).
 //   - anything else (already expired/failed/etc.): no action is needed; a
 //     cancellation racing with an already-terminal session is normal, not

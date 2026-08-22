@@ -82,36 +82,11 @@ func decodeCancellationBody(w http.ResponseWriter, r *http.Request) (orderCancel
 }
 
 func (s *protectedStoreServer) handleClientCancelOrder(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "client")
+	_, ok := s.requireActor(w, r, "client")
 	if !ok {
 		return
 	}
-	orderID := r.PathValue("orderId")
-	if _, err := orders.GetClientOrder(s.db, orderID, actor.OperatorContextID, actor.ID); err != nil {
-		writeOrderCancellationError(w, err)
-		return
-	}
-	body, ok := decodeCancellationBody(w, r)
-	if !ok {
-		return
-	}
-	_, err := orders.CancelOrderSync(s.db, orders.CreateCancellationCaseInput{
-		OrderID:           orderID,
-		OperatorContextID: actor.OperatorContextID,
-		ActorID:           actor.ID,
-		ActorRole:         "client",
-		ReasonCode:        body.ReasonCode,
-		ReasonNote:        body.ReasonNote,
-		CorrelationID:     cancellationCorrelation(r, body),
-	})
-	if err != nil {
-		writeOrderCancellationError(w, err)
-		return
-	}
-
-	order, _ := orders.GetOrder(s.db, orderID)
-	cancellation, _ := orders.GetCancellation(s.db, orderID)
-	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order), "cancellation": cancellation})
+	store.SendError(w, http.StatusForbidden, "CLIENT_CANCELLATION_DISALLOWED", "direct client cancellation is disallowed; please contact support")
 }
 
 func (s *protectedStoreServer) handlePartnerCancelOrder(w http.ResponseWriter, r *http.Request) {

@@ -1,6 +1,14 @@
-import { useCallback, useEffect } from "react";
-import { useCheckoutController } from "./use-checkout-controller";
-import { useCreateOrderTruthController } from "../order-truth";
+import { useCallback, useState } from "react";
+import {
+  clearCheckoutAttempt,
+  getOrCreateCheckoutAttempt,
+} from "./checkout-create-attempt";
+import {
+  cancelCheckoutIntent,
+  createCheckoutIntent,
+  fetchCheckoutIntent,
+} from "./checkout.api";
+import { useCreateOrderTruthController } from "../order-truth/use-order-truth-controller";
 import type {
   DshCheckoutIntent,
   DshCheckoutTerminalReason,
@@ -8,6 +16,7 @@ import type {
 } from "./checkout.types";
 
 export type CheckoutToOrderFlowState =
+  | { readonly kind: "idle" }
   | { readonly kind: "loading" }
   | { readonly kind: "confirming"; readonly intent: DshCheckoutIntent }
   | { readonly kind: "reconciliation_pending"; readonly intent: DshCheckoutIntent }
@@ -25,117 +34,78 @@ export type CheckoutToOrderFlowState =
       readonly correlationId: string;
     };
 
-export function useCheckoutToOrderFlow(input: DshCreateIntentInput) {
-  const checkout = useCheckoutController();
-  const order = useCreateOrderTruthController();
-  const submitCheckout = checkout.submit;
-  const cancelCheckout = checkout.cancel;
-  const reloadCheckout = checkout.reload;
-  const submitOrder = order.submit;
-  const resetOrder = order.reset;
+export function useCheckoutToOrderFlow() {
+  const [state, setState] = useState<CheckoutToOrderFlowState>({ kind: "idle" });
+  const { submit: submitOrder } = useCreateOrderTruthController();
 
-  useEffect(() => {
-    // A new checkout must never inherit a previous order mutation result. The
-    // durable order attempt remains in AsyncStorage until canonical readback.
-    resetOrder();
-    void submitCheckout(input);
-  }, [
-    input.cartId,
-    input.storeId,
-    input.fulfillmentMode,
-    input.paymentMethod,
-    input.deliveryAddressId,
-    input.note,
-    input.couponCode,
-    resetOrder,
-    submitCheckout,
-  ]);
+  const start = useCallback(async (input: DshCreateIntentInput) => {
+    setState({ kind: "loading" });
+    try {
+      const attempt = await getOrCreateCheckoutAttempt(input);
+      const intent = await createCheckoutIntent(input, attempt.context);
+      try {
+        await clearCheckoutAttempt(attempt.fingerprint);
+      } catch {
+        // The canonical checkout mutation succeeded; stale local cleanup must
+        // not rewrite the server result.
+      }
 
-  const checkoutIntentId = checkout.state.kind === "success"
-    ? checkout.state.intent.id
-    : null;
+      setState({ kind: "creating_order", intent });
 
-  const pendingIntentId = checkout.state.kind === "confirming" ||
-    checkout.state.kind === "reconciliation_pending"
-    ? checkout.state.intent.id
-    : null;
-  const reconciliationPending = checkout.state.kind === "reconciliation_pending";
+      // Order creation is delegated to the canonical controller so mutation
+      // locking, durable idempotency, actor-scoped readback validation, failure
+      // classification, and attempt cleanup stay in one owner.
+      const readback = await submitOrder({ checkoutIntentId: intent.id });
+      if (!readback) {
+        throw new Error("تعذر تثبيت الطلب وقراءة الحقيقة المعتمدة بعد الدفع.");
+      }
 
-  useEffect(() => {
-    if (!pendingIntentId) return undefined;
-    const timer = setTimeout(
-      () => void reloadCheckout(pendingIntentId),
-      reconciliationPending ? 3_000 : 5_000,
-    );
-    return () => clearTimeout(timer);
-  }, [pendingIntentId, reconciliationPending, reloadCheckout]);
-
-  useEffect(() => {
-    if (checkoutIntentId && order.state.kind === "idle") {
-      void submitOrder({ checkoutIntentId });
-    }
-  }, [checkoutIntentId, order.state.kind, submitOrder]);
-
-  const retryOrder = useCallback(() => {
-    if (!checkoutIntentId) return;
-    resetOrder();
-    void submitOrder({ checkoutIntentId });
-  }, [checkoutIntentId, resetOrder, submitOrder]);
-
-  const cancel = useCallback((intentId: string) => {
-    resetOrder();
-    void cancelCheckout(intentId);
-  }, [cancelCheckout, resetOrder]);
-
-  const refresh = useCallback((intentId: string) => {
-    void reloadCheckout(intentId);
-  }, [reloadCheckout]);
-
-  const state: CheckoutToOrderFlowState = (() => {
-    if (
-      checkout.state.kind === "idle" ||
-      checkout.state.kind === "loading"
-    ) {
-      return { kind: "loading" };
-    }
-    if (checkout.state.kind === "confirming") {
-      return { kind: "confirming", intent: checkout.state.intent };
-    }
-    if (checkout.state.kind === "reconciliation_pending") {
-      return { kind: "reconciliation_pending", intent: checkout.state.intent };
-    }
-    if (checkout.state.kind === "terminal") {
-      return { kind: "terminal", intent: checkout.state.intent, reason: checkout.state.reason };
-    }
-    if (checkout.state.kind === "blocked_payment_unavailable") {
-      return { kind: "blocked_payment_unavailable" };
-    }
-    if (checkout.state.kind === "out_of_area") {
-      return { kind: "out_of_area" };
-    }
-    if (checkout.state.kind === "error") {
-      return { kind: "error", message: checkout.state.message };
-    }
-    const intent = checkout.state.intent;
-    if (order.state.kind === "success") {
-      return {
+      setState({
         kind: "order_ready",
         intent,
-        orderId: order.state.order.id,
-        orderNumber: order.state.order.orderNumber,
-        correlationId: order.state.order.correlationId,
-      };
+        orderId: readback.id,
+        orderNumber: readback.orderNumber,
+        correlationId: readback.correlationId,
+      });
+    } catch (error: unknown) {
+      const err = error as { message?: string; code?: string; body?: string };
+      let message = "تعذر إتمام الطلب، يرجى المحاولة مرة أخرى.";
+      if (err.message) {
+        message = err.message;
+      } else if (err.code) {
+        message = `خطأ: ${err.code}`;
+      } else if (typeof err.body === "string" && err.body.length > 0) {
+        message = err.body;
+      }
+      setState({ kind: "order_error", message });
     }
-    if (
-      order.state.kind === "offline" ||
-      order.state.kind === "forbidden" ||
-      order.state.kind === "conflict" ||
-      order.state.kind === "error"
-    ) {
-      return { kind: "order_error", message: order.state.message };
-    }
-    return { kind: "creating_order", intent };
-  })();
+  }, [submitOrder]);
 
-  return { state, cancel, refresh, retryOrder };
+  const reset = useCallback(() => {
+    setState({ kind: "idle" });
+  }, []);
+
+  const cancel = useCallback(async (intentId: string) => {
+    try {
+      await cancelCheckoutIntent(intentId);
+    } catch {
+      // Best effort cancel; the next readback remains canonical.
+    }
+    setState({ kind: "idle" });
+  }, []);
+
+  const refresh = useCallback(async (intentId: string) => {
+    try {
+      const intent = await fetchCheckoutIntent(intentId);
+      setState({ kind: "confirming", intent });
+    } catch {
+      setState({ kind: "error", message: "تعذر تحديث حالة الطلب." });
+    }
+  }, []);
+
+  const retryOrder = useCallback(() => {
+    setState({ kind: "idle" });
+  }, []);
+
+  return { state, start, reset, cancel, refresh, retryOrder };
 }

@@ -20,25 +20,22 @@ var (
 type PaymentMethod string
 
 const (
-	MethodCOD            PaymentMethod = "cod"
-	MethodWallet         PaymentMethod = "wallet"
-	MethodMixed          PaymentMethod = "mixed"
-	MethodOfficialWallet PaymentMethod = "official_wallet"
+	MethodCOD    PaymentMethod = "cod"
+	MethodWallet PaymentMethod = "wallet"
+	MethodMixed  PaymentMethod = "mixed"
 )
 
 type IntentState string
 
 const (
-	StateDraft             IntentState = "draft"
-	StateValidating        IntentState = "validating"
-	StateReady             IntentState = "ready"
-	StateBlocked           IntentState = "blocked"
-	StateConfirming        IntentState = "confirming"
-	StateConfirmed         IntentState = "confirmed"
-	StateCancelled         IntentState = "cancelled"
-	StateExpired           IntentState = "expired"
-
-
+	StateDraft      IntentState = "draft"
+	StateValidating IntentState = "validating"
+	StateReady      IntentState = "ready"
+	StateBlocked    IntentState = "blocked"
+	StateConfirming IntentState = "confirming"
+	StateConfirmed  IntentState = "confirmed"
+	StateCancelled  IntentState = "cancelled"
+	StateExpired    IntentState = "expired"
 )
 
 type FulfillmentMode string
@@ -77,7 +74,7 @@ type Intent struct {
 
 type CreateIntentInput struct {
 	ID                  string
-	OperatorContextID            string
+	OperatorContextID   string
 	ClientID            string
 	CartID              string
 	StoreID             string
@@ -390,7 +387,7 @@ var ErrPaymentSessionMismatch = errors.New("wlt payment session id does not matc
 
 func paymentEventTargetState(wltStatus string) (IntentState, bool, error) {
 	switch strings.TrimSpace(wltStatus) {
-	case "captured", "cod_collected":
+	case "captured", "cod_finalized":
 		return StateConfirmed, false, nil
 	case "failed":
 		return StateCancelled, false, nil

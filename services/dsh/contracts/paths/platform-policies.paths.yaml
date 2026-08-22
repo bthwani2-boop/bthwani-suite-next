@@ -128,6 +128,28 @@
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
+/dsh/operator/platform/operational-policy/evaluate:
+  post:
+    operationId: evaluateDshOperatorOperationalPolicy
+    summary: Evaluate one operational-policy decision for the control-panel simulation.
+    tags: [DshPlatformPolicies]
+    security: [{ bearerAuth: [] }]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyEvaluationInput" }
+    responses:
+      "200":
+        description: Canonical operational decision and workflow effects.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshOperationalPolicyDecisionResponse" }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
 /dsh/operator/platform/operational-policy/audit:
   get:
     operationId: listDshOperationalPolicyAudit

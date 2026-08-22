@@ -31,8 +31,9 @@ type OperatorMutableStatus = NonNullable<DshUpdateSpecialRequest['status']>;
 type OperatorForm = {
   status: OperatorMutableStatus;
   workflowStage: string;
-  estimatedAmountMinorUnits: string;
-  currency: string;
+  proposedAmountMinorUnits: string;
+  proposedCurrency: string;
+  proposalReason: string;
   assignedOperatorId: string;
   rejectionReason: string;
   captainId: string;
@@ -43,12 +44,49 @@ const OPERATOR_STATUSES: readonly OperatorMutableStatus[] = [
   'under_review',
   'needs_customer_input',
   'approved',
-  'assigned',
-  'in_progress',
-  'completed',
   'cancelled',
   'rejected',
 ];
+
+const DISPATCH_OWNED_STATUSES = new Set<string>(['assigned', 'in_progress', 'completed']);
+const DISPATCH_OWNED_STAGES = new Set<string>([
+  'captain_assignment',
+  'out_for_delivery',
+  'proof_of_delivery',
+  'delivered',
+  'assigned',
+  'captain_enroute_to_pickup',
+  'arrived_at_pickup',
+  'item_received',
+  'in_progress',
+  'arrived_at_dropoff',
+  'proof_review',
+  'completed',
+]);
+
+const OPERATOR_STATUS_TRANSITIONS: Readonly<Record<string, readonly OperatorMutableStatus[]>> = {
+  submitted: ['under_review', 'cancelled'],
+  under_review: ['needs_customer_input', 'rejected', 'cancelled'],
+  needs_customer_input: ['under_review', 'cancelled'],
+  approved: ['cancelled'],
+};
+
+function isDispatchOwnedRequest(request: DshSpecialRequestResponse): boolean {
+  return DISPATCH_OWNED_STATUSES.has(request.status);
+}
+
+function isTransitionLocked(request: DshSpecialRequestResponse): boolean {
+  return isDispatchOwnedRequest(request) || request.status === 'completed' || request.status === 'cancelled' || request.status === 'rejected';
+}
+
+function operatorStatusOptions(request: DshSpecialRequestResponse): readonly OperatorMutableStatus[] {
+  const currentStatus = request.status === 'submitted' ? 'under_review' : request.status;
+  const options = new Set<OperatorMutableStatus>([
+    ...(OPERATOR_STATUS_TRANSITIONS[request.status] ?? []),
+    ...(OPERATOR_STATUSES.includes(currentStatus as OperatorMutableStatus) ? [currentStatus as OperatorMutableStatus] : []),
+  ]);
+  return OPERATOR_STATUSES.filter((status) => options.has(status));
+}
 
 const FAILURE_COPY: Readonly<Record<'error' | 'offline' | 'forbidden' | 'conflict', FailureCopy>> = {
   error: { title: 'خطأ في تحميل الطلبات', description: 'تعذر تحميل طلبات هذه الخدمة.', tone: 'danger' },
@@ -61,10 +99,11 @@ function formFromRequest(request: DshSpecialRequestResponse): OperatorForm {
   return {
     status: request.status === 'submitted' ? 'under_review' : request.status,
     workflowStage: request.workflowStage ?? '',
-    estimatedAmountMinorUnits: request.estimatedAmountMinorUnits === null || request.estimatedAmountMinorUnits === undefined
+    proposedAmountMinorUnits: request.wltQuoteAmountMinorUnits === null || request.wltQuoteAmountMinorUnits === undefined
       ? ''
-      : String(request.estimatedAmountMinorUnits),
-    currency: request.currency ?? 'YER',
+      : String(request.wltQuoteAmountMinorUnits),
+    proposedCurrency: request.wltQuoteCurrency ?? 'YER',
+    proposalReason: '',
     assignedOperatorId: request.assignedOperatorId ?? '',
     rejectionReason: request.rejectionReason ?? '',
     captainId: '',
@@ -175,6 +214,10 @@ export function OperatorSpecialRequestsWorkbench({
 
   const handleTransition = React.useCallback(async () => {
     if (!selectedRequest || !form) return;
+    if (isTransitionLocked(selectedRequest)) {
+      setFeedback('هذه الحالة يملكها Dispatch أو هي نهائية؛ تُقرأ هنا ولا تُعدّل عبر انتقال عام.');
+      return;
+    }
     setPendingAction('transition');
     setFeedback(null);
     try {
@@ -219,16 +262,19 @@ export function OperatorSpecialRequestsWorkbench({
     setPendingAction('quote');
     setFeedback(null);
     try {
-      const amount = parsePositiveMinorUnits(form.estimatedAmountMinorUnits);
-      const currency = form.currency.trim().toUpperCase();
+      const amount = parsePositiveMinorUnits(form.proposedAmountMinorUnits);
+      const currency = form.proposedCurrency.trim().toUpperCase();
       if (!currency) throw new Error('رمز العملة مطلوب.');
+      const proposalReason = form.proposalReason.trim();
+      if (proposalReason.length < 5) throw new Error('سبب العرض مطلوب ويجب أن يحتوي على خمسة أحرف على الأقل.');
       applyReadback(await update(selectedRequest.id, {
         expectedVersion: selectedRequest.version,
         status: 'needs_customer_input',
         workflowStage: 'customer_approval',
-        estimatedAmountMinorUnits: amount,
-        currency,
-        quotePreparedAt: new Date().toISOString(),
+        quotePolicyId: 'special-request-standard',
+        proposedAmountMinorUnits: amount,
+        proposedCurrency: currency,
+        proposalReason,
       }), 'تم إرسال العرض للعميل وأصبحت الموافقة والدفع متاحين من تطبيق العميل.');
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : 'تعذر إرسال العرض للعميل.');
@@ -291,6 +337,9 @@ export function OperatorSpecialRequestsWorkbench({
 
   const selectedDetail = selectedRequest ? detailsByRequestId[selectedRequest.id] : undefined;
   const exchange = selectedDetail?.informationExchange;
+  const transitionLocked = selectedRequest ? isTransitionLocked(selectedRequest) : true;
+  const quoteEligible = selectedRequest?.status === 'under_review' || selectedRequest?.status === 'needs_customer_input';
+  const operatorStages = stageOrder.filter((stage) => !DISPATCH_OWNED_STAGES.has(stage));
 
   return (
     <Box gap={3}>
@@ -384,29 +433,36 @@ export function OperatorSpecialRequestsWorkbench({
           </Box>
 
           <Box gap={2}>
-            <label>
-              الحالة التشغيلية
-              <select value={form.status} onChange={(event) => updateForm('status', event.target.value as OperatorMutableStatus)} disabled={pendingAction !== null}>
-                {OPERATOR_STATUSES.map((status) => <option key={status} value={status}>{status}</option>)}
-              </select>
-            </label>
-            <label>
-              مرحلة سير العمل
-              <select value={form.workflowStage} onChange={(event) => updateForm('workflowStage', event.target.value)} disabled={pendingAction !== null}>
-                <option value="">بدون تغيير صريح</option>
-                {stageOrder.map((stage) => <option key={stage} value={stage}>{stageLabels[stage] ?? stage}</option>)}
-              </select>
-            </label>
-            <TextField label="المشغّل المسؤول" value={form.assignedOperatorId} onChangeText={(value) => updateForm('assignedOperatorId', value)} disabled={pendingAction !== null} />
-            <TextField label="سبب الرفض التشغيلي" value={form.rejectionReason} onChangeText={(value) => updateForm('rejectionReason', value)} disabled={pendingAction !== null} />
-            <Button label={pendingAction === 'transition' ? 'جارٍ تطبيق الانتقال...' : 'تطبيق الانتقال وقراءة النتيجة'} tone="primary" loading={pendingAction === 'transition'} disabled={pendingAction !== null} onPress={() => void handleTransition()} />
+            {transitionLocked ? (
+              <Text role="bodySm" tone="secondary">الحالة الحالية يملكها Dispatch/WLT أو أُغلقت نهائيًا؛ لا يوجد تعديل lifecycle عام من لوحة العمليات.</Text>
+            ) : (
+              <>
+                <label>
+                  الحالة التشغيلية
+                  <select value={form.status} onChange={(event) => updateForm('status', event.target.value as OperatorMutableStatus)} disabled={pendingAction !== null}>
+                    {operatorStatusOptions(selectedRequest).map((status) => <option key={status} value={status}>{status}</option>)}
+                  </select>
+                </label>
+                <label>
+                  مرحلة سير العمل
+                  <select value={form.workflowStage} onChange={(event) => updateForm('workflowStage', event.target.value)} disabled={pendingAction !== null}>
+                    <option value="">بدون تغيير صريح</option>
+                    {operatorStages.map((stage) => <option key={stage} value={stage}>{stageLabels[stage] ?? stage}</option>)}
+                  </select>
+                </label>
+                <TextField label="المشغّل المسؤول" value={form.assignedOperatorId} onChangeText={(value) => updateForm('assignedOperatorId', value)} disabled={pendingAction !== null} />
+                <TextField label="سبب الرفض التشغيلي" value={form.rejectionReason} onChangeText={(value) => updateForm('rejectionReason', value)} disabled={pendingAction !== null} />
+                <Button label={pendingAction === 'transition' ? 'جارٍ تطبيق الانتقال...' : 'تطبيق الانتقال وقراءة النتيجة'} tone="primary" loading={pendingAction === 'transition'} disabled={pendingAction !== null} onPress={() => void handleTransition()} />
+              </>
+            )}
           </Box>
 
           <Box gap={2}>
-            <Text role="titleSm">عرض السعر وموافقة العميل</Text>
-            <TextField label="القيمة بالوحدة الصغرى" value={form.estimatedAmountMinorUnits} keyboardType="numeric" onChangeText={(value) => updateForm('estimatedAmountMinorUnits', value)} disabled={pendingAction !== null} />
-            <TextField label="العملة" value={form.currency} autoCapitalize="characters" onChangeText={(value) => updateForm('currency', value)} disabled={pendingAction !== null} />
-            <Button label={pendingAction === 'quote' ? 'جارٍ إرسال العرض...' : 'إرسال العرض للعميل'} tone="primary" loading={pendingAction === 'quote'} disabled={pendingAction !== null || exchange?.status === 'pending'} onPress={() => void handleQuote()} />
+            <Text role="titleSm">طلب تسعير WLT وموافقة العميل</Text>
+            <TextField label="القيمة المقترحة بالوحدة الصغرى" value={form.proposedAmountMinorUnits} keyboardType="numeric" onChangeText={(value) => updateForm('proposedAmountMinorUnits', value)} disabled={pendingAction !== null} />
+            <TextField label="العملة المقترحة" value={form.proposedCurrency} autoCapitalize="characters" onChangeText={(value) => updateForm('proposedCurrency', value)} disabled={pendingAction !== null} />
+            <TextField label="سبب الاقتراح" value={form.proposalReason} multiline numberOfLines={3} maxLength={2000} onChangeText={(value) => updateForm('proposalReason', value)} disabled={pendingAction !== null} />
+            <Button label={pendingAction === 'quote' ? 'جارٍ إرسال العرض...' : 'إرسال العرض للعميل'} tone="primary" loading={pendingAction === 'quote'} disabled={pendingAction !== null || !quoteEligible || exchange?.status === 'pending'} onPress={() => void handleQuote()} />
           </Box>
 
           <Box gap={2}>

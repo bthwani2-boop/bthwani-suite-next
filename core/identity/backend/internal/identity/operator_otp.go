@@ -80,8 +80,8 @@ func (r *Repository) RequestOtpForOperatorContext(
 		username := role + "-" + phone
 		_, err = tx.ExecContext(ctx, `
 			INSERT INTO identity_actors
-				(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, active, updated_at)
-			VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, false, now())`,
+				(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
+			VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, 'PENDING_ACTIVATION', 1, now())`,
 			actorID, username, operatorContextID, phone, pq.Array([]string{role}), string(permissions))
 		if err != nil {
 			return IssueActivationResult{}, mapUniqueViolation(err)

@@ -33,7 +33,6 @@ DshDeliveryExceptionReasonCode:
     - vehicle_breakdown
     - accident
     - damaged_order
-    - cash_collection_issue
     - weather_or_road_block
     - proof_unavailable
     - handoff_shortage
@@ -357,11 +356,14 @@ DshDeclineAssignmentRequest:
 
 DshUpdateDeliveryStatusRequest:
   type: object
-  required: [status]
+  required: [status, version]
   properties:
     status:
       type: string
       enum: [driver_arrived_store, picked_up, arrived_customer]
+    version: { type: integer, minimum: 1 }
+    latitude: { type: number, minimum: -90, maximum: 90 }
+    longitude: { type: number, minimum: -180, maximum: 180 }
 
 DshSubmitPoDRequest:
   type: object
@@ -386,7 +388,7 @@ DshVisitStatus:
 
 DshCheckType:
   type: string
-  enum: [location_verified, documents_uploaded, product_list_submitted, equipment_checked, safety_compliant, hygiene_compliant]
+  pattern: "^[a-z][a-z0-9_]{2,63}$"
 
 DshCheckStatus:
   type: string
@@ -851,13 +853,17 @@ DshSpecialRequestResponse:
     version: { type: integer }
     workflowStage: { type: ["string", "null"] }
     customerNotes: { type: ["string", "null"] }
-    currency: { type: ["string", "null"] }
-    estimatedAmountReference:
-      type: ["string", "null"]
-      description: "Deprecated: use estimatedAmountMinorUnits/currency."
-      deprecated: true
-    estimatedAmountMinorUnits: { type: ["integer", "null"], format: int64 }
+    wltQuoteId: { type: ["string", "null"], format: uuid }
+    wltQuotePolicyId: { type: ["string", "null"] }
+    wltQuotePolicyVersion: { type: ["integer", "null"], minimum: 1 }
+    wltQuoteVersion: { type: ["integer", "null"], minimum: 1 }
+    wltQuoteAmountMinorUnits: { type: ["integer", "null"], format: int64, minimum: 1 }
+    wltQuoteCurrency: { type: ["string", "null"], minLength: 3, maxLength: 3 }
+    wltQuoteHash: { type: ["string", "null"] }
+    wltQuoteExpiresAt: { type: ["string", "null"], format: date-time }
     wltPaymentSessionId: { type: ["string", "null"] }
+    lastWltStatus: { type: ["string", "null"], enum: [authorized, reference_created, cod_pending, captured, cod_finalized, failed, expired, null] }
+    lastWltEventAt: { type: ["string", "null"], format: date-time }
     correlationId: { type: ["string", "null"] }
     productUrl: { type: ["string", "null"] }
     quantity: { type: ["integer", "null"] }
@@ -880,7 +886,7 @@ DshSpecialRequestResponse:
     updatedAt: { type: string, format: date-time }
     completedAt: { type: ["string", "null"], format: date-time }
     cancelledAt: { type: ["string", "null"], format: date-time }
-    quotePreparedAt: { type: ["string", "null"], format: date-time }
+    wltQuoteIssuedAt: { type: ["string", "null"], format: date-time }
     customerApprovedAt: { type: ["string", "null"], format: date-time }
     purchaseBatchId: { type: ["string", "null"] }
     purchasedAt: { type: ["string", "null"], format: date-time }
@@ -918,10 +924,10 @@ DshUpdateSpecialRequest:
     workflowStage: { type: ["string", "null"] }
     assignedOperatorId: { type: ["string", "null"] }
     rejectionReason: { type: ["string", "null"] }
-    estimatedAmountMinorUnits: { type: ["integer", "null"], format: int64 }
-    wltPaymentSessionId: { type: ["string", "null"] }
-    currency: { type: ["string", "null"] }
-    quotePreparedAt: { type: ["string", "null"], format: date-time }
+    quotePolicyId: { type: ["string", "null"] }
+    proposedAmountMinorUnits: { type: ["integer", "null"], format: int64, minimum: 1 }
+    proposedCurrency: { type: ["string", "null"], minLength: 3, maxLength: 3 }
+    proposalReason: { type: ["string", "null"], minLength: 5, maxLength: 2000 }
     customerApprovedAt: { type: ["string", "null"], format: date-time }
     purchaseBatchId: { type: ["string", "null"] }
     purchasedAt: { type: ["string", "null"], format: date-time }

@@ -210,6 +210,26 @@ foreach ($actor in $actors) {
     Assert-Property -Value $payouts -Name "payoutRequests" -Context "$actorType payout response"
   }
 
+  if ($actorType -eq "field") {
+    $destination = Invoke-DshRead `
+      -Path "/dsh/field/me/finance/payout-destination" `
+      -Token $actorToken `
+      -CorrelationId "$correlationPrefix-payout-destination"
+    Assert-Property -Value $destination -Name "payoutDestination" -Context "field payout destination response"
+    if ([string]$destination.payoutDestination.ownerActorType -ne "field" -or
+        [string]$destination.payoutDestination.ownerActorId -ne $actorId) {
+      throw "field payout destination returned the wrong owner."
+    }
+    if ([string]$destination.payoutDestination.destinationMethod -ne "official_wallet") {
+      throw "field payout destination is not the canonical official_wallet method."
+    }
+    if ([string]::IsNullOrWhiteSpace([string]$destination.payoutDestination.maskedDestinationReference) -or
+        [string]$destination.payoutDestination.maskedDestinationReference -eq "LOCAL-FIELD-DESTINATION-0001") {
+      throw "field payout destination did not return a masked reference."
+    }
+    Write-Host "  field/$actorId canonical payout destination readback: PASS"
+  }
+
   Write-Host "  $actorType/$actorId representative finance parity: PASS"
 }
 

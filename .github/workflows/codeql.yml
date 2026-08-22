@@ -4,12 +4,14 @@ on:
   pull_request:
     branches: ["**"]
   push:
-    branches: [master]
+    branches: ["**"]
   schedule:
     - cron: "17 3 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: codeql-${{ github.event.pull_request.number || github.ref }}
@@ -21,139 +23,134 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
-      actions: ${{ steps.route.outputs.actions }}
-      javascript: ${{ steps.route.outputs.javascript }}
-      go_matrix: ${{ steps.route.outputs.go_matrix }}
+      languages: ${{ steps.scope.outputs.languages }}
+      go_matrix: ${{ steps.scope.outputs.go_matrix }}
+      actions_required: ${{ steps.scope.outputs.actions_required }}
+      skip_duplicate_push: ${{ steps.scope.outputs.skip_duplicate_push }}
     steps:
-      - name: Checkout immutable source history
+      - name: Checkout immutable candidate history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
           show-progress: false
-
-      - name: Set up locked Node runtime
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: "24.17.0"
-
-      - name: Reuse contextual CI routing
+      - name: Resolve affected CodeQL languages
         id: scope
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
+          EVENT_BEFORE: ${{ github.event.before }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          EXPECTED_HEAD_SHA: ${{ github.sha }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          HEAD_SHA="$(git rev-parse HEAD)"
-          MODE=affected
-          BASE_SHA="${PR_BASE_SHA:-}"
-
-          if [[ "${EVENT_NAME}" != "pull_request" ]]; then
-            MODE=full
-            BASE_SHA="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${HEAD_SHA}")"
-          elif [[ -z "${BASE_SHA}" ]]; then
-            BASE_SHA="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${HEAD_SHA}")"
-          elif git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" -- | grep -Eq '^\.github/workflows/'; then
-            # CI verification machinery must never certify itself partially.
-            MODE=full
+          all_modules=(
+            dsh=services/dsh/backend
+            wlt=services/wlt/backend
+            identity=core/identity/backend
+            workforce=core/workforce/backend
+            platform-control=core/platform-control/backend
+            providers=core/providers/backend
+          )
+          full=false
+          skip_duplicate=false
+          if [[ "${EVENT_NAME}" == "schedule" || "${EVENT_NAME}" == "workflow_dispatch" || ( "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "master" ) ]]; then
+            full=true
+          elif [[ "${EVENT_NAME}" == "push" ]]; then
+            open_pr_count="$(gh api --method GET \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "/repos/${GITHUB_REPOSITORY}/pulls" \
+              -f state=open \
+              -f head="${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}" \
+              -f per_page=1 \
+              --jq 'length')"
+            if [[ "${open_pr_count}" != "0" ]]; then skip_duplicate=true; fi
           fi
 
-          CI_BASE_SHA="${BASE_SHA}" \
-          CI_HEAD_SHA="${HEAD_SHA}" \
-          CI_MODE="${MODE}" \
-          node tools/scripts/detect-ci-context.mjs
-
-      - name: Build CodeQL execution matrix
-        id: route
-        shell: bash
-        env:
-          FULL: ${{ steps.scope.outputs.full_verification }}
-          WORKFLOW: ${{ steps.scope.outputs.workflow }}
-          GOVERNANCE: ${{ steps.scope.outputs.governance }}
-          SECURITY: ${{ steps.scope.outputs.security }}
-          NODE: ${{ steps.scope.outputs.node }}
-          DSH: ${{ steps.scope.outputs.dsh }}
-          WLT: ${{ steps.scope.outputs.wlt }}
-          IDENTITY: ${{ steps.scope.outputs.identity }}
-          WORKFORCE: ${{ steps.scope.outputs.workforce }}
-          PLATFORM: ${{ steps.scope.outputs.platform }}
-          PROVIDERS: ${{ steps.scope.outputs.providers }}
-        run: |
-          set -euo pipefail
-
+          js=false
+          go=false
           actions=false
-          javascript=false
-          if [[ "${WORKFLOW}" == "true" ]]; then actions=true; fi
-          if [[ "${NODE}" == "true" || "${GOVERNANCE}" == "true" || "${SECURITY}" == "true" ]]; then javascript=true; fi
-
-          include='[]'
-          add_go() {
-            local key="$1" mod="$2" dir="$3"
-            include="$(jq -c --arg key "$key" --arg mod "$mod" --arg dir "$dir" '. + [{key:$key,go_mod:$mod,workdir:$dir}]' <<<"${include}")"
+          modules=()
+          add_module() {
+            local candidate="$1"
+            for existing in "${modules[@]:-}"; do
+              if [[ "${existing}" == "${candidate}" ]]; then return; fi
+            done
+            modules+=("${candidate}")
           }
 
-          if [[ "${DSH}" == "true" ]]; then add_go dsh services/dsh/backend/go.mod services/dsh/backend; fi
-          if [[ "${WLT}" == "true" ]]; then add_go wlt services/wlt/backend/go.mod services/wlt/backend; fi
-          if [[ "${IDENTITY}" == "true" ]]; then add_go identity core/identity/backend/go.mod core/identity/backend; fi
-          if [[ "${WORKFORCE}" == "true" ]]; then add_go workforce core/workforce/backend/go.mod core/workforce/backend; fi
-          if [[ "${PLATFORM}" == "true" ]]; then add_go platform-control core/platform-control/backend/go.mod core/platform-control/backend; fi
-          if [[ "${PROVIDERS}" == "true" ]]; then add_go providers core/providers/backend/go.mod core/providers/backend; fi
+          if [[ "${full}" == "true" ]]; then
+            js=true
+            go=true
+            actions=true
+            modules=("${all_modules[@]}")
+          elif [[ "${skip_duplicate}" != "true" ]]; then
+            head_sha="$(git rev-parse HEAD)"
+            if [[ -z "${EXPECTED_HEAD_SHA}" || "${head_sha}" != "${EXPECTED_HEAD_SHA}" ]]; then
+              echo "::error::CodeQL scope checkout SHA mismatch: expected=${EXPECTED_HEAD_SHA:-<empty>} actual=${head_sha}"
+              exit 1
+            fi
+            base_sha="${PR_BASE_SHA:-${EVENT_BEFORE:-}}"
+            if [[ -z "${base_sha}" || "${base_sha}" =~ ^0+$ ]]; then
+              base_sha="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${head_sha}")"
+            fi
+            while IFS= read -r file; do
+              [[ -n "${file}" ]] || continue
+              case "${file}" in
+                .github/actions/*|.github/workflows/*) actions=true ;;
+              esac
+              case "${file}" in
+                *.js|*.jsx|*.ts|*.tsx|*.mjs|*.cjs|package.json|pnpm-lock.yaml) js=true ;;
+              esac
+              case "${file}" in
+                go.work|.go-version)
+                  go=true
+                  modules=("${all_modules[@]}")
+                  ;;
+                services/dsh/backend/*) go=true; add_module dsh=services/dsh/backend ;;
+                services/wlt/backend/*) go=true; add_module wlt=services/wlt/backend ;;
+                core/identity/backend/*) go=true; add_module identity=core/identity/backend ;;
+                core/workforce/backend/*) go=true; add_module workforce=core/workforce/backend ;;
+                core/platform-control/backend/*) go=true; add_module platform-control=core/platform-control/backend ;;
+                core/providers/backend/*) go=true; add_module providers=core/providers/backend ;;
+              esac
+            done < <(git diff --name-only "${base_sha}" "${head_sha}")
+          fi
 
+          languages='[]'
+          if [[ "${js}" == "true" ]]; then languages="$(jq -c '. + ["javascript-typescript"]' <<<"${languages}")"; fi
+          if [[ "${go}" == "true" ]]; then languages="$(jq -c '. + ["go"]' <<<"${languages}")"; fi
+          go_modules="$(printf '%s\n' "${modules[@]:-}" | jq -Rsc 'split("\n") | map(select(length > 0) | split("=") | {key: .[0], workdir: .[1]})')"
           {
-            printf 'actions=%s\n' "${actions}"
-            printf 'javascript=%s\n' "${javascript}"
-            printf 'go_matrix={"include":%s}\n' "${include}"
+            echo "languages=${languages}"
+            echo "go_matrix=${go_modules}"
+            echo "actions_required=${actions}"
+            echo "skip_duplicate_push=${skip_duplicate}"
           } >> "${GITHUB_OUTPUT}"
-
           {
-            echo "### CodeQL contextual routing"
+            echo "### CodeQL scope"
+            echo "- Languages: ${languages}"
+            echo "- Go modules: ${go_modules:-[]}"
             echo "- Actions: ${actions}"
-            echo "- JavaScript/TypeScript: ${javascript}"
-            echo "- Go matrix: ${include}"
+            echo "- Duplicate development push skipped: ${skip_duplicate}"
           } >> "${GITHUB_STEP_SUMMARY}"
-
-  analyze-actions:
-    name: Analyze actions
-    needs: [scope]
-    if: ${{ needs.scope.outputs.actions == 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    permissions:
-      contents: read
-      security-events: write
-    steps:
-      - name: Checkout immutable source
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          persist-credentials: false
-          show-progress: false
-
-      - name: Initialize CodeQL
-        uses: github/codeql-action/init@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
-        with:
-          languages: actions
-          build-mode: none
-          queries: security-extended
-
-      - name: Perform CodeQL analysis
-        uses: github/codeql-action/analyze@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
-        with:
-          category: "/language:actions"
 
   analyze-javascript-typescript:
     name: Analyze javascript-typescript
     needs: [scope]
-    if: ${{ needs.scope.outputs.javascript == 'true' }}
+    if: ${{ needs.scope.outputs.skip_duplicate_push != 'true' && contains(needs.scope.outputs.languages, 'javascript-typescript') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
       security-events: write
     steps:
-      - name: Checkout immutable source
+      - name: Checkout immutable candidate source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
           show-progress: false
 
@@ -172,7 +169,7 @@ jobs:
   analyze-go:
     name: Analyze go (${{ matrix.key }})
     needs: [scope]
-    if: ${{ needs.scope.outputs.go_matrix != '{"include":[]}' }}
+    if: ${{ needs.scope.outputs.skip_duplicate_push != 'true' && contains(needs.scope.outputs.languages, 'go') && needs.scope.outputs.go_matrix != '[]' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -180,19 +177,27 @@ jobs:
       security-events: write
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.scope.outputs.go_matrix) }}
+      matrix:
+        include: ${{ fromJSON(needs.scope.outputs.go_matrix) }}
     steps:
-      - name: Checkout immutable source
+      - name: Checkout immutable candidate source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
           show-progress: false
 
       - name: Set up locked Go runtime
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
-          go-version-file: ${{ matrix.go_mod }}
-          cache-dependency-path: ${{ matrix.workdir }}/go.sum
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: |
+            services/dsh/backend/go.sum
+            services/wlt/backend/go.sum
+            core/identity/backend/go.sum
+            core/workforce/backend/go.sum
+            core/platform-control/backend/go.sum
+            core/providers/backend/go.sum
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
@@ -200,48 +205,89 @@ jobs:
           languages: go
           build-mode: manual
           queries: security-extended
-          dependency-caching: true
 
-      - name: Build ${{ matrix.key }} backend for analysis
-        working-directory: ${{ matrix.workdir }}
-        run: go build ./...
+      - name: Build affected Go module
+        shell: bash
+        env:
+          GOWORK: off
+          GO_MODULE: ${{ matrix.workdir }}
+        run: |
+          set -euo pipefail
+          echo "CodeQL build: ${GO_MODULE}"
+          cd "${GO_MODULE}"
+          go build ./...
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
         with:
           category: "/language:go-${{ matrix.key }}"
 
+  analyze-actions:
+    name: Analyze actions
+    needs: [scope]
+    if: ${{ needs.scope.outputs.skip_duplicate_push != 'true' && needs.scope.outputs.actions_required == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout immutable candidate source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+          show-progress: false
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
+        with:
+          languages: actions
+          build-mode: none
+          queries: security-extended
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
+        with:
+          category: "/language:actions"
+
   result:
     name: CodeQL result
-    needs: [scope, analyze-actions, analyze-javascript-typescript, analyze-go]
+    needs: [scope, analyze-javascript-typescript, analyze-go, analyze-actions]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
     steps:
-      - name: Enforce routed CodeQL results
+      - name: Enforce applicable CodeQL results
         shell: bash
         env:
           SCOPE_RESULT: ${{ needs.scope.result }}
-          ACTIONS_RESULT: ${{ needs.analyze-actions.result }}
           JAVASCRIPT_RESULT: ${{ needs.analyze-javascript-typescript.result }}
           GO_RESULT: ${{ needs.analyze-go.result }}
+          ACTIONS_RESULT: ${{ needs.analyze-actions.result }}
+          LANGUAGES: ${{ needs.scope.outputs.languages }}
+          ACTIONS_REQUIRED: ${{ needs.scope.outputs.actions_required }}
+          SKIP_DUPLICATE_PUSH: ${{ needs.scope.outputs.skip_duplicate_push }}
         run: |
           set -euo pipefail
-          printf 'scope=%s actions=%s javascript=%s go=%s\n' \
-            "${SCOPE_RESULT}" "${ACTIONS_RESULT}" "${JAVASCRIPT_RESULT}" "${GO_RESULT}"
-
           if [[ "${SCOPE_RESULT}" != "success" ]]; then
-            echo "::error title=CodeQL routing failed::scope classifier did not complete successfully"
+            echo "::error title=CodeQL scope failed::scope resolution did not complete"
             exit 1
           fi
-
-          for result in "${ACTIONS_RESULT}" "${JAVASCRIPT_RESULT}" "${GO_RESULT}"; do
-            if [[ "${result}" == "failure" || "${result}" == "cancelled" ]]; then
-              echo "::error title=CodeQL analysis failed::one or more required routed analyzers failed or were cancelled"
-              exit 1
-            fi
-          done
-
-          echo "CodeQL routed analysis passed. Skipped analyzers were outside the affected scope."
+          if [[ "${SKIP_DUPLICATE_PUSH}" == "true" ]]; then
+            echo "CodeQL development push skipped because an open PR owns the same branch analysis."
+            exit 0
+          fi
+          if [[ "${LANGUAGES}" == *javascript-typescript* && "${JAVASCRIPT_RESULT}" != "success" ]]; then
+            echo "::error title=CodeQL JavaScript analysis failed::applicable source-language analysis failed"
+            exit 1
+          fi
+          if [[ "${LANGUAGES}" == *'go'* && "${GO_RESULT}" != "success" ]]; then
+            echo "::error title=CodeQL Go analysis failed::applicable source-language analysis failed"
+            exit 1
+          fi
+          if [[ "${ACTIONS_REQUIRED}" == "true" && "${ACTIONS_RESULT}" != "success" ]]; then
+            echo "::error title=CodeQL actions analysis failed::workflow analysis failed"
+            exit 1
+          fi
+          echo "All applicable CodeQL analyses passed."

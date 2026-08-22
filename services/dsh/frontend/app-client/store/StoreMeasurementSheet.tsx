@@ -99,8 +99,7 @@ export const StoreMeasurementSheet = React.memo(function StoreMeasurementSheet({
               </View>
 
               <Text style={styles.priceNotice}>
-                يُثبت السعر والتوافر من الكتالوج المركزي عند قبول DSH لعملية
-                السلة.
+                يتم تثبيت السعر والتوافر الفعلي عند إضافة الصنف إلى السلة.
               </Text>
 
               <View style={styles.qtyRow}>

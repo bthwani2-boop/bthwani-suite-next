@@ -26,12 +26,15 @@ import {
   usePartnerReadinessController,
   usePartnerStoresController,
   usePartnerVisitsController,
+  DOCUMENT_TYPE_LABELS,
+  DOCUMENT_REVIEW_STATUS_LABELS,
+  PARTNER_FIELD_VISIT_STATUS_LABELS,
 } from "../../shared/partner";
 import type { DshPartnerActivationStatus } from "../../shared/partner";
 import { OperatorDeliveryPricingPanel } from "./stores/OperatorDeliveryPricingPanel";
 
 type Tab = "overview" | "documents" | "visits" | "stores" | "readiness" | "audit";
-type DocumentDecision = "rejected" | "needs_resubmit";
+type DocumentDecision = "approved" | "rejected" | "needs_resubmit";
 
 const TABS: readonly Tab[] = ["overview", "documents", "visits", "stores", "readiness", "audit"];
 const TAB_LABELS: Record<Tab, string> = {
@@ -42,7 +45,7 @@ const TAB_LABELS: Record<Tab, string> = {
   readiness: "الجاهزية",
   audit: "سجل التدقيق",
 };
-const REASON_REQUIRED = new Set<string>(["ops_rejected", "partner_deactivated", "client_hidden"]);
+const REASON_REQUIRED = new Set<string>(["ops_rejected", "partner_terminated", "client_hidden"]);
 
 function card(title: string, children: ReactNode): ReactNode {
   return (
@@ -226,11 +229,11 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
                       <tbody>
                         {docs.state.documents.map((doc) => (
                           <tr key={doc.id}>
-                            <CpTableCell>{doc.documentType}</CpTableCell>
-                            <CpTableCell>{doc.documentStatus}</CpTableCell>
+                            <CpTableCell>{DOCUMENT_TYPE_LABELS[doc.documentType as keyof typeof DOCUMENT_TYPE_LABELS] ?? "نوع وثيقة غير معروف"}</CpTableCell>
+                            <CpTableCell>{DOCUMENT_REVIEW_STATUS_LABELS[doc.reviewStatus] ?? "حالة غير معروفة"}</CpTableCell>
                             <CpTableCell>
                               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                                <CpButton disabled={docs.actionState.kind === "loading" || doc.documentStatus === "approved"} onClick={() => void docs.review(doc.id, { decision: "approved" })}>اعتماد</CpButton>
+                                <CpButton disabled={docs.actionState.kind === "loading" || doc.reviewStatus === "verified"} onClick={() => { setDocumentDecision({ documentId: doc.id, decision: "approved" }); setDocumentReason(""); }}>اعتماد</CpButton>
                                 <CpButton disabled={docs.actionState.kind === "loading"} onClick={() => { setDocumentDecision({ documentId: doc.id, decision: "rejected" }); setDocumentReason(""); }}>رفض</CpButton>
                                 <CpButton disabled={docs.actionState.kind === "loading"} onClick={() => { setDocumentDecision({ documentId: doc.id, decision: "needs_resubmit" }); setDocumentReason(""); }}>طلب إعادة الرفع</CpButton>
                               </div>
@@ -259,7 +262,7 @@ export function PartnerDetailOperationalScreen({ partnerId, onBack }: PartnerDet
               : visits.state.kind === "error" ? <CpStatePanel role="alert" title="تعذر تحميل الزيارات الميدانية" code={visits.state.message}><CpRetryButton onClick={() => void visits.reload()}>إعادة المحاولة</CpRetryButton></CpStatePanel>
                 : (
                   <CpTable aria-label="زيارات الشريك الميدانية"><thead><tr><CpTableHeaderCell>الحالة</CpTableHeaderCell><CpTableHeaderCell>الملاحظات</CpTableHeaderCell><CpTableHeaderCell>الموقع</CpTableHeaderCell><CpTableHeaderCell>التاريخ</CpTableHeaderCell></tr></thead><tbody>
-                    {visits.state.visits.map((visit) => <tr key={visit.id}><CpTableCell>{visit.visitStatus}</CpTableCell><CpTableCell>{visit.visitNotes || "—"}</CpTableCell><CpTableCell>{visit.locationLatitude === null ? "—" : `${visit.locationLatitude}, ${visit.locationLongitude}`}</CpTableCell><CpTableCell>{visit.submittedAt ? new Date(visit.submittedAt).toLocaleString("ar-SA") : "—"}</CpTableCell></tr>)}
+                    {visits.state.visits.map((visit) => <tr key={visit.id}><CpTableCell>{PARTNER_FIELD_VISIT_STATUS_LABELS[visit.visitStatus] ?? "حالة غير معروفة"}</CpTableCell><CpTableCell>{visit.visitNotes || "—"}</CpTableCell><CpTableCell>{visit.locationLatitude === null ? "—" : `${visit.locationLatitude}, ${visit.locationLongitude}`}</CpTableCell><CpTableCell>{visit.submittedAt ? new Date(visit.submittedAt).toLocaleString("ar-SA") : "—"}</CpTableCell></tr>)}
                   </tbody></CpTable>
                 )
         ) : null}

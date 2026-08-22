@@ -1,80 +1,76 @@
 import React from 'react';
-import type { GovernedPartnerOrderItem } from '../shared/partner/partner.adapters';
+import { StateView } from '@bthwani/ui-kit';
 import { DshPartnerRouteRenderer } from './DshPartnerRouteRenderer';
+import {
+  buildDshPartnerSupportDirectoryRouteFromFlow,
+  buildDshPartnerSupportScreenRoute,
+} from './partner-navigation';
 import { OperationalOrderDecisionScreen } from './orders/OperationalOrderDecisionScreen';
 import { OperationalOrdersInboxScreen } from './orders/OperationalOrdersInboxScreen';
 import { PartnerDispatchTrackingScreen } from './orders/PartnerDispatchTrackingScreen';
 
-type LegacyRendererProps = React.ComponentProps<typeof DshPartnerRouteRenderer>;
-type Props = Omit<LegacyRendererProps, 'handleMarkReady' | 'partnerOrders' | 'refreshOrders'> & {
-  readonly partnerOrders: readonly GovernedPartnerOrderItem[];
-  readonly refreshOrders: () => void | Promise<void>;
-};
+type Props = React.ComponentProps<typeof DshPartnerRouteRenderer>;
 
-/**
- * Journey-specific renderer that owns all operational order routes. The legacy
- * mark-ready callback is injected only when delegating unrelated routes and is
- * unreachable from the inbox/decision journey.
- */
 export function DshPartnerOrderJourneyRenderer(props: Props): React.ReactElement {
-  const activeOrder = props.partnerOrders.find((order) => order.id === props.activeOrderId)
-    ?? props.partnerOrders[0];
-  const activeOrderId = activeOrder?.id ?? props.activeOrderId ?? props.initialOrderId;
+  const { route, navigation } = props;
 
-  if (props.route === 'order-rejection') {
+  if (route.kind === 'order-rejection') {
+    const activeOrder = props.partnerOrders.find((order) => order.id === route.orderId);
     return props.renderSurfaceShell(
       <OperationalOrderDecisionScreen
         order={activeOrder}
-        orderId={activeOrderId}
+        orderId={route.orderId}
         refreshOrders={props.refreshOrders}
-        onBack={props.openOrdersBoard}
+        onBack={navigation.back}
       />,
     );
   }
 
-  if (
-    props.route === 'support-screen'
-    && props.selectedSupportScreen === 'order-out-for-delivery'
-  ) {
+  if (route.kind === 'support-screen' && route.screenId === 'order-out-for-delivery') {
+    if (!route.orderId) {
+      return props.renderSurfaceShell(
+        <StateView
+          title="حدد الطلب أولًا"
+          description="تتبع التسليم يحتاج معرّف طلب صريحًا في المسار ولا يعتمد على أول طلب في القائمة."
+          tone="warning"
+          actionLabel="العودة للطلبات"
+          onActionPress={() => navigation.navigate({ kind: 'inbox' }, 'replace')}
+        />,
+      );
+    }
     return props.renderSurfaceShell(
-      <PartnerDispatchTrackingScreen
-        orderId={activeOrderId}
-        onBack={props.returnToSupportDirectory}
-      />,
+      <PartnerDispatchTrackingScreen orderId={route.orderId} onBack={navigation.back} />,
     );
   }
 
-  if (props.route !== 'inbox') {
-    return <DshPartnerRouteRenderer {...props} handleMarkReady={() => undefined} />;
-  }
+  if (route.kind !== 'inbox') return <DshPartnerRouteRenderer {...props} />;
 
   return props.renderMainShell(
     <OperationalOrdersInboxScreen
       state={props.partnerOrdersState}
       items={props.partnerOrders}
       teamMembers={props.teamMembers}
-      searchMode={props.ordersSearchMode}
-      onCloseSearch={() => props.setOrdersSearchMode(false)}
+      searchMode={route.search ?? false}
+      onCloseSearch={() => navigation.navigate({ kind: 'inbox' }, 'replace')}
       onRetry={props.refreshOrders}
       onNavigateAction={(actionId, orderId) => {
-        props.setActiveOrderId(orderId);
         if (actionId === 'reject') {
-          props.setRoute('order-rejection');
+          navigation.navigate({ kind: 'order-rejection', orderId });
           return;
         }
         if (actionId === 'issue') {
-          props.openSupportCommandFromOperationalFlow('order-issue-queue', 'orders');
+          navigation.navigate(buildDshPartnerSupportDirectoryRouteFromFlow('order-issue-queue', 'orders', orderId));
           return;
         }
         if (actionId === 'handoff') {
-          props.openSupportCommandFromOperationalFlow('order-handoff', 'orders');
+          navigation.navigate(buildDshPartnerSupportDirectoryRouteFromFlow('order-handoff', 'orders', orderId));
           return;
         }
         if (actionId === 'delivering') {
-          props.openSupportCommandFromOperationalFlow('order-out-for-delivery', 'orders');
+          navigation.navigate(buildDshPartnerSupportDirectoryRouteFromFlow('order-out-for-delivery', 'orders', orderId));
           return;
         }
-        props.openSupportScreen('order-get', 'orders');
+        navigation.navigate(buildDshPartnerSupportScreenRoute('order-get', 'orders', orderId));
       }}
     />,
   );

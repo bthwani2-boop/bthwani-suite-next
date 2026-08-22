@@ -11,8 +11,44 @@ import (
 
 const walletCols = `id, actor_id, actor_type, status, currency,
 	available_balance_minor_units, pending_balance_minor_units, held_balance_minor_units,
+	collateral_reserved_balance_minor_units,
 	earned_total_minor_units, settled_total_minor_units, paid_total_minor_units,
-	last_ledger_entry_at, updated_at`
+	last_ledger_entry_at, updated_at,
+	COALESCE((SELECT minimum_collateral_minor_units FROM wlt_captain_collateral_policies cp
+		WHERE cp.operator_context_id = wlt_wallets.operator_context_id
+		  AND cp.enabled
+		  AND wlt_wallets.actor_type = 'captain'), 0),
+	COALESCE((SELECT SUM(d.outstanding_amount_minor_units) FROM wlt_provider_debts d
+		WHERE d.operator_context_id = wlt_wallets.operator_context_id
+		  AND d.provider_actor_type = wlt_wallets.actor_type
+		  AND d.provider_actor_id = wlt_wallets.actor_id
+		  AND d.currency = wlt_wallets.currency
+		  AND d.status IN ('open','partially_settled')), 0),
+	COALESCE((SELECT COUNT(*) FROM wlt_captain_collateral_positions p
+		WHERE p.operator_context_id = wlt_wallets.operator_context_id
+		  AND p.captain_id = wlt_wallets.actor_id
+		  AND p.currency = wlt_wallets.currency
+		  AND p.status = 'active'), 0),
+	CASE WHEN wlt_wallets.actor_type = 'captain'
+		  AND wlt_wallets.pending_balance_minor_units = 0
+		  AND wlt_wallets.held_balance_minor_units = 0
+		  AND COALESCE(wlt_wallets.cod_reserved_balance_minor_units, 0) = 0
+		  AND NOT EXISTS (
+			SELECT 1 FROM wlt_provider_debts d
+			WHERE d.operator_context_id = wlt_wallets.operator_context_id
+			  AND d.provider_actor_type = 'captain'
+			  AND d.provider_actor_id = wlt_wallets.actor_id
+			  AND d.currency = wlt_wallets.currency
+			  AND d.status IN ('open','partially_settled')
+		  )
+		THEN GREATEST(
+			wlt_wallets.collateral_reserved_balance_minor_units -
+			COALESCE((SELECT minimum_collateral_minor_units FROM wlt_captain_collateral_policies cp
+				WHERE cp.operator_context_id = wlt_wallets.operator_context_id AND cp.enabled), 0),
+			0
+		)
+		ELSE 0
+	END`
 
 // walletScanner is satisfied by both *sql.Row and *sql.Rows.
 type walletScanner interface {
@@ -25,8 +61,11 @@ func scanWallet(s walletScanner) (*Wallet, error) {
 	err := s.Scan(
 		&w.ID, &w.ActorID, &w.ActorType, &w.Status, &w.Currency,
 		&w.AvailableBalanceMinorUnits, &w.PendingBalanceMinorUnits, &w.HeldBalanceMinorUnits,
+		&w.CollateralReservedBalanceMinorUnits,
 		&w.EarnedTotalMinorUnits, &w.SettledTotalMinorUnits, &w.PaidTotalMinorUnits,
 		&lastLedgerEntryAt, &w.UpdatedAt,
+		&w.ProtectedMinimumCollateralMinorUnits, &w.OutstandingDebtMinorUnits,
+		&w.ActiveCollateralPositionCount, &w.ReleasableCollateralExcessMinorUnits,
 	)
 	if err != nil {
 		return nil, err

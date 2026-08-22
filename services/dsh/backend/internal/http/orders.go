@@ -1,6 +1,7 @@
 package http
 
 import (
+	"database/sql"
 	"errors"
 	"net/http"
 	"strconv"
@@ -32,29 +33,94 @@ func parseIfMatchVersion(w http.ResponseWriter, r *http.Request) (int, bool) {
 	return version, true
 }
 
-// POST /dsh/partner/orders/{orderId}/decision
-func (s *protectedStoreServer) handlePartnerOrderDecision(w http.ResponseWriter, r *http.Request) {
-	actor, ownedOrder, ok := s.partnerOrder(w, r)
-	if !ok {
-		return
+func parsePartnerMutationHeaders(w http.ResponseWriter, r *http.Request) (string, int, bool) {
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
+		store.SendError(w, http.StatusBadRequest, "IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key must contain between 8 and 200 characters")
+		return "", 0, false
 	}
-
-	var body struct {
-		Decision   string `json:"decision"` // "accept" or "reject"
-		ReasonCode string `json:"reasonCode"`
-		ReasonNote string `json:"reasonNote"`
-	}
-	if !decodeProtectedJSON(w, r, &body) {
-		return
-	}
-
-	idempotencyKey := r.Header.Get("Idempotency-Key")
-	if idempotencyKey == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "Idempotency-Key header is required")
-		return
-	}
-
 	version, ok := parseIfMatchVersion(w, r)
+	if !ok {
+		return "", 0, false
+	}
+	return idempotencyKey, version, true
+}
+
+type partnerOrderDecisionRequest struct {
+	Decision   string `json:"decision"`
+	Reason     string `json:"reason"`
+	ReasonCode string `json:"reasonCode"`
+	ReasonNote string `json:"reasonNote"`
+}
+
+func normalizePartnerDecisionReason(body partnerOrderDecisionRequest) (string, string) {
+	reasonCode := strings.TrimSpace(body.ReasonCode)
+	reasonNote := strings.TrimSpace(body.ReasonNote)
+	legacyReason := strings.TrimSpace(body.Reason)
+	if reasonCode == "" {
+		reasonCode = legacyReason
+	}
+	if reasonNote == "" {
+		reasonNote = legacyReason
+	}
+	return reasonCode, reasonNote
+}
+
+func (s *protectedStoreServer) currentPartnerOrderVersion(
+	w http.ResponseWriter,
+	r *http.Request,
+	orderID,
+	storeID string,
+) (int, bool) {
+	var version int
+	err := s.db.QueryRowContext(r.Context(), `
+		SELECT version
+		FROM dsh_orders
+		WHERE id=$1::uuid AND store_id=$2`, orderID, storeID).Scan(&version)
+	if errors.Is(err, sql.ErrNoRows) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
+		return 0, false
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve order version")
+		return 0, false
+	}
+	if version <= 0 {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "order version is invalid")
+		return 0, false
+	}
+	return version, true
+}
+
+func (s *protectedStoreServer) executePartnerOrderDecision(
+	w http.ResponseWriter,
+	r *http.Request,
+	actor store.StoreActor,
+	ownedOrder *orders.Order,
+	decision,
+	reasonCode,
+	reasonNote string,
+	requireExplicitConcurrency bool,
+) {
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if idempotencyKey == "" {
+		if requireExplicitConcurrency {
+			store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "Idempotency-Key header is required")
+			return
+		}
+		// The public accept/reject facade predates explicit mutation headers. A
+		// stable server-owned key preserves retry safety while every mutation is
+		// still executed by the single governed decision engine below.
+		idempotencyKey = "partner-order-" + decision + ":" + ownedOrder.ID
+	}
+
+	var version int
+	var ok bool
+	if strings.TrimSpace(r.Header.Get("If-Match-Version")) != "" || requireExplicitConcurrency {
+		version, ok = parseIfMatchVersion(w, r)
+	} else {
+		version, ok = s.currentPartnerOrderVersion(w, r, ownedOrder.ID, ownedOrder.StoreID)
+	}
 	if !ok {
 		return
 	}
@@ -63,9 +129,9 @@ func (s *protectedStoreServer) handlePartnerOrderDecision(w http.ResponseWriter,
 		OrderID:         ownedOrder.ID,
 		StoreID:         ownedOrder.StoreID,
 		ActorID:         actor.ID,
-		Decision:        body.Decision,
-		ReasonCode:      body.ReasonCode,
-		ReasonNote:      body.ReasonNote,
+		Decision:        decision,
+		ReasonCode:      reasonCode,
+		ReasonNote:      reasonNote,
 		ExpectedVersion: version,
 		IdempotencyKey:  idempotencyKey,
 	})
@@ -89,13 +155,71 @@ func (s *protectedStoreServer) handlePartnerOrderDecision(w http.ResponseWriter,
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order)})
 }
 
+// POST /dsh/partner/orders/{orderId}/decision
+// This is the explicit OCC/idempotency form used by governed automation and
+// advanced clients. Public accept/reject routes below execute through the same
+// mutation engine instead of maintaining separate state-transition logic.
+func (s *protectedStoreServer) handlePartnerOrderDecision(w http.ResponseWriter, r *http.Request) {
+	actor, ownedOrder, ok := s.partnerOrder(w, r)
+	if !ok {
+		return
+	}
+
+	var body partnerOrderDecisionRequest
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	decision := strings.TrimSpace(body.Decision)
+	reasonCode, reasonNote := normalizePartnerDecisionReason(body)
+	s.executePartnerOrderDecision(w, r, actor, ownedOrder, decision, reasonCode, reasonNote, true)
+}
+
+// POST /dsh/partner/orders/{orderId}/accept
+// Public partner contract facade. It retains the documented endpoint while the
+// actual mutation is owned exclusively by DecidePartnerOrder. If callers send
+// If-Match-Version/Idempotency-Key they are honored; older callers receive a
+// server-owned stable idempotency key and an OCC snapshot that still fails on
+// a concurrent version change inside DecidePartnerOrder.
+func (s *protectedStoreServer) handlePartnerAcceptOrder(w http.ResponseWriter, r *http.Request) {
+	actor, ownedOrder, ok := s.partnerOrder(w, r)
+	if !ok {
+		return
+	}
+	s.executePartnerOrderDecision(w, r, actor, ownedOrder, "accept", "", "", false)
+}
+
+// POST /dsh/partner/orders/{orderId}/reject
+func (s *protectedStoreServer) handlePartnerRejectOrder(w http.ResponseWriter, r *http.Request) {
+	actor, ownedOrder, ok := s.partnerOrder(w, r)
+	if !ok {
+		return
+	}
+	var body partnerOrderDecisionRequest
+	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+	reasonCode, reasonNote := normalizePartnerDecisionReason(body)
+	if reasonCode == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "rejection reason is required")
+		return
+	}
+	s.executePartnerOrderDecision(w, r, actor, ownedOrder, "reject", reasonCode, reasonNote, false)
+}
+
 // POST /dsh/partner/orders/{orderId}/preparing
 func (s *protectedStoreServer) handleMarkPreparing(w http.ResponseWriter, r *http.Request) {
 	actor, ownedOrder, ok := s.partnerOrder(w, r)
 	if !ok {
 		return
 	}
-	order, err := orders.MarkPreparing(s.db, ownedOrder.ID, actor.ID)
+	idempotencyKey, expectedVersion, ok := parsePartnerMutationHeaders(w, r)
+	if !ok {
+		return
+	}
+	order, err := orders.TransitionPartnerPreparation(s.db, orders.PartnerPreparationTransitionInput{
+		OrderID: ownedOrder.ID, StoreID: ownedOrder.StoreID, ActorID: actor.ID,
+		Operation: "prepare", ExpectedVersion: expectedVersion, IdempotencyKey: idempotencyKey,
+	})
 	if errors.Is(err, orders.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return
@@ -117,7 +241,14 @@ func (s *protectedStoreServer) handleMarkReadyForPickup(w http.ResponseWriter, r
 	if !ok {
 		return
 	}
-	order, err := orders.MarkReadyForPickup(s.db, ownedOrder.ID, actor.ID)
+	idempotencyKey, expectedVersion, ok := parsePartnerMutationHeaders(w, r)
+	if !ok {
+		return
+	}
+	order, err := orders.TransitionPartnerPreparation(s.db, orders.PartnerPreparationTransitionInput{
+		OrderID: ownedOrder.ID, StoreID: ownedOrder.StoreID, ActorID: actor.ID,
+		Operation: "ready", ExpectedVersion: expectedVersion, IdempotencyKey: idempotencyKey,
+	})
 	if errors.Is(err, orders.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "order not found")
 		return
@@ -132,8 +263,6 @@ func (s *protectedStoreServer) handleMarkReadyForPickup(w http.ResponseWriter, r
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order)})
 }
-
-
 
 // POST /dsh/operator/orders/{orderId}/cancel
 // Compatibility alias: all operator cancellation writes execute through the
@@ -159,6 +288,7 @@ func marshalOrder(o *orders.Order) map[string]any {
 	}
 	return map[string]any{
 		"id":               o.ID,
+		"version":          o.Version,
 		"checkoutIntentId": o.CheckoutIntentID,
 		"storeId":          o.StoreID,
 		"fulfillmentMode":  o.FulfillmentMode,

@@ -1,57 +1,29 @@
 ---
 name: bthwani-docker-journey-runtime
-version: 2026.07.17-v1
-summary: Route Docker and data-plane changes to bounded same-commit runtime evidence without upgrading static checks.
+version: 2026.08.18-v2
+summary: Select bounded runtime evidence for Docker, data, startup, health, persistence, and live HTTP behavior.
 ---
 
 # bthwani-docker-journey-runtime
 
-## Purpose
-
-Own runtime-evidence routing for Docker, data-plane, service startup, health, migrations, persistence, Redis, MinIO, and live HTTP behavior.
-
 ## Invoke when
 
-- Docker, data-plane, runtime configuration, service startup, database, Redis, MinIO, or live behavior changes.
-- The requested claim includes runtime, integration, persistence, release, or production behavior.
+Docker, service startup, runtime configuration, database, Redis, MinIO, live HTTP behavior, persistence, or runtime proof is affected or claimed.
 
-## Do not invoke when
+## Method
 
-- The task is static or documentation-only and makes no runtime claim.
-- Runtime is explicitly outside the proven affected scope.
+1. Pin exact branch/SHA and environment.
+2. Select only affected runtime profiles/services.
+3. Start them with the canonical runtime command.
+4. Verify health/readiness.
+5. Exercise claimed request/response behavior.
+6. Verify persistence/readback for mutations.
+7. Exercise the material failure path when applicable.
+8. Stop/clean runtime resources when the command owns their lifecycle.
 
-## Read before
+Static configuration or anti-stub checks are not runtime proof. Do not run broad runtime suites for documentation/agent-only changes or unrelated code.
 
-- `governance/GOVERNANCE.md`
-- `governance/policies/engineering.md`
-- `governance/policies/delivery.md`
-- `governance/contracts/sdlc/` when a formal lifecycle/evidence transition is requested
-- `package.json`
-- applicable runtime scripts, compose files, service manifests, migrations, and health endpoints
-
-## Authority boundary
-
-This skill selects and reconciles runtime evidence only. It cannot approve product, architecture, finance, QA, security, release, production, or final closure. A runtime declaration, health configuration, or static anti-stub guard is not proof that a runtime executed.
-
-## Required evidence
-
-1. Exact immutable commit and environment identity.
-2. Exact targeted runtime command and profiles.
-3. Startup and health result for affected services.
-4. Request/response evidence for claimed endpoints.
-5. Persistence or readback evidence when mutation or database state is claimed.
-6. Failure-path evidence when required by Product Truth or the affected behavior.
-7. Explicit missing evidence and blocker classification.
-
-## Forbidden
-
-- Running runtime gates for agent-only or documentation-only changes.
-- Treating memory repositories, mocks, seeds, fixtures, or declarations as live proof.
-- Using floating or unverified container references where the engineering/runtime contract requires immutable identity.
-- Moving service business schema into infrastructure provisioning.
-- Claiming production readiness from local or CI runtime smoke alone.
-
-## Required output
+## Output
 
 ```text
 resolved_commit_sha:
@@ -66,5 +38,3 @@ missing_evidence:
 decision:
 remaining_risk:
 ```
-
-Allowed decisions: `PASS`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `BLOCKED_EXTERNAL`, `RELEASE_BLOCK`, and `PROTOCOL_VIOLATION`.

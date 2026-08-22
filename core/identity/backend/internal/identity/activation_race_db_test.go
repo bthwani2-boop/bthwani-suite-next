@@ -12,6 +12,7 @@ import (
 func TestActivationConcurrentIssue(t *testing.T) {
 	db := openIdentityTestDB(t)
 	repo := newOtpTestRepository(t, db)
+	seedActivationTestIssuer(t, db)
 
 	// Create test actor
 	phone := "+967777000100"
@@ -22,8 +23,8 @@ func TestActivationConcurrentIssue(t *testing.T) {
 	}
 
 	_, err = db.ExecContext(context.Background(), `
-		INSERT INTO identity_actors (id, username, phone_e164, roles, active, permissions)
-		VALUES ($1, $2, $3, '{field}', false, '[]')`,
+		INSERT INTO identity_actors (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version)
+		VALUES ($1, $2, '', 'local-dsh', $3, '{field}', '[]', 'PROVISIONED', 1)`,
 		actorID, "race_issue_1", phone)
 	if err != nil {
 		t.Fatalf("insert actor: %v", err)
@@ -40,7 +41,7 @@ func TestActivationConcurrentIssue(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			_, err := repo.IssueActivationForActor(context.Background(), actorID, IssueActivationForActorInput{
-				IssuedByActorID:   "operator-1",
+				IssuedByActorID:   activationTestIssuerID,
 				ExpectedActorType: "field",
 				ExpectedSurface:   "app-field",
 			}, idempotencyKey, "corr-1")
@@ -71,6 +72,7 @@ func TestActivationConcurrentIssue(t *testing.T) {
 func TestActivationConcurrentConsumeAndRevoke(t *testing.T) {
 	db := openIdentityTestDB(t)
 	repo := newOtpTestRepository(t, db)
+	seedActivationTestIssuer(t, db)
 
 	phone := "+967777000101"
 	cleanupTestPhone(t, db, phone)
@@ -80,15 +82,15 @@ func TestActivationConcurrentConsumeAndRevoke(t *testing.T) {
 	}
 
 	_, err = db.ExecContext(context.Background(), `
-		INSERT INTO identity_actors (id, username, phone_e164, roles, active, permissions)
-		VALUES ($1, $2, $3, '{field}', false, '[]')`,
+		INSERT INTO identity_actors (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version)
+		VALUES ($1, $2, '', 'local-dsh', $3, '{field}', '[]', 'PROVISIONED', 1)`,
 		actorID, "race_consume_1", phone)
 	if err != nil {
 		t.Fatalf("insert actor: %v", err)
 	}
 
 	res, err := repo.IssueActivationForActor(context.Background(), actorID, IssueActivationForActorInput{
-		IssuedByActorID:   "operator-1",
+		IssuedByActorID:   activationTestIssuerID,
 		ExpectedActorType: "field",
 		ExpectedSurface:   "app-field",
 	}, "idem-2", "corr-2")
@@ -142,6 +144,7 @@ func TestActivationConcurrentConsumeAndRevoke(t *testing.T) {
 func TestActivationConcurrentConsumeDuplicates(t *testing.T) {
 	db := openIdentityTestDB(t)
 	repo := newOtpTestRepository(t, db)
+	seedActivationTestIssuer(t, db)
 
 	phone := "+967777000102"
 	cleanupTestPhone(t, db, phone)
@@ -151,15 +154,15 @@ func TestActivationConcurrentConsumeDuplicates(t *testing.T) {
 	}
 
 	_, err = db.ExecContext(context.Background(), `
-		INSERT INTO identity_actors (id, username, phone_e164, roles, active, permissions)
-		VALUES ($1, $2, $3, '{field}', false, '[]')`,
+		INSERT INTO identity_actors (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version)
+		VALUES ($1, $2, '', 'local-dsh', $3, '{field}', '[]', 'PROVISIONED', 1)`,
 		actorID, "race_consume_2", phone)
 	if err != nil {
 		t.Fatalf("insert actor: %v", err)
 	}
 
 	res, err := repo.IssueActivationForActor(context.Background(), actorID, IssueActivationForActorInput{
-		IssuedByActorID:   "operator-1",
+		IssuedByActorID:   activationTestIssuerID,
 		ExpectedActorType: "field",
 		ExpectedSurface:   "app-field",
 	}, "idem-3", "corr-3")

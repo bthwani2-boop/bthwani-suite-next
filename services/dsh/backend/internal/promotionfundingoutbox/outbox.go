@@ -8,15 +8,16 @@ import (
 )
 
 const (
-	EventCommit  = "commit"
-	EventRelease = "release"
-	EventReverse = "reverse"
+	EventCommit             = "commit"
+	EventRelease            = "release"
+	EventReverse            = "reverse"
+	EventReserveThenRelease = "reserve_then_release"
 )
 
 type Event struct {
 	ID                 string
 	EventType          string
-	OperatorContextID           string
+	OperatorContextID  string
 	CheckoutIntentID   string
 	CouponRedemptionID string
 	WLTReservationID   string
@@ -29,7 +30,7 @@ type Event struct {
 
 type EnqueueInput struct {
 	EventType          string
-	OperatorContextID           string
+	OperatorContextID  string
 	CheckoutIntentID   string
 	CouponRedemptionID string
 	WLTReservationID   string
@@ -42,7 +43,7 @@ type EnqueueInput struct {
 func Enqueue(tx *sql.Tx, input EnqueueInput) error {
 	if tx == nil || strings.TrimSpace(input.EventType) == "" || strings.TrimSpace(input.OperatorContextID) == "" ||
 		strings.TrimSpace(input.CheckoutIntentID) == "" || strings.TrimSpace(input.CouponRedemptionID) == "" ||
-		strings.TrimSpace(input.WLTReservationID) == "" || strings.TrimSpace(input.IdempotencyKey) == "" ||
+		(input.EventType != EventReserveThenRelease && strings.TrimSpace(input.WLTReservationID) == "") || strings.TrimSpace(input.IdempotencyKey) == "" ||
 		strings.TrimSpace(input.CorrelationID) == "" {
 		return fmt.Errorf("promotion funding outbox: required field is missing")
 	}
@@ -59,13 +60,17 @@ func Enqueue(tx *sql.Tx, input EnqueueInput) error {
 		if input.OrderID == nil || strings.TrimSpace(*input.OrderID) == "" || strings.TrimSpace(input.Reason) == "" {
 			return fmt.Errorf("promotion funding outbox: reverse requires orderId and reason")
 		}
+	case EventReserveThenRelease:
+		if input.OrderID != nil || strings.TrimSpace(input.Reason) == "" {
+			return fmt.Errorf("promotion funding outbox: reserve_then_release requires reason and no orderId")
+		}
 	default:
 		return fmt.Errorf("promotion funding outbox: unsupported event type %q", input.EventType)
 	}
 	_, err := tx.Exec(`INSERT INTO dsh_promotion_funding_outbox
 		(event_type,operator_context_id,checkout_intent_id,coupon_redemption_id,
 		 wlt_funding_reservation_id,order_id,reason,idempotency_key,correlation_id)
-		VALUES ($1,$2,$3::uuid,$4::uuid,$5,$6::uuid,$7,$8,$9)
+		VALUES ($1,$2,$3::uuid,$4::uuid,NULLIF($5,''),$6::uuid,$7,$8,$9)
 		ON CONFLICT (idempotency_key) DO NOTHING`,
 		input.EventType,
 		strings.TrimSpace(input.OperatorContextID),
@@ -98,7 +103,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 
 	rows, err := tx.Query(`SELECT id::TEXT,event_type,operator_context_id,
 		checkout_intent_id::TEXT,coupon_redemption_id::TEXT,
-		wlt_funding_reservation_id,COALESCE(order_id::TEXT,''),reason,
+		COALESCE(wlt_funding_reservation_id,''),COALESCE(order_id::TEXT,''),reason,
 		idempotency_key,correlation_id,attempt_count
 		FROM dsh_promotion_funding_outbox
 		WHERE status='pending' AND next_retry_at<=NOW()
@@ -175,6 +180,24 @@ func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
 		SET attempt_count = $2, last_error = $3,
 		    next_retry_at = NOW() + $4::interval, updated_at = NOW()
 		WHERE id = $1::uuid`, id, nextAttempt, cause.Error(), backoff.String())
+	return err
+}
+
+// MarkRetry keeps an ambiguous reserve reconciliation pending indefinitely.
+// A WLT outage must never turn into a terminal local state that stops trying
+// to discover and release a reservation created by the original idempotent
+// request.
+func MarkRetry(db *sql.DB, id string, attemptCount int, cause error) error {
+	nextAttempt := attemptCount + 1
+	backoff := time.Duration(1<<uint(min(nextAttempt, 10))) * time.Second
+	if backoff > 30*time.Minute {
+		backoff = 30 * time.Minute
+	}
+	_, err := db.Exec(`
+		UPDATE dsh_promotion_funding_outbox
+		SET status='pending', attempt_count=$2, last_error=$3,
+		    next_retry_at=NOW()+$4::interval, updated_at=NOW()
+		WHERE id=$1::uuid`, id, nextAttempt, cause.Error(), backoff.String())
 	return err
 }
 

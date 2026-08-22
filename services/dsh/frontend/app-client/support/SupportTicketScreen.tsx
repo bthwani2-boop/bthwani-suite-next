@@ -24,16 +24,17 @@ import {
 export type SupportTicketScreenProps = {
   readonly onOpenTicket?: (ticketId: string) => void;
   readonly onBack?: () => void;
+  readonly orderId?: string | undefined;
 };
 
-export function SupportTicketScreen({ onOpenTicket, onBack }: SupportTicketScreenProps = {}) {
+export function SupportTicketScreen({ onOpenTicket, onBack, orderId }: SupportTicketScreenProps = {}) {
   const identity = useIdentitySession();
   const { listState, actionState, reload, submitTicket, resetAction } =
     useSupportTicketController(identity.state.kind);
-  const [showForm, setShowForm] = React.useState(false);
-  const [subject, setSubject] = React.useState("");
+  const [showForm, setShowForm] = React.useState(Boolean(orderId));
+  const [subject, setSubject] = React.useState(orderId ? "مساعدة بخصوص الطلب" : "");
   const [description, setDescription] = React.useState("");
-  const [category, setCategory] = React.useState<DshTicketCategory>("other");
+  const [category, setCategory] = React.useState<DshTicketCategory>(orderId ? "order_issue" : "other");
 
   const closeForm = React.useCallback(() => {
     setShowForm(false);
@@ -45,6 +46,7 @@ export function SupportTicketScreen({ onOpenTicket, onBack }: SupportTicketScree
       subject: subject.trim(),
       description: description.trim(),
       category,
+      ...(orderId ? { orderId } : {}),
     });
     if (!ok) return;
     setShowForm(false);
@@ -82,7 +84,8 @@ export function SupportTicketScreen({ onOpenTicket, onBack }: SupportTicketScree
         {showForm ? (
           <Card>
             <View style={styles.form}>
-              <Text role="titleSm">تفاصيل التذكرة</Text>
+              <Text role="titleSm">{orderId ? "مراسلة مرتبطة بالطلب" : "تفاصيل التذكرة"}</Text>
+              {orderId ? <Text role="caption" tone="muted">ستصل الرسائل إلى فريق الدعم مع ربطها بالطلب من المصدر.</Text> : null}
               <View style={styles.chips}>
                 {SUPPORT_CLIENT_CATEGORIES.map((item) => (
                   <Button

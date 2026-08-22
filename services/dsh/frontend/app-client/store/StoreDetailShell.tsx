@@ -135,11 +135,19 @@ export function StoreDetailShell({
     if (!selectedProduct || isSubmitting) return;
     setIsSubmitting(true);
     setMutationError(null);
-    const accepted = await onAddToCart(
-      selectedProduct,
-      quantity,
-      selectedMode,
-    );
+    let accepted = false;
+    try {
+      accepted = await onAddToCart(
+        selectedProduct,
+        quantity,
+        selectedMode,
+      );
+    } catch (error) {
+      const message = error instanceof Error && error.message.trim()
+        ? error.message.trim()
+        : "تعذر الوصول إلى DSH لإضافة المنتج. أعد المحاولة.";
+      setMutationError(message);
+    }
     setIsSubmitting(false);
     if (accepted) {
       setIsAddedToCart(true);

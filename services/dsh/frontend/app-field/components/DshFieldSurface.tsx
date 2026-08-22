@@ -1,9 +1,9 @@
 // app-field — DshFieldSurface
 // Consolidated entrypoint surface for field partner onboarding app.
 import React from 'react';
-import { BackHandler, Platform, View, StatusBar } from 'react-native';
+import { View, StatusBar } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { spacing, colorRoles, StateView, TabBar, type TabBarItem } from '@bthwani/ui-kit';
+import { spacing, colorRoles, InlineNotice, StateView, TabBar, type TabBarItem } from '@bthwani/ui-kit';
 import { DshFieldProblemState } from './DshFieldProblemNotice';
 import { useDshFieldSurfaceModel } from '../field.surface-model';
 import type { DshFieldSurfaceProps } from '../dsh-field.routes';
@@ -16,28 +16,24 @@ import {
   completeFieldVisit,
   upsertReadinessCheck,
   createReadinessEscalation,
+  reconcileFieldMutation,
 } from '../../shared/field-readiness';
-
-function useAndroidBackHandler(onBackPress: () => boolean) {
-  React.useEffect(() => {
-    if (Platform.OS !== 'android') return undefined;
-    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
-    return () => subscription.remove();
-  }, [onBackPress]);
-}
 
 const FIELD_TAB_BAR_ITEMS: readonly TabBarItem[] = [
   { id: 'stores', label: 'الرئيسية', icon: 'home-outline', activeIcon: 'home' },
-  { id: 'history', label: 'السجل', icon: 'time-outline', activeIcon: 'time' },
-  { id: 'finance', label: 'المالية', icon: 'cash-outline', activeIcon: 'cash' },
+  { id: 'work-queue', label: 'المهام', icon: 'list-outline', activeIcon: 'list' },
+  { id: 'finance', label: 'محفظتي', icon: 'cash-outline', activeIcon: 'cash' },
   { id: 'profile', label: 'حسابي', icon: 'person-outline', activeIcon: 'person' },
 ];
 
-export function DshFieldSurface({ command, onExit, installationId }: DshFieldSurfaceProps = {}) {
-  const fieldSurface = useDshFieldSurfaceModel(command);
+export function DshFieldSurface({ route, navigation, installationId }: DshFieldSurfaceProps) {
+  const fieldSurface = useDshFieldSurfaceModel(route);
   const onboardingController = useFieldPartnerOnboardingController();
   const identity = useIdentitySession();
   const insets = useSafeAreaInsets();
+  const openAssignment = React.useCallback((assignmentId: string) => {
+    navigation.navigate({ kind: 'onboarding', assignmentId });
+  }, [navigation]);
   const offlineScope = identity.state.kind === 'authenticated' && installationId
     ? {
         actorId: identity.state.identity.subject,
@@ -91,20 +87,14 @@ export function DshFieldSurface({ command, onExit, installationId }: DshFieldSur
         }
       : undefined,
     offlineScope,
-  );
-
-  useAndroidBackHandler(
-    React.useCallback(() => {
-      if (fieldSurface.model.routeStackDepth > 1) {
-        fieldSurface.actions.popRoute();
-        return true;
-      }
-      if (onExit) {
-        onExit();
-        return true;
-      }
-      return false;
-    }, [fieldSurface.actions, fieldSurface.model.routeStackDepth, onExit]),
+    identity.state.kind === 'authenticated'
+      ? {
+          create_visit: (operation) => reconcileFieldMutation(operation.operationType, operation.idempotencyKey),
+          complete_visit: (operation) => reconcileFieldMutation(operation.operationType, operation.idempotencyKey),
+          upsert_readiness_check: (operation) => reconcileFieldMutation(operation.operationType, operation.idempotencyKey),
+          create_escalation: (operation) => reconcileFieldMutation(operation.operationType, operation.idempotencyKey),
+        }
+      : undefined,
   );
 
   if (identity.state.kind !== 'authenticated') {
@@ -137,6 +127,20 @@ export function DshFieldSurface({ command, onExit, installationId }: DshFieldSur
     <View style={{ flex: 1, backgroundColor: colorRoles.surfaceBase }}>
       <StatusBar backgroundColor={colorRoles.brandAction} barStyle="light-content" translucent={false} />
 
+      {/* Work captured on a retired build cannot be replayed under this
+          session, so the employee must be told to redo it rather than assume
+          it synced. */}
+      {offlineSync.quarantinedCount > 0 && (
+        <View style={{ padding: spacing[3] }}>
+          <InlineNotice
+            tone="warning"
+            title="عمل ميداني قديم يحتاج إعادة تنفيذ"
+            description="تم حفظ عمل غير مُرسَل من إصدار سابق للتطبيق ولا يمكن إرساله تلقائيًا. أعد تنفيذ الزيارات أو الفحوصات المتأثرة."
+            code="LEGACY_OFFLINE_WORK_RECOVERED"
+          />
+        </View>
+      )}
+
       <View
         style={{
           flex: 1,
@@ -145,9 +149,10 @@ export function DshFieldSurface({ command, onExit, installationId }: DshFieldSur
       >
         <DshFieldRouteRenderer
           model={fieldSurface.model}
-          actions={fieldSurface.actions}
+          navigation={navigation}
           onboardingController={onboardingController}
           identity={identity}
+          onOpenAssignment={openAssignment}
         />
       </View>
 
@@ -157,17 +162,11 @@ export function DshFieldSurface({ command, onExit, installationId }: DshFieldSur
             items={FIELD_TAB_BAR_ITEMS}
             activeId={fieldSurface.model.bottomNav.activeId}
             bottomInset={insets.bottom}
-            centerAction={{
-              icon: 'add',
-              label: 'إضافة شريك',
-              accessibilityLabel: 'إضافة شريك جديد',
-              onPress: () => fieldSurface.actions.pushRoute({ kind: 'onboarding' }),
-            }}
             onSelect={(id: string) => {
-              if (id === 'stores') fieldSurface.actions.resetToStores();
-              if (id === 'history') fieldSurface.actions.pushRoute({ kind: 'history' });
-              if (id === 'finance') fieldSurface.actions.pushRoute({ kind: 'finance' });
-              if (id === 'profile') fieldSurface.actions.pushRoute({ kind: 'account' });
+              if (id === 'stores') navigation.navigate({ kind: 'stores' }, 'replace');
+              if (id === 'work-queue') navigation.navigate({ kind: 'work-queue' });
+              if (id === 'finance') navigation.navigate({ kind: 'finance' });
+              if (id === 'profile') navigation.navigate({ kind: 'account' });
             }}
           />
         </View>

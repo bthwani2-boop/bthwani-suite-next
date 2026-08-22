@@ -19,7 +19,7 @@ func (s *protectedStoreServer) handleListPartnerReels(w http.ResponseWriter, r *
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "storeId is required")
 		return
 	}
-	if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, s.workforce, actor, storeID); err != nil {
+	if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, storeID); err != nil {
 		s.writeStoreError(w, err)
 		return
 	}

@@ -23,15 +23,6 @@ var allowedVisitTypes = map[VisitType]struct{}{
 	VisitTypeEscalationFollowup: {},
 }
 
-var allowedCheckTypes = map[string]struct{}{
-	"location_verified":      {},
-	"documents_uploaded":     {},
-	"product_list_submitted": {},
-	"equipment_checked":      {},
-	"safety_compliant":       {},
-	"hygiene_compliant":      {},
-}
-
 var allowedCheckStatuses = map[CheckStatus]struct{}{
 	CheckPending: {},
 	CheckPassed:  {},
@@ -121,7 +112,7 @@ func loadStoreCoordinates(ctx context.Context, db *sql.DB, storeID string) (floa
 // CreateGovernedVisit starts a visit only from server-owned store coordinates.
 // Any coordinates supplied by a caller are overwritten and cannot influence the
 // geofence decision.
-func CreateGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, input CreateVisitInput) (Visit, error) {
+func CreateGovernedVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, input CreateVisitInput) (Visit, error) {
 	if strings.TrimSpace(input.StoreID) == "" || strings.TrimSpace(input.FieldAgentID) == "" {
 		return Visit{}, ErrInvalid
 	}
@@ -134,7 +125,7 @@ func CreateGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScop
 	if err := ValidateGovernedLocation(input.StartLocation, time.Now()); err != nil {
 		return Visit{}, err
 	}
-	if err := AuthorizeStore(ctx, db, wf, actor, input.StoreID); err != nil {
+	if err := AuthorizeStore(ctx, db, actor, input.StoreID); err != nil {
 		return Visit{}, err
 	}
 	latitude, longitude, err := loadStoreCoordinates(ctx, db, input.StoreID)
@@ -147,7 +138,7 @@ func CreateGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScop
 	}
 	input.StoreLatitude = &latitude
 	input.StoreLongitude = &longitude
-	return CreateVisit(ctx, db, wf, actor, input)
+	return CreateVisit(ctx, db, actor, input)
 }
 
 func hasBlockingEscalation(ctx context.Context, q interface {
@@ -166,7 +157,7 @@ func hasBlockingEscalation(ctx context.Context, q interface {
 // It validates fresh GPS evidence, exact evidence ownership and store binding,
 // all required checks, every blocking escalation state, and the commission
 // outbox write before committing the visit state.
-func CompleteGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, visitID string, input CompleteVisitInput) (Visit, error) {
+func CompleteGovernedVisit(ctx context.Context, db *sql.DB, actor store.StoreActor, visitID string, input CompleteVisitInput) (Visit, error) {
 	if strings.TrimSpace(visitID) == "" {
 		return Visit{}, ErrInvalid
 	}
@@ -191,7 +182,7 @@ func CompleteGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceSc
 	if actor.Role != "operator" && visit.FieldAgentID != actor.ID {
 		return Visit{}, ErrForbidden
 	}
-	allowed, err := store.ActorCanAccessStore(ctx, db, wf, actor, visit.StoreID)
+	allowed, err := store.ActorCanAccessStore(ctx, db, actor, visit.StoreID)
 	if err != nil {
 		return Visit{}, err
 	}
@@ -220,7 +211,7 @@ func CompleteGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceSc
 	geofence := geofenceStatus(distance, radius)
 
 	rows, err := tx.QueryContext(ctx, `
-		SELECT checks.check_type, checks.status,
+		SELECT requirement.check_type, requirement.evidence_required, COALESCE(checks.status,''),
 		       EXISTS (
 		         SELECT 1
 		         FROM dsh_media_refs refs
@@ -229,23 +220,28 @@ func CompleteGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceSc
 		           AND refs.purpose = 'field_readiness_evidence'
 		           AND ($2 = 'operator' OR (refs.owner_actor_id = $3 AND refs.owner_actor_role = $2))
 		       )
-		FROM dsh_readiness_checks checks
-		WHERE checks.visit_id = $1`, visitID, actor.Role, actor.ID)
+		FROM dsh_visit_checklist_requirements requirement
+		LEFT JOIN dsh_readiness_checks checks
+		  ON checks.visit_id = requirement.visit_id AND checks.check_type = requirement.check_type
+		WHERE requirement.visit_id = $1 AND requirement.required = TRUE`, visitID, actor.Role, actor.ID)
 	if err != nil {
 		return Visit{}, err
 	}
-	passed := make(map[string]bool, len(RequiredCheckTypes))
-	evidenceValid := make(map[string]bool, len(RequiredCheckTypes))
+	requiredCount := 0
 	for rows.Next() {
 		var checkType, status string
+		var evidenceRequired bool
 		var validEvidence bool
-		if err := rows.Scan(&checkType, &status, &validEvidence); err != nil {
+		if err := rows.Scan(&checkType, &evidenceRequired, &status, &validEvidence); err != nil {
 			rows.Close()
 			return Visit{}, err
 		}
-		if status == string(CheckPassed) {
-			passed[checkType] = true
-			evidenceValid[checkType] = validEvidence
+		requiredCount++
+		if status != string(CheckPassed) {
+			return Visit{}, ErrChecklistIncomplete
+		}
+		if evidenceRequired && !validEvidence {
+			return Visit{}, ErrEvidenceRequired
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -253,13 +249,8 @@ func CompleteGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceSc
 		return Visit{}, err
 	}
 	rows.Close()
-	for _, required := range RequiredCheckTypes {
-		if !passed[required] {
-			return Visit{}, ErrChecklistIncomplete
-		}
-		if !evidenceValid[required] {
-			return Visit{}, ErrEvidenceRequired
-		}
+	if requiredCount == 0 {
+		return Visit{}, ErrChecklistPolicyMissing
 	}
 
 	blocking, err := hasBlockingEscalation(ctx, tx, visitID)
@@ -301,7 +292,7 @@ func CompleteGovernedVisit(ctx context.Context, db *sql.DB, wf store.WorkforceSc
 }
 
 func validateCheckInput(input UpdateCheckInput) error {
-	if _, ok := allowedCheckTypes[input.CheckType]; !ok {
+	if !checkTypePattern.MatchString(strings.TrimSpace(input.CheckType)) {
 		return fmt.Errorf("%w: unsupported readiness check type", ErrInvalid)
 	}
 	if _, ok := allowedCheckStatuses[input.Status]; !ok {
@@ -313,7 +304,7 @@ func validateCheckInput(input UpdateCheckInput) error {
 	return nil
 }
 
-func validateGovernedCheckEvidence(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, storeID, mediaRef string) error {
+func validateGovernedCheckEvidence(ctx context.Context, db *sql.DB, actor store.StoreActor, storeID, mediaRef string) error {
 	ref := strings.TrimSpace(mediaRef)
 	if ref == "" {
 		return ErrEvidenceRequired
@@ -337,19 +328,26 @@ func validateGovernedCheckEvidence(ctx context.Context, db *sql.DB, wf store.Wor
 	return nil
 }
 
-func UpsertGovernedReadinessCheck(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, visitID string, input UpdateCheckInput) (ReadinessCheck, error) {
+func UpsertGovernedReadinessCheck(ctx context.Context, db *sql.DB, actor store.StoreActor, visitID string, input UpdateCheckInput) (ReadinessCheck, error) {
 	if err := validateCheckInput(input); err != nil {
 		return ReadinessCheck{}, err
 	}
-	visit, err := GetOwnedVisit(ctx, db, wf, actor, visitID)
+	visit, err := GetOwnedVisit(ctx, db, actor, visitID)
 	if err != nil {
 		return ReadinessCheck{}, err
 	}
 	if visit.Status == VisitComplete {
 		return ReadinessCheck{}, ErrVisitAlreadyComplete
 	}
+	exists, err := checklistItemExists(ctx, db, visitID, input.CheckType)
+	if err != nil {
+		return ReadinessCheck{}, err
+	}
+	if !exists {
+		return ReadinessCheck{}, fmt.Errorf("%w: check type is not part of the visit policy", ErrInvalid)
+	}
 	if input.Status == CheckPassed {
-		if err := validateGovernedCheckEvidence(ctx, db, wf, actor, visit.StoreID, input.EvidenceURL); err != nil {
+		if err := validateGovernedCheckEvidence(ctx, db, actor, visit.StoreID, input.EvidenceURL); err != nil {
 			return ReadinessCheck{}, err
 		}
 	}
@@ -370,7 +368,13 @@ func UpsertGovernedReadinessCheck(ctx context.Context, db *sql.DB, wf store.Work
 	var check ReadinessCheck
 	err = row.Scan(&check.ID, &check.VisitID, &check.StoreID, &check.CheckType, &check.Status,
 		&check.EvidenceURL, &check.Notes, &check.VerifiedBy, &check.CreatedAt, &check.UpdatedAt)
-	return check, err
+	if err != nil {
+		return ReadinessCheck{}, err
+	}
+	if err := hydrateChecklistMetadata(ctx, db, &check); err != nil {
+		return ReadinessCheck{}, err
+	}
+	return check, nil
 }
 
 func validateEscalationInput(input CreateEscalationInput) error {
@@ -390,12 +394,12 @@ func validateEscalationInput(input CreateEscalationInput) error {
 	return nil
 }
 
-func CreateGovernedEscalation(ctx context.Context, db *sql.DB, wf store.WorkforceScopeResolver, actor store.StoreActor, input CreateEscalationInput) (Escalation, error) {
+func CreateGovernedEscalation(ctx context.Context, db *sql.DB, actor store.StoreActor, input CreateEscalationInput) (Escalation, error) {
 	if err := validateEscalationInput(input); err != nil {
 		return Escalation{}, err
 	}
 	input.Description = strings.TrimSpace(input.Description)
-	return CreateEscalation(ctx, db, wf, actor, input)
+	return CreateEscalation(ctx, db, actor, input)
 }
 
 func allowedEscalationTransition(from, to EscalationStatus) bool {
@@ -414,9 +418,12 @@ func allowedEscalationTransition(from, to EscalationStatus) bool {
 	}
 }
 
-func UpdateGovernedEscalation(ctx context.Context, db *sql.DB, escalationID string, input UpdateEscalationInput) (Escalation, error) {
+func UpdateGovernedEscalation(ctx context.Context, db *sql.DB, escalationID, operatorContextID string, input UpdateEscalationInput) (Escalation, error) {
 	if strings.TrimSpace(escalationID) == "" || strings.TrimSpace(input.ResolvedBy) == "" {
 		return Escalation{}, ErrInvalid
+	}
+	if strings.TrimSpace(operatorContextID) == "" {
+		return Escalation{}, ErrForbidden
 	}
 	if input.Status != EscalationAcknowledged && input.Status != EscalationResolved && input.Status != EscalationEscalatedFurther {
 		return Escalation{}, fmt.Errorf("%w: unsupported escalation transition target", ErrInvalid)
@@ -436,7 +443,12 @@ func UpdateGovernedEscalation(ctx context.Context, db *sql.DB, escalationID stri
 	defer tx.Rollback() //nolint:errcheck
 
 	var current EscalationStatus
-	if err := tx.QueryRowContext(ctx, `SELECT status FROM dsh_readiness_escalations WHERE id = $1 FOR UPDATE`, escalationID).Scan(&current); errors.Is(err, sql.ErrNoRows) {
+	if err := tx.QueryRowContext(ctx, `
+		SELECT e.status
+		FROM dsh_readiness_escalations e
+		JOIN dsh_stores s ON s.id = e.store_id
+		WHERE e.id = $1 AND s.operator_context_id = $2
+		FOR UPDATE OF e`, escalationID, operatorContextID).Scan(&current); errors.Is(err, sql.ErrNoRows) {
 		return Escalation{}, ErrNotFound
 	} else if err != nil {
 		return Escalation{}, err

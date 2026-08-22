@@ -67,7 +67,7 @@ export async function fetchHomeDiscovery(params?: DshHomeDiscoveryParams): Promi
     }
 
     const banners = dto.banners.map(toBannerViewModel);
-    const promos = dto.promos.map(toPromoViewModel);
+    const promos = (dto.promos || []).map(toPromoViewModel);
     const categories = dto.categories.map(toCategoryViewModel);
     const stores = dto.stores.map(toHomeStoreCardViewModel);
 
@@ -92,7 +92,7 @@ export async function fetchHomeDiscovery(params?: DshHomeDiscoveryParams): Promi
     });
   } catch (err: unknown) {
     if (err && typeof err === 'object' && 'kind' in err) {
-      const clientErr = err as { kind: string; status?: number; message?: string };
+      const clientErr = err as { kind: string; status?: number; message?: string; code?: string; correlationId?: string };
       if (clientErr.kind === 'http' && clientErr.status === 503) {
         return serviceUnavailableState();
       }
@@ -102,7 +102,12 @@ export async function fetchHomeDiscovery(params?: DshHomeDiscoveryParams): Promi
       if (clientErr.kind === 'network') {
         return serviceUnavailableState();
       }
+      if (clientErr.kind === 'http') {
+        return errorState(`DSH_HTTP_ERROR: ${clientErr.status} ${clientErr.message || clientErr.code || 'unknown'}`);
+      }
     }
-    return errorState('DSH_UNKNOWN_ERROR: unexpected error fetching home discovery');
+
+    const errorMessage = err instanceof Error ? err.message : (typeof err === 'string' ? err : JSON.stringify(err));
+    return errorState(`DSH_UNKNOWN_ERROR: unexpected error fetching home discovery (${errorMessage})`);
   }
 }

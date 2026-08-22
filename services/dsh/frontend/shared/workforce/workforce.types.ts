@@ -87,8 +87,9 @@ export type WorkforceMe = FieldAgent & {
 export type CreateFieldAgentInput = {
   readonly fullNameAr: string;
   readonly fullNameEn?: string | undefined;
-  readonly actorId: string;
-  readonly engagementType?: EngagementType | undefined;
+  readonly username: string;
+  readonly phoneE164: string;
+  readonly engagementType?: "independent_contractor" | undefined;
   readonly engagementStartDate?: string | undefined;
   readonly serviceZoneId: string;
   readonly supervisorActorId?: string | undefined;
@@ -100,7 +101,7 @@ export type UpdateFieldAgentInput = {
   readonly expectedVersion: number;
   readonly fullNameAr?: string | undefined;
   readonly fullNameEn?: string | undefined;
-  readonly engagementType?: EngagementType | undefined;
+  readonly engagementType?: "independent_contractor" | undefined;
   readonly engagementStartDate?: string | undefined;
   readonly serviceZoneId?: string | undefined;
   readonly supervisorActorId?: string | undefined;
@@ -110,7 +111,8 @@ export type UpdateFieldAgentInput = {
 export type CreateCaptainInput = {
   readonly fullNameAr: string;
   readonly fullNameEn?: string | undefined;
-  readonly actorId: string;
+  readonly username: string;
+  readonly phoneE164: string;
   readonly engagementType?: EngagementType | undefined;
   readonly engagementStartDate?: string | undefined;
   readonly photoMediaRef?: string | undefined;
@@ -143,7 +145,8 @@ export type UpdateCaptainInput = {
 export type CreateEmployeeInput = {
   readonly fullNameAr: string;
   readonly fullNameEn?: string | undefined;
-  readonly actorId: string;
+  readonly username: string;
+  readonly phoneE164: string;
   readonly engagementType?: "employee" | undefined;
   readonly engagementStartDate?: string | undefined;
   readonly photoMediaRef?: string | undefined;
@@ -233,10 +236,6 @@ export type CaptainClassification = "joker" | "basic";
 
 export type CaptainActivationCore = {
   readonly classification: CaptainClassification;
-  readonly financialGuaranteeMinorUnits: number;
-  readonly financialGuaranteeCurrency: string;
-  readonly financialGuaranteeStatus: "not_funded" | "pending_review" | "funded" | "released" | "forfeited";
-  readonly financialGuaranteeReference?: string;
   readonly deliveryBagCustodyStatus: "not_issued" | "issued" | "returned" | "lost" | "damaged";
   readonly deliveryBagCustodyReference?: string;
   readonly mandatoryPurchasesStatus: "not_required" | "pending_payment" | "paid" | "paid_and_delivered" | "cancelled";
@@ -304,8 +303,6 @@ export type ProviderIncident = {
   readonly severity: "minor" | "major" | "critical";
   readonly status: string;
   readonly policyId?: string;
-  readonly proposedPenaltyMinorUnits: number;
-  readonly currency: string;
   readonly wltLedgerReference?: string;
   readonly appealNote?: string;
   readonly resolutionNote?: string;
@@ -329,44 +326,4 @@ export const ENGAGEMENT_STATUS_LABEL_AR: Record<EngagementStatus, string> = {
 export const ENGAGEMENT_TYPE_LABEL_AR: Record<EngagementType, string> = {
   independent_contractor: "مقدم خدمة مستقل",
   employee: "موظف رسمي",
-};
-
-export type ProvisioningCase = {
-  readonly id: string;
-  readonly idempotencyKey: string;
-  readonly status: string;
-  readonly workforceKind: string;
-  readonly actorId?: string;
-  readonly workforceCode?: string;
-  readonly failureReason?: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type StartProvisioningInput = {
-  readonly workforceKind: string;
-  readonly username: string;
-  readonly phoneE164: string;
-  readonly role: string;
-  readonly operatorContextId: string;
-  readonly payload: Record<string, unknown>;
-};
-
-export type BlockerReason =
-  | "IDENTITY_SUSPENDED"
-  | "PROFILE_INCOMPLETE"
-  | "DOCUMENTS_EXPIRED"
-  | "EMPLOYMENT_TERMINATED"
-  | "NO_ACTIVE_ASSIGNMENT"
-  | "SHIFT_INACTIVE"
-  | "OUTSIDE_ACTIVE_AREA"
-  | "FINANCIAL_ELIGIBILITY_BLOCKED"
-  | "ELIGIBILITY_UNAVAILABLE";
-
-export type ReadinessGate = {
-  readonly actorId: string;
-  readonly workforceKind: string;
-  readonly status: "ALLOWED" | "BLOCKED";
-  readonly blockerReasons: readonly BlockerReason[];
-  readonly checkedAt: string;
 };

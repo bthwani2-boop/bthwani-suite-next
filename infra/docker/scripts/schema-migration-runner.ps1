@@ -115,6 +115,42 @@ function Get-BthwaniMigrationManifestEntries {
   return $orderedEntries
 }
 
+# Ledger states that represent local drift between a database and the governed
+# migration set. These are the only failures a governed single-service rebuild
+# can legitimately resolve, and this is the one place they are enumerated: the
+# codes are raised by the SQL below, so the classifier must not keep a second
+# copy that can drift away from them.
+#
+# Deliberately excluded: DIRTY_MIGRATION_STATE, DIRTY_MIGRATION_STATE_AFTER_RUN
+# and INCOMPLETE_MIGRATION_RUN. Those mean a migration failed while executing,
+# not that the ledger drifted, and rebuilding on them would destroy a database
+# to hide a genuinely broken migration.
+$script:BthwaniRecoverableLedgerConflictCodes = @(
+  'GOVERNED_MIGRATION_LEDGER_CONFLICT',
+  'LEGACY_MIGRATION_LEDGER_CONFLICT',
+  'LEGACY_MIGRATION_LEDGER_QUARANTINE_CONFLICT',
+  'BTHWANI_MIGRATION_LEDGER_CONFLICT',
+  'BTHWANI_MIGRATION_LEDGER_QUARANTINE_CONFLICT',
+  'BTHWANI_MIGRATION_LEDGER_SCHEMA_CONFLICT',
+  'BTHWANI_MIGRATION_LEDGER_FOREIGN_SERVICE_CONFLICT',
+  'MIGRATION_CHECKSUM_MISMATCH',
+  'UNTRACKED_LEGACY_SCHEMA'
+)
+
+function Get-BthwaniRecoverableLedgerConflictCodes {
+  return @($script:BthwaniRecoverableLedgerConflictCodes)
+}
+
+function Test-BthwaniRecoverableLedgerConflict {
+  param([Parameter(Mandatory = $true)][AllowEmptyString()][string]$FailureText)
+
+  if ([string]::IsNullOrWhiteSpace($FailureText)) { return $false }
+  foreach ($code in $script:BthwaniRecoverableLedgerConflictCodes) {
+    if ($FailureText -like "*$code*") { return $true }
+  }
+  return $false
+}
+
 function Get-BthwaniAuthorizedHistoricalChecksums {
   param(
     [Parameter(Mandatory = $true)][ValidatePattern('^[a-z0-9-]+$')][string]$ServiceName,
@@ -123,7 +159,7 @@ function Get-BthwaniAuthorizedHistoricalChecksums {
   )
 
   $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '../../..')).Path
-  $amendmentsPath = Join-Path $repositoryRoot 'governance/contracts/migration-amendments.json'
+  $amendmentsPath = Join-Path $repositoryRoot 'tools/verification/migration-amendments.json'
   if (-not (Test-Path -LiteralPath $amendmentsPath -PathType Leaf)) {
     return @()
   }
@@ -622,6 +658,12 @@ function Invoke-BthwaniGovernedMigrations {
       -ExpectedCount $MigrationFiles.Count `
       -ExecuteStatement $ExecuteStatement
   } catch {
+    # Capture the originating failure before running anything else. The
+    # bookkeeping statement below issues another psql call, and a bare `throw`
+    # after an inner try/catch cannot be relied on to rethrow this error rather
+    # than the inner one. Callers classify the migration failure from this
+    # exception, so it must survive the recovery attempt intact.
+    $originalError = $_
     $serviceLiteral = ConvertTo-BthwaniSqlLiteral $ServiceName
     try {
       & $ExecuteStatement @"
@@ -632,6 +674,6 @@ WHERE service_name = $serviceLiteral AND dirty;
     } catch {
       Write-Warning "Unable to persist migration failure state for '$ServiceName': $($_.Exception.Message)"
     }
-    throw
+    throw $originalError
   }
 }

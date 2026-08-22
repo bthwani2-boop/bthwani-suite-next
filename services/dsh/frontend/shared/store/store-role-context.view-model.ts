@@ -82,7 +82,7 @@ export function toPartnerStoreContext(
     checks,
     operatingLabel: operatingLabel(store),
     visibilityLabel: store.isVisible ? "ظاهر للعملاء" : "مخفي عن العملاء",
-    catalogReadinessSummary: store.publicationEligible
+    catalogReadinessSummary: store.publicationDecision === "PUBLISHED"
       ? "المتجر اجتاز بوابة النشر التشغيلية"
       : "يلزم إغلاق عناصر الجاهزية قبل النشر للعملاء",
     readinessPercent: checks.length === 0 ? 0 : Math.round((readyCount / checks.length) * 100),

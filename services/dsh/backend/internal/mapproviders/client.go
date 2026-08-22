@@ -28,7 +28,6 @@ type Client struct {
 	baseURL string
 	http    *http.Client
 	breaker *providers.CircuitBreaker
-	reg     *providers.Registry
 }
 
 type SearchInput struct {
@@ -88,30 +87,24 @@ type upstreamError struct {
 	Message string `json:"message"`
 }
 
-func NewClient(baseURL string, reg *providers.Registry) *Client {
+func NewClient(baseURL string) *Client {
 	return &Client{
 		baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
-		// The http.Client timeout is overridden per request via Context when a
-		// registry-provided timeout budget is available; see get()/post().
 		http:    &http.Client{},
 		breaker: providers.NewCircuitBreaker(providers.CircuitBreakerConfig{
 			FailureThreshold: 5,
 			SuccessThreshold: 2,
 			Timeout:          30 * time.Second,
 		}),
-		reg: reg,
 	}
 }
 
-// NewClientWithTimeout builds a client bounded by a fixed http.Client timeout
-// instead of a provider registry budget, for callers that have no registry
-// (or, as in tests, need a deterministic short timeout regardless of any
-// registry-configured budget).
+// NewClientWithTimeout builds a client bounded by a fixed http.Client timeout.
 func NewClientWithTimeout(baseURL string, timeout time.Duration) *Client {
 	if timeout <= 0 {
 		timeout = 8 * time.Second
 	}
-	client := NewClient(baseURL, nil)
+	client := NewClient(baseURL)
 	client.http = &http.Client{Timeout: timeout}
 	return client
 }
@@ -253,14 +246,6 @@ func (c *Client) get(ctx context.Context, authorization, path string, output any
 	}
 
 	var reqCtx = ctx
-	if c.reg != nil {
-		cfg, _, err := c.reg.GetActiveProvider(ctx, "map", "search", "production")
-		if err == nil && cfg.TimeoutBudget > 0 {
-			var cancel context.CancelFunc
-			reqCtx, cancel = context.WithTimeout(ctx, cfg.TimeoutBudget)
-			defer cancel()
-		}
-	}
 
 	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
@@ -281,14 +266,6 @@ func (c *Client) post(ctx context.Context, authorization, path string, input, ou
 	}
 
 	var reqCtx = ctx
-	if c.reg != nil {
-		cfg, _, err := c.reg.GetActiveProvider(ctx, "map", "search", "production")
-		if err == nil && cfg.TimeoutBudget > 0 {
-			var cancel context.CancelFunc
-			reqCtx, cancel = context.WithTimeout(ctx, cfg.TimeoutBudget)
-			defer cancel()
-		}
-	}
 
 	req, err := http.NewRequestWithContext(reqCtx, http.MethodPost, c.baseURL+path, bytes.NewReader(payload))
 	if err != nil {

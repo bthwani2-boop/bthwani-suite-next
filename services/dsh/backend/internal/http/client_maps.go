@@ -50,7 +50,7 @@ func (s *protectedStoreServer) handleClientMapSearch(w http.ResponseWriter, r *h
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"), nil)
+	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"))
 	response, err := client.Search(r.Context(), r.Header.Get("Authorization"), input)
 	if err != nil {
 		writeClientMapError(w, err)
@@ -76,7 +76,7 @@ func (s *protectedStoreServer) handleClientMapReverse(w http.ResponseWriter, r *
 	if !decodeProtectedJSON(w, r, &input) {
 		return
 	}
-	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"), nil)
+	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"))
 	response, err := client.Reverse(r.Context(), r.Header.Get("Authorization"), input)
 	if err != nil {
 		writeClientMapError(w, err)
@@ -94,7 +94,7 @@ func (s *protectedStoreServer) handleOperatorMapProviderHealth(w http.ResponseWr
 	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
 	}
-	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"), nil)
+	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"))
 	health, err := client.Health(r.Context(), r.Header.Get("Authorization"))
 	if err != nil {
 		writeClientMapError(w, err)

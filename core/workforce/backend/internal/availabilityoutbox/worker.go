@@ -7,12 +7,14 @@ import (
 	"log"
 	"time"
 
+	"workforce-api/internal/auth"
 	"workforce-api/internal/dshclient"
 )
 
 type event struct {
 	ID                string
 	NoticeID          string
+	OperatorContextID string
 	ActorType         string
 	ActorID           string
 	NoticeType        string
@@ -30,7 +32,7 @@ func claimBatch(ctx context.Context, db *sql.DB, limit int) ([]event, error) {
 		return nil, err
 	}
 	defer tx.Rollback() //nolint:errcheck
-	rows, err := tx.QueryContext(ctx, `SELECT id::text,notice_id::text,actor_type,actor_id,
+	rows, err := tx.QueryContext(ctx, `SELECT id::text,notice_id::text,COALESCE(operator_context_id,''),actor_type,actor_id,
 		notice_type,starts_at,ends_at,status,reason,source_updated_at,attempt_count
 		FROM workforce_dsh_availability_outbox
 		WHERE delivery_status='pending' AND next_retry_at<=now()
@@ -42,7 +44,7 @@ func claimBatch(ctx context.Context, db *sql.DB, limit int) ([]event, error) {
 	items := make([]event, 0)
 	for rows.Next() {
 		var item event
-		if err := rows.Scan(&item.ID, &item.NoticeID, &item.ActorType, &item.ActorID,
+		if err := rows.Scan(&item.ID, &item.NoticeID, &item.OperatorContextID, &item.ActorType, &item.ActorID,
 			&item.NoticeType, &item.StartsAt, &item.EndsAt, &item.Status, &item.Reason,
 			&item.SourceUpdatedAt, &item.AttemptCount); err != nil {
 			return nil, err
@@ -102,8 +104,17 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *dshclient.Client) erro
 	}
 	for _, item := range items {
 		callCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
+		if item.OperatorContextID == "" {
+			cancel()
+			if markErr := markFailed(ctx, db, item, fmt.Errorf("operator context is unavailable for deferred DSH projection")); markErr != nil {
+				log.Printf("[workforce-availability-outbox] failed to persist retry for %s: %v", item.NoticeID, markErr)
+			}
+			continue
+		}
+		callCtx = auth.WithOperatorContext(callCtx, item.OperatorContextID)
 		err := client.SyncAvailabilityProjection(callCtx, dshclient.AvailabilityProjectionInput{
-			NoticeID: item.NoticeID, ActorType: item.ActorType, ActorID: item.ActorID,
+			OperatorContextID: item.OperatorContextID,
+			NoticeID:          item.NoticeID, ActorType: item.ActorType, ActorID: item.ActorID,
 			NoticeType: item.NoticeType, StartsAt: item.StartsAt, EndsAt: item.EndsAt,
 			Status: item.Status, Reason: item.Reason, SourceUpdatedAt: item.SourceUpdatedAt,
 		})

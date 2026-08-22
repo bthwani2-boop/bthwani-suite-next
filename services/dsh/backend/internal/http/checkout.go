@@ -11,11 +11,73 @@ import (
 
 	"dsh-api/internal/cart"
 	"dsh-api/internal/checkout"
+	"dsh-api/internal/checkoutfinanceoutbox"
 	"dsh-api/internal/clientaddress"
 	"dsh-api/internal/coupons"
 	"dsh-api/internal/store"
 	"dsh-api/internal/wlt"
 )
+
+func (s *protectedStoreServer) evaluateCheckoutDependencies(
+	r *http.Request,
+	intent *checkout.Intent,
+	addressID string,
+	mode checkout.FulfillmentMode,
+) (checkout.IntentDependencyValidation, string, string, error) {
+	if mode != checkout.ModeBthwaniDelivery && mode != checkout.ModePartnerDelivery && mode != checkout.ModePickup {
+		return checkout.IntentDependencyValidation{}, "", "", checkout.ErrInvalid
+	}
+	resolvedAddressID := strings.TrimSpace(addressID)
+	if mode != checkout.ModePickup && resolvedAddressID == "" {
+		if err := s.db.QueryRowContext(r.Context(), `
+			SELECT COALESCE(delivery_address_id, '')
+			FROM dsh_checkout_intents
+			WHERE id=$1::uuid AND operator_context_id=$2 AND client_id=$3`,
+			intent.ID, intent.OperatorContextID, intent.ClientID).Scan(&resolvedAddressID); err != nil {
+			return checkout.IntentDependencyValidation{}, "", "", err
+		}
+	}
+
+	var serviceAreaCode string
+	var clientLat, clientLng *float64
+	addressSnapshot := ""
+	if mode != checkout.ModePickup {
+		if resolvedAddressID == "" {
+			return checkout.IntentDependencyValidation{
+				CartReady:   false,
+				CartCode:    "ADDRESS_REQUIRED",
+				Serviceable: false,
+			}, resolvedAddressID, addressSnapshot, nil
+		}
+		address, err := clientaddress.GetOwned(r.Context(), s.db, intent.ClientID, resolvedAddressID)
+		if err != nil {
+			return checkout.IntentDependencyValidation{}, "", "", err
+		}
+		serviceAreaCode = address.ServiceAreaCode
+		clientLat = address.Latitude
+		clientLng = address.Longitude
+		addressSnapshot = address.CheckoutSnapshot()
+	}
+
+	cartValidation, err := cart.ValidateCart(r.Context(), s.db, intent.CartID)
+	if err != nil {
+		return checkout.IntentDependencyValidation{}, "", "", err
+	}
+	if len(cartValidation.Items) == 0 {
+		cartValidation.Ready = false
+		cartValidation.Code = "CART_EMPTY"
+	}
+	serviceability := cart.CheckGovernedServiceability(
+		r.Context(), s.db, s.maps, intent.StoreID, serviceAreaCode, clientLat, clientLng,
+		cart.FulfillmentMode(mode),
+	)
+	return checkout.IntentDependencyValidation{
+		CartReady:          cartValidation.Ready,
+		CartCode:           cartValidation.Code,
+		Serviceable:        serviceability.Serviceable,
+		ServiceabilityCode: serviceability.Code,
+	}, resolvedAddressID, addressSnapshot, nil
+}
 
 // POST /dsh/client/checkout-intents
 func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter, r *http.Request) {
@@ -24,13 +86,14 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		return
 	}
 	var body struct {
-		CartID            string `json:"cartId"`
-		StoreID           string `json:"storeId"`
-		FulfillmentMode   string `json:"fulfillmentMode"`
-		PaymentMethod     string `json:"paymentMethod"`
-		DeliveryAddressID string `json:"deliveryAddressId"`
-		Note              string `json:"note"`
-		CouponCode        string `json:"couponCode"`
+		CartID              string `json:"cartId"`
+		StoreID             string `json:"storeId"`
+		ExpectedCartVersion int    `json:"expectedCartVersion"`
+		FulfillmentMode     string `json:"fulfillmentMode"`
+		PaymentMethod       string `json:"paymentMethod"`
+		DeliveryAddressID   string `json:"deliveryAddressId"`
+		Note                string `json:"note"`
+		CouponCode          string `json:"couponCode"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
@@ -39,8 +102,8 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	cartID := strings.TrimSpace(body.CartID)
 	storeID := strings.TrimSpace(body.StoreID)
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
-	if cartID == "" || storeID == "" || actor.OperatorContextID == "" {
-		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId, storeId and authenticated OperatorContext are required")
+	if cartID == "" || storeID == "" || body.ExpectedCartVersion < 1 || actor.OperatorContextID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "cartId, storeId, expectedCartVersion and authenticated OperatorContext are required")
 		return
 	}
 	if len(idempotencyKey) < 16 || len(idempotencyKey) > 200 {
@@ -65,9 +128,12 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	}
 	if paymentMethod != string(checkout.MethodCOD) &&
 		paymentMethod != string(checkout.MethodWallet) &&
-		paymentMethod != string(checkout.MethodMixed) &&
-		paymentMethod != string(checkout.MethodOfficialWallet) {
+		paymentMethod != string(checkout.MethodMixed) {
 		store.SendError(w, http.StatusBadRequest, "INVALID_PAYMENT_METHOD", "payment method is invalid")
+		return
+	}
+	if (paymentMethod == string(checkout.MethodCOD) || paymentMethod == string(checkout.MethodMixed)) && fulfillmentMode != string(checkout.ModeBthwaniDelivery) {
+		store.SendError(w, http.StatusUnprocessableEntity, "COD_REQUIRES_BTHWANI_DELIVERY", "cash on delivery is only available for BThwani delivery")
 		return
 	}
 
@@ -99,23 +165,20 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		deliveryAddressSnapshot = address.CheckoutSnapshot()
 	}
 
-	// J051: Enforce mode capability using the universal check.
-	// This covers store_unavailable, out_of_area, and mode_not_enabled securely.
-	modesResp := cart.GetFulfillmentModes(r.Context(), s.db, storeID, serviceAreaCode, clientLat, clientLng)
-	var modeAvailable bool
-	var reasonCode string
-	for _, m := range modesResp.Modes {
-		if string(m.Mode) == fulfillmentMode {
-			modeAvailable = m.Available
-			reasonCode = m.UnavailableReasonCode
-			break
-		}
-	}
-	if !modeAvailable {
+	// Re-evaluate the canonical DSH operational decision immediately before the
+	// OCC-locked cart snapshot. A cached or earlier successful serviceability
+	// result cannot authorize checkout after a pause, capacity change, mode
+	// disablement, or provider denial.
+	serviceability := cart.CheckGovernedServiceability(
+		r.Context(), s.db, s.maps, storeID, serviceAreaCode, clientLat, clientLng,
+		cart.FulfillmentMode(fulfillmentMode),
+	)
+	if !serviceability.Serviceable {
+		reasonCode := serviceability.Code
 		if reasonCode == "" {
-			reasonCode = "mode_not_enabled"
+			reasonCode = "serviceability_unavailable"
 		}
-		store.SendError(w, http.StatusUnprocessableEntity, strings.ToUpper(reasonCode), fmt.Sprintf("fulfillment mode %s is unavailable: %s", fulfillmentMode, reasonCode))
+		store.SendError(w, http.StatusUnprocessableEntity, strings.ToUpper(reasonCode), fmt.Sprintf("checkout is unavailable: %s", reasonCode))
 		return
 	}
 
@@ -160,10 +223,11 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	}
 
 	var (
-		intent           *checkout.Intent
-		pricing          checkout.PricingSnapshot
-		hasCouponFunding bool
-		responseStatus   = http.StatusCreated
+		intent             *checkout.Intent
+		pricing            checkout.PricingSnapshot
+		checkoutQuoteInput *wlt.CalculatePricingQuoteRequest
+		hasCouponFunding   bool
+		responseStatus     = http.StatusCreated
 	)
 
 	if record != nil {
@@ -194,13 +258,17 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			return
 		}
 
-		snapshot, snapshotErr := cart.ComputeCheckoutSnapshotForClientTx(r.Context(), tx, cartID, actor.ID, storeID)
+		snapshot, snapshotErr := cart.ComputeCheckoutSnapshotTx(r.Context(), tx, actor.ID, cartID, storeID, body.ExpectedCartVersion)
 		if errors.Is(snapshotErr, cart.ErrCartItemMissingPrice) {
 			store.SendError(w, http.StatusConflict, "CART_ITEM_MISSING_PRICE", "one or more cart items are missing a price snapshot")
 			return
 		}
 		if errors.Is(snapshotErr, cart.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "CART_NOT_FOUND", "active cart does not belong to the authenticated client and store")
+			return
+		}
+		if errors.Is(snapshotErr, cart.ErrVersionConflict) {
+			s.sendCheckoutCartVersionConflict(w, r, actor.ID, cartID, storeID, body.ExpectedCartVersion)
 			return
 		}
 		if errors.Is(snapshotErr, cart.ErrInvalid) {
@@ -234,7 +302,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			Code: couponCode, ClientActorID: actor.ID, CartID: cartID,
 			CheckoutIntentID: intentID, StoreID: storeID,
 			FulfillmentMode:       fulfillmentMode,
-			SubtotalMinorUnits:    snapshot.AmountMinorUnits,
+			SubtotalMinorUnits:    snapshot.SubtotalMinorUnits,
 			DeliveryFeeMinorUnits: deliveryPolicy.FeeMinorUnits,
 			Currency:              snapshot.Currency,
 		})
@@ -256,9 +324,9 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		}
 
 		pricing = checkout.PricingSnapshot{
-			SubtotalMinorUnits:    snapshot.AmountMinorUnits,
+			SubtotalMinorUnits:    snapshot.SubtotalMinorUnits,
 			DeliveryFeeMinorUnits: deliveryPolicy.FeeMinorUnits,
-			TotalMinorUnits:       snapshot.AmountMinorUnits + deliveryPolicy.FeeMinorUnits,
+			TotalMinorUnits:       snapshot.SubtotalMinorUnits + deliveryPolicy.FeeMinorUnits,
 			Currency:              snapshot.Currency,
 		}
 		if reservation != nil {
@@ -272,6 +340,28 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			snapshot.SnapshotHash, pricing.CouponID, pricing.SubtotalMinorUnits,
 			pricing.DeliveryFeeMinorUnits, pricing.DiscountMinorUnits, pricing.TotalMinorUnits,
 		)
+		quoteLines := make([]wlt.QuotePricingInputLine, 0, len(snapshot.Lines))
+		for _, line := range snapshot.Lines {
+			quoteLines = append(quoteLines, wlt.QuotePricingInputLine{
+				MasterProductID:     line.MasterProductID,
+				Quantity:            line.Quantity,
+				UnitPriceMinorUnits: line.UnitPriceMinorUnits,
+			})
+		}
+		checkoutQuoteInput = &wlt.CalculatePricingQuoteRequest{
+			CheckoutIntentID: intentID,
+			CartSnapshotHash: snapshot.SnapshotHash,
+			ClientID:         actor.ID,
+			StoreID:          storeID,
+			Currency:         snapshot.Currency,
+			CartVersion:      snapshot.CartVersion,
+			Lines:            quoteLines,
+			PricingEvidence: wlt.PricingEvidence{
+				Version:               snapshot.CartVersion,
+				DeliveryFeeMinorUnits: pricing.DeliveryFeeMinorUnits,
+				DiscountMinorUnits:    pricing.DiscountMinorUnits,
+			},
+		}
 
 		intent, err = checkout.CreatePricedIntentWithAddressTx(r.Context(), tx, checkout.CreateIntentInput{
 			ID: intentID, OperatorContextID: actor.OperatorContextID, ClientID: actor.ID, CartID: cartID, StoreID: storeID,
@@ -305,9 +395,19 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	if hasCouponFunding {
 		fundingProjection, err = s.reserveCouponFunding(r.Context(), actor.OperatorContextID, intent.ID, correlationID)
 		if err != nil {
-			_ = coupons.ReleaseByIntent(s.db, intent.ID, "wlt_funding_reserve_failed")
+			cleanupErr := coupons.ReleaseByIntent(s.db, intent.ID, "wlt_funding_reserve_failed")
 			failedIntent, markErr := checkout.MarkHandoffBlocked(s.db, intent.ID, actor.OperatorContextID, actor.ID)
 			if markErr == nil {
+				if cleanupErr != nil {
+					store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
+						"intent": marshalIntentWithPricing(failedIntent, pricing),
+						"error": map[string]any{
+							"code":    "CHECKOUT_COMPENSATION_REQUIRED",
+							"message": "promotion funding reservation failed and coupon compensation requires reconciliation",
+						},
+					})
+					return
+				}
 				store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
 					"intent": marshalIntentWithPricing(failedIntent, pricing),
 					"error": map[string]any{
@@ -317,16 +417,65 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 				})
 				return
 			}
+			if cleanupErr != nil {
+				store.SendError(w, http.StatusServiceUnavailable, "CHECKOUT_COMPENSATION_REQUIRED", "promotion funding reservation failed and coupon compensation requires reconciliation")
+				return
+			}
 			store.SendError(w, http.StatusServiceUnavailable, "WLT_PROMOTION_FUNDING_UNAVAILABLE", "promotion funding reservation is unavailable")
 			return
 		}
+	}
+
+	var canonicalQuote *wlt.WltPricingQuote
+	if checkoutQuoteInput != nil {
+		canonicalQuote, err = s.wlt.CalculateQuote(r.Context(), *checkoutQuoteInput)
+		if err != nil {
+			// Issuance is exactly once per checkout intent in WLT. A transport
+			// failure is ambiguous, so read its canonical state before declaring
+			// the handoff failed or compensating the coupon reservation.
+			canonicalQuote, err = s.wlt.GetCheckoutQuote(r.Context(), intent.ID)
+		}
+	} else {
+		canonicalQuote, err = s.wlt.GetCheckoutQuote(r.Context(), intent.ID)
+	}
+	if err != nil || !checkoutQuoteMatchesPricing(canonicalQuote, intent, pricing) {
+		var compensationErr error
+		if fundingProjection != nil {
+			if releaseErr := s.releaseCouponFunding(r.Context(), actor.OperatorContextID, intent.ID, "pricing_quote_unavailable", correlationID); releaseErr != nil {
+				compensationErr = errors.Join(compensationErr, releaseErr)
+				if markErr := coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_pricing_quote_failure"); markErr != nil {
+					compensationErr = errors.Join(compensationErr, markErr)
+				}
+			}
+		}
+		if releaseErr := coupons.ReleaseByIntent(s.db, intent.ID, "wlt_pricing_quote_unavailable"); releaseErr != nil {
+			compensationErr = errors.Join(compensationErr, releaseErr)
+		}
+		failedIntent, markErr := checkout.MarkHandoffBlocked(s.db, intent.ID, actor.OperatorContextID, actor.ID)
+		if markErr == nil {
+			if compensationErr != nil {
+				store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
+					"intent": marshalIntentWithPricing(failedIntent, pricing),
+					"error":  map[string]any{"code": "WLT_PRICING_QUOTE_AND_COMPENSATION_REQUIRED", "message": "canonical WLT pricing quote is unavailable and financial compensation requires reconciliation"},
+				})
+				return
+			}
+			store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
+				"intent": marshalIntentWithPricing(failedIntent, pricing),
+				"error":  map[string]any{"code": "WLT_PRICING_QUOTE_UNAVAILABLE", "message": "canonical WLT pricing quote is unavailable or does not match the frozen checkout"},
+			})
+			return
+		}
+		store.SendError(w, http.StatusServiceUnavailable, "WLT_PRICING_QUOTE_UNAVAILABLE", "canonical WLT pricing quote is unavailable")
+		return
 	}
 
 	paymentSession, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
 		CheckoutIntentID: intent.ID, OperatorContextID: actor.OperatorContextID, ClientID: actor.ID,
 		StoreID: intent.StoreID, PaymentMethod: string(intent.PaymentMethod),
 		AmountMinorUnits: pricing.TotalMinorUnits, Currency: pricing.Currency,
-		CartSnapshotHash: pricing.SnapshotHash,
+		CartSnapshotHash: canonicalQuote.CartSnapshotHash,
+		PricingQuoteID:   canonicalQuote.ID,
 		CorrelationID:    correlationID,
 		IdempotencyKey:   "dsh-checkout-intent:" + intent.ID,
 	})
@@ -347,18 +496,22 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 			})
 			return
 		}
-		fundingReleaseFailed := false
+		var compensationErr error
 		if fundingProjection != nil {
 			if releaseErr := s.releaseCouponFunding(r.Context(), actor.OperatorContextID, intent.ID, "payment_session_handoff_failed", correlationID); releaseErr != nil {
-				fundingReleaseFailed = true
-				_ = coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_payment_handoff_failed")
+				compensationErr = errors.Join(compensationErr, releaseErr)
+				if markErr := coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_payment_handoff_failed"); markErr != nil {
+					compensationErr = errors.Join(compensationErr, markErr)
+				}
 			}
 		}
-		_ = coupons.ReleaseByIntent(s.db, intent.ID, "wlt_handoff_failed")
+		if releaseErr := coupons.ReleaseByIntent(s.db, intent.ID, "wlt_handoff_failed"); releaseErr != nil {
+			compensationErr = errors.Join(compensationErr, releaseErr)
+		}
 		if failedIntent, markErr := checkout.MarkHandoffBlocked(s.db, intent.ID, actor.OperatorContextID, actor.ID); markErr == nil {
 			code := "WLT_HANDOFF_UNAVAILABLE"
 			message := "WLT payment-session handoff is unavailable"
-			if fundingReleaseFailed {
+			if compensationErr != nil {
 				code = "WLT_HANDOFF_AND_FUNDING_COMPENSATION_FAILED"
 				message = "payment handoff failed and promotion funding compensation requires reconciliation"
 			}
@@ -374,14 +527,31 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 
 	intent, err = checkout.AttachWltPaymentSessionIdempotent(s.db, intent.ID, actor.OperatorContextID, actor.ID, paymentSession.ID)
 	if err != nil {
-		_ = s.wlt.ExpireSession(r.Context(), paymentSession.ID, correlationID)
-		if fundingProjection != nil {
-			if releaseErr := s.releaseCouponFunding(r.Context(), actor.OperatorContextID, intent.ID, "payment_session_attach_failed", correlationID); releaseErr != nil {
-				_ = coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_attach_failed")
+		var compensationErr error
+		if expireErr := s.wlt.ExpireSession(r.Context(), paymentSession.ID, correlationID); expireErr != nil {
+			if queueErr := checkoutfinanceoutbox.EnqueuePaymentSessionExpiry(s.db, intent.ID, paymentSession.ID, actor.ID, "payment_session_attach_failed", correlationID); queueErr != nil {
+				compensationErr = errors.Join(compensationErr, expireErr, queueErr)
 			}
 		}
-		_ = coupons.ReleaseByIntent(s.db, intent.ID, "payment_session_attach_failed")
-		_, _ = checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.OperatorContextID, actor.ID)
+		if fundingProjection != nil {
+			if releaseErr := s.releaseCouponFunding(r.Context(), actor.OperatorContextID, intent.ID, "payment_session_attach_failed", correlationID); releaseErr != nil {
+				compensationErr = errors.Join(compensationErr, releaseErr)
+				if markErr := coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_attach_failed"); markErr != nil {
+					compensationErr = errors.Join(compensationErr, markErr)
+				}
+			}
+		}
+		if releaseErr := coupons.ReleaseByIntent(s.db, intent.ID, "payment_session_attach_failed"); releaseErr != nil {
+			compensationErr = errors.Join(compensationErr, releaseErr)
+		}
+		_, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.OperatorContextID, actor.ID)
+		if markErr != nil {
+			compensationErr = errors.Join(compensationErr, markErr)
+		}
+		if compensationErr != nil {
+			store.SendError(w, http.StatusServiceUnavailable, "CHECKOUT_COMPENSATION_REQUIRED", "WLT payment-session attach failed and financial compensation requires reconciliation")
+			return
+		}
 		if errors.Is(err, checkout.ErrInvalid) {
 			store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 			return
@@ -394,6 +564,33 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		return
 	}
 	store.SendJSON(w, responseStatus, map[string]any{"intent": marshalIntentWithPricing(intent, pricing)})
+}
+
+func (s *protectedStoreServer) sendCheckoutCartVersionConflict(
+	w http.ResponseWriter,
+	r *http.Request,
+	clientID string,
+	cartID string,
+	storeID string,
+	expectedVersion int,
+) {
+	current, err := cart.GetCart(r.Context(), s.db, s.wlt, clientID, storeID)
+	if errors.Is(err, cart.ErrNotFound) {
+		store.SendError(w, http.StatusConflict, "CART_VERSION_CONFLICT", "cart changed and is no longer active")
+		return
+	}
+	if err != nil || current.ID != cartID {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "cart changed but canonical readback failed")
+		return
+	}
+	w.Header().Set("ETag", fmt.Sprintf(`"%d"`, current.Version))
+	store.SendJSON(w, http.StatusConflict, map[string]any{
+		"code":                "CART_VERSION_CONFLICT",
+		"message":             "cart changed; reload the current cart before checkout",
+		"expectedCartVersion": expectedVersion,
+		"currentCartVersion":  current.Version,
+		"cart":                current,
+	})
 }
 
 func (s *protectedStoreServer) handleGetCheckoutIntent(w http.ResponseWriter, r *http.Request) {
@@ -524,6 +721,17 @@ func checkoutCreateFingerprint(parts ...string) string {
 	return hex.EncodeToString(digest[:])
 }
 
+func checkoutQuoteMatchesPricing(quote *wlt.WltPricingQuote, intent *checkout.Intent, pricing checkout.PricingSnapshot) bool {
+	if quote == nil || intent == nil || strings.TrimSpace(quote.ID) == "" || quote.ExpiresAt == nil || !quote.ExpiresAt.After(time.Now().UTC()) {
+		return false
+	}
+	return quote.SubtotalMinorUnits == pricing.SubtotalMinorUnits &&
+		quote.DeliveryFeeMinorUnits == pricing.DeliveryFeeMinorUnits &&
+		quote.ServiceFeeMinorUnits == 0 && quote.TaxMinorUnits == 0 && quote.RoundingMinorUnits == 0 &&
+		quote.DiscountMinorUnits == pricing.DiscountMinorUnits && quote.TotalMinorUnits == pricing.TotalMinorUnits &&
+		quote.Currency == pricing.Currency
+}
+
 func (s *protectedStoreServer) handleReconcileCheckoutIntent(w http.ResponseWriter, r *http.Request) {
 	if _, ok := s.ActorFromContext(r.Context()); !ok {
 		return
@@ -547,17 +755,23 @@ func (s *protectedStoreServer) handleReconcileCheckoutIntent(w http.ResponseWrit
 		return
 	}
 	correlationID := fundingCorrelation(r.Header.Get("X-Correlation-ID"), intent.ID)
+	canonicalQuote, err := s.wlt.GetCheckoutQuote(r.Context(), intent.ID)
+	if err != nil || !checkoutQuoteMatchesPricing(canonicalQuote, intent, pricing) {
+		store.SendError(w, http.StatusServiceUnavailable, "WLT_PRICING_QUOTE_UNAVAILABLE", "canonical WLT pricing quote is unavailable or does not match the frozen checkout")
+		return
+	}
 	session, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
-		CheckoutIntentID: intent.ID,
-		OperatorContextID:         intent.OperatorContextID,
-		ClientID:         intent.ClientID,
-		StoreID:          intent.StoreID,
-		PaymentMethod:    string(intent.PaymentMethod),
-		AmountMinorUnits: pricing.TotalMinorUnits,
-		Currency:         pricing.Currency,
-		CartSnapshotHash: pricing.SnapshotHash,
-		CorrelationID:    correlationID,
-		IdempotencyKey:   "dsh-checkout-intent:" + intent.ID,
+		CheckoutIntentID:  intent.ID,
+		OperatorContextID: intent.OperatorContextID,
+		ClientID:          intent.ClientID,
+		StoreID:           intent.StoreID,
+		PaymentMethod:     string(intent.PaymentMethod),
+		AmountMinorUnits:  pricing.TotalMinorUnits,
+		Currency:          pricing.Currency,
+		CartSnapshotHash:  canonicalQuote.CartSnapshotHash,
+		PricingQuoteID:    canonicalQuote.ID,
+		CorrelationID:     correlationID,
+		IdempotencyKey:    "dsh-checkout-intent:" + intent.ID,
 	})
 	if err != nil {
 		if wlt.IsPaymentSessionOutcomeUnknown(err) {
@@ -567,10 +781,23 @@ func (s *protectedStoreServer) handleReconcileCheckoutIntent(w http.ResponseWrit
 			})
 			return
 		}
-		_ = s.releaseCouponFunding(r.Context(), intent.OperatorContextID, intent.ID, "reconciliation_definitive_failure", correlationID)
-		_ = coupons.ReleaseByIntent(s.db, intent.ID, "reconciliation_definitive_failure")
+		var compensationErr error
+		if releaseErr := s.releaseCouponFunding(r.Context(), intent.OperatorContextID, intent.ID, "reconciliation_definitive_failure", correlationID); releaseErr != nil {
+			compensationErr = errors.Join(compensationErr, releaseErr)
+		}
+		if releaseErr := coupons.ReleaseByIntent(s.db, intent.ID, "reconciliation_definitive_failure"); releaseErr != nil {
+			compensationErr = errors.Join(compensationErr, releaseErr)
+		}
 		failed, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, intent.OperatorContextID, intent.ClientID)
 		if markErr == nil {
+			if compensationErr != nil {
+				store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
+					"intent":                 marshalIntentWithPricing(failed, pricing),
+					"reconciliationRequired": true,
+					"error":                  map[string]any{"code": "WLT_HANDOFF_COMPENSATION_REQUIRED", "message": "WLT reconciliation failed and financial compensation requires reconciliation"},
+				})
+				return
+			}
 			store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
 				"intent":                 marshalIntentWithPricing(failed, pricing),
 				"reconciliationRequired": false,
@@ -602,7 +829,29 @@ func (s *protectedStoreServer) handleValidateCheckoutIntent(w http.ResponseWrite
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "intentId is required")
 		return
 	}
-	intent, err := checkout.ValidateIntent(s.db, intentID, actor.OperatorContextID, actor.ID)
+	intent, err := checkout.GetIntent(s.db, intentID, actor.OperatorContextID, actor.ID)
+	if errors.Is(err, checkout.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve checkout intent")
+		return
+	}
+	dependencies, _, _, err := s.evaluateCheckoutDependencies(r, intent, "", intent.FulfillmentMode)
+	if errors.Is(err, clientaddress.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "ADDRESS_NOT_FOUND", "checkout address is no longer owned by the authenticated client")
+		return
+	}
+	if errors.Is(err, checkout.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "checkout fulfillment mode is invalid")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to evaluate checkout dependencies")
+		return
+	}
+	intent, err = checkout.ValidateIntent(s.db, intentID, actor.OperatorContextID, actor.ID, dependencies)
 	if errors.Is(err, checkout.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found")
 		return
@@ -612,7 +861,7 @@ func (s *protectedStoreServer) handleValidateCheckoutIntent(w http.ResponseWrite
 		return
 	}
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to validate checkout intent")
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to persist checkout validation")
 		return
 	}
 	pricing, err := checkout.GetPricing(s.db, intent.ID)
@@ -634,6 +883,15 @@ func (s *protectedStoreServer) handleRefreshCheckoutIntent(w http.ResponseWriter
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "intentId is required")
 		return
 	}
+	intent, err := checkout.GetIntent(s.db, intentID, actor.OperatorContextID, actor.ID)
+	if errors.Is(err, checkout.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to resolve checkout intent")
+		return
+	}
 	var body struct {
 		FulfillmentMode   string `json:"fulfillmentMode"`
 		DeliveryAddressID string `json:"deliveryAddressId"`
@@ -645,10 +903,31 @@ func (s *protectedStoreServer) handleRefreshCheckoutIntent(w http.ResponseWriter
 	addressID := strings.TrimSpace(body.DeliveryAddressID)
 	mode := checkout.FulfillmentMode(strings.TrimSpace(body.FulfillmentMode))
 	if mode == "" {
-		mode = checkout.ModeBthwaniDelivery
+		mode = intent.FulfillmentMode
+	}
+	if mode != checkout.ModePickup && addressID == "" {
+		store.SendError(w, http.StatusBadRequest, "DELIVERY_ADDRESS_REQUIRED", "deliveryAddressId is required for delivery refresh")
+		return
 	}
 
-	intent, err := checkout.RefreshIntent(s.db, intentID, actor.OperatorContextID, actor.ID, addressID, mode, 0)
+	dependencies, resolvedAddressID, addressSnapshot, err := s.evaluateCheckoutDependencies(r, intent, addressID, mode)
+	if errors.Is(err, clientaddress.ErrNotFound) {
+		store.SendError(w, http.StatusNotFound, "ADDRESS_NOT_FOUND", "delivery address is not owned by the authenticated client")
+		return
+	}
+	if errors.Is(err, checkout.ErrInvalid) {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "checkout fulfillment mode is invalid")
+		return
+	}
+	if err != nil {
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to evaluate checkout dependencies")
+		return
+	}
+	intent, err = checkout.RefreshIntent(s.db, checkout.RefreshIntentInput{
+		IntentID: intentID, OperatorContextID: actor.OperatorContextID, ClientID: actor.ID,
+		AddressID: resolvedAddressID, AddressSnapshot: addressSnapshot, Mode: mode,
+		Dependencies: dependencies,
+	})
 	if errors.Is(err, checkout.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "checkout intent not found")
 		return
@@ -658,7 +937,7 @@ func (s *protectedStoreServer) handleRefreshCheckoutIntent(w http.ResponseWriter
 		return
 	}
 	if err != nil {
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to refresh checkout intent")
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to persist checkout refresh")
 		return
 	}
 	pricing, err := checkout.GetPricing(s.db, intent.ID)

@@ -33,7 +33,7 @@ func TestCreatePaymentSessionOmitsDeprecatedFinancialScopeFromPayload(t *testing
 		CheckoutIntentID: "intent-no-scope-payload",
 		ClientID:         "client-1",
 		StoreID:          "store-1",
-		PaymentMethod:    "official_wallet",
+		PaymentMethod:    "wallet",
 		AmountMinorUnits: 1000,
 		Currency:         "YER",
 		CartSnapshotHash: "snapshot-1",

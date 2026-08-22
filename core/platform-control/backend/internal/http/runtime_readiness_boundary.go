@@ -15,7 +15,7 @@ import (
 const (
 	minimumInternalServiceTokenLength   = 32
 	platformControlMigrationServiceName = "platform-control"
-	platformControlLatestMigration      = "platform-008_partner_commercial_model.sql"
+	platformControlLatestMigration      = "platform-009_partner_commercial_truth_boundary.sql"
 	defaultReadinessProbeTimeout        = 2 * time.Second
 	defaultClockSkewLimit               = 5 * time.Second
 )
@@ -87,9 +87,6 @@ func configuredReadinessDuration(name string, fallback time.Duration) (time.Dura
 }
 
 func runtimeConfigurationReady() bool {
-	if strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID")) == "" {
-		return false
-	}
 	if !configuredRuntimeSecret("PLATFORM_CONTROL_DSH_SERVICE_TOKEN", minimumInternalServiceTokenLength) {
 		return false
 	}
@@ -104,6 +101,16 @@ func RuntimeReadinessBoundary(next http.Handler, databases ...*sql.DB) http.Hand
 	return runtimeReadinessBoundary(store, next)
 }
 
+func isPlatformOperationalRequest(r *http.Request) bool {
+	if r.Method == http.MethodOptions {
+		return false
+	}
+	if r.URL.Path == "/platform/health" || r.URL.Path == "/platform/readiness" {
+		return false
+	}
+	return strings.HasPrefix(r.URL.Path, "/platform/")
+}
+
 func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet && r.URL.Path == "/platform/health" {
@@ -115,7 +122,9 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 			sendJSON(w, http.StatusOK, map[string]string{"status": status, "service": "core-platform-control"})
 			return
 		}
-		if r.Method != http.MethodGet || r.URL.Path != "/platform/readiness" {
+
+		isReadinessRequest := r.Method == http.MethodGet && r.URL.Path == "/platform/readiness"
+		if !isReadinessRequest && !isPlatformOperationalRequest(r) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -139,7 +148,7 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 		}
 
 		if store == nil {
-			next.ServeHTTP(w, r)
+			writeReadinessFailure(w, "database_configuration", startedAt, nil)
 			return
 		}
 
@@ -196,7 +205,13 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 			"success_total", successTotal,
 			"failure_total", readinessFailures.Load(),
 		)
-		sendJSON(w, http.StatusOK, map[string]string{"status": "HEALTHY", "service": "core-platform-control"})
+
+		if isReadinessRequest {
+			sendJSON(w, http.StatusOK, map[string]string{"status": "HEALTHY", "service": "core-platform-control"})
+			return
+		}
+		w.Header().Set("X-Platform-Control-Runtime-Status", "HEALTHY")
+		next.ServeHTTP(w, r)
 	})
 }
 

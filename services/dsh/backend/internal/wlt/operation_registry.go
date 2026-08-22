@@ -33,90 +33,22 @@ func NewOperationRegistry() *OperationRegistry {
 }
 
 func (r *OperationRegistry) registerDefaults() {
-	r.register(FinanceOperation{
-		ID:                 "finance.settlements.read",
-		Type:               OperationTypeRead,
-		RequiredPermission: "finance.read",
-		Timeout:            10 * time.Second,
-		Idempotent:         true,
-	})
-	r.register(FinanceOperation{
-		ID:                 "finance.refunds.read",
-		Type:               OperationTypeRead,
-		RequiredPermission: "finance.read",
-		Timeout:            10 * time.Second,
-		Idempotent:         true,
-	})
-	r.register(FinanceOperation{
-		ID:                 "finance.ledger.read",
-		Type:               OperationTypeRead,
-		RequiredPermission: "finance.read",
-		Timeout:            10 * time.Second,
-		Idempotent:         true,
-	})
-	r.register(FinanceOperation{
-		ID:                 "finance.payout_requests.read",
-		Type:               OperationTypeRead,
-		RequiredPermission: "finance.read",
-		Timeout:            10 * time.Second,
-		Idempotent:         true,
-	})
-	r.register(FinanceOperation{
-		ID:                 "finance.payout_requests.approve",
-		Type:               OperationTypeWrite,
-		RequiredPermission: "finance.manage",
-		Timeout:            15 * time.Second,
-		Idempotent:         true,
-	})
-	r.register(FinanceOperation{
-		ID:                 "finance.payout_requests.reject",
-		Type:               OperationTypeWrite,
-		RequiredPermission: "finance.manage",
-		Timeout:            15 * time.Second,
-		Idempotent:         true,
-	})
-	r.register(FinanceOperation{
-		ID:                 "finance.reconciliation.read",
-		Type:               OperationTypeRead,
-		RequiredPermission: "finance.read",
-		Timeout:            10 * time.Second,
-		Idempotent:         true,
-	})
-	r.register(FinanceOperation{
-		ID:                 "finance.reconciliation.assign",
-		Type:               OperationTypeWrite,
-		RequiredPermission: "finance.manage",
-		Timeout:            15 * time.Second,
-		Idempotent:         true,
-	})
-	r.register(FinanceOperation{
-		ID:                 "finance.reconciliation.resolve",
-		Type:               OperationTypeWrite,
-		RequiredPermission: "finance.manage",
-		Timeout:            15 * time.Second,
-		Idempotent:         true,
-	})
-	r.register(FinanceOperation{
-		ID:                 "finance.cod.read",
-		Type:               OperationTypeRead,
-		RequiredPermission: "finance.read",
-		Timeout:            10 * time.Second,
-		Idempotent:         true,
-	})
-	r.register(FinanceOperation{
-		ID:                 "finance.cod.collect",
-		Type:               OperationTypeWrite,
-		RequiredPermission: "finance.manage",
-		Timeout:            15 * time.Second,
-		Idempotent:         true,
-	})
-	r.register(FinanceOperation{
-		ID:                 "finance.cod.remit",
-		Type:               OperationTypeWrite,
-		RequiredPermission: "finance.manage",
-		Timeout:            15 * time.Second,
-		Idempotent:         true,
-	})
+	r.register(FinanceOperation{ID: "finance.settlements.read", Type: OperationTypeRead, RequiredPermission: "finance.read", Timeout: 10 * time.Second, Idempotent: true})
+	r.register(FinanceOperation{ID: "finance.refunds.read", Type: OperationTypeRead, RequiredPermission: "finance.read", Timeout: 10 * time.Second, Idempotent: true})
+	r.register(FinanceOperation{ID: "finance.ledger.read", Type: OperationTypeRead, RequiredPermission: "finance.read", Timeout: 10 * time.Second, Idempotent: true})
+	r.register(FinanceOperation{ID: "finance.payout_requests.read", Type: OperationTypeRead, RequiredPermission: "finance.read", Timeout: 10 * time.Second, Idempotent: true})
+	r.register(FinanceOperation{ID: "finance.payout_requests.approve", Type: OperationTypeWrite, RequiredPermission: "finance.manage", Timeout: 15 * time.Second, Idempotent: true})
+	r.register(FinanceOperation{ID: "finance.payout_requests.reject", Type: OperationTypeWrite, RequiredPermission: "finance.manage", Timeout: 15 * time.Second, Idempotent: true})
+	r.register(FinanceOperation{ID: "finance.payout_destinations.read", Type: OperationTypeRead, RequiredPermission: "finance.read", Timeout: 10 * time.Second, Idempotent: true})
+	r.register(FinanceOperation{ID: "finance.payout_destinations.upsert", Type: OperationTypeWrite, RequiredPermission: "finance.manage", Timeout: 15 * time.Second, Idempotent: true})
+	r.register(FinanceOperation{ID: "finance.payout_destinations.verify", Type: OperationTypeWrite, RequiredPermission: "administration.approve", Timeout: 15 * time.Second, Idempotent: true})
+	r.register(FinanceOperation{ID: "finance.payout_destinations.deactivate", Type: OperationTypeWrite, RequiredPermission: "administration.approve", Timeout: 15 * time.Second, Idempotent: true})
+	r.register(FinanceOperation{ID: "finance.reconciliation.read", Type: OperationTypeRead, RequiredPermission: "finance.read", Timeout: 10 * time.Second, Idempotent: true})
+	r.register(FinanceOperation{ID: "finance.reconciliation.assign", Type: OperationTypeWrite, RequiredPermission: "finance.manage", Timeout: 15 * time.Second, Idempotent: true})
+	r.register(FinanceOperation{ID: "finance.reconciliation.resolve", Type: OperationTypeWrite, RequiredPermission: "finance.manage", Timeout: 15 * time.Second, Idempotent: true})
+	r.register(FinanceOperation{ID: "finance.captain_collateral.read", Type: OperationTypeRead, RequiredPermission: "finance.read", Timeout: 10 * time.Second, Idempotent: true})
+	r.register(FinanceOperation{ID: "finance.captain_collateral.allocate", Type: OperationTypeWrite, RequiredPermission: "finance.manage", Timeout: 15 * time.Second, Idempotent: true})
+	r.register(FinanceOperation{ID: "finance.captain_collateral.release", Type: OperationTypeWrite, RequiredPermission: "finance.manage", Timeout: 15 * time.Second, Idempotent: true})
 }
 
 func (r *OperationRegistry) register(op FinanceOperation) {

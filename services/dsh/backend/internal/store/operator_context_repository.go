@@ -99,17 +99,49 @@ func GetStoreByIDInternalForOperatorContext(ctx context.Context, db *sql.DB, ope
 	return &row, nil
 }
 
-func GetStoreByPartnerIDForOperatorContext(db *sql.DB, operatorContextID, partnerID string) (*DshStoreRow, error) {
+var ErrFirstStoreReferenceMissing = errors.New("partner first-store reference is missing")
+
+// EnsurePartnerFirstStoreReferenceTx records the first store only when the
+// relationship is still unambiguous. Existing one-to-many partners are never
+// guessed or reassigned by this helper.
+func EnsurePartnerFirstStoreReferenceTx(ctx context.Context, tx *sql.Tx, partnerID, storeID, operatorContextID string) error {
+	partnerID = strings.TrimSpace(partnerID)
+	storeID = strings.TrimSpace(storeID)
+	operatorContextID, err := normalizeStoreOperatorContextID(operatorContextID)
+	if err != nil || partnerID == "" || storeID == "" {
+		if err != nil {
+			return err
+		}
+		return errors.New("partner and store identifiers are required")
+	}
+	_, err = tx.ExecContext(ctx, `
+		INSERT INTO dsh_partner_first_stores(partner_id, store_id, operator_context_id)
+		SELECT $1, $2, $3
+		WHERE EXISTS (
+			SELECT 1 FROM dsh_stores
+			WHERE id = $2 AND partner_id = $1 AND operator_context_id = $3
+		)
+		  AND NOT EXISTS (
+			SELECT 1 FROM dsh_partner_first_stores WHERE partner_id = $1
+		)
+		  AND NOT EXISTS (
+			SELECT 1 FROM dsh_stores WHERE partner_id = $1 AND id <> $2
+		)
+		ON CONFLICT (partner_id) DO NOTHING`, partnerID, storeID, operatorContextID)
+	return err
+}
+
+func GetPartnerFirstStoreForOperatorContext(ctx context.Context, db *sql.DB, operatorContextID, partnerID string) (*DshStoreRow, error) {
 	operatorContextID, err := normalizeStoreOperatorContextID(operatorContextID)
 	if err != nil {
 		return nil, err
 	}
-	row, err := scanStore(db.QueryRow(
-		"SELECT "+storeColumns+" FROM dsh_stores WHERE partner_id = $1 AND operator_context_id = $2 ORDER BY created_at ASC LIMIT 1",
-		partnerID, operatorContextID,
-	))
+	row, err := scanStore(db.QueryRowContext(ctx, "SELECT "+storeColumns+` FROM dsh_stores
+		WHERE id = (SELECT store_id FROM dsh_partner_first_stores
+		           WHERE partner_id = $1 AND operator_context_id = $2)
+		  AND operator_context_id = $2`, partnerID, operatorContextID))
 	if errors.Is(err, sql.ErrNoRows) {
-		return nil, nil
+		return nil, ErrFirstStoreReferenceMissing
 	}
 	if err != nil {
 		return nil, err
@@ -191,6 +223,9 @@ func CreateStoreForOperatorContextIdempotent(
 
 	// Link store to operator_context_id explicitly
 	if _, err = tx.ExecContext(ctx, `UPDATE dsh_stores SET operator_context_id = $1 WHERE id = $2`, operatorContextID, storeRow.ID); err != nil {
+		return DshStoreRow{}, false, err
+	}
+	if err := EnsurePartnerFirstStoreReferenceTx(ctx, tx, input.PartnerID, storeRow.ID, operatorContextID); err != nil {
 		return DshStoreRow{}, false, err
 	}
 

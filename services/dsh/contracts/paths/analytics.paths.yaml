@@ -298,7 +298,7 @@
 /dsh/partner/analytics/performance:
   get:
     operationId: getDshPartnerPerformance
-    summary: Authenticated partner's own store performance summary; store scope is derived from identity.
+    summary: Authenticated partner's selected authorized store performance summary.
     tags: [DshAnalytics]
     security:
       - bearerAuth: []
@@ -306,9 +306,13 @@
       - name: period
         in: query
         schema: { type: string, enum: [today, week, month], default: today }
+      - name: storeId
+        in: query
+        required: true
+        schema: { type: string, minLength: 1 }
     responses:
       "200":
-        description: Partner performance metrics for the actor's authorized store only.
+        description: Partner performance metrics for the explicitly selected authorized store only.
         content:
           application/json:
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerPerformanceResponse" }

@@ -103,7 +103,7 @@ func (s *Service) MarkReady(ctx context.Context, orderID, actorID, actorRole, co
 	if _, _, err := lockPickupOrder(tx, orderID, ""); err != nil {
 		return err
 	}
-	if _, err := orders.TransitionDispatchOrder(tx, orderID, actorRole, []orders.OrderStatus{orders.StatusPreparing}, orders.StatusReadyForPickup, "pickup ready"); err != nil {
+	if _, err := orders.TransitionDispatchOrder(tx, orderID, actorID, actorRole, []orders.OrderStatus{orders.StatusPreparing}, orders.StatusReadyForPickup, "pickup ready"); err != nil {
 		if errors.Is(err, orders.ErrNotFound) {
 			return ErrNotFound
 		}
@@ -312,7 +312,7 @@ func (s *Service) VerifyOtp(ctx context.Context, orderID, submittedOtp, actorID,
 		return nil, ErrVersionConflict
 	}
 
-	if _, err := orders.TransitionDispatchOrder(tx, orderID, actorRole, []orders.OrderStatus{orders.StatusReadyForPickup}, orders.StatusDelivered, "pickup verified"); err != nil {
+	if _, err := orders.TransitionDispatchOrder(tx, orderID, actorID, actorRole, []orders.OrderStatus{orders.StatusReadyForPickup}, orders.StatusDelivered, "pickup verified"); err != nil {
 		if errors.Is(err, orders.ErrNotFound) {
 			return nil, ErrNotFound
 		}

@@ -3,19 +3,46 @@ package http
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"dsh-api/internal/administration"
 	"dsh-api/internal/auth"
 	"dsh-api/internal/store"
 )
 
-// requireAdministrationPermission combines Identity authentication with the
-// canonical Identity RBAC registry. Identity remains both the session and
-// the permission authority: inline session claims (identity.Permissions)
-// are stale snapshots taken at login and cannot be used to authorize a
-// governed administration action — see the identical rule enforced for
-// operator actors in requirePermission (protected_store.go). Deny-by-default:
-// if the RBAC registry is unavailable, access is denied, never granted.
+func controlPanelActorRole(identity auth.Identity) string {
+	if identity.HasRole("operator") {
+		return "operator"
+	}
+	if identity.HasRole("employee") {
+		return "employee"
+	}
+	for _, role := range identity.Roles {
+		if trimmed := strings.TrimSpace(role); trimmed != "" {
+			return trimmed
+		}
+	}
+	return "authenticated"
+}
+
+func resolvedControlPanelPermissions(
+	s *protectedStoreServer,
+	r *http.Request,
+	identity auth.Identity,
+) ([]auth.Permission, error) {
+	if identity.HasRole("operator") {
+		return s.identity.ResolvePermissions(r.Context(), identity.Subject)
+	}
+	// Resolve() calls Identity /auth/session for every protected request, so
+	// these are the actor's current server-side permissions, not a browser or
+	// token snapshot. Non-operator control-panel employees are governed by this
+	// exact permission set.
+	return identity.Permissions, nil
+}
+
+// requireAdministrationPermission separates authentication from authorization:
+// the exact live session must be bound to control-panel, then the current
+// permission authority for that actor must contain the requested action.
 func (s *protectedStoreServer) requireAdministrationPermission(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -30,28 +57,33 @@ func (s *protectedStoreServer) requireAdministrationPermission(
 		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
 		return store.StoreActor{}, false
 	}
-
-	actor := store.StoreActor{
-		ID:                identity.Subject,
-		Role:              "permission:" + action,
-		OperatorContextID: identity.OperatorContextID,
-		AuthorizedAction:  action,
+	if identity.SessionSurface != "control-panel" {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "control-panel session is required")
+		return store.StoreActor{}, false
 	}
 
-	rbacPerms, rbacErr := s.identity.ResolvePermissions(r.Context(), identity.Subject)
-	if rbacErr != nil {
-		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "RBAC registry is unavailable")
+	permissions, permissionErr := resolvedControlPanelPermissions(s, r, identity)
+	if permissionErr != nil {
+		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "permission authority is unavailable")
 		return store.StoreActor{}, false
 	}
 	candidates := administration.AdministrationPermissionCandidates(action)
-	for _, permission := range rbacPerms {
+	for _, permission := range permissions {
 		if permission.Service != "dsh" || permission.Surface != "control-panel" {
 			continue
 		}
 		for _, candidate := range candidates {
-			if permission.Action == candidate {
-				actor.AuthorizationScope = permission.Scope
-				return actor, true
+			if permission.Action == candidate && strings.TrimSpace(permission.Scope) != "" {
+				return store.StoreActor{
+					ID:                 identity.Subject,
+					Role:               controlPanelActorRole(identity),
+					OperatorContextID:  identity.OperatorContextID,
+					SessionID:          identity.SessionID,
+					SessionSurface:     identity.SessionSurface,
+					PhoneE164:          identity.PhoneE164,
+					AuthorizedAction:   action,
+					AuthorizationScope: permission.Scope,
+				}, true
 			}
 		}
 	}

@@ -34,10 +34,18 @@ test("app-client keeps every Expo capability used by the operational experience"
   }
 
   const manifest = JSON.parse(source("tools/mobile/mobile-apps.manifest.json"));
-  const features = new Set(manifest.apps?.["app-client"]?.features ?? []);
-  for (const feature of ["crypto", "fileSystem", "image", "sharing", "video", "webBrowser"]) {
-    assert.equal(features.has(feature), true, `app-client manifest missing feature: ${feature}`);
+  const capabilities = new Set(manifest.apps?.["app-client"]?.nativeCapabilities ?? []);
+  for (const capability of ["crypto", "fileSystem", "image", "sharing", "video", "webBrowser"]) {
+    assert.equal(capabilities.has(capability), true, `app-client manifest missing capability: ${capability}`);
   }
+});
+
+test("client native wiring leaves inbound URL navigation to Expo Router", () => {
+  const platform = source("apps/app-client/runtime/src/platform/dsh-capabilities.tsx");
+
+  assert.doesNotMatch(platform, /configureDshLinkingAdapter|getInitialURL|getInitialUrl|addUrlListener|addEventListener\("url"/);
+  assert.match(platform, /configureDshMobileNotificationRuntime\(createDshExpoNotificationRuntime/);
+  assert.match(platform, /linking: Linking/);
 });
 
 test("client discovery exposes real search, cached images, and a persistent donor-style reels launcher", () => {
@@ -45,9 +53,8 @@ test("client discovery exposes real search, cached images, and a persistent dono
     "services/dsh/frontend/app-client/home-discovery/HomeDiscoveryShell.tsx",
     [
       "createClientEphemeralId",
-      "searchText",
+      "searchQuery",
       "normalizedQuery",
-      "ابحث عن متجر أو فئة",
       "setReels([])",
       "setVideoOpenRequest",
       "onVideoPress={handleVideoPress}",
@@ -70,15 +77,13 @@ test("client discovery exposes real search, cached images, and a persistent dono
   const reels = assertMarkers(
     "services/dsh/frontend/app-client/home-discovery/HomeReelsSection.tsx",
     [
-      "expo-video",
-      "useVideoPlayer",
-      "useCaching: true",
-      "allowsPictureInPicture",
+      "getDshVideoRenderer",
+      "VideoSurface",
+      "active={active}",
       "FlatList",
       "pagingEnabled",
       "itemVisiblePercentThreshold: 80",
       "onViewableItemsChanged",
-      "player.pause()",
       "initialScrollIndex",
       "ReelsStateModal",
       "لا توجد فيديوهات معتمدة بعد",
@@ -89,6 +94,11 @@ test("client discovery exposes real search, cached images, and a persistent dono
     ],
   );
   assert.equal(reels.includes("expo-av"), false);
+  assert.equal(reels.includes("expo-video"), false);
+  assertMarkers(
+    "apps/app-client/runtime/src/platform/dsh-capabilities.tsx",
+    ["expo-video", "useVideoPlayer", "useCaching: true", "player.pause()", "allowsPictureInPicture"],
+  );
   assertMarkers(
     "services/dsh/frontend/app-client/home-discovery/HomePromoSection.tsx",
     ["promo.actionTarget.trim().length > 0", "hasQuickActions", 'label="فيديو"', "isVideo"],
@@ -125,7 +135,9 @@ test("manual request categories are server-routed sovereign destinations", () =>
     [
       "DshHomeSpecialRequestTarget",
       "openSpecialRequestType",
-      'requestType === "SHEIN_ASSISTED_PURCHASE" ? "shein" : "awnak"',
+      'requestType === "SHEIN_ASSISTED_PURCHASE"',
+      '"special-request-shein"',
+      '"special-request-awnak"',
       "onSpecialRequestPress={openSpecialRequestType}",
     ],
   );
@@ -163,15 +175,87 @@ test("SHEIN and Awnak intake forms expose the backend-supported operational fiel
 test("client order and support routes remain navigable and failure-safe", () => {
   assertMarkers(
     "services/dsh/frontend/app-client/orders/OrderTrackingScreen.tsx",
-    ["onOpenPickup", 'order.fulfillmentMode === "pickup"', "افتح جلسة الاستلام"],
+    ["onOpenPickup", "onOpenOrderSupport", 'order.fulfillmentMode === "pickup"', "مراسلة الدعم بشأن الطلب"],
   );
   assertMarkers(
     "services/dsh/frontend/app-client/support/SupportTicketScreen.tsx",
-    ["const ok = await submitTicket", "if (!ok) return;", "maxLength={4000}"],
+    ["const ok = await submitTicket", "if (!ok) return;", "orderId", "maxLength={4000}"],
   );
   assertMarkers(
     "services/dsh/frontend/app-client/DshClientSurface.tsx",
-    ["openClientExternalUrl", "onOpenPickup={openPickupSession}", "performClientSelectionHaptic"],
+    ["openClientExternalUrl", "onOpenPickup={openPickupSession}", "onOpenOrderSupport={openOrderSupport}", "performClientSelectionHaptic"],
+  );
+});
+
+test("client commercial profile is reachable from My Space and has no inert privacy actions", () => {
+  const surface = assertMarkers(
+    "services/dsh/frontend/app-client/DshClientSurface.tsx",
+    [
+      '"profile-commercial"',
+      "MyProfileScreen",
+      'onOpenProfile={() => navigate({ kind: "profile-commercial" })}',
+    ],
+  );
+  assert.match(surface, /case "profile-commercial":/);
+  assert.doesNotMatch(surface, /setProfileRoute|commercial-profile/);
+  const profile = assertMarkers(
+    "services/dsh/frontend/app-client/account/MyProfileScreen.tsx",
+    ["fetchClientProfile", "upsertClientProfilePreferences", "upsertClientProfileConsents", "serverProfile"],
+  );
+  const profileApi = assertMarkers(
+    "services/dsh/frontend/shared/client-profile/client-profile.api.ts",
+    ["resolveDshApiBaseUrl()"],
+  );
+  assert.equal(profileApi.includes('createDshHttpClient("",'), false);
+  assert.equal(profile.includes("طلب نسخة بياناتي"), false);
+  assert.equal(profile.includes("طلب حذف الحساب"), false);
+});
+
+test("catalog verification wrapper initializes native exit state before a PowerShell child", () => {
+  const runtime = assertMarkers(
+    "infra/docker/scripts/runtime.ps1",
+    ["\"verify-catalog\"", "$global:LASTEXITCODE = 0", "verify-catalog: PASS"],
+  );
+  assert.ok(runtime.indexOf("$global:LASTEXITCODE = 0") < runtime.indexOf("verify-catalog: PASS"));
+});
+
+test("checkout carries the confirmed cart version into the canonical DSH OCC contract", () => {
+  const screen = assertMarkers(
+    "services/dsh/frontend/app-client/checkout/ClientCheckoutRoute.tsx",
+    ["expectedCartVersion: cart.version", "flow.start(input)"],
+  );
+  assert.ok(screen.includes("expectedCartVersion: cart.version"));
+  const schema = assertMarkers(
+    "services/dsh/contracts/components/schemas/checkout.schemas.yaml",
+    ["required: [cartId, storeId, expectedCartVersion]", "expectedCartVersion: { type: integer, minimum: 1 }"],
+  );
+  assert.ok(schema.includes("expectedCartVersion"));
+  const checkoutHandler = assertMarkers(
+    "services/dsh/backend/internal/http/checkout.go",
+    ["CheckGovernedServiceability", "ComputeCheckoutSnapshotTx", "CART_VERSION_CONFLICT", "currentCartVersion"],
+  );
+  assert.ok(checkoutHandler.includes("CheckGovernedServiceability"));
+  const snapshot = assertMarkers(
+    "services/dsh/backend/internal/cart/checkout_snapshot_scoped.go",
+    ["func ComputeCheckoutSnapshotTx(", "expectedVersion int"],
+  );
+  assert.equal(snapshot.includes("ComputeCheckoutSnapshotForClient"), false);
+  const conflictSchema = assertMarkers(
+    "services/dsh/contracts/components/schemas/checkout.schemas.yaml",
+    ["DshCheckoutCartVersionConflict", "currentCartVersion"],
+  );
+  assert.ok(conflictSchema.includes("DshCheckoutCartVersionConflict"));
+  assertMarkers(
+    "services/dsh/frontend/shared/checkout/use-checkout-to-order-flow.tsx",
+    ["useCreateOrderTruthController", "submitOrder({ checkoutIntentId", "order_ready"],
+  );
+  assertMarkers(
+    "services/dsh/frontend/shared/order-truth/order-truth.api.ts",
+    ["/dsh/client/order-truth", "idempotencyKey: context.idempotencyKey", "correlationId: context.correlationId"],
+  );
+  assertMarkers(
+    "services/dsh/frontend/shared/order-truth/use-order-truth-controller.ts",
+    ["fetchClientOrderTruthDetail(created.id, token)", "clearOrderTruthAttempt(attempt.fingerprint)"],
   );
 });
 
@@ -236,7 +320,29 @@ test("notification mutations are contained and provide canonical readback", () =
   );
 });
 
-test("incomplete dark appearance is not exposed while video PiP remains configured", () => {
+test("subscription mutations persist one governed attempt across retries and restart", () => {
+  const lifecycle = assertMarkers(
+    "services/dsh/frontend/shared/marketing/subscription-lifecycle.api.ts",
+    [
+      "getOrCreateSubscriptionMutationAttempt",
+      "recoverDshSubscriptionPurchase",
+      "clearSubscriptionMutationAttempt",
+      "attempt.context",
+    ],
+  );
+  assert.equal(lifecycle.includes("mutationSequence"), false);
+  assert.equal(lifecycle.includes("Date.now"), false);
+  assertMarkers(
+    "services/dsh/frontend/shared/marketing/use-subscription-lifecycle-controller.tsx",
+    ["registerIdentityBeforeSessionEndHook", "clearSubscriptionMutationAttempts", "recoverDshSubscriptionPurchase"],
+  );
+  assertMarkers(
+    "services/dsh/frontend/shared/marketing/subscription-mutation-attempt.ts",
+    ["@bthwani/data-runtime", "bthwaniKeyValueStorage", "LATEST_PURCHASE_KEY", "AsyncStorage.setItem", "AsyncStorage.removeItem"],
+  );
+});
+
+test("client does not own mobile appearance while video PiP remains configured", () => {
   assert.equal(
     fs.existsSync(path.join(repoRoot, "apps/app-client/runtime/src/preferences/client-appearance.tsx")),
     false,
@@ -247,7 +353,7 @@ test("incomplete dark appearance is not exposed while video PiP remains configur
   );
   const config = assertMarkers(
     "apps/app-client/runtime/app.config.ts",
-    ['userInterfaceStyle: "light"', "supportsPictureInPicture: true", "ExpoConfig"],
+    ["supportsPictureInPicture: true", "ExpoConfig"],
   );
-  assert.equal(config.includes('userInterfaceStyle: "automatic"'), false);
+  assert.equal(config.includes("userInterfaceStyle"), false);
 });

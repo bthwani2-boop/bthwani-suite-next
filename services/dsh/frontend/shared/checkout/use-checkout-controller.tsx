@@ -29,8 +29,10 @@ import { checkoutIdleState } from "./checkout.states";
 
 export function useCheckoutController() {
   const [state, setState] = useState<DshCheckoutState>(checkoutIdleState());
+  const operationGeneration = useRef(0);
 
   const submit = useCallback(async (input: DshCreateIntentInput) => {
+    const generation = ++operationGeneration.current;
     setState(beginCheckoutSubmit());
     try {
       const attempt = await getOrCreateCheckoutAttempt(input);
@@ -40,17 +42,22 @@ export function useCheckoutController() {
       } catch {
         // The accepted server mutation is idempotent; retaining the key is safe.
       }
+      if (generation !== operationGeneration.current) return;
       setState(resolveCheckoutSubmitSuccess(intent));
     } catch (error) {
+      if (generation !== operationGeneration.current) return;
       setState(resolveCheckoutSubmitError(classifyCheckoutError(error)));
     }
   }, []);
 
   const cancel = useCallback(async (intentId: string) => {
+    const generation = ++operationGeneration.current;
     try {
       await cancelCheckoutIntent(intentId);
+      if (generation !== operationGeneration.current) return;
       setState(checkoutIdleState());
     } catch (error) {
+      if (generation !== operationGeneration.current) return;
       const classified = classifyCheckoutError(error);
       if (classified.kind === "offline") {
         setState({ kind: "error", message: "تعذر إلغاء جلسة الدفع لعدم وجود اتصال بالإنترنت." });
@@ -65,16 +72,22 @@ export function useCheckoutController() {
   }, []);
 
   const reload = useCallback(async (intentId: string) => {
+    const generation = ++operationGeneration.current;
     setState(beginCheckoutReload());
     try {
       const intent = await fetchCheckoutIntent(intentId);
+      if (generation !== operationGeneration.current) return;
       setState(resolveCheckoutReloadSuccess(intent));
     } catch {
+      if (generation !== operationGeneration.current) return;
       setState(resolveCheckoutReloadError());
     }
   }, []);
 
-  const reset = useCallback(() => setState(checkoutIdleState()), []);
+  const reset = useCallback(() => {
+    operationGeneration.current += 1;
+    setState(checkoutIdleState());
+  }, []);
 
   return { state, submit, cancel, reload, reset };
 }

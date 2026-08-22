@@ -98,13 +98,40 @@ func seedVerificationEvidence(t *testing.T, db *sql.DB, visitID, storeID, agentI
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_partners WHERE id = $1`, partnerID) })
 
-	required := []string{
-		"location_verified",
-		"documents_uploaded",
-		"product_list_submitted",
-		"equipment_checked",
-		"safety_compliant",
-		"hygiene_compliant",
+	if _, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_visit_checklist_requirements
+		  (visit_id, template_id, template_version, business_vertical_id, check_type,
+		   label_ar, required, critical, evidence_required, display_order)
+		SELECT $1, template.id, template.version, template.business_vertical_id,
+		       item.check_type, item.label_ar, item.required, item.critical,
+		       item.evidence_required, item.display_order
+		FROM dsh_readiness_checklist_templates template
+		JOIN dsh_readiness_checklist_template_items item ON item.template_id = template.id
+		WHERE template.operator_context_id = 'system-default'
+		  AND template.business_vertical_id = 'default'
+		ON CONFLICT (visit_id, check_type) DO NOTHING`, visitID); err != nil {
+		t.Fatalf("seed visit checklist snapshot: %v", err)
+	}
+	rows, err := db.QueryContext(ctx, `
+		SELECT check_type FROM dsh_visit_checklist_requirements
+		WHERE visit_id = $1 AND required = TRUE ORDER BY display_order`, visitID)
+	if err != nil {
+		t.Fatalf("list required visit checks: %v", err)
+	}
+	defer rows.Close()
+	var required []string
+	for rows.Next() {
+		var checkType string
+		if err := rows.Scan(&checkType); err != nil {
+			t.Fatalf("scan required visit check: %v", err)
+		}
+		required = append(required, checkType)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("iterate required visit checks: %v", err)
+	}
+	if err := rows.Close(); err != nil {
+		t.Fatalf("close required visit checks: %v", err)
 	}
 	for _, checkType := range required {
 		mediaRef := uniqueID("media-fv")
@@ -136,7 +163,7 @@ func TestSubmitFieldVerificationRequiresVisitID(t *testing.T) {
 	seedGovernanceStore(t, db, storeID, agentID)
 	actor := testStoreActor(t, agentID)
 
-	_, err := SubmitFieldVerification(ctx, db, nil, actor, storeID, "idempotency-key-1", "correlation-id-1", FieldVerificationInput{
+	_, err := SubmitFieldVerification(ctx, db, actor, storeID, "idempotency-key-1", "correlation-id-1", FieldVerificationInput{
 		ExpectedVersion: 1,
 		Outcome:         "verified",
 		EvidenceStatus:  "complete",
@@ -159,7 +186,7 @@ func TestSubmitFieldVerificationRejectsVisitStoreMismatch(t *testing.T) {
 
 	visitID := seedFieldVisit(t, db, storeB, agentID, "complete")
 
-	_, err := SubmitFieldVerification(ctx, db, nil, actor, storeA, "idempotency-key-2", "correlation-id-2", FieldVerificationInput{
+	_, err := SubmitFieldVerification(ctx, db, actor, storeA, "idempotency-key-2", "correlation-id-2", FieldVerificationInput{
 		ExpectedVersion: 1,
 		VisitID:         visitID,
 		Outcome:         "verified",
@@ -181,7 +208,7 @@ func TestSubmitFieldVerificationRejectsVerifiedWithIncompleteVisit(t *testing.T)
 
 	visitID := seedFieldVisit(t, db, storeID, agentID, "in_progress")
 
-	_, err := SubmitFieldVerification(ctx, db, nil, actor, storeID, "idempotency-key-3", "correlation-id-3", FieldVerificationInput{
+	_, err := SubmitFieldVerification(ctx, db, actor, storeID, "idempotency-key-3", "correlation-id-3", FieldVerificationInput{
 		ExpectedVersion: 1,
 		VisitID:         visitID,
 		Outcome:         "verified",
@@ -192,7 +219,7 @@ func TestSubmitFieldVerificationRejectsVerifiedWithIncompleteVisit(t *testing.T)
 		t.Fatal("expected error when outcome=verified but visit is not complete")
 	}
 
-	resp, err := SubmitFieldVerification(ctx, db, nil, actor, storeID, "idempotency-key-4", "correlation-id-4", FieldVerificationInput{
+	resp, err := SubmitFieldVerification(ctx, db, actor, storeID, "idempotency-key-4", "correlation-id-4", FieldVerificationInput{
 		ExpectedVersion: 1,
 		VisitID:         visitID,
 		Outcome:         "needs_follow_up",
@@ -227,7 +254,7 @@ func TestSubmitFieldVerificationRejectsVerifiedWithOpenEscalation(t *testing.T) 
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_readiness_escalations WHERE id = $1`, escID) })
 
-	_, err := SubmitFieldVerification(ctx, db, nil, actor, storeID, "idempotency-key-5", "correlation-id-5", FieldVerificationInput{
+	_, err := SubmitFieldVerification(ctx, db, actor, storeID, "idempotency-key-5", "correlation-id-5", FieldVerificationInput{
 		ExpectedVersion: 1,
 		VisitID:         visitID,
 		Outcome:         "verified",
@@ -242,7 +269,7 @@ func TestSubmitFieldVerificationRejectsVerifiedWithOpenEscalation(t *testing.T) 
 		t.Fatalf("resolve escalation: %v", err)
 	}
 
-	if _, err := SubmitFieldVerification(ctx, db, nil, actor, storeID, "idempotency-key-6", "correlation-id-6", FieldVerificationInput{
+	if _, err := SubmitFieldVerification(ctx, db, actor, storeID, "idempotency-key-6", "correlation-id-6", FieldVerificationInput{
 		ExpectedVersion: 1,
 		VisitID:         visitID,
 		Outcome:         "verified",
@@ -263,19 +290,14 @@ func TestResolveActorStoreForIDFallbackAndExplicit(t *testing.T) {
 	seedGovernanceStore(t, db, storeB, agentID)
 	actor := testStoreActor(t, agentID)
 
-	rowNoParam, _, err := ResolveActorStoreForID(ctx, db, nil, actor, "")
-	if err != nil {
-		t.Fatalf("expected fallback resolution to succeed, got %v", err)
+	if _, _, err := ResolveActorStoreForID(ctx, db, actor, ""); !errors.Is(err, ErrAmbiguousStoreScope) {
+		t.Fatalf("expected empty storeId to fail closed for multiple active stores, got %v", err)
 	}
-	rowLegacy, _, err := ResolveActorStore(ctx, db, nil, actor)
-	if err != nil {
-		t.Fatalf("legacy resolution failed: %v", err)
-	}
-	if rowNoParam.ID != rowLegacy.ID {
-		t.Fatalf("expected empty-storeId fallback to match legacy first-scope behavior: got %s want %s", rowNoParam.ID, rowLegacy.ID)
+	if _, _, err := ResolveActorStore(ctx, db, actor); !errors.Is(err, ErrAmbiguousStoreScope) {
+		t.Fatalf("expected legacy resolution to fail closed for multiple active stores, got %v", err)
 	}
 
-	rowExplicit, _, err := ResolveActorStoreForID(ctx, db, nil, actor, storeB)
+	rowExplicit, _, err := ResolveActorStoreForID(ctx, db, actor, storeB)
 	if err != nil {
 		t.Fatalf("expected explicit store resolution to succeed, got %v", err)
 	}
@@ -283,7 +305,7 @@ func TestResolveActorStoreForIDFallbackAndExplicit(t *testing.T) {
 		t.Fatalf("expected explicit storeId to resolve to %s, got %s", storeB, rowExplicit.ID)
 	}
 
-	if _, _, err := ResolveActorStoreForID(ctx, db, nil, actor, uniqueID("store-not-scoped")); !errors.Is(err, ErrScopedStoreNotFound) {
+	if _, _, err := ResolveActorStoreForID(ctx, db, actor, uniqueID("store-not-scoped")); !errors.Is(err, ErrScopedStoreNotFound) {
 		t.Fatalf("expected ErrScopedStoreNotFound for an unscoped store, got %v", err)
 	}
 }

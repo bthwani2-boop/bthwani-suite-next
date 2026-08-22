@@ -10,7 +10,7 @@ import (
 )
 
 // GetPromotionFundingReservation reads sovereign WLT state for DSH
-// reconciliation. It never accepts a OperatorContext inferred from the reservation ID.
+// reconciliation. It never accepts an OperatorContext inferred from the reservation ID.
 func (c *Client) GetPromotionFundingReservation(
 	ctx context.Context,
 	reservationID string,
@@ -37,7 +37,9 @@ func (c *Client) GetPromotionFundingReservation(
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	if _, err := c.setDelegatedOperatorContextHeader(req, operatorContextID); err != nil {
+		return nil, fmt.Errorf("prepare WLT promotion funding read OperatorContext: %w", err)
+	}
 
 	response, err := c.http.Do(req)
 	if err != nil {

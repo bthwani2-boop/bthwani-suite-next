@@ -60,13 +60,17 @@ const (
 )
 
 // RequireReferenceReader protects WLT reference projections in every runtime
-// mode. Authenticated DSH requests delegate a trusted OperatorContext through
-// the service-auth boundary. End-user requests derive it from Identity, and a
-// conflicting client context is rejected. Development modes never bypass this
-// boundary.
+// mode. Authenticated service requests delegate OperatorContext through the
+// internal service-auth transport. End-user requests derive OperatorContext
+// exclusively from Identity and never receive or select the internal delegation
+// header. Development modes never bypass this boundary.
 func RequireReferenceReader(w http.ResponseWriter, r *http.Request) bool {
 	if strings.TrimSpace(r.Header.Get("X-Service-Caller")) != "" {
 		return RequireServiceCaller(w, r, "WLT_DSH_SERVICE_TOKEN", "dsh")
+	}
+	if strings.TrimSpace(r.Header.Get(DelegatedOperatorContextHeader)) != "" {
+		SendError(w, http.StatusBadRequest, "INTERNAL_DELEGATION_HEADER_FORBIDDEN", "internal OperatorContext delegation header is not accepted on end-user reference requests")
+		return false
 	}
 	identity, err := resolveReferenceIdentity(r.Context(), r.Header.Get("Authorization"))
 	if err == ErrReferenceIdentityUnavailable {
@@ -82,12 +86,6 @@ func RequireReferenceReader(w http.ResponseWriter, r *http.Request) bool {
 		SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "identity session has no trusted OperatorContext context")
 		return false
 	}
-	requestOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
-	if requestOperatorContextID != "" && requestOperatorContextID != identityOperatorContextID {
-		SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "client OperatorContext does not match the authenticated identity")
-		return false
-	}
-	r.Header.Set("X-Operator-Context-ID", identityOperatorContextID)
 	*r = *r.WithContext(WithOperatorContext(r.Context(), identityOperatorContextID))
 	return true
 }

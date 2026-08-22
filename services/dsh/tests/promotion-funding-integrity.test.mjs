@@ -28,8 +28,10 @@ const cases = [
     assert.match(dshReadback, /GetPromotionFundingReservation/);
     assert.match(wltFundingContract, /x-bthwani-owner: services\/wlt/);
     assert.match(dshMarketingContract, /x-bthwani-owner: services\/dsh/);
-    assert.match(wltServer, /POST \/wlt\/promotion-funding\/reservations"[\s\S]*gate\(serviceAuth\(promotionfunding\.HandleReserve/);
-    assert.match(wltServer, /GET \/wlt\/promotion-funding\/reservations\/\{reservationId\}"[\s\S]*readGate\(promotionfunding\.HandleGet/);
+    // mutation()/read() are the gated registration helpers: mutation() adds the
+    // configuration gate, service-caller auth and the finance kill switch.
+    assert.match(wltServer, /mutation\("POST \/wlt\/promotion-funding\/reservations", promotionfunding\.HandleReserve/);
+    assert.match(wltServer, /read\("GET \/wlt\/promotion-funding\/reservations\/\{reservationId\}", promotionfunding\.HandleGet/);
     assert.match(wltServer, /\/commit"[\s\S]*HandleCommit/);
     assert.match(wltServer, /\/release"[\s\S]*HandleRelease/);
     assert.match(wltServer, /\/reverse"[\s\S]*HandleReverse/);
@@ -51,7 +53,9 @@ const cases = [
     assert.match(concurrencyProof, /concurrent transitions produced more than one financial event/);
     assert.doesNotMatch(wltJSON, /IdempotencyKey\s+string/);
     assert.doesNotMatch(serviceAuth, /BTHWANI_OPERATOR_CONTEXT_ID/);
-    assert.match(serviceAuth, /r\.Header\.Get\(legacyOperatorContextHeader\)/);
+    assert.match(serviceAuth, /DelegatedOperatorContextHeader = "X-Delegated-Operator-Context"/);
+    assert.match(serviceAuth, /r\.Header\.Get\(DelegatedOperatorContextHeader\)/);
+    assert.doesNotMatch(serviceAuth, /legacyOperatorContextHeader/);
     assert.match(serviceAuth, /WithOperatorContext\(r\.Context\(\), operatorContextID\)/);
     assert.doesNotMatch(serviceAuth, /MISSING_operator_context_id/);
   }],

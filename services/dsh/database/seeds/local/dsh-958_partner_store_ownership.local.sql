@@ -134,12 +134,16 @@ FROM updated;
 SELECT set_config('bthwani.governed_store_partner_transfer', 'off', true);
 
 -- Keep the canonical local partner actor scoped only to the legal entity/store
--- represented by its session. OperatorContext ownership is derived through dsh_stores,
--- matching the canonical scope table and backend authorization queries.
+-- represented by its session. Runtime onboarding smoke creates a fresh transient
+-- store on every run, so this reconciliation must remove every non-canonical local
+-- scope rather than enumerating yesterday's generated store IDs. OperatorContext
+-- ownership is derived through dsh_stores, matching the canonical scope table and
+-- backend authorization queries.
 DELETE FROM dsh_store_actor_scopes
 WHERE actor_id = 'partner-local-001'
   AND actor_role = 'partner'
-  AND store_id IN ('store-1002', 'store-1003', 'store-1005', 'store-1006', 'store-test-electronics');
+  AND operator_context_id = 'local-dsh'
+  AND store_id <> 'store-test-grocery';
 
 INSERT INTO dsh_store_actor_scopes (
     actor_id, actor_role, store_id, scope_type, active
@@ -154,20 +158,50 @@ ON CONFLICT (actor_id, actor_role, store_id) DO UPDATE SET
     scope_type = EXCLUDED.scope_type,
     active = true;
 
+-- The canonical field journey starts from the same governed grocery store as
+-- the client/partner journey. Grant the provisioned field actor an explicit
+-- store scope; field authorization is object-scoped and must not infer access
+-- from partner ownership or service-area membership.
+INSERT INTO dsh_store_actor_scopes (
+    operator_context_id, actor_id, actor_role, store_id, scope_type, active
+) VALUES
+    ('local-dsh', '@@FIELD_ACTOR_ID@@', 'field', 'store-test-grocery', 'assigned', true)
+ON CONFLICT (actor_id, actor_role, store_id) DO UPDATE SET
+    operator_context_id = EXCLUDED.operator_context_id,
+    scope_type = EXCLUDED.scope_type,
+    active = true;
+
 -- Seed one approved legal document per independently visible local partner so
 -- partner activation readiness is internally coherent rather than status-only.
-INSERT INTO dsh_partner_documents (
-    id, partner_id, document_type, document_status,
-    uploaded_by_actor_id, media_ref, notes, version, created_at, updated_at
+INSERT INTO dsh_media_refs (
+    media_ref, storage_key, owner_actor_id, owner_actor_role, partner_id,
+    purpose, content_type, original_filename
 ) VALUES
-    ('doc_local_002_cr', 'prt_partner_local_002', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_002_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
-    ('doc_local_003_cr', 'prt_partner_local_003', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_003_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
-    ('doc_local_005_cr', 'prt_partner_local_005', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_005_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
-    ('doc_local_006_cr', 'prt_partner_local_006', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_006_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
-    ('doc_local_007_cr', 'prt_partner_local_007', 'commercial_register', 'approved', '@@FIELD_ACTOR_ID@@', 'media_local_007_cr.jpg', 'سجل تجاري محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW())
+    ('media_local_002_cr.jpg', 'local-seed/media_local_002_cr.jpg', '@@FIELD_ACTOR_ID@@', 'field', 'prt_partner_local_002', 'partner_document', 'image/jpeg', 'media_local_002_cr.jpg'),
+    ('media_local_003_cr.jpg', 'local-seed/media_local_003_cr.jpg', '@@FIELD_ACTOR_ID@@', 'field', 'prt_partner_local_003', 'partner_document', 'image/jpeg', 'media_local_003_cr.jpg'),
+    ('media_local_005_cr.jpg', 'local-seed/media_local_005_cr.jpg', '@@FIELD_ACTOR_ID@@', 'field', 'prt_partner_local_005', 'partner_document', 'image/jpeg', 'media_local_005_cr.jpg'),
+    ('media_local_006_cr.jpg', 'local-seed/media_local_006_cr.jpg', '@@FIELD_ACTOR_ID@@', 'field', 'prt_partner_local_006', 'partner_document', 'image/jpeg', 'media_local_006_cr.jpg'),
+    ('media_local_007_cr.jpg', 'local-seed/media_local_007_cr.jpg', '@@FIELD_ACTOR_ID@@', 'field', 'prt_partner_local_007', 'partner_document', 'image/jpeg', 'media_local_007_cr.jpg')
+ON CONFLICT (media_ref) DO NOTHING;
+
+INSERT INTO dsh_partner_documents (
+    id, partner_id, document_type, document_status, upload_status, review_status,
+    uploaded_by_actor_id, media_ref, notes, reviewed_by_actor_id, reviewed_at,
+    last_review_reason, version, created_at, updated_at
+) VALUES
+    ('doc_local_002_cr', 'prt_partner_local_002', 'commercial_register', 'approved', 'uploaded', 'verified', '@@FIELD_ACTOR_ID@@', 'media_local_002_cr.jpg', 'سجل تجاري محلي معتمد', 'operator-local-001', NOW() - INTERVAL '1 day', 'مستند محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
+    ('doc_local_003_cr', 'prt_partner_local_003', 'commercial_register', 'approved', 'uploaded', 'verified', '@@FIELD_ACTOR_ID@@', 'media_local_003_cr.jpg', 'سجل تجاري محلي معتمد', 'operator-local-001', NOW() - INTERVAL '1 day', 'مستند محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
+    ('doc_local_005_cr', 'prt_partner_local_005', 'commercial_register', 'approved', 'uploaded', 'verified', '@@FIELD_ACTOR_ID@@', 'media_local_005_cr.jpg', 'سجل تجاري محلي معتمد', 'operator-local-001', NOW() - INTERVAL '1 day', 'مستند محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
+    ('doc_local_006_cr', 'prt_partner_local_006', 'commercial_register', 'approved', 'uploaded', 'verified', '@@FIELD_ACTOR_ID@@', 'media_local_006_cr.jpg', 'سجل تجاري محلي معتمد', 'operator-local-001', NOW() - INTERVAL '1 day', 'مستند محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW()),
+    ('doc_local_007_cr', 'prt_partner_local_007', 'commercial_register', 'approved', 'uploaded', 'verified', '@@FIELD_ACTOR_ID@@', 'media_local_007_cr.jpg', 'سجل تجاري محلي معتمد', 'operator-local-001', NOW() - INTERVAL '1 day', 'مستند محلي معتمد', 2, NOW() - INTERVAL '1 day', NOW())
 ON CONFLICT (id) DO UPDATE SET
     document_status = 'approved',
+    upload_status = 'uploaded',
+    review_status = 'verified',
     notes = EXCLUDED.notes,
+    reviewed_by_actor_id = EXCLUDED.reviewed_by_actor_id,
+    reviewed_at = EXCLUDED.reviewed_at,
+    last_review_reason = EXCLUDED.last_review_reason,
     updated_at = NOW();
 
 INSERT INTO dsh_partner_activation_events (

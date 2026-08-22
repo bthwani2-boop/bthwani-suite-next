@@ -33,7 +33,7 @@ function createCompleteFirebaseFile(filename, packageName, overrides = {}) {
         },
         api_key: [
           {
-            current_key: "test-only-firebase-api-key",
+            current_key: `AIza${"A".repeat(35)}`,
           },
         ],
       },

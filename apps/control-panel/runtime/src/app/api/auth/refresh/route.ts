@@ -1,20 +1,21 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { identitySessionIsBoundToSurface } from "@bthwani/core-identity/session-policy";
 import {
   REFRESH_TOKEN_COOKIE,
   clearSessionCookies,
   isSameOriginRequest,
   setSessionCookies,
 } from "../_lib/cookies";
-import { identityServerClient } from "../_lib/identity-server";
+import {
+  identityServerClient,
+  isConcurrentRefreshError,
+  isIdentityServerAvailabilityError,
+  isIdentityServerInvalidSessionError,
+} from "../_lib/identity-server";
 
 export const runtime = "nodejs";
 
-/**
- * Explicit refresh endpoint, distinct from GET /api/auth/session which also
- * refreshes opportunistically. Used by the client-side single-flight retry
- * path after a 401 from /api/dsh/*.
- */
 export async function POST(request: Request): Promise<NextResponse> {
   if (!isSameOriginRequest(request)) {
     return NextResponse.json({ code: "CROSS_ORIGIN_REJECTED" }, { status: 403 });
@@ -31,7 +32,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   try {
     const rotated = await identityServerClient().refresh(refreshToken);
-    if (!rotated.identity.roles.includes("operator")) {
+    if (!identitySessionIsBoundToSurface(rotated.identity, "control-panel")) {
       const response = NextResponse.json(
         { code: "CONTROL_PANEL_FORBIDDEN" },
         { status: 403, headers: { "Cache-Control": "no-store" } },
@@ -46,7 +47,20 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
     setSessionCookies(response, rotated);
     return response;
-  } catch {
+  } catch (error) {
+    if (isConcurrentRefreshError(error)) {
+      return NextResponse.json(
+        { code: "REFRESH_ALREADY_ROTATED" },
+        { status: 409, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+    if (isIdentityServerAvailabilityError(error) || !isIdentityServerInvalidSessionError(error)) {
+      return NextResponse.json(
+        { code: "IDENTITY_UNAVAILABLE" },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
     const response = NextResponse.json(
       { code: "SESSION_EXPIRED" },
       { status: 401, headers: { "Cache-Control": "no-store" } },

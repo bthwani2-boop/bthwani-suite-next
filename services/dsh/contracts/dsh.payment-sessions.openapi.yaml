@@ -84,7 +84,7 @@ components:
   schemas:
     PaymentStatus:
       type: string
-      enum: [reference_created, pending_provider, authorization_pending, authorized, capture_pending, captured, cod_pending, cod_collected, failed, expired, provider_result_unknown]
+      enum: [reference_created, pending_provider, authorization_pending, authorized, capture_pending, captured, cod_pending, cod_finalized, failed, expired, provider_result_unknown]
     PaymentSession:
       type: object
       required: [id, operatorContextId, clientId, storeId, paymentMethod, status, providerReference, amountMinorUnits, currency, createdAt, updatedAt]
@@ -100,6 +100,14 @@ components:
         providerReference: { type: string }
         amountMinorUnits: { type: integer, format: int64 }
         currency: { type: string }
+        tenderAllocation:
+          type: [object, 'null']
+          additionalProperties: false
+          required: [walletAmountMinorUnits, cashOnDeliveryAmountMinorUnits, currency]
+          properties:
+            walletAmountMinorUnits: { type: integer, format: int64, minimum: 0 }
+            cashOnDeliveryAmountMinorUnits: { type: integer, format: int64, minimum: 0 }
+            currency: { type: string, minLength: 3, maxLength: 3 }
         capturedAt: { type: [string, 'null'], format: date-time }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }

@@ -11,13 +11,14 @@ import (
 )
 
 // PromotionFundingOutboxInput is used only by the durable DSH outbox worker.
-// The transition is idempotent in WLT and carries the OperatorContext explicitly.
+// The transition is idempotent in WLT and carries the OperatorContext explicitly
+// as a redundant assertion against the trusted outbox request context.
 type PromotionFundingOutboxInput struct {
-	OperatorContextID       string `json:"operatorContextId"`
-	OrderID        string `json:"orderId,omitempty"`
-	Reason         string `json:"reason,omitempty"`
-	IdempotencyKey string `json:"-"`
-	CorrelationID  string `json:"-"`
+	OperatorContextID string `json:"operatorContextId"`
+	OrderID           string `json:"orderId,omitempty"`
+	Reason            string `json:"reason,omitempty"`
+	IdempotencyKey    string `json:"-"`
+	CorrelationID     string `json:"-"`
 }
 
 type PromotionFundingOutboxResult struct {
@@ -61,7 +62,9 @@ func (c *Client) TransitionPromotionFundingFromOutbox(
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
-	req.Header.Set("X-Operator-Context-ID", input.OperatorContextID)
+	if _, err := c.setDelegatedOperatorContextHeader(req, input.OperatorContextID); err != nil {
+		return nil, fmt.Errorf("prepare WLT promotion funding outbox OperatorContext: %w", err)
+	}
 	if err := setRequiredMutationHeaders(req, input.CorrelationID, input.IdempotencyKey); err != nil {
 		return nil, fmt.Errorf("prepare WLT promotion funding outbox mutation: %w", err)
 	}

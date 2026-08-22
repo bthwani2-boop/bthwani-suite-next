@@ -64,18 +64,24 @@ test("Android Firebase configuration is isolated per application", () => {
   }));
 });
 
-test("mobile startup proves backends before Metro and avoids Expo Android stream piping", () => {
+test("mobile startup keeps backend preflight outside transport and ADB launch transport-scoped", () => {
   const compatibility = fs.readFileSync(path.join(repoRoot, "tools/scripts/start-mobile-runtime.ps1"), "utf8");
-  const launcher = fs.readFileSync(path.join(repoRoot, "apps/mobile/start-mobile-runtime.ps1"), "utf8");
-  assert.match(compatibility, /apps\\mobile\\start-mobile-runtime\.ps1/);
+  const shared = fs.readFileSync(path.join(repoRoot, "tools/mobile/mobile.ps1"), "utf8");
+  const launcher = fs.readFileSync(path.join(repoRoot, "tools/mobile/start-mobile-runtime.ps1"), "utf8");
+  assert.match(compatibility, /\.\.\\mobile\\start-mobile-runtime\.ps1/);
+
+  const preflightCall = shared.indexOf("& $EnsureRuntimeScript");
+  const transportCall = shared.indexOf("& $RuntimeScript");
+  assert.ok(preflightCall >= 0 && transportCall > preflightCall, "backend/data preflight must complete before transport runtime");
+  assert.doesNotMatch(launcher, /Ensure-BthwaniMobileBackend|invoke-runtime-phase\.ps1|runtime:mobile:up/);
+
   for (const marker of [
-    "Ensure-BthwaniMobileBackend",
-    "identity,workforce,dsh,wlt,media",
-    "Backend:",
-    "AndroidLaunchJob",
+    'if ($resolvedTransport -eq "adb")',
     "android.intent.action.VIEW",
+    "shell am start -W",
+    "Metro port $LaunchPort did not become ready for Android launch",
   ]) {
-    assert.ok(launcher.includes(marker), `missing startup marker: ${marker}`);
+    assert.ok(launcher.includes(marker), `missing ADB-scoped startup marker: ${marker}`);
   }
   assert.equal(launcher.includes('    "--android"'), false, "Expo --android must not own the ADB output stream");
 });
@@ -87,7 +93,7 @@ test("push registration is fail-closed when Firebase or native APIs are absent",
   );
   for (const marker of [
     "androidNativePushConfigured",
-    'Platform.OS === "android" && !androidNativePushConfigured()',
+    'runtime.platform === "android" && !runtime.androidNativePushConfigured()',
     'typeof getLastResponse === "function"',
     'typeof addPushTokenListener === "function"',
     "rebuild the development client after configuring GOOGLE_SERVICES_JSON",

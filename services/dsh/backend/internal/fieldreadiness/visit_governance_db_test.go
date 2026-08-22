@@ -45,7 +45,7 @@ func TestCreateGovernedVisitUsesRegisteredStoreCoordinates(t *testing.T) {
 
 	maliciousLatitude := -33.0
 	maliciousLongitude := 151.0
-	visit, err := CreateGovernedVisit(ctx, db, nil, actor, CreateVisitInput{
+	visit, err := CreateGovernedVisit(ctx, db, actor, CreateVisitInput{
 		StoreID:        storeID,
 		FieldAgentID:   agentID,
 		VisitType:      VisitTypeOnboarding,
@@ -78,7 +78,7 @@ func TestGovernedCheckRejectsEvidenceFromAnotherStore(t *testing.T) {
 	registerGovernedStoreLocation(t, db, storeB, partnerID)
 	actor := testFieldActor(t, agentID)
 
-	visit, err := CreateGovernedVisit(ctx, db, nil, actor, CreateVisitInput{
+	visit, err := CreateGovernedVisit(ctx, db, actor, CreateVisitInput{
 		StoreID: storeA, FieldAgentID: agentID, VisitType: VisitTypeOnboarding, StartLocation: testValidLocation(),
 	})
 	if err != nil {
@@ -86,7 +86,7 @@ func TestGovernedCheckRejectsEvidenceFromAnotherStore(t *testing.T) {
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_visits WHERE id = $1`, visit.ID) })
 	wrongStoreEvidence := seedStoreBoundReadinessMedia(t, db, partnerID, storeB, agentID)
-	_, err = UpsertGovernedReadinessCheck(ctx, db, nil, actor, visit.ID, UpdateCheckInput{
+	_, err = UpsertGovernedReadinessCheck(ctx, db, actor, visit.ID, UpdateCheckInput{
 		CheckType: "location_verified", Status: CheckPassed, EvidenceURL: wrongStoreEvidence,
 	})
 	if !errors.Is(err, ErrEvidenceRequired) {
@@ -104,34 +104,34 @@ func TestEscalatedFurtherRemainsACompletionBlocker(t *testing.T) {
 	registerGovernedStoreLocation(t, db, storeID, partnerID)
 	actor := testFieldActor(t, agentID)
 
-	visit, err := CreateGovernedVisit(ctx, db, nil, actor, CreateVisitInput{
+	visit, err := CreateGovernedVisit(ctx, db, actor, CreateVisitInput{
 		StoreID: storeID, FieldAgentID: agentID, VisitType: VisitTypeOnboarding, StartLocation: testValidLocation(),
 	})
 	if err != nil {
 		t.Fatalf("create governed visit: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_visits WHERE id = $1`, visit.ID) })
-	for _, checkType := range RequiredCheckTypes {
+	for _, checkType := range policyCheckTypes(t, db, visit.ID) {
 		mediaRef := seedStoreBoundReadinessMedia(t, db, partnerID, storeID, agentID)
-		if _, err := UpsertGovernedReadinessCheck(ctx, db, nil, actor, visit.ID, UpdateCheckInput{
+		if _, err := UpsertGovernedReadinessCheck(ctx, db, actor, visit.ID, UpdateCheckInput{
 			CheckType: checkType, Status: CheckPassed, EvidenceURL: mediaRef,
 		}); err != nil {
 			t.Fatalf("upsert governed check %s: %v", checkType, err)
 		}
 	}
-	escalation, err := CreateGovernedEscalation(ctx, db, nil, actor, CreateEscalationInput{
+	escalation, err := CreateGovernedEscalation(ctx, db, actor, CreateEscalationInput{
 		VisitID: visit.ID, StoreID: storeID, RaisedBy: agentID,
 		Severity: SeverityHigh, Category: CategorySafetyViolation, Description: "critical readiness issue",
 	})
 	if err != nil {
 		t.Fatalf("create governed escalation: %v", err)
 	}
-	if _, err := UpdateGovernedEscalation(ctx, db, escalation.ID, UpdateEscalationInput{
+	if _, err := UpdateGovernedEscalation(ctx, db, escalation.ID, requiredTestOperatorContextID(t), UpdateEscalationInput{
 		Status: EscalationEscalatedFurther, ResolvedBy: "operator-1", ResolutionNote: "escalated to operations",
 	}); err != nil {
 		t.Fatalf("escalate further: %v", err)
 	}
-	if _, err := CompleteGovernedVisit(ctx, db, nil, actor, visit.ID, testCompleteInput()); !errors.Is(err, ErrOpenEscalation) {
+	if _, err := CompleteGovernedVisit(ctx, db, actor, visit.ID, testCompleteInput()); !errors.Is(err, ErrOpenEscalation) {
 		t.Fatalf("expected ErrOpenEscalation for escalated_further, got %v", err)
 	}
 	status, err := GetGovernedStoreOnboardingStatus(ctx, db, storeID)

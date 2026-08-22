@@ -21,7 +21,7 @@ func TestPartnerStatusAllowsStoreOwnership(t *testing.T) {
 		}
 	}
 
-	blocked := []string{"", "ops_rejected", "partner_deactivated", "partner_suspended", "partner_terminated"}
+	blocked := []string{"", "ops_rejected", "partner_suspended", "partner_terminated"}
 	for _, status := range blocked {
 		if PartnerStatusAllowsStoreOwnership(status) {
 			t.Fatalf("expected %q to block store ownership acquisition", status)

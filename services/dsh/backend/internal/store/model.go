@@ -5,6 +5,12 @@ import "time"
 type DshStoreStatus string
 type DshServiceabilityStatus string
 type DshStoreCategory string
+type PublicationDecision string
+
+const (
+	PublicationPublished PublicationDecision = "PUBLISHED"
+	PublicationBlocked   PublicationDecision = "BLOCKED"
+)
 
 const (
 	StatusDraft     DshStoreStatus = "draft"
@@ -68,6 +74,8 @@ type DshStoreRow struct {
 	StorefrontPhotoRef      string
 	InteriorPhotoRef        string
 	SignagePhotoRef         string
+	PublicationDecision     PublicationDecision
+	BlockingReasonCodes     []string
 	Version                 int
 	CreatedAt               time.Time
 	UpdatedAt               time.Time
@@ -78,35 +86,36 @@ type ServiceabilityInfo struct {
 }
 
 type DshStoreSummary struct {
-	ID                    string             `json:"id"`
-	Slug                  string             `json:"slug"`
-	DisplayName           string             `json:"displayName"`
-	Status                DshStoreStatus     `json:"status"`
-	CityCode              string             `json:"cityCode"`
-	ServiceAreaCode       string             `json:"serviceAreaCode"`
-	Serviceability        ServiceabilityInfo `json:"serviceability"`
-	RatingAverage         *float64           `json:"ratingAverage"`
-	RatingCount           int                `json:"ratingCount"`
-	DeliveryEtaMin        *int               `json:"deliveryEtaMin"`
-	DeliveryEtaMax        *int               `json:"deliveryEtaMax"`
-	IsVisible             bool               `json:"isVisible"`
-	HeroImageURL          *string            `json:"heroImageUrl"`
-	LogoURL               *string            `json:"logoUrl"`
-	Category              DshStoreCategory   `json:"category"`
-	CategoryLabel         string             `json:"categoryLabel"`
-	DeliveryModes         []string           `json:"deliveryModes"`
-	IsFreeDelivery        bool               `json:"isFreeDelivery"`
-	DistanceKM            *float64           `json:"distanceKm"`
-	FollowerCount         int                `json:"followerCount"`
-	HasProBadge           bool               `json:"hasProBadge"`
-	HasCouponBadge        bool               `json:"hasCouponBadge"`
-	PointsMultiplier      *int               `json:"pointsMultiplier"`
-	IsPopular             bool               `json:"isPopular"`
-	PartnerReadiness      string             `json:"partnerReadiness"`
-	CatalogApprovalStatus string             `json:"catalogApprovalStatus"`
-	MarketingVisibility   string             `json:"marketingVisibility"`
-	PublicationEligible   bool               `json:"publicationEligible"`
-	Version               int                `json:"version"`
+	ID                    string              `json:"id"`
+	Slug                  string              `json:"slug"`
+	DisplayName           string              `json:"displayName"`
+	Status                DshStoreStatus      `json:"status"`
+	CityCode              string              `json:"cityCode"`
+	ServiceAreaCode       string              `json:"serviceAreaCode"`
+	Serviceability        ServiceabilityInfo  `json:"serviceability"`
+	RatingAverage         *float64            `json:"ratingAverage"`
+	RatingCount           int                 `json:"ratingCount"`
+	DeliveryEtaMin        *int                `json:"deliveryEtaMin"`
+	DeliveryEtaMax        *int                `json:"deliveryEtaMax"`
+	IsVisible             bool                `json:"isVisible"`
+	HeroImageURL          *string             `json:"heroImageUrl"`
+	LogoURL               *string             `json:"logoUrl"`
+	Category              DshStoreCategory    `json:"category"`
+	CategoryLabel         string              `json:"categoryLabel"`
+	DeliveryModes         []string            `json:"deliveryModes"`
+	IsFreeDelivery        bool                `json:"isFreeDelivery"`
+	DistanceKM            *float64            `json:"distanceKm"`
+	FollowerCount         int                 `json:"followerCount"`
+	HasProBadge           bool                `json:"hasProBadge"`
+	HasCouponBadge        bool                `json:"hasCouponBadge"`
+	PointsMultiplier      *int                `json:"pointsMultiplier"`
+	IsPopular             bool                `json:"isPopular"`
+	PartnerReadiness      string              `json:"partnerReadiness"`
+	CatalogApprovalStatus string              `json:"catalogApprovalStatus"`
+	MarketingVisibility   string              `json:"marketingVisibility"`
+	PublicationDecision   PublicationDecision `json:"publicationDecision"`
+	BlockingReasons       []string            `json:"blockingReasons"`
+	Version               int                 `json:"version"`
 }
 
 type DshStoreDetail struct {
@@ -179,6 +188,7 @@ type DshStoreListQuery struct {
 }
 
 func RowToSummary(row DshStoreRow) DshStoreSummary {
+	diagnostics := DiagnoseStorePublication(row)
 	return DshStoreSummary{
 		ID: row.ID, Slug: row.Slug, DisplayName: row.DisplayName, Status: row.Status,
 		CityCode: row.CityCode, ServiceAreaCode: row.ServiceAreaCode,
@@ -194,18 +204,15 @@ func RowToSummary(row DshStoreRow) DshStoreSummary {
 		PartnerReadiness:      row.PartnerReadiness,
 		CatalogApprovalStatus: row.CatalogApprovalStatus,
 		MarketingVisibility:   row.MarketingVisibility,
-		PublicationEligible:   IsPublicationEligible(row),
+		PublicationDecision:   row.PublicationDecision,
+		BlockingReasons:       append([]string(nil), diagnostics.BlockerCodes...),
 		Version:               row.Version,
 	}
 }
 
-func IsPublicationEligible(row DshStoreRow) bool {
-	return DiagnoseStorePublication(row).IsReady
-}
-
 func RowToDetail(row DshStoreRow) DshStoreDetail {
 	return DshStoreDetail{
-		DshStoreSummary:  RowToSummary(row),
+		DshStoreSummary:   RowToSummary(row),
 		AddressLine:       row.AddressLine,
 		CoverageSummary:   row.CoverageSummary,
 		OperatingHours:    row.OperatingHours,

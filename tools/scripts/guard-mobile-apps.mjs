@@ -7,6 +7,8 @@ import { resolvePackageManagerInvocation } from "./lib/package-manager-invocatio
 
 const require = createRequire(import.meta.url);
 const { appEnvSuffix, resolveGoogleServicesFile } = require("../mobile/sentry-env.js");
+const { validateMobileFeatureCapabilityManifest } = require("../mobile/mobile-feature-capability-model.js");
+const { validateMobileDependencyClosure } = require("../mobile/mobile-dependency-closure.js");
 
 const root = process.cwd();
 const requireBuildSecrets = process.argv.includes("--require-build-secrets");
@@ -36,6 +38,12 @@ function fail(message) {
 }
 
 const manifest = readJson("tools/mobile/mobile-apps.manifest.json");
+try {
+  validateMobileFeatureCapabilityManifest(manifest);
+  validateMobileDependencyClosure(manifest, root, requestedApp ? { appKeys: [requestedApp] } : undefined);
+} catch (error) {
+  fail(error.message);
+}
 const allowedAppKeys = Object.keys(manifest.apps);
 
 if (requestedApp && !manifest.apps[requestedApp]) {
@@ -93,6 +101,21 @@ function validateGoogleServicesFile(appKey, file, expectedPackage) {
   }
 }
 
+const mobileUiProvider = fs.readFileSync(
+  path.join(root, "shared", "ui-kit", "src", "mobile.tsx"),
+  "utf8",
+);
+
+for (const marker of [
+  "useColorScheme",
+  'colorScheme === "dark"',
+  "MobileUiProvider",
+]) {
+  if (!mobileUiProvider.includes(marker)) {
+    fail(`canonical MobileUiProvider marker missing: ${marker}`);
+  }
+}
+
 const rootPkg = readJson("package.json");
 
 if (rootPkg.packageManager !== `pnpm@${manifest.global.pnpm}`) {
@@ -119,7 +142,7 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   const dir = path.join(root, "apps", key, "runtime");
   const pkg = readJson(path.join("apps", key, "runtime", "package.json"));
   const eas = readJson(path.join("apps", key, "runtime", "eas.json"));
-  const features = app.features ?? [];
+  const nativeCapabilities = app.nativeCapabilities;
 
   if (pkg.devDependencies?.typescript !== manifest.global.runtimeTypeScript) {
     fail(`${key}: runtime TypeScript must be ${manifest.global.runtimeTypeScript}`);
@@ -164,6 +187,12 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   if (expo.extra?.appKey !== key) fail(`${key}: extra.appKey mismatch`);
   if (expo.extra?.appLine !== manifest.global.appLine) fail(`${key}: extra.appLine mismatch`);
   if (expo.extra?.sourceRepo !== manifest.global.sourceRepo) fail(`${key}: extra.sourceRepo mismatch`);
+  if (JSON.stringify(expo.extra?.productFeatures) !== JSON.stringify(Object.keys(app.productFeatures))) {
+    fail(`${key}: runtime productFeatures projection mismatch`);
+  }
+  if (JSON.stringify(expo.extra?.nativeCapabilities) !== JSON.stringify(nativeCapabilities)) {
+    fail(`${key}: runtime nativeCapabilities projection mismatch`);
+  }
   if (expo.extra?.eas?.projectId !== app.projectId) fail(`${key}: EAS projectId mismatch`);
   if (expo.runtimeVersion?.policy !== "appVersion") fail(`${key}: appVersion runtime policy is required`);
   if (expo.updates?.url !== `https://u.expo.dev/${app.projectId}`) fail(`${key}: EAS Update URL mismatch`);
@@ -171,9 +200,13 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   if (expo.updates?.fallbackToCacheTimeout !== 0) fail(`${key}: update fallback timeout must be zero`);
   if (Array.isArray(expo.platforms) && expo.platforms.includes("web")) fail(`${key}: web is forbidden in Expo mobile config`);
 
+  if (expo.userInterfaceStyle !== "automatic") {
+    fail(`${key}: userInterfaceStyle must be automatic`);
+  }
+
   const plugins = pluginMap(expo.plugins);
-  for (const basePlugin of ["expo-image-picker", "expo-document-picker"]) {
-    if (!plugins.has(basePlugin)) fail(`${key}: missing ${basePlugin} plugin`);
+  if (!plugins.has("expo-system-ui")) {
+    fail(`${key}: expo-system-ui plugin is required for automatic appearance`);
   }
   const sentryNativeConfigured = expo.extra?.sentry?.nativeConfigured === true;
   const sentryEnabled = expo.extra?.sentry?.enabled === true;
@@ -181,50 +214,18 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   if (sentryEnabled !== sentryNativeConfigured) fail(`${key}: Sentry enabled/nativeConfigured state mismatch`);
   if (hasSentryPlugin !== sentryNativeConfigured) fail(`${key}: Sentry Expo plugin must match native configuration state`);
 
-  const featurePlugins = {
+  const capabilityPlugins = {
     router: "expo-router",
     updates: "expo-updates",
     splashScreen: "expo-splash-screen",
     localAuthentication: "expo-local-authentication",
-    audio: "expo-audio",
-    camera: "expo-camera",
-    video: "expo-video",
-    sharing: "expo-sharing",
-    webBrowser: "expo-web-browser",
-    sqlite: "expo-sqlite",
-    taskManager: "expo-task-manager",
-    backgroundTask: "expo-background-task",
-    location: "expo-location",
-    backgroundLocation: "expo-location",
-    notifications: "expo-notifications",
-    secureStore: "expo-secure-store",
-  };
-  for (const [feature, plugin] of Object.entries(featurePlugins)) {
-    if (features.includes(feature) && !plugins.has(plugin)) fail(`${key}: feature '${feature}' requires plugin '${plugin}'`);
-  }
-
-  const featureDependencies = {
-    router: "expo-router",
-    updates: "expo-updates",
-    constants: "expo-constants",
-    application: "expo-application",
-    device: "expo-device",
-    crypto: "expo-crypto",
-    image: "expo-image",
-    battery: "expo-battery",
-    splashScreen: "expo-splash-screen",
-    localization: "expo-localization",
-    localAuthentication: "expo-local-authentication",
-    fileSystem: "expo-file-system",
     documentPicker: "expo-document-picker",
     imagePicker: "expo-image-picker",
     audio: "expo-audio",
     camera: "expo-camera",
     video: "expo-video",
-    imageManipulator: "expo-image-manipulator",
     sharing: "expo-sharing",
     webBrowser: "expo-web-browser",
-    keepAwake: "expo-keep-awake",
     sqlite: "expo-sqlite",
     taskManager: "expo-task-manager",
     backgroundTask: "expo-background-task",
@@ -234,27 +235,59 @@ for (const [key, app] of Object.entries(manifest.apps)) {
     notifications: "expo-notifications",
     secureStore: "expo-secure-store",
   };
-  for (const [feature, dependency] of Object.entries(featureDependencies)) {
-    if (features.includes(feature) && !pkg.dependencies?.[dependency]) fail(`${key}: feature '${feature}' requires dependency '${dependency}'`);
+  for (const [capability, plugin] of Object.entries(capabilityPlugins)) {
+    if (nativeCapabilities.includes(capability) && !plugins.has(plugin)) {
+      fail(`${key}: native capability '${capability}' requires plugin '${plugin}'`);
+    }
+    if (!nativeCapabilities.includes(capability) && plugins.has(plugin)) {
+      const siblingCapabilityUsesSamePlugin = Object.entries(capabilityPlugins)
+        .some(([otherCapability, otherPlugin]) => otherCapability !== capability
+          && otherPlugin === plugin
+          && nativeCapabilities.includes(otherCapability));
+      if (!siblingCapabilityUsesSamePlugin) {
+        fail(`${key}: plugin '${plugin}' has no declared native capability`);
+      }
+    }
   }
 
-  const needsMicrophone = features.includes("audio") || (features.includes("camera") && features.includes("video"));
+  const needsMicrophone = nativeCapabilities.includes("audio")
+    || (nativeCapabilities.includes("camera") && nativeCapabilities.includes("video"));
   const hasMicDescription = Boolean(expo.ios?.infoPlist?.NSMicrophoneUsageDescription);
   const blockedAudio = (expo.android?.blockedPermissions ?? []).includes("android.permission.RECORD_AUDIO");
   if (needsMicrophone !== hasMicDescription) fail(`${key}: microphone permission description does not match native capabilities`);
   if (needsMicrophone && blockedAudio) fail(`${key}: RECORD_AUDIO cannot be blocked when recording is enabled`);
   if (!needsMicrophone && !blockedAudio) fail(`${key}: RECORD_AUDIO must be blocked when recording is absent`);
 
-  if (features.includes("notifications")) {
+  const needsPhotos = nativeCapabilities.includes("imagePicker");
+  const hasPhotoDescription = Boolean(expo.ios?.infoPlist?.NSPhotoLibraryUsageDescription);
+  if (needsPhotos !== hasPhotoDescription) fail(`${key}: photo library permission description does not match native capabilities`);
+
+  if (nativeCapabilities.includes("notifications")) {
     const notificationOptions = plugins.get("expo-notifications");
     if (notificationOptions?.defaultChannel !== "bthwani-operational") fail(`${key}: notification default channel mismatch`);
   }
 
   const metro = fs.readFileSync(path.join(dir, "metro.config.cjs"), "utf8");
+  const metroFactory = fs.readFileSync(path.join(root, "tools/mobile/metro.config.factory.cjs"), "utf8");
+  if (!metro.includes("createBthwaniMetroConfig")) {
+    fail(`${key}: Metro config must delegate to the canonical Metro config factory`);
+  }
   for (const marker of ["getSentryExpoConfig"]) {
-    if (!metro.includes(marker)) fail(`${key}: Metro marker missing: ${marker}`);
+    if (!metroFactory.includes(marker)) fail(`canonical Metro config factory marker missing: ${marker}`);
   }
   const appRoot = fs.readFileSync(path.join(dir, "src", "index.ts"), "utf8");
+  if (!appRoot.includes('from "@bthwani/ui-kit/mobile"')) {
+    fail(`${key}: mobile runtime must import @bthwani/ui-kit/mobile`);
+  }
+  if (!appRoot.includes("MobileUiProvider")) {
+    fail(`${key}: MobileUiProvider is required`);
+  }
+  if (appRoot.includes("BthwaniUiProvider")) {
+    fail(`${key}: direct BthwaniUiProvider usage is forbidden in mobile runtime`);
+  }
+  if (appRoot.includes('defaultTheme: "light"') || appRoot.includes('defaultTheme: "dark"')) {
+    fail(`${key}: app-owned fixed mobile theme is forbidden`);
+  }
   for (const marker of ["persistenceKey", "createBthwaniOfflineMutationQueue", "clearBthwaniQueryClient", "registerIdentityBeforeSessionEndHook"]) {
     if (!appRoot.includes(marker)) fail(`${key}: OperatorContext-safe data runtime marker missing: ${marker}`);
   }
@@ -267,11 +300,11 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   }
 
   if (requireBuildSecrets && buildSecretsTargetApps.includes(key)) {
-    if ((platform === "android" || platform === "all") && features.includes("notifications")) {
+    if ((platform === "android" || platform === "all") && nativeCapabilities.includes("notifications")) {
       const googleServices = resolveGoogleServicesFile(key, process.env);
       validateGoogleServicesFile(key, googleServices, app.androidPackage);
     }
-    if (features.includes("maps") && profile !== "development") {
+    if (nativeCapabilities.includes("maps") && profile !== "development") {
       if (platform === "android" || platform === "all") requireEnv(key, "GOOGLE_MAPS_ANDROID_API_KEY");
       if (platform === "ios" || platform === "all") requireEnv(key, "GOOGLE_MAPS_IOS_API_KEY");
     }
@@ -295,4 +328,4 @@ for (const file of [
   "shared/data-runtime/src/offline-mutation-queue.ts",
 ]) requireFile(file);
 
-console.log(`PASS: mobile Expo/EAS configuration is centrally guarded for ${profile}/${platform}`);
+console.log(`PASS: mobile product features and native Expo/EAS capabilities are centrally guarded for ${profile}/${platform}`);

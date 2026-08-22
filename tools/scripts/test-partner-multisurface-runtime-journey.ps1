@@ -104,9 +104,9 @@ $Field = [pscustomobject]@{
     -DeviceFingerprint "partner-multisurface"
 }
 
-$PartnerStatus = Invoke-Api GET "$DshBaseUrl/dsh/partner/activation/status" (Headers $Partner "activation-status" -ReadOnly)
+$PartnerStatus = Invoke-Api GET "$DshBaseUrl/dsh/partner/activation/status?storeId=$([uri]::EscapeDataString($StoreId))" (Headers $Partner "activation-status" -ReadOnly)
 Require-Status $PartnerStatus @(200) "partner activation status"
-$PartnerReadiness = Invoke-Api GET "$DshBaseUrl/dsh/partner/activation/readiness" (Headers $Partner "activation-readiness" -ReadOnly)
+$PartnerReadiness = Invoke-Api GET "$DshBaseUrl/dsh/partner/activation/readiness?storeId=$([uri]::EscapeDataString($StoreId))" (Headers $Partner "activation-readiness" -ReadOnly)
 Require-Status $PartnerReadiness @(200) "partner activation readiness"
 $Scopes = Invoke-Api GET "$DshBaseUrl/dsh/partner/scopes" (Headers $Partner "scopes" -ReadOnly)
 Require-Status $Scopes @(200) "partner scopes"
@@ -144,10 +144,12 @@ $InviteIdentity = "+9677$($RunId.ToString().Substring($RunId.ToString().Length -
 $InviteKey = "partner-team-invite-$RunId"
 $Invite = Invoke-Api POST "$DshBaseUrl/dsh/partner/stores/$StoreId/team/invites" (Headers $Partner "team-invite" -FixedIdempotencyKey $InviteKey) @{
   identity = $InviteIdentity
+  role = "staff"
 }
 Require-Status $Invite @(200, 201) "partner team invite"
 $InviteReplay = Invoke-Api POST "$DshBaseUrl/dsh/partner/stores/$StoreId/team/invites" (Headers $Partner "team-invite-replay" -FixedIdempotencyKey $InviteKey) @{
   identity = $InviteIdentity
+  role = "staff"
 }
 Require-Status $InviteReplay @(200, 201) "partner team invite replay"
 $TeamAfter = Invoke-Api GET "$DshBaseUrl/dsh/partner/stores/$StoreId/team" (Headers $Partner "team-after" -ReadOnly)
@@ -184,18 +186,18 @@ $Assortment = Invoke-Api GET "$DshBaseUrl/dsh/partner/stores/$StoreId/assortment
 Require-Status $Assortment @(200) "partner store assortment"
 
 $ProposalBody = @{
-  proposedNameAr = "منتج رحلة الشريك $RunId"
-  proposedNameEn = "Partner journey product $RunId"
+  proposedNameAr = "حليب مبخر الشاي الذهبي 170 جم"
+  proposedNameEn = "Golden Tea Evaporated Milk 170g"
   domainId = $DomainId
   categoryNodeId = $CategoryNodeId
-  brand = "BThwani Runtime"
+  brand = "الشاي الذهبي"
   imageObjectKey = $null
   sourceSurface = "app-partner"
 }
 if ($RequiresBarcode) {
   $ProposalBody.barcode = "628$($RunId.ToString().PadLeft(10, '0').Substring(0, 10))"
 }
-$Proposal = Invoke-Api POST "$DshBaseUrl/dsh/partner/catalog/product-proposals" (Headers $Partner "catalog-proposal") $ProposalBody
+$Proposal = Invoke-Api POST "$DshBaseUrl/dsh/partner/catalog/product-proposals?storeId=$([uri]::EscapeDataString($StoreId))" (Headers $Partner "catalog-proposal") $ProposalBody
 Require-Status $Proposal @(200, 201) "partner product proposal"
 $ProposalRecord = Get-Value $Proposal.Json 'proposal'
 $ProposalId = "$(Get-Value $ProposalRecord 'id')"
@@ -203,8 +205,20 @@ Require (-not [string]::IsNullOrWhiteSpace($ProposalId)) "partner product propos
 
 $PartnerOrders = Invoke-Api GET "$DshBaseUrl/dsh/partner/orders" (Headers $Partner "orders" -ReadOnly)
 Require-Status $PartnerOrders @(200) "partner orders inbox"
-$PartnerAnalytics = Invoke-Api GET "$DshBaseUrl/dsh/partner/analytics/performance?period=today" (Headers $Partner "analytics" -ReadOnly)
+$PartnerAnalytics = Invoke-Api GET "$DshBaseUrl/dsh/partner/analytics/performance?period=today&storeId=$([uri]::EscapeDataString($StoreId))" (Headers $Partner "analytics" -ReadOnly)
 Require-Status $PartnerAnalytics @(200) "partner performance analytics"
+$PartnerAnalyticsRecord = Get-Value $PartnerAnalytics.Json 'value'
+if ($null -eq $PartnerAnalyticsRecord) { $PartnerAnalyticsRecord = $PartnerAnalytics.Json }
+Require ([string]$PartnerAnalyticsRecord.storeId -eq $StoreId) "partner performance returned another store"
+Require ([string]$PartnerAnalyticsRecord.sourceSystem -eq "DSH") "partner performance source provenance is missing"
+Require ([bool]$PartnerAnalyticsRecord.readOnly) "partner performance readOnly provenance is missing"
+Require (-not [string]::IsNullOrWhiteSpace([string]$PartnerAnalyticsRecord.readState)) "partner performance read state is missing"
+Require ($null -ne $PartnerAnalyticsRecord.windowFrom -and $null -ne $PartnerAnalyticsRecord.windowTo) "partner performance window provenance is missing"
+if ([string]$PartnerAnalyticsRecord.readState -eq "available") {
+  Require ($null -ne $PartnerAnalyticsRecord.generatedAt -and $null -ne $PartnerAnalyticsRecord.freshnessSeconds) "available partner performance is missing freshness evidence"
+} elseif ([string]$PartnerAnalyticsRecord.readState -ne "no_data") {
+  throw "partner performance returned unknown read state: $($PartnerAnalyticsRecord.readState)"
+}
 
 $PartnerSettlements = Invoke-Api GET "$DshBaseUrl/dsh/partner/me/finance/settlements" (Headers $Partner "settlements" -ReadOnly)
 Require-Status $PartnerSettlements @(200) "partner settlement references"

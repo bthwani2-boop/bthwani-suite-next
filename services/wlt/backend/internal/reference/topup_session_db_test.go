@@ -2,12 +2,12 @@ package reference
 
 import (
 	"database/sql"
-	"fmt"
 	"os"
 	"testing"
-	"time"
 
 	_ "github.com/lib/pq"
+
+	"wlt-api/internal/testsupport"
 )
 
 func getTestDB(t *testing.T) *sql.DB {
@@ -35,7 +35,7 @@ func getTestDB(t *testing.T) *sql.DB {
 }
 
 func uniqueID(prefix string) string {
-	return fmt.Sprintf("%s-%d", prefix, time.Now().UnixNano())
+	return testsupport.UniqueID(prefix)
 }
 
 func TestCreateTopUpSession_CustomerDerivesCustomerTopUpPurpose(t *testing.T) {

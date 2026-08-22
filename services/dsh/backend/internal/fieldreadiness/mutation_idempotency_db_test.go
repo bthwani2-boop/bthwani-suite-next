@@ -3,6 +3,7 @@ package fieldreadiness
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -52,12 +53,20 @@ func TestCreateGovernedVisitIdempotentReturnsOriginalVisitAndRejectsConflict(t *
 		Input   CreateVisitInput
 	}{StoreID: storeID, Input: input})
 
-	first, err := CreateGovernedVisitIdempotent(ctx, db, nil, actor, input, mutation)
+	first, err := CreateGovernedVisitIdempotent(ctx, db, actor, input, mutation)
 	if err != nil {
 		t.Fatalf("first create governed visit: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_visits WHERE id = $1`, first.ID) })
-	second, err := CreateGovernedVisitIdempotent(ctx, db, nil, actor, input, mutation)
+	var requirementCount int
+	if err := db.QueryRowContext(ctx, `
+		SELECT COUNT(*) FROM dsh_visit_checklist_requirements WHERE visit_id = $1`, first.ID).Scan(&requirementCount); err != nil {
+		t.Fatalf("count idempotent visit checklist requirements: %v", err)
+	}
+	if requirementCount == 0 {
+		t.Fatal("idempotent visit creation must snapshot the governed checklist policy")
+	}
+	second, err := CreateGovernedVisitIdempotent(ctx, db, actor, input, mutation)
 	if err != nil {
 		t.Fatalf("replay create governed visit: %v", err)
 	}
@@ -69,7 +78,7 @@ func TestCreateGovernedVisitIdempotentReturnsOriginalVisitAndRejectsConflict(t *
 		"storeId":   storeID,
 		"visitType": "periodic",
 	})
-	if _, err := CreateGovernedVisitIdempotent(ctx, db, nil, actor, input, conflictMutation); !errors.Is(err, ErrIdempotencyConflict) {
+	if _, err := CreateGovernedVisitIdempotent(ctx, db, actor, input, conflictMutation); !errors.Is(err, ErrIdempotencyConflict) {
 		t.Fatalf("expected ErrIdempotencyConflict, got %v", err)
 	}
 
@@ -87,6 +96,54 @@ func TestCreateGovernedVisitIdempotentReturnsOriginalVisitAndRejectsConflict(t *
 	}
 }
 
+func TestFindMutationReceiptIsActorScopedAndMissingMeansNotCommitted(t *testing.T) {
+	db := openRequiredDB(t)
+	ctx := context.Background()
+	actorID := uniqueID("agent-reconcile-receipt")
+	otherActorID := uniqueID("agent-reconcile-other")
+	cleanupFieldMutationReceipts(t, db, actorID)
+	cleanupFieldMutationReceipts(t, db, otherActorID)
+	mutation := testMutationContext(t, uniqueID("reconcile-receipt"), map[string]any{"visitId": "visit-receipt"})
+	_, err := db.ExecContext(ctx, `
+		INSERT INTO dsh_field_readiness_operation_receipts
+		  (actor_id, operation, resource_id, idempotency_key, request_hash, correlation_id, response_json)
+		VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+		actorID,
+		MutationCompleteVisit,
+		"visit-receipt",
+		mutation.IdempotencyKey,
+		mutation.RequestHash,
+		mutation.CorrelationID,
+		`{"visit":{"id":"visit-receipt","status":"complete"}}`,
+	)
+	if err != nil {
+		t.Fatalf("seed mutation receipt: %v", err)
+	}
+
+	receipt, err := FindMutationReceipt(ctx, db, actorID, MutationCompleteVisit, mutation.IdempotencyKey)
+	if err != nil {
+		t.Fatalf("find actor receipt: %v", err)
+	}
+	var receiptPayload struct {
+		Visit struct {
+			ID     string `json:"id"`
+			Status string `json:"status"`
+		} `json:"visit"`
+	}
+	if err := json.Unmarshal(receipt.ResponseJSON, &receiptPayload); err != nil {
+		t.Fatalf("decode receipt response: %v", err)
+	}
+	if receipt.CorrelationID != mutation.CorrelationID || receiptPayload.Visit.ID != "visit-receipt" || receiptPayload.Visit.Status != "complete" {
+		t.Fatalf("unexpected receipt: %#v", receipt)
+	}
+	if _, err := FindMutationReceipt(ctx, db, otherActorID, MutationCompleteVisit, mutation.IdempotencyKey); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("expected other actor to see not committed, got %v", err)
+	}
+	if _, err := FindMutationReceipt(ctx, db, actorID, MutationOperation("unsupported"), mutation.IdempotencyKey); !errors.Is(err, ErrInvalid) {
+		t.Fatalf("expected unsupported operation to be invalid, got %v", err)
+	}
+}
+
 func TestGovernedCheckReceiptDoesNotReapplyAnOlderMutation(t *testing.T) {
 	db := openRequiredDB(t)
 	ctx := context.Background()
@@ -98,7 +155,7 @@ func TestGovernedCheckReceiptDoesNotReapplyAnOlderMutation(t *testing.T) {
 	actor := testFieldActor(t, agentID)
 	cleanupFieldMutationReceipts(t, db, agentID)
 
-	visit, err := CreateGovernedVisit(ctx, db, nil, actor, CreateVisitInput{
+	visit, err := CreateGovernedVisit(ctx, db, actor, CreateVisitInput{
 		StoreID: storeID, FieldAgentID: agentID, VisitType: VisitTypeOnboarding, StartLocation: testValidLocation(),
 	})
 	if err != nil {
@@ -114,7 +171,7 @@ func TestGovernedCheckReceiptDoesNotReapplyAnOlderMutation(t *testing.T) {
 		VisitID string
 		Input   UpdateCheckInput
 	}{VisitID: visit.ID, Input: passedInput})
-	passed, err := UpsertGovernedReadinessCheckIdempotent(ctx, db, nil, actor, visit.ID, passedInput, passedMutation)
+	passed, err := UpsertGovernedReadinessCheckIdempotent(ctx, db, actor, visit.ID, passedInput, passedMutation)
 	if err != nil {
 		t.Fatalf("record passed check: %v", err)
 	}
@@ -126,11 +183,11 @@ func TestGovernedCheckReceiptDoesNotReapplyAnOlderMutation(t *testing.T) {
 		VisitID string
 		Input   UpdateCheckInput
 	}{VisitID: visit.ID, Input: failedInput})
-	if _, err := UpsertGovernedReadinessCheckIdempotent(ctx, db, nil, actor, visit.ID, failedInput, failedMutation); err != nil {
+	if _, err := UpsertGovernedReadinessCheckIdempotent(ctx, db, actor, visit.ID, failedInput, failedMutation); err != nil {
 		t.Fatalf("record newer failed check: %v", err)
 	}
 
-	replayed, err := UpsertGovernedReadinessCheckIdempotent(ctx, db, nil, actor, visit.ID, passedInput, passedMutation)
+	replayed, err := UpsertGovernedReadinessCheckIdempotent(ctx, db, actor, visit.ID, passedInput, passedMutation)
 	if err != nil {
 		t.Fatalf("replay older passed check: %v", err)
 	}
@@ -167,12 +224,12 @@ func TestCreateGovernedEscalationIdempotentCreatesOneEscalation(t *testing.T) {
 		Category: CategorySafetyViolation, Description: "idempotent safety escalation",
 	}
 	mutation := testMutationContext(t, uniqueID("create-escalation"), input)
-	first, err := CreateGovernedEscalationIdempotent(ctx, db, nil, actor, input, mutation)
+	first, err := CreateGovernedEscalationIdempotent(ctx, db, actor, input, mutation)
 	if err != nil {
 		t.Fatalf("first escalation: %v", err)
 	}
 	t.Cleanup(func() { _, _ = db.ExecContext(ctx, `DELETE FROM dsh_readiness_escalations WHERE id = $1`, first.ID) })
-	second, err := CreateGovernedEscalationIdempotent(ctx, db, nil, actor, input, mutation)
+	second, err := CreateGovernedEscalationIdempotent(ctx, db, actor, input, mutation)
 	if err != nil {
 		t.Fatalf("replay escalation: %v", err)
 	}
@@ -205,7 +262,7 @@ func TestCompleteGovernedVisitIdempotentDoesNotDuplicateCommissionOutbox(t *test
 	actor := testFieldActor(t, agentID)
 	cleanupFieldMutationReceipts(t, db, agentID)
 
-	visit, err := CreateGovernedVisit(ctx, db, nil, actor, CreateVisitInput{
+	visit, err := CreateGovernedVisit(ctx, db, actor, CreateVisitInput{
 		StoreID: storeID, FieldAgentID: agentID, VisitType: VisitTypeOnboarding, StartLocation: testValidLocation(),
 	})
 	if err != nil {
@@ -215,9 +272,9 @@ func TestCompleteGovernedVisitIdempotentDoesNotDuplicateCommissionOutbox(t *test
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_commission_outbox WHERE visit_id = $1`, visit.ID)
 		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_visits WHERE id = $1`, visit.ID)
 	})
-	for _, checkType := range RequiredCheckTypes {
+	for _, checkType := range policyCheckTypes(t, db, visit.ID) {
 		mediaRef := seedStoreBoundReadinessMedia(t, db, partnerID, storeID, agentID)
-		if _, err := UpsertGovernedReadinessCheck(ctx, db, nil, actor, visit.ID, UpdateCheckInput{
+		if _, err := UpsertGovernedReadinessCheck(ctx, db, actor, visit.ID, UpdateCheckInput{
 			CheckType: checkType, Status: CheckPassed, EvidenceURL: mediaRef,
 		}); err != nil {
 			t.Fatalf("upsert governed check %s: %v", checkType, err)
@@ -229,11 +286,11 @@ func TestCompleteGovernedVisitIdempotentDoesNotDuplicateCommissionOutbox(t *test
 		VisitID string
 		Input   CompleteVisitInput
 	}{VisitID: visit.ID, Input: completion})
-	first, err := CompleteGovernedVisitIdempotent(ctx, db, nil, actor, visit.ID, completion, mutation)
+	first, err := CompleteGovernedVisitIdempotent(ctx, db, actor, visit.ID, completion, mutation)
 	if err != nil {
 		t.Fatalf("first completion: %v", err)
 	}
-	second, err := CompleteGovernedVisitIdempotent(ctx, db, nil, actor, visit.ID, completion, mutation)
+	second, err := CompleteGovernedVisitIdempotent(ctx, db, actor, visit.ID, completion, mutation)
 	if err != nil {
 		t.Fatalf("replay completion: %v", err)
 	}
@@ -250,6 +307,57 @@ func TestCompleteGovernedVisitIdempotentDoesNotDuplicateCommissionOutbox(t *test
 	}
 	if outboxCount != 1 {
 		t.Fatalf("expected one commission outbox event, got %d", outboxCount)
+	}
+}
+
+func TestGovernedEscalationCannotMutateCompletedVisit(t *testing.T) {
+	db := openRequiredDB(t)
+	ctx := context.Background()
+	agentID := uniqueID("agent-escalation-after-complete")
+	partnerID := seedPartner(t, db, agentID)
+	storeID := uniqueID("store-escalation-after-complete")
+	seedFieldStoreForPartner(t, db, storeID, agentID, partnerID)
+	registerGovernedStoreLocation(t, db, storeID, partnerID)
+	actor := testFieldActor(t, agentID)
+	cleanupFieldMutationReceipts(t, db, agentID)
+
+	visit, err := CreateGovernedVisit(ctx, db, actor, CreateVisitInput{
+		StoreID: storeID, FieldAgentID: agentID, VisitType: VisitTypeOnboarding, StartLocation: testValidLocation(),
+	})
+	if err != nil {
+		t.Fatalf("create governed visit: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_commission_outbox WHERE visit_id = $1`, visit.ID)
+		_, _ = db.ExecContext(ctx, `DELETE FROM dsh_field_visits WHERE id = $1`, visit.ID)
+	})
+	for _, checkType := range policyCheckTypes(t, db, visit.ID) {
+		mediaRef := seedStoreBoundReadinessMedia(t, db, partnerID, storeID, agentID)
+		if _, err := UpsertGovernedReadinessCheck(ctx, db, actor, visit.ID, UpdateCheckInput{
+			CheckType: checkType, Status: CheckPassed, EvidenceURL: mediaRef,
+		}); err != nil {
+			t.Fatalf("upsert governed check %s: %v", checkType, err)
+		}
+	}
+	if _, err := CompleteGovernedVisit(ctx, db, actor, visit.ID, testCompleteInput()); err != nil {
+		t.Fatalf("complete governed visit: %v", err)
+	}
+
+	input := CreateEscalationInput{
+		VisitID: visit.ID, StoreID: storeID, RaisedBy: agentID,
+		Severity: SeverityHigh, Category: CategorySafetyViolation, Description: "must be rejected after completion",
+	}
+	mutation := testMutationContext(t, uniqueID("escalation-after-complete"), input)
+	if _, err := CreateGovernedEscalationIdempotent(ctx, db, actor, input, mutation); !errors.Is(err, ErrVisitAlreadyComplete) {
+		t.Fatalf("expected ErrVisitAlreadyComplete, got %v", err)
+	}
+
+	var count int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM dsh_readiness_escalations WHERE visit_id = $1`, visit.ID).Scan(&count); err != nil {
+		t.Fatalf("count post-completion escalations: %v", err)
+	}
+	if count != 0 {
+		t.Fatalf("completed visit must not receive a new escalation, got %d", count)
 	}
 }
 
@@ -282,7 +390,7 @@ func TestRevokedActorCannotExecuteStaleMutations(t *testing.T) {
 	}
 	mutation := testMutationContext(t, uniqueID("revoked-mutation"), input)
 
-	_, err := CreateGovernedVisitIdempotent(ctx, db, nil, actor, input, mutation)
+	_, err := CreateGovernedVisitIdempotent(ctx, db, actor, input, mutation)
 	if !errors.Is(err, store.ErrScopedStoreNotFound) && !errors.Is(err, ErrForbidden) {
 		t.Fatalf("expected revoked actor to fail with authorization error, got %v", err)
 	}

@@ -5,6 +5,88 @@ import (
 	"time"
 )
 
+func TestNormalizeStoreOnboardingFeePolicyInput(t *testing.T) {
+	effectiveFrom := time.Date(2026, time.August, 21, 15, 30, 0, 0, time.FixedZone("Yemen", 3*60*60))
+	valid := StoreOnboardingFeePolicyInput{
+		Enabled:          true,
+		AmountMinorUnits: 2500,
+		Currency:         " yer ",
+		AppliesTo:        " first_store ",
+		ChargeTiming:     " on_approval ",
+		EffectiveFrom:    &effectiveFrom,
+		Notes:            "  initial policy  ",
+		ExpectedVersion:  0,
+		Reason:           "  launch policy  ",
+		CreatedByActorID: "  actor-1  ",
+	}
+
+	normalized, err := normalizeStoreOnboardingFeePolicyInput(valid)
+	if err != nil {
+		t.Fatalf("valid policy rejected: %v", err)
+	}
+	if normalized.Currency != "YER" || normalized.AppliesTo != "first_store" || normalized.ChargeTiming != "on_approval" || normalized.Notes != "initial policy" || normalized.Reason != "launch policy" || normalized.CreatedByActorID != "actor-1" {
+		t.Fatalf("input was not canonicalized: %#v", normalized)
+	}
+	if normalized.EffectiveFrom == nil || !normalized.EffectiveFrom.Equal(effectiveFrom.UTC()) || normalized.EffectiveFrom.Location() != time.UTC {
+		t.Fatalf("effectiveFrom was not normalized to UTC: %#v", normalized.EffectiveFrom)
+	}
+
+	cases := []struct {
+		name   string
+		mutate func(*StoreOnboardingFeePolicyInput)
+	}{
+		{name: "unsupported currency", mutate: func(input *StoreOnboardingFeePolicyInput) { input.Currency = "US1" }},
+		{name: "unsupported scope", mutate: func(input *StoreOnboardingFeePolicyInput) { input.AppliesTo = "unknown" }},
+		{name: "unsupported timing", mutate: func(input *StoreOnboardingFeePolicyInput) { input.ChargeTiming = "later" }},
+		{name: "enabled zero amount", mutate: func(input *StoreOnboardingFeePolicyInput) { input.AmountMinorUnits = 0 }},
+		{name: "negative amount", mutate: func(input *StoreOnboardingFeePolicyInput) { input.AmountMinorUnits = -1 }},
+		{name: "negative version", mutate: func(input *StoreOnboardingFeePolicyInput) { input.ExpectedVersion = -1 }},
+		{name: "short reason", mutate: func(input *StoreOnboardingFeePolicyInput) { input.Reason = "no" }},
+		{name: "missing actor", mutate: func(input *StoreOnboardingFeePolicyInput) { input.CreatedByActorID = "" }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			input := valid
+			tc.mutate(&input)
+			if _, err := normalizeStoreOnboardingFeePolicyInput(input); err != ErrInvalidFeePolicy {
+				t.Fatalf("normalizeStoreOnboardingFeePolicyInput() error=%v, want %v", err, ErrInvalidFeePolicy)
+			}
+		})
+	}
+}
+
+func TestOnboardingFeeRequestHashIsStableAndInputBound(t *testing.T) {
+	input := StoreOnboardingFeePolicyInput{
+		Enabled:          true,
+		AmountMinorUnits: 2500,
+		Currency:         "YER",
+		AppliesTo:        "first_store",
+		ChargeTiming:     "on_approval",
+		ExpectedVersion:  0,
+		Reason:           "launch policy",
+		CreatedByActorID: "actor-1",
+	}
+	one, err := onboardingFeeRequestHash(input)
+	if err != nil {
+		t.Fatalf("hash input: %v", err)
+	}
+	two, err := onboardingFeeRequestHash(input)
+	if err != nil {
+		t.Fatalf("hash input again: %v", err)
+	}
+	if one != two || len(one) != 64 {
+		t.Fatalf("hash is not stable hex: %q %q", one, two)
+	}
+	input.AmountMinorUnits++
+	three, err := onboardingFeeRequestHash(input)
+	if err != nil {
+		t.Fatalf("hash changed input: %v", err)
+	}
+	if one == three {
+		t.Fatal("request hash did not change when policy input changed")
+	}
+}
+
 func TestProductTransitionPolicy(t *testing.T) {
 	tests := []struct {
 		from string

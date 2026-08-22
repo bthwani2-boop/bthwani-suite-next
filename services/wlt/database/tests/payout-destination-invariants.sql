@@ -89,9 +89,12 @@ BEGIN
     -- with not_null_violation before ever reaching the owner_actor_type check, so
     -- the test passed while proving nothing about the constraint it names.
     INSERT INTO wlt_payout_destinations
-      (operator_context_id, partner_id, owner_actor_id, owner_actor_type, beneficiary_name, settlement_preference, active)
+      (operator_context_id, partner_id, owner_actor_id, owner_actor_type, beneficiary_name,
+       destination_method, masked_destination_reference, destination_verification_status,
+       destination_version, material_identity_hash, active)
     VALUES
-      ('ctx-invariant-probe', 'actor-', 'actor-', 'client', 'invalid owner', 'manual', false);
+      ('ctx-invariant-probe', 'actor-', 'actor-', 'client', 'invalid owner',
+       'official_wallet', '', 'unverified', 1, '', false);
     RAISE EXCEPTION ' invariant failure: unsupported owner actor type was accepted';
   EXCEPTION
     WHEN check_violation THEN NULL;

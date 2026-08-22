@@ -126,7 +126,7 @@ func TestCreatePaymentSessionTimeoutThenRetryUsesSameDeterministicKey(t *testing
 // TestOutOfOrderMutationsCarryIndependentDeterministicKeys verifies that when
 // two different mutations for the same underlying payment session arrive
 // out of order (e.g. ExpireSession followed by a late-arriving
-// NotifyDeliveryCollection for the related order), each mutation carries its
+// FinalizeCodReservation for the related order), each mutation carries its
 // own independent, non-empty, deterministic idempotency key and correlation
 // id — there is no cross-mutation key collision that could let one mutation
 // be mistaken for a replay of the other.
@@ -144,6 +144,10 @@ func TestOutOfOrderMutationsCarryIndependentDeterministicKeys(t *testing.T) {
 			correlationID:  r.Header.Get("X-Correlation-ID"),
 		})
 		w.WriteHeader(http.StatusOK)
+		if r.URL.Path == "/wlt/cod-reservations/finalize" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"codReservation":{"id":"reservation-1","status":"finalized"},"replayed":false}`))
+		}
 	}))
 	defer server.Close()
 
@@ -157,38 +161,32 @@ func TestOutOfOrderMutationsCarryIndependentDeterministicKeys(t *testing.T) {
 	if err := c.ExpireSession(trustedMutationTestContext(), paymentSessionID, ""); err != nil {
 		t.Fatalf("unexpected ExpireSession error: %v", err)
 	}
-	// NotifyDeliveryCollection arrives late, out of order, for the related order.
-	if err := c.NotifyDeliveryCollection(trustedMutationTestContext(), NotifyDeliveryCollectionInput{
-		OrderID:          orderID,
-		CollectorType:    "captain",
-		CollectorID:      "captain-ooo-1",
-		PartnerID:        "partner-ooo-1",
-		CheckoutIntentID: checkoutIntentID,
-	}); err != nil {
-		t.Fatalf("unexpected NotifyDeliveryCollection error: %v", err)
+	// FinalizeCodReservation arrives late, out of order, for the related order.
+	if _, _, err := c.FinalizeCodReservation(trustedMutationTestContext(), orderID, checkoutIntentID, "", ""); err != nil {
+		t.Fatalf("unexpected FinalizeCodReservation error: %v", err)
 	}
 
 	if len(calls) != 2 {
 		t.Fatalf("expected 2 recorded calls, got %d", len(calls))
 	}
-	expireCall, notifyCall := calls[0], calls[1]
+	expireCall, finalizeCall := calls[0], calls[1]
 
-	if expireCall.idempotencyKey == "" || notifyCall.idempotencyKey == "" {
-		t.Fatalf("expected non-empty idempotency keys, got %q and %q", expireCall.idempotencyKey, notifyCall.idempotencyKey)
+	if expireCall.idempotencyKey == "" || finalizeCall.idempotencyKey == "" {
+		t.Fatalf("expected non-empty idempotency keys, got %q and %q", expireCall.idempotencyKey, finalizeCall.idempotencyKey)
 	}
-	if expireCall.correlationID == "" || notifyCall.correlationID == "" {
-		t.Fatalf("expected non-empty correlation ids, got %q and %q", expireCall.correlationID, notifyCall.correlationID)
+	if expireCall.correlationID == "" || finalizeCall.correlationID == "" {
+		t.Fatalf("expected non-empty correlation ids, got %q and %q", expireCall.correlationID, finalizeCall.correlationID)
 	}
-	if expireCall.idempotencyKey == notifyCall.idempotencyKey {
+	if expireCall.idempotencyKey == finalizeCall.idempotencyKey {
 		t.Fatalf("expected independent idempotency keys for distinct mutations, got the same key %q for both", expireCall.idempotencyKey)
 	}
 }
 
-// TestNotifyDeliveryCollectionPartialFailureRetryCarriesSameKey verifies that
+// TestFinalizeCodReservationPartialFailureRetryCarriesSameKey verifies that
 // after a server-side partial failure (HTTP 500), a caller-driven retry of
-// the identical NotifyDeliveryCollection input is both safe (identical
+// the identical FinalizeCodReservation input is both safe (identical
 // idempotency key on retry) and eventually succeeds.
-func TestNotifyDeliveryCollectionPartialFailureRetryCarriesSameKey(t *testing.T) {
+func TestFinalizeCodReservationPartialFailureRetryCarriesSameKey(t *testing.T) {
 	var attempt int
 	var idempotencyKeys []string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -198,20 +196,14 @@ func TestNotifyDeliveryCollectionPartialFailureRetryCarriesSameKey(t *testing.T)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		w.WriteHeader(http.StatusCreated)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"codReservation":{"id":"reservation-1","status":"finalized"},"replayed":false}`))
 	}))
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	input := NotifyDeliveryCollectionInput{
-		OrderID:          "order-partial-1",
-		CollectorType:    "captain",
-		CollectorID:      "captain-partial-1",
-		PartnerID:        "partner-partial-1",
-		CheckoutIntentID: "intent-partial-1",
-	}
-
-	firstErr := c.NotifyDeliveryCollection(trustedMutationTestContext(), input)
+	_, _, firstErr := c.FinalizeCodReservation(trustedMutationTestContext(), "order-partial-1", "intent-partial-1", "", "")
 	if firstErr == nil {
 		t.Fatal("expected first attempt to fail with HTTP 500")
 	}
@@ -219,7 +211,7 @@ func TestNotifyDeliveryCollectionPartialFailureRetryCarriesSameKey(t *testing.T)
 		t.Fatalf("expected error to mention status 500, got: %v", firstErr)
 	}
 
-	secondErr := c.NotifyDeliveryCollection(trustedMutationTestContext(), input)
+	_, _, secondErr := c.FinalizeCodReservation(trustedMutationTestContext(), "order-partial-1", "intent-partial-1", "", "")
 	if secondErr != nil {
 		t.Fatalf("expected retry to succeed, got error: %v", secondErr)
 	}

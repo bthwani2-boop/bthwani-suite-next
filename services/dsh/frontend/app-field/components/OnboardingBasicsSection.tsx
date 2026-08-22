@@ -4,6 +4,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { TextField, Text, SegmentedControl, spacing, colorRoles } from '@bthwani/ui-kit';
 import type { FieldPartnerDraftForm } from '../../shared/field-onboarding';
+import type { CentralCatalogDomain } from '../../shared/catalog/central-catalog.types';
 
 const LEGAL_IDENTITY_TYPES: readonly {
   readonly value: FieldPartnerDraftForm['legalIdentityType'];
@@ -19,9 +20,11 @@ type Props = {
   readonly errors: Partial<Record<keyof FieldPartnerDraftForm, string>>;
   readonly readOnly: boolean;
   readonly onChange: (patch: Partial<FieldPartnerDraftForm>) => void;
+  readonly businessVerticals: readonly CentralCatalogDomain[];
+  readonly businessVerticalsError: string | null;
 };
 
-export function OnboardingBasicsSection({ form, errors, readOnly, onChange }: Props) {
+export function OnboardingBasicsSection({ form, errors, readOnly, onChange, businessVerticals, businessVerticalsError }: Props) {
   return (
     <View style={{ gap: spacing[4] }}>
       <Text role="bodyStrong" style={{ textAlign: 'right', fontWeight: 'bold', color: colorRoles.textPrimary }}>
@@ -69,6 +72,22 @@ export function OnboardingBasicsSection({ form, errors, readOnly, onChange }: Pr
         placeholder="مثال: 777123456 أو 0551234567"
         hint="يستخدم لإرسال كود التفعيل والاتفاق النهائي"
       />
+
+      <View style={{ gap: spacing[2] }}>
+        <Text role="bodySm" style={{ textAlign: 'right', color: colorRoles.textPrimary }}>مجال نشاط المتجر</Text>
+        {businessVerticals.length > 0 ? (
+          <SegmentedControl
+            items={businessVerticals.map((domain) => ({ value: domain.id, label: domain.nameAr }))}
+            value={form.businessVerticalId ?? ''}
+            onValueChange={(value) => onChange({ businessVerticalId: value })}
+          />
+        ) : (
+          <Text role="caption" tone="warning" style={{ textAlign: 'right' }}>
+            {businessVerticalsError ?? 'جارٍ تحميل مجالات النشاط المركزية…'}
+          </Text>
+        )}
+        {errors.businessVerticalId ? <Text role="caption" tone="danger" style={{ textAlign: 'right' }}>{errors.businessVerticalId}</Text> : null}
+      </View>
     </View>
   );
 }

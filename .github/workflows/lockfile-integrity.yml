@@ -2,7 +2,7 @@ name: BThwani Lockfile Integrity
 
 on:
   pull_request:
-    branches: [master]
+    branches: [master, b, c]
     paths:
       - "package.json"
       - "pnpm-lock.yaml"
@@ -24,9 +24,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - name: Checkout candidate
+      - name: Checkout immutable candidate source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 1
           persist-credentials: false
 
@@ -47,8 +48,10 @@ jobs:
 
       - name: Reject tracked source mutation
         shell: bash
+        env:
+          EXPECTED_SOURCE_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = "${GITHUB_SHA}"
+          test "$(git rev-parse HEAD)" = "${EXPECTED_SOURCE_SHA}"
           git diff --quiet --exit-code
           git diff --cached --quiet --exit-code

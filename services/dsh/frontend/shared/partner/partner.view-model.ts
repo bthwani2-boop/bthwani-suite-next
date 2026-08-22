@@ -2,11 +2,23 @@ import type { DshPartner, DshPartnerSummary, DshPartnerReadiness } from "./partn
 import type { DshPartnerActivationStatus } from "./partner-activation.model";
 import { getDshPartnerActivationStatusLabel, getDshPartnerActivationStateMetadata, getDshPartnerReadinessChecklist } from "./partner-activation.model";
 
+const BUSINESS_VERTICAL_LABELS: Record<string, string> = {
+  "domain-restaurants": "مطاعم",
+  "domain-groceries": "مقاضي ومتاجر غذائية",
+  "domain-pharmacy": "صيدلية",
+  "domain-bthwani-store": "متجر بثواني",
+};
+
+export function getDshBusinessVerticalLabel(verticalId: string, legacyCategory = ""): string {
+  return BUSINESS_VERTICAL_LABELS[verticalId] ?? (legacyCategory && legacyCategory !== "default" ? legacyCategory : "غير محدد");
+}
+
 export type DshPartnerListRowViewModel = {
   readonly id: string;
   readonly displayName: string;
   readonly legalNameAr: string;
   readonly category: string;
+  readonly businessVerticalId: string;
   readonly activationStatus: DshPartnerActivationStatus;
   readonly statusLabel: string;
   readonly statusTone: "success" | "warning" | "danger" | "info" | "muted";
@@ -18,16 +30,12 @@ export type DshPartnerListRowViewModel = {
   readonly isRejected: boolean;
 };
 
-export type DshPartnerBankAccountViewModel = {
-  readonly hasBankAccount: boolean;
-  readonly beneficiaryName: string;
-  readonly bankName: string;
-  readonly bankBranch: string;
-  readonly maskedAccountNumber: string;
-  readonly maskedIban: string;
-  readonly settlementPreferenceLabel: string;
-  readonly bankAccountHolderMatchesOwner: boolean;
-  readonly bankNotes: string;
+export type DshPartnerPayoutDestinationViewModel = {
+  readonly configured: boolean;
+  readonly destinationId: string;
+  readonly method: string;
+  readonly maskedReference: string;
+  readonly verificationStatus: string;
 };
 
 export type DshPartnerDetailViewModel = {
@@ -42,7 +50,8 @@ export type DshPartnerDetailViewModel = {
   readonly primaryPhone: string;
   readonly email: string;
   readonly category: string;
-  readonly bankAccount: DshPartnerBankAccountViewModel;
+  readonly businessVerticalId: string;
+  readonly payoutDestination: DshPartnerPayoutDestinationViewModel;
   readonly activationStatus: DshPartnerActivationStatus;
   readonly statusLabel: string;
   readonly statusTone: "success" | "warning" | "danger" | "info" | "muted";
@@ -61,48 +70,32 @@ export type DshPartnerDetailViewModel = {
 export type DshPartnerReadinessViewModel = {
   readonly allGatesPassed: boolean;
   readonly canActivatePartner: boolean;
-  readonly canPublishStoreToClient: boolean;
+  readonly intakeComplete: boolean;
+  readonly publicationDecision: "PUBLISHED" | "BLOCKED";
+  readonly blockingReasons: readonly string[];
   readonly blockerLabel: string;
   readonly partnerActivationBlockedReason: string;
-  readonly storePublicationBlockedReason: string;
   readonly items: readonly { id: string; label: string; satisfied: boolean; blockedReason?: string | undefined }[];
 };
 
-const SETTLEMENT_PREFERENCE_LABELS: Record<string, string> = {
-  bank_transfer: "تحويل بنكي",
-  mobile_wallet: "محفظة جوال",
-  "": "غير محدد",
-};
-
-// Control-panel display masking: reveal only the last 4 characters of
-// sensitive bank identifiers (accountNumber/iban).
-function maskBankIdentifier(value: string): string {
-  const trimmed = value.trim();
-  if (!trimmed) return "—";
-  if (trimmed.length <= 4) return "•".repeat(trimmed.length);
-  return `${"•".repeat(trimmed.length - 4)}${trimmed.slice(-4)}`;
-}
-
-function buildBankAccountViewModel(p: DshPartner): DshPartnerBankAccountViewModel {
-  const hasBankAccount = Boolean(
-    p.beneficiaryName || p.bankName || p.accountNumber || p.iban
+function buildPayoutDestinationViewModel(p: DshPartner): DshPartnerPayoutDestinationViewModel {
+  const configured = Boolean(
+    p.payoutDestinationId &&
+    p.destinationMethod === "official_wallet" &&
+    p.maskedDestinationReference,
   );
   return {
-    hasBankAccount,
-    beneficiaryName: p.beneficiaryName || "—",
-    bankName: p.bankName || "—",
-    bankBranch: p.bankBranch || "—",
-    maskedAccountNumber: maskBankIdentifier(p.accountNumber),
-    maskedIban: maskBankIdentifier(p.iban),
-    settlementPreferenceLabel: SETTLEMENT_PREFERENCE_LABELS[p.settlementPreference] ?? p.settlementPreference,
-    bankAccountHolderMatchesOwner: p.bankAccountHolderMatchesOwner,
-    bankNotes: p.bankNotes || "—",
+    configured,
+    destinationId: p.payoutDestinationId || "",
+    method: p.destinationMethod || "",
+    maskedReference: p.maskedDestinationReference || "",
+    verificationStatus: p.destinationVerificationStatus || "",
   };
 }
 
 function resolveStatusTone(status: DshPartnerActivationStatus): "success" | "warning" | "danger" | "info" | "muted" {
   if (status === "client_visible" || status === "partner_active") return "success";
-  if (status === "ops_rejected" || status === "partner_deactivated") return "danger";
+  if (status === "ops_rejected" || status === "partner_terminated") return "danger";
   if (status === "documents_missing" || status === "catalog_not_ready" || status === "delivery_modes_not_ready") return "warning";
   if (status === "ops_review" || status === "ops_approved") return "info";
   return "muted";
@@ -116,6 +109,7 @@ export function buildPartnerListRowViewModel(p: DshPartnerSummary | DshPartner):
     displayName: p.displayName,
     legalNameAr: p.legalNameAr,
     category: p.category,
+    businessVerticalId: p.businessVerticalId,
     activationStatus: status,
     statusLabel: getDshPartnerActivationStatusLabel(status),
     statusTone: resolveStatusTone(status),
@@ -123,7 +117,7 @@ export function buildPartnerListRowViewModel(p: DshPartnerSummary | DshPartner):
     blockedReason: meta?.blockedReason ?? "",
     createdAt: p.createdAt,
     isClientVisible: status === "client_visible",
-    isDeactivated: status === "partner_deactivated",
+    isDeactivated: status === "partner_terminated",
     isRejected: status === "ops_rejected",
   };
 }
@@ -144,7 +138,8 @@ export function buildPartnerDetailViewModel(p: DshPartner): DshPartnerDetailView
     primaryPhone: p.primaryPhone,
     email: p.email,
     category: p.category,
-    bankAccount: buildBankAccountViewModel(p),
+    businessVerticalId: p.businessVerticalId,
+    payoutDestination: buildPayoutDestinationViewModel(p),
     activationStatus: status,
     statusLabel: getDshPartnerActivationStatusLabel(status),
     statusTone: resolveStatusTone(status),
@@ -154,7 +149,7 @@ export function buildPartnerDetailViewModel(p: DshPartner): DshPartnerDetailView
     auditRequired: meta?.auditRequired ?? false,
     allowedNextStatuses: meta?.allowedNextStatuses ?? [],
     canActivate: meta?.allowedNextStatuses.includes("partner_active") ?? false,
-    canDeactivate: meta?.allowedNextStatuses.includes("partner_deactivated") ?? false,
+    canDeactivate: meta?.allowedNextStatuses.includes("partner_terminated") ?? false,
     canReject: meta?.allowedNextStatuses.includes("ops_rejected") ?? false,
     isClientVisible: status === "client_visible",
     checklist: checklist.map(c => ({ ...c })),
@@ -165,10 +160,11 @@ export function buildPartnerReadinessViewModel(r: DshPartnerReadiness): DshPartn
   return {
     allGatesPassed: r.canActivate,
     canActivatePartner: r.canActivatePartner,
-    canPublishStoreToClient: r.canPublishStoreToClient,
+    intakeComplete: r.intakeComplete,
+    publicationDecision: r.publicationDecision,
+    blockingReasons: [...r.blockingReasons],
     blockerLabel: r.blockedReason ?? "",
     partnerActivationBlockedReason: r.partnerActivationBlockedReason ?? "",
-    storePublicationBlockedReason: r.storePublicationBlockedReason ?? "",
     items: r.checklist.map(item => ({
       id: item.id,
       label: item.label,

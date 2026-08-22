@@ -49,13 +49,20 @@ var accountTaxonomy = map[string]accountTaxonomyEntry{
 	"platform_payable":               {Classification: "liability", Category: "liability", NormalBalanceSide: "credit"},
 	"platform_revenue":               {Classification: "income", Category: "revenue", NormalBalanceSide: "credit"},
 	"provider_clearing":              {Classification: "asset", Category: "asset", NormalBalanceSide: "debit"},
+	"provider_receivable":            {Classification: "asset", Category: "asset", NormalBalanceSide: "debit"},
 	"platform_commission_receivable": {Classification: "asset", Category: "asset", NormalBalanceSide: "debit"},
-	// Corrected by wlt-909: captain-held COD cash awaiting remittance is the
-	// platform's asset, not a liability.
+	// Historical-only account retained so old cash-custody ledger rows remain
+	// correctly readable after the captain-funded COD cutover. New postings are
+	// rejected by PostLedgerTransaction and the database write fence.
 	"cash_in_transit": {Classification: "asset", Category: "asset", NormalBalanceSide: "debit"},
 	// New in wlt-909, for U001-T002.
 	"external_settlement_cash":   {Classification: "asset", Category: "asset", NormalBalanceSide: "debit"},
 	"payment_processing_expense": {Classification: "expense", Category: "expense", NormalBalanceSide: "debit"},
+	// Promotion funding is an actual cost (or a recoverable partner-funded
+	// amount), not merely a lifecycle marker. Keeping these accounts separate
+	// prevents a discount from silently reducing an unrelated revenue balance.
+	"promotion_funding_expense":    {Classification: "expense", Category: "expense", NormalBalanceSide: "debit"},
+	"partner_promotion_receivable": {Classification: "asset", Category: "asset", NormalBalanceSide: "debit"},
 	// New in wlt-910, for U001-T003: the balancing counterpart for opening
 	// balances and financial corrections. See PostOpeningBalance and
 	// PostFinancialCorrection in opening_balance.go.

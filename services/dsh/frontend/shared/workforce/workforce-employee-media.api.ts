@@ -1,6 +1,7 @@
 import { getIdentityAccessToken } from "@bthwani/core-identity";
 
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
+import { corrId } from "../_kernel/dsh-http-request";
 import type { FieldMediaPickResult } from "../media/field-document-media";
 
 export async function uploadEmployeeMedia(actorId: string, file: FieldMediaPickResult): Promise<string> {
@@ -22,7 +23,7 @@ export async function uploadEmployeeMedia(actorId: string, file: FieldMediaPickR
     method: "POST",
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      "X-Correlation-ID": `employee-media-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`,
+      "X-Correlation-ID": corrId("employee-media"),
     },
     body: form,
     ...(cookieMode ? { credentials: "include" as const } : {}),

@@ -1,12 +1,14 @@
 import React from 'react';
-import { Platform } from 'react-native';
 import { DSH_CAPTAIN_CONTRACT_CAPABILITIES } from '../orders/dsh-order-lifecycle-client';
+import { getDshLocationAdapter } from '../mobile-capabilities';
 import {
   acceptDispatchAssignment,
   declineDispatchAssignment,
+  fetchCaptainDispatchAssignments,
   reportDeliveryException,
   updateDeliveryStatus,
 } from '../dispatch/dispatch.api';
+import { corrId } from '../_kernel/dsh-http-request';
 import {
   flushPendingForegroundDispatchLocations,
   syncForegroundDispatchLocation,
@@ -59,38 +61,12 @@ function governedAccuracy(value: number | null | undefined): number {
 }
 
 export async function readCaptainForegroundLocation(): Promise<DshCaptainCoordinates> {
-  if (Platform.OS === 'web') {
-    if (typeof navigator === 'undefined' || !navigator.geolocation) {
-      throw new Error('خدمة الموقع غير متاحة على هذا الجهاز.');
-    }
-    return new Promise<DshCaptainCoordinates>((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          try {
-            resolve({
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              accuracyMeters: governedAccuracy(position.coords.accuracy),
-            });
-          } catch (error) {
-            reject(error);
-          }
-        },
-        () => reject(new Error('تعذر قراءة الموقع الحالي. تحقق من صلاحية الموقع وحاول مجددًا.')),
-        { enableHighAccuracy: true, maximumAge: 5_000, timeout: 10_000 },
-      );
-    });
-  }
-
-  // @ts-ignore expo-location is supplied by the app-captain runtime on native devices.
-  const Location = await import('expo-location');
-  const permission = await Location.requestForegroundPermissionsAsync();
+  const location = getDshLocationAdapter();
+  const permission = await location.requestForegroundPermissions();
   if (!permission.granted) {
     throw new Error('صلاحية الموقع مطلوبة لتحديث موقع المهمة.');
   }
-  const position = await Location.getCurrentPositionAsync({
-    accuracy: Location.Accuracy.High,
-  });
+  const position = await location.getCurrentPosition();
   return {
     latitude: position.coords.latitude,
     longitude: position.coords.longitude,
@@ -111,8 +87,17 @@ export function useCaptainOrderRuntime() {
   );
 
   const confirmPickup = React.useCallback(
-    (assignmentId: string, _captainId: string) =>
-      updateDeliveryStatus(assignmentId, 'picked_up'),
+    async (assignmentId: string, _captainId: string) => {
+      const assignments = await fetchCaptainDispatchAssignments();
+      const assignment = assignments.find((item) => item.id === assignmentId);
+      if (!assignment || !Number.isInteger(assignment.version) || assignment.version < 1) {
+        throw new Error('تعذر قراءة إصدار مهمة التوصيل. حدّث المهمة قبل الاستلام.');
+      }
+      return updateDeliveryStatus(assignmentId, 'picked_up', {
+        expectedVersion: assignment.version,
+        idempotencyKey: corrId('captain-pickup'),
+      });
+    },
     [],
   );
 
@@ -138,7 +123,7 @@ export function useCaptainOrderRuntime() {
       return reportDeliveryException(assignmentId, {
         reasonCode: draft.reasonCode,
         note: draft.note.trim(),
-        correlationId: `${assignmentId}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        correlationId: corrId('captain-delivery-exception'),
         ...(coordinates ? { latitude: coordinates.latitude, longitude: coordinates.longitude } : {}),
       });
     },

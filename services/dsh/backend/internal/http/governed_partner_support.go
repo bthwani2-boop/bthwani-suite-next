@@ -1,7 +1,10 @@
 package http
 
 import (
+	"encoding/json"
+	"errors"
 	"net/http"
+	"net/url"
 
 	"dsh-api/internal/store"
 	"dsh-api/internal/support"
@@ -43,13 +46,23 @@ func (s *administrationSupportServer) handleGetPartnerSupportFinance(w http.Resp
 		return
 	}
 
-	financeAgg, err := support.GetMaskedPartnerFinance(r.Context(), s.protected.wlt, agg.OperatorContextID)
+	query := url.Values{}
+	query.Set("partnerId", partnerID)
+	status, body, err := s.protected.wlt.ExecuteFinanceRead(
+		r.Context(), "finance.settlements.read", "/wlt/settlements/summary", query,
+		r.Header.Get("X-Correlation-ID"), agg.OperatorContextID,
+	)
 	if err != nil {
 		writeSupportRequestError(w, err)
 		return
 	}
-
-	store.SendJSON(w, http.StatusOK, map[string]any{"finance": financeAgg})
+	if !json.Valid(body) {
+		writeSupportRequestError(w, errors.New("WLT returned an invalid finance readback"))
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = w.Write(body)
 }
 
 // GET /dsh/operator/support/partners/{partnerId}/operations

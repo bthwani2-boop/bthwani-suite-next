@@ -13,9 +13,9 @@ import (
 // session mutations whose handler already owns its own idempotency semantics.
 func HandleOperatorContextScopedPaymentSession(db *sql.DB, next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		trustedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
-		if trustedOperatorContextID == "" {
-			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "X-Operator-Context-ID is required")
+		trustedOperatorContextID, err := shared.RequireOperatorContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "authenticated OperatorContext context is required")
 			return
 		}
 		session, err := getSession(db, strings.TrimSpace(r.PathValue("paymentSessionId")))

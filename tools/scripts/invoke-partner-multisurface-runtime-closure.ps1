@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [string]$Profiles = "identity,workforce,dsh,wlt,media",
+  [string]$Profiles = "identity,workforce,dsh,wlt,media-storage",
   [string]$ArtifactDirectory = "artifacts/partner-journey-closure"
 )
 

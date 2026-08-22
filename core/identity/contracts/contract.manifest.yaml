@@ -19,3 +19,5 @@ modules:
 overlays:
   - ./identity.actor-admin.overlay.yaml
   - ./identity.runtime-readiness.overlay.yaml
+  - ./identity.refresh-concurrency.overlay.yaml
+  - ./identity.device-binding.overlay.yaml

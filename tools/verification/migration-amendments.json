@@ -1,0 +1,591 @@
+{
+  "schemaVersion": 1,
+  "policy": {
+    "default": "IMMUTABLE_AFTER_APPLY",
+    "amendmentRule": "A migration may be corrected in place only when the repository has no successful same-commit runtime evidence for it, clean installation or invariant verification proves the file is unsafe, and a governed forward-recovery migration exists for any environment that may have recorded the previous checksum.",
+    "appliedChecksumMismatchAction": "HARD_FAIL_AND_REQUIRE_EXPLICIT_FORWARD_RECOVERY"
+  },
+  "amendments": [
+    {
+      "service": "dsh",
+      "migrationId": "dsh-100_cart_sync_diagnostics.sql",
+      "originalBlobSha": "1a9516b5b954ab65c9cbb3f2b5eaab56ac1deb0f",
+      "replacementSha256": "a30e3e0f83fb3453fb39fa0cbc7cf2638d4cbb2ecd748fb77bca20b3f200cc34",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The migration was written in the foreign '-- +migrate Up/Down' convention, which the governed runner does not parse: it executed the whole file, so the Down block dropped the two columns the Up block had just added. It also ALTERs dsh_cart_idempotency at ordinal 140 while dsh-136_cart_options_idempotency.sql creates that table at ordinal 165, so every clean installation failed here with 'relation \"dsh_cart_idempotency\" does not exist'. The migration has therefore never succeeded in any environment.",
+      "evidence": {
+        "cleanInstallCommitSha": "0bd6d82a54c7f813b3706ee3382329e96de8e65a",
+        "cleanInstallResult": "FAILED_AT_THIS_MIGRATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Drop the unparsed Down block, guard the ALTER on the table's existence because the governed order derives from the filename sort and cannot be changed, and add dsh-999_cart_idempotency_sync_diagnostics.sql as the explicit forward recovery so a database that reaches dsh-136 first still gains device_id and session_id."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-056_client_addresses.sql",
+      "originalBlobSha": "82e89d17c80d9037bbffb42b12542e25446111a7",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The original table-level UNIQUE(client_id, create_idempotency_key) constraint covered soft-deleted rows and contradicted the address lifecycle invariant that a deleted operation releases its idempotency key while active rows remain conflict-safe.",
+      "evidence": {
+        "cleanInstallCommitSha": "90e7e198100036fd9a959084b78074c9ff46fc5c",
+        "cleanInstallResult": "INVARIANT_FAILED_AFTER_APPLY",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Replace full-history uniqueness with uq_dsh_client_addresses_active_idempotency WHERE deleted_at IS NULL and retain dsh-900_client_address_active_idempotency_recovery.sql as the explicit forward recovery for any environment that applied the original constraint."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-077_platform_operational_policies.sql",
+      "originalBlobSha": "636a7217a376873cb8fbfafae1461ff37219805c",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The migration declared TEXT foreign keys against the UUID zone identity created by dsh-013 and introduced a second capacity table instead of upgrading the legacy capacity source.",
+      "evidence": {
+        "cleanInstallCommitSha": "6a12e031284a7f9100b88597aeee8a2d3b4c4c56",
+        "cleanInstallResult": "FAILED_AT_THIS_MIGRATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Preserve UUID zone identity, migrate legacy capacity rows into the governed capacity-config table, and remove the duplicate legacy table only after successful copy."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-031_governed_settlement_sources.sql",
+      "originalBlobSha": "1e0f8491fb415226872cd4d88b14917a84e57b58",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The migration declared settlement_id UUID while the sovereign wlt_settlements primary key has always been TEXT with a wset_ prefix.",
+      "evidence": {
+        "cleanInstallCommitSha": "6a12e031284a7f9100b88597aeee8a2d3b4c4c56",
+        "cleanInstallResult": "FAILED_AT_THIS_MIGRATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Use the exact sovereign settlement identifier type and retain the existing restrictive foreign key."
+    },
+    {
+      "service": "identity",
+      "migrationId": "identity-007_local_actor_operator_context_repair.sql",
+      "originalBlobSha": "7bb4eea0484590800fdeab16104080ce8004f6c6",
+      "replacementSha256": "174cd31b102c53013c1767cf3d9cf9192028658856dc55f4c8e175598759a63a",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The active Identity baseline defines operator_context_id and no tenant_id column. The corrected repair must also use PostgreSQL's folded lowercase constraint identifier when probing pg_constraint; the prior mixed-case literal missed the existing unquoted constraint and made direct replay attempt to add it again.",
+      "evidence": {
+        "cleanInstallCommitSha": "ecb24d4bae6025ff8946ecd02ea89b734177212d",
+        "cleanInstallResult": "TENANT_BASELINE_FAILED_COLUMN_MISSING",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Keep the repair bounded to operator_context_id, use the folded lowercase constraint identifier consistently, and fail closed for blank operator context values."
+    },
+    {
+      "service": "identity",
+      "migrationId": "identity-018_session_surface.sql",
+      "originalBlobSha": "f458827cf028520ac393c22138272dbf77ddca8f",
+      "replacementSha256": "bb0d70855597f5ec20f98e2a5e396555cbc6b6cba5f11fe54128e7c48e583479",
+      "acceptedHistoricalSha256": [
+        "8518a3dd2f87e8f8ea1bf10ab006794dc0364543deb430aa0f0cb713a3d59adf"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Commit 2f1568ed3c56e5cf365d02ccf6654aa949910f03 removed a single trailing space after 'ALTER TABLE identity_sessions' while the manifest declares this file HISTORICAL_IMMUTABLE, and updated the manifest digest without registering the authorizing amendment. The edit is whitespace-only: both digests parse to the identical statement and produce the identical schema, so a database that recorded either digest holds the same surface column. Because the manifest moved to the new digest alone, every database bootstrapped before that commit fails the governed ledger check permanently with no forward path. Clean installations never expose this because they record the new digest directly.",
+      "evidence": {
+        "cleanInstallCommitSha": "2f1568ed3c56e5cf365d02ccf6654aa949910f03",
+        "cleanInstallResult": "CLEAN_INSTALL_PASSES_PREEXISTING_LEDGER_CONFLICTS",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Record the pre-edit digest 8518a3dd2f87e8f8ea1bf10ab006794dc0364543deb430aa0f0cb713a3d59adf as an accepted historical checksum so pre-existing databases converge without a destructive rebuild. No forward-recovery migration is required because the two digests are schema-equivalent."
+    },
+    {
+      "service": "workforce",
+      "migrationId": "workforce-016_provisioning_cases.sql",
+      "replacementSha256": "1d365c309420eed09c7b27c589a55768100b1379702404338216fafcf36b80dc",
+      "acceptedHistoricalSha256": [
+        "8ca7c0f50af0250795b7380198a02e0c1f6aa00d214246512f761e9ed388e1f5"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Commit 2f1568ed3c56e5cf365d02ccf6654aa949910f03 normalized encoding and whitespace across governed migrations and updated the manifest digests without registering the authorizing amendments. For this file the change is a stripped UTF-8 BOM and one removed trailing space; the statements are byte-equivalent once decoded, so a database holding either digest has the identical schema. Because only the manifest moved, every database bootstrapped before that commit fails the governed ledger check permanently with no forward path, while clean installs record the new digest and never expose it.",
+      "evidence": {
+        "cleanInstallCommitSha": "2f1568ed3c56e5cf365d02ccf6654aa949910f03",
+        "cleanInstallResult": "CLEAN_INSTALL_PASSES_PREEXISTING_LEDGER_CONFLICTS",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Record the pre-normalization digest 8ca7c0f50af0250795b7380198a02e0c1f6aa00d214246512f761e9ed388e1f5 as an accepted historical checksum so pre-existing databases converge without a destructive rebuild. No forward-recovery migration is required because the two digests are schema-equivalent."
+    },
+    {
+      "service": "workforce",
+      "migrationId": "workforce-020_operator_context_scope_boundary.sql",
+      "originalBlobSha": "8f8ea535494078a9d9cea5e09945ef9f0835f51b",
+      "replacementSha256": "af61eefcffc6a926f7ebdd9aa6ec4aace69a6baf55893fbbc9d27b3b62b2ae96",
+      "acceptedHistoricalSha256": [
+        "ed2e079fbe4d5f2a386a847b17b30244af45f9be493a91c17960ac3487fe0caf",
+        "267cef525a8b1a2398ad02f5f7b1cc289960aa92894844e0587af3ea014aec6d"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The prior correction established the Identity mapping boundary but encoded proof metadata only on mapping rows and therefore made an authoritative zero-row source impossible. A fresh Workforce database has no actors to backfill, yet the migration required a non-empty Identity snapshot and forced unrelated local Identity bootstrap side effects. The corrected migration separates source proof from actor rows, permits a proved zero-row source only when Workforce has no actors, and retains complete fail-closed Identity coverage for every actual Workforce actor.",
+      "evidence": {
+        "cleanInstallCommitSha": "9e99f264ae3a93b842aaea6a83f62b680757efab",
+        "cleanInstallResult": "INVARIANT_REVIEW_CONFIRMED_MISSING_IDENTITY_PARENT_BACKFILL",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Use import-identity-operator-context-to-workforce.ps1 to stage a deterministic proof plus the exact Identity mappings for the Workforce actors that actually require cutover. A zero-row proof is valid only for zero Workforce actors; any real actor without a non-blank Identity operator context must fail closed. Retain Workforce-021 as forward recovery and accept both prior pre-release checksums. No payload, assignment, environment, default, synthetic actor, or local-bootstrap side effect may supply context."
+    },
+    {
+      "service": "providers",
+      "migrationId": "providers-002_operator_execution_context.sql",
+      "originalBlobSha": "191ab23a055720124ecd50cdc9148178b880907f",
+      "replacementSha256": "5895b0e0941679efe2844fb494c1043678b4861bbe7d56227c56cb2176c77008",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Providers audit and idempotency are scoped by trusted operator context in the active baseline; the tenant-column version is incompatible with the canonical schema and product model.",
+      "evidence": {
+        "cleanInstallCommitSha": "ecb24d4bae6025ff8946ecd02ea89b734177212d",
+        "cleanInstallResult": "TENANT_BASELINE_INCOMPATIBLE_WITH_ACTIVE_SCHEMA",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Use operator_context_id for audit and idempotency ownership without creating tenant semantics."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-906_client_address_geofence_binding.sql",
+      "originalBlobSha": "adc02faa9ef38f0acfbb5a416e5319b1507b3a95",
+      "replacementSha256": "4814469c49133b30a3024c7ef9ccb3e64476ab850cef0d0998576817a0c99e4f",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The migration filename and comments were normalized away from internal journey identifiers without changing the geofence enforcement logic.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_BASELINE_REACHED_MIGRATION_VERIFICATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Retain the exact governed geofence trigger and only normalize non-semantic metadata."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-907_address_mutation_receipts.sql",
+      "originalBlobSha": "754ce7d2e51fdd960c69ea0c5f32a3a458c615c5",
+      "replacementSha256": "c0475e9a62c2bc5b9f83dcc9329fb2d46af55b596f9a6dd29c66533848cb0474",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The pre-release migration metadata was normalized while preserving durable PII-free mutation receipt semantics.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_BASELINE_REACHED_MIGRATION_VERIFICATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Preserve receipt idempotency and privacy invariants exactly."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-907_service_area_topology.sql",
+      "originalBlobSha": "f2f92603a2fdcb369f0b5a316bdd398606ce5ed5",
+      "replacementSha256": "4d21a22bda7fb4e3f982d629f7d670df640b584907cd476e6020e2cd00e6864d",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The pre-release migration metadata was normalized without weakening malformed or self-intersecting geofence rejection.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_BASELINE_REACHED_MIGRATION_VERIFICATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Keep topology validation fail closed."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-908_mutation_receipt_retention.sql",
+      "originalBlobSha": "a451fd324f5e2d0d8cd26a223699a80cfb3ec270",
+      "replacementSha256": "9ecd41f4e1167ad538df28514cdd8fea940696741f61a7cc18dc2ddb18508eb6",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The pre-release migration metadata was normalized while retaining bounded pseudonymous receipt retention.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_BASELINE_REACHED_MIGRATION_VERIFICATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Retain bounded retention and deletion behavior."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-908_privacy_audit_projection.sql",
+      "originalBlobSha": "960d95b944da74ff217fb9f4946734dcf75846dd",
+      "replacementSha256": "1b38dd684cbf34ffcaffb94636a28174e8453409f7f2b853d3b08a8e7a8b8188",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The pre-release migration metadata was normalized while preserving the hashed-subject privacy projection and structural PII exclusion.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_BASELINE_REACHED_MIGRATION_VERIFICATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Keep raw client and address PII absent from the projection."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-024_payment_session_operator_context.sql",
+      "originalBlobSha": "a17efb0bba6705cc078a8c1b3b0af6be94f7aae9",
+      "replacementSha256": "17fa0324dff406719541e00a146ab77d1f4a2d01b651ce55b86821abf1997069",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The active WLT baseline scopes payment sessions and DSH outbox events by operator_context_id; tenant_id is not part of the canonical platform model.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_OPERATOR_CONTEXT_BASELINE",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Keep payment-session uniqueness scoped by operator_context_id."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-105_financial_operator_context_context_and_ledger.sql",
+      "originalBlobSha": "d67ddc5d08798a9761fa4f1d42805812db0656cc",
+      "replacementSha256": "66015d35a3a665a0b8bcf3ce7a53c41d5c9b47f63736c4abbdd18a994b5f7d52",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Active financial writes and ledger ownership use trusted operator context rather than tenant truth.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_OPERATOR_CONTEXT_BASELINE",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Preserve WLT as the sole financial owner and scope writes by trusted operator context."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-106_settlement_operator_context.sql",
+      "originalBlobSha": "8fb40dff4f90c8679f239d54633219beb5a1d747",
+      "replacementSha256": "be8785bd5863e271d294e850405badf1570d293d6297e3af9e9effd6d05d16b7",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Settlement policy, evidence and idempotency are operator-context scoped in the non-SaaS baseline.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_OPERATOR_CONTEXT_BASELINE",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Keep settlement state and evidence isolated by operator context."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-108_wallet_operator_context_identity.sql",
+      "originalBlobSha": "55d751028ecb8ab0e27ec0c397ac60e592686610",
+      "replacementSha256": "9b853be93ed0a56d92a6f7affcadad11c4649e9ec4d1a8765410fd627338b307",
+      "acceptedHistoricalSha256": [
+        "fc8d428499d909963cd8a406ba61ea275f84469cd3443ba1bc8f7ffcf93b7baa"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Wallet identity is operator-context scoped and the migration now drops its governed uniqueness constraint before recreating it so replay remains safe across pre-release databases that recorded an earlier constraint shape.",
+      "evidence": {
+        "cleanInstallCommitSha": "ed77c73d1952e05005436b69da9cf73e1e0a7ba6",
+        "cleanInstallResult": "CURRENT_WLT_DATABASE_VERIFICATION_PASSED",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Keep wallet uniqueness and lookup scoped by operator context while making constraint recreation idempotent."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-109_cod_custody_operator_context.sql",
+      "replacementSha256": "e14cb987338829e8213c717760c60fbf35c4aaa2c97d6ab6b1154b84238710ef",
+      "acceptedHistoricalSha256": [
+        "6ec72dacd926e4e8a322486bb4354c2da41d52559a0df1334f74e77c1e7f5c0a"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The COD custody migration must drop both legacy and governed uniqueness constraints before recreating the canonical operator-context constraints, otherwise replay against pre-release databases fails on duplicate constraint names.",
+      "evidence": {
+        "cleanInstallCommitSha": "ed77c73d1952e05005436b69da9cf73e1e0a7ba6",
+        "cleanInstallResult": "CURRENT_WLT_DATABASE_VERIFICATION_PASSED",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Preserve COD custody and reconciliation uniqueness by operator context and make constraint recreation idempotent."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-112_payout_operator_context.sql",
+      "replacementSha256": "71425d7bf316e90c36c03e8e7aab8f21d0464373713b14a8a7fcd0aa3ea6aaf1",
+      "acceptedHistoricalSha256": [
+        "9dab5166fb7d28448ce578e24d3fb8991fd0e2dd11e247d0de586271359d8bad"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The payout operator-context migration must drop previously created composite uniqueness and foreign-key constraints before recreating them, preventing replay failures across pre-release databases with partially applied payout governance.",
+      "evidence": {
+        "cleanInstallCommitSha": "ed77c73d1952e05005436b69da9cf73e1e0a7ba6",
+        "cleanInstallResult": "CURRENT_WLT_DATABASE_VERIFICATION_PASSED",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Preserve payout ownership and referential integrity by operator context while making constraint recreation idempotent."
+    },
+    {
+      "service": "wlt",
+      "migrationId": "wlt-902_contextual_finance_object_names.sql",
+      "replacementSha256": "27d318c2ea95d8b1ccd46c94c1833f3ba8f30a4123de54de15091e28813c6168",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The pre-release cleanup migration was normalized to contextual financial object names after the canonical platform model removed tenant terminology.",
+      "evidence": {
+        "cleanInstallCommitSha": "f9a0269d1c5cd5b85d85a431d5f80ed73b0679e8",
+        "cleanInstallResult": "CURRENT_OPERATOR_CONTEXT_BASELINE",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Rename only obsolete database object names while preserving financial truth and data."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-966_drop_dead_partner_brand.sql",
+      "originalBlobSha": "0c4c3330556f6d7ccf77eabe8a3f4258c166385e",
+      "replacementSha256": "46b09fcb4f60f61c5121430b15e2c051713c43b48a8772cc59d74df24057f0b6",
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The destructive migration asserted that dsh_stores.brand_id was never populated, but governed runtime verification reached this migration with six valid store-to-brand ownership links and failed before any destructive statement. Dropping the relation would destroy commercial ownership truth.",
+      "evidence": {
+        "cleanInstallCommitSha": "76172f83ada5434d5f10e201d406b47a3d153948",
+        "cleanInstallResult": "DATA_RETENTION_GUARD_FAILED_BEFORE_DROP",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Preserve dsh_partner_brands and dsh_stores.brand_id, validate operator-context and partner ownership, and retain dsh-971 as the structural forward recovery for any environment that applied the superseded destructive form. Deleted commercial rows must be restored from governed backup evidence, never fabricated."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-144_order_returns_saga.sql",
+      "replacementSha256": "ad7e72a34d6fa7097cc883e5d0b2f2b2655b86a892024359c4a9233ef561d99b",
+      "acceptedHistoricalSha256": [
+        "13947a2eb899a58c72b6875ab8425c6271249127018aa73834e2930d0e26961b",
+        "382d928f0ac14beae4309786ee9a92b6b947e1e4e1ad4d61d5a02489a7021ed7"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "The DSH-144 order returns saga migration was amended to fix a foreign key type mismatch: order_id and order_item_id must be UUID to match dsh_orders.id and dsh_order_items.id respectively. The replacement also removes trailing whitespace required by the immutable diff contract without changing SQL semantics.",
+      "evidence": {
+        "cleanInstallCommitSha": "76172f83ada5434d5f10e201d406b47a3d153948",
+        "cleanInstallResult": "CURRENT_BASELINE_REACHED_MIGRATION_VERIFICATION",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Fix FK column types from TEXT to UUID to match parent table primary keys."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-039_catalog_media_scanning.sql",
+      "replacementSha256": "6ebf7d975ac85281fc2a55f64647e523bf257d23e2eb5f0e8c03f892baf72871",
+      "acceptedHistoricalSha256": [
+        "65a814cd4159a5292e53b178e057bf02f206a7669c4533cbfb6fdfe3eef4ac55"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Commit 2f1568ed3c56e5cf365d02ccf6654aa949910f03 and the preceding migration normalization sweep removed trailing whitespace from governed migrations and updated the manifest digests without registering the authorizing amendments. The removed characters are end-of-line spaces outside string literals, so the statements are semantically identical and a database holding either digest has the identical schema. Because only the manifest moved, every database bootstrapped before the sweep fails the governed ledger check permanently with no forward path, while clean installs record the new digest and never expose it.",
+      "evidence": {
+        "cleanInstallCommitSha": "2f1568ed3c56e5cf365d02ccf6654aa949910f03",
+        "cleanInstallResult": "CLEAN_INSTALL_PASSES_PREEXISTING_LEDGER_CONFLICTS",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Record the pre-normalization digest 65a814cd4159a5292e53b178e057bf02f206a7669c4533cbfb6fdfe3eef4ac55 as an accepted historical checksum so pre-existing databases converge without a destructive rebuild. No forward-recovery migration is required because the two digests are schema-equivalent."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-040_product_proposal_corrections.sql",
+      "replacementSha256": "5712f6abbff0428eb1084aa514a5e85ceecbdfe703f287c0570af77b29ecbb1c",
+      "acceptedHistoricalSha256": [
+        "1cd00d8f5d0554bf038c8d586bd1e0d37bf0430fce020c5e649f11e514313ff4"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Commit 2f1568ed3c56e5cf365d02ccf6654aa949910f03 and the preceding migration normalization sweep removed trailing whitespace from governed migrations and updated the manifest digests without registering the authorizing amendments. The removed characters are end-of-line spaces outside string literals, so the statements are semantically identical and a database holding either digest has the identical schema. Because only the manifest moved, every database bootstrapped before the sweep fails the governed ledger check permanently with no forward path, while clean installs record the new digest and never expose it.",
+      "evidence": {
+        "cleanInstallCommitSha": "2f1568ed3c56e5cf365d02ccf6654aa949910f03",
+        "cleanInstallResult": "CLEAN_INSTALL_PASSES_PREEXISTING_LEDGER_CONFLICTS",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Record the pre-normalization digest 1cd00d8f5d0554bf038c8d586bd1e0d37bf0430fce020c5e649f11e514313ff4 as an accepted historical checksum so pre-existing databases converge without a destructive rebuild. No forward-recovery migration is required because the two digests are schema-equivalent."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-099_j075_incidents_lifecycle.sql",
+      "replacementSha256": "68923e77531ce866f0fedf76688800b487ac5be7e78925249a1fd42998d394cf",
+      "acceptedHistoricalSha256": [
+        "462667d339d6e0936bd874e3ed3f6eb4ae9c955416dd16bc21bccb63583180ec"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Commit 2f1568ed3c56e5cf365d02ccf6654aa949910f03 and the preceding migration normalization sweep removed trailing whitespace from governed migrations and updated the manifest digests without registering the authorizing amendments. The removed characters are end-of-line spaces outside string literals, so the statements are semantically identical and a database holding either digest has the identical schema. Because only the manifest moved, every database bootstrapped before the sweep fails the governed ledger check permanently with no forward path, while clean installs record the new digest and never expose it.",
+      "evidence": {
+        "cleanInstallCommitSha": "2f1568ed3c56e5cf365d02ccf6654aa949910f03",
+        "cleanInstallResult": "CLEAN_INSTALL_PASSES_PREEXISTING_LEDGER_CONFLICTS",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Record the pre-normalization digest 462667d339d6e0936bd874e3ed3f6eb4ae9c955416dd16bc21bccb63583180ec as an accepted historical checksum so pre-existing databases converge without a destructive rebuild. No forward-recovery migration is required because the two digests are schema-equivalent."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-101_j077_ratings.sql",
+      "replacementSha256": "aa92346416666d25745b055f99f89ade5548abc347d621c69d9037fa5a316fab",
+      "acceptedHistoricalSha256": [
+        "a34a9ca799083657d6dcd91eb4899865ea101890ee2c25dab707cb3d27b3174c"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Commit 2f1568ed3c56e5cf365d02ccf6654aa949910f03 and the preceding migration normalization sweep removed trailing whitespace from governed migrations and updated the manifest digests without registering the authorizing amendments. The removed characters are end-of-line spaces outside string literals, so the statements are semantically identical and a database holding either digest has the identical schema. Because only the manifest moved, every database bootstrapped before the sweep fails the governed ledger check permanently with no forward path, while clean installs record the new digest and never expose it.",
+      "evidence": {
+        "cleanInstallCommitSha": "2f1568ed3c56e5cf365d02ccf6654aa949910f03",
+        "cleanInstallResult": "CLEAN_INSTALL_PASSES_PREEXISTING_LEDGER_CONFLICTS",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Record the pre-normalization digest a34a9ca799083657d6dcd91eb4899865ea101890ee2c25dab707cb3d27b3174c as an accepted historical checksum so pre-existing databases converge without a destructive rebuild. No forward-recovery migration is required because the two digests are schema-equivalent."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-135_store_publication_lifecycle.sql",
+      "replacementSha256": "783a568ae868944af12d71531e1ab968a5e20bf0d30c9603e4b4fcc99749dce6",
+      "acceptedHistoricalSha256": [
+        "15041ab31438fc89b5fb43b5bed766503a733491a3a619bf558cf957554ac9b3"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Commit 2f1568ed3c56e5cf365d02ccf6654aa949910f03 and the preceding migration normalization sweep removed trailing whitespace from governed migrations and updated the manifest digests without registering the authorizing amendments. The removed characters are end-of-line spaces outside string literals, so the statements are semantically identical and a database holding either digest has the identical schema. Because only the manifest moved, every database bootstrapped before the sweep fails the governed ledger check permanently with no forward path, while clean installs record the new digest and never expose it.",
+      "evidence": {
+        "cleanInstallCommitSha": "2f1568ed3c56e5cf365d02ccf6654aa949910f03",
+        "cleanInstallResult": "CLEAN_INSTALL_PASSES_PREEXISTING_LEDGER_CONFLICTS",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Record the pre-normalization digest 15041ab31438fc89b5fb43b5bed766503a733491a3a619bf558cf957554ac9b3 as an accepted historical checksum so pre-existing databases converge without a destructive rebuild. No forward-recovery migration is required because the two digests are schema-equivalent."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-137_special_request_enhancements.sql",
+      "replacementSha256": "da4833efc014962b24b128a0a3667db74a6590911f83de4a2821a3cdeb5803eb",
+      "acceptedHistoricalSha256": [
+        "77574c2691c7f978239374391dd3899001b2aa2c854fb87d98f26da902072575"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Commit 2f1568ed3c56e5cf365d02ccf6654aa949910f03 and the preceding migration normalization sweep removed trailing whitespace from governed migrations and updated the manifest digests without registering the authorizing amendments. The removed characters are end-of-line spaces outside string literals, so the statements are semantically identical and a database holding either digest has the identical schema. Because only the manifest moved, every database bootstrapped before the sweep fails the governed ledger check permanently with no forward path, while clean installs record the new digest and never expose it.",
+      "evidence": {
+        "cleanInstallCommitSha": "2f1568ed3c56e5cf365d02ccf6654aa949910f03",
+        "cleanInstallResult": "CLEAN_INSTALL_PASSES_PREEXISTING_LEDGER_CONFLICTS",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Record the pre-normalization digest 77574c2691c7f978239374391dd3899001b2aa2c854fb87d98f26da902072575 as an accepted historical checksum so pre-existing databases converge without a destructive rebuild. No forward-recovery migration is required because the two digests are schema-equivalent."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-141_delivery_exceptions_policy.sql",
+      "replacementSha256": "76f8a861b72d72ae4da65391f6b9cc1c9d8fa601662f5bcda6111ee1ceb76499",
+      "acceptedHistoricalSha256": [
+        "305402390db39f9fd49fb4deceb8f2a6f9573cb6c32fdcad9986aaea1c60de06"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Commit 2f1568ed3c56e5cf365d02ccf6654aa949910f03 and the preceding migration normalization sweep removed trailing whitespace from governed migrations and updated the manifest digests without registering the authorizing amendments. The removed characters are end-of-line spaces outside string literals, so the statements are semantically identical and a database holding either digest has the identical schema. Because only the manifest moved, every database bootstrapped before the sweep fails the governed ledger check permanently with no forward path, while clean installs record the new digest and never expose it.",
+      "evidence": {
+        "cleanInstallCommitSha": "2f1568ed3c56e5cf365d02ccf6654aa949910f03",
+        "cleanInstallResult": "CLEAN_INSTALL_PASSES_PREEXISTING_LEDGER_CONFLICTS",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Record the pre-normalization digest 305402390db39f9fd49fb4deceb8f2a6f9573cb6c32fdcad9986aaea1c60de06 as an accepted historical checksum so pre-existing databases converge without a destructive rebuild. No forward-recovery migration is required because the two digests are schema-equivalent."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-142_order_rescue_actions.sql",
+      "replacementSha256": "2b483512a43d177a40a854b5e0d5db3afa3a7835b4584783a0cfaaa5be283f65",
+      "acceptedHistoricalSha256": [
+        "6269c442636c2532dd5bb8bdf20aaddc1b1db931e9cb5016b14aaae434e89024"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Commit 2f1568ed3c56e5cf365d02ccf6654aa949910f03 and the preceding migration normalization sweep removed trailing whitespace from governed migrations and updated the manifest digests without registering the authorizing amendments. The removed characters are end-of-line spaces outside string literals, so the statements are semantically identical and a database holding either digest has the identical schema. Because only the manifest moved, every database bootstrapped before the sweep fails the governed ledger check permanently with no forward path, while clean installs record the new digest and never expose it.",
+      "evidence": {
+        "cleanInstallCommitSha": "2f1568ed3c56e5cf365d02ccf6654aa949910f03",
+        "cleanInstallResult": "CLEAN_INSTALL_PASSES_PREEXISTING_LEDGER_CONFLICTS",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Record the pre-normalization digest 6269c442636c2532dd5bb8bdf20aaddc1b1db931e9cb5016b14aaae434e89024 as an accepted historical checksum so pre-existing databases converge without a destructive rebuild. No forward-recovery migration is required because the two digests are schema-equivalent."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-976_captain_fleet_memberships.sql",
+      "replacementSha256": "14b4e279ab858b036e89bf619b7b935f86bd2cd101da1cd08917044afc8c20e4",
+      "acceptedHistoricalSha256": [
+        "885e66eeb06c0de044c72d8b84ebb568d00304ff07052af43df0f5ef3d33fb00"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Commit 2f1568ed3c56e5cf365d02ccf6654aa949910f03 and the preceding migration normalization sweep removed trailing whitespace from governed migrations and updated the manifest digests without registering the authorizing amendments. The removed characters are end-of-line spaces outside string literals, so the statements are semantically identical and a database holding either digest has the identical schema. Because only the manifest moved, every database bootstrapped before the sweep fails the governed ledger check permanently with no forward path, while clean installs record the new digest and never expose it.",
+      "evidence": {
+        "cleanInstallCommitSha": "2f1568ed3c56e5cf365d02ccf6654aa949910f03",
+        "cleanInstallResult": "CLEAN_INSTALL_PASSES_PREEXISTING_LEDGER_CONFLICTS",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Record the pre-normalization digest 885e66eeb06c0de044c72d8b84ebb568d00304ff07052af43df0f5ef3d33fb00 as an accepted historical checksum so pre-existing databases converge without a destructive rebuild. No forward-recovery migration is required because the two digests are schema-equivalent."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-977_store_delivery_pricing_modes.sql",
+      "replacementSha256": "1185784873a5565e467b84cd8772ea69d422b0a6e2f786d2b8ad3d1910edcd86",
+      "acceptedHistoricalSha256": [
+        "1969700b6f5934d33f3b02455d31c5391685e2664720b1c7c1a21a764374e43a"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Commit 2f1568ed3c56e5cf365d02ccf6654aa949910f03 and the preceding migration normalization sweep removed trailing whitespace from governed migrations and updated the manifest digests without registering the authorizing amendments. The removed characters are end-of-line spaces outside string literals, so the statements are semantically identical and a database holding either digest has the identical schema. Because only the manifest moved, every database bootstrapped before the sweep fails the governed ledger check permanently with no forward path, while clean installs record the new digest and never expose it.",
+      "evidence": {
+        "cleanInstallCommitSha": "2f1568ed3c56e5cf365d02ccf6654aa949910f03",
+        "cleanInstallResult": "CLEAN_INSTALL_PASSES_PREEXISTING_LEDGER_CONFLICTS",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Record the pre-normalization digest 1969700b6f5934d33f3b02455d31c5391685e2664720b1c7c1a21a764374e43a as an accepted historical checksum so pre-existing databases converge without a destructive rebuild. No forward-recovery migration is required because the two digests are schema-equivalent."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-978_catalog_taxonomy_lifecycle.sql",
+      "replacementSha256": "71a77fcf2d4c7cbde6c7e8a4a923324beb8988fa3a68f7519722efb1201971ac",
+      "acceptedHistoricalSha256": [
+        "4a6e6e6e244dd538171ad44ca8d42b3493e8226a4f69c8139350bc1f57242b85"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Commit 2f1568ed3c56e5cf365d02ccf6654aa949910f03 and the preceding migration normalization sweep removed trailing whitespace from governed migrations and updated the manifest digests without registering the authorizing amendments. The removed characters are end-of-line spaces outside string literals, so the statements are semantically identical and a database holding either digest has the identical schema. Because only the manifest moved, every database bootstrapped before the sweep fails the governed ledger check permanently with no forward path, while clean installs record the new digest and never expose it.",
+      "evidence": {
+        "cleanInstallCommitSha": "2f1568ed3c56e5cf365d02ccf6654aa949910f03",
+        "cleanInstallResult": "CLEAN_INSTALL_PASSES_PREEXISTING_LEDGER_CONFLICTS",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Record the pre-normalization digest 4a6e6e6e244dd538171ad44ca8d42b3493e8226a4f69c8139350bc1f57242b85 as an accepted historical checksum so pre-existing databases converge without a destructive rebuild. No forward-recovery migration is required because the two digests are schema-equivalent."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-980_assortment_inventory_pricing.sql",
+      "replacementSha256": "026deebd90689eb47826866ff4dbeab9bda3be7e35191f8edb6e19afb0089163",
+      "acceptedHistoricalSha256": [
+        "5e64d93e127ed5a8c33c550fe04fe79358c77cd3df770f01e0d34d865caf8b03"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Commit 2f1568ed3c56e5cf365d02ccf6654aa949910f03 and the preceding migration normalization sweep removed trailing whitespace from governed migrations and updated the manifest digests without registering the authorizing amendments. The removed characters are end-of-line spaces outside string literals, so the statements are semantically identical and a database holding either digest has the identical schema. Because only the manifest moved, every database bootstrapped before the sweep fails the governed ledger check permanently with no forward path, while clean installs record the new digest and never expose it.",
+      "evidence": {
+        "cleanInstallCommitSha": "2f1568ed3c56e5cf365d02ccf6654aa949910f03",
+        "cleanInstallResult": "CLEAN_INSTALL_PASSES_PREEXISTING_LEDGER_CONFLICTS",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Record the pre-normalization digest 5e64d93e127ed5a8c33c550fe04fe79358c77cd3df770f01e0d34d865caf8b03 as an accepted historical checksum so pre-existing databases converge without a destructive rebuild. No forward-recovery migration is required because the two digests are schema-equivalent."
+    },
+    {
+      "service": "dsh",
+      "migrationId": "dsh-994_client_address_lifecycle.sql",
+      "replacementSha256": "22da5071b96e191caa3e122254b52b933b65da8b73c1b9e07bd843948e53ee59",
+      "acceptedHistoricalSha256": [
+        "c00c13d8822aee88d93e5911b5e07d1af40bc8a9252c8688d54356c19e8a1f22"
+      ],
+      "classification": "PRE_RELEASE_UNAPPLIED_CORRECTION",
+      "reason": "Commit 2f1568ed3c56e5cf365d02ccf6654aa949910f03 and the preceding migration normalization sweep removed trailing whitespace from governed migrations and updated the manifest digests without registering the authorizing amendments. The removed characters are end-of-line spaces outside string literals, so the statements are semantically identical and a database holding either digest has the identical schema. Because only the manifest moved, every database bootstrapped before the sweep fails the governed ledger check permanently with no forward path, while clean installs record the new digest and never expose it.",
+      "evidence": {
+        "cleanInstallCommitSha": "2f1568ed3c56e5cf365d02ccf6654aa949910f03",
+        "cleanInstallResult": "CLEAN_INSTALL_PASSES_PREEXISTING_LEDGER_CONFLICTS",
+        "sameCommitRuntimeEvidence": false,
+        "productionApprovalEvidence": false
+      },
+      "requiredCorrection": "Record the pre-normalization digest c00c13d8822aee88d93e5911b5e07d1af40bc8a9252c8688d54356c19e8a1f22 as an accepted historical checksum so pre-existing databases converge without a destructive rebuild. No forward-recovery migration is required because the two digests are schema-equivalent."
+    }
+  ]
+}

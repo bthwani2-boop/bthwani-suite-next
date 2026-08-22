@@ -2,7 +2,6 @@
   "schemaVersion": "1.0.0",
   "journeyId": "104",
   "title": "إنشاء الطلب وحقيقة الطلب",
-  "status": "COMPATIBILITY_PRODUCT_MODEL",
   "owner": "DSH",
   "purpose": "إنشاء طلب واحد قابل للتدقيق من Checkout Intent صالح وتثبيت حقيقة تشغيلية غير قابلة لإعادة التسعير أو إعادة ربط العنوان بعد الإنشاء.",
   "actors": ["client", "partner", "operator", "system"],
@@ -37,8 +36,5 @@
     "لا اشتقاق صلاحيات الأفعال داخل الواجهة من status فقط.",
     "لا إظهار PII العنوان الكامل لجهة لا تحتاجه تشغيليًا.",
     "لا تنفيذ خصم أو استرداد أو تسوية أو تغيير رصيد داخل DSH كحقيقة مالية."
-  ],
-  "evidenceRequired": ["static", "database", "contract", "backend", "runtime", "cross-surface", "security", "isolation", "qa", "governance", "ci"],
-  "planningRegistry": "tools/plans/journeys/FULLSTACK_MULTI_SURFACE_JOURNEY_REGISTRY.md",
-  "evidencePolicy": "Implementation status, CI runs, verified SHAs, runtime proofs and closure decisions are external same-commit evidence and are intentionally not stored as current truth in this compatibility Product Truth record."
+  ]
 }

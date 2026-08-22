@@ -22,7 +22,7 @@ func RegisterOrderJourneyRoutes(
 	mux.HandleFunc("GET /dsh/operator/order-workboard", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleOperatorOrderWorkboard))
 	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/partner-delivery", protected.handleGetPartnerDeliveryTask)
 
-	mux.HandleFunc("GET /dsh/orders/{orderId}/preparation", protected.withPermission("control-panel", OperationsPermissionRead, protected.handleGetOrderPreparation))
+	mux.HandleFunc("GET /dsh/orders/{orderId}/preparation", protected.handleGetOrderPreparation)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparation-estimate", protected.handleRevisePreparationEstimate)
 	mux.HandleFunc("GET /dsh/orders/{orderId}/preparation-issues", protected.handleListPreparationIssues)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/preparation-issues", protected.handleCreatePreparationIssue)

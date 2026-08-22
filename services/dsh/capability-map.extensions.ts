@@ -74,7 +74,6 @@ export const DSH_CAPABILITY_MAP_EXTENSIONS = [
       "GETDshCaptainFinanceCommissions",
       "GETDshCaptainFinancePayouts",
       "GETDshFieldFinanceCommissions",
-      "GETDshFieldFinancePayoutDestinations",
       "GETDshFieldFinancePayouts",
       "GETDshFieldFinanceWallet",
     ],

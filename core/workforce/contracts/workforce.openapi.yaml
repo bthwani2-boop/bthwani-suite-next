@@ -15,6 +15,7 @@ x-bthwani-contracts:
   operationalCore: ./workforce.operational-core.openapi.yaml
   referenceMutations: ./workforce.reference-mutations.openapi.yaml
   sovereignLeadership: ./workforce.sovereign-leadership.openapi.yaml
+  internalScopes: ./workforce.internal-scopes.openapi.yaml
 servers:
   - url: http://localhost:58086
     description: Local workforce runtime
@@ -62,11 +63,11 @@ paths:
         - $ref: "#/components/parameters/ActorId"
       responses:
         "200":
-          description: Canonical Workforce readiness gate for the requested actor.
+          description: Current Workforce provider readiness for the requested actor. Activation evidence and cross-service operational gates are separate contracts.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ReadinessGate"
+                $ref: "#/components/schemas/CurrentProviderReadiness"
         "400":
           $ref: "#/components/responses/InvalidRequest"
         "401":
@@ -75,6 +76,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
         "500":
           $ref: "#/components/responses/InternalError"
   /workforce/field-agents:
@@ -84,8 +87,9 @@ paths:
       description: >-
         Operator-only. Orchestrates provider creation: provisions an inactive
         Identity actor (idempotent on phone+role) then writes the sovereign
-        profile. Requires an Idempotency-Key; replays return 200 with the
-        original result.
+        profile. The caller supplies business identity inputs only; actorId is
+        generated and owned by Identity. Requires an Idempotency-Key; replays
+        return 200 with the original result.
       security:
         - bearerAuth: []
       parameters:
@@ -123,7 +127,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
         "422":
-          description: INVALID_REFERENCE_CODE — unknown or inactive city/shift.
+          description: INVALID_REFERENCE_CODE — unknown or inactive service zone/city mapping.
           content:
             application/json:
               schema:
@@ -1160,22 +1164,17 @@ components:
           type: string
         service:
           type: string
-    ReadinessStatus:
+    CurrentProviderReadinessStatus:
       type: string
       enum: [ ALLOWED, BLOCKED ]
-    ReadinessBlockerReason:
+    CurrentProviderReadinessBlockerReason:
       type: string
       enum:
         - IDENTITY_SUSPENDED
         - PROFILE_INCOMPLETE
         - DOCUMENTS_EXPIRED
-        - EMPLOYMENT_TERMINATED
-        - NO_ACTIVE_ASSIGNMENT
-        - SHIFT_INACTIVE
-        - OUTSIDE_ACTIVE_AREA
-        - FINANCIAL_ELIGIBILITY_BLOCKED
-        - ELIGIBILITY_UNAVAILABLE
-    ReadinessGate:
+        - ENGAGEMENT_INACTIVE
+    CurrentProviderReadiness:
       type: object
       additionalProperties: false
       required: [ actorId, workforceKind, status, blockerReasons, checkedAt ]
@@ -1187,11 +1186,11 @@ components:
           type: string
           minLength: 1
         status:
-          $ref: "#/components/schemas/ReadinessStatus"
+          $ref: "#/components/schemas/CurrentProviderReadinessStatus"
         blockerReasons:
           type: array
           items:
-            $ref: "#/components/schemas/ReadinessBlockerReason"
+            $ref: "#/components/schemas/CurrentProviderReadinessBlockerReason"
         checkedAt:
           type: string
           format: date-time
@@ -1204,24 +1203,26 @@ components:
     CreateFieldAgentRequest:
       type: object
       additionalProperties: false
-      required: [ actorId, fullNameAr, serviceZoneId ]
+      required: [ username, phoneE164, fullNameAr, serviceZoneId ]
       properties:
-        actorId:
+        username:
           type: string
           minLength: 1
+        phoneE164:
+          type: string
+          minLength: 7
         fullNameAr:
           type: string
           minLength: 1
         fullNameEn:
           type: string
         engagementType:
-          $ref: "#/components/schemas/EngagementType"
+          type: string
+          enum: [ independent_contractor ]
         engagementStartDate:
           type: string
           format: date
         serviceZoneId:
-          type: string
-        shiftCode:
           type: string
         supervisorActorId:
           type: string
@@ -1244,13 +1245,12 @@ components:
         fullNameEn:
           type: string
         engagementType:
-          $ref: "#/components/schemas/EngagementType"
+          type: string
+          enum: [ independent_contractor ]
         engagementStartDate:
           type: string
           format: date
         serviceZoneId:
-          type: string
-        shiftCode:
           type: string
         supervisorActorId:
           type: string
@@ -1259,11 +1259,14 @@ components:
     CreateCaptainRequest:
       type: object
       additionalProperties: false
-      required: [ actorId, fullNameAr, serviceZoneId, vehicleType, vehicleIdentifier ]
+      required: [ username, phoneE164, fullNameAr, serviceZoneId, vehicleType ]
       properties:
-        actorId:
+        username:
           type: string
           minLength: 1
+        phoneE164:
+          type: string
+          pattern: '^\\+[1-9][0-9]{7,14}$'
         fullNameAr:
           type: string
           minLength: 1
@@ -1334,11 +1337,14 @@ components:
     CreateEmployeeRequest:
       type: object
       additionalProperties: false
-      required: [ actorId, fullNameAr, department, role ]
+      required: [ username, phoneE164, fullNameAr, department, role ]
       properties:
-        actorId:
+        username:
           type: string
           minLength: 1
+        phoneE164:
+          type: string
+          pattern: '^\\+[1-9][0-9]{7,14}$'
         fullNameAr:
           type: string
           minLength: 1
@@ -1442,8 +1448,6 @@ components:
         cityCode:
           type: string
         serviceZoneId:
-          type: string
-        shiftCode:
           type: string
         supervisorActorId:
           type: string

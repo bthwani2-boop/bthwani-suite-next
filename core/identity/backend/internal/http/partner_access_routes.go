@@ -42,18 +42,9 @@ func (s *partnerAccessServer) dshOnly(next http.HandlerFunc) http.HandlerFunc {
 			sendError(w, http.StatusUnauthorized, "UNAUTHENTICATED", "DSH service token is required")
 			return
 		}
-		operatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
-		if operatorContextID == "" {
-			sendError(w, http.StatusServiceUnavailable, "INTERNAL_API_UNAVAILABLE", "trusted operator context is not configured")
-			return
-		}
 		requestedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
 		if requestedOperatorContextID == "" {
 			sendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "X-Operator-Context-ID is required")
-			return
-		}
-		if subtle.ConstantTimeCompare([]byte(requestedOperatorContextID), []byte(operatorContextID)) != 1 {
-			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "service operator context does not match the active runtime context")
 			return
 		}
 		next(w, r)
@@ -79,7 +70,7 @@ func (s *partnerAccessServer) provisionActor(w http.ResponseWriter, r *http.Requ
 		PhoneE164:         request.PhoneE164,
 		PermissionBundle:  request.PermissionBundle,
 		StoreID:           request.StoreID,
-		OperatorContextID: strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID")),
+		OperatorContextID: strings.TrimSpace(r.Header.Get("X-Operator-Context-ID")),
 	})
 	if err != nil {
 		writePartnerAccessError(w, err)
@@ -103,7 +94,7 @@ func (s *partnerAccessServer) setStoreAccess(w http.ResponseWriter, r *http.Requ
 		PermissionBundle:  request.PermissionBundle,
 		Enabled:           request.Enabled,
 		Reactivate:        request.Reactivate,
-		OperatorContextID: strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID")),
+		OperatorContextID: strings.TrimSpace(r.Header.Get("X-Operator-Context-ID")),
 	})
 	if err != nil {
 		writePartnerAccessError(w, err)
@@ -126,7 +117,7 @@ func (s *partnerAccessServer) issueActivation(w http.ResponseWriter, r *http.Req
 		identity.PartnerActivationInput{
 			IssuedByActorID:   request.IssuedByActorID,
 			StoreID:           request.StoreID,
-			OperatorContextID: strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID")),
+			OperatorContextID: strings.TrimSpace(r.Header.Get("X-Operator-Context-ID")),
 		},
 		r.Header.Get("Idempotency-Key"),
 		r.Header.Get("X-Correlation-ID"),

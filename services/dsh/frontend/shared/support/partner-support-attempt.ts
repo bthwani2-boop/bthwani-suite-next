@@ -1,17 +1,13 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/native-data-adapters";
 import type { DshCreateTicketInput } from "./support.types";
 import type { PartnerSupportMutationContext } from "./partner-support.api";
+import { secureRandomId } from "../_kernel/secure-random.ts";
 
 const CREATE_ATTEMPT_KEY = "@bthwani/dsh/partner-support/create-attempt/v1";
 const MESSAGE_ATTEMPT_PREFIX = "@bthwani/dsh/partner-support/message-attempt/v1/";
 
-let fallbackSequence = 0;
-
 function uniquePart(): string {
-  const uuid = globalThis.crypto?.randomUUID?.();
-  if (uuid) return uuid;
-  fallbackSequence += 1;
-  return `${Date.now().toString(36)}-${fallbackSequence.toString(36)}`;
+  return secureRandomId();
 }
 
 function newContext(prefix: string): PartnerSupportMutationContext {

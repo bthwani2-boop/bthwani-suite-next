@@ -12,7 +12,7 @@ import (
 type CreateSubscriptionPaymentSessionInput struct {
 	SubscriptionPurchaseID string `json:"subscriptionPurchaseId"`
 	ProductReference       string `json:"productReference"`
-	OperatorContextID               string `json:"operatorContextId"`
+	OperatorContextID      string `json:"operatorContextId"`
 	ClientID               string `json:"clientId"`
 	PaymentMethod          string `json:"paymentMethod"`
 }
@@ -41,7 +41,7 @@ func CreateSubscriptionPaymentSession(
 		return nil, ErrInvalidTransition
 	}
 	if input.PaymentMethod == "" {
-		input.PaymentMethod = "official_wallet"
+		return nil, ErrInvalid
 	}
 	if input.PaymentMethod == "cod" {
 		return nil, ErrInvalid
@@ -49,7 +49,7 @@ func CreateSubscriptionPaymentSession(
 	return reference.CreatePaymentSession(db, reference.CreatePaymentSessionInput{
 		SubscriptionPurchaseID:     input.SubscriptionPurchaseID,
 		CommercialProductReference: input.ProductReference,
-		OperatorContextID:                   input.OperatorContextID,
+		OperatorContextID:          input.OperatorContextID,
 		ClientID:                   input.ClientID,
 		StoreID:                    "platform-subscriptions",
 		PaymentMethod:              input.PaymentMethod,

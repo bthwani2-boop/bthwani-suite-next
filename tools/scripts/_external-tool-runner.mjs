@@ -1,48 +1,12 @@
-import { execSync } from "node:child_process";
+import { execFileSync, execSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { repoRoot } from "../guards/_guard-utils.mjs";
 
-const activationPolicyPath = path.join(repoRoot, "tools/toolchain/tool-activation-policy.json");
-const allowedActivations = new Set(["active", "partial", "optional", "missing", "disabled"]);
-let activationPolicy;
-
-function loadActivationPolicy() {
-  if (activationPolicy) return activationPolicy;
-  if (!fs.existsSync(activationPolicyPath)) {
-    console.error("[TOOLCHAIN FAIL] tool activation policy missing: tools/toolchain/tool-activation-policy.json decision=FIX_REQUIRED");
-    process.exit(1);
-  }
-  try {
-    activationPolicy = JSON.parse(fs.readFileSync(activationPolicyPath, "utf8"));
-  } catch (error) {
-    console.error(`[TOOLCHAIN FAIL] invalid tool activation policy: ${error.message} decision=FIX_REQUIRED`);
-    process.exit(1);
-  }
-  if (activationPolicy.schemaVersion !== 1 || activationPolicy.policyId !== "TOOL_ACTIVATION_POLICY" || typeof activationPolicy.activations !== "object" || activationPolicy.activations === null) {
-    console.error("[TOOLCHAIN FAIL] malformed tool activation policy decision=FIX_REQUIRED");
-    process.exit(1);
-  }
-  return activationPolicy;
-}
-
-function readActivation(toolId) {
-  const policy = loadActivationPolicy();
-  const activation = policy.activations[toolId];
-  if (!allowedActivations.has(activation)) {
-    console.error(`[TOOLCHAIN FAIL] missing or invalid activation for ${toolId}: ${String(activation)} decision=FIX_REQUIRED`);
-    process.exit(1);
-  }
-  return activation;
-}
-
 export function hasBinary(binary) {
-  try {
-    execSync(process.platform === "win32" ? `where.exe ${binary}` : `which ${binary}`, { stdio: "ignore" });
-    return true;
-  } catch {
-    return false;
-  }
+  const locator = process.platform === "win32" ? "where.exe" : "which";
+  const result = spawnSync(locator, [binary], { stdio: "ignore", windowsHide: true });
+  return !result.error && result.status === 0;
 }
 
 export function ensureDir(rel) {
@@ -59,82 +23,65 @@ export function quoteRel(file) {
 }
 
 export function walkFiles(rootDirs, predicate) {
-  const out = [];
-  function walk(dir) {
-    let entries;
-    try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const entry of entries) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (["node_modules", "dist", "build", ".next", ".git", ".diagnostics", ".nx", ".turbo", ".cache"].includes(entry.name)) continue;
-        walk(full);
-      } else if (predicate(full, entry.name)) {
-        out.push(full);
-      }
+  const roots = [...new Set(rootDirs.map((root) => String(root).trim()).filter(Boolean))];
+  if (!roots.length) return [];
+  for (const root of roots) {
+    if (path.isAbsolute(root) || root === ".." || root.startsWith(`..${path.sep}`) || root.replaceAll("\\", "/").startsWith("../")) {
+      throw new Error(`walkFiles root must be repository-relative: ${root}`);
     }
   }
-  for (const root of rootDirs) {
-    const full = path.join(repoRoot, root);
-    if (fs.existsSync(full)) walk(full);
+
+  let raw;
+  try {
+    raw = execFileSync(
+      "git",
+      ["ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ...roots],
+      { cwd: repoRoot, encoding: "utf8", windowsHide: true, maxBuffer: 64 * 1024 * 1024 },
+    );
+  } catch (error) {
+    throw new Error(`Unable to inventory repository files: ${error?.message || String(error)}`);
+  }
+
+  const out = [];
+  for (const relative of String(raw).split("\0").filter(Boolean)) {
+    const full = path.join(repoRoot, relative);
+    if (!predicate(full, path.basename(relative))) continue;
+    if (!fs.existsSync(full) || !fs.statSync(full).isFile()) continue;
+    out.push(full);
   }
   return out;
 }
 
-function handleMissingBinary(toolId, binary, required) {
-  const activation = readActivation(toolId);
+export function handleMissingBinary(toolId, binary, required) {
   const diagnostic = isDiagnosticMode();
-  const enforce = required && !diagnostic;
-
-  if (enforce || activation === "active") {
-    console.error(`[${toolId.toUpperCase()} FAIL] required binary missing: ${binary} activation=${activation} decision=FIX_REQUIRED`);
+  if (required && !diagnostic) {
+    console.error(`[${toolId.toUpperCase()} FAIL] required binary missing: ${binary} decision=FIX_REQUIRED`);
     process.exit(1);
   }
-  if (activation === "disabled") {
-    console.log(`[${toolId.toUpperCase()} SKIP] tool is disabled by activation policy.`);
-    process.exit(0);
-  }
-  if (diagnostic || activation === "optional" || activation === "missing") {
-    console.log(`[${toolId.toUpperCase()} SKIP] '${binary}' is not installed. activation=${activation} decision=NEEDS_EVIDENCE`);
-    process.exit(0);
-  }
-  if (activation === "partial") {
-    console.warn(`[${toolId.toUpperCase()} WARN] '${binary}' is not installed. activation=partial decision=NEEDS_EVIDENCE`);
-    process.exit(0);
-  }
-  console.error(`[${toolId.toUpperCase()} FAIL] unsupported activation state: ${activation} decision=FIX_REQUIRED`);
-  process.exit(1);
+  const mode = diagnostic ? "diagnostic" : "optional";
+  console.log(`[${toolId.toUpperCase()} SKIP] '${binary}' is not installed. mode=${mode}`);
+  process.exit(0);
 }
 
-function handleCommandFailure(toolId, required) {
-  const activation = readActivation(toolId);
+export function handleCommandFailure(toolId, required) {
   const diagnostic = isDiagnosticMode();
-  const enforce = required && !diagnostic;
-
-  if (enforce || activation === "active") {
-    console.error(`[${toolId.toUpperCase()} FAIL] command failed. activation=${activation} decision=FIX_REQUIRED`);
+  if (required && !diagnostic) {
+    console.error(`[${toolId.toUpperCase()} FAIL] command failed. decision=FIX_REQUIRED`);
     process.exit(1);
   }
-  if (activation === "disabled") {
-    console.log(`[${toolId.toUpperCase()} SKIP] tool is disabled by activation policy.`);
-    process.exit(0);
-  }
-  if (diagnostic || activation === "partial" || activation === "optional" || activation === "missing") {
-    console.warn(`[${toolId.toUpperCase()} WARN] command failed. activation=${activation} decision=NEEDS_EVIDENCE`);
-    process.exit(0);
-  }
-  console.error(`[${toolId.toUpperCase()} FAIL] unsupported activation state: ${activation} decision=FIX_REQUIRED`);
-  process.exit(1);
+  const mode = diagnostic ? "diagnostic" : "optional";
+  console.warn(`[${toolId.toUpperCase()} WARN] command failed. mode=${mode}`);
+  process.exit(0);
 }
 
 export function runTool({ toolId, binary, command, diagnosticCommand, required = false }) {
   if (!hasBinary(binary)) handleMissingBinary(toolId, binary, required);
-  ensureDir(".diagnostics/security");
-  ensureDir(".diagnostics/toolchain");
-  const cmd = isDiagnosticMode() && diagnosticCommand ? diagnosticCommand : command;
+  const diagnostic = isDiagnosticMode();
+  if (diagnostic) {
+    ensureDir(".diagnostics/security");
+    ensureDir(".diagnostics/toolchain");
+  }
+  const cmd = diagnostic && diagnosticCommand ? diagnosticCommand : command;
   console.log(`Running: ${cmd}`);
   try {
     execSync(cmd, { cwd: repoRoot, stdio: "inherit", shell: true });

@@ -1,108 +1,68 @@
 ---
 name: bthwani-final-journey-closure-judge
-version: 2026.07.17-v3
-summary: Judge final closure only from same-commit, all-applicable-scope, independently approved evidence within registered assurance boundaries.
+version: 2026.08.18-v4
+summary: Decide final closure from exact-candidate evidence for the material scopes actually affected by the change.
 ---
 
 # bthwani-final-journey-closure-judge
 
 ## Purpose
 
-Own final evidence reconciliation for deciding whether a governed journey or capability may be classified as `CLOSED_WITH_EVIDENCE`.
+Reconcile the exact candidate and determine whether the requested capability or change is closed with sufficient evidence. Closure is claim-based and affected-scope driven, not stage-driven.
 
 ## Invoke when
 
-- The user explicitly requests final closure, merge readiness, release readiness, production readiness, or a complete no-gap judgment.
-- All applicable implementation and verification work is complete and evidence must be reconciled.
+- Final closure, complete readiness, or a no-known-gap judgment is explicitly requested.
+- Implementation is complete enough for final evidence reconciliation.
 
 ## Do not invoke when
 
-- Work is still in discovery, implementation, or partial verification.
-- The request asks only for a code check, diagnostic, draft, or one evidence scope.
-
-## Authority boundary
-
-This skill reconciles independently produced evidence and issues the canonical final decision. It may not create missing proof, approve its own implementation, replace Product Manager, Product Owner, governance, CI, financial, QA, security, release, production, or residual-risk authorities, infer runtime truth from declarations, or expand a guard beyond its assurance class.
-
-## Read before
-
-- `governance/GOVERNANCE.md`
-- `governance/contracts/decision-vocabulary.json`
-- `governance/policies/delivery.md`
-- `governance/contracts/sdlc/`
-- `governance/product/PRD.md` and applicable Product Truth
-- `governance/product/platform-model.yaml`
-- `governance/github/master-protection.ruleset.json` only as desired configuration when applicable
-- `governance/guards/guard-assurance.json`
-- same-candidate evidence and approvals for every applicable scope
-- live GitHub branch/ruleset/check/workflow/review state whenever a GitHub enforcement claim matters
+- Work is still in discovery or active implementation.
+- The request asks only for one local code check.
 
 ## Required evidence model
 
-Reconcile the exact `applicableEvidenceScopes` declared by current impact:
+Select only scopes materially affected by the change:
 
-1. `static`: contracts, architecture, code, data ownership, generated clients, bindings, and targeted checks.
-2. `product`: Product Manager model and Product Owner acceptance.
-3. `runtime`: startup, health, actor request/response, failure path, and persistence readback.
-4. `visual`: rendered flow, state, RTL, and visual acceptance when applicable.
-5. `qa`: independent QA, negative tests, cross-surface consistency, and accessibility acceptance.
-6. `security`: independent security, privacy, authorization, vulnerability, and secret evidence.
-7. `finance`: independent Financial Control approval for WLT financial truth and DSH/WLT handoffs.
-8. `isolation`: independent isolation-security evidence when platform/operator/business/object boundaries are affected.
-9. `governance`: Governance Contract approval for control-plane changes.
-10. `ci`: CI Workflow approval, immutable action checks, syntax/security analysis, and actual same-candidate results.
-11. `release`: release readiness, rollback, monitoring, support ownership, and residual-risk decision.
-12. `production`: deployment, production smoke/readback, telemetry review, and rollback readiness.
+- static/code: typecheck, tests, build, architecture/import and contract checks;
+- data: migrations, ownership, persistence/readback where affected;
+- runtime: startup, health, request/response, failure path and readback where runtime truth is claimed;
+- frontend/visual/accessibility: rendered behavior and interaction where affected;
+- security/privacy: authorization, session, secret, dependency or isolation evidence where affected;
+- finance: ledger/payment/settlement/reconciliation evidence where affected;
+- CI: executable workflow syntax/security/pinning plus actual exact-candidate run result when CI success is claimed;
+- release/production: only when the user explicitly requests those environments or claims.
 
-Every skipped stage must appear in `notApplicableStages` with matching `stageExclusions` evidence. A scope-specific pass never upgrades another scope, and prior evidence never overrides a newer failure or candidate.
+A scope that is not materially affected does not need ceremonial evidence. A scope that is affected cannot be skipped merely to obtain closure.
 
-## Guard assurance rule
+## Required method
 
-- Resolve every guard result through `governance/guards/guard-assurance.json`.
-- `proves` is the maximum positive claim supported by that guard.
-- Every `doesNotProve` item remains unresolved without separate candidate-bound evidence.
-- A guard with `closureEligible: false` cannot independently support closure.
-- Static, configuration, schema, regression, syntax, pinning, and bounded runtime checks remain only their declared scope evidence.
-
-## GitHub live-evidence rule
-
-When branch protection, rulesets, required checks, reviewer separation, merge readiness, or workflow success are applicable:
-
-1. resolve the exact candidate SHA and target branch;
-2. query the live GitHub state for that branch/candidate;
-3. verify actual ruleset/branch-protection enforcement rather than a tracked desired configuration;
-4. verify required check names and exact-candidate outcomes;
-5. verify reviewer/approval identity and freshness where independent approval is required;
-6. treat absent, inaccessible, stale, pending, skipped-without-proof, or candidate-mismatched platform evidence as `NEEDS_EVIDENCE` or the applicable block decision.
-
-A tracked JSON/Markdown snapshot, CODEOWNERS file, desired ruleset file, previous workflow run, PR summary, or historical report is never current GitHub enforcement proof.
+1. Pin the exact branch and live candidate SHA.
+2. Derive the smallest complete affected cone from the actual diff and dependencies.
+3. Reconcile targeted verification already run for that exact candidate.
+4. Require runtime/visual/security/finance evidence only when the corresponding claim or risk exists.
+5. Re-check known failures and stale references after the final relevant write.
+6. Run one full verification only when closure risk or verification-authority changes justify it.
+7. Do not create or consult governance guard registries, workflow registries, SDLC stage state, or guard-assurance bookkeeping.
+8. If required evidence is unavailable, return `NEEDS_EVIDENCE`; do not manufacture proof.
 
 ## Forbidden
 
-- Using implemented, code checked, guard passed, or workflow configured as a synonym for closure.
-- Closure with failed gates, missing scopes, unsupported stage exclusions, open blockers, unresolved protected risk, stale evidence, or self-approval.
-- Closure based on a merge ref, another branch, seed, fixture, mock, declaration, snapshot, or documentation-only claim.
-- Promoting static/configuration/regression evidence into runtime, finance, isolation, QA, security, release, production, or product proof.
-- Treating partner/store/subscription records as proof of a separate platform instance or trusted isolation boundary.
-- Inventing collaborators, approvals, GitHub rules, checks, runtime, or production evidence.
+- Closure from documentation or configuration alone when runtime behavior is part of the claim.
+- Re-running every guard/tool merely because closure was requested.
+- Treating a static check as runtime/financial/security proof outside what it actually tested.
+- Inventing approvals, collaborators, branch rules, workflow results, runtime state, or production evidence.
 
 ## Required output
 
 ```text
 resolved_commit_sha:
-applicable_scopes:
-passed_scopes:
-failed_scopes:
-not_applicable_stages:
-stage_exclusion_evidence:
-missing_evidence:
-required_approvals:
-guard_assurance_reconciliation:
-live_github_enforcement_state:
-separation_of_duties:
+affected_scopes:
+checks_and_evidence:
+failed_or_missing_evidence:
 open_blockers:
 residual_risks:
 decision:
 ```
 
-Allowed decisions: `CLOSED_WITH_EVIDENCE`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `QA_BLOCK`, `SECURITY_BLOCK`, `RELEASE_BLOCK`, `BLOCKED_EXTERNAL`, and `PROTOCOL_VIOLATION`.
+Allowed decisions: `CLOSED_WITH_EVIDENCE`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `SECURITY_BLOCK`, `RELEASE_BLOCK`, and `BLOCKED_EXTERNAL`.

@@ -44,3 +44,12 @@ func TestPeriodFilterWeekIsBeforeToday(t *testing.T) {
 		t.Fatalf("expected week cutoff (%v) to be before today's cutoff (%v)", week, today)
 	}
 }
+
+func TestPartnerPerformanceReadStateRejectsZeroAsCurrentSuccess(t *testing.T) {
+	if got := partnerPerformanceReadState(0); got != PartnerPerformanceNoData {
+		t.Fatalf("zero orders read state = %q, want %q", got, PartnerPerformanceNoData)
+	}
+	if got := partnerPerformanceReadState(1); got != PartnerPerformanceAvailable {
+		t.Fatalf("non-zero orders read state = %q, want %q", got, PartnerPerformanceAvailable)
+	}
+}

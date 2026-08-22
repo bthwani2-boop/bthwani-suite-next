@@ -43,7 +43,7 @@ function Invoke-EasCommand {
         $ErrorActionPreference = "Continue"
         try {
             $global:LASTEXITCODE = 0
-            $output = & pnpm dlx eas-cli@latest @Arguments 2>&1
+            $output = & pnpm dlx eas-cli@22.2.0 @Arguments 2>&1
             $exitCode = [int]$global:LASTEXITCODE
         } catch {
             $output = @($_.Exception.Message)
@@ -55,7 +55,7 @@ function Invoke-EasCommand {
         return [pscustomobject]@{
             ExitCode = $exitCode
             Text = (($output | ForEach-Object { [string]$_ }) -join "`n").Trim()
-            Command = "pnpm dlx eas-cli@latest $($Arguments -join ' ')"
+            Command = "pnpm dlx eas-cli@22.2.0 $($Arguments -join ' ')"
         }
     } finally {
         Pop-Location

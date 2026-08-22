@@ -39,8 +39,7 @@ func analyticsLimit(r *http.Request, fallback int) int {
 		return fallback
 	}
 	return value
-}
-
+	}
 
 
 func (s *protectedStoreServer) handlePreparationSLAAnalytics(w http.ResponseWriter, r *http.Request) {

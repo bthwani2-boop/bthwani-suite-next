@@ -367,14 +367,14 @@ try {
     if ($SkipEas) {
         Add-Result -Area "eas" -Check "environment" -Status "SKIP" -Message "EAS checks skipped" -Data $null
     } else {
-        $easUser = Invoke-Captured -FilePath "pnpm" -Arguments @("dlx", "eas-cli@latest", "whoami") -WorkingDirectory $appDir
+        $easUser = Invoke-Captured -FilePath "pnpm" -Arguments @("dlx", "eas-cli@22.2.0", "whoami") -WorkingDirectory $appDir
         $whoamiStatus = "WARN"
         if ($easUser.exitCode -eq 0) { $whoamiStatus = "PASS" }
         Add-Result -Area "eas" -Check "whoami" -Status $whoamiStatus -Message $easUser.text -Data ([pscustomobject]@{ exitCode = $easUser.exitCode })
 
         $envAttempts = @(
-            @("dlx", "eas-cli@latest", "env:list", "development", "--json", "--non-interactive"),
-            @("dlx", "eas-cli@latest", "env:list", "--environment", "development", "--json", "--non-interactive")
+            @("dlx", "eas-cli@22.2.0", "env:list", "development", "--json", "--non-interactive"),
+            @("dlx", "eas-cli@22.2.0", "env:list", "--environment", "development", "--json", "--non-interactive")
         )
         $envListSucceeded = $false
         $lastEnvError = ""

@@ -67,8 +67,15 @@ export async function fetchStoreAnalytics(): Promise<DshStoreAnalytics> {
   return request<DshStoreAnalytics>(`/dsh/operator/analytics/stores`);
 }
 
-export async function fetchPartnerPerformance(period: DshAnalyticsPeriod = "today"): Promise<DshPartnerPerformance> {
-  return request<DshPartnerPerformance>(`/dsh/partner/analytics/performance?period=${period}`);
+export async function fetchPartnerPerformance(
+  period: DshAnalyticsPeriod = "today",
+  storeId: string,
+): Promise<DshPartnerPerformance> {
+  const normalizedStoreId = storeId.trim();
+  if (!normalizedStoreId) throw new Error("storeId is required for partner performance");
+  return request<DshPartnerPerformance>(
+    `/dsh/partner/analytics/performance${queryString({ period, storeId: normalizedStoreId })}`,
+  );
 }
 
 export async function fetchPreparationSlaAnalytics(

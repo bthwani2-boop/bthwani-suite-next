@@ -362,6 +362,34 @@ paths:
           $ref: "#/components/responses/Unauthenticated"
         "404":
           $ref: "#/components/responses/NotFound"
+    delete:
+      operationId: deprovisionActor
+      tags: [ internal ]
+      description: >-
+        Service-to-service only. Compensation for a failed Workforce
+        provisioning saga; removes only an inactive, never-activated actor in
+        the trusted operator context. This is not a general account-deletion API.
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: "#/components/parameters/ActorId"
+        - $ref: "#/components/parameters/Authorization"
+        - $ref: "#/components/parameters/ServiceCaller"
+      responses:
+        "204":
+          description: Provisioned actor removed.
+        "401":
+          $ref: "#/components/responses/Unauthenticated"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Actor is not eligible for deprovisioning.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
   /internal/actors/{actorId}/deactivate:
     post:
       operationId: deactivateActor

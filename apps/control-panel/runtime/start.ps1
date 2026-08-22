@@ -4,12 +4,16 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 $GoogleEnvironmentPath = Join-Path $RepoRoot "infra\local\control-panel.google.env"
 $SourceIntegrityGuard = Join-Path $RepoRoot "tools\guards\source-integrity-gate.mjs"
+$ControlPanelRuntimeBootstrap = Join-Path $RepoRoot "apps\control-panel\ensure-control-panel-dev-runtime.ps1"
 
 if (-not (Test-Path -LiteralPath $SourceIntegrityGuard -PathType Leaf)) {
     throw "Source-integrity guard not found: $SourceIntegrityGuard"
 }
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
     throw "Node.js is required to verify repository source integrity before Control Panel startup."
+}
+if (-not (Test-Path -LiteralPath $ControlPanelRuntimeBootstrap -PathType Leaf)) {
+    throw "Control Panel runtime bootstrap authority not found: $ControlPanelRuntimeBootstrap"
 }
 
 & node $SourceIntegrityGuard
@@ -228,6 +232,10 @@ function Ensure-BthwaniDevSessionBroker {
 }
 
 Import-EnvironmentFile -Path $GoogleEnvironmentPath
+& pwsh -NoProfile -ExecutionPolicy Bypass -File $ControlPanelRuntimeBootstrap
+if ($LASTEXITCODE -ne 0) {
+    throw "Control Panel runtime bootstrap failed with exit code $LASTEXITCODE."
+}
 Ensure-ControlPanelDependencies
 $DevSessionBrokerState = Ensure-BthwaniDevSessionBroker
 Set-Location -LiteralPath $PSScriptRoot

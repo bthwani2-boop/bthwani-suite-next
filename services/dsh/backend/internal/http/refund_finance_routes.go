@@ -17,5 +17,4 @@ func registerRefundFinanceRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 
 	registerPayoutFinanceRoutes(mux, s)
 	registerReconciliationFinanceRoutes(mux, s)
-	registerCodFinanceRoutes(mux, s)
 }

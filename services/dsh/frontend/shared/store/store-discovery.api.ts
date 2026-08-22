@@ -42,7 +42,8 @@ function hasRuntimeCardContract(
     typeof value["hasProBadge"] === "boolean" &&
     typeof value["hasCouponBadge"] === "boolean" &&
     typeof value["isPopular"] === "boolean" &&
-    typeof value["publicationEligible"] === "boolean"
+    (value["publicationDecision"] === "PUBLISHED" || value["publicationDecision"] === "BLOCKED") &&
+    Array.isArray(value["blockingReasons"])
   );
 }
 

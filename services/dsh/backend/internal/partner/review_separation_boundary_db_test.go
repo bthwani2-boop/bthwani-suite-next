@@ -99,6 +99,7 @@ func TestEvidenceUploaderCannotReviewOwnDocumentDBIntegration(t *testing.T) {
 	db := openRequiredDB(t)
 	uploader := "field-j021-document-uploader"
 	p := createJ021Partner(t, uploader)
+	seedPartnerDocumentMedia(t, db, p.ID, uploader, "media-j021-self-review")
 	doc, err := UploadDocument(db, p.ID, UploadDocumentInput{
 		DocumentType:      "commercial_register",
 		MediaRef:          "media-j021-self-review",

@@ -27,7 +27,7 @@ func (s *protectedStoreServer) handleOperatorGetStoreAssortment(w http.ResponseW
 	if _, ok := s.requireCatalogPermission(w, r, CatalogPermissionAssortmentRead); !ok {
 		return
 	}
-	items, err := centralcatalog.ListStoreAssortment(r.Context(), s.db, r.PathValue("storeId"))
+	items, err := centralcatalog.ListStoreAssortmentRuntimeTruth(r.Context(), s.db, r.PathValue("storeId"))
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
 		return
@@ -62,7 +62,7 @@ func (s *protectedStoreServer) upsertStoreAssortment(w http.ResponseWriter, r *h
 		s.writeCentralCatalogError(w, err)
 		return
 	}
-	a, err := centralcatalog.UpsertStoreAssortment(r.Context(), s.db, storeID, masterProductID, actorID, input, policy.AllowsStoreProductCustomImage)
+	a, err := centralcatalog.UpsertStoreAssortmentWithRuntimeTruth(r.Context(), s.db, storeID, masterProductID, actorID, input, policy.AllowsStoreProductCustomImage)
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
 		return
@@ -80,7 +80,7 @@ func (s *protectedStoreServer) handlePartnerGetStoreAssortment(w http.ResponseWr
 		return
 	}
 	_ = actor
-	items, err := centralcatalog.ListStoreAssortment(r.Context(), s.db, storeID)
+	items, err := centralcatalog.ListStoreAssortmentRuntimeTruth(r.Context(), s.db, storeID)
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
 		return
@@ -93,7 +93,7 @@ func (s *protectedStoreServer) handleFieldGetStoreAssortment(w http.ResponseWrit
 	if !ok {
 		return
 	}
-	items, err := centralcatalog.ListStoreAssortment(r.Context(), s.db, storeID)
+	items, err := centralcatalog.ListStoreAssortmentRuntimeTruth(r.Context(), s.db, storeID)
 	if err != nil {
 		s.writeCentralCatalogError(w, err)
 		return

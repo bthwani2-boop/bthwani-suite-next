@@ -17,18 +17,15 @@ import type {
   DshClientAddressDraft,
 } from "./client-address.types";
 import { validateClientAddressDraft } from "./client-address.validation";
+import { secureRandomId } from "../_kernel/secure-random.ts";
 
 export type ClientAddressState =
   | { readonly kind: "loading" }
   | { readonly kind: "error"; readonly message: string }
   | { readonly kind: "ready"; readonly addresses: readonly DshClientAddress[] };
 
-let fallbackSequence = 0;
 function uniquePart(): string {
-  const uuid = globalThis.crypto?.randomUUID?.();
-  if (uuid) return uuid;
-  fallbackSequence += 1;
-  return `${Date.now().toString(36)}-${fallbackSequence.toString(36)}`;
+  return secureRandomId();
 }
 
 function mutationContext(prefix: string): DshAddressMutationContext {

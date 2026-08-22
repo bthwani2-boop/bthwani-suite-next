@@ -39,8 +39,8 @@ function TierSection({ snapshot, mode }: { snapshot: DshCaptainProfileSnapshot; 
 				<KeyValueList
 					items={[
 						{ label: 'الطبقة الحالية', value: snapshot.tierLabel, tone: 'brand' },
-						{ label: 'مكافأة الأجر', value: '+8%' },
-						{ label: 'عتبة الطبقة التالية', value: '120 مسارًا مكتملًا' },
+						{ label: 'تفاصيل الأجر', value: 'تُقرأ من WLT عند توفرها' },
+						{ label: 'شروط الطبقة التالية', value: 'غير متاحة من عقد الجاهزية الحالي' },
 					]}
 				/>
 			</Box>
@@ -50,11 +50,11 @@ function TierSection({ snapshot, mode }: { snapshot: DshCaptainProfileSnapshot; 
 	return (
 		<Box gap={3} style={{ paddingVertical: spacing[1] }}>
 			<SectionHeader title="تقييم الطبقة" subtitle="راجع ما إذا كان الكابتن جاهزًا للطبقة التالية." />
-			<KeyValueList
-				items={[
-					{ label: 'معدل الإكمال', value: '97%', tone: 'success' },
-					{ label: 'معدل الإلغاء', value: '1.2%', tone: 'info' },
-					{ label: 'الحوادث', value: '0', tone: 'success' },
+				<KeyValueList
+					items={[
+						{ label: 'مؤشرات الأداء', value: 'غير متاحة من عقد الجاهزية الحالي' },
+						{ label: 'الطبقة', value: snapshot.tierLabel, tone: 'brand' },
+						{ label: 'الإجراء التالي', value: 'راجع Workforce أو عقد التقييم المعتمد' },
 				]}
 			/>
 		</Box>

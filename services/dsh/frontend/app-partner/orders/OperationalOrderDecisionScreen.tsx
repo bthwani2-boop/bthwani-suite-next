@@ -66,7 +66,7 @@ export function OperationalOrderDecisionScreen({
       canReject={canReject}
       onAccept={() => {
         if (!canAccept) return;
-        void commands.execute('accept', orderId).then((ok) => {
+        void commands.execute('accept', orderId, order?.version).then((ok) => {
           if (ok) onBack();
         });
       }}

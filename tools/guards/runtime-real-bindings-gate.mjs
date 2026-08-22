@@ -47,8 +47,8 @@ function verifyMigrationFileNames(relativeRoot, prefix) {
   const seenNames = new Set();
   for (const file of files) {
     const name = path.basename(file);
-    if (!new RegExp(`^${prefix}-\\d{3}[a-z]?_[a-z0-9_]+\\.sql$`).test(name)) {
-      violations.push({ file, line: 0, message: `INVALID_MIGRATION_FILENAME expected=${prefix}-NNN_or_NNNx_snake_case.sql` });
+    if (!new RegExp(`^${prefix}-\\d{3,}[a-z]?_[a-z0-9_]+\\.sql$`).test(name)) {
+      violations.push({ file, line: 0, message: `INVALID_MIGRATION_FILENAME expected=${prefix}-NNNplus_or_NNNx_snake_case.sql` });
     }
     if (seenNames.has(name)) {
       violations.push({ file, line: 0, message: `DUPLICATE_MIGRATION_FILENAME ${name}` });
@@ -154,7 +154,11 @@ for (const [pattern, message] of [
   }
 }
 
-requireMarkers(clientSurfacePath, ["BenefitsHubScreen", "onOpenBenefits", 'profileRoute === "benefits"']);
+requireMarkers(clientSurfacePath, ["BenefitsHubScreen", "onOpenBenefits", 'case "profile-benefits":']);
+requireMarkers("apps/app-client/runtime/app/profile/benefits.tsx", [
+  "ClientRouteScreen",
+  'route={{ kind: "profile-benefits" }}',
+]);
 requireMarkers("services/dsh/frontend/app-client/account/BenefitsHubScreen.tsx", ["useSubscriptionLifecycleController", "controller.reload"]);
 requireMarkers("services/dsh/frontend/shared/marketing/marketing.api.ts", [
   "/dsh/operator/marketing/loyalty-tiers",

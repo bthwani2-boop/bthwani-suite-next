@@ -5,19 +5,25 @@ import type { SupportMutationContext } from "./support-mutation-attempt";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "support-message-delivery");
 
-export type DshSupportMessageAttachment = {
+export type DshSupportMessageAttachmentReceipt = {
   readonly id: string;
+  readonly ticketId: string;
   readonly messageId: string;
-  readonly assetUrl: string;
+  readonly mediaAssetId: string;
   readonly mimeType: string;
-  readonly fileName?: string | undefined;
+  readonly fileName: string;
+  readonly sizeBytes: number;
+  readonly attachedBy: string;
+  readonly isInternal: boolean;
   readonly createdAt: string;
 };
 
 export type DshAttachActorSupportMessageAssetInput = {
-  readonly assetUrl: string;
+  readonly mediaAssetId: string;
   readonly mimeType: string;
-  readonly fileName?: string | undefined;
+  readonly fileName: string;
+  readonly sizeBytes: number;
+  readonly isInternal?: boolean | undefined;
 };
 
 export async function attachActorSupportMessageAsset(
@@ -25,8 +31,8 @@ export async function attachActorSupportMessageAsset(
   messageId: string,
   input: DshAttachActorSupportMessageAssetInput,
   context: SupportMutationContext,
-): Promise<DshSupportMessageAttachment> {
-  const data = await request<{ attachment: DshSupportMessageAttachment }>(
+): Promise<DshSupportMessageAttachmentReceipt> {
+  const data = await request<{ attachment: DshSupportMessageAttachmentReceipt }>(
     `/dsh/support/tickets/${encodeURIComponent(ticketId)}/messages/${encodeURIComponent(messageId)}/attachments`,
     {
       method: "POST",

@@ -7,13 +7,11 @@ import { CpBadge, CpButton } from "@bthwani/control-panel/components";
 import {
   approvePayoutRequest,
   completePayoutRequest,
-  processPayoutRequest,
   rejectPayoutRequest,
   type FinanceActionResult,
   type FinancePayoutRequest,
   formatWltMoney,
 } from '@bthwani/wlt/dsh';
-import { reconcilePayoutRequest } from '@bthwani/wlt/dsh';
 import { GovernedSettlementPanel } from "./GovernedSettlementPanel";
 import { CommissionGovernancePanel } from "./CommissionGovernancePanel";
 
@@ -23,7 +21,7 @@ type PayoutRequestsPanelProps = {
 };
 
 type PayoutAction = {
-  readonly id: "approve" | "reject" | "process" | "complete" | "reconcile";
+  readonly id: "approve" | "reject" | "complete";
   readonly label: string;
   readonly tone: CpButtonVariant;
   readonly run: (payoutId: string) => Promise<FinanceActionResult>;
@@ -31,15 +29,21 @@ type PayoutAction = {
 
 const STATUS_META: Record<string, { readonly label: string; readonly tone: CpBadgeTone }> = {
   pending: { label: "بانتظار المراجعة", tone: "warning" },
-  approved: { label: "معتمد بانتظار الإرسال", tone: "warning" },
-  provider_pending: { label: "قيد الإرسال إلى المزود", tone: "warning" },
-  processing: { label: "المزود أكد المعالجة", tone: "warning" },
-  provider_result_unknown: { label: "نتيجة المزود غير محسومة", tone: "danger" },
+  approved: { label: "معتمد بانتظار التنفيذ الخارجي", tone: "warning" },
+  executed: { label: "نُفّذ خارجيًا بانتظار التحقق المستقل", tone: "warning" },
+  verified: { label: "تم التحقق المستقل بانتظار الترحيل", tone: "warning" },
   completed: { label: "مكتمل ومُرحّل", tone: "success" },
   rejected: { label: "مرفوض", tone: "danger" },
   failed: { label: "فشل موثق", tone: "danger" },
+  // Historical rows from the retired provider-managed Cash-Out model.
+  provider_pending: { label: "سجل قديم: قيد الإرسال إلى المزود", tone: "neutral" },
+  processing: { label: "سجل قديم: المزود أكد المعالجة", tone: "neutral" },
+  provider_result_unknown: { label: "سجل قديم: نتيجة المزود غير محسومة", tone: "neutral" },
 };
 
+// Execution and independent verification happen against a frozen settlement
+// batch in the settlement workbench, not from this list: the executor must not
+// be able to alter the approved beneficiary, destination or amount.
 function actionsForStatus(status: string): readonly PayoutAction[] {
   switch (status) {
     case "pending":
@@ -48,15 +52,9 @@ function actionsForStatus(status: string): readonly PayoutAction[] {
         { id: "reject", label: "رفض وإعادة الحجز", tone: "danger", run: rejectPayoutRequest },
       ];
     case "approved":
-      return [
-        { id: "process", label: "إرسال إلى المزود", tone: "primary", run: processPayoutRequest },
-        { id: "reject", label: "إلغاء قبل الإرسال", tone: "danger", run: rejectPayoutRequest },
-      ];
-    case "processing":
+      return [{ id: "reject", label: "إلغاء قبل التنفيذ", tone: "danger", run: rejectPayoutRequest }];
+    case "verified":
       return [{ id: "complete", label: "تأكيد الاكتمال والترحيل", tone: "primary", run: completePayoutRequest }];
-    case "provider_pending":
-    case "provider_result_unknown":
-      return [{ id: "reconcile", label: "استعلام ومطابقة نتيجة المزود", tone: "secondary", run: reconcilePayoutRequest }];
     default:
       return [];
   }
@@ -68,10 +66,16 @@ function formatMoney(amountMinorUnits: number, currency: string): string {
 
 function terminalOrHoldMessage(request: FinancePayoutRequest): string | null {
   switch (request.status) {
+    case "approved":
+      return "الطلب معتمد ومحجوز. التنفيذ الخارجي يتم من دفعة تسوية مجمّدة في مساحة تنفيذ التسويات.";
+    case "executed":
+      return "تم تنفيذ التحويل الخارجي وتسجيل مرجعه. لا يكتمل الصرف قبل تحقق مستقل من مشغّل مختلف.";
+    case "verified":
+      return "تم التحقق المستقل من التحويل الخارجي. يمكن الآن ترحيل الصرف محاسبيًا.";
     case "provider_pending":
-      return "تم حجز الطلب لدى المزود ولم تصل نتيجة نهائية بعد. الاستعلام يقرأ حالة المزود ولا يعيد الإرسال.";
+    case "processing":
     case "provider_result_unknown":
-      return "النتيجة غير محسومة. استخدم الاستعلام والمطابقة؛ لا يوجد زر فشل يدوي يحرر الأموال.";
+      return "سجل قديم من نموذج الصرف عبر المزود المتوقف. لا توجد إجراءات متاحة عليه.";
     case "completed":
       return "اكتمل الصرف، أُزيل الحجز من المحفظة، وكُتب القيد المحاسبي.";
     case "rejected":

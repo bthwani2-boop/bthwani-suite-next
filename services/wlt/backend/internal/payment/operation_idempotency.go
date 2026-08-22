@@ -13,10 +13,10 @@ import (
 )
 
 type operationReceipt struct {
-	ID          string
-	OperatorContextID    string
-	RequestHash string
-	State       string
+	ID                string
+	OperatorContextID string
+	RequestHash       string
+	State             string
 }
 
 type bufferedResponseWriter struct {
@@ -57,13 +57,13 @@ func HandleGovernedPaymentOperation(db *sql.DB, operation string, next http.Hand
 		sessionID := strings.TrimSpace(r.PathValue("paymentSessionId"))
 		idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 		correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
-		trustedOperatorContextID := strings.TrimSpace(r.Header.Get("X-Operator-Context-ID"))
+		trustedOperatorContextID, contextErr := shared.RequireOperatorContext(r.Context())
 		if sessionID == "" {
 			shared.SendError(w, http.StatusBadRequest, "MISSING_PAYMENT_SESSION_ID", "paymentSessionId is required")
 			return
 		}
-		if trustedOperatorContextID == "" {
-			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "X-Operator-Context-ID is required")
+		if contextErr != nil {
+			shared.SendError(w, http.StatusBadRequest, "MISSING_operator_context_id", "authenticated OperatorContext context is required")
 			return
 		}
 		if len(idempotencyKey) < 8 || len(idempotencyKey) > 200 {
@@ -89,7 +89,7 @@ func HandleGovernedPaymentOperation(db *sql.DB, operation string, next http.Hand
 			return
 		}
 		if session.PaymentMethod == "cod" {
-			shared.SendError(w, http.StatusConflict, "USE_COD_RECORD_FLOW", "COD collection must use the governed COD record flow")
+			shared.SendError(w, http.StatusConflict, "COD_FINALIZATION_REQUIRED", "COD completion must use the governed reservation finalization flow")
 			return
 		}
 
@@ -199,7 +199,7 @@ func replayPaymentOperation(w http.ResponseWriter, db *sql.DB, sessionID, receip
 		status = http.StatusConflict
 	}
 	shared.SendJSON(w, status, map[string]any{
-		"paymentSession":  session,
+		"paymentSession":   session,
 		"idempotentReplay": true,
 		"receiptState":     receiptState,
 	})

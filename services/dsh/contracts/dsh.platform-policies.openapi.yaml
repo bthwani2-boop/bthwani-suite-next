@@ -1,9 +1,10 @@
 openapi: 3.1.0
 info:
   title: BThwani DSH Platform Operational Policies API
-  version: 0.2.0
+  version: 0.3.0
   description: Governed DSH zones, SLA, capacity, serviceability, and store-onboarding
-    fee policy. WLT remains the sole financial truth owner.
+    fee policy. WLT remains the sole financial truth owner; DSH exposes an authenticated
+    proxy projection and never owns or recomputes monetary state.
 x-bthwani-owner: services/dsh
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: DISABLED
@@ -150,41 +151,6 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
-    put:
-      operationId: upsertDshSlaRules
-      tags:
-      - DshPlatformPolicies
-      security:
-      - bearerAuth: []
-      parameters:
-      - $ref: '#/components/parameters/IdempotencyKey'
-      - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DshUpsertSlaInput'
-      responses:
-        '200':
-          description: SLA rule created or version-updated.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - slaRule
-                properties:
-                  slaRule:
-                    $ref: '#/components/schemas/DshSlaRule'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          $ref: '#/components/responses/Conflict'
   /dsh/operator/platform/capacity:
     get:
       operationId: getDshCapacityConfig
@@ -217,41 +183,6 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-    put:
-      operationId: upsertDshCapacityConfig
-      tags:
-      - DshPlatformPolicies
-      security:
-      - bearerAuth: []
-      parameters:
-      - $ref: '#/components/parameters/IdempotencyKey'
-      - $ref: '#/components/parameters/CorrelationId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DshUpsertCapacityInput'
-      responses:
-        '200':
-          description: Capacity configuration created or version-updated.
-          content:
-            application/json:
-              schema:
-                type: object
-                required:
-                - capacityConfig
-                properties:
-                  capacityConfig:
-                    $ref: '#/components/schemas/DshCapacityConfig'
-        '400':
-          $ref: '#/components/responses/InvalidRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '409':
-          $ref: '#/components/responses/Conflict'
   /dsh/operator/platform/serviceability/{zoneId}:
     get:
       operationId: getDshZoneServiceability
@@ -288,7 +219,7 @@ paths:
       - bearerAuth: []
       responses:
         '200':
-          description: Policy returned.
+          description: Current canonical WLT-owned policy or explicit unconfigured sentinel.
           content:
             application/json:
               schema:
@@ -319,7 +250,7 @@ paths:
               $ref: '#/components/schemas/DshStoreOnboardingFeePolicyInput'
       responses:
         '200':
-          description: Policy version-updated or replayed idempotently.
+          description: Canonical immutable policy version created or replayed idempotently.
           content:
             application/json:
               schema:
@@ -346,7 +277,7 @@ paths:
       - bearerAuth: []
       responses:
         '200':
-          description: Read-only policy reference for field and partner actors.
+          description: Read-only WLT-owned policy reference for field and partner actors in their authenticated OperatorContext.
           content:
             application/json:
               schema:
@@ -360,300 +291,6 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
-  /dsh/operator/platform/change-sets:
-    post:
-      operationId: createDshChangeSet
-      tags:
-      - DshPlatformPolicies
-      security:
-      - bearerAuth: []
-      responses:
-        '201':
-          description: Change set created
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  changeSet:
-                    $ref: '#/components/schemas/DshChangeSet'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-  /dsh/operator/platform/change-sets/{changesetId}:
-    get:
-      operationId: getDshChangeSet
-      tags:
-      - DshPlatformPolicies
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: changesetId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Change set retrieved
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  changeSet:
-                    $ref: '#/components/schemas/DshChangeSet'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-  /dsh/operator/platform/change-sets/{changesetId}/submit:
-    post:
-      operationId: submitDshChangeSet
-      tags:
-      - DshPlatformPolicies
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: changesetId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Change set submitted
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  changeSet:
-                    $ref: '#/components/schemas/DshChangeSet'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-  /dsh/operator/platform/change-sets/{changesetId}/approve:
-    post:
-      operationId: approveDshChangeSet
-      tags:
-      - DshPlatformPolicies
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: changesetId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Change set approved
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  changeSet:
-                    $ref: '#/components/schemas/DshChangeSet'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-  /dsh/operator/platform/change-sets/{changesetId}/apply:
-    post:
-      operationId: applyDshChangeSet
-      tags:
-      - DshPlatformPolicies
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: changesetId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Change set applied
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  changeSet:
-                    $ref: '#/components/schemas/DshChangeSet'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-  /dsh/operator/platform/change-sets/{changesetId}/reject:
-    post:
-      operationId: rejectDshChangeSet
-      tags:
-      - DshPlatformPolicies
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: changesetId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Change set rejected
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  changeSet:
-                    $ref: '#/components/schemas/DshChangeSet'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-  /dsh/operator/platform/providers:
-    get:
-      operationId: listDshProviders
-      tags:
-      - DshPlatformPolicies
-      security:
-      - bearerAuth: []
-      responses:
-        '200':
-          description: Providers retrieved
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  providers:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/DshProvider'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-  /dsh/operator/platform/providers/{providerId}/status:
-    post:
-      operationId: updateDshProviderStatus
-      tags:
-      - DshPlatformPolicies
-      security:
-      - bearerAuth: []
-      parameters:
-      - name: providerId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        '200':
-          description: Provider status updated
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  provider:
-                    $ref: '#/components/schemas/DshProvider'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
   /dsh/operator/platform/map-provider-health:
     get:
       tags:
@@ -799,16 +436,6 @@ components:
         minLength: 8
         maxLength: 200
   schemas:
-    DshChangeSet:
-      type: object
-      properties:
-        id:
-          type: string
-    DshProvider:
-      type: object
-      properties:
-        id:
-          type: string
     DshZone:
       type: object
       required:
@@ -919,38 +546,6 @@ components:
         updatedAt:
           type: string
           format: date-time
-    DshUpsertSlaInput:
-      type: object
-      additionalProperties: false
-      required:
-      - zoneId
-      - category
-      - maxPrepMins
-      - maxDeliveryMins
-      - expectedVersion
-      - reason
-      properties:
-        zoneId:
-          type: string
-        category:
-          type: string
-          minLength: 1
-          maxLength: 120
-        maxPrepMins:
-          type: integer
-          minimum: 1
-          maximum: 1440
-        maxDeliveryMins:
-          type: integer
-          minimum: 1
-          maximum: 1440
-        expectedVersion:
-          type: integer
-          minimum: 0
-        reason:
-          type: string
-          minLength: 3
-          maxLength: 500
     DshCapacityConfig:
       type: object
       required:
@@ -983,36 +578,6 @@ components:
         updatedAt:
           type: string
           format: date-time
-    DshUpsertCapacityInput:
-      type: object
-      additionalProperties: false
-      required:
-      - zoneId
-      - maxConcurrentOrders
-      - maxCaptainsOnline
-      - throttleThreshold
-      - expectedVersion
-      - reason
-      properties:
-        zoneId:
-          type: string
-        maxConcurrentOrders:
-          type: integer
-          minimum: 1
-        maxCaptainsOnline:
-          type: integer
-          minimum: 0
-        throttleThreshold:
-          type: number
-          minimum: 0
-          maximum: 1
-        expectedVersion:
-          type: integer
-          minimum: 0
-        reason:
-          type: string
-          minLength: 3
-          maxLength: 500
     DshZoneServiceability:
       type: object
       required:
@@ -1032,9 +597,10 @@ components:
           type: boolean
     DshStoreOnboardingFeePolicy:
       type: object
+      additionalProperties: false
       required:
       - enabled
-      - amount
+      - amountMinorUnits
       - currency
       - appliesTo
       - chargeTiming
@@ -1047,13 +613,13 @@ components:
       properties:
         enabled:
           type: boolean
-        amount:
-          type: number
+        amountMinorUnits:
+          type: integer
+          format: int64
           minimum: 0
         currency:
           type: string
-          minLength: 3
-          maxLength: 3
+          pattern: '^[A-Z]{3}$'
         appliesTo:
           type: string
           enum:
@@ -1078,24 +644,28 @@ components:
           format: date-time
         notes:
           type: string
+          maxLength: 1000
         updatedBy:
           type: string
+          maxLength: 200
         updatedAt:
           type: string
           format: date-time
         version:
           type: integer
-          minimum: 1
+          minimum: 0
         isConfigured:
           type: boolean
         blockedReason:
           type: string
+          enum:
+          - POLICY_NOT_CONFIGURED
     DshStoreOnboardingFeePolicyInput:
       type: object
       additionalProperties: false
       required:
       - enabled
-      - amount
+      - amountMinorUnits
       - currency
       - appliesTo
       - chargeTiming
@@ -1104,13 +674,13 @@ components:
       properties:
         enabled:
           type: boolean
-        amount:
-          type: number
+        amountMinorUnits:
+          type: integer
+          format: int64
           minimum: 0
         currency:
           type: string
-          minLength: 3
-          maxLength: 3
+          pattern: '^[A-Z]{3}$'
         appliesTo:
           type: string
           enum:
@@ -1134,11 +704,11 @@ components:
           maxLength: 1000
         expectedVersion:
           type: integer
-          minimum: 1
+          minimum: 0
         reason:
           type: string
           minLength: 3
-          maxLength: 500
+          maxLength: 1000
     DshError:
       type: object
       required:

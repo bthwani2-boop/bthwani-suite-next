@@ -13,17 +13,17 @@ function freshnessLabel(state: 'fresh' | 'stale' | 'lost'): string {
 function routeMessage(tracking: DshLiveTrackingProjection): string {
   switch (tracking.routeState) {
     case 'awaiting_location':
-      return 'بانتظار أول تحديث موقع مصدق من الكابتن.';
+      return 'بانتظار تحديث موقع الكابتن.';
     case 'location_lost':
-      return 'توقف تحديث موقع الكابتن. تعمل العمليات على متابعة المهمة.';
+      return 'توقف تحديث موقع الكابتن مؤقتاً، جاري المتابعة.';
     case 'destination_unavailable':
-      return 'تعذر احتساب الوصول لأن وجهة الطلب غير متاحة للمسار.';
+      return 'تعذر احتساب وقت الوصول للعنوان المحدد.';
     case 'provider_unavailable':
-      return 'خدمة المسار غير متاحة الآن. حالة المهمة ما زالت محدثة.';
+      return 'جاري تحديث بيانات مسار التوصيل.';
     case 'arrived':
       return 'وصل الكابتن إلى موقع التسليم.';
     case 'ready':
-      return 'وقت الوصول محسوب من مزود المسار المعتمد.';
+      return 'تم احتساب وقت الوصول التقريبي.';
     default:
       return 'سيظهر وقت الوصول بعد استلام الكابتن للطلب وبدء الطريق.';
   }
@@ -47,7 +47,7 @@ export function ClientLiveTrackingCard({
       <Surface tone="raised" gap={2}>
         <Text role="titleSm">التتبع الحي</Text>
         <Text role="bodySm" tone="muted">
-          لا يوجد إسقاط تتبع متاح لهذه المرحلة. تبقى حالة الطلب هي المرجع التشغيلي.
+          التتبع الحي سيكون متاحاً فور استلام الكابتن للطلب وبدء التوصيل.
         </Text>
       </Surface>
     );
@@ -68,11 +68,11 @@ export function ClientLiveTrackingCard({
         </Box>
 
         <View>
-          <Text role="bodySm" tone="muted">حماية الخصوصية</Text>
+          <Text role="bodySm" tone="muted">حالة الموقع</Text>
           <Text role="bodyStrong">
             {tracking.locationVisibility === 'delivery_window_rounded'
-              ? 'تظهر إحداثيات تقريبية فقط أثناء نافذة التوصيل.'
-              : 'موقع الكابتن مخفي حتى يستلم الطلب من المتجر.'}
+              ? 'يظهر الموقع التقريبي أثناء فترة التوصيل.'
+              : 'موقع الكابتن يظهر بعد استلام الطلب من المتجر.'}
           </Text>
         </View>
 
@@ -86,7 +86,7 @@ export function ClientLiveTrackingCard({
               {`الوصول المتوقع ${new Date(eta.estimatedArrivalAt).toLocaleString('ar-YE')}`}
             </Text>
             <Text role="caption" tone="muted">
-              {`المسافة التقريبية ${Math.max(0, Math.round(eta.distanceMeters / 100) / 10)} كم · المزود ${eta.providerCode}`}
+              {`المسافة التقريبية ${Math.max(0, Math.round(eta.distanceMeters / 100) / 10)} كم`}
             </Text>
           </Box>
         ) : (
@@ -97,7 +97,7 @@ export function ClientLiveTrackingCard({
 
         {tracking.location ? (
           <Text role="caption" tone="muted">
-            {`آخر تحديث منذ ${Math.max(0, tracking.location.ageSeconds)} ثانية · الدقة المعروضة محدودة لحماية الكابتن`}
+            {`آخر تحديث منذ ${Math.max(0, tracking.location.ageSeconds)} ثانية`}
           </Text>
         ) : null}
       </Surface>

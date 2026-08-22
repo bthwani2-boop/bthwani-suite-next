@@ -1,8 +1,8 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/native-data-adapters";
 import type { DshCreateIntentInput } from "./checkout.types";
+import { secureRandomId } from "../_kernel/secure-random.ts";
 
 const STORAGE_KEY = "@bthwani/checkout-create-attempt:v1";
-let fallbackSequence = 0;
 
 export type DshCheckoutMutationContext = {
   readonly idempotencyKey: string;
@@ -15,10 +15,7 @@ type StoredCheckoutAttempt = {
 };
 
 function uniquePart(): string {
-  const uuid = globalThis.crypto?.randomUUID?.();
-  if (uuid) return uuid;
-  fallbackSequence += 1;
-  return `${Date.now().toString(36)}-${fallbackSequence.toString(36)}`;
+  return secureRandomId();
 }
 
 export function fingerprintCheckoutInput(input: DshCreateIntentInput): string {

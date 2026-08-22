@@ -74,7 +74,7 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 	}
 
 	if body.SpecialRequestID != "" {
-		req, err := specialrequests.ApplyWltPaymentEvent(s.db, body.OperatorContextID, body.SpecialRequestID, body.PaymentSessionID, body.Status)
+		req, replayed, err := specialrequests.ApplyWltPaymentEventWithEvent(s.db, body.OperatorContextID, body.SpecialRequestID, body.PaymentSessionID, body.Status, body.EventID, body.CorrelationID)
 		if errors.Is(err, specialrequests.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "special request not found")
 			return
@@ -91,11 +91,24 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 			store.SendError(w, http.StatusConflict, "CONFLICT", err.Error())
 			return
 		}
+		if errors.Is(err, specialrequests.ErrWltEventReplayConflict) {
+			store.SendError(w, http.StatusConflict, "WLT_EVENT_REPLAY_CONFLICT", "eventId was already used for a different special-request WLT event")
+			return
+		}
 		if err != nil {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to apply WLT payment event")
 			return
 		}
-		store.SendJSON(w, http.StatusOK, map[string]any{"specialRequest": marshalSpecialRequest(req)})
+		eventReference, err := specialrequests.WltPaymentEventReference(body.OperatorContextID, body.SpecialRequestID, body.PaymentSessionID, body.Status, body.EventID)
+		if err != nil {
+			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to derive WLT event reference")
+			return
+		}
+		store.SendJSON(w, http.StatusOK, map[string]any{
+			"specialRequest": marshalSpecialRequest(req),
+			"eventReference": eventReference,
+			"replayed":       replayed,
+		})
 		return
 	}
 
@@ -177,8 +190,7 @@ func (s *protectedStoreServer) handleWltPaymentSessionEvent(w http.ResponseWrite
 			// this projection is eventually consistent and is repaired by replay.
 			// It is still recorded, because a silently dropped projection error would
 			// leave DSH's read model diverged from WLT with no operator signal.
-			log.Printf("[wlt-events] order payment projection failed for order %s (session %s, correlation %s): %v",
-				body.OrderID, body.PaymentSessionID, body.CorrelationID, err)
+			log.Printf("[wlt-events] order payment projection failed (error_type %T)", err)
 		}
 	}
 

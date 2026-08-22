@@ -1,103 +1,43 @@
 ---
 name: bthwani-cost-aware-subagent-orchestrator
-version: 2026.08.06-v3
-summary: Coordinate independent bounded work units with minimum sufficient context, non-overlapping writes, deterministic integration, and protected review.
+version: 2026.08.18-v4
+summary: Coordinate independent bounded work units with minimum sufficient context, non-overlapping writes, and deterministic integration.
 ---
 
 # bthwani-cost-aware-subagent-orchestrator
 
-## Purpose
-
-Coordinate broad tasks when decomposition reduces context, execution time, or integration risk. This skill orchestrates only; higher authorities and owner skills remain unchanged.
-
 ## Invoke when
 
-- The user requests subagents or delegated execution.
-- At least two independent work units have non-overlapping write scopes.
-- A cross-layer task can be decomposed without splitting one source-of-truth decision.
+- The user explicitly requests delegated execution; or
+- two or more independent bounded work units can reduce execution time/context without overlapping writes.
 
-## Do not invoke when
+Do not invoke when coordination costs more than direct execution, when work is indivisible, or when the platform has no real subagent capability.
 
-- The task is small, indivisible, analysis-only, or text-only.
-- The platform has no real subagent capability.
-- Work units would write the same file or mutually generated boundary.
-- Coordination would cost more context than direct execution.
+## Inputs
 
-## Read before
+Read only:
 
-- `AGENTS.md`
-- `governance/GOVERNANCE.md`
-- `governance/agents/agent-registry.json`
-- `governance/skills/skills-registry.json`
-- `governance/contracts/decision-vocabulary.json`
+- `AGENTS.md`;
+- `.agents/INDEX.md` when routing is not obvious;
+- `governance/skills/skills-registry.json` for available skill paths;
+- the actual code/contracts/data/runtime needed by each work unit.
 
-Load Product Truth, engineering, security, finance, runtime, SDLC, or evidence skills only when their triggers apply. Do not load separate model/token/work-unit policy documents; this `SKILL.md` is the complete orchestrator contract.
+No agent-role registry, SDLC stage registry, guard registry, or approval graph is required.
 
-## Authority boundary
+## Routing
 
-This skill owns coordination and work-unit routing only. It cannot approve product, architecture, finance, governance, CI, QA, security, release, risk, production, or final closure. The coordinator must not act as the independent reviewer of work it coordinated.
-
-## Routing method
-
-1. Pin the exact repository, branch, and commit.
-2. Classify task mode, risk, owner paths, and protected domains.
-3. Define one objective and one owner for each work unit.
-4. Declare allowed read/write paths, forbidden paths, dependencies, acceptance, and focused verification.
-5. Build a dependency DAG; parallelize only proven independent units.
-6. Select the lowest capable tier that satisfies risk and verification.
-7. Reject incomplete handoffs and resolve conflicts without force operations.
+1. Pin exact repository/branch/SHA.
+2. Split only along proven independent ownership boundaries.
+3. Give each unit one objective, bounded inputs, allowed writes, forbidden writes, dependencies, and focused verification.
+4. Never allow two units to write the same file or a source/generated pair concurrently.
+5. Serialize authoritative owner changes before dependent consumers.
+6. Use the smallest capable executor and smallest useful context.
+7. Reconcile every returned diff before integration.
 8. Re-pin after writes and before final verification.
-9. Return only a canonical scoped decision from `governance/contracts/decision-vocabulary.json`.
 
-Capability tiers:
+Default to direct execution unless delegation has clear material benefit. Default to two parallel workers; increase only when independence is proven.
 
-- `T0_MINIMAL` — extraction, formatting, and mechanical bounded edits.
-- `T1_BALANCED` — focused module work under one owner.
-- `T2_SPECIALIST` — contracts, data, runtime, security, finance, migrations, CI, and independent review.
-- `T3_ADVISORY_MAX` — cross-domain coordination, architecture conflict resolution, and final scoped synthesis.
-
-Never lower capability for cost in security, privacy, finance, migrations, production data, public contracts, CI, release, or protected approval work. Model/provider choice is an execution concern, not repository authority; use the capable connected executor available for the work unit without encoding provider-specific truth in governance.
-
-## Work-unit contract
-
-Each unit declares:
-
-```text
-work_unit_id:
-objective:
-owner_role:
-risk_tier:
-dependencies:
-allowed_read_paths:
-allowed_write_paths:
-forbidden_paths:
-bounded_inputs:
-acceptance:
-verification:
-mode:
-expected_output:
-```
-
-Two units must not write the same file or a source and its generated consumer concurrently. Serialize contracts before generated clients, migrations before dependent code/tests, and any authoritative owner mutation before affected read-model/surface consumers.
-
-## Context and parallelism
-
-- Send only relevant files, symbols, contracts, relationships, and acceptance criteria.
-- Reference global policies instead of copying them.
-- Exclude generated, cache, diagnostic, binary, historical, and unrelated output unless required by the work unit.
-- Reuse verified findings within the same candidate and stop a worker when acceptance is met.
-- Require concise structured handoffs, not private reasoning.
-- Default to two parallel executors; raise concurrency only when write scopes and dependencies prove independence.
-- Independent review starts only after the candidate revision is stable.
-
-## Failure handling
-
-- Re-pin and stop the affected write batch if the branch moves unexpectedly.
-- Retry an unchanged assertion at most twice and only with a changed hypothesis or new evidence.
-- Never force-push, reset, discard concurrent work, or hide failed checks.
-- Map unresolved work only to canonical decisions such as `FIX_REQUIRED`, `NEEDS_EVIDENCE`, or `BLOCKED_EXTERNAL`.
-
-## Required output
+## Output
 
 Worker:
 
@@ -106,9 +46,7 @@ work_unit_id:
 status:
 summary:
 changed_paths:
-findings:
 checks:
-assumptions:
 remaining_risks:
 conflicts:
 handoff:
@@ -121,10 +59,7 @@ repository:
 target_branch:
 resolved_commit_sha:
 work_units:
-independent_reviews:
 checks:
 decision:
 remaining_risks:
 ```
-
-Allowed decisions: `PASS`, `FIX_REQUIRED`, `NEEDS_EVIDENCE`, `BLOCKED_EXTERNAL`, and `PROTOCOL_VIOLATION`.

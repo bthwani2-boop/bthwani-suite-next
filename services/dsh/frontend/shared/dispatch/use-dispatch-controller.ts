@@ -10,6 +10,7 @@ import {
   submitPoD,
   updateDeliveryStatus,
 } from "./dispatch.api";
+import { corrId } from "../_kernel/dsh-http-request";
 import {
   beginDispatchLoad,
   beginTrackingLoad,
@@ -92,13 +93,22 @@ export function useCaptainDeliveryController() {
     }
     setActionState(dispatchActionSubmittingState());
     try {
-      const assignment = await updateDeliveryStatus(assignmentId, next);
+      const current = state.kind === "success"
+        ? state.assignments.find((item) => item.id === assignmentId)
+        : undefined;
+      if (!current || !Number.isInteger(current.version) || current.version < 1) {
+        throw new Error("assignment version is unavailable; reload is required");
+      }
+      const assignment = await updateDeliveryStatus(assignmentId, next, {
+        expectedVersion: current.version,
+        idempotencyKey: corrId("captain-delivery-status"),
+      });
       setActionState(dispatchActionSuccessState(assignment));
       await load();
     } catch (error) {
       await handleActionError(error, "status");
     }
-  }, [handleActionError, load]);
+  }, [handleActionError, load, state]);
 
   const submitProof = useCallback(async (assignmentId: string, input: DshSubmitPoDInput) => {
     const validation = resolvePoDValidation(input);

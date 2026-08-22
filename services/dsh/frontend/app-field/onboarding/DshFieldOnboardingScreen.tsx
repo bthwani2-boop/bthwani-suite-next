@@ -5,8 +5,6 @@
 import React from 'react';
 import { Platform, Pressable, View, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
 import {
   Badge,
   Button,
@@ -19,6 +17,7 @@ import {
   borders,
   colorRoles,
   Icon,
+  TextField,
 } from '@bthwani/ui-kit';
 import { useIdentitySession } from '@bthwani/core-identity';
 import { DshFieldActivationCard } from '../components/DshFieldActivationCard';
@@ -39,6 +38,17 @@ import {
 import { resolvePartnerOnboardingFailureState } from '../../shared/partner';
 import { uploadFieldMedia } from '../../shared/media';
 import { useStoreOnboardingFeeReferenceController } from '../../shared/platform';
+import {
+  getDshDocumentPickerAdapter,
+  getDshImagePickerAdapter,
+} from '../../shared/mobile-capabilities';
+import {
+  addFieldOnboardingMessage,
+  getFieldOnboardingCollaboration,
+  markFieldOnboardingRead,
+  type OnboardingCollaborationView,
+} from '../../shared/field-assignment';
+import { formatWltMoney } from '@bthwani/wlt/dsh';
 import { OnboardingBasicsSection } from '../components/OnboardingBasicsSection';
 import { OnboardingLocationSection } from '../components/OnboardingLocationSection';
 import {
@@ -99,6 +109,7 @@ function evidenceErrorMessage(error: unknown): string {
 export type DshFieldOnboardingScreenProps = {
   readonly controller?: FieldOnboardingController;
   readonly partnerId?: string;
+  readonly assignmentPrefill?: { readonly id: string; readonly storeNameHint: string; readonly phoneHint?: string; readonly addressHint?: string; readonly locationLatitude?: number; readonly locationLongitude?: number };
   readonly onBack?: () => void;
   readonly onOpenProducts?: (partnerId: string) => void;
 };
@@ -106,6 +117,7 @@ export type DshFieldOnboardingScreenProps = {
 export function DshFieldOnboardingScreen({
   controller: controllerProp,
   partnerId,
+  assignmentPrefill,
   onBack,
   onOpenProducts,
 }: DshFieldOnboardingScreenProps = {}) {
@@ -113,24 +125,76 @@ export function DshFieldOnboardingScreen({
   const ownController = useFieldPartnerOnboardingController();
   const controller = controllerProp ?? ownController;
   const insets = useSafeAreaInsets();
-  const { state, validationErrors, updateForm, updateVisitNotes, submitDraft, switchDraft } = controller;
+  const { state, validationErrors, updateForm, updateVisitNotes, updateLocation, submitDraft, switchDraft, businessVerticals, businessVerticalsError } = controller;
   const { state: feeRefState } = useStoreOnboardingFeeReferenceController(identity.state.kind);
 
   const [activeGroup, setActiveGroup] = React.useState<GroupId>('basics_profile');
   const [evidenceLoading, setEvidenceLoading] = React.useState<Record<string, boolean>>({});
   const [evidenceErrors, setEvidenceErrors] = React.useState<Record<string, string | undefined>>({});
   const [evidencePreviewUris, setEvidencePreviewUris] = React.useState<Record<string, string | undefined>>({});
+  const [collaboration, setCollaboration] = React.useState<OnboardingCollaborationView | null>(null);
+  const [collaborationBody, setCollaborationBody] = React.useState('');
+  const [collaborationLoading, setCollaborationLoading] = React.useState(false);
+  const [collaborationSubmitting, setCollaborationSubmitting] = React.useState(false);
+  const [collaborationError, setCollaborationError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    void switchDraft(partnerId);
-  }, [partnerId, switchDraft]);
+    void switchDraft(partnerId).then(() => {
+      if (partnerId || !assignmentPrefill) return;
+      updateForm({
+        legalNameAr: assignmentPrefill.storeNameHint,
+        displayName: assignmentPrefill.storeNameHint,
+        primaryPhone: assignmentPrefill.phoneHint ?? '',
+        addressLine: assignmentPrefill.addressHint ?? '',
+        notes: `مرجع إسناد DSH: ${assignmentPrefill.id}`,
+      });
+      if (assignmentPrefill.locationLatitude !== undefined && assignmentPrefill.locationLongitude !== undefined) {
+        updateLocation(assignmentPrefill.locationLatitude, assignmentPrefill.locationLongitude);
+      }
+    });
+  }, [assignmentPrefill, partnerId, switchDraft, updateForm, updateLocation]);
+
+  const reloadCollaboration = React.useCallback(async () => {
+    if (!partnerId || !assignmentPrefill?.id) {
+      setCollaboration(null);
+      return;
+    }
+    setCollaborationLoading(true);
+    setCollaborationError(null);
+    try {
+      const next = await getFieldOnboardingCollaboration(partnerId, assignmentPrefill.id);
+      setCollaboration(next);
+      if (next.unreadCount > 0) await markFieldOnboardingRead(partnerId, next.thread.id, next.messages[next.messages.length - 1]?.sequenceNumber ?? 0);
+    } catch (cause) {
+      setCollaborationError(cause instanceof Error ? cause.message : 'تعذر تحميل سجل المتابعة');
+    } finally {
+      setCollaborationLoading(false);
+    }
+  }, [assignmentPrefill?.id, partnerId]);
+
+  React.useEffect(() => { void reloadCollaboration(); }, [reloadCollaboration]);
+
+  const sendCollaborationMessage = React.useCallback(async () => {
+    if (!partnerId || !assignmentPrefill?.id || !collaborationBody.trim()) return;
+    setCollaborationSubmitting(true);
+    setCollaborationError(null);
+    try {
+      await addFieldOnboardingMessage(partnerId, { body: collaborationBody.trim(), clientMessageId: `field-${assignmentPrefill.id}-${Date.now()}` }, assignmentPrefill.id);
+      setCollaborationBody('');
+      await reloadCollaboration();
+    } catch (cause) {
+      setCollaborationError(cause instanceof Error ? cause.message : 'تعذر إرسال الرد');
+    } finally {
+      setCollaborationSubmitting(false);
+    }
+  }, [assignmentPrefill?.id, collaborationBody, partnerId, reloadCollaboration]);
 
   const pickEvidenceFile = React.useCallback(async (
     source: EvidencePickSource,
     fallbackName: string,
   ): Promise<PickedEvidenceFile | null> => {
     if (source === 'document') {
-      const result = await DocumentPicker.getDocumentAsync({
+      const result = await getDshDocumentPickerAdapter().getDocument({
         type: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'],
         copyToCacheDirectory: true,
         multiple: false,
@@ -149,9 +213,10 @@ export function DshFieldOnboardingScreen({
     }
 
     if (source === 'camera') {
-      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      const picker = getDshImagePickerAdapter();
+      const permission = await picker.requestCameraPermissions();
       if (!permission.granted) throw new Error('CAMERA_PERMISSION_DENIED');
-      const result = await ImagePicker.launchCameraAsync({ quality: 0.8, mediaTypes: ['images'] });
+      const result = await picker.launchCamera({ quality: 0.8, mediaTypes: ['images'] });
       const asset = result.canceled ? undefined : result.assets[0];
       if (!asset) return null;
       return {
@@ -161,9 +226,10 @@ export function DshFieldOnboardingScreen({
       };
     }
 
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const picker = getDshImagePickerAdapter();
+    const permission = await picker.requestMediaLibraryPermissions();
     if (!permission.granted) throw new Error('LIBRARY_PERMISSION_DENIED');
-    const result = await ImagePicker.launchImageLibraryAsync({ quality: 0.8, mediaTypes: ['images'] });
+    const result = await picker.launchImageLibrary({ quality: 0.8, mediaTypes: ['images'] });
     const asset = result.canceled ? undefined : result.assets[0];
     if (!asset) return null;
     return {
@@ -182,7 +248,7 @@ export function DshFieldOnboardingScreen({
 
       let ownerPartnerId = state.partnerId;
       if (!ownerPartnerId) {
-        const created = await controller.ensureDraftCreated();
+        const created = await controller.ensureDraftCreated(false, assignmentPrefill?.id);
         if (!created) {
           setActiveGroup('basics_profile');
           return;
@@ -190,7 +256,9 @@ export function DshFieldOnboardingScreen({
         ownerPartnerId = created;
       }
 
-      const mediaRef = await uploadFieldMedia(ownerPartnerId, picked);
+      const mediaRef = await uploadFieldMedia(ownerPartnerId, picked, {
+        kind: item.kind === 'document' ? 'legal_document' : 'visit_evidence',
+      });
       if (item.kind === 'document') {
         const documentSpec = getRequiredPartnerDocuments(state.form).find((candidate) => candidate.key === item.key);
         if (!documentSpec) throw new Error('DOCUMENT_TYPE_NOT_RESOLVED');
@@ -210,7 +278,7 @@ export function DshFieldOnboardingScreen({
 
   const openCatalogSetup = React.useCallback(async () => {
     if (!onOpenProducts) return;
-    const durablePartnerId = state.partnerId ?? await controller.ensureDraftCreated();
+    const durablePartnerId = state.partnerId ?? await controller.ensureDraftCreated(false, assignmentPrefill?.id);
     if (!durablePartnerId) {
       setActiveGroup('basics_profile');
       return;
@@ -263,7 +331,7 @@ export function DshFieldOnboardingScreen({
       } else if (state.partnerId) {
         void controller.save();
       } else {
-        void controller.ensureDraftCreated();
+        void controller.ensureDraftCreated(false, assignmentPrefill?.id);
       }
       return;
     }
@@ -352,7 +420,7 @@ export function DshFieldOnboardingScreen({
   }
 
   const goToNext = async () => {
-    const created = await controller.ensureDraftCreated();
+    const created = await controller.ensureDraftCreated(false, assignmentPrefill?.id);
     if (!created) {
       setActiveGroup('basics_profile');
       return;
@@ -366,7 +434,7 @@ export function DshFieldOnboardingScreen({
 
   const renderGroupContent = (groupId: GroupId) => {
     if (groupId === 'basics_profile') {
-      return <OnboardingBasicsSection form={form} errors={validationErrors} readOnly={false} onChange={updateForm} />;
+      return <OnboardingBasicsSection form={form} errors={validationErrors} readOnly={false} onChange={updateForm} businessVerticals={businessVerticals} businessVerticalsError={businessVerticalsError} />;
     }
     if (groupId === 'location_media') {
       return (
@@ -449,8 +517,26 @@ export function DshFieldOnboardingScreen({
           <View style={{ padding: spacing[3], borderRadius: radius.md, borderWidth: borders.hairline, borderColor: colorRoles.borderSubtle, gap: spacing[1] }}>
             <Text role="bodyStrong" style={{ textAlign: 'right' }}>مرجع رسوم انضمام المتجر</Text>
             <Text role="bodySm" tone="secondary" style={{ textAlign: 'right' }}>
-              {feeRefState.data.amount} {feeRefState.data.currency} — {CHARGE_TIMING_REFERENCE_LABELS[feeRefState.data.chargeTiming] ?? feeRefState.data.chargeTiming}
+              {formatWltMoney(feeRefState.data.amountMinorUnits, feeRefState.data.currency)} — {CHARGE_TIMING_REFERENCE_LABELS[feeRefState.data.chargeTiming] ?? feeRefState.data.chargeTiming}
             </Text>
+          </View>
+        ) : null}
+
+        {assignmentPrefill?.id && partnerId ? (
+          <View style={{ padding: spacing[3], borderRadius: radius.md, borderWidth: borders.hairline, borderColor: colorRoles.borderSubtle, backgroundColor: colorRoles.surfaceBase, gap: spacing[2] }}>
+            <Text role="bodyStrong" style={{ textAlign: 'right' }}>متابعة مرتبطة بالمسودة</Text>
+            <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>تظهر هنا ملاحظات فريق المراجعة لهذه المهمة فقط، وتبقى مرتبطة بالمسودة ولا تتحول إلى محادثة عامة.</Text>
+            {collaborationLoading ? <Text role="caption" tone="muted">جارٍ تحميل الملاحظات…</Text> : null}
+            {collaboration?.messages.map((message) => (
+              <View key={message.id} style={{ padding: spacing[2], borderRadius: radius.sm, backgroundColor: message.senderSurface === 'control-panel' ? colorRoles.brandActionSoft : colorRoles.surfaceBase, gap: spacing[1] }}>
+                <Text role="bodySm" style={{ textAlign: 'right' }}>{message.body}</Text>
+                <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>{message.senderSurface === 'control-panel' ? 'فريق المراجعة' : 'أنت'} · {new Date(message.createdAt).toLocaleString('ar-YE')}</Text>
+              </View>
+            ))}
+            {collaboration && collaboration.messages.length === 0 ? <Text role="caption" tone="muted" style={{ textAlign: 'right' }}>لا توجد ملاحظات بعد.</Text> : null}
+            <TextField label="رد على فريق المراجعة" value={collaborationBody} onChangeText={setCollaborationBody} placeholder="اكتب ردًا مرتبطًا بهذه المسودة" multiline />
+            <Button label={collaborationSubmitting ? 'جارٍ الإرسال…' : 'إرسال الرد'} tone="primary" onPress={() => void sendCollaborationMessage()} disabled={collaborationSubmitting || collaborationBody.trim().length === 0} />
+            {collaborationError ? <Text role="caption" tone="danger" style={{ textAlign: 'right' }}>{collaborationError}</Text> : null}
           </View>
         ) : null}
 

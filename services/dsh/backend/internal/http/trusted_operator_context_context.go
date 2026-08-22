@@ -17,7 +17,8 @@ func TrustedOperatorContextMiddleware(identity *auth.Client, next http.Handler) 
 		if identity != nil && strings.HasPrefix(strings.TrimSpace(r.Header.Get("Authorization")), "Bearer ") {
 			resolved, err := identity.Resolve(r.Context(), r.Header.Get("Authorization"))
 			if err == nil && strings.TrimSpace(resolved.OperatorContextID) != "" {
-				r = r.WithContext(wlt.WithOperatorContext(r.Context(), resolved.OperatorContextID))
+				trustedContext := auth.WithOperatorContext(r.Context(), resolved.OperatorContextID)
+				r = r.WithContext(wlt.WithOperatorContext(trustedContext, resolved.OperatorContextID))
 			}
 		}
 		next.ServeHTTP(w, r)

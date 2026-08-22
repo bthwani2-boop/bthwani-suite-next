@@ -21,6 +21,7 @@ import type {
   DshPartnerStoreCourierSettings,
   DshPartnerCoverageZone,
   DshPartnerCommercialSummary,
+  DshPartnerTeamMember,
 } from "./partner.types";
 import { createPartnerMutationContext, type DshGovernedPartner, type PartnerMutationContext } from "./partner-onboarding.runtime";
 
@@ -157,12 +158,17 @@ export function fetchPartnerFieldVisits(partnerId: string): Promise<{ visits: Ds
 
 // ── Partner self-view ───────────────────────────────────────────────────────
 
-export function fetchPartnerSelfStatus(): Promise<DshGovernedPartner> {
-  return request("/dsh/partner/activation/status");
+function partnerSelfScopeQuery(storeId?: string): string {
+  const normalizedStoreId = storeId?.trim() ?? "";
+  return normalizedStoreId ? `?storeId=${encodeURIComponent(normalizedStoreId)}` : "";
 }
 
-export function fetchPartnerSelfReadiness(): Promise<DshPartnerReadiness> {
-  return request("/dsh/partner/activation/readiness");
+export function fetchPartnerSelfStatus(storeId?: string): Promise<DshGovernedPartner> {
+  return request(`/dsh/partner/activation/status${partnerSelfScopeQuery(storeId)}`);
+}
+
+export function fetchPartnerSelfReadiness(storeId?: string): Promise<DshPartnerReadiness> {
+  return request(`/dsh/partner/activation/readiness${partnerSelfScopeQuery(storeId)}`);
 }
 
 export function fetchPartnerScopes(): Promise<{ scopes: DshPartnerOperationalScope[] }> {
@@ -191,6 +197,42 @@ export function fetchPartnerStoreCoverageZones(storeId: string): Promise<DshPart
 
 export function fetchPartnerStoreSettings(storeId: string): Promise<unknown> {
   return request(`/dsh/partner/stores/${storeId}/settings`);
+}
+
+export function fetchPartnerStoreTeam(storeId: string): Promise<{ members: DshPartnerTeamMember[] }> {
+  return request(`/dsh/partner/stores/${encodeURIComponent(storeId)}/team`);
+}
+
+export function invitePartnerStoreTeamMember(
+  storeId: string,
+  identity: string,
+  role: "manager" | "supervisor" | "staff",
+  mutation?: PartnerMutationContext,
+): Promise<{ success: boolean; member: DshPartnerTeamMember }> {
+  return request(`/dsh/partner/stores/${encodeURIComponent(storeId)}/team/invites`, {
+    method: "POST",
+    body: { identity, role },
+    mutation,
+  });
+}
+
+export function executePartnerStoreTeamMemberAction(
+  storeId: string,
+  memberId: string,
+  action: string,
+  expectedVersion: number,
+  mutation?: PartnerMutationContext,
+): Promise<{ success: boolean; member: DshPartnerTeamMember }> {
+  if (!Number.isInteger(expectedVersion) || expectedVersion < 1) {
+    return Promise.reject(new Error("team member version is required"));
+  }
+  return request(`/dsh/partner/stores/${encodeURIComponent(storeId)}/team/members/${encodeURIComponent(memberId)}/action`, {
+    method: "POST",
+    body: { action },
+    mutation: mutation
+      ? { ...mutation, expectedVersion }
+      : createPartnerMutationContext("team-action", memberId, expectedVersion),
+  });
 }
 
 export function updatePartnerStoreSettings(
@@ -286,10 +328,4 @@ export function fieldUpdatePartnerStore(
   mutation?: PartnerMutationContext,
 ): Promise<{ storeId: string; store: DshFieldPartnerStoreDraft; audit: unknown }> {
   return request(`/dsh/field/partners/${partnerId}/store`, { method: "PATCH", body: input, mutation });
-}
-
-// ── Partner analytics (outside partner-onboarding mutation scope) ──────────
-
-export function fetchPartnerPerformance(period: "today" | "week" | "month" = "today"): Promise<import("./partner.types").DshPartnerPerformanceResponse> {
-  return request(`/dsh/partner/analytics/performance?period=${period}`);
 }

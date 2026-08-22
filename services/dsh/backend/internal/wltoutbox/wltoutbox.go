@@ -20,13 +20,12 @@ const (
 )
 
 const (
-	CollectorCaptain      = "captain"
-	CollectorStoreCourier = "store_courier"
-	CollectorPartnerStore = "partner_store"
+	CollectorCaptain = "captain"
 )
 
 type Event struct {
 	ID                  string
+	Status              string
 	EventType           string
 	OrderID             string
 	CaptainID           string // compatibility projection for old captain events
@@ -35,7 +34,7 @@ type Event struct {
 	PartnerID           string
 	CheckoutIntentID    string
 	ClientID            string
-	OperatorContextID            string
+	OperatorContextID   string
 	Points              int64
 	ReversalOfReference string
 	ExternalReference   string
@@ -61,54 +60,31 @@ func resolveOperatorContext(tx *sql.Tx, checkoutIntentID string) (string, error)
 	return operatorContextID, nil
 }
 
-func validateCollector(collectorType, collectorID string) error {
-	collectorType = strings.TrimSpace(collectorType)
-	collectorID = strings.TrimSpace(collectorID)
-	if collectorID == "" {
-		return fmt.Errorf("collector id is required")
-	}
-	switch collectorType {
-	case CollectorCaptain, CollectorStoreCourier, CollectorPartnerStore:
-		return nil
-	default:
-		return fmt.Errorf("unsupported collector type %q", collectorType)
-	}
-}
-
-// EnqueueDeliveryCompleted persists the COD collection actor independently from
-// the fulfillment implementation. The amount is intentionally absent; WLT
-// derives it from checkoutIntentID.
+// EnqueueDeliveryCompleted persists the canonical captain-funded COD
+// completion event. WLT derives the immutable amount from checkoutIntentID.
 func EnqueueDeliveryCompleted(
 	tx *sql.Tx,
 	orderID,
-	collectorType,
-	collectorID,
+	captainID,
 	partnerID,
 	checkoutIntentID string,
 ) error {
 	if tx == nil {
 		return fmt.Errorf("enqueue wlt delivery event: transaction is required")
 	}
-	if err := validateCollector(collectorType, collectorID); err != nil {
-		return fmt.Errorf("enqueue wlt delivery event: %w", err)
-	}
-	if strings.TrimSpace(orderID) == "" || strings.TrimSpace(partnerID) == "" {
-		return fmt.Errorf("enqueue wlt delivery event: order and partner are required")
+	if strings.TrimSpace(orderID) == "" || strings.TrimSpace(captainID) == "" || strings.TrimSpace(partnerID) == "" {
+		return fmt.Errorf("enqueue wlt delivery event: order, captain, and partner are required")
 	}
 	operatorContextID, err := resolveOperatorContext(tx, checkoutIntentID)
 	if err != nil {
 		return fmt.Errorf("enqueue wlt delivery event: %w", err)
-	}
-	captainID := ""
-	if collectorType == CollectorCaptain {
-		captainID = collectorID
 	}
 	_, err = tx.Exec(`
 		INSERT INTO dsh_wlt_outbox_events
 		  (event_type,operator_context_id,order_id,captain_id,collector_type,collector_id,partner_id,checkout_intent_id)
 		VALUES ($1,$2,NULLIF($3,'')::uuid,NULLIF($4,''),$5,$6,$7,NULLIF($8,'')::uuid)
 		ON CONFLICT DO NOTHING`,
-		EventTypeDeliveryCompleted, operatorContextID, orderID, captainID, collectorType, collectorID, partnerID, checkoutIntentID,
+		EventTypeDeliveryCompleted, operatorContextID, orderID, captainID, CollectorCaptain, captainID, partnerID, checkoutIntentID,
 	)
 	if err != nil {
 		return fmt.Errorf("enqueue wlt delivery event: %w", err)
@@ -145,8 +121,8 @@ func Enqueue(tx *sql.Tx, eventType string, values ...string) error {
 		return fmt.Errorf("enqueue wlt outbox event: OperatorContext context is required")
 	}
 	if eventType == EventTypeDeliveryCompleted {
-		if err := validateCollector(CollectorCaptain, captainID); err != nil {
-			return fmt.Errorf("enqueue wlt outbox event: %w", err)
+		if strings.TrimSpace(captainID) == "" {
+			return fmt.Errorf("enqueue wlt outbox event: captain id is required")
 		}
 		_, err := tx.Exec(`
 			INSERT INTO dsh_wlt_outbox_events
@@ -188,13 +164,13 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 	}
 
 	rows, err := tx.Query(`
-		SELECT id,event_type,COALESCE(order_id::text,''),COALESCE(captain_id,''),
+		SELECT id,status,event_type,COALESCE(order_id::text,''),COALESCE(captain_id,''),
 		       COALESCE(collector_type,''),COALESCE(collector_id,''),
 		       COALESCE(partner_id,''),COALESCE(checkout_intent_id::text,''),
 		       COALESCE(client_id,''),operator_context_id,COALESCE(points,0),COALESCE(reversal_of_reference,''),
 		       COALESCE(external_reference,''),COALESCE(payload,'{}'::jsonb),COALESCE(reversal_requested,FALSE),attempt_count
 		FROM dsh_wlt_outbox_events
-		WHERE status IN ('pending','processing') AND next_retry_at<=NOW()
+		WHERE status IN ('pending','processing','unknown') AND next_retry_at<=NOW()
 		  AND NOT (event_type='loyalty_earned' AND reversal_requested=TRUE)
 		ORDER BY created_at
 		LIMIT $1
@@ -207,7 +183,7 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 		var event Event
 		var payload []byte
 		if err := rows.Scan(
-			&event.ID, &event.EventType, &event.OrderID, &event.CaptainID,
+			&event.ID, &event.Status, &event.EventType, &event.OrderID, &event.CaptainID,
 			&event.CollectorType, &event.CollectorID, &event.PartnerID,
 			&event.CheckoutIntentID, &event.ClientID, &event.OperatorContextID, &event.Points,
 			&event.ReversalOfReference, &event.ExternalReference, &payload,
@@ -342,6 +318,22 @@ func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
 		    END,
 		    attempt_count=$2,last_error=$3,next_retry_at=NOW()+$4::interval,updated_at=NOW()
 		WHERE id=$1::uuid AND status='processing'`, id, nextAttempt, cause.Error(), backoff.String())
+	return err
+}
+
+// MarkUnknown is deliberately separate from MarkFailed: a transport error
+// leaves the WLT side ambiguous, so retry is illegal until canonical readback
+// proves the mutation absent.
+func MarkUnknown(db *sql.DB, id string, attemptCount int, cause error) error {
+	message := "unknown WLT result"
+	if cause != nil {
+		message = cause.Error()
+	}
+	_, err := db.Exec(`
+		UPDATE dsh_wlt_outbox_events
+		SET status='unknown',attempt_count=$2,last_error=$3,next_retry_at=NOW()+INTERVAL '5 seconds',
+		    last_readback_at=NOW(),readback_attempt_count=readback_attempt_count+1,updated_at=NOW()
+		WHERE id=$1::uuid AND status='processing'`, id, attemptCount+1, message)
 	return err
 }
 

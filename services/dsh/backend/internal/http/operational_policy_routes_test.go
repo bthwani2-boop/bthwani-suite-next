@@ -20,6 +20,7 @@ func TestOperationalPolicyRoutes(t *testing.T) {
 		{"list delivery modes", http.MethodGet, "/dsh/operator/platform/operational-profiles/11111111-1111-1111-1111-111111111111/delivery-modes"},
 		{"upsert delivery mode", http.MethodPut, "/dsh/operator/platform/operational-profiles/11111111-1111-1111-1111-111111111111/delivery-modes/bthwani_delivery"},
 		{"evaluate operational policy", http.MethodPost, "/dsh/platform/operational-policy/evaluate"},
+		{"evaluate operator operational policy", http.MethodPost, "/dsh/operator/platform/operational-policy/evaluate"},
 		{"list operational audit", http.MethodGet, "/dsh/operator/platform/operational-policy/audit"},
 		{"rollback operational policy", http.MethodPost, "/dsh/operator/platform/operational-policy/audit/55555555-5555-5555-5555-555555555555/rollback"},
 	}

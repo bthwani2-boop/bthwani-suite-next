@@ -7,12 +7,10 @@ param(
   [Parameter(Mandatory = $true)]
   [ValidateSet("up", "down", "reset", "status", "logs", "migrate", "seed", "smoke", "doctor", "all", "bootstrap-dev", "verify-catalog")]
   [string]$Action,
-
   [string]$Profiles = "",
-
   [string]$Service = "",
-
-  [switch]$Force
+  [switch]$Force,
+  [switch]$PreparedRuntime
 )
 
 Set-StrictMode -Version Latest
@@ -30,12 +28,10 @@ foreach ($requiredFile in @($RuntimeScript, $DshCatalogSmoke, $DshPartnerSmoke, 
   }
 }
 
-$profileList = @(
-  $Profiles.Split(",") |
-    ForEach-Object { $_.Trim() } |
-    Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-)
+$profileList = @($Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ })
 $hasDsh = $profileList -contains "dsh"
+$hasLocalSeedMedia = $profileList -contains "media"
+$hasMediaStorage = $hasLocalSeedMedia -or ($profileList -contains "media-storage")
 
 function Invoke-RuntimeEngine {
   param(
@@ -43,39 +39,22 @@ function Invoke-RuntimeEngine {
     [Parameter(Mandatory = $true)][string]$EngineProfiles,
     [string]$EngineService = ""
   )
-
-  # runtime.ps1 predates the strict modular dispatcher and intentionally owns
-  # its own execution policy and scope. Run it in a fresh PowerShell process so
-  # Set-StrictMode from this wrapper cannot change legacy collection/null
-  # semantics inside the established engine.
   $arguments = @(
-    "-NoProfile",
-    "-ExecutionPolicy", "Bypass",
-    "-File", $RuntimeScript,
-    "-Action", $EngineAction,
-    "-Profiles", $EngineProfiles
+    "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $RuntimeScript,
+    "-Action", $EngineAction, "-Profiles", $EngineProfiles
   )
-  if (-not [string]::IsNullOrWhiteSpace($EngineService)) {
-    $arguments += @("-Service", $EngineService)
-  }
-  if ($Force) {
-    $arguments += "-Force"
-  }
-
+  if (-not [string]::IsNullOrWhiteSpace($EngineService)) { $arguments += @("-Service", $EngineService) }
+  if ($Force) { $arguments += "-Force" }
   $global:LASTEXITCODE = 0
   & pwsh @arguments
-  if ($LASTEXITCODE -ne 0) {
-    throw "Runtime action '$EngineAction' failed with exit code $LASTEXITCODE"
-  }
+  if ($LASTEXITCODE -ne 0) { throw "Runtime action '$EngineAction' failed with exit code $LASTEXITCODE" }
 }
 
 function Invoke-FinancialSimulatorHealthSmoke {
   Write-Host "`n--- Financial simulator isolated smoke ---"
   Invoke-RestMethod "http://localhost:58090/__admin/mappings" -TimeoutSec 10 -ErrorAction Stop | Out-Null
   $health = Invoke-RestMethod "http://localhost:58090/financial/health" -TimeoutSec 10 -ErrorAction Stop
-  if ([string]$health.status -ne "healthy") {
-    throw "WireMock financial simulator health is not healthy: $($health.status)"
-  }
+  if ([string]$health.status -ne "healthy") { throw "WireMock financial simulator health is not healthy: $($health.status)" }
   Write-Host "Financial simulator isolated smoke: PASS"
 }
 
@@ -85,12 +64,9 @@ function Invoke-DshSmokeScript {
     [Parameter(Mandatory = $true)][string]$ScriptPath,
     [hashtable]$Parameters = @{}
   )
-
   Write-Host "`n=== $Name ==="
   $global:LASTEXITCODE = 0
-  try {
-    & $ScriptPath @Parameters
-  } catch {
+  try { & $ScriptPath @Parameters } catch {
     Write-Host "DSH smoke slice '$Name' failed: $($_.Exception.Message)"
     if ($null -ne $_.ErrorDetails -and -not [string]::IsNullOrWhiteSpace([string]$_.ErrorDetails.Message)) {
       Write-Host "DSH smoke response details: $($_.ErrorDetails.Message)"
@@ -98,9 +74,7 @@ function Invoke-DshSmokeScript {
     Write-Host (($_ | Format-List * -Force | Out-String).TrimEnd())
     throw
   }
-  if ($LASTEXITCODE -ne 0) {
-    throw "DSH smoke slice '$Name' failed with exit code $LASTEXITCODE"
-  }
+  if ($LASTEXITCODE -ne 0) { throw "DSH smoke slice '$Name' failed with exit code $LASTEXITCODE" }
 }
 
 if ($Action -ne "smoke" -or -not $hasDsh) {
@@ -110,33 +84,46 @@ if ($Action -ne "smoke" -or -not $hasDsh) {
 
 Write-Host "=== runtime:smoke modular DSH routing ==="
 
-# The caller deliberately removes WLT from this phase and executes the governed
-# authenticated WLT smoke afterward. Running runtime.ps1 with only the financial
-# simulator profile would nevertheless invoke the WLT provider path and create a
-# false operator-context failure. Verify the simulator directly here, and leave the
-# WLT-to-provider contract to the dedicated authenticated smoke.
+# DSH smoke owns its DSH + media-infrastructure scope as one unit. Media storage
+# is distinct from the optional workstation seed-media overlay, so clean-clone
+# CI may exercise upload flows with media-storage while never requiring seed PNGs.
+$dshProfiles = @("dsh")
+if ($hasLocalSeedMedia) { $dshProfiles += "media" }
+elseif ($hasMediaStorage) { $dshProfiles += "media-storage" }
+$dshProfileString = $dshProfiles -join ","
+
 $financialSimulatorsRequested = $profileList -contains "financial-simulators"
 $nonDshProfiles = @(
-  $profileList |
-    Where-Object { $_ -ne "dsh" -and $_ -ne "financial-simulators" }
+  $profileList | Where-Object {
+    $_ -notin @("dsh", "media", "media-storage", "financial-simulators")
+  }
 )
 if ($nonDshProfiles.Length -gt 0) {
   Invoke-RuntimeEngine -EngineAction "smoke" -EngineProfiles ($nonDshProfiles -join ",") -EngineService $Service
 }
-if ($financialSimulatorsRequested) {
-  Invoke-FinancialSimulatorHealthSmoke
-}
+if ($financialSimulatorsRequested) { Invoke-FinancialSimulatorHealthSmoke }
 
-Invoke-RuntimeEngine -EngineAction "up" -EngineProfiles "dsh,media"
-Invoke-RuntimeEngine -EngineAction "seed" -EngineProfiles "dsh,media"
+if ($PreparedRuntime) {
+  Write-Host "Prepared runtime supplied: skipping duplicate DSH image build"
+  Invoke-RuntimeEngine -EngineAction "smoke" -EngineProfiles $dshProfileString
+} else {
+  Invoke-RuntimeEngine -EngineAction "up" -EngineProfiles $dshProfileString
+}
+Invoke-RuntimeEngine -EngineAction "seed" -EngineProfiles $dshProfileString
 
 $statePath = Join-Path ([System.IO.Path]::GetTempPath()) "bthwani-dsh-smoke-$([Guid]::NewGuid().ToString('N')).json"
 try {
-  Invoke-DshSmokeScript -Name "DSH catalog smoke" -ScriptPath $DshCatalogSmoke -Parameters @{ StatePath = $statePath }
-  Invoke-DshSmokeScript -Name "DSH partner onboarding smoke" -ScriptPath $DshPartnerSmoke -Parameters @{ StatePath = $statePath }
+  $catalogParameters = @{ StatePath = $statePath }
+  if ($hasLocalSeedMedia) { $catalogParameters.MediaEnabled = $true }
+  Invoke-DshSmokeScript -Name "DSH catalog smoke" -ScriptPath $DshCatalogSmoke -Parameters $catalogParameters
+
+  $partnerParameters = @{ StatePath = $statePath }
+  if ($hasLocalSeedMedia) { $partnerParameters.MediaEnabled = $true }
+  Invoke-DshSmokeScript -Name "DSH partner onboarding smoke" -ScriptPath $DshPartnerSmoke -Parameters $partnerParameters
 
   $clientParameters = @{ StatePath = $statePath }
   if ($profileList -contains "wlt") { $clientParameters.WltEnabled = $true }
+  if ($hasLocalSeedMedia) { $clientParameters.MediaEnabled = $true }
   Invoke-DshSmokeScript -Name "DSH client and home smoke" -ScriptPath $DshClientSmoke -Parameters $clientParameters
 } finally {
   Remove-Item -LiteralPath $statePath -Force -ErrorAction SilentlyContinue

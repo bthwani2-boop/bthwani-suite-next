@@ -2,7 +2,7 @@
 // No fetch in screens. No env in screens. All API calls here.
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   fieldCreateDraft,
   fieldGetPartner,
@@ -18,7 +18,11 @@ import {
   assertPartnerReadback,
   mapPartnerOnboardingFailure,
   type DshPartnerDocumentType,
+  type DshUpdatePartnerRequest,
 } from "../partner";
+import { fetchFieldTaxonomy } from "../catalog/central-catalog.api";
+import type { CentralCatalogDomain } from "../catalog/central-catalog.types";
+import { linkFieldOnboardingAssignmentDraft } from "../field-assignment";
 import {
   initialDraftState,
   validateIdentityStep,
@@ -36,7 +40,7 @@ export type FieldOnboardingController = {
   updateLocation: (lat: number, lon: number) => void;
   addEvidenceRef: (ref: string) => void;
   /** Validates identity + owner fields and creates the partner draft if it doesn't exist yet. Returns the partner id (existing or newly created), or false if blocked. */
-  ensureDraftCreated: (placeholder?: boolean) => Promise<string | false>;
+  ensureDraftCreated: (placeholder?: boolean, assignmentId?: string) => Promise<string | false>;
   /**
    * Links an already uploaded media reference to the partner document record.
    * partnerIdOverride closes the first-upload race where React state still holds
@@ -53,6 +57,8 @@ export type FieldOnboardingController = {
   save: () => Promise<boolean>;
   submitDraft: () => Promise<void>;
   reset: () => void;
+  businessVerticals: readonly CentralCatalogDomain[];
+  businessVerticalsError: string | null;
 };
 
 function buildStoreDraftInput(form: Partial<FieldPartnerDraftForm>) {
@@ -70,30 +76,36 @@ function buildStoreDraftInput(form: Partial<FieldPartnerDraftForm>) {
   };
 }
 
-function buildUpdatePartnerInput(form: Partial<FieldPartnerDraftForm>) {
+function buildUpdatePartnerInput(form: Partial<FieldPartnerDraftForm>): DshUpdatePartnerRequest {
   return {
     displayName: form.displayName ?? "",
-    legalNameAr: form.legalNameAr ?? "",
     primaryPhone: form.primaryPhone ?? "",
     secondaryPhone: form.secondaryPhone ?? "",
     email: form.email ?? "",
     notes: form.notes ?? "",
-    beneficiaryName: form.beneficiaryName ?? "",
-    bankName: form.bankName ?? "",
-    bankBranch: form.bankBranch ?? "",
-    accountNumber: form.accountNumber ?? "",
-    iban: form.iban ?? "",
-    payoutMobileNumber: form.payoutMobileNumber ?? "",
-    settlementPreference: form.settlementPreference ?? "",
-    bankAccountHolderMatchesOwner: form.bankAccountHolderMatchesOwner ?? false,
-    bankNotes: form.bankNotes ?? "",
   };
 }
 
 export function useFieldPartnerOnboardingController(): FieldOnboardingController {
   const [state, setState] = useState<FieldOnboardingDraftState>(initialDraftState);
   const [validationErrors, setValidationErrors] = useState<FieldOnboardingValidationErrors>({});
+  const [businessVerticals, setBusinessVerticals] = useState<readonly CentralCatalogDomain[]>([]);
+  const [businessVerticalsError, setBusinessVerticalsError] = useState<string | null>(null);
   const activeRouteKeyRef = useRef("new-draft");
+
+  useEffect(() => {
+    let active = true;
+    void fetchFieldTaxonomy()
+      .then(({ domains }) => {
+        if (!active) return;
+        setBusinessVerticals(domains.filter((domain) => domain.isActive));
+        setBusinessVerticalsError(null);
+      })
+      .catch(() => {
+        if (active) setBusinessVerticalsError("تعذر تحميل مجالات النشاط المركزية");
+      });
+    return () => { active = false; };
+  }, []);
 
   const updateForm = useCallback((patch: Partial<FieldPartnerDraftForm>) => {
     setState((s) => ({
@@ -127,7 +139,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     }));
   }, []);
 
-  const ensureDraftCreated = useCallback(async (placeholder = false): Promise<string | false> => {
+  const ensureDraftCreated = useCallback(async (placeholder = false, assignmentId?: string): Promise<string | false> => {
     if (state.partnerId) return state.partnerId;
 
     const form = { ...state.form };
@@ -156,18 +168,21 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         secondaryPhone: form.secondaryPhone ?? "",
         email: form.email ?? "",
         category: form.category ?? "default",
+        businessVerticalId: form.businessVerticalId ?? "",
         notes: form.notes ?? "",
       }, createMutation);
-      await fieldUpdatePartnerStore(
+      const storeReadback = await fieldUpdatePartnerStore(
         res.id,
         buildStoreDraftInput(form),
         createPartnerMutationContext("field-update-first-store", res.id),
       );
       const readback = assertPartnerReadback(res.id, res.version, await fieldGetPartner(res.id));
+      if (assignmentId) await linkFieldOnboardingAssignmentDraft(assignmentId, readback.id);
       setState((s) => ({
         ...s,
         partnerId: readback.id,
         partnerVersion: readback.version,
+        firstStoreId: storeReadback.storeId,
         form: { ...s.form, ...form },
         submitError: null,
         failure: null,
@@ -199,6 +214,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         ...s,
         partnerId: partner.id,
         partnerVersion: partner.version,
+        firstStoreId: storeRes.storeId,
         form: {
           ...s.form,
           legalNameAr: partner.legalNameAr,
@@ -210,6 +226,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
           secondaryPhone: partner.secondaryPhone,
           email: partner.email,
           category: partner.category as FieldPartnerDraftForm["category"],
+          businessVerticalId: partner.businessVerticalId,
           notes: partner.notes,
           city: storeRes.store.cityCode,
           serviceAreaCode: storeRes.store.serviceAreaCode,
@@ -220,15 +237,6 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
           signagePhotoRef: storeRes.store.signagePhotoRef,
           operatingHours: storeRes.store.operatingHours,
           deliveryReadiness: storeRes.store.deliveryReadiness,
-          beneficiaryName: partner.beneficiaryName,
-          bankName: partner.bankName,
-          bankBranch: partner.bankBranch,
-          accountNumber: "",
-          iban: "",
-          payoutMobileNumber: "",
-          settlementPreference: partner.settlementPreference as FieldPartnerDraftForm["settlementPreference"],
-          bankAccountHolderMatchesOwner: partner.bankAccountHolderMatchesOwner,
-          bankNotes: partner.bankNotes,
         },
         uploadedDocumentIds: documentsRes.documents.map((d) => d.id),
         uploadedDocumentTypes: documentsRes.documents.map((d) => d.documentType) as DshPartnerDocumentType[],
@@ -285,7 +293,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         expectedVersion,
         createPartnerMutationContext("field-save-partner", state.partnerId, expectedVersion),
       );
-      await fieldUpdatePartnerStore(
+      const storeReadback = await fieldUpdatePartnerStore(
         state.partnerId,
         buildStoreDraftInput(state.form),
         createPartnerMutationContext("field-save-store", state.partnerId),
@@ -300,6 +308,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         isSaving: false,
         isDirty: false,
         partnerVersion: readback.version,
+        firstStoreId: storeReadback.storeId,
         submitError: null,
         failure: null,
         lastSavedAt: new Date().toISOString(),
@@ -393,7 +402,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         expectedVersion,
         createPartnerMutationContext("field-submit-save", state.partnerId, expectedVersion),
       );
-      await fieldUpdatePartnerStore(
+      const storeReadback = await fieldUpdatePartnerStore(
         state.partnerId,
         buildStoreDraftInput(state.form),
         createPartnerMutationContext("field-submit-store", state.partnerId),
@@ -401,7 +410,9 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
 
       // Create field visit if we have location or notes.
       if (state.visitNotes || state.locationLatitude !== null) {
+        if (!storeReadback.storeId) throw new Error("PARTNER_FIRST_STORE_REFERENCE_REQUIRED");
         const visitPayload: import("../partner").DshCreatePartnerFieldVisitRequest = {
+          storeId: storeReadback.storeId,
           visitNotes: state.visitNotes,
           evidenceMediaRefs: state.evidenceMediaRefs,
           ...(state.locationLatitude !== null && state.locationLongitude !== null && {
@@ -429,6 +440,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
         ...s,
         isSubmitting: false,
         isSubmitted: true,
+        firstStoreId: storeReadback.storeId,
         partnerVersion: readback.version,
         submitError: null,
         failure: null,
@@ -465,5 +477,7 @@ export function useFieldPartnerOnboardingController(): FieldOnboardingController
     save,
     submitDraft,
     reset,
+    businessVerticals,
+    businessVerticalsError,
   };
 }

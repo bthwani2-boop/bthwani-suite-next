@@ -21,7 +21,8 @@ export type DshStoreAdminTableRow = {
   readonly partnerReadiness: "pending" | "ready" | "blocked";
   readonly catalogApprovalStatus: "draft" | "submitted" | "approved" | "rejected";
   readonly marketingVisibility: "hidden" | "visible";
-  readonly publicationEligible: boolean;
+  readonly publicationDecision: "PUBLISHED" | "BLOCKED";
+  readonly blockingReasons: readonly string[];
 };
 
 export type DshStoreAdminDetail = DshStoreAdminTableRow & {
@@ -169,7 +170,8 @@ export function toAdminTableRow(dto: DshStoreSummaryDto): DshStoreAdminTableRow 
     partnerReadiness: dto.partnerReadiness,
     catalogApprovalStatus: dto.catalogApprovalStatus,
     marketingVisibility: dto.marketingVisibility,
-    publicationEligible: dto.publicationEligible,
+    publicationDecision: dto.publicationDecision,
+    blockingReasons: [...dto.blockingReasons],
   };
 }
 

@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import {
   Badge,
   Box,
@@ -11,7 +11,9 @@ import {
   Text,
   TextField,
   TopBar,
+  alpha,
   colorRoles,
+  radius,
   spacing,
 } from "@bthwani/ui-kit";
 import {
@@ -35,6 +37,8 @@ import type { DshPartnerDeliveryTaskStatus } from "../../shared/partner-delivery
 import { ClientLiveTrackingCard } from "./ClientLiveTrackingCard";
 import { ClientPreparationDecisionPanel } from "./ClientPreparationDecisionPanel";
 import { useClientOrderController } from "./useClientOrderController";
+import { useStoreDetailController } from "../../shared/store";
+import { Image } from "react-native";
 
 const PARTNER_DELIVERY_STATUS_LABELS: Readonly<Record<DshPartnerDeliveryTaskStatus, string>> = {
   unassigned: "بانتظار تعيين سائق من المتجر",
@@ -51,6 +55,8 @@ type Props = {
   readonly orderId: string;
   readonly onBack?: () => void;
   readonly onOpenPickup?: (orderId: string) => void;
+  readonly onOpenOrderSupport?: (orderId: string, fulfillmentMode: OrderTruth["fulfillmentMode"]) => void;
+  readonly onOpenNotifications?: () => void;
 };
 
 const FULFILLMENT_LABELS: Readonly<Record<OrderTruth["fulfillmentMode"], string>> = {
@@ -72,6 +78,90 @@ function financialTone(status: DshFinancialClosureStatus): "neutral" | "success"
   if (status === "refund_requested") return "info";
   if (status === "session_expired" || status === "refund_completed" || status === "no_action") return "success";
   return "neutral";
+}
+
+function journeyTitle(order: OrderTruth): string {
+  if (order.status === "delivered") return "تم تسليم طلبك";
+  if (order.status === "ready_for_pickup") return "طلبك جاهز للاستلام";
+  if (order.status === "cancelled" || order.status.startsWith("cancelled_")) return "تم إلغاء الطلب";
+  if (order.status === "failed" || order.status.startsWith("failed_")) return "تعذر إكمال الطلب";
+  if (order.status === "out_for_delivery" || order.status === "in_transit") return "جاري توصيل ومتابعة طلبك";
+  if (order.status === "preparing" || order.status === "store_accepted") return "المتجر يجهز طلبك";
+  return "تم استلام طلبك";
+}
+
+function journeyStepIndex(order: OrderTruth): number {
+  if (order.status === "delivered" || order.status === "ready_for_pickup") return 3;
+  if (order.status === "out_for_delivery" || order.status === "in_transit") return 2;
+  if (order.status === "preparing" || order.status === "store_accepted") return 1;
+  return 0;
+}
+
+function JourneySteps({ order }: { readonly order: OrderTruth }) {
+  const activeIndex = journeyStepIndex(order);
+  const steps = ["تم الاستلام", "قيد التجهيز", order.fulfillmentMode === "pickup" ? "جاهز للاستلام" : "في الطريق", "تم التسليم"];
+  return (
+    <View style={styles.journeySteps} accessibilityLabel={`تقدم الطلب: ${steps[activeIndex]}`}>
+      {steps.map((label, index) => (
+        <View key={label} style={styles.journeyStep}>
+          <View style={[styles.journeyDot, index <= activeIndex && styles.journeyDotActive]}>
+            <Text role="caption" style={index <= activeIndex ? styles.journeyDotTextActive : styles.journeyDotText}>{String(index + 1)}</Text>
+          </View>
+          <Text role="caption" style={[styles.journeyLabel, index === activeIndex && styles.journeyLabelActive]}>{label}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function OrderStoreHero({ order }: { readonly order: OrderTruth }) {
+  const summary = toOrderTruthSummary(order);
+  const storeController = useStoreDetailController(order.storeId);
+  const store = storeController.state.kind === "success" ? storeController.state.store : null;
+
+  return (
+    <Surface tone="default" style={styles.storeHero}>
+      {store?.heroImageSource ? (
+        <Image source={store.heroImageSource} style={styles.storeHeroBg} accessibilityLabel="صورة غلاف المتجر" />
+      ) : null}
+      <View style={styles.storeHeroOverlay}>
+        <View style={styles.storeHeroHeader}>
+          {store?.logoImageSource ? (
+            <Image source={store.logoImageSource} style={styles.storeLogo} accessibilityLabel={`شعار ${store.displayName}`} />
+          ) : (
+            <View style={styles.storeLogoPlaceholder}>
+              <Text style={{ fontSize: 24 }}>{store?.placeholderEmoji ?? "🏪"}</Text>
+            </View>
+          )}
+          <View style={styles.storeHeroInfo}>
+            <Text role="titleMd" style={styles.storeHeroTitle}>
+              {store?.displayName ?? "متابعة الطلب"}
+            </Text>
+            <Text role="caption" style={styles.storeHeroSubtitle}>
+              الطلب {bidiIsolate(order.orderNumber)} · {order.items.length} أصناف · {formatMinorUnits(order.totalMinorUnits, order.currency)}
+            </Text>
+          </View>
+        </View>
+        <Surface tone={statusTone(order.status) === "neutral" ? "default" : statusTone(order.status) as any} style={styles.heroStatusCard}>
+          <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row-reverse', alignItems: 'center', gap: 8 }}>
+              {(order.status === "out_for_delivery" || order.status === "in_transit") ? (
+                <View style={{ backgroundColor: alpha(colorRoles.brandAction, 0.1), borderRadius: 16, padding: 4 }}>
+                  <Icon name="pulse-outline" size={20} tone="brand" />
+                </View>
+              ) : null}
+              <Text role="bodyStrong" style={{ color: colorRoles.surfaceBase }}>{journeyTitle(order)}</Text>
+            </View>
+            <Badge label={summary.statusLabel} tone={statusTone(order.status)} />
+          </View>
+          <Text role="bodySm" style={{ color: alpha(colorRoles.surfaceBase, 0.8), textAlign: "right", marginTop: 4 }}>
+            {FULFILLMENT_LABELS[order.fulfillmentMode]}
+          </Text>
+          <JourneySteps order={order} />
+        </Surface>
+      </View>
+    </Surface>
+  );
 }
 
 function OrderTimeline({ order }: { readonly order: OrderTruth }) {
@@ -113,124 +203,60 @@ function OrderTimeline({ order }: { readonly order: OrderTruth }) {
 
 function ClientCancellationPanel({
   orderId,
-  allowedActions,
-  onOrderChanged,
+  isCancelled,
+  onOpenSupport,
 }: {
   readonly orderId: string;
-  readonly allowedActions: readonly string[];
-  readonly onOrderChanged: () => void | Promise<void>;
+  readonly isCancelled: boolean;
+  readonly onOpenSupport?: ((orderId: string) => void) | undefined;
 }) {
-  const [reasonCode, setReasonCode] = React.useState<ClientCancellationReasonCode>("changed_mind");
-  const [reasonNote, setReasonNote] = React.useState("");
-  const controller = useOrderCancellationController({
-    surface: "client",
-    orderId,
-    onCancelled: onOrderChanged,
-  });
-  const canCancel = allowedActions.includes("cancel_if_policy_allows");
-  const cancellation =
-    controller.state.kind === "ready"
-      ? controller.state.cancellation
-      : controller.state.kind === "submitting"
-        ? controller.state.cancellation
-        : undefined;
-
-  if (cancellation) {
+  if (isCancelled) {
     return (
-      <Surface tone="raised" gap={3}>
-        <Text role="titleSm">قرار الإلغاء والاسترداد</Text>
-        <View style={styles.detailRow}>
-          <Text role="bodySm" tone="muted">سبب الإلغاء</Text>
-          <Text role="bodyStrong">{cancellation.reasonCode}</Text>
-        </View>
-        {cancellation.reasonNote ? <Text role="bodySm" tone="muted">{cancellation.reasonNote}</Text> : null}
-        <Badge
-          label={FINANCIAL_CLOSURE_LABELS[cancellation.financialClosureStatus]}
-          tone={financialTone(cancellation.financialClosureStatus)}
-        />
-        {cancellation.financialReference ? (
-          <View style={styles.detailRow}>
-            <Text role="bodySm" tone="muted">المرجع المالي</Text>
-            <Text role="caption">{bidiIsolate(cancellation.financialReference)}</Text>
-          </View>
-        ) : null}
-        {cancellation.financialFailure ? <Text role="bodySm" tone="danger">{cancellation.financialFailure}</Text> : null}
-        <Button
-          label={controller.state.kind === "submitting" ? "جارٍ تحديث القرار المالي…" : "تحديث حالة الاسترداد"}
-          accessibilityLabel="تحديث حالة الاسترداد من المصدر المالي"
-          tone="secondary"
-          disabled={controller.state.kind === "submitting"}
-          onPress={() => void controller.refresh()}
-        />
-      </Surface>
-    );
-  }
-
-  if (controller.state.kind === "requires_review") {
-    return (
-      <Surface tone="warning" gap={3}>
-        <Text role="titleSm">الإلغاء يحتاج مراجعة العمليات</Text>
-        <Text role="bodySm">{controller.state.message}</Text>
-        <Text role="caption" tone="muted">لا يتم إلغاء الطلب أو تغيير حالته المالية قبل اعتماد العمليات.</Text>
-      </Surface>
-    );
-  }
-
-  if (!canCancel) {
-    return (
-      <Surface tone="raised" gap={2}>
-        <Text role="bodyStrong">قرار الإلغاء</Text>
-        <Text role="bodySm" tone="muted">
-          لا يعرض الخادم إجراء إلغاء مباشر لهذا الطلب. أي متابعة إضافية تتم عبر العمليات وفق السياسة.
+      <Surface tone="warning" gap={2}>
+        <Text role="titleSm">حالة الطلب</Text>
+        <Text role="bodyStrong" tone="danger">
+          تم إلغاء هذا الطلب من قبل قسم العمليات.
         </Text>
+        <Text role="caption" tone="muted">
+          إذا كانت لديك أي استفسارات حول استرداد المبلغ أو تفاصيل الإلغاء، يرجى التواصل مع الدعم.
+        </Text>
+        {onOpenSupport ? (
+          <Button
+            label="مراسلة الدعم"
+            tone="secondary"
+            size="sm"
+            onPress={() => onOpenSupport(orderId)}
+          />
+        ) : null}
       </Surface>
     );
   }
-
-  const submitting = controller.state.kind === "submitting";
-  const selectedReason = CLIENT_CANCELLATION_REASONS.find((option) => option.code === reasonCode);
-  const noteRequired = reasonCode === "other";
 
   return (
-    <Surface tone="raised" gap={3}>
-      <Text role="titleSm">إلغاء الطلب</Text>
+    <Surface tone="raised" gap={2}>
+      <Text role="titleSm">إلغاء أو تعديل الطلب</Text>
       <Text role="bodySm" tone="muted">
-        صلاحية الإلغاء معروضة من allowedActions. يقرر WLT تحرير الدفع أو الاسترداد بصورة مستقلة.
+        يدخل الطلب مرحلة التجهيز الفوري مع المتجر فور تأكيده. في حال رغبتك بإلغاء أو تعديل الطلب قبل التجهيز، يرجى التواصل مع فريق العمليات والدعم.
       </Text>
-      <Box gap={2}>
-        {CLIENT_CANCELLATION_REASONS.map((reason) => (
-          <Button
-            key={reason.code}
-            label={reason.label}
-            accessibilityLabel={`اختيار سبب الإلغاء: ${reason.label}`}
-            tone={reasonCode === reason.code ? "brand" : "secondary"}
-            size="sm"
-            fullWidth={false}
-            disabled={submitting}
-            onPress={() => setReasonCode(reason.code as ClientCancellationReasonCode)}
-          />
-        ))}
-      </Box>
-      {selectedReason ? <Text role="caption" tone="muted">{selectedReason.description}</Text> : null}
-      <TextField
-        label={noteRequired ? "التوضيح المطلوب" : "ملاحظة اختيارية"}
-        placeholder="اكتب معلومات تساعد العمليات على فهم القرار"
-        value={reasonNote}
-        onChangeText={setReasonNote}
-      />
-      {controller.state.kind === "error" ? <Text role="bodySm" tone="danger">{controller.state.message}</Text> : null}
-      <Button
-        label={submitting ? "جارٍ تثبيت الإلغاء…" : "تأكيد إلغاء الطلب"}
-        accessibilityLabel="تأكيد إلغاء الطلب وفق السياسة"
-        tone="danger"
-        disabled={submitting || (noteRequired && !reasonNote.trim())}
-        onPress={() => void controller.submit({ reasonCode, reasonNote })}
-      />
+      {onOpenSupport ? (
+        <Button
+          label="طلب المساعدة أو الإلغاء عبر الدعم"
+          tone="secondary"
+          size="sm"
+          onPress={() => onOpenSupport(orderId)}
+        />
+      ) : null}
     </Surface>
   );
 }
 
-export function OrderTrackingScreen({ orderId, onBack, onOpenPickup }: Props) {
+export function OrderTrackingScreen({
+  orderId,
+  onBack,
+  onOpenPickup,
+  onOpenOrderSupport,
+  onOpenNotifications,
+}: Props) {
   const { state, reload } = useClientOrderController(orderId);
 
   if (state.kind === "loading") {
@@ -271,25 +297,93 @@ export function OrderTrackingScreen({ orderId, onBack, onOpenPickup }: Props) {
 
   return (
     <View style={styles.root}>
-      <TopBar title="رحلة الطلب" onBack={onBack} />
-      <MobileScrollView fill padding={4} gap={4} contentContainerStyle={styles.content}>
-        <Surface tone="action" gap={3}>
-          <View style={styles.summaryHeader}>
-            <Text role="titleMd" style={styles.actionText}>{bidiIsolate(order.orderNumber)}</Text>
-            <Badge label={summary.statusLabel} tone={statusTone(order.status)} />
-          </View>
-          <Text role="bodySm" style={styles.actionText}>{FULFILLMENT_LABELS[order.fulfillmentMode]}</Text>
-          <Text role="caption" style={styles.actionText}>
-            {`${order.items.length} أصناف · ${formatMinorUnits(order.totalMinorUnits, order.currency)}`}
-          </Text>
-          <Text role="caption" style={styles.actionText}>
-            {`المالك الحالي: ${summary.currentOwnerLabel} · الإصدار: ${order.version}`}
-          </Text>
-        </Surface>
+      <TopBar
+        title="متابعة الطلب"
+        onBack={onBack}
+        rightSlot={
+          onOpenNotifications ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="الإشعارات"
+              onPress={onOpenNotifications}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: colorRoles.surfaceMuted,
+              }}
+            >
+              <Icon name="notifications-outline" size={20} color={colorRoles.textPrimary} />
+            </Pressable>
+          ) : undefined
+        }
+      />
+      <MobileScrollView fill padding={3} gap={3} contentContainerStyle={styles.content}>
+        <OrderStoreHero order={order} />
 
         <OrderTimeline order={order} />
 
-        <Surface tone="raised" gap={3}>
+        {order.status === "delivered" ? (
+          <Surface tone="raised" gap={2} style={{ borderColor: colorRoles.brandAction, borderWidth: 1.5 }}>
+            <Box layoutDirection="row" justify="space-between" align="center">
+              <Text role="titleSm">⭐ تم تسليم الطلب بنجاح</Text>
+              <Badge label="مكتمل" tone="success" />
+            </Box>
+            <Text role="bodySm" tone="muted">
+              {order.fulfillmentMode === "pickup"
+                ? "شكراً لطلبك! يمكنك تقييم جودة منتجات المتجر وسرعة الاستلام."
+                : "شكراً لطلبك! يمكنك تقييم أداء كابتن التوصيل وجودة المنتجات."}
+            </Text>
+          </Surface>
+        ) : null}
+
+        <Surface tone="raised" gap={3} style={{ borderColor: alpha(colorRoles.brandAction, 0.3), borderWidth: 1.5 }}>
+          <Box layoutDirection="row" justify="space-between" align="center">
+            <Box layoutDirection="row" gap={2} align="center">
+              <View style={{
+                width: 32,
+                height: 32,
+                borderRadius: 16,
+                backgroundColor: colorRoles.brandActionTint,
+                alignItems: "center",
+                justifyContent: "center",
+              }}>
+                <Icon name="chatbubble-ellipses" size={18} tone="brand" />
+              </View>
+              <Text role="titleSm">
+                {order.fulfillmentMode === "pickup"
+                  ? "محادثة المتجر والعمليات"
+                  : "محادثة الكابتن والعمليات"}
+              </Text>
+            </Box>
+            <Badge
+              label="محادثة مدمجة بالطلب"
+              tone="brand"
+            />
+          </Box>
+          <Text role="bodySm" tone="muted">
+            {order.fulfillmentMode === "pickup"
+              ? "محادثة مخصصة مع المتجر لمتابعة استلام وتجهيز طلبك، مع إشراف ومتابعة قسم العمليات (مراسلة الدعم بشأن الطلب)."
+              : "محادثة مباشرة مع كابتن التوصيل لمتابعة الوصول وتأكيد العنوان، مع إشراف ومتابعة قسم العمليات (مراسلة الدعم بشأن الطلب)."}
+          </Text>
+          {onOpenOrderSupport ? (
+            <Button
+              label={
+                order.fulfillmentMode === "pickup"
+                  ? "مراسلة المتجر بخصوص الطلب"
+                  : "مراسلة كابتن التوصيل"
+              }
+              accessibilityLabel={`${accessibilityLabel}، مراسلة الدعم بشأن الطلب ومتابعة الكابتن`}
+              tone="primary"
+              leading={<Icon name="chatbubbles-outline" size={18} color={colorRoles.surfaceBase} />}
+              onPress={() => onOpenOrderSupport(order.id, order.fulfillmentMode)}
+            />
+          ) : null}
+        </Surface>
+
+        <Surface tone="raised" gap={2}>
           <Box layoutDirection="row" justify="space-between" align="center">
             <Text role="titleSm">تجهيز الطلب</Text>
             <Badge
@@ -318,19 +412,24 @@ export function OrderTrackingScreen({ orderId, onBack, onOpenPickup }: Props) {
           onUpdated={reload}
         />
 
-        <ClientCancellationPanel orderId={order.id} allowedActions={order.allowedActions} onOrderChanged={reload} />
+        <ClientCancellationPanel
+          orderId={order.id}
+          isCancelled={order.status.startsWith("cancelled_") || order.status.startsWith("failed_")}
+          onOpenSupport={onOpenOrderSupport ? (id) => onOpenOrderSupport(id, order.fulfillmentMode) : undefined}
+        />
 
-        <Surface tone="raised" gap={3}>
-          <Text role="titleSm">إسقاط الدفع للقراءة فقط</Text>
+        <Surface tone="raised" gap={2}>
+          <Text role="titleSm">تفاصيل الدفع</Text>
           <View style={styles.detailRow}>
-            <Text role="bodySm" tone="muted">الحالة</Text>
-            <Text role="bodyStrong">{order.paymentStatusProjection}</Text>
+            <Text role="bodySm" tone="muted">إجمالي الطلب</Text>
+            <Text role="bodyStrong">
+              {formatMinorUnits(order.totalMinorUnits, order.currency)}
+            </Text>
           </View>
           <View style={styles.detailRow}>
-            <Text role="bodySm" tone="muted">مرجع WLT المعتم</Text>
-            <Text role="caption">{bidiIsolate(order.wltPaymentRefId)}</Text>
+            <Text role="bodySm" tone="muted">حالة السداد</Text>
+            <Text role="bodyStrong">{order.paymentStatusProjection || "مؤكد"}</Text>
           </View>
-          <Text role="caption" tone="muted">لا ينفذ هذا السطح خصمًا أو استردادًا أو تسوية.</Text>
         </Surface>
 
         <Surface tone="raised" gap={3}>
@@ -405,7 +504,7 @@ export function OrderTrackingScreen({ orderId, onBack, onOpenPickup }: Props) {
           <ClientLiveTrackingCard tracking={liveTracking} />
         ) : null}
 
-        <Surface tone="raised" gap={3}>
+        <Surface tone="raised" gap={2}>
           <Text role="titleSm">أصناف الطلب المثبتة</Text>
           {order.items.map((item) => (
             <View key={item.id} style={styles.detailRow}>
@@ -416,7 +515,7 @@ export function OrderTrackingScreen({ orderId, onBack, onOpenPickup }: Props) {
         </Surface>
 
         <Surface tone="raised" gap={2}>
-          <Text role="titleSm">مرجع التدقيق</Text>
+          <Text role="titleSm">رقم الطلب المرجعي</Text>
           <Text role="caption">{bidiIsolate(order.correlationId)}</Text>
         </Surface>
 
@@ -446,6 +545,8 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingBottom: spacing[12],
+    paddingHorizontal: spacing[3],
+    gap: spacing[2],
   },
   summaryHeader: {
     flexDirection: "row-reverse",
@@ -453,18 +554,101 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: spacing[2],
   },
+  heroCopy: { flex: 1, alignItems: "flex-end", gap: spacing[1] },
   actionText: {
     color: colorRoles.surfaceBase,
     textAlign: "right",
   },
+  journeySteps: {
+    flexDirection: "row-reverse",
+    justifyContent: "space-between",
+    gap: spacing[1],
+    paddingTop: spacing[2],
+  },
+  journeyStep: { flex: 1, alignItems: "center", gap: spacing[1] },
+  journeyDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colorRoles.surfaceBase,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colorRoles.surfaceBase,
+  },
+  journeyDotActive: { backgroundColor: colorRoles.brandAction, borderColor: colorRoles.brandAction },
+  journeyDotText: { color: colorRoles.brandStructure },
+  journeyDotTextActive: { color: colorRoles.surfaceBase },
+  journeyLabel: { color: alpha(colorRoles.surfaceBase, 0.82), textAlign: "center", fontSize: 11 },
+  journeyLabelActive: { color: colorRoles.surfaceBase, fontWeight: "800" },
   timelineRow: {
     flexDirection: "row-reverse",
     alignItems: "center",
     gap: spacing[3],
   },
-  timelineText: {
+  timelineText: { flex: 1, alignItems: "flex-end" },
+  storeHero: {
+    borderRadius: radius.xl,
+    overflow: "hidden",
+    backgroundColor: colorRoles.surfaceWarm,
+    borderWidth: 1,
+    borderColor: colorRoles.borderSubtle,
+  },
+  storeHeroBg: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 120,
+    opacity: 0.15,
+  },
+  storeHeroOverlay: {
+    padding: spacing[4],
+    gap: spacing[4],
+  },
+  storeHeroHeader: {
+    flexDirection: "row-reverse",
+    alignItems: "center",
+    gap: spacing[3],
+  },
+  storeLogo: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: colorRoles.surfaceBase,
+    backgroundColor: colorRoles.surfaceBase,
+  },
+  storeLogoPlaceholder: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: alpha(colorRoles.brandAction, 0.1),
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  storeHeroInfo: {
     flex: 1,
     alignItems: "flex-end",
+  },
+  storeHeroTitle: {
+    color: colorRoles.brandStructure,
+    fontWeight: "800",
+  },
+  storeHeroSubtitle: {
+    color: colorRoles.textSecondary,
+    marginTop: 2,
+  },
+  heroStatusCard: {
+    padding: spacing[3],
+    borderRadius: radius.md,
+    backgroundColor: colorRoles.surfaceBase,
+    gap: spacing[1],
+    shadowColor: colorRoles.brandStructure,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   detailRow: {
     flexDirection: "row-reverse",

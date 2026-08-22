@@ -15,7 +15,7 @@ import (
 func CreateGovernedVisitIdempotent(
 	ctx context.Context,
 	db *sql.DB,
-	wf store.WorkforceScopeResolver, actor store.StoreActor,
+	actor store.StoreActor,
 	input CreateVisitInput,
 	mutation MutationContext,
 ) (Visit, error) {
@@ -34,7 +34,7 @@ func CreateGovernedVisitIdempotent(
 	if err := ValidateGovernedLocation(input.StartLocation, time.Now()); err != nil {
 		return Visit{}, err
 	}
-	if err := AuthorizeStore(ctx, db, wf, actor, input.StoreID); err != nil {
+	if err := AuthorizeStore(ctx, db, actor, input.StoreID); err != nil {
 		return Visit{}, err
 	}
 	latitude, longitude, err := loadStoreCoordinates(ctx, db, input.StoreID)
@@ -72,6 +72,9 @@ func CreateGovernedVisitIdempotent(
 	if err != nil {
 		return Visit{}, err
 	}
+	if err := snapshotChecklistPolicyTx(ctx, tx, created.ID, created.StoreID); err != nil {
+		return Visit{}, err
+	}
 	if err := storeMutationReceiptTx(
 		ctx,
 		tx,
@@ -92,7 +95,7 @@ func CreateGovernedVisitIdempotent(
 func CompleteGovernedVisitIdempotent(
 	ctx context.Context,
 	db *sql.DB,
-	wf store.WorkforceScopeResolver, actor store.StoreActor,
+	actor store.StoreActor,
 	visitID string,
 	input CompleteVisitInput,
 	mutation MutationContext,
@@ -133,7 +136,7 @@ func CompleteGovernedVisitIdempotent(
 	if actor.Role != "operator" && visit.FieldAgentID != actor.ID {
 		return Visit{}, ErrForbidden
 	}
-	allowed, err := store.ActorCanAccessStore(ctx, db, wf, actor, visit.StoreID)
+	allowed, err := store.ActorCanAccessStore(ctx, db, actor, visit.StoreID)
 	if err != nil {
 		return Visit{}, err
 	}
@@ -167,7 +170,7 @@ func CompleteGovernedVisitIdempotent(
 	geofence := geofenceStatus(distance, radius)
 
 	rows, err := tx.QueryContext(ctx, `
-		SELECT checks.check_type, checks.status,
+		SELECT requirement.check_type, requirement.evidence_required, COALESCE(checks.status,''),
 		       EXISTS (
 		         SELECT 1
 		         FROM dsh_media_refs refs
@@ -176,23 +179,28 @@ func CompleteGovernedVisitIdempotent(
 		           AND refs.purpose = 'field_readiness_evidence'
 		           AND ($2 = 'operator' OR (refs.owner_actor_id = $3 AND refs.owner_actor_role = $2))
 		       )
-		FROM dsh_readiness_checks checks
-		WHERE checks.visit_id = $1`, visitID, actor.Role, actor.ID)
+		FROM dsh_visit_checklist_requirements requirement
+		LEFT JOIN dsh_readiness_checks checks
+		  ON checks.visit_id = requirement.visit_id AND checks.check_type = requirement.check_type
+		WHERE requirement.visit_id = $1 AND requirement.required = TRUE`, visitID, actor.Role, actor.ID)
 	if err != nil {
 		return Visit{}, err
 	}
-	passed := make(map[string]bool, len(RequiredCheckTypes))
-	evidenceValid := make(map[string]bool, len(RequiredCheckTypes))
+	requiredCount := 0
 	for rows.Next() {
 		var checkType, status string
+		var evidenceRequired bool
 		var validEvidence bool
-		if err := rows.Scan(&checkType, &status, &validEvidence); err != nil {
+		if err := rows.Scan(&checkType, &evidenceRequired, &status, &validEvidence); err != nil {
 			rows.Close()
 			return Visit{}, err
 		}
-		if status == string(CheckPassed) {
-			passed[checkType] = true
-			evidenceValid[checkType] = validEvidence
+		requiredCount++
+		if status != string(CheckPassed) {
+			return Visit{}, ErrChecklistIncomplete
+		}
+		if evidenceRequired && !validEvidence {
+			return Visit{}, ErrEvidenceRequired
 		}
 	}
 	if err := rows.Err(); err != nil {
@@ -200,13 +208,8 @@ func CompleteGovernedVisitIdempotent(
 		return Visit{}, err
 	}
 	rows.Close()
-	for _, required := range RequiredCheckTypes {
-		if !passed[required] {
-			return Visit{}, ErrChecklistIncomplete
-		}
-		if !evidenceValid[required] {
-			return Visit{}, ErrEvidenceRequired
-		}
+	if requiredCount == 0 {
+		return Visit{}, ErrChecklistPolicyMissing
 	}
 
 	blocking, err := hasBlockingEscalation(ctx, tx, visitID)
@@ -274,7 +277,7 @@ func CompleteGovernedVisitIdempotent(
 func UpsertGovernedReadinessCheckIdempotent(
 	ctx context.Context,
 	db *sql.DB,
-	wf store.WorkforceScopeResolver, actor store.StoreActor,
+	actor store.StoreActor,
 	visitID string,
 	input UpdateCheckInput,
 	mutation MutationContext,
@@ -285,15 +288,22 @@ func UpsertGovernedReadinessCheckIdempotent(
 	if err := validateCheckInput(input); err != nil {
 		return ReadinessCheck{}, err
 	}
-	visit, err := GetOwnedVisit(ctx, db, wf, actor, visitID)
+	visit, err := GetOwnedVisit(ctx, db, actor, visitID)
 	if err != nil {
 		return ReadinessCheck{}, err
 	}
 	if visit.Status == VisitComplete {
 		return ReadinessCheck{}, ErrVisitAlreadyComplete
 	}
+	exists, err := checklistItemExists(ctx, db, visitID, input.CheckType)
+	if err != nil {
+		return ReadinessCheck{}, err
+	}
+	if !exists {
+		return ReadinessCheck{}, fmt.Errorf("%w: check type is not part of the visit policy", ErrInvalid)
+	}
 	if input.Status == CheckPassed {
-		if err := validateGovernedCheckEvidence(ctx, db, wf, actor, visit.StoreID, input.EvidenceURL); err != nil {
+		if err := validateGovernedCheckEvidence(ctx, db, actor, visit.StoreID, input.EvidenceURL); err != nil {
 			return ReadinessCheck{}, err
 		}
 	}
@@ -310,6 +320,9 @@ func UpsertGovernedReadinessCheckIdempotent(
 		return ReadinessCheck{}, err
 	}
 	if found {
+		if err := hydrateChecklistMetadata(ctx, tx, &replay); err != nil {
+			return ReadinessCheck{}, err
+		}
 		return replay, nil
 	}
 
@@ -351,7 +364,7 @@ func UpsertGovernedReadinessCheckIdempotent(
 func CreateGovernedEscalationIdempotent(
 	ctx context.Context,
 	db *sql.DB,
-	wf store.WorkforceScopeResolver, actor store.StoreActor,
+	actor store.StoreActor,
 	input CreateEscalationInput,
 	mutation MutationContext,
 ) (Escalation, error) {
@@ -362,20 +375,8 @@ func CreateGovernedEscalationIdempotent(
 		return Escalation{}, err
 	}
 	input.Description = strings.TrimSpace(input.Description)
-	if err := AuthorizeStore(ctx, db, wf, actor, input.StoreID); err != nil {
+	if err := AuthorizeStore(ctx, db, actor, input.StoreID); err != nil {
 		return Escalation{}, err
-	}
-	if strings.TrimSpace(input.VisitID) != "" {
-		visit, err := GetVisit(ctx, db, input.VisitID)
-		if err != nil {
-			return Escalation{}, err
-		}
-		if visit.StoreID != input.StoreID {
-			return Escalation{}, ErrInvalid
-		}
-		if actor.Role != "operator" && visit.FieldAgentID != actor.ID {
-			return Escalation{}, ErrForbidden
-		}
 	}
 
 	tx, err := db.BeginTx(ctx, nil)
@@ -391,6 +392,11 @@ func CreateGovernedEscalationIdempotent(
 	}
 	if found {
 		return replay, nil
+	}
+	if strings.TrimSpace(input.VisitID) != "" {
+		if err := lockGovernedEscalationVisitTx(ctx, tx, actor, input); err != nil {
+			return Escalation{}, err
+		}
 	}
 
 	created, err := insertGovernedEscalationTx(ctx, tx, input, mutation)

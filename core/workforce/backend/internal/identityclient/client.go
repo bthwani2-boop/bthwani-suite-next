@@ -13,6 +13,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	workforceauth "workforce-api/internal/auth"
 )
 
 // actorSearchPageSize is the page size requested from identity's keyset-paginated
@@ -35,37 +37,36 @@ var (
 )
 
 type Client struct {
-	baseURL           string
-	serviceToken      string
-	operatorContextID string
-	http              *http.Client
+	baseURL      string
+	serviceToken string
+	http         *http.Client
 }
 
-// NewClient requires an explicit trusted operator context. Runtime callers
-// must resolve it once at composition time; individual Workforce operations
-// cannot silently substitute or override it.
-func NewClient(baseURL, serviceToken, operatorContextID string) *Client {
+// NewClient configures the Identity service endpoint. Operator context is
+// request-scoped and must be bound from the authenticated Identity response;
+// it is never held as process state.
+func NewClient(baseURL, serviceToken string) *Client {
 	return &Client{
-		baseURL:           strings.TrimRight(baseURL, "/"),
-		serviceToken:      serviceToken,
-		operatorContextID: strings.TrimSpace(operatorContextID),
-		http:              &http.Client{Timeout: 10 * time.Second},
+		baseURL:      strings.TrimRight(baseURL, "/"),
+		serviceToken: serviceToken,
+		http:         &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
 func (c *Client) Configured() bool {
-	return c != nil && c.baseURL != "" && c.serviceToken != "" && c.operatorContextID != ""
+	return c != nil && c.baseURL != "" && c.serviceToken != ""
 }
 
-func (c *Client) trustedOperatorContext(requested string) (string, error) {
-	if c == nil || c.operatorContextID == "" {
-		return "", ErrUnavailable
-	}
-	requested = strings.TrimSpace(requested)
-	if requested != "" && requested != c.operatorContextID {
+func trustedOperatorContext(ctx context.Context, requested string) (string, error) {
+	operatorContextID, ok := workforceauth.OperatorContextIDFromContext(ctx)
+	if !ok {
 		return "", ErrOperatorContextForbidden
 	}
-	return c.operatorContextID, nil
+	requested = strings.TrimSpace(requested)
+	if requested != "" && requested != operatorContextID {
+		return "", ErrOperatorContextForbidden
+	}
+	return operatorContextID, nil
 }
 
 type ActorView struct {
@@ -75,6 +76,10 @@ type ActorView struct {
 	Roles     []string `json:"roles"`
 	Version   int      `json:"version"`
 	Status    string   `json:"status"`
+	// Created is true only when this Provision call created the actor. A
+	// replayed provision is intentionally false so callers can compensate only
+	// resources they actually created.
+	Created bool `json:"created,omitempty"`
 }
 
 // IsActive derives lifecycle truth exclusively from Identity's canonical
@@ -114,7 +119,7 @@ type ActivationMetadata struct {
 
 func (c *Client) Provision(ctx context.Context, input ProvisionInput) (ActorView, error) {
 	var view ActorView
-	operatorContextID, err := c.trustedOperatorContext(input.OperatorContextID)
+	operatorContextID, err := trustedOperatorContext(ctx, input.OperatorContextID)
 	if err != nil {
 		return view, err
 	}
@@ -127,6 +132,55 @@ func (c *Client) Actor(ctx context.Context, actorID string) (ActorView, error) {
 	var view ActorView
 	err := c.do(ctx, http.MethodGet, "/internal/actors/"+url.PathEscape(actorID), nil, &view, nil)
 	return view, err
+}
+
+// VerifyActorInOperatorContext turns the caller's context assertion into a
+// verified Identity relationship before Workforce uses it as a database
+// boundary. The assertion is transport input; Identity remains the authority
+// for the actor-to-context relationship.
+func (c *Client) VerifyActorInOperatorContext(ctx context.Context, actorID, operatorContextID string) error {
+	return c.verifyActorInOperatorContext(ctx, actorID, operatorContextID, "")
+}
+
+// VerifyActorRoleInOperatorContext attests both the actor/context boundary and
+// the Identity-owned role before Workforce exposes role-scoped assignments.
+func (c *Client) VerifyActorRoleInOperatorContext(ctx context.Context, actorID, operatorContextID, expectedRole string) error {
+	return c.verifyActorInOperatorContext(ctx, actorID, operatorContextID, expectedRole)
+}
+
+func (c *Client) verifyActorInOperatorContext(ctx context.Context, actorID, operatorContextID, expectedRole string) error {
+	actorID = strings.TrimSpace(actorID)
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	expectedRole = strings.TrimSpace(expectedRole)
+	if actorID == "" || operatorContextID == "" {
+		return ErrOperatorContextForbidden
+	}
+	if !c.Configured() {
+		return ErrUnavailable
+	}
+
+	view, err := c.Actor(workforceauth.WithOperatorContext(ctx, operatorContextID), actorID)
+	if errors.Is(err, ErrActorNotFound) {
+		// Identity deliberately does not distinguish a missing actor from an
+		// actor outside the requested context. Both are a failed boundary
+		// assertion to Workforce.
+		return ErrOperatorContextForbidden
+	}
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(view.ActorID) != actorID {
+		return ErrOperatorContextForbidden
+	}
+	if expectedRole != "" {
+		for _, role := range view.Roles {
+			if strings.EqualFold(strings.TrimSpace(role), expectedRole) {
+				return nil
+			}
+		}
+		return ErrOperatorContextForbidden
+	}
+	return nil
 }
 
 // SearchActors performs a keyset-paginated actor search against identity. An empty
@@ -217,6 +271,10 @@ func (c *Client) do(ctx context.Context, method, path string, body, target any, 
 	if !c.Configured() {
 		return ErrUnavailable
 	}
+	operatorContextID, ok := workforceauth.OperatorContextIDFromContext(ctx)
+	if !ok {
+		return ErrOperatorContextForbidden
+	}
 	var reader *bytes.Reader
 	if body != nil {
 		encoded, err := json.Marshal(body)
@@ -237,7 +295,7 @@ func (c *Client) do(ctx context.Context, method, path string, body, target any, 
 	}
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "workforce")
-	req.Header.Set("X-Operator-Context-ID", c.operatorContextID)
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}

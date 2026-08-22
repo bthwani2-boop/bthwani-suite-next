@@ -26,7 +26,6 @@ x-bthwani-contracts:
   clientAddress: ./dsh.client-address.openapi.yaml
   clientAddressPrivacy: ./dsh.client-address-privacy.openapi.yaml
   clientMap: ./dsh.client-map.openapi.yaml
-  codCustody: ./dsh.cod-custody.openapi.yaml
   deliveryExceptions: ./dsh.delivery-exceptions.openapi.yaml
   deliveryProofCompletion: ./dsh.delivery-proof-completion.openapi.yaml
   deliveryProofMedia: ./dsh.delivery-proof-media.openapi.yaml
@@ -62,12 +61,20 @@ x-bthwani-overlays:
 paths:
   /dsh/field/me/finance/wallet:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1me~1finance~1wallet"
+  /dsh/field/me/readiness:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1me~1readiness"
   /dsh/field/me/finance/commissions:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1me~1finance~1commissions"
   /dsh/field/me/finance/ledger-entries:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1me~1finance~1ledger-entries"
   /dsh/field/me/finance/payout-requests:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1me~1finance~1payout-requests"
+  /dsh/control-panel/finance/payout-destinations/{actorType}/{actorId}:
+    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1payout-destinations~1{actorType}~1{actorId}"
+  /dsh/control-panel/finance/payout-destinations/{actorType}/{actorId}/verify:
+    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1payout-destinations~1{actorType}~1{actorId}~1verify"
+  /dsh/control-panel/finance/payout-destinations/{actorType}/{actorId}/deactivate:
+    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1payout-destinations~1{actorType}~1{actorId}~1deactivate"
   /dsh/health:
     $ref: "./paths/system.paths.yaml#/~1dsh~1health"
   /dsh/readiness:
@@ -102,6 +109,12 @@ paths:
     $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1courier-settings"
   /dsh/partner/stores/{storeId}/coverage-zones:
     $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1coverage-zones"
+  /dsh/partner/stores/{storeId}/team:
+    $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1team"
+  /dsh/partner/stores/{storeId}/team/invites:
+    $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1team~1invites"
+  /dsh/partner/stores/{storeId}/team/members/{memberId}/action:
+    $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1stores~1{storeId}~1team~1members~1{memberId}~1action"
   /dsh/field/stores/{storeId}/verifications:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1stores~1{storeId}~1verifications"
   /dsh/captain/stores/{storeId}/pickup-readiness:
@@ -112,6 +125,8 @@ paths:
     $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1diagnostics~1stores~1{storeId}"
   /dsh/operator/stores/{storeId}/audit:
     $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1stores~1{storeId}~1audit"
+  /dsh/operator/marketing/stores/{storeId}/publication:
+    $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1marketing~1stores~1{storeId}~1publication"
   /dsh/stores/{storeId}/catalog:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1stores~1{storeId}~1catalog"
   /dsh/public/media/{assetId}/{variant}:
@@ -132,8 +147,6 @@ paths:
     $ref: "./dsh.catalog-governance.openapi.yaml#/paths/~1dsh~1operator~1catalog~1master-products~1{productId}~1relationships"
   /dsh/operator/catalog/product-proposals:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1product-proposals"
-  /dsh/operator/catalog/product-proposals/{proposalId}/decision:
-    $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1product-proposals~1{proposalId}~1decision"
   /dsh/operator/catalog/product-proposals/{proposalId}/transition:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1operator~1catalog~1product-proposals~1{proposalId}~1transition"
   /dsh/operator/catalog/platform-policies:
@@ -246,6 +259,8 @@ paths:
     $ref: "./paths/dispatch.paths.yaml#/~1dsh~1operator~1dispatch~1assignments"
   /dsh/captain/dispatch/assignments:
     $ref: "./paths/dispatch.paths.yaml#/~1dsh~1captain~1dispatch~1assignments"
+  /dsh/captain/dispatch/availability:
+    $ref: "./paths/dispatch.paths.yaml#/~1dsh~1captain~1dispatch~1availability"
   /dsh/captain/dispatch/assignments/{assignmentId}/accept:
     $ref: "./paths/dispatch.paths.yaml#/~1dsh~1captain~1dispatch~1assignments~1{assignmentId}~1accept"
   /dsh/captain/dispatch/assignments/{assignmentId}/decline:
@@ -288,8 +303,6 @@ paths:
     $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1master-products~1{productId}"
   /dsh/catalog/proposals:
     $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1proposals"
-  /dsh/catalog/proposals/{proposalId}/decision:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1proposals~1{proposalId}~1decision"
   /dsh/catalog/proposals/{proposalId}/transitions:
     $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1catalog~1proposals~1{proposalId}~1transitions"
   /dsh/catalog/policies:
@@ -324,6 +337,18 @@ paths:
     $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1payout-requests"
   /dsh/captain/me/finance/wallet:
     $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1wallet"
+  /dsh/captain/me/finance/topup-sessions:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1topup-sessions"
+  /dsh/captain/me/finance/topup-sessions/{topUpSessionId}:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1topup-sessions~1{topUpSessionId}"
+  /dsh/captain/me/finance/topup-sessions/{topUpSessionId}/{operation}:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1topup-sessions~1{topUpSessionId}~1{operation}"
+  /dsh/captain/me/finance/collateral:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1collateral"
+  /dsh/captain/me/finance/collateral/allocate:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1collateral~1allocate"
+  /dsh/captain/me/finance/collateral/release:
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1collateral~1release"
   /dsh/client/me/finance/ledger-entries:
     $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1client~1me~1finance~1ledger-entries"
   /dsh/client/me/finance/wallet:
@@ -342,30 +367,12 @@ paths:
     $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1wallets~1{actorType}~1{actorId}~1ledger-entries"
   /dsh/captain/me/finance/payout-destination:
     $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1payout-destination"
-  /dsh/captain/me/finance/payout-destination/deactivate:
-    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1captain~1me~1finance~1payout-destination~1deactivate"
   /dsh/field/me/finance/payout-destination:
     $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1field~1me~1finance~1payout-destination"
-  /dsh/field/me/finance/payout-destination/deactivate:
-    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1field~1me~1finance~1payout-destination~1deactivate"
   /dsh/partner/me/finance/payout-destination:
     $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1payout-destination"
-  /dsh/partner/me/finance/payout-destination/deactivate:
-    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1payout-destination~1deactivate"
   /dsh/control-panel/finance/payout-requests/{payoutId}/audit:
     $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1audit"
-  /dsh/control-panel/finance/payout-requests/{payoutId}/reconcile:
-    $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1reconcile"
-  /dsh/control-panel/finance/cod-reconciliation-cases:
-    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases"
-  /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/assign:
-    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases~1{caseId}~1assign"
-  /dsh/control-panel/finance/cod-reconciliation-cases/{caseId}/resolve:
-    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1cod-reconciliation-cases~1{caseId}~1resolve"
-  /dsh/partner/me/finance/cod-records:
-    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1cod-records"
-  /dsh/partner/me/finance/cod-records/{recordId}/remit:
-    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1partner~1me~1finance~1cod-records~1{recordId}~1remit"
   /dsh/control-panel/finance/commissions/{commissionId}:
     $ref: "./dsh.settlements-commissions.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1commissions~1{commissionId}"
   /dsh/control-panel/finance/commissions/{commissionId}/adjust:
@@ -406,8 +413,6 @@ paths:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1ledger~1entries"
   /dsh/control-panel/finance/financial-summary:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1financial-summary"
-  /dsh/control-panel/finance/cod-records:
-    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1cod-records"
   /dsh/control-panel/finance/commissions:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1commissions"
   /dsh/control-panel/finance/payout-requests:
@@ -416,22 +421,12 @@ paths:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1approve"
   /dsh/control-panel/finance/payout-requests/{payoutId}/reject:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1reject"
-  /dsh/control-panel/finance/payout-requests/{payoutId}/process:
-    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1process"
   /dsh/control-panel/finance/payout-requests/{payoutId}/complete:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1complete"
-  /dsh/control-panel/finance/payout-requests/{payoutId}/fail:
-    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1payout-requests~1{payoutId}~1fail"
   /dsh/control-panel/finance/settlements/from-delivered-orders:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1settlements~1from-delivered-orders"
   /dsh/control-panel/finance/settlement-policies/{partnerId}:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1settlement-policies~1{partnerId}"
-  /dsh/captain/finance/cod-records:
-    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1captain~1finance~1cod-records"
-  /dsh/captain/finance/cod-records/{recordId}/collect:
-    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1captain~1finance~1cod-records~1{recordId}~1collect"
-  /dsh/captain/finance/cod-records/{recordId}/remit:
-    $ref: "./dsh.cod-custody.openapi.yaml#/paths/~1dsh~1captain~1finance~1cod-records~1{recordId}~1remit"
   /dsh/captain/finance/commissions:
     $ref: "./paths/captain.paths.yaml#/~1dsh~1captain~1finance~1commissions"
   /dsh/captain/finance/payouts:
@@ -442,10 +437,6 @@ paths:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1finance~1wallet"
   /dsh/field/finance/payouts:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1finance~1payouts"
-  /dsh/field/finance/payout-destinations:
-    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1finance~1payout-destinations"
-  /dsh/field/finance/payout-destinations/{destinationId}:
-    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1finance~1payout-destinations~1{destinationId}"
   /dsh/control-panel/finance/reconciliation-cases:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1reconciliation-cases"
   /dsh/control-panel/finance/reconciliation-cases/{caseId}:
@@ -466,6 +457,42 @@ paths:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1stores~1{storeId}~1visits"
   /dsh/field/work-queue:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1work-queue"
+  /dsh/field/mutations/{operation}/{idempotencyKey}:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1mutations~1{operation}~1{idempotencyKey}"
+  /dsh/operator/field-onboarding-assignments:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1operator~1field-onboarding-assignments"
+  /dsh/operator/field-onboarding/workload:
+    $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1field-onboarding~1workload"
+  /dsh/operator/partners/{partnerId}/collaboration:
+    $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1partners~1{partnerId}~1collaboration"
+  /dsh/operator/partners/{partnerId}/collaboration/messages:
+    $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1partners~1{partnerId}~1collaboration~1messages"
+  /dsh/operator/partners/{partnerId}/collaboration/change-requests:
+    $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1partners~1{partnerId}~1collaboration~1change-requests"
+  /dsh/operator/partners/{partnerId}/collaboration/read:
+    $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1partners~1{partnerId}~1collaboration~1read"
+  /dsh/operator/field-onboarding-assignments/{assignmentId}/reassign:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1operator~1field-onboarding-assignments~1{assignmentId}~1reassign"
+  /dsh/operator/field-onboarding-assignments/{assignmentId}/cancel:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1operator~1field-onboarding-assignments~1{assignmentId}~1cancel"
+  /dsh/field/onboarding-assignments:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1onboarding-assignments"
+  /dsh/field/onboarding-assignments/{assignmentId}:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1onboarding-assignments~1{assignmentId}"
+  /dsh/field/onboarding-assignments/{assignmentId}/open:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1onboarding-assignments~1{assignmentId}~1open"
+  /dsh/field/onboarding-assignments/{assignmentId}/draft:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1onboarding-assignments~1{assignmentId}~1draft"
+  /dsh/field/onboarding-assignments/{assignmentId}/draft/{partnerId}:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1onboarding-assignments~1{assignmentId}~1draft~1{partnerId}"
+  /dsh/field/onboarding/workload:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1onboarding~1workload"
+  /dsh/field/partners/{partnerId}/collaboration:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1collaboration"
+  /dsh/field/partners/{partnerId}/collaboration/messages:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1collaboration~1messages"
+  /dsh/field/partners/{partnerId}/collaboration/read:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1collaboration~1read"
   /dsh/field/visits/{visitId}/complete:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1visits~1{visitId}~1complete"
   /dsh/field/visits/{visitId}/checks:
@@ -474,6 +501,8 @@ paths:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1stores~1{storeId}~1escalations"
   /dsh/operator/field-readiness/escalations:
     $ref: "./paths/field.paths.yaml#/~1dsh~1operator~1field-readiness~1escalations"
+  /dsh/operator/field-readiness/checklist-policies/{businessVerticalId}:
+    $ref: "./paths/field.paths.yaml#/~1dsh~1operator~1field-readiness~1checklist-policies~1{businessVerticalId}"
   /dsh/operator/field-readiness/escalations/{escalationId}:
     $ref: "./paths/field.paths.yaml#/~1dsh~1operator~1field-readiness~1escalations~1{escalationId}"
   /dsh/partner/stores/{storeId}/onboarding-status:
@@ -488,10 +517,6 @@ paths:
     $ref: "./paths/support.paths.yaml#/~1dsh~1operator~1support~1tickets"
   /dsh/operator/support/tickets/{ticketId}:
     $ref: "./dsh.support-governance.openapi.yaml#/paths/~1dsh~1operator~1support~1tickets~1{ticketId}"
-  /dsh/operator/incidents:
-    $ref: "./paths/support.paths.yaml#/~1dsh~1operator~1incidents"
-  /dsh/operator/incidents/{incidentId}:
-    $ref: "./paths/support.paths.yaml#/~1dsh~1operator~1incidents~1{incidentId}"
   /dsh/operator/analytics/platform:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1platform"
   /dsh/operator/analytics/orders:
@@ -548,6 +573,8 @@ paths:
     $ref: "./paths/platform-policies.paths.yaml#/~1dsh~1operator~1platform~1operational-profiles~1{zoneId}~1delivery-modes~1{fulfillmentMode}"
   /dsh/platform/operational-policy/evaluate:
     $ref: "./paths/platform-policies.paths.yaml#/~1dsh~1platform~1operational-policy~1evaluate"
+  /dsh/operator/platform/operational-policy/evaluate:
+    $ref: "./paths/platform-policies.paths.yaml#/~1dsh~1operator~1platform~1operational-policy~1evaluate"
   /dsh/operator/platform/operational-policy/audit:
     $ref: "./paths/platform-policies.paths.yaml#/~1dsh~1operator~1platform~1operational-policy~1audit"
   /dsh/operator/platform/operational-policy/audit/{eventId}/rollback:
@@ -738,22 +765,6 @@ paths:
     $ref: "./paths/preparation-handoff.paths.yaml#/~1dsh~1operator~1order-preparation~1alerts~1{alertId}~1acknowledge"
   /dsh/operator/pickups/{orderId}/reschedule:
     $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1pickups~1{orderId}~1reschedule"
-  /dsh/operator/platform/change-sets:
-    $ref: "./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1change-sets"
-  /dsh/operator/platform/change-sets/{changesetId}:
-    $ref: "./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}"
-  /dsh/operator/platform/change-sets/{changesetId}/submit:
-    $ref: "./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1submit"
-  /dsh/operator/platform/change-sets/{changesetId}/approve:
-    $ref: "./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1approve"
-  /dsh/operator/platform/change-sets/{changesetId}/apply:
-    $ref: "./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1apply"
-  /dsh/operator/platform/change-sets/{changesetId}/reject:
-    $ref: "./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1change-sets~1{changesetId}~1reject"
-  /dsh/operator/platform/providers:
-    $ref: "./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1providers"
-  /dsh/operator/platform/providers/{providerId}/status:
-    $ref: "./dsh.platform-policies.openapi.yaml#/paths/~1dsh~1operator~1platform~1providers~1{providerId}~1status"
   /dsh/client/addresses/{addressId}:
     $ref: "./dsh.client-address.openapi.yaml#/paths/~1dsh~1client~1addresses~1{addressId}"
   /dsh/client/addresses:
@@ -934,6 +945,10 @@ paths:
     $ref: "./dsh.home-marketing-events.openapi.yaml#/paths/~1dsh~1home-discovery~1events"
   /dsh/internal/workforce/availability-projections:
     $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1internal~1workforce~1availability-projections"
+  /dsh/internal/workforce/captains/{captainId}/financial-eligibility:
+    $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1internal~1workforce~1captains~1{captainId}~1financial-eligibility"
+  /dsh/internal/workforce/provider-media-refs/validate:
+    $ref: "./dsh.runtime-extensions.openapi.yaml#/paths/~1dsh~1internal~1workforce~1provider-media-refs~1validate"
   /dsh/operator/stores/{storeId}/assortment/{masterProductId}/pause:
     $ref: "./dsh.catalog-governance.openapi.yaml#/paths/~1dsh~1operator~1stores~1{storeId}~1assortment~1{masterProductId}~1pause"
   /dsh/operator/stores/{storeId}/assortment/{masterProductId}/resume:
@@ -1184,6 +1199,8 @@ components:
       $ref: "./components/responses.yaml#/NotFound"
     Conflict:
       $ref: "./components/responses.yaml#/Conflict"
+    InternalError:
+      $ref: "./components/responses.yaml#/InternalError"
     ServiceUnavailable:
       $ref: "./components/responses.yaml#/ServiceUnavailable"
   schemas:
@@ -1247,6 +1264,14 @@ components:
       $ref: "./components/schemas/store.schemas.yaml#/OperatorStoreGovernanceRequest"
     DshStoreActionResponse:
       $ref: "./components/schemas/store.schemas.yaml#/DshStoreActionResponse"
+    StorePublicationDiagnostics:
+      $ref: "./components/schemas/store.schemas.yaml#/StorePublicationDiagnostics"
+    StorePublicationOverridePolicy:
+      $ref: "./components/schemas/store.schemas.yaml#/StorePublicationOverridePolicy"
+    StorePublicationWorkspaceResponse:
+      $ref: "./components/schemas/store.schemas.yaml#/StorePublicationWorkspaceResponse"
+    StorePublicationRequest:
+      $ref: "./components/schemas/store.schemas.yaml#/StorePublicationRequest"
     DshStoreAuditEvent:
       $ref: "./components/schemas/store.schemas.yaml#/DshStoreAuditEvent"
     DshStoreAuditResponse:
@@ -1335,6 +1360,8 @@ components:
       $ref: "./components/schemas/checkout.schemas.yaml#/DshCreateCheckoutIntentRequest"
     DshCheckoutIntentResponse:
       $ref: "./components/schemas/checkout.schemas.yaml#/DshCheckoutIntentResponse"
+    DshCheckoutCartVersionConflict:
+      $ref: "./components/schemas/checkout.schemas.yaml#/DshCheckoutCartVersionConflict"
     DshOperatorCheckoutIntentsResponse:
       $ref: "./components/schemas/checkout.schemas.yaml#/DshOperatorCheckoutIntentsResponse"
     DshOrderStatus:
@@ -1379,6 +1406,10 @@ components:
       $ref: "./components/schemas/dispatch.schemas.yaml#/DshPartnerDispatchReferenceResponse"
     DshDispatchAssignmentsResponse:
       $ref: "./components/schemas/dispatch.schemas.yaml#/DshDispatchAssignmentsResponse"
+    DshCaptainAvailability:
+      $ref: "./components/schemas/dispatch.schemas.yaml#/DshCaptainAvailability"
+    DshSetCaptainAvailabilityRequest:
+      $ref: "./components/schemas/dispatch.schemas.yaml#/DshSetCaptainAvailabilityRequest"
     DshCreateAssignmentRequest:
       $ref: "./components/schemas/common.schemas.yaml#/DshCreateAssignmentRequest"
     DshDeclineAssignmentRequest:
@@ -1405,6 +1436,8 @@ components:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshEscalationCategory"
     DshFieldVisit:
       $ref: "./components/schemas/field.schemas.yaml#/DshFieldVisit"
+    DshFieldOperationalReadiness:
+      $ref: "./components/schemas/field.schemas.yaml#/DshFieldOperationalReadiness"
     DshFieldVisitResponse:
       $ref: "./components/schemas/field.schemas.yaml#/DshFieldVisitResponse"
     DshFieldVisitsResponse:
@@ -1419,6 +1452,14 @@ components:
       $ref: "./components/schemas/system.schemas.yaml#/DshReadinessChecksResponse"
     DshUpsertReadinessCheckRequest:
       $ref: "./components/schemas/system.schemas.yaml#/DshUpsertReadinessCheckRequest"
+    DshReadinessChecklistPolicyItem:
+      $ref: "./components/schemas/system.schemas.yaml#/DshReadinessChecklistPolicyItem"
+    DshReadinessChecklistPolicy:
+      $ref: "./components/schemas/system.schemas.yaml#/DshReadinessChecklistPolicy"
+    DshReadinessChecklistPolicyResponse:
+      $ref: "./components/schemas/system.schemas.yaml#/DshReadinessChecklistPolicyResponse"
+    DshReplaceReadinessChecklistPolicyRequest:
+      $ref: "./components/schemas/system.schemas.yaml#/DshReplaceReadinessChecklistPolicyRequest"
     DshReadinessEscalation:
       $ref: "./components/schemas/system.schemas.yaml#/DshReadinessEscalation"
     DshEscalationResponse:
@@ -1427,6 +1468,18 @@ components:
       $ref: "./components/schemas/common.schemas.yaml#/DshEscalationsResponse"
     DshFieldWorkQueueResponse:
       $ref: "./components/schemas/field.schemas.yaml#/DshFieldWorkQueueResponse"
+    DshFieldOnboardingAssignment:
+      $ref: "./components/schemas/field.schemas.yaml#/DshFieldOnboardingAssignment"
+    DshFieldOnboardingAssignmentListResponse:
+      $ref: "./components/schemas/field.schemas.yaml#/DshFieldOnboardingAssignmentListResponse"
+    DshFieldOnboardingAssignmentResponse:
+      $ref: "./components/schemas/field.schemas.yaml#/DshFieldOnboardingAssignmentResponse"
+    DshCreateFieldOnboardingAssignmentRequest:
+      $ref: "./components/schemas/field.schemas.yaml#/DshCreateFieldOnboardingAssignmentRequest"
+    DshFieldOnboardingAssignmentTransitionRequest:
+      $ref: "./components/schemas/field.schemas.yaml#/DshFieldOnboardingAssignmentTransitionRequest"
+    DshReassignFieldOnboardingAssignmentRequest:
+      $ref: "./components/schemas/field.schemas.yaml#/DshReassignFieldOnboardingAssignmentRequest"
     DshCreateEscalationRequest:
       $ref: "./components/schemas/common.schemas.yaml#/DshCreateEscalationRequest"
     DshUpdateEscalationRequest:
@@ -1485,6 +1538,22 @@ components:
       $ref: "./components/schemas/common.schemas.yaml#/DshCreateIncidentRequest"
     DshUpdateIncidentRequest:
       $ref: "./components/schemas/common.schemas.yaml#/DshUpdateIncidentRequest"
+    DshOnboardingCollaborationThread:
+      $ref: "./components/schemas/support.schemas.yaml#/DshOnboardingCollaborationThread"
+    DshOnboardingCollaborationMessage:
+      $ref: "./components/schemas/support.schemas.yaml#/DshOnboardingCollaborationMessage"
+    DshOnboardingChangeRequest:
+      $ref: "./components/schemas/support.schemas.yaml#/DshOnboardingChangeRequest"
+    DshOnboardingCollaborationResponse:
+      $ref: "./components/schemas/support.schemas.yaml#/DshOnboardingCollaborationResponse"
+    DshOnboardingCollaborationMessageRequest:
+      $ref: "./components/schemas/support.schemas.yaml#/DshOnboardingCollaborationMessageRequest"
+    DshOnboardingChangeRequestRequest:
+      $ref: "./components/schemas/support.schemas.yaml#/DshOnboardingChangeRequestRequest"
+    DshOnboardingWorkloadItem:
+      $ref: "./components/schemas/support.schemas.yaml#/DshOnboardingWorkloadItem"
+    DshOnboardingWorkloadResponse:
+      $ref: "./components/schemas/support.schemas.yaml#/DshOnboardingWorkloadResponse"
     DshPlatformKpisResponse:
       $ref: "./components/schemas/common.schemas.yaml#/DshPlatformKpisResponse"
     DshOrderStatusCount:

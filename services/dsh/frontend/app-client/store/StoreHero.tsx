@@ -25,6 +25,7 @@ export type StoreHeroProps = {
   readonly name: string;
   readonly locationLabel?: string | undefined;
   readonly isOpen?: boolean | undefined;
+  readonly operatingHours?: string | undefined;
   readonly hasBthwaniPro?: boolean | undefined;
   readonly distanceLabel?: string | undefined;
   readonly deliveryTimeLabel?: string | undefined;
@@ -46,6 +47,7 @@ export function StoreHero({
   name,
   locationLabel,
   isOpen = true,
+  operatingHours,
   hasBthwaniPro = false,
   distanceLabel,
   deliveryTimeLabel,
@@ -236,6 +238,28 @@ export function StoreHero({
                     {isOpen ? 'مفتوح الآن' : 'مغلق الآن'}
                   </Text>
                 </View>
+
+                {operatingHours ? (
+                  <View
+                    style={[
+                      styles.heroStatusBadge,
+                      isRTL && styles.rowReverse,
+                      {
+                        backgroundColor: alpha(colorPalette.black, 0.04),
+                        borderColor: alpha(colorPalette.black, 0.08),
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.heroStatusText,
+                        { color: secondaryText },
+                      ]}
+                    >
+                      🕒 {operatingHours}
+                    </Text>
+                  </View>
+                ) : null}
 
                 {contactNumber ? (
                   <View

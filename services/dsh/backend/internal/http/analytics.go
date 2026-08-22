@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"strings"
 
 	"dsh-api/internal/analytics"
 	"dsh-api/internal/store"
@@ -117,8 +118,17 @@ func (s *protectedStoreServer) handleStoreAnalytics(w http.ResponseWriter, r *ht
 
 // GET /dsh/partner/analytics/performance
 func (s *protectedStoreServer) handlePartnerPerformance(w http.ResponseWriter, r *http.Request) {
-	_, storeID, ok := s.partnerStore(w, r)
+	actor, ok := s.requireActor(w, r, "partner")
 	if !ok {
+		return
+	}
+	storeID := strings.TrimSpace(r.URL.Query().Get("storeId"))
+	if storeID == "" {
+		store.SendError(w, http.StatusBadRequest, "STORE_ID_REQUIRED", "storeId is required")
+		return
+	}
+	if _, _, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, storeID); err != nil {
+		s.writeStoreError(w, err)
 		return
 	}
 	period, ok := namedAnalyticsPeriod(w, r)

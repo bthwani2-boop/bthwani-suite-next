@@ -1,13 +1,22 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
 
 const httpClient = createDshHttpClient(resolveDshApiBaseUrl(), "partner-fleet");
 
 function request<T>(
   path: string,
-  options: { readonly method?: "GET" | "POST"; readonly body?: unknown } = {},
+    options: {
+      readonly method?: "GET" | "POST";
+      readonly body?: unknown;
+      readonly idempotencyKey?: string;
+      readonly correlationId?: string;
+    } = {},
 ): Promise<T> {
-  return httpClient.request<T>(path, options);
+  return httpClient.request<T>(path, {
+    ...options,
+    idempotencyKey: options.method === "POST" ? options.idempotencyKey ?? corrId("partner-fleet") : undefined,
+    correlationId: options.correlationId,
+  });
 }
 
 export type DshCourierConnectionStatus = "pending" | "redeemed" | "revoked" | "expired";
@@ -38,7 +47,7 @@ export type DshCaptainFleetMembership = {
   readonly storeId: string;
   readonly storeName: string;
   readonly courierName: string;
-  readonly status: string;
+  readonly status: "invited" | "active" | "suspended";
   readonly branchAssignment: string;
   readonly deliveryAssignment: string;
   readonly version: number;
@@ -48,7 +57,7 @@ export type DshOperatorStoreFleetMember = {
   readonly teamMemberId: string;
   readonly storeId: string;
   readonly courierName: string;
-  readonly status: string;
+  readonly status: "invited" | "active" | "suspended";
   readonly captainActorId?: string;
   readonly branchAssignment: string;
   readonly deliveryAssignment: string;

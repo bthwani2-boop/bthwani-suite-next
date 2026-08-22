@@ -66,18 +66,22 @@ export function useOperatorAnalyticsDashboardController(authKind = "unauthentica
   return { platformState, orderState, deliveryState, supportState, storeState, reload };
 }
 
-function usePartnerPerformanceController(authKind = "unauthenticated", period: DshAnalyticsPeriod = "today") {
+function usePartnerPerformanceController(
+  authKind = "unauthenticated",
+  period: DshAnalyticsPeriod = "today",
+  storeId = "",
+) {
   const [state, setState] = useState(partnerPerfIdle());
 
   const load = useCallback(async (p: DshAnalyticsPeriod) => {
     setState(partnerPerfLoading());
     try {
-      const data = await fetchPartnerPerformance(p);
+      const data = await fetchPartnerPerformance(p, storeId);
       setState(partnerPerfSuccess(data));
     } catch (err) {
       setState(partnerPerfError(resolveMessage(err)));
     }
-  }, []);
+  }, [storeId]);
 
   useEffect(() => {
     if (isAuthenticated(authKind)) void load(period);

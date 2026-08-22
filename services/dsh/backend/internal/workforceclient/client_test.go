@@ -3,6 +3,7 @@ package workforceclient
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -38,6 +39,21 @@ func TestGetActorScopesUsesTrustedServiceHeaders(t *testing.T) {
 	}
 }
 
+func TestGetActorScopesRejectsMismatchedCanonicalReadback(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(ActorScopes{
+			ActorID: "different-actor", Role: "field", OperatorContextID: "trusted-context",
+		})
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "dsh-workforce-token")
+	_, err := client.GetActorScopes(context.Background(), "field-1", "trusted-context", "field")
+	if !errors.Is(err, ErrScopeReadbackMismatch) {
+		t.Fatalf("expected canonical readback mismatch, got %v", err)
+	}
+}
+
 func TestGetActorScopesFailsClosedWithoutTrustedInputs(t *testing.T) {
 	client := NewClient("", "")
 	if _, err := client.GetActorScopes(context.Background(), "field-1", "context", "field"); err == nil {
@@ -46,5 +62,17 @@ func TestGetActorScopesFailsClosedWithoutTrustedInputs(t *testing.T) {
 	configured := NewClient("http://workforce.invalid", "token")
 	if _, err := configured.GetActorScopes(context.Background(), "field-1", "", "field"); err == nil {
 		t.Fatal("missing trusted operator context must fail closed")
+	}
+}
+
+func TestGetActorScopesMapsForbiddenToActorBoundaryError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "token")
+	if err := client.VerifyActorInOperatorContext(context.Background(), "field-1", "context-main", "field"); !errors.Is(err, ErrActorContextForbidden) {
+		t.Fatalf("expected actor boundary error, got %v", err)
 	}
 }

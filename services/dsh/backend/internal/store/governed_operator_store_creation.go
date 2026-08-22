@@ -127,14 +127,15 @@ func CreateGovernedStoreForOperatorContextIdempotent(
 
 	var partnerStatus string
 	var ownerActorID string
+	var partnerVerticalID string
 	err = tx.QueryRowContext(ctx, `
-		SELECT activation_status, COALESCE(owner_actor_id, '')
+		SELECT activation_status, COALESCE(owner_actor_id, ''), COALESCE(business_vertical_id, '')
 		FROM dsh_partners
 		WHERE id = $1
 		  AND operator_context_id = $2
 		FOR SHARE`,
 		input.PartnerID, operatorContextID,
-	).Scan(&partnerStatus, &ownerActorID)
+	).Scan(&partnerStatus, &ownerActorID, &partnerVerticalID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return DshStoreRow{}, false, ErrStoreCreationPartnerNotFound
 	}
@@ -143,6 +144,11 @@ func CreateGovernedStoreForOperatorContextIdempotent(
 	}
 	if !storepolicy.PartnerStatusAllowsStoreOwnership(partnerStatus) {
 		return DshStoreRow{}, false, ErrPartnerStoreOwnershipNotAllowed
+	}
+	if strings.TrimSpace(input.CatalogDomainID) == "" {
+		input.CatalogDomainID = partnerVerticalID
+	} else if partnerVerticalID != "" && strings.TrimSpace(input.CatalogDomainID) != partnerVerticalID {
+		return DshStoreRow{}, false, ErrStoreCreationInvalid
 	}
 
 	storeRow, err := CreateDraftStore(tx, input)

@@ -7,8 +7,8 @@ import { cleanupGoRouteExtractor, extractGoRoutes, routeKey } from "./lib/go-rou
 
 const guardId = "frontend-feature-binding-gate";
 const violations = [];
-const registryFile = "governance/guards/frontend-binding-registry.json";
-const schemaFile = "governance/guards/frontend-binding-registry.schema.json";
+const registryFile = "tools/verification/frontend-binding-registry.json";
+const schemaFile = "tools/verification/frontend-binding-registry.schema.json";
 const contractRegistryFile = "services/dsh/contracts/contract-registry.ts";
 const routerDir = "services/dsh/backend/internal/http";
 const sourceExtensions = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"];
@@ -113,12 +113,10 @@ function operationIds() {
 }
 
 function routeSet() {
-  const routes = new Set();
-  for (const name of fs.readdirSync(path.join(repoRoot, routerDir))) {
-    if (!name.endsWith(".go") || name.endsWith("_test.go")) continue;
-    for (const route of extractGoRoutes(`${routerDir}/${name}`)) routes.add(routeKey(route));
-  }
-  return routes;
+  // The Go extractor discovers the whole router package from its server entry
+  // point. A per-file loop repeats the same package parse for every router
+  // source file.
+  return new Set(extractGoRoutes(`${routerDir}/server.go`).map(routeKey));
 }
 
 function capabilityIds() {

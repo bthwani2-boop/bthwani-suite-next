@@ -33,6 +33,7 @@ func NewRouter(repository *identity.Repository) http.Handler {
 	mux.HandleFunc("POST /auth/introspect", s.introspect)
 	mux.HandleFunc("POST /internal/actors/provision", s.serviceOnly(s.provisionActor))
 	mux.HandleFunc("GET /internal/actors/search", s.serviceOnly(s.internalActorSearch))
+	mux.HandleFunc("DELETE /internal/actors/{actorId}", s.serviceOnly(s.internalActorDeprovision))
 	mux.HandleFunc("GET /internal/actors/{actorId}", s.serviceOnly(s.internalActorGet))
 	mux.HandleFunc("POST /internal/actors/{actorId}/deactivate", s.serviceOnly(s.internalActorDeactivate))
 	mux.HandleFunc("POST /internal/actors/{actorId}/reactivate", s.serviceOnly(s.internalActorReactivate))
@@ -40,6 +41,7 @@ func NewRouter(repository *identity.Repository) http.Handler {
 	mux.HandleFunc("POST /internal/actors/{actorId}/activations/reissue", s.serviceOnly(s.internalActorIssueActivation))
 	mux.HandleFunc("GET /internal/actors/{actorId}/activations/latest", s.serviceOnly(s.internalActorLatestActivation))
 	mux.HandleFunc("GET /internal/actors/{actorId}/sessions", s.serviceOnly(s.internalActorListSessions))
+	mux.HandleFunc("GET /internal/dsh/actors/{actorId}/sessions", s.dshServiceOnly(s.internalActorListSessions))
 	mux.HandleFunc("DELETE /internal/actors/{actorId}/sessions/{sessionId}", s.serviceOnly(s.internalActorRevokeSession))
 	mux.HandleFunc("DELETE /internal/actors/{actorId}/sessions", s.serviceOnly(s.internalActorRevokeAllSessions))
 	mux.HandleFunc("POST /internal/actors/{actorId}/activations/revoke", s.serviceOnly(s.internalActorRevokeActivations))
@@ -324,6 +326,19 @@ func (s *server) internalActorDeactivate(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if err := s.repository.SuspendActor(r.Context(), r.PathValue("actorId"), request.RequestedByActorID, request.Reason, request.CorrelationID); err != nil {
+		writeInternalActorError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *server) internalActorDeprovision(w http.ResponseWriter, r *http.Request) {
+	operatorContextID, ok := trustedOperatorContext(r)
+	if !ok {
+		sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "trusted operator context is unavailable")
+		return
+	}
+	if err := s.repository.DeprovisionActor(r.Context(), r.PathValue("actorId"), operatorContextID); err != nil {
 		writeInternalActorError(w, err)
 		return
 	}

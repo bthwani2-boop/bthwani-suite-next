@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { useIdentitySession } from '@bthwani/core-identity';
 import { Box, StateView } from '@bthwani/ui-kit';
 import {
   WebControlPanelDecisionRow,
@@ -8,11 +9,19 @@ import {
   WebControlPanelKpiStrip,
   WebControlPanelQueue,
 } from '@bthwani/ui-kit/web';
-import type { DshZone } from '../../shared/platform/platform-policies.types';
 import {
-  useAreaCapacityController,
+  fetchDshOperationalProfile,
+  fetchZoneServiceability,
+  upsertDshOperationalProfile,
   useZonesController,
-} from '../../shared/platform/use-platform-policies-controller';
+  type DshOperationalProfile,
+  type DshZone,
+  type DshZoneServiceability,
+} from '../../shared/platform';
+import {
+  CONTROL_PANEL_CAPABILITIES,
+  hasAllControlPanelPermissions,
+} from '../../shared/session/control-panel-permissions';
 import styles from '../shared/control-panel-surface.module.css';
 
 export type AreaCapacityScreenProps = { hubHref: string; subGroup?: string };
@@ -22,6 +31,16 @@ type CapacityForm = {
   maxCaptainsOnline: string;
   throttleThreshold: string;
 };
+
+type CapacityRuntime = {
+  profile: DshOperationalProfile;
+  serviceability: DshZoneServiceability;
+};
+
+type CapacityState =
+  | { kind: 'loading' }
+  | { kind: 'success'; data: CapacityRuntime }
+  | { kind: 'error'; message: string };
 
 const EMPTY_FORM: CapacityForm = {
   maxConcurrentOrders: '',
@@ -53,31 +72,69 @@ function parseUnitInterval(value: string, field: string): number {
   return parsed;
 }
 
+function messageFrom(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim()) return error.message;
+  return fallback;
+}
+
 function CapacityInspector({
   zone,
   onClose,
   onToggle,
+  canReadProfile,
+  canManageProfile,
+  canManageZone,
 }: {
   zone: DshZone;
   onClose: () => void;
-  onToggle: (zone: DshZone, nextActive: boolean) => Promise<void>;
+  onToggle: (zone: DshZone, nextActive: boolean) => Promise<boolean>;
+  canReadProfile: boolean;
+  canManageProfile: boolean;
+  canManageZone: boolean;
 }) {
-  const { state, reload, save } = useAreaCapacityController('authenticated', zone.id);
+  const [state, setState] = React.useState<CapacityState>({ kind: 'loading' });
   const [form, setForm] = React.useState<CapacityForm>(EMPTY_FORM);
   const [pendingAction, setPendingAction] = React.useState<'toggle' | 'save' | null>(null);
   const [feedback, setFeedback] = React.useState<string | null>(null);
 
+  const load = React.useCallback(async () => {
+    if (!canReadProfile) {
+      setState({
+        kind: 'error',
+        message: 'تحتاج صلاحيات قراءة المنطقة وSLA والسعة لعرض الملف التشغيلي الكانوني.',
+      });
+      return;
+    }
+    setState({ kind: 'loading' });
+    try {
+      const [{ profile }, serviceability] = await Promise.all([
+        fetchDshOperationalProfile(zone.id),
+        fetchZoneServiceability(zone.id),
+      ]);
+      setState({ kind: 'success', data: { profile, serviceability } });
+    } catch (error) {
+      setState({
+        kind: 'error',
+        message: messageFrom(error, 'تعذر تحميل الملف التشغيلي الكانوني للمنطقة.'),
+      });
+    }
+  }, [canReadProfile, zone.id]);
+
+  React.useEffect(() => {
+    void load();
+  }, [load]);
+
   React.useEffect(() => {
     if (state.kind !== 'success') return;
-    const capacityConfig = state.data.capacityConfig;
-    if (!capacityConfig) {
+    const capacity = state.data.profile.capacity;
+    if (!capacity.configured) {
       setForm(EMPTY_FORM);
       return;
     }
     setForm({
-      maxConcurrentOrders: String(capacityConfig.maxConcurrentOrders),
-      maxCaptainsOnline: String(capacityConfig.maxCaptainsOnline),
-      throttleThreshold: String(capacityConfig.throttleThreshold),
+      maxConcurrentOrders: String(capacity.maxConcurrentOrders ?? ''),
+      maxCaptainsOnline: String(capacity.maxCaptainsOnline ?? ''),
+      throttleThreshold: String(capacity.throttleThreshold ?? ''),
     });
   }, [state]);
 
@@ -87,35 +144,83 @@ function CapacityInspector({
   }, []);
 
   const handleSave = React.useCallback(async () => {
+    if (!canManageProfile) {
+      setFeedback('تحتاج صلاحيات إدارة SLA والسعة معًا لتعديل الملف التشغيلي.');
+      return;
+    }
+    if (state.kind !== 'success') return;
+
     setPendingAction('save');
     setFeedback(null);
     try {
-      await save({
-        maxConcurrentOrders: parsePositiveInteger(form.maxConcurrentOrders, 'أقصى الطلبات المتزامنة'),
-        maxCaptainsOnline: parseNonNegativeInteger(form.maxCaptainsOnline, 'أقصى الكباتن المتصلين'),
+      const { profile } = state.data;
+      const sla = profile.sla;
+      const capacity = profile.capacity;
+      if (
+        !sla.configured ||
+        !sla.category ||
+        sla.maxPrepMins == null ||
+        sla.maxAssignmentMins == null ||
+        sla.maxDeliveryMins == null ||
+        sla.version == null
+      ) {
+        throw new Error(
+          'لا يمكن تعديل السعة منفردة قبل اكتمال SLA الكانوني؛ أكمل الملف التشغيلي من شاشة سياسات المنصة أولًا.',
+        );
+      }
+      const pauseReason = (capacity.pauseReason ?? '').trim();
+      if (capacity.isPaused && pauseReason.length < 3) {
+        throw new Error('الملف الحالي موقوف دون سبب صالح؛ صحح الملف التشغيلي الكانوني قبل أي تعديل.');
+      }
+
+      await upsertDshOperationalProfile(zone.id, {
+        slaCategory: sla.category,
+        maxPrepMins: sla.maxPrepMins,
+        maxAssignmentMins: sla.maxAssignmentMins,
+        maxDeliveryMins: sla.maxDeliveryMins,
+        expectedSlaVersion: sla.version,
+        maxConcurrentOrders: parsePositiveInteger(
+          form.maxConcurrentOrders,
+          'أقصى الطلبات المتزامنة',
+        ),
+        maxCaptainsOnline: parseNonNegativeInteger(
+          form.maxCaptainsOnline,
+          'أقصى الكباتن المتصلين',
+        ),
         throttleThreshold: parseUnitInterval(form.throttleThreshold, 'حد الاختناق'),
-        reason: 'تحديث السعة التشغيلية للمنطقة من لوحة التحكم',
+        isPaused: capacity.isPaused,
+        pauseReason: capacity.isPaused ? pauseReason : '',
+        expectedCapacityVersion: capacity.version ?? 0,
+        reason: 'تحديث السعة التشغيلية للمنطقة من مساحة العمليات',
       });
-      setFeedback('تم حفظ السعة وقراءة القيم المحدثة من النظام.');
+      await load();
+      setFeedback('تم حفظ السعة عبر الملف التشغيلي الكانوني وقراءة الحالة المحدثة.');
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : 'تعذر حفظ إعدادات السعة');
+      setFeedback(messageFrom(error, 'تعذر حفظ إعدادات السعة.'));
     } finally {
       setPendingAction(null);
     }
-  }, [form, save]);
+  }, [canManageProfile, form, load, state, zone.id]);
 
   const handleToggle = React.useCallback(async () => {
+    if (!canManageZone) {
+      setFeedback('تحتاج صلاحية إدارة مناطق الخدمة لتغيير حالة المنطقة.');
+      return;
+    }
     setPendingAction('toggle');
     setFeedback(null);
     try {
-      await onToggle(zone, !zone.isActive);
-      setFeedback('تم تحديث حالة المنطقة وقراءة القائمة من النظام.');
+      const updated = await onToggle(zone, !zone.isActive);
+      if (!updated) {
+        throw new Error('رفض الخادم تحديث حالة المنطقة. أعد تحميل البيانات ثم حاول مجددًا.');
+      }
+      setFeedback('تم تحديث حالة المنطقة من الحقيقة التشغيلية الحية.');
     } catch (error) {
-      setFeedback(error instanceof Error ? error.message : 'تعذر تحديث حالة المنطقة');
+      setFeedback(messageFrom(error, 'تعذر تحديث حالة المنطقة.'));
     } finally {
       setPendingAction(null);
     }
-  }, [onToggle, zone]);
+  }, [canManageZone, onToggle, zone]);
 
   return (
     <WebControlPanelInspectorShell title={`المنطقة والسعة — ${zone.name}`} onClose={onClose}>
@@ -124,21 +229,23 @@ function CapacityInspector({
         <div><strong>رمز المدينة:</strong> {zone.cityCode}</div>
         <div><strong>حالة المنطقة:</strong> {zone.isActive ? 'نشطة' : 'غير نشطة'}</div>
 
-        {state.kind === 'idle' || state.kind === 'loading' ? (
-          <p>جارٍ جلب السعة وقابلية الخدمة...</p>
+        {state.kind === 'loading' ? (
+          <p>جارٍ جلب الملف التشغيلي وقابلية الخدمة...</p>
         ) : state.kind === 'error' ? (
           <StateView
             stateId="recoverableError"
             title="تعذر تحميل تفاصيل المنطقة"
             description={state.message}
             actionLabel="إعادة المحاولة"
-            onActionPress={() => void reload()}
+            onActionPress={() => void load()}
           />
         ) : (
           <>
             <div><strong>المتاجر النشطة:</strong> {state.data.serviceability.activeStores}</div>
             <div><strong>قابلية الخدمة:</strong> {state.data.serviceability.isActive ? 'متاحة' : 'متوقفة'}</div>
-            <div><strong>SLA:</strong> {state.data.serviceability.slaAvailable ? 'متاح' : 'غير متاح'}</div>
+            <div><strong>SLA:</strong> {state.data.profile.sla.configured ? 'مكتمل' : 'غير مكتمل'}</div>
+            <div><strong>السعة:</strong> {state.data.profile.capacity.configured ? 'مكتملة' : 'غير مكتملة'}</div>
+            <div><strong>حالة السعة:</strong> {state.data.profile.capacity.isPaused ? 'موقوفة' : 'فعالة'}</div>
 
             <label>
               أقصى الطلبات المتزامنة
@@ -147,7 +254,7 @@ function CapacityInspector({
                 min={1}
                 value={form.maxConcurrentOrders}
                 onChange={(event) => updateField('maxConcurrentOrders', event.target.value)}
-                disabled={pendingAction !== null}
+                disabled={pendingAction !== null || !canManageProfile}
               />
             </label>
             <label>
@@ -157,7 +264,7 @@ function CapacityInspector({
                 min={0}
                 value={form.maxCaptainsOnline}
                 onChange={(event) => updateField('maxCaptainsOnline', event.target.value)}
-                disabled={pendingAction !== null}
+                disabled={pendingAction !== null || !canManageProfile}
               />
             </label>
             <label>
@@ -169,17 +276,28 @@ function CapacityInspector({
                 step="0.01"
                 value={form.throttleThreshold}
                 onChange={(event) => updateField('throttleThreshold', event.target.value)}
-                disabled={pendingAction !== null}
+                disabled={pendingAction !== null || !canManageProfile}
               />
             </label>
 
-            <button type="button" onClick={() => void handleSave()} disabled={pendingAction !== null}>
-              {pendingAction === 'save' ? 'جارٍ الحفظ...' : 'حفظ إعدادات السعة'}
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={pendingAction !== null || !canManageProfile}
+            >
+              {pendingAction === 'save' ? 'جارٍ الحفظ...' : 'حفظ السعة عبر الملف التشغيلي'}
             </button>
+            {!canManageProfile ? (
+              <p>التعديل يتطلب صلاحيات إدارة SLA والسعة معًا لأنهما جزء من ملف تشغيلي واحد.</p>
+            ) : null}
           </>
         )}
 
-        <button type="button" onClick={() => void handleToggle()} disabled={pendingAction !== null}>
+        <button
+          type="button"
+          onClick={() => void handleToggle()}
+          disabled={pendingAction !== null || !canManageZone}
+        >
           {pendingAction === 'toggle'
             ? 'جارٍ التحديث...'
             : zone.isActive
@@ -194,8 +312,38 @@ function CapacityInspector({
 }
 
 export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: AreaCapacityScreenProps) {
-  const { state, reload, toggle } = useZonesController('authenticated');
+  const { state: sessionState } = useIdentitySession();
+  const identity = sessionState.kind === 'authenticated' ? sessionState.identity : null;
+  const canReadZones = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.dshServiceAreasRead,
+  );
+  const canManageZone = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.dshServiceAreasManage,
+  );
+  const canReadProfile = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.dshOperationalProfileRead,
+  );
+  const canManageProfile = hasAllControlPanelPermissions(
+    identity,
+    CONTROL_PANEL_CAPABILITIES.dshOperationalProfileManage,
+  );
+  const { state, reload, toggle } = useZonesController(
+    canReadZones ? 'authenticated' : 'restricted',
+  );
   const [selectedZoneId, setSelectedZoneId] = React.useState<string | null>(null);
+
+  if (!canReadZones) {
+    return (
+      <StateView
+        stateId="recoverableError"
+        title="صلاحية قراءة المناطق مطلوبة"
+        description="تحتاج صلاحية قراءة مناطق الخدمة للوصول إلى مساحة السعة التشغيلية."
+      />
+    );
+  }
 
   if (state.kind === 'idle' || state.kind === 'loading') {
     return <StateView stateId="loading" title="جارٍ تحميل المناطق" description="يتم جلب الحقيقة التشغيلية من الخادم." />;
@@ -221,7 +369,9 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
     <Box gap={3}>
       <div className={styles.surfaceSectionHeader}>
         <h2 className={styles.surfaceSectionTitle}>المناطق والسعة التشغيلية</h2>
-        <p className={styles.surfaceSectionSubtitleCompact}>بيانات حية مع تحديث وقراءة راجعة من DSH.</p>
+        <p className={styles.surfaceSectionSubtitleCompact}>
+          عرض تشغيلي مركّز يقرأ ويحدّث نفس Operational Profile الكانوني المستخدم في سياسات المنصة.
+        </p>
       </div>
 
       <WebControlPanelKpiStrip items={[
@@ -254,10 +404,13 @@ export function AreaCapacityScreen({ hubHref: _hubHref, subGroup: _subGroup }: A
           <CapacityInspector
             zone={selectedZone}
             onClose={() => setSelectedZoneId(null)}
-            onToggle={async (zone, nextActive) => { await toggle(zone, nextActive); }}
+            onToggle={(zone, nextActive) => toggle(zone, nextActive)}
+            canReadProfile={canReadProfile}
+            canManageProfile={canManageProfile}
+            canManageZone={canManageZone}
           />
         ) : (
-          <StateView stateId="empty" title="اختر منطقة" description="افتح منطقة لعرض السعة وقابلية الخدمة وتحديثهما." />
+          <StateView stateId="empty" title="اختر منطقة" description="افتح منطقة لعرض السعة وقابلية الخدمة من الملف التشغيلي الكانوني." />
         )}
       </div>
     </Box>

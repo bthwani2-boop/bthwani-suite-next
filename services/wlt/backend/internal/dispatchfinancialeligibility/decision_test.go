@@ -27,7 +27,11 @@ func TestEvaluateFinancialEligibilityUsesStrictestWltThreshold(t *testing.T) {
 		DecisionTTLSeconds:               120,
 		PolicyVersion:                    "dispatch-balance@7",
 	}
-	wallet := &walletRecord{ID: "wallet-1", Status: "active", Currency: "YER", AvailableBalanceMinorUnits: 400}
+	wallet := &walletRecord{
+		ID: "wallet-1", Status: "active", Currency: "YER", AvailableBalanceMinorUnits: 400,
+		CollateralReservedBalanceMinorUnits: 500, ProtectedMinimumCollateralMinorUnits: 500,
+		ActiveCollateralPositionCount: 1,
+	}
 	result := evaluateFinancialEligibility(now, policy, wallet)
 	if result.Eligible || result.ReasonCode != "WLT_AVAILABLE_BALANCE_BELOW_REQUIRED" {
 		t.Fatalf("unexpected decision: %+v", result)
@@ -48,7 +52,11 @@ func TestEvaluateFinancialEligibilityReturnsAbstractEligibleDecision(t *testing.
 		DecisionTTLSeconds:               180,
 		PolicyVersion:                    "dispatch-balance@8",
 	}
-	wallet := &walletRecord{ID: "wallet-1", Status: "active", Currency: "YER", AvailableBalanceMinorUnits: 700}
+	wallet := &walletRecord{
+		ID: "wallet-1", Status: "active", Currency: "YER", AvailableBalanceMinorUnits: 700,
+		CollateralReservedBalanceMinorUnits: 500, ProtectedMinimumCollateralMinorUnits: 500,
+		ActiveCollateralPositionCount: 1,
+	}
 	result := evaluateFinancialEligibility(now, policy, wallet)
 	if !result.Eligible || result.ReasonCode != "WLT_DISPATCH_FINANCIALLY_ELIGIBLE" {
 		t.Fatalf("unexpected eligible decision: %+v", result)
@@ -71,5 +79,23 @@ func TestEvaluateFinancialEligibilityRejectsWalletCurrencyMismatch(t *testing.T)
 	result := evaluateFinancialEligibility(now, policy, wallet)
 	if result.Eligible || result.ReasonCode != "WLT_WALLET_CURRENCY_MISMATCH" {
 		t.Fatalf("unexpected currency decision: %+v", result)
+	}
+}
+
+func TestEvaluateFinancialEligibilityRejectsOutstandingProviderDebt(t *testing.T) {
+	now := time.Date(2026, 8, 3, 4, 0, 0, 0, time.UTC)
+	policy := &policyRecord{
+		Enabled:                          true,
+		RequireActiveWallet:              true,
+		MinimumDispatchBalanceMinorUnits: 0,
+		MinimumCODBalanceMinorUnits:      0,
+		Currency:                         "YER",
+		DecisionTTLSeconds:               120,
+		PolicyVersion:                    "dispatch-balance@10",
+	}
+	wallet := &walletRecord{ID: "wallet-1", Status: "active", Currency: "YER", OutstandingDebtMinorUnits: 1_000}
+	result := evaluateFinancialEligibility(now, policy, wallet)
+	if result.Eligible || result.ReasonCode != "WLT_PROVIDER_DEBT_OUTSTANDING" {
+		t.Fatalf("unexpected debt decision: %+v", result)
 	}
 }

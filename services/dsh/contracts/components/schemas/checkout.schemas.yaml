@@ -28,7 +28,7 @@ DshCheckoutValidationIssue: &DshCheckoutValidationIssue
 
 DshCheckoutPaymentMethod: &DshCheckoutPaymentMethod
   type: string
-  enum: [cod, wallet, mixed, official_wallet]
+  enum: [cod, wallet, mixed]
 
 DshCheckoutFulfillmentMode: &DshCheckoutFulfillmentMode
   type: string
@@ -86,10 +86,11 @@ DshCheckoutIntent: &DshCheckoutIntent
 DshCreateCheckoutIntentRequest:
   type: object
   additionalProperties: false
-  required: [cartId, storeId]
+  required: [cartId, storeId, expectedCartVersion]
   properties:
     cartId: { type: string, format: uuid }
     storeId: { type: string, minLength: 1 }
+    expectedCartVersion: { type: integer, minimum: 1 }
     fulfillmentMode: *DshCheckoutFulfillmentMode
     paymentMethod: *DshCheckoutPaymentMethod
     deliveryAddressId: { type: string, format: uuid }
@@ -103,6 +104,18 @@ DshCheckoutIntentResponse:
   properties:
     intent: *DshCheckoutIntent
 
+DshCheckoutCartVersionConflict:
+  type: object
+  additionalProperties: false
+  required: [code, message, expectedCartVersion, currentCartVersion, cart]
+  properties:
+    code: { type: string, enum: [CART_VERSION_CONFLICT] }
+    message: { type: string }
+    expectedCartVersion: { type: integer, minimum: 1 }
+    currentCartVersion: { type: integer, minimum: 1 }
+    cart:
+      $ref: "../../dsh.openapi.yaml#/components/schemas/DshCart"
+
 DshOperatorCheckoutIntentsResponse:
   type: object
   additionalProperties: false
@@ -115,11 +128,19 @@ DshOperatorCheckoutIntentsResponse:
 DshWltPaymentSessionEvent:
   type: object
   additionalProperties: false
-  required: [operatorContextId, checkoutIntentId, paymentSessionId, status]
+  required: [operatorContextId, paymentSessionId, status]
+  oneOf:
+    - required: [checkoutIntentId]
+      not:
+        required: [specialRequestId]
+    - required: [specialRequestId]
+      not:
+        required: [checkoutIntentId]
   properties:
     eventId: { type: string, minLength: 8, maxLength: 200 }
     operatorContextId: { type: string, minLength: 1 }
     checkoutIntentId: { type: string, format: uuid }
+    specialRequestId: { type: string, format: uuid }
     paymentSessionId: { type: string, minLength: 1 }
     status:
       type: string
@@ -128,6 +149,5 @@ DshWltPaymentSessionEvent:
         - reference_created
         - cod_pending
         - captured
-        - cod_collected
         - failed
         - expired

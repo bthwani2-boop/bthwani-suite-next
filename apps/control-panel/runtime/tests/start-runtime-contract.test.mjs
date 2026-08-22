@@ -7,6 +7,27 @@ import test from "node:test";
 const repoRoot = path.resolve(import.meta.dirname, "../../../..");
 const startScriptPath = path.join(repoRoot, "apps/control-panel/runtime/start.ps1");
 const startScript = fs.readFileSync(startScriptPath, "utf8");
+const runtimeBootstrapPath = path.join(repoRoot, "apps/control-panel/ensure-control-panel-dev-runtime.ps1");
+const runtimeBootstrap = fs.readFileSync(runtimeBootstrapPath, "utf8");
+const frontendReadinessPath = path.join(repoRoot, "tools/scripts/check-frontend-binding-readiness.mjs");
+
+test("control-panel startup converges the declared backend bundle before Next.js", () => {
+  assert.match(startScript, /ensure-control-panel-dev-runtime\.ps1/);
+  assert.match(startScript, /Control Panel runtime bootstrap failed/);
+  for (const marker of [
+    "runtime-readiness.contract.json",
+    "bundles.controlPanelDevelopment",
+    "check-frontend-binding-readiness.mjs",
+    "invoke-runtime-phase.ps1",
+    "BTHWANI_AUTO_START_BACKEND",
+    "BthwaniControlPanelDevRuntimeBootstrap",
+  ]) {
+    assert.match(runtimeBootstrap, new RegExp(marker.replaceAll(".", "\\.")));
+  }
+  assert.match(runtimeBootstrap, /-Action\", \"up\"/);
+  assert.match(runtimeBootstrap, /-Profiles\", \$Profiles/);
+  assert.doesNotMatch(runtimeBootstrap, /-Action\", \"reset\"/);
+});
 
 test("control-panel startup forces all browser transports through the same-origin BFF", () => {
   assert.match(startScript, /NEXT_PUBLIC_CONTROL_PANEL_BFF_ENABLED\s*=\s*"true"/);
@@ -24,6 +45,50 @@ test("control-panel startup forces all browser transports through the same-origi
   }
 
   assert.doesNotMatch(startScript, /NEXT_PUBLIC_[A-Z_]+_API_BASE_URL\s*=\s*"https?:\/\//);
+});
+
+test("frontend readiness ignores same-origin public BFF paths", () => {
+  const env = { ...process.env };
+  for (const prefix of ["IDENTITY", "DSH"]) {
+    delete env[`NEXT_PUBLIC_${prefix}_API_BASE_URL`];
+    delete env[`EXPO_PUBLIC_${prefix}_API_BASE_URL`];
+    delete env[`${prefix}_API_BASE_URL`];
+  }
+  env.NEXT_PUBLIC_IDENTITY_API_BASE_URL = "/api/identity";
+  env.NEXT_PUBLIC_DSH_API_BASE_URL = "/api/dsh";
+  env.BTHWANI_ALLOW_FRONTEND_WITHOUT_BACKEND = "true";
+
+  const result = spawnSync("node", [frontendReadinessPath, "--bundle", "frontendDefault"], {
+    cwd: repoRoot,
+    env,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.doesNotMatch(result.stderr, /must be an absolute HTTP\(S\) URL/);
+});
+
+test("frontend readiness still rejects relative service-owner URLs", () => {
+  const env = { ...process.env };
+  for (const name of [
+    "NEXT_PUBLIC_IDENTITY_API_BASE_URL",
+    "EXPO_PUBLIC_IDENTITY_API_BASE_URL",
+    "NEXT_PUBLIC_DSH_API_BASE_URL",
+    "EXPO_PUBLIC_DSH_API_BASE_URL",
+  ]) delete env[name];
+  delete env.DSH_API_BASE_URL;
+  env.IDENTITY_API_BASE_URL = "/identity";
+
+  const result = spawnSync("node", [frontendReadinessPath, "--bundle", "frontendDefault"], {
+    cwd: repoRoot,
+    env,
+    encoding: "utf8",
+    windowsHide: true,
+  });
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /IDENTITY_API_BASE_URL must be an absolute HTTP\(S\) URL/);
 });
 
 test("control-panel startup keeps service origins in server-only environment variables", () => {

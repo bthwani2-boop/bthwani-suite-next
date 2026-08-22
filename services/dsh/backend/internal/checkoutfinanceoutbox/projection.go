@@ -24,6 +24,11 @@ func financialProjection(result DeliveryResult) (status, reference string, err e
 	case "none":
 		status = "no_action"
 		reference = result.PaymentSessionID
+	case "cod_reservation_released":
+		// WLT owns the reservation release outcome. It is recorded as a sent
+		// financial result without changing the payment-session closure state.
+		status = "no_action"
+		reference = result.PaymentSessionID
 	default:
 		return "", "", fmt.Errorf("unsupported financial closure action %q", result.Action)
 	}
@@ -63,7 +68,7 @@ func MarkSentWithResult(db *sql.DB, id string, result DeliveryResult) error {
 		}
 		return err
 	}
-	if orderID.Valid && orderID.String != "" {
+	if orderID.Valid && orderID.String != "" && result.Action != "cod_reservation_released" {
 		if _, err := tx.Exec(`
 			UPDATE dsh_orders
 			SET financial_closure_status=$2,

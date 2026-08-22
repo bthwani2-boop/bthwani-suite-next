@@ -13,6 +13,7 @@ import (
 	_ "github.com/lib/pq"
 
 	"wlt-api/internal/shared"
+	"wlt-api/internal/testsupport"
 )
 
 func getTestDB(t *testing.T) *sql.DB {
@@ -40,7 +41,7 @@ func getTestDB(t *testing.T) *sql.DB {
 }
 
 func uniqueActorID(prefix string) string {
-	return fmt.Sprintf("%s-%d", prefix, time.Now().UnixNano())
+	return testsupport.UniqueID(prefix)
 }
 
 func trustedLedgerTestContext() context.Context {
@@ -127,10 +128,9 @@ func TestPostLedgerTransaction_RejectsUnknownAccountType(t *testing.T) {
 	}
 }
 
-// TestPostLedgerTransaction_CashInTransitPostsAsAsset proves the corrected
-// classification is what actually lands in the database column, not just
-// what the taxonomy map says in isolation.
-func TestPostLedgerTransaction_CashInTransitPostsAsAsset(t *testing.T) {
+// TestPostLedgerTransaction_CashInTransitRejectedAfterCodCutover proves the
+// historical account remains readable but cannot receive a new financial fact.
+func TestPostLedgerTransaction_CashInTransitRejectedAfterCodCutover(t *testing.T) {
 	db := getTestDB(t)
 	if db == nil {
 		return
@@ -142,21 +142,12 @@ func TestPostLedgerTransaction_CashInTransitPostsAsAsset(t *testing.T) {
 	}
 	defer tx.Rollback()
 
-	captainID := uniqueActorID("captain")
 	lines := []LedgerLine{
 		{AccountType: "cash_in_transit", DebitCredit: "debit", AmountMinorUnits: 2000, Currency: "YER"},
-		{AccountType: "wallet", ActorType: "captain", ActorID: captainID, DebitCredit: "credit", AmountMinorUnits: 2000, Currency: "YER"},
+		{AccountType: "wallet", ActorType: "captain", ActorID: uniqueActorID("captain"), DebitCredit: "credit", AmountMinorUnits: 2000, Currency: "YER"},
 	}
-	if _, err := PostLedgerTransaction(ctx, tx, "test_cod_collect", "test", uniqueActorID("ref"), lines, Actor{ID: "system", Type: "system"}); err != nil {
-		t.Fatalf("expected cash_in_transit posting to succeed: %v", err)
-	}
-
-	var classification string
-	if err := tx.QueryRowContext(ctx, "SELECT classification FROM wlt_ledger_accounts WHERE operator_context_id = $1 AND account_type = 'cash_in_transit' AND currency = 'YER'", "OperatorContext-ledger-tests").Scan(&classification); err != nil {
-		t.Fatalf("read persisted classification: %v", err)
-	}
-	if classification != "asset" {
-		t.Fatalf("expected cash_in_transit to persist as asset, got %q", classification)
+	if _, err := PostLedgerTransaction(ctx, tx, "test_cod_collect", "test", uniqueActorID("ref"), lines, Actor{ID: "system", Type: "system"}); !errors.Is(err, ErrRetiredAccountType) {
+		t.Fatalf("expected retired cash_in_transit posting to fail closed, got %v", err)
 	}
 }
 

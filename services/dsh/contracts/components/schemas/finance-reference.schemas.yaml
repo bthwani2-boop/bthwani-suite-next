@@ -18,7 +18,7 @@ WltPaymentCallbackEnvelope:
     paymentSessionId: { type: string }
     status:
       type: string
-      enum: [reference_created, cod_pending, authorized, captured, cod_collected, failed, expired]
+      enum: [reference_created, cod_pending, authorized, captured, cod_finalized, failed, expired]
   description: >
     Contains opaque WLT references only. No amount, ledger, refund, settlement,
     or signature verification logic belongs to DSH. Fields are DisallowUnknownFields-strict

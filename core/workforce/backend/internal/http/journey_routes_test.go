@@ -24,6 +24,7 @@ var workforceJourneyRoutes = []workforceJourneyRouteCase{
 	{method: http.MethodPost, path: "/workforce/field-agents/field-1/reactivate", pattern: "POST /workforce/field-agents/{actorId}/reactivate"},
 	{method: http.MethodPost, path: "/workforce/field-agents/field-1/activation-codes", pattern: "POST /workforce/field-agents/{actorId}/activation-codes"},
 	{method: http.MethodDelete, path: "/workforce/field-agents/field-1/activation-codes", pattern: "DELETE /workforce/field-agents/{actorId}/activation-codes"},
+	{method: http.MethodPatch, path: "/workforce/field-agents/field-1/affiliations", pattern: "PATCH /workforce/field-agents/{actorId}/affiliations"},
 	{method: http.MethodPost, path: "/workforce/captains", pattern: "POST /workforce/captains"},
 	{method: http.MethodGet, path: "/workforce/captains", pattern: "GET /workforce/captains"},
 	{method: http.MethodGet, path: "/workforce/captains/captain-1", pattern: "GET /workforce/captains/{actorId}"},
@@ -32,12 +33,14 @@ var workforceJourneyRoutes = []workforceJourneyRouteCase{
 	{method: http.MethodPost, path: "/workforce/captains/captain-1/reactivate", pattern: "POST /workforce/captains/{actorId}/reactivate"},
 	{method: http.MethodPost, path: "/workforce/captains/captain-1/activation-codes", pattern: "POST /workforce/captains/{actorId}/activation-codes"},
 	{method: http.MethodDelete, path: "/workforce/captains/captain-1/activation-codes", pattern: "DELETE /workforce/captains/{actorId}/activation-codes"},
+	{method: http.MethodPatch, path: "/workforce/captains/captain-1/affiliations", pattern: "PATCH /workforce/captains/{actorId}/affiliations"},
 	{method: http.MethodPost, path: "/workforce/employees", pattern: "POST /workforce/employees"},
 	{method: http.MethodGet, path: "/workforce/employees", pattern: "GET /workforce/employees"},
 	{method: http.MethodGet, path: "/workforce/employees/employee-1", pattern: "GET /workforce/employees/{actorId}"},
 	{method: http.MethodPatch, path: "/workforce/employees/employee-1", pattern: "PATCH /workforce/employees/{actorId}"},
 	{method: http.MethodPost, path: "/workforce/employees/employee-1/suspend", pattern: "POST /workforce/employees/{actorId}/suspend"},
 	{method: http.MethodPost, path: "/workforce/employees/employee-1/reactivate", pattern: "POST /workforce/employees/{actorId}/reactivate"},
+	{method: http.MethodPatch, path: "/workforce/employees/employee-1/affiliations", pattern: "PATCH /workforce/employees/{actorId}/affiliations"},
 	{method: http.MethodGet, path: "/workforce/me", pattern: "GET /workforce/me"},
 	{method: http.MethodPatch, path: "/workforce/me", pattern: "PATCH /workforce/me"},
 	{method: http.MethodGet, path: "/workforce/reference/cities", pattern: "GET /workforce/reference/cities"},
@@ -48,7 +51,7 @@ var workforceJourneyRoutes = []workforceJourneyRouteCase{
 }
 
 func TestWorkforceJourneyRouteMatrixIsCompleteAndUnique(t *testing.T) {
-	const expectedRouteCount = 31
+	const expectedRouteCount = 34
 	if len(workforceJourneyRoutes) != expectedRouteCount {
 		t.Fatalf("expected %d governed workforce routes, got %d", expectedRouteCount, len(workforceJourneyRoutes))
 	}

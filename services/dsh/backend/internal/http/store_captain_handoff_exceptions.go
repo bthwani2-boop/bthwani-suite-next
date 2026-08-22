@@ -23,9 +23,21 @@ func (s *protectedStoreServer) handleReportCaptainStoreCaptainHandoffException(w
 	if !ok {
 		return
 	}
+	if _, ok := requireStoreCaptainHandoffIdempotencyKey(w, r); !ok {
+		return
+	}
 
 	var body storeCaptainHandoffExceptionBody
 	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+
+	correlationID := strings.TrimSpace(body.CorrelationID)
+	if correlationID == "" {
+		correlationID = strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	}
+	if correlationID == "" {
+		store.SendError(w, http.StatusBadRequest, "CORRELATION_ID_REQUIRED", "correlationId or X-Correlation-ID is required")
 		return
 	}
 
@@ -36,7 +48,7 @@ func (s *protectedStoreServer) handleReportCaptainStoreCaptainHandoffException(w
 		dispatch.ReportDeliveryExceptionInput{
 			ReasonCode:    body.ReasonCode,
 			Note:          body.Note,
-			CorrelationID: operationalCorrelationID(r, body.CorrelationID),
+			CorrelationID: correlationID,
 			Latitude:      body.Latitude,
 			Longitude:     body.Longitude,
 			ProofMediaRef: strings.TrimSpace(body.ProofMediaRef),
@@ -56,9 +68,21 @@ func (s *protectedStoreServer) handleReportPartnerStoreCaptainHandoffException(w
 	if !ok {
 		return
 	}
+	if _, ok := requireStoreCaptainHandoffIdempotencyKey(w, r); !ok {
+		return
+	}
 
 	var body storeCaptainHandoffExceptionBody
 	if !decodeProtectedJSON(w, r, &body) {
+		return
+	}
+
+	correlationID := strings.TrimSpace(body.CorrelationID)
+	if correlationID == "" {
+		correlationID = strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	}
+	if correlationID == "" {
+		store.SendError(w, http.StatusBadRequest, "CORRELATION_ID_REQUIRED", "correlationId or X-Correlation-ID is required")
 		return
 	}
 
@@ -70,7 +94,7 @@ func (s *protectedStoreServer) handleReportPartnerStoreCaptainHandoffException(w
 		dispatch.ReportDeliveryExceptionInput{
 			ReasonCode:    body.ReasonCode,
 			Note:          body.Note,
-			CorrelationID: operationalCorrelationID(r, body.CorrelationID),
+			CorrelationID: correlationID,
 			Latitude:      body.Latitude,
 			Longitude:     body.Longitude,
 			ProofMediaRef: strings.TrimSpace(body.ProofMediaRef),

@@ -10,7 +10,6 @@ import {
   useWindowDimensions,
   type ViewToken,
 } from "react-native";
-import { VideoView, useVideoPlayer } from "expo-video";
 import {
   Button,
   StateView,
@@ -25,6 +24,7 @@ import {
 import { ClientRemoteImage } from "../../../../../apps/app-client/runtime/src/media/ClientRemoteImage";
 import type { HomePublicReel } from "../../shared/home-discovery";
 import { isPlayableVideoUrl } from "../../shared/home-discovery/playable-video-url.adapter";
+import { getDshVideoRenderer } from "../../shared/mobile-capabilities";
 
 export type HomeReelsLoadState = "idle" | "loading" | "ready" | "empty" | "error";
 
@@ -80,15 +80,7 @@ function ReelSlide({
   readonly height: number;
   readonly onOpenStore?: (() => void) | undefined;
 }) {
-  const player = useVideoPlayer({ uri: reel.videoUrl, useCaching: true }, (instance) => {
-    instance.loop = true;
-  });
-
-  React.useEffect(() => {
-    if (active) player.play();
-    else player.pause();
-    return () => player.pause();
-  }, [active, player]);
+  const VideoSurface = getDshVideoRenderer();
 
   const target = targetCopy(reel);
   const subtitle = reelSubtitle(reel);
@@ -105,15 +97,9 @@ function ReelSlide({
             accessibilityLabel={`غلاف ${reelTitle(reel)}`}
           />
         ) : null}
-        <VideoView
-          player={player}
-          style={StyleSheet.absoluteFill}
-          nativeControls={false}
-          contentFit="cover"
-          surfaceType="textureView"
-          fullscreenOptions={{ enable: true }}
-          allowsPictureInPicture
-        />
+        {VideoSurface ? (
+          <VideoSurface uri={reel.videoUrl} active={active} style={StyleSheet.absoluteFill} />
+        ) : null}
         <View pointerEvents="none" style={styles.slideScrim} />
         <View style={styles.slideHeader}>
           <View style={styles.approvedBadge}>
@@ -447,7 +433,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   cardPosterScrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: alpha(colorRoles.shadowBase, 0.25),
   },
   playButton: {
@@ -519,7 +505,7 @@ const styles = StyleSheet.create({
     borderColor: alpha(neutralScale[0], 0.12),
   },
   slideScrim: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: alpha(colorRoles.shadowBase, 0.38),
   },
   slideHeader: {

@@ -102,11 +102,19 @@ function requiredReason(value: string): string {
   return reason;
 }
 
-export function OperationalPolicyGovernanceSection() {
-  const zones = useZonesController("authenticated");
-  const sla = useSlaRulesController("authenticated");
+export function OperationalPolicyGovernanceSection({
+  canReadZones = true,
+  canReadSla = true,
+  canReadCapacity = true,
+}: {
+  readonly canReadZones?: boolean;
+  readonly canReadSla?: boolean;
+  readonly canReadCapacity?: boolean;
+} = {}) {
+  const zones = useZonesController(canReadZones ? "authenticated" : "restricted");
+  const sla = useSlaRulesController(canReadSla ? "authenticated" : "restricted");
   const [selectedZoneId, setSelectedZoneId] = React.useState<string | undefined>();
-  const capacity = useAreaCapacityController("authenticated", selectedZoneId);
+  const capacity = useAreaCapacityController(canReadCapacity ? "authenticated" : "restricted", selectedZoneId);
   const [selectedSlaKey, setSelectedSlaKey] = React.useState<string | null>(null);
   const [zoneForm, setZoneForm] = React.useState<ZoneForm>(EMPTY_ZONE);
   const [slaForm, setSlaForm] = React.useState<SlaForm>(EMPTY_SLA);

@@ -4,15 +4,19 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colorRoles } from "@bthwani/ui-kit";
 import { File as ExpoFile } from "expo-file-system";
 import * as DocumentPicker from "expo-document-picker";
-import { DshPartnerSurface } from "../../../../services/dsh/frontend/app-partner";
-import { PartnerFieldRatingGate } from "../../../../services/dsh/frontend/app-partner/ratings/PartnerFieldRatingGate";
-import {
-  configureCatalogMobileFilePicker,
-  type CatalogMobileFileKind,
-  type UploadFileSource,
-} from "../../../../services/dsh/frontend/shared/catalog";
 import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
+import {
+  configureCatalogMobileFilePicker,
+  DshPartnerSurface,
+  IdentitySessionGate,
+  PartnerFieldRatingGate,
+  useDshMobilePushRegistration,
+  type CatalogMobileFileKind,
+  type DshPartnerNavigation,
+  type DshPartnerNavigationRoute,
+  type UploadFileSource,
+} from "@bthwani/dsh/app-partner";
 import {
   configureIdentityDeviceFingerprintProvider,
   configureIdentitySession,
@@ -21,10 +25,7 @@ import {
   resolveIdentityApiBaseUrl,
   useIdentitySession,
 } from "@bthwani/core-identity";
-import { IdentitySessionGate } from "../../../../services/dsh/frontend/shared/session/IdentitySessionGate";
-import { useDshMobilePushRegistration } from "../../../../services/dsh/frontend/shared/notifications/use-mobile-push-registration";
-
-const PARTNER_DEVICE_FINGERPRINT_KEY = "bthwani.partner.device-fingerprint.v1";
+import { getOrCreatePartnerDeviceFingerprint } from "./config/partner-device-fingerprint";
 
 function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
   return {
@@ -32,14 +33,6 @@ function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
     setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
     removeItem: (key: string) => SecureStore.deleteItemAsync(key),
   };
-}
-
-async function getOrCreatePartnerDeviceFingerprint(): Promise<string> {
-  const existing = await SecureStore.getItemAsync(PARTNER_DEVICE_FINGERPRINT_KEY);
-  if (existing?.trim()) return existing;
-  const created = `partner-device:${Crypto.randomUUID()}`;
-  await SecureStore.setItemAsync(PARTNER_DEVICE_FINGERPRINT_KEY, created);
-  return created;
 }
 
 async function pickCatalogFile(kind: CatalogMobileFileKind): Promise<UploadFileSource | null> {
@@ -61,12 +54,25 @@ async function pickCatalogFile(kind: CatalogMobileFileKind): Promise<UploadFileS
 
 if (Platform.OS !== "web") {
   configureIdentitySessionStorage(createSecureStoreSessionStorageAdapter());
-  configureIdentityDeviceFingerprintProvider(getOrCreatePartnerDeviceFingerprint);
+  configureIdentityDeviceFingerprintProvider(() =>
+    getOrCreatePartnerDeviceFingerprint(
+      {
+        getItem: (key) => SecureStore.getItemAsync(key),
+        setItem: (key, value) => SecureStore.setItemAsync(key, value),
+      },
+      () => Crypto.randomUUID(),
+    ),
+  );
   configureCatalogMobileFilePicker(pickCatalogFile);
 }
 configureIdentitySession(resolveIdentityApiBaseUrl());
 
-function AppContent() {
+export type PartnerAppProps = {
+  readonly route: DshPartnerNavigationRoute;
+  readonly navigation: DshPartnerNavigation;
+};
+
+function AppContent({ route, navigation }: PartnerAppProps) {
   const insets = useSafeAreaInsets();
   const identity = useIdentitySession();
   useDshMobilePushRegistration(identity.state.kind, "app-partner", "bthwani-partner-next");
@@ -76,7 +82,7 @@ function AppContent() {
       <View style={styles.screen}>
         <IdentitySessionGate requiredRole="partner" requiredSurface="app-partner">
           <PartnerFieldRatingGate>
-            <DshPartnerSurface />
+            <DshPartnerSurface route={route} navigation={navigation} />
           </PartnerFieldRatingGate>
         </IdentitySessionGate>
       </View>
@@ -84,8 +90,8 @@ function AppContent() {
   );
 }
 
-export default function App() {
-  return <AppContent />;
+export default function App(props: PartnerAppProps) {
+  return <AppContent {...props} />;
 }
 
 const styles = StyleSheet.create({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CpButton,
   CpStatePanel,
@@ -8,6 +8,8 @@ import {
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import { createPartnerStore } from "../../../shared/partner";
+import { fetchCatalogDomains } from "../../../shared/catalog/central-catalog.api";
+import type { CentralCatalogDomain } from "../../../shared/catalog/central-catalog.types";
 
 export type PartnerStoreCreateWizardProps = {
   readonly partnerId: string;
@@ -37,18 +39,28 @@ export function PartnerStoreCreateWizard({
 }: PartnerStoreCreateWizardProps) {
   const [displayName, setDisplayName] = useState("");
   const [cityCode, setCityCode] = useState("");
-  const [category, setCategory] = useState("default");
+  const [businessVerticalId, setBusinessVerticalId] = useState("");
+  const [businessVerticals, setBusinessVerticals] = useState<readonly CentralCatalogDomain[]>([]);
+  const [businessVerticalsError, setBusinessVerticalsError] = useState<string | null>(null);
   const [addressLine, setAddressLine] = useState("");
   const [operatingHours, setOperatingHours] = useState("");
   const [status, setStatus] = useState<SubmissionStatus>("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
+  useEffect(() => {
+    let active = true;
+    void fetchCatalogDomains()
+      .then((domains) => { if (active) setBusinessVerticals(domains.filter((domain) => domain.isActive)); })
+      .catch(() => { if (active) setBusinessVerticalsError("تعذر تحميل مجالات النشاط المركزية"); });
+    return () => { active = false; };
+  }, []);
+
   const handleSubmit = async () => {
     const normalizedPartnerId = partnerId.trim();
     const normalizedDisplayName = displayName.trim();
     const normalizedCityCode = cityCode.trim();
-    const normalizedCategory = category.trim();
-    if (!normalizedPartnerId || !normalizedDisplayName || !normalizedCityCode || !normalizedCategory) {
+    const normalizedBusinessVerticalId = businessVerticalId.trim();
+    if (!normalizedPartnerId || !normalizedDisplayName || !normalizedCityCode || !normalizedBusinessVerticalId) {
       setErrorMessage("REQUIRED_STORE_FIELDS_MISSING");
       setStatus("error");
       return;
@@ -67,7 +79,8 @@ export function PartnerStoreCreateWizard({
           PartnerID: normalizedPartnerId,
           DisplayName: normalizedDisplayName,
           CityCode: normalizedCityCode,
-          Category: normalizedCategory,
+          Category: "",
+          businessVerticalId: normalizedBusinessVerticalId,
           AddressLine: addressLine.trim(),
           OperatingHours: operatingHours.trim(),
         },
@@ -108,13 +121,12 @@ export function PartnerStoreCreateWizard({
         aria-label="رمز المدينة"
         disabled={submitting}
       />
-      <CpTextInput
-        value={category}
-        onChange={setCategory}
-        placeholder="التصنيف (مطلوب)"
-        aria-label="التصنيف"
-        disabled={submitting}
-      />
+      {businessVerticals.length > 0 ? (
+        <select value={businessVerticalId} onChange={(event) => setBusinessVerticalId(event.target.value)} aria-label="مجال نشاط المتجر" disabled={submitting}>
+          <option value="">اختر مجال نشاط المتجر (مطلوب)</option>
+          {businessVerticals.map((domain) => <option key={domain.id} value={domain.id}>{domain.nameAr}</option>)}
+        </select>
+      ) : <span>{businessVerticalsError ?? "جارٍ تحميل مجالات النشاط…"}</span>}
       <CpTextInput
         value={addressLine}
         onChange={setAddressLine}

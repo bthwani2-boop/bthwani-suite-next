@@ -5,4 +5,4 @@ if (!process.argv.includes('--repair')) {
   process.argv.push('--repair');
 }
 
-await import('../../apps/mobile/mobile-dev-data.mjs');
+await import('../mobile/mobile-dev-data.mjs');

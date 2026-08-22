@@ -107,7 +107,8 @@ test("partner onboarding closes the canonical store publication journey", () => 
   assert.match(dshPartnerOnboardingSmoke, /role = "store_cover"/);
   assert.match(dshPartnerOnboardingSmoke, /isPrimary = \$true/);
   assert.match(dshPartnerOnboardingSmoke, /publicationStatus = "client_visible"/);
-  assert.match(dshPartnerOnboardingSmoke, /"lifecycle" "published"/);
+  assert.match(dshPartnerOnboardingSmoke, /decision = "publish"/);
+  assert.match(dshPartnerOnboardingSmoke, /\/dsh\/operator\/marketing\/stores\/\$smokeStoreId\/publication/);
   assert.match(dshPartnerOnboardingSmoke, /\/dsh\/stores\/\$smokeStoreId"/);
   assert.match(dshPartnerOnboardingSmoke, /\/dsh\/stores\/\$smokeStoreId\/catalog"/);
   assert.doesNotMatch(dshPartnerOnboardingSmoke, /"lifecycle" "active"/);

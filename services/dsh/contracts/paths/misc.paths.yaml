@@ -175,38 +175,6 @@
             schema: { type: object, additionalProperties: true }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
-/dsh/control-panel/finance/cod-records:
-  get:
-    operationId: listDshControlPanelFinanceCodRecords
-    summary: Operator reads the governed WLT COD records view through the DSH
-      finance proxy.
-    tags: [ DshFinanceProxy ]
-    security: [ { bearerAuth: [] } ]
-    parameters:
-      - name: captainId
-        in: query
-        required: false
-        schema: { type: string }
-      - name: orderId
-        in: query
-        required: false
-        schema: { type: string }
-      - name: limit
-        in: query
-        required: false
-        schema: { type: string }
-      - name: cursor
-        in: query
-        required: false
-        schema: { type: string }
-    responses:
-      "200":
-        description: WLT COD records view (verbatim passthrough).
-        content:
-          application/json:
-            schema: { type: object, additionalProperties: true }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-
 /dsh/control-panel/finance/commissions:
   get:
     operationId: listDshControlPanelFinanceCommissions
@@ -336,38 +304,6 @@
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
-/dsh/control-panel/finance/payout-requests/{payoutId}/process:
-  post:
-    operationId: processDshControlPanelPayoutRequest
-    summary: Operator moves a payout request to processing state via the DSH finance
-      proxy.
-    tags: [ DshFinanceProxy ]
-    security: [ { bearerAuth: [] } ]
-    parameters:
-      - name: payoutId
-        in: path
-        required: true
-        schema: { type: string }
-      - $ref: "#/components/parameters/IdempotencyKey"
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: []
-            properties: {}
-    responses:
-      "200":
-        {
-          description: Payout request processing started (verbatim passthrough),
-          content: { application/json: { schema: { type: object, additionalProperties: true } } }
-        }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
 /dsh/control-panel/finance/payout-requests/{payoutId}/complete:
   post:
@@ -394,39 +330,6 @@
       "200":
         {
           description: Payout request completed (verbatim passthrough),
-          content: { application/json: { schema: { type: object, additionalProperties: true } } }
-        }
-      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
-
-/dsh/control-panel/finance/payout-requests/{payoutId}/fail:
-  post:
-    operationId: failDshControlPanelPayoutRequest
-    summary: Operator records a payout failure via the DSH finance proxy.
-    tags: [ DshFinanceProxy ]
-    security: [ { bearerAuth: [] } ]
-    parameters:
-      - name: payoutId
-        in: path
-        required: true
-        schema: { type: string }
-      - $ref: "#/components/parameters/IdempotencyKey"
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            additionalProperties: false
-            required: [ failureReason ]
-            properties:
-              failureReason: { type: string, minLength: 1 }
-    responses:
-      "200":
-        {
-          description: Payout request failed state recorded (verbatim passthrough),
           content: { application/json: { schema: { type: object, additionalProperties: true } } }
         }
       "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }

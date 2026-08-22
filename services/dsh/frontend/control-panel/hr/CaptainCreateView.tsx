@@ -5,7 +5,7 @@ import { useIdentityRuntimeStatus } from "@bthwani/core-identity";
 import { CpButton, CpMutedInline, CpPageHeader, CpStatePanel, CpTabs, CpTextInput } from "@bthwani/control-panel/components";
 import { EditorPageFrame } from "@bthwani/control-panel/shell";
 import { Text } from "@bthwani/ui-kit";
-import { useCaptainCreateAndActivationController } from "../../shared/workforce";
+import { useCaptainCreateController } from "../../shared/workforce";
 import { ZonePicker } from "./ZonePicker";
 
 const VEHICLE_TYPES: Array<{ label: string; value: string }> = [
@@ -16,10 +16,10 @@ const VEHICLE_TYPES: Array<{ label: string; value: string }> = [
 
 export function CaptainCreateView(props: {
   readonly onBack?: () => void;
-  readonly onCreated: (caseId: string) => void;
+  readonly onCreated: (actorId: string) => void;
   readonly inline?: boolean;
 }) {
-  const { state, submit, resume, reset } = useCaptainCreateAndActivationController();
+  const { state, submit, reset } = useCaptainCreateController();
   const identityRuntime = useIdentityRuntimeStatus();
   const runtimeValue = identityRuntime.state.kind === "resolved"
     ? identityRuntime.state.value
@@ -37,9 +37,9 @@ export function CaptainCreateView(props: {
   const [zoneId, setZoneId] = useState("");
   const [vehicleType, setVehicleType] = useState("");
 
-  const createdCaseId = state.kind === "created" ? state.caseId : null;
-  const isProvisioning = state.kind === "provisioning";
-  const formLocked = Boolean(createdCaseId) || isProvisioning;
+  const createdCaptain = state.kind === "created" ? state.captain : null;
+  const isSubmitting = state.kind === "submitting";
+  const formLocked = Boolean(createdCaptain) || isSubmitting;
 
   const canSubmit =
     identityReady &&
@@ -48,24 +48,20 @@ export function CaptainCreateView(props: {
     phoneE164.trim().length > 0 &&
     zoneId !== "" &&
     vehicleType !== "" &&
-    !isProvisioning &&
-    !createdCaseId;
+    !isSubmitting &&
+    !createdCaptain;
 
   const handleSubmit = async () => {
     if (!identityReady) return;
     await submit({
-      workforceKind: "captain",
+      fullNameAr: fullNameAr.trim(),
       username: username.trim(),
       phoneE164: phoneE164.trim(),
-      role: "workforce_captain",
-      payload: {
-        fullNameAr: fullNameAr.trim(),
-        engagementType: "independent_contractor",
-        vehicleType,
-        licenseStatus: "missing",
-        serviceZoneId: zoneId,
-      }
-    }, { issueActivationCode: false });
+      engagementType: "independent_contractor",
+      vehicleType,
+      licenseStatus: "missing",
+      serviceZoneId: zoneId,
+    });
   };
 
   const resetForm = () => {
@@ -75,23 +71,6 @@ export function CaptainCreateView(props: {
     setPhoneE164("");
     setZoneId("");
     setVehicleType("");
-  };
-
-  const renderProgress = () => {
-    if (state.kind !== "provisioning") return null;
-    return (
-      <div style={{ padding: "16px", backgroundColor: "var(--bthwani-control-panel-surface)", border: "1px solid var(--bthwani-control-panel-border)", borderRadius: "8px", marginTop: "16px" }}>
-        <Text role="titleSm" style={{ fontWeight: "700", marginBottom: "8px" }}>تقدم عملية الإنشاء الموحدة</Text>
-        <Text role="bodySm" style={{ color: "var(--bthwani-control-panel-text-muted)" }}>
-          الحالة الحالية: {state.status}
-        </Text>
-        <div style={{ marginTop: "12px", display: "flex", gap: "8px" }}>
-          {state.status === "FAILED_AT_WORKFORCE" && (
-            <CpButton variant="secondary" onClick={() => resume(state.caseId)}>محاولة استئناف العملية</CpButton>
-          )}
-        </div>
-      </div>
-    );
   };
 
   const body = (
@@ -115,17 +94,17 @@ export function CaptainCreateView(props: {
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
           <div>
             <Text role="bodySm" style={{ marginBottom: "6px", display: "block", fontWeight: "600", color: "var(--bthwani-control-panel-text-muted)" }}>الاسم الكامل بالعربية *</Text>
-            <CpTextInput value={fullNameAr} onChange={setFullNameAr} placeholder="أحمد محمد" disabled={Boolean(createdCaseId) || isProvisioning} aria-label="الاسم الكامل" />
+            <CpTextInput value={fullNameAr} onChange={setFullNameAr} placeholder="أحمد محمد" disabled={formLocked} aria-label="الاسم الكامل" />
           </div>
           <div>
             <Text role="bodySm" style={{ marginBottom: "6px", display: "block", fontWeight: "600", color: "var(--bthwani-control-panel-text-muted)" }}>اسم المستخدم (Username) *</Text>
-            <CpTextInput value={username} onChange={setUsername} placeholder="مثال: ahmed.ali" disabled={Boolean(createdCaseId) || isProvisioning} aria-label="Username" />
+            <CpTextInput value={username} onChange={setUsername} placeholder="مثال: ahmed.ali" disabled={formLocked} aria-label="Username" />
           </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "16px" }}>
           <div>
             <Text role="bodySm" style={{ marginBottom: "6px", display: "block", fontWeight: "600", color: "var(--bthwani-control-panel-text-muted)" }}>رقم الهاتف الأساسي *</Text>
-            <CpTextInput value={phoneE164} onChange={setPhoneE164} placeholder="+966500000000" disabled={Boolean(createdCaseId) || isProvisioning} aria-label="Phone" />
+            <CpTextInput value={phoneE164} onChange={setPhoneE164} placeholder="+966500000000" disabled={formLocked} aria-label="Phone" />
           </div>
         </div>
       </div>
@@ -161,12 +140,10 @@ export function CaptainCreateView(props: {
         <CpStatePanel role="alert" title="تعذر إنشاء الكابتن" description={state.message} />
       ) : null}
 
-      {renderProgress()}
-
-      {createdCaseId ? (
+      {createdCaptain ? (
         <CpStatePanel role="status" title="تم إنشاء ملف الكابتن المبدئي" description="يجب استكمال باقي البيانات لتفعيله.">
           <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "1rem" }}>
-            <CpButton variant="primary" onClick={() => props.onCreated(createdCaseId)}>فتح الملف والمتابعة</CpButton>
+            <CpButton variant="primary" onClick={() => props.onCreated(createdCaptain.actorId)}>فتح الملف والمتابعة</CpButton>
             <CpButton variant="secondary" onClick={resetForm}>إضافة كابتن آخر</CpButton>
           </div>
         </CpStatePanel>
@@ -178,7 +155,7 @@ export function CaptainCreateView(props: {
               disabled={!canSubmit}
               onClick={handleSubmit}
             >
-              {isProvisioning ? "جارٍ الإنشاء…" : "إنشاء الكابتن"}
+              {isSubmitting ? "جارٍ الإنشاء…" : "إنشاء الكابتن"}
             </CpButton>
           </div>
         </div>

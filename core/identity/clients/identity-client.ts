@@ -18,6 +18,24 @@ export type IdentityClientError =
   | { readonly kind: "http"; readonly status: number; readonly code: string; readonly message: string }
   | { readonly kind: "network"; readonly message: string };
 
+export type IdentityClientDeviceFingerprintProvider = () => string | Promise<string>;
+
+let deviceFingerprintProvider: IdentityClientDeviceFingerprintProvider | null = null;
+
+export function configureIdentityClientDeviceFingerprintProvider(
+  provider: IdentityClientDeviceFingerprintProvider,
+): void {
+  if (deviceFingerprintProvider !== null) return;
+  deviceFingerprintProvider = provider;
+}
+
+async function resolveConfiguredDeviceFingerprint(): Promise<string | undefined> {
+  if (deviceFingerprintProvider === null) return undefined;
+  const fingerprint = (await deviceFingerprintProvider()).trim();
+  if (!fingerprint) throw new Error("IDENTITY_DEVICE_FINGERPRINT_UNAVAILABLE");
+  return fingerprint;
+}
+
 export type IdentityClient = {
   health(): Promise<IdentityRuntimeStatus>;
   readiness(): Promise<IdentityRuntimeStatus>;
@@ -127,8 +145,15 @@ export function createIdentityClient(baseUrl: string): IdentityClient {
     introspect(body) {
       return request("/auth/introspect", { method: "POST", body });
     },
-    refresh(refreshToken) {
-      return request("/auth/refresh", { method: "POST", body: { refreshToken } });
+    async refresh(refreshToken) {
+      const deviceFingerprint = await resolveConfiguredDeviceFingerprint();
+      return request("/auth/refresh", {
+        method: "POST",
+        body: {
+          refreshToken,
+          ...(deviceFingerprint !== undefined ? { deviceFingerprint } : {}),
+        },
+      });
     },
     listSessions(accessToken) {
       return request("/auth/sessions", { method: "GET", token: accessToken });

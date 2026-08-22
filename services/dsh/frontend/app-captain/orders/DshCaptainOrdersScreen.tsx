@@ -329,41 +329,6 @@ export function CaptainDeliveryConfirmSheet({ visible, orderTitle, onConfirm, on
   );
 }
 
-export function DshCaptainOrderChatScreen({ orderId, pickupLabel, dropoffLabel, state = 'active' }: { orderId: string; pickupLabel: string; dropoffLabel: string; state?: 'active' | 'readOnly' }) {
-  return <OrderChatSection orderId={orderId} pickupLabel={pickupLabel} dropoffLabel={dropoffLabel} state={state} />;
-}
-
-export function DshCaptainBellScreen({
-  state,
-  items,
-  onOpenInbox,
-  onOpenNextOrder,
-  onRetry,
-  onBack,
-}: {
-  state?: 'ready' | 'loading' | 'empty' | 'error' | 'offline' | 'disabled';
-  summary?: { inboxLabel: string; approvalLabel: string; urgentLabel: string; nextActionLabel: string };
-  items?: DshCaptainOrderBellItem[];
-  onOpenInbox?: () => void;
-  onOpenNextOrder?: () => void;
-  onRetry?: (() => void) | undefined;
-  onBack?: (() => void) | undefined;
-}) {
-  if (state && state !== 'ready') {
-    const stateProps = {
-      loading: { tone: 'info' as const, loading: true, title: 'جارٍ تجهيز جرس الكابتن', description: 'ستظهر العروض فور وصولها.', actionLabel: 'إعادة المحاولة' },
-      empty: { tone: 'neutral' as const, title: 'لا توجد عروض جديدة', description: 'لا يوجد عرض ينتظر قرارك.', actionLabel: 'فتح الصندوق' },
-      offline: { tone: 'warning' as const, title: 'جرس الكابتن غير متصل', description: 'أعد الاتصال لاسترجاع العروض.', actionLabel: 'إعادة المحاولة' },
-      disabled: { tone: 'warning' as const, title: 'جرس الكابتن متوقف', description: 'يمكن فتح الصندوق للقراءة.', actionLabel: 'فتح الصندوق' },
-      error: { tone: 'danger' as const, title: 'تعذر تحميل الجرس', description: 'أعد المحاولة دون افتراض نجاح.', actionLabel: 'إعادة المحاولة' },
-      ready: null,
-    }[state];
-    if (!stateProps) return null;
-    return <MobileScrollView padding={4} gap={4}><StateView {...stateProps} onActionPress={onRetry ?? onOpenInbox ?? onBack} /></MobileScrollView>;
-  }
-  return <OrderBellSection items={items} onOpenInbox={onOpenInbox} onOpenNextOrder={onOpenNextOrder} onRetry={onRetry} onBack={onBack} />;
-}
-
 export function CaptainOrdersInboxScreen(props: Pick<DshCaptainOrdersScreenProps, 'state' | 'items' | 'onOpenOrder' | 'onOpenNextOrder' | 'onRetry'> = {}) {
   return <DshCaptainOrdersScreen {...props} section="inbox" />;
 }

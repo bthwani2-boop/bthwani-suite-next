@@ -16,6 +16,9 @@ export {
   updateEscalation,
   fetchPartnerOnboardingStatus,
   fetchFieldWorkQueue,
+  reconcileFieldMutation,
+  fetchChecklistPolicy,
+  replaceChecklistPolicy,
 } from "./field-readiness.api";
 export type { FieldMutationContext } from "./field-readiness.api";
 export {
@@ -28,29 +31,39 @@ export {
 export { useFieldEscalationSubmissionController } from "./use-field-escalation-submission-controller";
 export {
   configureFieldOfflineQueueStorage,
+  configureFieldOfflineLegacyStorage,
   configureFieldOfflineQueueScope,
   prepareFieldOfflineQueue,
   clearFieldOfflineQueue,
   enqueueFieldOperation,
   markOperationSynced,
+  markOperationUnknown,
+  markOperationReadyForRetry,
   markOperationFailed,
   getDueOperations,
-  getPendingCount,
+  getUnknownOperations,
   purgeSyncedOperations,
+  evacuateTerminalOperations,
   getAllOperations,
   recoverCorruptFieldOfflineQueue,
+  readLegacyQuarantine,
   FieldOfflineQueueCorruptError,
 } from "./field-offline-queue";
 export type {
   FieldOfflineQueueScope,
   FieldOfflineQueueStorageAdapter,
+  FieldOfflineLegacyStorageAdapter,
   FieldOfflineOperation,
   FieldOfflineOperationType,
   FieldOfflineOperationStatus,
+  FieldOfflineQuarantineReason,
+  FieldOfflineQuarantineRecord,
+  FieldOfflineLegacyMigrationSummary,
 } from "./field-offline-queue";
 export { useFieldOfflineSync } from "./use-field-offline-sync";
 export type {
   FieldOfflineExecutorMap,
+  FieldOfflineReconcilerMap,
   FieldOfflineSyncController,
   FieldOfflineSyncState,
 } from "./use-field-offline-sync";

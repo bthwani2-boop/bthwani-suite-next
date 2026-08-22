@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -16,12 +18,14 @@ import (
 
 // handlePublicCatalog is the sole client-facing catalog read. Per
 // governance/catalog/CENTRAL_CATALOG_SOVEREIGNTY_DECISION.md rule 4, it reads
-// only from the master catalog + store assortment, so a
-// product is visible to app-client only when domain, master product, and
-// assortment row are all independently approved/active/visible.
+// only from the master catalog + store assortment, then applies the same
+// normalized price/inventory authority used by cart. A product cannot be
+// advertised to app-client unless it is actually purchasable now, and every
+// returned taxonomy/media/policy projection is pruned to that exact final
+// product set.
 func handlePublicCatalog(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		domains, nodes, products, media, policySnapshot, err := centralcatalog.GetClientCatalog(r.Context(), db, r.PathValue("storeId"))
+		domains, nodes, products, catalogMedia, policySnapshot, err := centralcatalog.GetPurchasableClientCatalog(r.Context(), db, r.PathValue("storeId"))
 		if errors.Is(err, centralcatalog.ErrNotFound) {
 			store.SendError(w, http.StatusNotFound, "NOT_FOUND", "approved catalog not found")
 			return
@@ -34,7 +38,7 @@ func handlePublicCatalog(db *sql.DB) http.HandlerFunc {
 			"domains":        domains,
 			"nodes":          nodes,
 			"products":       products,
-			"media":          media,
+			"media":          catalogMedia,
 			"policySnapshot": policySnapshot,
 		})
 	}
@@ -67,6 +71,15 @@ func handlePublicMedia(db *sql.DB, mediaProvider *media.Provider) http.HandlerFu
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load media asset")
 			return
 		}
+
+		if localMediaDir := os.Getenv("DSH_LOCAL_MEDIA_PATH"); localMediaDir != "" {
+			localPath := filepath.Join(localMediaDir, asset.ObjectKey)
+			if stat, err := os.Stat(localPath); err == nil && !stat.IsDir() {
+				http.ServeFile(w, r, localPath)
+				return
+			}
+		}
+
 		signedURL, _, err := mediaClient.PresignGet(r.Context(), asset.ObjectKey, 2*time.Hour)
 		if err != nil {
 			store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to generate preview url")
@@ -81,7 +94,11 @@ func (s *protectedStoreServer) partnerStore(w http.ResponseWriter, r *http.Reque
 	if !ok {
 		return store.StoreActor{}, "", false
 	}
-	row, _, err := store.ResolveActorStore(r.Context(), s.db, s.workforce, actor)
+	requestedStoreID := strings.TrimSpace(r.PathValue("storeId"))
+	if requestedStoreID == "" {
+		requestedStoreID = strings.TrimSpace(r.URL.Query().Get("storeId"))
+	}
+	row, _, err := store.ResolveActorStoreForID(r.Context(), s.db, actor, requestedStoreID)
 	if err != nil {
 		s.writeStoreError(w, err)
 		return store.StoreActor{}, "", false
@@ -93,44 +110,53 @@ func (s *protectedStoreServer) partnerStore(w http.ResponseWriter, r *http.Reque
 // {partnerId} in the URL, requiring the calling field actor to be the one
 // who created that partner draft, and requiring the partner to already have
 // a linked store (every partner gets one automatically on creation).
-func (s *protectedStoreServer) fieldPartnerStore(w http.ResponseWriter, r *http.Request) (actorID, storeID string, ok bool) {
+func (s *protectedStoreServer) fieldPartnerStore(w http.ResponseWriter, r *http.Request) (actor store.StoreActor, storeID string, ok bool) {
 	actor, reqOk := s.requireActor(w, r, "field")
 	if !reqOk {
-		return "", "", false
+		return store.StoreActor{}, "", false
+	}
+	operatorContextID := strings.TrimSpace(actor.OperatorContextID)
+	if operatorContextID == "" {
+		store.SendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_REQUIRED", "trusted OperatorContext context is required")
+		return store.StoreActor{}, "", false
 	}
 	partnerID := r.PathValue("partnerId")
-	p, err := partner.GetPartner(s.db, partnerID)
+	p, err := partner.GetPartnerForOperatorContext(s.db, operatorContextID, partnerID)
 	if errors.Is(err, partner.ErrNotFound) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "partner not found")
-		return "", "", false
+		return store.StoreActor{}, "", false
 	}
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to verify partner ownership")
-		return "", "", false
+		return store.StoreActor{}, "", false
 	}
 	if p.CreatedByActorID != actor.ID {
 		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "this partner draft does not belong to you")
-		return "", "", false
+		return store.StoreActor{}, "", false
 	}
-	row, err := store.GetStoreByPartnerID(s.db, partnerID)
+	row, err := store.GetPartnerFirstStoreForOperatorContext(r.Context(), s.db, operatorContextID, partnerID)
+	if errors.Is(err, store.ErrFirstStoreReferenceMissing) {
+		store.SendError(w, http.StatusConflict, "PARTNER_FIRST_STORE_REFERENCE_REQUIRED", "the first-store reference is not uniquely governed")
+		return store.StoreActor{}, "", false
+	}
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load partner store")
-		return "", "", false
+		return store.StoreActor{}, "", false
 	}
 	if row == nil {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "partner has no linked store yet")
-		return "", "", false
+		return store.StoreActor{}, "", false
 	}
-	return actor.ID, row.ID, true
+	return actor, row.ID, true
 }
 
 // GET /dsh/field/partners/{partnerId}/store
 func (s *protectedStoreServer) handleFieldGetPartnerStore(w http.ResponseWriter, r *http.Request) {
-	_, storeID, ok := s.fieldPartnerStore(w, r)
+	actor, storeID, ok := s.fieldPartnerStore(w, r)
 	if !ok {
 		return
 	}
-	row, err := store.GetStoreByPartnerID(s.db, r.PathValue("partnerId"))
+	row, err := store.GetStoreByIDInternalForOperatorContext(r.Context(), s.db, actor.OperatorContextID, storeID)
 	if err != nil || row == nil {
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to load store")
 		return
@@ -140,7 +166,7 @@ func (s *protectedStoreServer) handleFieldGetPartnerStore(w http.ResponseWriter,
 
 // PATCH /dsh/field/partners/{partnerId}/store
 func (s *protectedStoreServer) handleFieldUpdatePartnerStore(w http.ResponseWriter, r *http.Request) {
-	actorID, storeID, ok := s.fieldPartnerStore(w, r)
+	actor, storeID, ok := s.fieldPartnerStore(w, r)
 	if !ok {
 		return
 	}
@@ -154,7 +180,7 @@ func (s *protectedStoreServer) handleFieldUpdatePartnerStore(w http.ResponseWrit
 		return
 	}
 
-	row, audit, err := store.UpdateFieldStoreDraft(r.Context(), s.db, storeID, actorID, idempotencyKey, correlationID(r), input)
+	row, audit, err := store.UpdateFieldStoreDraft(r.Context(), s.db, storeID, actor.ID, idempotencyKey, correlationID(r), input)
 	if errors.Is(err, store.ErrIdempotencyConflict) {
 		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", "idempotency key was already used with a different store draft update request")
 		return

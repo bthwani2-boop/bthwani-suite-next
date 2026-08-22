@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, fileURLToPath } from "node:path";
+import { dirname } from "node:path";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 const guardPath = join(dirname(fileURLToPath(import.meta.url)), "source-integrity-gate.mjs");

@@ -62,7 +62,13 @@ export function AnalyticsInsightsPanel({ storeName, canonicalStoreId }: { storeN
   React.useEffect(() => {
     let cancelled = false;
     setState({ kind: 'loading' });
-    void fetchPartnerPerformance(period)
+    if (!canonicalStoreId?.trim()) {
+      setState({ kind: 'error', message: 'لا يوجد متجر محدد لقراءة أداء المتجر من DSH.' });
+      return () => {
+        cancelled = true;
+      };
+    }
+    void fetchPartnerPerformance(period, canonicalStoreId)
       .then((value) => {
         if (!cancelled) setState({ kind: 'success', value });
       })
@@ -96,7 +102,7 @@ export function AnalyticsInsightsPanel({ storeName, canonicalStoreId }: { storeN
   }
 
   const performance = state.value;
-  if (performance.totalOrders === 0) {
+  if (performance.readState === 'no_data') {
     return (
       <Box gap={3}>
         <PeriodSelector period={period} onChange={setPeriod} />
@@ -109,12 +115,24 @@ export function AnalyticsInsightsPanel({ storeName, canonicalStoreId }: { storeN
     );
   }
 
+  if (performance.readState !== 'available' || !performance.generatedAt || performance.freshnessSeconds === null) {
+    return (
+      <StateView
+        tone="danger"
+        title="بيانات الأداء غير مكتملة"
+        description="أعاد DSH حالة قراءة غير قابلة للعرض؛ لم تُعرض أرقام بديلة."
+        actionLabel="إعادة المحاولة"
+        onActionPress={() => setReloadToken((value) => value + 1)}
+      />
+    );
+  }
+
   return (
     <Box gap={4}>
       <Box gap={2} paddingY={2}>
         <Text role="label" tone="muted" align="start">ملخص الأداء — {storeName}</Text>
         <Text role="bodySm" tone="muted" align="start">
-          مصدر البيانات DSH • آخر تحديث {new Date(performance.generatedAt).toLocaleString('ar')}
+          مصدر البيانات {performance.sourceSystem} • نافذة {new Date(performance.windowFrom).toLocaleDateString('ar')} إلى {new Date(performance.windowTo).toLocaleDateString('ar')} • قراءة مباشرة قبل {performance.freshnessSeconds} ثانية
         </Text>
       </Box>
       <PeriodSelector period={period} onChange={setPeriod} />

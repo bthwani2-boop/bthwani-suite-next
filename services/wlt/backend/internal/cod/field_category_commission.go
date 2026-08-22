@@ -132,11 +132,11 @@ func UpsertFieldCategoryCommissionPolicy(
 	}
 	metadata, _ := json.Marshal(map[string]any{
 		"operatorContextId": operatorContextID,
-		"partnerCategory": partnerCategory,
-		"version": version,
-		"amountMinorUnits": input.FixedAmountMinorUnits,
-		"currency": input.Currency,
-		"status": input.Status,
+		"partnerCategory":   partnerCategory,
+		"version":           version,
+		"amountMinorUnits":  input.FixedAmountMinorUnits,
+		"currency":          input.Currency,
+		"status":            input.Status,
 	})
 	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_finance_audit_events(
 		operator_context_id,aggregate_type,aggregate_id,action,actor_id,actor_type,reason,correlation_id,metadata)
@@ -262,18 +262,6 @@ func CreateFieldCategoryCommission(
 	if err != nil {
 		return nil, err
 	}
-	result, err := tx.ExecContext(ctx, `UPDATE wlt_wallets SET
-		pending_balance_minor_units=pending_balance_minor_units+$1,
-		earned_total_minor_units=earned_total_minor_units+$1,
-		last_ledger_entry_at=now(),updated_at=now()
-		WHERE operator_context_id=$2 AND actor_type='field' AND actor_id=$3`,
-		policy.FixedAmountMinorUnits, operatorContextID, input.BeneficiaryActorID)
-	if err != nil {
-		return nil, err
-	}
-	if affected, _ := result.RowsAffected(); affected != 1 {
-		return nil, ErrFieldWalletUnavailable
-	}
 	if _, err := ledger.PostLedgerTransaction(ctx, tx, "commission_earned", "commission", commission.ID, []ledger.LedgerLine{
 		{AccountType: "platform_commission_receivable", DebitCredit: "debit", AmountMinorUnits: policy.FixedAmountMinorUnits, Currency: policy.Currency},
 		{AccountType: "wallet", ActorType: "field", ActorID: input.BeneficiaryActorID, DebitCredit: "credit", AmountMinorUnits: policy.FixedAmountMinorUnits, Currency: policy.Currency},
@@ -290,14 +278,14 @@ func CreateFieldCategoryCommission(
 		return nil, err
 	}
 	metadata, _ := json.Marshal(map[string]any{
-		"operatorContextId": operatorContextID,
-		"partnerId": input.PartnerID,
-		"partnerCategory": input.PartnerCategory,
+		"operatorContextId":     operatorContextID,
+		"partnerId":             input.PartnerID,
+		"partnerCategory":       input.PartnerCategory,
 		"matchedPolicyCategory": policy.PartnerCategory,
-		"policyId": policy.PolicyID,
-		"policyVersion": policy.Version,
-		"amountMinorUnits": policy.FixedAmountMinorUnits,
-		"currency": policy.Currency,
+		"policyId":              policy.PolicyID,
+		"policyVersion":         policy.Version,
+		"amountMinorUnits":      policy.FixedAmountMinorUnits,
+		"currency":              policy.Currency,
 	})
 	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_finance_audit_events(
 		operator_context_id,aggregate_type,aggregate_id,action,actor_id,actor_type,correlation_id,metadata)
@@ -318,8 +306,13 @@ func HandleUpsertFieldCategoryCommissionPolicy(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "authenticated OperatorContext context is required")
+			return
+		}
 		policy, err := UpsertFieldCategoryCommissionPolicy(
-			r.Context(), db, r.Header.Get("X-Operator-Context-ID"), r.PathValue("partnerCategory"), input, r.Header.Get("X-Correlation-ID"),
+			r.Context(), db, operatorContextID, r.PathValue("partnerCategory"), input, r.Header.Get("X-Correlation-ID"),
 		)
 		if errors.Is(err, ErrFieldCategoryPolicyConflict) {
 			shared.SendError(w, http.StatusConflict, "POLICY_VERSION_CONFLICT", err.Error())
@@ -340,8 +333,13 @@ func HandleCreateFieldCategoryCommission(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
+		if err != nil {
+			shared.SendError(w, http.StatusBadRequest, "OPERATOR_CONTEXT_REQUIRED", "authenticated OperatorContext context is required")
+			return
+		}
 		commission, err := CreateFieldCategoryCommission(
-			r.Context(), db, r.Header.Get("X-Operator-Context-ID"), input, r.Header.Get("X-Correlation-ID"),
+			r.Context(), db, operatorContextID, input, r.Header.Get("X-Correlation-ID"),
 		)
 		switch {
 		case errors.Is(err, ErrFieldCategoryPolicyMissing):

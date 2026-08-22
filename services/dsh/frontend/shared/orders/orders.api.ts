@@ -1,11 +1,10 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { createDshHttpClient, type DshRequestOptions } from "../_kernel/dsh-http-request";
+import { corrId, createDshHttpClient, type DshRequestOptions } from "../_kernel/dsh-http-request";
 import type { DshDeliveryException } from "../dispatch/dispatch.types";
 import type {
   DshOrder,
   DshOrderPreparation,
   DshPartnerOrder,
-  DshCreateOrderInput,
   DshRejectOrderInput,
   DshStoreCaptainHandoff,
   DshStorePreparationPolicy,
@@ -19,31 +18,24 @@ import type {
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "order");
 
+export type PartnerOrderMutationOptions = {
+  readonly expectedVersion: number;
+  readonly idempotencyKey?: string;
+};
+
+function partnerMutationOptions(options: PartnerOrderMutationOptions): DshRequestOptions {
+  return {
+    method: "POST",
+    expectedVersion: options.expectedVersion,
+    idempotencyKey: options.idempotencyKey ?? corrId("partner-order-command"),
+  };
+}
+
 function withOptionalToken(
   options: Omit<DshRequestOptions, "token">,
   token?: string,
 ): DshRequestOptions {
   return token === undefined ? options : { ...options, token };
-}
-
-export async function createOrder(input: DshCreateOrderInput): Promise<DshOrder> {
-  const data = await request<{ order: DshOrder }>("/dsh/client/orders", {
-    method: "POST",
-    body: input,
-  });
-  return data.order;
-}
-
-export async function fetchClientOrders(): Promise<readonly DshOrder[]> {
-  const data = await request<{ orders: DshOrder[] }>("/dsh/client/orders");
-  return data.orders ?? [];
-}
-
-export async function fetchClientOrder(orderId: string): Promise<DshOrder> {
-  const data = await request<{ order: DshOrder }>(
-    `/dsh/client/orders/${encodeURIComponent(orderId)}`,
-  );
-  return data.order;
 }
 
 export async function fetchOrderPreparation(
@@ -83,10 +75,12 @@ export async function fetchOrderPreparationIssues(
  */
 export async function fetchPartnerOrders(
   status?: string,
+  storeId?: string,
   token?: string,
 ): Promise<readonly DshPartnerOrder[]> {
   const params = new URLSearchParams();
   if (status) params.set("status", status);
+  if (storeId?.trim()) params.set("storeId", storeId.trim());
   const query = params.toString();
   const data = await request<{ orders: DshPartnerOrder[] }>(
     `/dsh/partner/order-workboard${query ? `?${query}` : ""}`,
@@ -95,10 +89,10 @@ export async function fetchPartnerOrders(
   return data.orders ?? [];
 }
 
-export async function acceptOrder(orderId: string, token?: string): Promise<DshOrder> {
+export async function acceptOrder(orderId: string, options: PartnerOrderMutationOptions, token?: string): Promise<DshOrder> {
   const data = await request<{ order: DshOrder }>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/accept`,
-    withOptionalToken({ method: "POST" }, token),
+    withOptionalToken(partnerMutationOptions(options), token),
   );
   return data.order;
 }
@@ -106,27 +100,28 @@ export async function acceptOrder(orderId: string, token?: string): Promise<DshO
 export async function rejectOrder(
   orderId: string,
   input: DshRejectOrderInput,
+  options: PartnerOrderMutationOptions,
   token?: string,
 ): Promise<DshOrder> {
   const data = await request<{ order: DshOrder }>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/reject`,
-    withOptionalToken({ method: "POST", body: input }, token),
+    withOptionalToken({ ...partnerMutationOptions(options), body: input }, token),
   );
   return data.order;
 }
 
-export async function markOrderPreparing(orderId: string, token?: string): Promise<DshOrder> {
+export async function markOrderPreparing(orderId: string, options: PartnerOrderMutationOptions, token?: string): Promise<DshOrder> {
   const data = await request<{ order: DshOrder }>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/preparing`,
-    withOptionalToken({ method: "POST" }, token),
+    withOptionalToken(partnerMutationOptions(options), token),
   );
   return data.order;
 }
 
-export async function markOrderReady(orderId: string, token?: string): Promise<DshOrder> {
+export async function markOrderReady(orderId: string, options: PartnerOrderMutationOptions, token?: string): Promise<DshOrder> {
   const data = await request<{ order: DshOrder }>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/ready`,
-    withOptionalToken({ method: "POST" }, token),
+    withOptionalToken(partnerMutationOptions(options), token),
   );
   return data.order;
 }
@@ -134,10 +129,11 @@ export async function markOrderReady(orderId: string, token?: string): Promise<D
 export async function confirmStoreCaptainHandoff(
   orderId: string,
   token?: string,
+  idempotencyKey?: string,
 ): Promise<DshStoreCaptainHandoff> {
   const data = await request<{ handoff: DshStoreCaptainHandoff }>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/captain-handoff/confirm`,
-    withOptionalToken({ method: "POST" }, token),
+    withOptionalToken({ method: "POST", idempotencyKey: idempotencyKey ?? corrId("partner-handoff-confirm") }, token),
   );
   return data.handoff;
 }
@@ -149,7 +145,7 @@ export async function reportPartnerStoreCaptainHandoffException(
 ): Promise<DshDeliveryException> {
   const data = await request<{ exception: DshDeliveryException }>(
     `/dsh/partner/orders/${encodeURIComponent(orderId)}/captain-handoff/exceptions`,
-    withOptionalToken({ method: "POST", body: input }, token),
+    withOptionalToken({ method: "POST", body: input, idempotencyKey: input.correlationId }, token),
   );
   return data.exception;
 }

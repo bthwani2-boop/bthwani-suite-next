@@ -2,11 +2,20 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/url"
 
 	"dsh-api/internal/store"
 )
+
+func writePartnerFinanceScopeError(w http.ResponseWriter, err error) {
+	if errors.Is(err, store.ErrAmbiguousStoreScope) {
+		store.SendError(w, http.StatusConflict, "PARTNER_SCOPE_REQUIRED", "actor is assigned to multiple partner scopes")
+		return
+	}
+	store.SendError(w, http.StatusForbidden, "NO_PARTNER_ASSIGNMENT", "actor has no partner assignments")
+}
 
 // Finance permission actions on the control-panel surface.
 const (
@@ -27,9 +36,9 @@ func (s *protectedStoreServer) handlePartnerFinanceSettlements(w http.ResponseWr
 	if !ok {
 		return
 	}
-	scopes, err := s.workforce.GetActorScopes(r.Context(), actor.ID, actor.OperatorContextID, "partner")
-	if err != nil || len(scopes.PartnerIDs) == 0 {
-		store.SendError(w, http.StatusForbidden, "NO_PARTNER_ASSIGNMENT", "actor has no partner assignments")
+	partnerID, err := store.ResolveActorPartnerID(r.Context(), s.db, actor)
+	if err != nil || partnerID == "" {
+		writePartnerFinanceScopeError(w, err)
 		return
 	}
 	query := url.Values{}
@@ -38,7 +47,7 @@ func (s *protectedStoreServer) handlePartnerFinanceSettlements(w http.ResponseWr
 			query.Set(key, v)
 		}
 	}
-	query.Set("partnerId", scopes.PartnerIDs[0])
+	query.Set("partnerId", partnerID)
 	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.settlements.read", "/wlt/settlements", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
@@ -54,13 +63,13 @@ func (s *protectedStoreServer) handlePartnerFinanceSettlementSummary(w http.Resp
 	if !ok {
 		return
 	}
-	scopes, err := s.workforce.GetActorScopes(r.Context(), actor.ID, actor.OperatorContextID, "partner")
-	if err != nil || len(scopes.PartnerIDs) == 0 {
-		store.SendError(w, http.StatusForbidden, "NO_PARTNER_ASSIGNMENT", "actor has no partner assignments")
+	partnerID, err := store.ResolveActorPartnerID(r.Context(), s.db, actor)
+	if err != nil || partnerID == "" {
+		writePartnerFinanceScopeError(w, err)
 		return
 	}
 	query := url.Values{}
-	query.Set("partnerId", scopes.PartnerIDs[0])
+	query.Set("partnerId", partnerID)
 	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.settlements.read", "/wlt/settlements/summary", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
@@ -123,10 +132,6 @@ func (s *protectedStoreServer) handleFinanceFinancialSummary(w http.ResponseWrit
 	s.handleFacadeRead("finance.ledger.read", "/wlt/ledger/financial-summary", nil)(w, r)
 }
 
-func (s *protectedStoreServer) handleFinanceCodRecords(w http.ResponseWriter, r *http.Request) {
-	s.handleFacadeRead("finance.cod.read", "/wlt/cod-records", []string{"captainId", "orderId", "limit", "cursor"})(w, r)
-}
-
 func (s *protectedStoreServer) handleFinanceCommissions(w http.ResponseWriter, r *http.Request) {
 	s.handleFacadeRead("finance.ledger.read", "/wlt/commissions", []string{"orderId", "captainId", "limit", "cursor"})(w, r)
 }
@@ -145,23 +150,6 @@ func (s *protectedStoreServer) handleFinanceReferencesRefundStatus(w http.Respon
 
 func (s *protectedStoreServer) handleFinanceReferencesFieldCommission(w http.ResponseWriter, r *http.Request) {
 	s.handleFacadeRead("finance.ledger.read", "/wlt/references/field-commission", []string{"partnerId"})(w, r)
-}
-
-func (s *protectedStoreServer) handleCaptainFinanceCodRecords(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.requireActor(w, r, "captain")
-	if !ok {
-		return
-	}
-	query := url.Values{}
-	query.Set("captainId", actor.ID)
-	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.cod.read", "/wlt/cod-records", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
-	if err != nil {
-		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
 }
 
 func (s *protectedStoreServer) handleFinancePayoutRequests(w http.ResponseWriter, r *http.Request) {
@@ -229,7 +217,7 @@ func (s *protectedStoreServer) handleResolveFinanceReconciliationCase(w http.Res
 		"resolutionNote":   input.ResolutionNote,
 	})
 
-	status, respBody, err := s.wlt.ExecuteFinanceWrite(r.Context(), "finance.reconciliation.resolve", http.MethodPost, "/wlt/reconciliation-cases/"+url.PathEscape(caseID)+"/resolve", body, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID)
+	status, respBody, err := s.wlt.ExecuteFinanceWrite(r.Context(), "finance.reconciliation.resolve", http.MethodPost, "/wlt/reconciliation-cases/"+url.PathEscape(caseID)+"/resolve", body, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID, actor.ID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance write failed")
 		return
@@ -271,9 +259,9 @@ func (s *protectedStoreServer) handleFacadeWrite(opID, wltPath string) http.Hand
 			return
 		}
 
-		body := operatorWriteBody(actor.ID)
+		body := operatorWriteBody()
 
-		status, respBody, err := s.wlt.ExecuteFinanceWrite(r.Context(), opID, http.MethodPost, wltPath, body, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID)
+		status, respBody, err := s.wlt.ExecuteFinanceWrite(r.Context(), opID, http.MethodPost, wltPath, body, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID, actor.ID)
 		if err != nil {
 			store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance operation failed")
 			return
@@ -284,8 +272,8 @@ func (s *protectedStoreServer) handleFacadeWrite(opID, wltPath string) http.Hand
 	}
 }
 
-func operatorWriteBody(operatorID string) []byte {
-	body, _ := json.Marshal(map[string]string{"operatorId": operatorID})
+func operatorWriteBody() []byte {
+	body, _ := json.Marshal(struct{}{})
 	return body
 }
 

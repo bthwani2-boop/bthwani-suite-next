@@ -9,8 +9,6 @@ import {
   suspendEmployee,
   updateEmployee,
   workforceErrorMessage,
-  startProvisioningCase,
-  resumeProvisioningCase,
 } from "./workforce.api";
 import type {
   CreateEmployeeInput,
@@ -18,7 +16,6 @@ import type {
   EmployeeDetail,
   EngagementStatus,
   UpdateEmployeeInput,
-  StartProvisioningInput,
 } from "./workforce.types";
 
 export type EmployeeListState =
@@ -115,49 +112,25 @@ export function useEmployeeDetailController(actorId: string) {
 
 export type EmployeeCreateState =
   | { kind: "idle" }
-  | { kind: "provisioning"; caseId: string; status: string }
-  | { kind: "error"; message: string; caseId?: string }
-  | { kind: "created"; caseId: string };
+  | { kind: "submitting" }
+  | { kind: "error"; message: string }
+  | { kind: "created"; employee: Employee };
 
 export function useEmployeeCreateController() {
   const [state, setState] = useState<EmployeeCreateState>({ kind: "idle" });
 
-  const submit = useCallback(async (input: StartProvisioningInput) => {
-    setState({ kind: "provisioning", caseId: "", status: "DRAFT" });
+  const submit = useCallback(async (input: CreateEmployeeInput) => {
+    setState({ kind: "submitting" });
     try {
-      const pc = await startProvisioningCase(input);
-      if (pc.status === "READY_FOR_ACTIVATION" || pc.status === "COMPLETED") {
-        setState({ kind: "created", caseId: pc.id });
-      } else if (pc.status.startsWith("FAILED")) {
-        setState({ kind: "error", message: pc.failureReason || "Failed", caseId: pc.id });
-      } else {
-        setState({ kind: "provisioning", caseId: pc.id, status: pc.status });
-      }
-      return pc;
+      const employee = await createEmployee(input);
+      setState({ kind: "created", employee });
+      return employee;
     } catch (error) {
       setState({ kind: "error", message: workforceErrorMessage(error) });
       return null;
     }
   }, []);
 
-  const resume = useCallback(async (caseId: string) => {
-    setState({ kind: "provisioning", caseId, status: "RESUMING" });
-    try {
-      const pc = await resumeProvisioningCase(caseId);
-      if (pc.status === "READY_FOR_ACTIVATION" || pc.status === "COMPLETED") {
-        setState({ kind: "created", caseId: pc.id });
-      } else if (pc.status.startsWith("FAILED")) {
-        setState({ kind: "error", message: pc.failureReason || "Failed", caseId: pc.id });
-      } else {
-        setState({ kind: "provisioning", caseId: pc.id, status: pc.status });
-      }
-      return pc;
-    } catch (error) {
-      setState({ kind: "error", message: workforceErrorMessage(error), caseId });
-      return null;
-    }
-  }, []);
-
   const reset = useCallback(() => setState({ kind: "idle" }), []);
-  return { state, submit, resume, reset };
+  return { state, submit, reset };
 }

@@ -1,9 +1,0 @@
-{
-  "project": "bthwani-suite-next",
-  "instructions": [
-    "governance/GOVERNANCE.md",
-    "AGENTS.md",
-    ".agents/INDEX.md"
-  ],
-  "mcp": {}
-}

@@ -50,7 +50,7 @@ export function buildStoreOnboardingFeePolicyForm(
 ): StoreOnboardingFeePolicyFormState {
   return {
     enabledValue: policy.enabled ? "true" : "false",
-    amount: String(policy.amount),
+    amount: String(policy.amountMinorUnits),
     currency: policy.currency,
     appliesTo: policy.appliesTo,
     chargeTiming: policy.chargeTiming,
@@ -60,25 +60,33 @@ export function buildStoreOnboardingFeePolicyForm(
 }
 
 export function normalizeStoreOnboardingFeeAmount(value: string): number {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : Number.NaN;
+  const normalized = value.trim();
+  if (!/^\d+$/.test(normalized)) return Number.NaN;
+  const parsed = Number(normalized);
+  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : Number.NaN;
 }
 
 export function buildStoreOnboardingFeePolicyInput(
   form: StoreOnboardingFeePolicyFormState,
   expectedVersion: number,
 ): DshStoreOnboardingFeePolicyInput {
-  const amount = normalizeStoreOnboardingFeeAmount(form.amount);
-  if (!Number.isFinite(amount)) throw new Error("المبلغ غير صالح.");
+  const amountMinorUnits = normalizeStoreOnboardingFeeAmount(form.amount);
+  if (!Number.isSafeInteger(amountMinorUnits)) throw new Error("المبلغ بوحداته الصغرى غير صالح.");
+  if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 0) throw new Error("نسخة السياسة غير صالحة.");
+  if (form.enabledValue === "true" && amountMinorUnits <= 0) throw new Error("المبلغ يجب أن يكون أكبر من صفر عند تفعيل الرسم.");
+  const currency = form.currency.trim().toUpperCase();
+  if (!/^[A-Z]{3}$/.test(currency)) throw new Error("رمز العملة غير صالح.");
   const reason = form.reason.trim();
-  if (reason.length < 3) throw new Error("اكتب سببًا واضحًا للتغيير.");
+  if (reason.length < 3 || reason.length > 1000) throw new Error("اكتب سببًا واضحًا للتغيير.");
+  const notes = form.notes.trim();
+  if (notes.length > 1000) throw new Error("الملاحظات تتجاوز الحد المسموح.");
   return {
     enabled: form.enabledValue === "true",
-    amount,
-    currency: form.currency.trim().toUpperCase() || DEFAULT_STORE_ONBOARDING_FEE_POLICY_FORM.currency,
+    amountMinorUnits,
+    currency,
     appliesTo: form.appliesTo,
     chargeTiming: form.chargeTiming,
-    notes: form.notes.trim(),
+    notes,
     expectedVersion,
     reason,
   };

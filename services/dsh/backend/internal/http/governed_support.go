@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 
-
 	"dsh-api/internal/store"
 	"dsh-api/internal/support"
 )
@@ -36,8 +35,6 @@ func marshalTicketEvent(event support.TicketEvent) map[string]any {
 		"createdAt":     event.CreatedAt,
 	}
 }
-
-
 
 // GET /dsh/operator/support/tickets
 func (s *protectedStoreServer) handleListGovernedOperatorSupportTickets(w http.ResponseWriter, r *http.Request) {
@@ -125,21 +122,23 @@ func (s *protectedStoreServer) handleUpdateGovernedOperatorSupportTicket(w http.
 		return
 	}
 	var body struct {
-		ExpectedStatus string `json:"expectedStatus"`
-		Status         string `json:"status"`
-		AssignedTo     string `json:"assignedTo"`
+		ExpectedStatus  string `json:"expectedStatus"`
+		ExpectedVersion int    `json:"expectedVersion"`
+		Status          string `json:"status"`
+		AssignedTo      string `json:"assignedTo"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
 	ticket, err := support.UpdateOperatorTicketGoverned(s.db, support.OperatorTicketTransitionInput{
-		ActorID:        actor.ID,
-		TicketID:       r.PathValue("ticketId"),
-		ExpectedStatus: support.TicketStatus(body.ExpectedStatus),
-		Status:         support.TicketStatus(body.Status),
-		AssignedTo:     body.AssignedTo,
-		IdempotencyKey: idempotencyKey,
-		CorrelationID:  correlationID,
+		ActorID:         actor.ID,
+		TicketID:        r.PathValue("ticketId"),
+		ExpectedStatus:  support.TicketStatus(body.ExpectedStatus),
+		ExpectedVersion: body.ExpectedVersion,
+		Status:          support.TicketStatus(body.Status),
+		AssignedTo:      body.AssignedTo,
+		IdempotencyKey:  idempotencyKey,
+		CorrelationID:   correlationID,
 	})
 	if err != nil {
 		sendGovernedSupportError(w, err, "failed to update operator support ticket")

@@ -12,10 +12,6 @@ import (
 	"wlt-api/internal/shared"
 )
 
-// fakeCashInRail is a deterministic stand-in for provider.CashInRail so the
-// topup authorize/capture DB flow can be tested without a real mock/sandbox
-// HTTP endpoint. Authorize and Capture each report independently so a test
-// can force one to succeed while the other fails/errors.
 type fakeCashInRail struct {
 	authorizeRes provider.ProviderResult
 	authorizeErr error
@@ -104,7 +100,7 @@ func TestCaptureTopUpSession_PostsWalletCreditAtomically(t *testing.T) {
 		t.Fatalf("expected status captured, got %s", session.Status)
 	}
 
-	projection, err := ledger.GetWalletLedgerProjection(db, "captain", actorID, "YER")
+	projection, err := ledger.GetWalletLedgerProjection(postedCtx, db, "captain", actorID, "YER")
 	if err != nil {
 		t.Fatalf("unexpected error reading wallet projection: %v", err)
 	}
@@ -114,6 +110,22 @@ func TestCaptureTopUpSession_PostsWalletCreditAtomically(t *testing.T) {
 	if projection.BalanceMinorUnits != 7500 {
 		t.Fatalf("expected wallet balance 7500, got %d", projection.BalanceMinorUnits)
 	}
+	if projection.OperatorContextID != opCtx {
+		t.Fatalf("expected projection OperatorContext %q, got %q", opCtx, projection.OperatorContextID)
+	}
+
+	var materializedAvailable int64
+	if err := db.QueryRowContext(ctx, `
+		SELECT available_balance_minor_units
+		FROM wlt_wallets
+		WHERE operator_context_id=$1 AND actor_type='captain' AND actor_id=$2`,
+		opCtx, actorID,
+	).Scan(&materializedAvailable); err != nil {
+		t.Fatalf("expected canonical topup to materialize the wallet projection: %v", err)
+	}
+	if materializedAvailable != 7500 {
+		t.Fatalf("expected materialized available balance 7500, got %d", materializedAvailable)
+	}
 }
 
 func TestCaptureTopUpSession_RejectsNonTopUpSession(t *testing.T) {
@@ -122,18 +134,11 @@ func TestCaptureTopUpSession_RejectsNonTopUpSession(t *testing.T) {
 	ctx := context.Background()
 
 	checkoutIntentID := fmt.Sprintf("test-checkout-nontopup-%d", time.Now().UnixNano())
-	var sessionID string
-	err := db.QueryRowContext(ctx, `
-		INSERT INTO wlt_payment_sessions (checkout_intent_id, client_id, store_id, payment_method, status, provider_reference, amount_minor_units, currency, financial_purpose)
-		VALUES ($1, 'client-test', 'store-test', 'official_wallet', 'authorized', 'card-auth-x', 1000, 'YER', 'order_payment')
-		RETURNING id`, checkoutIntentID).Scan(&sessionID)
-	if err != nil {
-		t.Fatalf("failed to insert test session: %v", err)
-	}
+	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "authorized", "card-auth-x", 1000, false)
 
 	rail := &fakeCashInRail{captureRes: provider.ProviderResult{ProviderReference: "should-not-be-used", Status: "captured"}}
 
-	_, err = CaptureTopUpSession(ctx, db, rail, sessionID, provider.RequestMeta{})
+	_, err := CaptureTopUpSession(ctx, db, rail, sessionID, provider.RequestMeta{})
 	if !errors.Is(err, ErrNotATopUpSession) {
 		t.Fatalf("expected ErrNotATopUpSession, got %v", err)
 	}

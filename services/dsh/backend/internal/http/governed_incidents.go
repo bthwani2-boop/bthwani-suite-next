@@ -3,7 +3,6 @@ package http
 import (
 	"database/sql"
 	"net/http"
-	"strings"
 
 	"dsh-api/internal/auth"
 	"dsh-api/internal/media"
@@ -11,39 +10,6 @@ import (
 	"dsh-api/internal/support"
 	"dsh-api/internal/wlt"
 )
-
-type governedIncidentRouteMatch struct {
-	IncidentID string
-	Collection bool
-	Events     bool
-}
-
-func matchGovernedIncidentRoute(path string) (governedIncidentRouteMatch, bool) {
-	prefixes := []string{
-		"/dsh/operator/incidents",
-		"/dsh/operator/support/incidents",
-	}
-	for _, prefix := range prefixes {
-		if path == prefix || path == prefix+"/" {
-			return governedIncidentRouteMatch{Collection: true}, true
-		}
-		if !strings.HasPrefix(path, prefix+"/") {
-			continue
-		}
-		rest := strings.Trim(strings.TrimPrefix(path, prefix+"/"), "/")
-		if rest == "" {
-			return governedIncidentRouteMatch{Collection: true}, true
-		}
-		parts := strings.Split(rest, "/")
-		if len(parts) == 1 && parts[0] != "" {
-			return governedIncidentRouteMatch{IncidentID: parts[0]}, true
-		}
-		if len(parts) == 2 && parts[0] != "" && parts[1] == "events" {
-			return governedIncidentRouteMatch{IncidentID: parts[0], Events: true}, true
-		}
-	}
-	return governedIncidentRouteMatch{}, false
-}
 
 func marshalIncidentEvent(event support.IncidentEvent) map[string]any {
 	return map[string]any{
@@ -130,21 +96,23 @@ func (s *protectedStoreServer) handleUpdateGovernedIncident(w http.ResponseWrite
 		return
 	}
 	var body struct {
-		ExpectedStatus string `json:"expectedStatus"`
-		Status         string `json:"status"`
-		PostmortemURL  string `json:"postmortemUrl"`
+		ExpectedStatus  string `json:"expectedStatus"`
+		ExpectedVersion int64  `json:"expectedVersion"`
+		Status          string `json:"status"`
+		PostmortemURL   string `json:"postmortemUrl"`
 	}
 	if !decodeProtectedJSON(w, r, &body) {
 		return
 	}
 	incident, err := support.UpdateGovernedIncident(s.db, support.GovernedIncidentTransitionInput{
-		ActorID:        actor.ID,
-		IncidentID:     r.PathValue("incidentId"),
-		ExpectedStatus: support.IncidentStatus(body.ExpectedStatus),
-		Status:         support.IncidentStatus(body.Status),
-		PostmortemURL:  body.PostmortemURL,
-		IdempotencyKey: idempotencyKey,
-		CorrelationID:  correlationID,
+		ActorID:         actor.ID,
+		IncidentID:      r.PathValue("incidentId"),
+		ExpectedStatus:  support.IncidentStatus(body.ExpectedStatus),
+		ExpectedVersion: body.ExpectedVersion,
+		Status:          support.IncidentStatus(body.Status),
+		PostmortemURL:   body.PostmortemURL,
+		IdempotencyKey:  idempotencyKey,
+		CorrelationID:   correlationID,
 	})
 	if err != nil {
 		sendGovernedSupportError(w, err, "failed to update governed incident")
@@ -176,8 +144,6 @@ func (s *protectedStoreServer) handleListGovernedIncidentEvents(w http.ResponseW
 
 // RegisterGovernedIncidentRoutes makes the canonical support-owned incident
 // contract visible to the runtime router and static route/contract verification.
-// The legacy /dsh/operator/incidents aliases remain intercepted by the
-// middleware below and resolve to these same governed handlers.
 func RegisterGovernedIncidentRoutes(
 	mux *http.ServeMux,
 	db *sql.DB,
@@ -195,43 +161,6 @@ func RegisterGovernedIncidentRoutes(
 	mux.HandleFunc("PATCH /dsh/operator/support/incident-tasks/{taskId}", protected.withPermission("control-panel", SupportPermissionManage, protected.handleUpdateIncidentTask))
 	mux.HandleFunc("POST /dsh/operator/support/incidents/{incidentId}/communications", protected.withPermission("control-panel", SupportPermissionManage, protected.handleCreateIncidentCommunication))
 	mux.HandleFunc("POST /dsh/operator/support/incidents/{incidentId}/entities", protected.withPermission("control-panel", SupportPermissionManage, protected.handleCreateIncidentEntity))
-}
-
-// GovernedIncidentMiddleware replaces the legacy incident CRUD at runtime and
-// also exposes the canonical support-owned path. Both paths resolve to one
-// implementation, one state machine and one audit trail.
-func GovernedIncidentMiddleware(
-	db *sql.DB,
-	identityClient *auth.Client,
-	wltClient *wlt.Client,
-	mediaProvider *media.Provider,
-	next http.Handler,
-) http.Handler {
-	protected := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		match, ok := matchGovernedIncidentRoute(r.URL.Path)
-		if !ok {
-			next.ServeHTTP(w, r)
-			return
-		}
-		if match.IncidentID != "" {
-			r.SetPathValue("incidentId", match.IncidentID)
-		}
-		switch {
-		case match.Collection && r.Method == http.MethodPost:
-			protected.handleCreateGovernedIncident(w, r)
-		case match.Collection && r.Method == http.MethodGet:
-			protected.handleListGovernedIncidents(w, r)
-		case match.Events && r.Method == http.MethodGet:
-			protected.handleListGovernedIncidentEvents(w, r)
-		case match.IncidentID != "" && r.Method == http.MethodGet:
-			protected.handleGetGovernedIncident(w, r)
-		case match.IncidentID != "" && r.Method == http.MethodPatch:
-			protected.handleUpdateGovernedIncident(w, r)
-		default:
-			store.SendError(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "incident operation is not supported")
-		}
-	})
 }
 
 func (s *protectedStoreServer) handleCreateIncidentTask(w http.ResponseWriter, r *http.Request) {

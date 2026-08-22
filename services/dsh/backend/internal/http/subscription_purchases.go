@@ -100,7 +100,7 @@ func deterministicSubscriptionPurchaseID(operatorContextID, clientID, idempotenc
 func normalizeSubscriptionPaymentMethod(value string) (string, bool) {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return "official_wallet", true
+		return "", false
 	}
 	switch value {
 	case "wallet", "mixed", "official_wallet":

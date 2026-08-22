@@ -3,6 +3,24 @@ name: BThwani Backend Verification
 on:
   workflow_call:
     inputs:
+      base_sha:
+        type: string
+        required: true
+      head_sha:
+        type: string
+        required: true
+      full_scope:
+        type: string
+        required: true
+      verification_tier:
+        type: string
+        required: true
+      execution_phase:
+        type: string
+        required: true
+      database_changed:
+        type: string
+        required: true
       dsh:
         type: string
         required: true
@@ -24,6 +42,9 @@ on:
 
 permissions:
   contents: read
+
+env:
+  CANDIDATE_SHA: ${{ github.sha }}
 
 jobs:
   plan:
@@ -76,11 +97,89 @@ jobs:
           count="$(jq 'length' <<< "${entries}")"
           echo "count=${count}" >> "${GITHUB_OUTPUT}"
           echo "matrix={\"include\":${entries}}" >> "${GITHUB_OUTPUT}"
+          if [[ "${count}" == "0" ]]; then
+            echo "packages=none reason=no-package-in-semantic-cone" >> "${GITHUB_STEP_SUMMARY}"
+          fi
 
   verify:
-    name: Verify ${{ matrix.key }} backend and database
+    name: Verify ${{ matrix.key }} backend
     needs: [plan]
     if: ${{ needs.plan.outputs.count != '0' }}
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      CI_BASE_SHA: ${{ inputs.base_sha }}
+      CI_HEAD_SHA: ${{ github.sha }}
+      CI_FULL_SCOPE: ${{ inputs.full_scope }}
+      CI_VERIFICATION_TIER: ${{ inputs.verification_tier }}
+      CI_EXECUTION_PHASE: ${{ inputs.execution_phase }}
+      GOWORK: off
+    steps:
+      - name: Verify routed candidate identity
+        shell: bash
+        env:
+          ROUTED_HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CANDIDATE_SHA}" || "${ROUTED_HEAD_SHA}" != "${CANDIDATE_SHA}" ]]; then
+            echo "::error::Routed head SHA mismatch: routed=${ROUTED_HEAD_SHA:-<empty>} event=${CANDIDATE_SHA:-<empty>}"
+            exit 1
+          fi
+      - name: Checkout immutable source candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+          show-progress: false
+      - name: Verify exact candidate and fetch base
+        uses: ./.github/actions/fetch-exact-commits
+        with:
+          base_sha: ${{ inputs.base_sha }}
+          head_sha: ${{ env.CANDIDATE_SHA }}
+          token: ${{ github.token }}
+          repository: ${{ github.repository }}
+      - name: Set up locked Go runtime
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: ${{ matrix.go_mod }}
+          cache-dependency-path: ${{ matrix.workdir }}/go.sum
+      - name: Test and build backend
+        working-directory: ${{ matrix.workdir }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          log="${RUNNER_TEMP}/${{ matrix.key }}-go-verification.log"
+          printf 'backend verification mode=selected-module packages=./...\n' | tee "${log}"
+
+          if ! go test ./... -count=1 >>"${log}" 2>&1; then
+            echo "::error title=${{ matrix.key }} Go verification failed::The complete log is stored as an artifact."
+            grep -E '^--- FAIL:|^FAIL([[:space:]]|$)|panic:|undefined:|cannot use|build failed|Error Trace:' "${log}" | tail -n 80 || true
+            tail -n 160 "${log}"
+            exit 1
+          fi
+          if ! go build ./... >>"${log}" 2>&1; then
+            tail -n 160 "${log}"
+            exit 1
+          fi
+      - name: Upload verification logs
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ${{ matrix.key }}-backend-verification-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/${{ matrix.key }}-migration.log
+            ${{ runner.temp }}/${{ matrix.key }}-go-verification.log
+          if-no-files-found: warn
+          retention-days: 7
+
+  database:
+    name: Verify ${{ matrix.key }} database safety
+    needs: [plan]
+    if: ${{ needs.plan.outputs.count != '0' && (inputs.database_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' || inputs.execution_phase == 'b' || inputs.execution_phase == 'c') }}
     strategy:
       fail-fast: false
       matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
@@ -103,10 +202,23 @@ jobs:
       DSH_REQUIRE_DB_TESTS: ${{ matrix.key == 'dsh' && 'true' || 'false' }}
       WLT_REQUIRE_DB_TESTS: ${{ matrix.key == 'wlt' && 'true' || 'false' }}
       BTHWANI_OPERATOR_CONTEXT_ID: ${{ matrix.key == 'wlt' && 'ci-wlt' || '' }}
+      GOWORK: off
     steps:
-      - name: Checkout immutable source
+      - name: Verify routed candidate identity
+        shell: bash
+        env:
+          ROUTED_HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CANDIDATE_SHA}" || "${ROUTED_HEAD_SHA}" != "${CANDIDATE_SHA}" ]]; then
+            echo "::error::Routed head SHA mismatch: routed=${ROUTED_HEAD_SHA:-<empty>} event=${CANDIDATE_SHA:-<empty>}"
+            exit 1
+          fi
+      - name: Checkout immutable source candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 1
           persist-credentials: false
           show-progress: false
       - name: Set up locked Go runtime
@@ -134,29 +246,106 @@ jobs:
             Write-Error "$env:BACKEND_KEY migration safety verification failed; complete output is retained as an artifact."
             exit $exitCode
           }
-      - name: Test and build backend
+      - name: Run WLT database integration tests
+        if: ${{ matrix.key == 'wlt' }}
         working-directory: ${{ matrix.workdir }}
         shell: bash
         run: |
-          set -uo pipefail
-          log="${RUNNER_TEMP}/${{ matrix.key }}-go-verification.log"
-          if ! go test ./... -count=1 >"${log}" 2>&1; then
-            echo "::error title=${{ matrix.key }} Go verification failed::The complete log is stored as an artifact."
+          set -euo pipefail
+          log="${RUNNER_TEMP}/wlt-database-go-verification.log"
+          printf 'database verification mode=integration packages=./...\n' | tee "${log}"
+          if ! go test ./... -count=1 >>"${log}" 2>&1; then
+            echo "::error title=WLT database integration verification failed::The complete log is stored as an artifact."
             grep -E '^--- FAIL:|^FAIL([[:space:]]|$)|panic:|undefined:|cannot use|build failed|Error Trace:' "${log}" | tail -n 80 || true
             tail -n 160 "${log}"
             exit 1
           fi
-          if ! go build ./... >>"${log}" 2>&1; then
-            tail -n 160 "${log}"
-            exit 1
-          fi
-      - name: Upload verification logs
+      - name: Upload database verification log
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: ${{ matrix.key }}-backend-verification-${{ github.run_id }}
+          name: ${{ matrix.key }}-database-verification-${{ github.run_id }}
           path: |
             ${{ runner.temp }}/${{ matrix.key }}-migration.log
-            ${{ runner.temp }}/${{ matrix.key }}-go-verification.log
+            ${{ runner.temp }}/wlt-database-go-verification.log
           if-no-files-found: warn
           retention-days: 7
+
+  dsh-database-contract:
+    name: Verify DSH schema and seed contracts
+    if: ${{ inputs.dsh == 'true' && (inputs.database_changed == 'true' || inputs.execution_phase == 'closure' || inputs.execution_phase == 'master' || inputs.execution_phase == 'b' || inputs.execution_phase == 'c') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4-alpine
+        env:
+          POSTGRES_USER: dsh_runtime
+          POSTGRES_PASSWORD: dsh_runtime_password
+          POSTGRES_DB: dsh_runtime
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U dsh_runtime -d dsh_runtime"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgres://dsh_runtime:dsh_runtime_password@localhost:5432/dsh_runtime?sslmode=disable
+      PGPASSWORD: dsh_runtime_password
+      BTHWANI_ENVIRONMENT: ci
+      DSH_REQUIRE_DB_TESTS: "true"
+      DSH_TEST_operator_context_id: ci-dsh
+    steps:
+      - name: Verify routed candidate identity
+        shell: bash
+        env:
+          ROUTED_HEAD_SHA: ${{ inputs.head_sha }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CANDIDATE_SHA}" || "${ROUTED_HEAD_SHA}" != "${CANDIDATE_SHA}" ]]; then
+            echo "::error::Routed head SHA mismatch: routed=${ROUTED_HEAD_SHA:-<empty>} event=${CANDIDATE_SHA:-<empty>}"
+            exit 1
+          fi
+      - name: Checkout immutable source candidate
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+          show-progress: false
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        with:
+          go-version-file: services/dsh/backend/go.mod
+          cache-dependency-path: services/dsh/backend/go.sum
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client >/dev/null
+      - name: Validate governed DSH database contracts
+        run: |
+          node tools/scripts/check-dsh-database-contract.mjs
+      - name: Apply canonical DSH migrations
+        shell: pwsh
+        run: ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action migrate -Transport url -DatabaseUrl $env:DATABASE_URL
+      - name: Re-run canonical DSH migrations
+        shell: pwsh
+        run: ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action migrate -Transport url -DatabaseUrl $env:DATABASE_URL
+      - name: Verify DSH migration runner failure contracts
+        shell: pwsh
+        run: ./services/dsh/database/scripts/test-dsh-migration-runner.ps1 -DatabaseUrl $env:DATABASE_URL
+      - name: Run DSH schema database contracts
+        shell: pwsh
+        run: ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action test -Transport url -DatabaseUrl $env:DATABASE_URL -TestSuite schema
+      - name: Apply DSH local seeds twice
+        shell: pwsh
+        run: |
+          $placeholderFile = Join-Path $env:RUNNER_TEMP "dsh-seed-placeholders.json"
+          @{
+            FIELD_ACTOR_ID = "ci-field-actor-001"
+            CAPTAIN_ACTOR_ID = "ci-captain-actor-001"
+          } | ConvertTo-Json | Set-Content -LiteralPath $placeholderFile -Encoding utf8NoBOM
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl $env:DATABASE_URL -AllowLocalSeeds -PlaceholderFile $placeholderFile
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl $env:DATABASE_URL -AllowLocalSeeds -PlaceholderFile $placeholderFile
+      - name: Run DSH seed database contracts
+        shell: pwsh
+        run: ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action test -Transport url -DatabaseUrl $env:DATABASE_URL -TestSuite seed

@@ -5,7 +5,7 @@
  * current app installation. Mobile runtimes must use encrypted storage.
  */
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/native-data-adapters";
 
 export type FieldOfflineOperationType =
   | "create_visit"
@@ -16,6 +16,7 @@ export type FieldOfflineOperationType =
 export type FieldOfflineOperationStatus =
   | "pending"
   | "retrying"
+  | "unknown"
   | "synced"
   | "failed_permanent";
 
@@ -28,6 +29,27 @@ export type FieldOfflineQueueStorageAdapter = {
   readonly getItem: (key: string) => Promise<string | null>;
   readonly setItem: (key: string, value: string) => Promise<void>;
   readonly removeItem: (key: string) => Promise<void>;
+};
+
+export type FieldOfflineLegacyStorageAdapter = {
+  readonly getItem: (key: string) => Promise<string | null>;
+  readonly removeItem: (key: string) => Promise<void>;
+};
+
+export type FieldOfflineQuarantineReason =
+  | "LEGACY_V1_UNSCOPED"
+  | "TERMINAL_SYNC_FAILURE";
+
+export type FieldOfflineQuarantineRecord = {
+  readonly sourceKey: string;
+  readonly reason: FieldOfflineQuarantineReason;
+  readonly capturedAt: string;
+  readonly raw: string;
+};
+
+export type FieldOfflineLegacyMigrationSummary = {
+  readonly adopted: number;
+  readonly quarantined: number;
 };
 
 export type FieldOfflineOperation<P = unknown> = {
@@ -45,8 +67,10 @@ export type FieldOfflineOperation<P = unknown> = {
   readonly lastError?: string;
 };
 
-const LEGACY_STORAGE_KEY = "@bthwani/field-offline-queue:v1";
-const LEGACY_CORRUPT_STORAGE_KEY = "@bthwani/field-offline-queue:corrupt:v1";
+const LEGACY_V1_STORAGE_KEYS = [
+  "@bthwani/field-offline-queue:v1",
+  "@bthwani/field-offline-queue:corrupt:v1",
+] as const;
 const STORAGE_PREFIX = "bthwani.field-offline-queue.v3";
 const MAX_ATTEMPTS = 10;
 const MAX_QUEUE_OPERATIONS = 100;
@@ -55,6 +79,10 @@ const MAX_SERIALIZED_CHARACTERS = 48_000;
 let storageAdapter: FieldOfflineQueueStorageAdapter = {
   getItem: (key) => AsyncStorage.getItem(key),
   setItem: (key, value) => AsyncStorage.setItem(key, value),
+  removeItem: (key) => AsyncStorage.removeItem(key),
+};
+let legacyStorageAdapter: FieldOfflineLegacyStorageAdapter = {
+  getItem: (key) => AsyncStorage.getItem(key),
   removeItem: (key) => AsyncStorage.removeItem(key),
 };
 let activeScope: FieldOfflineQueueScope | null = null;
@@ -77,10 +105,7 @@ function requireNonEmpty(value: string, label: string): string {
 function normalizeScope(scope: FieldOfflineQueueScope): FieldOfflineQueueScope {
   return {
     actorId: requireNonEmpty(scope.actorId, "field offline queue actor id"),
-    installationId: requireNonEmpty(
-      scope.installationId,
-      "field offline queue installation id",
-    ),
+    installationId: requireNonEmpty(scope.installationId, "field offline queue installation id"),
   };
 }
 
@@ -101,8 +126,16 @@ function corruptStorageKey(scope: FieldOfflineQueueScope): string {
   return `${STORAGE_PREFIX}.corrupt.${scopeFingerprint(scope)}`;
 }
 
+function legacyQuarantineStorageKey(scope: FieldOfflineQueueScope): string {
+  return `${STORAGE_PREFIX}.legacy-quarantine.${scopeFingerprint(scope)}`;
+}
+
 export function configureFieldOfflineQueueStorage(adapter: FieldOfflineQueueStorageAdapter): void {
   storageAdapter = adapter;
+}
+
+export function configureFieldOfflineLegacyStorage(adapter: FieldOfflineLegacyStorageAdapter): void {
+  legacyStorageAdapter = adapter;
 }
 
 export function configureFieldOfflineQueueScope(scope: FieldOfflineQueueScope | null): void {
@@ -112,6 +145,12 @@ export function configureFieldOfflineQueueScope(scope: FieldOfflineQueueScope | 
 function isOperation(value: unknown, scope: FieldOfflineQueueScope): value is FieldOfflineOperation {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<FieldOfflineOperation>;
+  const validStatus =
+    candidate.status === "pending" ||
+    candidate.status === "retrying" ||
+    candidate.status === "unknown" ||
+    candidate.status === "synced" ||
+    candidate.status === "failed_permanent";
   return (
     typeof candidate.operationId === "string" &&
     typeof candidate.operationType === "string" &&
@@ -124,21 +163,49 @@ function isOperation(value: unknown, scope: FieldOfflineQueueScope): value is Fi
     typeof candidate.createdAt === "string" &&
     typeof candidate.attemptCount === "number" &&
     typeof candidate.nextRetryAt === "string" &&
-    typeof candidate.status === "string"
+    validStatus
   );
 }
 
-async function removeLegacyQueue(): Promise<void> {
-  await Promise.all([
-    AsyncStorage.removeItem(LEGACY_STORAGE_KEY),
-    AsyncStorage.removeItem(LEGACY_CORRUPT_STORAGE_KEY),
-  ]);
+async function readQuarantine(scope: FieldOfflineQueueScope): Promise<FieldOfflineQuarantineRecord[]> {
+  const raw = await storageAdapter.getItem(legacyQuarantineStorageKey(scope));
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as FieldOfflineQuarantineRecord[]) : [];
+  } catch {
+    return [];
+  }
 }
 
-/**
- * Carries a stable reason code so callers decide recover-vs-retry from the
- * code, never from matching the message text.
- */
+async function migrateLegacyQueues(scope: FieldOfflineQueueScope): Promise<FieldOfflineLegacyMigrationSummary> {
+  const found: { key: string; raw: string }[] = [];
+  for (const key of LEGACY_V1_STORAGE_KEYS) {
+    const raw = await legacyStorageAdapter.getItem(key);
+    if (raw) found.push({ key, raw });
+  }
+  if (found.length === 0) return { adopted: 0, quarantined: 0 };
+
+  const capturedAt = new Date().toISOString();
+  const quarantined = [
+    ...(await readQuarantine(scope)),
+    ...found.map(({ key, raw }) => ({
+      sourceKey: key,
+      reason: "LEGACY_V1_UNSCOPED" as const,
+      capturedAt,
+      raw,
+    })),
+  ];
+
+  await storageAdapter.setItem(legacyQuarantineStorageKey(scope), JSON.stringify(quarantined));
+  for (const { key } of found) await legacyStorageAdapter.removeItem(key);
+  return { adopted: 0, quarantined: quarantined.length };
+}
+
+export async function readLegacyQuarantine(): Promise<FieldOfflineQuarantineRecord[]> {
+  return readQuarantine(requireScope());
+}
+
 export class FieldOfflineQueueCorruptError extends Error {
   readonly code = "OFFLINE_QUEUE_CORRUPT";
 
@@ -161,17 +228,13 @@ async function readQueue(): Promise<FieldOfflineOperation[]> {
     return parsed;
   } catch (error) {
     await storageAdapter.setItem(corruptStorageKey(scope), raw);
-    throw new FieldOfflineQueueCorruptError(
-      error instanceof Error ? error.message : String(error),
-    );
+    throw new FieldOfflineQueueCorruptError(error instanceof Error ? error.message : String(error));
   }
 }
 
 async function writeQueue(queue: FieldOfflineOperation[]): Promise<void> {
   const scope = requireScope();
-  if (queue.length > MAX_QUEUE_OPERATIONS) {
-    throw new Error("field offline queue capacity exceeded");
-  }
+  if (queue.length > MAX_QUEUE_OPERATIONS) throw new Error("field offline queue capacity exceeded");
   const serialized = JSON.stringify(queue);
   if (serialized.length > MAX_SERIALIZED_CHARACTERS) {
     throw new Error("field offline queue encrypted storage limit exceeded");
@@ -179,18 +242,18 @@ async function writeQueue(queue: FieldOfflineOperation[]): Promise<void> {
   await storageAdapter.setItem(storageKey(scope), serialized);
 }
 
-export async function prepareFieldOfflineQueue(): Promise<void> {
-  requireScope();
-  await removeLegacyQueue();
+export async function prepareFieldOfflineQueue(): Promise<FieldOfflineLegacyMigrationSummary> {
+  return migrateLegacyQueues(requireScope());
 }
 
 export async function clearFieldOfflineQueue(): Promise<void> {
   const scope = activeScope;
-  await removeLegacyQueue();
+  for (const key of LEGACY_V1_STORAGE_KEYS) await legacyStorageAdapter.removeItem(key);
   if (!scope) return;
   await Promise.all([
     storageAdapter.removeItem(storageKey(scope)),
     storageAdapter.removeItem(corruptStorageKey(scope)),
+    storageAdapter.removeItem(legacyQuarantineStorageKey(scope)),
   ]);
 }
 
@@ -220,9 +283,7 @@ export async function enqueueFieldOperation<P>(
   );
   if (existing) return existing as FieldOfflineOperation<P>;
 
-  const fingerprint = stableHash(
-    `${scope.actorId}|${scope.installationId}|${operationType}|${normalizedKey}`,
-  );
+  const fingerprint = stableHash(`${scope.actorId}|${scope.installationId}|${operationType}|${normalizedKey}`);
   const now = new Date().toISOString();
   const operation: FieldOfflineOperation<P> = {
     operationId: `field-op:${operationType}:${fingerprint}`,
@@ -244,11 +305,32 @@ export async function enqueueFieldOperation<P>(
 
 export async function markOperationSynced(operationId: string): Promise<void> {
   const queue = await readQueue();
-  await writeQueue(
-    queue.map((operation) =>
-      operation.operationId === operationId ? { ...operation, status: "synced" as const } : operation,
-    ),
-  );
+  await writeQueue(queue.map((operation) =>
+    operation.operationId === operationId ? { ...operation, status: "synced" as const } : operation,
+  ));
+}
+
+export async function markOperationUnknown(operationId: string, error: string): Promise<void> {
+  const queue = await readQueue();
+  await writeQueue(queue.map((operation) => {
+    if (operation.operationId !== operationId) return operation;
+    return {
+      ...operation,
+      attemptCount: operation.attemptCount + 1,
+      lastError: error,
+      nextRetryAt: new Date().toISOString(),
+      status: "unknown" as const,
+    };
+  }));
+}
+
+export async function markOperationReadyForRetry(operationId: string): Promise<void> {
+  const queue = await readQueue();
+  await writeQueue(queue.map((operation) =>
+    operation.operationId === operationId
+      ? { ...operation, nextRetryAt: new Date().toISOString(), status: "retrying" as const }
+      : operation,
+  ));
 }
 
 export async function markOperationFailed(operationId: string, error: string, isPermanent = false): Promise<void> {
@@ -272,23 +354,40 @@ export async function markOperationFailed(operationId: string, error: string, is
 export async function getDueOperations(): Promise<FieldOfflineOperation[]> {
   const queue = await readQueue();
   const now = new Date().toISOString();
-  return queue.filter(
-    (operation) =>
-      (operation.status === "pending" || operation.status === "retrying") &&
-      operation.nextRetryAt <= now,
+  return queue.filter((operation) =>
+    (operation.status === "pending" || operation.status === "retrying") && operation.nextRetryAt <= now,
   );
 }
 
-export async function getPendingCount(): Promise<number> {
+export async function getUnknownOperations(): Promise<FieldOfflineOperation[]> {
   const queue = await readQueue();
-  return queue.filter(
-    (operation) => operation.status === "pending" || operation.status === "retrying",
-  ).length;
+  return queue.filter((operation) => operation.status === "unknown");
 }
 
 export async function purgeSyncedOperations(): Promise<void> {
   const queue = await readQueue();
   await writeQueue(queue.filter((operation) => operation.status !== "synced"));
+}
+
+export async function evacuateTerminalOperations(): Promise<number> {
+  const scope = requireScope();
+  const queue = await readQueue();
+  const terminal = queue.filter((operation) => operation.status === "failed_permanent");
+  if (terminal.length === 0) return 0;
+
+  const capturedAt = new Date().toISOString();
+  const quarantined = [
+    ...(await readQuarantine(scope)),
+    ...terminal.map((operation) => ({
+      sourceKey: storageKey(scope),
+      reason: "TERMINAL_SYNC_FAILURE" as const,
+      capturedAt,
+      raw: JSON.stringify(operation),
+    })),
+  ];
+  await storageAdapter.setItem(legacyQuarantineStorageKey(scope), JSON.stringify(quarantined));
+  await writeQueue(queue.filter((operation) => operation.status !== "failed_permanent"));
+  return terminal.length;
 }
 
 export async function getAllOperations(): Promise<FieldOfflineOperation[]> {

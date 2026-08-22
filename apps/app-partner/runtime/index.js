@@ -1,4 +1,3 @@
-import { registerRootComponent } from 'expo';
-import App from './src/App';
-
-registerRootComponent(App);
+// Canonical Expo Router bootstrap: initialize runtime services before Router registration.
+import "./src/index.ts";
+import "expo-router/entry";

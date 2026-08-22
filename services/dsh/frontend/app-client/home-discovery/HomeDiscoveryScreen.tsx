@@ -8,12 +8,13 @@ import {
 import { HomeDiscoveryShell } from "./HomeDiscoveryShell";
 
 type Props = {
+  searchQuery?: string | undefined;
   onStorePress?: ((storeId: string, slug: string) => void) | undefined;
   onSpecialRequestPress?: ((requestType: DshHomeSpecialRequestTarget) => void) | undefined;
   onMarketingAction?: ((actionType: string, actionTarget: string) => void) | undefined;
 };
 
-export function HomeDiscoveryScreen({ onStorePress, onSpecialRequestPress, onMarketingAction }: Props) {
+export function HomeDiscoveryScreen({ searchQuery, onStorePress, onSpecialRequestPress, onMarketingAction }: Props) {
   const addressController = useClientAddressController();
   const serviceAreaCode = addressController.selectedAddress?.serviceAreaCode;
   const controller = useHomeDiscoveryController({
@@ -34,6 +35,7 @@ export function HomeDiscoveryScreen({ onStorePress, onSpecialRequestPress, onMar
 
   return (
     <HomeDiscoveryShell
+      searchQuery={searchQuery}
       state={state}
       activeFilter={controller.activeFilter}
       onFilterChange={controller.setActiveFilter}
