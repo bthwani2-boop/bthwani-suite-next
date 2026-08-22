@@ -14,6 +14,10 @@ on:
         description: Exact live branch SHA to re-read; defaults to live target branch SHA
         required: false
         type: string
+      base_ref:
+        description: Exact comparison base commit/ref; defaults to repository default branch
+        required: false
+        type: string
 
 permissions:
   actions: read
@@ -28,10 +32,10 @@ concurrency:
 
 jobs:
   evidence:
-    name: Read back exact remote analysis evidence
+    name: Read back exact remote toolchain evidence
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.event == 'push' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 75
     steps:
       - name: Resolve exact live branch target
         id: target
@@ -42,56 +46,44 @@ jobs:
           WORKFLOW_RUN_BRANCH: ${{ github.event.workflow_run.head_branch }}
           REQUESTED_SHA: ${{ inputs.target_sha }}
           REQUESTED_REF: ${{ inputs.target_ref }}
+          REQUESTED_BASE: ${{ inputs.base_ref }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-
           if [[ "${EVENT_NAME}" == "workflow_run" ]]; then
             target_branch="${WORKFLOW_RUN_BRANCH}"
             target_sha="${WORKFLOW_RUN_SHA}"
+            evidence_mode=push
+            base_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/commits/${target_sha}" --jq '.parents[0].sha // .sha')"
           else
             target_branch="${REQUESTED_REF:-${DEFAULT_BRANCH}}"
             encoded_branch="$(jq -rn --arg value "${target_branch}" '$value|@uri')"
-            live_sha="$(gh api \
-              -H 'X-GitHub-Api-Version: 2026-03-10' \
-              "/repos/${GITHUB_REPOSITORY}/branches/${encoded_branch}" \
-              --jq '.commit.sha')"
+            live_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/branches/${encoded_branch}" --jq '.commit.sha')"
             target_sha="${REQUESTED_SHA:-${live_sha}}"
+            base_ref="${REQUESTED_BASE:-${DEFAULT_BRANCH}}"
+            base_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/commits/${base_ref}" --jq '.sha')"
+            evidence_mode=manual-full
           fi
-
           [[ -n "${target_branch}" ]] || { echo "::error::target branch is required"; exit 1; }
           [[ "${target_sha}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::target SHA must be a full SHA"; exit 1; }
-
+          [[ "${base_sha}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::base SHA must be a full SHA"; exit 1; }
           encoded_branch="$(jq -rn --arg value "${target_branch}" '$value|@uri')"
-          live_sha="$(gh api \
-            -H 'X-GitHub-Api-Version: 2026-03-10' \
-            "/repos/${GITHUB_REPOSITORY}/branches/${encoded_branch}" \
-            --jq '.commit.sha')"
-
-          [[ "${target_sha}" == "${live_sha}" ]] || {
-            echo "::error::target=${target_branch}@${target_sha} is superseded by live=${live_sha}"
-            exit 1
-          }
+          live_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/branches/${encoded_branch}" --jq '.commit.sha')"
+          [[ "${target_sha}" == "${live_sha}" ]] || { echo "::error::target=${target_branch}@${target_sha} is superseded by live=${live_sha}"; exit 1; }
 
           skip=false
           if [[ "${EVENT_NAME}" == "workflow_run" && "${target_branch}" != "${DEFAULT_BRANCH}" ]]; then
-            open_pr_count="$(gh api --method GET \
-              -H 'X-GitHub-Api-Version: 2022-11-28' \
-              "/repos/${GITHUB_REPOSITORY}/pulls" \
-              -f state=open \
-              -f head="${GITHUB_REPOSITORY_OWNER}:${target_branch}" \
-              -f per_page=1 \
-              --jq 'length')"
-            if [[ "${open_pr_count}" != "0" ]]; then
-              skip=true
-            fi
+            open_pr_count="$(gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/pulls" -f state=open -f head="${GITHUB_REPOSITORY_OWNER}:${target_branch}" -f per_page=1 --jq 'length')"
+            [[ "${open_pr_count}" == "0" ]] || skip=true
           fi
-
           {
             echo "branch=${target_branch}"
             echo "sha=${target_sha}"
+            echo "base_sha=${base_sha}"
             echo "default_branch=${DEFAULT_BRANCH}"
+            echo "evidence_mode=${evidence_mode}"
             echo "skip_duplicate_push=${skip}"
           } >> "${GITHUB_OUTPUT}"
 
@@ -118,7 +110,7 @@ jobs:
         run: |
           [[ -n "${SONAR_TOKEN}" ]] || { echo "::error::SONAR_TOKEN is required for Sonar read-back"; exit 1; }
 
-      - name: Collect complete remote analysis evidence
+      - name: Collect exact-SHA workflow, CodeQL, and Sonar evidence
         id: collect
         if: ${{ steps.target.outputs.skip_duplicate_push != 'true' }}
         continue-on-error: true
@@ -128,47 +120,90 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           TARGET_SHA: ${{ steps.target.outputs.sha }}
           TARGET_REF: refs/heads/${{ steps.target.outputs.branch }}
-          TARGET_EVENT: push
-          SONAR_BRANCH: ${{ steps.target.outputs.branch }}
-          DEFAULT_BRANCH: ${{ steps.target.outputs.default_branch }}
+          BASE_SHA: ${{ steps.target.outputs.base_sha }}
+          EVIDENCE_MODE: ${{ steps.target.outputs.evidence_mode }}
           WAIT_FOR_WORKFLOWS_SECONDS: "1800"
           WORKFLOW_POLL_SECONDS: "15"
         run: |
           set +e
-          mkdir -p "${RUNNER_TEMP}/remote-analysis-evidence"
-          node tools/scripts/collect-remote-analysis-evidence.mjs > "${RUNNER_TEMP}/remote-analysis-evidence/evidence.json"
+          root="${RUNNER_TEMP}/remote-analysis-evidence"
+          mkdir -p "${root}/raw-logs" "${root}/raw-artifacts"
+          node tools/scripts/collect-remote-toolchain-evidence.mjs > "${root}/metadata.json"
           status=$?
           set -e
-          jq '.summary // {targetSha, targetRef, evidenceComplete, policyStatus, policyFailures, error}' \
-            "${RUNNER_TEMP}/remote-analysis-evidence/evidence.json" > "${RUNNER_TEMP}/remote-analysis-evidence/summary.json"
+          jq '{schemaVersion,repository,targetSha,targetRef,targetBranch,baseSha,evidenceMode,evidenceComplete,policyStatus,policyFailures,error,workflowSummary:(.workflows.selected // {} | with_entries(.value |= {id,name,path,event,status,conclusion,html_url,created_at,updated_at,jobs,artifacts}))}' \
+            "${root}/metadata.json" > "${root}/metadata-summary.json" || true
           exit "${status}"
 
-      - name: Upload exact-SHA remote analysis evidence
-        id: artifact
+      - name: Capture raw logs and artifacts for every selected authority
+        id: raw
         if: ${{ always() && steps.target.outputs.skip_duplicate_push != 'true' }}
         continue-on-error: true
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: remote-analysis-evidence-${{ steps.target.outputs.sha }}
-          path: ${{ runner.temp }}/remote-analysis-evidence
-          if-no-files-found: error
-          retention-days: 14
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          root="${RUNNER_TEMP}/remote-analysis-evidence"
+          metadata="${root}/metadata.json"
+          [[ -s "${metadata}" ]] || { echo "::error::metadata.json is missing"; exit 1; }
+          while IFS=$'\t' read -r name run_id; do
+            [[ -n "${name}" && -n "${run_id}" ]] || continue
+            slug="$(printf '%s' "${name}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-|-$//g')"
+            gh run view "${run_id}" --repo "${GITHUB_REPOSITORY}" --log > "${root}/raw-logs/${slug}.log" 2>&1 || true
+            mkdir -p "${root}/raw-artifacts/${slug}"
+            gh run download "${run_id}" --repo "${GITHUB_REPOSITORY}" --dir "${root}/raw-artifacts/${slug}" >/dev/null 2>&1 || true
+          done < <(jq -r '.workflows.selected // {} | to_entries[] | [.key, (.value.id|tostring)] | @tsv' "${metadata}")
+          printf 'Raw logs: %s\n' "$(find "${root}/raw-logs" -type f | wc -l)"
+          printf 'Raw artifact files: %s\n' "$(find "${root}/raw-artifacts" -type f | wc -l)"
 
-      - name: Publish evidence summary
+      - name: Normalize all available tool findings
+        id: normalize
+        if: ${{ always() && steps.target.outputs.skip_duplicate_push != 'true' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set +e
+          root="${RUNNER_TEMP}/remote-analysis-evidence"
+          node tools/scripts/normalize-remote-toolchain-findings.mjs "${root}" "${root}" \
+            > "${root}/normalization.log" 2>&1
+          status=$?
+          set -e
+          cat "${root}/normalization.log" || true
+          exit "${status}"
+
+      - name: Build final evidence summary
         id: summary
         if: ${{ always() && steps.target.outputs.skip_duplicate_push != 'true' }}
         continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
-          summary="${RUNNER_TEMP}/remote-analysis-evidence/summary.json"
-          [[ -f "${summary}" ]] || { echo "::error::evidence summary was not produced"; exit 1; }
+          root="${RUNNER_TEMP}/remote-analysis-evidence"
+          [[ -s "${root}/metadata.json" ]] || { echo "::error::metadata evidence missing"; exit 1; }
+          [[ -s "${root}/policy-summary.json" ]] || { echo "::error::normalized policy summary missing"; exit 1; }
+          jq -n \
+            --slurpfile metadata "${root}/metadata.json" \
+            --slurpfile normalized "${root}/policy-summary.json" \
+            '{schemaVersion:1,target:{sha:$metadata[0].targetSha,ref:$metadata[0].targetRef,baseSha:$metadata[0].baseSha,mode:$metadata[0].evidenceMode},workflowPolicy:{status:$metadata[0].policyStatus,failures:$metadata[0].policyFailures},findings:$normalized[0]}' \
+            > "${root}/summary.json"
           {
             echo "### Remote Analysis Evidence"
             echo '```json'
-            cat "${summary}"
+            cat "${root}/summary.json"
             echo '```'
           } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload exact-SHA complete remote evidence
+        id: artifact
+        if: ${{ always() && steps.target.outputs.skip_duplicate_push != 'true' }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: remote-analysis-evidence-${{ steps.target.outputs.sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/remote-analysis-evidence
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Publish discoverable exact-SHA evidence status
         id: status
@@ -178,39 +213,40 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ steps.target.outputs.sha }}
           COLLECT_OUTCOME: ${{ steps.collect.outcome }}
-          ARTIFACT_OUTCOME: ${{ steps.artifact.outcome }}
+          RAW_OUTCOME: ${{ steps.raw.outcome }}
+          NORMALIZE_OUTCOME: ${{ steps.normalize.outcome }}
           SUMMARY_OUTCOME: ${{ steps.summary.outcome }}
+          ARTIFACT_OUTCOME: ${{ steps.artifact.outcome }}
         run: |
           set -euo pipefail
-          [[ "${TARGET_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::cannot publish evidence status without a validated target SHA"; exit 1; }
           state=failure
-          description="Remote evidence incomplete or blocking findings remain"
-          if [[ "${COLLECT_OUTCOME}" == "success" && "${ARTIFACT_OUTCOME}" == "success" && "${SUMMARY_OUTCOME}" == "success" ]]; then
+          description="Remote toolchain evidence incomplete or material findings remain"
+          if [[ "${COLLECT_OUTCOME}" == "success" && "${RAW_OUTCOME}" == "success" && "${NORMALIZE_OUTCOME}" == "success" && "${SUMMARY_OUTCOME}" == "success" && "${ARTIFACT_OUTCOME}" == "success" ]]; then
             state=success
-            description="Remote CodeQL and Sonar evidence complete and policy passed"
+            description="Complete exact-SHA remote toolchain evidence passed"
           fi
           run_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-          gh api --method POST \
-            -H 'X-GitHub-Api-Version: 2026-03-10' \
+          gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' \
             "/repos/${GITHUB_REPOSITORY}/statuses/${TARGET_SHA}" \
-            -f state="${state}" \
-            -f context='Remote Analysis Evidence' \
-            -f description="${description}" \
-            -f target_url="${run_url}" >/dev/null
+            -f state="${state}" -f context='Remote Analysis Evidence' -f description="${description}" -f target_url="${run_url}" >/dev/null
 
-      - name: Enforce evidence and finding policy
+      - name: Enforce evidence and material-finding policy
         if: ${{ always() && steps.target.outputs.skip_duplicate_push != 'true' }}
         shell: bash
         env:
           COLLECT_OUTCOME: ${{ steps.collect.outcome }}
-          ARTIFACT_OUTCOME: ${{ steps.artifact.outcome }}
+          RAW_OUTCOME: ${{ steps.raw.outcome }}
+          NORMALIZE_OUTCOME: ${{ steps.normalize.outcome }}
           SUMMARY_OUTCOME: ${{ steps.summary.outcome }}
+          ARTIFACT_OUTCOME: ${{ steps.artifact.outcome }}
           STATUS_OUTCOME: ${{ steps.status.outcome }}
         run: |
           set -euo pipefail
           [[ "${COLLECT_OUTCOME}" == "success" ]]
-          [[ "${ARTIFACT_OUTCOME}" == "success" ]]
+          [[ "${RAW_OUTCOME}" == "success" ]]
+          [[ "${NORMALIZE_OUTCOME}" == "success" ]]
           [[ "${SUMMARY_OUTCOME}" == "success" ]]
+          [[ "${ARTIFACT_OUTCOME}" == "success" ]]
           [[ "${STATUS_OUTCOME}" == "success" ]]
 
       - name: Record duplicate push suppression
