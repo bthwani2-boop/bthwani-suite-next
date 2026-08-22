@@ -5,68 +5,84 @@ on:
     workflows: ["CodeQL"]
     types: [completed]
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Audit any branch or repair only the live default branch
+        required: true
+        default: audit
+        type: choice
+        options: [audit, repair]
 
 permissions: {}
 
 concurrency:
-  group: codeql-metadata-hygiene-default
+  group: codeql-metadata-hygiene-${{ github.event.workflow_run.head_branch || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
   hygiene:
-    name: Retire obsolete CodeQL configuration
+    name: Audit or retire obsolete CodeQL configuration
     if: >-
       ${{
-        (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) ||
+        github.event_name == 'workflow_dispatch' ||
         (github.event_name == 'workflow_run' &&
          github.event.workflow_run.conclusion == 'success' &&
          github.event.workflow_run.event == 'push' &&
          github.event.workflow_run.head_branch == github.event.repository.default_branch)
       }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 25
     permissions:
       contents: read
       security-events: write
     steps:
-      - name: Resolve exact live default-branch candidate
+      - name: Resolve exact live candidate and mode
         id: target
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           EVENT_NAME: ${{ github.event_name }}
           TRIGGER_SHA: ${{ github.event.workflow_run.head_sha }}
+          TRIGGER_BRANCH: ${{ github.event.workflow_run.head_branch }}
           DISPATCH_SHA: ${{ github.sha }}
+          DISPATCH_BRANCH: ${{ github.ref_name }}
+          REQUEST_MODE: ${{ inputs.mode }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
           if [[ "${EVENT_NAME}" == "workflow_run" ]]; then
             candidate_sha="${TRIGGER_SHA}"
+            branch="${TRIGGER_BRANCH}"
+            mode=repair
           else
             candidate_sha="${DISPATCH_SHA}"
+            branch="${DISPATCH_BRANCH}"
+            mode="${REQUEST_MODE:-audit}"
           fi
-          [[ "${candidate_sha}" =~ ^[0-9a-fA-F]{40}$ ]] || {
-            echo "::error::CodeQL hygiene candidate must be a full SHA"
+          [[ "${candidate_sha}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::CodeQL hygiene candidate must be a full SHA"; exit 1; }
+          [[ -n "${branch}" ]] || { echo "::error::CodeQL hygiene branch is required"; exit 1; }
+          if [[ "${mode}" == "repair" && "${branch}" != "${DEFAULT_BRANCH}" ]]; then
+            echo "::error::CodeQL hygiene repair is restricted to the default branch ${DEFAULT_BRANCH}; use audit on ${branch}"
             exit 1
-          }
-          encoded_default_branch="$(jq -rn --arg value "${DEFAULT_BRANCH}" '$value|@uri')"
-          live_default="$(gh api \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/branches/${encoded_default_branch}" \
-            --jq '.commit.sha')"
-          superseded=false
-          if [[ "${candidate_sha}" != "${live_default}" ]]; then
-            superseded=true
-            echo "Candidate ${candidate_sha} is superseded by live default branch ${live_default}; no CodeQL metadata will be mutated."
           fi
+          encoded_branch="$(jq -rn --arg value "${branch}" '$value|@uri')"
+          live_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/branches/${encoded_branch}" --jq '.commit.sha')"
+          superseded=false
+          [[ "${candidate_sha}" == "${live_sha}" ]] || superseded=true
           {
             echo "sha=${candidate_sha}"
-            echo "live_default=${live_default}"
+            echo "branch=${branch}"
+            echo "live_sha=${live_sha}"
+            echo "default_branch=${DEFAULT_BRANCH}"
+            echo "mode=${mode}"
             echo "superseded=${superseded}"
           } >> "${GITHUB_OUTPUT}"
+          if [[ "${superseded}" == "true" ]]; then
+            echo "::error::CodeQL hygiene candidate is superseded: candidate=${candidate_sha} live=${live_sha}"
+            exit 1
+          fi
 
       - name: Verify canonical CodeQL workflow metadata without checkout
-        if: ${{ steps.target.outputs.superseded != 'true' }}
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -74,148 +90,114 @@ jobs:
         run: |
           set -euo pipefail
           encoded_sha="$(jq -rn --arg value "${CANDIDATE_SHA}" '$value|@uri')"
-          workflow_base64="$(gh api \
-            -H 'X-GitHub-Api-Version: 2022-11-28' \
-            "/repos/${GITHUB_REPOSITORY}/contents/.github/workflows/codeql.yml?ref=${encoded_sha}" \
-            --jq '.content')"
+          workflow_base64="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/contents/.github/workflows/codeql.yml?ref=${encoded_sha}" --jq '.content')"
           workflow="$(printf '%s' "${workflow_base64}" | tr -d '\n' | base64 --decode)"
-          for job in \
-            "analyze-javascript-typescript:" \
-            "analyze-go:" \
-            "analyze-actions:"
-          do
-            grep -Fq "${job}" <<<"${workflow}" || {
-              echo "::error::canonical CodeQL job is missing: ${job}"
-              exit 1
-            }
+          for job in "analyze-javascript-typescript:" "analyze-go:" "analyze-actions:"; do
+            grep -Fq "${job}" <<<"${workflow}" || { echo "::error::canonical CodeQL job is missing: ${job}"; exit 1; }
           done
           if grep -Eq '^  analyze:[[:space:]]*$' <<<"${workflow}"; then
             echo "::error::obsolete generic analyze job unexpectedly exists"
             exit 1
           fi
 
-      - name: Remove only proven obsolete CodeQL analysis keys
-        if: ${{ steps.target.outputs.superseded != 'true' }}
+      - name: Audit branch CodeQL analysis keys
+        id: audit
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          CANDIDATE_SHA: ${{ steps.target.outputs.sha }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          BRANCH: ${{ steps.target.outputs.branch }}
         run: |
           set -euo pipefail
-          default_ref="refs/heads/${DEFAULT_BRANCH}"
-          encoded_default_branch="$(jq -rn --arg value "${DEFAULT_BRANCH}" '$value|@uri')"
+          mkdir -p "${RUNNER_TEMP}/codeql-hygiene-evidence"
+          ref="refs/heads/${BRANCH}"
           prefix='.github/workflows/codeql.yml:'
           key_js='.github/workflows/codeql.yml:analyze-javascript-typescript'
           key_go='.github/workflows/codeql.yml:analyze-go'
           key_actions='.github/workflows/codeql.yml:analyze-actions'
-          deleted=0
+          gh api --paginate --method GET \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/code-scanning/analyses" \
+            -f ref="${ref}" -f tool_name=CodeQL -f per_page=100 \
+            | jq -s 'flatten' > "${RUNNER_TEMP}/codeql-hygiene-evidence/analyses.json"
+          jq \
+            --arg prefix "${prefix}" --arg js "${key_js}" --arg go "${key_go}" --arg actions "${key_actions}" \
+            '[.[] | select(((.analysis_key // "") | startswith($prefix)) and .analysis_key != $js and .analysis_key != $go and .analysis_key != $actions)]' \
+            "${RUNNER_TEMP}/codeql-hygiene-evidence/analyses.json" \
+            > "${RUNNER_TEMP}/codeql-hygiene-evidence/obsolete-analyses.json"
+          obsolete="$(jq 'length' "${RUNNER_TEMP}/codeql-hygiene-evidence/obsolete-analyses.json")"
+          echo "obsolete=${obsolete}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "### CodeQL Metadata Hygiene audit"
+            echo "- Branch: \`${BRANCH}\`"
+            echo "- Candidate: \`${GITHUB_SHA}\`"
+            echo "- Obsolete analysis keys: \`${obsolete}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
 
-          assert_live_default() {
+      - name: Repair only proven obsolete default-branch analysis keys
+        if: ${{ steps.target.outputs.mode == 'repair' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ steps.target.outputs.sha }}
+          DEFAULT_BRANCH: ${{ steps.target.outputs.default_branch }}
+        run: |
+          set -euo pipefail
+          encoded_default="$(jq -rn --arg value "${DEFAULT_BRANCH}" '$value|@uri')"
+          prefix='.github/workflows/codeql.yml:'
+          key_js='.github/workflows/codeql.yml:analyze-javascript-typescript'
+          key_go='.github/workflows/codeql.yml:analyze-go'
+          key_actions='.github/workflows/codeql.yml:analyze-actions'
+          assert_live() {
             local live
-            live="$(gh api \
-              -H 'X-GitHub-Api-Version: 2022-11-28' \
-              "/repos/${GITHUB_REPOSITORY}/branches/${encoded_default_branch}" \
-              --jq '.commit.sha')"
-            if [[ "${live}" != "${CANDIDATE_SHA}" ]]; then
-              echo "::error::default branch moved during CodeQL hygiene: candidate=${CANDIDATE_SHA} live=${live:-<unknown>}"
-              exit 1
-            fi
+            live="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/branches/${encoded_default}" --jq '.commit.sha')"
+            [[ "${live}" == "${CANDIDATE_SHA}" ]] || { echo "::error::default branch moved during CodeQL hygiene"; exit 1; }
           }
-
-          obsolete_analyses() {
+          obsolete() {
             gh api --paginate --method GET \
               -H 'X-GitHub-Api-Version: 2022-11-28' \
               "/repos/${GITHUB_REPOSITORY}/code-scanning/analyses" \
-              -f ref="${default_ref}" \
-              -f tool_name=CodeQL \
-              -f per_page=100 | jq -s \
-                --arg prefix "${prefix}" \
-                --arg js "${key_js}" \
-                --arg go "${key_go}" \
-                --arg actions "${key_actions}" \
+              -f ref="refs/heads/${DEFAULT_BRANCH}" -f tool_name=CodeQL -f per_page=100 \
+              | jq -s --arg prefix "${prefix}" --arg js "${key_js}" --arg go "${key_go}" --arg actions "${key_actions}" \
                 '[.[][] | select(((.analysis_key // "") | startswith($prefix)) and .analysis_key != $js and .analysis_key != $go and .analysis_key != $actions)]'
           }
-
-          obsolete_open_alerts() {
-            gh api --paginate --method GET \
-              -H 'X-GitHub-Api-Version: 2022-11-28' \
-              "/repos/${GITHUB_REPOSITORY}/code-scanning/alerts" \
-              -f state=open \
-              -f ref="${default_ref}" \
-              -f tool_name=CodeQL \
-              -f per_page=100 | jq -s \
-                --arg prefix "${prefix}" \
-                --arg js "${key_js}" \
-                --arg go "${key_go}" \
-                --arg actions "${key_actions}" \
-                '[.[][] | select((((.most_recent_instance.analysis_key // "") | startswith($prefix))) and .most_recent_instance.analysis_key != $js and .most_recent_instance.analysis_key != $go and .most_recent_instance.analysis_key != $actions)]'
-          }
-
-          assert_live_default
+          deleted=0
           for _ in $(seq 1 1000); do
-            assert_live_default
-            obsolete="$(obsolete_analyses)"
-            count="$(jq 'length' <<<"${obsolete}")"
-            if [[ "${count}" == "0" ]]; then
-              break
-            fi
-            target_id="$(jq -r '[.[] | select(.deletable == true)] | sort_by(.created_at) | last | .id // empty' <<<"${obsolete}")"
-            if [[ -z "${target_id}" ]]; then
-              echo "::error::obsolete CodeQL analyses remain but none is deletable"
-              jq -c '.[] | {id,analysis_key,category,commit_sha,deletable}' <<<"${obsolete}" >&2
-              exit 1
-            fi
-            assert_live_default
-            gh api --method DELETE \
-              -H 'X-GitHub-Api-Version: 2022-11-28' \
-              "/repos/${GITHUB_REPOSITORY}/code-scanning/analyses/${target_id}?confirm_delete=true" >/dev/null
+            assert_live
+            current="$(obsolete)"
+            [[ "$(jq 'length' <<<"${current}")" == "0" ]] && break
+            target_id="$(jq -r '[.[] | select(.deletable == true)] | sort_by(.created_at) | last | .id // empty' <<<"${current}")"
+            [[ -n "${target_id}" ]] || { echo "::error::obsolete CodeQL analyses remain but none is deletable"; exit 1; }
+            gh api --method DELETE -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/code-scanning/analyses/${target_id}?confirm_delete=true" >/dev/null
             deleted=$((deleted + 1))
           done
+          assert_live
+          remaining="$(obsolete)"
+          [[ "$(jq 'length' <<<"${remaining}")" == "0" ]] || { echo "::error::obsolete CodeQL analyses remain after repair"; exit 1; }
+          echo "Deleted obsolete analyses: ${deleted}"
 
-          assert_live_default
-          remaining="$(obsolete_analyses)"
-          remaining_count="$(jq 'length' <<<"${remaining}")"
-          if [[ "${remaining_count}" != "0" ]]; then
-            echo "::error::obsolete CodeQL analyses remain after cleanup: ${remaining_count}"
-            exit 1
-          fi
+      - name: Upload CodeQL hygiene evidence
+        id: artifact
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: codeql-hygiene-evidence-${{ steps.target.outputs.sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/codeql-hygiene-evidence
+          if-no-files-found: warn
+          retention-days: 14
 
-          remaining_alerts='[]'
-          for attempt in $(seq 1 12); do
-            assert_live_default
-            remaining_alerts="$(obsolete_open_alerts)"
-            [[ "$(jq 'length' <<<"${remaining_alerts}")" == "0" ]] && break
-            [[ "${attempt}" == "12" ]] || sleep 5
-          done
-          remaining_alert_count="$(jq 'length' <<<"${remaining_alerts}")"
-          if [[ "${remaining_alert_count}" != "0" ]]; then
-            echo "::error::open alerts from obsolete CodeQL analysis keys remain"
-            jq -r '.[].number' <<<"${remaining_alerts}" >&2
-            exit 1
-          fi
-
-          {
-            echo "### CodeQL hygiene result"
-            echo "- Candidate: \`${CANDIDATE_SHA}\`"
-            echo "- Deleted obsolete analyses: \`${deleted}\`"
-            echo "- Remaining obsolete analyses: \`0\`"
-            echo "- Remaining open alerts from obsolete keys: \`0\`"
-          } >> "${GITHUB_STEP_SUMMARY}"
-
-      - name: Publish hygiene summary
+      - name: Enforce audit result
         if: ${{ always() }}
         shell: bash
         env:
-          CANDIDATE_SHA: ${{ steps.target.outputs.sha }}
-          LIVE_DEFAULT: ${{ steps.target.outputs.live_default }}
-          SUPERSEDED: ${{ steps.target.outputs.superseded }}
+          MODE: ${{ steps.target.outputs.mode }}
+          OBSOLETE: ${{ steps.audit.outputs.obsolete }}
+          ARTIFACT: ${{ steps.artifact.outcome }}
         run: |
-          {
-            echo "### CodeQL Metadata Hygiene"
-            echo "- Candidate: \`${CANDIDATE_SHA:-unresolved}\`"
-            echo "- Live default branch: \`${LIVE_DEFAULT:-unresolved}\`"
-            echo "- Superseded without mutation: \`${SUPERSEDED:-unknown}\`"
-            echo "- Repository source is never checked out or executed by this privileged metadata workflow."
-            echo "- Canonical scanner authority remains \`.github/workflows/codeql.yml\`."
-          } >> "${GITHUB_STEP_SUMMARY}"
+          set -euo pipefail
+          [[ "${ARTIFACT}" == "success" ]] || { echo "::error::CodeQL hygiene evidence upload failed"; exit 1; }
+          if [[ "${MODE}" == "audit" && "${OBSOLETE:-0}" != "0" ]]; then
+            echo "::error::obsolete CodeQL analysis keys detected: ${OBSOLETE}"
+            exit 1
+          fi
+          echo "CodeQL metadata hygiene ${MODE} passed."
