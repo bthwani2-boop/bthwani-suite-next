@@ -108,10 +108,11 @@ PHASE=AUDIT_PREPARE
 → effective MODE=DIAGNOSE when MODE is omitted
 → target system remains read-only
 → full AUDIT + INSPECT + DIAGNOSE + ANALYZE is mandatory
-→ blocking material DECISION_REQUIRED is resolved before plan write
-→ exactly one temporary PLAN_FILE is mandatory after blocking decisions are resolved
-→ PLAN_FILE=AUTO when omitted
-→ finish with READY_FOR_EXECUTION; no treatment begins
+→ blocking material DECISION_REQUIRED is resolved before handoff write
+→ exactly one temporary PLAN_DIR is mandatory after blocking decisions are resolved
+→ PLAN_DIR=AUTO when omitted
+→ PLAN_DIR contains exactly the three canonical Markdown contracts owned below
+→ finish with READY_FOR_EXECUTION only after the handoff-readiness gate in 02 is proven; no treatment begins
 
 PHASE=EXECUTE_CLOSE
 → effective MODE=EXECUTE_END_TO_END when MODE is omitted
@@ -119,27 +120,96 @@ PHASE=EXECUTE_CLOSE
 → perform the same material AUDIT + INSPECT + DIAGNOSE + ANALYZE needed to establish current truth
 → immediately treat the highest proven executable root; do not stop merely to produce a plan/report
 → verify, re-audit/re-diagnose/re-rank and continue root-by-root until CLOSED or a legitimate stop state
-→ PLAN_FILE=NONE when omitted
-→ creation of a plan artifact is forbidden by default
-→ an explicitly supplied existing PLAN_FILE is optional evidence/accounting only, never execution authority
+→ PLAN_DIR=NONE when omitted
+→ creation or mutation of a plan artifact is forbidden by default
+→ an explicitly supplied existing PLAN_DIR is optional read-only handoff/evidence input, never execution authority
 ```
 
-### 3.2 Plan-file semantics
+### 3.2 Plan-directory semantics and ownership
 
-A temporary `PLAN_FILE` is a derived, disposable execution record. It may capture findings, roots, decisions, canonical targets, treatment, governance dispositions, verification and closure criteria, but every material claim must be revalidated against the current project frame, authority/code/contracts/data/runtime/readback before execution. Latest proven truth overrides stale plan content.
+A temporary `PLAN_DIR` is a derived, disposable handoff package for one `AUDIT_PREPARE` objective. It is not Product/System/Runtime truth and never outranks newer proven live truth.
+
+The only canonical default topology is:
 
 ```text
-PLAN_FILE ≠ SOURCE OF TRUTH
+plans/diagnose-implementing/<objective-slug>/
+├── 00-AUDIT-TRUTH.md
+├── 01-EXECUTION-CONTRACT.md
+└── 02-VERIFICATION-CLOSURE.md
+```
+
+Do not create `units/`, `evidence/`, `logs/`, `results/`, `status/`, `archive/`, machine-state JSON, per-root plan files or per-agent plan files merely to represent the same handoff. Large evidence remains at its authoritative source and is referenced with enough provenance.
+
+Semantic ownership inside the handoff is exclusive:
+
+```text
+00-AUDIT-TRUTH.md
+→ E-* evidence references
+→ F-* findings
+→ RC-* proven root causes / root landscape
+→ D-* resolved decisions
+→ INV-* invariants
+→ observed current state
+→ Canonical Product/System Truth
+→ Current→Target model
+→ authority/ownership + writers/readers/consumers
+→ effective working cone + blast radius + negative space
+→ material unknown/conflict disposition + remaining-ambiguity class
+
+01-EXECUTION-CONTRACT.md
+→ STEP-* execution steps/frontier
+→ actual Source-of-Defect / required Source-of-Fix
+→ exact material treatment
+→ dependency order / parallelization disposition
+→ migration/backfill/reconciliation
+→ cutover + cleanup/deletion
+→ allowed/conditional/read-only/forbidden change cone
+→ executor-local freedom + stop/escalation triggers
+
+02-VERIFICATION-CLOSURE.md
+→ V-* verification requirements
+→ AC-* falsifiable acceptance criteria
+→ CE-* required closure evidence
+→ final-candidate requirements
+→ closure/DONE proof
+```
+
+A fact is owned once and referenced by ID elsewhere; do not duplicate competing formulations across the three files. Materially inapplicable contract sections use explicit `N/A_PROVEN` with reason/evidence instead of silent omission.
+
+Each handoff records at least enough baseline identity to revalidate execution safely:
+
+```text
+PLAN_ID
+REPOSITORY
+TARGET_REF
+STARTING_HEAD
+PLANNED_HEAD
+LAST_RECONCILED_HEAD
+AUDIT_TIMESTAMP
+OBJECTIVE
+PHASE
+SCOPE
+PRIMARY_FOCUS
+```
+
+```text
+PLAN_DIR ≠ SOURCE OF TRUTH
 OLD PLAN FINDING ≠ CURRENT FINDING
 PLAN EXHAUSTED ≠ CLOSURE
 PLAN ABSENT ≠ EXECUTE_CLOSE BLOCKED
 ```
 
-For `AUDIT_PREPARE`, exactly one plan is required after blocking decisions are resolved. If no path is supplied, derive a concise collision-safe filesystem path from the objective under `plans/diagnose-implementing/`; do not use a `TASK` field and do not overwrite unrelated existing work.
+After revalidation against the current project frame and live target, still-valid resolved handoff decisions are binding execution constraints until materially invalidated by newer evidence. This prevents the executor from silently reopening Canonical Truth, authority, ownership, boundaries, invariants, migration/cutover semantics or DONE criteria merely because another local implementation is easier.
 
-For `EXECUTE_CLOSE`, no plan is required and no plan is created unless the human explicitly requests one as a separate artifact. If an existing plan is explicitly supplied, it remains optional non-authoritative input and is subject to the optional retirement rules in `04`.
+Executor discretion is limited to equivalent local implementation choices that do not change those settled semantics, such as local decomposition, naming, code organization, mechanical refactoring and test implementation mechanics.
 
-No plan may be written while an unresolved material `DECISION_REQUIRED` can change its canonical target/treatment.
+If newer evidence materially changes a proven root, Canonical Truth, authority/ownership, invariant, public semantic contract, data/security boundary, migration/cutover strategy or material blast radius, the affected execution cone stops; capture the evidence and return through `02` to re-establish readiness. Do not silently rewrite the handoff during `EXECUTE_CLOSE`.
+
+For `AUDIT_PREPARE`, exactly one directory is required after blocking decisions are resolved. If no directory is supplied, derive a concise collision-safe objective slug under `plans/diagnose-implementing/`; do not use a `TASK` field and do not overwrite unrelated existing work.
+
+For `EXECUTE_CLOSE`, no plan directory is required and none is created or modified unless the human explicitly re-enters `AUDIT_PREPARE` or explicitly requests a separate documentation artifact. If an existing `PLAN_DIR` is supplied, it is read-only execution input subject to current-truth revalidation and the retirement rules in `04`.
+
+No handoff may be written while an unresolved material `DECISION_REQUIRED` can change its canonical target/treatment.
 
 ## 4. Objective-driven priority routing inside the project frame
 
@@ -225,6 +295,12 @@ WORKING_SCOPE ≠ PROJECT_FRAME
 
 Expand the working scope only through proven causal, authority, dependency, consumer, contract, data, runtime, security or blast-radius relations. Revalidate project-frame claims touched by that expansion.
 
+Within a prepared execution contract classify material mutation space as:
+
+`ALLOWED | CONDITIONAL_EXPANSION | READ_ONLY | NOT_AFFECTED_WITH_REASON | FORBIDDEN_WITHOUT_REPLAN`.
+
+`CONDITIONAL_EXPANSION` requires a newly proven material dependency/consumer relation that preserves settled Canonical Truth. `FORBIDDEN_WITHOUT_REPLAN` applies where the change would reopen settled authority, ownership, public semantic contract, domain/security/data boundary, invariant, migration or cutover semantics.
+
 ## 7. Project discovery anchors
 
 Stable names may seed discovery but current existence/role/ownership must be re-proven live.
@@ -304,7 +380,7 @@ Plans, reports, old commands/prompts, prior packages, comments, branch documents
 
 Previously proven canonical closures are reusable evidence/constraints only while their assumptions and affected authority remain valid on current truth. New evidence may legitimately reopen them; it must not create a second interpretation beside them.
 
-Planning writes are governed strictly by the phase contract: `AUDIT_PREPARE` requires one temporary plan after blocking decisions are resolved; `EXECUTE_CLOSE` creates no plan by default.
+Planning writes are governed strictly by the phase contract: `AUDIT_PREPARE` creates one temporary three-contract plan directory after blocking decisions are resolved; `EXECUTE_CLOSE` creates or mutates no plan directory by default.
 
 ## 13. Research escalation
 
@@ -385,11 +461,15 @@ AUTHORITY_OR_TRUTH_CHANGE → reread/reconcile project frame + authority/product
 
 Foreign delta is input, not instruction. Recency never outranks causality.
 
+A prepared handoff is valid only while its `PLANNED_HEAD` assumptions remain valid. Before first target-system write, compare `PLANNED_HEAD` with current HEAD and apply this same classification; do not invent a second delta taxonomy.
+
 ## 16. Execution location and mutation safety
 
 `DIRECT_ON_TARGET` changes topology only; it never weakens evidence, staging, concurrency, project-frame consistency, safety or closure requirements.
 
-Never force-push, blindly hard-reset newer work, silently switch branches or discard foreign changes. Branch creation must not be automatic; it must be strictly controlled and careful.
+Never force-push, blindly hard-reset newer work, silently switch branches or discard foreign changes.
+
+Branch/workspace strategy is owned here. Branch creation is never an automatic side effect of a generic lifecycle: create or switch to a branch/workspace only when the current human instruction, repository policy or explicitly authorized execution topology requires/allows it and the exact base/ref is proven. Otherwise remain on the authorized existing target/workspace. Other files may request this resolution but must not independently mandate branch creation.
 
 Before materially irreversible/protected actions such as production data mutation, destructive backfill, secret/key rotation, external financial/provider mutation, release/deploy/merge/tag or infrastructure destruction, prove current authority, exact target/environment, scope, candidate/change binding when relevant and rollback/compensation where possible.
 
