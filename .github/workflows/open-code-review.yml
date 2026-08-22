@@ -15,14 +15,12 @@ on:
         required: true
         type: string
       model:
-        description: GitHub Models model identifier
+        description: Optional model override; repository variable OCR_LLM_MODEL is canonical default
         required: false
-        default: openai/gpt-4o
         type: string
 
 permissions:
   contents: read
-  models: read
 
 concurrency:
   group: opencodereview-${{ github.event.pull_request.number || github.ref }}
@@ -32,9 +30,9 @@ jobs:
   review:
     name: Deep semantic review
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
-      - name: Resolve candidate and trusted base
+      - name: Resolve candidate and governed remote model
         id: request
         shell: bash
         env:
@@ -44,6 +42,7 @@ jobs:
           INPUT_HEAD_SHA: ${{ inputs.head_sha }}
           INPUT_BASE_REF: ${{ inputs.base_ref }}
           INPUT_MODEL: ${{ inputs.model }}
+          CONFIG_MODEL: ${{ vars.OCR_LLM_MODEL }}
         run: |
           set -euo pipefail
           if [[ "${EVENT_NAME}" == "pull_request" ]]; then
@@ -53,9 +52,10 @@ jobs:
             head_sha="${INPUT_HEAD_SHA}"
             base_ref="${INPUT_BASE_REF}"
           fi
-          model="${INPUT_MODEL:-openai/gpt-4o}"
+          model="${INPUT_MODEL:-${CONFIG_MODEL:-}}"
           [[ "${head_sha}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::head_sha must be a full SHA"; exit 1; }
           [[ -n "${base_ref}" ]] || { echo "::error::base_ref is required"; exit 1; }
+          [[ -n "${model}" ]] || { echo "::error::OCR_LLM_MODEL repository variable is required unless model input is supplied"; exit 1; }
           {
             echo "head_sha=${head_sha}"
             echo "base_ref=${base_ref}"
@@ -102,21 +102,53 @@ jobs:
           npm install --global @alibaba-group/open-code-review@1.9.9
           ocr --version
 
+      - name: Validate governed remote LLM configuration
+        id: llm
+        continue-on-error: true
+        shell: bash
+        env:
+          OCR_LLM_URL: ${{ secrets.OCR_LLM_URL }}
+          OCR_LLM_TOKEN: ${{ secrets.OCR_LLM_AUTH_TOKEN }}
+          OCR_LLM_MODEL: ${{ steps.request.outputs.model }}
+          OCR_USE_ANTHROPIC: ${{ vars.OCR_LLM_USE_ANTHROPIC }}
+          OCR_LLM_AUTH_HEADER: ${{ vars.OCR_LLM_AUTH_HEADER }}
+          OCR_LLM_EXTRA_HEADERS: ${{ secrets.OCR_LLM_EXTRA_HEADERS }}
+          OCR_LLM_TIMEOUT: "180"
+        run: |
+          set -euo pipefail
+          [[ -n "${OCR_LLM_URL}" ]] || { echo "::error::GitHub Actions secret OCR_LLM_URL is required"; exit 1; }
+          [[ -n "${OCR_LLM_TOKEN}" ]] || { echo "::error::GitHub Actions secret OCR_LLM_AUTH_TOKEN is required"; exit 1; }
+          [[ -n "${OCR_LLM_MODEL}" ]] || { echo "::error::OCR_LLM_MODEL is required"; exit 1; }
+          [[ "${OCR_USE_ANTHROPIC}" == "true" || "${OCR_USE_ANTHROPIC}" == "false" ]] || {
+            echo "::error::Repository variable OCR_LLM_USE_ANTHROPIC must be true or false"
+            exit 1
+          }
+          ocr config set llm.extra_body '{"thinking":{"type":"disabled"}}'
+          ocr config set language English
+          ocr llm test
+
       - name: Run OpenCodeReview against exact candidate
         id: ocr
         continue-on-error: true
         shell: bash
         env:
-          OCR_LLM_URL: https://models.github.ai/inference/chat/completions
-          OCR_LLM_TOKEN: ${{ github.token }}
+          OCR_LLM_URL: ${{ secrets.OCR_LLM_URL }}
+          OCR_LLM_TOKEN: ${{ secrets.OCR_LLM_AUTH_TOKEN }}
           OCR_LLM_MODEL: ${{ steps.request.outputs.model }}
-          OCR_USE_ANTHROPIC: "false"
+          OCR_USE_ANTHROPIC: ${{ vars.OCR_LLM_USE_ANTHROPIC }}
+          OCR_LLM_AUTH_HEADER: ${{ vars.OCR_LLM_AUTH_HEADER }}
+          OCR_LLM_EXTRA_HEADERS: ${{ secrets.OCR_LLM_EXTRA_HEADERS }}
           OCR_LLM_TIMEOUT: "180"
           HEAD_SHA: ${{ steps.request.outputs.head_sha }}
           MERGE_BASE: ${{ steps.target.outputs.merge_base }}
         run: |
           set +e
           mkdir -p "${RUNNER_TEMP}/ocr-evidence"
+          if [[ "${{ steps.llm.outcome }}" != "success" ]]; then
+            echo "OpenCodeReview remote LLM preflight failed; review was not executed." > "${RUNNER_TEMP}/ocr-evidence/stderr.log"
+            echo '{"status":"failed","reason":"remote_llm_preflight_failed"}' > "${RUNNER_TEMP}/ocr-evidence/result.json"
+            exit 1
+          fi
           ocr review \
             --from "${MERGE_BASE}" \
             --to "${HEAD_SHA}" \
@@ -143,6 +175,7 @@ jobs:
           BASE_SHA: ${{ steps.target.outputs.base_sha }}
           MERGE_BASE: ${{ steps.target.outputs.merge_base }}
           MODEL: ${{ steps.request.outputs.model }}
+          LLM_OUTCOME: ${{ steps.llm.outcome }}
           OCR_OUTCOME: ${{ steps.ocr.outcome }}
         run: |
           mkdir -p "${RUNNER_TEMP}/ocr-evidence"
@@ -151,8 +184,9 @@ jobs:
             --arg base "${BASE_SHA}" \
             --arg mergeBase "${MERGE_BASE}" \
             --arg model "${MODEL}" \
+            --arg llmOutcome "${LLM_OUTCOME}" \
             --arg outcome "${OCR_OUTCOME}" \
-            '{schemaVersion:1,headSha:$head,baseSha:$base,mergeBase:$mergeBase,model:$model,outcome:$outcome}' \
+            '{schemaVersion:2,headSha:$head,baseSha:$base,mergeBase:$mergeBase,model:$model,llmPreflight:$llmOutcome,outcome:$outcome}' \
             > "${RUNNER_TEMP}/ocr-evidence/provenance.json"
 
       - name: Upload complete OpenCodeReview evidence
@@ -170,10 +204,12 @@ jobs:
         if: ${{ always() }}
         shell: bash
         env:
+          LLM_OUTCOME: ${{ steps.llm.outcome }}
           OCR_OUTCOME: ${{ steps.ocr.outcome }}
           ARTIFACT_OUTCOME: ${{ steps.artifact.outcome }}
         run: |
           set -euo pipefail
+          [[ "${LLM_OUTCOME}" == "success" ]] || { echo "::error::OpenCodeReview remote LLM preflight failed"; exit 1; }
           [[ "${OCR_OUTCOME}" == "success" ]] || { echo "::error::OpenCodeReview execution failed"; exit 1; }
           [[ "${ARTIFACT_OUTCOME}" == "success" ]] || { echo "::error::OpenCodeReview evidence upload failed"; exit 1; }
           echo "OpenCodeReview completed. Findings are evidence inputs and must be normalized under proven roots before closure."
