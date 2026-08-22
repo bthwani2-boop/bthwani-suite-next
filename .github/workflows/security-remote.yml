@@ -9,6 +9,13 @@ on:
   schedule:
     - cron: "41 4 * * 1"
   workflow_dispatch:
+    inputs:
+      tool:
+        description: Remote security tool to execute
+        required: true
+        default: all
+        type: choice
+        options: [all, gitleaks, osv, trivy, actionlint, zizmor, pinact, shellcheck, hadolint, yamllint, authority]
 
 permissions:
   contents: read
@@ -45,9 +52,7 @@ jobs:
               -f head="${GITHUB_REPOSITORY_OWNER}:${BRANCH}" \
               -f per_page=1 \
               --jq 'length')"
-            if [[ "${open_pr_count}" != "0" ]]; then
-              skip=true
-            fi
+            [[ "${open_pr_count}" == "0" ]] || skip=true
           fi
           echo "skip_duplicate_push=${skip}" >> "${GITHUB_OUTPUT}"
 
@@ -65,15 +70,12 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
           show-progress: false
-
       - name: Set up locked Node runtime
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "24.17.0"
-
       - name: Enforce remote-only Sonar and CodeQL authority
         run: node tools/guards/remote-analysis-authority-gate.mjs
-
       - name: Verify SonarQube Cloud CI configuration
         shell: pwsh
         run: pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/check-sonarqube-config.ps1
@@ -81,10 +83,23 @@ jobs:
   security:
     name: Remote security and workflow hygiene
     needs: [ownership]
-    if: ${{ needs.ownership.outputs.skip_duplicate_push != 'true' }}
+    if: ${{ needs.ownership.outputs.skip_duplicate_push != 'true' && (github.event_name != 'workflow_dispatch' || inputs.tool != 'authority') }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 55
     steps:
+      - name: Resolve requested tool
+        id: selection
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_TOOL: ${{ inputs.tool }}
+        run: |
+          set -euo pipefail
+          tool="${REQUESTED_TOOL:-all}"
+          [[ "${EVENT_NAME}" == "workflow_dispatch" ]] || tool=all
+          echo "tool=${tool}" >> "${GITHUB_OUTPUT}"
+          echo "Selected remote security tool: ${tool}"
+
       - name: Checkout immutable candidate with history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
@@ -92,49 +107,162 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
           show-progress: false
-
       - name: Set up locked Node runtime
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "24.17.0"
-
       - name: Set up locked Go runtime
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: services/dsh/backend/go.mod
           cache: false
+      - name: Prepare evidence directory
+        shell: bash
+        run: mkdir -p "${RUNNER_TEMP}/security-evidence"
 
       - name: Install locked remote security toolchain
+        id: install
+        continue-on-error: true
         shell: bash
-        run: bash tools/scripts/install-oss-toolchain-binaries.sh security
+        run: |
+          set -o pipefail
+          bash tools/scripts/install-oss-toolchain-binaries.sh security 2>&1 | tee "${RUNNER_TEMP}/security-evidence/toolchain-install.log"
 
       - name: Run Gitleaks
+        id: gitleaks
+        if: ${{ steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'gitleaks' }}
+        continue-on-error: true
         shell: bash
-        run: gitleaks detect --gitleaks-ignore-path .gitleaksignore --log-opts="HEAD" --source . --no-banner --redact --verbose
+        run: |
+          set -o pipefail
+          gitleaks detect --gitleaks-ignore-path .gitleaksignore --log-opts="HEAD" --source . --no-banner --redact --verbose \
+            --report-format json --report-path "${RUNNER_TEMP}/security-evidence/gitleaks.json" \
+            2>&1 | tee "${RUNNER_TEMP}/security-evidence/gitleaks.log"
 
       - name: Run OSV Scanner
-        run: node tools/scripts/run-osv-scanner.mjs
+        id: osv
+        if: ${{ steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'osv' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/scripts/run-osv-scanner.mjs 2>&1 | tee "${RUNNER_TEMP}/security-evidence/osv.log"
 
       - name: Run Trivy
-        run: node tools/scripts/run-trivy.mjs
+        id: trivy
+        if: ${{ steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'trivy' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/scripts/run-trivy.mjs 2>&1 | tee "${RUNNER_TEMP}/security-evidence/trivy.log"
 
       - name: Run actionlint
-        run: node tools/scripts/run-actionlint.mjs
+        id: actionlint
+        if: ${{ steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'actionlint' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/scripts/run-actionlint.mjs 2>&1 | tee "${RUNNER_TEMP}/security-evidence/actionlint.log"
 
       - name: Run zizmor
-        run: node tools/scripts/run-zizmor.mjs
+        id: zizmor
+        if: ${{ steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'zizmor' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/scripts/run-zizmor.mjs 2>&1 | tee "${RUNNER_TEMP}/security-evidence/zizmor.log"
 
       - name: Verify action pins
-        run: node tools/scripts/run-pinact.mjs --verify
+        id: pinact
+        if: ${{ steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'pinact' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/scripts/run-pinact.mjs --verify 2>&1 | tee "${RUNNER_TEMP}/security-evidence/pinact.log"
 
       - name: Run ShellCheck
-        run: node tools/scripts/run-shellcheck.mjs
+        id: shellcheck
+        if: ${{ steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'shellcheck' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/scripts/run-shellcheck.mjs 2>&1 | tee "${RUNNER_TEMP}/security-evidence/shellcheck.log"
 
       - name: Run Hadolint
-        run: node tools/scripts/run-hadolint.mjs
+        id: hadolint
+        if: ${{ steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'hadolint' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/scripts/run-hadolint.mjs 2>&1 | tee "${RUNNER_TEMP}/security-evidence/hadolint.log"
 
       - name: Run yamllint
-        run: node tools/scripts/run-yamllint.mjs
+        id: yamllint
+        if: ${{ steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'yamllint' }}
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          node tools/scripts/run-yamllint.mjs 2>&1 | tee "${RUNNER_TEMP}/security-evidence/yamllint.log"
+
+      - name: Upload complete security evidence
+        id: evidence
+        if: ${{ always() }}
+        continue-on-error: true
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: remote-security-evidence-${{ github.sha }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/security-evidence
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Enforce selected security tool outcomes
+        if: ${{ always() }}
+        shell: bash
+        env:
+          TOOL: ${{ steps.selection.outputs.tool }}
+          INSTALL: ${{ steps.install.outcome }}
+          GITLEAKS: ${{ steps.gitleaks.outcome }}
+          OSV: ${{ steps.osv.outcome }}
+          TRIVY: ${{ steps.trivy.outcome }}
+          ACTIONLINT: ${{ steps.actionlint.outcome }}
+          ZIZMOR: ${{ steps.zizmor.outcome }}
+          PINACT: ${{ steps.pinact.outcome }}
+          SHELLCHECK: ${{ steps.shellcheck.outcome }}
+          HADOLINT: ${{ steps.hadolint.outcome }}
+          YAMLLINT: ${{ steps.yamllint.outcome }}
+          EVIDENCE: ${{ steps.evidence.outcome }}
+        run: |
+          set -euo pipefail
+          failures=()
+          [[ "${INSTALL}" == "success" ]] || failures+=("toolchain-install:${INSTALL}")
+          check() {
+            local selector="$1" outcome="$2"
+            if [[ "${TOOL}" == "all" || "${TOOL}" == "${selector}" ]]; then
+              [[ "${outcome}" == "success" ]] || failures+=("${selector}:${outcome}")
+            fi
+          }
+          check gitleaks "${GITLEAKS}"
+          check osv "${OSV}"
+          check trivy "${TRIVY}"
+          check actionlint "${ACTIONLINT}"
+          check zizmor "${ZIZMOR}"
+          check pinact "${PINACT}"
+          check shellcheck "${SHELLCHECK}"
+          check hadolint "${HADOLINT}"
+          check yamllint "${YAMLLINT}"
+          [[ "${EVIDENCE}" == "success" ]] || failures+=("evidence:${EVIDENCE}")
+          if [[ "${#failures[@]}" -ne 0 ]]; then
+            echo "::error title=Remote security tool failures::$(IFS=,; echo "${failures[*]}")"
+            exit 1
+          fi
+          echo "Selected remote security tool set passed: ${TOOL}"
 
   result:
     name: Remote security result
@@ -150,25 +278,21 @@ jobs:
           OWNERSHIP_RESULT: ${{ needs.ownership.result }}
           AUTHORITY_RESULT: ${{ needs.authority.result }}
           SECURITY_RESULT: ${{ needs.security.result }}
+          SECURITY_REQUIRED: ${{ github.event_name != 'workflow_dispatch' || inputs.tool != 'authority' }}
         run: |
           set -euo pipefail
-          [[ "${OWNERSHIP_RESULT}" == "success" ]] || {
-            echo "::error title=Remote security ownership failed::ownership:${OWNERSHIP_RESULT}"
-            exit 1
-          }
-
+          [[ "${OWNERSHIP_RESULT}" == "success" ]] || { echo "::error::ownership:${OWNERSHIP_RESULT}"; exit 1; }
           if [[ "${SKIP_DUPLICATE_PUSH}" == "true" ]]; then
             echo "development push skipped because an open PR owns security verification"
             exit 0
           fi
-
           failures=()
           [[ "${AUTHORITY_RESULT}" == "success" ]] || failures+=("authority:${AUTHORITY_RESULT}")
-          [[ "${SECURITY_RESULT}" == "success" ]] || failures+=("security:${SECURITY_RESULT}")
-
+          if [[ "${SECURITY_REQUIRED}" == "true" && "${SECURITY_RESULT}" != "success" ]]; then
+            failures+=("security:${SECURITY_RESULT}")
+          fi
           if [[ "${#failures[@]}" -ne 0 ]]; then
             echo "::error title=Remote security failed::$(IFS=,; echo "${failures[*]}")"
             exit 1
           fi
-
-          echo "All remote security gates passed."
+          echo "Remote security authority passed."
