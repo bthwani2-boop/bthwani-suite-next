@@ -454,3 +454,163 @@ GOVERNANCE TREATMENT AFTER SYSTEM PROOF
 `GOVERNANCE_CLARITY_GAP` is not authority to write speculative documentation. The governance-write gate in the governance focus module still applies. If the truth is unresolved, keep the finding open/held or raise the true decision gap instead of manufacturing completeness.
 
 A bootstrap governance audit uses this same model against current live project truth. It should improve established durable context without turning governance into a task ledger, source-code mirror or exhaustive registry of implementation facts.
+
+## 20. `AUDIT_PREPARE` execution-handoff construction
+
+This section canonically owns construction/readiness of the phase-scoped handoff defined by `01`; it does not change the live-truth authority rules there and does not own final verification semantics from `04`.
+
+After all blocking material decisions are resolved, synthesize the already-proven diagnosis into the three canonical contracts without duplicating ownership between them.
+
+### 20.1 `00-AUDIT-TRUTH.md`
+
+Record the audit truth needed to prevent execution from rediscovering or silently redesigning the system:
+
+```text
+Plan identity / exact baseline
+Objective / closure claim
+Project/System orientation
+Observed Current State
+E-* Evidence Register with source/provenance/proof limit
+F-* Findings Ledger
+Root-Cause Landscape + RC-* Proven Root-Cause Contracts
+Canonical Product/System Truth
+Current → Target model
+Authority / Ownership map
+Writers / Readers / Consumers
+Effective Working Cone
+Blast Radius
+Negative Space
+D-* Decision Ledger
+INV-* Invariant Register
+Material unknown/conflict disposition
+Remaining Ambiguity class
+```
+
+For each material resolved decision retain enough traceability to prevent accidental reopening:
+
+```text
+D-*
+DECISION
+EVIDENCE
+RATIONALE
+ALTERNATIVES_REJECTED when material
+SUPERSEDES when applicable
+AFFECTED_ROOTS
+EXECUTOR_MAY_CHANGE
+EXECUTOR_MAY_NOT_REOPEN
+REOPEN_TRIGGER
+```
+
+Do not copy execution mechanics into this file when `01-EXECUTION-CONTRACT.md` owns them.
+
+### 20.2 `01-EXECUTION-CONTRACT.md`
+
+For each root on the current executable frontier instantiate the Source-of-Fix and target treatment already proven by §§15-18:
+
+```text
+RC-* reference
+ACTUAL_SOURCE_OF_DEFECT
+REQUIRED_SOURCE_OF_FIX
+CANONICAL_CORRECTION
+REQUIRED_MATERIAL_MUTATIONS
+STEP-* dependency-ordered treatment
+ADD / CHANGE / MOVE / REFACTOR / MIGRATE / BACKFILL / REGENERATE / CUTOVER / DELETE / VERIFY as materially applicable
+AFFECTED_WRITERS / READERS / CONSUMERS
+HARD_DEPENDENCIES
+PARALLELIZATION disposition
+ALLOWED_CHANGE_CONE
+CONDITIONAL_EXPANSION
+READ_ONLY
+FORBIDDEN_WITHOUT_REPLAN
+CLEANUP / RETIREMENT
+STOP_ESCALATION_TRIGGERS
+```
+
+`VERIFY` here references the V-* requirements owned by `02-VERIFICATION-CLOSURE.md`; it does not redefine verification law.
+
+The Source-of-Fix gate is fail-closed: when a root requires code, contract, data, schema, runtime or configuration mutation, the required actual source(s) must be identified before readiness. Planning/report/governance/comment changes alone cannot be specified as the treatment for such a root.
+
+### 20.3 `02-VERIFICATION-CLOSURE.md`
+
+Instantiate only the task-specific claims and acceptance/closure requirements from the verification law owned by `04`:
+
+```text
+V-* verification requirements
+AC-* falsifiable acceptance criteria
+CE-* required closure evidence
+Final-candidate requirements
+Definition-of-DONE references/applicability
+```
+
+Do not restate generic verification doctrine already owned by `04`.
+
+### 20.4 Remaining Ambiguity
+
+Classify execution readiness by the highest remaining material ambiguity:
+
+```text
+R0 — DETERMINISTIC
+No material semantic/architectural decision remains; treatment is mechanically determined apart from trivial local choices.
+
+R1 — LOCAL_REASONING
+Only equivalent local implementation choices remain; Canonical Truth/authority/target/migration/cutover are fixed.
+
+R2 — REASONING_HEAVY
+Canonical Truth is fixed, but substantial engineering reasoning remains inside the allowed implementation boundary.
+
+R3 — NOT_EXECUTION_READY
+A material Product/Domain/Authority/Architecture/Invariant/Migration/Cutover decision or unknown can still change treatment.
+```
+
+`R3` cannot produce `READY_FOR_EXECUTION`. Model names or vendor-specific routing do not belong in this package; routing systems may map these classes externally.
+
+### 20.5 Root landscape vs executable frontier
+
+The handoff may record multiple proven roots, but it must distinguish:
+
+```text
+ROOT_LANDSCAPE
+= all material roots currently proven for the objective.
+
+EXECUTION_FRONTIER
+= only roots/tightly coupled root sets safe to treat now under current dependencies and authority.
+
+DEFERRED_REVALIDATE
+= proven roots whose treatment assumptions may change after the current frontier mutates live truth.
+```
+
+Do not turn a broad audit into a frozen checklist that bypasses JIT re-diagnosis.
+
+### 20.6 Traceability
+
+Every material execution obligation must remain reconstructable through IDs without duplicating the underlying truth:
+
+```text
+E-* → F-* → RC-* → D-* / INV-* when applicable → STEP-* → V-* → AC-* → CE-*
+```
+
+Not every chain requires every optional node, but every material `STEP-*` must trace back to a proven root/decision and forward to sufficient verification/acceptance evidence.
+
+### 20.7 Handoff-readiness gate
+
+`READY_FOR_EXECUTION` is valid only when all materially applicable conditions are proven:
+
+```text
+EXACT_BASELINE_RECORDED
+AND MATERIAL_DECISIONS_RESOLVED
+AND HIGHEST_RELEVANT_ROOTS_PROVEN
+AND CANONICAL_TARGET_FIXED
+AND SOURCE_OF_FIX_KNOWN_FOR_EXECUTION_FRONTIER
+AND WRITERS_READERS_CONSUMERS_ACCOUNTED_FOR_MATERIALLY
+AND WORKING_CONE_COMPLETE_BUT_NOT_UNJUSTIFIABLY_BROAD
+AND BLAST_RADIUS_AND_NEGATIVE_SPACE_SUFFICIENTLY_PROVEN
+AND MATERIAL_INVARIANTS_EXPLICIT
+AND MIGRATION_BACKFILL_RECONCILIATION_DEFINED_WHEN_REQUIRED
+AND CUTOVER_AND_CLEANUP_DEFINED_WHEN_REQUIRED
+AND CHANGE_CONE_AND_ESCALATION_BOUNDARY_DEFINED
+AND TASK_SPECIFIC_VERIFICATION_ACCEPTANCE_CLOSURE_EVIDENCE_DEFINED
+AND TRACEABILITY_SUFFICIENT_TO_EXPLAIN_EVERY_MATERIAL_EXECUTION_STEP
+AND REMAINING_AMBIGUITY != R3
+```
+
+If any conjunct is materially unproven, remain `NOT_READY_FOR_EXECUTION`, `DECISION_REQUIRED` or `EXTERNAL_BLOCKER` as applicable. Writing the three files does not itself satisfy readiness.

@@ -1,7 +1,7 @@
 # Source Consolidation and Atomic Semantic Disposition Record
 
 STATUS: CONSOLIDATION_RECORD_ONLY
-ATOMIC_SOURCE_AUDIT_REVISION: 4
+ATOMIC_SOURCE_AUDIT_REVISION: 5
 RUNTIME_AUTHORITY: NO
 EXECUTION_AUTHORITY: NO
 EXTERNAL_SOURCE_DEPENDENCY: NONE
@@ -51,7 +51,7 @@ REJECTED_AS_SELF_REFERENTIAL_AUTOMATION
 = machine machinery whose purpose was to run/validate/police the orchestrator itself; intentionally excluded.
 
 REJECTED_AS_DEFAULT_PLAN_MACHINERY
-= mandatory planning/package lifecycle intentionally removed from normal live execution.
+= historical mandatory planning/package machinery rejected as a universal prerequisite to ordinary execution; this does not prohibit the current explicit `AUDIT_PREPARE` phase from producing its minimal phase-scoped handoff.
 
 REJECTED_AS_RIGID_NUMERIC_RULE
 = useful intent retained, but fixed numeric topology was not adopted because ownership/value is the real invariant.
@@ -61,11 +61,11 @@ REJECTED_AS_RIGID_NUMERIC_RULE
 
 | Concept owner | Responsibility |
 |---|---|
-| `00-ORCHESTRATOR.md` | Governing law; objective-driven lifecycle; invocation; independence/protection; valid stop states. |
-| `01-SCOPE-AUTHORITY-RULES.md` | Authority/truth; objective/focus/scope routing; research/capability discipline; exclusions; concurrency; longevity. |
-| `02-DIAGNOSE-ROOT-CAUSE.md` | Coverage; journeys; diagnostic angles; findings; decisions; root proof/ranking; canonical target model; readiness. |
-| `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` | Actual treatment; reconstruction; cutover; cleanup; migrations; engineering-control-path treatment; workspace/staging/mutation discipline. |
-| `04-VERIFY-REDIAGNOSE-CLOSE.md` | Candidate/evidence provenance; repository-platform truth when required; verification; re-diagnosis; closure. |
+| `00-ORCHESTRATOR.md` | Governing law; objective-driven lifecycle; phase semantics; invocation; independence/protection; valid stop states. |
+| `01-SCOPE-AUTHORITY-RULES.md` | Authority/truth; objective/focus/scope routing; plan-directory topology/semantics; executor and branch/workspace boundaries; research/capability discipline; exclusions; concurrency; longevity. |
+| `02-DIAGNOSE-ROOT-CAUSE.md` | Coverage; journeys; diagnostic angles; findings; decisions; root proof/ranking; canonical target model; phase-scoped handoff construction/readiness. |
+| `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` | Actual treatment; prepared-handoff consumption; reconstruction; cutover; cleanup; migrations; engineering-control-path treatment; workspace/staging/mutation discipline. |
+| `04-VERIFY-REDIAGNOSE-CLOSE.md` | Task-specific verification/acceptance/closure-contract semantics; candidate/evidence provenance; repository-platform truth when required; verification; re-diagnosis; temporary-plan-directory retirement; closure. |
 | `focus/code-architecture-organization.md` | Code/architecture/structure/UI/UX/discoverability application. |
 | `focus/governance-product-design.md` | Product/governance semantics; engineering-governance value; new-control-artifact gate. |
 | `focus/data-contracts-runtime-security-quality.md` | Data/contracts/runtime/security/finance/quality/control-path efficiency application. |
@@ -111,7 +111,7 @@ REJECTED_AS_RIGID_NUMERIC_RULE
 | New control-artifact creation requires unique need/value/consumer/trigger/owner and no simpler owner | `focus/governance-product-design.md` | `MIGRATED` | Prevents control-plane growth as a substitute for ownership resolution. |
 | Before→after proof + no cost shift + assurance preserved | `03`, `04`, `focus/data-contracts-runtime-security-quality.md` | `MIGRATED` | Required for tooling/performance roots. |
 | One concept → one canonical owner; avoid internal law duplication | `00`, `01` | `MIGRATED` | Package structure itself follows the rule. |
-| Mandatory PREPARE_ONLY / task package / package generator / package schema lifecycle | none | `REJECTED_AS_DEFAULT_PLAN_MACHINERY` | Current architecture is direct live execution; planning artifacts are opt-in only. |
+| Mandatory PREPARE_ONLY / task package / package generator / package schema lifecycle | none | `REJECTED_AS_DEFAULT_PLAN_MACHINERY` | Rejected as a universal/default prerequisite. The current `AUDIT_PREPARE` phase instead emits one minimal three-contract `PLAN_DIR`; ordinary `EXECUTE_CLOSE` remains plan-optional and live. |
 | Orchestrator self-validator / self-guard / workflow/CLI/machine status registry | none | `REJECTED_AS_SELF_REFERENTIAL_AUTOMATION` | Plain-text package must not depend on self-certification. |
 | Fixed numeric topology such as “exactly one guard registry/router” | none | `REJECTED_AS_RIGID_NUMERIC_RULE` | Retained invariant is unique responsibility/value, not arbitrary count. |
 | Heavy mandatory Evidence/Approval matrices for every task | `01`, `04` | `SUPERSEDED` | Claim/risk-proportional evidence and authority gates preserve value without default bureaucracy. |
@@ -151,7 +151,7 @@ REJECTED_AS_RIGID_NUMERIC_RULE
 
 | Source atom/group | Current disposition |
 |---|---|
-| Header/inputs requiring diagnosis then mandatory package creation without product mutation | diagnosis semantics retained; mandatory package lifecycle = `REJECTED_AS_DEFAULT_PLAN_MACHINERY` |
+| Header/inputs requiring diagnosis then mandatory package creation without product mutation | diagnosis semantics retained; historical universal package lifecycle = `REJECTED_AS_DEFAULT_PLAN_MACHINERY`; current `AUDIT_PREPARE` uses only the phase-scoped three-contract handoff |
 | §1 authority/source classes; plans are derived/historical, not live truth | `01` §§1-2,12 — `MIGRATED` |
 | §2 exact ref pin/re-resolve; capability preflight and no false tool claims | `00` §5, `01` §§14-16, `04` — `MIGRATED` |
 | §3 CODE_BASED_LEAN / smallest complete root scope / proven risk expansion | `00` §§4,9, `01` §§4,6 — `GENERALIZED` |
@@ -162,13 +162,13 @@ REJECTED_AS_RIGID_NUMERIC_RULE
 | §11 derivable fact vs true decision vs external evidence gap; batch high-value questions | `02` §14, `00` §11 — `MIGRATED` |
 | §12 PostgreSQL/compatibility/security/WLT/mobile/control-panel/design risk lenses | data/code focus modules + `03`/`04` — `MIGRATED` |
 | §13 concurrent-agent collision/reconciliation planning | `01` §15, `03` §§20-22 — `GENERALIZED` to live reconciliation rather than package fields |
-| §§14-16 package create/resume/rebaseline/schema/generator/COVERAGE/unit machinery | `REJECTED_AS_DEFAULT_PLAN_MACHINERY`; useful current-truth rebaseline and JIT ordering retained in `01`/`02` |
-| §17 verification plan + capability binding + proof limits | `01` §14, `04` §§1-8 — `MIGRATED` and hardened in Revision 4 |
-| §18 package handoff mapping | package schema = rejected; underlying Finding→Root→Consumer→Evidence traceability = `02`/`04` `MIGRATED` |
-| §19 readiness gate | generalized into Source-of-Fix/Canonical Target/closure requirements in `02` §§15-18 and `04` §22 |
+| §§14-16 historical package create/resume/rebaseline/schema/generator/COVERAGE/unit machinery | universal/machine package machinery = `REJECTED_AS_DEFAULT_PLAN_MACHINERY`; current-truth rebaseline, JIT ordering and minimal phase-scoped handoff are owned by `01`/`02` |
+| §17 verification plan + capability binding + proof limits | `01` §14, `04` §§1-8 — `MIGRATED` and hardened |
+| §18 package handoff mapping | historical package schema rejected; current lightweight `E→F→RC→D/INV→STEP→V→AC→CE` traceability = `02`/`04` `MIGRATED` |
+| §19 readiness gate | Source-of-Fix/Canonical Target/readiness retained and hardened in `02` §§15-20 and `04` |
 | §20 delivery/latest-head/staging semantics | `00` §5, `01` §15-16, `03` §§20-22, `04` §18 — `MIGRATED` |
 | §21 retention/Git history | `03` §8 and derived-support rules in `01` — `MIGRATED` |
-| §22 evidence-based report/decision vocabulary | `04` §23 — `GENERALIZED` |
+| §22 evidence-based report/decision vocabulary | `04` §24 — `GENERALIZED` |
 
 ## 8. Atomic audit — `02-execute-verify-close.md`
 
@@ -176,29 +176,29 @@ REJECTED_AS_RIGID_NUMERIC_RULE
 |---|---|
 | §0 fail-closed default/open/no ignore-defer-patch-fake-green | `00`, `03`, `04` — `MERGED` |
 | §1 EXECUTE_PACKAGE/EXECUTE_DIRECT/REVIEW_CANDIDATE modes | package mode = rejected; direct execution = `EXECUTE_END_TO_END`; immutable review = `DIAGNOSE` on exact commit/ref — `GENERALIZED` |
-| §2 authority/source classes/package revalidation | `01` §§1-2,12 — `MIGRATED`; package-specific mechanics rejected |
-| §3 exact target/task identity; package resume/collision | exact target pin = `00`/`01`; package identity mechanics = `REJECTED_AS_DEFAULT_PLAN_MACHINERY` |
+| §2 authority/source classes/package revalidation | `01` §§1-2,12 — `MIGRATED`; historical package-specific mechanics rejected |
+| §3 exact target/task identity; package resume/collision | exact target pin = `00`/`01`; machine package identity mechanics = `REJECTED_AS_DEFAULT_PLAN_MACHINERY`; current minimal `PLAN_DIR` identity/baseline is phase-scoped under `01`/`02` |
 | §4 capability preflight and pre-execution authority for protected/irreversible actions | `01` §§14,16 — `MIGRATED` |
 | §5 claimed outcome→owner→consumers→contracts/data/runtime scope | `00` §§4,9, `01` §§4,6, `02` — `MIGRATED` |
-| §§6-8 candidate lifecycle/AUTO/reachability/relation | candidate/reachability principles = `04` §§4-6; package-specific AUTO vocabulary = `SUPERSEDED` |
-| §9 workspace/staging hygiene including broad-command prohibitions and hunk ownership | `03` §20 — `MIGRATED` in Revision 4 |
+| §§6-8 candidate lifecycle/AUTO/reachability/relation | candidate/reachability principles = `04` §§4-6; historical package-specific AUTO vocabulary = `SUPERSEDED` |
+| §9 workspace/staging hygiene including broad-command prohibitions and hunk ownership | `03` §20 — `MIGRATED` |
 | §§10-12 concurrent isolation, atomic GitHub writes, push serialization | `01` §15, `03` §22, `04` §18 — `MIGRATED` |
 | §13 findings ledger | `02` §9 — `MIGRATED` |
-| §14 root-cause execution loop/no patch loop | `02` §§10-18, `03` §§2-3 — `MIGRATED`; explicit patch-loop breaker restored in Revision 4 |
+| §14 root-cause execution loop/no patch loop | `02` §§10-18, `03` §§2-3 — `MIGRATED`; explicit patch-loop breaker restored |
 | §15 CI/runtime failure classification/no blind rerun | `04` §10 — `MIGRATED` |
 | §§16-18 full-stack/domain/runtime freshness gates | `02` §8, `03` §§13-19, focus modules, `04` §§7-9 — `MIGRATED` |
 | §§19-20 affected-first verification and evidence invalidation | `04` §§1-13 — `MIGRATED` |
-| §§21-22 package schema projection/bookkeeping | `REJECTED_AS_DEFAULT_PLAN_MACHINERY` |
+| §§21-22 historical package schema projection/bookkeeping | machine package machinery = `REJECTED_AS_DEFAULT_PLAN_MACHINERY`; current three Markdown contracts remain non-machine handoff only |
 | §23 cleanup/refactor/structural finishing | `03` §§16-17, `04` §17 — `MIGRATED` |
 | §§24-30 latest-head integration, delivery, freeze, red-team, read-only final verify, evidence provenance, branch race | `03` §§20-23, `04` §§4-7,18-20 — `MIGRATED` |
 | §31 independence provenance | `04` §14 — `MIGRATED` |
 | §32 claim/diff/test-effectiveness review | `03` §18, `04` §§1-9,20 — `MIGRATED` |
 | §33 mandatory Evidence Matrix | provenance/value retained as minimal material evidence record in `04` §6 — `SUPERSEDED` |
 | §34 mandatory Approval Matrix | protected-action authority retained in `01` §16 — `SUPERSEDED` |
-| §35 GitHub/CI/Repository-Platform truth | `04` §11 — `MIGRATED` in Revision 4 |
-| §36 package-validator semantics | package machinery rejected; general rule “validator proves only what it checks” retained in `04` proof limits — `GENERALIZED` |
-| §37 package retention | package-specific lifecycle rejected; Git-history/current-tree retention principle in `03` §8 — `GENERALIZED` |
-| §§38-40 final closure/report/golden laws | `00` §§8,12-13 and `04` §§22-23 — `MERGED` |
+| §35 GitHub/CI/Repository-Platform truth | `04` §11 — `MIGRATED` |
+| §36 package-validator semantics | machine package machinery rejected; general rule “validator proves only what it checks” retained in `04` proof limits — `GENERALIZED` |
+| §37 package retention | historical machine package lifecycle rejected; Git-history/current-tree retention principle in `03` §8 and current temporary `PLAN_DIR` retirement in `04` §23 |
+| §§38-40 final closure/report/golden laws | `00` §§8,12-13 and `04` §§22-24 — `MERGED` |
 
 ## 9. Atomic audit — `03-end-to-end-fail-closed.md`
 
@@ -214,7 +214,7 @@ REJECTED_AS_RIGID_NUMERIC_RULE
 | §§17-19 real failure testing/adversarial diagnosis/repeat until exhausted | `02` §7, `04` §§9,19-20 — `MIGRATED` |
 | §20 authority to modify/delete/move/merge/split/rename/restructure/redesign/rebuild with blast-radius proof | `03` §§4-6,16-17 — `MIGRATED` |
 | §§21-23 final finishing/technical/latest-head gates | `04` §§17-20,22 — `MIGRATED` |
-| §§24-26 evidence-derived DONE and final decision questions | `04` §§21-23 — `MERGED` |
+| §§24-26 evidence-derived DONE and final decision questions | `04` §§21-24 — `MERGED` |
 
 ## 10. Atomic audit — `04-journey-multisurface-operational-diagnosis.md`
 
@@ -226,43 +226,43 @@ REJECTED_AS_RIGID_NUMERIC_RULE
 | §6 UX states/discoverability/action/feedback/handoff/recovery clarity | `02` §§3,6-7 and code focus §9 — `MIGRATED` |
 | §7 Findings Ledger and confidence discipline | Finding ledger = `02` §9; exact historical confidence enum consolidated into evidence/confidence/missing-proof semantics — `MERGED` |
 | §8 actual vs intended behavior/source conflict/plans as derived support | `01` §§1-2,12 — `MIGRATED` |
-| §§9-11 ask only at true Decision Boundary; batch questions; continue derivable diagnosis | `00` §11, `02` §14 — `MIGRATED` |
-| §12 mandatory re-diagnosis after decisions | `00` §11, `02` §14, `04` §16 — `MIGRATED` |
+| §§9-11 ask only at true Decision Boundary; batch questions; continue derivable diagnosis | `00` §12, `02` §14 — `MIGRATED` |
+| §12 mandatory re-diagnosis after decisions | `00` §12, `02` §14, `04` §16 — `MIGRATED` |
 | §13 journey ordering by operational dependency, not folders | `02` §§12-13,18 — `GENERALIZED` as dependency/root-driven ordering |
 | §14 journey-understanding completeness questions | `02` §6/7 — `MERGED` into Journey Matrix + angles |
-| §§15-16 mandatory package readiness/creation after knowledge closure | semantic readiness retained in `02` §§15-18 and `04`; mandatory package creation = `REJECTED_AS_DEFAULT_PLAN_MACHINERY` |
+| §§15-16 mandatory historical package readiness/creation after knowledge closure | semantic readiness retained/hardened in `02` §§15-20 and `04`; universal package machinery rejected, current `AUDIT_PREPARE` uses only the minimal phase-scoped handoff |
 | §17 golden laws | `00`, `01`, `02` — `MERGED` |
 
 ## 11. Atomic audit — `05-universal-deep-diagnose-prepare-execute-reconstruct.md`
 
 | Source atom/group | Current disposition |
 |---|---|
-| Header requiring V5 package/orchestrator.mjs as governing machinery | textual orchestrator retained; mandatory package/machine state = `REJECTED_AS_DEFAULT_PLAN_MACHINERY` / self-referential machinery rejected as applicable |
-| §0 PREPARE_ONLY/EXECUTE_END_TO_END invocation and semantic TARGET | semantic target/objective generalized to `00`/`01`; PREPARE_ONLY default lifecycle = `REJECTED_AS_DEFAULT_PLAN_MACHINERY` |
+| Header requiring V5 package/orchestrator.mjs as governing machinery | textual orchestrator retained; mandatory machine package/state = `REJECTED_AS_DEFAULT_PLAN_MACHINERY` / self-referential machinery rejected as applicable |
+| §0 PREPARE_ONLY/EXECUTE_END_TO_END invocation and semantic TARGET | semantic target/objective generalized to `00`/`01`; historical PREPARE_ONLY default lifecycle rejected; current explicit `AUDIT_PREPARE` is phase-scoped |
 | §1 unified semantic-first/root-first/live-treatment command | `00`-`04` + focus modules — `MERGED` |
 | §2 authority/source hierarchy and derived historical records | `01` §§1-2,12 — `MIGRATED` |
-| §3 capabilities/Git/safety/isolation/staging | capability/safety/staging = `01`/`03`; mandatory task-branch topology = `GENERALIZED` into explicit `EXECUTION_LOCATION` without weakening safety |
+| §3 capabilities/Git/safety/isolation/staging | capability/safety/staging = `01`/`03`; mandatory task-branch topology generalized into authorized `EXECUTION_LOCATION`/branch strategy under `01` |
 | §4 broad discovery from highest meaning | `02` §§2,5 — `MIGRATED` |
 | §5 journey/multi-surface/failure paths | `02` §§6-8, `04` §9 — `MIGRATED` |
 | §6 product/UI/shared/contracts/backend/data/integration/security/runtime/repository lenses | focus modules + `02`/`03`/`04` — `MIGRATED` |
 | §7 findings→root graph→competitive deepening→frontier | `02` §§9-13,18 — `MIGRATED` |
 | §8 decision closure | `02` §14 — `MIGRATED` |
-| §9 Canonical Target / Reconstruction Blueprint | `02` §16 — `MIGRATED` in Revision 4 |
-| §10 mandatory V5 package creation and machine-checkable package state | `REJECTED_AS_DEFAULT_PLAN_MACHINERY` |
+| §9 Canonical Target / Reconstruction Blueprint | `02` §16 — `MIGRATED` |
+| §10 mandatory V5 package creation and machine-checkable package state | `REJECTED_AS_DEFAULT_PLAN_MACHINERY`; current three Markdown handoff contracts are explicitly non-machine and phase-scoped |
 | §11 root-by-root execution sequence | `03` §2 — `MIGRATED` |
 | §12 preserve value; classify KEEP/HARDEN/.../DELETE; no clean-room rebuild | `03` §§4-5 — `MIGRATED` |
-| §13 forbidden final patch/fallback/parallel/shadow/UI-only/financial/debug states; bounded compatibility | `00` §8, `03` §§9-14 — `MIGRATED` |
+| §13 forbidden final patch/fallback/parallel/shadow/UI-only/financial/debug states; bounded compatibility | `00` §9, `03` §§9-14 — `MIGRATED` |
 | §14 risk/layer verification | `04` §§1-13 and focus modules — `MIGRATED` |
 | §15 cleanup/zero residue with replacement and reachability proof | `03` §§16-17, `04` §15 — `MIGRATED` |
 | §16 exact candidate/foreign delta/final read-only closure | `01` §15, `03` §§20-23, `04` §§4-7,18-20 — `MIGRATED` |
 | §17 closure equation | `04` §22 — `MERGED` |
-| §18 PREPARED/BLOCKED/CLOSED stop states | decision/blocker/closed retained in `00` §12; PREPARED_NOT_CLOSED removed with mandatory plan lifecycle — `SUPERSEDED` |
-| §19 evidence-based final report | `04` §23 — `MIGRATED` |
+| §18 PREPARED/BLOCKED/CLOSED stop states | decision/blocker/closed retained in `00` §13; `READY_FOR_EXECUTION` is now valid only for explicit `AUDIT_PREPARE` and never means system closure |
+| §19 evidence-based final report | `04` §24 — `MIGRATED` |
 | §20 final compact loop | `00` §6 — `MERGED` |
 
-## 12. Current 2026-08-17 hardening requirements
+## 12. Current hardening requirements
 
-These are current human-directed requirements discovered during the final extraction audit rather than legacy source atoms. They are now canonicalized as follows:
+These are current human-directed requirements discovered during consolidation/hardening and now canonicalized as follows:
 
 | Current requirement | Canonical destination |
 |---|---|
@@ -279,6 +279,12 @@ These are current human-directed requirements discovered during the final extrac
 | Minimal evidence provenance record, not mandatory heavy matrix | `04` §6 |
 | New control-artifact creation gate | governance focus §10 |
 | Engineering-governance/control-path value and before→after efficiency proof | governance/data focus + `03`/`04` |
+| `AUDIT_PREPARE`: one objective → one temporary `PLAN_DIR` → exactly `00-AUDIT-TRUTH.md`, `01-EXECUTION-CONTRACT.md`, `02-VERIFICATION-CLOSURE.md` | `00` §3.1; `01` §3; `02` §20; `04` §6.1 |
+| Handoff semantics are non-machine, non-authoritative, single-owner-per-fact and baseline-bound | `01` §3.2; `02` §20 |
+| Prepared handoff is read-only during `EXECUTE_CLOSE`; plan-only changes never count as treatment | `00` §3.2; `01` §3.2; actual treatment law in `03` §§1-3 |
+| Source-of-Fix + exact treatment + `R0..R3` remaining ambiguity + traceability chain | `02` §§15-20 |
+| Task-specific V/AC/CE contract and whole-directory retirement after proven closure | `04` §§6.1,23 |
+| Branch creation is not a generic lifecycle side effect; branch/workspace authority belongs to `01` | `00` §6.2; `01` §16 |
 
 ## 13. Explicitly rejected historical machinery
 
@@ -292,7 +298,7 @@ The following were reviewed and are intentionally not missing:
 - permanent historical task-branch names, current HEADs, fixed tool versions or closed journey universes in the method;
 - literal historical branch `b`/branch `A` mandates as universal laws.
 
-Their material safety/traceability intent is retained where applicable through current authority, candidate, evidence, concurrency, scope and closure laws.
+Their material safety/traceability intent is retained where applicable through current authority, candidate, evidence, concurrency, scope and closure laws. The current three-file `AUDIT_PREPARE` handoff is not a resurrection of the rejected machine package lifecycle: it is phase-scoped, Markdown-only, non-authoritative, temporary and absent by default from ordinary `EXECUTE_CLOSE`.
 
 ## 14. Extraction accounting
 

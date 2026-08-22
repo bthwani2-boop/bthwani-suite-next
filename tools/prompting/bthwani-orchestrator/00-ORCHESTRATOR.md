@@ -1,6 +1,6 @@
 # BThwani Self-Contained Goal-Driven Audit, Inspection, Diagnosis, Analysis & Root-Cause Execution Orchestrator
 
-PACKAGE_REVISION: 10
+PACKAGE_REVISION: 11
 PACKAGE_CLASS: TEXTUAL_EXECUTION_COMMAND_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -48,10 +48,10 @@ Project tooling and external research may be used only as evidence or execution 
 The package has exactly these semantic owners:
 
 1. `00-ORCHESTRATOR.md` — governing law, project-frame invariant, progressive-governance invariant, goal-driven audit/execution lifecycle, invocation, phase semantics, independence, protection and valid stop states.
-2. `01-SCOPE-AUTHORITY-RULES.md` — truth/authority, project-frame reconstruction, objective/working-scope/focus routing, durable project-memory routing, phase/mode/plan authority, research/capability discipline, exclusions, concurrency and longevity.
-3. `02-DIAGNOSE-ROOT-CAUSE.md` — detailed audit/inspection/diagnosis/analysis protocol through project orientation, coverage, journeys, findings, decisions, root proof/ranking, durable-truth discovery, project-consistency target modeling and execution readiness.
-4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — actual treatment, reconstruction, migration, cutover, continuity, simplification, cleanup, progressive governance clarification and mutation discipline.
-5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-candidate evidence, project-consistency proof, durable project-memory closure, optional temporary-plan retirement, repository-platform truth when required, review provenance, post-treatment re-audit/re-inspection/re-diagnosis/re-analysis and fail-closed closure.
+2. `01-SCOPE-AUTHORITY-RULES.md` — truth/authority, project-frame reconstruction, objective/working-scope/focus routing, phase/mode/plan-directory authority, handoff topology, executor boundary, branch/workspace authority, research/capability discipline, exclusions, concurrency and longevity.
+3. `02-DIAGNOSE-ROOT-CAUSE.md` — detailed audit/inspection/diagnosis/analysis protocol through project orientation, coverage, journeys, findings, decisions, root proof/ranking, durable-truth discovery, project-consistency target modeling, `AUDIT_PREPARE` handoff construction and execution readiness.
+4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — actual treatment, prepared-handoff consumption, reconstruction, migration, cutover, continuity, simplification, cleanup, progressive governance clarification and mutation discipline.
+5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — task-specific verification/acceptance/closure contract semantics, exact-candidate evidence, project-consistency proof, durable project-memory closure, optional temporary-plan-directory retirement, repository-platform truth when required, review provenance, post-treatment re-audit/re-inspection/re-diagnosis/re-analysis and fail-closed closure.
 6. `focus/code-architecture-organization.md` — implementation architecture, repository structure, UI/UX and discoverability.
 7. `focus/governance-product-design.md` — product meaning, governance reconciliation, progressive durable-memory clarification and engineering-governance/control-artifact value.
 8. `focus/data-contracts-runtime-security-quality.md` — data, contracts, runtime, security, finance, quality and engineering control-path efficiency.
@@ -88,7 +88,7 @@ REPOSITORY: <owner/repo>
 BRANCH: <exact branch/ref>
 OBJECTIVE: <material outcome to audit/inspect/diagnose/analyze/fix/restructure/clean/close; discovery itself may be the objective>
 PHASE: <AUDIT_PREPARE | EXECUTE_CLOSE | AUTO>
-PLAN_FILE: <AUTO | NONE | exact temporary plan path>
+PLAN_DIR: <AUTO | NONE | exact temporary objective-plan directory>
 MODE: <AUTO | DIAGNOSE | EXECUTE_END_TO_END | EXECUTE_PROJECT_CLOSURE>
 PRIMARY_FOCUS: <AUTO | optional explicit focus>
 SCOPE: <AUTO | repository/domain/service/surface/feature/journey/path/semantic scope>
@@ -109,18 +109,18 @@ PRE-EXECUTION METHOD = AUDIT + INSPECT + DIAGNOSE + ANALYZE
 EXECUTION PRIORITY = HIGHEST PROVEN SYSTEMIC ROOT
 
 IF PHASE=AUDIT_PREPARE:
-  PLAN_FILE = AUTO when omitted
-  PLAN ARTIFACT = MANDATORY after material decisions are resolved
+  PLAN_DIR = AUTO when omitted
+  PLAN DIRECTORY = MANDATORY after material decisions are resolved and handoff readiness is proven
 
 IF PHASE=EXECUTE_CLOSE:
-  PLAN_FILE = NONE when omitted
-  PLAN ARTIFACT CREATION = FORBIDDEN BY DEFAULT
-  EXISTING PLAN_FILE = OPTIONAL NON-AUTHORITATIVE INPUT ONLY WHEN EXPLICITLY SUPPLIED
+  PLAN_DIR = NONE when omitted
+  PLAN ARTIFACT CREATION/MUTATION = FORBIDDEN BY DEFAULT
+  EXISTING PLAN_DIR = OPTIONAL READ-ONLY HANDOFF/EVIDENCE INPUT ONLY WHEN EXPLICITLY SUPPLIED
 ```
 
 The invocation token `MODE=DIAGNOSE` is intentionally retained for compatibility and routing simplicity. It **does not mean diagnosis-only**. It means the full read-only `AUDIT + INSPECT + DIAGNOSE + ANALYZE` protocol governed here and detailed by `01`/`02`, without target-system mutation.
 
-`PHASE` is a human-requested operating contract. Its authority relationship to `MODE` and `PLAN_FILE` is owned by `01`.
+`PHASE` is a human-requested operating contract. Its authority relationship to `MODE` and `PLAN_DIR` is owned by `01`.
 
 ### 3.1 `AUDIT_PREPARE`
 
@@ -132,32 +132,46 @@ AUDIT + INSPECT + DIAGNOSE + ANALYZE
 → DEFINE CANONICAL TARGET + ROOT-CORRECT TREATMENT
 → DEFINE MIGRATIONS / CUTOVERS / CLEANUP / GOVERNANCE DISPOSITION
 → DEFINE VERIFICATION + CLOSURE CRITERIA
-→ WRITE ONE TEMPORARY PLAN FILE
+→ PROVE HANDOFF READINESS UNDER 02
+→ WRITE ONE TEMPORARY PLAN DIRECTORY WITH EXACTLY THREE CANONICAL MARKDOWN CONTRACTS
 → REPORT
 → READY_FOR_EXECUTION
 ```
 
-The target system remains read-only throughout this phase. If any material `DECISION_REQUIRED` can change the target/treatment, stop **before writing the plan file**, batch the material questions under §12, and wait for the decision. After decisions are supplied, propagate them and re-audit/re-inspect/re-diagnose/re-analyze the affected cone before preparing the handoff.
+The target system remains read-only throughout this phase. If any material `DECISION_REQUIRED` can change the target/treatment, stop **before writing the plan directory**, batch the material questions under §12, and wait for the decision. After decisions are supplied, propagate them and re-audit/re-inspect/re-diagnose/re-analyze the affected cone before preparing the handoff.
 
-After all blocking material decisions are resolved, this phase **must create exactly one temporary execution record**:
+After all blocking material decisions are resolved and the handoff-readiness gate in `02` is proven, this phase **must create exactly one temporary objective plan directory**:
 
-- when `PLAN_FILE` is an explicit path, use that exact path;
-- when `PLAN_FILE=AUTO` or is omitted, derive a concise filesystem-safe slug from `OBJECTIVE` and create a collision-safe path under `plans/diagnose-implementing/` without using any `TASK` field;
+```text
+plans/diagnose-implementing/<objective-slug>/
+├── 00-AUDIT-TRUTH.md
+├── 01-EXECUTION-CONTRACT.md
+└── 02-VERIFICATION-CLOSURE.md
+```
+
+- when `PLAN_DIR` is an explicit directory, use that exact owned directory only if it does not overwrite unrelated work;
+- when `PLAN_DIR=AUTO` or is omitted, derive a concise filesystem-safe slug from `OBJECTIVE` and create a collision-safe directory under `plans/diagnose-implementing/` without using any `TASK` field;
 - never overwrite unrelated existing work merely to satisfy automatic naming;
-- the file is derived evidence/accounting, not authority or Product Truth.
+- do not create parallel `units/`, `evidence/`, `logs/`, `results/`, `status/`, `archive/`, machine-state JSON, per-root plan files or per-agent plan files merely to represent the same handoff;
+- the directory is derived handoff/evidence, not authority or Product Truth;
+- semantic ownership of its three contracts is defined by `01`; `02` owns audit/execution handoff construction and readiness; `04` owns verification/closure contract semantics.
 
-The file records the material evidence, findings, proven roots, blast radius, resolved decisions, Canonical Target, Root-Correct Treatment, migrations/cutovers/cleanup, required governance dispositions that have passed the governance mutation gate, durable-truth clarification requirements, verification and closure criteria.
+After writing the three contracts, **do not begin treatment**. Report a detailed human-readable summary in the conversation covering what was audited/inspected/diagnosed/analyzed, the highest roots and gaps, the Canonical Target, material treatment/cleanup/governance impact, risks/dependencies, the exact generated `PLAN_DIR`, the remaining-ambiguity class, and what remains to execute. End with `READY_FOR_EXECUTION` plus the exact directory only when `02` proves readiness.
 
-After writing it, **do not begin treatment**. Report a detailed human-readable summary in the conversation covering what was audited/inspected/diagnosed/analyzed, the highest roots and gaps, the Canonical Target, material treatment/cleanup/governance impact, risks/dependencies, the exact generated `PLAN_FILE`, and what remains to execute. End with `READY_FOR_EXECUTION` plus the exact path.
+```text
+AUDIT_PREPARE WRITES THE HANDOFF.
+EXECUTE_CLOSE WRITES THE ACTUAL TARGET SYSTEM.
+PLANNING-ARTIFACT MUTATION ≠ TARGET-SYSTEM TREATMENT ≠ ROOT-CAUSE PROGRESS ≠ CLOSURE.
+```
 
 ### 3.2 `EXECUTE_CLOSE`
 
-This phase does **not require a plan file and does not create one by default**. It performs the same deep audit/inspection/diagnosis/analysis obligations needed to establish current truth, but couples them directly to root-correct treatment:
+This phase does **not require a plan directory and does not create or mutate one by default**. It performs the same deep audit/inspection/diagnosis/analysis obligations needed to establish current truth, but couples them directly to root-correct treatment:
 
 ```text
 AUDIT + INSPECT + DIAGNOSE + ANALYZE CURRENT LIVE TRUTH
 → PROVE / RANK HIGHEST CURRENT SYSTEMIC ROOT
-→ IF EXECUTABLE: TREAT ROOT IMMEDIATELY END-TO-END
+→ IF EXECUTABLE: TREAT ROOT IMMEDIATELY END-TO-END IN THE ACTUAL SYSTEM
 → MIGRATE / CUTOVER / CLEAN / RECONCILE GOVERNANCE AS REQUIRED
 → VERIFY
 → RE-AUDIT / RE-INSPECT / RE-DIAGNOSE / RE-ANALYZE AFFECTED CONE
@@ -168,7 +182,7 @@ AUDIT + INSPECT + DIAGNOSE + ANALYZE CURRENT LIVE TRUTH
 
 Do not perform a broad diagnosis merely to produce a report and then stop while an executable material root remains. Once the highest root is sufficiently proven and no unresolved higher root/decision can change the treatment, execute it immediately; then continue adaptively from the new live truth.
 
-If an existing `PLAN_FILE` is explicitly supplied, revalidate it against current live truth and use only still-valid material content as optional evidence/accounting. It is never required, never Source of Truth, never a scope ceiling, never an execution checklist, and its absence never blocks `EXECUTE_CLOSE`.
+If an existing `PLAN_DIR` is explicitly supplied, revalidate it against current live truth and use only still-valid material content as read-only handoff/evidence under `01`/`03`. It is never Source of Truth, never a scope ceiling, never a writable progress ledger, never an execution checklist and never a substitute for Source-of-Fix treatment. Material invalidation stops only the affected cone and returns it through `02`; do not silently rewrite the handoff while claiming execution progress.
 
 A `DECISION_REQUIRED`, external blocker or long-running unavailable evidence source blocks only its dependent cone. Continue every independent proven executable root allowed by the current project frame and maximum-safe-parallel law.
 
@@ -433,7 +447,8 @@ Parallel execution changes scheduling only; it does not weaken any requirement o
 ## 6.2 Canonical integration-branch closure loop
 
 For project-wide closure or any objective whose success must be integrated back into the repository's canonical integration branch, use that branch as the **audit baseline and integration truth**. For this repository that branch is normally `master` unless the human explicitly establishes another canonical integration baseline.
-All treatment and execution MUST occur directly on the current branch provided by the user. **Do not create, switch, or merge branches automatically.**
+
+Execution workspace/branch strategy is resolved exclusively under `01`; this section does not independently authorize branch creation or branch switching.
 
 ```text
 PIN CANONICAL_BASE_HEAD
@@ -442,11 +457,15 @@ PIN CANONICAL_BASE_HEAD
 → RANK HIGHEST PROVEN ACTIONABLE ROOTS
 → SELECT ATOMIC_CLOSURE_UNIT
 → DERIVE SMALLEST COMPLETE WORKING CONE
+→ RESOLVE AUTHORIZED EXECUTION WORKSPACE / BRANCH STRATEGY UNDER 01
 → ROOT-CORRECT TREATMENT
 → MIGRATION / BACKFILL / WRITER-READER-CONSUMER MIGRATION
 → CANONICAL CUTOVER
 → LEGACY / DUPLICATE / DEAD / SHADOW-TRUTH CLEANUP
 → EXACT-CANDIDATE + NEGATIVE-SPACE VERIFICATION
+→ RECONCILE CURRENT CANONICAL HEAD
+→ INTEGRATE ONLY A PROVEN FRESH FINAL CANDIDATE WHEN INTEGRATION IS AUTHORIZED/REQUIRED
+→ POST-INTEGRATION VERIFY / REBASELINE CANONICAL HEAD
 → INVALIDATE STALE EVIDENCE / FINDINGS
 → REFRESH / RE-RANK ROOT LANDSCAPE
 → REPEAT UNTIL FINAL CANONICAL CLOSURE IS PROVEN
@@ -454,11 +473,13 @@ PIN CANONICAL_BASE_HEAD
 
 `ATOMIC_CLOSURE_UNIT` is the smallest coherent root or tightly coupled root set that requires one end-to-end cutover boundary. Do not split it merely by file, service, frontend/backend layer or agent when that would create an intermediate broken state, half migration, compatibility path or parallel authority.
 
-Re-resolve the canonical integration branch periodically. If it moved materially since `CANONICAL_BASE_HEAD`, re-audit the affected intersection, invalidate stale proof and rerun every materially affected gate.
+Before integration, re-resolve the canonical integration branch. If it moved materially since `CANONICAL_BASE_HEAD`, reconcile the candidate/workspace as allowed by the authorized topology, re-audit the affected intersection, invalidate stale proof and rerun every materially affected gate. A stale candidate may not be integrated because its earlier CI or verification was green.
 
-After merge, the new canonical HEAD becomes the only integration baseline. Revalidate the affected system truth, invalidate findings/evidence that are `RESOLVED | SUPERSEDED | INVALIDATED`, retain only `STILL_OPEN | N/A_PROVEN` as justified, refresh the root/dependency landscape and select the next highest actionable root. Reuse still-valid evidence incrementally, but preserve global awareness for newly exposed higher roots; do not trust a stale checklist and do not restart an indiscriminate repository scan without evidence that it is required.
+Integration is permitted only for the exact fresh candidate when every applicable closure claim is proven or explicitly `N/A_PROVEN`, all affected writers/readers/consumers and data are migrated, the canonical cutover is complete, negative space is clean, and no known material finding, half migration, unjustified parallel truth or superseded reachable legacy remains inside the closure unit. Retire any temporary execution branch/workspace after safe integration only when it was authorized, is owned by the work and has no remaining purpose.
 
-Project closure is not "all planned branches merged". Final `CLOSED` requires `04` to prove on the latest canonical integration HEAD that known material roots are exhausted within the effective project objective, Canonical Authorities/Truth are consistent, no material parallel truth/half migration/drift remains, and the final master candidate satisfies all materially applicable end-to-end proof obligations.
+After integration, the new canonical HEAD becomes the only integration baseline. Revalidate the affected system truth, invalidate findings/evidence that are `RESOLVED | SUPERSEDED | INVALIDATED`, retain only `STILL_OPEN | N/A_PROVEN` as justified, refresh the root/dependency landscape and select the next highest actionable root. Reuse still-valid evidence incrementally, but preserve global awareness for newly exposed higher roots; do not trust a stale checklist and do not restart an indiscriminate repository scan without evidence that it is required.
+
+Project closure is not "all planned branches merged". Final `CLOSED` requires `04` to prove on the latest canonical integration HEAD that known material roots are exhausted within the effective project objective, Canonical Authorities/Truth are consistent, no material parallel truth/half migration/drift remains, and the final canonical candidate satisfies all materially applicable end-to-end proof obligations.
 
 ## 7. Audit, inspection, diagnosis and analysis are distinct mandatory operations
 
