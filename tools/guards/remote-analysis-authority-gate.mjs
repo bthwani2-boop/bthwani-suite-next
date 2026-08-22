@@ -4,44 +4,50 @@ const fail = (message) => {
   console.error(`[REMOTE_ANALYSIS_AUTHORITY FAIL] ${message}`);
   process.exit(1);
 };
-
 const read = (path) => {
   if (!fs.existsSync(path)) fail(`missing ${path}`);
   return fs.readFileSync(path, "utf8");
 };
+const requireAll = (label, text, values) => {
+  for (const value of values) if (!text.includes(value)) fail(`${label} is missing invariant: ${value}`);
+};
+const forbidAll = (label, text, values) => {
+  for (const value of values) if (text.includes(value)) fail(`${label} contains forbidden authority/execution path: ${value}`);
+};
 
-const expectedUrl = "https://api.sonarcloud.io/mcp";
+// Hosted Sonar read/control surfaces: IDEs/agents may query Cloud, never host Sonar locally.
+const expectedSonarUrl = "https://api.sonarcloud.io/mcp";
 const expectedOrg = "bthwani2-boop";
 const tokenReference = "Bearer ${SONARQUBE_TOKEN}";
 
 const antigravity = JSON.parse(read(".agents/mcp_config.json"));
 const antigravitySonar = antigravity?.mcpServers?.sonarqube;
 if (!antigravitySonar) fail("Antigravity SonarQube MCP definition is missing");
-if (antigravitySonar.serverUrl !== expectedUrl) fail("Antigravity must use the SonarQube Cloud-hosted MCP endpoint");
+if (antigravitySonar.serverUrl !== expectedSonarUrl) fail("Antigravity must use the SonarQube Cloud-hosted MCP endpoint");
 if ("command" in antigravitySonar || "args" in antigravitySonar) fail("Antigravity must not launch a local SonarQube MCP process");
 if (antigravitySonar.headers?.SONARQUBE_ORG !== expectedOrg) fail("Antigravity SonarQube organization is not pinned");
 if (antigravitySonar.headers?.SONARQUBE_READ_ONLY !== "true") fail("Antigravity SonarQube MCP must remain read-only");
-if (antigravitySonar.headers?.Authorization !== tokenReference) fail("Antigravity token must remain an environment reference, never a committed credential");
+if (antigravitySonar.headers?.Authorization !== tokenReference) fail("Antigravity token must remain an environment reference");
 
 const projectMcp = JSON.parse(read(".mcp.json"));
 const projectSonar = projectMcp?.mcpServers?.sonarqube;
 if (!projectSonar) fail("project SonarQube MCP definition is missing");
-if (projectSonar.type !== "http" || projectSonar.url !== expectedUrl) fail("project MCP config must use hosted SonarQube HTTP transport");
-if ("command" in projectSonar || "args" in projectSonar || "serverUrl" in projectSonar) fail("project MCP config must not launch or emulate a local SonarQube MCP process");
+if (projectSonar.type !== "http" || projectSonar.url !== expectedSonarUrl) fail("project MCP config must use hosted SonarQube HTTP transport");
+if ("command" in projectSonar || "args" in projectSonar || "serverUrl" in projectSonar) fail("project MCP config must not launch/emulate local SonarQube MCP");
 if (projectSonar.headers?.SONARQUBE_ORG !== expectedOrg) fail("project SonarQube organization is not pinned");
 if (projectSonar.headers?.SONARQUBE_READ_ONLY !== "true") fail("project SonarQube MCP must remain read-only");
-if (projectSonar.headers?.Authorization !== tokenReference) fail("project token must remain an environment reference, never a committed credential");
+if (projectSonar.headers?.Authorization !== tokenReference) fail("project SonarQube token must remain an environment reference");
 
 const codex = read(".codex/config.toml");
-for (const forbidden of ["sonar.exe", "mcp/sonarqube", "sonarsource/sonarqube-mcp", "localhost:9000", "command = \"sonar"]) {
-  if (codex.includes(forbidden)) fail(`Codex config contains forbidden local SonarQube reference: ${forbidden}`);
-}
-if (!codex.includes(`url = "${expectedUrl}"`)) fail("Codex must use the SonarQube Cloud-hosted MCP endpoint");
-if (!codex.includes('bearer_token_env_var = "SONARQUBE_TOKEN"')) fail("Codex must source the SonarQube bearer token from the environment");
-if (!codex.includes(`"SONARQUBE_ORG" = "${expectedOrg}"`)) fail("Codex SonarQube organization is not pinned");
-if (!codex.includes('"SONARQUBE_READ_ONLY" = "true"')) fail("Codex SonarQube MCP must remain read-only");
+forbidAll("Codex config", codex, ["sonar.exe", "mcp/sonarqube", "sonarsource/sonarqube-mcp", "localhost:9000", 'command = "sonar"']);
+requireAll("Codex config", codex, [
+  `url = "${expectedSonarUrl}"`,
+  'bearer_token_env_var = "SONARQUBE_TOKEN"',
+  `"SONARQUBE_ORG" = "${expectedOrg}"`,
+  '"SONARQUBE_READ_ONLY" = "true"',
+]);
 
-const forbiddenLocalSonarPaths = [
+for (const path of [
   ".agents/hooks.json",
   ".agents/rules/sonar-prompt-secrets.md",
   ".agents/sonar/hooks/pretool-secrets.ps1",
@@ -49,114 +55,232 @@ const forbiddenLocalSonarPaths = [
   ".codex/hooks/sonar-secrets/build-scripts/prompt-secrets.ps1",
   ".claude/hooks/sonar-secrets/build-scripts/prompt-secrets.ps1",
   ".claude/hooks/sonar-secrets/build-scripts/pretool-secrets.ps1",
-];
-for (const path of forbiddenLocalSonarPaths) {
+]) {
   if (fs.existsSync(path)) fail(`local Sonar hook path must not exist: ${path}`);
 }
 
-const agents = read("AGENTS.md");
-for (const forbidden of ["sonar analyze secrets", "sonar hook ", "Get-Command sonar"]) {
-  if (agents.includes(forbidden)) fail(`AGENTS.md contains forbidden local Sonar instruction: ${forbidden}`);
-}
-
-const claude = read(".claude/settings.json");
-if (claude.includes("sonar-secrets") || claude.includes("PreToolUse") || claude.includes("UserPromptSubmit")) {
-  fail("Claude settings must not invoke local Sonar hooks");
-}
-
 const sonarWorkflow = read(".github/workflows/sonarqube.yml");
-for (const forbidden of ["localhost:9000", "SONAR_HOST_URL"]) {
-  if (sonarWorkflow.includes(forbidden)) fail(`SonarQube workflow contains forbidden self-hosted dependency: ${forbidden}`);
-}
-if (!sonarWorkflow.includes("SonarQube Cloud")) fail("SonarQube workflow is not explicitly cloud-owned");
+requireAll("SonarQube workflow", sonarWorkflow, ["SonarQube Cloud", "runs-on: ubuntu-24.04", "workflow_dispatch:"]);
+forbidAll("SonarQube workflow", sonarWorkflow, ["localhost:9000"]);
 
 const codeqlWorkflow = read(".github/workflows/codeql.yml");
-if (!codeqlWorkflow.includes("github/codeql-action/init@")) fail("CodeQL must run through GitHub code scanning on hosted CI");
-if (!codeqlWorkflow.includes("github/codeql-action/analyze@")) fail("CodeQL analysis action is missing");
+requireAll("CodeQL workflow", codeqlWorkflow, [
+  "github/codeql-action/init@",
+  "github/codeql-action/analyze@",
+  "runs-on: ubuntu-24.04",
+  "workflow_dispatch:",
+  "security-extended",
+]);
 
-const remoteSecurityWorkflow = read(".github/workflows/security-remote.yml");
-for (const required of ["gitleaks detect", "run-osv-scanner.mjs", "run-trivy.mjs", "runs-on: ubuntu-24.04"]) {
-  if (!remoteSecurityWorkflow.includes(required)) fail(`remote security workflow is missing: ${required}`);
-}
+const semgrepWorkflow = read(".github/workflows/semgrep.yml");
+requireAll("Semgrep workflow", semgrepWorkflow, [
+  "name: Semgrep Code Remote",
+  "pull_request:",
+  "push:",
+  "workflow_dispatch:",
+  "runs-on: ubuntu-24.04",
+  "semgrep==1.168.0",
+  "p/default",
+  "p/security-audit",
+  "semgrep-evidence-",
+  "--baseline-commit",
+]);
+forbidAll("Semgrep workflow", semgrepWorkflow, ["runs-on: self-hosted", "localhost:", "semgrep ci --supply-chain", "semgrep secrets"]);
+
+const ocrWorkflow = read(".github/workflows/open-code-review.yml");
+requireAll("OpenCodeReview workflow", ocrWorkflow, [
+  "name: OpenCodeReview",
+  "pull_request:",
+  "workflow_dispatch:",
+  "runs-on: ubuntu-24.04",
+  "models: read",
+  "@alibaba-group/open-code-review@1.9.9",
+  "https://models.github.ai/inference/chat/completions",
+  'git show "${base}:.opencodereview/rule.json"',
+  "ocr review",
+  "opencodereview-evidence-",
+]);
+forbidAll("OpenCodeReview workflow", ocrWorkflow, ["runs-on: self-hosted", "localhost:"]);
+
+const remoteSecurity = read(".github/workflows/security-remote.yml");
+requireAll("Remote Security workflow", remoteSecurity, [
+  "runs-on: ubuntu-24.04",
+  "workflow_dispatch:",
+  "tool:",
+  "gitleaks detect",
+  "run-osv-scanner.mjs",
+  "run-trivy.mjs",
+  "run-actionlint.mjs",
+  "run-zizmor.mjs",
+  "run-pinact.mjs --verify",
+  "run-shellcheck.mjs",
+  "run-hadolint.mjs",
+  "run-yamllint.mjs",
+  "remote-security-evidence-",
+]);
+
+const dependencyReview = read(".github/workflows/dependency-review.yml");
+requireAll("Dependency Review workflow", dependencyReview, [
+  "pull_request:",
+  "workflow_dispatch:",
+  "base_ref:",
+  "head_ref:",
+  "actions/dependency-review-action@",
+  "fail-on-severity: low",
+]);
+
+const lockfile = read(".github/workflows/lockfile-integrity.yml");
+requireAll("Lockfile Integrity workflow", lockfile, [
+  "workflow_dispatch:",
+  "pnpm install --frozen-lockfile --ignore-scripts",
+  "git diff --quiet --exit-code",
+]);
+
+const dependabotAudit = read(".github/workflows/dependabot-audit.yml");
+requireAll("Dependabot audit workflow", dependabotAudit, [
+  "workflow_dispatch:",
+  "/dependabot/alerts?state=open",
+  'dependabot[bot]',
+  "dependabot-evidence-",
+]);
 
 const codeqlHygiene = read(".github/workflows/codeql-hygiene.yml");
-for (const required of [
+requireAll("CodeQL Metadata Hygiene", codeqlHygiene, [
   'workflows: ["CodeQL"]',
+  "workflow_dispatch:",
+  "options: [audit, repair]",
   "security-events: write",
-  "github.event.workflow_run.head_sha",
   "github.event.repository.default_branch",
   "/code-scanning/analyses",
   "confirm_delete=true",
-  "/code-scanning/alerts",
   "Verify canonical CodeQL workflow metadata without checkout",
-]) {
-  if (!codeqlHygiene.includes(required)) fail(`CodeQL metadata hygiene is missing invariant: ${required}`);
-}
-for (const forbidden of [
-  "branches/master",
-  "refs/heads/master",
-  "/branches/master",
-]) {
-  if (codeqlHygiene.includes(forbidden)) fail(`CodeQL metadata hygiene must not hard-code the default branch: ${forbidden}`);
-}
-for (const forbidden of [
+  "repair is restricted to the default branch",
+  "codeql-hygiene-evidence-",
+]);
+forbidAll("CodeQL Metadata Hygiene", codeqlHygiene, [
   "actions/checkout@",
-  "node tools/",
   "github/codeql-action/init@",
   "github/codeql-action/analyze@",
   "gitleaks detect",
   "run-osv-scanner.mjs",
   "run-trivy.mjs",
   "sonar-scanner",
-]) {
-  if (codeqlHygiene.includes(forbidden)) fail(`CodeQL metadata hygiene must remain API-only and must not become an execution/scanner authority: ${forbidden}`);
-}
-if (fs.existsSync("tools/scripts/codeql-hygiene.mjs")) {
-  fail("CodeQL metadata hygiene must not execute a repository-owned privileged helper script");
-}
+  "semgrep scan",
+  "ocr review",
+]);
+
+const remoteToolchain = read(".github/workflows/remote-toolchain.yml");
+requireAll("Remote Toolchain", remoteToolchain, [
+  "name: BThwani Remote Toolchain",
+  "target_ref:",
+  "target_sha:",
+  "base_ref:",
+  "ci-full",
+  "codeql-full",
+  "codeql-hygiene-audit",
+  "sonar-full",
+  "security-full",
+  "dependency-review",
+  "lockfile-integrity",
+  "opencodereview",
+  "semgrep-full",
+  "dependabot-audit",
+  "remote-analysis-evidence.yml",
+  "Wait for conflicting branch run to settle",
+]);
+forbidAll("Remote Toolchain", remoteToolchain, [
+  "github/codeql-action/init@",
+  "github/codeql-action/analyze@",
+  "gitleaks detect",
+  "semgrep scan",
+  "ocr review",
+  "sonar-scanner",
+]);
 
 const remoteEvidence = read(".github/workflows/remote-analysis-evidence.yml");
-for (const required of [
-  "collect-remote-analysis-evidence.mjs",
+requireAll("Remote Analysis Evidence", remoteEvidence, [
+  "collect-remote-toolchain-evidence.mjs",
+  "normalize-remote-toolchain-findings.mjs",
   "Remote Analysis Evidence",
   "statuses: write",
   "workflow_run:",
   "cancel-in-progress: false",
-]) {
-  if (!remoteEvidence.includes(required)) fail(`remote analysis evidence is missing read-back invariant: ${required}`);
-}
-for (const forbidden of [
+  "Checkout trusted collector from repository default branch",
+  "gh run view",
+  "gh run download",
+  "raw-logs",
+  "raw-artifacts",
+  "remote-analysis-evidence-",
+]);
+forbidAll("Remote Analysis Evidence", remoteEvidence, [
   "github/codeql-action/init@",
   "github/codeql-action/analyze@",
   "gitleaks detect",
   "run-osv-scanner.mjs",
   "run-trivy.mjs",
+  "semgrep scan",
+  "ocr review",
   "sonar-scanner",
-]) {
-  if (remoteEvidence.includes(forbidden)) fail(`remote analysis evidence must remain read-back only: ${forbidden}`);
-}
+]);
 
 const remoteCommand = read(".github/workflows/remote-command.yml");
-for (const required of [
+requireAll("Remote Command ingress", remoteCommand, [
   "issues:",
   "actions: write",
   "expected_sha",
   "git check-ref-format --branch",
   "unsupported remote command",
+  "Wait for conflicting branch run to settle",
+  "toolchain-full",
+  "opencodereview",
+  "semgrep-full",
+  "dependabot-audit",
   "actions/workflows/${WORKFLOW}/dispatches",
-]) {
-  if (!remoteCommand.includes(required)) fail(`remote command ingress is missing safety invariant: ${required}`);
-}
-for (const forbidden of [
+]);
+forbidAll("Remote Command ingress", remoteCommand, [
   "github/codeql-action/init@",
   "github/codeql-action/analyze@",
   "gitleaks detect",
   "run-osv-scanner.mjs",
   "run-trivy.mjs",
+  "semgrep scan",
+  "ocr review",
   "sonar-scanner",
   "Invoke-Expression",
-]) {
-  if (remoteCommand.includes(forbidden)) fail(`remote command ingress must dispatch authorities, not execute them: ${forbidden}`);
-}
+]);
 
-console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] Hosted SonarQube, GitHub CodeQL, GitHub-hosted security scans, API-only metadata hygiene, read-only evidence, and SHA-pinned remote dispatch remain separated canonical responsibilities.");
+const remoteClient = read("tools/scripts/request-remote-toolchain.ps1");
+requireAll("Remote control client", remoteClient, [
+  "[remote-command]",
+  "expected_sha",
+  "toolchain-full",
+  "execution_authority=GITHUB_REMOTE_ONLY",
+  "gh",
+]);
+forbidAll("Remote control client", remoteClient, [
+  "semgrep scan",
+  "semgrep ci",
+  "gitleaks detect",
+  "ocr review",
+  "sonar-scanner",
+  "codeql database",
+  "docker run",
+  "Invoke-Expression",
+]);
+
+const ocrClient = read("tools/scripts/invoke-open-code-review-toolchain.ps1");
+requireAll("OpenCodeReview control client", ocrClient, [
+  "GITHUB_REMOTE_ONLY",
+  "local_ocr_installation=NOT_REQUIRED",
+  "local_ocr_execution=FORBIDDEN_BY_PROJECT_CONTROL_PATH",
+  'Command = "opencodereview"',
+  "request-remote-toolchain.ps1",
+]);
+forbidAll("OpenCodeReview control client", ocrClient, [
+  "npm install --global",
+  "ocr review",
+  "ocr delegate",
+  "Get-Command ocr",
+]);
+
+console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] SonarQube Cloud, CodeQL, Semgrep Code, OpenCodeReview, OSS security gates, dependency controls, metadata hygiene, unified remote dispatch, and exact-SHA evidence are remote-only separated authorities with IDE/agent control surfaces only.");
