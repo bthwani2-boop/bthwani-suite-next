@@ -114,6 +114,7 @@ for (const required of [
   "Remote Analysis Evidence",
   "statuses: write",
   "workflow_run:",
+  "cancel-in-progress: false",
 ]) {
   if (!remoteEvidence.includes(required)) fail(`remote analysis evidence is missing read-back invariant: ${required}`);
 }
