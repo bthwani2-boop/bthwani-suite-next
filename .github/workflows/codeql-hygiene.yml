@@ -63,28 +63,141 @@ jobs:
             echo "superseded=${superseded}"
           } >> "${GITHUB_OUTPUT}"
 
-      - name: Checkout exact canonical candidate
+      - name: Verify canonical CodeQL workflow metadata without checkout
         if: ${{ steps.target.outputs.superseded != 'true' }}
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          ref: ${{ steps.target.outputs.sha }}
-          fetch-depth: 1
-          persist-credentials: false
-          show-progress: false
-
-      - name: Set up locked Node runtime
-        if: ${{ steps.target.outputs.superseded != 'true' }}
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: "24.17.0"
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          set -euo pipefail
+          encoded_sha="$(jq -rn --arg value "${CANDIDATE_SHA}" '$value|@uri')"
+          workflow_base64="$(gh api \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/.github/workflows/codeql.yml?ref=${encoded_sha}" \
+            --jq '.content')"
+          workflow="$(printf '%s' "${workflow_base64}" | tr -d '\n' | base64 --decode)"
+          for job in \
+            "analyze-javascript-typescript:" \
+            "analyze-go:" \
+            "analyze-actions:"
+          do
+            grep -Fq "${job}" <<<"${workflow}" || {
+              echo "::error::canonical CodeQL job is missing: ${job}"
+              exit 1
+            }
+          done
+          if grep -Eq '^  analyze:[[:space:]]*$' <<<"${workflow}"; then
+            echo "::error::obsolete generic analyze job unexpectedly exists"
+            exit 1
+          fi
 
       - name: Remove only proven obsolete CodeQL analysis keys
         if: ${{ steps.target.outputs.superseded != 'true' }}
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          CODEQL_HYGIENE_SHA: ${{ steps.target.outputs.sha }}
-          CODEQL_HYGIENE_REF: refs/heads/master
-        run: node tools/scripts/codeql-hygiene.mjs
+          CANDIDATE_SHA: ${{ steps.target.outputs.sha }}
+        run: |
+          set -euo pipefail
+          master_ref='refs/heads/master'
+          prefix='.github/workflows/codeql.yml:'
+          key_js='.github/workflows/codeql.yml:analyze-javascript-typescript'
+          key_go='.github/workflows/codeql.yml:analyze-go'
+          key_actions='.github/workflows/codeql.yml:analyze-actions'
+          deleted=0
+
+          assert_live_master() {
+            local live
+            live="$(gh api \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/branches/master" \
+              --jq '.commit.sha')"
+            if [[ "${live}" != "${CANDIDATE_SHA}" ]]; then
+              echo "::error::master moved during CodeQL hygiene: candidate=${CANDIDATE_SHA} live=${live:-<unknown>}"
+              exit 1
+            fi
+          }
+
+          obsolete_analyses() {
+            gh api --paginate --method GET \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/code-scanning/analyses" \
+              -f ref="${master_ref}" \
+              -f tool_name=CodeQL \
+              -f per_page=100 | jq -s \
+                --arg prefix "${prefix}" \
+                --arg js "${key_js}" \
+                --arg go "${key_go}" \
+                --arg actions "${key_actions}" \
+                '[.[][] | select(((.analysis_key // "") | startswith($prefix)) and .analysis_key != $js and .analysis_key != $go and .analysis_key != $actions)]'
+          }
+
+          obsolete_open_alerts() {
+            gh api --paginate --method GET \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/code-scanning/alerts" \
+              -f state=open \
+              -f ref="${master_ref}" \
+              -f tool_name=CodeQL \
+              -f per_page=100 | jq -s \
+                --arg prefix "${prefix}" \
+                --arg js "${key_js}" \
+                --arg go "${key_go}" \
+                --arg actions "${key_actions}" \
+                '[.[][] | select((((.most_recent_instance.analysis_key // "") | startswith($prefix))) and .most_recent_instance.analysis_key != $js and .most_recent_instance.analysis_key != $go and .most_recent_instance.analysis_key != $actions)]'
+          }
+
+          assert_live_master
+          for _ in $(seq 1 1000); do
+            assert_live_master
+            obsolete="$(obsolete_analyses)"
+            count="$(jq 'length' <<<"${obsolete}")"
+            if [[ "${count}" == "0" ]]; then
+              break
+            fi
+            target_id="$(jq -r '[.[] | select(.deletable == true)] | sort_by(.created_at) | last | .id // empty' <<<"${obsolete}")"
+            if [[ -z "${target_id}" ]]; then
+              echo "::error::obsolete CodeQL analyses remain but none is deletable"
+              jq -c '.[] | {id,analysis_key,category,commit_sha,deletable}' <<<"${obsolete}" >&2
+              exit 1
+            fi
+            assert_live_master
+            gh api --method DELETE \
+              -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/code-scanning/analyses/${target_id}?confirm_delete=true" >/dev/null
+            deleted=$((deleted + 1))
+          done
+
+          assert_live_master
+          remaining="$(obsolete_analyses)"
+          remaining_count="$(jq 'length' <<<"${remaining}")"
+          if [[ "${remaining_count}" != "0" ]]; then
+            echo "::error::obsolete CodeQL analyses remain after cleanup: ${remaining_count}"
+            exit 1
+          fi
+
+          remaining_alerts='[]'
+          for attempt in $(seq 1 12); do
+            assert_live_master
+            remaining_alerts="$(obsolete_open_alerts)"
+            [[ "$(jq 'length' <<<"${remaining_alerts}")" == "0" ]] && break
+            [[ "${attempt}" == "12" ]] || sleep 5
+          done
+          remaining_alert_count="$(jq 'length' <<<"${remaining_alerts}")"
+          if [[ "${remaining_alert_count}" != "0" ]]; then
+            echo "::error::open alerts from obsolete CodeQL analysis keys remain"
+            jq -r '.[].number' <<<"${remaining_alerts}" >&2
+            exit 1
+          fi
+
+          {
+            echo "### CodeQL hygiene result"
+            echo "- Candidate: \`${CANDIDATE_SHA}\`"
+            echo "- Deleted obsolete analyses: \`${deleted}\`"
+            echo "- Remaining obsolete analyses: \`0\`"
+            echo "- Remaining open alerts from obsolete keys: \`0\`"
+          } >> "${GITHUB_STEP_SUMMARY}"
 
       - name: Publish hygiene summary
         if: ${{ always() }}
@@ -99,5 +212,6 @@ jobs:
             echo "- Candidate: \`${CANDIDATE_SHA:-unresolved}\`"
             echo "- Live master: \`${LIVE_MASTER:-unresolved}\`"
             echo "- Superseded without mutation: \`${SUPERSEDED:-unknown}\`"
+            echo "- Repository source is never checked out or executed by this privileged metadata workflow."
             echo "- Canonical scanner authority remains \`.github/workflows/codeql.yml\`."
           } >> "${GITHUB_STEP_SUMMARY}"
