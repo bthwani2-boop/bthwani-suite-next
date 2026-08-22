@@ -28,6 +28,9 @@ for (let index = 0; index < options.length; index += 1) {
 }
 
 const [command, ...commandArgs] = process.argv.slice(separatorIndex + 1);
+if (!["pnpm", "npx"].includes(command)) {
+  fail(`run-command-check only permits governed package-manager commands; received: ${command}`);
+}
 const invocation = resolvePackageManagerInvocation(command, commandArgs, process.env);
 process.stdout.write(`[${label}] ${[command, ...commandArgs].join(" ")}\n`);
 
