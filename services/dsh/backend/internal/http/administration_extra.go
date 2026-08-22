@@ -43,6 +43,8 @@ func writeAdministrationCreateError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "referenced approval was not found")
 	case errors.Is(err, administration.ErrIdentityUnavailable):
 		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
+	case errors.Is(err, administration.ErrConflict):
+		store.SendError(w, http.StatusConflict, "REQUEST_STATE_CONFLICT", "another role change for this actor and role is already pending")
 	case errors.Is(err, administration.ErrInvalid):
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request is invalid")
 	case err.Error() == "only approved requests can be rolled back":
@@ -77,7 +79,7 @@ func (s *protectedStoreServer) handleCreateRoleRequest(w http.ResponseWriter, r 
 
 // GET /dsh/operator/admin/role-requests
 func (s *protectedStoreServer) handleListRoleRequests(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireAdministrationPermission(w, r, "administration.role.read")
+	_, ok := s.requireAdministrationPermission(w, r, "administration.role.approve")
 	if !ok {
 		return
 	}
@@ -126,7 +128,7 @@ func (s *protectedStoreServer) handleCreateRoleAssignment(w http.ResponseWriter,
 		store.SendError(w, http.StatusBadRequest, "INVALID_JSON", "invalid json body")
 		return
 	}
-	approval, err := administration.CreateRoleAssignmentApproval(r.Context(), s.db, actor.ID, staffID, params)
+	approval, err := administration.CreateRoleAssignmentApproval(r.Context(), s.db, s.identity, actor.ID, staffID, params)
 	if err != nil {
 		writeAdministrationCreateError(w, err)
 		return
@@ -136,7 +138,7 @@ func (s *protectedStoreServer) handleCreateRoleAssignment(w http.ResponseWriter,
 
 // GET /dsh/operator/admin/approvals
 func (s *protectedStoreServer) handleListRoleAssignmentApprovals(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireAdministrationPermission(w, r, "administration.approval.read")
+	_, ok := s.requireAdministrationPermission(w, r, "administration.staff.approve")
 	if !ok {
 		return
 	}
@@ -250,7 +252,7 @@ func (s *protectedStoreServer) handleCreateRollbackRequest(w http.ResponseWriter
 
 // GET /dsh/operator/admin/rollback-requests
 func (s *protectedStoreServer) handleListRollbackRequests(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireAdministrationPermission(w, r, "administration.rollback.read")
+	_, ok := s.requireAdministrationPermission(w, r, "administration.rollback.approve")
 	if !ok {
 		return
 	}

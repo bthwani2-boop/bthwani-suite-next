@@ -8,11 +8,6 @@ import (
 	"dsh-api/internal/store"
 )
 
-const (
-	AdministrationPermissionRead   = "administration.read"
-	AdministrationPermissionManage = "administration.manage"
-)
-
 // GET /dsh/operator/admin/roles
 func (s *protectedStoreServer) handleListRoles(w http.ResponseWriter, r *http.Request) {
 	_, ok := s.requireAdministrationPermission(w, r, "administration.role.read")
@@ -33,7 +28,7 @@ func (s *protectedStoreServer) handleListRoles(w http.ResponseWriter, r *http.Re
 
 // GET /dsh/operator/admin/partners
 func (s *protectedStoreServer) handleListPartnerActivations(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
+	_, ok := s.requireAdministrationPermission(w, r, "administration.partner.read")
 	if !ok {
 		return
 	}
@@ -47,7 +42,7 @@ func (s *protectedStoreServer) handleListPartnerActivations(w http.ResponseWrite
 
 // GET /dsh/operator/admin/captains
 func (s *protectedStoreServer) handleListCaptainCredentials(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
+	_, ok := s.requireAdministrationPermission(w, r, "administration.captain.read")
 	if !ok {
 		return
 	}
@@ -61,7 +56,7 @@ func (s *protectedStoreServer) handleListCaptainCredentials(w http.ResponseWrite
 
 // GET /dsh/operator/admin/audit
 func (s *protectedStoreServer) handleListAdminAudit(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionAuditRead)
+	_, ok := s.requireAdministrationPermission(w, r, "administration.audit.read")
 	if !ok {
 		return
 	}

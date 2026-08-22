@@ -1,11 +1,12 @@
 export type DshAdministrationSurface =
-  | "control-panel"
-  | "app-client"
-  | "app-partner"
-  | "app-captain"
-  | "app-field"
-  | "webapp"
-  | "website";
+  | "control-panel";
+
+export type DshPermissionVocabularyEntry = {
+  readonly service: string;
+  readonly surface: string;
+  readonly action: string;
+  readonly description: string;
+};
 
 export type DshRolePermission = {
   readonly service: string;
@@ -18,17 +19,20 @@ export type DshRole = {
   readonly id: string;
   readonly name: string;
   readonly description: string;
+  readonly active: boolean;
   readonly permissions: readonly DshRolePermission[];
   readonly surfaces: readonly string[];
+  readonly version: number;
+  readonly createdAt: string;
+  readonly updatedAt: string;
 };
 
 export type DshStaffMember = {
   readonly id: string;
   readonly actorId: string;
-  readonly roleId: string;
-  readonly roleName: string;
-  readonly assignedBy: string;
-  readonly assignedAt: string;
+  readonly username: string;
+  readonly roles: readonly string[];
+  readonly createdAt: string;
 };
 
 export type DshAdministrationApprovalStatus = "pending" | "approved" | "rejected";
@@ -39,7 +43,6 @@ export type DshRoleAssignmentApproval = {
   readonly id: string;
   readonly actionType: DshRoleChangeAction;
   readonly targetActorId: string;
-  readonly roleId: string;
   readonly roleName: string;
   readonly requestedBy: string;
   readonly reason: string;
@@ -56,8 +59,10 @@ export type DshRoleDefinitionRequest = {
   readonly id: string;
   readonly roleName: string;
   readonly description: string;
+  readonly active: boolean;
   readonly permissions: readonly string[];
   readonly surfaces: readonly DshAdministrationSurface[];
+  readonly expectedRoleVersion: number;
   readonly requestedBy: string;
   readonly reason: string;
   readonly status: DshAdministrationApprovalStatus;
@@ -75,7 +80,6 @@ export type DshAdministrationRollbackRequest = {
   readonly sourceActionType: DshRoleChangeAction;
   readonly inverseActionType: DshRoleChangeAction;
   readonly targetActorId: string;
-  readonly roleId: string;
   readonly roleName: string;
   readonly requestedBy: string;
   readonly reason: string;

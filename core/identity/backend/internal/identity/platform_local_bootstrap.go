@@ -2,11 +2,9 @@ package identity
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"strings"
 
-	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -76,21 +74,15 @@ func (r *Repository) BootstrapLocalPlatformActors(ctx context.Context, input Loc
 	}
 
 	for _, actor := range actors {
-		permissions, err := json.Marshal(actor.permissions)
-		if err != nil {
-			return err
-		}
 		if _, err := r.db.ExecContext(ctx, `
 INSERT INTO identity_actors
     (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'ACTIVE', 1, NOW())
+VALUES ($1, $2, $3, $4, $5, ARRAY[]::text[], '[]'::jsonb, 'ACTIVE', 1, NOW())
 ON CONFLICT (id) DO UPDATE SET
     username = EXCLUDED.username,
     password_hash = EXCLUDED.password_hash,
     operator_context_id = EXCLUDED.operator_context_id,
     phone_e164 = EXCLUDED.phone_e164,
-    roles = EXCLUDED.roles,
-    permissions = EXCLUDED.permissions,
     status = 'ACTIVE',
     version = identity_actors.version + 1,
     updated_at = NOW()`,
@@ -99,9 +91,10 @@ ON CONFLICT (id) DO UPDATE SET
 			string(hash),
 			operatorContextID,
 			actor.phone,
-			pq.Array([]string{actor.role}),
-			string(permissions),
 		); err != nil {
+			return err
+		}
+		if err := r.replaceActorAccess(ctx, actor.id, []string{actor.role}, actor.permissions, "platform-bootstrap"); err != nil {
 			return err
 		}
 	}

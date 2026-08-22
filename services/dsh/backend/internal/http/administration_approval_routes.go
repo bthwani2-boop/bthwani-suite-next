@@ -9,15 +9,6 @@ import (
 	"dsh-api/internal/wlt"
 )
 
-// Administration permissions still enforced by DSH. Role definition, role
-// assignment and rollback approvals moved to Identity as the single registry of
-// roles, permissions and assignments; DSH no longer defines permissions for
-// capabilities it does not own.
-const (
-	AdministrationPermissionApprove   = "administration.approve"
-	AdministrationPermissionAuditRead = "administration.audit.read"
-)
-
 func RegisterAdministrationRoutes(
 	router *http.ServeMux,
 	db *sql.DB,

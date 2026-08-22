@@ -13,47 +13,39 @@ import (
 )
 
 type RoleDefinitionRequest struct {
-	ID          string     `json:"id"`
-	RoleName    string     `json:"roleName"`
-	Description string     `json:"description"`
-	Permissions []string   `json:"permissions"`
-	Surfaces    []string   `json:"surfaces,omitempty"`
-	RequestedBy string     `json:"requestedBy"`
-	Reason      string     `json:"reason"`
-	Status      string     `json:"status"`
-	ReviewedBy  *string    `json:"reviewedBy,omitempty"`
-	ReviewNote  *string    `json:"reviewNote,omitempty"`
-	Version     int        `json:"version"`
-	CreatedAt   time.Time  `json:"createdAt"`
-	UpdatedAt   time.Time  `json:"updatedAt"`
-	ReviewedAt  *time.Time `json:"reviewedAt,omitempty"`
+	ID                  string     `json:"id"`
+	RoleName            string     `json:"roleName"`
+	Description         string     `json:"description"`
+	Active              bool       `json:"active"`
+	ExpectedRoleVersion int        `json:"expectedRoleVersion"`
+	Permissions         []string   `json:"permissions"`
+	Surfaces            []string   `json:"surfaces,omitempty"`
+	RequestedBy         string     `json:"requestedBy"`
+	Reason              string     `json:"reason"`
+	Status              string     `json:"status"`
+	ReviewedBy          *string    `json:"reviewedBy,omitempty"`
+	ReviewNote          *string    `json:"reviewNote,omitempty"`
+	Version             int        `json:"version"`
+	CreatedAt           time.Time  `json:"createdAt"`
+	UpdatedAt           time.Time  `json:"updatedAt"`
+	ReviewedAt          *time.Time `json:"reviewedAt,omitempty"`
 }
 
 type CreateRoleDefinitionParams struct {
 	RoleName    string   `json:"name"`
 	Description string   `json:"description"`
+	Active      bool     `json:"active"`
 	Permissions []string `json:"permissions"`
-	Surfaces    []string `json:"surfaces"`
 	Reason      string   `json:"reason"`
 }
 
-func normalizeAdministrationRoleSurfaces(surfaces []string) ([]string, error) {
-	if len(surfaces) == 0 {
-		return []string{"control-panel"}, nil
-	}
-	if len(surfaces) != 1 || strings.TrimSpace(surfaces[0]) != "control-panel" {
-		return nil, ErrInvalid
-	}
-	return []string{"control-panel"}, nil
+func normalizeAdministrationRoleSurfaces() []string {
+	return []string{"control-panel"}
 }
 
-func canonicalPermissionsForRoleRequest(ctx context.Context, identityClient *auth.Client, actions []string, surfaces []string) ([]auth.Permission, []string, error) {
+func canonicalPermissionsForRoleRequest(ctx context.Context, identityClient *auth.Client, actions []string) ([]auth.Permission, []string, error) {
 	if identityClient == nil {
 		return nil, nil, ErrIdentityUnavailable
-	}
-	normalizedSurfaces, err := normalizeAdministrationRoleSurfaces(surfaces)
-	if err != nil {
-		return nil, nil, err
 	}
 	if len(actions) == 0 {
 		return nil, nil, ErrInvalid
@@ -91,7 +83,7 @@ func canonicalPermissionsForRoleRequest(ctx context.Context, identityClient *aut
 			Service: "dsh",
 			Surface: "control-panel",
 			Action:  action,
-			Scope:   "assigned",
+			Scope:   "all",
 		})
 	}
 	return permissions, normalizedActions, nil
@@ -102,7 +94,7 @@ func permissionKey(permission auth.Permission) string {
 }
 
 func roleDefinitionMatchesRequest(definition auth.RbacRoleDefinition, req RoleDefinitionRequest, expected []auth.Permission) bool {
-	if definition.Name != req.RoleName || definition.Description != req.Description || len(definition.Permissions) != len(expected) {
+	if definition.Name != req.RoleName || definition.Description != req.Description || definition.Active != req.Active || len(definition.Permissions) != len(expected) {
 		return false
 	}
 	expectedSet := make(map[string]struct{}, len(expected))
@@ -123,6 +115,8 @@ func CreateRoleDefinitionRequest(ctx context.Context, db *sql.DB, identityClient
 	}
 	params.RoleName = strings.TrimSpace(params.RoleName)
 	params.Description = strings.TrimSpace(params.Description)
+	// The public request contract defaults new definitions to active. An
+	// explicit false is preserved by the caller and is used for deactivation.
 	if len(params.RoleName) < 3 || len(params.RoleName) > 80 {
 		return nil, errors.New("invalid role name length")
 	}
@@ -133,18 +127,24 @@ func CreateRoleDefinitionRequest(ctx context.Context, db *sql.DB, identityClient
 		return nil, errors.New("reason too short")
 	}
 
-	_, normalizedActions, err := canonicalPermissionsForRoleRequest(ctx, identityClient, params.Permissions, params.Surfaces)
+	_, normalizedActions, err := canonicalPermissionsForRoleRequest(ctx, identityClient, params.Permissions)
 	if err != nil {
 		return nil, err
 	}
 	params.Permissions = normalizedActions
-	params.Surfaces = []string{"control-panel"}
+	expectedRoleVersion := 0
+	if definition, getErr := identityClient.GetRoleDefinition(ctx, params.RoleName); getErr == nil {
+		expectedRoleVersion = definition.Version
+	} else if !errors.Is(getErr, auth.ErrRbacRoleNotFound) {
+		return nil, ErrIdentityUnavailable
+	}
+	surfaces := normalizeAdministrationRoleSurfaces()
 
 	permissionsJSON, err := json.Marshal(params.Permissions)
 	if err != nil {
 		return nil, err
 	}
-	surfacesJSON, err := json.Marshal(params.Surfaces)
+	surfacesJSON, err := json.Marshal(surfaces)
 	if err != nil {
 		return nil, err
 	}
@@ -152,11 +152,11 @@ func CreateRoleDefinitionRequest(ctx context.Context, db *sql.DB, identityClient
 	var req RoleDefinitionRequest
 	err = db.QueryRowContext(ctx, `
 		INSERT INTO dsh_admin_role_definition_requests
-			(role_name, description, permissions, surfaces, requested_by, reason, status)
-		VALUES ($1, $2, $3, $4, $5, $6, 'pending')
-		RETURNING id, role_name, description, permissions, surfaces, requested_by, reason, status, version, created_at, updated_at
-	`, params.RoleName, params.Description, permissionsJSON, surfacesJSON, actorID, params.Reason).Scan(
-		&req.ID, &req.RoleName, &req.Description, &permissionsJSON, &surfacesJSON,
+			(role_name, description, active, expected_role_version, permissions, surfaces, requested_by, reason, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
+		RETURNING id, role_name, description, active, expected_role_version, permissions, surfaces, requested_by, reason, status, version, created_at, updated_at
+	`, params.RoleName, params.Description, params.Active, expectedRoleVersion, permissionsJSON, surfacesJSON, actorID, params.Reason).Scan(
+		&req.ID, &req.RoleName, &req.Description, &req.Active, &req.ExpectedRoleVersion, &permissionsJSON, &surfacesJSON,
 		&req.RequestedBy, &req.Reason, &req.Status, &req.Version, &req.CreatedAt, &req.UpdatedAt,
 	)
 	if err != nil {
@@ -183,7 +183,7 @@ func ListRoleDefinitionRequests(ctx context.Context, db *sql.DB, status string) 
 	}
 
 	query := `
-		SELECT id, role_name, description, permissions, surfaces, requested_by, reason, status,
+		SELECT id, role_name, description, active, expected_role_version, permissions, surfaces, requested_by, reason, status,
 		       reviewed_by, review_note, version, created_at, updated_at, reviewed_at
 		FROM dsh_admin_role_definition_requests
 	`
@@ -205,7 +205,7 @@ func ListRoleDefinitionRequests(ctx context.Context, db *sql.DB, status string) 
 		var req RoleDefinitionRequest
 		var permissionsJSON, surfacesJSON []byte
 		if err := rows.Scan(
-			&req.ID, &req.RoleName, &req.Description, &permissionsJSON, &surfacesJSON, &req.RequestedBy, &req.Reason, &req.Status,
+			&req.ID, &req.RoleName, &req.Description, &req.Active, &req.ExpectedRoleVersion, &permissionsJSON, &surfacesJSON, &req.RequestedBy, &req.Reason, &req.Status,
 			&req.ReviewedBy, &req.ReviewNote, &req.Version, &req.CreatedAt, &req.UpdatedAt, &req.ReviewedAt,
 		); err != nil {
 			return nil, err
@@ -230,7 +230,7 @@ type ReviewDecisionParams struct {
 // ReviewRoleDefinitionRequest reviews a pending role-definition request. An
 // approval writes the complete role definition only through Identity, performs
 // an independent canonical readback, and updates the maker/checker request only
-// after that exact readback matches. DSH never writes dsh_admin_roles here.
+// after that exact readback matches. DSH never writes a local role registry.
 func ReviewRoleDefinitionRequest(ctx context.Context, db *sql.DB, identityClient *auth.Client, actorID string, requestID string, params ReviewDecisionParams) (*RoleDefinitionRequest, *Role, error) {
 	if db == nil {
 		return nil, nil, ErrInvalid
@@ -248,11 +248,11 @@ func ReviewRoleDefinitionRequest(ctx context.Context, db *sql.DB, identityClient
 	var req RoleDefinitionRequest
 	var permissionsJSON, surfacesJSON []byte
 	err = tx.QueryRowContext(ctx, `
-		SELECT id, role_name, description, permissions, surfaces, requested_by, reason, status, version
+		SELECT id, role_name, description, active, expected_role_version, permissions, surfaces, requested_by, reason, status, version
 		FROM dsh_admin_role_definition_requests
 		WHERE id = $1 FOR UPDATE
 	`, requestID).Scan(
-		&req.ID, &req.RoleName, &req.Description, &permissionsJSON, &surfacesJSON, &req.RequestedBy, &req.Reason, &req.Status, &req.Version,
+		&req.ID, &req.RoleName, &req.Description, &req.Active, &req.ExpectedRoleVersion, &permissionsJSON, &surfacesJSON, &req.RequestedBy, &req.Reason, &req.Status, &req.Version,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -280,53 +280,78 @@ func ReviewRoleDefinitionRequest(ctx context.Context, db *sql.DB, identityClient
 
 	var canonicalRole *Role
 	if params.Decision == "approved" {
-		permissions, normalizedActions, err := canonicalPermissionsForRoleRequest(ctx, identityClient, req.Permissions, req.Surfaces)
+		permissions, normalizedActions, err := canonicalPermissionsForRoleRequest(ctx, identityClient, req.Permissions)
 		if err != nil {
 			return nil, nil, err
 		}
 		req.Permissions = normalizedActions
-		req.Surfaces = []string{"control-panel"}
+		req.Surfaces = normalizeAdministrationRoleSurfaces()
+		intentPayload, _ := json.Marshal(map[string]any{
+			"roleName": req.RoleName, "description": req.Description, "active": req.Active,
+			"expectedVersion": req.ExpectedRoleVersion, "permissions": permissions, "reviewerId": actorID,
+		})
+		if err := enqueueCanonicalMutationTx(ctx, tx, "role-definition-upsert", req.ID, string(intentPayload)); err != nil {
+			return nil, nil, err
+		}
+		if err := tx.Commit(); err != nil {
+			return nil, nil, err
+		}
 
-		if _, err := identityClient.UpsertRoleDefinition(ctx, req.RoleName, req.Description, permissions); err != nil {
+		if identityClient == nil {
+			_ = markCanonicalMutation(ctx, db, "role-definition-upsert", req.ID, "failed", "identity client is unavailable")
+			return nil, nil, ErrIdentityUnavailable
+		}
+		readback, err := identityClient.UpsertRoleDefinition(ctx, req.RoleName, req.Description, req.Active, req.ExpectedRoleVersion, permissions, req.ID)
+		if err != nil {
+			_ = markCanonicalMutation(ctx, db, "role-definition-upsert", req.ID, "failed", err.Error())
 			if errors.Is(err, auth.ErrIdentityUnavailable) {
 				return nil, nil, ErrIdentityUnavailable
 			}
 			return nil, nil, ErrCanonicalMutationFailed
 		}
-		readback, err := identityClient.GetRoleDefinition(ctx, req.RoleName)
-		if err != nil {
-			return nil, nil, ErrIdentityUnavailable
-		}
 		if !roleDefinitionMatchesRequest(readback, req, permissions) {
+			_ = markCanonicalMutation(ctx, db, "role-definition-upsert", req.ID, "failed", "canonical readback mismatch")
 			return nil, nil, ErrCanonicalMutationFailed
 		}
 		role := roleFromCanonical(readback)
 		canonicalRole = &role
-	}
 
-	err = tx.QueryRowContext(ctx, `
-		UPDATE dsh_admin_role_definition_requests
-		SET status = $1, reviewed_by = $2, review_note = $3, version = version + 1, updated_at = NOW(), reviewed_at = NOW()
-		WHERE id = $4
-		RETURNING version, updated_at, reviewed_at
-	`, params.Decision, actorID, params.ReviewNote, requestID).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt)
-	if err != nil {
-		return nil, nil, err
+		finalize, finalizeErr := db.BeginTx(ctx, nil)
+		if finalizeErr != nil {
+			return nil, nil, finalizeErr
+		}
+		defer finalize.Rollback()
+		if err := finalize.QueryRowContext(ctx, `
+			UPDATE dsh_admin_role_definition_requests
+			SET status = 'approved', reviewed_by = $1, review_note = $2, version = version + 1, updated_at = NOW(), reviewed_at = NOW()
+			WHERE id = $3 AND status = 'pending' AND version = $4
+			RETURNING version, updated_at, reviewed_at
+		`, actorID, params.ReviewNote, requestID, req.Version).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt); err != nil {
+			return nil, nil, errors.New("version conflict")
+		}
+		_, _ = finalize.ExecContext(ctx, `INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id) VALUES ($1, $2, $3, $4, 'HIGH', $5)`, actorID, "ROLE_DEFINITION_APPROVED", req.ID, "Reviewed canonical role: "+req.RoleName, req.ID)
+		if err := finalize.Commit(); err != nil {
+			return nil, nil, err
+		}
+		_ = markCanonicalMutation(ctx, db, "role-definition-upsert", req.ID, "applied", "")
+		req.Status = "approved"
+	} else {
+		if err = tx.QueryRowContext(ctx, `
+			UPDATE dsh_admin_role_definition_requests
+			SET status = 'rejected', reviewed_by = $1, review_note = $2, version = version + 1, updated_at = NOW(), reviewed_at = NOW()
+			WHERE id = $3 AND status = 'pending' AND version = $4
+			RETURNING version, updated_at, reviewed_at
+		`, actorID, params.ReviewNote, requestID, req.Version).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt); err != nil {
+			return nil, nil, errors.New("version conflict")
+		}
+		_, _ = tx.ExecContext(ctx, `INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id) VALUES ($1, $2, $3, $4, 'HIGH', $5)`, actorID, "ROLE_DEFINITION_REJECTED", req.ID, "Reviewed canonical role: "+req.RoleName, req.ID)
+		if err := tx.Commit(); err != nil {
+			return nil, nil, err
+		}
+		req.Status = "rejected"
 	}
-
-	req.Status = params.Decision
 	reviewer := actorID
 	req.ReviewedBy = &reviewer
 	req.ReviewNote = &params.ReviewNote
-
-	_, _ = tx.ExecContext(ctx, `
-		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
-		VALUES ($1, $2, $3, $4, 'HIGH', $5)
-	`, actorID, "ROLE_DEFINITION_"+strings.ToUpper(params.Decision), req.ID, "Reviewed canonical role: "+req.RoleName, req.ID)
-
-	if err := tx.Commit(); err != nil {
-		return nil, nil, err
-	}
-
 	return &req, canonicalRole, nil
 }

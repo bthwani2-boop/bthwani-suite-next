@@ -79,7 +79,7 @@ func (s *protectedStoreServer) handleUpsertClientProfileConsents(w http.Response
 }
 
 func (s *protectedStoreServer) handleAdminGetClientProfile(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireAdministrationPermission(w, r, "administration.read")
+	_, ok := s.requireAdministrationPermission(w, r, "support.read")
 	if !ok {
 		return
 	}

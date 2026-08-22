@@ -3,11 +3,13 @@ package administration
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
 
 	"dsh-api/internal/auth"
+	"github.com/lib/pq"
 )
 
 type RoleAssignmentApproval struct {
@@ -58,6 +60,17 @@ func CreateRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 		}
 		return nil, ErrIdentityUnavailable
 	}
+	var pending bool
+	if err := db.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM dsh_admin_approval_requests
+			WHERE target_actor_id = $1 AND role_name = $2 AND status = 'pending'
+		)`, targetActorID, params.RoleName).Scan(&pending); err != nil {
+		return nil, err
+	}
+	if pending {
+		return nil, ErrConflict
+	}
 
 	var req RoleAssignmentApproval
 	err := db.QueryRowContext(ctx, `
@@ -70,6 +83,10 @@ func CreateRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 		&req.RequestedBy, &req.Reason, &req.Status, &req.Version, &req.CreatedAt, &req.UpdatedAt,
 	)
 	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" && pqErr.Constraint == "uq_dsh_admin_pending_role_change_by_actor_role" {
+			return nil, ErrConflict
+		}
 		return nil, err
 	}
 
@@ -149,7 +166,6 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 		}
 		return nil, nil, err
 	}
-
 	if req.Status != "pending" {
 		return nil, nil, errors.New("request is not pending")
 	}
@@ -160,50 +176,82 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 		return nil, nil, errors.New("cannot review own request")
 	}
 
-	var assignment *auth.RbacActorRoleAssignment
-	if params.Decision == "approved" {
-		if identityClient == nil {
-			return nil, nil, ErrIdentityUnavailable
+	if params.Decision == "rejected" {
+		if err = tx.QueryRowContext(ctx, `
+			UPDATE dsh_admin_approval_requests
+			SET status = 'rejected', reviewed_by = $1, review_note = $2, version = version + 1, updated_at = NOW(), reviewed_at = NOW()
+			WHERE id = $3 AND status = 'pending' AND version = $4
+			RETURNING version, updated_at, reviewed_at
+		`, actorID, params.ReviewNote, approvalID, req.Version).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt); err != nil {
+			return nil, nil, errors.New("version conflict")
 		}
-		switch req.ActionType {
-		case "staff_role_assignment":
-			granted, grantErr := identityClient.GrantRole(ctx, req.TargetActorID, req.RoleName, actorID)
-			if grantErr != nil {
-				return nil, nil, ErrCanonicalMutationFailed
-			}
-			assignment = &granted
-		case "staff_role_revocation":
-			if revokeErr := identityClient.RevokeRole(ctx, req.TargetActorID, req.RoleName, actorID); revokeErr != nil {
-				return nil, nil, ErrCanonicalMutationFailed
-			}
-		default:
-			return nil, nil, errors.New("unsupported action type")
+		_, _ = tx.ExecContext(ctx, `
+			INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
+			VALUES ($1, 'ROLE_ASSIGNMENT_REJECTED', $2, $3, 'HIGH', $4)
+		`, actorID, req.ID, "Reviewed "+req.ActionType+" for role "+req.RoleName+" and actor "+req.TargetActorID, req.ID)
+		if err := tx.Commit(); err != nil {
+			return nil, nil, err
 		}
+		req.Status = "rejected"
+		reviewer := actorID
+		req.ReviewedBy = &reviewer
+		req.ReviewNote = &params.ReviewNote
+		return &req, nil, nil
 	}
 
-	err = tx.QueryRowContext(ctx, `
-		UPDATE dsh_admin_approval_requests
-		SET status = $1, reviewed_by = $2, review_note = $3, version = version + 1, updated_at = NOW(), reviewed_at = NOW()
-		WHERE id = $4
-		RETURNING version, updated_at, reviewed_at
-	`, params.Decision, actorID, params.ReviewNote, approvalID).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt)
-	if err != nil {
+	intentPayload, _ := json.Marshal(map[string]string{"targetActorId": req.TargetActorID, "roleName": req.RoleName, "actionType": req.ActionType, "reviewerId": actorID})
+	if err := enqueueCanonicalMutationTx(ctx, tx, "role-assignment", req.ID, string(intentPayload)); err != nil {
 		return nil, nil, err
 	}
-
-	req.Status = params.Decision
-	reviewer := actorID
-	req.ReviewedBy = &reviewer
-	req.ReviewNote = &params.ReviewNote
-
-	_, _ = tx.ExecContext(ctx, `
-		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
-		VALUES ($1, $2, $3, $4, 'HIGH', $5)
-	`, actorID, "ROLE_ASSIGNMENT_"+strings.ToUpper(params.Decision), req.ID, "Reviewed "+req.ActionType+" for role "+req.RoleName+" and actor "+req.TargetActorID, req.ID)
-
 	if err := tx.Commit(); err != nil {
 		return nil, nil, err
 	}
+	if identityClient == nil {
+		_ = markCanonicalMutation(ctx, db, "role-assignment", req.ID, "failed", "identity client is unavailable")
+		return nil, nil, ErrIdentityUnavailable
+	}
+	var assignment *auth.RbacActorRoleAssignment
+	switch req.ActionType {
+	case "staff_role_assignment":
+		granted, grantErr := identityClient.GrantRoleWithIdempotency(ctx, req.TargetActorID, req.RoleName, actorID, req.ID)
+		if grantErr != nil {
+			_ = markCanonicalMutation(ctx, db, "role-assignment", req.ID, "failed", grantErr.Error())
+			return nil, nil, ErrCanonicalMutationFailed
+		}
+		assignment = &granted
+	case "staff_role_revocation":
+		if revokeErr := identityClient.RevokeRoleWithIdempotency(ctx, req.TargetActorID, req.RoleName, actorID, req.ID); revokeErr != nil {
+			_ = markCanonicalMutation(ctx, db, "role-assignment", req.ID, "failed", revokeErr.Error())
+			return nil, nil, ErrCanonicalMutationFailed
+		}
+	default:
+		return nil, nil, errors.New("unsupported action type")
+	}
 
+	finalize, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer finalize.Rollback()
+	if err := finalize.QueryRowContext(ctx, `
+		UPDATE dsh_admin_approval_requests
+		SET status = 'approved', reviewed_by = $1, review_note = $2, version = version + 1, updated_at = NOW(), reviewed_at = NOW()
+		WHERE id = $3 AND status = 'pending' AND version = $4
+		RETURNING version, updated_at, reviewed_at
+	`, actorID, params.ReviewNote, approvalID, req.Version).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt); err != nil {
+		return nil, nil, errors.New("version conflict")
+	}
+	_, _ = finalize.ExecContext(ctx, `
+		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
+		VALUES ($1, 'ROLE_ASSIGNMENT_APPROVED', $2, $3, 'HIGH', $4)
+	`, actorID, req.ID, "Reviewed "+req.ActionType+" for role "+req.RoleName+" and actor "+req.TargetActorID, req.ID)
+	if err := finalize.Commit(); err != nil {
+		return nil, nil, err
+	}
+	_ = markCanonicalMutation(ctx, db, "role-assignment", req.ID, "applied", "")
+	req.Status = "approved"
+	reviewer := actorID
+	req.ReviewedBy = &reviewer
+	req.ReviewNote = &params.ReviewNote
 	return &req, assignment, nil
 }

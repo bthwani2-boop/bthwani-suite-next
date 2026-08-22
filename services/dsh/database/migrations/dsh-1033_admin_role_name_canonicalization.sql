@@ -55,9 +55,11 @@ ALTER TABLE dsh_admin_rollback_requests
   ADD COLUMN IF NOT EXISTS role_name TEXT;
 
 UPDATE dsh_admin_rollback_requests rollback_request
-SET role_name = COALESCE(source.role_name, role.name)
+SET role_name = COALESCE(
+  source.role_name,
+  (SELECT role.name FROM dsh_admin_roles role WHERE role.id = rollback_request.role_id)
+)
 FROM dsh_admin_approval_requests source
-LEFT JOIN dsh_admin_roles role ON role.id = rollback_request.role_id
 WHERE rollback_request.source_approval_id = source.id
   AND rollback_request.role_name IS NULL;
 

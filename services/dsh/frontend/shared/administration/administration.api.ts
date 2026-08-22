@@ -11,20 +11,23 @@ import type {
   DshRoleChangeAction,
   DshRoleDefinitionRequest,
   DshAdministrationApprovalStatus,
-  DshAdministrationSurface,
   DshAdministrationRollbackRequest,
   DshAdministrationDiagnostics,
+  DshPermissionVocabularyEntry,
 } from "./administration.types";
 
 const { req } = createDshRawHttpClient(resolveDshApiBaseUrl(), "adm");
 
 export const fetchRoles = () => req<{ roles: DshRole[] }>("/dsh/operator/admin/roles");
 
+export const fetchPermissionVocabulary = () =>
+  req<{ permissions: DshPermissionVocabularyEntry[] }>("/dsh/operator/admin/permission-vocabulary");
+
 export const requestRoleDefinition = (body: {
   name: string;
   description: string;
+  active: boolean;
   permissions: readonly string[];
-  surfaces: readonly DshAdministrationSurface[];
   reason: string;
 }) => req<{ request: DshRoleDefinitionRequest }>("/dsh/operator/admin/roles/requests", {
   method: "POST",
@@ -48,12 +51,12 @@ export const fetchStaff = () => req<{ staff: DshStaffMember[] }>("/dsh/operator/
 
 export const requestStaffRoleChange = (
   staffId: string,
-  roleId: string,
+  roleName: string,
   actionType: DshRoleChangeAction,
   reason: string,
 ) => req<{ approval: DshRoleAssignmentApproval }>(`/dsh/operator/admin/staff/${staffId}/roles`, {
   method: "POST",
-  body: JSON.stringify({ roleId, actionType, reason }),
+  body: JSON.stringify({ roleName, actionType, reason }),
 });
 
 export const fetchRoleAssignmentApprovals = (status: DshRoleAssignmentApprovalStatus | "" = "pending") =>

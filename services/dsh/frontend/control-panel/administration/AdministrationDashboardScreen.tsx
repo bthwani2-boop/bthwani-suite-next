@@ -23,6 +23,8 @@ import {
   type DshAdminState,
   type DshRolePermission,
 } from "../../shared/administration";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 
 type CountableState = DshAdminState<readonly unknown[]>;
 
@@ -40,13 +42,26 @@ function permissionLabel(permission: DshRolePermission): string {
   return `${permission.service}/${permission.surface}/${permission.action} [${permission.scope}]`;
 }
 
-const MAIN_TAB_ITEMS = ADMIN_MAIN_TABS.map((tab) => ({ value: tab.id, label: tab.label }));
-
 export function AdministrationDashboardScreen() {
   const [tab, setTab] = useState<AdminMainTabId>("overview");
-  const roles = useAdministrationRolesController("authenticated");
-  const staff = useStaffController("authenticated");
-  const audit = useAdminAuditController("authenticated");
+  const { state: sessionState } = useIdentitySession();
+  const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
+  const canReadRoles = hasServiceControlPanelPermission(identity, "dsh", "administration.role.read");
+  const canReadStaff = hasServiceControlPanelPermission(identity, "dsh", "administration.staff.read");
+  const canReadAudit = hasServiceControlPanelPermission(identity, "dsh", "administration.audit.read");
+  const canReview = hasServiceControlPanelPermission(identity, "dsh", "administration.role.approve")
+    || hasServiceControlPanelPermission(identity, "dsh", "administration.staff.approve")
+    || hasServiceControlPanelPermission(identity, "dsh", "administration.rollback.approve");
+  const roles = useAdministrationRolesController("authenticated", canReadRoles);
+  const staff = useStaffController("authenticated", canReadStaff);
+  const audit = useAdminAuditController("authenticated", canReadAudit);
+  const mainTabItems = ADMIN_MAIN_TABS
+    .filter((item) => item.id === "overview"
+      || (item.id === "roles-permissions" && canReadRoles)
+      || (item.id === "users" && canReadStaff)
+      || (item.id === "approval-chain" && canReview)
+      || (item.id === "audit" && canReadAudit))
+    .map((item) => ({ value: item.id, label: item.label }));
 
   const renderOverview = () => (
     <>
@@ -84,7 +99,7 @@ export function AdministrationDashboardScreen() {
               <CpTableHeaderCell>الدور</CpTableHeaderCell>
               <CpTableHeaderCell>الوصف</CpTableHeaderCell>
               <CpTableHeaderCell>الصلاحيات الفعلية</CpTableHeaderCell>
-              <CpTableHeaderCell>الأسطح المشتقة</CpTableHeaderCell>
+              <CpTableHeaderCell>الحالة / النسخة</CpTableHeaderCell>
             </tr>
           </thead>
           <tbody>
@@ -97,7 +112,7 @@ export function AdministrationDashboardScreen() {
                     ? role.permissions.map(permissionLabel).join("، ")
                     : "لا توجد صلاحيات مرتبطة"}
                 </CpTableCell>
-                <CpTableCell>{role.surfaces.length > 0 ? role.surfaces.join("، ") : "—"}</CpTableCell>
+                <CpTableCell>{role.active ? "نشط" : "غير فعال"} / v{role.version}</CpTableCell>
               </tr>
             ))}
           </tbody>
@@ -120,17 +135,17 @@ export function AdministrationDashboardScreen() {
               <tr>
                 <CpTableHeaderCell>الموظف</CpTableHeaderCell>
                 <CpTableHeaderCell>الدور</CpTableHeaderCell>
-                <CpTableHeaderCell>المعتمد</CpTableHeaderCell>
-                <CpTableHeaderCell>وقت الاعتماد</CpTableHeaderCell>
+                <CpTableHeaderCell>معرّف الممثل</CpTableHeaderCell>
+                <CpTableHeaderCell>أول منح</CpTableHeaderCell>
               </tr>
             </thead>
             <tbody>
               {staff.state.data.map((member) => (
                 <tr key={member.id}>
+                  <CpTableCell>{member.username || member.actorId}</CpTableCell>
+                  <CpTableCell>{member.roles.join("، ")}</CpTableCell>
                   <CpTableCell>{member.actorId}</CpTableCell>
-                  <CpTableCell>{member.roleName}</CpTableCell>
-                  <CpTableCell>{member.assignedBy || "—"}</CpTableCell>
-                  <CpTableCell>{member.assignedAt}</CpTableCell>
+                  <CpTableCell>{member.createdAt}</CpTableCell>
                 </tr>
               ))}
             </tbody>
@@ -195,7 +210,7 @@ export function AdministrationDashboardScreen() {
     <OverviewPageFrame
       dir="rtl"
       header={<CpPageHeader title="الإدارة والصلاحيات" />}
-      toolbar={<CpTabs items={MAIN_TAB_ITEMS} value={tab} onChange={(value) => setTab(value as AdminMainTabId)} aria-label="أقسام الإدارة" />}
+      toolbar={<CpTabs items={mainTabItems} value={tab} onChange={(value) => setTab(value as AdminMainTabId)} aria-label="أقسام الإدارة" />}
     >
       {content}
     </OverviewPageFrame>

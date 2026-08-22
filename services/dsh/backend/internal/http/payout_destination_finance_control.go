@@ -138,6 +138,9 @@ func (s *protectedStoreServer) handleFinancePayoutDestinationVerify(w http.Respo
 		return
 	}
 	body, _ := json.Marshal(input)
+	if _, ok := s.requirePermission(w, r, "control-panel", "finance.payout_destinations.verify"); !ok {
+		return
+	}
 	status, responseBody, err := s.wlt.ExecuteFinanceWrite(
 		r.Context(),
 		"finance.payout_destinations.verify",
@@ -178,6 +181,9 @@ func (s *protectedStoreServer) handleFinancePayoutDestinationDeactivate(w http.R
 		return
 	}
 	body, _ := json.Marshal(input)
+	if _, ok := s.requirePermission(w, r, "control-panel", "finance.payout_destinations.deactivate"); !ok {
+		return
+	}
 	status, responseBody, err := s.wlt.ExecuteFinanceWrite(
 		r.Context(),
 		"finance.payout_destinations.deactivate",

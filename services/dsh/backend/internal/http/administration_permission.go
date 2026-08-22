@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	"dsh-api/internal/administration"
 	"dsh-api/internal/auth"
 	"dsh-api/internal/store"
 )
@@ -67,24 +66,26 @@ func (s *protectedStoreServer) requireAdministrationPermission(
 		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "permission authority is unavailable")
 		return store.StoreActor{}, false
 	}
-	candidates := administration.AdministrationPermissionCandidates(action)
+	action = strings.TrimSpace(action)
+	if action == "" || (!strings.HasPrefix(action, "administration.") && action != "support.read" && action != "support.manage") {
+		store.SendError(w, http.StatusForbidden, "FORBIDDEN", "administration action is invalid")
+		return store.StoreActor{}, false
+	}
 	for _, permission := range permissions {
 		if permission.Service != "dsh" || permission.Surface != "control-panel" {
 			continue
 		}
-		for _, candidate := range candidates {
-			if permission.Action == candidate && strings.TrimSpace(permission.Scope) != "" {
-				return store.StoreActor{
-					ID:                 identity.Subject,
-					Role:               controlPanelActorRole(identity),
-					OperatorContextID:  identity.OperatorContextID,
-					SessionID:          identity.SessionID,
-					SessionSurface:     identity.SessionSurface,
-					PhoneE164:          identity.PhoneE164,
-					AuthorizedAction:   action,
-					AuthorizationScope: permission.Scope,
-				}, true
-			}
+		if permission.Action == action && strings.TrimSpace(permission.Scope) == "all" {
+			return store.StoreActor{
+				ID:                 identity.Subject,
+				Role:               controlPanelActorRole(identity),
+				OperatorContextID:  identity.OperatorContextID,
+				SessionID:          identity.SessionID,
+				SessionSurface:     identity.SessionSurface,
+				PhoneE164:          identity.PhoneE164,
+				AuthorizedAction:   action,
+				AuthorizationScope: permission.Scope,
+			}, true
 		}
 	}
 

@@ -3,6 +3,7 @@ package administration
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"strings"
 	"time"
@@ -191,7 +192,6 @@ func ReviewRollbackRequest(ctx context.Context, db *sql.DB, identityClient *auth
 		}
 		return nil, err
 	}
-
 	if req.Status != "pending" {
 		return nil, errors.New("request is not pending")
 	}
@@ -202,47 +202,79 @@ func ReviewRollbackRequest(ctx context.Context, db *sql.DB, identityClient *auth
 		return nil, errors.New("cannot review own request")
 	}
 
-	if params.Decision == "approved" {
-		if identityClient == nil {
-			return nil, ErrIdentityUnavailable
+	if params.Decision == "rejected" {
+		if err = tx.QueryRowContext(ctx, `
+			UPDATE dsh_admin_rollback_requests
+			SET status = 'rejected', reviewed_by = $1, review_note = $2, version = version + 1, updated_at = NOW(), reviewed_at = NOW()
+			WHERE id = $3 AND status = 'pending' AND version = $4
+			RETURNING version, updated_at, reviewed_at
+		`, actorID, params.ReviewNote, requestID, req.Version).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt); err != nil {
+			return nil, errors.New("version conflict")
 		}
-		switch req.InverseActionType {
-		case "staff_role_revocation":
-			if revokeErr := identityClient.RevokeRole(ctx, req.TargetActorID, req.RoleName, actorID); revokeErr != nil {
-				return nil, ErrCanonicalMutationFailed
-			}
-		case "staff_role_assignment":
-			if _, grantErr := identityClient.GrantRole(ctx, req.TargetActorID, req.RoleName, actorID); grantErr != nil {
-				return nil, ErrCanonicalMutationFailed
-			}
-		default:
-			return nil, errors.New("unsupported inverse action type")
+		_, _ = tx.ExecContext(ctx, `
+			INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
+			VALUES ($1, 'ROLLBACK_REJECTED', $2, $3, 'HIGH', $4)
+		`, actorID, req.ID, "Reviewed rollback for role "+req.RoleName+" and actor "+req.TargetActorID, req.ID)
+		if err := tx.Commit(); err != nil {
+			return nil, err
 		}
+		req.Status = "rejected"
+		reviewer := actorID
+		req.ReviewedBy = &reviewer
+		req.ReviewNote = &params.ReviewNote
+		return &req, nil
 	}
 
-	err = tx.QueryRowContext(ctx, `
-		UPDATE dsh_admin_rollback_requests
-		SET status = $1, reviewed_by = $2, review_note = $3, version = version + 1, updated_at = NOW(), reviewed_at = NOW()
-		WHERE id = $4
-		RETURNING version, updated_at, reviewed_at
-	`, params.Decision, actorID, params.ReviewNote, requestID).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt)
-	if err != nil {
+	intentPayload, _ := json.Marshal(map[string]string{"targetActorId": req.TargetActorID, "roleName": req.RoleName, "actionType": req.InverseActionType, "reviewerId": actorID})
+	if err := enqueueCanonicalMutationTx(ctx, tx, "role-rollback", req.ID, string(intentPayload)); err != nil {
 		return nil, err
 	}
-
-	req.Status = params.Decision
-	reviewer := actorID
-	req.ReviewedBy = &reviewer
-	req.ReviewNote = &params.ReviewNote
-
-	_, _ = tx.ExecContext(ctx, `
-		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
-		VALUES ($1, $2, $3, $4, 'HIGH', $5)
-	`, actorID, "ROLLBACK_"+strings.ToUpper(params.Decision), req.ID, "Reviewed rollback for role "+req.RoleName+" and actor "+req.TargetActorID, req.ID)
-
 	if err := tx.Commit(); err != nil {
 		return nil, err
 	}
+	if identityClient == nil {
+		_ = markCanonicalMutation(ctx, db, "role-rollback", req.ID, "failed", "identity client is unavailable")
+		return nil, ErrIdentityUnavailable
+	}
+	switch req.InverseActionType {
+	case "staff_role_revocation":
+		if revokeErr := identityClient.RevokeRoleWithIdempotency(ctx, req.TargetActorID, req.RoleName, actorID, req.ID); revokeErr != nil {
+			_ = markCanonicalMutation(ctx, db, "role-rollback", req.ID, "failed", revokeErr.Error())
+			return nil, ErrCanonicalMutationFailed
+		}
+	case "staff_role_assignment":
+		if _, grantErr := identityClient.GrantRoleWithIdempotency(ctx, req.TargetActorID, req.RoleName, actorID, req.ID); grantErr != nil {
+			_ = markCanonicalMutation(ctx, db, "role-rollback", req.ID, "failed", grantErr.Error())
+			return nil, ErrCanonicalMutationFailed
+		}
+	default:
+		return nil, errors.New("unsupported inverse action type")
+	}
 
+	finalize, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer finalize.Rollback()
+	if err := finalize.QueryRowContext(ctx, `
+		UPDATE dsh_admin_rollback_requests
+		SET status = 'approved', reviewed_by = $1, review_note = $2, version = version + 1, updated_at = NOW(), reviewed_at = NOW()
+		WHERE id = $3 AND status = 'pending' AND version = $4
+		RETURNING version, updated_at, reviewed_at
+	`, actorID, params.ReviewNote, requestID, req.Version).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt); err != nil {
+		return nil, errors.New("version conflict")
+	}
+	_, _ = finalize.ExecContext(ctx, `
+		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
+		VALUES ($1, 'ROLLBACK_APPROVED', $2, $3, 'HIGH', $4)
+	`, actorID, req.ID, "Reviewed rollback for role "+req.RoleName+" and actor "+req.TargetActorID, req.ID)
+	if err := finalize.Commit(); err != nil {
+		return nil, err
+	}
+	_ = markCanonicalMutation(ctx, db, "role-rollback", req.ID, "applied", "")
+	req.Status = "approved"
+	reviewer := actorID
+	req.ReviewedBy = &reviewer
+	req.ReviewNote = &params.ReviewNote
 	return &req, nil
 }

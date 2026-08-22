@@ -345,7 +345,7 @@
     summary: List admin roles.
     tags: [DshAdministration]
     security:
-      - bearerAuth: []
+      - bearerAuth: [ administration.role.read ]
     responses:
       "200":
         description: Admin roles list.
@@ -360,7 +360,7 @@
     summary: List admin staff members.
     tags: [DshAdministration]
     security:
-      - bearerAuth: []
+      - bearerAuth: [ administration.staff.read ]
     responses:
       "200":
         description: Staff list.
@@ -375,7 +375,7 @@
     summary: Assign a role to a staff member.
     tags: [DshAdministration]
     security:
-      - bearerAuth: []
+      - bearerAuth: [ administration.staff.request ]
     parameters:
       - name: staffId
         in: path
@@ -404,7 +404,7 @@
     summary: List admin audit log entries.
     tags: [DshAdministration]
     security:
-      - bearerAuth: []
+      - bearerAuth: [ administration.audit.read ]
     responses:
       "200":
         description: Audit log entries.

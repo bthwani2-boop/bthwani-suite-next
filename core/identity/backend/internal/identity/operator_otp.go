@@ -3,10 +3,9 @@ package identity
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"strings"
-
-	"github.com/lib/pq"
 )
 
 var ErrOperatorContextMismatch = errors.New("actor operator context does not match active runtime operator context")
@@ -81,10 +80,17 @@ func (r *Repository) RequestOtpForOperatorContext(
 		_, err = tx.ExecContext(ctx, `
 			INSERT INTO identity_actors
 				(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
-			VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, 'PENDING_ACTIVATION', 1, now())`,
-			actorID, username, operatorContextID, phone, pq.Array([]string{role}), string(permissions))
+			VALUES ($1, $2, '', $3, $4, ARRAY[]::text[], '[]'::jsonb, 'PENDING_ACTIVATION', 1, now())`,
+			actorID, username, operatorContextID, phone)
 		if err != nil {
 			return IssueActivationResult{}, mapUniqueViolation(err)
+		}
+		var requested []Permission
+		if err := json.Unmarshal(permissions, &requested); err != nil {
+			return IssueActivationResult{}, err
+		}
+		if err := setActorAccessTx(ctx, tx, actorID, []string{role}, requested, "otp-provision"); err != nil {
+			return IssueActivationResult{}, err
 		}
 		actor, err = actorByIDTx(ctx, tx, actorID)
 		if err != nil {
@@ -95,14 +101,14 @@ func (r *Repository) RequestOtpForOperatorContext(
 			return IssueActivationResult{}, ErrOperatorContextMismatch
 		}
 		if !hasRole(actor.Roles, role) {
-			_, err = tx.ExecContext(ctx, `
-				UPDATE identity_actors
-				SET roles = array_append(roles, $2),
-				    permissions = permissions || $3::jsonb,
-				    updated_at = now()
-				WHERE id = $1 AND operator_context_id = $4`,
-				actor.ID, role, string(permissions), operatorContextID)
-			if err != nil {
+			var requested []Permission
+			if err := json.Unmarshal(permissions, &requested); err != nil {
+				return IssueActivationResult{}, err
+			}
+			roles := append([]string{}, actor.Roles...)
+			roles = append(roles, role)
+			merged := mergeEmployeePermissions(actor.Permissions, requested)
+			if err := setActorAccessTx(ctx, tx, actor.ID, roles, merged, "otp-provision"); err != nil {
 				return IssueActivationResult{}, err
 			}
 			actor, err = actorByIDTx(ctx, tx, actor.ID)

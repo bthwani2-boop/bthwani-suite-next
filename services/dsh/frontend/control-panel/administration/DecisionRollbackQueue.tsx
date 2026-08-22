@@ -17,10 +17,17 @@ import {
   useAdministrationRollbackController,
   useRoleAssignmentApprovalController,
 } from "../../shared/administration";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 
 export function DecisionRollbackQueue() {
-  const approvals = useRoleAssignmentApprovalController("authenticated", "approved");
-  const rollbacks = useAdministrationRollbackController("authenticated", "pending");
+  const { state: sessionState } = useIdentitySession();
+  const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
+  const canRequest = hasServiceControlPanelPermission(identity, "dsh", "administration.rollback.request");
+  const canReadApproved = hasServiceControlPanelPermission(identity, "dsh", "administration.staff.approve");
+  const canReview = hasServiceControlPanelPermission(identity, "dsh", "administration.rollback.approve");
+  const approvals = useRoleAssignmentApprovalController("authenticated", "approved", canReadApproved);
+  const rollbacks = useAdministrationRollbackController("authenticated", "pending", canReview);
   const [sourceApprovalId, setSourceApprovalId] = useState("");
   const [reason, setReason] = useState("");
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
@@ -67,12 +74,15 @@ export function DecisionRollbackQueue() {
           : undefined
       }
     >
+      {!canRequest && !canReview ? (
+        <CpStatePanel role="alert" title="صلاحية التراجع الإداري مطلوبة" description="لا يتم تحميل أو إرسال أي طلب قبل تحقق الصلاحية الدقيقة." />
+      ) : null}
       <CpStatePanel
         role="status"
         title="التراجع قرار جديد وليس حذفًا للسجل"
         description="ينشئ النظام الإجراء العكسي داخل معاملة مستقلة، ويمنع المنشئ والمستفيد والمعتمد السابق من اعتماد التراجع."
       />
-      <section aria-label="إنشاء طلب تراجع">
+      {canRequest ? <section aria-label="إنشاء طلب تراجع">
         <strong>إنشاء طلب تراجع</strong>
         <CpTextInput
           value={sourceApprovalId}
@@ -93,9 +103,9 @@ export function DecisionRollbackQueue() {
         >
           إرسال طلب التراجع
         </CpButton>
-      </section>
+      </section> : null}
 
-      {approvals.state.kind === "success" && approvals.state.data.length > 0 ? (
+      {canRequest && canReadApproved && approvals.state.kind === "success" && approvals.state.data.length > 0 ? (
         <section aria-label="قرارات معتمدة قابلة لطلب التراجع">
           <strong>قرارات معتمدة قابلة لطلب التراجع</strong>
           {approvals.state.data.map((approval) => (
@@ -107,10 +117,10 @@ export function DecisionRollbackQueue() {
       ) : null}
 
       {actionError ? <CpStateView kind="error" title={actionError} /> : null}
-      {rollbacks.state.kind === "success" && rollbacks.state.data.length === 0 ? (
+      {canReview && rollbacks.state.kind === "success" && rollbacks.state.data.length === 0 ? (
         <CpStatePanel role="status" title="لا توجد طلبات تراجع معلقة." />
       ) : null}
-      {rollbacks.state.kind === "success" && rollbacks.state.data.length > 0 ? (
+      {canReview && rollbacks.state.kind === "success" && rollbacks.state.data.length > 0 ? (
         <CpTable aria-label="طلبات التراجع المعلقة">
           <thead>
             <tr>

@@ -15,6 +15,7 @@ import {
   fetchRollbackRequests,
   reviewRollbackRequest,
   fetchAdministrationDiagnostics,
+  fetchPermissionVocabulary,
 } from "./administration.api";
 import type {
   DshRole,
@@ -27,12 +28,12 @@ import type {
   DshRoleAssignmentApprovalStatus,
   DshRoleDefinitionRequest,
   DshAdministrationApprovalStatus,
-  DshAdministrationSurface,
   DshAdministrationRollbackRequest,
   DshAdministrationDiagnostics,
+  DshPermissionVocabularyEntry,
 } from "./administration.types";
 
-function useReadModel<T>(authKind: string, loader: () => Promise<T>) {
+function useReadModel<T>(authKind: string, loader: () => Promise<T>, enabled = true) {
   const [state, setState] = useState<DshAdminState<T>>({ kind: "idle" });
   const load = useCallback(async () => {
     setState({ kind: "loading" });
@@ -40,12 +41,12 @@ function useReadModel<T>(authKind: string, loader: () => Promise<T>) {
     catch (err) { setState({ kind: "error", message: messageFromError(err) }); }
   }, [loader]);
   useEffect(() => {
-    if (authKind !== "authenticated") {
+    if (authKind !== "authenticated" || !enabled) {
       setState({ kind: "idle" });
       return;
     }
     void load();
-  }, [authKind, load]);
+  }, [authKind, enabled, load]);
   return { state, reload: load };
 }
 
@@ -57,26 +58,27 @@ function messageFromError(err: unknown): string {
   return error?.message || "تعذّر تحميل البيانات";
 }
 
-export function useAdministrationRolesController(authKind: string) {
+export function useAdministrationRolesController(authKind: string, enabled = true) {
   const loader = useCallback(async (): Promise<DshRole[]> => (await fetchRoles()).roles, []);
-  return useReadModel(authKind, loader);
+  return useReadModel(authKind, loader, enabled);
 }
 
 export function useRoleDefinitionApprovalController(
   authKind: string,
   status: DshAdministrationApprovalStatus | "" = "pending",
+  enabled = true,
 ) {
   const loader = useCallback(
     async (): Promise<DshRoleDefinitionRequest[]> => (await fetchRoleDefinitionRequests(status)).requests,
     [status],
   );
-  const { state, reload } = useReadModel(authKind, loader);
+  const { state, reload } = useReadModel(authKind, loader, enabled);
 
   const request = useCallback(async (input: {
     name: string;
     description: string;
+    active: boolean;
     permissions: readonly string[];
-    surfaces: readonly DshAdministrationSurface[];
     reason: string;
   }) => {
     const response = await requestRoleDefinition(input);
@@ -97,37 +99,38 @@ export function useRoleDefinitionApprovalController(
   return { state, reload, request, review };
 }
 
-export function useStaffController(authKind: string) {
+export function useStaffController(authKind: string, enabled = true) {
   const loader = useCallback(async (): Promise<DshStaffMember[]> => (await fetchStaff()).staff, []);
-  const readModel = useReadModel(authKind, loader);
+  const readModel = useReadModel(authKind, loader, enabled);
   const requestChange = useCallback(async (
     staffId: string,
-    roleId: string,
+    roleName: string,
     actionType: "staff_role_assignment" | "staff_role_revocation",
     reason: string,
   ) => {
-    const response = await requestStaffRoleChange(staffId, roleId, actionType, reason);
+    const response = await requestStaffRoleChange(staffId, roleName, actionType, reason);
     await readModel.reload();
     return response.approval;
   }, [readModel]);
   return {
     ...readModel,
-    requestRoleAssignment: (staffId: string, roleId: string, reason: string) =>
-      requestChange(staffId, roleId, "staff_role_assignment", reason),
-    requestRoleRevocation: (staffId: string, roleId: string, reason: string) =>
-      requestChange(staffId, roleId, "staff_role_revocation", reason),
+    requestRoleAssignment: (staffId: string, roleName: string, reason: string) =>
+      requestChange(staffId, roleName, "staff_role_assignment", reason),
+    requestRoleRevocation: (staffId: string, roleName: string, reason: string) =>
+      requestChange(staffId, roleName, "staff_role_revocation", reason),
   };
 }
 
 export function useRoleAssignmentApprovalController(
   authKind: string,
   status: DshRoleAssignmentApprovalStatus | "" = "pending",
+  enabled = true,
 ) {
   const loader = useCallback(
     async (): Promise<DshRoleAssignmentApproval[]> => (await fetchRoleAssignmentApprovals(status)).approvals,
     [status],
   );
-  const { state, reload } = useReadModel(authKind, loader);
+  const { state, reload } = useReadModel(authKind, loader, enabled);
 
   const review = useCallback(async (
     approvalId: string,
@@ -151,12 +154,13 @@ export function useRoleAssignmentApprovalController(
 export function useAdministrationRollbackController(
   authKind: string,
   status: DshAdministrationApprovalStatus | "" = "pending",
+  enabled = true,
 ) {
   const loader = useCallback(
     async (): Promise<DshAdministrationRollbackRequest[]> => (await fetchRollbackRequests(status)).requests,
     [status],
   );
-  const { state, reload } = useReadModel(authKind, loader);
+  const { state, reload } = useReadModel(authKind, loader, enabled);
   const review = useCallback(async (
     requestId: string,
     decision: "approved" | "rejected",
@@ -169,25 +173,30 @@ export function useAdministrationRollbackController(
   return { state, reload, review };
 }
 
-export function useAdministrationDiagnosticsController(authKind: string) {
+export function useAdministrationDiagnosticsController(authKind: string, enabled = true) {
   const loader = useCallback(
     async (): Promise<DshAdministrationDiagnostics> => (await fetchAdministrationDiagnostics()).diagnostics,
     [],
   );
-  return useReadModel(authKind, loader);
+  return useReadModel(authKind, loader, enabled);
 }
 
-export function usePartnerActivationReadController(authKind: string) {
+export function usePartnerActivationReadController(authKind: string, enabled = true) {
   const loader = useCallback(async (): Promise<DshPartnerActivation[]> => (await fetchPartnerActivations()).activations, []);
-  return useReadModel(authKind, loader);
+  return useReadModel(authKind, loader, enabled);
 }
 
-export function useCaptainCredentialController(authKind: string) {
+export function useCaptainCredentialController(authKind: string, enabled = true) {
   const loader = useCallback(async (): Promise<DshCaptainCredential[]> => (await fetchCaptainCredentials()).credentials, []);
-  return useReadModel(authKind, loader);
+  return useReadModel(authKind, loader, enabled);
 }
 
-export function useAdminAuditController(authKind: string) {
+export function useAdminAuditController(authKind: string, enabled = true) {
   const loader = useCallback(async (): Promise<DshAdminAuditEntry[]> => (await fetchAdminAudit()).audit, []);
-  return useReadModel(authKind, loader);
+  return useReadModel(authKind, loader, enabled);
+}
+
+export function useAdministrationPermissionVocabularyController(authKind: string, enabled = true) {
+  const loader = useCallback(async (): Promise<DshPermissionVocabularyEntry[]> => (await fetchPermissionVocabulary()).permissions, []);
+  return useReadModel(authKind, loader, enabled);
 }

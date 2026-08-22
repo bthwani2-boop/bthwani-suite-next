@@ -62,7 +62,7 @@ func writeSupportRequestError(w http.ResponseWriter, err error) {
 }
 
 func (s *administrationSupportServer) handleCreateRequest(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.protected.requireAdministrationPermission(w, r, AdministrationPermissionManage)
+	actor, ok := s.protected.requireAdministrationPermission(w, r, "support.manage")
 	if !ok {
 		return
 	}
@@ -85,7 +85,7 @@ func (s *administrationSupportServer) handleCreateRequest(w http.ResponseWriter,
 }
 
 func (s *administrationSupportServer) handleListRequests(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.protected.requireAdministrationPermission(w, r, AdministrationPermissionRead)
+	_, ok := s.protected.requireAdministrationPermission(w, r, "support.read")
 	if !ok {
 		return
 	}
@@ -98,7 +98,7 @@ func (s *administrationSupportServer) handleListRequests(w http.ResponseWriter, 
 }
 
 func (s *administrationSupportServer) handleReviewRequest(w http.ResponseWriter, r *http.Request) {
-	checker, ok := s.protected.requireAdministrationPermission(w, r, AdministrationPermissionApprove)
+	checker, ok := s.protected.requireAdministrationPermission(w, r, "support.manage")
 	if !ok {
 		return
 	}
@@ -141,7 +141,7 @@ func (s *administrationSupportServer) handleReviewRequest(w http.ResponseWriter,
 }
 
 func (s *administrationSupportServer) handleRevokeRequest(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.protected.requireAdministrationPermission(w, r, AdministrationPermissionApprove)
+	actor, ok := s.protected.requireAdministrationPermission(w, r, "support.manage")
 	if !ok {
 		return
 	}

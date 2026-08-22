@@ -733,25 +733,41 @@ DshUpsertCapacityConfigRequest:
     maxConcurrentOrders: { type: integer }
     warningThreshold: { type: number }
 
+DshPermissionBinding:
+  type: object
+  required: [service, surface, action, scope]
+  properties:
+    service: { type: string }
+    surface: { type: string }
+    action: { type: string }
+    scope: { type: string }
+
 DshAdminRole:
   type: object
-  required: [id, name, permissions, createdAt]
+  required: [id, name, description, active, permissions, surfaces, version, createdAt, updatedAt]
   properties:
     id: { type: string }
     name: { type: string }
+    description: { type: string }
+    active: { type: boolean }
     permissions:
       type: array
-      items: { type: string }
+      items: { $ref: "#/DshPermissionBinding" }
+    surfaces:
+      type: array
+      minItems: 1
+      items: { type: string, enum: [control-panel] }
+    version: { type: integer, minimum: 1 }
     createdAt: { type: string, format: date-time }
+    updatedAt: { type: string, format: date-time }
 
 DshAdminRolesListResponse:
   type: object
-  required: [roles, total]
+  required: [roles]
   properties:
     roles:
       type: array
       items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshAdminRole" }
-    total: { type: integer }
 
 DshAdminRoleResponse:
   type: object
@@ -770,9 +786,10 @@ DshCreateAdminRoleRequest:
 
 DshStaffMember:
   type: object
-  required: [id, username, roles, createdAt]
+  required: [id, actorId, username, roles, createdAt]
   properties:
     id: { type: string }
+    actorId: { type: string }
     username: { type: string }
     roles:
       type: array
@@ -790,9 +807,11 @@ DshStaffListResponse:
 
 DshAssignStaffRoleRequest:
   type: object
-  required: [roleId]
+  required: [roleName, actionType, reason]
   properties:
-    roleId: { type: string }
+    roleName: { type: string, minLength: 1 }
+    actionType: { type: string, enum: [staff_role_assignment, staff_role_revocation] }
+    reason: { type: string, minLength: 5, maxLength: 1000 }
 
 DshAdminAuditEntry:
   type: object

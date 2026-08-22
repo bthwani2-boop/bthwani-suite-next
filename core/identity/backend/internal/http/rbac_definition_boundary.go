@@ -71,17 +71,33 @@ func handleRoleDefinitionRead(authority *identity.PermissionEnforcer) http.Handl
 
 func handleRoleDefinitionWrite(authority *identity.PermissionEnforcer) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+		if idempotencyKey == "" {
+			sendError(w, http.StatusBadRequest, "INVALID_IDEMPOTENCY_KEY", identity.ErrIdempotencyKeyRequired.Error())
+			return
+		}
 		var request struct {
-			Description string                `json:"description"`
-			Permissions []identity.Permission `json:"permissions"`
+			Description     string                `json:"description"`
+			Active          *bool                 `json:"active"`
+			ExpectedVersion *int                  `json:"expectedVersion"`
+			Permissions     []identity.Permission `json:"permissions"`
 		}
 		if !decodeJSON(w, r, &request) {
 			return
 		}
-		role, err := authority.UpsertRoleDefinition(r.Context(), r.PathValue("roleName"), request.Description, request.Permissions)
+		if request.Active == nil || request.ExpectedVersion == nil || *request.ExpectedVersion < 0 {
+			sendError(w, http.StatusBadRequest, "INVALID_ROLE_DEFINITION", "active and expectedVersion are required")
+			return
+		}
+		active := *request.Active
+		expectedVersion := *request.ExpectedVersion
+		role, err := authority.UpsertRoleDefinitionWithOptions(r.Context(), r.PathValue("roleName"), request.Description, active, expectedVersion, request.Permissions, idempotencyKey, "dsh")
 		switch {
-		case errors.Is(err, identity.ErrInvalidRoleName), errors.Is(err, identity.ErrPermissionNotInVocabulary):
+		case errors.Is(err, identity.ErrInvalidRoleName), errors.Is(err, identity.ErrPermissionNotInVocabulary), errors.Is(err, identity.ErrIdempotencyKeyRequired):
 			sendError(w, http.StatusBadRequest, "INVALID_ROLE_DEFINITION", err.Error())
+			return
+		case errors.Is(err, identity.ErrIdempotencyConflict), errors.Is(err, identity.ErrRoleVersionConflict):
+			sendError(w, http.StatusConflict, "ROLE_DEFINITION_CONFLICT", err.Error())
 			return
 		case err != nil:
 			sendError(w, http.StatusBadRequest, "INVALID_ROLE_DEFINITION", err.Error())

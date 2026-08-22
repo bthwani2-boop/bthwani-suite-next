@@ -222,9 +222,30 @@
     },
     {
       "ordinal": 271,
+      "file": "dsh-1033_admin_role_name_canonicalization.sql",
+      "sha256": "78d40692ed55aac23a1cc4c88395c9c7895e129c01527b55d6552beba836f2f6",
+      "historicalPrefix": "1033",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 272,
+      "file": "dsh-1034_admin_canonical_mutation_intents.sql",
+      "sha256": "3e67494c54b11edb2acf7e67f6b60dc388f23ec48902a44b2102b4d378f525fd",
+      "historicalPrefix": "1034",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 273,
       "file": "dsh-1000_order_delivery_geofence_snapshot.sql",
       "sha256": "201180fe0191f3a5cec0e78c0fa37b7e74d3fffe68e8ef663d97ac22b40db555",
       "historicalPrefix": "1000",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 274,
+      "file": "dsh-1035_admin_pending_role_change_exclusion.sql",
+      "sha256": "d40e81b97e2f8b9cf5184bb5f7a687900481546b88be05187d97995c2c99aaa3",
+      "historicalPrefix": "1035",
       "state": "ACTIVE"
     }
   ]

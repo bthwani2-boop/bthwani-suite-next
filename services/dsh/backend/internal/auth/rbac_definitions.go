@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/url"
+	"time"
 )
 
 var ErrRbacInvalidRoleDefinition = errors.New("invalid canonical role definition")
@@ -25,6 +26,10 @@ type RbacRoleDefinition struct {
 	ID          string       `json:"id"`
 	Name        string       `json:"name"`
 	Description string       `json:"description"`
+	Active      bool         `json:"active"`
+	Version     int          `json:"version"`
+	CreatedAt   time.Time    `json:"createdAt"`
+	UpdatedAt   time.Time    `json:"updatedAt"`
 	Permissions []Permission `json:"permissions"`
 }
 
@@ -80,11 +85,13 @@ func (c *Client) GetRoleDefinition(ctx context.Context, roleName string) (RbacRo
 // UpsertRoleDefinition makes the Identity-owned role exactly match the supplied
 // canonical permission bindings. Identity validates the vocabulary and commits
 // the role plus bindings atomically.
-func (c *Client) UpsertRoleDefinition(ctx context.Context, roleName, description string, permissions []Permission) (RbacRoleDefinition, error) {
-	resp, err := c.rbacRequest(ctx, http.MethodPut, "/internal/rbac/role-definitions/"+url.PathEscape(roleName), nil, map[string]any{
-		"description": description,
-		"permissions": permissions,
-	})
+func (c *Client) UpsertRoleDefinition(ctx context.Context, roleName, description string, active bool, expectedVersion int, permissions []Permission, idempotencyKey string) (RbacRoleDefinition, error) {
+	resp, err := c.rbacRequestWithHeaders(ctx, http.MethodPut, "/internal/rbac/role-definitions/"+url.PathEscape(roleName), nil, map[string]any{
+		"description":     description,
+		"active":          active,
+		"expectedVersion": expectedVersion,
+		"permissions":     permissions,
+	}, map[string]string{"Idempotency-Key": idempotencyKey})
 	if err != nil {
 		return RbacRoleDefinition{}, err
 	}
@@ -98,6 +105,8 @@ func (c *Client) UpsertRoleDefinition(ctx context.Context, roleName, description
 		return role, nil
 	case http.StatusBadRequest:
 		return RbacRoleDefinition{}, ErrRbacInvalidRoleDefinition
+	case http.StatusConflict:
+		return RbacRoleDefinition{}, ErrRbacVersionConflict
 	default:
 		return RbacRoleDefinition{}, ErrIdentityUnavailable
 	}

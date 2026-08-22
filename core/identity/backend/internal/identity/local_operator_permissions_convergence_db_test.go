@@ -21,11 +21,19 @@ func TestLocalBootstrapConvergenceDetectsAndRepairsOperatorPermissionDriftDBInte
 	if err != nil {
 		t.Fatalf("marshal under-privileged operator fixture: %v", err)
 	}
-	if _, err := db.Exec(`
-UPDATE identity_actors
-SET permissions = $1::jsonb
-WHERE id = 'operator-local-001'`, string(underPrivilegedJSON)); err != nil {
+	driftTx, err := db.Begin()
+	if err != nil {
+		t.Fatalf("begin projection drift fixture: %v", err)
+	}
+	if _, err := driftTx.Exec(`SELECT set_config('bthwani.identity_access_projection', '1', true)`); err != nil {
+		t.Fatalf("enable projection fixture: %v", err)
+	}
+	if _, err := driftTx.Exec(`UPDATE identity_actors SET permissions = $1::jsonb WHERE id = 'operator-local-001'`, string(underPrivilegedJSON)); err != nil {
+		_ = driftTx.Rollback()
 		t.Fatalf("corrupt operator actor permissions: %v", err)
+	}
+	if err := driftTx.Commit(); err != nil {
+		t.Fatalf("commit projection drift fixture: %v", err)
 	}
 
 	var operatorRoleID string

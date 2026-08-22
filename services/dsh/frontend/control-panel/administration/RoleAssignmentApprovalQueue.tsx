@@ -16,16 +16,22 @@ import {
   useRoleAssignmentApprovalController,
   useStaffController,
 } from "../../shared/administration";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 
 function actionLabel(actionType: "staff_role_assignment" | "staff_role_revocation"): string {
   return actionType === "staff_role_revocation" ? "سحب الدور" : "إسناد الدور";
 }
 
 export function RoleAssignmentApprovalQueue() {
-  const approvals = useRoleAssignmentApprovalController("authenticated", "pending");
-  const staff = useStaffController("authenticated");
+  const { state: sessionState } = useIdentitySession();
+  const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
+  const canRequest = hasServiceControlPanelPermission(identity, "dsh", "administration.staff.request");
+  const canReview = hasServiceControlPanelPermission(identity, "dsh", "administration.staff.approve");
+  const approvals = useRoleAssignmentApprovalController("authenticated", "pending", canReview);
+  const staff = useStaffController("authenticated", canRequest);
   const [targetActorId, setTargetActorId] = useState("");
-  const [roleId, setRoleId] = useState("");
+  const [roleName, setRoleName] = useState("");
   const [reason, setReason] = useState("");
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const [actionError, setActionError] = useState<string | null>(null);
@@ -37,12 +43,12 @@ export function RoleAssignmentApprovalQueue() {
     setActionError(null);
     try {
       if (actionType === "staff_role_revocation") {
-        await staff.requestRoleRevocation(targetActorId.trim(), roleId.trim(), reason.trim());
+        await staff.requestRoleRevocation(targetActorId.trim(), roleName.trim(), reason.trim());
       } else {
-        await staff.requestRoleAssignment(targetActorId.trim(), roleId.trim(), reason.trim());
+        await staff.requestRoleAssignment(targetActorId.trim(), roleName.trim(), reason.trim());
       }
       setTargetActorId("");
-      setRoleId("");
+      setRoleName("");
       setReason("");
       await approvals.reload();
     } catch (error) {
@@ -67,7 +73,7 @@ export function RoleAssignmentApprovalQueue() {
 
   const formInvalid = submitting
     || targetActorId.trim().length < 2
-    || roleId.trim().length < 2
+    || roleName.trim().length < 2
     || reason.trim().length < 5;
 
   return (
@@ -80,7 +86,10 @@ export function RoleAssignmentApprovalQueue() {
           : undefined
       }
     >
-      <section aria-label="إنشاء طلب تغيير دور">
+      {!canRequest && !canReview ? (
+        <CpStatePanel role="alert" title="صلاحية إسناد أدوار الموظفين مطلوبة" description="لا يتم تحميل طوابير أو إرسال طلبات دون الصلاحية الدقيقة." />
+      ) : null}
+      {canRequest ? <section aria-label="إنشاء طلب تغيير دور">
         <strong>إنشاء طلب تغيير دور</strong>
         <CpTextInput
           value={targetActorId}
@@ -89,10 +98,10 @@ export function RoleAssignmentApprovalQueue() {
           aria-label="معرّف الموظف المستفيد"
         />
         <CpTextInput
-          value={roleId}
-          onChange={setRoleId}
-          placeholder="معرّف الدور"
-          aria-label="معرّف الدور"
+          value={roleName}
+          onChange={setRoleName}
+          placeholder="اسم الدور المعياري"
+          aria-label="اسم الدور"
         />
         <CpTextInput
           value={reason}
@@ -106,15 +115,15 @@ export function RoleAssignmentApprovalQueue() {
         <CpButton variant="secondary" disabled={formInvalid} onClick={() => void requestChange("staff_role_revocation")}>
           إرسال طلب سحب
         </CpButton>
-      </section>
+      </section> : null}
 
       {actionError ? <CpStateView kind="error" title={actionError} /> : null}
 
-      {approvals.state.kind === "success" && approvals.state.data.length === 0 ? (
+      {canReview && approvals.state.kind === "success" && approvals.state.data.length === 0 ? (
         <CpStatePanel role="status" title="لا توجد طلبات تغيير أدوار معلقة." />
       ) : null}
 
-      {approvals.state.kind === "success" && approvals.state.data.length > 0 ? (
+      {canReview && approvals.state.kind === "success" && approvals.state.data.length > 0 ? (
         <CpTable aria-label="طلبات تغيير الأدوار المعلقة">
           <thead>
             <tr>

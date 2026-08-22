@@ -95,7 +95,7 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
         '409': { $ref: '#/components/responses/ErrorResponse' }
       security:
-        - bearerAuth: [ finance.manage, administration.approve ]
+        - bearerAuth: [ finance.manage, finance.payout_destinations.verify ]
   /dsh/control-panel/finance/payout-destinations/{actorType}/{actorId}/deactivate:
     post:
       tags: [ "dsh-control-panel" ]
@@ -115,7 +115,7 @@ paths:
         '400': { $ref: '#/components/responses/ErrorResponse' }
         '403': { $ref: '#/components/responses/ErrorResponse' }
       security:
-        - bearerAuth: [ finance.manage, administration.approve ]
+        - bearerAuth: [ finance.manage, finance.payout_destinations.deactivate ]
   /dsh/control-panel/finance/payout-requests/{payoutId}/audit:
     get:
       tags: [ "dsh-control-panel" ]

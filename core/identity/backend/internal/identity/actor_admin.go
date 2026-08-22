@@ -138,10 +138,17 @@ func (r *Repository) ProvisionActorGoverned(ctx context.Context, input Provision
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO identity_actors
 			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
-		VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, 'PROVISIONED', 1, now())`,
-		actorID, username, operatorContextID, phone, pq.Array([]string{role}), string(permissions))
+		VALUES ($1, $2, '', $3, $4, ARRAY[]::text[], '[]'::jsonb, 'PROVISIONED', 1, now())`,
+		actorID, username, operatorContextID, phone)
 	if err != nil {
 		return ActorAdminView{}, mapUniqueViolation(err)
+	}
+	var actorPermissions []Permission
+	if err := json.Unmarshal(permissions, &actorPermissions); err != nil {
+		return ActorAdminView{}, err
+	}
+	if err := setActorAccessTx(ctx, tx, actorID, []string{role}, actorPermissions, "actor-provision"); err != nil {
+		return ActorAdminView{}, err
 	}
 	if err := tx.Commit(); err != nil {
 		return ActorAdminView{}, err

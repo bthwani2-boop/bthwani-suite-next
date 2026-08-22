@@ -134,11 +134,6 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 		if actor.role == "operator" {
 			actorPermissions = localOperatorDevelopmentPermissions()
 		}
-		permissions, marshalErr := json.Marshal(actorPermissions)
-		if marshalErr != nil {
-			return marshalErr
-		}
-
 		// 1. Ensure the role exists in identity_roles
 		var roleID string
 		err = r.db.QueryRowContext(ctx, `
@@ -153,19 +148,16 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 		_, err = r.db.ExecContext(ctx, `
 			INSERT INTO identity_actors
 				(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'ACTIVE', 1, now())
+			VALUES ($1, $2, $3, $4, $5, ARRAY[]::text[], '[]'::jsonb, 'ACTIVE', 1, now())
 			ON CONFLICT (id) DO UPDATE SET
 				username = EXCLUDED.username,
 				password_hash = EXCLUDED.password_hash,
 				operator_context_id = EXCLUDED.operator_context_id,
 				phone_e164 = EXCLUDED.phone_e164,
-				roles = EXCLUDED.roles,
-				permissions = EXCLUDED.permissions,
 				status = 'ACTIVE',
 				version = identity_actors.version + 1,
 				updated_at = now()`,
-			actor.id, actor.username, string(hash), operatorContextID, actor.phone,
-			pq.Array([]string{actor.role}), string(permissions))
+			actor.id, actor.username, string(hash), operatorContextID, actor.phone)
 		if err != nil {
 			return err
 		}
@@ -894,14 +886,13 @@ func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInp
 		if err != nil {
 			return ActorAdminView{}, err
 		}
-		_, err = tx.ExecContext(ctx, `
-			UPDATE identity_actors
-			SET roles = array_append(roles, $2),
-			    permissions = permissions || $3::jsonb,
-			    updated_at = now()
-			WHERE id = $1 AND NOT ($2 = ANY(roles))`,
-			existing.ID, role, string(permissionsJSON))
-		if err != nil {
+		var requestedPermissions []Permission
+		if err := json.Unmarshal(permissionsJSON, &requestedPermissions); err != nil {
+			return ActorAdminView{}, err
+		}
+		roles := append([]string{}, existing.Roles...)
+		roles = append(roles, role)
+		if err := setActorAccessTx(ctx, tx, existing.ID, roles, mergeEmployeePermissions(existing.Permissions, requestedPermissions), "workforce-provision"); err != nil {
 			return ActorAdminView{}, err
 		}
 		if err := tx.Commit(); err != nil {
@@ -922,10 +913,17 @@ func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInp
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO identity_actors
 			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
-		VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, 'PROVISIONED', 1, now())`,
-		actorID, username, operatorContextID, phone, pq.Array([]string{role}), string(permissions))
+		VALUES ($1, $2, '', $3, $4, ARRAY[]::text[], '[]'::jsonb, 'PROVISIONED', 1, now())`,
+		actorID, username, operatorContextID, phone)
 	if err != nil {
 		return ActorAdminView{}, mapUniqueViolation(err)
+	}
+	var requestedPermissions []Permission
+	if err := json.Unmarshal(permissions, &requestedPermissions); err != nil {
+		return ActorAdminView{}, err
+	}
+	if err := setActorAccessTx(ctx, tx, actorID, []string{role}, requestedPermissions, "workforce-provision"); err != nil {
+		return ActorAdminView{}, err
 	}
 	if err := tx.Commit(); err != nil {
 		return ActorAdminView{}, err

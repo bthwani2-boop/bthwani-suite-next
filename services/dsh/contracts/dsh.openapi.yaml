@@ -1049,6 +1049,8 @@ paths:
     $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1role-requests~1{requestId}~1review"
   /dsh/operator/admin/roles/requests:
     $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1roles~1requests"
+  /dsh/operator/admin/permission-vocabulary:
+    $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1permission-vocabulary"
   /dsh/operator/admin/rollback-requests/{requestId}/review:
     $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1rollback-requests~1{requestId}~1review"
   /dsh/operator/admin/approvals:

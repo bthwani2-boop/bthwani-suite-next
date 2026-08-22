@@ -14,6 +14,7 @@ import (
 var (
 	ErrNotFound = errors.New("not found")
 	ErrInvalid  = errors.New("invalid input")
+	ErrConflict = errors.New("request conflicts with another pending role change")
 	// ErrIdentityUnavailable is returned when a review requires a canonical
 	// Identity mutation but no Identity client is configured.
 	ErrIdentityUnavailable = errors.New("identity is unavailable")
@@ -32,6 +33,10 @@ type Role struct {
 	ID          string            `json:"id"`
 	Name        string            `json:"name"`
 	Description string            `json:"description"`
+	Active      bool              `json:"active"`
+	Version     int               `json:"version"`
+	CreatedAt   time.Time         `json:"createdAt"`
+	UpdatedAt   time.Time         `json:"updatedAt"`
 	Permissions []auth.Permission `json:"permissions"`
 	Surfaces    []string          `json:"surfaces"`
 }
@@ -56,13 +61,17 @@ func roleFromCanonical(definition auth.RbacRoleDefinition) Role {
 		ID:          definition.ID,
 		Name:        definition.Name,
 		Description: definition.Description,
+		Active:      definition.Active,
+		Version:     definition.Version,
+		CreatedAt:   definition.CreatedAt,
+		UpdatedAt:   definition.UpdatedAt,
 		Permissions: permissions,
 		Surfaces:    surfaces,
 	}
 }
 
 // ListRoles reads role shells and each complete definition from Identity. DSH
-// no longer reads dsh_admin_roles as a role-definition truth source.
+// does not retain a local role-definition registry.
 func ListRoles(ctx context.Context, identityClient *auth.Client) ([]Role, error) {
 	if identityClient == nil {
 		return nil, ErrIdentityUnavailable
@@ -80,25 +89,6 @@ func ListRoles(ctx context.Context, identityClient *auth.Client) ([]Role, error)
 		out = append(out, roleFromCanonical(definition))
 	}
 	return out, nil
-}
-
-// AdministrationPermissionCandidates keeps legacy broad permissions working
-// while allowing least-privilege permissions for each governed operation.
-func AdministrationPermissionCandidates(action string) []string {
-	action = strings.TrimSpace(action)
-	if !strings.HasPrefix(action, "administration.") {
-		return nil
-	}
-	candidates := []string{action}
-	switch action {
-	case "administration.role.request", "administration.staff.request", "administration.rollback.request":
-		candidates = append(candidates, "administration.manage")
-	case "administration.role.approve", "administration.staff.approve", "administration.rollback.approve":
-		candidates = append(candidates, "administration.approve")
-	case "administration.audit.read", "administration.diagnostics.read":
-		candidates = append(candidates, "administration.read")
-	}
-	return candidates
 }
 
 // PartnerActivation is a privacy-minimized read-only compatibility projection.

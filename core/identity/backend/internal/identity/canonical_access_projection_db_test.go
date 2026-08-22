@@ -12,6 +12,7 @@ import (
 func cleanupCanonicalAccessProjectionTest(t *testing.T, db *sql.DB, actorID, roleName string) {
 	t.Helper()
 	cleanup := func() {
+		_, _ = db.Exec(`DELETE FROM identity_rbac_operation_ledger WHERE caller = 'identity' AND (idempotency_key LIKE $1 OR idempotency_key LIKE $2)`, "legacy-grant:"+actorID+":%", "legacy-revoke:"+actorID+":%")
 		_, _ = db.Exec(`DELETE FROM identity_actors WHERE id = $1`, actorID)
 		_, _ = db.Exec(`DELETE FROM identity_roles WHERE name = $1`, roleName)
 		_, _ = db.Exec(`
@@ -60,23 +61,18 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 	directPermissions := []Permission{{
 		Service: "dsh", Surface: "control-panel", Action: "platform.read", Scope: "all",
 	}}
-	directJSON, err := json.Marshal(directPermissions)
-	if err != nil {
-		t.Fatalf("marshal direct permissions: %v", err)
-	}
-
-	_, err = db.Exec(`
+	_, err := db.Exec(`
 		INSERT INTO identity_actors
 		    (id, username, password_hash, operator_context_id, phone_e164,
 		     roles, permissions, status, version, updated_at)
-		VALUES ($1, $2, '', 'local-dsh', NULL, ARRAY['employee']::text[], $3::jsonb, 'ACTIVE', 1, now())`,
-		actorID, actorID, string(directJSON))
+		VALUES ($1, $2, '', 'local-dsh', NULL, ARRAY[]::text[], '[]'::jsonb, 'ACTIVE', 1, now())`,
+		actorID, actorID)
 	if err != nil {
 		t.Fatalf("insert actor: %v", err)
 	}
 
-	role, err := repository.Enforcer.CreateRole(context.Background(), roleName, "Agent 2 canonical access projection test")
-	if err != nil {
+	var role RbacRole
+	if err := db.QueryRow(`INSERT INTO identity_roles(name, description) VALUES ($1, $2) RETURNING id, name, description, active, version, created_at, updated_at`, roleName, "Agent 2 canonical access projection test").Scan(&role.ID, &role.Name, &role.Description, &role.Active, &role.Version, &role.CreatedAt, &role.UpdatedAt); err != nil {
 		t.Fatalf("create role: %v", err)
 	}
 
@@ -96,6 +92,9 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 		ON CONFLICT (role_id, permission_id) DO UPDATE SET scope = EXCLUDED.scope`,
 		role.ID, permissionID); err != nil {
 		t.Fatalf("attach permission to role: %v", err)
+	}
+	if err := repository.replaceActorAccess(context.Background(), actorID, []string{"employee"}, directPermissions, "projection-test"); err != nil {
+		t.Fatalf("seed canonical actor access: %v", err)
 	}
 
 	accessToken := "agent2-existing-session-access-token"
@@ -140,15 +139,14 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 		t.Fatalf("existing session did not observe role-derived permission: %#v", granted.Permissions)
 	}
 
-	// Simulate a legacy Identity writer that reads the effective projection and
-	// writes it back. The canonical capture trigger must not promote the
-	// role-derived permission into an independent direct grant.
+	// Legacy projection writes are rejected. Canonical role-derived authority is
+	// rebuilt only by normalized Identity writers.
 	effectiveJSON, err := json.Marshal(granted.Permissions)
 	if err != nil {
 		t.Fatalf("marshal effective permissions: %v", err)
 	}
-	if _, err := db.Exec(`UPDATE identity_actors SET permissions = $2::jsonb WHERE id = $1`, actorID, string(effectiveJSON)); err != nil {
-		t.Fatalf("legacy projection write: %v", err)
+	if _, err := db.Exec(`UPDATE identity_actors SET permissions = $2::jsonb WHERE id = $1`, actorID, string(effectiveJSON)); err == nil {
+		t.Fatal("legacy projection write unexpectedly succeeded")
 	}
 
 	var redundantDirect int

@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"github.com/lib/pq"
 )
 
 // localOperatorDevelopmentPermissions is the single local-development authority
@@ -173,11 +175,6 @@ WHERE role.name = 'operator'`)
 // under-privileged after convergence.
 func (r *Repository) reconcileLocalOperatorDevelopmentPermissions(ctx context.Context, operatorContextID string) error {
 	expected := localOperatorDevelopmentPermissions()
-	permissionsJSON, err := json.Marshal(expected)
-	if err != nil {
-		return err
-	}
-
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -199,14 +196,11 @@ SELECT EXISTS (
 	if !actorExists {
 		return fmt.Errorf("canonical local operator is absent from operator context %q", operatorContextID)
 	}
-	if _, err := tx.ExecContext(ctx, `
-UPDATE identity_actors
-SET permissions = $2::jsonb,
-    version = version + 1,
-    updated_at = now()
-WHERE id = 'operator-local-001'
-  AND operator_context_id = $1
-  AND permissions IS DISTINCT FROM $2::jsonb`, operatorContextID, string(permissionsJSON)); err != nil {
+	var existingRoles pq.StringArray
+	if err := tx.QueryRowContext(ctx, `SELECT roles FROM identity_actors WHERE id = 'operator-local-001' AND operator_context_id = $1`, operatorContextID).Scan(&existingRoles); err != nil {
+		return err
+	}
+	if err := setActorAccessTx(ctx, tx, "operator-local-001", []string(existingRoles), expected, "local-bootstrap"); err != nil {
 		return err
 	}
 
