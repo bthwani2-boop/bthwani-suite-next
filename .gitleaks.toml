@@ -1,0 +1,10 @@
+title = "BThwani Gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Deterministic non-secret idempotency token used by the finance HTTP test"
+paths = ['''services/dsh/backend/internal/http/finance_settlement_sources_test\.go''']
+regexTarget = "secret"
+regexes = ['''idempotency-finance-1''']
