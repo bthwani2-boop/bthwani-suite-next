@@ -19,7 +19,7 @@ permissions:
 
 concurrency:
   group: remote-analysis-evidence-${{ github.event.workflow_run.head_sha || inputs.target_sha || github.sha }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   evidence:
