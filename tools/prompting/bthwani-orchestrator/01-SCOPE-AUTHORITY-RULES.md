@@ -108,6 +108,8 @@ PHASE=AUDIT_PREPARE
 → effective MODE=DIAGNOSE when MODE is omitted
 → target system remains read-only
 → full AUDIT + INSPECT + DIAGNOSE + ANALYZE is mandatory
+→ optimize for material evidence completeness + handoff determinism, not fastest readiness
+→ discover, classify and use every materially applicable available capability under §14 before claiming readiness
 → blocking material DECISION_REQUIRED is resolved before handoff write
 → exactly one temporary PLAN_DIR is mandatory after blocking decisions are resolved
 → PLAN_DIR=AUTO when omitted
@@ -117,7 +119,7 @@ PHASE=AUDIT_PREPARE
 PHASE=EXECUTE_CLOSE
 → effective MODE=EXECUTE_END_TO_END when MODE is omitted
 → use EXECUTE_PROJECT_CLOSURE only when repository-wide closure is explicitly requested
-→ perform the same material AUDIT + INSPECT + DIAGNOSE + ANALYZE needed to establish current truth
+→ perform only the material revalidation/audit needed to establish current truth or respond to invalidation
 → immediately treat the highest proven executable root; do not stop merely to produce a plan/report
 → verify, re-audit/re-diagnose/re-rank and continue root-by-root until CLOSED or a legitimate stop state
 → PLAN_DIR=NONE when omitted
@@ -154,6 +156,7 @@ Semantic ownership inside the handoff is exclusive:
 → Current→Target model
 → authority/ownership + writers/readers/consumers
 → effective working cone + blast radius + negative space
+→ capability/tool coverage ledger
 → material unknown/conflict disposition + remaining-ambiguity class
 
 01-EXECUTION-CONTRACT.md
@@ -163,6 +166,7 @@ Semantic ownership inside the handoff is exclusive:
 → dependency order / parallelization disposition
 → migration/backfill/reconciliation
 → cutover + cleanup/deletion
+→ artifact-disposition / deletion manifest
 → allowed/conditional/read-only/forbidden change cone
 → executor-local freedom + stop/escalation triggers
 
@@ -440,6 +444,32 @@ MISSING REQUIRED CAPABILITY ≠ PASS.
 
 Unavailable required capability becomes an evidence/blocker condition, never an assumed PASS.
 
+### 14.1 `AUDIT_PREPARE` capability saturation
+
+`AUDIT_PREPARE` is deliberately reasoning/evidence heavy. Before `READY_FOR_EXECUTION`, discover the capabilities actually available in the current environment and classify each materially plausible one as:
+
+`REQUIRED_APPLICABLE | SUPPORTING_APPLICABLE | N/A_PROVEN | UNAVAILABLE_BLOCKER`.
+
+For every `REQUIRED_APPLICABLE` capability, use it and record the material result/provenance/proof limit in the audit-truth capability ledger. Use `SUPPORTING_APPLICABLE` capabilities when they can materially increase confidence, expose negative space, falsify a root, improve artifact disposition, or make execution more deterministic. Capability families may include repository/code/history search, static/code-quality analysis, code scanning/security analysis, review analyzers, dependency/supply-chain analysis, contracts/generated bindings, tests/type/lint/build, database/runtime/readback, CI/repository-platform state, observability, connected services, and authoritative external technical research.
+
+Do not stop because one strong tool is green. Correlate independent evidence classes where doing so can materially change the handoff. Do not copy huge raw logs into `PLAN_DIR`; reference authoritative results with enough provenance and proof limits.
+
+Evidence saturation for preparation is reached only when further **materially applicable available** capabilities/sources are not reasonably capable of changing the proven roots, Canonical Target, working cone/blast radius, writers/readers/consumers, artifact disposition, execution frontier, or verification/closure contract. Wall-clock speed is not the optimization target for this phase.
+
+### 14.2 Hierarchical agent authority
+
+When subordinate-agent capability exists, use **one `PRIMARY_COORDINATOR` with zero or more `SUBAGENT`s**. Peer primary authorities are forbidden for one invocation/objective.
+
+The `PRIMARY_COORDINATOR` exclusively owns:
+
+`project-frame reconciliation | Canonical Truth/authority decisions | root landscape/ranking | handoff ownership | task decomposition | subagent scopes | shared write-set/collision resolution | current-HEAD reconciliation | integration/ref movement | readiness decision | final closure decision`.
+
+A `SUBAGENT` receives a bounded delegated cone and may, as supported and explicitly delegated, inspect evidence, run tools/checks, reconstruct a specialized trace, search negative space, inventory writers/readers/consumers/artifacts, independently challenge a hypothesis, verify claims, or execute an independent non-overlapping treatment unit under the coordinator's settled target. A subagent must return provenance, findings, contradictions, proof limits and any proposed/actual write set to the coordinator.
+
+A `SUBAGENT` must not independently redefine Product/System truth, authority, ownership, architecture, migration/cutover semantics, write a competing plan, create/switch branches, move integration refs, resolve cross-cone conflicts, or declare `READY_FOR_EXECUTION`/`CLOSED`.
+
+Use subagents aggressively for materially independent read-only audit/evidence work and safely parallel verification. For target-system writes, parallel subagent mutation is allowed only when the coordinator proves non-overlapping safe write/cutover boundaries and retains the single integration/ref authority; otherwise subagents remain read-only/proposal-producing and the coordinator serializes mutation. If subordinate-agent capability is unavailable, the primary coordinator performs the same obligations sequentially; absence of subagents does not weaken proof.
+
 Package independence/self-validation rules remain owned exclusively by `00-ORCHESTRATOR.md`.
 
 ## 15. Foreign/concurrent delta classification
@@ -469,7 +499,18 @@ A prepared handoff is valid only while its `PLANNED_HEAD` assumptions remain val
 
 Never force-push, blindly hard-reset newer work, silently switch branches or discard foreign changes.
 
-Branch/workspace strategy is owned here. Branch creation is never an automatic side effect of a generic lifecycle: create or switch to a branch/workspace only when the current human instruction, repository policy or explicitly authorized execution topology requires/allows it and the exact base/ref is proven. Otherwise remain on the authorized existing target/workspace. Other files may request this resolution but must not independently mandate branch creation.
+### 16.1 Human-only branch creation
+
+```text
+BRANCH_CREATION_AUTHORITY = HUMAN_ONLY
+AGENT_AUTOMATIC_BRANCH_CREATION = FORBIDDEN
+```
+
+An agent must never create a branch on its own, derive a branch name, or create a fix/closure/integration/temporary branch because a lifecycle, repository policy, PR requirement, isolation preference or tool suggests one. Repository policy that would require a new branch/PR does **not** itself grant branch-creation authority.
+
+An explicitly supplied existing `BRANCH`/ref is binding for baseline and target selection: do not substitute the repository default branch or another integration branch. When the human authorizes direct writes to that existing branch, operate there. Switching to another already-existing branch/workspace requires explicit human authorization for that target.
+
+If correct execution requires a branch that does not already exist and has not been human-created/authorized, stop only that dependent write cone with `HUMAN_ACTION_REQUIRED`, report the exact required branch/base/reason, and continue any independent read-only work. Do not create the branch as a convenience or unblocker.
 
 Before materially irreversible/protected actions such as production data mutation, destructive backfill, secret/key rotation, external financial/provider mutation, release/deploy/merge/tag or infrastructure destruction, prove current authority, exact target/environment, scope, candidate/change binding when relevant and rollback/compensation where possible.
 
