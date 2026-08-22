@@ -133,37 +133,60 @@ async function sonarPaged(endpoint, params, property, pageSize = 500, maxPages =
 }
 
 function expectedWorkflows() {
-  const names = ["BThwani Contextual CI", "CodeQL", "SonarQube Cloud"];
-  const security = fs.readFileSync(".github/workflows/security-remote.yml", "utf8");
-  if (/^\s{2}(?:pull_request|push):/m.test(security)) names.push("Remote Security");
-  return names;
+  return [
+    { name: "BThwani Contextual CI", path: ".github/workflows/ci.yml" },
+    { name: "CodeQL", path: ".github/workflows/codeql.yml" },
+    { name: "SonarQube Cloud", path: ".github/workflows/sonarqube.yml" },
+    { name: "Remote Security", path: ".github/workflows/security-remote.yml" },
+  ];
 }
 
 async function waitForExactWorkflows() {
-  const names = expectedWorkflows();
+  const workflows = expectedWorkflows();
+  const targetBranch = targetRef.slice("refs/heads/".length);
   const deadline = Date.now() + waitSeconds * 1000;
   while (true) {
-    const response = await gh(`/actions/runs?head_sha=${encodeURIComponent(targetSha)}&per_page=100`);
+    const response = await gh(
+      `/actions/runs?head_sha=${encodeURIComponent(targetSha)}` +
+      `&branch=${encodeURIComponent(targetBranch)}` +
+      `&event=${encodeURIComponent(targetEvent)}` +
+      "&per_page=100",
+    );
     const runs = Array.isArray(response?.workflow_runs)
-      ? response.workflow_runs.filter((run) => run.head_sha === targetSha && run.event === targetEvent)
+      ? response.workflow_runs.filter((run) =>
+          run.head_sha === targetSha &&
+          run.head_branch === targetBranch &&
+          run.event === targetEvent,
+        )
       : [];
     const selected = {};
-    for (const name of names) {
-      const matches = runs.filter((run) => run.name === name)
+    for (const workflow of workflows) {
+      const matches = runs
+        .filter((run) => run.name === workflow.name && run.path === workflow.path)
         .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
-      if (matches[0]) selected[name] = matches[0];
+      if (matches[0]) selected[workflow.name] = matches[0];
     }
-    const missing = names.filter((name) => !selected[name]);
-    const pending = names.filter((name) => selected[name] && selected[name].status !== "completed");
+    const missing = workflows.filter((workflow) => !selected[workflow.name]);
+    const pending = workflows.filter((workflow) => selected[workflow.name] && selected[workflow.name].status !== "completed");
     if (!missing.length && !pending.length) {
-      const failed = names.filter((name) => selected[name].conclusion !== "success");
-      evidence.workflows = { expected: names, selected };
-      if (failed.length) fail(`exact-SHA workflows failed: ${failed.map((name) => `${name}:${selected[name].conclusion}`).join(", ")}`);
+      const failed = workflows.filter((workflow) => selected[workflow.name].conclusion !== "success");
+      evidence.workflows = { expected: workflows, selected };
+      if (failed.length) {
+        fail(`exact-SHA workflows failed: ${failed.map((workflow) => `${workflow.name}:${selected[workflow.name].conclusion}`).join(", ")}`);
+      }
       return;
     }
     if (Date.now() >= deadline) {
-      evidence.workflows = { expected: names, selected, missing, pending };
-      fail(`timed out waiting for exact-SHA workflows; missing=${missing.join(",") || "none"}; pending=${pending.join(",") || "none"}`);
+      evidence.workflows = {
+        expected: workflows,
+        selected,
+        missing: missing.map((workflow) => workflow.name),
+        pending: pending.map((workflow) => workflow.name),
+      };
+      fail(
+        `timed out waiting for exact-SHA workflows; missing=${missing.map((workflow) => workflow.name).join(",") || "none"}; ` +
+        `pending=${pending.map((workflow) => workflow.name).join(",") || "none"}`,
+      );
     }
     await new Promise((resolve) => setTimeout(resolve, pollSeconds * 1000));
   }
