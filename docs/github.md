@@ -1,59 +1,66 @@
 # GitHub and CI Operations
 
-This document is operational guidance. It does not override `AGENTS.md`, `governance/GOVERNANCE.md`, or `governance/policies/delivery.md`.
+This document records the executable control plane. It does not override `AGENTS.md`, governance, or Product/System Truth.
 
-## Live authority model
+## Canonical remote model
 
-Do not maintain a second workflow, guard, agent, or SDLC registry as repository truth. The repository intentionally has no workflow registry. Executable authority is the current implementation plus live GitHub state on the exact candidate SHA.
+All governed analysis and verification runs remotely. A workstation, ChatGPT, Codex, Antigravity, or another IDE may **control and read** remote authorities, but must not become a scanner/CI authority.
 
-The primary GitHub execution authorities are:
+```text
+ChatGPT / Codex / IDE / gh
+  -> exact ref + SHA request
+  -> .github/workflows/remote-command.yml
+  -> canonical GitHub-hosted / cloud authority
+  -> candidate-bound logs + artifacts + findings
+  -> .github/workflows/remote-analysis-evidence.yml
+  -> normalized evidence for root-cause review
+```
 
-- contextual routing and aggregate CI result: `.github/workflows/ci.yml`;
-- reusable Node diagnostics and verification: `.github/workflows/ci-node-diagnostics.yml` and `.github/workflows/ci-node-verification.yml`;
-- reusable backend verification: `.github/workflows/ci-backends.yml`;
-- reusable runtime proof: `.github/workflows/ci-runtime.yml`;
-- canonical CodeQL scanner authority: `.github/workflows/codeql.yml`;
-- API-only CodeQL metadata maintenance after successful canonical master analysis: `.github/workflows/codeql-hygiene.yml`;
-- SonarQube Cloud scan: `.github/workflows/sonarqube.yml`;
-- remote security scans: `.github/workflows/security-remote.yml`;
-- dependency delta review: `.github/workflows/dependency-review.yml`;
-- frozen lockfile verification: `.github/workflows/lockfile-integrity.yml`;
-- exact-master remote CodeQL/Sonar read-back: `.github/workflows/remote-analysis-evidence.yml`;
-- authenticated SHA-pinned command ingress: `.github/workflows/remote-command.yml`.
+Do not create a second workflow registry or local scanner path. Executable authority is the live repository implementation plus live GitHub/cloud state on the exact candidate SHA.
 
-This list describes executable entry points; it is not a registry and must not be copied into another machine-authority layer.
+## Execution authorities
 
-Actual branch protection, rulesets, required checks, workflow outcomes, reviews, code-scanning state, and approval freshness must be read from GitHub live for the exact target branch and candidate SHA.
+- Contextual verification owner: `.github/workflows/ci.yml`.
+- Reusable CI: `ci-node-diagnostics.yml`, `ci-node-verification.yml`, `ci-backends.yml`, `ci-runtime.yml`.
+- Deep SAST: `.github/workflows/codeql.yml`.
+- Fast/custom SAST: `.github/workflows/semgrep.yml`.
+- Quality/coverage: `.github/workflows/sonarqube.yml`.
+- Secrets, dependency/security/config/workflow/shell/docker/yaml checks: `.github/workflows/security-remote.yml`.
+- Dependency delta admission: `.github/workflows/dependency-review.yml`.
+- Frozen lockfile determinism: `.github/workflows/lockfile-integrity.yml`.
+- Deep semantic review: `.github/workflows/open-code-review.yml` using trusted-base `.opencodereview/rule.json`.
+- Dependency automation: `.github/dependabot.yml`; remote state/read-back: `.github/workflows/dependabot-audit.yml`.
+- CodeQL metadata audit/repair: `.github/workflows/codeql-hygiene.yml`; repair is default-branch-only.
+- Thin full-suite coordinator: `.github/workflows/remote-toolchain.yml`; it dispatches authorities and contains no scanner logic.
+- Exact-SHA read-back: `.github/workflows/remote-analysis-evidence.yml`.
+- Authenticated agent/IDE ingress: `.github/workflows/remote-command.yml`.
 
-## Repository flow
+## Remote-only law
 
-Before every material write:
+The repository control path must not require local CodeQL databases, local `semgrep scan/ci`, local OpenCodeReview execution, local SonarQube/Sonar Scanner, or local Gitleaks/OSV/Trivy/actionlint/zizmor/pinact/ShellCheck/Hadolint/yamllint execution.
 
-1. resolve the current user-named target ref and live SHA;
-2. reconcile unexpected branch movement;
-3. write only the authorized logical change;
-4. never force/reset newer unrelated work;
-5. re-resolve after the write and before any merge or closure claim.
+GitHub-hosted runners may install pinned scanner binaries as part of their canonical workflow. That is remote execution, not workstation execution.
 
-`master` is the release target. A tracked file cannot prove that GitHub currently enforces a particular ruleset or required-check set.
+SonarQube IDE/Codex access remains the hosted read-only MCP/API surface. Semgrep/OpenCodeReview and the remaining authorities are controlled through the exact-SHA GitHub ingress unless an official read-only cloud surface is explicitly proven and governed later.
 
-## Remote analysis and security
+## Agent / IDE control
 
-Canonical static/security analysis is remote-owned:
+`tools/scripts/request-remote-toolchain.ps1` is a control client only. It resolves the live branch SHA, creates the strict `[remote-command]` request, and may wait for the canonical GitHub result. It never executes scanners locally.
 
-- CodeQL executes through GitHub Code Scanning on GitHub-hosted runners;
-- SonarQube analysis executes through SonarQube Cloud from GitHub-hosted runners;
-- SonarQube hosted MCP/API is the remote read surface for IDEs and agents that have an appropriate credential;
-- repository security gates execute on GitHub-hosted runners;
-- local scanner execution is never a prerequisite for repository closure.
+Examples:
 
-Local terminal clients are allowed as control/read surfaces. In particular, `gh` may dispatch and inspect GitHub Actions remotely, and the official `sonar` CLI may authenticate to and query SonarQube Cloud. This does not make the local machine an analysis authority. Local `sonar-scanner`, local CodeQL database creation/analysis, a local SonarQube server, or local replacements for the governed remote security workflows are not canonical closure paths.
+```powershell
+pwsh -File tools/scripts/request-remote-toolchain.ps1 -Command toolchain-full -TargetRef c
+pwsh -File tools/scripts/request-remote-toolchain.ps1 -Command codeql-full -TargetRef c
+pwsh -File tools/scripts/request-remote-toolchain.ps1 -Command semgrep-full -TargetRef c
+pwsh -File tools/scripts/request-remote-toolchain.ps1 -Command opencodereview -TargetRef c
+pwsh -File tools/scripts/request-remote-toolchain.ps1 -Command security-full -TargetRef c
+pwsh -File tools/scripts/request-remote-toolchain.ps1 -Command gitleaks -TargetRef c
+```
 
-`codeql-hygiene.yml` is metadata maintenance, not a second scanner authority. It may retire only analyses produced by obsolete `.github/workflows/codeql.yml` analysis keys, and only when the triggering successful CodeQL run is still the exact live `master` SHA. It never dismisses current findings and never deletes history from a still-canonical analysis key. Because it has `security-events: write`, it is deliberately API-only: it never checks out or executes repository source.
+The existing `ocr:*` package commands are compatibility controls only; their wrapper dispatches remote OpenCodeReview and does not install or run `ocr` on the workstation.
 
-## Remote command ingress
-
-`remote-command.yml` is a thin control ingress, not another CI implementation. It accepts only an allowlisted JSON envelope from a repository writer/maintainer/admin, verifies the exact branch SHA, dispatches an existing canonical workflow, correlates the resulting run, and reports the result back to the request issue.
+## Remote command contract
 
 The issue title is exactly:
 
@@ -61,48 +68,61 @@ The issue title is exactly:
 [remote-command]
 ```
 
-The body is JSON:
+The body is strict JSON and must pin the live target SHA:
 
 ```json
 {
-  "schema_version": 1,
-  "command": "ci-full",
-  "target_ref": "master",
+  "schema_version": 2,
+  "command": "toolchain-full",
+  "target_ref": "c",
   "expected_sha": "<40-character live SHA>"
 }
 ```
 
-Supported command intents are intentionally bounded to contextual CI, runtime proof, CodeQL, CodeQL metadata hygiene, SonarQube Cloud, remote security, lockfile integrity, and exact-master remote evidence read-back. No arbitrary shell command is accepted.
+Optional fields are `base_ref`, `journey`, and `model`. Unsupported fields/commands fail closed. `codeql-hygiene-repair` is restricted to the live default branch.
 
-Dependency Review remains pull-request-bound because its meaningful authority is the dependency delta between PR base and head.
+Available command families are contextual CI/runtime, CodeQL, SonarQube, Semgrep, OpenCodeReview, Remote Security as a whole or each contained tool, Dependency Review, Lockfile Integrity, Dependabot audit, CodeQL hygiene audit/repair, full toolchain coordination, and exact-SHA evidence read-back.
 
-## Remote evidence
+## Automatic execution
 
-`remote-analysis-evidence.yml` is read-back only. It does not run a second CodeQL or Sonar scanner. After canonical master CI completes, it reads CodeQL and Sonar evidence for the exact live master SHA, emits a short-lived artifact, and publishes the `Remote Analysis Evidence` commit status whose target URL points to the exact evidence run.
+Automatic events remain responsibility-specific:
 
-The evidence collector accepts only canonical `push` evidence from `master` and correlates each required workflow by exact SHA, exact branch, event, workflow name, and workflow path. Manual terminal dispatch remains useful for diagnosis and explicit reruns, but it cannot impersonate canonical post-merge master evidence.
+- CodeQL, SonarQube, Remote Security, Semgrep, and contextual CI run on repository changes according to their workflow triggers.
+- OpenCodeReview runs automatically on PR candidate updates.
+- Dependency Review remains PR-delta-owned and also supports explicit exact-base/head diagnosis.
+- Lockfile Integrity runs automatically only when dependency manifests/lockfiles are affected and supports explicit remote verification.
+- Dependabot performs scheduled dependency maintenance; Dependabot State Audit performs scheduled/read-on-demand evidence collection.
+- CodeQL Metadata Hygiene repairs only after canonical successful default-branch CodeQL; any branch may request non-mutating audit.
+- `remote-toolchain.yml` is explicit deep/full verification, not a replacement for automatic routing.
 
-This status provides a stable bridge for connected GitHub clients:
+## Deep evidence and closure
 
-```text
-exact master SHA
-  -> Remote Analysis Evidence status
-  -> exact GitHub Actions run
-  -> candidate-bound artifact/read-back
-```
+A green workflow is not sufficient evidence by itself. `remote-analysis-evidence.yml` binds evidence to the exact live candidate and collects, as applicable:
 
-Logs, screenshots, reports, and evidence artifacts are candidate-bound operational evidence. Do not commit them as durable Product/System Truth.
+- workflow/run/job/step identities and conclusions;
+- raw GitHub Actions logs;
+- all candidate-bound artifacts produced by selected authorities;
+- CodeQL analyses/alerts;
+- SonarQube analysis, quality gate, issues, hotspots, and measures;
+- Semgrep JSON;
+- Gitleaks JSON and Remote Security logs;
+- OpenCodeReview JSON/provenance;
+- Dependabot alerts/PR state;
+- normalized findings across available tools.
 
-## Verification and change procedure
+Normalization is not root-cause determination. Multiple tool findings may represent one causal root. The orchestrator must validate/falsify, correlate, deduplicate symptoms, prove the highest material roots, fix the actual owner, and rerun only invalidated evidence.
 
-When changing CI/security authority:
+Transient logs/reports/evidence remain GitHub artifacts; do not commit them as Product/System Truth.
 
-1. pin the exact source SHA;
-2. inspect all callers, required checks, and live rulesets before changing ownership or check names;
-3. migrate all consumers in the same logical change;
-4. remove obsolete duplicate execution only after live protection dependencies are proven safe;
-5. use local control/query clients only where they do not become scanner or security authorities;
-6. let GitHub-hosted workflows provide canonical security/runtime evidence;
-7. verify the exact final candidate and live GitHub result before merge or closure.
+## Safety invariants
 
-Skipped jobs are acceptable only when routing proves non-applicability. Cancelled, superseded, or older-SHA runs are not PASS for a current candidate.
+Before every material write or closure claim:
+
+1. resolve the exact user-named branch and live SHA;
+2. reconcile unexpected branch movement;
+3. preserve one execution authority per responsibility;
+4. never replace a remote failure with a local scanner result;
+5. never suppress/ignore a material finding merely to obtain green;
+6. bind verification to the final candidate;
+7. treat cancelled, superseded, stale, differently-scoped, or missing evidence as not PASS;
+8. read live branch protection/rulesets/checks/reviews from GitHub rather than inferring them from tracked files.
