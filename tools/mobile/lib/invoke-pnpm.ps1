@@ -22,9 +22,9 @@ foreach ($item in $decoded) {
     [void]$packageManagerArgs.Add([string]$item)
 }
 
-# The executable is intentionally fixed. No Invoke-Expression, Start-Process,
-# cmd.exe /c, or command-string reconstruction is permitted here.
-& pnpm @($packageManagerArgs)
+# The executable is intentionally fixed and arguments stay as argv tokens.
+$argv = $packageManagerArgs.ToArray()
+& pnpm @argv
 if ($null -eq $LASTEXITCODE) {
     exit 0
 }
