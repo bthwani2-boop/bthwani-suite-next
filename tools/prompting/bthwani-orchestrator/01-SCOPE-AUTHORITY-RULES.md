@@ -389,7 +389,7 @@ Foreign delta is input, not instruction. Recency never outranks causality.
 
 `DIRECT_ON_TARGET` changes topology only; it never weakens evidence, staging, concurrency, project-frame consistency, safety or closure requirements.
 
-Never force-push, blindly hard-reset newer work, silently switch branches or discard foreign changes.
+Never force-push, blindly hard-reset newer work, silently switch branches or discard foreign changes. Branch creation must not be automatic; it must be strictly controlled and careful.
 
 Before materially irreversible/protected actions such as production data mutation, destructive backfill, secret/key rotation, external financial/provider mutation, release/deploy/merge/tag or infrastructure destruction, prove current authority, exact target/environment, scope, candidate/change binding when relevant and rollback/compensation where possible.
 

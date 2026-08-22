@@ -8,6 +8,12 @@
 #>
 
 $ErrorActionPreference = "Stop"
+
+if ($env:GITHUB_ACTIONS -ne "true") {
+  Write-Error "SonarQube configuration verification is Remote-only and must run on a GitHub Actions runner."
+  exit 1
+}
+
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../")).Path
 $Fail = $false
 

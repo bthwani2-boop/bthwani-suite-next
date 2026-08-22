@@ -59,6 +59,8 @@ Derive security, financial, and domain ownership from the current canonical impl
 
 Authentication, authorization, sessions, secrets, PII, provider credentials, isolation, and financial mutation paths require risk-appropriate verification.
 
+Static/security analysis is remote-owned. Do not launch a local SonarQube server, Sonar CLI/MCP process, CodeQL scanner, Trivy, OSV Scanner, or Gitleaks as an agent/workspace prerequisite. SonarQube IDE/agent access uses the hosted MCP configuration; repository security gates execute on GitHub-hosted runners.
+
 ## Delegation
 
 Delegation is optional and only for bounded work that materially benefits from it.

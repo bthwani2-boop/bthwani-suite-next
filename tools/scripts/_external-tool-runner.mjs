@@ -9,6 +9,12 @@ export function hasBinary(binary) {
   return !result.error && result.status === 0;
 }
 
+export function requireRemoteExecution(toolId) {
+  if (process.env.GITHUB_ACTIONS === "true") return;
+  console.error(`[${toolId.toUpperCase()} BLOCKED] this analyzer is Remote-only and must run on a GitHub Actions runner.`);
+  process.exit(1);
+}
+
 export function ensureDir(rel) {
   fs.mkdirSync(path.join(repoRoot, rel), { recursive: true });
 }
@@ -75,6 +81,7 @@ export function handleCommandFailure(toolId, required) {
 }
 
 export function runTool({ toolId, binary, command, diagnosticCommand, required = false }) {
+  requireRemoteExecution(toolId);
   if (!hasBinary(binary)) handleMissingBinary(toolId, binary, required);
   const diagnostic = isDiagnosticMode();
   if (diagnostic) {
@@ -91,6 +98,7 @@ export function runTool({ toolId, binary, command, diagnosticCommand, required =
 }
 
 export function runFilesTool({ toolId, binary, files, makeCommand, noFilesMessage, required = false }) {
+  requireRemoteExecution(toolId);
   if (!hasBinary(binary)) handleMissingBinary(toolId, binary, required);
   if (!files.length) {
     console.log(noFilesMessage || "No files found.");

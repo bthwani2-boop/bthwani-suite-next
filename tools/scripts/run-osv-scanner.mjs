@@ -6,12 +6,14 @@ import {
   handleCommandFailure,
   handleMissingBinary,
   hasBinary,
+  requireRemoteExecution,
   repoRoot,
   walkFiles
 } from "./_external-tool-runner.mjs";
 import { adjudicateOsvReport, scopedGoImports } from "./lib/osv-go-reachability.mjs";
 
 const toolId = "osv-scanner";
+requireRemoteExecution(toolId);
 const rootLockfile = path.join(repoRoot, "pnpm-lock.yaml");
 const lockfiles = [
   ...(fs.existsSync(rootLockfile) ? [rootLockfile] : []),

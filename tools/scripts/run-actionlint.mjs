@@ -1,8 +1,10 @@
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
+import { requireRemoteExecution } from "./_external-tool-runner.mjs";
 
 const lockedVersion = "v1.7.12";
+requireRemoteExecution("actionlint");
 const diagnosticDir = path.resolve(".diagnostics/workflow");
 const diagnosticPath = path.join(diagnosticDir, "actionlint.jsonl");
 

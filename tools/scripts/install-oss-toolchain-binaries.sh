@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ "${GITHUB_ACTIONS:-}" != "true" ]]; then
+  echo "ERROR: security tool installation is Remote-only and must run on a GitHub Actions runner." >&2
+  exit 1
+fi
+
 MODE="${1:-governance}"
 
 readonly ACTIONLINT_VERSION="v1.7.12"
 readonly PINACT_VERSION="v0.1.2"
-readonly ZIZMOR_VERSION="1.27.0"
+readonly ZIZMOR_VERSION="1.28.0"
 readonly REGAL_VERSION="v0.25.0"
 readonly CONFTEST_VERSION="v0.55.0"
 readonly HADOLINT_VERSION="v2.12.0"
@@ -14,14 +19,23 @@ readonly OSV_SCANNER_VERSION="v2.4.0"
 
 echo "Installing locked OSS toolchain binaries for mode: ${MODE}"
 
-install_common_go_tools() {
+require_go() {
   if ! command -v go >/dev/null 2>&1; then
     echo "ERROR: go is required to install Go-based tools in this workflow image." >&2
     echo "Do not change the project Go version here; configure setup-go in the workflow if Go is unavailable." >&2
     exit 1
   fi
+}
 
+install_osv_scanner() {
+  require_go
   go install "github.com/google/osv-scanner/v2/cmd/osv-scanner@${OSV_SCANNER_VERSION}"
+  echo "$HOME/go/bin" >> "$GITHUB_PATH"
+  export PATH="$HOME/go/bin:$PATH"
+}
+
+install_github_action_go_tools() {
+  require_go
   go install "github.com/rhysd/actionlint/cmd/actionlint@${ACTIONLINT_VERSION}"
   go install "github.com/suzuki-shunsuke/pinact/cmd/pinact@${PINACT_VERSION}"
   echo "$HOME/go/bin" >> "$GITHUB_PATH"
@@ -75,7 +89,8 @@ if [[ "${MODE}" == "governance" || "${MODE}" == "ci" ]]; then
   sudo apt-get update
   sudo apt-get install -y shellcheck yamllint python3-pip
   install_hadolint
-  install_common_go_tools
+  install_osv_scanner
+  install_github_action_go_tools
   install_regal
   python3 -m pip install --user "zizmor==${ZIZMOR_VERSION}"
   echo "$HOME/.local/bin" >> "$GITHUB_PATH"
@@ -83,9 +98,14 @@ if [[ "${MODE}" == "governance" || "${MODE}" == "ci" ]]; then
 fi
 
 if [[ "${MODE}" == "security" ]]; then
+  sudo apt-get update
+  sudo apt-get install -y shellcheck yamllint python3-pip
+  install_hadolint
   install_trivy
-  install_common_go_tools
+  install_osv_scanner
   install_gitleaks
+  python3 -m pip install --user "zizmor==${ZIZMOR_VERSION}"
+  echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 fi
 
 echo "Locked OSS toolchain binary installation completed."
