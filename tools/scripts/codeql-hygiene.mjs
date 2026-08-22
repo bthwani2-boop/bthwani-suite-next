@@ -3,8 +3,8 @@ import fs from "node:fs";
 const repository = String(process.env.GITHUB_REPOSITORY ?? "").trim();
 const token = String(process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN ?? "").trim();
 const apiBase = String(process.env.GITHUB_API_URL ?? "https://api.github.com").replace(/\/$/, "");
-const candidateSha = String(process.env.GITHUB_SHA ?? "").trim();
-const candidateRef = String(process.env.GITHUB_REF ?? "").trim();
+const candidateSha = String(process.env.CODEQL_HYGIENE_SHA ?? process.env.GITHUB_SHA ?? "").trim();
+const candidateRef = String(process.env.CODEQL_HYGIENE_REF ?? process.env.GITHUB_REF ?? "").trim();
 const masterRef = "refs/heads/master";
 const workflowAnalysisPrefix = ".github/workflows/codeql.yml:";
 const canonicalAnalysisKeys = new Set([
@@ -18,7 +18,7 @@ function fail(message) {
 }
 
 if (!repository || !token) fail("GITHUB_REPOSITORY and GH_TOKEN are required");
-if (!/^[0-9a-f]{40}$/i.test(candidateSha)) fail("GITHUB_SHA must be a full commit SHA");
+if (!/^[0-9a-f]{40}$/i.test(candidateSha)) fail("candidate SHA must be a full commit SHA");
 if (candidateRef !== masterRef) fail(`must run only on ${masterRef}; got ${candidateRef || "<empty>"}`);
 
 const workflow = fs.readFileSync(".github/workflows/codeql.yml", "utf8");
@@ -62,9 +62,13 @@ async function page(pathname) {
   return items;
 }
 
-async function assertLiveMaster() {
+async function liveMasterSha() {
   const branch = await request("/branches/master");
-  const liveSha = String(branch?.commit?.sha ?? "");
+  return String(branch?.commit?.sha ?? "");
+}
+
+async function assertLiveMaster() {
+  const liveSha = await liveMasterSha();
   if (liveSha !== candidateSha) {
     fail(`master moved during hygiene; candidate=${candidateSha} live=${liveSha || "<unknown>"}`);
   }
