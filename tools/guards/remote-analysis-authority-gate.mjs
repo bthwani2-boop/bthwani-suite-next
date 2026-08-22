@@ -83,13 +83,18 @@ const codeqlHygiene = read(".github/workflows/codeql-hygiene.yml");
 for (const required of [
   'workflows: ["CodeQL"]',
   "security-events: write",
-  "codeql-hygiene.mjs",
   "github.event.workflow_run.head_sha",
   "branches/master",
+  "/code-scanning/analyses",
+  "confirm_delete=true",
+  "/code-scanning/alerts",
+  "Verify canonical CodeQL workflow metadata without checkout",
 ]) {
   if (!codeqlHygiene.includes(required)) fail(`CodeQL metadata hygiene is missing invariant: ${required}`);
 }
 for (const forbidden of [
+  "actions/checkout@",
+  "node tools/",
   "github/codeql-action/init@",
   "github/codeql-action/analyze@",
   "gitleaks detect",
@@ -97,7 +102,10 @@ for (const forbidden of [
   "run-trivy.mjs",
   "sonar-scanner",
 ]) {
-  if (codeqlHygiene.includes(forbidden)) fail(`CodeQL metadata hygiene must not become a scanner authority: ${forbidden}`);
+  if (codeqlHygiene.includes(forbidden)) fail(`CodeQL metadata hygiene must remain API-only and must not become an execution/scanner authority: ${forbidden}`);
+}
+if (fs.existsSync("tools/scripts/codeql-hygiene.mjs")) {
+  fail("CodeQL metadata hygiene must not execute a repository-owned privileged helper script");
 }
 
 const remoteEvidence = read(".github/workflows/remote-analysis-evidence.yml");
@@ -143,4 +151,4 @@ for (const forbidden of [
   if (remoteCommand.includes(forbidden)) fail(`remote command ingress must dispatch authorities, not execute them: ${forbidden}`);
 }
 
-console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] Hosted SonarQube, GitHub CodeQL, GitHub-hosted security scans, read-only evidence, metadata hygiene, and SHA-pinned remote dispatch remain separated canonical responsibilities.");
+console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] Hosted SonarQube, GitHub CodeQL, GitHub-hosted security scans, API-only metadata hygiene, read-only evidence, and SHA-pinned remote dispatch remain separated canonical responsibilities.");
