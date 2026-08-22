@@ -1,6 +1,20 @@
 name: Dependency Review
 
 on:
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: Base branch/ref to compare
+        required: true
+        type: string
+      head_ref:
+        description: Exact head ref or SHA to compare
+        required: true
+        type: string
+      expected_sha:
+        description: Exact candidate SHA expected at the dispatched workflow ref
+        required: true
+        type: string
   pull_request:
     branches: ["**"]
     types: [opened, synchronize, reopened, ready_for_review]
@@ -20,9 +34,49 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Reject newly introduced vulnerable dependencies
+      - name: Verify immutable manual candidate
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ inputs.expected_sha }}
+          HEAD_REF: ${{ inputs.head_ref }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "${EXPECTED_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || {
+            echo "::error::expected_sha must be a full 40-character SHA"
+            exit 1
+          }
+          [[ "${GITHUB_SHA}" == "${EXPECTED_SHA}" ]] || {
+            echo "::error::Dependency Review dispatch SHA mismatch: expected=${EXPECTED_SHA} workflow=${GITHUB_SHA}"
+            exit 1
+          }
+          resolved_head="$(gh api --method GET \
+            -H "X-GitHub-Api-Version: 2026-03-10" \
+            "/repos/${GITHUB_REPOSITORY}/commits/${HEAD_REF}" \
+            --jq '.sha')"
+          [[ "${resolved_head}" == "${EXPECTED_SHA}" ]] || {
+            echo "::error::Dependency Review head_ref mismatch: expected=${EXPECTED_SHA} resolved=${resolved_head}"
+            exit 1
+          }
+          {
+            echo "### Dependency Review manual scope"
+            echo "- Base: ${{ inputs.base_ref }}"
+            echo "- Head: ${resolved_head}"
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Reject newly introduced vulnerable dependencies on pull requests
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
+          fail-on-severity: low
+          show-patched-versions: true
+
+      - name: Reject newly introduced vulnerable dependencies on remote dispatch
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          base-ref: ${{ inputs.base_ref }}
+          head-ref: ${{ inputs.head_ref }}
           fail-on-severity: low
           show-patched-versions: true
