@@ -13,7 +13,7 @@ The primary GitHub execution authorities are:
 - reusable backend verification: `.github/workflows/ci-backends.yml`;
 - reusable runtime proof: `.github/workflows/ci-runtime.yml`;
 - canonical CodeQL scanner authority: `.github/workflows/codeql.yml`;
-- CodeQL metadata maintenance after successful canonical master analysis: `.github/workflows/codeql-hygiene.yml`;
+- API-only CodeQL metadata maintenance after successful canonical master analysis: `.github/workflows/codeql-hygiene.yml`;
 - SonarQube Cloud scan: `.github/workflows/sonarqube.yml`;
 - remote security scans: `.github/workflows/security-remote.yml`;
 - dependency delta review: `.github/workflows/dependency-review.yml`;
@@ -42,11 +42,14 @@ Before every material write:
 Canonical static/security analysis is remote-owned:
 
 - CodeQL executes through GitHub Code Scanning on GitHub-hosted runners;
-- SonarQube uses SonarQube Cloud and the hosted MCP endpoint for IDE/agent read access;
+- SonarQube analysis executes through SonarQube Cloud from GitHub-hosted runners;
+- SonarQube hosted MCP/API is the remote read surface for IDEs and agents that have an appropriate credential;
 - repository security gates execute on GitHub-hosted runners;
-- local CodeQL, SonarQube server/CLI/MCP, Trivy, OSV Scanner, or Gitleaks execution is not a prerequisite for repository closure.
+- local scanner execution is never a prerequisite for repository closure.
 
-`codeql-hygiene.yml` is metadata maintenance, not a second scanner authority. It may retire only analyses produced by obsolete `.github/workflows/codeql.yml` analysis keys, and only when the triggering successful CodeQL run is still the exact live `master` SHA. It never dismisses current findings and never deletes history from a still-canonical analysis key.
+Local terminal clients are allowed as control/read surfaces. In particular, `gh` may dispatch and inspect GitHub Actions remotely, and the official `sonar` CLI may authenticate to and query SonarQube Cloud. This does not make the local machine an analysis authority. Local `sonar-scanner`, local CodeQL database creation/analysis, a local SonarQube server, or local replacements for the governed remote security workflows are not canonical closure paths.
+
+`codeql-hygiene.yml` is metadata maintenance, not a second scanner authority. It may retire only analyses produced by obsolete `.github/workflows/codeql.yml` analysis keys, and only when the triggering successful CodeQL run is still the exact live `master` SHA. It never dismisses current findings and never deletes history from a still-canonical analysis key. Because it has `security-events: write`, it is deliberately API-only: it never checks out or executes repository source.
 
 ## Remote command ingress
 
@@ -77,6 +80,8 @@ Dependency Review remains pull-request-bound because its meaningful authority is
 
 `remote-analysis-evidence.yml` is read-back only. It does not run a second CodeQL or Sonar scanner. After canonical master CI completes, it reads CodeQL and Sonar evidence for the exact live master SHA, emits a short-lived artifact, and publishes the `Remote Analysis Evidence` commit status whose target URL points to the exact evidence run.
 
+The evidence collector accepts only canonical `push` evidence from `master` and correlates each required workflow by exact SHA, exact branch, event, workflow name, and workflow path. Manual terminal dispatch remains useful for diagnosis and explicit reruns, but it cannot impersonate canonical post-merge master evidence.
+
 This status provides a stable bridge for connected GitHub clients:
 
 ```text
@@ -96,7 +101,7 @@ When changing CI/security authority:
 2. inspect all callers, required checks, and live rulesets before changing ownership or check names;
 3. migrate all consumers in the same logical change;
 4. remove obsolete duplicate execution only after live protection dependencies are proven safe;
-5. use targeted local compiler/test/static checks only where they do not violate remote-analysis ownership;
+5. use local control/query clients only where they do not become scanner or security authorities;
 6. let GitHub-hosted workflows provide canonical security/runtime evidence;
 7. verify the exact final candidate and live GitHub result before merge or closure.
 
