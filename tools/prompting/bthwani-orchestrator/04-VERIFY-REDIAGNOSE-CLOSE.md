@@ -37,6 +37,7 @@ TRACKED WORKFLOW CONFIG ≠ LIVE REPOSITORY ENFORCEMENT
 EXTERNAL DOCUMENTATION ≠ LOCAL VERSION/RUNTIME PROOF
 PLAN_DIR ABSENT ≠ EXECUTE_CLOSE BLOCKED
 PLAN_DIR UPDATED ≠ TARGET SYSTEM FIXED
+DELETE_REQUIRED RECORDED ≠ ARTIFACT DELETED
 ```
 
 State what material evidence proves and what it does not prove.
@@ -122,7 +123,7 @@ PROVENANCE_REQUIRED
 
 The prepared contract defines what evidence must be produced; it does not pre-declare results. `EXECUTE_CLOSE` fills/proves those claims through actual target-system evidence, not by editing the prepared plan directory.
 
-Every materially applicable execution step must be able to trace forward to sufficient `V-*`/`AC-*`/`CE-*` proof through the chain owned by `02`.
+Every materially applicable execution step must be able to trace forward to sufficient `V-*`/`AC-*`/`CE-*` proof through the chain owned by `02`. Every artifact disposition requiring move/merge/delete/retirement must likewise map to proof of its final intended state; `DELETE_REQUIRED` must map to final-tree absence plus reference/reachability and behavior-preservation evidence.
 
 ## 7. Runtime provenance/freshness
 
@@ -154,7 +155,7 @@ Verify where material:
 - every canonical focus family has an applicability disposition and every material one received sufficient proof;
 - governance/product/policy impact is classified and synchronized where required;
 - newly proven material knowledge has been classified for durable project-memory value and any required governance enrichment is complete;
-- deletion/retirement of superseded reachable paths;
+- deletion/retirement of superseded reachable paths and exhaustion of every still-valid `DELETE_REQUIRED` item;
 - absence of new parallel truth;
 - preservation of proven design/value;
 - removal of materially unjustified complexity identified in scope without weakening required correctness/assurance;
@@ -224,7 +225,7 @@ Rerun what is invalidated; do not rerun everything mechanically and do not retai
 
 Begin with nearest proof. Broaden when shared/canonical ownership changed, project-frame invariants changed, multiple consumers depend on root, public contract/data/runtime boundary changed, targeted evidence leaves material uncertainty, or feature/project closure is claimed.
 
-Speed comes from accurate scope and valid reusable project context, not weaker proof.
+Speed comes from accurate scope and valid reusable project context, not weaker proof. A still-valid prepared handoff does not require rerunning the entire preparation capability/tool pass after every mutation; rerun only invalidated or closure-required proof.
 
 ## 14. Review provenance
 
@@ -242,6 +243,18 @@ After cutover/removal inspect materially relevant imports/exports/re-exports, ro
 
 Textual zero-reference search may be necessary but is insufficient alone; prove no runtime/reachable alternate path or authoritative writer remains.
 
+For every still-valid `DELETE_REQUIRED` entry from the execution contract prove, on the final candidate:
+
+```text
+ARTIFACT ABSENT FROM ACTIVE TREE
+AND ZERO STALE/REACHABLE REFERENCE OR REGISTRATION
+AND REQUIRED REPLACEMENT/CUTOVER IS PRESENT
+AND AFFECTED CONSUMERS/CONFIG/TESTS/GENERATED BINDINGS ARE REPAIRED
+AND REQUIRED BEHAVIOR/VALUE IS PRESERVED OR INTENTIONALLY MIGRATED
+```
+
+If an item cannot be deleted because new evidence changed its purpose/consumer/safety status, the disposition must be re-established through diagnosis; leaving the file in place without invalidating the `DELETE_REQUIRED` decision is not a pass.
+
 ## 16. Re-diagnosis after every material root
 
 `reinspect operational outcome → rerun affected journey/actor/state/handoff traces → rerun ownership/contract/data/runtime traces → revalidate materially touched project-frame claims + governance impact + affected prior closures → classify newly proven durable knowledge → invalidate descendant symptoms → discover exposed roots → rebuild affected coverage → rerank`.
@@ -258,6 +271,8 @@ Before freeze, every materially affected remaining artifact needs a defensible:
 
 Closure is blocked by known related dead/unreachable code, superseded implementation, duplicate authority, stale/orphan reference, old path/alias, misleading naming, wrong placement/ownership, unused dependency, obsolete config/env/flag/script, workaround/fallback, stale docs/comments/examples, debug/temp artifact, unjustified compatibility residue or materially unjustified complexity tied to scope.
 
+Every still-valid `DELETE_REQUIRED` artifact must be absent; every `RETIRE_AFTER_CUTOVER` item whose cutover condition is satisfied must have been promoted/executed as deletion. A retained item requires new evidence and an explicit reclassification, not executor preference or deletion avoidance.
+
 Material governance/product artifacts capable of directing future work toward a stale owner/path/semantic model are closure-blocking even if runtime currently works. The same is true for a materially missing proven durable truth when its absence or ambiguity can direct future work incorrectly.
 
 ## 18. Final freeze and branch-race gate
@@ -272,7 +287,7 @@ Immediately before ref update/push and final decision re-resolve target HEAD and
 
 ## 19. Final negative-space pass
 
-Search deliberately for missing consumer/surface, route/handler/contract field, writer/readback, failure/recovery path, authorization boundary, handoff/intervention, migration/compatibility transition, hidden duplicate/legacy truth, missing project-frame relation/invariant impact, missing prior-closure reconciliation, missing focus applicability disposition, missing governance reconciliation or durable-truth home, missing repository-platform proof when relied upon, and missing operational/audit evidence required by the claim.
+Search deliberately for missing consumer/surface, route/handler/contract field, writer/readback, failure/recovery path, authorization boundary, handoff/intervention, migration/compatibility transition, hidden duplicate/legacy truth, unexecuted `DELETE_REQUIRED` residue, missing project-frame relation/invariant impact, missing prior-closure reconciliation, missing focus applicability disposition, missing governance reconciliation or durable-truth home, missing repository-platform proof when relied upon, and missing operational/audit evidence required by the claim.
 
 Unexplained material absence remains open.
 
@@ -280,7 +295,7 @@ Unexplained material absence remains open.
 
 Assume closure is false and search for:
 
-`missed domain/capability | objective-induced local optimization | project-frame contradiction | cross-objective regression | duplicate truth | stale/wrong/incomplete governance | material proven durable truth missing from governance | hidden consumer/writer | reachable old path | contract/data mismatch | cross-surface mismatch | unintended affected regression | incomplete consumer migration | failure/recovery gap | runtime divergence | stale process/data | unresolved semantic ambiguity | patch/workaround | race/idempotency issue | security/isolation issue | wrong placement/naming/context | orphan references | unjustified complexity | assurance loss/cost shift in tooling changes | stale/mismatched repository-platform evidence`.
+`missed domain/capability | objective-induced local optimization | project-frame contradiction | cross-objective regression | duplicate truth | stale/wrong/incomplete governance | material proven durable truth missing from governance | hidden consumer/writer | reachable old path | retained DELETE_REQUIRED artifact | contract/data mismatch | cross-surface mismatch | unintended affected regression | incomplete consumer migration | failure/recovery gap | runtime divergence | stale process/data | unresolved semantic ambiguity | patch/workaround | race/idempotency issue | security/isolation issue | wrong placement/naming/context | orphan references | unjustified complexity | assurance loss/cost shift in tooling changes | stale/mismatched repository-platform evidence`.
 
 Any material issue reopens diagnosis/treatment/verification.
 
@@ -313,6 +328,7 @@ AND ZERO_CONTRADICTORY_CANONICAL_TRUTHS
 AND ZERO_DUPLICATE_AUTHORITATIVE_WRITERS
 AND ZERO_UNJUSTIFIED_PARALLEL_TRUTH
 AND ZERO_UNJUSTIFIED_REACHABLE_LEGACY_PATHS
+AND ZERO_UNEXECUTED_DELETE_REQUIRED_ARTIFACTS
 AND ZERO_KNOWN_FINAL_PATCHES/WORKAROUNDS/FALLBACKS
 AND ZERO_MATERIAL_MIGRATION/BACKFILL/CUTOVER_GAPS
 AND ZERO_MATERIAL_CONTRACT/BINDING_DRIFT
@@ -360,7 +376,7 @@ Do not delete an unrelated, foreign or deliberately retained plan directory mere
 
 ## 24. Final report
 
-Keep reporting concise and evidence-based: repository/ref, objective, starting/final observed HEAD, final candidate relation, relevant project-frame authority/invariants, highest roots treated, canonical owners, migrations/cutovers/cleanup, affected consumers/surfaces, governance disposition, durable-truth clarification performed when material, verification actually performed and proof limits, runtime provenance/readback when claimed, repository-platform truth when materially relied upon, foreign-delta reconciliation, any prior closure reopened/reconciled, optional plan-directory disposition when one was explicitly supplied, remaining true blocker/decision, and final state.
+Keep reporting concise and evidence-based: repository/ref, objective, starting/final observed HEAD, final candidate relation, relevant project-frame authority/invariants, highest roots treated, canonical owners, migrations/cutovers/cleanup, artifact disposition/deletion outcome, affected consumers/surfaces, governance disposition, durable-truth clarification performed when material, verification actually performed and proof limits, runtime provenance/readback when claimed, repository-platform truth when materially relied upon, foreign-delta reconciliation, any prior closure reopened/reconciled, optional plan-directory disposition when one was explicitly supplied, remaining true blocker/decision, and final state.
 
 ## 25. Durable project-memory closure gate
 
