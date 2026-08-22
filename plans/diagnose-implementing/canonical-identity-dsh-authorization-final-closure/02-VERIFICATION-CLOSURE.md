@@ -1,299 +1,370 @@
-# VERIFICATION & CLOSURE — Canonical Identity/DSH Authorization Final Closure
+# Canonical Identity / DSH Authorization — Verification & Closure Contract
 
-## Closure law
+PLAN_ID: `canonical-identity-dsh-authorization-final-closure`  
+REPOSITORY: `bthwani2-boop/bthwani-suite-next`  
+TARGET_REF: `c`  
+AUDITED_SOURCE_HEAD: `262a80ad889963e8d950178c075b3272176e2b5c`  
+GOVERNING_PHASE: `EXECUTE_CLOSE`  
+CLOSURE_POLICY: `FAIL_CLOSED / EXACT_FINAL_CANDIDATE_ONLY`
+
+## 1. Closure rule
 
 `GREEN != CLOSED`.
 
-`CLOSED` is permitted only for the exact final candidate after the **last target-system write**, after a fresh affected-cone/negative-space re-audit, and after both pre-merge PR evidence and post-merge landed-master readback are coherent.
+A build, typecheck, unit test, CI workflow, CodeQL scan, Semgrep scan, Sonar Quality Gate, OpenCodeReview result, or successful screen is only one piece of evidence. Final closure is legal only when the exact candidate after the last source change satisfies every applicable verification and closure criterion below, and a fresh affected-cone/negative-space re-audit finds no known material remainder.
 
-Record final candidate identity:
+Any source mutation after a verification run invalidates that run as final-candidate evidence unless the tool is provably unaffected and the governing orchestrator explicitly permits reuse. Default behavior is rerun.
 
-- branch/ref;
-- exact commit SHA;
-- PR `#284` head SHA;
-- current base/master SHA;
-- migration/schema/runtime provenance;
-- generated contract/client provenance;
-- CI/CodeQL/Sonar/Remote Security/semantic review run identities and freshness;
-- post-merge landed `master` SHA and Remote Analysis Evidence identity.
+## 2. Evidence record required for every remote tool
 
-Any target-system write after evidence collection invalidates affected evidence and requires re-pin/re-run.
+For every required remote workflow/scanner record:
 
-## A. Canonical ownership proof
+- `tool_name`
+- `workflow_name`
+- `run_id`
+- `run_url_or_canonical_identity`
+- `requested_ref`
+- `resolved_sha`
+- `baseline/base_sha` where relevant
+- `mode/effective_scope`
+- `started_at/completed_at`
+- `conclusion`
+- `artifact/provenance identity`
+- `finding counts and material findings`
+- `suppressions/waivers with reason`, if any
+- `exact_candidate_match = true`
 
-Prove:
+Missing or stale evidence is `NOT_PROVEN`, never PASS.
 
-- Identity is the only permission vocabulary, role-definition, actor-role assignment/revocation and resolved-authorization authority;
-- DSH Administration owns governed workflow/projection/audit only;
-- WLT remains financial truth for payout effects;
-- no local UI/backend/database shadow authorization truth is reachable.
+## 3. Verification matrix
 
-Evidence authority: durable governance + source/schema inspection + focused runtime/readback + negative caller/import/route/schema searches.
+### V-AUTH-01 — Assignment SoD matrix
 
-## B. Separation-of-duties proof — RC0
+Prove at the DSH administration domain/use-case boundary:
 
-Prove server-side for approve **and reject** paths:
+- maker == beneficiary -> rejected before intent/remote mutation;
+- checker == maker -> rejected;
+- checker == beneficiary -> rejected;
+- maker/checker/beneficiary all distinct -> allowed subject to all other permissions/state/version rules.
 
-1. maker cannot review own assignment/revocation request;
-2. beneficiary cannot review own assignment/revocation request;
-3. unrelated checker with exact permission can review;
-4. rollback maker cannot review own rollback request;
-5. rollback beneficiary cannot review rollback;
-6. original source checker cannot review rollback;
-7. unrelated rollback checker with exact permission can review;
-8. worker/replay/direct domain caller cannot bypass the same checks;
-9. wrong surface / missing exact permission still fails before mutation;
-10. failure response is distinct and does not enqueue or call Identity.
+Evidence must include focused unit/integration tests and one runtime/API journey where material.
 
-Product Truth explicitly owns these negatives; passing UI behavior is not sufficient evidence.
-
-## C. Canonical operation lifecycle/recovery proof — RC1
-
-Required scenarios through DB/integration/runtime tests:
-
-1. normal synchronous success → governed request and operation become terminal consistently and Identity readback matches;
-2. Identity unavailable before mutation → local operation remains non-terminal with bounded retry schedule, no fake success;
-3. process restart after operation persistence but before Identity call → worker resumes with same idempotency identity;
-4. Identity commits but response is uncertain → replay/readback reconciles without a new effective mutation identity;
-5. Identity succeeds then DSH dies before local finalization → later replay obtains same result and atomically finalizes request + operation exactly once;
-6. failure in local finalization cannot produce durable `approved request + unjustified non-terminal operation` residue;
-7. two DSH worker instances cannot concurrently own the same due operation;
-8. worker death/stale lease is recoverable;
-9. retryable dependency failure uses bounded backoff, not repeated 5-second hot retry;
-10. permanent version/idempotency/contract conflict becomes explicit terminal/actionable reconciliation state;
-11. existing orphan rows are classified/reconciled with zero unexplained residue;
-12. role definition, assignment/revocation and rollback all obey the same lifecycle invariants.
-
-Database assertions after proof:
-
-- zero approved governed requests with required operation left unjustifiably non-terminal;
-- zero due operations permanently unclaimable;
-- zero simultaneous active claims for one operation;
-- zero unknown/malformed operation types silently retrying;
-- retry/terminal constraints valid;
-- canonical readback matches governed terminal state.
-
-## D. Migration proof
-
-Run both fresh-install and representative upgrade.
-
-Representative upgrade must include:
-
-- pre-`identity-028` broad administration bindings;
-- pre-cutover local DSH role references;
-- existing pending/failed canonical operations;
-- Identity-already-applied/request-pending window;
-- approved-request/non-applied-operation orphan window;
-- stale permission alias if proven obsolete;
-- persisted source checker needed for rollback separation.
-
-Verify:
-
-- `identity-028..031` invariants remain valid;
-- `dsh-1033..1035` remain valid;
-- new migrations are forward-only/registered/idempotent according to repository policy;
-- old `dsh_admin_roles`/`role_id` authority absent;
-- broad administration vocabulary/bindings absent;
-- direct projection writes rejected;
-- role versions/idempotency survive upgrade;
-- fresh and upgraded DBs converge to identical canonical invariants.
-
-## E. Contract/frontend proof
-
-Trace all three governed journeys:
-
-`UI → controller → API contract → exact authorization → separation-of-duties → DSH operation → Identity writer → canonical readback → DSH terminal/read model → UI readback`.
+### V-AUTH-02 — Rollback SoD matrix
 
 Prove:
 
-- contract/error/status semantics match runtime;
-- no handwritten/generated client drift;
-- no stale route binding;
-- loading/empty/denied/validation/separation/conflict/dependency/reconciling/terminal-failure/success states are clear;
-- duplicate click prevented;
-- queued/reconciling is neither fake success nor generic terminal failure;
-- canonical refresh/readback after success;
-- Arabic/RTL/accessibility materially touched remains correct;
-- frontend never owns permission/role/operation truth.
+- rollback maker == beneficiary -> rejected;
+- rollback checker == rollback maker -> rejected;
+- rollback checker == beneficiary -> rejected;
+- rollback checker == original source checker -> rejected;
+- all required actors independent -> allowed subject to other rules.
 
-## F. Residue/deletion proof — RC2
+### V-AUTH-03 — Authorization owner and deny-by-default
 
-Before deletion, inventory callers/imports/routes/contracts/tests/runtime references. After cutover prove zero legitimate reachability for removed paths.
+Prove that:
 
-Required searches/checks include:
+- Identity is queried/consumed as the effective authorization authority;
+- DSH does not authorize from local approval status alone;
+- missing/unavailable Identity authorization fails closed;
+- operator context is trusted from authenticated Identity and client mismatch is rejected;
+- no role-name bypass or wildcard fallback was added during treatment.
 
-- broad actions `administration.read`, `administration.manage`, `administration.approve`;
-- local role authority `dsh_admin_roles`, obsolete `role_id` fields/FKs;
-- stale permission spelling such as `platform.read` if canonical action is `platform:read`;
-- `legacy-grant:`, `legacy-revoke:`, `legacy-role-definition:` and their wrappers;
-- superseded split-operation worker/finalization helpers;
-- stale OpenAPI/client/type/schema names;
-- TODO/FIXME/HACK/compatibility comments that merely defer this cutover.
+### V-AUTH-04 — Permission vocabulary canonicalization
 
-Text search alone is not deletion authority; combine it with reachability and persisted-data proof.
+For `platform:read` cutover prove:
 
-## Focused local/CI verification stack
+- live Platform Control read routes require `platform:read`;
+- Control Panel navigation/affected platform readers use `platform:read`;
+- Identity vocabulary/bootstrap and role bindings contain the canonical capability;
+- zero `platform.read` live-code, fixture, seed, migration-residue, binding, actor/session projection, or generated-contract consumer remains except historical migrations that are intentionally immutable and cannot execute as live authority;
+- any historical migration text retained is classified as historical and cannot recreate the alias on a fresh current schema.
 
-Use smallest complete applicable set, expanding only on failure/evidence gap:
+### V-AUTH-05 — Legacy grant/revoke helper removal
 
-- Identity Go unit/integration/database tests for RBAC definition, vocabulary, idempotency, projection fences and permission resolution;
-- DSH Go unit/integration/database tests for separation-of-duties, request states, canonical operation lifecycle, worker claim/backoff/reconciliation, audit and exact permissions;
-- OpenAPI/contract/provenance/generated-client consistency checks;
-- control-panel typecheck/tests and affected administration interaction/journey tests;
-- fresh migration/startup/readiness/runtime proof;
-- security/isolation adversarial tests for exact permission, separation, replay and concurrency;
-- repository-owned scope/binding/provenance guards.
+Prove zero live caller of synthesized `legacy-grant:` / `legacy-revoke:` idempotency wrappers remains, all callers supply stable operation/request-derived idempotency, and the wrappers are deleted.
 
-Do not weaken/suppress/exclude a failing applicable check merely to obtain green.
+## 4. Canonical mutation lifecycle verification
 
-## Deep tool assurance — exact PR head before merge
+### V-LIFE-01 — State-machine legality
 
-### CodeQL
+Prove every state transition is explicit and legal. Tests must reject impossible transitions and prove that no path reaches complete/applied before canonical Identity truth is known.
 
-Canonical source: `.github/workflows/codeql.yml`.
+### V-LIFE-02 — Atomic local transition
 
-Require:
+Where request/audit/intent updates share PostgreSQL, prove the local finalization transaction cannot persist a partial combination that falsely reports success.
 
-- immutable checkout SHA = PR head;
-- affected language/module scope is correct for diff;
-- applicable JS/TS, Go and Actions jobs succeed;
-- `security-extended` analysis completes;
-- no unresolved material CodeQL alert tied to candidate remains;
-- analysis-key hygiene is not confused with security closure.
+### V-LIFE-03 — Durable claim / lease
 
-A green workflow with unresolved candidate alert is not closure.
+Run concurrent-worker tests proving:
 
-### SonarQube Cloud
+- one due intent is claimed once;
+- another worker skips a live claim;
+- lease expiry permits safe recovery;
+- stale owner cannot finalize after ownership loss;
+- process restart preserves recoverability.
 
-Canonical sources: `.github/workflows/sonarqube.yml` + `sonar-project.properties`.
+### V-LIFE-04 — Retry/backoff
 
-Require:
+Prove transient Identity failures produce increasing bounded delay with jitter/equivalent governed policy, do not spin every worker interval, and preserve a next eligible time across restart.
 
-- scanner revision exactly equals PR head;
-- `sonar.qualitygate.wait=true` behavior is effective;
-- Quality Gate = `OK`;
-- inspect unresolved issues, severity/impacts, bugs/vulnerabilities/code smells, coverage, duplicated-line density, ratings and security hotspots;
-- zero unresolved material vulnerability/blocker/critical/high-impact issue;
-- zero unreviewed material hotspot;
-- existing suppressions are only accepted if still grounded and not used to hide this change.
+### V-LIFE-05 — Crash window: remote applied before local finalization
 
-### Remote Security
+Inject a failure after Identity mutation but before local finalization. On retry/restart, canonical Identity readback must detect the remote result and converge local request + intent without duplicating or reversing the mutation.
 
-Canonical source: `.github/workflows/security-remote.yml`.
+### V-LIFE-06 — Crash window: request finalized but intent completion fails
 
-Require successful exact-candidate results for:
+Inject failure in/around the current problematic completion edge. Prove the operation remains discoverable and reconciles to complete rather than becoming `approved + non-applied` orphan residue.
 
-- remote analysis authority/config validation;
-- Gitleaks;
-- OSV Scanner;
-- Trivy;
-- actionlint;
-- zizmor;
-- pinact verify;
-- ShellCheck;
-- Hadolint;
-- yamllint.
+### V-LIFE-07 — Timeout ambiguity
 
-Inspect failed job logs and root cause; rerun only after proving failure is transient or after treatment. Never retry repeatedly to mask deterministic failure.
+Simulate remote timeout where the mutation may have applied. Prove readback resolves ambiguity before reissuing an effect and stable idempotency prevents duplicate remote mutation.
 
-### OpenCodeReview
+### V-LIFE-08 — Version/conflict semantics
 
-Canonical policy/rules: `.agents/tools/open-code-review.md`, `.opencodereview/rule.json`.
+Prove stale request/role version conflicts are classified correctly and do not become infinite retries or silent success.
 
-Require, if execution backend is available:
+### V-LIFE-09 — Existing data migration/backfill
 
-- exact base/head pinned;
-- deterministic included/excluded file list recorded;
-- rules applied to workflows/contracts/migrations/DSH/tests/frontend/security/concurrency/idempotency as applicable;
-- grounded Critical/High/Medium issues closed;
-- result treated as advisory, not self-approval.
+On representative pre-change data prove:
 
-If OCR cannot execute in the current host, record the limitation and obtain equivalent independent semantic review; do not claim OCR success.
+- pending intents migrate correctly;
+- failed intents receive valid retry metadata;
+- ambiguous approved/non-applied combinations become reconciliation-required until Identity readback;
+- no row is declared successful by migration without canonical evidence;
+- constraints and indexes support due-work/claim queries;
+- forward migration is repeatably valid under the repository migration discipline.
 
-### CodeRabbit / Codex Security
+## 5. UX / journey verification
 
-Use when execution backend is actually available:
+### V-UX-01 — Assignment journey
 
-- CodeRabbit for independent PR semantic review;
-- Codex Security diff scan for security coverage of every changed source file and validated candidates.
+From Control Panel entry through maker request, checker review, application, canonical readback, refresh/relogin, prove UI state matches backend/Identity truth at every step.
 
-Do not attribute manual findings to those tools.
+### V-UX-02 — Rollback journey
 
-## Independent review proof
+Prove independent checker eligibility, rollback application, canonical readback, and later readback. No stale action remains enabled for an actor that domain SoD will reject.
 
-At least one reviewer/agent/tool independent of the implementation author must review the exact final diff. All material review threads/findings must be resolved or explicitly proven false/non-applicable with evidence.
+### V-UX-03 — Failure/recovery states
 
-No independent review result was available during `AUDIT_PREPARE`; final execution must obtain fresh evidence.
+Exercise at minimum:
 
-## PR #284 pre-merge gate
+- Identity unavailable;
+- retryable application failure;
+- reconciliation in progress;
+- terminal conflict where applicable;
+- network/API failure;
+- empty/no-request state.
 
-Before marking ready/merging:
+Each state must provide accurate feedback and a valid recovery path or explicit terminal explanation. No false success and no indefinite ambiguous loading.
 
-1. `c` HEAD == declared final candidate;
-2. PR head SHA == candidate;
-3. compare with live `master`; classify concurrent delta;
-4. mergeable state is clean without unauthorized Orchestrator conflict handling;
-5. no unresolved material review threads/findings;
-6. exact-head CI/CodeQL/Sonar/Remote Security/semantic review requirements above pass;
-7. protected `tools/prompting/bthwani-orchestrator/**` divergence is absent or handled through separately authorized Orchestrator maintenance;
-8. final affected-cone + negative-space re-audit on candidate finds no material root;
-9. merge uses expected-head SHA protection.
+### V-UX-04 — Accessibility and action semantics
 
-## Post-merge landed-master gate
+Where affected controls are changed, prove disabled/hidden/action feedback remains keyboard/screen-reader understandable and that authorization is not communicated solely by visual styling.
 
-`Remote Analysis Evidence` is intentionally branch-`push`/default-branch readback authority and can skip a development push when an open PR owns verification. Therefore it is **post-merge landed-SHA evidence**, not a replacement for pre-merge PR checks.
+## 6. API / contract / generated binding verification
 
-After merge:
+### V-CONTRACT-01
 
-1. pin exact landed `master` SHA;
-2. require the canonical branch workflows for that SHA (`BThwani Contextual CI`, CodeQL, SonarQube Cloud, Remote Security);
-3. run/read `Remote Analysis Evidence` for landed `master` SHA;
-4. require collector policy `PASS`:
-   - CodeQL exact-SHA analysis complete and no open alerts;
-   - Sonar latest revision == landed SHA;
-   - Quality Gate `OK`;
-   - zero material unresolved Sonar issues;
-   - zero unreviewed hotspots;
-   - required workflow conclusions success;
-5. if landed readback fails or reveals a material issue, `CLOSED` is forbidden/revoked and treatment resumes.
+If operation/reconciliation state or error codes change, update the canonical API contract first and prove generated bindings match it exactly.
 
-## Final re-audit / negative space
+### V-CONTRACT-02
 
-After the last treatment write and again after landing:
+Search all writers/readers/consumers for old enum/error/action names. Zero mixed-version consumer remains before deleting old definitions.
 
-`RE-PIN → AUDIT → INSPECT → DIAGNOSE → ANALYZE affected cone → NEGATIVE SPACE → RE-RANK ROOTS`.
+### V-CONTRACT-03
 
-Reconfirm:
+Compatibility layers are temporary only during the same controlled migration and must be deleted before closure. No permanent dual contract is accepted.
 
-- authority boundaries;
-- all writers/readers/consumers migrated;
-- separation invariants;
-- lifecycle/retry/restart/concurrency/recovery invariants;
-- contract/data/readback agreement;
-- no partial migration/stale process/artifact;
-- no parallel authority/truth;
-- no orphan/broken state;
-- no known material finding;
-- no unjustified compatibility/fallback/legacy residue;
-- no regression in materially touched project-frame invariants.
+## 7. Database verification
 
-Any new material root forbids `CLOSED` and restarts ordered treatment.
+### V-DATA-01 — fresh database
 
-## Closed-state definition
+Create a fresh database using canonical migrations and prove Identity/DSH schemas, constraints, seeds/bootstrap, and authorization vocabulary converge without `platform.read` residue.
 
-Report `CLOSED` only when all are simultaneously true:
+### V-DATA-02 — upgrade path
 
-- RC0 separation-of-duties proven end-to-end and adversarially;
-- RC1 lifecycle/recovery/multi-replica invariants proven;
-- RC2 stale aliases/legacy helpers removed or bounded by a proven temporary external dependency with explicit retirement trigger;
-- historical Identity/DSH cutover has zero missing writer/reader/consumer;
-- fresh/upgrade DB and representative runtime readback pass;
-- UX reflects operational/recovery truth;
-- exact permission/security/privacy negatives pass;
-- exact PR-head CodeQL/Sonar/Remote Security/semantic review have no unresolved material finding;
-- PR #284 is mergeable/clean against current master without unauthorized Orchestrator mutation;
-- merge occurs with expected-head protection;
-- exact landed-master Remote Analysis Evidence passes;
-- final re-audit finds no known material defect or unjustified residue in Effective Scope.
+Upgrade from a representative previous schema/data state and prove backfill/cutover without lost requests, duplicate bindings, orphaned intents, or invented success.
 
-Until all are true, the correct state is not `CLOSED`.
+### V-DATA-03 — constraints
+
+Prove database constraints/indexes materially enforce uniqueness/state validity and support claim/due-work performance where appropriate; business SoD still remains in the domain owner when it depends on cross-record actor semantics not safely expressible as a simple constraint.
+
+### V-DATA-04 — transaction and idempotency
+
+Prove repeated identical operation IDs are safe and conflicting payload reuse fails explicitly rather than silently mutating a different request.
+
+## 8. Sonar repair and Quality Gate verification
+
+### V-SONAR-01 — coverage generator validity
+
+Before Sonar scanner:
+
+- Go coverage report exists;
+- is non-empty;
+- uses one valid representation;
+- parses successfully with Go tooling;
+- contains deterministic, collision-free source/package data;
+- workflow fails hard if generation/validation fails.
+
+### V-SONAR-02 — exact candidate scan
+
+Run SonarQube Cloud on `FINAL_CANDIDATE_SHA`. Record project key, analysis identity, imported JS/Go/Flutter coverage where configured, Quality Gate status, each condition, issues, hotspots, duplications and coverage metrics relevant to the affected scope.
+
+### V-SONAR-03 — no waiver-by-tooling
+
+A Quality Gate failure must be diagnosed and fixed from source/tool config as appropriate. Do not lower thresholds, ignore the failed language, or skip coverage solely to get green.
+
+## 9. Remote security / quality tool matrix
+
+### V-TOOL-01 — Canonical CI
+
+Relevant Node/Go/contracts/database/runtime checks pass on exact final candidate.
+
+### V-TOOL-02 — CodeQL
+
+Exact final candidate CodeQL completes successfully for all configured languages/effective scope with no unresolved material security finding.
+
+### V-TOOL-03 — Semgrep
+
+Exact final candidate Semgrep completes in governed mode; scan/policy/artifact steps succeed; no unresolved material finding remains.
+
+### V-TOOL-04 — Remote Security
+
+Run applicable governed Remote Security subtools and preserve their individual conclusions, including Gitleaks, OSV, Trivy, actionlint, zizmor, pinact, ShellCheck, Hadolint, yamllint and any current governed policy evaluation. Every failure is investigated; aggregate green cannot hide a red subtool.
+
+### V-TOOL-05 — Dependency Review / lockfile integrity
+
+Where activated by the final diff/governance, prove exact candidate dependency review and lockfile integrity.
+
+### V-TOOL-06 — OpenCodeReview
+
+Run semantic review against exact head/base. Host execution, evidence adjudication, policy evaluation and artifact publication must succeed. Material architecture/semantic findings route back into source treatment.
+
+### V-TOOL-07 — PR review / CodeRabbit where active
+
+Inspect reviews and unresolved threads on the active PR. Any material unresolved comment blocks closure even when automated scanners are green.
+
+### V-TOOL-08 — provenance
+
+Every accepted artifact must identify the exact SHA it analyzed. Artifact name alone is insufficient.
+
+## 10. Negative-space re-audit
+
+After all candidate tests are green, perform fresh search/inspection rather than trusting the implementation diff.
+
+### V-NEG-01
+
+Search for every forbidden actor equality path and verify no alternate assignment/rollback endpoint/use-case bypasses SoD.
+
+### V-NEG-02
+
+Search for all writers of approval/rollback/intent statuses and prove one canonical transition model.
+
+### V-NEG-03
+
+Search for every reader of `pending`, `failed`, `applied`, old/new lifecycle states and migrate all consumers.
+
+### V-NEG-04
+
+Search for `platform.read`, `legacy-grant:`, `legacy-revoke:` and removed helper names. Classify all hits; zero reachable superseded path remains.
+
+### V-NEG-05
+
+Search for catch-and-ignore patterns around mutation completion/readback, especially `_ =` or ignored update errors in the affected cone. No material completion error may be discarded.
+
+### V-NEG-06
+
+Inspect worker scheduling/query paths for unbounded immediate retry, missing lease predicates, stale claim handling, and no-index due-work scans.
+
+### V-NEG-07
+
+Inspect UI for local-only optimistic success, stale cached permissions, and actions visible/enabled for forbidden reviewer relationships.
+
+### V-NEG-08
+
+Inspect scanner workflows for `continue-on-error`, silent fallbacks, empty-artifact acceptance, stale SHA checkout, or different-ref analysis in the required gates.
+
+## 11. Acceptance criteria
+
+### AC-01 — canonical authority
+
+Identity is the only authorization truth; DSH is the only governed authorization workflow/orchestration owner; no parallel authority exists.
+
+### AC-02 — SoD
+
+Pairwise maker/beneficiary/checker separation and independent rollback checker are enforced centrally and proven through negative tests/runtime evidence.
+
+### AC-03 — lifecycle
+
+Every governed mutation is durable, exclusive, idempotent, retry-bounded, crash-recoverable, and canonically reconciled.
+
+### AC-04 — data
+
+Fresh and upgrade migrations succeed; no ambiguous row is silently marked successful; all relevant constraints/indexes exist.
+
+### AC-05 — vocabulary
+
+`platform:read` is the only live Platform Control read capability and `platform.read` is removed from all reachable truth/consumer paths.
+
+### AC-06 — legacy cleanup
+
+No legacy grant/revoke wrapper or synthetic legacy idempotency path remains reachable.
+
+### AC-07 — UX
+
+Affected journeys reflect canonical state including progress, failure, retry, recovery and later readback without false success.
+
+### AC-08 — toolchain
+
+All materially required remote tools pass on the same `FINAL_CANDIDATE_SHA` with inspectable provenance and no unresolved material finding.
+
+### AC-09 — repository integration
+
+PR head/base/reviews/mergeability and required checks are reconciled; post-merge/default-branch evidence required by governance is proven.
+
+### AC-10 — simplicity
+
+No compatibility layer, shadow lifecycle, duplicate vocabulary, fallback authority, orphan state, unused helper, or unjustified abstraction remains in the Effective Scope.
+
+## 12. Closure evidence IDs
+
+### CE-01 — Exact candidate identity
+
+One `FINAL_CANDIDATE_SHA` is recorded and every final pre-merge tool result maps to it.
+
+### CE-02 — Writer/reader/consumer migration complete
+
+Inventory proves every affected writer, reader, consumer, contract, generated binding, data row class, job, runtime path and surface has moved to canonical truth.
+
+### CE-03 — Root closure
+
+RC-0 through RC-3 are proven impossible/repaired at source; RC-4 is satisfied by fresh exact-candidate evidence.
+
+### CE-04 — Negative space clear
+
+Fresh re-audit finds no known material bypass, drift, parallel truth, orphan/retry loop, stale alias, legacy wrapper, false-success UX or verification workaround.
+
+### CE-05 — Tool evidence complete
+
+CodeQL, Sonar, Semgrep, Remote Security, OpenCodeReview and all other activated verification boundaries have exact-candidate PASS/proven-N/A evidence. Historical or different-SHA results do not satisfy this criterion.
+
+### CE-06 — PR/integration complete
+
+The intended PR is non-draft when ready, mergeable, has no unresolved material review item, and all required checks/evidence correspond to its exact head. Merge result/default-branch follow-up is verified where required.
+
+### CE-07 — Cleanup complete
+
+All proven legacy/dead/stale/duplicate/superseded reachable paths inside the Effective Scope are deleted after cutover.
+
+### CE-08 — Final post-change re-audit
+
+After the last source mutation and evidence run, perform one final `AUDIT + INSPECT + DIAGNOSE + ANALYZE` over the affected cone and negative space. It produces no new material finding.
+
+## 13. State transitions for this plan
+
+- Current legal state after this document refresh: `READY_FOR_EXECUTION`.
+- During source treatment: `EXECUTING` / root-specific verification states as governed by the orchestrator.
+- A failed/missing exact-candidate tool keeps the task open and routes to diagnosis.
+- `CLOSED` is legal only when every applicable `AC-*` and `CE-*` is proven on the exact final candidate/integration state.
+
+Until then: **DO NOT MARK CLOSED.**
