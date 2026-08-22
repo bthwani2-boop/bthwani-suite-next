@@ -4,6 +4,8 @@
 
 Diagnosis exists to choose and prove the correct treatment, not to generate a report or enumerate every low-level defect before useful execution can begin.
 
+For `EXECUTE_CLOSE`, prove enough to select and safely treat the highest current root without needless rediscovery. For `AUDIT_PREPARE`, the optimization target is different: maximize materially useful evidence completeness and handoff determinism **before** handoff, so execution does not need to rediscover architecture, artifact disposition, cleanup or verification intent.
+
 ```text
 DISCOVER
 → MODEL
@@ -283,7 +285,9 @@ If a root exposed by the current objective is materially higher and affects othe
 
 ## 13. Competitive deepening
 
-Deepen only candidates that can materially change priority or treatment.
+In live execution, deepen candidates only as far as needed to materially change priority or treatment; once the winning root is safely proven, execute rather than wander.
+
+In `AUDIT_PREPARE`, do **not** stop at the first executable root merely because execution could begin. Continue materially relevant competitive deepening, capability use, negative-space inspection, consumer/artifact inventory and cleanup/deletion analysis until the handoff reaches the evidence-saturation condition in `01 §14.1`. Preparation ends when more applicable evidence is not reasonably capable of changing the contract, not when the first fix becomes obvious.
 
 The winning root must be:
 
@@ -293,10 +297,8 @@ AND DEEPENED_ENOUGH_TO_RANK
 AND HIGHEST_CURRENT_SYSTEMIC_LEVERAGE
 AND EXECUTABLE
 AND NO_KNOWN_HIGHER_ROOT_CAN_MATERIALLY_CHANGE_TREATMENT
-AND PROJECT-FRAME RELATION SUFFICIENTLY PROVEN FOR SAFE TREATMENT
+AND PROJECT-FRAME RELATION SUFFICIENTLY_PROVEN FOR SAFE TREATMENT
 ```
-
-Then execute; do not keep wandering through details that cannot alter the next correct action.
 
 ## 14. Decision taxonomy
 
@@ -425,6 +427,8 @@ A new local fix is allowed only when evidence proves the issue is itself the hig
 
 Derive only the next coherent treatment frontier from the currently proven root and hard dependencies. Do not build speculative multi-root task forests whose assumptions may disappear after the current root is fixed. After treatment, revalidate touched project-frame claims, re-diagnose and derive the next frontier from the new live state.
 
+An `AUDIT_PREPARE` handoff may record the broader proven root landscape for context, but only the currently safe `EXECUTION_FRONTIER` is executable; downstream/deferred roots remain explicitly `DEFERRED_REVALIDATE` where live mutation can change their assumptions.
+
 Different objectives, workers or sessions may advance independent roots only when they share the same reconciled project frame and single integration truth under `00`/`01`; no local worker target may become a competing canonical model.
 
 ## 19. Durable-truth discovery and governance-clarity findings
@@ -480,11 +484,14 @@ Writers / Readers / Consumers
 Effective Working Cone
 Blast Radius
 Negative Space
+Capability / Tool Coverage Ledger
 D-* Decision Ledger
 INV-* Invariant Register
 Material unknown/conflict disposition
 Remaining Ambiguity class
 ```
+
+The `Capability / Tool Coverage Ledger` records each materially plausible discovered capability as `REQUIRED_APPLICABLE | SUPPORTING_APPLICABLE | N/A_PROVEN | UNAVAILABLE_BLOCKER`, whether/how it was actually used, the evidence/result reference, candidate/environment provenance where relevant, what it proves, what it does not prove, and why any plausible capability was not used. A capability cannot be marked applicable merely by name; applicability is claim/risk driven. A required applicable capability that was available but unused blocks readiness.
 
 For each material resolved decision retain enough traceability to prevent accidental reopening:
 
@@ -518,6 +525,7 @@ ADD / CHANGE / MOVE / REFACTOR / MIGRATE / BACKFILL / REGENERATE / CUTOVER / DEL
 AFFECTED_WRITERS / READERS / CONSUMERS
 HARD_DEPENDENCIES
 PARALLELIZATION disposition
+ARTIFACT_DISPOSITION / DELETION_MANIFEST
 ALLOWED_CHANGE_CONE
 CONDITIONAL_EXPANSION
 READ_ONLY
@@ -525,6 +533,27 @@ FORBIDDEN_WITHOUT_REPLAN
 CLEANUP / RETIREMENT
 STOP_ESCALATION_TRIGGERS
 ```
+
+Every materially affected artifact whose existence/placement is relevant to the treatment or cleanup must receive exactly one current disposition:
+
+`KEEP_PROVEN | MOVE_REQUIRED | MERGE_REQUIRED | DELETE_REQUIRED | RETIRE_AFTER_CUTOVER | BLOCKED_WITH_REASON`.
+
+For every `DELETE_REQUIRED` or `RETIRE_AFTER_CUTOVER` item record enough to make deletion deterministic:
+
+```text
+ARTIFACT / PATH / SYMBOL OR OWNED CONCEPT
+ROOT / STEP REFERENCES
+EVIDENCE THAT VALUE/PURPOSE IS ABSENT OR SUPERSEDED
+CURRENT OWNER / KNOWN CONSUMERS / REFERENCES
+REPLACEMENT OR CANONICAL DESTINATION when applicable
+CUTOVER / MIGRATION PREREQUISITES
+REFERENCE / CONFIG / TEST / GENERATED REPAIR REQUIRED
+DELETE / RETIRE ORDER
+V-* / AC-* / CE-* PROOF REQUIRED
+INVALIDATION / BLOCKER TRIGGER
+```
+
+A proven `DELETE_REQUIRED` item is an execution obligation, not a suggestion. Do not replace it with `KEEP` because deletion feels risky; risk is resolved during audit through consumer/reachability/cutover proof or is recorded as `BLOCKED_WITH_REASON`. `RETIRE_AFTER_CUTOVER` becomes `DELETE_REQUIRED` once its proven prerequisite is satisfied unless new material evidence invalidates that disposition.
 
 `VERIFY` here references the V-* requirements owned by `02-VERIFICATION-CLOSURE.md`; it does not redefine verification law.
 
@@ -541,6 +570,8 @@ CE-* required closure evidence
 Final-candidate requirements
 Definition-of-DONE references/applicability
 ```
+
+For every `DELETE_REQUIRED`/`RETIRE_AFTER_CUTOVER` item, include enough mapped verification to prove final-tree absence where deletion is required, zero stale/reachable references, repaired consumers/config/tests/generated bindings, and no loss of required behavior/value.
 
 Do not restate generic verification doctrine already owned by `04`.
 
@@ -589,7 +620,7 @@ Every material execution obligation must remain reconstructable through IDs with
 E-* → F-* → RC-* → D-* / INV-* when applicable → STEP-* → V-* → AC-* → CE-*
 ```
 
-Not every chain requires every optional node, but every material `STEP-*` must trace back to a proven root/decision and forward to sufficient verification/acceptance evidence.
+Not every chain requires every optional node, but every material `STEP-*` must trace back to a proven root/decision and forward to sufficient verification/acceptance evidence. Artifact dispositions reference the same chain; they do not create a parallel finding/root system.
 
 ### 20.7 Handoff-readiness gate
 
@@ -600,11 +631,15 @@ EXACT_BASELINE_RECORDED
 AND MATERIAL_DECISIONS_RESOLVED
 AND HIGHEST_RELEVANT_ROOTS_PROVEN
 AND CANONICAL_TARGET_FIXED
+AND REQUIRED_APPLICABLE_CAPABILITIES_USED_OR_EXPLICITLY_BLOCKED
+AND CAPABILITY_COVERAGE_LEDGER_COMPLETE
 AND SOURCE_OF_FIX_KNOWN_FOR_EXECUTION_FRONTIER
 AND WRITERS_READERS_CONSUMERS_ACCOUNTED_FOR_MATERIALLY
 AND WORKING_CONE_COMPLETE_BUT_NOT_UNJUSTIFIABLY_BROAD
 AND BLAST_RADIUS_AND_NEGATIVE_SPACE_SUFFICIENTLY_PROVEN
 AND MATERIAL_INVARIANTS_EXPLICIT
+AND MATERIAL_ARTIFACTS_DISPOSITIONED
+AND DELETE_REQUIRED_ITEMS_HAVE_PROVEN_PREREQUISITES_ORDER_REFERENCE_REPAIR_AND_VERIFICATION
 AND MIGRATION_BACKFILL_RECONCILIATION_DEFINED_WHEN_REQUIRED
 AND CUTOVER_AND_CLEANUP_DEFINED_WHEN_REQUIRED
 AND CHANGE_CONE_AND_ESCALATION_BOUNDARY_DEFINED
