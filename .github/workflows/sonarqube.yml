@@ -124,7 +124,7 @@ jobs:
           BASE_SHA="${PR_BASE_SHA:-}"
           MODE=affected
 
-          if [[ "${EVENT_NAME}" == "push" ]]; then
+          if [[ "${EVENT_NAME}" == "push" || "${EVENT_NAME}" == "workflow_dispatch" ]]; then
             MODE=full
             BASE_SHA="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${HEAD_SHA}")"
           elif [[ -z "${BASE_SHA}" ]]; then
