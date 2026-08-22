@@ -13,7 +13,7 @@ $ErrorActionPreference = 'Stop'
 $global:LASTEXITCODE = 0
 
 # Fixed argv bridge for Windows package-manager shims. Never evaluate a joined
-# command string and never invoke cmd.exe /c.
+# command string and never invoke an intermediate command shell.
 & $Command @Arguments
 if ($null -eq $LASTEXITCODE) { exit 0 }
 exit [int]$LASTEXITCODE
