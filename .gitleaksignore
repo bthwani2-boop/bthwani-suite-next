@@ -1,1 +1,54 @@
+# .gitleaksignore
+# Sourced from Gitleaks false positive fingerprints
+
+# performance-budget-gate.mjs line 73 false positive generic-api-key
+dd6f345174025430738772bede1d82298bdafb71:tools/guards/performance-budget-gate.mjs:generic-api-key:73
+
+# Historical generic-api-key findings reviewed during PR #232. These are exact
+# immutable fingerprints (test/evidence identifiers or pre-existing master
+# history), so new values and new commits remain fail-closed.
+bf31a1ce8b142e4f82a3e4154bd83cb4d403f635:tools/diagnose-implementing/dsh-wlt-all-journeys-final-closure-reassessment-2026-08-04/evidence/authority-ledger.csv:generic-api-key:7
+bf31a1ce8b142e4f82a3e4154bd83cb4d403f635:tools/diagnose-implementing/dsh-wlt-all-journeys-final-closure-reassessment-2026-08-04/evidence/http-routes.csv:generic-api-key:702
+1fbc80dffc54f3096498c943c422de20bc5d7628:core/identity/backend/internal/identity/activation_race_db_test.go:generic-api-key:36
+034b0003c7d37cab81b7ee393370d65541520220:services/wlt/backend/internal/payout/upsert_governed_db_test.go:generic-api-key:91
+9011119712a8083916817791f009231aae8d5f2e:services/wlt/backend/internal/http/delivery_collection_routes_test.go:generic-api-key:24
+b43b2f53ace00798a5df3e481598bdebab15fd8c:tools/verification/jrn-036-runtime-smoke.sh:generic-api-key:89
+b43b2f53ace00798a5df3e481598bdebab15fd8c:tools/verification/jrn-036-runtime-smoke.sh:generic-api-key:170
+b43b2f53ace00798a5df3e481598bdebab15fd8c:tools/verification/jrn-036-runtime-smoke.sh:generic-api-key:214
+b43b2f53ace00798a5df3e481598bdebab15fd8c:tools/verification/jrn-036-runtime-smoke.sh:generic-api-key:220
+b43b2f53ace00798a5df3e481598bdebab15fd8c:tools/verification/jrn-036-runtime-smoke.sh:generic-api-key:283
+8be49823175c0f08fc284090617eef409b283d7b:tools/verification/jrn-036-runtime-smoke.sh:generic-api-key:179
+8be49823175c0f08fc284090617eef409b283d7b:tools/verification/jrn-036-runtime-smoke.sh:generic-api-key:187
+cbf3e49eb60d633951b81a02af0a0ee0a3c20d71:tools/verification/jrn-036-runtime-smoke.sh:generic-api-key:108
+cbf3e49eb60d633951b81a02af0a0ee0a3c20d71:tools/verification/jrn-036-runtime-smoke.sh:generic-api-key:140
+f055c7367a137fa99cacb34e034ec924da621115:services/dsh/backend/internal/http/order_truth_validation_test.go:generic-api-key:33
+c5a3b1e6fc95c7e132b315bc256decaa15396ffb:services/dsh/database/tests/dsh-098_jrn_004_store_governance_closure.sql:generic-api-key:73
+640dd301aa087366cef6c47f0e7e566ef7a1f702:.github/workflows/jrn-002-identity-runtime.yml:generic-api-key:80
+66b5dec62ca9b4e80e94bcfe2751b5fbbede0492:services/wlt/backend/internal/payout/upsert_governed_db_test.go:generic-api-key:79
+cd330e743feb1ebadb562f4ce595a7cfbab0a84e:infra/docker/env/runtime.local-production.env:generic-api-key:16
+cd330e743feb1ebadb562f4ce595a7cfbab0a84e:infra/docker/env/runtime.local-production.env:generic-api-key:23
+cd330e743feb1ebadb562f4ce595a7cfbab0a84e:infra/docker/env/runtime.local-production.env:generic-api-key:32
+cd330e743feb1ebadb562f4ce595a7cfbab0a84e:infra/docker/env/runtime.local-production.env:generic-api-key:41
+cd330e743feb1ebadb562f4ce595a7cfbab0a84e:infra/docker/env/runtime.local-production.env:generic-api-key:42
+cd330e743feb1ebadb562f4ce595a7cfbab0a84e:infra/docker/env/runtime.local-production.env:generic-api-key:48
+cd330e743feb1ebadb562f4ce595a7cfbab0a84e:infra/docker/env/runtime.local-production.env:generic-api-key:50
+cd330e743feb1ebadb562f4ce595a7cfbab0a84e:infra/docker/env/runtime.local-production.env:generic-api-key:51
+cd330e743feb1ebadb562f4ce595a7cfbab0a84e:infra/docker/env/runtime.local-production.env:generic-api-key:57
+cd330e743feb1ebadb562f4ce595a7cfbab0a84e:infra/docker/env/runtime.local-production.env:generic-api-key:81
+
+# Historical DSH finance test idempotency key. The matched value is a synthetic
+# deterministic request-deduplication identifier, not a credential. The exact
+# immutable fingerprint is ignored; changed values or new occurrences still fail.
 44dfcdebd3bff00181659bc9d3ec4ea636ea9f49:services/dsh/backend/internal/http/finance_settlement_sources_test.go:generic-api-key:63
+
+# Historical WLT payout DB-test encryption literals reviewed during PR #239.
+# The source values are explicit synthetic test strings, not credentials. These
+# exact immutable fingerprints are ignored; any changed value/line/commit stays
+# fail-closed and will be reported again.
+ccde6be162bad7127a5049b279ce74bb97e050c1:services/wlt/backend/internal/payout/payout_governance_concurrency_db_test.go:generic-api-key:28
+ccde6be162bad7127a5049b279ce74bb97e050c1:services/wlt/backend/internal/payout/payout_governance_concurrency_db_test.go:generic-api-key:98
+bee8e9cfe1762cef39690f0b254fdf0b6855e1a9:services/wlt/backend/internal/payout/payout_governance_concurrency_db_test.go:generic-api-key:98
+e4b85f4be6ede7e33d1fbb81ffa7baa2410c6b87:services/wlt/backend/internal/payout/official_wallet_destination_db_test.go:generic-api-key:28
+e4b85f4be6ede7e33d1fbb81ffa7baa2410c6b87:services/wlt/backend/internal/payout/official_wallet_destination_db_test.go:generic-api-key:47
+e4b85f4be6ede7e33d1fbb81ffa7baa2410c6b87:services/wlt/backend/internal/payout/official_wallet_destination_db_test.go:generic-api-key:118
+e4b85f4be6ede7e33d1fbb81ffa7baa2410c6b87:services/wlt/backend/internal/payout/official_wallet_destination_db_test.go:generic-api-key:146

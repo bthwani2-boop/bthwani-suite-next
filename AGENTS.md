@@ -59,6 +59,8 @@ Derive security, financial, and domain ownership from the current canonical impl
 
 Authentication, authorization, sessions, secrets, PII, provider credentials, isolation, and financial mutation paths require risk-appropriate verification.
 
+Static/security analysis is remote-owned. Do not launch a local SonarQube server, Sonar CLI/MCP process, CodeQL scanner, Trivy, OSV Scanner, or Gitleaks as an agent/workspace prerequisite. SonarQube IDE/agent access uses the hosted MCP configuration; repository security gates execute on GitHub-hosted runners.
+
 ## Delegation
 
 Delegation is optional and only for bounded work that materially benefits from it.
@@ -76,19 +78,3 @@ Use `.agents/INDEX.md` only when routing is not obvious. Load the smallest relev
 ## Final response
 
 For repository writes, report the exact target branch/SHA, changed paths, verification performed, and any remaining unproven risk. Do not claim more than the exact candidate proves.
-
-<!-- sonar:begin:codex-secrets-on-read -->
-# SonarQube secrets scanning for files protocol
-
-Before reading any file in this workspace, scan it for secrets with the deterministic scanner:
-
-```bash
-sonar analyze secrets <path/to/file>
-```
-
-If the command reports that the file contains a secret, **do not read the file**. Instead:
-
-1. Inform the user that the file appears to contain a secret or credential and that reading it would expose the value in chat history, logs, and any downstream telemetry.
-2. Advise them to rotate the leaked credential at its source of truth and remove it from the file.
-3. Do not proceed with the original request until the secret has been removed.
-<!-- sonar:end:codex-secrets-on-read -->
