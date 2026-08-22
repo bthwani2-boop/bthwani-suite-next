@@ -1,14 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import {
-  CpBadge,
-  CpButton,
   CpKpiCard,
   CpKpiStrip,
-  CpMutedInline,
   CpPageHeader,
   CpStatePanel,
   CpStateView,
@@ -21,12 +16,12 @@ import { OverviewPageFrame } from "@bthwani/control-panel/shell";
 import {
   ADMIN_MAIN_TABS,
   ADMINISTRATION_TRUTH_NOTICE,
-  administrationStatusLabel,
   useAdministrationRolesController,
   useStaffController,
   useAdminAuditController,
   type AdminMainTabId,
   type DshAdminState,
+  type DshRolePermission,
 } from "../../shared/administration";
 
 type CountableState = DshAdminState<readonly unknown[]>;
@@ -41,29 +36,13 @@ function statePanel(state: CountableState, loadingTitle: string) {
   return null;
 }
 
-function statusTone(status: string): CpBadgeTone {
-  switch (status) {
-    case "active":
-    case "approved":
-    case "partner_active":
-    case "ops_approved":
-      return "success";
-    case "pending":
-    case "submitted":
-      return "warning";
-    case "rejected":
-    case "suspended":
-    case "blocked":
-      return "danger";
-    default:
-      return "neutral";
-  }
+function permissionLabel(permission: DshRolePermission): string {
+  return `${permission.service}/${permission.surface}/${permission.action} [${permission.scope}]`;
 }
 
 const MAIN_TAB_ITEMS = ADMIN_MAIN_TABS.map((tab) => ({ value: tab.id, label: tab.label }));
 
 export function AdministrationDashboardScreen() {
-  const router = useRouter();
   const [tab, setTab] = useState<AdminMainTabId>("overview");
   const roles = useAdministrationRolesController("authenticated");
   const staff = useStaffController("authenticated");
@@ -82,11 +61,11 @@ export function AdministrationDashboardScreen() {
       />
       <section aria-label="حالة القراءة التشغيلية">
         <h2>حالة القراءة التشغيلية</h2>
-        {statePanel(roles.state, "جارٍ تحميل الأدوار…")}
+        {statePanel(roles.state, "جارٍ تحميل الأدوار من Identity…")}
         {statePanel(staff.state, "جارٍ تحميل إسنادات الأدوار…")}
         {statePanel(audit.state, "جارٍ تحميل سجل التدقيق…")}
         {roles.state.kind === "success" && staff.state.kind === "success" && audit.state.kind === "success" ? (
-          <CpStatePanel role="status" title="تم تحميل الحقيقة الإدارية من DSH." />
+          <CpStatePanel role="status" title="تم تحميل تعريفات الأدوار من Identity وسجل الحوكمة من DSH." />
         ) : null}
       </section>
     </>
@@ -94,20 +73,18 @@ export function AdministrationDashboardScreen() {
 
   const renderRoles = () => (
     <>
-      {statePanel(roles.state, "جارٍ تحميل الأدوار…")}
+      {statePanel(roles.state, "جارٍ تحميل الأدوار من Identity…")}
       {roles.state.kind === "success" && roles.state.data.length === 0 ? (
-        <CpStatePanel role="status" title="لا توجد أدوار معرفة في DSH." />
+        <CpStatePanel role="status" title="لا توجد أدوار معرفة في Identity." />
       ) : null}
       {roles.state.kind === "success" ? (
-        <CpTable aria-label="الأدوار والصلاحيات">
+        <CpTable aria-label="تعريفات الأدوار والصلاحيات في Identity">
           <thead>
             <tr>
               <CpTableHeaderCell>الدور</CpTableHeaderCell>
               <CpTableHeaderCell>الوصف</CpTableHeaderCell>
-              <CpTableHeaderCell>الصلاحيات</CpTableHeaderCell>
-              <CpTableHeaderCell>الأسطح</CpTableHeaderCell>
-              <CpTableHeaderCell>الحالة/النسخة</CpTableHeaderCell>
-              <CpTableHeaderCell>تاريخ الإنشاء</CpTableHeaderCell>
+              <CpTableHeaderCell>الصلاحيات الفعلية</CpTableHeaderCell>
+              <CpTableHeaderCell>الأسطح المشتقة</CpTableHeaderCell>
             </tr>
           </thead>
           <tbody>
@@ -115,13 +92,12 @@ export function AdministrationDashboardScreen() {
               <tr key={role.id}>
                 <CpTableCell>{role.name}</CpTableCell>
                 <CpTableCell>{role.description || "—"}</CpTableCell>
-                <CpTableCell>{role.permissions.length > 0 ? role.permissions.join("، ") : "لا توجد صلاحيات مرتبطة"}</CpTableCell>
-                <CpTableCell>{role.surfaces.length > 0 ? role.surfaces.join("، ") : "—"}</CpTableCell>
                 <CpTableCell>
-                  <CpBadge tone={role.active ? "success" : "neutral"}>{role.active ? "فعال" : "غير فعال"}</CpBadge>{" "}
-                  <CpMutedInline tight>v{role.version}</CpMutedInline>
+                  {role.permissions.length > 0
+                    ? role.permissions.map(permissionLabel).join("، ")
+                    : "لا توجد صلاحيات مرتبطة"}
                 </CpTableCell>
-                <CpTableCell>{role.createdAt}</CpTableCell>
+                <CpTableCell>{role.surfaces.length > 0 ? role.surfaces.join("، ") : "—"}</CpTableCell>
               </tr>
             ))}
           </tbody>
@@ -168,7 +144,7 @@ export function AdministrationDashboardScreen() {
     <CpStatePanel
       role="status"
       title="جميع طفرات إسناد الأدوار تمر عبر Maker / Checker"
-      description="أنشئ الطلب وراجعه من الطابور الحاكم أدناه. لا توجد مسارات Runtime مباشرة لإسناد الدور أو إنشاء حقائق موازية."
+      description="أنشئ الطلب وراجعه من الطابور الحاكم أدناه. Identity هي سلطة تعريف الأدوار والإسنادات، وDSH يحتفظ بسجل طلبات ومراجعات الحوكمة فقط."
     />
   );
 
