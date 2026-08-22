@@ -15,7 +15,7 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
-$ExpectedVersion = "1.8.8"
+$ExpectedVersion = "1.9.9"
 $PackageName = "@alibaba-group/open-code-review"
 $RulePath = ".opencodereview/rule.json"
 $PackagePath = "package.json"
@@ -225,6 +225,18 @@ function Set-OpenCodeReviewConfiguration {
     throw "OpenCodeReview rules are missing from $RulePath."
   }
 
+  foreach ($entry in @($rule.rules)) {
+    $mergeProperty = $entry.PSObject.Properties["merge_system_rule"]
+    if ($null -eq $mergeProperty) {
+      $entry | Add-Member -NotePropertyName merge_system_rule -NotePropertyValue $true
+      $ruleChanged = $true
+    }
+    elseif ($entry.merge_system_rule -ne $true) {
+      $entry.merge_system_rule = $true
+      $ruleChanged = $true
+    }
+  }
+
   if ($ruleChanged) {
     Write-Utf8Json -LiteralPath $RulePath -Value $rule
     $changed.Add($RulePath)
@@ -289,12 +301,23 @@ function Get-ReviewTargets {
 function Invoke-DelegatePreview {
   param([Parameter(Mandatory)][object]$Ocr)
 
-  Invoke-ExternalCommand -FilePath $Ocr.Command.Source -Arguments @(
+  $arguments = @(
     "delegate",
     "preview",
     "--rule",
     $RulePath
   )
+
+  if (-not [string]::IsNullOrWhiteSpace($From)) {
+    $arguments += @(
+      "--from",
+      $From,
+      "--to",
+      $To
+    )
+  }
+
+  Invoke-ExternalCommand -FilePath $Ocr.Command.Source -Arguments $arguments
 }
 
 function Invoke-DelegateRules {
@@ -307,7 +330,9 @@ function Invoke-DelegateRules {
 
   Invoke-ExternalCommand -FilePath $Ocr.Command.Source -Arguments (@(
     "delegate",
-    "rule"
+    "rule",
+    "--rule",
+    $RulePath
   ) + $targets)
 
   Write-Output "review_target_count=$($targets.Count)"
@@ -327,7 +352,9 @@ function Invoke-DelegateAudit {
   Write-Output "=== OCR RESOLVED RULES ==="
   Invoke-ExternalCommand -FilePath $Ocr.Command.Source -Arguments (@(
     "delegate",
-    "rule"
+    "rule",
+    "--rule",
+    $RulePath
   ) + $targets)
 
   Write-Output "=== REVIEW TARGETS ==="
@@ -386,6 +413,16 @@ function Test-OpenCodeReviewConfiguration {
 
   if (($null -eq $rule.PSObject.Properties["rules"]) -or @($rule.rules).Count -eq 0) {
     throw "OCR review rules are missing."
+  }
+
+  $nonMergingRules = @(
+    $rule.rules | Where-Object {
+      $_.PSObject.Properties.Name -notcontains "merge_system_rule" -or
+      $_.merge_system_rule -ne $true
+    }
+  )
+  if ($nonMergingRules.Count -gt 0) {
+    throw "Every project OpenCodeReview rule must set merge_system_rule=true."
   }
 
   $git = (Get-Command git -ErrorAction Stop).Source
