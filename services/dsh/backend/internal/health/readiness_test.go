@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -110,61 +111,27 @@ func TestReadinessIdentityNotReadyReturns503(t *testing.T) {
 	}
 }
 
-type migrationManifestDocument struct {
-	Cutover    string `json:"cutover"`
-	Migrations []struct {
-		Ordinal int    `json:"ordinal"`
-		File    string `json:"file"`
-		State   string `json:"state"`
-	} `json:"migrations"`
-}
-
-type migrationManifestExtensionDocument struct {
-	Migrations []struct {
-		Ordinal int    `json:"ordinal"`
-		File    string `json:"file"`
-		State   string `json:"state"`
-	} `json:"migrations"`
-}
-
-func TestReadinessMigrationMatchesGovernedManifestSet(t *testing.T) {
+func TestReadinessDoesNotDuplicateMigrationManifestHead(t *testing.T) {
 	_, testFile, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("cannot resolve test source path")
 	}
-	migrationDirectory := filepath.Clean(filepath.Join(filepath.Dir(testFile), "../../../database/migrations"))
-	manifestPath := filepath.Join(migrationDirectory, "manifest.json")
-	content, err := os.ReadFile(manifestPath)
+	content, err := os.ReadFile(filepath.Join(filepath.Dir(testFile), "health.go"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	var manifest migrationManifestDocument
-	if err := json.Unmarshal(content, &manifest); err != nil {
-		t.Fatal(err)
-	}
-	extensionContent, err := os.ReadFile(filepath.Join(migrationDirectory, "manifest.extensions.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	var extension migrationManifestExtensionDocument
-	if err := json.Unmarshal(extensionContent, &extension); err != nil {
-		t.Fatal(err)
-	}
-	latestOrdinal := -1
-	latestRequired := manifest.Cutover
-	for _, migration := range manifest.Migrations {
-		if migration.State == "ACTIVE" && migration.Ordinal > latestOrdinal {
-			latestOrdinal = migration.Ordinal
-			latestRequired = migration.File
+	source := string(content)
+	for _, forbidden := range []string{"dshLatestMigration", "migration_id = $2"} {
+		if strings.Contains(source, forbidden) {
+			t.Fatalf("runtime readiness must not duplicate migration-manifest head authority: found %q", forbidden)
 		}
 	}
-	for _, migration := range extension.Migrations {
-		if migration.State == "ACTIVE" && migration.Ordinal > latestOrdinal {
-			latestOrdinal = migration.Ordinal
-			latestRequired = migration.File
+	for _, requiredInvariant := range []string{
+		"dsh_admin_canonical_mutation_intents",
+		"uq_dsh_admin_pending_role_change_by_actor_role",
+	} {
+		if !strings.Contains(source, requiredInvariant) {
+			t.Fatalf("runtime readiness is missing required schema invariant %q", requiredInvariant)
 		}
-	}
-	if latestRequired != dshLatestMigration {
-		t.Fatalf("DSH readiness migration drift: latest_required=%s runtime=%s", latestRequired, dshLatestMigration)
 	}
 }
