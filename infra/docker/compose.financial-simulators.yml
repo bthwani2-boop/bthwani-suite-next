@@ -30,8 +30,8 @@ services:
     container_name: ${BTHWANI_MAILPIT_CONTAINER:-bthwani-mailpit-runtime}
     restart: unless-stopped
     ports:
-      - "${BTHWANI_MAILPIT_UI_PORT:-8025}:8025"
-      - "${BTHWANI_MAILPIT_SMTP_PORT:-1025}:1025"
+      - "127.0.0.1:${BTHWANI_MAILPIT_UI_PORT:-8025}:8025"
+      - "127.0.0.1:${BTHWANI_MAILPIT_SMTP_PORT:-1025}:1025"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8025/api/v1/info || exit 1"]
       interval: 10s
