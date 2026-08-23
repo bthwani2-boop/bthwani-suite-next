@@ -287,8 +287,13 @@ func ReviewRoleDefinitionRequest(ctx context.Context, db *sql.DB, identityClient
 		req.Permissions = normalizedActions
 		req.Surfaces = normalizeAdministrationRoleSurfaces()
 		intentPayload, _ := json.Marshal(map[string]any{
-			"roleName": req.RoleName, "description": req.Description, "active": req.Active,
-			"expectedVersion": req.ExpectedRoleVersion, "permissions": permissions, "reviewerId": actorID,
+			"roleName": req.RoleName,
+			"description": req.Description,
+			"active": req.Active,
+			"expectedVersion": req.ExpectedRoleVersion,
+			"permissions": permissions,
+			"reviewerId": actorID,
+			"reviewNote": params.ReviewNote,
 		})
 		if err := enqueueCanonicalMutationTx(ctx, tx, "role-definition-upsert", req.ID, string(intentPayload)); err != nil {
 			return nil, nil, err
@@ -329,11 +334,26 @@ func ReviewRoleDefinitionRequest(ctx context.Context, db *sql.DB, identityClient
 		`, actorID, params.ReviewNote, requestID, req.Version).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt); err != nil {
 			return nil, nil, errors.New("version conflict")
 		}
+		intentResult, err := finalize.ExecContext(ctx, `
+			UPDATE dsh_admin_canonical_mutation_intents
+			SET status = 'applied', attempts = attempts + 1, last_error = NULL,
+			    next_attempt_at = NULL, terminal_failure = FALSE,
+			    lease_owner = NULL, lease_expires_at = NULL, updated_at = NOW()
+			WHERE operation_type = 'role-definition-upsert' AND request_id = $1
+		`, req.ID)
+		if err != nil {
+			return nil, nil, err
+		}
+		if rows, rowsErr := intentResult.RowsAffected(); rowsErr != nil || rows != 1 {
+			if rowsErr != nil {
+				return nil, nil, rowsErr
+			}
+			return nil, nil, errors.New("canonical mutation intent is missing")
+		}
 		_, _ = finalize.ExecContext(ctx, `INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id) VALUES ($1, $2, $3, $4, 'HIGH', $5)`, actorID, "ROLE_DEFINITION_APPROVED", req.ID, "Reviewed canonical role: "+req.RoleName, req.ID)
 		if err := finalize.Commit(); err != nil {
 			return nil, nil, err
 		}
-		_ = markCanonicalMutation(ctx, db, "role-definition-upsert", req.ID, "applied", "")
 		req.Status = "approved"
 	} else {
 		if err = tx.QueryRowContext(ctx, `
