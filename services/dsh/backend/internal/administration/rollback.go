@@ -235,7 +235,13 @@ func ReviewRollbackRequest(ctx context.Context, db *sql.DB, identityClient *auth
 		return &req, nil
 	}
 
-	intentPayload, _ := json.Marshal(map[string]string{"targetActorId": req.TargetActorID, "roleName": req.RoleName, "actionType": req.InverseActionType, "reviewerId": actorID})
+	intentPayload, _ := json.Marshal(map[string]string{
+		"targetActorId": req.TargetActorID,
+		"roleName": req.RoleName,
+		"actionType": req.InverseActionType,
+		"reviewerId": actorID,
+		"reviewNote": params.ReviewNote,
+	})
 	if err := enqueueCanonicalMutationTx(ctx, tx, "role-rollback", req.ID, string(intentPayload)); err != nil {
 		return nil, err
 	}
@@ -274,6 +280,22 @@ func ReviewRollbackRequest(ctx context.Context, db *sql.DB, identityClient *auth
 	`, actorID, params.ReviewNote, requestID, req.Version).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt); err != nil {
 		return nil, errors.New("version conflict")
 	}
+	intentResult, err := finalize.ExecContext(ctx, `
+		UPDATE dsh_admin_canonical_mutation_intents
+		SET status = 'applied', attempts = attempts + 1, last_error = NULL,
+		    next_attempt_at = NULL, terminal_failure = FALSE,
+		    lease_owner = NULL, lease_expires_at = NULL, updated_at = NOW()
+		WHERE operation_type = 'role-rollback' AND request_id = $1
+	`, req.ID)
+	if err != nil {
+		return nil, err
+	}
+	if rows, rowsErr := intentResult.RowsAffected(); rowsErr != nil || rows != 1 {
+		if rowsErr != nil {
+			return nil, rowsErr
+		}
+		return nil, errors.New("canonical mutation intent is missing")
+	}
 	_, _ = finalize.ExecContext(ctx, `
 		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
 		VALUES ($1, 'ROLLBACK_APPROVED', $2, $3, 'HIGH', $4)
@@ -281,7 +303,6 @@ func ReviewRollbackRequest(ctx context.Context, db *sql.DB, identityClient *auth
 	if err := finalize.Commit(); err != nil {
 		return nil, err
 	}
-	_ = markCanonicalMutation(ctx, db, "role-rollback", req.ID, "applied", "")
 	req.Status = "approved"
 	reviewer := actorID
 	req.ReviewedBy = &reviewer
