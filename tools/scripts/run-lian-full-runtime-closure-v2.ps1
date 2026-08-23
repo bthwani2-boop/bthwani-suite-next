@@ -12,7 +12,7 @@ $FinancialComposeFile = Join-Path $RepoRoot "infra/docker/compose.financial-simu
 $EnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
 $EvidenceDirectory = Join-Path $RepoRoot "artifacts"
 $EvidencePath = Join-Path $EvidenceDirectory "lian-runtime-closure-evidence.json"
-$CoreProfiles = "identity,workforce,dsh,wlt,financial-simulators,mail,media-storage"
+$CoreProfiles = "identity,workforce,dsh,wlt,providers,platform,financial-simulators,mail,media-storage"
 $MigrationRunner = Join-Path $RepoRoot "infra/docker/scripts/schema-migration-runner.ps1"
 New-Item -ItemType Directory -Path $EvidenceDirectory -Force | Out-Null
 
@@ -68,13 +68,6 @@ function Save-Evidence([string]$State, [string]$Failure = "") {
   $Evidence.completedAt = [DateTimeOffset]::UtcNow.ToString("o")
   if ($Failure) { $Evidence.failure = $Failure }
   $Evidence | ConvertTo-Json -Depth 14 | Set-Content -LiteralPath $EvidencePath -Encoding utf8
-}
-
-function Invoke-Compose([string[]]$Arguments, [switch]$Financial) {
-  $Base = @("compose", "--env-file", $EnvFile, "-f", $ComposeFile)
-  if ($Financial) { $Base += @("-f", $FinancialComposeFile) }
-  & docker @Base @Arguments
-  if ($LASTEXITCODE -ne 0) { throw "docker compose failed: $($Arguments -join ' ')" }
 }
 
 function Invoke-Runtime([string]$Action, [string]$Profiles, [switch]$Force) {
@@ -210,8 +203,7 @@ function Verify-AllServices {
 }
 
 try {
-  Invoke-Compose @("down", "-v", "--remove-orphans") -Financial
-  Invoke-Runtime "up" $CoreProfiles
+  Invoke-Runtime "reset" $CoreProfiles -Force
   Invoke-Runtime "seed" $CoreProfiles
   Invoke-Runtime "bootstrap-dev" "dsh,media-storage" -Force
 
@@ -219,7 +211,7 @@ try {
   Wait-Database "platform_control_runtime"
   Invoke-Migrations "providers" (Join-Path $RepoRoot "core/providers/database/migrations") "providers_runtime" "providers_runtime"
   Invoke-Migrations "platform-control" (Join-Path $RepoRoot "core/platform-control/database/migrations") "platform_control_runtime" "platform_control_runtime"
-  Invoke-Compose @("--profile", "providers", "--profile", "platform", "up", "-d", "--build", "providers-api", "platform-control-api")
+  Invoke-Runtime "up" $CoreProfiles
   Verify-AllServices
 
   $Evidence.financialMatrix = Invoke-EvidenceScript "WLT runtime failure matrix" `
@@ -244,6 +236,5 @@ try {
 } finally {
   if ($Cleanup) {
     try { Invoke-Runtime "down" $CoreProfiles } catch { }
-    try { Invoke-Compose @("--profile", "providers", "--profile", "platform", "down", "--remove-orphans") } catch { }
   }
 }

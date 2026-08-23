@@ -1,20 +1,16 @@
+[CmdletBinding()]
 param(
-  [string]$Profiles = ""
+  [Alias("Profile")]
+  [string]$Profiles = "dsh,media-storage"
 )
 
 $ErrorActionPreference = "Stop"
-Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)))
+Set-StrictMode -Version Latest
 
-$ComposeFile = "infra\docker\compose.runtime.yml"
-$EnvFile     = "infra\docker\env\runtime.env.example"
+$Runtime = Join-Path $PSScriptRoot "runtime.ps1"
 
-$ProfileArgs = @()
-if ($Profiles -ne "") {
-  $Profiles.Split(",") | ForEach-Object {
-    $p = $_.Trim()
-    if ($p) { $ProfileArgs += @("--profile", $p) }
-  }
+if (-not (Test-Path -LiteralPath $Runtime -PathType Leaf)) {
+  throw "Canonical runtime authority not found: $Runtime"
 }
 
-docker compose --env-file $EnvFile -f $ComposeFile @ProfileArgs down --remove-orphans
-Write-Host "Runtime stopped."
+& $Runtime -Action down -Profiles $Profiles

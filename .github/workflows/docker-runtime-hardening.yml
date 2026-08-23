@@ -9,6 +9,8 @@ on:
       - "services/**/Dockerfile"
       - "tools/scripts/docker-context-local.ps1"
       - "tools/guards/docker-runtime-hardening-gate.mjs"
+      - "services/dsh/database/scripts/invoke-dsh-database.ps1"
+      - "tools/scripts/run-lian-full-runtime-closure-v2.ps1"
       - ".github/workflows/docker-runtime-hardening.yml"
   push:
     branches: ["**"]
@@ -19,6 +21,8 @@ on:
       - "services/**/Dockerfile"
       - "tools/scripts/docker-context-local.ps1"
       - "tools/guards/docker-runtime-hardening-gate.mjs"
+      - "services/dsh/database/scripts/invoke-dsh-database.ps1"
+      - "tools/scripts/run-lian-full-runtime-closure-v2.ps1"
       - ".github/workflows/docker-runtime-hardening.yml"
   workflow_dispatch:
 
@@ -50,6 +54,33 @@ jobs:
       - name: Enforce Docker hardening invariants
         run: node tools/guards/docker-runtime-hardening-gate.mjs
 
+      - name: Parse canonical Docker PowerShell authorities
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $files = @(
+            "infra/docker/scripts/runtime.ps1",
+            "infra/docker/scripts/up-runtime.ps1",
+            "infra/docker/scripts/down-runtime.ps1",
+            "infra/docker/scripts/reset-runtime.ps1",
+            "infra/docker/scripts/smoke-runtime.ps1",
+            "infra/docker/scripts/up-local-production.ps1",
+            "services/dsh/database/scripts/invoke-dsh-database.ps1",
+            "tools/scripts/run-lian-full-runtime-closure-v2.ps1"
+          )
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $file),
+              [ref]$tokens,
+              [ref]$errors
+            ) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "$file :: $($_.Message)" }
+              exit 1
+            }
+          }
       - name: Validate canonical Compose model
         shell: bash
         run: |

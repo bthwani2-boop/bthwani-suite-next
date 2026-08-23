@@ -15,7 +15,7 @@
 
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet("up", "down", "reset", "status", "logs", "migrate", "seed", "smoke", "doctor", "all", "bootstrap-dev", "verify-catalog")]
+  [ValidateSet("up", "down", "reset", "status", "logs", "migrate", "seed", "smoke", "doctor", "all", "bootstrap-dev", "verify-catalog", "ensure-db")]
   [string]$Action,
   [string]$Profiles = "",
   [string]$Service = "",
@@ -118,20 +118,22 @@ function Get-ComposeProfileArgs {
 }
 
 function Get-ComposeBase {
-  $arguments = @("--env-file", $script:EnvFile, "-f", $script:ComposeFile)
-  if ($script:ProfileList | Where-Object { @("financial-simulators", "mail", "cache") -contains $_ }) {
-    if (-not (Test-Path -LiteralPath $script:FinancialComposeFile -PathType Leaf)) {
-      throw "Financial simulator compose file not found: $script:FinancialComposeFile"
+  foreach ($requiredCompose in @(
+    $script:ComposeFile,
+    $script:FinancialComposeFile,
+    $script:ObservabilityComposeFile
+  )) {
+    if (-not (Test-Path -LiteralPath $requiredCompose -PathType Leaf)) {
+      throw "Required canonical Compose authority not found: $requiredCompose"
     }
-    $arguments += @("-f", $script:FinancialComposeFile)
   }
-  if ($script:ProfileList -contains "observability") {
-    if (-not (Test-Path -LiteralPath $script:ObservabilityComposeFile -PathType Leaf)) {
-      throw "Observability compose file not found: $script:ObservabilityComposeFile"
-    }
-    $arguments += @("-f", $script:ObservabilityComposeFile)
-  }
-  return $arguments
+
+  return @(
+    "--env-file", $script:EnvFile,
+    "-f", $script:ComposeFile,
+    "-f", $script:FinancialComposeFile,
+    "-f", $script:ObservabilityComposeFile
+  )
 }
 
 function Invoke-Compose {
@@ -139,6 +141,192 @@ function Invoke-Compose {
   if ($LASTEXITCODE -ne 0) {
     throw "docker compose failed: $($args -join ' ') (exit $LASTEXITCODE)"
   }
+}
+
+$CanonicalComposeProject = "bthwani-runtime"
+$HardPublishedBindingCeiling = 15
+
+function Get-BthwaniDockerRows {
+  $rows = @()
+
+  $raw = @(
+    docker ps -a --format '{{.ID}}|{{.Names}}|{{.Label "com.docker.compose.project"}}'
+  )
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "Unable to inspect Docker containers."
+  }
+
+  foreach ($line in $raw) {
+    if ([string]::IsNullOrWhiteSpace($line)) { continue }
+
+    $parts = $line -split '\|', 3
+    if ($parts.Count -lt 3) { continue }
+
+    $id = $parts[0].Trim()
+    $name = $parts[1].Trim()
+    $project = $parts[2].Trim()
+
+    if (
+      $name.StartsWith("bthwani-", [System.StringComparison]::OrdinalIgnoreCase) -or
+      $project.StartsWith("bthwani", [System.StringComparison]::OrdinalIgnoreCase)
+    ) {
+      $rows += [pscustomobject]@{
+        Id = $id
+        Name = $name
+        Project = $project
+      }
+    }
+  }
+
+  return @($rows)
+}
+
+function Get-DeclaredPublishedBindingCount {
+  $count = 0
+
+  foreach ($file in @(
+    $script:ComposeFile,
+    $script:FinancialComposeFile,
+    $script:ObservabilityComposeFile
+  )) {
+    foreach ($line in Get-Content -LiteralPath $file) {
+      $trimmed = $line.Trim()
+
+      if (
+        $trimmed.StartsWith('- "127.0.0.1:') -or
+        $trimmed.StartsWith("- '127.0.0.1:") -or
+        $trimmed.StartsWith('- 127.0.0.1:')
+      ) {
+        $count++
+      }
+    }
+  }
+
+  return $count
+}
+
+function Get-RunningPublishedBindingCount {
+  $count = 0
+
+  $running = @(
+    docker ps --format '{{.ID}}|{{.Names}}|{{.Label "com.docker.compose.project"}}'
+  )
+
+  if ($LASTEXITCODE -ne 0) {
+    throw "Unable to inspect running Docker containers."
+  }
+
+  foreach ($line in $running) {
+    if ([string]::IsNullOrWhiteSpace($line)) { continue }
+
+    $parts = $line -split '\|', 3
+    if ($parts.Count -lt 3) { continue }
+
+    $id = $parts[0].Trim()
+    $name = $parts[1].Trim()
+    $project = $parts[2].Trim()
+
+    if (
+      -not $name.StartsWith("bthwani-", [System.StringComparison]::OrdinalIgnoreCase) -and
+      -not $project.StartsWith("bthwani", [System.StringComparison]::OrdinalIgnoreCase)
+    ) {
+      continue
+    }
+
+    $published = @(docker port $id 2>$null)
+
+    if ($LASTEXITCODE -eq 0) {
+      $count += @(
+        $published |
+          Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+      ).Count
+    }
+  }
+
+  return $count
+}
+
+function Assert-DockerRuntimeTopology {
+  $context = (docker context show).Trim()
+  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($context)) {
+    throw "Unable to resolve Docker context."
+  }
+
+  $endpoint = (
+    docker context inspect $context --format '{{.Endpoints.docker.Host}}'
+  ).Trim()
+
+  if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($endpoint)) {
+    throw "Unable to resolve Docker endpoint for context '$context'."
+  }
+
+  if ($endpoint -notmatch '^(npipe|unix)://') {
+    throw "Docker runtime refuses non-local endpoint '$endpoint'."
+  }
+
+  $rows = @(Get-BthwaniDockerRows)
+
+  $foreign = @(
+    $rows | Where-Object {
+      [string]::IsNullOrWhiteSpace($_.Project) -or
+      $_.Project -ne $script:CanonicalComposeProject
+    }
+  )
+
+  if ($foreign.Count -gt 0) {
+    $details = @(
+      $foreign |
+        ForEach-Object {
+          "$($_.Name) [project='$($_.Project)']"
+        }
+    ) -join ", "
+
+    throw @"
+Non-canonical BThwani Docker state detected:
+$details
+
+The canonical project is '$script:CanonicalComposeProject'.
+Do not create another Compose project. Diagnose/remove the legacy state explicitly before starting runtime.
+"@
+  }
+
+  $declared = Get-DeclaredPublishedBindingCount
+
+  if ($declared -le 0) {
+    throw "No canonical loopback Docker port bindings were discovered."
+  }
+
+  if ($declared -gt $script:HardPublishedBindingCeiling) {
+    throw "Canonical Compose declares $declared published bindings; hard ceiling is $script:HardPublishedBindingCeiling."
+  }
+
+  $running = Get-RunningPublishedBindingCount
+
+  if ($running -gt $script:HardPublishedBindingCeiling) {
+    throw "Running BThwani Docker bindings=$running exceeds hard ceiling=$script:HardPublishedBindingCeiling."
+  }
+}
+
+function Write-DockerRuntimeTopology {
+  $declared = Get-DeclaredPublishedBindingCount
+  $running = Get-RunningPublishedBindingCount
+  $rows = @(Get-BthwaniDockerRows)
+
+  Write-Host "`n--- BThwani Docker topology ---"
+  Write-Host "canonical_project: $script:CanonicalComposeProject"
+  Write-Host "containers: $($rows.Count)"
+  Write-Host "declared_host_bindings: $declared"
+  Write-Host "running_host_bindings: $running"
+  Write-Host "hard_binding_ceiling: $script:HardPublishedBindingCeiling"
+
+  foreach ($row in $rows) {
+    Write-Host "  $($row.Name) project=$($row.Project)"
+  }
+}
+
+function Invoke-ComposeConvergentUp {
+  Invoke-ComposeConvergentUp --remove-orphans @args
 }
 
 function Get-SelectedMigrationServices {
@@ -211,6 +399,7 @@ function Write-RuntimeDoctor {
   Invoke-Compose ps
   Write-Host "`n--- docker ps ---"
   docker ps --format "table {{.Names}}`t{{.Image}}`t{{.Status}}`t{{.Ports}}"
+  Write-DockerRuntimeTopology
   $logServices = if ([string]::IsNullOrWhiteSpace($TargetService)) {
     @("identity-api", "workforce-api", "dsh-api", "wlt-api", "providers-api", "platform-control-api", "postgres", "minio")
   } else { @($TargetService) }
@@ -388,19 +577,37 @@ function Invoke-SelectedSmoke {
 
 Test-RuntimeDefaultSecrets
 
+if ($Action -in @(
+  "up",
+  "reset",
+  "migrate",
+  "seed",
+  "smoke",
+  "all",
+  "bootstrap-dev",
+  "ensure-db"
+)) {
+  docker info | Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    throw "Docker Engine is not reachable."
+  }
+
+  Assert-DockerRuntimeTopology
+}
+
 switch ($Action) {
   "up" {
     Write-Host "=== runtime:up (profiles: $($ProfileList -join ','))"
     docker info | Out-Null
-    Invoke-Compose up -d postgres
+    Invoke-ComposeConvergentUp postgres
     Wait-ForPostgres
     if (Test-MediaStorageSelected) {
-      Invoke-Compose up -d minio
+      Invoke-ComposeConvergentUp minio
       Wait-ForMinIO
       Invoke-GovernedMinioInit
     }
     Invoke-GovernedMigrations
-    Invoke-Compose up -d --build
+    Invoke-ComposeConvergentUp --build
     Wait-ForSelectedApis
     Write-Host "runtime:up: PASS"
   }
@@ -413,15 +620,15 @@ switch ($Action) {
     Write-Host "=== runtime:reset (profiles: $($ProfileList -join ','))"
     docker info | Out-Null
     Invoke-Compose down -v --remove-orphans
-    Invoke-Compose up -d postgres
+    Invoke-ComposeConvergentUp postgres
     Wait-ForPostgres
     if (Test-MediaStorageSelected) {
-      Invoke-Compose up -d minio
+      Invoke-ComposeConvergentUp minio
       Wait-ForMinIO
       Invoke-GovernedMinioInit
     }
     Invoke-GovernedMigrations
-    Invoke-Compose up -d --build
+    Invoke-ComposeConvergentUp --build
     Wait-ForSelectedApis
     Assert-LocalIdentityBootstrapConverged
     Invoke-LocalWorkforceProvisioning -DeferFinancialStanding
@@ -435,15 +642,15 @@ switch ($Action) {
     if (-not $Force) { throw "bootstrap-dev requires -Force." }
     Write-Host "=== runtime:bootstrap-dev (profiles: $($ProfileList -join ','))"
     docker info | Out-Null
-    Invoke-Compose up -d postgres
+    Invoke-ComposeConvergentUp postgres
     Wait-ForPostgres
     if (Test-MediaStorageSelected) {
-      Invoke-Compose up -d minio
+      Invoke-ComposeConvergentUp minio
       Wait-ForMinIO
       Invoke-GovernedMinioInit
     }
     Invoke-GovernedMigrations
-    Invoke-Compose up -d --build
+    Invoke-ComposeConvergentUp --build
     Restart-MigratedApis
     Wait-ForSelectedApis
     Assert-LocalIdentityBootstrapConverged
@@ -470,6 +677,7 @@ switch ($Action) {
     Invoke-Compose ps
     Write-Host "`n--- docker ps ---"
     docker ps --format "table {{.Names}}`t{{.Image}}`t{{.Status}}`t{{.Ports}}"
+  Write-DockerRuntimeTopology
   }
   "logs" {
     Write-Host "=== runtime:logs"
@@ -477,19 +685,25 @@ switch ($Action) {
     else { Invoke-Compose logs --tail=100 $Service }
   }
   "doctor" { Write-RuntimeDoctor -Reason "manual doctor action" -TargetService $Service }
+  "ensure-db" {
+    Write-Host "=== runtime:ensure-db (profiles: $($ProfileList -join ','))"
+    Invoke-ComposeConvergentUp postgres
+    Wait-ForPostgres
+    Write-Host "runtime:ensure-db: PASS"
+  }
   "migrate" {
     Write-Host "=== runtime:migrate"
-    Invoke-Compose up -d postgres
+    Invoke-ComposeConvergentUp postgres
     Wait-ForPostgres
     Invoke-GovernedMigrations
     Write-Host "runtime:migrate: PASS"
   }
   "seed" {
     Write-Host "=== runtime:seed"
-    Invoke-Compose up -d postgres
+    Invoke-ComposeConvergentUp postgres
     Wait-ForPostgres
     if (Test-MediaStorageSelected) {
-      Invoke-Compose up -d minio
+      Invoke-ComposeConvergentUp minio
       Wait-ForMinIO
       Invoke-GovernedMinioInit
     }
@@ -500,16 +714,16 @@ switch ($Action) {
   "smoke" {
     Write-Host "=== runtime:smoke (profiles: $($ProfileList -join ','))"
     if (@(Get-RequiredDatabaseNames).Count -gt 0) {
-      Invoke-Compose up -d postgres
+      Invoke-ComposeConvergentUp postgres
       Wait-ForPostgres
       Invoke-GovernedMigrations
     }
     if (Test-MediaStorageSelected) {
-      Invoke-Compose up -d minio
+      Invoke-ComposeConvergentUp minio
       Wait-ForMinIO
       Invoke-GovernedMinioInit
     }
-    Invoke-Compose up -d
+    Invoke-ComposeConvergentUp
     Invoke-SelectedSmoke
   }
   "all" {
@@ -517,16 +731,16 @@ switch ($Action) {
     docker info | Out-Null
     Invoke-Compose down -v --remove-orphans
     Write-Host "down: OK"
-    Invoke-Compose up -d --build postgres
+    Invoke-ComposeConvergentUp --build postgres
     Wait-ForPostgres
     if (Test-MediaStorageSelected) {
-      Invoke-Compose up -d --build minio
+      Invoke-ComposeConvergentUp --build minio
       Wait-ForMinIO
       Invoke-GovernedMinioInit
     }
     Invoke-GovernedMigrations
     Invoke-GovernedSeeds
-    Invoke-Compose up -d --build
+    Invoke-ComposeConvergentUp --build
     Invoke-SelectedSmoke
     Write-Host "`nruntime:all: PASS"
   }

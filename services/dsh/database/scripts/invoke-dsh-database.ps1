@@ -46,11 +46,12 @@ $SeedDir = Join-Path $RepoRoot "services/dsh/database/seeds/local"
 $TestRoot = Join-Path $RepoRoot "services/dsh/database/tests"
 $ComposeFilePath = if ([System.IO.Path]::IsPathRooted($ComposeFile)) { $ComposeFile } else { Join-Path $RepoRoot $ComposeFile }
 $EnvFilePath = if ([System.IO.Path]::IsPathRooted($EnvFile)) { $EnvFile } else { Join-Path $RepoRoot $EnvFile }
+$RuntimeOrchestrator = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
 $RuntimeMigrationRunner = Join-Path $RepoRoot "infra/docker/scripts/invoke-runtime-database-migrations.ps1"
 $ServiceMigrationRunner = Join-Path $RepoRoot "tools/scripts/invoke-service-migrations.ps1"
 $ServiceSeedRunner = Join-Path $RepoRoot "tools/scripts/invoke-service-seeds.ps1"
 
-foreach ($requiredFile in @($RuntimeMigrationRunner, $ServiceMigrationRunner, $ServiceSeedRunner)) {
+foreach ($requiredFile in @($RuntimeOrchestrator, $RuntimeMigrationRunner, $ServiceMigrationRunner, $ServiceSeedRunner)) {
   if (-not (Test-Path -LiteralPath $requiredFile -PathType Leaf)) {
     throw "Required governed database authority not found: $requiredFile"
   }
@@ -93,25 +94,11 @@ function Get-DockerComposeBaseArguments {
 }
 
 function Ensure-DockerDshPostgres {
-  $startArguments = @(Get-DockerComposeBaseArguments) + @("up", "-d", "postgres")
-  & docker @startArguments | Out-Host
-  if ($LASTEXITCODE -ne 0) {
-    throw "Unable to start PostgreSQL runtime (exit $LASTEXITCODE)."
-  }
+  & $RuntimeOrchestrator -Action ensure-db -Profiles dsh
 
-  for ($attempt = 1; $attempt -le 30; $attempt++) {
-    $readyArguments = @(Get-DockerComposeBaseArguments) + @(
-      "exec", "-T", "postgres", "pg_isready",
-      "-U", "dsh_runtime", "-d", "dsh_runtime"
-    )
-    & docker @readyArguments *> $null
-    if ($LASTEXITCODE -eq 0) {
-      Write-Host "DSH PostgreSQL: ready"
-      return
-    }
-    Start-Sleep -Seconds 2
+  if ($LASTEXITCODE -ne 0) {
+    throw "Canonical Docker database lifecycle failed (exit $LASTEXITCODE)."
   }
-  throw "DSH PostgreSQL did not become ready."
 }
 
 function Invoke-DshTestSql {
