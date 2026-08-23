@@ -241,9 +241,11 @@ jobs:
             chunk_number="${chunk_number%%.*}"
             chunk_count="$(awk 'NF { count++ } END { print count + 0 }' "${files_manifest}")"
             context="${chunk_dir}/${chunk_number}.context.md"
-            review_prompt="${instruction}"$'\n\n'"This cone contains ${chunk_count} reviewable files."$'\n\n'"$(cat "${context}")"
-            copilot \
-              --prompt "${review_prompt}" \
+            {
+              printf '%s\n\n' "${instruction}"
+              printf 'This cone contains %s reviewable files.\n\n' "${chunk_count}"
+              cat "${context}"
+            } | copilot \
               --silent \
               --no-auto-update \
               --no-ask-user \
