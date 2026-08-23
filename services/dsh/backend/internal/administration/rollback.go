@@ -34,6 +34,16 @@ type CreateRollbackRequestParams struct {
 	Reason string `json:"reason"`
 }
 
+func validateRollbackReviewSeparation(requestedBy, targetActorID, sourceApprovedBy, reviewerID string) error {
+	if err := validateRoleReviewSeparation(requestedBy, targetActorID, reviewerID); err != nil {
+		return err
+	}
+	if sourceApprovedBy != "" && sourceApprovedBy == reviewerID {
+		return errors.New("original approval checker cannot review rollback")
+	}
+	return nil
+}
+
 func inverseRoleAction(actionType string) (string, error) {
 	switch actionType {
 	case "staff_role_assignment":
@@ -198,8 +208,8 @@ func ReviewRollbackRequest(ctx context.Context, db *sql.DB, identityClient *auth
 	if req.Version != params.ExpectedVersion {
 		return nil, errors.New("version conflict")
 	}
-	if req.RequestedBy == actorID {
-		return nil, errors.New("cannot review own request")
+	if err := validateRollbackReviewSeparation(req.RequestedBy, req.TargetActorID, req.SourceApprovedBy, actorID); err != nil {
+		return nil, err
 	}
 
 	if params.Decision == "rejected" {
