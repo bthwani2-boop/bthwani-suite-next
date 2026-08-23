@@ -1,4 +1,11 @@
 import React from "react";
+import { configureSecureRandomUuidProvider } from "./_kernel/secure-random";
+
+export function configureDshSecureRandomUuidProvider(
+  provider: () => string,
+): void {
+  configureSecureRandomUuidProvider(provider);
+}
 
 export class DshNativeCapabilityUnavailable extends Error {
   constructor(capability: string) {
