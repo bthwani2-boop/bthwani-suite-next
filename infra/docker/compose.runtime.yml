@@ -118,7 +118,7 @@ services:
       IDENTITY_WORKFORCE_SERVICE_TOKEN: "${IDENTITY_WORKFORCE_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_workforce_internal_service_token}"
       IDENTITY_DSH_SERVICE_TOKEN: "${IDENTITY_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_dsh_identity_internal_service_token}"
     ports:
-      - "127.0.0.1:${BTHWANI_IDENTITY_API_HOST_PORT:-58082}:8082"
+      - "127.0.0.1:${BTHWANI_IDENTITY_API_HOST_PORT:-18082}:8082"
     depends_on:
       postgres:
         condition: service_healthy
