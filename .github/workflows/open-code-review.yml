@@ -165,6 +165,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           REQUESTED_MODEL: ${{ steps.request.outputs.model }}
+          HEAD_SHA: ${{ steps.request.outputs.head_sha }}
+          MERGE_BASE: ${{ steps.target.outputs.merge_base }}
         run: |
           set +e
           evidence="${RUNNER_TEMP}/ocr-evidence"
