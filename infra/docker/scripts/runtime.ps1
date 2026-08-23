@@ -710,7 +710,8 @@ switch ($Action) {
     Write-Host "=== runtime:service-stop service=$Service profiles=$($ProfileList -join ',')"
     Invoke-Compose stop $Service
     Write-Host "runtime:service-stop: PASS service=$Service"
-  }  "ensure-db" {
+  }
+  "ensure-db" {
     Write-Host "=== runtime:ensure-db (profiles: $($ProfileList -join ','))"
     Invoke-ComposeConvergentUp postgres
     Wait-ForPostgres

@@ -19,6 +19,13 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../..")).Path
+$RuntimeOrchestrator = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
+
+if (-not (Test-Path -LiteralPath $RuntimeOrchestrator -PathType Leaf)) {
+  throw "Canonical runtime authority not found: $RuntimeOrchestrator"
+}
+
 if (-not $AllowLocalDevelopmentRebuild) {
   throw "Service database rebuild requires the explicit -AllowLocalDevelopmentRebuild switch."
 }
@@ -37,12 +44,12 @@ if (-not (Test-Path -LiteralPath $EnvFile -PathType Leaf)) {
 }
 
 $serviceMap = @{
-  "identity" = @{ Database = "identity_runtime"; Owner = "identity_runtime"; ApiService = "identity-api"; Extensions = @() }
-  "workforce" = @{ Database = "workforce_runtime"; Owner = "workforce_runtime"; ApiService = "workforce-api"; Extensions = @() }
-  "dsh" = @{ Database = "dsh_runtime"; Owner = "dsh_runtime"; ApiService = "dsh-api"; Extensions = @("postgis") }
-  "wlt" = @{ Database = "wlt_runtime"; Owner = "wlt_runtime"; ApiService = "wlt-api"; Extensions = @() }
-  "providers" = @{ Database = "providers_runtime"; Owner = "providers_runtime"; ApiService = "providers-api"; Extensions = @() }
-  "platform-control" = @{ Database = "platform_control_runtime"; Owner = "platform_control_runtime"; ApiService = "platform-control-api"; Extensions = @() }
+  "identity" = @{ Database = "identity_runtime"; Owner = "identity_runtime"; ApiService = "identity-api"; Profile = "identity"; Extensions = @() }
+  "workforce" = @{ Database = "workforce_runtime"; Owner = "workforce_runtime"; ApiService = "workforce-api"; Profile = "workforce"; Extensions = @() }
+  "dsh" = @{ Database = "dsh_runtime"; Owner = "dsh_runtime"; ApiService = "dsh-api"; Profile = "dsh"; Extensions = @("postgis") }
+  "wlt" = @{ Database = "wlt_runtime"; Owner = "wlt_runtime"; ApiService = "wlt-api"; Profile = "wlt"; Extensions = @() }
+  "providers" = @{ Database = "providers_runtime"; Owner = "providers_runtime"; ApiService = "providers-api"; Profile = "providers"; Extensions = @() }
+  "platform-control" = @{ Database = "platform_control_runtime"; Owner = "platform_control_runtime"; ApiService = "platform-control-api"; Profile = "platform"; Extensions = @() }
 }
 $config = $serviceMap[$Service]
 $databaseName = [string]$config.Database
@@ -81,15 +88,6 @@ function Get-RuntimeEnvironmentValue {
   return $DefaultValue
 }
 
-function Invoke-ComposeCommand {
-  param([Parameter(Mandatory = $true)][string[]]$CommandArguments)
-
-  & docker compose --env-file $EnvFile -f $ComposeFile @CommandArguments
-  if ($LASTEXITCODE -ne 0) {
-    throw "docker compose failed: $($CommandArguments -join ' ') (exit $LASTEXITCODE)"
-  }
-}
-
 function Invoke-AdminPsql {
   param(
     [Parameter(Mandatory = $true)][string]$Database,
@@ -124,7 +122,7 @@ if ($LASTEXITCODE -ne 0) {
 $apiServiceWasStopped = $false
 if ($runningServices -contains $apiService) {
   Write-Host "Stopping $apiService before rebuilding $databaseName..."
-  Invoke-ComposeCommand -CommandArguments @("stop", $apiService)
+  & $RuntimeOrchestrator -Action service-stop -Profiles ([string]$config.Profile) -Service $apiService
   $apiServiceWasStopped = $true
 }
 
@@ -158,7 +156,7 @@ try {
   if ($apiServiceWasStopped) {
     Write-Host "Restarting $apiService after rebuilding $databaseName..."
     try {
-      Invoke-ComposeCommand -CommandArguments @("up", "-d", $apiService)
+      & $RuntimeOrchestrator -Action service-up -Profiles ([string]$config.Profile) -Service $apiService
     } catch {
       Write-Warning "Could not restart '$apiService' after the database rebuild: $($_.Exception.Message)"
     }

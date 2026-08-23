@@ -272,6 +272,112 @@ for (const text of dockerAuthorityFiles) {
   }
 }
 
+
+// canonical-lifecycle-authority-v3
+const lifecycleAuthority = "infra/docker/scripts/runtime.ps1";
+const lifecycleVerbs = "(?:up|down|start|stop|restart|rm|kill|create|pause|unpause)";
+
+function walkFiles(relativeRoot, extensions) {
+  const absoluteRoot = path.join(root, relativeRoot);
+  if (!fs.existsSync(absoluteRoot)) return [];
+
+  const results = [];
+  const visit = (absoluteDir) => {
+    for (const entry of fs.readdirSync(absoluteDir, { withFileTypes: true })) {
+      const absolute = path.join(absoluteDir, entry.name);
+      if (entry.isDirectory()) {
+        visit(absolute);
+        continue;
+      }
+      if (!extensions.some((extension) => entry.name.endsWith(extension))) continue;
+      results.push(path.relative(root, absolute).replaceAll("\\", "/"));
+    }
+  };
+
+  visit(absoluteRoot);
+  return results;
+}
+
+const lifecyclePowerShellFiles = [
+  ...walkFiles("infra/docker/scripts", [".ps1"]),
+  ...walkFiles("tools/scripts", [".ps1"]),
+  ...walkFiles("services", [".ps1"]),
+  ...walkFiles("apps", [".ps1"]),
+];
+
+for (const rel of [...new Set(lifecyclePowerShellFiles)]) {
+  if (rel === lifecycleAuthority) continue;
+
+  const normalized = read(rel)
+    .replace(/<#[\s\S]*?#>/g, "")
+    .replace(/^\s*#.*$/gm, "")
+    .replace(/`\r?\n\s*/g, " ")
+    .replace(/\\\r?\n\s*/g, " ");
+
+  const executableLines = normalized;
+
+  const forbidden = [
+    new RegExp(`\\bdocker\\s+compose\\b[^\\n]*\\b${lifecycleVerbs}\\b`, "i"),
+    new RegExp(`\\bdocker\\s+(?:container\\s+)?(?:start|stop|restart|rm|kill|create|pause|unpause)\\b`, "i"),
+    new RegExp(`\\bdocker\\s+(?:network|volume)\\s+(?:create|rm)\\b`, "i"),
+    new RegExp(`\\bInvoke-[A-Za-z0-9_-]*Compose\\b[^\\n]*\\b${lifecycleVerbs}\\b`, "i"),
+  ];
+
+  for (const pattern of forbidden) {
+    if (pattern.test(executableLines)) {
+      failures.push(
+        `${rel}: Docker lifecycle mutation must delegate to ${lifecycleAuthority}`,
+      );
+      break;
+    }
+  }
+}
+
+const platformRuntimeAdapter = read("tools/scripts/platform-control-runtime.ps1");
+const platformRuntimeCommon = read("tools/scripts/platform-control-runtime/common.ps1");
+const platformSmoke = read("tools/scripts/platform-control-runtime/smoke.ps1");
+const rebuildDatabase = read("infra/docker/scripts/rebuild-runtime-service-database.ps1");
+const restoreRuntime = read("infra/docker/scripts/restore-runtime.ps1");
+
+for (const [rel, text] of [
+  ["tools/scripts/platform-control-runtime.ps1", platformRuntimeAdapter],
+  ["tools/scripts/platform-control-runtime/common.ps1", platformRuntimeCommon],
+]) {
+  if (!text.includes("runtime.ps1")) {
+    failures.push(`${rel}: must delegate lifecycle to runtime.ps1`);
+  }
+}
+
+if (!platformRuntimeCommon.includes("function Invoke-PlatformDatabasePsql")) {
+  failures.push(
+    "platform-control-runtime/common.ps1: missing governed database verification helper",
+  );
+}
+
+if (!platformSmoke.includes("Invoke-PlatformP3Smoke")) {
+  failures.push(
+    "platform-control-runtime/smoke.ps1: P3 semantic smoke coverage must be retained",
+  );
+}
+
+for (const [rel, text] of [
+  ["infra/docker/scripts/rebuild-runtime-service-database.ps1", rebuildDatabase],
+  ["infra/docker/scripts/restore-runtime.ps1", restoreRuntime],
+]) {
+  if (!text.includes("-Action service-stop") || !text.includes("-Action service-up")) {
+    failures.push(`${rel}: service stop/up must delegate to runtime.ps1`);
+  }
+}
+
+if (!canonicalRuntimeScript.includes('"service-up"') ||
+    !canonicalRuntimeScript.includes('"service-stop"') ||
+    !canonicalRuntimeScript.includes("Invoke-Compose stop $Service") ||
+    !canonicalRuntimeScript.includes("Invoke-ComposeConvergentUp --no-deps $Service")) {
+  failures.push(
+    "runtime.ps1: canonical service-level lifecycle actions are incomplete",
+  );
+}
+
 if (failures.length > 0) {
   console.error("docker-runtime-hardening-gate: FAIL");
   for (const failure of failures) console.error(`- ${failure}`);
