@@ -37,8 +37,9 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: support.read
       security:
-      - bearerAuth: [ support.read ]
+      - bearerAuth: []
     post:
       tags:
       - operator
@@ -65,8 +66,9 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: support.manage
       security:
-      - bearerAuth: [ support.manage ]
+      - bearerAuth: []
   /dsh/operator/admin/support/snapshot:
     get:
       tags:
@@ -94,8 +96,9 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: support.read
       security:
-      - bearerAuth: [ support.read ]
+      - bearerAuth: []
   /dsh/operator/admin/support-sessions/{requestId}/review:
     parameters:
     - name: requestId
@@ -129,8 +132,9 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: support.manage
       security:
-      - bearerAuth: [ support.manage ]
+      - bearerAuth: []
   /dsh/operator/admin/support-sessions/{requestId}/revoke:
     parameters:
     - name: requestId
@@ -164,8 +168,9 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: support.manage
       security:
-      - bearerAuth: [ support.manage ]
+      - bearerAuth: []
   /dsh/operator/admin/approvals/{approvalId}/review:
     parameters:
     - name: approvalId
@@ -232,8 +237,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdministrationError'
+      x-bthwani-required-scope: administration.staff.approve
       security:
-      - bearerAuth: [ administration.staff.approve ]
+      - bearerAuth: []
   /dsh/operator/admin/approvals/{approvalId}/rollback-requests:
     parameters:
     - name: approvalId
@@ -267,8 +273,9 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: administration.rollback.request
       security:
-      - bearerAuth: [ administration.rollback.request ]
+      - bearerAuth: []
   /dsh/operator/admin/role-requests/{requestId}/review:
     parameters:
     - name: requestId
@@ -335,8 +342,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdministrationError'
+      x-bthwani-required-scope: administration.role.approve
       security:
-      - bearerAuth: [ administration.role.approve ]
+      - bearerAuth: []
   /dsh/operator/admin/permission-vocabulary:
     get:
       tags: [operator]
@@ -357,8 +365,9 @@ paths:
         '401': { description: Unauthorized }
         '403': { description: Forbidden }
         '503': { description: Identity unavailable }
+      x-bthwani-required-scope: administration.role.request
       security:
-      - bearerAuth: [ administration.role.request ]
+      - bearerAuth: []
   /dsh/operator/admin/roles/requests:
     post:
       tags:
@@ -392,8 +401,9 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: administration.role.request
       security:
-      - bearerAuth: [ administration.role.request ]
+      - bearerAuth: []
   /dsh/operator/admin/rollback-requests/{requestId}/review:
     parameters:
     - name: requestId
@@ -460,8 +470,9 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AdministrationError'
+      x-bthwani-required-scope: administration.rollback.approve
       security:
-      - bearerAuth: [ administration.rollback.approve ]
+      - bearerAuth: []
   /dsh/operator/admin/approvals:
     get:
       tags:
@@ -489,8 +500,9 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: administration.staff.approve
       security:
-      - bearerAuth: [ administration.staff.approve ]
+      - bearerAuth: []
   /dsh/operator/admin/diagnostics:
     get:
       tags:
@@ -523,8 +535,9 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: administration.diagnostics.read
       security:
-      - bearerAuth: [ administration.diagnostics.read ]
+      - bearerAuth: []
   /dsh/operator/admin/role-requests:
     get:
       tags:
@@ -552,8 +565,9 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: administration.role.approve
       security:
-      - bearerAuth: [ administration.role.approve ]
+      - bearerAuth: []
   /dsh/operator/admin/rollback-requests:
     get:
       tags:
@@ -581,8 +595,9 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: administration.rollback.approve
       security:
-      - bearerAuth: [ administration.rollback.approve ]
+      - bearerAuth: []
 components:
   securitySchemes:
     bearerAuth:
@@ -632,10 +647,6 @@ components:
       - retryable_failure
       - terminal_failure
       - applied
-    AdministrationPermission:
-      type: string
-      minLength: 1
-      description: Canonical Identity vocabulary action; the live vocabulary endpoint is authoritative.
     AdministrationSurface:
       type: string
       enum:
@@ -734,7 +745,7 @@ components:
           minItems: 1
           uniqueItems: true
           items:
-            $ref: '#/components/schemas/AdministrationPermission'
+            $ref: '#/components/schemas/PermissionBinding'
         reason:
           type: string
           minLength: 5
@@ -774,7 +785,7 @@ components:
           minItems: 1
           uniqueItems: true
           items:
-            $ref: '#/components/schemas/AdministrationPermission'
+            $ref: '#/components/schemas/PermissionBinding'
         surfaces:
           type: array
           minItems: 1
