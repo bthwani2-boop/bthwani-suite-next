@@ -156,7 +156,8 @@ test("ADB remains an explicit Android fallback with verified reverse mappings an
     assert.ok(helper.includes(marker), `missing ADB helper contract marker: ${marker}`);
   }
   assert.match(launcher, /Invoke-BthwaniAdbReverse/);
-  assert.match(launcher, /58080, 18082, 58086, 58100, 59000, \$MetroPort/);
+  assert.match(launcher, /\$identityHostPort = if \(\[string\]::IsNullOrWhiteSpace\(\$env:BTHWANI_IDENTITY_API_HOST_PORT\)\) \{ "18082" \}/);
+  assert.match(launcher, /\$ports = @\(58080, \[int\] \$identityHostPort, 58086, 58100, 59000, \$MetroPort\)/);
   assert.match(launcher, /Clear-BthwaniProcessEnvironment -Names @\("ANDROID_SERIAL", "BTHWANI_ANDROID_SERIAL", "ADB"\)/);
   assert.ok(
     launcher.indexOf('Clear-BthwaniProcessEnvironment -Names @("ANDROID_SERIAL", "BTHWANI_ANDROID_SERIAL", "ADB")')
