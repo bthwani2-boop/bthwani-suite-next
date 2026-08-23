@@ -56,6 +56,12 @@ export class HttpError extends Error {
   }
 }
 
+export function isMissingLocalProviderState(error) {
+  if (!(error instanceof HttpError) || error.status !== 404) return false;
+  return error.message.includes('ACTOR_NOT_FOUND')
+    || error.message.includes('PROFILE_NOT_PROVISIONED');
+}
+
 export function stableToken(value) {
   return createHash('sha256').update(String(value)).digest('hex').slice(0, 24);
 }

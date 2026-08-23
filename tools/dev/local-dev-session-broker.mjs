@@ -10,6 +10,7 @@ import {
   readGeneratedRegistry,
   provisionLocalWorkforceActors,
   HttpError,
+  isMissingLocalProviderState,
 } from './local-workforce-provisioning.mjs';
 
 const PORT = Number(process.env.BTHWANI_DEV_SESSION_BROKER_PORT || 18100);
@@ -106,7 +107,7 @@ async function createSessionForRole(role, surface, deviceFingerprint) {
           deviceFingerprint.trim(),
         );
       } catch (error) {
-        if (error instanceof HttpError && error.status === 404 && error.message.includes('ACTOR_NOT_FOUND')) {
+        if (isMissingLocalProviderState(error)) {
           provisioned = null;
         } else {
           throw error;

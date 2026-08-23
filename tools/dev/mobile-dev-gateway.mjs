@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 export const MOBILE_DEV_GATEWAY_CONTRACT_VERSION = 1;
 export const MOBILE_DEV_GATEWAY_DEFAULT_PORT = 18110;
 export const MOBILE_DEV_GATEWAY_SERVICE = 'bthwani-mobile-dev-gateway';
+const DEFAULT_MINIO_API_PORT = 59000;
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
 const HOP_BY_HOP_HEADERS = new Set([
@@ -32,6 +33,15 @@ const SERVICE_ROUTES = Object.freeze([
   { prefix: '/identity/', host: '127.0.0.1', port: 18082 },
   { prefix: '/workforce/', host: '127.0.0.1', port: 18086 },
 ]);
+
+function resolveMinioApiPort() {
+  const configured = String(process.env.BTHWANI_MINIO_API_PORT ?? '').trim();
+  const port = Number(configured || DEFAULT_MINIO_API_PORT);
+  if (!Number.isInteger(port) || port < 1024 || port > 65535) {
+    throw new Error('MOBILE_DEV_GATEWAY_MINIO_API_PORT_INVALID');
+  }
+  return port;
+}
 
 export function isPrivateIpv4(value) {
   const parts = String(value ?? '').trim().split('.');
@@ -88,7 +98,7 @@ export function resolveGatewayRoute(rawUrl) {
     return {
       kind: 'media',
       host: '127.0.0.1',
-      port: 59000,
+      port: resolveMinioApiPort(),
       path: `${stripPrefix(parsed.pathname, '/__media')}${parsed.search}`,
       requiresCapability: false,
       presigned: isPresignedMediaUrl(parsed),
@@ -106,15 +116,19 @@ function normalizeGatewayBaseUrl(value) {
 }
 
 function parseSignedMediaHost(value) {
-  const normalized = String(value || 'localhost:59000').trim();
+  const normalized = String(value || `localhost:${resolveMinioApiPort()}`).trim();
   const parsed = new URL(`http://${normalized}`);
-  if (!LOOPBACK_HOSTS.has(parsed.hostname) || parsed.port !== '59000') {
-    throw new Error('MOBILE_DEV_GATEWAY_SIGNED_MEDIA_HOST_MUST_BE_LOOPBACK_59000');
+  if (!LOOPBACK_HOSTS.has(parsed.hostname) || parsed.port !== String(resolveMinioApiPort())) {
+    throw new Error('MOBILE_DEV_GATEWAY_SIGNED_MEDIA_HOST_MUST_BE_LOOPBACK_MINIO_PORT');
   }
   return parsed.host;
 }
 
-export function rewritePresignedMediaLocation(location, gatewayBaseUrl, signedMediaHost = 'localhost:59000') {
+export function rewritePresignedMediaLocation(
+  location,
+  gatewayBaseUrl,
+  signedMediaHost = `localhost:${resolveMinioApiPort()}`,
+) {
   if (!location) return location;
   let parsed;
   try {
@@ -191,7 +205,9 @@ export function createMobileDevGateway(options = {}) {
   const port = Number(options.port ?? process.env.BTHWANI_MOBILE_DEV_GATEWAY_PORT ?? MOBILE_DEV_GATEWAY_DEFAULT_PORT);
   const capability = String(options.capability ?? process.env.BTHWANI_MOBILE_DEV_GATEWAY_TOKEN ?? '').trim();
   const signedMediaHost = parseSignedMediaHost(
-    options.signedMediaHost ?? process.env.BTHWANI_MOBILE_SIGNED_MEDIA_HOST ?? 'localhost:59000',
+    options.signedMediaHost
+      ?? process.env.BTHWANI_MOBILE_SIGNED_MEDIA_HOST
+      ?? `localhost:${resolveMinioApiPort()}`,
   );
 
   if (!isPrivateIpv4(host)) throw new Error('MOBILE_DEV_GATEWAY_HOST_MUST_BE_PRIVATE_IPV4');

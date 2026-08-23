@@ -73,4 +73,6 @@ test("quick developer login stays local-only and never bundles privileged secret
   assert.ok(repairBranch >= 0);
   assert.ok(operatorLogin > repairBranch, "operator login/session creation must stay inside repair mode");
   assert.ok(readOnlyCheck > repairBranch, "check mode must use the non-mutating collector");
+  assert.match(devData, /getProvider\(operatorToken, role, provisioned\.actorId\)/);
+  assert.match(devData, /canonical Workforce provider read failed/);
 });

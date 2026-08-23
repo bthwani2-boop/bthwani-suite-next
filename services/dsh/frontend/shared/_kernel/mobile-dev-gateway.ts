@@ -11,10 +11,20 @@ const REQUIRED_PRESIGN_QUERY_KEYS = [
   "x-amz-signedheaders",
   "x-amz-signature",
 ];
+const DEFAULT_MINIO_API_PORT = "59000";
 
 function readEnv(name: string): string {
   if (typeof process === "undefined" || !process.env) return "";
   return process.env[name]?.trim() ?? "";
+}
+
+function resolveMinioApiPort(): string {
+  const configured = readEnv("EXPO_PUBLIC_BTHWANI_MINIO_API_PORT") || readEnv("BTHWANI_MINIO_API_PORT");
+  const port = Number(configured || DEFAULT_MINIO_API_PORT);
+  if (!Number.isInteger(port) || port < 1024 || port > 65535) {
+    throw new Error("MOBILE_DEV_MINIO_API_PORT_INVALID");
+  }
+  return String(port);
 }
 
 function isPrivateIpv4(value: string): boolean {
@@ -71,7 +81,7 @@ export function rewriteMobileDevPresignedMediaUrl(value: string): string {
   if (
     parsed.protocol !== "http:"
     || !LOOPBACK_HOSTS.has(parsed.hostname)
-    || port !== "59000"
+    || port !== resolveMinioApiPort()
     || !hasPresignedQuery(parsed)
   ) {
     return value;

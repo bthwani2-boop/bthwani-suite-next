@@ -334,7 +334,8 @@ if ($resolvedTransport -eq "lan") {
     $env:BTHWANI_ANDROID_SERIAL = $selectedSerial
     $env:ADB = $adbPath
 
-    $ports = @(18080, [int] $identityHostPort, 18086, 18100, 59000, $MetroPort)
+    $minioApiPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_MINIO_API_PORT)) { 59000 } else { [int] $env:BTHWANI_MINIO_API_PORT }
+    $ports = @(18080, [int] $identityHostPort, 18086, 18100, $minioApiPort, $MetroPort)
     Invoke-BthwaniAdbReverse -AdbPath $adbPath -Serial $selectedSerial -Ports $ports
 
     $watchdogSetting = ([string] $env:BTHWANI_ADB_WATCHDOG).Trim().ToLowerInvariant()

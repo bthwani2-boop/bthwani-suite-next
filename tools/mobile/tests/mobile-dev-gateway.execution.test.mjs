@@ -76,3 +76,22 @@ test("MinIO redirects are rewritten to the gateway without changing the signed o
     "https://example.com/public.jpg",
   );
 });
+
+test("media gateway follows the configured MinIO host port", () => {
+  const previousPort = process.env.BTHWANI_MINIO_API_PORT;
+  process.env.BTHWANI_MINIO_API_PORT = "59500";
+  try {
+    const route = resolveGatewayRoute(`/__media/dsh-media/catalog/test.jpg?${presignedQuery}`);
+    assert.equal(route?.port, 59500);
+    assert.equal(
+      rewritePresignedMediaLocation(
+        `http://localhost:59500/dsh-media/catalog/test.jpg?${presignedQuery}`,
+        "http://192.168.1.20:18110",
+      ),
+      `http://192.168.1.20:18110/__media/dsh-media/catalog/test.jpg?${presignedQuery}`,
+    );
+  } finally {
+    if (previousPort === undefined) delete process.env.BTHWANI_MINIO_API_PORT;
+    else process.env.BTHWANI_MINIO_API_PORT = previousPort;
+  }
+});

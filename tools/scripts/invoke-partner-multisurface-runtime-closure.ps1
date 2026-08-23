@@ -59,7 +59,8 @@ Invoke-LoggedScript -Name "readiness" -Action {
   Assert-HttpReady -Name "Workforce API" -Uri "http://127.0.0.1:18086/workforce/health" -ExpectedStatus "healthy"
   Assert-HttpReady -Name "DSH API" -Uri "http://127.0.0.1:18080/dsh/health" -ExpectedStatus "healthy"
   Assert-HttpReady -Name "WLT API" -Uri "http://127.0.0.1:18083/wlt/health" -ExpectedStatus "healthy"
-  Invoke-WebRequest -Uri "http://127.0.0.1:59000/minio/health/ready" -TimeoutSec 10 -UseBasicParsing | Out-Null
+  $minioApiPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_MINIO_API_PORT)) { 59000 } else { [int] $env:BTHWANI_MINIO_API_PORT }
+  Invoke-WebRequest -Uri "http://127.0.0.1:$minioApiPort/minio/health/ready" -TimeoutSec 10 -UseBasicParsing | Out-Null
   Write-Host "Partner runtime dependencies: PASS"
 }
 

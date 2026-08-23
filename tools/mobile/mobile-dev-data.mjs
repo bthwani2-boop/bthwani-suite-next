@@ -8,6 +8,7 @@ import {
   DSH_API_BASE,
   WORKFORCE_API_BASE,
   authorization,
+  getProvider,
   getPasswordToken,
   issueProviderToken,
   list,
@@ -70,8 +71,9 @@ async function collectClientStorefrontFailures() {
 }
 
 /**
- * Read-only startup check. It deliberately avoids password login, activation
- * issuance/consumption, and provider session creation. Deep governed checks run
+ * Read-only startup check. It reads the generated registry and then verifies
+ * each actor against the canonical Workforce provider projection. It does not
+ * issue activation codes or create provider sessions. Deep governed checks run
  * in --repair, where mutations are explicitly allowed.
  */
 async function collectReadOnlyReadinessFailures() {
@@ -85,6 +87,18 @@ async function collectReadOnlyReadinessFailures() {
     return failures;
   }
 
+  let operatorToken;
+  try {
+    // Workforce operator reads are the canonical proof that the generated
+    // actor binding still points at a real provider profile. The login only
+    // authenticates the read; it does not issue provider activations or mutate
+    // Workforce data.
+    operatorToken = await getPasswordToken(LOCAL_ACTORS.operator.username);
+  } catch (error) {
+    failures.push(`app-field/app-captain: Workforce operator read authorization failed: ${error.message}`);
+    return failures;
+  }
+
   for (const role of ["field", "captain"]) {
     const provisioned = registry.actors[role];
     const fixture = LOCAL_WORKFORCE_PROVIDERS[role];
@@ -92,6 +106,19 @@ async function collectReadOnlyReadinessFailures() {
     if (!provisioned?.workforceCode) failures.push(`app-${role}: missing workforceCode in generated Workforce registry`);
     if (provisioned?.phoneE164 !== fixture.phoneE164) {
       failures.push(`app-${role}: generated Workforce phone does not match canonical local fixture`);
+    }
+    if (!provisioned?.actorId) continue;
+
+    try {
+      const detail = await getProvider(operatorToken, role, provisioned.actorId);
+      if (detail?.actorId !== provisioned.actorId) {
+        failures.push(`app-${role}: Workforce provider actor binding does not match the generated registry`);
+      }
+      if (detail?.workforceKind !== role) {
+        failures.push(`app-${role}: Workforce provider kind does not match the mobile surface`);
+      }
+    } catch (error) {
+      failures.push(`app-${role}: canonical Workforce provider read failed: ${error.message}`);
     }
   }
 

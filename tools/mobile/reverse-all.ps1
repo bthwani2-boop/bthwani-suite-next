@@ -14,13 +14,14 @@ $SelectedDevice = Select-BthwaniAndroidDevice -Devices $Devices
 $SelectedSerial = $SelectedDevice.Serial
 
 $env:ANDROID_SERIAL = $SelectedSerial
+$minioApiPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_MINIO_API_PORT)) { 59000 } else { [int] $env:BTHWANI_MINIO_API_PORT }
 
 $Ports = @(
     18080,
     18082,
     18086,
     18100,
-    59000,
+    $minioApiPort,
     18101,
     18102,
     18103,

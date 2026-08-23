@@ -83,7 +83,9 @@ Invoke-DirectJsonRequest -Uri "$gatewayBase/workforce/health" -ExpectedStatus "h
 # The gateway must be the only LAN-visible development ingress. These services
 # are intentionally bound to host loopback in Docker and must stay unreachable
 # through the machine's LAN address even while the runtime is healthy.
-  $forbiddenDirectPorts = @(18080, 18082, 18083, 18086, 59000, 59001)
+$minioApiPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_MINIO_API_PORT)) { 59000 } else { [int] $env:BTHWANI_MINIO_API_PORT }
+$minioConsolePort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_MINIO_CONSOLE_PORT)) { 59001 } else { [int] $env:BTHWANI_MINIO_CONSOLE_PORT }
+$forbiddenDirectPorts = @(18080, 18082, 18083, 18086, $minioApiPort, $minioConsolePort)
 foreach ($port in $forbiddenDirectPorts) {
     if (Test-TcpReachable -TargetHost $lan.Host -Port $port) {
         throw "Private runtime port $port is reachable directly on LAN host $($lan.Host); only gateway port 18110 may be LAN-visible."
