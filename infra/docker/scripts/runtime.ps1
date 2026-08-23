@@ -169,6 +169,7 @@ function Get-BthwaniDockerRows {
 
     if (
       $name.StartsWith("bthwani-", [System.StringComparison]::OrdinalIgnoreCase) -or
+      $name -match '^pr\d+-' -or
       $project.StartsWith("bthwani", [System.StringComparison]::OrdinalIgnoreCase)
     ) {
       $rows += [pscustomobject]@{
@@ -229,6 +230,7 @@ function Get-RunningPublishedBindingCount {
 
     if (
       -not $name.StartsWith("bthwani-", [System.StringComparison]::OrdinalIgnoreCase) -and
+      $name -notmatch '^pr\d+-' -and
       -not $project.StartsWith("bthwani", [System.StringComparison]::OrdinalIgnoreCase)
     ) {
       continue
@@ -326,7 +328,7 @@ function Write-DockerRuntimeTopology {
 }
 
 function Invoke-ComposeConvergentUp {
-  Invoke-ComposeConvergentUp --remove-orphans @args
+  Invoke-Compose up -d --remove-orphans @args
 }
 
 function Get-SelectedMigrationServices {

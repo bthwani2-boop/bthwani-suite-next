@@ -129,9 +129,52 @@ for (const required of [
   }
 }
 
-if (/Invoke-Compose\s+up\s+-d\b/.test(canonicalRuntimeScript)) {
+const convergentUpDefinition =
+  canonicalRuntimeScript.match(
+    /function\s+Invoke-ComposeConvergentUp\s*\{([\s\S]*?)^\}/m,
+  );
+
+if (!convergentUpDefinition) {
   failures.push(
-    "runtime.ps1: raw Compose up is forbidden; use Invoke-ComposeConvergentUp",
+    "runtime.ps1: Invoke-ComposeConvergentUp definition is missing",
+  );
+} else {
+  const body = convergentUpDefinition[1];
+
+  if (
+    !/Invoke-Compose\s+up\s+-d\s+--remove-orphans\s+@args/.test(body)
+  ) {
+    failures.push(
+      "runtime.ps1: convergent-up helper must delegate to Invoke-Compose up -d --remove-orphans @args",
+    );
+  }
+
+  if (/Invoke-ComposeConvergentUp/.test(body)) {
+    failures.push(
+      "runtime.ps1: recursive Invoke-ComposeConvergentUp is forbidden",
+    );
+  }
+}
+
+const rawComposeUpCalls =
+  canonicalRuntimeScript.match(
+    /Invoke-Compose\s+up\s+-d\b[^\r\n]*/g,
+  ) ?? [];
+
+if (
+  rawComposeUpCalls.length !== 1 ||
+  !/Invoke-Compose\s+up\s+-d\s+--remove-orphans\s+@args/.test(
+    rawComposeUpCalls[0],
+  )
+) {
+  failures.push(
+    `runtime.ps1: expected exactly one canonical raw Compose up implementation; found ${rawComposeUpCalls.length}`,
+  );
+}
+
+if (!canonicalRuntimeScript.includes("$name -match '^pr\\d+-'")) {
+  failures.push(
+    "runtime.ps1: PR residue containers must participate in topology governance",
   );
 }
 
