@@ -8,7 +8,7 @@ x-bthwani-owner: core/platform-control
 x-bthwani-capability: platform-progressive-rollout
 x-bthwani-contract-state: CONTRACT_ACTIVE
 servers:
-  - url: http://localhost:58084
+  - url: http://localhost:18088
 paths:
   /platform/v1/rollouts:
     get:

@@ -13,7 +13,7 @@ x-bthwani-parent-contract: services/dsh/contracts/dsh.openapi.yaml
 x-bthwani-client-generation: DISABLED
 x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
 servers:
-- url: http://localhost:58080
+- url: http://localhost:18080
 paths:
   /dsh/captain/dispatch/assignments/{assignmentId}/pod:
     post:

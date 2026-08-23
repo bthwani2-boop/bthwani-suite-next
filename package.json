@@ -154,7 +154,7 @@
     "web:runtime-contract:test": "node --test apps/control-panel/runtime/tests/*.test.mjs",
     "ui-kit:catalog:build": "node tools/scripts/build-ui-kit-catalog.mjs",
     "visual:ui-kit:contract": "node tools/guards/ui-kit-visual-contract-gate.mjs",
-    "performance:api:quick": "pnpm exec autocannon -c 10 -d 10 http://localhost:58080/dsh/health",
+    "performance:api:quick": "pnpm exec autocannon -c 10 -d 10 http://localhost:18080/dsh/health",
     "performance:bundle:size": "pnpm exec size-limit",
     "diagnostics:next-bundle": "ANALYZE=true pnpm --dir apps/control-panel/runtime build",
     "diagnostics:knip": "knip --reporter json",

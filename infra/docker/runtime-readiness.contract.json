@@ -13,7 +13,7 @@
       "name": "Workforce API",
       "kind": "json-status",
       "baseUrlEnv": "WORKFORCE_API_BASE_URL",
-      "defaultBaseUrl": "http://127.0.0.1:58086",
+      "defaultBaseUrl": "http://127.0.0.1:18086",
       "path": "/workforce/readiness",
       "healthyStatuses": ["ready"]
     },
@@ -21,7 +21,7 @@
       "name": "DSH API",
       "kind": "json-status",
       "baseUrlEnv": "DSH_API_BASE_URL",
-      "defaultBaseUrl": "http://127.0.0.1:58080",
+      "defaultBaseUrl": "http://127.0.0.1:18080",
       "path": "/dsh/readiness",
       "healthyStatuses": ["HEALTHY"]
     },
@@ -29,7 +29,7 @@
       "name": "WLT API",
       "kind": "json-status",
       "baseUrlEnv": "WLT_API_BASE_URL",
-      "defaultBaseUrl": "http://127.0.0.1:58083",
+      "defaultBaseUrl": "http://127.0.0.1:18083",
       "path": "/wlt/readiness",
       "healthyStatuses": ["ready"]
     },
@@ -37,7 +37,7 @@
       "name": "Providers API",
       "kind": "json-status",
       "baseUrlEnv": "PROVIDERS_API_BASE_URL",
-      "defaultBaseUrl": "http://127.0.0.1:58087",
+      "defaultBaseUrl": "http://127.0.0.1:18087",
       "path": "/providers/readiness",
       "healthyStatuses": ["HEALTHY"]
     },
@@ -45,7 +45,7 @@
       "name": "Platform Control API",
       "kind": "json-status",
       "baseUrlEnv": "PLATFORM_CONTROL_API_BASE_URL",
-      "defaultBaseUrl": "http://127.0.0.1:58088",
+      "defaultBaseUrl": "http://127.0.0.1:18088",
       "path": "/platform/readiness",
       "healthyStatuses": ["HEALTHY"]
     },

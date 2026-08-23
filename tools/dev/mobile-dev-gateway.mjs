@@ -3,7 +3,7 @@ import http from 'node:http';
 import { pathToFileURL } from 'node:url';
 
 export const MOBILE_DEV_GATEWAY_CONTRACT_VERSION = 1;
-export const MOBILE_DEV_GATEWAY_DEFAULT_PORT = 58110;
+export const MOBILE_DEV_GATEWAY_DEFAULT_PORT = 18110;
 export const MOBILE_DEV_GATEWAY_SERVICE = 'bthwani-mobile-dev-gateway';
 
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
@@ -28,9 +28,9 @@ const REQUIRED_PRESIGN_QUERY_KEYS = [
 ];
 
 const SERVICE_ROUTES = Object.freeze([
-  { prefix: '/dsh/', host: '127.0.0.1', port: 58080 },
+  { prefix: '/dsh/', host: '127.0.0.1', port: 18080 },
   { prefix: '/identity/', host: '127.0.0.1', port: 18082 },
-  { prefix: '/workforce/', host: '127.0.0.1', port: 58086 },
+  { prefix: '/workforce/', host: '127.0.0.1', port: 18086 },
 ]);
 
 export function isPrivateIpv4(value) {
@@ -78,7 +78,7 @@ export function resolveGatewayRoute(rawUrl) {
     return {
       kind: 'dev-session',
       host: '127.0.0.1',
-      port: 58100,
+      port: 18100,
       path: `${stripPrefix(parsed.pathname, '/__dev-session')}${parsed.search}`,
       requiresCapability: true,
     };

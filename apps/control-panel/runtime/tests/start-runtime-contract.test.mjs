@@ -93,11 +93,11 @@ test("frontend readiness still rejects relative service-owner URLs", () => {
 
 test("control-panel startup keeps service origins in server-only environment variables", () => {
   const serverOrigins = new Map([
-    ["DSH_API_BASE_URL", 58080],
+    ["DSH_API_BASE_URL", 18080],
     ["IDENTITY_API_BASE_URL", 18082],
-    ["WORKFORCE_API_BASE_URL", 58086],
-    ["PROVIDERS_API_BASE_URL", 58087],
-    ["PLATFORM_CONTROL_API_BASE_URL", 58088],
+    ["WORKFORCE_API_BASE_URL", 18086],
+    ["PROVIDERS_API_BASE_URL", 18087],
+    ["PLATFORM_CONTROL_API_BASE_URL", 18088],
   ]);
 
   for (const [name, port] of serverOrigins) {

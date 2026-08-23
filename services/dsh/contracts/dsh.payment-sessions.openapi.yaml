@@ -11,7 +11,7 @@ x-bthwani-capability: payment-sessions
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: ENABLED
 servers:
-  - url: http://localhost:58080
+  - url: http://localhost:18080
 paths:
   /dsh/control-panel/finance/payment-sessions/{paymentSessionId}/timeline:
     get:

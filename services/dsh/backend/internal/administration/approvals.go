@@ -13,19 +13,20 @@ import (
 )
 
 type RoleAssignmentApproval struct {
-	ID            string     `json:"id"`
-	ActionType    string     `json:"actionType"`
-	TargetActorID string     `json:"targetActorId"`
-	RoleName      string     `json:"roleName"`
-	RequestedBy   string     `json:"requestedBy"`
-	Reason        string     `json:"reason"`
-	Status        string     `json:"status"`
-	ReviewedBy    *string    `json:"reviewedBy,omitempty"`
-	ReviewNote    *string    `json:"reviewNote,omitempty"`
-	Version       int        `json:"version"`
-	CreatedAt     time.Time  `json:"createdAt"`
-	UpdatedAt     time.Time  `json:"updatedAt"`
-	ReviewedAt    *time.Time `json:"reviewedAt,omitempty"`
+	ID              string     `json:"id"`
+	ActionType      string     `json:"actionType"`
+	TargetActorID   string     `json:"targetActorId"`
+	RoleName        string     `json:"roleName"`
+	RequestedBy     string     `json:"requestedBy"`
+	Reason          string     `json:"reason"`
+	Status          string     `json:"status"`
+	ExecutionStatus string     `json:"executionStatus"`
+	ReviewedBy      *string    `json:"reviewedBy,omitempty"`
+	ReviewNote      *string    `json:"reviewNote,omitempty"`
+	Version         int        `json:"version"`
+	CreatedAt       time.Time  `json:"createdAt"`
+	UpdatedAt       time.Time  `json:"updatedAt"`
+	ReviewedAt      *time.Time `json:"reviewedAt,omitempty"`
 }
 
 type CreateRoleAssignmentParams struct {
@@ -85,8 +86,14 @@ func CreateRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 		return nil, ErrConflict
 	}
 
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
 	var req RoleAssignmentApproval
-	err := db.QueryRowContext(ctx, `
+	err = tx.QueryRowContext(ctx, `
 		INSERT INTO dsh_admin_approval_requests
 			(action_type, target_actor_id, role_name, requested_by, reason, status)
 		VALUES ($1, $2, $3, $4, $5, 'pending')
@@ -102,11 +109,17 @@ func CreateRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 		}
 		return nil, err
 	}
+	req.ExecutionStatus = "not_started"
 
-	_, _ = db.ExecContext(ctx, `
+	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
-		VALUES ($1, 'ROLE_ASSIGNMENT_REQUESTED', $2, $3, 'HIGH', $4)
-	`, actorID, req.ID, "Requested "+params.ActionType+" for role "+req.RoleName+" and actor "+targetActorID, req.ID)
+		VALUES ($1, 'ROLE_ASSIGNMENT_REQUESTED', $2, $3, 'restricted', $4)
+	`, actorID, req.ID, "Requested "+params.ActionType+" for role "+req.RoleName+" and actor "+targetActorID, req.ID); err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
 
 	return &req, nil
 }
@@ -117,13 +130,25 @@ func ListRoleAssignmentApprovals(ctx context.Context, db *sql.DB, status string)
 	}
 
 	query := `
-		SELECT id, action_type, target_actor_id, role_name, requested_by, reason, status,
-		       reviewed_by, review_note, version, created_at, updated_at, reviewed_at
-		FROM dsh_admin_approval_requests
+		SELECT request.id, request.action_type, request.target_actor_id, request.role_name,
+		       request.requested_by, request.reason, request.status,
+		       CASE
+		         WHEN intent.id IS NULL THEN 'not_started'
+		         WHEN intent.status = 'applied' THEN 'applied'
+		         WHEN intent.terminal_failure THEN 'terminal_failure'
+		         WHEN intent.status = 'failed' THEN 'retryable_failure'
+		         WHEN intent.lease_owner IS NOT NULL THEN 'reconciling'
+		         ELSE 'pending'
+		       END,
+		       request.reviewed_by, request.review_note, request.version,
+		       request.created_at, request.updated_at, request.reviewed_at
+		FROM dsh_admin_approval_requests request
+		LEFT JOIN dsh_admin_canonical_mutation_intents intent
+		  ON intent.operation_type = 'role-assignment' AND intent.request_id = request.id
 	`
 	args := []interface{}{}
 	if status != "" {
-		query += ` WHERE status = $1 `
+		query += ` WHERE request.status = $1 `
 		args = append(args, status)
 	}
 	query += ` ORDER BY created_at DESC`
@@ -138,7 +163,7 @@ func ListRoleAssignmentApprovals(ctx context.Context, db *sql.DB, status string)
 	for rows.Next() {
 		var req RoleAssignmentApproval
 		if err := rows.Scan(
-			&req.ID, &req.ActionType, &req.TargetActorID, &req.RoleName, &req.RequestedBy, &req.Reason, &req.Status,
+			&req.ID, &req.ActionType, &req.TargetActorID, &req.RoleName, &req.RequestedBy, &req.Reason, &req.Status, &req.ExecutionStatus,
 			&req.ReviewedBy, &req.ReviewNote, &req.Version, &req.CreatedAt, &req.UpdatedAt, &req.ReviewedAt,
 		); err != nil {
 			return nil, err
@@ -146,6 +171,37 @@ func ListRoleAssignmentApprovals(ctx context.Context, db *sql.DB, status string)
 		out = append(out, req)
 	}
 	return out, rows.Err()
+}
+
+func getRoleAssignmentApproval(ctx context.Context, db *sql.DB, approvalID string) (*RoleAssignmentApproval, error) {
+	var req RoleAssignmentApproval
+	if err := db.QueryRowContext(ctx, `
+		SELECT request.id, request.action_type, request.target_actor_id, request.role_name,
+		       request.requested_by, request.reason, request.status,
+		       CASE
+		         WHEN intent.id IS NULL THEN 'not_started'
+		         WHEN intent.status = 'applied' THEN 'applied'
+		         WHEN intent.terminal_failure THEN 'terminal_failure'
+		         WHEN intent.status = 'failed' THEN 'retryable_failure'
+		         WHEN intent.lease_owner IS NOT NULL THEN 'reconciling'
+		         ELSE 'pending'
+		       END,
+		       request.reviewed_by, request.review_note, request.version,
+		       request.created_at, request.updated_at, request.reviewed_at
+		FROM dsh_admin_approval_requests request
+		LEFT JOIN dsh_admin_canonical_mutation_intents intent
+		  ON intent.operation_type = 'role-assignment' AND intent.request_id = request.id
+		WHERE request.id = $1
+	`, approvalID).Scan(
+		&req.ID, &req.ActionType, &req.TargetActorID, &req.RoleName, &req.RequestedBy, &req.Reason, &req.Status, &req.ExecutionStatus,
+		&req.ReviewedBy, &req.ReviewNote, &req.Version, &req.CreatedAt, &req.UpdatedAt, &req.ReviewedAt,
+	); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &req, nil
 }
 
 // ReviewRoleAssignmentApproval reviews a pending canonical actor-role change.
@@ -198,10 +254,12 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 		`, actorID, params.ReviewNote, approvalID, req.Version).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt); err != nil {
 			return nil, nil, errors.New("version conflict")
 		}
-		_, _ = tx.ExecContext(ctx, `
+		if _, err := tx.ExecContext(ctx, `
 			INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
-			VALUES ($1, 'ROLE_ASSIGNMENT_REJECTED', $2, $3, 'HIGH', $4)
-		`, actorID, req.ID, "Reviewed "+req.ActionType+" for role "+req.RoleName+" and actor "+req.TargetActorID, req.ID)
+			VALUES ($1, 'ROLE_ASSIGNMENT_REJECTED', $2, $3, 'restricted', $4)
+		`, actorID, req.ID, "Reviewed "+req.ActionType+" for role "+req.RoleName+" and actor "+req.TargetActorID, req.ID); err != nil {
+			return nil, nil, err
+		}
 		if err := tx.Commit(); err != nil {
 			return nil, nil, err
 		}
@@ -225,67 +283,16 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 	if err := tx.Commit(); err != nil {
 		return nil, nil, err
 	}
-	if identityClient == nil {
-		_ = markCanonicalMutation(ctx, db, "role-assignment", req.ID, "failed", "identity client is unavailable")
-		return nil, nil, ErrIdentityUnavailable
-	}
-	var assignment *auth.RbacActorRoleAssignment
-	switch req.ActionType {
-	case "staff_role_assignment":
-		granted, grantErr := identityClient.GrantRoleWithIdempotency(ctx, req.TargetActorID, req.RoleName, actorID, req.ID)
-		if grantErr != nil {
-			_ = markCanonicalMutation(ctx, db, "role-assignment", req.ID, "failed", grantErr.Error())
-			return nil, nil, ErrCanonicalMutationFailed
-		}
-		assignment = &granted
-	case "staff_role_revocation":
-		if revokeErr := identityClient.RevokeRoleWithIdempotency(ctx, req.TargetActorID, req.RoleName, actorID, req.ID); revokeErr != nil {
-			_ = markCanonicalMutation(ctx, db, "role-assignment", req.ID, "failed", revokeErr.Error())
-			return nil, nil, ErrCanonicalMutationFailed
-		}
-	default:
-		return nil, nil, errors.New("unsupported action type")
-	}
-
-	finalize, err := db.BeginTx(ctx, nil)
+	result, err := executeCanonicalMutationNow(ctx, db, identityClient, "role-assignment", req.ID)
 	if err != nil {
 		return nil, nil, err
 	}
-	defer finalize.Rollback()
-	if err := finalize.QueryRowContext(ctx, `
-		UPDATE dsh_admin_approval_requests
-		SET status = 'approved', reviewed_by = $1, review_note = $2, version = version + 1, updated_at = NOW(), reviewed_at = NOW()
-		WHERE id = $3 AND status = 'pending' AND version = $4
-		RETURNING version, updated_at, reviewed_at
-	`, actorID, params.ReviewNote, approvalID, req.Version).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt); err != nil {
+	readback, err := getRoleAssignmentApproval(ctx, db, req.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if readback.Status != "approved" || readback.ReviewedBy == nil || *readback.ReviewedBy != actorID {
 		return nil, nil, errors.New("version conflict")
 	}
-	intentResult, err := finalize.ExecContext(ctx, `
-		UPDATE dsh_admin_canonical_mutation_intents
-		SET status = 'applied', attempts = attempts + 1, last_error = NULL,
-		    next_attempt_at = NULL, terminal_failure = FALSE,
-		    lease_owner = NULL, lease_expires_at = NULL, updated_at = NOW()
-		WHERE operation_type = 'role-assignment' AND request_id = $1
-	`, req.ID)
-	if err != nil {
-		return nil, nil, err
-	}
-	if rows, rowsErr := intentResult.RowsAffected(); rowsErr != nil || rows != 1 {
-		if rowsErr != nil {
-			return nil, nil, rowsErr
-		}
-		return nil, nil, errors.New("canonical mutation intent is missing")
-	}
-	_, _ = finalize.ExecContext(ctx, `
-		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
-		VALUES ($1, 'ROLE_ASSIGNMENT_APPROVED', $2, $3, 'HIGH', $4)
-	`, actorID, req.ID, "Reviewed "+req.ActionType+" for role "+req.RoleName+" and actor "+req.TargetActorID, req.ID)
-	if err := finalize.Commit(); err != nil {
-		return nil, nil, err
-	}
-	req.Status = "approved"
-	reviewer := actorID
-	req.ReviewedBy = &reviewer
-	req.ReviewNote = &params.ReviewNote
-	return &req, assignment, nil
+	return readback, result.assignment, nil
 }

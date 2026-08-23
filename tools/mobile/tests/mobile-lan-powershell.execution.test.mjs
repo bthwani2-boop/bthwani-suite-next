@@ -79,11 +79,11 @@ test("the gateway descriptor is actually writable and keeps its public pid contr
   // reserved parameter name fails at call time, not at parse time.
   const command = [
     `. '${quoted}'`,
-    "Write-BthwaniMobileGatewayDescriptor -LanHost '192.168.1.50' -Port 58110 -GatewayProcessId 4242 -Capability ('a' * 64) -ContractVersion 1",
+    "Write-BthwaniMobileGatewayDescriptor -LanHost '192.168.1.50' -Port 18110 -GatewayProcessId 4242 -Capability ('a' * 64) -ContractVersion 1",
     "$descriptor = Read-BthwaniMobileGatewayDescriptor",
     "if ($null -eq $descriptor) { throw 'descriptor was not written' }",
     "if ([int] $descriptor.pid -ne 4242) { throw \"descriptor.pid was $($descriptor.pid), expected 4242\" }",
-    "if ([int] $descriptor.port -ne 58110) { throw 'descriptor.port drifted' }",
+    "if ([int] $descriptor.port -ne 18110) { throw 'descriptor.port drifted' }",
     "if ([string] $descriptor.host -ne '192.168.1.50') { throw 'descriptor.host drifted' }",
     "Remove-Item -LiteralPath (Get-BthwaniMobileGatewayDescriptorPath) -Force -ErrorAction SilentlyContinue",
   ].join("; ");
@@ -95,13 +95,13 @@ test("the gateway descriptor is actually writable and keeps its public pid contr
 
 test("stale gateway replacement refuses to kill a process it cannot identify as the gateway", (t) => {
   const quoted = helper.replaceAll("'", "''");
-  // Port 58110 replacement must never terminate an unrelated listener. Feeds a
+  // Port 18110 replacement must never terminate an unrelated listener. Feeds a
   // synthetic listener owned by the current process, which is not the gateway.
   const command = [
     `. '${quoted}'`,
     "$listener = [pscustomobject]@{ OwningProcess = $PID }",
     "$refused = $false",
-    "try { Stop-BthwaniStaleMobileDevGateway -Listener $listener -Port 58110 } catch { if ($_.Exception.Message -match 'not the BThwani mobile development gateway|cannot be verified safely') { $refused = $true } else { throw $_ } }",
+    "try { Stop-BthwaniStaleMobileDevGateway -Listener $listener -Port 18110 } catch { if ($_.Exception.Message -match 'not the BThwani mobile development gateway|cannot be verified safely') { $refused = $true } else { throw $_ } }",
     "if (-not $refused) { throw 'replacement did not refuse an unrelated process' }",
   ].join("; ");
 

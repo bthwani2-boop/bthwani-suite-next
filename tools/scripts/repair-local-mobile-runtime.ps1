@@ -98,8 +98,8 @@ try {
           -Action up -Profiles "identity,workforce"
       }
 
-      $dshHealthy = Test-ServiceHealth -Uri "http://127.0.0.1:58080/dsh/health"
-      $wltHealthy = Test-ServiceHealth -Uri "http://127.0.0.1:58083/wlt/health"
+      $dshHealthy = Test-ServiceHealth -Uri "http://127.0.0.1:18080/dsh/health"
+      $wltHealthy = Test-ServiceHealth -Uri "http://127.0.0.1:18083/wlt/health"
       if (-not $dshHealthy -or -not $wltHealthy) {
         Invoke-Checked -Description "restore unhealthy DSH/WLT dependencies" -Command {
           & pwsh -NoProfile -ExecutionPolicy Bypass -File $RuntimeScript `
@@ -118,9 +118,9 @@ try {
 
     $healthChecks = @(
   @{ Name = "Identity"; Uri = "http://127.0.0.1:18082/identity/health" },
-      @{ Name = "Workforce"; Uri = "http://127.0.0.1:58086/workforce/health" },
-      @{ Name = "DSH"; Uri = "http://127.0.0.1:58080/dsh/health" },
-      @{ Name = "WLT"; Uri = "http://127.0.0.1:58083/wlt/health" }
+      @{ Name = "Workforce"; Uri = "http://127.0.0.1:18086/workforce/health" },
+      @{ Name = "DSH"; Uri = "http://127.0.0.1:18080/dsh/health" },
+      @{ Name = "WLT"; Uri = "http://127.0.0.1:18083/wlt/health" }
     )
     foreach ($check in $healthChecks) {
       if (-not (Test-ServiceHealth -Uri $check.Uri)) {

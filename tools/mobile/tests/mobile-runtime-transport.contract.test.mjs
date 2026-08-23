@@ -22,8 +22,8 @@ test("all mobile wrappers stay thin and bind canonical fixed Metro ports", () =>
     assert.match(start, /mobile\.ps1/);
     assert.match(appWrapper, new RegExp(`-App\\s+'${appKey}'`));
     assert.match(shared, new RegExp(`'${appKey}'\\s*=\\s*${port}\\b`));
-    assert.doesNotMatch(start, /BTHWANI_MOBILE_TRANSPORT|Resolve-BthwaniAdb|Get-NetRoute|58110/);
-    assert.doesNotMatch(appWrapper, /BTHWANI_MOBILE_TRANSPORT|Resolve-BthwaniAdb|Get-NetRoute|58110/);
+    assert.doesNotMatch(start, /BTHWANI_MOBILE_TRANSPORT|Resolve-BthwaniAdb|Get-NetRoute|18110/);
+    assert.doesNotMatch(appWrapper, /BTHWANI_MOBILE_TRANSPORT|Resolve-BthwaniAdb|Get-NetRoute|18110/);
   }
 });
 
@@ -124,9 +124,9 @@ test("development gateway is allowlisted and the underlying broker and MinIO sta
   assert.doesNotMatch(gateway, /0\.0\.0\.0/);
   assert.match(broker, /const HOST = '127\.0\.0\.1'/);
   assert.match(broker, /DEV_SESSION_LOOPBACK_REQUIRED/);
-  assert.match(compose, /127\.0\.0\.1:\$\{BTHWANI_DSH_API_HOST_PORT:-58080\}:8080/);
+  assert.match(compose, /127\.0\.0\.1:\$\{BTHWANI_DSH_API_HOST_PORT:-18080\}:8080/);
   assert.match(compose, /127\.0\.0\.1:\$\{BTHWANI_MINIO_API_PORT:-59000\}:9000/);
-  assert.doesNotMatch(gateway, /58083/);
+  assert.doesNotMatch(gateway, /18083/);
 });
 
 test("developer session and presigned media clients use the governed gateway only when LAN exports it", () => {
@@ -157,7 +157,7 @@ test("ADB remains an explicit Android fallback with verified reverse mappings an
   }
   assert.match(launcher, /Invoke-BthwaniAdbReverse/);
   assert.match(launcher, /\$identityHostPort = if \(\[string\]::IsNullOrWhiteSpace\(\$env:BTHWANI_IDENTITY_API_HOST_PORT\)\) \{ "18082" \}/);
-  assert.match(launcher, /\$ports = @\(58080, \[int\] \$identityHostPort, 58086, 58100, 59000, \$MetroPort\)/);
+  assert.match(launcher, /\$ports = @\(18080, \[int\] \$identityHostPort, 18086, 18100, 59000, \$MetroPort\)/);
   assert.match(launcher, /Clear-BthwaniProcessEnvironment -Names @\("ANDROID_SERIAL", "BTHWANI_ANDROID_SERIAL", "ADB"\)/);
   assert.ok(
     launcher.indexOf('Clear-BthwaniProcessEnvironment -Names @("ANDROID_SERIAL", "BTHWANI_ANDROID_SERIAL", "ADB")')

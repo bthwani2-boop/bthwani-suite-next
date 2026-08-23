@@ -84,13 +84,13 @@ function Start-PlatformP3Runtime {
   Invoke-CanonicalPlatformRuntime -Action up
 
   foreach ($url in @(
-    "http://localhost:58090/__admin/mappings",
+    "http://localhost:18090/__admin/mappings",
     "http://localhost:18082/identity/health",
-    "http://localhost:58087/providers/readiness",
-    "http://localhost:58083/wlt/health",
-    "http://localhost:58080/dsh/health",
-    "http://localhost:58088/platform/health",
-    "http://localhost:58088/platform/readiness"
+    "http://localhost:18087/providers/readiness",
+    "http://localhost:18083/wlt/health",
+    "http://localhost:18080/dsh/health",
+    "http://localhost:18088/platform/health",
+    "http://localhost:18088/platform/readiness"
   )) {
     Wait-PlatformHttpReady $url
   }

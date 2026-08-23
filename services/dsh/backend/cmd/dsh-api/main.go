@@ -32,7 +32,7 @@ import (
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "58080"
+		port = "18080"
 	}
 
 	databaseURL := os.Getenv("DATABASE_URL")

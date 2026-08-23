@@ -32,11 +32,11 @@ const FORWARDED_REQUEST_HEADERS = [
 ] as const;
 
 const SERVICE_CONFIG = {
-  dsh: { env: "DSH_API_BASE_URL", fallback: "http://127.0.0.1:58080" },
+  dsh: { env: "DSH_API_BASE_URL", fallback: "http://127.0.0.1:18080" },
   identity: { env: "IDENTITY_API_BASE_URL", fallback: "http://127.0.0.1:18082" },
-  workforce: { env: "WORKFORCE_API_BASE_URL", fallback: "http://127.0.0.1:58086" },
-  providers: { env: "PROVIDERS_API_BASE_URL", fallback: "http://127.0.0.1:58087" },
-  "platform-control": { env: "PLATFORM_CONTROL_API_BASE_URL", fallback: "http://127.0.0.1:58088" },
+  workforce: { env: "WORKFORCE_API_BASE_URL", fallback: "http://127.0.0.1:18086" },
+  providers: { env: "PROVIDERS_API_BASE_URL", fallback: "http://127.0.0.1:18087" },
+  "platform-control": { env: "PLATFORM_CONTROL_API_BASE_URL", fallback: "http://127.0.0.1:18088" },
 } as const;
 
 export type ControlPanelBffService = keyof typeof SERVICE_CONFIG;

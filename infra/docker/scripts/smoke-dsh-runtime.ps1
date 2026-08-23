@@ -3,7 +3,7 @@ Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent (Split-Path -P
 
 $ComposeFile = ".\infra\docker\compose.runtime.yml"
 $EnvFile     = ".\infra\docker\env\runtime.env.example"
-$DshBaseUrl  = "http://localhost:58080"
+$DshBaseUrl  = "http://localhost:18080"
 
 Write-Host "=== DSH runtime smoke ==="
 

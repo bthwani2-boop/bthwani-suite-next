@@ -1,6 +1,6 @@
 param(
-  [string]$BaseUrl = "http://127.0.0.1:58083",
-  [string]$WiremockUrl = "http://127.0.0.1:58090"
+  [string]$BaseUrl = "http://127.0.0.1:18083",
+  [string]$WiremockUrl = "http://127.0.0.1:18090"
 )
 
 $ErrorActionPreference = "Stop"

@@ -208,10 +208,10 @@ ON CONFLICT (singleton) DO UPDATE SET probe_value = EXCLUDED.probe_value, update
   if ($LASTEXITCODE -ne 0) { throw "Post-restore integrity verification failed." }
 
   Wait-Status "identity" "http://127.0.0.1:18082/identity/health" "healthy"
-  Wait-Status "workforce" "http://127.0.0.1:58086/workforce/health" "healthy"
-  Wait-Status "dsh" "http://127.0.0.1:58080/dsh/health" "healthy"
-  Wait-Status "wlt" "http://127.0.0.1:58083/wlt/health" "healthy"
-  Wait-Status "platform-control" "http://127.0.0.1:58088/platform/health" "healthy"
+  Wait-Status "workforce" "http://127.0.0.1:18086/workforce/health" "healthy"
+  Wait-Status "dsh" "http://127.0.0.1:18080/dsh/health" "healthy"
+  Wait-Status "wlt" "http://127.0.0.1:18083/wlt/health" "healthy"
+  Wait-Status "platform-control" "http://127.0.0.1:18088/platform/health" "healthy"
 
   $OperatorLogin = Invoke-RestMethod -Method POST -Uri "http://127.0.0.1:18082/auth/login" `
     -ContentType "application/json" `
@@ -225,7 +225,7 @@ ON CONFLICT (singleton) DO UPDATE SET probe_value = EXCLUDED.probe_value, update
     throw "Could not obtain a governed operator token after restore."
   }
 
-  $Providers = Invoke-RestMethod -Uri "http://127.0.0.1:58087/providers/health" `
+  $Providers = Invoke-RestMethod -Uri "http://127.0.0.1:18087/providers/health" `
     -Headers @{ Authorization = "Bearer $($OperatorLogin.accessToken)" } -TimeoutSec 10
   if (@($Providers.providers).Count -lt 8) {
     throw "Providers did not recover its governed health matrix after restore."

@@ -30,7 +30,7 @@ x-bthwani-contracts:
   workforceFinance: ./wlt.workforce-finance.openapi.yaml
   pricingQuotes: ./wlt.pricing-quotes.openapi.yaml
 servers:
-  - url: http://localhost:58083
+  - url: http://localhost:18083
 paths:
   /wlt/health:
     get:

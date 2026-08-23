@@ -16,10 +16,10 @@ $SelectedSerial = $SelectedDevice.Serial
 $env:ANDROID_SERIAL = $SelectedSerial
 
 $Ports = @(
-    58080,
+    18080,
     18082,
-    58086,
-    58100,
+    18086,
+    18100,
     59000,
     18101,
     18102,

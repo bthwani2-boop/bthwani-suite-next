@@ -5,7 +5,7 @@
  *
  * Usage (requires runtime up):
  *   k6 run tools/performance/k6/identity-smoke.js
- *   k6 run --env BASE_URL=http://localhost:58000 tools/performance/k6/identity-smoke.js
+ *   k6 run --env BASE_URL=http://localhost:18082 tools/performance/k6/identity-smoke.js
  *
  * Thresholds sourced from tools/performance/performance-budgets.json api.identity
  */
@@ -14,7 +14,7 @@ import http from "k6/http";
 import { check, sleep } from "k6";
 import { Trend, Rate } from "k6/metrics";
 
-const BASE_URL = __ENV.BASE_URL || "http://localhost:58000";
+const BASE_URL = __ENV.BASE_URL || "http://localhost:18082";
 
 const healthTrend = new Trend("identity_health_duration");
 const errorRate   = new Rate("identity_errors");

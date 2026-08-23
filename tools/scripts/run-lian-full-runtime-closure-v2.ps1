@@ -157,7 +157,7 @@ function Wait-Status([string]$Name, [string]$Url, [string]$Expected = "healthy")
 }
 
 function Wait-Providers {
-  $Url = "http://127.0.0.1:58087/providers/health"
+  $Url = "http://127.0.0.1:18087/providers/health"
   $RequiredKinds = @("sms", "maps", "payment", "push", "email", "storage", "search", "fraud")
   for ($Attempt = 1; $Attempt -le 40; $Attempt++) {
     try {
@@ -193,13 +193,13 @@ function Invoke-EvidenceScript([string]$Name, [string]$Path, [string[]]$Argument
 }
 
 function Verify-AllServices {
-  Wait-Status "dsh" "http://127.0.0.1:58080/dsh/health"
+  Wait-Status "dsh" "http://127.0.0.1:18080/dsh/health"
   Wait-Status "identity" "http://127.0.0.1:18082/identity/health" 
-  Wait-Status "wlt" "http://127.0.0.1:58083/wlt/health"
-  Wait-Status "workforce" "http://127.0.0.1:58086/workforce/health"
+  Wait-Status "wlt" "http://127.0.0.1:18083/wlt/health"
+  Wait-Status "workforce" "http://127.0.0.1:18086/workforce/health"
   Wait-Providers
-  Wait-Status "platform-control" "http://127.0.0.1:58088/platform/health"
-  Wait-Status "platform-control-readiness" "http://127.0.0.1:58088/platform/readiness" "ready"
+  Wait-Status "platform-control" "http://127.0.0.1:18088/platform/health"
+  Wait-Status "platform-control-readiness" "http://127.0.0.1:18088/platform/readiness" "ready"
 }
 
 try {
@@ -222,11 +222,11 @@ try {
     (Join-Path $RepoRoot "tools/scripts/test-runtime-backup-restore.ps1") @("-EnvFile", $EnvFile)
 
   Verify-AllServices
-  Assert-Protected "client-map-search" "POST" "http://127.0.0.1:58080/dsh/client/maps/search" '{"query":"Sanaa"}'
-  Assert-Protected "client-map-reverse" "POST" "http://127.0.0.1:58080/dsh/client/maps/reverse" '{"latitude":15.35,"longitude":44.20}'
-  Assert-Protected "service-area-governance" "GET" "http://127.0.0.1:58080/dsh/operator/platform/service-areas"
-  Assert-Protected "platform-zones" "GET" "http://127.0.0.1:58080/dsh/operator/platform/zones"
-  Assert-Protected "address-privacy-policy" "GET" "http://127.0.0.1:58080/dsh/operator/platform/client-address-privacy"
+  Assert-Protected "client-map-search" "POST" "http://127.0.0.1:18080/dsh/client/maps/search" '{"query":"Sanaa"}'
+  Assert-Protected "client-map-reverse" "POST" "http://127.0.0.1:18080/dsh/client/maps/reverse" '{"latitude":15.35,"longitude":44.20}'
+  Assert-Protected "service-area-governance" "GET" "http://127.0.0.1:18080/dsh/operator/platform/service-areas"
+  Assert-Protected "platform-zones" "GET" "http://127.0.0.1:18080/dsh/operator/platform/zones"
+  Assert-Protected "address-privacy-policy" "GET" "http://127.0.0.1:18080/dsh/operator/platform/client-address-privacy"
 
   Save-Evidence "PASS"
   Write-Host "Sovereign full-runtime closure v2: PASS"

@@ -1,6 +1,6 @@
 param(
   [string]$IdentityBaseUrl = "http://localhost:18082",
-  [string]$DshBaseUrl = "http://localhost:58080",
+  [string]$DshBaseUrl = "http://localhost:18080",
   [string]$StoreId = "store-test-grocery"
 )
 

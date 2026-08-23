@@ -35,6 +35,6 @@ export function resolveWorkforceApiBaseUrl(): string {
   }
 
   return isReactNative() && !isWorkforceDeviceLoopbackBridgeEnabled()
-    ? "http://10.0.2.2:58086"
-    : "http://127.0.0.1:58086";
+    ? "http://10.0.2.2:18086"
+    : "http://127.0.0.1:18086";
 }

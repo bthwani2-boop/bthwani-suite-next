@@ -25,8 +25,8 @@ function brokerTarget(): BrokerTarget {
   return {
     baseUrl:
       Platform.OS === "web" || isDshDeviceLoopbackBridgeEnabled()
-        ? "http://127.0.0.1:58100"
-        : "http://10.0.2.2:58100",
+        ? "http://127.0.0.1:18100"
+        : "http://10.0.2.2:18100",
     headers: {},
   };
 }

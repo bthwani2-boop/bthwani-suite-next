@@ -12,7 +12,7 @@ info:
     operator evidence. WLT idempotency and outcome-persistence failures are
     propagated without changing status or body.
 servers:
-  - url: http://localhost:58080
+  - url: http://localhost:18080
 paths:
   /dsh/control-panel/finance/refunds:
     get:

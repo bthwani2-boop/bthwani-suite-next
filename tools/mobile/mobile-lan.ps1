@@ -257,7 +257,7 @@ function Ensure-BthwaniMobileDevGateway {
     param(
         [Parameter(Mandatory)][string] $RepoRoot,
         [Parameter(Mandatory)][string] $LanHost,
-        [int] $Port = 58110,
+        [int] $Port = 18110,
         [int] $ContractVersion = 1
     )
 

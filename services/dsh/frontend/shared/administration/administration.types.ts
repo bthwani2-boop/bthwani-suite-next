@@ -35,7 +35,21 @@ export type DshStaffMember = {
   readonly createdAt: string;
 };
 
+export type DshCanonicalRoleAssignment = {
+  readonly actorId: string;
+  readonly roleId: string;
+  readonly roleName: string;
+  readonly grantedBy: string;
+};
+
 export type DshAdministrationApprovalStatus = "pending" | "approved" | "rejected";
+export type DshMutationExecutionStatus =
+  | "not_started"
+  | "pending"
+  | "reconciling"
+  | "retryable_failure"
+  | "terminal_failure"
+  | "applied";
 export type DshRoleAssignmentApprovalStatus = DshAdministrationApprovalStatus;
 export type DshRoleChangeAction = "staff_role_assignment" | "staff_role_revocation";
 
@@ -47,6 +61,7 @@ export type DshRoleAssignmentApproval = {
   readonly requestedBy: string;
   readonly reason: string;
   readonly status: DshRoleAssignmentApprovalStatus;
+  readonly executionStatus: DshMutationExecutionStatus;
   readonly reviewedBy: string;
   readonly reviewNote: string;
   readonly version: number;
@@ -66,6 +81,7 @@ export type DshRoleDefinitionRequest = {
   readonly requestedBy: string;
   readonly reason: string;
   readonly status: DshAdministrationApprovalStatus;
+  readonly executionStatus: DshMutationExecutionStatus;
   readonly reviewedBy: string;
   readonly reviewNote: string;
   readonly version: number;
@@ -84,6 +100,7 @@ export type DshAdministrationRollbackRequest = {
   readonly requestedBy: string;
   readonly reason: string;
   readonly status: DshAdministrationApprovalStatus;
+  readonly executionStatus: DshMutationExecutionStatus;
   readonly reviewedBy: string;
   readonly reviewNote: string;
   readonly version: number;

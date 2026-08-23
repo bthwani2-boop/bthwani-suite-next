@@ -45,10 +45,10 @@ test("quick developer login stays local-only and never bundles privileged secret
   assert.match(gate, /getIdentityDeviceFingerprint/);
   assert.match(gate, /adoptSession/);
   assert.match(gate, /requestDevelopmentSession/);
-  assert.doesNotMatch(gate, /127\.0\.0\.1:58100/);
+  assert.doesNotMatch(gate, /127\.0\.0\.1:18100/);
 
-  assert.match(sessionAdapter, /127\.0\.0\.1:58100/);
-  assert.match(sessionAdapter, /10\.0\.2\.2:58100/);
+  assert.match(sessionAdapter, /127\.0\.0\.1:18100/);
+  assert.match(sessionAdapter, /10\.0\.2\.2:18100/);
   assert.match(sessionAdapter, /isDshDeviceLoopbackBridgeEnabled/);
   assert.match(broker, /HOST = '127\.0\.0\.1'/);
   assert.match(broker, /LOCAL_DEV_SESSION_BROKER_FORBIDDEN_IN_PRODUCTION/);
@@ -56,8 +56,8 @@ test("quick developer login stays local-only and never bundles privileged secret
   assert.match(broker, /issueProviderSession/);
   assert.doesNotMatch(broker, /0\.0\.0\.0/);
   assert.match(runtime, /local-dev-session-broker\.mjs/);
-  assert.match(runtime, /58100/);
-  assert.match(reverse, /58100/);
+  assert.match(runtime, /18100/);
+  assert.match(reverse, /18100/);
 
   const mobileSource = apps.join("\n");
   assert.doesNotMatch(mobileSource, /IDENTITY_LOCAL_BOOTSTRAP_PASSWORD/);

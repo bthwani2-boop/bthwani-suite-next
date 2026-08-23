@@ -6,7 +6,7 @@ info:
   version: 1.0.0
   description: Governed contract for multi-item platform change sets.
 servers:
-  - url: http://localhost:58085
+  - url: http://localhost:18088
 paths:
   /platform/v1/change-sets:
     get:

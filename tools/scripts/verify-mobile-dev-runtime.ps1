@@ -73,9 +73,9 @@ try {
   Invoke-NativeChecked -Description "migration-manifest-drift" -FilePath "node" -Arguments @($MigrationGuard)
 
   Assert-Health -Name "Identity" -Uri "http://127.0.0.1:18082/identity/health"
-  Assert-Health -Name "Workforce" -Uri "http://127.0.0.1:58086/workforce/health"
-  Assert-Health -Name "DSH" -Uri "http://127.0.0.1:58080/dsh/health"
-  Assert-Health -Name "WLT" -Uri "http://127.0.0.1:58083/wlt/health"
+  Assert-Health -Name "Workforce" -Uri "http://127.0.0.1:18086/workforce/health"
+  Assert-Health -Name "DSH" -Uri "http://127.0.0.1:18080/dsh/health"
+  Assert-Health -Name "WLT" -Uri "http://127.0.0.1:18083/wlt/health"
 
   Invoke-NativeChecked -Description "mobile-dev-data-check" -FilePath "node" -Arguments @($MobileData, "--check")
   Invoke-NativeChecked -Description "central-catalog-readback" -FilePath "pwsh" -Arguments @(

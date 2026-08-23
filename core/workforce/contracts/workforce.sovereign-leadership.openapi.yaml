@@ -10,7 +10,7 @@ info:
 x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-owner: core/workforce
 servers:
-  - url: http://localhost:58086
+  - url: http://localhost:18086
     description: Local Workforce runtime
 paths:
   /workforce/sovereign-leadership/reference-data:

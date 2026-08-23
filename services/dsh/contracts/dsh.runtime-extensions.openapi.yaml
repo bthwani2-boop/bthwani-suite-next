@@ -10,7 +10,7 @@ x-bthwani-runtime-dependency: true
 x-bthwani-client-generation: DISABLED
 x-bthwani-adapter-owner: frontend/shared/dispatch + core/workforce availability outbox
 servers:
-- url: http://localhost:58080
+- url: http://localhost:18080
 paths:
   /dsh/internal/workforce/provider-media-refs/validate:
     post:

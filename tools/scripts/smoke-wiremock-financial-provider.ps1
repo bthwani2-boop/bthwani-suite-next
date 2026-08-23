@@ -5,7 +5,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 if ([string]::IsNullOrWhiteSpace($BaseUrl)) {
-  $BaseUrl = "http://localhost:58090"
+  $BaseUrl = "http://localhost:18090"
 }
 
 function Invoke-Json {

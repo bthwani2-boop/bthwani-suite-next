@@ -24,7 +24,11 @@ var (
 	// must remain unapplied; this error must never be swallowed into a
 	// local-only status flip.
 	ErrCanonicalMutationFailed = errors.New("canonical authorization mutation failed")
-	ErrSeparationOfDuties      = errors.New("separation of duties violation")
+	// ErrCanonicalMutationInProgress means another valid leased executor owns
+	// the durable intent. Callers must not fall back to a direct Identity write
+	// or report success before canonical readback and fenced finalization.
+	ErrCanonicalMutationInProgress = errors.New("canonical authorization mutation is reconciling")
+	ErrSeparationOfDuties          = errors.New("separation of duties violation")
 )
 
 func separationOfDutiesError(message string) error {

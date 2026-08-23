@@ -17,6 +17,7 @@ import {
   useAdministrationRollbackController,
   useRoleAssignmentApprovalController,
 } from "../../shared/administration";
+import { administrationExecutionStatusLabel } from "../../shared/administration/administration-registry";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 
@@ -42,7 +43,6 @@ export function DecisionRollbackQueue() {
       await approvals.requestRollback(sourceApprovalId.trim(), reason.trim());
       setSourceApprovalId("");
       setReason("");
-      await rollbacks.reload();
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "تعذر إنشاء طلب التراجع.");
     } finally {
@@ -56,7 +56,6 @@ export function DecisionRollbackQueue() {
     setActionError(null);
     try {
       await rollbacks.review(requestId, decision, version, (reviewNotes[requestId] ?? "").trim());
-      await approvals.reload();
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "تعذر مراجعة طلب التراجع.");
     } finally {
@@ -128,6 +127,7 @@ export function DecisionRollbackQueue() {
               <CpTableHeaderCell>الإجراء الأصلي/العكسي</CpTableHeaderCell>
               <CpTableHeaderCell>المنشئ / المعتمد الأصلي</CpTableHeaderCell>
               <CpTableHeaderCell>السبب</CpTableHeaderCell>
+              <CpTableHeaderCell>حالة التنفيذ المعياري</CpTableHeaderCell>
               <CpTableHeaderCell>ملاحظة المراجع</CpTableHeaderCell>
               <CpTableHeaderCell>الإجراءات</CpTableHeaderCell>
             </tr>
@@ -147,6 +147,7 @@ export function DecisionRollbackQueue() {
                   <CpMutedInline tight>{request.sourceApprovedBy}</CpMutedInline>
                 </CpTableCell>
                 <CpTableCell>{request.reason}</CpTableCell>
+                <CpTableCell>{administrationExecutionStatusLabel(request.executionStatus)}</CpTableCell>
                 <CpTableCell>
                   <CpTextInput
                     value={reviewNotes[request.id] ?? ""}

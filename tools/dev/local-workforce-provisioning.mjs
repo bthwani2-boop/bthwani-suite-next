@@ -25,10 +25,10 @@ export const GENERATED_REGISTRY_PATH = path.join(
   '.artifacts/local-dev/workforce-actors.json',
 );
 
-export const DSH_API_BASE = process.env.DSH_API_BASE || 'http://127.0.0.1:58080';
+export const DSH_API_BASE = process.env.DSH_API_BASE || 'http://127.0.0.1:18080';
 export const IDENTITY_API_BASE = process.env.IDENTITY_API_BASE || 'http://127.0.0.1:18082';
-export const WORKFORCE_API_BASE = process.env.WORKFORCE_API_BASE || 'http://127.0.0.1:58086';
-const WLT_API_BASE = process.env.WLT_API_BASE || 'http://127.0.0.1:58083';
+export const WORKFORCE_API_BASE = process.env.WORKFORCE_API_BASE || 'http://127.0.0.1:18086';
+const WLT_API_BASE = process.env.WLT_API_BASE || 'http://127.0.0.1:18083';
 const WLT_DSH_SERVICE_TOKEN =
   process.env.WLT_DSH_SERVICE_TOKEN ||
   process.env.DSH_WLT_SERVICE_TOKEN ||

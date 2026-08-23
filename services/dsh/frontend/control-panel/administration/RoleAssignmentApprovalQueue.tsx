@@ -16,6 +16,7 @@ import {
   useRoleAssignmentApprovalController,
   useStaffController,
 } from "../../shared/administration";
+import { administrationExecutionStatusLabel } from "../../shared/administration/administration-registry";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 
@@ -130,6 +131,7 @@ export function RoleAssignmentApprovalQueue() {
               <CpTableHeaderCell>الطلب</CpTableHeaderCell>
               <CpTableHeaderCell>المنشئ</CpTableHeaderCell>
               <CpTableHeaderCell>السبب</CpTableHeaderCell>
+              <CpTableHeaderCell>حالة التنفيذ المعياري</CpTableHeaderCell>
               <CpTableHeaderCell>النسخة</CpTableHeaderCell>
               <CpTableHeaderCell>ملاحظة المراجع</CpTableHeaderCell>
               <CpTableHeaderCell>الإجراءات</CpTableHeaderCell>
@@ -141,6 +143,7 @@ export function RoleAssignmentApprovalQueue() {
                 <CpTableCell>{actionLabel(approval.actionType)}: {approval.targetActorId} ← {approval.roleName}</CpTableCell>
                 <CpTableCell>{approval.requestedBy}</CpTableCell>
                 <CpTableCell>{approval.reason}</CpTableCell>
+                <CpTableCell>{administrationExecutionStatusLabel(approval.executionStatus)}</CpTableCell>
                 <CpTableCell>{approval.version}</CpTableCell>
                 <CpTableCell>
                   <CpTextInput

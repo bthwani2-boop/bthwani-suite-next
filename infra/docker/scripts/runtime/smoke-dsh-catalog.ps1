@@ -17,7 +17,7 @@ $identityBaseUrl = if ([string]::IsNullOrWhiteSpace($env:IDENTITY_API_BASE_URL))
 
 Write-Host "`n--- DSH API smoke ---"
 
-$health = Invoke-RestMethod "http://localhost:58080/dsh/health" -TimeoutSec 10 -ErrorAction Stop
+$health = Invoke-RestMethod "http://localhost:18080/dsh/health" -TimeoutSec 10 -ErrorAction Stop
 Write-Host "  /dsh/health: $($health | ConvertTo-Json -Compress)"
 if ($health.status -ne "healthy") { throw "/dsh/health not healthy: $($health.status)" }
 
@@ -25,7 +25,7 @@ $readiness = $null
 $readinessReady = $false
 for ($i = 1; $i -le 10; $i++) {
   try {
-    $readiness = Invoke-RestMethod "http://localhost:58080/dsh/readiness" -TimeoutSec 10 -ErrorAction Stop
+    $readiness = Invoke-RestMethod "http://localhost:18080/dsh/readiness" -TimeoutSec 10 -ErrorAction Stop
     Write-Host "  /dsh/readiness attempt $i/10: $($readiness | ConvertTo-Json -Compress)"
     if ($readiness.status -eq "HEALTHY") {
       $readinessReady = $true
@@ -38,13 +38,13 @@ for ($i = 1; $i -le 10; $i++) {
 }
 if (-not $readinessReady) { throw "/dsh/readiness not ready after retries" }
 
-$stores = Invoke-RestMethod "http://localhost:58080/dsh/stores?limit=10&offset=0" -TimeoutSec 10 -ErrorAction Stop
+$stores = Invoke-RestMethod "http://localhost:18080/dsh/stores?limit=10&offset=0" -TimeoutSec 10 -ErrorAction Stop
 $count = if ($stores.stores) { $stores.stores.Count } else { 0 }
 Write-Host "  /dsh/stores: returned $count stores"
 if ($null -eq $stores.stores) { throw "/dsh/stores missing 'stores' field" }
 if ($count -eq 0) { throw "/dsh/stores returned 0 stores — seed may not have run" }
 
-$store1 = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-test-grocery" -TimeoutSec 10 -ErrorAction Stop
+$store1 = Invoke-RestMethod "http://localhost:18080/dsh/stores/store-test-grocery" -TimeoutSec 10 -ErrorAction Stop
 Write-Host "  /dsh/stores/store-test-grocery: $($store1.store.displayName)"
 if ($store1.store.id -ne "store-test-grocery") { throw "/dsh/stores/store-test-grocery returned wrong id" }
 
@@ -71,10 +71,10 @@ function Get-HttpFailureBody($Failure) {
 
 $operatorToken = Get-LocalActorToken (Get-LocalUsername "operator")
 $operatorHeaders = @{ Authorization = "Bearer $operatorToken" }
-$operatorStores = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores" -Headers $operatorHeaders -TimeoutSec 10
+$operatorStores = Invoke-RestMethod "http://localhost:18080/dsh/operator/stores" -Headers $operatorHeaders -TimeoutSec 10
 if ($operatorStores.stores.Count -lt 1) { throw "operator store list returned no stores" }
-$operatorStore = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery" -Headers $operatorHeaders -TimeoutSec 10
-$publicationWorkspace = Invoke-RestMethod "http://localhost:58080/dsh/operator/marketing/stores/store-test-grocery/publication" -Headers $operatorHeaders -TimeoutSec 10
+$operatorStore = Invoke-RestMethod "http://localhost:18080/dsh/operator/stores/store-test-grocery" -Headers $operatorHeaders -TimeoutSec 10
+$publicationWorkspace = Invoke-RestMethod "http://localhost:18080/dsh/operator/marketing/stores/store-test-grocery/publication" -Headers $operatorHeaders -TimeoutSec 10
 if ($publicationWorkspace.store.id -ne "store-test-grocery") { throw "marketing publication workspace returned the wrong store" }
 
 # DSH-JOURNEY-001: prove the publication gate changes persisted state.
@@ -88,9 +88,9 @@ $hideBody = @{
   decision = "hide"
   reason = "runtime publication gate verification"
 } | ConvertTo-Json
-$hidden = Invoke-RestMethod "http://localhost:58080/dsh/operator/marketing/stores/store-test-grocery/publication" -Method Post -Headers $hideHeaders -ContentType "application/json" -Body $hideBody -TimeoutSec 10
+$hidden = Invoke-RestMethod "http://localhost:18080/dsh/operator/marketing/stores/store-test-grocery/publication" -Method Post -Headers $hideHeaders -ContentType "application/json" -Body $hideBody -TimeoutSec 10
 try {
-  Invoke-RestMethod "http://localhost:58080/dsh/stores/store-test-grocery" -TimeoutSec 10 -ErrorAction Stop | Out-Null
+  Invoke-RestMethod "http://localhost:18080/dsh/stores/store-test-grocery" -TimeoutSec 10 -ErrorAction Stop | Out-Null
   throw "store remained publicly visible after marketing gate was hidden"
 } catch {
   if ($_.Exception.Response.StatusCode.value__ -ne 404) { throw }
@@ -105,8 +105,8 @@ $showBody = @{
   decision = "publish"
   reason = "restore runtime publication gate"
 } | ConvertTo-Json
-$visible = Invoke-RestMethod "http://localhost:58080/dsh/operator/marketing/stores/store-test-grocery/publication" -Method Post -Headers $showHeaders -ContentType "application/json" -Body $showBody -TimeoutSec 10
-$publicStore = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-test-grocery" -TimeoutSec 10
+$visible = Invoke-RestMethod "http://localhost:18080/dsh/operator/marketing/stores/store-test-grocery/publication" -Method Post -Headers $showHeaders -ContentType "application/json" -Body $showBody -TimeoutSec 10
+$publicStore = Invoke-RestMethod "http://localhost:18080/dsh/stores/store-test-grocery" -TimeoutSec 10
 if ($publicStore.store.publicationDecision -ne "PUBLISHED") { throw "store publication gates were not restored" }
 
 # DSH-JOURNEY-002: product proposal, transition pipeline, and assortment management
@@ -123,7 +123,7 @@ $proposalBody = @{
   brand = "الكبوس"
   sourceSurface = "app-partner"
 } | ConvertTo-Json
-$proposal = Invoke-RestMethod "http://localhost:58080/dsh/partner/catalog/product-proposals?storeId=$([uri]::EscapeDataString('store-test-grocery'))" -Method Post -Headers $partnerHeaders -ContentType "application/json" -Body $proposalBody -TimeoutSec 10
+$proposal = Invoke-RestMethod "http://localhost:18080/dsh/partner/catalog/product-proposals?storeId=$([uri]::EscapeDataString('store-test-grocery'))" -Method Post -Headers $partnerHeaders -ContentType "application/json" -Body $proposalBody -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($proposal.proposal.id)) { throw "product proposal create did not persist" }
 
 $operatorToken = Get-LocalActorToken (Get-LocalUsername "operator")
@@ -137,21 +137,21 @@ $transBody1 = @{
   note = "smoke partner review"
   expectedVersion = [int]$proposal.proposal.version
 } | ConvertTo-Json
-$proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody1 -TimeoutSec 10
+$proposal = Invoke-RestMethod "http://localhost:18080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody1 -TimeoutSec 10
 
 $transBody2 = @{
   nextStatus = "marketing-review"
   note = "smoke marketing review"
   expectedVersion = [int]$proposal.proposal.version
 } | ConvertTo-Json
-$proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody2 -TimeoutSec 10
+$proposal = Invoke-RestMethod "http://localhost:18080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody2 -TimeoutSec 10
 
 $transBody3 = @{
   nextStatus = "catalog-adopted"
   note = "smoke adopt"
   expectedVersion = [int]$proposal.proposal.version
 } | ConvertTo-Json
-$proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody3 -TimeoutSec 10
+$proposal = Invoke-RestMethod "http://localhost:18080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody3 -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($proposal.proposal.adoptedMasterProductId)) { throw "master product was not created during adoption" }
 
 # The platform policy decides whether an image is needed. The local seed-media
@@ -159,7 +159,7 @@ if ([string]::IsNullOrWhiteSpace($proposal.proposal.adoptedMasterProductId)) { t
 # must never rely on an absent repository placeholder.
 if ($MediaEnabled) {
   $imageBody = @{ assetId = "asset-node-canned-food" } | ConvertTo-Json
-  $imageUrl = "http://localhost:58080/dsh/operator/catalog/master-products/$($proposal.proposal.adoptedMasterProductId)/images/canonical_product_image"
+  $imageUrl = "http://localhost:18080/dsh/operator/catalog/master-products/$($proposal.proposal.adoptedMasterProductId)/images/canonical_product_image"
   try {
     Invoke-RestMethod $imageUrl -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $imageBody -TimeoutSec 10 | Out-Null
   } catch {
@@ -174,10 +174,10 @@ $transBody4 = @{
   note = "smoke approve"
   expectedVersion = [int]$proposal.proposal.version
 } | ConvertTo-Json
-$proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody4 -TimeoutSec 10
+$proposal = Invoke-RestMethod "http://localhost:18080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody4 -TimeoutSec 10
 
-$assortmentUrl = "http://localhost:58080/dsh/operator/stores/store-test-grocery/assortment/$($proposal.proposal.adoptedMasterProductId)"
-$assortmentList = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery/assortment" -Headers $operatorHeaders -TimeoutSec 10
+$assortmentUrl = "http://localhost:18080/dsh/operator/stores/store-test-grocery/assortment/$($proposal.proposal.adoptedMasterProductId)"
+$assortmentList = Invoke-RestMethod "http://localhost:18080/dsh/operator/stores/store-test-grocery/assortment" -Headers $operatorHeaders -TimeoutSec 10
 $currentAssortment = @($assortmentList.assortment) |
   Where-Object { $_.masterProductId -eq $proposal.proposal.adoptedMasterProductId } |
   Select-Object -First 1
@@ -213,7 +213,7 @@ $inventoryBody = @{
 } | ConvertTo-Json
 Invoke-RestMethod "$assortmentUrl/inventory" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $inventoryBody -TimeoutSec 10 | Out-Null
 
-$assortmentList = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/store-test-grocery/assortment" -Headers $operatorHeaders -TimeoutSec 10
+$assortmentList = Invoke-RestMethod "http://localhost:18080/dsh/operator/stores/store-test-grocery/assortment" -Headers $operatorHeaders -TimeoutSec 10
 $currentAssortment = @($assortmentList.assortment) |
   Where-Object { $_.masterProductId -eq $proposal.proposal.adoptedMasterProductId } |
   Select-Object -First 1
@@ -245,9 +245,9 @@ if ($MediaEnabled) {
     note = "smoke publish"
     expectedVersion = [int]$proposal.proposal.version
   } | ConvertTo-Json
-  $proposal = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody5 -TimeoutSec 10
+  $proposal = Invoke-RestMethod "http://localhost:18080/dsh/operator/catalog/product-proposals/$($proposal.proposal.id)/transition" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $transBody5 -TimeoutSec 10
 
-  $publishedCatalog = Invoke-RestMethod "http://localhost:58080/dsh/stores/store-test-grocery/catalog" -TimeoutSec 10
+  $publishedCatalog = Invoke-RestMethod "http://localhost:18080/dsh/stores/store-test-grocery/catalog" -TimeoutSec 10
   if ($publishedCatalog.products.Count -lt 1) { throw "approved catalog is not visible to app-client" }
 } else {
   Write-Host "  DSH catalog media-neutral mode: client-visible cutover skipped because no governed product image overlay is active."

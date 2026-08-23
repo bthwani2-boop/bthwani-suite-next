@@ -12,7 +12,7 @@ import {
   HttpError,
 } from './local-workforce-provisioning.mjs';
 
-const PORT = Number(process.env.BTHWANI_DEV_SESSION_BROKER_PORT || 58100);
+const PORT = Number(process.env.BTHWANI_DEV_SESSION_BROKER_PORT || 18100);
 const HOST = '127.0.0.1';
 const BROKER_CONTRACT_VERSION = 2;
 const MAX_BODY_BYTES = 16 * 1024;

@@ -22,6 +22,8 @@ func writeAdministrationReviewError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
 	case errors.Is(err, administration.ErrCanonicalMutationFailed):
 		store.SendError(w, http.StatusConflict, "CANONICAL_MUTATION_FAILED", "the canonical authorization mutation was rejected; the request remains pending")
+	case errors.Is(err, administration.ErrCanonicalMutationInProgress):
+		store.SendError(w, http.StatusConflict, "CANONICAL_MUTATION_RECONCILING", "the canonical authorization mutation is already being reconciled")
 	case errors.Is(err, administration.ErrSeparationOfDuties):
 		store.SendError(w, http.StatusBadRequest, "SEPARATION_OF_DUTIES_VIOLATION", "maker, beneficiary, and checker must be independent")
 	case errors.Is(err, administration.ErrInvalid):

@@ -2,6 +2,7 @@ import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshRawHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshRole,
+  DshCanonicalRoleAssignment,
   DshStaffMember,
   DshPartnerActivation,
   DshCaptainCredential,
@@ -67,7 +68,7 @@ export const fetchRoleAssignmentApprovals = (status: DshRoleAssignmentApprovalSt
 export const reviewRoleAssignmentApproval = (
   approvalId: string,
   body: { decision: "approved" | "rejected"; reviewNote: string; expectedVersion: number },
-) => req<{ approval: DshRoleAssignmentApproval; assignment: DshStaffMember | null }>(
+) => req<{ approval: DshRoleAssignmentApproval; assignment: DshCanonicalRoleAssignment | null }>(
   `/dsh/operator/admin/approvals/${approvalId}/review`,
   { method: "POST", body: JSON.stringify(body) },
 );
@@ -86,7 +87,7 @@ export const fetchRollbackRequests = (status: DshAdministrationApprovalStatus | 
 export const reviewRollbackRequest = (
   requestId: string,
   body: { decision: "approved" | "rejected"; reviewNote: string; expectedVersion: number },
-) => req<{ request: DshAdministrationRollbackRequest; assignment: DshStaffMember | null }>(
+) => req<{ request: DshAdministrationRollbackRequest }>(
   `/dsh/operator/admin/rollback-requests/${requestId}/review`,
   { method: "POST", body: JSON.stringify(body) },
 );

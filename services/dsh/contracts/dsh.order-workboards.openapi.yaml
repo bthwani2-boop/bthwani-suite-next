@@ -11,7 +11,7 @@ x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: MANUAL_TYPED_ADAPTER
 x-bthwani-runtime-dependency: true
 servers:
-  - url: http://localhost:58080
+  - url: http://localhost:18080
 paths:
   /dsh/partner/order-workboard:
     get:

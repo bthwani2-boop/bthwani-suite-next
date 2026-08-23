@@ -17,6 +17,7 @@ import {
   useAdministrationPermissionVocabularyController,
   useRoleDefinitionApprovalController,
 } from "../../shared/administration";
+import { administrationExecutionStatusLabel } from "../../shared/administration/administration-registry";
 import { useIdentitySession } from "@bthwani/core-identity";
 import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 
@@ -164,6 +165,7 @@ export function RoleDefinitionApprovalQueue() {
               <CpTableHeaderCell>الصلاحيات</CpTableHeaderCell>
               <CpTableHeaderCell>الأسطح</CpTableHeaderCell>
               <CpTableHeaderCell>المنشئ / السبب</CpTableHeaderCell>
+              <CpTableHeaderCell>حالة التنفيذ المعياري</CpTableHeaderCell>
               <CpTableHeaderCell>ملاحظة المراجع</CpTableHeaderCell>
               <CpTableHeaderCell>الإجراءات</CpTableHeaderCell>
             </tr>
@@ -180,6 +182,7 @@ export function RoleDefinitionApprovalQueue() {
                   <br />
                   <CpMutedInline tight>{request.reason}</CpMutedInline>
                 </CpTableCell>
+                <CpTableCell>{administrationExecutionStatusLabel(request.executionStatus)}</CpTableCell>
                 <CpTableCell>
                   <CpTextInput
                     value={reviewNotes[request.id] ?? ""}

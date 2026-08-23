@@ -531,6 +531,15 @@ components:
       - pending
       - approved
       - rejected
+    MutationExecutionStatus:
+      type: string
+      enum:
+      - not_started
+      - pending
+      - reconciling
+      - retryable_failure
+      - terminal_failure
+      - applied
     AdministrationPermission:
       type: string
       minLength: 1
@@ -652,6 +661,7 @@ components:
       - requestedBy
       - reason
       - status
+      - executionStatus
       - reviewedBy
       - reviewNote
       - version
@@ -691,6 +701,8 @@ components:
           minLength: 5
         status:
           $ref: '#/components/schemas/ApprovalStatus'
+        executionStatus:
+          $ref: '#/components/schemas/MutationExecutionStatus'
         reviewedBy:
           type: string
         reviewNote:
@@ -777,6 +789,7 @@ components:
       - requestedBy
       - reason
       - status
+      - executionStatus
       - reviewedBy
       - reviewNote
       - version
@@ -799,6 +812,8 @@ components:
           minLength: 5
         status:
           $ref: '#/components/schemas/ApprovalStatus'
+        executionStatus:
+          $ref: '#/components/schemas/MutationExecutionStatus'
         reviewedBy:
           type: string
         reviewNote:
@@ -830,6 +845,7 @@ components:
       - requestedBy
       - reason
       - status
+      - executionStatus
       - reviewedBy
       - reviewNote
       - version
@@ -858,6 +874,8 @@ components:
           minLength: 5
         status:
           $ref: '#/components/schemas/ApprovalStatus'
+        executionStatus:
+          $ref: '#/components/schemas/MutationExecutionStatus'
         reviewedBy:
           type: string
         reviewNote:

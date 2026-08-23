@@ -546,13 +546,13 @@ function Wait-ForSelectedApis {
     $identityApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_IDENTITY_API_HOST_PORT)) { "18082" } else { $env:BTHWANI_IDENTITY_API_HOST_PORT }
     Wait-ForHttpStatus -Name "Identity API" -Url "http://localhost:$identityApiHostPort/identity/readiness" -HealthyValues @("HEALTHY") | Out-Null
   }
-  if ($ProfileList -contains "workforce") { Wait-ForHttpStatus -Name "Workforce API" -Url "http://localhost:58086/workforce/readiness" -HealthyValues @("ready") | Out-Null }
-  if ($ProfileList -contains "providers") { Wait-ForHttpStatus -Name "Providers API" -Url "http://localhost:58087/providers/readiness" -HealthyValues @("HEALTHY") | Out-Null }
-  if ($ProfileList -contains "platform") { Wait-ForHttpStatus -Name "Platform Control API" -Url "http://localhost:58088/platform/readiness" -HealthyValues @("HEALTHY") | Out-Null }
-  if ($ProfileList -contains "wlt") { Wait-ForHttpStatus -Name "WLT API" -Url "http://localhost:58083/wlt/readiness" -HealthyValues @("ready") | Out-Null }
-  if ($ProfileList -contains "dsh") { Wait-ForHttpStatus -Name "DSH API" -Url "http://localhost:58080/dsh/readiness" -HealthyValues @("HEALTHY") | Out-Null }
+  if ($ProfileList -contains "workforce") { Wait-ForHttpStatus -Name "Workforce API" -Url "http://localhost:18086/workforce/readiness" -HealthyValues @("ready") | Out-Null }
+  if ($ProfileList -contains "providers") { Wait-ForHttpStatus -Name "Providers API" -Url "http://localhost:18087/providers/readiness" -HealthyValues @("HEALTHY") | Out-Null }
+  if ($ProfileList -contains "platform") { Wait-ForHttpStatus -Name "Platform Control API" -Url "http://localhost:18088/platform/readiness" -HealthyValues @("HEALTHY") | Out-Null }
+  if ($ProfileList -contains "wlt") { Wait-ForHttpStatus -Name "WLT API" -Url "http://localhost:18083/wlt/readiness" -HealthyValues @("ready") | Out-Null }
+  if ($ProfileList -contains "dsh") { Wait-ForHttpStatus -Name "DSH API" -Url "http://localhost:18080/dsh/readiness" -HealthyValues @("HEALTHY") | Out-Null }
   if ($ProfileList -contains "financial-simulators") {
-    Invoke-RestMethod "http://localhost:58090/__admin/mappings" -TimeoutSec 10 -ErrorAction Stop | Out-Null
+    Invoke-RestMethod "http://localhost:18090/__admin/mappings" -TimeoutSec 10 -ErrorAction Stop | Out-Null
     Write-Host "WireMock financial provider: healthy"
   }
   if ($ProfileList -contains "mail") {
@@ -570,7 +570,7 @@ function Invoke-SelectedSmoke {
   Write-Host "`n--- Runtime smoke ---"
   Wait-ForSelectedApis
   if ($ProfileList -contains "dsh") {
-    $stores = Invoke-RestMethod "http://localhost:58080/dsh/stores?limit=1&offset=0" -TimeoutSec 10 -ErrorAction Stop
+    $stores = Invoke-RestMethod "http://localhost:18080/dsh/stores?limit=1&offset=0" -TimeoutSec 10 -ErrorAction Stop
     if ($null -eq $stores.stores) { throw "/dsh/stores response is missing the stores field" }
     Write-Host "DSH stores smoke: PASS count=$($stores.stores.Count)"
   }

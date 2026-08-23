@@ -10,7 +10,7 @@ info:
     financial truth owner; DSH resolves self-service identity and applies
     finance.read to explicit operator lookups.
 servers:
-  - url: http://localhost:58080
+  - url: http://localhost:18080
 paths:
   /dsh/client/me/finance/wallet:
     get:

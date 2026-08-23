@@ -73,14 +73,14 @@ foreach ($key in $fieldHeaders.Keys) {
 }
 $partnerDraftHeaders["X-Correlation-ID"] = "smoke-partner-draft-$([guid]::NewGuid())"
 $partnerDraftHeaders["Idempotency-Key"] = "smoke-partner-draft-$partnerSuffix-$([guid]::NewGuid())"
-$partnerDraft = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/drafts" -Method Post -Headers $partnerDraftHeaders -ContentType "application/json" -Body $partnerDraftBody -TimeoutSec 10
+$partnerDraft = Invoke-RestMethod "http://localhost:18080/dsh/field/partners/drafts" -Method Post -Headers $partnerDraftHeaders -ContentType "application/json" -Body $partnerDraftBody -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($partnerDraft.id)) { throw "Partner Onboarding & Store Publication draft create did not return partner id" }
 if (-not $partnerDraft.version) { throw "Partner Onboarding & Store Publication draft create did not return partner version" }
 
 # Draft creation owns the first store immediately. Complete the field-owned
 # location and operating profile before submission because those readiness
 # gates are server-enforced and must not be bypassed by the smoke flow.
-$fieldStore = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/store" -Headers $fieldHeaders -TimeoutSec 10
+$fieldStore = Invoke-RestMethod "http://localhost:18080/dsh/field/partners/$($partnerDraft.id)/store" -Headers $fieldHeaders -TimeoutSec 10
 $smokeStoreId = [string]$fieldStore.storeId
 if ([string]::IsNullOrWhiteSpace($smokeStoreId)) { throw "Partner Onboarding & Store Publication auto-created store id is empty" }
 
@@ -102,7 +102,7 @@ foreach ($key in $fieldHeaders.Keys) {
 }
 $storeProfileHeaders["X-Correlation-ID"] = "smoke-partner-store-profile-$([guid]::NewGuid())"
 $storeProfileHeaders["Idempotency-Key"] = "smoke-partner-store-profile-$($partnerDraft.id)-$([guid]::NewGuid())"
-$updatedStore = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/store" -Method Patch -Headers $storeProfileHeaders -ContentType "application/json" -Body $storeProfileBody -TimeoutSec 10
+$updatedStore = Invoke-RestMethod "http://localhost:18080/dsh/field/partners/$($partnerDraft.id)/store" -Method Patch -Headers $storeProfileHeaders -ContentType "application/json" -Body $storeProfileBody -TimeoutSec 10
 if ($updatedStore.storeId -ne $smokeStoreId) { throw "Partner Onboarding & Store Publication store profile update returned another store" }
 if ([string]::IsNullOrWhiteSpace($updatedStore.store.addressLine)) { throw "Partner Onboarding & Store Publication store location was not persisted" }
 if ([string]::IsNullOrWhiteSpace($updatedStore.store.operatingHours)) { throw "Partner Onboarding & Store Publication store operating profile was not persisted" }
@@ -123,7 +123,7 @@ $settingsBody = @{
   deliveryModes = @("delivery", "pickup")
   reason = "Partner Onboarding & Store Publication operating settings complete"
 } | ConvertTo-Json
-$settings = Invoke-RestMethod "http://localhost:58080/dsh/partner/stores/$smokeStoreId/settings" -Method Patch -Headers $settingsHeaders -ContentType "application/json" -Body $settingsBody -TimeoutSec 10
+$settings = Invoke-RestMethod "http://localhost:18080/dsh/partner/stores/$smokeStoreId/settings" -Method Patch -Headers $settingsHeaders -ContentType "application/json" -Body $settingsBody -TimeoutSec 10
 if ($settings.store.status -ne "ready") { throw "Partner Onboarding & Store Publication store settings did not reach ready" }
 if (@($settings.store.deliveryModes).Count -lt 1) { throw "Partner Onboarding & Store Publication store settings did not persist delivery modes" }
 
@@ -145,7 +145,7 @@ foreach ($key in $operatorHeaders.Keys) {
 }
 $destinationHeaders["X-Correlation-ID"] = "smoke-partner-finance-payout-$([guid]::NewGuid())"
 $destinationHeaders["Idempotency-Key"] = "smoke-partner-finance-payout-$($partnerDraft.id)-$([guid]::NewGuid())"
-$destination = Invoke-RestMethod "http://localhost:58080/dsh/control-panel/finance/payout-destinations/partner/$($partnerActor.actorId)" -Method Put -Headers $destinationHeaders -ContentType "application/json" -Body $destinationBody -TimeoutSec 10
+$destination = Invoke-RestMethod "http://localhost:18080/dsh/control-panel/finance/payout-destinations/partner/$($partnerActor.actorId)" -Method Put -Headers $destinationHeaders -ContentType "application/json" -Body $destinationBody -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace([string]$destination.payoutDestination.id)) { throw "Partner Onboarding & Store Publication finance payout setup did not return a destination id" }
 if ([string]$destination.payoutDestination.ownerActorId -ne [string]$partnerActor.actorId -or [string]$destination.payoutDestination.ownerActorType -ne "partner") { throw "Partner Onboarding & Store Publication finance payout setup owner mismatch" }
 if ([string]$destination.payoutDestination.destinationVerificationStatus -ne "unverified") { throw "Partner Onboarding & Store Publication new payout destination must start unverified" }
@@ -157,7 +157,7 @@ foreach ($key in $partnerHeaders.Keys) {
   $payoutHeaders[$key] = $partnerHeaders[$key]
 }
 $payoutHeaders["X-Correlation-ID"] = "smoke-partner-payout-$([guid]::NewGuid())"
-$payoutReadback = Invoke-WebRequest "http://localhost:58080/dsh/partner/me/finance/payout-destination" -Headers $payoutHeaders -TimeoutSec 10 -SkipHttpErrorCheck
+$payoutReadback = Invoke-WebRequest "http://localhost:18080/dsh/partner/me/finance/payout-destination" -Headers $payoutHeaders -TimeoutSec 10 -SkipHttpErrorCheck
 $payoutResult = $null
 $payoutDestination = $null
 if ($payoutReadback.StatusCode -eq 404) {
@@ -179,10 +179,10 @@ if ($null -ne $payoutDestination) {
   if ([string]::IsNullOrWhiteSpace($payoutDestination.maskedDestinationReference)) { throw "Partner Onboarding & Store Publication payout destination was not masked" }
 }
 
-$mutationProbe = Invoke-WebRequest "http://localhost:58080/dsh/partner/me/finance/payout-destination" -Method Put -Headers $payoutHeaders -ContentType "application/json" -Body '{}' -TimeoutSec 10 -SkipHttpErrorCheck
+$mutationProbe = Invoke-WebRequest "http://localhost:18080/dsh/partner/me/finance/payout-destination" -Method Put -Headers $payoutHeaders -ContentType "application/json" -Body '{}' -TimeoutSec 10 -SkipHttpErrorCheck
 if ($mutationProbe.StatusCode -notin @(404, 405)) { throw "Partner Onboarding & Store Publication allowed a Partner payout destination mutation (HTTP $($mutationProbe.StatusCode))" }
 
-$payoutPartner = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)" -Headers $fieldHeaders -TimeoutSec 10
+$payoutPartner = Invoke-RestMethod "http://localhost:18080/dsh/field/partners/$($partnerDraft.id)" -Headers $fieldHeaders -TimeoutSec 10
 if ($null -eq $payoutDestination) {
   if (-not [string]::IsNullOrWhiteSpace([string]$payoutPartner.payoutDestinationId)) { throw "Partner Onboarding & Store Publication DSH payout projection exposed a destination absent from WLT" }
 } else {
@@ -196,7 +196,7 @@ $visitEvidencePath = Join-Path $smokeTempPath ("dsh-partner-visit-" + [guid]::Ne
 $onePixelPng = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
 [System.IO.File]::WriteAllBytes($visitEvidencePath, [Convert]::FromBase64String($onePixelPng))
 try {
-  $visitEvidenceUpload = Invoke-RestMethod "http://localhost:58080/dsh/field/media/uploads" -Method Post -Headers $fieldHeaders -Form @{
+  $visitEvidenceUpload = Invoke-RestMethod "http://localhost:18080/dsh/field/media/uploads" -Method Post -Headers $fieldHeaders -Form @{
     partnerId = [string]$partnerDraft.id
     storeId = $smokeStoreId
     mediaKind = "visit_evidence"
@@ -215,13 +215,13 @@ $visitBody = @{
   evidenceMediaRefs = @([string]$visitEvidenceUpload.mediaRef)
 } | ConvertTo-Json
 
-$visit = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/visits" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $visitBody -TimeoutSec 10
+$visit = Invoke-RestMethod "http://localhost:18080/dsh/field/partners/$($partnerDraft.id)/visits" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $visitBody -TimeoutSec 10
 if ($visit.visitStatus -ne "submitted") { throw "Partner Onboarding & Store Publication field visit was not submitted" }
 
 $documentEvidencePath = Join-Path $smokeTempPath ("dsh-partner-document-" + [guid]::NewGuid().ToString("N") + ".png")
 [System.IO.File]::WriteAllBytes($documentEvidencePath, [Convert]::FromBase64String($onePixelPng))
 try {
-  $documentEvidenceUpload = Invoke-RestMethod "http://localhost:58080/dsh/field/media/uploads" -Method Post -Headers $fieldHeaders -Form @{
+  $documentEvidenceUpload = Invoke-RestMethod "http://localhost:18080/dsh/field/media/uploads" -Method Post -Headers $fieldHeaders -Form @{
     partnerId = [string]$partnerDraft.id
     mediaKind = "legal_document"
     file = Get-Item -LiteralPath $documentEvidencePath
@@ -236,19 +236,19 @@ $docBody = @{
   mediaRef = [string]$documentEvidenceUpload.mediaRef
   notes = "commercial register smoke document"
 } | ConvertTo-Json
-$doc = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/documents" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $docBody -TimeoutSec 10
+$doc = Invoke-RestMethod "http://localhost:18080/dsh/field/partners/$($partnerDraft.id)/documents" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $docBody -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($doc.id)) { throw "Partner Onboarding & Store Publication document upload did not return document id" }
 
 $submitBody = @{ reason = "field submitted Partner Onboarding & Store Publication smoke partner" } | ConvertTo-Json
-$submitted = Invoke-RestMethod "http://localhost:58080/dsh/field/partners/$($partnerDraft.id)/submit" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $submitBody -TimeoutSec 10
+$submitted = Invoke-RestMethod "http://localhost:18080/dsh/field/partners/$($partnerDraft.id)/submit" -Method Post -Headers $fieldHeaders -ContentType "application/json" -Body $submitBody -TimeoutSec 10
 if ($submitted.partner.activationStatus -ne "submitted") { throw "Partner Onboarding & Store Publication submit did not reach submitted" }
 
-$partnerStores = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/stores" -Headers $operatorHeaders -TimeoutSec 10
+$partnerStores = Invoke-RestMethod "http://localhost:18080/dsh/operator/partners/$($partnerDraft.id)/stores" -Headers $operatorHeaders -TimeoutSec 10
 if ($partnerStores.total -lt 1) { throw "Partner Onboarding & Store Publication partner has no auto-created store" }
 if (-not (@($partnerStores.stores).id -contains $smokeStoreId)) { throw "Partner Onboarding & Store Publication operator readback did not include the first store" }
 
 function Invoke-PartnerTransition([string] $PartnerId, [string] $ToStatus) {
-  $current = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$PartnerId" -Headers $operatorHeaders -TimeoutSec 10
+  $current = Invoke-RestMethod "http://localhost:18080/dsh/operator/partners/$PartnerId" -Headers $operatorHeaders -TimeoutSec 10
   if (-not $current.version) { throw "Partner Onboarding & Store Publication transition to $ToStatus could not read partner version" }
 
   $headers = @{}
@@ -263,7 +263,7 @@ function Invoke-PartnerTransition([string] $PartnerId, [string] $ToStatus) {
     toStatus = $ToStatus
     reason = "Partner Onboarding & Store Publication runtime smoke transition to $ToStatus"
   } | ConvertTo-Json
-  $result = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$PartnerId/transition" -Method Post -Headers $headers -ContentType "application/json" -Body $body -TimeoutSec 10
+  $result = Invoke-RestMethod "http://localhost:18080/dsh/operator/partners/$PartnerId/transition" -Method Post -Headers $headers -ContentType "application/json" -Body $body -TimeoutSec 10
   if ($result.partner.activationStatus -ne $ToStatus) { throw "Partner Onboarding & Store Publication transition to $ToStatus failed" }
   if ($result.partner.version -le $current.version) { throw "Partner Onboarding & Store Publication transition to $ToStatus did not advance partner version" }
   if ($result.event.actorSurface -ne "control-panel") { throw "Partner Onboarding & Store Publication transition actor_surface was $($result.event.actorSurface)" }
@@ -275,7 +275,7 @@ $reviewBody = @{
   decision = "approved"
   reason = "Partner Onboarding & Store Publication smoke review approved"
 } | ConvertTo-Json
-$review = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/documents/$($doc.id)/review" -Method Patch -Headers $operatorHeaders -ContentType "application/json" -Body $reviewBody -TimeoutSec 10
+$review = Invoke-RestMethod "http://localhost:18080/dsh/operator/partners/$($partnerDraft.id)/documents/$($doc.id)/review" -Method Patch -Headers $operatorHeaders -ContentType "application/json" -Body $reviewBody -TimeoutSec 10
 if ($review.document.documentStatus -ne "approved") { throw "Partner Onboarding & Store Publication document review did not approve document" }
 
 foreach ($toStatus in @("documents_verified", "ops_review", "ops_approved", "partner_active")) {
@@ -283,7 +283,7 @@ foreach ($toStatus in @("documents_verified", "ops_review", "ops_approved", "par
 }
 
 function Invoke-SmokeStoreGovernance([string] $StoreId, [string] $Action, [string] $Value) {
-  $detail = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/$StoreId" -Headers $operatorHeaders -TimeoutSec 10
+  $detail = Invoke-RestMethod "http://localhost:18080/dsh/operator/stores/$StoreId" -Headers $operatorHeaders -TimeoutSec 10
 
   if (-not $detail.store.version) {
     throw "Partner Onboarding & Store Publication could not read store version for $StoreId"
@@ -304,7 +304,7 @@ function Invoke-SmokeStoreGovernance([string] $StoreId, [string] $Action, [strin
     reason = "Partner Onboarding & Store Publication runtime smoke: $Action => $Value"
   } | ConvertTo-Json
 
-  $result = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/$StoreId/governance" -Method Post -Headers $headers -ContentType "application/json" -Body $body -TimeoutSec 10
+  $result = Invoke-RestMethod "http://localhost:18080/dsh/operator/stores/$StoreId/governance" -Method Post -Headers $headers -ContentType "application/json" -Body $body -TimeoutSec 10
 
   if (-not $result.store) {
     throw "Partner Onboarding & Store Publication governance failed for $Action => $Value"
@@ -332,7 +332,7 @@ if ($MediaEnabled) {
       sortOrder = 0
       isPrimary = $true
     } | ConvertTo-Json
-    $imageLink = Invoke-RestMethod "http://localhost:58080/dsh/operator/catalog/assets/$($storeImage.assetId)/link" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $imageLinkBody -TimeoutSec 10
+    $imageLink = Invoke-RestMethod "http://localhost:18080/dsh/operator/catalog/assets/$($storeImage.assetId)/link" -Method Post -Headers $operatorHeaders -ContentType "application/json" -Body $imageLinkBody -TimeoutSec 10
     if (-not $imageLink.link.isPrimary -or $imageLink.link.status -ne "approved") {
       throw "Partner Onboarding & Store Publication primary $($storeImage.role) DAM link was not approved"
     }
@@ -350,7 +350,7 @@ $assortmentBody = @{
   stockStatus = "in_stock"
   publicationStatus = $expectedAssortmentPublicationStatus
 } | ConvertTo-Json
-$assortment = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/$smokeStoreId/assortment/$smokeCatalogProductId" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $assortmentBody -TimeoutSec 10
+$assortment = Invoke-RestMethod "http://localhost:18080/dsh/operator/stores/$smokeStoreId/assortment/$smokeCatalogProductId" -Method Put -Headers $operatorHeaders -ContentType "application/json" -Body $assortmentBody -TimeoutSec 10
 if ($assortment.assortment.publicationStatus -ne $expectedAssortmentPublicationStatus -or -not $assortment.assortment.available) {
   throw "Partner Onboarding & Store Publication approved assortment was not persisted"
 }
@@ -359,7 +359,7 @@ if ($MediaEnabled) {
   # Marketing owns the canonical publication cutover. Its gate evaluation treats
   # partner_active as the next client_visible candidate, then atomically commits
   # the store publication and the partner activation transition with audit.
-  $publicationWorkspace = Invoke-RestMethod "http://localhost:58080/dsh/operator/marketing/stores/$smokeStoreId/publication" -Headers $operatorHeaders -TimeoutSec 10
+  $publicationWorkspace = Invoke-RestMethod "http://localhost:18080/dsh/operator/marketing/stores/$smokeStoreId/publication" -Headers $operatorHeaders -TimeoutSec 10
   $publicationHeaders = @{}
   foreach ($key in $operatorHeaders.Keys) {
     $publicationHeaders[$key] = $operatorHeaders[$key]
@@ -371,36 +371,36 @@ if ($MediaEnabled) {
     decision = "publish"
     reason = "Partner Onboarding & Store Publication runtime smoke: marketing publication publish"
   } | ConvertTo-Json
-  $published = Invoke-RestMethod "http://localhost:58080/dsh/operator/marketing/stores/$smokeStoreId/publication" -Method Post -Headers $publicationHeaders -ContentType "application/json" -Body $publicationBody -TimeoutSec 10
+  $published = Invoke-RestMethod "http://localhost:18080/dsh/operator/marketing/stores/$smokeStoreId/publication" -Method Post -Headers $publicationHeaders -ContentType "application/json" -Body $publicationBody -TimeoutSec 10
   if ($published.store.publicationDecision -ne "PUBLISHED") { throw "Partner Onboarding & Store Publication marketing publication did not return a published store" }
 } else {
   Write-Host "  Partner Onboarding & Store Publication media-neutral mode: public publication cutover skipped because no governed media overlay is active."
 }
 
-$readiness = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/readiness" -Headers $operatorHeaders -TimeoutSec 10
+$readiness = Invoke-RestMethod "http://localhost:18080/dsh/operator/partners/$($partnerDraft.id)/readiness" -Headers $operatorHeaders -TimeoutSec 10
 if ($readiness.partnerId -ne $partnerDraft.id) { throw "Partner Onboarding & Store Publication readiness response did not match partner" }
-$audit = Invoke-RestMethod "http://localhost:58080/dsh/operator/partners/$($partnerDraft.id)/audit" -Headers $operatorHeaders -TimeoutSec 10
+$audit = Invoke-RestMethod "http://localhost:18080/dsh/operator/partners/$($partnerDraft.id)/audit" -Headers $operatorHeaders -TimeoutSec 10
 if ($audit.events.Count -lt 7) { throw "Partner Onboarding & Store Publication audit did not include the full transition chain" }
 if ($MediaEnabled) {
   if ($audit.events[$audit.events.Count - 1].toStatus -ne "client_visible") { throw "Partner Onboarding & Store Publication audit final status is not client_visible" }
 } elseif ($audit.events[$audit.events.Count - 1].toStatus -ne "partner_active") {
   throw "Partner Onboarding & Store Publication media-neutral audit final status is not partner_active"
 }
-$linkedStore = Invoke-RestMethod "http://localhost:58080/dsh/operator/stores/$smokeStoreId" -Headers $operatorHeaders -TimeoutSec 10
+$linkedStore = Invoke-RestMethod "http://localhost:18080/dsh/operator/stores/$smokeStoreId" -Headers $operatorHeaders -TimeoutSec 10
 if ($linkedStore.store.partnerReadiness -ne "ready") { throw "Partner Onboarding & Store Publication linked store partner_readiness is not ready" }
 if ($MediaEnabled -and $linkedStore.store.publicationDecision -ne "PUBLISHED") { throw "Partner Onboarding & Store Publication operator readback is not published" }
 
 if ($MediaEnabled) {
-  $publicStore = Invoke-RestMethod "http://localhost:58080/dsh/stores/$smokeStoreId" -TimeoutSec 10
+  $publicStore = Invoke-RestMethod "http://localhost:18080/dsh/stores/$smokeStoreId" -TimeoutSec 10
   if ($publicStore.store.id -ne $smokeStoreId -or $publicStore.store.publicationDecision -ne "PUBLISHED") {
     throw "Partner Onboarding & Store Publication app-client store readback is not published"
   }
-  $publicCatalog = Invoke-RestMethod "http://localhost:58080/dsh/stores/$smokeStoreId/catalog" -TimeoutSec 10
+  $publicCatalog = Invoke-RestMethod "http://localhost:18080/dsh/stores/$smokeStoreId/catalog" -TimeoutSec 10
   if (@($publicCatalog.products).Count -lt 1) { throw "Partner Onboarding & Store Publication app-client catalog is empty" }
 }
 
-$partnerSelfStatus = Invoke-RestMethod "http://localhost:58080/dsh/partner/activation/status?storeId=$([uri]::EscapeDataString($smokeStoreId))" -Headers $partnerHeaders -TimeoutSec 10
+$partnerSelfStatus = Invoke-RestMethod "http://localhost:18080/dsh/partner/activation/status?storeId=$([uri]::EscapeDataString($smokeStoreId))" -Headers $partnerHeaders -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($partnerSelfStatus.activationStatus)) { throw "Partner Onboarding & Store Publication partner self status missing activationStatus" }
-$partnerSelfReadiness = Invoke-RestMethod "http://localhost:58080/dsh/partner/activation/readiness?storeId=$([uri]::EscapeDataString($smokeStoreId))" -Headers $partnerHeaders -TimeoutSec 10
+$partnerSelfReadiness = Invoke-RestMethod "http://localhost:18080/dsh/partner/activation/readiness?storeId=$([uri]::EscapeDataString($smokeStoreId))" -Headers $partnerHeaders -TimeoutSec 10
 if ([string]::IsNullOrWhiteSpace($partnerSelfReadiness.partnerId)) { throw "Partner Onboarding & Store Publication partner self readiness missing partnerId" }
 Write-Host "  Partner Onboarding & Store Publication partner lifecycle smoke: PASS"

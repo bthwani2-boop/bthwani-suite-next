@@ -10,7 +10,7 @@ x-bthwani-client-generation: ENABLED
 x-bthwani-runtime-dependency: true
 x-bthwani-financial-owner: true
 servers:
-  - url: http://localhost:58083
+  - url: http://localhost:18083
 paths:
   /wlt/payout-requests/{payoutId}/fail:
     post:

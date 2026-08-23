@@ -9,6 +9,7 @@ import { DecisionRollbackQueue } from "./DecisionRollbackQueue";
 import { AdministrationDiagnosticsPanel } from "./AdministrationDiagnosticsPanel";
 import { IdentityRuntimeHealthPanel } from "../dashboard/IdentityRuntimeHealthPanel";
 import { CpStatePanel } from "@bthwani/control-panel/components";
+import { AdministrationInvalidationProvider } from "../../shared/administration";
 
 export function GovernedAdministrationScreen() {
   const { state } = useIdentityRuntimeStatus();
@@ -17,7 +18,7 @@ export function GovernedAdministrationScreen() {
   const reasonCodes = state.kind === "resolved" ? state.value.reasonCodes.join(", ") : "";
 
   return (
-    <>
+    <AdministrationInvalidationProvider>
       {identityNotReady && (
         <div style={{ padding: "16px", paddingBottom: 0 }}>
           <CpStatePanel
@@ -39,6 +40,6 @@ export function GovernedAdministrationScreen() {
         <RoleAssignmentApprovalQueue />
         <DecisionRollbackQueue />
       </div>
-    </>
+    </AdministrationInvalidationProvider>
   );
 }

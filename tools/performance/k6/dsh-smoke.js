@@ -5,7 +5,7 @@
  *
  * Usage (requires runtime up):
  *   k6 run tools/performance/k6/dsh-smoke.js
- *   k6 run --env BASE_URL=http://localhost:58080 tools/performance/k6/dsh-smoke.js
+ *   k6 run --env BASE_URL=http://localhost:18080 tools/performance/k6/dsh-smoke.js
  *
  * Thresholds sourced from tools/performance/performance-budgets.json
  */
@@ -14,7 +14,7 @@ import http from "k6/http";
 import { check, sleep } from "k6";
 import { Trend, Rate } from "k6/metrics";
 
-const BASE_URL = __ENV.BASE_URL || "http://localhost:58080";
+const BASE_URL = __ENV.BASE_URL || "http://localhost:18080";
 
 // ── Custom metrics ────────────────────────────────────────────────────────────
 const healthTrend    = new Trend("dsh_health_duration");

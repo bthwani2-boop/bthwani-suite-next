@@ -22,7 +22,7 @@ local_runtime_truth:
   source: "infra/docker/compose.runtime.yml"
   status: LOCAL_ONLY
   evidence:
-    - "كل port binding في الملف مربوط بـ 127.0.0.1 فقط: postgres (127.0.0.1:55432), minio (127.0.0.1:59000/59001), identity-api (127.0.0.1:58082), workforce-api (127.0.0.1:58086), wlt-api (127.0.0.1:58083), dsh-api (127.0.0.1:58080)"
+    - "كل port binding في الملف مربوط بـ 127.0.0.1 فقط: postgres (127.0.0.1:55432), minio (127.0.0.1:59000/59001), identity-api (127.0.0.1:18082), workforce-api (127.0.0.1:18086), wlt-api (127.0.0.1:18083), dsh-api (127.0.0.1:18080)"
     - "أسرار افتراضية ظاهرة في infra/docker/env/runtime.env.example: BTHWANI_POSTGRES_PASSWORD=bthwani_runtime_password, BTHWANI_MINIO_ROOT_PASSWORD=bthwani_minio_password, IDENTITY_ACTIVATION_HMAC_SECRET=LOCAL_ONLY_replace_with_...، WLT_DSH_SERVICE_TOKEN=dev-only-dsh-wlt-shared-secret"
     - "IDENTITY_LOCAL_BOOTSTRAP: افتراضيًا true مع كلمة مرور bootstrap ثابتة (123456) في compose.runtime.yml"
     - "MinIO محلي (minio/minio image) بدلاً من object storage مُدار، وبكت private افتراضيًا حسب نفس x-bthwani-policy"
@@ -138,10 +138,10 @@ proposed_production_architecture:
 
 | الخدمة | Local (اليوم — دليل) | Staging (مخطط) | Production (مخطط / BLOCKED_EXTERNAL) |
 |---|---|---|---|
-| identity-api | `compose.runtime.yml` service `identity-api`, بورت 127.0.0.1:58082, `IDENTITY_LOCAL_BOOTSTRAP=true` | نطاق داخلي، bootstrap معطّل، أسرار من secret manager | نطاق عام خلف TLS، لا bootstrap، سر HMAC من secret manager — BLOCKED_EXTERNAL |
-| workforce-api | `compose.runtime.yml` service `workforce-api`, بورت 127.0.0.1:58086 | نطاق داخلي، service token من secret manager | نطاق عام خلف TLS — BLOCKED_EXTERNAL |
-| dsh-api | `compose.runtime.yml` service `dsh-api`, بورت 127.0.0.1:58080, يعتمد MinIO محلي | نطاق داخلي + object storage staging | نطاق عام خلف TLS + S3-compatible managed storage — BLOCKED_EXTERNAL |
-| wlt-api | `compose.runtime.yml` service `wlt-api`, بورت 127.0.0.1:58083, `WLT_FINANCIAL_PROVIDER_MODE=mock` | mock مسموح أو sandbox حقيقي إن توفر | `WLT_FINANCIAL_PROVIDER_MODE=<real>` و`WLT_ALLOW_PRODUCTION_PROVIDER=true` إلزاميًا — BLOCKED_EXTERNAL (اختيار المزود) |
+| identity-api | `compose.runtime.yml` service `identity-api`, بورت 127.0.0.1:18082, `IDENTITY_LOCAL_BOOTSTRAP=true` | نطاق داخلي، bootstrap معطّل، أسرار من secret manager | نطاق عام خلف TLS، لا bootstrap، سر HMAC من secret manager — BLOCKED_EXTERNAL |
+| workforce-api | `compose.runtime.yml` service `workforce-api`, بورت 127.0.0.1:18086 | نطاق داخلي، service token من secret manager | نطاق عام خلف TLS — BLOCKED_EXTERNAL |
+| dsh-api | `compose.runtime.yml` service `dsh-api`, بورت 127.0.0.1:18080, يعتمد MinIO محلي | نطاق داخلي + object storage staging | نطاق عام خلف TLS + S3-compatible managed storage — BLOCKED_EXTERNAL |
+| wlt-api | `compose.runtime.yml` service `wlt-api`, بورت 127.0.0.1:18083, `WLT_FINANCIAL_PROVIDER_MODE=mock` | mock مسموح أو sandbox حقيقي إن توفر | `WLT_FINANCIAL_PROVIDER_MODE=<real>` و`WLT_ALLOW_PRODUCTION_PROVIDER=true` إلزاميًا — BLOCKED_EXTERNAL (اختيار المزود) |
 | مزود مالي (financial provider) | `compose.financial-simulators.yml` service `wiremock-financial-provider` (mock, profile `financial-simulators`) | mock أو sandbox حقيقي | مزود دفع حقيقي معتمد — BLOCKED_EXTERNAL |
 | storage (media) | `compose.runtime.yml` service `minio`, بورت 127.0.0.1:59000/59001, بكت `dsh-media` | object storage staging مُدار | S3-compatible managed storage — BLOCKED_EXTERNAL |
 | db (postgres) | `compose.runtime.yml` service `postgres`, بورت 127.0.0.1:55432, صورة `postgres:16-alpine`, بلا backups آلية موثقة | managed Postgres instance (staging tier) | managed Postgres + automated encrypted backups + quarterly restore drills — BLOCKED_EXTERNAL (اختيار المزود) |

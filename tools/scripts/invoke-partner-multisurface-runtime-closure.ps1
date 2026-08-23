@@ -56,9 +56,9 @@ Invoke-LoggedScript -Name "seed" -Action {
 
 Invoke-LoggedScript -Name "readiness" -Action {
   Assert-HttpReady -Name "Identity API" -Uri "http://127.0.0.1:18082/identity/health" -ExpectedStatus "healthy"
-  Assert-HttpReady -Name "Workforce API" -Uri "http://127.0.0.1:58086/workforce/health" -ExpectedStatus "healthy"
-  Assert-HttpReady -Name "DSH API" -Uri "http://127.0.0.1:58080/dsh/health" -ExpectedStatus "healthy"
-  Assert-HttpReady -Name "WLT API" -Uri "http://127.0.0.1:58083/wlt/health" -ExpectedStatus "healthy"
+  Assert-HttpReady -Name "Workforce API" -Uri "http://127.0.0.1:18086/workforce/health" -ExpectedStatus "healthy"
+  Assert-HttpReady -Name "DSH API" -Uri "http://127.0.0.1:18080/dsh/health" -ExpectedStatus "healthy"
+  Assert-HttpReady -Name "WLT API" -Uri "http://127.0.0.1:18083/wlt/health" -ExpectedStatus "healthy"
   Invoke-WebRequest -Uri "http://127.0.0.1:59000/minio/health/ready" -TimeoutSec 10 -UseBasicParsing | Out-Null
   Write-Host "Partner runtime dependencies: PASS"
 }

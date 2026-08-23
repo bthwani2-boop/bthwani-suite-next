@@ -59,7 +59,7 @@ function Test-TcpReachable {
 }
 
 $lan = Resolve-BthwaniMobileLanContext
-$gateway = Ensure-BthwaniMobileDevGateway -RepoRoot $RepoRoot -LanHost $lan.Host -Port 58110 -ContractVersion 1
+$gateway = Ensure-BthwaniMobileDevGateway -RepoRoot $RepoRoot -LanHost $lan.Host -Port 18110 -ContractVersion 1
 $gatewayBase = [string] $gateway.BaseUrl
 
 Write-Host "LAN host:      $($lan.Host)" -ForegroundColor Cyan
@@ -83,15 +83,15 @@ Invoke-DirectJsonRequest -Uri "$gatewayBase/workforce/health" -ExpectedStatus "h
 # The gateway must be the only LAN-visible development ingress. These services
 # are intentionally bound to host loopback in Docker and must stay unreachable
 # through the machine's LAN address even while the runtime is healthy.
-  $forbiddenDirectPorts = @(58080, 18082, 58083, 58086, 59000, 59001)
+  $forbiddenDirectPorts = @(18080, 18082, 18083, 18086, 59000, 59001)
 foreach ($port in $forbiddenDirectPorts) {
     if (Test-TcpReachable -TargetHost $lan.Host -Port $port) {
-        throw "Private runtime port $port is reachable directly on LAN host $($lan.Host); only gateway port 58110 may be LAN-visible."
+        throw "Private runtime port $port is reachable directly on LAN host $($lan.Host); only gateway port 18110 may be LAN-visible."
     }
 }
 
-if (-not (Test-TcpReachable -TargetHost $lan.Host -Port 58110)) {
-    throw "Mobile development gateway is not reachable on LAN host $($lan.Host):58110."
+if (-not (Test-TcpReachable -TargetHost $lan.Host -Port 18110)) {
+    throw "Mobile development gateway is not reachable on LAN host $($lan.Host):18110."
 }
 
 Write-Host "mobile-lan-runtime: PASS" -ForegroundColor Green

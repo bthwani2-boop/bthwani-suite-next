@@ -1,6 +1,6 @@
 param(
   [string]$BaseUrl = $env:WLT_BASE_URL,
-  [string]$WiremockUrl = "http://localhost:58090",
+  [string]$WiremockUrl = "http://localhost:18090",
   [string]$OperatorContextId = $env:BTHWANI_OPERATOR_CONTEXT_ID,
   [string]$ServiceToken = $env:WLT_DSH_SERVICE_TOKEN
 )
@@ -9,7 +9,7 @@ $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 
 if ([string]::IsNullOrWhiteSpace($BaseUrl)) {
-  $BaseUrl = "http://localhost:58083"
+  $BaseUrl = "http://localhost:18083"
 }
 if ([string]::IsNullOrWhiteSpace($OperatorContextId)) {
   throw "BTHWANI_OPERATOR_CONTEXT_ID or -OperatorContextId is required for WLT provider smoke"

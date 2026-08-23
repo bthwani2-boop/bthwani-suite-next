@@ -3,7 +3,7 @@
 
 [CmdletBinding()]
 param(
-    [string] $BaseUrl = "http://localhost:58080"
+    [string] $BaseUrl = "http://localhost:18080"
 )
 
 Set-StrictMode -Version Latest
