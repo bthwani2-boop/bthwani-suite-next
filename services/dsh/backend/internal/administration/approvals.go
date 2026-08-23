@@ -34,6 +34,19 @@ type CreateRoleAssignmentParams struct {
 	Reason     string `json:"reason"`
 }
 
+func validateRoleReviewSeparation(requestedBy, targetActorID, reviewerID string) error {
+	if requestedBy == reviewerID {
+		return errors.New("cannot review own request")
+	}
+	if targetActorID == reviewerID {
+		return errors.New("beneficiary cannot review role change")
+	}
+	if requestedBy == targetActorID {
+		return errors.New("maker and beneficiary must be distinct")
+	}
+	return nil
+}
+
 func CreateRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClient *auth.Client, actorID, targetActorID string, params CreateRoleAssignmentParams) (*RoleAssignmentApproval, error) {
 	if db == nil {
 		return nil, ErrInvalid
@@ -172,8 +185,8 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 	if req.Version != params.ExpectedVersion {
 		return nil, nil, errors.New("version conflict")
 	}
-	if req.RequestedBy == actorID {
-		return nil, nil, errors.New("cannot review own request")
+	if err := validateRoleReviewSeparation(req.RequestedBy, req.TargetActorID, actorID); err != nil {
+		return nil, nil, err
 	}
 
 	if params.Decision == "rejected" {
