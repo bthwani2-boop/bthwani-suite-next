@@ -263,32 +263,32 @@ jobs:
             fi
           done
           if ((status == 0)); then
-            node --input-type=module - "${chunk_dir}" "${evidence}/host.raw.txt" <<'NODE'
-            import fs from 'node:fs';
-            const [directory, output] = process.argv.slice(2);
-            const names = fs.readdirSync(directory)
-              .filter((name) => /^\d+\.raw\.txt$/.test(name))
-              .sort((left, right) => Number.parseInt(left, 10) - Number.parseInt(right, 10));
-            if (names.length === 0) throw new Error('no OpenCodeReview cone results were produced');
-            const comments = [];
-            let filesReviewed = 0;
-            for (const name of names) {
-              const raw = fs.readFileSync(`${directory}/${name}`, 'utf8').trim();
-              const first = raw.indexOf('{');
-              const last = raw.lastIndexOf('}');
-              if (first < 0 || last < first) throw new Error(`cone ${name} did not emit JSON`);
-              const result = JSON.parse(raw.slice(first, last + 1));
-              const expected = fs.readFileSync(`${directory}/${name.replace('.raw.txt', '.files.txt')}`, 'utf8')
-                .split(/\r?\n/).map((line) => line.trim()).filter(Boolean).length;
-              if (result.status !== 'complete' || result.summary?.files_reviewed !== expected || !Array.isArray(result.comments)) {
-                throw new Error(`cone ${name} returned an incomplete review result`);
-              }
-              filesReviewed += result.summary.files_reviewed;
-              comments.push(...result.comments);
+          node --input-type=module - "${chunk_dir}" "${evidence}/host.raw.txt" <<'NODE'
+          import fs from 'node:fs';
+          const [directory, output] = process.argv.slice(2);
+          const names = fs.readdirSync(directory)
+            .filter((name) => /^\d+\.raw\.txt$/.test(name))
+            .sort((left, right) => Number.parseInt(left, 10) - Number.parseInt(right, 10));
+          if (names.length === 0) throw new Error('no OpenCodeReview cone results were produced');
+          const comments = [];
+          let filesReviewed = 0;
+          for (const name of names) {
+            const raw = fs.readFileSync(`${directory}/${name}`, 'utf8').trim();
+            const first = raw.indexOf('{');
+            const last = raw.lastIndexOf('}');
+            if (first < 0 || last < first) throw new Error(`cone ${name} did not emit JSON`);
+            const result = JSON.parse(raw.slice(first, last + 1));
+            const expected = fs.readFileSync(`${directory}/${name.replace('.raw.txt', '.files.txt')}`, 'utf8')
+              .split(/\r?\n/).map((line) => line.trim()).filter(Boolean).length;
+            if (result.status !== 'complete' || result.summary?.files_reviewed !== expected || !Array.isArray(result.comments)) {
+              throw new Error(`cone ${name} returned an incomplete review result`);
             }
-            fs.writeFileSync(output, `${JSON.stringify({ status: 'complete', summary: { files_reviewed: filesReviewed }, comments }, null, 2)}\n`, { mode: 0o600 });
-            NODE
-            status=$?
+            filesReviewed += result.summary.files_reviewed;
+            comments.push(...result.comments);
+          }
+          fs.writeFileSync(output, `${JSON.stringify({ status: 'complete', summary: { files_reviewed: filesReviewed }, comments }, null, 2)}\n`, { mode: 0o600 });
+          NODE
+          status=$?
           fi
           set -e
           exit "${status}"
