@@ -339,13 +339,22 @@ const platformSmoke = read("tools/scripts/platform-control-runtime/smoke.ps1");
 const rebuildDatabase = read("infra/docker/scripts/rebuild-runtime-service-database.ps1");
 const restoreRuntime = read("infra/docker/scripts/restore-runtime.ps1");
 
-for (const [rel, text] of [
-  ["tools/scripts/platform-control-runtime.ps1", platformRuntimeAdapter],
-  ["tools/scripts/platform-control-runtime/common.ps1", platformRuntimeCommon],
-]) {
-  if (!text.includes("runtime.ps1")) {
-    failures.push(`${rel}: must delegate lifecycle to runtime.ps1`);
-  }
+if (
+  !platformRuntimeAdapter.includes('. (Join-Path $ModuleRoot "common.ps1")') ||
+  !platformRuntimeAdapter.includes("Invoke-CanonicalPlatformRuntime")
+) {
+  failures.push(
+    "platform-control-runtime.ps1: must delegate lifecycle through common.ps1 canonical adapter",
+  );
+}
+
+if (
+  !platformRuntimeCommon.includes('infra/docker/scripts/runtime.ps1') ||
+  !platformRuntimeCommon.includes("& $script:RuntimeOrchestrator @parameters")
+) {
+  failures.push(
+    "platform-control-runtime/common.ps1: must own the canonical runtime.ps1 delegation path",
+  );
 }
 
 if (!platformRuntimeCommon.includes("function Invoke-PlatformDatabasePsql")) {
