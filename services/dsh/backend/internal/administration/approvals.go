@@ -212,7 +212,13 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 		return &req, nil, nil
 	}
 
-	intentPayload, _ := json.Marshal(map[string]string{"targetActorId": req.TargetActorID, "roleName": req.RoleName, "actionType": req.ActionType, "reviewerId": actorID})
+	intentPayload, _ := json.Marshal(map[string]string{
+		"targetActorId": req.TargetActorID,
+		"roleName": req.RoleName,
+		"actionType": req.ActionType,
+		"reviewerId": actorID,
+		"reviewNote": params.ReviewNote,
+	})
 	if err := enqueueCanonicalMutationTx(ctx, tx, "role-assignment", req.ID, string(intentPayload)); err != nil {
 		return nil, nil, err
 	}
@@ -254,6 +260,22 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 	`, actorID, params.ReviewNote, approvalID, req.Version).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt); err != nil {
 		return nil, nil, errors.New("version conflict")
 	}
+	intentResult, err := finalize.ExecContext(ctx, `
+		UPDATE dsh_admin_canonical_mutation_intents
+		SET status = 'applied', attempts = attempts + 1, last_error = NULL,
+		    next_attempt_at = NULL, terminal_failure = FALSE,
+		    lease_owner = NULL, lease_expires_at = NULL, updated_at = NOW()
+		WHERE operation_type = 'role-assignment' AND request_id = $1
+	`, req.ID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if rows, rowsErr := intentResult.RowsAffected(); rowsErr != nil || rows != 1 {
+		if rowsErr != nil {
+			return nil, nil, rowsErr
+		}
+		return nil, nil, errors.New("canonical mutation intent is missing")
+	}
 	_, _ = finalize.ExecContext(ctx, `
 		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
 		VALUES ($1, 'ROLE_ASSIGNMENT_APPROVED', $2, $3, 'HIGH', $4)
@@ -261,7 +283,6 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 	if err := finalize.Commit(); err != nil {
 		return nil, nil, err
 	}
-	_ = markCanonicalMutation(ctx, db, "role-assignment", req.ID, "applied", "")
 	req.Status = "approved"
 	reviewer := actorID
 	req.ReviewedBy = &reviewer
