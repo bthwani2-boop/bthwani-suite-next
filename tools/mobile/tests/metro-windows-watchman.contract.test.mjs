@@ -26,8 +26,8 @@ test("all four mobile surfaces consume the single governed Metro watcher policy"
   }
 });
 
-test("the Windows watcher safety policy remains owned only by the shared Metro factory", () => {
+test("the Windows watcher safety policy has one canonical assignment", () => {
   const factory = read("tools/mobile/metro.config.factory.cjs");
-  const occurrences = (factory.match(/useWatchman/g) ?? []).length;
-  assert.equal(occurrences, 2, "shared factory should own the Watchman rationale and the single assignment");
+  const assignments = factory.match(/config\.resolver\.useWatchman\s*=\s*true/g) ?? [];
+  assert.equal(assignments.length, 1, "shared factory must own exactly one Watchman enablement assignment");
 });
