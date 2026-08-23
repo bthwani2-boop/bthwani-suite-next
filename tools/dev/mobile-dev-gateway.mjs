@@ -29,7 +29,7 @@ const REQUIRED_PRESIGN_QUERY_KEYS = [
 
 const SERVICE_ROUTES = Object.freeze([
   { prefix: '/dsh/', host: '127.0.0.1', port: 58080 },
-  { prefix: '/identity/', host: '127.0.0.1', port: 58082 },
+  { prefix: '/identity/', host: '127.0.0.1', port: 18082 },
   { prefix: '/workforce/', host: '127.0.0.1', port: 58086 },
 ]);
 
