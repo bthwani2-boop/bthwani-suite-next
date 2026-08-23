@@ -35,7 +35,8 @@ describe("administration review canonical readback", () => {
     const rollbackQueue = read("services/dsh/frontend/control-panel/administration/DecisionRollbackQueue.tsx");
     const api = read("services/dsh/frontend/shared/administration/administration.api.ts");
     assert.doesNotMatch(rollbackQueue, /await approvals\.reload\(\)|await rollbacks\.reload\(\)/);
-    assert.match(api, /assignment: DshCanonicalRoleAssignment \| null/);
-    assert.match(api, /req<\{ request: DshAdministrationRollbackRequest \}>/);
+    assert.match(api, /operations\["post_dsh_operator_admin_approvals__approvalId__review"\]/);
+    assert.match(api, /req<RoleAssignmentReviewResponse>/);
+    assert.match(api, /req<RollbackReviewResponse>/);
   });
 });

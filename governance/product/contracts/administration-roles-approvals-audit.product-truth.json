@@ -17,8 +17,23 @@
   "entities": ["administration_role", "role_definition_request", "staff_role_assignment", "role_assignment_approval", "decision_rollback_request", "administration_audit_entry"],
   "states": {
     "approval": ["pending", "approved", "rejected"],
+    "execution": ["not_started", "pending", "reconciling", "retryable_failure", "terminal_failure", "applied"],
     "role": ["active", "inactive"],
     "diagnostics": ["healthy", "attention"]
+  },
+  "approvalExecutionStateMatrix": {
+    "allowedPairs": [
+      { "approval": "pending", "execution": "not_started" },
+      { "approval": "pending", "execution": "pending" },
+      { "approval": "pending", "execution": "reconciling" },
+      { "approval": "pending", "execution": "retryable_failure" },
+      { "approval": "pending", "execution": "terminal_failure" },
+      { "approval": "approved", "execution": "applied" },
+      { "approval": "rejected", "execution": "not_started" }
+    ],
+    "approvedMeaning": "approved is emitted only after the canonical Identity mutation succeeds, Identity readback proves the resulting truth, and fenced DSH finalization commits.",
+    "outstandingMeaning": "pending execution states are non-applied and require governed reconciliation or retry; consumers must not treat them as RBAC truth.",
+    "rejectionMeaning": "rejected requests have no executable canonical mutation intent and always read execution as not_started."
   },
   "allowedActions": [
     "request_surface_scoped_role_definition",

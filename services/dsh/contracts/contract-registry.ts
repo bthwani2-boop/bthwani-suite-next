@@ -83,8 +83,8 @@ export const DSH_CONTRACT_REGISTRY = [
     path: "contracts/dsh.administration.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
-    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
-    adapterOwner: "frontend/shared/administration",
+    clientStrategy: "PARENT_GENERATED_SUBSET",
+    generatedClient: "clients/generated/dsh-api.ts",
   },
   {
     id: "dsh-analytics-extensions",

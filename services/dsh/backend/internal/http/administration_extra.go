@@ -113,10 +113,7 @@ func (s *protectedStoreServer) handleReviewRoleRequest(w http.ResponseWriter, r 
 		writeAdministrationReviewError(w, err)
 		return
 	}
-	out := map[string]interface{}{"request": req}
-	if role != nil {
-		out["role"] = role
-	}
+	out := map[string]interface{}{"request": req, "role": role}
 	store.SendJSON(w, http.StatusOK, out)
 }
 
@@ -212,26 +209,8 @@ func (s *protectedStoreServer) handleGetDiagnostics(w http.ResponseWriter, r *ht
 	if !ok {
 		return
 	}
-	status := "healthy"
-	details := "Admin governance database and Identity RBAC registry are reachable."
-
-	if err := s.db.PingContext(r.Context()); err != nil {
-		status = "unhealthy"
-		details = "Administration database is unreachable."
-	} else if s.identity == nil {
-		status = "degraded"
-		details = "Identity RBAC client is not configured."
-	} else if _, err := s.identity.ListRoles(r.Context()); err != nil {
-		status = "degraded"
-		details = "Identity RBAC registry is unreachable."
-	}
-
-	store.SendJSON(w, http.StatusOK, map[string]interface{}{
-		"diagnostics": map[string]interface{}{
-			"status":  status,
-			"details": details,
-		},
-	})
+	diagnostics := administration.LoadDiagnostics(r.Context(), s.db, s.identity)
+	store.SendJSON(w, http.StatusOK, map[string]interface{}{"diagnostics": diagnostics})
 }
 
 // POST /dsh/operator/admin/approvals/{approvalId}/rollback-requests

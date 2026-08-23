@@ -101,6 +101,85 @@ func ListRoles(ctx context.Context, identityClient *auth.Client) ([]Role, error)
 	return out, nil
 }
 
+// AdministrationDiagnostics is the privacy-safe operator read model. Identity
+// remains the authority for active-role truth; DSH contributes only governed
+// request, intent, and audit projections.
+type AdministrationDiagnostics struct {
+	Status                     string    `json:"status"`
+	ActiveRoleCount            int       `json:"activeRoleCount"`
+	ApprovedAssignmentCount    int       `json:"approvedAssignmentCount"`
+	PendingRoleDefinitionCount int       `json:"pendingRoleDefinitionCount"`
+	PendingRoleAssignmentCount int       `json:"pendingRoleAssignmentCount"`
+	PendingRollbackCount       int       `json:"pendingRollbackCount"`
+	RecentRestrictedAuditCount int       `json:"recentRestrictedAuditCount"`
+	GeneratedAt                time.Time `json:"generatedAt"`
+	Details                    string    `json:"details,omitempty"`
+}
+
+// LoadDiagnostics intentionally reports operator attention as a valid 200
+// read-model result. A dependency failure never creates a second public status
+// vocabulary, and it never turns a diagnostic read into an authorization
+// mutation.
+func LoadDiagnostics(ctx context.Context, db *sql.DB, identityClient *auth.Client) AdministrationDiagnostics {
+	diagnostics := AdministrationDiagnostics{
+		Status:      "healthy",
+		GeneratedAt: time.Now().UTC(),
+		Details:     "Administration database and Identity RBAC truth are reachable.",
+	}
+	attention := func(detail string) {
+		diagnostics.Status = "attention"
+		diagnostics.Details = detail
+	}
+
+	if db == nil {
+		attention("Administration database is not configured.")
+		return diagnostics
+	}
+
+	var pendingRoleDefinitions, pendingAssignments, pendingRollbacks, appliedAssignments, recentRestrictedAudit int
+	err := db.QueryRowContext(ctx, `
+		SELECT
+			(SELECT COUNT(*) FROM dsh_admin_role_definition_requests WHERE status = 'pending'),
+			(SELECT COUNT(*) FROM dsh_admin_approval_requests WHERE status = 'pending'),
+			(SELECT COUNT(*) FROM dsh_admin_rollback_requests WHERE status = 'pending'),
+			(SELECT COUNT(*)
+			 FROM dsh_admin_approval_requests request
+			 JOIN dsh_admin_canonical_mutation_intents intent
+			   ON intent.operation_type = 'role-assignment' AND intent.request_id = request.id
+			 WHERE request.status = 'approved' AND intent.status = 'applied'),
+			(SELECT COUNT(*) FROM dsh_admin_audit
+			 WHERE sensitivity = 'restricted' AND created_at >= NOW() - INTERVAL '24 hours')
+	`).Scan(
+		&pendingRoleDefinitions, &pendingAssignments, &pendingRollbacks,
+		&appliedAssignments, &recentRestrictedAudit,
+	)
+	if err != nil {
+		attention("Administration database is unavailable.")
+	} else {
+		diagnostics.PendingRoleDefinitionCount = pendingRoleDefinitions
+		diagnostics.PendingRoleAssignmentCount = pendingAssignments
+		diagnostics.PendingRollbackCount = pendingRollbacks
+		diagnostics.ApprovedAssignmentCount = appliedAssignments
+		diagnostics.RecentRestrictedAuditCount = recentRestrictedAudit
+	}
+
+	if identityClient == nil {
+		attention("Identity RBAC truth is not configured.")
+		return diagnostics
+	}
+	roles, err := ListRoles(ctx, identityClient)
+	if err != nil {
+		attention("Identity RBAC truth is unavailable.")
+		return diagnostics
+	}
+	for _, role := range roles {
+		if role.Active {
+			diagnostics.ActiveRoleCount++
+		}
+	}
+	return diagnostics
+}
+
 // PartnerActivation is a privacy-minimized read-only compatibility projection.
 // Partner lifecycle mutations and review notes remain owned by the governed
 // partner lifecycle and are never exposed through administration diagnostics.

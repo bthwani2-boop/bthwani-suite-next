@@ -408,6 +408,7 @@ func ReviewRoleDefinitionRequest(ctx context.Context, db *sql.DB, identityClient
 			return nil, nil, err
 		}
 		req.Status = "rejected"
+		req.ExecutionStatus = "not_started"
 	}
 	reviewer := actorID
 	req.ReviewedBy = &reviewer

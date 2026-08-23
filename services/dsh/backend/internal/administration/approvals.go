@@ -264,6 +264,7 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 			return nil, nil, err
 		}
 		req.Status = "rejected"
+		req.ExecutionStatus = "not_started"
 		reviewer := actorID
 		req.ReviewedBy = &reviewer
 		req.ReviewNote = &params.ReviewNote

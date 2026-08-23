@@ -99,7 +99,7 @@ jobs:
         if: ${{ steps.target.outputs.skip_duplicate_push != 'true' }}
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ steps.target.outputs.default_branch }}
+          ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 1
           persist-credentials: false
           show-progress: false
@@ -121,7 +121,6 @@ jobs:
       - name: Collect complete remote analysis evidence
         id: collect
         if: ${{ steps.target.outputs.skip_duplicate_push != 'true' }}
-        continue-on-error: true
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -146,7 +145,6 @@ jobs:
       - name: Upload exact-SHA remote analysis evidence
         id: artifact
         if: ${{ always() && steps.target.outputs.skip_duplicate_push != 'true' }}
-        continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: remote-analysis-evidence-${{ steps.target.outputs.sha }}
@@ -157,7 +155,6 @@ jobs:
       - name: Publish evidence summary
         id: summary
         if: ${{ always() && steps.target.outputs.skip_duplicate_push != 'true' }}
-        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail

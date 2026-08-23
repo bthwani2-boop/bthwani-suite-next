@@ -177,28 +177,61 @@ paths:
       tags:
       - operator
       operationId: post_dsh_operator_admin_approvals__approvalId__review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalReviewInput'
       responses:
         '200':
-          description: Auto-generated
+          description: Reviewed role assignment decision and canonical Identity readback.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/RoleAssignmentReviewResponse'
         '400':
-          description: Bad request
+          description: Invalid review input or separation-of-duties violation.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
+                $ref: '#/components/schemas/AdministrationError'
         '401':
-          description: Unauthorized
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
         '403':
-          description: Forbidden
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '404':
+          description: Review target was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '409':
+          description: Request state conflict, canonical mutation is reconciling, or canonical mutation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '500':
+          description: Internal administration failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '503':
+          description: Identity is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
       security:
       - bearerAuth: [ administration.staff.approve ]
   /dsh/operator/admin/approvals/{approvalId}/rollback-requests:
@@ -255,26 +288,53 @@ paths:
               $ref: '#/components/schemas/ApprovalReviewInput'
       responses:
         '200':
-          description: Auto-generated
+          description: Reviewed role definition decision and canonical role readback.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/RoleDefinitionReviewResponse'
         '400':
-          description: Bad request
+          description: Invalid review input or separation-of-duties violation.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
+                $ref: '#/components/schemas/AdministrationError'
         '401':
-          description: Unauthorized
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
         '403':
-          description: Forbidden
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '404':
+          description: Review target was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '409':
+          description: Request state conflict, canonical mutation is reconciling, or canonical mutation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '500':
+          description: Internal administration failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '503':
+          description: Identity is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
       security:
       - bearerAuth: [ administration.role.approve ]
   /dsh/operator/admin/permission-vocabulary:
@@ -353,26 +413,53 @@ paths:
               $ref: '#/components/schemas/ApprovalReviewInput'
       responses:
         '200':
-          description: Auto-generated
+          description: Reviewed rollback decision and canonical lifecycle readback.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/RollbackReviewResponse'
         '400':
-          description: Bad request
+          description: Invalid review input or separation-of-duties violation.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
+                $ref: '#/components/schemas/AdministrationError'
         '401':
-          description: Unauthorized
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
         '403':
-          description: Forbidden
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '404':
+          description: Review target was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '409':
+          description: Request state conflict, canonical mutation is reconciling, or canonical mutation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '500':
+          description: Internal administration failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '503':
+          description: Identity is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
       security:
       - bearerAuth: [ administration.rollback.approve ]
   /dsh/operator/admin/approvals:
@@ -411,11 +498,16 @@ paths:
       operationId: get_dsh_operator_admin_diagnostics
       responses:
         '200':
-          description: Auto-generated
+          description: Privacy-safe administration diagnostics and lifecycle counts.
           content:
             application/json:
               schema:
                 type: object
+                additionalProperties: false
+                required: [diagnostics]
+                properties:
+                  diagnostics:
+                    $ref: '#/components/schemas/AdministrationDiagnostics'
         '400':
           description: Bad request
           content:
@@ -778,6 +870,70 @@ components:
         expectedVersion:
           type: integer
           minimum: 1
+    AdministrationError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+          - INVALID_JSON
+          - INVALID_REQUEST
+          - SEPARATION_OF_DUTIES_VIOLATION
+          - UNAUTHENTICATED
+          - FORBIDDEN
+          - NOT_FOUND
+          - REQUEST_STATE_CONFLICT
+          - CANONICAL_MUTATION_FAILED
+          - CANONICAL_MUTATION_RECONCILING
+          - INTERNAL_ERROR
+          - IDENTITY_UNAVAILABLE
+        message:
+          type: string
+          minLength: 1
+    CanonicalRoleAssignment:
+      type: object
+      additionalProperties: false
+      required: [actorId, roleId, roleName, grantedBy]
+      properties:
+        actorId:
+          type: string
+        roleId:
+          type: string
+        roleName:
+          type: string
+        grantedBy:
+          type: string
+    RoleDefinitionReviewResponse:
+      type: object
+      additionalProperties: false
+      required: [request, role]
+      properties:
+        request:
+          $ref: '#/components/schemas/RoleDefinitionRequest'
+        role:
+          oneOf:
+          - $ref: '#/components/schemas/Role'
+          - type: 'null'
+    RoleAssignmentReviewResponse:
+      type: object
+      additionalProperties: false
+      required: [approval, assignment]
+      properties:
+        approval:
+          $ref: '#/components/schemas/RoleAssignmentApproval'
+        assignment:
+          oneOf:
+          - $ref: '#/components/schemas/CanonicalRoleAssignment'
+          - type: 'null'
+    RollbackReviewResponse:
+      type: object
+      additionalProperties: false
+      required: [request]
+      properties:
+        request:
+          $ref: '#/components/schemas/RollbackRequest'
     RoleAssignmentApproval:
       type: object
       additionalProperties: false
@@ -935,6 +1091,9 @@ components:
         generatedAt:
           type: string
           format: date-time
+        details:
+          type: string
+          description: Sanitized component-level diagnostic detail without PII, credentials, or secrets.
     AuditEntry:
       type: object
       additionalProperties: false
