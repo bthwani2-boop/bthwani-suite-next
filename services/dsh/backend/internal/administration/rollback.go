@@ -39,7 +39,7 @@ func validateRollbackReviewSeparation(requestedBy, targetActorID, sourceApproved
 		return err
 	}
 	if sourceApprovedBy != "" && sourceApprovedBy == reviewerID {
-		return errors.New("original approval checker cannot review rollback")
+		return separationOfDutiesError("original approval checker cannot review rollback")
 	}
 	return nil
 }
@@ -237,10 +237,10 @@ func ReviewRollbackRequest(ctx context.Context, db *sql.DB, identityClient *auth
 
 	intentPayload, _ := json.Marshal(map[string]string{
 		"targetActorId": req.TargetActorID,
-		"roleName": req.RoleName,
-		"actionType": req.InverseActionType,
-		"reviewerId": actorID,
-		"reviewNote": params.ReviewNote,
+		"roleName":      req.RoleName,
+		"actionType":    req.InverseActionType,
+		"reviewerId":    actorID,
+		"reviewNote":    params.ReviewNote,
 	})
 	if err := enqueueCanonicalMutationTx(ctx, tx, "role-rollback", req.ID, string(intentPayload)); err != nil {
 		return nil, err

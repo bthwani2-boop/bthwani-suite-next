@@ -97,7 +97,7 @@ function Start-PlatformP3Runtime {
   Invoke-PlatformMigrations
   Invoke-PlatformCompose up -d wiremock-financial-provider minio identity-api providers-api wlt-api dsh-api platform-control-api
   Wait-PlatformHttpReady "http://localhost:58090/__admin/mappings"
-  Wait-PlatformHttpReady "http://localhost:58082/identity/health"
+  Wait-PlatformHttpReady "http://localhost:18082/identity/health"
   Wait-PlatformHttpReady "http://localhost:58087/providers/readiness"
   Wait-PlatformHttpReady "http://localhost:58083/wlt/health"
   Wait-PlatformHttpReady "http://localhost:58080/dsh/health"

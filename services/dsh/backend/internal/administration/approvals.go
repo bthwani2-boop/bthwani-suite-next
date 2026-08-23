@@ -36,13 +36,13 @@ type CreateRoleAssignmentParams struct {
 
 func validateRoleReviewSeparation(requestedBy, targetActorID, reviewerID string) error {
 	if requestedBy == reviewerID {
-		return errors.New("cannot review own request")
+		return separationOfDutiesError("cannot review own request")
 	}
 	if targetActorID == reviewerID {
-		return errors.New("beneficiary cannot review role change")
+		return separationOfDutiesError("beneficiary cannot review role change")
 	}
 	if requestedBy == targetActorID {
-		return errors.New("maker and beneficiary must be distinct")
+		return separationOfDutiesError("maker and beneficiary must be distinct")
 	}
 	return nil
 }
@@ -214,10 +214,10 @@ func ReviewRoleAssignmentApproval(ctx context.Context, db *sql.DB, identityClien
 
 	intentPayload, _ := json.Marshal(map[string]string{
 		"targetActorId": req.TargetActorID,
-		"roleName": req.RoleName,
-		"actionType": req.ActionType,
-		"reviewerId": actorID,
-		"reviewNote": params.ReviewNote,
+		"roleName":      req.RoleName,
+		"actionType":    req.ActionType,
+		"reviewerId":    actorID,
+		"reviewNote":    params.ReviewNote,
 	})
 	if err := enqueueCanonicalMutationTx(ctx, tx, "role-assignment", req.ID, string(intentPayload)); err != nil {
 		return nil, nil, err

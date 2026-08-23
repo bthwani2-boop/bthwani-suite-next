@@ -74,7 +74,6 @@ func localOperatorDevelopmentPermissions() []Permission {
 		{Service: "workforce", Surface: "control-panel", Action: "audit:read", Scope: "all"},
 
 		{Service: "dsh", Surface: "control-panel", Action: "platform:read", Scope: "all"},
-		{Service: "dsh", Surface: "control-panel", Action: "platform.read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "platform.manage", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.fulfillment_sla.read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.fulfillment_sla.manage", Scope: "all"},

@@ -15,7 +15,7 @@ x-bthwani-owner: core/identity
 x-bthwani-runtime-dependency: true
 x-bthwani-extends: ./identity.openapi.yaml
 servers:
-  - url: http://localhost:58082
+  - url: http://localhost:18082
     description: Local Identity runtime
 paths:
   /internal/permissions/resolve:

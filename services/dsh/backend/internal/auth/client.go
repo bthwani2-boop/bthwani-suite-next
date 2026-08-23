@@ -451,14 +451,6 @@ func (c *Client) ListStaff(ctx context.Context) ([]RbacStaffActor, error) {
 	return result.Staff, nil
 }
 
-// GrantRole applies a canonical actor→role assignment in Identity. This is
-// the mutation an approved DSH staff-role-assignment request must invoke
-// before its approval status may flip to approved; a failure here leaves
-// the approval unapplied and must not be overridden by a local write.
-func (c *Client) GrantRole(ctx context.Context, targetActorID, roleName, requestedByActorID string) (RbacActorRoleAssignment, error) {
-	return c.GrantRoleWithIdempotency(ctx, targetActorID, roleName, requestedByActorID, "legacy-grant:"+targetActorID+":"+roleName+":"+requestedByActorID)
-}
-
 func (c *Client) GrantRoleWithIdempotency(ctx context.Context, targetActorID, roleName, requestedByActorID, idempotencyKey string) (RbacActorRoleAssignment, error) {
 	resp, err := c.rbacRequestWithHeaders(ctx, http.MethodPost, "/internal/rbac/actors/"+targetActorID+"/roles", nil, map[string]string{
 		"roleName":           roleName,
@@ -484,13 +476,6 @@ func (c *Client) GrantRoleWithIdempotency(ctx context.Context, targetActorID, ro
 	default:
 		return RbacActorRoleAssignment{}, ErrIdentityUnavailable
 	}
-}
-
-// RevokeRole applies the canonical inverse of GrantRole in Identity. This is
-// the mutation an approved DSH rollback request must invoke before its
-// status may flip to approved.
-func (c *Client) RevokeRole(ctx context.Context, targetActorID, roleName, requestedByActorID string) error {
-	return c.RevokeRoleWithIdempotency(ctx, targetActorID, roleName, requestedByActorID, "legacy-revoke:"+targetActorID+":"+roleName+":"+requestedByActorID)
 }
 
 func (c *Client) RevokeRoleWithIdempotency(ctx context.Context, targetActorID, roleName, requestedByActorID, idempotencyKey string) error {

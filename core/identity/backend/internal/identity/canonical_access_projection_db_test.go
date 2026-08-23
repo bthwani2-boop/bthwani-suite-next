@@ -12,7 +12,7 @@ import (
 func cleanupCanonicalAccessProjectionTest(t *testing.T, db *sql.DB, actorID, roleName string) {
 	t.Helper()
 	cleanup := func() {
-		_, _ = db.Exec(`DELETE FROM identity_rbac_operation_ledger WHERE caller = 'identity' AND (idempotency_key LIKE $1 OR idempotency_key LIKE $2)`, "legacy-grant:"+actorID+":%", "legacy-revoke:"+actorID+":%")
+		_, _ = db.Exec(`DELETE FROM identity_rbac_operation_ledger WHERE caller = $1 AND operation IN ('role-grant', 'role-revoke') AND idempotency_key IN ($2, $3)`, "projection-test", "canonical-access-projection:grant:"+actorID+":"+roleName, "canonical-access-projection:revoke:"+actorID+":"+roleName)
 		_, _ = db.Exec(`DELETE FROM identity_actors WHERE id = $1`, actorID)
 		_, _ = db.Exec(`DELETE FROM identity_roles WHERE name = $1`, roleName)
 		_, _ = db.Exec(`
@@ -59,7 +59,7 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 	cleanupCanonicalAccessProjectionTest(t, db, actorID, roleName)
 
 	directPermissions := []Permission{{
-		Service: "dsh", Surface: "control-panel", Action: "platform.read", Scope: "all",
+		Service: "dsh", Surface: "control-panel", Action: "platform:read", Scope: "all",
 	}}
 	_, err := db.Exec(`
 		INSERT INTO identity_actors
@@ -120,11 +120,11 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 	if hasRole(before.Roles, roleName) || hasCanonicalPermission(before.Permissions, "providers", "control-panel", "maps:invoke", "all") {
 		t.Fatalf("role authority existed before grant: %#v", before)
 	}
-	if !hasCanonicalPermission(before.Permissions, "dsh", "control-panel", "platform.read", "all") {
+	if !hasCanonicalPermission(before.Permissions, "dsh", "control-panel", "platform:read", "all") {
 		t.Fatalf("direct actor permission was lost before grant: %#v", before.Permissions)
 	}
 
-	if _, inserted, err := repository.Enforcer.GrantRole(context.Background(), actorID, roleName, "reviewer-agent2"); err != nil || !inserted {
+	if _, inserted, err := repository.Enforcer.GrantRoleWithIdempotency(context.Background(), actorID, roleName, "reviewer-agent2", "canonical-access-projection:grant:"+actorID+":"+roleName, "projection-test"); err != nil || !inserted {
 		t.Fatalf("grant role: inserted=%v err=%v", inserted, err)
 	}
 
@@ -163,7 +163,7 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 		t.Fatalf("role-derived permission was promoted into direct authority: count=%d", redundantDirect)
 	}
 
-	if err := repository.Enforcer.RevokeRole(context.Background(), actorID, roleName, "reviewer-agent2"); err != nil {
+	if err := repository.Enforcer.RevokeRoleWithIdempotency(context.Background(), actorID, roleName, "reviewer-agent2", "canonical-access-projection:revoke:"+actorID+":"+roleName, "projection-test"); err != nil {
 		t.Fatalf("revoke role: %v", err)
 	}
 
@@ -177,7 +177,7 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 	if hasCanonicalPermission(revoked.Permissions, "providers", "control-panel", "maps:invoke", "all") {
 		t.Fatalf("revoked role permission remained executable: %#v", revoked.Permissions)
 	}
-	if !hasCanonicalPermission(revoked.Permissions, "dsh", "control-panel", "platform.read", "all") {
+	if !hasCanonicalPermission(revoked.Permissions, "dsh", "control-panel", "platform:read", "all") {
 		t.Fatalf("unrelated direct permission was removed by role revoke: %#v", revoked.Permissions)
 	}
 
@@ -197,7 +197,7 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 	if err != nil {
 		t.Fatalf("read effective permissions through enforcer: %v", err)
 	}
-	if !hasCanonicalPermission(effectiveFromEnforcer, "dsh", "control-panel", "platform.read", "all") {
+	if !hasCanonicalPermission(effectiveFromEnforcer, "dsh", "control-panel", "platform:read", "all") {
 		t.Fatalf("enforcer omitted direct actor authority: %#v", effectiveFromEnforcer)
 	}
 	if hasCanonicalPermission(effectiveFromEnforcer, "providers", "control-panel", "maps:invoke", "all") {

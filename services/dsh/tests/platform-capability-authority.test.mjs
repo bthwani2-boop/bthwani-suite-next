@@ -49,7 +49,7 @@ test("platform capability registry is bound to the canonical scope vocabulary", 
 test("platform policy routes use named DSH permission constants", () => {
   const routes = read("services/dsh/backend/internal/http/platformpolicies_routes.go");
   const server = read("services/dsh/backend/internal/http/server.go");
-  assert.match(read("services/dsh/backend/internal/http/platformpolicies.go"), /DshPlatformPermissionRead\s+=\s+"platform\.read"/);
+  assert.match(read("services/dsh/backend/internal/http/platformpolicies.go"), /DshPlatformPermissionRead\s+=\s+"platform:read"/);
   assert.match(read("services/dsh/backend/internal/http/platformpolicies.go"), /DshPlatformPermissionManage\s+=\s+"platform\.manage"/);
   assert.match(read("services/dsh/backend/internal/http/platformpolicies.go"), /DshOperationalPolicyEvaluatePermission\s+=\s+"dsh\.operational_policy\.evaluate"/);
   assert.doesNotMatch(routes, /"platform\.(?:read|manage)"/);
@@ -99,7 +99,7 @@ test("WLT payout-destination client exposes only operator-context methods", () =
 test("local operator grants match the live DSH policy surfaces", () => {
   const permissions = read("core/identity/backend/internal/identity/local_operator_permissions.go");
   for (const permission of [
-    "platform.read",
+    "platform:read",
     "platform.manage",
     "dsh.fulfillment_sla.read",
     "dsh.fulfillment_sla.manage",
@@ -112,6 +112,7 @@ test("local operator grants match the live DSH policy surfaces", () => {
   ]) {
     assert.match(permissions, new RegExp(`Action: "${permission.replaceAll(".", "\\.")}"`));
   }
+  assert.doesNotMatch(permissions, /Action: "platform\.read"/);
   for (const deadPermission of [
     "platform:flags:manage",
     "platform:services:manage",

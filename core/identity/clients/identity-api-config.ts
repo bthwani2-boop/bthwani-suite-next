@@ -36,6 +36,6 @@ export function resolveIdentityApiBaseUrl(): string {
   }
 
   return isReactNative() && !isIdentityDeviceLoopbackBridgeEnabled()
-    ? "http://10.0.2.2:58082"
-    : "http://127.0.0.1:58082";
+      ? "http://10.0.2.2:18082"
+      : "http://127.0.0.1:18082";
 }

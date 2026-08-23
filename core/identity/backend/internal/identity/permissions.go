@@ -85,13 +85,6 @@ func (e *PermissionEnforcer) ListRoles(ctx context.Context) ([]RbacRole, error) 
 	return roles, rows.Err()
 }
 
-// GrantRole assigns a role to a target actor, enforcing that self-grant is
-// prohibited. Idempotent: granting an already-held role succeeds without
-// error and reports whether a new row was inserted.
-func (e *PermissionEnforcer) GrantRole(ctx context.Context, targetActorID, roleName, requestedByActorID string) (ActorRoleAssignment, bool, error) {
-	return e.GrantRoleWithIdempotency(ctx, targetActorID, roleName, requestedByActorID, "legacy-grant:"+targetActorID+":"+roleName+":"+requestedByActorID, "identity")
-}
-
 func (e *PermissionEnforcer) GrantRoleWithIdempotency(ctx context.Context, targetActorID, roleName, requestedByActorID, idempotencyKey, caller string) (ActorRoleAssignment, bool, error) {
 	targetActorID = strings.TrimSpace(targetActorID)
 	roleName = strings.TrimSpace(roleName)
@@ -185,13 +178,6 @@ RETURNING request_hash, status, result`, caller, idempotencyKey, requestHash).Sc
 		RoleName:  roleName,
 		GrantedBy: requestedByActorID,
 	}, rows > 0, nil
-}
-
-// RevokeRole removes a role assignment from a target actor, enforcing that
-// self-revoke is prohibited. Idempotent: revoking an absent assignment
-// succeeds without error.
-func (e *PermissionEnforcer) RevokeRole(ctx context.Context, targetActorID, roleName, requestedByActorID string) error {
-	return e.RevokeRoleWithIdempotency(ctx, targetActorID, roleName, requestedByActorID, "legacy-revoke:"+targetActorID+":"+roleName+":"+requestedByActorID, "identity")
 }
 
 func (e *PermissionEnforcer) RevokeRoleWithIdempotency(ctx context.Context, targetActorID, roleName, requestedByActorID, idempotencyKey, caller string) error {

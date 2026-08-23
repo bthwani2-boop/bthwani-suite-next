@@ -17,7 +17,7 @@
       "owner": "services/dsh",
       "service": "dsh",
       "surface": "control-panel",
-      "read": ["platform.read"],
+      "read": ["platform:read"],
       "manage": ["platform.manage"]
     },
     {
@@ -201,7 +201,6 @@
         { "scope": "pickup.manage", "domain": "dsh" },
         { "scope": "pickup.read", "domain": "dsh" },
         { "scope": "platform.manage", "domain": "dsh" },
-        { "scope": "platform.read", "domain": "dsh" },
         { "scope": "support.manage", "domain": "dsh" },
         { "scope": "support.read", "domain": "dsh" }
       ]

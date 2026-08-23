@@ -11,7 +11,7 @@ function Login-PlatformLocalActor {
     password = $Password
     deviceFingerprint = $DeviceFingerprint
   } | ConvertTo-Json
-  $login = Invoke-RestMethod "http://localhost:58082/auth/login" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 10
+  $login = Invoke-RestMethod "http://localhost:18082/auth/login" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 10
   if ([string]::IsNullOrWhiteSpace($login.accessToken)) { throw "$Username login did not return an access token" }
   return $login.accessToken
 }

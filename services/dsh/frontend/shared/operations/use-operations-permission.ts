@@ -12,7 +12,7 @@ function resolveReadRequirement(
   subGroup?: string,
 ): ReadRequirement {
   if (group === 'command-center') {
-    return { actions: ['analytics.read', 'platform.read'] };
+    return { actions: ['analytics.read', 'platform:read'] };
   }
 
   if (group === 'special-ops') {
@@ -21,7 +21,7 @@ function resolveReadRequirement(
 
   if (group === 'dispatch-capacity') {
     return subGroup === 'zones'
-      ? { actions: ['platform.read'] }
+      ? { actions: ['platform:read'] }
       : { actions: ['operations.read'] };
   }
 

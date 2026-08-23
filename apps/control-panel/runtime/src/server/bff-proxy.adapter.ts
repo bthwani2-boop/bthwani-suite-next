@@ -33,7 +33,7 @@ const FORWARDED_REQUEST_HEADERS = [
 
 const SERVICE_CONFIG = {
   dsh: { env: "DSH_API_BASE_URL", fallback: "http://127.0.0.1:58080" },
-  identity: { env: "IDENTITY_API_BASE_URL", fallback: "http://127.0.0.1:58082" },
+  identity: { env: "IDENTITY_API_BASE_URL", fallback: "http://127.0.0.1:18082" },
   workforce: { env: "WORKFORCE_API_BASE_URL", fallback: "http://127.0.0.1:58086" },
   providers: { env: "PROVIDERS_API_BASE_URL", fallback: "http://127.0.0.1:58087" },
   "platform-control": { env: "PLATFORM_CONTROL_API_BASE_URL", fallback: "http://127.0.0.1:58088" },

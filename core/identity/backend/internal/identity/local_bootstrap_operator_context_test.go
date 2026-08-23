@@ -60,7 +60,7 @@ func TestLocalOperatorDevelopmentPermissionsAreCanonical(t *testing.T) {
 		{Service: "dsh", Surface: "control-panel", Action: "support.manage", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.service_zones.read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.service_zones.manage", Scope: "all"},
-		{Service: "dsh", Surface: "control-panel", Action: "platform.read", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "platform:read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "platform.manage", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.fulfillment_sla.read", Scope: "all"},
 		{Service: "dsh", Surface: "control-panel", Action: "dsh.fulfillment_sla.manage", Scope: "all"},
@@ -104,6 +104,12 @@ func TestLocalOperatorDevelopmentPermissionsAreCanonical(t *testing.T) {
 	for _, permission := range permissions {
 		if _, forbidden := forbiddenActions[permission.Action]; forbidden {
 			t.Fatalf("forbidden or non-consumed local operator permission present: %s", permission.Action)
+		}
+	}
+	legacyPlatformRead := "platform" + ".read"
+	for _, permission := range permissions {
+		if permission.Action == legacyPlatformRead {
+			t.Fatalf("legacy platform read permission remains in local operator authority: %#v", permission)
 		}
 	}
 }

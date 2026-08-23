@@ -117,7 +117,7 @@ try {
     }
 
     $healthChecks = @(
-      @{ Name = "Identity"; Uri = "http://127.0.0.1:58082/identity/health" },
+  @{ Name = "Identity"; Uri = "http://127.0.0.1:18082/identity/health" },
       @{ Name = "Workforce"; Uri = "http://127.0.0.1:58086/workforce/health" },
       @{ Name = "DSH"; Uri = "http://127.0.0.1:58080/dsh/health" },
       @{ Name = "WLT"; Uri = "http://127.0.0.1:58083/wlt/health" }

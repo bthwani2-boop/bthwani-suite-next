@@ -351,7 +351,10 @@ function Invoke-GovernedSeeds {
 
 
 function Wait-ForSelectedApis {
-  if ($ProfileList -contains "identity") { Wait-ForHttpStatus -Name "Identity API" -Url "http://localhost:58082/identity/readiness" -HealthyValues @("HEALTHY") | Out-Null }
+  if ($ProfileList -contains "identity") {
+    $identityApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_IDENTITY_API_HOST_PORT)) { "18082" } else { $env:BTHWANI_IDENTITY_API_HOST_PORT }
+    Wait-ForHttpStatus -Name "Identity API" -Url "http://localhost:$identityApiHostPort/identity/readiness" -HealthyValues @("HEALTHY") | Out-Null
+  }
   if ($ProfileList -contains "workforce") { Wait-ForHttpStatus -Name "Workforce API" -Url "http://localhost:58086/workforce/readiness" -HealthyValues @("ready") | Out-Null }
   if ($ProfileList -contains "providers") { Wait-ForHttpStatus -Name "Providers API" -Url "http://localhost:58087/providers/readiness" -HealthyValues @("HEALTHY") | Out-Null }
   if ($ProfileList -contains "platform") { Wait-ForHttpStatus -Name "Platform Control API" -Url "http://localhost:58088/platform/readiness" -HealthyValues @("HEALTHY") | Out-Null }

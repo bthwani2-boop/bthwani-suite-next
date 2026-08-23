@@ -6,7 +6,7 @@ function readServerEnv(name: string, fallback: string): string {
 
 /** Server-only Identity base URL. Never exposed to the browser (no NEXT_PUBLIC_ prefix). */
 export function resolveIdentityServerBaseUrl(): string {
-  return readServerEnv("IDENTITY_API_BASE_URL", "http://localhost:58082");
+  return readServerEnv("IDENTITY_API_BASE_URL", "http://localhost:18082");
 }
 
 /** Server-only DSH backend base URL used by the /api/dsh proxy route. */

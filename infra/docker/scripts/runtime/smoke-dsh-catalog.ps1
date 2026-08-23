@@ -12,6 +12,9 @@ Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot "../../../../tools/dev/local-actors.ps1")
 $ErrorActionPreference = "Stop"
 
+$identityApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_IDENTITY_API_HOST_PORT)) { "18082" } else { $env:BTHWANI_IDENTITY_API_HOST_PORT }
+$identityBaseUrl = if ([string]::IsNullOrWhiteSpace($env:IDENTITY_API_BASE_URL)) { "http://localhost:$identityApiHostPort" } else { $env:IDENTITY_API_BASE_URL }
+
 Write-Host "`n--- DSH API smoke ---"
 
 $health = Invoke-RestMethod "http://localhost:58080/dsh/health" -TimeoutSec 10 -ErrorAction Stop
@@ -52,7 +55,7 @@ function Get-LocalActorToken([string] $Username) {
     password = $identityPassword
     deviceFingerprint = "dsh-runtime-smoke"
   } | ConvertTo-Json
-  $login = Invoke-RestMethod "http://localhost:58082/auth/login" -Method Post -ContentType "application/json" -Body $loginBody -TimeoutSec 10
+  $login = Invoke-RestMethod "$identityBaseUrl/auth/login" -Method Post -ContentType "application/json" -Body $loginBody -TimeoutSec 10
   return $login.accessToken
 }
 

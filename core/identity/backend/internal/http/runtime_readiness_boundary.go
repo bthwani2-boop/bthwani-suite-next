@@ -18,7 +18,7 @@ const (
 	minimumActivationHMACSecretLength = 32
 	minimumInternalServiceTokenLength = 32
 	identityMigrationServiceName      = "identity"
-	identityLatestMigration           = "identity-031_projection_update_write_fence.sql"
+	identityLatestMigration           = "identity-032_platform_permission_vocabulary_canonicalization.sql"
 	defaultReadinessProbeTimeout      = 2 * time.Second
 	defaultReadinessCheckTimeout      = 750 * time.Millisecond
 	defaultClockSkewLimit             = 5 * time.Second

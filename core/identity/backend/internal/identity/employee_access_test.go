@@ -94,11 +94,11 @@ func TestEmployeeBundlesGrantOnlyTheirExactDshDomain(t *testing.T) {
 	}{
 		{
 			bundle: EmployeeBundleStaff, department: "operations",
-			forbidden: []string{"operations.read", "partners.read", "finance.read", "support.read", "platform.read"},
+			forbidden: []string{"operations.read", "partners.read", "finance.read", "support.read", "platform:read"},
 		},
 		{
 			bundle: EmployeeBundlePlatformCoordinator, department: "platform",
-			required: []string{"platform.read"}, forbidden: []string{"platform.manage", "operations.manage"},
+			required: []string{"platform:read"}, forbidden: []string{"platform.manage", "operations.manage"},
 		},
 		{
 			bundle: EmployeeBundleOperationsManager, department: "operations",
@@ -122,7 +122,7 @@ func TestEmployeeBundlesGrantOnlyTheirExactDshDomain(t *testing.T) {
 		},
 		{
 			bundle: EmployeeBundlePlatformOwner, department: "platform",
-			required: []string{"platform.read", "platform.manage"},
+			required: []string{"platform:read", "platform.manage"},
 		},
 	}
 
@@ -140,6 +140,7 @@ func TestEmployeeBundlesGrantOnlyTheirExactDshDomain(t *testing.T) {
 				}
 				return false
 			}
+			legacyPlatformRead := "platform" + ".read"
 			for _, action := range test.required {
 				if !hasAction(action) {
 					t.Fatalf("bundle %s is missing exact DSH action %s", test.bundle, action)
@@ -150,15 +151,18 @@ func TestEmployeeBundlesGrantOnlyTheirExactDshDomain(t *testing.T) {
 					t.Fatalf("bundle %s unexpectedly grants DSH action %s", test.bundle, action)
 				}
 			}
+			if hasAction(legacyPlatformRead) {
+				t.Fatalf("bundle %s unexpectedly retains the legacy platform read action", test.bundle)
+			}
 		})
 	}
 }
 
 func TestEmployeeRolesReserveOperatorForPlatformOwner(t *testing.T) {
 	tests := []struct {
-		bundle          string
-		wantOperator    bool
-		wantSupervisory bool
+		bundle                  string
+		wantOperator            bool
+		wantSupervisory         bool
 		wantProviderSupervisors bool
 	}{
 		{bundle: EmployeeBundleStaff, wantOperator: false, wantSupervisory: false, wantProviderSupervisors: false},

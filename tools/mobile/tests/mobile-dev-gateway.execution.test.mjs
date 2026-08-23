@@ -34,7 +34,7 @@ test("gateway service routes are fixed allowlisted upstreams", () => {
     path: "/dsh/health?probe=1",
     requiresCapability: false,
   });
-  assert.equal(resolveGatewayRoute("/identity/readiness")?.port, 58082);
+  assert.equal(resolveGatewayRoute("/identity/readiness")?.port, 18082);
   assert.equal(resolveGatewayRoute("/workforce/health")?.port, 58086);
   assert.equal(resolveGatewayRoute("/wlt/health"), null);
   assert.equal(resolveGatewayRoute("/http://example.com"), null);

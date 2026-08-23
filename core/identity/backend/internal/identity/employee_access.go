@@ -66,7 +66,7 @@ func employeeDshPermissions(bundle string) []Permission {
 	case EmployeeBundlePlatformOwner:
 		// Sovereign platform owner: all DSH control-panel capabilities.
 		return grant(
-			"platform.read", "platform.manage",
+			"platform:read", "platform.manage",
 			"partners.read", "partners.manage", "partners.activate",
 			"catalog.taxonomy.manage",
 			"catalog.product.read", "catalog.product.manage", "catalog.product.approve", "catalog.product.publish",
@@ -98,7 +98,7 @@ func employeeDshPermissions(bundle string) []Permission {
 		)
 	case EmployeeBundlePlatformCoordinator:
 		return grant(
-			"platform.read", "analytics.read",
+			"platform:read", "analytics.read",
 			"dsh.service_zones.read",
 			"dsh.fulfillment_sla.read",
 			"dsh.dispatch_capacity.read",

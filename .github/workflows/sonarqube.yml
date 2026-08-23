@@ -338,6 +338,19 @@ jobs:
                   ;;
               esac
             )
+            if [[ ! -s "$raw_report" ]]; then
+              echo "::error::Go coverage report is empty for ${module}"
+              exit 1
+            fi
+            if ! grep -qv '^mode:' "$raw_report"; then
+              echo "::error::Go coverage report has no executable coverage records for ${module}"
+              exit 1
+            fi
+            raw_summary="$(cd "$module" && go tool cover -func="$raw_report")"
+            if ! grep -q '^total:' <<<"$raw_summary"; then
+              echo "::error::Go coverage report has no total summary for ${module}"
+              exit 1
+            fi
             module_name="$(cd "$module" && go list -m)"
             : > "$report"
             while IFS= read -r coverage_line; do
@@ -350,6 +363,19 @@ jobs:
                   ;;
               esac
             done < "$raw_report"
+            if [[ ! -s "$report" ]]; then
+              echo "::error::Normalized Go coverage report is empty for ${module}"
+              exit 1
+            fi
+            if ! grep -qv '^mode:' "$report"; then
+              echo "::error::Normalized Go coverage report has no executable coverage records for ${module}"
+              exit 1
+            fi
+            normalized_summary="$(go tool cover -func="$report")"
+            if ! grep -q '^total:' <<<"$normalized_summary"; then
+              echo "::error::Normalized Go coverage report has no total summary for ${module}"
+              exit 1
+            fi
           done
           echo 'scan_args=-Dsonar.go.coverage.reportPaths=**/.sonar/coverage.out' >> "$GITHUB_OUTPUT"
 

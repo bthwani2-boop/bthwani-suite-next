@@ -140,12 +140,12 @@ ON CONFLICT (singleton) DO UPDATE SET probe_value = EXCLUDED.probe_value, update
   & pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/restore-verify-runtime.ps1 -EnvFile $EnvFile -BackupDir $BackupDir -RequireMinio
   if ($LASTEXITCODE -ne 0) { throw "Post-restore integrity verification failed." }
 
-  Wait-Status "identity" "http://127.0.0.1:58082/identity/health" "healthy"
+  Wait-Status "identity" "http://127.0.0.1:18082/identity/health" "healthy"
   Wait-Status "workforce" "http://127.0.0.1:58086/workforce/health" "healthy"
   Wait-Status "dsh" "http://127.0.0.1:58080/dsh/health" "healthy"
   Wait-Status "wlt" "http://127.0.0.1:58083/wlt/health" "healthy"
   Wait-Status "platform-control" "http://127.0.0.1:58088/platform/health" "healthy"
-  $OperatorLogin = Invoke-RestMethod -Method POST -Uri "http://127.0.0.1:58082/auth/login" `
+  $OperatorLogin = Invoke-RestMethod -Method POST -Uri "http://127.0.0.1:18082/auth/login" `
     -ContentType "application/json" `
     -Body (@{
       username = Get-LocalUsername -Key "operator"

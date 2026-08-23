@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -23,7 +24,12 @@ var (
 	// must remain unapplied; this error must never be swallowed into a
 	// local-only status flip.
 	ErrCanonicalMutationFailed = errors.New("canonical authorization mutation failed")
+	ErrSeparationOfDuties      = errors.New("separation of duties violation")
 )
+
+func separationOfDutiesError(message string) error {
+	return fmt.Errorf("%w: %s", ErrSeparationOfDuties, message)
+}
 
 // Role is a DSH API view of the complete Identity-owned role definition.
 // Permissions are canonical service/surface/action/scope bindings. Surfaces is
