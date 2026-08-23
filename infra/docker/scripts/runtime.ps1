@@ -15,7 +15,7 @@
 
 param(
   [Parameter(Mandatory = $true)]
-  [ValidateSet("up", "down", "reset", "status", "logs", "migrate", "seed", "smoke", "doctor", "all", "bootstrap-dev", "verify-catalog", "ensure-db")]
+  [ValidateSet("up", "down", "reset", "status", "logs", "migrate", "seed", "smoke", "doctor", "all", "bootstrap-dev", "verify-catalog", "ensure-db", "service-up", "service-stop")]
   [string]$Action,
   [string]$Profiles = "",
   [string]$Service = "",
@@ -587,7 +587,9 @@ if ($Action -in @(
   "smoke",
   "all",
   "bootstrap-dev",
-  "ensure-db"
+  "ensure-db",
+  "service-up",
+  "service-stop"
 )) {
   docker info | Out-Null
   if ($LASTEXITCODE -ne 0) {
@@ -687,7 +689,28 @@ switch ($Action) {
     else { Invoke-Compose logs --tail=100 $Service }
   }
   "doctor" { Write-RuntimeDoctor -Reason "manual doctor action" -TargetService $Service }
-  "ensure-db" {
+  "service-up" {
+    if ([string]::IsNullOrWhiteSpace($Service)) {
+      throw "service-up requires -Service."
+    }
+    if ($Service -notmatch '^[a-z0-9][a-z0-9-]*$') {
+      throw "Unsafe canonical Compose service name: $Service"
+    }
+    Write-Host "=== runtime:service-up service=$Service profiles=$($ProfileList -join ',')"
+    Invoke-ComposeConvergentUp --no-deps $Service
+    Write-Host "runtime:service-up: PASS service=$Service"
+  }
+  "service-stop" {
+    if ([string]::IsNullOrWhiteSpace($Service)) {
+      throw "service-stop requires -Service."
+    }
+    if ($Service -notmatch '^[a-z0-9][a-z0-9-]*$') {
+      throw "Unsafe canonical Compose service name: $Service"
+    }
+    Write-Host "=== runtime:service-stop service=$Service profiles=$($ProfileList -join ',')"
+    Invoke-Compose stop $Service
+    Write-Host "runtime:service-stop: PASS service=$Service"
+  }  "ensure-db" {
     Write-Host "=== runtime:ensure-db (profiles: $($ProfileList -join ','))"
     Invoke-ComposeConvergentUp postgres
     Wait-ForPostgres
