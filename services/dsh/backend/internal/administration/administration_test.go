@@ -23,3 +23,50 @@ func TestAuditRedactionDropsSensitiveValues(t *testing.T) {
 		t.Fatalf("unexpected JSON redaction %q", redacted)
 	}
 }
+
+func TestValidateRoleReviewSeparation(t *testing.T) {
+	tests := []struct {
+		name        string
+		maker       string
+		beneficiary string
+		checker     string
+		wantErr     bool
+	}{
+		{name: "pairwise distinct", maker: "maker", beneficiary: "beneficiary", checker: "checker", wantErr: false},
+		{name: "maker is checker", maker: "checker", beneficiary: "beneficiary", checker: "checker", wantErr: true},
+		{name: "beneficiary is checker", maker: "maker", beneficiary: "checker", checker: "checker", wantErr: true},
+		{name: "maker is beneficiary", maker: "same", beneficiary: "same", checker: "checker", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateRoleReviewSeparation(tt.maker, tt.beneficiary, tt.checker)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("validateRoleReviewSeparation() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestValidateRollbackReviewSeparation(t *testing.T) {
+	tests := []struct {
+		name           string
+		maker          string
+		beneficiary    string
+		sourceChecker  string
+		rollbackChecker string
+		wantErr        bool
+	}{
+		{name: "pairwise distinct", maker: "rollback-maker", beneficiary: "beneficiary", sourceChecker: "source-checker", rollbackChecker: "rollback-checker", wantErr: false},
+		{name: "rollback checker is maker", maker: "rollback-checker", beneficiary: "beneficiary", sourceChecker: "source-checker", rollbackChecker: "rollback-checker", wantErr: true},
+		{name: "rollback checker is beneficiary", maker: "rollback-maker", beneficiary: "rollback-checker", sourceChecker: "source-checker", rollbackChecker: "rollback-checker", wantErr: true},
+		{name: "rollback checker is original checker", maker: "rollback-maker", beneficiary: "beneficiary", sourceChecker: "rollback-checker", rollbackChecker: "rollback-checker", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateRollbackReviewSeparation(tt.maker, tt.beneficiary, tt.sourceChecker, tt.rollbackChecker)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("validateRollbackReviewSeparation() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
