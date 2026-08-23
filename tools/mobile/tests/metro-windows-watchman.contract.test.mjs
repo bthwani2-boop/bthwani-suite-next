@@ -7,11 +7,16 @@ const repoRoot = path.resolve(import.meta.dirname, "../../..");
 const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 const mobileApps = ["app-client", "app-partner", "app-captain", "app-field"];
 
-test("Windows Metro is fail-closed on a functional Watchman project watch", () => {
+test("Windows Metro is fail-closed on compatible Watchman capabilities and a functional project watch", () => {
   const factory = read("tools/mobile/metro.config.factory.cjs");
 
   assert.match(factory, /process\.platform !== "win32"/);
-  assert.match(factory, /runWatchman\(\["version"\]\)/);
+  assert.match(factory, /"field-content\.sha1hex"/);
+  assert.match(factory, /"relative_root"/);
+  assert.match(factory, /"suffix-set"/);
+  assert.match(factory, /"wildmatch"/);
+  assert.match(factory, /"list-capabilities"/);
+  assert.match(factory, /"--no-spawn"/);
   assert.match(factory, /runWatchman\(\["watch-project", projectRoot\]\)/);
   assert.match(factory, /Metro startup is blocked rather than falling back to the Node watcher/);
   assert.match(factory, /config\.resolver\.useWatchman = true/);
