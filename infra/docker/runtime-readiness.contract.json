@@ -5,7 +5,7 @@
       "name": "Identity API",
       "kind": "json-status",
       "baseUrlEnv": "IDENTITY_API_BASE_URL",
-      "defaultBaseUrl": "http://127.0.0.1:58082",
+      "defaultBaseUrl": "http://127.0.0.1:18082",
       "path": "/identity/readiness",
       "healthyStatuses": ["HEALTHY"]
     },
