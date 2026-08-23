@@ -40,6 +40,12 @@ if ($Mode -eq 'Run') {
         'app-field' = 18104
     }
 
+    # Canonical local Identity host port. Setting the process value before the
+    # governed runtime starts gives it precedence over stale local env files
+    # while keeping production/container service-to-service ports unchanged.
+    $env:BTHWANI_IDENTITY_API_HOST_PORT = '18082'
+    $env:IDENTITY_API_BASE_URL = 'http://127.0.0.1:18082'
+
     & $EnsureRuntimeScript
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
