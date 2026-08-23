@@ -321,7 +321,8 @@ if ($resolvedTransport -eq "lan") {
     $env:BTHWANI_ADB_REVERSE_ENABLED = "1"
     $env:EXPO_PUBLIC_ADB_REVERSE_ENABLED = "true"
     $env:EXPO_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-    $env:EXPO_PUBLIC_IDENTITY_API_BASE_URL = "http://127.0.0.1:58082"
+    $identityHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_IDENTITY_API_HOST_PORT)) { "18082" } else { [string] $env:BTHWANI_IDENTITY_API_HOST_PORT }
+    $env:EXPO_PUBLIC_IDENTITY_API_BASE_URL = "http://127.0.0.1:$identityHostPort"
     $env:EXPO_PUBLIC_WORKFORCE_API_BASE_URL = "http://127.0.0.1:58086"
 
     $adbPath = Resolve-BthwaniAdb
@@ -333,7 +334,7 @@ if ($resolvedTransport -eq "lan") {
     $env:BTHWANI_ANDROID_SERIAL = $selectedSerial
     $env:ADB = $adbPath
 
-    $ports = @(58080, 58082, 58086, 58100, 59000, $MetroPort)
+    $ports = @(58080, [int] $identityHostPort, 58086, 58100, 59000, $MetroPort)
     Invoke-BthwaniAdbReverse -AdbPath $adbPath -Serial $selectedSerial -Ports $ports
 
     $watchdogSetting = ([string] $env:BTHWANI_ADB_WATCHDOG).Trim().ToLowerInvariant()
