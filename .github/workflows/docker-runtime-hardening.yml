@@ -10,10 +10,7 @@ on:
       - "apps/**/runtime/**/*.ps1"
       - "core/**/Dockerfile"
       - "services/**/Dockerfile"
-      - "tools/scripts/docker-context-local.ps1"
       - "tools/guards/docker-runtime-hardening-gate.mjs"
-      - "services/dsh/database/scripts/invoke-dsh-database.ps1"
-      - "tools/scripts/run-lian-full-runtime-closure-v2.ps1"
       - ".github/workflows/docker-runtime-hardening.yml"
   push:
     branches: ["**"]
@@ -25,10 +22,7 @@ on:
       - "apps/**/runtime/**/*.ps1"
       - "core/**/Dockerfile"
       - "services/**/Dockerfile"
-      - "tools/scripts/docker-context-local.ps1"
       - "tools/guards/docker-runtime-hardening-gate.mjs"
-      - "services/dsh/database/scripts/invoke-dsh-database.ps1"
-      - "tools/scripts/run-lian-full-runtime-closure-v2.ps1"
       - ".github/workflows/docker-runtime-hardening.yml"
   workflow_dispatch:
 
@@ -45,12 +39,20 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - name: Checkout immutable source
+      - name: Checkout immutable candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
           persist-credentials: false
+
+      - name: Verify exact candidate checkout
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          [[ "$(git rev-parse HEAD)" == "${EXPECTED_SHA}" ]] || { echo "::error::Docker hardening candidate drift"; exit 1; }
 
       - name: Set up locked Node runtime
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
@@ -65,47 +67,25 @@ jobs:
         run: |
           $ErrorActionPreference = "Stop"
           $candidates = @()
-          foreach ($root in @(
-            "infra/docker/scripts",
-            "tools/scripts",
-            "services",
-            "apps"
-          )) {
+          foreach ($root in @("infra/docker/scripts","tools/scripts","services","apps")) {
             if (-not (Test-Path -LiteralPath $root)) { continue }
-            $candidates += @(
-              Get-ChildItem -LiteralPath $root -Recurse -File -Filter "*.ps1" |
-                Select-Object -ExpandProperty FullName
-            )
+            $candidates += @(Get-ChildItem -LiteralPath $root -Recurse -File -Filter "*.ps1" | Select-Object -ExpandProperty FullName)
+          }
+          $files = @($candidates | Select-Object -Unique | Where-Object {
+            $raw = Get-Content -LiteralPath $_ -Raw
+            $raw -match '(?i)\bdocker\b|compose|runtime\.ps1|Invoke-[A-Za-z0-9_-]*Compose'
+          })
+          foreach ($file in $files) {
+            $tokens = $null; $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file),[ref]$tokens,[ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error "$file :: $($_.Message)" }; exit 1 }
           }
 
-          $files = @(
-            $candidates |
-              Select-Object -Unique |
-              Where-Object {
-                $raw = Get-Content -LiteralPath $_ -Raw
-                $raw -match '(?i)\bdocker\b|compose|runtime\.ps1|Invoke-[A-Za-z0-9_-]*Compose'
-              }
-          )
-          foreach ($file in $files) {
-            $tokens = $null
-            $errors = $null
-            [System.Management.Automation.Language.Parser]::ParseFile(
-              (Resolve-Path $file),
-              [ref]$tokens,
-              [ref]$errors
-            ) | Out-Null
-            if ($errors.Count -gt 0) {
-              $errors | ForEach-Object { Write-Error "$file :: $($_.Message)" }
-              exit 1
-            }
-          }
       - name: Validate canonical Compose model
         shell: bash
         run: |
           set -euo pipefail
-          docker compose \
-            --env-file infra/docker/env/runtime.env.example \
+          docker compose --env-file infra/docker/env/runtime.env.example \
             -f infra/docker/compose.runtime.yml \
             -f infra/docker/compose.financial-simulators.yml \
-            -f infra/docker/compose.observability.yml \
-            config >/dev/null
+            -f infra/docker/compose.observability.yml config >/dev/null
