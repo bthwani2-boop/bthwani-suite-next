@@ -48,6 +48,7 @@ func NewRouter(repository *identity.Repository) http.Handler {
 	mux.HandleFunc("GET /internal/permissions/resolve", s.dshServiceOnly(s.internalPermissionsResolve))
 	mux.HandleFunc("GET /internal/rbac/roles", s.dshServiceOnly(s.internalRbacListRoles))
 	mux.HandleFunc("GET /internal/rbac/staff", s.dshServiceOnly(s.internalRbacListStaff))
+	mux.HandleFunc("GET /internal/rbac/actors/{actorId}/roles", s.dshServiceOnly(s.internalRbacListActorRoles))
 	mux.HandleFunc("POST /internal/rbac/actors/{actorId}/roles", s.dshServiceOnly(s.internalRbacGrantRole))
 	mux.HandleFunc("DELETE /internal/rbac/actors/{actorId}/roles", s.dshServiceOnly(s.internalRbacRevokeRole))
 	mux.HandleFunc("POST /internal/support-sessions", s.dshServiceOnly(s.internalSupportSessionsIssue))
@@ -680,10 +681,10 @@ func (s *server) internalRbacListRoles(w http.ResponseWriter, r *http.Request) {
 	sendJSON(w, http.StatusOK, map[string]interface{}{"roles": roles})
 }
 
-// internalRbacListStaff returns every actor holding at least one durable
-// role assignment. This is the canonical source for "who is staff"; DSH's
-// administration staff listing reads it here instead of maintaining a local
-// copy or reporting a permanently empty list.
+// internalRbacListStaff returns every actor holding at least one effective
+// assignment to an active role. This is the canonical active-staff projection;
+// durable assignments to inactive roles remain available from the actor-role
+// assignment readback.
 func (s *server) internalRbacListStaff(w http.ResponseWriter, r *http.Request) {
 	staff, err := s.repository.Enforcer.ListStaffActors(r.Context())
 	if err != nil {
@@ -694,6 +695,18 @@ func (s *server) internalRbacListStaff(w http.ResponseWriter, r *http.Request) {
 		staff = []identity.StaffActor{}
 	}
 	sendJSON(w, http.StatusOK, map[string]interface{}{"staff": staff})
+}
+
+// internalRbacListActorRoles returns durable actor-role membership without
+// filtering inactive roles. It is read-only and therefore requires neither an
+// idempotency key nor a canonical mutation intent.
+func (s *server) internalRbacListActorRoles(w http.ResponseWriter, r *http.Request) {
+	assignments, err := s.repository.Enforcer.ListActorRoleAssignments(r.Context(), r.PathValue("actorId"))
+	if err != nil {
+		sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "could not list actor role assignments")
+		return
+	}
+	sendJSON(w, http.StatusOK, map[string]interface{}{"assignments": assignments})
 }
 
 // internalRbacGrantRole applies a canonical actor→role grant. Idempotent:
@@ -710,13 +723,14 @@ func (s *server) internalRbacGrantRole(w http.ResponseWriter, r *http.Request) {
 	}
 	actorID := r.PathValue("actorId")
 	var request struct {
-		RoleName           string `json:"roleName"`
-		RequestedByActorID string `json:"requestedByActorId"`
+		RoleName            string `json:"roleName"`
+		RequestedByActorID  string `json:"requestedByActorId"`
+		ExpectedRoleVersion int    `json:"expectedRoleVersion"`
 	}
 	if !decodeJSON(w, r, &request) {
 		return
 	}
-	assignment, created, err := s.repository.Enforcer.GrantRoleWithIdempotency(r.Context(), actorID, request.RoleName, request.RequestedByActorID, idempotencyKey, "dsh")
+	assignment, created, err := s.repository.Enforcer.GrantRoleWithIdempotency(r.Context(), actorID, request.RoleName, request.RequestedByActorID, request.ExpectedRoleVersion, idempotencyKey, "dsh")
 	if err != nil {
 		writeRbacError(w, err)
 		return
@@ -743,7 +757,12 @@ func (s *server) internalRbacRevokeRole(w http.ResponseWriter, r *http.Request) 
 	actorID := r.PathValue("actorId")
 	roleName := r.URL.Query().Get("roleName")
 	requestedByActorID := r.URL.Query().Get("requestedByActorId")
-	if err := s.repository.Enforcer.RevokeRoleWithIdempotency(r.Context(), actorID, roleName, requestedByActorID, idempotencyKey, "dsh"); err != nil {
+	expectedRoleVersion, err := strconv.Atoi(r.URL.Query().Get("expectedRoleVersion"))
+	if err != nil || expectedRoleVersion < 1 {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "expectedRoleVersion must be a positive integer")
+		return
+	}
+	if err := s.repository.Enforcer.RevokeRoleWithIdempotency(r.Context(), actorID, roleName, requestedByActorID, expectedRoleVersion, idempotencyKey, "dsh"); err != nil {
 		writeRbacError(w, err)
 		return
 	}
@@ -758,6 +777,8 @@ func writeRbacError(w http.ResponseWriter, err error) {
 		sendError(w, http.StatusConflict, "ROLE_INACTIVE", err.Error())
 	case errors.Is(err, identity.ErrIdempotencyConflict):
 		sendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", err.Error())
+	case errors.Is(err, identity.ErrRoleVersionConflict):
+		sendError(w, http.StatusConflict, "ROLE_VERSION_CONFLICT", err.Error())
 	case errors.Is(err, identity.ErrRoleNotFound):
 		sendError(w, http.StatusNotFound, "ROLE_NOT_FOUND", err.Error())
 	case errors.Is(err, identity.ErrRoleAlreadyExists):

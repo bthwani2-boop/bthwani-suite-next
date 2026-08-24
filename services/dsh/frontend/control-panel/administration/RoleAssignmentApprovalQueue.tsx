@@ -35,6 +35,8 @@ export function RoleAssignmentApprovalQueue() {
   const [roleName, setRoleName] = useState("");
   const [reason, setReason] = useState("");
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [replacementReasonCodes, setReplacementReasonCodes] = useState<Record<string, string>>({});
+  const [replacementReasons, setReplacementReasons] = useState<Record<string, string>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -67,6 +69,24 @@ export function RoleAssignmentApprovalQueue() {
       await approvals.review(approvalId, decision, version, (reviewNotes[approvalId] ?? "").trim());
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "تعذر اعتماد الطلب.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const replaceTerminalFailure = async (approvalId: string, version: number) => {
+    if (submitting) return;
+    setSubmitting(true);
+    setActionError(null);
+    try {
+      await approvals.replaceTerminalFailure(
+        approvalId,
+        version,
+        (replacementReasonCodes[approvalId] ?? "").trim(),
+        (replacementReasons[approvalId] ?? "").trim(),
+      );
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "تعذر استبدال الطلب ذي الفشل النهائي.");
     } finally {
       setSubmitting(false);
     }
@@ -138,8 +158,11 @@ export function RoleAssignmentApprovalQueue() {
             </tr>
           </thead>
           <tbody>
-            {approvals.state.data.map((approval) => (
-              <tr key={approval.id}>
+            {approvals.state.data.map((approval) => {
+              const reviewable = approval.status === "pending" && approval.executionStatus !== "failed_terminal";
+              const replacementCode = replacementReasonCodes[approval.id] ?? "";
+              const replacementReason = replacementReasons[approval.id] ?? "";
+              return <tr key={approval.id}>
                 <CpTableCell>{actionLabel(approval.actionType)}: {approval.targetActorId} ← {approval.roleName}</CpTableCell>
                 <CpTableCell>{approval.requestedBy}</CpTableCell>
                 <CpTableCell>{approval.reason}</CpTableCell>
@@ -154,19 +177,40 @@ export function RoleAssignmentApprovalQueue() {
                   />
                 </CpTableCell>
                 <CpTableCell>
-                  <CpButton variant="brand" disabled={submitting} onClick={() => void review(approval.id, approval.version, "approved")}>
+                  <CpButton variant="brand" disabled={submitting || !reviewable} onClick={() => void review(approval.id, approval.version, "approved")}>
                     اعتماد من مراجع مستقل
                   </CpButton>{" "}
                   <CpButton
                     variant="danger"
-                    disabled={submitting || (reviewNotes[approval.id] ?? "").trim().length < 5}
+                    disabled={submitting || !reviewable || (reviewNotes[approval.id] ?? "").trim().length < 5}
                     onClick={() => void review(approval.id, approval.version, "rejected")}
                   >
                     رفض
                   </CpButton>
+                  {approval.executionStatus === "failed_terminal" && canRequest ? <>
+                    <CpTextInput
+                      value={replacementCode}
+                      onChange={(value) => setReplacementReasonCodes((current) => ({ ...current, [approval.id]: value }))}
+                      placeholder="رمز السبب مثل role_version_changed"
+                      aria-label={`رمز سبب استبدال ${approval.id}`}
+                    />
+                    <CpTextInput
+                      value={replacementReason}
+                      onChange={(value) => setReplacementReasons((current) => ({ ...current, [approval.id]: value }))}
+                      placeholder="سبب الطلب البديل — خمسة أحرف على الأقل"
+                      aria-label={`سبب الطلب البديل ${approval.id}`}
+                    />
+                    <CpButton
+                      variant="primary"
+                      disabled={submitting || !/^[a-z][a-z0-9_]{2,63}$/.test(replacementCode.trim()) || replacementReason.trim().length < 5}
+                      onClick={() => void replaceTerminalFailure(approval.id, approval.version)}
+                    >
+                      تثبيت الفشل وإنشاء طلب بديل
+                    </CpButton>
+                  </> : null}
                 </CpTableCell>
               </tr>
-            ))}
+            })}
           </tbody>
         </CpTable>
       ) : null}

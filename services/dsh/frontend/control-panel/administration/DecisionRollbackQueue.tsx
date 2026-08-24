@@ -32,6 +32,8 @@ export function DecisionRollbackQueue() {
   const [sourceApprovalId, setSourceApprovalId] = useState("");
   const [reason, setReason] = useState("");
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [replacementReasonCodes, setReplacementReasonCodes] = useState<Record<string, string>>({});
+  const [replacementReasons, setReplacementReasons] = useState<Record<string, string>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -58,6 +60,24 @@ export function DecisionRollbackQueue() {
       await rollbacks.review(requestId, decision, version, (reviewNotes[requestId] ?? "").trim());
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "تعذر مراجعة طلب التراجع.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const replaceTerminalFailure = async (requestId: string, version: number) => {
+    if (submitting) return;
+    setSubmitting(true);
+    setActionError(null);
+    try {
+      await rollbacks.replaceTerminalFailure(
+        requestId,
+        version,
+        (replacementReasonCodes[requestId] ?? "").trim(),
+        (replacementReasons[requestId] ?? "").trim(),
+      );
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "تعذر استبدال طلب التراجع ذي الفشل النهائي.");
     } finally {
       setSubmitting(false);
     }
@@ -133,8 +153,11 @@ export function DecisionRollbackQueue() {
             </tr>
           </thead>
           <tbody>
-            {rollbacks.state.data.map((request) => (
-              <tr key={request.id}>
+            {rollbacks.state.data.map((request) => {
+              const reviewable = request.status === "pending" && request.executionStatus !== "failed_terminal";
+              const replacementCode = replacementReasonCodes[request.id] ?? "";
+              const replacementReason = replacementReasons[request.id] ?? "";
+              return <tr key={request.id}>
                 <CpTableCell>{request.targetActorId} ← {request.roleName}</CpTableCell>
                 <CpTableCell>
                   {request.sourceActionType}
@@ -157,19 +180,40 @@ export function DecisionRollbackQueue() {
                   />
                 </CpTableCell>
                 <CpTableCell>
-                  <CpButton variant="brand" disabled={submitting} onClick={() => void review(request.id, request.version, "approved")}>
+                  <CpButton variant="brand" disabled={submitting || !reviewable} onClick={() => void review(request.id, request.version, "approved")}>
                     اعتماد التراجع
                   </CpButton>{" "}
                   <CpButton
                     variant="danger"
-                    disabled={submitting || (reviewNotes[request.id] ?? "").trim().length < 5}
+                    disabled={submitting || !reviewable || (reviewNotes[request.id] ?? "").trim().length < 5}
                     onClick={() => void review(request.id, request.version, "rejected")}
                   >
                     رفض التراجع
                   </CpButton>
+                  {request.executionStatus === "failed_terminal" && canRequest ? <>
+                    <CpTextInput
+                      value={replacementCode}
+                      onChange={(value) => setReplacementReasonCodes((current) => ({ ...current, [request.id]: value }))}
+                      placeholder="رمز السبب مثل canonical_state_changed"
+                      aria-label={`رمز سبب استبدال التراجع ${request.id}`}
+                    />
+                    <CpTextInput
+                      value={replacementReason}
+                      onChange={(value) => setReplacementReasons((current) => ({ ...current, [request.id]: value }))}
+                      placeholder="سبب الطلب البديل — خمسة أحرف على الأقل"
+                      aria-label={`سبب طلب التراجع البديل ${request.id}`}
+                    />
+                    <CpButton
+                      variant="primary"
+                      disabled={submitting || !/^[a-z][a-z0-9_]{2,63}$/.test(replacementCode.trim()) || replacementReason.trim().length < 5}
+                      onClick={() => void replaceTerminalFailure(request.id, request.version)}
+                    >
+                      تثبيت الفشل وإنشاء طلب بديل
+                    </CpButton>
+                  </> : null}
                 </CpTableCell>
               </tr>
-            ))}
+            })}
           </tbody>
         </CpTable>
       ) : null}

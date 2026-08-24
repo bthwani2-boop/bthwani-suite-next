@@ -12,8 +12,10 @@ WORKDIR /app/services/dsh/backend
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/dsh-api cmd/dsh-api/main.go
 
 FROM alpine:3.22 AS runtime
-RUN apk add --no-cache ca-certificates tzdata wget \
-    && addgroup -S app \
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY --from=build /usr/local/go/lib/time/zoneinfo.zip /usr/share/zoneinfo.zip
+ENV ZONEINFO=/usr/share/zoneinfo.zip
+RUN addgroup -S app \
     && adduser -S -G app app
 
 WORKDIR /app

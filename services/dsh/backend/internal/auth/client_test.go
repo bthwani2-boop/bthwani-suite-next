@@ -242,3 +242,74 @@ func TestFetchPartnerPermissionBundlesAuthenticatesAndCachesDefensiveCopy(t *tes
 		t.Fatalf("caller mutated cached permission truth: %#v", second)
 	}
 }
+
+func TestListActorRoleAssignmentsReadsDurableInactiveMemberships(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.EscapedPath() != "/internal/rbac/actors/actor-1/roles" {
+			t.Fatalf("unexpected request %s %s", r.Method, r.URL.EscapedPath())
+		}
+		if r.Header.Get("Authorization") != "Bearer dsh-identity-secret" {
+			t.Fatalf("unexpected authorization header %q", r.Header.Get("Authorization"))
+		}
+		if r.Header.Get("X-Service-Caller") != "dsh" {
+			t.Fatalf("unexpected service caller %q", r.Header.Get("X-Service-Caller"))
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"assignments": []RbacActorRoleAssignment{{
+				ActorID:  "actor-1",
+				RoleID:   "role-inactive",
+				RoleName: "operations_support",
+			}},
+		})
+	}))
+	defer server.Close()
+
+	client := NewClientWithInternalAccess(server.URL, "dsh-identity-secret", "")
+	assignments, err := client.ListActorRoleAssignments(context.Background(), "actor-1")
+	if err != nil {
+		t.Fatalf("unexpected durable assignment read error: %v", err)
+	}
+	if len(assignments) != 1 || assignments[0].RoleName != "operations_support" {
+		t.Fatalf("inactive durable assignment was not preserved: %#v", assignments)
+	}
+}
+
+func TestRoleMutationCarriesVersionFenceAndMapsConflict(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Idempotency-Key") != "intent-1" || r.Header.Get("X-Canonical-Intent-ID") != "intent-1" {
+			t.Fatalf("canonical intent headers missing: %#v", r.Header)
+		}
+		switch r.Method {
+		case http.MethodPost:
+			var payload struct {
+				RoleName            string `json:"roleName"`
+				ExpectedRoleVersion int    `json:"expectedRoleVersion"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+				t.Fatalf("decode grant payload: %v", err)
+			}
+			if payload.RoleName != "operations_support" || payload.ExpectedRoleVersion != 7 {
+				t.Fatalf("grant version fence missing: %#v", payload)
+			}
+			w.WriteHeader(http.StatusConflict)
+			_ = json.NewEncoder(w).Encode(map[string]string{"code": "ROLE_VERSION_CONFLICT"})
+		case http.MethodDelete:
+			if r.URL.Query().Get("expectedRoleVersion") != "7" {
+				t.Fatalf("revoke version fence missing: %s", r.URL.RawQuery)
+			}
+			w.WriteHeader(http.StatusConflict)
+			_ = json.NewEncoder(w).Encode(map[string]string{"code": "ROLE_VERSION_CONFLICT"})
+		default:
+			t.Fatalf("unexpected mutation method %s", r.Method)
+		}
+	}))
+	defer server.Close()
+
+	client := NewClientWithInternalAccess(server.URL, "dsh-identity-secret", "")
+	if _, err := client.GrantRoleWithIdempotency(context.Background(), "actor-1", "operations_support", "reviewer-1", 7, "intent-1"); err != ErrRbacVersionConflict {
+		t.Fatalf("grant conflict mapping = %v", err)
+	}
+	if err := client.RevokeRoleWithIdempotency(context.Background(), "actor-1", "operations_support", "reviewer-1", 7, "intent-1"); err != ErrRbacVersionConflict {
+		t.Fatalf("revoke conflict mapping = %v", err)
+	}
+}

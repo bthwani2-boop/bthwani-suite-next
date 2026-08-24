@@ -180,7 +180,7 @@ paths:
         - $ref: '#/components/parameters/DshServiceCaller'
       responses:
         '200':
-          description: Every actor holding at least one durable role assignment.
+          description: Every actor holding at least one effective assignment to an active role.
           content:
             application/json:
               schema:
@@ -199,6 +199,40 @@ paths:
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
   /internal/rbac/actors/{actorId}/roles:
+    get:
+      operationId: listRbacActorRoleAssignments
+      tags: [internal-rbac]
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/DshServiceCaller'
+        - name: actorId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Durable actor-role assignments, including assignments to inactive roles.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [assignments]
+                properties:
+                  assignments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RbacActorRoleAssignment'
+        '401':
+          description: Invalid DSH service token.
+        '403':
+          description: Caller is forbidden.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     post:
       operationId: grantRbacRole
       tags: [internal-rbac]
@@ -272,6 +306,12 @@ paths:
           schema:
             type: string
             minLength: 1
+        - name: expectedRoleVersion
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
       responses:
         '204':
           description: Role revoked (or already absent; idempotent).
@@ -390,7 +430,7 @@ components:
     RbacRoleGrantRequest:
       type: object
       additionalProperties: false
-      required: [roleName, requestedByActorId]
+      required: [roleName, requestedByActorId, expectedRoleVersion]
       properties:
         roleName:
           type: string
@@ -398,6 +438,9 @@ components:
         requestedByActorId:
           type: string
           minLength: 1
+        expectedRoleVersion:
+          type: integer
+          minimum: 1
     RbacStaffActor:
       type: object
       additionalProperties: false

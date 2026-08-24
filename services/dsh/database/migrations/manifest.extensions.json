@@ -275,6 +275,20 @@
       "sha256": "7ca0aac405a8c0450724a9722ca1e5bd6846eb9a8035c957af6c1722c7e94b10",
       "historicalPrefix": "1039",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 279,
+      "file": "dsh-1040_admin_terminal_supersession.sql",
+      "sha256": "f1a83803e67f55dd1b2dd198a9895a906ce9e85c74f82187689ca8f06f61f5ce",
+      "historicalPrefix": "1040",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 280,
+      "file": "dsh-1041_drop_non_owner_admin_projections.sql",
+      "sha256": "b4f76ca125bd0422a6711028fcb58389e48278388ca87c96840f9cdb2de0395a",
+      "historicalPrefix": "1041",
+      "state": "ACTIVE"
     }
   ]
 }

@@ -1,12 +1,6 @@
 # .hadolint.yaml
-# Hadolint Dockerfile linter rules configuration
-
-ignored:
-  # Pin versions in apt-get install (too strict for local dev/reusability)
-  - DL3008
-  # Pin versions in pip (similar logic)
-  - DL3013
-  # Use WORKDIR instead of multiple cd commands
-  - DL3003
-
-# NOTE: ignored rules are a temporary baseline and must be reviewed before making hadolint mandatory.
+# Hadolint Dockerfile linter rules configuration.
+#
+# No repository-wide rule suppressions are permitted here. A genuinely
+# intentional exception belongs on the narrow owning Dockerfile with its
+# evidence and removal condition.

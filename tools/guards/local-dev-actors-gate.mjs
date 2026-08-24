@@ -25,16 +25,16 @@ const password = localPasswordDefault();
 // --- 1. The Go bootstrap actor table must match the registry ------------------
 
 const goSource = read(goBootstrapFile);
-const goTable = goSource.match(/actors := \[\]struct \{\s*id, username, role, surface, scope, phone string\s*\}\{([\s\S]*?)\n\t\}/);
+const goTable = goSource.match(/actors := \[\]struct \{\s*id, username, role, phone string\s*\}\{([\s\S]*?)\n\t\}/);
 if (!goTable) {
   violations.push({ file: goBootstrapFile, message: "LOCAL_BOOTSTRAP_ACTOR_TABLE_NOT_FOUND — the guard can no longer verify registry drift" });
 } else {
   const declared = new Map();
-  const rowRegex = /\{"([^"]+)", "([^"]+)", "([^"]+)", "([^"]+)", "([^"]+)", "([^"]+)"\}/g;
+  const rowRegex = /\{"([^"]+)", "([^"]+)", "([^"]+)", "([^"]+)"\}/g;
   let row;
   while ((row = rowRegex.exec(goTable[1]))) {
-    const [, id, username, role, surface, scope, phone] = row;
-    declared.set(id, { actorId: id, username, role, surface, scope, phoneE164: phone });
+    const [, id, username, role, phone] = row;
+    declared.set(id, { actorId: id, username, role, phoneE164: phone });
   }
 
   for (const [key, expected] of Object.entries(LOCAL_ACTORS)) {
@@ -43,7 +43,7 @@ if (!goTable) {
       violations.push({ file: goBootstrapFile, message: `LOCAL_ACTOR_MISSING_IN_BOOTSTRAP:${key} (${expected.actorId}) — declared in ${registryFile}` });
       continue;
     }
-    for (const field of ["username", "role", "surface", "scope", "phoneE164"]) {
+    for (const field of ["username", "role", "phoneE164"]) {
       if (actual[field] !== expected[field]) {
         violations.push({
           file: goBootstrapFile,

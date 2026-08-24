@@ -1,11 +1,17 @@
 name: OpenCodeReview Delegation Context
 
+run-name: ${{ github.event_name == 'pull_request' && format('OpenCodeReview PR #{0}', github.event.pull_request.number) || format('OpenCodeReview dispatched candidate {0}', inputs.head_sha) }}
+
 on:
   pull_request:
     branches: ["**"]
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
     inputs:
+      pr_number:
+        description: PR number for exact closure correlation
+        required: false
+        type: string
       base_ref:
         description: Trusted base commit/ref
         required: true
@@ -13,6 +19,10 @@ on:
       head_sha:
         description: Exact candidate SHA to prepare
         required: true
+        type: string
+      base_sha:
+        description: Immutable PR base SHA for closure correlation
+        required: false
         type: string
 
 permissions:
@@ -40,6 +50,7 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           INPUT_HEAD_SHA: ${{ inputs.head_sha }}
           INPUT_BASE_REF: ${{ inputs.base_ref }}
+          INPUT_BASE_SHA: ${{ inputs.base_sha }}
         run: |
           set -euo pipefail
           if [[ "${EVENT_NAME}" == "pull_request" ]]; then
@@ -47,7 +58,7 @@ jobs:
             base_ref="${PR_BASE_SHA}"
           else
             head_sha="${INPUT_HEAD_SHA}"
-            base_ref="${INPUT_BASE_REF}"
+            base_ref="${INPUT_BASE_SHA:-${INPUT_BASE_REF}}"
           fi
 
           [[ "${head_sha}" =~ ^[0-9a-fA-F]{40}$ ]] || {
@@ -188,19 +199,30 @@ jobs:
             --arg head "${HEAD_SHA}" \
             --arg base "${BASE_SHA}" \
             --arg mergeBase "${MERGE_BASE}" \
+            --arg workflowRunId "${GITHUB_RUN_ID}" \
             --argjson reviewableFiles "${count}" \
             '{
-              schemaVersion: 1,
+              schemaVersion: 2,
               mode: "deterministic-delegation-context",
               headSha: $head,
               baseSha: $base,
               mergeBase: $mergeBase,
+              workflowRunId: $workflowRunId,
               reviewableFiles: $reviewableFiles,
               hostAgentRequired: true,
               hostAgentExecutedByThisWorkflow: false,
               semanticReviewClaimedByThisWorkflow: false
             }' \
             > "${evidence}/delegation-contract.json"
+
+          (
+            cd "${evidence}"
+            sha256sum preview.json rules.json diff.patch reviewable-files.txt > context-files.sha256
+          )
+          context_sha256="$(sha256sum "${evidence}/context-files.sha256" | awk '{print $1}')"
+          jq --arg contextSha256 "${context_sha256}" '. + {contextSha256:$contextSha256}' \
+            "${evidence}/delegation-contract.json" > "${evidence}/delegation-contract.tmp"
+          mv "${evidence}/delegation-contract.tmp" "${evidence}/delegation-contract.json"
 
           {
             echo "# OpenCodeReview delegation context"
@@ -209,14 +231,19 @@ jobs:
             echo "- trusted base: \`${BASE_SHA}\`"
             echo "- merge base: \`${MERGE_BASE}\`"
             echo "- reviewable files: \`${count}\`"
+            echo "- context SHA-256: \`${context_sha256}\`"
+            echo "- workflow run: \`${GITHUB_RUN_ID}\`"
             echo
             echo "This workflow performs deterministic OpenCodeReview scope/rule/diff preparation only."
             echo "It intentionally does not call Copilot, OpenAI, Anthropic, or any OCR LLM endpoint."
             echo "Semantic reasoning belongs to the external host agent (for example Codex/ChatGPT) that consumes this context."
             echo "This workflow therefore does not claim an AI semantic review pass/fail."
+            echo
+            echo "An independent write-authorized reviewer must submit an APPROVED review containing the exact v2 attestation shown by the trusted closure workflow."
           } > "${evidence}/README.md"
 
           echo "count=${count}" >> "${GITHUB_OUTPUT}"
+          echo "context_sha256=${context_sha256}" >> "${GITHUB_OUTPUT}"
           popd >/dev/null
 
       - name: Publish delegation summary

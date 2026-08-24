@@ -37,6 +37,8 @@ export function RoleDefinitionApprovalQueue() {
   const [active, setActive] = useState(true);
   const [permissions, setPermissions] = useState<readonly string[]>([]);
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [replacementReasonCodes, setReplacementReasonCodes] = useState<Record<string, string>>({});
+  const [replacementReasons, setReplacementReasons] = useState<Record<string, string>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -78,6 +80,24 @@ export function RoleDefinitionApprovalQueue() {
       await roleRequests.review(requestId, decision, version, (reviewNotes[requestId] ?? "").trim());
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "تعذر مراجعة تعريف الدور.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const replaceTerminalFailure = async (requestId: string, version: number) => {
+    if (submitting) return;
+    setSubmitting(true);
+    setActionError(null);
+    try {
+      await roleRequests.replaceTerminalFailure(
+        requestId,
+        version,
+        (replacementReasonCodes[requestId] ?? "").trim(),
+        (replacementReasons[requestId] ?? "").trim(),
+      );
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "تعذر استبدال تعريف الدور ذي الفشل النهائي.");
     } finally {
       setSubmitting(false);
     }
@@ -139,7 +159,7 @@ export function RoleDefinitionApprovalQueue() {
         <CpStatePanel
           role="status"
           title="لوحة التحكم سطح إلزامي"
-          description="تحديد التطبيقات الأخرى يوثق أثر الدور، ولا يمنح مسار إدارة داخل تلك التطبيقات."
+          description="تُختار الصلاحيات من قاموس Identity المعياري، ولوحة التحكم هي سطح الإدارة الوحيد لهذا الدور."
         />
         <CpButton
           variant="primary"
@@ -171,8 +191,11 @@ export function RoleDefinitionApprovalQueue() {
             </tr>
           </thead>
           <tbody>
-            {roleRequests.state.data.map((request) => (
-              <tr key={request.id}>
+            {roleRequests.state.data.map((request) => {
+              const reviewable = request.status === "pending" && request.executionStatus !== "failed_terminal";
+              const replacementCode = replacementReasonCodes[request.id] ?? "";
+              const replacementReason = replacementReasons[request.id] ?? "";
+              return <tr key={request.id}>
                 <CpTableCell>{request.roleName}</CpTableCell>
               <CpTableCell>{request.description || "بلا وصف"}</CpTableCell>
               <CpTableCell>{request.permissions.join("، ")}</CpTableCell>
@@ -192,19 +215,40 @@ export function RoleDefinitionApprovalQueue() {
                   />
                 </CpTableCell>
                 <CpTableCell>
-                  <CpButton variant="brand" disabled={submitting} onClick={() => void review(request.id, request.version, "approved")}>
+                  <CpButton variant="brand" disabled={submitting || !reviewable} onClick={() => void review(request.id, request.version, "approved")}>
                     اعتماد تعريف الدور
                   </CpButton>{" "}
                   <CpButton
                     variant="danger"
-                    disabled={submitting || (reviewNotes[request.id] ?? "").trim().length < 5}
+                    disabled={submitting || !reviewable || (reviewNotes[request.id] ?? "").trim().length < 5}
                     onClick={() => void review(request.id, request.version, "rejected")}
                   >
                     رفض التعريف
                   </CpButton>
+                  {request.executionStatus === "failed_terminal" && canRequest ? <>
+                    <CpTextInput
+                      value={replacementCode}
+                      onChange={(value) => setReplacementReasonCodes((current) => ({ ...current, [request.id]: value }))}
+                      placeholder="رمز السبب مثل permission_vocabulary_changed"
+                      aria-label={`رمز سبب استبدال ${request.roleName}`}
+                    />
+                    <CpTextInput
+                      value={replacementReason}
+                      onChange={(value) => setReplacementReasons((current) => ({ ...current, [request.id]: value }))}
+                      placeholder="سبب الطلب البديل — خمسة أحرف على الأقل"
+                      aria-label={`سبب الطلب البديل ${request.roleName}`}
+                    />
+                    <CpButton
+                      variant="primary"
+                      disabled={submitting || !/^[a-z][a-z0-9_]{2,63}$/.test(replacementCode.trim()) || replacementReason.trim().length < 5}
+                      onClick={() => void replaceTerminalFailure(request.id, request.version)}
+                    >
+                      تثبيت الفشل وإنشاء طلب بديل
+                    </CpButton>
+                  </> : null}
                 </CpTableCell>
               </tr>
-            ))}
+            })}
           </tbody>
         </CpTable>
       ) : null}

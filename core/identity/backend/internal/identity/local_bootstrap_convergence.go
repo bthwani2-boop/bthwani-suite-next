@@ -62,6 +62,13 @@ WHERE username = ANY($1)
 	if present != len(expected) {
 		return false, nil
 	}
+	roleConverged, err := r.localOperatorRoleDefinitionConverged(ctx)
+	if err != nil {
+		return false, err
+	}
+	if !roleConverged {
+		return false, nil
+	}
 	return r.localOperatorDevelopmentPermissionsConverged(ctx, operatorContextID)
 }
 

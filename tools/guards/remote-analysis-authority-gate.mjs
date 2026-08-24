@@ -57,11 +57,23 @@ mustContain(ci, [
   "expected_head_sha",
   "expected_base_sha",
   "PR_IDENTITY_CONFLICT",
-  "Created canonical draft PR",
-  "BThwani / PR Closure Evidence",
-  "BTHWANI_SEMANTIC_REVIEW:v1",
-  "statuses: write",
 ], "contextual CI control plane");
+const closureEvidence = read(".github/workflows/pr-closure-evidence.yml");
+mustContain(closureEvidence, [
+  "name: BThwani PR Closure Evidence",
+  "name: BThwani / PR Closure Evidence",
+  "statuses: write",
+  "BThwani / PR Closure Evidence",
+  "Publish canonical closure status",
+  "BTHWANI_SEMANTIC_REVIEW:v1",
+], "PR closure evidence workflow");
+const closureDispatch = read(".github/workflows/pr-closure-dispatch.yml");
+mustContain(closureDispatch, [
+  "name: BThwani PR Closure Dispatch",
+  "bthwani:closure-request",
+  "actions: write",
+  "Dispatch unprivileged full CI from the trusted default definition",
+], "PR closure dispatch workflow");
 mustNotContain(ci, ["branches: [\"c\"]", "GITHUB_REF_NAME == \"c\"", "refs/heads/c"], "contextual CI control plane");
 
 const sonarWorkflow = read(".github/workflows/sonarqube.yml");
@@ -73,15 +85,22 @@ mustContain(codeqlWorkflow, ["github/codeql-action/init@", "github/codeql-action
 
 const semgrep = read(".github/workflows/semgrep.yml");
 mustContain(semgrep, [
-  "allRawFindingsAccounted:",
+  "classify-semgrep-evidence.mjs",
   "classifiedEngineErrors",
   "totalFindings",
   "engineConditions",
   "toolLimitationsProven",
   "unknownEngineErrors",
-  "TOOL_LIMITATION_PROVEN",
   "Semgrep findings require diagnosis/disposition before closure",
 ], "Semgrep workflow");
+const semgrepNormalizer = read("tools/scripts/classify-semgrep-evidence.mjs");
+mustContain(semgrepNormalizer, [
+  "allRawFindingsAccounted",
+  "classifiedEngineErrors",
+  "TOOL_LIMITATION_PROVEN",
+  "UNKNOWN_ENGINE_ERROR",
+  "raw",
+], "Semgrep evidence normalizer");
 
 for (const path of [".github/workflows/docker-runtime-hardening.yml", ".github/workflows/lockfile-integrity.yml"]) {
   const text = read(path);
@@ -107,10 +126,9 @@ mustContain(remoteCommand, [
   "pr_number",
   "expected_head_sha",
   "expected_base_sha",
-  "pr-closure",
   "actions/workflows/${WORKFLOW}/dispatches",
 ], "remote command ingress");
-mustNotContain(remoteCommand, ["schema_version == 1", "Invoke-Expression", "github/codeql-action/init@", "sonar-scanner"], "remote command ingress");
+mustNotContain(remoteCommand, ["schema_version == 1", "pr-closure", "Invoke-Expression", "github/codeql-action/init@", "sonar-scanner"], "remote command ingress");
 
 const ocr = read(".github/workflows/open-code-review.yml");
 mustContain(ocr, ["hostAgentRequired: true", "hostAgentExecutedByThisWorkflow: false", "semanticReviewClaimedByThisWorkflow: false"], "OpenCodeReview delegation");

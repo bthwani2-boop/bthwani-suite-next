@@ -177,8 +177,11 @@ func CreateRoleDefinitionRequest(ctx context.Context, db *sql.DB, identityClient
 
 	if _, err := tx.ExecContext(ctx, `
 		INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
-		VALUES ($1, 'ROLE_DEFINITION_REQUESTED', $2, $3, 'restricted', $4)
-	`, actorID, req.ID, "Requested canonical role: "+req.RoleName, req.ID); err != nil {
+		VALUES ($1, 'ROLE_DEFINITION_REQUESTED', $2,
+		        jsonb_build_object('request_id', $2::text, 'reason_provided', TRUE,
+		                           'permission_count', $3::int, 'surface_count', $4::int)::text,
+		        'restricted', $2)
+	`, actorID, req.ID, len(req.Permissions), len(req.Surfaces)); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -200,11 +203,8 @@ func ListRoleDefinitionRequests(ctx context.Context, db *sql.DB, status string) 
 		       request.requested_by, request.reason, request.status,
 		       CASE
 		         WHEN intent.id IS NULL THEN 'not_started'
-		         WHEN intent.status = 'applied' THEN 'applied'
-		         WHEN intent.terminal_failure THEN 'terminal_failure'
-		         WHEN intent.status = 'failed' THEN 'retryable_failure'
-		         WHEN intent.lease_owner IS NOT NULL THEN 'reconciling'
-		         ELSE 'pending'
+		         WHEN intent.status = 'pending' AND intent.lease_owner IS NOT NULL THEN 'reconciling'
+		         ELSE intent.status
 		       END,
 		       request.reviewed_by, request.review_note, request.version,
 		       request.created_at, request.updated_at, request.reviewed_at
@@ -255,11 +255,8 @@ func getRoleDefinitionRequest(ctx context.Context, db *sql.DB, requestID string)
 		       request.requested_by, request.reason, request.status,
 		       CASE
 		         WHEN intent.id IS NULL THEN 'not_started'
-		         WHEN intent.status = 'applied' THEN 'applied'
-		         WHEN intent.terminal_failure THEN 'terminal_failure'
-		         WHEN intent.status = 'failed' THEN 'retryable_failure'
-		         WHEN intent.lease_owner IS NOT NULL THEN 'reconciling'
-		         ELSE 'pending'
+		         WHEN intent.status = 'pending' AND intent.lease_owner IS NOT NULL THEN 'reconciling'
+		         ELSE intent.status
 		       END,
 		       request.reviewed_by, request.review_note, request.version,
 		       request.created_at, request.updated_at, request.reviewed_at
@@ -401,7 +398,14 @@ func ReviewRoleDefinitionRequest(ctx context.Context, db *sql.DB, identityClient
 		`, actorID, params.ReviewNote, requestID, req.Version).Scan(&req.Version, &req.UpdatedAt, &req.ReviewedAt); err != nil {
 			return nil, nil, errors.New("version conflict")
 		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id) VALUES ($1, $2, $3, $4, 'restricted', $5)`, actorID, "ROLE_DEFINITION_REJECTED", req.ID, "Reviewed canonical role: "+req.RoleName, req.ID); err != nil {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
+			VALUES ($1, 'ROLE_DEFINITION_REJECTED', $2,
+			        jsonb_build_object('request_id', $2::text, 'decision', 'rejected',
+			                           'note_provided', btrim($3::text) <> '',
+			                           'permission_count', $4::int, 'surface_count', $5::int)::text,
+			        'restricted', $2)
+		`, actorID, req.ID, params.ReviewNote, len(req.Permissions), len(req.Surfaces)); err != nil {
 			return nil, nil, err
 		}
 		if err := tx.Commit(); err != nil {

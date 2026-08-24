@@ -12,5 +12,5 @@ rules:
     spaces: 2
   comments:
     level: warning
-  truthiness:
+  truthy:
     level: warning

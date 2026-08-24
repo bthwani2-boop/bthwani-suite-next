@@ -7,6 +7,8 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -451,10 +453,37 @@ func (c *Client) ListStaff(ctx context.Context) ([]RbacStaffActor, error) {
 	return result.Staff, nil
 }
 
-func (c *Client) GrantRoleWithIdempotency(ctx context.Context, targetActorID, roleName, requestedByActorID, idempotencyKey string) (RbacActorRoleAssignment, error) {
-	resp, err := c.rbacRequestWithHeaders(ctx, http.MethodPost, "/internal/rbac/actors/"+targetActorID+"/roles", nil, map[string]string{
-		"roleName":           roleName,
-		"requestedByActorId": requestedByActorID,
+// ListActorRoleAssignments returns the durable actor-to-role memberships owned
+// by Identity. Unlike ListStaff, this read intentionally includes assignments
+// to inactive roles so DSH can verify that a revoke removed the canonical row
+// rather than merely hiding it from the effective-access projection.
+func (c *Client) ListActorRoleAssignments(ctx context.Context, actorID string) ([]RbacActorRoleAssignment, error) {
+	actorID = strings.TrimSpace(actorID)
+	if actorID == "" {
+		return nil, ErrIdentityUnavailable
+	}
+	resp, err := c.rbacRequest(ctx, http.MethodGet, "/internal/rbac/actors/"+url.PathEscape(actorID)+"/roles", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, ErrIdentityUnavailable
+	}
+	var result struct {
+		Assignments []RbacActorRoleAssignment `json:"assignments"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, ErrIdentityUnavailable
+	}
+	return result.Assignments, nil
+}
+
+func (c *Client) GrantRoleWithIdempotency(ctx context.Context, targetActorID, roleName, requestedByActorID string, expectedRoleVersion int, idempotencyKey string) (RbacActorRoleAssignment, error) {
+	resp, err := c.rbacRequestWithHeaders(ctx, http.MethodPost, "/internal/rbac/actors/"+targetActorID+"/roles", nil, map[string]any{
+		"roleName":            roleName,
+		"requestedByActorId":  requestedByActorID,
+		"expectedRoleVersion": expectedRoleVersion,
 	}, map[string]string{"Idempotency-Key": idempotencyKey, "X-Canonical-Intent-ID": idempotencyKey})
 	if err != nil {
 		return RbacActorRoleAssignment{}, err
@@ -472,16 +501,17 @@ func (c *Client) GrantRoleWithIdempotency(ctx context.Context, targetActorID, ro
 	case http.StatusBadRequest:
 		return RbacActorRoleAssignment{}, ErrRbacSelfGrant
 	case http.StatusConflict:
-		return RbacActorRoleAssignment{}, ErrRbacConflict
+		return RbacActorRoleAssignment{}, rbacConflictError(resp)
 	default:
 		return RbacActorRoleAssignment{}, ErrIdentityUnavailable
 	}
 }
 
-func (c *Client) RevokeRoleWithIdempotency(ctx context.Context, targetActorID, roleName, requestedByActorID, idempotencyKey string) error {
+func (c *Client) RevokeRoleWithIdempotency(ctx context.Context, targetActorID, roleName, requestedByActorID string, expectedRoleVersion int, idempotencyKey string) error {
 	resp, err := c.rbacRequestWithHeaders(ctx, http.MethodDelete, "/internal/rbac/actors/"+targetActorID+"/roles", map[string]string{
-		"roleName":           roleName,
-		"requestedByActorId": requestedByActorID,
+		"roleName":            roleName,
+		"requestedByActorId":  requestedByActorID,
+		"expectedRoleVersion": strconv.Itoa(expectedRoleVersion),
 	}, nil, map[string]string{"Idempotency-Key": idempotencyKey, "X-Canonical-Intent-ID": idempotencyKey})
 	if err != nil {
 		return err
@@ -493,8 +523,18 @@ func (c *Client) RevokeRoleWithIdempotency(ctx context.Context, targetActorID, r
 	case http.StatusBadRequest:
 		return ErrRbacSelfGrant
 	case http.StatusConflict:
-		return ErrRbacConflict
+		return rbacConflictError(resp)
 	default:
 		return ErrIdentityUnavailable
 	}
+}
+
+func rbacConflictError(resp *http.Response) error {
+	var payload struct {
+		Code string `json:"code"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err == nil && payload.Code == "ROLE_VERSION_CONFLICT" {
+		return ErrRbacVersionConflict
+	}
+	return ErrRbacConflict
 }

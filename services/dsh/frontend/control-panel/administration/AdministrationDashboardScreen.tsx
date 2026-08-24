@@ -39,7 +39,7 @@ function statePanel(state: CountableState, loadingTitle: string) {
 }
 
 function permissionLabel(permission: DshRolePermission): string {
-  return `${permission.service}/${permission.surface}/${permission.action} [${permission.scope}]`;
+  return permission;
 }
 
 export function AdministrationDashboardScreen() {

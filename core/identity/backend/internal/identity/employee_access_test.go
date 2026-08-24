@@ -13,6 +13,24 @@ func TestEmployeeActivationSurfaceRegistered(t *testing.T) {
 	}
 }
 
+func TestMergeEmployeePermissionsPreservesExistingAndDeduplicatesRequested(t *testing.T) {
+	existingPermission := Permission{Service: "dsh", Surface: "control-panel", Action: "staff:read", Scope: "all"}
+	requestedPermission := Permission{Service: "dsh", Surface: "control-panel", Action: "staff:write", Scope: "department:operations"}
+	existing := []Permission{existingPermission, existingPermission}
+	requested := []Permission{existingPermission, requestedPermission, requestedPermission}
+
+	merged := mergeEmployeePermissions(existing, requested)
+	if len(merged) != 3 {
+		t.Fatalf("merged permission count = %d, want 3: %#v", len(merged), merged)
+	}
+	if merged[0] != existingPermission || merged[1] != existingPermission {
+		t.Fatalf("existing permissions were not preserved in order: %#v", merged)
+	}
+	if merged[2] != requestedPermission {
+		t.Fatalf("unique requested permission was not appended exactly once: %#v", merged)
+	}
+}
+
 func TestEmployeeActivationMigrationRegistersPersistedContract(t *testing.T) {
 	migration, err := os.ReadFile("../../../database/migrations/identity-008_employee_activation_surface.sql")
 	if err != nil {

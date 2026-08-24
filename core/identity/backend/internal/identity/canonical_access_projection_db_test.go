@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -12,7 +13,15 @@ import (
 func cleanupCanonicalAccessProjectionTest(t *testing.T, db *sql.DB, actorID, roleName string) {
 	t.Helper()
 	cleanup := func() {
-		_, _ = db.Exec(`DELETE FROM identity_rbac_operation_ledger WHERE caller = $1 AND operation IN ('role-grant', 'role-revoke') AND idempotency_key IN ($2, $3)`, "projection-test", "canonical-access-projection:grant:"+actorID+":"+roleName, "canonical-access-projection:revoke:"+actorID+":"+roleName)
+		_, _ = db.Exec(`
+			DELETE FROM identity_rbac_operation_ledger
+			WHERE caller = $1
+			  AND idempotency_key IN ($2, $3, $4, $5)`,
+			"projection-test",
+			"canonical-access-projection:grant:"+actorID+":"+roleName,
+			"canonical-access-projection:deactivate:"+actorID+":"+roleName,
+			"canonical-access-projection:revoke:"+actorID+":"+roleName,
+			"canonical-access-projection:reactivate:"+actorID+":"+roleName)
 		_, _ = db.Exec(`DELETE FROM identity_actors WHERE id = $1`, actorID)
 		_, _ = db.Exec(`DELETE FROM identity_roles WHERE name = $1`, roleName)
 		_, _ = db.Exec(`
@@ -93,7 +102,7 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 		role.ID, permissionID); err != nil {
 		t.Fatalf("attach permission to role: %v", err)
 	}
-	if err := repository.replaceActorAccess(context.Background(), actorID, []string{"employee"}, directPermissions, "projection-test"); err != nil {
+	if err := repository.replaceActorAccess(context.Background(), actorID, nil, directPermissions, "projection-test"); err != nil {
 		t.Fatalf("seed canonical actor access: %v", err)
 	}
 
@@ -124,7 +133,7 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 		t.Fatalf("direct actor permission was lost before grant: %#v", before.Permissions)
 	}
 
-	if _, inserted, err := repository.Enforcer.GrantRoleWithIdempotency(context.Background(), actorID, roleName, "reviewer-agent2", "canonical-access-projection:grant:"+actorID+":"+roleName, "projection-test"); err != nil || !inserted {
+	if _, inserted, err := repository.Enforcer.GrantRoleWithIdempotency(context.Background(), actorID, roleName, "reviewer-agent2", role.Version, "canonical-access-projection:grant:"+actorID+":"+roleName, "projection-test"); err != nil || !inserted {
 		t.Fatalf("grant role: inserted=%v err=%v", inserted, err)
 	}
 
@@ -137,6 +146,13 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 	}
 	if !hasCanonicalPermission(granted.Permissions, "providers", "control-panel", "maps:invoke", "all") {
 		t.Fatalf("existing session did not observe role-derived permission: %#v", granted.Permissions)
+	}
+	durableAssignments, err := repository.Enforcer.ListActorRoleAssignments(context.Background(), actorID)
+	if err != nil {
+		t.Fatalf("list durable assignments after grant: %v", err)
+	}
+	if len(durableAssignments) != 1 || durableAssignments[0].RoleID != role.ID || durableAssignments[0].RoleName != roleName {
+		t.Fatalf("durable assignment after grant = %#v", durableAssignments)
 	}
 
 	// Legacy projection writes are rejected. Canonical role-derived authority is
@@ -163,8 +179,77 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 		t.Fatalf("role-derived permission was promoted into direct authority: count=%d", redundantDirect)
 	}
 
-	if err := repository.Enforcer.RevokeRoleWithIdempotency(context.Background(), actorID, roleName, "reviewer-agent2", "canonical-access-projection:revoke:"+actorID+":"+roleName, "projection-test"); err != nil {
-		t.Fatalf("revoke role: %v", err)
+	rolePermission := []Permission{{
+		Service: "providers", Surface: "control-panel", Action: "maps:invoke", Scope: "all",
+	}}
+	deactivatedRole, err := repository.Enforcer.UpsertRoleDefinitionWithOptions(
+		context.Background(),
+		roleName,
+		role.Description,
+		false,
+		role.Version,
+		rolePermission,
+		"canonical-access-projection:deactivate:"+actorID+":"+roleName,
+		"projection-test",
+	)
+	if err != nil {
+		t.Fatalf("canonically deactivate role: %v", err)
+	}
+	if deactivatedRole.Active {
+		t.Fatalf("canonical role remained active after deactivation: %#v", deactivatedRole)
+	}
+
+	durableAssignments, err = repository.Enforcer.ListActorRoleAssignments(context.Background(), actorID)
+	if err != nil {
+		t.Fatalf("list durable assignments after deactivation: %v", err)
+	}
+	if len(durableAssignments) != 1 || durableAssignments[0].RoleID != role.ID {
+		t.Fatalf("inactive role assignment was not durable: %#v", durableAssignments)
+	}
+	if err := repository.Enforcer.RevokeRoleWithIdempotency(
+		context.Background(),
+		actorID,
+		roleName,
+		"reviewer-agent2",
+		role.Version,
+		"canonical-access-projection:stale-revoke:"+actorID+":"+roleName,
+		"projection-test",
+	); !errors.Is(err, ErrRoleVersionConflict) {
+		t.Fatalf("stale role version must fence revoke, got %v", err)
+	}
+	durableAssignments, err = repository.Enforcer.ListActorRoleAssignments(context.Background(), actorID)
+	if err != nil || len(durableAssignments) != 1 {
+		t.Fatalf("stale fenced revoke changed durable assignment: assignments=%#v err=%v", durableAssignments, err)
+	}
+	staff, err := repository.Enforcer.ListStaffActors(context.Background())
+	if err != nil {
+		t.Fatalf("list effective staff after deactivation: %v", err)
+	}
+	for _, staffActor := range staff {
+		if staffActor.ID == actorID {
+			t.Fatalf("inactive role assignment leaked into effective staff: %#v", staffActor)
+		}
+	}
+	deactivated, err := repository.ResolveAccessToken(context.Background(), accessToken)
+	if err != nil {
+		t.Fatalf("resolve after role deactivation: %v", err)
+	}
+	if hasRole(deactivated.Roles, roleName) || hasCanonicalPermission(deactivated.Permissions, "providers", "control-panel", "maps:invoke", "all") {
+		t.Fatalf("inactive durable assignment remained effective: %#v", deactivated)
+	}
+
+	if err := repository.Enforcer.RevokeRoleWithIdempotency(context.Background(), actorID, roleName, "reviewer-agent2", deactivatedRole.Version, "canonical-access-projection:revoke:"+actorID+":"+roleName, "projection-test"); err != nil {
+		t.Fatalf("revoke inactive role: %v", err)
+	}
+	if err := repository.Enforcer.RevokeRoleWithIdempotency(context.Background(), actorID, roleName, "reviewer-agent2", deactivatedRole.Version, "canonical-access-projection:revoke:"+actorID+":"+roleName, "projection-test"); err != nil {
+		t.Fatalf("retry inactive role revoke: %v", err)
+	}
+	durableAssignments, err = repository.Enforcer.ListActorRoleAssignments(context.Background(), actorID)
+	if err != nil {
+		t.Fatalf("list durable assignments after revoke: %v", err)
+	}
+	if len(durableAssignments) != 0 {
+		t.Fatalf("revoked durable assignment remained present: %#v", durableAssignments)
 	}
 
 	revoked, err := repository.ResolveAccessToken(context.Background(), accessToken)
@@ -179,6 +264,30 @@ func TestCanonicalAccessProjectionMakesRoleGrantAndRevokeImmediateForExistingSes
 	}
 	if !hasCanonicalPermission(revoked.Permissions, "dsh", "control-panel", "platform:read", "all") {
 		t.Fatalf("unrelated direct permission was removed by role revoke: %#v", revoked.Permissions)
+	}
+
+	reactivatedRole, err := repository.Enforcer.UpsertRoleDefinitionWithOptions(
+		context.Background(),
+		roleName,
+		role.Description,
+		true,
+		deactivatedRole.Version,
+		rolePermission,
+		"canonical-access-projection:reactivate:"+actorID+":"+roleName,
+		"projection-test",
+	)
+	if err != nil {
+		t.Fatalf("canonically reactivate role: %v", err)
+	}
+	if !reactivatedRole.Active {
+		t.Fatalf("canonical role remained inactive after reactivation: %#v", reactivatedRole)
+	}
+	afterReactivation, err := repository.ResolveAccessToken(context.Background(), accessToken)
+	if err != nil {
+		t.Fatalf("resolve after role reactivation: %v", err)
+	}
+	if hasRole(afterReactivation.Roles, roleName) || hasCanonicalPermission(afterReactivation.Permissions, "providers", "control-panel", "maps:invoke", "all") {
+		t.Fatalf("revoked assignment regained authority after role reactivation: %#v", afterReactivation)
 	}
 
 	var projectionDrift bool

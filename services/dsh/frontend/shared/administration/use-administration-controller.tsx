@@ -14,8 +14,6 @@ import {
   reviewRoleDefinitionRequest,
   fetchStaff,
   requestStaffRoleChange,
-  fetchPartnerActivations,
-  fetchCaptainCredentials,
   fetchAdminAudit,
   fetchRoleAssignmentApprovals,
   reviewRoleAssignmentApproval,
@@ -24,12 +22,13 @@ import {
   reviewRollbackRequest,
   fetchAdministrationDiagnostics,
   fetchPermissionVocabulary,
+  replaceFailedRoleDefinitionRequest,
+  replaceFailedRoleAssignmentApproval,
+  replaceFailedRollbackRequest,
 } from "./administration.api";
 import type {
   DshRole,
   DshStaffMember,
-  DshPartnerActivation,
-  DshCaptainCredential,
   DshAdminAuditEntry,
   DshAdminState,
   DshRoleAssignmentApproval,
@@ -156,7 +155,7 @@ export function useRoleDefinitionApprovalController(
     permissions: readonly string[];
     reason: string;
   }) => {
-    const response = await requestRoleDefinition(input);
+    const response = await requestRoleDefinition({ ...input, permissions: [...input.permissions] });
     await invalidate(["role-definitions", "audit", "diagnostics"]);
     return response.request;
   }, [invalidate]);
@@ -173,7 +172,22 @@ export function useRoleDefinitionApprovalController(
       : ["role-definitions", "audit", "diagnostics"]);
   }, [invalidate]);
 
-  return { state, reload, request, review };
+  const replaceTerminalFailure = useCallback(async (
+    requestId: string,
+    expectedVersion: number,
+    reasonCode: string,
+    replacementReason: string,
+  ) => {
+    const response = await replaceFailedRoleDefinitionRequest(requestId, {
+      expectedVersion,
+      reasonCode,
+      replacementReason,
+    });
+    await invalidate(["role-definitions", "audit", "diagnostics"]);
+    return response.request;
+  }, [invalidate]);
+
+  return { state, reload, request, review, replaceTerminalFailure };
 }
 
 export function useStaffController(authKind: string, enabled = true) {
@@ -229,7 +243,22 @@ export function useRoleAssignmentApprovalController(
     return response.request;
   }, [invalidate]);
 
-  return { state, reload, review, requestRollback };
+  const replaceTerminalFailure = useCallback(async (
+    approvalId: string,
+    expectedVersion: number,
+    reasonCode: string,
+    replacementReason: string,
+  ) => {
+    const response = await replaceFailedRoleAssignmentApproval(approvalId, {
+      expectedVersion,
+      reasonCode,
+      replacementReason,
+    });
+    await invalidate(["role-assignments", "audit", "diagnostics"]);
+    return response.approval;
+  }, [invalidate]);
+
+  return { state, reload, review, requestRollback, replaceTerminalFailure };
 }
 
 export function useAdministrationRollbackController(
@@ -254,7 +283,21 @@ export function useAdministrationRollbackController(
       ? ["rollbacks", "staff", "audit", "diagnostics"]
       : ["rollbacks", "audit", "diagnostics"]);
   }, [invalidate]);
-  return { state, reload, review };
+  const replaceTerminalFailure = useCallback(async (
+    requestId: string,
+    expectedVersion: number,
+    reasonCode: string,
+    replacementReason: string,
+  ) => {
+    const response = await replaceFailedRollbackRequest(requestId, {
+      expectedVersion,
+      reasonCode,
+      replacementReason,
+    });
+    await invalidate(["rollbacks", "audit", "diagnostics"]);
+    return response.request;
+  }, [invalidate]);
+  return { state, reload, review, replaceTerminalFailure };
 }
 
 export function useAdministrationDiagnosticsController(authKind: string, enabled = true) {
@@ -265,18 +308,8 @@ export function useAdministrationDiagnosticsController(authKind: string, enabled
   return useReadModel(authKind, "diagnostics", loader, enabled);
 }
 
-export function usePartnerActivationReadController(authKind: string, enabled = true) {
-  const loader = useCallback(async (): Promise<DshPartnerActivation[]> => (await fetchPartnerActivations()).activations, []);
-  return useReadModel(authKind, null, loader, enabled);
-}
-
-export function useCaptainCredentialController(authKind: string, enabled = true) {
-  const loader = useCallback(async (): Promise<DshCaptainCredential[]> => (await fetchCaptainCredentials()).credentials, []);
-  return useReadModel(authKind, null, loader, enabled);
-}
-
 export function useAdminAuditController(authKind: string, enabled = true) {
-  const loader = useCallback(async (): Promise<DshAdminAuditEntry[]> => (await fetchAdminAudit()).audit, []);
+  const loader = useCallback(async (): Promise<DshAdminAuditEntry[]> => (await fetchAdminAudit()).entries, []);
   return useReadModel(authKind, "audit", loader, enabled);
 }
 

@@ -259,7 +259,7 @@ func permissionIdentityKey(permission Permission) string {
 
 func mergeEmployeePermissions(existing, requested []Permission) []Permission {
 	result := append([]Permission{}, existing...)
-	seen := make(map[string]struct{}, len(result)+len(requested))
+	seen := make(map[string]struct{}, len(result))
 	for _, permission := range result {
 		seen[permissionIdentityKey(permission)] = struct{}{}
 	}

@@ -1,7 +1,22 @@
 name: BThwani Lockfile Integrity
 
+run-name: ${{ github.event_name == 'pull_request' && format('Lockfile Integrity PR #{0}', github.event.pull_request.number) || format('Lockfile Integrity dispatched candidate {0}', inputs.head_sha || github.sha) }}
+
 on:
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number for exact closure verification
+        required: false
+        type: string
+      head_sha:
+        description: Immutable candidate SHA
+        required: false
+        type: string
+      base_sha:
+        description: Immutable PR base SHA
+        required: false
+        type: string
   pull_request:
     branches: ["**"]
     paths:
@@ -17,7 +32,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: lockfile-integrity-${{ github.event.pull_request.number || github.ref }}
+  group: lockfile-integrity-${{ inputs.head_sha || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -28,14 +43,14 @@ jobs:
       - name: Checkout immutable candidate source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
           persist-credentials: false
 
       - name: Verify exact candidate checkout
         shell: bash
         env:
-          EXPECTED_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          EXPECTED_SOURCE_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           [[ "$(git rev-parse HEAD)" == "${EXPECTED_SOURCE_SHA}" ]] || { echo "::error::Lockfile candidate drift"; exit 1; }

@@ -457,38 +457,6 @@ DshSubmitPartnerOfferRequest:
     eligibility: { type: string }
 # ── Platform Policies Schemas ────────────────────────────────────
 
-DshPartnerActivation:
-  type: object
-  required: [partnerId, status, submittedAt]
-  properties:
-    partnerId: { type: string }
-    status: { type: string }
-    submittedAt: { type: string, format: date-time }
-    reviewedAt: { type: ["string", "null"], format: date-time }
-    reviewedBy: { type: string }
-    rejectionReason: { type: string }
-
-DshPartnerActivationsListResponse:
-  type: object
-  required: [partners, total]
-  properties:
-    partners:
-      type: array
-      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshPartnerActivation" }
-    total: { type: integer }
-
-DshActivatePartnerRequest:
-  type: object
-  required: [note]
-  properties:
-    note: { type: string }
-
-DshBlockPartnerRequest:
-  type: object
-  required: [reason]
-  properties:
-    reason: { type: string, minLength: 1 }
-
 DshPartnerDeliveryTaskStatus:
   type: string
   enum:

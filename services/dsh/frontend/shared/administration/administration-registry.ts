@@ -35,6 +35,7 @@ export function administrationStatusLabel(status: string): string {
     case "pending": return "معلق";
     case "approved": return "معتمد";
     case "rejected": return "مرفوض";
+    case "superseded": return "مستبدل بطلب جديد";
     case "active": return "نشط";
     case "suspended": return "موقوف";
     case "blocked": return "محظور";
@@ -51,7 +52,7 @@ export function administrationExecutionStatusLabel(status: string): string {
     case "pending": return "بانتظار التنفيذ";
     case "reconciling": return "قيد المطابقة";
     case "retryable_failure": return "تعذر مؤقتًا — ستتم إعادة المحاولة";
-    case "terminal_failure": return "فشل نهائي — يحتاج تدخلًا";
+    case "failed_terminal": return "فشل نهائي — أنشئ طلبًا بديلًا";
     case "applied": return "تم التحقق والتطبيق";
     default: return status || "حالة التنفيذ غير معروفة";
   }

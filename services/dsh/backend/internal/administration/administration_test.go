@@ -6,10 +6,10 @@ import (
 )
 
 func TestAuditRedactionDropsSensitiveValues(t *testing.T) {
-	legacy := "approval_id=approval-1; role_id=role-1; reason=phone +967700000000; note=secret token"
+	legacy := "request_id=request-1; action_type=staff_role_assignment; role_id=role-1; reason=phone +967700000000; note=secret token"
 	redacted := redactAuditDetail(legacy)
-	if !strings.Contains(redacted, "approval_id=approval-1") || !strings.Contains(redacted, "role_id=role-1") {
-		t.Fatalf("expected allowlisted keys, got %q", redacted)
+	if redacted != "{}" {
+		t.Fatalf("legacy free text must fail closed after migration, got %q", redacted)
 	}
 	for _, forbidden := range []string{"+967", "secret", "reason=", "note="} {
 		if strings.Contains(redacted, forbidden) {
@@ -17,9 +17,9 @@ func TestAuditRedactionDropsSensitiveValues(t *testing.T) {
 		}
 	}
 
-	jsonDetail := `{"role_id":"role-2","phone":"+967711111111","note":"credential"}`
+	jsonDetail := `{"request_id":"request-2","role_id":"role-2","phone":"+967711111111","note":"credential"}`
 	redacted = redactAuditDetail(jsonDetail)
-	if redacted != `{"role_id":"role-2"}` {
+	if redacted != `{"request_id":"request-2"}` {
 		t.Fatalf("unexpected JSON redaction %q", redacted)
 	}
 }
@@ -49,12 +49,12 @@ func TestValidateRoleReviewSeparation(t *testing.T) {
 
 func TestValidateRollbackReviewSeparation(t *testing.T) {
 	tests := []struct {
-		name           string
-		maker          string
-		beneficiary    string
-		sourceChecker  string
+		name            string
+		maker           string
+		beneficiary     string
+		sourceChecker   string
 		rollbackChecker string
-		wantErr        bool
+		wantErr         bool
 	}{
 		{name: "pairwise distinct", maker: "rollback-maker", beneficiary: "beneficiary", sourceChecker: "source-checker", rollbackChecker: "rollback-checker", wantErr: false},
 		{name: "rollback checker is maker", maker: "rollback-checker", beneficiary: "beneficiary", sourceChecker: "source-checker", rollbackChecker: "rollback-checker", wantErr: true},

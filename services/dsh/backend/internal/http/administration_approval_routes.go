@@ -17,8 +17,6 @@ func RegisterAdministrationRoutes(
 	mediaProvider *media.Provider,
 ) {
 	server := newProtectedStoreServer(db, identityClient, wltClient, nil, mediaProvider)
-	router.HandleFunc("GET /dsh/operator/admin/partners", server.handleListPartnerActivations)
-	router.HandleFunc("GET /dsh/operator/admin/captains", server.handleListCaptainCredentials)
 	router.HandleFunc("GET /dsh/operator/admin/audit", server.handleListAdminAudit)
 	router.HandleFunc("GET /dsh/operator/admin/permission-vocabulary", server.handleListPermissionVocabulary)
 }

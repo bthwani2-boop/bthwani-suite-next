@@ -15,9 +15,10 @@ func TestJourney031ExposesGovernedAdministrationRoutes(t *testing.T) {
 		path    string
 		pattern string
 	}{
-		{name: "list partner activations", method: http.MethodGet, path: "/dsh/operator/admin/partners", pattern: "GET /dsh/operator/admin/partners"},
-		{name: "list captain credentials", method: http.MethodGet, path: "/dsh/operator/admin/captains", pattern: "GET /dsh/operator/admin/captains"},
 		{name: "list audit", method: http.MethodGet, path: "/dsh/operator/admin/audit", pattern: "GET /dsh/operator/admin/audit"},
+		{name: "replace failed role definition", method: http.MethodPost, path: "/dsh/operator/admin/role-requests/request-1/replacements", pattern: "POST /dsh/operator/admin/role-requests/{requestId}/replacements"},
+		{name: "replace failed role assignment", method: http.MethodPost, path: "/dsh/operator/admin/approvals/approval-1/replacements", pattern: "POST /dsh/operator/admin/approvals/{approvalId}/replacements"},
+		{name: "replace failed rollback", method: http.MethodPost, path: "/dsh/operator/admin/rollback-requests/request-1/replacements", pattern: "POST /dsh/operator/admin/rollback-requests/{requestId}/replacements"},
 	}
 
 	for _, tc := range cases {
@@ -31,5 +32,16 @@ func TestJourney031ExposesGovernedAdministrationRoutes(t *testing.T) {
 				t.Fatalf("expected route %q, got %q", tc.pattern, pattern)
 			}
 		})
+	}
+
+	for _, path := range []string{"/dsh/operator/admin/partners", "/dsh/operator/admin/captains"} {
+		request, err := http.NewRequest(http.MethodGet, path, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, pattern := router.Handler(request)
+		if pattern != "" {
+			t.Fatalf("superseded local projection route %q remains reachable as %q", path, pattern)
+		}
 	}
 }

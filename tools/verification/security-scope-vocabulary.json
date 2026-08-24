@@ -139,8 +139,6 @@
       "scopes": [
         { "scope": "administration.audit.read", "domain": "dsh" },
         { "scope": "administration.diagnostics.read", "domain": "dsh" },
-        { "scope": "administration.captain.read", "domain": "dsh" },
-        { "scope": "administration.partner.read", "domain": "dsh" },
         { "scope": "administration.role.read", "domain": "dsh" },
         { "scope": "administration.role.approve", "domain": "dsh" },
         { "scope": "administration.role.request", "domain": "dsh" },

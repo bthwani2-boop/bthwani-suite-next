@@ -1,5 +1,7 @@
 name: Remote Security
 
+run-name: ${{ github.event_name == 'pull_request' && format('Remote Security PR #{0}', github.event.pull_request.number) || github.event_name == 'push' && format('Remote Security push {0}', github.sha) || format('Remote Security dispatched candidate {0}', inputs.head_sha || github.sha) }}
+
 on:
   pull_request:
     branches: ["**"]
@@ -9,13 +11,26 @@ on:
   schedule:
     - cron: "41 4 * * 1"
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number for exact closure analysis
+        required: false
+        type: string
+      head_sha:
+        description: Immutable candidate SHA
+        required: false
+        type: string
+      base_sha:
+        description: Immutable PR base SHA
+        required: false
+        type: string
 
 permissions:
   contents: read
   pull-requests: read
 
 concurrency:
-  group: remote-security-${{ github.event.pull_request.number || github.ref }}
+  group: remote-security-${{ inputs.head_sha || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -33,10 +48,22 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           BRANCH: ${{ github.ref_name }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+          INPUT_HEAD_SHA: ${{ inputs.head_sha }}
+          INPUT_BASE_SHA: ${{ inputs.base_sha }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           skip=false
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" && -n "${INPUT_PR_NUMBER:-}" ]]; then
+            [[ "${INPUT_PR_NUMBER}" =~ ^[1-9][0-9]*$ ]] || { echo "::error::pr_number must be a positive integer"; exit 1; }
+            [[ "${INPUT_HEAD_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::head_sha must be a full SHA"; exit 1; }
+            [[ "${INPUT_BASE_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::base_sha must be a full SHA"; exit 1; }
+            pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${INPUT_PR_NUMBER}")"
+            [[ "$(jq -r '.state' <<<"${pr}")" == "open" ]] || { echo "::error::closure PR is not open"; exit 1; }
+            [[ "$(jq -r '.head.sha' <<<"${pr}")" == "${INPUT_HEAD_SHA}" ]] || { echo "::error::closure PR head drift"; exit 1; }
+            [[ "$(jq -r '.base.sha' <<<"${pr}")" == "${INPUT_BASE_SHA}" ]] || { echo "::error::closure PR base drift"; exit 1; }
+          fi
           if [[ "${EVENT_NAME}" == "push" && "${BRANCH}" != "${DEFAULT_BRANCH}" ]]; then
             open_pr_count="$(gh api --method GET \
               -H "X-GitHub-Api-Version: 2022-11-28" \
@@ -61,7 +88,7 @@ jobs:
       - name: Checkout immutable candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 1
           persist-credentials: false
           show-progress: false
@@ -69,7 +96,7 @@ jobs:
       - name: Verify exact candidate checkout
         shell: bash
         env:
-          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          EXPECTED_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           actual="$(git rev-parse HEAD)"
@@ -113,7 +140,7 @@ jobs:
       - name: Checkout immutable candidate with history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
           show-progress: false
@@ -121,7 +148,7 @@ jobs:
       - name: Verify exact candidate checkout
         shell: bash
         env:
-          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          EXPECTED_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           actual="$(git rev-parse HEAD)"
@@ -155,7 +182,7 @@ jobs:
         shell: bash
         env:
           ANALYZER: ${{ matrix.analyzer }}
-          CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+          CANDIDATE_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
           TOOLCHAIN_OUTCOME: ${{ steps.toolchain.outcome }}
         run: |
           set +e
@@ -178,7 +205,19 @@ jobs:
               yamllint) node tools/scripts/run-yamllint.mjs >"${log}" 2>&1; status=$? ;;
               *) printf 'unknown analyzer: %s\n' "${ANALYZER}" > "${log}"; status=125 ;;
             esac
-            if [[ "${status}" -eq 0 ]]; then outcome=PASS; else outcome=FAIL; fi
+            if [[ "${status}" -eq 0 ]]; then
+              outcome=PASS
+              policy_marker='(^|[[:space:]]|\[[^]]+[[:space:]])(WARN|SKIP|BLOCKED)(\]|:|[[:space:]]|$)'
+              if grep -Eiq "${policy_marker}" "${log}"; then
+                if grep -Eiq '(^|[[:space:]]|\[[^]]+[[:space:]])BLOCKED(\]|:|[[:space:]]|$)' "${log}"; then outcome=BLOCKED
+                elif grep -Eiq '(^|[[:space:]]|\[[^]]+[[:space:]])SKIP(\]|:|[[:space:]]|$)' "${log}"; then outcome=SKIP
+                else outcome=WARN
+                fi
+                status=1
+              fi
+            else
+              outcome=FAIL
+            fi
           fi
           jq -n \
             --arg analyzer "${ANALYZER}" \
@@ -188,6 +227,7 @@ jobs:
             --arg log "${ANALYZER}.log" \
             '{schemaVersion:1, analyzer:$analyzer, candidateSha:$candidateSha, scope:$scope, outcome:$outcome, log:$log}' \
             > "${RUNNER_TEMP}/remote-security-evidence/${ANALYZER}.json"
+          [[ "${outcome}" == "PASS" ]] || status=1
           exit "${status}"
 
       - name: Upload independent analyzer evidence
@@ -213,7 +253,7 @@ jobs:
           }
 
   result:
-    name: Remote security result
+    name: ${{ github.event_name == 'pull_request' && 'Remote Security / PR result' || github.event_name == 'push' && 'Remote Security / push result' || 'Remote Security / dispatched result' }}
     needs: [ownership, authority, security]
     if: ${{ always() }}
     runs-on: ubuntu-24.04

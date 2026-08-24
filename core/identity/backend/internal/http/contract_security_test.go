@@ -173,3 +173,28 @@ func TestIdentityRbacMutationsRequireCanonicalIntentBinding(t *testing.T) {
 		}
 	}
 }
+
+func TestIdentityRbacActorRoleAssignmentsGetIsReadOnly(t *testing.T) {
+	contract := readIdentityRbacAdminContract(t)
+	block := identityMethodBlock(t, contract, "/internal/rbac/actors/{actorId}/roles", "get")
+
+	for _, required := range []string{
+		"- serviceToken: []",
+		"- $ref: '#/components/parameters/Authorization'",
+		"- $ref: '#/components/parameters/DshServiceCaller'",
+		"required: [assignments]",
+		"#/components/schemas/RbacActorRoleAssignment",
+	} {
+		if !strings.Contains(block, required) {
+			t.Errorf("actor-role assignment GET is missing %s", required)
+		}
+	}
+	for _, mutationHeader := range []string{
+		"#/components/parameters/IdempotencyKey",
+		"#/components/parameters/CanonicalIntentId",
+	} {
+		if strings.Contains(block, mutationHeader) {
+			t.Errorf("read-only actor-role assignment GET must not require %s", mutationHeader)
+		}
+	}
+}

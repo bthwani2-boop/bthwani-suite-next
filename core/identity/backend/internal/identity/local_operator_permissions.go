@@ -92,18 +92,15 @@ func localOperatorDevelopmentPermissions() []Permission {
 	}
 }
 
-func localOperatorCanonicalPermissions() ([]Permission, error) {
-	sovereignPermissions, err := employeeBundlePermissions(
-		EmployeeBundlePlatformOwner,
-		"platform",
-	)
-	if err != nil {
-		return nil, err
+// localOperatorRolePermissions is the exact durable definition seeded by
+// identity-027. The operator role is intentionally small: local bootstrap's
+// broad development access is direct actor authority, while the role keeps
+// only the shared support boundary used by deployed control-panel operators.
+func localOperatorRolePermissions() []Permission {
+	return []Permission{
+		{Service: "dsh", Surface: "control-panel", Action: "support.read", Scope: "all"},
+		{Service: "dsh", Surface: "control-panel", Action: "support.manage", Scope: "all"},
 	}
-	return mergeEmployeePermissions(
-		localOperatorDevelopmentPermissions(),
-		sovereignPermissions,
-	), nil
 }
 func permissionSetKey(permission Permission) string {
 	return permission.Service + "\x00" + permission.Surface + "\x00" + permission.Action + "\x00" + permission.Scope
@@ -153,11 +150,56 @@ WHERE id = 'operator-local-001'
 		return false, err
 	}
 
-	expected, err := localOperatorCanonicalPermissions()
+	expected := localOperatorDevelopmentPermissions()
+	return permissionSetsEqual(actorPermissions, expected), nil
+}
+
+func (r *Repository) localOperatorRoleDefinitionConverged(ctx context.Context) (bool, error) {
+	role, err := r.Enforcer.GetRoleDefinition(ctx, "operator")
+	if errors.Is(err, ErrRoleNotFound) {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}
-	return permissionSetsEqual(actorPermissions, expected), nil
+	return role.Active && permissionSetsEqual(role.Permissions, localOperatorRolePermissions()), nil
+}
+
+// reconcileLocalOperatorRoleDefinition repairs role-definition drift through
+// Identity's canonical, idempotent role writer. Bootstrap never creates role
+// or permission vocabulary and never writes identity_role_permissions directly.
+func (r *Repository) reconcileLocalOperatorRoleDefinition(ctx context.Context) error {
+	role, err := r.Enforcer.GetRoleDefinition(ctx, "operator")
+	if errors.Is(err, ErrRoleNotFound) {
+		return fmt.Errorf("canonical operator role is absent from Identity vocabulary")
+	}
+	if err != nil {
+		return err
+	}
+
+	expected := localOperatorRolePermissions()
+	if role.Active && permissionSetsEqual(role.Permissions, expected) {
+		return nil
+	}
+
+	requestHash := roleDefinitionRequestHash(
+		role.Name,
+		role.Description,
+		true,
+		role.Version,
+		expected,
+	)
+	_, err = r.Enforcer.UpsertRoleDefinitionWithOptions(
+		ctx,
+		role.Name,
+		role.Description,
+		true,
+		role.Version,
+		expected,
+		"local-bootstrap:operator-role:"+requestHash,
+		"identity-local-bootstrap",
+	)
+	return err
 }
 
 // reconcileLocalOperatorDevelopmentPermissions makes the actor projection and
@@ -166,11 +208,11 @@ WHERE id = 'operator-local-001'
 // missing grants, so an old development database cannot remain over- or
 // under-privileged after convergence.
 func (r *Repository) reconcileLocalOperatorDevelopmentPermissions(ctx context.Context, operatorContextID string) error {
-	expected, err := localOperatorCanonicalPermissions()
-	if err != nil {
+	if err := r.reconcileLocalOperatorRoleDefinition(ctx); err != nil {
 		return err
 	}
 
+	expected := localOperatorDevelopmentPermissions()
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err

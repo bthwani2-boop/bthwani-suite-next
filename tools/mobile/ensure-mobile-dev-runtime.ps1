@@ -1,5 +1,6 @@
 param(
-  [switch]$Force
+  [switch]$Force,
+  [string]$PowerShellExecutable = "pwsh"
 )
 
 Set-StrictMode -Version Latest
@@ -152,7 +153,7 @@ function Ensure-BthwaniMobileBackend {
 
   Invoke-BthwaniProcess `
     -Description "mobile-runtime-up" `
-    -FilePath "pwsh" `
+    -FilePath $PowerShellExecutable `
     -Arguments @(
       "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $RuntimePhase,
       "-Action", "up", "-Profiles", $Profiles, "-Force"
@@ -194,7 +195,7 @@ function Repair-BthwaniMobileDevData {
 
   Invoke-BthwaniProcess `
     -Description "mobile-runtime-bootstrap-dev" `
-    -FilePath "pwsh" `
+    -FilePath $PowerShellExecutable `
     -Arguments @(
       "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $RuntimePhase,
       "-Action", "bootstrap-dev", "-Profiles", $Profiles, "-Force"

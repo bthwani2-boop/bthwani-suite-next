@@ -59,6 +59,7 @@ func openCanonicalIntentTestDB(t *testing.T) *sql.DB {
 			action_type TEXT NOT NULL,
 			target_actor_id TEXT NOT NULL,
 			role_name TEXT NOT NULL,
+			expected_role_version INTEGER,
 			requested_by TEXT NOT NULL,
 			reason TEXT NOT NULL DEFAULT 'test reason',
 			status TEXT NOT NULL DEFAULT 'pending',
@@ -117,18 +118,19 @@ func insertRoleAssignmentIntentFixture(t *testing.T, db *sql.DB, leaseOwner stri
 	const requestID = "11111111-1111-4111-8111-111111111111"
 	const intentID = "22222222-2222-4222-8222-222222222222"
 	payload := roleMutationIntentPayload{
-		ActionType:    "staff_role_assignment",
-		TargetActorID: "beneficiary",
-		RoleName:      "dsh-operator",
-		ReviewerID:    "checker",
-		ReviewNote:    "approved by integration proof",
+		ActionType:          "staff_role_assignment",
+		TargetActorID:       "beneficiary",
+		RoleName:            "dsh-operator",
+		ExpectedRoleVersion: 7,
+		ReviewerID:          "checker",
+		ReviewNote:          "approved by integration proof",
 	}
-	payloadJSON := `{"actionType":"staff_role_assignment","targetActorId":"beneficiary","roleName":"dsh-operator","reviewerId":"checker","reviewNote":"approved by integration proof"}`
+	payloadJSON := `{"actionType":"staff_role_assignment","targetActorId":"beneficiary","roleName":"dsh-operator","expectedRoleVersion":7,"reviewerId":"checker","reviewNote":"approved by integration proof"}`
 	if _, err := db.ExecContext(context.Background(), `
 		INSERT INTO dsh_admin_approval_requests
-			(id, action_type, target_actor_id, role_name, requested_by)
-		VALUES ($1, $2, $3, $4, $5)
-	`, requestID, payload.ActionType, payload.TargetActorID, payload.RoleName, "maker"); err != nil {
+			(id, action_type, target_actor_id, role_name, expected_role_version, requested_by)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`, requestID, payload.ActionType, payload.TargetActorID, payload.RoleName, payload.ExpectedRoleVersion, "maker"); err != nil {
 		t.Fatalf("insert source approval: %v", err)
 	}
 	if _, err := db.ExecContext(context.Background(), `

@@ -40,6 +40,123 @@ test("workflow verification has one remote-security owner", () => {
   assert.doesNotMatch(securityWorkflow, /run-foundation-gate|guard:foundation/u);
 });
 
+test("PR closure is aggregated only by a trusted workflow_run definition", () => {
+  const ciWorkflow = read(".github/workflows/ci.yml");
+  const requestWorkflow = read(".github/workflows/pr-closure-request.yml");
+  const dispatchWorkflow = read(".github/workflows/pr-closure-dispatch.yml");
+  const evidenceWorkflow = read(".github/workflows/pr-closure-evidence.yml");
+  const remoteCommandWorkflow = read(".github/workflows/remote-command.yml");
+
+  assert.doesNotMatch(ciWorkflow, /PR Closure Evidence|statuses:\s*write|security-events:\s*read|secrets\.SONAR_TOKEN/u);
+  assert.match(ciWorkflow, /run-name:[^\n]*closure-pr-/u);
+
+  assert.match(requestWorkflow, /<!-- bthwani:closure-request -->/u);
+  assert.match(requestWorkflow, /(?:^|\n)\s{2}pull_request:/u);
+  assert.doesNotMatch(requestWorkflow, /pull_request_target:|actions:\s*write/u);
+  assert.doesNotMatch(requestWorkflow, /actions\/checkout|Wait for canonical closure result/u);
+
+  assert.match(dispatchWorkflow, /issues:[\s\S]*?types: \[labeled\]/u);
+  assert.doesNotMatch(dispatchWorkflow, /pull_request_target:|pull_request:/u);
+  assert.match(dispatchWorkflow, /github\.event\.label\.name == 'bthwani:closure-request'/u);
+  assert.match(dispatchWorkflow, /\.head\.repo\.full_name/u);
+  assert.match(dispatchWorkflow, /admin\|maintain\|write/u);
+  assert.match(dispatchWorkflow, /approval must be independent from the PR author/u);
+  assert.match(dispatchWorkflow, /Candidate SHA: \$\{head_sha\}/u);
+  assert.match(dispatchWorkflow, /default_branch/u);
+  assert.match(dispatchWorkflow, /<!-- bthwani:closure-request -->/u);
+  assert.doesNotMatch(dispatchWorkflow, /actions\/checkout/u);
+
+  assert.match(evidenceWorkflow, /workflow_run:/u);
+  assert.match(evidenceWorkflow, /workflows:\s*\["BThwani Contextual CI"\]/u);
+  assert.match(evidenceWorkflow, /github\.event\.workflow_run\.event == 'workflow_dispatch'/u);
+  assert.match(evidenceWorkflow, /github\.event\.workflow_run\.head_branch == github\.event\.repository\.default_branch/u);
+  assert.doesNotMatch(evidenceWorkflow, /actions\/checkout/u);
+  assert.match(evidenceWorkflow, /--arg ref "\$\{DEFAULT_BRANCH\}"[\s\S]*?\{ref:\$ref,inputs:\$inputs\}/u);
+  assert.match(evidenceWorkflow, /pr_number:\$pr,head_sha:\$head,base_sha:\$base/u);
+  assert.match(evidenceWorkflow, /\/code-scanning\/analyses/u);
+  assert.match(evidenceWorkflow, /\/code-scanning\/alerts/u);
+  assert.match(evidenceWorkflow, /\/actions\/runs\/\$\{codeql_run\}\/jobs/u);
+  assert.match(evidenceWorkflow, /check_run_url/u);
+  assert.doesNotMatch(evidenceWorkflow, /\/commits\/\$\{HEAD_SHA\}\/check-runs/u);
+  assert.match(evidenceWorkflow, /\/language:javascript-typescript/u);
+  assert.match(evidenceWorkflow, /\/language:actions/u);
+  for (const module of ["dsh", "wlt", "identity", "workforce", "platform-control", "providers"]) {
+    assert.match(evidenceWorkflow, new RegExp(`/language:go-${module}`), module);
+  }
+
+  assert.doesNotMatch(remoteCommandWorkflow, /\bpr-closure\b/u);
+  assert.match(remoteCommandWorkflow, /codeql-full\|sonar-full\|security-full\|semgrep-full\|lockfile-integrity\)[\s\S]*?dispatch_ref="\$\{DEFAULT_BRANCH\}"/u);
+});
+
+test("closure analyzers accept immutable PR scope while executing trusted default definitions", () => {
+  for (const workflow of [
+    ".github/workflows/codeql.yml",
+    ".github/workflows/sonarqube.yml",
+    ".github/workflows/security-remote.yml",
+    ".github/workflows/semgrep.yml",
+    ".github/workflows/docker-runtime-hardening.yml",
+    ".github/workflows/lockfile-integrity.yml",
+  ]) {
+    const content = read(workflow);
+    assert.match(content, /workflow_dispatch:[\s\S]*?pr_number:/u, workflow);
+    assert.match(content, /workflow_dispatch:[\s\S]*?head_sha:/u, workflow);
+    assert.match(content, /workflow_dispatch:[\s\S]*?base_sha:/u, workflow);
+    assert.match(content, /inputs\.head_sha \|\| github\.event\.pull_request\.head\.sha \|\| github\.sha/u, workflow);
+  }
+});
+
+test("closure security evidence fails closed and analyzer ownership is disjoint", () => {
+  const securityWorkflow = read(".github/workflows/security-remote.yml");
+  const semgrepWorkflow = read(".github/workflows/semgrep.yml");
+
+  assert.match(securityWorkflow, /WARN\|SKIP\|BLOCKED/u);
+  assert.match(securityWorkflow, /outcome=BLOCKED/u);
+  assert.match(securityWorkflow, /\[\[ "\$\{outcome\}" == "PASS" \]\]/u);
+
+  assert.match(semgrepWorkflow, /--exclude="\.github\/workflows\/\*\*"/u);
+  assert.match(semgrepWorkflow, /unknown_engine_errors/u);
+  assert.match(semgrepWorkflow, /\[\[ "\$\{unknown_engine_errors\}" == "0" \]\]/u);
+});
+
+test("secret and write-bearing remote analysis jobs never execute candidate scripts", () => {
+  const codeql = read(".github/workflows/codeql.yml");
+  const sonar = read(".github/workflows/sonarqube.yml");
+
+  assert.equal((codeql.match(/security-events:\s*write/gu) ?? []).length, 1);
+  const codeqlWriteBoundary = codeql.slice(codeql.indexOf("  upload:\n"), codeql.indexOf("  result:\n"));
+  assert.match(codeqlWriteBoundary, /name: Upload trusted CodeQL SARIF/u);
+  assert.doesNotMatch(codeqlWriteBoundary, /actions\/checkout|go build|uses: \.\/|run: (?:node|pnpm|go)\b/u);
+  for (const analysis of ["analyze-javascript-typescript", "analyze-go", "analyze-actions"]) {
+    const start = codeql.indexOf(`  ${analysis}:\n`);
+    assert.ok(start >= 0, analysis);
+    const nextJobOffset = codeql.slice(start + 3).search(/\n  [a-z0-9-]+:\n/u);
+    const end = nextJobOffset < 0 ? codeql.length : start + 3 + nextJobOffset;
+    assert.doesNotMatch(codeql.slice(start, end), /security-events:\s*write/u, analysis);
+  }
+
+  assert.doesNotMatch(sonar, /secrets\.BTHWANI_CI_POSTGRES_PASSWORD/u);
+  const sonarCoverage = sonar.slice(sonar.indexOf("  coverage:\n"), sonar.indexOf("  scan:\n"));
+  const sonarScan = sonar.slice(sonar.indexOf("  scan:\n"), sonar.indexOf("  result:\n"));
+  assert.doesNotMatch(sonarCoverage, /secrets\.|SONAR_TOKEN/u);
+  assert.match(sonarScan, /secrets\.SONAR_TOKEN/u);
+  assert.doesNotMatch(sonarScan, /uses: \.\/|run: (?:node|pnpm|go|pwsh)\b/u);
+  assert.match(sonarScan, /github\.ref_name == github\.event\.repository\.default_branch/u);
+});
+
+test("push and pull-request result checks have distinct names", () => {
+  for (const workflow of [
+    ".github/workflows/ci.yml",
+    ".github/workflows/codeql.yml",
+    ".github/workflows/sonarqube.yml",
+    ".github/workflows/security-remote.yml",
+    ".github/workflows/semgrep.yml",
+  ]) {
+    const content = read(workflow);
+    assert.match(content, /github\.event_name == 'pull_request'[\s\S]*?PR result/u, workflow);
+    assert.match(content, /github\.event_name == 'push'[\s\S]*?push result/u, workflow);
+  }
+});
+
 test("verification authority is phase-gated", () => {
   const router = read("tools/scripts/detect-ci-context.mjs");
   assert.match(router, /verificationAuthorityChanged && \["closure", "default-branch"\]\.includes\(executionPhase\)/u);

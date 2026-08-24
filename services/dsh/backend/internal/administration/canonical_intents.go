@@ -42,11 +42,12 @@ type canonicalMutationResult struct {
 }
 
 type roleMutationIntentPayload struct {
-	TargetActorID string `json:"targetActorId"`
-	RoleName      string `json:"roleName"`
-	ActionType    string `json:"actionType"`
-	ReviewerID    string `json:"reviewerId"`
-	ReviewNote    string `json:"reviewNote,omitempty"`
+	TargetActorID       string `json:"targetActorId"`
+	RoleName            string `json:"roleName"`
+	ExpectedRoleVersion int    `json:"expectedRoleVersion"`
+	ActionType          string `json:"actionType"`
+	ReviewerID          string `json:"reviewerId"`
+	ReviewNote          string `json:"reviewNote,omitempty"`
 }
 
 type roleDefinitionIntentPayload struct {
@@ -101,16 +102,15 @@ func markCanonicalMutationFailure(ctx context.Context, db *sql.DB, current canon
 	if terminal {
 		result, err = db.ExecContext(ctx, `
 			UPDATE dsh_admin_canonical_mutation_intents
-			SET status = 'failed',
+			SET status = 'failed_terminal',
 			    attempts = attempts + 1,
 			    last_error = NULLIF($1, ''),
 			    next_attempt_at = NULL,
-			    terminal_failure = TRUE,
 			    lease_owner = NULL,
 			    lease_expires_at = NULL,
 			    updated_at = NOW()
 			WHERE operation_type = $2 AND request_id = $3
-			  AND status <> 'applied'
+			  AND status IN ('pending', 'retryable_failure')
 			  AND lease_owner = $4
 			  AND lease_generation = $5
 			  AND lease_expires_at > NOW()
@@ -118,16 +118,15 @@ func markCanonicalMutationFailure(ctx context.Context, db *sql.DB, current canon
 	} else {
 		result, err = db.ExecContext(ctx, `
 			UPDATE dsh_admin_canonical_mutation_intents
-			SET status = 'failed',
+			SET status = 'retryable_failure',
 			    attempts = attempts + 1,
 			    last_error = NULLIF($1, ''),
 			    next_attempt_at = NOW() + make_interval(secs => LEAST(300, (5 * power(2, LEAST(attempts, 6)))::int)),
-			    terminal_failure = FALSE,
 			    lease_owner = NULL,
 			    lease_expires_at = NULL,
 			    updated_at = NOW()
 			WHERE operation_type = $2 AND request_id = $3
-			  AND status <> 'applied'
+			  AND status IN ('pending', 'retryable_failure')
 			  AND lease_owner = $4
 			  AND lease_generation = $5
 			  AND lease_expires_at > NOW()
@@ -152,8 +151,7 @@ func claimCanonicalMutations(ctx context.Context, db *sql.DB, limit int, leaseOw
 		WITH candidates AS (
 			SELECT id
 			FROM dsh_admin_canonical_mutation_intents
-			WHERE status <> 'applied'
-			  AND terminal_failure = FALSE
+			WHERE status IN ('pending', 'retryable_failure')
 			  AND next_attempt_at IS NOT NULL
 			  AND next_attempt_at <= NOW()
 			  AND (lease_expires_at IS NULL OR lease_expires_at <= NOW())
@@ -198,8 +196,7 @@ func claimCanonicalMutation(ctx context.Context, db *sql.DB, operationType, requ
 			SELECT id
 			FROM dsh_admin_canonical_mutation_intents
 			WHERE operation_type = $1 AND request_id = $2
-			  AND status <> 'applied'
-			  AND terminal_failure = FALSE
+			  AND status IN ('pending', 'retryable_failure')
 			  AND next_attempt_at IS NOT NULL
 			  AND next_attempt_at <= NOW()
 			  AND (lease_expires_at IS NULL OR lease_expires_at <= NOW())
@@ -250,20 +247,14 @@ func markIntentTerminal(ctx context.Context, db *sql.DB, current canonicalMutati
 }
 
 func canonicalActorHasRole(ctx context.Context, identityClient *auth.Client, actorID, roleName string) (bool, error) {
-	staff, err := identityClient.ListStaff(ctx)
+	assignments, err := identityClient.ListActorRoleAssignments(ctx, actorID)
 	if err != nil {
 		return false, err
 	}
-	for _, actor := range staff {
-		if actor.ID != actorID {
-			continue
+	for _, assignment := range assignments {
+		if assignment.RoleName == roleName {
+			return true, nil
 		}
-		for _, currentRole := range actor.Roles {
-			if currentRole == roleName {
-				return true, nil
-			}
-		}
-		return false, nil
 	}
 	return false, nil
 }
@@ -284,12 +275,12 @@ func applyCanonicalRoleMutation(ctx context.Context, identityClient *auth.Client
 
 	var assignment *auth.RbacActorRoleAssignment
 	if desiredPresent {
-		granted, err := identityClient.GrantRoleWithIdempotency(ctx, payload.TargetActorID, payload.RoleName, payload.ReviewerID, idempotencyKey)
+		granted, err := identityClient.GrantRoleWithIdempotency(ctx, payload.TargetActorID, payload.RoleName, payload.ReviewerID, payload.ExpectedRoleVersion, idempotencyKey)
 		if err != nil {
 			return nil, err
 		}
 		assignment = &granted
-	} else if err := identityClient.RevokeRoleWithIdempotency(ctx, payload.TargetActorID, payload.RoleName, payload.ReviewerID, idempotencyKey); err != nil {
+	} else if err := identityClient.RevokeRoleWithIdempotency(ctx, payload.TargetActorID, payload.RoleName, payload.ReviewerID, payload.ExpectedRoleVersion, idempotencyKey); err != nil {
 		return nil, err
 	}
 
@@ -347,17 +338,13 @@ func finalizeCanonicalMutation(ctx context.Context, db *sql.DB, current canonica
 	if !leaseOwner.Valid || leaseOwner.String != current.leaseOwner || leaseGeneration != current.leaseGeneration || !leaseValid {
 		return errCanonicalMutationLeaseLost
 	}
-	if err := finalizeSource(tx); err != nil {
-		return err
-	}
-
 	result, err := tx.ExecContext(ctx, `
 		UPDATE dsh_admin_canonical_mutation_intents
 		SET status = 'applied', attempts = attempts + 1, last_error = NULL,
-		    next_attempt_at = NULL, terminal_failure = FALSE,
+		    next_attempt_at = NULL,
 		    lease_owner = NULL, lease_expires_at = NULL, updated_at = NOW()
 		WHERE operation_type = $1 AND request_id = $2
-		  AND status <> 'applied'
+		  AND status IN ('pending', 'retryable_failure')
 		  AND lease_owner = $3
 		  AND lease_generation = $4
 		  AND lease_expires_at > NOW()
@@ -371,6 +358,12 @@ func finalizeCanonicalMutation(ctx context.Context, db *sql.DB, current canonica
 	}
 	if updated != 1 {
 		return errCanonicalMutationLeaseLost
+	}
+	// The source decision may become approved only after the durable execution
+	// state is applied. Both writes remain atomic; any source or audit failure
+	// rolls the intent update back with this transaction.
+	if err := finalizeSource(tx); err != nil {
+		return err
 	}
 	return tx.Commit()
 }
@@ -392,17 +385,18 @@ func requireCanonicalSourceUpdate(result sql.Result, err error) error {
 func finalizeRoleAssignmentIntent(ctx context.Context, db *sql.DB, current canonicalMutationIntent, payload roleMutationIntentPayload) error {
 	return finalizeCanonicalMutation(ctx, db, current, func(tx *sql.Tx) error {
 		var targetActorID, roleName, actionType, requestedBy, status string
+		var expectedRoleVersion int
 		var version int
 		var reviewedBy sql.NullString
 		if err := tx.QueryRowContext(ctx, `
-			SELECT target_actor_id, role_name, action_type, requested_by, status, version, reviewed_by
+			SELECT target_actor_id, role_name, COALESCE(expected_role_version, 0), action_type, requested_by, status, version, reviewed_by
 			FROM dsh_admin_approval_requests
 			WHERE id = $1
 			FOR UPDATE
-		`, current.requestID).Scan(&targetActorID, &roleName, &actionType, &requestedBy, &status, &version, &reviewedBy); err != nil {
+		`, current.requestID).Scan(&targetActorID, &roleName, &expectedRoleVersion, &actionType, &requestedBy, &status, &version, &reviewedBy); err != nil {
 			return err
 		}
-		if payload.TargetActorID != targetActorID || payload.RoleName != roleName || payload.ActionType != actionType ||
+		if payload.TargetActorID != targetActorID || payload.RoleName != roleName || payload.ExpectedRoleVersion != expectedRoleVersion || payload.ActionType != actionType ||
 			validateRoleReviewSeparation(requestedBy, targetActorID, payload.ReviewerID) != nil {
 			return fmt.Errorf("%w: role-assignment request changed", errCanonicalMutationSourceDrift)
 		}
@@ -425,8 +419,11 @@ func finalizeRoleAssignmentIntent(ctx context.Context, db *sql.DB, current canon
 		}
 		_, err := tx.ExecContext(ctx, `
 			INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
-			VALUES ($1, 'ROLE_ASSIGNMENT_APPROVED', $2, $3, 'restricted', $4)
-		`, payload.ReviewerID, current.requestID, "Reviewed "+actionType+" for role "+roleName+" and actor "+targetActorID, current.requestID)
+			VALUES ($1, 'ROLE_ASSIGNMENT_APPROVED', $2,
+			        jsonb_build_object('request_id', $2::text, 'decision', 'approved',
+			                           'action_type', $3::text, 'note_provided', btrim($4::text) <> '')::text,
+			        'restricted', $2)
+		`, payload.ReviewerID, current.requestID, actionType, payload.ReviewNote)
 		return err
 	})
 }
@@ -434,20 +431,21 @@ func finalizeRoleAssignmentIntent(ctx context.Context, db *sql.DB, current canon
 func finalizeRoleRollbackIntent(ctx context.Context, db *sql.DB, current canonicalMutationIntent, payload roleMutationIntentPayload) error {
 	return finalizeCanonicalMutation(ctx, db, current, func(tx *sql.Tx) error {
 		var targetActorID, roleName, inverseActionType, requestedBy, status, sourceApprovedBy string
+		var expectedRoleVersion int
 		var version int
 		var reviewedBy sql.NullString
 		if err := tx.QueryRowContext(ctx, `
-			SELECT rollback.target_actor_id, rollback.role_name, rollback.inverse_action_type,
+			SELECT rollback.target_actor_id, rollback.role_name, COALESCE(rollback.expected_role_version, 0), rollback.inverse_action_type,
 			       rollback.requested_by, rollback.status, rollback.version, rollback.reviewed_by,
 			       COALESCE(source.reviewed_by, '')
 			FROM dsh_admin_rollback_requests rollback
 			JOIN dsh_admin_approval_requests source ON source.id = rollback.source_approval_id
 			WHERE rollback.id = $1
 			FOR UPDATE OF rollback
-		`, current.requestID).Scan(&targetActorID, &roleName, &inverseActionType, &requestedBy, &status, &version, &reviewedBy, &sourceApprovedBy); err != nil {
+		`, current.requestID).Scan(&targetActorID, &roleName, &expectedRoleVersion, &inverseActionType, &requestedBy, &status, &version, &reviewedBy, &sourceApprovedBy); err != nil {
 			return err
 		}
-		if payload.TargetActorID != targetActorID || payload.RoleName != roleName || payload.ActionType != inverseActionType ||
+		if payload.TargetActorID != targetActorID || payload.RoleName != roleName || payload.ExpectedRoleVersion != expectedRoleVersion || payload.ActionType != inverseActionType ||
 			validateRollbackReviewSeparation(requestedBy, targetActorID, sourceApprovedBy, payload.ReviewerID) != nil {
 			return fmt.Errorf("%w: role-rollback request changed", errCanonicalMutationSourceDrift)
 		}
@@ -470,8 +468,11 @@ func finalizeRoleRollbackIntent(ctx context.Context, db *sql.DB, current canonic
 		}
 		_, err := tx.ExecContext(ctx, `
 			INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
-			VALUES ($1, 'ROLLBACK_APPROVED', $2, $3, 'restricted', $4)
-		`, payload.ReviewerID, current.requestID, "Reviewed rollback for role "+roleName+" and actor "+targetActorID, current.requestID)
+			VALUES ($1, 'ROLLBACK_APPROVED', $2,
+			        jsonb_build_object('request_id', $2::text, 'decision', 'approved',
+			                           'action_type', $3::text, 'note_provided', btrim($4::text) <> '')::text,
+			        'restricted', $2)
+		`, payload.ReviewerID, current.requestID, inverseActionType, payload.ReviewNote)
 		return err
 	})
 }
@@ -483,19 +484,20 @@ func reconcileRoleAssignmentIntent(ctx context.Context, db *sql.DB, identityClie
 	}
 
 	var targetActorID, roleName, actionType, requestedBy, status string
+	var expectedRoleVersion int
 	var version int
 	var reviewedBy sql.NullString
 	if err := db.QueryRowContext(ctx, `
-		SELECT target_actor_id, role_name, action_type, requested_by, status, version, reviewed_by
+		SELECT target_actor_id, role_name, COALESCE(expected_role_version, 0), action_type, requested_by, status, version, reviewed_by
 		FROM dsh_admin_approval_requests
 		WHERE id = $1
-	`, current.requestID).Scan(&targetActorID, &roleName, &actionType, &requestedBy, &status, &version, &reviewedBy); err != nil {
+	`, current.requestID).Scan(&targetActorID, &roleName, &expectedRoleVersion, &actionType, &requestedBy, &status, &version, &reviewedBy); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return markIntentTerminal(ctx, db, current, "role-assignment source request is missing")
 		}
 		return canonicalMutationResult{}, err
 	}
-	if payload.TargetActorID != targetActorID || payload.RoleName != roleName || payload.ActionType != actionType {
+	if payload.TargetActorID != targetActorID || payload.RoleName != roleName || payload.ExpectedRoleVersion != expectedRoleVersion || payload.ActionType != actionType {
 		return markIntentTerminal(ctx, db, current, "role-assignment intent does not match source request")
 	}
 	if status != "pending" && status != "approved" {
@@ -534,22 +536,23 @@ func reconcileRoleRollbackIntent(ctx context.Context, db *sql.DB, identityClient
 	}
 
 	var targetActorID, roleName, inverseActionType, requestedBy, status, sourceApprovedBy string
+	var expectedRoleVersion int
 	var version int
 	var reviewedBy sql.NullString
 	if err := db.QueryRowContext(ctx, `
-		SELECT rollback.target_actor_id, rollback.role_name, rollback.inverse_action_type,
+		SELECT rollback.target_actor_id, rollback.role_name, COALESCE(rollback.expected_role_version, 0), rollback.inverse_action_type,
 		       rollback.requested_by, rollback.status, rollback.version, rollback.reviewed_by,
 		       COALESCE(source.reviewed_by, '')
 		FROM dsh_admin_rollback_requests rollback
 		JOIN dsh_admin_approval_requests source ON source.id = rollback.source_approval_id
 		WHERE rollback.id = $1
-	`, current.requestID).Scan(&targetActorID, &roleName, &inverseActionType, &requestedBy, &status, &version, &reviewedBy, &sourceApprovedBy); err != nil {
+	`, current.requestID).Scan(&targetActorID, &roleName, &expectedRoleVersion, &inverseActionType, &requestedBy, &status, &version, &reviewedBy, &sourceApprovedBy); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return markIntentTerminal(ctx, db, current, "role-rollback source request is missing")
 		}
 		return canonicalMutationResult{}, err
 	}
-	if payload.TargetActorID != targetActorID || payload.RoleName != roleName || payload.ActionType != inverseActionType {
+	if payload.TargetActorID != targetActorID || payload.RoleName != roleName || payload.ExpectedRoleVersion != expectedRoleVersion || payload.ActionType != inverseActionType {
 		return markIntentTerminal(ctx, db, current, "role-rollback intent does not match source request")
 	}
 	if status != "pending" && status != "approved" {
@@ -636,8 +639,12 @@ func finalizeRoleDefinitionIntent(ctx context.Context, db *sql.DB, current canon
 		}
 		_, err := tx.ExecContext(ctx, `
 			INSERT INTO dsh_admin_audit (actor_id, action, target_id, detail, sensitivity, correlation_id)
-			VALUES ($1, 'ROLE_DEFINITION_APPROVED', $2, $3, 'restricted', $4)
-		`, payload.ReviewerID, current.requestID, "Reviewed canonical role: "+roleName, current.requestID)
+			VALUES ($1, 'ROLE_DEFINITION_APPROVED', $2,
+			        jsonb_build_object('request_id', $2::text, 'decision', 'approved',
+			                           'note_provided', btrim($3::text) <> '',
+			                           'permission_count', $4::int, 'surface_count', 1)::text,
+			        'restricted', $2)
+		`, payload.ReviewerID, current.requestID, payload.ReviewNote, len(payload.Permissions))
 		return err
 	})
 }
@@ -747,19 +754,18 @@ func executeCanonicalMutationNow(ctx context.Context, db *sql.DB, identityClient
 			return canonicalMutationResult{}, err
 		}
 		var status string
-		var terminal bool
 		var lastError sql.NullString
 		if stateErr := db.QueryRowContext(ctx, `
-			SELECT status, terminal_failure, last_error
+			SELECT status, last_error
 			FROM dsh_admin_canonical_mutation_intents
 			WHERE operation_type = $1 AND request_id = $2
-		`, operationType, requestID).Scan(&status, &terminal, &lastError); stateErr != nil {
+		`, operationType, requestID).Scan(&status, &lastError); stateErr != nil {
 			return canonicalMutationResult{}, stateErr
 		}
 		if status == "applied" {
 			return canonicalMutationResult{applied: true}, nil
 		}
-		if terminal {
+		if status == "failed_terminal" {
 			message := "canonical mutation failed"
 			if lastError.Valid && strings.TrimSpace(lastError.String) != "" {
 				message = lastError.String
