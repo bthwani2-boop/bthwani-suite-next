@@ -93,18 +93,18 @@ jobs:
           npm install --global --ignore-scripts "${ocr_tgz}" "${copilot_tgz}"
           ocr --version
 
-      # Candidate state is read only after the trusted runtime and review
-      # engines are installed. Candidate package metadata cannot influence
-      # setup-node caching or privileged bootstrap.
-      - name: Checkout immutable candidate with history
+      # Keep the working tree on the trusted base. The candidate is fetched
+      # as an object for diff/read-back only, so candidate-controlled files
+      # never become executable workflow code.
+      - name: Checkout trusted base with history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ steps.request.outputs.head_sha }}
+          ref: ${{ steps.request.outputs.base_ref }}
           fetch-depth: 0
           persist-credentials: false
           show-progress: false
 
-      - name: Validate candidate and load trusted rules
+      - name: Fetch candidate object and load trusted rules
         id: target
         shell: bash
         env:
@@ -112,9 +112,9 @@ jobs:
           BASE_REF: ${{ steps.request.outputs.base_ref }}
         run: |
           set -euo pipefail
-          actual="$(git rev-parse HEAD)"
-          [[ "${actual}" == "${HEAD_SHA}" ]] || { echo "::error::OpenCodeReview checkout drift: expected=${HEAD_SHA} actual=${actual}"; exit 1; }
-          git fetch --no-tags origin "${BASE_REF}" || true
+          git fetch --no-tags origin "${HEAD_SHA}"
+          candidate="$(git rev-parse "${HEAD_SHA}^{commit}")"
+          [[ "${candidate}" == "${HEAD_SHA}" ]] || { echo "::error::candidate object drift: expected=${HEAD_SHA} actual=${candidate}"; exit 1; }
           base="$(git rev-parse "${BASE_REF}^{commit}" 2>/dev/null || git rev-parse "origin/${BASE_REF}^{commit}" 2>/dev/null || true)"
           [[ "${base}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::unable to resolve trusted base ${BASE_REF}"; exit 1; }
           merge_base="$(git merge-base "${base}" "${HEAD_SHA}")"
