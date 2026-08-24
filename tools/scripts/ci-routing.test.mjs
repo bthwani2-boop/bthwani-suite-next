@@ -67,7 +67,8 @@ test("OpenCodeReview uses dedicated Copilot authority and a trusted evaluator", 
   const workflow = read(".github/workflows/open-code-review.yml");
   assert.match(workflow, /COPILOT_GITHUB_TOKEN: \$\{\{ secrets\.COPILOT_GITHUB_TOKEN \}\}/u);
   assert.doesNotMatch(workflow, /GITHUB_TOKEN: \$\{\{ github\.token \}\}|copilot-requests:/u);
-  assert.match(workflow, /show "\$\{base\}:tools\/scripts\/evaluate-opencodereview\.mjs"/u);
+  assert.match(workflow, /EVALUATOR_SHA: \$\{\{ vars\.OCR_EVALUATOR_SHA \}\}/u);
+  assert.match(workflow, /show "\$\{evaluator\}:tools\/scripts\/evaluate-opencodereview\.mjs"/u);
   assert.doesNotMatch(workflow, /show "\$\{HEAD_SHA\}:tools\/scripts\/evaluate-opencodereview\.mjs"/u);
 });
 
