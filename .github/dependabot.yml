@@ -3,6 +3,7 @@ updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule: { interval: "weekly" }
+    cooldown: { default-days: 7 }
     open-pull-requests-limit: 10
     labels: ["dependencies", "gate:ci-required"]
     commit-message: { prefix: "chore(deps)" }
@@ -12,42 +13,49 @@ updates:
   - package-ecosystem: "gomod"
     directory: "/services/wlt/backend"
     schedule: { interval: "weekly" }
+    cooldown: { default-days: 7 }
     open-pull-requests-limit: 5
     labels: ["dependencies", "gate:ci-required"]
     commit-message: { prefix: "chore(deps)" }
   - package-ecosystem: "gomod"
     directory: "/services/dsh/backend"
     schedule: { interval: "weekly" }
+    cooldown: { default-days: 7 }
     open-pull-requests-limit: 5
     labels: ["dependencies", "gate:ci-required"]
     commit-message: { prefix: "chore(deps)" }
   - package-ecosystem: "gomod"
     directory: "/core/identity/backend"
     schedule: { interval: "weekly" }
+    cooldown: { default-days: 7 }
     open-pull-requests-limit: 5
     labels: ["dependencies", "gate:ci-required"]
     commit-message: { prefix: "chore(deps)" }
   - package-ecosystem: "gomod"
     directory: "/core/workforce/backend"
     schedule: { interval: "weekly" }
+    cooldown: { default-days: 7 }
     open-pull-requests-limit: 5
     labels: ["dependencies", "gate:ci-required"]
     commit-message: { prefix: "chore(deps)" }
   - package-ecosystem: "gomod"
     directory: "/core/platform-control/backend"
     schedule: { interval: "weekly" }
+    cooldown: { default-days: 7 }
     open-pull-requests-limit: 5
     labels: ["dependencies", "gate:ci-required"]
     commit-message: { prefix: "chore(deps)" }
   - package-ecosystem: "gomod"
     directory: "/core/providers/backend"
     schedule: { interval: "weekly" }
+    cooldown: { default-days: 7 }
     open-pull-requests-limit: 5
     labels: ["dependencies", "gate:ci-required"]
     commit-message: { prefix: "chore(deps)" }
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule: { interval: "weekly" }
+    cooldown: { default-days: 7 }
     open-pull-requests-limit: 5
     labels: ["dependencies", "gate:ci-required"]
     commit-message: { prefix: "chore(deps)" }
