@@ -7,7 +7,7 @@ func TestOtpRoleSurfaceRejectsGovernedRoles(t *testing.T) {
 		if _, err := otpRoleSurface(role); err != ErrInvalidActivation {
 			t.Fatalf("otpRoleSurface(%q) must reject governed roles, got %v", role, err)
 		}
-		if _, err := otpRolePermissions(role, ""); err != ErrInvalidActivation {
+		if _, err := otpRolePermissions(role); err != ErrInvalidActivation {
 			t.Fatalf("otpRolePermissions(%q) must reject governed roles, got %v", role, err)
 		}
 	}
@@ -18,7 +18,7 @@ func TestOtpRoleSurfaceAcceptsClientOnly(t *testing.T) {
 	if err != nil || surface != "app-client" {
 		t.Fatalf("otpRoleSurface(client) = %q, %v; want app-client, nil", surface, err)
 	}
-	if _, err := otpRolePermissions("client", surface); err != nil {
+	if _, err := otpRolePermissions("client"); err != nil {
 		t.Fatalf("otpRolePermissions(client) failed: %v", err)
 	}
 }

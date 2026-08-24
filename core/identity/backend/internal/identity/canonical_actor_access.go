@@ -87,6 +87,56 @@ func setActorAccessTx(ctx context.Context, tx *sql.Tx, actorID string, roles []s
 	return err
 }
 
+// mutateActorRoleTx is the canonical role-assignment mutation path. It keeps
+// unrelated role assignments, grant provenance, and direct grants intact
+// while routing every normalized role write through this boundary, followed
+// by the derived projection rebuild. Callers must validate the requested
+// role's lifecycle and authorization before invoking this helper.
+func mutateActorRoleTx(ctx context.Context, tx *sql.Tx, actorID, roleName, roleID, grantedBy string, grant bool) (bool, error) {
+	actorID = strings.TrimSpace(actorID)
+	roleName = strings.TrimSpace(roleName)
+	grantedBy = strings.TrimSpace(grantedBy)
+	if actorID == "" || roleName == "" || grantedBy == "" {
+		return false, fmt.Errorf("actorID, roleName, and grantedBy are required")
+	}
+	var lockedActorID string
+	if err := tx.QueryRowContext(ctx, `SELECT id FROM identity_actors WHERE id = $1 FOR UPDATE`, actorID).Scan(&lockedActorID); err != nil {
+		return false, err
+	}
+
+	var present bool
+	if err := tx.QueryRowContext(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM identity_actor_roles
+			WHERE actor_id = $1 AND role_id = $2
+		)`, actorID, roleID).Scan(&present); err != nil {
+		return false, err
+	}
+	if grant {
+		if present {
+			return false, nil
+		}
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO identity_actor_roles(actor_id, role_id, granted_by)
+			VALUES ($1, $2, $3)`, actorID, roleID, grantedBy); err != nil {
+			return false, err
+		}
+	} else {
+		if !present {
+			return false, nil
+		}
+		if _, err := tx.ExecContext(ctx, `
+			DELETE FROM identity_actor_roles
+			WHERE actor_id = $1 AND role_id = $2`, actorID, roleID); err != nil {
+			return false, err
+		}
+	}
+	if _, err := tx.ExecContext(ctx, `SELECT identity_rebuild_actor_access_projection($1)`, actorID); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 func (r *Repository) replaceActorAccess(ctx context.Context, actorID string, roles []string, permissions []Permission, grantedBy string) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {

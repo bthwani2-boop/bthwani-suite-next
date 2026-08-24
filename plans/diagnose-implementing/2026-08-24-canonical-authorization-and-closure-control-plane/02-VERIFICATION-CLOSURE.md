@@ -1,10 +1,10 @@
 # VERIFY / REDIAGNOSE / CLOSE — Exact Final Candidate Contract
 
-**STATUS:** `READY_FOR_EXECUTION`  
-**EXECUTION_READY:** `true`  
-**CLOSED:** `false`  
-**REPOSITORY:** `bthwani2-boop/bthwani-suite-next`  
-**BRANCH:** `c`  
+**STATUS:** `READY_FOR_EXECUTION`
+**EXECUTION_READY:** `true`
+**CLOSED:** `false`
+**REPOSITORY:** `bthwani2-boop/bthwani-suite-next`
+**BRANCH:** `c`
 **AUDIT_TARGET_SHA:** `51a8482bc891ce904415eadc6c0bcf7168068fbc`
 
 This file defines the minimum proof required after `01-EXECUTION-CONTRACT.md` has been executed. It is intentionally fail-closed. A check is not closure evidence unless it targets the exact final candidate and proves the material invariant it is meant to cover.

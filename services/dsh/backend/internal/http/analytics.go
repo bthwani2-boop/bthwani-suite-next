@@ -8,8 +8,8 @@ import (
 	"dsh-api/internal/store"
 )
 
-// Analytics permission action on the control-panel surface. "operator"
-// remains a valid fallback role during RBAC data migration.
+// Analytics permission action on the control-panel surface. Access is granted
+// only by the canonical Identity permission readback.
 const AnalyticsPermissionRead = "analytics.read"
 
 func namedAnalyticsPeriod(w http.ResponseWriter, r *http.Request) (string, bool) {

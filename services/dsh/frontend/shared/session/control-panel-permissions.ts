@@ -72,8 +72,8 @@ function isControlPanelPermission(
   action: string,
 ): boolean {
   return (
-    (permission.surface === "control-panel" || permission.surface === "all" || permission.surface === "*") &&
-    (permission.action === action || permission.action === "*")
+    permission.surface === "control-panel" &&
+    permission.action === action
   );
 }
 
@@ -83,7 +83,7 @@ export function hasServiceControlPanelPermission(
   action: string,
 ): boolean {
   return identity?.permissions?.some((permission) =>
-    (permission.service === service || permission.service === "*") &&
+    permission.service === service &&
     isControlPanelPermission(permission, action),
   ) ?? false;
 }

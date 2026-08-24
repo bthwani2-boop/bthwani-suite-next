@@ -93,7 +93,6 @@ func employeeDshPermissions(bundle string) []Permission {
 			"administration.audit.read", "administration.diagnostics.read",
 			"administration.role.request", "administration.role.approve",
 			"administration.staff.request", "administration.staff.approve",
-			"administration.audit.read", "administration.diagnostics.read",
 			"administration.rollback.request", "administration.rollback.approve",
 		)
 	case EmployeeBundlePlatformCoordinator:

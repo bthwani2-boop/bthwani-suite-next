@@ -455,7 +455,7 @@ func (c *Client) GrantRoleWithIdempotency(ctx context.Context, targetActorID, ro
 	resp, err := c.rbacRequestWithHeaders(ctx, http.MethodPost, "/internal/rbac/actors/"+targetActorID+"/roles", nil, map[string]string{
 		"roleName":           roleName,
 		"requestedByActorId": requestedByActorID,
-	}, map[string]string{"Idempotency-Key": idempotencyKey})
+	}, map[string]string{"Idempotency-Key": idempotencyKey, "X-Canonical-Intent-ID": idempotencyKey})
 	if err != nil {
 		return RbacActorRoleAssignment{}, err
 	}
@@ -482,7 +482,7 @@ func (c *Client) RevokeRoleWithIdempotency(ctx context.Context, targetActorID, r
 	resp, err := c.rbacRequestWithHeaders(ctx, http.MethodDelete, "/internal/rbac/actors/"+targetActorID+"/roles", map[string]string{
 		"roleName":           roleName,
 		"requestedByActorId": requestedByActorID,
-	}, nil, map[string]string{"Idempotency-Key": idempotencyKey})
+	}, nil, map[string]string{"Idempotency-Key": idempotencyKey, "X-Canonical-Intent-ID": idempotencyKey})
 	if err != nil {
 		return err
 	}

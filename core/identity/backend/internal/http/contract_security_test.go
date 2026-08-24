@@ -7,12 +7,22 @@ import (
 )
 
 const identityContractPath = "../../../contracts/identity.openapi.yaml"
+const identityRbacAdminContractPath = "../../../contracts/identity.rbac-admin.openapi.yaml"
 
 func readIdentityContract(t *testing.T) string {
 	t.Helper()
 	content, err := os.ReadFile(identityContractPath)
 	if err != nil {
 		t.Fatalf("read identity contract: %v", err)
+	}
+	return string(content)
+}
+
+func readIdentityRbacAdminContract(t *testing.T) string {
+	t.Helper()
+	content, err := os.ReadFile(identityRbacAdminContractPath)
+	if err != nil {
+		t.Fatalf("read identity RBAC administration contract: %v", err)
 	}
 	return string(content)
 }
@@ -33,6 +43,32 @@ func identityOperationBlock(t *testing.T, contract, path string) string {
 		return rest[:end]
 	}
 	return rest
+}
+
+func identityMethodBlock(t *testing.T, contract, path, method string) string {
+	t.Helper()
+	pathBlock := identityOperationBlock(t, contract, path)
+	marker := "\n    " + method + ":\n"
+	start := strings.Index(pathBlock, marker)
+	if strings.HasPrefix(pathBlock, strings.TrimPrefix(marker, "\n")) {
+		start = 0
+		marker = strings.TrimPrefix(marker, "\n")
+	}
+	if start < 0 {
+		t.Fatalf("identity contract path %s is missing %s operation", path, method)
+	}
+	start += len(marker)
+	rest := pathBlock[start:]
+	end := len(rest)
+	for _, nextMethod := range []string{"get", "put", "post", "delete", "patch"} {
+		if nextMethod == method {
+			continue
+		}
+		if candidate := strings.Index(rest, "\n    "+nextMethod+":\n"); candidate >= 0 && candidate < end {
+			end = candidate
+		}
+	}
+	return rest[:end]
 }
 
 func TestIdentityPreAuthenticationOperationsAreExplicitlyPublic(t *testing.T) {
@@ -118,5 +154,22 @@ func TestIdentityPublicFailureResponsesMatchRuntimeBoundaries(t *testing.T) {
 	activate := identityOperationBlock(t, contract, "/auth/activate")
 	if !strings.Contains(activate, "\"429\":") {
 		t.Error("/auth/activate must document runtime rate limiting")
+	}
+}
+
+func TestIdentityRbacMutationsRequireCanonicalIntentBinding(t *testing.T) {
+	contract := readIdentityRbacAdminContract(t)
+	for _, operation := range []struct {
+		path   string
+		method string
+	}{
+		{path: "/internal/rbac/role-definitions/{roleName}", method: "put"},
+		{path: "/internal/rbac/actors/{actorId}/roles", method: "post"},
+		{path: "/internal/rbac/actors/{actorId}/roles", method: "delete"},
+	} {
+		block := identityMethodBlock(t, contract, operation.path, operation.method)
+		if !strings.Contains(block, "- $ref: '#/components/parameters/CanonicalIntentId'") {
+			t.Errorf("%s %s must require X-Canonical-Intent-ID", operation.method, operation.path)
+		}
 	}
 }

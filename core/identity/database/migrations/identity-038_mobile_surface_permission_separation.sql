@@ -15,29 +15,47 @@
 --      by the actor's role.
 --   4. Fail if any material residue remains.
 
-UPDATE identity_actors AS actor
-SET permissions = (
-        SELECT COALESCE(
-            jsonb_agg(entry.value ORDER BY entry.ordinality),
-            '[]'::jsonb
-        )
-        FROM jsonb_array_elements(COALESCE(actor.permissions, '[]'::jsonb))
-             WITH ORDINALITY AS entry(value, ordinality)
-        WHERE NOT (
-            entry.value->>'service' = 'dsh'
-            AND entry.value->>'surface' IN ('app-client', 'app-partner')
-            AND entry.value->>'action' IN ('store:read', 'store:write')
-        )
-    ),
-    version = actor.version + 1,
-    updated_at = now()
-WHERE EXISTS (
-    SELECT 1
-    FROM jsonb_array_elements(COALESCE(actor.permissions, '[]'::jsonb)) AS entry(value)
-    WHERE entry.value->>'service' = 'dsh'
-      AND entry.value->>'surface' IN ('app-client', 'app-partner')
-      AND entry.value->>'action' IN ('store:read', 'store:write')
-);
+-- The JSON columns on identity_actors are a derived projection. First
+-- regenerate them from normalized authority so this migration never becomes
+-- a second writer for role/permission truth.
+DO $$
+DECLARE
+    actor_id text;
+BEGIN
+    FOR actor_id IN SELECT id FROM identity_actors LOOP
+        PERFORM identity_rebuild_actor_access_projection(actor_id);
+    END LOOP;
+END
+$$;
+
+CREATE TEMP TABLE identity_038_obsolete_permission_ids ON COMMIT DROP AS
+SELECT id
+FROM identity_permission_vocabulary
+WHERE service = 'dsh'
+  AND surface IN ('app-client', 'app-partner')
+  AND action IN ('store:read', 'store:write');
+
+-- Remove obsolete authority at its normalized owner. The existing projection
+-- triggers rebuild identity_actors after each normalized mutation.
+DELETE FROM identity_role_permissions role_permission
+USING identity_038_obsolete_permission_ids obsolete
+WHERE role_permission.permission_id = obsolete.id;
+
+DELETE FROM identity_actor_direct_permissions direct_permission
+USING identity_038_obsolete_permission_ids obsolete
+WHERE direct_permission.permission_id = obsolete.id;
+
+DELETE FROM identity_permission_vocabulary vocabulary
+USING identity_038_obsolete_permission_ids obsolete
+WHERE vocabulary.id = obsolete.id
+  AND NOT EXISTS (
+      SELECT 1 FROM identity_role_permissions role_permission
+      WHERE role_permission.permission_id = vocabulary.id
+  )
+  AND NOT EXISTS (
+      SELECT 1 FROM identity_actor_direct_permissions direct_permission
+      WHERE direct_permission.permission_id = vocabulary.id
+  );
 
 UPDATE identity_activation_challenges
 SET status = 'revoked',
@@ -53,16 +71,35 @@ FROM identity_actors AS actor
 WHERE actor.id = session.actor_id
   AND session.revoked_at IS NULL
   AND (
-      (session.surface = 'app-client'  AND NOT ('client'  = ANY(actor.roles)))
-   OR (session.surface = 'app-partner' AND NOT ('partner' = ANY(actor.roles)))
-   OR (session.surface = 'app-field'   AND NOT ('field'   = ANY(actor.roles)))
-   OR (session.surface = 'app-captain' AND NOT ('captain' = ANY(actor.roles)))
+      (session.surface = 'app-client'  AND NOT EXISTS (
+          SELECT 1 FROM identity_actor_roles assignment
+          JOIN identity_roles role ON role.id = assignment.role_id
+          WHERE assignment.actor_id = actor.id AND role.active IS TRUE AND role.name = 'client'
+      ))
+   OR (session.surface = 'app-partner' AND NOT EXISTS (
+          SELECT 1 FROM identity_actor_roles assignment
+          JOIN identity_roles role ON role.id = assignment.role_id
+          WHERE assignment.actor_id = actor.id AND role.active IS TRUE AND role.name = 'partner'
+      ))
+   OR (session.surface = 'app-field'   AND NOT EXISTS (
+          SELECT 1 FROM identity_actor_roles assignment
+          JOIN identity_roles role ON role.id = assignment.role_id
+          WHERE assignment.actor_id = actor.id AND role.active IS TRUE AND role.name = 'field'
+      ))
+   OR (session.surface = 'app-captain' AND NOT EXISTS (
+          SELECT 1 FROM identity_actor_roles assignment
+          JOIN identity_roles role ON role.id = assignment.role_id
+          WHERE assignment.actor_id = actor.id AND role.active IS TRUE AND role.name = 'captain'
+      ))
    OR (
         session.surface = 'control-panel'
         AND NOT EXISTS (
             SELECT 1
-            FROM unnest(actor.roles) AS role(name)
-            WHERE role.name NOT IN ('client', 'partner', 'field', 'captain')
+            FROM identity_actor_roles assignment
+            JOIN identity_roles role ON role.id = assignment.role_id
+            WHERE assignment.actor_id = actor.id
+              AND role.active IS TRUE
+              AND role.name NOT IN ('client', 'partner', 'field', 'captain')
         )
       )
   );
@@ -70,6 +107,18 @@ WHERE actor.id = session.actor_id
 DO $$
 BEGIN
     IF EXISTS (
+        SELECT 1
+        FROM identity_role_permissions role_permission
+        JOIN identity_038_obsolete_permission_ids obsolete ON obsolete.id = role_permission.permission_id
+    ) OR EXISTS (
+        SELECT 1
+        FROM identity_actor_direct_permissions direct_permission
+        JOIN identity_038_obsolete_permission_ids obsolete ON obsolete.id = direct_permission.permission_id
+    ) OR EXISTS (
+        SELECT 1
+        FROM identity_permission_vocabulary vocabulary
+        JOIN identity_038_obsolete_permission_ids obsolete ON obsolete.id = vocabulary.id
+    ) OR EXISTS (
         SELECT 1
         FROM identity_actors AS actor
         CROSS JOIN LATERAL jsonb_array_elements(COALESCE(actor.permissions, '[]'::jsonb)) AS entry(value)
@@ -99,16 +148,34 @@ BEGIN
         JOIN identity_actors AS actor ON actor.id = session.actor_id
         WHERE session.revoked_at IS NULL
           AND (
-              (session.surface = 'app-client'  AND NOT ('client'  = ANY(actor.roles)))
-           OR (session.surface = 'app-partner' AND NOT ('partner' = ANY(actor.roles)))
-           OR (session.surface = 'app-field'   AND NOT ('field'   = ANY(actor.roles)))
-           OR (session.surface = 'app-captain' AND NOT ('captain' = ANY(actor.roles)))
+              (session.surface = 'app-client'  AND NOT EXISTS (
+                  SELECT 1 FROM identity_actor_roles assignment
+                  JOIN identity_roles role ON role.id = assignment.role_id
+                  WHERE assignment.actor_id = actor.id AND role.active IS TRUE AND role.name = 'client'
+              ))
+           OR (session.surface = 'app-partner' AND NOT EXISTS (
+                  SELECT 1 FROM identity_actor_roles assignment
+                  JOIN identity_roles role ON role.id = assignment.role_id
+                  WHERE assignment.actor_id = actor.id AND role.active IS TRUE AND role.name = 'partner'
+              ))
+           OR (session.surface = 'app-field'   AND NOT EXISTS (
+                  SELECT 1 FROM identity_actor_roles assignment
+                  JOIN identity_roles role ON role.id = assignment.role_id
+                  WHERE assignment.actor_id = actor.id AND role.active IS TRUE AND role.name = 'field'
+              ))
+           OR (session.surface = 'app-captain' AND NOT EXISTS (
+                  SELECT 1 FROM identity_actor_roles assignment
+                  JOIN identity_roles role ON role.id = assignment.role_id
+                  WHERE assignment.actor_id = actor.id AND role.active IS TRUE AND role.name = 'captain'
+              ))
            OR (
                 session.surface = 'control-panel'
                 AND NOT EXISTS (
-                    SELECT 1
-                    FROM unnest(actor.roles) AS role(name)
-                    WHERE role.name NOT IN ('client', 'partner', 'field', 'captain')
+                    SELECT 1 FROM identity_actor_roles assignment
+                    JOIN identity_roles role ON role.id = assignment.role_id
+                    WHERE assignment.actor_id = actor.id
+                      AND role.active IS TRUE
+                      AND role.name NOT IN ('client', 'partner', 'field', 'captain')
                 )
               )
           )

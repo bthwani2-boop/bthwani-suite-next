@@ -704,6 +704,10 @@ func (s *server) internalRbacGrantRole(w http.ResponseWriter, r *http.Request) {
 		sendError(w, http.StatusBadRequest, "INVALID_IDEMPOTENCY_KEY", identity.ErrIdempotencyKeyRequired.Error())
 		return
 	}
+	if strings.TrimSpace(r.Header.Get("X-Canonical-Intent-ID")) != idempotencyKey {
+		sendError(w, http.StatusBadRequest, "INVALID_CANONICAL_INTENT", "canonical mutation intent is required")
+		return
+	}
 	actorID := r.PathValue("actorId")
 	var request struct {
 		RoleName           string `json:"roleName"`
@@ -730,6 +734,10 @@ func (s *server) internalRbacRevokeRole(w http.ResponseWriter, r *http.Request) 
 	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
 	if idempotencyKey == "" {
 		sendError(w, http.StatusBadRequest, "INVALID_IDEMPOTENCY_KEY", identity.ErrIdempotencyKeyRequired.Error())
+		return
+	}
+	if strings.TrimSpace(r.Header.Get("X-Canonical-Intent-ID")) != idempotencyKey {
+		sendError(w, http.StatusBadRequest, "INVALID_CANONICAL_INTENT", "canonical mutation intent is required")
 		return
 	}
 	actorID := r.PathValue("actorId")

@@ -73,7 +73,8 @@ mustContain(codeqlWorkflow, ["github/codeql-action/init@", "github/codeql-action
 
 const semgrep = read(".github/workflows/semgrep.yml");
 mustContain(semgrep, [
-  "allRawFindingsAccounted:true",
+  "allRawFindingsAccounted:",
+  "classifiedEngineErrors",
   "totalFindings",
   "engineConditions",
   "toolLimitationsProven",

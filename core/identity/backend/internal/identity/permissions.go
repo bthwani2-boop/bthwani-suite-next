@@ -141,19 +141,13 @@ RETURNING request_hash, status, result`, caller, idempotencyKey, requestHash).Sc
 		return ActorRoleAssignment{}, false, err
 	}
 
-	// Insert the role assignment
 	if strings.TrimSpace(idempotencyKey) == "" {
 		return ActorRoleAssignment{}, false, ErrIdempotencyKeyRequired
 	}
-	res, err := tx.ExecContext(ctx, `
-		INSERT INTO identity_actor_roles (actor_id, role_id, granted_by)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (actor_id, role_id) DO NOTHING`,
-		targetActorID, roleID, requestedByActorID)
-	if err != nil {
-		return ActorRoleAssignment{}, false, err
-	}
-	rows, err := res.RowsAffected()
+	// All normalized actor-role writes are owned by the canonical access
+	// boundary. The helper preserves unrelated assignments and direct grants,
+	// then rebuilds the derived actor projection transactionally.
+	created, err := mutateActorRoleTx(ctx, tx, targetActorID, roleName, roleID, requestedByActorID, true)
 	if err != nil {
 		return ActorRoleAssignment{}, false, err
 	}
@@ -161,7 +155,7 @@ RETURNING request_hash, status, result`, caller, idempotencyKey, requestHash).Sc
 	resultJSON, err := json.Marshal(struct {
 		Assignment ActorRoleAssignment `json:"assignment"`
 		Created    bool                `json:"created"`
-	}{ActorRoleAssignment{ActorID: targetActorID, RoleID: roleID, RoleName: roleName, GrantedBy: requestedByActorID}, rows > 0})
+	}{ActorRoleAssignment{ActorID: targetActorID, RoleID: roleID, RoleName: roleName, GrantedBy: requestedByActorID}, created})
 	if err != nil {
 		return ActorRoleAssignment{}, false, err
 	}
@@ -177,7 +171,7 @@ RETURNING request_hash, status, result`, caller, idempotencyKey, requestHash).Sc
 		RoleID:    roleID,
 		RoleName:  roleName,
 		GrantedBy: requestedByActorID,
-	}, rows > 0, nil
+	}, created, nil
 }
 
 func (e *PermissionEnforcer) RevokeRoleWithIdempotency(ctx context.Context, targetActorID, roleName, requestedByActorID, idempotencyKey, caller string) error {
@@ -228,10 +222,7 @@ RETURNING request_hash, status, result`, caller, idempotencyKey, requestHash).Sc
 		return err
 	}
 
-	_, err = tx.ExecContext(ctx, `
-		DELETE FROM identity_actor_roles WHERE actor_id = $1 AND role_id = $2`,
-		targetActorID, roleID)
-	if err != nil {
+	if _, err := mutateActorRoleTx(ctx, tx, targetActorID, roleName, roleID, requestedByActorID, false); err != nil {
 		return err
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE identity_rbac_operation_ledger SET status = 'succeeded', result = '{"revoked":true}'::jsonb, updated_at = now() WHERE caller = $1 AND operation = 'role-revoke' AND idempotency_key = $2 AND request_hash = $3`, caller, idempotencyKey, requestHash); err != nil {

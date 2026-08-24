@@ -56,19 +56,14 @@ export function useOperationsPermission(
 
   const { identity } = state;
 
-  // Keep the control-panel shell aligned with the backend's sovereign
-  // requirePermission fallback: authenticated operators retain full operator
-  // access while fine-grained grants can expose a bounded workspace to another
-  // role without granting operator authority.
-  if (identity.roles.includes('operator') || identity.roles.includes('system')) {
-    return true;
-  }
-
+  // The backend is authoritative for every operation capability. Roles are
+  // identity metadata, not a permission bypass, and wildcard actions are not
+  // part of the canonical DSH control-panel vocabulary.
   const requirement = resolveReadRequirement(group, subGroup);
   return identity.permissions.some((permission) => {
     if (permission.service !== 'dsh' || permission.surface !== 'control-panel') {
       return false;
     }
-    return permission.action === '*' || requirement.actions.includes(permission.action);
+    return requirement.actions.includes(permission.action);
   });
 }

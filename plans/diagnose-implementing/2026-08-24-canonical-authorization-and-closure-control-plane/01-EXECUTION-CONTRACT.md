@@ -1,10 +1,10 @@
 # EXECUTE_CLOSE — Canonical Execution Contract
 
-**STATUS:** `READY_FOR_EXECUTION`  
-**EXECUTION_READY:** `true`  
-**CLOSED:** `false`  
-**REPOSITORY:** `bthwani2-boop/bthwani-suite-next`  
-**BRANCH:** `c`  
+**STATUS:** `READY_FOR_EXECUTION`
+**EXECUTION_READY:** `true`
+**CLOSED:** `false`
+**REPOSITORY:** `bthwani2-boop/bthwani-suite-next`
+**BRANCH:** `c`
 **AUDIT_TARGET_SHA:** `51a8482bc891ce904415eadc6c0bcf7168068fbc`
 
 This file is executable handoff, not permission to bypass the orchestrator. `EXECUTE_CLOSE` must re-enter through `tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md`, revalidate this handoff against the then-current branch, and execute the units below from highest root to lower exposed findings.
@@ -56,8 +56,8 @@ If temporary coexistence is technically unavoidable, only one side may retain wr
 
 ## U001 — Freeze and enforce canonical authorization vocabulary/authority
 
-**Owner:** Product truth + Identity.  
-**Depends on:** none.  
+**Owner:** Product truth + Identity.
+**Depends on:** none.
 **Primary source:** `governance/product/contracts/administration-roles-approvals-audit.product-truth.json` and Identity RBAC definitions/canonical access domain.
 
 ### Required work
@@ -85,7 +85,7 @@ One canonical machine vocabulary exists; all authorization decisions reference i
 
 ## U002 — Make Identity the physically enforceable sole applied-RBAC writer
 
-**Owner:** `core/identity`.  
+**Owner:** `core/identity`.
 **Depends on:** U001.
 
 ### Required work
@@ -117,7 +117,7 @@ A repository-wide write-path audit proves **zero applied-RBAC writers outside Id
 
 ## U003 — Converge DSH Administration to orchestration-only authority
 
-**Owner:** `services/dsh/backend/internal/administration`.  
+**Owner:** `services/dsh/backend/internal/administration`.
 **Depends on:** U001, U002.
 
 ### Required work
@@ -149,7 +149,7 @@ Every DSH administrative mutation can be traced to one canonical intent and one 
 
 ## U004 — Cut over contracts, generated bindings and all consumers
 
-**Owners:** Identity contracts + DSH contracts; consuming owners derive only.  
+**Owners:** Identity contracts + DSH contracts; consuming owners derive only.
 **Depends on:** U001-U003.
 
 ### Required work
@@ -178,7 +178,7 @@ Contract registry and consumer inventory show one semantic model from Product/Id
 
 ## U005 — Reconcile/backfill data and prove canonical cutover
 
-**Owners:** Identity for applied state; DSH for orchestration/audit state.  
+**Owners:** Identity for applied state; DSH for orchestration/audit state.
 **Depends on:** U002-U004.
 
 ### Required work
@@ -210,7 +210,7 @@ Reconciliation reports zero material mismatch/orphan/conflict and post-cutover w
 
 ## U006 — Mandatory repository cleanup after authorization cutover
 
-**Owner:** each owning domain; integration authority coordinates deletion.  
+**Owner:** each owning domain; integration authority coordinates deletion.
 **Depends on:** U001-U005.
 
 This unit is not polish. It is part of the treatment.
@@ -241,7 +241,7 @@ Every surviving material artifact has necessary purpose, correct owner, real con
 
 ## U007 — Correct the canonical Realtime/Redis behavior exposed by Contextual CI
 
-**Owner:** canonical realtime/runtime publish boundary identified by the failing contract.  
+**Owner:** canonical realtime/runtime publish boundary identified by the failing contract.
 **Depends on:** authorization units only when shared code/data actually intersects; otherwise may execute in parallel after root ownership is confirmed.
 
 ### Required work
@@ -261,7 +261,7 @@ The exact failing contract passes for the correct reason, runtime failure/recove
 
 ## U008 — Repair remote analysis/control-plane authority without weakening evidence
 
-**Owner:** `.github/workflows/**` + canonical remote-analysis scripts/guards.  
+**Owner:** `.github/workflows/**` + canonical remote-analysis scripts/guards.
 **Depends on:** may run in parallel with independent product units, subject to single integration authority.
 
 ### A. Semgrep evidence normalization
@@ -299,7 +299,7 @@ Semgrep produces zero unaccounted raw conditions, zizmor/actionlint pass, exact-
 
 ## U009 — Diagnose and close SonarQube material findings at code owner
 
-**Owner:** code/config owner responsible for each Sonar finding.  
+**Owner:** code/config owner responsible for each Sonar finding.
 **Depends on:** execute after or alongside the source units that may naturally remove findings; re-scan only the integrated candidate.
 
 ### Required work
@@ -318,7 +318,7 @@ SonarQube Cloud analysis completes successfully and the project/PR quality gate 
 
 ## U010 — Integrated final cutover, deletion and re-audit
 
-**Owner:** single integration authority.  
+**Owner:** single integration authority.
 **Depends on:** U001-U009.
 
 ### Required work

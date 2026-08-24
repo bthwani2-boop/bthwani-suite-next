@@ -12,8 +12,8 @@ import (
 )
 
 // Operations permission actions on the control-panel surface, shared by
-// orders/cart/checkout/dispatch/field-readiness operator views. "operator"
-// remains a valid fallback role during RBAC data migration.
+// orders/cart/checkout/dispatch/field-readiness views. Access is granted only
+// by the canonical Identity permission readback.
 const (
 	OperationsPermissionRead   = "operations.read"
 	OperationsPermissionManage = "operations.manage"

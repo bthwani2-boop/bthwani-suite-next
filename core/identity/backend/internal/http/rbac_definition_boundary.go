@@ -76,6 +76,10 @@ func handleRoleDefinitionWrite(authority *identity.PermissionEnforcer) http.Hand
 			sendError(w, http.StatusBadRequest, "INVALID_IDEMPOTENCY_KEY", identity.ErrIdempotencyKeyRequired.Error())
 			return
 		}
+		if strings.TrimSpace(r.Header.Get("X-Canonical-Intent-ID")) != idempotencyKey {
+			sendError(w, http.StatusBadRequest, "INVALID_CANONICAL_INTENT", "canonical mutation intent is required")
+			return
+		}
 		var request struct {
 			Description     string                `json:"description"`
 			Active          *bool                 `json:"active"`

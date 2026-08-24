@@ -91,7 +91,7 @@ func (c *Client) UpsertRoleDefinition(ctx context.Context, roleName, description
 		"active":          active,
 		"expectedVersion": expectedVersion,
 		"permissions":     permissions,
-	}, map[string]string{"Idempotency-Key": idempotencyKey})
+	}, map[string]string{"Idempotency-Key": idempotencyKey, "X-Canonical-Intent-ID": idempotencyKey})
 	if err != nil {
 		return RbacRoleDefinition{}, err
 	}

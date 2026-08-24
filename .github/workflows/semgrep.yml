@@ -43,10 +43,10 @@ jobs:
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
-          skip=false
+          skip="false"
           if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" != "${DEFAULT_BRANCH}" ]]; then
             count="$(gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls" -f state=open -f head="${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}" -f base="${DEFAULT_BRANCH}" -f per_page=100 --jq 'length')"
-            [[ "${count}" == "0" ]] || skip=true
+            [[ "${count}" == "0" ]] || skip="true"
           fi
           echo "skip=${skip}" >> "${GITHUB_OUTPUT}"
 
@@ -72,13 +72,13 @@ jobs:
           set -euo pipefail
           actual="$(git rev-parse HEAD)"
           [[ "${actual}" == "${EXPECTED_SHA}" ]] || { echo "::error::Semgrep checkout drift"; exit 1; }
-          mode=full
+          mode="full"
           base=""
           if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
-            mode=diff
+            mode="diff"
             base="${PR_BASE_SHA}"
           elif [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && "${REQUEST_MODE:-full}" == "diff" ]]; then
-            mode=diff
+            mode="diff"
             base="${REQUEST_BASE}"
           fi
           if [[ "${mode}" == "diff" ]]; then
@@ -138,15 +138,25 @@ jobs:
           jq . "${src}" > "${RUNNER_TEMP}/semgrep-evidence/semgrep.pretty.json"
           total="$(jq '[.results[]?] | length' "${src}")"
           engine_conditions="$(jq '[.errors[]?] | length' "${src}")"
-          tool_limitations="$(jq '[.errors[]? | select(.type == "Internal matching error" and ((.message // "") | contains("metavariable-pattern failed when parsing $SHELL\u0027s content as Bash")))] | length' "${src}")"
-          unknown_engine_errors="$((engine_conditions - tool_limitations))"
+          classified_errors="$(jq -c '[.errors[]? |
+            if type != "object" then
+              {classification:"UNKNOWN_ENGINE_ERROR", raw:.}
+            elif (.type == "Internal matching error" and ((.message // "") | contains("metavariable-pattern failed when parsing $SHELL\u0027s content as Bash"))) then
+              {classification:"TOOL_LIMITATION_PROVEN", type:(.type // "UNSPECIFIED"), message:(.message // "")}
+            else
+              {classification:"UNKNOWN_ENGINE_ERROR", type:(.type // "UNSPECIFIED"), message:(.message // "")}
+            end
+          ]' "${src}")"
+          tool_limitations="$(jq '[.[] | select(.classification == "TOOL_LIMITATION_PROVEN")] | length' <<<"${classified_errors}")"
+          unknown_engine_errors="$(jq '[.[] | select(.classification == "UNKNOWN_ENGINE_ERROR")] | length' <<<"${classified_errors}")"
+          classified_engine_errors="$(jq 'length' <<<"${classified_errors}")"
           severities="$(jq -c '[.results[]? | (.extra.severity // "UNSPECIFIED")] | group_by(.) | map({severity:.[0],count:length})' "${src}")"
           jq -n \
             --arg headSha "${HEAD_SHA}" --arg mode "${MODE}" --arg baseSha "${BASE_SHA}" \
             --argjson total "${total}" --argjson engineConditions "${engine_conditions}" \
             --argjson toolLimitations "${tool_limitations}" --argjson unknownEngineErrors "${unknown_engine_errors}" \
-            --argjson severities "${severities}" \
-            '{schemaVersion:3,headSha:$headSha,mode:$mode,baseSha:$baseSha,totalFindings:$total,engineConditions:$engineConditions,toolLimitationsProven:$toolLimitations,unknownEngineErrors:$unknownEngineErrors,severities:$severities,allRawFindingsAccounted:true}' \
+            --argjson classifiedEngineErrors "${classified_engine_errors}" --argjson severities "${severities}" \
+            '{schemaVersion:3,headSha:$headSha,mode:$mode,baseSha:$baseSha,totalFindings:$total,engineConditions:$engineConditions,classifiedEngineErrors:$classifiedEngineErrors,toolLimitationsProven:$toolLimitations,unknownEngineErrors:$unknownEngineErrors,severities:$severities,allRawFindingsAccounted:($classifiedEngineErrors == $engineConditions)}' \
             > "${RUNNER_TEMP}/semgrep-evidence/summary.json"
           {
             echo "### Semgrep Code Remote"

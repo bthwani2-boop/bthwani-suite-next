@@ -45,7 +45,7 @@ on:
 permissions:
   actions: read
   contents: read
-  pull-requests: write
+  pull-requests: read
 
 env:
   GIT_CONFIG_COUNT: "1"
@@ -61,6 +61,10 @@ jobs:
     name: Resolve canonical target and affected scope
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: write
     outputs:
       target_kind: ${{ steps.target.outputs.target_kind }}
       pr_number: ${{ steps.target.outputs.pr_number }}
@@ -159,7 +163,7 @@ jobs:
             head_ref="${PR_HEAD_REF_EVENT}"
             base_ref="${PR_BASE_REF_EVENT}"
             base_sha="${PR_BASE_SHA_EVENT}"
-            phase=pr
+            phase="pr"
           elif [[ "${EVENT_NAME}" == "workflow_dispatch" && "${REQUEST_TARGET_KIND:-branch}" == "pull_request" ]]; then
             [[ "${REQUEST_PR_NUMBER}" =~ ^[0-9]+$ ]] || { echo "::error::pr_number is required for pull_request target"; exit 1; }
             pr="$(resolve_pr "${REQUEST_PR_NUMBER}")"
@@ -174,12 +178,12 @@ jobs:
             head_ref="$(jq -r '.head.ref' <<<"${pr}")"
             base_ref="$(jq -r '.base.ref' <<<"${pr}")"
             base_sha="${pr_base}"
-            phase=closure
+            phase="closure"
           elif [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
             [[ -z "${REQUEST_HEAD_SHA:-}" || "${REQUEST_HEAD_SHA}" == "${actual_head}" ]] || { echo "::error::requested branch SHA is stale"; exit 1; }
-            phase=closure
+            phase="closure"
           elif [[ "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]]; then
-            phase=default-branch
+            phase="default-branch"
           elif [[ "${EVENT_NAME}" == "push" ]]; then
             mapfile -t prs < <(gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
               "/repos/${GITHUB_REPOSITORY}/pulls" \
@@ -210,7 +214,7 @@ jobs:
               head_ref="$(jq -r '.head.ref' <<<"${pr}")"
               base_ref="$(jq -r '.base.ref' <<<"${pr}")"
               base_sha="$(jq -r '.base.sha' <<<"${pr}")"
-              phase=pr
+              phase="pr"
               skip_duplicate=true
             fi
           fi

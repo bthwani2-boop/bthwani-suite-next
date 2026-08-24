@@ -76,13 +76,6 @@ ORDER BY service, surface, action`, service, surface)
 	return entries, rows.Err()
 }
 
-// UpsertRoleDefinition is retained as a source-compatible helper for internal
-// callers. HTTP and governed DSH callers use the versioned, idempotent method.
-func (e *PermissionEnforcer) UpsertRoleDefinition(ctx context.Context, name, description string, permissions []Permission) (RoleDefinition, error) {
-	key := "legacy-role-definition:" + strings.TrimSpace(name)
-	return e.UpsertRoleDefinitionWithOptions(ctx, name, description, true, -1, permissions, key, "identity-legacy")
-}
-
 // UpsertRoleDefinitionWithOptions atomically makes one role exactly match the
 // supplied canonical bindings. It validates all permissions before mutating
 // anything, conditionally advances the role version, and records the complete

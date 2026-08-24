@@ -18,7 +18,7 @@ const (
 	minimumActivationHMACSecretLength = 32
 	minimumInternalServiceTokenLength = 32
 	identityMigrationServiceName      = "identity"
-	identityLatestMigration           = "identity-037_canonical_local_bootstrap_access_vocabulary.sql"
+	identityLatestMigration           = "identity-038_mobile_surface_permission_separation.sql"
 	defaultReadinessProbeTimeout      = 2 * time.Second
 	defaultReadinessCheckTimeout      = 750 * time.Millisecond
 	defaultClockSkewLimit             = 5 * time.Second

@@ -1,13 +1,13 @@
 # AUDIT_PREPARE — Canonical Truth Handoff
 
-**STATUS:** `READY_FOR_EXECUTION`  
-**EXECUTION_READY:** `true`  
-**CLOSED:** `false`  
-**REPOSITORY:** `bthwani2-boop/bthwani-suite-next`  
-**BRANCH:** `c`  
-**PHASE:** `AUDIT_PREPARE`  
-**AUDIT_TARGET_SHA:** `51a8482bc891ce904415eadc6c0bcf7168068fbc`  
-**PR:** `#284`  
+**STATUS:** `READY_FOR_EXECUTION`
+**EXECUTION_READY:** `true`
+**CLOSED:** `false`
+**REPOSITORY:** `bthwani2-boop/bthwani-suite-next`
+**BRANCH:** `c`
+**PHASE:** `AUDIT_PREPARE`
+**AUDIT_TARGET_SHA:** `51a8482bc891ce904415eadc6c0bcf7168068fbc`
+**PR:** `#284`
 **PR_BASE_SHA:** `ffc25c4d7799c36e876e2e0796551e6a50afcb9c`
 
 > This handoff records the audit of the exact Target System candidate at `AUDIT_TARGET_SHA`. Commits that add only the three canonical handoff files under this `PLAN_DIR` are planning metadata, not Target System mutations. Before `EXECUTE_CLOSE`, compare the then-current branch with `AUDIT_TARGET_SHA`: if anything other than these three plan files changed after the audit, re-audit the changed material cone before executing it.

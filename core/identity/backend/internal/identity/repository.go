@@ -14,7 +14,6 @@ import (
 	"math/big"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -808,166 +807,16 @@ func maskPhone(phone string) string {
 	return phone[:4] + strings.Repeat("*", len(phone)-6) + phone[len(phone)-2:]
 }
 
-// ProvisionActor creates an inactive actor for a Workforce-managed provider.
-// It is intentionally limited to field and captain roles and requires the
-// trusted scope supplied by the authenticated Workforce service boundary.
-func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInput) (ActorAdminView, error) {
-	role := strings.TrimSpace(input.Role)
-	surface, ok := workforceActivationSurfaceFor(role)
-	if !ok {
-		return ActorAdminView{}, ErrInvalidActivation
-	}
-	username := strings.TrimSpace(input.Username)
-	if username == "" {
-		return ActorAdminView{}, ErrInvalidActivation
-	}
-	operatorContextID := strings.TrimSpace(input.OperatorContextID)
-	if operatorContextID == "" {
-		return ActorAdminView{}, ErrInvalidActivation
-	}
-	phone, err := NormalizePhoneE164(input.PhoneE164)
-	if err != nil {
-		return ActorAdminView{}, err
-	}
-
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return ActorAdminView{}, err
-	}
-	defer tx.Rollback()
-
-	existing, err := actorByPhoneAnyRoleTx(ctx, tx, phone)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return ActorAdminView{}, err
-	}
-	if err == nil && strings.TrimSpace(existing.OperatorContextID) != operatorContextID {
-		return ActorAdminView{}, ErrForbidden
-	}
-	if err == nil {
-		if hasRole(existing.Roles, role) {
-			if err := tx.Commit(); err != nil {
-				return ActorAdminView{}, err
-			}
-			return toAdminView(existing), nil
-		}
-		permissionsJSON, err := providerPermissions(surface)
-		if err != nil {
-			return ActorAdminView{}, err
-		}
-		var requestedPermissions []Permission
-		if err := json.Unmarshal(permissionsJSON, &requestedPermissions); err != nil {
-			return ActorAdminView{}, err
-		}
-		roles := append([]string{}, existing.Roles...)
-		roles = append(roles, role)
-		if err := setActorAccessTx(ctx, tx, existing.ID, roles, mergeEmployeePermissions(existing.Permissions, requestedPermissions), "workforce-provision"); err != nil {
-			return ActorAdminView{}, err
-		}
-		if err := tx.Commit(); err != nil {
-			return ActorAdminView{}, err
-		}
-		return r.ActorAdminByID(ctx, existing.ID)
-	}
-
-	suffix, err := randomToken(9)
-	if err != nil {
-		return ActorAdminView{}, err
-	}
-	actorID := role + "-" + suffix
-	permissions, err := providerPermissions(surface)
-	if err != nil {
-		return ActorAdminView{}, err
-	}
-	_, err = tx.ExecContext(ctx, `
-		INSERT INTO identity_actors
-			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
-		VALUES ($1, $2, '', $3, $4, ARRAY[]::text[], '[]'::jsonb, 'PROVISIONED', 1, now())`,
-		actorID, username, operatorContextID, phone)
-	if err != nil {
-		return ActorAdminView{}, mapUniqueViolation(err)
-	}
-	var requestedPermissions []Permission
-	if err := json.Unmarshal(permissions, &requestedPermissions); err != nil {
-		return ActorAdminView{}, err
-	}
-	if err := setActorAccessTx(ctx, tx, actorID, []string{role}, requestedPermissions, "workforce-provision"); err != nil {
-		return ActorAdminView{}, err
-	}
-	if err := tx.Commit(); err != nil {
-		return ActorAdminView{}, err
-	}
-	return ActorAdminView{
-		ActorID: actorID, Username: username, PhoneE164: phone,
-		Roles: []string{role}, Status: ActorStatusProvisioned, Version: 1,
-	}, nil
-}
-
 func providerPermissions(surface string) ([]byte, error) {
+	if surface != "app-field" && surface != "app-captain" {
+		return nil, ErrInvalidActivation
+	}
 	return json.Marshal([]Permission{
 		{Service: "dsh", Surface: surface, Action: "store:read", Scope: "assigned"},
 		{Service: "dsh", Surface: surface, Action: "store:write", Scope: "assigned"},
 		{Service: "workforce", Surface: surface, Action: "provider:read", Scope: "own"},
 		{Service: "workforce", Surface: surface, Action: "provider:update", Scope: "own"},
 	})
-}
-
-// ActorAdminByID returns the internal projection of an actor, including the
-// sovereign phone number, for service-to-service consumers.
-func (r *Repository) SearchActors(ctx context.Context, role, q string, limit int) ([]ActorAdminView, error) {
-	if limit <= 0 || limit > 100 {
-		limit = 25
-	}
-	clauses := []string{"status = 'ACTIVE'"}
-	args := []any{}
-	if role != "" {
-		args = append(args, role)
-		clauses = append(clauses, fmt.Sprintf("$%d = ANY(roles)", len(args)))
-	}
-	if q != "" {
-		args = append(args, "%"+q+"%")
-		clauses = append(clauses, fmt.Sprintf("(username ILIKE $%d OR COALESCE(phone_e164, '') ILIKE $%d)", len(args), len(args)))
-	}
-	args = append(args, limit)
-	query := `
-		SELECT id, username, COALESCE(phone_e164, ''), roles, status, version
-		FROM identity_actors
-		WHERE ` + strings.Join(clauses, " AND ") + `
-		ORDER BY username
-		LIMIT $` + strconv.Itoa(len(args))
-	rows, err := r.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	views := []ActorAdminView{}
-	for rows.Next() {
-		var actor Actor
-		var roles pq.StringArray
-		if err := rows.Scan(&actor.ID, &actor.Username, &actor.PhoneE164, &roles, &actor.Status, &actor.Version); err != nil {
-			return nil, err
-		}
-		actor.Roles = []string(roles)
-		views = append(views, toAdminView(actor))
-	}
-	return views, rows.Err()
-}
-
-func (r *Repository) ActorAdminByID(ctx context.Context, actorID string) (ActorAdminView, error) {
-	var actor Actor
-	var roles pq.StringArray
-	err := r.db.QueryRowContext(ctx, `
-		SELECT id, username, COALESCE(phone_e164, ''), roles, status, version
-		FROM identity_actors WHERE id = $1`, actorID).Scan(
-		&actor.ID, &actor.Username, &actor.PhoneE164, &roles, &actor.Status, &actor.Version,
-	)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ActorAdminView{}, ErrActorNotFound
-		}
-		return ActorAdminView{}, err
-	}
-	actor.Roles = []string(roles)
-	return toAdminView(actor), nil
 }
 
 // SuspendActor suspends authentication for an actor in one transaction.

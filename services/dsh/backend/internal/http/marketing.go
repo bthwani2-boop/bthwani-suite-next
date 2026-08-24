@@ -8,9 +8,8 @@ import (
 	"dsh-api/internal/store"
 )
 
-// Marketing permission actions on the control-panel surface. "operator"
-// remains a valid fallback role for all of them during RBAC data migration
-// (see requirePermission).
+// Marketing permission actions on the control-panel surface. Access is
+// granted only by the canonical Identity permission readback.
 const (
 	MarketingPermissionRead   = "marketing.read"
 	MarketingPermissionManage = "marketing.manage"

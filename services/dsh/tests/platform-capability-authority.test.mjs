@@ -44,6 +44,7 @@ test("platform capability registry is bound to the canonical scope vocabulary", 
     scopeVocabulary.capabilities.some((capability) => capability.id === "dsh-operational-policy-evaluate"),
     true,
   );
+  assert.doesNotMatch(permissionsModule, /permission\.(?:service|surface|action)\s*===\s*["'](?:\*|all)["']/);
 });
 
 test("platform policy routes use named DSH permission constants", () => {
