@@ -3,7 +3,7 @@ name: BThwani Runtime Proof
 on:
   workflow_call:
     inputs:
-      head_sha:
+      candidate_sha:
         type: string
         required: true
       full_verification:
@@ -23,7 +23,7 @@ permissions:
   contents: read
 
 env:
-  CANDIDATE_SHA: ${{ github.sha }}
+  CANDIDATE_SHA: ${{ inputs.candidate_sha }}
 
 jobs:
   proof:
@@ -35,11 +35,11 @@ jobs:
       - name: Verify routed candidate identity
         shell: bash
         env:
-          ROUTED_HEAD_SHA: ${{ inputs.head_sha }}
+          ROUTED_CANDIDATE_SHA: ${{ inputs.candidate_sha }}
         run: |
           set -euo pipefail
-          if [[ -z "${CANDIDATE_SHA}" || "${ROUTED_HEAD_SHA}" != "${CANDIDATE_SHA}" ]]; then
-            echo "::error::Routed head SHA mismatch: routed=${ROUTED_HEAD_SHA:-<empty>} event=${CANDIDATE_SHA:-<empty>}"
+          if [[ ! "${CANDIDATE_SHA}" =~ ^[0-9a-fA-F]{40}$ || "${ROUTED_CANDIDATE_SHA}" != "${CANDIDATE_SHA}" ]]; then
+            echo "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CANDIDATE_SHA:-<empty>}"
             exit 1
           fi
       - name: Checkout immutable source

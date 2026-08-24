@@ -32,7 +32,7 @@ test("verification authority stays targeted during PR development", () => {
 });
 
 test("verification authority forces full exact-candidate closure verification", () => {
-  for (const executionPhase of ["closure", "master"]) {
+  for (const executionPhase of ["closure", "default-branch"]) {
     const result = classifyFiles([".github/workflows/ci.yml"], { executionPhase });
     assert.equal(result.full_scope, true, executionPhase);
     assert.equal(result.full_verification, true, executionPhase);

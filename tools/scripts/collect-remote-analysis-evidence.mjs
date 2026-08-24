@@ -10,10 +10,7 @@ const sonarHost = String(process.env.SONAR_HOST_URL || "https://sonarcloud.io").
 const targetSha = String(process.env.TARGET_SHA || "").trim();
 const targetRef = String(process.env.TARGET_REF || "").trim();
 const targetEvent = String(process.env.TARGET_EVENT || "push").trim();
-// GitHub workflows always pass the live repository default branch. Keep the
-// historical master fallback for direct/local invocations that predate that
-// workflow input; remote evidence still validates the exact target branch.
-const defaultBranch = String(process.env.DEFAULT_BRANCH || "master").trim();
+const defaultBranch = String(process.env.DEFAULT_BRANCH || "").trim();
 const targetBranch = targetRef.startsWith("refs/heads/") ? targetRef.slice("refs/heads/".length) : "";
 const sonarBranch = String(process.env.SONAR_BRANCH || targetBranch).trim();
 const waitSeconds = Number(process.env.WAIT_FOR_WORKFLOWS_SECONDS || "1800");
@@ -59,6 +56,7 @@ function emit(exitCode) {
 
 function assertInputs() {
   if (!repository) fail("GITHUB_REPOSITORY is required");
+  if (!defaultBranch) fail("DEFAULT_BRANCH is required and must come from live repository context");
   if (!githubToken) fail("GH_TOKEN/GITHUB_TOKEN is required");
   if (!sonarToken) fail("SONAR_TOKEN is required");
   if (!/^[0-9a-f]{40}$/i.test(targetSha)) fail("TARGET_SHA must be a full 40-character commit SHA");

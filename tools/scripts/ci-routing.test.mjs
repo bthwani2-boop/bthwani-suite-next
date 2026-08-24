@@ -29,20 +29,46 @@ test("router owns scopes and jobs only", () => {
   assert.doesNotMatch(router, /governance_policy|policy_required|agent-governance|guard-registry|required-command-integrity|\bsdlc\b/u);
 });
 
-test("workflow verification is targeted and direct", () => {
-  const workflow = read(".github/workflows/ci.yml");
-  assert.match(workflow, /run-actionlint\.mjs/u);
-  assert.match(workflow, /run-zizmor\.mjs/u);
-  assert.match(workflow, /run-pinact\.mjs --verify/u);
-  assert.doesNotMatch(workflow, /run-foundation-gate|guard:foundation/u);
+test("workflow verification has one remote-security owner", () => {
+  const ciWorkflow = read(".github/workflows/ci.yml");
+  const securityWorkflow = read(".github/workflows/security-remote.yml");
+  assert.match(securityWorkflow, /run-actionlint\.mjs/u);
+  assert.match(securityWorkflow, /run-zizmor\.mjs/u);
+  assert.match(securityWorkflow, /run-pinact\.mjs --verify/u);
+  assert.doesNotMatch(ciWorkflow, /run-actionlint\.mjs|run-zizmor\.mjs|run-pinact\.mjs/u);
+  assert.doesNotMatch(ciWorkflow, /run-foundation-gate|guard:foundation/u);
+  assert.doesNotMatch(securityWorkflow, /run-foundation-gate|guard:foundation/u);
 });
 
 test("verification authority is phase-gated", () => {
   const router = read("tools/scripts/detect-ci-context.mjs");
-  assert.match(router, /verificationAuthorityChanged && \["closure", "master"\]\.includes\(executionPhase\)/u);
+  assert.match(router, /verificationAuthorityChanged && \["closure", "default-branch"\]\.includes\(executionPhase\)/u);
+  assert.doesNotMatch(router, /\["closure", "master"\]|executionPhase === "(?:master|b|c)"/u);
   const tests = read("tools/scripts/detect-ci-context.test.mjs");
   assert.match(tests, /verification authority stays targeted during PR development/u);
   assert.match(tests, /verification authority forces full exact-candidate closure verification/u);
+});
+
+test("reusable jobs execute the routed immutable candidate instead of the PR merge ref", () => {
+  for (const workflow of [
+    ".github/workflows/ci-node-diagnostics.yml",
+    ".github/workflows/ci-node-verification.yml",
+    ".github/workflows/ci-backends.yml",
+    ".github/workflows/ci-runtime.yml",
+  ]) {
+    const content = read(workflow);
+    assert.match(content, /candidate_sha:[\s\S]*?CANDIDATE_SHA: \$\{\{ inputs\.candidate_sha \}\}/u, workflow);
+    assert.doesNotMatch(content, /CANDIDATE_SHA: \$\{\{ github\.sha \}\}/u, workflow);
+    assert.doesNotMatch(content, /inputs\.head_sha/u, workflow);
+  }
+});
+
+test("OpenCodeReview uses dedicated Copilot authority and a trusted evaluator", () => {
+  const workflow = read(".github/workflows/open-code-review.yml");
+  assert.match(workflow, /COPILOT_GITHUB_TOKEN: \$\{\{ secrets\.COPILOT_GITHUB_TOKEN \}\}/u);
+  assert.doesNotMatch(workflow, /GITHUB_TOKEN: \$\{\{ github\.token \}\}|copilot-requests:/u);
+  assert.match(workflow, /show "\$\{base\}:tools\/scripts\/evaluate-opencodereview\.mjs"/u);
+  assert.doesNotMatch(workflow, /show "\$\{HEAD_SHA\}:tools\/scripts\/evaluate-opencodereview\.mjs"/u);
 });
 
 test("backend verification skips an empty development package cone", () => {

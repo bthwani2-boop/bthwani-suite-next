@@ -90,6 +90,7 @@ jobs:
       - name: Verify router behavior
         run: |
           node --test tools/scripts/detect-ci-context.test.mjs
+          node --test tools/scripts/ci-routing.test.mjs
           node --test tools/scripts/ci-runtime-bootstrap-policy.test.mjs
       - name: Resolve execution phase and affected scope
         id: scope
@@ -120,7 +121,7 @@ jobs:
             phase=closure
             mode="${DISPATCH_MODE:-affected}"
           elif [[ "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]]; then
-            phase=master
+            phase=default-branch
             verified_base=""
             while IFS= read -r candidate; do
               [[ -n "${candidate}" && "${candidate}" != "${head_sha}" ]] || continue
@@ -194,14 +195,13 @@ jobs:
     uses: ./.github/workflows/ci-node-diagnostics.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
-      head_sha: ${{ needs.context.outputs.head_sha }}
+      candidate_sha: ${{ needs.context.outputs.head_sha }}
       full_verification: ${{ needs.context.outputs.full_verification }}
       frontend: ${{ needs.context.outputs.frontend }}
       contracts: ${{ needs.context.outputs.contracts }}
       contracts_changed: ${{ needs.context.outputs.contracts_changed }}
       node: ${{ needs.context.outputs.node }}
       verification_tier: ${{ needs.context.outputs.verification_tier }}
-      execution_phase: ${{ needs.context.outputs.execution_phase }}
 
   verification:
     name: Node verification
@@ -210,13 +210,12 @@ jobs:
     uses: ./.github/workflows/ci-node-verification.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
-      head_sha: ${{ needs.context.outputs.head_sha }}
+      candidate_sha: ${{ needs.context.outputs.head_sha }}
       full_scope: ${{ needs.context.outputs.full_scope }}
       frontend: ${{ needs.context.outputs.frontend }}
       mobile: ${{ needs.context.outputs.mobile }}
       heavy: ${{ needs.context.outputs.heavy }}
       verification_tier: ${{ needs.context.outputs.verification_tier }}
-      execution_phase: ${{ needs.context.outputs.execution_phase }}
       journey: ${{ needs.context.outputs.journey }}
       journey_scope: ${{ needs.context.outputs.journey_scope }}
       platform_change_sets: ${{ needs.context.outputs.platform_change_sets }}
@@ -228,10 +227,9 @@ jobs:
     uses: ./.github/workflows/ci-backends.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
-      head_sha: ${{ needs.context.outputs.head_sha }}
+      candidate_sha: ${{ needs.context.outputs.head_sha }}
       full_scope: ${{ needs.context.outputs.full_scope }}
       verification_tier: ${{ needs.context.outputs.verification_tier }}
-      execution_phase: ${{ needs.context.outputs.execution_phase }}
       database_changed: ${{ needs.context.outputs.database_changed }}
       dsh: ${{ needs.context.outputs.dsh }}
       wlt: ${{ needs.context.outputs.wlt }}
@@ -246,7 +244,7 @@ jobs:
     if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.runtime_required == 'true' }}
     uses: ./.github/workflows/ci-runtime.yml
     with:
-      head_sha: ${{ needs.context.outputs.head_sha }}
+      candidate_sha: ${{ needs.context.outputs.head_sha }}
       full_verification: ${{ needs.context.outputs.full_verification }}
       runtime: ${{ needs.context.outputs.runtime_required }}
       runtime_profile: ${{ needs.context.outputs.runtime_profile }}

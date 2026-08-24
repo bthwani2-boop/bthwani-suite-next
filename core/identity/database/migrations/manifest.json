@@ -3,7 +3,7 @@
   "service": "identity",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "identity-033_workforce_provider_permission_vocabulary.sql",
+  "cutover": "identity-036_canonical_platform_control_permission_vocabulary.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -248,6 +248,13 @@
       "file": "identity-035_local_platform_role_vocabulary.sql",
       "sha256": "e470b74a9199acc5d0f01e52f63730621ee4e9937ed0a3104a79f83adb9d5c2e",
       "historicalPrefix": "035",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 36,
+      "file": "identity-036_canonical_platform_control_permission_vocabulary.sql",
+      "sha256": "d19b1a8038e2ceb8f053cfa8c5e1eea7f20d00ed6ec0a97c8c526f79381aa736",
+      "historicalPrefix": "036",
       "state": "ACTIVE"
     }
   ]

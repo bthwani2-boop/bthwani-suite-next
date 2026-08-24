@@ -25,7 +25,7 @@ export function classifyFiles(inputFiles, options = {}) {
   const includes = (...parts) => has((file) => parts.some((part) => file.includes(part)));
 
   const verificationAuthorityChanged = isVerificationAuthorityChange(files);
-  const authorityRequiresFull = verificationAuthorityChanged && ["closure", "master"].includes(executionPhase);
+  const authorityRequiresFull = verificationAuthorityChanged && ["closure", "default-branch"].includes(executionPhase);
   const fullScope = mode === "full" || authorityRequiresFull;
   const fullVerification = fullScope || verificationDepth === "full";
 
@@ -133,7 +133,7 @@ export function classifyFiles(inputFiles, options = {}) {
 
   const runtime = runtimeProfile !== "none";
   const runtimeRequired = runtime && (
-    runtimeProofRequested || fullScope || ["closure", "master"].includes(executionPhase) || protectedSecurityChanged
+    runtimeProofRequested || fullScope || ["closure", "default-branch"].includes(executionPhase) || protectedSecurityChanged
   );
 
   const sharedBrain = starts("shared/", "services/dsh/frontend/shared/", "services/wlt/frontend/shared/");

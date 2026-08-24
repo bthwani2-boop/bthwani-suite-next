@@ -123,8 +123,8 @@ jobs:
           [[ "${base}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::unable to resolve trusted base ${BASE_REF}"; exit 1; }
           merge_base="$(git -C "${OCR_REPO}" merge-base "${base}" "${HEAD_SHA}")"
           git -C "${OCR_REPO}" show "${base}:.opencodereview/rule.json" > "${RUNNER_TEMP}/ocr-rule.json"
-          git -C "${OCR_REPO}" show "${HEAD_SHA}:tools/scripts/evaluate-opencodereview.mjs" > "${RUNNER_TEMP}/evaluate-opencodereview.mjs"
-          [[ -s "${RUNNER_TEMP}/evaluate-opencodereview.mjs" ]] || { echo "::error::candidate evaluator is missing"; exit 1; }
+          git -C "${OCR_REPO}" show "${base}:tools/scripts/evaluate-opencodereview.mjs" > "${RUNNER_TEMP}/evaluate-opencodereview.mjs"
+          [[ -s "${RUNNER_TEMP}/evaluate-opencodereview.mjs" ]] || { echo "::error::trusted base evaluator is missing"; exit 1; }
           {
             echo "base_sha=${base}"
             echo "merge_base=${merge_base}"
@@ -187,13 +187,17 @@ jobs:
         continue-on-error: true
         shell: bash
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           REQUESTED_MODEL: ${{ steps.request.outputs.model }}
           HEAD_SHA: ${{ steps.request.outputs.head_sha }}
           MERGE_BASE: ${{ steps.target.outputs.merge_base }}
           OCR_REPO: ${{ runner.temp }}/ocr-repo
         run: |
           set +e
+          if [[ -z "${COPILOT_GITHUB_TOKEN:-}" ]]; then
+            echo "::error::COPILOT_GITHUB_TOKEN is required and must allow Copilot Requests"
+            exit 1
+          fi
           evidence="${RUNNER_TEMP}/ocr-evidence"
           chunk_dir="${evidence}/chunks"
           mkdir -p "${chunk_dir}"
@@ -362,7 +366,7 @@ jobs:
           OCR_MODEL: ${{ steps.request.outputs.model || 'copilot-auto' }}
         run: |
           set -euo pipefail
-          env -u GITHUB_TOKEN -u GH_TOKEN -u SONAR_TOKEN -u ACTIONS_RUNTIME_TOKEN \
+          env -u COPILOT_GITHUB_TOKEN -u GITHUB_TOKEN -u GH_TOKEN -u SONAR_TOKEN -u ACTIONS_RUNTIME_TOKEN \
             node "${RUNNER_TEMP}/evaluate-opencodereview.mjs" \
             --input "${RUNNER_TEMP}/ocr-evidence/result.json" \
             --preview "${RUNNER_TEMP}/ocr-evidence/preview.json" \
