@@ -2,107 +2,94 @@
 
 This document is operational guidance. It does not override `AGENTS.md`, `governance/GOVERNANCE.md`, or `governance/policies/delivery.md`.
 
-## Live authority model
+## Canonical lifecycle
 
-Do not maintain a second workflow, guard, agent, or SDLC registry as repository truth. The repository intentionally has no workflow registry. Executable authority is the current implementation plus live GitHub state on the exact candidate SHA.
+Source branch creation is human-only. Source-branch names never define CI semantics.
 
-The primary GitHub execution authorities are:
+For every existing development branch, GitHub live state is authoritative:
 
-- contextual routing and aggregate CI result: `.github/workflows/ci.yml`;
-- reusable Node diagnostics and verification: `.github/workflows/ci-node-diagnostics.yml` and `.github/workflows/ci-node-verification.yml`;
-- reusable backend verification: `.github/workflows/ci-backends.yml`;
-- reusable runtime proof: `.github/workflows/ci-runtime.yml`;
-- canonical CodeQL scanner authority: `.github/workflows/codeql.yml`;
-- API-only CodeQL metadata maintenance after successful canonical master analysis: `.github/workflows/codeql-hygiene.yml`;
-- SonarQube Cloud scan: `.github/workflows/sonarqube.yml`;
-- remote security scans: `.github/workflows/security-remote.yml`;
-- dependency delta review: `.github/workflows/dependency-review.yml`;
-- frozen lockfile verification: `.github/workflows/lockfile-integrity.yml`;
-- exact-master remote CodeQL/Sonar read-back: `.github/workflows/remote-analysis-evidence.yml`;
-- authenticated SHA-pinned command ingress: `.github/workflows/remote-command.yml`.
+```text
+human creates branch
+-> first material push
+-> exactly one open Draft PR to the repository default branch
+-> same PR persists for the whole branch lifecycle
+-> PR_NUMBER stays stable while HEAD_SHA advances
+-> old-SHA evidence is superseded
+-> exact final HEAD is verified
+-> merge to canonical trunk
+-> retire/delete source branch
+```
 
-This list describes executable entry points; it is not a registry and must not be copied into another machine-authority layer.
+`ci.yml` owns branch/PR identity resolution. On a development push it queries the exact `head -> default-branch` PR set. Zero matching PRs causes creation of one Draft PR; one is reused; more than one is a fail-closed `PR_IDENTITY_CONFLICT`. The duplicate push run is then suppressed because the GitHub `pull_request` event owns verification.
 
-Actual branch protection, rulesets, required checks, workflow outcomes, reviews, code-scanning state, and approval freshness must be read from GitHub live for the exact target branch and candidate SHA.
+The canonical PR identity is `repository + PR_NUMBER + head ref/SHA + base ref/SHA`. A different PR, old SHA, same workflow name, or synthetic merge SHA is never current-candidate evidence.
 
-## Repository flow
+## Execution readiness versus closure readiness
 
-Before every material write:
+Tool health is not execution readiness. Broken CI/scanners/runtimes are evidence and normally enter root-cause treatment. Only a proven diagnosis blocker prevents execution.
 
-1. resolve the current user-named target ref and live SHA;
-2. reconcile unexpected branch movement;
-3. write only the authorized logical change;
-4. never force/reset newer unrelated work;
-5. re-resolve after the write and before any merge or closure claim.
+Closure is stricter. A full PR closure run is an explicit `workflow_dispatch` of `ci.yml` with the exact PR/head/base identity, `mode=full`, and `runtime_proof=true`.
 
-`master` is the release target. A tracked file cannot prove that GitHub currently enforces a particular ruleset or required-check set.
+The `BThwani / PR Closure Evidence` job re-resolves the PR, runs full internal CI/runtime, dispatches the remote analyzers on the same branch, correlates every new run to the exact HEAD SHA, reads back CodeQL/Sonar state, requires an exact-head semantic review attestation, re-resolves the PR again, and publishes one stable commit status.
 
-## Remote analysis and security
+A successful tool run is not cross-SHA or cross-PR evidence. A new commit invalidates affected evidence.
 
-Canonical static/security analysis is remote-owned:
+## Remote analysis authorities
 
-- CodeQL executes through GitHub Code Scanning on GitHub-hosted runners;
-- SonarQube analysis executes through SonarQube Cloud from GitHub-hosted runners;
-- SonarQube hosted MCP/API is the remote read surface for IDEs and agents that have an appropriate credential;
-- repository security gates execute on GitHub-hosted runners;
-- local scanner execution is never a prerequisite for repository closure.
+Canonical analysis is remote-owned:
 
-Local terminal clients are allowed as control/read surfaces. In particular, `gh` may dispatch and inspect GitHub Actions remotely, and the official `sonar` CLI may authenticate to and query SonarQube Cloud. This does not make the local machine an analysis authority. Local `sonar-scanner`, local CodeQL database creation/analysis, a local SonarQube server, or local replacements for the governed remote security workflows are not canonical closure paths.
+- CodeQL -> GitHub Code Scanning;
+- SonarQube -> SonarQube Cloud from GitHub-hosted runners;
+- Semgrep -> GitHub-hosted runner with complete raw finding/error artifact;
+- Remote Security -> GitHub-hosted gitleaks/OSV/Trivy/workflow/shell/container analyzers;
+- Dependency Review -> exact base/head dependency delta;
+- OpenCodeReview -> deterministic context preparation only; semantic reasoning is external host-agent evidence;
+- Docker/lockfile checks -> exact PR head, never the synthetic `github.sha` merge candidate.
 
-`codeql-hygiene.yml` is metadata maintenance, not a second scanner authority. It may retire only analyses produced by obsolete `.github/workflows/codeql.yml` analysis keys, and only when the triggering successful CodeQL run is still the exact live `master` SHA. It never dismisses current findings and never deletes history from a still-canonical analysis key. Because it has `security-events: write`, it is deliberately API-only: it never checks out or executes repository source.
+Local scanner execution is not a closure authority. Local `gh`/Sonar clients may be read/control surfaces only.
+
+Semgrep does not translate unknown severities into success. Every raw result and engine error is counted. A non-empty result set is an execution finding that must be diagnosed/dispositioned before closure.
+
+`remote-analysis-evidence.yml` remains default-branch/post-merge read-back. It is not PR closure authority.
+
+## Semantic review attestation
+
+OpenCodeReview preparation is not semantic review. Before full PR closure can pass, the exact current head must have a GitHub PR review anchored to that commit containing both:
+
+```text
+BTHWANI_SEMANTIC_REVIEW:v1
+verdict=PASS
+```
+
+The review body should summarize the material scope reviewed and any finding dispositions. A new commit supersedes the attestation.
 
 ## Remote command ingress
 
-`remote-command.yml` is a thin control ingress, not another CI implementation. It accepts only an allowlisted JSON envelope from a repository writer/maintainer/admin, verifies the exact branch SHA, dispatches an existing canonical workflow, correlates the resulting run, and reports the result back to the request issue.
+`remote-command.yml` accepts schema v2 only. It is a control ingress, not a scanner.
 
-The issue title is exactly:
-
-```text
-[remote-command]
-```
-
-The body is JSON:
+Example PR closure request:
 
 ```json
 {
-  "schema_version": 1,
-  "command": "ci-full",
-  "target_ref": "master",
-  "expected_sha": "<40-character live SHA>"
+  "schema_version": 2,
+  "request_id": "closure-20260824-001",
+  "command": "pr-closure",
+  "target_kind": "pull_request",
+  "target_ref": "",
+  "pr_number": 284,
+  "expected_head_sha": "<40-char current PR head>",
+  "expected_base_sha": "<40-char current PR base>"
 }
 ```
 
-Supported command intents are intentionally bounded to contextual CI, runtime proof, CodeQL, CodeQL metadata hygiene, SonarQube Cloud, remote security, lockfile integrity, and exact-master remote evidence read-back. No arbitrary shell command is accepted.
+For `target_kind=pull_request`, the workflow reads the PR directly and validates exact head/base SHA. For `target_kind=branch`, it validates the named existing branch directly. No branch is created by remote command ingress.
 
-Dependency Review remains pull-request-bound because its meaningful authority is the dependency delta between PR base and head.
+Supported intents are bounded: contextual CI, full/runtime/journey verification, PR closure, CodeQL, CodeQL hygiene, SonarQube, Remote Security, Semgrep, lockfile integrity, and default-branch evidence read-back. Arbitrary shell execution is forbidden.
 
-## Remote evidence
+## Platform enforcement
 
-`remote-analysis-evidence.yml` is read-back only. It does not run a second CodeQL or Sonar scanner. After canonical master CI completes, it reads CodeQL and Sonar evidence for the exact live master SHA, emits a short-lived artifact, and publishes the `Remote Analysis Evidence` commit status whose target URL points to the exact evidence run.
+Tracked files cannot prove live GitHub Rulesets. The canonical integration branch should be protected in GitHub live configuration with PR-required merging, blocked force-push/deletion, and `BThwani / PR Closure Evidence` as the stable required closure status once that ruleset is configured and read back successfully.
 
-The evidence collector accepts only canonical `push` evidence from `master` and correlates each required workflow by exact SHA, exact branch, event, workflow name, and workflow path. Manual terminal dispatch remains useful for diagnosis and explicit reruns, but it cannot impersonate canonical post-merge master evidence.
+## Verification discipline
 
-This status provides a stable bridge for connected GitHub clients:
-
-```text
-exact master SHA
-  -> Remote Analysis Evidence status
-  -> exact GitHub Actions run
-  -> candidate-bound artifact/read-back
-```
-
-Logs, screenshots, reports, and evidence artifacts are candidate-bound operational evidence. Do not commit them as durable Product/System Truth.
-
-## Verification and change procedure
-
-When changing CI/security authority:
-
-1. pin the exact source SHA;
-2. inspect all callers, required checks, and live rulesets before changing ownership or check names;
-3. migrate all consumers in the same logical change;
-4. remove obsolete duplicate execution only after live protection dependencies are proven safe;
-5. use local control/query clients only where they do not become scanner or security authorities;
-6. let GitHub-hosted workflows provide canonical security/runtime evidence;
-7. verify the exact final candidate and live GitHub result before merge or closure.
-
-Skipped jobs are acceptable only when routing proves non-applicability. Cancelled, superseded, or older-SHA runs are not PASS for a current candidate.
+Before every material write, re-resolve the target ref/PR and exact SHA. Before every closure/merge claim, re-resolve again. Never force a moved ref. Cancelled, stale, cross-PR, cross-SHA, incomplete, or skipped-without-non-applicability evidence is not PASS.
