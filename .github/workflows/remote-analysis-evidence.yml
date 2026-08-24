@@ -95,14 +95,28 @@ jobs:
             echo "skip_duplicate_push=${skip}"
           } >> "${GITHUB_OUTPUT}"
 
-      - name: Checkout trusted collector from repository default branch
+      - name: Fetch trusted collector from repository default branch
         if: ${{ steps.target.outputs.skip_duplicate_push != 'true' }}
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          ref: ${{ github.event.repository.default_branch }}
-          fetch-depth: 1
-          persist-credentials: false
-          show-progress: false
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ steps.target.outputs.default_branch }}
+        run: |
+          set -euo pipefail
+          collector_dir="${RUNNER_TEMP}/trusted-remote-analysis"
+          mkdir -p "${collector_dir}"
+          fetch_file() {
+            local repository_path="$1"
+            local output_path="$2"
+            gh api --method GET \
+              -H 'X-GitHub-Api-Version: 2026-03-10' \
+              "/repos/${GITHUB_REPOSITORY}/contents/${repository_path}" \
+              -f "ref=${DEFAULT_BRANCH}" \
+              --jq '.content' | base64 --decode > "${output_path}"
+            [[ -s "${output_path}" ]] || { echo "::error::trusted collector file is empty: ${repository_path}"; exit 1; }
+          }
+          fetch_file "tools/scripts/collect-remote-analysis-evidence.mjs" "${collector_dir}/collect-remote-analysis-evidence.mjs"
+          fetch_file "sonar-project.properties" "${collector_dir}/sonar-project.properties"
 
       - name: Set up locked Node runtime
         if: ${{ steps.target.outputs.skip_duplicate_push != 'true' }}
@@ -135,8 +149,10 @@ jobs:
         run: |
           set +e
           mkdir -p "${RUNNER_TEMP}/remote-analysis-evidence"
-          node tools/scripts/collect-remote-analysis-evidence.mjs > "${RUNNER_TEMP}/remote-analysis-evidence/evidence.json"
+          pushd "${RUNNER_TEMP}/trusted-remote-analysis" >/dev/null
+          node ./collect-remote-analysis-evidence.mjs > "${RUNNER_TEMP}/remote-analysis-evidence/evidence.json"
           status=$?
+          popd >/dev/null
           set -e
           jq '.summary // {targetSha, targetRef, evidenceComplete, policyStatus, policyFailures, error}' \
             "${RUNNER_TEMP}/remote-analysis-evidence/evidence.json" > "${RUNNER_TEMP}/remote-analysis-evidence/summary.json"
