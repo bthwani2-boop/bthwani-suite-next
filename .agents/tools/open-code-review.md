@@ -1,10 +1,28 @@
-
 # OpenCodeReview Tool Policy
 
 ## Purpose
 
-OpenCodeReview (`ocr`) selects a deterministic bounded review scope and resolves project review rules.
-The host agent performs advisory reasoning.
+OpenCodeReview (`ocr`) owns deterministic review preparation only:
+
+- select the bounded review scope;
+- apply project include/exclude rules;
+- resolve file-specific review rules;
+- expose the exact diff/context for the pinned candidate.
+
+The host agent owns semantic reasoning. In an interactive ChatGPT or Codex session, that current host agent performs the review. OpenCodeReview itself does not own an LLM provider, model credential, approval, or repository authority.
+
+## Credential boundary
+
+The canonical delegation path must not depend on:
+
+- `COPILOT_GITHUB_TOKEN`;
+- `OCR_LLM_*`;
+- an OpenAI/Anthropic API key solely for OpenCodeReview;
+- a model-specific CLI embedded inside the OCR wrapper.
+
+A GitHub Actions workflow may prepare and publish deterministic delegation context, but it must not claim that an AI semantic review occurred unless a separately authenticated host reviewer actually performed one.
+
+Automatic GitHub PR AI review belongs to the platform-native host reviewer (for example Codex Code Review) and is separate from the deterministic OpenCodeReview context workflow.
 
 ## Use when
 
@@ -22,10 +40,12 @@ The host agent performs advisory reasoning.
 ## Workflow
 
 1. Pin the exact review subject.
-2. Preview with `.opencodereview/rule.json`.
+2. Run `ocr delegate preview` with `.opencodereview/rule.json`.
 3. Record included and excluded paths.
-4. Inspect exact diffs and only the necessary surrounding context.
-5. Report grounded Critical, High, and Medium findings.
-6. Keep registered guards, tests, runtime proof, and independent approval separate.
+4. Run `ocr delegate rule` for the reviewable paths.
+5. Inspect the exact diff and only necessary surrounding context.
+6. The current host agent performs the semantic review using those resolved rules.
+7. Report grounded Critical, High, and Medium findings.
+8. Keep tests, runtime proof, security scanners, and independent approval separate.
 
-OpenCodeReview owns no approval or repository authority and may not mutate source during review.
+OpenCodeReview may not mutate source during review and may not self-promote its output into final approval.

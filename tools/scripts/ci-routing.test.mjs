@@ -63,13 +63,19 @@ test("reusable jobs execute the routed immutable candidate instead of the PR mer
   }
 });
 
-test("OpenCodeReview uses dedicated Copilot authority and a trusted evaluator", () => {
+test("OpenCodeReview owns deterministic delegation context without model authority", () => {
   const workflow = read(".github/workflows/open-code-review.yml");
-  assert.match(workflow, /COPILOT_GITHUB_TOKEN: \$\{\{ secrets\.COPILOT_GITHUB_TOKEN \}\}/u);
-  assert.doesNotMatch(workflow, /GITHUB_TOKEN: \$\{\{ github\.token \}\}|copilot-requests:/u);
-  assert.match(workflow, /EVALUATOR_SHA: \$\{\{ vars\.OCR_EVALUATOR_SHA \}\}/u);
-  assert.match(workflow, /show "\$\{evaluator\}:tools\/scripts\/evaluate-opencodereview\.mjs"/u);
-  assert.doesNotMatch(workflow, /show "\$\{HEAD_SHA\}:tools\/scripts\/evaluate-opencodereview\.mjs"/u);
+  assert.match(workflow, /ocr delegate preview/u);
+  assert.match(workflow, /ocr delegate rule/u);
+  assert.match(workflow, /mode: "deterministic-delegation-context"/u);
+  assert.match(workflow, /hostAgentRequired: true/u);
+  assert.match(workflow, /hostAgentExecutedByThisWorkflow: false/u);
+  assert.match(workflow, /semanticReviewClaimedByThisWorkflow: false/u);
+  assert.doesNotMatch(
+    workflow,
+    /COPILOT_GITHUB_TOKEN|@github\/copilot|delegation-copilot-cli|OCR_LLM_|llm_auth_token|llm_url|llm_model/u,
+  );
+  assert.doesNotMatch(workflow, /OCR_EVALUATOR_SHA|evaluate-opencodereview\.mjs/u);
 });
 
 test("backend verification skips an empty development package cone", () => {

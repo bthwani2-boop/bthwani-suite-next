@@ -3,7 +3,6 @@
 
 Status: TOOL_ADAPTER
 
-Canonical inventory: `governance/tools/agent-tool-registry.json`.
 
 Files in this directory define safe invocation and evidence boundaries for optional tools.
 They are not owner skills, approval authorities, or default preload instructions.

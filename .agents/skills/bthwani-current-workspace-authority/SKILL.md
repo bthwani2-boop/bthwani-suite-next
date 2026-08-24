@@ -22,7 +22,6 @@ Establish one immutable repository truth before diagnosis, analysis, execution, 
 
 ## Read before
 
-- `governance/authority/authority-precedence.json`
 - `governance/GOVERNANCE.md`
 - `governance/policies/delivery.md`
 - `AGENTS.md`
