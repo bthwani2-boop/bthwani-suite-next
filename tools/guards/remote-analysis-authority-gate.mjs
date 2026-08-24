@@ -72,7 +72,15 @@ const codeqlWorkflow = read(".github/workflows/codeql.yml");
 mustContain(codeqlWorkflow, ["github/codeql-action/init@", "github/codeql-action/analyze@"], "CodeQL workflow");
 
 const semgrep = read(".github/workflows/semgrep.yml");
-mustContain(semgrep, ["allRawFindingsAccounted:true", "totalFindings", "engineErrors", "Semgrep findings require diagnosis/disposition before closure"], "Semgrep workflow");
+mustContain(semgrep, [
+  "allRawFindingsAccounted:true",
+  "totalFindings",
+  "engineConditions",
+  "toolLimitationsProven",
+  "unknownEngineErrors",
+  "TOOL_LIMITATION_PROVEN",
+  "Semgrep findings require diagnosis/disposition before closure",
+], "Semgrep workflow");
 
 for (const path of [".github/workflows/docker-runtime-hardening.yml", ".github/workflows/lockfile-integrity.yml"]) {
   const text = read(path);
@@ -106,4 +114,4 @@ mustNotContain(remoteCommand, ["schema_version == 1", "Invoke-Expression", "gith
 const ocr = read(".github/workflows/open-code-review.yml");
 mustContain(ocr, ["hostAgentRequired: true", "hostAgentExecutedByThisWorkflow: false", "semanticReviewClaimedByThisWorkflow: false"], "OpenCodeReview delegation");
 
-console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] Branch-agnostic PR identity, exact-head closure evidence, hosted scanners, total Semgrep accounting, API-only metadata hygiene, baseline read-back and schema-v2 remote dispatch remain separated canonical responsibilities.");
+console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] Branch-agnostic PR identity, exact-head closure evidence, hosted scanners, total Semgrep accounting with proven tool limitations, API-only metadata hygiene, baseline read-back and schema-v2 remote dispatch remain separated canonical responsibilities.");
