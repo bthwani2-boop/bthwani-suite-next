@@ -155,7 +155,7 @@ function Ensure-BthwaniMobileBackend {
     -FilePath "pwsh" `
     -Arguments @(
       "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", $RuntimePhase,
-      "-Action", "up", "-Profiles", $Profiles
+      "-Action", "up", "-Profiles", $Profiles, "-Force"
     )
 
   $maxWaitSeconds = 30

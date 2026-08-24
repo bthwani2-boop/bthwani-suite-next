@@ -51,6 +51,15 @@ test("mobile runtime defaults to auto, resolves LAN before platform-aware Androi
   assert.match(launcher, /"--localhost"/);
 });
 
+test("mobile backend startup forces Compose reconciliation when readiness is missing", () => {
+  const bootstrap = read("tools/mobile/ensure-mobile-dev-runtime.ps1");
+  assert.match(
+    bootstrap,
+    /"-Action", "up", "-Profiles", \$Profiles, "-Force"/,
+    "mobile startup must reconcile environment-sensitive Compose bindings instead of trusting an image-only reuse marker",
+  );
+});
+
 test("LAN runtime branch contains no ADB execution path", () => {
   const launcher = read("tools/mobile/start-mobile-runtime.ps1");
   const start = launcher.indexOf('if ($resolvedTransport -eq "lan") {');
