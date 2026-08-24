@@ -14,7 +14,7 @@ function Get-LocalActorsRegistry {
   return $script:LocalActorsRegistry
 }
 
-# Local bootstrap password: an environment override wins, the registry is the default.
+# Development seed password: an environment override wins, the registry is the default.
 function Get-LocalPassword {
   $override = [Environment]::GetEnvironmentVariable($script:LocalActorsRegistry.passwordEnvVar)
   if (-not [string]::IsNullOrWhiteSpace($override)) { return [string]$override }

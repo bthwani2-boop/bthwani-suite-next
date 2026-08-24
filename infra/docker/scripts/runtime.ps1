@@ -32,6 +32,7 @@ $RepoRoot = (Resolve-Path (Join-Path $ScriptDir "../../../")).Path
 Set-Location -LiteralPath $RepoRoot
 
 $ComposeFile = Join-Path $RepoRoot "infra/docker/compose.runtime.yml"
+$DevBootstrapComposeFile = Join-Path $RepoRoot "infra/docker/compose.dev-bootstrap.yml"
 $FinancialComposeFile = Join-Path $RepoRoot "infra/docker/compose.financial-simulators.yml"
 $ObservabilityComposeFile = Join-Path $RepoRoot "infra/docker/compose.observability.yml"
 $EnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
@@ -141,6 +142,25 @@ function Invoke-Compose {
   if ($LASTEXITCODE -ne 0) {
     throw "docker compose failed: $($args -join ' ') (exit $LASTEXITCODE)"
   }
+}
+
+function Invoke-LocalIdentityDevelopmentSeed {
+  if ($env:NODE_ENV -eq "production") { throw "The development identity seed is forbidden when NODE_ENV=production." }
+  if (-not (Test-Path -LiteralPath $script:DevBootstrapComposeFile -PathType Leaf)) {
+    throw "Development identity seed overlay not found: $script:DevBootstrapComposeFile"
+  }
+  Write-Host "`n--- Running isolated development identity seed executable ---"
+  $base = @(
+    "--env-file", $script:EnvFile,
+    "-f", $script:ComposeFile,
+    "-f", $script:FinancialComposeFile,
+    "-f", $script:ObservabilityComposeFile,
+    "-f", $script:DevBootstrapComposeFile,
+    "--profile", "dev-bootstrap"
+  )
+  docker compose @base run --rm identity-local-bootstrap
+  if ($LASTEXITCODE -ne 0) { throw "Development identity seed failed (exit $LASTEXITCODE)" }
+  Write-Host "Development identity seed: PASS"
 }
 
 $CanonicalComposeProject = "bthwani-runtime"
@@ -382,7 +402,7 @@ function Test-RuntimeDefaultSecrets {
   $defaults = @(
     @{ Name = "BTHWANI_MINIO_ROOT_PASSWORD"; Value = if ($env:BTHWANI_MINIO_ROOT_PASSWORD) { $env:BTHWANI_MINIO_ROOT_PASSWORD } else { "bthwani_minio_password" }; Default = "bthwani_minio_password" },
     @{ Name = "BTHWANI_POSTGRES_PASSWORD"; Value = if ($env:BTHWANI_POSTGRES_PASSWORD) { $env:BTHWANI_POSTGRES_PASSWORD } else { "bthwani_runtime_password" }; Default = "bthwani_runtime_password" },
-    @{ Name = "IDENTITY_LOCAL_BOOTSTRAP_PASSWORD"; Value = Get-LocalPassword; Default = Get-LocalPasswordDefault }
+    @{ Name = "BTHWANI_LOCAL_DEV_PASSWORD"; Value = Get-LocalPassword; Default = Get-LocalPasswordDefault }
   )
   $weak = @($defaults | Where-Object { $_.Value -eq $_.Default })
   foreach ($item in $weak) { Write-Warning "Runtime default secret in use: $($item.Name). Override it outside local-only development." }
@@ -512,9 +532,9 @@ function Restart-MigratedApis {
 
 function Assert-LocalIdentityBootstrapConverged {
   if ($env:NODE_ENV -eq "production" -or $ProfileList -notcontains "identity") { return }
-  Write-Host "`n--- Verifying governed Identity local bootstrap ---"
+  Write-Host "`n--- Verifying explicit Identity development seed ---"
   & node (Join-Path $RepoRoot "tools/dev/verify-local-identity-bootstrap.mjs")
-  if ($LASTEXITCODE -ne 0) { throw "Identity local bootstrap has not converged (exit $LASTEXITCODE)" }
+  if ($LASTEXITCODE -ne 0) { throw "Identity development seed has not converged (exit $LASTEXITCODE)" }
 }
 
 function Invoke-LocalWorkforceProvisioning {
@@ -634,6 +654,7 @@ switch ($Action) {
     }
     Invoke-GovernedMigrations
     Invoke-ComposeConvergentUp --build
+    Invoke-LocalIdentityDevelopmentSeed
     Wait-ForSelectedApis
     Assert-LocalIdentityBootstrapConverged
     Invoke-LocalWorkforceProvisioning -DeferFinancialStanding
@@ -657,6 +678,7 @@ switch ($Action) {
     Invoke-GovernedMigrations
     Invoke-ComposeConvergentUp --build
     Restart-MigratedApis
+    Invoke-LocalIdentityDevelopmentSeed
     Wait-ForSelectedApis
     Assert-LocalIdentityBootstrapConverged
     Invoke-LocalWorkforceProvisioning -DeferFinancialStanding
@@ -768,6 +790,7 @@ switch ($Action) {
     Invoke-GovernedMigrations
     Invoke-GovernedSeeds
     Invoke-ComposeConvergentUp --build
+    Invoke-LocalIdentityDevelopmentSeed
     Invoke-SelectedSmoke
     Write-Host "`nruntime:all: PASS"
   }

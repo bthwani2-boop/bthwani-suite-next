@@ -18,7 +18,7 @@ const (
 	minimumActivationHMACSecretLength = 32
 	minimumInternalServiceTokenLength = 32
 	identityMigrationServiceName      = "identity"
-	identityLatestMigration           = "identity-038_mobile_surface_permission_separation.sql"
+	identityLatestMigration           = "identity-039_retire_embedded_local_bootstrap_authority.sql"
 	defaultReadinessProbeTimeout      = 2 * time.Second
 	defaultReadinessCheckTimeout      = 750 * time.Millisecond
 	defaultClockSkewLimit             = 5 * time.Second
@@ -209,7 +209,6 @@ func configurationChecks() runtimeReadinessResult {
 		reasonCode string
 	}{
 		{"activation_signing_key", configuredRuntimeSecret("IDENTITY_ACTIVATION_HMAC_SECRET", minimumActivationHMACSecretLength), reasonSigningKeyInvalid},
-		{"operator_context", !strings.EqualFold(strings.TrimSpace(os.Getenv("IDENTITY_LOCAL_BOOTSTRAP")), "true") || strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID")) != "", reasonConfigurationInvalid},
 		{"workforce_service_auth", configuredRuntimeSecret("IDENTITY_WORKFORCE_SERVICE_TOKEN", minimumInternalServiceTokenLength), reasonConfigurationInvalid},
 		{"dsh_service_auth", configuredRuntimeSecret("IDENTITY_DSH_SERVICE_TOKEN", minimumInternalServiceTokenLength), reasonConfigurationInvalid},
 	}

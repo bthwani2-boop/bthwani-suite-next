@@ -18,7 +18,7 @@ export const LOCAL_PLATFORM_ACTORS = Object.freeze(registry.platformActors);
 export const LOCAL_WORKFORCE_PROVIDERS = Object.freeze(registry.workforceProviders);
 export const LOCAL_PASSWORD_ENV_VAR = registry.passwordEnvVar;
 
-/** Local bootstrap password: an environment override wins, the registry is the default. */
+/** Development seed password: an environment override wins, the registry is the default. */
 export function localPassword() {
   const override = process.env[registry.passwordEnvVar];
   return override && override.trim() ? override : registry.password;

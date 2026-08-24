@@ -19,6 +19,7 @@ test("client source never bundles privileged local-development credentials", asy
   assert.doesNotMatch(source, /IDENTITY_LOCAL_BOOTSTRAP_PASSWORD/);
   assert.doesNotMatch(source, /BTHWANI_LOCAL_IDENTITY_BOOTSTRAP_PASSWORD/);
   assert.doesNotMatch(source, /BTHWANI_LOCAL_DEVELOPMENT_BOOTSTRAP_AUTHORIZED/);
+  assert.doesNotMatch(source, /BTHWANI_LOCAL_DEV_PASSWORD/);
   assert.doesNotMatch(source, /LOCAL_ONLY_replace_with_workforce_internal_service_token/);
   assert.doesNotMatch(source, /123456/);
 });

@@ -42,10 +42,18 @@ type TokenPair struct {
 	Identity     ActorIdentity
 }
 
-type LocalBootstrap struct {
-	Enabled           bool
-	Password          string
+// ActorAccessProvisionInput is the canonical input for an idempotent actor
+// upsert plus normalized RBAC assignment. It intentionally contains no
+// development- or environment-specific semantics.
+type ActorAccessProvisionInput struct {
+	ID                string
+	Username          string
+	PasswordHash      string
 	OperatorContextID string
+	PhoneE164         string
+	Roles             []string
+	Permissions       []Permission
+	GrantedBy         string
 }
 
 type IssueActivationForActorInput struct {

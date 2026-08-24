@@ -1,0 +1,25 @@
+name: bthwani-runtime
+
+# Development-only overlay. It is deliberately not part of compose.runtime.yml
+# and is never built into the production identity-api image.
+services:
+  identity-local-bootstrap:
+    profiles:
+      - dev-bootstrap
+    build:
+      context: ../..
+      dockerfile: core/identity/backend/Dockerfile.local-bootstrap
+    environment:
+      BTHWANI_RUNTIME_MODE: development
+      DATABASE_URL: "postgres://${BTHWANI_IDENTITY_DB_USER:-identity_runtime}:${BTHWANI_IDENTITY_DB_PASSWORD:-identity_runtime_password}@postgres:5432/${BTHWANI_IDENTITY_DB_NAME:-identity_runtime}?sslmode=disable"
+      BTHWANI_OPERATOR_CONTEXT_ID: "${BTHWANI_OPERATOR_CONTEXT_ID:-local-dsh}"
+      BTHWANI_LOCAL_DEV_PASSWORD: "${BTHWANI_LOCAL_DEV_PASSWORD:-123456}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - bthwani-runtime
+
+networks:
+  bthwani-runtime:
+    name: bthwani-runtime

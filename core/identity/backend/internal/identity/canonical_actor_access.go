@@ -8,6 +8,10 @@ import (
 	"strings"
 )
 
+func permissionSetKey(permission Permission) string {
+	return permission.Service + "\x00" + permission.Surface + "\x00" + permission.Action + "\x00" + permission.Scope
+}
+
 // setActorAccessTx is the sole application writer for actor role assignments
 // and direct permission grants. Callers must create/validate role and
 // vocabulary definitions explicitly before invoking it; this helper never
@@ -144,6 +148,54 @@ func (r *Repository) replaceActorAccess(ctx context.Context, actorID string, rol
 	}
 	defer tx.Rollback()
 	if err := setActorAccessTx(ctx, tx, actorID, roles, permissions, grantedBy); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+// ReplaceActorAccess applies an exact normalized access set and rebuilds the
+// derived actor projection. It does not create role or permission vocabulary.
+func (r *Repository) ReplaceActorAccess(ctx context.Context, actorID string, roles []string, permissions []Permission, grantedBy string) error {
+	return r.replaceActorAccess(ctx, actorID, roles, permissions, grantedBy)
+}
+
+// UpsertActorWithAccess atomically creates or updates an actor and assigns its
+// normalized access through the canonical RBAC writer. Development fixture
+// orchestration lives outside the Identity API and calls this generic seam.
+func (r *Repository) UpsertActorWithAccess(ctx context.Context, input ActorAccessProvisionInput) error {
+	if r == nil || r.db == nil {
+		return fmt.Errorf("identity actor provisioning requires a database")
+	}
+	if strings.TrimSpace(input.ID) == "" || strings.TrimSpace(input.Username) == "" ||
+		strings.TrimSpace(input.PasswordHash) == "" || strings.TrimSpace(input.OperatorContextID) == "" ||
+		strings.TrimSpace(input.GrantedBy) == "" {
+		return fmt.Errorf("actor id, username, password hash, operator context, and grant provenance are required")
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.ExecContext(ctx, `
+INSERT INTO identity_actors
+    (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
+VALUES ($1, $2, $3, $4, NULLIF($5, ''), ARRAY[]::text[], '[]'::jsonb, 'ACTIVE', 1, now())
+ON CONFLICT (id) DO UPDATE SET
+    username = EXCLUDED.username,
+    password_hash = EXCLUDED.password_hash,
+    operator_context_id = EXCLUDED.operator_context_id,
+    phone_e164 = EXCLUDED.phone_e164,
+    status = 'ACTIVE',
+    version = identity_actors.version + 1,
+    updated_at = now()`,
+		input.ID, input.Username, input.PasswordHash, input.OperatorContextID, input.PhoneE164,
+	); err != nil {
+		return err
+	}
+
+	if err := setActorAccessTx(ctx, tx, input.ID, input.Roles, input.Permissions, input.GrantedBy); err != nil {
 		return err
 	}
 	return tx.Commit()

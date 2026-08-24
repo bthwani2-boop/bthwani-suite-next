@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"errors"
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -12,89 +10,43 @@ import (
 
 	_ "github.com/lib/pq"
 
-	"identity-api/internal/identity"
+	"identity-api/internal/localbootstrap"
 )
 
-const localBootstrapTimeout = 60 * time.Second
-
 func main() {
-	enabled, err := localDevelopmentBootstrapAuthorized()
-	if err != nil {
-		log.Fatal(err)
+	if !strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_RUNTIME_MODE")), "development") {
+		log.Fatal("identity-local-bootstrap is restricted to BTHWANI_RUNTIME_MODE=development")
 	}
-	if !enabled {
-		log.Printf("[identity-local-bootstrap] skipped: local development bootstrap is not authorized")
-		return
-	}
-
 	databaseURL := strings.TrimSpace(os.Getenv("DATABASE_URL"))
 	if databaseURL == "" {
-		log.Fatal("DATABASE_URL is required for the local Identity bootstrap")
+		log.Fatal("DATABASE_URL is required")
 	}
-
 	db, err := sql.Open("postgres", databaseURL)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("open identity database: %v", err)
 	}
 	defer db.Close()
 	db.SetMaxOpenConns(4)
 	db.SetConnMaxIdleTime(30 * time.Second)
 
-	ctx, cancel := context.WithTimeout(context.Background(), localBootstrapTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := db.PingContext(ctx); err != nil {
-		log.Fatalf("identity database unavailable: %v", err)
+		log.Fatalf("ping identity database: %v", err)
 	}
-
-	bootstrap := identity.LocalBootstrap{
-		Enabled:           true,
-		Password:          os.Getenv("BTHWANI_LOCAL_IDENTITY_BOOTSTRAP_PASSWORD"),
-		OperatorContextID: strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID")),
+	config := localbootstrap.Config{
+		Password:          os.Getenv("BTHWANI_LOCAL_DEV_PASSWORD"),
+		OperatorContextID: os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"),
 	}
-	repository := identity.NewRepository(db)
-
-	if err := bootstrapLocalIdentityState(ctx, repository, bootstrap); err != nil {
-		log.Fatal(err)
+	if err := localbootstrap.Run(ctx, db, config); err != nil {
+		log.Fatalf("identity local development seed failed: %v", err)
 	}
-	converged, err := repository.LocalBootstrapConverged(ctx, bootstrap)
+	converged, err := localbootstrap.Converged(ctx, db, config)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("identity local development seed readback failed: %v", err)
 	}
 	if !converged {
-		log.Fatal("local Identity bootstrap completed without converging its canonical actors")
+		log.Fatal("identity local development seed readback did not converge")
 	}
-	log.Printf("[identity-local-bootstrap] canonical local development actors converged")
-}
-
-func localDevelopmentBootstrapAuthorized() (bool, error) {
-	if !strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_LOCAL_DEVELOPMENT_BOOTSTRAP_AUTHORIZED")), "true") {
-		return false, nil
-	}
-
-	runtimeMode := strings.ToLower(strings.TrimSpace(os.Getenv("BTHWANI_RUNTIME_MODE")))
-	if runtimeMode != "development" {
-		return false, fmt.Errorf("local Identity bootstrap authorization requires BTHWANI_RUNTIME_MODE=development, got %q", runtimeMode)
-	}
-	if strings.EqualFold(strings.TrimSpace(os.Getenv("BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED")), "true") {
-		return false, errors.New("local Identity bootstrap is forbidden when production deployment is authorized")
-	}
-	for _, name := range []string{"NODE_ENV", "ENVIRONMENT", "BTHWANI_ENVIRONMENT"} {
-		if strings.EqualFold(strings.TrimSpace(os.Getenv(name)), "production") {
-			return false, fmt.Errorf("local Identity bootstrap is forbidden when %s=production", name)
-		}
-	}
-	return true, nil
-}
-
-func bootstrapLocalIdentityState(ctx context.Context, repository *identity.Repository, bootstrap identity.LocalBootstrap) error {
-	if err := repository.BootstrapLocalActors(ctx, bootstrap); err != nil {
-		return err
-	}
-	if err := repository.BootstrapLocalPlatformActors(ctx, bootstrap); err != nil {
-		return err
-	}
-	if err := repository.BootstrapSovereignLeadershipAccess(ctx, bootstrap); err != nil {
-		return err
-	}
-	return repository.ReconcileLocalBootstrapSecurityState(ctx, bootstrap)
+	log.Print("identity local development seed: PASS")
 }

@@ -366,33 +366,3 @@ func samePermissionSet(left, right []Permission) bool {
 	}
 	return true
 }
-
-// BootstrapSovereignLeadershipAccess upgrades only the explicit local operator
-// bootstrap actor so development can exercise the sovereign leadership journey.
-func (r *Repository) BootstrapSovereignLeadershipAccess(ctx context.Context, input LocalBootstrap) error {
-	if !input.Enabled {
-		return nil
-	}
-	permissions, err := employeeBundlePermissions(EmployeeBundlePlatformOwner, "platform")
-	if err != nil {
-		return err
-	}
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback() //nolint:errcheck
-	actor, err := actorByIDTx(ctx, tx, "operator-local-001")
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	roles := mergeEmployeeRoles(actor.Roles, EmployeeBundlePlatformOwner)
-	mergedPermissions := mergeEmployeePermissions(actor.Permissions, permissions)
-	if err := setActorAccessTx(ctx, tx, actor.ID, roles, mergedPermissions, "bootstrap-sovereign"); err != nil {
-		return err
-	}
-	return tx.Commit()
-}
