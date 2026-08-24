@@ -78,4 +78,3 @@ Use `.agents/INDEX.md` only when routing is not obvious. Load the smallest relev
 ## Final response
 
 For repository writes, report the exact target branch/SHA, changed paths, verification performed, and any remaining unproven risk. Do not claim more than the exact candidate proves.
-

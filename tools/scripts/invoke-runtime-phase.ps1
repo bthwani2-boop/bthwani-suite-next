@@ -6,7 +6,10 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$Profiles,
 
-  [switch]$Force
+  [switch]$Force,
+
+  [ValidateRange(1, 240)]
+  [int]$LockTimeoutMinutes = 60
 )
 
 Set-StrictMode -Version Latest
@@ -213,13 +216,14 @@ $RuntimePhaseLockAcquired = $false
 $RuntimePhaseFailureMessage = $null
 
 try {
+  "Waiting for canonical runtime phase lock (timeout=${LockTimeoutMinutes}m)." | Add-Content -LiteralPath $LogPath
   try {
-    $RuntimePhaseLockAcquired = $RuntimePhaseMutex.WaitOne([TimeSpan]::FromMinutes(10))
+    $RuntimePhaseLockAcquired = $RuntimePhaseMutex.WaitOne([TimeSpan]::FromMinutes($LockTimeoutMinutes))
   } catch [System.Threading.AbandonedMutexException] {
     $RuntimePhaseLockAcquired = $true
   }
   if (-not $RuntimePhaseLockAcquired) {
-    throw "Timed out waiting for the canonical runtime phase lock. Another runtime mutation has not completed."
+    throw "Timed out waiting ${LockTimeoutMinutes} minutes for the canonical runtime phase lock. Another runtime mutation has not completed. See $LogPath for phase diagnostics."
   }
 
   Set-Location -LiteralPath $RepoRoot

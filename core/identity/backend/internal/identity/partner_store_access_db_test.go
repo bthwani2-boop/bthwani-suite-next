@@ -8,8 +8,6 @@ import (
 	"os"
 	"testing"
 	"time"
-
-	"github.com/lib/pq"
 )
 
 func openIdentityDBIntegration(t *testing.T) *sql.DB {
@@ -93,28 +91,11 @@ func TestPartnerStoreAccessChangeRevokesSessionsAndPreservesOtherStoresDBIntegra
 		PartnerBundlePermissions("manager", "store-j022-a-"+suffix),
 		PartnerBundlePermissions("staff", "store-j022-b-"+suffix)...,
 	)
-	permissionsJSON, err := json.Marshal(permissions)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = db.Exec(`
-		INSERT INTO identity_actors (
-			id, username, password_hash, operator_context_id, phone_e164,
-			roles, permissions, status, version
-		) VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, 'ACTIVE', 1)`,
-		actorID,
-		"partner-j022-user-"+suffix,
-		operatorContextID,
-		phone,
-		pq.Array([]string{"partner"}),
-		string(permissionsJSON),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
+	insertIdentityTestActor(t, db, actorID, "partner-j022-user-"+suffix, operatorContextID, phone, []string{"partner"}, permissions, ActorStatusActive, 1)
 	t.Cleanup(func() { _, _ = db.Exec(`DELETE FROM identity_actors WHERE id = $1`, actorID) })
 
 	repository := NewRepository(db)
+	var err error
 	firstSession := insertLiveIdentitySession(t, db, actorID, "a-"+suffix)
 	_, err = repository.SetPartnerStoreAccess(context.Background(), actorID, PartnerStoreAccessInput{
 		StoreID:           "store-j022-a-" + suffix,

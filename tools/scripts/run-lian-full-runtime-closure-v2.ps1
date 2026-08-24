@@ -194,7 +194,7 @@ function Invoke-EvidenceScript([string]$Name, [string]$Path, [string[]]$Argument
 
 function Verify-AllServices {
   Wait-Status "dsh" "http://127.0.0.1:18080/dsh/health"
-  Wait-Status "identity" "http://127.0.0.1:18082/identity/health" 
+  Wait-Status "identity" "http://127.0.0.1:18082/identity/health"
   Wait-Status "wlt" "http://127.0.0.1:18083/wlt/health"
   Wait-Status "workforce" "http://127.0.0.1:18086/workforce/health"
   Wait-Providers

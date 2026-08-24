@@ -32,7 +32,6 @@ jobs:
     name: Deep semantic review
     permissions:
       contents: read
-      copilot-requests: write
     runs-on: ubuntu-24.04
     timeout-minutes: 120
     steps:
@@ -75,7 +74,23 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          npm install --global --ignore-scripts @alibaba-group/open-code-review@1.9.9 @github/copilot@1.0.80
+          engine_dir="${RUNNER_TEMP}/review-engines"
+          mkdir -p "${engine_dir}"
+          ocr_tgz="${engine_dir}/$(npm pack --silent --ignore-scripts --pack-destination "${engine_dir}" @alibaba-group/open-code-review@1.9.9)"
+          copilot_tgz="${engine_dir}/$(npm pack --silent --ignore-scripts --pack-destination "${engine_dir}" @github/copilot@1.0.80)"
+          verify_sha512() {
+            local archive="$1"
+            local expected="$2"
+            local actual
+            actual="$(sha512sum "${archive}" | awk '{print $1}' | xxd -r -p | base64 -w0)"
+            [[ "${actual}" == "${expected}" ]] || {
+              echo "::error::review engine integrity mismatch: ${archive}"
+              exit 1
+            }
+          }
+          verify_sha512 "${ocr_tgz}" "/p+9mE+gEG1HrkGZu25ocKxrPWPJbdLhqfbKgG7idMJEc6gLF3RpS/u+2V3lpnKKVallXj7IHW4sSjNFQO1F9w=="
+          verify_sha512 "${copilot_tgz}" "6tf93ZF56KOiTTAjK/UhLZkl1W543IzaTQly288kockJZFswpRTnQEI00Yvacpb39DTvTYu3/ha9SeKpo/pgZQ=="
+          npm install --global --ignore-scripts "${ocr_tgz}" "${copilot_tgz}"
           ocr --version
 
       # Candidate state is read only after the trusted runtime and review
@@ -347,7 +362,9 @@ jobs:
         shell: bash
         run: |
           summary="${RUNNER_TEMP}/ocr-evidence/summary.md"
-          [[ -f "${summary}" ]] && cat "${summary}" >> "${GITHUB_STEP_SUMMARY}" || true
+          if [[ -f "${summary}" ]]; then
+            cat "${summary}" >> "${GITHUB_STEP_SUMMARY}"
+          fi
 
       - name: Record review provenance
         if: ${{ always() }}

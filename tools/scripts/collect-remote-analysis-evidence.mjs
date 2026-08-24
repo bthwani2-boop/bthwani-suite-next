@@ -10,7 +10,10 @@ const sonarHost = String(process.env.SONAR_HOST_URL || "https://sonarcloud.io").
 const targetSha = String(process.env.TARGET_SHA || "").trim();
 const targetRef = String(process.env.TARGET_REF || "").trim();
 const targetEvent = String(process.env.TARGET_EVENT || "push").trim();
-const defaultBranch = String(process.env.DEFAULT_BRANCH || "").trim();
+// GitHub workflows always pass the live repository default branch. Keep the
+// historical master fallback for direct/local invocations that predate that
+// workflow input; remote evidence still validates the exact target branch.
+const defaultBranch = String(process.env.DEFAULT_BRANCH || "master").trim();
 const targetBranch = targetRef.startsWith("refs/heads/") ? targetRef.slice("refs/heads/".length) : "";
 const sonarBranch = String(process.env.SONAR_BRANCH || targetBranch).trim();
 const waitSeconds = Number(process.env.WAIT_FOR_WORKFLOWS_SECONDS || "1800");
@@ -61,7 +64,6 @@ function assertInputs() {
   if (!/^[0-9a-f]{40}$/i.test(targetSha)) fail("TARGET_SHA must be a full 40-character commit SHA");
   if (!/^refs\/heads\/.+/.test(targetRef)) fail(`TARGET_REF must be an exact refs/heads/* ref; received ${targetRef}`);
   if (!targetBranch) fail("target branch could not be derived from TARGET_REF");
-  if (!defaultBranch) fail("DEFAULT_BRANCH is required");
   if (!sonarBranch || sonarBranch !== targetBranch) fail(`SONAR_BRANCH must match target branch ${targetBranch}; received ${sonarBranch}`);
   if (targetEvent !== "push") fail(`canonical branch evidence requires push evidence; received ${targetEvent}`);
   if (!Number.isFinite(waitSeconds) || waitSeconds < 0) fail("WAIT_FOR_WORKFLOWS_SECONDS must be non-negative");

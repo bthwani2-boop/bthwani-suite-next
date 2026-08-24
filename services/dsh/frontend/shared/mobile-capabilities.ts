@@ -7,6 +7,31 @@ export function configureDshSecureRandomUuidProvider(
   configureSecureRandomUuidProvider(provider);
 }
 
+type ExpoCryptoRandomModule = {
+  readonly randomUUID?: () => string;
+  readonly getRandomBytes?: (length: number) => Uint8Array;
+};
+
+function uuidFromRandomBytes(bytes: Uint8Array): string {
+  if (bytes.length !== 16) throw new DshNativeCapabilityUnavailable("secureRandomUuid");
+  bytes[6] = ((bytes[6] ?? 0) & 0x0f) | 0x40;
+  bytes[8] = ((bytes[8] ?? 0) & 0x3f) | 0x80;
+  const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, "0"));
+  return `${hex.slice(0, 4).join("")}-${hex.slice(4, 6).join("")}-${hex.slice(6, 8).join("")}-${hex.slice(8, 10).join("")}-${hex.slice(10, 16).join("")}`;
+}
+
+export function createDshExpoSecureRandomUuidProvider(module: unknown): () => string {
+  const cryptoModule = module as ExpoCryptoRandomModule;
+  return () => {
+    if (typeof cryptoModule.randomUUID === "function") return cryptoModule.randomUUID();
+    if (typeof cryptoModule.getRandomBytes === "function") return uuidFromRandomBytes(cryptoModule.getRandomBytes(16));
+    if (typeof globalThis.crypto?.getRandomValues === "function") {
+      return uuidFromRandomBytes(globalThis.crypto.getRandomValues(new Uint8Array(16)));
+    }
+    throw new DshNativeCapabilityUnavailable("secureRandomUuid");
+  };
+}
+
 export class DshNativeCapabilityUnavailable extends Error {
   constructor(capability: string) {
     super(`القدرة الأصلية غير متاحة: ${capability}`);
