@@ -20,7 +20,7 @@ $LanHelper = Join-Path $PSScriptRoot "mobile-lan.ps1"
 $MobileEnvFile = Join-Path $RepoRoot "infra\local\mobile.env"
 $DevSessionBrokerScript = Join-Path $RepoRoot "tools\dev\local-dev-session-broker.mjs"
 $DevSessionBrokerPort = 18100
-$DevSessionBrokerContractVersion = 2
+$DevSessionBrokerContractVersion = 3
 $DevGatewayPort = 18110
 $DevGatewayContractVersion = 1
 

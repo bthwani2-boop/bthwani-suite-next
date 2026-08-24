@@ -75,4 +75,8 @@ test("quick developer login stays local-only and never bundles privileged secret
   assert.ok(readOnlyCheck > repairBranch, "check mode must use the non-mutating collector");
   assert.match(devData, /getProvider\(operatorToken, role, provisioned\.actorId\)/);
   assert.match(devData, /canonical Workforce provider read failed/);
+  assert.match(devData, /Workforce provider is not ready for activation/);
+  assert.match(devData, /dsh:captain-dispatch-readiness-read/);
+  assert.match(devData, /X-Correlation-ID.*mobile-dev-captain-dispatch-readiness/);
+  assert.match(devData, /dsh:captain-financial-eligibility-read/);
 });

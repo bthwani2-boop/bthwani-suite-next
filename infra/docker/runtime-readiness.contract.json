@@ -56,11 +56,19 @@
       "portEnv": "BTHWANI_MINIO_API_PORT",
       "defaultPort": 59000,
       "path": "/minio/health/ready"
+    },
+    "financial-simulators": {
+      "name": "WireMock financial provider",
+      "kind": "http-ok",
+      "host": "127.0.0.1",
+      "portEnv": "BTHWANI_WIREMOCK_FINANCIAL_PORT",
+      "defaultPort": 18090,
+      "path": "/__admin/mappings"
     }
   },
   "bundles": {
     "frontendDefault": ["identity", "dsh"],
-    "mobileDevelopment": ["identity", "workforce", "dsh", "wlt", "media-storage"],
+    "mobileDevelopment": ["identity", "workforce", "dsh", "wlt", "financial-simulators", "media-storage"],
     "controlPanelDevelopment": ["identity", "workforce", "dsh", "wlt", "providers", "platform"]
   }
 }

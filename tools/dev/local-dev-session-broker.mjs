@@ -9,13 +9,12 @@ import {
   issueProviderSession,
   readGeneratedRegistry,
   provisionLocalWorkforceActors,
-  HttpError,
-  isMissingLocalProviderState,
+  needsLocalProviderConvergence,
 } from './local-workforce-provisioning.mjs';
 
 const PORT = Number(process.env.BTHWANI_DEV_SESSION_BROKER_PORT || 18100);
 const HOST = '127.0.0.1';
-const BROKER_CONTRACT_VERSION = 2;
+const BROKER_CONTRACT_VERSION = 3;
 const MAX_BODY_BYTES = 16 * 1024;
 const ROLE_SURFACE = Object.freeze({
   operator: 'control-panel',
@@ -107,7 +106,7 @@ async function createSessionForRole(role, surface, deviceFingerprint) {
           deviceFingerprint.trim(),
         );
       } catch (error) {
-        if (isMissingLocalProviderState(error)) {
+        if (needsLocalProviderConvergence(error)) {
           provisioned = null;
         } else {
           throw error;
@@ -116,7 +115,7 @@ async function createSessionForRole(role, surface, deviceFingerprint) {
     }
 
     if (!provisioned?.actorId) {
-      console.log(`[local-dev-session-broker] Auto-provisioning workforce actors for wiped database...`);
+      console.log(`[local-dev-session-broker] Converging local Workforce provider state before issuing a session...`);
       const { actors } = await provisionLocalWorkforceActors(operatorToken);
       provisioned = actors[role];
       if (!provisioned?.actorId) {

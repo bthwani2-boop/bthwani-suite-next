@@ -234,6 +234,13 @@
       "file": "identity-033_workforce_provider_permission_vocabulary.sql",
       "sha256": "f678f53c60cd51b7262389009158b872601fe00cdeb568af4d892d649918127c",
       "historicalPrefix": "033",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 34,
+      "file": "identity-034_canonical_provider_partner_vocabulary.sql",
+      "sha256": "b3010eff307dd2b4be5f71f6672fdf388f6b76bda42abaa5d80c9e3eca4cd0df",
+      "historicalPrefix": "034",
       "state": "ACTIVE"
     }
   ]

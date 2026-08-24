@@ -128,7 +128,7 @@ function Ensure-ControlPanelDependencies {
 
 $DevSessionBrokerScript = Join-Path $RepoRoot "tools\dev\local-dev-session-broker.mjs"
 $DevSessionBrokerPort = 18100
-$DevSessionBrokerContractVersion = 2
+$DevSessionBrokerContractVersion = 3
 
 function Test-BthwaniDevSessionBroker {
     try {

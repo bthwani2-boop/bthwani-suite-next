@@ -552,7 +552,8 @@ function Wait-ForSelectedApis {
   if ($ProfileList -contains "wlt") { Wait-ForHttpStatus -Name "WLT API" -Url "http://localhost:18083/wlt/readiness" -HealthyValues @("ready") | Out-Null }
   if ($ProfileList -contains "dsh") { Wait-ForHttpStatus -Name "DSH API" -Url "http://localhost:18080/dsh/readiness" -HealthyValues @("HEALTHY") | Out-Null }
   if ($ProfileList -contains "financial-simulators") {
-    Invoke-RestMethod "http://localhost:18090/__admin/mappings" -TimeoutSec 10 -ErrorAction Stop | Out-Null
+    $financialSimulatorPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_WIREMOCK_FINANCIAL_PORT)) { 18090 } else { [int]$env:BTHWANI_WIREMOCK_FINANCIAL_PORT }
+    Invoke-RestMethod "http://localhost:$financialSimulatorPort/__admin/mappings" -TimeoutSec 10 -ErrorAction Stop | Out-Null
     Write-Host "WireMock financial provider: healthy"
   }
   if ($ProfileList -contains "mail") {

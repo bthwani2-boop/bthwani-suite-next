@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/financial/card/status"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {
+      "providerReference": "card-status-001",
+      "status": "authorized"
+    },
+    "headers": {
+      "Content-Type": "application/json"
+    }
+  }
+}
