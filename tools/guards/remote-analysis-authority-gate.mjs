@@ -72,8 +72,13 @@ mustContain(closureDispatch, [
   "name: BThwani PR Closure Dispatch",
   "bthwani:closure-request",
   "actions: write",
-  "Dispatch unprivileged full CI from the trusted default definition",
+  "uses: ./.github/workflows/pr-closure-evidence.yml",
 ], "PR closure dispatch workflow");
+mustContain(closureEvidence, [
+  "Dispatch and wait for exact unprivileged full CI",
+  "actions/workflows/ci.yml/dispatches",
+  "expected_title=\"closure-pr-${PR_NUMBER}-head-${HEAD_SHA}-base-${BASE_SHA}\"",
+], "PR closure exact-CI dispatch");
 mustNotContain(ci, ["branches: [\"c\"]", "GITHUB_REF_NAME == \"c\"", "refs/heads/c"], "contextual CI control plane");
 
 const sonarWorkflow = read(".github/workflows/sonarqube.yml");

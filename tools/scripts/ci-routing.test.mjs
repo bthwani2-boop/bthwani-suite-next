@@ -40,7 +40,7 @@ test("workflow verification has one remote-security owner", () => {
   assert.doesNotMatch(securityWorkflow, /run-foundation-gate|guard:foundation/u);
 });
 
-test("PR closure is aggregated only by a trusted workflow_run definition", () => {
+test("PR closure uses a trusted reusable workflow with immutable candidate provenance", () => {
   const ciWorkflow = read(".github/workflows/ci.yml");
   const requestWorkflow = read(".github/workflows/pr-closure-request.yml");
   const dispatchWorkflow = read(".github/workflows/pr-closure-dispatch.yml");
@@ -66,10 +66,27 @@ test("PR closure is aggregated only by a trusted workflow_run definition", () =>
   assert.match(dispatchWorkflow, /<!-- bthwani:closure-request -->/u);
   assert.doesNotMatch(dispatchWorkflow, /actions\/checkout/u);
 
-  assert.match(evidenceWorkflow, /workflow_run:/u);
-  assert.match(evidenceWorkflow, /workflows:\s*\["BThwani Contextual CI"\]/u);
-  assert.match(evidenceWorkflow, /github\.event\.workflow_run\.event == 'workflow_dispatch'/u);
-  assert.match(evidenceWorkflow, /github\.event\.workflow_run\.head_branch == github\.event\.repository\.default_branch/u);
+  assert.match(evidenceWorkflow, /on:\n  workflow_call:/u);
+  assert.doesNotMatch(evidenceWorkflow, /workflow_run:/u);
+  for (const input of [
+    "pr_number",
+    "head_ref",
+    "head_sha",
+    "base_ref",
+    "base_sha",
+    "closure_approver",
+    "default_sha",
+  ]) {
+    assert.match(evidenceWorkflow, new RegExp(`\\n      ${input}:\\n        required: true`, "u"), input);
+  }
+  assert.match(evidenceWorkflow, /permissions:\s*\{\}/u);
+  assert.match(evidenceWorkflow, /GITHUB_ACTOR,,.*CLOSURE_APPROVER/u);
+  assert.match(evidenceWorkflow, /GITHUB_SHA.*DEFAULT_SHA/u);
+  assert.match(evidenceWorkflow, /pulls\/\$\{PR_NUMBER\}/u);
+  assert.match(evidenceWorkflow, /\.head\.sha.*HEAD_SHA/u);
+  assert.match(evidenceWorkflow, /\.base\.sha.*BASE_SHA/u);
+  assert.match(evidenceWorkflow, /ref "\$\{DEFAULT_BRANCH\}"[\s\S]*?\{ref:\$ref,inputs:\$inputs\}/u);
+  assert.match(evidenceWorkflow, /actions\/workflows\/ci\.yml\/dispatches/u);
   assert.doesNotMatch(evidenceWorkflow, /actions\/checkout/u);
   assert.match(evidenceWorkflow, /--arg ref "\$\{DEFAULT_BRANCH\}"[\s\S]*?\{ref:\$ref,inputs:\$inputs\}/u);
   assert.match(evidenceWorkflow, /pr_number:\$pr,head_sha:\$head,base_sha:\$base/u);
