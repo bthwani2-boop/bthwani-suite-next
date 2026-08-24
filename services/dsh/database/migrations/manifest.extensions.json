@@ -268,6 +268,13 @@
       "sha256": "da90e8eb89e4e3a47f8677bdb917717a5635a91e28850814a93b6f13810b1420",
       "historicalPrefix": "1038",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 278,
+      "file": "dsh-1039_admin_canonical_decision_fencing.sql",
+      "sha256": "7ca0aac405a8c0450724a9722ca1e5bd6846eb9a8035c957af6c1722c7e94b10",
+      "historicalPrefix": "1039",
+      "state": "ACTIVE"
     }
   ]
 }
