@@ -42,8 +42,8 @@ var (
 
 // activationSurfaceByActorType is the single source for the authentication
 // surface of every activatable actor type. Issuance policy is deliberately
-// separate: client and partner may request public OTPs, while field and captain
-// must first be provisioned by Workforce and receive an actor-bound challenge.
+// separate: client may use public OTP; partner activation is DSH-governed;
+// field and captain must be provisioned by Workforce.
 var activationSurfaceByActorType = map[string]string{
 	"client":  "app-client",
 	"partner": "app-partner",
@@ -52,8 +52,7 @@ var activationSurfaceByActorType = map[string]string{
 }
 
 var publicOtpActorTypes = map[string]bool{
-	"client":  true,
-	"partner": true,
+	"client": true,
 }
 
 var workforceManagedActorTypes = map[string]bool{
@@ -117,22 +116,26 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 	}
 
 	actors := []struct {
-		id, username, role, surface, scope, phone string
+		id, username, role, phone string
 	}{
-		{"operator-local-001", "operator", "operator", "control-panel", "all", "+967770000000"},
-		{"partner-local-001", "bthwani", "partner", "app-partner", "own", "+967771111111"},
-		{"client-local-001", "client", "client", "app-client", "own", "+967772222222"},
+		{"operator-local-001", "operator", "operator", "+967770000000"},
+		{"partner-local-001", "bthwani", "partner", "+967771111111"},
+		{"client-local-001", "client", "client", "+967772222222"},
 	}
 
 	// Runtime bootstrap owns only local actor fixtures and actor-access bindings.
 	// Role and Permission vocabulary are migration-owned canonical truth.
 	for _, actor := range actors {
-		actorPermissions := []Permission{
-			{Service: "dsh", Surface: actor.surface, Action: "store:read", Scope: actor.scope},
-			{Service: "dsh", Surface: actor.surface, Action: "store:write", Scope: actor.scope},
-		}
-		if actor.role == "operator" {
+		var actorPermissions []Permission
+		switch actor.role {
+		case "operator":
 			actorPermissions = localOperatorDevelopmentPermissions()
+		case "partner":
+			actorPermissions = PartnerBundlePermissions(PartnerBundleOwner, "store-test-grocery")
+		case "client":
+			actorPermissions = []Permission{}
+		default:
+			return fmt.Errorf("unsupported local bootstrap role %q", actor.role)
 		}
 
 		tx, err := r.db.BeginTx(ctx, nil)
@@ -453,43 +456,19 @@ func actorCanAccessSurface(actor Actor, surface string) bool {
 }
 
 func resolvePasswordLoginSurface(actor Actor) (string, error) {
-	roleSurface := map[string]string{
-		"client":  "app-client",
-		"partner": "app-partner",
-		"field":   "app-field",
-		"captain": "app-captain",
-	}
 	candidates := map[string]struct{}{}
 
 	for _, role := range actor.Roles {
-		if surface, ok := roleSurface[role]; ok {
-			if actorCanAccessSurface(actor, surface) {
-				candidates[surface] = struct{}{}
-			}
-			continue
+		if surface, ok := activationSurfaceFor(strings.TrimSpace(role)); ok {
+			candidates[surface] = struct{}{}
 		}
-		if actorCanAccessSurface(actor, "control-panel") {
-			candidates["control-panel"] = struct{}{}
-		}
+	}
+	if actorCanAccessSurface(actor, "control-panel") {
+		candidates["control-panel"] = struct{}{}
 	}
 
 	if len(candidates) == 1 {
 		for surface := range candidates {
-			return surface, nil
-		}
-	}
-	if len(candidates) > 1 {
-		return "", ErrForbidden
-	}
-
-	permissionSurfaces := map[string]struct{}{}
-	for _, permission := range actor.Permissions {
-		if strings.TrimSpace(permission.Surface) != "" {
-			permissionSurfaces[permission.Surface] = struct{}{}
-		}
-	}
-	if len(permissionSurfaces) == 1 {
-		for surface := range permissionSurfaces {
 			return surface, nil
 		}
 	}
@@ -765,9 +744,11 @@ func actorByIDTx(ctx context.Context, tx *sql.Tx, actorID string) (Actor, error)
 
 func toIdentity(actor Actor, sessionID string, sessionSurface string, expiresAt time.Time) ActorIdentity {
 	surfaces := map[string]bool{}
+	if surface := strings.TrimSpace(sessionSurface); surface != "" {
+		surfaces[surface] = true
+	}
 	services := map[string]bool{}
 	for _, permission := range actor.Permissions {
-		surfaces[permission.Surface] = true
 		services[permission.Service] = true
 	}
 	return ActorIdentity{
@@ -1263,22 +1244,6 @@ func mapUniqueViolation(err error) error {
 		}
 	}
 	return err
-}
-
-func publicActorPermissions(role, surface string) ([]byte, error) {
-	switch role {
-	case "client":
-		return json.Marshal([]Permission{
-			{Service: "dsh", Surface: surface, Action: "store:read", Scope: "all"},
-		})
-	case "partner":
-		return json.Marshal([]Permission{
-			{Service: "dsh", Surface: surface, Action: "store:read", Scope: "own"},
-			{Service: "dsh", Surface: surface, Action: "store:write", Scope: "own"},
-		})
-	default:
-		return nil, ErrInvalidActivation
-	}
 }
 
 func (r *Repository) ListSessions(ctx context.Context, actorID string) ([]SessionInfo, error) {

@@ -174,7 +174,7 @@ func TestActorIdentityDerivesSurfaceAndServiceAccess(t *testing.T) {
 		OperatorContextID: "context-1",
 		Roles:             []string{"partner"},
 		Permissions: []Permission{
-			{Service: "dsh", Surface: "app-partner", Action: "store:write", Scope: "own"},
+			{Service: "dsh", Surface: "app-partner", Action: "orders.manage", Scope: "store:store-test-grocery"},
 		},
 	}, "session-1", "app-partner", expiresAt)
 
@@ -183,6 +183,55 @@ func TestActorIdentityDerivesSurfaceAndServiceAccess(t *testing.T) {
 	}
 	if resolved.AuthState != "authenticated" || resolved.Subject != "partner-1" {
 		t.Fatalf("unexpected identity: %#v", resolved)
+	}
+}
+
+func TestActorIdentityDoesNotDeriveSurfaceAccessFromBusinessPermissions(t *testing.T) {
+	expiresAt := time.Now().Add(time.Minute)
+	resolved := toIdentity(Actor{
+		ID:                "client-1",
+		OperatorContextID: "context-1",
+		Roles:             []string{"client"},
+		Permissions: []Permission{
+			{Service: "dsh", Surface: "control-panel", Action: "partners.read", Scope: "all"},
+		},
+	}, "session-1", "app-client", expiresAt)
+
+	if !resolved.SurfaceAccess["app-client"] {
+		t.Fatalf("active session surface must be granted: %#v", resolved.SurfaceAccess)
+	}
+	if resolved.SurfaceAccess["control-panel"] {
+		t.Fatalf("business permission must not manufacture session surface access: %#v", resolved.SurfaceAccess)
+	}
+	if !resolved.ServiceAccess["dsh"] {
+		t.Fatalf("service access must still be derived from business permissions: %#v", resolved.ServiceAccess)
+	}
+}
+
+func TestResolvePasswordLoginSurfaceUsesRoleNotBusinessPermissionForMobileActors(t *testing.T) {
+	for role, expectedSurface := range map[string]string{
+		"client":  "app-client",
+		"partner": "app-partner",
+	} {
+		surface, err := resolvePasswordLoginSurface(Actor{Roles: []string{role}})
+		if err != nil {
+			t.Fatalf("%s role must resolve its governed mobile surface without synthetic permissions: %v", role, err)
+		}
+		if surface != expectedSurface {
+			t.Fatalf("%s resolved to %q, expected %q", role, surface, expectedSurface)
+		}
+	}
+}
+
+func TestResolvePasswordLoginSurfaceRejectsAmbiguousMobileAndControlPanelAuthority(t *testing.T) {
+	_, err := resolvePasswordLoginSurface(Actor{
+		Roles: []string{"client", "operator"},
+		Permissions: []Permission{
+			{Service: "dsh", Surface: "control-panel", Action: "partners.read", Scope: "all"},
+		},
+	})
+	if !errors.Is(err, ErrForbidden) {
+		t.Fatalf("ambiguous mobile/control-panel authority must fail closed, got %v", err)
 	}
 }
 

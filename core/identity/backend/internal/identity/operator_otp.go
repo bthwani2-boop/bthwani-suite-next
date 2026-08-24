@@ -10,8 +10,9 @@ import (
 
 var ErrOperatorContextMismatch = errors.New("actor operator context does not match active runtime operator context")
 
-// otpRoleSurface and otpRolePermissions delegate to the single central
-// activation registry so the public OTP path can never diverge from it.
+// otpRoleSurface is delegated to the canonical activation registry.
+// Public OTP currently owns only Client authentication. Surface access is
+// session/role authority; it must not be manufactured through business permissions.
 func otpRoleSurface(role string) (string, error) {
 	role = strings.TrimSpace(role)
 	if !publicOtpActorTypes[role] {
@@ -24,12 +25,12 @@ func otpRoleSurface(role string) (string, error) {
 	return surface, nil
 }
 
-func otpRolePermissions(role, surface string) ([]byte, error) {
+func otpRolePermissions(role string) ([]byte, error) {
 	role = strings.TrimSpace(role)
-	if !publicOtpActorTypes[role] {
+	if role != "client" || !publicOtpActorTypes[role] {
 		return nil, ErrInvalidActivation
 	}
-	return publicActorPermissions(role, surface)
+	return json.Marshal([]Permission{})
 }
 
 // RequestOtpForOperatorContext is the commercial-safe OTP provisioning path. The operator context is
@@ -54,7 +55,7 @@ func (r *Repository) RequestOtpForOperatorContext(
 	if err != nil {
 		return IssueActivationResult{}, err
 	}
-	permissions, err := otpRolePermissions(role, surface)
+	permissions, err := otpRolePermissions(role)
 	if err != nil {
 		return IssueActivationResult{}, err
 	}
