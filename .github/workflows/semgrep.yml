@@ -30,44 +30,28 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ownership:
-    name: Resolve branch event ownership
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    outputs:
-      skip_duplicate_push: ${{ steps.owner.outputs.skip_duplicate_push }}
-    steps:
-      - name: Resolve push versus PR ownership
-        id: owner
-        shell: bash
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          BRANCH: ${{ github.ref_name }}
-          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          skip="false"
-          if [[ "${EVENT_NAME}" == "push" && "${BRANCH}" != "${DEFAULT_BRANCH}" ]]; then
-            open_pr_count="$(gh api --method GET \
-              -H 'X-GitHub-Api-Version: 2026-03-10' \
-              "/repos/${GITHUB_REPOSITORY}/pulls" \
-              -f state=open \
-              -f head="${GITHUB_REPOSITORY_OWNER}:${BRANCH}" \
-              -f per_page=1 \
-              --jq 'length')"
-            [[ "${open_pr_count}" == "0" ]] || skip="true"
-          fi
-          echo "skip_duplicate_push=${skip}" >> "${GITHUB_OUTPUT}"
-
   scan:
     name: Semgrep Code analysis
-    needs: [ownership]
-    if: ${{ needs.ownership.outputs.skip_duplicate_push != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
+      - name: Resolve event ownership
+        id: owner
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          skip=false
+          if [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" != "${DEFAULT_BRANCH}" ]]; then
+            count="$(gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls" -f state=open -f head="${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}" -f base="${DEFAULT_BRANCH}" -f per_page=100 --jq 'length')"
+            [[ "${count}" == "0" ]] || skip=true
+          fi
+          echo "skip=${skip}" >> "${GITHUB_OUTPUT}"
+
       - name: Checkout immutable candidate with history
+        if: ${{ steps.owner.outputs.skip != 'true' }}
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -76,10 +60,10 @@ jobs:
           show-progress: false
 
       - name: Resolve exact scan scope
+        if: ${{ steps.owner.outputs.skip != 'true' }}
         id: scope
         shell: bash
         env:
-          EVENT_NAME: ${{ github.event_name }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           REQUEST_MODE: ${{ inputs.mode }}
           REQUEST_BASE: ${{ inputs.base_ref }}
@@ -87,47 +71,37 @@ jobs:
         run: |
           set -euo pipefail
           actual="$(git rev-parse HEAD)"
-          [[ "${actual}" == "${EXPECTED_SHA}" ]] || {
-            echo "::error::Semgrep checkout drift: expected=${EXPECTED_SHA} actual=${actual}"
-            exit 1
-          }
-
-          mode="full"
+          [[ "${actual}" == "${EXPECTED_SHA}" ]] || { echo "::error::Semgrep checkout drift"; exit 1; }
+          mode=full
           base=""
-          if [[ "${EVENT_NAME}" == "pull_request" ]]; then
-            mode="diff"
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            mode=diff
             base="${PR_BASE_SHA}"
-          elif [[ "${EVENT_NAME}" == "workflow_dispatch" && "${REQUEST_MODE:-full}" == "diff" ]]; then
-            mode="diff"
+          elif [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && "${REQUEST_MODE:-full}" == "diff" ]]; then
+            mode=diff
             base="${REQUEST_BASE}"
           fi
-
           if [[ "${mode}" == "diff" ]]; then
-            [[ -n "${base}" ]] || { echo "::error::diff scan requires base_ref"; exit 1; }
+            [[ -n "${base}" ]] || { echo "::error::diff scan requires base"; exit 1; }
             git fetch --no-tags origin "${base}" || true
-            base_sha="$(git rev-parse "${base}^{commit}" 2>/dev/null || git rev-parse "origin/${base}^{commit}" 2>/dev/null || true)"
-            [[ "${base_sha}" =~ ^[0-9a-fA-F]{40}$ ]] || {
-              echo "::error::unable to resolve Semgrep base ${base}"
-              exit 1
-            }
-            base="$(git merge-base "${base_sha}" "${EXPECTED_SHA}")"
+            resolved="$(git rev-parse "${base}^{commit}" 2>/dev/null || git rev-parse "origin/${base}^{commit}" 2>/dev/null || true)"
+            [[ "${resolved}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::unable to resolve Semgrep base"; exit 1; }
+            base="$(git merge-base "${resolved}" "${EXPECTED_SHA}")"
           fi
+          echo "mode=${mode}" >> "${GITHUB_OUTPUT}"
+          echo "base_sha=${base}" >> "${GITHUB_OUTPUT}"
 
-          {
-            echo "mode=${mode}"
-            echo "base_sha=${base}"
-          } >> "${GITHUB_OUTPUT}"
-
-      - name: Install pinned Semgrep on remote runner
+      - name: Install pinned Semgrep
+        if: ${{ steps.owner.outputs.skip != 'true' }}
         shell: bash
         run: |
           set -euo pipefail
           python3 -m venv "${RUNNER_TEMP}/semgrep-1.172.0"
-          "${RUNNER_TEMP}/semgrep-1.172.0/bin/python" -m pip install \
-            --disable-pip-version-check --no-input semgrep==1.172.0
+          "${RUNNER_TEMP}/semgrep-1.172.0/bin/python" -m pip install --disable-pip-version-check --no-input semgrep==1.172.0
           echo "${RUNNER_TEMP}/semgrep-1.172.0/bin" >> "${GITHUB_PATH}"
 
-      - name: Run Semgrep Code rules
+      - name: Run Semgrep and retain raw evidence
+        if: ${{ steps.owner.outputs.skip != 'true' }}
         id: semgrep
         continue-on-error: true
         shell: bash
@@ -136,64 +110,50 @@ jobs:
           BASE_SHA: ${{ steps.scope.outputs.base_sha }}
         run: |
           set +e
-          mkdir -p "${RUNNER_TEMP}/semgrep-evidence"
+          evidence="${RUNNER_TEMP}/semgrep-evidence"
+          mkdir -p "${evidence}"
           args=(scan --config p/default --config p/security-audit --json --metrics=off)
-          if [[ "${MODE}" == "diff" ]]; then
-            args+=(--baseline-commit "${BASE_SHA}")
-          fi
-          semgrep "${args[@]}" . \
-            > "${RUNNER_TEMP}/semgrep-evidence/semgrep.json" \
-            2> "${RUNNER_TEMP}/semgrep-evidence/stderr.log"
+          [[ "${MODE}" != "diff" ]] || args+=(--baseline-commit "${BASE_SHA}")
+          semgrep "${args[@]}" . > "${evidence}/semgrep.json" 2> "${evidence}/stderr.log"
           status=$?
           set -e
           echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
-          cat "${RUNNER_TEMP}/semgrep-evidence/stderr.log" || true
           exit "${status}"
 
-      - name: Normalize Semgrep findings and policy
+      - name: Normalize every raw finding and engine error
+        if: ${{ always() && steps.owner.outputs.skip != 'true' }}
         id: policy
-        if: ${{ always() }}
         continue-on-error: true
         shell: bash
         env:
           SCAN_OUTCOME: ${{ steps.semgrep.outcome }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           MODE: ${{ steps.scope.outputs.mode }}
           BASE_SHA: ${{ steps.scope.outputs.base_sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           src="${RUNNER_TEMP}/semgrep-evidence/semgrep.json"
           [[ "${SCAN_OUTCOME}" == "success" ]] || { echo "::error::Semgrep execution failed"; exit 1; }
-          [[ -s "${src}" ]] || { echo "::error::Semgrep JSON evidence is missing"; exit 1; }
+          [[ -s "${src}" ]] || { echo "::error::Semgrep JSON evidence missing"; exit 1; }
           jq . "${src}" > "${RUNNER_TEMP}/semgrep-evidence/semgrep.pretty.json"
           total="$(jq '[.results[]?] | length' "${src}")"
-          errors="$(jq '[.results[]? | select((.extra.severity // "") == "ERROR")] | length' "${src}")"
-          warnings="$(jq '[.results[]? | select((.extra.severity // "") == "WARNING")] | length' "${src}")"
-          info="$(jq '[.results[]? | select((.extra.severity // "") == "INFO")] | length' "${src}")"
-          jq -n \
-            --arg headSha "${HEAD_SHA}" \
-            --arg mode "${MODE}" \
-            --arg baseSha "${BASE_SHA}" \
-            --argjson total "${total}" \
-            --argjson errors "${errors}" \
-            --argjson warnings "${warnings}" \
-            --argjson info "${info}" \
-            '{schemaVersion:1,headSha:$headSha,mode:$mode,baseSha:$baseSha,total:$total,blockingErrors:$errors,warnings:$warnings,info:$info}' \
-            > "${RUNNER_TEMP}/semgrep-evidence/summary.json"
+          engine_errors="$(jq '[.errors[]?] | length' "${src}")"
+          severities="$(jq -c '[.results[]? | (.extra.severity // "UNSPECIFIED")] | group_by(.) | map({severity:.[0],count:length})' "${src}")"
+          jq -n --arg headSha "${HEAD_SHA}" --arg mode "${MODE}" --arg baseSha "${BASE_SHA}" --argjson total "${total}" --argjson engineErrors "${engine_errors}" --argjson severities "${severities}" '{schemaVersion:2,headSha:$headSha,mode:$mode,baseSha:$baseSha,totalFindings:$total,engineErrors:$engineErrors,severities:$severities,allRawFindingsAccounted:true}' > "${RUNNER_TEMP}/semgrep-evidence/summary.json"
           {
             echo "### Semgrep Code Remote"
             echo "- Candidate: \`${HEAD_SHA}\`"
             echo "- Mode: \`${MODE}\`"
-            echo "- Findings: \`${total}\`"
-            echo "- Blocking ERROR findings: \`${errors}\`"
-            echo "- WARNING findings: \`${warnings}\`"
-            echo "- INFO findings: \`${info}\`"
+            echo "- Raw findings: \`${total}\`"
+            echo "- Engine errors: \`${engine_errors}\`"
+            echo "- Severity distribution: \`${severities}\`"
           } >> "${GITHUB_STEP_SUMMARY}"
-          [[ "${errors}" == "0" ]] || { echo "::error::Semgrep blocking ERROR findings=${errors}"; exit 1; }
+          [[ "${engine_errors}" == "0" ]] || { echo "::error::Semgrep engine errors=${engine_errors}"; exit 1; }
+          [[ "${total}" == "0" ]] || { echo "::error::Semgrep findings require diagnosis/disposition before closure: total=${total}"; exit 1; }
 
       - name: Upload complete Semgrep evidence
+        if: ${{ always() && steps.owner.outputs.skip != 'true' }}
         id: artifact
-        if: ${{ always() }}
         continue-on-error: true
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -202,41 +162,17 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Enforce Semgrep execution, policy, and evidence
+      - name: Enforce execution, accounting and evidence
         if: ${{ always() }}
         shell: bash
         env:
+          SKIP: ${{ steps.owner.outputs.skip }}
           SCAN_OUTCOME: ${{ steps.semgrep.outcome }}
           POLICY_OUTCOME: ${{ steps.policy.outcome }}
           ARTIFACT_OUTCOME: ${{ steps.artifact.outcome }}
         run: |
           set -euo pipefail
+          if [[ "${SKIP}" == "true" ]]; then echo "development push suppressed because PR owns Semgrep verification"; exit 0; fi
           [[ "${SCAN_OUTCOME}" == "success" ]]
           [[ "${POLICY_OUTCOME}" == "success" ]]
           [[ "${ARTIFACT_OUTCOME}" == "success" ]]
-
-  result:
-    name: Semgrep Code result
-    needs: [ownership, scan]
-    if: ${{ always() }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - name: Enforce Semgrep result
-        shell: bash
-        env:
-          OWNERSHIP_RESULT: ${{ needs.ownership.result }}
-          SCAN_RESULT: ${{ needs.scan.result }}
-          SKIP_DUPLICATE_PUSH: ${{ needs.ownership.outputs.skip_duplicate_push }}
-        run: |
-          set -euo pipefail
-          [[ "${OWNERSHIP_RESULT}" == "success" ]] || { echo "::error::Semgrep ownership failed"; exit 1; }
-          if [[ "${SKIP_DUPLICATE_PUSH}" == "true" ]]; then
-            echo "development push skipped because an open PR owns Semgrep verification"
-            exit 0
-          fi
-          [[ "${SCAN_RESULT}" == "success" ]] || {
-            echo "::error::Semgrep Code Remote failed: ${SCAN_RESULT}"
-            exit 1
-          }
-          echo "Semgrep Code Remote passed."
