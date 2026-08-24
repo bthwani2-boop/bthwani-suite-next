@@ -1,14 +1,9 @@
-// Asserts that the Identity local bootstrap has actually converged, immediately
-// after the runtime's APIs report ready and before anything downstream depends
-// on an authenticated operator.
-//
-// Without this gate the real failure — Identity serving against a database with
-// no canonical actors — surfaced three layers later as a bare
-// `INVALID_CREDENTIALS` from mobile-dev-data, which names neither the authority
-// that failed nor the state that caused it.
+// Verifies that the explicit one-shot local-development Identity bootstrap has
+// converged before downstream development data flows depend on authenticated actors.
 import { getPasswordSession, IDENTITY_API_BASE } from './local-workforce-provisioning.mjs';
+import { LOCAL_ACTORS } from './local-actors.mjs';
 
-const OPERATOR = 'operator';
+const OPERATOR = LOCAL_ACTORS.operator.username;
 
 async function main() {
   let session;
@@ -18,15 +13,13 @@ async function main() {
     const status = error?.status ?? 'unreachable';
     console.error(
       [
-        'Identity local bootstrap has not converged.',
-        `  authority: core/identity local bootstrap (IDENTITY_LOCAL_BOOTSTRAP)`,
+        'Identity local development bootstrap has not converged.',
+        '  authority: one-shot identity-local-bootstrap service',
         `  probe:     POST ${IDENTITY_API_BASE}/auth/login as "${OPERATOR}" -> ${status}`,
         '',
-        'The canonical local actors are missing or hold credentials this runtime',
-        'does not recognise. Identity converges them at startup and re-converges',
-        'them while it serves, so this means Identity could not reach or repair',
-        'its database. Inspect the identity-api logs and identity_actors before',
-        'running any data repair downstream.',
+        'The production-capable identity-api never creates or repairs these fixtures.',
+        'Run the canonical local-development bootstrap path and inspect the one-shot',
+        'identity-local-bootstrap logs plus identity_actors if convergence fails.',
         '',
         `  detail: ${error?.message ?? error}`,
       ].join('\n'),
@@ -36,7 +29,7 @@ async function main() {
   }
 
   console.log(
-    `Identity local bootstrap: PASS actor=${OPERATOR} subject=${session.identity.subject}`,
+    `Identity local development bootstrap: PASS actor=${OPERATOR} subject=${session.identity.subject}`,
   );
 }
 

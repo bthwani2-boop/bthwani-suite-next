@@ -8,19 +8,20 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// BootstrapLocalPlatformActors applies separation of duties to the local
-// control-plane accounts. It runs only when the existing local bootstrap is
-// explicitly enabled and never affects production actors.
+// BootstrapLocalPlatformActors is the Identity-owned mutation primitive for
+// local-development platform fixtures. The only runtime caller is the separate
+// identity-local-bootstrap command, which enforces the development/production
+// boundary before opening the database. Production identity-api never calls it.
 func (r *Repository) BootstrapLocalPlatformActors(ctx context.Context, input LocalBootstrap) error {
 	if !input.Enabled {
 		return nil
 	}
 	if len(input.Password) < 6 {
-		return errors.New("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD must contain at least 6 characters")
+		return errors.New("local Identity bootstrap password must contain at least 6 characters")
 	}
 	operatorContextID := strings.TrimSpace(input.OperatorContextID)
 	if operatorContextID == "" {
-		return errors.New("BTHWANI_OPERATOR_CONTEXT_ID is required when IDENTITY_LOCAL_BOOTSTRAP=true")
+		return errors.New("BTHWANI_OPERATOR_CONTEXT_ID is required for local Identity bootstrap")
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)

@@ -62,6 +62,8 @@ test("quick developer login stays local-only and never bundles privileged secret
 
   const mobileSource = apps.join("\n");
   assert.doesNotMatch(mobileSource, /IDENTITY_LOCAL_BOOTSTRAP_PASSWORD/);
+  assert.doesNotMatch(mobileSource, /BTHWANI_LOCAL_IDENTITY_BOOTSTRAP_PASSWORD/);
+  assert.doesNotMatch(mobileSource, /BTHWANI_LOCAL_DEVELOPMENT_BOOTSTRAP_AUTHORIZED/);
   assert.doesNotMatch(mobileSource, /LOCAL_ONLY_replace_with_workforce_internal_service_token/);
   assert.doesNotMatch(mobileSource, /123456/);
 

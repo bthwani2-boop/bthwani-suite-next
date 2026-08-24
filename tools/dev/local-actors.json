@@ -1,7 +1,7 @@
 {
-  "$comment": "Canonical local development identity actors. Single source of truth for the local bootstrap password and the usernames every dev/smoke script logs in with. Local only: the Identity bootstrap that creates these actors runs solely when IDENTITY_LOCAL_BOOTSTRAP=true and is refused in production. Consumers: tools/dev/local-actors.mjs, tools/dev/local-actors.ps1. Drift against the Go bootstrap and the runtime env files is enforced by tools/guards/local-dev-actors-gate.mjs.",
+  "$comment": "Canonical local development identity actors. Single source of truth for the one-shot development bootstrap password and the usernames every dev/smoke script logs in with. Local only: these actors are created by the separate identity-local-bootstrap command/service; the production-capable identity-api never owns this writer. The command mutates only when BTHWANI_LOCAL_DEVELOPMENT_BOOTSTRAP_AUTHORIZED=true, BTHWANI_RUNTIME_MODE=development, and production authorization is false. Consumers: tools/dev/local-actors.mjs, tools/dev/local-actors.ps1. Drift against the Go bootstrap and runtime env files is enforced by tools/guards/local-dev-actors-gate.mjs.",
   "$workforceProvidersComment": "Field agents and captains are NOT bootstrap actors. Workforce owns provider actor creation and always provisions Identity with a server-generated workforce code as the username, so a pre-seeded actor holding the same phone can never be adopted. They are provisioned at runtime by tools/dev/local-workforce-provisioning.mjs, which writes the generated actor ids to .artifacts/local-dev/workforce-actors.json. They authenticate by redeeming an activation code, not by password.",
-  "passwordEnvVar": "IDENTITY_LOCAL_BOOTSTRAP_PASSWORD",
+  "passwordEnvVar": "BTHWANI_LOCAL_IDENTITY_BOOTSTRAP_PASSWORD",
   "password": "123456",
   "OperatorContextId": "local-dsh",
   "actors": {

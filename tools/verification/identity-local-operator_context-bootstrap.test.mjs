@@ -4,48 +4,80 @@ import { test } from "node:test";
 
 const read = (path) => readFileSync(path, "utf8");
 
-const main = read("core/identity/backend/cmd/identity-api/main.go");
+const apiMain = read("core/identity/backend/cmd/identity-api/main.go");
+const bootstrapMain = read("core/identity/backend/cmd/identity-local-bootstrap/main.go");
+const apiDockerfile = read("core/identity/backend/Dockerfile");
+const bootstrapDockerfile = read("core/identity/backend/Dockerfile.local-bootstrap");
 const repository = read("core/identity/backend/internal/identity/repository.go");
 const platformBootstrap = read("core/identity/backend/internal/identity/platform_local_bootstrap.go");
-const migration = read("core/identity/database/migrations/identity-007_local_actor_operator_context_repair.sql");
 const compose = read("infra/docker/compose.runtime.yml");
+const localProduction = read("infra/docker/env/runtime.local-production.env.example");
 
-test("identity binds the configured OperatorContext before every local bootstrap write", () => {
-  const bootstrapInput = main.indexOf("OperatorContextID: bootstrapOperatorContextID");
-  const bootstrap = main.indexOf("BootstrapLocalActors");
-  const platform = main.indexOf("BootstrapLocalPlatformActors");
-  const leadership = main.indexOf("BootstrapSovereignLeadershipAccess");
-  const router = main.indexOf("identityhttp.NewRouter");
-
-  assert.ok(bootstrapInput >= 0, "LocalBootstrap must carry the configured OperatorContext");
-  assert.ok(bootstrap > bootstrapInput, "local actor bootstrap must use the bound input");
-  assert.ok(platform > bootstrap, "platform bootstrap must follow local actor bootstrap");
-  assert.ok(leadership > platform, "leadership bootstrap must follow platform bootstrap");
-  assert.ok(router > leadership, "auth routes must not serve before bootstrap completes");
-  assert.doesNotMatch(main, /RepairLocalBootstrapOperatorContext/);
+test("production-capable identity-api owns no local-development bootstrap entry authority", () => {
+  for (const marker of [
+    "BootstrapLocalActors",
+    "BootstrapLocalPlatformActors",
+    "BootstrapSovereignLeadershipAccess",
+    "ReconcileLocalBootstrapSecurityState",
+    "superviseLocalBootstrap",
+    "IDENTITY_LOCAL_BOOTSTRAP",
+    "BTHWANI_LOCAL_IDENTITY_BOOTSTRAP_PASSWORD",
+  ]) {
+    assert.doesNotMatch(apiMain, new RegExp(marker));
+  }
+  assert.doesNotMatch(apiDockerfile, /identity-local-bootstrap/);
 });
 
-test("local actor bootstrap writes and refreshes OperatorContext_id directly", () => {
-  assert.match(repository, /OperatorContextID := strings\.TrimSpace\(input\.OperatorContextID\)/);
-  assert.match(repository, /BTHWANI_DEFAULT_OperatorContext_ID is required when IDENTITY_LOCAL_BOOTSTRAP=true/);
-  assert.match(repository, /VALUES \(\$1, \$2, \$3, \$4, \$5, \$6, \$7::jsonb, true, now\(\)\)/);
-  assert.match(repository, /OperatorContext_id = EXCLUDED\.OperatorContext_id/);
-  assert.doesNotMatch(repository, /VALUES \(\$1, \$2, \$3, 'local-dsh'/);
+test("one-shot bootstrap binds runtime class and operator context before writes", () => {
+  const authorization = bootstrapMain.indexOf("localDevelopmentBootstrapAuthorized()");
+  const operatorContext = bootstrapMain.indexOf("OperatorContextID:");
+  const baseActors = bootstrapMain.indexOf("BootstrapLocalActors");
+  const platformActors = bootstrapMain.indexOf("BootstrapLocalPlatformActors");
+  const leadership = bootstrapMain.indexOf("BootstrapSovereignLeadershipAccess");
+  const reconcile = bootstrapMain.indexOf("ReconcileLocalBootstrapSecurityState");
+  const readback = bootstrapMain.indexOf("LocalBootstrapConverged");
+
+  assert.ok(authorization >= 0);
+  assert.ok(operatorContext > authorization);
+  assert.ok(baseActors > operatorContext);
+  assert.ok(platformActors > baseActors);
+  assert.ok(leadership > platformActors);
+  assert.ok(reconcile > leadership);
+  assert.ok(readback > reconcile);
+  assert.match(bootstrapMain, /BTHWANI_LOCAL_DEVELOPMENT_BOOTSTRAP_AUTHORIZED/);
+  assert.match(bootstrapMain, /BTHWANI_RUNTIME_MODE/);
+  assert.match(bootstrapMain, /BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED/);
+  assert.match(bootstrapMain, /BTHWANI_OPERATOR_CONTEXT_ID/);
 });
 
-test("platform bootstrap writes and refreshes OperatorContext_id directly", () => {
-  assert.match(platformBootstrap, /OperatorContextID := strings\.TrimSpace\(input\.OperatorContextID\)/);
-  assert.match(platformBootstrap, /VALUES \(\$1, \$2, \$3, \$4, \$5, \$6, \$7::jsonb, true, NOW\(\)\)/);
-  assert.match(platformBootstrap, /OperatorContext_id = EXCLUDED\.OperatorContext_id/);
-  assert.doesNotMatch(platformBootstrap, /VALUES \(\$1, \$2, \$3, 'local-dsh'/);
+test("local bootstrap image is physically separate from the production API image", () => {
+  assert.match(bootstrapDockerfile, /\.\/cmd\/identity-local-bootstrap/);
+  assert.doesNotMatch(bootstrapDockerfile, /\.\/cmd\/identity-api/);
+  assert.match(apiDockerfile, /\.\/cmd\/identity-api/);
+  assert.doesNotMatch(apiDockerfile, /\.\/cmd\/identity-local-bootstrap/);
 });
 
-test("database and compose preserve deferred platform readiness and OperatorContext safety", () => {
-  // Published migration history remains immutable and still protects upgraded
-  // databases that may contain historical local bootstrap rows.
-  assert.match(migration, /identity_actors_OperatorContext_nonblank_chk/);
-  assert.match(migration, /CHECK \(btrim\(OperatorContext_id\) <> ''\) NOT VALID/);
-  assert.match(compose, /BTHWANI_DEFAULT_OperatorContext_ID: "\$\{BTHWANI_DEFAULT_OperatorContext_ID:-local-dsh\}"/);
-  assert.match(compose, /identity-api:[\s\S]*<<: \*bthwani-platform-environment/);
-  assert.match(compose, /dsh-api:[\s\S]*<<: \*bthwani-platform-environment/);
+test("compose routes fixture writes through the one-shot service and fences production-like mode", () => {
+  const apiStart = compose.indexOf("  identity-api:");
+  const bootstrapStart = compose.indexOf("  identity-local-bootstrap:");
+  const workforceStart = compose.indexOf("  workforce-api:");
+  assert.ok(apiStart >= 0 && bootstrapStart > apiStart && workforceStart > bootstrapStart);
+
+  const apiBlock = compose.slice(apiStart, bootstrapStart);
+  const bootstrapBlock = compose.slice(bootstrapStart, workforceStart);
+  assert.match(apiBlock, /identity-local-bootstrap:[\s\S]*condition: service_completed_successfully/);
+  assert.doesNotMatch(apiBlock, /IDENTITY_LOCAL_BOOTSTRAP|BTHWANI_LOCAL_IDENTITY_BOOTSTRAP_PASSWORD/);
+  assert.match(bootstrapBlock, /Dockerfile\.local-bootstrap/);
+  assert.match(bootstrapBlock, /BTHWANI_LOCAL_DEVELOPMENT_BOOTSTRAP_AUTHORIZED/);
+  assert.match(bootstrapBlock, /BTHWANI_LOCAL_IDENTITY_BOOTSTRAP_PASSWORD/);
+  assert.match(localProduction, /^BTHWANI_RUNTIME_MODE=production$/m);
+  assert.match(localProduction, /^BTHWANI_LOCAL_DEVELOPMENT_BOOTSTRAP_AUTHORIZED=false$/m);
+  assert.doesNotMatch(localProduction, /^BTHWANI_LOCAL_IDENTITY_BOOTSTRAP_PASSWORD=/m);
+});
+
+test("bootstrap mutation primitives require a bound operator context", () => {
+  assert.match(repository, /operatorContextID := strings\.TrimSpace\(input\.OperatorContextID\)/);
+  assert.match(repository, /operator_context_id = EXCLUDED\.operator_context_id/);
+  assert.match(platformBootstrap, /operatorContextID := strings\.TrimSpace\(input\.OperatorContextID\)/);
+  assert.match(platformBootstrap, /operator_context_id = EXCLUDED\.operator_context_id/);
 });
