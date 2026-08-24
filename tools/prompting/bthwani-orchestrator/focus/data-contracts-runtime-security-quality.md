@@ -1,220 +1,189 @@
-# Focus — Data, Contracts, Runtime, Security, Finance, Quality and Engineering Control-Path Efficiency
+# Focus — Data, Contracts, Runtime, Security, Quality, CI and Tool Evidence
 
 ## 1. Purpose
 
-Apply this module when proven scope includes data/database, contracts/API/events, runtime/infrastructure, security/auth, finance, testing/quality, operations, CI/tooling or engineering execution cost.
+Apply when scope includes data/database, contracts/API/events, runtime/infrastructure, security/auth, finance, testing/quality, CI/tooling, remote analysis or engineering control-path cost.
 
-Do not split cross-boundary correctness into independent pseudo-projects when one root spans them.
+Do not split one cross-boundary root into independent pseudo-projects.
 
-## 2. Data ownership and database truth
+## 2. Data ownership and migrations
 
-Inspect canonical data owner, allowed writers/readers/projections, schema/model consistency, constraints/invariants, transactions, uniqueness/FKs/checks/indexes, fresh install and representative upgrade states, migration ordering/history, expand/backfill/switch/contract sequences, idempotency/concurrency/locking/batching, drift/duplicates/orphans/stale fields, restart/readback/roll-forward/rollback and old-writer elimination.
+Inspect canonical data owner, allowed writers/readers/projections, schema/model consistency, constraints/invariants, transactions, uniqueness/FKs/checks/indexes, fresh install, representative upgrade states, migration ordering/history, backfill/cutover, idempotency/concurrency/locking/batching, duplicates/orphans/drift, restart/readback and old-writer elimination.
 
-A successful migration command alone does not prove correct product state.
+Use forward corrective migrations. Do not rewrite applied migration history for cosmetic cleanliness.
 
-## 3. Migration law
+Persisted authority change:
 
-Use forward corrective migrations. Do not rewrite applied migration history merely for cosmetic cleanliness.
+`current owner -> target owner/schema -> forward migration -> backfill -> real compatibility window -> switch writers -> switch readers -> canonical readback -> zero old authoritative writer -> cleanup`.
 
-For persisted authority changes prove as applicable:
+## 3. Contracts and generated bindings
 
-`current owner → target owner/schema → forward migration → backfill/transform → real compatibility window → switch writers → switch readers → canonical readback → zero old authoritative writer → cleanup/contract phase`.
+Trace:
 
-## 4. Contracts and APIs
+`canonical schema/OpenAPI/event -> generated/manual client -> caller -> auth/authz -> handler -> domain -> persistence/event/provider -> response/error -> persisted readback -> all consumers`.
 
-Verify:
+Look for enum/null/error drift, ambiguous IDs/scopes, generated provenance mismatch, shadow endpoints, contract bypass, stale clients and indefinite compatibility.
 
-`canonical schema/OpenAPI/event → generated/manual client → caller/request → auth/authz → route/handler → domain command/query → persistence/event/provider → response/error semantics → persisted readback → all consumers`.
+Generated outputs follow the Source-of-Fix law in `02`: fix generator/schema/template/authoritative input first, then regenerate.
 
-Look for schema/enum/null/error drift, ambiguous IDs/scopes, generated-client provenance mismatch, shadow endpoints, contract bypass, missing server auth, stale clients, missing idempotency/concurrency semantics and indefinite compatibility.
+## 4. Runtime and infrastructure
 
-## 5. Events, jobs and providers
+Inspect startup/readiness/health truthfulness, environment/config ownership, ports/endpoints/networking, containers/processes, provider bindings, startup validation, hidden localhost/legacy fallback, jobs/events/queues/providers, observability, failure/recovery/restart and release/rollback when material.
 
-For asynchronous/external paths prove sender/receiver responsibility, identity, schema/version, durability/outbox when required, callback authenticity, ordering, idempotency/replay, retry/backoff/lease, DLQ/terminal handling, timeout/unknown result, restart, reconciliation, compensation and observability/correlation.
+Runtime proof requires candidate/artifact/process/schema/profile/endpoint/fixture/readback provenance sufficient to exclude stale execution.
 
-Provider timeout after possible commit is not equivalent to failure.
+## 5. Security and isolation
 
-## 6. Runtime and infrastructure
+Always consider and deepen when material:
 
-Inspect service startup/readiness/health truthfulness, configuration/environment ownership, ports/endpoints/networking, Docker/container/process bindings, provider bindings, startup validation, hidden localhost/legacy fallback, jobs/events/queues/providers, mobile/control-panel boundaries, observability, failure/recovery/restart and release/rollback when in scope.
+`authentication | authorization | role/object/tenant/store/partner/actor scope | sessions/tokens | secrets | PII/privacy | validation | injection | SSRF/path/file/upload | replay/idempotency | IDOR | rate/abuse | provider signature | service identity | auditability`.
 
-Discover current canonical project commands/configuration live; do not hard-code historical commands here.
+UI visibility never substitutes for server authorization. Redact secrets/PII in evidence.
 
-## 7. Runtime freshness
+## 6. Finance
 
-Before trusting runtime proof establish enough candidate/artifact/process/schema/profile/endpoint/fixture/readback provenance to exclude stale execution.
+Prove canonical financial authority live. Verify server-derived amounts/identity, idempotency/correlation, state constraints, provider outcome binding, unknown-result reconciliation, compensation/reversal, replay/restart safety, canonical readback and maker-checker/step-up where governed.
 
-## 8. Security and isolation
+Caller-authored money authority and parallel financial truth are forbidden final states.
 
-Treat security as an always-on impact lens and deepen when material:
+## 7. Testing and quality
 
-`authentication | authorization | role/object/tenant/store/partner/actor scope | sessions/tokens | secrets | PII/privacy | input/output validation | injection | SSRF/path/file/upload | replay/idempotency | IDOR | rate/abuse | provider signature | service identity | auditability`.
+Tests are falsifiable evidence, not Product Truth. Use focused unit/domain, integration/contract/database, generated consistency, journey, runtime/readback, security/isolation, migration, concurrency/restart and adversarial checks as relevant.
 
-UI visibility never substitutes for server authorization. Redact raw secrets/PII in evidence.
+Do not weaken/skip valid tests or scanners to obtain green.
 
-## 9. Finance and WLT
+## 8. Engineering control-path efficiency
 
-Prove the current canonical financial authority live. Verify where applicable:
+Treat CI/tooling execution paths as first-class system paths when they materially affect correctness, reliability or delivery cost.
 
-`canonical ledger/fact owner | allowed writers | server-derived amount/identity | idempotency/correlation | state constraints | provider outcome binding | unknown-result reconciliation | compensation/reversal | restart/replay safety | canonical readback | maker-checker/step-up where governed | audit provenance`.
+Inspect:
 
-Forbidden final states include caller-authored money authority, parallel financial truth, best-effort required mutation, fake success before persisted readback and retry with new financial identity before reconciling unknown result.
+`workflow routers | scripts | registries | guards | generators | Nx/graph discovery | postinstall | scanners | repeated verification | runtime bootstrap/reset | wrappers | fan-out | repeated parsing/hash/graph work | unnecessary full-workspace scans | cache invalidation`.
 
-## 10. Compatibility
+Treatment:
 
-Allow compatibility only for a real mixed-version/rollout dependency. Require one semantic authority, explicit consumer scope, bounded behavior, observability, owner, expiry/removal trigger and negative tests where material.
+`measure/trace -> prove cost root -> remove/merge/route/cache/narrow/reorder -> preserve assurance -> measure same scenario -> prove no cost shift`.
 
-## 11. Protected/irreversible actions
+`COMPLEXITY WITHOUT PROVEN UNIQUE VALUE = REMOVE OR SIMPLIFY`.
 
-Apply the authority gate in `01` before production-sensitive secret/PII/financial/destructive/infrastructure actions.
+## 9. Tools are sensors/analyzers, not Product/System authority
 
-## 12. Testing and quality
-
-Tests are evidence. Use focused unit/domain regression, integration/contract/database, generated-client consistency, cross-surface/journey, runtime/readback, security/isolation, migration fresh/upgrade, duplicate/replay/concurrency/restart and adversarial checks as relevant.
-
-Do not use a focused check to claim broad closure it cannot prove.
-
-## 13. Failure and recovery are product behavior
-
-Cover applicable invalid, denied, wrong role/scope, forbidden state, not found, stale/conflict, duplicate/replay, race, partial failure, dependency/provider/database/network failure, timeout/unknown result, retry/backoff, offline/reconnect, restart, compensation and reconciliation.
-
-## 14. Mobile and control-panel runtime concerns
-
-Mobile: native permissions, deep links, push, maps/location, SecureStore/session, offline/reconnect, build/OTA/EAS/env/runtime transport, physical-device/emulator proof limits.
-
-Control Panel: route/object auth, trusted scope, server/client boundary, search isolation, bulk operations, audit/session/error/readback, responsive/RTL/localization/accessibility.
-
-## 15. Engineering control-path efficiency
-
-Treat developer/agent execution paths as first-class system paths when they materially affect delivery speed, correctness or maintainability.
-
-Candidate surfaces include:
-
-`guards | scripts | CI jobs | workflow routers | registries | policies | skills | prompting adapters | hooks | Nx/graph discovery | generators | postinstall | watchers | wrappers | runtime bootstrap/reset | scanners | repeated verification layers`.
-
-For the affected scenario measure/trace as applicable:
+Canonical lifecycle:
 
 ```text
-wall-clock duration
-invocation count
-child-process fan-out
-repository scans / glob breadth
-parsing / hashing / dependency-discovery repetition
-disk I/O
-network operations
-DB/runtime startup/reset work
-regeneration/materialization
-cache hit/miss and cache invalidation
-same-input repeated work
-full-workspace work triggered by affected-only change
-nested aggregate commands executing the same assurance twice
+ASSURANCE NEED
+-> DISCOVER LIVE CAPABILITY
+-> PROVE ENABLEMENT + EFFECTIVE SCOPE
+-> RUN/READ ON EXACT CANDIDATE
+-> INGEST RAW OUTPUT
+-> NORMALIZE FINDINGS + EXECUTION/COVERAGE WARNINGS
+-> VALIDATE/FALSIFY/CORRELATE/DEDUPLICATE
+-> ROOT-CAUSE UNDER 02
+-> FIX ACTUAL OWNER
+-> RERUN INVALIDATED ANALYSIS
+-> REMOTE READ-BACK WHEN THAT PLATFORM IS THE FINAL AUTHORITY
+-> FINAL GATE ONLY AFTER FINDING LIFECYCLE IS COMPLETE
 ```
-
-Then execute:
 
 ```text
-MEASURE BASELINE
-→ TRACE CALL GRAPH / TRIGGERS
-→ PROVE ROOT COST
-→ IDENTIFY UNIQUE ASSURANCE OF EACH LAYER
-→ REMOVE / MERGE / ROUTE / CACHE / NARROW / REORDER
-→ VERIFY ASSURANCE/CORRECTNESS DID NOT DECREASE
-→ MEASURE SAME SCENARIO AGAIN
-→ PROVE NO MATERIAL COST SHIFT
+GREEN != CLOSED
+MULTIPLE TOOL FINDINGS != MULTIPLE ROOTS
+SCANNER SUCCESS != COMPLETE ANALYSIS IF COVERAGE/PARSER WARNINGS ARE MATERIAL
 ```
 
-`COMPLEXITY WITHOUT PROVEN UNIQUE VALUE = REMOVE OR SIMPLIFY.`
+Every material raw finding uses the disposition invariant in `02`.
 
-Do not adopt rigid numeric laws such as “exactly one registry” when the domain genuinely needs more than one authority boundary. The invariant is one canonical owner per concept and no duplicated assurance/cost without proven value.
+## 10. Current preferred responsibility mapping — verify live
 
-## 16. Control-path anti-patterns
+These are preferred/current capability mappings **only when proven installed/enabled/applicable**; the durable authority is the assurance responsibility, not the tool brand.
 
-Explicitly inspect for:
-
-- nested aggregate scripts that invoke already-included checks;
-- full workspace verification by default when affected proof is sufficient;
-- the same repository parsing/hash/graph construction repeated in one execution;
-- duplicated workflow + local guard enforcement of the same claim without distinct value;
-- multiple routers/registries answering the same question;
-- generators that materialize outputs during read-only verification;
-- cache invalidation that makes caching ceremonial;
-- “green” speedups achieved by skipping required assurance;
-- moving expensive work from local to CI (or vice versa) without reducing total cost;
-- policy/guard layers that only assert the existence/text of another policy rather than a project property.
-
-## 17. Quality/performance and supply chain
-
-Inspect correctness/operability impacts such as excessive coupling, inefficient/unbounded queries, missing pagination/cache semantics, flaky checks, config drift, unused dependencies, unsafe retries, observability gaps, resource leaks, lockfile integrity, unsupported/duplicate dependencies, vulnerability/licensing policy where governed, secret leakage, action/tool pinning and removed-path references.
-
-Do not silence scanners or weaken checks to obtain green; prove false positives or fix the root.
-
-## 18. Tool routing and evidence authority
-
-Tools are evidence/review/remediation controls, never Product/System Truth or orchestration authority.
-
-```text
-ASSURANCE NEED FROM WORKING CONE
-→ DISCOVER LIVE CANONICAL CAPABILITY
-→ PROVE ENABLEMENT + EFFECTIVE SCOPE
-→ RUN/READ MINIMUM COMPLETE APPLICABLE SET ON EXACT CANDIDATE
-→ NORMALIZE FINDINGS
-→ PROVE/RANK ROOTS
-→ FIX ACTUAL OWNER ONCE
-→ RE-RUN ONLY INVALIDATED AUTHORITIES
-→ REMOTE READ-BACK WHEN REQUIRED
-→ CLOSE FROM FINAL-CANDIDATE EVIDENCE
-```
-
-Do not run every tool blindly. `LISTED ≠ INSTALLED ≠ ENABLED ≠ APPLICABLE`, and `GREEN ≠ CLOSED`.
-
-### 18.1 Responsibility map
-
-| Concern | Canonical capability |
+| Assurance responsibility | Current preferred capability when live-proven |
 | --- | --- |
 | Deep/data-flow SAST | CodeQL |
-| Fast/custom/diff SAST | Semgrep Code Remote |
+| Fast/custom/diff SAST | Semgrep Remote |
 | Quality/coverage/maintainability | SonarQube Cloud |
+| Semantic/architecture review | OpenCodeReview / host agent review |
 | Secrets | Gitleaks |
 | Dependency CVEs | OSV Scanner |
 | Supply chain/config/container | Trivy |
 | PR dependency admission | GitHub Dependency Review |
 | Lockfile determinism | Lockfile Integrity |
-| GitHub Actions correctness | actionlint |
-| GitHub Actions security | zizmor |
-| Immutable Action pins | pinact |
-| Shell | ShellCheck |
-| Dockerfile | Hadolint |
-| YAML | yamllint |
-| Semantic/architecture review | OpenCodeReview |
+| GitHub Actions correctness/security | actionlint / zizmor / pinact as applicable |
+| Shell/Docker/YAML | ShellCheck / Hadolint / yamllint as applicable |
 | Dependency maintenance | Dependabot |
-| CodeQL stale metadata | CodeQL Metadata Hygiene |
-| Final remote evidence | Remote Analysis Evidence |
+| Final repository-platform evidence | PR Closure Evidence / remote analysis read-back |
 
-Semgrep Code Remote is conditional until its official remote integration and exact-candidate result path are proven live. OpenCodeReview is semantic review unless a remote gate is separately proven. Dependabot is remediation, CodeQL Metadata Hygiene is subordinate hygiene, and Remote Analysis Evidence is an aggregator/read-back gate—not scanners.
+`LISTED != INSTALLED != ENABLED != APPLICABLE`.
 
-### 18.2 Applicability and evidence
+Adding/replacing/retiring a tool requires proof of unique assurance value, overlap/cost/permission/data-exposure impact, migration of configs/secrets/apps/callers/evidence consumers and cleanup of shadow/inert integration residue.
 
-Route by changed semantics + proven blast radius, not filename alone. Typical sets:
+## 11. Remote evidence authority
 
-- source behavior → CodeQL + SonarQube + semantic review + proven/applicable Semgrep;
-- GitHub Actions → actionlint + zizmor + pinact + applicable CodeQL Actions;
-- dependencies/lockfile → OSV + applicable Trivy + Dependency Review on PR + Lockfile Integrity;
-- Docker/runtime/config → applicable Hadolint/Trivy/language-specific checks + required runtime proof.
+Where Sonar/CodeQL/Semgrep/GitHub checks or another repository platform is governed as the final analysis authority, closure requires exact-candidate remote execution/read-back.
 
-Material tool evidence must establish enough provenance for its claim: `tool/control + responsibility + effective scope + exact SHA/ref/artifact + relevant config/rules provenance + run/check/artifact identity + result/findings + freshness + suppression state`.
+Local CLI/MCP/manual analysis may support diagnosis but cannot satisfy a required remote check/status/analysis authority.
 
-Superseded, stale, differently scoped, failed or unproven execution is not PASS.
+```text
+REMOTE CONFIG PRESENT != REMOTE EXECUTION
+REMOTE JOB GREEN != MATERIAL FINDINGS DISPOSITIONED
+OLD REMOTE RESULT != CURRENT PR/SHA RESULT
+```
 
-### 18.3 Findings, suppression and lifecycle
+If a scanner step never ran because an upstream build/coverage/provisioning step failed, classify the missing execution under `02`; do not substitute an older scan.
 
-`MULTIPLE TOOL FINDINGS ≠ MULTIPLE ROOTS.` Validate/falsify, correlate and deduplicate symptoms, prove distinct material roots, fix each actual owner once, then rerun every invalidated authority.
+## 12. PR/CI execution context
 
-Suppression/ignore/exclusion is fail-closed: never silence a material finding merely to obtain green. A material suppression requires a proven false positive or authorized intentional condition, the narrowest exact scope, correct owner/rationale, no safer root-correct treatment, no hidden affected path or weakened authority, and an expiry/removal condition when temporary.
+PR-scoped tools must consume or prove one canonical execution identity:
 
-Adding, replacing or retiring a tool requires proof of unique/materially stronger assurance, overlap/cost/permissions/data-exposure impact, one responsibility boundary, integration/failure model, migration of checks/config/secrets/apps/callers/evidence consumers, and final negative-space verification. Do not leave inert configuration, stale metadata or external app registration as shadow authority.
+`PR_NUMBER | HEAD_REF | HEAD_SHA | BASE_REF | BASE_SHA | MERGE_BASE_SHA when material | event owner | affected/full closure scope`.
 
-## 19. Closure for this focus
+No analyzer may use “latest PR”, branch name similarity, old PR body text or same workflow name as current-PR identity.
 
-Close only when canonical data/contract/runtime/security/finance truth is consistent through materially affected consumers, migration/cutover and failure/recovery are proven, runtime provenance matches the claim, obsolete authority is removed, verification strength matches risk, all materially applicable assurance has trustworthy final-candidate evidence or a legitimate dependent-cone blocker is reported, unresolved tool findings are treated at their real roots, suppressions satisfy the fail-closed law, remote read-back is complete when required, and any engineering-control-path root has comparable before/after evidence with preserved assurance and no material cost shift.
+Source branch with open PR -> PR verification owns analysis. Push-only evidence for that same source branch must not compete as a second PR authority.
 
-Package independence/self-validation rules remain governed solely by `00-ORCHESTRATOR.md`.
+Post-merge canonical-trunk analysis is a different evidence class from PR closure evidence.
+
+## 13. Development verification vs closure verification
+
+During Draft iteration:
+
+`affected/deep verification` is appropriate when it safely covers the changed/affected cone.
+
+Before Ready/merge:
+
+`full materially applicable PR closure verification` must run on the exact current PR head and include every closure-required analyzer/evidence source. A heavy affected run is not automatically a full closure run.
+
+`READY_FOR_REVIEW` should be a consequence of closure readiness, not a trigger that is hoped to prove it afterward.
+
+## 14. OpenCodeReview / agent semantic review
+
+A workflow that prepares deterministic review context does not itself prove semantic review completion.
+
+Distinguish:
+
+`OCR_CONTEXT_READY` from `OCR_SEMANTIC_REVIEW_COMPLETE`.
+
+When semantic review is required, bind review to `PR_NUMBER + HEAD_SHA + context/run/artifact + reviewer provenance + findings + dispositions/root mappings`.
+
+Review output is evidence/hypothesis, not automatic truth.
+
+## 15. Suppressions
+
+Never silence a material finding merely to obtain green. Material suppression requires proven false positive or explicitly authorized intentional condition, narrow scope, correct owner/rationale, proof no required path is hidden and expiry/removal trigger when temporary.
+
+The executing agent may not self-authorize a material intentional suppression.
+
+## 16. Tool/CI failure treatment
+
+Apply `02` classification:
+
+- broken workflow/tool config -> usually `EXECUTION_FINDING`;
+- unavailable nonessential final analyzer with sufficient diagnostic alternatives -> `DEGRADED_EVIDENCE`, closure obligation retained;
+- truly indispensable missing evidence for root/target/Source-of-Fix -> `DIAGNOSIS_BLOCKER`;
+- irrelevant capability -> `NOT_APPLICABLE`.
+
+Thus tool failure does not automatically produce `AUDIT_PREPARE — NOT_READY_FOR_EXECUTION`.
+
+## 17. Closure for this focus
+
+Close only when materially affected data/contract/runtime/security/quality truth is consistent through consumers, migrations/cutovers/failure paths are proven, remote authority evidence is current where required, all material tool outputs are accounted/dispositioned, suppressions satisfy policy, obsolete authority/tooling residue is removed and control-path changes preserve assurance without shifting hidden cost.

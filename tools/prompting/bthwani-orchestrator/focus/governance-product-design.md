@@ -1,186 +1,128 @@
-# Focus — Governance, Product Semantics and Product Design
+# Focus — Product Meaning, UX Semantics and Durable Governance
 
-## 1. Governance is a candidate authority, not blind truth
+## 1. Purpose
 
-Start from current governance/product/policy roots that materially apply, then verify material claims against the affected live system.
+Apply when scope touches Product/System semantics, actors, authorities, journeys, states, responsibilities, information architecture, UX meaning, governance, durable project memory or engineering policy.
 
-Classify governance claims:
+Governance records proven durable truth; it does not invent truth and does not substitute for fixing the actual system.
 
-`CONFIRMED | STALE | WRONG | CONFLICTING | INCOMPLETE | MISSING_BUT_PROVEN | DECISION_REQUIRED`.
+## 2. Product/System truth
 
-Never apply “governance wins” or “code wins” universally.
+Reconcile materially applicable:
 
-## 2. Reconciliation target
+`Product Outcome | Actor | Responsibility | Authority | Journey | State/Transition | Preconditions | Decision Rules | Invariants | Handoffs | Canonical Owner | Writers/Readers/Consumers | Contract/Data/Runtime ownership | Cross-surface meaning`.
 
-Prove intended target truth using available explicit decision, product outcome, actor expectations, operational evidence, contracts, data ownership, runtime behavior, canonical responsibility and authoritative technical/standard evidence where needed; then reconcile affected representations to that truth.
+A local implementation or objective wording cannot silently redefine these.
 
-## 3. Product semantics to model
+## 3. UX is operational meaning
 
-Inspect actors/identities and role boundaries, authorities/responsibilities, capabilities/business rules, journeys/handoffs, states/transitions/preconditions/decision rules/invariants, success/failure/recovery/unknown-result behavior, cross-surface meaning, canonical source/write owner and information-architecture implications.
+Treat UX as:
 
-## 4. Governance drift classes
+`entry -> understanding -> discoverability -> available actions -> authorization -> decision -> state change -> feedback -> handoff -> later readback -> failure -> recovery -> terminal outcome`.
 
-Look for governance→implementation drift, implementation→governance drift, policy→product contradiction, product→journey contradiction, journey→runtime contradiction, contract→implementation contradiction, data→contract contradiction, cross-surface semantic drift, duplicate governance authorities, materially missing durable truth and stale documents still directing work toward obsolete owners/paths.
+A cross-surface difference is material when it expresses a different state, responsibility, permission, canonical fact or handoff even if each screen works locally.
 
-## 5. Governance writes require system impact analysis and proven truth
+Product/UX semantics are settled here; concrete component/layout/accessibility implementation is owned by `focus/code-architecture-organization.md`.
 
-Before a material governance write establish:
+## 4. Actor/authority discipline
 
-`claimed semantic change or clarification → affected actors/journeys/states/owners → implementation/contracts/data/runtime/surfaces evidence → canonical target truth → root/clarity cause → future-understanding impact → blast radius → migration/cutover consequences when any`.
+For each material capability/journey prove:
 
-A governance classification such as `STALE`, `WRONG`, `CONFLICTING`, `INCOMPLETE` or `MISSING_BUT_PROVEN` is evidence for investigation, not mutation authority. Before any `UPDATE | CORRECT | ADD | DELETE | MERGE | MOVE | RESTRUCTURE`, prove the affected Canonical Product/System Truth, the reason the current governance conflicts with or materially omits it, the material impact/blast radius, and that no unresolved `DECISION_REQUIRED` or material semantic contradiction can change the write.
+- who initiates;
+- who decides;
+- who owns canonical truth;
+- who writes it;
+- who may read/project it;
+- who may cancel/recover/intervene;
+- who receives the next handoff;
+- which permissions/object scopes enforce it.
 
-```text
-UNCERTAINTY = NO GOVERNANCE WRITE
-CURRENT CODE ≠ GOVERNANCE UPDATE AUTHORITY
-SUSPECTED DRIFT ≠ DELETE/REWRITE AUTHORITY
-DISCOVERED ≠ GOVERNANCE WORTHY
-```
+Do not solve ambiguous ownership by synchronizing multiple authorities indefinitely.
 
-If proof is incomplete, keep the governance unchanged and classify the affected claim as `EVIDENCE/HOLD` or `DECISION_REQUIRED` through `02` as appropriate.
+## 5. Canonical Product/System target
 
-**NO GOVERNANCE WRITE WITHOUT PROVEN TARGET TRUTH + SYSTEM IMPACT/CLARITY ANALYSIS.**
+Before semantic mutation establish enough of:
 
-## 6. System semantic changes require governance impact analysis
+`Target Outcome | Canonical Owner | Allowed Writers | Consumers | Actor/Permission Scope | State Machine | Invariants | Contract/Event Meaning | Data Ownership | Handoff Model | Failure/Recovery | Cross-surface Readback | Security/Audit | Migration/Cutover | Legacy Removal Condition`.
 
-If treatment changes actor, authority, responsibility, journey, state, transition, invariant, canonical ownership, API/data ownership or policy semantics, inspect and reconcile affected governance.
+Model only what is material to the root; do not speculate for unrelated domains.
 
-**NO SYSTEM SEMANTIC CHANGE WITHOUT GOVERNANCE IMPACT ANALYSIS.**
+## 6. Governance is durable memory, not execution authority
 
-## 7. Governance cannot substitute for treatment
+Classify current governance representations as materially applicable:
 
-```text
-wrong system + corrected governance = NOT CLOSED
-correct system + materially stale governance = NOT CLOSED
-correct system + materially missing proven durable governance truth = NOT CLOSED when the gap can mislead future execution
-correct system + reconciled governance + required runtime proof = closure candidate
-```
+`CONFIRMED | STALE | WRONG | CONFLICTING | INCOMPLETE | MISSING_BUT_PROVEN | DECISION_REQUIRED | N/A_PROVEN`.
 
-Documentation records the fix; it does not constitute the fix.
-
-## 8. Product design
-
-Product design includes whether the right actor understands state, available actions match authority/state, decisions are communicated correctly, responsibility/handoff is clear, recovery preserves intent/canonical truth, information architecture reflects ownership and cross-surface representations preserve the same meaning.
-
-Treat discrepancies through the proven root, not by rewriting labels around incorrect backend/data semantics.
-
-## 9. Engineering-governance value test
-
-Rules, policies, registries, skills, guards, workflows, scripts and routing layers are not valuable merely because they are governance.
-
-For every materially affected engineering-governance/control artifact prove:
+Governance may be proven stale by live system/product evidence. Implementation may also be proven wrong by durable product authority. Reconcile to one truth; do not preserve both.
 
 ```text
-Unique Current Responsibility
-+ Consumer
-+ Trigger
-+ Scope
-+ Cadence
-+ Assurance/Decision Value
-+ Canonical Owner
-+ Non-duplication with another layer
+DOCUMENTATION RECORDS THE FIX
+DOCUMENTATION MUST NOT SUBSTITUTE FOR THE FIX
 ```
 
-If its value is duplicated, stale, superseded, purely ceremonial or creates more ambiguity/cost than assurance, simplify, merge, retire or delete it only after satisfying the governance-write gate in §5. Do not add a new registry/guard/policy merely to reconcile two existing sources of authority; resolve ownership instead.
+## 7. Governance write gate
 
-## 10. New control-artifact creation gate
-
-Before creating any new engineering-control artifact such as a:
-
-`guard | script | workflow | router | registry | policy | skill | hook | wrapper | adapter | generated control layer | verification layer`,
-
-prove all materially applicable conditions:
+A governance mutation is allowed only when:
 
 ```text
-UNIQUE CURRENT NEED
-AND NO EXISTING CANONICAL OWNER CAN ABSORB THE RESPONSIBILITY CLEANLY
-AND NO SIMPLER DESIGN CAN PROVIDE THE SAME REQUIRED ASSURANCE/DECISION VALUE
-AND A REAL CONSUMER EXISTS
-AND A REAL TRIGGER/EXECUTION POINT EXISTS
-AND THE SCOPE/BOUNDARY IS CLEAR
-AND OWNERSHIP/LIFECYCLE/RETIREMENT CONDITION ARE CLEAR
-AND THE NEW LAYER DOES NOT DUPLICATE EXISTING AUTHORITY OR ASSURANCE
+truth is materially proven
+AND durable across expected implementation change
+AND reusable across future objectives/agents/sessions
+AND material to Product/Operations/Ownership/Boundaries/Policy
+AND absence/ambiguity can materially misdirect future work
+AND no unresolved contradiction/decision can change it
+AND the smallest current canonical governance owner is proven live
 ```
 
-If these conditions are not proven, **DO NOT CREATE THE ARTIFACT**. Prefer removal, consolidation, routing simplification or strengthening the canonical owner.
+Do not create new governance files merely because a fact is important if an existing owner can represent it clearly.
 
-A new control layer is not an acceptable way to make conflicting old layers coexist indefinitely.
+## 8. Live-path verification
 
-## 11. Historical/derived representations
+Historical expected paths are discovery anchors only. Before any governance write, verify live existence/ownership/current repository truth.
 
-Old plans, prompts, branch documents, journey registries, reports and comments may inform diagnosis but cannot override current proven truth automatically.
+Possible current homes may include product PRD/platform model/product-truth contracts/policies, but **never recreate a missing historical path automatically**. If ownership moved, follow the live canonical owner.
 
-`PAST INSTRUCTION ≠ CURRENT AUTHORITY`.
+## 9. Decision gaps
 
-## 12. External research boundary
+A human decision is required only when multiple materially valid Product/System/architectural semantics remain after all derivable evidence is exhausted.
 
-External official/primary sources may establish technical, platform, security, standards or tool behavior and may inform design alternatives. They do not define BThwani product semantics.
+Do not ask for implementation details that can be derived. Do not use external best practice to invent product behavior.
 
-If multiple materially valid product/operational choices remain after evidence and research, use the decision boundary in `02` rather than importing an external convention as product truth.
+After a human semantic decision:
 
-## 13. Decision boundary
+`propagate -> invalidate affected assumptions -> re-diagnose affected cone -> update target/ownership/migration -> execute actual system -> prove runtime -> reconcile governance`.
 
-If multiple materially valid product/operational behaviors remain and evidence cannot choose, raise `DECISION_REQUIRED` using `02-DIAGNOSE-ROOT-CAUSE.md`. Do not convert product preference into an engineering guess.
+## 10. Information architecture and design semantics
 
-## 14. Closure for governance/product focus
+When navigation/discoverability/design is material, prove:
 
-A semantic/governance root is not closed until materially affected representations are reconciled across governance, contracts/data, implementation, runtime and consuming surfaces, and no stale/parallel authority or material durable-truth clarity gap remains capable of misleading future execution.
+- actor's mental/operational model;
+- responsibility grouping;
+- information hierarchy;
+- action discoverability;
+- terminology/state labels;
+- handoff/feedback semantics;
+- consistent meaning across surfaces.
 
-## 15. Progressive governance clarification and durable project memory
+Do not improve visual arrangement by creating a new local Product/System truth.
 
-Governance is progressively clarified by proven work; it is not populated by every observation.
+Concrete UI implementation details route additionally to the code/architecture focus module.
 
-Classify newly exposed material knowledge as:
+## 11. Governance/control artifacts must justify themselves
 
-```text
-EPHEMERAL_IMPLEMENTATION_FACT
-CURRENT_RUNTIME_FACT
-TASK_LOCAL_FACT
-DURABLE_PROJECT_TRUTH
-DURABLE_POLICY_INVARIANT
-DECISION_REQUIRED
-```
+Policies, registries, checklists, prompt adapters, design docs and control artifacts are subject to the same necessary-value test:
 
-A `DURABLE_PROJECT_TRUTH` or `DURABLE_POLICY_INVARIANT` becomes a governance-write candidate only when all materially applicable conditions are proven:
+`Necessary Purpose | Canonical Owner | Real Consumer | Unique Authority/Assurance Value | Correct Placement | No Duplicated Rule`.
 
-```text
-PROVEN
-AND DURABLE ACROSS EXPECTED IMPLEMENTATION CHANGE
-AND MATERIAL TO PRODUCT / OPERATIONS / OWNERSHIP / BOUNDARIES / POLICY
-AND REUSABLE ACROSS OBJECTIVES / AGENTS / SESSIONS
-AND ITS ABSENCE OR AMBIGUITY CAN MATERIALLY MISLEAD FUTURE UNDERSTANDING OR EXECUTION
-AND AN EXISTING CANONICAL GOVERNANCE HOME CAN REPRESENT IT CLEANLY OR A NEW HOME IS UNIQUELY JUSTIFIED
-AND NO UNRESOLVED CONTRADICTION / DECISION_REQUIRED CAN CHANGE IT
-```
+A control artifact that only mirrors another rule without unique value is duplication and should be merged/deleted after reference proof.
 
-Typical governance-worthy facts include proven platform/surface identity, durable actors/role boundaries, authorities/responsibilities, canonical owners, domain/service boundaries, durable journeys/handoffs, material state/invariant semantics, security/financial boundaries and durable product policy.
+## 12. Durable-knowledge finishing
 
-Do not promote function names, SHAs, temporary paths, task status, bug/finding lists, transient runtime facts, replaceable implementation details, temporary rollout state or evidence bookkeeping into durable governance merely to make the model appear complete.
+Before closure:
 
-Route the truth to the smallest existing canonical home:
+- no materially touched governance points to stale owner/path/semantics;
+- no newly proven durable truth with material future-misdirection risk remains missing/ambiguous;
+- no task-local/runtime/transient fact is promoted into durable governance unnecessarily;
+- no competing governance representation remains for the same material truth.
 
-```text
-platform-wide meaning / surfaces / actors / durable ownership
-→ governance/product/PRD.md
-
-compact stable orientation model
-→ governance/product/platform-model.yaml
-
-capability/journey-specific Product Truth
-→ governance/product/contracts/*.product-truth.json
-
-durable engineering/security/delivery policy
-→ governance/policies/**
-```
-
-Prefer `ENRICH EXISTING CANONICAL OWNER` before `CREATE NEW GOVERNANCE ARTIFACT`.
-
-### Bootstrap governance audit
-
-When a bootstrap/reconciliation audit is materially required, compare current governance with proven live project truth and classify each material area as:
-
-`CONFIRMED | STALE | WRONG | CONFLICTING | INCOMPLETE | MISSING_BUT_PROVEN | DECISION_REQUIRED`.
-
-Correct/enrich only `STALE | WRONG | CONFLICTING | INCOMPLETE | MISSING_BUT_PROVEN` items whose target truth is sufficiently proven and whose write passes §5. Do not manufacture completeness for unresolved areas.
-
-The goal is compounding clarity: future objectives should begin from a more precise durable platform model than prior objectives, without turning governance into a copy of code or a historical execution ledger.
+Governance cleanliness is a closure property only where the root materially touched durable meaning/policy; it is not permission for unrelated documentation sweeps.

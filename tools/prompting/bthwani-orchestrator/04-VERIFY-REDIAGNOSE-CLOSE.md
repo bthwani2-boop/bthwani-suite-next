@@ -1,395 +1,343 @@
-# Verification, Project-Consistency Re-Diagnosis, Exact-Candidate Evidence and Fail-Closed Closure
+# Verification, Exact-Candidate Evidence, Re-Diagnosis and Fail-Closed Closure
 
 ## 1. Verification proves claims, not activity
 
-Choose the **smallest sufficient proof that can falsify/prove the claim**, then escalate by material risk.
+Choose the smallest sufficient proof that can falsify the claim, then escalate by material risk.
 
 Typical progression:
 
-`direct code/contract inspection → nearest unit/module regression → affected integration/type/lint/build → contract/data/security/isolation → runtime/readback → cross-surface/E2E/visual → broad final closure checks`.
-
-Do not automatically run the heaviest suite and do not use a weak check to make a stronger claim.
-
-A locally correct objective is not closed until its materially touched project-frame invariants, governance impact and affected prior canonical closures are reconciled.
-
-## 2. Risk-proportional escalation
-
-Escalate especially for public contracts/events, database/migrations, finance/provider outcomes, security/auth/privacy/isolation, runtime/infrastructure, structural move/delete, governance semantics, shared project-frame authorities/invariants, multi-surface journeys, repository-platform claims and release/production claims.
-
-## 3. Proof limits
+`direct inspection -> nearest unit/module regression -> affected integration/type/lint/build -> contract/data/security -> runtime/readback -> cross-surface/E2E -> broad final closure checks`.
 
 ```text
-TEST PASS ≠ PRODUCT CORRECTNESS
-BUILD PASS ≠ SYSTEM CORRECTNESS
-TYPECHECK/LINT PASS ≠ OPERATIONAL CORRECTNESS
-STATIC PASS ≠ RUNTIME PROOF
-MIGRATION APPLIED ≠ READBACK/IDEMPOTENCY/RESTART/COMPATIBILITY PROOF
-HIDDEN UI ≠ SERVER AUTHORIZATION
-ONE SURFACE PASS ≠ JOURNEY PASS
-LOCAL FIX ≠ SYSTEM FIX
-LOCAL OBJECTIVE PASS ≠ PROJECT CONSISTENCY
-CANONICAL CHANGE WITHOUT ALL AFFECTED CONSUMERS MIGRATED ≠ COMPLETE
-MOCK PASS ≠ REAL PROVIDER/RUNTIME PASS
-DOC UPDATED ≠ IMPLEMENTATION FIXED
-GOVERNANCE UNCHANGED ≠ GOVERNANCE CONFIRMED
-GOVERNANCE PRESENT ≠ DURABLE PROJECT MEMORY COMPLETE FOR PROVEN MATERIAL TRUTH
-TRACKED WORKFLOW CONFIG ≠ LIVE REPOSITORY ENFORCEMENT
-EXTERNAL DOCUMENTATION ≠ LOCAL VERSION/RUNTIME PROOF
-PLAN_DIR ABSENT ≠ EXECUTE_CLOSE BLOCKED
-PLAN_DIR UPDATED ≠ TARGET SYSTEM FIXED
-DELETE_REQUIRED RECORDED ≠ ARTIFACT DELETED
-UNCLASSIFIED MATERIAL CLEANUP RESIDUE ≠ CLOSED
+TEST PASS != PRODUCT CORRECTNESS
+BUILD PASS != SYSTEM CORRECTNESS
+TYPE/LINT PASS != OPERATIONAL CORRECTNESS
+STATIC PASS != RUNTIME PROOF
+TOOL GREEN != ALL FINDINGS RESOLVED
+PR BODY != CURRENT PR TRUTH
+OLD SHA != CURRENT CANDIDATE
 ```
 
-State what material evidence proves and what it does not prove.
+## 2. Candidate and PR identity
 
-## 4. Candidate lifecycle
+For PR-scoped work, closure identity is:
+
+```text
+PR_NUMBER
+CURRENT_HEAD_SHA
+CURRENT_BASE_SHA
+HEAD_REF
+BASE_REF
+```
+
+`PR_NUMBER` is stable through the branch lifecycle. `HEAD_SHA` advances with commits.
+
+```text
+SAME PR + NEW SHA -> new candidate; invalidate affected old evidence
+DIFFERENT PR -> never current-PR closure evidence
+SYNTHETIC MERGE SHA -> distinct from PR head candidate unless the claim explicitly targets merge simulation
+```
+
+Candidate lifecycle:
 
 ```text
 STARTING_LIVE_HEAD
-= exact target-ref head at task start.
-
 WORK_BASE_HEAD
-= latest reconciled head used to build the current owned delta.
-
 IMPLEMENTATION_COMMIT(S)
-= logical commits containing source/runtime/data/contract treatment.
-
 FINAL_CANDIDATE
-= exact immutable commit after every allowed project/package write required for the claimed state.
-
 HEAD_AT_REVIEW_START
-= live target head when final review begins.
-
 HEAD_AT_DECISION
-= live target head immediately before final closure decision.
 ```
 
-Any material write after `FINAL_CANDIDATE` creates a new candidate and invalidates affected evidence. Never mix evidence from different candidates/runs/environments and call it one proof set.
+Any material write after `FINAL_CANDIDATE` creates a new candidate.
 
-## 5. Exact-candidate evidence
+## 3. Material evidence record
 
-Before final closure:
-
-`freeze intended writes → resolve FINAL_CANDIDATE → prove relation to target → bind required evidence to candidate/runtime derived from it → re-resolve target at decision time`.
-
-An older reviewed commit cannot silently prove a newer target head.
-
-## 6. Material evidence record
-
-Do not require a heavyweight matrix for every task, but every material evidence item relied upon for closure must remain reconstructable with enough provenance:
+Every material evidence item used for closure remains reconstructable with:
 
 ```text
-Claim / Finding / Root proved
-Candidate SHA or exact immutable source identity
-Command / Run / Job / Artifact / Manual Scenario source
-Environment / Profile / Runner / Device when relevant
-Started/completed time or freshness window when relevant
-Result / Exit / Status
-What this evidence proves
-What this evidence explicitly does NOT prove
-Required capability / provenance
-Invalidation trigger
+claim/finding/root proved
+PR_NUMBER when PR-scoped
+candidate SHA / immutable source identity
+command/run/job/check/artifact/manual scenario
+runner/environment/profile/device when relevant
+result/status
+what it proves
+what it does NOT prove
+config/rule provenance when relevant
+freshness
+invalidation trigger
 ```
 
-Evidence without sufficient candidate/environment provenance cannot support a stronger claim than its provenance allows.
+Evidence without adequate provenance cannot support a stronger claim than its provenance.
 
-### 6.1 Task-specific verification/closure contract for `AUDIT_PREPARE`
+## 4. Tool evidence is diagnostic input first, gate evidence last
 
-When `02` constructs `02-VERIFICATION-CLOSURE.md`, instantiate only the materially required claims from this file; do not copy this generic doctrine into every plan.
-
-Use stable IDs sufficient for cross-file traceability:
+Canonical lifecycle:
 
 ```text
-V-*
-CLAIM
-REQUIRED_PROOF
-REQUIRED_CAPABILITY
-CANDIDATE_BINDING
-ENVIRONMENT / PROFILE when relevant
-PASS_CONDITION
-PROOF_LIMIT
-INVALIDATION_TRIGGER
-
-AC-*
-FALSIFIABLE_ACCEPTANCE_CONDITION
-MAPPED_ROOT(S)
-MAPPED_VERIFICATION(S)
-
-CE-*
-CLOSURE_EVIDENCE_REQUIRED_FROM_EXECUTION
-MAPPED_ACCEPTANCE / VERIFICATION
-PROVENANCE_REQUIRED
+RUN/READ TOOL ON EXACT CANDIDATE
+-> INGEST RAW OUTPUT
+-> ACCOUNT FOR EVERY MATERIAL FINDING + EXECUTION/COVERAGE WARNING
+-> VALIDATE/FALSIFY
+-> CORRELATE/DEDUPLICATE
+-> MAP TO ROOTS
+-> TREAT ACTUAL SOURCE-OF-FIX
+-> RERUN INVALIDATED TOOL
+-> INGEST AGAIN
+-> FINAL STATUS/GATE ONLY AFTER FINDINGS LIFECYCLE IS COMPLETE
 ```
 
-The prepared contract defines what evidence must be produced; it does not pre-declare results. `EXECUTE_CLOSE` fills/proves those claims through actual target-system evidence, not by editing the prepared plan directory.
+Passing a tool/gate without dispositioning its material findings is not closure.
 
-Every materially applicable execution step must be able to trace forward to sufficient `V-*`/`AC-*`/`CE-*` proof through the chain owned by `02`. Every artifact disposition requiring move/merge/delete/retirement must likewise map to proof of its final intended state; `DELETE_REQUIRED` must map to final-tree absence plus reference/reachability and behavior-preservation evidence.
+Tools do not decide Product/System Truth. Their outputs are evidence and hypotheses subject to root analysis.
 
-## 7. Runtime provenance/freshness
-
-Runtime evidence must exclude stale execution as applicable:
-
-`candidate/source identity | artifact/image/bundle identity | service/process/container freshness | schema/migration level | runtime endpoint/profile/config | seed/fixture provenance | canonical readback`.
-
-A screenshot, API response or smoke result without sufficient provenance cannot prove a high-risk runtime claim.
-
-## 8. Required verification dimensions
+## 5. Required verification dimensions
 
 Verify where material:
 
-- root cause actually removed and actual source corrected;
+- root cause actually removed at Source-of-Fix;
 - canonical owner/write path enforced;
-- affected writers/readers/consumers migrated;
-- required previously correct behavior preserved or intentionally migrated across the affected blast radius;
-- no unintended regression, missing consumer, partial migration or half cutover remains;
+- all materially affected writers/readers/consumers migrated;
+- no half cutover or unintended regression;
 - success/failure/recovery/unknown-result paths;
-- state transitions/invariants;
-- cross-surface semantic consistency;
-- frontend/backend/data/contract vertical integrity;
-- authorization/security/isolation;
-- data migration/backfill/cutover/readback;
-- idempotency/replay/concurrency/restart;
-- runtime/config/provider behavior;
-- materially touched project-frame authorities/invariants remain consistent;
-- previously proven canonical closures affected by the change remain valid or were explicitly reopened/reconciled;
-- every canonical focus family has an applicability disposition and every material one received sufficient proof;
-- governance/product/policy impact is classified and synchronized where required;
-- newly proven material knowledge has been classified for durable project-memory value and any required governance enrichment is complete;
-- deletion/retirement of superseded reachable paths and exhaustion of every still-valid `DELETE_REQUIRED` item;
-- classification and resolution of materially related cleanup/deletion obligations newly exposed during execution;
-- absence of new parallel truth;
-- preservation of proven design/value;
-- removal of materially unjustified complexity identified in scope without weakening required correctness/assurance;
-- naming/placement/reference integrity;
-- directly related cleanup residue removed;
-- engineering-control-path assurance/performance before→after when that root was treated;
-- repository-platform truth when the claim depends on current GitHub/ruleset/check/review state.
+- states/invariants/handoffs;
+- cross-surface meaning;
+- contract/data/runtime vertical integrity;
+- auth/authz/security/isolation;
+- migration/backfill/readback/restart/idempotency/concurrency;
+- previous canonical closures remain valid or are intentionally reconciled;
+- focus applicability dispositions complete;
+- governance impact synchronized where required;
+- every still-valid cleanup/deletion obligation executed/verified;
+- no new parallel truth;
+- structural completion/finishing pass complete;
+- repository-platform truth when relied upon.
 
-## 9. Failure/edge verification
+## 6. Failure classification
 
-Cover materially applicable:
-
-`success | empty/missing | invalid/malformed | unauthenticated | denied | wrong role/scope | IDOR | forbidden state | not found | stale/conflict | boundary/min/max | duplicate/replay | idempotency | race/concurrency | partial failure | dependency/database/network/provider failure | timeout/unknown result | retry/backoff/DLQ | offline/reconnect | restart/recovery | old/new data | mixed-version | rollback/roll-forward | compensation/reconciliation`.
-
-When shared meaning/authority changed, also verify a representative contradictory use from another affected journey/surface/domain cannot recreate the old or locally optimized truth.
-
-## 10. CI/runtime failure classification
-
-Classify first causal failure:
-
-`DETERMINISTIC_PRODUCT | DETERMINISTIC_TEST_OR_CONTRACT | INFRA_OR_RUNNER | EXTERNAL_PROVIDER | FLAKY_OR_NONDETERMINISTIC | CANCELLED_OR_SUPERSEDED | STALE_RUN`.
-
-Deterministic failures require root correction before rerun. Flakiness remains a defect until controlled/proven. Cancelled/superseded is neither PASS nor product FAIL. Stale runs cannot prove current candidate.
-
-## 11. Repository-platform truth
-
-When a material claim depends on GitHub or repository-platform state, verify that live state against the exact candidate instead of inferring it from tracked configuration.
-
-As applicable inspect:
+Classify the first causal failure in each materially independent failure chain, then correlate chains into root clusters:
 
 ```text
-workflow runs bound to the candidate SHA
-required/expected checks and status context names
-pending / missing / failed / cancelled / superseded / stale runs
-pull-request reviews and unresolved review threads when policy/claim requires them
-live rulesets / branch protection / repository settings relevant to the claim
-candidate reachability / base relation / mergeability when merge readiness is claimed
-Sonar / CodeQL / dependency / security / quality gates when governed or materially relied upon
+DETERMINISTIC_PRODUCT
+DETERMINISTIC_TEST_OR_CONTRACT
+DETERMINISTIC_TOOL_OR_WORKFLOW_CONFIG
+AUTHORITY_PERMISSION_OR_CREDENTIAL
+INEFFECTIVE_OR_MISSING_EXECUTION
+INFRA_OR_RUNNER
+EXTERNAL_PROVIDER
+FLAKY_OR_NONDETERMINISTIC
+CANCELLED_OR_SUPERSEDED
+STALE_RUN
+```
+
+Deterministic failures become findings/root evidence and require correction before closure. Flakiness remains a defect until controlled/proven. Cancelled/superseded/stale is neither PASS nor current product FAIL.
+
+## 7. Repository-platform truth
+
+When the claim depends on GitHub/repository platform state, inspect it live against the exact candidate.
+
+As applicable verify:
+
+```text
+current PR identity from repository API
+current PR head/base SHA
+workflow runs/checks bound to that exact PR/SHA
+pending/missing/failed/cancelled/superseded/stale runs
+review provenance / unresolved threads when governed
+live rulesets/branch protection/settings
+mergeability/base relation
+Sonar/CodeQL/Semgrep/security/dependency/quality analysis provenance
+final PR closure evidence
 ```
 
 Rules:
 
-- a tracked workflow file proves only configuration in the tree, not live enforcement;
-- absence of red is not PASS when a required check is pending/missing/stale;
-- a successful run for another SHA cannot prove the current candidate;
-- repository-platform checks do not replace product/runtime evidence they do not exercise;
-- do not perform this platform inspection when the claim does not materially depend on it.
+```text
+TRACKED WORKFLOW CONFIG != LIVE ENFORCEMENT
+ABSENCE OF RED != PASS WHEN REQUIRED EVIDENCE IS MISSING
+SUCCESS ON OTHER SHA != CURRENT EVIDENCE
+SUCCESS ON OTHER PR != CURRENT EVIDENCE
+SAME WORKFLOW NAME != SAME CANDIDATE
+```
+
+PR body/comments/plans may provide history/context but never current SHA authority.
+
+## 8. Canonical PR Closure Evidence
+
+When repository policy requires PR closure evidence, one stable final repository-platform check should prove **completeness/provenance**, not hide underlying analyzers.
+
+Conceptually:
+
+```text
+BThwani / PR Closure Evidence
+```
+
+It proves, as applicable:
+
+```text
+CURRENT PR_NUMBER proven
+CURRENT HEAD_SHA proven
+CURRENT BASE_SHA proven
+required CI/runtime evidence complete
+required Sonar evidence complete
+required CodeQL evidence complete
+required Semgrep evidence complete
+required security/dependency evidence complete
+required semantic review complete
+all required evidence bound to the same current candidate
+zero missing/stale/mismatched required evidence
+zero undispositioned material raw findings
+zero unjustified/expired material suppressions
+```
+
+It does **not** turn “tool job success” into proof that findings are clean. Detailed tool evidence remains visible and traceable.
+
+Final merge must be bound to the exact verified final head SHA. A newer commit after closure evidence invalidates merge readiness.
+
+## 9. Remote evidence policy
+
+Where a repository-platform analysis authority is remote, final repository-platform proof must come from remote exact-candidate execution/read-back.
+
+Local analysis may be supporting diagnostic evidence, but cannot satisfy a required remote status/check/analysis authority.
+
+`REMOTE TOOL CONFIG PRESENT != REMOTE ANALYSIS PRODUCED`.
+
+If a scanner step was skipped because an upstream coverage/build step failed, classify `INEFFECTIVE_OR_MISSING_EXECUTION`; do not read old scanner output as current-candidate analysis.
+
+## 10. Semantic review provenance
+
+OpenCodeReview/CodeRabbit/agent review outputs are review evidence, not automatic truth.
+
+A context-preparation workflow is not semantic review completion.
+
+When semantic review is required, record:
+
+```text
+PR_NUMBER
+HEAD_SHA
+context/run/artifact identity
+reviewer/agent provenance
+material findings
+finding dispositions/root mappings
+review completion
+```
+
+Self-review is not independent review. Independent review is required only when policy/risk requires it.
+
+## 11. Suppression closure
+
+`AUTHORIZED_INTENTIONAL_CONDITION` requires explicit governing Product/Security/Policy/human authority; the executing agent may not self-authorize a material intentional suppression merely for convenience.
+
+A suppression must have narrow scope, rationale, owner, proof it hides no required path and expiry/removal condition when temporary.
+
+Closure requires:
+
+`ZERO_UNJUSTIFIED_OR_EXPIRED_MATERIAL_SUPPRESSIONS`.
 
 ## 12. Evidence invalidation
 
-For each material evidence item reason about bound candidate, inputs/environment, covered scope and what changes invalidate it.
+For every material evidence item reason about candidate, inputs/environment, covered scope and invalidation triggers.
 
 Examples:
 
-- product/governance/authority change → revalidate affected project-frame claims, target and consumers;
-- contract/schema change → reverify generators/consumers/integration;
-- data/migration owner change → reverify DB/runtime/readback;
-- runtime/config/network change → reverify affected runtime/E2E;
-- auth/permission change → reverify negative isolation/security paths;
-- shared canonical library change → reverify all proven consumers;
-- workflow/ruleset/repository-setting change → reverify affected repository-platform claims;
-- unrelated documentation-only change → retain evidence only when independence is actually provable.
+- Product/authority change -> revalidate target + consumers;
+- contract/schema change -> generators/consumers/integration;
+- data/migration change -> DB/runtime/readback;
+- runtime/config/network change -> affected runtime/E2E;
+- auth/permission change -> negative isolation/security;
+- shared canonical library change -> all proven consumers;
+- workflow/ruleset/tool config change -> repository-platform evidence;
+- unrelated docs change -> retain only if independence is proven.
 
-Rerun what is invalidated; do not rerun everything mechanically and do not retain stale proof.
+Rerun invalidated proof; do not rerun everything mechanically and do not retain stale proof.
 
-## 13. Affected-only first
+## 13. Re-diagnosis loop
 
-Begin with nearest proof. Broaden when shared/canonical ownership changed, project-frame invariants changed, multiple consumers depend on root, public contract/data/runtime boundary changed, targeted evidence leaves material uncertainty, or feature/project closure is claimed.
-
-Speed comes from accurate scope and valid reusable project context, not weaker proof. A still-valid prepared handoff does not require rerunning the entire preparation capability/tool pass after every mutation; rerun only invalidated or closure-required proof.
-
-## 14. Review provenance
+After every material root:
 
 ```text
-SELF_REVIEW ≠ INDEPENDENT_REVIEW
+reinspect operational outcome
+-> rerun affected journey/state/ownership/contract/data/runtime traces
+-> ingest all new tool/review/runtime outputs under 02
+-> invalidate descendant symptoms
+-> discover exposed roots
+-> rebuild affected coverage
+-> rerank
 ```
 
-Do not label self-review as independent. When a governing policy or risk decision requires independent review, prove reviewer provenance and exact candidate binding. If the reviewer mutates the candidate, the previous review no longer independently proves the new candidate.
+If a higher root appears, reopen affected descendant treatment. Never mechanically execute a stale finding list after system truth changes.
 
-Independent review is not mandatory by default merely because it existed in a historical package; it is risk/policy-driven.
+## 14. Zero-reference/reachability proof
 
-## 15. Zero-reference and reachability proof
-
-After cutover/removal inspect materially relevant imports/exports/re-exports, routes/navigation, callers/callees, writers/readers, contracts/generated consumers, DB/schema/migrations, runtime/config, tests/CI, scripts/manifests and governance/docs references.
-
-Textual zero-reference search may be necessary but is insufficient alone; prove no runtime/reachable alternate path or authoritative writer remains.
-
-For every still-valid `DELETE_REQUIRED` entry from the execution contract prove, on the final candidate:
+For each still-valid `DELETE_REQUIRED` item prove:
 
 ```text
 ARTIFACT ABSENT FROM ACTIVE TREE
-AND ZERO STALE/REACHABLE REFERENCE OR REGISTRATION
-AND REQUIRED REPLACEMENT/CUTOVER IS PRESENT
-AND AFFECTED CONSUMERS/CONFIG/TESTS/GENERATED BINDINGS ARE REPAIRED
-AND REQUIRED BEHAVIOR/VALUE IS PRESERVED OR INTENTIONALLY MIGRATED
+AND ZERO STALE/REACHABLE REFERENCE/REGISTRATION
+AND REQUIRED REPLACEMENT/CUTOVER PRESENT
+AND CONSUMERS/CONFIG/TESTS/GENERATED BINDINGS REPAIRED
+AND REQUIRED VALUE PRESERVED OR INTENTIONALLY MIGRATED
 ```
 
-If an item cannot be deleted because new evidence changed its purpose/consumer/safety status, the disposition must be re-established through diagnosis; leaving the file in place without invalidating the `DELETE_REQUIRED` decision is not a pass.
+Textual zero-reference search alone is insufficient when runtime/reachable registration can exist.
 
-## 16. Re-diagnosis after every material root
+## 15. Final finishing gate
 
-`reinspect operational outcome → rerun affected journey/actor/state/handoff traces → rerun ownership/contract/data/runtime traces → revalidate materially touched project-frame claims + governance impact + affected prior closures → classify newly proven durable knowledge → invalidate descendant symptoms → discover exposed roots → rebuild affected coverage → rerank`.
+Before freeze, every material remaining affected artifact needs a defensible:
 
-If a treatment changes shared authority, Product/System semantics, cross-domain boundary or durable invariant, broaden re-diagnosis far enough to prove project-level consistency for that concept; do not confine proof to the objective that exposed the root.
+`Necessary Purpose | Canonical Owner | Single Responsibility | Real Consumer | Correct Layer | Dependency Direction | Proven Value | Correct Placement | Clear Name | No Duplicated Authority | No Superseded Implementation`.
 
-Never mechanically execute an old finding list after system truth changes. The adaptive treatment loop and saturation condition are owned by `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md`.
+Closure is blocked by known material related:
 
-## 17. Final finishing gate
+`dead/unreachable code | duplicate authority | stale/orphan reference | obsolete alias/path | misplaced/unowned artifact | unjustified wrapper/indirection | stale config/env/flag/script | unused dependency | obsolete test/fixture/mock | direct generated-output patch without authority | legacy/fallback residue | unfinished restructuring | misleading docs/comments that can redirect future work`.
 
-Before freeze, every materially affected remaining artifact needs a defensible:
+## 16. Final negative-space and adversarial pass
 
-`Necessary Purpose | Correct Owner | Real Consumer | Requirement | Proven Value | Correct Placement | Correct Naming/Context`.
+Assume closure is false. Search deliberately for:
 
-Closure is blocked by known related dead/unreachable code, superseded implementation, duplicate authority, stale/orphan reference, old path/alias, misleading naming, wrong placement/ownership, unused dependency, obsolete config/env/flag/script, workaround/fallback, stale docs/comments/examples, debug/temp artifact, unjustified compatibility residue or materially unjustified complexity tied to scope.
-
-Every materially related cleanup/deletion residue exposed during execution must have an explicit current disposition before freeze. Leaving it unclassified because it was absent from the prepared handoff is closure-blocking.
-
-Every still-valid `DELETE_REQUIRED` artifact must be absent; every `RETIRE_AFTER_CUTOVER` item whose cutover condition is satisfied must have been promoted/executed as deletion. A retained item requires new evidence and an explicit reclassification, not executor preference or deletion avoidance.
-
-Material governance/product artifacts capable of directing future work toward a stale owner/path/semantic model are closure-blocking even if runtime currently works. The same is true for a materially missing proven durable truth when its absence or ambiguity can direct future work incorrectly.
-
-## 18. Final freeze and branch-race gate
-
-After required writes:
-
-`FREEZE PROJECT WRITES → FINAL_CANDIDATE = exact last allowed candidate → final evidence is read-only with respect to candidate`.
-
-Any subsequent material write reopens the candidate cycle.
-
-Immediately before ref update/push and final decision re-resolve target HEAD and classify movement under `01`. Do not force stale candidates over newer truth.
-
-## 19. Final negative-space pass
-
-Search deliberately for missing consumer/surface, route/handler/contract field, writer/readback, failure/recovery path, authorization boundary, handoff/intervention, migration/compatibility transition, hidden duplicate/legacy truth, unexecuted `DELETE_REQUIRED` residue, unclassified materially related cleanup/deletion residue exposed by execution, missing project-frame relation/invariant impact, missing prior-closure reconciliation, missing focus applicability disposition, missing governance reconciliation or durable-truth home, missing repository-platform proof when relied upon, and missing operational/audit evidence required by the claim.
-
-Unexplained material absence remains open.
-
-## 20. Final adversarial re-diagnosis
-
-Assume closure is false and search for:
-
-`missed domain/capability | objective-induced local optimization | project-frame contradiction | cross-objective regression | duplicate truth | stale/wrong/incomplete governance | material proven durable truth missing from governance | hidden consumer/writer | reachable old path | retained DELETE_REQUIRED artifact | unclassified related cleanup/deletion residue | contract/data mismatch | cross-surface mismatch | unintended affected regression | incomplete consumer migration | failure/recovery gap | runtime divergence | stale process/data | unresolved semantic ambiguity | patch/workaround | race/idempotency issue | security/isolation issue | wrong placement/naming/context | orphan references | unjustified complexity | assurance loss/cost shift in tooling changes | stale/mismatched repository-platform evidence`.
+`hidden writer/consumer | duplicate truth | stale governance | missing durable truth | reachable old path | unexecuted cleanup | contract/data mismatch | cross-surface mismatch | missing recovery | half migration | runtime divergence | stale process/data | patch/workaround/fallback | race/idempotency | security/isolation gap | wrong placement/naming/context | orphan references | unjustified complexity | stale/mismatched PR/SHA/tool evidence`.
 
 Any material issue reopens diagnosis/treatment/verification.
 
-## 21. Coverage vs closure
+## 17. Closure equation
 
-`COVERAGE_COMPLETE` means required material nodes are accounted for and inspected or proven N/A, including required project-frame/focus/governance dispositions for the claim.
-
-`CLOSURE_COMPLETE` additionally means all material roots/findings are treated and verified on the correct candidate/runtime and the treatment remains consistent with the project-wide Canonical frame.
-
-## 22. Closure equation
-
-`CLOSED` only when every materially required condition is proven:
+`CLOSED` only when every materially applicable term is proven:
 
 ```text
 ZERO_UNKNOWN_REQUIRED_COVERAGE
-AND ZERO_UNINSPECTED_REQUIRED_NODES
-AND ALL_MATERIAL_FOCUS_DIMENSIONS_DISPOSITIONED
 AND ZERO_KNOWN_MATERIAL_OPEN_ROOTS
 AND ZERO_UNRESOLVED_MATERIAL_FINDINGS
 AND ZERO_FIXED_PENDING_VERIFY_FINDINGS
 AND ZERO_UNRESOLVED_REQUIRED_DECISIONS
-AND ZERO_UNACCOUNTED_AFFECTED_CONSUMERS
-AND ZERO_UNMIGRATED_AFFECTED_CONSUMERS
+AND ZERO_UNACCOUNTED_OR_UNMIGRATED_AFFECTED_CONSUMERS
 AND ZERO_UNINTENDED_AFFECTED_REGRESSIONS
-AND ZERO_CROSS_OBJECTIVE_REGRESSIONS
 AND ZERO_PROJECT_INVARIANT_REGRESSIONS
-AND ZERO_UNKNOWN_MATERIAL_DEPENDENCIES
-AND ZERO_UNRECONCILED_PROJECT_FRAME_CONTRADICTIONS
 AND ZERO_CONTRADICTORY_CANONICAL_TRUTHS
 AND ZERO_DUPLICATE_AUTHORITATIVE_WRITERS
 AND ZERO_UNJUSTIFIED_PARALLEL_TRUTH
 AND ZERO_UNJUSTIFIED_REACHABLE_LEGACY_PATHS
 AND ZERO_UNEXECUTED_DELETE_REQUIRED_ARTIFACTS
-AND ZERO_UNCLASSIFIED_MATERIAL_CLEANUP_RESIDUE_TIED_TO_SCOPE
-AND ZERO_UNVERIFIED_MATERIAL_CLEANUP_DELETION_OUTCOMES
+AND ZERO_UNCLASSIFIED_MATERIAL_RELATED_CLEANUP_RESIDUE
+AND ZERO_UNVERIFIED_CLEANUP/DELETION_OUTCOMES
 AND ZERO_KNOWN_FINAL_PATCHES/WORKAROUNDS/FALLBACKS
-AND ZERO_MATERIAL_MIGRATION/BACKFILL/CUTOVER_GAPS
-AND ZERO_MATERIAL_CONTRACT/BINDING_DRIFT
-AND ZERO_MATERIAL_AUTH/SCOPE/SECURITY_GAPS
-AND ZERO_UNRESOLVED_RUNTIME/DATA_STATE
-AND ZERO_UNRECONCILED_MATERIAL_GOVERNANCE_IMPACT
-AND ZERO_MATERIAL_GOVERNANCE_DRIFT_CAPABLE_OF_MISLEADING_CURRENT_OR_FUTURE_WORK
-AND ZERO_MATERIAL_DURABLE_TRUTH_CLARITY_GAPS_CAPABLE_OF_MISLEADING_FUTURE_EXECUTION
-AND ZERO_BROKEN/ORPHAN/STALE_REFERENCES_EXPOSED_BY_WORK
-AND ZERO_MATERIAL_CLEANUP_RESIDUE_TIED_TO_SCOPE
-AND ZERO_MATERIAL_UNJUSTIFIED_COMPLEXITY_TIED_TO_SCOPE
-AND ZERO_UNVERIFIED_MATERIAL_CLAIMS
-AND ZERO_REQUIRED_MISSING/STALE_EVIDENCE
-AND ZERO_REQUIRED_REPOSITORY_PLATFORM_TRUTH_GAPS
-AND ZERO_SILENT_EXCLUSIONS
-AND LATEST_REQUIRED_HEAD_RECONCILED
-AND FINAL_PROJECT_CONSISTENCY_PASS
-AND FINAL_NEGATIVE_SPACE_PASS
-AND FINAL_ADVERSARIAL_REDIAGNOSIS_PASS
+AND ZERO_COSMETIC_ONLY_ROOT_TREATMENTS
+AND ZERO_KNOWN_MATERIAL_SOURCE_OF_FIX_BYPASSES
+AND ZERO_DIRECT_GENERATED_OUTPUT_PATCHES_WITHOUT_PROVEN_AUTHORITY
+AND ZERO_MATERIAL_UNJUSTIFIED_WRAPPERS_OR_INDIRECTION
+AND ZERO_MATERIAL_OWNERLESS_OR_MISPLACED_ARTIFACTS
+AND ZERO_MATERIAL_STRUCTURAL_DUPLICATION
+AND ZERO_MATERIAL_UNJUSTIFIED_DIRECTORIES
+AND ZERO_MATERIAL_STALE_CONFIG_OR_SCRIPTS
+AND ZERO_MATERIAL_UNUSED_DEPENDENCIES
+AND ZERO_MATERIAL_OBSOLETE_TESTS_FIXTURES_MOCKS
+AND ZERO_MATERIAL_UNFINISHED_RESTRUCTURING
+AND ZERO_UNDISPOSITIONED_MATERIAL_TOOL_FINDINGS
+AND ZERO_UNJUSTIFIED_OR_EXPIRED_MATERIAL_SUPPRESSIONS
+AND ALL_REQUIRED_APPLICABLE_FINAL_TOOL/REMOTE EVIDENCE PRESENT ON EXACT FINAL CANDIDATE
+AND NO_STALE_OR_CROSS_PR_OR_CROSS_SHA_CLOSURE_EVIDENCE
+AND FINAL_NEGATIVE_SPACE_CLEAN
+AND FINAL_ADVERSARIAL_REDIAGNOSIS_CLEAN
 ```
 
-If any conjunct is unproven, state is `OPEN` unless a valid `DECISION_REQUIRED` or `EXTERNAL_BLOCKER` applies.
-
-`FINAL_PROJECT_CONSISTENCY_PASS` means the current objective/root is proven compatible with the materially touched project-wide Product/System frame, shared authorities/invariants, affected governance and previously proven canonical closures. It does not require exhaustive proof of unrelated unknown areas.
-
-## 23. Optional temporary plan-directory lifecycle
-
-`EXECUTE_CLOSE` does not require a plan directory and does not create or mutate one by default. If `PLAN_DIR=NONE` or is omitted, skip this section entirely; closure proceeds directly through the normal exact-candidate lifecycle.
-
-If an existing temporary `PLAN_DIR` is explicitly supplied to `EXECUTE_CLOSE`, it is read-only optional handoff/evidence input. Revalidate it against current live truth before use; its original finding/root list is not a stopping boundary and must not be edited as a substitute for treatment.
-
-If new material evidence invalidates the handoff, stop only the affected execution cone and re-enter preparation/diagnosis under `02`; do not silently rewrite the plan directory while claiming continuous execution.
-
-If the explicitly supplied directory is owned by the current objective and intended to be disposable, retain it until every still-valid material item it carried and every materially related item exposed during treatment satisfies the closure requirements above. Then retire the **entire owned directory** as the last intended project write:
-
-```text
-DELETE OWNED TEMPORARY PLAN_DIR
-→ NEW FINAL_CANDIDATE
-→ FINAL READ-ONLY PROJECT-CONSISTENCY / AUDIT / INSPECTION / DIAGNOSIS / ANALYSIS / NEGATIVE-SPACE PASS
-→ RE-RESOLVE LIVE HEAD
-→ CLOSED ONLY IF NOTHING MATERIAL REOPENS
-```
-
-Do not delete an unrelated, foreign or deliberately retained plan directory merely because a matching objective exists. If no explicit temporary plan directory was supplied, no plan deletion/recreation step exists.
-
-## 24. Final report
-
-Keep reporting concise and evidence-based: repository/ref, objective, starting/final observed HEAD, final candidate relation, relevant project-frame authority/invariants, highest roots treated, canonical owners, migrations/cutovers/cleanup, artifact disposition/deletion outcome, affected consumers/surfaces, governance disposition, durable-truth clarification performed when material, verification actually performed and proof limits, runtime provenance/readback when claimed, repository-platform truth when materially relied upon, foreign-delta reconciliation, any prior closure reopened/reconciled, optional plan-directory disposition when one was explicitly supplied, remaining true blocker/decision, and final state.
-
-## 25. Durable project-memory closure gate
-
-Progressive governance clarification is **affected-knowledge scoped**, not an obligation to fully document every unknown area of the repository during every objective.
-
-Before closure, classify every newly proven material fact that can affect durable platform understanding under the vocabulary owned by `01` and the governance focus module. If it is proven durable/reusable truth and its absence or ambiguity can materially mislead future objectives, agents or sessions, its canonical governance home must be reconciled before `CLOSED`.
-
-Do not create documentation churn for ephemeral implementation facts. Do not use an unrelated unknown governance area to block a narrow objective when it cannot affect the claim. Do not declare closure while knowingly leaving a newly proven durable material truth absent or materially ambiguous in the governance surface future work is expected to rely on.
-
-Package independence/self-validation rules remain governed solely by `00-ORCHESTRATOR.md`.
+If a deep post-treatment audit can still reasonably find a material residue tied to the root that should have been closed with it, `CLOSED` is false.
