@@ -115,7 +115,7 @@ Definitions:
 
 `EVIDENCE_AVAILABLE` — trustworthy evidence exists with explicit proof limit.
 
-Only a proven `DIAGNOSIS_BLOCKER` may make the dependent execution frontier `NOT_READY_FOR_EXECUTION` solely because of a tool/capability condition.
+Only a proven `DIAGNOSIS_BLOCKER` may set `EXECUTION_READY=false` for the dependent execution frontier solely because of a tool/capability condition.
 
 ## 5. Root-cause proof and clustering
 

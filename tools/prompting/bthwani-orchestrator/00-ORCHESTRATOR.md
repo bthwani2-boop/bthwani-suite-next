@@ -50,7 +50,7 @@ One material law has one owner. Other files reference/apply it; they do not rest
 
 Ordinary project work treats this directory as read-only. Editing/deleting/restructuring it requires explicit current human authorization.
 
-`SEMANTIC SELF-CERTIFICATION = FORBIDDEN`: no script/check may declare these instructions semantically correct, `READY_FOR_EXECUTION` or `CLOSED`.
+`SEMANTIC SELF_CERTIFICATION = FORBIDDEN`: no script/check may declare these instructions semantically correct, `READY_FOR_EXECUTION` or `CLOSED`.
 
 Non-authoritative structural lint/evals are allowed to detect broken references, stale paths, duplicate headings, dangling anchors and scenario regressions. Their pass never equals semantic correctness or closure.
 
@@ -78,6 +78,16 @@ explicit fix/execute/change/restructure/clean/close intent -> EXECUTE_CLOSE
 ambiguous mutation intent -> AUDIT_PREPARE
 ```
 
+`PLAN_DIR` default resolution when omitted:
+
+```text
+explicit PHASE=AUDIT_PREPARE -> AUTO
+inferred AUDIT_PREPARE from audit/report-only intent -> NONE
+EXECUTE_CLOSE -> NONE
+```
+
+The human may always override the default with explicit `PLAN_DIR=AUTO|NONE|<path>`.
+
 Ordinary objective wording never waives package invariants. An invariant may be overridden only by an explicit current human instruction that materially names/addresses the override and remains within safety/legal/repository authority.
 
 ### 3.1 AUDIT_PREPARE
@@ -98,13 +108,20 @@ AUDIT + INSPECT + DIAGNOSE + ANALYZE
 
 `TOOL HEALTH != EXECUTION READINESS`.
 
-A failed/missing/incomplete tool must be classified under `02`; only a proven `DIAGNOSIS_BLOCKER` can prevent readiness. An actionable broken tool/workflow/scanner is normally an `EXECUTION_FINDING` and enters the execution contract.
+A failed/missing/incomplete tool must be classified under `02`; only a proven `DIAGNOSIS_BLOCKER` can make `EXECUTION_READY=false`. An actionable broken tool/workflow/scanner is normally an `EXECUTION_FINDING` and enters the execution contract.
 
 `PLAN_DIR` semantics:
 
 ```text
-PLAN_DIR=NONE -> pure read-only audit; no repository write; end AUDIT_COMPLETE or NOT_READY_FOR_EXECUTION
-PLAN_DIR=AUTO|<path> -> after readiness, create exactly one 3-file temporary handoff and end READY_FOR_EXECUTION
+PLAN_DIR=NONE
+-> pure read-only audit
+-> no repository write
+-> end AUDIT_COMPLETE with EXECUTION_READY=true|false and exact blockers/next treatment
+
+PLAN_DIR=AUTO|<path>
+-> if EXECUTION_READY=true, create exactly one 3-file temporary handoff
+-> end READY_FOR_EXECUTION
+-> if EXECUTION_READY=false, do not write a misleading handoff; end AUDIT_COMPLETE with exact blocker
 ```
 
 No treatment begins during `AUDIT_PREPARE`.
@@ -259,7 +276,7 @@ Only:
 
 - `CLOSED` — 04 proves exact-candidate closure.
 - `READY_FOR_EXECUTION` — AUDIT_PREPARE with persisted handoff and execution readiness proven.
-- `AUDIT_COMPLETE` — read-only `AUDIT_PREPARE + PLAN_DIR=NONE` completed; may be execution-ready or not.
+- `AUDIT_COMPLETE` — read-only audit completed; report `EXECUTION_READY=true|false` plus exact blockers/next treatment.
 - `DECISION_REQUIRED` — non-derivable material Product/System/architecture decision.
 - `HUMAN_ACTION_REQUIRED` — human-only topology/repository action, such as creating/selecting a required branch/workspace.
 - `AUTHORIZATION_REQUIRED` — missing permission/secret/authorization that cannot be acquired by the agent.
