@@ -110,10 +110,12 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 	if operatorContextID == "" {
 		return errors.New("BTHWANI_OPERATOR_CONTEXT_ID is required when IDENTITY_LOCAL_BOOTSTRAP=true")
 	}
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
 	}
+
 	actors := []struct {
 		id, username, role, surface, scope, phone string
 	}{
@@ -121,11 +123,9 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 		{"partner-local-001", "bthwani", "partner", "app-partner", "own", "+967771111111"},
 		{"client-local-001", "client", "client", "app-client", "own", "+967772222222"},
 	}
-	// Field agents and captains are deliberately absent. Workforce owns provider
-	// actor creation and always provisions with a server-generated workforce code
-	// as the username, so an actor pre-seeded here under a friendly username would
-	// permanently conflict on the phone and could never be adopted. They are
-	// created at runtime by tools/dev/local-workforce-provisioning.mjs.
+
+	// Runtime bootstrap owns only local actor fixtures and actor-access bindings.
+	// Role and Permission vocabulary are migration-owned canonical truth.
 	for _, actor := range actors {
 		actorPermissions := []Permission{
 			{Service: "dsh", Surface: actor.surface, Action: "store:read", Scope: actor.scope},
@@ -134,62 +134,49 @@ func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootst
 		if actor.role == "operator" {
 			actorPermissions = localOperatorDevelopmentPermissions()
 		}
-		// 1. Ensure the role exists in identity_roles
-		var roleID string
-		err = r.db.QueryRowContext(ctx, `
-			INSERT INTO identity_roles (name, description) VALUES ($1, $2)
-			ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description
-			RETURNING id`, actor.role, "Local Bootstrap Role").Scan(&roleID)
+
+		tx, err := r.db.BeginTx(ctx, nil)
 		if err != nil {
 			return err
 		}
 
-		// 2. Upsert the actor
-		_, err = r.db.ExecContext(ctx, `
-			INSERT INTO identity_actors
-				(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
-			VALUES ($1, $2, $3, $4, $5, ARRAY[]::text[], '[]'::jsonb, 'ACTIVE', 1, now())
-			ON CONFLICT (id) DO UPDATE SET
-				username = EXCLUDED.username,
-				password_hash = EXCLUDED.password_hash,
-				operator_context_id = EXCLUDED.operator_context_id,
-				phone_e164 = EXCLUDED.phone_e164,
-				status = 'ACTIVE',
-				version = identity_actors.version + 1,
-				updated_at = now()`,
-			actor.id, actor.username, string(hash), operatorContextID, actor.phone)
+		_, err = tx.ExecContext(ctx, `
+INSERT INTO identity_actors
+    (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
+VALUES ($1, $2, $3, $4, $5, ARRAY[]::text[], '[]'::jsonb, 'ACTIVE', 1, now())
+ON CONFLICT (id) DO UPDATE SET
+    username = EXCLUDED.username,
+    password_hash = EXCLUDED.password_hash,
+    operator_context_id = EXCLUDED.operator_context_id,
+    phone_e164 = EXCLUDED.phone_e164,
+    status = 'ACTIVE',
+    version = identity_actors.version + 1,
+    updated_at = now()`,
+			actor.id,
+			actor.username,
+			string(hash),
+			operatorContextID,
+			actor.phone,
+		)
 		if err != nil {
+			_ = tx.Rollback()
 			return err
 		}
 
-		// 3. Link actor to role
-		_, err = r.db.ExecContext(ctx, `
-			INSERT INTO identity_actor_roles (actor_id, role_id, granted_by)
-			VALUES ($1, $2, 'system_bootstrap')
-			ON CONFLICT DO NOTHING`, actor.id, roleID)
-		if err != nil {
+		if err := setActorAccessTx(
+			ctx,
+			tx,
+			actor.id,
+			[]string{actor.role},
+			actorPermissions,
+			"local-bootstrap",
+		); err != nil {
+			_ = tx.Rollback()
 			return err
 		}
 
-		// 4. Map permissions to the role
-		for _, p := range actorPermissions {
-			var permID string
-			err = r.db.QueryRowContext(ctx, `
-				INSERT INTO identity_permission_vocabulary (service, surface, action, description)
-				VALUES ($1, $2, $3, 'Local Bootstrap Permission')
-				ON CONFLICT (service, surface, action) DO UPDATE SET description = EXCLUDED.description
-				RETURNING id`, p.Service, p.Surface, p.Action).Scan(&permID)
-			if err != nil {
-				return err
-			}
-
-			_, err = r.db.ExecContext(ctx, `
-				INSERT INTO identity_role_permissions (role_id, permission_id, scope)
-				VALUES ($1, $2, $3)
-				ON CONFLICT (role_id, permission_id) DO UPDATE SET scope = EXCLUDED.scope`, roleID, permID, p.Scope)
-			if err != nil {
-				return err
-			}
+		if err := tx.Commit(); err != nil {
+			return err
 		}
 	}
 	return nil

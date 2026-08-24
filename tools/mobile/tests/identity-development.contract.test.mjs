@@ -10,7 +10,8 @@ test("all mobile apps persist stable Identity installation fingerprints", async 
     const source = await read(`apps/${app}/runtime/src/App.tsx`);
     assert.match(source, /configureIdentityDeviceFingerprintProvider/);
     assert.match(source, /SecureStore/);
-    assert.match(source, /randomUUID/);
+    assert.match(source, /\bsecureRandomId\b/);
+    assert.doesNotMatch(source, /\brandomUUID\b/);
   }
 });
 

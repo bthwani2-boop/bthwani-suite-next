@@ -92,6 +92,19 @@ func localOperatorDevelopmentPermissions() []Permission {
 	}
 }
 
+func localOperatorCanonicalPermissions() ([]Permission, error) {
+	sovereignPermissions, err := employeeBundlePermissions(
+		EmployeeBundlePlatformOwner,
+		"platform",
+	)
+	if err != nil {
+		return nil, err
+	}
+	return mergeEmployeePermissions(
+		localOperatorDevelopmentPermissions(),
+		sovereignPermissions,
+	), nil
+}
 func permissionSetKey(permission Permission) string {
 	return permission.Service + "\x00" + permission.Surface + "\x00" + permission.Action + "\x00" + permission.Scope
 }
@@ -134,37 +147,17 @@ WHERE id = 'operator-local-001'
 	if err != nil {
 		return false, err
 	}
+
 	var actorPermissions []Permission
 	if err := json.Unmarshal(permissionsJSON, &actorPermissions); err != nil {
 		return false, err
 	}
-	expected := localOperatorDevelopmentPermissions()
-	if !permissionSetsEqual(actorPermissions, expected) {
-		return false, nil
-	}
 
-	rows, err := r.db.QueryContext(ctx, `
-SELECT vocabulary.service, vocabulary.surface, vocabulary.action, role_permission.scope
-FROM identity_roles AS role
-JOIN identity_role_permissions AS role_permission ON role_permission.role_id = role.id
-JOIN identity_permission_vocabulary AS vocabulary ON vocabulary.id = role_permission.permission_id
-WHERE role.name = 'operator'`)
+	expected, err := localOperatorCanonicalPermissions()
 	if err != nil {
 		return false, err
 	}
-	defer rows.Close()
-	rolePermissions := make([]Permission, 0, len(expected))
-	for rows.Next() {
-		var permission Permission
-		if err := rows.Scan(&permission.Service, &permission.Surface, &permission.Action, &permission.Scope); err != nil {
-			return false, err
-		}
-		rolePermissions = append(rolePermissions, permission)
-	}
-	if err := rows.Err(); err != nil {
-		return false, err
-	}
-	return permissionSetsEqual(rolePermissions, expected), nil
+	return permissionSetsEqual(actorPermissions, expected), nil
 }
 
 // reconcileLocalOperatorDevelopmentPermissions makes the actor projection and
@@ -173,7 +166,11 @@ WHERE role.name = 'operator'`)
 // missing grants, so an old development database cannot remain over- or
 // under-privileged after convergence.
 func (r *Repository) reconcileLocalOperatorDevelopmentPermissions(ctx context.Context, operatorContextID string) error {
-	expected := localOperatorDevelopmentPermissions()
+	expected, err := localOperatorCanonicalPermissions()
+	if err != nil {
+		return err
+	}
+
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -193,65 +190,32 @@ SELECT EXISTS (
 		return err
 	}
 	if !actorExists {
-		return fmt.Errorf("canonical local operator is absent from operator context %q", operatorContextID)
+		return fmt.Errorf(
+			"canonical local operator is absent from operator context %q",
+			operatorContextID,
+		)
 	}
+
 	var existingRoles pq.StringArray
-	if err := tx.QueryRowContext(ctx, `SELECT roles FROM identity_actors WHERE id = 'operator-local-001' AND operator_context_id = $1`, operatorContextID).Scan(&existingRoles); err != nil {
-		return err
-	}
-	if err := setActorAccessTx(ctx, tx, "operator-local-001", []string(existingRoles), expected, "local-bootstrap"); err != nil {
+	if err := tx.QueryRowContext(
+		ctx,
+		`SELECT roles FROM identity_actors WHERE id = 'operator-local-001' AND operator_context_id = $1`,
+		operatorContextID,
+	).Scan(&existingRoles); err != nil {
 		return err
 	}
 
-	var roleID string
-	if err := tx.QueryRowContext(ctx, `SELECT id FROM identity_roles WHERE name = 'operator'`).Scan(&roleID); err != nil {
+	// Actor access is the only runtime mutation here. Vocabulary and role
+	// definitions are migration-owned and therefore read-only to bootstrap.
+	if err := setActorAccessTx(
+		ctx,
+		tx,
+		"operator-local-001",
+		[]string(existingRoles),
+		expected,
+		"local-bootstrap",
+	); err != nil {
 		return err
-	}
-	requiredPermissionIDs := make(map[string]struct{}, len(expected))
-	for _, permission := range expected {
-		var permissionID string
-		if err := tx.QueryRowContext(ctx, `
-INSERT INTO identity_permission_vocabulary(service, surface, action, description)
-VALUES ($1, $2, $3, 'Local Bootstrap Permission')
-ON CONFLICT (service, surface, action) DO UPDATE SET description = EXCLUDED.description
-RETURNING id`, permission.Service, permission.Surface, permission.Action).Scan(&permissionID); err != nil {
-			return err
-		}
-		requiredPermissionIDs[permissionID] = struct{}{}
-		if _, err := tx.ExecContext(ctx, `
-INSERT INTO identity_role_permissions(role_id, permission_id, scope)
-VALUES ($1, $2, $3)
-ON CONFLICT (role_id, permission_id) DO UPDATE SET scope = EXCLUDED.scope`, roleID, permissionID, permission.Scope); err != nil {
-			return err
-		}
-	}
-
-	rows, err := tx.QueryContext(ctx, `SELECT permission_id FROM identity_role_permissions WHERE role_id = $1`, roleID)
-	if err != nil {
-		return err
-	}
-	stalePermissionIDs := []string{}
-	for rows.Next() {
-		var permissionID string
-		if err := rows.Scan(&permissionID); err != nil {
-			rows.Close()
-			return err
-		}
-		if _, required := requiredPermissionIDs[permissionID]; !required {
-			stalePermissionIDs = append(stalePermissionIDs, permissionID)
-		}
-	}
-	if err := rows.Err(); err != nil {
-		rows.Close()
-		return err
-	}
-	rows.Close()
-	for _, permissionID := range stalePermissionIDs {
-		if _, err := tx.ExecContext(ctx, `
-DELETE FROM identity_role_permissions
-WHERE role_id = $1 AND permission_id = $2`, roleID, permissionID); err != nil {
-			return err
-		}
 	}
 
 	return tx.Commit()
