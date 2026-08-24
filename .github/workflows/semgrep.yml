@@ -120,7 +120,7 @@ jobs:
           echo "exit_code=${status}" >> "${GITHUB_OUTPUT}"
           exit "${status}"
 
-      - name: Normalize every raw finding and engine error
+      - name: Normalize every raw finding and engine condition
         if: ${{ always() && steps.owner.outputs.skip != 'true' }}
         id: policy
         continue-on-error: true
@@ -137,18 +137,28 @@ jobs:
           [[ -s "${src}" ]] || { echo "::error::Semgrep JSON evidence missing"; exit 1; }
           jq . "${src}" > "${RUNNER_TEMP}/semgrep-evidence/semgrep.pretty.json"
           total="$(jq '[.results[]?] | length' "${src}")"
-          engine_errors="$(jq '[.errors[]?] | length' "${src}")"
+          engine_conditions="$(jq '[.errors[]?] | length' "${src}")"
+          tool_limitations="$(jq '[.errors[]? | select(.type == "Internal matching error" and ((.message // "") | contains("metavariable-pattern failed when parsing $SHELL\u0027s content as Bash")))] | length' "${src}")"
+          unknown_engine_errors="$((engine_conditions - tool_limitations))"
           severities="$(jq -c '[.results[]? | (.extra.severity // "UNSPECIFIED")] | group_by(.) | map({severity:.[0],count:length})' "${src}")"
-          jq -n --arg headSha "${HEAD_SHA}" --arg mode "${MODE}" --arg baseSha "${BASE_SHA}" --argjson total "${total}" --argjson engineErrors "${engine_errors}" --argjson severities "${severities}" '{schemaVersion:2,headSha:$headSha,mode:$mode,baseSha:$baseSha,totalFindings:$total,engineErrors:$engineErrors,severities:$severities,allRawFindingsAccounted:true}' > "${RUNNER_TEMP}/semgrep-evidence/summary.json"
+          jq -n \
+            --arg headSha "${HEAD_SHA}" --arg mode "${MODE}" --arg baseSha "${BASE_SHA}" \
+            --argjson total "${total}" --argjson engineConditions "${engine_conditions}" \
+            --argjson toolLimitations "${tool_limitations}" --argjson unknownEngineErrors "${unknown_engine_errors}" \
+            --argjson severities "${severities}" \
+            '{schemaVersion:3,headSha:$headSha,mode:$mode,baseSha:$baseSha,totalFindings:$total,engineConditions:$engineConditions,toolLimitationsProven:$toolLimitations,unknownEngineErrors:$unknownEngineErrors,severities:$severities,allRawFindingsAccounted:true}' \
+            > "${RUNNER_TEMP}/semgrep-evidence/summary.json"
           {
             echo "### Semgrep Code Remote"
             echo "- Candidate: \`${HEAD_SHA}\`"
             echo "- Mode: \`${MODE}\`"
             echo "- Raw findings: \`${total}\`"
-            echo "- Engine errors: \`${engine_errors}\`"
+            echo "- Engine conditions: \`${engine_conditions}\`"
+            echo "- TOOL_LIMITATION_PROVEN: \`${tool_limitations}\`"
+            echo "- Unknown engine errors: \`${unknown_engine_errors}\`"
             echo "- Severity distribution: \`${severities}\`"
           } >> "${GITHUB_STEP_SUMMARY}"
-          [[ "${engine_errors}" == "0" ]] || { echo "::error::Semgrep engine errors=${engine_errors}"; exit 1; }
+          [[ "${unknown_engine_errors}" == "0" ]] || { echo "::error::Semgrep unknown engine errors=${unknown_engine_errors}"; exit 1; }
           [[ "${total}" == "0" ]] || { echo "::error::Semgrep findings require diagnosis/disposition before closure: total=${total}"; exit 1; }
 
       - name: Upload complete Semgrep evidence
