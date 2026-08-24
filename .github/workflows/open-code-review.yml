@@ -93,17 +93,19 @@ jobs:
           npm install --global --ignore-scripts "${ocr_tgz}" "${copilot_tgz}"
           ocr --version
 
-      # Keep the working tree on the repository default branch. Both the
-      # requested base and candidate are fetched as objects for diff/read-
-      # back only, so candidate-controlled files never become executable
+      # Keep all source in an isolated object-only repository. Neither the
+      # trusted base nor the candidate is checked out into the workflow
+      # workspace, so candidate-controlled files never become executable
       # workflow code.
-      - name: Checkout trusted workflow source with history
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          ref: ${{ github.event.repository.default_branch }}
-          fetch-depth: 0
-          persist-credentials: false
-          show-progress: false
+      - name: Initialize object-only review workspace
+        shell: bash
+        env:
+          OCR_REPO: ${{ runner.temp }}/ocr-repo
+        run: |
+          set -euo pipefail
+          mkdir -p "${OCR_REPO}"
+          git -C "${OCR_REPO}" init --quiet
+          git -C "${OCR_REPO}" remote add origin "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}.git"
 
       - name: Fetch candidate object and load trusted rules
         id: target
@@ -111,15 +113,17 @@ jobs:
         env:
           HEAD_SHA: ${{ steps.request.outputs.head_sha }}
           BASE_REF: ${{ steps.request.outputs.base_ref }}
+          OCR_REPO: ${{ runner.temp }}/ocr-repo
         run: |
           set -euo pipefail
-          git fetch --no-tags origin "${BASE_REF}" "${HEAD_SHA}"
-          candidate="$(git rev-parse "${HEAD_SHA}^{commit}")"
+          git -C "${OCR_REPO}" fetch --no-tags origin "${BASE_REF}" "${HEAD_SHA}"
+          candidate="$(git -C "${OCR_REPO}" rev-parse "${HEAD_SHA}^{commit}")"
           [[ "${candidate}" == "${HEAD_SHA}" ]] || { echo "::error::candidate object drift: expected=${HEAD_SHA} actual=${candidate}"; exit 1; }
-          base="$(git rev-parse "${BASE_REF}^{commit}" 2>/dev/null || git rev-parse "origin/${BASE_REF}^{commit}" 2>/dev/null || true)"
+          base="$(git -C "${OCR_REPO}" rev-parse "${BASE_REF}^{commit}" 2>/dev/null || git -C "${OCR_REPO}" rev-parse "origin/${BASE_REF}^{commit}" 2>/dev/null || true)"
           [[ "${base}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::unable to resolve trusted base ${BASE_REF}"; exit 1; }
-          merge_base="$(git merge-base "${base}" "${HEAD_SHA}")"
-          git show "${base}:.opencodereview/rule.json" > "${RUNNER_TEMP}/ocr-rule.json"
+          merge_base="$(git -C "${OCR_REPO}" merge-base "${base}" "${HEAD_SHA}")"
+          git -C "${OCR_REPO}" show "${base}:.opencodereview/rule.json" > "${RUNNER_TEMP}/ocr-rule.json"
+          git -C "${OCR_REPO}" show "${base}:tools/scripts/evaluate-opencodereview.mjs" > "${RUNNER_TEMP}/evaluate-opencodereview.mjs"
           {
             echo "base_sha=${base}"
             echo "merge_base=${merge_base}"
@@ -131,10 +135,12 @@ jobs:
         env:
           HEAD_SHA: ${{ steps.request.outputs.head_sha }}
           MERGE_BASE: ${{ steps.target.outputs.merge_base }}
+          OCR_REPO: ${{ runner.temp }}/ocr-repo
         run: |
           set -euo pipefail
           evidence="${RUNNER_TEMP}/ocr-evidence"
           mkdir -p "${evidence}"
+          pushd "${OCR_REPO}" >/dev/null
           ocr delegate preview --format json --from "${MERGE_BASE}" --to "${HEAD_SHA}" --rule "${RUNNER_TEMP}/ocr-rule.json" > "${evidence}/preview.json"
           jq . "${evidence}/preview.json" > "${evidence}/preview.pretty.json"
           mapfile -t files < <(jq -r '.reviewable_files[]?.path // empty' "${evidence}/preview.json")
@@ -172,6 +178,7 @@ jobs:
             cat "${evidence}/diff.patch"
             echo '```'
           } > "${evidence}/review-context.md"
+          popd >/dev/null
 
       - name: Run host-agent semantic review with GitHub Copilot CLI
         id: host
@@ -183,6 +190,7 @@ jobs:
           REQUESTED_MODEL: ${{ steps.request.outputs.model }}
           HEAD_SHA: ${{ steps.request.outputs.head_sha }}
           MERGE_BASE: ${{ steps.target.outputs.merge_base }}
+          OCR_REPO: ${{ runner.temp }}/ocr-repo
         run: |
           set +e
           evidence="${RUNNER_TEMP}/ocr-evidence"
@@ -221,6 +229,7 @@ jobs:
           }
 
           start_chunk
+          pushd "${OCR_REPO}" >/dev/null
           while IFS= read -r file; do
             [[ -n "${file}" ]] || continue
             candidate="${chunk_dir}/candidate.txt"
@@ -245,6 +254,7 @@ jobs:
             chunk_files+=("${file}")
           done < "${evidence}/reviewable-files.txt"
           finalize_chunk
+          popd >/dev/null
 
           model_args=()
           [[ -z "${REQUESTED_MODEL}" ]] || model_args=(--model "${REQUESTED_MODEL}")
@@ -351,7 +361,7 @@ jobs:
           OCR_MODEL: ${{ steps.request.outputs.model || 'copilot-auto' }}
         run: |
           set -euo pipefail
-          node tools/scripts/evaluate-opencodereview.mjs \
+          node "${RUNNER_TEMP}/evaluate-opencodereview.mjs" \
             --input "${RUNNER_TEMP}/ocr-evidence/result.json" \
             --preview "${RUNNER_TEMP}/ocr-evidence/preview.json" \
             --summary-json "${RUNNER_TEMP}/ocr-evidence/summary.json" \
