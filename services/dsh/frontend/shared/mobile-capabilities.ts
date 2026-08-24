@@ -1,5 +1,7 @@
 import React from "react";
-import { configureSecureRandomUuidProvider } from "./_kernel/secure-random";
+import { configureSecureRandomUuidProvider, secureRandomId } from "./_kernel/secure-random";
+
+export { secureRandomId };
 
 export function configureDshSecureRandomUuidProvider(
   provider: () => string,

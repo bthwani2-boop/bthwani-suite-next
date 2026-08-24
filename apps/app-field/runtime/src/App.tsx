@@ -1,5 +1,4 @@
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
-import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
 import { Button, colorRoles } from "@bthwani/ui-kit";
@@ -16,6 +15,7 @@ import {
   type DshFieldNavigation,
   type DshFieldRouteState,
 } from "@bthwani/dsh/app-field";
+import { secureRandomId } from "@bthwani/dsh/mobile-capabilities";
 import {
   configureIdentityDeviceFingerprintProvider,
   configureIdentitySession,
@@ -40,7 +40,7 @@ function createSecureStoreSessionStorageAdapter(): SessionStorageAdapter {
 async function getOrCreateFieldDeviceFingerprint(): Promise<string> {
   const existing = await SecureStore.getItemAsync(FIELD_DEVICE_FINGERPRINT_KEY);
   if (existing?.trim()) return existing;
-  const created = `field-device:${Crypto.randomUUID()}`;
+  const created = `field-device:${secureRandomId()}`;
   await SecureStore.setItemAsync(FIELD_DEVICE_FINGERPRINT_KEY, created);
   return created;
 }

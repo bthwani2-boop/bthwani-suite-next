@@ -5,7 +5,6 @@ import { colorRoles } from "@bthwani/ui-kit";
 import { File as ExpoFile } from "expo-file-system";
 import * as DocumentPicker from "expo-document-picker";
 import * as SecureStore from "expo-secure-store";
-import * as Crypto from "expo-crypto";
 import {
   configureCatalogMobileFilePicker,
   DshPartnerSurface,
@@ -17,6 +16,7 @@ import {
   type DshPartnerNavigationRoute,
   type UploadFileSource,
 } from "@bthwani/dsh/app-partner";
+import { secureRandomId } from "@bthwani/dsh/mobile-capabilities";
 import {
   configureIdentityDeviceFingerprintProvider,
   configureIdentitySession,
@@ -60,7 +60,7 @@ if (Platform.OS !== "web") {
         getItem: (key) => SecureStore.getItemAsync(key),
         setItem: (key, value) => SecureStore.setItemAsync(key, value),
       },
-      () => Crypto.randomUUID(),
+      secureRandomId,
     ),
   );
   configureCatalogMobileFilePicker(pickCatalogFile);

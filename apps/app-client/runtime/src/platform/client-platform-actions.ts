@@ -1,11 +1,11 @@
-import * as Crypto from "expo-crypto";
 import { File, Paths } from "expo-file-system";
 import * as Haptics from "expo-haptics";
 import * as Sharing from "expo-sharing";
 import * as WebBrowser from "expo-web-browser";
+import { secureRandomId } from "@bthwani/dsh/mobile-capabilities";
 
 export function createClientEphemeralId(prefix: string): string {
-  return `${prefix}.${Crypto.randomUUID()}`;
+  return `${prefix}.${secureRandomId()}`;
 }
 
 export async function performClientSelectionHaptic(): Promise<void> {
@@ -40,7 +40,7 @@ export async function shareClientTextDocument(input: {
 
   try {
     if (!(await Sharing.isAvailableAsync())) return false;
-    file = new File(Paths.cache, `${safePrefix}-${Crypto.randomUUID()}.txt`);
+    file = new File(Paths.cache, `${safePrefix}-${secureRandomId()}.txt`);
     file.write(contents);
     await Sharing.shareAsync(file.uri, {
       dialogTitle: input.dialogTitle,
