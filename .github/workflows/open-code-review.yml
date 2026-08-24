@@ -93,13 +93,14 @@ jobs:
           npm install --global --ignore-scripts "${ocr_tgz}" "${copilot_tgz}"
           ocr --version
 
-      # Keep the working tree on the trusted base. The candidate is fetched
-      # as an object for diff/read-back only, so candidate-controlled files
-      # never become executable workflow code.
-      - name: Checkout trusted base with history
+      # Keep the working tree on the repository default branch. Both the
+      # requested base and candidate are fetched as objects for diff/read-
+      # back only, so candidate-controlled files never become executable
+      # workflow code.
+      - name: Checkout trusted workflow source with history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ steps.request.outputs.base_ref }}
+          ref: ${{ github.event.repository.default_branch }}
           fetch-depth: 0
           persist-credentials: false
           show-progress: false
@@ -112,7 +113,7 @@ jobs:
           BASE_REF: ${{ steps.request.outputs.base_ref }}
         run: |
           set -euo pipefail
-          git fetch --no-tags origin "${HEAD_SHA}"
+          git fetch --no-tags origin "${BASE_REF}" "${HEAD_SHA}"
           candidate="$(git rev-parse "${HEAD_SHA}^{commit}")"
           [[ "${candidate}" == "${HEAD_SHA}" ]] || { echo "::error::candidate object drift: expected=${HEAD_SHA} actual=${candidate}"; exit 1; }
           base="$(git rev-parse "${BASE_REF}^{commit}" 2>/dev/null || git rev-parse "origin/${BASE_REF}^{commit}" 2>/dev/null || true)"
