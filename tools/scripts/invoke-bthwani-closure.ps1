@@ -19,6 +19,11 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
+$rootBoundParameters = @{}
+foreach ($key in $PSBoundParameters.Keys) {
+    $rootBoundParameters[$key] = $PSBoundParameters[$key]
+}
+
 function Assert-FullSha {
     param([Parameter(Mandatory)][string]$Value)
     if ($Value -notmatch '^[0-9a-fA-F]{40}$') {
@@ -27,11 +32,13 @@ function Assert-FullSha {
 }
 
 function Get-TargetSelectors {
+    param([Parameter(Mandatory)][System.Collections.IDictionary]$BoundParameters)
+
     $selectors = @()
-    if ($PSBoundParameters.ContainsKey('PR')) { $selectors += 'PR' }
-    if ($PSBoundParameters.ContainsKey('Branch')) { $selectors += 'Branch' }
-    if ($PSBoundParameters.ContainsKey('Sha')) { $selectors += 'Sha' }
-    if ($PSBoundParameters.ContainsKey('RunId')) { $selectors += 'RunId' }
+    if ($BoundParameters.Contains('PR')) { $selectors += 'PR' }
+    if ($BoundParameters.Contains('Branch')) { $selectors += 'Branch' }
+    if ($BoundParameters.Contains('Sha')) { $selectors += 'Sha' }
+    if ($BoundParameters.Contains('RunId')) { $selectors += 'RunId' }
     return $selectors
 }
 
@@ -98,7 +105,7 @@ function Get-RemoteFileContent {
 function Write-JsonFile {
     param(
         [Parameter(Mandatory)][string]$Path,
-        [Parameter(Mandatory)]$Value
+        [Parameter(Mandatory)][AllowNull()][AllowEmptyCollection()]$Value
     )
     $Value | ConvertTo-Json -Depth 100 | Set-Content -LiteralPath $Path -Encoding utf8
 }
@@ -117,14 +124,30 @@ function Save-Text {
 
 function Invoke-SelfTest {
     Assert-FullSha -Value '0123456789abcdef0123456789abcdef01234567'
+
+    $testBound = @{ PR = 284 }
+    $testSelectors = @(Get-TargetSelectors -BoundParameters $testBound)
+    if ($testSelectors.Count -ne 1 -or $testSelectors[0] -ne 'PR') {
+        throw "Self-test failed: target selector propagation is broken."
+    }
+
     $encoded = ConvertTo-EncodedPath -Path 'tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md'
     if ($encoded -ne 'tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md') {
         throw "Self-test failed: canonical path encoding changed unexpectedly."
     }
+
     $slashBranch = [uri]::EscapeDataString('feature/example')
     if ([string]::IsNullOrWhiteSpace($slashBranch)) {
         throw "Self-test failed: branch encoding is empty."
     }
+
+    $targetKindForFormat = 'PR'
+    $targetInputForFormat = '284'
+    $targetLine = "TARGET=${targetKindForFormat}:$targetInputForFormat"
+    if ($targetLine -ne 'TARGET=PR:284') {
+        throw "Self-test failed: target output formatting is broken."
+    }
+
     Write-Host 'SELF_TEST=PASS'
 }
 
@@ -133,7 +156,7 @@ if ($SelfTest) {
     exit 0
 }
 
-$selectors = @(Get-TargetSelectors)
+$selectors = @(Get-TargetSelectors -BoundParameters $rootBoundParameters)
 if ($selectors.Count -ne 1) {
     throw "Specify exactly one target selector: -PR, -Branch, -Sha, or -RunId. Received: $($selectors -join ', ')."
 }
@@ -157,7 +180,6 @@ if ($Repository -notmatch '^[^/]+/[^/]+$') {
 
 $repoInfo = Invoke-GhJson -GhArgs @('api', "repos/$Repository")
 $defaultBranch = [string]$repoInfo.default_branch
-$owner = [string]$repoInfo.owner.login
 
 $targetKind = $selectors[0]
 $targetInput = switch ($targetKind) {
@@ -518,7 +540,7 @@ if ($Json) {
 }
 else {
     Write-Host "REPOSITORY=$Repository"
-    Write-Host "TARGET=$targetKind:$targetInput"
+    Write-Host "TARGET=${targetKind}:$targetInput"
     Write-Host "EXACT_CANDIDATE_SHA=$candidateSha"
     Write-Host "FINAL_RECHECK_SHA=$finalSha"
     Write-Host "TARGET_STABLE=$targetStable"
