@@ -239,8 +239,15 @@
     {
       "ordinal": 34,
       "file": "identity-034_canonical_provider_partner_vocabulary.sql",
-      "sha256": "c37bd0609a8b94a14681d9e3a9bdda27fa861c4586509f190efed6620f180098",
+      "sha256": "b3010eff307dd2b4be5f71f6672fdf388f6b76bda42abaa5d80c9e3eca4cd0df",
       "historicalPrefix": "034",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 35,
+      "file": "identity-035_local_platform_role_vocabulary.sql",
+      "sha256": "e470b74a9199acc5d0f01e52f63730621ee4e9937ed0a3104a79f83adb9d5c2e",
+      "historicalPrefix": "035",
       "state": "ACTIVE"
     }
   ]

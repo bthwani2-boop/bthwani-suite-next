@@ -10,10 +10,7 @@ INSERT INTO identity_roles(name, description)
 VALUES
     ('field', 'Workforce-managed field provider'),
     ('employee', 'Workforce-managed administrative employee'),
-    ('support', 'Identity support-session actor'),
-    ('platform-approver', 'Local platform variable approver'),
-    ('platform-applier', 'Local platform variable applier'),
-    ('platform-rollout-manager', 'Local platform rollout manager')
+    ('support', 'Identity support-session actor')
 ON CONFLICT (name)
 DO UPDATE SET description = EXCLUDED.description;
 
@@ -34,10 +31,7 @@ BEGIN
         FROM (VALUES
             ('field'),
             ('employee'),
-            ('support'),
-            ('platform-approver'),
-            ('platform-applier'),
-            ('platform-rollout-manager')
+            ('support')
         ) AS required(name)
         LEFT JOIN identity_roles role ON role.name = required.name
         WHERE role.id IS NULL OR role.active IS NOT TRUE
