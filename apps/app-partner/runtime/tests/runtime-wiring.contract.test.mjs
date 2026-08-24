@@ -17,7 +17,9 @@ test("partner app composes canonical identity, rating, catalog media, push, and 
   assert.match(source, /copyToCacheDirectory: true/);
   assert.match(source, /configureIdentityDeviceFingerprintProvider/);
   assert.match(source, /SecureStore/);
-  assert.match(source, /randomUUID/);
+  assert.match(source, /from "@bthwani\/dsh\/mobile-capabilities"/);
+  assert.match(source, /secureRandomId/);
+  assert.doesNotMatch(source, /Crypto\.randomUUID/);
   assert.match(source, /useDshMobilePushRegistration\(identity\.state\.kind, "app-partner", "bthwani-partner-next"\)/);
 });
 

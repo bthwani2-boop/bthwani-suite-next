@@ -9,7 +9,9 @@ test("client persists its own stable Identity installation fingerprint", async (
   const source = await read("apps/app-client/runtime/src/App.tsx");
   assert.match(source, /configureIdentityDeviceFingerprintProvider/);
   assert.match(source, /SecureStore/);
-  assert.match(source, /randomUUID/);
+  assert.match(source, /from "@bthwani\/dsh\/mobile-capabilities"/);
+  assert.match(source, /secureRandomId/);
+  assert.doesNotMatch(source, /Crypto\.randomUUID/);
 });
 
 test("client source never bundles privileged local-development credentials", async () => {
