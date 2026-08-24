@@ -304,9 +304,10 @@ for (const token of [
   "Apply DSH local seeds twice",
   "Run DSH seed database contracts",
   runnerPath,
-  "CANDIDATE_SHA: ${{ github.sha }}",
+  "candidate_sha:",
+  "CANDIDATE_SHA: ${{ inputs.candidate_sha }}",
   "Verify routed candidate identity",
-  "ROUTED_HEAD_SHA: ${{ inputs.head_sha }}",
+  "ROUTED_CANDIDATE_SHA: ${{ inputs.candidate_sha }}",
   "ref: ${{ env.CANDIDATE_SHA }}",
   "head_sha: ${{ env.CANDIDATE_SHA }}",
   "persist-credentials: false",
@@ -319,6 +320,7 @@ for (const forbiddenToken of [
   "bthwani/dsh-database",
   "ALTER DATABASE dsh_runtime SET bthwani.operator_context_id",
   "ref: ${{ inputs.head_sha }}",
+  "inputs.head_sha",
 ]) {
   forbidText(workflow, forbiddenToken, workflowOwner);
 }
