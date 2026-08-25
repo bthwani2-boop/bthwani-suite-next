@@ -1,6 +1,8 @@
 import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
+import openapiTS, { astToString } from "openapi-typescript";
 import { spawnSync } from "node:child_process";
 import { normalizeOpenApiMetadata } from "./normalize-openapi-metadata.mjs";
 import { composeContext } from "../openapi-context-composer.mjs";
@@ -109,13 +111,11 @@ try {
 
   for (const contract of verificationContracts) {
     const tsOut = join(tempDir, `${basename(contract.normalized)}.ts`);
-    run(`openapi-typescript ${contract.source}`, "pnpm", [
-      "exec",
-      "openapi-typescript",
-      contract.normalized,
-      "-o",
-      tsOut,
-    ]);
+    // Generation equivalence runs through the same Node API as the canonical
+    // materializer; a subprocess bridge here would duplicate that mechanism
+    // and cannot carry dash-leading flags through governed Windows argv.
+    const ast = await openapiTS(pathToFileURL(contract.normalized));
+    writeFileSync(tsOut, astToString(ast), "utf8");
   }
 
   console.log("contracts-typecheck: PASS (read-only deterministic composition, zero warnings)");

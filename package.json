@@ -9,7 +9,6 @@
   },
   "scripts": {
     "contracts:redocly": "node tools/scripts/contracts/typecheck.mjs",
-    "contracts:registry": "node tools/scripts/generate-contract-registry.mjs",
     "contracts:lint": "pnpm run contracts:redocly && pnpm run guard:contract-registry-drift",
     "typecheck": "pnpm run affected:typecheck",
     "typecheck:ts7": "pnpm -r --if-present typecheck:ts7",
@@ -126,7 +125,6 @@
     "guard:platform-change-sets": "node tools/guards/platform-change-sets-gate.mjs",
     "runtime:frontend-binding:check": "node tools/scripts/check-frontend-binding-readiness.mjs",
     "swagger": "node tools/scripts/serve-swagger.mjs",
-    "swagger:build": "node tools/scripts/build-swagger-static.mjs",
     "diagnostics:sonarqube:config": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/check-sonarqube-config.ps1",
     "diagnostics:go-routes": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/check-go-ast-extractor.ps1",
     "diagnostics:otel:smoke": "node tools/observability/otel-node-smoke.mjs",
