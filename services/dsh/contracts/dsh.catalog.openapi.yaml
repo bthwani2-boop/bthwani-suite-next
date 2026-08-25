@@ -9,7 +9,8 @@ x-bthwani-owner: services/dsh
 x-bthwani-parent-contract: contracts/dsh.openapi.yaml
 x-bthwani-contract-role: executable-fragment
 x-bthwani-contract-state: CONTRACT_ACTIVE
-x-bthwani-client-generation: ENABLED
+x-bthwani-client-generation: DISABLED
+x-bthwani-adapter-owner: frontend/shared/catalog/central-catalog.api.ts
 x-bthwani-runtime-dependency: true
 paths:
   /dsh/operator/catalog/master-products/{productId}:

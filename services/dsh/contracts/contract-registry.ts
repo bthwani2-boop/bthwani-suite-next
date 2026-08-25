@@ -115,8 +115,8 @@ export const DSH_CONTRACT_REGISTRY = [
     path: "contracts/dsh.catalog.openapi.yaml",
     state: "CONTRACT_ACTIVE",
     runtimeDependency: true,
-    clientStrategy: "SECONDARY_GENERATED_SUBSET",
-    generatedClient: "clients/generated/dsh-api.ts",
+    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
+    adapterOwner: "frontend/shared/catalog/central-catalog.api.ts",
   },
   {
     id: "dsh-catalog-proposal-readback",
