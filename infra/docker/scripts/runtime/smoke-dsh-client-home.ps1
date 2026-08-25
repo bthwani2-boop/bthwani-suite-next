@@ -12,6 +12,9 @@ Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot "../../../../tools/dev/local-workforce-actors.ps1")
 $ErrorActionPreference = "Stop"
 
+$identityApiHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_IDENTITY_API_HOST_PORT)) { "18082" } else { $env:BTHWANI_IDENTITY_API_HOST_PORT }
+$identityBaseUrl = if ([string]::IsNullOrWhiteSpace($env:IDENTITY_API_BASE_URL)) { "http://localhost:$identityApiHostPort" } else { $env:IDENTITY_API_BASE_URL }
+
 $state = Get-Content -LiteralPath $StatePath -Raw | ConvertFrom-Json
 $smokeCatalogProductId = [string]$state.masterProductId
 if ([string]::IsNullOrWhiteSpace($smokeCatalogProductId)) {
@@ -25,7 +28,7 @@ function Get-LocalActorToken([string] $Username) {
     password = $identityPassword
     deviceFingerprint = "dsh-runtime-smoke"
   } | ConvertTo-Json
-  $login = Invoke-RestMethod "http://localhost:58082/auth/login" -Method Post -ContentType "application/json" -Body $loginBody -TimeoutSec 10
+  $login = Invoke-RestMethod "$identityBaseUrl/auth/login" -Method Post -ContentType "application/json" -Body $loginBody -TimeoutSec 10
   return $login.accessToken
 }
 
@@ -44,7 +47,7 @@ if ($WltEnabled) {
     masterProductId = $smokeCatalogProductId
     quantity = 1
   } | ConvertTo-Json
-  $cartItem = Invoke-RestMethod "http://localhost:58080/dsh/client/cart/items" -Method Post -Headers $clientHeaders -ContentType "application/json" -Body $cartBody -TimeoutSec 10
+  $cartItem = Invoke-RestMethod "http://localhost:18080/dsh/client/cart/items" -Method Post -Headers $clientHeaders -ContentType "application/json" -Body $cartBody -TimeoutSec 10
   if ([string]::IsNullOrWhiteSpace($cartItem.cartId)) { throw "cart item did not return cartId" }
   $checkoutBody = @{
     cartId = $cartItem.cartId
@@ -54,10 +57,10 @@ if ($WltEnabled) {
     deliveryAddress = "runtime smoke checkout address"
     note = "runtime Checkout & WLT Handoff smoke"
   } | ConvertTo-Json
-  $checkout = Invoke-RestMethod "http://localhost:58080/dsh/client/checkout-intents" -Method Post -Headers $clientHeaders -ContentType "application/json" -Body $checkoutBody -TimeoutSec 10
+  $checkout = Invoke-RestMethod "http://localhost:18080/dsh/client/checkout-intents" -Method Post -Headers $clientHeaders -ContentType "application/json" -Body $checkoutBody -TimeoutSec 10
   Write-Host "  /dsh/client/checkout-intents: $($checkout.intent.id) / WLT=$($checkout.intent.wltPaymentSessionId)"
   if ([string]::IsNullOrWhiteSpace($checkout.intent.wltPaymentSessionId)) { throw "checkout intent missing WLT payment session reference" }
-  $operatorCheckout = Invoke-RestMethod "http://localhost:58080/dsh/operator/checkout-intents" -Headers $operatorHeaders -TimeoutSec 10
+  $operatorCheckout = Invoke-RestMethod "http://localhost:18080/dsh/operator/checkout-intents" -Headers $operatorHeaders -TimeoutSec 10
   if ($operatorCheckout.intents.Count -lt 1) { throw "operator checkout intent list returned no rows" }
 } else {
   Write-Host "  Checkout & WLT Handoff checkout handoff smoke skipped because wlt profile is not active."
@@ -87,7 +90,7 @@ foreach ($actor in $scopedActors) {
   $token = [string]$actor.token
   $headers = @{ Authorization = "Bearer $token" }
   $storeId = [Uri]::EscapeDataString([string]$actor.storeId)
-  $context = Invoke-RestMethod "http://localhost:58080/dsh/store-context?storeId=$storeId" -Headers $headers -TimeoutSec 10
+  $context = Invoke-RestMethod "http://localhost:18080/dsh/store-context?storeId=$storeId" -Headers $headers -TimeoutSec 10
   if ($context.actorRole -ne $actor.expectedRole) { throw "wrong actor role for $($actor.label)" }
   if ([string]$context.store.id -ne [string]$actor.storeId) { throw "wrong scoped store for $($actor.label)" }
 }
@@ -95,7 +98,7 @@ foreach ($actor in $scopedActors) {
 # Home banners/promos are local seed-media projections; categories/filters/store
 # discovery are DSH core. Prove both sides explicitly rather than treating a
 # missing optional overlay as a core failure.
-$homeDisc = Invoke-RestMethod "http://localhost:58080/dsh/home-discovery?limit=50" -TimeoutSec 10 -ErrorAction Stop
+$homeDisc = Invoke-RestMethod "http://localhost:18080/dsh/home-discovery?limit=50" -TimeoutSec 10 -ErrorAction Stop
 $bannerCount    = if ($homeDisc.banners)    { $homeDisc.banners.Count }    else { 0 }
 $promoCount     = if ($homeDisc.promos)     { $homeDisc.promos.Count }     else { 0 }
 $categoryCount  = if ($homeDisc.categories) { $homeDisc.categories.Count } else { 0 }
@@ -119,13 +122,13 @@ foreach ($homeStore in $homeStores) {
   if ([string]::IsNullOrWhiteSpace($storeId)) { throw "/dsh/home-discovery returned a store without id" }
 
   $encodedStoreId = [uri]::EscapeDataString($storeId)
-  $detail = Invoke-RestMethod "http://localhost:58080/dsh/stores/$encodedStoreId" -TimeoutSec 10 -ErrorAction Stop
+  $detail = Invoke-RestMethod "http://localhost:18080/dsh/stores/$encodedStoreId" -TimeoutSec 10 -ErrorAction Stop
   if ($null -eq $detail.store) { throw "/dsh/stores/$storeId response is missing store" }
   if ([string]$detail.store.id -ne $storeId) {
     throw "/dsh/stores/$storeId returned mismatched store id: $($detail.store.id)"
   }
 
-  $catalog = Invoke-RestMethod "http://localhost:58080/dsh/stores/$encodedStoreId/catalog" -TimeoutSec 15 -ErrorAction Stop
+  $catalog = Invoke-RestMethod "http://localhost:18080/dsh/stores/$encodedStoreId/catalog" -TimeoutSec 15 -ErrorAction Stop
   $productCount = if ($catalog.products) { @($catalog.products).Count } else { 0 }
   if ($MediaEnabled -and $productCount -eq 0) { throw "/dsh/stores/$storeId/catalog returned no client-visible products" }
   Write-Host "  storefront=$storeId detail=PASS catalogProducts=$productCount media=$MediaEnabled"

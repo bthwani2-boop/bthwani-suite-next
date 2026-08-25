@@ -39,8 +39,8 @@ export function resolveDshApiBaseUrl(): string {
   if (!url) {
     url =
       isReactNative() && !isDshDeviceLoopbackBridgeEnabled()
-        ? "http://10.0.2.2:58080"
-        : "http://127.0.0.1:58080";
+        ? "http://10.0.2.2:18080"
+        : "http://127.0.0.1:18080";
   }
   return url;
 }

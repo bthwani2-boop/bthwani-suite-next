@@ -11,7 +11,7 @@ x-bthwani-contracts:
   rbacAdmin: ./identity.rbac-admin.openapi.yaml
   supportSessions: ./identity.support-sessions.openapi.yaml
 servers:
-  - url: http://localhost:58082
+  - url: http://localhost:18082
     description: Local identity runtime
 paths:
   /identity/health:

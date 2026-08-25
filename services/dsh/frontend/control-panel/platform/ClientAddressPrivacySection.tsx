@@ -97,7 +97,7 @@ export function ClientAddressPrivacySection({
       <CpStatePanel
         role="status"
         title="صلاحية قراءة خصوصية العناوين مطلوبة"
-        description="لن يطلب هذا القسم سياسة الخصوصية قبل تحقق صلاحية platform.read."
+		description="لن يطلب هذا القسم سياسة الخصوصية قبل تحقق صلاحية platform:read."
         code="DSH_PLATFORM_READ_REQUIRED"
       />
     );

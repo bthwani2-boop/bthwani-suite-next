@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	DshPlatformPermissionRead                       = "platform.read"
+	DshPlatformPermissionRead                       = "platform:read"
 	DshPlatformPermissionManage                     = "platform.manage"
 	DshServiceZonesPermissionRead                   = "dsh.service_zones.read"
 	DshServiceZonesPermissionManage                 = "dsh.service_zones.manage"

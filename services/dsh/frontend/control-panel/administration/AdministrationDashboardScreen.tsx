@@ -1,14 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import type { CpBadgeTone } from "@bthwani/control-panel/components";
 import {
-  CpBadge,
-  CpButton,
   CpKpiCard,
   CpKpiStrip,
-  CpMutedInline,
   CpPageHeader,
   CpStatePanel,
   CpStateView,
@@ -21,13 +16,15 @@ import { OverviewPageFrame } from "@bthwani/control-panel/shell";
 import {
   ADMIN_MAIN_TABS,
   ADMINISTRATION_TRUTH_NOTICE,
-  administrationStatusLabel,
   useAdministrationRolesController,
   useStaffController,
   useAdminAuditController,
   type AdminMainTabId,
   type DshAdminState,
+  type DshRolePermission,
 } from "../../shared/administration";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 
 type CountableState = DshAdminState<readonly unknown[]>;
 
@@ -41,33 +38,30 @@ function statePanel(state: CountableState, loadingTitle: string) {
   return null;
 }
 
-function statusTone(status: string): CpBadgeTone {
-  switch (status) {
-    case "active":
-    case "approved":
-    case "partner_active":
-    case "ops_approved":
-      return "success";
-    case "pending":
-    case "submitted":
-      return "warning";
-    case "rejected":
-    case "suspended":
-    case "blocked":
-      return "danger";
-    default:
-      return "neutral";
-  }
+function permissionLabel(permission: DshRolePermission): string {
+  return permission;
 }
 
-const MAIN_TAB_ITEMS = ADMIN_MAIN_TABS.map((tab) => ({ value: tab.id, label: tab.label }));
-
 export function AdministrationDashboardScreen() {
-  const router = useRouter();
   const [tab, setTab] = useState<AdminMainTabId>("overview");
-  const roles = useAdministrationRolesController("authenticated");
-  const staff = useStaffController("authenticated");
-  const audit = useAdminAuditController("authenticated");
+  const { state: sessionState } = useIdentitySession();
+  const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
+  const canReadRoles = hasServiceControlPanelPermission(identity, "dsh", "administration.role.read");
+  const canReadStaff = hasServiceControlPanelPermission(identity, "dsh", "administration.staff.read");
+  const canReadAudit = hasServiceControlPanelPermission(identity, "dsh", "administration.audit.read");
+  const canReview = hasServiceControlPanelPermission(identity, "dsh", "administration.role.approve")
+    || hasServiceControlPanelPermission(identity, "dsh", "administration.staff.approve")
+    || hasServiceControlPanelPermission(identity, "dsh", "administration.rollback.approve");
+  const roles = useAdministrationRolesController("authenticated", canReadRoles);
+  const staff = useStaffController("authenticated", canReadStaff);
+  const audit = useAdminAuditController("authenticated", canReadAudit);
+  const mainTabItems = ADMIN_MAIN_TABS
+    .filter((item) => item.id === "overview"
+      || (item.id === "roles-permissions" && canReadRoles)
+      || (item.id === "users" && canReadStaff)
+      || (item.id === "approval-chain" && canReview)
+      || (item.id === "audit" && canReadAudit))
+    .map((item) => ({ value: item.id, label: item.label }));
 
   const renderOverview = () => (
     <>
@@ -82,11 +76,11 @@ export function AdministrationDashboardScreen() {
       />
       <section aria-label="حالة القراءة التشغيلية">
         <h2>حالة القراءة التشغيلية</h2>
-        {statePanel(roles.state, "جارٍ تحميل الأدوار…")}
+        {statePanel(roles.state, "جارٍ تحميل الأدوار من Identity…")}
         {statePanel(staff.state, "جارٍ تحميل إسنادات الأدوار…")}
         {statePanel(audit.state, "جارٍ تحميل سجل التدقيق…")}
         {roles.state.kind === "success" && staff.state.kind === "success" && audit.state.kind === "success" ? (
-          <CpStatePanel role="status" title="تم تحميل الحقيقة الإدارية من DSH." />
+          <CpStatePanel role="status" title="تم تحميل تعريفات الأدوار من Identity وسجل الحوكمة من DSH." />
         ) : null}
       </section>
     </>
@@ -94,20 +88,18 @@ export function AdministrationDashboardScreen() {
 
   const renderRoles = () => (
     <>
-      {statePanel(roles.state, "جارٍ تحميل الأدوار…")}
+      {statePanel(roles.state, "جارٍ تحميل الأدوار من Identity…")}
       {roles.state.kind === "success" && roles.state.data.length === 0 ? (
-        <CpStatePanel role="status" title="لا توجد أدوار معرفة في DSH." />
+        <CpStatePanel role="status" title="لا توجد أدوار معرفة في Identity." />
       ) : null}
       {roles.state.kind === "success" ? (
-        <CpTable aria-label="الأدوار والصلاحيات">
+        <CpTable aria-label="تعريفات الأدوار والصلاحيات في Identity">
           <thead>
             <tr>
               <CpTableHeaderCell>الدور</CpTableHeaderCell>
               <CpTableHeaderCell>الوصف</CpTableHeaderCell>
-              <CpTableHeaderCell>الصلاحيات</CpTableHeaderCell>
-              <CpTableHeaderCell>الأسطح</CpTableHeaderCell>
-              <CpTableHeaderCell>الحالة/النسخة</CpTableHeaderCell>
-              <CpTableHeaderCell>تاريخ الإنشاء</CpTableHeaderCell>
+              <CpTableHeaderCell>الصلاحيات الفعلية</CpTableHeaderCell>
+              <CpTableHeaderCell>الحالة / النسخة</CpTableHeaderCell>
             </tr>
           </thead>
           <tbody>
@@ -115,13 +107,12 @@ export function AdministrationDashboardScreen() {
               <tr key={role.id}>
                 <CpTableCell>{role.name}</CpTableCell>
                 <CpTableCell>{role.description || "—"}</CpTableCell>
-                <CpTableCell>{role.permissions.length > 0 ? role.permissions.join("، ") : "لا توجد صلاحيات مرتبطة"}</CpTableCell>
-                <CpTableCell>{role.surfaces.length > 0 ? role.surfaces.join("، ") : "—"}</CpTableCell>
                 <CpTableCell>
-                  <CpBadge tone={role.active ? "success" : "neutral"}>{role.active ? "فعال" : "غير فعال"}</CpBadge>{" "}
-                  <CpMutedInline tight>v{role.version}</CpMutedInline>
+                  {role.permissions.length > 0
+                    ? role.permissions.map(permissionLabel).join("، ")
+                    : "لا توجد صلاحيات مرتبطة"}
                 </CpTableCell>
-                <CpTableCell>{role.createdAt}</CpTableCell>
+                <CpTableCell>{role.active ? "نشط" : "غير فعال"} / v{role.version}</CpTableCell>
               </tr>
             ))}
           </tbody>
@@ -144,17 +135,17 @@ export function AdministrationDashboardScreen() {
               <tr>
                 <CpTableHeaderCell>الموظف</CpTableHeaderCell>
                 <CpTableHeaderCell>الدور</CpTableHeaderCell>
-                <CpTableHeaderCell>المعتمد</CpTableHeaderCell>
-                <CpTableHeaderCell>وقت الاعتماد</CpTableHeaderCell>
+                <CpTableHeaderCell>معرّف الممثل</CpTableHeaderCell>
+                <CpTableHeaderCell>أول منح</CpTableHeaderCell>
               </tr>
             </thead>
             <tbody>
               {staff.state.data.map((member) => (
                 <tr key={member.id}>
+                  <CpTableCell>{member.username || member.actorId}</CpTableCell>
+                  <CpTableCell>{member.roles.join("، ")}</CpTableCell>
                   <CpTableCell>{member.actorId}</CpTableCell>
-                  <CpTableCell>{member.roleName}</CpTableCell>
-                  <CpTableCell>{member.assignedBy || "—"}</CpTableCell>
-                  <CpTableCell>{member.assignedAt}</CpTableCell>
+                  <CpTableCell>{member.createdAt}</CpTableCell>
                 </tr>
               ))}
             </tbody>
@@ -168,7 +159,7 @@ export function AdministrationDashboardScreen() {
     <CpStatePanel
       role="status"
       title="جميع طفرات إسناد الأدوار تمر عبر Maker / Checker"
-      description="أنشئ الطلب وراجعه من الطابور الحاكم أدناه. لا توجد مسارات Runtime مباشرة لإسناد الدور أو إنشاء حقائق موازية."
+      description="أنشئ الطلب وراجعه من الطابور الحاكم أدناه. Identity هي سلطة تعريف الأدوار والإسنادات، وDSH يحتفظ بسجل طلبات ومراجعات الحوكمة فقط."
     />
   );
 
@@ -219,7 +210,7 @@ export function AdministrationDashboardScreen() {
     <OverviewPageFrame
       dir="rtl"
       header={<CpPageHeader title="الإدارة والصلاحيات" />}
-      toolbar={<CpTabs items={MAIN_TAB_ITEMS} value={tab} onChange={(value) => setTab(value as AdminMainTabId)} aria-label="أقسام الإدارة" />}
+      toolbar={<CpTabs items={mainTabItems} value={tab} onChange={(value) => setTab(value as AdminMainTabId)} aria-label="أقسام الإدارة" />}
     >
       {content}
     </OverviewPageFrame>

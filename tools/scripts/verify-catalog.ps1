@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 $mode = if ($RequireMedia) { "media-overlay" } else { "core" }
 Write-Host "=== verify-catalog mode=$mode ==="
 
-$ApiBase = "http://localhost:58080"
+$ApiBase = "http://localhost:18080"
 
 function Resolve-PublicMediaUrl {
     param([Parameter(Mandatory = $true)][string]$Value)

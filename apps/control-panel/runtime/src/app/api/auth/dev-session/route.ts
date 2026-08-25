@@ -9,7 +9,7 @@ import { isDevelopmentRuntime } from "../_lib/server-config";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const DEV_SESSION_BROKER_BASE_URL = "http://127.0.0.1:58100";
+const DEV_SESSION_BROKER_BASE_URL = "http://127.0.0.1:18100";
 const CONTROL_PANEL_DEV_FINGERPRINT = "control-panel-bff-dev";
 
 function unavailable(status: number, code: string): NextResponse {

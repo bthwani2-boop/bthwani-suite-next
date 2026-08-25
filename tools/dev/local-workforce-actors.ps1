@@ -44,9 +44,9 @@ function Get-ProvisionedWorkforceActorToken {
     [Parameter(Mandatory = $true)]
     [string]$OperatorToken,
 
-    [string]$WorkforceBaseUrl = "http://localhost:58086",
-    [string]$IdentityBaseUrl = "http://localhost:58082",
-    [string]$DshBaseUrl = "http://localhost:58080",
+    [string]$WorkforceBaseUrl = "http://localhost:18086",
+    [string]$IdentityBaseUrl = "http://localhost:18082",
+    [string]$DshBaseUrl = "http://localhost:18080",
     [string]$OperatorContextId = "local-dsh",
     [string]$DeviceFingerprint = "local-workforce-runtime",
     [string]$RegistryPath = $script:LocalWorkforceActorRegistryPath

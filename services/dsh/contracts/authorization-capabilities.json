@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "authority": "DSH_CONTROL_PANEL_AUTHORIZATION_CAPABILITIES",
+  "owner": "services/dsh",
+  "surface": "control-panel",
+  "description": "Canonical capability-to-permission binding for the DSH control-panel surface. Runtime consumers read this contract directly; verification may validate it but must not redefine capability semantics.",
+  "capabilities": [
+    {
+      "id": "platform-control",
+      "owner": "core/platform-control",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["platform:read"],
+      "healthRead": ["platform:health:read"],
+      "auditRead": ["platform:audit:read"]
+    },
+    {
+      "id": "dsh-platform-policy",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["platform:read"],
+      "manage": ["platform.manage"]
+    },
+    {
+      "id": "dsh-service-areas",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["dsh.service_zones.read"],
+      "manage": ["dsh.service_zones.manage"]
+    },
+    {
+      "id": "dsh-operational-profile",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": [
+        "dsh.service_zones.read",
+        "dsh.fulfillment_sla.read",
+        "dsh.dispatch_capacity.read"
+      ],
+      "manage": [
+        "dsh.fulfillment_sla.manage",
+        "dsh.dispatch_capacity.manage"
+      ]
+    },
+    {
+      "id": "dsh-operational-delivery-mode",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["dsh.fulfillment_sla.read"],
+      "manage": ["dsh.fulfillment_sla.manage"]
+    },
+    {
+      "id": "dsh-operational-sla",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["dsh.fulfillment_sla.read"],
+      "manage": ["dsh.fulfillment_sla.manage"]
+    },
+    {
+      "id": "dsh-operational-capacity",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["dsh.dispatch_capacity.read"],
+      "manage": ["dsh.dispatch_capacity.manage"]
+    },
+    {
+      "id": "dsh-operational-policy-evaluate",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["dsh.operational_policy.evaluate"]
+    },
+    {
+      "id": "dsh-operational-policy-audit",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["dsh.operational_policy.audit.read"]
+    },
+    {
+      "id": "dsh-operational-policy-rollback",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "manage": ["dsh.operational_policy.rollback"]
+    },
+    {
+      "id": "dsh-finance",
+      "owner": "services/dsh",
+      "service": "dsh",
+      "surface": "control-panel",
+      "read": ["finance.read"],
+      "manage": ["finance.manage"]
+    }
+  ]
+}

@@ -15,6 +15,8 @@ import {
   configureDshLocationAdapter,
   configureDshMapRenderer,
   configureDshMobileNotificationRuntime,
+  configureDshSecureRandomUuidProvider,
+  createDshExpoSecureRandomUuidProvider,
   configureDshVideoRenderer,
   createDshBrowserLocationAdapter,
   createDshExpoDocumentPickerAdapter,
@@ -28,6 +30,8 @@ import {
 import { VideoView, useVideoPlayer } from "expo-video";
 
 const platform = Platform.OS === "android" || Platform.OS === "ios" ? Platform.OS : "web";
+
+if (platform !== "web") configureDshSecureRandomUuidProvider(createDshExpoSecureRandomUuidProvider(Crypto));
 
 configureDshLocationAdapter(
   platform === "web" ? createDshBrowserLocationAdapter() : createDshExpoLocationAdapter(Location),

@@ -1,7 +1,6 @@
 import React from "react";
 import { Platform, StyleSheet, View } from "react-native";
 import * as SecureStore from "expo-secure-store";
-import * as Crypto from "expo-crypto";
 import {
   ClientOrderRatingGate,
   DshClientSurface,
@@ -10,6 +9,7 @@ import {
   type DshClientNavigation,
   type DshClientRoute,
 } from "@bthwani/dsh/app-client";
+import { secureRandomId } from "@bthwani/dsh/mobile-capabilities";
 import {
   configureIdentityDeviceFingerprintProvider,
   configureIdentitySession,
@@ -36,7 +36,7 @@ if (Platform.OS !== "web") {
         getItem: (key) => SecureStore.getItemAsync(key),
         setItem: (key, value) => SecureStore.setItemAsync(key, value),
       },
-      () => Crypto.randomUUID(),
+      secureRandomId,
     ),
   );
 }

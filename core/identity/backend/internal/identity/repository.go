@@ -14,7 +14,6 @@ import (
 	"math/big"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -42,8 +41,8 @@ var (
 
 // activationSurfaceByActorType is the single source for the authentication
 // surface of every activatable actor type. Issuance policy is deliberately
-// separate: client and partner may request public OTPs, while field and captain
-// must first be provisioned by Workforce and receive an actor-bound challenge.
+// separate: client may use public OTP; partner activation is DSH-governed;
+// field and captain must be provisioned by Workforce.
 var activationSurfaceByActorType = map[string]string{
 	"client":  "app-client",
 	"partner": "app-partner",
@@ -52,8 +51,7 @@ var activationSurfaceByActorType = map[string]string{
 }
 
 var publicOtpActorTypes = map[string]bool{
-	"client":  true,
-	"partner": true,
+	"client": true,
 }
 
 var workforceManagedActorTypes = map[string]bool{
@@ -97,110 +95,6 @@ func NewRepository(db *sql.DB) *Repository {
 		now:              time.Now,
 		activationSecret: []byte(secret),
 	}
-}
-
-func (r *Repository) BootstrapLocalActors(ctx context.Context, input LocalBootstrap) error {
-	if !input.Enabled {
-		return nil
-	}
-	if len(input.Password) < 6 {
-		return errors.New("IDENTITY_LOCAL_BOOTSTRAP_PASSWORD must contain at least 6 characters")
-	}
-	operatorContextID := strings.TrimSpace(input.OperatorContextID)
-	if operatorContextID == "" {
-		return errors.New("BTHWANI_OPERATOR_CONTEXT_ID is required when IDENTITY_LOCAL_BOOTSTRAP=true")
-	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(input.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-	actors := []struct {
-		id, username, role, surface, scope, phone string
-	}{
-		{"operator-local-001", "operator", "operator", "control-panel", "all", "+967770000000"},
-		{"partner-local-001", "bthwani", "partner", "app-partner", "own", "+967771111111"},
-		{"client-local-001", "client", "client", "app-client", "own", "+967772222222"},
-	}
-	// Field agents and captains are deliberately absent. Workforce owns provider
-	// actor creation and always provisions with a server-generated workforce code
-	// as the username, so an actor pre-seeded here under a friendly username would
-	// permanently conflict on the phone and could never be adopted. They are
-	// created at runtime by tools/dev/local-workforce-provisioning.mjs.
-	for _, actor := range actors {
-		actorPermissions := []Permission{
-			{Service: "dsh", Surface: actor.surface, Action: "store:read", Scope: actor.scope},
-			{Service: "dsh", Surface: actor.surface, Action: "store:write", Scope: actor.scope},
-		}
-		if actor.role == "operator" {
-			actorPermissions = localOperatorDevelopmentPermissions()
-		}
-		permissions, marshalErr := json.Marshal(actorPermissions)
-		if marshalErr != nil {
-			return marshalErr
-		}
-
-		// 1. Ensure the role exists in identity_roles
-		var roleID string
-		err = r.db.QueryRowContext(ctx, `
-			INSERT INTO identity_roles (name, description) VALUES ($1, $2)
-			ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description
-			RETURNING id`, actor.role, "Local Bootstrap Role").Scan(&roleID)
-		if err != nil {
-			return err
-		}
-
-		// 2. Upsert the actor
-		_, err = r.db.ExecContext(ctx, `
-			INSERT INTO identity_actors
-				(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'ACTIVE', 1, now())
-			ON CONFLICT (id) DO UPDATE SET
-				username = EXCLUDED.username,
-				password_hash = EXCLUDED.password_hash,
-				operator_context_id = EXCLUDED.operator_context_id,
-				phone_e164 = EXCLUDED.phone_e164,
-				roles = EXCLUDED.roles,
-				permissions = EXCLUDED.permissions,
-				status = 'ACTIVE',
-				version = identity_actors.version + 1,
-				updated_at = now()`,
-			actor.id, actor.username, string(hash), operatorContextID, actor.phone,
-			pq.Array([]string{actor.role}), string(permissions))
-		if err != nil {
-			return err
-		}
-
-		// 3. Link actor to role
-		_, err = r.db.ExecContext(ctx, `
-			INSERT INTO identity_actor_roles (actor_id, role_id, granted_by)
-			VALUES ($1, $2, 'system_bootstrap')
-			ON CONFLICT DO NOTHING`, actor.id, roleID)
-		if err != nil {
-			return err
-		}
-
-		// 4. Map permissions to the role
-		for _, p := range actorPermissions {
-			var permID string
-			err = r.db.QueryRowContext(ctx, `
-				INSERT INTO identity_permission_vocabulary (service, surface, action, description)
-				VALUES ($1, $2, $3, 'Local Bootstrap Permission')
-				ON CONFLICT (service, surface, action) DO UPDATE SET description = EXCLUDED.description
-				RETURNING id`, p.Service, p.Surface, p.Action).Scan(&permID)
-			if err != nil {
-				return err
-			}
-
-			_, err = r.db.ExecContext(ctx, `
-				INSERT INTO identity_role_permissions (role_id, permission_id, scope)
-				VALUES ($1, $2, $3)
-				ON CONFLICT (role_id, permission_id) DO UPDATE SET scope = EXCLUDED.scope`, roleID, permID, p.Scope)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
 }
 
 func NormalizePhoneE164(raw string) (string, error) {
@@ -474,43 +368,19 @@ func actorCanAccessSurface(actor Actor, surface string) bool {
 }
 
 func resolvePasswordLoginSurface(actor Actor) (string, error) {
-	roleSurface := map[string]string{
-		"client":  "app-client",
-		"partner": "app-partner",
-		"field":   "app-field",
-		"captain": "app-captain",
-	}
 	candidates := map[string]struct{}{}
 
 	for _, role := range actor.Roles {
-		if surface, ok := roleSurface[role]; ok {
-			if actorCanAccessSurface(actor, surface) {
-				candidates[surface] = struct{}{}
-			}
-			continue
+		if surface, ok := activationSurfaceFor(strings.TrimSpace(role)); ok {
+			candidates[surface] = struct{}{}
 		}
-		if actorCanAccessSurface(actor, "control-panel") {
-			candidates["control-panel"] = struct{}{}
-		}
+	}
+	if actorCanAccessSurface(actor, "control-panel") {
+		candidates["control-panel"] = struct{}{}
 	}
 
 	if len(candidates) == 1 {
 		for surface := range candidates {
-			return surface, nil
-		}
-	}
-	if len(candidates) > 1 {
-		return "", ErrForbidden
-	}
-
-	permissionSurfaces := map[string]struct{}{}
-	for _, permission := range actor.Permissions {
-		if strings.TrimSpace(permission.Surface) != "" {
-			permissionSurfaces[permission.Surface] = struct{}{}
-		}
-	}
-	if len(permissionSurfaces) == 1 {
-		for surface := range permissionSurfaces {
 			return surface, nil
 		}
 	}
@@ -786,9 +656,11 @@ func actorByIDTx(ctx context.Context, tx *sql.Tx, actorID string) (Actor, error)
 
 func toIdentity(actor Actor, sessionID string, sessionSurface string, expiresAt time.Time) ActorIdentity {
 	surfaces := map[string]bool{}
+	if surface := strings.TrimSpace(sessionSurface); surface != "" {
+		surfaces[surface] = true
+	}
 	services := map[string]bool{}
 	for _, permission := range actor.Permissions {
-		surfaces[permission.Surface] = true
 		services[permission.Service] = true
 	}
 	return ActorIdentity{
@@ -848,160 +720,16 @@ func maskPhone(phone string) string {
 	return phone[:4] + strings.Repeat("*", len(phone)-6) + phone[len(phone)-2:]
 }
 
-// ProvisionActor creates an inactive actor for a Workforce-managed provider.
-// It is intentionally limited to field and captain roles and requires the
-// trusted scope supplied by the authenticated Workforce service boundary.
-func (r *Repository) ProvisionActor(ctx context.Context, input ProvisionActorInput) (ActorAdminView, error) {
-	role := strings.TrimSpace(input.Role)
-	surface, ok := workforceActivationSurfaceFor(role)
-	if !ok {
-		return ActorAdminView{}, ErrInvalidActivation
-	}
-	username := strings.TrimSpace(input.Username)
-	if username == "" {
-		return ActorAdminView{}, ErrInvalidActivation
-	}
-	operatorContextID := strings.TrimSpace(input.OperatorContextID)
-	if operatorContextID == "" {
-		return ActorAdminView{}, ErrInvalidActivation
-	}
-	phone, err := NormalizePhoneE164(input.PhoneE164)
-	if err != nil {
-		return ActorAdminView{}, err
-	}
-
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return ActorAdminView{}, err
-	}
-	defer tx.Rollback()
-
-	existing, err := actorByPhoneAnyRoleTx(ctx, tx, phone)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return ActorAdminView{}, err
-	}
-	if err == nil && strings.TrimSpace(existing.OperatorContextID) != operatorContextID {
-		return ActorAdminView{}, ErrForbidden
-	}
-	if err == nil {
-		if hasRole(existing.Roles, role) {
-			if err := tx.Commit(); err != nil {
-				return ActorAdminView{}, err
-			}
-			return toAdminView(existing), nil
-		}
-		permissionsJSON, err := providerPermissions(surface)
-		if err != nil {
-			return ActorAdminView{}, err
-		}
-		_, err = tx.ExecContext(ctx, `
-			UPDATE identity_actors
-			SET roles = array_append(roles, $2),
-			    permissions = permissions || $3::jsonb,
-			    updated_at = now()
-			WHERE id = $1 AND NOT ($2 = ANY(roles))`,
-			existing.ID, role, string(permissionsJSON))
-		if err != nil {
-			return ActorAdminView{}, err
-		}
-		if err := tx.Commit(); err != nil {
-			return ActorAdminView{}, err
-		}
-		return r.ActorAdminByID(ctx, existing.ID)
-	}
-
-	suffix, err := randomToken(9)
-	if err != nil {
-		return ActorAdminView{}, err
-	}
-	actorID := role + "-" + suffix
-	permissions, err := providerPermissions(surface)
-	if err != nil {
-		return ActorAdminView{}, err
-	}
-	_, err = tx.ExecContext(ctx, `
-		INSERT INTO identity_actors
-			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
-		VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, 'PROVISIONED', 1, now())`,
-		actorID, username, operatorContextID, phone, pq.Array([]string{role}), string(permissions))
-	if err != nil {
-		return ActorAdminView{}, mapUniqueViolation(err)
-	}
-	if err := tx.Commit(); err != nil {
-		return ActorAdminView{}, err
-	}
-	return ActorAdminView{
-		ActorID: actorID, Username: username, PhoneE164: phone,
-		Roles: []string{role}, Status: ActorStatusProvisioned, Version: 1,
-	}, nil
-}
-
 func providerPermissions(surface string) ([]byte, error) {
+	if surface != "app-field" && surface != "app-captain" {
+		return nil, ErrInvalidActivation
+	}
 	return json.Marshal([]Permission{
 		{Service: "dsh", Surface: surface, Action: "store:read", Scope: "assigned"},
 		{Service: "dsh", Surface: surface, Action: "store:write", Scope: "assigned"},
 		{Service: "workforce", Surface: surface, Action: "provider:read", Scope: "own"},
 		{Service: "workforce", Surface: surface, Action: "provider:update", Scope: "own"},
 	})
-}
-
-// ActorAdminByID returns the internal projection of an actor, including the
-// sovereign phone number, for service-to-service consumers.
-func (r *Repository) SearchActors(ctx context.Context, role, q string, limit int) ([]ActorAdminView, error) {
-	if limit <= 0 || limit > 100 {
-		limit = 25
-	}
-	clauses := []string{"status = 'ACTIVE'"}
-	args := []any{}
-	if role != "" {
-		args = append(args, role)
-		clauses = append(clauses, fmt.Sprintf("$%d = ANY(roles)", len(args)))
-	}
-	if q != "" {
-		args = append(args, "%"+q+"%")
-		clauses = append(clauses, fmt.Sprintf("(username ILIKE $%d OR COALESCE(phone_e164, '') ILIKE $%d)", len(args), len(args)))
-	}
-	args = append(args, limit)
-	query := `
-		SELECT id, username, COALESCE(phone_e164, ''), roles, status, version
-		FROM identity_actors
-		WHERE ` + strings.Join(clauses, " AND ") + `
-		ORDER BY username
-		LIMIT $` + strconv.Itoa(len(args))
-	rows, err := r.db.QueryContext(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	views := []ActorAdminView{}
-	for rows.Next() {
-		var actor Actor
-		var roles pq.StringArray
-		if err := rows.Scan(&actor.ID, &actor.Username, &actor.PhoneE164, &roles, &actor.Status, &actor.Version); err != nil {
-			return nil, err
-		}
-		actor.Roles = []string(roles)
-		views = append(views, toAdminView(actor))
-	}
-	return views, rows.Err()
-}
-
-func (r *Repository) ActorAdminByID(ctx context.Context, actorID string) (ActorAdminView, error) {
-	var actor Actor
-	var roles pq.StringArray
-	err := r.db.QueryRowContext(ctx, `
-		SELECT id, username, COALESCE(phone_e164, ''), roles, status, version
-		FROM identity_actors WHERE id = $1`, actorID).Scan(
-		&actor.ID, &actor.Username, &actor.PhoneE164, &roles, &actor.Status, &actor.Version,
-	)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return ActorAdminView{}, ErrActorNotFound
-		}
-		return ActorAdminView{}, err
-	}
-	actor.Roles = []string(roles)
-	return toAdminView(actor), nil
 }
 
 // SuspendActor suspends authentication for an actor in one transaction.
@@ -1278,22 +1006,6 @@ func mapUniqueViolation(err error) error {
 		}
 	}
 	return err
-}
-
-func publicActorPermissions(role, surface string) ([]byte, error) {
-	switch role {
-	case "client":
-		return json.Marshal([]Permission{
-			{Service: "dsh", Surface: surface, Action: "store:read", Scope: "all"},
-		})
-	case "partner":
-		return json.Marshal([]Permission{
-			{Service: "dsh", Surface: surface, Action: "store:read", Scope: "own"},
-			{Service: "dsh", Surface: surface, Action: "store:write", Scope: "own"},
-		})
-	default:
-		return nil, ErrInvalidActivation
-	}
 }
 
 func (r *Repository) ListSessions(ctx context.Context, actorID string) ([]SessionInfo, error) {

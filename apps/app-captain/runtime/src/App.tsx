@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Platform, StyleSheet, Text, View } from "react-native";
 import * as SecureStore from "expo-secure-store";
-import * as Crypto from "expo-crypto";
 import {
   configureIdentityDeviceFingerprintProvider,
   configureIdentitySession,
@@ -20,6 +19,7 @@ import {
   type DshCaptainNavigation,
   type DshCaptainNavigationRoute,
 } from "@bthwani/dsh/app-captain";
+import { secureRandomId } from "@bthwani/dsh/mobile-capabilities";
 import { Button, colorRoles } from "@bthwani/ui-kit";
 
 import { getOrCreateCaptainDeviceFingerprint } from "./config/captain-device-fingerprint";
@@ -37,7 +37,7 @@ if (Platform.OS !== "web") {
         getItem: (key) => SecureStore.getItemAsync(key),
         setItem: (key, value) => SecureStore.setItemAsync(key, value),
       },
-      () => Crypto.randomUUID(),
+      secureRandomId,
     ),
   );
 }

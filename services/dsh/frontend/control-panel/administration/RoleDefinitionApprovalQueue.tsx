@@ -14,40 +14,31 @@ import {
 } from "@bthwani/control-panel/components";
 import { QueuePageFrame } from "@bthwani/control-panel/shell";
 import {
+  useAdministrationPermissionVocabularyController,
   useRoleDefinitionApprovalController,
-  type DshAdministrationSurface,
 } from "../../shared/administration";
-
-const AVAILABLE_PERMISSIONS = [
-  "administration.read",
-  "administration.role.request",
-  "administration.role.approve",
-  "administration.staff.request",
-  "administration.staff.approve",
-  "administration.audit.read",
-  "administration.diagnostics.read",
-  "administration.rollback.request",
-  "administration.rollback.approve",
-] as const;
-
-const AVAILABLE_SURFACES: readonly DshAdministrationSurface[] = [
-  "control-panel",
-  "app-client",
-  "app-partner",
-  "app-captain",
-  "app-field",
-  "webapp",
-  "website",
-];
+import { administrationExecutionStatusLabel } from "../../shared/administration/administration-registry";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 
 export function RoleDefinitionApprovalQueue() {
-  const roleRequests = useRoleDefinitionApprovalController("authenticated", "pending");
+  const { state: sessionState } = useIdentitySession();
+  const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
+  const canRequest = hasServiceControlPanelPermission(identity, "dsh", "administration.role.request");
+  const canReview = hasServiceControlPanelPermission(identity, "dsh", "administration.role.approve");
+  const roleRequests = useRoleDefinitionApprovalController("authenticated", "pending", canReview);
+  const vocabulary = useAdministrationPermissionVocabularyController("authenticated", canRequest);
+  const availablePermissions = vocabulary.state.kind === "success"
+    ? vocabulary.state.data.map((entry) => entry.action)
+    : [];
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [reason, setReason] = useState("");
-  const [permissions, setPermissions] = useState<readonly string[]>(["administration.read"]);
-  const [surfaces, setSurfaces] = useState<readonly DshAdministrationSurface[]>(["control-panel"]);
+  const [active, setActive] = useState(true);
+  const [permissions, setPermissions] = useState<readonly string[]>([]);
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [replacementReasonCodes, setReplacementReasonCodes] = useState<Record<string, string>>({});
+  const [replacementReasons, setReplacementReasons] = useState<Record<string, string>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -55,13 +46,6 @@ export function RoleDefinitionApprovalQueue() {
     setPermissions((current) => current.includes(permission)
       ? current.filter((item) => item !== permission)
       : [...current, permission]);
-  };
-
-  const toggleSurface = (surface: DshAdministrationSurface) => {
-    if (surface === "control-panel") return;
-    setSurfaces((current) => current.includes(surface)
-      ? current.filter((item) => item !== surface)
-      : [...current, surface]);
   };
 
   const requestRole = async () => {
@@ -72,15 +56,15 @@ export function RoleDefinitionApprovalQueue() {
       await roleRequests.request({
         name: name.trim(),
         description: description.trim(),
+        active,
         permissions,
-        surfaces,
         reason: reason.trim(),
       });
       setName("");
       setDescription("");
       setReason("");
-      setPermissions(["administration.read"]);
-      setSurfaces(["control-panel"]);
+      setActive(true);
+      setPermissions([]);
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "تعذر إنشاء طلب تعريف الدور.");
     } finally {
@@ -101,6 +85,24 @@ export function RoleDefinitionApprovalQueue() {
     }
   };
 
+  const replaceTerminalFailure = async (requestId: string, version: number) => {
+    if (submitting) return;
+    setSubmitting(true);
+    setActionError(null);
+    try {
+      await roleRequests.replaceTerminalFailure(
+        requestId,
+        version,
+        (replacementReasonCodes[requestId] ?? "").trim(),
+        (replacementReasons[requestId] ?? "").trim(),
+      );
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "تعذر استبدال تعريف الدور ذي الفشل النهائي.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <QueuePageFrame
       dir="rtl"
@@ -111,7 +113,10 @@ export function RoleDefinitionApprovalQueue() {
           : undefined
       }
     >
-      <section aria-label="طلب تعريف دور جديد">
+      {!canRequest && !canReview ? (
+        <CpStatePanel role="alert" title="صلاحية إدارة تعريفات الأدوار مطلوبة" description="لا يتم تحميل أو إرسال أي طلب قبل تحقق الصلاحية الدقيقة." />
+      ) : null}
+      {canRequest ? <section aria-label="طلب تعريف دور جديد">
         <strong>طلب تعريف دور جديد</strong>
         <CpTextInput
           value={name}
@@ -131,9 +136,16 @@ export function RoleDefinitionApprovalQueue() {
           placeholder="سبب إنشاء الدور"
           aria-label="سبب إنشاء الدور"
         />
+        <CpButton
+          variant={active ? "brand" : "secondary"}
+          onClick={() => setActive((value) => !value)}
+          aria-pressed={active}
+        >
+          الدور فعال
+        </CpButton>
         <strong>صلاحيات العمليات</strong>
         <div role="group" aria-label="صلاحيات الدور">
-          {AVAILABLE_PERMISSIONS.map((permission) => (
+          {availablePermissions.map((permission) => (
             <CpButton
               key={permission}
               variant={permissions.includes(permission) ? "brand" : "secondary"}
@@ -144,24 +156,10 @@ export function RoleDefinitionApprovalQueue() {
             </CpButton>
           ))}
         </div>
-        <strong>الأسطح المتأثرة</strong>
-        <div role="group" aria-label="أسطح الدور">
-          {AVAILABLE_SURFACES.map((surface) => (
-            <CpButton
-              key={surface}
-              variant={surfaces.includes(surface) ? "brand" : "secondary"}
-              onClick={() => toggleSurface(surface)}
-              aria-pressed={surfaces.includes(surface)}
-              disabled={surface === "control-panel"}
-            >
-              {surface}
-            </CpButton>
-          ))}
-        </div>
         <CpStatePanel
           role="status"
           title="لوحة التحكم سطح إلزامي"
-          description="تحديد التطبيقات الأخرى يوثق أثر الدور، ولا يمنح مسار إدارة داخل تلك التطبيقات."
+          description="تُختار الصلاحيات من قاموس Identity المعياري، ولوحة التحكم هي سطح الإدارة الوحيد لهذا الدور."
         />
         <CpButton
           variant="primary"
@@ -170,15 +168,15 @@ export function RoleDefinitionApprovalQueue() {
         >
           إرسال تعريف الدور للمراجعة
         </CpButton>
-      </section>
+      </section> : null}
 
       {actionError ? <CpStateView kind="error" title={actionError} /> : null}
 
-      {roleRequests.state.kind === "success" && roleRequests.state.data.length === 0 ? (
+      {canReview && roleRequests.state.kind === "success" && roleRequests.state.data.length === 0 ? (
         <CpStatePanel role="status" title="لا توجد طلبات تعريف أدوار معلقة." />
       ) : null}
 
-      {roleRequests.state.kind === "success" && roleRequests.state.data.length > 0 ? (
+      {canReview && roleRequests.state.kind === "success" && roleRequests.state.data.length > 0 ? (
         <CpTable aria-label="طلبات تعريف الأدوار المعلقة">
           <thead>
             <tr>
@@ -187,22 +185,27 @@ export function RoleDefinitionApprovalQueue() {
               <CpTableHeaderCell>الصلاحيات</CpTableHeaderCell>
               <CpTableHeaderCell>الأسطح</CpTableHeaderCell>
               <CpTableHeaderCell>المنشئ / السبب</CpTableHeaderCell>
+              <CpTableHeaderCell>حالة التنفيذ المعياري</CpTableHeaderCell>
               <CpTableHeaderCell>ملاحظة المراجع</CpTableHeaderCell>
               <CpTableHeaderCell>الإجراءات</CpTableHeaderCell>
             </tr>
           </thead>
           <tbody>
-            {roleRequests.state.data.map((request) => (
-              <tr key={request.id}>
+            {roleRequests.state.data.map((request) => {
+              const reviewable = request.status === "pending" && request.executionStatus !== "failed_terminal";
+              const replacementCode = replacementReasonCodes[request.id] ?? "";
+              const replacementReason = replacementReasons[request.id] ?? "";
+              return <tr key={request.id}>
                 <CpTableCell>{request.roleName}</CpTableCell>
-                <CpTableCell>{request.description || "بلا وصف"}</CpTableCell>
-                <CpTableCell>{request.permissions.join("، ")}</CpTableCell>
-                <CpTableCell>{request.surfaces.join("، ")}</CpTableCell>
+              <CpTableCell>{request.description || "بلا وصف"}</CpTableCell>
+              <CpTableCell>{request.permissions.join("، ")}</CpTableCell>
+              <CpTableCell>control-panel</CpTableCell>
                 <CpTableCell>
                   {request.requestedBy}
                   <br />
                   <CpMutedInline tight>{request.reason}</CpMutedInline>
                 </CpTableCell>
+                <CpTableCell>{administrationExecutionStatusLabel(request.executionStatus)}</CpTableCell>
                 <CpTableCell>
                   <CpTextInput
                     value={reviewNotes[request.id] ?? ""}
@@ -212,19 +215,40 @@ export function RoleDefinitionApprovalQueue() {
                   />
                 </CpTableCell>
                 <CpTableCell>
-                  <CpButton variant="brand" disabled={submitting} onClick={() => void review(request.id, request.version, "approved")}>
+                  <CpButton variant="brand" disabled={submitting || !reviewable} onClick={() => void review(request.id, request.version, "approved")}>
                     اعتماد تعريف الدور
                   </CpButton>{" "}
                   <CpButton
                     variant="danger"
-                    disabled={submitting || (reviewNotes[request.id] ?? "").trim().length < 5}
+                    disabled={submitting || !reviewable || (reviewNotes[request.id] ?? "").trim().length < 5}
                     onClick={() => void review(request.id, request.version, "rejected")}
                   >
                     رفض التعريف
                   </CpButton>
+                  {request.executionStatus === "failed_terminal" && canRequest ? <>
+                    <CpTextInput
+                      value={replacementCode}
+                      onChange={(value) => setReplacementReasonCodes((current) => ({ ...current, [request.id]: value }))}
+                      placeholder="رمز السبب مثل permission_vocabulary_changed"
+                      aria-label={`رمز سبب استبدال ${request.roleName}`}
+                    />
+                    <CpTextInput
+                      value={replacementReason}
+                      onChange={(value) => setReplacementReasons((current) => ({ ...current, [request.id]: value }))}
+                      placeholder="سبب الطلب البديل — خمسة أحرف على الأقل"
+                      aria-label={`سبب الطلب البديل ${request.roleName}`}
+                    />
+                    <CpButton
+                      variant="primary"
+                      disabled={submitting || !/^[a-z][a-z0-9_]{2,63}$/.test(replacementCode.trim()) || replacementReason.trim().length < 5}
+                      onClick={() => void replaceTerminalFailure(request.id, request.version)}
+                    >
+                      تثبيت الفشل وإنشاء طلب بديل
+                    </CpButton>
+                  </> : null}
                 </CpTableCell>
               </tr>
-            ))}
+            })}
           </tbody>
         </CpTable>
       ) : null}

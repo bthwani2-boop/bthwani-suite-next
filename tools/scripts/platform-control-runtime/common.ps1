@@ -1,87 +1,69 @@
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
 $script:RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../..")).Path
 Set-Location -LiteralPath $script:RepoRoot
 
-$script:ComposeFile = Join-Path $script:RepoRoot "infra/docker/compose.runtime.yml"
-$script:FinancialComposeFile = Join-Path $script:RepoRoot "infra/docker/compose.financial-simulators.yml"
-$script:EnvFile = Join-Path $script:RepoRoot "infra/docker/env/runtime.env.example"
-$script:MigrationRunner = Join-Path $script:RepoRoot "tools/scripts/invoke-service-migrations.ps1"
-$script:ComposeArgs = @(
-  "--env-file", $script:EnvFile,
-  "-f", $script:ComposeFile,
-  "-f", $script:FinancialComposeFile,
-  "--profile", "platform",
-  "--profile", "providers",
-  "--profile", "wlt",
-  "--profile", "dsh",
-  "--profile", "media",
-  "--profile", "financial-simulators"
-)
-$script:PostgresAdminUser = if ($env:BTHWANI_POSTGRES_USER) { $env:BTHWANI_POSTGRES_USER } else { "bthwani_runtime" }
-$script:PostgresAdminDatabase = if ($env:BTHWANI_POSTGRES_DB) { $env:BTHWANI_POSTGRES_DB } else { "bthwani_runtime" }
-$script:PostgresPort = if ($env:BTHWANI_POSTGRES_PORT) { $env:BTHWANI_POSTGRES_PORT } else { "55432" }
+$script:RuntimeOrchestrator = Join-Path $script:RepoRoot "infra/docker/scripts/runtime.ps1"
+$script:PlatformProfiles = "identity,providers,wlt,dsh,platform,financial-simulators,media-storage"
+$script:PostgresContainer = "bthwani-postgres-runtime"
 
-function Invoke-PlatformCompose {
-  param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Arguments)
-  docker compose @script:ComposeArgs @Arguments
-  if ($LASTEXITCODE -ne 0) {
-    throw "docker compose failed: $($Arguments -join ' ') (exit $LASTEXITCODE)"
-  }
+if (-not (Test-Path -LiteralPath $script:RuntimeOrchestrator -PathType Leaf)) {
+  throw "Canonical runtime authority not found: $script:RuntimeOrchestrator"
 }
 
-function Wait-PlatformPostgres {
-  for ($attempt = 1; $attempt -le 45; $attempt++) {
-    docker compose @script:ComposeArgs exec -T postgres pg_isready -U $script:PostgresAdminUser -d $script:PostgresAdminDatabase *> $null
-    if ($LASTEXITCODE -eq 0) { return }
-    Start-Sleep -Seconds 2
-  }
-  throw "platform-control runtime PostgreSQL did not become ready"
-}
-
-function Ensure-PlatformDatabases {
-  docker compose @script:ComposeArgs exec -T postgres sh /docker-entrypoint-initdb.d/001_create_runtime_databases.sh
-  if ($LASTEXITCODE -ne 0) { throw "failed to ensure platform runtime databases" }
-}
-
-function Invoke-PlatformServiceMigrations {
+function Invoke-CanonicalPlatformRuntime {
   param(
-    [Parameter(Mandatory = $true)][string]$ServiceKey,
-    [Parameter(Mandatory = $true)][string]$User,
-    [Parameter(Mandatory = $true)][string]$Password,
-    [Parameter(Mandatory = $true)][string]$Database,
-    [Parameter(Mandatory = $true)][string]$MigrationDirectory
+    [Parameter(Mandatory = $true)]
+    [ValidateSet("up", "down", "reset", "status", "logs", "migrate", "smoke")]
+    [string]$Action,
+    [string]$Service = "",
+    [switch]$Force
   )
 
-  if (-not (Test-Path -LiteralPath $script:MigrationRunner -PathType Leaf)) {
-    throw "governed migration runner not found: $script:MigrationRunner"
+  $parameters = @{
+    Action = $Action
+    Profiles = $script:PlatformProfiles
   }
-  if (-not (Get-Command psql -ErrorAction SilentlyContinue)) {
-    throw "psql is required to apply governed platform runtime migrations"
+  if (-not [string]::IsNullOrWhiteSpace($Service)) {
+    $parameters.Service = $Service
+  }
+  if ($Force) {
+    $parameters.Force = $true
   }
 
-  $databaseUrl = "postgresql://${User}:${Password}@127.0.0.1:$($script:PostgresPort)/${Database}?sslmode=disable"
-  & pwsh -NoProfile -ExecutionPolicy Bypass -File $script:MigrationRunner `
-    -ServiceKey $ServiceKey `
-    -MigrationDirectory $MigrationDirectory `
-    -DatabaseUrl $databaseUrl
-  if ($LASTEXITCODE -ne 0) {
-    throw "governed migrations failed for service '$ServiceKey' (exit $LASTEXITCODE)"
-  }
+  & $script:RuntimeOrchestrator @parameters
 }
 
-function Invoke-PlatformMigrations {
-  Invoke-PlatformCompose up -d postgres
-  Wait-PlatformPostgres
-  Ensure-PlatformDatabases
-  Invoke-PlatformServiceMigrations -ServiceKey "identity" -User "identity_runtime" -Password "identity_runtime_password" -Database "identity_runtime" -MigrationDirectory "core/identity/database/migrations"
-  Invoke-PlatformServiceMigrations -ServiceKey "providers" -User "providers_runtime" -Password "providers_runtime_password" -Database "providers_runtime" -MigrationDirectory "core/providers/database/migrations"
-  Invoke-PlatformServiceMigrations -ServiceKey "wlt" -User "wlt_runtime" -Password "wlt_runtime_password" -Database "wlt_runtime" -MigrationDirectory "services/wlt/database/migrations"
-  Invoke-PlatformServiceMigrations -ServiceKey "dsh" -User "dsh_runtime" -Password "dsh_runtime_password" -Database "dsh_runtime" -MigrationDirectory "services/dsh/database/migrations"
-  Invoke-PlatformServiceMigrations -ServiceKey "platform-control" -User "platform_control_runtime" -Password "platform_control_runtime_password" -Database "platform_control_runtime" -MigrationDirectory "core/platform-control/database/migrations"
+function Invoke-PlatformDatabasePsql {
+  param(
+    [Parameter(Mandatory = $true)][string]$User,
+    [Parameter(Mandatory = $true)][string]$Database,
+    [Parameter(Mandatory = $true)][string]$Sql
+  )
+
+  foreach ($identifier in @($User, $Database)) {
+    if ($identifier -notmatch '^[a-z][a-z0-9_]*$') {
+      throw "Unsafe platform smoke database identifier: $identifier"
+    }
+  }
+
+  $output = @(
+    & docker exec $script:PostgresContainer `
+      psql -U $User -d $Database -X -v ON_ERROR_STOP=1 -tAc $Sql 2>&1
+  )
+  $exitCode = $LASTEXITCODE
+
+  if ($exitCode -ne 0) {
+    throw "Platform database query failed for $Database (exit $exitCode): $($output -join "`n")"
+  }
+
+  return (($output | ForEach-Object { [string]$_ }) -join "`n").Trim()
 }
 
 function Wait-PlatformHttpReady {
   param([Parameter(Mandatory = $true)][string]$Url)
+
   for ($attempt = 1; $attempt -le 60; $attempt++) {
     try {
       Invoke-RestMethod $Url -TimeoutSec 5 -ErrorAction Stop | Out-Null
@@ -90,17 +72,26 @@ function Wait-PlatformHttpReady {
       Start-Sleep -Seconds 2
     }
   }
+
   throw "endpoint did not become ready: $Url"
 }
 
+function Invoke-PlatformMigrations {
+  Invoke-CanonicalPlatformRuntime -Action migrate
+}
+
 function Start-PlatformP3Runtime {
-  Invoke-PlatformMigrations
-  Invoke-PlatformCompose up -d wiremock-financial-provider minio identity-api providers-api wlt-api dsh-api platform-control-api
-  Wait-PlatformHttpReady "http://localhost:58090/__admin/mappings"
-  Wait-PlatformHttpReady "http://localhost:58082/identity/health"
-  Wait-PlatformHttpReady "http://localhost:58087/providers/readiness"
-  Wait-PlatformHttpReady "http://localhost:58083/wlt/health"
-  Wait-PlatformHttpReady "http://localhost:58080/dsh/health"
-  Wait-PlatformHttpReady "http://localhost:58088/platform/health"
-  Wait-PlatformHttpReady "http://localhost:58088/platform/readiness"
+  Invoke-CanonicalPlatformRuntime -Action up
+
+  foreach ($url in @(
+    "http://localhost:18090/__admin/mappings",
+    "http://localhost:18082/identity/health",
+    "http://localhost:18087/providers/readiness",
+    "http://localhost:18083/wlt/health",
+    "http://localhost:18080/dsh/health",
+    "http://localhost:18088/platform/health",
+    "http://localhost:18088/platform/readiness"
+  )) {
+    Wait-PlatformHttpReady $url
+  }
 }

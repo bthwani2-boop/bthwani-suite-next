@@ -5,7 +5,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 if ([string]::IsNullOrWhiteSpace($BaseUrl)) {
-  $BaseUrl = "http://localhost:58090"
+  $BaseUrl = "http://localhost:18090"
 }
 
 function Invoke-Json {
@@ -51,6 +51,14 @@ try {
 
 $authorize = Invoke-Json -Method "POST" -Path "/financial/card/authorize" -Body @{ amountMinorUnits = 1000; currency = "YER" }
 if ($authorize.status -ne "authorized") { throw "card authorize success failed" }
+
+$status = Invoke-Json -Method "POST" -Path "/financial/card/status" -Body @{
+  paymentSessionId = "smoke-payment-session"
+  providerReference = $authorize.providerReference
+  amountMinorUnits = 1000
+  currency = "YER"
+}
+if ($status.status -ne "authorized") { throw "card status success failed" }
 
 try {
   Invoke-Json -Method "POST" -Path "/financial/card/authorize-declined" -Body @{ amountMinorUnits = 1000; currency = "YER" } | Out-Null

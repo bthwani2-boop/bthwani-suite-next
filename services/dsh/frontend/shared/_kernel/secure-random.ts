@@ -1,6 +1,20 @@
 const HEX = Array.from({ length: 256 }, (_, value) => value.toString(16).padStart(2, "0"));
 
+type SecureRandomUuidProvider = () => string;
+
+let configuredSecureRandomUuidProvider: SecureRandomUuidProvider | null = null;
+
+export function configureSecureRandomUuidProvider(
+  provider: SecureRandomUuidProvider | null,
+): void {
+  configuredSecureRandomUuidProvider = provider;
+}
+
 export function secureRandomId(): string {
+  if (configuredSecureRandomUuidProvider) {
+    return configuredSecureRandomUuidProvider();
+  }
+
   const crypto = globalThis.crypto;
   if (typeof crypto?.randomUUID === "function") return crypto.randomUUID();
   if (typeof crypto?.getRandomValues !== "function") {

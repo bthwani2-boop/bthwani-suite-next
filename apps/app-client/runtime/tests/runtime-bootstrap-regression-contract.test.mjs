@@ -39,7 +39,7 @@ test('canonical runtime builds service images before readiness', () => {
   const verifyCatalogStart = source.indexOf('"verify-catalog" {', bootstrapStart);
   assert.ok(bootstrapStart >= 0 && verifyCatalogStart > bootstrapStart, 'bootstrap-dev action is missing');
   const bootstrap = source.slice(bootstrapStart, verifyCatalogStart);
-  assert.match(bootstrap, /Invoke-Compose up -d --build/);
+  assert.match(bootstrap, /Invoke-ComposeConvergentUp --build/);
   assert.match(bootstrap, /Mobile full-stack development data bootstrap failed/);
   assert.doesNotMatch(bootstrap, /DSH API dev bootstrap failed/);
 });

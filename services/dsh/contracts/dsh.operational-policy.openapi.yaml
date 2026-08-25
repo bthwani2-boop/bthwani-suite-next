@@ -9,7 +9,7 @@ info:
     SLA, capacity pause and pressure, fulfillment modes, cross-surface effects, audit
     history and rollback. Service-area geofences remain the spatial truth.
 servers:
-- url: http://localhost:58080
+- url: http://localhost:18080
 paths:
   /dsh/operator/platform/operational-profiles/{zoneId}:
     parameters:

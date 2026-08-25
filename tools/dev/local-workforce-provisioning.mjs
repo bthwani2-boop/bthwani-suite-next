@@ -25,10 +25,10 @@ export const GENERATED_REGISTRY_PATH = path.join(
   '.artifacts/local-dev/workforce-actors.json',
 );
 
-export const DSH_API_BASE = process.env.DSH_API_BASE || 'http://127.0.0.1:58080';
-export const IDENTITY_API_BASE = process.env.IDENTITY_API_BASE || 'http://127.0.0.1:58082';
-export const WORKFORCE_API_BASE = process.env.WORKFORCE_API_BASE || 'http://127.0.0.1:58086';
-const WLT_API_BASE = process.env.WLT_API_BASE || 'http://127.0.0.1:58083';
+export const DSH_API_BASE = process.env.DSH_API_BASE || 'http://127.0.0.1:18080';
+export const IDENTITY_API_BASE = process.env.IDENTITY_API_BASE || 'http://127.0.0.1:18082';
+export const WORKFORCE_API_BASE = process.env.WORKFORCE_API_BASE || 'http://127.0.0.1:18086';
+const WLT_API_BASE = process.env.WLT_API_BASE || 'http://127.0.0.1:18083';
 const WLT_DSH_SERVICE_TOKEN =
   process.env.WLT_DSH_SERVICE_TOKEN ||
   process.env.DSH_WLT_SERVICE_TOKEN ||
@@ -36,7 +36,7 @@ const WLT_DSH_SERVICE_TOKEN =
 const IDENTITY_WORKFORCE_SERVICE_TOKEN =
   process.env.IDENTITY_WORKFORCE_SERVICE_TOKEN ||
   'LOCAL_ONLY_replace_with_workforce_internal_service_token';
-const LOCAL_OPERATOR_CONTEXT_ID = process.env.BTHWANI_OPERATOR_CONTEXT_ID || 'local-dsh';
+export const LOCAL_OPERATOR_CONTEXT_ID = process.env.BTHWANI_OPERATOR_CONTEXT_ID || 'local-dsh';
 // The local COD journey must have spendable wallet capacity in addition to the
 // protected collateral position. This is a governed development top-up, not a
 // direct wallet write; production balances remain WLT-owned.
@@ -54,6 +54,26 @@ export class HttpError extends Error {
     this.status = status;
     this.body = body;
   }
+}
+
+export function needsLocalProviderConvergence(error) {
+  if (!(error instanceof HttpError)) return false;
+
+  let code = '';
+  try {
+    const body = JSON.parse(error.body);
+    code = typeof body?.code === 'string' ? body.code : '';
+  } catch {
+    code = '';
+  }
+
+  if (!code) {
+    const match = error.message.match(/[\"]code[\"]\s*:\s*[\"]([^\"]+)[\"]/);
+    code = match?.[1] ?? '';
+  }
+
+  return (error.status === 404 && (code === 'ACTOR_NOT_FOUND' || code === 'PROFILE_NOT_PROVISIONED'))
+    || (error.status === 422 && code === 'PROFILE_INCOMPLETE');
 }
 
 export function stableToken(value) {
@@ -300,6 +320,100 @@ function wltHeaders(operation, idempotencyKey = '') {
   return headers;
 }
 
+function replayedWltPaymentSession(error) {
+  if (!(error instanceof HttpError) || error.status !== 409) return null;
+  try {
+    const body = JSON.parse(error.body);
+    return body?.idempotentReplay === true && body.paymentSession?.id
+      ? body.paymentSession
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+async function refreshWltPaymentSessionStatus(paymentSessionId, operationPrefix) {
+  const attempt = randomUUID();
+  const operation = `${operationPrefix}-status-refresh-${attempt}`;
+  const result = await requestJson(
+    `wlt:${operationPrefix}:status-refresh`,
+    `${WLT_API_BASE}/wlt/payment-sessions/${encodeURIComponent(paymentSessionId)}/refresh-provider-status`,
+    {
+      method: 'POST',
+      headers: wltHeaders(operation, `mobile-dev-${operation}`),
+      body: '{}',
+    },
+  );
+  const session = result?.paymentSession;
+  if (!session?.id) {
+    throw new Error(`wlt:${operationPrefix}: status refresh returned no payment session`);
+  }
+  return session;
+}
+
+async function completeWltTopup({ operationPrefix, reference, actorId, amountMinorUnits, currency }) {
+  const created = await requestJson(
+    `wlt:${operationPrefix}:topup-create`,
+    `${WLT_API_BASE}/wlt/topup-sessions`,
+    {
+      method: 'POST',
+      headers: wltHeaders(`${operationPrefix}-topup-create`, `mobile-dev-${reference}`),
+      body: JSON.stringify({
+        actorType: 'captain',
+        actorId,
+        topupReference: reference,
+        amountMinorUnits,
+        currency,
+      }),
+    },
+  );
+  let session = created?.paymentSession;
+  if (!session?.id) throw new Error(`wlt:${operationPrefix}: top-up returned no payment session`);
+
+  if (session.status === 'provider_result_unknown') {
+    session = await refreshWltPaymentSessionStatus(session.id, operationPrefix);
+  }
+
+  for (const operation of ['authorize', 'capture']) {
+    if (session.status === 'captured' || (operation === 'authorize' && session.status === 'authorized')) {
+      continue;
+    }
+    if (!['reference_created', 'pending_provider', 'authorized'].includes(session.status)) {
+      throw new Error(`wlt:${operationPrefix}: top-up cannot continue from status ${session.status}`);
+    }
+
+    try {
+      const result = await requestJson(
+        `wlt:${operationPrefix}:topup-${operation}`,
+        `${WLT_API_BASE}/wlt/topup-sessions/${encodeURIComponent(session.id)}/${operation}`,
+        {
+          method: 'POST',
+          headers: wltHeaders(
+            `${operationPrefix}-topup-${operation}`,
+            `mobile-dev-${reference}-${operation}`,
+          ),
+          body: '{}',
+        },
+      );
+      session = result?.paymentSession ?? session;
+    } catch (error) {
+      const replayed = replayedWltPaymentSession(error);
+      if (!replayed) throw error;
+      session = await refreshWltPaymentSessionStatus(session.id, operationPrefix);
+    }
+
+    if (session.status === 'provider_result_unknown') {
+      session = await refreshWltPaymentSessionStatus(session.id, operationPrefix);
+    }
+    if (session.status === 'captured' || (operation === 'authorize' && session.status === 'authorized')) {
+      continue;
+    }
+    throw new Error(`wlt:${operationPrefix}: top-up remained in status ${session.status} after provider reconciliation`);
+  }
+
+  return session;
+}
+
 async function ensureCaptainFinancialStanding(captainId) {
   const readback = await requestJson(
     'wlt:captain-collateral:read',
@@ -327,39 +441,13 @@ async function ensureCaptainFinancialStanding(captainId) {
   );
   if (!hasValidPosition) {
     const reference = `local-captain-collateral-${stableToken(captainId)}`;
-    const createHeaders = wltHeaders('captain-collateral-topup-create', `mobile-dev-${reference}`);
-    const created = await requestJson(
-      'wlt:captain-collateral:topup-create',
-      `${WLT_API_BASE}/wlt/topup-sessions`,
-      {
-        method: 'POST',
-        headers: createHeaders,
-        body: JSON.stringify({
-          actorType: 'captain',
-          actorId: captainId,
-          topupReference: reference,
-          amountMinorUnits: policy.minimumCollateralMinorUnits,
-          currency: policy.currency,
-        }),
-      },
-    );
-    const paymentSessionId = created?.paymentSession?.id;
-    if (!paymentSessionId) throw new Error('WLT captain collateral top-up returned no payment session');
-
-    for (const operation of ['authorize', 'capture']) {
-      await requestJson(
-        `wlt:captain-collateral:topup-${operation}`,
-        `${WLT_API_BASE}/wlt/topup-sessions/${encodeURIComponent(paymentSessionId)}/${operation}`,
-        {
-          method: 'POST',
-          headers: wltHeaders(
-            `captain-collateral-topup-${operation}`,
-            `mobile-dev-${reference}-${operation}`,
-          ),
-          body: '{}',
-        },
-      );
-    }
+    const session = await completeWltTopup({
+      operationPrefix: 'captain-collateral',
+      reference,
+      actorId: captainId,
+      amountMinorUnits: policy.minimumCollateralMinorUnits,
+      currency: policy.currency,
+    });
 
     await requestJson(
       'wlt:captain-collateral:allocate',
@@ -369,7 +457,7 @@ async function ensureCaptainFinancialStanding(captainId) {
         headers: wltHeaders('captain-collateral-allocate', `mobile-dev-${reference}-allocate`),
         body: JSON.stringify({
           captainId,
-          paymentSessionId,
+          paymentSessionId: session.id,
           allocatedByActorId: LOCAL_ACTORS.operator.actorId,
         }),
       },
@@ -397,41 +485,36 @@ async function ensureCaptainFinancialStanding(captainId) {
 
 async function ensureCaptainDispatchCapacity(captainId) {
   const reference = `local-captain-dispatch-capacity-${stableToken(captainId)}`;
-  const createHeaders = wltHeaders('captain-dispatch-capacity-topup-create', `mobile-dev-${reference}`);
-  const created = await requestJson(
-    'wlt:captain-dispatch-capacity:topup-create',
-    `${WLT_API_BASE}/wlt/topup-sessions`,
+  await completeWltTopup({
+    operationPrefix: 'captain-dispatch-capacity',
+    reference,
+    actorId: captainId,
+    amountMinorUnits: LOCAL_CAPTAIN_DISPATCH_CAPACITY_MINOR_UNITS,
+    currency: 'YER',
+  });
+}
+
+async function ensureCaptainDispatchProfile(operatorToken, captainId) {
+  await requestJson(
+    'dsh:captain-dispatch-profile-upsert',
+    `${DSH_API_BASE}/dsh/operator/dispatch/captains/${encodeURIComponent(captainId)}/profile`,
     {
-      method: 'POST',
-      headers: createHeaders,
+      method: 'PUT',
+      headers: {
+        ...authorization(operatorToken),
+        'Content-Type': 'application/json',
+        'X-Operator-Context-ID': LOCAL_OPERATOR_CONTEXT_ID,
+        'X-Correlation-ID': `mobile-dev-captain-dispatch-profile-${stableToken(captainId)}`,
+      },
       body: JSON.stringify({
-        actorType: 'captain',
-        actorId: captainId,
-        topupReference: reference,
-        amountMinorUnits: LOCAL_CAPTAIN_DISPATCH_CAPACITY_MINOR_UNITS,
-        currency: 'YER',
+        accreditationStatus: 'approved',
+        availabilityStatus: 'available',
+        maxActiveAssignments: 5,
+        priorityScore: 100,
+        expectedVersion: 0,
       }),
     },
   );
-  const paymentSessionId = created?.paymentSession?.id;
-  if (!paymentSessionId) {
-    throw new Error('WLT captain dispatch capacity top-up returned no payment session');
-  }
-
-  for (const operation of ['authorize', 'capture']) {
-    await requestJson(
-      `wlt:captain-dispatch-capacity:topup-${operation}`,
-      `${WLT_API_BASE}/wlt/topup-sessions/${encodeURIComponent(paymentSessionId)}/${operation}`,
-      {
-        method: 'POST',
-        headers: wltHeaders(
-          `captain-dispatch-capacity-topup-${operation}`,
-          `mobile-dev-${reference}-${operation}`,
-        ),
-        body: '{}',
-      },
-    );
-  }
 }
 
 async function refreshCaptainFinancialEligibility(operatorToken, captainId) {
@@ -443,6 +526,7 @@ async function refreshCaptainFinancialEligibility(operatorToken, captainId) {
       headers: {
         ...authorization(operatorToken),
         'Content-Type': 'application/json',
+        'Idempotency-Key': `mobile-dev-captain-financial-eligibility-${stableToken(captainId)}`,
         'X-Operator-Context-ID': LOCAL_OPERATOR_CONTEXT_ID,
         'X-Correlation-ID': `mobile-dev-captain-financial-eligibility-${stableToken(captainId)}`,
       },
@@ -508,6 +592,12 @@ export async function issueProviderSession(
   deviceFingerprint = `mobile-dev-${kind}`,
 ) {
   const detail = await getProvider(operatorToken, kind, actorId);
+  if (kind === 'captain') {
+    // Captain activation is also gated by a short-lived DSH/WLT decision.
+    // Refresh it at the same boundary that issues the activation code so a
+    // previously provisioned local actor cannot drift into PROFILE_INCOMPLETE.
+    await refreshCaptainFinancialEligibility(operatorToken, actorId);
+  }
   // Issuing an activation code is a fresh operation every time, never a replay:
   // a stable idempotency key collides with the previously issued challenge.
   const attempt = randomUUID();
@@ -674,6 +764,9 @@ async function provisionOne(operatorToken, kind, zone, { deferFinancialStanding 
   if (kind === 'captain' && !deferFinancialStanding) {
     await ensureCaptainFinancialStanding(actorId);
     await refreshCaptainFinancialEligibility(operatorToken, actorId);
+  }
+  if (kind === 'captain') {
+    await ensureCaptainDispatchProfile(operatorToken, actorId);
   }
   const operational = await patchOperationalCore(operatorToken, kind, actorId, operationalCore);
   if (operational?.activationReadiness?.ready !== true) {

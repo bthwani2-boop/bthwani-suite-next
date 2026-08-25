@@ -22,13 +22,7 @@ func TestActivationConcurrentIssue(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = db.ExecContext(context.Background(), `
-		INSERT INTO identity_actors (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version)
-		VALUES ($1, $2, '', 'local-dsh', $3, '{field}', '[]', 'PROVISIONED', 1)`,
-		actorID, "race_issue_1", phone)
-	if err != nil {
-		t.Fatalf("insert actor: %v", err)
-	}
+	insertIdentityTestActor(t, db, actorID, "race_issue_1", "local-dsh", phone, []string{"field"}, nil, ActorStatusProvisioned, 1)
 
 	concurrency := 10
 	var successCount int32
@@ -81,13 +75,7 @@ func TestActivationConcurrentConsumeAndRevoke(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = db.ExecContext(context.Background(), `
-		INSERT INTO identity_actors (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version)
-		VALUES ($1, $2, '', 'local-dsh', $3, '{field}', '[]', 'PROVISIONED', 1)`,
-		actorID, "race_consume_1", phone)
-	if err != nil {
-		t.Fatalf("insert actor: %v", err)
-	}
+	insertIdentityTestActor(t, db, actorID, "race_consume_1", "local-dsh", phone, []string{"field"}, nil, ActorStatusProvisioned, 1)
 
 	res, err := repo.IssueActivationForActor(context.Background(), actorID, IssueActivationForActorInput{
 		IssuedByActorID:   activationTestIssuerID,
@@ -153,13 +141,7 @@ func TestActivationConcurrentConsumeDuplicates(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = db.ExecContext(context.Background(), `
-		INSERT INTO identity_actors (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version)
-		VALUES ($1, $2, '', 'local-dsh', $3, '{field}', '[]', 'PROVISIONED', 1)`,
-		actorID, "race_consume_2", phone)
-	if err != nil {
-		t.Fatalf("insert actor: %v", err)
-	}
+	insertIdentityTestActor(t, db, actorID, "race_consume_2", "local-dsh", phone, []string{"field"}, nil, ActorStatusProvisioned, 1)
 
 	res, err := repo.IssueActivationForActor(context.Background(), actorID, IssueActivationForActorInput{
 		IssuedByActorID:   activationTestIssuerID,

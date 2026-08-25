@@ -1,16 +1,21 @@
 package administration
 
 import (
+	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
+	"fmt"
+	"sort"
 	"strings"
 	"time"
+
+	"dsh-api/internal/auth"
 )
 
 var (
 	ErrNotFound = errors.New("not found")
 	ErrInvalid  = errors.New("invalid input")
+	ErrConflict = errors.New("request conflicts with another pending role change")
 	// ErrIdentityUnavailable is returned when a review requires a canonical
 	// Identity mutation but no Identity client is configured.
 	ErrIdentityUnavailable = errors.New("identity is unavailable")
@@ -19,158 +24,160 @@ var (
 	// must remain unapplied; this error must never be swallowed into a
 	// local-only status flip.
 	ErrCanonicalMutationFailed = errors.New("canonical authorization mutation failed")
+	// ErrCanonicalMutationInProgress means another valid leased executor owns
+	// the durable intent. Callers must not fall back to a direct Identity write
+	// or report success before canonical readback and fenced finalization.
+	ErrCanonicalMutationInProgress = errors.New("canonical authorization mutation is reconciling")
+	ErrSeparationOfDuties          = errors.New("separation of duties violation")
 )
 
-// Role is the governed DSH authorization role projection. Identity owns the
-// authenticated actor and session, while these permissions own only DSH
-// administration actions after an independently approved assignment.
+func separationOfDutiesError(message string) error {
+	return fmt.Errorf("%w: %s", ErrSeparationOfDuties, message)
+}
+
+// Role is a DSH API view of the complete Identity-owned role definition.
+// Permissions are canonical service/surface/action/scope bindings. Surfaces is
+// derived from those bindings for presentation only and is never persisted as
+// an independent authorization authority in DSH.
 type Role struct {
-	ID          string    `json:"id"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Permissions []string  `json:"permissions"`
-	Surfaces    []string  `json:"surfaces"`
-	Active      bool      `json:"active"`
-	Version     int       `json:"version"`
-	CreatedAt   time.Time `json:"createdAt"`
+	ID          string            `json:"id"`
+	Name        string            `json:"name"`
+	Description string            `json:"description"`
+	Active      bool              `json:"active"`
+	Version     int               `json:"version"`
+	CreatedAt   time.Time         `json:"createdAt"`
+	UpdatedAt   time.Time         `json:"updatedAt"`
+	Permissions []auth.Permission `json:"permissions"`
+	Surfaces    []string          `json:"surfaces"`
 }
 
-func ListRoles(db *sql.DB) ([]Role, error) {
-	if db == nil {
-		return nil, ErrInvalid
+func roleFromCanonical(definition auth.RbacRoleDefinition) Role {
+	surfaceSet := make(map[string]struct{}, len(definition.Permissions))
+	for _, permission := range definition.Permissions {
+		if surface := strings.TrimSpace(permission.Surface); surface != "" {
+			surfaceSet[surface] = struct{}{}
+		}
 	}
-	rows, err := db.Query(`
-		SELECT id, name, COALESCE(description,''), permissions, surfaces,
-		       active, version, created_at
-		FROM dsh_admin_roles ORDER BY active DESC, name`)
+	surfaces := make([]string, 0, len(surfaceSet))
+	for surface := range surfaceSet {
+		surfaces = append(surfaces, surface)
+	}
+	sort.Strings(surfaces)
+	permissions := append([]auth.Permission(nil), definition.Permissions...)
+	if permissions == nil {
+		permissions = []auth.Permission{}
+	}
+	return Role{
+		ID:          definition.ID,
+		Name:        definition.Name,
+		Description: definition.Description,
+		Active:      definition.Active,
+		Version:     definition.Version,
+		CreatedAt:   definition.CreatedAt,
+		UpdatedAt:   definition.UpdatedAt,
+		Permissions: permissions,
+		Surfaces:    surfaces,
+	}
+}
+
+// ListRoles reads role shells and each complete definition from Identity. DSH
+// does not retain a local role-definition registry.
+func ListRoles(ctx context.Context, identityClient *auth.Client) ([]Role, error) {
+	if identityClient == nil {
+		return nil, ErrIdentityUnavailable
+	}
+	shells, err := identityClient.ListRoles(ctx)
 	if err != nil {
-		return nil, err
+		return nil, ErrIdentityUnavailable
 	}
-	defer rows.Close()
-	out := make([]Role, 0)
-	for rows.Next() {
-		var role Role
-		var permissionsJSON, surfacesJSON []byte
-		if err := rows.Scan(
-			&role.ID, &role.Name, &role.Description, &permissionsJSON, &surfacesJSON,
-			&role.Active, &role.Version, &role.CreatedAt,
-		); err != nil {
-			return nil, err
+	out := make([]Role, 0, len(shells))
+	for _, shell := range shells {
+		definition, err := identityClient.GetRoleDefinition(ctx, shell.Name)
+		if err != nil {
+			return nil, ErrIdentityUnavailable
 		}
-		if err := json.Unmarshal(permissionsJSON, &role.Permissions); err != nil {
-			return nil, err
-		}
-		if err := json.Unmarshal(surfacesJSON, &role.Surfaces); err != nil {
-			return nil, err
-		}
-		if role.Permissions == nil {
-			role.Permissions = []string{}
-		}
-		if role.Surfaces == nil {
-			role.Surfaces = []string{}
-		}
-		out = append(out, role)
+		out = append(out, roleFromCanonical(definition))
 	}
-	return out, rows.Err()
+	return out, nil
 }
 
-// AdministrationPermissionCandidates keeps legacy broad permissions working
-// while allowing least-privilege permissions for each governed operation.
-func AdministrationPermissionCandidates(action string) []string {
-	action = strings.TrimSpace(action)
-	if !strings.HasPrefix(action, "administration.") {
-		return nil
-	}
-	candidates := []string{action}
-	switch action {
-	case "administration.role.request", "administration.staff.request", "administration.rollback.request":
-		candidates = append(candidates, "administration.manage")
-	case "administration.role.approve", "administration.staff.approve", "administration.rollback.approve":
-		candidates = append(candidates, "administration.approve")
-	case "administration.audit.read", "administration.diagnostics.read":
-		candidates = append(candidates, "administration.read")
-	}
-	return candidates
+// AdministrationDiagnostics is the privacy-safe operator read model. Identity
+// remains the authority for active-role truth; DSH contributes only governed
+// request, intent, and audit projections.
+type AdministrationDiagnostics struct {
+	Status                     string    `json:"status"`
+	ActiveRoleCount            int       `json:"activeRoleCount"`
+	ApprovedAssignmentCount    int       `json:"approvedAssignmentCount"`
+	PendingRoleDefinitionCount int       `json:"pendingRoleDefinitionCount"`
+	PendingRoleAssignmentCount int       `json:"pendingRoleAssignmentCount"`
+	PendingRollbackCount       int       `json:"pendingRollbackCount"`
+	RecentRestrictedAuditCount int       `json:"recentRestrictedAuditCount"`
+	GeneratedAt                time.Time `json:"generatedAt"`
+	Details                    string    `json:"details,omitempty"`
 }
 
-// PartnerActivation is a privacy-minimized read-only compatibility projection.
-// Partner lifecycle mutations and review notes remain owned by the governed
-// partner lifecycle and are never exposed through administration diagnostics.
-type PartnerActivation struct {
-	ID         string    `json:"id"`
-	PartnerID  string    `json:"partnerId"`
-	Status     string    `json:"status"`
-	ReviewedBy string    `json:"reviewedBy"`
-	CreatedAt  time.Time `json:"createdAt"`
-	UpdatedAt  time.Time `json:"updatedAt"`
-}
+// LoadDiagnostics intentionally reports operator attention as a valid 200
+// read-model result. A dependency failure never creates a second public status
+// vocabulary, and it never turns a diagnostic read into an authorization
+// mutation.
+func LoadDiagnostics(ctx context.Context, db *sql.DB, identityClient *auth.Client) AdministrationDiagnostics {
+	diagnostics := AdministrationDiagnostics{
+		Status:      "healthy",
+		GeneratedAt: time.Now().UTC(),
+		Details:     "Administration database and Identity RBAC truth are reachable.",
+	}
+	attention := func(detail string) {
+		diagnostics.Status = "attention"
+		diagnostics.Details = detail
+	}
 
-func ListPartnerActivations(db *sql.DB, status string) ([]PartnerActivation, error) {
 	if db == nil {
-		return nil, ErrInvalid
+		attention("Administration database is not configured.")
+		return diagnostics
 	}
-	rows, err := db.Query(`
-		SELECT id, partner_id, status, COALESCE(reviewed_by,''),
-		       created_at, updated_at
-		FROM dsh_admin_partner_activations
-		WHERE ($1='' OR status=$1)
-		ORDER BY created_at DESC`, status)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	out := make([]PartnerActivation, 0)
-	for rows.Next() {
-		var activation PartnerActivation
-		if err := rows.Scan(
-			&activation.ID, &activation.PartnerID, &activation.Status,
-			&activation.ReviewedBy, &activation.CreatedAt, &activation.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		out = append(out, activation)
-	}
-	return out, rows.Err()
-}
 
-// CaptainCredential is a privacy-minimized read-only projection. Credential
-// review and the raw license number remain owned by Workforce/captain
-// accreditation and are never exposed through the administration projection.
-type CaptainCredential struct {
-	ID          string    `json:"id"`
-	CaptainID   string    `json:"captainId"`
-	VehicleType string    `json:"vehicleType"`
-	Status      string    `json:"status"`
-	ReviewedBy  string    `json:"reviewedBy"`
-	UpdatedAt   time.Time `json:"updatedAt"`
-}
-
-func ListCaptainCredentials(db *sql.DB, status string) ([]CaptainCredential, error) {
-	if db == nil {
-		return nil, ErrInvalid
-	}
-	rows, err := db.Query(`
-		SELECT id, captain_id, COALESCE(vehicle_type,''),
-		       status, COALESCE(reviewed_by,''), updated_at
-		FROM dsh_admin_captain_credentials
-		WHERE ($1='' OR status=$1)
-		ORDER BY updated_at DESC`, status)
+	var pendingRoleDefinitions, pendingAssignments, pendingRollbacks, appliedAssignments, recentRestrictedAudit int
+	err := db.QueryRowContext(ctx, `
+		SELECT
+			(SELECT COUNT(*) FROM dsh_admin_role_definition_requests WHERE status = 'pending'),
+			(SELECT COUNT(*) FROM dsh_admin_approval_requests WHERE status = 'pending'),
+			(SELECT COUNT(*) FROM dsh_admin_rollback_requests WHERE status = 'pending'),
+			(SELECT COUNT(*)
+			 FROM dsh_admin_approval_requests request
+			 JOIN dsh_admin_canonical_mutation_intents intent
+			   ON intent.operation_type = 'role-assignment' AND intent.request_id = request.id
+			 WHERE request.status = 'approved' AND intent.status = 'applied'),
+			(SELECT COUNT(*) FROM dsh_admin_audit
+			 WHERE sensitivity = 'restricted' AND created_at >= NOW() - INTERVAL '24 hours')
+	`).Scan(
+		&pendingRoleDefinitions, &pendingAssignments, &pendingRollbacks,
+		&appliedAssignments, &recentRestrictedAudit,
+	)
 	if err != nil {
-		return nil, err
+		attention("Administration database is unavailable.")
+	} else {
+		diagnostics.PendingRoleDefinitionCount = pendingRoleDefinitions
+		diagnostics.PendingRoleAssignmentCount = pendingAssignments
+		diagnostics.PendingRollbackCount = pendingRollbacks
+		diagnostics.ApprovedAssignmentCount = appliedAssignments
+		diagnostics.RecentRestrictedAuditCount = recentRestrictedAudit
 	}
-	defer rows.Close()
-	out := make([]CaptainCredential, 0)
-	for rows.Next() {
-		var credential CaptainCredential
-		if err := rows.Scan(
-			&credential.ID, &credential.CaptainID, &credential.VehicleType,
-			&credential.Status, &credential.ReviewedBy, &credential.UpdatedAt,
-		); err != nil {
-			return nil, err
+
+	if identityClient == nil {
+		attention("Identity RBAC truth is not configured.")
+		return diagnostics
+	}
+	roles, err := ListRoles(ctx, identityClient)
+	if err != nil {
+		attention("Identity RBAC truth is unavailable.")
+		return diagnostics
+	}
+	for _, role := range roles {
+		if role.Active {
+			diagnostics.ActiveRoleCount++
 		}
-		out = append(out, credential)
 	}
-	return out, rows.Err()
+	return diagnostics
 }
 
 type AdminAuditEntry struct {

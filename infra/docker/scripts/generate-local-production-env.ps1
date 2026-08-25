@@ -22,18 +22,25 @@ if (Test-Path -LiteralPath $OutFile) {
   exit 1
 }
 
-$pgPassword          = New-Secret 24
-$dshDbPassword       = New-Secret 24
-$wltDbPassword       = New-Secret 24
-$identityDbPassword  = New-Secret 24
-$workforceDbPassword = New-Secret 24
-$minioPassword       = New-Secret 24
-$wltDshToken         = New-Secret 32
-$dshWltToken         = New-Secret 32
-$dshWltPricingSecret = New-Secret 32
-$hmacSecret          = New-Secret 32
-$workforceToken      = New-Secret 32
-$dshIdentityToken    = New-Secret 32
+$pgPassword             = New-Secret 24
+$dshDbPassword          = New-Secret 24
+$wltDbPassword          = New-Secret 24
+$identityDbPassword     = New-Secret 24
+$workforceDbPassword    = New-Secret 24
+$minioPassword          = New-Secret 24
+$wltDshToken            = New-Secret 32
+$dshWltToken            = New-Secret 32
+$dshWltPricingSecret    = New-Secret 32
+$workforceDshToken      = New-Secret 32
+$dshWorkforceToken      = New-Secret 32
+$workforceWltToken      = New-Secret 32
+$hmacSecret             = New-Secret 32
+$workforceToken         = New-Secret 32
+$dshIdentityToken       = New-Secret 32
+$platformControlDshToken = New-Secret 32
+$minioDshAccessKey      = New-Secret 24
+$minioDshSecretKey      = New-Secret 32
+$wltPayoutEncryptionKey = New-Secret 32
 
 $template = Get-Content "infra\docker\env\runtime.local-production.env.example" -Raw
 
@@ -47,9 +54,23 @@ $content = $template `
   -replace "REPLACE_WITH_GENERATED_WLT_DSH_SERVICE_TOKEN",      $wltDshToken `
   -replace "REPLACE_WITH_GENERATED_DSH_WLT_SERVICE_TOKEN",      $dshWltToken `
   -replace "REPLACE_WITH_GENERATED_DSH_WLT_PRICING_EVIDENCE_SECRET", $dshWltPricingSecret `
+  -replace "REPLACE_WITH_GENERATED_WORKFORCE_DSH_SERVICE_TOKEN", $workforceDshToken `
+  -replace "REPLACE_WITH_GENERATED_DSH_WORKFORCE_SERVICE_TOKEN", $dshWorkforceToken `
+  -replace "REPLACE_WITH_GENERATED_WORKFORCE_WLT_SERVICE_TOKEN", $workforceWltToken `
   -replace "REPLACE_WITH_GENERATED_HMAC_SECRET_32BYTES",        $hmacSecret `
   -replace "REPLACE_WITH_GENERATED_WORKFORCE_SERVICE_TOKEN",    $workforceToken `
-  -replace "REPLACE_WITH_GENERATED_DSH_IDENTITY_SERVICE_TOKEN", $dshIdentityToken
+  -replace "REPLACE_WITH_GENERATED_DSH_IDENTITY_SERVICE_TOKEN", $dshIdentityToken `
+  -replace "REPLACE_WITH_GENERATED_PLATFORM_CONTROL_DSH_SERVICE_TOKEN", $platformControlDshToken `
+  -replace "REPLACE_WITH_GENERATED_MINIO_DSH_ACCESS_KEY", $minioDshAccessKey `
+  -replace "REPLACE_WITH_GENERATED_MINIO_DSH_SECRET_KEY", $minioDshSecretKey `
+  -replace "REPLACE_WITH_GENERATED_WLT_PAYOUT_ENCRYPTION_KEY", $wltPayoutEncryptionKey
+
+$unresolved = [regex]::Matches($content, "REPLACE_WITH_GENERATED_[A-Z0-9_]+") |
+  ForEach-Object { $_.Value } |
+  Sort-Object -Unique
+if ($unresolved.Count -gt 0) {
+  throw "Local production env generation left unresolved placeholders: $($unresolved -join ', ')"
+}
 
 $content | Set-Content -LiteralPath $OutFile -Encoding UTF8 -NoNewline
 Write-Host "Generated: $OutFile"

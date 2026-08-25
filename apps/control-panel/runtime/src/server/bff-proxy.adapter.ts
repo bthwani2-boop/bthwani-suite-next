@@ -21,6 +21,7 @@ export const BFF_OPAQUE_TOKEN = "BFF_HTTP_ONLY_COOKIE_SESSION";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const MUTATING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+const PUBLIC_IDENTITY_PROBE_PATHS = new Set(["/identity/health", "/identity/readiness"]);
 const FORWARDED_REQUEST_HEADERS = [
   "accept",
   "accept-language",
@@ -32,11 +33,11 @@ const FORWARDED_REQUEST_HEADERS = [
 ] as const;
 
 const SERVICE_CONFIG = {
-  dsh: { env: "DSH_API_BASE_URL", fallback: "http://127.0.0.1:58080" },
-  identity: { env: "IDENTITY_API_BASE_URL", fallback: "http://127.0.0.1:58082" },
-  workforce: { env: "WORKFORCE_API_BASE_URL", fallback: "http://127.0.0.1:58086" },
-  providers: { env: "PROVIDERS_API_BASE_URL", fallback: "http://127.0.0.1:58087" },
-  "platform-control": { env: "PLATFORM_CONTROL_API_BASE_URL", fallback: "http://127.0.0.1:58088" },
+  dsh: { env: "DSH_API_BASE_URL", fallback: "http://127.0.0.1:18080" },
+  identity: { env: "IDENTITY_API_BASE_URL", fallback: "http://127.0.0.1:18082" },
+  workforce: { env: "WORKFORCE_API_BASE_URL", fallback: "http://127.0.0.1:18086" },
+  providers: { env: "PROVIDERS_API_BASE_URL", fallback: "http://127.0.0.1:18087" },
+  "platform-control": { env: "PLATFORM_CONTROL_API_BASE_URL", fallback: "http://127.0.0.1:18088" },
 } as const;
 
 export type ControlPanelBffService = keyof typeof SERVICE_CONFIG;
@@ -65,6 +66,17 @@ function requestIsSameSite(request: Request): boolean {
   if (!isSameOriginRequest(request)) return false;
   const fetchSite = request.headers.get("sec-fetch-site");
   return !fetchSite || ["same-origin", "same-site", "none"].includes(fetchSite);
+}
+
+function isPublicIdentityProbe(
+  request: Request,
+  service: ControlPanelBffService,
+  upstreamPath: string,
+): boolean {
+  const isSafeProbeMethod = request.method === "GET";
+  return service === "identity"
+    && isSafeProbeMethod
+    && PUBLIC_IDENTITY_PROBE_PATHS.has(upstreamPath);
 }
 
 function pathIsSafe(path: readonly string[]): boolean {
@@ -286,6 +298,7 @@ export async function proxyControlPanelRequest(
   let rotatedCookies: ControlPanelTokenPair | null = null;
   const upstreamPath = `/${pathSegments.map(encodeURIComponent).join("/")}`;
   const isIdentityRefresh = service === "identity" && upstreamPath === "/auth/refresh";
+  const isPublicIdentityProbeRequest = isPublicIdentityProbe(request, service, upstreamPath);
 
   if (isIdentityRefresh && !refreshToken) {
     return jsonError(401, "IDENTITY_REFRESH_COOKIE_MISSING", "Refresh session is unavailable.");
@@ -298,7 +311,7 @@ export async function proxyControlPanelRequest(
   const requestUrl = new URL(request.url);
   const upstreamUrl = new URL(`${upstreamPath}${requestUrl.search}`, `${baseUrl}/`);
 
-  if (!isIdentityRefresh && !accessToken) {
+  if (!isIdentityRefresh && !isPublicIdentityProbeRequest && !accessToken) {
     if (!refreshToken) return noStoreJson({ code: "SESSION_NOT_FOUND" }, 401);
     try {
       rotatedCookies = await rotateControlPanelSession(refreshToken);
@@ -321,7 +334,11 @@ export async function proxyControlPanelRequest(
     return jsonError(502, "BFF_UPSTREAM_UNAVAILABLE", "The requested upstream service is temporarily unavailable.");
   }
 
-  if (!isIdentityRefresh && upstream.status === 401 && refreshToken && !rotatedCookies) {
+  if (
+    !isIdentityRefresh
+    && !isPublicIdentityProbeRequest
+    && upstream.status === 401 && refreshToken && !rotatedCookies
+  ) {
     try {
       rotatedCookies = await rotateControlPanelSession(refreshToken);
       if (!rotatedCookies) return expiredSessionResponse(403);

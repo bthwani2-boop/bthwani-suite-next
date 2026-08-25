@@ -15,5 +15,5 @@ export function resolveProvidersApiBaseUrl(): string {
     const configured = process.env["NEXT_PUBLIC_PROVIDERS_API_BASE_URL"];
     if (configured && configured.trim().length > 0) return configured.trim();
   }
-  return "http://localhost:58087";
+  return "http://localhost:18087";
 }

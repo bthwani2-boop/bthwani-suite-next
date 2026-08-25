@@ -919,23 +919,6 @@
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "503": { $ref: "../dsh.openapi.yaml#/components/responses/ServiceUnavailable" }
 
-/dsh/operator/admin/partners:
-  get:
-    operationId: listDshPartnerActivations
-    summary: List partner activation requests.
-    tags: [DshAdministration]
-    security:
-      - bearerAuth: []
-    responses:
-      "200":
-        description: Partner activations list.
-        content:
-          application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshPartnerActivationsListResponse" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-
-
-
 /dsh/partner/orders/{orderId}/partner-delivery:
   get:
     operationId: getDshPartnerDeliveryTask

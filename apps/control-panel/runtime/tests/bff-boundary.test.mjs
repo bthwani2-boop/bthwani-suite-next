@@ -14,5 +14,5 @@ test("control-panel has no direct WLT upstream or browser route", () => {
   assert.doesNotMatch(proxy, /\bwlt:\s*\{/);
   assert.doesNotMatch(proxy, /WLT_API_BASE_URL/);
   assert.doesNotMatch(proxy, /\/api\/wlt/);
-  assert.doesNotMatch(proxy, /58083/);
+  assert.doesNotMatch(proxy, /18083/);
 });

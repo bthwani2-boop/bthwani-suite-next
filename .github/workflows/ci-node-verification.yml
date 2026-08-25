@@ -3,23 +3,22 @@ name: BThwani Node Verification
 on:
   workflow_call:
     inputs:
-      base_sha: { type: string, required: true }
-      head_sha: { type: string, required: true }
-      full_scope: { type: string, required: true }
-      frontend: { type: string, required: true }
-      mobile: { type: string, required: true }
-      heavy: { type: string, required: true }
-      verification_tier: { type: string, required: true }
-      execution_phase: { type: string, required: true }
-      journey: { type: string, required: true }
-      journey_scope: { type: string, required: false, default: "" }
-      platform_change_sets: { type: string, required: true }
+      base_sha: {type: string, required: true}
+      candidate_sha: {type: string, required: true}
+      full_scope: {type: string, required: true}
+      frontend: {type: string, required: true}
+      mobile: {type: string, required: true}
+      heavy: {type: string, required: true}
+      verification_tier: {type: string, required: true}
+      journey: {type: string, required: true}
+      journey_scope: {type: string, required: false, default: ""}
+      platform_change_sets: {type: string, required: true}
 
 permissions:
   contents: read
 
 env:
-  CANDIDATE_SHA: ${{ github.sha }}
+  CANDIDATE_SHA: ${{ inputs.candidate_sha }}
 
 jobs:
   verify:
@@ -30,11 +29,13 @@ jobs:
       - name: Verify routed candidate identity
         shell: bash
         env:
-          ROUTED_HEAD_SHA: ${{ inputs.head_sha }}
+          ROUTED_CANDIDATE_SHA: ${{ inputs.candidate_sha }}
         run: |
           set -euo pipefail
-          if [[ -z "${CANDIDATE_SHA}" || "${ROUTED_HEAD_SHA}" != "${CANDIDATE_SHA}" ]]; then
-            echo "::error::Routed head SHA mismatch: routed=${ROUTED_HEAD_SHA:-<empty>} event=${CANDIDATE_SHA:-<empty>}"
+          if [[ ! "${CANDIDATE_SHA}" =~ ^[0-9a-fA-F]{40}$ || "${ROUTED_CANDIDATE_SHA}" != "${CANDIDATE_SHA}" ]]; then
+            echo \
+            "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CA\
+            NDIDATE_SHA:-<empty>}"
             exit 1
           fi
       - name: Checkout immutable source candidate
@@ -76,7 +77,6 @@ jobs:
           FULL_SCOPE: ${{ inputs.full_scope }}
           MOBILE: ${{ inputs.mobile }}
           VERIFICATION_TIER: ${{ inputs.verification_tier }}
-          EXECUTION_PHASE: ${{ inputs.execution_phase }}
         shell: bash
         run: |
           set +e
@@ -91,7 +91,7 @@ jobs:
           if [[ "${MOBILE}" == "true" ]]; then
             run_check node --test tools/mobile/tests/*.test.mjs || status=$?
           fi
-          if [[ "${FULL_SCOPE}" == "true" && ( "${EXECUTION_PHASE}" == "closure" || "${EXECUTION_PHASE}" == "master" || "${EXECUTION_PHASE}" == "b" || "${EXECUTION_PHASE}" == "c" ) ]]; then
+          if [[ "${FULL_SCOPE}" == "true" ]]; then
             run_check pnpm exec nx run-many -t typecheck lint test build --all --outputStyle=stream || status=$?
           elif [[ "${VERIFICATION_TIER}" == "fast" ]]; then
             run_check node tools/scripts/run-affected-verification.mjs typecheck lint test || status=$?
@@ -123,11 +123,13 @@ jobs:
       - name: Verify routed candidate identity
         shell: bash
         env:
-          ROUTED_HEAD_SHA: ${{ inputs.head_sha }}
+          ROUTED_CANDIDATE_SHA: ${{ inputs.candidate_sha }}
         run: |
           set -euo pipefail
-          if [[ -z "${CANDIDATE_SHA}" || "${ROUTED_HEAD_SHA}" != "${CANDIDATE_SHA}" ]]; then
-            echo "::error::Routed head SHA mismatch: routed=${ROUTED_HEAD_SHA:-<empty>} event=${CANDIDATE_SHA:-<empty>}"
+          if [[ ! "${CANDIDATE_SHA}" =~ ^[0-9a-fA-F]{40}$ || "${ROUTED_CANDIDATE_SHA}" != "${CANDIDATE_SHA}" ]]; then
+            echo \
+            "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CA\
+            NDIDATE_SHA:-<empty>}"
             exit 1
           fi
       - name: Checkout immutable source candidate
@@ -156,7 +158,8 @@ jobs:
         run: |
           $log = Join-Path $env:RUNNER_TEMP "journey-gates.log"
           Set-Content -Path $log -Value ""
-          $journeys = @($env:JOURNEY_SCOPE -split ',' | Where-Object { $_ -and $_.Trim() } | ForEach-Object { $_.Trim().ToUpperInvariant() } | Select-Object -Unique)
+          $journeys = @($env:JOURNEY_SCOPE -split ',' | Where-Object { $_ -and $_.Trim() } | `
+          ForEach-Object { $_.Trim().ToUpperInvariant() } | Select-Object -Unique)
           $journeyOutput = & ./tools/scripts/run-journey-gate.ps1 -Journey ($journeys -join ',') 2>&1
           $exitCode = if ($null -eq $LASTEXITCODE) { 1 } else { $LASTEXITCODE }
           $journeyOutput | Tee-Object -FilePath $log -Append
@@ -182,11 +185,13 @@ jobs:
       - name: Verify routed candidate identity
         shell: bash
         env:
-          ROUTED_HEAD_SHA: ${{ inputs.head_sha }}
+          ROUTED_CANDIDATE_SHA: ${{ inputs.candidate_sha }}
         run: |
           set -euo pipefail
-          if [[ -z "${CANDIDATE_SHA}" || "${ROUTED_HEAD_SHA}" != "${CANDIDATE_SHA}" ]]; then
-            echo "::error::Routed head SHA mismatch: routed=${ROUTED_HEAD_SHA:-<empty>} event=${CANDIDATE_SHA:-<empty>}"
+          if [[ ! "${CANDIDATE_SHA}" =~ ^[0-9a-fA-F]{40}$ || "${ROUTED_CANDIDATE_SHA}" != "${CANDIDATE_SHA}" ]]; then
+            echo \
+            "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CA\
+            NDIDATE_SHA:-<empty>}"
             exit 1
           fi
       - name: Checkout immutable source candidate

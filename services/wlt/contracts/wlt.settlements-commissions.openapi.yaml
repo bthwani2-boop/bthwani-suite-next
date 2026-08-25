@@ -11,7 +11,7 @@ info:
     only. Every financial mutation requires an Idempotency-Key and stores an
     atomic canonical response for safe replay.
 servers:
-  - url: http://localhost:58083
+  - url: http://localhost:18083
 paths:
   /wlt/settlements:
     post:

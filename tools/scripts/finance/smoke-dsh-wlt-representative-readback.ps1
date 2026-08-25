@@ -1,7 +1,7 @@
 param(
-  [string]$IdentityBaseUrl = "http://localhost:58082",
-  [string]$DshBaseUrl = "http://localhost:58080",
-  [string]$WorkforceBaseUrl = "http://localhost:58086"
+  [string]$IdentityBaseUrl = "http://localhost:18082",
+  [string]$DshBaseUrl = "http://localhost:18080",
+  [string]$WorkforceBaseUrl = "http://localhost:18086"
 )
 
 Set-StrictMode -Version Latest

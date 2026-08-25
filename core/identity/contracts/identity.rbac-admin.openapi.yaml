@@ -15,7 +15,7 @@ x-bthwani-owner: core/identity
 x-bthwani-runtime-dependency: true
 x-bthwani-extends: ./identity.openapi.yaml
 servers:
-  - url: http://localhost:58082
+  - url: http://localhost:18082
     description: Local Identity runtime
 paths:
   /internal/permissions/resolve:
@@ -57,6 +57,89 @@ paths:
           description: Caller is forbidden.
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
+  /internal/rbac/permission-vocabulary:
+    get:
+      operationId: listRbacPermissionVocabulary
+      tags: [internal-rbac]
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/DshServiceCaller'
+        - name: service
+          in: query
+          required: false
+          schema: { type: string }
+        - name: surface
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        '200':
+          description: Canonical permission vocabulary.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [permissions]
+                properties:
+                  permissions:
+                    type: array
+                    items: { $ref: '#/components/schemas/PermissionVocabularyEntry' }
+        '401': { description: Invalid DSH service token. }
+        '403': { description: Caller is forbidden. }
+        '503': { $ref: '#/components/responses/ServiceUnavailable' }
+  /internal/rbac/role-definitions/{roleName}:
+    parameters:
+      - name: roleName
+        in: path
+        required: true
+        schema:
+          type: string
+          pattern: '^[a-z][a-z0-9_-]{2,79}$'
+    get:
+      operationId: getRbacRoleDefinition
+      tags: [internal-rbac]
+      security: [{ serviceToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/DshServiceCaller'
+      responses:
+        '200':
+          description: Complete canonical role definition.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RbacRole' }
+        '404': { description: Role does not exist. }
+        '401': { description: Invalid DSH service token. }
+        '403': { description: Caller is forbidden. }
+    put:
+      operationId: upsertRbacRoleDefinition
+      tags: [internal-rbac]
+      security: [{ serviceToken: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/DshServiceCaller'
+        - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CanonicalIntentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RbacRoleDefinitionRequest' }
+      responses:
+        '200':
+          description: Canonical role definition after the write.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RbacRole' }
+        '400':
+          description: >-
+            Invalid role definition, missing idempotency key, or missing canonical intent binding.
+        '409': { description: Idempotency or expected-version conflict. }
+        '401': { description: Invalid DSH service token. }
+        '403': { description: Caller is forbidden. }
   /internal/rbac/roles:
     get:
       operationId: listRbacRoles
@@ -86,38 +169,6 @@ paths:
           description: Caller is forbidden.
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
-    post:
-      operationId: createRbacRole
-      tags: [internal-rbac]
-      security:
-        - serviceToken: []
-      parameters:
-        - $ref: '#/components/parameters/Authorization'
-        - $ref: '#/components/parameters/DshServiceCaller'
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/RbacRoleCreateRequest'
-      responses:
-        '201':
-          description: Role definition created.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RbacRole'
-        '400':
-          description: Invalid role name, description, or permission reference.
-        '401':
-          description: Invalid DSH service token.
-        '403':
-          description: Caller is forbidden.
-        '409':
-          description: A role with this name already exists.
-        '503':
-          $ref: '#/components/responses/ServiceUnavailable'
   /internal/rbac/staff:
     get:
       operationId: listRbacStaff
@@ -129,7 +180,7 @@ paths:
         - $ref: '#/components/parameters/DshServiceCaller'
       responses:
         '200':
-          description: Every actor holding at least one durable role assignment.
+          description: Every actor holding at least one effective assignment to an active role.
           content:
             application/json:
               schema:
@@ -148,6 +199,40 @@ paths:
         '503':
           $ref: '#/components/responses/ServiceUnavailable'
   /internal/rbac/actors/{actorId}/roles:
+    get:
+      operationId: listRbacActorRoleAssignments
+      tags: [internal-rbac]
+      security:
+        - serviceToken: []
+      parameters:
+        - $ref: '#/components/parameters/Authorization'
+        - $ref: '#/components/parameters/DshServiceCaller'
+        - name: actorId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      responses:
+        '200':
+          description: Durable actor-role assignments, including assignments to inactive roles.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [assignments]
+                properties:
+                  assignments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/RbacActorRoleAssignment'
+        '401':
+          description: Invalid DSH service token.
+        '403':
+          description: Caller is forbidden.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
     post:
       operationId: grantRbacRole
       tags: [internal-rbac]
@@ -157,6 +242,7 @@ paths:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/DshServiceCaller'
         - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CanonicalIntentId'
         - name: actorId
           in: path
           required: true
@@ -183,7 +269,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/RbacActorRoleAssignment'
         '400':
-          description: Self-grant, unknown actor, or unknown role.
+          description: Self-grant, unknown actor, unknown role, or missing canonical intent binding.
         '401':
           description: Invalid DSH service token.
         '403':
@@ -201,6 +287,7 @@ paths:
         - $ref: '#/components/parameters/Authorization'
         - $ref: '#/components/parameters/DshServiceCaller'
         - $ref: '#/components/parameters/IdempotencyKey'
+        - $ref: '#/components/parameters/CanonicalIntentId'
         - name: actorId
           in: path
           required: true
@@ -219,11 +306,17 @@ paths:
           schema:
             type: string
             minLength: 1
+        - name: expectedRoleVersion
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
       responses:
         '204':
           description: Role revoked (or already absent; idempotent).
         '400':
-          description: Self-revoke or unknown role.
+          description: Self-revoke, unknown role, or missing canonical intent binding.
         '401':
           description: Invalid DSH service token.
         '403':
@@ -252,7 +345,15 @@ components:
     IdempotencyKey:
       name: Idempotency-Key
       in: header
-      required: false
+      required: true
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 128
+    CanonicalIntentId:
+      name: X-Canonical-Intent-ID
+      in: header
+      required: true
       schema:
         type: string
         minLength: 1
@@ -261,6 +362,16 @@ components:
     ServiceUnavailable:
       description: Identity RBAC store is unavailable.
   schemas:
+    PermissionVocabularyEntry:
+      type: object
+      additionalProperties: false
+      required: [id, service, surface, action, description]
+      properties:
+        id: { type: string, format: uuid }
+        service: { type: string }
+        surface: { type: string }
+        action: { type: string }
+        description: { type: string }
     Permission:
       type: object
       additionalProperties: false
@@ -277,7 +388,7 @@ components:
     RbacRole:
       type: object
       additionalProperties: false
-      required: [id, name, description]
+      required: [id, name, description, active, permissions, version, createdAt, updatedAt]
       properties:
         id:
           type: string
@@ -285,21 +396,41 @@ components:
           type: string
         description:
           type: string
-    RbacRoleCreateRequest:
+        active:
+          type: boolean
+        permissions:
+          type: array
+          items: { $ref: '#/components/schemas/Permission' }
+        version:
+          type: integer
+          minimum: 1
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    RbacRoleDefinitionRequest:
       type: object
       additionalProperties: false
-      required: [name, description]
+      required: [description, active, permissions, expectedVersion]
       properties:
-        name:
-          type: string
-          pattern: '^[a-z][a-z0-9_-]{2,79}$'
         description:
           type: string
           minLength: 1
+        active:
+          type: boolean
+        permissions:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Permission' }
+        expectedVersion:
+          type: integer
+          minimum: 0
     RbacRoleGrantRequest:
       type: object
       additionalProperties: false
-      required: [roleName, requestedByActorId]
+      required: [roleName, requestedByActorId, expectedRoleVersion]
       properties:
         roleName:
           type: string
@@ -307,6 +438,9 @@ components:
         requestedByActorId:
           type: string
           minLength: 1
+        expectedRoleVersion:
+          type: integer
+          minimum: 1
     RbacStaffActor:
       type: object
       additionalProperties: false

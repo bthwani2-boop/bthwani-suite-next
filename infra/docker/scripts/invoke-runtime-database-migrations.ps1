@@ -4,7 +4,7 @@ param(
   [ValidateSet("identity", "workforce", "dsh", "wlt", "providers", "platform-control")]
   [string]$Service,
   [string]$SourceCommitSha = "",
-  # Explicit permission to rebuild THIS service's local database when its
+  # Explicit permission to reset THIS service's local database when its
   # migration ledger has drifted. Passed only by the bootstrap-dev phase; `up`
   # and `smoke` must never pass it, so a conflict stays loud there.
   [switch]$AllowLocalLedgerRecovery
@@ -18,20 +18,44 @@ Set-Location -LiteralPath $RepoRoot
 
 $ComposeFile = Join-Path $RepoRoot "infra/docker/compose.runtime.yml"
 $EnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
-$RebuildScript = Join-Path $ScriptDir "rebuild-runtime-service-database.ps1"
+$ResetScript = Join-Path $ScriptDir "reset-runtime-service-database.ps1"
 $IdentityImportScript = Join-Path $RepoRoot "tools/scripts/import-identity-operator-context-to-workforce.ps1"
 if (-not (Test-Path -LiteralPath $ComposeFile -PathType Leaf)) { throw "Compose file not found: $ComposeFile" }
 if (-not (Test-Path -LiteralPath $EnvFile -PathType Leaf)) { throw "Runtime env file not found: $EnvFile" }
-if (-not (Test-Path -LiteralPath $RebuildScript -PathType Leaf)) { throw "Service database rebuild authority not found: $RebuildScript" }
+if (-not (Test-Path -LiteralPath $ResetScript -PathType Leaf)) { throw "Service database reset primitive not found: $ResetScript" }
 if ($Service -eq "workforce" -and -not (Test-Path -LiteralPath $IdentityImportScript -PathType Leaf)) { throw "Identity-to-Workforce migration authority not found: $IdentityImportScript" }
 
+function Get-RuntimeEnvironmentValue {
+  param(
+    [Parameter(Mandatory = $true)][string]$Name,
+    [Parameter(Mandatory = $true)][string]$DefaultValue
+  )
+
+  $processValue = [System.Environment]::GetEnvironmentVariable($Name, "Process")
+  if (-not [string]::IsNullOrWhiteSpace($processValue)) { return $processValue.Trim() }
+
+  foreach ($rawLine in Get-Content -LiteralPath $EnvFile) {
+    $line = $rawLine.Trim()
+    if (-not $line -or $line.StartsWith("#") -or -not $line.Contains("=")) { continue }
+    $parts = $line.Split("=", 2)
+    if ($parts[0].Trim() -ne $Name) { continue }
+    $value = $parts[1].Trim()
+    if (($value.StartsWith('"') -and $value.EndsWith('"')) -or
+        ($value.StartsWith("'") -and $value.EndsWith("'"))) {
+      $value = $value.Substring(1, $value.Length - 2)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($value)) { return $value }
+  }
+  return $DefaultValue
+}
+
 $serviceMap = @{
-  "identity" = @{ Directory = "core/identity/database/migrations"; User = "identity_runtime"; Database = "identity_runtime" }
-  "workforce" = @{ Directory = "core/workforce/database/migrations"; User = "workforce_runtime"; Database = "workforce_runtime" }
-  "dsh" = @{ Directory = "services/dsh/database/migrations"; User = "dsh_runtime"; Database = "dsh_runtime" }
-  "wlt" = @{ Directory = "services/wlt/database/migrations"; User = "wlt_runtime"; Database = "wlt_runtime" }
-  "providers" = @{ Directory = "core/providers/database/migrations"; User = "providers_runtime"; Database = "providers_runtime" }
-  "platform-control" = @{ Directory = "core/platform-control/database/migrations"; User = "platform_control_runtime"; Database = "platform_control_runtime" }
+  "identity" = @{ Directory = "core/identity/database/migrations"; User = (Get-RuntimeEnvironmentValue "BTHWANI_IDENTITY_DB_USER" "identity_runtime"); Database = (Get-RuntimeEnvironmentValue "BTHWANI_IDENTITY_DB_NAME" "identity_runtime") }
+  "workforce" = @{ Directory = "core/workforce/database/migrations"; User = (Get-RuntimeEnvironmentValue "BTHWANI_WORKFORCE_DB_USER" "workforce_runtime"); Database = (Get-RuntimeEnvironmentValue "BTHWANI_WORKFORCE_DB_NAME" "workforce_runtime") }
+  "dsh" = @{ Directory = "services/dsh/database/migrations"; User = (Get-RuntimeEnvironmentValue "BTHWANI_DSH_DB_USER" "dsh_runtime"); Database = (Get-RuntimeEnvironmentValue "BTHWANI_DSH_DB_NAME" "dsh_runtime") }
+  "wlt" = @{ Directory = "services/wlt/database/migrations"; User = (Get-RuntimeEnvironmentValue "BTHWANI_WLT_DB_USER" "wlt_runtime"); Database = (Get-RuntimeEnvironmentValue "BTHWANI_WLT_DB_NAME" "wlt_runtime") }
+  "providers" = @{ Directory = "core/providers/database/migrations"; User = (Get-RuntimeEnvironmentValue "BTHWANI_PROVIDERS_DB_USER" "providers_runtime"); Database = (Get-RuntimeEnvironmentValue "BTHWANI_PROVIDERS_DB_NAME" "providers_runtime") }
+  "platform-control" = @{ Directory = "core/platform-control/database/migrations"; User = (Get-RuntimeEnvironmentValue "BTHWANI_PLATFORM_CONTROL_DB_USER" "platform_control_runtime"); Database = (Get-RuntimeEnvironmentValue "BTHWANI_PLATFORM_CONTROL_DB_NAME" "platform_control_runtime") }
 }
 $config = $serviceMap[$Service]
 $migrationDirectory = Join-Path $RepoRoot $config.Directory
@@ -57,26 +81,16 @@ if ([string]::IsNullOrWhiteSpace($SourceCommitSha)) {
 . (Join-Path $ScriptDir "schema-migration-runner.ps1")
 . (Join-Path $ScriptDir "workforce-migration-input-handoff.ps1")
 
-# Local ledger recovery is destructive, so permission is an explicit contract
-# passed down from the bootstrap-dev phase -- never inferred from ambient state.
-# It previously keyed off the pnpm lifecycle-event environment variable, which is
-# a package-manager side effect rather than a contract: any hop through
-# Start-Process, a nested pnpm invocation or a direct `pwsh -File` call silently
-# revoked recovery, and its allow-list also covered the five app start scripts,
-# meaning ordinary app startup was authorized to rebuild a database.
-function Test-LocalDatabaseRebuildAllowed {
+# Destructive local ledger recovery is authorized only by the canonical
+# bootstrap-dev action. There is no ambient environment-variable escape hatch:
+# callers outside that lifecycle must fail closed on a ledger conflict.
+function Test-LocalDatabaseResetAllowed {
   $environmentValues = @($env:NODE_ENV, $env:ENVIRONMENT, $env:BTHWANI_ENVIRONMENT) |
     Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
     ForEach-Object { $_.Trim().ToLowerInvariant() }
   if ($environmentValues -contains "production") { return $false }
-
-  if ($AllowLocalLedgerRecovery) { return $true }
-
-  # Explicit operator override for a local database, still subject to the
-  # production assertion above. Nothing in the repository sets it.
-  return $env:BTHWANI_ALLOW_LOCAL_DATABASE_REBUILD -eq "true"
+  return [bool]$AllowLocalLedgerRecovery
 }
-
 function Invoke-ComposePsql {
   param([Parameter(Mandatory = $true)][string]$Sql, [switch]$Quiet)
 
@@ -95,12 +109,6 @@ function Invoke-ComposePsql {
   $psqlOutput = ($output | ForEach-Object { [string]$_ }) -join "`n"
   foreach ($line in $output) { Write-Host ([string]$line) }
   if ($exitCode -ne 0) {
-    # The failure text travels on the exception itself. It used to be stashed in
-    # a shared $script:LastPsqlOutput that the recovery guard read afterwards,
-    # but the runner's own failure-bookkeeping UPDATE re-entered this function
-    # and overwrote that variable before the guard ever looked at it -- so the
-    # conflict token was always gone and the rebuild path was dead code for
-    # exactly the failure it was written for.
     throw "Runtime psql failed for '$Service' with exit code $exitCode.`n$psqlOutput"
   }
 }
@@ -150,7 +158,7 @@ try {
     $isRecoverableLedgerConflict = Test-BthwaniRecoverableLedgerConflict -FailureText $failureText
 
     if (-not $isRecoverableLedgerConflict) { throw $migrationFailure }
-    if (-not (Test-LocalDatabaseRebuildAllowed)) {
+    if (-not (Test-LocalDatabaseResetAllowed)) {
       throw [System.InvalidOperationException]::new(
         "Migration ledger conflict for '$Service' is recoverable, but this phase holds no local recovery permission. " +
         "Run 'pnpm run runtime:full:bootstrap-dev', which passes -AllowLocalLedgerRecovery explicitly. " +
@@ -158,14 +166,16 @@ try {
         $migrationFailure.Exception)
     }
 
-    Write-Warning "Governed migration drift detected for local service '$Service'; rebuilding only its runtime database from canonical migrations."
-    & $RebuildScript `
+    Write-Warning "Governed migration drift detected for local service '$Service'; resetting only its runtime database before replaying canonical migrations."
+    & $ResetScript `
       -Service $Service `
       -ComposeFile $ComposeFile `
       -EnvFile $EnvFile `
       -Reason "governed migration ledger conflict" `
-      -AllowLocalDevelopmentRebuild
+      -AllowLocalDevelopmentReset
 
+    # The reset primitive never restarts the service. Canonical migrations must
+    # converge first; the runtime orchestrator starts/restarts APIs afterwards.
     Invoke-GovernedMigrationPass
   }
 } finally {

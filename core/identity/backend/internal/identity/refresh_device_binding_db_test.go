@@ -3,7 +3,6 @@ package identity
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -12,24 +11,8 @@ import (
 
 func insertDeviceBindingActor(t *testing.T, db *sql.DB, actorID, role, surface string) {
 	t.Helper()
-	permissions, err := json.Marshal([]Permission{{
-		Service: "dsh",
-		Surface: surface,
-		Action:  "session:test",
-		Scope:   "own",
-	}})
-	if err != nil {
-		t.Fatalf("marshal actor permissions: %v", err)
-	}
-	if _, err := db.Exec(`
-		INSERT INTO identity_actors
-		    (id, username, password_hash, operator_context_id, phone_e164,
-		     roles, permissions, status, version, updated_at)
-		VALUES ($1, $1, '', 'agent2-device-binding', NULL,
-		        ARRAY[$2]::text[], $3::jsonb, 'ACTIVE', 1, now())`,
-		actorID, role, string(permissions)); err != nil {
-		t.Fatalf("insert device-binding actor: %v", err)
-	}
+	_ = surface
+	insertIdentityTestActor(t, db, actorID, actorID, "agent2-device-binding", "", []string{role}, nil, ActorStatusActive, 1)
 }
 
 func insertDeviceBindingSession(

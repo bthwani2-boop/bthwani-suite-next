@@ -12,7 +12,7 @@ $FinancialComposeFile = Join-Path $RepoRoot "infra/docker/compose.financial-simu
 $EnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.env.example"
 $EvidenceDirectory = Join-Path $RepoRoot "artifacts"
 $EvidencePath = Join-Path $EvidenceDirectory "lian-runtime-closure-evidence.json"
-$CoreProfiles = "identity,workforce,dsh,wlt,financial-simulators,mail,media-storage"
+$CoreProfiles = "identity,workforce,dsh,wlt,providers,platform,financial-simulators,mail,media-storage"
 $MigrationRunner = Join-Path $RepoRoot "infra/docker/scripts/schema-migration-runner.ps1"
 New-Item -ItemType Directory -Path $EvidenceDirectory -Force | Out-Null
 
@@ -68,13 +68,6 @@ function Save-Evidence([string]$State, [string]$Failure = "") {
   $Evidence.completedAt = [DateTimeOffset]::UtcNow.ToString("o")
   if ($Failure) { $Evidence.failure = $Failure }
   $Evidence | ConvertTo-Json -Depth 14 | Set-Content -LiteralPath $EvidencePath -Encoding utf8
-}
-
-function Invoke-Compose([string[]]$Arguments, [switch]$Financial) {
-  $Base = @("compose", "--env-file", $EnvFile, "-f", $ComposeFile)
-  if ($Financial) { $Base += @("-f", $FinancialComposeFile) }
-  & docker @Base @Arguments
-  if ($LASTEXITCODE -ne 0) { throw "docker compose failed: $($Arguments -join ' ')" }
 }
 
 function Invoke-Runtime([string]$Action, [string]$Profiles, [switch]$Force) {
@@ -164,7 +157,7 @@ function Wait-Status([string]$Name, [string]$Url, [string]$Expected = "healthy")
 }
 
 function Wait-Providers {
-  $Url = "http://127.0.0.1:58087/providers/health"
+  $Url = "http://127.0.0.1:18087/providers/health"
   $RequiredKinds = @("sms", "maps", "payment", "push", "email", "storage", "search", "fraud")
   for ($Attempt = 1; $Attempt -le 40; $Attempt++) {
     try {
@@ -200,18 +193,17 @@ function Invoke-EvidenceScript([string]$Name, [string]$Path, [string[]]$Argument
 }
 
 function Verify-AllServices {
-  Wait-Status "dsh" "http://127.0.0.1:58080/dsh/health"
-  Wait-Status "identity" "http://127.0.0.1:58082/identity/health"
-  Wait-Status "wlt" "http://127.0.0.1:58083/wlt/health"
-  Wait-Status "workforce" "http://127.0.0.1:58086/workforce/health"
+  Wait-Status "dsh" "http://127.0.0.1:18080/dsh/health"
+  Wait-Status "identity" "http://127.0.0.1:18082/identity/health"
+  Wait-Status "wlt" "http://127.0.0.1:18083/wlt/health"
+  Wait-Status "workforce" "http://127.0.0.1:18086/workforce/health"
   Wait-Providers
-  Wait-Status "platform-control" "http://127.0.0.1:58088/platform/health"
-  Wait-Status "platform-control-readiness" "http://127.0.0.1:58088/platform/readiness" "ready"
+  Wait-Status "platform-control" "http://127.0.0.1:18088/platform/health"
+  Wait-Status "platform-control-readiness" "http://127.0.0.1:18088/platform/readiness" "ready"
 }
 
 try {
-  Invoke-Compose @("down", "-v", "--remove-orphans") -Financial
-  Invoke-Runtime "up" $CoreProfiles
+  Invoke-Runtime "reset" $CoreProfiles -Force
   Invoke-Runtime "seed" $CoreProfiles
   Invoke-Runtime "bootstrap-dev" "dsh,media-storage" -Force
 
@@ -219,7 +211,7 @@ try {
   Wait-Database "platform_control_runtime"
   Invoke-Migrations "providers" (Join-Path $RepoRoot "core/providers/database/migrations") "providers_runtime" "providers_runtime"
   Invoke-Migrations "platform-control" (Join-Path $RepoRoot "core/platform-control/database/migrations") "platform_control_runtime" "platform_control_runtime"
-  Invoke-Compose @("--profile", "providers", "--profile", "platform", "up", "-d", "--build", "providers-api", "platform-control-api")
+  Invoke-Runtime "up" $CoreProfiles
   Verify-AllServices
 
   $Evidence.financialMatrix = Invoke-EvidenceScript "WLT runtime failure matrix" `
@@ -230,11 +222,11 @@ try {
     (Join-Path $RepoRoot "tools/scripts/test-runtime-backup-restore.ps1") @("-EnvFile", $EnvFile)
 
   Verify-AllServices
-  Assert-Protected "client-map-search" "POST" "http://127.0.0.1:58080/dsh/client/maps/search" '{"query":"Sanaa"}'
-  Assert-Protected "client-map-reverse" "POST" "http://127.0.0.1:58080/dsh/client/maps/reverse" '{"latitude":15.35,"longitude":44.20}'
-  Assert-Protected "service-area-governance" "GET" "http://127.0.0.1:58080/dsh/operator/platform/service-areas"
-  Assert-Protected "platform-zones" "GET" "http://127.0.0.1:58080/dsh/operator/platform/zones"
-  Assert-Protected "address-privacy-policy" "GET" "http://127.0.0.1:58080/dsh/operator/platform/client-address-privacy"
+  Assert-Protected "client-map-search" "POST" "http://127.0.0.1:18080/dsh/client/maps/search" '{"query":"Sanaa"}'
+  Assert-Protected "client-map-reverse" "POST" "http://127.0.0.1:18080/dsh/client/maps/reverse" '{"latitude":15.35,"longitude":44.20}'
+  Assert-Protected "service-area-governance" "GET" "http://127.0.0.1:18080/dsh/operator/platform/service-areas"
+  Assert-Protected "platform-zones" "GET" "http://127.0.0.1:18080/dsh/operator/platform/zones"
+  Assert-Protected "address-privacy-policy" "GET" "http://127.0.0.1:18080/dsh/operator/platform/client-address-privacy"
 
   Save-Evidence "PASS"
   Write-Host "Sovereign full-runtime closure v2: PASS"
@@ -244,6 +236,5 @@ try {
 } finally {
   if ($Cleanup) {
     try { Invoke-Runtime "down" $CoreProfiles } catch { }
-    try { Invoke-Compose @("--profile", "providers", "--profile", "platform", "down", "--remove-orphans") } catch { }
   }
 }

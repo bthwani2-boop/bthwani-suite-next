@@ -8,9 +8,11 @@ const githubApi = String(process.env.GITHUB_API_URL || "https://api.github.com")
 const sonarToken = String(process.env.SONAR_TOKEN || "").trim();
 const sonarHost = String(process.env.SONAR_HOST_URL || "https://sonarcloud.io").replace(/\/$/, "");
 const targetSha = String(process.env.TARGET_SHA || "").trim();
-const targetRef = String(process.env.TARGET_REF || "refs/heads/master").trim();
+const targetRef = String(process.env.TARGET_REF || "").trim();
 const targetEvent = String(process.env.TARGET_EVENT || "push").trim();
-const sonarBranch = String(process.env.SONAR_BRANCH || "master").trim();
+const defaultBranch = String(process.env.DEFAULT_BRANCH || "").trim();
+const targetBranch = targetRef.startsWith("refs/heads/") ? targetRef.slice("refs/heads/".length) : "";
+const sonarBranch = String(process.env.SONAR_BRANCH || targetBranch).trim();
 const waitSeconds = Number(process.env.WAIT_FOR_WORKFLOWS_SECONDS || "1800");
 const pollSeconds = Number(process.env.WORKFLOW_POLL_SECONDS || "15");
 
@@ -54,11 +56,14 @@ function emit(exitCode) {
 
 function assertInputs() {
   if (!repository) fail("GITHUB_REPOSITORY is required");
+  if (!defaultBranch) fail("DEFAULT_BRANCH is required and must come from live repository context");
   if (!githubToken) fail("GH_TOKEN/GITHUB_TOKEN is required");
   if (!sonarToken) fail("SONAR_TOKEN is required");
   if (!/^[0-9a-f]{40}$/i.test(targetSha)) fail("TARGET_SHA must be a full 40-character commit SHA");
-  if (targetRef !== "refs/heads/master") fail(`canonical evidence requires refs/heads/master; received ${targetRef}`);
-  if (targetEvent !== "push") fail(`canonical evidence requires push evidence; received ${targetEvent}`);
+  if (!/^refs\/heads\/.+/.test(targetRef)) fail(`TARGET_REF must be an exact refs/heads/* ref; received ${targetRef}`);
+  if (!targetBranch) fail("target branch could not be derived from TARGET_REF");
+  if (!sonarBranch || sonarBranch !== targetBranch) fail(`SONAR_BRANCH must match target branch ${targetBranch}; received ${sonarBranch}`);
+  if (targetEvent !== "push") fail(`canonical branch evidence requires push evidence; received ${targetEvent}`);
   if (!Number.isFinite(waitSeconds) || waitSeconds < 0) fail("WAIT_FOR_WORKFLOWS_SECONDS must be non-negative");
   if (!Number.isFinite(pollSeconds) || pollSeconds <= 0) fail("WORKFLOW_POLL_SECONDS must be positive");
 }
@@ -143,7 +148,6 @@ function expectedWorkflows() {
 
 async function waitForExactWorkflows() {
   const workflows = expectedWorkflows();
-  const targetBranch = targetRef.slice("refs/heads/".length);
   const deadline = Date.now() + waitSeconds * 1000;
   while (true) {
     const response = await gh(
@@ -169,11 +173,7 @@ async function waitForExactWorkflows() {
     const missing = workflows.filter((workflow) => !selected[workflow.name]);
     const pending = workflows.filter((workflow) => selected[workflow.name] && selected[workflow.name].status !== "completed");
     if (!missing.length && !pending.length) {
-      const failed = workflows.filter((workflow) => selected[workflow.name].conclusion !== "success");
       evidence.workflows = { expected: workflows, selected };
-      if (failed.length) {
-        fail(`exact-SHA workflows failed: ${failed.map((workflow) => `${workflow.name}:${selected[workflow.name].conclusion}`).join(", ")}`);
-      }
       return;
     }
     if (Date.now() >= deadline) {
@@ -196,10 +196,11 @@ async function collectCodeql() {
   const analyses = await ghPaged(`/code-scanning/analyses?ref=${encodeURIComponent(targetRef)}&tool_name=CodeQL`);
   const exactAnalyses = analyses.filter((analysis) => analysis?.commit_sha === targetSha);
   const categories = [...new Set(exactAnalyses.map((analysis) => analysis?.category).filter(Boolean))].sort();
-  const missing = expectedCodeqlCategories.filter((expected) =>
+  const requiredCategories = targetBranch === defaultBranch ? expectedCodeqlCategories : [];
+  const missing = requiredCategories.filter((expected) =>
     !categories.some((observed) => observed === expected || observed.endsWith(expected)),
   );
-  if (missing.length) fail(`CodeQL exact-SHA analyses are incomplete: ${missing.join(", ")}`);
+  if (missing.length) fail(`CodeQL exact-SHA analyses are incomplete on default branch: ${missing.join(", ")}`);
 
   const alerts = {};
   for (const state of ["open", "closed", "dismissed", "fixed"]) {
@@ -214,7 +215,7 @@ async function collectCodeql() {
   }
 
   evidence.codeql = {
-    expectedCategories: expectedCodeqlCategories,
+    expectedCategories: requiredCategories,
     observedCategories: categories,
     exactAnalyses,
     alerts,
@@ -231,9 +232,14 @@ function sonarIssueIsMaterial(issue) {
 }
 
 async function collectSonar(project) {
-  const analyses = await sonarPaged("/api/project_analyses/search", { project: project.projectKey, branch: sonarBranch }, "analyses", 100);
-  const exactAnalyses = analyses.filter((analysis) => analysis?.revision === targetSha)
+  const analyses = (await sonarPaged("/api/project_analyses/search", { project: project.projectKey, branch: sonarBranch }, "analyses", 100))
     .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const latestAnalysis = analyses[0] || null;
+  if (!latestAnalysis) fail(`Sonar has no analysis for branch ${sonarBranch}`);
+  if (latestAnalysis?.revision !== targetSha) {
+    fail(`Sonar latest branch analysis drift: expected=${targetSha} latest=${latestAnalysis?.revision || "missing"}`);
+  }
+  const exactAnalyses = analyses.filter((analysis) => analysis?.revision === targetSha);
   if (!exactAnalyses[0]) fail(`Sonar analysis revision does not match ${targetSha}`);
 
   const qualityGate = await sonar("/api/qualitygates/project_status", { projectKey: project.projectKey, branch: sonarBranch });
@@ -248,6 +254,7 @@ async function collectSonar(project) {
   evidence.sonar = {
     organization: project.organization,
     projectKey: project.projectKey,
+    latestAnalysis,
     exactAnalyses,
     qualityGate,
     issues,
@@ -284,6 +291,23 @@ function finalizePolicy() {
     })),
   ];
 
+  const selectedWorkflows = evidence.workflows?.selected || {};
+  const workflowConclusions = Object.fromEntries(
+    Object.entries(selectedWorkflows).map(([name, run]) => [name, run?.conclusion || "unknown"]),
+  );
+
+  for (const name of ["BThwani Contextual CI", "CodeQL", "Remote Security"]) {
+    if (workflowConclusions[name] !== "success") {
+      evidence.policyFailures.push(
+        `workflow_${name.replace(/[^A-Za-z0-9]+/g, "_").toLowerCase()}=${workflowConclusions[name] || "missing"}`,
+      );
+    }
+  }
+
+  if (workflowConclusions["SonarQube Cloud"] !== "success" && qualityGate === "OK") {
+    evidence.policyFailures.push(`workflow_sonarqube_cloud=${workflowConclusions["SonarQube Cloud"] || "missing"}`);
+  }
+
   if (openAlerts.length) evidence.policyFailures.push(`codeql_open_alerts=${openAlerts.length}`);
   if (qualityGate !== "OK") evidence.policyFailures.push(`sonar_quality_gate=${qualityGate}`);
   if (materialIssues.length) evidence.policyFailures.push(`sonar_material_issues=${materialIssues.length}`);
@@ -291,7 +315,11 @@ function finalizePolicy() {
 
   evidence.summary = {
     targetSha,
+    targetRef,
+    targetBranch,
+    defaultBranch,
     evidenceComplete: true,
+    workflows: workflowConclusions,
     policyStatus: evidence.policyFailures.length ? "FAIL" : "PASS",
     policyFailures: evidence.policyFailures,
     codeql: {

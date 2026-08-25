@@ -22,6 +22,12 @@ func writeAdministrationReviewError(w http.ResponseWriter, err error) {
 		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
 	case errors.Is(err, administration.ErrCanonicalMutationFailed):
 		store.SendError(w, http.StatusConflict, "CANONICAL_MUTATION_FAILED", "the canonical authorization mutation was rejected; the request remains pending")
+	case errors.Is(err, administration.ErrCanonicalMutationInProgress):
+		store.SendError(w, http.StatusConflict, "CANONICAL_MUTATION_RECONCILING", "the canonical authorization mutation is already being reconciled")
+	case errors.Is(err, administration.ErrSeparationOfDuties):
+		store.SendError(w, http.StatusBadRequest, "SEPARATION_OF_DUTIES_VIOLATION", "maker, beneficiary, and checker must be independent")
+	case errors.Is(err, administration.ErrInvalid):
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request is invalid")
 	case err.Error() == "request is not pending" || err.Error() == "version conflict":
 		store.SendError(w, http.StatusConflict, "REQUEST_STATE_CONFLICT", err.Error())
 	case err.Error() == "invalid decision" || err.Error() == "cannot review own request" ||
@@ -39,6 +45,10 @@ func writeAdministrationCreateError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, administration.ErrNotFound):
 		store.SendError(w, http.StatusNotFound, "NOT_FOUND", "referenced approval was not found")
+	case errors.Is(err, administration.ErrIdentityUnavailable):
+		store.SendError(w, http.StatusServiceUnavailable, "IDENTITY_UNAVAILABLE", "identity service is unavailable")
+	case errors.Is(err, administration.ErrConflict):
+		store.SendError(w, http.StatusConflict, "REQUEST_STATE_CONFLICT", "another role change for this actor and role is already pending")
 	case errors.Is(err, administration.ErrInvalid):
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request is invalid")
 	case err.Error() == "only approved requests can be rolled back":
@@ -63,7 +73,7 @@ func (s *protectedStoreServer) handleCreateRoleRequest(w http.ResponseWriter, r 
 		store.SendError(w, http.StatusBadRequest, "INVALID_JSON", "invalid json body")
 		return
 	}
-	req, err := administration.CreateRoleDefinitionRequest(r.Context(), s.db, actor.ID, params)
+	req, err := administration.CreateRoleDefinitionRequest(r.Context(), s.db, s.identity, actor.ID, params)
 	if err != nil {
 		writeAdministrationCreateError(w, err)
 		return
@@ -73,7 +83,7 @@ func (s *protectedStoreServer) handleCreateRoleRequest(w http.ResponseWriter, r 
 
 // GET /dsh/operator/admin/role-requests
 func (s *protectedStoreServer) handleListRoleRequests(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
+	_, ok := s.requireAdministrationPermission(w, r, "administration.role.approve")
 	if !ok {
 		return
 	}
@@ -103,11 +113,33 @@ func (s *protectedStoreServer) handleReviewRoleRequest(w http.ResponseWriter, r 
 		writeAdministrationReviewError(w, err)
 		return
 	}
-	out := map[string]interface{}{"request": req}
+	var roleView interface{}
 	if role != nil {
-		out["role"] = role
+		roleView = canonicalAdministrationRoleView(*role)
 	}
+	out := map[string]interface{}{"request": req, "role": roleView}
 	store.SendJSON(w, http.StatusOK, out)
+}
+
+// POST /dsh/operator/admin/role-requests/{requestId}/replacements
+func (s *protectedStoreServer) handleReplaceFailedRoleRequest(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireAdministrationPermission(w, r, "administration.role.request")
+	if !ok {
+		return
+	}
+	var params administration.SupersedeTerminalFailureParams
+	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+		store.SendError(w, http.StatusBadRequest, "INVALID_JSON", "invalid json body")
+		return
+	}
+	request, err := administration.SupersedeFailedRoleDefinitionRequest(
+		r.Context(), s.db, s.identity, actor.ID, r.PathValue("requestId"), params,
+	)
+	if err != nil {
+		writeAdministrationCreateError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]interface{}{"request": request})
 }
 
 // POST /dsh/operator/admin/staff/{staffId}/roles
@@ -122,7 +154,7 @@ func (s *protectedStoreServer) handleCreateRoleAssignment(w http.ResponseWriter,
 		store.SendError(w, http.StatusBadRequest, "INVALID_JSON", "invalid json body")
 		return
 	}
-	approval, err := administration.CreateRoleAssignmentApproval(r.Context(), s.db, actor.ID, staffID, params)
+	approval, err := administration.CreateRoleAssignmentApproval(r.Context(), s.db, s.identity, actor.ID, staffID, params)
 	if err != nil {
 		writeAdministrationCreateError(w, err)
 		return
@@ -132,7 +164,7 @@ func (s *protectedStoreServer) handleCreateRoleAssignment(w http.ResponseWriter,
 
 // GET /dsh/operator/admin/approvals
 func (s *protectedStoreServer) handleListRoleAssignmentApprovals(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
+	_, ok := s.requireAdministrationPermission(w, r, "administration.staff.approve")
 	if !ok {
 		return
 	}
@@ -168,9 +200,30 @@ func (s *protectedStoreServer) handleReviewRoleAssignmentApproval(w http.Respons
 	})
 }
 
+// POST /dsh/operator/admin/approvals/{approvalId}/replacements
+func (s *protectedStoreServer) handleReplaceFailedRoleAssignmentApproval(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireAdministrationPermission(w, r, "administration.staff.request")
+	if !ok {
+		return
+	}
+	var params administration.SupersedeTerminalFailureParams
+	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+		store.SendError(w, http.StatusBadRequest, "INVALID_JSON", "invalid json body")
+		return
+	}
+	approval, err := administration.SupersedeFailedRoleAssignmentApproval(
+		r.Context(), s.db, s.identity, actor.ID, r.PathValue("approvalId"), params,
+	)
+	if err != nil {
+		writeAdministrationCreateError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]interface{}{"approval": approval})
+}
+
 // GET /dsh/operator/admin/staff
 func (s *protectedStoreServer) handleListStaff(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
+	_, ok := s.requireAdministrationPermission(w, r, "administration.staff.read")
 	if !ok {
 		return
 	}
@@ -187,6 +240,7 @@ func (s *protectedStoreServer) handleListStaff(w http.ResponseWriter, r *http.Re
 	for _, actor := range staff {
 		members = append(members, map[string]interface{}{
 			"id":        actor.ID,
+			"actorId":   actor.ID,
 			"username":  actor.Username,
 			"roles":     actor.Roles,
 			"createdAt": actor.GrantedAt,
@@ -201,26 +255,8 @@ func (s *protectedStoreServer) handleGetDiagnostics(w http.ResponseWriter, r *ht
 	if !ok {
 		return
 	}
-	status := "healthy"
-	details := "Admin governance database and Identity RBAC registry are reachable."
-
-	if err := s.db.PingContext(r.Context()); err != nil {
-		status = "unhealthy"
-		details = "Administration database is unreachable."
-	} else if s.identity == nil {
-		status = "degraded"
-		details = "Identity RBAC client is not configured."
-	} else if _, err := s.identity.ListRoles(r.Context()); err != nil {
-		status = "degraded"
-		details = "Identity RBAC registry is unreachable."
-	}
-
-	store.SendJSON(w, http.StatusOK, map[string]interface{}{
-		"diagnostics": map[string]interface{}{
-			"status":  status,
-			"details": details,
-		},
-	})
+	diagnostics := administration.LoadDiagnostics(r.Context(), s.db, s.identity)
+	store.SendJSON(w, http.StatusOK, map[string]interface{}{"diagnostics": diagnostics})
 }
 
 // POST /dsh/operator/admin/approvals/{approvalId}/rollback-requests
@@ -245,7 +281,7 @@ func (s *protectedStoreServer) handleCreateRollbackRequest(w http.ResponseWriter
 
 // GET /dsh/operator/admin/rollback-requests
 func (s *protectedStoreServer) handleListRollbackRequests(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.requireAdministrationPermission(w, r, AdministrationPermissionRead)
+	_, ok := s.requireAdministrationPermission(w, r, "administration.rollback.approve")
 	if !ok {
 		return
 	}
@@ -278,4 +314,25 @@ func (s *protectedStoreServer) handleReviewRollbackRequest(w http.ResponseWriter
 	store.SendJSON(w, http.StatusOK, map[string]interface{}{
 		"request": req,
 	})
+}
+
+// POST /dsh/operator/admin/rollback-requests/{requestId}/replacements
+func (s *protectedStoreServer) handleReplaceFailedRollbackRequest(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.requireAdministrationPermission(w, r, "administration.rollback.request")
+	if !ok {
+		return
+	}
+	var params administration.SupersedeTerminalFailureParams
+	if err := json.NewDecoder(r.Body).Decode(&params); err != nil {
+		store.SendError(w, http.StatusBadRequest, "INVALID_JSON", "invalid json body")
+		return
+	}
+	request, err := administration.SupersedeFailedRollbackRequest(
+		r.Context(), s.db, s.identity, actor.ID, r.PathValue("requestId"), params,
+	)
+	if err != nil {
+		writeAdministrationCreateError(w, err)
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]interface{}{"request": request})
 }

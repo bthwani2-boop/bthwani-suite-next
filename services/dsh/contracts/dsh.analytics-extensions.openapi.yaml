@@ -10,7 +10,7 @@ x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-client-generation: MANUAL_TYPED_ADAPTER
 x-bthwani-runtime-dependency: true
 servers:
-- url: http://localhost:58080
+- url: http://localhost:18080
 paths:
   /dsh/operator/analytics/preparation-sla:
     $ref: "./paths/analytics.paths.yaml#/~1dsh~1operator~1analytics~1preparation-sla"

@@ -7,7 +7,9 @@
 import {
   DSH_API_BASE,
   WORKFORCE_API_BASE,
+  LOCAL_OPERATOR_CONTEXT_ID,
   authorization,
+  getProvider,
   getPasswordToken,
   issueProviderToken,
   list,
@@ -70,8 +72,9 @@ async function collectClientStorefrontFailures() {
 }
 
 /**
- * Read-only startup check. It deliberately avoids password login, activation
- * issuance/consumption, and provider session creation. Deep governed checks run
+ * Read-only startup check. It reads the generated registry and then verifies
+ * each actor against the canonical Workforce provider projection. It does not
+ * issue activation codes or create provider sessions. Deep governed checks run
  * in --repair, where mutations are explicitly allowed.
  */
 async function collectReadOnlyReadinessFailures() {
@@ -85,6 +88,18 @@ async function collectReadOnlyReadinessFailures() {
     return failures;
   }
 
+  let operatorToken;
+  try {
+    // Workforce operator reads are the canonical proof that the generated
+    // actor binding still points at a real provider profile. The login only
+    // authenticates the read; it does not issue provider activations or mutate
+    // Workforce data.
+    operatorToken = await getPasswordToken(LOCAL_ACTORS.operator.username);
+  } catch (error) {
+    failures.push(`app-field/app-captain: Workforce operator read authorization failed: ${error.message}`);
+    return failures;
+  }
+
   for (const role of ["field", "captain"]) {
     const provisioned = registry.actors[role];
     const fixture = LOCAL_WORKFORCE_PROVIDERS[role];
@@ -92,6 +107,60 @@ async function collectReadOnlyReadinessFailures() {
     if (!provisioned?.workforceCode) failures.push(`app-${role}: missing workforceCode in generated Workforce registry`);
     if (provisioned?.phoneE164 !== fixture.phoneE164) {
       failures.push(`app-${role}: generated Workforce phone does not match canonical local fixture`);
+    }
+    if (!provisioned?.actorId) continue;
+
+    try {
+      const detail = await getProvider(operatorToken, role, provisioned.actorId);
+      if (detail?.actorId !== provisioned.actorId) {
+        failures.push(`app-${role}: Workforce provider actor binding does not match the generated registry`);
+      }
+      if (detail?.workforceKind !== role) {
+        failures.push(`app-${role}: Workforce provider kind does not match the mobile surface`);
+      }
+      if (detail?.engagementStatus !== 'active' && detail?.readyToIssue !== true) {
+        failures.push(`app-${role}: Workforce provider is not ready for activation`);
+      }
+      if (role === 'captain') {
+        const dispatchReadiness = await requestJson(
+          'dsh:captain-dispatch-readiness-read',
+          `${DSH_API_BASE}/dsh/operator/dispatch/captains/${encodeURIComponent(provisioned.actorId)}/readiness`,
+          {
+            headers: {
+              ...authorization(operatorToken),
+              'X-Operator-Context-ID': LOCAL_OPERATOR_CONTEXT_ID,
+              'X-Correlation-ID': `mobile-dev-captain-dispatch-readiness-${stableToken(provisioned.actorId)}`,
+            },
+          },
+        );
+        if (dispatchReadiness?.ready !== true) {
+          for (const reason of list(dispatchReadiness?.missing)) {
+            failures.push(`app-captain: DSH dispatch readiness missing ${reason}`);
+          }
+        }
+        const eligibility = await requestJson(
+          'dsh:captain-financial-eligibility-read',
+          `${DSH_API_BASE}/dsh/operator/dispatch/captains/${encodeURIComponent(provisioned.actorId)}/financial-eligibility`,
+          {
+            headers: {
+              ...authorization(operatorToken),
+              'X-Operator-Context-ID': LOCAL_OPERATOR_CONTEXT_ID,
+            },
+          },
+        );
+        const decision = eligibility?.financialEligibility;
+        if (
+          decision?.eligible !== true
+          || !decision?.wltDecisionId
+          || !decision?.wltPolicyVersion
+          || !decision?.expiresAt
+          || new Date(decision.expiresAt).getTime() <= Date.now()
+        ) {
+          failures.push(`app-captain: DSH/WLT financial eligibility is not active for the current session window`);
+        }
+      }
+    } catch (error) {
+      failures.push(`app-${role}: canonical Workforce provider read failed: ${error.message}`);
     }
   }
 

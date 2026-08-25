@@ -12,7 +12,7 @@ info:
     by a durable idempotency receipt before business execution, and provider
     outcomes are not acknowledged unless their state is durably persisted.
 servers:
-  - url: http://localhost:58083
+  - url: http://localhost:18083
 paths:
   /wlt/refunds:
     get:

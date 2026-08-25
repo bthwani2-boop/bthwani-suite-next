@@ -16,18 +16,27 @@ import {
   useRoleAssignmentApprovalController,
   useStaffController,
 } from "../../shared/administration";
+import { administrationExecutionStatusLabel } from "../../shared/administration/administration-registry";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 
 function actionLabel(actionType: "staff_role_assignment" | "staff_role_revocation"): string {
   return actionType === "staff_role_revocation" ? "سحب الدور" : "إسناد الدور";
 }
 
 export function RoleAssignmentApprovalQueue() {
-  const approvals = useRoleAssignmentApprovalController("authenticated", "pending");
-  const staff = useStaffController("authenticated");
+  const { state: sessionState } = useIdentitySession();
+  const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
+  const canRequest = hasServiceControlPanelPermission(identity, "dsh", "administration.staff.request");
+  const canReview = hasServiceControlPanelPermission(identity, "dsh", "administration.staff.approve");
+  const approvals = useRoleAssignmentApprovalController("authenticated", "pending", canReview);
+  const staff = useStaffController("authenticated", canRequest);
   const [targetActorId, setTargetActorId] = useState("");
-  const [roleId, setRoleId] = useState("");
+  const [roleName, setRoleName] = useState("");
   const [reason, setReason] = useState("");
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [replacementReasonCodes, setReplacementReasonCodes] = useState<Record<string, string>>({});
+  const [replacementReasons, setReplacementReasons] = useState<Record<string, string>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -37,12 +46,12 @@ export function RoleAssignmentApprovalQueue() {
     setActionError(null);
     try {
       if (actionType === "staff_role_revocation") {
-        await staff.requestRoleRevocation(targetActorId.trim(), roleId.trim(), reason.trim());
+        await staff.requestRoleRevocation(targetActorId.trim(), roleName.trim(), reason.trim());
       } else {
-        await staff.requestRoleAssignment(targetActorId.trim(), roleId.trim(), reason.trim());
+        await staff.requestRoleAssignment(targetActorId.trim(), roleName.trim(), reason.trim());
       }
       setTargetActorId("");
-      setRoleId("");
+      setRoleName("");
       setReason("");
       await approvals.reload();
     } catch (error) {
@@ -65,9 +74,27 @@ export function RoleAssignmentApprovalQueue() {
     }
   };
 
+  const replaceTerminalFailure = async (approvalId: string, version: number) => {
+    if (submitting) return;
+    setSubmitting(true);
+    setActionError(null);
+    try {
+      await approvals.replaceTerminalFailure(
+        approvalId,
+        version,
+        (replacementReasonCodes[approvalId] ?? "").trim(),
+        (replacementReasons[approvalId] ?? "").trim(),
+      );
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "تعذر استبدال الطلب ذي الفشل النهائي.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const formInvalid = submitting
     || targetActorId.trim().length < 2
-    || roleId.trim().length < 2
+    || roleName.trim().length < 2
     || reason.trim().length < 5;
 
   return (
@@ -80,7 +107,10 @@ export function RoleAssignmentApprovalQueue() {
           : undefined
       }
     >
-      <section aria-label="إنشاء طلب تغيير دور">
+      {!canRequest && !canReview ? (
+        <CpStatePanel role="alert" title="صلاحية إسناد أدوار الموظفين مطلوبة" description="لا يتم تحميل طوابير أو إرسال طلبات دون الصلاحية الدقيقة." />
+      ) : null}
+      {canRequest ? <section aria-label="إنشاء طلب تغيير دور">
         <strong>إنشاء طلب تغيير دور</strong>
         <CpTextInput
           value={targetActorId}
@@ -89,10 +119,10 @@ export function RoleAssignmentApprovalQueue() {
           aria-label="معرّف الموظف المستفيد"
         />
         <CpTextInput
-          value={roleId}
-          onChange={setRoleId}
-          placeholder="معرّف الدور"
-          aria-label="معرّف الدور"
+          value={roleName}
+          onChange={setRoleName}
+          placeholder="اسم الدور المعياري"
+          aria-label="اسم الدور"
         />
         <CpTextInput
           value={reason}
@@ -106,32 +136,37 @@ export function RoleAssignmentApprovalQueue() {
         <CpButton variant="secondary" disabled={formInvalid} onClick={() => void requestChange("staff_role_revocation")}>
           إرسال طلب سحب
         </CpButton>
-      </section>
+      </section> : null}
 
       {actionError ? <CpStateView kind="error" title={actionError} /> : null}
 
-      {approvals.state.kind === "success" && approvals.state.data.length === 0 ? (
+      {canReview && approvals.state.kind === "success" && approvals.state.data.length === 0 ? (
         <CpStatePanel role="status" title="لا توجد طلبات تغيير أدوار معلقة." />
       ) : null}
 
-      {approvals.state.kind === "success" && approvals.state.data.length > 0 ? (
+      {canReview && approvals.state.kind === "success" && approvals.state.data.length > 0 ? (
         <CpTable aria-label="طلبات تغيير الأدوار المعلقة">
           <thead>
             <tr>
               <CpTableHeaderCell>الطلب</CpTableHeaderCell>
               <CpTableHeaderCell>المنشئ</CpTableHeaderCell>
               <CpTableHeaderCell>السبب</CpTableHeaderCell>
+              <CpTableHeaderCell>حالة التنفيذ المعياري</CpTableHeaderCell>
               <CpTableHeaderCell>النسخة</CpTableHeaderCell>
               <CpTableHeaderCell>ملاحظة المراجع</CpTableHeaderCell>
               <CpTableHeaderCell>الإجراءات</CpTableHeaderCell>
             </tr>
           </thead>
           <tbody>
-            {approvals.state.data.map((approval) => (
-              <tr key={approval.id}>
+            {approvals.state.data.map((approval) => {
+              const reviewable = approval.status === "pending" && approval.executionStatus !== "failed_terminal";
+              const replacementCode = replacementReasonCodes[approval.id] ?? "";
+              const replacementReason = replacementReasons[approval.id] ?? "";
+              return <tr key={approval.id}>
                 <CpTableCell>{actionLabel(approval.actionType)}: {approval.targetActorId} ← {approval.roleName}</CpTableCell>
                 <CpTableCell>{approval.requestedBy}</CpTableCell>
                 <CpTableCell>{approval.reason}</CpTableCell>
+                <CpTableCell>{administrationExecutionStatusLabel(approval.executionStatus)}</CpTableCell>
                 <CpTableCell>{approval.version}</CpTableCell>
                 <CpTableCell>
                   <CpTextInput
@@ -142,19 +177,40 @@ export function RoleAssignmentApprovalQueue() {
                   />
                 </CpTableCell>
                 <CpTableCell>
-                  <CpButton variant="brand" disabled={submitting} onClick={() => void review(approval.id, approval.version, "approved")}>
+                  <CpButton variant="brand" disabled={submitting || !reviewable} onClick={() => void review(approval.id, approval.version, "approved")}>
                     اعتماد من مراجع مستقل
                   </CpButton>{" "}
                   <CpButton
                     variant="danger"
-                    disabled={submitting || (reviewNotes[approval.id] ?? "").trim().length < 5}
+                    disabled={submitting || !reviewable || (reviewNotes[approval.id] ?? "").trim().length < 5}
                     onClick={() => void review(approval.id, approval.version, "rejected")}
                   >
                     رفض
                   </CpButton>
+                  {approval.executionStatus === "failed_terminal" && canRequest ? <>
+                    <CpTextInput
+                      value={replacementCode}
+                      onChange={(value) => setReplacementReasonCodes((current) => ({ ...current, [approval.id]: value }))}
+                      placeholder="رمز السبب مثل role_version_changed"
+                      aria-label={`رمز سبب استبدال ${approval.id}`}
+                    />
+                    <CpTextInput
+                      value={replacementReason}
+                      onChange={(value) => setReplacementReasons((current) => ({ ...current, [approval.id]: value }))}
+                      placeholder="سبب الطلب البديل — خمسة أحرف على الأقل"
+                      aria-label={`سبب الطلب البديل ${approval.id}`}
+                    />
+                    <CpButton
+                      variant="primary"
+                      disabled={submitting || !/^[a-z][a-z0-9_]{2,63}$/.test(replacementCode.trim()) || replacementReason.trim().length < 5}
+                      onClick={() => void replaceTerminalFailure(approval.id, approval.version)}
+                    >
+                      تثبيت الفشل وإنشاء طلب بديل
+                    </CpButton>
+                  </> : null}
                 </CpTableCell>
               </tr>
-            ))}
+            })}
           </tbody>
         </CpTable>
       ) : null}

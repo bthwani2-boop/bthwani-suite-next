@@ -10,7 +10,7 @@ x-bthwani-runtime-dependency: true
 x-bthwani-generation: DISABLED
 x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
 servers:
-  - url: http://localhost:58080
+  - url: http://localhost:18080
 paths:
   /dsh/operator/support/order-rescue-cases:
     get:

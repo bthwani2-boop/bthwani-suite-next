@@ -8,7 +8,7 @@ info:
     review, audited lifecycle decisions, first-store ownership, and synchronized partner
     readback.
 servers:
-- url: http://localhost:58080
+- url: http://localhost:18080
 paths:
   /dsh/operator/partners:
     post:

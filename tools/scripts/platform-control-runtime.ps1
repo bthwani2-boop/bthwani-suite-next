@@ -5,16 +5,18 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+Set-StrictMode -Version Latest
+
 $ModuleRoot = Join-Path $PSScriptRoot "platform-control-runtime"
 . (Join-Path $ModuleRoot "common.ps1")
 . (Join-Path $ModuleRoot "smoke.ps1")
 
 switch ($Action) {
   "up"      { Start-PlatformP3Runtime }
-  "down"    { Invoke-PlatformCompose down --remove-orphans }
-  "reset"   { Invoke-PlatformCompose down -v --remove-orphans; Start-PlatformP3Runtime }
-  "status"  { Invoke-PlatformCompose ps postgres wiremock-financial-provider minio identity-api providers-api wlt-api dsh-api platform-control-api }
-  "logs"    { Invoke-PlatformCompose logs --tail=250 platform-control-api dsh-api wlt-api providers-api identity-api wiremock-financial-provider postgres }
+  "down"    { Invoke-CanonicalPlatformRuntime -Action down }
+  "reset"   { Invoke-CanonicalPlatformRuntime -Action reset -Force }
+  "status"  { Invoke-CanonicalPlatformRuntime -Action status }
+  "logs"    { Invoke-CanonicalPlatformRuntime -Action logs }
   "migrate" { Invoke-PlatformMigrations }
   "smoke"   { Invoke-PlatformP3Smoke }
 }

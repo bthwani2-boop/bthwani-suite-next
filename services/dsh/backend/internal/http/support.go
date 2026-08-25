@@ -9,8 +9,8 @@ import (
 	"dsh-api/internal/support"
 )
 
-// Support permission actions on the control-panel surface. "operator"
-// remains a valid fallback role during RBAC data migration.
+// Support permission actions on the control-panel surface. Access is granted
+// only by the canonical Identity permission readback.
 const (
 	SupportPermissionRead   = "support.read"
 	SupportPermissionManage = "support.manage"
@@ -31,22 +31,22 @@ func partnerSupportMutationHeaders(w http.ResponseWriter, r *http.Request) (stri
 
 func marshalTicket(t support.Ticket) map[string]any {
 	m := map[string]any{
-		"id":           t.ID,
-		"storeId":      t.StoreID,
-		"reporterId":   t.ReporterID,
-		"reporterRole": t.ReporterRole,
-		"subject":      t.Subject,
-		"description":  t.Description,
-		"category":     t.Category,
-		"priority":     t.Priority,
-		"status":       t.Status,
-		"assignedTo":   t.AssignedTo,
-		"orderId":      t.OrderID,
-		"version":      t.Version,
-		"claimedBy":    t.ClaimedBy,
+		"id":               t.ID,
+		"storeId":          t.StoreID,
+		"reporterId":       t.ReporterID,
+		"reporterRole":     t.ReporterRole,
+		"subject":          t.Subject,
+		"description":      t.Description,
+		"category":         t.Category,
+		"priority":         t.Priority,
+		"status":           t.Status,
+		"assignedTo":       t.AssignedTo,
+		"orderId":          t.OrderID,
+		"version":          t.Version,
+		"claimedBy":        t.ClaimedBy,
 		"escalationReason": t.EscalationReason,
-		"createdAt":    t.CreatedAt,
-		"updatedAt":    t.UpdatedAt,
+		"createdAt":        t.CreatedAt,
+		"updatedAt":        t.UpdatedAt,
 	}
 	if t.ResolvedAt != nil {
 		m["resolvedAt"] = t.ResolvedAt

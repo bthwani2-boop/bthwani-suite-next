@@ -2,7 +2,10 @@ package identity
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -24,7 +27,11 @@ var (
 	ErrRoleAlreadyExists = errors.New(`role already exists`)
 	// ErrInvalidRoleName is returned when a role name fails the canonical
 	// naming pattern shared with the DSH-facing contract.
-	ErrInvalidRoleName = errors.New(`invalid role name`)
+	ErrInvalidRoleName        = errors.New(`invalid role name`)
+	ErrRoleInactive           = errors.New(`role is inactive`)
+	ErrIdempotencyKeyRequired = errors.New(`Idempotency-Key is required`)
+	ErrIdempotencyConflict    = errors.New(`Idempotency-Key was already used with a different request`)
+	ErrRoleVersionConflict    = errors.New(`role definition version conflict`)
 )
 
 var roleNamePattern = regexp.MustCompile(`^[a-z][a-z0-9_-]{2,79}$`)
@@ -42,9 +49,13 @@ func NewPermissionEnforcer(db *sql.DB) *PermissionEnforcer {
 
 // RbacRole is a durable role definition.
 type RbacRole struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Active      bool      `json:"active"`
+	Version     int       `json:"version"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
 // ActorRoleAssignment is a durable actor→role grant.
@@ -57,7 +68,7 @@ type ActorRoleAssignment struct {
 
 // ListRoles returns every durable role definition.
 func (e *PermissionEnforcer) ListRoles(ctx context.Context) ([]RbacRole, error) {
-	rows, err := e.db.QueryContext(ctx, `SELECT id, name, description FROM identity_roles ORDER BY name`)
+	rows, err := e.db.QueryContext(ctx, `SELECT id, name, description, active, version, created_at, updated_at FROM identity_roles ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +77,7 @@ func (e *PermissionEnforcer) ListRoles(ctx context.Context) ([]RbacRole, error) 
 	var roles []RbacRole
 	for rows.Next() {
 		var role RbacRole
-		if err := rows.Scan(&role.ID, &role.Name, &role.Description); err != nil {
+		if err := rows.Scan(&role.ID, &role.Name, &role.Description, &role.Active, &role.Version, &role.CreatedAt, &role.UpdatedAt); err != nil {
 			return nil, err
 		}
 		roles = append(roles, role)
@@ -74,44 +85,13 @@ func (e *PermissionEnforcer) ListRoles(ctx context.Context) ([]RbacRole, error) 
 	return roles, rows.Err()
 }
 
-// CreateRole creates a new durable role definition. It is the only path by
-// which a role name may become active; DSH must call this instead of
-// writing a local role table.
-func (e *PermissionEnforcer) CreateRole(ctx context.Context, name, description string) (RbacRole, error) {
-	name = strings.TrimSpace(name)
-	description = strings.TrimSpace(description)
-	if !roleNamePattern.MatchString(name) {
-		return RbacRole{}, ErrInvalidRoleName
-	}
-	if description == `` {
-		return RbacRole{}, fmt.Errorf(`description is required`)
-	}
-
-	var role RbacRole
-	err := e.db.QueryRowContext(ctx, `
-		INSERT INTO identity_roles (name, description)
-		VALUES ($1, $2)
-		RETURNING id, name, description`,
-		name, description).Scan(&role.ID, &role.Name, &role.Description)
-	if err != nil {
-		if isUniqueViolation(err) {
-			return RbacRole{}, ErrRoleAlreadyExists
-		}
-		return RbacRole{}, err
-	}
-	return role, nil
-}
-
-// GrantRole assigns a role to a target actor, enforcing that self-grant is
-// prohibited. Idempotent: granting an already-held role succeeds without
-// error and reports whether a new row was inserted.
-func (e *PermissionEnforcer) GrantRole(ctx context.Context, targetActorID, roleName, requestedByActorID string) (ActorRoleAssignment, bool, error) {
+func (e *PermissionEnforcer) GrantRoleWithIdempotency(ctx context.Context, targetActorID, roleName, requestedByActorID string, expectedRoleVersion int, idempotencyKey, caller string) (ActorRoleAssignment, bool, error) {
 	targetActorID = strings.TrimSpace(targetActorID)
 	roleName = strings.TrimSpace(roleName)
 	requestedByActorID = strings.TrimSpace(requestedByActorID)
 
-	if targetActorID == `` || roleName == `` || requestedByActorID == `` {
-		return ActorRoleAssignment{}, false, fmt.Errorf(`GrantRole requires targetActorID, roleName, and requestedByActorID`)
+	if targetActorID == `` || roleName == `` || requestedByActorID == `` || expectedRoleVersion < 1 {
+		return ActorRoleAssignment{}, false, fmt.Errorf(`GrantRole requires targetActorID, roleName, requestedByActorID, and expectedRoleVersion`)
 	}
 
 	// Prevent self-grant (a core security invariant)
@@ -124,30 +104,69 @@ func (e *PermissionEnforcer) GrantRole(ctx context.Context, targetActorID, roleN
 		return ActorRoleAssignment{}, false, err
 	}
 	defer tx.Rollback()
+	requestHash := roleMutationRequestHash("grant", targetActorID, roleName, requestedByActorID, expectedRoleVersion)
+	var ledgerHash, ledgerStatus string
+	var ledgerResult []byte
+	if err := tx.QueryRowContext(ctx, `
+INSERT INTO identity_rbac_operation_ledger(caller, operation, idempotency_key, request_hash, status)
+VALUES ($1, 'role-grant', $2, $3, 'processing')
+ON CONFLICT (caller, operation, idempotency_key) DO UPDATE SET idempotency_key = EXCLUDED.idempotency_key
+RETURNING request_hash, status, result`, caller, idempotencyKey, requestHash).Scan(&ledgerHash, &ledgerStatus, &ledgerResult); err != nil {
+		return ActorRoleAssignment{}, false, err
+	}
+	if ledgerHash != requestHash {
+		return ActorRoleAssignment{}, false, ErrIdempotencyConflict
+	}
+	if ledgerStatus == "succeeded" {
+		var result struct {
+			Assignment ActorRoleAssignment `json:"assignment"`
+			Created    bool                `json:"created"`
+		}
+		if err := json.Unmarshal(ledgerResult, &result); err != nil {
+			return ActorRoleAssignment{}, false, err
+		}
+		return result.Assignment, result.Created, tx.Commit()
+	}
 
-	// Resolve the role ID
+	// Resolve and fence the exact canonical role definition in the same
+	// transaction that writes the durable assignment.
 	var roleID string
-	err = tx.QueryRowContext(ctx, `SELECT id FROM identity_roles WHERE name = $1`, roleName).Scan(&roleID)
+	var roleActive bool
+	var roleVersion int
+	err = tx.QueryRowContext(ctx, `SELECT id, active, version FROM identity_roles WHERE name = $1 FOR SHARE`, roleName).Scan(&roleID, &roleActive, &roleVersion)
 	if err == sql.ErrNoRows {
 		return ActorRoleAssignment{}, false, ErrRoleNotFound
 	} else if err != nil {
 		return ActorRoleAssignment{}, false, err
 	}
+	if roleVersion != expectedRoleVersion {
+		return ActorRoleAssignment{}, false, ErrRoleVersionConflict
+	}
+	if !roleActive {
+		return ActorRoleAssignment{}, false, ErrRoleInactive
+	}
 
-	// Insert the role assignment
-	res, err := tx.ExecContext(ctx, `
-		INSERT INTO identity_actor_roles (actor_id, role_id, granted_by)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (actor_id, role_id) DO NOTHING`,
-		targetActorID, roleID, requestedByActorID)
+	if strings.TrimSpace(idempotencyKey) == "" {
+		return ActorRoleAssignment{}, false, ErrIdempotencyKeyRequired
+	}
+	// All normalized actor-role writes are owned by the canonical access
+	// boundary. The helper preserves unrelated assignments and direct grants,
+	// then rebuilds the derived actor projection transactionally.
+	created, err := mutateActorRoleTx(ctx, tx, targetActorID, roleName, roleID, requestedByActorID, true)
 	if err != nil {
 		return ActorRoleAssignment{}, false, err
 	}
-	rows, err := res.RowsAffected()
+
+	resultJSON, err := json.Marshal(struct {
+		Assignment ActorRoleAssignment `json:"assignment"`
+		Created    bool                `json:"created"`
+	}{ActorRoleAssignment{ActorID: targetActorID, RoleID: roleID, RoleName: roleName, GrantedBy: requestedByActorID}, created})
 	if err != nil {
 		return ActorRoleAssignment{}, false, err
 	}
-
+	if _, err := tx.ExecContext(ctx, `UPDATE identity_rbac_operation_ledger SET status = 'succeeded', result = $4::jsonb, updated_at = now() WHERE caller = $1 AND operation = 'role-grant' AND idempotency_key = $2 AND request_hash = $3`, caller, idempotencyKey, requestHash, string(resultJSON)); err != nil {
+		return ActorRoleAssignment{}, false, err
+	}
 	if err := tx.Commit(); err != nil {
 		return ActorRoleAssignment{}, false, err
 	}
@@ -157,42 +176,75 @@ func (e *PermissionEnforcer) GrantRole(ctx context.Context, targetActorID, roleN
 		RoleID:    roleID,
 		RoleName:  roleName,
 		GrantedBy: requestedByActorID,
-	}, rows > 0, nil
+	}, created, nil
 }
 
-// RevokeRole removes a role assignment from a target actor, enforcing that
-// self-revoke is prohibited. Idempotent: revoking an absent assignment
-// succeeds without error.
-func (e *PermissionEnforcer) RevokeRole(ctx context.Context, targetActorID, roleName, requestedByActorID string) error {
+func (e *PermissionEnforcer) RevokeRoleWithIdempotency(ctx context.Context, targetActorID, roleName, requestedByActorID string, expectedRoleVersion int, idempotencyKey, caller string) error {
 	targetActorID = strings.TrimSpace(targetActorID)
 	roleName = strings.TrimSpace(roleName)
 	requestedByActorID = strings.TrimSpace(requestedByActorID)
 
-	if targetActorID == `` || roleName == `` || requestedByActorID == `` {
-		return fmt.Errorf(`RevokeRole requires targetActorID, roleName, and requestedByActorID`)
+	if targetActorID == `` || roleName == `` || requestedByActorID == `` || expectedRoleVersion < 1 {
+		return fmt.Errorf(`RevokeRole requires targetActorID, roleName, requestedByActorID, and expectedRoleVersion`)
 	}
 	if targetActorID == requestedByActorID {
 		return ErrSelfGrantProhibited
 	}
 
+	if strings.TrimSpace(idempotencyKey) == "" {
+		return ErrIdempotencyKeyRequired
+	}
+	tx, err := e.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	requestHash := roleMutationRequestHash("revoke", targetActorID, roleName, requestedByActorID, expectedRoleVersion)
+	var ledgerHash, ledgerStatus string
+	var ledgerResult []byte
+	if err := tx.QueryRowContext(ctx, `
+INSERT INTO identity_rbac_operation_ledger(caller, operation, idempotency_key, request_hash, status)
+VALUES ($1, 'role-revoke', $2, $3, 'processing')
+ON CONFLICT (caller, operation, idempotency_key) DO UPDATE SET idempotency_key = EXCLUDED.idempotency_key
+RETURNING request_hash, status, result`, caller, idempotencyKey, requestHash).Scan(&ledgerHash, &ledgerStatus, &ledgerResult); err != nil {
+		return err
+	}
+	if ledgerHash != requestHash {
+		return ErrIdempotencyConflict
+	}
+	if ledgerStatus == "succeeded" {
+		return tx.Commit()
+	}
 	var roleID string
-	err := e.db.QueryRowContext(ctx, `SELECT id FROM identity_roles WHERE name = $1`, roleName).Scan(&roleID)
+	var roleVersion int
+	err = tx.QueryRowContext(ctx, `SELECT id, version FROM identity_roles WHERE name = $1 FOR SHARE`, roleName).Scan(&roleID, &roleVersion)
 	if err == sql.ErrNoRows {
 		return ErrRoleNotFound
 	} else if err != nil {
 		return err
 	}
+	if roleVersion != expectedRoleVersion {
+		return ErrRoleVersionConflict
+	}
 
-	_, err = e.db.ExecContext(ctx, `
-		DELETE FROM identity_actor_roles WHERE actor_id = $1 AND role_id = $2`,
-		targetActorID, roleID)
-	return err
+	if _, err := mutateActorRoleTx(ctx, tx, targetActorID, roleName, roleID, requestedByActorID, false); err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, `UPDATE identity_rbac_operation_ledger SET status = 'succeeded', result = '{"revoked":true}'::jsonb, updated_at = now() WHERE caller = $1 AND operation = 'role-revoke' AND idempotency_key = $2 AND request_hash = $3`, caller, idempotencyKey, requestHash); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
-// StaffActor is an Identity actor holding at least one durable role
-// assignment — the canonical "who is staff and what can they do" projection.
-// DSH's administration staff listing must read this rather than maintain
-// its own copy of who has been granted access.
+func roleMutationRequestHash(operation, targetActorID, roleName, requestedByActorID string, expectedRoleVersion int) string {
+	h := sha256.Sum256([]byte(fmt.Sprintf("%s\x00%s\x00%s\x00%s\x00%d", operation, targetActorID, roleName, requestedByActorID, expectedRoleVersion)))
+	return hex.EncodeToString(h[:])
+}
+
+// StaffActor is an Identity actor holding at least one effective assignment to
+// an active role — the canonical "who is active staff" projection. Durable
+// assignments, including assignments to inactive roles, are read separately
+// through ListActorRoleAssignments.
 type StaffActor struct {
 	ID        string    `json:"id"`
 	Username  string    `json:"username"`
@@ -200,14 +252,14 @@ type StaffActor struct {
 	GrantedAt time.Time `json:"grantedAt"`
 }
 
-// ListStaffActors returns every actor with at least one durable role
-// assignment, grouped with their role names and earliest grant time.
+// ListStaffActors returns every actor with at least one effective assignment
+// to an active role, grouped with active role names and earliest grant time.
 func (e *PermissionEnforcer) ListStaffActors(ctx context.Context) ([]StaffActor, error) {
 	rows, err := e.db.QueryContext(ctx, `
 		SELECT a.id, a.username, array_agg(r.name ORDER BY r.name), MIN(ar.created_at)
 		FROM identity_actor_roles ar
 		JOIN identity_actors a ON a.id = ar.actor_id
-		JOIN identity_roles r ON r.id = ar.role_id
+		JOIN identity_roles r ON r.id = ar.role_id AND r.active = true
 		GROUP BY a.id, a.username
 		ORDER BY a.username`)
 	if err != nil {
@@ -224,6 +276,36 @@ func (e *PermissionEnforcer) ListStaffActors(ctx context.Context) ([]StaffActor,
 		staff = append(staff, actor)
 	}
 	return staff, rows.Err()
+}
+
+// ListActorRoleAssignments returns the actor's durable role assignments,
+// including assignments to inactive roles. It is a canonical membership
+// readback, independent from executable/effective authority projections.
+func (e *PermissionEnforcer) ListActorRoleAssignments(ctx context.Context, actorID string) ([]ActorRoleAssignment, error) {
+	actorID = strings.TrimSpace(actorID)
+	if actorID == "" {
+		return nil, fmt.Errorf("actorID is required")
+	}
+	rows, err := e.db.QueryContext(ctx, `
+		SELECT assignment.actor_id, assignment.role_id, role.name, assignment.granted_by
+		FROM identity_actor_roles assignment
+		JOIN identity_roles role ON role.id = assignment.role_id
+		WHERE assignment.actor_id = $1
+		ORDER BY role.name`, actorID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	assignments := make([]ActorRoleAssignment, 0)
+	for rows.Next() {
+		var assignment ActorRoleAssignment
+		if err := rows.Scan(&assignment.ActorID, &assignment.RoleID, &assignment.RoleName, &assignment.GrantedBy); err != nil {
+			return nil, err
+		}
+		assignments = append(assignments, assignment)
+	}
+	return assignments, rows.Err()
 }
 
 func isUniqueViolation(err error) bool {
@@ -254,7 +336,7 @@ func (e *PermissionEnforcer) GetActorPermissions(ctx context.Context, actorID st
 			FROM identity_actor_roles actor_role
 			JOIN identity_role_permissions role_permission ON actor_role.role_id = role_permission.role_id
 			JOIN identity_permission_vocabulary v ON v.id = role_permission.permission_id
-			WHERE actor_role.actor_id = $1
+			WHERE actor_role.actor_id = $1 AND role_permission.role_id IN (SELECT id FROM identity_roles WHERE active = true)
 		) effective_permission
 		ORDER BY service, surface, action, scope`, actorID)
 	if err != nil {

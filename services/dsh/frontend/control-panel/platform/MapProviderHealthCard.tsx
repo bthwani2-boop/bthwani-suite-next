@@ -13,7 +13,7 @@ export function MapProviderHealthCard({ canRead }: { readonly canRead: boolean }
       <CpStatePanel
         role="status"
         title="صلاحية قراءة صحة الخرائط مطلوبة"
-        description="لن يطلب هذا القسم حالة مزود الخرائط قبل تحقق صلاحية platform.read."
+		description="لن يطلب هذا القسم حالة مزود الخرائط قبل تحقق صلاحية platform:read."
         code="DSH_PLATFORM_READ_REQUIRED"
       />
     );

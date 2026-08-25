@@ -9,7 +9,7 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
-if ([string]::IsNullOrWhiteSpace($BaseUrl)) { $BaseUrl = 'http://localhost:58083' }
+if ([string]::IsNullOrWhiteSpace($BaseUrl)) { $BaseUrl = 'http://localhost:18083' }
 if ([string]::IsNullOrWhiteSpace($PostgresContainer)) { $PostgresContainer = 'bthwani-postgres-runtime' }
 if ([string]::IsNullOrWhiteSpace($DatabaseUser)) { $DatabaseUser = 'wlt_runtime' }
 if ([string]::IsNullOrWhiteSpace($DatabaseName)) { $DatabaseName = 'wlt_runtime' }

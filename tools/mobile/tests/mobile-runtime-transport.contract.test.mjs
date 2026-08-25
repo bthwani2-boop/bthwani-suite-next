@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
@@ -22,8 +23,8 @@ test("all mobile wrappers stay thin and bind canonical fixed Metro ports", () =>
     assert.match(start, /mobile\.ps1/);
     assert.match(appWrapper, new RegExp(`-App\\s+'${appKey}'`));
     assert.match(shared, new RegExp(`'${appKey}'\\s*=\\s*${port}\\b`));
-    assert.doesNotMatch(start, /BTHWANI_MOBILE_TRANSPORT|Resolve-BthwaniAdb|Get-NetRoute|58110/);
-    assert.doesNotMatch(appWrapper, /BTHWANI_MOBILE_TRANSPORT|Resolve-BthwaniAdb|Get-NetRoute|58110/);
+    assert.doesNotMatch(start, /BTHWANI_MOBILE_TRANSPORT|Resolve-BthwaniAdb|Get-NetRoute|18110/);
+    assert.doesNotMatch(appWrapper, /BTHWANI_MOBILE_TRANSPORT|Resolve-BthwaniAdb|Get-NetRoute|18110/);
   }
 });
 
@@ -49,6 +50,124 @@ test("mobile runtime defaults to auto, resolves LAN before platform-aware Androi
   );
   assert.match(launcher, /"--lan"/);
   assert.match(launcher, /"--localhost"/);
+});
+
+test("mobile backend startup forces Compose reconciliation when readiness is missing", () => {
+  const bootstrap = read("tools/mobile/ensure-mobile-dev-runtime.ps1");
+  assert.match(
+    bootstrap,
+    /"-Action", "up", "-Profiles", \$Profiles, "-Force"/,
+    "mobile startup must reconcile environment-sensitive Compose bindings instead of trusting an image-only reuse marker",
+  );
+});
+
+test("mobile backend recovery bypasses stale prepared state and waits for canonical readiness", { timeout: 20_000 }, async (t) => {
+  if (process.platform !== "win32") {
+    t.skip("the governed mobile bootstrap currently targets Windows PowerShell");
+    return;
+  }
+
+  const wherePwsh = spawnSync("where.exe", ["pwsh.exe"], { encoding: "utf8", windowsHide: true });
+  if (wherePwsh.status !== 0) {
+    t.skip("pwsh is unavailable in this environment");
+    return;
+  }
+  const realPwsh = wherePwsh.stdout.split(/\r?\n/u).map((entry) => entry.trim()).find(Boolean);
+  assert.ok(realPwsh, "where.exe returned no pwsh executable");
+
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), "bthwani-mobile-runtime-recovery-"));
+  const startupMarker = path.join(temporaryRoot, "runtime-started.txt");
+  const invocationFile = path.join(temporaryRoot, "runtime-invocation.txt");
+  const portFile = path.join(temporaryRoot, "readiness-port.txt");
+  const serverScript = path.join(temporaryRoot, "readiness-server.mjs");
+  const stalePreparedMarker = path.join(temporaryRoot, "bthwani-runtime-prepared-stale.json");
+
+  fs.writeFileSync(stalePreparedMarker, JSON.stringify({ sourceSha: "stale", profiles: ["identity", "dsh"] }));
+  const runtimePowerShell = path.join(temporaryRoot, "runtime-phase.cmd");
+  fs.writeFileSync(runtimePowerShell, [
+    "@echo off",
+    `> "${invocationFile}" echo %*`,
+    `> "${startupMarker}" echo started`,
+    "exit /b 0",
+    "",
+  ].join("\r\n"));
+  fs.writeFileSync(path.join(temporaryRoot, "docker.cmd"), "@echo off\r\nexit /b 0\r\n");
+  fs.writeFileSync(path.join(temporaryRoot, "node.cmd"), "@echo off\r\nexit /b 0\r\n");
+  fs.writeFileSync(serverScript, `
+    import fs from "node:fs";
+    import http from "node:http";
+
+    const [startupMarker, portFile] = process.argv.slice(2);
+    const server = http.createServer((request, response) => {
+      if (!fs.existsSync(startupMarker)) {
+        response.statusCode = 503;
+        response.end("not ready");
+        return;
+      }
+      response.setHeader("content-type", "application/json");
+      if (request.url === "/identity/readiness" || request.url === "/dsh/readiness") {
+        response.end(JSON.stringify({ status: "HEALTHY" }));
+        return;
+      }
+      if (request.url === "/workforce/readiness" || request.url === "/wlt/readiness") {
+        response.end(JSON.stringify({ status: "ready" }));
+        return;
+      }
+      response.end(JSON.stringify({ status: "ready" }));
+    });
+    server.listen(0, "127.0.0.1", () => {
+      fs.writeFileSync(portFile, String(server.address().port));
+    });
+    process.on("SIGTERM", () => server.close(() => process.exit(0)));
+  `);
+
+  const readinessServer = spawn(process.execPath, [serverScript, startupMarker, portFile], {
+    stdio: "ignore",
+    windowsHide: true,
+  });
+  t.after(() => {
+    readinessServer.kill();
+    fs.rmSync(temporaryRoot, { recursive: true, force: true });
+  });
+
+  const deadline = Date.now() + 5_000;
+  while (!fs.existsSync(portFile) && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  assert.ok(fs.existsSync(portFile), "readiness fixture did not start");
+  const port = fs.readFileSync(portFile, "utf8").trim();
+  const baseUrl = `http://127.0.0.1:${port}`;
+
+  const result = spawnSync(realPwsh, [
+    "-NoLogo", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File",
+    path.join(repoRoot, "tools/mobile/ensure-mobile-dev-runtime.ps1"),
+    "-PowerShellExecutable", runtimePowerShell,
+  ], {
+    cwd: repoRoot,
+    encoding: "utf8",
+    timeout: 15_000,
+    windowsHide: true,
+    env: {
+      ...process.env,
+      PATH: `${temporaryRoot}${path.delimiter}${process.env.PATH ?? ""}`,
+      RUNNER_TEMP: temporaryRoot,
+      BTHWANI_AUTO_START_BACKEND: "1",
+      IDENTITY_API_BASE_URL: baseUrl,
+      WORKFORCE_API_BASE_URL: baseUrl,
+      DSH_API_BASE_URL: baseUrl,
+      WLT_API_BASE_URL: baseUrl,
+      BTHWANI_WIREMOCK_FINANCIAL_PORT: port,
+      BTHWANI_MINIO_API_PORT: port,
+    },
+  });
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.ok(fs.existsSync(invocationFile), "missing readiness did not invoke the canonical runtime phase");
+  const invocation = fs.readFileSync(invocationFile, "utf8");
+  assert.match(invocation, /-Action up/);
+  assert.match(invocation, /-Profiles identity,workforce,dsh,wlt,financial-simulators,media-storage/);
+  assert.match(invocation, /-Force(?:\s|$)/, "recovery must bypass any prepared-runtime reuse marker");
+  assert.match(result.stdout, /Mobile full-stack development data is ready\./);
 });
 
 test("LAN runtime branch contains no ADB execution path", () => {
@@ -124,9 +243,9 @@ test("development gateway is allowlisted and the underlying broker and MinIO sta
   assert.doesNotMatch(gateway, /0\.0\.0\.0/);
   assert.match(broker, /const HOST = '127\.0\.0\.1'/);
   assert.match(broker, /DEV_SESSION_LOOPBACK_REQUIRED/);
-  assert.match(compose, /127\.0\.0\.1:\$\{BTHWANI_DSH_API_HOST_PORT:-58080\}:8080/);
+  assert.match(compose, /127\.0\.0\.1:\$\{BTHWANI_DSH_API_HOST_PORT:-18080\}:8080/);
   assert.match(compose, /127\.0\.0\.1:\$\{BTHWANI_MINIO_API_PORT:-59000\}:9000/);
-  assert.doesNotMatch(gateway, /58083/);
+  assert.doesNotMatch(gateway, /18083/);
 });
 
 test("developer session and presigned media clients use the governed gateway only when LAN exports it", () => {
@@ -156,7 +275,9 @@ test("ADB remains an explicit Android fallback with verified reverse mappings an
     assert.ok(helper.includes(marker), `missing ADB helper contract marker: ${marker}`);
   }
   assert.match(launcher, /Invoke-BthwaniAdbReverse/);
-  assert.match(launcher, /58080, 58082, 58086, 58100, 59000, \$MetroPort/);
+  assert.match(launcher, /\$identityHostPort = if \(\[string\]::IsNullOrWhiteSpace\(\$env:BTHWANI_IDENTITY_API_HOST_PORT\)\) \{ "18082" \}/);
+  assert.match(launcher, /\$minioApiPort = if \(\[string\]::IsNullOrWhiteSpace\(\$env:BTHWANI_MINIO_API_PORT\)\) \{ 59000 \} else \{ \[int\] \$env:BTHWANI_MINIO_API_PORT \}/);
+  assert.match(launcher, /\$ports = @\(18080, \[int\] \$identityHostPort, 18086, 18100, \$minioApiPort, \$MetroPort\)/);
   assert.match(launcher, /Clear-BthwaniProcessEnvironment -Names @\("ANDROID_SERIAL", "BTHWANI_ANDROID_SERIAL", "ADB"\)/);
   assert.ok(
     launcher.indexOf('Clear-BthwaniProcessEnvironment -Names @("ANDROID_SERIAL", "BTHWANI_ANDROID_SERIAL", "ADB")')

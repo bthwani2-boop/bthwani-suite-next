@@ -1,0 +1,24 @@
+# Keep Docker build contexts deterministic and free of workstation/repository residue.
+.git
+.git/**
+**/.git
+**/.git/**
+
+**/node_modules
+**/.pnpm-store
+**/.nx
+**/coverage
+**/.cache
+**/tmp
+**/temp
+**/*.log
+
+.env
+.env.*
+**/.env
+**/.env.*
+!**/*.env.example
+
+# Runtime seed media is mounted at runtime and must never enter image build contexts.
+services/dsh/database/seeds/local/media
+services/dsh/database/seeds/local/media/**

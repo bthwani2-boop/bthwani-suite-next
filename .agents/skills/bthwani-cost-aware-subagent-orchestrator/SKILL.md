@@ -19,7 +19,6 @@ Read only:
 
 - `AGENTS.md`;
 - `.agents/INDEX.md` when routing is not obvious;
-- `governance/skills/skills-registry.json` for available skill paths;
 - the actual code/contracts/data/runtime needed by each work unit.
 
 No agent-role registry, SDLC stage registry, guard registry, or approval graph is required.

@@ -257,7 +257,7 @@ function Ensure-BthwaniMobileDevGateway {
     param(
         [Parameter(Mandatory)][string] $RepoRoot,
         [Parameter(Mandatory)][string] $LanHost,
-        [int] $Port = 58110,
+        [int] $Port = 18110,
         [int] $ContractVersion = 1
     )
 
@@ -315,7 +315,8 @@ function Ensure-BthwaniMobileDevGateway {
         $env:BTHWANI_MOBILE_DEV_GATEWAY_HOST = $LanHost
         $env:BTHWANI_MOBILE_DEV_GATEWAY_PORT = [string] $Port
         $env:BTHWANI_MOBILE_DEV_GATEWAY_TOKEN = $capability
-        $env:BTHWANI_MOBILE_SIGNED_MEDIA_HOST = "localhost:59000"
+        $minioApiPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_MINIO_API_PORT)) { 59000 } else { [int] $env:BTHWANI_MINIO_API_PORT }
+        $env:BTHWANI_MOBILE_SIGNED_MEDIA_HOST = "localhost:$minioApiPort"
 
         $startParameters = @{
             FilePath = $node.Source

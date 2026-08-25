@@ -12,6 +12,7 @@ import (
 
 	_ "github.com/lib/pq"
 
+	"dsh-api/internal/administration"
 	"dsh-api/internal/auth"
 	"dsh-api/internal/cache"
 	"dsh-api/internal/checkoutfinanceoutbox"
@@ -31,7 +32,7 @@ import (
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "58080"
+		port = "18080"
 	}
 
 	databaseURL := os.Getenv("DATABASE_URL")
@@ -117,6 +118,7 @@ func main() {
 	outboxCtx, cancelOutbox := context.WithCancel(context.Background())
 	go orders.RunOrderEventBridgeWorker(outboxCtx, db, 5*time.Second)
 	go operationaloutbox.RunWorker(outboxCtx, db, 5*time.Second)
+	go administration.RunCanonicalMutationWorker(outboxCtx, db, identityClient, 5*time.Second)
 	log.Println("[dsh-api] order event bridge and operational outbox workers enabled")
 
 	if pushProviderURL == "" {

@@ -3,11 +3,8 @@ package identity
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"strings"
-
-	"github.com/lib/pq"
 )
 
 // PartnerActorProvisionInput is accepted only from the authenticated DSH
@@ -147,16 +144,7 @@ func (r *Repository) ProvisionPartnerActor(ctx context.Context, input PartnerAct
 			roles = append(roles, "partner")
 		}
 		effectivePermissions := replacePartnerStorePermissions(existing.Permissions, permissions, storeID)
-		permissionsJSON, marshalErr := json.Marshal(effectivePermissions)
-		if marshalErr != nil {
-			return ActorAdminView{}, marshalErr
-		}
-		if _, err = tx.ExecContext(ctx, `
-			UPDATE identity_actors
-			SET roles = $2,
-			    permissions = $3::jsonb,
-			    updated_at = now()
-			WHERE id = $1`, existing.ID, pq.Array(roles), string(permissionsJSON)); err != nil {
+		if err := setActorAccessTx(ctx, tx, existing.ID, roles, effectivePermissions, "partner-provision"); err != nil {
 			return ActorAdminView{}, err
 		}
 		if err := revokeActorSessionsTx(ctx, tx, existing.ID); err != nil {
@@ -173,16 +161,15 @@ func (r *Repository) ProvisionPartnerActor(ctx context.Context, input PartnerAct
 		return ActorAdminView{}, err
 	}
 	actorID := "partner-" + suffix
-	permissionsJSON, err := json.Marshal(permissions)
-	if err != nil {
-		return ActorAdminView{}, err
-	}
 	if _, err = tx.ExecContext(ctx, `
 		INSERT INTO identity_actors
 			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
-		VALUES ($1, $2, '', $3, $4, $5, $6::jsonb, 'PROVISIONED', 1, now())`,
-		actorID, username, operatorContextID, phone, pq.Array([]string{"partner"}), string(permissionsJSON)); err != nil {
+		VALUES ($1, $2, '', $3, $4, ARRAY[]::text[], '[]'::jsonb, 'PROVISIONED', 1, now())`,
+		actorID, username, operatorContextID, phone); err != nil {
 		return ActorAdminView{}, mapUniqueViolation(err)
+	}
+	if err := setActorAccessTx(ctx, tx, actorID, []string{"partner"}, permissions, "partner-provision"); err != nil {
+		return ActorAdminView{}, err
 	}
 	if err := tx.Commit(); err != nil {
 		return ActorAdminView{}, err
@@ -246,17 +233,10 @@ func (r *Repository) SetPartnerStoreAccess(ctx context.Context, actorID string, 
 	} else if !input.Enabled && !hasAnyPartnerStorePermission(effectivePermissions) && hasOnlyPartnerRole(actor.Roles) {
 		status = ActorStatusSuspended
 	}
-	permissionsJSON, err := json.Marshal(effectivePermissions)
-	if err != nil {
+	if err := setActorAccessTx(ctx, tx, actorID, actor.Roles, effectivePermissions, "partner-store-access"); err != nil {
 		return ActorAdminView{}, err
 	}
-	if _, err = tx.ExecContext(ctx, `
-		UPDATE identity_actors
-		SET permissions = $2::jsonb,
-		    status = $3,
-		    version = version + 1,
-		    updated_at = now()
-		WHERE id = $1`, actorID, string(permissionsJSON), status); err != nil {
+	if _, err = tx.ExecContext(ctx, `UPDATE identity_actors SET status = $2, version = version + 1, updated_at = now() WHERE id = $1`, actorID, status); err != nil {
 		return ActorAdminView{}, err
 	}
 	if err := revokeActorSessionsTx(ctx, tx, actorID); err != nil {

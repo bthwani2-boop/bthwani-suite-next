@@ -58,6 +58,33 @@ export function walkFiles(rootDirs, predicate) {
   return out;
 }
 
+export function changedFiles(baseSha, candidateSha, rootDirs, predicate = () => true) {
+  const base = String(baseSha || "").trim();
+  const candidate = String(candidateSha || "").trim();
+  if (!/^[0-9a-f]{40}$/i.test(base) || !/^[0-9a-f]{40}$/i.test(candidate)) {
+    throw new Error("changedFiles requires full base and candidate commit SHAs");
+  }
+  const roots = [...new Set(rootDirs.map((root) => String(root).trim()).filter(Boolean))];
+  for (const root of roots) {
+    if (path.isAbsolute(root) || root === ".." || root.startsWith(`..${path.sep}`) || root.replaceAll("\\\\", "/").startsWith("../")) {
+      throw new Error(`changedFiles root must be repository-relative: ${root}`);
+    }
+  }
+  let raw;
+  try {
+    raw = execFileSync(
+      "git",
+      ["diff", "--name-only", "--diff-filter=ACMR", `${base}..${candidate}`, "--", ...roots],
+      { cwd: repoRoot, encoding: "utf8", windowsHide: true, maxBuffer: 64 * 1024 * 1024 },
+    );
+  } catch (error) {
+    throw new Error(`Unable to inventory changed files: ${error?.message || String(error)}`);
+  }
+  return String(raw).split(/\r?\n/).filter(Boolean).map((relative) => path.join(repoRoot, relative)).filter((full) =>
+    fs.existsSync(full) && fs.statSync(full).isFile() && predicate(full, path.basename(full))
+  );
+}
+
 export function handleMissingBinary(toolId, binary, required) {
   const diagnostic = isDiagnosticMode();
   if (required && !diagnostic) {

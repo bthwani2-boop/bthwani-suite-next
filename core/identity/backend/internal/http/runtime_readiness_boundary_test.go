@@ -14,7 +14,6 @@ func readinessRequest() *http.Request {
 func configureIdentityRuntime(t *testing.T) {
 	t.Helper()
 	t.Setenv("IDENTITY_ACTIVATION_HMAC_SECRET", strings.Repeat("a", minimumActivationHMACSecretLength))
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "operator-main")
 	t.Setenv("IDENTITY_WORKFORCE_SERVICE_TOKEN", strings.Repeat("w", minimumInternalServiceTokenLength))
 	t.Setenv("IDENTITY_DSH_SERVICE_TOKEN", strings.Repeat("d", minimumInternalServiceTokenLength))
 }
@@ -45,18 +44,6 @@ func TestRuntimeReadinessBoundaryRejectsMissingActivationSecret(t *testing.T) {
 func TestRuntimeReadinessBoundaryRejectsShortActivationSecret(t *testing.T) {
 	configureIdentityRuntime(t)
 	t.Setenv("IDENTITY_ACTIVATION_HMAC_SECRET", "too-short")
-	response := httptest.NewRecorder()
-
-	RuntimeReadinessBoundary(http.NotFoundHandler(), nil).ServeHTTP(response, readinessRequest())
-
-	if response.Code != http.StatusServiceUnavailable || !strings.Contains(response.Body.String(), "IDENTITY_NOT_READY") {
-		t.Fatalf("unexpected readiness response status=%d body=%s", response.Code, response.Body.String())
-	}
-}
-
-func TestRuntimeReadinessBoundaryRejectsMissingOperatorContext(t *testing.T) {
-	configureIdentityRuntime(t)
-	t.Setenv("BTHWANI_OPERATOR_CONTEXT_ID", "")
 	response := httptest.NewRecorder()
 
 	RuntimeReadinessBoundary(http.NotFoundHandler(), nil).ServeHTTP(response, readinessRequest())

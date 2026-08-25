@@ -5,7 +5,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Describe observable behavior without secrets, access tokens, raw personal data, payment/provider payloads, or private production logs.
+        Describe observable behavior without secrets, access tokens, raw personal data, payment/provider
+        payloads, or private production logs.
   - type: input
     id: branch
     attributes:

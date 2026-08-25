@@ -6,27 +6,27 @@ function readServerEnv(name: string, fallback: string): string {
 
 /** Server-only Identity base URL. Never exposed to the browser (no NEXT_PUBLIC_ prefix). */
 export function resolveIdentityServerBaseUrl(): string {
-  return readServerEnv("IDENTITY_API_BASE_URL", "http://localhost:58082");
+  return readServerEnv("IDENTITY_API_BASE_URL", "http://localhost:18082");
 }
 
 /** Server-only DSH backend base URL used by the /api/dsh proxy route. */
 export function resolveDshServerBaseUrl(): string {
-  return readServerEnv("DSH_API_BASE_URL", "http://localhost:58080");
+  return readServerEnv("DSH_API_BASE_URL", "http://localhost:18080");
 }
 
 /** Server-only Workforce backend base URL used by the /api/workforce proxy route. */
 export function resolveWorkforceServerBaseUrl(): string {
-  return readServerEnv("WORKFORCE_API_BASE_URL", "http://localhost:58086");
+  return readServerEnv("WORKFORCE_API_BASE_URL", "http://localhost:18086");
 }
 
 /** Server-only Providers backend base URL used by the /api/providers proxy route. */
 export function resolveProvidersServerBaseUrl(): string {
-  return readServerEnv("PROVIDERS_API_BASE_URL", "http://localhost:58087");
+  return readServerEnv("PROVIDERS_API_BASE_URL", "http://localhost:18087");
 }
 
 /** Server-only Platform Control base URL used by the /api/platform-control proxy route. */
 export function resolvePlatformControlServerBaseUrl(): string {
-  return readServerEnv("PLATFORM_CONTROL_API_BASE_URL", "http://localhost:58088");
+  return readServerEnv("PLATFORM_CONTROL_API_BASE_URL", "http://localhost:18088");
 }
 
 export function isProductionRuntime(): boolean {

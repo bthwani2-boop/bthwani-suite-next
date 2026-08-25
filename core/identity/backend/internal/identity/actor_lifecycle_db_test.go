@@ -23,14 +23,7 @@ type lifecycleTestActor struct {
 
 func insertLifecycleTestActor(t *testing.T, db *sql.DB, actor lifecycleTestActor) {
 	t.Helper()
-	_, err := db.Exec(`
-		INSERT INTO identity_actors
-			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version)
-		VALUES ($1, $2, $3, $4, $5, ARRAY[$6]::text[], '[]'::jsonb, $7, $8)`,
-		actor.id, actor.username, actor.passwordHash, actor.operatorContextID, actor.phone, actor.role, actor.status, actor.version)
-	if err != nil {
-		t.Fatalf("insert lifecycle test actor %s: %v", actor.id, err)
-	}
+	insertIdentityTestActor(t, db, actor.id, actor.username, actor.operatorContextID, actor.phone, []string{actor.role}, nil, actor.status, actor.version)
 }
 
 func cleanupLifecycleTestActors(t *testing.T, db *sql.DB, actorIDs ...string) {

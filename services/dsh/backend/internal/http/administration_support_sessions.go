@@ -62,7 +62,7 @@ func writeSupportRequestError(w http.ResponseWriter, err error) {
 }
 
 func (s *administrationSupportServer) handleCreateRequest(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.protected.requireAdministrationPermission(w, r, AdministrationPermissionManage)
+	actor, ok := s.protected.requireAdministrationPermission(w, r, "support.manage")
 	if !ok {
 		return
 	}
@@ -85,7 +85,7 @@ func (s *administrationSupportServer) handleCreateRequest(w http.ResponseWriter,
 }
 
 func (s *administrationSupportServer) handleListRequests(w http.ResponseWriter, r *http.Request) {
-	_, ok := s.protected.requireAdministrationPermission(w, r, AdministrationPermissionRead)
+	_, ok := s.protected.requireAdministrationPermission(w, r, "support.read")
 	if !ok {
 		return
 	}
@@ -98,7 +98,7 @@ func (s *administrationSupportServer) handleListRequests(w http.ResponseWriter, 
 }
 
 func (s *administrationSupportServer) handleReviewRequest(w http.ResponseWriter, r *http.Request) {
-	checker, ok := s.protected.requireAdministrationPermission(w, r, AdministrationPermissionApprove)
+	checker, ok := s.protected.requireAdministrationPermission(w, r, "support.manage")
 	if !ok {
 		return
 	}
@@ -141,7 +141,7 @@ func (s *administrationSupportServer) handleReviewRequest(w http.ResponseWriter,
 }
 
 func (s *administrationSupportServer) handleRevokeRequest(w http.ResponseWriter, r *http.Request) {
-	actor, ok := s.protected.requireAdministrationPermission(w, r, AdministrationPermissionApprove)
+	actor, ok := s.protected.requireAdministrationPermission(w, r, "support.manage")
 	if !ok {
 		return
 	}
@@ -222,11 +222,10 @@ func (s *administrationSupportServer) requirePartnerSupportSession(w http.Respon
 		store.SendError(w, http.StatusForbidden, "SUPPORT_TARGET_MISMATCH", "support session is not bound to the requested partner")
 		return supportsession.Identity{}, false
 	}
-	// Log the access to audit
-	_, _ = s.db.ExecContext(r.Context(), `
-		INSERT INTO dsh_admin_audit (id, actor_id, target_id, action, detail)
-		VALUES (gen_random_uuid(), $1, $2, 'partner_support_access', $3)`,
-		identity.InitiatorActorID, targetPartnerID, "accessed partner support center via session")
+	if err := supportsession.RecordPartnerSupportAccess(r.Context(), s.db, identity, targetPartnerID); err != nil {
+		store.SendError(w, http.StatusInternalServerError, "SUPPORT_AUDIT_FAILED", "support access could not be audited")
+		return supportsession.Identity{}, false
+	}
 
 	return identity, true
 }

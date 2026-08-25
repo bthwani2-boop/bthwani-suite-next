@@ -1,7 +1,7 @@
 {
-  "$comment": "Canonical local development identity actors. Single source of truth for the local bootstrap password and the usernames every dev/smoke script logs in with. Local only: the Identity bootstrap that creates these actors runs solely when IDENTITY_LOCAL_BOOTSTRAP=true and is refused in production. Consumers: tools/dev/local-actors.mjs, tools/dev/local-actors.ps1. Drift against the Go bootstrap and the runtime env files is enforced by tools/guards/local-dev-actors-gate.mjs.",
+  "$comment": "Canonical local development identity actors. Single source of truth for the one-shot dev seed password and the three password-backed usernames every dev/smoke script may log in with. The seed is a separate development executable and is absent from the production identity-api image. Consumers: tools/dev/local-actors.mjs, tools/dev/local-actors.ps1, infra/docker/compose.dev-bootstrap.yml.",
   "$workforceProvidersComment": "Field agents and captains are NOT bootstrap actors. Workforce owns provider actor creation and always provisions Identity with a server-generated workforce code as the username, so a pre-seeded actor holding the same phone can never be adopted. They are provisioned at runtime by tools/dev/local-workforce-provisioning.mjs, which writes the generated actor ids to .artifacts/local-dev/workforce-actors.json. They authenticate by redeeming an activation code, not by password.",
-  "passwordEnvVar": "IDENTITY_LOCAL_BOOTSTRAP_PASSWORD",
+  "passwordEnvVar": "BTHWANI_LOCAL_DEV_PASSWORD",
   "password": "123456",
   "OperatorContextId": "local-dsh",
   "actors": {
@@ -46,29 +46,6 @@
       "phoneE164": "+967774444444",
       "fullNameAr": "كابتن بثواني المحلي",
       "fullNameEn": "BThwani Local Captain"
-    }
-  },
-  "platformActors": {
-    "platform-approver": {
-      "username": "platform-approver",
-      "actorId": "platform-approver-local-001",
-      "role": "platform-approver",
-      "surface": "control-panel",
-      "phoneE164": "+967770000101"
-    },
-    "platform-applier": {
-      "username": "platform-applier",
-      "actorId": "platform-applier-local-001",
-      "role": "platform-applier",
-      "surface": "control-panel",
-      "phoneE164": "+967770000102"
-    },
-    "platform-rollout-manager": {
-      "username": "platform-rollout-manager",
-      "actorId": "platform-rollout-manager-local-001",
-      "role": "platform-rollout-manager",
-      "surface": "control-panel",
-      "phoneE164": "+967770000103"
     }
   }
 }

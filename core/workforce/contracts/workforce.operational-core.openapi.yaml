@@ -6,7 +6,7 @@ info:
     incidents, appeals, and evidence-backed captain classification.
 x-bthwani-owner: core/workforce
 servers:
-  - url: http://localhost:58086
+  - url: http://localhost:18086
 paths:
   /workforce/field-agents/{actorId}/operational-core:
     parameters:

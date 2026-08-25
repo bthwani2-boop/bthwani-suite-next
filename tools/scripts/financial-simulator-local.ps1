@@ -92,8 +92,8 @@ try {
       }
       Invoke-FinancialJourneys
       Write-Host "`nFinancial simulator is ready." -ForegroundColor Green
-      Write-Host 'WLT API: http://localhost:58083'
-      Write-Host 'WireMock financial provider: http://localhost:58090'
+      Write-Host 'WLT API: http://localhost:18083'
+      Write-Host 'WireMock financial provider: http://localhost:18090'
     }
 
     'down' {

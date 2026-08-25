@@ -9,7 +9,7 @@ x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-financial-owner: true
 x-bthwani-client-generation: ENABLED
 servers:
-  - url: http://localhost:58083
+  - url: http://localhost:18083
 paths:
   /wlt/internal/quotes/special-request:
     post:

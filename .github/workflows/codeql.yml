@@ -1,5 +1,10 @@
 name: CodeQL
 
+run-name: >-
+  ${{ github.event_name == 'pull_request' && format('CodeQL PR {0}', github.event.pull_request.number) ||
+  github.event_name == 'push' && format('CodeQL push {0}', github.sha) || format('CodeQL dispatched candidate
+  {0}', inputs.head_sha || github.sha) }}
+
 on:
   pull_request:
     branches: ["**"]
@@ -8,13 +13,30 @@ on:
   schedule:
     - cron: "17 3 * * 1"
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number for an exact closure scan
+        required: false
+        type: string
+      head_sha:
+        description: Immutable candidate SHA
+        required: false
+        type: string
+      base_sha:
+        description: Immutable PR base SHA
+        required: false
+        type: string
+      head_ref:
+        description: Canonical candidate branch for trusted SARIF upload
+        required: false
+        type: string
 
 permissions:
   contents: read
   pull-requests: read
 
 concurrency:
-  group: codeql-${{ github.event.pull_request.number || github.ref }}
+  group: codeql-${{ inputs.head_sha || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -31,7 +53,7 @@ jobs:
       - name: Checkout immutable candidate history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           persist-credentials: false
           show-progress: false
@@ -41,8 +63,11 @@ jobs:
         env:
           EVENT_NAME: ${{ github.event_name }}
           EVENT_BEFORE: ${{ github.event.before }}
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          EXPECTED_HEAD_SHA: ${{ github.sha }}
+          PR_BASE_SHA: ${{ inputs.base_sha || github.event.pull_request.base.sha }}
+          EXPECTED_HEAD_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+          INPUT_BASE_SHA: ${{ inputs.base_sha }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
@@ -54,9 +79,27 @@ jobs:
             platform-control=core/platform-control/backend
             providers=core/providers/backend
           )
+          head_sha="$(git rev-parse HEAD)"
+          [[ "${head_sha}" == "${EXPECTED_HEAD_SHA}" ]] || {
+            echo \
+            "::error::CodeQL scope checkout SHA mismatch: expected=${EXPECTED_HEAD_SHA:-<empty>} actual=${head_sha}"
+            exit 1
+          }
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" && -n "${INPUT_PR_NUMBER:-}" ]]; then
+            [[ "${INPUT_PR_NUMBER}" =~ ^[1-9][0-9]*$ ]] || { echo \
+            "::error::pr_number must be a positive integer"; exit 1; }
+            [[ "${INPUT_BASE_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::base_sha must be a full SHA"; exit 1; }
+            pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${INPUT_PR_NUMBER}")"
+            [[ "$(jq -r '.state' <<<"${pr}")" == "open" ]] || { echo "::error::closure PR is not open"; exit 1; }
+            [[ "$(jq -r '.head.sha' <<<"${pr}")" == "${EXPECTED_HEAD_SHA}" ]] || { echo \
+            "::error::closure PR head drift"; exit 1; }
+            [[ "$(jq -r '.base.sha' <<<"${pr}")" == "${INPUT_BASE_SHA}" ]] || { echo \
+            "::error::closure PR base drift"; exit 1; }
+          fi
           full=false
           skip_duplicate=false
-          if [[ "${EVENT_NAME}" == "schedule" || "${EVENT_NAME}" == "workflow_dispatch" || ( "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "master" ) ]]; then
+          if [[ "${EVENT_NAME}" == "schedule" || "${EVENT_NAME}" == "workflow_dispatch" || ( \
+          "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ) ]]; then
             full=true
           elif [[ "${EVENT_NAME}" == "push" ]]; then
             open_pr_count="$(gh api --method GET \
@@ -87,11 +130,6 @@ jobs:
             actions=true
             modules=("${all_modules[@]}")
           elif [[ "${skip_duplicate}" != "true" ]]; then
-            head_sha="$(git rev-parse HEAD)"
-            if [[ -z "${EXPECTED_HEAD_SHA}" || "${head_sha}" != "${EXPECTED_HEAD_SHA}" ]]; then
-              echo "::error::CodeQL scope checkout SHA mismatch: expected=${EXPECTED_HEAD_SHA:-<empty>} actual=${head_sha}"
-              exit 1
-            fi
             base_sha="${PR_BASE_SHA:-${EVENT_BEFORE:-}}"
             if [[ -z "${base_sha}" || "${base_sha}" =~ ^0+$ ]]; then
               base_sha="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${head_sha}")"
@@ -122,7 +160,8 @@ jobs:
           languages='[]'
           if [[ "${js}" == "true" ]]; then languages="$(jq -c '. + ["javascript-typescript"]' <<<"${languages}")"; fi
           if [[ "${go}" == "true" ]]; then languages="$(jq -c '. + ["go"]' <<<"${languages}")"; fi
-          go_modules="$(printf '%s\n' "${modules[@]:-}" | jq -Rsc 'split("\n") | map(select(length > 0) | split("=") | {key: .[0], workdir: .[1]})')"
+          go_modules_filter='split("\n") | map(select(length > 0) | split("=") | {key: .[0], workdir: .[1]})'
+          go_modules="$(printf '%s\n' "${modules[@]:-}" | jq -Rsc "${go_modules_filter}")"
           {
             echo "languages=${languages}"
             echo "go_matrix=${go_modules}"
@@ -140,17 +179,18 @@ jobs:
   analyze-javascript-typescript:
     name: Analyze javascript-typescript
     needs: [scope]
-    if: ${{ needs.scope.outputs.skip_duplicate_push != 'true' && contains(needs.scope.outputs.languages, 'javascript-typescript') }}
+    if: >-
+      ${{ needs.scope.outputs.skip_duplicate_push != 'true' && contains(needs.scope.outputs.languages,
+      'javascript-typescript') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
-      security-events: write
     steps:
       - name: Checkout immutable candidate source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
           show-progress: false
 
@@ -165,16 +205,27 @@ jobs:
         uses: github/codeql-action/analyze@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
         with:
           category: "/language:javascript-typescript"
+          upload: never
+          output: ${{ runner.temp }}/codeql-sarif
+
+      - name: Upload unprivileged JavaScript CodeQL evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: codeql-sarif-javascript-typescript-${{ github.run_id }}
+          path: ${{ runner.temp }}/codeql-sarif
+          if-no-files-found: error
+          retention-days: 2
 
   analyze-go:
     name: Analyze go (${{ matrix.key }})
     needs: [scope]
-    if: ${{ needs.scope.outputs.skip_duplicate_push != 'true' && contains(needs.scope.outputs.languages, 'go') && needs.scope.outputs.go_matrix != '[]' }}
+    if: >-
+      ${{ needs.scope.outputs.skip_duplicate_push != 'true' && contains(needs.scope.outputs.languages, 'go')
+      && needs.scope.outputs.go_matrix != '[]' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
       contents: read
-      security-events: write
     strategy:
       fail-fast: false
       matrix:
@@ -183,7 +234,7 @@ jobs:
       - name: Checkout immutable candidate source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
           show-progress: false
 
@@ -221,6 +272,16 @@ jobs:
         uses: github/codeql-action/analyze@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
         with:
           category: "/language:go-${{ matrix.key }}"
+          upload: never
+          output: ${{ runner.temp }}/codeql-sarif
+
+      - name: Upload unprivileged Go CodeQL evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: codeql-sarif-go-${{ matrix.key }}-${{ github.run_id }}
+          path: ${{ runner.temp }}/codeql-sarif
+          if-no-files-found: error
+          retention-days: 2
 
   analyze-actions:
     name: Analyze actions
@@ -230,12 +291,11 @@ jobs:
     timeout-minutes: 20
     permissions:
       contents: read
-      security-events: write
     steps:
       - name: Checkout immutable candidate source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
           show-progress: false
       - name: Initialize CodeQL
@@ -248,10 +308,145 @@ jobs:
         uses: github/codeql-action/analyze@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4
         with:
           category: "/language:actions"
+          upload: never
+          output: ${{ runner.temp }}/codeql-sarif
+
+      - name: Upload unprivileged Actions CodeQL evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: codeql-sarif-actions-${{ github.run_id }}
+          path: ${{ runner.temp }}/codeql-sarif
+          if-no-files-found: error
+          retention-days: 2
+
+  upload:
+    name: Upload trusted CodeQL SARIF
+    needs: [scope, analyze-javascript-typescript, analyze-go, analyze-actions]
+    if: >-
+      ${{ needs.scope.outputs.skip_duplicate_push != 'true' && needs.analyze-javascript-typescript.result ==
+      'success' && needs.analyze-go.result == 'success' && needs.analyze-actions.result == 'success' &&
+      ((github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch)
+      || github.event_name == 'schedule' || (github.event_name == 'push' && github.ref_name ==
+      github.event.repository.default_branch)) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+      security-events: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CANDIDATE_SHA: ${{ inputs.head_sha || github.sha }}
+      CANDIDATE_REF: ${{ inputs.head_ref && format('refs/heads/{0}', inputs.head_ref) || github.ref }}
+      PR_NUMBER: ${{ inputs.pr_number }}
+      BASE_SHA: ${{ inputs.base_sha }}
+      DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+    steps:
+      - name: Revalidate trusted definition and immutable upload identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]] || { echo \
+          "::error::CodeQL SARIF upload requires the default-branch workflow definition"; exit 1; }
+          [[ "${CANDIDATE_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::CodeQL candidate SHA is invalid"; exit 1; }
+          [[ "${CANDIDATE_REF}" == refs/* ]] || { echo "::error::CodeQL candidate ref is invalid"; exit 1; }
+          if [[ -n "${PR_NUMBER:-}" ]]; then
+            pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
+            [[ "$(jq -r '.state' <<<"${pr}")" == "open" ]] || { echo "::error::CodeQL closure PR is not open"; exit 1; }
+            [[ "$(jq -r '.head.sha' <<<"${pr}")" == "${CANDIDATE_SHA}" ]] || { echo \
+            "::error::CodeQL closure PR head drift"; exit 1; }
+            [[ "$(jq -r '.base.sha' <<<"${pr}")" == "${BASE_SHA}" ]] || { echo \
+            "::error::CodeQL closure PR base drift"; exit 1; }
+          fi
+
+      - name: Download unprivileged CodeQL SARIF artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          artifacts="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+          "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100")"
+          mapfile -t artifact_ids < <(jq -r \
+          '.artifacts[] | select(.name | startswith("codeql-sarif-")) | .id' <<<"${artifacts}")
+          [[ "${#artifact_ids[@]}" -eq 8 ]] || { echo \
+          "::error::expected 8 full-baseline CodeQL SARIF artifacts"; exit 1; }
+          destination="${RUNNER_TEMP}/codeql-sarif"
+          mkdir -p "${destination}"
+          for artifact_id in "${artifact_ids[@]}"; do
+            archive="${RUNNER_TEMP}/codeql-${artifact_id}.zip"
+            target="${destination}/${artifact_id}"
+            mkdir -p "${target}"
+            gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "${archive}"
+            while IFS= read -r entry; do
+              [[ -n "${entry}" && "${entry}" != ".." && "${entry}" != /* && "${entry}" != ../* && \
+              "${entry}" != */../* && "${entry}" != */.. ]] || {
+                echo "::error::unsafe CodeQL SARIF artifact path"
+                exit 1
+              }
+            done < <(unzip -Z1 "${archive}")
+            unzip -q "${archive}" -d "${target}"
+          done
+          mapfile -d '' sarif_files < <(find "${destination}" -type f -name '*.sarif' -print0)
+          [[ "${#sarif_files[@]}" -eq 8 ]] || { echo "::error::expected 8 full-baseline SARIF documents"; exit 1; }
+          for sarif in "${sarif_files[@]}"; do
+            jq -e '.version=="2.1.0" and (.runs | type=="array" and length>0)' "${sarif}" >/dev/null
+          done
+          expected_categories=(
+            /language:javascript-typescript
+            /language:actions
+            /language:go-dsh
+            /language:go-wlt
+            /language:go-identity
+            /language:go-workforce
+            /language:go-platform-control
+            /language:go-providers
+          )
+          mapfile -t actual_categories < <(jq -r '.runs[]?.automationDetails.id // empty' "${sarif_files[@]}")
+          [[ "${#actual_categories[@]}" -eq 8 ]] || { echo \
+          "::error::expected one CodeQL automation category per SARIF"; exit 1; }
+          for category in "${expected_categories[@]}"; do
+            occurrences="$(printf '%s\n' "${actual_categories[@]}" | awk -v expected="${category}" '$0 == \
+            expected { count += 1 } END { print count + 0 }')"
+            [[ "${occurrences}" == "1" ]] || { echo \
+            "::error::CodeQL SARIF category ${category} count=${occurrences}"; exit 1; }
+          done
+          printf '%s\0' "${sarif_files[@]}" > "${RUNNER_TEMP}/codeql-sarif-files"
+
+      - name: Upload exact CodeQL SARIF through the trusted API boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > "${RUNNER_TEMP}/codeql-upload-ids.txt"
+          while IFS= read -r -d '' sarif; do
+            encoded="${RUNNER_TEMP}/$(basename "${sarif}").gz.b64"
+            payload="${encoded}.json"
+            gzip -c -- "${sarif}" | base64 -w0 > "${encoded}"
+            jq -Rs --arg commit_sha "${CANDIDATE_SHA}" --arg ref "${CANDIDATE_REF}" \
+            '{commit_sha:$commit_sha,ref:$ref,sarif:.}' "${encoded}" > "${payload}"
+            upload_id="$(gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/code-scanning/sarifs" --input "${payload}" --jq '.id')"
+            [[ -n "${upload_id}" ]] || { echo "::error::CodeQL SARIF upload id missing"; exit 1; }
+            echo "${upload_id}" >> "${RUNNER_TEMP}/codeql-upload-ids.txt"
+          done < "${RUNNER_TEMP}/codeql-sarif-files"
+
+          while IFS= read -r upload_id; do
+            status=""
+            for _ in $(seq 1 120); do
+              response="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/code-scanning/sarifs/${upload_id}")"
+              status="$(jq -r '.processing_status // "unknown"' <<<"${response}")"
+              [[ "${status}" == "pending" ]] || break
+              sleep 5
+            done
+            [[ "${status}" == "complete" ]] || { echo "::error::CodeQL SARIF processing status=${status}"; exit 1; }
+          done < "${RUNNER_TEMP}/codeql-upload-ids.txt"
 
   result:
-    name: CodeQL result
-    needs: [scope, analyze-javascript-typescript, analyze-go, analyze-actions]
+    name: >-
+      ${{ github.event_name == 'pull_request' && 'CodeQL / PR result' || github.event_name == 'push' &&
+      'CodeQL / push result' || 'CodeQL / dispatched result' }}
+    needs: [scope, analyze-javascript-typescript, analyze-go, analyze-actions, upload]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -265,9 +460,13 @@ jobs:
           JAVASCRIPT_RESULT: ${{ needs.analyze-javascript-typescript.result }}
           GO_RESULT: ${{ needs.analyze-go.result }}
           ACTIONS_RESULT: ${{ needs.analyze-actions.result }}
+          UPLOAD_RESULT: ${{ needs.upload.result }}
           LANGUAGES: ${{ needs.scope.outputs.languages }}
           ACTIONS_REQUIRED: ${{ needs.scope.outputs.actions_required }}
           SKIP_DUPLICATE_PUSH: ${{ needs.scope.outputs.skip_duplicate_push }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
           if [[ "${SCOPE_RESULT}" != "success" ]]; then
@@ -289,5 +488,17 @@ jobs:
           if [[ "${ACTIONS_REQUIRED}" == "true" && "${ACTIONS_RESULT}" != "success" ]]; then
             echo "::error title=CodeQL actions analysis failed::workflow analysis failed"
             exit 1
+          fi
+          trusted_upload_required=false
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" || "${EVENT_NAME}" == "schedule" || ( \
+          "${EVENT_NAME}" == "push" && "${REF_NAME}" == "${DEFAULT_BRANCH}" ) ]]; then
+            trusted_upload_required=true
+          fi
+          if [[ "${trusted_upload_required}" == "true" ]]; then
+            [[ "${UPLOAD_RESULT}" == "success" ]] || { echo \
+            "::error title=CodeQL trusted upload failed::upload:${UPLOAD_RESULT}"; exit 1; }
+          else
+            [[ "${UPLOAD_RESULT}" == "skipped" ]] || { echo \
+            "::error::untrusted event unexpectedly ran the CodeQL write boundary"; exit 1; }
           fi
           echo "All applicable CodeQL analyses passed."

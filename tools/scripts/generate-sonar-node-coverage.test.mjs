@@ -58,10 +58,22 @@ test("coverage preparation resolves package-manager commands through the canonic
   const invocation = resolveCoverageCommandInvocation("pnpm", ["--version"]);
   assert.notEqual(invocation.executable, "pnpm.cmd");
   if (process.platform === "win32") {
-    assert.equal(invocation.executable.toLowerCase().endsWith("cmd.exe"), true);
-    assert.deepEqual(invocation.args.slice(0, 3), ["/d", "/s", "/c"]);
+    assert.equal(invocation.executable.toLowerCase(), "pwsh");
+    assert.deepEqual(invocation.args.slice(0, 5), [
+      "-NoProfile",
+      "-NonInteractive",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+    ]);
+    assert.match(
+      invocation.args[5].replaceAll("\\", "/"),
+      /\/tools\/mobile\/lib\/invoke-package-manager\.ps1$/,
+    );
+    assert.deepEqual(invocation.args.slice(6), ["pnpm", "--version"]);
   } else {
     assert.equal(invocation.executable, "pnpm");
+    assert.deepEqual(invocation.args, ["--version"]);
   }
 });
 

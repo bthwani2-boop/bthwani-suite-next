@@ -2,7 +2,7 @@
   "schemaVersion": "1.0.0",
   "journeyId": "101",
   "journeyNameAr": "الإدارة والأدوار والاعتمادات والتدقيق",
-  "truthOwner": "DSH_ADMINISTRATION_PROJECTION",
+  "truthOwner": "DSH_ADMINISTRATION_GOVERNANCE",
   "scopeBoundary": "platform-control-plane",
   "identityTruthOwner": "IDENTITY",
   "workforceTruthOwner": "WORKFORCE",
@@ -13,12 +13,29 @@
   "actors": ["operator-role-maker", "operator-role-checker", "operator-auditor", "role-beneficiary"],
   "requiredSurfaces": ["control-panel"],
   "impactedSurfaces": ["app-client", "app-partner", "app-captain", "app-field", "webapp", "website"],
-  "services": ["DSH_ADMINISTRATION_PROJECTION", "IDENTITY_AUTHENTICATION_TRUTH", "WORKFORCE_PROFILE_TRUTH", "PARTNER_LIFECYCLE_TRUTH"],
+  "services": ["DSH_ADMINISTRATION_GOVERNANCE", "IDENTITY_AUTHENTICATION_TRUTH", "WORKFORCE_PROFILE_TRUTH", "PARTNER_LIFECYCLE_TRUTH"],
   "entities": ["administration_role", "role_definition_request", "staff_role_assignment", "role_assignment_approval", "decision_rollback_request", "administration_audit_entry"],
   "states": {
-    "approval": ["pending", "approved", "rejected"],
+    "approval": ["pending", "approved", "rejected", "superseded"],
+    "execution": ["not_started", "pending", "reconciling", "retryable_failure", "failed_terminal", "applied"],
     "role": ["active", "inactive"],
     "diagnostics": ["healthy", "attention"]
+  },
+  "approvalExecutionStateMatrix": {
+    "allowedPairs": [
+      { "approval": "pending", "execution": "not_started" },
+      { "approval": "pending", "execution": "pending" },
+      { "approval": "pending", "execution": "reconciling" },
+      { "approval": "pending", "execution": "retryable_failure" },
+      { "approval": "pending", "execution": "failed_terminal" },
+      { "approval": "superseded", "execution": "failed_terminal" },
+      { "approval": "approved", "execution": "applied" },
+      { "approval": "rejected", "execution": "not_started" }
+    ],
+    "approvedMeaning": "approved is emitted only after the canonical Identity mutation succeeds, Identity readback proves the resulting truth, and fenced DSH finalization commits.",
+    "outstandingMeaning": "pending execution states are non-applied and require governed reconciliation or retry; consumers must not treat them as RBAC truth.",
+    "rejectionMeaning": "rejected requests have no executable canonical mutation intent and always read execution as not_started.",
+    "terminalFailureMeaning": "failed_terminal freezes the old intent payload and maker/checker source. Recovery atomically marks that request superseded and creates one fresh pending request against the latest canonical role version; the old request is never replayed or edited."
   },
   "allowedActions": [
     "request_surface_scoped_role_definition",
@@ -27,9 +44,9 @@
     "independently_approve_or_reject_role_change",
     "request_inverse_action_for_approved_role_decision",
     "independently_approve_or_reject_rollback",
+    "supersede_failed_terminal_request_and_create_one_fresh_version_fenced_request",
     "read_append_only_redacted_administration_audit",
     "read_aggregate_privacy_safe_administration_diagnostics",
-    "read_partner_activation_and_captain_credential_projections_without_mutating_owner_truth",
     "delegate_partner_activation_or_blocking_to_partner_lifecycle_owner",
     "delegate_captain_creation_update_documents_and_license_review_to_workforce_owner"
   ],
@@ -42,32 +59,37 @@
     "broad_identity_role_bypass_of_operation_permissions",
     "reading_approval_queues_without_checker_permission",
     "deleting_or_rewriting_audit_history",
+    "replaying_resetting_or_editing_a_failed_terminal_request",
+    "creating_more_than_one_replacement_for_a_superseded_request",
     "storing_phone_document_session_or_secret_values_in_audit_detail",
     "exposing_partner_review_notes_or_captain_license_number_in_administration_projection",
     "mutating_partner_lifecycle_or_captain_credentials_inside_administration_projection",
+    "storing_partner_activation_or_captain_credential_projections_inside_administration",
     "granting_administration_permission_outside_the_declared_surface_scope",
     "moving_identity_or_workforce_truth_into_dsh"
   ],
   "negativeInvariants": [
-    "Every role definition, assignment, revocation, and rollback request has a reason and an optimistic version.",
+    "Every newly executable role definition, assignment, revocation, and rollback request has a reason and an optimistic canonical role-version fence; immutable historical rows with unknowable legacy versions are never fabricated.",
     "Maker, beneficiary, and checker are distinct for role assignments; rollback checker is also distinct from the original decision checker.",
     "A rollback appends an inverse decision and never deletes the source approval or its audit trail.",
+    "A failed-terminal intent and its payload are immutable; its source may transition only to superseded in the same transaction that creates exactly one fresh pending replacement.",
     "The administration audit table is append-only outside an explicit maintenance context and readback redacts non-allowlisted details.",
     "Administration diagnostics expose aggregate counts only and never return phone numbers, credentials, documents, session tokens, or secrets.",
     "Identity authenticates the actor, but a broad role label never authorizes an administration operation; exact control-panel permission or an approved active administration role projection is required.",
     "Role-definition, role-assignment, and rollback queues are readable only by their corresponding checker permissions.",
-    "Partner review notes and captain license numbers remain inside their sovereign owners and are absent from administration projections.",
-    "Partner activation and captain credential mutations remain owned by their lifecycle and Workforce accreditation owners; administration only delegates navigation to those live owner surfaces."
+    "Partner review notes, activation state, captain credentials, and license numbers remain inside their sovereign owners; DSH Administration has no local table, cache, route, or DTO for them.",
+    "Partner activation and captain credential reads and mutations remain owned by their lifecycle and Workforce accreditation owners; the control panel delegates navigation to those live owner surfaces."
   ],
   "acceptanceCriteria": [
     "Role definitions persist normalized operation permissions and explicit surface scope with control-panel mandatory.",
     "Role definition and staff role changes use maker-checker approval with version conflict protection.",
+    "A failed-terminal request can only be recovered by one atomic supersede-and-replace operation followed by a fresh independent approval.",
     "Approved assignment or revocation decisions can be reversed only through a separate independently approved inverse request.",
     "Audit writes avoid raw reason or review-note values, audit readback is redacted, and update or delete is rejected by the persistence boundary.",
     "Approval queues require role, staff, or rollback checker permissions and cannot be listed through administration.read alone.",
     "The administration permission gate has no broad operator-role bypass and does not propagate phone PII.",
-    "Partner and captain administration projections omit partner review notes and captain license numbers.",
+    "Partner and captain owner surfaces expose only their own canonical reads; Administration contains no partner-activation or captain-credential projection.",
     "The administration surface binds roles, approvals, rollback, diagnostics, and audit to live owner routes.",
-    "The partner projection opens the governed partner lifecycle detail for activation or blocking and the captain projection opens Workforce for creation, update, documents, and license review."
+    "The governed partner lifecycle surface owns activation or blocking and Workforce owns captain creation, update, documents, and license review."
   ]
 }

@@ -30,7 +30,7 @@ export function StoreAdminStateView({ state, onRetry }: Props) {
       <CpStatePanel
         role="alert"
         title="الخدمة غير متاحة"
-        description="تعذر الوصول إلى DSH API (58080). تأكد من تشغيل pnpm runtime:up."
+        description="تعذر الوصول إلى DSH API (18080). تأكد من تشغيل pnpm runtime:up."
       >
         <RetryButton onRetry={onRetry} />
       </CpStatePanel>

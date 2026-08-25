@@ -1,89 +1,131 @@
-# Focus — Code, Architecture, Repository Organization and UI/UX
+# Focus — Code Architecture, Organization, UI Implementation and Structural Quality
 
 ## 1. Purpose
 
-Apply this module for `CODE`, `STRUCTURE`, `DESIGN` or `ALL`. Diagnose implementation quality as part of system meaning, not isolated style cleanup.
+Apply when the working cone includes implementation architecture, repository structure, modules/packages/files, shared code, UI/component implementation, accessibility, naming, dependency direction, duplication or cleanup.
 
-## 2. Architecture and ownership
+This module does not own Product/System meaning. Product meaning, actors, journeys, responsibilities, information architecture and UX semantics are owned by `focus/governance-product-design.md`; this file owns their implementation structure.
 
-Inspect materially applicable domain/capability boundaries, canonical owners, public/private module boundaries, dependency direction, cross-domain leakage, parallel implementations, shared-vs-feature placement, surface-local business logic, unbound frontend/backend code, circular/confused ownership and components with mixed responsibilities.
+## 2. Architecture follows meaning
 
-Fix parent ownership/design causes before mass-moving leaf files.
+Derive implementation structure in this order:
 
-When implementation complexity itself is materially suspect, diagnose necessity under `02-DIAGNOSE-ROOT-CAUSE.md` and apply the canonical minimum-complexity treatment in `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md`; working or long-standing code is not sufficient justification for avoidable complexity.
+`Product Capability -> Canonical Owner -> Responsibility -> Domain Boundary -> Public Contract -> Data Ownership -> Dependency Direction -> Runtime Boundary -> Surface Composition -> Directory -> File -> Symbol`.
 
-## 3. Repository structure
+Do not reverse this by treating current folders/files as architecture authority.
 
-For affected folders/modules establish as needed:
+A move/rename without semantic re-ownership, rewiring and cleanup is not an architectural fix.
 
-`owner | responsibility | allowed contents | forbidden contents | public boundary | incoming dependencies | outgoing dependencies | generated artifacts | tests | runtime relation`.
+## 3. Single responsibility and ownership
 
-Derive directories from ownership/capability boundaries rather than forcing meaning into an arbitrary historical tree.
+For every materially affected module/package/directory/file/component/helper prove:
 
-## 4. Placement, naming and discoverability
+`Necessary Purpose | Canonical Owner | Single Clear Responsibility | Real Consumer | Correct Layer | Correct Dependency Direction | Proven Value | Correct Placement | Clear Name`.
 
-Every material file should have identifiable responsibility, domain/context, canonical owner, justified location and non-ambiguous name.
+Ownerless or multiply-owned implementation is a finding when it can produce ambiguity, duplicated decisions, wrong dependencies or future mutation in the wrong place.
 
-`new | old | temp | final | copy | backup | misc | helpers | utils | common | shared | data | types` are review signals, not automatic failures.
+## 4. Semantic duplication
 
-Do not enforce arbitrary line-count thresholds. Split when responsibilities, authorities or lifecycles are genuinely independent.
+Inspect beyond textual clones:
 
-A new engineer/agent should be able to locate the canonical implementation/contract/config/runtime path without choosing between multiple plausible legacy aliases or duplicate commands. Navigation ambiguity that can redirect maintenance to the wrong authority is a structural defect.
+`business/decision-rule duplication | authorization duplication | state-mapping duplication | DTO/contract mapping duplication | validation duplication | config/routing duplication | duplicated writer logic | duplicate UI state authority | textual duplication`.
 
-## 5. Shared-frontend classification
+Prefer removing duplicated authority/decision logic at the canonical owner before reducing low-risk textual repetition.
 
-Classify affected shared frontend modules as:
+## 5. Shared/common/utils/helpers
 
-`transport adapter | generated-client wrapper | controller | view-model | state mapper | presentation policy | domain type | state machine | runtime binding`.
+Names do not create shared authority.
 
-Detect unjustified duplicate DTOs, status maps, business rules in presentation code, raw transport bypass, local authoritative state machines and shadow financial/business truth.
+A shared abstraction is justified only when it represents a genuinely shared stable concept with a clear owner and multiple real consumers without leaking domain authority.
 
-Shared does not mean ownerless.
+A generic directory with unrelated responsibilities or no clear owner is a structural finding. Split/rehome/inline/merge/delete according to proven semantics; do not preserve a junk drawer because many imports point to it.
 
-## 6. Dependency/reference proof before move/delete
+## 6. Wrappers, adapters and indirection
 
-Trace materially relevant imports/exports/re-exports, callers/callees, routes/navigation, registries/manifests, API/generated clients, DB/data, runtime/config, tests/CI, workspace scripts and governance references.
+Each wrapper/adapter/facade/helper must own unique material value such as:
 
-A move/rename/delete is complete only after rewiring, zero-old-reference/reachability reasoning and affected verification.
+`protocol translation | policy | security boundary | lifecycle/state | compatibility with explicit expiry | orchestration | testable transformation | runtime boundary`.
 
-## 7. Duplication, dead and stale code
+If it is pass-through indirection with no unique responsibility, classify it for inline/merge/delete after consumer proof.
 
-Look for duplicated business rules/state mappings/API adapters/contracts/types, obsolete compatibility/fallback paths, dead screens/routes/features, orphan modules/directories, stale configs/scripts/dependencies, wrongly owned generated artifacts, reachable historical implementations, aliases preserving obsolete authority and duplicate write/read paths.
+Adding a wrapper around wrong ownership is not a fix.
 
-Static unused/orphan output is evidence, not deletion authority.
+## 7. Dependency direction
 
-## 8. Frontend/backend binding
+Dependencies should flow toward stable canonical owners/boundaries. Inspect materially affected:
 
-For affected actions trace full vertical effect to backend/data and canonical readback.
+- circular dependencies;
+- lower-level modules importing surfaces/apps;
+- domain logic depending on transport/UI;
+- direct persistence/provider access bypassing canonical owner;
+- duplicated cross-surface business logic;
+- public APIs leaking internal models;
+- convenience re-export chains that hide ownership;
+- package boundaries that exist only historically.
 
-Reject final states with UI-only fake/local success, backend-only feature missing required surface, direct raw API logic duplicating canonical rules, contract change with stale consumers, divergent state/error/permission meaning, local surface state machine or mutation without canonical refresh/readback.
+Fix dependency direction at the highest correct boundary; do not add inversion layers without proven value.
 
-## 9. Design and UI/UX correctness
+## 8. Files and directories
 
-Diagnose information architecture/navigation, actor goal clarity, action availability, state/authority representation, loading/empty/error/denied/disabled/retry/offline/recovery, mutation feedback/readback, handoff clarity, cross-surface semantic consistency, responsive/mobile ergonomics, Arabic/RTL, accessibility, localization and design-system/component consistency.
+Audit structure at the necessary level:
 
-Do not destroy proven product/design behavior merely to obtain a cleaner tree.
+`symbol -> file -> file family -> directory -> package/module -> service/surface -> domain`.
 
-## 10. Mobile-specific lens
+For material directories prove:
 
-When relevant inspect native permissions, deep links, push, maps/location, SecureStore/session, offline/reconnect, build/OTA/EAS/env/runtime transport and physical-device vs emulator proof limits.
+`owner | responsibility | allowed contents | public boundary | incoming/outgoing dependencies | real consumers | generated contents | runtime relation | reason to exist`.
 
-## 11. Control-panel lens
+Directories named `old`, `legacy`, `backup`, `archive`, `temp`, `misc`, `stuff`, `common`, `shared`, `utils`, `helpers` are not auto-delete. They are high-suspicion when they have mixed ownership, unclear consumers or superseded content.
 
-When relevant inspect route/object authorization, trusted scope, server/client boundary, search isolation, bulk operations, audit/session/error/readback, responsive/RTL/localization/accessibility.
+Git is the default repository history; do not keep active backup copies without a live requirement.
 
-Visibility never replaces backend authorization.
+## 9. Naming and discoverability
 
-## 12. Content conservation
+A competent engineer/agent should be able to identify the canonical owner, contract, model, config, command and runtime path without guesswork.
 
-`inventory proven value → identify canonical owner/structure → migrate value/behavior → migrate consumers → compare operational/visual behavior → remove old path only after proof`.
+Misleading stale names/aliases/duplicate commands/multiple plausible paths are defects when they can redirect future writes to the wrong authority.
 
-## 13. Performance
+After rename/move, repair references and remove obsolete aliases unless a bounded compatibility requirement proves otherwise.
 
-Review product-code performance when material: duplicate calls, expensive render transforms, oversized loading, inappropriate eager imports, repeated mapping/formatting, inefficient queries and missing pagination/cache semantics.
+## 10. UI implementation quality
 
-Engineering control-path/toolchain performance is owned by `focus/data-contracts-runtime-security-quality.md`.
+When UI is material, verify implementation against proven Product/UX semantics:
 
-## 14. Closure for this focus
+- component ownership and composition;
+- state ownership and server/readback binding;
+- loading/empty/error/recovery states;
+- accessibility and keyboard/screen-reader semantics where applicable;
+- responsive and RTL/localization behavior where required;
+- consistent design-system use when it has real project authority;
+- no local business truth embedded solely to make a screen work;
+- authorization enforced server-side, not only via hidden UI.
 
-Compilation or a cleaner folder tree is insufficient. Material closure requires correct ownership/bindings, one justified source of truth, preserved intended behavior/design, removed stale reachable duplicates, correct naming/context/discoverability and verification through affected consumers/runtime.
+Visual polish does not substitute for correct journey/state/authority behavior.
+
+## 11. Generated and derived code
+
+Generated bindings/artifacts are normally derived. Apply `02` Generated-Output Law: fix the authoritative source/generator, regenerate, then verify consumers.
+
+Do not create hand-maintained forks of generated truth for local convenience.
+
+## 12. Dependency/package hygiene
+
+Within the affected cone inspect:
+
+`unused dependencies | duplicate package responsibility | obsolete compatibility package | stale workspace declaration | duplicate build script | dead command | unnecessary wrapper package | obsolete generated package`.
+
+Remove only after consumer/build/runtime proof, but once proven obsolete cleanup is mandatory under `03`.
+
+## 13. Test structure
+
+Tests should sit near the authority/behavior they falsify and should not encode superseded implementation structure as product semantics.
+
+After structural/semantic change classify stale mocks, fixtures, snapshots, helper harnesses and tests for deleted behavior. Preserve valid falsification strength; remove obsolete test infrastructure after replacement proof.
+
+## 14. Structural finishing
+
+Before closure, inspect every materially affected remaining structure for:
+
+`ownerless artifact | misplaced file | duplicated authority | unjustified directory | pass-through wrapper | dead alias | stale import/export | obsolete dependency | generated fork | legacy residue | unfinished move/split/merge`.
+
+Known material structural residue tied to the root blocks `CLOSED` under `04`.

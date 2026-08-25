@@ -10,7 +10,7 @@ x-bthwani-contract-state: CONTRACT_ACTIVE
 x-bthwani-runtime-dependency: true
 x-bthwani-client-generation: DISABLED
 servers:
-  - url: http://localhost:58083
+  - url: http://localhost:18083
 paths:
   /wlt/field-commission-category-policies/{partnerCategory}:
     put:

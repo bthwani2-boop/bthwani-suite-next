@@ -5,9 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -333,14 +334,20 @@ var (
 	ErrRbacRoleNotFound = errors.New("role does not exist in the Identity vocabulary")
 	// ErrRbacRoleAlreadyExists mirrors Identity's duplicate-role rejection.
 	ErrRbacRoleAlreadyExists = errors.New("role already exists in Identity")
+	ErrRbacConflict          = errors.New("canonical RBAC request conflicted")
+	ErrRbacVersionConflict   = errors.New("canonical role version conflicted")
 )
 
 // RbacRole is the canonical Identity role definition, as returned by the
 // Identity RBAC internal API.
 type RbacRole struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	Description string    `json:"description"`
+	Active      bool      `json:"active"`
+	Version     int       `json:"version"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
 // RbacActorRoleAssignment is the canonical Identity actor→role grant.
@@ -352,6 +359,10 @@ type RbacActorRoleAssignment struct {
 }
 
 func (c *Client) rbacRequest(ctx context.Context, method, path string, query map[string]string, body any) (*http.Response, error) {
+	return c.rbacRequestWithHeaders(ctx, method, path, query, body, nil)
+}
+
+func (c *Client) rbacRequestWithHeaders(ctx context.Context, method, path string, query map[string]string, body any, headers map[string]string) (*http.Response, error) {
 	if c.baseURL == "" || c.internalServiceToken == "" {
 		return nil, ErrIdentityUnavailable
 	}
@@ -379,6 +390,11 @@ func (c *Client) rbacRequest(ctx context.Context, method, path string, query map
 	}
 	req.Header.Set("Authorization", "Bearer "+c.internalServiceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
+	for key, value := range headers {
+		if strings.TrimSpace(value) != "" {
+			req.Header.Set(key, value)
+		}
+	}
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return nil, ErrIdentityUnavailable
@@ -405,35 +421,6 @@ func (c *Client) ListRoles(ctx context.Context) ([]RbacRole, error) {
 		return nil, ErrIdentityUnavailable
 	}
 	return result.Roles, nil
-}
-
-// CreateRole creates a new durable role definition in Identity. This is the
-// canonical mutation an approved DSH role-definition request must invoke
-// before it may report the role as active; DSH never activates a role name
-// in its own storage without this call succeeding first.
-func (c *Client) CreateRole(ctx context.Context, name, description string) (RbacRole, error) {
-	resp, err := c.rbacRequest(ctx, http.MethodPost, "/internal/rbac/roles", nil, map[string]string{
-		"name":        name,
-		"description": description,
-	})
-	if err != nil {
-		return RbacRole{}, err
-	}
-	defer resp.Body.Close()
-	switch resp.StatusCode {
-	case http.StatusCreated:
-		var role RbacRole
-		if err := json.NewDecoder(resp.Body).Decode(&role); err != nil {
-			return RbacRole{}, ErrIdentityUnavailable
-		}
-		return role, nil
-	case http.StatusConflict:
-		return RbacRole{}, ErrRbacRoleAlreadyExists
-	case http.StatusBadRequest:
-		return RbacRole{}, fmt.Errorf("invalid role definition: %s", name)
-	default:
-		return RbacRole{}, ErrIdentityUnavailable
-	}
 }
 
 // RbacStaffActor is an Identity actor holding at least one durable role
@@ -466,15 +453,38 @@ func (c *Client) ListStaff(ctx context.Context) ([]RbacStaffActor, error) {
 	return result.Staff, nil
 }
 
-// GrantRole applies a canonical actor→role assignment in Identity. This is
-// the mutation an approved DSH staff-role-assignment request must invoke
-// before its approval status may flip to approved; a failure here leaves
-// the approval unapplied and must not be overridden by a local write.
-func (c *Client) GrantRole(ctx context.Context, targetActorID, roleName, requestedByActorID string) (RbacActorRoleAssignment, error) {
-	resp, err := c.rbacRequest(ctx, http.MethodPost, "/internal/rbac/actors/"+targetActorID+"/roles", nil, map[string]string{
-		"roleName":           roleName,
-		"requestedByActorId": requestedByActorID,
-	})
+// ListActorRoleAssignments returns the durable actor-to-role memberships owned
+// by Identity. Unlike ListStaff, this read intentionally includes assignments
+// to inactive roles so DSH can verify that a revoke removed the canonical row
+// rather than merely hiding it from the effective-access projection.
+func (c *Client) ListActorRoleAssignments(ctx context.Context, actorID string) ([]RbacActorRoleAssignment, error) {
+	actorID = strings.TrimSpace(actorID)
+	if actorID == "" {
+		return nil, ErrIdentityUnavailable
+	}
+	resp, err := c.rbacRequest(ctx, http.MethodGet, "/internal/rbac/actors/"+url.PathEscape(actorID)+"/roles", nil, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, ErrIdentityUnavailable
+	}
+	var result struct {
+		Assignments []RbacActorRoleAssignment `json:"assignments"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return nil, ErrIdentityUnavailable
+	}
+	return result.Assignments, nil
+}
+
+func (c *Client) GrantRoleWithIdempotency(ctx context.Context, targetActorID, roleName, requestedByActorID string, expectedRoleVersion int, idempotencyKey string) (RbacActorRoleAssignment, error) {
+	resp, err := c.rbacRequestWithHeaders(ctx, http.MethodPost, "/internal/rbac/actors/"+targetActorID+"/roles", nil, map[string]any{
+		"roleName":            roleName,
+		"requestedByActorId":  requestedByActorID,
+		"expectedRoleVersion": expectedRoleVersion,
+	}, map[string]string{"Idempotency-Key": idempotencyKey, "X-Canonical-Intent-ID": idempotencyKey})
 	if err != nil {
 		return RbacActorRoleAssignment{}, err
 	}
@@ -490,19 +500,19 @@ func (c *Client) GrantRole(ctx context.Context, targetActorID, roleName, request
 		return RbacActorRoleAssignment{}, ErrRbacRoleNotFound
 	case http.StatusBadRequest:
 		return RbacActorRoleAssignment{}, ErrRbacSelfGrant
+	case http.StatusConflict:
+		return RbacActorRoleAssignment{}, rbacConflictError(resp)
 	default:
 		return RbacActorRoleAssignment{}, ErrIdentityUnavailable
 	}
 }
 
-// RevokeRole applies the canonical inverse of GrantRole in Identity. This is
-// the mutation an approved DSH rollback request must invoke before its
-// status may flip to approved.
-func (c *Client) RevokeRole(ctx context.Context, targetActorID, roleName, requestedByActorID string) error {
-	resp, err := c.rbacRequest(ctx, http.MethodDelete, "/internal/rbac/actors/"+targetActorID+"/roles", map[string]string{
-		"roleName":           roleName,
-		"requestedByActorId": requestedByActorID,
-	}, nil)
+func (c *Client) RevokeRoleWithIdempotency(ctx context.Context, targetActorID, roleName, requestedByActorID string, expectedRoleVersion int, idempotencyKey string) error {
+	resp, err := c.rbacRequestWithHeaders(ctx, http.MethodDelete, "/internal/rbac/actors/"+targetActorID+"/roles", map[string]string{
+		"roleName":            roleName,
+		"requestedByActorId":  requestedByActorID,
+		"expectedRoleVersion": strconv.Itoa(expectedRoleVersion),
+	}, nil, map[string]string{"Idempotency-Key": idempotencyKey, "X-Canonical-Intent-ID": idempotencyKey})
 	if err != nil {
 		return err
 	}
@@ -512,7 +522,19 @@ func (c *Client) RevokeRole(ctx context.Context, targetActorID, roleName, reques
 		return nil
 	case http.StatusBadRequest:
 		return ErrRbacSelfGrant
+	case http.StatusConflict:
+		return rbacConflictError(resp)
 	default:
 		return ErrIdentityUnavailable
 	}
+}
+
+func rbacConflictError(resp *http.Response) error {
+	var payload struct {
+		Code string `json:"code"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err == nil && payload.Code == "ROLE_VERSION_CONFLICT" {
+		return ErrRbacVersionConflict
+	}
+	return ErrRbacConflict
 }

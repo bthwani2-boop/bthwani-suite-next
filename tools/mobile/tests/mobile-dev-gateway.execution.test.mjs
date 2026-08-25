@@ -30,12 +30,12 @@ test("gateway service routes are fixed allowlisted upstreams", () => {
   assert.deepEqual(resolveGatewayRoute("/dsh/health?probe=1"), {
     kind: "service",
     host: "127.0.0.1",
-    port: 58080,
+    port: 18080,
     path: "/dsh/health?probe=1",
     requiresCapability: false,
   });
-  assert.equal(resolveGatewayRoute("/identity/readiness")?.port, 58082);
-  assert.equal(resolveGatewayRoute("/workforce/health")?.port, 58086);
+  assert.equal(resolveGatewayRoute("/identity/readiness")?.port, 18082);
+  assert.equal(resolveGatewayRoute("/workforce/health")?.port, 18086);
   assert.equal(resolveGatewayRoute("/wlt/health"), null);
   assert.equal(resolveGatewayRoute("/http://example.com"), null);
 });
@@ -44,7 +44,7 @@ test("developer sessions stay behind the capability-protected loopback broker ro
   assert.deepEqual(resolveGatewayRoute("/__dev-session/session"), {
     kind: "dev-session",
     host: "127.0.0.1",
-    port: 58100,
+    port: 18100,
     path: "/session",
     requiresCapability: true,
   });
@@ -65,14 +65,33 @@ test("media route accepts only presigned requests and preserves signed path/quer
 
 test("MinIO redirects are rewritten to the gateway without changing the signed object path or query", () => {
   const location = `http://localhost:59000/dsh-media/catalog/test.jpg?${presignedQuery}`;
-  const rewritten = rewritePresignedMediaLocation(location, "http://192.168.1.20:58110");
+  const rewritten = rewritePresignedMediaLocation(location, "http://192.168.1.20:18110");
   assert.equal(
     rewritten,
-    `http://192.168.1.20:58110/__media/dsh-media/catalog/test.jpg?${presignedQuery}`,
+    `http://192.168.1.20:18110/__media/dsh-media/catalog/test.jpg?${presignedQuery}`,
   );
 
   assert.equal(
-    rewritePresignedMediaLocation("https://example.com/public.jpg", "http://192.168.1.20:58110"),
+    rewritePresignedMediaLocation("https://example.com/public.jpg", "http://192.168.1.20:18110"),
     "https://example.com/public.jpg",
   );
+});
+
+test("media gateway follows the configured MinIO host port", () => {
+  const previousPort = process.env.BTHWANI_MINIO_API_PORT;
+  process.env.BTHWANI_MINIO_API_PORT = "59500";
+  try {
+    const route = resolveGatewayRoute(`/__media/dsh-media/catalog/test.jpg?${presignedQuery}`);
+    assert.equal(route?.port, 59500);
+    assert.equal(
+      rewritePresignedMediaLocation(
+        `http://localhost:59500/dsh-media/catalog/test.jpg?${presignedQuery}`,
+        "http://192.168.1.20:18110",
+      ),
+      `http://192.168.1.20:18110/__media/dsh-media/catalog/test.jpg?${presignedQuery}`,
+    );
+  } finally {
+    if (previousPort === undefined) delete process.env.BTHWANI_MINIO_API_PORT;
+    else process.env.BTHWANI_MINIO_API_PORT = previousPort;
+  }
 });

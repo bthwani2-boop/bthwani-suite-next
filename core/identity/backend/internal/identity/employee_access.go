@@ -3,12 +3,9 @@ package identity
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"regexp"
 	"strings"
-
-	"github.com/lib/pq"
 )
 
 const (
@@ -69,7 +66,7 @@ func employeeDshPermissions(bundle string) []Permission {
 	case EmployeeBundlePlatformOwner:
 		// Sovereign platform owner: all DSH control-panel capabilities.
 		return grant(
-			"platform.read", "platform.manage",
+			"platform:read", "platform.manage",
 			"partners.read", "partners.manage", "partners.activate",
 			"catalog.taxonomy.manage",
 			"catalog.product.read", "catalog.product.manage", "catalog.product.approve", "catalog.product.publish",
@@ -92,16 +89,15 @@ func employeeDshPermissions(bundle string) []Permission {
 			"dsh.operational_policy.audit.read", "dsh.operational_policy.evaluate", "dsh.operational_policy.rollback",
 			"operations.special_requests.read", "operations.special_requests.transition", "operations.special_requests.dispatch",
 			"support.read", "support.manage",
-			"administration.read", "administration.manage",
-			"administration.approve",
+			"administration.role.read", "administration.staff.read",
+			"administration.audit.read", "administration.diagnostics.read",
 			"administration.role.request", "administration.role.approve",
 			"administration.staff.request", "administration.staff.approve",
-			"administration.audit.read", "administration.diagnostics.read",
 			"administration.rollback.request", "administration.rollback.approve",
 		)
 	case EmployeeBundlePlatformCoordinator:
 		return grant(
-			"platform.read", "analytics.read",
+			"platform:read", "analytics.read",
 			"dsh.service_zones.read",
 			"dsh.fulfillment_sla.read",
 			"dsh.dispatch_capacity.read",
@@ -128,7 +124,7 @@ func employeeDshPermissions(bundle string) []Permission {
 	case EmployeeBundleSupportManager:
 		return grant("support.read", "support.manage")
 	case EmployeeBundleHRManager:
-		return grant("administration.read", "administration.manage")
+		return grant("administration.role.read", "administration.staff.read")
 	default:
 		return nil
 	}
@@ -263,7 +259,7 @@ func permissionIdentityKey(permission Permission) string {
 
 func mergeEmployeePermissions(existing, requested []Permission) []Permission {
 	result := append([]Permission{}, existing...)
-	seen := make(map[string]struct{}, len(result)+len(requested))
+	seen := make(map[string]struct{}, len(result))
 	for _, permission := range result {
 		seen[permissionIdentityKey(permission)] = struct{}{}
 	}
@@ -338,17 +334,16 @@ func (r *Repository) ProvisionEmployee(ctx context.Context, input EmployeeProvis
 	}
 	actorID := "employee-" + suffix
 	roles := mergeEmployeeRoles(nil, permissionBundle)
-	permissionsJSON, err := json.Marshal(permissions)
-	if err != nil {
-		return ActorAdminView{}, err
-	}
 	_, err = tx.ExecContext(ctx, `
 		INSERT INTO identity_actors
 			(id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version, updated_at)
-		VALUES ($1,$2,'',$3,$4,$5,$6::jsonb,'PROVISIONED',1,now())`,
-		actorID, username, operatorContextID, phone, pq.Array(roles), string(permissionsJSON))
+		VALUES ($1,$2,'',$3,$4,ARRAY[]::text[],'[]'::jsonb,'PROVISIONED',1,now())`,
+		actorID, username, operatorContextID, phone)
 	if err != nil {
 		return ActorAdminView{}, mapUniqueViolation(err)
+	}
+	if err := setActorAccessTx(ctx, tx, actorID, roles, permissions, "employee-provision"); err != nil {
+		return ActorAdminView{}, err
 	}
 	if err := tx.Commit(); err != nil {
 		return ActorAdminView{}, err
@@ -370,39 +365,4 @@ func samePermissionSet(left, right []Permission) bool {
 		}
 	}
 	return true
-}
-
-// BootstrapSovereignLeadershipAccess upgrades only the explicit local operator
-// bootstrap actor so development can exercise the sovereign leadership journey.
-func (r *Repository) BootstrapSovereignLeadershipAccess(ctx context.Context, input LocalBootstrap) error {
-	if !input.Enabled {
-		return nil
-	}
-	permissions, err := employeeBundlePermissions(EmployeeBundlePlatformOwner, "platform")
-	if err != nil {
-		return err
-	}
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback() //nolint:errcheck
-	actor, err := actorByIDTx(ctx, tx, "operator-local-001")
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	roles := mergeEmployeeRoles(actor.Roles, EmployeeBundlePlatformOwner)
-	mergedPermissions := mergeEmployeePermissions(actor.Permissions, permissions)
-	permissionsJSON, err := json.Marshal(mergedPermissions)
-	if err != nil {
-		return err
-	}
-	if _, err := tx.ExecContext(ctx, `UPDATE identity_actors SET roles=$2,permissions=$3::jsonb,updated_at=now() WHERE id=$1`,
-		actor.ID, pq.Array(roles), string(permissionsJSON)); err != nil {
-		return err
-	}
-	return tx.Commit()
 }

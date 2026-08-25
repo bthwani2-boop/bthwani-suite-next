@@ -1,5 +1,10 @@
 name: BThwani Contextual CI
 
+run-name: >- # closure-pr-run-name
+  ${{ github.event_name == 'workflow_dispatch' && inputs.target_kind == 'pull_request' &&
+  format('closure-pr-{0}-head-{1}-base-{2}', inputs.pr_number, inputs.expected_head_sha,
+  inputs.expected_base_sha) || format('bthwani-ci-{0}-{1}', github.event_name, github.sha) }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -18,6 +23,24 @@ on:
         required: true
         default: false
         type: boolean
+      target_kind:
+        description: Explicit target identity for remote closure
+        required: false
+        default: branch
+        type: choice
+        options: [branch, pull_request]
+      pr_number:
+        description: Pull request number when target_kind=pull_request
+        required: false
+        type: string
+      expected_head_sha:
+        description: Exact expected candidate SHA
+        required: false
+        type: string
+      expected_base_sha:
+        description: Exact expected PR base SHA
+        required: false
+        type: string
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches: ["**"]
@@ -29,21 +52,29 @@ permissions:
   contents: read
   pull-requests: read
 
-concurrency:
-  group: contextual-ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 env:
   GIT_CONFIG_COUNT: "1"
   GIT_CONFIG_KEY_0: init.defaultBranch
-  GIT_CONFIG_VALUE_0: master
+  GIT_CONFIG_VALUE_0: ${{ github.event.repository.default_branch }}
+
+concurrency:
+  group: bthwani-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   context:
-    name: Detect affected code scope
+    name: Resolve canonical target and affected scope
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
     outputs:
+      target_kind: ${{ steps.target.outputs.target_kind }}
+      pr_number: ${{ steps.target.outputs.pr_number }}
+      head_ref: ${{ steps.target.outputs.head_ref }}
+      base_ref: ${{ steps.target.outputs.base_ref }}
       base_sha: ${{ steps.scope.outputs.base_sha }}
       head_sha: ${{ steps.scope.outputs.head_sha }}
       full_verification: ${{ steps.scope.outputs.full_verification }}
@@ -72,150 +103,216 @@ jobs:
       verification_required: ${{ steps.scope.outputs.verification_required }}
       backend_required: ${{ steps.scope.outputs.backend_required }}
       platform_change_sets: ${{ steps.scope.outputs.platform_change_sets }}
-      skip_duplicate_push: ${{ steps.scope.outputs.skip_duplicate_push }}
-      execution_phase: ${{ steps.scope.outputs.execution_phase }}
+      skip_duplicate_push: ${{ steps.target.outputs.skip_duplicate_push }}
+      execution_phase: ${{ steps.target.outputs.execution_phase }}
     steps:
       - name: Checkout immutable source history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.expected_head_sha || github.event.pull_request.head.sha || github.sha }}
           fetch-depth: 0
           fetch-tags: false
           filter: blob:none
           persist-credentials: false
+
       - name: Set up locked Node runtime
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "24.17.0"
+
       - name: Verify router behavior
         run: |
           node --test tools/scripts/detect-ci-context.test.mjs
+          node --test tools/scripts/ci-routing.test.mjs
           node --test tools/scripts/ci-runtime-bootstrap-policy.test.mjs
-      - name: Resolve execution phase and affected scope
-        id: scope
+
+      - name: Resolve canonical branch/PR identity
+        id: target
         shell: bash
         env:
-          EVENT_BEFORE: ${{ github.event.before }}
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          EXPECTED_HEAD_SHA: ${{ github.sha }}
-          DISPATCH_MODE: ${{ inputs.mode }}
-          DISPATCH_JOURNEY: ${{ inputs.journey }}
-          DISPATCH_RUNTIME_PROOF: ${{ inputs.runtime_proof }}
           EVENT_NAME: ${{ github.event_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          PR_NUMBER_EVENT: ${{ github.event.pull_request.number }}
+          PR_HEAD_REF_EVENT: ${{ github.event.pull_request.head.ref }}
+          PR_HEAD_SHA_EVENT: ${{ github.event.pull_request.head.sha }}
+          PR_BASE_REF_EVENT: ${{ github.event.pull_request.base.ref }}
+          PR_BASE_SHA_EVENT: ${{ github.event.pull_request.base.sha }}
+          REQUEST_TARGET_KIND: ${{ inputs.target_kind }}
+          REQUEST_PR_NUMBER: ${{ inputs.pr_number }}
+          REQUEST_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          REQUEST_BASE_SHA: ${{ inputs.expected_base_sha }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          head_sha="$(git rev-parse HEAD)"
-          if [[ -z "${EXPECTED_HEAD_SHA}" || "${head_sha}" != "${EXPECTED_HEAD_SHA}" ]]; then
-            echo "::error::Contextual CI checkout SHA mismatch: expected=${EXPECTED_HEAD_SHA:-<empty>} actual=${head_sha}"
-            exit 1
-          fi
-          base_sha="${PR_BASE_SHA:-${EVENT_BEFORE:-}}"
-          phase="pr"
-          mode=affected
+          actual_head="$(git rev-parse HEAD)"
+          target_kind=branch
+          pr_number=""
+          head_ref="${GITHUB_REF_NAME}"
+          base_ref="${DEFAULT_BRANCH}"
+          base_sha=""
+          phase=development
           skip_duplicate=false
 
-          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
-            phase=closure
-            mode="${DISPATCH_MODE:-affected}"
-          elif [[ "${EVENT_NAME}" == "push" && ( "${GITHUB_REF_NAME}" == "master" || "${GITHUB_REF_NAME}" == "b" || "${GITHUB_REF_NAME}" == "c" ) ]]; then
-            phase=master
-            verified_base=""
-            while IFS= read -r candidate; do
-              [[ -n "${candidate}" && "${candidate}" != "${head_sha}" ]] || continue
-              if git merge-base --is-ancestor "${candidate}" "${head_sha}" 2>/dev/null; then
-                verified_base="${candidate}"
-                break
-              fi
-            done < <(gh api --method GET \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
-              "/repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs" \
-              -f branch="${GITHUB_REF_NAME}" \
-              -f event=push \
-              -f status=success \
-              -f per_page=100 \
-              --jq '.workflow_runs[].head_sha')
-            if [[ -n "${verified_base}" ]]; then base_sha="${verified_base}"; else mode=full; fi
+          resolve_pr() {
+            local number="$1"
+            gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${number}"
+          }
+
+          if [[ "${EVENT_NAME}" == "pull_request" ]]; then
+            [[ "${actual_head}" == "${PR_HEAD_SHA_EVENT}" ]] || {
+              echo "::error::PR checkout drift: expected=${PR_HEAD_SHA_EVENT} actual=${actual_head}"
+              exit 1
+            }
+            target_kind=pull_request
+            pr_number="${PR_NUMBER_EVENT}"
+            head_ref="${PR_HEAD_REF_EVENT}"
+            base_ref="${PR_BASE_REF_EVENT}"
+            base_sha="${PR_BASE_SHA_EVENT}"
+            phase="pr"
+          elif [[ "${EVENT_NAME}" == "workflow_dispatch" && "${REQUEST_TARGET_KIND:-branch}" == "pull_request" ]]; then
+            [[ "${REQUEST_PR_NUMBER}" =~ ^[0-9]+$ ]] || { echo \
+            "::error::pr_number is required for pull_request target"; exit 1; }
+            pr="$(resolve_pr "${REQUEST_PR_NUMBER}")"
+            [[ "$(jq -r '.state' <<<"${pr}")" == "open" ]] || { echo "::error::target PR is not open"; exit 1; }
+            pr_head="$(jq -r '.head.sha' <<<"${pr}")"
+            pr_base="$(jq -r '.base.sha' <<<"${pr}")"
+            [[ "${actual_head}" == "${pr_head}" ]] || { echo \
+            "::error::dispatch checkout is not PR head: expected=${pr_head} actual=${actual_head}"; exit 1; }
+            [[ -z "${REQUEST_HEAD_SHA:-}" || "${REQUEST_HEAD_SHA}" == "${pr_head}" ]] || { echo \
+            "::error::requested head SHA is stale"; exit 1; }
+            [[ -z "${REQUEST_BASE_SHA:-}" || "${REQUEST_BASE_SHA}" == "${pr_base}" ]] || { echo \
+            "::error::requested base SHA is stale"; exit 1; }
+            target_kind=pull_request
+            pr_number="${REQUEST_PR_NUMBER}"
+            head_ref="$(jq -r '.head.ref' <<<"${pr}")"
+            base_ref="$(jq -r '.base.ref' <<<"${pr}")"
+            base_sha="${pr_base}"
+            phase="closure"
+          elif [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+            [[ -z "${REQUEST_HEAD_SHA:-}" || "${REQUEST_HEAD_SHA}" == "${actual_head}" ]] || { echo \
+            "::error::requested branch SHA is stale"; exit 1; }
+            phase="closure"
+          elif [[ "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]]; then
+            phase="default-branch"
           elif [[ "${EVENT_NAME}" == "push" ]]; then
-            phase=development
-            open_pr_count="$(gh api --method GET \
-              -H "X-GitHub-Api-Version: 2022-11-28" \
+            mapfile -t prs < <(gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
               "/repos/${GITHUB_REPOSITORY}/pulls" \
-              -f state=open \
-              -f head="${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}" \
-              -f per_page=1 \
-              --jq 'length')"
-            if [[ "${open_pr_count}" != "0" ]]; then skip_duplicate=true; fi
+              -f state=open -f head="${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}" -f \
+              base="${DEFAULT_BRANCH}" -f per_page=100 \
+              --jq '.[].number')
+            if (( ${#prs[@]} > 1 )); then
+              echo "::error::PR_IDENTITY_CONFLICT: multiple open PRs own ${GITHUB_REF_NAME} -> ${DEFAULT_BRANCH}"
+              exit 1
+            fi
+            if (( ${#prs[@]} == 1 )); then
+              pr="$(resolve_pr "${prs[0]}")"
+              [[ "$(jq -r '.head.sha' <<<"${pr}")" == "${actual_head}" ]] || { echo \
+              "::error::open PR head does not match push candidate"; exit 1; }
+              target_kind=pull_request
+              pr_number="${prs[0]}"
+              head_ref="$(jq -r '.head.ref' <<<"${pr}")"
+              base_ref="$(jq -r '.base.ref' <<<"${pr}")"
+              base_sha="$(jq -r '.base.sha' <<<"${pr}")"
+              phase="pr"
+              skip_duplicate=true
+            fi
           fi
 
+          if [[ -z "${base_sha}" ]]; then
+            if [[ "${phase}" == "default-branch" ]]; then
+              base_sha="${{ github.event.before }}"
+            else
+              base_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/branches/${base_ref}" --jq '.commit.sha')"
+            fi
+          fi
           if [[ -z "${base_sha}" || "${base_sha}" =~ ^0+$ ]]; then
-            base_sha="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${head_sha}")"
+            base_sha="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${actual_head}")"
           fi
 
-          echo "skip_duplicate_push=${skip_duplicate}" >> "${GITHUB_OUTPUT}"
-          echo "execution_phase=${phase}" >> "${GITHUB_OUTPUT}"
-          CI_BASE_SHA="${base_sha}" \
-          CI_HEAD_SHA="${head_sha}" \
-          CI_MODE="${mode}" \
-          CI_EXECUTION_PHASE="${phase}" \
-          CI_JOURNEY="${DISPATCH_JOURNEY:-}" \
-          CI_RUNTIME_PROOF="${DISPATCH_RUNTIME_PROOF:-false}" \
-          node tools/scripts/detect-ci-context.mjs
-      - name: Publish routing summary
+          {
+            echo "target_kind=${target_kind}"
+            echo "pr_number=${pr_number}"
+            echo "head_ref=${head_ref}"
+            echo "base_ref=${base_ref}"
+            echo "base_sha=${base_sha}"
+            echo "head_sha=${actual_head}"
+            echo "execution_phase=${phase}"
+            echo "skip_duplicate_push=${skip_duplicate}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Resolve affected scope from canonical identity
+        id: scope
+        shell: bash
         env:
-          BASE_SHA: ${{ steps.scope.outputs.base_sha }}
+          CI_BASE_SHA: ${{ steps.target.outputs.base_sha }}
+          CI_HEAD_SHA: ${{ steps.target.outputs.head_sha }}
+          CI_EXECUTION_PHASE: ${{ steps.target.outputs.execution_phase }}
+          DISPATCH_MODE: ${{ inputs.mode }}
+          CI_JOURNEY: ${{ inputs.journey }}
+          CI_RUNTIME_PROOF: ${{ inputs.runtime_proof }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          mode=affected
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then mode="${DISPATCH_MODE:-affected}"; fi
+          CI_MODE="${mode}" node tools/scripts/detect-ci-context.mjs
+
+      - name: Publish canonical identity summary
+        env:
+          TARGET_KIND: ${{ steps.target.outputs.target_kind }}
+          PR_NUMBER: ${{ steps.target.outputs.pr_number }}
+          HEAD_REF: ${{ steps.target.outputs.head_ref }}
           HEAD_SHA: ${{ steps.scope.outputs.head_sha }}
-          NODE_SCOPE: ${{ steps.scope.outputs.node_scope }}
-          JOURNEY_SCOPE: ${{ steps.scope.outputs.journey_scope }}
-          VERIFICATION_TIER: ${{ steps.scope.outputs.verification_tier }}
-          RUNTIME_PROFILE: ${{ steps.scope.outputs.runtime_profile }}
-          FULL_VERIFICATION: ${{ steps.scope.outputs.full_verification }}
-          EXECUTION_PHASE: ${{ steps.scope.outputs.execution_phase }}
-          SKIP_DUPLICATE_PUSH: ${{ steps.scope.outputs.skip_duplicate_push }}
+          BASE_REF: ${{ steps.target.outputs.base_ref }}
+          BASE_SHA: ${{ steps.scope.outputs.base_sha }}
+          PHASE: ${{ steps.target.outputs.execution_phase }}
+          SKIP_DUPLICATE: ${{ steps.target.outputs.skip_duplicate_push }}
+          TIER: ${{ steps.scope.outputs.verification_tier }}
         run: |
           {
-            echo "### Contextual code verification"
-            echo "- Base: ${BASE_SHA}"
-            echo "- Head: ${HEAD_SHA}"
-            echo "- Phase: ${EXECUTION_PHASE}"
-            echo "- Duplicate push suppressed: ${SKIP_DUPLICATE_PUSH}"
-            echo "- Full verification: ${FULL_VERIFICATION}"
-            echo "- Tier: ${VERIFICATION_TIER}"
-            echo "- Runtime: ${RUNTIME_PROFILE}"
-            echo "- Node scope: ${NODE_SCOPE}"
-            echo "- Journey: ${JOURNEY_SCOPE:-none}"
+            echo "### Canonical execution context"
+            echo "- Target: ${TARGET_KIND}"
+            echo "- PR: ${PR_NUMBER:-none}"
+            echo "- Head: ${HEAD_REF}@${HEAD_SHA}"
+            echo "- Base: ${BASE_REF}@${BASE_SHA}"
+            echo "- Phase: ${PHASE}"
+            echo "- Verification tier: ${TIER}"
+            echo "- Duplicate push suppressed: ${SKIP_DUPLICATE}"
           } >> "${GITHUB_STEP_SUMMARY}"
 
   diagnostics:
     name: Contract diagnostics
     needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.diagnostics_required == 'true' }}
+    if: >-
+      ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.diagnostics_required ==
+      'true' }}
     uses: ./.github/workflows/ci-node-diagnostics.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
-      head_sha: ${{ needs.context.outputs.head_sha }}
+      candidate_sha: ${{ needs.context.outputs.head_sha }}
       full_verification: ${{ needs.context.outputs.full_verification }}
       frontend: ${{ needs.context.outputs.frontend }}
       contracts: ${{ needs.context.outputs.contracts }}
       contracts_changed: ${{ needs.context.outputs.contracts_changed }}
       node: ${{ needs.context.outputs.node }}
       verification_tier: ${{ needs.context.outputs.verification_tier }}
-      execution_phase: ${{ needs.context.outputs.execution_phase }}
 
   verification:
     name: Node verification
     needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.verification_required == 'true' }}
+    if: >-
+      ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.verification_required
+      == 'true' }}
     uses: ./.github/workflows/ci-node-verification.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
-      head_sha: ${{ needs.context.outputs.head_sha }}
+      candidate_sha: ${{ needs.context.outputs.head_sha }}
       full_scope: ${{ needs.context.outputs.full_scope }}
       frontend: ${{ needs.context.outputs.frontend }}
       mobile: ${{ needs.context.outputs.mobile }}
       heavy: ${{ needs.context.outputs.heavy }}
       verification_tier: ${{ needs.context.outputs.verification_tier }}
-      execution_phase: ${{ needs.context.outputs.execution_phase }}
       journey: ${{ needs.context.outputs.journey }}
       journey_scope: ${{ needs.context.outputs.journey_scope }}
       platform_change_sets: ${{ needs.context.outputs.platform_change_sets }}
@@ -227,10 +324,9 @@ jobs:
     uses: ./.github/workflows/ci-backends.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
-      head_sha: ${{ needs.context.outputs.head_sha }}
+      candidate_sha: ${{ needs.context.outputs.head_sha }}
       full_scope: ${{ needs.context.outputs.full_scope }}
       verification_tier: ${{ needs.context.outputs.verification_tier }}
-      execution_phase: ${{ needs.context.outputs.execution_phase }}
       database_changed: ${{ needs.context.outputs.database_changed }}
       dsh: ${{ needs.context.outputs.dsh }}
       wlt: ${{ needs.context.outputs.wlt }}
@@ -245,65 +341,17 @@ jobs:
     if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.runtime_required == 'true' }}
     uses: ./.github/workflows/ci-runtime.yml
     with:
-      head_sha: ${{ needs.context.outputs.head_sha }}
+      candidate_sha: ${{ needs.context.outputs.head_sha }}
       full_verification: ${{ needs.context.outputs.full_verification }}
       runtime: ${{ needs.context.outputs.runtime_required }}
       runtime_profile: ${{ needs.context.outputs.runtime_profile }}
       runtime_proof: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
 
-  security:
-    name: Remote security tools
-    needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 30
-    steps:
-      - name: Checkout immutable source history
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-          fetch-tags: false
-          persist-credentials: false
-          show-progress: false
-      - name: Set up locked Node runtime
-        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
-        with:
-          node-version: "24.17.0"
-      - name: Set up locked Go runtime
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
-        with:
-          go-version-file: services/dsh/backend/go.mod
-          cache: false
-      - name: Install locked remote security toolchain
-        shell: bash
-        run: bash tools/scripts/install-oss-toolchain-binaries.sh security
-      - name: Verify Sonar Cloud configuration remotely
-        shell: pwsh
-        run: pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/check-sonarqube-config.ps1
-      - name: Run Gitleaks remotely
-        shell: bash
-        run: gitleaks detect --gitleaks-ignore-path .gitleaksignore --log-opts="HEAD" --source . --no-banner --redact --verbose
-      - name: Run Trivy remotely
-        run: node tools/scripts/run-trivy.mjs
-      - name: Run OSV Scanner remotely
-        run: node tools/scripts/run-osv-scanner.mjs
-      - name: Run workflow lint remotely
-        run: node tools/scripts/run-actionlint.mjs
-      - name: Run workflow security remotely
-        run: node tools/scripts/run-zizmor.mjs
-      - name: Verify action pins remotely
-        run: node tools/scripts/run-pinact.mjs --verify
-      - name: Run ShellCheck remotely
-        run: node tools/scripts/run-shellcheck.mjs
-      - name: Run Hadolint remotely
-        run: node tools/scripts/run-hadolint.mjs
-      - name: Run yamllint remotely
-        run: node tools/scripts/run-yamllint.mjs
-
   result:
-    name: BThwani CI result
-    needs: [context, diagnostics, verification, backends, runtime, security]
+    name: >-
+      ${{ github.event_name == 'pull_request' && 'BThwani CI / PR result' || github.event_name == 'push' &&
+      'BThwani CI / push result' || 'BThwani CI / dispatched result' }}
+    needs: [context, diagnostics, verification, backends, runtime]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -316,34 +364,31 @@ jobs:
           VERIFICATION_RESULT: ${{ needs.verification.result }}
           BACKENDS_RESULT: ${{ needs.backends.result }}
           RUNTIME_RESULT: ${{ needs.runtime.result }}
-          SECURITY_RESULT: ${{ needs.security.result }}
           DIAGNOSTICS_REQUIRED: ${{ needs.context.outputs.diagnostics_required }}
           VERIFICATION_REQUIRED: ${{ needs.context.outputs.verification_required }}
           BACKEND_REQUIRED: ${{ needs.context.outputs.backend_required }}
           RUNTIME_REQUIRED: ${{ needs.context.outputs.runtime_required }}
-          SECURITY_REQUIRED: ${{ needs.context.outputs.skip_duplicate_push != 'true' }}
           SKIP_DUPLICATE_PUSH: ${{ needs.context.outputs.skip_duplicate_push }}
         run: |
           set -euo pipefail
+          [[ "${CONTEXT_RESULT}" == "success" ]] || { echo "::error::canonical context failed"; exit 1; }
           if [[ "${SKIP_DUPLICATE_PUSH}" == "true" ]]; then
-            echo "development push skipped because an open PR owns verification"
+            echo "development push suppressed because the canonical PR event owns verification"
             exit 0
           fi
           failures=()
           check_result() {
             local name="$1" result="$2" applicable="$3"
-            if [[ "${result}" == "success" ]]; then return; fi
-            if [[ "${result}" == "skipped" && "${applicable}" != "true" ]]; then return; fi
+            [[ "${result}" == "success" ]] && return
+            [[ "${result}" == "skipped" && "${applicable}" != "true" ]] && return
             failures+=("${name}:${result}")
           }
-          check_result context "${CONTEXT_RESULT}" true
           check_result diagnostics "${DIAGNOSTICS_RESULT}" "${DIAGNOSTICS_REQUIRED}"
           check_result verification "${VERIFICATION_RESULT}" "${VERIFICATION_REQUIRED}"
           check_result backends "${BACKENDS_RESULT}" "${BACKEND_REQUIRED}"
           check_result runtime "${RUNTIME_RESULT}" "${RUNTIME_REQUIRED}"
-          check_result security "${SECURITY_RESULT}" "${SECURITY_REQUIRED}"
-          if [[ "${#failures[@]}" -ne 0 ]]; then
+          if (( ${#failures[@]} )); then
             echo "::error title=BThwani CI failed::$(IFS=,; echo "${failures[*]}")"
             exit 1
           fi
-          echo "all applicable code verification passed"
+          echo "all applicable contextual verification passed"

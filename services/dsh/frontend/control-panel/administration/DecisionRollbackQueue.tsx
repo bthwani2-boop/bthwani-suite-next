@@ -17,13 +17,23 @@ import {
   useAdministrationRollbackController,
   useRoleAssignmentApprovalController,
 } from "../../shared/administration";
+import { administrationExecutionStatusLabel } from "../../shared/administration/administration-registry";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { hasServiceControlPanelPermission } from "../../shared/session/control-panel-permissions";
 
 export function DecisionRollbackQueue() {
-  const approvals = useRoleAssignmentApprovalController("authenticated", "approved");
-  const rollbacks = useAdministrationRollbackController("authenticated", "pending");
+  const { state: sessionState } = useIdentitySession();
+  const identity = sessionState.kind === "authenticated" ? sessionState.identity : null;
+  const canRequest = hasServiceControlPanelPermission(identity, "dsh", "administration.rollback.request");
+  const canReadApproved = hasServiceControlPanelPermission(identity, "dsh", "administration.staff.approve");
+  const canReview = hasServiceControlPanelPermission(identity, "dsh", "administration.rollback.approve");
+  const approvals = useRoleAssignmentApprovalController("authenticated", "approved", canReadApproved);
+  const rollbacks = useAdministrationRollbackController("authenticated", "pending", canReview);
   const [sourceApprovalId, setSourceApprovalId] = useState("");
   const [reason, setReason] = useState("");
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
+  const [replacementReasonCodes, setReplacementReasonCodes] = useState<Record<string, string>>({});
+  const [replacementReasons, setReplacementReasons] = useState<Record<string, string>>({});
   const [actionError, setActionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -35,7 +45,6 @@ export function DecisionRollbackQueue() {
       await approvals.requestRollback(sourceApprovalId.trim(), reason.trim());
       setSourceApprovalId("");
       setReason("");
-      await rollbacks.reload();
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "تعذر إنشاء طلب التراجع.");
     } finally {
@@ -49,9 +58,26 @@ export function DecisionRollbackQueue() {
     setActionError(null);
     try {
       await rollbacks.review(requestId, decision, version, (reviewNotes[requestId] ?? "").trim());
-      await approvals.reload();
     } catch (error) {
       setActionError(error instanceof Error ? error.message : "تعذر مراجعة طلب التراجع.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const replaceTerminalFailure = async (requestId: string, version: number) => {
+    if (submitting) return;
+    setSubmitting(true);
+    setActionError(null);
+    try {
+      await rollbacks.replaceTerminalFailure(
+        requestId,
+        version,
+        (replacementReasonCodes[requestId] ?? "").trim(),
+        (replacementReasons[requestId] ?? "").trim(),
+      );
+    } catch (error) {
+      setActionError(error instanceof Error ? error.message : "تعذر استبدال طلب التراجع ذي الفشل النهائي.");
     } finally {
       setSubmitting(false);
     }
@@ -67,12 +93,15 @@ export function DecisionRollbackQueue() {
           : undefined
       }
     >
+      {!canRequest && !canReview ? (
+        <CpStatePanel role="alert" title="صلاحية التراجع الإداري مطلوبة" description="لا يتم تحميل أو إرسال أي طلب قبل تحقق الصلاحية الدقيقة." />
+      ) : null}
       <CpStatePanel
         role="status"
         title="التراجع قرار جديد وليس حذفًا للسجل"
         description="ينشئ النظام الإجراء العكسي داخل معاملة مستقلة، ويمنع المنشئ والمستفيد والمعتمد السابق من اعتماد التراجع."
       />
-      <section aria-label="إنشاء طلب تراجع">
+      {canRequest ? <section aria-label="إنشاء طلب تراجع">
         <strong>إنشاء طلب تراجع</strong>
         <CpTextInput
           value={sourceApprovalId}
@@ -93,9 +122,9 @@ export function DecisionRollbackQueue() {
         >
           إرسال طلب التراجع
         </CpButton>
-      </section>
+      </section> : null}
 
-      {approvals.state.kind === "success" && approvals.state.data.length > 0 ? (
+      {canRequest && canReadApproved && approvals.state.kind === "success" && approvals.state.data.length > 0 ? (
         <section aria-label="قرارات معتمدة قابلة لطلب التراجع">
           <strong>قرارات معتمدة قابلة لطلب التراجع</strong>
           {approvals.state.data.map((approval) => (
@@ -107,10 +136,10 @@ export function DecisionRollbackQueue() {
       ) : null}
 
       {actionError ? <CpStateView kind="error" title={actionError} /> : null}
-      {rollbacks.state.kind === "success" && rollbacks.state.data.length === 0 ? (
+      {canReview && rollbacks.state.kind === "success" && rollbacks.state.data.length === 0 ? (
         <CpStatePanel role="status" title="لا توجد طلبات تراجع معلقة." />
       ) : null}
-      {rollbacks.state.kind === "success" && rollbacks.state.data.length > 0 ? (
+      {canReview && rollbacks.state.kind === "success" && rollbacks.state.data.length > 0 ? (
         <CpTable aria-label="طلبات التراجع المعلقة">
           <thead>
             <tr>
@@ -118,13 +147,17 @@ export function DecisionRollbackQueue() {
               <CpTableHeaderCell>الإجراء الأصلي/العكسي</CpTableHeaderCell>
               <CpTableHeaderCell>المنشئ / المعتمد الأصلي</CpTableHeaderCell>
               <CpTableHeaderCell>السبب</CpTableHeaderCell>
+              <CpTableHeaderCell>حالة التنفيذ المعياري</CpTableHeaderCell>
               <CpTableHeaderCell>ملاحظة المراجع</CpTableHeaderCell>
               <CpTableHeaderCell>الإجراءات</CpTableHeaderCell>
             </tr>
           </thead>
           <tbody>
-            {rollbacks.state.data.map((request) => (
-              <tr key={request.id}>
+            {rollbacks.state.data.map((request) => {
+              const reviewable = request.status === "pending" && request.executionStatus !== "failed_terminal";
+              const replacementCode = replacementReasonCodes[request.id] ?? "";
+              const replacementReason = replacementReasons[request.id] ?? "";
+              return <tr key={request.id}>
                 <CpTableCell>{request.targetActorId} ← {request.roleName}</CpTableCell>
                 <CpTableCell>
                   {request.sourceActionType}
@@ -137,6 +170,7 @@ export function DecisionRollbackQueue() {
                   <CpMutedInline tight>{request.sourceApprovedBy}</CpMutedInline>
                 </CpTableCell>
                 <CpTableCell>{request.reason}</CpTableCell>
+                <CpTableCell>{administrationExecutionStatusLabel(request.executionStatus)}</CpTableCell>
                 <CpTableCell>
                   <CpTextInput
                     value={reviewNotes[request.id] ?? ""}
@@ -146,19 +180,40 @@ export function DecisionRollbackQueue() {
                   />
                 </CpTableCell>
                 <CpTableCell>
-                  <CpButton variant="brand" disabled={submitting} onClick={() => void review(request.id, request.version, "approved")}>
+                  <CpButton variant="brand" disabled={submitting || !reviewable} onClick={() => void review(request.id, request.version, "approved")}>
                     اعتماد التراجع
                   </CpButton>{" "}
                   <CpButton
                     variant="danger"
-                    disabled={submitting || (reviewNotes[request.id] ?? "").trim().length < 5}
+                    disabled={submitting || !reviewable || (reviewNotes[request.id] ?? "").trim().length < 5}
                     onClick={() => void review(request.id, request.version, "rejected")}
                   >
                     رفض التراجع
                   </CpButton>
+                  {request.executionStatus === "failed_terminal" && canRequest ? <>
+                    <CpTextInput
+                      value={replacementCode}
+                      onChange={(value) => setReplacementReasonCodes((current) => ({ ...current, [request.id]: value }))}
+                      placeholder="رمز السبب مثل canonical_state_changed"
+                      aria-label={`رمز سبب استبدال التراجع ${request.id}`}
+                    />
+                    <CpTextInput
+                      value={replacementReason}
+                      onChange={(value) => setReplacementReasons((current) => ({ ...current, [request.id]: value }))}
+                      placeholder="سبب الطلب البديل — خمسة أحرف على الأقل"
+                      aria-label={`سبب طلب التراجع البديل ${request.id}`}
+                    />
+                    <CpButton
+                      variant="primary"
+                      disabled={submitting || !/^[a-z][a-z0-9_]{2,63}$/.test(replacementCode.trim()) || replacementReason.trim().length < 5}
+                      onClick={() => void replaceTerminalFailure(request.id, request.version)}
+                    >
+                      تثبيت الفشل وإنشاء طلب بديل
+                    </CpButton>
+                  </> : null}
                 </CpTableCell>
               </tr>
-            ))}
+            })}
           </tbody>
         </CpTable>
       ) : null}

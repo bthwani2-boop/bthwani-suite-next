@@ -38,7 +38,9 @@ test("captain app keeps canonical identity, workforce, and notification boundari
   assert.doesNotMatch(appContentMatch[0], /useDshMobilePushRegistration/);
   assert.match(source, /configureIdentityDeviceFingerprintProvider/);
   assert.match(source, /SecureStore/);
-  assert.match(source, /randomUUID/);
+  assert.match(source, /from "@bthwani\/dsh\/mobile-capabilities"/);
+  assert.match(source, /secureRandomId/);
+  assert.doesNotMatch(source, /Crypto\.randomUUID/);
 });
 
 test("captain identity changes invalidate stale Workforce and push state", async () => {

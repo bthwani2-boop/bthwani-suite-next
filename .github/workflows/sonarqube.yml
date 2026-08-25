@@ -1,23 +1,80 @@
 name: SonarQube Cloud
 
+run-name: >-
+  ${{ github.event_name == 'pull_request' && format('SonarQube PR {0}', github.event.pull_request.number) ||
+  github.event_name == 'push' && format('SonarQube push {0}', github.sha) || format('SonarQube dispatched
+  candidate {0}', inputs.head_sha || github.sha) }}
+
 on:
   workflow_dispatch:
+    inputs:
+      pr_number:
+        description: PR number for an exact closure scan
+        required: false
+        type: string
+      head_sha:
+        description: Immutable candidate SHA
+        required: false
+        type: string
+      base_sha:
+        description: Immutable PR base SHA
+        required: false
+        type: string
+      head_ref:
+        description: Canonical PR head branch for Sonar read-back
+        required: false
+        type: string
   pull_request:
-    branches: [master, b, c]
-    types: [opened, synchronize, reopened]
+    branches: ["**"]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
-    branches: [master]
+    branches: ["**"]
 
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
-  group: sonarqube-cloud-${{ github.event.pull_request.number || github.ref }}
+  group: sonarqube-cloud-${{ inputs.head_sha || github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 jobs:
-  scan:
-    name: SonarQube Cloud scan
+  ownership:
+    name: Resolve branch event ownership
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      skip_duplicate_push: ${{ steps.owner.outputs.skip_duplicate_push }}
+    steps:
+      - name: Resolve push versus PR ownership
+        id: owner
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BRANCH: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          skip=false
+          if [[ "${EVENT_NAME}" == "push" && "${BRANCH}" != "${DEFAULT_BRANCH}" ]]; then
+            open_pr_count="$(gh api --method GET \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "/repos/${GITHUB_REPOSITORY}/pulls" \
+              -f state=open \
+              -f head="${GITHUB_REPOSITORY_OWNER}:${BRANCH}" \
+              -f per_page=1 \
+              --jq 'length')"
+            if [[ "${open_pr_count}" != "0" ]]; then
+              skip=true
+            fi
+          fi
+          echo "skip_duplicate_push=${skip}" >> "${GITHUB_OUTPUT}"
+
+  coverage:
+    name: SonarQube unprivileged coverage
+    needs: [ownership]
+    if: ${{ needs.ownership.outputs.skip_duplicate_push != 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     services:
@@ -25,7 +82,7 @@ jobs:
         image: postgis/postgis:16-3.4-alpine
         env:
           POSTGRES_USER: dsh_runtime
-          POSTGRES_PASSWORD: ${{ secrets.BTHWANI_CI_POSTGRES_PASSWORD }}
+          POSTGRES_PASSWORD: bthwani_ci_ephemeral_coverage
           POSTGRES_DB: dsh_runtime
         ports: ["5433:5432"]
         options: >-
@@ -35,7 +92,7 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: wlt_runtime
-          POSTGRES_PASSWORD: ${{ secrets.BTHWANI_CI_POSTGRES_PASSWORD }}
+          POSTGRES_PASSWORD: bthwani_ci_ephemeral_coverage
           POSTGRES_DB: wlt_runtime
         ports: ["5434:5432"]
         options: >-
@@ -45,7 +102,7 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: identity_runtime
-          POSTGRES_PASSWORD: ${{ secrets.BTHWANI_CI_POSTGRES_PASSWORD }}
+          POSTGRES_PASSWORD: bthwani_ci_ephemeral_coverage
           POSTGRES_DB: identity_runtime
         ports: ["5435:5432"]
         options: >-
@@ -55,7 +112,7 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: workforce_runtime
-          POSTGRES_PASSWORD: ${{ secrets.BTHWANI_CI_POSTGRES_PASSWORD }}
+          POSTGRES_PASSWORD: bthwani_ci_ephemeral_coverage
           POSTGRES_DB: workforce_runtime
         ports: ["5436:5432"]
         options: >-
@@ -65,7 +122,7 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: platform_control_runtime
-          POSTGRES_PASSWORD: ${{ secrets.BTHWANI_CI_POSTGRES_PASSWORD }}
+          POSTGRES_PASSWORD: bthwani_ci_ephemeral_coverage
           POSTGRES_DB: platform_control_runtime
         ports: ["5437:5432"]
         options: >-
@@ -75,7 +132,7 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: providers_runtime
-          POSTGRES_PASSWORD: ${{ secrets.BTHWANI_CI_POSTGRES_PASSWORD }}
+          POSTGRES_PASSWORD: bthwani_ci_ephemeral_coverage
           POSTGRES_DB: providers_runtime
         ports: ["5438:5432"]
         options: >-
@@ -86,20 +143,10 @@ jobs:
       - name: Checkout immutable candidate source with full history
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
           show-progress: false
           fetch-depth: 0
-
-      - name: Validate SonarQube Cloud token
-        shell: bash
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        run: |
-          if [ -z "$SONAR_TOKEN" ]; then
-            echo "::error::SONAR_TOKEN is not configured. Add the SonarQube Cloud token in GitHub Actions secrets."
-            exit 1
-          fi
 
       - name: Set up locked Node runtime for scope routing
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
@@ -111,8 +158,12 @@ jobs:
         shell: bash
         env:
           EVENT_NAME: ${{ github.event_name }}
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          EXPECTED_HEAD_SHA: ${{ github.sha }}
+          EVENT_BEFORE: ${{ github.event.before }}
+          PR_BASE_SHA: ${{ inputs.base_sha || github.event.pull_request.base.sha }}
+          EXPECTED_HEAD_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
+          INPUT_HEAD_REF: ${{ inputs.head_ref }}
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
           HEAD_SHA="$(git rev-parse HEAD)"
@@ -121,21 +172,29 @@ jobs:
             exit 1
           fi
 
-          BASE_SHA="${PR_BASE_SHA:-}"
+          BASE_SHA="${PR_BASE_SHA:-${EVENT_BEFORE:-}}"
           MODE=affected
 
-          if [[ "${EVENT_NAME}" == "push" || "${EVENT_NAME}" == "workflow_dispatch" ]]; then
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" || ( "${EVENT_NAME}" == "push" && \
+          "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ) ]]; then
             MODE=full
             BASE_SHA="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${HEAD_SHA}")"
-          elif [[ -z "${BASE_SHA}" ]]; then
-            echo "::error::PR base SHA is required for affected Sonar analysis"
-            exit 1
+          elif [[ -z "${BASE_SHA}" || "${BASE_SHA}" =~ ^0+$ ]]; then
+            BASE_SHA="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${HEAD_SHA}")"
           fi
 
           CI_BASE_SHA="${BASE_SHA}" \
           CI_HEAD_SHA="${HEAD_SHA}" \
           CI_MODE="${MODE}" \
           node tools/scripts/detect-ci-context.mjs
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" && -n "${INPUT_PR_NUMBER:-}" ]]; then
+            [[ -n "${INPUT_HEAD_REF}" ]] || { echo "::error::head_ref is required for closure Sonar analysis"; exit 1; }
+            echo \
+            "sonar_target_args=-Dsonar.branch.name=${INPUT_HEAD_REF} -Dsonar.scm.revision=${HEAD_SHA}" >> \
+            "${GITHUB_OUTPUT}"
+          else
+            echo "sonar_target_args=" >> "${GITHUB_OUTPUT}"
+          fi
 
       - name: Test and plan affected Node coverage
         id: node_coverage_plan
@@ -166,14 +225,20 @@ jobs:
         run: node tools/scripts/generate-sonar-node-coverage.mjs
 
       - name: Set up Go for affected coverage
-        if: ${{ steps.scope.outputs.dsh == 'true' || steps.scope.outputs.wlt == 'true' || steps.scope.outputs.identity == 'true' || steps.scope.outputs.workforce == 'true' || steps.scope.outputs.platform == 'true' || steps.scope.outputs.providers == 'true' }}
+        if: >-
+          ${{ steps.scope.outputs.dsh == 'true' || steps.scope.outputs.wlt == 'true' ||
+          steps.scope.outputs.identity == 'true' || steps.scope.outputs.workforce == 'true' ||
+          steps.scope.outputs.platform == 'true' || steps.scope.outputs.providers == 'true' }}
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: services/dsh/backend/go.mod
           cache: false
 
       - name: Provision governed databases for affected Go coverage
-        if: ${{ steps.scope.outputs.dsh == 'true' || steps.scope.outputs.wlt == 'true' || steps.scope.outputs.identity == 'true' || steps.scope.outputs.workforce == 'true' || steps.scope.outputs.platform == 'true' || steps.scope.outputs.providers == 'true' }}
+        if: >-
+          ${{ steps.scope.outputs.dsh == 'true' || steps.scope.outputs.wlt == 'true' ||
+          steps.scope.outputs.identity == 'true' || steps.scope.outputs.workforce == 'true' ||
+          steps.scope.outputs.platform == 'true' || steps.scope.outputs.providers == 'true' }}
         shell: bash
         env:
           DSH: ${{ steps.scope.outputs.dsh }}
@@ -182,14 +247,15 @@ jobs:
           WORKFORCE: ${{ steps.scope.outputs.workforce }}
           PLATFORM: ${{ steps.scope.outputs.platform }}
           PROVIDERS: ${{ steps.scope.outputs.providers }}
-          BTHWANI_CI_POSTGRES_PASSWORD: ${{ secrets.BTHWANI_CI_POSTGRES_PASSWORD }}
-          SONAR_SOURCE_SHA: ${{ github.sha }}
+          BTHWANI_CI_POSTGRES_PASSWORD: bthwani_ci_ephemeral_coverage
+          SONAR_SOURCE_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client >/dev/null
 
-          identity_url="postgres://identity_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5435/identity_runtime?sslmode=disable"
+          identity_db="identity_runtime"
+          identity_url="postgres://${identity_db}:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5435/${identity_db}?sslmode=disable"
           actor_placeholders="$RUNNER_TEMP/go-coverage-actor-placeholders.json"
           cat > "$actor_placeholders" <<'JSON'
           {
@@ -219,33 +285,46 @@ jobs:
           if [[ "$IDENTITY" == "true" || "$WORKFORCE" == "true" ]]; then
             migrate identity core/identity/database/migrations "$identity_url"
           fi
+          workforce_db="workforce_runtime"
+          workforce_url="postgres://${workforce_db}:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5436/${workforce_db}?sslmode=disable"
           [[ "$WORKFORCE" == "true" ]] && migrate workforce core/workforce/database/migrations \
-            "postgres://workforce_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5436/workforce_runtime?sslmode=disable" "$identity_url"
+            "${workforce_url}" "$identity_url"
           [[ "$DSH" == "true" ]] && migrate dsh services/dsh/database/migrations \
             "postgres://dsh_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5433/dsh_runtime?sslmode=disable"
           [[ "$WLT" == "true" ]] && migrate wlt services/wlt/database/migrations \
             "postgres://wlt_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5434/wlt_runtime?sslmode=disable"
-          [[ "$PLATFORM" == "true" ]] && migrate platform-control core/platform-control/database/migrations \
-            "postgres://platform_control_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5437/platform_control_runtime?sslmode=disable"
+          platform_db="platform_control_runtime"
+          platform_url="postgres://${platform_db}:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5437/${platform_db}?sslmode=disable"
+          [[ "$PLATFORM" == "true" ]] && migrate platform-control \
+            core/platform-control/database/migrations "${platform_url}"
+          providers_db="providers_runtime"
+          providers_url="postgres://${providers_db}:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5438/${providers_db}?sslmode=disable"
           [[ "$PROVIDERS" == "true" ]] && migrate providers core/providers/database/migrations \
-            "postgres://providers_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5438/providers_runtime?sslmode=disable"
+            "${providers_url}"
 
           if [[ "$DSH" == "true" ]]; then
-            BTHWANI_ENVIRONMENT=ci pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-service-seeds.ps1 \
+            BTHWANI_ENVIRONMENT=ci pwsh -NoProfile -ExecutionPolicy Bypass -File \
+            tools/scripts/invoke-service-seeds.ps1 \
               -ServiceKey dsh -SeedDirectory services/dsh/database/seeds/local -Transport url \
-              -DatabaseUrl "postgres://dsh_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5433/dsh_runtime?sslmode=disable" \
+              -DatabaseUrl \
+              "postgres://dsh_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5433/dsh_runtime?sslmode=disable" \
               -PlaceholderFile "$actor_placeholders" -AllowLocalSeeds -SourceCommitSha "$SONAR_SOURCE_SHA"
           fi
           if [[ "$WLT" == "true" ]]; then
-            BTHWANI_ENVIRONMENT=ci pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-service-seeds.ps1 \
+            BTHWANI_ENVIRONMENT=ci pwsh -NoProfile -ExecutionPolicy Bypass -File \
+            tools/scripts/invoke-service-seeds.ps1 \
               -ServiceKey wlt -SeedDirectory services/wlt/database/seeds/local -Transport url \
-              -DatabaseUrl "postgres://wlt_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5434/wlt_runtime?sslmode=disable" \
+              -DatabaseUrl \
+              "postgres://wlt_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5434/wlt_runtime?sslmode=disable" \
               -PlaceholderFile "$actor_placeholders" -AllowLocalSeeds -SourceCommitSha "$SONAR_SOURCE_SHA"
           fi
 
       - name: Generate affected Go coverage reports
         id: go_coverage
-        if: ${{ steps.scope.outputs.dsh == 'true' || steps.scope.outputs.wlt == 'true' || steps.scope.outputs.identity == 'true' || steps.scope.outputs.workforce == 'true' || steps.scope.outputs.platform == 'true' || steps.scope.outputs.providers == 'true' }}
+        if: >-
+          ${{ steps.scope.outputs.dsh == 'true' || steps.scope.outputs.wlt == 'true' ||
+          steps.scope.outputs.identity == 'true' || steps.scope.outputs.workforce == 'true' ||
+          steps.scope.outputs.platform == 'true' || steps.scope.outputs.providers == 'true' }}
         shell: bash
         env:
           DSH: ${{ steps.scope.outputs.dsh }}
@@ -254,9 +333,19 @@ jobs:
           WORKFORCE: ${{ steps.scope.outputs.workforce }}
           PLATFORM: ${{ steps.scope.outputs.platform }}
           PROVIDERS: ${{ steps.scope.outputs.providers }}
-          BTHWANI_CI_POSTGRES_PASSWORD: ${{ secrets.BTHWANI_CI_POSTGRES_PASSWORD }}
+          BTHWANI_CI_POSTGRES_PASSWORD: bthwani_ci_ephemeral_coverage
         run: |
           set -euo pipefail
+          database_url() {
+            printf 'postgres://%s:%s@127.0.0.1:%s/%s?sslmode=disable' \
+              "$1" "$BTHWANI_CI_POSTGRES_PASSWORD" "$2" "$1"
+          }
+          identity_url="$(database_url identity_runtime 5435)"
+          workforce_url="$(database_url workforce_runtime 5436)"
+          dsh_url="$(database_url dsh_runtime 5433)"
+          wlt_url="$(database_url wlt_runtime 5434)"
+          platform_url="$(database_url platform_control_runtime 5437)"
+          providers_url="$(database_url providers_runtime 5438)"
           modules=()
           [[ "${WORKFORCE}" == "true" ]] && modules+=(core/workforce/backend)
           [[ "${PROVIDERS}" == "true" ]] && modules+=(core/providers/backend)
@@ -274,27 +363,32 @@ jobs:
               cd "$module"
               case "$module" in
                 core/identity/backend)
-                  IDENTITY_REQUIRE_DB_TESTS=true DATABASE_URL="postgres://identity_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5435/identity_runtime?sslmode=disable" \
+                  IDENTITY_REQUIRE_DB_TESTS=true \
+                  DATABASE_URL="${identity_url}" \
                     go test ./... -coverprofile="$raw_report"
                   ;;
                 core/workforce/backend)
-                  WORKFORCE_REQUIRE_DB_TESTS=true DATABASE_URL="postgres://workforce_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5436/workforce_runtime?sslmode=disable" \
+                  WORKFORCE_REQUIRE_DB_TESTS=true \
+                  DATABASE_URL="${workforce_url}" \
                     go test ./... -coverprofile="$raw_report"
                   ;;
                 services/dsh/backend)
-                  DSH_REQUIRE_DB_TESTS=true DSH_TEST_operator_context_id=local-dsh DATABASE_URL="postgres://dsh_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5433/dsh_runtime?sslmode=disable" \
+                  DSH_REQUIRE_DB_TESTS=true DSH_TEST_operator_context_id=local-dsh \
+                  DATABASE_URL="${dsh_url}" \
                     go test ./... -coverprofile="$raw_report"
                   ;;
                 services/wlt/backend)
-                  WLT_REQUIRE_DB_TESTS=true BTHWANI_OPERATOR_CONTEXT_ID=local-dsh DATABASE_URL="postgres://wlt_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5434/wlt_runtime?sslmode=disable" \
+                  WLT_REQUIRE_DB_TESTS=true BTHWANI_OPERATOR_CONTEXT_ID=local-dsh \
+                  DATABASE_URL="${wlt_url}" \
                     go test ./... -coverprofile="$raw_report"
                   ;;
                 core/platform-control/backend)
-                  DATABASE_URL="postgres://platform_control_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5437/platform_control_runtime?sslmode=disable" \
+                  DATABASE_URL="${platform_url}" \
                     go test ./... -coverprofile="$raw_report"
                   ;;
                 core/providers/backend)
-                  DATABASE_TEST=1 DATABASE_URL="postgres://providers_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5438/providers_runtime?sslmode=disable" \
+                  DATABASE_TEST=1 \
+                  DATABASE_URL="${providers_url}" \
                     go test ./... -coverprofile="$raw_report"
                   ;;
                 *)
@@ -302,6 +396,19 @@ jobs:
                   ;;
               esac
             )
+            if [[ ! -s "$raw_report" ]]; then
+              echo "::error::Go coverage report is empty for ${module}"
+              exit 1
+            fi
+            if ! grep -qv '^mode:' "$raw_report"; then
+              echo "::error::Go coverage report has no executable coverage records for ${module}"
+              exit 1
+            fi
+            raw_summary="$(cd "$module" && go tool cover -func="$raw_report")"
+            if ! grep -q '^total:' <<<"$raw_summary"; then
+              echo "::error::Go coverage report has no total summary for ${module}"
+              exit 1
+            fi
             module_name="$(cd "$module" && go list -m)"
             : > "$report"
             while IFS= read -r coverage_line; do
@@ -314,12 +421,198 @@ jobs:
                   ;;
               esac
             done < "$raw_report"
+            if [[ ! -s "$report" ]]; then
+              echo "::error::Normalized Go coverage report is empty for ${module}"
+              exit 1
+            fi
+            if ! grep -qv '^mode:' "$report"; then
+              echo "::error::Normalized Go coverage report has no executable coverage records for ${module}"
+              exit 1
+            fi
+            normalized_summary="$(go tool cover -func="$report")"
+            if ! grep -q '^total:' <<<"$normalized_summary"; then
+              echo "::error::Normalized Go coverage report has no total summary for ${module}"
+              exit 1
+            fi
           done
           echo 'scan_args=-Dsonar.go.coverage.reportPaths=**/.sonar/coverage.out' >> "$GITHUB_OUTPUT"
 
-      - name: SonarQube Cloud scan
-        uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
+      - name: Collect unprivileged coverage evidence
+        shell: bash
+        env:
+          CANDIDATE_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          evidence="${RUNNER_TEMP}/sonar-coverage-evidence"
+          mkdir -p "${evidence}/reports"
+          while IFS= read -r -d '' report; do
+            relative="${report#./}"
+            mkdir -p "${evidence}/reports/$(dirname "${relative}")"
+            cp -- "${report}" "${evidence}/reports/${relative}"
+          done < <(find . -type f -path '*/.sonar/*' -print0)
+          jq -n --arg candidateSha "${CANDIDATE_SHA}" '{schemaVersion:1,candidateSha:$candidateSha}' > \
+          "${evidence}/manifest.json"
+
+      - name: Upload unprivileged coverage evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          args: ${{ steps.node_coverage.outputs.scan_args }} ${{ steps.go_coverage.outputs.scan_args }}
+          name: >-
+            sonar-coverage-${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}-${{
+            github.run_id }}
+          path: ${{ runner.temp }}/sonar-coverage-evidence
+          if-no-files-found: error
+          retention-days: 2
+
+  scan:
+    name: SonarQube trusted static analysis
+    needs: [ownership, coverage]
+    if: >-
+      ${{ needs.ownership.outputs.skip_duplicate_push != 'true' && needs.coverage.result == 'success' &&
+      ((github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch)
+      || (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch)) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      actions: read
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout immutable candidate without executing repository code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: ${{ inputs.head_sha || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          show-progress: false
+
+      - name: Revalidate trusted definition and candidate
+        shell: bash
+        env:
+          EXPECTED_HEAD_SHA: ${{ inputs.head_sha || github.sha }}
+          EXPECTED_BASE_SHA: ${{ inputs.base_sha }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          [[ "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]] || { echo \
+          "::error::secret-bearing Sonar analysis requires the default-branch workflow definition"; exit 1; }
+          [[ "$(git rev-parse HEAD)" == "${EXPECTED_HEAD_SHA}" ]] || { echo \
+          "::error::Sonar trusted scan checkout drift"; exit 1; }
+          if [[ -n "${PR_NUMBER:-}" ]]; then
+            pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
+            [[ "$(jq -r '.head.sha' <<<"${pr}")" == "${EXPECTED_HEAD_SHA}" ]] || { echo \
+            "::error::Sonar PR head drift"; exit 1; }
+            [[ "$(jq -r '.base.sha' <<<"${pr}")" == "${EXPECTED_BASE_SHA}" ]] || { echo \
+            "::error::Sonar PR base drift"; exit 1; }
+          fi
+
+      - name: Download and validate unprivileged coverage artifact
+        shell: bash
+        env:
+          EXPECTED_HEAD_SHA: ${{ inputs.head_sha || github.sha }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          prefix="sonar-coverage-${EXPECTED_HEAD_SHA}-"
+          artifacts="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+          "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100")"
+          artifact_id="$(jq -r --arg prefix "${prefix}" '[.artifacts[] | select(.name | startswith($prefix\
+          ))] | max_by(.created_at).id // empty' <<<"${artifacts}")"
+          [[ "${artifact_id}" =~ ^[0-9]+$ ]] || { echo "::error::Sonar coverage artifact missing"; exit 1; }
+          archive="${RUNNER_TEMP}/sonar-coverage.zip"
+          destination="${RUNNER_TEMP}/sonar-coverage"
+          mkdir -p "${destination}"
+          gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+          "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "${archive}"
+          while IFS= read -r entry; do
+            [[ -n "${entry}" && "${entry}" != ".." && "${entry}" != /* && "${entry}" != ../* && "${entry}" \
+            != */../* && "${entry}" != */.. ]] || {
+              echo "::error::unsafe Sonar coverage artifact path"
+              exit 1
+            }
+          done < <(unzip -Z1 "${archive}")
+          unzip -q "${archive}" -d "${destination}"
+          jq -e --arg sha "${EXPECTED_HEAD_SHA}" '.schemaVersion==1 and .candidateSha==$sha' \
+          "${destination}/manifest.json" >/dev/null
+          if [[ -d "${destination}/reports" ]]; then cp -a "${destination}/reports/." "${GITHUB_WORKSPACE}/"; fi
+
+      - name: Fetch trusted Sonar project settings without checkout
+        shell: bash
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          trusted="${RUNNER_TEMP}/trusted-sonar-project.properties"
+          gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
+          "/repos/${GITHUB_REPOSITORY}/contents/sonar-project.properties" -f "ref=${DEFAULT_BRANCH}" --jq '.content' |
+            base64 --decode > "${trusted}"
+          [[ -s "${trusted}" ]] || { echo "::error::trusted Sonar settings missing"; exit 1; }
+          rm -f -- "${GITHUB_WORKSPACE}/sonar-project.properties"
+          install -m 0600 -- "${trusted}" "${GITHUB_WORKSPACE}/sonar-project.properties"
+          [[ -f "${GITHUB_WORKSPACE}/sonar-project.properties" && ! -L \
+          "${GITHUB_WORKSPACE}/sonar-project.properties" ]] || { echo \
+          "::error::trusted Sonar settings were not installed as a regular file"; exit 1; }
+          if find "${GITHUB_WORKSPACE}" -type l -print -quit | grep -q .; then
+            echo "::error::candidate or coverage artifact contains a symlink; secret-bearing Sonar scan refused"
+            exit 1
+          fi
+
+      - name: Validate SonarQube Cloud token
+        shell: bash
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          [[ -n "${SONAR_TOKEN}" ]] || { echo "::error::SONAR_TOKEN is not configured"; exit 1; }
+
+      - name: SonarQube Cloud trusted scan
+        uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
+        with:
+          args: >-
+            ${{ inputs.head_ref && format('-Dsonar.branch.name={0}', inputs.head_ref) || '' }}
+            ${{ inputs.head_sha && format('-Dsonar.scm.revision={0}', inputs.head_sha) || '' }}
+            -Dsonar.javascript.lcov.reportPaths=.sonar/node-coverage/lcov.info
+            -Dsonar.go.coverage.reportPaths=**/.sonar/coverage.out
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  result:
+    name: >-
+      ${{ github.event_name == 'pull_request' && 'SonarQube / PR result' || github.event_name == 'push' &&
+      'SonarQube / push result' || 'SonarQube / dispatched result' }}
+    needs: [ownership, coverage, scan]
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Enforce separated Sonar results
+        shell: bash
+        env:
+          OWNERSHIP_RESULT: ${{ needs.ownership.result }}
+          SKIP_DUPLICATE_PUSH: ${{ needs.ownership.outputs.skip_duplicate_push }}
+          COVERAGE_RESULT: ${{ needs.coverage.result }}
+          SCAN_RESULT: ${{ needs.scan.result }}
+          EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref_name }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          [[ "${OWNERSHIP_RESULT}" == "success" ]] || { echo "::error::Sonar ownership failed"; exit 1; }
+          if [[ "${SKIP_DUPLICATE_PUSH}" == "true" ]]; then
+            echo "development push skipped because the PR event owns unprivileged coverage"
+            exit 0
+          fi
+          [[ "${COVERAGE_RESULT}" == "success" ]] || { echo \
+          "::error::Sonar coverage result=${COVERAGE_RESULT}"; exit 1; }
+          trusted_scan_required=false
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" || ( "${EVENT_NAME}" == "push" && "${REF_NAME}" == \
+          "${DEFAULT_BRANCH}" ) ]]; then
+            trusted_scan_required=true
+          fi
+          if [[ "${trusted_scan_required}" == "true" ]]; then
+            [[ "${SCAN_RESULT}" == "success" ]] || { echo "::error::trusted Sonar scan result=${SCAN_RESULT}"; exit 1; }
+          else
+            [[ "${SCAN_RESULT}" == "skipped" ]] || { echo \
+            "::error::untrusted event unexpectedly ran secret-bearing Sonar scan"; exit 1; }
+          fi

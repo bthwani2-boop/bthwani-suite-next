@@ -144,9 +144,18 @@ function git(args) {
 function resolveBaseline() {
   const baselineIndex = args.indexOf("--immutable-baseline");
   const requested = baselineIndex >= 0 ? args[baselineIndex + 1] : null;
+  let remoteDefault = null;
+  try {
+    remoteDefault = git(["symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"]).trim();
+  } catch {}
   const candidates = requested
     ? [requested]
-    : [process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : null, "origin/master", "master"].filter(Boolean);
+    : [
+        process.env.GITHUB_BASE_REF ? `origin/${process.env.GITHUB_BASE_REF}` : null,
+        process.env.DEFAULT_BRANCH ? `origin/${process.env.DEFAULT_BRANCH}` : null,
+        remoteDefault,
+        "HEAD^",
+      ].filter(Boolean);
   for (const candidate of candidates) {
     try {
       const mergeBase = git(["merge-base", "HEAD", candidate]).trim();

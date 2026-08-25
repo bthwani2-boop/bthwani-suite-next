@@ -48,12 +48,12 @@ describe("validateDshApiBaseUrl — rejects old ports on localhost", () => {
 });
 
 describe("validateDshApiBaseUrl — accepts canonical DSH port", () => {
-  test("accepts localhost:58080", () => {
-    assert.equal(validateDshApiBaseUrl("http://localhost:58080"), true);
+  test("accepts localhost:18080", () => {
+    assert.equal(validateDshApiBaseUrl("http://localhost:18080"), true);
   });
 
-  test("accepts 127.0.0.1:58080", () => {
-    assert.equal(validateDshApiBaseUrl("http://127.0.0.1:58080"), true);
+  test("accepts 127.0.0.1:18080", () => {
+    assert.equal(validateDshApiBaseUrl("http://127.0.0.1:18080"), true);
   });
 
   test("accepts production HTTPS URL without port restriction", () => {
@@ -65,21 +65,21 @@ describe("validateDshApiBaseUrl — accepts canonical DSH port", () => {
   });
 
   test("accepts IPv6 localhost canonical port", () => {
-    assert.equal(validateDshApiBaseUrl("http://[::1]:58080"), true);
+    assert.equal(validateDshApiBaseUrl("http://[::1]:18080"), true);
   });
 });
 
 describe("validateDshApiBaseUrl — native Android transport", () => {
   test("rejects physical-device loopback without an explicit bridge", () => {
-    assert.equal(validateDshApiBaseUrl("http://127.0.0.1:58080", true, false), false);
+    assert.equal(validateDshApiBaseUrl("http://127.0.0.1:18080", true, false), false);
   });
 
   test("accepts physical-device loopback after adb reverse is verified", () => {
-    assert.equal(validateDshApiBaseUrl("http://127.0.0.1:58080", true, true), true);
+    assert.equal(validateDshApiBaseUrl("http://127.0.0.1:18080", true, true), true);
   });
 
   test("accepts the Android emulator host bridge", () => {
-    assert.equal(validateDshApiBaseUrl("http://10.0.2.2:58080", true, false), true);
+    assert.equal(validateDshApiBaseUrl("http://10.0.2.2:18080", true, false), true);
   });
 
   test("accepts a non-local production endpoint on a device", () => {
@@ -93,7 +93,7 @@ describe("validateDshApiBaseUrl — rejects malformed URLs", () => {
   });
 
   test("rejects plain hostname without protocol", () => {
-    assert.equal(validateDshApiBaseUrl("localhost:58080"), false);
+    assert.equal(validateDshApiBaseUrl("localhost:18080"), false);
   });
 
   test("rejects garbage", () => {
@@ -102,12 +102,12 @@ describe("validateDshApiBaseUrl — rejects malformed URLs", () => {
 });
 
 describe("resolveDshApiBaseUrl — defaults to canonical port", () => {
-  test("fallback is http://localhost:58080", () => {
+  test("fallback is http://localhost:18080", () => {
     const url = resolveDshApiBaseUrl();
     assert.ok(
       validateDshApiBaseUrl(url),
       `resolveDshApiBaseUrl() fallback must pass validateDshApiBaseUrl, got: ${url}`,
     );
-    assert.ok(url.includes("58080"), `expected canonical port 58080 in fallback, got: ${url}`);
+    assert.ok(url.includes("18080"), `expected canonical port 18080 in fallback, got: ${url}`);
   });
 });

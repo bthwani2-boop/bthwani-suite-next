@@ -586,11 +586,11 @@ paths:
   /dsh/platform/store-onboarding-fee:
     $ref: "./paths/partner.paths.yaml#/~1dsh~1platform~1store-onboarding-fee"
   /dsh/operator/admin/roles:
-    $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1admin~1roles"
+    $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1roles"
   /dsh/operator/admin/staff:
-    $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1admin~1staff"
+    $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1staff"
   /dsh/operator/admin/staff/{staffId}/roles:
-    $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1admin~1staff~1{staffId}~1roles"
+    $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1staff~1{staffId}~1roles"
   /dsh/operator/partners:
     $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1partners"
   /dsh/operator/partners/{partnerId}:
@@ -643,12 +643,8 @@ paths:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1field-visits"
   /dsh/field/partners/{partnerId}/submit:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1partners~1{partnerId}~1submit"
-  /dsh/operator/admin/partners:
-    $ref: "./paths/partner.paths.yaml#/~1dsh~1operator~1admin~1partners"
-  /dsh/operator/admin/captains:
-    $ref: "./paths/captain.paths.yaml#/~1dsh~1operator~1admin~1captains"
   /dsh/operator/admin/audit:
-    $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1admin~1audit"
+    $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1audit"
   /dsh/client/special-requests:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1client~1special-requests"
   /dsh/client/special-requests/{requestId}:
@@ -1043,14 +1039,22 @@ paths:
     $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1support-sessions~1{requestId}~1revoke"
   /dsh/operator/admin/approvals/{approvalId}/review:
     $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1approvals~1{approvalId}~1review"
+  /dsh/operator/admin/approvals/{approvalId}/replacements:
+    $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1approvals~1{approvalId}~1replacements"
   /dsh/operator/admin/approvals/{approvalId}/rollback-requests:
     $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1approvals~1{approvalId}~1rollback-requests"
   /dsh/operator/admin/role-requests/{requestId}/review:
     $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1role-requests~1{requestId}~1review"
+  /dsh/operator/admin/role-requests/{requestId}/replacements:
+    $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1role-requests~1{requestId}~1replacements"
   /dsh/operator/admin/roles/requests:
     $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1roles~1requests"
+  /dsh/operator/admin/permission-vocabulary:
+    $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1permission-vocabulary"
   /dsh/operator/admin/rollback-requests/{requestId}/review:
     $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1rollback-requests~1{requestId}~1review"
+  /dsh/operator/admin/rollback-requests/{requestId}/replacements:
+    $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1rollback-requests~1{requestId}~1replacements"
   /dsh/operator/admin/approvals:
     $ref: "./dsh.administration.openapi.yaml#/paths/~1dsh~1operator~1admin~1approvals"
   /dsh/operator/admin/diagnostics:
@@ -1744,42 +1748,6 @@ components:
       $ref: "./components/schemas/platform-policies.schemas.yaml#/DshStoreOnboardingFeePolicyResponse"
     DshUpsertStoreOnboardingFeePolicyRequest:
       $ref: "./components/schemas/platform-policies.schemas.yaml#/DshUpsertStoreOnboardingFeePolicyRequest"
-    DshAdminRole:
-      $ref: "./components/schemas/common.schemas.yaml#/DshAdminRole"
-    DshAdminRolesListResponse:
-      $ref: "./components/schemas/common.schemas.yaml#/DshAdminRolesListResponse"
-    DshAdminRoleResponse:
-      $ref: "./components/schemas/common.schemas.yaml#/DshAdminRoleResponse"
-    DshCreateAdminRoleRequest:
-      $ref: "./components/schemas/common.schemas.yaml#/DshCreateAdminRoleRequest"
-    DshStaffMember:
-      $ref: "./components/schemas/common.schemas.yaml#/DshStaffMember"
-    DshStaffListResponse:
-      $ref: "./components/schemas/common.schemas.yaml#/DshStaffListResponse"
-    DshAssignStaffRoleRequest:
-      $ref: "./components/schemas/common.schemas.yaml#/DshAssignStaffRoleRequest"
-    DshPartnerActivation:
-      $ref: "./components/schemas/partner.schemas.yaml#/DshPartnerActivation"
-    DshPartnerActivationsListResponse:
-      $ref: "./components/schemas/partner.schemas.yaml#/DshPartnerActivationsListResponse"
-    DshActivatePartnerRequest:
-      $ref: "./components/schemas/partner.schemas.yaml#/DshActivatePartnerRequest"
-    DshBlockPartnerRequest:
-      $ref: "./components/schemas/partner.schemas.yaml#/DshBlockPartnerRequest"
-    DshCaptainCredential:
-      $ref: "./components/schemas/captain.schemas.yaml#/DshCaptainCredential"
-    DshCaptainAppPersona:
-      $ref: "./components/schemas/captain.schemas.yaml#/DshCaptainAppPersona"
-    DshCaptainIdentity:
-      $ref: "./components/schemas/captain.schemas.yaml#/DshCaptainIdentity"
-    DshCaptainCredentialsListResponse:
-      $ref: "./components/schemas/captain.schemas.yaml#/DshCaptainCredentialsListResponse"
-    DshUpsertCaptainCredentialRequest:
-      $ref: "./components/schemas/captain.schemas.yaml#/DshUpsertCaptainCredentialRequest"
-    DshAdminAuditEntry:
-      $ref: "./components/schemas/common.schemas.yaml#/DshAdminAuditEntry"
-    DshAdminAuditListResponse:
-      $ref: "./components/schemas/common.schemas.yaml#/DshAdminAuditListResponse"
     DshCreateSpecialRequest:
       $ref: "./components/schemas/common.schemas.yaml#/DshCreateSpecialRequest"
     DshSpecialRequestResponse:

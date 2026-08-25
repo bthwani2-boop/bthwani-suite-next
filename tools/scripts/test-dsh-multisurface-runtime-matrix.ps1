@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
-  [string]$DshBaseUrl = "http://127.0.0.1:58080",
-  [string]$IdentityBaseUrl = "http://127.0.0.1:58082",
+  [string]$DshBaseUrl = "http://127.0.0.1:18080",
+  [string]$IdentityBaseUrl = "http://127.0.0.1:18082",
   [string]$IdentityPassword = ""
 )
 

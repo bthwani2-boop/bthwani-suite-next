@@ -49,7 +49,7 @@ function assertTrackedSourcesHaveNoConflictMarkers(root) {
   // loops over every source file on every application startup.
   const result = spawnSync(
     "git",
-    ["grep", "-n", "-I", "-E", CONFLICT_MARKER_PATTERN, "--", ...TEXT_PATHS],
+    ["grep", "--no-color", "-n", "-I", "-E", CONFLICT_MARKER_PATTERN, "--", ...TEXT_PATHS],
     {
       cwd: root,
       encoding: "utf8",

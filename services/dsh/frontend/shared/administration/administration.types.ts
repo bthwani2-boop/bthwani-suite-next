@@ -1,129 +1,35 @@
+import type { operations } from "../../../clients/generated/dsh-api";
+
+type RoleDefinitionReviewResponse =
+  operations["post_dsh_operator_admin_role_requests__requestId__review"]["responses"][200]["content"]["application/json"];
+type RoleAssignmentReviewResponse =
+  operations["post_dsh_operator_admin_approvals__approvalId__review"]["responses"][200]["content"]["application/json"];
+type RollbackReviewResponse =
+  operations["post_dsh_operator_admin_rollback_requests__requestId__review"]["responses"][200]["content"]["application/json"];
+type DiagnosticsResponse =
+  operations["get_dsh_operator_admin_diagnostics"]["responses"][200]["content"]["application/json"];
+
 export type DshAdministrationSurface =
-  | "control-panel"
-  | "app-client"
-  | "app-partner"
-  | "app-captain"
-  | "app-field"
-  | "webapp"
-  | "website";
+  | "control-panel";
 
-export type DshRole = {
-  readonly id: string;
-  readonly name: string;
-  readonly description: string;
-  readonly permissions: readonly string[];
-  readonly surfaces: readonly DshAdministrationSurface[];
-  readonly active: boolean;
-  readonly version: number;
-  readonly createdAt: string;
-};
-
-export type DshStaffMember = {
-  readonly id: string;
-  readonly actorId: string;
-  readonly roleId: string;
-  readonly roleName: string;
-  readonly assignedBy: string;
-  readonly assignedAt: string;
-};
-
-export type DshAdministrationApprovalStatus = "pending" | "approved" | "rejected";
+export type DshPermissionVocabularyEntry =
+  operations["get_dsh_operator_admin_permission_vocabulary"]["responses"][200]["content"]["application/json"]["permissions"][number];
+export type DshRole =
+  operations["listDshAdminRoles"]["responses"][200]["content"]["application/json"]["roles"][number];
+export type DshRolePermission = DshRole["permissions"][number];
+export type DshStaffMember =
+  operations["listDshAdminStaff"]["responses"][200]["content"]["application/json"]["staff"][number];
+export type DshCanonicalRoleAssignment = NonNullable<RoleAssignmentReviewResponse["assignment"]>;
+export type DshAdministrationApprovalStatus = RoleAssignmentReviewResponse["approval"]["status"];
+export type DshMutationExecutionStatus = RoleAssignmentReviewResponse["approval"]["executionStatus"];
 export type DshRoleAssignmentApprovalStatus = DshAdministrationApprovalStatus;
-export type DshRoleChangeAction = "staff_role_assignment" | "staff_role_revocation";
-
-export type DshRoleAssignmentApproval = {
-  readonly id: string;
-  readonly actionType: DshRoleChangeAction;
-  readonly targetActorId: string;
-  readonly roleId: string;
-  readonly roleName: string;
-  readonly requestedBy: string;
-  readonly reason: string;
-  readonly status: DshRoleAssignmentApprovalStatus;
-  readonly reviewedBy: string;
-  readonly reviewNote: string;
-  readonly version: number;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  readonly reviewedAt?: string;
-};
-
-export type DshRoleDefinitionRequest = {
-  readonly id: string;
-  readonly roleName: string;
-  readonly description: string;
-  readonly permissions: readonly string[];
-  readonly surfaces: readonly DshAdministrationSurface[];
-  readonly requestedBy: string;
-  readonly reason: string;
-  readonly status: DshAdministrationApprovalStatus;
-  readonly reviewedBy: string;
-  readonly reviewNote: string;
-  readonly version: number;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  readonly reviewedAt?: string;
-};
-
-export type DshAdministrationRollbackRequest = {
-  readonly id: string;
-  readonly sourceApprovalId: string;
-  readonly sourceActionType: DshRoleChangeAction;
-  readonly inverseActionType: DshRoleChangeAction;
-  readonly targetActorId: string;
-  readonly roleId: string;
-  readonly roleName: string;
-  readonly requestedBy: string;
-  readonly reason: string;
-  readonly status: DshAdministrationApprovalStatus;
-  readonly reviewedBy: string;
-  readonly reviewNote: string;
-  readonly version: number;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  readonly reviewedAt?: string;
-  readonly sourceApprovedBy: string;
-};
-
-export type DshAdministrationDiagnostics = {
-  readonly status: "healthy" | "attention";
-  readonly activeRoleCount: number;
-  readonly approvedAssignmentCount: number;
-  readonly pendingRoleDefinitionCount: number;
-  readonly pendingRoleAssignmentCount: number;
-  readonly pendingRollbackCount: number;
-  readonly recentRestrictedAuditCount: number;
-  readonly generatedAt: string;
-};
-
-export type DshPartnerActivation = {
-  readonly id: string;
-  readonly partnerId: string;
-  readonly status: "submitted" | "ops_approved" | "partner_active" | "blocked";
-  readonly reviewedBy: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type DshCaptainCredential = {
-  readonly id: string;
-  readonly captainId: string;
-  readonly vehicleType: string;
-  readonly status: "pending" | "approved" | "rejected" | "suspended";
-  readonly reviewedBy: string;
-  readonly updatedAt: string;
-};
-
-export type DshAdminAuditEntry = {
-  readonly id: string;
-  readonly actorId: string;
-  readonly action: string;
-  readonly targetId: string;
-  readonly detail: string;
-  readonly sensitivity: "internal" | "restricted";
-  readonly correlationId: string;
-  readonly createdAt: string;
-};
+export type DshRoleChangeAction = RoleAssignmentReviewResponse["approval"]["actionType"];
+export type DshRoleAssignmentApproval = RoleAssignmentReviewResponse["approval"];
+export type DshRoleDefinitionRequest = RoleDefinitionReviewResponse["request"];
+export type DshAdministrationRollbackRequest = RollbackReviewResponse["request"];
+export type DshAdministrationDiagnostics = DiagnosticsResponse["diagnostics"];
+export type DshAdminAuditEntry =
+  operations["listDshAdminAudit"]["responses"][200]["content"]["application/json"]["entries"][number];
 
 export type DshAdminState<T> =
   | { readonly kind: "idle" }

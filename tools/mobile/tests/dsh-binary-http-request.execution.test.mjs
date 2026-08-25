@@ -21,7 +21,7 @@ test("binary client preserves presigned URL, body and content type without DSH a
   };
 
   const body = new Blob(["image-bytes"], { type: "image/jpeg" });
-  const url = "http://192.168.1.20:58110/__media/dsh-media/a.jpg?X-Amz-Signature=abc";
+  const url = "http://192.168.1.20:18110/__media/dsh-media/a.jpg?X-Amz-Signature=abc";
   const client = createDshBinaryHttpClient(5_000);
   const result = await client.put(url, body, "image/jpeg");
 

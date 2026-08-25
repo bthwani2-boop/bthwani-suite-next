@@ -10,6 +10,10 @@ param(
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../..")).Path
+$RuntimeOrchestrator = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
+if (-not (Test-Path -LiteralPath $RuntimeOrchestrator -PathType Leaf)) {
+  throw "Canonical runtime authority not found: $RuntimeOrchestrator"
+}
 Set-Location -LiteralPath $RepoRoot
 
 function Resolve-RuntimeEnvFile {
@@ -177,14 +181,18 @@ if ($Manifest.minio.included) {
   $VolumeExists = docker volume ls --filter "name=^${MinioVolumeName}$" -q
   if ([string]::IsNullOrWhiteSpace(($VolumeExists -join ""))) { throw "Target MinIO volume does not exist: $MinioVolumeName" }
   $MinioWasRunning = -not [string]::IsNullOrWhiteSpace(((docker ps --filter "name=^/${MinioContainer}$" --filter "status=running" -q) -join ""))
-  if ($MinioWasRunning) { docker stop $MinioContainer | Out-Null; if ($LASTEXITCODE -ne 0) { throw "Could not stop MinIO." } }
+  if ($MinioWasRunning) {
+    & $RuntimeOrchestrator -Action service-stop -Profiles media-storage -Service minio
+  }
   try {
     docker run --rm -v "${MinioVolumeName}:/volume-data" alpine:3.21 sh -c "rm -rf /volume-data/* /volume-data/.[!.]* /volume-data/..?* 2>/dev/null || true"
     if ($LASTEXITCODE -ne 0) { throw "Could not clear MinIO volume." }
     docker run --rm -v "${MinioVolumeName}:/volume-data" -v "${BackupDir}:/backup-src:ro" alpine:3.21 tar -xzf "/backup-src/$($Manifest.minio.relativePath)" -C /volume-data
     if ($LASTEXITCODE -ne 0) { throw "MinIO restore failed." }
   } finally {
-    if ($MinioWasRunning) { docker start $MinioContainer | Out-Null; if ($LASTEXITCODE -ne 0) { throw "Could not restart MinIO." } }
+    if ($MinioWasRunning) {
+      & $RuntimeOrchestrator -Action service-up -Profiles media-storage -Service minio
+    }
   }
   Write-Host "MinIO restore PASS"
 }

@@ -37,6 +37,7 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: support.read
       security:
       - bearerAuth: []
     post:
@@ -65,6 +66,7 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: support.manage
       security:
       - bearerAuth: []
   /dsh/operator/admin/support/snapshot:
@@ -94,6 +96,7 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: support.read
       security:
       - bearerAuth: []
   /dsh/operator/admin/support-sessions/{requestId}/review:
@@ -129,6 +132,7 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: support.manage
       security:
       - bearerAuth: []
   /dsh/operator/admin/support-sessions/{requestId}/revoke:
@@ -164,6 +168,7 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: support.manage
       security:
       - bearerAuth: []
   /dsh/operator/admin/approvals/{approvalId}/review:
@@ -177,28 +182,62 @@ paths:
       tags:
       - operator
       operationId: post_dsh_operator_admin_approvals__approvalId__review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalReviewInput'
       responses:
         '200':
-          description: Auto-generated
+          description: Reviewed role assignment decision and canonical Identity readback.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/RoleAssignmentReviewResponse'
         '400':
-          description: Bad request
+          description: Invalid review input or separation-of-duties violation.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
+                $ref: '#/components/schemas/AdministrationError'
         '401':
-          description: Unauthorized
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
         '403':
-          description: Forbidden
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '404':
+          description: Review target was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '409':
+          description: Request state conflict, canonical mutation is reconciling, or canonical mutation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '500':
+          description: Internal administration failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '503':
+          description: Identity is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+      x-bthwani-required-scope: administration.staff.approve
       security:
       - bearerAuth: []
   /dsh/operator/admin/approvals/{approvalId}/rollback-requests:
@@ -212,13 +251,19 @@ paths:
       tags:
       - operator
       operationId: post_dsh_operator_admin_approvals__approvalId__rollback_requests
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RollbackRequestInput'
       responses:
         '200':
-          description: Auto-generated
+          description: Fresh pending rollback maker request.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/RollbackCreateResponse'
         '400':
           description: Bad request
           content:
@@ -234,6 +279,7 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: administration.rollback.request
       security:
       - bearerAuth: []
   /dsh/operator/admin/role-requests/{requestId}/review:
@@ -247,28 +293,170 @@ paths:
       tags:
       - operator
       operationId: post_dsh_operator_admin_role_requests__requestId__review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalReviewInput'
       responses:
         '200':
-          description: Auto-generated
+          description: Reviewed role definition decision and canonical role readback.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/RoleDefinitionReviewResponse'
         '400':
-          description: Bad request
+          description: Invalid review input or separation-of-duties violation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '401':
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '404':
+          description: Review target was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '409':
+          description: Request state conflict, canonical mutation is reconciling, or canonical mutation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '500':
+          description: Internal administration failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '503':
+          description: Identity is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+      x-bthwani-required-scope: administration.role.approve
+      security:
+      - bearerAuth: []
+  /dsh/operator/admin/permission-vocabulary:
+    get:
+      tags: [operator]
+      operationId: get_dsh_operator_admin_permission_vocabulary
+      responses:
+        '200':
+          description: Canonical Identity permission vocabulary for DSH control-panel roles.
           content:
             application/json:
               schema:
                 type: object
+                required: [permissions]
                 properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
+                  permissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PermissionVocabularyEntry'
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+        '503': { description: Identity unavailable }
+      x-bthwani-required-scope: administration.role.request
+      security:
+      - bearerAuth: []
+  /dsh/operator/admin/roles:
+    get:
+      tags: [operator]
+      operationId: listDshAdminRoles
+      responses:
+        '200':
+          description: Canonical Identity-owned role definitions projected as action strings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolesListResponse'
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+        '503': { description: Identity unavailable }
+      x-bthwani-required-scope: administration.role.read
+      security:
+      - bearerAuth: []
+  /dsh/operator/admin/staff:
+    get:
+      tags: [operator]
+      operationId: listDshAdminStaff
+      responses:
+        '200':
+          description: Canonical Identity effective staff projection.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StaffListResponse'
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+        '503': { description: Identity unavailable }
+      x-bthwani-required-scope: administration.staff.read
+      security:
+      - bearerAuth: []
+  /dsh/operator/admin/staff/{staffId}/roles:
+    parameters:
+    - $ref: '#/components/parameters/StaffId'
+    post:
+      tags: [operator]
+      operationId: assignDshStaffRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleChangeRequestInput'
+      responses:
+        '200':
+          description: Fresh pending maker request; no role authority is granted by this response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleAssignmentCreateResponse'
+        '400': { description: Invalid request }
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+        '404': { description: Canonical role not found }
+        '409': { description: Conflicting pending request }
+        '503': { description: Identity unavailable }
+      x-bthwani-required-scope: administration.staff.request
+      security:
+      - bearerAuth: []
+  /dsh/operator/admin/audit:
+    get:
+      tags: [operator]
+      operationId: listDshAdminAudit
+      parameters:
+      - name: actorId
+        in: query
+        required: false
+        schema:
+          type: string
+          minLength: 1
+      responses:
+        '200':
+          description: Privacy-safe append-only administration audit envelope.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditListResponse'
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+      x-bthwani-required-scope: administration.audit.read
       security:
       - bearerAuth: []
   /dsh/operator/admin/roles/requests:
@@ -276,13 +464,19 @@ paths:
       tags:
       - operator
       operationId: post_dsh_operator_admin_roles_requests
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleDefinitionRequestInput'
       responses:
         '200':
-          description: Auto-generated
+          description: Fresh pending role-definition maker request.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/RoleDefinitionCreateResponse'
         '400':
           description: Bad request
           content:
@@ -298,6 +492,91 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: administration.role.request
+      security:
+      - bearerAuth: []
+  /dsh/operator/admin/role-requests/{requestId}/replacements:
+    parameters:
+    - $ref: '#/components/parameters/RequestId'
+    post:
+      tags: [operator]
+      operationId: post_dsh_operator_admin_role_requests__requestId__replacements
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TerminalFailureReplacementInput'
+      responses:
+        '200':
+          description: Old failed-terminal request superseded and a fresh pending maker request created atomically.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleDefinitionCreateResponse'
+        '400': { description: Invalid replacement input }
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+        '404': { description: Request or canonical role not found }
+        '409': { description: Version or lifecycle conflict }
+        '503': { description: Identity unavailable }
+      x-bthwani-required-scope: administration.role.request
+      security:
+      - bearerAuth: []
+  /dsh/operator/admin/approvals/{approvalId}/replacements:
+    parameters:
+    - $ref: '#/components/parameters/ApprovalId'
+    post:
+      tags: [operator]
+      operationId: post_dsh_operator_admin_approvals__approvalId__replacements
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TerminalFailureReplacementInput'
+      responses:
+        '200':
+          description: Old failed-terminal assignment request superseded and a fresh pending maker request created atomically.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleAssignmentCreateResponse'
+        '400': { description: Invalid replacement input }
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+        '404': { description: Request or canonical role not found }
+        '409': { description: Version or lifecycle conflict }
+        '503': { description: Identity unavailable }
+      x-bthwani-required-scope: administration.staff.request
+      security:
+      - bearerAuth: []
+  /dsh/operator/admin/rollback-requests/{requestId}/replacements:
+    parameters:
+    - $ref: '#/components/parameters/RequestId'
+    post:
+      tags: [operator]
+      operationId: post_dsh_operator_admin_rollback_requests__requestId__replacements
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TerminalFailureReplacementInput'
+      responses:
+        '200':
+          description: Old failed-terminal rollback request superseded and a fresh pending maker request created atomically.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RollbackCreateResponse'
+        '400': { description: Invalid replacement input }
+        '401': { description: Unauthorized }
+        '403': { description: Forbidden }
+        '404': { description: Request or canonical role not found }
+        '409': { description: Version or lifecycle conflict }
+        '503': { description: Identity unavailable }
+      x-bthwani-required-scope: administration.rollback.request
       security:
       - bearerAuth: []
   /dsh/operator/admin/rollback-requests/{requestId}/review:
@@ -311,28 +590,62 @@ paths:
       tags:
       - operator
       operationId: post_dsh_operator_admin_rollback_requests__requestId__review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalReviewInput'
       responses:
         '200':
-          description: Auto-generated
+          description: Reviewed rollback decision and canonical lifecycle readback.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/RollbackReviewResponse'
         '400':
-          description: Bad request
+          description: Invalid review input or separation-of-duties violation.
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                  message:
-                    type: string
+                $ref: '#/components/schemas/AdministrationError'
         '401':
-          description: Unauthorized
+          description: Unauthorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
         '403':
-          description: Forbidden
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '404':
+          description: Review target was not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '409':
+          description: Request state conflict, canonical mutation is reconciling, or canonical mutation failed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '500':
+          description: Internal administration failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+        '503':
+          description: Identity is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdministrationError'
+      x-bthwani-required-scope: administration.rollback.approve
       security:
       - bearerAuth: []
   /dsh/operator/admin/approvals:
@@ -340,13 +653,15 @@ paths:
       tags:
       - operator
       operationId: get_dsh_operator_admin_approvals
+      parameters:
+      - $ref: '#/components/parameters/ApprovalStatus'
       responses:
         '200':
-          description: Auto-generated
+          description: Role-assignment approval requests matching the optional status filter.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/RoleAssignmentListResponse'
         '400':
           description: Bad request
           content:
@@ -362,6 +677,7 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: administration.staff.approve
       security:
       - bearerAuth: []
   /dsh/operator/admin/diagnostics:
@@ -371,11 +687,16 @@ paths:
       operationId: get_dsh_operator_admin_diagnostics
       responses:
         '200':
-          description: Auto-generated
+          description: Privacy-safe administration diagnostics and lifecycle counts.
           content:
             application/json:
               schema:
                 type: object
+                additionalProperties: false
+                required: [diagnostics]
+                properties:
+                  diagnostics:
+                    $ref: '#/components/schemas/AdministrationDiagnostics'
         '400':
           description: Bad request
           content:
@@ -391,6 +712,7 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: administration.diagnostics.read
       security:
       - bearerAuth: []
   /dsh/operator/admin/role-requests:
@@ -398,13 +720,15 @@ paths:
       tags:
       - operator
       operationId: get_dsh_operator_admin_role_requests
+      parameters:
+      - $ref: '#/components/parameters/ApprovalStatus'
       responses:
         '200':
-          description: Auto-generated
+          description: Role-definition requests matching the optional status filter.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/RoleDefinitionListResponse'
         '400':
           description: Bad request
           content:
@@ -420,6 +744,7 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: administration.role.approve
       security:
       - bearerAuth: []
   /dsh/operator/admin/rollback-requests:
@@ -427,13 +752,15 @@ paths:
       tags:
       - operator
       operationId: get_dsh_operator_admin_rollback_requests
+      parameters:
+      - $ref: '#/components/parameters/ApprovalStatus'
       responses:
         '200':
-          description: Auto-generated
+          description: Rollback requests matching the optional status filter.
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/RollbackListResponse'
         '400':
           description: Bad request
           content:
@@ -449,6 +776,7 @@ paths:
           description: Unauthorized
         '403':
           description: Forbidden
+      x-bthwani-required-scope: administration.rollback.approve
       security:
       - bearerAuth: []
 components:
@@ -491,30 +819,20 @@ components:
       - pending
       - approved
       - rejected
-    AdministrationPermission:
+      - superseded
+    MutationExecutionStatus:
       type: string
       enum:
-      - administration.read
-      - administration.manage
-      - administration.approve
-      - administration.role.request
-      - administration.role.approve
-      - administration.staff.request
-      - administration.staff.approve
-      - administration.audit.read
-      - administration.diagnostics.read
-      - administration.rollback.request
-      - administration.rollback.approve
+      - not_started
+      - pending
+      - reconciling
+      - retryable_failure
+      - failed_terminal
+      - applied
     AdministrationSurface:
       type: string
       enum:
       - control-panel
-      - app-client
-      - app-partner
-      - app-captain
-      - app-field
-      - webapp
-      - website
     RoleChangeAction:
       type: string
       enum:
@@ -532,13 +850,14 @@ components:
       - active
       - version
       - createdAt
+      - updatedAt
       properties:
         id:
           type: string
           format: uuid
         name:
           type: string
-          pattern: ^[a-z][a-z0-9-]{2,79}$
+          pattern: ^[a-z][a-z0-9_-]{2,79}$
         description:
           type: string
         permissions:
@@ -546,7 +865,7 @@ components:
           minItems: 1
           uniqueItems: true
           items:
-            $ref: '#/components/schemas/AdministrationPermission'
+            $ref: '#/components/schemas/PermissionAction'
         surfaces:
           type: array
           minItems: 1
@@ -563,36 +882,47 @@ components:
         createdAt:
           type: string
           format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    PermissionAction:
+      type: string
+      minLength: 1
+      pattern: ^[a-z][a-z0-9._:-]*$
+    PermissionVocabularyEntry:
+      type: object
+      additionalProperties: false
+      required: [id, service, surface, action, description]
+      properties:
+        id: { type: string }
+        service: { type: string }
+        surface: { type: string }
+        action: { type: string }
+        description: { type: string }
     RoleDefinitionRequestInput:
       type: object
       additionalProperties: false
       required:
       - name
       - description
+      - active
       - permissions
-      - surfaces
       - reason
       properties:
         name:
           type: string
-          pattern: ^[a-z][a-z0-9-]{2,79}$
+          pattern: ^[a-z][a-z0-9_-]{2,79}$
         description:
           type: string
           maxLength: 1000
+        active:
+          type: boolean
         permissions:
           type: array
           minItems: 1
           uniqueItems: true
           items:
-            $ref: '#/components/schemas/AdministrationPermission'
-        surfaces:
-          type: array
-          minItems: 1
-          uniqueItems: true
-          contains:
-            const: control-panel
-          items:
-            $ref: '#/components/schemas/AdministrationSurface'
+            $ref: '#/components/schemas/PermissionAction'
         reason:
           type: string
           minLength: 5
@@ -604,13 +934,14 @@ components:
       - id
       - roleName
       - description
+      - active
       - permissions
       - surfaces
+      - expectedRoleVersion
       - requestedBy
       - reason
       - status
-      - reviewedBy
-      - reviewNote
+      - executionStatus
       - version
       - createdAt
       - updatedAt
@@ -620,14 +951,17 @@ components:
           format: uuid
         roleName:
           type: string
+          pattern: ^[a-z][a-z0-9_-]{2,79}$
         description:
           type: string
+        active:
+          type: boolean
         permissions:
           type: array
           minItems: 1
           uniqueItems: true
           items:
-            $ref: '#/components/schemas/AdministrationPermission'
+            $ref: '#/components/schemas/PermissionAction'
         surfaces:
           type: array
           minItems: 1
@@ -636,6 +970,9 @@ components:
             const: control-panel
           items:
             $ref: '#/components/schemas/AdministrationSurface'
+        expectedRoleVersion:
+          type: integer
+          minimum: 0
         requestedBy:
           type: string
         reason:
@@ -643,10 +980,16 @@ components:
           minLength: 5
         status:
           $ref: '#/components/schemas/ApprovalStatus'
+        executionStatus:
+          $ref: '#/components/schemas/MutationExecutionStatus'
         reviewedBy:
-          type: string
+          type:
+          - string
+          - 'null'
         reviewNote:
-          type: string
+          type:
+          - string
+          - 'null'
         version:
           type: integer
           minimum: 1
@@ -667,7 +1010,6 @@ components:
       required:
       - id
       - actorId
-      - roleId
       - roleName
       - assignedBy
       - assignedAt
@@ -677,11 +1019,9 @@ components:
           format: uuid
         actorId:
           type: string
-        roleId:
-          type: string
-          format: uuid
         roleName:
           type: string
+          pattern: ^[a-z][a-z0-9_-]{2,79}$
         assignedBy:
           type: string
         assignedAt:
@@ -691,15 +1031,23 @@ components:
       type: object
       additionalProperties: false
       required:
-      - roleId
+      - roleName
       - actionType
       - reason
       properties:
-        roleId:
+        roleName:
           type: string
-          format: uuid
         actionType:
           $ref: '#/components/schemas/RoleChangeAction'
+        reason:
+          type: string
+          minLength: 5
+          maxLength: 1000
+    RollbackRequestInput:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
         reason:
           type: string
           minLength: 5
@@ -723,6 +1071,87 @@ components:
         expectedVersion:
           type: integer
           minimum: 1
+    TerminalFailureReplacementInput:
+      type: object
+      additionalProperties: false
+      required: [expectedVersion, reasonCode, replacementReason]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 1
+        reasonCode:
+          type: string
+          minLength: 3
+          maxLength: 64
+          pattern: ^[a-z][a-z0-9_]*$
+        replacementReason:
+          type: string
+          minLength: 5
+          maxLength: 1000
+    AdministrationError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          enum:
+          - INVALID_JSON
+          - INVALID_REQUEST
+          - SEPARATION_OF_DUTIES_VIOLATION
+          - UNAUTHENTICATED
+          - FORBIDDEN
+          - NOT_FOUND
+          - REQUEST_STATE_CONFLICT
+          - CANONICAL_MUTATION_FAILED
+          - CANONICAL_MUTATION_RECONCILING
+          - INTERNAL_ERROR
+          - IDENTITY_UNAVAILABLE
+        message:
+          type: string
+          minLength: 1
+    CanonicalRoleAssignment:
+      type: object
+      additionalProperties: false
+      required: [actorId, roleId, roleName, grantedBy]
+      properties:
+        actorId:
+          type: string
+        roleId:
+          type: string
+        roleName:
+          type: string
+        grantedBy:
+          type: string
+    RoleDefinitionReviewResponse:
+      type: object
+      additionalProperties: false
+      required: [request, role]
+      properties:
+        request:
+          $ref: '#/components/schemas/RoleDefinitionRequest'
+        role:
+          oneOf:
+          - $ref: '#/components/schemas/Role'
+          - type: 'null'
+    RoleAssignmentReviewResponse:
+      type: object
+      additionalProperties: false
+      required: [approval, assignment]
+      properties:
+        approval:
+          $ref: '#/components/schemas/RoleAssignmentApproval'
+        assignment:
+          oneOf:
+          - $ref: '#/components/schemas/CanonicalRoleAssignment'
+          - type: 'null'
+    RollbackReviewResponse:
+      type: object
+      additionalProperties: false
+      required: [request]
+      properties:
+        request:
+          $ref: '#/components/schemas/RollbackRequest'
     RoleAssignmentApproval:
       type: object
       additionalProperties: false
@@ -730,13 +1159,11 @@ components:
       - id
       - actionType
       - targetActorId
-      - roleId
       - roleName
       - requestedBy
       - reason
       - status
-      - reviewedBy
-      - reviewNote
+      - executionStatus
       - version
       - createdAt
       - updatedAt
@@ -748,11 +1175,9 @@ components:
           $ref: '#/components/schemas/RoleChangeAction'
         targetActorId:
           type: string
-        roleId:
-          type: string
-          format: uuid
         roleName:
           type: string
+          pattern: ^[a-z][a-z0-9_-]{2,79}$
         requestedBy:
           type: string
         reason:
@@ -760,10 +1185,16 @@ components:
           minLength: 5
         status:
           $ref: '#/components/schemas/ApprovalStatus'
+        executionStatus:
+          $ref: '#/components/schemas/MutationExecutionStatus'
         reviewedBy:
-          type: string
+          type:
+          - string
+          - 'null'
         reviewNote:
-          type: string
+          type:
+          - string
+          - 'null'
         version:
           type: integer
           minimum: 1
@@ -787,13 +1218,11 @@ components:
       - sourceActionType
       - inverseActionType
       - targetActorId
-      - roleId
       - roleName
       - requestedBy
       - reason
       - status
-      - reviewedBy
-      - reviewNote
+      - executionStatus
       - version
       - createdAt
       - updatedAt
@@ -811,11 +1240,9 @@ components:
           $ref: '#/components/schemas/RoleChangeAction'
         targetActorId:
           type: string
-        roleId:
-          type: string
-          format: uuid
         roleName:
           type: string
+          pattern: ^[a-z][a-z0-9_-]{2,79}$
         requestedBy:
           type: string
         reason:
@@ -823,10 +1250,16 @@ components:
           minLength: 5
         status:
           $ref: '#/components/schemas/ApprovalStatus'
+        executionStatus:
+          $ref: '#/components/schemas/MutationExecutionStatus'
         reviewedBy:
-          type: string
+          type:
+          - string
+          - 'null'
         reviewNote:
-          type: string
+          type:
+          - string
+          - 'null'
         version:
           type: integer
           minimum: 1
@@ -882,6 +1315,9 @@ components:
         generatedAt:
           type: string
           format: date-time
+        details:
+          type: string
+          description: Sanitized component-level diagnostic detail without PII, credentials, or secrets.
     AuditEntry:
       type: object
       additionalProperties: false
@@ -892,6 +1328,7 @@ components:
       - targetId
       - detail
       - sensitivity
+      - correlationId
       - createdAt
       properties:
         id:
@@ -912,6 +1349,101 @@ components:
           enum:
           - internal
           - restricted
+        correlationId:
+          type: string
         createdAt:
           type: string
           format: date-time
+    RolesListResponse:
+      type: object
+      additionalProperties: false
+      required: [roles]
+      properties:
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+    StaffMember:
+      type: object
+      additionalProperties: false
+      required: [id, actorId, username, roles, createdAt]
+      properties:
+        id: { type: string, minLength: 1 }
+        actorId: { type: string, minLength: 1 }
+        username: { type: string }
+        roles:
+          type: array
+          items:
+            type: string
+            pattern: ^[a-z][a-z0-9_-]{2,79}$
+        createdAt: { type: string, format: date-time }
+    StaffListResponse:
+      type: object
+      additionalProperties: false
+      required: [staff, total]
+      properties:
+        staff:
+          type: array
+          items:
+            $ref: '#/components/schemas/StaffMember'
+        total: { type: integer, minimum: 0 }
+    RoleDefinitionCreateResponse:
+      type: object
+      additionalProperties: false
+      required: [request]
+      properties:
+        request:
+          $ref: '#/components/schemas/RoleDefinitionRequest'
+    RoleDefinitionListResponse:
+      type: object
+      additionalProperties: false
+      required: [requests]
+      properties:
+        requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleDefinitionRequest'
+    RoleAssignmentCreateResponse:
+      type: object
+      additionalProperties: false
+      required: [approval]
+      properties:
+        approval:
+          $ref: '#/components/schemas/RoleAssignmentApproval'
+    RoleAssignmentListResponse:
+      type: object
+      additionalProperties: false
+      required: [approvals]
+      properties:
+        approvals:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleAssignmentApproval'
+    RollbackCreateResponse:
+      type: object
+      additionalProperties: false
+      required: [request]
+      properties:
+        request:
+          $ref: '#/components/schemas/RollbackRequest'
+    RollbackListResponse:
+      type: object
+      additionalProperties: false
+      required: [requests]
+      properties:
+        requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/RollbackRequest'
+    AuditListResponse:
+      type: object
+      additionalProperties: false
+      required: [entries, total]
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEntry'
+        total:
+          type: integer
+          minimum: 0

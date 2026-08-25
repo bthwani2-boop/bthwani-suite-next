@@ -1,62 +1,59 @@
 #!/usr/bin/env pwsh
-# up-local-production.ps1
-# ─────────────────────────────────────────────────────────────────────────────
-# Starts the local production-like stack using a securely generated env file.
-# Run generate-local-production-env.ps1 first if the env file does not exist.
-# Usage: .\infra\docker\scripts\up-local-production.ps1 [-Profiles dsh,media-storage]
-# ─────────────────────────────────────────────────────────────────────────────
-
+[CmdletBinding()]
 param(
-  [string]$Profiles = ""
+  [string]$Profiles = "dsh,media-storage"
 )
 
 $ErrorActionPreference = "Stop"
-Set-Location -LiteralPath (Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)))
+Set-StrictMode -Version Latest
 
-$ComposeFile  = "infra\docker\compose.runtime.yml"
-$EnvFile      = "infra\docker\env\runtime.local-production.env"
+$RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../../..")).Path
+$Runtime = Join-Path $PSScriptRoot "runtime.ps1"
+$EnvFile = Join-Path $RepoRoot "infra/docker/env/runtime.local-production.env"
 
-# ── Guard: require real env file (not example) ────────────────────────────────
-if (-not (Test-Path -LiteralPath $EnvFile)) {
-  Write-Error @"
+if (-not (Test-Path -LiteralPath $EnvFile -PathType Leaf)) {
+  throw @"
 runtime.local-production.env not found.
-Run first:
+Run:
   .\infra\docker\scripts\generate-local-production-env.ps1
 "@
-  exit 1
 }
 
-# ── Guard: no placeholder secrets in the env file ─────────────────────────────
 $Raw = Get-Content -LiteralPath $EnvFile -Raw
+
 if ($Raw -match "REPLACE_WITH_GENERATED_") {
-  Write-Error "runtime.local-production.env still contains REPLACE_WITH_GENERATED_ placeholders. Re-run generate-local-production-env.ps1."
-  exit 1
+  throw "runtime.local-production.env contains unresolved secret placeholders."
 }
 
-# ── Docker daemon check ───────────────────────────────────────────────────────
-docker info | Out-Null
+# Import into this child process. Shell environment has precedence over the
+# committed example env used by the canonical orchestrator.
+Get-Content -LiteralPath $EnvFile | ForEach-Object {
+  $line = $_.Trim()
 
-# ── Build profile args ────────────────────────────────────────────────────────
-$ProfileList = @()
-if ($Profiles -ne "") {
-  $ProfileList = $Profiles.Split(",") | ForEach-Object { $_.Trim() } | Where-Object { $_ }
-}
-
-$AllowedProfiles = @("media-storage", "dsh")
-foreach ($profile in $ProfileList) {
-  if ($AllowedProfiles -notcontains $profile) {
-    throw "Unsupported profile: $profile. Allowed: media-storage, dsh"
+  if (
+    -not $line -or
+    $line.StartsWith("#") -or
+    -not $line.Contains("=")
+  ) {
+    return
   }
+
+  $parts = $line.Split("=", 2)
+  $key = $parts[0].Trim()
+  $value = $parts[1].Trim()
+
+  if (
+    ($value.StartsWith('"') -and $value.EndsWith('"')) -or
+    ($value.StartsWith("'") -and $value.EndsWith("'"))
+  ) {
+    $value = $value.Substring(1, $value.Length - 2)
+  }
+
+  [Environment]::SetEnvironmentVariable($key, $value, "Process")
 }
 
-$ComposeArgs = @("--env-file", $EnvFile, "-f", $ComposeFile)
-$ProfileArgs = @()
-foreach ($profile in $ProfileList) { $ProfileArgs += @("--profile", $profile) }
+if (-not (Test-Path -LiteralPath $Runtime -PathType Leaf)) {
+  throw "Canonical runtime authority not found: $Runtime"
+}
 
-Write-Host "[local-production] Starting stack: profiles=[$($ProfileList -join ',')]"
-docker compose @ComposeArgs @ProfileArgs up -d --remove-orphans
-
-Write-Host "[local-production] Running smoke..."
-& "infra\docker\scripts\smoke-runtime.ps1" -Profiles ($ProfileList -join ",")
-
-Write-Host "[local-production] Stack UP — PASS"
+& $Runtime -Action up -Profiles $Profiles

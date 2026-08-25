@@ -222,9 +222,86 @@
     },
     {
       "ordinal": 271,
+      "file": "dsh-1033_admin_role_name_canonicalization.sql",
+      "sha256": "78d40692ed55aac23a1cc4c88395c9c7895e129c01527b55d6552beba836f2f6",
+      "historicalPrefix": "1033",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 272,
+      "file": "dsh-1034_admin_canonical_mutation_intents.sql",
+      "sha256": "3e67494c54b11edb2acf7e67f6b60dc388f23ec48902a44b2102b4d378f525fd",
+      "historicalPrefix": "1034",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 273,
       "file": "dsh-1000_order_delivery_geofence_snapshot.sql",
       "sha256": "201180fe0191f3a5cec0e78c0fa37b7e74d3fffe68e8ef663d97ac22b40db555",
       "historicalPrefix": "1000",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 274,
+      "file": "dsh-1035_admin_pending_role_change_exclusion.sql",
+      "sha256": "d40e81b97e2f8b9cf5184bb5f7a687900481546b88be05187d97995c2c99aaa3",
+      "historicalPrefix": "1035",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 275,
+      "file": "dsh-1036_admin_canonical_mutation_leases.sql",
+      "sha256": "7aad1de033e4b3fc14e37d3219c18019155364b56c4cfa85e6344beb471b4a08",
+      "historicalPrefix": "1036",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 276,
+      "file": "dsh-1037_admin_canonical_mutation_fencing.sql",
+      "sha256": "cf5b86983311f229617c0d10d5a24f2ad872340371820297525cb20cb77420c1",
+      "historicalPrefix": "1037",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 277,
+      "file": "dsh-1038_admin_audit_reconciliation.sql",
+      "sha256": "da90e8eb89e4e3a47f8677bdb917717a5635a91e28850814a93b6f13810b1420",
+      "historicalPrefix": "1038",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 278,
+      "file": "dsh-1039_admin_canonical_decision_fencing.sql",
+      "sha256": "7ca0aac405a8c0450724a9722ca1e5bd6846eb9a8035c957af6c1722c7e94b10",
+      "historicalPrefix": "1039",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 279,
+      "file": "dsh-1040_admin_terminal_supersession.sql",
+      "sha256": "f1a83803e67f55dd1b2dd198a9895a906ce9e85c74f82187689ca8f06f61f5ce",
+      "historicalPrefix": "1040",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 280,
+      "file": "dsh-1041_drop_non_owner_admin_projections.sql",
+      "sha256": "b4f76ca125bd0422a6711028fcb58389e48278388ca87c96840f9cdb2de0395a",
+      "historicalPrefix": "1041",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 281,
+      "file": "dsh-1042_assert_admin_roles_retired.sql",
+      "sha256": "d9a7177ee3cfbd73ba6c209038e9ce9b82000d6574615a45460cd603a366f9ff",
+      "historicalPrefix": "1042",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 282,
+      "file": "dsh-1042_retire_local_admin_role_registry.sql",
+      "sha256": "e032ad38324f0dd2781cb177d4284cacba24be77d4fcc0f4088a93fed4d2da08",
+      "historicalPrefix": null,
       "state": "ACTIVE"
     }
   ]

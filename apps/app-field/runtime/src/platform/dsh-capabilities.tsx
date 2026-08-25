@@ -15,6 +15,8 @@ import {
   configureDshLocationAdapter,
   configureDshMapRenderer,
   configureDshMobileNotificationRuntime,
+  configureDshSecureRandomUuidProvider,
+  createDshExpoSecureRandomUuidProvider,
   createDshBrowserLocationAdapter,
   createDshExpoDocumentPickerAdapter,
   createDshExpoImagePickerAdapter,
@@ -25,6 +27,8 @@ import {
 } from "@bthwani/dsh/mobile-capabilities";
 
 const platform = Platform.OS === "android" || Platform.OS === "ios" ? Platform.OS : "web";
+
+if (platform !== "web") configureDshSecureRandomUuidProvider(createDshExpoSecureRandomUuidProvider(Crypto));
 
 configureDshLocationAdapter(
   platform === "web" ? createDshBrowserLocationAdapter() : createDshExpoLocationAdapter(Location),

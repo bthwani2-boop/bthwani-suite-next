@@ -2,60 +2,60 @@ version: 2
 updates:
   - package-ecosystem: "npm"
     directory: "/"
-    target-branch: "master"
-    schedule: { interval: "weekly" }
+    schedule: {interval: "weekly"}
+    cooldown: {default-days: 7}
     open-pull-requests-limit: 10
     labels: ["dependencies", "gate:ci-required"]
-    commit-message: { prefix: "chore(deps)" }
+    commit-message: {prefix: "chore(deps)"}
     groups:
-      production-dependencies: { dependency-type: "production" }
-      development-dependencies: { dependency-type: "development" }
+      production-dependencies: {dependency-type: "production"}
+      development-dependencies: {dependency-type: "development"}
   - package-ecosystem: "gomod"
     directory: "/services/wlt/backend"
-    target-branch: "master"
-    schedule: { interval: "weekly" }
+    schedule: {interval: "weekly"}
+    cooldown: {default-days: 7}
     open-pull-requests-limit: 5
     labels: ["dependencies", "gate:ci-required"]
-    commit-message: { prefix: "chore(deps)" }
+    commit-message: {prefix: "chore(deps)"}
   - package-ecosystem: "gomod"
     directory: "/services/dsh/backend"
-    target-branch: "master"
-    schedule: { interval: "weekly" }
+    schedule: {interval: "weekly"}
+    cooldown: {default-days: 7}
     open-pull-requests-limit: 5
     labels: ["dependencies", "gate:ci-required"]
-    commit-message: { prefix: "chore(deps)" }
+    commit-message: {prefix: "chore(deps)"}
   - package-ecosystem: "gomod"
     directory: "/core/identity/backend"
-    target-branch: "master"
-    schedule: { interval: "weekly" }
+    schedule: {interval: "weekly"}
+    cooldown: {default-days: 7}
     open-pull-requests-limit: 5
     labels: ["dependencies", "gate:ci-required"]
-    commit-message: { prefix: "chore(deps)" }
+    commit-message: {prefix: "chore(deps)"}
   - package-ecosystem: "gomod"
     directory: "/core/workforce/backend"
-    target-branch: "master"
-    schedule: { interval: "weekly" }
+    schedule: {interval: "weekly"}
+    cooldown: {default-days: 7}
     open-pull-requests-limit: 5
     labels: ["dependencies", "gate:ci-required"]
-    commit-message: { prefix: "chore(deps)" }
+    commit-message: {prefix: "chore(deps)"}
   - package-ecosystem: "gomod"
     directory: "/core/platform-control/backend"
-    target-branch: "master"
-    schedule: { interval: "weekly" }
+    schedule: {interval: "weekly"}
+    cooldown: {default-days: 7}
     open-pull-requests-limit: 5
     labels: ["dependencies", "gate:ci-required"]
-    commit-message: { prefix: "chore(deps)" }
+    commit-message: {prefix: "chore(deps)"}
   - package-ecosystem: "gomod"
     directory: "/core/providers/backend"
-    target-branch: "master"
-    schedule: { interval: "weekly" }
+    schedule: {interval: "weekly"}
+    cooldown: {default-days: 7}
     open-pull-requests-limit: 5
     labels: ["dependencies", "gate:ci-required"]
-    commit-message: { prefix: "chore(deps)" }
+    commit-message: {prefix: "chore(deps)"}
   - package-ecosystem: "github-actions"
     directory: "/"
-    target-branch: "master"
-    schedule: { interval: "weekly" }
+    schedule: {interval: "weekly"}
+    cooldown: {default-days: 7}
     open-pull-requests-limit: 5
     labels: ["dependencies", "gate:ci-required"]
-    commit-message: { prefix: "chore(deps)" }
+    commit-message: {prefix: "chore(deps)"}

@@ -1,5 +1,7 @@
 name: Setup BThwani Node workspace
-description: Install the repository-pinned PNPM and Node toolchain. Contract materialization is owned by the Nx contracts target.
+description: >-
+  Install the repository-pinned PNPM and Node toolchain. Contract materialization is owned by the Nx contracts
+  target.
 
 inputs:
   node-version:

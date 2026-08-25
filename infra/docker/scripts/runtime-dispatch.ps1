@@ -52,8 +52,8 @@ function Invoke-RuntimeEngine {
 
 function Invoke-FinancialSimulatorHealthSmoke {
   Write-Host "`n--- Financial simulator isolated smoke ---"
-  Invoke-RestMethod "http://localhost:58090/__admin/mappings" -TimeoutSec 10 -ErrorAction Stop | Out-Null
-  $health = Invoke-RestMethod "http://localhost:58090/financial/health" -TimeoutSec 10 -ErrorAction Stop
+  Invoke-RestMethod "http://localhost:18090/__admin/mappings" -TimeoutSec 10 -ErrorAction Stop | Out-Null
+  $health = Invoke-RestMethod "http://localhost:18090/financial/health" -TimeoutSec 10 -ErrorAction Stop
   if ([string]$health.status -ne "healthy") { throw "WireMock financial simulator health is not healthy: $($health.status)" }
   Write-Host "Financial simulator isolated smoke: PASS"
 }

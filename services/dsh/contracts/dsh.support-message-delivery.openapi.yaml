@@ -12,7 +12,7 @@ x-bthwani-runtime-dependency: true
 x-bthwani-client-generation: DISABLED
 x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
 servers:
-  - url: http://localhost:58080
+  - url: http://localhost:18080
 paths:
   /dsh/support/tickets/{ticketId}/messages/{messageId}/attachments:
     parameters:

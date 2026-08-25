@@ -46,7 +46,7 @@ function validateSharedRuntimeReadinessContract() {
   }
   if (contract.schemaVersion !== 1) fail(`runtime readiness schemaVersion must be 1, got ${contract.schemaVersion}`);
 
-  const expectedMobileProfiles = ["identity", "workforce", "dsh", "wlt", "media-storage"];
+  const expectedMobileProfiles = ["identity", "workforce", "dsh", "wlt", "financial-simulators", "media-storage"];
   const actualMobileProfiles = contract.bundles?.mobileDevelopment;
   if (JSON.stringify(actualMobileProfiles) !== JSON.stringify(expectedMobileProfiles)) {
     fail(`mobileDevelopment readiness bundle drift: expected=${expectedMobileProfiles.join(",")} actual=${(actualMobileProfiles ?? []).join(",")}`);

@@ -17,12 +17,7 @@ func seedActivationTestIssuer(t *testing.T, db *sql.DB) {
 	if _, err := db.Exec(`DELETE FROM identity_actors WHERE id = $1`, activationTestIssuerID); err != nil {
 		t.Fatalf("clean activation test issuer: %v", err)
 	}
-	if _, err := db.Exec(`
-		INSERT INTO identity_actors
-			(id, username, password_hash, operator_context_id, roles, permissions, status, version)
-		VALUES ($1, 'identity-db-test-issuer', '', 'local-dsh', '{operator}', '[]', 'ACTIVE', 1)`, activationTestIssuerID); err != nil {
-		t.Fatalf("seed activation test issuer: %v", err)
-	}
+	insertIdentityTestActor(t, db, activationTestIssuerID, "identity-db-test-issuer", "local-dsh", "", []string{"operator"}, nil, ActorStatusActive, 1)
 	t.Cleanup(func() {
 		if _, err := db.Exec(`DELETE FROM identity_activation_challenges WHERE issued_by_actor_id = $1`, activationTestIssuerID); err != nil {
 			t.Errorf("clean activation test issuer challenges: %v", err)
@@ -45,13 +40,7 @@ func TestActivationFunctionalConsumeWrongSurface(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = db.ExecContext(context.Background(), `
-		INSERT INTO identity_actors (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version)
-		VALUES ($1, $2, '', 'local-dsh', $3, '{field}', '[]', 'PROVISIONED', 1)`,
-		actorID, "func_wrong_surf", phone)
-	if err != nil {
-		t.Fatalf("insert actor: %v", err)
-	}
+	insertIdentityTestActor(t, db, actorID, "func_wrong_surf", "local-dsh", phone, []string{"field"}, nil, ActorStatusProvisioned, 1)
 
 	res, err := repo.IssueActivationForActor(context.Background(), actorID, IssueActivationForActorInput{
 		IssuedByActorID:   activationTestIssuerID,
@@ -85,13 +74,7 @@ func TestActivationFunctionalConsumeRevoked(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = db.ExecContext(context.Background(), `
-		INSERT INTO identity_actors (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version)
-		VALUES ($1, $2, '', 'local-dsh', $3, '{field}', '[]', 'PROVISIONED', 1)`,
-		actorID, "func_revoked", phone)
-	if err != nil {
-		t.Fatalf("insert actor: %v", err)
-	}
+	insertIdentityTestActor(t, db, actorID, "func_revoked", "local-dsh", phone, []string{"field"}, nil, ActorStatusProvisioned, 1)
 
 	res, err := repo.IssueActivationForActor(context.Background(), actorID, IssueActivationForActorInput{
 		IssuedByActorID:   activationTestIssuerID,
@@ -130,13 +113,7 @@ func TestActivationFunctionalConsumeExpired(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = db.ExecContext(context.Background(), `
-		INSERT INTO identity_actors (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version)
-		VALUES ($1, $2, '', 'local-dsh', $3, '{field}', '[]', 'PROVISIONED', 1)`,
-		actorID, "func_expired", phone)
-	if err != nil {
-		t.Fatalf("insert actor: %v", err)
-	}
+	insertIdentityTestActor(t, db, actorID, "func_expired", "local-dsh", phone, []string{"field"}, nil, ActorStatusProvisioned, 1)
 
 	res, err := repo.IssueActivationForActor(context.Background(), actorID, IssueActivationForActorInput{
 		IssuedByActorID:   activationTestIssuerID,
@@ -186,13 +163,7 @@ func TestActivationFunctionalConsumeBruteForceLockout(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = db.ExecContext(context.Background(), `
-		INSERT INTO identity_actors (id, username, password_hash, operator_context_id, phone_e164, roles, permissions, status, version)
-		VALUES ($1, $2, '', 'local-dsh', $3, '{field}', '[]', 'PROVISIONED', 1)`,
-		actorID, "func_lockout", phone)
-	if err != nil {
-		t.Fatalf("insert actor: %v", err)
-	}
+	insertIdentityTestActor(t, db, actorID, "func_lockout", "local-dsh", phone, []string{"field"}, nil, ActorStatusProvisioned, 1)
 
 	res, err := repo.IssueActivationForActor(context.Background(), actorID, IssueActivationForActorInput{
 		IssuedByActorID:   activationTestIssuerID,

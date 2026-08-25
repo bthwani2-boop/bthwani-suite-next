@@ -17,7 +17,7 @@ x-bthwani-contracts:
   sovereignLeadership: ./workforce.sovereign-leadership.openapi.yaml
   internalScopes: ./workforce.internal-scopes.openapi.yaml
 servers:
-  - url: http://localhost:58086
+  - url: http://localhost:18086
     description: Local workforce runtime
 paths:
   /workforce/health:

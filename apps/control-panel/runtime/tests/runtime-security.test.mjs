@@ -152,6 +152,22 @@ test("dynamic BFF is limited to Identity and excludes direct WLT access", () => 
   assert.match(route, /Object\.hasOwn\(allowedPathPrefixes, service\)/);
 });
 
+test("anonymous Identity bootstrap can read only the public runtime probes", () => {
+  const proxy = read(bffProxyPath);
+  const publicProbeDeclaration = proxy.match(
+    /PUBLIC_IDENTITY_PROBE_PATHS\s*=\s*new Set\([^;]+;/,
+  )?.[0];
+
+  assert.ok(publicProbeDeclaration, "public Identity probe allowlist must be explicit");
+  assert.match(
+    publicProbeDeclaration,
+    /PUBLIC_IDENTITY_PROBE_PATHS\s*=\s*new Set\(\["\/identity\/health",\s*"\/identity\/readiness"\]\)/,
+  );
+  assert.match(proxy, /isSafeProbeMethod = request\.method === "GET"/);
+  assert.match(proxy, /!isPublicIdentityProbeRequest && !accessToken/);
+  assert.doesNotMatch(publicProbeDeclaration, /\/auth\//);
+});
+
 test("authenticated business services use explicit static BFF routes", () => {
   const staticRoutes = [
     "apps/control-panel/runtime/src/app/api/dsh/[...path]/route.ts",

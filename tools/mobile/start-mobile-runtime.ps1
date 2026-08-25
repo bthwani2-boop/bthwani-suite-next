@@ -19,9 +19,9 @@ $AdbHelper = Join-Path $PSScriptRoot "mobile-adb.ps1"
 $LanHelper = Join-Path $PSScriptRoot "mobile-lan.ps1"
 $MobileEnvFile = Join-Path $RepoRoot "infra\local\mobile.env"
 $DevSessionBrokerScript = Join-Path $RepoRoot "tools\dev\local-dev-session-broker.mjs"
-$DevSessionBrokerPort = 58100
-$DevSessionBrokerContractVersion = 2
-$DevGatewayPort = 58110
+$DevSessionBrokerPort = 18100
+$DevSessionBrokerContractVersion = 3
+$DevGatewayPort = 18110
 $DevGatewayContractVersion = 1
 
 if (-not (Test-Path -LiteralPath $RuntimeDir -PathType Container)) {
@@ -320,9 +320,10 @@ if ($resolvedTransport -eq "lan") {
 
     $env:BTHWANI_ADB_REVERSE_ENABLED = "1"
     $env:EXPO_PUBLIC_ADB_REVERSE_ENABLED = "true"
-    $env:EXPO_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:58080"
-    $env:EXPO_PUBLIC_IDENTITY_API_BASE_URL = "http://127.0.0.1:58082"
-    $env:EXPO_PUBLIC_WORKFORCE_API_BASE_URL = "http://127.0.0.1:58086"
+    $env:EXPO_PUBLIC_DSH_API_BASE_URL = "http://127.0.0.1:18080"
+    $identityHostPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_IDENTITY_API_HOST_PORT)) { "18082" } else { [string] $env:BTHWANI_IDENTITY_API_HOST_PORT }
+    $env:EXPO_PUBLIC_IDENTITY_API_BASE_URL = "http://127.0.0.1:$identityHostPort"
+    $env:EXPO_PUBLIC_WORKFORCE_API_BASE_URL = "http://127.0.0.1:18086"
 
     $adbPath = Resolve-BthwaniAdb
     Start-BthwaniAdbServer -AdbPath $adbPath
@@ -333,7 +334,8 @@ if ($resolvedTransport -eq "lan") {
     $env:BTHWANI_ANDROID_SERIAL = $selectedSerial
     $env:ADB = $adbPath
 
-    $ports = @(58080, 58082, 58086, 58100, 59000, $MetroPort)
+    $minioApiPort = if ([string]::IsNullOrWhiteSpace($env:BTHWANI_MINIO_API_PORT)) { 59000 } else { [int] $env:BTHWANI_MINIO_API_PORT }
+    $ports = @(18080, [int] $identityHostPort, 18086, 18100, $minioApiPort, $MetroPort)
     Invoke-BthwaniAdbReverse -AdbPath $adbPath -Serial $selectedSerial -Ports $ports
 
     $watchdogSetting = ([string] $env:BTHWANI_ADB_WATCHDOG).Trim().ToLowerInvariant()

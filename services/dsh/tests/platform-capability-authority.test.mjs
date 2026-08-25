@@ -10,14 +10,22 @@ function read(relativePath) {
 }
 
 const scopeVocabulary = JSON.parse(read("tools/verification/security-scope-vocabulary.json"));
+const capabilityContract = JSON.parse(read("services/dsh/contracts/authorization-capabilities.json"));
 const declaredScopes = new Set(
   scopeVocabulary.families.flatMap((family) => family.scopes.map(({ scope }) => scope)),
 );
 
-test("platform capability registry is bound to the canonical scope vocabulary", () => {
-  assert.ok(Array.isArray(scopeVocabulary.capabilities));
+test("platform capability contract is bound to the enforced scope inventory", () => {
+  assert.equal(
+    Object.hasOwn(scopeVocabulary, "capabilities"),
+    false,
+    "verification inventory must not own runtime capability semantics",
+  );
+  assert.equal(capabilityContract.authority, "DSH_CONTROL_PANEL_AUTHORIZATION_CAPABILITIES");
+  assert.equal(capabilityContract.owner, "services/dsh");
+  assert.ok(Array.isArray(capabilityContract.capabilities));
   const ids = new Set();
-  for (const capability of scopeVocabulary.capabilities) {
+  for (const capability of capabilityContract.capabilities) {
     assert.equal(ids.has(capability.id), false, `duplicate capability id: ${capability.id}`);
     ids.add(capability.id);
     for (const action of ["read", "manage", "healthRead", "auditRead", "rollback"]) {
@@ -32,7 +40,8 @@ test("platform capability registry is bound to the canonical scope vocabulary", 
   }
 
   const permissionsModule = read("services/dsh/frontend/shared/session/control-panel-permissions.ts");
-  assert.match(permissionsModule, /scope-vocabulary\.json/);
+  assert.match(permissionsModule, /contracts\/authorization-capabilities\.json/);
+  assert.doesNotMatch(permissionsModule, /tools\/verification\/security-scope-vocabulary/);
   assert.match(permissionsModule, /CONTROL_PANEL_CAPABILITIES/);
   assert.match(permissionsModule, /hasAllControlPanelPermissions/);
   assert.match(permissionsModule, /dshOperationalProfileRead/);
@@ -41,15 +50,16 @@ test("platform capability registry is bound to the canonical scope vocabulary", 
   assert.match(permissionsModule, /dshOperationalCapacityManage/);
   assert.match(permissionsModule, /dshOperationalPolicyEvaluate/);
   assert.equal(
-    scopeVocabulary.capabilities.some((capability) => capability.id === "dsh-operational-policy-evaluate"),
+    capabilityContract.capabilities.some((capability) => capability.id === "dsh-operational-policy-evaluate"),
     true,
   );
+  assert.doesNotMatch(permissionsModule, /permission\.(?:service|surface|action)\s*===\s*["'](?:\*|all)["']/);
 });
 
 test("platform policy routes use named DSH permission constants", () => {
   const routes = read("services/dsh/backend/internal/http/platformpolicies_routes.go");
   const server = read("services/dsh/backend/internal/http/server.go");
-  assert.match(read("services/dsh/backend/internal/http/platformpolicies.go"), /DshPlatformPermissionRead\s+=\s+"platform\.read"/);
+  assert.match(read("services/dsh/backend/internal/http/platformpolicies.go"), /DshPlatformPermissionRead\s+=\s+"platform:read"/);
   assert.match(read("services/dsh/backend/internal/http/platformpolicies.go"), /DshPlatformPermissionManage\s+=\s+"platform\.manage"/);
   assert.match(read("services/dsh/backend/internal/http/platformpolicies.go"), /DshOperationalPolicyEvaluatePermission\s+=\s+"dsh\.operational_policy\.evaluate"/);
   assert.doesNotMatch(routes, /"platform\.(?:read|manage)"/);
@@ -97,9 +107,9 @@ test("WLT payout-destination client exposes only operator-context methods", () =
 });
 
 test("local operator grants match the live DSH policy surfaces", () => {
-  const permissions = read("core/identity/backend/internal/identity/local_operator_permissions.go");
+  const permissions = read("core/identity/backend/internal/identity/employee_access.go");
   for (const permission of [
-    "platform.read",
+    "platform:read",
     "platform.manage",
     "dsh.fulfillment_sla.read",
     "dsh.fulfillment_sla.manage",
@@ -110,8 +120,9 @@ test("local operator grants match the live DSH policy surfaces", () => {
     "dsh.operational_policy.rollback",
     "finance.manage",
   ]) {
-    assert.match(permissions, new RegExp(`Action: "${permission.replaceAll(".", "\\.")}"`));
+    assert.match(permissions, new RegExp(`"${permission.replaceAll(".", "\\.")}"`));
   }
+  assert.doesNotMatch(permissions, /"platform\.read"/);
   for (const deadPermission of [
     "platform:flags:manage",
     "platform:services:manage",
@@ -119,6 +130,6 @@ test("local operator grants match the live DSH policy surfaces", () => {
     "platform:audit:export",
     "platform:wlt-policy:read",
   ]) {
-    assert.doesNotMatch(permissions, new RegExp(`Action: "${deadPermission.replaceAll(":", "\\:")}"`));
+    assert.doesNotMatch(permissions, new RegExp(`"${deadPermission.replaceAll(":", "\\:")}"`));
   }
 });
