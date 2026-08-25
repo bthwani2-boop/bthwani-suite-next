@@ -1,10 +1,11 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   dehydrate,
   hydrate,
   type DehydratedState,
   type QueryClient,
 } from "@tanstack/react-query";
+import { bthwaniKeyValueStorage, type BthwaniKeyValueStorage } from "./native-data-adapters.ts";
+import { isFinancialQueryKey } from "./query-keys.ts";
 
 const CACHE_SCHEMA_VERSION = 2;
 const MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000;
@@ -26,19 +27,20 @@ function isEnvelope(value: unknown): value is PersistedQueryEnvelope {
 export async function restoreBthwaniQueryClient(
   client: QueryClient,
   storageKey: string,
+  storage: BthwaniKeyValueStorage = bthwaniKeyValueStorage,
 ): Promise<void> {
   try {
-    const raw = await AsyncStorage.getItem(storageKey);
+    const raw = await storage.getItem(storageKey);
     if (!raw) return;
     try {
       const envelope: unknown = JSON.parse(raw);
       if (!isEnvelope(envelope) || Date.now() - envelope.persistedAt > MAX_CACHE_AGE_MS) {
-        await AsyncStorage.removeItem(storageKey);
+        await storage.removeItem(storageKey);
         return;
       }
       hydrate(client, envelope.clientState);
     } catch {
-      await AsyncStorage.removeItem(storageKey);
+      await storage.removeItem(storageKey);
     }
   } catch {
     // Storage unavailable (e.g. native module not linked); continue without cached state.
@@ -48,6 +50,7 @@ export async function restoreBthwaniQueryClient(
 export function persistBthwaniQueryClient(
   client: QueryClient,
   storageKey: string,
+  storage: BthwaniKeyValueStorage = bthwaniKeyValueStorage,
 ): () => void {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const unsubscribe = client.getQueryCache().subscribe(() => {
@@ -57,10 +60,14 @@ export function persistBthwaniQueryClient(
         schemaVersion: CACHE_SCHEMA_VERSION,
         persistedAt: Date.now(),
         clientState: dehydrate(client, {
-          shouldDehydrateQuery: (query) => query.state.status === "success",
+          // Financial queries are structurally excluded: balances and money
+          // state must always come from the server, never from a persisted
+          // cache envelope.
+          shouldDehydrateQuery: (query) =>
+            query.state.status === "success" && !isFinancialQueryKey(query.queryKey),
         }),
       };
-      void AsyncStorage.setItem(storageKey, JSON.stringify(envelope));
+      void storage.setItem(storageKey, JSON.stringify(envelope));
     }, 250);
   });
   return () => {
@@ -72,7 +79,8 @@ export function persistBthwaniQueryClient(
 export async function clearBthwaniQueryClient(
   client: QueryClient,
   storageKey: string,
+  storage: BthwaniKeyValueStorage = bthwaniKeyValueStorage,
 ): Promise<void> {
   client.clear();
-  await AsyncStorage.removeItem(storageKey);
+  await storage.removeItem(storageKey);
 }
