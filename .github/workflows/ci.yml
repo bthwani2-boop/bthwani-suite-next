@@ -1,6 +1,6 @@
 name: BThwani Contextual CI
 
-run-name: >-
+run-name: >- # closure-pr-run-name
   ${{ github.event_name == 'workflow_dispatch' && inputs.target_kind == 'pull_request' &&
   format('closure-pr-{0}-head-{1}-base-{2}', inputs.pr_number, inputs.expected_head_sha,
   inputs.expected_base_sha) || format('bthwani-ci-{0}-{1}', github.event_name, github.sha) }}

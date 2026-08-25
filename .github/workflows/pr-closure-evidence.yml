@@ -194,8 +194,8 @@ jobs:
             gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
             "/repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/runs?branch=${encoded_default}&even\
             t=workflow_dispatch&per_page=100" --jq '.workflow_runs[].id' > "${before}"
-            payload="$(jq -n --arg ref "${DEFAULT_BRANCH}" --argjson inputs "${inputs_json}" '{ref:$ref,in\
-            puts:$inputs}')"
+            payload="$(jq -n --arg ref "${DEFAULT_BRANCH}" --argjson inputs "${inputs_json}" \
+            '{ref:$ref,inputs:$inputs}')"
             printf '%s' "${payload}" | gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' \
             "/repos/${GITHUB_REPOSITORY}/actions/workflows/${workflow}/dispatches" --input - >/dev/null
             run_id=""
