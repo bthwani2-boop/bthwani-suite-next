@@ -289,6 +289,13 @@
       "sha256": "b4f76ca125bd0422a6711028fcb58389e48278388ca87c96840f9cdb2de0395a",
       "historicalPrefix": "1041",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 281,
+      "file": "dsh-1042_retire_local_admin_role_registry.sql",
+      "sha256": "fa13c71d6fbc706c8155e3f28796cd939d28de1d32f1b2c0858446e8b7e6e1a1",
+      "historicalPrefix": "1042",
+      "state": "ACTIVE"
     }
   ]
 }
