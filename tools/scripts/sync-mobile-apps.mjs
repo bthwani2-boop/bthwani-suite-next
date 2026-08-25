@@ -187,6 +187,9 @@ if (apply) {
   for (const key of targetAppKeys) {
     writeText(`${appDir(key)}/app.config.ts`, appConfig(key));
     writeJson(`${appDir(key)}/eas.json`, easTemplate);
+    // Shared runtime sources are byte-synchronized from the canonical template
+    // so observability configuration has exactly one owner.
+    writeText(`${appDir(key)}/src/config/sentry-config.ts`, readText("tools/mobile/runtime-shared/sentry-config.ts"));
   }
 
   console.log(`PASS: generated mobile app configs synchronized for ${targetAppKeys.join(", ")} without overwriting the Expo factory`);
@@ -197,6 +200,7 @@ assertSame("tools/mobile/defineBthwaniExpoApp.d.ts", factoryDtsContent());
 for (const key of targetAppKeys) {
   assertAppConfigSynced(key, `${appDir(key)}/app.config.ts`, appConfig(key));
   assertSame(`${appDir(key)}/eas.json`, JSON.stringify(easTemplate, null, 2) + "\n");
+  assertSame(`${appDir(key)}/src/config/sentry-config.ts`, readText("tools/mobile/runtime-shared/sentry-config.ts"));
 }
 
 const lifecycle = process.env.npm_lifecycle_event ?? "";
