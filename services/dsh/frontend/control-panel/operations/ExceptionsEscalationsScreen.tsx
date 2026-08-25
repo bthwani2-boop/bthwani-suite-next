@@ -349,6 +349,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
             placeholder="سجل سبب القرار وخطوات التحقق"
             rows={4}
             dir="rtl"
+            className="ui-resize-none"
           />
         </div>
         {canReassign(selectedDelivery) ? (
@@ -485,6 +486,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
                 placeholder="سجل حالة المرتجع وسبب عدم إعادة التنفيذ"
                 rows={4}
                 dir="rtl"
+                className="ui-resize-none"
               />
             </div>
             {actionState.kind === 'error' && actionState.id === selectedReturn.id ? (
@@ -512,6 +514,7 @@ export function ExceptionsEscalationsScreen({ hubHref }: ExceptionsEscalationsSc
             placeholder="اكتب نتيجة تشغيلية قابلة للتدقيق"
             rows={4}
             dir="rtl"
+            className="ui-resize-none"
           />
         </div>
         {actionState.kind === 'error' && actionState.id === selectedReadiness.id ? (

@@ -9,5 +9,4 @@ export * from './dsh-operational.contract';
 export * from './operations.types';
 export * from './operations-registry';
 export * from './use-operations-controller';
-export * from './theme';
 export * from './use-operations-permission';

@@ -116,6 +116,7 @@ export function RepresentativeWalletLookup() {
       </div>
 
       <form
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
           void lookup();

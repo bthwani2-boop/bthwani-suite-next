@@ -300,7 +300,7 @@ export function AssistedOrderDeskInspector({
             <textarea
               value={desk.auditReason.operatorNote}
               onChange={(e) => onUpdateAuditReason('operatorNote', e.target.value)}
-              className={styles.inspectorTextarea}
+              className={`${styles.inspectorTextarea} ui-resize-none`}
               rows={2}
             />
           </div>

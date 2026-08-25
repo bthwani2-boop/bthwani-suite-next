@@ -80,7 +80,7 @@ function LabeledField({ label, children }: { readonly label: string; readonly ch
 }
 
 // CpTextInput has no multiline mode and CpPrimitives.tsx is off-limits for this
-// migration, so multi-line fields keep a plain <textarea> instead of losing the
+// migration, so multi-line fields keep a plain multiline control instead of losing the
 // multiline affordance.
 function LabeledTextArea({
   label,
@@ -102,6 +102,7 @@ function LabeledTextArea({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         rows={rows}
+        className="ui-resize-none"
         style={{ width: "100%", font: "inherit", padding: "0.5rem 0.75rem", borderRadius: "0.75rem" }}
       />
     </LabeledField>
