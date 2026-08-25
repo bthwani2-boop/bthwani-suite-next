@@ -1,4 +1,4 @@
-import scopeVocabulary from "../../../../../tools/verification/security-scope-vocabulary.json";
+import capabilityContract from "../../../contracts/authorization-capabilities.json";
 
 export type ControlPanelPermissionIdentity = {
   readonly permissions?: readonly {
@@ -20,10 +20,7 @@ type CapabilityDefinition = {
   readonly rollback?: readonly string[];
 };
 
-const capabilityDefinitions = scopeVocabulary.capabilities as readonly CapabilityDefinition[];
-const vocabularyScopes = new Set(
-  scopeVocabulary.families.flatMap((family) => family.scopes.map(({ scope }) => scope)),
-);
+const capabilityDefinitions = capabilityContract.capabilities as readonly CapabilityDefinition[];
 
 function registeredCapabilityPermissions(
   id: string,
@@ -32,12 +29,7 @@ function registeredCapabilityPermissions(
   const definition = capabilityDefinitions.find((candidate) => candidate.id === id);
   const permissions = definition?.[action];
   if (!permissions || permissions.length === 0) {
-    throw new Error(`Capability ${id}.${action} is missing from the canonical scope vocabulary`);
-  }
-  for (const permission of permissions) {
-    if (!vocabularyScopes.has(permission)) {
-      throw new Error(`Capability ${id}.${action} references an undeclared permission: ${permission}`);
-    }
+    throw new Error(`Capability ${id}.${action} is missing from the canonical authorization capability contract`);
   }
   return Object.freeze([...permissions]);
 }

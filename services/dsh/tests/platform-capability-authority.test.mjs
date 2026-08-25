@@ -10,14 +10,22 @@ function read(relativePath) {
 }
 
 const scopeVocabulary = JSON.parse(read("tools/verification/security-scope-vocabulary.json"));
+const capabilityContract = JSON.parse(read("services/dsh/contracts/authorization-capabilities.json"));
 const declaredScopes = new Set(
   scopeVocabulary.families.flatMap((family) => family.scopes.map(({ scope }) => scope)),
 );
 
-test("platform capability registry is bound to the canonical scope vocabulary", () => {
-  assert.ok(Array.isArray(scopeVocabulary.capabilities));
+test("platform capability contract is bound to the enforced scope inventory", () => {
+  assert.equal(
+    Object.hasOwn(scopeVocabulary, "capabilities"),
+    false,
+    "verification inventory must not own runtime capability semantics",
+  );
+  assert.equal(capabilityContract.authority, "DSH_CONTROL_PANEL_AUTHORIZATION_CAPABILITIES");
+  assert.equal(capabilityContract.owner, "services/dsh");
+  assert.ok(Array.isArray(capabilityContract.capabilities));
   const ids = new Set();
-  for (const capability of scopeVocabulary.capabilities) {
+  for (const capability of capabilityContract.capabilities) {
     assert.equal(ids.has(capability.id), false, `duplicate capability id: ${capability.id}`);
     ids.add(capability.id);
     for (const action of ["read", "manage", "healthRead", "auditRead", "rollback"]) {
@@ -32,7 +40,8 @@ test("platform capability registry is bound to the canonical scope vocabulary", 
   }
 
   const permissionsModule = read("services/dsh/frontend/shared/session/control-panel-permissions.ts");
-  assert.match(permissionsModule, /scope-vocabulary\.json/);
+  assert.match(permissionsModule, /contracts\/authorization-capabilities\.json/);
+  assert.doesNotMatch(permissionsModule, /tools\/verification\/security-scope-vocabulary/);
   assert.match(permissionsModule, /CONTROL_PANEL_CAPABILITIES/);
   assert.match(permissionsModule, /hasAllControlPanelPermissions/);
   assert.match(permissionsModule, /dshOperationalProfileRead/);
@@ -41,7 +50,7 @@ test("platform capability registry is bound to the canonical scope vocabulary", 
   assert.match(permissionsModule, /dshOperationalCapacityManage/);
   assert.match(permissionsModule, /dshOperationalPolicyEvaluate/);
   assert.equal(
-    scopeVocabulary.capabilities.some((capability) => capability.id === "dsh-operational-policy-evaluate"),
+    capabilityContract.capabilities.some((capability) => capability.id === "dsh-operational-policy-evaluate"),
     true,
   );
   assert.doesNotMatch(permissionsModule, /permission\.(?:service|surface|action)\s*===\s*["'](?:\*|all)["']/);
