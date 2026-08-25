@@ -26,6 +26,7 @@
     "react-native": "0.86.2"
   },
   "exports": {
-    "./dsh": "./frontend/shared/dsh/index.ts"
+    "./dsh": "./frontend/shared/dsh/index.ts",
+    "./openapi": "./clients/generated/wlt-api.ts"
   }
 }

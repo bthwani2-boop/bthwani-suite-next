@@ -44,6 +44,7 @@
   },
   "exports": {
     "./mobile-capabilities": "./frontend/shared/mobile-capabilities.ts",
+    "./openapi": "./clients/generated/dsh-api.ts",
     "./app-client": "./frontend/app-client/index.ts",
     "./app-field": "./frontend/app-field/index.ts",
     "./app-partner": "./frontend/app-partner/index.ts",
