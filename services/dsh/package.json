@@ -28,6 +28,7 @@
     "@bthwani/core-identity": "workspace:*",
     "@bthwani/core-platform-control": "workspace:*",
     "@bthwani/core-providers": "workspace:*",
+    "@bthwani/core-workforce": "workspace:*",
     "@bthwani/data-runtime": "workspace:*",
     "@bthwani/ui-kit": "workspace:*",
     "@bthwani/wlt": "workspace:*",

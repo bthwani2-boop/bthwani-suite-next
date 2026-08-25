@@ -666,6 +666,9 @@ importers:
       '@bthwani/core-providers':
         specifier: workspace:*
         version: link:../../core/providers
+      '@bthwani/core-workforce':
+        specifier: workspace:*
+        version: link:../../core/workforce
       '@bthwani/data-runtime':
         specifier: workspace:*
         version: link:../../shared/data-runtime

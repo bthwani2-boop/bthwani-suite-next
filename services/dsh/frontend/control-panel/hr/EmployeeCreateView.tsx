@@ -163,7 +163,7 @@ export function EmployeeCreateView(props: {
                   username: username.trim(),
                   phoneE164: phoneE164.trim(),
                   engagementType: "employee",
-                  engagementStartDate: engagementStartDate.trim() || undefined,
+                  ...(engagementStartDate.trim() ? { engagementStartDate: engagementStartDate.trim() } : {}),
                   department: department.trim(),
                   role: role.trim(),
                   ...(fullNameEn.trim() ? { fullNameEn: fullNameEn.trim() } : {}),

@@ -252,12 +252,12 @@ export function EmployeeDetailView(props: { readonly actorId: string; readonly o
                 onClick={() => void controller.update({
                   expectedVersion: employee.version,
                   fullNameAr: fullNameAr.trim(),
-                  fullNameEn: fullNameEn.trim() || undefined,
+                  ...(fullNameEn.trim() ? { fullNameEn: fullNameEn.trim() } : {}),
                   department: department.trim(),
                   role: role.trim(),
-                  officeLocation: officeLocation.trim() || undefined,
-                  engagementStartDate: engagementStartDate.trim() || undefined,
-                  supervisorActorId: supervisor?.actorId,
+                  ...(officeLocation.trim() ? { officeLocation: officeLocation.trim() } : {}),
+                  ...(engagementStartDate.trim() ? { engagementStartDate: engagementStartDate.trim() } : {}),
+                  ...(supervisor?.actorId ? { supervisorActorId: supervisor.actorId } : {}),
                 })}
               >
                 {controller.actionBusy ? "جارٍ الحفظ…" : "حفظ البيانات الأساسية"}

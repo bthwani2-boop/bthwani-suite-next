@@ -62,8 +62,9 @@ export function DshFieldProfileCompletionScreen({ onBack, onLogout }: DshFieldPr
     setSaving(true);
     setMessage(null);
     setProblem(null);
+    const contactName = emergencyContactName.trim();
     const result = await workforce.updateSelf({
-      emergencyContactName: emergencyContactName.trim() || undefined,
+      ...(contactName ? { emergencyContactName: contactName } : {}),
       emergencyContactPhone: emergencyContactPhone.trim(),
       preferredLanguage,
       policyConsent: true,
