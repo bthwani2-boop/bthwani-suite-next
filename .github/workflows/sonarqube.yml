@@ -256,6 +256,10 @@ jobs:
 
           identity_db="identity_runtime"
           identity_url="postgres://${identity_db}:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5435/${identity_db}?sslmode=disable"
+          dsh_db="dsh_runtime"
+          dsh_url="postgres://${dsh_db}:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5433/${dsh_db}?sslmode=disable"
+          wlt_db="wlt_runtime"
+          wlt_url="postgres://${wlt_db}:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5434/${wlt_db}?sslmode=disable"
           actor_placeholders="$RUNNER_TEMP/go-coverage-actor-placeholders.json"
           cat > "$actor_placeholders" <<'JSON'
           {
@@ -354,37 +358,31 @@ jobs:
               case "$module" in
                 core/identity/backend)
                   IDENTITY_REQUIRE_DB_TESTS=true \
-                  DATABASE_URL="postgres://identity_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5435\
-                  /identity_runtime?sslmode=disable" \
+                  DATABASE_URL="${identity_url}" \
                     go test ./... -coverprofile="$raw_report"
                   ;;
                 core/workforce/backend)
                   WORKFORCE_REQUIRE_DB_TESTS=true \
-                  DATABASE_URL="postgres://workforce_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:543\
-                  6/workforce_runtime?sslmode=disable" \
+                  DATABASE_URL="${workforce_url}" \
                     go test ./... -coverprofile="$raw_report"
                   ;;
                 services/dsh/backend)
                   DSH_REQUIRE_DB_TESTS=true DSH_TEST_operator_context_id=local-dsh \
-                  DATABASE_URL="postgres://dsh_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5433/dsh_\
-                  runtime?sslmode=disable" \
+                  DATABASE_URL="${dsh_url}" \
                     go test ./... -coverprofile="$raw_report"
                   ;;
                 services/wlt/backend)
                   WLT_REQUIRE_DB_TESTS=true BTHWANI_OPERATOR_CONTEXT_ID=local-dsh \
-                  DATABASE_URL="postgres://wlt_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5434/wlt_\
-                  runtime?sslmode=disable" \
+                  DATABASE_URL="${wlt_url}" \
                     go test ./... -coverprofile="$raw_report"
                   ;;
                 core/platform-control/backend)
-                  DATABASE_URL="postgres://platform_control_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.\
-                  0.1:5437/platform_control_runtime?sslmode=disable" \
+                  DATABASE_URL="${platform_url}" \
                     go test ./... -coverprofile="$raw_report"
                   ;;
                 core/providers/backend)
                   DATABASE_TEST=1 \
-                  DATABASE_URL="postgres://providers_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:543\
-                  8/providers_runtime?sslmode=disable" \
+                  DATABASE_URL="${providers_url}" \
                     go test ./... -coverprofile="$raw_report"
                   ;;
                 *)
