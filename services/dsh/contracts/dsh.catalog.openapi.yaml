@@ -822,6 +822,8 @@ components:
         - isClientVisible
         - requiresProductCatalog
         - isManualRequest
+        - createdAt
+        - updatedAt
         properties:
           slug:
             type: string
@@ -841,6 +843,12 @@ components:
             type: boolean
           isManualRequest:
             type: boolean
+          createdAt:
+            type: string
+            format: date-time
+          updatedAt:
+            type: string
+            format: date-time
     CreateDomainRequest:
       type: object
       required:
@@ -911,6 +919,9 @@ components:
         - sortOrder
         - isActive
         - isClientVisible
+        - lifecycleStatus
+        - createdAt
+        - updatedAt
         properties:
           domainId:
             type: string
@@ -944,6 +955,24 @@ components:
             type: boolean
           requiresProductCatalog:
             type: boolean
+          lifecycleStatus:
+            type: string
+            enum:
+            - active
+            - deprecated
+            - merged
+            description: Taxonomy lifecycle; merged nodes point at their replacement
+              through mergedIntoId and disappear from listing queries.
+          mergedIntoId:
+            type:
+            - string
+            - 'null'
+          createdAt:
+            type: string
+            format: date-time
+          updatedAt:
+            type: string
+            format: date-time
     CreateNodeRequest:
       type: object
       required:
@@ -1040,6 +1069,10 @@ components:
         - measurementType
         - approvalStatus
         - isActive
+        - createdSource
+        - isStandalone
+        - createdAt
+        - updatedAt
         properties:
           domainId:
             type: string
@@ -1083,6 +1116,25 @@ components:
             - archived
           isActive:
             type: boolean
+          duplicateGroupId:
+            type:
+            - string
+            - 'null'
+          createdSource:
+            type: string
+            description: Provenance of the row, e.g. control-panel-catalog or product-proposal:<sourceSurface>.
+          parentId:
+            type:
+            - string
+            - 'null'
+          isStandalone:
+            type: boolean
+          createdAt:
+            type: string
+            format: date-time
+          updatedAt:
+            type: string
+            format: date-time
     CreateMasterProductRequest:
       type: object
       required:
@@ -1176,10 +1228,19 @@ components:
       - type: object
         required:
         - proposedNameAr
+        - proposedNameEn
         - domainId
+        - brand
         - sourceSurface
         - sourceActorId
         - status
+        - reviewNote
+        - reviewStage
+        - auditRequired
+        - resubmissionCount
+        - duplicateCandidates
+        - createdAt
+        - updatedAt
         properties:
           proposedNameAr:
             type: string
@@ -1203,6 +1264,11 @@ components:
             - 'null'
           sourceSurface:
             type: string
+            enum:
+            - app-field
+            - app-partner
+            - control-panel-catalog
+            - control-panel-platform
           sourceActorId:
             type: string
           sourceStoreId:
@@ -1211,8 +1277,79 @@ components:
             - 'null'
           status:
             type: string
+            enum:
+            - catalog-draft
+            - partner-proposed
+            - partner-review
+            - marketing-review
+            - catalog-adopted
+            - catalog-approved
+            - client-visible
+            - needs-fix
+            - rejected
+            - conflict
+            - withdrawn
           reviewNote:
             type: string
+          adoptedMasterProductId:
+            type:
+            - string
+            - 'null'
+          reviewStage:
+            type: string
+          partnerReviewedBy:
+            type:
+            - string
+            - 'null'
+          marketingReviewedBy:
+            type:
+            - string
+            - 'null'
+          catalogAdoptedBy:
+            type:
+            - string
+            - 'null'
+          catalogApprovedBy:
+            type:
+            - string
+            - 'null'
+          clientVisibleAt:
+            type:
+            - string
+            - 'null'
+            format: date-time
+          auditRequired:
+            type: boolean
+          blockedReason:
+            type:
+            - string
+            - 'null'
+          resubmissionCount:
+            type: integer
+          linkedStoreId:
+            type:
+            - string
+            - 'null'
+          targetMasterProductId:
+            type:
+            - string
+            - 'null'
+          baseVersion:
+            type:
+            - integer
+            - 'null'
+          duplicateCandidates:
+            type: array
+            items:
+              type: string
+            description: Master-product ids flagged as possible duplicates, mirrored
+              verbatim from JSONB column dsh_product_proposals.duplicate_candidates.
+          createdAt:
+            type: string
+            format: date-time
+          updatedAt:
+            type: string
+            format: date-time
     CreateProposalRequest:
       type: object
       required:
@@ -1242,6 +1379,27 @@ components:
           - 'null'
         sourceSurface:
           type: string
+          enum:
+          - app-field
+          - app-partner
+          - control-panel-catalog
+          - control-panel-platform
+          sourceStoreId:
+            type:
+            - string
+            - 'null'
+          targetMasterProductId:
+            type:
+            - string
+            - 'null'
+          baseVersion:
+            type:
+            - integer
+            - 'null'
+        duplicateCandidates:
+          type: array
+          items:
+            type: string
     UpdateProposalRequest:
       type: object
       required:
@@ -1283,11 +1441,108 @@ components:
           - 'null'
         createMasterProduct:
           type: boolean
+        mergeData:
+          type: boolean
     Policy:
       allOf:
       - $ref: '#/components/schemas/VersionedEntity'
       - type: object
-        additionalProperties: true
+        required:
+        - policyScope
+        - platformCommissionRate
+        - fieldPartnerOnboardingCommissionAmount
+        - fieldPartnerOnboardingCommissionCurrency
+        - storeOnboardingFeeAmount
+        - storeOnboardingFeeCurrency
+        - allowsStoreProductCustomImage
+        - allowsProductProposal
+        - requiresBarcode
+        - requiresCatalogReview
+        - requiresMarketingReview
+        - requiresProductImage
+        - requiresCategoryImage
+        - requiresDescription
+        - requiresBrand
+        - requiresUnit
+        - productDataQualityMinimumScore
+        - maxGalleryImages
+        - manualRequestMode
+        - isActive
+        - effectiveFrom
+        - notes
+        - createdAt
+        - updatedAt
+        properties:
+          domainId:
+            type:
+            - string
+            - 'null'
+          nodeId:
+            type:
+            - string
+            - 'null'
+          policyScope:
+            type: string
+            enum:
+            - default
+            - domain
+            - node
+          platformCommissionRate:
+            type: number
+            minimum: 0
+            maximum: 1
+          fieldPartnerOnboardingCommissionAmount:
+            type: number
+            minimum: 0
+          fieldPartnerOnboardingCommissionCurrency:
+            type: string
+          storeOnboardingFeeAmount:
+            type: number
+            minimum: 0
+          storeOnboardingFeeCurrency:
+            type: string
+          allowsStoreProductCustomImage:
+            type: boolean
+          allowsProductProposal:
+            type: boolean
+          requiresBarcode:
+            type: boolean
+          requiresCatalogReview:
+            type: boolean
+          requiresMarketingReview:
+            type: boolean
+          requiresProductImage:
+            type: boolean
+          requiresCategoryImage:
+            type: boolean
+          requiresDescription:
+            type: boolean
+          requiresBrand:
+            type: boolean
+          requiresUnit:
+            type: boolean
+          productDataQualityMinimumScore:
+            type: number
+            minimum: 0
+            maximum: 1
+          maxGalleryImages:
+            type: integer
+            minimum: 0
+          manualRequestMode:
+            type: boolean
+          isActive:
+            type: boolean
+          effectiveFrom:
+            type: string
+            format: date-time
+          notes:
+            type: string
+          createdAt:
+            type: string
+            format: date-time
+          updatedAt:
+            type: string
+            format: date-time
     UpdatePolicyRequest:
       type: object
       required:
@@ -1357,6 +1612,10 @@ components:
         - available
         - stockStatus
         - publicationStatus
+        - submittedBy
+        - approvedBy
+        - createdAt
+        - updatedAt
         properties:
           storeId:
             type: string
@@ -1383,6 +1642,23 @@ components:
             - 'null'
           publicationStatus:
             type: string
+            enum:
+            - draft
+            - submitted
+            - approved
+            - client_visible
+            - rejected
+            - hidden
+          submittedBy:
+            type: string
+          approvedBy:
+            type: string
+          createdAt:
+            type: string
+            format: date-time
+          updatedAt:
+            type: string
+            format: date-time
     UpsertAssortmentRequest:
       type: object
       required:
@@ -1421,7 +1697,97 @@ components:
       allOf:
       - $ref: '#/components/schemas/VersionedEntity'
       - type: object
-        additionalProperties: true
+        required:
+        - objectKey
+        - mimeType
+        - sizeBytes
+        - status
+        - originalFileName
+        - altAr
+        - altEn
+        - uploadedBy
+        - sourceSurface
+        - reviewNote
+        - createdAt
+        - updatedAt
+        properties:
+          objectKey:
+            type: string
+          publicUrl:
+            type:
+            - string
+            - 'null'
+          mimeType:
+            type: string
+          sizeBytes:
+            type: integer
+          width:
+            type:
+            - integer
+            - 'null'
+          height:
+            type:
+            - integer
+            - 'null'
+          checksumSha256:
+            type:
+            - string
+            - 'null'
+          originalFileName:
+            type: string
+          altAr:
+            type: string
+          altEn:
+            type: string
+          dominantColor:
+            type:
+            - string
+            - 'null'
+          status:
+            type: string
+            enum:
+            - draft
+            - uploaded
+            - pending_review
+            - approved
+            - rejected
+            - archived
+            - scanning
+            - quarantined
+          sourceSurface:
+            type: string
+            enum:
+            - control-panel-catalog
+            - control-panel-platform
+            - app-partner
+            - app-field
+            - system
+          uploadedBy:
+            type: string
+          reviewedBy:
+            type:
+            - string
+            - 'null'
+          reviewNote:
+            type: string
+          intendedEntityType:
+            type:
+            - string
+            - 'null'
+          intendedEntityId:
+            type:
+            - string
+            - 'null'
+          intendedRole:
+            type:
+            - string
+            - 'null'
+          createdAt:
+            type: string
+            format: date-time
+          updatedAt:
+            type: string
+            format: date-time
     UpdateAssetRequest:
       type: object
       required:

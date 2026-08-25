@@ -145,7 +145,7 @@ export interface ProductProposal {
   readonly adoptedMasterProductId: string | null;
   readonly targetMasterProductId: string | null;
   readonly baseVersion: number | null;
-  readonly duplicateCandidates: readonly string[] | null;
+  readonly duplicateCandidates: readonly string[];
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly reviewStage?: string;

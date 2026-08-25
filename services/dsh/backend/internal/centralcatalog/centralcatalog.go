@@ -12,6 +12,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"image"
@@ -715,36 +716,36 @@ func UpdateMasterProduct(ctx context.Context, db *sql.DB, id string, input Maste
 // ── Product proposals (request-to-add; never a sellable entity) ────────────
 
 type ProductProposal struct {
-	Version                int        `json:"version"`
-	ID                     string     `json:"id"`
-	ProposedNameAr         string     `json:"proposedNameAr"`
-	ProposedNameEn         string     `json:"proposedNameEn"`
-	DomainID               string     `json:"domainId"`
-	CategoryNodeID         *string    `json:"categoryNodeId"`
-	Brand                  string     `json:"brand"`
-	Barcode                *string    `json:"barcode"`
-	ImageObjectKey         *string    `json:"imageObjectKey"`
-	SourceSurface          string     `json:"sourceSurface"`
-	SourceActorID          string     `json:"sourceActorId"`
-	SourceStoreID          *string    `json:"sourceStoreId"`
-	Status                 string     `json:"status"`
-	ReviewNote             string     `json:"reviewNote"`
-	AdoptedMasterProductID *string    `json:"adoptedMasterProductId"`
-	CreatedAt              time.Time  `json:"createdAt"`
-	UpdatedAt              time.Time  `json:"updatedAt"`
-	ReviewStage            string     `json:"reviewStage"`
-	PartnerReviewedBy      *string    `json:"partnerReviewedBy"`
-	MarketingReviewedBy    *string    `json:"marketingReviewedBy"`
-	CatalogAdoptedBy       *string    `json:"catalogAdoptedBy"`
-	CatalogApprovedBy      *string    `json:"catalogApprovedBy"`
-	ClientVisibleAt        *time.Time `json:"clientVisibleAt"`
-	AuditRequired          bool       `json:"auditRequired"`
-	BlockedReason          *string    `json:"blockedReason"`
-	ResubmissionCount      int        `json:"resubmissionCount"`
-	LinkedStoreID          *string    `json:"linkedStoreId"`
-	TargetMasterProductID  *string    `json:"targetMasterProductId"`
-	BaseVersion            *int       `json:"baseVersion"`
-	DuplicateCandidates    []byte     `json:"duplicateCandidates"`
+	Version                int             `json:"version"`
+	ID                     string          `json:"id"`
+	ProposedNameAr         string          `json:"proposedNameAr"`
+	ProposedNameEn         string          `json:"proposedNameEn"`
+	DomainID               string          `json:"domainId"`
+	CategoryNodeID         *string         `json:"categoryNodeId"`
+	Brand                  string          `json:"brand"`
+	Barcode                *string         `json:"barcode"`
+	ImageObjectKey         *string         `json:"imageObjectKey"`
+	SourceSurface          string          `json:"sourceSurface"`
+	SourceActorID          string          `json:"sourceActorId"`
+	SourceStoreID          *string         `json:"sourceStoreId"`
+	Status                 string          `json:"status"`
+	ReviewNote             string          `json:"reviewNote"`
+	AdoptedMasterProductID *string         `json:"adoptedMasterProductId"`
+	CreatedAt              time.Time       `json:"createdAt"`
+	UpdatedAt              time.Time       `json:"updatedAt"`
+	ReviewStage            string          `json:"reviewStage"`
+	PartnerReviewedBy      *string         `json:"partnerReviewedBy"`
+	MarketingReviewedBy    *string         `json:"marketingReviewedBy"`
+	CatalogAdoptedBy       *string         `json:"catalogAdoptedBy"`
+	CatalogApprovedBy      *string         `json:"catalogApprovedBy"`
+	ClientVisibleAt        *time.Time      `json:"clientVisibleAt"`
+	AuditRequired          bool            `json:"auditRequired"`
+	BlockedReason          *string         `json:"blockedReason"`
+	ResubmissionCount      int             `json:"resubmissionCount"`
+	LinkedStoreID          *string         `json:"linkedStoreId"`
+	TargetMasterProductID  *string         `json:"targetMasterProductId"`
+	BaseVersion            *int            `json:"baseVersion"`
+	DuplicateCandidates    json.RawMessage `json:"duplicateCandidates"`
 }
 
 var validSourceSurface = map[string]bool{
@@ -792,18 +793,18 @@ func UpdateProposal(ctx context.Context, db *sql.DB, id string, actorID string, 
 }
 
 type ProductProposalInput struct {
-	ProposedNameAr        string  `json:"proposedNameAr"`
-	ProposedNameEn        string  `json:"proposedNameEn"`
-	DomainID              string  `json:"domainId"`
-	CategoryNodeID        *string `json:"categoryNodeId"`
-	Brand                 string  `json:"brand"`
-	Barcode               *string `json:"barcode"`
-	ImageObjectKey        *string `json:"imageObjectKey"`
-	SourceSurface         string  `json:"sourceSurface"`
-	SourceStoreID         *string `json:"sourceStoreId"`
-	TargetMasterProductID *string `json:"targetMasterProductId"`
-	BaseVersion           *int    `json:"baseVersion"`
-	DuplicateCandidates   []byte  `json:"duplicateCandidates"`
+	ProposedNameAr        string          `json:"proposedNameAr"`
+	ProposedNameEn        string          `json:"proposedNameEn"`
+	DomainID              string          `json:"domainId"`
+	CategoryNodeID        *string         `json:"categoryNodeId"`
+	Brand                 string          `json:"brand"`
+	Barcode               *string         `json:"barcode"`
+	ImageObjectKey        *string         `json:"imageObjectKey"`
+	SourceSurface         string          `json:"sourceSurface"`
+	SourceStoreID         *string         `json:"sourceStoreId"`
+	TargetMasterProductID *string         `json:"targetMasterProductId"`
+	BaseVersion           *int            `json:"baseVersion"`
+	DuplicateCandidates   json.RawMessage `json:"duplicateCandidates"`
 }
 
 const proposalColumns = `id, proposed_name_ar, proposed_name_en, domain_id, category_node_id, brand, barcode,
