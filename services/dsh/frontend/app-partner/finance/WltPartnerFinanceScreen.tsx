@@ -5,9 +5,9 @@
 import React from "react";
 import { View } from "react-native";
 import { Box, MobileScrollView, TopBar, useTheme } from "@bthwani/ui-kit";
-import { ActorWalletPanel } from '@bthwani/wlt/dsh';
-import { RepresentativeCommissionPanel } from '@bthwani/wlt/dsh';
-import { PayoutDestinationPanel } from '@bthwani/wlt/dsh';
+import { ActorWalletPanel } from '@bthwani/dsh/wlt';
+import { RepresentativeCommissionPanel } from '@bthwani/dsh/wlt';
+import { PayoutDestinationPanel } from '@bthwani/dsh/wlt';
 
 export type WltPartnerFinanceScreenProps = {
   readonly section?: "overview" | "commissions" | "payouts";

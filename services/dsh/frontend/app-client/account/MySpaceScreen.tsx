@@ -9,7 +9,7 @@ import {
   colorRoles,
   spacing,
 } from "@bthwani/ui-kit";
-import { ActorWalletPanel } from "@bthwani/wlt/dsh";
+import { ActorWalletPanel } from "@bthwani/dsh/wlt";
 
 export type MySpaceScreenProps = {
   onOpenOrders?: () => void;

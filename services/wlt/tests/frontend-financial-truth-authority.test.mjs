@@ -47,7 +47,7 @@ test("DSH frontend does not own fixed financial or delivery policy truth", () =>
 });
 
 test("WLT DSH-facing transport has one canonical implementation", () => {
-  const root = path.join(repoRoot, "services/wlt/frontend/shared/dsh");
+  const root = path.join(repoRoot, "services/dsh/frontend/wlt");
   for (const file of listCodeFiles(root)) {
     const source = fs.readFileSync(file, "utf8");
     assert.doesNotMatch(
@@ -60,7 +60,7 @@ test("WLT DSH-facing transport has one canonical implementation", () => {
 
 test("named WLT financial records and lifecycle states come from OpenAPI", () => {
   const boundary = read(
-    "services/wlt/frontend/shared/dsh/finance-boundary/wlt-dsh-boundary.types.ts",
+    "services/dsh/frontend/wlt/finance-boundary/wlt-dsh-boundary.types.ts",
   );
   for (const marker of [
     'components["schemas"]["PaymentStatus"]',
@@ -87,14 +87,14 @@ test("named WLT financial records and lifecycle states come from OpenAPI", () =>
   }
 
   const commissionApi = read(
-    "services/wlt/frontend/shared/dsh/commissions/commission.api.ts",
+    "services/dsh/frontend/wlt/commissions/commission.api.ts",
   );
-  assert.match(commissionApi, /@bthwani\/wlt-openapi/);
+  assert.match(commissionApi, /@bthwani\/wlt\/openapi/);
   assert.doesNotMatch(commissionApi, /export type Commission\s*=\s*\{/);
   assert.doesNotMatch(commissionApi, /export type CommissionDetail\s*=\s*\{/);
 
   const walletApi = read(
-    "services/wlt/frontend/shared/dsh/actor-wallet/actor-wallet.api.ts",
+    "services/dsh/frontend/wlt/actor-wallet/actor-wallet.api.ts",
   );
   assert.match(walletApi, /components\["schemas"\]\["LedgerEntry"\]/);
   assert.doesNotMatch(

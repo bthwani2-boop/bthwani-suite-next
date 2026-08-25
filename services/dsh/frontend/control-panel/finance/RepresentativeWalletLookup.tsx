@@ -15,12 +15,12 @@ import {
 } from "@bthwani/control-panel/components";
 import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
-import { formatWltMoney } from '@bthwani/wlt/dsh';
+import { formatWltMoney } from '@bthwani/dsh/wlt';
 import type {
   RepresentativeWalletActorType,
   RepresentativeLedgerEntry,
   RepresentativeWallet,
-} from '@bthwani/wlt/dsh';
+} from '@bthwani/dsh/wlt';
 
 const { request } = createDshHttpClient(
   resolveDshApiBaseUrl(),

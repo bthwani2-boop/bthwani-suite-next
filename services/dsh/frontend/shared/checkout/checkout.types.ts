@@ -1,4 +1,4 @@
-import type { paths } from "@bthwani/dsh-openapi";
+import type { paths } from "@bthwani/dsh/openapi";
 
 type CreateCheckoutIntentOperation = paths["/dsh/client/checkout-intents"]["post"];
 type CreateCheckoutIntentEnvelope =

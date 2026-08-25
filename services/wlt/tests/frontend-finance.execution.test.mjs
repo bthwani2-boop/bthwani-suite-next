@@ -43,9 +43,9 @@ globalThis.fetch = async (input, init = {}) => {
   return Response.json({});
 };
 
-const payout = await import("../frontend/shared/dsh/payouts/payout.api.ts");
-const operator = await import("../frontend/shared/dsh/payouts/payout-operator.api.ts");
-const finance = await import("../frontend/shared/dsh/finance/finance-hub-runtime.api.ts");
+const payout = await import("../../dsh/frontend/wlt/payouts/payout.api.ts");
+const operator = await import("../../dsh/frontend/wlt/payouts/payout-operator.api.ts");
+const finance = await import("../../dsh/frontend/wlt/finance/finance-hub-runtime.api.ts");
 
 test("payout boundary executes verified, missing and mutation paths", async () => {
   const destination = await payout.fetchOwnPayoutDestination("partner");

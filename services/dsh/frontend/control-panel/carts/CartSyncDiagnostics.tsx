@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { formatWltMoney } from "@bthwani/wlt/dsh";
+import { formatWltMoney } from "@bthwani/dsh/wlt";
 import { Button, LoadingState, StateView, Surface, Text, Badge, colorRoles, spacing, alpha, radius } from "@bthwani/ui-kit";
 import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";

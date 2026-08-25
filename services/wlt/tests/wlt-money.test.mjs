@@ -7,7 +7,7 @@ import ts from "@typescript/typescript6";
 
 const testDirectory = path.dirname(fileURLToPath(import.meta.url));
 const source = fs.readFileSync(
-  path.resolve(testDirectory, "../frontend/shared/dsh/finance/wlt-money.ts"),
+  path.resolve(testDirectory, "../../dsh/frontend/wlt/finance/wlt-money.ts"),
   "utf8",
 );
 const transpiled = ts.transpileModule(source, {

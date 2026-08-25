@@ -12,7 +12,7 @@ import {
 import type {
   PaymentDecisionOption,
   PaymentMethodKey,
-} from "@bthwani/wlt/dsh";
+} from "@bthwani/dsh/wlt";
 
 type Props = {
   readonly paymentMethod: PaymentMethodKey;

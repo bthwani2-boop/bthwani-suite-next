@@ -14,7 +14,7 @@ import {
 import { FinanceReadOnlyFrame } from "@bthwani/control-panel/shell";
 import { createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
-import { formatWltMoney } from '@bthwani/wlt/dsh';
+import { formatWltMoney } from '@bthwani/dsh/wlt';
 
 const { request } = createDshHttpClient(
   resolveDshApiBaseUrl(),

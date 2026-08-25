@@ -5,7 +5,7 @@ import { colorRoles } from "@bthwani/ui-kit";
 import {
   minorUnitsToWltMajorInput,
   parseWltMajorInputToMinorUnits,
-} from "@bthwani/wlt/dsh";
+} from "@bthwani/dsh/wlt";
 import {
   CpButton,
   CpRetryButton,
