@@ -13,7 +13,7 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$Reason,
 
-  [switch]$AllowLocalDevelopmentRebuild
+  [switch]$AllowLocalDevelopmentReset
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,16 +25,15 @@ $RuntimeOrchestrator = Join-Path $RepoRoot "infra/docker/scripts/runtime.ps1"
 if (-not (Test-Path -LiteralPath $RuntimeOrchestrator -PathType Leaf)) {
   throw "Canonical runtime authority not found: $RuntimeOrchestrator"
 }
-
-if (-not $AllowLocalDevelopmentRebuild) {
-  throw "Service database rebuild requires the explicit -AllowLocalDevelopmentRebuild switch."
+if (-not $AllowLocalDevelopmentReset) {
+  throw "Service database reset requires the explicit -AllowLocalDevelopmentReset switch."
 }
 
 $environmentValues = @($env:NODE_ENV, $env:ENVIRONMENT, $env:BTHWANI_ENVIRONMENT) |
   Where-Object { -not [string]::IsNullOrWhiteSpace($_) } |
   ForEach-Object { $_.Trim().ToLowerInvariant() }
 if ($environmentValues -contains "production") {
-  throw "Service database rebuild is forbidden in production."
+  throw "Service database reset is forbidden in production."
 }
 if (-not (Test-Path -LiteralPath $ComposeFile -PathType Leaf)) {
   throw "Compose file not found: $ComposeFile"
@@ -109,7 +108,7 @@ function Invoke-AdminPsql {
   }
 }
 
-Write-Warning "Rebuilding governed local-development database for service '$Service'. Reason: $Reason"
+Write-Warning "Resetting governed local-development database for service '$Service'. Reason: $Reason"
 
 $runningServices = @(
   & docker compose --env-file $EnvFile -f $ComposeFile ps --services --status running 2>$null |
@@ -119,11 +118,10 @@ $runningServices = @(
 if ($LASTEXITCODE -ne 0) {
   throw "Unable to determine running compose services."
 }
-$apiServiceWasStopped = $false
+
 if ($runningServices -contains $apiService) {
-  Write-Host "Stopping $apiService before rebuilding $databaseName..."
+  Write-Host "Quiescing $apiService through canonical runtime authority before resetting $databaseName..."
   & $RuntimeOrchestrator -Action service-stop -Profiles ([string]$config.Profile) -Service $apiService
-  $apiServiceWasStopped = $true
 }
 
 $recreateSql = @"
@@ -136,31 +134,18 @@ DROP DATABASE IF EXISTS "$databaseName";
 CREATE DATABASE "$databaseName" OWNER "$databaseOwner" TEMPLATE template0 ENCODING 'UTF8';
 "@
 
-try {
-  Invoke-AdminPsql -Database "postgres" -Sql $recreateSql
+Invoke-AdminPsql -Database "postgres" -Sql $recreateSql
 
-  foreach ($extension in @($config.Extensions)) {
-    if ([string]$extension -notmatch '^[a-z][a-z0-9_]*$') {
-      throw "Unsafe governed extension identifier: $extension"
-    }
-    Invoke-AdminPsql -Database $databaseName -Sql "CREATE EXTENSION IF NOT EXISTS `"$extension`";"
+foreach ($extension in @($config.Extensions)) {
+  if ([string]$extension -notmatch '^[a-z][a-z0-9_]*$') {
+    throw "Unsafe governed extension identifier: $extension"
   }
-} finally {
-  # A service this script stopped must never be left down, including when the
-  # rebuild itself fails. Leaving it stopped is how a governed ledger conflict
-  # turned into a runtime whose API never came back and whose start-only local
-  # bootstrap therefore never ran again.
-  #
-  # A restart failure must not mask the rebuild failure that caused it, so it is
-  # reported as a warning and the original error keeps propagating.
-  if ($apiServiceWasStopped) {
-    Write-Host "Restarting $apiService after rebuilding $databaseName..."
-    try {
-      & $RuntimeOrchestrator -Action service-up -Profiles ([string]$config.Profile) -Service $apiService
-    } catch {
-      Write-Warning "Could not restart '$apiService' after the database rebuild: $($_.Exception.Message)"
-    }
-  }
+  Invoke-AdminPsql -Database $databaseName -Sql "CREATE EXTENSION IF NOT EXISTS `"$extension`";"
 }
 
-Write-Host "Governed local-development database rebuild: PASS service=$Service database=$databaseName"
+# Deliberately do not restart the API here. This script is a destructive reset
+# primitive, not a lifecycle/recovery authority. Its caller must re-apply the
+# canonical migration ledger and only the canonical runtime orchestrator may
+# start services after that convergence succeeds. Any failure therefore leaves
+# the affected API fail-closed instead of serving against an empty schema.
+Write-Host "Governed local-development database reset: PASS service=$Service database=$databaseName api_restart=DEFERRED_TO_CANONICAL_RUNTIME"
