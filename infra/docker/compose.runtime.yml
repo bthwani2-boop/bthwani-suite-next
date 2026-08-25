@@ -86,9 +86,33 @@ services:
         mc alias set local http://minio:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"
         mc mb --ignore-existing local/dsh-media
         mc anonymous set none local/dsh-media
-        printf '%s' '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":["s3:GetObject","s3:PutObject","s3:DeleteObject","s3:ListBucket","s3:GetBucketLocation"],"Resource":["arn:aws:s3:::dsh-media","arn:aws:s3:::dsh-media/*"]}]}' > /tmp/dsh-media-rw.json
-        mc admin policy create local dsh-media-rw /tmp/dsh-media-rw.json || mc admin policy info local dsh-media-rw >/dev/null
-        mc admin user add local "$$DSH_MINIO_ACCESS_KEY" "$$DSH_MINIO_SECRET_KEY" || mc admin user info local "$$DSH_MINIO_ACCESS_KEY" >/dev/null
+        cat > /tmp/dsh-media-rw.json <<'JSON'
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:GetObject",
+                "s3:PutObject",
+                "s3:DeleteObject",
+                "s3:ListBucket",
+                "s3:GetBucketLocation"
+              ],
+              "Resource": [
+                "arn:aws:s3:::dsh-media",
+                "arn:aws:s3:::dsh-media/*"
+              ]
+            }
+          ]
+        }
+        JSON
+        if ! mc admin policy create local dsh-media-rw /tmp/dsh-media-rw.json; then
+          mc admin policy info local dsh-media-rw >/dev/null
+        fi
+        if ! mc admin user add local "$$DSH_MINIO_ACCESS_KEY" "$$DSH_MINIO_SECRET_KEY"; then
+          mc admin user info local "$$DSH_MINIO_ACCESS_KEY" >/dev/null
+        fi
         mc admin policy attach local dsh-media-rw --user "$$DSH_MINIO_ACCESS_KEY"
         mc ls local/dsh-media >/dev/null
     networks:
@@ -111,9 +135,12 @@ services:
       <<: *bthwani-environment
       PORT: "8082"
       DATABASE_URL: "postgres://${BTHWANI_IDENTITY_DB_USER:-identity_runtime}:${BTHWANI_IDENTITY_DB_PASSWORD:-identity_runtime_password}@postgres:5432/${BTHWANI_IDENTITY_DB_NAME:-identity_runtime}?sslmode=disable"
-      IDENTITY_ACTIVATION_HMAC_SECRET: "${IDENTITY_ACTIVATION_HMAC_SECRET:-LOCAL_ONLY_replace_with_32_plus_byte_activation_hmac_secret}"
-      IDENTITY_WORKFORCE_SERVICE_TOKEN: "${IDENTITY_WORKFORCE_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_workforce_internal_service_token}"
-      IDENTITY_DSH_SERVICE_TOKEN: "${IDENTITY_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_dsh_identity_internal_service_token}"
+      IDENTITY_ACTIVATION_HMAC_SECRET: >-
+        ${IDENTITY_ACTIVATION_HMAC_SECRET:-LOCAL_ONLY_replace_with_32_plus_byte_activation_hmac_secret}
+      IDENTITY_WORKFORCE_SERVICE_TOKEN: >-
+        ${IDENTITY_WORKFORCE_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_workforce_internal_service_token}
+      IDENTITY_DSH_SERVICE_TOKEN: >-
+        ${IDENTITY_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_dsh_identity_internal_service_token}
     ports:
       - "127.0.0.1:${BTHWANI_IDENTITY_API_HOST_PORT:-18082}:8082"
     depends_on:
@@ -140,7 +167,8 @@ services:
       PORT: "8086"
       DATABASE_URL: "postgres://${BTHWANI_WORKFORCE_DB_USER:-workforce_runtime}:${BTHWANI_WORKFORCE_DB_PASSWORD:-workforce_runtime_password}@postgres:5432/${BTHWANI_WORKFORCE_DB_NAME:-workforce_runtime}?sslmode=disable"
       WORKFORCE_IDENTITY_BASE_URL: "http://identity-api:8082"
-      WORKFORCE_IDENTITY_SERVICE_TOKEN: "${IDENTITY_WORKFORCE_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_workforce_internal_service_token}"
+      WORKFORCE_IDENTITY_SERVICE_TOKEN: >-
+        ${IDENTITY_WORKFORCE_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_workforce_internal_service_token}
       WORKFORCE_DSH_BASE_URL: "${WORKFORCE_DSH_BASE_URL:-http://dsh-api:8080}"
       WORKFORCE_DSH_SERVICE_TOKEN: "${WORKFORCE_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_workforce_dsh_service_token}"
       WORKFORCE_WLT_BASE_URL: "${WORKFORCE_WLT_BASE_URL:-http://wlt-api:8083}"
@@ -205,7 +233,8 @@ services:
       DATABASE_URL: "postgres://${BTHWANI_PLATFORM_CONTROL_DB_USER:-platform_control_runtime}:${BTHWANI_PLATFORM_CONTROL_DB_PASSWORD:-platform_control_runtime_password}@postgres:5432/${BTHWANI_PLATFORM_CONTROL_DB_NAME:-platform_control_runtime}?sslmode=disable"
       PLATFORM_CONTROL_IDENTITY_BASE_URL: "http://identity-api:8082"
       PLATFORM_CONTROL_CORS_ALLOWED_ORIGINS: "${PLATFORM_CONTROL_CORS_ALLOWED_ORIGINS:-http://localhost:13000}"
-      PLATFORM_CONTROL_DSH_SERVICE_TOKEN: "${PLATFORM_CONTROL_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_platform_control_dsh_service_token}"
+      PLATFORM_CONTROL_DSH_SERVICE_TOKEN: >-
+        ${PLATFORM_CONTROL_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_platform_control_dsh_service_token}
     ports:
       - "127.0.0.1:${BTHWANI_PLATFORM_CONTROL_API_HOST_PORT:-18088}:8088"
     depends_on:
@@ -278,7 +307,8 @@ services:
       DSH_AUTH_MODE: "identity-required-for-protected-store-actions"
       DSH_DISPATCH_ASSIGNMENT_KILL_SWITCH: "${DSH_DISPATCH_ASSIGNMENT_KILL_SWITCH:-true}"
       DSH_IDENTITY_BASE_URL: "http://identity-api:8082"
-      DSH_IDENTITY_SERVICE_TOKEN: "${IDENTITY_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_dsh_identity_internal_service_token}"
+      DSH_IDENTITY_SERVICE_TOKEN: >-
+        ${IDENTITY_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_dsh_identity_internal_service_token}
       DSH_WLT_BASE_URL: "${DSH_WLT_BASE_URL:-http://wlt-api:8083}"
       WLT_DSH_SERVICE_TOKEN: "${WLT_DSH_SERVICE_TOKEN:-dev-only-dsh-wlt-shared-secret}"
       DSH_WLT_SERVICE_TOKEN: "${DSH_WLT_SERVICE_TOKEN:-dev-only-dsh-wlt-shared-secret}"
@@ -287,7 +317,8 @@ services:
       WORKFORCE_DSH_SERVICE_TOKEN: "${WORKFORCE_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_workforce_dsh_service_token}"
       DSH_WORKFORCE_SERVICE_TOKEN: "${WORKFORCE_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_workforce_dsh_service_token}"
       DSH_PLATFORM_CONTROL_BASE_URL: "${DSH_PLATFORM_CONTROL_BASE_URL:-http://platform-control-api:8088}"
-      PLATFORM_CONTROL_DSH_SERVICE_TOKEN: "${PLATFORM_CONTROL_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_platform_control_dsh_service_token}"
+      PLATFORM_CONTROL_DSH_SERVICE_TOKEN: >-
+        ${PLATFORM_CONTROL_DSH_SERVICE_TOKEN:-LOCAL_ONLY_replace_with_platform_control_dsh_service_token}
       DSH_MINIO_ENDPOINT: "minio:9000"
       DSH_MINIO_PUBLIC_ENDPOINT: "${BTHWANI_MINIO_PUBLIC_ENDPOINT:-localhost:59000}"
       DSH_MINIO_ACCESS_KEY: "${BTHWANI_MINIO_DSH_ACCESS_KEY:-dsh_media_local}"

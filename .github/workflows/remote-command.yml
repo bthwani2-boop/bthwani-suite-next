@@ -9,7 +9,9 @@ permissions: {}
 jobs:
   dispatch:
     name: Validate and dispatch canonical remote command
-    if: ${{ github.event.issue.title == '[remote-command]' && contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) }}
+    if: >-
+      ${{ github.event.issue.title == '[remote-command]' &&
+      contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     permissions:
@@ -44,8 +46,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          permission="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/collaborators/${REQUEST_ACTOR}/permission" --jq '.permission')"
-          case "${permission}" in admin|maintain|write) ;; *) echo "::error::remote command requires write/maintain/admin"; exit 1;; esac
+          permission="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+          "/repos/${GITHUB_REPOSITORY}/collaborators/${REQUEST_ACTOR}/permission" --jq '.permission')"
+          case "${permission}" in admin|maintain|write) ;; *) echo \
+          "::error::remote command requires write/maintain/admin"; exit 1;; esac
 
           printf '%s' "${REQUEST_BODY}" > "${RUNNER_TEMP}/request.json"
           jq -e '
@@ -56,9 +60,11 @@ jobs:
             ((.target_ref // "")|type=="string") and
             ((.pr_number // 0)|type=="number") and
             (.expected_head_sha|type=="string" and test("^[0-9a-fA-F]{40}$")) and
-            (((.expected_base_sha // "") == "") or ((.expected_base_sha|type=="string") and (.expected_base_sha|test("^[0-9a-fA-F]{40}$")))) and
+            (((.expected_base_sha // "") == "") or ((.expected_base_sha|type=="string") and \
+            (.expected_base_sha|test("^[0-9a-fA-F]{40}$")))) and
             ((.journey // "")|type=="string") and
-            ((keys-["schema_version","request_id","command","target_kind","target_ref","pr_number","expected_head_sha","expected_base_sha","journey"])|length==0)
+            ((keys-["schema_version","request_id","command","target_kind","target_ref","pr_number","expect\
+            ed_head_sha","expected_base_sha","journey"])|length==0)
           ' "${RUNNER_TEMP}/request.json" >/dev/null
 
           command="$(jq -r '.command' "${RUNNER_TEMP}/request.json")"
@@ -71,12 +77,15 @@ jobs:
           request_id="$(jq -r '.request_id' "${RUNNER_TEMP}/request.json")"
 
           case "${command}" in
-            ci-affected|ci-full|ci-runtime|ci-journey|codeql-full|codeql-hygiene|sonar-full|security-full|semgrep-full|lockfile-integrity|remote-evidence) ;;
+            ci-affected|ci-full|ci-runtime|ci-journey|codeql-full|codeql-hygiene|sonar-full|security-full|semgrep-full|lockfile-integrity|remote-evidence)
+              ;;
             *) echo "::error::unsupported remote command: ${command}"; exit 1;;
           esac
-          [[ "${command}" != "ci-journey" || -n "${journey}" ]] || { echo "::error::ci-journey requires journey"; exit 1; }
+          [[ "${command}" != "ci-journey" || -n "${journey}" ]] || { echo \
+          "::error::ci-journey requires journey"; exit 1; }
 
-          default_branch="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}" --jq '.default_branch')"
+          default_branch="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}" --j\
+          q '.default_branch')"
           if [[ "${target_kind}" == "pull_request" ]]; then
             [[ "${pr_number}" =~ ^[1-9][0-9]*$ ]] || { echo "::error::pr_number required"; exit 1; }
             pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${pr_number}")"
@@ -84,19 +93,25 @@ jobs:
             actual_head="$(jq -r '.head.sha' <<<"${pr}")"
             actual_base="$(jq -r '.base.sha' <<<"${pr}")"
             target_ref="$(jq -r '.head.ref' <<<"${pr}")"
-            [[ "${actual_head}" == "${expected_head_sha}" ]] || { echo "::error::PR head moved: expected=${expected_head_sha} actual=${actual_head}"; exit 1; }
-            [[ -z "${expected_base_sha}" || "${actual_base}" == "${expected_base_sha}" ]] || { echo "::error::PR base moved: expected=${expected_base_sha} actual=${actual_base}"; exit 1; }
+            [[ "${actual_head}" == "${expected_head_sha}" ]] || { echo \
+            "::error::PR head moved: expected=${expected_head_sha} actual=${actual_head}"; exit 1; }
+            [[ -z "${expected_base_sha}" || "${actual_base}" == "${expected_base_sha}" ]] || { echo \
+            "::error::PR base moved: expected=${expected_base_sha} actual=${actual_base}"; exit 1; }
             expected_base_sha="${actual_base}"
           else
             [[ -n "${target_ref}" ]] || { echo "::error::branch target_ref required"; exit 1; }
             git check-ref-format --branch "${target_ref}" >/dev/null
             encoded="$(jq -rn --arg v "${target_ref}" '$v|@uri')"
-            actual_head="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/branches/${encoded}" --jq '.commit.sha')"
-            [[ "${actual_head}" == "${expected_head_sha}" ]] || { echo "::error::branch moved: expected=${expected_head_sha} actual=${actual_head}"; exit 1; }
+            actual_head="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/branches/${encoded}" --jq '.commit.sha')"
+            [[ "${actual_head}" == "${expected_head_sha}" ]] || { echo \
+            "::error::branch moved: expected=${expected_head_sha} actual=${actual_head}"; exit 1; }
           fi
 
-          [[ "${command}" != "codeql-hygiene" || "${target_ref}" == "${default_branch}" ]] || { echo "::error::codeql-hygiene is default-branch only"; exit 1; }
-          [[ "${command}" != "remote-evidence" || "${target_ref}" == "${default_branch}" ]] || { echo "::error::remote-evidence is default-branch only"; exit 1; }
+          [[ "${command}" != "codeql-hygiene" || "${target_ref}" == "${default_branch}" ]] || { echo \
+          "::error::codeql-hygiene is default-branch only"; exit 1; }
+          [[ "${command}" != "remote-evidence" || "${target_ref}" == "${default_branch}" ]] || { echo \
+          "::error::remote-evidence is default-branch only"; exit 1; }
 
           {
             echo "command=${command}"
@@ -135,7 +150,8 @@ jobs:
             codeql-full|sonar-full|security-full|semgrep-full|lockfile-integrity)
             dispatch_ref="${DEFAULT_BRANCH}"
             encoded_default="$(jq -rn --arg value "${DEFAULT_BRANCH}" '$value|@uri')"
-            dispatch_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/branches/${encoded_default}" --jq '.commit.sha')"
+            dispatch_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/branches/${encoded_default}" --jq '.commit.sha')"
               ;;
           esac
           {
@@ -151,7 +167,9 @@ jobs:
           DISPATCH_REF: ${{ steps.route.outputs.dispatch_ref }}
         run: |
           encoded="$(jq -rn --arg v "${DISPATCH_REF}" '$v|@uri')"
-          gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW}/runs?branch=${encoded}&event=workflow_dispatch&per_page=100" --jq '.workflow_runs[].id' > "${RUNNER_TEMP}/before.txt"
+          gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+          "/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW}/runs?branch=${encoded}&event=workflow\
+          _dispatch&per_page=100" --jq '.workflow_runs[].id' > "${RUNNER_TEMP}/before.txt"
 
       - name: Dispatch canonical workflow
         shell: bash
@@ -169,18 +187,84 @@ jobs:
           set -euo pipefail
           inputs='{}'
           case "${COMMAND}" in
-            ci-affected) inputs="$(jq -cn --arg kind "${TARGET_KIND}" --arg pr "${PR_NUMBER}" --arg head "${HEAD_SHA}" --arg base "${BASE_SHA}" '{mode:"affected",journey:"",runtime_proof:false,target_kind:$kind,pr_number:$pr,expected_head_sha:$head,expected_base_sha:$base}')" ;;
-            ci-full) inputs="$(jq -cn --arg kind "${TARGET_KIND}" --arg pr "${PR_NUMBER}" --arg head "${HEAD_SHA}" --arg base "${BASE_SHA}" '{mode:"full",journey:"",runtime_proof:false,target_kind:$kind,pr_number:$pr,expected_head_sha:$head,expected_base_sha:$base}')" ;;
-            ci-runtime) inputs="$(jq -cn --arg kind "${TARGET_KIND}" --arg pr "${PR_NUMBER}" --arg head "${HEAD_SHA}" --arg base "${BASE_SHA}" '{mode:"full",journey:"",runtime_proof:true,target_kind:$kind,pr_number:$pr,expected_head_sha:$head,expected_base_sha:$base}')" ;;
-            ci-journey) inputs="$(jq -cn --arg kind "${TARGET_KIND}" --arg pr "${PR_NUMBER}" --arg head "${HEAD_SHA}" --arg base "${BASE_SHA}" --arg journey "${JOURNEY}" '{mode:"affected",journey:$journey,runtime_proof:false,target_kind:$kind,pr_number:$pr,expected_head_sha:$head,expected_base_sha:$base}')" ;;
-            codeql-full) inputs="$(jq -cn --arg kind "${TARGET_KIND}" --arg pr "${PR_NUMBER}" --arg head "${HEAD_SHA}" --arg base "${BASE_SHA}" --arg head_ref "${HEAD_REF}" '{pr_number:(if $kind=="pull_request" then $pr else "" end),head_sha:$head,base_sha:$base,head_ref:$head_ref}')" ;;
-            sonar-full) inputs="$(jq -cn --arg kind "${TARGET_KIND}" --arg pr "${PR_NUMBER}" --arg head "${HEAD_SHA}" --arg base "${BASE_SHA}" --arg head_ref "${HEAD_REF}" '{pr_number:(if $kind=="pull_request" then $pr else "" end),head_sha:$head,base_sha:$base,head_ref:$head_ref}')" ;;
-            security-full|lockfile-integrity) inputs="$(jq -cn --arg kind "${TARGET_KIND}" --arg pr "${PR_NUMBER}" --arg head "${HEAD_SHA}" --arg base "${BASE_SHA}" '{pr_number:(if $kind=="pull_request" then $pr else "" end),head_sha:$head,base_sha:$base}')" ;;
-            semgrep-full) inputs="$(jq -cn --arg kind "${TARGET_KIND}" --arg pr "${PR_NUMBER}" --arg head "${HEAD_SHA}" --arg base "${BASE_SHA}" '{mode:"full",base_ref:$base,pr_number:(if $kind=="pull_request" then $pr else "" end),head_sha:$head,base_sha:$base}')" ;;
-            remote-evidence) inputs="$(jq -cn --arg ref "${DISPATCH_REF}" --arg sha "${HEAD_SHA}" '{target_ref:$ref,target_sha:$sha}')" ;;
+            ci-affected)
+              inputs="$(jq -cn \
+                --arg kind "${TARGET_KIND}" --arg pr "${PR_NUMBER}" \
+                --arg head "${HEAD_SHA}" --arg base "${BASE_SHA}" \
+                '{mode:"affected",journey:"",runtime_proof:false,target_kind:$kind,pr_number:$pr,expected_head_sha:$head,expected_base_sha:$base}')"
+              ;;
+            ci-full)
+              inputs="$(jq -cn \
+                --arg kind "${TARGET_KIND}" --arg pr "${PR_NUMBER}" \
+                --arg head "${HEAD_SHA}" --arg base "${BASE_SHA}" \
+                '{mode:"full",journey:"",runtime_proof:false,target_kind:$kind,pr_number:$pr,expected_head_sha:$head,expected_base_sha:$base}')"
+              ;;
+            ci-runtime)
+              inputs="$(jq -cn \
+                --arg kind "${TARGET_KIND}" --arg pr "${PR_NUMBER}" \
+                --arg head "${HEAD_SHA}" --arg base "${BASE_SHA}" \
+                '{mode:"full",journey:"",runtime_proof:true,target_kind:$kind,pr_number:$pr,expected_head_sha:$head,expected_base_sha:$base}')"
+              ;;
+            ci-journey)
+              inputs="$(jq -cn \
+                --arg kind "${TARGET_KIND}" --arg pr "${PR_NUMBER}" \
+                --arg head "${HEAD_SHA}" --arg base "${BASE_SHA}" \
+                --arg journey "${JOURNEY}" \
+                '{mode:"affected",journey:$journey,runtime_proof:false,target_kind:$kind,pr_number:$pr,expected_head_sha:$head,expected_base_sha:$base}')"
+              ;;
+            codeql-full)
+              inputs="$(jq -cn \
+                --arg kind "${TARGET_KIND}" --arg pr "${PR_NUMBER}" \
+                --arg head "${HEAD_SHA}" --arg base "${BASE_SHA}" \
+                --arg head_ref "${HEAD_REF}" \
+                '{
+                  pr_number:(if $kind=="pull_request" then $pr else "" end),
+                  head_sha:$head,
+                  base_sha:$base,
+                  head_ref:$head_ref
+                }')"
+              ;;
+            sonar-full)
+              inputs="$(jq -cn \
+                --arg kind "${TARGET_KIND}" --arg pr "${PR_NUMBER}" \
+                --arg head "${HEAD_SHA}" --arg base "${BASE_SHA}" \
+                --arg head_ref "${HEAD_REF}" \
+                '{
+                  pr_number:(if $kind=="pull_request" then $pr else "" end),
+                  head_sha:$head,
+                  base_sha:$base,
+                  head_ref:$head_ref
+                }')"
+              ;;
+            security-full|lockfile-integrity)
+              inputs="$(jq -cn \
+                --arg kind "${TARGET_KIND}" --arg pr "${PR_NUMBER}" \
+                --arg head "${HEAD_SHA}" --arg base "${BASE_SHA}" \
+                '{
+                  pr_number:(if $kind=="pull_request" then $pr else "" end),
+                  head_sha:$head,
+                  base_sha:$base
+                }')"
+              ;;
+            semgrep-full)
+              inputs="$(jq -cn \
+                --arg kind "${TARGET_KIND}" --arg pr "${PR_NUMBER}" \
+                --arg head "${HEAD_SHA}" --arg base "${BASE_SHA}" \
+                '{
+                  mode:"full",
+                  base_ref:$base,
+                  pr_number:(if $kind=="pull_request" then $pr else "" end),
+                  head_sha:$head,
+                  base_sha:$base
+                }')"
+              ;;
+            remote-evidence) \
+            inputs="$(jq -cn --arg ref "${DISPATCH_REF}" --arg sha "${HEAD_SHA}" '{target_ref:$ref,target_\
+            sha:$sha}')" ;;
           esac
           payload="$(jq -n --arg ref "${DISPATCH_REF}" --argjson inputs "${inputs}" '{ref:$ref,inputs:$inputs}')"
-          printf '%s' "${payload}" | gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW}/dispatches" --input - >/dev/null
+          printf '%s' "${payload}" | gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' \
+          "/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW}/dispatches" --input - >/dev/null
 
       - name: Correlate exact dispatched run
         id: run
@@ -199,7 +283,8 @@ jobs:
             while IFS= read -r candidate; do
               [[ -n "${candidate}" ]] || continue
               grep -qx "${candidate}" "${RUNNER_TEMP}/before.txt" && continue
-              run="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/runs/${candidate}")"
+              run="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/actions/runs/${candidate}")"
               sha="$(jq -r '.head_sha' <<<"${run}")"
               [[ "${sha}" == "${DISPATCH_SHA}" ]] || continue
               expected_title=""
@@ -213,7 +298,9 @@ jobs:
               [[ -z "${expected_title}" || "$(jq -r '.display_title' <<<"${run}")" == "${expected_title}" ]] || continue
               run_id="${candidate}"
               break
-            done < <(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW}/runs?branch=${encoded}&event=workflow_dispatch&per_page=20" --jq '.workflow_runs[].id')
+            done < <(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/actions/workflows/${WORKFLOW}/runs?branch=${encoded}&event=workfl\
+            ow_dispatch&per_page=20" --jq '.workflow_runs[].id')
             [[ -n "${run_id}" ]] && break
             sleep 3
           done
@@ -231,7 +318,12 @@ jobs:
           HEAD_SHA: ${{ steps.request.outputs.expected_head_sha }}
           RUN_URL: ${{ steps.run.outputs.run_url }}
         run: |
-          gh issue comment "${ISSUE_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body "Accepted \`${REQUEST_ID}\`: \`${COMMAND}\` target=\`${TARGET_KIND}:${TARGET_REF}@${HEAD_SHA}\`. Canonical run: ${RUN_URL}"
+              comment_body="Accepted \`${REQUEST_ID}\`: \`${COMMAND}\`"
+              comment_body+=" target=\`${TARGET_KIND}:${TARGET_REF}@${HEAD_SHA}\`."
+              comment_body+=" Canonical run: ${RUN_URL}"
+              gh issue comment "${ISSUE_NUMBER}" \
+                --repo "${GITHUB_REPOSITORY}" \
+                --body "${comment_body}"
 
   wait:
     name: Wait for canonical remote result
@@ -259,7 +351,10 @@ jobs:
           for _ in $(seq 1 1140); do
             run="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}")"
             [[ "$(jq -r '.head_sha' <<<"${run}")" == "${HEAD_SHA}" ]] || { echo "::error::run SHA drift"; exit 1; }
-            if [[ "$(jq -r '.status' <<<"${run}")" == "completed" ]]; then conclusion="$(jq -r '.conclusion // "unknown"' <<<"${run}")"; break; fi
+            if [[ "$(jq -r '.status' <<<"${run}")" == "completed" ]]; then
+              conclusion="$(jq -r '.conclusion // "unknown"' <<<"${run}")"
+              break
+            fi
             sleep 10
           done
           [[ -n "${conclusion}" ]] || { echo "::error::timed out"; exit 1; }
@@ -272,6 +367,8 @@ jobs:
           CONCLUSION: ${{ steps.result.outputs.conclusion }}
         run: |
           conclusion="${CONCLUSION:-failed-before-completion}"
-          gh issue comment "${ISSUE_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body "Remote request \`${REQUEST_ID}\` / \`${COMMAND}\` completed with **${conclusion}**. ${RUN_URL}"
-          if [[ "${conclusion}" == "success" ]]; then gh issue close "${ISSUE_NUMBER}" --repo "${GITHUB_REPOSITORY}" --reason completed; fi
+          gh issue comment "${ISSUE_NUMBER}" --repo "${GITHUB_REPOSITORY}" --body \
+          "Remote request \`${REQUEST_ID}\` / \`${COMMAND}\` completed with **${conclusion}**. ${RUN_URL}"
+          if [[ "${conclusion}" == "success" ]]; then gh issue close "${ISSUE_NUMBER}" --repo \
+          "${GITHUB_REPOSITORY}" --reason completed; fi
           [[ "${conclusion}" == "success" ]]

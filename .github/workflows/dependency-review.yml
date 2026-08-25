@@ -1,6 +1,9 @@
 name: Dependency Review
 
-run-name: ${{ github.event_name == 'pull_request' && format('Dependency Review PR {0}', github.event.pull_request.number) || format('Dependency Review dispatched candidate {0}', inputs.head_sha || inputs.expected_sha) }}
+run-name: >-
+  ${{ github.event_name == 'pull_request' && format('Dependency Review PR {0}',
+  github.event.pull_request.number) || format('Dependency Review dispatched candidate {0}', inputs.head_sha ||
+  inputs.expected_sha) }}
 
 on:
   workflow_dispatch:

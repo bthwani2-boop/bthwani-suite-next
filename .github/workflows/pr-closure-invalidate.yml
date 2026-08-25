@@ -16,7 +16,9 @@ concurrency:
 jobs:
   invalidate:
     name: Invalidate stale PR closure evidence
-    if: ${{ (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch) || (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request') }}
+    if: >-
+      ${{ (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch) ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.event == 'pull_request') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:

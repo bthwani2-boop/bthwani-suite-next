@@ -3,16 +3,16 @@ name: BThwani Node Verification
 on:
   workflow_call:
     inputs:
-      base_sha: { type: string, required: true }
-      candidate_sha: { type: string, required: true }
-      full_scope: { type: string, required: true }
-      frontend: { type: string, required: true }
-      mobile: { type: string, required: true }
-      heavy: { type: string, required: true }
-      verification_tier: { type: string, required: true }
-      journey: { type: string, required: true }
-      journey_scope: { type: string, required: false, default: "" }
-      platform_change_sets: { type: string, required: true }
+      base_sha: {type: string, required: true}
+      candidate_sha: {type: string, required: true}
+      full_scope: {type: string, required: true}
+      frontend: {type: string, required: true}
+      mobile: {type: string, required: true}
+      heavy: {type: string, required: true}
+      verification_tier: {type: string, required: true}
+      journey: {type: string, required: true}
+      journey_scope: {type: string, required: false, default: ""}
+      platform_change_sets: {type: string, required: true}
 
 permissions:
   contents: read
@@ -33,7 +33,9 @@ jobs:
         run: |
           set -euo pipefail
           if [[ ! "${CANDIDATE_SHA}" =~ ^[0-9a-fA-F]{40}$ || "${ROUTED_CANDIDATE_SHA}" != "${CANDIDATE_SHA}" ]]; then
-            echo "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CANDIDATE_SHA:-<empty>}"
+            echo \
+            "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CA\
+            NDIDATE_SHA:-<empty>}"
             exit 1
           fi
       - name: Checkout immutable source candidate
@@ -125,7 +127,9 @@ jobs:
         run: |
           set -euo pipefail
           if [[ ! "${CANDIDATE_SHA}" =~ ^[0-9a-fA-F]{40}$ || "${ROUTED_CANDIDATE_SHA}" != "${CANDIDATE_SHA}" ]]; then
-            echo "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CANDIDATE_SHA:-<empty>}"
+            echo \
+            "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CA\
+            NDIDATE_SHA:-<empty>}"
             exit 1
           fi
       - name: Checkout immutable source candidate
@@ -154,7 +158,8 @@ jobs:
         run: |
           $log = Join-Path $env:RUNNER_TEMP "journey-gates.log"
           Set-Content -Path $log -Value ""
-          $journeys = @($env:JOURNEY_SCOPE -split ',' | Where-Object { $_ -and $_.Trim() } | ForEach-Object { $_.Trim().ToUpperInvariant() } | Select-Object -Unique)
+          $journeys = @($env:JOURNEY_SCOPE -split ',' | Where-Object { $_ -and $_.Trim() } | `
+          ForEach-Object { $_.Trim().ToUpperInvariant() } | Select-Object -Unique)
           $journeyOutput = & ./tools/scripts/run-journey-gate.ps1 -Journey ($journeys -join ',') 2>&1
           $exitCode = if ($null -eq $LASTEXITCODE) { 1 } else { $LASTEXITCODE }
           $journeyOutput | Tee-Object -FilePath $log -Append
@@ -184,7 +189,9 @@ jobs:
         run: |
           set -euo pipefail
           if [[ ! "${CANDIDATE_SHA}" =~ ^[0-9a-fA-F]{40}$ || "${ROUTED_CANDIDATE_SHA}" != "${CANDIDATE_SHA}" ]]; then
-            echo "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CANDIDATE_SHA:-<empty>}"
+            echo \
+            "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CA\
+            NDIDATE_SHA:-<empty>}"
             exit 1
           fi
       - name: Checkout immutable source candidate

@@ -1,5 +1,7 @@
 name: Fetch exact verification commits
-description: Verify the checked-out immutable candidate and fetch only the base commit required for diff-based verification.
+description: >-
+  Verify the checked-out immutable candidate and fetch only the base commit required for diff-based
+  verification.
 
 inputs:
   base_sha:
@@ -38,12 +40,14 @@ runs:
           exit 1
         fi
 
-        if [[ -n "${BASE_SHA}" && ! "${BASE_SHA}" =~ ^0+$ ]] && ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+        if [[ -n "${BASE_SHA}" && ! "${BASE_SHA}" =~ ^0+$ ]] && ! git cat-file -e "${BASE_SHA}^{commit}" \
+        2>/dev/null; then
           remote_url="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY_NAME}.git"
           git fetch --no-tags --depth=1 "${remote_url}" "${BASE_SHA}"
         fi
 
-        if [[ -n "${BASE_SHA}" && ! "${BASE_SHA}" =~ ^0+$ ]] && ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+        if [[ -n "${BASE_SHA}" && ! "${BASE_SHA}" =~ ^0+$ ]] && ! git cat-file -e "${BASE_SHA}^{commit}" \
+        2>/dev/null; then
           echo "::error::Exact verification base commit is unavailable after fetch: ${BASE_SHA}"
           exit 1
         fi

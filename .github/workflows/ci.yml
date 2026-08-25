@@ -1,6 +1,9 @@
 name: BThwani Contextual CI
 
-run-name: ${{ github.event_name == 'workflow_dispatch' && inputs.target_kind == 'pull_request' && format('closure-pr-{0}-head-{1}-base-{2}', inputs.pr_number, inputs.expected_head_sha, inputs.expected_base_sha) || format('bthwani-ci-{0}-{1}', github.event_name, github.sha) }}
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch' && inputs.target_kind == 'pull_request' &&
+  format('closure-pr-{0}-head-{1}-base-{2}', inputs.pr_number, inputs.expected_head_sha,
+  inputs.expected_base_sha) || format('bthwani-ci-{0}-{1}', github.event_name, github.sha) }}
 
 on:
   workflow_dispatch:
@@ -167,14 +170,18 @@ jobs:
             base_sha="${PR_BASE_SHA_EVENT}"
             phase="pr"
           elif [[ "${EVENT_NAME}" == "workflow_dispatch" && "${REQUEST_TARGET_KIND:-branch}" == "pull_request" ]]; then
-            [[ "${REQUEST_PR_NUMBER}" =~ ^[0-9]+$ ]] || { echo "::error::pr_number is required for pull_request target"; exit 1; }
+            [[ "${REQUEST_PR_NUMBER}" =~ ^[0-9]+$ ]] || { echo \
+            "::error::pr_number is required for pull_request target"; exit 1; }
             pr="$(resolve_pr "${REQUEST_PR_NUMBER}")"
             [[ "$(jq -r '.state' <<<"${pr}")" == "open" ]] || { echo "::error::target PR is not open"; exit 1; }
             pr_head="$(jq -r '.head.sha' <<<"${pr}")"
             pr_base="$(jq -r '.base.sha' <<<"${pr}")"
-            [[ "${actual_head}" == "${pr_head}" ]] || { echo "::error::dispatch checkout is not PR head: expected=${pr_head} actual=${actual_head}"; exit 1; }
-            [[ -z "${REQUEST_HEAD_SHA:-}" || "${REQUEST_HEAD_SHA}" == "${pr_head}" ]] || { echo "::error::requested head SHA is stale"; exit 1; }
-            [[ -z "${REQUEST_BASE_SHA:-}" || "${REQUEST_BASE_SHA}" == "${pr_base}" ]] || { echo "::error::requested base SHA is stale"; exit 1; }
+            [[ "${actual_head}" == "${pr_head}" ]] || { echo \
+            "::error::dispatch checkout is not PR head: expected=${pr_head} actual=${actual_head}"; exit 1; }
+            [[ -z "${REQUEST_HEAD_SHA:-}" || "${REQUEST_HEAD_SHA}" == "${pr_head}" ]] || { echo \
+            "::error::requested head SHA is stale"; exit 1; }
+            [[ -z "${REQUEST_BASE_SHA:-}" || "${REQUEST_BASE_SHA}" == "${pr_base}" ]] || { echo \
+            "::error::requested base SHA is stale"; exit 1; }
             target_kind=pull_request
             pr_number="${REQUEST_PR_NUMBER}"
             head_ref="$(jq -r '.head.ref' <<<"${pr}")"
@@ -182,14 +189,16 @@ jobs:
             base_sha="${pr_base}"
             phase="closure"
           elif [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
-            [[ -z "${REQUEST_HEAD_SHA:-}" || "${REQUEST_HEAD_SHA}" == "${actual_head}" ]] || { echo "::error::requested branch SHA is stale"; exit 1; }
+            [[ -z "${REQUEST_HEAD_SHA:-}" || "${REQUEST_HEAD_SHA}" == "${actual_head}" ]] || { echo \
+            "::error::requested branch SHA is stale"; exit 1; }
             phase="closure"
           elif [[ "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]]; then
             phase="default-branch"
           elif [[ "${EVENT_NAME}" == "push" ]]; then
             mapfile -t prs < <(gh api --method GET -H 'X-GitHub-Api-Version: 2022-11-28' \
               "/repos/${GITHUB_REPOSITORY}/pulls" \
-              -f state=open -f head="${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}" -f base="${DEFAULT_BRANCH}" -f per_page=100 \
+              -f state=open -f head="${GITHUB_REPOSITORY_OWNER}:${GITHUB_REF_NAME}" -f \
+              base="${DEFAULT_BRANCH}" -f per_page=100 \
               --jq '.[].number')
             if (( ${#prs[@]} > 1 )); then
               echo "::error::PR_IDENTITY_CONFLICT: multiple open PRs own ${GITHUB_REF_NAME} -> ${DEFAULT_BRANCH}"
@@ -197,7 +206,8 @@ jobs:
             fi
             if (( ${#prs[@]} == 1 )); then
               pr="$(resolve_pr "${prs[0]}")"
-              [[ "$(jq -r '.head.sha' <<<"${pr}")" == "${actual_head}" ]] || { echo "::error::open PR head does not match push candidate"; exit 1; }
+              [[ "$(jq -r '.head.sha' <<<"${pr}")" == "${actual_head}" ]] || { echo \
+              "::error::open PR head does not match push candidate"; exit 1; }
               target_kind=pull_request
               pr_number="${prs[0]}"
               head_ref="$(jq -r '.head.ref' <<<"${pr}")"
@@ -212,7 +222,8 @@ jobs:
             if [[ "${phase}" == "default-branch" ]]; then
               base_sha="${{ github.event.before }}"
             else
-              base_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/branches/${base_ref}" --jq '.commit.sha')"
+              base_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+              "/repos/${GITHUB_REPOSITORY}/branches/${base_ref}" --jq '.commit.sha')"
             fi
           fi
           if [[ -z "${base_sha}" || "${base_sha}" =~ ^0+$ ]]; then
@@ -273,7 +284,9 @@ jobs:
   diagnostics:
     name: Contract diagnostics
     needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.diagnostics_required == 'true' }}
+    if: >-
+      ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.diagnostics_required ==
+      'true' }}
     uses: ./.github/workflows/ci-node-diagnostics.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
@@ -288,7 +301,9 @@ jobs:
   verification:
     name: Node verification
     needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.verification_required == 'true' }}
+    if: >-
+      ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.verification_required
+      == 'true' }}
     uses: ./.github/workflows/ci-node-verification.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
@@ -333,7 +348,9 @@ jobs:
       runtime_proof: ${{ github.event_name == 'workflow_dispatch' && inputs.runtime_proof == true }}
 
   result:
-    name: ${{ github.event_name == 'pull_request' && 'BThwani CI / PR result' || github.event_name == 'push' && 'BThwani CI / push result' || 'BThwani CI / dispatched result' }}
+    name: >-
+      ${{ github.event_name == 'pull_request' && 'BThwani CI / PR result' || github.event_name == 'push' &&
+      'BThwani CI / push result' || 'BThwani CI / dispatched result' }}
     needs: [context, diagnostics, verification, backends, runtime]
     if: ${{ always() }}
     runs-on: ubuntu-24.04

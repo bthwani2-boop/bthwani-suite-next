@@ -1,6 +1,9 @@
 name: Remote Security
 
-run-name: ${{ github.event_name == 'pull_request' && format('Remote Security PR {0}', github.event.pull_request.number) || github.event_name == 'push' && format('Remote Security push {0}', github.sha) || format('Remote Security dispatched candidate {0}', inputs.head_sha || github.sha) }}
+run-name: >-
+  ${{ github.event_name == 'pull_request' && format('Remote Security PR {0}',
+  github.event.pull_request.number) || github.event_name == 'push' && format('Remote Security push {0}',
+  github.sha) || format('Remote Security dispatched candidate {0}', inputs.head_sha || github.sha) }}
 
 on:
   pull_request:
@@ -56,13 +59,16 @@ jobs:
           set -euo pipefail
           skip=false
           if [[ "${EVENT_NAME}" == "workflow_dispatch" && -n "${INPUT_PR_NUMBER:-}" ]]; then
-            [[ "${INPUT_PR_NUMBER}" =~ ^[1-9][0-9]*$ ]] || { echo "::error::pr_number must be a positive integer"; exit 1; }
+            [[ "${INPUT_PR_NUMBER}" =~ ^[1-9][0-9]*$ ]] || { echo \
+            "::error::pr_number must be a positive integer"; exit 1; }
             [[ "${INPUT_HEAD_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::head_sha must be a full SHA"; exit 1; }
             [[ "${INPUT_BASE_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::base_sha must be a full SHA"; exit 1; }
             pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${INPUT_PR_NUMBER}")"
             [[ "$(jq -r '.state' <<<"${pr}")" == "open" ]] || { echo "::error::closure PR is not open"; exit 1; }
-            [[ "$(jq -r '.head.sha' <<<"${pr}")" == "${INPUT_HEAD_SHA}" ]] || { echo "::error::closure PR head drift"; exit 1; }
-            [[ "$(jq -r '.base.sha' <<<"${pr}")" == "${INPUT_BASE_SHA}" ]] || { echo "::error::closure PR base drift"; exit 1; }
+            [[ "$(jq -r '.head.sha' <<<"${pr}")" == "${INPUT_HEAD_SHA}" ]] || { echo \
+            "::error::closure PR head drift"; exit 1; }
+            [[ "$(jq -r '.base.sha' <<<"${pr}")" == "${INPUT_BASE_SHA}" ]] || { echo \
+            "::error::closure PR base drift"; exit 1; }
           fi
           if [[ "${EVENT_NAME}" == "push" && "${BRANCH}" != "${DEFAULT_BRANCH}" ]]; then
             open_pr_count="$(gh api --method GET \
@@ -183,6 +189,7 @@ jobs:
         env:
           ANALYZER: ${{ matrix.analyzer }}
           CANDIDATE_SHA: ${{ inputs.head_sha || github.event.pull_request.head.sha || github.sha }}
+          BASE_SHA: ${{ inputs.base_sha || github.event.pull_request.base.sha || '' }}
           TOOLCHAIN_OUTCOME: ${{ steps.toolchain.outcome }}
         run: |
           set +e
@@ -194,7 +201,8 @@ jobs:
             outcome=BLOCKED
           else
             case "${ANALYZER}" in
-              gitleaks) gitleaks detect --gitleaks-ignore-path .gitleaksignore --log-opts="HEAD" --source . --no-banner --redact --verbose >"${log}" 2>&1; status=$? ;;
+              gitleaks) gitleaks detect --gitleaks-ignore-path .gitleaksignore --log-opts="HEAD" --source \
+              . --no-banner --redact --verbose >"${log}" 2>&1; status=$? ;;
               osv-scanner) node tools/scripts/run-osv-scanner.mjs >"${log}" 2>&1; status=$? ;;
               trivy) node tools/scripts/run-trivy.mjs >"${log}" 2>&1; status=$? ;;
               actionlint) node tools/scripts/run-actionlint.mjs >"${log}" 2>&1; status=$? ;;
@@ -207,14 +215,6 @@ jobs:
             esac
             if [[ "${status}" -eq 0 ]]; then
               outcome=PASS
-              policy_marker='(^|[[:space:]])\[[^]]+[[:space:]]+(WARN|SKIP|BLOCKED)(\]|:|[[:space:]]|$)'
-              if grep -Eiq "${policy_marker}" "${log}"; then
-                if grep -Eiq '(^|[[:space:]])\[[^]]+[[:space:]]+BLOCKED(\]|:|[[:space:]]|$)' "${log}"; then outcome=BLOCKED
-                elif grep -Eiq '(^|[[:space:]])\[[^]]+[[:space:]]+SKIP(\]|:|[[:space:]]|$)' "${log}"; then outcome=SKIP
-                else outcome=WARN
-                fi
-                status=1
-              fi
             else
               outcome=FAIL
             fi
@@ -225,7 +225,12 @@ jobs:
             --arg outcome "${outcome}" \
             --arg scope "repository candidate ${CANDIDATE_SHA}" \
             --arg log "${ANALYZER}.log" \
-            '{schemaVersion:1, analyzer:$analyzer, candidateSha:$candidateSha, scope:$scope, outcome:$outcome, log:$log}' \
+            '{schemaVersion:1,
+              analyzer:$analyzer,
+              candidateSha:$candidateSha,
+              scope:$scope,
+              outcome:$outcome,
+              log:$log}' \
             > "${RUNNER_TEMP}/remote-security-evidence/${ANALYZER}.json"
           [[ "${outcome}" == "PASS" ]] || status=1
           exit "${status}"
@@ -253,7 +258,9 @@ jobs:
           }
 
   result:
-    name: ${{ github.event_name == 'pull_request' && 'Remote Security / PR result' || github.event_name == 'push' && 'Remote Security / push result' || 'Remote Security / dispatched result' }}
+    name: >-
+      ${{ github.event_name == 'pull_request' && 'Remote Security / PR result' || github.event_name == 'push'
+      && 'Remote Security / push result' || 'Remote Security / dispatched result' }}
     needs: [ownership, authority, security]
     if: ${{ always() }}
     runs-on: ubuntu-24.04

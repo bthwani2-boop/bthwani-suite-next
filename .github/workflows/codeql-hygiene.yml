@@ -57,7 +57,9 @@ jobs:
           superseded=false
           if [[ "${candidate_sha}" != "${live_default}" ]]; then
             superseded=true
-            echo "Candidate ${candidate_sha} is superseded by live default branch ${live_default}; no CodeQL metadata will be mutated."
+            echo \
+            "Candidate ${candidate_sha} is superseded by live default branch ${live_default}; no CodeQL me\
+            tadata will be mutated."
           fi
           {
             echo "sha=${candidate_sha}"
@@ -118,7 +120,8 @@ jobs:
               "/repos/${GITHUB_REPOSITORY}/branches/${encoded_default_branch}" \
               --jq '.commit.sha')"
             if [[ "${live}" != "${CANDIDATE_SHA}" ]]; then
-              echo "::error::default branch moved during CodeQL hygiene: candidate=${CANDIDATE_SHA} live=${live:-<unknown>}"
+              echo \
+              "::error::default branch moved during CodeQL hygiene: candidate=${CANDIDATE_SHA} live=${live:-<unknown>}"
               exit 1
             fi
           }
@@ -134,7 +137,15 @@ jobs:
                 --arg js "${key_js}" \
                 --arg go "${key_go}" \
                 --arg actions "${key_actions}" \
-                '[.[][] | select(((.analysis_key // "") | startswith($prefix)) and .analysis_key != $js and .analysis_key != $go and .analysis_key != $actions)]'
+                '[
+                  .[][]
+                  | select(
+                      ((.analysis_key // "") | startswith($prefix))
+                      and .analysis_key != $js
+                      and .analysis_key != $go
+                      and .analysis_key != $actions
+                    )
+                ]'
           }
 
           obsolete_open_alerts() {
@@ -149,7 +160,15 @@ jobs:
                 --arg js "${key_js}" \
                 --arg go "${key_go}" \
                 --arg actions "${key_actions}" \
-                '[.[][] | select((((.most_recent_instance.analysis_key // "") | startswith($prefix))) and .most_recent_instance.analysis_key != $js and .most_recent_instance.analysis_key != $go and .most_recent_instance.analysis_key != $actions)]'
+                '[
+                  .[][]
+                  | select(
+                      ((.most_recent_instance.analysis_key // "") | startswith($prefix))
+                      and .most_recent_instance.analysis_key != $js
+                      and .most_recent_instance.analysis_key != $go
+                      and .most_recent_instance.analysis_key != $actions
+                    )
+                ]'
           }
 
           assert_live_default
@@ -160,7 +179,8 @@ jobs:
             if [[ "${count}" == "0" ]]; then
               break
             fi
-            target_id="$(jq -r '[.[] | select(.deletable == true)] | sort_by(.created_at) | last | .id // empty' <<<"${obsolete}")"
+            target_id="$(jq -r '[.[] | select(.deletable == true)] | sort_by(.created_at) | last | .id // \
+            empty' <<<"${obsolete}")"
             if [[ -z "${target_id}" ]]; then
               echo "::error::obsolete CodeQL analyses remain but none is deletable"
               jq -c '.[] | {id,analysis_key,category,commit_sha,deletable}' <<<"${obsolete}" >&2

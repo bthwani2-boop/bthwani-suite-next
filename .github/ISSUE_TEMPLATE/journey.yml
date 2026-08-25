@@ -1,11 +1,14 @@
 name: Capability or Journey
-description: Propose or track a product capability or operational journey from outcome through affected surfaces and evidence.
+description: >-
+  Propose or track a product capability or operational journey from outcome through affected surfaces and
+  evidence.
 labels: ["journey", "needs-evidence"]
 body:
   - type: markdown
     attributes:
       value: |
-        Start from the product outcome, actors, authoritative owners, surfaces, states, and evidence—not from a file list. This issue is planning/tracking support and does not create Product Truth or approval.
+        Start from the product outcome, actors, authoritative owners, surfaces, states, and evidence—not
+        from a file list. This issue is planning/tracking support and does not create Product Truth or approval.
   - type: input
     id: capability-id
     attributes:
@@ -31,7 +34,9 @@ body:
     id: ownership
     attributes:
       label: Authoritative owners and boundaries
-      placeholder: Identity / Workforce / DSH / WLT / Platform Control / Provider / Media or other current contract owner.
+      placeholder: >-
+        Identity / Workforce / DSH / WLT / Platform Control / Provider / Media or other current contract
+        owner.
     validations:
       required: true
   - type: textarea
@@ -52,7 +57,9 @@ body:
     id: product-truth
     attributes:
       label: Product Truth
-      description: Reference the applicable existing Product Truth, or state that a new/changed Product Truth must be created through current governance.
+      description: >-
+        Reference the applicable existing Product Truth, or state that a new/changed Product Truth must be
+        created through current governance.
       placeholder: governance/product/contracts/<capability>.product-truth.json or REQUIRED
     validations:
       required: true
@@ -60,6 +67,8 @@ body:
     id: evidence
     attributes:
       label: Applicable evidence scopes
-      placeholder: static, product, runtime, visual, qa, security, finance, isolation, governance, ci, release, production — only what impact requires.
+      placeholder: >-
+        static, product, runtime, visual, qa, security, finance, isolation, governance, ci, release,
+        production — only what impact requires.
     validations:
       required: true

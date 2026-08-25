@@ -5,7 +5,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Runtime evidence must identify the exact candidate/environment and the claim it proves. Do not paste secrets, tokens, credentials, PII, private provider payloads, or unsanitized production logs.
+        Runtime evidence must identify the exact candidate/environment and the claim it proves. Do not
+        paste secrets, tokens, credentials, PII, private provider payloads, or unsanitized production logs.
   - type: input
     id: candidate
     attributes:
@@ -38,7 +39,9 @@ body:
     id: evidence
     attributes:
       label: Sanitized result and readback
-      placeholder: Summarize observable result, persistence/readback, correlation IDs, and limitations. Link raw restricted evidence only through an approved private location when required.
+      placeholder: >-
+        Summarize observable result, persistence/readback, correlation IDs, and limitations. Link raw
+        restricted evidence only through an approved private location when required.
     validations:
       required: true
   - type: textarea

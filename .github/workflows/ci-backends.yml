@@ -84,12 +84,18 @@ jobs:
               <<< "${entries}")"
           }
 
-          add_backend "${DSH}" dsh services/dsh/backend/go.mod services/dsh/database/migrations services/dsh/backend postgis/postgis:16-3.4-alpine
-          add_backend "${WLT}" wlt services/wlt/backend/go.mod services/wlt/database/migrations services/wlt/backend postgres:16-alpine
-          add_backend "${IDENTITY}" identity core/identity/backend/go.mod core/identity/database/migrations core/identity/backend postgres:16-alpine
-          add_backend "${WORKFORCE}" workforce core/workforce/backend/go.mod core/workforce/database/migrations core/workforce/backend postgres:16-alpine
-          add_backend "${PLATFORM}" platform-control core/platform-control/backend/go.mod core/platform-control/database/migrations core/platform-control/backend postgres:16-alpine
-          add_backend "${PROVIDERS}" providers core/providers/backend/go.mod core/providers/database/migrations core/providers/backend postgres:16-alpine
+          add_backend "${DSH}" dsh services/dsh/backend/go.mod services/dsh/database/migrations \
+          services/dsh/backend postgis/postgis:16-3.4-alpine
+          add_backend "${WLT}" wlt services/wlt/backend/go.mod services/wlt/database/migrations \
+          services/wlt/backend postgres:16-alpine
+          add_backend "${IDENTITY}" identity core/identity/backend/go.mod \
+          core/identity/database/migrations core/identity/backend postgres:16-alpine
+          add_backend "${WORKFORCE}" workforce core/workforce/backend/go.mod \
+          core/workforce/database/migrations core/workforce/backend postgres:16-alpine
+          add_backend "${PLATFORM}" platform-control core/platform-control/backend/go.mod \
+          core/platform-control/database/migrations core/platform-control/backend postgres:16-alpine
+          add_backend "${PROVIDERS}" providers core/providers/backend/go.mod \
+          core/providers/database/migrations core/providers/backend postgres:16-alpine
 
           count="$(jq 'length' <<< "${entries}")"
           echo "count=${count}" >> "${GITHUB_OUTPUT}"
@@ -121,7 +127,9 @@ jobs:
         run: |
           set -euo pipefail
           if [[ ! "${CANDIDATE_SHA}" =~ ^[0-9a-fA-F]{40}$ || "${ROUTED_CANDIDATE_SHA}" != "${CANDIDATE_SHA}" ]]; then
-            echo "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CANDIDATE_SHA:-<empty>}"
+            echo \
+            "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CA\
+            NDIDATE_SHA:-<empty>}"
             exit 1
           fi
       - name: Checkout immutable source candidate
@@ -153,7 +161,9 @@ jobs:
 
           if ! go test ./... -count=1 >>"${log}" 2>&1; then
             echo "::error title=${{ matrix.key }} Go verification failed::The complete log is stored as an artifact."
-            grep -E '^--- FAIL:|^FAIL([[:space:]]|$)|panic:|undefined:|cannot use|build failed|Error Trace:' "${log}" | tail -n 80 || true
+            grep -E \
+            '^--- FAIL:|^FAIL([[:space:]]|$)|panic:|undefined:|cannot use|build failed|Error Trace:' \
+            "${log}" | tail -n 80 || true
             tail -n 160 "${log}"
             exit 1
           fi
@@ -207,7 +217,9 @@ jobs:
         run: |
           set -euo pipefail
           if [[ ! "${CANDIDATE_SHA}" =~ ^[0-9a-fA-F]{40}$ || "${ROUTED_CANDIDATE_SHA}" != "${CANDIDATE_SHA}" ]]; then
-            echo "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CANDIDATE_SHA:-<empty>}"
+            echo \
+            "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CA\
+            NDIDATE_SHA:-<empty>}"
             exit 1
           fi
       - name: Checkout immutable source candidate
@@ -239,7 +251,8 @@ jobs:
           $exitCode = $LASTEXITCODE
           $output | Tee-Object -FilePath $log
           if ($exitCode -ne 0) {
-            Write-Error "$env:BACKEND_KEY migration safety verification failed; complete output is retained as an artifact."
+            Write-Error `
+            "$env:BACKEND_KEY migration safety verification failed; complete output is retained as an artifact."
             exit $exitCode
           }
       - name: Run WLT database integration tests
@@ -251,8 +264,11 @@ jobs:
           log="${RUNNER_TEMP}/wlt-database-go-verification.log"
           printf 'database verification mode=integration packages=./...\n' | tee "${log}"
           if ! go test ./... -count=1 >>"${log}" 2>&1; then
-            echo "::error title=WLT database integration verification failed::The complete log is stored as an artifact."
-            grep -E '^--- FAIL:|^FAIL([[:space:]]|$)|panic:|undefined:|cannot use|build failed|Error Trace:' "${log}" | tail -n 80 || true
+            echo \
+            "::error title=WLT database integration verification failed::The complete log is stored as an artifact."
+            grep -E \
+            '^--- FAIL:|^FAIL([[:space:]]|$)|panic:|undefined:|cannot use|build failed|Error Trace:' \
+            "${log}" | tail -n 80 || true
             tail -n 160 "${log}"
             exit 1
           fi
@@ -300,7 +316,9 @@ jobs:
         run: |
           set -euo pipefail
           if [[ ! "${CANDIDATE_SHA}" =~ ^[0-9a-fA-F]{40}$ || "${ROUTED_CANDIDATE_SHA}" != "${CANDIDATE_SHA}" ]]; then
-            echo "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CANDIDATE_SHA:-<empty>}"
+            echo \
+            "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CA\
+            NDIDATE_SHA:-<empty>}"
             exit 1
           fi
       - name: Checkout immutable source candidate
@@ -322,16 +340,22 @@ jobs:
           node tools/scripts/check-dsh-database-contract.mjs
       - name: Apply canonical DSH migrations
         shell: pwsh
-        run: ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action migrate -Transport url -DatabaseUrl $env:DATABASE_URL
+        run: >-
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action migrate -Transport url -DatabaseUrl
+          $env:DATABASE_URL
       - name: Re-run canonical DSH migrations
         shell: pwsh
-        run: ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action migrate -Transport url -DatabaseUrl $env:DATABASE_URL
+        run: >-
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action migrate -Transport url -DatabaseUrl
+          $env:DATABASE_URL
       - name: Verify DSH migration runner failure contracts
         shell: pwsh
         run: ./services/dsh/database/scripts/test-dsh-migration-runner.ps1 -DatabaseUrl $env:DATABASE_URL
       - name: Run DSH schema database contracts
         shell: pwsh
-        run: ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action test -Transport url -DatabaseUrl $env:DATABASE_URL -TestSuite schema
+        run: >-
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action test -Transport url -DatabaseUrl
+          $env:DATABASE_URL -TestSuite schema
       - name: Apply DSH local seeds twice
         shell: pwsh
         run: |
@@ -340,8 +364,12 @@ jobs:
             FIELD_ACTOR_ID = "ci-field-actor-001"
             CAPTAIN_ACTOR_ID = "ci-captain-actor-001"
           } | ConvertTo-Json | Set-Content -LiteralPath $placeholderFile -Encoding utf8NoBOM
-          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl $env:DATABASE_URL -AllowLocalSeeds -PlaceholderFile $placeholderFile
-          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl $env:DATABASE_URL -AllowLocalSeeds -PlaceholderFile $placeholderFile
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl `
+          $env:DATABASE_URL -AllowLocalSeeds -PlaceholderFile $placeholderFile
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action seed -Transport url -DatabaseUrl `
+          $env:DATABASE_URL -AllowLocalSeeds -PlaceholderFile $placeholderFile
       - name: Run DSH seed database contracts
         shell: pwsh
-        run: ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action test -Transport url -DatabaseUrl $env:DATABASE_URL -TestSuite seed
+        run: >-
+          ./services/dsh/database/scripts/invoke-dsh-database.ps1 -Action test -Transport url -DatabaseUrl
+          $env:DATABASE_URL -TestSuite seed

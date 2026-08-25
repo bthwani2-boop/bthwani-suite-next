@@ -1,11 +1,16 @@
 name: Security Hardening or Review
-description: Track non-secret security hardening, review, or remediation work. Do not disclose exploitable sensitive details publicly.
+description: >-
+  Track non-secret security hardening, review, or remediation work. Do not disclose exploitable sensitive
+  details publicly.
 labels: ["security"]
 body:
   - type: markdown
     attributes:
       value: |
-        Do not publish credentials, tokens, PII, private keys, exploit payloads, undisclosed vulnerability details, production secrets, or sensitive provider data in a public issue. If safe public description is not possible, stop here and use the repository owner's approved private security-reporting channel.
+        Do not publish credentials, tokens, PII, private keys, exploit payloads, undisclosed vulnerability
+        details, production secrets, or sensitive provider data in a public issue. If safe public
+        description is not possible, stop here and use the repository
+        owner's approved private security-reporting channel.
   - type: input
     id: candidate
     attributes:
@@ -40,13 +45,17 @@ body:
     id: mitigation
     attributes:
       label: Required mitigation and invariant
-      placeholder: State the security invariant that must hold and the remediation class; avoid sensitive reproduction payloads.
+      placeholder: >-
+        State the security invariant that must hold and the remediation class; avoid sensitive reproduction
+        payloads.
     validations:
       required: true
   - type: textarea
     id: evidence
     attributes:
       label: Sanitized verification references
-      placeholder: Candidate-bound guard/test/run references, reviewer evidence, or NEEDS_EVIDENCE. Do not paste restricted raw logs.
+      placeholder: >-
+        Candidate-bound guard/test/run references, reviewer evidence, or NEEDS_EVIDENCE. Do not paste
+        restricted raw logs.
     validations:
       required: true

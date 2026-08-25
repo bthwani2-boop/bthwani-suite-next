@@ -113,9 +113,11 @@ jobs:
               "/repos/${GITHUB_REPOSITORY}/contents/${repository_path}" \
               -f "ref=${DEFAULT_BRANCH}" \
               --jq '.content' | base64 --decode > "${output_path}"
-            [[ -s "${output_path}" ]] || { echo "::error::trusted collector file is empty: ${repository_path}"; exit 1; }
+            [[ -s "${output_path}" ]] || { echo \
+            "::error::trusted collector file is empty: ${repository_path}"; exit 1; }
           }
-          fetch_file "tools/scripts/collect-remote-analysis-evidence.mjs" "${collector_dir}/collect-remote-analysis-evidence.mjs"
+          fetch_file "tools/scripts/collect-remote-analysis-evidence.mjs" \
+          "${collector_dir}/collect-remote-analysis-evidence.mjs"
           fetch_file "sonar-project.properties" "${collector_dir}/sonar-project.properties"
 
       - name: Set up locked Node runtime
@@ -155,7 +157,8 @@ jobs:
           popd >/dev/null
           set -e
           jq '.summary // {targetSha, targetRef, evidenceComplete, policyStatus, policyFailures, error}' \
-            "${RUNNER_TEMP}/remote-analysis-evidence/evidence.json" > "${RUNNER_TEMP}/remote-analysis-evidence/summary.json"
+            "${RUNNER_TEMP}/remote-analysis-evidence/evidence.json" > \
+            "${RUNNER_TEMP}/remote-analysis-evidence/summary.json"
           exit "${status}"
 
       - name: Upload exact-SHA remote analysis evidence
@@ -195,10 +198,12 @@ jobs:
           SUMMARY_OUTCOME: ${{ steps.summary.outcome }}
         run: |
           set -euo pipefail
-          [[ "${TARGET_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::cannot publish evidence status without a validated target SHA"; exit 1; }
+          [[ "${TARGET_SHA}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo \
+          "::error::cannot publish evidence status without a validated target SHA"; exit 1; }
           state=failure
           description="Remote evidence incomplete or blocking findings remain"
-          if [[ "${COLLECT_OUTCOME}" == "success" && "${ARTIFACT_OUTCOME}" == "success" && "${SUMMARY_OUTCOME}" == "success" ]]; then
+          if [[ "${COLLECT_OUTCOME}" == "success" && "${ARTIFACT_OUTCOME}" == "success" && \
+          "${SUMMARY_OUTCOME}" == "success" ]]; then
             state=success
             description="Remote CodeQL and Sonar evidence complete and policy passed"
           fi

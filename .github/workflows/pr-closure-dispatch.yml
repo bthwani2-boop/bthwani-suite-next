@@ -38,26 +38,34 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          permission="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/collaborators/${APPROVER}/permission" --jq '.permission')"
-          case "${permission}" in admin|maintain|write) ;; *) echo "::error::closure approval requires write, maintain, or admin permission"; exit 1;; esac
+          permission="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+          "/repos/${GITHUB_REPOSITORY}/collaborators/${APPROVER}/permission" --jq '.permission')"
+          case "${permission}" in admin|maintain|write) ;; *) echo \
+          "::error::closure approval requires write, maintain, or admin permission"; exit 1;; esac
 
           pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
           [[ "$(jq -r '.state' <<<"${pr}")" == "open" ]] || { echo "::error::PR is not open"; exit 1; }
-          [[ "$(jq -r '.head.repo.full_name' <<<"${pr}")" == "${GITHUB_REPOSITORY}" ]] || { echo "::error::closure dispatch is limited to same-repository candidates"; exit 1; }
+          [[ "$(jq -r '.head.repo.full_name' <<<"${pr}")" == "${GITHUB_REPOSITORY}" ]] || { echo \
+          "::error::closure dispatch is limited to same-repository candidates"; exit 1; }
           author="$(jq -r '.user.login' <<<"${pr}")"
           head_owner="$(jq -r '.head.repo.owner.login' <<<"${pr}")"
-          [[ "${APPROVER,,}" != "${author,,}" ]] || { echo "::error::closure approval must be independent from the PR author"; exit 1; }
-          [[ "${APPROVER,,}" != "${head_owner,,}" ]] || { echo "::error::closure approval must be independent from the head repository owner"; exit 1; }
+          [[ "${APPROVER,,}" != "${author,,}" ]] || { echo \
+          "::error::closure approval must be independent from the PR author"; exit 1; }
+          [[ "${APPROVER,,}" != "${head_owner,,}" ]] || { echo \
+          "::error::closure approval must be independent from the head repository owner"; exit 1; }
           head_ref="$(jq -r '.head.ref' <<<"${pr}")"
           head_sha="$(jq -r '.head.sha' <<<"${pr}")"
           base_ref="$(jq -r '.base.ref' <<<"${pr}")"
           base_sha="$(jq -r '.base.sha' <<<"${pr}")"
           [[ "${head_sha}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::PR head SHA is invalid"; exit 1; }
           [[ "${base_sha}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::PR base SHA is invalid"; exit 1; }
-          [[ "${base_ref}" == "${DEFAULT_BRANCH}" ]] || { echo "::error::closure base must be the repository default branch"; exit 1; }
+          [[ "${base_ref}" == "${DEFAULT_BRANCH}" ]] || { echo \
+          "::error::closure base must be the repository default branch"; exit 1; }
           encoded_default="$(jq -rn --arg value "${DEFAULT_BRANCH}" '$value|@uri')"
-          default_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/branches/${encoded_default}" --jq '.commit.sha')"
-          [[ "${GITHUB_SHA}" == "${default_sha}" ]] || { echo "::error::closure approval must execute the live default-branch definition"; exit 1; }
+          default_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+          "/repos/${GITHUB_REPOSITORY}/branches/${encoded_default}" --jq '.commit.sha')"
+          [[ "${GITHUB_SHA}" == "${default_sha}" ]] || { echo \
+          "::error::closure approval must execute the live default-branch definition"; exit 1; }
           jq -e '(.body // "") | contains("<!-- bthwani:closure-request -->")' <<<"${pr}" >/dev/null || {
             echo "::error::closure request marker was removed before approval"
             exit 1

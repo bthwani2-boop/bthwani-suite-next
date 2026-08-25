@@ -1,10 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
-import { quoteRel, repoRoot, runFilesTool, walkFiles } from "./_external-tool-runner.mjs";
+import { changedFiles, quoteRel, repoRoot, runFilesTool, walkFiles } from "./_external-tool-runner.mjs";
 
-const files = walkFiles([".github", "governance", "infra", "tools"], (_full, name) =>
-  name.endsWith(".yml") || name.endsWith(".yaml")
-);
+const baseSha = String(process.env.BASE_SHA || "").trim();
+const candidateSha = String(process.env.CANDIDATE_SHA || "").trim();
+const yamlFile = (_full, name) => name.endsWith(".yml") || name.endsWith(".yaml");
+const files = baseSha && candidateSha
+  ? changedFiles(baseSha, candidateSha, [".github", "governance", "infra", "tools"], yamlFile)
+  : walkFiles([".github", "governance", "infra", "tools"], yamlFile);
 
 runFilesTool({
   toolId: "yamllint",

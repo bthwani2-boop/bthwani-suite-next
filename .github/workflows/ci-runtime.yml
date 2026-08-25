@@ -39,7 +39,9 @@ jobs:
         run: |
           set -euo pipefail
           if [[ ! "${CANDIDATE_SHA}" =~ ^[0-9a-fA-F]{40}$ || "${ROUTED_CANDIDATE_SHA}" != "${CANDIDATE_SHA}" ]]; then
-            echo "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CANDIDATE_SHA:-<empty>}"
+            echo \
+            "::error::Invalid routed candidate SHA: routed=${ROUTED_CANDIDATE_SHA:-<empty>} candidate=${CA\
+            NDIDATE_SHA:-<empty>}"
             exit 1
           fi
       - name: Checkout immutable source
@@ -89,14 +91,16 @@ jobs:
           $ErrorActionPreference = "Stop"
           $profile = if ([string]::IsNullOrWhiteSpace($env:RUNTIME_PROFILE)) { "none" } else { $env:RUNTIME_PROFILE }
           $profiles = if ($null -eq $env:RUNTIME_COMPONENTS) { "" } else { $env:RUNTIME_COMPONENTS.Trim() }
-          $sourceSha = if ([string]::IsNullOrWhiteSpace($env:SOURCE_SHA)) { throw "SOURCE_SHA is required" } else { $env:SOURCE_SHA }
+          $sourceSha = if ([string]::IsNullOrWhiteSpace($env:SOURCE_SHA)) { throw "SOURCE_SHA is required" `
+          } else { $env:SOURCE_SHA }
           $checkedOutSha = (git rev-parse HEAD).Trim()
           if ($checkedOutSha -ne $sourceSha) {
             throw "Runtime checkout SHA mismatch: expected $sourceSha, got $checkedOutSha"
           }
           $logPath = Join-Path $PWD "runtime-smoke.log"
           $resultPath = Join-Path $PWD "runtime-proof.json"
-          "Runtime proof started for $sourceSha profile=$profile components=$profiles" | Set-Content -LiteralPath $logPath
+          "Runtime proof started for $sourceSha profile=$profile components=$profiles" | Set-Content `
+          -LiteralPath $logPath
 
           function Invoke-Phase {
             param([string] $Name, [scriptblock] $Command)
@@ -123,37 +127,45 @@ jobs:
               $requiresDshBootstrap = @($profiles.Split(",") | ForEach-Object { $_.Trim() }) -contains "dsh"
               if ($requiresDshBootstrap) {
                 Invoke-Phase "runtime:bootstrap-dev" {
-                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action bootstrap-dev -Profiles $profiles -Force
+                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 `
+                  -Action bootstrap-dev -Profiles $profiles -Force
                 }
               } else {
                 Invoke-Phase "runtime:up" {
-                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action up -Profiles $profiles
+                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 `
+                  -Action up -Profiles $profiles
                 }
               }
               Invoke-Phase "runtime:catalog-readback" {
-                & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action catalog-readback -Profiles $profiles
+                & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 `
+                -Action catalog-readback -Profiles $profiles
               }
               if ($profile -eq "full") {
                 Invoke-Phase "dsh-operator-governance-preflight" {
-                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/runtime/smoke-dsh-operator-governance-preflight.ps1
+                  & pwsh -NoProfile -ExecutionPolicy Bypass -File `
+                  tools/scripts/runtime/smoke-dsh-operator-governance-preflight.ps1
                 }
                 Invoke-Phase "runtime:full:smoke" {
-                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action smoke -Profiles $profiles
+                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 `
+                  -Action smoke -Profiles $profiles
                 }
                 Invoke-Phase "mobile:four-app-dispatch-readiness" {
                   & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/prepare-dsh-runtime-captain-dispatch.ps1
                 }
                 Invoke-Phase "mobile:four-app-integration" {
-                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/test-dsh-multisurface-runtime-matrix-v2.ps1
+                  & pwsh -NoProfile -ExecutionPolicy Bypass -File `
+                  tools/scripts/test-dsh-multisurface-runtime-matrix-v2.ps1
                 }
               } else {
                 Invoke-Phase "runtime:smoke" {
-                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action smoke -Profiles $profiles
+                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 `
+                  -Action smoke -Profiles $profiles
                 }
               }
               if ($profile -in @("wlt-finance", "full")) {
                 Invoke-Phase "representative-financial-readback" {
-                  & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/finance/smoke-dsh-wlt-representative-readback.ps1
+                  & pwsh -NoProfile -ExecutionPolicy Bypass -File `
+                  tools/scripts/finance/smoke-dsh-wlt-representative-readback.ps1
                 }
               }
             }
@@ -199,7 +211,11 @@ jobs:
               fi
               echo
               echo "=== ${container} state ==="
-              docker inspect "${container}" --format 'status={{.State.Status}} running={{.State.Running}} exitCode={{.State.ExitCode}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}'
+              inspect_format='status={{.State.Status}}'
+              inspect_format+=" running={{.State.Running}}"
+              inspect_format+=" exitCode={{.State.ExitCode}}"
+              inspect_format+=" health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}"
+              docker inspect "${container}" --format "${inspect_format}"
               echo "=== ${container} logs ==="
               docker logs --tail 250 "${container}" 2>&1
             done
@@ -214,7 +230,8 @@ jobs:
         run: |
           $profiles = if ($null -eq $env:RUNTIME_COMPONENTS) { "" } else { $env:RUNTIME_COMPONENTS.Trim() }
           if (-not [string]::IsNullOrWhiteSpace($profiles)) {
-            & pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down -Profiles $profiles
+            & pwsh -NoProfile -ExecutionPolicy Bypass -File infra/docker/scripts/runtime.ps1 -Action down `
+            -Profiles $profiles
           }
 
       - name: Upload runtime proof
