@@ -1247,7 +1247,7 @@ components:
     DshStoreAuditResponse:
       $ref: "./components/schemas/store.schemas.yaml#/DshStoreAuditResponse"
     DshCatalogAsset:
-      $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogAsset"
+      $ref: "./dsh.catalog.openapi.yaml#/components/schemas/Asset"
     DshCatalogAssetListResponse:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogAssetListResponse"
     DshMasterProduct:

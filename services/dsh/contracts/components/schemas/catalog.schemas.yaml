@@ -7,33 +7,7 @@ DshStoreCategory:
   pattern: ^domain-[a-z0-9-]+$
 
 DshCatalogAsset:
-  type: object
-  required: [id, objectKey, mimeType, sizeBytes, status, sourceSurface, uploadedBy, createdAt, updatedAt, version]
-  properties:
-    id: { type: string }
-    objectKey: { type: string }
-    publicUrl: { type: [string, "null"] }
-    mimeType: { type: string }
-    sizeBytes: { type: integer }
-    widthPx: { type: [integer, "null"] }
-    heightPx: { type: [integer, "null"] }
-    checksum: { type: [string, "null"] }
-    altAr: { type: string }
-    altEn: { type: string }
-    dominantColor: { type: [string, "null"] }
-    status:
-      type: string
-      enum: [draft, uploaded, pending_review, approved, rejected, archived]
-    sourceSurface: { type: string }
-    uploadedBy: { type: string }
-    reviewedBy: { type: [string, "null"] }
-    reviewNote: { type: string }
-    intendedEntityType: { type: [string, "null"] }
-    intendedEntityId: { type: [string, "null"] }
-    intendedRole: { type: [string, "null"] }
-    createdAt: { type: string, format: date-time }
-    updatedAt: { type: string, format: date-time }
-    version: { type: integer, minimum: 1 }
+  $ref: "../../dsh.catalog.openapi.yaml#/components/schemas/Asset"
 
 DshCatalogAssetListResponse:
   type: object
