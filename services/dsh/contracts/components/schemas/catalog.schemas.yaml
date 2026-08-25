@@ -46,32 +46,6 @@ DshCatalogAssetListResponse:
     limit: { type: integer }
     offset: { type: integer }
 
-DshMasterProduct:
-  type: object
-  required: [id, domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive, createdSource, createdAt, updatedAt, version]
-  properties:
-    id: { type: string }
-    domainId: { type: string }
-    categoryNodeId: { type: [string, "null"] }
-    canonicalNameAr: { type: string }
-    canonicalNameEn: { type: string }
-    brand: { type: string }
-    barcode: { type: [string, "null"] }
-    gtin: { type: [string, "null"] }
-    sku: { type: [string, "null"] }
-    unit: { type: string }
-    measurementType: { type: string }
-    canonicalImageObjectKey: { type: [string, "null"] }
-    approvalStatus:
-      type: string
-      enum: [draft, pending_review, approved, rejected, archived]
-    isActive: { type: boolean }
-    duplicateGroupId: { type: [string, "null"] }
-    createdSource: { type: string }
-    createdAt: { type: string, format: date-time }
-    updatedAt: { type: string, format: date-time }
-    version: { type: integer }
-
 MasterProductSummary:
   type: object
   required: [id, domainId, canonicalNameAr, canonicalNameEn, brand, unit, measurementType, approvalStatus, isActive, updatedAt, version]
@@ -106,88 +80,16 @@ DshMasterProductListResponse:
     limit: { type: integer }
     offset: { type: integer }
 
-DshProductProposal:
-  type: object
-  required: [id, proposedNameAr, proposedNameEn, domainId, brand, sourceSurface, sourceActorId, status, reviewNote, createdAt, updatedAt, reviewStage, auditRequired, resubmissionCount, version]
-  properties:
-    id: { type: string }
-    proposedNameAr: { type: string }
-    proposedNameEn: { type: string }
-    domainId: { type: string }
-    categoryNodeId: { type: [string, "null"] }
-    brand: { type: string }
-    barcode: { type: [string, "null"] }
-    imageObjectKey: { type: [string, "null"] }
-    sourceSurface:
-      type: string
-      enum: [app-field, app-partner, control-panel-catalog, control-panel-platform]
-    sourceActorId: { type: string }
-    sourceStoreId: { type: [string, "null"] }
-    status:
-      type: string
-      enum: [catalog-draft, partner-proposed, partner-review, marketing-review, catalog-adopted, catalog-approved, client-visible, needs-fix, rejected]
-    reviewNote: { type: string }
-    adoptedMasterProductId: { type: [string, "null"] }
-    createdAt: { type: string, format: date-time }
-    updatedAt: { type: string, format: date-time }
-    reviewStage: { type: string }
-    partnerReviewedBy: { type: [string, "null"] }
-    marketingReviewedBy: { type: [string, "null"] }
-    catalogAdoptedBy: { type: [string, "null"] }
-    catalogApprovedBy: { type: [string, "null"] }
-    clientVisibleAt: { type: [string, "null"], format: date-time }
-    auditRequired: { type: boolean }
-    blockedReason: { type: [string, "null"] }
-    resubmissionCount: { type: integer }
-    linkedStoreId: { type: [string, "null"] }
-    version: { type: integer, minimum: 1 }
-
 DshProductProposalListResponse:
   type: object
   required: [proposals, total, limit, offset]
   properties:
     proposals:
       type: array
-      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshProductProposal" }
+      items: { $ref: "../../dsh.catalog.openapi.yaml#/components/schemas/Proposal" }
     total: { type: integer }
     limit: { type: integer }
     offset: { type: integer }
-
-DshCentralCatalogDomain:
-
-  type: object
-  required: [id, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, requiresProductCatalog, isManualRequest, version]
-  properties:
-    id: { type: string }
-    slug: { type: string }
-    nameAr: { type: string }
-    nameEn: { type: string }
-    icon: { type: string }
-    sortOrder: { type: integer }
-    isActive: { type: boolean }
-    isClientVisible: { type: boolean }
-    requiresProductCatalog: { type: boolean }
-    isManualRequest: { type: boolean }
-    createdAt: { type: string, format: date-time }
-    updatedAt: { type: string, format: date-time }
-    version: { type: integer, minimum: 1 }
-
-DshCentralCatalogNode:
-  type: object
-  required: [id, domainId, level, slug, nameAr, nameEn, icon, sortOrder, isActive, isClientVisible, version]
-  properties:
-    id: { type: string }
-    domainId: { type: string }
-    parentId: { type: ["string", "null"] }
-    level: { type: string, enum: [BUSINESS_SUBDOMAIN, PRODUCT_MAIN_CLASS, PRODUCT_SUB_CLASS] }
-    slug: { type: string }
-    nameAr: { type: string }
-    nameEn: { type: string }
-    icon: { type: string }
-    sortOrder: { type: integer }
-    isActive: { type: boolean }
-    isClientVisible: { type: boolean }
-    version: { type: integer, minimum: 1 }
 
 DshClientCatalogProduct:
   type: object
@@ -257,10 +159,10 @@ DshCatalogResponse:
   properties:
     domains:
       type: array
-      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCentralCatalogDomain" }
+      items: { $ref: "../../dsh.catalog.openapi.yaml#/components/schemas/Domain" }
     nodes:
       type: array
-      items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshCentralCatalogNode" }
+      items: { $ref: "../../dsh.catalog.openapi.yaml#/components/schemas/Node" }
     products:
       type: array
       items: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshClientCatalogProduct" }

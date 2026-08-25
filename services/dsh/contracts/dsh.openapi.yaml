@@ -1251,13 +1251,13 @@ components:
     DshCatalogAssetListResponse:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshCatalogAssetListResponse"
     DshMasterProduct:
-      $ref: "./components/schemas/catalog.schemas.yaml#/DshMasterProduct"
+      $ref: "./dsh.catalog.openapi.yaml#/components/schemas/MasterProduct"
     MasterProductSummary:
       $ref: "./components/schemas/catalog.schemas.yaml#/MasterProductSummary"
     DshMasterProductListResponse:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshMasterProductListResponse"
     DshProductProposal:
-      $ref: "./components/schemas/catalog.schemas.yaml#/DshProductProposal"
+      $ref: "./dsh.catalog.openapi.yaml#/components/schemas/Proposal"
     DshProductProposalListResponse:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshProductProposalListResponse"
     DshReel:
@@ -1265,9 +1265,9 @@ components:
     DshPublicReel:
       $ref: "./components/schemas/common.schemas.yaml#/DshPublicReel"
     DshCentralCatalogDomain:
-      $ref: "./components/schemas/catalog.schemas.yaml#/DshCentralCatalogDomain"
+      $ref: "./dsh.catalog.openapi.yaml#/components/schemas/Domain"
     DshCentralCatalogNode:
-      $ref: "./components/schemas/catalog.schemas.yaml#/DshCentralCatalogNode"
+      $ref: "./dsh.catalog.openapi.yaml#/components/schemas/Node"
     DshClientCatalogProduct:
       $ref: "./components/schemas/catalog.schemas.yaml#/DshClientCatalogProduct"
     DshCatalogAssetLink:
