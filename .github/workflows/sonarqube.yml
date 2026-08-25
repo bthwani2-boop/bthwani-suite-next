@@ -292,9 +292,10 @@ jobs:
             "postgres://dsh_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5433/dsh_runtime?sslmode=disable"
           [[ "$WLT" == "true" ]] && migrate wlt services/wlt/database/migrations \
             "postgres://wlt_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5434/wlt_runtime?sslmode=disable"
-          [[ "$PLATFORM" == "true" ]] && migrate platform-control core/platform-control/database/migrations \
-            "postgres://platform_control_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5437/platform_c\
-            ontrol_runtime?sslmode=disable"
+          platform_db="platform_control_runtime"
+          platform_url="postgres://${platform_db}:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5437/${platform_db}?sslmode=disable"
+          [[ "$PLATFORM" == "true" ]] && migrate platform-control \
+            core/platform-control/database/migrations "${platform_url}"
           [[ "$PROVIDERS" == "true" ]] && migrate providers core/providers/database/migrations \
             "postgres://providers_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5438/providers_runtime\
             ?sslmode=disable"

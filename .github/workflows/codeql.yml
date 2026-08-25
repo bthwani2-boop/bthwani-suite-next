@@ -160,8 +160,8 @@ jobs:
           languages='[]'
           if [[ "${js}" == "true" ]]; then languages="$(jq -c '. + ["javascript-typescript"]' <<<"${languages}")"; fi
           if [[ "${go}" == "true" ]]; then languages="$(jq -c '. + ["go"]' <<<"${languages}")"; fi
-          go_modules="$(printf '%s\n' "${modules[@]:-}" | jq -Rsc 'split("\n") | map(select(length > 0) | \
-          split("=") | {key: .[0], workdir: .[1]})')"
+          go_modules_filter='split("\n") | map(select(length > 0) | split("=") | {key: .[0], workdir: .[1]})'
+          go_modules="$(printf '%s\n' "${modules[@]:-}" | jq -Rsc "${go_modules_filter}")"
           {
             echo "languages=${languages}"
             echo "go_matrix=${go_modules}"
