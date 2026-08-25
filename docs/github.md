@@ -30,7 +30,7 @@ Tool health is not execution readiness. Broken CI/scanners/runtimes are evidence
 
 Closure is stricter. A full PR closure run is an explicit `workflow_dispatch` of `ci.yml` with the exact PR/head/base identity, `mode=full`, and `runtime_proof=true`.
 
-The `BThwani / PR Closure Evidence` job re-resolves the PR, runs full internal CI/runtime, dispatches the remote analyzers on the same branch, correlates every new run to the exact HEAD SHA, reads back CodeQL/Sonar state, requires an exact-head semantic review attestation, re-resolves the PR again, and publishes one stable commit status.
+The `BThwani / PR Closure Evidence` job re-resolves the PR, runs full internal CI/runtime, dispatches the remote analyzers on the same branch, correlates every new run to the exact HEAD SHA, reads back CodeQL/Sonar state, requires an independent write-authorized exact-head `APPROVED` semantic review attestation, re-resolves the PR again, and publishes one stable commit status.
 
 A successful tool run is not cross-SHA or cross-PR evidence. A new commit invalidates affected evidence.
 
@@ -54,14 +54,19 @@ Semgrep does not translate unknown severities into success. Every raw result and
 
 ## Semantic review attestation
 
-OpenCodeReview preparation is not semantic review. Before full PR closure can pass, the exact current head must have a GitHub PR review anchored to that commit containing both:
+OpenCodeReview preparation is not semantic review. Before full PR closure can pass, the exact current head must have a GitHub PR review anchored to that commit that is all of the following:
+
+- `APPROVED`;
+- submitted by a reviewer other than the PR author;
+- submitted by a repository collaborator with `write`, `maintain`, or `admin` permission;
+- contains both required attestation markers:
 
 ```text
 BTHWANI_SEMANTIC_REVIEW:v1
 verdict=PASS
 ```
 
-The review body should summarize the material scope reviewed and any finding dispositions. A new commit supersedes the attestation.
+The review body should summarize the material scope reviewed and any finding dispositions. A new commit supersedes the attestation. A self-review, comment-only review, stale-head review, or review from an account without write authority is not closure evidence.
 
 ## Remote command ingress
 
