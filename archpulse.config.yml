@@ -49,3 +49,15 @@ styles:
   database: "#9b59b6"
   external: "#95a5a6"
   shared: "#f39c12"
+
+# Allowed file extensions
+extensions:
+  - ".ts"
+  - ".tsx"
+  - ".js"
+  - ".jsx"
+  - ".mjs"
+  - ".cjs"
+  - ".py"
+  - ".java"
+  - ".go"
