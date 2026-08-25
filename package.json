@@ -141,7 +141,7 @@
     "performance:api:k6:identity": "k6 run tools/performance/k6/identity-smoke.js",
     "performance:go:bench:dsh": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/performance/go/run-go-benchmarks.ps1 -Service dsh",
     "performance:go:bench:wlt": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/performance/go/run-go-benchmarks.ps1 -Service wlt",
-    "guard:image-size-security": "node --test tools/guards/image-size-security-regression-gate.mjs",
+    "guard:image-size-security": "node --test tools/guards/image-size-security-regression-gate.test.mjs",
     "guard:workflow-lint": "node tools/scripts/run-actionlint.mjs",
     "guard:workflow-security": "node tools/scripts/run-zizmor.mjs",
     "guard:actions-pin": "node tools/scripts/run-pinact.mjs --verify",
