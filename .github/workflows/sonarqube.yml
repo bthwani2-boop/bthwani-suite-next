@@ -340,6 +340,16 @@ jobs:
           BTHWANI_CI_POSTGRES_PASSWORD: bthwani_ci_ephemeral_coverage
         run: |
           set -euo pipefail
+          database_url() {
+            printf 'postgres://%s:%s@127.0.0.1:%s/%s?sslmode=disable' \
+              "$1" "$BTHWANI_CI_POSTGRES_PASSWORD" "$2" "$1"
+          }
+          identity_url="$(database_url identity_runtime 5435)"
+          workforce_url="$(database_url workforce_runtime 5436)"
+          dsh_url="$(database_url dsh_runtime 5433)"
+          wlt_url="$(database_url wlt_runtime 5434)"
+          platform_url="$(database_url platform_control_runtime 5437)"
+          providers_url="$(database_url providers_runtime 5438)"
           modules=()
           [[ "${WORKFORCE}" == "true" ]] && modules+=(core/workforce/backend)
           [[ "${PROVIDERS}" == "true" ]] && modules+=(core/providers/backend)
