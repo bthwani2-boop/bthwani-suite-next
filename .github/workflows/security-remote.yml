@@ -207,10 +207,10 @@ jobs:
             esac
             if [[ "${status}" -eq 0 ]]; then
               outcome=PASS
-              policy_marker='(^|[[:space:]]|\[[^]]+[[:space:]])(WARN|SKIP|BLOCKED)(\]|:|[[:space:]]|$)'
+              policy_marker='(^|[[:space:]])\[[^]]+[[:space:]]+(WARN|SKIP|BLOCKED)(\]|:|[[:space:]]|$)'
               if grep -Eiq "${policy_marker}" "${log}"; then
-                if grep -Eiq '(^|[[:space:]]|\[[^]]+[[:space:]])BLOCKED(\]|:|[[:space:]]|$)' "${log}"; then outcome=BLOCKED
-                elif grep -Eiq '(^|[[:space:]]|\[[^]]+[[:space:]])SKIP(\]|:|[[:space:]]|$)' "${log}"; then outcome=SKIP
+                if grep -Eiq '(^|[[:space:]])\[[^]]+[[:space:]]+BLOCKED(\]|:|[[:space:]]|$)' "${log}"; then outcome=BLOCKED
+                elif grep -Eiq '(^|[[:space:]])\[[^]]+[[:space:]]+SKIP(\]|:|[[:space:]]|$)' "${log}"; then outcome=SKIP
                 else outcome=WARN
                 fi
                 status=1
