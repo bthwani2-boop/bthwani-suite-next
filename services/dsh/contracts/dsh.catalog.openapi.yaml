@@ -1385,18 +1385,18 @@ components:
           - app-partner
           - control-panel-catalog
           - control-panel-platform
-          sourceStoreId:
-            type:
-            - string
-            - 'null'
-          targetMasterProductId:
-            type:
-            - string
-            - 'null'
-          baseVersion:
-            type:
-            - integer
-            - 'null'
+        sourceStoreId:
+          type:
+          - string
+          - 'null'
+        targetMasterProductId:
+          type:
+          - string
+          - 'null'
+        baseVersion:
+          type:
+          - integer
+          - 'null'
         duplicateCandidates:
           type: array
           items:
