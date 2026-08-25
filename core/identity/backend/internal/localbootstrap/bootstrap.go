@@ -60,7 +60,7 @@ func Run(ctx context.Context, db *sql.DB, config Config) error {
 		return errors.New("development identity seed requires a database")
 	}
 
-	if err := ensureOperatorRoleDefinition(ctx, db); err != nil {
+	if err := validateOperatorRoleDefinition(ctx, db); err != nil {
 		return err
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(config.Password), bcrypt.DefaultCost)
@@ -179,30 +179,18 @@ WHERE id = ANY($1)`, pq.Array(fixtureActorIDs()))
 	return true, nil
 }
 
-func ensureOperatorRoleDefinition(ctx context.Context, db *sql.DB) error {
-	enforcer := identity.NewPermissionEnforcer(db)
-	role, err := enforcer.GetRoleDefinition(ctx, operatorRole)
+func validateOperatorRoleDefinition(ctx context.Context, db *sql.DB) error {
+	role, err := identity.NewPermissionEnforcer(db).GetRoleDefinition(ctx, operatorRole)
 	if errors.Is(err, identity.ErrRoleNotFound) {
 		return errors.New("canonical operator role is absent from Identity vocabulary")
 	}
 	if err != nil {
 		return err
 	}
-	expected := operatorRolePermissions()
-	if role.Active && permissionSetEqual(role.Permissions, expected) {
-		return nil
+	if !role.Active || !permissionSetEqual(role.Permissions, operatorRolePermissions()) {
+		return errors.New("canonical operator role definition drifted; local development seed cannot mutate migration-owned role authority")
 	}
-	_, err = enforcer.UpsertRoleDefinitionWithOptions(
-		ctx,
-		role.Name,
-		role.Description,
-		true,
-		role.Version,
-		expected,
-		"identity-local-development-seed:operator-role",
-		"identity-local-development-seed",
-	)
-	return err
+	return nil
 }
 
 func roleConverged(ctx context.Context, db *sql.DB) (bool, error) {
