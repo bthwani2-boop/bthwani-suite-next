@@ -79,6 +79,17 @@ func ProcessOnce(ctx context.Context, db *sql.DB, client *wlt.Client) error {
 	return nil
 }
 
+func deliveryCommissionRequired(ctx context.Context, client *wlt.Client, checkoutIntentID string) (bool, error) {
+	quote, err := client.GetCheckoutQuote(ctx, checkoutIntentID)
+	if err != nil {
+		return false, fmt.Errorf("read canonical WLT checkout quote before delivery commission: %w", err)
+	}
+	if quote.DeliveryFeeMinorUnits < 0 {
+		return false, fmt.Errorf("canonical WLT checkout quote has negative delivery fee: %d", quote.DeliveryFeeMinorUnits)
+	}
+	return quote.DeliveryFeeMinorUnits > 0, nil
+}
+
 func deliverEvent(ctx context.Context, client *wlt.Client, event Event) (string, error) {
 	if event.OperatorContextID == "" {
 		return "", fmt.Errorf("WLT outbox event %s has no OperatorContext context", event.ID)
@@ -92,6 +103,13 @@ func deliverEvent(ctx context.Context, client *wlt.Client, event Event) (string,
 		}
 		if _, _, err := client.FinalizeCodReservation(ctx, event.OrderID, event.CheckoutIntentID, event.OrderID, "delivery-completed:"+event.OrderID+":cod-finalize"); err != nil {
 			return "", err
+		}
+		commissionRequired, err := deliveryCommissionRequired(ctx, client, event.CheckoutIntentID)
+		if err != nil {
+			return "", err
+		}
+		if !commissionRequired {
+			return "", nil
 		}
 		if err := client.DeliverCaptainCommission(ctx, wlt.DeliverCaptainCommissionInput{
 			CaptainID:        event.CaptainID,
