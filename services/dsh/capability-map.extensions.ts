@@ -68,27 +68,6 @@ export const DSH_CAPABILITY_MAP_EXTENSIONS = [
     ],
   },
   {
-    id: "dsh.field.finance",
-    status: "experience-fix-required",
-    contractOperations: [
-      "GETDshCaptainFinanceCommissions",
-      "GETDshCaptainFinancePayouts",
-      "GETDshFieldFinanceCommissions",
-      "GETDshFieldFinancePayouts",
-      "GETDshFieldFinanceWallet",
-    ],
-    surfaces: ["app-field", "app-captain", "control-panel"],
-    runtimeBound: true,
-    closureState: "FIX_REQUIRED",
-    topic: "field-ops",
-    topicScope: [
-      "field-finance",
-      "captain-finance",
-      "settlements",
-      "payout-processing",
-    ],
-  },
-  {
     id: "dsh.support.hub",
     status: "experience-fix-required",
     contractOperations: [

@@ -47,22 +47,3 @@ func (s *protectedStoreServer) handleCaptainFinanceCommissions(w http.ResponseWr
 	status, body, err := s.wlt.FinanceReadWithOperatorContext(r.Context(), "/wlt/commissions", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
-
-// Historical captain and field URLs delegate to the same actor-scoped payout
-// handlers used by the current /me routes. No compatibility route can create
-// a payout without an active destination owned by the authenticated actor.
-func (s *protectedStoreServer) handleCaptainFinancePayouts(w http.ResponseWriter, r *http.Request) {
-	s.handleCaptainPayoutRequests(w, r)
-}
-
-func (s *protectedStoreServer) handleFieldFinanceCommissions(w http.ResponseWriter, r *http.Request) {
-	s.handleFieldMeCommissions(w, r)
-}
-
-func (s *protectedStoreServer) handleFieldFinanceWallet(w http.ResponseWriter, r *http.Request) {
-	s.handleFieldMeWallet(w, r)
-}
-
-func (s *protectedStoreServer) handleFieldFinancePayouts(w http.ResponseWriter, r *http.Request) {
-	s.handleFieldPayoutRequests(w, r)
-}

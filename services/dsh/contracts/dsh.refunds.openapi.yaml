@@ -85,32 +85,6 @@ paths:
           $ref: "#/components/responses/WltUnavailable"
       security:
         - bearerAuth: []
-  /dsh/control-panel/finance/refunds/{refundId}:
-    get:
-      tags:
-        - dsh-control-panel
-      operationId: getDshControlPanelFinanceRefund
-      summary: Read one authenticated-OperatorContext-scoped canonical refund
-      parameters:
-        - $ref: "#/components/parameters/RefundId"
-        - $ref: "#/components/parameters/CorrelationIdOptional"
-      responses:
-        "200":
-          description: Canonical WLT refund
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ControlPanelRefundEnvelope"
-        "400":
-          $ref: "#/components/responses/BadRequest"
-        "401":
-          $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
-        "404":
-          $ref: "#/components/responses/NotFound"
-      security:
-        - bearerAuth: []
   /dsh/control-panel/finance/refunds/{refundId}/approve:
     post:
       tags:

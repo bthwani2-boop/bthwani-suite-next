@@ -29,6 +29,7 @@ export function commissionTypeLabel(type: string): string {
     delivery_fee: "عمولة توصيل",
     platform_fee: "عمولة منصة",
     cod_fee: "عمولة تحصيل نقدي",
+    partner_discount: "خصم الشريك",
   };
   return (map[type] ?? type) || "عمولة تشغيلية";
 }

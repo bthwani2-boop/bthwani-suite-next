@@ -60,15 +60,15 @@ x-bthwani-overlays:
   storeOperationalContext: ./dsh.store-operational-context.overlay.yaml
 paths:
   /dsh/field/me/finance/wallet:
-    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1me~1finance~1wallet"
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1field~1me~1finance~1wallet"
   /dsh/field/me/readiness:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1me~1readiness"
   /dsh/field/me/finance/commissions:
-    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1me~1finance~1commissions"
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1field~1me~1finance~1commissions"
   /dsh/field/me/finance/ledger-entries:
-    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1me~1finance~1ledger-entries"
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1field~1me~1finance~1ledger-entries"
   /dsh/field/me/finance/payout-requests:
-    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1me~1finance~1payout-requests"
+    $ref: "./dsh.representative-finance.openapi.yaml#/paths/~1dsh~1field~1me~1finance~1payout-requests"
   /dsh/control-panel/finance/payout-destinations/{actorType}/{actorId}:
     $ref: "./dsh.payouts-destinations.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1payout-destinations~1{actorType}~1{actorId}"
   /dsh/control-panel/finance/payout-destinations/{actorType}/{actorId}/verify:
@@ -427,16 +427,6 @@ paths:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1settlements~1from-delivered-orders"
   /dsh/control-panel/finance/settlement-policies/{partnerId}:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1settlement-policies~1{partnerId}"
-  /dsh/captain/finance/commissions:
-    $ref: "./paths/captain.paths.yaml#/~1dsh~1captain~1finance~1commissions"
-  /dsh/captain/finance/payouts:
-    $ref: "./paths/captain.paths.yaml#/~1dsh~1captain~1finance~1payouts"
-  /dsh/field/finance/commissions:
-    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1finance~1commissions"
-  /dsh/field/finance/wallet:
-    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1finance~1wallet"
-  /dsh/field/finance/payouts:
-    $ref: "./paths/field.paths.yaml#/~1dsh~1field~1finance~1payouts"
   /dsh/control-panel/finance/reconciliation-cases:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1reconciliation-cases"
   /dsh/control-panel/finance/reconciliation-cases/{caseId}:

@@ -15,69 +15,6 @@ x-bthwani-adapter-owner: frontend/shared/dispatch
 x-bthwani-runtime-dependency: true
 
 paths:
-  /dsh/captain/dispatch/assignments/{assignmentId}/location:
-    post:
-      operationId: pushDshCaptainLocation
-      tags: [DshLiveTracking]
-      summary: Store the authenticated captain's latest trusted foreground sample only.
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: '#/components/parameters/AssignmentId'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/TrustedLocationInput' }
-      responses:
-        '200':
-          description: Sample accepted or exact latest-sample replay returned idempotently.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/DispatchAssignmentResponse' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/Unauthenticated' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/UnacceptableLocation' }
-        '429': { $ref: '#/components/responses/TooFrequent' }
-
-  /dsh/client/orders/{orderId}/tracking:
-    get:
-      operationId: getDshClientOrderTracking
-      tags: [DshLiveTracking]
-      summary: Read assignment state, rounded delivery-window location, freshness, and governed ETA.
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: '#/components/parameters/OrderId'
-      responses:
-        '200':
-          description: Client-owned order tracking projection returned.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/ClientLiveTrackingResponse' }
-        '401': { $ref: '#/components/responses/Unauthenticated' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-
-  /dsh/partner/orders/{orderId}/dispatch-tracking:
-    get:
-      operationId: getDshPartnerDispatchTracking
-      tags: [DshLiveTracking]
-      summary: Read delivery state and ETA reference without captain coordinates or mutations.
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: '#/components/parameters/OrderId'
-      responses:
-        '200':
-          description: Partner-owned order reference projection returned with no location coordinates.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/PartnerTrackingResponse' }
-        '401': { $ref: '#/components/responses/Unauthenticated' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-
   /dsh/operator/dispatch/tracking-alerts:
     get:
       operationId: listOperatorDispatchTrackingAlerts

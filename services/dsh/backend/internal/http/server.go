@@ -215,11 +215,6 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("GET /dsh/control-panel/finance/references/settlement-status", protected.withPermission("control-panel", FinancePermissionRead, protected.handleFinanceReferencesSettlementStatus))
 	mux.HandleFunc("GET /dsh/control-panel/finance/references/refund-status", protected.withPermission("control-panel", FinancePermissionRead, protected.handleFinanceReferencesRefundStatus))
 	mux.HandleFunc("GET /dsh/control-panel/finance/references/field-commission", protected.withPermission("control-panel", FinancePermissionRead, protected.handleFinanceReferencesFieldCommission))
-	mux.HandleFunc("GET /dsh/captain/finance/commissions", protected.handleCaptainFinanceCommissions)
-	mux.HandleFunc("GET /dsh/captain/finance/payouts", protected.handleCaptainFinancePayouts)
-	mux.HandleFunc("GET /dsh/field/finance/commissions", protected.withFieldActor(protected.handleFieldFinanceCommissions))
-	mux.HandleFunc("GET /dsh/field/finance/wallet", protected.withFieldActor(protected.handleFieldFinanceWallet))
-	mux.HandleFunc("GET /dsh/field/finance/payouts", protected.withFieldActor(protected.handleFieldFinancePayouts))
 
 	// Representative self-service finance routes are composed once, from
 	// registerUnifiedCatalogRoutes below. A second call here registered the

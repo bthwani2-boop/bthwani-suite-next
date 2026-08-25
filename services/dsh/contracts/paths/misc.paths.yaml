@@ -72,33 +72,6 @@
             schema: { type: object, additionalProperties: true }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
-/dsh/control-panel/finance/refunds:
-  get:
-    operationId: listDshControlPanelFinanceRefunds
-    summary: Operator reads the governed WLT refunds view through the DSH finance proxy.
-    tags: [ DshFinanceProxy ]
-    security: [ { bearerAuth: [] } ]
-    parameters:
-      - name: orderId
-        in: query
-        required: false
-        schema: { type: string }
-      - name: limit
-        in: query
-        required: false
-        schema: { type: string }
-      - name: cursor
-        in: query
-        required: false
-        schema: { type: string }
-    responses:
-      "200":
-        description: WLT refunds view (verbatim passthrough).
-        content:
-          application/json:
-            schema: { type: object, additionalProperties: true }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-
 /dsh/control-panel/finance/refunds/{refundId}:
   get:
     operationId: getDshControlPanelFinanceRefund

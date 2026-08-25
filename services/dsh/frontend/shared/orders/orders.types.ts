@@ -1,9 +1,8 @@
 import type { components } from "../../../clients/generated/dsh-api";
 
 type GeneratedDshOrder = components["schemas"]["DshOrder"];
-type GeneratedDshOrderStatus = components["schemas"]["DshOrderStatus"];
 
-export type DshOrderStatus = GeneratedDshOrderStatus | "store_handoff_confirmed";
+export type DshOrderStatus = components["schemas"]["DshOrderStatus"];
 
 export type DshOrderItem = components["schemas"]["DshOrderItem"];
 export type DshOrder = Omit<GeneratedDshOrder, "status"> & {

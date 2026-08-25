@@ -49,54 +49,6 @@
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
 
-/dsh/client/checkout-intents/{intentId}/validate:
-  post:
-    operationId: validateDshCheckoutIntent
-    summary: Validate a checkout intent dependencies without triggering side effects.
-    tags: [DshCheckout]
-    security:
-      - bearerAuth: []
-    parameters:
-      - name: intentId
-        in: path
-        required: true
-        schema: { type: string }
-    responses:
-      "200":
-        description: Checkout intent with validation issues.
-        content:
-          application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCheckoutIntentResponse" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-
-/dsh/client/checkout-intents/{intentId}/refresh:
-  post:
-    operationId: refreshDshCheckoutIntent
-    summary: Refresh a checkout intent dependencies (cart, address, mode) recalculating the preview hash and validating.
-    tags: [DshCheckout]
-    security:
-      - bearerAuth: []
-    parameters:
-      - name: intentId
-        in: path
-        required: true
-        schema: { type: string }
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCreateCheckoutIntentRequest" }
-    responses:
-      "200":
-        description: Checkout intent refreshed.
-        content:
-          application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshCheckoutIntentResponse" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-
-
 /dsh/client/checkout-intents/{intentId}/cancel:
   post:
     operationId: cancelDshCheckoutIntent

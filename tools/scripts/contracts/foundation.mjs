@@ -43,6 +43,27 @@ function indexedEntries() {
   return entries;
 }
 
+// MODULAR entries may bind path-items through external `$ref` stubs that point
+// at fragment files never listed in `x-bthwani-contracts`. Those fragments are
+// ownership inputs too and must join the duplicate-operation scan; otherwise
+// two files can silently declare the same operationId while composition picks
+// a winner without any evidence.
+function entryPathItemRefFiles(entryFile) {
+  const absolute = path.join(repoRoot, entryFile);
+  if (!fs.existsSync(absolute)) return [];
+  // Path-item pointers are either `#/paths/~1...` (documented paths map) or
+  // `#/~1...` (root-level path-item fragments); component pointers are ignored.
+  const refRegex = /\$ref:\s*["']?([^"'\s]+)#(\/(?:paths\/)?~1[^"'\s]*)["']?/;
+  const files = [];
+  for (const line of read(entryFile).split(/\r?\n/)) {
+    const match = line.match(refRegex);
+    if (!match) continue;
+    const resolved = toPosix(path.relative(repoRoot, path.resolve(path.dirname(absolute), match[1])));
+    if (!files.includes(resolved)) files.push(resolved);
+  }
+  return files;
+}
+
 for (const file of forbiddenIndexes) {
   if (exists(file)) violations.push({ file, message: `parallel or retired central contract source is forbidden; use ${canonicalIndex}` });
 }
@@ -95,7 +116,16 @@ for (const entry of entries) {
     else ownedFiles.set(candidate.file, entry.file);
   }
 
-  const operationSources = modules.length > 0 ? modules : [{ file: entry.file, exists: true }];
+  const indexedModuleFiles = new Set(modules.map((module) => module.file));
+  const fragmentSources = entryPathItemRefFiles(entry.file)
+    .filter((file) => !indexedModuleFiles.has(file) && file !== toPosix(entry.file))
+    .map((file) => {
+      if (!exists(file)) violations.push({ file: entry.file, message: `entry path-item ref target does not exist: ${file}` });
+      return { file, exists: exists(file) };
+    });
+  const operationSources = modules.length > 0
+    ? [...modules, ...fragmentSources]
+    : [{ file: entry.file, exists: true }, ...fragmentSources];
   for (const source of operationSources) {
     if (!source.exists) continue;
     if (source.file !== entry.file && parseIndexedContractModules(source.file).length > 0) {

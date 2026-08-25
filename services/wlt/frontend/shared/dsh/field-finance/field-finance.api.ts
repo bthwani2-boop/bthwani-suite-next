@@ -1,3 +1,4 @@
+import type { operations } from "@bthwani/dsh-openapi";
 import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
 import { createDshHttpClient } from "../dsh-link/dsh-http-request";
 
@@ -8,69 +9,25 @@ const { request: fieldGet } = createDshHttpClient(
   "dsh-field-finance",
 );
 
-export type FieldWallet = {
-  readonly actorId: string;
-  readonly actorType: string;
-  readonly status: string;
-  readonly currency: string;
-  readonly availableBalanceMinorUnits: number;
-  readonly pendingBalanceMinorUnits: number;
-  readonly heldBalanceMinorUnits: number;
-  readonly earnedTotalMinorUnits: number;
-  readonly settledTotalMinorUnits: number;
-  readonly paidTotalMinorUnits: number;
-  readonly lastLedgerEntryAt: string | null;
-  readonly updatedAt: string | null;
-};
+type WalletResponse =
+  operations["getDshFieldMeWallet"]["responses"][200]["content"]["application/json"];
+type LedgerEntriesResponse =
+  operations["getDshFieldMeLedgerEntries"]["responses"][200]["content"]["application/json"];
+type CommissionsResponse =
+  operations["getDshFieldMeCommissions"]["responses"][200]["content"]["application/json"];
+type PayoutRequestsResponse =
+  operations["getDshFieldMePayoutRequests"]["responses"][200]["content"]["application/json"];
+type PayoutRequestCreatedResponse =
+  operations["submitDshFieldMePayoutRequest"]["responses"][201]["content"]["application/json"];
+type SubmitPayoutRequestBody = NonNullable<
+  operations["submitDshFieldMePayoutRequest"]["requestBody"]
+>["content"]["application/json"];
 
-export type FieldLedgerEntry = {
-  readonly id: string;
-  readonly entryType: string;
-  readonly sourceType: string;
-  readonly sourceId: string;
-  readonly referenceId: string;
-  readonly referenceType: string;
-  readonly amountMinorUnits: number;
-  readonly currency: string;
-  readonly debitCredit: string;
-  readonly balanceAfter: number;
-  readonly description: string;
-  readonly createdAt: string;
-};
-
-export type FieldCommission = {
-  readonly id: string;
-  readonly beneficiaryActorId: string;
-  readonly beneficiaryActorType: string;
-  readonly sourceType: string;
-  readonly sourceId: string;
-  readonly visitId: string | null;
-  readonly storeId: string | null;
-  readonly commissionPolicyId: string | null;
-  readonly commissionType: string;
-  readonly amountMinorUnits: number;
-  readonly currency: string;
-  readonly status: string;
-  readonly settledAt: string | null;
-  readonly confirmedAt: string | null;
-  readonly rejectedAt: string | null;
-  readonly reversedAt: string | null;
-  readonly resolutionNote: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-};
-
-export type FieldPayoutRequest = {
-  readonly id: string;
-  readonly beneficiaryActorId: string;
-  readonly beneficiaryActorType: string;
-  readonly amountMinorUnits: number;
-  readonly currency: string;
-  readonly status: string;
-  readonly requestedAt: string;
-  readonly completedAt: string | null;
-  readonly failureReason: string | null;
-};
+// Payload shapes derive from the composed DSH contract; WLT owns their truth.
+export type FieldWallet = WalletResponse["wallet"];
+export type FieldLedgerEntry = LedgerEntriesResponse["ledgerEntries"][number];
+export type FieldCommission = CommissionsResponse["commissions"][number];
+export type FieldPayoutRequest = PayoutRequestsResponse["payoutRequests"][number];
 
 /** Stable reason code for the consuming surface; never a localized sentence. */
 function codeFrom(error: unknown): string {
@@ -89,7 +46,7 @@ export async function fetchFieldMeWallet(): Promise<
   | { ok: false; message: string; code: string }
 > {
   try {
-    const data = await fieldGet<{ wallet: FieldWallet }>("/dsh/field/me/finance/wallet");
+    const data = await fieldGet<WalletResponse>("/dsh/field/me/finance/wallet");
     return { ok: true, wallet: data.wallet };
   } catch (error) {
     return { ok: false, message: messageFrom(error), code: codeFrom(error) };
@@ -101,7 +58,7 @@ export async function fetchFieldMeLedgerEntries(): Promise<
   | { ok: false; message: string; code: string }
 > {
   try {
-    const data = await fieldGet<{ ledgerEntries: FieldLedgerEntry[] }>(
+    const data = await fieldGet<LedgerEntriesResponse>(
       "/dsh/field/me/finance/ledger-entries?limit=30",
     );
     return { ok: true, ledgerEntries: data.ledgerEntries ?? [] };
@@ -115,7 +72,7 @@ export async function fetchFieldMeCommissions(): Promise<
   | { ok: false; message: string; code: string }
 > {
   try {
-    const data = await fieldGet<{ commissions: FieldCommission[] }>(
+    const data = await fieldGet<CommissionsResponse>(
       "/dsh/field/me/finance/commissions",
     );
     return { ok: true, commissions: data.commissions ?? [] };
@@ -129,7 +86,7 @@ export async function fetchFieldMePayoutRequests(): Promise<
   | { ok: false; message: string; code: string }
 > {
   try {
-    const data = await fieldGet<{ payoutRequests: FieldPayoutRequest[] }>(
+    const data = await fieldGet<PayoutRequestsResponse>(
       "/dsh/field/me/finance/payout-requests",
     );
     return { ok: true, payoutRequests: data.payoutRequests ?? [] };
@@ -138,6 +95,11 @@ export async function fetchFieldMePayoutRequests(): Promise<
   }
 }
 
+/**
+ * Submits a SPECIFIED-amount payout through the governed actor payout route.
+ * The live DSH handler requires `amountMode`; FULL_AVAILABLE is reserved for
+ * full-balance cash-out flows that do not take a caller amount.
+ */
 export async function submitFieldMePayoutRequest(
   amountMinorUnits: number,
   currency: string,
@@ -147,11 +109,17 @@ export async function submitFieldMePayoutRequest(
   | { ok: false; message: string; code: string }
 > {
   try {
-    const data = await fieldGet<{ payoutRequest: FieldPayoutRequest }>(
+    const body: SubmitPayoutRequestBody = {
+      amountMode: "SPECIFIED",
+      amountMinorUnits,
+      currency,
+      idempotencyKey,
+    };
+    const data = await fieldGet<PayoutRequestCreatedResponse>(
       "/dsh/field/me/finance/payout-requests",
       {
         method: "POST",
-        body: { amountMinorUnits, currency, idempotencyKey },
+        body,
         idempotencyKey,
       },
     );

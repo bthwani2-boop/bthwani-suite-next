@@ -1,3 +1,4 @@
+import type { operations } from "@bthwani/dsh-openapi";
 import type { components } from "@bthwani/wlt-openapi";
 import { resolveDshApiBaseUrl } from "../dsh-link/dsh-api-base-url";
 import { createDshHttpClient } from "../dsh-link/dsh-http-request";
@@ -11,27 +12,11 @@ export type RepresentativeActorType = Extract<
 /** Actor classes that expose a DSH-facing WLT wallet projection. */
 export type RepresentativeWalletActorType = components["schemas"]["ActorType"];
 
-/** WalletEnvelope remains open in WLT OpenAPI; this is a read-only projection. */
-export type RepresentativeWallet = {
-  readonly id: string;
-  readonly actorId: string;
-  readonly actorType: RepresentativeWalletActorType;
-  readonly status: "active" | "suspended" | "frozen" | "closed" | string;
-  readonly currency: string;
-  readonly availableBalanceMinorUnits: number;
-  readonly pendingBalanceMinorUnits: number;
-  readonly heldBalanceMinorUnits: number;
-  readonly earnedTotalMinorUnits: number;
-  readonly settledTotalMinorUnits: number;
-  readonly paidTotalMinorUnits: number;
-  readonly collateralReservedBalanceMinorUnits: number;
-  readonly protectedMinimumCollateralMinorUnits: number;
-  readonly releasableCollateralExcessMinorUnits: number;
-  readonly outstandingDebtMinorUnits: number;
-  readonly activeCollateralPositionCount: number;
-  readonly lastLedgerEntryAt: string | null;
-  readonly updatedAt: string | null;
-};
+type DshRepresentativeWalletEnvelope =
+  operations["getDshFieldMeWallet"]["responses"][200]["content"]["application/json"];
+
+/** Derived from the composed DSH representative-finance contract; WLT owns truth. */
+export type RepresentativeWallet = DshRepresentativeWalletEnvelope["wallet"];
 
 export type RepresentativeLedgerEntry = components["schemas"]["LedgerEntry"];
 
