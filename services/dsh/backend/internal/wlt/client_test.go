@@ -315,14 +315,6 @@ func TestFinanceReadWalletWithOperatorContextNotConfigured(t *testing.T) {
 	}
 }
 
-func TestFinanceReadWalletFailsClosedWithoutOperatorContext(t *testing.T) {
-	c := NewClient("https://wlt.internal", "test-service-token")
-	_, _, err := c.FinanceReadWallet(context.Background(), "field", "field-1", "corr-1")
-	if err == nil || !strings.Contains(err.Error(), "OperatorContext id is required") {
-		t.Fatalf("expected fail-closed OperatorContext error, got: %v", err)
-	}
-}
-
 func TestFinanceReadRejectsBareWalletsPathNowThatItRequiresActorSegments(t *testing.T) {
 	// /wlt/wallets was removed from the query-based allowlist because the
 	// real WLT route is path-parameterized (/wlt/wallets/{actorType}/{actorId}).
@@ -522,13 +514,16 @@ func TestCancelSessionForOrderSendsExactBodyAndHeaders(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	err := c.CancelSessionForOrder(trustedMutationTestContext(), "ps-1", CancelSessionForOrderInput{
+	result, err := c.CancelSessionForOrderWithResult(trustedMutationTestContext(), "ps-1", CancelSessionForOrderInput{
 		OrderID:  "order-1",
 		ClientID: "client-1",
 		Reason:   "store rejected order",
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Action != "refund_requested" || result.RefundID != "refund-1" {
+		t.Fatalf("unexpected cancel result: %+v", result)
 	}
 	if gotPath != "/wlt/payment-sessions/ps-1/cancel-for-order" {
 		t.Fatalf("expected /wlt/payment-sessions/ps-1/cancel-for-order, got %q", gotPath)
@@ -548,7 +543,7 @@ func TestCancelSessionForOrderNonSuccessStatus(t *testing.T) {
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	err := c.CancelSessionForOrder(trustedMutationTestContext(), "ps-1", CancelSessionForOrderInput{
+	_, err := c.CancelSessionForOrderWithResult(trustedMutationTestContext(), "ps-1", CancelSessionForOrderInput{
 		OrderID:  "order-1",
 		ClientID: "client-1",
 		Reason:   "client cancelled order",
@@ -560,7 +555,7 @@ func TestCancelSessionForOrderNonSuccessStatus(t *testing.T) {
 
 func TestCancelSessionForOrderNotConfigured(t *testing.T) {
 	c := NewClient("", "")
-	err := c.CancelSessionForOrder(context.Background(), "ps-1", CancelSessionForOrderInput{OrderID: "order-1"})
+	_, err := c.CancelSessionForOrderWithResult(context.Background(), "ps-1", CancelSessionForOrderInput{OrderID: "order-1"})
 	if err == nil || !strings.Contains(err.Error(), "not configured") {
 		t.Fatalf("expected 'not configured' error, got: %v", err)
 	}

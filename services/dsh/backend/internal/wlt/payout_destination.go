@@ -1,7 +1,6 @@
 package wlt
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -21,19 +20,6 @@ func partnerPayoutDestinationPath(partnerID string) string {
 	return "/wlt/payout-destinations/partner/" + url.PathEscape(partnerID)
 }
 
-// PayoutDestinationUpsertInput is intentionally official-wallet-only. DSH may
-// relay the unmasked reference to WLT for this request, but must never persist
-// or return it. CreatedByActorID is transport-only: WLT receives it as the
-// authenticated delegated finance principal, never as body-selected authority.
-type PayoutDestinationUpsertInput struct {
-	BeneficiaryName           string `json:"beneficiaryName"`
-	OfficialWalletProviderKey string `json:"officialWalletProviderKey"`
-	DestinationReference      string `json:"destinationReference"`
-	CreatedByActorID          string `json:"-"`
-	CorrelationID             string `json:"-"`
-	IdempotencyKey            string `json:"-"`
-}
-
 // PayoutDestinationRef mirrors the canonical WLT PayoutDestination response.
 type PayoutDestinationRef struct {
 	ID                            string `json:"id"`
@@ -51,65 +37,6 @@ type PayoutDestinationRef struct {
 
 type payoutDestinationEnvelope struct {
 	PayoutDestination PayoutDestinationRef `json:"payoutDestination"`
-}
-
-func (c *Client) UpsertPayoutDestination(ctx context.Context, partnerID string, input PayoutDestinationUpsertInput) (*PayoutDestinationRef, error) {
-	if !c.Configured() {
-		return nil, fmt.Errorf("WLT payout-destination handoff is not configured")
-	}
-	partnerID = strings.TrimSpace(partnerID)
-	input.BeneficiaryName = strings.TrimSpace(input.BeneficiaryName)
-	input.OfficialWalletProviderKey = strings.ToLower(strings.TrimSpace(input.OfficialWalletProviderKey))
-	input.DestinationReference = strings.TrimSpace(input.DestinationReference)
-	input.CreatedByActorID = strings.TrimSpace(input.CreatedByActorID)
-	if partnerID == "" || input.BeneficiaryName == "" || input.OfficialWalletProviderKey == "" || input.DestinationReference == "" || input.CreatedByActorID == "" {
-		return nil, fmt.Errorf("partner, beneficiary, official wallet provider, destination reference, and creating actor are required")
-	}
-
-	body, err := json.Marshal(input)
-	if err != nil {
-		return nil, fmt.Errorf("encode WLT payout destination request: %w", err)
-	}
-	path := partnerPayoutDestinationPath(partnerID)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, c.baseURL+path, bytes.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("build WLT payout destination request: %w", err)
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
-	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
-		return nil, fmt.Errorf("prepare WLT payout destination OperatorContext: %w", err)
-	}
-	req.Header.Set("X-Delegated-Principal-ID", input.CreatedByActorID)
-	correlationID := strings.TrimSpace(input.CorrelationID)
-	if correlationID == "" {
-		correlationID = deterministicMutationKey("partner-payout-correlation", partnerID, input.CreatedByActorID)
-	}
-	idempotencyKey := strings.TrimSpace(input.IdempotencyKey)
-	if idempotencyKey == "" {
-		idempotencyKey = deterministicMutationKey(
-			"partner-payout-destination",
-			partnerID,
-			input.CreatedByActorID,
-			input.OfficialWalletProviderKey,
-			input.DestinationReference,
-		)
-	}
-	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
-		return nil, fmt.Errorf("prepare WLT payout destination request: %w", err)
-	}
-
-	response, err := c.http.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("call WLT payout destination: %w", err)
-	}
-	defer response.Body.Close()
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return nil, fmt.Errorf("WLT payout destination returned HTTP %d", response.StatusCode)
-	}
-	return decodePayoutDestinationRef(response, partnerID)
 }
 
 func (c *Client) GetPayoutDestination(ctx context.Context, partnerID string) (*PayoutDestinationRef, error) {
