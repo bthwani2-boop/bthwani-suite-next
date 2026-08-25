@@ -62,11 +62,9 @@ func TestUnifiedCatalogRoutesAreRegistered(t *testing.T) {
 		{http.MethodPost, "/dsh/partner/reels", "POST /dsh/partner/reels"},
 		{http.MethodGet, "/dsh/operator/reels", "GET /dsh/operator/reels"},
 		{http.MethodPost, "/dsh/operator/reels/reel-1/review", "POST /dsh/operator/reels/{reelId}/review"},
-		{http.MethodPatch, "/dsh/catalog/domains/domain-1", "PATCH /dsh/catalog/domains/{domainId}"},
-		{http.MethodPatch, "/dsh/catalog/nodes/node-1", "PATCH /dsh/catalog/nodes/{nodeId}"},
-		{http.MethodPatch, "/dsh/catalog/master-products/product-1", "PATCH /dsh/catalog/master-products/{productId}"},
-		{http.MethodPatch, "/dsh/catalog/policies/policy-1", "PATCH /dsh/catalog/policies/{policyId}"},
 	}
+	// The retired /dsh/catalog/* legacy-prefix aliases must stay unregistered;
+	// TestRemovedCatalogDecisionRoutesAreNotRegistered covers their absence.
 
 	for _, tc := range cases {
 		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
