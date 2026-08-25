@@ -1,6 +1,6 @@
 name: SonarQube Cloud
 
-run-name: ${{ github.event_name == 'pull_request' && format('SonarQube PR #{0}', github.event.pull_request.number) || github.event_name == 'push' && format('SonarQube push {0}', github.sha) || format('SonarQube dispatched candidate {0}', inputs.head_sha || github.sha) }}
+run-name: ${{ github.event_name == 'pull_request' && format('SonarQube PR {0}', github.event.pull_request.number) || github.event_name == 'push' && format('SonarQube push {0}', github.sha) || format('SonarQube dispatched candidate {0}', inputs.head_sha || github.sha) }}
 
 on:
   workflow_dispatch:

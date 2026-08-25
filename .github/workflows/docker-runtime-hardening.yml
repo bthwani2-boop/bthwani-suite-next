@@ -1,6 +1,6 @@
 name: Docker Runtime Hardening
 
-run-name: ${{ github.event_name == 'pull_request' && format('Docker Runtime Hardening PR #{0}', github.event.pull_request.number) || github.event_name == 'push' && format('Docker Runtime Hardening push {0}', github.sha) || format('Docker Runtime Hardening dispatched candidate {0}', inputs.head_sha || github.sha) }}
+run-name: ${{ github.event_name == 'pull_request' && format('Docker Runtime Hardening PR {0}', github.event.pull_request.number) || github.event_name == 'push' && format('Docker Runtime Hardening push {0}', github.sha) || format('Docker Runtime Hardening dispatched candidate {0}', inputs.head_sha || github.sha) }}
 
 on:
   pull_request:

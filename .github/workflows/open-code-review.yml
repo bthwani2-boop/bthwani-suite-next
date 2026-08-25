@@ -1,6 +1,6 @@
 name: OpenCodeReview Delegation Context
 
-run-name: ${{ github.event_name == 'pull_request' && format('OpenCodeReview PR #{0}', github.event.pull_request.number) || format('OpenCodeReview dispatched candidate {0}', inputs.head_sha) }}
+run-name: ${{ github.event_name == 'pull_request' && format('OpenCodeReview PR {0}', github.event.pull_request.number) || format('OpenCodeReview dispatched candidate {0}', inputs.head_sha) }}
 
 on:
   pull_request:
