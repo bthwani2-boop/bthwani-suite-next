@@ -55,7 +55,7 @@ jobs:
       - name: Materialize contracts
         run: pnpm exec nx run contracts:materialize
       - name: Verify contract tree, composition, lint, and generation equivalence
-        run: pnpm run contracts:redocly
+        run: pnpm run contracts:lint
       - name: Verify guard suite self-tests
         run: node --test tools/guards/*.test.mjs
       - name: Verify contract and binding integrity
