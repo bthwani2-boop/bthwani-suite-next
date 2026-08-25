@@ -50,7 +50,7 @@ test("PR closure uses a trusted reusable workflow with immutable candidate prove
   assert.doesNotMatch(ciWorkflow, /PR Closure Evidence|statuses:\s*write|security-events:\s*read|secrets\.SONAR_TOKEN/u);
   assert.match(ciWorkflow, /run-name:[^\n]*closure-pr-/u);
 
-  assert.match(requestWorkflow, /<!-- bthwani:closure-request -->/u);
+  assert.equal(requestWorkflow.includes("<!-- bthwani:closure-request -->"), true);
   assert.match(requestWorkflow, /(?:^|\n)\s{2}pull_request:/u);
   assert.doesNotMatch(requestWorkflow, /pull_request_target:|actions:\s*write/u);
   assert.doesNotMatch(requestWorkflow, /actions\/checkout|Wait for canonical closure result/u);
@@ -63,7 +63,7 @@ test("PR closure uses a trusted reusable workflow with immutable candidate prove
   assert.match(dispatchWorkflow, /approval must be independent from the PR author/u);
   assert.match(dispatchWorkflow, /Candidate SHA: \$\{head_sha\}/u);
   assert.match(dispatchWorkflow, /default_branch/u);
-  assert.match(dispatchWorkflow, /<!-- bthwani:closure-request -->/u);
+  assert.equal(dispatchWorkflow.includes("<!-- bthwani:closure-request -->"), true);
   assert.doesNotMatch(dispatchWorkflow, /actions\/checkout/u);
 
   assert.match(evidenceWorkflow, /on:\n  workflow_call:/u);
