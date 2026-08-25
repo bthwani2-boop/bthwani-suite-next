@@ -136,6 +136,10 @@ if (!fs.existsSync(path.join(repoRoot, envExample))) {
     ["DSH_WLT_SERVICE_TOKEN", "dev-only-dsh-wlt-shared-secret"],
     ["WLT_PAYOUT_ENCRYPTION_KEY", "dev-only-payout-destination-encryption-key"],
     ["PLATFORM_CONTROL_DSH_SERVICE_TOKEN", "LOCAL_ONLY_replace_with_platform_control_dsh_service_token"],
+    ["WORKFORCE_DSH_SERVICE_TOKEN", "LOCAL_ONLY_replace_with_workforce_dsh_service_token"],
+    ["DSH_WORKFORCE_SERVICE_TOKEN", "LOCAL_ONLY_replace_with_dsh_workforce_service_token"],
+    ["WORKFORCE_WLT_SERVICE_TOKEN", "LOCAL_ONLY_replace_with_workforce_wlt_service_token"],
+    ["BTHWANI_MINIO_DSH_SECRET_KEY", "dsh_media_local_secret"],
   ]);
   if (mode === "production") {
     for (const [key, weak] of weakDefaults) {
@@ -180,6 +184,15 @@ if (!fs.existsSync(path.join(repoRoot, envExample))) {
 const localProductionEnvExample = "infra/docker/env/runtime.local-production.env.example";
 if (fs.existsSync(path.join(repoRoot, localProductionEnvExample))) {
   const localProductionEnv = parseEnv(localProductionEnvExample);
+  if (localProductionEnv.get("BTHWANI_RUNTIME_MODE") !== "production") {
+    violations.push({ file: localProductionEnvExample, message: "LOCAL_PRODUCTION_RUNTIME_MODE_REQUIRED" });
+  }
+  if (localProductionEnv.get("BTHWANI_LOCAL_PRODUCTION_LIKE") !== "true") {
+    violations.push({ file: localProductionEnvExample, message: "LOCAL_PRODUCTION_LIKE_AUTHORIZATION_REQUIRED" });
+  }
+  if (localProductionEnv.get("BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED") === "true") {
+    violations.push({ file: localProductionEnvExample, message: "LOCAL_PRODUCTION_LIKE_MUST_NOT_AUTHORIZE_REAL_PRODUCTION" });
+  }
   if (
     localProductionEnv.get("WLT_FINANCIAL_PROVIDER_MODE") === "mock" &&
     localProductionEnv.get("WLT_ALLOW_MOCK_PROVIDER") !== "true"

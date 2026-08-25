@@ -25,13 +25,37 @@ if (-not (Test-Path -LiteralPath $EnvFile -PathType Leaf)) { throw "Runtime env 
 if (-not (Test-Path -LiteralPath $ResetScript -PathType Leaf)) { throw "Service database reset primitive not found: $ResetScript" }
 if ($Service -eq "workforce" -and -not (Test-Path -LiteralPath $IdentityImportScript -PathType Leaf)) { throw "Identity-to-Workforce migration authority not found: $IdentityImportScript" }
 
+function Get-RuntimeEnvironmentValue {
+  param(
+    [Parameter(Mandatory = $true)][string]$Name,
+    [Parameter(Mandatory = $true)][string]$DefaultValue
+  )
+
+  $processValue = [System.Environment]::GetEnvironmentVariable($Name, "Process")
+  if (-not [string]::IsNullOrWhiteSpace($processValue)) { return $processValue.Trim() }
+
+  foreach ($rawLine in Get-Content -LiteralPath $EnvFile) {
+    $line = $rawLine.Trim()
+    if (-not $line -or $line.StartsWith("#") -or -not $line.Contains("=")) { continue }
+    $parts = $line.Split("=", 2)
+    if ($parts[0].Trim() -ne $Name) { continue }
+    $value = $parts[1].Trim()
+    if (($value.StartsWith('"') -and $value.EndsWith('"')) -or
+        ($value.StartsWith("'") -and $value.EndsWith("'"))) {
+      $value = $value.Substring(1, $value.Length - 2)
+    }
+    if (-not [string]::IsNullOrWhiteSpace($value)) { return $value }
+  }
+  return $DefaultValue
+}
+
 $serviceMap = @{
-  "identity" = @{ Directory = "core/identity/database/migrations"; User = "identity_runtime"; Database = "identity_runtime" }
-  "workforce" = @{ Directory = "core/workforce/database/migrations"; User = "workforce_runtime"; Database = "workforce_runtime" }
-  "dsh" = @{ Directory = "services/dsh/database/migrations"; User = "dsh_runtime"; Database = "dsh_runtime" }
-  "wlt" = @{ Directory = "services/wlt/database/migrations"; User = "wlt_runtime"; Database = "wlt_runtime" }
-  "providers" = @{ Directory = "core/providers/database/migrations"; User = "providers_runtime"; Database = "providers_runtime" }
-  "platform-control" = @{ Directory = "core/platform-control/database/migrations"; User = "platform_control_runtime"; Database = "platform_control_runtime" }
+  "identity" = @{ Directory = "core/identity/database/migrations"; User = (Get-RuntimeEnvironmentValue "BTHWANI_IDENTITY_DB_USER" "identity_runtime"); Database = (Get-RuntimeEnvironmentValue "BTHWANI_IDENTITY_DB_NAME" "identity_runtime") }
+  "workforce" = @{ Directory = "core/workforce/database/migrations"; User = (Get-RuntimeEnvironmentValue "BTHWANI_WORKFORCE_DB_USER" "workforce_runtime"); Database = (Get-RuntimeEnvironmentValue "BTHWANI_WORKFORCE_DB_NAME" "workforce_runtime") }
+  "dsh" = @{ Directory = "services/dsh/database/migrations"; User = (Get-RuntimeEnvironmentValue "BTHWANI_DSH_DB_USER" "dsh_runtime"); Database = (Get-RuntimeEnvironmentValue "BTHWANI_DSH_DB_NAME" "dsh_runtime") }
+  "wlt" = @{ Directory = "services/wlt/database/migrations"; User = (Get-RuntimeEnvironmentValue "BTHWANI_WLT_DB_USER" "wlt_runtime"); Database = (Get-RuntimeEnvironmentValue "BTHWANI_WLT_DB_NAME" "wlt_runtime") }
+  "providers" = @{ Directory = "core/providers/database/migrations"; User = (Get-RuntimeEnvironmentValue "BTHWANI_PROVIDERS_DB_USER" "providers_runtime"); Database = (Get-RuntimeEnvironmentValue "BTHWANI_PROVIDERS_DB_NAME" "providers_runtime") }
+  "platform-control" = @{ Directory = "core/platform-control/database/migrations"; User = (Get-RuntimeEnvironmentValue "BTHWANI_PLATFORM_CONTROL_DB_USER" "platform_control_runtime"); Database = (Get-RuntimeEnvironmentValue "BTHWANI_PLATFORM_CONTROL_DB_NAME" "platform_control_runtime") }
 }
 $config = $serviceMap[$Service]
 $migrationDirectory = Join-Path $RepoRoot $config.Directory
@@ -67,7 +91,6 @@ function Test-LocalDatabaseResetAllowed {
   if ($environmentValues -contains "production") { return $false }
   return [bool]$AllowLocalLedgerRecovery
 }
-
 function Invoke-ComposePsql {
   param([Parameter(Mandatory = $true)][string]$Sql, [switch]$Quiet)
 

@@ -145,7 +145,7 @@ function Invoke-Compose {
 }
 
 function Invoke-LocalIdentityDevelopmentSeed {
-  if ($env:NODE_ENV -eq "production") { throw "The development identity seed is forbidden when NODE_ENV=production." }
+  if ($env:NODE_ENV -eq "production" -or $env:BTHWANI_RUNTIME_MODE -eq "production") { throw "The development identity seed is forbidden in production runtime mode." }
   if (-not (Test-Path -LiteralPath $script:DevBootstrapComposeFile -PathType Leaf)) {
     throw "Development identity seed overlay not found: $script:DevBootstrapComposeFile"
   }
@@ -158,7 +158,7 @@ function Invoke-LocalIdentityDevelopmentSeed {
     "-f", $script:DevBootstrapComposeFile,
     "--profile", "dev-bootstrap"
   )
-  docker compose @base run --rm identity-local-bootstrap
+  docker compose @base run --build --rm identity-local-bootstrap
   if ($LASTEXITCODE -ne 0) { throw "Development identity seed failed (exit $LASTEXITCODE)" }
   Write-Host "Development identity seed: PASS"
 }
@@ -351,6 +351,69 @@ function Invoke-ComposeConvergentUp {
   Invoke-Compose up -d --remove-orphans @args
 }
 
+function Assert-ProductionRuntimeBoundary {
+  if ([string]$env:BTHWANI_RUNTIME_MODE -ne "production") { return }
+
+  $authorized = ([string]$env:BTHWANI_PRODUCTION_DEPLOYMENT_AUTHORIZED).Trim().ToLowerInvariant() -eq "true"
+  $localProductionLike = ([string]$env:BTHWANI_LOCAL_PRODUCTION_LIKE).Trim().ToLowerInvariant() -eq "true"
+  if ($authorized -and $localProductionLike) {
+    throw "Production deployment cannot also declare the local production-like escape hatch."
+  }
+  if (-not $authorized -and -not $localProductionLike) {
+    throw "Production runtime is not explicitly authorized and is not an explicitly local production-like run."
+  }
+  if ([string]$env:BTHWANI_REQUIRE_STRONG_SECRETS -ne "true") {
+    throw "Production runtime requires BTHWANI_REQUIRE_STRONG_SECRETS=true."
+  }
+  if ($env:BTHWANI_LOCAL_DEV_PASSWORD -or $env:BTHWANI_LOCAL_DEVELOPMENT_BOOTSTRAP_AUTHORIZED -or $env:IDENTITY_LOCAL_BOOTSTRAP) {
+    throw "Development bootstrap environment state is forbidden in the production runtime boundary."
+  }
+  if ($authorized -and $Action -in @("reset", "all", "bootstrap-dev", "seed")) {
+    throw "Production deployment cannot execute local reset, seed, or bootstrap actions."
+  }
+  if ($env:COMPOSE_PROJECT_NAME -and $env:COMPOSE_PROJECT_NAME -ne $script:CanonicalComposeProject) {
+    throw "Production runtime must use the canonical Compose project '$script:CanonicalComposeProject'."
+  }
+  if ($authorized -and [string]$env:WLT_FINANCIAL_PROVIDER_MODE -eq "mock") {
+    throw "Authorized production deployment cannot use the mock financial provider."
+  }
+
+  $composeArguments = @(Get-ComposeBase) + @(Get-ComposeProfileArgs) + @("config")
+  $effectiveOutput = @(docker compose @composeArguments 2>&1)
+  $effectiveExitCode = $LASTEXITCODE
+  if ($effectiveExitCode -ne 0) {
+    throw "Effective production Compose validation failed (exit $effectiveExitCode)."
+  }
+  $effective = ($effectiveOutput | ForEach-Object { [string]$_ }) -join "`n"
+  foreach ($forbidden in @(
+    "identity-local-bootstrap",
+    "Dockerfile.local-bootstrap",
+    "compose.dev-bootstrap.yml",
+    "BTHWANI_RUNTIME_MODE: development",
+    "REPLACE_WITH_GENERATED_",
+    "LOCAL_ONLY_",
+    "dev-only-",
+    "bthwani_runtime_password",
+    "bthwani_minio_password",
+    "identity_runtime_password",
+    "workforce_runtime_password",
+    "dsh_runtime_password",
+    "wlt_runtime_password",
+    "providers_runtime_password",
+    "platform_control_runtime_password",
+    "dsh_media_local",
+    "dsh_media_local_secret"
+  )) {
+    if ($effective.Contains($forbidden, [System.StringComparison]::OrdinalIgnoreCase)) {
+      throw "Effective production Compose contains forbidden local/default value or development authority: $forbidden"
+    }
+  }
+  if ($authorized -and $effective -match '(?i)WLT_ALLOW_MOCK_PROVIDER:\s*"?true') {
+    throw "Effective production Compose enables the mock provider."
+  }
+  Write-Host "Production runtime boundary: PASS (effective Compose validated before service start)"
+}
+
 function Get-SelectedMigrationServices {
   $services = @()
   if ($script:ProfileList -contains "identity") { $services += "identity" }
@@ -387,12 +450,12 @@ function Get-RequiredDatabaseNames {
   $databases = @()
   foreach ($serviceName in Get-SelectedMigrationServices) {
     switch ($serviceName) {
-      "identity" { $databases += "identity_runtime" }
-      "workforce" { $databases += "workforce_runtime" }
-      "dsh" { $databases += "dsh_runtime" }
-      "wlt" { $databases += "wlt_runtime" }
-      "providers" { $databases += "providers_runtime" }
-      "platform-control" { $databases += "platform_control_runtime" }
+      "identity" { $databases += if ($env:BTHWANI_IDENTITY_DB_NAME) { $env:BTHWANI_IDENTITY_DB_NAME } else { "identity_runtime" } }
+      "workforce" { $databases += if ($env:BTHWANI_WORKFORCE_DB_NAME) { $env:BTHWANI_WORKFORCE_DB_NAME } else { "workforce_runtime" } }
+      "dsh" { $databases += if ($env:BTHWANI_DSH_DB_NAME) { $env:BTHWANI_DSH_DB_NAME } else { "dsh_runtime" } }
+      "wlt" { $databases += if ($env:BTHWANI_WLT_DB_NAME) { $env:BTHWANI_WLT_DB_NAME } else { "wlt_runtime" } }
+      "providers" { $databases += if ($env:BTHWANI_PROVIDERS_DB_NAME) { $env:BTHWANI_PROVIDERS_DB_NAME } else { "providers_runtime" } }
+      "platform-control" { $databases += if ($env:BTHWANI_PLATFORM_CONTROL_DB_NAME) { $env:BTHWANI_PLATFORM_CONTROL_DB_NAME } else { "platform_control_runtime" } }
     }
   }
   return @($databases | Select-Object -Unique)
@@ -401,9 +464,11 @@ function Get-RequiredDatabaseNames {
 function Test-RuntimeDefaultSecrets {
   $defaults = @(
     @{ Name = "BTHWANI_MINIO_ROOT_PASSWORD"; Value = if ($env:BTHWANI_MINIO_ROOT_PASSWORD) { $env:BTHWANI_MINIO_ROOT_PASSWORD } else { "bthwani_minio_password" }; Default = "bthwani_minio_password" },
-    @{ Name = "BTHWANI_POSTGRES_PASSWORD"; Value = if ($env:BTHWANI_POSTGRES_PASSWORD) { $env:BTHWANI_POSTGRES_PASSWORD } else { "bthwani_runtime_password" }; Default = "bthwani_runtime_password" },
-    @{ Name = "BTHWANI_LOCAL_DEV_PASSWORD"; Value = Get-LocalPassword; Default = Get-LocalPasswordDefault }
+    @{ Name = "BTHWANI_POSTGRES_PASSWORD"; Value = if ($env:BTHWANI_POSTGRES_PASSWORD) { $env:BTHWANI_POSTGRES_PASSWORD } else { "bthwani_runtime_password" }; Default = "bthwani_runtime_password" }
   )
+  if ($env:BTHWANI_RUNTIME_MODE -ne "production") {
+    $defaults += @{ Name = "BTHWANI_LOCAL_DEV_PASSWORD"; Value = Get-LocalPassword; Default = Get-LocalPasswordDefault }
+  }
   $weak = @($defaults | Where-Object { $_.Value -eq $_.Default })
   foreach ($item in $weak) { Write-Warning "Runtime default secret in use: $($item.Name). Override it outside local-only development." }
   if ($env:BTHWANI_REQUIRE_STRONG_SECRETS -eq "true" -and $weak.Count -gt 0) {
@@ -539,7 +604,7 @@ function Assert-LocalIdentityBootstrapConverged {
 
 function Invoke-LocalWorkforceProvisioning {
   param([switch]$DeferFinancialStanding)
-  if ($env:NODE_ENV -eq "production") { throw "Local workforce provisioning is forbidden when NODE_ENV=production." }
+  if ($env:NODE_ENV -eq "production" -or $env:BTHWANI_RUNTIME_MODE -eq "production") { throw "Local workforce provisioning is forbidden in production runtime mode." }
   if (-not ($ProfileList -contains "workforce" -and $ProfileList -contains "identity")) { return }
   if ($ProfileList -notcontains "wlt") { throw "Local Workforce provisioning requires the WLT profile because captain standing is WLT-owned." }
   if (@(Get-SelectedSeedServices).Count -eq 0) { return }
@@ -551,7 +616,7 @@ function Invoke-LocalWorkforceProvisioning {
 }
 
 function Invoke-GovernedSeeds {
-  if ($env:NODE_ENV -eq "production") { throw "Local runtime seeds are forbidden when NODE_ENV=production." }
+  if ($env:NODE_ENV -eq "production" -or $env:BTHWANI_RUNTIME_MODE -eq "production") { throw "Local runtime seeds are forbidden in production runtime mode." }
   $sourceCommitSha = Get-SourceCommitSha
   foreach ($serviceName in Get-SelectedSeedServices) {
     Write-Host "`n--- Applying governed $serviceName local seeds ---"
@@ -599,6 +664,9 @@ function Invoke-SelectedSmoke {
 }
 
 Test-RuntimeDefaultSecrets
+if ($Action -in @("up", "reset", "migrate", "seed", "smoke", "all", "bootstrap-dev", "ensure-db")) {
+  Assert-ProductionRuntimeBoundary
+}
 
 if ($Action -in @(
   "up",
@@ -664,7 +732,7 @@ switch ($Action) {
     Write-Host "reset: PASS"
   }
   "bootstrap-dev" {
-    if ($env:NODE_ENV -eq "production") { throw "bootstrap-dev is not allowed in production." }
+    if ($env:NODE_ENV -eq "production" -or $env:BTHWANI_RUNTIME_MODE -eq "production") { throw "bootstrap-dev is not allowed in production runtime mode." }
     if (-not $Force) { throw "bootstrap-dev requires -Force." }
     Write-Host "=== runtime:bootstrap-dev (profiles: $($ProfileList -join ','))"
     docker info | Out-Null

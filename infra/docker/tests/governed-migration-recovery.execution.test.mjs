@@ -1,18 +1,6 @@
-// Locks the governed migration ledger recovery contract.
-//
-// Regression origin: the recovery guard in invoke-runtime-database-migrations.ps1
-// classified the failure by reading a shared $script:LastPsqlOutput. When a
-// migration batch failed, Invoke-BthwaniGovernedMigrations caught it and issued
-// a bookkeeping UPDATE through $ExecuteStatement, which re-entered
-// Invoke-ComposePsql and overwrote that variable with the UPDATE's output. By
-// the time the guard looked, the conflict token was gone, so the rebuild path
-// was unreachable for exactly the failure it was written for and bootstrap-dev
-// could not self-heal.
-//
-// Second defect: recovery permission was inferred from $env:npm_lifecycle_event,
-// a pnpm side effect rather than a contract, whose allow-list also covered
-// client/partner/captain/field/control -- so ordinary app startup was authorized
-// to destructively rebuild a database.
+// Locks the governed migration ledger recovery contract. Recovery is owned by
+// runtime.ps1; the migration runner only executes migrations and reports a
+// classified ledger conflict to its canonical caller.
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -95,11 +83,13 @@ test("every recoverable code the classifier accepts is actually raised by the ru
   }
 });
 
-test("local ledger recovery is an explicit permission, not ambient lifecycle state", () => {
+test("migration recovery is explicit, local-only, and delegated to the reset primitive", () => {
   const source = fs.readFileSync(migrations, "utf8");
 
-  assert.match(source, /\[switch\]\$AllowLocalLedgerRecovery/);
-  assert.match(source, /if \(\$AllowLocalLedgerRecovery\) \{ return \$true \}/);
+  assert.match(source, /AllowLocalLedgerRecovery/);
+  assert.match(source, /return \[bool\]\$AllowLocalLedgerRecovery/);
+  assert.match(source, /-AllowLocalDevelopmentReset/);
+  assert.doesNotMatch(source, /rebuild-runtime-service-database/);
 
   // npm_lifecycle_event must not gate authorization anywhere in the runtime
   // scripts: it is a pnpm side effect that any process hop silently drops.
@@ -115,11 +105,11 @@ test("local ledger recovery is an explicit permission, not ambient lifecycle sta
   assert.doesNotMatch(source, /\$script:LastPsqlOutput\s*=/);
 });
 
-test("only bootstrap-dev grants recovery; up and smoke must surface the conflict", () => {
+test("only bootstrap-dev invokes canonical recovery; up and smoke surface the conflict", () => {
   const source = fs.readFileSync(runtime, "utf8");
+  const migrationSource = fs.readFileSync(migrations, "utf8");
   assert.match(source, /\$allowLocalLedgerRecovery = \(\$Action -eq "bootstrap-dev"\)/);
-
-  // The switch is passed only on the guarded branch, never unconditionally.
-  const invocations = source.match(/GovernedMigrationScript[^\n]*-AllowLocalLedgerRecovery/g) ?? [];
-  assert.equal(invocations.length, 1, "recovery permission must be passed from exactly one guarded branch");
+  assert.match(source, /GovernedMigrationScript -Service \$serviceName -SourceCommitSha \$sourceCommitSha -AllowLocalLedgerRecovery/);
+  assert.doesNotMatch(source, /Invoke-CanonicalLocalDatabaseRecovery/);
+  assert.match(migrationSource, /if \(\$environmentValues -contains "production"\) \{ return \$false \}/);
 });

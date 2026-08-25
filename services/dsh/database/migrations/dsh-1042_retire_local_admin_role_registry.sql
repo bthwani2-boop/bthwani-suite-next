@@ -44,16 +44,46 @@ $$;
 
 -- These columns are obsolete UUID links to DSH-owned role truth. Dropping the
 -- columns removes only their own local constraints/index dependencies. Any
--- external dependency blocks because CASCADE is intentionally absent.
-ALTER TABLE dsh_admin_approval_requests
-  DROP COLUMN role_id;
+-- external dependency blocks because CASCADE is intentionally absent. The
+-- explicit existence checks make this cutover converge across databases where
+-- an earlier cleanup already removed one or both columns.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'dsh_admin_approval_requests'
+      AND column_name = 'role_id'
+  ) THEN
+    ALTER TABLE dsh_admin_approval_requests
+      DROP COLUMN role_id;
+  END IF;
 
-ALTER TABLE dsh_admin_rollback_requests
-  DROP COLUMN role_id;
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'dsh_admin_rollback_requests'
+      AND column_name = 'role_id'
+  ) THEN
+    ALTER TABLE dsh_admin_rollback_requests
+      DROP COLUMN role_id;
+  END IF;
+END;
+$$;
 
 -- The registry itself must now be unreachable. Any undiscovered FK/view or
--- other database consumer prevents this statement from succeeding.
-DROP TABLE dsh_admin_roles;
+-- other database consumer prevents this statement from succeeding. The
+-- historical bridge may already have removed it, so only issue the non-cascade
+-- drop when the registry still exists.
+DO $$
+BEGIN
+  IF to_regclass('public.dsh_admin_roles') IS NOT NULL THEN
+    DROP TABLE dsh_admin_roles;
+  END IF;
+END;
+$$;
 
 DO $$
 BEGIN

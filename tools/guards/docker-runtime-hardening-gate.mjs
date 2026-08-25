@@ -336,7 +336,6 @@ for (const rel of [...new Set(lifecyclePowerShellFiles)]) {
 const platformRuntimeAdapter = read("tools/scripts/platform-control-runtime.ps1");
 const platformRuntimeCommon = read("tools/scripts/platform-control-runtime/common.ps1");
 const platformSmoke = read("tools/scripts/platform-control-runtime/smoke.ps1");
-const rebuildDatabase = read("infra/docker/scripts/rebuild-runtime-service-database.ps1");
 const restoreRuntime = read("infra/docker/scripts/restore-runtime.ps1");
 
 if (
@@ -369,13 +368,11 @@ if (!platformSmoke.includes("Invoke-PlatformP3Smoke")) {
   );
 }
 
-for (const [rel, text] of [
-  ["infra/docker/scripts/rebuild-runtime-service-database.ps1", rebuildDatabase],
-  ["infra/docker/scripts/restore-runtime.ps1", restoreRuntime],
-]) {
-  if (!text.includes("-Action service-stop") || !text.includes("-Action service-up")) {
-    failures.push(`${rel}: service stop/up must delegate to runtime.ps1`);
-  }
+if (fs.existsSync(path.join(root, "infra/docker/scripts/rebuild-runtime-service-database.ps1"))) {
+  failures.push("rebuild-runtime-service-database.ps1: independent database recovery authority must be removed");
+}
+if (!restoreRuntime.includes("-Action service-stop") || !restoreRuntime.includes("-Action service-up")) {
+  failures.push("infra/docker/scripts/restore-runtime.ps1: service stop/up must delegate to runtime.ps1");
 }
 
 if (!canonicalRuntimeScript.includes('"service-up"') ||

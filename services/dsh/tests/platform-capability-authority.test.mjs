@@ -107,7 +107,7 @@ test("WLT payout-destination client exposes only operator-context methods", () =
 });
 
 test("local operator grants match the live DSH policy surfaces", () => {
-  const permissions = read("core/identity/backend/internal/identity/local_operator_permissions.go");
+  const permissions = read("core/identity/backend/internal/identity/employee_access.go");
   for (const permission of [
     "platform:read",
     "platform.manage",
@@ -120,9 +120,9 @@ test("local operator grants match the live DSH policy surfaces", () => {
     "dsh.operational_policy.rollback",
     "finance.manage",
   ]) {
-    assert.match(permissions, new RegExp(`Action: "${permission.replaceAll(".", "\\.")}"`));
+    assert.match(permissions, new RegExp(`"${permission.replaceAll(".", "\\.")}"`));
   }
-  assert.doesNotMatch(permissions, /Action: "platform\.read"/);
+  assert.doesNotMatch(permissions, /"platform\.read"/);
   for (const deadPermission of [
     "platform:flags:manage",
     "platform:services:manage",
@@ -130,6 +130,6 @@ test("local operator grants match the live DSH policy surfaces", () => {
     "platform:audit:export",
     "platform:wlt-policy:read",
   ]) {
-    assert.doesNotMatch(permissions, new RegExp(`Action: "${deadPermission.replaceAll(":", "\\:")}"`));
+    assert.doesNotMatch(permissions, new RegExp(`"${deadPermission.replaceAll(":", "\\:")}"`));
   }
 });

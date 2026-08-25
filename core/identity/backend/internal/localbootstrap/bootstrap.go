@@ -166,15 +166,20 @@ WHERE id = ANY($1)`, pq.Array(fixtureActorIDs()))
 }
 
 func validateOperatorRoleDefinition(ctx context.Context, db *sql.DB) error {
-	role, err := identity.NewPermissionEnforcer(db).GetRoleDefinition(ctx, operatorRole)
+	enforcer := identity.NewPermissionEnforcer(db)
+	role, err := enforcer.GetRoleDefinition(ctx, operatorRole)
 	if errors.Is(err, identity.ErrRoleNotFound) {
 		return errors.New("canonical operator role is absent from Identity vocabulary")
 	}
 	if err != nil {
 		return err
 	}
-	if !role.Active || !permissionSetEqual(role.Permissions, operatorRolePermissions()) {
-		return errors.New("canonical operator role definition drifted; local development seed cannot mutate migration-owned role authority")
+	expected := operatorRolePermissions()
+	if !role.Active {
+		return errors.New("canonical operator role is inactive in Identity vocabulary")
+	}
+	if !permissionSetContains(role.Permissions, expected) {
+		return errors.New("canonical operator role is missing required Identity vocabulary permissions")
 	}
 	return nil
 }
@@ -388,6 +393,19 @@ func permissionSetEqual(actual, expected []identity.Permission) bool {
 		seen[key] = true
 	}
 	for _, permission := range expected {
+		if !seen[permissionKey(permission)] {
+			return false
+		}
+	}
+	return true
+}
+
+func permissionSetContains(actual, required []identity.Permission) bool {
+	seen := make(map[string]bool, len(actual))
+	for _, permission := range actual {
+		seen[permissionKey(permission)] = true
+	}
+	for _, permission := range required {
 		if !seen[permissionKey(permission)] {
 			return false
 		}

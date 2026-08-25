@@ -14,6 +14,10 @@ const obsoleteRebuildPath = new URL(
   '../../../infra/docker/scripts/rebuild-runtime-service-database.ps1',
   import.meta.url,
 );
+const runtimePath = new URL(
+  '../../../infra/docker/scripts/runtime.ps1',
+  import.meta.url,
+);
 const legacyRecoveryPath = new URL(
   '../../../infra/docker/scripts/recover-dsh-144-checksum.ps1',
   import.meta.url,
@@ -30,19 +34,21 @@ const runtimeEnvPath = new URL(
 
 const runner = readFileSync(runnerPath, 'utf8');
 const reset = readFileSync(resetPath, 'utf8');
+const runtime = readFileSync(runtimePath, 'utf8');
 const compose = readFileSync(composePath, 'utf8');
 const runtimeEnv = readFileSync(runtimeEnvPath, 'utf8');
 
-test('local migration drift recovery resets one database and keeps the API fail-closed until canonical convergence', () => {
+test('local migration drift recovery has one canonical runtime owner and keeps the API fail-closed until convergence', () => {
   assert.equal(existsSync(legacyRecoveryPath), false, 'one-off DSH-144 recovery must be removed');
   assert.equal(existsSync(obsoleteRebuildPath), false, 'obsolete self-restarting rebuild authority must be removed');
   assert.match(runner, /reset-runtime-service-database\.ps1/);
   assert.doesNotMatch(runner, /rebuild-runtime-service-database\.ps1/);
-
   assert.match(runner, /\[switch\]\$AllowLocalLedgerRecovery/);
   assert.match(runner, /return \[bool\]\$AllowLocalLedgerRecovery/);
   assert.doesNotMatch(runner, /npm_lifecycle_event/);
   assert.doesNotMatch(runner, /BTHWANI_ALLOW_LOCAL_DATABASE_REBUILD/);
+  assert.match(runtime, /GovernedMigrationScript -Service \$serviceName -SourceCommitSha \$sourceCommitSha -AllowLocalLedgerRecovery/);
+  assert.doesNotMatch(runtime, /Invoke-CanonicalLocalDatabaseRecovery/);
 
   const migrationAuthority = readFileSync(migrationAuthorityPath, 'utf8');
   assert.match(migrationAuthority, /GOVERNED_MIGRATION_LEDGER_CONFLICT/);
@@ -69,6 +75,10 @@ test('local migration drift recovery resets one database and keeps the API fail-
   const resetIndex = runner.indexOf('& $ResetScript');
   const replayIndex = runner.indexOf('Invoke-GovernedMigrationPass', resetIndex);
   assert.ok(resetIndex >= 0 && replayIndex > resetIndex, 'canonical migrations must replay after reset');
+  assert.doesNotMatch(runtime, /DROP DATABASE IF EXISTS/);
+  assert.doesNotMatch(runtime, /CREATE DATABASE/);
+  assert.doesNotMatch(runtime, /CREATE EXTENSION IF NOT EXISTS/);
+  assert.doesNotMatch(runtime, /AllowLocalDevelopmentRebuild/);
 });
 
 test('runtime PostgreSQL authority defaults to the governed PostGIS image', () => {

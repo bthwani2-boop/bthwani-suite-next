@@ -4,7 +4,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fail, lineNumber, read, repoRoot } from "./_guard-utils.mjs";
-import { LOCAL_ACTORS, LOCAL_PLATFORM_ACTORS, LOCAL_WORKFORCE_PROVIDERS, localPasswordDefault } from "../dev/local-actors.mjs";
+import { LOCAL_ACTORS, LOCAL_WORKFORCE_PROVIDERS, localPasswordDefault } from "../dev/local-actors.mjs";
 
 const guardId = "local-dev-actors-gate";
 const violations = [];
@@ -49,7 +49,7 @@ for (const required of ["BTHWANI_RUNTIME_MODE", "BTHWANI_LOCAL_DEV_PASSWORD", "l
   }
 }
 
-for (const [key, actor] of Object.entries({ ...LOCAL_ACTORS, ...LOCAL_PLATFORM_ACTORS })) {
+for (const [key, actor] of Object.entries(LOCAL_ACTORS)) {
   if (!actor.actorId || !actor.username || !actor.role || !actor.phoneE164) {
     violations.push({ file: registryFile, message: `LOCAL_ACTOR_INCOMPLETE:${key}` });
   }
@@ -81,7 +81,7 @@ function walk(dir, files = []) {
 
 const loginCallSite = /(?:username\s*[=:]\s*|-Username\s+|getToken\(|Get-ActorToken\b[^\n]*|Get-LocalActorToken\s+|Get-ActorSession\s+|Login-Actor\s+|Login-PlatformLocalActor\b[^\n]*|\bLogin\s+)["']([^"']+)["']/g;
 const loginUsernames = new Set(
-  [...Object.values(LOCAL_ACTORS), ...Object.values(LOCAL_PLATFORM_ACTORS)].map((actor) => actor.username),
+  Object.values(LOCAL_ACTORS).map((actor) => actor.username),
 );
 
 for (const file of scannedRoots.flatMap((dir) => walk(dir))) {
