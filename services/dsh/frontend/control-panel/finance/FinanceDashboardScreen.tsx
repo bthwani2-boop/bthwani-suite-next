@@ -5,13 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Card, StateView, Text } from "@bthwani/ui-kit";
 import { CpBadge, CpButton, CpKpiCard, CpKpiStrip, CpTabs } from "@bthwani/control-panel/components";
 import { OverviewPageFrame } from "@bthwani/control-panel/shell";
-import { useFinanceController } from '@bthwani/wlt/dsh';
+import { useFinanceController } from '@bthwani/dsh/wlt';
 import { PayoutRequestsPanel } from "./PayoutRequestsPanel";
 import { ReconciliationCasesPanel } from "./ReconciliationCasesPanel";
 import { RefundsCommandPanel } from "./RefundsCommandPanel";
 import { LedgerInspectorScreen } from "./LedgerInspectorScreen";
 import { RepresentativeWalletLookup } from "./RepresentativeWalletLookup";
-import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from '@bthwani/wlt/dsh';
+import type { WltFinancialCenter, WltFinancialCenterSection, WltAccountPositionLine } from '@bthwani/dsh/wlt';
 
 type FinanceTabItem = { readonly id: string; readonly label: string; readonly active: boolean };
 

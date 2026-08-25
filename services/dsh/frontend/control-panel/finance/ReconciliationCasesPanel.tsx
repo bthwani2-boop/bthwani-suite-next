@@ -9,7 +9,7 @@ import {
   resolveReconciliationCase,
   type FinanceActionResult,
   type ReconciliationCase,
-} from '@bthwani/wlt/dsh';
+} from '@bthwani/dsh/wlt';
 
 export function ReconciliationCasesPanel() {
   const [cases, setCases] = useState<readonly ReconciliationCase[] | null>(null);

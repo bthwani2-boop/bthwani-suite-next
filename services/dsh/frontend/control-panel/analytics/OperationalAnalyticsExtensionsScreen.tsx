@@ -13,7 +13,7 @@ import {
   CpTabs,
 } from "@bthwani/control-panel/components";
 import { MetricsPageFrame } from "@bthwani/control-panel/shell";
-import { formatWltMoney } from "@bthwani/wlt/dsh";
+import { formatWltMoney } from "@bthwani/dsh/wlt";
 import {
   fetchCaptainPerformanceAnalytics,
   fetchFieldPerformanceAnalytics,

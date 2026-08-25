@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 const serviceRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
-const sharedRoot = join(serviceRoot, "frontend", "shared", "dsh");
+const walletRoot = join(serviceRoot, "..", "dsh", "frontend", "wlt");
 
 function sourceFiles(root) {
   const files = [];
@@ -17,22 +17,26 @@ function sourceFiles(root) {
   return files;
 }
 
-test("WLT-for-DSH has one live transport path and no retired aliases", () => {
+test("DSH-owned WLT surface has one live transport authority", () => {
+  assert.equal(existsSync(walletRoot), true, "the DSH-owned wallet surface tree must exist");
+
   for (const retired of [
-    join(sharedRoot, "dsh-http"),
-    join(sharedRoot, "wlt-dsh-api-base-url.ts"),
-    join(sharedRoot, "wlt-dsh-http-request.ts"),
+    join(walletRoot, "dsh-link"),
+    join(walletRoot, "dsh-http"),
+    join(walletRoot, "wlt-dsh-api-base-url.ts"),
+    join(walletRoot, "wlt-dsh-http-request.ts"),
   ]) {
     assert.equal(existsSync(retired), false, `retired transport path exists: ${retired}`);
   }
 
   const forbiddenImports = [
+    "/dsh-link/",
     "../dsh-http/",
     "/dsh-http/",
     "wlt-dsh-api-base-url",
     "wlt-dsh-http-request",
   ];
-  for (const file of sourceFiles(sharedRoot)) {
+  for (const file of sourceFiles(walletRoot)) {
     const source = readFileSync(file, "utf8");
     for (const forbidden of forbiddenImports) {
       assert.equal(
@@ -43,14 +47,15 @@ test("WLT-for-DSH has one live transport path and no retired aliases", () => {
     }
   }
 
+  const kernelRoot = join(serviceRoot, "..", "dsh", "frontend", "shared", "_kernel");
   assert.equal(
-    existsSync(join(sharedRoot, "dsh-link", "dsh-api-base-url.ts")),
+    existsSync(join(kernelRoot, "dsh-api-base-url.ts")),
     true,
-    "the temporary canonical WLT-to-DSH transport must remain explicit until DSH injection cutover",
+    "the canonical DSH transport base-url kernel must remain the single owner",
   );
   assert.equal(
-    existsSync(join(sharedRoot, "dsh-link", "dsh-http-request.ts")),
+    existsSync(join(kernelRoot, "dsh-http-request.ts")),
     true,
-    "the temporary canonical WLT-to-DSH request kernel must remain explicit until DSH injection cutover",
+    "the canonical DSH request kernel must remain the single owner",
   );
 });

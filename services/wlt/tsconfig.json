@@ -7,8 +7,6 @@
   "include": [
     "service.manifest.ts",
     "clients/generated/**/*.ts",
-    "frontend/shared/dsh/**/*.ts",
-    "frontend/shared/dsh/**/*.tsx",
     "contracts/**/*.ts"
   ],
   "exclude": [

@@ -2,7 +2,7 @@
 // Displays the authenticated client's own WLT wallet balance and ledger.
 // DSH app-client surfaces import this via the WLT shared barrel.
 import React from "react";
-import { ActorWalletPanel } from '@bthwani/wlt/dsh';
+import { ActorWalletPanel } from '@bthwani/dsh/wlt';
 
 export type WltClientWalletPanelProps = {
   readonly title?: string;

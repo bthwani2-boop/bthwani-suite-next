@@ -3,7 +3,7 @@
 import { type CSSProperties } from "react";
 import { colorRoles } from "@bthwani/ui-kit";
 import { CpButton } from "@bthwani/control-panel/components";
-import { formatWltMoney } from "@bthwani/wlt/dsh";
+import { formatWltMoney } from "@bthwani/dsh/wlt";
 import type { CouponFundingLifecycleRecord } from "../../../shared/marketing/coupons.types";
 
 type CouponFundingReconciliationPanelProps = {

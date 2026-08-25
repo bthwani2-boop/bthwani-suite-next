@@ -102,16 +102,13 @@ test("generic control-panel authentication is exact-surface and role-neutral", (
 test("refresh coordination has one database owner and one browser owner", () => {
   const serverSession = read("apps/control-panel/runtime/src/app/api/auth/_lib/session.ts");
   const dsh = read("services/dsh/frontend/shared/_kernel/dsh-http-request.ts");
-  const wlt = read("services/wlt/frontend/shared/dsh/dsh-link/dsh-http-request.ts");
   const browser = read("core/identity/clients/control-panel-cookie-session.ts");
   const coordination = read("core/identity/backend/internal/identity/refresh_concurrency.go");
   const boundary = read("core/identity/backend/internal/http/refresh_concurrency_boundary.go");
 
   assert.doesNotMatch(serverSession, /inFlightRefresh|new Map<string, Promise<TokenResponse>>/);
   assert.doesNotMatch(dsh, /controlPanelRefreshInFlight|\/api\/auth\/refresh/);
-  assert.doesNotMatch(wlt, /controlPanelRefreshInFlight|\/api\/auth\/refresh/);
   assert.match(dsh, /executeWithControlPanelCookieSession/);
-  assert.match(wlt, /executeWithControlPanelCookieSession/);
   assert.match(browser, /CONTROL_PANEL_SESSION_LOCK/);
   assert.match(coordination, /pg_advisory_xact_lock/);
   assert.match(coordination, /RefreshGoverned/);

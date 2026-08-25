@@ -14,7 +14,7 @@ import {
   useReconcileRefundMutation,
   WltRefundResponse,
   WltRefundAuditResponse,
-} from '@bthwani/wlt/dsh';
+} from '@bthwani/dsh/wlt';
 
 function refundTone(refund: WltRefundResponse): CpBadgeTone {
   switch (refund.status) {

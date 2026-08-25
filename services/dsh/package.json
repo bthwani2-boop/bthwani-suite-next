@@ -31,6 +31,7 @@
     "@bthwani/data-runtime": "workspace:*",
     "@bthwani/ui-kit": "workspace:*",
     "@bthwani/wlt": "workspace:*",
+    "@tanstack/react-query": "5.90.2",
     "react-native": "0.86.2",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-svg": "15.15.4"
@@ -45,6 +46,7 @@
   "exports": {
     "./mobile-capabilities": "./frontend/shared/mobile-capabilities.ts",
     "./openapi": "./clients/generated/dsh-api.ts",
+    "./wlt": "./frontend/wlt/index.ts",
     "./app-client": "./frontend/app-client/index.ts",
     "./app-field": "./frontend/app-field/index.ts",
     "./app-partner": "./frontend/app-partner/index.ts",

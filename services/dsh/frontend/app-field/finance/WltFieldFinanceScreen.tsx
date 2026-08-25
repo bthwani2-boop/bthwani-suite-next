@@ -13,7 +13,7 @@ import {
   Header,
   formatDateTime,
 } from "@bthwani/ui-kit";
-import { formatWltMoney, useFieldFinanceController } from '@bthwani/wlt/dsh';
+import { formatWltMoney, useFieldFinanceController } from '@bthwani/dsh/wlt';
 import { classifyGovernedError } from '../../shared/_kernel/governed-problem';
 import { DshFieldProblemState } from '../components/DshFieldProblemNotice';
 import {
@@ -22,7 +22,7 @@ import {
   commissionStatusTone,
   commissionTypeLabel,
   walletStatusLabel
-} from '@bthwani/wlt/dsh';
+} from '@bthwani/dsh/wlt';
 import { DshFieldReferenceTag } from "../../../../dsh/frontend/app-field/components/DshFieldReferenceTag";
 
 type WltFieldFinanceScreenProps = {

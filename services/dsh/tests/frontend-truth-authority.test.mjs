@@ -105,11 +105,11 @@ describe("DSH/WLT frontend truth authority", () => {
     }
   });
 
-  it("does not restore the retired WLT dsh-http transport tree", () => {
+  it("does not restore a retired WLT-side transport authority in the DSH-owned wallet surface", () => {
     const violations = [];
-    for (const absolutePath of listSourceFiles("services/wlt/frontend/shared/dsh")) {
+    for (const absolutePath of listSourceFiles("services/dsh/frontend/wlt")) {
       const source = fs.readFileSync(absolutePath, "utf8");
-      if (/from\s+["'][^"']*\/dsh-http\//.test(source)) {
+      if (/from\s+["'][^"']*(?:\/dsh-http\/|dsh-link\/)/.test(source)) {
         violations.push(relativeToRepository(absolutePath));
       }
     }
@@ -117,7 +117,7 @@ describe("DSH/WLT frontend truth authority", () => {
     assert.deepEqual(
       violations,
       [],
-      `WLT DSH consumers must use the canonical dsh-link transport:\n${violations.join("\n")}`,
+      `wallet surface consumers must use the canonical shared/_kernel transport:\n${violations.join("\n")}`,
     );
   });
 

@@ -11,7 +11,7 @@ import {
   type FinanceActionResult,
   type FinancePayoutRequest,
   formatWltMoney,
-} from '@bthwani/wlt/dsh';
+} from '@bthwani/dsh/wlt';
 import { GovernedSettlementPanel } from "./GovernedSettlementPanel";
 import { CommissionGovernancePanel } from "./CommissionGovernancePanel";
 
