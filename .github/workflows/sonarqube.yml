@@ -256,10 +256,6 @@ jobs:
 
           identity_db="identity_runtime"
           identity_url="postgres://${identity_db}:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5435/${identity_db}?sslmode=disable"
-          dsh_db="dsh_runtime"
-          dsh_url="postgres://${dsh_db}:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5433/${dsh_db}?sslmode=disable"
-          wlt_db="wlt_runtime"
-          wlt_url="postgres://${wlt_db}:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5434/${wlt_db}?sslmode=disable"
           actor_placeholders="$RUNNER_TEMP/go-coverage-actor-placeholders.json"
           cat > "$actor_placeholders" <<'JSON'
           {
