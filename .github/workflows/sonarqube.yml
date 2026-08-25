@@ -254,8 +254,8 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq postgresql-client >/dev/null
 
-          identity_url="postgres://identity_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5435/identit\
-          y_runtime?sslmode=disable"
+          identity_db="identity_runtime"
+          identity_url="postgres://${identity_db}:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5435/${identity_db}?sslmode=disable"
           actor_placeholders="$RUNNER_TEMP/go-coverage-actor-placeholders.json"
           cat > "$actor_placeholders" <<'JSON'
           {
@@ -285,9 +285,10 @@ jobs:
           if [[ "$IDENTITY" == "true" || "$WORKFORCE" == "true" ]]; then
             migrate identity core/identity/database/migrations "$identity_url"
           fi
+          workforce_db="workforce_runtime"
+          workforce_url="postgres://${workforce_db}:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5436/${workforce_db}?sslmode=disable"
           [[ "$WORKFORCE" == "true" ]] && migrate workforce core/workforce/database/migrations \
-            "postgres://workforce_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5436/workforce_runtime\
-            ?sslmode=disable" "$identity_url"
+            "${workforce_url}" "$identity_url"
           [[ "$DSH" == "true" ]] && migrate dsh services/dsh/database/migrations \
             "postgres://dsh_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5433/dsh_runtime?sslmode=disable"
           [[ "$WLT" == "true" ]] && migrate wlt services/wlt/database/migrations \
@@ -296,9 +297,10 @@ jobs:
           platform_url="postgres://${platform_db}:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5437/${platform_db}?sslmode=disable"
           [[ "$PLATFORM" == "true" ]] && migrate platform-control \
             core/platform-control/database/migrations "${platform_url}"
+          providers_db="providers_runtime"
+          providers_url="postgres://${providers_db}:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5438/${providers_db}?sslmode=disable"
           [[ "$PROVIDERS" == "true" ]] && migrate providers core/providers/database/migrations \
-            "postgres://providers_runtime:${BTHWANI_CI_POSTGRES_PASSWORD}@127.0.0.1:5438/providers_runtime\
-            ?sslmode=disable"
+            "${providers_url}"
 
           if [[ "$DSH" == "true" ]]; then
             BTHWANI_ENVIRONMENT=ci pwsh -NoProfile -ExecutionPolicy Bypass -File \
