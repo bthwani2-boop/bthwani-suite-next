@@ -5,10 +5,26 @@ import {
   type QueryClient,
 } from "@tanstack/react-query";
 import { bthwaniKeyValueStorage, type BthwaniKeyValueStorage } from "./native-data-adapters.ts";
-import { isFinancialQueryKey } from "./query-keys.ts";
 
-const CACHE_SCHEMA_VERSION = 2;
+const CACHE_SCHEMA_VERSION = 3;
 const MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000;
+
+// Deny-by-default: only explicitly allowlisted query-key namespaces are
+// eligible for disk persistence. Everything else (including financial data)
+// stays server-authoritative and never reaches a persisted envelope.
+export const PERSISTED_QUERY_NAMESPACE_ALLOWLIST = [
+  ["dsh", "home-discovery"],
+] as const;
+
+export function isPersistableQueryKey(queryKey: readonly unknown[]): boolean {
+  if (!Array.isArray(queryKey) || queryKey.length < 2) return false;
+  const first = queryKey[0];
+  const second = queryKey[1];
+  if (typeof first !== "string" || typeof second !== "string") return false;
+  return PERSISTED_QUERY_NAMESPACE_ALLOWLIST.some(
+    (entry) => entry[0] === first && entry[1] === second,
+  );
+}
 
 type PersistedQueryEnvelope = {
   readonly schemaVersion: number;
@@ -38,7 +54,10 @@ export async function restoreBthwaniQueryClient(
         await storage.removeItem(storageKey);
         return;
       }
-      hydrate(client, envelope.clientState);
+      const persistedQueries = envelope.clientState.queries.filter((query) =>
+        isPersistableQueryKey(query.queryKey),
+      );
+      hydrate(client, { ...envelope.clientState, queries: persistedQueries });
     } catch {
       await storage.removeItem(storageKey);
     }
@@ -60,11 +79,10 @@ export function persistBthwaniQueryClient(
         schemaVersion: CACHE_SCHEMA_VERSION,
         persistedAt: Date.now(),
         clientState: dehydrate(client, {
-          // Financial queries are structurally excluded: balances and money
-          // state must always come from the server, never from a persisted
-          // cache envelope.
+          // Deny-by-default: unprefixed feature keys (e.g. wlt refund data)
+          // are structurally excluded from disk persistence.
           shouldDehydrateQuery: (query) =>
-            query.state.status === "success" && !isFinancialQueryKey(query.queryKey),
+            query.state.status === "success" && isPersistableQueryKey(query.queryKey),
         }),
       };
       void storage.setItem(storageKey, JSON.stringify(envelope));
