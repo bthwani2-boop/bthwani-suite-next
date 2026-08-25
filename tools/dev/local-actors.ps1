@@ -30,9 +30,6 @@ function Get-LocalActor {
   param([Parameter(Mandatory = $true)][string]$Key)
 
   $property = $script:LocalActorsRegistry.actors.PSObject.Properties[$Key]
-  if ($null -eq $property) {
-    $property = $script:LocalActorsRegistry.platformActors.PSObject.Properties[$Key]
-  }
   if ($null -eq $property) { throw "unknown local development actor: $Key" }
   return $property.Value
 }

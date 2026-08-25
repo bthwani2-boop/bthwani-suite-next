@@ -44,14 +44,14 @@ func (c Config) validate() error {
 type actorFixture struct {
 	id          string
 	username    string
-	role        string
+	roles       []string
 	phone       string
 	permissions []identity.Permission
 }
 
 // Run performs one deterministic development seed pass. Role and permission
-// vocabulary are migration-owned; this pass only binds actors to existing
-// canonical vocabulary through Identity's writer.
+// vocabulary are migration-owned; this pass only binds the three development
+// actors to existing canonical vocabulary through Identity's actor-access writer.
 func Run(ctx context.Context, db *sql.DB, config Config) error {
 	if err := config.validate(); err != nil {
 		return err
@@ -59,10 +59,10 @@ func Run(ctx context.Context, db *sql.DB, config Config) error {
 	if db == nil {
 		return errors.New("development identity seed requires a database")
 	}
-
 	if err := validateOperatorRoleDefinition(ctx, db); err != nil {
 		return err
 	}
+
 	hash, err := bcrypt.GenerateFromPassword([]byte(config.Password), bcrypt.DefaultCost)
 	if err != nil {
 		return err
@@ -70,23 +70,13 @@ func Run(ctx context.Context, db *sql.DB, config Config) error {
 
 	repository := identity.NewRepository(db)
 	for _, actor := range actorFixtures() {
-		roles := []string{actor.role}
-		if actor.id == operatorActorID {
-			roles = []string{
-				"operator",
-				"employee",
-				"workforce.supervise.employee",
-				"workforce.supervise.field",
-				"workforce.supervise.captain",
-			}
-		}
 		if err := repository.UpsertActorWithAccess(ctx, identity.ActorAccessProvisionInput{
 			ID:                actor.id,
 			Username:          actor.username,
 			PasswordHash:      string(hash),
 			OperatorContextID: config.OperatorContextID,
 			PhoneE164:         actor.phone,
-			Roles:             roles,
+			Roles:             actor.roles,
 			Permissions:       actor.permissions,
 			GrantedBy:         "identity-local-development-seed",
 		}); err != nil {
@@ -106,7 +96,7 @@ WHERE attempt.username = actor.username
 
 // Converged is a normalized readback of the seed's actual actor/access state.
 // It never treats the JSON projection as authority; it also checks that the
-// projection agrees with the canonical RBAC readback.
+// projection agrees with the canonical RBAC resolver.
 func Converged(ctx context.Context, db *sql.DB, config Config) (bool, error) {
 	if err := config.validate(); err != nil {
 		return false, err
@@ -114,12 +104,8 @@ func Converged(ctx context.Context, db *sql.DB, config Config) (bool, error) {
 	if db == nil {
 		return false, errors.New("development identity seed convergence requires a database")
 	}
-	roleOK, err := roleConverged(ctx, db)
-	if err != nil {
+	if err := validateOperatorRoleDefinition(ctx, db); err != nil {
 		return false, err
-	}
-	if !roleOK {
-		return false, nil
 	}
 
 	fixtures := actorFixtures()
@@ -131,6 +117,7 @@ WHERE id = ANY($1)`, pq.Array(fixtureActorIDs()))
 		return false, err
 	}
 	defer rows.Close()
+
 	seen := make(map[string]bool, len(fixtures))
 	for rows.Next() {
 		var id, username, operatorContextID, phone, status string
@@ -138,19 +125,18 @@ WHERE id = ANY($1)`, pq.Array(fixtureActorIDs()))
 			return false, err
 		}
 		fixture, ok := fixtureByID(id)
-		if !ok || seen[id] || username != fixture.username || operatorContextID != config.OperatorContextID || phone != fixture.phone || status != string(identity.ActorStatusActive) {
+		if !ok || seen[id] || username != fixture.username ||
+			operatorContextID != config.OperatorContextID ||
+			phone != fixture.phone || status != string(identity.ActorStatusActive) {
 			return false, nil
 		}
 		seen[id] = true
+
 		roles, permissions, err := actorAccess(ctx, db, id)
 		if err != nil {
 			return false, err
 		}
-		expectedRoles := []string{fixture.role}
-		if id == operatorActorID {
-			expectedRoles = []string{"employee", "operator", "workforce.supervise.captain", "workforce.supervise.employee", "workforce.supervise.field"}
-		}
-		if !stringSetEqual(roles, expectedRoles) || !permissionSetEqual(permissions, fixture.permissions) {
+		if !stringSetEqual(roles, fixture.roles) || !permissionSetEqual(permissions, fixture.permissions) {
 			return false, nil
 		}
 	}
@@ -191,20 +177,6 @@ func validateOperatorRoleDefinition(ctx context.Context, db *sql.DB) error {
 		return errors.New("canonical operator role definition drifted; local development seed cannot mutate migration-owned role authority")
 	}
 	return nil
-}
-
-func roleConverged(ctx context.Context, db *sql.DB) (bool, error) {
-	role, err := identity.NewPermissionEnforcer(db).GetRoleDefinition(ctx, operatorRole)
-	if errors.Is(err, identity.ErrRoleNotFound) {
-		return false, errors.New("canonical operator role is absent from Identity vocabulary")
-	}
-	if err != nil {
-		return false, err
-	}
-	if !role.Active || !permissionSetEqual(role.Permissions, operatorRolePermissions()) {
-		return false, nil
-	}
-	return true, nil
 }
 
 func actorAccess(ctx context.Context, db *sql.DB, actorID string) ([]string, []identity.Permission, error) {
@@ -278,28 +250,33 @@ func fixtureActorIDs() []string {
 
 func actorFixtures() []actorFixture {
 	return []actorFixture{
-		{id: "operator-local-001", username: "operator", role: "operator", phone: "+967770000000", permissions: localOperatorDevelopmentPermissions()},
-		{id: "partner-local-001", username: "bthwani", role: "partner", phone: "+967771111111", permissions: identity.PartnerBundlePermissions(identity.PartnerBundleOwner, "store-test-grocery")},
-		{id: "client-local-001", username: "client", role: "client", phone: "+967772222222", permissions: []identity.Permission{}},
-		{id: "platform-approver-local-001", username: "platform-approver", role: "platform-approver", phone: "+967770000101", permissions: []identity.Permission{
-			{Service: "dsh", Surface: "control-panel", Action: "platform:read", Scope: "all"},
-			{Service: "dsh", Surface: "control-panel", Action: "platform:health:read", Scope: "all"},
-			{Service: "dsh", Surface: "control-panel", Action: "platform:audit:read", Scope: "all"},
-			{Service: "dsh", Surface: "control-panel", Action: "platform:variables:approve", Scope: "all"},
-		}},
-		{id: "platform-applier-local-001", username: "platform-applier", role: "platform-applier", phone: "+967770000102", permissions: []identity.Permission{
-			{Service: "dsh", Surface: "control-panel", Action: "platform:read", Scope: "all"},
-			{Service: "dsh", Surface: "control-panel", Action: "platform:health:read", Scope: "all"},
-			{Service: "dsh", Surface: "control-panel", Action: "platform:audit:read", Scope: "all"},
-			{Service: "dsh", Surface: "control-panel", Action: "platform:variables:apply", Scope: "all"},
-			{Service: "dsh", Surface: "control-panel", Action: "platform:variables:rollback", Scope: "all"},
-		}},
-		{id: "platform-rollout-manager-local-001", username: "platform-rollout-manager", role: "platform-rollout-manager", phone: "+967770000103", permissions: []identity.Permission{
-			{Service: "dsh", Surface: "control-panel", Action: "platform:read", Scope: "all"},
-			{Service: "dsh", Surface: "control-panel", Action: "platform:health:read", Scope: "all"},
-			{Service: "dsh", Surface: "control-panel", Action: "platform:audit:read", Scope: "all"},
-			{Service: "dsh", Surface: "control-panel", Action: "platform:rollouts:manage", Scope: "all"},
-		}},
+		{
+			id:       "operator-local-001",
+			username: "operator",
+			roles: []string{
+				"employee",
+				"operator",
+				"workforce.supervise.captain",
+				"workforce.supervise.employee",
+				"workforce.supervise.field",
+			},
+			phone:       "+967770000000",
+			permissions: localOperatorDevelopmentPermissions(),
+		},
+		{
+			id:          "partner-local-001",
+			username:    "bthwani",
+			roles:       []string{"partner"},
+			phone:       "+967771111111",
+			permissions: identity.PartnerBundlePermissions(identity.PartnerBundleOwner, "store-test-grocery"),
+		},
+		{
+			id:          "client-local-001",
+			username:    "client",
+			roles:       []string{"client"},
+			phone:       "+967772222222",
+			permissions: []identity.Permission{},
+		},
 	}
 }
 
