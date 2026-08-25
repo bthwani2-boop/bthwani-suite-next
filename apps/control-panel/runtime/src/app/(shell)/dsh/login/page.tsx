@@ -75,9 +75,9 @@ function DshLoginForm() {
   const inputStyle = {
     padding: "0.625rem 0.75rem",
     borderRadius: "0.5rem",
-    border: "1px solid var(--card-border)",
-    background: "var(--card-bg)",
-    color: "var(--text-primary)",
+    border: "1px solid var(--cp-card-border)",
+    background: "var(--cp-card-bg)",
+    color: "var(--cp-text-primary)",
   } as const;
 
   if (state.kind === "service_unavailable") {
@@ -89,7 +89,7 @@ function DshLoginForm() {
           alignItems: "center",
           justifyContent: "center",
           minHeight: "100vh",
-          background: "var(--main-bg)",
+          background: "var(--cp-main-bg)",
           padding: "1rem",
         }}
       >
@@ -102,8 +102,8 @@ function DshLoginForm() {
             gap: "1rem",
             padding: "2rem",
             borderRadius: "1rem",
-            border: "1px solid var(--card-border)",
-            background: "var(--card-bg)",
+            border: "1px solid var(--cp-card-border)",
+            background: "var(--cp-card-bg)",
           }}
         >
           <h1 style={{ margin: 0, fontSize: "1.25rem" }}>خدمة الهوية غير متاحة</h1>
@@ -117,7 +117,7 @@ function DshLoginForm() {
               padding: "0.75rem",
               borderRadius: "0.5rem",
               border: "none",
-              background: "var(--grad-blue)",
+              background: "var(--cp-grad-blue)",
               color: "white",
               fontWeight: 700,
               cursor: "pointer",
@@ -138,11 +138,12 @@ function DshLoginForm() {
         alignItems: "center",
         justifyContent: "center",
         minHeight: "100vh",
-        background: "var(--main-bg)",
+        background: "var(--cp-main-bg)",
         padding: "1rem",
       }}
     >
       <form
+        noValidate
         onSubmit={handleSubmit}
         style={{
           width: "26rem",
@@ -151,8 +152,8 @@ function DshLoginForm() {
           gap: "1rem",
           padding: "2rem",
           borderRadius: "1rem",
-          border: "1px solid var(--card-border)",
-          background: "var(--card-bg)",
+          border: "1px solid var(--cp-card-border)",
+          background: "var(--cp-card-bg)",
           boxShadow: `0 1px 2px ${alpha(colorRoles.shadowBase, 0.06)}`,
         }}
       >
@@ -210,7 +211,7 @@ function DshLoginForm() {
             padding: "0.75rem",
             borderRadius: "0.5rem",
             border: "none",
-            background: "var(--grad-blue)",
+            background: "var(--cp-grad-blue)",
             color: "white",
             fontWeight: 700,
             cursor: isSubmitting ? "wait" : submitDisabled ? "not-allowed" : "pointer",
@@ -228,9 +229,9 @@ function DshLoginForm() {
             style={{
               padding: "0.75rem",
               borderRadius: "0.5rem",
-              border: "1px solid var(--card-border)",
+              border: "1px solid var(--cp-card-border)",
               background: "transparent",
-              color: "var(--text-primary)",
+              color: "var(--cp-text-primary)",
               fontWeight: 700,
               cursor: isSubmitting || quickLoginPending ? "wait" : "pointer",
               opacity: isSubmitting || quickLoginPending ? 0.65 : 1,

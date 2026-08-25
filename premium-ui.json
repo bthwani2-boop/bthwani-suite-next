@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "profile": "product-admin",
+  "canonicalMap": "UX-CONTRACT.md",
+  "sourceRoots": [
+    "shared/ui-kit/src",
+    "services/dsh/frontend",
+    "apps/control-panel/runtime/src"
+  ],
+  "requiredCapabilities": [
+    "Table Selection",
+    "Select/Listbox",
+    "Date",
+    "Form",
+    "Scrollbar",
+    "Toast",
+    "CRUD"
+  ],
+  "ownership": {
+    "Select/Listbox": "native",
+    "Date": "native"
+  },
+  "commands": {
+    "uiKitBoundary": "pnpm guard:ui-kit-boundary",
+    "visualContract": "pnpm visual:ui-kit:contract",
+    "iconContract": "pnpm guard:icon-contract",
+    "controlPanelTests": "pnpm --dir apps/control-panel/runtime test",
+    "uiKitTypecheck": "pnpm --dir shared/ui-kit typecheck",
+    "controlPanelTypecheck": "pnpm --dir shared/control-panel typecheck"
+  }
+}

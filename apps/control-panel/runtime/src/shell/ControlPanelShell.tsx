@@ -33,8 +33,8 @@ export function ControlPanelShell({
   const topBarStyle: CSSProperties = {
     backdropFilter: glassMode === "darkGlass" ? "blur(20px)" : undefined,
     WebkitBackdropFilter: glassMode === "darkGlass" ? "blur(20px)" : undefined,
-    background: glass.backgroundColor ?? "var(--topbar-bg)",
-    borderBottom: `1px solid ${glass.borderColor ?? "var(--topbar-border)"}`,
+    background: glass.backgroundColor ?? "var(--cp-topbar-bg)",
+    borderBottom: `1px solid ${glass.borderColor ?? "var(--cp-topbar-border)"}`,
   };
 
   return (
@@ -81,8 +81,8 @@ const styles = WebStyleSheet.create({
     height: "100vh",
     overflow: "hidden",
     fontFamily: "var(--font-arabic)",
-    background: "var(--main-bg)",
-    color: "var(--text-primary)",
+    background: "var(--cp-main-bg)",
+    color: "var(--cp-text-primary)",
   },
   topBar: {
     flexShrink: 0,
@@ -95,12 +95,12 @@ const styles = WebStyleSheet.create({
     overflow: "hidden",
   },
   sidebar: {
-    width: "var(--sidebar-width, 15.5rem)",
+    width: "var(--cp-sidebar-width, 15.5rem)",
     flexShrink: 0,
     overflowY: "auto",
     overflowX: "hidden",
-    background: "var(--sidebar-bg)",
-    borderInlineEnd: "1px solid var(--sidebar-border)",
+    background: "var(--cp-sidebar-bg)",
+    borderInlineEnd: "1px solid var(--cp-sidebar-border)",
     display: "flex",
     flexDirection: "column",
     scrollbarWidth: "none",
@@ -109,19 +109,19 @@ const styles = WebStyleSheet.create({
     flex: 1,
     minWidth: 0,
     overflowY: "auto",
-    background: "var(--main-bg)",
+    background: "var(--cp-main-bg)",
     scrollbarWidth: "thin",
-    scrollbarColor: "var(--card-border) transparent",
+    scrollbarColor: "var(--cp-card-border) transparent",
   },
   sidePanel: {
     flexShrink: 0,
     overflowY: "auto",
-    background: "var(--card-bg)",
-    borderInlineStart: "1px solid var(--card-border)",
+    background: "var(--cp-card-bg)",
+    borderInlineStart: "1px solid var(--cp-card-border)",
   },
   footer: {
     flexShrink: 0,
-    background: "var(--topbar-bg)",
-    borderTop: "1px solid var(--topbar-border)",
+    background: "var(--cp-topbar-bg)",
+    borderTop: "1px solid var(--cp-topbar-border)",
   },
 });
