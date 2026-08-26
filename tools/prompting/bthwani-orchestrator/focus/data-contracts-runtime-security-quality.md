@@ -145,7 +145,7 @@ Post-merge canonical-trunk analysis is a different evidence class from PR closur
 
 ## 13. Development verification vs closure verification
 
-During Draft iteration:
+During active iteration:
 
 `affected/deep verification` is appropriate when it safely covers the changed/affected cone.
 
@@ -173,16 +173,16 @@ Never silence a material finding merely to obtain green. Material suppression re
 
 The executing agent may not self-authorize a material intentional suppression.
 
-## 16. Tool/CI failure treatment
+## 16. Tool/CI failure treatment in the unified loop
 
 Apply `02` classification:
 
 - broken workflow/tool config -> usually `EXECUTION_FINDING`;
 - unavailable nonessential final analyzer with sufficient diagnostic alternatives -> `DEGRADED_EVIDENCE`, closure obligation retained;
-- truly indispensable missing evidence for root/target/Source-of-Fix -> `DIAGNOSIS_BLOCKER`;
+- truly indispensable missing evidence for root/target/Source-of-Fix -> `DIAGNOSIS_BLOCKER` for that dependent treatment cone;
 - irrelevant capability -> `NOT_APPLICABLE`.
 
-Thus tool failure does not automatically produce `AUDIT_PREPARE — NOT_READY_FOR_EXECUTION`.
+Tool failure does not create a separate preparation phase, does not require a plan handoff and does not stop other sufficiently proven independent treatment. Under mutation-authorized intent, diagnose/treat/rerun in the same unified loop unless a legitimate `00` stop state applies.
 
 ## 17. Closure for this focus
 
