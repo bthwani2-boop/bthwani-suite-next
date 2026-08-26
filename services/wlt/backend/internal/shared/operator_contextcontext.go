@@ -23,6 +23,9 @@ func OperatorContextIDFromContext(ctx context.Context) (string, bool) {
 // process-wide, local, or legacy OperatorContext ownership fallback.
 func RequireOperatorContext(ctx context.Context) (string, error) {
 	if operatorContextID, ok := OperatorContextIDFromContext(ctx); ok {
+		if strings.EqualFold(operatorContextID, "legacy-unscoped") {
+			return "", fmt.Errorf("legacy-unscoped OperatorContext is migration-only and not executable")
+		}
 		return operatorContextID, nil
 	}
 	return "", fmt.Errorf("trusted OperatorContext context is required")

@@ -97,6 +97,13 @@ func TestRequireServiceCallerAuthenticatesBeforeBindingScope(t *testing.T) {
 	}
 }
 
+func TestRequireOperatorContextRejectsLegacyUnscopedSentinel(t *testing.T) {
+	ctx := WithOperatorContext(context.Background(), "legacy-unscoped")
+	if scopeID, err := RequireOperatorContext(ctx); err == nil || scopeID != "" {
+		t.Fatalf("legacy-unscoped context was accepted: scope=%q err=%v", scopeID, err)
+	}
+}
+
 func TestRequireOperatorContextCompatibilityAccessorFailsClosedWithoutBoundScope(t *testing.T) {
 	scopeID, err := RequireOperatorContext(context.Background())
 	if err == nil || scopeID != "" {
