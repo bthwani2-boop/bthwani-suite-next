@@ -3,17 +3,23 @@ name: BThwani PR Closure Dispatch
 on:
   issues:
     types: [labeled]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request number requiring trusted closure
+        required: true
+        type: string
 
 permissions: {}
 
 concurrency:
-  group: bthwani-pr-closure-dispatch-${{ github.event.issue.number }}
+  group: bthwani-pr-closure-dispatch-${{ inputs.pr_number || github.event.issue.number }}
   cancel-in-progress: false
 
 jobs:
   approve:
     name: Bind authorized human closure approval
-    if: ${{ github.event.issue.pull_request && github.event.label.name == 'bthwani:closure-request' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.issue.pull_request && github.event.label.name == 'bthwani:closure-request') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -29,7 +35,7 @@ jobs:
       default_sha: ${{ steps.target.outputs.default_sha }}
     env:
       GH_TOKEN: ${{ github.token }}
-      PR_NUMBER: ${{ github.event.issue.number }}
+      PR_NUMBER: ${{ inputs.pr_number || github.event.issue.number }}
       APPROVER: ${{ github.actor }}
       DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
     steps:
@@ -115,7 +121,7 @@ jobs:
       security-events: read
       statuses: write
     with:
-      pr_number: ${{ github.event.issue.number }}
+      pr_number: ${{ inputs.pr_number || github.event.issue.number }}
       head_ref: ${{ needs.approve.outputs.head_ref }}
       head_sha: ${{ needs.approve.outputs.head_sha }}
       base_ref: ${{ needs.approve.outputs.base_ref }}
