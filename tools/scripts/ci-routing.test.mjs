@@ -60,7 +60,11 @@ test("PR closure uses a trusted reusable workflow with immutable candidate prove
   assert.match(dispatchWorkflow, /github\.event\.label\.name == 'bthwani:closure-request'/u);
   assert.match(dispatchWorkflow, /\.head\.repo\.full_name/u);
   assert.match(dispatchWorkflow, /admin\|maintain\|write/u);
-  assert.match(dispatchWorkflow, /approval must be independent from the PR author/u);
+  assert.doesNotMatch(
+    dispatchWorkflow,
+    /must be independent from the PR author|independent from the head repository owner/u
+  );
+  assert.match(dispatchWorkflow, /Solo-maintenance authority policy/u);
   assert.match(dispatchWorkflow, /Candidate SHA: \$\{head_sha\}/u);
   assert.match(dispatchWorkflow, /default_branch/u);
   assert.equal(dispatchWorkflow.includes("<!-- bthwani:closure-request -->"), true);
