@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import nextConfig from "../next.config.mjs";
+import { buildControlPanelSecurityHeaders } from "../csp-policy.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "../../../..");
 const read = (relative) => fs.readFileSync(path.join(repoRoot, relative), "utf8");
@@ -11,10 +12,9 @@ const bffProxyPath = "apps/control-panel/runtime/src/server/bff-proxy.adapter.ts
 
 test("control-panel emits governed browser security headers", async () => {
   assert.equal(nextConfig.env?.NEXT_PUBLIC_CONTROL_PANEL_BFF_ENABLED, "true");
-  const routes = await nextConfig.headers();
-  const governedRoute = routes.find((entry) => entry.source === "/:path*");
-  assert.ok(governedRoute, "global security-header route must exist");
-  const headers = new Map(governedRoute.headers.map(({ key, value }) => [key, value]));
+  const headers = new Map(
+    buildControlPanelSecurityHeaders({ nonce: "test-nonce" }).map(({ key, value }) => [key, value]),
+  );
   for (const header of [
     "Content-Security-Policy",
     "Referrer-Policy",

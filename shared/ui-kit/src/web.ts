@@ -10,13 +10,12 @@ export {
 	WebSectionCard,
 	WebSignalCard,
 } from './web/page-frame';
-export {
-	WebDocumentShell,
-	WebRootBody,
-	WebRootLayout,
-	WebThemeStyle,
-	buildWebRootMetadata,
-} from './web/root-layout';
+
+// Single governed critical-style producer for the web lane. Receives the
+// per-request CSP nonce from the server layout so the strict `style-src
+// 'self' 'nonce-…'` policy accepts the emitted <style> element. See
+// ./web/root-layout.tsx for the full contract.
+export { WebThemeStyle } from './web/root-layout';
 
 // ─── Control Panel Lane ────────────────────────────────────────────────────────
 // Use for: staff operations, admin dashboards, control rooms only.
