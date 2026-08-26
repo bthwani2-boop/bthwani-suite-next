@@ -16,9 +16,10 @@ STATIC PASS != RUNTIME PROOF
 TOOL GREEN != ALL FINDINGS RESOLVED
 PR BODY != CURRENT PR TRUTH
 OLD SHA != CURRENT CANDIDATE
+SEPARATE WORKTREE != PARALLEL SAFETY
 ```
 
-## 2. Candidate and PR identity
+## 2. Candidate, PR and concurrent-work identity
 
 For PR-scoped work, closure identity is:
 
@@ -50,6 +51,17 @@ HEAD_AT_DECISION
 ```
 
 Any material write after `FINAL_CANDIDATE` creates a new candidate.
+
+When `ACTIVE_WORKSET` or other concurrent work exists, closure identity additionally includes the **current coordination boundary**:
+
+```text
+human-known active objectives at final reconciliation
+visible concurrent/ref delta
+collision dispositions relevant to the selected Closure Unit
+shared authority/write/cutover/evidence dependencies
+```
+
+An objective proven parallel-safe at selection can become overlapping later. Reconcile again before final closure.
 
 ## 3. Material evidence record
 
@@ -97,6 +109,7 @@ Tools do not decide Product/System Truth. Their outputs are evidence and hypothe
 Verify where material:
 
 - root cause actually removed at Source-of-Fix;
+- selected Closure Unit still corresponds to the proven root/canonical target;
 - canonical owner/write path enforced;
 - all materially affected writers/readers/consumers migrated;
 - no half cutover or unintended regression;
@@ -112,7 +125,8 @@ Verify where material:
 - every still-valid cleanup/deletion obligation executed/verified;
 - no new parallel truth;
 - structural completion/finishing pass complete;
-- repository-platform truth when relied upon.
+- repository-platform truth when relied upon;
+- current ACTIVE_WORKSET/concurrent delta has been re-resolved and no unresolved collision now overlaps the selected root's authority/write/cutover/evidence cone.
 
 ## 6. Failure classification
 
@@ -248,18 +262,20 @@ Examples:
 - auth/permission change -> negative isolation/security;
 - shared canonical library change -> all proven consumers;
 - workflow/ruleset/tool config change -> repository-platform evidence;
+- active-objective/concurrent delta overlaps authority/write/cutover/evidence cone -> re-run collision analysis and invalidate dependent proof;
 - unrelated docs change -> retain only if independence is proven.
 
 Rerun invalidated proof; do not rerun everything mechanically and do not retain stale proof.
 
 ## 13. Re-diagnosis loop
 
-After every material root:
+After every material root treatment:
 
 ```text
 reinspect operational outcome
 -> rerun affected journey/state/ownership/contract/data/runtime traces
 -> ingest all new tool/review/runtime outputs under 02
+-> reconcile visible concurrent delta / ACTIVE_WORKSET assumptions under 01/05 when relevant
 -> invalidate descendant symptoms
 -> discover exposed roots
 -> rebuild affected coverage
@@ -267,6 +283,8 @@ reinspect operational outcome
 ```
 
 If a higher root appears, reopen affected descendant treatment. Never mechanically execute a stale finding list after system truth changes.
+
+An independent newly discovered root does not silently expand the selected Closure Unit. It enters re-ranking unless it is a causal parent that invalidates the current root treatment.
 
 ## 14. Zero-reference/reachability proof
 
@@ -296,20 +314,35 @@ Closure is blocked by known material related:
 
 Assume closure is false. Search deliberately for:
 
-`hidden writer/consumer | duplicate truth | stale governance | missing durable truth | reachable old path | unexecuted cleanup | contract/data mismatch | cross-surface mismatch | missing recovery | half migration | runtime divergence | stale process/data | patch/workaround/fallback | race/idempotency | security/isolation gap | wrong placement/naming/context | orphan references | unjustified complexity | stale/mismatched PR/SHA/tool evidence`.
+`hidden writer/consumer | duplicate truth | stale governance | missing durable truth | reachable old path | unexecuted cleanup | contract/data mismatch | cross-surface mismatch | missing recovery | half migration | runtime divergence | stale process/data | patch/workaround/fallback | race/idempotency | security/isolation gap | wrong placement/naming/context | orphan references | unjustified complexity | stale/mismatched PR/SHA/tool evidence | concurrent objective authority overlap | shared cutover collision | evidence dependency on unfinished external work`.
 
 Any material issue reopens diagnosis/treatment/verification.
 
-## 17. Closure equation
+## 17. Final concurrent-work reconciliation gate
+
+Immediately before declaring the selected Closure Unit closed:
+
+```text
+RE-RESOLVE TARGET / PR / HEAD
+-> RE-INGEST HUMAN-KNOWN ACTIVE_WORKSET
+-> RECONCILE VISIBLE FOREIGN/CONCURRENT DELTA
+-> RECHECK AUTHORITY / WRITE SET / CONTRACT / DATA / MIGRATION / RUNTIME / GOVERNANCE / CUTOVER / EVIDENCE COLLISIONS
+-> if overlap emerged: classify under 01/05 and reopen affected treatment or serialize
+-> if independent: preserve foreign work and retain only valid evidence
+```
+
+A Closure Unit cannot be declared `CLOSED` while its final state depends on unresolved behavior from another active objective or while both units independently claim the same material authority.
+
+## 18. Closure equation
 
 `CLOSED` only when every materially applicable term is proven:
 
 ```text
 ZERO_UNKNOWN_REQUIRED_COVERAGE
-AND ZERO_KNOWN_MATERIAL_OPEN_ROOTS
-AND ZERO_UNRESOLVED_MATERIAL_FINDINGS
-AND ZERO_FIXED_PENDING_VERIFY_FINDINGS
-AND ZERO_UNRESOLVED_REQUIRED_DECISIONS
+AND ZERO_KNOWN_MATERIAL_OPEN_ROOTS_WITHIN_SELECTED_CLOSURE
+AND ZERO_UNRESOLVED_MATERIAL_FINDINGS_WITHIN_SELECTED_CLOSURE
+AND ZERO_FIXED_PENDING_VERIFY_FINDINGS_WITHIN_SELECTED_CLOSURE
+AND ZERO_UNRESOLVED_REQUIRED_DECISIONS_FOR_SELECTED_CLOSURE
 AND ZERO_UNACCOUNTED_OR_UNMIGRATED_AFFECTED_CONSUMERS
 AND ZERO_UNINTENDED_AFFECTED_REGRESSIONS
 AND ZERO_PROJECT_INVARIANT_REGRESSIONS
@@ -334,10 +367,14 @@ AND ZERO_MATERIAL_OBSOLETE_TESTS_FIXTURES_MOCKS
 AND ZERO_MATERIAL_UNFINISHED_RESTRUCTURING
 AND ZERO_UNDISPOSITIONED_MATERIAL_TOOL_FINDINGS
 AND ZERO_UNJUSTIFIED_OR_EXPIRED_MATERIAL_SUPPRESSIONS
-AND ALL_REQUIRED_APPLICABLE_FINAL_TOOL/REMOTE EVIDENCE PRESENT ON EXACT FINAL CANDIDATE
+AND ZERO_UNRECONCILED_ACTIVE_WORKSET_COLLISIONS
+AND ZERO_UNRESOLVED_SHARED_CUTOVER_OR_EVIDENCE_DEPENDENCIES
+AND ALL_REQUIRED_APPLICABLE_FINAL_TOOL/REMOTE_EVIDENCE_PRESENT_ON_EXACT_FINAL_CANDIDATE
 AND NO_STALE_OR_CROSS_PR_OR_CROSS_SHA_CLOSURE_EVIDENCE
 AND FINAL_NEGATIVE_SPACE_CLEAN
 AND FINAL_ADVERSARIAL_REDIAGNOSIS_CLEAN
 ```
 
-If a deep post-treatment audit can still reasonably find a material residue tied to the root that should have been closed with it, `CLOSED` is false.
+This equation is scoped to the selected Closure Unit and its complete causal affected cone. It does not require an independent active root in another proven non-overlapping cone to be closed first.
+
+If a deep post-treatment audit can still reasonably find material residue tied to the selected root that should have been closed with it, `CLOSED` is false.
