@@ -27,6 +27,11 @@ require_go() {
   fi
 }
 
+apt_install() {
+  sudo apt-get update -qq
+  sudo apt-get install -y -qq "$@"
+}
+
 install_osv_scanner() {
   require_go
   go install "github.com/google/osv-scanner/v2/cmd/osv-scanner@${OSV_SCANNER_VERSION}"
@@ -34,12 +39,23 @@ install_osv_scanner() {
   export PATH="$HOME/go/bin:$PATH"
 }
 
-install_github_action_go_tools() {
+install_actionlint() {
   require_go
   go install "github.com/rhysd/actionlint/cmd/actionlint@${ACTIONLINT_VERSION}"
+  echo "$HOME/go/bin" >> "$GITHUB_PATH"
+  export PATH="$HOME/go/bin:$PATH"
+}
+
+install_pinact() {
+  require_go
   go install "github.com/suzuki-shunsuke/pinact/cmd/pinact@${PINACT_VERSION}"
   echo "$HOME/go/bin" >> "$GITHUB_PATH"
   export PATH="$HOME/go/bin:$PATH"
+}
+
+install_github_action_go_tools() {
+  install_actionlint
+  install_pinact
 }
 
 install_hadolint() {
@@ -85,9 +101,15 @@ install_trivy() {
   sudo chmod +x /usr/local/bin/trivy
 }
 
+install_zizmor() {
+  apt_install python3-pip
+  python3 -m pip install --user "zizmor==${ZIZMOR_VERSION}"
+  echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+  export PATH="$HOME/.local/bin:$PATH"
+}
+
 if [[ "${MODE}" == "governance" || "${MODE}" == "ci" ]]; then
-  sudo apt-get update
-  sudo apt-get install -y shellcheck yamllint python3-pip
+  apt_install shellcheck yamllint python3-pip
   install_hadolint
   install_osv_scanner
   install_github_action_go_tools
@@ -95,17 +117,34 @@ if [[ "${MODE}" == "governance" || "${MODE}" == "ci" ]]; then
   python3 -m pip install --user "zizmor==${ZIZMOR_VERSION}"
   echo "$HOME/.local/bin" >> "$GITHUB_PATH"
   install_conftest
-fi
-
-if [[ "${MODE}" == "security" ]]; then
-  sudo apt-get update
-  sudo apt-get install -y shellcheck yamllint python3-pip
+elif [[ "${MODE}" == "security" ]]; then
+  apt_install shellcheck yamllint python3-pip
   install_hadolint
   install_trivy
   install_osv_scanner
   install_gitleaks
   python3 -m pip install --user "zizmor==${ZIZMOR_VERSION}"
   echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+elif [[ "${MODE}" == security:* ]]; then
+  analyzer="${MODE#security:}"
+  case "${analyzer}" in
+    gitleaks) install_gitleaks ;;
+    osv-scanner) install_osv_scanner ;;
+    trivy) install_trivy ;;
+    actionlint) install_actionlint ;;
+    zizmor) install_zizmor ;;
+    pinact) install_pinact ;;
+    shellcheck) apt_install shellcheck ;;
+    hadolint) install_hadolint ;;
+    yamllint) apt_install yamllint ;;
+    *)
+      echo "ERROR: unknown security analyzer mode: ${analyzer}" >&2
+      exit 1
+      ;;
+  esac
+else
+  echo "ERROR: unknown OSS toolchain mode: ${MODE}" >&2
+  exit 1
 fi
 
 echo "Locked OSS toolchain binary installation completed."
