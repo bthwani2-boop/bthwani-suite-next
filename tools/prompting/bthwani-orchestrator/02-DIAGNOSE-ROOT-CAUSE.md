@@ -1,4 +1,4 @@
-# Diagnose, Findings, Root Proof, Source-of-Fix and Execution Readiness
+# Diagnose, Findings, Root Proof, Source-of-Fix and Internal Execution Gate
 
 ## 1. Purpose
 
@@ -16,9 +16,12 @@ DISCOVER
 -> RANK ROOTS
 -> DEFINE CANONICAL TARGET
 -> PROVE SOURCE-OF-FIX
--> EXECUTE WHEN READY
+-> SELECT/DECLARE CLOSURE UNIT WHEN NEEDED UNDER 05
+-> EXECUTE WHEN INTERNALLY READY
 -> RE-DIAGNOSE
 ```
+
+Diagnosis is part of the unified close loop owned by `00`. It is not a separate mandatory phase and does not require a persisted plan before treatment.
 
 ## 2. Mandatory diagnostic altitude
 
@@ -36,13 +39,13 @@ Material nodes progress conceptually through:
 
 or `N/A_PROVEN`.
 
-Inspect materially applicable: product meaning, actors/roles/permissions, journeys/states, owners/writers/readers/consumers, frontend/backend binding, contracts/events, data/migrations, runtime/config/providers, security/finance, testing/CI/tooling, structure/naming/duplication/dead/legacy residue, governance consistency and prior canonical closures.
+Inspect materially applicable: Product meaning, actors/roles/permissions, journeys/states, owners/writers/readers/consumers, frontend/backend binding, contracts/events, data/migrations, runtime/config/providers, security/finance, testing/CI/tooling, structure/naming/duplication/dead/legacy residue, governance consistency, active/concurrent work boundaries and prior canonical closures.
 
 `COVERAGE_COMPLETE != CLOSURE_COMPLETE`.
 
 ## 4. Findings Ledger — total accounting
 
-Every material finding is addressable and traceable. Minimum fields:
+Every material finding is addressable and traceable. Minimum conceptual fields:
 
 ```text
 FINDING_ID
@@ -69,9 +72,11 @@ Statuses:
 
 `OPEN | EVIDENCE_HOLD | FIXED_PENDING_VERIFY | PROVEN_CLOSED | N/A_PROVEN`.
 
+The ledger may exist in memory, tool output or a task-local artifact. A repository status registry is not required and must not become a parallel source of truth.
+
 ### 4.1 Raw tool finding invariant
 
-Every material raw finding emitted by Sonar/CodeQL/Semgrep/OpenCodeReview/CodeRabbit/CI/tests/scanners/reviews or equivalent must receive exactly one traceable disposition:
+Every material raw finding emitted by Sonar/CodeQL/Semgrep/OpenCodeReview/CodeRabbit/CI/tests/scanners/reviews or equivalent receives exactly one traceable disposition:
 
 ```text
 MAPPED_TO_FINDING
@@ -107,15 +112,15 @@ Definitions:
 
 `DIAGNOSIS_BLOCKER` — without this evidence and without sufficient alternative evidence, a material root/target/Source-of-Fix cannot be safely determined.
 
-`EXECUTION_FINDING` — the broken tool/workflow/config/execution chain is itself diagnosable/treatable or is a normal defect to close during execution. It does **not** block execution readiness.
+`EXECUTION_FINDING` — the broken tool/workflow/config/execution chain is itself diagnosable/treatable or is a normal defect to close during execution. It does **not** block the unified loop from treating another sufficiently proven root.
 
-`DEGRADED_EVIDENCE` — evidence is incomplete/unavailable, but sufficient independent evidence exists to begin the proven treatment. Required missing proof is carried forward as a closure obligation.
+`DEGRADED_EVIDENCE` — evidence is incomplete/unavailable, but sufficient independent evidence exists to begin the proven treatment. Required missing proof remains a closure obligation.
 
 `NOT_APPLICABLE` — proven irrelevant to the current claim/risk.
 
 `EVIDENCE_AVAILABLE` — trustworthy evidence exists with explicit proof limit.
 
-Only a proven `DIAGNOSIS_BLOCKER` may set `EXECUTION_READY=false` for the dependent execution frontier solely because of a tool/capability condition.
+Only a proven `DIAGNOSIS_BLOCKER` can block the dependent treatment frontier solely because of a tool/capability condition.
 
 ## 5. Root-cause proof and clustering
 
@@ -144,6 +149,8 @@ High-leverage root signals include:
 
 `PARALLEL_TRUTH | DUPLICATE_AUTHORITATIVE_WRITER | SHADOW_STATE | DUPLICATE_CONTRACT_AUTHORITY | DUPLICATE_CONFIG_AUTHORITY | LEGACY_CANONICAL_PATH | DUPLICATE_DECISION_RULE`.
 
+When concurrent objectives exist, leverage ranking and collision safety are both required: the highest root that is not safe to mutate concurrently remains high priority but is not selected for an independent parallel Closure Unit.
+
 ## 6. Semantic duplication
 
 Do not limit duplication to textual clones. Inspect:
@@ -169,9 +176,12 @@ CONTRACT/DATA/MIGRATION/RUNTIME/CONFIG IMPACT
 GOVERNANCE IMPACT
 OBSOLETE IMPLEMENTATION TO REMOVE
 REQUIRED VERIFICATION
+ACTIVE_WORKSET COLLISION IMPACT when concurrent work exists
 ```
 
-If code/runtime/data/contract/schema/config mutation is required but the actual Source-of-Defect is still unknown, that root is not executable.
+If code/runtime/data/contract/schema/config mutation is required but the actual Source-of-Defect remains unknown, that root is not executable yet.
+
+A root may be proven but temporarily unavailable for parallel mutation because it collides with `ACTIVE_WORKSET`; route that selection decision through `01`/`05` rather than weakening the root.
 
 ### 7.1 Generated-output law
 
@@ -226,7 +236,7 @@ Every remaining material artifact must justify:
 
 `Necessary Purpose + Canonical Owner + Single Clear Responsibility + Real Consumer + Correct Layer + Correct Dependency Direction + Proven Value + Correct Placement + Unambiguous Name + No Duplicated Authority + No Superseded Implementation`.
 
-For `DELETE_REQUIRED` / `RETIRE_AFTER_CUTOVER`, record evidence of obsolescence/supersession, consumers/references, replacement/cutover prerequisites, reference/config/test/generated repair, deletion order and verification.
+For `DELETE_REQUIRED` / `RETIRE_AFTER_CUTOVER`, record enough evidence of obsolescence/supersession, consumers/references, replacement/cutover prerequisites, reference/config/test/generated repair, deletion order and verification.
 
 A proven `DELETE_REQUIRED` item is an execution obligation after prerequisites are satisfied.
 
@@ -253,6 +263,8 @@ EXTERNAL_EVIDENCE_GAP
 = external evidence is needed; classify as DIAGNOSIS_BLOCKER only if no sufficient alternative evidence can establish safe treatment.
 ```
 
+Do not turn ordinary execution complexity, tool failure, planning preference or a large working cone into a human decision request.
+
 ## 12. Patch-loop breaker
 
 When work becomes:
@@ -278,25 +290,22 @@ IF THIS WRITE WERE REMOVED, WOULD THE ROOT STILL EXIST?
 
 If the root would remain, reject the write as patch/workaround/cosmetic/local compensation unless it is a necessary bounded step in a proven migration/cutover.
 
-## 14. Readiness semantics
+## 14. Internal execution-readiness gate
 
-Readiness is decomposed without creating a third phase:
+Readiness is an internal gate inside the unified loop, not a phase, stop state or required handoff:
 
 ```text
 TARGET_READY
 DIAGNOSIS_READY
 SOURCE_OF_FIX_READY
-EXECUTION_READY
+COLLISION_READY
+MUTATION_AUTHORIZED
 REMOTE_EVIDENCE_COMPLETE
 FINAL_VERIFICATION_READY
 CLOSURE_READY
 ```
 
-During `AUDIT_PREPARE`, `REMOTE_EVIDENCE_COMPLETE`, `FINAL_VERIFICATION_READY` and `CLOSURE_READY` may legitimately be false.
-
-`READY_FOR_EXECUTION` means **the next root-correct treatment is sufficiently proven and safe to begin**, not that the system/tools are healthy.
-
-Execution readiness requires, materially:
+The first treatment may begin when materially:
 
 ```text
 TARGET_READY
@@ -309,28 +318,32 @@ AND relevant artifact/cleanup dispositions known enough for the frontier
 AND migration/cutover semantics known where required
 AND no unresolved TRUE_DECISION_GAP can change the first treatment
 AND no DIAGNOSIS_BLOCKER blocks the first treatment
-AND verification/closure obligations are defined, even if not yet satisfied
+AND ACTIVE_WORKSET collision disposition permits the selected mutation when concurrency exists
+AND current human intent authorizes mutation
+AND verification/closure obligations are defined enough to avoid blind treatment
 ```
 
-It does **not** require every closure tool to be green or even runnable before treatment when those failures are execution findings/degraded evidence.
+It does **not** require every closure tool to be green or even runnable before treatment when failures are execution findings/degraded evidence.
 
-## 15. AUDIT_PREPARE handoff
+When this gate is satisfied, do not stop merely to say “ready”. Under mutation-authorized intent:
 
-When `PLAN_DIR=AUTO|<path>` and execution readiness is proven, create exactly:
+`declare the selected Closure Unit under 05 -> execute immediately under 03`.
+
+## 15. Planning and handoff semantics
+
+There is no mandatory preparation handoff and no canonical `plans/diagnose-implementing` requirement.
+
+Planning follows `00`:
 
 ```text
-plans/diagnose-implementing/<objective-slug>/
-├── 00-AUDIT-TRUTH.md
-├── 01-EXECUTION-CONTRACT.md
-└── 02-VERIFICATION-CLOSURE.md
+DEFAULT = in-memory / just-in-time
+OPTIONAL = task-local artifact only when materially useful
+FIXED 3-FILE HANDOFF = NOT REQUIRED
+PLAN ARTIFACT = NON-AUTHORITATIVE
 ```
 
-`00-AUDIT-TRUTH.md` owns evidence/findings/root landscape/target/authority/working cone/tool conditions/decisions.
+If an agent/provider chooses to persist a task-local plan, it chooses an appropriate path supported by its own authorized workspace and repository hygiene. Do not create a new canonical plan/status/evidence registry to represent execution state.
 
-`01-EXECUTION-CONTRACT.md` owns Source-of-Fix, frontier steps, mutation cone, migrations/cutovers/artifact dispositions/cleanup and stop triggers.
+A plan may summarize evidence, root hypotheses, Source-of-Fix, treatment frontier and verification obligations, but live code/data/runtime/repository evidence always outrank it. Material target movement invalidates affected plan assumptions exactly as it invalidates other stale evidence.
 
-`02-VERIFICATION-CLOSURE.md` owns task-specific V/AC/CE requirements and exact-candidate proof obligations.
-
-No parallel plan/status/evidence registries are created merely to represent the same handoff.
-
-When `PLAN_DIR=NONE`, report the same conclusions in the conversation without repository mutation and end `AUDIT_COMPLETE`; include whether `EXECUTION_READY=true|false`.
+When the human requests read-only audit or objective selection only, report the same decision-quality conclusions in the conversation without manufacturing a repository plan file.
