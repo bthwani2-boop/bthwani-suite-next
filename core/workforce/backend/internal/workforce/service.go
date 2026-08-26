@@ -3,6 +3,7 @@ package workforce
 import (
 	"context"
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -194,9 +195,30 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 		return existing, true, nil
 	}
 
-	person, err := s.repo.CreatePerson(ctx, actorID, workforceCode, zone.CityCode, input)
-	if err != nil {
-		if errors.Is(err, ErrDuplicateWorkforceCode) {
+	// One governed transaction: sovereign profile rows + audit + idempotent
+	// response commit atomically, or nothing commits at all.
+	var person Person
+	unitErr := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+		var err error
+		person, err = createPersonTx(ctx, tx, actorID, workforceCode, zone.CityCode, input)
+		if err != nil {
+			return err
+		}
+		encoded, err := json.Marshal(person)
+		if err != nil {
+			return err
+		}
+		if err := recordAuditTx(ctx, tx, auditInput{
+			OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
+			TargetActorID: actorID, Action: "field_agent.created", Operation: "create_field_agent",
+			ToState: person, CorrelationID: correlationID, IdempotencyKey: idempotencyKey,
+		}); err != nil {
+			return err
+		}
+		return storeIdempotentResponseTx(ctx, tx, operator.ActorID, "create_field_agent", idempotencyKey, requestHash, encoded)
+	})
+	if unitErr != nil {
+		if errors.Is(unitErr, ErrDuplicateWorkforceCode) {
 			if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
 				return existing, true, nil
 			}
@@ -206,15 +228,7 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 				log.Printf("[workforce] field identity compensation failed actor=%s: %v", actorID, compensationErr)
 			}
 		}
-		return Person{}, false, err
-	}
-
-	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
-		"field_agent.created", "create_field_agent", nil, person, "", correlationID, idempotencyKey); err != nil {
-		return Person{}, false, err
-	}
-	if encoded, err := json.Marshal(person); err == nil {
-		_ = s.repo.StoreIdempotentResponse(ctx, operator.ActorID, "create_field_agent", idempotencyKey, requestHash, encoded)
+		return Person{}, false, unitErr
 	}
 	return person, false, nil
 }
@@ -293,22 +307,36 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 		return existing, true, nil
 	}
 
-	person, err := s.repo.CreateCaptain(ctx, actorID, workforceCode, zone.CityCode, input)
-	if err != nil {
-		if errors.Is(err, ErrDuplicateWorkforceCode) {
+	// One governed transaction: sovereign captain rows + audit + idempotent
+	// response commit atomically.
+	var person Person
+	unitErr := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+		var err error
+		person, err = createCaptainTx(ctx, tx, actorID, workforceCode, zone.CityCode, input)
+		if err != nil {
+			return err
+		}
+		encoded, err := json.Marshal(person)
+		if err != nil {
+			return err
+		}
+		if err := recordAuditTx(ctx, tx, auditInput{
+			OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
+			TargetActorID: actorID, Action: "captain.created", Operation: "create_captain",
+			ToState: person, CorrelationID: correlationID, IdempotencyKey: idempotencyKey,
+		}); err != nil {
+			return err
+		}
+		return storeIdempotentResponseTx(ctx, tx, operator.ActorID, "create_captain", idempotencyKey, requestHash, encoded)
+	})
+	if unitErr != nil {
+		if errors.Is(unitErr, ErrDuplicateWorkforceCode) {
 			if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
 				return existing, true, nil
 			}
 		}
 		compensate()
-		return Person{}, false, err
-	}
-	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
-		"captain.created", "create_captain", nil, person, "", correlationID, idempotencyKey); err != nil {
-		return Person{}, false, err
-	}
-	if encoded, err := json.Marshal(person); err == nil {
-		_ = s.repo.StoreIdempotentResponse(ctx, operator.ActorID, "create_captain", idempotencyKey, requestHash, encoded)
+		return Person{}, false, unitErr
 	}
 	return person, false, nil
 }
@@ -378,22 +406,36 @@ func (s *Service) CreateEmployee(ctx context.Context, operator Operator, input C
 		return existing, true, nil
 	}
 
-	person, err := s.repo.CreateEmployee(ctx, actorID, workforceCode, input)
-	if err != nil {
-		if errors.Is(err, ErrDuplicateWorkforceCode) {
+	// One governed transaction: sovereign employee rows + audit + idempotent
+	// response commit atomically.
+	var person Person
+	unitErr := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+		var err error
+		person, err = createEmployeeTx(ctx, tx, actorID, workforceCode, input)
+		if err != nil {
+			return err
+		}
+		encoded, err := json.Marshal(person)
+		if err != nil {
+			return err
+		}
+		if err := recordAuditTx(ctx, tx, auditInput{
+			OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
+			TargetActorID: actorID, Action: "employee.created", Operation: "create_employee",
+			ToState: person, CorrelationID: correlationID, IdempotencyKey: idempotencyKey,
+		}); err != nil {
+			return err
+		}
+		return storeIdempotentResponseTx(ctx, tx, operator.ActorID, "create_employee", idempotencyKey, requestHash, encoded)
+	})
+	if unitErr != nil {
+		if errors.Is(unitErr, ErrDuplicateWorkforceCode) {
 			if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
 				return existing, true, nil
 			}
 		}
 		compensate()
-		return Person{}, false, err
-	}
-	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
-		"employee.created", "create_employee", nil, person, "", correlationID, idempotencyKey); err != nil {
-		return Person{}, false, err
-	}
-	if encoded, err := json.Marshal(person); err == nil {
-		_ = s.repo.StoreIdempotentResponse(ctx, operator.ActorID, "create_employee", idempotencyKey, requestHash, encoded)
+		return Person{}, false, unitErr
 	}
 	return person, false, nil
 }
@@ -433,12 +475,19 @@ func (s *Service) UpdateFieldAgent(ctx context.Context, operator Operator, actor
 		}
 		derivedCityCode = &zone.CityCode
 	}
-	person, err := s.repo.UpdatePerson(ctx, actorID, derivedCityCode, input)
-	if err != nil {
-		return Person{}, err
-	}
-	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
-		"field_agent.updated", "update_field_agent", before, person, "", correlationID, ""); err != nil {
+	var person Person
+	if err := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+		var err error
+		person, err = updatePersonTx(ctx, tx, actorID, derivedCityCode, input)
+		if err != nil {
+			return err
+		}
+		return recordAuditTx(ctx, tx, auditInput{
+			OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
+			TargetActorID: actorID, Action: "field_agent.updated", Operation: "update_field_agent",
+			FromState: before, ToState: person, CorrelationID: correlationID,
+		})
+	}); err != nil {
 		return Person{}, err
 	}
 	return person, nil
@@ -468,12 +517,19 @@ func (s *Service) UpdateCaptain(ctx context.Context, operator Operator, actorID 
 		}
 		derivedCityCode = &zone.CityCode
 	}
-	person, err := s.repo.UpdateCaptain(ctx, actorID, derivedCityCode, input)
-	if err != nil {
-		return Person{}, err
-	}
-	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
-		"captain.updated", "update_captain", before, person, "", correlationID, ""); err != nil {
+	var person Person
+	if err := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+		var err error
+		person, err = updateCaptainTx(ctx, tx, actorID, derivedCityCode, input)
+		if err != nil {
+			return err
+		}
+		return recordAuditTx(ctx, tx, auditInput{
+			OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
+			TargetActorID: actorID, Action: "captain.updated", Operation: "update_captain",
+			FromState: before, ToState: person, CorrelationID: correlationID,
+		})
+	}); err != nil {
 		return Person{}, err
 	}
 	return person, nil
@@ -489,15 +545,82 @@ func (s *Service) UpdateEmployee(ctx context.Context, operator Operator, actorID
 			return Person{}, err
 		}
 	}
-	person, err := s.repo.UpdateEmployee(ctx, actorID, input)
-	if err != nil {
-		return Person{}, err
-	}
-	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
-		"employee.updated", "update_employee", before, person, "", correlationID, ""); err != nil {
+	var person Person
+	if err := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+		var err error
+		person, err = updateEmployeeTx(ctx, tx, actorID, input)
+		if err != nil {
+			return err
+		}
+		return recordAuditTx(ctx, tx, auditInput{
+			OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
+			TargetActorID: actorID, Action: "employee.updated", Operation: "update_employee",
+			FromState: before, ToState: person, CorrelationID: correlationID,
+		})
+	}); err != nil {
 		return Person{}, err
 	}
 	return person, nil
+}
+
+// EmployeeGovernanceByActorID reads the governance profile through the
+// service boundary so HTTP surfaces never touch the repository directly.
+func (s *Service) EmployeeGovernanceByActorID(ctx context.Context, actorID string) (EmployeeGovernanceProfile, error) {
+	return s.repo.EmployeeGovernanceByActorID(ctx, actorID)
+}
+
+// UpsertEmployeeGovernance is the canonical governed write for the employee
+// governance profile: the mutation, its audit and (when the command carries an
+// idempotency key) its idempotent response commit in ONE transaction.
+// Correlation provenance falls back to the idempotency key when the caller
+// supplied no X-Correlation-ID header.
+func (s *Service) UpsertEmployeeGovernance(ctx context.Context, operator Operator, actorID string, input UpsertEmployeeGovernanceInput, idempotencyKey, correlationID string) (EmployeeGovernanceProfile, error) {
+	actorID = strings.TrimSpace(actorID)
+	if actorID == "" || operator.ActorID == "" {
+		return EmployeeGovernanceProfile{}, ErrInvalidInput
+	}
+	if correlationID == "" {
+		correlationID = strings.TrimSpace(idempotencyKey)
+	}
+	if correlationID == "" {
+		return EmployeeGovernanceProfile{}, ErrInvalidInput
+	}
+	if idempotencyKey != "" {
+		requestHash := hashRequest(input)
+		if stored, replayed, err := s.repo.IdempotentReplay(ctx, operator.ActorID, "upsert_employee_governance", idempotencyKey, requestHash); err != nil {
+			return EmployeeGovernanceProfile{}, err
+		} else if replayed {
+			var profile EmployeeGovernanceProfile
+			if err := json.Unmarshal(stored, &profile); err != nil {
+				return EmployeeGovernanceProfile{}, err
+			}
+			return profile, nil
+		}
+	}
+	var profile EmployeeGovernanceProfile
+	unitErr := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+		var err error
+		profile, err = upsertEmployeeGovernanceTx(ctx, tx, actorID, operator.ActorID, input)
+		if err != nil {
+			return err
+		}
+		encoded, err := json.Marshal(profile)
+		if err != nil {
+			return err
+		}
+		if err := recordAuditTx(ctx, tx, auditInput{
+			OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
+			TargetActorID: actorID, Action: "employee.governance_upserted", Operation: "upsert_employee_governance",
+			ToState: profile, CorrelationID: correlationID, IdempotencyKey: idempotencyKey,
+		}); err != nil {
+			return err
+		}
+		return storeIdempotentResponseTx(ctx, tx, operator.ActorID, "upsert_employee_governance", idempotencyKey, hashRequest(input), encoded)
+	})
+	if unitErr != nil {
+		return EmployeeGovernanceProfile{}, unitErr
+	}
+	return profile, nil
 }
 
 // Suspend blocks the provider operationally and revokes all authentication:
@@ -511,18 +634,40 @@ func (s *Service) Suspend(ctx context.Context, operator Operator, actorID string
 	if before.EngagementStatus == "terminated" {
 		return Person{}, ErrStatusNotIssuable
 	}
-	person, err := s.repo.SetEngagementStatus(ctx, actorID, "suspended", expectedVersion)
-	if err != nil {
+	// Governed unit 1: the suspension status change and its audit commit
+	// atomically.
+	var person Person
+	if err := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+		var err error
+		person, err = setEngagementStatusTx(ctx, tx, actorID, "suspended", expectedVersion)
+		if err != nil {
+			return err
+		}
+		return recordAuditTx(ctx, tx, auditInput{
+			OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
+			TargetActorID: actorID, Action: "workforce.suspended", Operation: "suspend_workforce_actor",
+			FromState: before, ToState: person, Reason: reason, CorrelationID: correlationID,
+		})
+	}); err != nil {
 		return Person{}, err
 	}
 	if err := s.identity.Deactivate(ctx, actorID, operator.ActorID, reason, correlationID); err != nil {
 		// Identity is the auth gate: if it cannot be deactivated the
-		// suspension is not effective, so roll the status back and fail.
-		_, _ = s.repo.SetEngagementStatus(ctx, actorID, before.EngagementStatus, person.Version)
-		return Person{}, err
-	}
-	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
-		"workforce.suspended", "suspend_workforce_actor", before, person, reason, correlationID, ""); err != nil {
+		// suspension is not effective, so compensate locally with an audited
+		// revert in its own governed unit and report the failure loudly.
+		revertErr := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+			if _, rErr := setEngagementStatusTx(ctx, tx, actorID, before.EngagementStatus, person.Version); rErr != nil {
+				return rErr
+			}
+			return recordAuditTx(ctx, tx, auditInput{
+				OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
+				TargetActorID: actorID, Action: "workforce.suspend_reverted", Operation: "suspend_workforce_actor",
+				FromState: person, ToState: before, Reason: reason, CorrelationID: correlationID,
+			})
+		})
+		if revertErr != nil {
+			return Person{}, governedRevertError("suspend", err, revertErr)
+		}
 		return Person{}, err
 	}
 	return person, nil
@@ -540,16 +685,40 @@ func (s *Service) Reactivate(ctx context.Context, operator Operator, actorID str
 	if before.EngagementStatus != "suspended" {
 		return Person{}, ErrStatusNotIssuable
 	}
-	person, err := s.repo.SetEngagementStatus(ctx, actorID, "active", expectedVersion)
-	if err != nil {
+	// Governed unit 1: the reactivation status change and its audit commit
+	// atomically.
+	var person Person
+	if err := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+		var err error
+		person, err = setEngagementStatusTx(ctx, tx, actorID, "active", expectedVersion)
+		if err != nil {
+			return err
+		}
+		return recordAuditTx(ctx, tx, auditInput{
+			OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
+			TargetActorID: actorID, Action: "workforce.reactivated", Operation: "reactivate_workforce_actor",
+			FromState: before, ToState: person, Reason: reason, CorrelationID: correlationID,
+		})
+	}); err != nil {
 		return Person{}, err
 	}
 	if err := s.identity.Reactivate(ctx, actorID, operator.ActorID, reason, correlationID); err != nil {
-		_, _ = s.repo.SetEngagementStatus(ctx, actorID, "suspended", person.Version)
-		return Person{}, err
-	}
-	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
-		"workforce.reactivated", "reactivate_workforce_actor", before, person, reason, correlationID, ""); err != nil {
+		// Identity is the auth gate: if it cannot be reactivated the local
+		// active projection is a lie, so compensate with an audited revert in
+		// its own governed unit and report the failure loudly.
+		revertErr := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+			if _, rErr := setEngagementStatusTx(ctx, tx, actorID, "suspended", person.Version); rErr != nil {
+				return rErr
+			}
+			return recordAuditTx(ctx, tx, auditInput{
+				OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
+				TargetActorID: actorID, Action: "workforce.reactivate_reverted", Operation: "reactivate_workforce_actor",
+				FromState: person, ToState: before, Reason: reason, CorrelationID: correlationID,
+			})
+		})
+		if revertErr != nil {
+			return Person{}, governedRevertError("reactivate", err, revertErr)
+		}
 		return Person{}, err
 	}
 	return person, nil
@@ -607,8 +776,16 @@ func (s *Service) IssueActivation(ctx context.Context, operator Operator, actorI
 	if err != nil {
 		return identityclient.ActivationCode{}, err
 	}
-	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
-		"workforce.activation_issued", "issue_activation", nil, map[string]string{"activationId": code.ActivationID}, "", correlationID, idempotencyKey); err != nil {
+	// Governed unit: the activation audit is the local evidence of the issued
+	// code; it is idempotent on the command's idempotency key, so a retry that
+	// re-issues (identity-side idempotent) converges instead of duplicating.
+	if err := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+		return recordAuditTx(ctx, tx, auditInput{
+			OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
+			TargetActorID: actorID, Action: "workforce.activation_issued", Operation: "issue_activation",
+			ToState: map[string]string{"activationId": code.ActivationID}, CorrelationID: correlationID, IdempotencyKey: idempotencyKey,
+		})
+	}); err != nil {
 		return identityclient.ActivationCode{}, err
 	}
 	return code, nil
@@ -648,11 +825,15 @@ func (s *Service) RevokeActivation(ctx context.Context, operator Operator, actor
 	if err := s.identity.RevokeActivations(ctx, actorID); err != nil {
 		return err
 	}
-	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
-		"workforce.activation_revoked", "revoke_activation", nil, nil, "", correlationID, ""); err != nil {
-		return err
-	}
-	return nil
+	// Governed unit: the revocation audit is the local evidence of the
+	// remote revocation.
+	return s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+		return recordAuditTx(ctx, tx, auditInput{
+			OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
+			TargetActorID: actorID, Action: "workforce.activation_revoked", Operation: "revoke_activation",
+			CorrelationID: correlationID,
+		})
+	})
 }
 
 // Me returns the provider-facing profile, applying the lazy
@@ -688,16 +869,23 @@ func (s *Service) UpdateMe(ctx context.Context, actorID string, input UpdateSelf
 	if before.EngagementStatus == "suspended" || before.EngagementStatus == "terminated" {
 		return MeView{}, ErrSuspended
 	}
-	person, err := s.repo.UpdateSelf(ctx, actorID, input)
-	if err != nil {
-		return MeView{}, err
-	}
 	contextID, contextErr := operatorContextID(ctx)
 	if contextErr != nil {
 		return MeView{}, contextErr
 	}
-	if err := s.repo.RecordAudit(ctx, contextID, actorID, "field", actorID,
-		"field_agent.self_updated", "update_self", before.FieldProfile, person.FieldProfile, "", correlationID, ""); err != nil {
+	var person Person
+	if err := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
+		var err error
+		person, err = updateSelfTx(ctx, tx, actorID, input)
+		if err != nil {
+			return err
+		}
+		return recordAuditTx(ctx, tx, auditInput{
+			OperatorContextID: contextID, ActorID: actorID, ActorRole: "field", TargetActorID: actorID,
+			Action: "field_agent.self_updated", Operation: "update_self",
+			FromState: before.FieldProfile, ToState: person.FieldProfile, CorrelationID: correlationID,
+		})
+	}); err != nil {
 		return MeView{}, err
 	}
 	view := MeView{Person: person, ProfileComplete: selfFieldsComplete(person)}

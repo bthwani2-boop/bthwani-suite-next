@@ -17,18 +17,18 @@ func TestFieldProviderShiftAuthorityIsFullyRemoved(t *testing.T) {
 	}
 	workforceDir := filepath.Dir(currentFile)
 
-	repositoryBytes, err := os.ReadFile(filepath.Join(workforceDir, "repository.go"))
+	repositoryBytes, err := os.ReadFile(filepath.Join(workforceDir, "txunit.go"))
 	if err != nil {
-		t.Fatalf("read repository source: %v", err)
+		t.Fatalf("read governed write source: %v", err)
 	}
 	repositorySource := string(repositoryBytes)
 	createSection := sourceSection(t, repositorySource,
-		"func (r *Repository) CreatePerson(",
-		"func (r *Repository) CreateCaptain(",
+		"func createPersonTx(",
+		"func createCaptainTx(",
 	)
 	updateSection := sourceSection(t, repositorySource,
-		"func (r *Repository) UpdatePerson(",
-		"func (r *Repository) UpdateCaptain(",
+		"func updatePersonTx(",
+		"func updateCaptainTx(",
 	)
 	for _, forbidden := range []string{"shift_code", "not_applicable", "ShiftCode"} {
 		if strings.Contains(createSection, forbidden) {
