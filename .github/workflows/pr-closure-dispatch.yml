@@ -54,7 +54,6 @@ jobs:
           [[ "$(jq -r '.head.repo.full_name' <<<"${pr}")" == "${GITHUB_REPOSITORY}" ]] || { echo \
           "::error::closure dispatch is limited to same-repository candidates"; exit 1; }
           author="$(jq -r '.user.login' <<<"${pr}")"
-          head_owner="$(jq -r '.head.repo.owner.login' <<<"${pr}")"
           # Solo-maintenance authority policy: closure approval binds to repository
           # write authority (admin|maintain|write enforced above), not to author
           # independence. Every other exact-candidate control stays unchanged.
