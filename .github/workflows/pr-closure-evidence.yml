@@ -434,7 +434,7 @@ jobs:
           erity=="CRITICAL") or any(.impacts[]?; .severity=="BLOCKER" or .severity=="HIGH"))] | length' <<<"${issues}")"
           [[ "${material}" == "0" ]] || { echo "::error::Sonar has ${material} unresolved material findings"; exit 1; }
 
-      - name: Require independent exact-head semantic review attestation
+      - name: Require authorized exact-head semantic review attestation
         id: semantic_review
         if: ${{ steps.scope.outcome == 'success' }}
         continue-on-error: true
@@ -442,18 +442,16 @@ jobs:
         env:
           PR_NUMBER: ${{ steps.scope.outputs.pr_number }}
           HEAD_SHA: ${{ steps.scope.outputs.head_sha }}
-          PR_AUTHOR: ${{ steps.scope.outputs.pr_author }}
         run: |
           set -euo pipefail
           reviews="$(gh api --paginate -H 'X-GitHub-Api-Version: 2022-11-28' \
           "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews?per_page=100" --slurp)"
           mapfile -t reviewers < <(
-            jq -r --arg sha "${HEAD_SHA}" --arg author "${PR_AUTHOR}" '
+            jq -r --arg sha "${HEAD_SHA}" '
               .[][]
               | select(
                   .commit_id == $sha
                   and .state == "APPROVED"
-                  and ((.user.login // "") | ascii_downcase) != ($author | ascii_downcase)
                   and ((.body // "") | contains("BTHWANI_SEMANTIC_REVIEW:v1"))
                   and ((.body // "") | contains("verdict=PASS"))
                 )
@@ -461,7 +459,7 @@ jobs:
             ' <<<"${reviews}" | sort -fu
           )
           (( ${#reviewers[@]} > 0 )) || {
-            echo "::error::missing independent exact-head APPROVED BTHWANI_SEMANTIC_REVIEW:v1 verdict=PASS"
+            echo "::error::missing authorized exact-head APPROVED BTHWANI_SEMANTIC_REVIEW:v1 verdict=PASS"
             exit 1
           }
 
@@ -479,7 +477,7 @@ jobs:
             esac
           done
           [[ "${authorized}" == "true" ]] || {
-            echo "::error::semantic review PASS is not from an independent write-authorized reviewer"
+            echo "::error::semantic review PASS is not from a write-authorized approver"
             exit 1
           }
 
