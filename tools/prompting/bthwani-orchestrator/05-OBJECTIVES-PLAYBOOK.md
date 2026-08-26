@@ -1,9 +1,9 @@
 # BThwani Objectives Playbook
 ## Discovery, Selection, Decomposition, Declaration and Cross-Window Coordination
 
-Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER  
-Owner: Objective discovery / decomposition / portable declaration / active-work collision selection  
-Execution authority: `00-ORCHESTRATOR.md` through `04-VERIFY-REDIAGNOSE-CLOSE.md`  
+Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
+Owner: Objective discovery / decomposition / portable declaration / active-work collision selection
+Execution authority: `00-ORCHESTRATOR.md` through `04-VERIFY-REDIAGNOSE-CLOSE.md`
 Delivery authority: `governance/policies/delivery.md`
 
 ## 0. Purpose and authority boundary
@@ -96,13 +96,13 @@ IF HUMAN REQUESTS PARALLEL EXECUTION -> HUMAN_ACTION_REQUIRED for the missing kn
 
 Objective IDs are ephemeral coordination labels only. Do not create a repository registry merely to persist them.
 
-The coordinator MUST treat the human-declared `ACTIVE_WORKSET` as a collision constraint and then revalidate all visible repository/ref evidence. An active objective may contain work not yet visible on the target branch; absence from the current tree is therefore not proof of independence.
+Treat the human-declared `ACTIVE_WORKSET` as a collision constraint and revalidate all visible repository/ref evidence. An active objective may contain work not yet visible on the target branch; absence from the current tree is not proof of independence.
 
 For every active objective, reconstruct enough of its expected exclusion cone as materially possible:
 
 `root/root-family | canonical authority | likely Source-of-Fix | domains/surfaces | writers/readers/consumers | expected write cone | contracts | data/schema/migrations | runtime/config | governance impact | cutover/integration ordering | verification dependencies`.
 
-Do not require the human to provide these derived fields when they can be inferred from the objective and live evidence.
+Do not require the human to provide derived fields that can be safely inferred from the objective and live evidence.
 
 ## 4. Live-state selection protocol
 
