@@ -158,7 +158,7 @@ A supplied historical plan is evidence/context only. Re-resolve live truth befor
 
 ## 4. Objective declaration and concurrent-work law
 
-When concurrent sessions/worktrees/providers exist, the human SHOULD pass the complete known `ACTIVE_WORKSET`. Provider names such as ChatGPT, Claude, Manus, Codex or others are optional coordination labels only.
+When concurrent sessions/worktrees/providers exist or are known, `ACTIVE_WORKSET` completeness and missing-snapshot behavior are owned by `05-OBJECTIVES-PLAYBOOK.md` and MUST be satisfied before any new concurrent mutation may be claimed `PARALLEL_SAFE`. Provider names such as ChatGPT, Claude, Manus, Codex or others are optional coordination labels only.
 
 Before selecting a new concurrently executable Closure Unit, compare every candidate against **every** active objective using `01`/`05`.
 
