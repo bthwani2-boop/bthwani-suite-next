@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Governed write boundary (workforce-027 invariant).
@@ -54,6 +56,11 @@ type auditInput struct {
 	Reason            string
 	CorrelationID     string
 	IdempotencyKey    string
+	// LifecycleCommandID optionally links the originating audit row to its
+	// durable lifecycle command (workforce-029). Only the originating
+	// governed unit sets it; confirmation/reversion audits stay unlinked
+	// because the unique index admits exactly one originating row.
+	LifecycleCommandID string
 }
 
 // recordAuditTx is the single audit writer for governed workforce writes.
@@ -77,12 +84,12 @@ func recordAuditTx(ctx context.Context, tx *sql.Tx, in auditInput) error {
 	}
 	_, err = tx.ExecContext(ctx, `
                 INSERT INTO workforce_action_audit
-                        (operator_context_id, actor_id, actor_role, target_actor_id, action, operation, from_state, to_state, reason, correlation_id, idempotency_key)
-                VALUES ($1, $2, $3, NULLIF($4, ''), $5, $6, $7::jsonb, $8::jsonb, NULLIF($9, ''), NULLIF($10, ''), NULLIF($11, ''))
+                        (operator_context_id, actor_id, actor_role, target_actor_id, action, operation, from_state, to_state, reason, correlation_id, idempotency_key, lifecycle_command_id)
+                VALUES ($1, $2, $3, NULLIF($4, ''), $5, $6, $7::jsonb, $8::jsonb, NULLIF($9, ''), NULLIF($10, ''), NULLIF($11, ''), NULLIF($12,'')::uuid)
                 ON CONFLICT (operator_context_id, actor_id, operation, idempotency_key)
                 WHERE idempotency_key IS NOT NULL AND BTRIM(idempotency_key) <> '' DO NOTHING`,
 		in.OperatorContextID, in.ActorID, in.ActorRole, in.TargetActorID, in.Action, in.Operation,
-		fromJSON, toJSON, in.Reason, in.CorrelationID, in.IdempotencyKey)
+		fromJSON, toJSON, in.Reason, in.CorrelationID, in.IdempotencyKey, in.LifecycleCommandID)
 	return err
 }
 
@@ -616,6 +623,76 @@ func sovereignAssignmentVersionTx(ctx context.Context, tx *sql.Tx, actorID strin
 		return 0, nil
 	}
 	return version, err
+}
+
+// lifecycleCommandInput is the durable intent of one cross-sovereign
+// suspend/reactivate command (workforce-029). It is inserted in the SAME
+// governed unit as the local status change and its audit, so a crash between
+// the local commit and the identity outcome always leaves a recoverable
+// command row instead of silent contradictory sovereign states.
+type lifecycleCommandInput struct {
+	OperatorContextID  string
+	ActorID            string
+	Operation          string // 'suspend' | 'reactivate'
+	FromStatus         string
+	ToStatus           string
+	PersonVersionAfter int
+	Reason             string
+	RequestedByActorID string
+	RequestedByRole    string
+	CorrelationID      string
+	IdempotencyKey     string
+	NextRetryAt        time.Time // grace window before the reconciler may drive it
+}
+
+// insertLifecycleCommandTx persists the lifecycle intent inside the governed
+// unit that performs the local status change. The identity replay contract
+// (same requested_by/reason/correlation returns success) makes reconciler
+// retries with these stored parameters idempotent.
+func insertLifecycleCommandTx(ctx context.Context, tx *sql.Tx, in lifecycleCommandInput) (string, error) {
+	id := uuid.NewString()
+	var nextRetry any
+	if !in.NextRetryAt.IsZero() {
+		nextRetry = in.NextRetryAt
+	}
+	_, err := tx.ExecContext(ctx, `
+                INSERT INTO workforce_lifecycle_commands (
+                        id, operator_context_id, actor_id, operation, from_status, to_status,
+                        person_version_after, reason, requested_by_actor_id, requested_by_role,
+                        correlation_id, command_idempotency_key, lifecycle_state, next_retry_at
+                ) VALUES ($1::uuid, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'IN_FLIGHT', COALESCE($13, now()))`,
+		id, in.OperatorContextID, in.ActorID, in.Operation, in.FromStatus, in.ToStatus,
+		in.PersonVersionAfter, in.Reason, in.RequestedByActorID, in.RequestedByRole,
+		in.CorrelationID, in.IdempotencyKey, nextRetry)
+	if err != nil {
+		return "", err
+	}
+	return id, nil
+}
+
+// markLifecycleCommandTx moves a lifecycle command to a terminal disposition
+// (COMPLETED / COMPENSATED / SUPERSEDED / FAILED) inside the governed unit
+// that evidences the outcome. When the caller holds a reconciler lease the
+// transition is fenced by that lease so two reconciler instances can never
+// terminate the same command; the synchronous service path passes a zero UUID
+// which matches the initial lease-less row.
+func markLifecycleCommandTx(ctx context.Context, tx *sql.Tx, id string, lease uuid.UUID, state, terminalDisposition, errorCode, lastError string) error {
+	result, err := tx.ExecContext(ctx, `
+                UPDATE workforce_lifecycle_commands
+                SET lifecycle_state=$3, terminal_disposition=$4, last_error_code=$5, last_error=$6,
+                        remote_confirmed_at=CASE WHEN $3='COMPLETED' THEN now() ELSE remote_confirmed_at END,
+                        completed_at=CASE WHEN $3 IN ('COMPLETED','COMPENSATED','SUPERSEDED','FAILED') THEN now() ELSE completed_at END,
+                        lease_token=NULL, lease_owner=NULL, lease_expires_at=NULL, updated_at=now()
+                WHERE id=$1::uuid AND (lease_token IS NULL OR lease_token=$2::uuid)
+                        AND lifecycle_state IN ('IN_FLIGHT','RETRY_SCHEDULED')`,
+		id, lease, state, terminalDisposition, errorCode, lastError)
+	if err != nil {
+		return err
+	}
+	if affected, _ := result.RowsAffected(); affected == 0 {
+		return errLifecycleLeaseLost
+	}
+	return nil
 }
 
 // governedRevertError reports a governed mutation whose remote counterpart

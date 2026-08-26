@@ -51,6 +51,7 @@ var governedWorkerNames = map[string]bool{
 	"upsertEmployeeGovernanceTx": true, "upsertSovereignAssignmentTx": true,
 	"personByActorIDTx": true, "recordAuditTx": true, "storeIdempotentResponseTx": true,
 	"employeeGovernanceVersionTx": true, "sovereignAssignmentVersionTx": true,
+	"insertLifecycleCommandTx": true, "markLifecycleCommandTx": true,
 }
 
 var serviceLayerFiles = map[string]bool{

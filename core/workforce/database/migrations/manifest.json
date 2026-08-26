@@ -200,6 +200,13 @@
       "sha256": "97bb6c079bc42cff7c4acaab4f153d9243639d8eacdbc2622c58abdedac24288",
       "historicalPrefix": "028",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 29,
+      "file": "workforce-029_lifecycle_identity_saga.sql",
+      "sha256": "3223697eb7bfff6fe398811b5bbcca9cc370e12a02bfcdd48a4facb9fa960e39",
+      "historicalPrefix": "029",
+      "state": "ACTIVE"
     }
   ]
 }

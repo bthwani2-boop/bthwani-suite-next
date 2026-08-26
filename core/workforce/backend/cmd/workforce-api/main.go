@@ -82,6 +82,7 @@ func main() {
 	workerCtx, cancelWorker := context.WithCancel(context.Background())
 	go availabilityoutbox.RunWorker(workerCtx, db, dsh, 15*time.Second)
 	go providerpenaltysaga.RunWorker(workerCtx, db, identity, wlt, 5*time.Second)
+	go workforce.RunLifecycleReconciler(workerCtx, db, identity, 5*time.Second)
 
 	server := &http.Server{
 		Addr:         ":" + port,

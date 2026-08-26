@@ -626,6 +626,10 @@ func (s *Service) UpsertEmployeeGovernance(ctx context.Context, operator Operato
 // Suspend blocks the provider operationally and revokes all authentication:
 // Identity deactivation kills every live session, blocks refresh, and
 // revokes pending activation codes in one transaction on the Identity side.
+// The local status change, its audit, and the durable lifecycle command
+// commit atomically (workforce-029) BEFORE the identity call, so a crash
+// between the two sovereigns always leaves a recoverable command that the
+// reconciler drives to COMPLETED, COMPENSATED, SUPERSEDED, or FAILED.
 func (s *Service) Suspend(ctx context.Context, operator Operator, actorID string, expectedVersion int, reason, correlationID string) (Person, error) {
 	before, err := s.repo.PersonByActorID(ctx, actorID)
 	if err != nil {
@@ -634,12 +638,30 @@ func (s *Service) Suspend(ctx context.Context, operator Operator, actorID string
 	if before.EngagementStatus == "terminated" {
 		return Person{}, ErrStatusNotIssuable
 	}
-	// Governed unit 1: the suspension status change and its audit commit
-	// atomically.
+	// Idempotent replay: a second suspend of an already suspended actor is a
+	// success no-op. If a prior command is still IN_FLIGHT the durable intent
+	// already exists and the reconciler converges identity; nothing to write.
+	if before.EngagementStatus == "suspended" {
+		return before, nil
+	}
+	// Governed unit 1: the suspension status change, its audit, and the
+	// durable lifecycle command commit atomically.
 	var person Person
+	var commandID string
 	if err := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
 		var err error
 		person, err = setEngagementStatusTx(ctx, tx, actorID, "suspended", expectedVersion)
+		if err != nil {
+			return err
+		}
+		commandID, err = insertLifecycleCommandTx(ctx, tx, lifecycleCommandInput{
+			OperatorContextID: operator.OperatorContextID, ActorID: actorID, Operation: "suspend",
+			FromStatus: before.EngagementStatus, ToStatus: "suspended", PersonVersionAfter: person.Version,
+			Reason: reason, RequestedByActorID: operator.ActorID, RequestedByRole: operator.Role,
+			CorrelationID:  correlationID,
+			IdempotencyKey: lifecycleCommandIdempotencyKey(operator.OperatorContextID, actorID, "suspend", expectedVersion),
+			NextRetryAt:    time.Now().Add(lifecycleGraceWindow),
+		})
 		if err != nil {
 			return err
 		}
@@ -647,36 +669,27 @@ func (s *Service) Suspend(ctx context.Context, operator Operator, actorID string
 			OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
 			TargetActorID: actorID, Action: "workforce.suspended", Operation: "suspend_workforce_actor",
 			FromState: before, ToState: person, Reason: reason, CorrelationID: correlationID,
+			LifecycleCommandID: commandID,
 		})
 	}); err != nil {
 		return Person{}, err
 	}
 	if err := s.identity.Deactivate(ctx, actorID, operator.ActorID, reason, correlationID); err != nil {
-		// Identity is the auth gate: if it cannot be deactivated the
-		// suspension is not effective, so compensate locally with an audited
-		// revert in its own governed unit and report the failure loudly.
-		revertErr := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
-			if _, rErr := setEngagementStatusTx(ctx, tx, actorID, before.EngagementStatus, person.Version); rErr != nil {
-				return rErr
-			}
-			return recordAuditTx(ctx, tx, auditInput{
-				OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
-				TargetActorID: actorID, Action: "workforce.suspend_reverted", Operation: "suspend_workforce_actor",
-				FromState: person, ToState: before, Reason: reason, CorrelationID: correlationID,
-			})
-		})
-		if revertErr != nil {
-			return Person{}, governedRevertError("suspend", err, revertErr)
-		}
-		return Person{}, err
+		// Identity is the auth gate: if it cannot be deactivated the suspension
+		// is not effective, so compensate with an audited governed revert that
+		// terminates the command as COMPENSATED, or leave the durable command
+		// IN_FLIGHT for the reconciler when the compensation unit itself fails.
+		return Person{}, s.compensateLifecycleCommand(ctx, operator, actorID, "suspend", commandID, before, person, reason, correlationID, err)
 	}
+	s.confirmLifecycleCommand(ctx, operator, actorID, "suspend", commandID, person, reason, correlationID)
 	return person, nil
 }
 
 // Reactivate restores a suspended provider to active and reopens
 // authentication. If the provider never activated a device, holding
 // active=true grants nothing by itself (no session, no code); issuance for
-// status=active covers the fresh-device path.
+// status=active covers the fresh-device path. Mirrors Suspend's durable
+// lifecycle command discipline (workforce-029).
 func (s *Service) Reactivate(ctx context.Context, operator Operator, actorID string, expectedVersion int, reason, correlationID string) (Person, error) {
 	before, err := s.repo.PersonByActorID(ctx, actorID)
 	if err != nil {
@@ -685,12 +698,24 @@ func (s *Service) Reactivate(ctx context.Context, operator Operator, actorID str
 	if before.EngagementStatus != "suspended" {
 		return Person{}, ErrStatusNotIssuable
 	}
-	// Governed unit 1: the reactivation status change and its audit commit
-	// atomically.
+	// Governed unit 1: the reactivation status change, its audit, and the
+	// durable lifecycle command commit atomically.
 	var person Person
+	var commandID string
 	if err := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
 		var err error
 		person, err = setEngagementStatusTx(ctx, tx, actorID, "active", expectedVersion)
+		if err != nil {
+			return err
+		}
+		commandID, err = insertLifecycleCommandTx(ctx, tx, lifecycleCommandInput{
+			OperatorContextID: operator.OperatorContextID, ActorID: actorID, Operation: "reactivate",
+			FromStatus: before.EngagementStatus, ToStatus: "active", PersonVersionAfter: person.Version,
+			Reason: reason, RequestedByActorID: operator.ActorID, RequestedByRole: operator.Role,
+			CorrelationID:  correlationID,
+			IdempotencyKey: lifecycleCommandIdempotencyKey(operator.OperatorContextID, actorID, "reactivate", expectedVersion),
+			NextRetryAt:    time.Now().Add(lifecycleGraceWindow),
+		})
 		if err != nil {
 			return err
 		}
@@ -698,29 +723,18 @@ func (s *Service) Reactivate(ctx context.Context, operator Operator, actorID str
 			OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
 			TargetActorID: actorID, Action: "workforce.reactivated", Operation: "reactivate_workforce_actor",
 			FromState: before, ToState: person, Reason: reason, CorrelationID: correlationID,
+			LifecycleCommandID: commandID,
 		})
 	}); err != nil {
 		return Person{}, err
 	}
 	if err := s.identity.Reactivate(ctx, actorID, operator.ActorID, reason, correlationID); err != nil {
-		// Identity is the auth gate: if it cannot be reactivated the local
-		// active projection is a lie, so compensate with an audited revert in
-		// its own governed unit and report the failure loudly.
-		revertErr := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
-			if _, rErr := setEngagementStatusTx(ctx, tx, actorID, "suspended", person.Version); rErr != nil {
-				return rErr
-			}
-			return recordAuditTx(ctx, tx, auditInput{
-				OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
-				TargetActorID: actorID, Action: "workforce.reactivate_reverted", Operation: "reactivate_workforce_actor",
-				FromState: person, ToState: before, Reason: reason, CorrelationID: correlationID,
-			})
-		})
-		if revertErr != nil {
-			return Person{}, governedRevertError("reactivate", err, revertErr)
-		}
-		return Person{}, err
+		// If identity cannot be reactivated the local active projection is a
+		// lie, so compensate with an audited governed revert terminating the
+		// command as COMPENSATED (or leave it IN_FLIGHT for the reconciler).
+		return Person{}, s.compensateLifecycleCommand(ctx, operator, actorID, "reactivate", commandID, before, person, reason, correlationID, err)
 	}
+	s.confirmLifecycleCommand(ctx, operator, actorID, "reactivate", commandID, person, reason, correlationID)
 	return person, nil
 }
 
