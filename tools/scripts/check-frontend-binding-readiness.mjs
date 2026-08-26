@@ -67,6 +67,8 @@ const publicEnvPrefixByProfile = {
 
 const httpOkPortEnvByProfile = {
   media: "BTHWANI_MINIO_API_PORT",
+  "financial-simulators": "BTHWANI_WIREMOCK_FINANCIAL_PORT",
+  "media-storage": "BTHWANI_MINIO_API_PORT",
 };
 
 function isLoopbackHostname(hostname) {

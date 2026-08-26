@@ -8,9 +8,11 @@ const guardId = "wlt-financial-boundary-gate";
 const violations = [];
 
 // 0. Applications and the control panel may consume finance only through DSH.
-// WLT remains an internal service-to-service dependency of DSH.
+// WLT remains an internal service-to-service dependency of DSH. The DSH-owned
+// wallet surface (services/dsh/frontend/wlt) consumes WLT contract types only
+// through the declared public export '@bthwani/wlt/openapi'.
 const directAppWltPatterns = [
-  [/from\s+['"]@bthwani\/wlt(?!\/dsh\b)[^'"]*['"]/, "APPLICATION_IMPORTS_WLT_DEEP_PATHS"],
+  [/from\s+['"]@bthwani\/wlt(?!\/openapi\b)[^'"]*['"]/, "APPLICATION_IMPORTS_WLT_DEEP_PATHS"],
   [/\b(?:EXPO_PUBLIC_)?WLT_API_BASE_URL\b/, "APPLICATION_CONFIGURES_WLT_DIRECTLY"],
   [/\/api\/wlt(?:\/|["'`])/, "APPLICATION_EXPOSES_WLT_ROUTE"],
   [/\bwltFetchJson\b/, "WLT_FETCH_JSON_IS_FORBIDDEN"],

@@ -16,9 +16,9 @@ describe("U002 canonical Field provider creation", () => {
     assert.doesNotMatch(view, /useFieldAgentCreateAndActivationController|provisioning-cases|officeLocation|engagementType:\s*"employee"/);
     assert.match(controller, /createFieldAgent\(/);
     assert.doesNotMatch(controller, /startProvisioningCase|resumeProvisioningCase/);
-    assert.match(types, /readonly username: string/);
-    assert.match(types, /readonly phoneE164: string/);
-    assert.doesNotMatch(types, /export type CreateFieldAgentInput[\s\S]{0,300}readonly actorId/);
+    assert.match(types, /export type CreateFieldAgentInput = Schemas\["CreateFieldAgentRequest"\];/);
+    assert.match(types, /import type \{ components, operations \} from "@bthwani\/core-workforce";/);
+    assert.doesNotMatch(types, /export type CreateFieldAgentInput = \{/);
   });
 
   test("Workforce contract owns actor creation and excludes Field shifts", () => {

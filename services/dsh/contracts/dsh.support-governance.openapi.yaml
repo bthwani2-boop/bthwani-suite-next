@@ -12,24 +12,6 @@ x-bthwani-client-binding: MANUAL_TYPED_ADAPTER
 servers:
 - url: http://localhost:18080
 paths:
-  /dsh/operator/support/tickets:
-    get:
-      tags:
-      - dsh-operator
-      operationId: listDshOperatorTickets
-      parameters:
-      - name: status
-        in: query
-        required: false
-        schema:
-          $ref: '#/components/schemas/TicketStatus'
-      responses:
-        '200':
-          $ref: '#/components/responses/TicketList'
-        '403':
-          $ref: '#/components/responses/Error'
-      security:
-      - bearerAuth: []
   /dsh/operator/support/tickets/{ticketId}:
     parameters:
     - $ref: '#/components/parameters/TicketId'

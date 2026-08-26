@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, View } from 'react-native';
 import { Box, Chip, Divider, Icon, radius, Text, spacing, typography, useDirection } from '@bthwani/ui-kit';
-import { wltDshPartnerUiCopy } from "@bthwani/wlt/dsh";
+import { wltDshPartnerUiCopy } from "@bthwani/dsh/wlt";
 import type { BThwaniAppearanceMode, NotificationPreferenceId, NotificationPreferenceState } from '../../shared/partner/partner-hub.types';
 import { partnerHubTheme, SettingsOptionRow } from './PartnerHubNav';
 

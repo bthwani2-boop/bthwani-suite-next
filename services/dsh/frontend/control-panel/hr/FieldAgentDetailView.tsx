@@ -119,10 +119,10 @@ export function FieldAgentDetailView(props: { readonly actorId: string; readonly
     await controller.update({
       expectedVersion: agent.version,
       fullNameAr: fullNameAr.trim(),
-      fullNameEn: fullNameEn.trim() || undefined,
-      engagementStartDate: engagementStartDate.trim() || undefined,
+      ...(fullNameEn.trim() ? { fullNameEn: fullNameEn.trim() } : {}),
+      ...(engagementStartDate.trim() ? { engagementStartDate: engagementStartDate.trim() } : {}),
       serviceZoneId: zoneId,
-      supervisorActorId: supervisor?.actorId || undefined,
+      ...(supervisor?.actorId ? { supervisorActorId: supervisor.actorId } : {}),
     });
   };
 

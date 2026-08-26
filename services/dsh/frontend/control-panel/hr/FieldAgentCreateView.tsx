@@ -51,11 +51,11 @@ export function FieldAgentCreateView(props: {
     if (!identityReady) return;
     await submit({
       fullNameAr: fullNameAr.trim(),
-      fullNameEn: fullNameEn.trim() || undefined,
+      ...(fullNameEn.trim() ? { fullNameEn: fullNameEn.trim() } : {}),
       username: username.trim(),
       phoneE164: phoneE164.trim(),
       serviceZoneId: zoneId,
-      supervisorActorId: supervisor?.actorId,
+      ...(supervisor?.actorId ? { supervisorActorId: supervisor.actorId } : {}),
       engagementType: "independent_contractor",
     });
   };

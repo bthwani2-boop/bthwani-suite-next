@@ -28,6 +28,56 @@ body.bth-web-root-body, body.ui-web-root-body, html, #__next {
   font-family: var(--bth-font-family-latin), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   overflow-x: hidden;
 }
+
+/* The root owns the baseline for every web surface. Individual panes may
+   override geometry, but they inherit one accessible visual contract. */
+html, body.bth-web-root-body, body.ui-web-root-body, #__next {
+  scrollbar-width: thin;
+  scrollbar-color: var(--bthwani-line) transparent;
+}
+
+html::-webkit-scrollbar,
+body.bth-web-root-body::-webkit-scrollbar,
+body.ui-web-root-body::-webkit-scrollbar,
+#__next::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+html::-webkit-scrollbar-track,
+body.bth-web-root-body::-webkit-scrollbar-track,
+body.ui-web-root-body::-webkit-scrollbar-track,
+#__next::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html::-webkit-scrollbar-thumb,
+body.bth-web-root-body::-webkit-scrollbar-thumb,
+body.ui-web-root-body::-webkit-scrollbar-thumb,
+#__next::-webkit-scrollbar-thumb {
+  background: var(--bthwani-line-strong);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+:where(button, a[href], input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--bthwani-focus-ring);
+  outline-offset: 2px;
+}
+
+.ui-resize-none {
+  resize: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
 `;
 
 function buildStoredLanguageBootstrapScript(appName: string | undefined, defaultThemeMode: ThemeMode) {

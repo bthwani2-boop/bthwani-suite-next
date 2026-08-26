@@ -98,44 +98,6 @@ paths:
           description: WLT financial eligibility has not been projected for the captain.
         '503':
           description: The DSH financial eligibility projection is unavailable.
-  /dsh/operator/stores/{storeId}/assortment-pauses:
-    parameters:
-    - name: storeId
-      in: path
-      required: true
-      schema:
-        type: string
-  /dsh/operator/stores/{storeId}/delivery-pricing:
-    parameters:
-    - name: storeId
-      in: path
-      required: true
-      schema:
-        type: string
-  /dsh/operator/stores/{storeId}/assortment/{masterProductId}/pause:
-    parameters:
-    - name: storeId
-      in: path
-      required: true
-      schema:
-        type: string
-    - name: masterProductId
-      in: path
-      required: true
-      schema:
-        type: string
-  /dsh/operator/stores/{storeId}/assortment/{masterProductId}/resume:
-    parameters:
-    - name: storeId
-      in: path
-      required: true
-      schema:
-        type: string
-    - name: masterProductId
-      in: path
-      required: true
-      schema:
-        type: string
   /dsh/partner/orders/{orderId}/captain-handoff/confirm:
     parameters:
     - name: orderId
@@ -220,32 +182,6 @@ paths:
           description: Forbidden
       security:
       - bearerAuth: []
-  /dsh/partner/orders/{orderId}/pickup/extend-window:
-    parameters:
-    - name: orderId
-      in: path
-      required: true
-      schema:
-        type: string
-  /dsh/partner/orders/{orderId}/pickup/reschedule:
-    parameters:
-    - name: orderId
-      in: path
-      required: true
-      schema:
-        type: string
-  /dsh/operator/stores/{storeId}/delivery-pricing/{fulfillmentMode}:
-    parameters:
-    - name: storeId
-      in: path
-      required: true
-      schema:
-        type: string
-    - name: fulfillmentMode
-      in: path
-      required: true
-      schema:
-        type: string
   /dsh/storefront/{storeId}:
     parameters:
     - name: storeId

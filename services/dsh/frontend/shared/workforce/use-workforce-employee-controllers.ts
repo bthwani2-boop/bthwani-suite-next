@@ -31,7 +31,7 @@ export function useEmployeeListController(initialStatus?: EngagementStatus) {
   const reload = useCallback(async () => {
     setState({ kind: "loading" });
     try {
-      const employees = await listEmployees({ status, q: query.trim() || undefined });
+      const employees = await listEmployees({ ...(status ? { status } : {}), ...(query.trim() ? { q: query.trim() } : {}) });
       setState({ kind: "ready", employees });
     } catch (error) {
       setState({

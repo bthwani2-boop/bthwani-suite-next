@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AppHeader } from "../../../../apps/app-client/runtime/src/shell/AppHeader";
-import { BottomNavBar, type BottomNavItem } from "../../../../apps/app-client/runtime/src/shell/BottomNavBar";
+import { AppHeader } from "./shell/AppHeader";
+import { BottomNavBar, type BottomNavItem } from "./shell/BottomNavBar";
 import { openClientExternalUrl, performClientSelectionHaptic } from "../../../../apps/app-client/runtime/src/platform/client-platform-actions";
 import { LoadingState, brandScale, colorRoles, Icon, StateView } from "@bthwani/ui-kit";
 import { HomeDiscoveryRoute } from "./home-discovery/HomeDiscoveryRoute";

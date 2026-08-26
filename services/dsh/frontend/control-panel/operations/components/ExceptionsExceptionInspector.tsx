@@ -120,7 +120,7 @@ export function ExceptionsExceptionInspector({
                 id="handoff-note-textarea"
                 aria-label="ملاحظات تسليم الدعم"
                 rows={3}
-                className={styles.inspectorTextarea}
+                className={`${styles.inspectorTextarea} ui-resize-none`}
                 value={handoffNote}
                 onChange={(e) => onSetHandoffNote(e.target.value)}
                 placeholder="اكتب مبررات التصعيد وتعليمات المتابعة للفريق المستلم..."
@@ -147,7 +147,7 @@ export function ExceptionsExceptionInspector({
                 id="resolution-note-textarea"
                 aria-label="ملاحظات الحل والإغلاق"
                 rows={3}
-                className={styles.inspectorTextarea}
+                className={`${styles.inspectorTextarea} ui-resize-none`}
                 value={resolutionNote}
                 onChange={(e) => onSetResolutionNote(e.target.value)}
                 placeholder="اكتب كيفية معالجة الاستثناء والحل النهائي المطبق..."

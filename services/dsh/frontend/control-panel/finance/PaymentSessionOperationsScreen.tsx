@@ -10,12 +10,12 @@ import {
   presentWltPaymentSessionStatus,
   requiresWltPaymentReconciliation,
   type WltPaymentSessionTimeline,
-} from '@bthwani/wlt/dsh';
+} from '@bthwani/dsh/wlt';
 import {
   loadPaymentSessionTimeline,
   refreshPaymentSessionProviderStatus,
   type PaymentSessionRuntimeError,
-} from '@bthwani/wlt/dsh';
+} from '@bthwani/dsh/wlt';
 
 type ScreenState = "idle" | "loading" | "ready" | "refreshing" | "offline" | "forbidden" | "not_found" | "conflict" | "error";
 

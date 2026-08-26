@@ -118,28 +118,28 @@ func financeMutationDecisionStatus(ctx context.Context, decisions financeMutatio
 func handleReadiness(readinessStore runtimeReadinessStore, decisions financeMutationDecisionProbe) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
-		dbStatus := "not_ready"
+		dbStatus := "NOT_READY"
 		if readinessStore != nil {
 			ctx, cancel := context.WithTimeout(r.Context(), wltReadinessTimeout)
 			ready, err := readinessStore.Ready(ctx)
 			cancel()
 			if err == nil && ready {
-				dbStatus = "ready"
+				dbStatus = "HEALTHY"
 			}
 		}
 		dshCallbackBaseURLStatus := configuredStatus(os.Getenv("WLT_DSH_BASE_URL"))
 		dshCallbackTokenStatus := configuredStatus(os.Getenv("DSH_WLT_SERVICE_TOKEN"))
 		decisionStatus := financeMutationDecisionStatus(r.Context(), decisions)
 
-		overallStatus := "ready"
+		overallStatus := "HEALTHY"
 		httpStatus := http.StatusOK
 		// "killed" is a deliberate operational state, not an unhealthy one:
 		// the instance is correctly configured and correctly refusing
 		// mutations. "missing" and "unavailable" are genuine dependency
 		// failures.
-		if dbStatus != "ready" || dshCallbackBaseURLStatus != "configured" || dshCallbackTokenStatus != "configured" ||
+		if dbStatus != "HEALTHY" || dshCallbackBaseURLStatus != "configured" || dshCallbackTokenStatus != "configured" ||
 			decisionStatus == "missing" || decisionStatus == "unavailable" {
-			overallStatus = "not_ready"
+			overallStatus = "NOT_READY"
 			httpStatus = http.StatusServiceUnavailable
 		}
 

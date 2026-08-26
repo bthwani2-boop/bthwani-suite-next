@@ -89,11 +89,11 @@ test("WLT financial code selects finance runtime profile", () => {
   assert.equal(result.verification_tier, "deep");
 });
 
-test("authorization scope contract requires identity security proof", () => {
+test("authorization scope contract selects local identity security proof without remote PR runtime", () => {
   const result = classifyFiles(["tools/verification/security-scope-vocabulary.json"], { executionPhase: "pr" });
   assert.equal(result.rbac_changed, true);
   assert.equal(result.runtime_profile, "identity-security");
-  assert.equal(result.runtime_required, true);
+  assert.equal(result.runtime_required, false);
   assert.equal(result.verification_tier, "deep");
 });
 

@@ -22,11 +22,11 @@ type Permission struct {
 }
 
 type Identity struct {
-	Subject     string       `json:"subject"`
-	OperatorContextID    string       `json:"operatorContextId"`
-	Roles       []string     `json:"roles"`
-	Permissions []Permission `json:"permissions"`
-	AuthState   string       `json:"authState"`
+	Subject           string       `json:"subject"`
+	OperatorContextID string       `json:"operatorContextId"`
+	Roles             []string     `json:"roles"`
+	Permissions       []Permission `json:"permissions"`
+	AuthState         string       `json:"authState"`
 }
 
 type Client struct {
@@ -68,7 +68,9 @@ func (c *Client) Resolve(ctx context.Context, authorization string) (Identity, e
 	if err := json.NewDecoder(resp.Body).Decode(&identity); err != nil {
 		return Identity{}, ErrIdentityUnavailable
 	}
-	if identity.AuthState != "authenticated" || identity.Subject == "" {
+	identity.Subject = strings.TrimSpace(identity.Subject)
+	identity.OperatorContextID = strings.TrimSpace(identity.OperatorContextID)
+	if identity.AuthState != "authenticated" || identity.Subject == "" || identity.OperatorContextID == "" {
 		return Identity{}, ErrUnauthenticated
 	}
 	return identity, nil

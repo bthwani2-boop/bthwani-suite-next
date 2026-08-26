@@ -1,6 +1,7 @@
+---
 name: BThwani Contract Diagnostics
 
-on:
+"on":
   workflow_call:
     inputs:
       base_sha: {type: string, required: true}
@@ -38,7 +39,7 @@ jobs:
             exit 1
           fi
       - name: Checkout immutable source candidate
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6
         with:
           ref: ${{ env.CANDIDATE_SHA }}
           fetch-depth: 1
@@ -54,6 +55,10 @@ jobs:
         uses: ./.github/actions/setup-node-workspace
       - name: Materialize contracts
         run: pnpm exec nx run contracts:materialize
+      - name: Verify contract tree, composition, lint, and generation equivalence
+        run: pnpm run contracts:lint
+      - name: Verify guard suite self-tests
+        run: node --test tools/guards/*.test.mjs
       - name: Verify contract and binding integrity
         shell: bash
         run: |
@@ -73,4 +78,6 @@ jobs:
           node tools/scripts/run-guard-suite.mjs --concurrency 2 \
             tools/guards/service-manifest-drift-gate.mjs \
             tools/guards/openapi-bundle-provenance-gate.mjs \
-            tools/guards/frontend-feature-binding-gate.mjs
+            tools/guards/frontend-feature-binding-gate.mjs \
+            tools/guards/dsh-openapi-modular-gate.mjs \
+            tools/guards/wlt-openapi-bundle-gate.mjs

@@ -1,13 +1,30 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   dehydrate,
   hydrate,
   type DehydratedState,
   type QueryClient,
 } from "@tanstack/react-query";
+import { bthwaniKeyValueStorage, type BthwaniKeyValueStorage } from "./native-data-adapters.ts";
 
-const CACHE_SCHEMA_VERSION = 2;
+const CACHE_SCHEMA_VERSION = 3;
 const MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000;
+
+// Deny-by-default: only explicitly allowlisted query-key namespaces are
+// eligible for disk persistence. Everything else (including financial data)
+// stays server-authoritative and never reaches a persisted envelope.
+export const PERSISTED_QUERY_NAMESPACE_ALLOWLIST = [
+  ["dsh", "home-discovery"],
+] as const;
+
+export function isPersistableQueryKey(queryKey: readonly unknown[]): boolean {
+  if (!Array.isArray(queryKey) || queryKey.length < 2) return false;
+  const first = queryKey[0];
+  const second = queryKey[1];
+  if (typeof first !== "string" || typeof second !== "string") return false;
+  return PERSISTED_QUERY_NAMESPACE_ALLOWLIST.some(
+    (entry) => entry[0] === first && entry[1] === second,
+  );
+}
 
 type PersistedQueryEnvelope = {
   readonly schemaVersion: number;
@@ -26,19 +43,23 @@ function isEnvelope(value: unknown): value is PersistedQueryEnvelope {
 export async function restoreBthwaniQueryClient(
   client: QueryClient,
   storageKey: string,
+  storage: BthwaniKeyValueStorage = bthwaniKeyValueStorage,
 ): Promise<void> {
   try {
-    const raw = await AsyncStorage.getItem(storageKey);
+    const raw = await storage.getItem(storageKey);
     if (!raw) return;
     try {
       const envelope: unknown = JSON.parse(raw);
       if (!isEnvelope(envelope) || Date.now() - envelope.persistedAt > MAX_CACHE_AGE_MS) {
-        await AsyncStorage.removeItem(storageKey);
+        await storage.removeItem(storageKey);
         return;
       }
-      hydrate(client, envelope.clientState);
+      const persistedQueries = envelope.clientState.queries.filter((query) =>
+        isPersistableQueryKey(query.queryKey),
+      );
+      hydrate(client, { ...envelope.clientState, queries: persistedQueries });
     } catch {
-      await AsyncStorage.removeItem(storageKey);
+      await storage.removeItem(storageKey);
     }
   } catch {
     // Storage unavailable (e.g. native module not linked); continue without cached state.
@@ -48,6 +69,7 @@ export async function restoreBthwaniQueryClient(
 export function persistBthwaniQueryClient(
   client: QueryClient,
   storageKey: string,
+  storage: BthwaniKeyValueStorage = bthwaniKeyValueStorage,
 ): () => void {
   let timer: ReturnType<typeof setTimeout> | undefined;
   const unsubscribe = client.getQueryCache().subscribe(() => {
@@ -57,10 +79,13 @@ export function persistBthwaniQueryClient(
         schemaVersion: CACHE_SCHEMA_VERSION,
         persistedAt: Date.now(),
         clientState: dehydrate(client, {
-          shouldDehydrateQuery: (query) => query.state.status === "success",
+          // Deny-by-default: unprefixed feature keys (e.g. wlt refund data)
+          // are structurally excluded from disk persistence.
+          shouldDehydrateQuery: (query) =>
+            query.state.status === "success" && isPersistableQueryKey(query.queryKey),
         }),
       };
-      void AsyncStorage.setItem(storageKey, JSON.stringify(envelope));
+      void storage.setItem(storageKey, JSON.stringify(envelope));
     }, 250);
   });
   return () => {
@@ -72,7 +97,8 @@ export function persistBthwaniQueryClient(
 export async function clearBthwaniQueryClient(
   client: QueryClient,
   storageKey: string,
+  storage: BthwaniKeyValueStorage = bthwaniKeyValueStorage,
 ): Promise<void> {
   client.clear();
-  await AsyncStorage.removeItem(storageKey);
+  await storage.removeItem(storageKey);
 }

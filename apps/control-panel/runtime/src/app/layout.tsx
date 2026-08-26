@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Cairo, Inter } from "next/font/google";
 import { Providers } from "./providers";
 import { WebThemeStyle } from "@bthwani/ui-kit/web";
-import { buildCpCssVariables, buildCpLegacyAliasVariables, renderCssVariableBlock } from "../styles/cp-css-vars";
+import { buildCpCssVariables, renderCssVariableBlock } from "../styles/cp-css-vars";
 
 // Self-hosted via next/font/google: the font files are fetched at build time and
 // served from this origin, so the CSP never needs to allowlist
@@ -53,17 +53,14 @@ ${renderCssVariableBlock(buildCpCssVariables())}
             --font-arabic:     var(--font-cairo), 'system-ui', sans-serif;
             --font-latin:      var(--font-inter), 'system-ui', sans-serif;
 
-            /* Legacy aliases (pre-Phase-0 names) — remove once every call site
-               migrates to --cp-*. See src/styles/cp-css-vars.ts. */
-${renderCssVariableBlock(buildCpLegacyAliasVariables())}
           }
 
           html, body { height: 100%; margin: 0; padding: 0; }
 
           body {
             font-family: var(--font-arabic);
-            background: var(--main-bg);
-            color: var(--text-primary);
+            background: var(--cp-main-bg);
+            color: var(--cp-text-primary);
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
           }

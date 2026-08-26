@@ -4,7 +4,7 @@ x-bthwani-capability: representative-finance
 x-bthwani-contract-state: CONTRACT_ACTIVE
 info:
   title: BThwani DSH Representative Finance
-  version: 1.1.0
+  version: 1.2.0
   description: >-
     Canonical actor-scoped wallet and ledger read contract. WLT remains the
     financial truth owner; DSH resolves self-service identity and applies
@@ -69,7 +69,7 @@ paths:
       operationId: listDshPartnerOwnCommissions
       tags: [ representative-finance ]
       responses:
-        '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
+        '200': { $ref: '#/components/responses/CommissionCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
@@ -80,7 +80,7 @@ paths:
       operationId: listDshPartnerOwnPayoutRequests
       tags: [ representative-finance ]
       responses:
-        '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
+        '200': { $ref: '#/components/responses/PayoutRequestCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
@@ -94,7 +94,7 @@ paths:
       requestBody:
         $ref: '#/components/requestBodies/PayoutRequestBody'
       responses:
-        '201': { $ref: '#/components/responses/ReferenceItemResponse' }
+        '201': { $ref: '#/components/responses/PayoutRequestItemResponse' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
@@ -132,7 +132,7 @@ paths:
       operationId: listDshCaptainOwnCommissions
       tags: [ representative-finance ]
       responses:
-        '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
+        '200': { $ref: '#/components/responses/CommissionCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
@@ -143,7 +143,7 @@ paths:
       operationId: listDshCaptainOwnPayoutRequests
       tags: [ representative-finance ]
       responses:
-        '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
+        '200': { $ref: '#/components/responses/PayoutRequestCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
@@ -157,7 +157,7 @@ paths:
       requestBody:
         $ref: '#/components/requestBodies/PayoutRequestBody'
       responses:
-        '201': { $ref: '#/components/responses/ReferenceItemResponse' }
+        '201': { $ref: '#/components/responses/PayoutRequestItemResponse' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
@@ -310,7 +310,7 @@ paths:
       operationId: getDshFieldMeCommissions
       tags: [ representative-finance ]
       responses:
-        '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
+        '200': { $ref: '#/components/responses/CommissionCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
@@ -321,7 +321,7 @@ paths:
       operationId: getDshFieldMePayoutRequests
       tags: [ representative-finance ]
       responses:
-        '200': { $ref: '#/components/responses/ReferenceCollectionResponse' }
+        '200': { $ref: '#/components/responses/PayoutRequestCollectionResponse' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
         '502': { $ref: '#/components/responses/WltUnavailable' }
@@ -335,7 +335,7 @@ paths:
       requestBody:
         $ref: '#/components/requestBodies/PayoutRequestBody'
       responses:
-        '201': { $ref: '#/components/responses/ReferenceItemResponse' }
+        '201': { $ref: '#/components/responses/PayoutRequestItemResponse' }
         '400': { $ref: '#/components/responses/ValidationError' }
         '401': { $ref: '#/components/responses/AuthError' }
         '403': { $ref: '#/components/responses/AuthError' }
@@ -475,11 +475,38 @@ components:
               ledgerEntries:
                 type: array
                 items: { $ref: '#/components/schemas/RepresentativeLedgerEntry' }
-    ReferenceCollectionResponse:
-      description: Actor-scoped finance references owned by WLT.
+    CommissionCollectionResponse:
+      description: Actor-scoped commission references owned by WLT.
       content:
         application/json:
-          schema: { type: object, additionalProperties: true }
+          schema:
+            type: object
+            required: [ commissions ]
+            properties:
+              commissions:
+                type: array
+                items: { $ref: '#/components/schemas/RepresentativeCommission' }
+    PayoutRequestCollectionResponse:
+      description: Actor-scoped payout-request references owned by WLT.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [ payoutRequests, total ]
+            properties:
+              payoutRequests:
+                type: array
+                items: { $ref: '#/components/schemas/RepresentativePayoutRequest' }
+              total: { type: integer, format: int32, minimum: 0 }
+    PayoutRequestItemResponse:
+      description: Governed WLT payout request readback.
+      content:
+        application/json:
+          schema:
+            type: object
+            required: [ payoutRequest ]
+            properties:
+              payoutRequest: { $ref: '#/components/schemas/RepresentativePayoutRequest' }
     ReferenceItemResponse:
       description: Governed WLT reference item.
       content:
@@ -582,12 +609,107 @@ components:
         balanceAfter: { type: integer, format: int64 }
         description: { type: string }
         createdAt: { type: string, format: date-time }
+    RepresentativeCommission:
+      type: object
+      description: WLT-owned commission readback (wlt_commissions row projection).
+      required:
+        [
+          id,
+          beneficiaryActorId,
+          beneficiaryActorType,
+          sourceType,
+          sourceId,
+          commissionType,
+          amountMinorUnits,
+          currency,
+          status,
+          resolutionNote,
+          createdAt,
+          updatedAt
+        ]
+      properties:
+        id: { type: string }
+        beneficiaryActorId: { type: string }
+        beneficiaryActorType: { type: string }
+        sourceType: { type: string }
+        sourceId: { type: string }
+        visitId: { type: [string, 'null'] }
+        storeId: { type: [string, 'null'] }
+        commissionPolicyId: { type: [string, 'null'] }
+        commissionType:
+          type: string
+          enum: [ delivery_fee, platform_fee, cod_fee, partner_discount, field_visit_fee ]
+        amountMinorUnits: { type: integer, format: int64 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        status:
+          type: string
+          enum: [ pending, confirmed, settled, reversed, earned_pending_review, approved_pending_posting, posted_pending_settlement, held, rejected, paid ]
+        settledAt: { type: [string, 'null'], format: date-time }
+        confirmedAt: { type: [string, 'null'], format: date-time }
+        rejectedAt: { type: [string, 'null'], format: date-time }
+        reversedAt: { type: [string, 'null'], format: date-time }
+        resolutionNote: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    RepresentativePayoutRequest:
+      type: object
+      description: Governed manual-settlement payout request readback (wlt_payout_requests row projection).
+      required:
+        [
+          id,
+          beneficiaryActorId,
+          beneficiaryActorType,
+          payoutDestinationId,
+          amountMinorUnits,
+          currency,
+          status,
+          reconciliationStatus,
+          requestedAt,
+          failureReason,
+          operatorId,
+          approvedByOperatorId,
+          rejectedByOperatorId,
+          executedByOperatorId,
+          verifiedByOperatorId,
+          completedByOperatorId,
+          failedByOperatorId,
+          idempotencyKey
+        ]
+      properties:
+        id: { type: string }
+        beneficiaryActorId: { type: string }
+        beneficiaryActorType: { type: string, enum: [ client, partner, captain, field ] }
+        payoutDestinationId: { type: string }
+        amountMinorUnits: { type: integer, format: int64 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        status:
+          type: string
+          enum: [ pending, approved, rejected, executed, verified, completed, failed, provider_pending, processing, provider_result_unknown ]
+        reconciliationStatus: { type: string }
+        requestedAt: { type: string, format: date-time }
+        approvedAt: { type: [string, 'null'], format: date-time }
+        rejectedAt: { type: [string, 'null'], format: date-time }
+        executedAt: { type: [string, 'null'], format: date-time }
+        verifiedAt: { type: [string, 'null'], format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        failedAt: { type: [string, 'null'], format: date-time }
+        failureReason: { type: string }
+        operatorId: { type: string }
+        approvedByOperatorId: { type: string }
+        rejectedByOperatorId: { type: string }
+        executedByOperatorId: { type: string }
+        verifiedByOperatorId: { type: string }
+        completedByOperatorId: { type: string }
+        failedByOperatorId: { type: string }
+        idempotencyKey: { type: string }
     PayoutRequestInput:
       type: object
-      required: [ amountMinorUnits, currency ]
+      required: [ amountMode, currency, idempotencyKey ]
       properties:
+        amountMode: { type: string, enum: [ FULL_AVAILABLE, SPECIFIED ] }
         amountMinorUnits: { type: integer, format: int64, minimum: 1 }
         currency: { type: string, minLength: 3, maxLength: 3 }
+        idempotencyKey: { type: string, minLength: 8, maxLength: 200 }
       additionalProperties: false
     TopUpRequestInput:
       type: object

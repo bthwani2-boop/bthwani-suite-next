@@ -56,7 +56,7 @@ func TestReadinessSucceedsOnlyWithGovernedFinancialSchema(t *testing.T) {
 	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
 		t.Fatal(err)
 	}
-	if payload.Dependencies["postgres"] != "ready" {
+	if payload.Dependencies["postgres"] != "HEALTHY" {
 		t.Fatalf("unexpected dependency state: %v", payload.Dependencies)
 	}
 	if payload.Dependencies["finance_mutation_decision"] != "permitting" {

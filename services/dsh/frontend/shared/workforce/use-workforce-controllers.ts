@@ -58,7 +58,7 @@ export function useFieldAgentListController(initialStatus?: EngagementStatus, op
     if (options?.enabled === false) return;
     setState({ kind: "loading" });
     try {
-      const fieldAgents = await listFieldAgents({ status, q: query.trim() || undefined });
+      const fieldAgents = await listFieldAgents({ ...(status ? { status } : {}), ...(query.trim() ? { q: query.trim() } : {}) });
       setState({ kind: "ready", fieldAgents });
     } catch (error) {
       setState({ kind: "error", message: workforceErrorMessage(error), isSessionExpired: isSessionExpiredCode(error) });
@@ -209,7 +209,7 @@ export function useCaptainListController(initialStatus?: EngagementStatus, optio
     if (options?.enabled === false) return;
     setState({ kind: "loading" });
     try {
-      const captains = await listCaptains({ status, q: query.trim() || undefined });
+      const captains = await listCaptains({ ...(status ? { status } : {}), ...(query.trim() ? { q: query.trim() } : {}) });
       setState({ kind: "ready", captains });
     } catch (error) {
       setState({ kind: "error", message: workforceErrorMessage(error), isSessionExpired: isSessionExpiredCode(error) });

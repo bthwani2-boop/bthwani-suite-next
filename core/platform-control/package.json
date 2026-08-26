@@ -5,6 +5,9 @@
   "type": "module",
   "main": "clients/generated/platform-control-api.ts",
   "types": "clients/generated/platform-control-api.ts",
+  "exports": {
+    ".": "./clients/generated/platform-control-api.ts"
+  },
   "scripts": {
     "openapi:compose": "node ../../tools/scripts/compose-openapi-context.mjs platform-control",
     "openapi:generate": "pnpm run openapi:compose && pnpm exec openapi-typescript contracts/generated/platform-control.bundle.openapi.yaml -o clients/generated/platform-control-api.ts",

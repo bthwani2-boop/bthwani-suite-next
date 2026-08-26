@@ -110,6 +110,10 @@ for (const file of listCodeFiles().filter((candidate) => candidate.startsWith(`$
 
 for (const file of listCodeFiles().filter((candidate) => candidate.startsWith(`${dshControlPanelRoot}/`))) {
   for (const { specifier } of findImportSpecifiers(read(file))) {
+    if (specifier === dshPackage || specifier.startsWith(`${dshPackage}/`)) {
+      checkPublicExport(file, specifier, dshPackage, dshExports, "DSH control-panel");
+      continue;
+    }
     if (specifier.startsWith(".")) {
       const resolved = resolveRelativeImport(file, specifier);
       if (resolved.startsWith("apps/")) forbiddenCrossServiceImports.push({ file, message: `DSH control-panel import reaches runtime application source: ${specifier}` });

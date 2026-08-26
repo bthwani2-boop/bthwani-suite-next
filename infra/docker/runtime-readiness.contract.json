@@ -15,7 +15,7 @@
       "baseUrlEnv": "WORKFORCE_API_BASE_URL",
       "defaultBaseUrl": "http://127.0.0.1:18086",
       "path": "/workforce/readiness",
-      "healthyStatuses": ["ready"]
+      "healthyStatuses": ["HEALTHY"]
     },
     "dsh": {
       "name": "DSH API",
@@ -31,7 +31,7 @@
       "baseUrlEnv": "WLT_API_BASE_URL",
       "defaultBaseUrl": "http://127.0.0.1:18083",
       "path": "/wlt/readiness",
-      "healthyStatuses": ["ready"]
+      "healthyStatuses": ["HEALTHY"]
     },
     "providers": {
       "name": "Providers API",

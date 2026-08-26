@@ -7,7 +7,7 @@ import {
   createSettlementFromDeliveredOrders,
   upsertSettlementPolicy,
   type SettlementActionResult,
-} from '@bthwani/wlt/dsh';
+} from '@bthwani/dsh/wlt';
 
 type GovernedSettlementPanelProps = {
   readonly reload: () => Promise<void>;

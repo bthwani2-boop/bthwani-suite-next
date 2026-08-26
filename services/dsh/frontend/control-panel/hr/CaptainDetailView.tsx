@@ -30,6 +30,11 @@ const LICENSE_LABEL: Record<LicenseStatus, string> = {
   rejected: "مرفوضة",
 };
 
+const licenseStatusLabel = (status: string | undefined): string => {
+  if (status && Object.hasOwn(LICENSE_LABEL, status)) return LICENSE_LABEL[status as LicenseStatus];
+  return LICENSE_LABEL.missing;
+};
+
 export function CaptainDetailView(props: { readonly actorId: string; readonly onBack: () => void }) {
   const controller = useCaptainDetailController(props.actorId);
   const captain = controller.state.kind === "ready" ? controller.state.captain : null;
@@ -141,7 +146,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
     controller.update({
       expectedVersion: captain.version,
       licenseStatus,
-      licenseExpiresAt: licenseExpiresAt.trim() || undefined,
+      ...(licenseExpiresAt.trim() ? { licenseExpiresAt: licenseExpiresAt.trim() } : {}),
     });
 
   const canSave =
@@ -213,14 +218,14 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
                 void controller.update({
                   expectedVersion: captain.version,
                   fullNameAr: fullNameAr.trim(),
-                  fullNameEn: fullNameEn.trim() || undefined,
-                  engagementStartDate: engagementStartDate.trim() || undefined,
+                  ...(fullNameEn.trim() ? { fullNameEn: fullNameEn.trim() } : {}),
+                  ...(engagementStartDate.trim() ? { engagementStartDate: engagementStartDate.trim() } : {}),
                   serviceZoneId: zoneId,
                   vehicleType: vehicleType.trim(),
                   vehicleIdentifier: vehicleIdentifier.trim(),
-                  licenseExpiresAt: licenseExpiresAt.trim() || undefined,
-                  operatingScopeCode: operatingScopeCode.trim() || undefined,
-                  supervisorActorId: supervisor?.actorId,
+                  ...(licenseExpiresAt.trim() ? { licenseExpiresAt: licenseExpiresAt.trim() } : {}),
+                  ...(operatingScopeCode.trim() ? { operatingScopeCode: operatingScopeCode.trim() } : {}),
+                  ...(supervisor?.actorId ? { supervisorActorId: supervisor.actorId } : {}),
                 })
               }
             >
@@ -234,7 +239,7 @@ export function CaptainDetailView(props: { readonly actorId: string; readonly on
             <Text role="titleSm">الصورة ووثائق الرخصة</Text>
             <Text role="bodySm">الصورة: {captain.photoMediaRef ? "مرتبطة" : "مفقودة"}</Text>
             <Text role="bodySm">الوثائق: {documentCount}</Text>
-            <Text role="bodySm">حالة الرخصة: {LICENSE_LABEL[profile?.licenseStatus ?? "missing"]}</Text>
+            <Text role="bodySm">حالة الرخصة: {licenseStatusLabel(profile?.licenseStatus)}</Text>
             {uploadError ? <CpStateView kind="error" title={uploadError} /> : null}
             <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
               <CpButton variant="secondary" disabled={uploadBusy} onClick={() => pickFile("photo")}>

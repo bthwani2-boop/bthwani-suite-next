@@ -3,6 +3,7 @@
  * factory per feature as it adopts TanStack Query — keep keys serializable
  * and scoped to the parameters that actually vary the response.
  */
+
 export const queryKeys = {
   dshHomeDiscovery: (scope: {
     readonly cityCode?: string | undefined;

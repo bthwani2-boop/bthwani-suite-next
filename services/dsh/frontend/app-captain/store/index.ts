@@ -1,2 +1,0 @@
-export { DshCaptainStoreCourierHomeContent } from "./DshCaptainStoreCourierHomeContent";
-

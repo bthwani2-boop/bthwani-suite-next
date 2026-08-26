@@ -60,7 +60,6 @@ jobs:
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Restore Nx computation cache
-        if: ${{ github.event_name != 'pull_request' }}
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .nx/cache
@@ -93,10 +92,10 @@ jobs:
           fi
           if [[ "${FULL_SCOPE}" == "true" ]]; then
             run_check pnpm exec nx run-many -t typecheck lint test build --all --outputStyle=stream || status=$?
-          elif [[ "${VERIFICATION_TIER}" == "fast" ]]; then
-            run_check node tools/scripts/run-affected-verification.mjs typecheck lint test || status=$?
           else
-            run_check node tools/scripts/run-affected-verification.mjs typecheck lint test build || status=$?
+            # Development PR gate stays cheap and affected. Affected build runs in ci:local;
+            # the authoritative full build runs again in exact Final Closure.
+            run_check node tools/scripts/run-affected-verification.mjs typecheck lint test || status=$?
           fi
           exit "${status}"
       - name: Upload Node graph diagnostics

@@ -36,6 +36,7 @@
     "gh",
     "go",
     "pwsh",
+    "where",
     "graphify",
     "k6",
     "gitleaks",
@@ -151,7 +152,8 @@
         "frontend/shared/operations/dsh-operational-runtime-adapter.ts",
         "frontend/shared/partner-delivery/PartnerDeliveryStatusCard.tsx",
         "frontend/shared/partner/operator-delivery-pricing.tsx",
-        "frontend/shared/workforce/WorkforceErrorState.tsx"
+        "frontend/shared/workforce/WorkforceErrorState.tsx",
+        "frontend/wlt/index.ts"
       ],
       "ignoreFiles": [
         "frontend/shared/**/generated/**"
@@ -173,10 +175,7 @@
     },
     "services/wlt": {
       "entry": [
-        "service.manifest.ts",
-        "frontend/shared/**/*.{ts,tsx}",
-        "frontend/app-*/operational-surface.classification.ts",
-        "frontend/control-panel/_skeleton-proof/*.tsx"
+        "service.manifest.ts"
       ]
     },
     "shared/data-runtime": {

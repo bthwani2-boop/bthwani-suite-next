@@ -1,57 +1,45 @@
+// Local developer documentation viewer. Serves the six materialized contract
+// bundles that the provenance gate already pins byte-for-byte; no bundling,
+// no network tool invocation, and no generated files inside contracts/.
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { execSync, exec } from 'child_process';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '../../');
-const contractsDir = path.resolve(rootDir, 'contracts');
 
 const specs = [
-  { input: 'contracts/openapi/index.yaml', output: 'contracts/openapi-index.bundled.json', name: 'Canonical API Index' },
-  { input: 'core/identity/contracts/identity.openapi.yaml', output: 'contracts/identity.bundled.json', name: 'Core - Identity API' },
-  { input: 'core/providers/contracts/providers.openapi.yaml', output: 'contracts/providers.bundled.json', name: 'Core - Providers API' },
-  { input: 'core/workforce/contracts/workforce.openapi.yaml', output: 'contracts/workforce.bundled.json', name: 'Core - Workforce API' },
-  { input: 'services/dsh/contracts/generated/dsh.bundle.openapi.yaml', output: 'contracts/dsh.bundled.json', name: 'Services - Dsh API' },
-  { input: 'services/wlt/contracts/wlt.openapi.yaml', output: 'contracts/wlt.bundled.json', name: 'Services - Wlt API' }
+  { bundle: 'core/identity/contracts/generated/identity.bundle.openapi.yaml', name: 'Core - Identity API' },
+  { bundle: 'core/workforce/contracts/generated/workforce.bundle.openapi.yaml', name: 'Core - Workforce API' },
+  { bundle: 'core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml', name: 'Core - Platform Control API' },
+  { bundle: 'core/providers/contracts/generated/providers.bundle.openapi.yaml', name: 'Core - Providers API' },
+  { bundle: 'services/dsh/contracts/generated/dsh.bundle.openapi.yaml', name: 'Services - DSH API' },
+  { bundle: 'services/wlt/contracts/generated/wlt.bundle.openapi.yaml', name: 'Services - WLT API' }
 ];
 
-// 1. Bundle all OpenAPI specifications
-console.log('Bundling all OpenAPI specifications...');
 for (const spec of specs) {
-  console.log(`Bundling ${spec.name}...`);
-  try {
-    execSync(`pnpm dlx @apidevtools/swagger-cli bundle ${spec.input} --outfile ${spec.output} --type json`, {
-      cwd: rootDir,
-      stdio: 'inherit'
-    });
-  } catch (error) {
-    console.error(`Failed to bundle ${spec.name}:`, error.message);
+  if (!fs.existsSync(path.join(rootDir, spec.bundle))) {
+    console.error(`Missing materialized bundle: ${spec.bundle}. Run "pnpm exec nx run contracts:materialize" first.`);
     process.exit(1);
   }
 }
-console.log('All bundles completed successfully.');
 
-// 2. Start HTTP server
-const PORT = 8080;
 const server = http.createServer((req, res) => {
   if (req.url === '/' || req.url === '/index.html') {
     res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.end(getHtmlContent());
+    res.end(renderIndex());
     return;
   }
 
-  // Serve bundled files
-  const matchedSpec = specs.find(s => req.url === `/${path.basename(s.output)}`);
+  const matchedSpec = specs.find((s) => req.url === `/${path.basename(s.bundle)}`);
   if (matchedSpec) {
-    const filePath = path.join(rootDir, matchedSpec.output);
-    fs.readFile(filePath, (err, content) => {
+    fs.readFile(path.join(rootDir, matchedSpec.bundle), (err, content) => {
       if (err) {
         res.writeHead(500, { 'Content-Type': 'text/plain' });
         res.end(`Server Error: ${err.code}`);
       } else {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.writeHead(200, { 'Content-Type': 'application/yaml' });
         res.end(content);
       }
     });
@@ -62,19 +50,15 @@ const server = http.createServer((req, res) => {
   res.end('Not Found');
 });
 
+const PORT = 8080;
 server.listen(PORT, () => {
-  const url = `http://localhost:${PORT}`;
-  console.log(`\n==================================================`);
-  console.log(`Swagger UI is running at: ${url}`);
-  console.log(`==================================================\n`);
-  
-  // 3. Open browser
-  const startCmd = process.platform === 'win32' ? 'start' : process.platform === 'darwin' ? 'open' : 'xdg-open';
-  exec(`${startCmd} ${url}`);
+  console.log(`Swagger UI serving materialized bundles at http://localhost:${PORT}`);
 });
 
-function getHtmlContent() {
-  const urlsList = specs.map(s => `{ url: "./${path.basename(s.output)}", name: "${s.name}" }`).join(',\n          ');
+function renderIndex() {
+  const urlsList = specs
+    .map((s) => `{ url: "./${path.basename(s.bundle)}", name: "${s.name}" }`)
+    .join(',\n          ');
   return `<!DOCTYPE html>
 <html lang="en">
 <head>

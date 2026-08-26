@@ -62,14 +62,6 @@ func financeReadPathAllowed(path string) bool {
 
 var financeReadWalletAllowlist = map[string]struct{}{"client": {}, "partner": {}, "captain": {}, "field": {}}
 
-// FinanceReadWallet intentionally fails without OperatorContext context. Representative
-// wallet reads must use FinanceReadWalletWithOperatorContext with the OperatorContext resolved by
-// Identity; retaining this method makes stale call sites fail closed at compile-
-// compatible runtime rather than silently issuing an unscoped financial read.
-func (c *Client) FinanceReadWallet(ctx context.Context, actorType, actorID, correlationID string) (int, []byte, error) {
-	return 0, nil, fmt.Errorf("WLT wallet OperatorContext id is required; use FinanceReadWalletWithOperatorContext")
-}
-
 func (c *Client) FinanceReadWalletWithOperatorContext(ctx context.Context, actorType, actorID, correlationID, operatorContextID string) (int, []byte, error) {
 	if !c.Configured() {
 		return 0, nil, fmt.Errorf("WLT integration is not configured")
@@ -129,10 +121,6 @@ func (c *Client) financeReadRequest(ctx context.Context, path string, query url.
 		return 0, nil, fmt.Errorf("read WLT finance read response: %w", err)
 	}
 	return response.StatusCode, body, nil
-}
-
-func (c *Client) FinanceWrite(ctx context.Context, method, path string, body []byte, correlationID, idempotencyKey string) (int, []byte, error) {
-	return c.FinanceWriteWithOperatorContext(ctx, method, path, body, correlationID, idempotencyKey, "")
 }
 
 func (c *Client) FinanceWriteWithOperatorContext(ctx context.Context, method, path string, body []byte, correlationID, idempotencyKey, operatorContextID string) (int, []byte, error) {

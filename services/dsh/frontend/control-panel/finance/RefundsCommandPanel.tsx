@@ -14,7 +14,7 @@ import {
   useReconcileRefundMutation,
   WltRefundResponse,
   WltRefundAuditResponse,
-} from '@bthwani/wlt/dsh';
+} from '@bthwani/dsh/wlt';
 
 function refundTone(refund: WltRefundResponse): CpBadgeTone {
   switch (refund.status) {
@@ -212,6 +212,7 @@ export function RefundsCommandPanel() {
                     placeholder="ملخص الدليل الخارجي"
                     value={evidenceNote}
                     onChange={(event) => setEvidenceNote(event.target.value)}
+                    className="ui-resize-none"
                     style={{ minHeight: "5rem", borderRadius: "0.5rem", padding: "0.7rem", width: "100%" }}
                   />
                   <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>

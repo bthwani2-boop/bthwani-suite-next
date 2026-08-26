@@ -312,9 +312,9 @@ func TestAppendLoyaltyEntryHasDeterministicRequiredHeaders(t *testing.T) {
 }
 
 // TestFinanceWriteHasDeterministicRequiredHeaders covers the
-// finance_proxy.go mutation surface: FinanceWrite must always send non-empty
-// required mutation headers, and two identical calls must derive the
-// identical idempotency key so a replay is safe.
+// finance_proxy.go mutation surface: FinanceWriteWithOperatorContext must
+// always send non-empty required mutation headers, and two identical calls
+// must derive the identical idempotency key so a replay is safe.
 func TestFinanceWriteHasDeterministicRequiredHeaders(t *testing.T) {
 	var idempotencyKeys []string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -328,10 +328,10 @@ func TestFinanceWriteHasDeterministicRequiredHeaders(t *testing.T) {
 	c := NewClient(server.URL, "test-service-token")
 	body := []byte(`{"actorId":"payout-1"}`)
 
-	if _, _, err := c.FinanceWrite(trustedMutationTestContext(), http.MethodPost, "/wlt/payout-requests", body, "corr-payout-1", ""); err != nil {
+	if _, _, err := c.FinanceWriteWithOperatorContext(trustedMutationTestContext(), http.MethodPost, "/wlt/payout-requests", body, "corr-payout-1", "", "OperatorContext-a"); err != nil {
 		t.Fatalf("unexpected error on first call: %v", err)
 	}
-	if _, _, err := c.FinanceWrite(trustedMutationTestContext(), http.MethodPost, "/wlt/payout-requests", body, "corr-payout-1", ""); err != nil {
+	if _, _, err := c.FinanceWriteWithOperatorContext(trustedMutationTestContext(), http.MethodPost, "/wlt/payout-requests", body, "corr-payout-1", "", "OperatorContext-a"); err != nil {
 		t.Fatalf("unexpected error on second call: %v", err)
 	}
 

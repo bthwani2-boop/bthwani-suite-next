@@ -62,11 +62,10 @@ func TestUnifiedCatalogRoutesAreRegistered(t *testing.T) {
 		{http.MethodPost, "/dsh/partner/reels", "POST /dsh/partner/reels"},
 		{http.MethodGet, "/dsh/operator/reels", "GET /dsh/operator/reels"},
 		{http.MethodPost, "/dsh/operator/reels/reel-1/review", "POST /dsh/operator/reels/{reelId}/review"},
-		{http.MethodPatch, "/dsh/catalog/domains/domain-1", "PATCH /dsh/catalog/domains/{domainId}"},
-		{http.MethodPatch, "/dsh/catalog/nodes/node-1", "PATCH /dsh/catalog/nodes/{nodeId}"},
-		{http.MethodPatch, "/dsh/catalog/master-products/product-1", "PATCH /dsh/catalog/master-products/{productId}"},
-		{http.MethodPatch, "/dsh/catalog/policies/policy-1", "PATCH /dsh/catalog/policies/{policyId}"},
 	}
+	// The retired catalog decision endpoints plus all 15 retired /dsh/catalog/*
+	// legacy-prefix aliases must stay unregistered;
+	// TestRemovedCatalogDecisionRoutesAreNotRegistered covers their absence (17 cases).
 
 	for _, tc := range cases {
 		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
@@ -83,15 +82,35 @@ func TestRemovedCatalogDecisionRoutesAreNotRegistered(t *testing.T) {
 	t.Parallel()
 
 	mux := NewRouter(nil, nil, nil, nil, nil, nil)
-	for _, path := range []string{
-		"/dsh/operator/catalog/product-proposals/proposal-1/decision",
-		"/dsh/catalog/proposals/proposal-1/decision",
-	} {
-		t.Run(path, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, path, nil)
+	cases := []struct {
+		method string
+		path   string
+	}{
+		{http.MethodPost, "/dsh/operator/catalog/product-proposals/proposal-1/decision"},
+		{http.MethodPost, "/dsh/catalog/proposals/proposal-1/decision"},
+		{http.MethodGet, "/dsh/catalog/domains"},
+		{http.MethodPost, "/dsh/catalog/domains"},
+		{http.MethodPatch, "/dsh/catalog/domains/{domainId}"},
+		{http.MethodGet, "/dsh/catalog/nodes"},
+		{http.MethodPost, "/dsh/catalog/nodes"},
+		{http.MethodPatch, "/dsh/catalog/nodes/{nodeId}"},
+		{http.MethodGet, "/dsh/catalog/master-products"},
+		{http.MethodPost, "/dsh/catalog/master-products"},
+		{http.MethodPatch, "/dsh/catalog/master-products/{productId}"},
+		{http.MethodGet, "/dsh/catalog/proposals"},
+		{http.MethodPost, "/dsh/catalog/proposals/{proposalId}/transitions"},
+		{http.MethodGet, "/dsh/catalog/policies"},
+		{http.MethodPatch, "/dsh/catalog/policies/{policyId}"},
+		{http.MethodGet, "/dsh/catalog/stores/{storeId}/assortment"},
+		{http.MethodPut, "/dsh/catalog/stores/{storeId}/assortment/{masterProductId}"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.path, nil)
 			_, pattern := mux.Handler(req)
 			if pattern != "" {
-				t.Fatalf("removed catalog decision route is still registered: path=%q pattern=%q", path, pattern)
+				t.Fatalf("removed catalog route still registered: %s %s pattern=%q", tc.method, tc.path, pattern)
 			}
 		})
 	}

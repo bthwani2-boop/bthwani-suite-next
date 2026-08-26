@@ -47,7 +47,6 @@ for (const file of listCodeFiles()) {
 
 const allowedEnvAccess = (file) =>
   file.startsWith("tools/") ||
-  file.startsWith("shared/config/") ||
   file.includes("/shared/") ||
   file.startsWith("shared/") ||
   file.includes("config") ||

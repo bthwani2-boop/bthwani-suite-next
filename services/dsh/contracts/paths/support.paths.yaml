@@ -123,32 +123,6 @@
             schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshTicketsResponse" }
       "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
 
-/dsh/operator/support/tickets/{ticketId}:
-  patch:
-    operationId: updateDshOperatorTicket
-    summary: Operator updates ticket status or assignee.
-    tags: [DshSupport]
-    security:
-      - bearerAuth: []
-    parameters:
-      - name: ticketId
-        in: path
-        required: true
-        schema: { type: string }
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshUpdateTicketRequest" }
-    responses:
-      "200":
-        description: Ticket updated.
-        content:
-          application/json:
-            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshTicketResponse" }
-      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
-      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
-
 # ── Platform Analytics & Operational Reporting ────────────────────
 
 /dsh/operator/analytics/support:

@@ -63,7 +63,7 @@ func (s *server) readiness(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sendJSON(w, http.StatusOK, map[string]string{"status": "ready", "service": "core-workforce"})
+	sendJSON(w, http.StatusOK, map[string]string{"status": "HEALTHY", "service": "core-workforce"})
 }
 
 func writeWorkforceNotReady(w http.ResponseWriter) {

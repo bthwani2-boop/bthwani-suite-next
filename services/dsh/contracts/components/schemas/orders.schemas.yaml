@@ -26,6 +26,7 @@ DshOrderStatus:
     - driver_arrived_store
     - picked_up
     - arrived_customer
+    - store_handoff_confirmed
     - returning_to_store
     - return_arrived_store
     - returned_to_store

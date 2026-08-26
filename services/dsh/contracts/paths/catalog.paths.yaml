@@ -213,37 +213,6 @@
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "201": { description: Master product created. }
 
-/dsh/operator/catalog/master-products/{productId}:
-  patch:
-    operationId: updateMasterProduct
-    tags: [CentralCatalog]
-    security: [{ bearerAuth: [] }]
-    parameters:
-      - name: productId
-        in: path
-        required: true
-        schema: { type: string }
-    requestBody:
-      required: false
-      content:
-        application/json:
-          schema:
-            type: object
-            description: All fields are optional. Only provided fields are updated. Do NOT send canonicalImageObjectKey — images are managed via DAM asset links.
-            properties:
-              expectedVersion: { type: integer }
-              canonicalNameAr: { type: string }
-              canonicalNameEn: { type: string }
-              brand: { type: string }
-              unit: { type: string }
-              unitPrice: { type: number }
-              currency: { type: string }
-              stockStatus: { type: string, enum: [in_stock, low_stock, out_of_stock] }
-              isActive: { type: boolean }
-              approvalStatus: { type: string }
-    responses:
-      "200": { description: Master product updated. }
-
 /dsh/operator/catalog/product-proposals:
   get:
     operationId: listProductProposals
@@ -471,46 +440,6 @@
       "200":
         description: Asset upload verified against storage and moved out of draft.
 
-/dsh/operator/catalog/assets/{assetId}:
-  patch:
-    operationId: updateCatalogAsset
-    tags: [CentralCatalog]
-    security: [{ bearerAuth: [] }]
-    parameters:
-      - name: assetId
-        in: path
-        required: true
-        schema: { type: string }
-    requestBody:
-      required: false
-      content:
-        application/json:
-          schema:
-            type: object
-            description: >
-              Only alt text and dominant color may be updated via PATCH.
-              Status, size, checksum, and publicUrl are controlled by the upload lifecycle
-              (intent → PUT → complete) and must not be sent here.
-            properties:
-              altAr: { type: string }
-              altEn: { type: string }
-              dominantColor: { type: string }
-    responses:
-      "200":
-        description: Asset alt text / dominant color updated.
-  delete:
-    operationId: deleteCatalogAsset
-    tags: [CentralCatalog]
-    security: [{ bearerAuth: [] }]
-    parameters:
-      - name: assetId
-        in: path
-        required: true
-        schema: { type: string }
-    responses:
-      "204":
-        description: Asset deleted (only draft/uploaded/rejected with no active links).
-
 /dsh/operator/catalog/assets/{assetId}/review:
   post:
     operationId: reviewCatalogAsset
@@ -672,36 +601,6 @@
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
       "200":
         description: Reel reviewed.
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                reel: { $ref: "../dsh.openapi.yaml#/components/schemas/DshReel" }
-
-/dsh/partner/reels:
-  post:
-    operationId: submitReel
-    tags: [CentralCatalog]
-    security: [{ bearerAuth: [] }]
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            required: [assetId, targetType, targetId]
-            properties:
-              assetId: { type: string }
-              titleAr: { type: string }
-              titleEn: { type: string }
-              targetType: { type: string, enum: [master_product, store, offer] }
-              targetId: { type: string }
-              sortOrder: { type: integer }
-              sourceStoreId: { type: string }
-    responses:
-      "201":
-        description: Reel submitted for review.
         content:
           application/json:
             schema:
@@ -882,14 +781,6 @@
       "200": { description: Assortment row created/updated for the partner's own store. }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
 
-/dsh/partner/catalog/product-proposals:
-  post:
-    operationId: createPartnerProductProposal
-    tags: [CentralCatalog]
-    security: [{ bearerAuth: [] }]
-    responses:
-      "201": { description: Product proposal submitted — never a final sellable product. }
-
 /dsh/partner/catalog/product-proposals/{proposalId}:
   put:
     operationId: updatePartnerProductProposal
@@ -1024,19 +915,6 @@
     responses:
       "200": { description: Current central assortment for the field-owned partner draft. }
       "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
-
-/dsh/field/partners/{partnerId}/catalog/product-proposals:
-  post:
-    operationId: createFieldProductProposal
-    tags: [CentralCatalog]
-    security: [{ bearerAuth: [] }]
-    parameters:
-      - name: partnerId
-        in: path
-        required: true
-        schema: { type: string }
-    responses:
-      "201": { description: Product proposal submitted for the field-owned partner store — never a final sellable product. }
 
 /dsh/field/partners/{partnerId}/catalog/product-proposals/{proposalId}:
   put:

@@ -1,6 +1,6 @@
 import type { DshOrderRecord } from './dsh-order-lifecycle.types';
 import { isOrderCancellationStatus } from './orders.types';
-import { formatWltMoney } from '@bthwani/wlt/dsh';
+import { formatWltMoney } from '@bthwani/dsh/wlt';
 
 export function formatOrderTotalPrice(order: DshOrderRecord): string {
   const currency = order.currency?.trim();

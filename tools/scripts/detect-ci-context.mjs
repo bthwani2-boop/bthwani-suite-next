@@ -133,7 +133,7 @@ export function classifyFiles(inputFiles, options = {}) {
 
   const runtime = runtimeProfile !== "none";
   const runtimeRequired = runtime && (
-    runtimeProofRequested || fullScope || ["closure", "default-branch"].includes(executionPhase) || protectedSecurityChanged
+    runtimeProofRequested || fullScope || ["closure", "default-branch"].includes(executionPhase)
   );
 
   const sharedBrain = starts("shared/", "services/dsh/frontend/shared/", "services/wlt/frontend/shared/");
