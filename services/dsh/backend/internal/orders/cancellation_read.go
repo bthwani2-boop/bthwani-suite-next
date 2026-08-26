@@ -18,6 +18,12 @@ type Cancellation struct {
 	FinancialReference     string `json:"financialReference"`
 	FinancialResultAction  string `json:"financialResultAction"`
 	FinancialFailure       string `json:"financialFailure"`
+	FinancialOutboxID      string `json:"financialOutboxId"`
+	FinancialOutboxStatus  string `json:"financialOutboxStatus"`
+	FinancialRecovery      string `json:"financialRecoveryDisposition"`
+	FinancialDiagnostic    string `json:"financialDiagnosticCode"`
+	FinancialAttempts      int    `json:"financialAttemptCount"`
+	FinancialReadbacks     int    `json:"financialReadbackAttemptCount"`
 	CreatedAt              string `json:"createdAt"`
 	UpdatedAt              string `json:"updatedAt"`
 }
@@ -37,11 +43,18 @@ func GetCancellation(db *sql.DB, orderID string) (*Cancellation, error) {
 		       COALESCE(c.financial_reference,''),
 		       COALESCE(o.result_action,''),
 		       COALESCE(o.last_error,''),
+		       COALESCE(o.id::text,''),
+		       COALESCE(o.status,''),
+		       COALESCE(o.failure_disposition,''),
+		       COALESCE(o.diagnostic_code,''),
+		       COALESCE(o.attempt_count,0),
+		       COALESCE(o.readback_attempt_count,0),
 		       c.created_at::text,
 		       c.updated_at::text
 		FROM dsh_order_cancellations c
 		LEFT JOIN LATERAL (
-			SELECT result_action,last_error
+			SELECT id, result_action, last_error, status, failure_disposition,
+			       diagnostic_code, attempt_count, readback_attempt_count
 			FROM dsh_checkout_financial_closure_outbox
 			WHERE order_id=c.order_id
 			ORDER BY created_at DESC
@@ -60,6 +73,12 @@ func GetCancellation(db *sql.DB, orderID string) (*Cancellation, error) {
 		&cancellation.FinancialReference,
 		&cancellation.FinancialResultAction,
 		&cancellation.FinancialFailure,
+		&cancellation.FinancialOutboxID,
+		&cancellation.FinancialOutboxStatus,
+		&cancellation.FinancialRecovery,
+		&cancellation.FinancialDiagnostic,
+		&cancellation.FinancialAttempts,
+		&cancellation.FinancialReadbacks,
 		&cancellation.CreatedAt,
 		&cancellation.UpdatedAt,
 	)

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -48,13 +49,16 @@ func (c *Client) GetPaymentSession(ctx context.Context, sessionID string) (*Paym
 		return nil, errors.New("payment session id is required")
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/wlt/payment-sessions/"+sessionID, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/wlt/payment-sessions/"+url.PathEscape(sessionID), nil)
 	if err != nil {
 		return nil, fmt.Errorf("build WLT payment session request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
 	req.Header.Set("X-Service-Caller", "dsh")
+	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
+		return nil, fmt.Errorf("prepare WLT payment-session read OperatorContext: %w", err)
+	}
 
 	response, err := c.http.Do(req)
 	if err != nil {

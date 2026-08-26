@@ -76,9 +76,12 @@ func (c *Client) CancelSessionForOrderWithResult(
 	}
 	response, err := c.http.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("call WLT cancel-for-order: %w", err)
+		return nil, fmt.Errorf("%w: call WLT cancel-for-order: %v", ErrMutationOutcomeUnknown, err)
 	}
 	defer response.Body.Close()
+	if response.StatusCode == http.StatusRequestTimeout || response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500 {
+		return nil, fmt.Errorf("%w: WLT cancel-for-order returned HTTP %d", ErrMutationOutcomeUnknown, response.StatusCode)
+	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		return nil, fmt.Errorf("WLT cancel-for-order returned HTTP %d", response.StatusCode)
 	}
@@ -94,7 +97,7 @@ func (c *Client) CancelSessionForOrderWithResult(
 		} `json:"refund"`
 	}
 	if err := json.NewDecoder(response.Body).Decode(&envelope); err != nil {
-		return nil, fmt.Errorf("decode WLT cancel-for-order response: %w", err)
+		return nil, fmt.Errorf("%w: decode WLT cancel-for-order response: %v", ErrMutationOutcomeUnknown, err)
 	}
 	action := strings.TrimSpace(envelope.Action)
 	if action != "expired" && action != "refund_requested" && action != "none" {

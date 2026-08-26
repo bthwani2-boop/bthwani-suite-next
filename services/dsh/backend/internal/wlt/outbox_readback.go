@@ -12,6 +12,10 @@ import (
 
 var ErrCanonicalReadbackUnavailable = errors.New("canonical WLT outbox readback unavailable")
 
+func IsCanonicalReadbackUnavailable(err error) bool {
+	return errors.Is(err, ErrCanonicalReadbackUnavailable)
+}
+
 type OutboxReadbackInput struct {
 	EventType         string
 	OperatorContextID string
@@ -185,4 +189,60 @@ func (c *Client) readRefund(ctx context.Context, input OutboxReadbackInput) (Out
 		}
 	}
 	return OutboxReadbackResult{Absent: true}, nil
+}
+
+// FindCancellationRefund reads the deterministic refund created by WLT's
+// order-cancellation adapter. Matching the idempotency key avoids treating a
+// separate manual refund for the same order as proof of this closure.
+func (c *Client) FindCancellationRefund(ctx context.Context, orderID, paymentSessionID string) (string, error) {
+	orderID = strings.TrimSpace(orderID)
+	paymentSessionID = strings.TrimSpace(paymentSessionID)
+	if orderID == "" || paymentSessionID == "" {
+		return "", fmt.Errorf("%w: order and payment session are required", ErrCanonicalReadbackUnavailable)
+	}
+	var envelope struct {
+		Refunds []struct {
+			ID               string `json:"id"`
+			PaymentSessionID string `json:"paymentSessionId"`
+			IdempotencyKey   string `json:"idempotencyKey"`
+		} `json:"refunds"`
+	}
+	status, err := c.readJSON(ctx, "/wlt/refunds?orderId="+url.QueryEscape(orderID), &envelope)
+	if err != nil {
+		return "", err
+	}
+	if status == http.StatusNotFound {
+		return "", nil
+	}
+	wantKey := "order-cancellation:" + paymentSessionID + ":" + orderID
+	for _, item := range envelope.Refunds {
+		if strings.TrimSpace(item.ID) != "" && item.PaymentSessionID == paymentSessionID && item.IdempotencyKey == wantKey {
+			return item.ID, nil
+		}
+	}
+	return "", nil
+}
+
+// GetCodReservation reads the WLT-owned reservation state. A nil result is a
+// successful not-found readback, which proves that no reservation remains to
+// release; transport and malformed responses remain errors.
+func (c *Client) GetCodReservation(ctx context.Context, orderID string) (*CodReservation, error) {
+	orderID = strings.TrimSpace(orderID)
+	if orderID == "" {
+		return nil, fmt.Errorf("%w: order id is required", ErrCanonicalReadbackUnavailable)
+	}
+	var envelope struct {
+		CodReservation *CodReservation `json:"codReservation"`
+	}
+	status, err := c.readJSON(ctx, "/wlt/cod-reservations/"+url.PathEscape(orderID), &envelope)
+	if err != nil {
+		return nil, err
+	}
+	if status == http.StatusNotFound {
+		return nil, nil
+	}
+	if envelope.CodReservation == nil {
+		return nil, fmt.Errorf("%w: COD reservation readback is incomplete", ErrCanonicalReadbackUnavailable)
+	}
+	return envelope.CodReservation, nil
 }

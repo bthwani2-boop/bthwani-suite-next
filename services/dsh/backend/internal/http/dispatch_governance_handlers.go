@@ -200,7 +200,7 @@ func (s *protectedStoreServer) handleAcceptGovernedDispatchAssignment(w http.Res
 	correlationID := r.Header.Get("X-Correlation-Id")
 
 	if isCod {
-		session, err := s.wlt.GetPaymentSession(r.Context(), sessionID)
+		session, err := s.wlt.GetPaymentSession(wlt.WithOperatorContext(r.Context(), actor.OperatorContextID), sessionID)
 		if err != nil {
 			store.SendError(w, http.StatusServiceUnavailable, "WLT_UNAVAILABLE", "failed to verify COD capacity")
 			return

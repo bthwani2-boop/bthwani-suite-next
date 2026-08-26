@@ -6,6 +6,7 @@ import (
 
 	"dsh-api/internal/specialrequests"
 	"dsh-api/internal/store"
+	"dsh-api/internal/wlt"
 )
 
 func marshalSpecialRequestExecution(evidence *specialrequests.ExecutionEvidence) map[string]any {
@@ -98,7 +99,7 @@ func (s *protectedStoreServer) handleGetClientSpecialRequestExecution(w http.Res
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{
 		"execution": marshalSpecialRequestExecution(evidence),
-		"financial": s.specialRequestFinancialReadback(r.Context(), request),
+		"financial": s.specialRequestFinancialReadback(wlt.WithOperatorContext(r.Context(), actor.OperatorContextID), request),
 	})
 }
 
@@ -122,6 +123,6 @@ func (s *protectedStoreServer) handleGetOperatorSpecialRequestExecution(w http.R
 	}
 	store.SendJSON(w, http.StatusOK, map[string]any{
 		"execution": marshalSpecialRequestExecution(evidence),
-		"financial": s.specialRequestFinancialReadback(r.Context(), request),
+		"financial": s.specialRequestFinancialReadback(wlt.WithOperatorContext(r.Context(), actor.OperatorContextID), request),
 	})
 }

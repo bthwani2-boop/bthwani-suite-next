@@ -45,6 +45,12 @@ export type DshOrderCancellation = {
   readonly financialReference: string;
   readonly financialResultAction: "expired" | "refund_requested" | "none" | "";
   readonly financialFailure: string;
+  readonly financialOutboxId: string;
+  readonly financialOutboxStatus: string;
+  readonly financialRecoveryDisposition: string;
+  readonly financialDiagnosticCode: string;
+  readonly financialAttemptCount: number;
+  readonly financialReadbackAttemptCount: number;
   readonly createdAt: string;
   readonly updatedAt: string;
 };

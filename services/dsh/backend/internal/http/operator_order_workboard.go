@@ -26,6 +26,12 @@ type operatorOrderWorkboardRow struct {
 	FinancialClosureStatus    string                   `json:"financialClosureStatus"`
 	FinancialClosureReference *string                  `json:"financialClosureReference"`
 	FinancialClosureFailure   *string                  `json:"financialClosureFailure"`
+	FinancialOutboxID         *string                  `json:"financialOutboxId"`
+	FinancialOutboxStatus     string                   `json:"financialOutboxStatus"`
+	FinancialRecovery         string                   `json:"financialRecoveryDisposition"`
+	FinancialDiagnostic       *string                  `json:"financialDiagnosticCode"`
+	FinancialAttempts         int                      `json:"financialAttemptCount"`
+	FinancialReadbacks        int                      `json:"financialReadbackAttemptCount"`
 	Preparation               orders.PreparationTiming `json:"preparation"`
 	TotalPrice                float64                  `json:"totalPrice"`
 	CreatedAt                 time.Time                `json:"createdAt"`
@@ -60,6 +66,12 @@ func (s *protectedStoreServer) handleOperatorOrderWorkboard(w http.ResponseWrite
 			o.financial_closure_status,
 			NULLIF(o.financial_closure_reference,''),
 			finance.last_error,
+			NULLIF(finance.id::text,''),
+			COALESCE(finance.status,''),
+			COALESCE(finance.failure_disposition,''),
+			NULLIF(finance.diagnostic_code,''),
+			COALESCE(finance.attempt_count,0),
+			COALESCE(finance.readback_attempt_count,0),
 			o.accepted_at,
 			o.preparation_started_at,
 			o.estimated_ready_at,
@@ -86,7 +98,14 @@ func (s *protectedStoreServer) handleOperatorOrderWorkboard(w http.ResponseWrite
 			LIMIT 1
 		) latest ON TRUE
 		LEFT JOIN LATERAL (
-			SELECT NULLIF(last_error,'') AS last_error, updated_at
+			SELECT NULLIF(last_error,'') AS last_error,
+			id,
+			       status,
+			       failure_disposition,
+			       COALESCE(diagnostic_code,'') AS diagnostic_code,
+			       attempt_count,
+			       readback_attempt_count,
+			       updated_at
 			FROM dsh_checkout_financial_closure_outbox
 			WHERE order_id=o.id
 			ORDER BY created_at DESC
@@ -132,6 +151,12 @@ func (s *protectedStoreServer) handleOperatorOrderWorkboard(w http.ResponseWrite
 			&row.FinancialClosureStatus,
 			&row.FinancialClosureReference,
 			&row.FinancialClosureFailure,
+			&row.FinancialOutboxID,
+			&row.FinancialOutboxStatus,
+			&row.FinancialRecovery,
+			&row.FinancialDiagnostic,
+			&row.FinancialAttempts,
+			&row.FinancialReadbacks,
 			&row.Preparation.AcceptedAt,
 			&row.Preparation.PreparationStartedAt,
 			&row.Preparation.EstimatedReadyAt,

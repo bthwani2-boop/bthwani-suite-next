@@ -177,6 +177,12 @@ DshOrderCancellation:
     - financialReference
     - financialResultAction
     - financialFailure
+    - financialOutboxId
+    - financialOutboxStatus
+    - financialRecoveryDisposition
+    - financialDiagnosticCode
+    - financialAttemptCount
+    - financialReadbackAttemptCount
     - createdAt
     - updatedAt
   properties:
@@ -196,6 +202,12 @@ DshOrderCancellation:
       type: string
       enum: [expired, refund_requested, none, ""]
     financialFailure: { type: string }
+    financialOutboxId: { type: string }
+    financialOutboxStatus: { type: string }
+    financialRecoveryDisposition: { type: string }
+    financialDiagnosticCode: { type: string }
+    financialAttemptCount: { type: integer, minimum: 0 }
+    financialReadbackAttemptCount: { type: integer, minimum: 0 }
     createdAt: { type: string, format: date-time }
     updatedAt: { type: string, format: date-time }
 

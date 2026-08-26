@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -110,10 +111,20 @@ func TestProcessOnceDispatchesExpireSessionDBIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var gotPath string
+	var gotExpirePath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		gotPath = r.URL.Path
-		w.WriteHeader(http.StatusOK)
+		if r.Method == http.MethodPost {
+			gotExpirePath = r.URL.Path
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		if r.Method == http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"paymentSession":{"id":"` + paymentSessionID + `","status":"expired","reference":"` + paymentSessionID + `","createdAt":"2026-08-26T00:00:00Z","updatedAt":"2026-08-26T00:00:00Z"}}`))
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	}))
 	defer server.Close()
 
@@ -123,8 +134,8 @@ func TestProcessOnceDispatchesExpireSessionDBIntegration(t *testing.T) {
 	}
 
 	expectedPath := "/wlt/payment-sessions/" + paymentSessionID + "/expire"
-	if gotPath != expectedPath {
-		t.Fatalf("expected path %q, got %q", expectedPath, gotPath)
+	if gotExpirePath != expectedPath {
+		t.Fatalf("expected path %q, got %q", expectedPath, gotExpirePath)
 	}
 
 	var id string
@@ -352,8 +363,8 @@ func TestProcessOnceMarksFailedWithoutMarkingSentDBIntegration(t *testing.T) {
 		t.Fatal(err)
 	}
 	status, attemptCount, lastError := fetchOutboxRow(t, db, id)
-	if status != "pending" {
-		t.Fatalf("expected event to remain 'pending' (never marked sent) after a failed delivery, got %q", status)
+	if status != "unknown" {
+		t.Fatalf("expected event to enter 'unknown' before canonical readback after a failed delivery, got %q", status)
 	}
 	if attemptCount != 1 {
 		t.Fatalf("expected attempt_count 1 after first failure, got %d", attemptCount)
@@ -398,5 +409,190 @@ func TestEnqueueDeduplicatesOnPaymentSessionAndEventTypeDBIntegration(t *testing
 	}
 	if count != 1 {
 		t.Fatalf("expected exactly 1 row after duplicate enqueue calls, got %d", count)
+	}
+}
+
+func TestClaimBatchFencesDuplicateWorkersAndExpiredLeasesDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	paymentSessionID := uniqueID("ps")
+	_, clientID, intentID := seedCheckoutIntentFixture(t, db, paymentSessionID)
+	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM dsh_checkout_financial_closure_outbox WHERE checkout_intent_id=$1::uuid`, intentID)
+	})
+
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Enqueue(tx, EnqueueInput{EventType: EventTypeExpireSession, CheckoutIntentID: intentID, PaymentSessionID: paymentSessionID, ClientID: clientID}); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+
+	first, err := ClaimBatch(db, 1, time.Minute)
+	if err != nil || len(first) != 1 {
+		t.Fatalf("first claim=%+v err=%v", first, err)
+	}
+	second, err := ClaimBatch(db, 1, time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(second) != 0 {
+		t.Fatalf("duplicate worker claimed active lease: %+v", second)
+	}
+	if _, err := db.Exec(`UPDATE dsh_checkout_financial_closure_outbox SET lease_expires_at=NOW()-INTERVAL '1 second' WHERE id=$1::uuid`, first[0].ID); err != nil {
+		t.Fatal(err)
+	}
+	reclaimed, err := ClaimBatch(db, 1, time.Minute)
+	if err != nil || len(reclaimed) != 1 {
+		t.Fatalf("expired lease reclaim=%+v err=%v", reclaimed, err)
+	}
+	if reclaimed[0].LeaseToken == first[0].LeaseToken {
+		t.Fatal("expired lease reclaim must issue a new fencing token")
+	}
+
+	if err := MarkSentWithResult(db, first[0].ID, first[0].LeaseToken, DeliveryResult{Action: "expired", PaymentSessionID: paymentSessionID}); err != nil {
+		t.Fatal(err)
+	}
+	status, _, _ := fetchOutboxRow(t, db, first[0].ID)
+	if status != "processing" {
+		t.Fatalf("stale worker changed reclaimed row to %q", status)
+	}
+	if err := MarkSentWithResult(db, reclaimed[0].ID, reclaimed[0].LeaseToken, DeliveryResult{Action: "expired", PaymentSessionID: paymentSessionID}); err != nil {
+		t.Fatal(err)
+	}
+	status, _, _ = fetchOutboxRow(t, db, first[0].ID)
+	if status != "sent" {
+		t.Fatalf("current lease owner did not close row, got %q", status)
+	}
+}
+
+func TestUnknownOutcomeRequiresReadbackBeforeRetryDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	paymentSessionID := uniqueID("ps")
+	_, clientID, intentID := seedCheckoutIntentFixture(t, db, paymentSessionID)
+	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM dsh_checkout_financial_closure_outbox WHERE checkout_intent_id=$1::uuid`, intentID)
+	})
+
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Enqueue(tx, EnqueueInput{EventType: EventTypeExpireSession, CheckoutIntentID: intentID, PaymentSessionID: paymentSessionID, ClientID: clientID}); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+
+	var expireCalls, readbackCalls int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPost {
+			expireCalls++
+			if expireCalls == 1 {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		readbackCalls++
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		status := "reference_created"
+		if readbackCalls > 1 {
+			status = "expired"
+		}
+		_, _ = w.Write([]byte(`{"paymentSession":{"id":"` + paymentSessionID + `","status":"` + status + `"}}`))
+	}))
+	defer server.Close()
+	client := wlt.NewClient(server.URL, "test-service-token")
+
+	if err := ProcessOnce(context.Background(), db, client); err != nil {
+		t.Fatal(err)
+	}
+	var id string
+	if err := db.QueryRow(`SELECT id::text FROM dsh_checkout_financial_closure_outbox WHERE checkout_intent_id=$1::uuid`, intentID).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	status, _, _ := fetchOutboxRow(t, db, id)
+	if status != "unknown" {
+		t.Fatalf("unknown mutation outcome entered %q", status)
+	}
+	if _, err := db.Exec(`UPDATE dsh_checkout_financial_closure_outbox SET next_retry_at=NOW() WHERE id=$1::uuid`, id); err != nil {
+		t.Fatal(err)
+	}
+	if err := ProcessOnce(context.Background(), db, client); err != nil {
+		t.Fatal(err)
+	}
+	status, _, _ = fetchOutboxRow(t, db, id)
+	if status != "pending" || expireCalls != 1 {
+		t.Fatalf("readback-absent path blindly delivered: status=%q expireCalls=%d", status, expireCalls)
+	}
+	if _, err := db.Exec(`UPDATE dsh_checkout_financial_closure_outbox SET next_retry_at=NOW() WHERE id=$1::uuid`, id); err != nil {
+		t.Fatal(err)
+	}
+	if err := ProcessOnce(context.Background(), db, client); err != nil {
+		t.Fatal(err)
+	}
+	status, _, _ = fetchOutboxRow(t, db, id)
+	if status != "sent" || expireCalls != 2 || readbackCalls != 2 {
+		t.Fatalf("safe retry did not complete: status=%q expireCalls=%d readbackCalls=%d", status, expireCalls, readbackCalls)
+	}
+}
+
+func TestManualRetryResetsDeliveryBudgetDBIntegration(t *testing.T) {
+	db := openRequiredDB(t)
+	paymentSessionID := uniqueID("ps")
+	_, clientID, intentID := seedCheckoutIntentFixture(t, db, paymentSessionID)
+	t.Cleanup(func() {
+		_, _ = db.Exec(`DELETE FROM dsh_checkout_financial_closure_outbox WHERE checkout_intent_id=$1::uuid`, intentID)
+	})
+
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := Enqueue(tx, EnqueueInput{
+		EventType:        EventTypeExpireSession,
+		CheckoutIntentID: intentID,
+		PaymentSessionID: paymentSessionID,
+		ClientID:         clientID,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+
+	claimed, err := ClaimBatch(db, 1, time.Minute)
+	if err != nil || len(claimed) != 1 {
+		t.Fatalf("claim=%+v err=%v", claimed, err)
+	}
+	event := claimed[0]
+	event.AttemptCount = MaxDeliveryAttempts - 1
+	if _, err := db.Exec(`UPDATE dsh_checkout_financial_closure_outbox SET attempt_count=$2 WHERE id=$1::uuid`, event.ID, event.AttemptCount); err != nil {
+		t.Fatal(err)
+	}
+	if err := MarkDeliveryFailure(db, event, errors.New("WLT unavailable")); err != nil {
+		t.Fatal(err)
+	}
+	if err := RetryFailed(db, event.ID, "operator restarted after provider outage"); err != nil {
+		t.Fatal(err)
+	}
+
+	var status, disposition, diagnostic string
+	var attempts, readbacks int
+	if err := db.QueryRow(`
+		SELECT status, attempt_count, readback_attempt_count, failure_disposition, diagnostic_code
+		FROM dsh_checkout_financial_closure_outbox WHERE id=$1::uuid`, event.ID,
+	).Scan(&status, &attempts, &readbacks, &disposition, &diagnostic); err != nil {
+		t.Fatal(err)
+	}
+	if status != "pending" || attempts != 0 || readbacks != 0 || disposition != "retry_scheduled" || diagnostic != "manual_retry_requested" {
+		t.Fatalf("manual retry did not start a fresh delivery budget: status=%q attempts=%d readbacks=%d disposition=%q diagnostic=%q", status, attempts, readbacks, disposition, diagnostic)
 	}
 }

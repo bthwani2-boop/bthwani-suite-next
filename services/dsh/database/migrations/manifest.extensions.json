@@ -303,6 +303,13 @@
       "sha256": "e032ad38324f0dd2781cb177d4284cacba24be77d4fcc0f4088a93fed4d2da08",
       "historicalPrefix": null,
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 283,
+      "file": "dsh-1044_checkout_financial_closure_outbox_state_machine.sql",
+      "sha256": "e39758df42930f8b79336d43d8834d55b8cca706b5ac6d146e0319fbba1baa7f",
+      "historicalPrefix": "1044",
+      "state": "ACTIVE"
     }
   ]
 }

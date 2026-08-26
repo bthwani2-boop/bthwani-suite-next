@@ -233,15 +233,18 @@ func (c *Client) ReleaseCodReservation(
 
 	response, err := c.http.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("call WLT: %v", err)
+		return nil, fmt.Errorf("%w: call WLT COD release: %v", ErrMutationOutcomeUnknown, err)
 	}
 	defer response.Body.Close()
 
 	body, err := io.ReadAll(io.LimitReader(response.Body, 64<<10))
 	if err != nil {
-		return nil, fmt.Errorf("read response: %v", err)
+		return nil, fmt.Errorf("%w: read WLT COD release response: %v", ErrMutationOutcomeUnknown, err)
 	}
 
+	if response.StatusCode == http.StatusRequestTimeout || response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500 {
+		return nil, fmt.Errorf("%w: WLT COD release returned HTTP %d", ErrMutationOutcomeUnknown, response.StatusCode)
+	}
 	if response.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("WLT returned %s: %s", response.Status, string(body))
 	}
@@ -250,10 +253,10 @@ func (c *Client) ReleaseCodReservation(
 		CodReservation *CodReservation `json:"codReservation"`
 	}
 	if err := json.Unmarshal(body, &envelope); err != nil {
-		return nil, fmt.Errorf("decode response: %v", err)
+		return nil, fmt.Errorf("%w: decode WLT COD release response: %v", ErrMutationOutcomeUnknown, err)
 	}
 	if envelope.CodReservation == nil {
-		return nil, fmt.Errorf("missing reservation in response")
+		return nil, fmt.Errorf("%w: missing reservation in WLT COD release response", ErrMutationOutcomeUnknown)
 	}
 	return envelope.CodReservation, nil
 }
