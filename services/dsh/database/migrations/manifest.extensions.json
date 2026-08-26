@@ -317,6 +317,13 @@
       "sha256": "e39758df42930f8b79336d43d8834d55b8cca706b5ac6d146e0319fbba1baa7f",
       "historicalPrefix": "1044",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 285,
+      "file": "dsh-1045_workforce_availability_projection_state_machine.sql",
+      "sha256": "edb1bdd6a88596d161297e4c05ad35e68fb4993255cceaacd112a291039a5347",
+      "historicalPrefix": "1045",
+      "state": "ACTIVE"
     }
   ]
 }

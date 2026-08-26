@@ -9,7 +9,7 @@ import (
 
 const (
 	workforceMigrationServiceName = "workforce"
-	workforceLatestMigration      = "workforce-025_operational_affiliation_context_integrity.sql"
+	workforceLatestMigration      = "workforce-026_availability_outbox_state_machine.sql"
 	workforceReadinessTimeout     = 2 * time.Second
 )
 
@@ -41,7 +41,20 @@ func (s sqlWorkforceRuntimeReadinessStore) Ready(ctx context.Context) (bool, err
 			)
 			AND to_regclass('public.workforce_people') IS NOT NULL
 			AND to_regclass('public.workforce_operational_assignments') IS NOT NULL
-			AND to_regclass('public.workforce_operational_assignment_audit') IS NOT NULL`,
+			AND to_regclass('public.workforce_operational_assignment_audit') IS NOT NULL
+			AND to_regclass('public.workforce_provider_availability_notices') IS NOT NULL
+			AND to_regclass('public.workforce_dsh_availability_outbox') IS NOT NULL
+			AND (
+				SELECT COUNT(*)
+				  FROM information_schema.columns
+				 WHERE table_schema = 'public'
+				   AND table_name = 'workforce_dsh_availability_outbox'
+				   AND column_name IN (
+					 'lifecycle_state', 'source_version', 'idempotency_key',
+					 'lease_token', 'lease_expires_at', 'terminal_disposition',
+					 'reconciliation_eligible'
+				   )
+			) = 7`,
 		workforceMigrationServiceName,
 		workforceLatestMigration,
 	).Scan(&ready)

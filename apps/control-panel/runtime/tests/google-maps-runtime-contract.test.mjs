@@ -3,7 +3,9 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import { buildControlPanelContentSecurityPolicy } from "../csp-policy.mjs";
+
+const cspPolicyUrl = new URL("../src/server/csp-policy.ts", import.meta.url).href;
+const { buildControlPanelContentSecurityPolicy } = await import(cspPolicyUrl);
 
 const repoRoot = path.resolve(import.meta.dirname, "../../../..");
 const read = (relative) => fs.readFileSync(path.join(repoRoot, relative), "utf8");

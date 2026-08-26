@@ -9,9 +9,9 @@ const __dirname = path.dirname(__filename);
  *
  * Security headers (Content-Security-Policy, Referrer-Policy, etc.) are NOT
  * defined here. The single canonical writer for the governed security header
- * set is `src/middleware.ts`, which consumes `csp-policy.mjs`. Keeping
- * authority in one place lets tests assert against a real policy object and
- * lets the per-request nonce reach Next SSR through the request
+ * set is `src/middleware.ts`, which consumes `src/server/csp-policy.ts`.
+ * Keeping authority in one place lets tests assert against a real policy
+ * object and lets the per-request nonce reach Next SSR through the request
  * `content-security-policy` header, which Next's app-render uses to nonify
  * its own bootstrap, polyfill and flight-data scripts.
  *

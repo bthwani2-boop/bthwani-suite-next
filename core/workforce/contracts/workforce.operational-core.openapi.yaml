@@ -140,6 +140,35 @@ paths:
         '403': { $ref: '#/components/responses/ErrorResponse' }
       security:
         - bearerAuth: []
+  /workforce/me/availability-notices/{noticeId}:
+    patch:
+      operationId: updateOwnAvailabilityNotice
+      parameters:
+        - name: noticeId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateAvailabilityNoticeInput' }
+      responses:
+        '200':
+          description: Availability notice updated and re-enqueued with a new source version.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ availabilityNotice ]
+                properties:
+                  availabilityNotice: { $ref: '#/components/schemas/AvailabilityNotice' }
+        '400': { $ref: '#/components/responses/ErrorResponse' }
+        '401': { $ref: '#/components/responses/ErrorResponse' }
+        '403': { $ref: '#/components/responses/ErrorResponse' }
+        '409': { $ref: '#/components/responses/ErrorResponse' }
+      security:
+        - bearerAuth: []
   /workforce/me/incidents:
     get:
       operationId: listOwnProviderIncidents
@@ -532,15 +561,40 @@ components:
         serviceZoneId: { type: string }
         reasonCode: { type: string, minLength: 1 }
         note: { type: string, maxLength: 1000 }
+    UpdateAvailabilityNoticeInput:
+      type: object
+      additionalProperties: false
+      required: [ noticeType, startsAt, endsAt, reasonCode, status, expectedSourceVersion ]
+      properties:
+        noticeType:
+          {
+            type: string,
+            enum:
+              [
+                planned_unavailability,
+                immediate_unavailability,
+                short_break,
+                emergency,
+                temporary_restriction
+              ]
+          }
+        startsAt: { type: string, format: date-time }
+        endsAt: { type: string, format: date-time }
+        serviceZoneId: { type: string }
+        reasonCode: { type: string, minLength: 1 }
+        note: { type: string, maxLength: 1000 }
+        status: { type: string, enum: [ scheduled, active, completed, cancelled ] }
+        expectedSourceVersion: { type: integer, minimum: 1 }
     AvailabilityNotice:
       allOf:
         - $ref: '#/components/schemas/CreateAvailabilityNoticeInput'
         - type: object
-          required: [ id, actorId, status, createdByActorId, createdAt, updatedAt ]
+          required: [ id, actorId, status, sourceVersion, createdByActorId, createdAt, updatedAt ]
           properties:
             id: { type: string, format: uuid }
             actorId: { type: string }
             status: { type: string, enum: [ scheduled, active, completed, cancelled ] }
+            sourceVersion: { type: integer, minimum: 1 }
             createdByActorId: { type: string }
             createdAt: { type: string, format: date-time }
             updatedAt: { type: string, format: date-time }

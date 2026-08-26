@@ -7,15 +7,13 @@ export type { ViewProps as WebViewProps } from "./platform/web/View";
 export {
 	WebMissionHeroCard,
 	WebPageFrame,
-	WebSectionCard,
-	WebSignalCard,
-} from './web/page-frame';
-
-// Single governed critical-style producer for the web lane. Receives the
-// per-request CSP nonce from the server layout so the strict `style-src
-// 'self' 'nonce-…'` policy accepts the emitted <style> element. See
-// ./web/root-layout.tsx for the full contract.
-export { WebThemeStyle } from './web/root-layout';
+	WebThemeStyle,
+} from './web/index';
+export type {
+	WebMissionHeroCardProps,
+	WebPageFrameProps,
+	WebRootLayoutProps,
+} from './web/index';
 
 // ─── Control Panel Lane ────────────────────────────────────────────────────────
 // Use for: staff operations, admin dashboards, control rooms only.
@@ -86,4 +84,22 @@ export {
 	WebControlSurfaceHeader,
 	WebCompactSurfaceHeader,
 	WebSystemSuggestion,
+	WebSectionCard,
+	WebSignalCard,
+} from './web/index';
+export type {
+	WebControlActionButtonProps,
+	WebControlActionCardProps,
+	WebControlDisclosureItemProps,
+	WebControlSurfaceAction,
+	WebControlSurfaceActionTone,
+	WebControlSurfaceHeaderChip,
+	WebControlSurfaceHeaderChipTone,
+	WebControlSurfaceHeaderProps,
+	WebCompactSurfaceHeaderProps,
+	WebSystemSuggestionProps,
+	WebSystemSuggestionActionProps,
+	WebSectionCardProps,
+	WebSignalCardProps,
+	WebSignalCardTone,
 } from './web/index';

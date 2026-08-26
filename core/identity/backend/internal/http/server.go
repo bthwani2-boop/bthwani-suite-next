@@ -14,7 +14,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	"identity-api/internal/identity"
 )
@@ -47,8 +46,13 @@ func NewRouter(repository *identity.Repository, db *sql.DB) http.Handler {
 	mux.HandleFunc("POST /auth/password/change", s.changePassword)
 	mux.HandleFunc("POST /auth/introspect", s.introspect)
 	mux.HandleFunc("POST /auth/otp/request", s.requestOtp)
-	mux.HandleFunc("GET /identity/health", s.identityHealth)
-	mux.HandleFunc("GET /identity/readiness", s.identityReadiness)
+	// Keep the probe paths declared in the base router for contract binding.
+	// The outer RuntimeReadinessBoundary installed by main handles these paths
+	// first; this canonical boundary-backed handler keeps NewRouter complete on
+	// its own without restoring a second probe implementation.
+	runtimeProbeRouter := RuntimeReadinessBoundary(http.NotFoundHandler(), db)
+	mux.Handle("GET /identity/health", runtimeProbeRouter)
+	mux.Handle("GET /identity/readiness", runtimeProbeRouter)
 	mux.HandleFunc("POST /internal/actors/provision", s.serviceOnly(s.provisionActor))
 	mux.HandleFunc("GET /internal/actors/search", s.serviceOnly(s.internalActorSearch))
 	mux.HandleFunc("DELETE /internal/actors/{actorId}", s.serviceOnly(s.internalActorDeprovision))
@@ -302,50 +306,6 @@ func (s *server) requestOtp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sendJSON(w, http.StatusOK, result)
-}
-
-func (s *server) identityHealth(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Content-Type", "application/json")
-	status := "HEALTHY"
-	// If readiness has failed, health is degraded
-	// We check the repository's enforcer to see if we can connect
-	if s.db != nil {
-		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-		defer cancel()
-		if err := s.db.PingContext(ctx); err != nil {
-			status = "DEGRADED"
-		}
-	}
-	sendJSON(w, http.StatusOK, map[string]string{"status": status, "service": "core-identity"})
-}
-
-func (s *server) identityReadiness(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "no-store")
-	w.Header().Set("Content-Type", "application/json")
-
-	if s.db == nil {
-		sendJSON(w, http.StatusServiceUnavailable, map[string]string{
-			"status":  "NOT_READY",
-			"service": "core-identity",
-			"reason":  "database_unavailable",
-		})
-		return
-	}
-
-	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
-	defer cancel()
-
-	if err := s.db.PingContext(ctx); err != nil {
-		sendJSON(w, http.StatusServiceUnavailable, map[string]string{
-			"status":  "NOT_READY",
-			"service": "core-identity",
-			"reason":  "database_unavailable",
-		})
-		return
-	}
-
-	sendJSON(w, http.StatusOK, map[string]string{"status": "HEALTHY", "service": "core-identity"})
 }
 
 func (s *server) provisionActor(w http.ResponseWriter, r *http.Request) {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -15,10 +16,14 @@ import (
 )
 
 var (
-	ErrZoneNotFound         = errors.New("zone not found")
-	ErrZoneInactive         = errors.New("zone is inactive")
-	ErrUnavailable          = errors.New("dsh-api is unavailable")
-	ErrProviderMediaInvalid = errors.New("provider media reference is invalid")
+	ErrZoneNotFound               = errors.New("zone not found")
+	ErrZoneInactive               = errors.New("zone is inactive")
+	ErrUnavailable                = errors.New("dsh-api is unavailable")
+	ErrProviderMediaInvalid       = errors.New("provider media reference is invalid")
+	ErrAvailabilityOutcomeUnknown = errors.New("DSH availability projection outcome is unknown")
+	ErrAvailabilityRejected       = errors.New("DSH availability projection was rejected")
+	ErrAvailabilityStale          = errors.New("DSH availability projection is stale")
+	ErrAvailabilityMalformed      = errors.New("DSH availability projection response is malformed")
 )
 
 type Client struct {
@@ -167,43 +172,179 @@ type AvailabilityProjectionInput struct {
 	EndsAt            time.Time `json:"endsAt"`
 	Status            string    `json:"status"`
 	Reason            string    `json:"reason"`
+	SourceVersion     int64     `json:"sourceVersion"`
 	SourceUpdatedAt   time.Time `json:"sourceUpdatedAt"`
+	IdempotencyKey    string    `json:"idempotencyKey"`
+}
+
+type AvailabilityProjectionResult struct {
+	AvailabilityProjectionInput
+	Idempotent bool `json:"idempotent"`
+}
+
+func AvailabilityProjectionIdempotencyKey(operatorContextID, noticeID string, sourceVersion int64) string {
+	return fmt.Sprintf("workforce-availability-v1:%s:%s:%d", strings.TrimSpace(operatorContextID), strings.TrimSpace(noticeID), sourceVersion)
+}
+
+func prepareAvailabilityProjectionInput(ctx context.Context, input AvailabilityProjectionInput) (AvailabilityProjectionInput, error) {
+	operatorContextID, ok := workforceauth.OperatorContextIDFromContext(ctx)
+	if !ok {
+		return AvailabilityProjectionInput{}, ErrUnavailable
+	}
+	if strings.TrimSpace(input.OperatorContextID) != "" && strings.TrimSpace(input.OperatorContextID) != operatorContextID {
+		return AvailabilityProjectionInput{}, fmt.Errorf("operator context mismatch")
+	}
+	input.OperatorContextID = operatorContextID
+	if input.SourceVersion < 1 {
+		input.SourceVersion = 1
+	}
+	if input.SourceUpdatedAt.IsZero() {
+		input.SourceUpdatedAt = time.Now().UTC()
+	}
+	if strings.TrimSpace(input.IdempotencyKey) == "" {
+		input.IdempotencyKey = AvailabilityProjectionIdempotencyKey(
+			input.OperatorContextID, input.NoticeID, input.SourceVersion,
+		)
+	}
+	if input.IdempotencyKey != AvailabilityProjectionIdempotencyKey(
+		input.OperatorContextID, input.NoticeID, input.SourceVersion,
+	) {
+		return AvailabilityProjectionInput{}, fmt.Errorf("idempotency key does not match availability source identity")
+	}
+	return input, nil
 }
 
 func (c *Client) SyncAvailabilityProjection(ctx context.Context, input AvailabilityProjectionInput) error {
+	_, err := c.SyncAvailabilityProjectionWithResult(ctx, input)
+	return err
+}
+
+func (c *Client) SyncAvailabilityProjectionWithResult(ctx context.Context, input AvailabilityProjectionInput) (AvailabilityProjectionResult, error) {
 	if !c.AvailabilityProjectionConfigured() {
-		return ErrUnavailable
+		return AvailabilityProjectionResult{}, ErrUnavailable
 	}
-	operatorContextID, ok := workforceauth.OperatorContextIDFromContext(ctx)
-	if !ok {
-		return ErrUnavailable
+	input, err := prepareAvailabilityProjectionInput(ctx, input)
+	if err != nil {
+		return AvailabilityProjectionResult{}, err
 	}
-	if strings.TrimSpace(input.OperatorContextID) != "" && strings.TrimSpace(input.OperatorContextID) != operatorContextID {
-		return fmt.Errorf("operator context mismatch")
-	}
-	input.OperatorContextID = operatorContextID
 	encoded, err := json.Marshal(input)
 	if err != nil {
-		return err
+		return AvailabilityProjectionResult{}, err
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/dsh/internal/workforce/availability-projections", bytes.NewReader(encoded))
 	if err != nil {
-		return err
+		return AvailabilityProjectionResult{}, err
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+c.token)
 	req.Header.Set("X-Service-Caller", "workforce")
-	req.Header.Set("X-Correlation-ID", "workforce-availability:"+input.NoticeID)
+	req.Header.Set("X-Operator-Context-ID", input.OperatorContextID)
+	req.Header.Set("Idempotency-Key", input.IdempotencyKey)
+	req.Header.Set("X-Correlation-ID", input.IdempotencyKey)
 	resp, err := c.http.Do(req)
 	if err != nil {
-		return fmt.Errorf("%w: %v", ErrUnavailable, err)
+		return AvailabilityProjectionResult{}, fmt.Errorf("%w: %w: %v", ErrAvailabilityOutcomeUnknown, ErrUnavailable, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("DSH availability projection returned HTTP %d", resp.StatusCode)
+		return AvailabilityProjectionResult{}, classifyAvailabilityResponseError(resp)
 	}
-	return nil
+	if resp.StatusCode == http.StatusNoContent {
+		return AvailabilityProjectionResult{AvailabilityProjectionInput: input}, nil
+	}
+	result, err := decodeAvailabilityProjectionResult(resp.Body)
+	if err != nil {
+		return AvailabilityProjectionResult{}, err
+	}
+	if result.OperatorContextID != input.OperatorContextID || result.NoticeID != input.NoticeID ||
+		result.SourceVersion != input.SourceVersion || result.IdempotencyKey != input.IdempotencyKey {
+		return AvailabilityProjectionResult{}, fmt.Errorf("%w: acknowledgement identity does not match the request", ErrAvailabilityMalformed)
+	}
+	return result, nil
+}
+
+func (c *Client) ReconcileAvailabilityProjection(ctx context.Context, operatorContextID, idempotencyKey string) (AvailabilityProjectionResult, bool, error) {
+	if !c.AvailabilityProjectionConfigured() {
+		return AvailabilityProjectionResult{}, false, ErrUnavailable
+	}
+	operatorContextID = strings.TrimSpace(operatorContextID)
+	idempotencyKey = strings.TrimSpace(idempotencyKey)
+	if operatorContextID == "" || idempotencyKey == "" {
+		return AvailabilityProjectionResult{}, false, ErrUnavailable
+	}
+	trustedContext, ok := workforceauth.OperatorContextIDFromContext(ctx)
+	if !ok || trustedContext != operatorContextID {
+		return AvailabilityProjectionResult{}, false, fmt.Errorf("operator context mismatch")
+	}
+	endpoint := c.baseURL + "/dsh/internal/workforce/availability-projections/" + url.PathEscape(idempotencyKey)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return AvailabilityProjectionResult{}, false, err
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Authorization", "Bearer "+c.token)
+	req.Header.Set("X-Service-Caller", "workforce")
+	req.Header.Set("X-Operator-Context-ID", operatorContextID)
+	req.Header.Set("X-Correlation-ID", idempotencyKey+":readback")
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return AvailabilityProjectionResult{}, false, fmt.Errorf("%w: %w: %v", ErrAvailabilityOutcomeUnknown, ErrUnavailable, err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return AvailabilityProjectionResult{}, false, nil
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return AvailabilityProjectionResult{}, false, classifyAvailabilityResponseError(resp)
+	}
+	result, err := decodeAvailabilityProjectionResult(resp.Body)
+	if err != nil {
+		return AvailabilityProjectionResult{}, false, err
+	}
+	if result.OperatorContextID != operatorContextID || result.IdempotencyKey != idempotencyKey {
+		return AvailabilityProjectionResult{}, false, fmt.Errorf("%w: readback identity does not match the request", ErrAvailabilityMalformed)
+	}
+	return result, true, nil
+}
+
+func decodeAvailabilityProjectionResult(reader io.Reader) (AvailabilityProjectionResult, error) {
+	var envelope struct {
+		AvailabilityProjection *AvailabilityProjectionResult `json:"availabilityProjection"`
+	}
+	decoder := json.NewDecoder(io.LimitReader(reader, 1<<20))
+	if err := decoder.Decode(&envelope); err != nil || envelope.AvailabilityProjection == nil {
+		if err == nil {
+			err = errors.New("availabilityProjection is missing")
+		}
+		return AvailabilityProjectionResult{}, fmt.Errorf("%w: %v", ErrAvailabilityMalformed, err)
+	}
+	result := *envelope.AvailabilityProjection
+	if strings.TrimSpace(result.OperatorContextID) == "" || strings.TrimSpace(result.NoticeID) == "" ||
+		result.SourceVersion < 1 || strings.TrimSpace(result.IdempotencyKey) == "" {
+		return AvailabilityProjectionResult{}, fmt.Errorf("%w: acknowledgement is incomplete", ErrAvailabilityMalformed)
+	}
+	return result, nil
+}
+
+func classifyAvailabilityResponseError(resp *http.Response) error {
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	var envelope struct {
+		Code string `json:"code"`
+	}
+	_ = json.Unmarshal(body, &envelope)
+	code := strings.ToUpper(strings.TrimSpace(envelope.Code))
+	if resp.StatusCode == http.StatusConflict && code == "STALE_SOURCE_VERSION" {
+		return fmt.Errorf("%w: DSH returned HTTP %d", ErrAvailabilityStale, resp.StatusCode)
+	}
+	if resp.StatusCode == http.StatusBadRequest || resp.StatusCode == http.StatusUnauthorized ||
+		resp.StatusCode == http.StatusForbidden || resp.StatusCode == http.StatusConflict {
+		if strings.Contains(code, "OPERATOR_CONTEXT") {
+			return fmt.Errorf("%w: %s", ErrAvailabilityRejected, code)
+		}
+		return fmt.Errorf("%w: DSH returned HTTP %d (%s)", ErrAvailabilityRejected, resp.StatusCode, code)
+	}
+	return fmt.Errorf("%w: %w: DSH returned HTTP %d", ErrAvailabilityOutcomeUnknown, ErrUnavailable, resp.StatusCode)
 }
 
 // ValidateProviderDocumentMedia asks DSH, the media owner, to validate the

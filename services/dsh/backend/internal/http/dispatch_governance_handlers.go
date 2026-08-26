@@ -575,6 +575,10 @@ func parseDispatchLimit(raw string, fallback int) int {
 
 func writeGovernedDispatchError(w http.ResponseWriter, err error) {
 	switch {
+	case errors.Is(err, dispatch.ErrAvailabilityProjectionStale):
+		store.SendError(w, http.StatusConflict, "STALE_SOURCE_VERSION", err.Error())
+	case errors.Is(err, dispatch.ErrAvailabilityProjectionIdempotencyConflict):
+		store.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", err.Error())
 	case errors.Is(err, dispatch.ErrNotFound):
 		store.SendError(w, http.StatusNotFound, "DISPATCH_NOT_FOUND", err.Error())
 	case errors.Is(err, dispatch.ErrCaptainNotEligible) || strings.Contains(err.Error(), "CAPTAIN_FINANCIAL_ELIGIBILITY_REQUIRED"):

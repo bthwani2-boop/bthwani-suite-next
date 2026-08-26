@@ -490,10 +490,29 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("X-Correlation-ID", correlationID)
 
-		// Health and readiness are now handled by the canonical router.
-		// Pass them through to the next handler (the router).
-		if r.Method == http.MethodGet && (r.URL.Path == "/identity/health" || r.URL.Path == "/identity/readiness") {
-			next.ServeHTTP(w, r)
+		// Canonical health/readiness handling - the boundary IS the authority.
+		if r.Method == http.MethodGet && r.URL.Path == "/identity/readiness" {
+			startedAt := time.Now()
+			settings, configurationFailure := runtimeProbeConfiguration()
+			if configurationFailure.failedCheck != "" {
+				writeReadinessFailure(w, configurationFailure, startedAt, correlationID)
+				return
+			}
+			result, completed := waitForRuntimeProbe(r, coordinator, store, settings)
+			if !completed {
+				return
+			}
+			if result.failedCheck != "" {
+				writeReadinessFailure(w, result, startedAt, correlationID)
+				return
+			}
+			writeReadinessSuccess(w, result, startedAt, correlationID)
+			return
+		}
+
+		if r.Method == http.MethodGet && r.URL.Path == "/identity/health" {
+			snapshot, statusCode := currentHealthSnapshot(correlationID)
+			sendJSON(w, statusCode, snapshot)
 			return
 		}
 
@@ -517,13 +536,23 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 			return
 		}
 
-		writeReadinessSuccess(result, startedAt, correlationID)
+		recordReadinessSuccess(result, startedAt, correlationID)
 		w.Header().Set("X-Identity-Runtime-Status", "HEALTHY")
 		next.ServeHTTP(w, r)
 	})
 }
 
-func writeReadinessSuccess(result runtimeReadinessResult, startedAt time.Time, correlationID string) {
+func writeReadinessSuccess(
+	w http.ResponseWriter,
+	result runtimeReadinessResult,
+	startedAt time.Time,
+	correlationID string,
+) {
+	recordReadinessSuccess(result, startedAt, correlationID)
+	sendJSON(w, http.StatusOK, readinessStatus("HEALTHY", result, startedAt, correlationID))
+}
+
+func recordReadinessSuccess(result runtimeReadinessResult, startedAt time.Time, correlationID string) {
 	lastReadinessFailed.Store(false)
 	successTotal := readinessSuccesses.Add(1)
 	snapshot := readinessStatus("HEALTHY", result, startedAt, correlationID)

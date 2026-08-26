@@ -105,6 +105,7 @@ type AvailabilityNotice struct {
 	ReasonCode       string    `json:"reasonCode"`
 	Note             string    `json:"note,omitempty"`
 	Status           string    `json:"status"`
+	SourceVersion    int64     `json:"sourceVersion"`
 	CreatedByActorID string    `json:"createdByActorId"`
 	CreatedAt        time.Time `json:"createdAt"`
 	UpdatedAt        time.Time `json:"updatedAt"`
@@ -118,6 +119,18 @@ type CreateAvailabilityNoticeInput struct {
 	ReasonCode        string    `json:"reasonCode"`
 	Note              string    `json:"note"`
 	OperatorContextID string    `json:"-"`
+}
+
+type UpdateAvailabilityNoticeInput struct {
+	NoticeType            string    `json:"noticeType"`
+	StartsAt              time.Time `json:"startsAt"`
+	EndsAt                time.Time `json:"endsAt"`
+	ServiceZoneID         string    `json:"serviceZoneId"`
+	ReasonCode            string    `json:"reasonCode"`
+	Note                  string    `json:"note"`
+	Status                string    `json:"status"`
+	ExpectedSourceVersion int64     `json:"expectedSourceVersion"`
+	OperatorContextID     string    `json:"-"`
 }
 
 type ProviderIncident struct {
@@ -452,8 +465,42 @@ func (r *Repository) CreateAvailabilityNotice(ctx context.Context, actorID strin
 		input.ReasonCode = "personal"
 	}
 	var n AvailabilityNotice
-	err = r.db.QueryRowContext(ctx, `INSERT INTO workforce_provider_availability_notices(actor_id,operator_context_id,notice_type,starts_at,ends_at,service_zone_id,reason_code,note,created_by_actor_id) VALUES($1,$2,$3,$4,$5,NULLIF($6,''),$7,$8,$1) RETURNING id::text,actor_id,notice_type,starts_at,ends_at,COALESCE(service_zone_id,''),reason_code,note,status,created_by_actor_id,created_at,updated_at`, actorID, operatorContextID, input.NoticeType, input.StartsAt, input.EndsAt, strings.TrimSpace(input.ServiceZoneID), strings.TrimSpace(input.ReasonCode), strings.TrimSpace(input.Note)).Scan(&n.ID, &n.ActorID, &n.NoticeType, &n.StartsAt, &n.EndsAt, &n.ServiceZoneID, &n.ReasonCode, &n.Note, &n.Status, &n.CreatedByActorID, &n.CreatedAt, &n.UpdatedAt)
+	err = r.db.QueryRowContext(ctx, `INSERT INTO workforce_provider_availability_notices(actor_id,operator_context_id,notice_type,starts_at,ends_at,service_zone_id,reason_code,note,created_by_actor_id) VALUES($1,$2,$3,$4,$5,NULLIF($6,''),$7,$8,$1) RETURNING id::text,actor_id,notice_type,starts_at,ends_at,COALESCE(service_zone_id,''),reason_code,note,status,source_version,created_by_actor_id,created_at,updated_at`, actorID, operatorContextID, input.NoticeType, input.StartsAt, input.EndsAt, strings.TrimSpace(input.ServiceZoneID), strings.TrimSpace(input.ReasonCode), strings.TrimSpace(input.Note)).Scan(&n.ID, &n.ActorID, &n.NoticeType, &n.StartsAt, &n.EndsAt, &n.ServiceZoneID, &n.ReasonCode, &n.Note, &n.Status, &n.SourceVersion, &n.CreatedByActorID, &n.CreatedAt, &n.UpdatedAt)
 	return n, err
+}
+
+func (r *Repository) UpdateAvailabilityNotice(ctx context.Context, actorID, noticeID string, input UpdateAvailabilityNoticeInput) (AvailabilityNotice, error) {
+	operatorContextID, err := operatorContextID(ctx)
+	if err != nil || strings.TrimSpace(input.OperatorContextID) != operatorContextID || input.ExpectedSourceVersion < 1 ||
+		!oneOf(input.NoticeType, "planned_unavailability", "immediate_unavailability", "short_break", "emergency", "temporary_restriction") ||
+		!oneOf(input.Status, "scheduled", "active", "completed", "cancelled") || input.StartsAt.IsZero() || input.EndsAt.IsZero() ||
+		!input.EndsAt.After(input.StartsAt) || strings.TrimSpace(noticeID) == "" {
+		return AvailabilityNotice{}, ErrInvalidInput
+	}
+	if _, err := r.requireOperationalCore(ctx, actorID); err != nil {
+		return AvailabilityNotice{}, err
+	}
+	input.ReasonCode = strings.TrimSpace(input.ReasonCode)
+	if input.ReasonCode == "" {
+		input.ReasonCode = "personal"
+	}
+	var notice AvailabilityNotice
+	err = r.db.QueryRowContext(ctx, `UPDATE workforce_provider_availability_notices
+		SET notice_type=$4, starts_at=$5, ends_at=$6, service_zone_id=NULLIF($7,''),
+		    reason_code=$8, note=$9, status=$10
+		WHERE id=$1::uuid AND actor_id=$2 AND operator_context_id=$3 AND source_version=$11
+		RETURNING id::text,actor_id,notice_type,starts_at,ends_at,COALESCE(service_zone_id,''),
+		reason_code,note,status,source_version,created_by_actor_id,created_at,updated_at`,
+		strings.TrimSpace(noticeID), actorID, operatorContextID, input.NoticeType, input.StartsAt,
+		input.EndsAt, strings.TrimSpace(input.ServiceZoneID), input.ReasonCode, strings.TrimSpace(input.Note),
+		input.Status, input.ExpectedSourceVersion,
+	).Scan(&notice.ID, &notice.ActorID, &notice.NoticeType, &notice.StartsAt, &notice.EndsAt,
+		&notice.ServiceZoneID, &notice.ReasonCode, &notice.Note, &notice.Status, &notice.SourceVersion,
+		&notice.CreatedByActorID, &notice.CreatedAt, &notice.UpdatedAt)
+	if errors.Is(err, sql.ErrNoRows) {
+		return AvailabilityNotice{}, ErrVersionConflict
+	}
+	return notice, err
 }
 
 func (r *Repository) ListAvailabilityNotices(ctx context.Context, actorID string, limit int) ([]AvailabilityNotice, error) {
@@ -464,7 +511,7 @@ func (r *Repository) ListAvailabilityNotices(ctx context.Context, actorID string
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
-	rows, err := r.db.QueryContext(ctx, `SELECT id::text,actor_id,notice_type,starts_at,ends_at,COALESCE(service_zone_id,''),reason_code,note,status,created_by_actor_id,created_at,updated_at FROM workforce_provider_availability_notices WHERE operator_context_id=$1 AND actor_id=$2 ORDER BY starts_at DESC LIMIT $3`, operatorContextID, actorID, limit)
+	rows, err := r.db.QueryContext(ctx, `SELECT id::text,actor_id,notice_type,starts_at,ends_at,COALESCE(service_zone_id,''),reason_code,note,status,source_version,created_by_actor_id,created_at,updated_at FROM workforce_provider_availability_notices WHERE operator_context_id=$1 AND actor_id=$2 ORDER BY starts_at DESC LIMIT $3`, operatorContextID, actorID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -472,7 +519,7 @@ func (r *Repository) ListAvailabilityNotices(ctx context.Context, actorID string
 	out := make([]AvailabilityNotice, 0)
 	for rows.Next() {
 		var n AvailabilityNotice
-		if err := rows.Scan(&n.ID, &n.ActorID, &n.NoticeType, &n.StartsAt, &n.EndsAt, &n.ServiceZoneID, &n.ReasonCode, &n.Note, &n.Status, &n.CreatedByActorID, &n.CreatedAt, &n.UpdatedAt); err != nil {
+		if err := rows.Scan(&n.ID, &n.ActorID, &n.NoticeType, &n.StartsAt, &n.EndsAt, &n.ServiceZoneID, &n.ReasonCode, &n.Note, &n.Status, &n.SourceVersion, &n.CreatedByActorID, &n.CreatedAt, &n.UpdatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, n)

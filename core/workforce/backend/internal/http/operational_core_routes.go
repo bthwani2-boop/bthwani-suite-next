@@ -30,6 +30,7 @@ func RegisterOperationalCoreRoutes(handler http.Handler, repo *workforce.Reposit
 	mux.HandleFunc("GET /workforce/me/operational-core", s.providerSelf("provider:read", s.getOwnCore))
 	mux.HandleFunc("GET /workforce/me/availability-notices", s.providerSelf("provider:read", s.listOwnAvailabilityNotices))
 	mux.HandleFunc("POST /workforce/me/availability-notices", s.providerSelf("provider:update", s.createOwnAvailabilityNotice))
+	mux.HandleFunc("PATCH /workforce/me/availability-notices/{noticeId}", s.providerSelf("provider:update", s.updateOwnAvailabilityNotice))
 	mux.HandleFunc("GET /workforce/me/incidents", s.providerSelf("provider:read", s.listOwnIncidents))
 	mux.HandleFunc("POST /workforce/me/incidents/{incidentId}/appeal", s.providerSelf("provider:update", s.appealOwnIncident))
 	mux.HandleFunc("POST /workforce/provider-incidents", s.operatorOnly("provider:update", s.createProviderIncident))
@@ -152,6 +153,22 @@ func (s *operationalCoreServer) listOwnAvailabilityNotices(w http.ResponseWriter
 		return
 	}
 	sendJSON(w, http.StatusOK, map[string]any{"availabilityNotices": notices})
+}
+
+func (s *operationalCoreServer) updateOwnAvailabilityNotice(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
+	var input workforce.UpdateAvailabilityNoticeInput
+	if !decodeJSON(w, r, &input) {
+		return
+	}
+	input.OperatorContextID, _ = auth.OperatorContextIDFromContext(r.Context())
+	notice, err := s.repo.UpdateAvailabilityNotice(r.Context(), identity.Subject, r.PathValue("noticeId"), input)
+	if err != nil {
+		writeWorkforceError(w, err)
+		return
+	}
+	_ = s.repo.RecordAudit(r.Context(), identity.Subject, firstRole(identity), identity.Subject,
+		"provider.availability_notice.updated", nil, notice, input.Note, r.Header.Get("X-Correlation-ID"))
+	sendJSON(w, http.StatusOK, map[string]any{"availabilityNotice": notice})
 }
 
 func (s *operationalCoreServer) createProviderIncident(w http.ResponseWriter, r *http.Request, identity auth.Identity) {

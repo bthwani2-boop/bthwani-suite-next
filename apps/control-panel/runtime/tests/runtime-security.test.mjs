@@ -3,7 +3,9 @@ import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import nextConfig from "../next.config.mjs";
-import { buildControlPanelSecurityHeaders } from "../csp-policy.mjs";
+
+const cspPolicyUrl = new URL("../src/server/csp-policy.ts", import.meta.url).href;
+const { buildControlPanelSecurityHeaders, isStaticAssetPath, STATIC_ASSET_PATH_MATCHER } = await import(cspPolicyUrl);
 
 const repoRoot = path.resolve(import.meta.dirname, "../../../..");
 const read = (relative) => fs.readFileSync(path.join(repoRoot, relative), "utf8");
@@ -28,6 +30,43 @@ test("control-panel emits governed browser security headers", async () => {
   assert.match(csp, /frame-ancestors 'none'/);
   assert.match(csp, /object-src 'none'/);
   assert.match(csp, /connect-src 'self'/);
+});
+
+test("control-panel middleware matcher is a single static string sourced from the canonical CSP authority", () => {
+  assert.equal(typeof STATIC_ASSET_PATH_MATCHER, "string");
+  assert.equal(
+    STATIC_ASSET_PATH_MATCHER,
+    "/((?!_next/static|_next/image|favicon.ico).*)",
+  );
+  for (const [path, expected] of [
+    ["/_next/static/foo.css", true],
+    ["/_next/image/foo.png", true],
+    ["/favicon.ico", true],
+    ["/dsh/dashboard", false],
+    ["/api/auth/session", false],
+  ]) {
+    assert.equal(isStaticAssetPath(path), expected, `isStaticAssetPath(${path})`);
+  }
+
+  // Next.js 16 Turbopack requires `config.matcher` to be a plain literal in
+  // `src/middleware.ts`. The middleware file inlines the literal but must keep
+  // it identical to the canonical `STATIC_ASSET_PATH_MATCHER` exported from
+  // `src/server/csp-policy.ts`. This static-source check is the single drift
+  // guard between the literal in middleware and the canonical constant.
+  const middlewareSource = read("apps/control-panel/runtime/src/middleware.ts");
+  assert.ok(
+    middlewareSource.includes("matcher: ["),
+    "middleware must export a config with a matcher array",
+  );
+  assert.ok(
+    middlewareSource.includes(JSON.stringify(STATIC_ASSET_PATH_MATCHER)),
+    "middleware matcher literal must equal the canonical STATIC_ASSET_PATH_MATCHER",
+  );
+  assert.doesNotMatch(
+    middlewareSource,
+    /matcher:\s*\[[A-Za-z_]/,
+    "middleware matcher must be a plain string literal; it must not reference a cross-module identifier",
+  );
 });
 
 test("browser identity storage contains no durable real token store", () => {

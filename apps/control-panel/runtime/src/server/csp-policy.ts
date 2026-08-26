@@ -3,9 +3,10 @@
  * Control Panel web runtime.
  *
  * This module is the ONLY writer of the production CSP. The Next.js
- * `middleware.ts` is the only header emitter; the `next.config.mjs` no longer
- * owns security headers. Tests import this module directly to assert the
- * contract against the real policy output (not against source-text regexes).
+ * `src/middleware.ts` is the only header emitter; `next.config.mjs` no longer
+ * owns security headers. Tests import this module directly (Node 24 strips
+ * types from `.ts` dynamic imports) to assert the contract against the real
+ * policy output (not against source-text regexes).
  *
  * Production design (per objective CU-E-CONTROL-PANEL-CSP-EXECUTION-BOUNDARY):
  *   - script-src drops 'unsafe-eval' and 'unsafe-inline'.
@@ -36,9 +37,15 @@
  *     style-src only when NODE_ENV !== "production" so Next.js dev tools
  *     (react-refresh, error overlay, HMR style injection) keep working.
  *   - WebSocket / localhost connect sources are added in dev only.
+ *
+ * Edge runtime: this file is also imported from `src/middleware.ts`, which
+ * Next.js compiles to the Edge runtime. It therefore must not depend on
+ * Node-only APIs (`fs`, `node:crypto`, `Buffer`, …). It uses only the Web
+ * Crypto API (`globalThis.crypto.getRandomValues`) and `btoa`, both of which
+ * are available in the Edge runtime, Node.js 16+ and the browser.
  */
 
-const PRODUCTION_SCRIPT_HOSTS = Object.freeze([
+export const PRODUCTION_SCRIPT_HOSTS: ReadonlyArray<string> = Object.freeze([
   "https://*.googleapis.com",
   "https://*.gstatic.com",
   "https://*.google.com",
@@ -46,47 +53,67 @@ const PRODUCTION_SCRIPT_HOSTS = Object.freeze([
   "https://*.googleusercontent.com",
 ]);
 
-const PRODUCTION_CONNECT_HOSTS = Object.freeze([
+export const PRODUCTION_CONNECT_HOSTS: ReadonlyArray<string> = Object.freeze([
   "https://*.googleapis.com",
   "https://*.google.com",
   "https://*.gstatic.com",
 ]);
 
-const PRODUCTION_DEV_CONNECT_HOSTS = Object.freeze([
+export const PRODUCTION_DEV_CONNECT_HOSTS: ReadonlyArray<string> = Object.freeze([
   "http://localhost:*",
   "http://127.0.0.1:*",
   "ws:",
   "wss:",
 ]);
 
-/**
- * Build the production Content-Security-Policy header value with a fresh
- * per-request nonce. `nonce` MUST be a non-empty base64 string drawn from the
- * charset accepted by Next.js' CSP nonce extractor (`[A-Za-z0-9+/_-]+={0,2}`).
- *
- * @param {object} options
- * @param {string} options.nonce
- * @param {boolean} [options.isDevelopment]
- * @returns {string}
- */
-export function buildControlPanelContentSecurityPolicy({ nonce, isDevelopment = false }) {
+export interface BuildControlPanelCspOptions {
+  nonce: string;
+  isDevelopment?: boolean;
+}
+
+export interface SecurityHeader {
+  readonly key: string;
+  readonly value: string;
+}
+
+export interface BuildControlPanelSecurityHeadersOptions {
+  nonce: string;
+  isDevelopment?: boolean;
+}
+
+const CSP_NONCE_CHARSET = /^[A-Za-z0-9+/_-]+={0,2}$/;
+
+function assertValidNonce(nonce: string): void {
   if (typeof nonce !== "string" || nonce.length === 0) {
     throw new Error("buildControlPanelContentSecurityPolicy requires a non-empty nonce");
   }
+  if (!CSP_NONCE_CHARSET.test(nonce)) {
+    throw new Error(
+      "buildControlPanelContentSecurityPolicy: nonce must match the charset accepted by Next.js "
+        + "([A-Za-z0-9+/_-]+={0,2})",
+    );
+  }
+}
 
-  const scriptSources = ["'self'", `'nonce-${nonce}'`, ...PRODUCTION_SCRIPT_HOSTS];
+export function buildControlPanelContentSecurityPolicy(
+  options: BuildControlPanelCspOptions,
+): string {
+  const { nonce, isDevelopment = false } = options;
+  assertValidNonce(nonce);
+
+  const scriptSources: string[] = ["'self'", `'nonce-${nonce}'`, ...PRODUCTION_SCRIPT_HOSTS];
   if (isDevelopment) {
     scriptSources.push("'unsafe-eval'", "'unsafe-inline'");
   }
 
-  const styleSources = ["'self'", `'nonce-${nonce}'`];
+  const styleSources: string[] = ["'self'", `'nonce-${nonce}'`];
   if (isDevelopment) {
     styleSources.push("'unsafe-inline'");
   }
 
-  const styleAttrSources = ["'unsafe-inline'"];
+  const styleAttrSources: string[] = ["'unsafe-inline'"];
 
-  const connectSources = ["'self'", ...PRODUCTION_CONNECT_HOSTS];
+  const connectSources: string[] = ["'self'", ...PRODUCTION_CONNECT_HOSTS];
   if (isDevelopment) {
     connectSources.push(...PRODUCTION_DEV_CONNECT_HOSTS);
   }
@@ -109,20 +136,15 @@ export function buildControlPanelContentSecurityPolicy({ nonce, isDevelopment = 
   ].join("; ");
 }
 
-/**
- * Build the full governed security-header set for one response. Returns a
- * frozen array of `{ key, value }` pairs in the order Next.js' `headers()`
- * and middleware apply them. The CSP header is at the front because the
- * browser parses it independently of ordering.
- *
- * @param {object} options
- * @param {string} options.nonce
- * @param {boolean} [options.isDevelopment]
- * @returns {ReadonlyArray<{ key: string, value: string }>}
- */
-export function buildControlPanelSecurityHeaders({ nonce, isDevelopment = false }) {
+export function buildControlPanelSecurityHeaders(
+  options: BuildControlPanelSecurityHeadersOptions,
+): ReadonlyArray<SecurityHeader> {
+  const { nonce, isDevelopment = false } = options;
   return Object.freeze([
-    { key: "Content-Security-Policy", value: buildControlPanelContentSecurityPolicy({ nonce, isDevelopment }) },
+    {
+      key: "Content-Security-Policy",
+      value: buildControlPanelContentSecurityPolicy({ nonce, isDevelopment }),
+    },
     { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
     { key: "X-Content-Type-Options", value: "nosniff" },
     { key: "X-Frame-Options", value: "DENY" },
@@ -131,30 +153,41 @@ export function buildControlPanelSecurityHeaders({ nonce, isDevelopment = false 
       key: "Permissions-Policy",
       value: "camera=(self), geolocation=(self), microphone=(), payment=(), usb=()",
     },
-  ]);
+  ]) as ReadonlyArray<SecurityHeader>;
 }
 
 /**
- * Path matchers that the middleware should NOT apply the full governed
+ * Source patterns for paths the middleware should NOT apply the full governed
  * security-header set to. Immutable-hashed Next assets do not need CSP,
  * nosniff or X-Frame-Options, and re-applying the policy on every static
  * fetch wastes cycles.
+ *
+ * Exported so the Next.js `matcher` config (and any test that needs to assert
+ * the matcher surface) is derived from the single canonical source.
  */
-export const STATIC_ASSET_PATH_PATTERNS = Object.freeze([
+export const STATIC_ASSET_PATH_PATTERNS: ReadonlyArray<RegExp> = Object.freeze([
   /^\/_next\/static\//,
   /^\/_next\/image\//,
   /^\/favicon\.ico$/,
 ]);
 
 /**
+ * The Next.js `matcher` string literal that mirrors `STATIC_ASSET_PATH_PATTERNS`.
+ * Kept as a single literal (not a function call) because Next.js 16's static
+ * config analyzer requires `config.matcher` entries to be statically
+ * parseable strings or objects; it cannot evaluate function calls. The literal
+ * here is the same negative-lookahead pattern that
+ * `STATIC_ASSET_PATH_PATTERNS` would generate, so the two remain coupled by
+ * convention inside this single canonical file.
+ */
+export const STATIC_ASSET_PATH_MATCHER: string = "/((?!_next/static|_next/image|favicon.ico).*)";
+
+/**
  * Determine whether the middleware should skip a given pathname. Static asset
  * paths return `true`; everything else (HTML documents, API routes, dynamic
  * chunks) returns `false` and receives the full governed header set.
- *
- * @param {string} pathname
- * @returns {boolean}
  */
-export function isStaticAssetPath(pathname) {
+export function isStaticAssetPath(pathname: string): boolean {
   if (typeof pathname !== "string" || pathname.length === 0) {
     return false;
   }
@@ -165,11 +198,8 @@ export function isStaticAssetPath(pathname) {
  * Generate a CSP nonce suitable for the Next.js SSR extractor. Uses the Web
  * Crypto API which is available in the Edge runtime, Node.js, and the
  * browser. Output is standard base64 (charset `[A-Za-z0-9+/_-]+={0,2}`).
- *
- * @param {number} [byteLength=16]
- * @returns {string}
  */
-export function generateCspNonce(byteLength = 16) {
+export function generateCspNonce(byteLength: number = 16): string {
   const globalCrypto = globalThis.crypto;
   if (!globalCrypto || typeof globalCrypto.getRandomValues !== "function") {
     throw new Error("generateCspNonce requires a runtime with Web Crypto getRandomValues");
@@ -178,8 +208,8 @@ export function generateCspNonce(byteLength = 16) {
   globalCrypto.getRandomValues(bytes);
   let binary = "";
   for (let index = 0; index < bytes.length; index += 1) {
-    binary += String.fromCharCode(bytes[index]);
+    const byte = bytes[index] ?? 0;
+    binary += String.fromCharCode(byte);
   }
-  // btoa exists in the Edge runtime and Node.js 16+.
   return btoa(binary);
 }

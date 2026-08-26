@@ -3,7 +3,7 @@
   "service": "workforce",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "workforce-025_operational_affiliation_context_integrity.sql",
+  "cutover": "workforce-026_availability_outbox_state_machine.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -178,6 +178,13 @@
       "file": "workforce-025_operational_affiliation_context_integrity.sql",
       "sha256": "0770a7640b9a9ace937d81e238b238286e4d5000a37866dc57a1f4613c53fb6a",
       "historicalPrefix": "025",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 26,
+      "file": "workforce-026_availability_outbox_state_machine.sql",
+      "sha256": "cdec5938e1aff894fd431c7646d4f0e72595fdad1b44b76a48fb127396b278fc",
+      "historicalPrefix": "026",
       "state": "ACTIVE"
     }
   ]

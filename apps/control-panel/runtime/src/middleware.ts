@@ -2,13 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   buildControlPanelSecurityHeaders,
   generateCspNonce,
-  isStaticAssetPath,
-} from "../csp-policy.mjs";
+} from "./server/csp-policy";
 
 /**
  * Single canonical security-header writer for the Control Panel runtime.
  *
- * Authority: `csp-policy.mjs` is the ONLY source of CSP truth; this
+ * Authority: `./server/csp-policy.ts` is the ONLY source of CSP truth; this
  * middleware is the ONLY emitter. `next.config.mjs` no longer owns security
  * headers. For per-request nonce propagation into Next SSR, we forward the
  * same `Content-Security-Policy` value on the request headers so Next's
@@ -33,18 +32,16 @@ export function middleware(request: NextRequest): NextResponse {
     response.headers.set(header.key, header.value);
   }
 
-  // Echo the nonce on the response too so server-rendered code paths (and
-  // the layout's `headers()` call) can confirm what the browser was issued.
   response.headers.set("x-bthwani-csp-nonce", nonce);
   return response;
 }
 
+// The Next.js 16 Turbopack static config analyzer requires the `matcher`
+// entry to be a plain string literal — it cannot resolve cross-module
+// references. The literal below is the inverse-lookahead of the static-asset
+// patterns exported from `./server/csp-policy`; the two are kept coupled by
+// `runtime-security.test.mjs`, which asserts equality between the literal
+// here and the canonical constant.
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the immutable assets we deliberately
-     * skip. Next's standard matcher for application routes.
-     */
-    "/((?!_next/static|_next/image|favicon.ico).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

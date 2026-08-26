@@ -1864,3 +1864,7 @@ export function WebControlPanelInspectorShell({ title, onClose, children }: WebC
     </>
   );
 }
+
+// Re-export Website lane components that are actually generic/shared
+export { WebSectionCard, WebSignalCard } from './page-frame';
+export type { WebSectionCardProps, WebSignalCardProps, WebSignalCardTone } from './page-frame';
