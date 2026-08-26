@@ -95,13 +95,19 @@ function loadRouteClassifications() {
       item.classification !== "LEGACY_COMPATIBILITY" ||
       item.retirementState !== "DEPRECATED_SUPPORTED" ||
       typeof item.owner !== "string" ||
-      item.owner.trim() === ""
+      item.owner.trim() === "" ||
+      typeof item.migrationLifecycle !== "string" ||
+      item.migrationLifecycle.trim() === "" ||
+      typeof item.retirementCriteria !== "string" ||
+      item.retirementCriteria.trim() === "" ||
+      typeof item.expiryOrClosure !== "string" ||
+      item.expiryOrClosure.trim() === ""
     ) {
       violations.push({
         file: routeClassificationFile,
         line,
         message:
-          "MALFORMED_ROUTE_CLASSIFICATION: every route must define a legacy route, canonical route, owner and governed retirement state",
+          "MALFORMED_ROUTE_CLASSIFICATION: every route must define a legacy route, canonical route, owner, migrationLifecycle, retirementCriteria, expiryOrClosure and governed retirement state",
       });
       continue;
     }
