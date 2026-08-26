@@ -451,7 +451,7 @@ function Test-OpenCodeReviewConfiguration {
 
   Write-Output "ocr_version=$($Ocr.Version)"
   Write-Output "rule_file=$RulePath"
-  Write-Output "decision=PASS"
+  Write-Output "decision=DETERMINISTIC_DELEGATION_VERIFIED"
 }
 
 Push-Location $Root

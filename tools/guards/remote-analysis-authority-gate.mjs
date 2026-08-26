@@ -65,7 +65,6 @@ mustContain(closureEvidence, [
   "statuses: write",
   "BThwani / PR Closure Evidence",
   "Publish canonical closure status",
-  "BTHWANI_SEMANTIC_REVIEW:v1",
 ], "PR closure evidence workflow");
 const closureDispatch = read(".github/workflows/pr-closure-dispatch.yml");
 mustContain(closureDispatch, [
@@ -136,6 +135,34 @@ mustContain(remoteCommand, [
 mustNotContain(remoteCommand, ["schema_version == 1", "pr-closure", "Invoke-Expression", "github/codeql-action/init@", "sonar-scanner"], "remote command ingress");
 
 const ocr = read(".github/workflows/open-code-review.yml");
-mustContain(ocr, ["hostAgentRequired: true", "hostAgentExecutedByThisWorkflow: false", "semanticReviewClaimedByThisWorkflow: false"], "OpenCodeReview delegation");
+mustContain(ocr, [
+  "ocr delegate preview",
+  "ocr delegate rule",
+  "schemaVersion: 3",
+  "repository: $repository",
+  "reviewableFiles: $reviewableFiles",
+  "resolvedRulesSha256: $rulesSha256",
+  "artifactIdentity: $artifactIdentity",
+  "packageIntegrity: $packageIntegrity",
+  "hostAgentRequired: true",
+  "hostAgentExecutedByThisWorkflow: false",
+  "semanticReviewClaimedByThisWorkflow: false",
+], "OpenCodeReview delegation");
+mustNotContain(ocr, ["COPILOT_GITHUB_TOKEN", "OCR_EVALUATOR_SHA", "evaluate-opencodereview.mjs", "OCR_LLM_"], "OpenCodeReview delegation");
+const attestationParser = read("tools/scripts/parse-semantic-attestation.mjs");
+mustContain(attestationParser, [
+  "BTHWANI_SEMANTIC_REVIEW:v1",
+  "candidate SHA mismatch",
+  "external-authorized-host-agent",
+  "duplicate semantic attestations are ambiguous",
+  "PR author cannot author semantic attestation",
+], "semantic attestation parser");
+mustContain(closureEvidence, [
+  "contents/tools/scripts/parse-semantic-attestation.mjs",
+  "sha256sum -c context-files.sha256",
+  "artifactIdentity == $artifact",
+  "--candidate-sha \"${HEAD_SHA}\"",
+], "exact semantic attestation consumer");
+mustNotContain(closureEvidence, ["contains(\"BTHWANI_SEMANTIC_REVIEW:v1\")", "contains(\"verdict=PASS\")"], "exact semantic attestation consumer");
 
-console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] Branch-agnostic PR identity, exact-head closure evidence, hosted scanners, total Semgrep accounting with proven tool limitations, API-only metadata hygiene, baseline read-back and schema-v2 remote dispatch remain separated canonical responsibilities.");
+console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] Branch-agnostic PR identity, exact-head closure evidence, hosted scanners, total Semgrep accounting with proven tool limitations, API-only metadata hygiene, trusted OCR artifact provenance, and deterministic external-host attestation remain separated canonical responsibilities.");

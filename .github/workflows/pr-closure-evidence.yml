@@ -401,44 +401,122 @@ jobs:
         shell: bash
         env:
           PR_NUMBER: ${{ steps.scope.outputs.pr_number }}
+          PR_AUTHOR: ${{ steps.scope.outputs.pr_author }}
           HEAD_SHA: ${{ steps.scope.outputs.head_sha }}
+          BASE_REF: ${{ steps.scope.outputs.base_ref }}
+          BASE_SHA: ${{ steps.scope.outputs.base_sha }}
+          DEFAULT_SHA: ${{ steps.scope.outputs.default_sha }}
         run: |
           set -euo pipefail
-          # GitHub forbids APPROVED reviews on self-authored PRs, so the exact-head
-          # attestation binds to an issue comment authored by a write-authorized
-          # account and containing the marker, verdict, and the candidate SHA.
-          comments="$(gh api --paginate -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments?per_page=100" --slurp)"
-          mapfile -t reviewers < <(
-            jq -r --arg sha "${HEAD_SHA}" '
-              .[][]
-              | select(
-                  ((.body // "") | contains("BTHWANI_SEMANTIC_REVIEW:v1"))
-                  and ((.body // "") | contains("verdict=PASS"))
-                  and ((.body // "") | contains($sha))
-                )
-              | .user.login
-            ' <<<"${comments}" | sort -fu
-          )
-          (( ${#reviewers[@]} > 0 )) || {
-            echo "::error::missing authorized exact-head BTHWANI_SEMANTIC_REVIEW:v1 verdict=PASS comment"
-            exit 1
-          }
+          # The parser is fetched from the already-approved default definition;
+          # candidate content never supplies executable attestation logic.
+          parser="${RUNNER_TEMP}/parse-semantic-attestation.mjs"
+          gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/tools/scripts/parse-semantic-attestation.mjs" \
+            -f "ref=${DEFAULT_SHA}" --jq '.content' | tr -d '\n' | base64 --decode > "${parser}"
+          node --check "${parser}"
+          trusted_rule="${RUNNER_TEMP}/trusted-ocr-rule.json"
+          gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/contents/.opencodereview/rule.json" \
+            -f "ref=${BASE_SHA}" --jq '.content' | tr -d '\n' | base64 --decode > "${trusted_rule}"
+          jq -e . "${trusted_rule}" >/dev/null
+          rule_source_sha256="$(sha256sum "${trusted_rule}" | awk '{print $1}')"
 
-          authorized=false
-          for reviewer in "${reviewers[@]}"; do
-            encoded_reviewer="$(jq -rn --arg value "${reviewer}" '$value|@uri')"
-            permission="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/collaborators/${encoded_reviewer}/permission" --jq '.permission // "none"' 2>/dev/null || printf 'none')"
-            case "${permission}" in
-              admin|maintain|write)
-                authorized=true
-                break
-                ;;
-            esac
+          ocr_run="$(awk -F '\t' '$1=="open-code-review.yml"{print $2}' "${RUNNER_TEMP}/closure-runs.tsv")"
+          [[ "${ocr_run}" =~ ^[0-9]+$ ]] || { echo "::error::OpenCodeReview run id missing"; exit 1; }
+          expected_artifact="opencodereview-delegation-${HEAD_SHA}-${ocr_run}"
+          artifacts="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/actions/runs/${ocr_run}/artifacts?per_page=100")"
+          artifact_id="$(jq -r --arg name "${expected_artifact}" '[.artifacts[] | select(.name == $name and .expired == false)] | if length == 1 then .[0].id else empty end' <<<"${artifacts}")"
+          [[ "${artifact_id}" =~ ^[0-9]+$ ]] || { echo "::error::exact OpenCodeReview delegation artifact is missing or duplicated"; exit 1; }
+
+          artifact_zip="${RUNNER_TEMP}/ocr-delegation.zip"
+          artifact_dir="${RUNNER_TEMP}/ocr-delegation"
+          mkdir -p "${artifact_dir}"
+          gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "${artifact_zip}"
+          while IFS= read -r entry; do
+            [[ -n "${entry}" && "${entry}" != /* && "${entry}" != ../* && "${entry}" != */../* && "${entry}" != */.. ]] || {
+              echo "::error::unsafe OpenCodeReview artifact path"
+              exit 1
+            }
+          done < <(unzip -Z1 "${artifact_zip}")
+          unzip -q "${artifact_zip}" -d "${artifact_dir}"
+          for required in delegation-contract.json context-files.sha256 preview.json rules.json diff.patch reviewable-files.txt; do
+            [[ -f "${artifact_dir}/${required}" ]] || { echo "::error::OpenCodeReview artifact missing ${required}"; exit 1; }
           done
-          [[ "${authorized}" == "true" ]] || {
-            echo "::error::semantic review PASS is not from a write-authorized approver"
+          [[ "$(find "${artifact_dir}" -type f | wc -l)" -eq 6 ]] || {
+            echo "::error::OpenCodeReview artifact contains unexpected files"
             exit 1
           }
+          [[ "$(wc -l < "${artifact_dir}/context-files.sha256")" -eq 4 ]] || {
+            echo "::error::OpenCodeReview context manifest is incomplete or duplicated"
+            exit 1
+          }
+          (cd "${artifact_dir}" && sha256sum -c context-files.sha256)
+          files_json="$(jq -R -s 'split("\n") | map(select(length > 0))' "${artifact_dir}/reviewable-files.txt")"
+          preview_sha256="$(sha256sum "${artifact_dir}/preview.json" | awk '{print $1}')"
+          rules_sha256="$(sha256sum "${artifact_dir}/rules.json" | awk '{print $1}')"
+          diff_sha256="$(sha256sum "${artifact_dir}/diff.patch" | awk '{print $1}')"
+          files_sha256="$(sha256sum "${artifact_dir}/reviewable-files.txt" | awk '{print $1}')"
+          context_sha256="$(sha256sum "${artifact_dir}/context-files.sha256" | awk '{print $1}')"
+          jq -e \
+            --arg repository "${GITHUB_REPOSITORY}" \
+            --arg pr "${PR_NUMBER}" \
+            --arg head "${HEAD_SHA}" \
+            --arg base_ref "${BASE_REF}" \
+            --arg base "${BASE_SHA}" \
+            --arg run "${ocr_run}" \
+            --arg artifact "${expected_artifact}" \
+            --arg ruleSource "${rule_source_sha256}" \
+            --arg preview "${preview_sha256}" \
+            --arg rules "${rules_sha256}" \
+            --arg diff "${diff_sha256}" \
+            --arg filesHash "${files_sha256}" \
+            --arg context "${context_sha256}" \
+            --argjson files "${files_json}" \
+            '((keys | sort) == ["artifactIdentity", "baseRef", "baseSha", "contextSha256", "diffSha256", "hostAgentExecutedByThisWorkflow", "hostAgentRequired", "headSha", "mergeBase", "mode", "packageIntegrity", "prNumber", "previewSha256", "repository", "resolvedRulesSha256", "reviewableFiles", "reviewableFilesSha256", "ruleSourceSha256", "schemaVersion", "semanticReviewClaimedByThisWorkflow", "toolVersion", "workflowRunId"])
+             and (.schemaVersion == 3)
+             and (.mode == "deterministic-delegation-context")
+             and (.repository == $repository)
+             and (.prNumber == ($pr | tonumber))
+             and (.headSha == $head)
+             and (.baseRef == $base_ref)
+             and (.baseSha == $base)
+             and (.mergeBase | test("^[0-9a-fA-F]{40}$"))
+             and (.reviewableFiles == $files)
+             and (.ruleSourceSha256 == $ruleSource)
+             and (.resolvedRulesSha256 == $rules)
+             and (.previewSha256 == $preview)
+             and (.diffSha256 == $diff)
+             and (.reviewableFilesSha256 == $filesHash)
+             and (.contextSha256 == $context)
+             and (.workflowRunId == $ocr_run)
+             and (.artifactIdentity == $artifact)
+             and (.toolVersion == "1.9.9")
+             and (.packageIntegrity == "/p+9mE+gEG1HrkGZu25ocKxrPWPJbdLhqfbKgG7idMJEc6gLF3RpS/u+2V3lpnKKVallXj7IHW4sSjNFQO1F9w==")
+             and (.hostAgentRequired == true)
+             and (.hostAgentExecutedByThisWorkflow == false)
+             and (.semanticReviewClaimedByThisWorkflow == false)' \
+            "${artifact_dir}/delegation-contract.json" >/dev/null
+
+          comments="$(gh api --paginate -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments?per_page=100" --slurp)"
+          parsed="${RUNNER_TEMP}/semantic-attestation.json"
+          if ! printf '%s' "${comments}" | node "${parser}" --candidate-sha "${HEAD_SHA}" --pr-author "${PR_AUTHOR}" > "${parsed}"; then
+            echo "::error::semantic attestation is malformed, stale, duplicated, conflicting, or candidate-authored"
+            exit 1
+          fi
+          reviewer="$(jq -r '.attestation.login' "${parsed}")"
+          [[ -n "${reviewer}" && "${reviewer,,}" != "${PR_AUTHOR,,}" ]] || {
+            echo "::error::semantic attestation author is not independent from the candidate"
+            exit 1
+          }
+          encoded_reviewer="$(jq -rn --arg value "${reviewer}" '$value|@uri')"
+          permission="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/collaborators/${encoded_reviewer}/permission" --jq '.permission // "none"' 2>/dev/null || printf 'none')"
+          case "${permission}" in
+            admin|maintain|write) ;;
+            *) echo "::error::semantic review PASS is not from a live write-authorized repository identity"; exit 1 ;;
+          esac
+          echo "reviewer=${reviewer}" >> "${GITHUB_OUTPUT}"
 
       - name: Final live identity revalidation
         id: final_identity

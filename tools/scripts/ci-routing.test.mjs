@@ -206,6 +206,13 @@ test("OpenCodeReview owns deterministic delegation context without model authori
   assert.match(workflow, /ocr delegate preview/u);
   assert.match(workflow, /ocr delegate rule/u);
   assert.match(workflow, /mode: "deterministic-delegation-context"/u);
+  assert.match(workflow, /schemaVersion: 3/u);
+  assert.match(workflow, /repository: \$repository/u);
+  assert.match(workflow, /reviewableFiles: \$reviewableFiles/u);
+  assert.match(workflow, /ruleSourceSha256: \$ruleSourceSha256/u);
+  assert.match(workflow, /resolvedRulesSha256: \$rulesSha256/u);
+  assert.match(workflow, /artifactIdentity: \$artifactIdentity/u);
+  assert.match(workflow, /packageIntegrity: \$packageIntegrity/u);
   assert.match(workflow, /hostAgentRequired: true/u);
   assert.match(workflow, /hostAgentExecutedByThisWorkflow: false/u);
   assert.match(workflow, /semanticReviewClaimedByThisWorkflow: false/u);
@@ -214,6 +221,27 @@ test("OpenCodeReview owns deterministic delegation context without model authori
     /COPILOT_GITHUB_TOKEN|@github\/copilot|delegation-copilot-cli|OCR_LLM_|llm_auth_token|llm_url|llm_model/u,
   );
   assert.doesNotMatch(workflow, /OCR_EVALUATOR_SHA|evaluate-opencodereview\.mjs/u);
+  const toolchain = read("tools/scripts/invoke-open-code-review-toolchain.ps1");
+  assert.match(toolchain, /decision=DETERMINISTIC_DELEGATION_VERIFIED/u);
+  assert.doesNotMatch(toolchain, /decision=PASS/u);
+});
+
+test("semantic closure consumes only the canonical external-host attestation", () => {
+  const workflow = read(".github/workflows/pr-closure-evidence.yml");
+  const parser = read("tools/scripts/parse-semantic-attestation.mjs");
+  assert.match(workflow, /contents\/tools\/scripts\/parse-semantic-attestation\.mjs/u);
+  assert.match(workflow, /ref=\$\{DEFAULT_SHA\}/u);
+  assert.match(workflow, /sha256sum -c context-files\.sha256/u);
+  assert.match(workflow, /artifactIdentity == \$artifact/u);
+  assert.match(workflow, /ruleSourceSha256 == \$ruleSource/u);
+  assert.match(workflow, /semantic-attestation\.json/u);
+  assert.equal(workflow.includes('--candidate-sha "${HEAD_SHA}"'), true);
+  assert.doesNotMatch(workflow, /contains\("BTHWANI_SEMANTIC_REVIEW:v1"\)/u);
+  assert.match(parser, /external-authorized-host-agent/u);
+  assert.match(parser, /candidate SHA mismatch/u);
+  assert.match(parser, /duplicate semantic attestations are ambiguous/u);
+  assert.match(parser, /PR author cannot author semantic attestation/u);
+  assert.match(parser, /multiple semantic attestations are ambiguous/u);
 });
 
 test("backend verification skips an empty development package cone", () => {
