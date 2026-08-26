@@ -390,7 +390,7 @@ func (s *Service) CreateEmployee(ctx context.Context, operator Operator, input C
 	}
 	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
 		"employee.created", "create_employee", nil, person, "", correlationID, idempotencyKey); err != nil {
-		log.Printf("[workforce] RecordAudit error in CreateEmployee: %v", err)
+		return Person{}, false, err
 	}
 	if encoded, err := json.Marshal(person); err == nil {
 		_ = s.repo.StoreIdempotentResponse(ctx, operator.ActorID, "create_employee", idempotencyKey, requestHash, encoded)
@@ -438,8 +438,8 @@ func (s *Service) UpdateFieldAgent(ctx context.Context, operator Operator, actor
 		return Person{}, err
 	}
 	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
-		"field_agent.updated", "update_field_agent", before, person, "", correlationID, correlationID); err != nil {
-		log.Printf("[workforce] RecordAudit error in UpdateFieldAgent: %v", err)
+		"field_agent.updated", "update_field_agent", before, person, "", correlationID, ""); err != nil {
+		return Person{}, err
 	}
 	return person, nil
 }
@@ -473,8 +473,8 @@ func (s *Service) UpdateCaptain(ctx context.Context, operator Operator, actorID 
 		return Person{}, err
 	}
 	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
-		"captain.updated", "update_captain", before, person, "", correlationID, correlationID); err != nil {
-		log.Printf("[workforce] RecordAudit error in UpdateCaptain: %v", err)
+		"captain.updated", "update_captain", before, person, "", correlationID, ""); err != nil {
+		return Person{}, err
 	}
 	return person, nil
 }
@@ -494,8 +494,8 @@ func (s *Service) UpdateEmployee(ctx context.Context, operator Operator, actorID
 		return Person{}, err
 	}
 	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
-		"employee.updated", "update_employee", before, person, "", correlationID, correlationID); err != nil {
-		log.Printf("[workforce] RecordAudit error in UpdateEmployee: %v", err)
+		"employee.updated", "update_employee", before, person, "", correlationID, ""); err != nil {
+		return Person{}, err
 	}
 	return person, nil
 }
