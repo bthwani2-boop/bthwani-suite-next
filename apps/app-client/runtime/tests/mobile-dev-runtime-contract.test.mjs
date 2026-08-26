@@ -123,6 +123,56 @@ test('Sentry root instrumentation is conditional on successful initialization', 
   }
 });
 
+test('mobile development runtime has no parallel or shadow authority outside the canonical control plane', () => {
+  // Canonical Runtime Execution Path:
+  //   infra/docker/scripts/runtime.ps1                  (sole lifecycle owner: up/down/reset/bootstrap-dev/migrate/seed/smoke)
+  //   tools/scripts/invoke-runtime-phase.ps1            (sole phase serialization + prepared-runtime marker)
+  //   tools/mobile/invoke-runtime-phase.ps1             (thin adapter)
+  //   tools/mobile/ensure-mobile-dev-runtime.ps1       (sole mobile preflight, delegates to invoke-runtime-phase + mobile-dev-data)
+  //   tools/mobile/mobile-dev-data.mjs                 (sole convergence of client/partner/field/captain surfaces)
+  //   tools/scripts/mobile-dev-data.mjs                (thin compat shim, one-line re-export)
+  //   tools/scripts/ensure-mobile-dev-runtime.ps1       (thin compat shim, one-line forwarder)
+  //   tools/scripts/start-mobile-runtime.ps1            (thin compat shim, one-line forwarder)
+  //
+  // No script outside this set may define bootstrap, health/recovery, data convergence, or
+  // mutation semantics independently. Parallel or shadow repair authority is forbidden.
+  const toolsScriptsDir = path.join(repoRoot, 'tools', 'scripts');
+  const forbiddenParallelScripts = [
+    'repair-mobile-dev-runtime.ps1',
+    'repair-local-mobile-runtime.ps1',
+    'bootstrap-dev-data.mjs',
+  ];
+  for (const relativeName of forbiddenParallelScripts) {
+    const absolutePath = path.join(toolsScriptsDir, relativeName);
+    assert.equal(
+      fs.existsSync(absolutePath),
+      false,
+      `Parallel or shadow mobile runtime authority must not exist: ${relativeName}. ` +
+        `The canonical path is infra/docker/scripts/runtime.ps1 (-Action bootstrap-dev) ` +
+        `plus tools/mobile/mobile-dev-data.mjs (--repair).`,
+    );
+  }
+
+  const packageJson = JSON.parse(read('package.json'));
+  const scripts = packageJson.scripts ?? {};
+  for (const [name, command] of Object.entries(scripts)) {
+    assert.doesNotMatch(
+      String(command),
+      /repair-mobile-dev-runtime|repair-local-mobile-runtime|bootstrap-dev-data/,
+      `package.json script '${name}' references deleted parallel mobile runtime authority. ` +
+        `Route it through the canonical runtime:full:bootstrap-dev / runtime:full:smoke commands.`,
+    );
+  }
+
+  // The canonical data convergence is the one and only data owner for mobile surfaces.
+  const runtimeAuthority = read('infra/docker/scripts/runtime.ps1');
+  assert.match(
+    runtimeAuthority,
+    /tools\/scripts\/mobile-dev-data\.mjs --repair/,
+    'Canonical runtime must invoke the sole mobile data convergence during bootstrap-dev.',
+  );
+});
+
 test('Sentry Expo plugin is omitted until the native configuration is complete', () => {
   const environmentNames = [
     'EXPO_PUBLIC_SENTRY_DSN',
