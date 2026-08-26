@@ -17,6 +17,7 @@ import (
 	"workforce-api/internal/dshclient"
 	workforcehttp "workforce-api/internal/http"
 	"workforce-api/internal/identityclient"
+	"workforce-api/internal/providerpenaltysaga"
 	"workforce-api/internal/wltclient"
 	"workforce-api/internal/workforce"
 )
@@ -71,7 +72,7 @@ func main() {
 	baseRouter := workforcehttp.NewRouter(db, service, repo, authClient, identity, dshServiceToken)
 	workforcehttp.RegisterInternalReadinessRoutes(baseRouter, repo, dshServiceToken)
 	workforcehttp.RegisterOperationalCoreRoutes(baseRouter, repo, authClient)
-	workforcehttp.RegisterOperationalEnforcementRoutes(baseRouter, repo, authClient, wlt)
+	workforcehttp.RegisterOperationalEnforcementRoutes(baseRouter, repo, authClient)
 	workforcehttp.RegisterEmployeeGovernanceRoutes(baseRouter, repo, authClient)
 	workforcehttp.RegisterSovereignLeadershipRoutes(baseRouter, service, repo, authClient)
 	workforcehttp.RegisterSovereignLeadershipReferenceRoutes(baseRouter, service, authClient)
@@ -80,6 +81,7 @@ func main() {
 
 	workerCtx, cancelWorker := context.WithCancel(context.Background())
 	go availabilityoutbox.RunWorker(workerCtx, db, dsh, 15*time.Second)
+	go providerpenaltysaga.RunWorker(workerCtx, db, identity, wlt, 5*time.Second)
 
 	server := &http.Server{
 		Addr:         ":" + port,

@@ -19,15 +19,16 @@ const (
 )
 
 type Event struct {
-	ID              string
-	OperatorContextID        string
-	PartnerID       string
-	ActivationEvent string
-	EventType       string
-	ActorID         string
-	CorrelationID   string
-	IdempotencyKey  string
-	AttemptCount    int
+	ID                string
+	OperatorContextID string
+	PartnerID         string
+	ActivationEvent   string
+	EventType         string
+	ActorID           string
+	Reason            string
+	CorrelationID     string
+	IdempotencyKey    string
+	AttemptCount      int
 }
 
 type partnerReadback struct {
@@ -96,6 +97,8 @@ func ProcessNext(ctx context.Context, db *sql.DB, client *wlt.Client) (bool, err
 			deliveryCtx,
 			event.PartnerID,
 			event.ActorID,
+			event.Reason,
+			"dsh-partner-activation:"+event.ActivationEvent,
 			event.CorrelationID,
 			event.IdempotencyKey,
 		)
@@ -146,10 +149,11 @@ func claimNext(ctx context.Context, db *sql.DB) (Event, error) {
 	err = tx.QueryRowContext(ctx, `
 		SELECT outbox.id::text, btrim(partner.operator_context_id), outbox.partner_id,
 		       outbox.activation_event_id::text, outbox.event_type,
-		       outbox.actor_id, outbox.correlation_id, outbox.idempotency_key,
+		       outbox.actor_id, btrim(activation.reason), outbox.correlation_id, outbox.idempotency_key,
 		       outbox.attempt_count + 1
 		FROM dsh_partner_wlt_outbox outbox
 		JOIN dsh_partners partner ON partner.id=outbox.partner_id
+		JOIN dsh_partner_activation_events activation ON activation.id=outbox.activation_event_id
 		WHERE outbox.status IN ('pending','retry')
 		  AND outbox.available_at <= now()
 		  AND btrim(partner.operator_context_id) <> ''
@@ -158,7 +162,7 @@ func claimNext(ctx context.Context, db *sql.DB) (Event, error) {
 		LIMIT 1`,
 	).Scan(
 		&event.ID, &event.OperatorContextID, &event.PartnerID, &event.ActivationEvent, &event.EventType,
-		&event.ActorID, &event.CorrelationID, &event.IdempotencyKey,
+		&event.ActorID, &event.Reason, &event.CorrelationID, &event.IdempotencyKey,
 		&event.AttemptCount,
 	)
 	if err != nil {

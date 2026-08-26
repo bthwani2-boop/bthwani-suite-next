@@ -3,9 +3,16 @@
  *
  * Durable queue scoped to the authenticated platform-workforce actor and the
  * current app installation. Mobile runtimes must use encrypted storage.
+ *
+ * The queue is configured with a FieldOfflineQueueStorageAdapter at runtime;
+ * it does not import the shared storage adapter directly. The platform owner
+ * (mobile runtime or web bootstrap) must install a storage adapter that
+ * surfaces platform rejections as throws for the durable path so the queue
+ * fails closed on quota exhaustion, native module rejection, or browser
+ * security exceptions.
  */
 
-import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/storage-adapter";
+import { bthwaniDurableStorage } from "@bthwani/data-runtime/storage-adapter";
 
 export type FieldOfflineOperationType =
   | "create_visit"
@@ -77,13 +84,13 @@ const MAX_QUEUE_OPERATIONS = 100;
 const MAX_SERIALIZED_CHARACTERS = 48_000;
 
 let storageAdapter: FieldOfflineQueueStorageAdapter = {
-  getItem: (key) => AsyncStorage.getItem(key),
-  setItem: (key, value) => AsyncStorage.setItem(key, value),
-  removeItem: (key) => AsyncStorage.removeItem(key),
+  getItem: (key) => bthwaniDurableStorage.getItem(key),
+  setItem: (key, value) => bthwaniDurableStorage.setItem(key, value),
+  removeItem: (key) => bthwaniDurableStorage.removeItem(key),
 };
 let legacyStorageAdapter: FieldOfflineLegacyStorageAdapter = {
-  getItem: (key) => AsyncStorage.getItem(key),
-  removeItem: (key) => AsyncStorage.removeItem(key),
+  getItem: (key) => bthwaniDurableStorage.getItem(key),
+  removeItem: (key) => bthwaniDurableStorage.removeItem(key),
 };
 let activeScope: FieldOfflineQueueScope | null = null;
 

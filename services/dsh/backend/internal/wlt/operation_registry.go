@@ -49,6 +49,9 @@ func (o FinanceOperation) Path(params map[string]string) (string, error) {
 type OperationRegistry struct{ operations map[string]FinanceOperation }
 
 func responseContract(key string, kind FinanceResponseKind, allowed ...string) FinanceResponseContract {
+	if kind == FinanceResponseNoContent {
+		return FinanceResponseContract{ValueKind: kind}
+	}
 	if len(allowed) == 0 {
 		allowed = []string{key}
 	}
@@ -103,7 +106,7 @@ func NewOperationRegistry() *OperationRegistry {
 	write("finance.payout_requests.complete", http.MethodPost, "/wlt/payout-requests/{payoutId}/complete", "finance.manage", "payoutRequest", FinanceResponseObject, true, true)
 	write("finance.payout_destinations.upsert", http.MethodPut, "/wlt/payout-destinations/{actorType}/{actorId}", "finance.manage", "payoutDestination", FinanceResponseObject, true, true)
 	write("finance.payout_destinations.verify", http.MethodPost, "/wlt/payout-destinations/{actorType}/{actorId}/verify", "finance.payout_destinations.verify", "payoutDestination", FinanceResponseObject, true, true)
-	write("finance.payout_destinations.deactivate", http.MethodPost, "/wlt/payout-destinations/{actorType}/{actorId}/deactivate", "finance.payout_destinations.deactivate", "payoutDestination", FinanceResponseObject, true, true)
+	write("finance.payout_destinations.deactivate", http.MethodPost, "/wlt/payout-destinations/{actorType}/{actorId}/deactivate", "finance.payout_destinations.deactivate", "", FinanceResponseNoContent, true, true)
 	write("finance.reconciliation.assign", http.MethodPost, "/wlt/reconciliation-cases/{caseId}/assign", "finance.manage", "reconciliationCase", FinanceResponseObject, true, true)
 	write("finance.reconciliation.resolve", http.MethodPost, "/wlt/reconciliation-cases/{caseId}/resolve", "finance.manage", "reconciliationCase", FinanceResponseObject, true, true)
 	write("finance.captain_collateral.allocate", http.MethodPost, "/wlt/captain-collateral/allocate", "finance.manage", "collateral", FinanceResponseObject, true, true)

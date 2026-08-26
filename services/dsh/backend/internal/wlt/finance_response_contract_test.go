@@ -82,6 +82,31 @@ func TestNormalizeFinanceResponseRejectsMalformedErrorEnvelope(t *testing.T) {
 	}
 }
 
+func TestNormalizeFinanceResponseEnforcesCanonicalNoContent(t *testing.T) {
+	op, err := Registry.GetOperation("finance.payout_destinations.deactivate")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status, body, err := normalizeFinanceResponse(op, http.StatusNoContent, "", nil); err != nil || status != http.StatusNoContent || len(body) != 0 {
+		t.Fatalf("expected canonical 204 no-content response, got status=%d body=%q err=%v", status, body, err)
+	}
+	for _, tc := range []struct {
+		name        string
+		status      int
+		contentType string
+		body        string
+	}{
+		{name: "wrong success status", status: http.StatusOK, contentType: "application/json"},
+		{name: "body on no-content status", status: http.StatusNoContent, contentType: "application/json", body: `{"payoutDestination":{}}`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, _, err := normalizeFinanceResponse(op, tc.status, tc.contentType, []byte(tc.body)); err == nil {
+				t.Fatal("expected no-content contract rejection")
+			}
+		})
+	}
+}
+
 func TestExecuteFinanceRejectsOversizedBody(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")

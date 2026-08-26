@@ -73,3 +73,10 @@ func TestExecuteFinanceWriteUsesRegistryMethodAndPath(t *testing.T) {
 		t.Fatalf("request = %s %s", gotMethod, gotPath)
 	}
 }
+
+func TestExecuteFinanceRejectsUnregisteredOperation(t *testing.T) {
+	c := NewClient("https://wlt.internal", "service-token")
+	if _, _, err := c.ExecuteFinanceRead(trustedMutationTestContext(), "finance.retired.transport", nil, nil, "corr-1", "operator-1"); err == nil || !strings.Contains(err.Error(), "unregistered finance operation") {
+		t.Fatalf("expected unregistered operation rejection, got %v", err)
+	}
+}

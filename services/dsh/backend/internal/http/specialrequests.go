@@ -329,16 +329,15 @@ func (s *protectedStoreServer) handleApproveSpecialRequestQuote(w http.ResponseW
 	}
 
 	paymentSession, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
-		SpecialRequestID:  reqID,
-		OperatorContextID: actor.OperatorContextID,
-		ClientID:          actor.ID,
-		StoreID:           "dsh-special-requests",
-		PaymentMethod:     "official_wallet",
-		PricingQuoteID:    *req.WltQuoteID,
-		AmountMinorUnits:  *req.WltQuoteAmountMinorUnits,
-		Currency:          *req.WltQuoteCurrency,
-		CorrelationID:     r.Header.Get("X-Correlation-ID"),
-		IdempotencyKey:    r.Header.Get("Idempotency-Key"),
+		SpecialRequestID: reqID,
+		ClientID:         actor.ID,
+		StoreID:          "dsh-special-requests",
+		PaymentMethod:    "official_wallet",
+		PricingQuoteID:   *req.WltQuoteID,
+		AmountMinorUnits: *req.WltQuoteAmountMinorUnits,
+		Currency:         *req.WltQuoteCurrency,
+		CorrelationID:    r.Header.Get("X-Correlation-ID"),
+		IdempotencyKey:   r.Header.Get("Idempotency-Key"),
 	})
 	if err != nil {
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_HANDOFF_UNAVAILABLE", "WLT payment-session handoff is unavailable")

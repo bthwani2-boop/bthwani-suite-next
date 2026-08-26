@@ -36,7 +36,7 @@ func HandleCalculateQuote(db *sql.DB) http.HandlerFunc {
 		}
 		operatorContextID, err := shared.RequireOperatorContext(r.Context())
 		if err != nil {
-			shared.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_BOUND", "server-owned financial compatibility scope is unavailable")
+			shared.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_BOUND", "server-owned financial OperatorContext is unavailable")
 			return
 		}
 		issued, err := pricing.IssueCheckoutQuote(r.Context(), db, operatorContextID, req)
@@ -52,7 +52,7 @@ func HandleGetCheckoutQuote(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		operatorContextID, err := shared.RequireOperatorContext(r.Context())
 		if err != nil {
-			shared.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_BOUND", "server-owned financial compatibility scope is unavailable")
+			shared.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_BOUND", "server-owned financial OperatorContext is unavailable")
 			return
 		}
 		quote, err := pricing.LoadCheckoutQuoteByIntent(r.Context(), db, operatorContextID, r.PathValue("checkoutIntentId"))

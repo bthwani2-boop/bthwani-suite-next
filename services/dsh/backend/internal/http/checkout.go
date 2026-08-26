@@ -471,7 +471,7 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 	}
 
 	paymentSession, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
-		CheckoutIntentID: intent.ID, OperatorContextID: actor.OperatorContextID, ClientID: actor.ID,
+		CheckoutIntentID: intent.ID, ClientID: actor.ID,
 		StoreID: intent.StoreID, PaymentMethod: string(intent.PaymentMethod),
 		AmountMinorUnits: pricing.TotalMinorUnits, Currency: pricing.Currency,
 		CartSnapshotHash: canonicalQuote.CartSnapshotHash,
@@ -761,17 +761,16 @@ func (s *protectedStoreServer) handleReconcileCheckoutIntent(w http.ResponseWrit
 		return
 	}
 	session, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
-		CheckoutIntentID:  intent.ID,
-		OperatorContextID: intent.OperatorContextID,
-		ClientID:          intent.ClientID,
-		StoreID:           intent.StoreID,
-		PaymentMethod:     string(intent.PaymentMethod),
-		AmountMinorUnits:  pricing.TotalMinorUnits,
-		Currency:          pricing.Currency,
-		CartSnapshotHash:  canonicalQuote.CartSnapshotHash,
-		PricingQuoteID:    canonicalQuote.ID,
-		CorrelationID:     correlationID,
-		IdempotencyKey:    "dsh-checkout-intent:" + intent.ID,
+		CheckoutIntentID: intent.ID,
+		ClientID:         intent.ClientID,
+		StoreID:          intent.StoreID,
+		PaymentMethod:    string(intent.PaymentMethod),
+		AmountMinorUnits: pricing.TotalMinorUnits,
+		Currency:         pricing.Currency,
+		CartSnapshotHash: canonicalQuote.CartSnapshotHash,
+		PricingQuoteID:   canonicalQuote.ID,
+		CorrelationID:    correlationID,
+		IdempotencyKey:   "dsh-checkout-intent:" + intent.ID,
 	})
 	if err != nil {
 		if wlt.IsPaymentSessionOutcomeUnknown(err) {

@@ -219,27 +219,6 @@ func getActiveGovernedCommissionPolicyTx(
 	return scanGovernedCommissionPolicy(tx.QueryRowContext(ctx, query, operatorContextID, commissionType, sourceType, actorType))
 }
 
-// UpsertGovernedCommissionPolicy is retained as a compatibility adapter only.
-// All writes converge on the OperatorContext-local idempotent implementation.
-func UpsertGovernedCommissionPolicy(
-	ctx context.Context,
-	db *sql.DB,
-	input UpsertGovernedCommissionPolicyInput,
-	correlationID string,
-) (*GovernedCommissionPolicy, error) {
-	correlationID = strings.TrimSpace(correlationID)
-	if correlationID == "" {
-		return nil, fmt.Errorf("correlationId is required")
-	}
-	return UpsertGovernedCommissionPolicyIdempotent(
-		ctx,
-		db,
-		input,
-		correlationID,
-		"compat-commission-policy:"+correlationID,
-	)
-}
-
 func maxInt64(a, b int64) int64 {
 	if a > b {
 		return a

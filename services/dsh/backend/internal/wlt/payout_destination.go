@@ -6,19 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 )
 
 var ErrPayoutDestinationNotFound = errors.New("WLT payout destination not found")
-
-// partnerPayoutDestinationPath addresses the canonical WLT typed payout
-// destination resource for a partner. WLT retired the partner-only
-// /wlt/payout-destinations/{partnerId} shape; the governed contract is keyed by
-// {actorType}/{actorId}, and "partner" is one actor type among several.
-func partnerPayoutDestinationPath(partnerID string) string {
-	return "/wlt/payout-destinations/partner/" + url.PathEscape(partnerID)
-}
 
 // PayoutDestinationRef mirrors the canonical WLT PayoutDestination response.
 type PayoutDestinationRef struct {
@@ -40,41 +31,33 @@ type payoutDestinationEnvelope struct {
 }
 
 func (c *Client) GetPayoutDestination(ctx context.Context, partnerID string) (*PayoutDestinationRef, error) {
-	if !c.Configured() {
-		return nil, fmt.Errorf("WLT payout-destination readback is not configured")
-	}
 	partnerID = strings.TrimSpace(partnerID)
 	if partnerID == "" {
 		return nil, fmt.Errorf("partner is required for payout readback")
 	}
-	path := partnerPayoutDestinationPath(partnerID)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
+	status, body, err := c.ExecuteFinanceRead(
+		ctx,
+		"finance.payout_destinations.read",
+		map[string]string{"actorType": "partner", "actorId": partnerID},
+		nil,
+		"",
+		"",
+	)
 	if err != nil {
-		return nil, fmt.Errorf("build WLT payout readback request: %w", err)
+		return nil, err
 	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
-	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
-		return nil, fmt.Errorf("prepare WLT payout readback OperatorContext: %w", err)
-	}
-	response, err := c.http.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("call WLT payout readback: %w", err)
-	}
-	defer response.Body.Close()
-	if response.StatusCode == http.StatusNotFound {
+	if status == http.StatusNotFound {
 		return nil, ErrPayoutDestinationNotFound
 	}
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return nil, fmt.Errorf("WLT payout readback returned HTTP %d", response.StatusCode)
+	if status < 200 || status >= 300 {
+		return nil, fmt.Errorf("WLT payout readback returned HTTP %d", status)
 	}
-	return decodePayoutDestinationRef(response, partnerID)
+	return decodePayoutDestinationRef(body, partnerID)
 }
 
-func decodePayoutDestinationRef(response *http.Response, partnerID string) (*PayoutDestinationRef, error) {
+func decodePayoutDestinationRef(body []byte, partnerID string) (*PayoutDestinationRef, error) {
 	var envelope payoutDestinationEnvelope
-	if err := json.NewDecoder(response.Body).Decode(&envelope); err != nil {
+	if err := json.Unmarshal(body, &envelope); err != nil {
 		return nil, fmt.Errorf("decode WLT payout destination response: %w", err)
 	}
 	ref := envelope.PayoutDestination
@@ -91,43 +74,36 @@ func decodePayoutDestinationRef(response *http.Response, partnerID string) (*Pay
 	return &ref, nil
 }
 
-func (c *Client) DeactivatePayoutDestination(ctx context.Context, partnerID, actorID, correlationID, idempotencyKey string) error {
-	if !c.Configured() {
-		return fmt.Errorf("WLT payout-destination handoff is not configured")
-	}
+func (c *Client) DeactivatePayoutDestination(ctx context.Context, partnerID, actorID, reason, evidenceReference, correlationID, idempotencyKey string) error {
 	partnerID = strings.TrimSpace(partnerID)
 	actorID = strings.TrimSpace(actorID)
-	if partnerID == "" || actorID == "" {
-		return fmt.Errorf("partner and actor are required to deactivate a payout destination")
+	reason = strings.TrimSpace(reason)
+	evidenceReference = strings.TrimSpace(evidenceReference)
+	if partnerID == "" || actorID == "" || reason == "" || evidenceReference == "" {
+		return fmt.Errorf("partner, actor, reason and evidence reference are required to deactivate a payout destination")
 	}
-	path := partnerPayoutDestinationPath(partnerID) + "/deactivate"
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, nil)
+	body, err := json.Marshal(map[string]string{
+		"reason":            reason,
+		"evidenceReference": evidenceReference,
+	})
 	if err != nil {
-		return fmt.Errorf("build WLT payout destination deactivation request: %w", err)
+		return fmt.Errorf("encode WLT payout destination deactivation request: %w", err)
 	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Authorization", "Bearer "+c.serviceToken)
-	req.Header.Set("X-Service-Caller", "dsh")
-	if _, err := c.setDelegatedOperatorContextHeader(req, ""); err != nil {
-		return fmt.Errorf("prepare WLT payout destination deactivation OperatorContext: %w", err)
-	}
-	req.Header.Set("X-Delegated-Principal-ID", actorID)
 	if strings.TrimSpace(correlationID) == "" {
 		correlationID = deterministicMutationKey("partner-payout-deactivate-correlation", partnerID, actorID)
 	}
 	if strings.TrimSpace(idempotencyKey) == "" {
 		idempotencyKey = deterministicMutationKey("partner-payout-deactivate", partnerID, actorID)
 	}
-	if err := setRequiredMutationHeaders(req, correlationID, idempotencyKey); err != nil {
-		return fmt.Errorf("prepare WLT payout destination deactivation request: %w", err)
-	}
-	response, err := c.http.Do(req)
-	if err != nil {
-		return fmt.Errorf("call WLT payout destination deactivation: %w", err)
-	}
-	defer response.Body.Close()
-	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return fmt.Errorf("WLT payout destination deactivation returned HTTP %d", response.StatusCode)
-	}
-	return nil
+	_, _, err = c.ExecuteFinanceWrite(
+		ctx,
+		"finance.payout_destinations.deactivate",
+		map[string]string{"actorType": "partner", "actorId": partnerID},
+		body,
+		correlationID,
+		idempotencyKey,
+		"",
+		actorID,
+	)
+	return err
 }

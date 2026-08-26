@@ -92,12 +92,16 @@ func (r *Repository) StoreIdempotentResponse(ctx context.Context, actorID, opera
 
 // ---- audit (mirroring dsh_store_action_audit) ----
 
-// RecordAudit is best-effort for reads but called inside the write paths;
-// failures propagate so a state change is never silently unaudited.
-func (r *Repository) RecordAudit(ctx context.Context, actorID, actorRole, targetActorID, action string, fromState, toState any, reason, correlationID string) error {
-	operatorContextID, err := operatorContextID(ctx)
-	if err != nil {
-		return err
+// RecordAudit inserts a durable audit record for a material mutation.
+// It is idempotent per (operator_context_id, actor_id, operation, idempotency_key).
+// The caller MUST provide a non-empty correlation_id for material mutations.
+// Failures propagate so a state change is never silently unaudited.
+func (r *Repository) RecordAudit(ctx context.Context, operatorContextID, actorID, actorRole, targetActorID, action, operation string, fromState, toState any, reason, correlationID, idempotencyKey string) error {
+	if operatorContextID == "" {
+		return ErrOperatorContextRequired
+	}
+	if correlationID == "" && action != "provider.document_linked" && action != "field_agent.self_updated" {
+		return errors.New("correlation_id is required for material mutation audit")
 	}
 	fromJSON, err := marshalNullable(fromState)
 	if err != nil {
@@ -109,9 +113,11 @@ func (r *Repository) RecordAudit(ctx context.Context, actorID, actorRole, target
 	}
 	_, err = r.db.ExecContext(ctx, `
 		INSERT INTO workforce_action_audit
-			(operator_context_id, actor_id, actor_role, target_actor_id, action, from_state, to_state, reason, correlation_id)
-		VALUES ($1, $2, $3, NULLIF($4, ''), $5, $6::jsonb, $7::jsonb, NULLIF($8, ''), NULLIF($9, ''))`,
-		operatorContextID, actorID, actorRole, targetActorID, action, fromJSON, toJSON, reason, correlationID)
+			(operator_context_id, actor_id, actor_role, target_actor_id, action, operation, from_state, to_state, reason, correlation_id, idempotency_key)
+		VALUES ($1, $2, $3, NULLIF($4, ''), $5, $6, $7::jsonb, $8::jsonb, NULLIF($9, ''), NULLIF($10, ''), NULLIF($11, ''))
+		ON CONFLICT (operator_context_id, actor_id, operation, idempotency_key)
+		WHERE idempotency_key IS NOT NULL AND BTRIM(idempotency_key) <> '' DO NOTHING`,
+		operatorContextID, actorID, actorRole, targetActorID, action, operation, fromJSON, toJSON, reason, correlationID, idempotencyKey)
 	return err
 }
 

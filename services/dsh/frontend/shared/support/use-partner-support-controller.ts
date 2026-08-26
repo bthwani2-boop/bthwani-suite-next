@@ -121,7 +121,7 @@ export function usePartnerSupportController(enabled = true) {
     const attempt = await getOrCreatePartnerTicketAttempt(input);
     const ticket = await runMutation(() => createPartnerSupportTicket(input, attempt.context));
     if (!ticket) return false;
-    await clearPartnerTicketAttempt(attempt.fingerprint);
+    await clearPartnerTicketAttempt();
     setSelectedTicketId(ticket.id);
     await loadTickets();
     await loadDetail(ticket.id);
@@ -142,7 +142,7 @@ export function usePartnerSupportController(enabled = true) {
       attempt.context,
     ));
     if (!message) return false;
-    await clearPartnerMessageAttempt(ticketId, attempt.fingerprint);
+    await clearPartnerMessageAttempt(ticketId);
     await loadDetail(ticketId);
     return true;
   }, [loadDetail, runMutation, selectedTicketId]);

@@ -209,9 +209,9 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 		return Person{}, false, err
 	}
 
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"field_agent.created", nil, person, "", correlationID); err != nil {
-		log.Printf("[workforce] RecordAudit error in CreateFieldAgent: %v", err)
+	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
+		"field_agent.created", "create_field_agent", nil, person, "", correlationID, idempotencyKey); err != nil {
+		return Person{}, false, err
 	}
 	if encoded, err := json.Marshal(person); err == nil {
 		_ = s.repo.StoreIdempotentResponse(ctx, operator.ActorID, "create_field_agent", idempotencyKey, requestHash, encoded)
@@ -303,9 +303,9 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 		compensate()
 		return Person{}, false, err
 	}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"captain.created", nil, person, "", correlationID); err != nil {
-		log.Printf("[workforce] RecordAudit error in CreateCaptain: %v", err)
+	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
+		"captain.created", "create_captain", nil, person, "", correlationID, idempotencyKey); err != nil {
+		return Person{}, false, err
 	}
 	if encoded, err := json.Marshal(person); err == nil {
 		_ = s.repo.StoreIdempotentResponse(ctx, operator.ActorID, "create_captain", idempotencyKey, requestHash, encoded)
@@ -388,8 +388,8 @@ func (s *Service) CreateEmployee(ctx context.Context, operator Operator, input C
 		compensate()
 		return Person{}, false, err
 	}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"employee.created", nil, person, "", correlationID); err != nil {
+	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
+		"employee.created", "create_employee", nil, person, "", correlationID, idempotencyKey); err != nil {
 		log.Printf("[workforce] RecordAudit error in CreateEmployee: %v", err)
 	}
 	if encoded, err := json.Marshal(person); err == nil {
@@ -437,8 +437,8 @@ func (s *Service) UpdateFieldAgent(ctx context.Context, operator Operator, actor
 	if err != nil {
 		return Person{}, err
 	}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"field_agent.updated", before, person, "", correlationID); err != nil {
+	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
+		"field_agent.updated", "update_field_agent", before, person, "", correlationID, correlationID); err != nil {
 		log.Printf("[workforce] RecordAudit error in UpdateFieldAgent: %v", err)
 	}
 	return person, nil
@@ -472,8 +472,8 @@ func (s *Service) UpdateCaptain(ctx context.Context, operator Operator, actorID 
 	if err != nil {
 		return Person{}, err
 	}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"captain.updated", before, person, "", correlationID); err != nil {
+	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
+		"captain.updated", "update_captain", before, person, "", correlationID, correlationID); err != nil {
 		log.Printf("[workforce] RecordAudit error in UpdateCaptain: %v", err)
 	}
 	return person, nil
@@ -493,8 +493,8 @@ func (s *Service) UpdateEmployee(ctx context.Context, operator Operator, actorID
 	if err != nil {
 		return Person{}, err
 	}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"employee.updated", before, person, "", correlationID); err != nil {
+	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
+		"employee.updated", "update_employee", before, person, "", correlationID, correlationID); err != nil {
 		log.Printf("[workforce] RecordAudit error in UpdateEmployee: %v", err)
 	}
 	return person, nil
@@ -521,8 +521,8 @@ func (s *Service) Suspend(ctx context.Context, operator Operator, actorID string
 		_, _ = s.repo.SetEngagementStatus(ctx, actorID, before.EngagementStatus, person.Version)
 		return Person{}, err
 	}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"workforce.suspended", before, person, reason, correlationID); err != nil {
+	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
+		"workforce.suspended", "suspend_workforce_actor", before, person, reason, correlationID, correlationID); err != nil {
 		log.Printf("[workforce] RecordAudit error in Suspend: %v", err)
 	}
 	return person, nil
@@ -548,8 +548,8 @@ func (s *Service) Reactivate(ctx context.Context, operator Operator, actorID str
 		_, _ = s.repo.SetEngagementStatus(ctx, actorID, "suspended", person.Version)
 		return Person{}, err
 	}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"workforce.reactivated", before, person, reason, correlationID); err != nil {
+	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
+		"workforce.reactivated", "reactivate_workforce_actor", before, person, reason, correlationID, correlationID); err != nil {
 		log.Printf("[workforce] RecordAudit error in Reactivate: %v", err)
 	}
 	return person, nil
@@ -607,8 +607,8 @@ func (s *Service) IssueActivation(ctx context.Context, operator Operator, actorI
 	if err != nil {
 		return identityclient.ActivationCode{}, err
 	}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"workforce.activation_issued", nil, map[string]string{"activationId": code.ActivationID}, "", correlationID); err != nil {
+	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
+		"workforce.activation_issued", "issue_activation", nil, map[string]string{"activationId": code.ActivationID}, "", correlationID, idempotencyKey); err != nil {
 		log.Printf("[workforce] RecordAudit error in IssueActivation: %v", err)
 	}
 	return code, nil
@@ -648,8 +648,8 @@ func (s *Service) RevokeActivation(ctx context.Context, operator Operator, actor
 	if err := s.identity.RevokeActivations(ctx, actorID); err != nil {
 		return err
 	}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"workforce.activation_revoked", nil, nil, "", correlationID); err != nil {
+	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
+		"workforce.activation_revoked", "revoke_activation", nil, nil, "", correlationID, correlationID); err != nil {
 		log.Printf("[workforce] RecordAudit error in RevokeActivation: %v", err)
 	}
 	return nil
@@ -692,8 +692,12 @@ func (s *Service) UpdateMe(ctx context.Context, actorID string, input UpdateSelf
 	if err != nil {
 		return MeView{}, err
 	}
-	if err := s.repo.RecordAudit(ctx, actorID, "field", actorID,
-		"field_agent.self_updated", before.FieldProfile, person.FieldProfile, "", correlationID); err != nil {
+	contextID, contextErr := operatorContextID(ctx)
+	if contextErr != nil {
+		return MeView{}, contextErr
+	}
+	if err := s.repo.RecordAudit(ctx, contextID, actorID, "field", actorID,
+		"field_agent.self_updated", "update_self", before.FieldProfile, person.FieldProfile, "", correlationID, correlationID); err != nil {
 		return MeView{}, err
 	}
 	view := MeView{Person: person, ProfileComplete: selfFieldsComplete(person)}

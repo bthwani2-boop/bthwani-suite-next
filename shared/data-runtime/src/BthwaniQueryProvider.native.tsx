@@ -1,13 +1,15 @@
-import { bthwaniKeyValueStorage as nativeStorage } from "./native-data-adapters";
+import { bthwaniCacheStorage, bthwaniDurableStorage } from "./native-data-adapters";
 import { configureNativeBthwaniConnectivityAdapter } from "./native-connectivity-adapter";
-import { configureBthwaniStorageAdapter } from "./storage-adapter.ts";
+import { configureBthwaniCacheStorage, configureBthwaniDurableStorage } from "./storage-adapter.ts";
 import {
   BthwaniQueryProvider as BthwaniQueryProviderBase,
   type BthwaniQueryProviderProps,
 } from "./BthwaniQueryProvider.tsx";
 
-configureBthwaniStorageAdapter(nativeStorage);
+configureBthwaniCacheStorage(bthwaniCacheStorage);
+configureBthwaniDurableStorage(bthwaniDurableStorage);
 configureNativeBthwaniConnectivityAdapter();
 
 export { BthwaniQueryProviderBase as BthwaniQueryProvider };
 export type { BthwaniQueryProviderProps };
+export { bthwaniCacheStorage, bthwaniDurableStorage };

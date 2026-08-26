@@ -64,6 +64,10 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 		routes = append(routes, registeredRoute{Pattern: pattern, Kind: routeMutation, ServiceAuth: true})
 		mux.HandleFunc(pattern, gate(requireWorkforceMutationServiceAuth(killGate(handler))))
 	})
+	workforceRead := routeRegistrar(func(pattern string, handler http.HandlerFunc) {
+		routes = append(routes, registeredRoute{Pattern: pattern, Kind: routeRead, ServiceAuth: true})
+		mux.HandleFunc(pattern, requireWorkforceMutationServiceAuth(handler))
+	})
 	providerMutation := routeRegistrar(func(pattern string, handler http.HandlerFunc) {
 		routes = append(routes, registeredRoute{Pattern: pattern, Kind: routeMutation})
 		mux.HandleFunc(pattern, gate(killGate(handler)))
@@ -137,6 +141,8 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 
 	workforceMutation("POST /wlt/provider-penalties", penalty.HandlePost(db))
 	workforceMutation("POST /wlt/provider-penalties/{penaltyId}/reverse", penalty.HandleReverse(db))
+	workforceRead("GET /wlt/provider-penalties/by-incident/{incidentId}", penalty.HandleGetByIncident(db))
+	workforceRead("GET /wlt/provider-penalties/{penaltyId}", penalty.HandleGetByID(db))
 
 	read("GET /wlt/ledger/entries/{entryId}", ledger.HandleGetLedgerEntry(db))
 	read("GET /wlt/ledger/entries", ledger.HandleListLedgerEntries(db))

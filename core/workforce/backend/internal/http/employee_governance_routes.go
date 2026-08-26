@@ -64,13 +64,12 @@ func (s *employeeGovernanceServer) put(w http.ResponseWriter, r *http.Request, i
 	if !decodeJSON(w, r, &input) {
 		return
 	}
-	before, _ := s.repo.EmployeeGovernanceByActorID(r.Context(), actorID)
-	profile, err := s.repo.UpsertEmployeeGovernance(r.Context(), actorID, identity.Subject, input)
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	profile, err := s.repo.UpsertEmployeeGovernance(r.Context(), actorID, identity.Subject, firstRole(identity), correlationID, idempotencyKey, input)
 	if err != nil {
 		writeWorkforceError(w, err)
 		return
 	}
-	_ = s.repo.RecordAudit(r.Context(), identity.Subject, firstRole(identity), actorID,
-		"employee.governance.updated", before, profile, input.Notes, r.Header.Get("X-Correlation-ID"))
 	sendJSON(w, http.StatusOK, map[string]any{"employeeGovernance": profile})
 }

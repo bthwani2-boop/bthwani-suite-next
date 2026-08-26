@@ -242,7 +242,7 @@ func (r *Repository) OperationalCoreByActorID(ctx context.Context, actorID strin
 	return core, nil
 }
 
-func (r *Repository) PatchOperationalCore(ctx context.Context, actorID, operatorID string, input OperationalCorePatch) (ProviderOperationalCore, error) {
+func (r *Repository) PatchOperationalCore(ctx context.Context, actorID, operatorID, operatorRole, correlationID, idempotencyKey string, input OperationalCorePatch) (ProviderOperationalCore, error) {
 	operatorContextID, err := operatorContextID(ctx)
 	if err != nil {
 		return ProviderOperationalCore{}, err
@@ -453,7 +453,7 @@ func EvaluateProviderActivationReadiness(person Person, core ProviderOperational
 	return ActivationReadiness{Ready: len(missing) == 0, Missing: missing}
 }
 
-func (r *Repository) CreateAvailabilityNotice(ctx context.Context, actorID string, input CreateAvailabilityNoticeInput) (AvailabilityNotice, error) {
+func (r *Repository) CreateAvailabilityNotice(ctx context.Context, actorID, operatorID, operatorRole, correlationID, idempotencyKey string, input CreateAvailabilityNoticeInput) (AvailabilityNotice, error) {
 	operatorContextID, err := operatorContextID(ctx)
 	if err != nil || !oneOf(input.NoticeType, "planned_unavailability", "immediate_unavailability", "short_break", "emergency", "temporary_restriction") || input.StartsAt.IsZero() || input.EndsAt.IsZero() || !input.EndsAt.After(input.StartsAt) || strings.TrimSpace(input.OperatorContextID) != operatorContextID {
 		return AvailabilityNotice{}, ErrInvalidInput
@@ -469,7 +469,7 @@ func (r *Repository) CreateAvailabilityNotice(ctx context.Context, actorID strin
 	return n, err
 }
 
-func (r *Repository) UpdateAvailabilityNotice(ctx context.Context, actorID, noticeID string, input UpdateAvailabilityNoticeInput) (AvailabilityNotice, error) {
+func (r *Repository) UpdateAvailabilityNotice(ctx context.Context, actorID, noticeID, operatorID, operatorRole, correlationID, idempotencyKey string, input UpdateAvailabilityNoticeInput) (AvailabilityNotice, error) {
 	operatorContextID, err := operatorContextID(ctx)
 	if err != nil || strings.TrimSpace(input.OperatorContextID) != operatorContextID || input.ExpectedSourceVersion < 1 ||
 		!oneOf(input.NoticeType, "planned_unavailability", "immediate_unavailability", "short_break", "emergency", "temporary_restriction") ||
@@ -527,7 +527,7 @@ func (r *Repository) ListAvailabilityNotices(ctx context.Context, actorID string
 	return out, rows.Err()
 }
 
-func (r *Repository) CreateProviderIncident(ctx context.Context, reporterID string, input CreateProviderIncidentInput) (ProviderIncident, error) {
+func (r *Repository) CreateProviderIncident(ctx context.Context, reporterID, operatorID, operatorRole, correlationID, idempotencyKey string, input CreateProviderIncidentInput) (ProviderIncident, error) {
 	operatorContextID, err := operatorContextID(ctx)
 	if err != nil {
 		return ProviderIncident{}, err
@@ -620,7 +620,7 @@ func (r *Repository) ListProviderIncidents(ctx context.Context, actorID string, 
 	return out, nil
 }
 
-func (r *Repository) SubmitProviderIncidentAppeal(ctx context.Context, actorID, incidentID, note string) (ProviderIncident, error) {
+func (r *Repository) SubmitProviderIncidentAppeal(ctx context.Context, actorID, incidentID, operatorID, operatorRole, correlationID, idempotencyKey, note string) (ProviderIncident, error) {
 	operatorContextID, err := operatorContextID(ctx)
 	if err != nil {
 		return ProviderIncident{}, err

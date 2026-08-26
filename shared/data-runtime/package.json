@@ -10,7 +10,11 @@
     ".": "./src/index.ts",
     "./native-data-adapters": "./src/native-data-adapters.ts",
     "./connectivity-adapter": "./src/connectivity-adapter.ts",
-    "./storage-adapter": "./src/storage-adapter.ts"
+    "./storage-adapter": "./src/storage-adapter.ts",
+    "./mutation-identity-scope": "./src/mutation-identity-scope.ts",
+    "./installation-id": "./src/installation-id.ts",
+    "./current-actor": "./src/current-actor.ts",
+    "./identity-bridge": "./src/identity-bridge.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

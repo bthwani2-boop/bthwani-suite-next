@@ -266,7 +266,8 @@ test("control-panel uses owner-level platform bindings without external package 
   assert.doesNotMatch(storage, /@react-native-async-storage\/async-storage/);
   const nativeProvider = read("shared/data-runtime/src/BthwaniQueryProvider.native.tsx");
   assert.match(nativeProvider, /native-data-adapters/);
-  assert.match(nativeProvider, /configureBthwaniStorageAdapter/);
+  assert.match(nativeProvider, /configureBthwaniCacheStorage/);
+  assert.match(nativeProvider, /configureBthwaniDurableStorage/);
   const connectivity = read("shared/data-runtime/src/connectivity-adapter.ts");
   assert.match(connectivity, /navigator\.onLine/);
   assert.match(connectivity, /addEventListener\("online"/);

@@ -56,7 +56,6 @@ func TestDailyCloseTotalsComeFromTheCanonicalLedger(t *testing.T) {
 
 	close, err := ExecuteDailyFinanceClose(ctx, db, ExecuteDailyCloseInput{
 		BusinessDate: businessDate,
-		OperatorID:   "finance-day-closer",
 	}, "close-corr")
 	if err != nil {
 		t.Fatalf("execute daily close: %v", err)
@@ -72,7 +71,6 @@ func TestDailyCloseTotalsComeFromTheCanonicalLedger(t *testing.T) {
 	// A business date closes exactly once.
 	if _, err := ExecuteDailyFinanceClose(ctx, db, ExecuteDailyCloseInput{
 		BusinessDate: businessDate,
-		OperatorID:   "finance-day-closer",
 	}, "close-corr-2"); err == nil {
 		t.Fatal("expected a second close of the same business date to be refused")
 	}
@@ -135,7 +133,6 @@ func TestDailyCloseBlocksOnUnverifiedExecution(t *testing.T) {
 
 	_, err = ExecuteDailyFinanceClose(ctx, db, ExecuteDailyCloseInput{
 		BusinessDate: time.Now().UTC().Format("2006-01-02"),
-		OperatorID:   "finance-day-closer",
 	}, "close-block-corr")
 	if err == nil {
 		t.Fatal("expected the close to be blocked by unverified external execution")

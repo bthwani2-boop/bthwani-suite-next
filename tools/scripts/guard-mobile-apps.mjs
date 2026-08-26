@@ -288,7 +288,7 @@ for (const [key, app] of Object.entries(manifest.apps)) {
   if (appRoot.includes('defaultTheme: "light"') || appRoot.includes('defaultTheme: "dark"')) {
     fail(`${key}: app-owned fixed mobile theme is forbidden`);
   }
-  for (const marker of ["persistenceKey", "createBthwaniOfflineMutationQueue", "clearBthwaniQueryClient", "registerIdentityBeforeSessionEndHook"]) {
+  for (const marker of ["persistenceKey", "clearBthwaniQueryClient", "registerIdentityBeforeSessionEndHook"]) {
     if (!appRoot.includes(marker)) fail(`${key}: OperatorContext-safe data runtime marker missing: ${marker}`);
   }
   if ((key === "app-captain" || key === "app-field") && !appRoot.includes("wireBatteryAwareQueue")) {
@@ -325,7 +325,6 @@ if (workspace.includes("ignoredBuiltDependencies")) fail("pnpm-workspace.yaml mu
 
 for (const file of [
   "shared/data-runtime/src/persistence.ts",
-  "shared/data-runtime/src/offline-mutation-queue.ts",
 ]) requireFile(file);
 
 console.log(`PASS: mobile product features and native Expo/EAS capabilities are centrally guarded for ${profile}/${platform}`);

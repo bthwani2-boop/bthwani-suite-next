@@ -3,7 +3,6 @@ package http
 import (
 	"encoding/json"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"dsh-api/internal/store"
@@ -23,10 +22,6 @@ func resolveManagedPayoutDestinationActor(w http.ResponseWriter, r *http.Request
 		return "", "", false
 	}
 	return actorType, actorID, true
-}
-
-func managedPayoutDestinationPath(actorType, actorID string) string {
-	return "/wlt/payout-destinations/" + url.PathEscape(actorType) + "/" + url.PathEscape(actorID)
 }
 
 func writeManagedPayoutDestinationResponse(w http.ResponseWriter, status int, body []byte, err error) {

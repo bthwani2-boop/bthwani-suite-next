@@ -255,7 +255,7 @@ test("checkout carries the confirmed cart version into the canonical DSH OCC con
   );
   assertMarkers(
     "services/dsh/frontend/shared/order-truth/use-order-truth-controller.ts",
-    ["fetchClientOrderTruthDetail(created.id, token)", "clearOrderTruthAttempt(attempt.fingerprint)"],
+    ["fetchClientOrderTruthDetail(created.id, token)", "clearOrderTruthAttempt()"],
   );
 });
 
@@ -338,7 +338,7 @@ test("subscription mutations persist one governed attempt across retries and res
   );
   assertMarkers(
     "services/dsh/frontend/shared/marketing/subscription-mutation-attempt.ts",
-    ["@bthwani/data-runtime", "bthwaniKeyValueStorage", "LATEST_PURCHASE_KEY", "AsyncStorage.setItem", "AsyncStorage.removeItem"],
+    ["@bthwani/data-runtime", "bthwaniDurableStorage", "LATEST_PURCHASE_KEY"],
   );
 });
 

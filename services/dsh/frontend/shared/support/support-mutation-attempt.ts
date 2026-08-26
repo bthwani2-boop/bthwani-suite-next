@@ -1,4 +1,8 @@
-import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/storage-adapter";
+import { bthwaniDurableStorage } from "@bthwani/data-runtime/storage-adapter";
+import {
+  MutationIdentityScopeError,
+  resolveMutationIdentityScope,
+} from "@bthwani/data-runtime/mutation-identity-scope";
 import { secureRandomId } from "../_kernel/secure-random.ts";
 
 export type SupportMutationContext = {
@@ -9,17 +13,23 @@ export type SupportMutationContext = {
 type StoredAttempt = {
   readonly fingerprint: string;
   readonly context: SupportMutationContext;
+  readonly scope: {
+    readonly actorId: string;
+    readonly installationId: string;
+    readonly entityId: string;
+  };
 };
 
 type SupportMutationScope = "actor" | "client" | "operator" | "partner";
 
-const PREFIX = "@bthwani/dsh/support-mutation/v1/";
+const PREFIX = "@bthwani/dsh/support-mutation/v2/";
+const PREFIX_LEGACY = "@bthwani/dsh/support-mutation/v1/";
 
 function nextPart(): string {
   return secureRandomId();
 }
 
-function keyFor(scope: string, operation: string, entityId?: string): string {
+function keyFor(scope: SupportMutationScope, operation: string, entityId?: string): string {
   return `${PREFIX}${scope}/${operation}/${entityId ?? "root"}`;
 }
 
@@ -28,9 +38,12 @@ function parseStored(raw: string | null): StoredAttempt | null {
   try {
     const value = JSON.parse(raw) as Partial<StoredAttempt>;
     if (
-      typeof value.fingerprint === "string" &&
-      typeof value.context?.idempotencyKey === "string" &&
-      typeof value.context?.correlationId === "string"
+      typeof value.fingerprint === "string"
+      && typeof value.context?.idempotencyKey === "string"
+      && typeof value.context?.correlationId === "string"
+      && typeof value.scope?.actorId === "string"
+      && typeof value.scope?.installationId === "string"
+      && typeof value.scope?.entityId === "string"
     ) {
       return value as StoredAttempt;
     }
@@ -47,17 +60,41 @@ export async function getOrCreateSupportMutationAttempt(input: {
   readonly fingerprint: string;
 }): Promise<StoredAttempt> {
   const storageKey = keyFor(input.scope, input.operation, input.entityId);
-  const existing = parseStored(await AsyncStorage.getItem(storageKey));
-  if (existing?.fingerprint === input.fingerprint) return existing;
+  const entityId = `${input.scope}/${input.operation}/${input.entityId ?? "root"}`;
+  const scope = await resolveMutationIdentityScope("", { entityId });
+  const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
+
+  const existing = parseStored(await bthwaniDurableStorage.getItem(storageKey));
+  if (existing?.fingerprint === input.fingerprint) {
+    if (existing.scope.actorId !== scoped.actorId) {
+      throw new MutationIdentityScopeError(
+        "actor_mismatch",
+        `support attempt belongs to a different actor (${existing.scope.actorId}); refusing to reuse it for ${scoped.actorId}`,
+      );
+    }
+    if (existing.scope.installationId !== scoped.installationId) {
+      throw new MutationIdentityScopeError(
+        "installation_mismatch",
+        `support attempt belongs to a different installation (${existing.scope.installationId}); refusing to reuse it for ${scoped.installationId}`,
+      );
+    }
+    if (existing.scope.entityId !== entityId) {
+      await bthwaniDurableStorage.removeItem(storageKey);
+    } else {
+      return existing;
+    }
+  }
+
   const part = nextPart();
   const created: StoredAttempt = {
     fingerprint: input.fingerprint,
+    scope: scoped,
     context: {
       idempotencyKey: `${input.scope}:${input.operation}:${part}`,
       correlationId: `support:${input.scope}:${part}`,
     },
   };
-  await AsyncStorage.setItem(storageKey, JSON.stringify(created));
+  await bthwaniDurableStorage.setItem(storageKey, JSON.stringify(created));
   return created;
 }
 
@@ -68,8 +105,21 @@ export async function clearSupportMutationAttempt(input: {
   readonly fingerprint: string;
 }): Promise<void> {
   const storageKey = keyFor(input.scope, input.operation, input.entityId);
-  const existing = parseStored(await AsyncStorage.getItem(storageKey));
-  if (existing?.fingerprint === input.fingerprint) {
-    await AsyncStorage.removeItem(storageKey);
+  const existing = parseStored(await bthwaniDurableStorage.getItem(storageKey));
+  if (!existing || existing.fingerprint !== input.fingerprint) return;
+  await bthwaniDurableStorage.removeItem(storageKey);
+}
+
+export async function clearSupportMutationAttemptsForScope(): Promise<void> {
+  const allKeys = await bthwaniDurableStorage.getAllKeys();
+  for (const key of allKeys) {
+    if (!key.startsWith(PREFIX)) continue;
+    await bthwaniDurableStorage.removeItem(key);
+  }
+  for (const key of allKeys.filter((k) => k.startsWith(PREFIX_LEGACY))) {
+    const raw = await bthwaniDurableStorage.getItem(key);
+    if (!raw) continue;
+    await bthwaniDurableStorage.setItem(`${key}:quarantine:${Date.now()}`, raw);
+    await bthwaniDurableStorage.removeItem(key);
   }
 }

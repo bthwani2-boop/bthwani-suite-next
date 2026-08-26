@@ -69,6 +69,7 @@ func TestPartnerDeactivationTriggerAndOutboxDeliveryDBIntegration(t *testing.T) 
 
 	var requestCount int
 	var gotCaller, gotIdempotency, gotCorrelation string
+	var gotBody map[string]string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestCount++
 		gotCaller = r.Header.Get("X-Service-Caller")
@@ -76,6 +77,9 @@ func TestPartnerDeactivationTriggerAndOutboxDeliveryDBIntegration(t *testing.T) 
 		gotCorrelation = r.Header.Get("X-Correlation-ID")
 		if r.Method != http.MethodPost || r.URL.Path != "/wlt/payout-destinations/partner/"+partnerID+"/deactivate" {
 			t.Fatalf("unexpected WLT deactivation request: %s %s", r.Method, r.URL.Path)
+		}
+		if err := json.NewDecoder(r.Body).Decode(&gotBody); err != nil {
+			t.Fatalf("failed to decode WLT deactivation body: %v", err)
 		}
 		w.WriteHeader(http.StatusNoContent)
 	}))
@@ -116,6 +120,9 @@ func TestPartnerDeactivationTriggerAndOutboxDeliveryDBIntegration(t *testing.T) 
 	}
 	if gotCaller != "dsh" || gotIdempotency == "" || gotCorrelation != "partner-deactivation-correlation" {
 		t.Fatalf("WLT mutation headers incomplete: caller=%q idempotency=%q correlation=%q", gotCaller, gotIdempotency, gotCorrelation)
+	}
+	if gotBody["reason"] != "integration deactivation" || !strings.HasPrefix(gotBody["evidenceReference"], "dsh-partner-activation:") {
+		t.Fatalf("WLT deactivation evidence incomplete: %#v", gotBody)
 	}
 
 	var status string

@@ -42,13 +42,6 @@ func TestResolveManagedPayoutDestinationActorCanonicalizesAndBoundsIdentity(t *t
 	}
 }
 
-func TestManagedPayoutDestinationPathEscapesBothIdentitySegments(t *testing.T) {
-	path := managedPayoutDestinationPath("partner", "actor/one")
-	if path != "/wlt/payout-destinations/partner/actor%2Fone" {
-		t.Fatalf("path=%q, want escaped actor identity", path)
-	}
-}
-
 func TestDecodePayoutDestinationProjectionEnforcesOfficialWalletOwnership(t *testing.T) {
 	valid := []byte(`{"payoutDestination":{"id":"destination-1","ownerActorId":"partner-1","ownerActorType":"partner","officialWalletProviderKey":"bank-yemen","destinationVersion":2,"destinationMethod":"official_wallet","maskedDestinationReference":"****1234","destinationVerificationStatus":"verified"}}`)
 	projection, err := decodePayoutDestinationProjection(valid, "partner", "partner-1")

@@ -170,7 +170,7 @@ export function useFieldFinanceController(): FieldFinanceController {
         setSubmitPayoutError(result.message);
         return false;
       }
-      await clearFieldPayoutAttempt(attempt.idempotencyKey);
+      await clearFieldPayoutAttempt();
       load();
       return true;
     } catch (error) {

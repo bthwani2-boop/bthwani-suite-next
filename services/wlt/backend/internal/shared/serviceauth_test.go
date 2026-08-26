@@ -42,8 +42,8 @@ func TestRequireServiceCallerBindsAuthenticatedDelegatedOperatorContext(t *testi
 	if got := request.Header.Get("X-Delegated-Operator-Context"); got != "OperatorContext-a" {
 		t.Fatalf("delegated context changed after authentication: got %q", got)
 	}
-	if scopeID, ok := OperatorContextIDFromContext(request.Context()); !ok || scopeID != "OperatorContext-a" {
-		t.Fatalf("delegated context was not propagated, scope=%q ok=%v", scopeID, ok)
+	if operatorContextID, ok := OperatorContextIDFromContext(request.Context()); !ok || operatorContextID != "OperatorContext-a" {
+		t.Fatalf("delegated context was not propagated, operatorContext=%q ok=%v", operatorContextID, ok)
 	}
 }
 

@@ -148,7 +148,7 @@ func (r *Repository) EmployeeGovernanceByActorID(ctx context.Context, actorID st
 	return profile, err
 }
 
-func (r *Repository) UpsertEmployeeGovernance(ctx context.Context, actorID, operatorID string, input UpsertEmployeeGovernanceInput) (EmployeeGovernanceProfile, error) {
+func (r *Repository) UpsertEmployeeGovernance(ctx context.Context, actorID, operatorID, operatorRole, correlationID, idempotencyKey string, input UpsertEmployeeGovernanceInput) (EmployeeGovernanceProfile, error) {
 	operatorContextID, err := operatorContextID(ctx)
 	if err != nil {
 		return EmployeeGovernanceProfile{}, err

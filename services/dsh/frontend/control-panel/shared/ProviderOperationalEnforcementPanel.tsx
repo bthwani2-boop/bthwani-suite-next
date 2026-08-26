@@ -11,6 +11,7 @@ import {
 import { Text } from "@bthwani/ui-kit";
 import {
   createProviderIncident,
+  getProviderPenaltyCommand,
   getProviderOperationalCore,
   listProviderIncidents,
   promoteCaptainToBasic,
@@ -189,9 +190,8 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
   };
 
   const applyIncidentTransition = async () => {
-    if (!selectedIncidentId || !nextStatus) return;
-    const needsResolution = ["approved", "rejected", "financial_action_posted", "closed", "reversed"].includes(nextStatus);
-    if (needsResolution && resolutionNote.trim().length < 3) {
+    if (!selectedIncidentId || !selectedIncident || !nextStatus) return;
+    if (resolutionNote.trim().length < 3) {
       setError("اكتب سبب القرار قبل تنفيذ الانتقال.");
       return;
     }
@@ -201,13 +201,24 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
     try {
       const result = await transitionProviderIncident(selectedIncidentId, {
         toStatus: nextStatus,
-        resolutionNote: resolutionNote.trim() || undefined,
+		resolutionNote: resolutionNote.trim(),
+		expectedVersion: selectedIncident.version,
       });
-      setIncidents((current) => current.map((incident) => incident.id === result.incident.id ? result.incident : incident));
+		const updatedIncident = result.incident;
+		if (updatedIncident) {
+			setIncidents((current) => current.map((incident) => incident.id === updatedIncident.id ? updatedIncident : incident));
+		}
       setSelectedIncidentId(null);
       setNextStatus("");
       setResolutionNote("");
-      setSuccess("تم حفظ قرار المخالفة وسجل الانتقال.");
+		if (result.financialCommand) {
+			const command = await getProviderPenaltyCommand(result.financialCommand.id);
+			setSuccess(command.lifecycleState === "COMPLETED"
+				? "اكتمل الإجراء المالي وتأكد الإسقاط التشغيلي من WLT."
+				: `سُجل الأمر المالي بشكل دائم وحالته الحالية: ${command.lifecycleState}. سيستمر التعافي الآلي ويمكن تحديث الصفحة للقراءة اللاحقة.`);
+		} else {
+			setSuccess("تم حفظ قرار المخالفة وسجل الانتقال.");
+		}
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "تعذر تغيير حالة المخالفة.");
     } finally {
@@ -224,7 +235,7 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       <CpMutedInline>
         {canManage
-          ? "هذه الأفعال محكومة من الخادم وتُسجل في التدقيق. الخصم المالي لا يُنشأ هنا؛ يلزم مرجع قيد صادر من WLT."
+			? "هذه الأفعال محكومة من الخادم وتُسجل في التدقيق. الإجراء المالي يُسجل كأمر دائم، ثم يتقارب تلقائيًا مع الحقيقة المالية في WLT."
           : "القرارات التشغيلية للقراءة فقط من هذا القسم. الإدارة متاحة للجهة المخولة بالتفعيل."}
       </CpMutedInline>
 

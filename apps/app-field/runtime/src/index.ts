@@ -8,7 +8,6 @@ import { registerIdentityBeforeSessionEndHook } from "@bthwani/core-identity";
 import {
   BthwaniQueryProvider,
   clearBthwaniQueryClient,
-  createBthwaniOfflineMutationQueue,
   createBthwaniQueryClient,
   wireBatteryAwareQueue,
   wireNetInfoOnlineManager,
@@ -29,16 +28,14 @@ export const sentryEnabled = initSentry();
 const APP_KEY = "app-field";
 const queryClient = createBthwaniQueryClient();
 const queryPersistenceKey = `bthwani-query-cache:v2:${APP_KEY}`;
-const mutationQueue = createBthwaniOfflineMutationQueue(`bthwani-offline-mutations:v1:${APP_KEY}`);
 
 export function MobileRuntimeProviders({ children }: { readonly children: React.ReactNode }) {
   useEffect(() => {
-    const detachNetwork = wireNetInfoOnlineManager(queryClient, mutationQueue);
-    const detachPower = wireBatteryAwareQueue(mutationQueue);
+    const detachNetwork = wireNetInfoOnlineManager(queryClient);
+    const detachPower = wireBatteryAwareQueue();
     const detachSession = registerIdentityBeforeSessionEndHook(async () => {
       await Promise.all([
         clearBthwaniQueryClient(queryClient, queryPersistenceKey),
-        mutationQueue.clear(),
         clearFieldOfflineQueue(),
       ]);
     });

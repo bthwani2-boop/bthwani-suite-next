@@ -13,8 +13,9 @@ import (
 type FinanceResponseKind string
 
 const (
-	FinanceResponseObject FinanceResponseKind = "object"
-	FinanceResponseArray  FinanceResponseKind = "array"
+	FinanceResponseObject    FinanceResponseKind = "object"
+	FinanceResponseArray     FinanceResponseKind = "array"
+	FinanceResponseNoContent FinanceResponseKind = "no-content"
 )
 
 type FinanceResponseContract struct {
@@ -110,14 +111,23 @@ func canonicalFinanceUpstreamError(status int) []byte {
 // stable 502 public envelope, while expected 4xx semantics retain their
 // status with a non-disclosing canonical code.
 func normalizeFinanceResponse(op FinanceOperation, status int, contentType string, body []byte) (int, []byte, error) {
-	if err := validateFinanceResponseContentType(contentType); err != nil {
-		return 0, nil, err
-	}
 	if status >= 200 && status < 300 {
+		if op.ResponseContract.ValueKind == FinanceResponseNoContent {
+			if status != http.StatusNoContent || len(bytes.TrimSpace(body)) != 0 {
+				return 0, nil, errFinanceResponseBody
+			}
+			return status, body, nil
+		}
+		if err := validateFinanceResponseContentType(contentType); err != nil {
+			return 0, nil, err
+		}
 		if err := validateFinanceSuccessBody(op.ResponseContract, body); err != nil {
 			return 0, nil, err
 		}
 		return status, body, nil
+	}
+	if err := validateFinanceResponseContentType(contentType); err != nil {
+		return 0, nil, err
 	}
 	if status >= 400 && status < 500 {
 		if err := validateFinanceErrorBody(body); err != nil {

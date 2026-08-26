@@ -44,7 +44,7 @@ export function useCheckoutToOrderFlow() {
       const attempt = await getOrCreateCheckoutAttempt(input);
       const intent = await createCheckoutIntent(input, attempt.context);
       try {
-        await clearCheckoutAttempt(attempt.fingerprint);
+        await clearCheckoutAttempt();
       } catch {
         // The canonical checkout mutation succeeded; stale local cleanup must
         // not rewrite the server result.

@@ -2,6 +2,7 @@ import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   PromoteCaptainInput,
   PromoteCaptainResponse,
+  ProviderPenaltyCommand,
   ProviderIncidentTransition,
   TransitionProviderIncidentInput,
   TransitionProviderIncidentResponse,
@@ -20,10 +21,18 @@ export function transitionProviderIncident(
   incidentId: string,
   input: TransitionProviderIncidentInput,
 ): Promise<TransitionProviderIncidentResponse> {
+  const commandIdentity = `workforce-provider-incident:${incidentId}:${input.expectedVersion}:${input.toStatus}`;
   return request<TransitionProviderIncidentResponse>(
     `/workforce/provider-incidents/${encodeURIComponent(incidentId)}/status`,
-    { method: "PATCH", body: input },
+    { method: "PATCH", body: input, expectedVersion: input.expectedVersion, idempotencyKey: commandIdentity },
   );
+}
+
+export async function getProviderPenaltyCommand(commandId: string): Promise<ProviderPenaltyCommand> {
+  const result = await request<{ financialCommand: ProviderPenaltyCommand }>(
+    `/workforce/provider-penalty-commands/${encodeURIComponent(commandId)}`,
+  );
+  return result.financialCommand;
 }
 
 export async function listProviderIncidentTransitions(

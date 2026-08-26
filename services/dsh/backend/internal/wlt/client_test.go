@@ -220,7 +220,7 @@ func TestFinalizeCodReservationNotConfigured(t *testing.T) {
 	}
 }
 
-func TestFinanceReadWalletWithOperatorContextBuildsPathAndHeaders(t *testing.T) {
+func TestExecuteFinanceReadWalletBuildsCanonicalPathAndHeaders(t *testing.T) {
 	var gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
@@ -246,7 +246,7 @@ func TestFinanceReadWalletWithOperatorContextBuildsPathAndHeaders(t *testing.T) 
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	status, body, err := c.FinanceReadWalletWithOperatorContext(trustedMutationTestContext(), "field", "field-123", "corr-1", "OperatorContext-a")
+	status, body, err := c.ExecuteFinanceRead(trustedMutationTestContext(), "finance.wallet.read", map[string]string{"actorType": "field", "actorId": "field-123"}, nil, "corr-1", "OperatorContext-a")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -261,7 +261,7 @@ func TestFinanceReadWalletWithOperatorContextBuildsPathAndHeaders(t *testing.T) 
 	}
 }
 
-func TestFinanceReadWalletWithOperatorContextEscapesActorIDSegment(t *testing.T) {
+func TestExecuteFinanceReadEscapesActorIDSegment(t *testing.T) {
 	var gotEscapedPath string
 	var gotSegmentCount int
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -274,7 +274,7 @@ func TestFinanceReadWalletWithOperatorContextEscapesActorIDSegment(t *testing.T)
 	defer server.Close()
 
 	c := NewClient(server.URL, "test-service-token")
-	if _, _, err := c.FinanceReadWalletWithOperatorContext(trustedMutationTestContext(), "field", "../admin", "corr-1", "OperatorContext-a"); err != nil {
+	if _, _, err := c.ExecuteFinanceRead(trustedMutationTestContext(), "finance.wallet.read", map[string]string{"actorType": "field", "actorId": "../admin"}, nil, "corr-1", "OperatorContext-a"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if gotEscapedPath != "/wlt/wallets/field/..%2Fadmin" {
@@ -285,45 +285,27 @@ func TestFinanceReadWalletWithOperatorContextEscapesActorIDSegment(t *testing.T)
 	}
 }
 
-func TestFinanceReadWalletWithOperatorContextRejectsUnknownActorType(t *testing.T) {
+func TestExecuteFinanceReadRejectsIncompleteWalletCoordinates(t *testing.T) {
 	c := NewClient("https://wlt.internal", "test-service-token")
-	_, _, err := c.FinanceReadWalletWithOperatorContext(context.Background(), "operator", "operator-1", "corr-1", "OperatorContext-a")
-	if err == nil || !strings.Contains(err.Error(), "not allowlisted") {
-		t.Fatalf("expected not-allowlisted error, got: %v", err)
+	_, _, err := c.ExecuteFinanceRead(trustedMutationTestContext(), "finance.wallet.read", map[string]string{"actorType": "field"}, nil, "corr-1", "OperatorContext-a")
+	if err == nil || !strings.Contains(err.Error(), "path parameters are incomplete") {
+		t.Fatalf("expected incomplete-coordinate error, got: %v", err)
 	}
 }
 
-func TestFinanceReadWalletWithOperatorContextRejectsEmptyActorID(t *testing.T) {
+func TestExecuteFinanceReadRequiresTrustedOperatorContext(t *testing.T) {
 	c := NewClient("https://wlt.internal", "test-service-token")
-	_, _, err := c.FinanceReadWalletWithOperatorContext(context.Background(), "field", "", "corr-1", "OperatorContext-a")
-	if err == nil {
-		t.Fatalf("expected error for empty actor id")
+	_, _, err := c.ExecuteFinanceRead(context.Background(), "finance.wallet.read", map[string]string{"actorType": "field", "actorId": "field-1"}, nil, "corr-1", "")
+	if err == nil || !strings.Contains(err.Error(), "trusted OperatorContext context is required") {
+		t.Fatalf("expected trusted-context error, got: %v", err)
 	}
 }
 
-func TestFinanceReadWalletWithOperatorContextRejectsEmptyOperatorContext(t *testing.T) {
-	c := NewClient("https://wlt.internal", "test-service-token")
-	_, _, err := c.FinanceReadWalletWithOperatorContext(context.Background(), "field", "field-1", "corr-1", "")
-	if err == nil || !strings.Contains(err.Error(), "OperatorContext id is required") {
-		t.Fatalf("expected OperatorContext-required error, got: %v", err)
-	}
-}
-
-func TestFinanceReadWalletWithOperatorContextNotConfigured(t *testing.T) {
+func TestExecuteFinanceReadNotConfigured(t *testing.T) {
 	c := NewClient("", "")
-	_, _, err := c.FinanceReadWalletWithOperatorContext(context.Background(), "field", "field-1", "corr-1", "OperatorContext-a")
+	_, _, err := c.ExecuteFinanceRead(trustedMutationTestContext(), "finance.wallet.read", map[string]string{"actorType": "field", "actorId": "field-1"}, nil, "corr-1", "OperatorContext-a")
 	if err == nil || !strings.Contains(err.Error(), "not configured") {
 		t.Fatalf("expected 'not configured' error, got: %v", err)
-	}
-}
-
-func TestFinanceReadRejectsBareWalletsPathNowThatItRequiresActorSegments(t *testing.T) {
-	// /wlt/wallets was removed from the query-based allowlist because the
-	// real WLT route is path-parameterized (/wlt/wallets/{actorType}/{actorId}).
-	c := NewClient("https://wlt.internal", "test-service-token")
-	_, _, err := c.FinanceRead(context.Background(), "/wlt/wallets", nil, "corr-1")
-	if err == nil || !strings.Contains(err.Error(), "not allowlisted") {
-		t.Fatalf("expected not-allowlisted error for bare /wlt/wallets, got: %v", err)
 	}
 }
 

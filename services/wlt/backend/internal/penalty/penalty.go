@@ -2,6 +2,7 @@ package penalty
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -123,6 +124,9 @@ type ProviderPenalty struct {
 	ReversedByActorID             string     `json:"reversedByActorId,omitempty"`
 	ReversedReason                string     `json:"reversedReason,omitempty"`
 	IdempotencyKey                string     `json:"idempotencyKey"`
+	PostRequestHash               string     `json:"-"`
+	ReversalIdempotencyKey        string     `json:"reversalIdempotencyKey,omitempty"`
+	ReversalRequestHash           string     `json:"-"`
 	CreatedAt                     time.Time  `json:"createdAt"`
 	ReversedAt                    *time.Time `json:"reversedAt,omitempty"`
 	UpdatedAt                     time.Time  `json:"updatedAt"`
@@ -146,7 +150,8 @@ const columns = `id,operator_context_id,incident_id,provider_actor_id,provider_a
 	policy_id,policy_version,COALESCE(debt_id,''),amount_minor_units,wallet_applied_amount_minor_units,
 	debt_amount_minor_units,currency,reason,status,ledger_transaction_id,
 	COALESCE(reversal_ledger_transaction_id,''),posted_by_actor_id,
-	COALESCE(reversed_by_actor_id,''),COALESCE(reversed_reason,''),idempotency_key,
+	COALESCE(reversed_by_actor_id,''),COALESCE(reversed_reason,''),idempotency_key,post_request_hash,
+	COALESCE(reversal_idempotency_key,''),COALESCE(reversal_request_hash,''),
 	created_at,reversed_at,updated_at`
 
 type scanner interface{ Scan(dest ...any) error }
@@ -159,9 +164,35 @@ func scan(row scanner) (ProviderPenalty, error) {
 		&item.AmountMinorUnits, &item.WalletAppliedAmountMinorUnits, &item.DebtAmountMinorUnits,
 		&item.Currency, &item.Reason, &item.Status, &item.LedgerTransactionID,
 		&item.ReversalLedgerTransactionID, &item.PostedByActorID, &item.ReversedByActorID,
-		&item.ReversedReason, &item.IdempotencyKey, &item.CreatedAt, &item.ReversedAt, &item.UpdatedAt,
+		&item.ReversedReason, &item.IdempotencyKey, &item.PostRequestHash,
+		&item.ReversalIdempotencyKey, &item.ReversalRequestHash,
+		&item.CreatedAt, &item.ReversedAt, &item.UpdatedAt,
 	)
 	return item, err
+}
+
+func requestHash(value any) (string, error) {
+	payload, err := json.Marshal(value)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%x", sha256.Sum256(payload)), nil
+}
+
+func samePostRequest(item ProviderPenalty, key, hash string, input PostInput) bool {
+	if item.IdempotencyKey != key || item.IncidentID != input.IncidentID ||
+		item.ProviderActorID != input.ProviderActorID || item.ProviderActorType != input.ProviderActorType ||
+		item.PolicyID != input.PolicyID || item.Reason != input.Reason || item.PostedByActorID != input.PostedByActorID {
+		return false
+	}
+	return strings.HasPrefix(item.PostRequestHash, "legacy:") || item.PostRequestHash == hash
+}
+
+func sameReverseRequest(item ProviderPenalty, key, hash string, input ReverseInput) bool {
+	if item.ReversalIdempotencyKey != key || item.ReversedReason != input.Reason || item.ReversedByActorID != input.ReversedByActorID {
+		return false
+	}
+	return strings.HasPrefix(item.ReversalRequestHash, "legacy:") || item.ReversalRequestHash == hash
 }
 
 func normalizePost(input *PostInput) error {
@@ -218,6 +249,22 @@ func existingForIncidentTx(ctx context.Context, tx *sql.Tx, operatorContextID, i
 	return &item, err
 }
 
+func existingForPostKeyTx(ctx context.Context, tx *sql.Tx, operatorContextID, idempotencyKey string) (*ProviderPenalty, error) {
+	item, err := scan(tx.QueryRowContext(ctx, `SELECT `+columns+` FROM wlt_provider_penalties WHERE operator_context_id=$1 AND idempotency_key=$2`, operatorContextID, idempotencyKey))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return &item, err
+}
+
+func existingForReverseKeyTx(ctx context.Context, tx *sql.Tx, operatorContextID, idempotencyKey string) (*ProviderPenalty, error) {
+	item, err := scan(tx.QueryRowContext(ctx, `SELECT `+columns+` FROM wlt_provider_penalties WHERE operator_context_id=$1 AND reversal_idempotency_key=$2`, operatorContextID, idempotencyKey))
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	}
+	return &item, err
+}
+
 // Post records one penalty accounting fact. OperatorContext is resolved only
 // from authenticated request context; a raw caller header is never financial
 // authority. The canonical ledger posting is the sole economic balance write.
@@ -234,13 +281,33 @@ func Post(ctx context.Context, db *sql.DB, idempotencyKey string, input PostInpu
 	if err := normalizePost(&input); err != nil {
 		return ProviderPenalty{}, err
 	}
+	postRequestHash, err := requestHash(input)
+	if err != nil {
+		return ProviderPenalty{}, err
+	}
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return ProviderPenalty{}, err
 	}
 	defer tx.Rollback() //nolint:errcheck
-	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, operatorContextID+":"+input.IncidentID); err != nil {
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, "provider-penalty-post-key:"+operatorContextID+":"+idempotencyKey); err != nil {
+		return ProviderPenalty{}, err
+	}
+	byKey, err := existingForPostKeyTx(ctx, tx, operatorContextID, idempotencyKey)
+	if err != nil {
+		return ProviderPenalty{}, err
+	}
+	if byKey != nil {
+		if !samePostRequest(*byKey, idempotencyKey, postRequestHash, input) {
+			return ProviderPenalty{}, ErrConflict
+		}
+		if err := tx.Commit(); err != nil {
+			return ProviderPenalty{}, err
+		}
+		return *byKey, nil
+	}
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, "provider-penalty-incident:"+operatorContextID+":"+input.IncidentID); err != nil {
 		return ProviderPenalty{}, err
 	}
 	existing, err := existingForIncidentTx(ctx, tx, operatorContextID, input.IncidentID)
@@ -251,7 +318,7 @@ func Post(ctx context.Context, db *sql.DB, idempotencyKey string, input PostInpu
 		if strings.HasPrefix(existing.PolicyID, "legacy:") {
 			return ProviderPenalty{}, ErrPolicyUnavailable
 		}
-		if existing.ProviderActorID != input.ProviderActorID || existing.ProviderActorType != input.ProviderActorType || existing.PolicyID != input.PolicyID || existing.IdempotencyKey != idempotencyKey {
+		if !samePostRequest(*existing, idempotencyKey, postRequestHash, input) {
 			return ProviderPenalty{}, ErrConflict
 		}
 		if err := tx.Commit(); err != nil {
@@ -298,10 +365,10 @@ func Post(ctx context.Context, db *sql.DB, idempotencyKey string, input PostInpu
 
 	item, err := scan(tx.QueryRowContext(ctx, `INSERT INTO wlt_provider_penalties(
 		operator_context_id,incident_id,provider_actor_id,provider_actor_type,amount_minor_units,
-		policy_id,policy_version,wallet_applied_amount_minor_units,debt_amount_minor_units,currency,reason,ledger_transaction_id,posted_by_actor_id,idempotency_key)
-		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING `+columns,
+		policy_id,policy_version,wallet_applied_amount_minor_units,debt_amount_minor_units,currency,reason,ledger_transaction_id,posted_by_actor_id,idempotency_key,post_request_hash)
+		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING `+columns,
 		operatorContextID, input.IncidentID, input.ProviderActorID, input.ProviderActorType, policy.AmountMinorUnits,
-		input.PolicyID, policy.Version, walletApplied, debtAmount, policy.Currency, input.Reason, ledgerID, input.PostedByActorID, idempotencyKey))
+		input.PolicyID, policy.Version, walletApplied, debtAmount, policy.Currency, input.Reason, ledgerID, input.PostedByActorID, idempotencyKey, postRequestHash))
 	if err != nil {
 		return ProviderPenalty{}, err
 	}
@@ -329,22 +396,43 @@ func Post(ctx context.Context, db *sql.DB, idempotencyKey string, input PostInpu
 
 // Reverse posts a compensating ledger transaction; it never rewrites the
 // original penalty or writes an economic balance directly to wlt_wallets.
-func Reverse(ctx context.Context, db *sql.DB, penaltyID string, input ReverseInput) (ProviderPenalty, error) {
+func Reverse(ctx context.Context, db *sql.DB, penaltyID, idempotencyKey string, input ReverseInput) (ProviderPenalty, error) {
 	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return ProviderPenalty{}, err
 	}
 	penaltyID = strings.TrimSpace(penaltyID)
+	idempotencyKey = strings.TrimSpace(idempotencyKey)
 	input.Reason = strings.TrimSpace(input.Reason)
 	input.ReversedByActorID = strings.TrimSpace(input.ReversedByActorID)
-	if penaltyID == "" || len(input.Reason) < 3 || input.ReversedByActorID == "" {
-		return ProviderPenalty{}, fmt.Errorf("penaltyId, reason and reversedByActorId are required")
+	if penaltyID == "" || idempotencyKey == "" || len(input.Reason) < 3 || input.ReversedByActorID == "" {
+		return ProviderPenalty{}, fmt.Errorf("penaltyId, idempotency key, reason and reversedByActorId are required")
+	}
+	reversalRequestHash, err := requestHash(input)
+	if err != nil {
+		return ProviderPenalty{}, err
 	}
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return ProviderPenalty{}, err
 	}
 	defer tx.Rollback() //nolint:errcheck
+	if _, err := tx.ExecContext(ctx, `SELECT pg_advisory_xact_lock(hashtext($1))`, "provider-penalty-reverse-key:"+operatorContextID+":"+idempotencyKey); err != nil {
+		return ProviderPenalty{}, err
+	}
+	byKey, err := existingForReverseKeyTx(ctx, tx, operatorContextID, idempotencyKey)
+	if err != nil {
+		return ProviderPenalty{}, err
+	}
+	if byKey != nil {
+		if byKey.ID != penaltyID || !sameReverseRequest(*byKey, idempotencyKey, reversalRequestHash, input) {
+			return ProviderPenalty{}, ErrConflict
+		}
+		if err := tx.Commit(); err != nil {
+			return ProviderPenalty{}, err
+		}
+		return *byKey, nil
+	}
 	item, err := scan(tx.QueryRowContext(ctx, `SELECT `+columns+` FROM wlt_provider_penalties WHERE operator_context_id=$1 AND id=$2 FOR UPDATE`, operatorContextID, penaltyID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return ProviderPenalty{}, ErrNotFound
@@ -353,10 +441,7 @@ func Reverse(ctx context.Context, db *sql.DB, penaltyID string, input ReverseInp
 		return ProviderPenalty{}, err
 	}
 	if item.Status == "reversed" {
-		if err := tx.Commit(); err != nil {
-			return ProviderPenalty{}, err
-		}
-		return item, nil
+		return ProviderPenalty{}, ErrConflict
 	}
 	lines := []ledger.LedgerLine{{AccountType: "platform_revenue", DebitCredit: "debit", AmountMinorUnits: item.AmountMinorUnits, Currency: item.Currency}}
 	if item.WalletAppliedAmountMinorUnits > 0 {
@@ -377,8 +462,9 @@ func Reverse(ctx context.Context, db *sql.DB, penaltyID string, input ReverseInp
 	}
 	item, err = scan(tx.QueryRowContext(ctx, `UPDATE wlt_provider_penalties SET status='reversed',
 		reversal_ledger_transaction_id=$3,reversed_by_actor_id=$4,reversed_reason=$5,
+		reversal_idempotency_key=$6,reversal_request_hash=$7,
 		reversed_at=now(),updated_at=now() WHERE operator_context_id=$1 AND id=$2 RETURNING `+columns,
-		operatorContextID, item.ID, ledgerID, input.ReversedByActorID, input.Reason))
+		operatorContextID, item.ID, ledgerID, input.ReversedByActorID, input.Reason, idempotencyKey, reversalRequestHash))
 	if err != nil {
 		return ProviderPenalty{}, err
 	}
@@ -450,11 +536,54 @@ func HandleReverse(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
 			return
 		}
-		item, err := Reverse(r.Context(), db, r.PathValue("penaltyId"), input)
+		item, err := Reverse(r.Context(), db, r.PathValue("penaltyId"), r.Header.Get("Idempotency-Key"), input)
 		if err != nil {
 			writeError(w, err)
 			return
 		}
 		shared.SendJSON(w, http.StatusOK, map[string]any{"providerPenalty": item})
 	}
+}
+
+func GetByID(ctx context.Context, db *sql.DB, penaltyID string) (ProviderPenalty, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return ProviderPenalty{}, err
+	}
+	item, err := scan(db.QueryRowContext(ctx, `SELECT `+columns+` FROM wlt_provider_penalties WHERE operator_context_id=$1 AND id=$2`, operatorContextID, strings.TrimSpace(penaltyID)))
+	if errors.Is(err, sql.ErrNoRows) {
+		return ProviderPenalty{}, ErrNotFound
+	}
+	return item, err
+}
+
+func GetByIncident(ctx context.Context, db *sql.DB, incidentID string) (ProviderPenalty, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil {
+		return ProviderPenalty{}, err
+	}
+	item, err := scan(db.QueryRowContext(ctx, `SELECT `+columns+` FROM wlt_provider_penalties WHERE operator_context_id=$1 AND incident_id=$2`, operatorContextID, strings.TrimSpace(incidentID)))
+	if errors.Is(err, sql.ErrNoRows) {
+		return ProviderPenalty{}, ErrNotFound
+	}
+	return item, err
+}
+
+func handleGet(loader func(context.Context, *sql.DB, string) (ProviderPenalty, error), pathValue string, db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		item, err := loader(r.Context(), db, r.PathValue(pathValue))
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		shared.SendJSON(w, http.StatusOK, map[string]any{"providerPenalty": item})
+	}
+}
+
+func HandleGetByID(db *sql.DB) http.HandlerFunc {
+	return handleGet(GetByID, "penaltyId", db)
+}
+
+func HandleGetByIncident(db *sql.DB) http.HandlerFunc {
+	return handleGet(GetByIncident, "incidentId", db)
 }

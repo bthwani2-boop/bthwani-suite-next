@@ -14,23 +14,22 @@ import (
 
 var ErrAlreadySettled = errors.New("settlement is already settled")
 var ErrSettlementAmountsInconsistent = errors.New("settlement amounts are not arithmetically consistent")
-var ErrSettlementCalculationSourceRequired = errors.New("settlement must be calculated from a governed DSH order source")
 
 type Settlement struct {
-	ID          string  `json:"id"`
-	OperatorContextID    string  `json:"operatorContextId,omitempty"`
-	PartnerID   string  `json:"partnerId"`
-	PeriodStart string  `json:"periodStart"`
-	PeriodEnd   string  `json:"periodEnd"`
-	GrossAmount int64   `json:"grossAmount"`
-	PlatformFee int64   `json:"platformFee"`
-	NetAmount   int64   `json:"netAmount"`
-	Currency    string  `json:"currency"`
-	OrderCount  int     `json:"orderCount"`
-	Status      string  `json:"status"`
-	SettledAt   *string `json:"settledAt"`
-	CreatedAt   string  `json:"createdAt"`
-	UpdatedAt   string  `json:"updatedAt"`
+	ID                string  `json:"id"`
+	OperatorContextID string  `json:"operatorContextId,omitempty"`
+	PartnerID         string  `json:"partnerId"`
+	PeriodStart       string  `json:"periodStart"`
+	PeriodEnd         string  `json:"periodEnd"`
+	GrossAmount       int64   `json:"grossAmount"`
+	PlatformFee       int64   `json:"platformFee"`
+	NetAmount         int64   `json:"netAmount"`
+	Currency          string  `json:"currency"`
+	OrderCount        int     `json:"orderCount"`
+	Status            string  `json:"status"`
+	SettledAt         *string `json:"settledAt"`
+	CreatedAt         string  `json:"createdAt"`
+	UpdatedAt         string  `json:"updatedAt"`
 }
 
 type SettlementSummary struct {
@@ -43,21 +42,6 @@ type SettlementSummary struct {
 	TotalOrders     int    `json:"totalOrders"`
 	SettlementCount int    `json:"settlementCount"`
 	Currency        string `json:"currency"`
-}
-
-// CreateSettlementInput remains as a compatibility contract while live
-// settlement creation is fail-closed. Its monetary values must never become
-// financial truth until DSH provides a governed, order-derived calculation
-// contract with an immutable source reference.
-type CreateSettlementInput struct {
-	PartnerID   string `json:"partnerId"`
-	PeriodStart string `json:"periodStart"`
-	PeriodEnd   string `json:"periodEnd"`
-	GrossAmount int64  `json:"grossAmount"`
-	PlatformFee int64  `json:"platformFee"`
-	NetAmount   int64  `json:"netAmount"`
-	Currency    string `json:"currency"`
-	OrderCount  int    `json:"orderCount"`
 }
 
 const settlementCols = `id, operator_context_id, partner_id, period_start, period_end, gross_amount, platform_fee,
@@ -111,15 +95,6 @@ func scanSettlementRow(rows *sql.Rows) (*Settlement, error) {
 	return &s, nil
 }
 
-// CreateSettlement fails closed. Caller-supplied gross, fee, net and order
-// counts are not a governed financial source and therefore cannot be inserted
-// into WLT as settlement truth.
-func CreateSettlement(db *sql.DB, input CreateSettlementInput) (*Settlement, error) {
-	_ = db
-	_ = input
-	return nil, ErrSettlementCalculationSourceRequired
-}
-
 func getSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Settlement, error) {
 	settlementID = strings.TrimSpace(settlementID)
 	if settlementID == "" {
@@ -135,12 +110,6 @@ func getSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Settl
 		return nil, nil
 	}
 	return s, err
-}
-
-// GetSettlement retains deferred-runtime compatibility. Embedded callers use
-// the HTTP handler, which provides the authenticated OperatorContext context.
-func GetSettlement(db *sql.DB, settlementID string) (*Settlement, error) {
-	return getSettlement(context.Background(), db, settlementID)
 }
 
 func ListPartnerSettlements(ctx context.Context, db *sql.DB, requestedOperatorContextID, partnerID string) ([]*Settlement, error) {
@@ -215,12 +184,6 @@ func ListSettlementSummary(ctx context.Context, db *sql.DB, partnerID, periodSta
 		return nil, err
 	}
 	return &summary, nil
-}
-
-// PostSettlement retains deferred-runtime compatibility for package-level tests.
-// Embedded mutations enter through postSettlement with authenticated context.
-func PostSettlement(db *sql.DB, settlementID string) (*Settlement, error) {
-	return postSettlement(context.Background(), db, settlementID)
 }
 
 func postSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Settlement, error) {
@@ -312,21 +275,6 @@ func postSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Sett
 		return nil, err
 	}
 	return settlement, nil
-}
-
-// HandleCreateSettlement intentionally ignores the submitted body and fails
-// closed until a governed DSH order-derived calculation contract exists.
-func HandleCreateSettlement(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		_ = db
-		_ = r
-		shared.SendError(
-			w,
-			http.StatusConflict,
-			"SETTLEMENT_SOURCE_REQUIRED",
-			ErrSettlementCalculationSourceRequired.Error(),
-		)
-	}
 }
 
 func HandleGetSettlement(db *sql.DB) http.HandlerFunc {

@@ -1,5 +1,3 @@
-import type { BthwaniOfflineMutationQueue } from "./offline-mutation-queue";
-
 declare const require: ((id: string) => unknown) | undefined;
 
 type BatteryState = {
@@ -15,14 +13,7 @@ type BatteryModule = {
   addLowPowerModeListener(listener: (event: { lowPowerMode: boolean }) => void): BatterySubscription;
 };
 
-function shouldPause(state: BatteryState): boolean {
-  return state.lowPowerMode === true
-    || (typeof state.batteryLevel === "number"
-      && state.batteryLevel >= 0
-      && state.batteryLevel < 0.12);
-}
-
-export function wireBatteryAwareQueue(queue: BthwaniOfflineMutationQueue): () => void {
+export function wireBatteryAwareQueue(): () => void {
   if (typeof require !== "function") return () => {};
   let battery: BatteryModule;
   try {
@@ -31,17 +22,16 @@ export function wireBatteryAwareQueue(queue: BthwaniOfflineMutationQueue): () =>
     return () => {};
   }
 
-  let lastState: BatteryState = {};
-  const applyState = (patch: BatteryState) => {
-    lastState = { ...lastState, ...patch };
-    const paused = shouldPause(lastState);
-    queue.setPaused(paused);
-    if (!paused) void queue.flush();
-  };
-
-  void battery.getPowerStateAsync().then((state) => applyState(state));
-  const levelSubscription = battery.addBatteryLevelListener(({ batteryLevel }) => applyState({ batteryLevel }));
-  const lowPowerSubscription = battery.addLowPowerModeListener(({ lowPowerMode }) => applyState({ lowPowerMode }));
+  const levelSubscription = battery.addBatteryLevelListener(() => {
+    // No offline-mutation queue is owned by data-runtime. Battery
+    // observers are kept only as a hook for downstream consumers
+    // to subscribe; paused/flush semantics now belong to the
+    // field-offline-queue state machine which is scoped to the
+    // platform-workforce actor and observes its own budget.
+  });
+  const lowPowerSubscription = battery.addLowPowerModeListener(() => {
+    // Same rationale as above.
+  });
   return () => {
     levelSubscription.remove();
     lowPowerSubscription.remove();

@@ -76,10 +76,9 @@ type CreatePaymentSessionInput struct {
 	// or both left empty -- see sourceCount and CreatePaymentSession.
 	TopUpReference string `json:"topupReference"`
 	TopUpActorType string `json:"topupActorType"`
-	// OperatorContextID is a temporary persistence compatibility field. The
-	// HTTP handler ignores any caller value and overwrites it from authenticated
-	// server configuration before validation or database access.
-	OperatorContextID string `json:"operatorContextId"`
+	// OperatorContextID is server-owned partition state. The HTTP transport
+	// never accepts it from a caller; the trusted request context supplies it.
+	OperatorContextID string `json:"-"`
 	ClientID          string `json:"clientId"`
 	StoreID           string `json:"storeId"`
 	PaymentMethod     string `json:"paymentMethod"`
@@ -137,7 +136,7 @@ func CreatePaymentSession(db *sql.DB, input CreatePaymentSessionInput) (*Payment
 	}
 	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	if input.OperatorContextID == "" || input.ClientID == "" || input.StoreID == "" {
-		return nil, fmt.Errorf("financial compatibility scope, clientId and storeId are required")
+		return nil, fmt.Errorf("financial OperatorContext scope, clientId and storeId are required")
 	}
 	if input.PaymentMethod == "" {
 		if input.CheckoutIntentID != "" {
@@ -523,12 +522,12 @@ func HandleCreatePaymentSession(db *sql.DB) http.HandlerFunc {
 			shared.SendError(w, http.StatusBadRequest, "PRICING_QUOTE_REQUIRED", "checkout payment sessions require a canonical WLT pricing quote identity")
 			return
 		}
-		compatibilityScope, err := shared.RequireOperatorContext(r.Context())
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
 		if err != nil {
-			shared.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_BOUND", "server-owned financial compatibility scope is unavailable")
+			shared.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_BOUND", "server-owned financial OperatorContext is unavailable")
 			return
 		}
-		input.OperatorContextID = compatibilityScope
+		input.OperatorContextID = operatorContextID
 		input.IdempotencyKey = r.Header.Get("Idempotency-Key")
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
 		if input.IdempotencyKey == "" {
@@ -550,14 +549,6 @@ func HandleCreatePaymentSession(db *sql.DB) http.HandlerFunc {
 		}
 		shared.SendJSON(w, http.StatusCreated, map[string]any{"paymentSession": session})
 	}
-}
-
-// GetPaymentSessionByCheckoutIntent looks up the payment session WLT created
-// for a given DSH checkout intent. This service-only compatibility read is safe
-// in the current single-platform deployment; server-scoped creation and source
-// uniqueness remain mandatory while legacy columns are retired.
-func GetPaymentSessionByCheckoutIntent(db *sql.DB, checkoutIntentID string) (*PaymentSession, error) {
-	return getPaymentSessionByCheckoutIntent(db, "", checkoutIntentID)
 }
 
 func getPaymentSessionByCheckoutIntent(db *sql.DB, operatorContextID string, checkoutIntentID string) (*PaymentSession, error) {

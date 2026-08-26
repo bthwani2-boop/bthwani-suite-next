@@ -11,7 +11,7 @@ func representativeWalletTestContext() context.Context {
 	return WithOperatorContext(context.Background(), "OperatorContext-main")
 }
 
-func TestFinanceReadWalletAllowsEveryRepresentativeActorType(t *testing.T) {
+func TestExecuteFinanceReadAllowsEveryRepresentativeActorType(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.Header.Get("X-Delegated-Operator-Context"); got != "OperatorContext-main" {
 			t.Fatalf("expected OperatorContext-main, got %q", got)
@@ -28,10 +28,11 @@ func TestFinanceReadWalletAllowsEveryRepresentativeActorType(t *testing.T) {
 	client := NewClient(server.URL, "test-service-token")
 	for _, actorType := range []string{"client", "partner", "captain", "field"} {
 		t.Run(actorType, func(t *testing.T) {
-			status, _, err := client.FinanceReadWalletWithOperatorContext(
+			status, _, err := client.ExecuteFinanceRead(
 				representativeWalletTestContext(),
-				actorType,
-				actorType+"-1",
+				"finance.wallet.read",
+				map[string]string{"actorType": actorType, "actorId": actorType + "-1"},
+				nil,
 				"corr-"+actorType,
 				"OperatorContext-main",
 			)
@@ -45,7 +46,7 @@ func TestFinanceReadWalletAllowsEveryRepresentativeActorType(t *testing.T) {
 	}
 }
 
-func TestFinanceReadWalletNormalizesActorTypeCase(t *testing.T) {
+func TestExecuteFinanceReadUsesCanonicalActorCoordinate(t *testing.T) {
 	var gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
@@ -62,8 +63,8 @@ func TestFinanceReadWalletNormalizesActorTypeCase(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, "test-service-token")
-	if _, _, err := client.FinanceReadWalletWithOperatorContext(representativeWalletTestContext(), "CAPTAIN", "captain-9", "corr-9", "OperatorContext-main"); err != nil {
-		t.Fatalf("expected uppercase representative actor type to normalize: %v", err)
+	if _, _, err := client.ExecuteFinanceRead(representativeWalletTestContext(), "finance.wallet.read", map[string]string{"actorType": "captain", "actorId": "captain-9"}, nil, "corr-9", "OperatorContext-main"); err != nil {
+		t.Fatalf("expected canonical representative actor type: %v", err)
 	}
 	if gotPath != "/wlt/wallets/captain/captain-9" {
 		t.Fatalf("unexpected normalized path %q", gotPath)

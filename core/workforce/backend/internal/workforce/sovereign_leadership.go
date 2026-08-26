@@ -406,7 +406,7 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 		compensate()
 		return SovereignLeadershipCreationResult{}, false, err
 	}
-	governance, err := s.repo.UpsertEmployeeGovernance(ctx, actorID, operator.ActorID, UpsertEmployeeGovernanceInput{
+	governance, err := s.repo.UpsertEmployeeGovernance(ctx, actorID, operator.ActorID, operator.Role, correlationID, idempotencyKey+":governance", UpsertEmployeeGovernanceInput{
 		ExpectedVersion: governanceVersion, PositionTitle: input.PositionTitle, JobGrade: input.JobGrade,
 		EmploymentClass: input.EmploymentClass, GuaranteeType: input.GuaranteeType,
 		GuaranteeStatus: input.GuaranteeStatus, GuaranteeReference: input.GuaranteeReference,
@@ -435,9 +435,9 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 		Leadership: SovereignLeadershipRecord{Employee: person, Governance: governance, Assignment: assignment},
 		Activation: activation,
 	}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"sovereign_leadership.created", nil, result.Leadership, input.Notes, correlationID); err != nil {
-		log.Printf("[workforce] RecordAudit error in CreateSovereignLeader: %v", err)
+	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
+		"sovereign_leadership.created", "create_sovereign_leader", nil, result.Leadership, input.Notes, correlationID, idempotencyKey); err != nil {
+		return SovereignLeadershipCreationResult{}, false, err
 	}
 	if encoded, err := json.Marshal(result); err == nil {
 		_ = s.repo.StoreIdempotentResponse(ctx, operator.ActorID, "create_sovereign_leader", idempotencyKey, requestHash, encoded)
@@ -512,9 +512,9 @@ func (s *Service) CreateDepartmentEmployee(ctx context.Context, operator Operato
 		return DepartmentEmployeeCreationResult{}, false, err
 	}
 	result := DepartmentEmployeeCreationResult{Employee: person, Activation: activation}
-	if err := s.repo.RecordAudit(ctx, operator.ActorID, operator.Role, actorID,
-		"department_employee.created", nil, person, "", correlationID); err != nil {
-		log.Printf("[workforce] RecordAudit error in CreateDepartmentEmployee: %v", err)
+	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
+		"department_employee.created", "create_department_employee", nil, person, "", correlationID, idempotencyKey); err != nil {
+		return DepartmentEmployeeCreationResult{}, false, err
 	}
 	if encoded, err := json.Marshal(result); err == nil {
 		_ = s.repo.StoreIdempotentResponse(ctx, operator.ActorID, "create_department_employee", idempotencyKey, requestHash, encoded)

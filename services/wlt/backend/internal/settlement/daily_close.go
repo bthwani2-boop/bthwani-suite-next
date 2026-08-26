@@ -14,10 +14,6 @@ import (
 
 type ExecuteDailyCloseInput struct {
 	BusinessDate string `json:"businessDate"`
-	// OperatorID is retained only for in-process compatibility. HTTP JSON cannot
-	// select the actor; ExecuteDailyFinanceClose always uses the authenticated
-	// delegated finance principal from context.
-	OperatorID string `json:"-"`
 }
 
 type DailyFinanceClose struct {

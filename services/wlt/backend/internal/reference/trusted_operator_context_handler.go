@@ -26,12 +26,12 @@ func HandleCreatePaymentSessionTrustedDsh(db *sql.DB) http.HandlerFunc {
 			return
 		}
 
-		compatibilityScope, err := shared.RequireOperatorContext(r.Context())
+		operatorContextID, err := shared.RequireOperatorContext(r.Context())
 		if err != nil {
-			shared.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_BOUND", "server-owned financial compatibility scope is unavailable")
+			shared.SendError(w, http.StatusServiceUnavailable, "FINANCIAL_SCOPE_NOT_BOUND", "server-owned financial OperatorContext is unavailable")
 			return
 		}
-		input.OperatorContextID = compatibilityScope
+		input.OperatorContextID = operatorContextID
 		input.IdempotencyKey = r.Header.Get("Idempotency-Key")
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
 		if input.IdempotencyKey == "" {
