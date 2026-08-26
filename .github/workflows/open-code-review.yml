@@ -88,10 +88,11 @@ jobs:
         run: |
           set -euo pipefail
           engine_dir="${RUNNER_TEMP}/review-engines"
+          ocr_prefix="${RUNNER_TEMP}/open-code-review-cli"
           mkdir -p "${engine_dir}"
+          rm -rf "${ocr_prefix}"
 
-          ocr_tgz="${engine_dir}/$(npm pack --silent --ignore-scripts --pack-destination "${engine_dir}" @\
-          alibaba-group/open-code-review@1.9.9)"
+          ocr_tgz="${engine_dir}/$(npm pack --silent --ignore-scripts --pack-destination "${engine_dir}" @alibaba-group/open-code-review@1.9.9)"
           expected="/p+9mE+gEG1HrkGZu25ocKxrPWPJbdLhqfbKgG7idMJEc6gLF3RpS/u+2V3lpnKKVallXj7IHW4sSjNFQO1F9w=="
           actual="$(sha512sum "${ocr_tgz}" | awk '{print $1}' | xxd -r -p | base64 -w0)"
 
@@ -100,8 +101,9 @@ jobs:
             exit 1
           }
 
-          npm install --global --ignore-scripts "${ocr_tgz}"
-          ocr --version
+          npm install --global --prefix "${ocr_prefix}" --ignore-scripts "${ocr_tgz}"
+          "${ocr_prefix}/bin/ocr" --version
+          echo "${ocr_prefix}/bin" >> "${GITHUB_PATH}"
 
       - name: Initialize object-only review repository
         shell: bash
