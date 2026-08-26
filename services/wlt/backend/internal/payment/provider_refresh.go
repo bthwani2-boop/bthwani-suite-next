@@ -33,23 +33,18 @@ func HandleRefreshProviderStatus(db *sql.DB) http.HandlerFunc {
 		}
 		if session.Status == "captured" || session.Status == "failed" || session.Status == "expired" {
 			shared.SendJSON(w, http.StatusOK, map[string]any{
-				"paymentSession": session,
+				"paymentSession":      session,
 				"providerRefreshSkipped": true,
-				"reason": "session is already terminal",
+				"reason":              "session is already terminal",
 			})
 			return
 		}
-		client, err := provider.NewDefaultPaymentProvider()
+		rail, err := provider.NewFinancialRailRouter(nil, "")
 		if err != nil {
 			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
 			return
 		}
-		result, err := client.Post(r.Context(), "/financial/card/status", map[string]any{
-			"paymentSessionId":  session.ID,
-			"providerReference": session.ProviderReference,
-			"amountMinorUnits":  session.AmountMinorUnits,
-			"currency":          session.Currency,
-		}, provider.RequestMetaFromHTTP(r, "wlt-provider-status-refresh"))
+		result, err := rail.Status(r.Context(), provider.RequestMetaFromHTTP(r, "wlt-provider-status-refresh"))
 		if err != nil {
 			shared.SendProviderError(w, err)
 			return

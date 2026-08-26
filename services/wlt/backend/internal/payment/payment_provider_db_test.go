@@ -18,9 +18,23 @@ type fakeProvider struct {
 	err error
 }
 
-func (f *fakeProvider) Post(ctx context.Context, path string, body any, meta provider.RequestMeta) (provider.ProviderResult, error) {
+func (f *fakeProvider) Authorize(ctx context.Context, body any, meta provider.RequestMeta) (provider.ProviderResult, error) {
 	return f.res, f.err
 }
+
+func (f *fakeProvider) Capture(ctx context.Context, body any, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	return f.res, f.err
+}
+
+func (f *fakeProvider) Refund(ctx context.Context, body any, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	return f.res, f.err
+}
+
+func (f *fakeProvider) Status(ctx context.Context, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	return f.res, f.err
+}
+
+var _ provider.CashInRail = (*fakeProvider)(nil)
 
 func getTestDB(t *testing.T) *sql.DB {
 	dbURL := os.Getenv("DATABASE_URL")
@@ -180,8 +194,8 @@ func TestAuthorizeSessionWithProvider_IgnoresCallerAmount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AuthorizeSessionWithProvider returned error: %v", err)
 	}
-	if amt, _ := client.body["amountMinorUnits"].(int64); amt != 500 {
-		t.Errorf("expected provider to be called with the session's own amount (500), got %v", client.body["amountMinorUnits"])
+	if amt, _ := client.authorizeBody["amountMinorUnits"].(int64); amt != 500 {
+		t.Errorf("expected provider to be called with the session's own amount (500), got %v", client.authorizeBody["amountMinorUnits"])
 	}
 	if session.AmountMinorUnits != 500 {
 		t.Errorf("expected persisted amount to remain 500, got %d", session.AmountMinorUnits)

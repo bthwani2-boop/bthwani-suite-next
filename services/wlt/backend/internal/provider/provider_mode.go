@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 type Mode string
@@ -15,8 +16,9 @@ const (
 )
 
 type Config struct {
-	Mode    Mode
-	BaseURL string
+	Mode          Mode
+	BaseURL       string
+	TimeoutBudget time.Duration
 }
 
 func LoadConfig() (Config, error) {
@@ -42,24 +44,14 @@ func LoadConfig() (Config, error) {
 			return Config{}, fmt.Errorf("WLT_FINANCIAL_PROVIDER_BASE_URL is required for sandbox mode")
 		}
 	}
-	return Config{Mode: mode, BaseURL: baseURL}, nil
-}
 
-func NewPaymentProvider(config Config) (PaymentProvider, error) {
-	switch config.Mode {
-	case ModeMock, ModeSandbox:
-		return NewClient(config, nil), nil
-	case ModeProduction:
-		return nil, fmt.Errorf("%w: production provider construction is disabled", ErrProductionProviderUnavailable)
-	default:
-		return nil, fmt.Errorf("unsupported provider mode: %s", config.Mode)
+	// Default timeout budget (can be overridden by registry)
+	timeoutBudget := 15 * time.Second
+	if tb := strings.TrimSpace(os.Getenv("WLT_FINANCIAL_PROVIDER_TIMEOUT_MS")); tb != "" {
+		if ms, err := time.ParseDuration(tb + "ms"); err == nil {
+			timeoutBudget = ms
+		}
 	}
-}
 
-func NewDefaultPaymentProvider() (PaymentProvider, error) {
-	config, err := LoadConfig()
-	if err != nil {
-		return nil, err
-	}
-	return NewPaymentProvider(config)
+	return Config{Mode: mode, BaseURL: baseURL, TimeoutBudget: timeoutBudget}, nil
 }

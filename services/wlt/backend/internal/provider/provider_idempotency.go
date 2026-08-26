@@ -3,9 +3,12 @@ package provider
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 )
+
+var ErrEntropyUnavailable = errors.New("entropy source unavailable for idempotency material")
 
 type RequestMeta struct {
 	CorrelationID  string
@@ -17,9 +20,15 @@ func NewRequestMeta(prefix string) RequestMeta {
 		prefix = "wlt-provider"
 	}
 
+	token, err := randomToken()
+	if err != nil {
+		// Fail closed: cannot create idempotency material without entropy
+		panic(fmt.Sprintf("failed to create RequestMeta: %v", err))
+	}
+
 	return RequestMeta{
-		CorrelationID:  fmt.Sprintf("%s-%s", prefix, randomToken()),
-		IdempotencyKey: fmt.Sprintf("%s-%s", prefix, randomToken()),
+		CorrelationID:  fmt.Sprintf("%s-%s", prefix, token),
+		IdempotencyKey: fmt.Sprintf("%s-%s", prefix, token),
 	}
 }
 
@@ -34,10 +43,10 @@ func RequestMetaFromHTTP(r *http.Request, prefix string) RequestMeta {
 	return meta
 }
 
-func randomToken() string {
+func randomToken() (string, error) {
 	var b [16]byte
 	if _, err := rand.Read(b[:]); err != nil {
-		return "random-unavailable"
+		return "", ErrEntropyUnavailable
 	}
-	return hex.EncodeToString(b[:])
+	return hex.EncodeToString(b[:]), nil
 }

@@ -3,6 +3,10 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"os"
+	"strings"
+	"time"
 )
 
 // Capability enumerates the finite set of financial-rail operations a
@@ -39,44 +43,93 @@ type CashInRail interface {
 	Status(ctx context.Context, meta RequestMeta) (ProviderResult, error)
 }
 
-// FinancialRailRouter selects the single active PaymentProvider for the
-// configured mode and exposes it through CashInRail. It reuses
-// NewPaymentProvider for mode selection rather than reimplementing it, so
-// production continues to fail closed via the existing LoadConfig/
-// NewPaymentProvider guard (ModeProduction is refused before any adapter is
-// constructed) with no mock/sandbox fallback.
-//
-// The registry/environment fields are optional (nil registry preserves
-// today's behavior exactly, matching NewDefaultPaymentProvider). When a
-// registry is supplied, the router additionally fails closed if the
-// configured provider row is missing, inactive, or under maintenance before
-// delegating any call.
+// FinancialRailRouter is the single canonical authority for all outbound
+// Cash-In money movement. It binds provider selection, environment,
+// active/maintenance state, timeout budget, secret/auth material, and
+// idempotency provenance to one source. The generic HTTP adapter (Client)
+// is an implementation detail and cannot be constructed directly by consumers.
+// Production fails closed when no real provider adapter exists.
 type FinancialRailRouter struct {
-	provider    PaymentProvider
-	registry    *Registry
+	client     *Client
+	registry   *Registry
 	environment string
+	providerType string
+	timeoutBudget time.Duration
 }
 
-// NewFinancialRailRouter builds a router for the given config. reg may be
-// nil to skip the wlt_financial_providers activation check.
-func NewFinancialRailRouter(config Config, reg *Registry, environment string) (*FinancialRailRouter, error) {
-	p, err := NewPaymentProvider(config)
+// NewFinancialRailRouter builds the canonical financial rail router.
+// It loads configuration from environment, constructs the internal HTTP client,
+// and optionally validates against the registry at call time. reg may be nil for
+// environments without a wlt_financial_providers table (e.g., local mock), but
+// production deployments MUST supply a registry to enforce active/maintenance/timeout checks.
+func NewFinancialRailRouter(registry *Registry, environment string) (*FinancialRailRouter, error) {
+	config, err := loadInternalConfig()
 	if err != nil {
 		return nil, err
 	}
-	return &FinancialRailRouter{provider: p, registry: reg, environment: environment}, nil
+
+	// Use environment-configured timeout as default; registry can override at call time
+	timeoutBudget := config.TimeoutBudget
+	providerType := string(config.Mode)
+
+	// Construct internal HTTP client (implementation detail)
+	client := &Client{
+		baseURL: strings.TrimRight(config.BaseURL, "/"),
+		httpClient: &http.Client{
+			Timeout: timeoutBudget,
+		},
+		breaker: NewCircuitBreaker(CircuitBreakerConfig{
+			FailureThreshold: 5,
+			SuccessThreshold: 2,
+			Timeout:          30 * time.Second,
+		}),
+		reg: registry,
+	}
+
+	return &FinancialRailRouter{
+		client:        client,
+		registry:      registry,
+		environment:   environment,
+		providerType:  providerType,
+		timeoutBudget: timeoutBudget,
+	}, nil
 }
 
-// NewDefaultFinancialRailRouter loads Config from the environment the same
-// way NewDefaultPaymentProvider does, with no registry check (reg=nil),
-// preserving the exact selection/fail-closed behavior already relied upon by
-// existing callers.
-func NewDefaultFinancialRailRouter() (*FinancialRailRouter, error) {
-	config, err := LoadConfig()
-	if err != nil {
-		return nil, err
+// loadInternalConfig loads provider configuration from environment.
+// This is internal to the financial rail authority; consumers MUST NOT call this.
+func loadInternalConfig() (Config, error) {
+	mode := Mode(strings.TrimSpace(os.Getenv("WLT_FINANCIAL_PROVIDER_MODE")))
+	if mode == "" {
+		return Config{}, fmt.Errorf("WLT_FINANCIAL_PROVIDER_MODE is required; select mock only for explicit local simulation or sandbox for approved provider verification")
 	}
-	return NewFinancialRailRouter(config, nil, "")
+	if mode != ModeMock && mode != ModeSandbox && mode != ModeProduction {
+		return Config{}, fmt.Errorf("unsupported WLT_FINANCIAL_PROVIDER_MODE: %s", mode)
+	}
+	if mode == ModeProduction {
+		return Config{}, fmt.Errorf("%w: WLT_FINANCIAL_PROVIDER_MODE=production is blocked until a real provider adapter, secret reference, inquiry, webhook verification, reconciliation, and independent release approvals are implemented", ErrProductionProviderUnavailable)
+	}
+	if mode == ModeMock && strings.TrimSpace(os.Getenv("WLT_ALLOW_MOCK_PROVIDER")) != "true" {
+		return Config{}, fmt.Errorf("mock payment provider is disabled; set WLT_ALLOW_MOCK_PROVIDER=true only for an explicit local simulation")
+	}
+
+	baseURL := strings.TrimSpace(os.Getenv("WLT_FINANCIAL_PROVIDER_BASE_URL"))
+	if baseURL == "" {
+		if mode == ModeMock {
+			baseURL = "http://wiremock-financial-provider:8080"
+		} else {
+			return Config{}, fmt.Errorf("WLT_FINANCIAL_PROVIDER_BASE_URL is required for sandbox mode")
+		}
+	}
+
+	// Default timeout budget (can be overridden by registry)
+	timeoutBudget := 15 * time.Second
+	if tb := strings.TrimSpace(os.Getenv("WLT_FINANCIAL_PROVIDER_TIMEOUT_MS")); tb != "" {
+		if ms, err := time.ParseDuration(tb + "ms"); err == nil {
+			timeoutBudget = ms
+		}
+	}
+
+	return Config{Mode: mode, BaseURL: baseURL, TimeoutBudget: timeoutBudget}, nil
 }
 
 func (r *FinancialRailRouter) checkActive(ctx context.Context, capability Capability) error {
@@ -94,28 +147,28 @@ func (r *FinancialRailRouter) Authorize(ctx context.Context, body any, meta Requ
 	if err := r.checkActive(ctx, CapabilityCashInAuthorize); err != nil {
 		return ProviderResult{}, err
 	}
-	return r.provider.Post(ctx, cashInAuthorizePath, body, meta)
+	return r.client.Post(ctx, cashInAuthorizePath, body, meta)
 }
 
 func (r *FinancialRailRouter) Capture(ctx context.Context, body any, meta RequestMeta) (ProviderResult, error) {
 	if err := r.checkActive(ctx, CapabilityCashInCapture); err != nil {
 		return ProviderResult{}, err
 	}
-	return r.provider.Post(ctx, cashInCapturePath, body, meta)
+	return r.client.Post(ctx, cashInCapturePath, body, meta)
 }
 
 func (r *FinancialRailRouter) Refund(ctx context.Context, body any, meta RequestMeta) (ProviderResult, error) {
 	if err := r.checkActive(ctx, CapabilityCashInRefund); err != nil {
 		return ProviderResult{}, err
 	}
-	return r.provider.Post(ctx, cashInRefundPath, body, meta)
+	return r.client.Post(ctx, cashInRefundPath, body, meta)
 }
 
 func (r *FinancialRailRouter) Status(ctx context.Context, meta RequestMeta) (ProviderResult, error) {
 	if err := r.checkActive(ctx, CapabilityCashInStatus); err != nil {
 		return ProviderResult{}, err
 	}
-	return r.provider.Get(ctx, cashInStatusPath, meta)
+	return r.client.Get(ctx, cashInStatusPath, meta)
 }
 
 var _ CashInRail = (*FinancialRailRouter)(nil)

@@ -60,7 +60,7 @@ func HandleCompleteGovernedRefundDurable(db *sql.DB) http.HandlerFunc {
 		if !decodeGovernedJSON(w, r, &input) {
 			return
 		}
-		rail, err := provider.NewDefaultFinancialRailRouter()
+		rail, err := provider.NewFinancialRailRouter(nil, "")
 		if err != nil {
 			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
 			return

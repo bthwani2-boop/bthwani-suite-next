@@ -8,27 +8,28 @@ import (
 	"testing"
 )
 
-func TestPaymentProviderFactory(t *testing.T) {
-	t.Run("Mock Mode factory", func(t *testing.T) {
+func TestFinancialRailRouterFactory(t *testing.T) {
+	t.Run("Mock Mode router", func(t *testing.T) {
 		t.Setenv("WLT_FINANCIAL_PROVIDER_MODE", "mock")
 		t.Setenv("WLT_FINANCIAL_PROVIDER_BASE_URL", "http://localhost:8080")
 		t.Setenv("WLT_ALLOW_MOCK_PROVIDER", "true")
-		provider, err := NewDefaultPaymentProvider()
+		router, err := NewFinancialRailRouter(nil, "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if _, ok := provider.(*Client); !ok {
-			t.Fatal("expected mock provider to be of type *Client")
+		if router == nil {
+			t.Fatal("expected non-nil router")
 		}
+		var _ CashInRail = router
 	})
 
 	t.Run("Production Mode fails closed", func(t *testing.T) {
 		t.Setenv("WLT_FINANCIAL_PROVIDER_MODE", "production")
 		t.Setenv("WLT_FINANCIAL_PROVIDER_BASE_URL", "https://prod.example")
 		t.Setenv("WLT_ALLOW_PRODUCTION_PROVIDER", "true")
-		provider, err := NewDefaultPaymentProvider()
-		if provider != nil {
-			t.Fatalf("expected no production provider, got %T", provider)
+		router, err := NewFinancialRailRouter(nil, "")
+		if router != nil {
+			t.Fatalf("expected no production router, got %T", router)
 		}
 		if !errors.Is(err, ErrProductionProviderUnavailable) {
 			t.Fatalf("expected ErrProductionProviderUnavailable, got %v", err)

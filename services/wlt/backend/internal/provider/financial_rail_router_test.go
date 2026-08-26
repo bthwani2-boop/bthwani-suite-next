@@ -38,7 +38,7 @@ func TestFinancialRailRouter_ProductionFailsClosedNoFallback(t *testing.T) {
 	t.Setenv("WLT_FINANCIAL_PROVIDER_MODE", "production")
 	t.Setenv("WLT_FINANCIAL_PROVIDER_BASE_URL", "https://prod.example")
 
-	router, err := NewDefaultFinancialRailRouter()
+	router, err := NewFinancialRailRouter(nil, "")
 	if router != nil {
 		t.Fatalf("expected no router for production mode, got %T", router)
 	}
@@ -52,17 +52,14 @@ func TestFinancialRailRouter_MockModeRoutesToAllowlistedPaths(t *testing.T) {
 	t.Setenv("WLT_FINANCIAL_PROVIDER_BASE_URL", "http://localhost:8080")
 	t.Setenv("WLT_ALLOW_MOCK_PROVIDER", "true")
 
-	router, err := NewDefaultFinancialRailRouter()
+	router, err := NewFinancialRailRouter(nil, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if router == nil {
 		t.Fatal("expected non-nil router")
 	}
-	if _, ok := router.provider.(*Client); !ok {
-		t.Fatalf("expected mock provider to be *Client, got %T", router.provider)
-	}
-
+	// The internal client is now an implementation detail; verify it implements CashInRail
 	var _ CashInRail = router
 }
 
@@ -70,11 +67,6 @@ func TestFinancialRailRouter_RegistryMaintenanceFailsClosed(t *testing.T) {
 	t.Setenv("WLT_FINANCIAL_PROVIDER_MODE", "mock")
 	t.Setenv("WLT_FINANCIAL_PROVIDER_BASE_URL", "http://localhost:8080")
 	t.Setenv("WLT_ALLOW_MOCK_PROVIDER", "true")
-
-	config, err := LoadConfig()
-	if err != nil {
-		t.Fatalf("unexpected LoadConfig error: %v", err)
-	}
 
 	db := getTestDB(t)
 	defer db.Close()
@@ -85,7 +77,7 @@ func TestFinancialRailRouter_RegistryMaintenanceFailsClosed(t *testing.T) {
 	}()
 
 	reg := NewRegistry(db)
-	router, err := NewFinancialRailRouter(config, reg, "test-env")
+	router, err := NewFinancialRailRouter(reg, "test-env")
 	if err != nil {
 		t.Fatalf("unexpected error constructing router: %v", err)
 	}
@@ -104,16 +96,15 @@ func TestFinancialRailRouter_RegistryMissingProviderFailsClosed(t *testing.T) {
 	t.Setenv("WLT_FINANCIAL_PROVIDER_BASE_URL", "http://localhost:8080")
 	t.Setenv("WLT_ALLOW_MOCK_PROVIDER", "true")
 
-	config, err := LoadConfig()
-	if err != nil {
-		t.Fatalf("unexpected LoadConfig error: %v", err)
-	}
-
 	db := getTestDB(t)
 	defer db.Close()
 
 	reg := NewRegistry(db)
-	router, err := NewFinancialRailRouter(config, reg, "environment-with-no-row-"+randomToken())
+	envSuffix, err := randomToken()
+	if err != nil {
+		t.Fatalf("failed to generate random token: %v", err)
+	}
+	router, err := NewFinancialRailRouter(reg, "environment-with-no-row-"+envSuffix)
 	if err != nil {
 		t.Fatalf("unexpected error constructing router: %v", err)
 	}

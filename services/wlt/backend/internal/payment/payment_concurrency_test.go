@@ -20,11 +20,31 @@ type slowCountingProvider struct {
 	calls int32
 }
 
-func (p *slowCountingProvider) Post(ctx context.Context, path string, body any, meta provider.RequestMeta) (provider.ProviderResult, error) {
+func (p *slowCountingProvider) Authorize(ctx context.Context, body any, meta provider.RequestMeta) (provider.ProviderResult, error) {
 	atomic.AddInt32(&p.calls, 1)
 	time.Sleep(p.delay)
 	return p.res, nil
 }
+
+func (p *slowCountingProvider) Capture(ctx context.Context, body any, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	atomic.AddInt32(&p.calls, 1)
+	time.Sleep(p.delay)
+	return p.res, nil
+}
+
+func (p *slowCountingProvider) Refund(ctx context.Context, body any, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	atomic.AddInt32(&p.calls, 1)
+	time.Sleep(p.delay)
+	return p.res, nil
+}
+
+func (p *slowCountingProvider) Status(ctx context.Context, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	atomic.AddInt32(&p.calls, 1)
+	time.Sleep(p.delay)
+	return p.res, nil
+}
+
+var _ provider.CashInRail = (*slowCountingProvider)(nil)
 
 // TestCaptureSessionWithProvider_ConcurrentCalls_OnlyOneReachesProvider fires
 // two concurrent CaptureSessionWithProvider calls against the same

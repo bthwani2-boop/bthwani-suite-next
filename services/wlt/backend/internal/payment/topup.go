@@ -204,7 +204,7 @@ func CaptureTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashInRa
 
 func HandleAuthorizeTopUpSession(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rail, err := provider.NewDefaultFinancialRailRouter()
+		rail, err := provider.NewFinancialRailRouter(nil, "")
 		if err != nil {
 			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
 			return
@@ -232,7 +232,7 @@ func HandleAuthorizeTopUpSession(db *sql.DB) http.HandlerFunc {
 
 func HandleCaptureTopUpSession(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rail, err := provider.NewDefaultFinancialRailRouter()
+		rail, err := provider.NewFinancialRailRouter(nil, "")
 		if err != nil {
 			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
 			return

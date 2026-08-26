@@ -26,7 +26,7 @@ type ProviderResult struct {
 	Message           string `json:"message,omitempty"`
 }
 
-func NewClient(config Config, reg *Registry) *Client {
+func newClient(config Config, reg *Registry) *Client {
 	return &Client{
 		baseURL: strings.TrimRight(config.BaseURL, "/"),
 		// The timeout will be dynamically overridden per-request

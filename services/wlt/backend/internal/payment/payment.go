@@ -71,10 +71,6 @@ func strOrEmpty(s *string) string {
 	return *s
 }
 
-type financialProvider interface {
-	Post(ctx context.Context, path string, body any, meta provider.RequestMeta) (provider.ProviderResult, error)
-}
-
 func scanSession(row *sql.Row) (*PaymentSession, error) {
 	var s PaymentSession
 	err := row.Scan(
@@ -178,26 +174,27 @@ func claimSession(db *sql.DB, sessionID string, allowedFrom []string, pendingSta
 }
 
 func AuthorizeSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
-	client, err := provider.NewDefaultPaymentProvider()
+	rail, err := provider.NewFinancialRailRouter(nil, "")
 	if err != nil {
 		return nil, err
 	}
-	return AuthorizeSessionWithProvider(context.Background(), db, client, sessionID, provider.NewRequestMeta("wlt-authorize"))
+	return AuthorizeSessionWithProvider(context.Background(), db, rail, sessionID, provider.NewRequestMeta("wlt-authorize"))
 }
 
 // AuthorizeSessionWithProvider authorizes sessionID with the payment
-// provider. The amount and currency are always read from the session's own
-// row (never from caller input) so a client cannot tamper with the amount
-// actually authorized by supplying a different value in the request body.
-// The session must be in an authorizable status (reference_created or
-// pending_provider); anything else -- already authorized/captured, or
-// failed/expired -- returns ErrNotAuthorizable (409, not silently retried).
+// provider through the capability-checked CashInRail. The amount and currency
+// are always read from the session's own row (never from caller input) so a
+// client cannot tamper with the amount actually authorized by supplying a
+// different value in the request body. The session must be in an authorizable
+// status (reference_created or pending_provider); anything else -- already
+// authorized/captured, or failed/expired -- returns ErrNotAuthorizable (409,
+// not silently retried).
 //
 // The session is first claimed into 'authorization_pending' (see
 // claimSession) before the provider is ever called, so two concurrent
 // requests on the same session cannot both reach the provider call below --
 // the second one's claim fails with ErrSessionClaimConflict.
-func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, client financialProvider, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
+func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, rail provider.CashInRail, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("paymentSessionId is required")
 	}
@@ -217,7 +214,7 @@ func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, client financ
 		_ = markSessionFailedAndNotify(db, claimed, "authorization_pending")
 		return nil, fmt.Errorf("payment session has no amount to authorize")
 	}
-	result, err := authorizeProvider(ctx, client, claimed, amountMinorUnits, currency, meta)
+	result, err := authorizeProvider(ctx, rail, claimed, amountMinorUnits, currency, meta)
 	if err != nil {
 		if isAmbiguousProviderError(err) {
 			_ = markSessionResultUnknownAndOpenCase(db, claimed, "authorize", err, "authorization_pending")
@@ -248,17 +245,17 @@ func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, client financ
 }
 
 func CaptureSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
-	client, err := provider.NewDefaultPaymentProvider()
+	rail, err := provider.NewFinancialRailRouter(nil, "")
 	if err != nil {
 		return nil, err
 	}
-	return CaptureSessionWithProvider(context.Background(), db, client, sessionID, provider.NewRequestMeta("wlt-capture"))
+	return CaptureSessionWithProvider(context.Background(), db, rail, sessionID, provider.NewRequestMeta("wlt-capture"))
 }
 
 // CaptureSessionWithProvider claims the session into 'capture_pending' (see
 // claimSession) before calling the provider, closing the same double-call
 // race described on AuthorizeSessionWithProvider.
-func CaptureSessionWithProvider(ctx context.Context, db *sql.DB, client financialProvider, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
+func CaptureSessionWithProvider(ctx context.Context, db *sql.DB, rail provider.CashInRail, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("paymentSessionId is required")
 	}
@@ -269,7 +266,7 @@ func CaptureSessionWithProvider(ctx context.Context, db *sql.DB, client financia
 	if err != nil || claimed == nil {
 		return claimed, err
 	}
-	result, err := captureProvider(ctx, client, claimed, meta)
+	result, err := captureProvider(ctx, rail, claimed, meta)
 	if err != nil {
 		if isAmbiguousProviderError(err) {
 			_ = markSessionResultUnknownAndOpenCase(db, claimed, "capture", err, "capture_pending")
@@ -281,8 +278,8 @@ func CaptureSessionWithProvider(ctx context.Context, db *sql.DB, client financia
 	return captureSessionAndNotify(db, sessionID, result.ProviderReference)
 }
 
-func authorizeProvider(ctx context.Context, client financialProvider, session *PaymentSession, amountMinorUnits int64, currency string, meta provider.RequestMeta) (provider.ProviderResult, error) {
-	result, err := client.Post(ctx, "/financial/card/authorize", map[string]any{
+func authorizeProvider(ctx context.Context, rail provider.CashInRail, session *PaymentSession, amountMinorUnits int64, currency string, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	result, err := rail.Authorize(ctx, map[string]any{
 		"paymentSessionId":  session.ID,
 		"checkoutIntentId":  strOrEmpty(session.CheckoutIntentID),
 		"clientId":          session.ClientID,
@@ -301,8 +298,8 @@ func authorizeProvider(ctx context.Context, client financialProvider, session *P
 	return result, nil
 }
 
-func captureProvider(ctx context.Context, client financialProvider, session *PaymentSession, meta provider.RequestMeta) (provider.ProviderResult, error) {
-	result, err := client.Post(ctx, "/financial/card/capture", map[string]any{
+func captureProvider(ctx context.Context, rail provider.CashInRail, session *PaymentSession, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	result, err := rail.Capture(ctx, map[string]any{
 		"paymentSessionId":  session.ID,
 		"providerReference": session.ProviderReference,
 		"amountMinorUnits":  session.AmountMinorUnits,

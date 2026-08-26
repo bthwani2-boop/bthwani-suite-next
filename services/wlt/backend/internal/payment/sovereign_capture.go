@@ -20,7 +20,7 @@ import (
 // local finalization fails, WLT moves the claimed session to the explicit
 // provider_result_unknown reconciliation path instead of allowing a blind
 // capture retry.
-func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, client financialProvider, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
+func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, rail provider.CashInRail, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("paymentSessionId is required")
 	}
@@ -32,7 +32,7 @@ func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, client
 		return claimed, err
 	}
 
-	result, err := captureProvider(ctx, client, claimed, meta)
+	result, err := captureProviderSovereign(ctx, rail, claimed, meta)
 	if err != nil {
 		if isAmbiguousProviderError(err) {
 			_ = markSessionResultUnknownAndOpenCase(db, claimed, "capture", err, "capture_pending")
@@ -90,12 +90,12 @@ func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, client
 
 func HandleCaptureSessionSovereign(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		client, err := provider.NewDefaultPaymentProvider()
+		rail, err := provider.NewFinancialRailRouter(nil, "")
 		if err != nil {
 			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
 			return
 		}
-		session, err := CaptureSessionWithProviderSovereign(r.Context(), db, client, r.PathValue("paymentSessionId"), provider.RequestMetaFromHTTP(r, "wlt-capture"))
+		session, err := CaptureSessionWithProviderSovereign(r.Context(), db, rail, r.PathValue("paymentSessionId"), provider.RequestMetaFromHTTP(r, "wlt-capture"))
 		if err != nil {
 			shared.SendProviderError(w, err)
 			return
@@ -106,4 +106,20 @@ func HandleCaptureSessionSovereign(db *sql.DB) http.HandlerFunc {
 		}
 		shared.SendJSON(w, http.StatusOK, map[string]any{"paymentSession": session})
 	}
+}
+
+func captureProviderSovereign(ctx context.Context, rail provider.CashInRail, session *PaymentSession, meta provider.RequestMeta) (provider.ProviderResult, error) {
+	result, err := rail.Capture(ctx, map[string]any{
+		"paymentSessionId":  session.ID,
+		"providerReference": session.ProviderReference,
+		"amountMinorUnits":  session.AmountMinorUnits,
+		"currency":          session.Currency,
+	}, meta)
+	if err != nil {
+		return provider.ProviderResult{}, err
+	}
+	if result.Status != "captured" || result.ProviderReference == "" {
+		return provider.ProviderResult{}, fmt.Errorf("provider capture returned invalid status or reference")
+	}
+	return result, nil
 }
