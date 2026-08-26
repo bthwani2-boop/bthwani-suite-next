@@ -267,7 +267,7 @@ export function OperationalPolicySection({
       setError(null);
       const response = await evaluateDshOperatorOperationalPolicy({
         zoneId: selectedZoneId,
-        ...(selectedZone?.cityCode ? { serviceAreaCode: selectedZone.cityCode } : {}),
+        ...(selectedZone?.serviceAreaCode ? { serviceAreaCode: selectedZone.serviceAreaCode } : {}),
         fulfillmentMode: evaluationMode,
         slaCategory: form.slaCategory,
         activeOrders: integer(activeOrders, "الطلبات الحالية", 0, 1_000_000),
@@ -358,7 +358,7 @@ export function OperationalPolicySection({
                 }}
               >
                 <CpTableCell>{row.name}</CpTableCell>
-                <CpTableCell>{row.cityCode}</CpTableCell>
+                <CpTableCell>{row.serviceAreaCode}</CpTableCell>
                 <CpTableCell>{String(row.version)}</CpTableCell>
                 <CpTableCell>
                   <CpBadge tone={row.isActive ? "success" : "neutral"}>{row.isActive ? "نشطة" : "معطلة"}</CpBadge>

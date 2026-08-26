@@ -284,10 +284,10 @@ func EvaluateOperationalPolicy(
 	var snapshot operationalSnapshot
 	snapshot.Input = input
 	err := db.QueryRowContext(ctx, `
-		SELECT id, name, city_code, is_active, description, version, created_at, updated_at
+		SELECT id, name, service_area_code, is_active, description, version, created_at, updated_at
 		FROM dsh_platform_zones
 		WHERE id = $1`, input.ZoneID).Scan(
-		&snapshot.Zone.ID, &snapshot.Zone.Name, &snapshot.Zone.CityCode,
+		&snapshot.Zone.ID, &snapshot.Zone.Name, &snapshot.Zone.ServiceAreaCode,
 		&snapshot.Zone.IsActive, &snapshot.Zone.Description, &snapshot.Zone.Version,
 		&snapshot.Zone.CreatedAt, &snapshot.Zone.UpdatedAt,
 	)
@@ -350,7 +350,7 @@ func BuildOperationalDecision(snapshot operationalSnapshot) OperationalDecision 
 	input := snapshot.Input
 	decision := OperationalDecision{
 		ZoneID:          snapshot.Zone.ID,
-		ServiceAreaCode: snapshot.Zone.CityCode,
+		ServiceAreaCode: snapshot.Zone.ServiceAreaCode,
 		FulfillmentMode: input.FulfillmentMode,
 		Decision:        "serviceable",
 		Serviceable:     true,
@@ -384,7 +384,7 @@ func BuildOperationalDecision(snapshot operationalSnapshot) OperationalDecision 
 	switch {
 	case !snapshot.Zone.IsActive:
 		deny("ZONE_INACTIVE", "unserviceable")
-	case input.ServiceAreaCode != "" && input.ServiceAreaCode != strings.ToLower(snapshot.Zone.CityCode):
+	case input.ServiceAreaCode != "" && input.ServiceAreaCode != strings.ToLower(snapshot.Zone.ServiceAreaCode):
 		deny("SERVICE_AREA_MISMATCH", "unserviceable")
 	case snapshot.ActiveStores < 1:
 		deny("NO_ACTIVE_STORES", "unserviceable")
@@ -516,10 +516,10 @@ func RollbackPolicyEvent(
 			}
 			err = tx.QueryRowContext(ctx, `
 				UPDATE dsh_platform_zones
-				SET name = $2, city_code = $3, is_active = $4, description = $5,
+				SET name = $2, service_area_code = $3, is_active = $4, description = $5,
 				    version = version + 1, updated_at = NOW()
 				WHERE id = $1 AND version = $6
-				RETURNING version`, event.AggregateID, snapshot.Name, snapshot.CityCode,
+				RETURNING version`, event.AggregateID, snapshot.Name, snapshot.ServiceAreaCode,
 				snapshot.IsActive, snapshot.Description, input.ExpectedCurrentVersion,
 			).Scan(&result.ToVersion)
 			restored = snapshot

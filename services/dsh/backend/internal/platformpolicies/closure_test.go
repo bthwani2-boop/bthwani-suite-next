@@ -4,7 +4,7 @@ import "testing"
 
 func baseJRN029Snapshot() operationalSnapshot {
 	return operationalSnapshot{
-		Zone:         Zone{ID: "11111111-1111-1111-1111-111111111111", CityCode: "sanaa", IsActive: true, Version: 3},
+		Zone:         Zone{ID: "11111111-1111-1111-1111-111111111111", ServiceAreaCode: "sanaa", IsActive: true, Version: 3},
 		ActiveStores: 2,
 		SLA: OperationalSLA{
 			Configured:        true,

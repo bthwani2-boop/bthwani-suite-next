@@ -1,7 +1,7 @@
 export type DshZone = {
   readonly id: string;
   readonly name: string;
-  readonly cityCode: string;
+  readonly serviceAreaCode: string;
   readonly isActive: boolean;
   readonly description: string;
   readonly version: number;
@@ -47,7 +47,7 @@ export type DshPlatformState<T> =
 export type DshCreateZoneInput = {
   readonly id?: string;
   readonly name: string;
-  readonly cityCode: string;
+  readonly serviceAreaCode: string;
   readonly description?: string;
   readonly reason: string;
 };
