@@ -26,15 +26,15 @@ BEGIN
         SELECT COUNT(*)
         INTO v_zone_count
         FROM dsh_platform_zones
-        WHERE lower(city_code) = lower(r.code);
+        WHERE lower(service_area_code) = lower(r.code);
 
         IF v_zone_count > 1 THEN
-            SELECT id INTO v_zone_id FROM dsh_platform_zones WHERE lower(city_code) = lower(r.code) LIMIT 1;
+            SELECT id INTO v_zone_id FROM dsh_platform_zones WHERE lower(service_area_code) = lower(r.code) LIMIT 1;
         ELSIF v_zone_count = 0 THEN
             INSERT INTO dsh_platform_zones (
                 id,
                 name,
-                city_code,
+                service_area_code,
                 is_active,
                 description,
                 version,
@@ -55,7 +55,7 @@ BEGIN
             SELECT id
             INTO v_zone_id
             FROM dsh_platform_zones
-            WHERE lower(city_code) = lower(r.code);
+            WHERE lower(service_area_code) = lower(r.code);
 
             UPDATE dsh_platform_zones
             SET is_active = TRUE,

@@ -32,7 +32,7 @@ func TestPostgresLifecycle(t *testing.T) {
 	suffix := fmt.Sprintf("%d", time.Now().UnixNano())
 	actorID := "test-operator-" + suffix
 	storeID := "store-" + suffix
-	cityCode := "" + suffix
+	serviceAreaCode := "area-" + suffix
 
 	mutation := func(key, reason string) MutationContext {
 		return MutationContext{
@@ -44,10 +44,17 @@ func TestPostgresLifecycle(t *testing.T) {
 		}
 	}
 
+	if _, err := db.Exec(`
+		INSERT INTO dsh_service_area_geofences (service_area_code, display_name, polygon, active)
+		VALUES ($1, 'Lifecycle Proof Area', '[["44.18","15.33"],["44.20","15.33"],["44.20","15.35"],["44.18","15.35"],["44.18","15.33"]]'::jsonb, TRUE)
+		ON CONFLICT (service_area_code) DO NOTHING`, serviceAreaCode); err != nil {
+		t.Fatalf("seed service-area geofence: %v", err)
+	}
+
 	zone, err := CreateZone(ctx, db, CreateZoneInput{
-		Name:        " Remote Proof " + suffix,
-		CityCode:    cityCode,
-		Description: "same-commit PostgreSQL lifecycle proof",
+		Name:            " Remote Proof " + suffix,
+		ServiceAreaCode: serviceAreaCode,
+		Description:     "same-commit PostgreSQL lifecycle proof",
 	}, mutation("create-zone", "create remote proof zone"))
 	if err != nil {
 		t.Fatalf("create zone: %v", err)
@@ -61,19 +68,20 @@ func TestPostgresLifecycle(t *testing.T) {
 		_, _ = db.Exec(`DELETE FROM dsh_platform_sla_rules WHERE zone_id = $1`, zone.ID)
 		_, _ = db.Exec(`DELETE FROM dsh_stores WHERE id = $1`, storeID)
 		_, _ = db.Exec(`DELETE FROM dsh_platform_zones WHERE id = $1`, zone.ID)
+		_, _ = db.Exec(`DELETE FROM dsh_service_area_geofences WHERE service_area_code = $1`, serviceAreaCode)
 	})
 
 	_, err = db.Exec(`
 		INSERT INTO dsh_stores (
 			id, operator_context_id, slug, display_name, status, city_code, service_area_code,
-			serviceability_status, is_visible, partner_readiness,
+		serviceability_status, is_visible, partner_readiness,
 			catalog_approval_status, marketing_visibility
 		)
 		VALUES (
 			$1, $5, $2, $3, 'published', $4, $4, 'serviceable', TRUE,
 			'ready', 'approved', 'visible'
 		)`,
-		storeID, storeID, " Store", cityCode, operatorContextID,
+		storeID, storeID, " Store", serviceAreaCode, operatorContextID,
 	)
 	if err != nil {
 		t.Fatalf("insert visible store: %v", err)
@@ -113,7 +121,7 @@ func TestPostgresLifecycle(t *testing.T) {
 
 	decision, err := EvaluateOperationalPolicy(ctx, db, OperationalEvaluationInput{
 		ZoneID:          zone.ID,
-		ServiceAreaCode: cityCode,
+		ServiceAreaCode: serviceAreaCode,
 		FulfillmentMode: FulfillmentModeBthwaniDelivery,
 		SlaCategory:     "default",
 		ActiveOrders:    1,
@@ -149,7 +157,7 @@ func TestPostgresLifecycle(t *testing.T) {
 
 	pausedDecision, err := EvaluateOperationalPolicy(ctx, db, OperationalEvaluationInput{
 		ZoneID:          zone.ID,
-		ServiceAreaCode: cityCode,
+		ServiceAreaCode: serviceAreaCode,
 		FulfillmentMode: FulfillmentModeBthwaniDelivery,
 		ActiveOrders:    1,
 		CaptainsOnline:  3,
@@ -223,7 +231,7 @@ func TestPostgresLifecycle(t *testing.T) {
 
 	disabledDecision, err := EvaluateOperationalPolicy(ctx, db, OperationalEvaluationInput{
 		ZoneID:          zone.ID,
-		ServiceAreaCode: cityCode,
+		ServiceAreaCode: serviceAreaCode,
 		FulfillmentMode: FulfillmentModeBthwaniDelivery,
 		ActiveOrders:    1,
 		CaptainsOnline:  3,

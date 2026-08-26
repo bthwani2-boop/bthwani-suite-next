@@ -30,7 +30,7 @@ import {
 type ZoneForm = {
   id: string;
   name: string;
-  cityCode: string;
+  serviceAreaCode: string;
   description: string;
   isActive: boolean;
   reason: string;
@@ -53,7 +53,7 @@ type CapacityForm = {
 const EMPTY_ZONE: ZoneForm = {
   id: "",
   name: "",
-  cityCode: "",
+  serviceAreaCode: "",
   description: "",
   isActive: true,
   reason: "",
@@ -154,7 +154,7 @@ export function OperationalPolicyGovernanceSection({
     setZoneForm({
       id: selectedZone.id,
       name: selectedZone.name,
-      cityCode: selectedZone.cityCode,
+      serviceAreaCode: selectedZone.serviceAreaCode,
       description: selectedZone.description,
       isActive: selectedZone.isActive,
       reason: "",
@@ -206,19 +206,19 @@ export function OperationalPolicyGovernanceSection({
   const saveZone = React.useCallback(async () => {
     try {
       const name = zoneForm.name.trim();
-      const cityCode = zoneForm.cityCode.trim().toLowerCase();
+      const serviceAreaCode = zoneForm.serviceAreaCode.trim().toLowerCase();
       if (name.length < 2 || name.length > 160) {
         throw new Error("اسم المنطقة يجب أن يكون بين حرفين و160 حرفًا.");
       }
-      if (cityCode.length < 1 || cityCode.length > 80) {
-        throw new Error("رمز المدينة غير صالح.");
+      if (serviceAreaCode.length < 1 || serviceAreaCode.length > 80) {
+        throw new Error("رمز نطاق الخدمة غير صالح.");
       }
       const reason = requiredReason(zoneForm.reason);
       setValidationError(null);
       const ok = await editor.saveZone(selectedZone, {
         ...(!selectedZone && zoneForm.id.trim() ? { id: zoneForm.id.trim().toLowerCase() } : {}),
         name,
-        cityCode,
+        serviceAreaCode,
         description: zoneForm.description.trim(),
         isActive: zoneForm.isActive,
         reason,
@@ -320,7 +320,7 @@ export function OperationalPolicyGovernanceSection({
           <thead>
             <tr>
               <CpTableHeaderCell>المنطقة</CpTableHeaderCell>
-              <CpTableHeaderCell>رمز المدينة</CpTableHeaderCell>
+              <CpTableHeaderCell>رمز نطاق الخدمة</CpTableHeaderCell>
               <CpTableHeaderCell>الحالة</CpTableHeaderCell>
               <CpTableHeaderCell>الإصدار</CpTableHeaderCell>
             </tr>
@@ -329,7 +329,7 @@ export function OperationalPolicyGovernanceSection({
             {zoneRows.map((row) => (
               <tr key={row.id} onClick={() => chooseZone(row)}>
                 <CpTableCell>{row.name}</CpTableCell>
-                <CpTableCell>{row.cityCode}</CpTableCell>
+                <CpTableCell>{row.serviceAreaCode}</CpTableCell>
                 <CpTableCell>
                   <CpBadge tone={row.isActive ? "success" : "neutral"}>{row.isActive ? "نشطة" : "معطلة"}</CpBadge>
                 </CpTableCell>
@@ -357,11 +357,11 @@ export function OperationalPolicyGovernanceSection({
           onChange={(name) => setZoneForm((current) => ({ ...current, name }))}
         />
         <CpTextInput
-          aria-label="رمز المدينة أو منطقة الخدمة"
-          value={zoneForm.cityCode}
+          aria-label="رمز نطاق الخدمة"
+          value={zoneForm.serviceAreaCode}
           disabled={Boolean(selectedZone)}
-          onChange={(cityCode) =>
-            setZoneForm((current) => ({ ...current, cityCode }))
+          onChange={(serviceAreaCode) =>
+            setZoneForm((current) => ({ ...current, serviceAreaCode }))
           }
         />
         {/* TextField kept: CpTextInput has no multiline support */}

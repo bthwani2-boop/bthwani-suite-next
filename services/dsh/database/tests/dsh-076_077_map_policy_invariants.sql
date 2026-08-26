@@ -66,7 +66,7 @@ BEGIN
   INSERT INTO dsh_platform_zones (
     id,
     name,
-    city_code,
+    service_area_code,
     description
   ) VALUES (
     v_zone_id,
