@@ -8,6 +8,7 @@
     "pnpm": "10.34.0"
   },
   "scripts": {
+    "ci:local": "pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/ci-local-gate.ps1",
     "contracts:redocly": "node tools/scripts/contracts/typecheck.mjs",
     "contracts:lint": "pnpm run contracts:redocly && pnpm run guard:contract-registry-drift",
     "typecheck": "pnpm run affected:typecheck",
