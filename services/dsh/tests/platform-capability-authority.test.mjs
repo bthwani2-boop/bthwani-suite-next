@@ -95,15 +95,12 @@ test("policy surfaces gate reads and writes before invoking their controllers", 
 });
 
 test("WLT payout-destination client exposes only operator-context methods", () => {
-  const client = read("services/dsh/backend/internal/wlt/actor_finance_client.go");
+  const client = read("services/dsh/backend/internal/wlt/payout_destination.go");
   assert.doesNotMatch(client, /Finance(?:Read|Upsert|Deactivate)PayoutDestination\s*\(/);
-  for (const method of [
-    "FinanceReadPayoutDestinationWithOperatorContext",
-    "FinanceUpsertPayoutDestinationWithOperatorContext",
-    "FinanceDeactivatePayoutDestinationWithOperatorContext",
-  ]) {
-    assert.match(client, new RegExp(`func \\(c \\*Client\\) ${method}\\s*\\(`));
-  }
+  assert.match(client, /func \(c \*Client\) GetPayoutDestination\s*\(/);
+  assert.match(client, /func \(c \*Client\) DeactivatePayoutDestination\s*\(/);
+  assert.match(client, /setDelegatedOperatorContextHeader/);
+  assert.match(client, /setRequiredMutationHeaders/);
 });
 
 test("local operator grants match the live DSH policy surfaces", () => {
