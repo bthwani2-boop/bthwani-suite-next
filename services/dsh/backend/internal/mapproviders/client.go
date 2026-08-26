@@ -24,6 +24,8 @@ var (
 	ErrUncertain     = errors.New("providers map result is uncertain")
 )
 
+const defaultRequestTimeout = 8 * time.Second
+
 type Client struct {
 	baseURL string
 	http    *http.Client
@@ -88,25 +90,24 @@ type upstreamError struct {
 }
 
 func NewClient(baseURL string) *Client {
+	return NewClientWithTimeout(baseURL, defaultRequestTimeout)
+}
+
+// NewClientWithTimeout builds a client with a bounded request budget and one
+// circuit breaker shared by every operation on the client.
+func NewClientWithTimeout(baseURL string, timeout time.Duration) *Client {
+	if timeout <= 0 {
+		timeout = defaultRequestTimeout
+	}
 	return &Client{
 		baseURL: strings.TrimRight(strings.TrimSpace(baseURL), "/"),
-		http:    &http.Client{},
+		http:    &http.Client{Timeout: timeout},
 		breaker: providers.NewCircuitBreaker(providers.CircuitBreakerConfig{
 			FailureThreshold: 5,
 			SuccessThreshold: 2,
 			Timeout:          30 * time.Second,
 		}),
 	}
-}
-
-// NewClientWithTimeout builds a client bounded by a fixed http.Client timeout.
-func NewClientWithTimeout(baseURL string, timeout time.Duration) *Client {
-	if timeout <= 0 {
-		timeout = 8 * time.Second
-	}
-	client := NewClient(baseURL)
-	client.http = &http.Client{Timeout: timeout}
-	return client
 }
 
 func (c *Client) Configured() bool {
