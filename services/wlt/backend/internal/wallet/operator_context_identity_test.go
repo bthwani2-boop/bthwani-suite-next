@@ -71,21 +71,6 @@ func TestEnsureWalletForOperatorContextTxSeparatesIdenticalActors(t *testing.T) 
 	}
 }
 
-func TestLegacyEnsureWalletFailsClosed(t *testing.T) {
-	db := walletTestDB(t)
-	defer db.Close()
-	tx, err := db.Begin()
-	if err != nil {
-		t.Fatalf("begin wallet tx: %v", err)
-	}
-	defer tx.Rollback()
-
-	_, err = EnsureWalletTx(tx, "field", "legacy-field", "YER")
-	if err == nil || !strings.Contains(err.Error(), "trusted OperatorContext context is required") {
-		t.Fatalf("expected fail-closed OperatorContext error, got %v", err)
-	}
-}
-
 func pqTextArray(values []string) string {
 	out := "{"
 	for i, value := range values {

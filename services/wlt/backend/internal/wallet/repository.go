@@ -76,28 +76,6 @@ func scanWallet(s walletScanner) (*Wallet, error) {
 	return &w, nil
 }
 
-// GetWallet is a deferred-runtime compatibility reader only. It is deliberately
-// restricted to the explicit legacy-unscoped partition so it can never choose
-// an arbitrary OperatorContext wallet when identical actor ids exist across OperatorContexts.
-// Active HTTP and domain paths must use GetWalletForOperatorContext.
-func GetWallet(db *sql.DB, actorType, actorID string) (*Wallet, error) {
-	const q = `
-		SELECT ` + walletCols + `
-		FROM wlt_wallets
-		WHERE operator_context_id = 'legacy-unscoped' AND actor_type = $1 AND actor_id = $2
-		LIMIT 1`
-
-	row := db.QueryRow(q, actorType, actorID)
-	w, err := scanWallet(row)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("get legacy wallet: %w", err)
-	}
-	return w, nil
-}
-
 func GetWalletForOperatorContext(db *sql.DB, operatorContextID, actorType, actorID string) (*Wallet, error) {
 	operatorContextID = strings.TrimSpace(operatorContextID)
 	if operatorContextID == "" {
@@ -157,9 +135,4 @@ func EnsureWalletForOperatorContextTx(ctx context.Context, tx *sql.Tx, actorType
 		return nil, fmt.Errorf("wallet currency %s does not match requested currency %s", w.Currency, currency)
 	}
 	return w, nil
-}
-
-// EnsureWalletTx preserves package compatibility for deferred/local callers.
-func EnsureWalletTx(tx *sql.Tx, actorType, actorID, currency string) (*Wallet, error) {
-	return EnsureWalletForOperatorContextTx(context.Background(), tx, actorType, actorID, currency)
 }
