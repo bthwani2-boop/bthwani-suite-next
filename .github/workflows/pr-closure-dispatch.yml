@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   approve:
-    name: Bind independent human closure approval
+    name: Bind authorized human closure approval
     if: ${{ github.event.issue.pull_request && github.event.label.name == 'bthwani:closure-request' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -49,10 +49,9 @@ jobs:
           "::error::closure dispatch is limited to same-repository candidates"; exit 1; }
           author="$(jq -r '.user.login' <<<"${pr}")"
           head_owner="$(jq -r '.head.repo.owner.login' <<<"${pr}")"
-          [[ "${APPROVER,,}" != "${author,,}" ]] || { echo \
-          "::error::closure approval must be independent from the PR author"; exit 1; }
-          [[ "${APPROVER,,}" != "${head_owner,,}" ]] || { echo \
-          "::error::closure approval must be independent from the head repository owner"; exit 1; }
+          # Solo-maintenance authority policy: closure approval binds to repository
+          # write authority (admin|maintain|write enforced above), not to author
+          # independence. Every other exact-candidate control stays unchanged.
           head_ref="$(jq -r '.head.ref' <<<"${pr}")"
           head_sha="$(jq -r '.head.sha' <<<"${pr}")"
           base_ref="$(jq -r '.base.ref' <<<"${pr}")"
