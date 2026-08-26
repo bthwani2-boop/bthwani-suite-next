@@ -2,14 +2,17 @@
 
 ## 1. Execution contract
 
-`PHASE=EXECUTE_CLOSE` is live mutation by default. A prepared `PLAN_DIR`, when explicitly supplied, is read-only handoff/evidence; it is never Product/System Truth or a writable progress ledger.
+Live mutation begins from the unified loop in `00` after `02` proves the selected treatment frontier executable and `05` has emitted the portable Closure Unit declaration when selection/decomposition was required.
 
-Execution begins from current live truth, not from stale plan assumptions.
+There is no separate execution phase and no mandatory prepared plan artifact.
+
+Execution always begins from current live truth, never from stale plan assumptions:
 
 ```text
 RE-RESOLVE TARGET / PR / HEAD
+-> RECONCILE ACTIVE_WORKSET + VISIBLE CONCURRENT DELTA
 -> REVALIDATE ONLY MATERIAL ASSUMPTIONS
--> SELECT HIGHEST EXECUTABLE ROOT
+-> CONFIRM SELECTED CLOSURE UNIT / HIGHEST EXECUTABLE ROOT
 -> TREAT ACTUAL SOURCE-OF-DEFECT
 -> VERIFY NEAREST INVALIDATED CLAIMS
 -> INGEST NEW EVIDENCE
@@ -18,11 +21,13 @@ RE-RESOLVE TARGET / PR / HEAD
 -> CONTINUE
 ```
 
-New evidence that invalidates root/target/authority/migration/cutover semantics stops only the affected cone. Re-enter `02` in memory; do not force the user through a new preparation cycle unless a true human decision/authority gap exists or the human explicitly requests a persisted handoff update.
+New evidence that invalidates root/target/authority/migration/cutover/collision semantics stops only the affected cone. Re-enter `02`/`05` in memory and continue when safely derivable. Do not force the human through a preparation cycle or mandatory plan rewrite.
+
+An optional task-local plan may support the executor but never governs live truth or progress.
 
 ## 2. Root-correct treatment sequence
 
-For each proven root:
+For each proven root inside the selected Closure Unit:
 
 ```text
 DEFINE CANONICAL TARGET
@@ -272,6 +277,7 @@ Before every material write batch and ref movement:
 ```text
 re-resolve live target/PR HEAD
 -> classify concurrent delta under 01
+-> re-check ACTIVE_WORKSET collision assumptions when relevant
 -> build on latest reconciled parent
 -> preserve foreign work
 -> no force push
