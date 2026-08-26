@@ -79,6 +79,7 @@ ALTER TABLE dsh_platform_zones
 
 -- 5. Drop obsolete legacy indexes.
 DROP INDEX IF EXISTS idx_dsh_zones_city;
+DROP INDEX IF EXISTS idx_dsh_zones_active;
 DROP INDEX IF EXISTS uq_dsh_platform_zones_city_name;
 DROP INDEX IF EXISTS idx_dsh_platform_zones_active_city;
 
@@ -104,7 +105,7 @@ ALTER TABLE dsh_platform_zones
 --    rollback restores without compatibility shims. Casing is normalized to the
 --    canonical geofence value when resolvable.
 UPDATE dsh_platform_policy_events e
-SET payload = (e.payload - 'cityCode')
+SET payload = (e.payload - 'cityCode'::text)
     || jsonb_build_object(
         'serviceAreaCode',
         COALESCE((
@@ -116,25 +117,25 @@ SET payload = (e.payload - 'cityCode')
         ), lower(e.payload->>'cityCode'))
     )
 WHERE e.aggregate_type = 'zone'
-  AND e.payload ? 'cityCode';
+  AND e.payload ? 'cityCode'::text;
 
 -- 9. Backfill stored idempotency replay bodies for zone mutations.
 UPDATE dsh_platform_policy_mutation_results m
 SET response_body = jsonb_set(
     m.response_body,
     '{zone}',
-    (m.response_body->'zone' - 'cityCode')
+    ((m.response_body -> 'zone'::text) - 'cityCode'::text)
         || jsonb_build_object(
             'serviceAreaCode',
             COALESCE((
                 SELECT g.service_area_code
                 FROM dsh_service_area_geofences g
-                WHERE lower(g.service_area_code) = lower(m.response_body->'zone'->>'cityCode')
+                WHERE lower(g.service_area_code) = lower(m.response_body #>> '{zone,cityCode}')
                 ORDER BY g.service_area_code
                 LIMIT 1
-            ), lower(m.response_body->'zone'->>'cityCode'))
+            ), lower(m.response_body #>> '{zone,cityCode}'))
         )
 )
-WHERE m.response_body->'zone' ? 'cityCode';
+WHERE m.response_body #> '{zone}' ? 'cityCode'::text;
 
 COMMIT;

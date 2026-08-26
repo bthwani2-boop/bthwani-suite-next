@@ -36,7 +36,7 @@ func TestZoneServiceAreaBindingInvariants(t *testing.T) {
 
 	if _, err := db.ExecContext(ctx, `
 		INSERT INTO dsh_service_area_geofences (service_area_code, display_name, polygon, active)
-		VALUES ($1, 'Binding Proof Area', '[["44.18","15.33"],["44.20","15.33"],["44.20","15.35"],["44.18","15.35"],["44.18","15.33"]]'::jsonb, TRUE)
+		VALUES ($1, 'Binding Proof Area', ST_GeomFromText('POLYGON((44.18 15.33,44.20 15.33,44.20 15.35,44.18 15.35,44.18 15.33))', 4326), TRUE)
 		ON CONFLICT (service_area_code) DO NOTHING`, serviceAreaCode); err != nil {
 		t.Fatalf("seed service-area geofence: %v", err)
 	}
