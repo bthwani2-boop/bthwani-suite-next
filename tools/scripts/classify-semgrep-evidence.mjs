@@ -6,6 +6,7 @@ export const TOOL_LIMITATION_PROVEN = "TOOL_LIMITATION_PROVEN";
 export const UNKNOWN_ENGINE_ERROR = "UNKNOWN_ENGINE_ERROR";
 
 const workflowPath = (value) => typeof value === "string" && value.startsWith(".github/workflows/");
+const typescriptPath = (value) => typeof value === "string" && /\.(?:ts|tsx|mts|cts)$/.test(value);
 
 const normalizedType = (raw) => {
   if (Array.isArray(raw?.type)) return raw.type[0] ?? "UNSPECIFIED";
@@ -24,6 +25,11 @@ const isWorkflowBashMetavariableParse = (raw, type, message) => {
 const isKnownWorkflowInternalParse = (raw, type, message) => {
   if (!workflowPath(raw?.path) || type !== "Internal matching error") return false;
   return message.includes("metavariable-pattern failed when parsing $SHELL's content as Bash");
+};
+
+const isKnownReadonlyImportTypeParse = (raw, type, message) => {
+  if (!typescriptPath(raw?.path) || type !== "PartialParsing") return false;
+  return /`readonly import\((['"])[^'"]+\1\)\.[A-Za-z_$][\w$]*` was unexpected/.test(message);
 };
 
 export function classifySemgrepEngineCondition(raw) {
@@ -54,6 +60,14 @@ export function classifySemgrepEngineCondition(raw) {
       ...result,
       classification: TOOL_LIMITATION_PROVEN,
       reason: "semgrep-yaml-github-actions-bash-metavariable-parser",
+    };
+  }
+
+  if (isKnownReadonlyImportTypeParse(raw, type, message)) {
+    return {
+      ...result,
+      classification: TOOL_LIMITATION_PROVEN,
+      reason: "semgrep-typescript-readonly-import-type-parser",
     };
   }
 
