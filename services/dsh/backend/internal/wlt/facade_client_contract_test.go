@@ -59,7 +59,9 @@ func TestExecuteFinanceWriteUsesRegistryMethodAndPath(t *testing.T) {
 	var gotMethod, gotPath string
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotMethod, gotPath = r.Method, r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"reconciliationCase":{"id":"case-1"}}`))
 	}))
 	defer server.Close()
 	c := NewClient(server.URL, "service-token")

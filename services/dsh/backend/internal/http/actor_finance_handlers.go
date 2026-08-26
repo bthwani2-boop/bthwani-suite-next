@@ -10,13 +10,7 @@ import (
 )
 
 func writeWltActorFinanceResponse(w http.ResponseWriter, status int, body []byte, err error) {
-	if err != nil {
-		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", err.Error())
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	writeFinanceResponse(w, status, body, err)
 }
 
 func decodeActorFinanceJSON(w http.ResponseWriter, r *http.Request, target any) bool {

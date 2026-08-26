@@ -38,8 +38,6 @@ func (s *protectedStoreServer) handleGetFinanceSettlementPolicy(w http.ResponseW
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT settlement policy read failed")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "private, no-store")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	writeFinanceResponse(w, status, body, nil)
 }

@@ -3,10 +3,10 @@ package http
 import (
 	"encoding/json"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"dsh-api/internal/store"
+	"dsh-api/internal/wlt"
 )
 
 type governedCommissionPolicyRequest struct {
@@ -36,13 +36,7 @@ type governedCommissionLifecycleRequest struct {
 
 func writeGovernedCommissionProxyResponse(w http.ResponseWriter, status int, body []byte, err error) {
 	w.Header().Set("Cache-Control", "no-store")
-	if err != nil {
-		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT governed commission call failed")
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	writeFinanceResponse(w, status, body, err)
 }
 
 // PUT /dsh/control-panel/finance/commission-policies
@@ -90,7 +84,12 @@ func (s *protectedStoreServer) handleUpsertFinanceCommissionPolicy(w http.Respon
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode governed commission policy")
 		return
 	}
-	status, body, err := s.wlt.FinanceWriteCommission(r.Context(), http.MethodPut, "/wlt/commission-policies", payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if idempotencyKey == "" {
+		idempotencyKey = "commission-policy-" + refundHash(actor.OperatorContextID, actor.ID, string(payload))[:32]
+	}
+	status, body, err := s.wlt.ExecuteFinanceWrite(r.Context(), "finance.commission_policy.upsert", nil, payload, correlationID, idempotencyKey, actor.OperatorContextID, "")
 	writeGovernedCommissionProxyResponse(w, status, body, err)
 }
 
@@ -128,14 +127,14 @@ func (s *protectedStoreServer) handleAdjustFinanceCommission(w http.ResponseWrit
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "idempotencyKey must not exceed 200 characters")
 		return
 	}
-	s.proxyGovernedCommissionLifecycle(w, r, actor.ID, "adjust", map[string]any{
+	s.proxyGovernedCommissionLifecycle(w, r, actor.ID, actor.OperatorContextID, "adjust", map[string]any{
 		"deltaMinorUnits": input.DeltaMinorUnits,
 		"reason":          input.Reason,
 		"idempotencyKey":  input.IdempotencyKey,
 	})
 }
 
-func (s *protectedStoreServer) proxyGovernedCommissionLifecycle(w http.ResponseWriter, r *http.Request, operatorID, action string, fields map[string]any) {
+func (s *protectedStoreServer) proxyGovernedCommissionLifecycle(w http.ResponseWriter, r *http.Request, operatorID, operatorContextID, action string, fields map[string]any) {
 	if !s.wlt.Configured() {
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured")
 		return
@@ -154,8 +153,13 @@ func (s *protectedStoreServer) proxyGovernedCommissionLifecycle(w http.ResponseW
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode governed commission action")
 		return
 	}
-	path := "/wlt/commissions/" + url.PathEscape(commissionID) + "/" + action
-	status, body, err := s.wlt.FinanceWriteCommission(r.Context(), http.MethodPost, path, payload, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"))
+	correlationID := strings.TrimSpace(r.Header.Get("X-Correlation-ID"))
+	idempotencyKey := strings.TrimSpace(r.Header.Get("Idempotency-Key"))
+	if idempotencyKey == "" {
+		idempotencyKey = "commission-" + refundHash(commissionID, action, operatorID, string(payload))[:32]
+	}
+	trustedContext := wlt.WithOperatorContext(r.Context(), operatorContextID)
+	status, body, err := s.wlt.ExecuteFinanceWrite(trustedContext, "finance.commissions."+action, map[string]string{"commissionId": commissionID}, payload, correlationID, idempotencyKey, operatorContextID, "")
 	writeGovernedCommissionProxyResponse(w, status, body, err)
 }
 
@@ -164,7 +168,7 @@ func (s *protectedStoreServer) handleConfirmFinanceCommission(w http.ResponseWri
 	if !ok {
 		return
 	}
-	s.proxyGovernedCommissionLifecycle(w, r, actor.ID, "confirm", nil)
+	s.proxyGovernedCommissionLifecycle(w, r, actor.ID, actor.OperatorContextID, "confirm", nil)
 }
 
 func (s *protectedStoreServer) handleSettleFinanceCommission(w http.ResponseWriter, r *http.Request) {
@@ -172,7 +176,7 @@ func (s *protectedStoreServer) handleSettleFinanceCommission(w http.ResponseWrit
 	if !ok {
 		return
 	}
-	s.proxyGovernedCommissionLifecycle(w, r, actor.ID, "settle", nil)
+	s.proxyGovernedCommissionLifecycle(w, r, actor.ID, actor.OperatorContextID, "settle", nil)
 }
 
 func (s *protectedStoreServer) decodeReasonedCommissionLifecycle(w http.ResponseWriter, r *http.Request, action string) (string, bool) {
@@ -197,7 +201,7 @@ func (s *protectedStoreServer) handleRejectFinanceCommission(w http.ResponseWrit
 	if !ok {
 		return
 	}
-	s.proxyGovernedCommissionLifecycle(w, r, actor.ID, "reject", map[string]any{"reason": reason})
+	s.proxyGovernedCommissionLifecycle(w, r, actor.ID, actor.OperatorContextID, "reject", map[string]any{"reason": reason})
 }
 
 func (s *protectedStoreServer) handleReverseFinanceCommission(w http.ResponseWriter, r *http.Request) {
@@ -209,7 +213,7 @@ func (s *protectedStoreServer) handleReverseFinanceCommission(w http.ResponseWri
 	if !ok {
 		return
 	}
-	s.proxyGovernedCommissionLifecycle(w, r, actor.ID, "reverse", map[string]any{"reason": reason})
+	s.proxyGovernedCommissionLifecycle(w, r, actor.ID, actor.OperatorContextID, "reverse", map[string]any{"reason": reason})
 }
 
 // GET /dsh/control-panel/finance/settlements/{settlementId}/evidence

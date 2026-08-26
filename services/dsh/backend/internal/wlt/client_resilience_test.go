@@ -320,8 +320,9 @@ func TestFinanceWriteHasDeterministicRequiredHeaders(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requireMutationHeaders(t, r)
 		idempotencyKeys = append(idempotencyKeys, r.Header.Get("Idempotency-Key"))
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{}`))
+		_, _ = w.Write([]byte(`{"payoutRequest":{"id":"payout-1"}}`))
 	}))
 	defer server.Close()
 

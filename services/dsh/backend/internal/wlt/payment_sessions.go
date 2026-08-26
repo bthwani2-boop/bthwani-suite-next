@@ -69,9 +69,24 @@ func (c *Client) doPaymentSessionRequest(req *http.Request) (int, []byte, error)
 		return 0, nil, fmt.Errorf("call WLT payment session endpoint: %w", err)
 	}
 	defer response.Body.Close()
-	body, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes))
+	body, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes+1))
 	if err != nil {
 		return 0, nil, fmt.Errorf("read WLT payment session response: %w", err)
 	}
-	return response.StatusCode, body, nil
+	if len(body) > maxFinanceProxyResponseBytes {
+		return 0, nil, fmt.Errorf("WLT payment session response exceeds the %d-byte limit", maxFinanceProxyResponseBytes)
+	}
+	opID := "finance.payment_sessions.timeline.read"
+	if strings.HasSuffix(req.URL.Path, "/refresh-provider-status") {
+		opID = "finance.payment_sessions.refresh_provider_status"
+	}
+	op, err := Registry.GetOperation(opID)
+	if err != nil {
+		return 0, nil, err
+	}
+	normalizedStatus, normalizedBody, err := normalizeFinanceResponse(op, response.StatusCode, response.Header.Get("Content-Type"), body)
+	if err != nil {
+		return 0, nil, fmt.Errorf("validate WLT payment session response: %w", err)
+	}
+	return normalizedStatus, normalizedBody, nil
 }

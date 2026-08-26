@@ -89,9 +89,16 @@ func (c *Client) executeFinance(ctx context.Context, opID string, params map[str
 		return 0, nil, fmt.Errorf("call WLT finance operation: %w", err)
 	}
 	defer response.Body.Close()
-	responseBody, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes))
+	responseBody, err := io.ReadAll(io.LimitReader(response.Body, maxFinanceProxyResponseBytes+1))
 	if err != nil {
 		return 0, nil, fmt.Errorf("read WLT finance response: %w", err)
 	}
-	return response.StatusCode, responseBody, nil
+	if len(responseBody) > maxFinanceProxyResponseBytes {
+		return 0, nil, fmt.Errorf("WLT finance response exceeds the %d-byte limit", maxFinanceProxyResponseBytes)
+	}
+	normalizedStatus, normalizedBody, err := normalizeFinanceResponse(op, response.StatusCode, response.Header.Get("Content-Type"), responseBody)
+	if err != nil {
+		return 0, nil, fmt.Errorf("validate WLT finance response for %s: %w", opID, err)
+	}
+	return normalizedStatus, normalizedBody, nil
 }

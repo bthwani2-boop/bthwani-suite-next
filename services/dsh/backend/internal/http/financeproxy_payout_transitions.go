@@ -36,13 +36,7 @@ func (s *protectedStoreServer) proxyFinancePayoutTransition(w http.ResponseWrite
 		operatorContextID,
 		actor.ID,
 	)
-	if err != nil {
-		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance write failed")
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	writeFinanceResponse(w, status, body, err)
 }
 
 // POST /dsh/control-panel/finance/payout-requests/{payoutId}/complete

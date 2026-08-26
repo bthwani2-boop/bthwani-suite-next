@@ -53,9 +53,7 @@ func (s *protectedStoreServer) handlePartnerFinanceSettlements(w http.ResponseWr
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	writeFinanceResponse(w, status, body, nil)
 }
 
 func (s *protectedStoreServer) handlePartnerFinanceSettlementSummary(w http.ResponseWriter, r *http.Request) {
@@ -75,9 +73,7 @@ func (s *protectedStoreServer) handlePartnerFinanceSettlementSummary(w http.Resp
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	writeFinanceResponse(w, status, body, nil)
 }
 
 func (s *protectedStoreServer) handleFinanceRefunds(w http.ResponseWriter, r *http.Request) {
@@ -100,9 +96,7 @@ func (s *protectedStoreServer) handleFinanceRefunds(w http.ResponseWriter, r *ht
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	writeFinanceResponse(w, status, body, nil)
 }
 
 func (s *protectedStoreServer) handleFinanceRefundDetail(w http.ResponseWriter, r *http.Request) {
@@ -119,9 +113,7 @@ func (s *protectedStoreServer) handleFinanceRefundDetail(w http.ResponseWriter, 
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	writeFinanceResponse(w, status, body, nil)
 }
 
 func (s *protectedStoreServer) handleFinanceLedgerEntries(w http.ResponseWriter, r *http.Request) {
@@ -222,9 +214,7 @@ func (s *protectedStoreServer) handleResolveFinanceReconciliationCase(w http.Res
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance write failed")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(respBody)
+	writeFinanceResponse(w, status, respBody, nil)
 }
 
 func (s *protectedStoreServer) handleFacadeRead(opID string, allowedQueryParams []string) http.HandlerFunc {
@@ -246,9 +236,7 @@ func (s *protectedStoreServer) handleFacadeRead(opID string, allowedQueryParams 
 			store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance operation failed")
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(status)
-		_, _ = w.Write(body)
+		writeFinanceResponse(w, status, body, nil)
 	}
 }
 
@@ -262,9 +250,7 @@ func (s *protectedStoreServer) wltFinanceReadWithParams(w http.ResponseWriter, r
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	writeFinanceResponse(w, status, body, nil)
 }
 
 func (s *protectedStoreServer) handleFacadeWrite(opID string, params func(*http.Request) map[string]string) http.HandlerFunc {
@@ -281,9 +267,7 @@ func (s *protectedStoreServer) handleFacadeWrite(opID string, params func(*http.
 			store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance operation failed")
 			return
 		}
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(status)
-		_, _ = w.Write(respBody)
+		writeFinanceResponse(w, status, respBody, nil)
 	}
 }
 
@@ -308,7 +292,5 @@ func (s *protectedStoreServer) proxyFinanceRead(w http.ResponseWriter, r *http.R
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	writeFinanceResponse(w, status, body, nil)
 }

@@ -78,6 +78,7 @@ func TestRefreshPaymentSessionProviderStatusBuildsReplaySafeMutation(t *testing.
 		} else if key != firstIdempotencyKey {
 			t.Fatalf("expected stable key %q, got %q", firstIdempotencyKey, key)
 		}
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"paymentSession":{"id":"payment-session-2","status":"provider_result_unknown"}}`))
 	}))

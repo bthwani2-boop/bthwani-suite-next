@@ -73,12 +73,6 @@ func refundRequestIdentity(r *http.Request, fallbackParts ...string) (string, st
 	return correlationID, idempotencyKey
 }
 
-func writeWltProxyResponse(w http.ResponseWriter, status int, body []byte) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
-}
-
 func (s *protectedStoreServer) writeRefundCommand(w http.ResponseWriter, r *http.Request, opID, operatorContextID, delegatedPrincipalID, idempotencyKey string, params map[string]string, body []byte) {
 	if !s.wlt.Configured() {
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_NOT_CONFIGURED", "WLT integration is not configured")
@@ -93,7 +87,7 @@ func (s *protectedStoreServer) writeRefundCommand(w http.ResponseWriter, r *http
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT refund command failed")
 		return
 	}
-	writeWltProxyResponse(w, status, responseBody)
+	writeFinanceResponse(w, status, responseBody, nil)
 }
 
 // POST /dsh/control-panel/finance/refunds
@@ -248,7 +242,7 @@ func (s *protectedStoreServer) handleFinanceRefundAudit(w http.ResponseWriter, r
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT refund audit read failed")
 		return
 	}
-	writeWltProxyResponse(w, status, body)
+	writeFinanceResponse(w, status, body, nil)
 }
 
 func privacyRefunds(body []byte) ([]privacyRefund, error) {
@@ -278,7 +272,7 @@ func (s *protectedStoreServer) proxyPrivacyRefunds(w http.ResponseWriter, r *htt
 		return
 	}
 	if status < 200 || status >= 300 {
-		writeWltProxyResponse(w, status, body)
+		writeFinanceResponse(w, status, body, nil)
 		return
 	}
 	items, err := privacyRefunds(body)

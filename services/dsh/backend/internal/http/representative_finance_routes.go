@@ -25,13 +25,7 @@ func normalizeRepresentativeWalletActorType(value string) (string, bool) {
 func writeRepresentativeFinanceResponse(w http.ResponseWriter, status int, body []byte, err error) {
 	w.Header().Set("Cache-Control", "private, no-store")
 	w.Header().Set("Pragma", "no-cache")
-	if err != nil {
-		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT representative finance read failed")
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	writeFinanceResponse(w, status, body, err)
 }
 
 func (s *protectedStoreServer) handleOwnRepresentativeWallet(w http.ResponseWriter, r *http.Request, actorType string) {

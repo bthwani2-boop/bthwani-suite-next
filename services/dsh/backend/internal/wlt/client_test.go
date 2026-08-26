@@ -241,7 +241,7 @@ func TestFinanceReadWalletWithOperatorContextBuildsPathAndHeaders(t *testing.T) 
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"balanceMinorUnits":0}`))
+		_, _ = w.Write([]byte(`{"wallet":{"balanceMinorUnits":0}}`))
 	}))
 	defer server.Close()
 
@@ -267,7 +267,9 @@ func TestFinanceReadWalletWithOperatorContextEscapesActorIDSegment(t *testing.T)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotEscapedPath = r.URL.EscapedPath()
 		gotSegmentCount = len(strings.Split(strings.TrimPrefix(r.URL.EscapedPath(), "/"), "/"))
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"wallet":{"balanceMinorUnits":0}}`))
 	}))
 	defer server.Close()
 

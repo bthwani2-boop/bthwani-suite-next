@@ -19,7 +19,9 @@ func TestFinanceReadWalletAllowsEveryRepresentativeActorType(t *testing.T) {
 		if got := r.Header.Get("X-Operator-Context-ID"); got != "" {
 			t.Fatalf("legacy OperatorContext header must not be emitted, got %q", got)
 		}
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"wallet":{"balanceMinorUnits":0}}`))
 	}))
 	defer server.Close()
 
@@ -53,7 +55,9 @@ func TestFinanceReadWalletNormalizesActorTypeCase(t *testing.T) {
 		if got := r.Header.Get("X-Operator-Context-ID"); got != "" {
 			t.Fatalf("legacy OperatorContext header must not be emitted, got %q", got)
 		}
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"wallet":{"balanceMinorUnits":0}}`))
 	}))
 	defer server.Close()
 

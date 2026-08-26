@@ -30,17 +30,7 @@ func managedPayoutDestinationPath(actorType, actorID string) string {
 }
 
 func writeManagedPayoutDestinationResponse(w http.ResponseWriter, status int, body []byte, err error) {
-	if err != nil {
-		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT payout destination governance operation failed")
-		return
-	}
-	if len(body) > 0 {
-		w.Header().Set("Content-Type", "application/json")
-	}
-	w.WriteHeader(status)
-	if len(body) > 0 {
-		_, _ = w.Write(body)
-	}
+	writeFinanceResponse(w, status, body, err)
 }
 
 func (s *protectedStoreServer) handleFinancePayoutDestinationRead(w http.ResponseWriter, r *http.Request) {

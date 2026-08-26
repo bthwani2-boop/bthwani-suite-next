@@ -60,9 +60,7 @@ func (s *administrationSupportServer) handleGetPartnerSupportFinance(w http.Resp
 		writeSupportRequestError(w, errors.New("WLT returned an invalid finance readback"))
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	writeFinanceResponse(w, status, body, nil)
 }
 
 // GET /dsh/operator/support/partners/{partnerId}/operations

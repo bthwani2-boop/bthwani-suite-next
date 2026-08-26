@@ -41,14 +41,8 @@ type trustedStoreOnboardingFeePolicyWriteInput struct {
 
 func writeStoreOnboardingFeeProxyResponse(w http.ResponseWriter, status int, body []byte, err error) {
 	w.Header().Set("Cache-Control", "private, no-store")
-	w.Header().Set("Pragma", "no-cache")
-	if err != nil {
-		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT store onboarding fee policy is unavailable")
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_, _ = w.Write(body)
+	w.Header().Set("Pragma", "no-store")
+	writeFinanceResponse(w, status, body, err)
 }
 
 func decodeStoreOnboardingFeePolicyWrite(w http.ResponseWriter, r *http.Request) (storeOnboardingFeePolicyWriteInput, bool) {

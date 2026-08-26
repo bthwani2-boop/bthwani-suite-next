@@ -54,31 +54,6 @@ func TestRequiredMutationHeadersRejectMissingValues(t *testing.T) {
 	}
 }
 
-func TestActorFinanceMutationRejectsMissingCorrelation(t *testing.T) {
-	called := false
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		called = true
-	}))
-	defer server.Close()
-
-	client := NewClient(server.URL, "token")
-	_, _, err := client.actorFinanceRequest(
-		trustedMutationTestContext(),
-		http.MethodPost,
-		"/wlt/commissions",
-		[]byte(`{"proofReference":"proof-1"}`),
-		"",
-		"idem-1",
-		"OperatorContext-a",
-	)
-	if err == nil {
-		t.Fatal("expected actor finance mutation to reject missing correlation")
-	}
-	if called {
-		t.Fatal("actor finance mutation reached WLT without correlation")
-	}
-}
-
 func TestFinalizeCodReservationAddsDeterministicHeaders(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requireMutationHeaders(t, r)
@@ -124,13 +99,14 @@ func TestDeliverFieldCommissionUsesSameBodyAndHeaderIdempotencyKey(t *testing.T)
 func TestSettlementMutationAddsRequiredHeaders(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requireMutationHeaders(t, r)
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		_, _ = w.Write([]byte(`{"settlement":{"id":"st-1"}}`))
 	}))
 	defer server.Close()
 
 	client := NewClient(server.URL, "token")
-	if _, _, err := client.FinanceWriteSettlement(trustedMutationTestContext(), http.MethodPost, "/wlt/settlements", []byte(`{}`), "order-1", ""); err != nil {
+	if _, _, err := client.ExecuteFinanceWrite(trustedMutationTestContext(), "finance.settlements.create", nil, []byte(`{}`), "order-1", "idem-settlement-1", "OperatorContext-a", ""); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
