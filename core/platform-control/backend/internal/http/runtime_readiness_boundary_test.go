@@ -122,10 +122,13 @@ func TestPlatformPreflightAndLivenessDoNotDependOnReadiness(t *testing.T) {
 		t.Fatalf("preflight status=%d called=%v", preflight.Code, called)
 	}
 
+	// Health and readiness are now handled by the canonical router.
+	// The middleware passes them through to the next handler.
 	called = false
 	liveness := httptest.NewRecorder()
 	handler.ServeHTTP(liveness, httptest.NewRequest(http.MethodGet, "/platform/health", nil))
-	if liveness.Code != http.StatusOK || called {
+	// The middleware passes through to the next handler (which returns 204 in this test)
+	if liveness.Code != http.StatusNoContent || !called {
 		t.Fatalf("liveness status=%d called=%v", liveness.Code, called)
 	}
 }

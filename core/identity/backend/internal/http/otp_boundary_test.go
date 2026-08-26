@@ -30,15 +30,12 @@ func (f *fakeOperatorContextOtpRepository) RequestOtpForOperatorContext(
 	return f.result, f.err
 }
 
-func TestOtpBoundaryUsesTrustedRuntimeOperatorContextForClient(t *testing.T) {
+func TestRequestOtpUsesTrustedRuntimeOperatorContextForClient(t *testing.T) {
 	configureIdentity(t)
 	repository := &fakeOperatorContextOtpRepository{
 		result: identity.IssueActivationResult{ActivationID: "activation-1", Code: "123456"},
 	}
-	nextCalled := false
-	handler := OtpBoundary(repository, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
-		nextCalled = true
-	}))
+	s := &server{otpRepo: repository}
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/auth/otp/request",
@@ -46,11 +43,8 @@ func TestOtpBoundaryUsesTrustedRuntimeOperatorContextForClient(t *testing.T) {
 	)
 	response := httptest.NewRecorder()
 
-	handler.ServeHTTP(response, request)
+	s.requestOtp(response, request)
 
-	if nextCalled {
-		t.Fatal("active platform client OTP request fell through to legacy handler")
-	}
 	if repository.calls != 1 || repository.operatorContextID != "OperatorContext-main" {
 		t.Fatalf("unexpected repository call count=%d OperatorContext=%q", repository.calls, repository.operatorContextID)
 	}
@@ -62,9 +56,10 @@ func TestOtpBoundaryUsesTrustedRuntimeOperatorContextForClient(t *testing.T) {
 	}
 }
 
-func TestOtpBoundaryRejectsProviderSelfServiceIssuance(t *testing.T) {
+func TestRequestOtpRejectsProviderSelfServiceIssuance(t *testing.T) {
 	configureIdentity(t)
 	repository := &fakeOperatorContextOtpRepository{}
+	s := &server{otpRepo: repository}
 	for _, actorType := range []string{"partner", "captain", "field", "employee"} {
 		t.Run(actorType, func(t *testing.T) {
 			request := httptest.NewRequest(
@@ -74,7 +69,7 @@ func TestOtpBoundaryRejectsProviderSelfServiceIssuance(t *testing.T) {
 			)
 			response := httptest.NewRecorder()
 
-			OtpBoundary(repository, http.NotFoundHandler()).ServeHTTP(response, request)
+			s.requestOtp(response, request)
 
 			if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "PLATFORM_ACCESS_CODE_REQUIRED") {
 				t.Fatalf("expected PLATFORM_ACCESS_CODE_REQUIRED, got status=%d body=%s", response.Code, response.Body.String())
@@ -86,9 +81,10 @@ func TestOtpBoundaryRejectsProviderSelfServiceIssuance(t *testing.T) {
 	}
 }
 
-func TestOtpBoundaryRejectsCrossOperatorContextClientPhone(t *testing.T) {
+func TestRequestOtpRejectsCrossOperatorContextClientPhone(t *testing.T) {
 	configureIdentity(t)
 	repository := &fakeOperatorContextOtpRepository{err: identity.ErrOperatorContextMismatch}
+	s := &server{otpRepo: repository}
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/auth/otp/request",
@@ -96,16 +92,17 @@ func TestOtpBoundaryRejectsCrossOperatorContextClientPhone(t *testing.T) {
 	)
 	response := httptest.NewRecorder()
 
-	OtpBoundary(repository, http.NotFoundHandler()).ServeHTTP(response, request)
+	s.requestOtp(response, request)
 
 	if response.Code != http.StatusForbidden || !strings.Contains(response.Body.String(), "OPERATOR_CONTEXT_FORBIDDEN") {
 		t.Fatalf("expected OPERATOR_CONTEXT_FORBIDDEN, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
-func TestOtpBoundaryPreservesRateLimitError(t *testing.T) {
+func TestRequestOtpPreservesRateLimitError(t *testing.T) {
 	configureIdentity(t)
 	repository := &fakeOperatorContextOtpRepository{err: identity.ErrActivationRateLimited}
+	s := &server{otpRepo: repository}
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/auth/otp/request",
@@ -113,27 +110,35 @@ func TestOtpBoundaryPreservesRateLimitError(t *testing.T) {
 	)
 	response := httptest.NewRecorder()
 
-	OtpBoundary(repository, http.NotFoundHandler()).ServeHTTP(response, request)
+	s.requestOtp(response, request)
 
 	if response.Code != http.StatusTooManyRequests || !strings.Contains(response.Body.String(), "ACTIVATION_RATE_LIMITED") {
 		t.Fatalf("expected ACTIVATION_RATE_LIMITED, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
-
-
-func TestOtpBoundaryRejectsInvalidBody(t *testing.T) {
+func TestRequestOtpRejectsInvalidBody(t *testing.T) {
+	repository := &fakeOperatorContextOtpRepository{}
+	s := &server{otpRepo: repository}
 	request := httptest.NewRequest(http.MethodPost, "/auth/otp/request", strings.NewReader(`{"actorType":`))
 	response := httptest.NewRecorder()
-	OtpBoundary(&fakeOperatorContextOtpRepository{}, http.NotFoundHandler()).ServeHTTP(response, request)
+	s.requestOtp(response, request)
 	if response.Code != http.StatusBadRequest || !strings.Contains(response.Body.String(), "INVALID_REQUEST") {
 		t.Fatalf("expected INVALID_REQUEST, got status=%d body=%s", response.Code, response.Body.String())
 	}
 }
 
-func TestOperatorContextOtpErrorFallsBackToInternalError(t *testing.T) {
+func TestRequestOtpFallsBackToInternalError(t *testing.T) {
+	configureIdentity(t)
+	repository := &fakeOperatorContextOtpRepository{err: errors.New("unexpected")}
+	s := &server{otpRepo: repository}
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/auth/otp/request",
+		strings.NewReader(`{"phone":"+967770000001","actorType":"client"}`),
+	)
 	response := httptest.NewRecorder()
-	writeOperatorContextOtpError(response, errors.New("unexpected"))
+	s.requestOtp(response, request)
 	if response.Code != http.StatusInternalServerError || !strings.Contains(response.Body.String(), "IDENTITY_INTERNAL_ERROR") {
 		t.Fatalf("expected IDENTITY_INTERNAL_ERROR, got status=%d body=%s", response.Code, response.Body.String())
 	}

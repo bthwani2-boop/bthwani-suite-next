@@ -1,25 +1,40 @@
 package http
 
 import (
+	"bytes"
+	"context"
 	"crypto/subtle"
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"io"
+	"log"
 	"net"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"identity-api/internal/identity"
 )
 
-type server struct {
-	repository *identity.Repository
+type otpRepository interface {
+	RequestOtpForOperatorContext(
+		ctx context.Context,
+		operatorContextID string,
+		input identity.OtpInput,
+	) (identity.IssueActivationResult, error)
 }
 
-func NewRouter(repository *identity.Repository) http.Handler {
-	s := &server{repository: repository}
+type server struct {
+	repository *identity.Repository
+	otpRepo    otpRepository
+	db         *sql.DB
+}
+
+func NewRouter(repository *identity.Repository, db *sql.DB) http.Handler {
+	s := &server{repository: repository, otpRepo: repository, db: db}
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /auth/login", s.login)
 	mux.HandleFunc("POST /auth/activate", s.activate)
@@ -31,6 +46,9 @@ func NewRouter(repository *identity.Repository) http.Handler {
 	mux.HandleFunc("DELETE /auth/account", s.deleteAccount)
 	mux.HandleFunc("POST /auth/password/change", s.changePassword)
 	mux.HandleFunc("POST /auth/introspect", s.introspect)
+	mux.HandleFunc("POST /auth/otp/request", s.requestOtp)
+	mux.HandleFunc("GET /identity/health", s.identityHealth)
+	mux.HandleFunc("GET /identity/readiness", s.identityReadiness)
 	mux.HandleFunc("POST /internal/actors/provision", s.serviceOnly(s.provisionActor))
 	mux.HandleFunc("GET /internal/actors/search", s.serviceOnly(s.internalActorSearch))
 	mux.HandleFunc("DELETE /internal/actors/{actorId}", s.serviceOnly(s.internalActorDeprovision))
@@ -234,6 +252,100 @@ func (s *server) introspect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	sendJSON(w, http.StatusOK, resolved)
+}
+
+func (s *server) requestOtp(w http.ResponseWriter, r *http.Request) {
+	const selfServiceOtpRequestLimit = 32 * 1024
+	body, err := io.ReadAll(io.LimitReader(r.Body, selfServiceOtpRequestLimit+1))
+	if err != nil || len(body) > selfServiceOtpRequestLimit {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
+		return
+	}
+	r.Body = io.NopCloser(bytes.NewReader(body))
+
+	var input identity.OtpInput
+	if json.Unmarshal(body, &input) != nil {
+		sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
+		return
+	}
+	if strings.TrimSpace(input.ActorType) != "client" {
+		sendError(
+			w,
+			http.StatusForbidden,
+			"PLATFORM_ACCESS_CODE_REQUIRED",
+			"provider and employee access codes are issued only by an authorised platform department",
+		)
+		return
+	}
+
+	operatorContextID := strings.TrimSpace(os.Getenv("BTHWANI_OPERATOR_CONTEXT_ID"))
+	if operatorContextID == "" {
+		sendError(w, http.StatusServiceUnavailable, "OPERATOR_CONTEXT_RUNTIME_CONFIG_INVALID", "BTHWANI_OPERATOR_CONTEXT_ID is required for OTP requests")
+		return
+	}
+
+	result, err := s.otpRepo.RequestOtpForOperatorContext(r.Context(), operatorContextID, input)
+	if err != nil {
+		switch {
+		case errors.Is(err, identity.ErrOperatorContextMismatch):
+			sendError(w, http.StatusForbidden, "OPERATOR_CONTEXT_FORBIDDEN", "phone is already bound to another OperatorContext")
+		case errors.Is(err, identity.ErrActivationRateLimited):
+			sendError(w, http.StatusTooManyRequests, "ACTIVATION_RATE_LIMITED", "activation can be requested again later")
+		case errors.Is(err, identity.ErrInvalidActivation):
+			sendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid phone or actor type")
+		case errors.Is(err, identity.ErrActivationUnavailable):
+			sendError(w, http.StatusServiceUnavailable, "ACTIVATION_UNAVAILABLE", "activation is not configured")
+		default:
+			log.Printf("[identity-api] unmapped OTP request failure: %v", err)
+			sendError(w, http.StatusInternalServerError, "IDENTITY_INTERNAL_ERROR", "identity request failed")
+		}
+		return
+	}
+	sendJSON(w, http.StatusOK, result)
+}
+
+func (s *server) identityHealth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json")
+	status := "HEALTHY"
+	// If readiness has failed, health is degraded
+	// We check the repository's enforcer to see if we can connect
+	if s.db != nil {
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		if err := s.db.PingContext(ctx); err != nil {
+			status = "DEGRADED"
+		}
+	}
+	sendJSON(w, http.StatusOK, map[string]string{"status": status, "service": "core-identity"})
+}
+
+func (s *server) identityReadiness(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json")
+
+	if s.db == nil {
+		sendJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"status":  "NOT_READY",
+			"service": "core-identity",
+			"reason":  "database_unavailable",
+		})
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+	defer cancel()
+
+	if err := s.db.PingContext(ctx); err != nil {
+		sendJSON(w, http.StatusServiceUnavailable, map[string]string{
+			"status":  "NOT_READY",
+			"service": "core-identity",
+			"reason":  "database_unavailable",
+		})
+		return
+	}
+
+	sendJSON(w, http.StatusOK, map[string]string{"status": "HEALTHY", "service": "core-identity"})
 }
 
 func (s *server) provisionActor(w http.ResponseWriter, r *http.Request) {

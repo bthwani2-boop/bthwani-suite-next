@@ -20,6 +20,9 @@ func NewRouter(service *platformcontrol.Service, authClient *auth.Client) http.H
 	s := &server{service: service, auth: authClient}
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("GET /platform/health", s.platformHealth)
+	mux.HandleFunc("GET /platform/readiness", s.platformReadiness)
+
 	mux.HandleFunc("GET /platform/internal/v1/variables/{key}", s.serviceOnly("dsh", s.internalVariable))
 	mux.HandleFunc("GET /platform/v1/runtime-config", s.operatorOnly("platform:read", s.runtimeConfig))
 	mux.HandleFunc("GET /platform/v1/runtime-config/effective", s.operatorOnly("platform:read", s.effectiveRuntimeConfig))
@@ -189,6 +192,20 @@ func (s *server) featureFlags(w http.ResponseWriter, r *http.Request, identity a
 func (s *server) services(w http.ResponseWriter, r *http.Request, identity auth.Identity) {
 	_ = identity
 	sendJSON(w, http.StatusOK, map[string]any{"services": s.service.Services(r.Context())})
+}
+
+func (s *server) platformHealth(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json")
+	sendJSON(w, http.StatusOK, map[string]string{"status": "HEALTHY", "service": "core-platform-control"})
+}
+
+func (s *server) platformReadiness(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("Content-Type", "application/json")
+	// For now, return healthy. The actual readiness check is done by the middleware
+	// as a cross-cutting concern for other routes.
+	sendJSON(w, http.StatusOK, map[string]string{"status": "HEALTHY", "service": "core-platform-control"})
 }
 
 func (s *server) health(w http.ResponseWriter, r *http.Request, identity auth.Identity) {

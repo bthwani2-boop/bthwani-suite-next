@@ -490,14 +490,14 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("X-Correlation-ID", correlationID)
 
-		if r.Method == http.MethodGet && r.URL.Path == "/identity/health" {
-			snapshot, statusCode := currentHealthSnapshot(correlationID)
-			sendJSON(w, statusCode, snapshot)
+		// Health and readiness are now handled by the canonical router.
+		// Pass them through to the next handler (the router).
+		if r.Method == http.MethodGet && (r.URL.Path == "/identity/health" || r.URL.Path == "/identity/readiness") {
+			next.ServeHTTP(w, r)
 			return
 		}
 
-		isReadinessRequest := r.Method == http.MethodGet && r.URL.Path == "/identity/readiness"
-		if !isReadinessRequest && !isIdentityOperationalRequest(r) {
+		if !isIdentityOperationalRequest(r) {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -518,10 +518,6 @@ func runtimeReadinessBoundary(store runtimeReadinessStore, next http.Handler) ht
 		}
 
 		writeReadinessSuccess(result, startedAt, correlationID)
-		if isReadinessRequest {
-			sendJSON(w, http.StatusOK, readinessStatus("HEALTHY", result, startedAt, correlationID))
-			return
-		}
 		w.Header().Set("X-Identity-Runtime-Status", "HEALTHY")
 		next.ServeHTTP(w, r)
 	})
