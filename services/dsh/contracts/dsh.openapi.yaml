@@ -83,14 +83,6 @@ paths:
     $ref: "./paths/discovery.paths.yaml#/~1dsh~1stores"
   /dsh/home-discovery:
     $ref: "./paths/home-discovery.paths.yaml#/~1dsh~1home-discovery"
-  /dsh/field/catalog/domains:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1field~1catalog~1domains"
-  /dsh/field/catalog/nodes:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1field~1catalog~1nodes"
-  /dsh/partner/catalog/domains:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1domains"
-  /dsh/partner/catalog/nodes:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1nodes"
   /dsh/operator/home-discovery/{kind}:
     $ref: "./dsh.home-marketing-governance.openapi.yaml#/paths/~1dsh~1operator~1home-discovery~1{kind}"
   /dsh/operator/home-discovery/{kind}/{itemId}:
@@ -877,10 +869,6 @@ paths:
     $ref: "./dsh.catalog-governance.openapi.yaml#/paths/~1dsh~1field~1catalog~1master-products~1{productId}~1attribute-values"
   /dsh/field/catalog/master-products/{productId}/relationships:
     $ref: "./dsh.catalog-governance.openapi.yaml#/paths/~1dsh~1field~1catalog~1master-products~1{productId}~1relationships"
-  /dsh/field/catalog/stores/{storeId}/assortment:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1field~1catalog~1stores~1{storeId}~1assortment"
-  /dsh/partner/catalog/assortment:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1assortment"
   /dsh/partner/catalog/attributes:
     $ref: "./dsh.catalog-governance.openapi.yaml#/paths/~1dsh~1partner~1catalog~1attributes"
   /dsh/partner/catalog/attributes/{attributeId}/options:
@@ -889,12 +877,6 @@ paths:
     $ref: "./dsh.catalog-governance.openapi.yaml#/paths/~1dsh~1partner~1catalog~1master-products~1{productId}~1attribute-values"
   /dsh/partner/catalog/master-products/{productId}/relationships:
     $ref: "./dsh.catalog-governance.openapi.yaml#/paths/~1dsh~1partner~1catalog~1master-products~1{productId}~1relationships"
-  /dsh/partner/catalog/proposals:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1proposals"
-  /dsh/field/catalog/stores/{storeId}/assortment/{masterProductId}:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1field~1catalog~1stores~1{storeId}~1assortment~1{masterProductId}"
-  /dsh/partner/catalog/assortment/{masterProductId}:
-    $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1assortment~1{masterProductId}"
   /dsh/partner/catalog/product-proposals/{proposalId}/withdraw:
     $ref: "./dsh.catalog.openapi.yaml#/paths/~1dsh~1partner~1catalog~1product-proposals~1{proposalId}~1withdraw"
   /dsh/field/me/ratings/summary:

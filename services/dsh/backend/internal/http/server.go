@@ -272,18 +272,9 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("POST /dsh/client/marketing/subscriptions/instances/{subscriptionId}/cancel", protected.handleCancelSubscriptionPurchase)
 	mux.HandleFunc("GET /dsh/client/benefits", protected.handleClientBenefits)
 
-	mux.HandleFunc("GET /dsh/field/catalog/domains", protected.withFieldActor(protected.handleListFieldCatalogDomains))
-	mux.HandleFunc("GET /dsh/field/catalog/nodes", protected.withFieldActor(protected.handleListFieldCatalogNodes))
-	mux.HandleFunc("GET /dsh/field/catalog/master-products", protected.withFieldActor(protected.handleListFieldCatalogMasterProducts))
-	mux.HandleFunc("GET /dsh/field/catalog/stores/{storeId}/assortment", protected.withFieldActor(protected.handleGetFieldStoreAssortment))
-	mux.HandleFunc("PUT /dsh/field/catalog/stores/{storeId}/assortment/{masterProductId}", protected.withFieldActor(protected.handleLegacyFieldUpsertStoreAssortmentAtomic))
-	mux.HandleFunc("GET /dsh/partner/catalog/domains", protected.handleListPartnerCatalogDomains)
-	mux.HandleFunc("GET /dsh/partner/catalog/nodes", protected.handleListPartnerCatalogNodes)
-	mux.HandleFunc("GET /dsh/partner/catalog/master-products", protected.handleListPartnerCatalogMasterProducts)
-	mux.HandleFunc("POST /dsh/partner/catalog/proposals", protected.handleCreatePartnerCatalogProposal)
-	mux.HandleFunc("GET /dsh/partner/catalog/proposals", protected.handleListPartnerCatalogProposals)
-	mux.HandleFunc("GET /dsh/partner/catalog/assortment", protected.handleGetPartnerStoreAssortment)
-	mux.HandleFunc("PUT /dsh/partner/catalog/assortment/{masterProductId}", protected.handleLegacyPartnerUpsertStoreAssortmentAtomic)
+	mux.HandleFunc("GET /dsh/field/catalog/master-products", protected.withFieldActor(protected.handleListMasterProducts))
+	mux.HandleFunc("GET /dsh/partner/catalog/master-products", protected.handleListMasterProducts)
+
 	registerUnifiedCatalogRoutes(mux, protected)
 
 	mux.HandleFunc("GET /dsh/operator/platform/store-onboarding-fee", protected.handleGetStoreOnboardingFeePolicy)

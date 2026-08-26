@@ -116,6 +116,37 @@ func TestRemovedCatalogDecisionRoutesAreNotRegistered(t *testing.T) {
 	}
 }
 
+func TestRetiredCatalogCompatibilityRoutesAreNotRegistered(t *testing.T) {
+	t.Parallel()
+
+	mux := NewRouter(nil, nil, nil, nil, nil, nil)
+	cases := []struct {
+		method string
+		path   string
+	}{
+		{http.MethodGet, "/dsh/field/catalog/domains"},
+		{http.MethodGet, "/dsh/field/catalog/nodes"},
+		{http.MethodGet, "/dsh/field/catalog/stores/store-1/assortment"},
+		{http.MethodGet, "/dsh/partner/catalog/assortment"},
+		{http.MethodGet, "/dsh/partner/catalog/domains"},
+		{http.MethodGet, "/dsh/partner/catalog/nodes"},
+		{http.MethodGet, "/dsh/partner/catalog/proposals"},
+		{http.MethodPost, "/dsh/partner/catalog/proposals"},
+		{http.MethodPut, "/dsh/field/catalog/stores/store-1/assortment/product-1"},
+		{http.MethodPut, "/dsh/partner/catalog/assortment/product-1"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
+			req := httptest.NewRequest(tc.method, tc.path, nil)
+			_, pattern := mux.Handler(req)
+			if pattern != "" {
+				t.Fatalf("retired catalog compatibility route still registered: %s %s pattern=%q", tc.method, tc.path, pattern)
+			}
+		})
+	}
+}
+
 func TestCatalogConflictResponseIsStructured409(t *testing.T) {
 	t.Parallel()
 
