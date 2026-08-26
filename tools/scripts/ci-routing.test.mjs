@@ -213,6 +213,8 @@ test("OpenCodeReview owns deterministic delegation context without model authori
   assert.match(workflow, /resolvedRulesSha256: \$rulesSha256/u);
   assert.match(workflow, /artifactIdentity: \$artifactIdentity/u);
   assert.match(workflow, /packageIntegrity: \$packageIntegrity/u);
+  assert.equal(workflow.includes('rev-parse --verify "${BASE_REF}^{commit}"'), true);
+  assert.equal(workflow.includes('refs/remotes/origin/${BASE_REF}^{commit}'), true);
   assert.match(workflow, /hostAgentRequired: true/u);
   assert.match(workflow, /hostAgentExecutedByThisWorkflow: false/u);
   assert.match(workflow, /semanticReviewClaimedByThisWorkflow: false/u);

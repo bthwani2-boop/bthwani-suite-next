@@ -137,16 +137,20 @@ jobs:
         run: |
           set -euo pipefail
 
-          git -C "${OCR_REPO}" fetch --no-tags origin "${BASE_REF}" "${HEAD_SHA}"
+          if [[ "${BASE_REF}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            git -C "${OCR_REPO}" fetch --no-tags origin "${BASE_REF}" "${HEAD_SHA}"
+          else
+            git -C "${OCR_REPO}" fetch --no-tags origin "${BASE_REF}:refs/remotes/origin/${BASE_REF}" "${HEAD_SHA}"
+          fi
 
-          candidate="$(git -C "${OCR_REPO}" rev-parse "${HEAD_SHA}^{commit}")"
+          candidate="$(git -C "${OCR_REPO}" rev-parse --verify "${HEAD_SHA}^{commit}")"
           [[ "${candidate}" == "${HEAD_SHA}" ]] || {
             echo "::error::candidate object drift: expected=${HEAD_SHA} actual=${candidate}"
             exit 1
           }
 
-          base="$(git -C "${OCR_REPO}" rev-parse "${BASE_REF}^{commit}" 2>/dev/null || git -C \
-          "${OCR_REPO}" rev-parse "origin/${BASE_REF}^{commit}" 2>/dev/null || true)"
+          base="$(git -C "${OCR_REPO}" rev-parse --verify "${BASE_REF}^{commit}" 2>/dev/null || git -C \
+          "${OCR_REPO}" rev-parse --verify "refs/remotes/origin/${BASE_REF}^{commit}" 2>/dev/null || true)"
           [[ "${base}" =~ ^[0-9a-fA-F]{40}$ ]] || {
             echo "::error::unable to resolve trusted base ${BASE_REF}"
             exit 1
