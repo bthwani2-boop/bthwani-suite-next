@@ -284,9 +284,6 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("GET /dsh/operator/admin/roles", protected.handleListRoles)
 	mux.HandleFunc("GET /dsh/operator/admin/staff", protected.handleListStaff)
 	mux.HandleFunc("POST /dsh/operator/admin/staff/{staffId}/roles", protected.handleCreateRoleAssignment)
-	mux.HandleFunc("GET /dsh/partner/invites", protected.handleNotImplemented)
-	mux.HandleFunc("POST /dsh/partner/invites/{inviteId}/accept", protected.handleNotImplemented)
-	mux.HandleFunc("POST /dsh/partner/invites/{inviteId}/reject", protected.handleNotImplemented)
 	mux.HandleFunc("POST /dsh/operator/admin/roles/requests", protected.handleCreateRoleRequest)
 	mux.HandleFunc("GET /dsh/operator/admin/role-requests", protected.handleListRoleRequests)
 	mux.HandleFunc("POST /dsh/operator/admin/role-requests/{requestId}/review", protected.handleReviewRoleRequest)
@@ -303,8 +300,4 @@ func NewRouter(db *sql.DB, identityClient *auth.Client, wltClient *wlt.Client, p
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/accept", protected.handlePartnerAcceptOrder)
 	mux.HandleFunc("POST /dsh/partner/orders/{orderId}/reject", protected.handlePartnerRejectOrder)
 	return mux
-}
-
-func (s *protectedStoreServer) handleNotImplemented(w http.ResponseWriter, r *http.Request) {
-	store.SendError(w, http.StatusNotImplemented, "NOT_IMPLEMENTED", "not implemented")
 }

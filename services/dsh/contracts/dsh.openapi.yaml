@@ -577,12 +577,6 @@ paths:
     $ref: "./paths/system.paths.yaml#/~1dsh~1partner~1activation~1readiness"
   /dsh/partner/scopes:
     $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1scopes"
-  /dsh/partner/invites:
-    $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1invites"
-  /dsh/partner/invites/{inviteId}/accept:
-    $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1invites~1{inviteId}~1accept"
-  /dsh/partner/invites/{inviteId}/reject:
-    $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1invites~1{inviteId}~1reject"
   /dsh/field/partners:
     $ref: "./paths/field.paths.yaml#/~1dsh~1field~1partners"
   /dsh/field/partners/drafts:
