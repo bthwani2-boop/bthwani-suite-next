@@ -522,8 +522,8 @@ func (s *Service) Suspend(ctx context.Context, operator Operator, actorID string
 		return Person{}, err
 	}
 	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
-		"workforce.suspended", "suspend_workforce_actor", before, person, reason, correlationID, correlationID); err != nil {
-		log.Printf("[workforce] RecordAudit error in Suspend: %v", err)
+		"workforce.suspended", "suspend_workforce_actor", before, person, reason, correlationID, ""); err != nil {
+		return Person{}, err
 	}
 	return person, nil
 }
@@ -549,8 +549,8 @@ func (s *Service) Reactivate(ctx context.Context, operator Operator, actorID str
 		return Person{}, err
 	}
 	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
-		"workforce.reactivated", "reactivate_workforce_actor", before, person, reason, correlationID, correlationID); err != nil {
-		log.Printf("[workforce] RecordAudit error in Reactivate: %v", err)
+		"workforce.reactivated", "reactivate_workforce_actor", before, person, reason, correlationID, ""); err != nil {
+		return Person{}, err
 	}
 	return person, nil
 }
@@ -609,7 +609,7 @@ func (s *Service) IssueActivation(ctx context.Context, operator Operator, actorI
 	}
 	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
 		"workforce.activation_issued", "issue_activation", nil, map[string]string{"activationId": code.ActivationID}, "", correlationID, idempotencyKey); err != nil {
-		log.Printf("[workforce] RecordAudit error in IssueActivation: %v", err)
+		return identityclient.ActivationCode{}, err
 	}
 	return code, nil
 }
@@ -649,8 +649,8 @@ func (s *Service) RevokeActivation(ctx context.Context, operator Operator, actor
 		return err
 	}
 	if err := s.repo.RecordAudit(ctx, operator.OperatorContextID, operator.ActorID, operator.Role, actorID,
-		"workforce.activation_revoked", "revoke_activation", nil, nil, "", correlationID, correlationID); err != nil {
-		log.Printf("[workforce] RecordAudit error in RevokeActivation: %v", err)
+		"workforce.activation_revoked", "revoke_activation", nil, nil, "", correlationID, ""); err != nil {
+		return err
 	}
 	return nil
 }
@@ -697,7 +697,7 @@ func (s *Service) UpdateMe(ctx context.Context, actorID string, input UpdateSelf
 		return MeView{}, contextErr
 	}
 	if err := s.repo.RecordAudit(ctx, contextID, actorID, "field", actorID,
-		"field_agent.self_updated", "update_self", before.FieldProfile, person.FieldProfile, "", correlationID, correlationID); err != nil {
+		"field_agent.self_updated", "update_self", before.FieldProfile, person.FieldProfile, "", correlationID, ""); err != nil {
 		return MeView{}, err
 	}
 	view := MeView{Person: person, ProfileComplete: selfFieldsComplete(person)}
