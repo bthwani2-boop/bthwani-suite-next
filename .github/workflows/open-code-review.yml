@@ -253,8 +253,9 @@ jobs:
             echo "This workflow therefore does not claim an AI semantic review pass/fail."
             echo
             echo \
-            "An independent write-authorized reviewer must submit an APPROVED review containing the exact \
-            v2 attestation shown by the trusted closure workflow."
+            "Closure semantic review is attested by a write-authorized repository account submitting \
+            an issue comment on the closure PR containing BTHWANI_SEMANTIC_REVIEW:v1, verdict=PASS, \
+            and this exact head SHA."
           } > "${evidence}/README.md"
 
           echo "count=${count}" >> "${GITHUB_OUTPUT}"

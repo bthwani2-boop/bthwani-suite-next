@@ -20,7 +20,7 @@ human creates branch
 -> retire/delete source branch
 ```
 
-`ci.yml` owns branch/PR identity resolution. On a development push it queries the exact `head -> default-branch` PR set. Zero matching PRs causes creation of one Draft PR; one is reused; more than one is a fail-closed `PR_IDENTITY_CONFLICT`. The duplicate push run is then suppressed because the GitHub `pull_request` event owns verification.
+`ci.yml` owns branch/PR identity resolution. On a development push it queries the exact `head -> default-branch` PR set. Zero matching PRs leaves the push as plain branch-development evidence with no PR creation; one is bound to that PR and the duplicate push run is suppressed because the GitHub `pull_request` event owns verification; more than one is a fail-closed `PR_IDENTITY_CONFLICT`. PR creation itself stays human-owned.
 
 The canonical PR identity is `repository + PR_NUMBER + head ref/SHA + base ref/SHA`. A different PR, old SHA, same workflow name, or synthetic merge SHA is never current-candidate evidence.
 
@@ -30,7 +30,7 @@ Tool health is not execution readiness. Broken CI/scanners/runtimes are evidence
 
 Closure is stricter. A full PR closure run is an explicit `workflow_dispatch` of `ci.yml` with the exact PR/head/base identity, `mode=full`, and `runtime_proof=true`.
 
-The `BThwani / PR Closure Evidence` job re-resolves the PR, runs full internal CI/runtime, dispatches the remote analyzers on the same branch, correlates every new run to the exact HEAD SHA, reads back CodeQL/Sonar state, requires an independent write-authorized exact-head `APPROVED` semantic review attestation, re-resolves the PR again, and publishes one stable commit status.
+The `BThwani / PR Closure Evidence` job re-resolves the PR, runs full internal CI/runtime, dispatches the remote analyzers on the same branch, correlates every new run to the exact HEAD SHA, reads back CodeQL/Sonar state scoped to the candidate branch ref, requires a write-authorized exact-head `BTHWANI_SEMANTIC_REVIEW:v1` comment attestation, re-resolves the PR again, and publishes one stable commit status.
 
 A successful tool run is not cross-SHA or cross-PR evidence. A new commit invalidates affected evidence.
 
@@ -54,31 +54,30 @@ Semgrep does not translate unknown severities into success. Every raw result and
 
 ## Semantic review attestation
 
-OpenCodeReview preparation is not semantic review. Before full PR closure can pass, the exact current head must have a GitHub PR review anchored to that commit that is all of the following:
+OpenCodeReview preparation is not semantic review. Before full PR closure can pass, the exact current head must be attested by a GitHub issue comment on the closure PR that is all of the following:
 
-- `APPROVED`;
-- submitted by a reviewer other than the PR author;
-- submitted by a repository collaborator with `write`, `maintain`, or `admin` permission;
-- contains both required attestation markers:
+- authored by a repository collaborator with `write`, `maintain`, or `admin` permission;
+- bound to the exact candidate by containing its full head SHA;
+- containing all required attestation markers:
 
 ```text
 BTHWANI_SEMANTIC_REVIEW:v1
 verdict=PASS
 ```
 
-The review body should summarize the material scope reviewed and any finding dispositions. A new commit supersedes the attestation. A self-review, comment-only review, stale-head review, or review from an account without write authority is not closure evidence.
+The comment body should summarize the material scope reviewed and any finding dispositions. The attestation channel is an issue comment because GitHub forbids APPROVED reviews on self-authored PRs; solo-maintenance authority policy deliberately does not require author independence. A new commit supersedes the attestation. A comment missing any marker, anchored to a stale head, or from an account without write authority is not closure evidence.
 
 ## Remote command ingress
 
 `remote-command.yml` accepts schema v2 only. It is a control ingress, not a scanner.
 
-Example PR closure request:
+Example full-CI verification request for an open PR:
 
 ```json
 {
   "schema_version": 2,
-  "request_id": "closure-20260824-001",
-  "command": "pr-closure",
+  "request_id": "verify-20260824-001",
+  "command": "ci-full",
   "target_kind": "pull_request",
   "target_ref": "",
   "pr_number": 284,
@@ -89,7 +88,7 @@ Example PR closure request:
 
 For `target_kind=pull_request`, the workflow reads the PR directly and validates exact head/base SHA. For `target_kind=branch`, it validates the named existing branch directly. No branch is created by remote command ingress.
 
-Supported intents are bounded: contextual CI, full/runtime/journey verification, PR closure, CodeQL, CodeQL hygiene, SonarQube, Remote Security, Semgrep, lockfile integrity, and default-branch evidence read-back. Arbitrary shell execution is forbidden.
+Supported commands are bounded: `ci-affected`, `ci-full`, `ci-runtime`, `ci-journey`, `codeql-full`, `codeql-hygiene`, `sonar-full`, `security-full`, `semgrep-full`, `lockfile-integrity`, and `remote-evidence` (default-branch evidence read-back). PR closure itself is not a remote command; it is requested through the closure-request label path. Arbitrary shell execution is forbidden.
 
 ## Platform enforcement
 
