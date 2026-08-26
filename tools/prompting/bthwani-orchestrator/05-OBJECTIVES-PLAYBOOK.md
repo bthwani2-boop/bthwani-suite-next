@@ -69,7 +69,7 @@ Rewrite, move, rename, split, merge, migrate, backfill, regenerate, cut over, de
 
 Concurrent execution may occur across ChatGPT, Claude, Manus, Codex, other agents, IDEs or human-managed worktrees. Provider identity has no semantic authority.
 
-Every new execution window SHOULD receive the complete human-known active work snapshot when concurrent work exists:
+When concurrent execution is known or declared, the complete **human-known** active-work snapshot is REQUIRED before a new independent concurrent mutation may be selected or started:
 
 ```text
 ACTIVE_WORKSET:
@@ -79,6 +79,19 @@ ACTIVE_WORKSET:
   WORKSPACE: <optional worktree/branch/ref>
   STARTING_SHA: <optional immutable source identity>
   STATUS: ACTIVE
+```
+
+When no concurrent work is known, use `ACTIVE_WORKSET: NONE` conceptually; do not manufacture a registry.
+
+The requirement is deliberately limited to work the human/coordinator actually knows is active. It does not demand impossible discovery of hidden external sessions. However, if concurrent work is known to exist and the available snapshot is materially incomplete, the coordinator MUST NOT claim a new mutation is `PARALLEL_SAFE` against the missing work.
+
+In that case:
+
+```text
+READ-ONLY AUDIT / ROOT DISCOVERY -> MAY CONTINUE
+NEW PARALLEL MUTATION -> NOT AUTHORIZED AS PARALLEL_SAFE
+COLLISION STATUS -> UNKNOWN_COLLISION for the missing coordination cone
+IF HUMAN REQUESTS PARALLEL EXECUTION -> HUMAN_ACTION_REQUIRED for the missing known active-objective snapshot
 ```
 
 Objective IDs are ephemeral coordination labels only. Do not create a repository registry merely to persist them.
@@ -104,7 +117,7 @@ Before selecting a Closure Unit:
 7. **Rank roots by the current `02` leverage law** — upstream depth, blocking power, canonical importance, blast radius, user/operational/security/data/finance risk, recurrence, structural multiplier, cosmetic impact.
 8. **Prove Source-of-Fix frontier** — enough actual Source-of-Defect, required Source-of-Fix, owner/write path, affected consumers, migration/cutover, obsolete implementation and proof must be known to execute safely.
 9. **Apply the Window-Fit Gate** — split only causally independent roots; keep together what one canonical cutover requires.
-10. **Apply ACTIVE_WORKSET collision analysis** — candidate must be safe against **every** active objective, not merely the most recent one.
+10. **Apply ACTIVE_WORKSET collision analysis** — candidate must be safe against **every** active objective, not merely the most recent one. When known concurrency exists, §3 must be satisfied first.
 11. **Select the highest proven executable parallel-safe root** — if the highest root collides, do not distort it for concurrency; classify it and select the next highest genuinely parallel-safe root.
 12. **Declare the selected Closure Unit before mutation** under §5.
 13. **Execute under `00`–`04`** without waiting for confirmation unless a legitimate human decision/authority/safety stop exists or the human asked only for objective extraction.
