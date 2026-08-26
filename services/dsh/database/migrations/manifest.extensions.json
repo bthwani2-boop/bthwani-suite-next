@@ -306,6 +306,13 @@
     },
     {
       "ordinal": 283,
+      "file": "dsh-1043_zone_service_area_canonical_relationship.sql",
+      "sha256": "d40d2ee9b0e246e2938593732ed6877906025aaee612106bb50afdfb918fa676",
+      "historicalPrefix": null,
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 284,
       "file": "dsh-1044_checkout_financial_closure_outbox_state_machine.sql",
       "sha256": "e39758df42930f8b79336d43d8834d55b8cca706b5ac6d146e0319fbba1baa7f",
       "historicalPrefix": "1044",
