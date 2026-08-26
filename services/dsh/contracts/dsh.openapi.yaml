@@ -281,6 +281,10 @@ paths:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1settlements~1summary"
   /dsh/control-panel/finance/refunds:
     $ref: "./dsh.refunds.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1refunds"
+  /dsh/control-panel/finance/checkout-closures/{outboxId}/retry:
+    $ref: "./dsh.order-workboards.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1checkout-closures~1{outboxId}~1retry"
+  /dsh/control-panel/finance/checkout-closures/{outboxId}/reconcile:
+    $ref: "./dsh.order-workboards.openapi.yaml#/paths/~1dsh~1control-panel~1finance~1checkout-closures~1{outboxId}~1reconcile"
   /dsh/control-panel/finance/references/field-commission:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1references~1field-commission"
   /dsh/control-panel/finance/references/payment-status:
