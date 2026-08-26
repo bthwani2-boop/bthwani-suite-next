@@ -1,4 +1,4 @@
-import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/native-data-adapters";
+import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/storage-adapter";
 import type {
   CreateOrderTruthInput,
   OrderTruthMutationContext,

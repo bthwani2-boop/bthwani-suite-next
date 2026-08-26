@@ -82,18 +82,12 @@ const nextConfig = {
     root: path.join(__dirname, "../../.."),
     resolveAlias: {
       "react-native": "react-native-web",
-      "@react-native-vector-icons/ionicons": "./stubs/ionicons-stub.js",
-      "@react-native-community/netinfo": "./stubs/netinfo-stub.js",
-      "expo-image-picker": "./stubs/expo-image-picker-web.js",
     },
   },
   webpack: (config) => {
     config.resolve.alias = {
       ...(config.resolve.alias ?? {}),
       "react-native$": "react-native-web",
-      "@react-native-vector-icons/ionicons": require.resolve("./stubs/ionicons-stub.js"),
-      "@react-native-community/netinfo": require.resolve("./stubs/netinfo-stub.js"),
-      "expo-image-picker": require.resolve("./stubs/expo-image-picker-web.js"),
     };
     return config;
   },

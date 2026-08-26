@@ -4,7 +4,7 @@ import {
   type DehydratedState,
   type QueryClient,
 } from "@tanstack/react-query";
-import { bthwaniKeyValueStorage, type BthwaniKeyValueStorage } from "./native-data-adapters.ts";
+import { bthwaniKeyValueStorage, type BthwaniKeyValueStorage } from "./storage-adapter.ts";
 
 const CACHE_SCHEMA_VERSION = 3;
 const MAX_CACHE_AGE_MS = 24 * 60 * 60 * 1000;

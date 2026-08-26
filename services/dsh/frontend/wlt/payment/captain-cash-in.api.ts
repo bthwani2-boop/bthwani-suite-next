@@ -1,4 +1,4 @@
-import { bthwaniKeyValueStorage } from "@bthwani/data-runtime";
+import { bthwaniKeyValueStorage } from "@bthwani/data-runtime/storage-adapter";
 import { corrId, createDshHttpClient } from "../../shared/_kernel/dsh-http-request";
 import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
 

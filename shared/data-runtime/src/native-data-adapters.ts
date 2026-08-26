@@ -1,5 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-
 declare const require: ((id: string) => unknown) | undefined;
 
 export type BthwaniKeyValueStorage = {
@@ -10,41 +8,26 @@ export type BthwaniKeyValueStorage = {
   readonly multiRemove: (keys: readonly string[]) => Promise<void>;
 };
 
+type AsyncStorageModule = BthwaniKeyValueStorage | { readonly default: BthwaniKeyValueStorage };
+
+function resolveAsyncStorage(): BthwaniKeyValueStorage {
+  if (typeof require !== "function") {
+    throw new Error("NATIVE_STORAGE_UNAVAILABLE");
+  }
+
+  const loaded = require("@react-native-async-storage/async-storage") as AsyncStorageModule;
+  return "default" in loaded ? loaded.default : loaded;
+}
+
 /**
  * Canonical mobile key-value persistence adapter.
  * Product/domain packages consume this interface instead of importing the
  * native provider directly, keeping provider ownership inside data-runtime.
  */
 export const bthwaniKeyValueStorage: BthwaniKeyValueStorage = {
-  getItem: (key) => AsyncStorage.getItem(key),
-  setItem: (key, value) => AsyncStorage.setItem(key, value),
-  removeItem: (key) => AsyncStorage.removeItem(key),
-  getAllKeys: () => AsyncStorage.getAllKeys(),
-  multiRemove: (keys) => AsyncStorage.multiRemove([...keys]),
+  getItem: (key) => resolveAsyncStorage().getItem(key),
+  setItem: (key, value) => resolveAsyncStorage().setItem(key, value),
+  removeItem: (key) => resolveAsyncStorage().removeItem(key),
+  getAllKeys: () => resolveAsyncStorage().getAllKeys(),
+  multiRemove: (keys) => resolveAsyncStorage().multiRemove([...keys]),
 };
-
-export type BthwaniNetworkState = {
-  readonly isConnected: boolean | null;
-  readonly isInternetReachable: boolean | null;
-};
-
-type NetInfoModule = {
-  addEventListener(listener: (state: BthwaniNetworkState) => void): () => void;
-};
-
-/**
- * Canonical connectivity subscription adapter. A missing native peer degrades
- * to an inert unsubscribe function; callers still fail closed on their own
- * offline/readiness state and never become direct NetInfo owners.
- */
-export function subscribeBthwaniConnectivity(
-  listener: (state: BthwaniNetworkState) => void,
-): () => void {
-  if (typeof require !== "function") return () => {};
-  try {
-    const netInfo = (require("@react-native-community/netinfo") as { default: NetInfoModule }).default;
-    return netInfo.addEventListener(listener);
-  } catch {
-    return () => {};
-  }
-}

@@ -5,5 +5,6 @@ export * from "./BthwaniQueryProvider";
 export * from "./persistence";
 export * from "./offline-mutation-queue";
 export * from "./power-policy";
-export * from "./native-data-adapters";
+export * from "./storage-adapter";
+export * from "./connectivity-adapter";
 export { useQuery as useBthwaniQuery } from "@tanstack/react-query";

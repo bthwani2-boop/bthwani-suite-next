@@ -1,4 +1,4 @@
-import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/native-data-adapters";
+import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/storage-adapter";
 import type { DshCreateTicketInput } from "./support.types";
 import type { PartnerSupportMutationContext } from "./partner-support.api";
 import { secureRandomId } from "../_kernel/secure-random.ts";

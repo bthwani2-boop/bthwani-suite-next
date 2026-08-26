@@ -1,4 +1,4 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { bthwaniKeyValueStorage } from "./storage-adapter.ts";
 
 export type OfflineMutationEnvelope = {
   readonly id: string;
@@ -30,20 +30,20 @@ export function createBthwaniOfflineMutationQueue(
   let flushing: Promise<void> | undefined;
 
   async function readQueue(): Promise<OfflineMutationEnvelope[]> {
-    const raw = await AsyncStorage.getItem(storageKey);
+    const raw = await bthwaniKeyValueStorage.getItem(storageKey);
     if (!raw) return [];
     try {
       const parsed: unknown = JSON.parse(raw);
       return Array.isArray(parsed) ? parsed as OfflineMutationEnvelope[] : [];
     } catch {
-      await AsyncStorage.removeItem(storageKey);
+      await bthwaniKeyValueStorage.removeItem(storageKey);
       return [];
     }
   }
 
   async function writeQueue(queue: readonly OfflineMutationEnvelope[]): Promise<void> {
-    if (queue.length === 0) await AsyncStorage.removeItem(storageKey);
-    else await AsyncStorage.setItem(storageKey, JSON.stringify(queue));
+    if (queue.length === 0) await bthwaniKeyValueStorage.removeItem(storageKey);
+    else await bthwaniKeyValueStorage.setItem(storageKey, JSON.stringify(queue));
   }
 
   return {
@@ -89,7 +89,7 @@ export function createBthwaniOfflineMutationQueue(
       return flushing;
     },
     async clear() {
-      await AsyncStorage.removeItem(storageKey);
+      await bthwaniKeyValueStorage.removeItem(storageKey);
     },
     async size() {
       return (await readQueue()).length;

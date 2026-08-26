@@ -1,4 +1,4 @@
-import { bthwaniKeyValueStorage } from "@bthwani/data-runtime";
+import { bthwaniKeyValueStorage } from "@bthwani/data-runtime/storage-adapter";
 
 const STORAGE_KEY = "@bthwani/field-payout-attempt:v1";
 const MAX_ATTEMPT_AGE_MS = 24 * 60 * 60 * 1000;

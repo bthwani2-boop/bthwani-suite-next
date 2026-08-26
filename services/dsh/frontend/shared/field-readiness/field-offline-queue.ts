@@ -5,7 +5,7 @@
  * current app installation. Mobile runtimes must use encrypted storage.
  */
 
-import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/native-data-adapters";
+import { bthwaniKeyValueStorage as AsyncStorage } from "@bthwani/data-runtime/storage-adapter";
 
 export type FieldOfflineOperationType =
   | "create_visit"
