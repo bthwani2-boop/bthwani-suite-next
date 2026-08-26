@@ -1,7 +1,10 @@
 // ─── Website Lane ──────────────────────────────────────────────────────────────
 export { WebMissionHeroCard, WebPageFrame, WebSectionCard, WebSignalCard } from './page-frame';
 export type { WebMissionHeroCardProps, WebPageFrameProps, WebSectionCardProps, WebSignalCardProps, WebSignalCardTone } from './page-frame';
-export { WebDocumentShell, WebRootBody, WebRootLayout, WebThemeStyle, buildWebRootMetadata } from './root-layout';
+// The legacy document shell/bootstrap exports were removed because they
+// injected an unnonced inline script/style pair. WebThemeStyle remains the
+// single style producer and accepts the request nonce from the server layout.
+export { WebThemeStyle } from './root-layout';
 export type { WebRootLayoutProps } from './root-layout';
 
 // ─── Shared WebApp Components ─────────────────────────────────────────────────
@@ -11,7 +14,7 @@ export type { WebControlActionButtonProps, WebControlActionCardProps, WebControl
 // ─── Control Panel Lane ────────────────────────────────────────────────────────
 // Use for: staff operations, admin dashboards, control rooms only.
 export { WebCommandCenterFrame, WebCommandStrip, WebRailServiceList, WebSegmentedTabs, WebControlPanelFrame, WebControlPanelKpiStrip, WebControlPanelWorkspaceTabs } from './command-center';
-export type { WebCommandCenterFilter, WebCommandCenterFrameProps, WebCommandCenterNavItem, WebCommandStripFilter, WebCommandStripProps, WebRailServiceItem, WebRailServiceListProps, WebSearchItem, WebSegmentedTabItem, WebSegmentedTabsProps, WebControlPanelFrameProps, WebControlPanelKpiItem, WebControlPanelKpiStripProps, WebControlPanelKpiTone, WebControlPanelWorkspaceTabItem, WebControlPanelWorkspaceTabsProps } from './command-center';
+export type { WebCommandCenterFilter, WebCommandCenterFrameProps, WebCommandCenterNavItem, WebCommandStripFilter, WebCommandStripProps, WebRailServiceItem, WebRailServiceListProps, WebSearchItem, WebSegmentedTabItem, WebSegmentedTabsProps, WebControlPanelKpiItem, WebControlPanelKpiStripProps, WebControlPanelKpiTone, WebControlPanelWorkspaceTabItem, WebControlPanelWorkspaceTabsProps } from './command-center';
 export { WebControlPanelQueue } from './control-panel-queue';
 export type { WebControlPanelQueueProps } from './control-panel-queue';
 export {

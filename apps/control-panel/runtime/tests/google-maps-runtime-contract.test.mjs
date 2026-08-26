@@ -3,7 +3,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import nextConfig from "../next.config.mjs";
+import { buildControlPanelContentSecurityPolicy } from "../csp-policy.mjs";
 
 const repoRoot = path.resolve(import.meta.dirname, "../../../..");
 const read = (relative) => fs.readFileSync(path.join(repoRoot, relative), "utf8");
@@ -85,17 +85,14 @@ test("Maps JavaScript loader uses async loading and exposes authentication failu
 });
 
 test("control-panel CSP permits the official Maps JavaScript runtime domains", async () => {
-  const routes = await nextConfig.headers();
-  const governedRoute = routes.find((entry) => entry.source === "/:path*");
-  assert.ok(governedRoute);
-  const csp = governedRoute.headers.find(({ key }) => key === "Content-Security-Policy")?.value ?? "";
+  const csp = buildControlPanelContentSecurityPolicy({ nonce: "test-nonce" });
 
   assert.match(csp, /script-src[^;]*https:\/\/\*\.googleapis\.com/);
   assert.match(csp, /script-src[^;]*https:\/\/\*\.gstatic\.com/);
   assert.match(csp, /connect-src[^;]*https:\/\/\*\.googleapis\.com/);
   assert.match(csp, /connect-src[^;]*https:\/\/\*\.gstatic\.com/);
   assert.match(csp, /font-src[^;]*https:\/\/fonts\.gstatic\.com/);
-  assert.match(csp, /style-src[^;]*https:\/\/fonts\.googleapis\.com/);
+  assert.match(csp, /style-src[^;]*'nonce-test-nonce'/);
   assert.match(csp, /frame-src https:\/\/\*\.google\.com/);
 });
 
