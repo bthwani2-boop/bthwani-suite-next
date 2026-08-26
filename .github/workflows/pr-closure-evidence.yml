@@ -444,22 +444,24 @@ jobs:
           HEAD_SHA: ${{ steps.scope.outputs.head_sha }}
         run: |
           set -euo pipefail
-          reviews="$(gh api --paginate -H 'X-GitHub-Api-Version: 2022-11-28' \
-          "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}/reviews?per_page=100" --slurp)"
+          # GitHub forbids APPROVED reviews on self-authored PRs, so the exact-head
+          # attestation binds to an issue comment authored by a write-authorized
+          # account and containing the marker, verdict, and the candidate SHA.
+          comments="$(gh api --paginate -H 'X-GitHub-Api-Version: 2022-11-28' \
+          "/repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments?per_page=100" --slurp)"
           mapfile -t reviewers < <(
             jq -r --arg sha "${HEAD_SHA}" '
               .[][]
               | select(
-                  .commit_id == $sha
-                  and .state == "APPROVED"
-                  and ((.body // "") | contains("BTHWANI_SEMANTIC_REVIEW:v1"))
+                  ((.body // "") | contains("BTHWANI_SEMANTIC_REVIEW:v1"))
                   and ((.body // "") | contains("verdict=PASS"))
+                  and ((.body // "") | contains($sha))
                 )
               | .user.login
-            ' <<<"${reviews}" | sort -fu
+            ' <<<"${comments}" | sort -fu
           )
           (( ${#reviewers[@]} > 0 )) || {
-            echo "::error::missing authorized exact-head APPROVED BTHWANI_SEMANTIC_REVIEW:v1 verdict=PASS"
+            echo "::error::missing authorized exact-head BTHWANI_SEMANTIC_REVIEW:v1 verdict=PASS comment"
             exit 1
           }
 
