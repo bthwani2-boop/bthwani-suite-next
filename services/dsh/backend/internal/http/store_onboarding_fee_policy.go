@@ -74,9 +74,10 @@ func (s *protectedStoreServer) proxyStoreOnboardingFeePolicyRead(w http.Response
 		return
 	}
 	trustedContext := wlt.WithOperatorContext(r.Context(), operatorContextID)
-	status, body, err := s.wlt.FinanceReadWithOperatorContext(
+	status, body, err := s.wlt.ExecuteFinanceRead(
 		trustedContext,
-		wltStoreOnboardingFeePolicyPath,
+		"finance.store_onboarding_fee.read",
+		nil,
 		nil,
 		r.Header.Get("X-Correlation-ID"),
 		operatorContextID,
@@ -138,14 +139,15 @@ func (s *protectedStoreServer) handleUpsertStoreOnboardingFeePolicy(w http.Respo
 		return
 	}
 	trustedContext := wlt.WithOperatorContext(r.Context(), operatorContextID)
-	status, body, err := s.wlt.FinanceWriteWithOperatorContext(
+	status, body, err := s.wlt.ExecuteFinanceWrite(
 		trustedContext,
-		http.MethodPut,
-		wltStoreOnboardingFeePolicyPath,
+		"finance.store_onboarding_fee.upsert",
+		nil,
 		payload,
 		correlationID,
 		idempotencyKey,
 		operatorContextID,
+		actorID,
 	)
 	writeStoreOnboardingFeeProxyResponse(w, status, body, err)
 }

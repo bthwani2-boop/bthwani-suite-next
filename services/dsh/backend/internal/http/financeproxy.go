@@ -24,11 +24,11 @@ const (
 )
 
 func (s *protectedStoreServer) handleFinanceSettlements(w http.ResponseWriter, r *http.Request) {
-	s.handleFacadeRead("finance.settlements.read", "/wlt/settlements", []string{"partnerId", "limit", "cursor"})(w, r)
+	s.handleFacadeRead("finance.settlements.read", []string{"partnerId", "limit", "cursor"})(w, r)
 }
 
 func (s *protectedStoreServer) handleFinanceSettlementSummary(w http.ResponseWriter, r *http.Request) {
-	s.handleFacadeRead("finance.settlements.read", "/wlt/settlements/summary", []string{"partnerId"})(w, r)
+	s.handleFacadeRead("finance.settlements.summary.read", []string{"partnerId"})(w, r)
 }
 
 func (s *protectedStoreServer) handlePartnerFinanceSettlements(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +48,7 @@ func (s *protectedStoreServer) handlePartnerFinanceSettlements(w http.ResponseWr
 		}
 	}
 	query.Set("partnerId", partnerID)
-	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.settlements.read", "/wlt/settlements", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
+	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.settlements.read", nil, query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
 		return
@@ -70,7 +70,7 @@ func (s *protectedStoreServer) handlePartnerFinanceSettlementSummary(w http.Resp
 	}
 	query := url.Values{}
 	query.Set("partnerId", partnerID)
-	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.settlements.read", "/wlt/settlements/summary", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
+	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.settlements.summary.read", nil, query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
 		return
@@ -95,7 +95,7 @@ func (s *protectedStoreServer) handleFinanceRefunds(w http.ResponseWriter, r *ht
 			query.Set(key, v)
 		}
 	}
-	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.refunds.read", "/wlt/refunds", query, r.Header.Get("X-Correlation-ID"), operatorContextID)
+	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.refunds.read", nil, query, r.Header.Get("X-Correlation-ID"), operatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
 		return
@@ -114,7 +114,7 @@ func (s *protectedStoreServer) handleFinanceRefundDetail(w http.ResponseWriter, 
 	if !ok {
 		return
 	}
-	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.refunds.read", "/wlt/refunds/"+url.PathEscape(r.PathValue("refundId")), nil, r.Header.Get("X-Correlation-ID"), operatorContextID)
+	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.refunds.detail.read", map[string]string{"refundId": r.PathValue("refundId")}, nil, r.Header.Get("X-Correlation-ID"), operatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
 		return
@@ -125,35 +125,35 @@ func (s *protectedStoreServer) handleFinanceRefundDetail(w http.ResponseWriter, 
 }
 
 func (s *protectedStoreServer) handleFinanceLedgerEntries(w http.ResponseWriter, r *http.Request) {
-	s.handleFacadeRead("finance.ledger.read", "/wlt/ledger/entries", []string{"actorId", "actorType", "orderId", "entryType", "limit", "cursor"})(w, r)
+	s.handleFacadeRead("finance.ledger.entries.read", []string{"actorId", "actorType", "orderId", "entryType", "limit", "cursor"})(w, r)
 }
 
 func (s *protectedStoreServer) handleFinanceFinancialSummary(w http.ResponseWriter, r *http.Request) {
-	s.handleFacadeRead("finance.ledger.read", "/wlt/ledger/financial-summary", nil)(w, r)
+	s.handleFacadeRead("finance.ledger.summary.read", nil)(w, r)
 }
 
 func (s *protectedStoreServer) handleFinanceCommissions(w http.ResponseWriter, r *http.Request) {
-	s.handleFacadeRead("finance.ledger.read", "/wlt/commissions", []string{"orderId", "captainId", "limit", "cursor"})(w, r)
+	s.handleFacadeRead("finance.ledger.commissions.read", []string{"orderId", "captainId", "limit", "cursor"})(w, r)
 }
 
 func (s *protectedStoreServer) handleFinanceReferencesPaymentStatus(w http.ResponseWriter, r *http.Request) {
-	s.handleFacadeRead("finance.ledger.read", "/wlt/references/payment-status", []string{"orderId"})(w, r)
+	s.handleFacadeRead("finance.ledger.payment_status.read", []string{"orderId"})(w, r)
 }
 
 func (s *protectedStoreServer) handleFinanceReferencesSettlementStatus(w http.ResponseWriter, r *http.Request) {
-	s.handleFacadeRead("finance.ledger.read", "/wlt/references/settlement-status", []string{"orderId"})(w, r)
+	s.handleFacadeRead("finance.ledger.settlement_status.read", []string{"orderId"})(w, r)
 }
 
 func (s *protectedStoreServer) handleFinanceReferencesRefundStatus(w http.ResponseWriter, r *http.Request) {
-	s.handleFacadeRead("finance.ledger.read", "/wlt/references/refund-status", []string{"orderId"})(w, r)
+	s.handleFacadeRead("finance.ledger.refund_status.read", []string{"orderId"})(w, r)
 }
 
 func (s *protectedStoreServer) handleFinanceReferencesFieldCommission(w http.ResponseWriter, r *http.Request) {
-	s.handleFacadeRead("finance.ledger.read", "/wlt/references/field-commission", []string{"partnerId"})(w, r)
+	s.handleFacadeRead("finance.ledger.field_commission.read", []string{"partnerId"})(w, r)
 }
 
 func (s *protectedStoreServer) handleFinancePayoutRequests(w http.ResponseWriter, r *http.Request) {
-	s.handleFacadeRead("finance.payout_requests.read", "/wlt/payout-requests", []string{"status", "limit", "cursor", "beneficiaryActorId"})(w, r)
+	s.handleFacadeRead("finance.payout_requests.read", []string{"status", "limit", "cursor", "beneficiaryActorId"})(w, r)
 }
 
 func (s *protectedStoreServer) handleApproveFinancePayoutRequest(w http.ResponseWriter, r *http.Request) {
@@ -162,7 +162,7 @@ func (s *protectedStoreServer) handleApproveFinancePayoutRequest(w http.Response
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId is required")
 		return
 	}
-	s.handleFacadeWrite("finance.payout_requests.approve", "/wlt/payout-requests/"+url.PathEscape(payoutID)+"/approve")(w, r)
+	s.handleFacadeWrite("finance.payout_requests.approve", func(*http.Request) map[string]string { return map[string]string{"payoutId": payoutID} })(w, r)
 }
 
 func (s *protectedStoreServer) handleRejectFinancePayoutRequest(w http.ResponseWriter, r *http.Request) {
@@ -171,15 +171,15 @@ func (s *protectedStoreServer) handleRejectFinancePayoutRequest(w http.ResponseW
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId is required")
 		return
 	}
-	s.handleFacadeWrite("finance.payout_requests.reject", "/wlt/payout-requests/"+url.PathEscape(payoutID)+"/reject")(w, r)
+	s.handleFacadeWrite("finance.payout_requests.reject", func(*http.Request) map[string]string { return map[string]string{"payoutId": payoutID} })(w, r)
 }
 
 func (s *protectedStoreServer) handleFinanceReconciliationCases(w http.ResponseWriter, r *http.Request) {
-	s.handleFacadeRead("finance.reconciliation.read", "/wlt/reconciliation-cases", []string{"status"})(w, r)
+	s.handleFacadeRead("finance.reconciliation.read", []string{"status"})(w, r)
 }
 
 func (s *protectedStoreServer) handleFinanceReconciliationCaseDetail(w http.ResponseWriter, r *http.Request) {
-	s.handleFacadeRead("finance.reconciliation.read", "/wlt/reconciliation-cases/"+url.PathEscape(r.PathValue("caseId")), nil)(w, r)
+	s.wltFinanceReadWithParams(w, r, "finance.reconciliation.detail.read", map[string]string{"caseId": r.PathValue("caseId")}, nil)
 }
 
 func (s *protectedStoreServer) handleAssignFinanceReconciliationCase(w http.ResponseWriter, r *http.Request) {
@@ -188,7 +188,7 @@ func (s *protectedStoreServer) handleAssignFinanceReconciliationCase(w http.Resp
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "caseId is required")
 		return
 	}
-	s.handleFacadeWrite("finance.reconciliation.assign", "/wlt/reconciliation-cases/"+url.PathEscape(caseID)+"/assign")(w, r)
+	s.handleFacadeWrite("finance.reconciliation.assign", func(*http.Request) map[string]string { return map[string]string{"caseId": caseID} })(w, r)
 }
 
 func (s *protectedStoreServer) handleResolveFinanceReconciliationCase(w http.ResponseWriter, r *http.Request) {
@@ -217,7 +217,7 @@ func (s *protectedStoreServer) handleResolveFinanceReconciliationCase(w http.Res
 		"resolutionNote":   input.ResolutionNote,
 	})
 
-	status, respBody, err := s.wlt.ExecuteFinanceWrite(r.Context(), "finance.reconciliation.resolve", http.MethodPost, "/wlt/reconciliation-cases/"+url.PathEscape(caseID)+"/resolve", body, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID, actor.ID)
+	status, respBody, err := s.wlt.ExecuteFinanceWrite(r.Context(), "finance.reconciliation.resolve", map[string]string{"caseId": caseID}, body, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID, actor.ID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance write failed")
 		return
@@ -227,7 +227,7 @@ func (s *protectedStoreServer) handleResolveFinanceReconciliationCase(w http.Res
 	_, _ = w.Write(respBody)
 }
 
-func (s *protectedStoreServer) handleFacadeRead(opID, wltPath string, allowedQueryParams []string) http.HandlerFunc {
+func (s *protectedStoreServer) handleFacadeRead(opID string, allowedQueryParams []string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := s.ActorFromContext(r.Context())
 		if !ok {
@@ -241,7 +241,7 @@ func (s *protectedStoreServer) handleFacadeRead(opID, wltPath string, allowedQue
 			}
 		}
 
-		status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), opID, wltPath, query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
+		status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), opID, nil, query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 		if err != nil {
 			store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance operation failed")
 			return
@@ -252,7 +252,22 @@ func (s *protectedStoreServer) handleFacadeRead(opID, wltPath string, allowedQue
 	}
 }
 
-func (s *protectedStoreServer) handleFacadeWrite(opID, wltPath string) http.HandlerFunc {
+func (s *protectedStoreServer) wltFinanceReadWithParams(w http.ResponseWriter, r *http.Request, opID string, params map[string]string, query url.Values) {
+	actor, ok := s.ActorFromContext(r.Context())
+	if !ok {
+		return
+	}
+	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), opID, params, query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
+	if err != nil {
+		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_, _ = w.Write(body)
+}
+
+func (s *protectedStoreServer) handleFacadeWrite(opID string, params func(*http.Request) map[string]string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		actor, ok := s.ActorFromContext(r.Context())
 		if !ok {
@@ -261,7 +276,7 @@ func (s *protectedStoreServer) handleFacadeWrite(opID, wltPath string) http.Hand
 
 		body := operatorWriteBody()
 
-		status, respBody, err := s.wlt.ExecuteFinanceWrite(r.Context(), opID, http.MethodPost, wltPath, body, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID, actor.ID)
+		status, respBody, err := s.wlt.ExecuteFinanceWrite(r.Context(), opID, params(r), body, r.Header.Get("X-Correlation-ID"), r.Header.Get("Idempotency-Key"), actor.OperatorContextID, actor.ID)
 		if err != nil {
 			store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance operation failed")
 			return
@@ -287,8 +302,8 @@ func financeQuery(r *http.Request, keys ...string) url.Values {
 	return out
 }
 
-func (s *protectedStoreServer) proxyFinanceRead(w http.ResponseWriter, r *http.Request, opID, wltPath string, query url.Values, operatorContextID string) {
-	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), opID, wltPath, query, r.Header.Get("X-Correlation-ID"), operatorContextID)
+func (s *protectedStoreServer) proxyFinanceRead(w http.ResponseWriter, r *http.Request, opID string, params map[string]string, query url.Values, operatorContextID string) {
+	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), opID, params, query, r.Header.Get("X-Correlation-ID"), operatorContextID)
 	if err != nil {
 		store.SendError(w, http.StatusBadGateway, "WLT_UNAVAILABLE", "WLT finance read failed")
 		return

@@ -49,7 +49,7 @@ func (s *administrationSupportServer) handleGetPartnerSupportFinance(w http.Resp
 	query := url.Values{}
 	query.Set("partnerId", partnerID)
 	status, body, err := s.protected.wlt.ExecuteFinanceRead(
-		r.Context(), "finance.settlements.read", "/wlt/settlements/summary", query,
+		r.Context(), "finance.settlements.summary.read", nil, query,
 		r.Header.Get("X-Correlation-ID"), agg.OperatorContextID,
 	)
 	if err != nil {

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"math"
 	"net/http"
-	"os"
 	"time"
 
 	"dsh-api/internal/dispatch"
@@ -37,14 +36,14 @@ type dispatchLocationProjection struct {
 }
 
 type operatorDispatchLocationProjection struct {
-	AssignmentID  string    `json:"assignmentId"`
-	OrderID       string    `json:"orderId"`
-	CaptainID     string    `json:"captainId"`
-	Latitude      float64   `json:"latitude"`
-	Longitude     float64   `json:"longitude"`
-	RecordedAt    time.Time `json:"recordedAt"`
-	FreshnessState string   `json:"freshnessState"`
-	AgeSeconds    int64     `json:"ageSeconds"`
+	AssignmentID   string    `json:"assignmentId"`
+	OrderID        string    `json:"orderId"`
+	CaptainID      string    `json:"captainId"`
+	Latitude       float64   `json:"latitude"`
+	Longitude      float64   `json:"longitude"`
+	RecordedAt     time.Time `json:"recordedAt"`
+	FreshnessState string    `json:"freshnessState"`
+	AgeSeconds     int64     `json:"ageSeconds"`
 }
 
 func roundTrackingCoordinate(value float64) float64 {
@@ -96,13 +95,13 @@ func loadOrderDestination(ctx context.Context, db *sql.DB, orderID string) (floa
 
 func routeEta(
 	ctx context.Context,
+	client *mapproviders.Client,
 	authorization string,
 	originLatitude float64,
 	originLongitude float64,
 	destinationLatitude float64,
 	destinationLongitude float64,
 ) (*dispatchEtaProjection, error) {
-	client := mapproviders.NewClient(os.Getenv("DSH_PROVIDERS_BASE_URL"))
 	route, err := client.Route(ctx, authorization, mapproviders.RouteInput{
 		OriginLatitude:       originLatitude,
 		OriginLongitude:      originLongitude,
@@ -128,6 +127,7 @@ func buildLiveTrackingProjection(
 	db *sql.DB,
 	assignment *dispatch.Assignment,
 	allowCoordinates bool,
+	mapsClient *mapproviders.Client,
 ) map[string]any {
 	now := time.Now().UTC()
 	assignmentProjection := marshalDispatchAssignment(*assignment)
@@ -192,6 +192,7 @@ func buildLiveTrackingProjection(
 	}
 	eta, err := routeEta(
 		r.Context(),
+		mapsClient,
 		r.Header.Get("Authorization"),
 		*assignment.LastLatitude,
 		*assignment.LastLongitude,
@@ -222,6 +223,7 @@ func (s *protectedStoreServer) handleGetClientLiveTracking(w http.ResponseWriter
 		s.db,
 		assignment,
 		clientCanSeeCaptainLocation(assignment.Delivery.Status),
+		s.maps,
 	))
 }
 
@@ -235,7 +237,7 @@ func (s *protectedStoreServer) handleGetPartnerDispatchTrackingReference(w http.
 		s.writeDispatchResult(w, http.StatusOK, assignment, err)
 		return
 	}
-	projection := buildLiveTrackingProjection(r, s.db, assignment, false)
+	projection := buildLiveTrackingProjection(r, s.db, assignment, false, s.maps)
 	assignmentProjection := projection["assignment"].(map[string]any)
 	partnerReference := map[string]any{
 		"id":                 assignmentProjection["id"],
@@ -286,14 +288,14 @@ func (s *protectedStoreServer) handleListDispatchTrackingAlerts(w http.ResponseW
 
 		freshness, ageSeconds := trackingFreshness(*assignment.LocationRecordedAt, now)
 		locations = append(locations, operatorDispatchLocationProjection{
-			AssignmentID:  assignment.ID,
-			OrderID:       assignment.OrderID,
-			CaptainID:     assignment.CaptainID,
-			Latitude:      roundTrackingCoordinate(*assignment.LastLatitude),
-			Longitude:     roundTrackingCoordinate(*assignment.LastLongitude),
-			RecordedAt:    assignment.LocationRecordedAt.UTC(),
+			AssignmentID:   assignment.ID,
+			OrderID:        assignment.OrderID,
+			CaptainID:      assignment.CaptainID,
+			Latitude:       roundTrackingCoordinate(*assignment.LastLatitude),
+			Longitude:      roundTrackingCoordinate(*assignment.LastLongitude),
+			RecordedAt:     assignment.LocationRecordedAt.UTC(),
 			FreshnessState: freshness,
-			AgeSeconds:    ageSeconds,
+			AgeSeconds:     ageSeconds,
 		})
 		if freshness == "fresh" {
 			continue

@@ -3,7 +3,6 @@ package http
 import (
 	"encoding/json"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"dsh-api/internal/store"
@@ -23,7 +22,7 @@ func (s *protectedStoreServer) handleCaptainReadCollateral(w http.ResponseWriter
 		return
 	}
 	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.captain_collateral.read",
-		"/wlt/captain-collateral/"+url.PathEscape(actor.ID), nil,
+		map[string]string{"captainId": actor.ID}, nil,
 		r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
@@ -57,9 +56,7 @@ func (s *protectedStoreServer) handleCaptainAllocateCollateral(w http.ResponseWr
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode collateral allocation")
 		return
 	}
-	status, response, err := s.wlt.ExecuteFinanceWrite(r.Context(), "finance.captain_collateral.allocate",
-		http.MethodPost, "/wlt/captain-collateral/allocate", body, correlationID,
-		idempotencyKey, actor.OperatorContextID, actor.ID)
+	status, response, err := s.wlt.ExecuteFinanceWrite(r.Context(), "finance.captain_collateral.allocate", nil, body, correlationID, idempotencyKey, actor.OperatorContextID, actor.ID)
 	writeWltActorFinanceResponse(w, status, response, err)
 }
 
@@ -94,8 +91,6 @@ func (s *protectedStoreServer) handleCaptainReleaseCollateral(w http.ResponseWri
 		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to encode collateral release")
 		return
 	}
-	status, response, err := s.wlt.ExecuteFinanceWrite(r.Context(), "finance.captain_collateral.release",
-		http.MethodPost, "/wlt/captain-collateral/release", body, correlationID,
-		idempotencyKey, actor.OperatorContextID, actor.ID)
+	status, response, err := s.wlt.ExecuteFinanceWrite(r.Context(), "finance.captain_collateral.release", nil, body, correlationID, idempotencyKey, actor.OperatorContextID, actor.ID)
 	writeWltActorFinanceResponse(w, status, response, err)
 }

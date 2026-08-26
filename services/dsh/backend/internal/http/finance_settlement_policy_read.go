@@ -2,7 +2,6 @@ package http
 
 import (
 	"net/http"
-	"net/url"
 	"strings"
 
 	"dsh-api/internal/store"
@@ -27,9 +26,10 @@ func (s *protectedStoreServer) handleGetFinanceSettlementPolicy(w http.ResponseW
 		return
 	}
 	trustedContext := wlt.WithOperatorContext(r.Context(), actor.OperatorContextID)
-	status, body, err := s.wlt.FinanceReadWithOperatorContext(
+	status, body, err := s.wlt.ExecuteFinanceRead(
 		trustedContext,
-		"/wlt/settlement-policies/"+url.PathEscape(partnerID),
+		"finance.settlement_policy.read",
+		map[string]string{"partnerId": partnerID},
 		nil,
 		r.Header.Get("X-Correlation-ID"),
 		actor.OperatorContextID,

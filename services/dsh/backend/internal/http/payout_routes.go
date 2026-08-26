@@ -130,7 +130,7 @@ func (s *protectedStoreServer) handleActorPayoutList(w http.ResponseWriter, r *h
 		return
 	}
 	query := url.Values{"beneficiaryActorId": {actor.ID}, "beneficiaryActorType": {actorType}}
-	status, body, err := s.wlt.FinanceReadWithOperatorContext(r.Context(), "/wlt/payout-requests", query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
+	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.payout_requests.read", nil, query, r.Header.Get("X-Correlation-ID"), actor.OperatorContextID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
@@ -189,7 +189,7 @@ func (s *protectedStoreServer) handleActorPayoutCreate(w http.ResponseWriter, r 
 		return
 	}
 	correlationID := correlationForActorMutation(r, input.IdempotencyKey)
-	status, body, err := s.wlt.FinanceWriteWithOperatorContext(r.Context(), http.MethodPost, "/wlt/payout-requests", payload, correlationID, idempotencyKey, actor.OperatorContextID)
+	status, body, err := s.wlt.ExecuteFinanceWrite(r.Context(), "finance.payout_requests.create", nil, payload, correlationID, idempotencyKey, actor.OperatorContextID, actor.ID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }
 
@@ -237,12 +237,6 @@ func (s *protectedStoreServer) handleFinancePayoutAudit(w http.ResponseWriter, r
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "payoutId is required")
 		return
 	}
-	status, body, err := s.wlt.FinanceReadWithOperatorContext(
-		r.Context(),
-		"/wlt/payout-requests/"+url.PathEscape(payoutID)+"/audit",
-		nil,
-		r.Header.Get("X-Correlation-ID"),
-		operatorContextID,
-	)
+	status, body, err := s.wlt.ExecuteFinanceRead(r.Context(), "finance.payout_requests.audit.read", map[string]string{"payoutId": payoutID}, nil, r.Header.Get("X-Correlation-ID"), operatorContextID)
 	writeWltActorFinanceResponse(w, status, body, err)
 }

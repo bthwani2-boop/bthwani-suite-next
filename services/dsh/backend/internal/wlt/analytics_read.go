@@ -45,7 +45,7 @@ func (c *Client) ReadAnalyticsFinancialSnapshot(ctx context.Context) (AnalyticsF
 		ReadState:   "unavailable",
 		GeneratedAt: time.Now().UTC(),
 	}
-	statusCode, body, err := c.FinanceRead(ctx, "/wlt/ledger/financial-summary", nil, "")
+	statusCode, body, err := c.ExecuteFinanceRead(ctx, "finance.ledger.summary.read", nil, nil, "", "")
 	if err != nil {
 		return snapshot, fmt.Errorf("read WLT analytics through governed finance boundary: %w", err)
 	}
