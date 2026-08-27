@@ -11,7 +11,6 @@ export type ProviderStatus = 'active' | 'inactive' | 'test-only' | 'pending-appr
 
 // ── Services Types ────────────────────────────────────────────────────────────
 export type ServiceStatus = 'live' | 'paused' | 'internal-only' | 'pilot' | 'maintenance';
-export type ServiceClientVisibility = 'visible' | 'hidden';
 export type ServiceScope = 'Global' | 'Region' | 'City' | 'Zone' | 'Service';
 export type ServiceOwner = 'Platform' | 'Operations' | 'DesignSystem';
 export type ServiceRisk = 'low' | 'medium' | 'high' | 'critical';
