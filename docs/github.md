@@ -1,89 +1,73 @@
-# GitHub and CI Operations
+# GitHub CI operating model
 
-This document is operational guidance. It does not override `AGENTS.md`, `governance/GOVERNANCE.md`, or `governance/policies/delivery.md`.
+This document describes the canonical control plane. It does not override `AGENTS.md`, `governance/GOVERNANCE.md`, or `governance/policies/delivery.md`.
 
 ## Canonical lifecycle
 
-Source branch creation is human-only. Source-branch names never define CI semantics.
-
-For every existing development branch, GitHub live state is authoritative:
+GitHub live state is authoritative for every remote candidate. The relevant identity is `repository + open PR + head ref/SHA + base ref/SHA`. A previous commit, synthetic merge SHA, or previous workflow run is never a substitute for the current candidate.
 
 ```text
-human creates branch
--> first material push
--> exactly one open Draft PR to the repository default branch
--> same PR persists for the whole branch lifecycle
--> PR_NUMBER stays stable while HEAD_SHA advances
--> old-SHA evidence is superseded
--> exact final HEAD is verified
--> merge to canonical trunk
--> retire/delete source branch
+DEVELOP LOCALLY
+  -> nearest targeted verification
+  -> fix
+  -> continue
+
+WHEN REMOTE EVIDENCE HAS VALUE
+  -> pnpm ci:check
+  -> exact live Base-to-Head affected verification
+  -> collect and fix every current red root
+
+WHEN READY TO MERGE
+  -> pnpm ci:close
+  -> exact live candidate
+  -> Full CI preflight
+  -> heavy analyzers only after Full CI passes
+  -> exact Final Closure status
+  -> merge
 ```
 
-`ci.yml` owns branch/PR identity resolution. On a development push it queries the exact `head -> default-branch` PR set. Zero matching PRs leaves the push as plain branch-development evidence with no PR creation; one is bound to that PR and the duplicate push run is suppressed because the GitHub `pull_request` event owns verification; more than one is a fail-closed `PR_IDENTITY_CONFLICT`. PR creation itself stays human-owned.
+Normal commits, pushes, PR synchronization, PR opening, reopening, and `ready_for_review` do not start remote verification automatically. There are no polling, label, `workflow_run`, `repository_dispatch`, queue, or hidden state-machine replacements.
 
-The canonical PR identity is `repository + PR_NUMBER + head ref/SHA + base ref/SHA`. A different PR, old SHA, same workflow name, or synthetic merge SHA is never current-candidate evidence.
+## User interface
 
-## Execution readiness versus closure readiness
-
-Tool health is not execution readiness. Broken CI/scanners/runtimes are evidence and normally enter root-cause treatment. Only a proven diagnosis blocker prevents execution.
-
-Closure is stricter. A full PR closure run is an explicit `workflow_dispatch` of `ci.yml` with the exact PR/head/base identity, `mode=full`, and `runtime_proof=true`.
-
-The `BThwani / PR Closure Evidence` job re-resolves the PR, runs full internal CI/runtime, dispatches the remote analyzers on the same branch, correlates every new run to the exact HEAD SHA, reads back CodeQL/Sonar state scoped to the candidate branch ref, requires a write-authorized exact-head `BTHWANI_SEMANTIC_REVIEW:v1` comment attestation, re-resolves the PR again, and publishes one stable commit status.
-
-A successful tool run is not cross-SHA or cross-PR evidence. A new commit invalidates affected evidence.
-
-## Remote analysis authorities
-
-Canonical analysis is remote-owned:
-
-- CodeQL -> GitHub Code Scanning;
-- SonarQube -> SonarQube Cloud from GitHub-hosted runners;
-- Semgrep -> GitHub-hosted runner with complete raw finding/error artifact;
-- Remote Security -> GitHub-hosted gitleaks/OSV/Trivy/workflow/shell/container analyzers;
-- Dependency Review -> exact base/head dependency delta;
-- OpenCodeReview -> deterministic context preparation only; semantic reasoning is external host-agent evidence;
-- Docker/lockfile checks -> exact PR head, never the synthetic `github.sha` merge candidate.
-
-Local scanner execution is not a closure authority. Local `gh`/Sonar clients may be read/control surfaces only.
-
-Semgrep does not translate unknown severities into success. Every raw result and engine error is counted. A non-empty result set is an execution finding that must be diagnosed/dispositioned before closure.
-
-`master-sonar.yml` is the sole post-merge Sonar authority. All PR analyzers are reusable workers invoked by the fast gate or Final Closure; no workflow-run read-back or polling path is required.
-
-## Semantic review attestation
-
-OpenCodeReview preparation is not semantic review. Before full PR closure can pass, the exact current head must be attested by a GitHub issue comment on the closure PR that is all of the following:
-
-- authored by a repository collaborator with `write`, `maintain`, or `admin` permission;
-- bound to the exact candidate by containing its full head SHA;
-- containing all required attestation markers:
+The only remote user commands are:
 
 ```text
-BTHWANI_SEMANTIC_REVIEW:v1
-verdict=PASS
+pnpm ci:check
+pnpm ci:close
 ```
 
-The comment body should summarize the material scope reviewed and any finding dispositions. The attestation channel is an issue comment because GitHub forbids APPROVED reviews on self-authored PRs; solo-maintenance authority policy deliberately does not require author independence. A new commit supersedes the attestation. A comment missing any marker, anchored to a stale head, or from an account without write authority is not closure evidence.
+Both commands resolve the repository, current branch, live HEAD, open PR, and live base through GitHub before dispatching a workflow with exact identity. `ci:check` accepts no user routing flags. `ci:close` requires exactly one open, non-draft PR and accepts no analyzer or runtime options.
 
-## Canonical CI request interface
+## Affected verification
 
-`pnpm ci:request` is the single human-facing interface. It resolves the repository default branch, current local HEAD, and any matching open PR through GitHub before dispatching the default-branch `ci.yml` definition.
+`ci:check` uses the exact Git diff from the live PR base to the current PR head. The Router only identifies affected owners/modules: Node/frontend, DSH, WLT, Identity, Workforce, Platform, Providers, Contracts, Database, Infrastructure, CI control plane, and Dependencies. It does not infer verification from business words in filenames and it does not read previous workflow history.
+
+A changed backend always runs the corresponding backend verification. A Node-only change does not run unrelated backends. Contract, database, infrastructure, dependency, and CI-control-plane changes run their applicable material checks. A successful Router with a skipped applicable worker is not a successful candidate.
+
+## Final Closure
+
+Final Closure is `workflow_dispatch` only. It first resolves and checks out the exact live PR candidate and derives applicability from one Git-native `git diff --name-only BASE HEAD` result. It does not use the GitHub PR files endpoint with a 100-file limit.
+
+The order is fail-closed and intentional:
 
 ```text
-pnpm ci:request --affected
-pnpm ci:request --full
-pnpm ci:request --runtime
-pnpm ci:request --journey partner-onboarding
+RESOLVE EXACT LIVE CANDIDATE
+  -> FULL CI PREFLIGHT
+  -> if red: stop; no heavy analyzer starts
+  -> if green: Sonar, CodeQL, Semgrep, Security, Dependency, Lockfile, and Docker checks in parallel when applicable
+  -> aggregate all results
+  -> publish BThwani / Final Closure on the exact HEAD
 ```
 
-Every request carries the exact candidate SHA and, when a PR exists, the exact PR number and base SHA. No issue marker, label lifecycle, synthetic branch, arbitrary shell command, `workflow_run` read-back, or polling loop is part of the interface. Final closure is started by `ready_for_review` or by the explicit PR-number dispatch on `final-closure.yml`.
+A new commit produces a different exact SHA, so previous evidence cannot satisfy current-head merge protection. The status names remain `BThwani CI / PR result` and `BThwani / Final Closure`.
 
-## Platform enforcement
-
-Tracked files cannot prove live GitHub Rulesets. The canonical integration branch should be protected in GitHub live configuration with PR-required merging, blocked force-push/deletion, and `BThwani / Final Closure` as the stable required closure status once that ruleset is configured and read back successfully.
+OpenCodeReview is context/delegation preparation only. It is not a semantic review and is not part of the required Final Closure gate. `master-sonar.yml` remains a separate post-merge default-branch analysis authority when its dashboard/trend purpose is required.
 
 ## Verification discipline
 
-Before every material write, re-resolve the target ref/PR and exact SHA. Before every closure/merge claim, re-resolve again. Never force a moved ref. Cancelled, stale, cross-PR, cross-SHA, incomplete, or skipped-without-non-applicability evidence is not PASS.
+A failed remote run is handled by collecting all available red results, normalizing and correlating them, identifying executable root causes, applying root-correct fixes, cleaning the affected cone, and rerunning the smallest authoritative verification. A green result is not accepted across candidates, PRs, or SHAs. Before any closure or merge claim, the live candidate and current branch protection requirements must be resolved again.
+
+## Platform enforcement
+
+Tracked files cannot prove live GitHub branch protection. The canonical integration branch must remain protected in GitHub live configuration with pull-request-required merging and the two exact-candidate statuses above as required checks. The repository configuration should be read back after any settings mutation; this change does not silently alter protection settings.

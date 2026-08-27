@@ -2,142 +2,78 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { classifyFiles } from "./detect-ci-context.mjs";
 
-function assertNoGovernanceControlPlane(result) {
-  for (const forbidden of ["governance", "policy", "governance_policy", "policy_required", "authority_change", "foundation_guard_ids"]) {
-    assert.equal(Object.hasOwn(result, forbidden), false, forbidden);
-  }
-}
-
 test("governance text does not widen executable verification", () => {
   const result = classifyFiles(["governance/policies/engineering.md"]);
   assert.equal(result.full_scope, false);
-  assert.equal(result.verification_tier, "fast");
-  assert.equal(result.verification_required, false);
-  assert.equal(result.backend_required, false);
-  assert.equal(result.runtime_profile, "none");
+  assert.equal(result.node, false);
+  assert.equal(result.backend, false);
+  assert.deepEqual(result.required_jobs, []);
 });
 
-test("verification authority stays targeted during PR development", () => {
-  const result = classifyFiles([".github/workflows/ci.yml"], { executionPhase: "pr" });
-  assert.equal(result.full_scope, false);
-  assert.equal(result.full_verification, false);
-  assert.equal(result.workflow, true);
-  assert.equal(result.verification_tier, "deep");
-  assert.equal(result.dsh, false);
-  assert.equal(result.wlt, false);
-  assert.equal(result.identity, false);
-  assert.equal(result.backend_required, false);
-  assert.equal(result.runtime_profile, "none");
-  assert.equal(result.runtime_required, false);
-});
-
-test("verification authority forces full exact-candidate closure verification", () => {
-  for (const executionPhase of ["closure", "default-branch"]) {
-    const result = classifyFiles([".github/workflows/ci.yml"], { executionPhase });
-    assert.equal(result.full_scope, true, executionPhase);
-    assert.equal(result.full_verification, true, executionPhase);
-    assert.equal(result.dsh, true, executionPhase);
-    assert.equal(result.wlt, true, executionPhase);
-    assert.equal(result.identity, true, executionPhase);
-    assert.equal(result.runtime_profile, "full", executionPhase);
-    assert.equal(result.runtime_required, true, executionPhase);
-    assert.deepEqual(result.required_jobs, ["diagnostics", "node", "backends", "runtime"], executionPhase);
-  }
-});
-
-test("verification files follow the same phase gate", () => {
-  const file = "tools/verification/journey-profiles.json";
-  assert.equal(classifyFiles([file], { executionPhase: "pr" }).full_scope, false);
-  assert.equal(classifyFiles([file], { executionPhase: "closure" }).full_scope, true);
-});
-
-test("isolated app code remains fast", () => {
-  const result = classifyFiles(["apps/app-client/runtime/src/App.tsx"]);
-  assert.equal(result.frontend, true);
-  assert.equal(result.verification_tier, "fast");
-  assert.equal(result.diagnostics, false);
-  assert.equal(result.runtime_profile, "none");
-});
-
-test("shared frontend code is standard without a second diagnostics job", () => {
-  const result = classifyFiles(["services/dsh/frontend/shared/cart/cart-controller.ts"]);
-  assert.equal(result.shared_brain, true);
-  assert.equal(result.verification_tier, "standard");
-  assert.equal(result.diagnostics, false);
-  assert.equal(result.verification_required, true);
-});
-
-test("contract changes own the diagnostics job", () => {
-  const result = classifyFiles(["services/dsh/contracts/dsh.openapi.yaml"]);
-  assert.equal(result.contracts, true);
-  assert.equal(result.diagnostics, true);
-  assert.equal(result.verification_required, true);
-});
-
-test("non-financial backend remains standard and affected", () => {
+test("backend changes always require the matching backend worker", () => {
   const result = classifyFiles(["services/dsh/backend/internal/cart/cart.go"]);
   assert.equal(result.dsh, true);
-  assert.equal(result.financial_changed, false);
-  assert.equal(result.runtime_profile, "none");
-  assert.equal(result.verification_tier, "standard");
+  assert.equal(result.backend_required, true);
+  assert.deepEqual(result.required_jobs, ["backends"]);
 });
 
-test("WLT financial code selects finance runtime profile", () => {
-  const result = classifyFiles(["services/wlt/backend/internal/ledger/ledger.go"]);
-  assert.equal(result.financial_changed, true);
-  assert.equal(result.runtime_profile, "wlt-finance");
-  assert.equal(result.verification_tier, "deep");
+test("node-only changes do not require unrelated backends", () => {
+  const result = classifyFiles(["apps/app-client/runtime/src/App.tsx"]);
+  assert.equal(result.frontend, true);
+  assert.equal(result.node, true);
+  assert.equal(result.backend_required, false);
+  assert.deepEqual(result.required_jobs, ["node"]);
 });
 
-test("authorization scope contract selects local identity security proof without remote PR runtime", () => {
-  const result = classifyFiles(["tools/verification/security-scope-vocabulary.json"], { executionPhase: "pr" });
-  assert.equal(result.rbac_changed, true);
-  assert.equal(result.runtime_profile, "identity-security");
-  assert.equal(result.runtime_required, false);
-  assert.equal(result.verification_tier, "deep");
-});
-
-test("infrastructure is deep but PR runtime is not automatic", () => {
-  const result = classifyFiles(["infra/docker/compose.runtime.yml"], { executionPhase: "pr" });
-  assert.equal(result.runtime_profile, "full");
-  assert.equal(result.verification_tier, "deep");
-  assert.equal(result.runtime_required, false);
-});
-
-test("migration changes are deep without unrelated runtime", () => {
-  const result = classifyFiles(["services/dsh/database/migrations/0002_add_column.sql"]);
-  assert.equal(result.migration_changed, true);
-  assert.equal(result.database_changed, true);
-  assert.equal(result.verification_tier, "deep");
-  assert.equal(result.runtime_profile, "none");
-});
-
-test("manual journey stays targeted", () => {
-  const result = classifyFiles([], { journey: "platform-change-sets" });
-  assert.equal(result.journey_scope, "PLATFORM-CHANGE-SETS");
-  assert.equal(result.full_scope, false);
-  assert.equal(result.verification_tier, "standard");
+test("contract changes require diagnostics and node verification", () => {
+  const result = classifyFiles(["contracts/customer.openapi.yaml"]);
+  assert.equal(result.contracts, true);
+  assert.equal(result.diagnostics_required, true);
   assert.equal(result.verification_required, true);
+  assert.deepEqual(result.required_jobs, ["diagnostics", "node"]);
 });
 
-test("explicit full mode enables all code domains", () => {
-  const result = classifyFiles([], { mode: "full" });
-  for (const key of ["frontend", "contracts", "journey", "dsh", "wlt", "identity", "workforce", "platform", "providers", "database", "runtime", "heavy", "diagnostics"]) {
-    assert.equal(result[key], true, key);
-  }
-  assert.equal(result.runtime_profile, "full");
-  assert.equal(result.runtime_required, true);
-  assert.equal(result.journey_scope, "PROJECT-WIDE");
+test("database changes route to the owning backend and database checks", () => {
+  const result = classifyFiles(["services/dsh/database/migrations/0002_add_column.sql"]);
+  assert.equal(result.dsh, true);
+  assert.equal(result.database_changed, true);
+  assert.equal(result.backend_required, true);
+  assert.deepEqual(result.required_jobs, ["backends"]);
 });
 
-test("explicit runtime proof runs runtime without widening code scope", () => {
-  const result = classifyFiles([], { runtimeProof: "true" });
-  assert.equal(result.full_scope, false);
-  assert.equal(result.runtime_profile, "full");
+test("CI control-plane changes run node verification without semantic filename routing", () => {
+  const result = classifyFiles([".github/workflows/ci.yml"]);
+  assert.equal(result.ci_control_plane, true);
+  assert.equal(result.node, true);
+  assert.deepEqual(result.required_jobs, ["node"]);
+});
+
+test("infrastructure changes require the fixed runtime verification", () => {
+  const result = classifyFiles(["infra/docker/compose.runtime.yml"]);
+  assert.equal(result.infrastructure, true);
   assert.equal(result.runtime_required, true);
   assert.deepEqual(result.required_jobs, ["runtime"]);
 });
 
-test("router interface has no governance or nested guard-routing fields", () => {
-  assertNoGovernanceControlPlane(classifyFiles(["README.md"]));
+test("dependency manifests route to node integrity verification", () => {
+  const result = classifyFiles(["services/dsh/backend/go.mod"]);
+  assert.equal(result.dependency_changed, true);
+  assert.equal(result.node, true);
+  assert.equal(result.dsh, true);
+  assert.deepEqual(result.required_jobs, ["node", "backends"]);
+});
+
+test("full mode enables every owner without adding a tier or profile", () => {
+  const result = classifyFiles([], { mode: "full" });
+  for (const key of ["frontend", "contracts", "dsh", "wlt", "identity", "workforce", "platform", "providers", "database", "runtime_required", "node", "backend"]) {
+    assert.equal(result[key], true, key);
+  }
+  assert.deepEqual(result.required_jobs, ["diagnostics", "node", "backends", "runtime"]);
+});
+
+test("router output has no legacy control-plane concepts", () => {
+  const result = classifyFiles(["README.md"]);
+  for (const key of ["verification_tier", "run_assurance", "runtime_profile", "journey_scope", "previous_head_sha", "financial_changed", "security_scan"]) {
+    assert.equal(Object.hasOwn(result, key), false, key);
+  }
 });

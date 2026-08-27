@@ -12,9 +12,6 @@ on:
       full_scope:
         type: string
         required: true
-      verification_tier:
-        type: string
-        required: true
       database_changed:
         type: string
         required: true
@@ -117,7 +114,6 @@ jobs:
       CI_BASE_SHA: ${{ inputs.base_sha }}
       CI_HEAD_SHA: ${{ inputs.candidate_sha }}
       CI_FULL_SCOPE: ${{ inputs.full_scope }}
-      CI_VERIFICATION_TIER: ${{ inputs.verification_tier }}
       GOWORK: off
     steps:
       - name: Verify routed candidate identity
