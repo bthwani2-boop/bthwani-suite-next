@@ -1,7 +1,7 @@
 import type { CatalogSubmission, CatalogSubmissionState } from "./catalog.types";
 import type { CatalogState, ClientStoreCatalog } from "./client-catalog.types";
 
-export type CatalogActionState = "idle" | "submitting" | "success" | "error" | "conflict";
+export type CatalogActionState = "error" | "conflict";
 
 export type CatalogAuditState =
   | { readonly kind: "idle"; readonly entries: readonly CatalogSubmission[] }
