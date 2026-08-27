@@ -615,19 +615,6 @@ const PARTNER_HIDDEN_COMPAT_FLOWS: readonly DshFlowRegistryEntry[] = [
     forbiddenActions: ['عرضه كمدخل أساسي منفصل'],
     notes: 'مضمّن داخل حالات command center؛ التصعيد يذهب لـ control-panel.',
   },
-  {
-    id: 'order-issue-required',
-    label: 'تقرير مشكلة إلزامي',
-    domain: 'support-escalation',
-    ownerSurface: 'app-partner',
-    visibleSurfaces: ['app-partner'],
-    visibility: 'hidden-compat',
-    hiddenCompat: true,
-    onDemandPolicy: 'detail-on-open',
-    allowedActions: ['الاحتفاظ بالتوافق'],
-    forbiddenActions: ['إظهاره كخيار ابتدائي'],
-    notes: 'استخدم order-issue-queue بدلًا منه للتدفقات الجديدة.',
-  },
 ];
 
 const PARTNER_CHAT_FLOWS: readonly DshFlowRegistryEntry[] = [
