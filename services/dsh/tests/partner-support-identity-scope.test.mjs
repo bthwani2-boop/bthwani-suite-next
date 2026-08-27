@@ -72,4 +72,3 @@ test("partner ticket attempts fail closed when actor identity is absent", async 
     (error) => error instanceof MutationIdentityScopeError && error.reason === "missing_actor",
   );
 });
-

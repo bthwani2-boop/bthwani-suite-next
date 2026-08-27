@@ -57,4 +57,3 @@ test("captain cash-in writes only the canonical v2 mutation key", async () => {
   assert.equal([...map.keys()].some((key) => key.includes("captain-cash-in/v1/")), false);
   assert.equal([...map.keys()].some((key) => key.includes(":quarantine:")), false);
 });
-
