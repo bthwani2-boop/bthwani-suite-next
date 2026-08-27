@@ -13,8 +13,6 @@
     "./storage-adapter": "./src/storage-adapter.ts",
     "./mutation-identity-scope": "./src/mutation-identity-scope.ts",
     "./installation-id": "./src/installation-id.ts",
-    "./current-actor": "./src/current-actor.ts",
-    "./identity-bridge": "./src/identity-bridge.ts",
     "./power-policy": "./src/power-policy.ts"
   },
   "scripts": {

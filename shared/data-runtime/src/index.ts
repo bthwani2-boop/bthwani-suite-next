@@ -6,7 +6,5 @@ export * from "./persistence";
 export * from "./storage-adapter";
 export * from "./mutation-identity-scope";
 export * from "./installation-id";
-export * from "./current-actor";
-export * from "./identity-bridge";
 export * from "./connectivity-adapter";
 export { useQuery as useBthwaniQuery } from "@tanstack/react-query";
