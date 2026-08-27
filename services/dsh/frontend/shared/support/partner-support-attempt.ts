@@ -81,11 +81,12 @@ function assertScopeMatchesStored(stored: PersistedAttempt, scope: { readonly ac
 }
 
 export async function getOrCreatePartnerTicketAttempt(
+  actorId: string,
   input: DshCreateTicketInput,
 ): Promise<PersistedAttempt> {
   const fingerprint = createFingerprint(input);
   const entityId = fingerprint.slice(0, 32);
-  const scope = await resolveMutationIdentityScope("", { entityId });
+  const scope = await resolveMutationIdentityScope(actorId, { entityId });
   const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
 
   const stored = parseAttempt(await bthwaniDurableStorage.getItem(CREATE_ATTEMPT_KEY));
@@ -120,13 +121,14 @@ function messageAttemptKey(ticketId: string): string {
 }
 
 export async function getOrCreatePartnerMessageAttempt(
+  actorId: string,
   ticketId: string,
   body: string,
 ): Promise<PersistedAttempt> {
   const fingerprint = JSON.stringify({ ticketId, body: body.trim() });
   const key = messageAttemptKey(ticketId);
   const entityId = `${ticketId}:${fingerprint.slice(0, 16)}`;
-  const scope = await resolveMutationIdentityScope("", { entityId });
+  const scope = await resolveMutationIdentityScope(actorId, { entityId });
   const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
 
   const stored = parseAttempt(await bthwaniDurableStorage.getItem(key));

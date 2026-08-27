@@ -1,5 +1,6 @@
 import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
   Button,
@@ -86,7 +87,9 @@ export function PartnerSupportScreen({
   initialIssueCategoryId,
   initialSupportRouteId: _initialSupportRouteId,
 }: PartnerSupportScreenProps) {
-  const controller = usePartnerSupportController(true);
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
+  const controller = usePartnerSupportController(actorId, identity.state.kind === "authenticated");
   const [showCreate, setShowCreate] = React.useState(false);
   const [subject, setSubject] = React.useState("");
   const [description, setDescription] = React.useState("");

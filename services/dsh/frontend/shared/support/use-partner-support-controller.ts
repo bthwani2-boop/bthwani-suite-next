@@ -43,7 +43,7 @@ function supportErrorMessage(error: unknown): string {
   return typed.message?.trim() || "تعذر تنفيذ عملية الدعم.";
 }
 
-export function usePartnerSupportController(enabled = true) {
+export function usePartnerSupportController(actorId: string | null, enabled = true) {
   const [state, setState] = useState<PartnerSupportControllerState>({ kind: "loading" });
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [detailState, setDetailState] = useState<PartnerSupportDetailState>({ kind: "idle" });
@@ -118,7 +118,11 @@ export function usePartnerSupportController(enabled = true) {
   }, []);
 
   const createTicket = useCallback(async (input: DshCreateTicketInput): Promise<boolean> => {
-    const attempt = await getOrCreatePartnerTicketAttempt(input);
+    if (!actorId) {
+      setMutationError("جلسة الشريك غير جاهزة لتثبيت هوية العملية.");
+      return false;
+    }
+    const attempt = await getOrCreatePartnerTicketAttempt(actorId, input);
     const ticket = await runMutation(() => createPartnerSupportTicket(input, attempt.context));
     if (!ticket) return false;
     await clearPartnerTicketAttempt();
@@ -126,7 +130,7 @@ export function usePartnerSupportController(enabled = true) {
     await loadTickets();
     await loadDetail(ticket.id);
     return true;
-  }, [loadDetail, loadTickets, runMutation]);
+  }, [actorId, loadDetail, loadTickets, runMutation]);
 
   const sendMessage = useCallback(async (body: string): Promise<boolean> => {
     const ticketId = selectedTicketId;
@@ -135,7 +139,11 @@ export function usePartnerSupportController(enabled = true) {
       setMutationError("اكتب رسالة وحدد تذكرة أولًا.");
       return false;
     }
-    const attempt = await getOrCreatePartnerMessageAttempt(ticketId, normalizedBody);
+    if (!actorId) {
+      setMutationError("جلسة الشريك غير جاهزة لتثبيت هوية العملية.");
+      return false;
+    }
+    const attempt = await getOrCreatePartnerMessageAttempt(actorId, ticketId, normalizedBody);
     const message = await runMutation(() => addPartnerSupportMessage(
       ticketId,
       normalizedBody,
@@ -145,7 +153,7 @@ export function usePartnerSupportController(enabled = true) {
     await clearPartnerMessageAttempt(ticketId);
     await loadDetail(ticketId);
     return true;
-  }, [loadDetail, runMutation, selectedTicketId]);
+  }, [actorId, loadDetail, runMutation, selectedTicketId]);
 
   const tickets = state.kind === "ready" ? state.tickets : [];
   const selectedTicket = useMemo(
