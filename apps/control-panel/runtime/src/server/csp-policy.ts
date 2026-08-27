@@ -71,6 +71,14 @@ export interface BuildControlPanelCspOptions {
   isDevelopment?: boolean;
 }
 
+/**
+ * Resolve the runtime mode at the canonical CSP/config boundary. Middleware
+ * emits headers only; it must not read environment variables directly.
+ */
+export function isControlPanelDevelopment(): boolean {
+  return process.env.NODE_ENV !== "production";
+}
+
 export interface SecurityHeader {
   readonly key: string;
   readonly value: string;

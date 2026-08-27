@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   buildControlPanelSecurityHeaders,
   generateCspNonce,
+  isControlPanelDevelopment,
 } from "./server/csp-policy";
 
 /**
@@ -15,7 +16,7 @@ import {
  * script (bootstrap, polyfill, inlined flight data, and HMR for dev).
  */
 export function middleware(request: NextRequest): NextResponse {
-  const isDevelopment = process.env.NODE_ENV !== "production";
+  const isDevelopment = isControlPanelDevelopment();
   const nonce = generateCspNonce();
   const securityHeaders = buildControlPanelSecurityHeaders({ nonce, isDevelopment });
   const cspHeader = securityHeaders.find((entry) => entry.key === "Content-Security-Policy");
