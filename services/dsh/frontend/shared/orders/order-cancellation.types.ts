@@ -112,11 +112,3 @@ export const OPERATOR_CANCELLATION_REASONS: readonly CancellationReasonOption[] 
   { code: "operational_failure", label: "فشل تشغيلي", description: "تعذر إكمال الرحلة بسبب عطل تشغيلي مثبت." },
   { code: "other", label: "سبب آخر", description: "يتطلب كتابة توضيح." },
 ];
-
-export function cancellationReasonsForSurface(
-  surface: OrderCancellationSurface,
-): readonly CancellationReasonOption[] {
-  if (surface === "client") return CLIENT_CANCELLATION_REASONS;
-  if (surface === "partner") return PARTNER_CANCELLATION_REASONS;
-  return OPERATOR_CANCELLATION_REASONS;
-}
