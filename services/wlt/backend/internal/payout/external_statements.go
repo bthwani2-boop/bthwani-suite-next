@@ -252,6 +252,22 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 		return nil, fmt.Errorf("statement currency must match external provider account currency")
 	}
 
+	var existingArtifactSHA256 string
+	existingErr := tx.QueryRowContext(ctx, `
+		SELECT artifact_sha256
+		FROM wlt_external_provider_statements
+		WHERE operator_context_id=$1 AND external_provider_account_id=$2
+		  AND statement_reference=$3 AND business_date=$4
+		FOR UPDATE`,
+		operatorContextID, input.ExternalProviderAccountID, input.StatementReference, businessDate,
+	).Scan(&existingArtifactSHA256)
+	if existingErr == nil && existingArtifactSHA256 != input.ArtifactSHA256 {
+		return nil, fmt.Errorf("statement reference is already bound to a different artifact payload")
+	}
+	if existingErr != nil && existingErr != sql.ErrNoRows {
+		return nil, existingErr
+	}
+
 	var statement AuthoritativeStatement
 	err = tx.QueryRowContext(ctx, `
 					INSERT INTO wlt_external_provider_statements

@@ -844,6 +844,13 @@
       "sha256": "cb2da6d2dc8b9887456c65b6891de5d209a0c61866bbfb334fa8d90c2bd0b124",
       "historicalPrefix": "950",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 121,
+      "file": "wlt-951_external_statement_replay_fence.sql",
+      "sha256": "5f856d28462ad3d838b4fee8bd08ca5707eab49cbe5c246be8b1e689db58fb13",
+      "historicalPrefix": "951",
+      "state": "ACTIVE"
     }
   ]
 }
