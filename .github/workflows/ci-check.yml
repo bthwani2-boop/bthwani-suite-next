@@ -47,7 +47,6 @@ jobs:
       wlt: ${{ steps.scope.outputs.wlt }}
       identity: ${{ steps.scope.outputs.identity }}
       workforce: ${{ steps.scope.outputs.workforce }}
-      platform: ${{ steps.scope.outputs.platform }}
       providers: ${{ steps.scope.outputs.providers }}
       database_changed: ${{ steps.scope.outputs.database_changed }}
       runtime_required: ${{ steps.scope.outputs.runtime_required }}
