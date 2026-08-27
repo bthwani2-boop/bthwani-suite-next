@@ -106,7 +106,10 @@ jobs:
             base="${PR_BASE_SHA}"
           elif [[ ( "${GITHUB_EVENT_NAME}" == "workflow_dispatch" || "${GITHUB_EVENT_NAME}" == "workflow_call" ) && "${REQUEST_MODE:-full}" == "diff" ]]; then
             mode="diff"
-            base="${REQUEST_BASE}"
+            # Reusable workflows receive an immutable base SHA from Final Closure.
+            # Resolving a symbolic base_ref is not reliable on detached candidates,
+            # so prefer the exact SHA and only fall back to the requested ref.
+            base="${PR_BASE_SHA:-${REQUEST_BASE}}"
           fi
           if [[ "${mode}" == "diff" ]]; then
             [[ -n "${base}" ]] || { echo "::error::diff scan requires base"; exit 1; }
