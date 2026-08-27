@@ -21,8 +21,9 @@ var (
 	ErrSupportSessionSelfTarget = errors.New("support session cannot target the initiating actor")
 	// ErrSupportSessionAlreadyIssued is returned when a support session was
 	// already issued for this request id (uq_identity_support_request).
-	ErrSupportSessionAlreadyIssued   = errors.New("support session already issued for this request")
-	ErrSupportSessionRequestConflict = errors.New("support request payload conflicts with the issued session")
+	ErrSupportSessionAlreadyIssued         = errors.New("support session already issued for this request")
+	ErrSupportSessionRequestConflict       = errors.New("support request payload conflicts with the issued session")
+	ErrSupportSessionCredentialUnavailable = errors.New("support session credential is unavailable; governed reissue is required")
 	// ErrSupportSessionTargetUnavailable is returned when the target actor
 	// does not exist or is not ACTIVE.
 	ErrSupportSessionTargetUnavailable = errors.New("support session target actor is unavailable")
@@ -112,20 +113,87 @@ func (r *Repository) IssueSupportSession(ctx context.Context, requestID, targetA
 	var existingFingerprint, existingTarget, existingInitiator string
 	var existingSessionID string
 	var existingExpires time.Time
+	var existingRevokedAt sql.NullTime
 	var existingPermissionsJSON []byte
 	existingErr := tx.QueryRowContext(ctx, `
-		SELECT id, actor_id, initiator_actor_id, access_expires_at, effective_permissions, support_payload_fingerprint
-		FROM identity_sessions WHERE support_request_id=$1 AND session_kind='support'`, requestID).
-		Scan(&existingSessionID, &existingTarget, &existingInitiator, &existingExpires, &existingPermissionsJSON, &existingFingerprint)
+		SELECT id, actor_id, initiator_actor_id, access_expires_at, effective_permissions, support_payload_fingerprint, revoked_at
+		FROM identity_sessions
+		WHERE support_request_id=$1 AND session_kind='support'
+		ORDER BY created_at DESC
+		LIMIT 1
+		FOR UPDATE`, requestID).
+		Scan(&existingSessionID, &existingTarget, &existingInitiator, &existingExpires, &existingPermissionsJSON, &existingFingerprint, &existingRevokedAt)
 	if existingErr == nil {
 		if existingFingerprint != fingerprint || existingTarget != targetActorID || existingInitiator != initiatorActorID {
 			return SupportSessionToken{}, ErrSupportSessionRequestConflict
 		}
-		var permissions []Permission
-		if err := json.Unmarshal(existingPermissionsJSON, &permissions); err != nil {
+		if existingRevokedAt.Valid {
+			return SupportSessionToken{}, ErrSupportSessionCredentialUnavailable
+		}
+		target, err := actorByIDTx(ctx, tx, existingTarget)
+		if err != nil || target.Status != ActorStatusActive {
+			return SupportSessionToken{}, ErrSupportSessionTargetUnavailable
+		}
+		initiator, err := actorByIDTx(ctx, tx, existingInitiator)
+		if err != nil || initiator.Status != ActorStatusActive {
+			return SupportSessionToken{}, ErrSupportSessionTargetUnavailable
+		}
+		permissions := supportSessionPermissions(existingTarget)
+		permissionsJSON, err := json.Marshal(permissions)
+		if err != nil {
 			return SupportSessionToken{}, err
 		}
-		return SupportSessionToken{TokenType: "Bearer", ExpiresIn: max(0, int(time.Until(existingExpires).Seconds())), Identity: SupportSessionIdentity{Subject: existingTarget, InitiatorActorID: existingInitiator, SupportRequestID: requestID, SessionID: existingSessionID, SessionKind: "support", Roles: []string{"support"}, Permissions: permissions, AuthState: "authenticated", ExpiresAt: existingExpires}}, nil
+		if _, err := tx.ExecContext(ctx, `UPDATE identity_sessions SET revoked_at=now() WHERE id=$1 AND revoked_at IS NULL`, existingSessionID); err != nil {
+			return SupportSessionToken{}, err
+		}
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO identity_support_session_audit
+				(support_request_id, session_id, target_actor_id, initiator_actor_id, event_type, reason)
+			VALUES ($1, $2, $3, $4, 'revoked', $5)`,
+			requestID, existingSessionID, existingTarget, existingInitiator, "credential recovery rotation"); err != nil {
+			return SupportSessionToken{}, err
+		}
+		sessionID, err := randomToken(18)
+		if err != nil {
+			return SupportSessionToken{}, err
+		}
+		accessToken, err := randomToken(32)
+		if err != nil {
+			return SupportSessionToken{}, err
+		}
+		now := r.now()
+		expiresAt := now.Add(time.Duration(durationMinutes) * time.Minute)
+		if _, err = tx.ExecContext(ctx, `
+			INSERT INTO identity_sessions
+				(id, actor_id, access_token_hash, surface, access_expires_at,
+				 session_kind, initiator_actor_id, support_request_id, support_reason,
+				 effective_roles, effective_permissions, support_payload_fingerprint)
+			VALUES ($1, $2, $3, 'control-panel', $4, 'support', $5, $6, $7, $8, $9, $10)`,
+			sessionID, existingTarget, tokenHash(accessToken), expiresAt,
+			existingInitiator, requestID, reason, pq.Array([]string{"support"}), permissionsJSON, fingerprint); err != nil {
+			return SupportSessionToken{}, err
+		}
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO identity_support_session_audit
+				(support_request_id, session_id, target_actor_id, initiator_actor_id, event_type, reason)
+			VALUES ($1, $2, $3, $4, 'issued', $5)`,
+			requestID, sessionID, existingTarget, existingInitiator, "credential recovery replacement"); err != nil {
+			return SupportSessionToken{}, err
+		}
+		if err := tx.Commit(); err != nil {
+			return SupportSessionToken{}, err
+		}
+		return SupportSessionToken{
+			AccessToken: accessToken,
+			TokenType:   "Bearer",
+			ExpiresIn:   durationMinutes * 60,
+			Identity: SupportSessionIdentity{
+				Subject: existingTarget, OperatorContextID: target.OperatorContextID, PhoneE164: target.PhoneE164,
+				Roles: []string{"support"}, Permissions: permissions, AuthState: "authenticated",
+				SessionID: sessionID, SessionKind: "support", InitiatorActorID: existingInitiator,
+				SupportRequestID: requestID, ExpiresAt: expiresAt,
+			},
+		}, nil
 	}
 	if existingErr != sql.ErrNoRows {
 		return SupportSessionToken{}, existingErr

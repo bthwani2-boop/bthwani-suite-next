@@ -7,6 +7,8 @@ import (
 	"errors"
 	"strings"
 	"time"
+
+	"dsh-api/internal/auth"
 )
 
 var (
@@ -18,6 +20,7 @@ var (
 
 type Request struct {
 	ID                string     `json:"id"`
+	OperatorContextID string     `json:"operatorContextId"`
 	TargetActorID     string     `json:"targetActorId"`
 	RequestedBy       string     `json:"requestedBy"`
 	Reason            string     `json:"reason"`
@@ -39,6 +42,7 @@ func scanRequest(scanner interface{ Scan(...any) error }) (Request, error) {
 	var out Request
 	err := scanner.Scan(
 		&out.ID,
+		&out.OperatorContextID,
 		&out.TargetActorID,
 		&out.RequestedBy,
 		&out.Reason,
@@ -59,10 +63,18 @@ func scanRequest(scanner interface{ Scan(...any) error }) (Request, error) {
 }
 
 const requestColumns = `
-	id::TEXT, target_actor_id, requested_by, reason, duration_minutes,
+		id::TEXT, operator_context_id, target_actor_id, requested_by, reason, duration_minutes,
 	status, COALESCE(reviewed_by,''), COALESCE(review_note,''),
 	COALESCE(identity_session_id,''), expires_at, version,
 	created_at, updated_at, reviewed_at, issued_at, revoked_at`
+
+func requireOperatorContext(ctx context.Context) (string, error) {
+	operatorContextID, ok := auth.OperatorContextIDFromContext(ctx)
+	if !ok {
+		return "", ErrInvalid
+	}
+	return operatorContextID, nil
+}
 
 func supportAuditDetail(requestID string, reasonProvided, noteProvided bool) (string, error) {
 	detail := map[string]any{"request_id": strings.TrimSpace(requestID)}
@@ -86,15 +98,19 @@ func appendSupportAudit(
 	reasonProvided bool,
 	noteProvided bool,
 ) error {
+	operatorContextID, contextErr := requireOperatorContext(ctx)
+	if contextErr != nil {
+		return contextErr
+	}
 	detail, err := supportAuditDetail(requestID, reasonProvided, noteProvided)
 	if err != nil {
 		return err
 	}
 	_, err = tx.ExecContext(ctx, `
-		INSERT INTO dsh_admin_audit
-			(actor_id, action, target_id, detail, sensitivity, correlation_id)
-		VALUES ($1, $2, $3, $4, 'restricted', $5)`,
-		strings.TrimSpace(actorID), action, strings.TrimSpace(targetID), detail, strings.TrimSpace(requestID))
+INSERT INTO dsh_admin_audit
+				(operator_context_id, actor_id, action, target_id, detail, sensitivity, correlation_id)
+			VALUES ($1, $2, $3, $4, $5, 'restricted', $6)`,
+		operatorContextID, strings.TrimSpace(actorID), action, strings.TrimSpace(targetID), detail, strings.TrimSpace(requestID))
 	return err
 }
 
@@ -106,6 +122,10 @@ func CreateRequest(
 	reason string,
 	durationMinutes int,
 ) (Request, error) {
+	operatorContextID, contextErr := requireOperatorContext(ctx)
+	if contextErr != nil {
+		return Request{}, contextErr
+	}
 	targetActorID = strings.TrimSpace(targetActorID)
 	requestedBy = strings.TrimSpace(requestedBy)
 	reason = strings.TrimSpace(reason)
@@ -119,11 +139,11 @@ func CreateRequest(
 	}
 	defer tx.Rollback()
 	request, err := scanRequest(tx.QueryRowContext(ctx, `
-		INSERT INTO dsh_admin_support_session_requests
-			(target_actor_id, requested_by, reason, duration_minutes)
-		VALUES ($1, $2, $3, $4)
+INSERT INTO dsh_admin_support_session_requests
+				(operator_context_id, target_actor_id, requested_by, reason, duration_minutes)
+			VALUES ($1, $2, $3, $4, $5)
 		RETURNING `+requestColumns,
-		targetActorID, requestedBy, reason, durationMinutes))
+		operatorContextID, targetActorID, requestedBy, reason, durationMinutes))
 	if err != nil {
 		if strings.Contains(strings.ToLower(err.Error()), "duplicate key") {
 			return Request{}, ErrConflict
@@ -140,6 +160,10 @@ func CreateRequest(
 }
 
 func ListRequests(ctx context.Context, db *sql.DB, status string, limit int) ([]Request, error) {
+	operatorContextID, contextErr := requireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, contextErr
+	}
 	status = strings.TrimSpace(status)
 	if db == nil || (status != "" && status != "pending" && status != "approved" &&
 		status != "rejected" && status != "issued" && status != "revoked") {
@@ -151,10 +175,10 @@ func ListRequests(ctx context.Context, db *sql.DB, status string, limit int) ([]
 	rows, err := db.QueryContext(ctx, `
 		SELECT `+requestColumns+`
 		FROM dsh_admin_support_session_requests
-		WHERE ($1 = '' OR status = $1)
-		ORDER BY CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'issued' THEN 2 ELSE 3 END,
+		WHERE operator_context_id = $2 AND ($1 = '' OR status = $1)
+			ORDER BY CASE status WHEN 'pending' THEN 0 WHEN 'approved' THEN 1 WHEN 'issued' THEN 2 ELSE 3 END,
 		         created_at DESC
-		LIMIT $2`, status, limit)
+		LIMIT $3`, status, operatorContextID, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -181,6 +205,10 @@ func ReviewRequest(
 	reviewNote string,
 	expectedVersion int,
 ) (Request, error) {
+	operatorContextID, contextErr := requireOperatorContext(ctx)
+	if contextErr != nil {
+		return Request{}, contextErr
+	}
 	requestID = strings.TrimSpace(requestID)
 	checkerActorID = strings.TrimSpace(checkerActorID)
 	decision = strings.TrimSpace(decision)
@@ -198,8 +226,8 @@ func ReviewRequest(
 	current, err := scanRequest(tx.QueryRowContext(ctx, `
 		SELECT `+requestColumns+`
 		FROM dsh_admin_support_session_requests
-		WHERE id = $1
-		FOR UPDATE`, requestID))
+WHERE id = $1 AND operator_context_id = $2
+			FOR UPDATE`, requestID, operatorContextID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Request{}, ErrNotFound
 	}
@@ -208,6 +236,12 @@ func ReviewRequest(
 	}
 	if checkerActorID == current.RequestedBy || checkerActorID == current.TargetActorID {
 		return Request{}, ErrSelfApproval
+	}
+	if current.Status == "issued" && decision == "approved" && current.ReviewedBy == checkerActorID {
+		if err := tx.Commit(); err != nil {
+			return Request{}, err
+		}
+		return current, nil
 	}
 	if current.Status == "approved" && decision == "approved" &&
 		current.ReviewedBy == checkerActorID && current.Version == expectedVersion {
@@ -223,9 +257,9 @@ func ReviewRequest(
 		UPDATE dsh_admin_support_session_requests
 		SET status = $2, reviewed_by = $3, review_note = $4,
 		    reviewed_at = NOW(), updated_at = NOW(), version = version + 1
-		WHERE id = $1 AND status = 'pending' AND version = $5
-		RETURNING `+requestColumns,
-		requestID, decision, checkerActorID, reviewNote, expectedVersion))
+WHERE id = $1 AND operator_context_id = $6 AND status = 'pending' AND version = $5
+			RETURNING `+requestColumns,
+		requestID, decision, checkerActorID, reviewNote, expectedVersion, operatorContextID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Request{}, ErrConflict
 	}
@@ -248,6 +282,10 @@ func MarkIssued(
 	sessionID string,
 	expiresAt time.Time,
 ) (Request, error) {
+	operatorContextID, contextErr := requireOperatorContext(ctx)
+	if contextErr != nil {
+		return Request{}, contextErr
+	}
 	if db == nil || strings.TrimSpace(requestID) == "" || strings.TrimSpace(sessionID) == "" {
 		return Request{}, ErrInvalid
 	}
@@ -257,15 +295,32 @@ func MarkIssued(
 	}
 	defer tx.Rollback()
 	request, err := scanRequest(tx.QueryRowContext(ctx, `
-		UPDATE dsh_admin_support_session_requests
-		SET status = 'issued', identity_session_id = $2, expires_at = $3,
-		    issued_at = COALESCE(issued_at, NOW()), updated_at = NOW(), version = version + 1
-		WHERE id = $1 AND status = 'approved'
-		RETURNING `+requestColumns,
-		requestID, strings.TrimSpace(sessionID), expiresAt))
+			SELECT `+requestColumns+`
+			FROM dsh_admin_support_session_requests
+			WHERE id = $1 AND operator_context_id = $2
+			FOR UPDATE`, requestID, operatorContextID))
 	if errors.Is(err, sql.ErrNoRows) {
+		return Request{}, ErrNotFound
+	}
+	if err != nil {
+		return Request{}, err
+	}
+	if request.Status != "approved" && request.Status != "issued" {
 		return Request{}, ErrConflict
 	}
+	if request.Status == "issued" && request.IdentitySessionID == strings.TrimSpace(sessionID) {
+		if err := tx.Commit(); err != nil {
+			return Request{}, err
+		}
+		return request, nil
+	}
+	request, err = scanRequest(tx.QueryRowContext(ctx, `
+			UPDATE dsh_admin_support_session_requests
+			SET status = 'issued', identity_session_id = $2, expires_at = $3,
+			    issued_at = COALESCE(issued_at, NOW()), updated_at = NOW(), version = version + 1
+			WHERE id = $1 AND operator_context_id = $4 AND status IN ('approved','issued')
+			RETURNING `+requestColumns,
+		requestID, strings.TrimSpace(sessionID), expiresAt, operatorContextID))
 	if err != nil {
 		return Request{}, err
 	}
@@ -279,6 +334,10 @@ func MarkIssued(
 }
 
 func MarkRevoked(ctx context.Context, db *sql.DB, requestID string, actorID string, reason string) (Request, error) {
+	operatorContextID, contextErr := requireOperatorContext(ctx)
+	if contextErr != nil {
+		return Request{}, contextErr
+	}
 	if db == nil || strings.TrimSpace(requestID) == "" || strings.TrimSpace(actorID) == "" || len(strings.TrimSpace(reason)) < 5 {
 		return Request{}, ErrInvalid
 	}
@@ -290,8 +349,8 @@ func MarkRevoked(ctx context.Context, db *sql.DB, requestID string, actorID stri
 	request, err := scanRequest(tx.QueryRowContext(ctx, `
 		UPDATE dsh_admin_support_session_requests
 		SET status = 'revoked', revoked_at = NOW(), updated_at = NOW(), version = version + 1
-		WHERE id = $1 AND status = 'issued'
-		RETURNING `+requestColumns, requestID))
+WHERE id = $1 AND operator_context_id = $2 AND status = 'issued'
+			RETURNING `+requestColumns, requestID, operatorContextID))
 	if errors.Is(err, sql.ErrNoRows) {
 		return Request{}, ErrConflict
 	}
@@ -310,6 +369,9 @@ func MarkRevoked(ctx context.Context, db *sql.DB, requestID string, actorID stri
 // RecordPartnerSupportAccess makes the audit append a required part of entering
 // the governed support scope. Callers must fail closed when it cannot commit.
 func RecordPartnerSupportAccess(ctx context.Context, db *sql.DB, identity Identity, targetPartnerID string) error {
+	if _, err := requireOperatorContext(ctx); err != nil {
+		return err
+	}
 	if db == nil || strings.TrimSpace(identity.InitiatorActorID) == "" ||
 		strings.TrimSpace(identity.SupportRequestID) == "" || strings.TrimSpace(targetPartnerID) == "" {
 		return ErrInvalid
@@ -347,9 +409,22 @@ type Snapshot struct {
 }
 
 func LoadSnapshot(ctx context.Context, db *sql.DB, targetActorID string) (Snapshot, error) {
+	operatorContextID, contextErr := requireOperatorContext(ctx)
+	if contextErr != nil {
+		return Snapshot{}, contextErr
+	}
 	targetActorID = strings.TrimSpace(targetActorID)
 	if db == nil || targetActorID == "" {
 		return Snapshot{}, ErrInvalid
+	}
+	var requestOwned bool
+	if err := db.QueryRowContext(ctx, `SELECT EXISTS (
+		SELECT 1 FROM dsh_admin_support_session_requests
+		WHERE operator_context_id=$1 AND target_actor_id=$2 AND status IN ('approved','issued','revoked'))`, operatorContextID, targetActorID).Scan(&requestOwned); err != nil {
+		return Snapshot{}, err
+	}
+	if !requestOwned {
+		return Snapshot{}, ErrNotFound
 	}
 	// Roles is intentionally empty: dsh_admin_staff_assignments (a local DSH
 	// role-assignment table) was retired in favor of Identity as the single
@@ -367,9 +442,9 @@ func LoadSnapshot(ctx context.Context, db *sql.DB, targetActorID string) (Snapsh
 	auditRows, err := db.QueryContext(ctx, `
 		SELECT action, COALESCE(target_id,''), COALESCE(detail,''), created_at
 		FROM dsh_admin_audit
-		WHERE actor_id = $1 OR target_id = $1
+		WHERE operator_context_id = $1 AND (actor_id = $2 OR target_id = $2)
 		ORDER BY created_at DESC
-		LIMIT 50`, targetActorID)
+		LIMIT 50`, operatorContextID, targetActorID)
 	if err != nil {
 		return Snapshot{}, err
 	}

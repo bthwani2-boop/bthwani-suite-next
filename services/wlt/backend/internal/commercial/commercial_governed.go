@@ -39,6 +39,10 @@ func HandleUpdateProductGoverned(db *sql.DB) http.HandlerFunc {
 }
 
 func AppendLoyaltyEntryGoverned(ctx context.Context, db *sql.DB, input AppendLoyaltyEntryInput) (*LoyaltyEntry, error) {
+	operatorContextID, contextErr := shared.RequireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, ErrInvalid
+	}
 	input.ClientID = strings.TrimSpace(input.ClientID)
 	input.SourceType = strings.TrimSpace(input.SourceType)
 	input.SourceID = strings.TrimSpace(input.SourceID)
@@ -59,7 +63,7 @@ func AppendLoyaltyEntryGoverned(ctx context.Context, db *sql.DB, input AppendLoy
 		input.Metadata = map[string]any{}
 	}
 
-	existing, err := GetLoyaltyEntryByIdempotency(db, input.IdempotencyKey)
+	existing, err := GetLoyaltyEntryByIdempotency(ctx, db, input.IdempotencyKey)
 	if err == nil {
 		if existing.ClientID != input.ClientID || existing.Direction != input.Direction || existing.Points != input.Points || existing.SourceType != input.SourceType || existing.SourceID != input.SourceID || stringValue(existing.ReversalOf) != strings.TrimSpace(input.ReversalOf) {
 			return nil, ErrConflict
@@ -76,12 +80,12 @@ func AppendLoyaltyEntryGoverned(ctx context.Context, db *sql.DB, input AppendLoy
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	if _, err = tx.ExecContext(ctx, `INSERT INTO wlt_loyalty_accounts(client_id) VALUES ($1) ON CONFLICT (client_id) DO NOTHING`, input.ClientID); err != nil {
+	if _, err = tx.ExecContext(ctx, `INSERT INTO wlt_loyalty_accounts(operator_context_id, client_id) VALUES ($1,$2) ON CONFLICT (operator_context_id, client_id) DO NOTHING`, operatorContextID, input.ClientID); err != nil {
 		return nil, err
 	}
 
 	var balance, lifetime int64
-	if err := tx.QueryRowContext(ctx, `SELECT points_balance, lifetime_points FROM wlt_loyalty_accounts WHERE client_id=$1 FOR UPDATE`, input.ClientID).Scan(&balance, &lifetime); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT points_balance, lifetime_points FROM wlt_loyalty_accounts WHERE operator_context_id=$1 AND client_id=$2 FOR UPDATE`, operatorContextID, input.ClientID).Scan(&balance, &lifetime); err != nil {
 		return nil, err
 	}
 
@@ -95,20 +99,20 @@ func AppendLoyaltyEntryGoverned(ctx context.Context, db *sql.DB, input AppendLoy
 	case "burn", "expire":
 		deltaBalance = -points
 	case "reverse":
-		var originalClient, originalDirection string
+		var originalOperatorContext, originalClient, originalDirection string
 		var originalPoints int64
-		err := tx.QueryRowContext(ctx, `SELECT client_id, direction, points FROM wlt_loyalty_entries WHERE id=$1 FOR UPDATE`, strings.TrimSpace(input.ReversalOf)).Scan(&originalClient, &originalDirection, &originalPoints)
+		err := tx.QueryRowContext(ctx, `SELECT operator_context_id, client_id, direction, points FROM wlt_loyalty_entries WHERE id=$1 AND operator_context_id=$2 FOR UPDATE`, strings.TrimSpace(input.ReversalOf), operatorContextID).Scan(&originalOperatorContext, &originalClient, &originalDirection, &originalPoints)
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 		if err != nil {
 			return nil, err
 		}
-		if originalClient != input.ClientID || originalDirection == "reverse" {
+		if originalOperatorContext != operatorContextID || originalClient != input.ClientID || originalDirection == "reverse" {
 			return nil, ErrInvalid
 		}
 		var reversalCount int
-		if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM wlt_loyalty_entries WHERE reversal_of=$1`, input.ReversalOf).Scan(&reversalCount); err != nil {
+		if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM wlt_loyalty_entries WHERE operator_context_id=$1 AND reversal_of=$2`, operatorContextID, input.ReversalOf).Scan(&reversalCount); err != nil {
 			return nil, err
 		}
 		if reversalCount > 0 {
@@ -129,7 +133,7 @@ func AppendLoyaltyEntryGoverned(ctx context.Context, db *sql.DB, input AppendLoy
 	if newBalance < 0 || newLifetime < 0 {
 		return nil, ErrInsufficientPoints
 	}
-	if _, err := tx.ExecContext(ctx, `UPDATE wlt_loyalty_accounts SET points_balance=$2, lifetime_points=$3, updated_at=NOW() WHERE client_id=$1`, input.ClientID, newBalance, newLifetime); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE wlt_loyalty_accounts SET points_balance=$3, lifetime_points=$4, updated_at=NOW() WHERE operator_context_id=$1 AND client_id=$2`, operatorContextID, input.ClientID, newBalance, newLifetime); err != nil {
 		return nil, err
 	}
 
@@ -138,11 +142,11 @@ func AppendLoyaltyEntryGoverned(ctx context.Context, db *sql.DB, input AppendLoy
 		return nil, ErrInvalid
 	}
 	entry, err := scanLoyaltyEntry(tx.QueryRowContext(ctx, `
-		INSERT INTO wlt_loyalty_entries
-			(client_id, direction, points, balance_after, source_type, source_id, reversal_of, idempotency_key, correlation_id, metadata)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULLIF($9,''), $10)
-		RETURNING `+loyaltyEntrySelectCols,
-		input.ClientID, input.Direction, points, newBalance, input.SourceType, input.SourceID, reversal, input.IdempotencyKey, input.CorrelationID, metadata,
+			INSERT INTO wlt_loyalty_entries
+				(operator_context_id, client_id, direction, points, balance_after, source_type, source_id, reversal_of, idempotency_key, correlation_id, metadata)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULLIF($10,''), $11)
+			RETURNING `+loyaltyEntrySelectCols,
+		operatorContextID, input.ClientID, input.Direction, points, newBalance, input.SourceType, input.SourceID, reversal, input.IdempotencyKey, input.CorrelationID, metadata,
 	))
 	if err != nil {
 		return nil, err
@@ -182,6 +186,10 @@ type ActivateSubscriptionGovernedInput struct {
 }
 
 func ActivateSubscriptionGoverned(ctx context.Context, db *sql.DB, input ActivateSubscriptionGovernedInput) (*Subscription, error) {
+	operatorContextID, contextErr := shared.RequireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, ErrInvalid
+	}
 	input.ClientID = strings.TrimSpace(input.ClientID)
 	input.ProductReference = strings.TrimSpace(input.ProductReference)
 	input.PaymentSessionID = strings.TrimSpace(input.PaymentSessionID)
@@ -209,10 +217,10 @@ func ActivateSubscriptionGoverned(ctx context.Context, db *sql.DB, input Activat
 		return nil, ErrInvalidTransition
 	}
 
-	var paymentClient, paymentStatus, paymentCurrency string
+	var paymentOperatorContext, paymentClient, paymentStatus, paymentCurrency string
 	var paymentAmount int64
 	var purchaseID, productReference, checkoutIntentID, specialRequestID sql.NullString
-	err = tx.QueryRowContext(ctx, `SELECT client_id, status, amount_minor_units, currency, subscription_purchase_id, commercial_product_reference, checkout_intent_id, special_request_id FROM wlt_payment_sessions WHERE id=$1 FOR UPDATE`, input.PaymentSessionID).Scan(&paymentClient, &paymentStatus, &paymentAmount, &paymentCurrency, &purchaseID, &productReference, &checkoutIntentID, &specialRequestID)
+	err = tx.QueryRowContext(ctx, `SELECT operator_context_id, client_id, status, amount_minor_units, currency, subscription_purchase_id, commercial_product_reference, checkout_intent_id, special_request_id FROM wlt_payment_sessions WHERE id=$1 FOR UPDATE`, input.PaymentSessionID).Scan(&paymentOperatorContext, &paymentClient, &paymentStatus, &paymentAmount, &paymentCurrency, &purchaseID, &productReference, &checkoutIntentID, &specialRequestID)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	}
@@ -222,12 +230,12 @@ func ActivateSubscriptionGoverned(ctx context.Context, db *sql.DB, input Activat
 	if paymentStatus != "captured" {
 		return nil, ErrPaymentNotCaptured
 	}
-	if !purchaseID.Valid || purchaseID.String != input.SubscriptionPurchaseID || !productReference.Valid || productReference.String != input.ProductReference || checkoutIntentID.Valid || specialRequestID.Valid || paymentClient != input.ClientID || paymentAmount != price || paymentCurrency != currency {
+	if paymentOperatorContext != operatorContextID || !purchaseID.Valid || purchaseID.String != input.SubscriptionPurchaseID || !productReference.Valid || productReference.String != input.ProductReference || checkoutIntentID.Valid || specialRequestID.Valid || paymentClient != input.ClientID || paymentAmount != price || paymentCurrency != currency {
 		return nil, ErrPaymentMismatch
 	}
 
 	var activeCount int
-	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM wlt_client_subscriptions WHERE client_id=$1 AND status='active'`, input.ClientID).Scan(&activeCount); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM wlt_client_subscriptions WHERE operator_context_id=$1 AND client_id=$2 AND status='active'`, operatorContextID, input.ClientID).Scan(&activeCount); err != nil {
 		return nil, err
 	}
 	if activeCount > 0 {
@@ -237,11 +245,11 @@ func ActivateSubscriptionGoverned(ctx context.Context, db *sql.DB, input Activat
 	start := time.Now().UTC()
 	end := cycleEnd(start, cycle)
 	subscription, err := scanSubscription(tx.QueryRowContext(ctx, `
-		INSERT INTO wlt_client_subscriptions
-			(client_id, product_reference, status, payment_session_id, subscription_purchase_id, starts_at, ends_at)
-		VALUES ($1, $2, 'active', $3, $4, $5, $6)
+INSERT INTO wlt_client_subscriptions
+				(operator_context_id, client_id, product_reference, status, payment_session_id, subscription_purchase_id, starts_at, ends_at)
+			VALUES ($1, $2, $3, 'active', $4, $5, $6, $7)
 		RETURNING `+subscriptionSelectCols,
-		input.ClientID, input.ProductReference, input.PaymentSessionID, input.SubscriptionPurchaseID, start, end,
+		operatorContextID, input.ClientID, input.ProductReference, input.PaymentSessionID, input.SubscriptionPurchaseID, start, end,
 	))
 	if err != nil {
 		return nil, err

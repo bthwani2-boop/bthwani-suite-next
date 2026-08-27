@@ -1,6 +1,7 @@
 package commercial
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -279,29 +280,31 @@ func UpdateProduct(db *sql.DB, reference string, input UpdateProductInput) (*Pro
 }
 
 type LoyaltyAccount struct {
-	ClientID       string  `json:"clientId"`
-	PointsBalance  int64   `json:"pointsBalance"`
-	LifetimePoints int64   `json:"lifetimePoints"`
-	TierReference  *string `json:"tierReference,omitempty"`
-	UpdatedAt      string  `json:"updatedAt"`
+	OperatorContextID string  `json:"operatorContextId"`
+	ClientID          string  `json:"clientId"`
+	PointsBalance     int64   `json:"pointsBalance"`
+	LifetimePoints    int64   `json:"lifetimePoints"`
+	TierReference     *string `json:"tierReference,omitempty"`
+	UpdatedAt         string  `json:"updatedAt"`
 }
 
 type LoyaltyEntry struct {
-	ID             string         `json:"id"`
-	ClientID       string         `json:"clientId"`
-	Direction      string         `json:"direction"`
-	Points         int64          `json:"points"`
-	BalanceAfter   int64          `json:"balanceAfter"`
-	SourceType     string         `json:"sourceType"`
-	SourceID       string         `json:"sourceId"`
-	ReversalOf     *string        `json:"reversalOf,omitempty"`
-	IdempotencyKey string         `json:"idempotencyKey"`
-	CorrelationID  *string        `json:"correlationId,omitempty"`
-	Metadata       map[string]any `json:"metadata"`
-	CreatedAt      string         `json:"createdAt"`
+	ID                string         `json:"id"`
+	OperatorContextID string         `json:"operatorContextId"`
+	ClientID          string         `json:"clientId"`
+	Direction         string         `json:"direction"`
+	Points            int64          `json:"points"`
+	BalanceAfter      int64          `json:"balanceAfter"`
+	SourceType        string         `json:"sourceType"`
+	SourceID          string         `json:"sourceId"`
+	ReversalOf        *string        `json:"reversalOf,omitempty"`
+	IdempotencyKey    string         `json:"idempotencyKey"`
+	CorrelationID     *string        `json:"correlationId,omitempty"`
+	Metadata          map[string]any `json:"metadata"`
+	CreatedAt         string         `json:"createdAt"`
 }
 
-const loyaltyEntrySelectCols = `id::TEXT, client_id, direction, points, balance_after,
+const loyaltyEntrySelectCols = `id::TEXT, operator_context_id, client_id, direction, points, balance_after,
 	source_type, source_id, reversal_of::TEXT, idempotency_key, correlation_id,
 	metadata, created_at::TEXT`
 
@@ -311,7 +314,7 @@ func scanLoyaltyEntry(row interface{ Scan(dest ...any) error }) (*LoyaltyEntry, 
 	var correlation sql.NullString
 	var metadata []byte
 	err := row.Scan(
-		&entry.ID, &entry.ClientID, &entry.Direction, &entry.Points,
+		&entry.ID, &entry.OperatorContextID, &entry.ClientID, &entry.Direction, &entry.Points,
 		&entry.BalanceAfter, &entry.SourceType, &entry.SourceID, &reversal,
 		&entry.IdempotencyKey, &correlation, &metadata, &entry.CreatedAt,
 	)
@@ -344,12 +347,20 @@ type AppendLoyaltyEntryInput struct {
 	Metadata       map[string]any `json:"metadata"`
 }
 
-func GetLoyaltyEntryByIdempotency(db *sql.DB, key string) (*LoyaltyEntry, error) {
-	return scanLoyaltyEntry(db.QueryRow(`SELECT `+loyaltyEntrySelectCols+`
-		FROM wlt_loyalty_entries WHERE idempotency_key=$1`, key))
+func GetLoyaltyEntryByIdempotency(ctx context.Context, db *sql.DB, key string) (*LoyaltyEntry, error) {
+	operatorContextID, err := shared.RequireOperatorContext(ctx)
+	if err != nil || db == nil || strings.TrimSpace(key) == "" {
+		return nil, ErrInvalid
+	}
+	return scanLoyaltyEntry(db.QueryRowContext(ctx, `SELECT `+loyaltyEntrySelectCols+`
+		FROM wlt_loyalty_entries WHERE operator_context_id=$1 AND idempotency_key=$2`, operatorContextID, key))
 }
 
-func AppendLoyaltyEntry(db *sql.DB, input AppendLoyaltyEntryInput) (*LoyaltyEntry, error) {
+func AppendLoyaltyEntry(ctx context.Context, db *sql.DB, input AppendLoyaltyEntryInput) (*LoyaltyEntry, error) {
+	operatorContextID, contextErr := shared.RequireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, ErrInvalid
+	}
 	input.ClientID = strings.TrimSpace(input.ClientID)
 	input.SourceType = strings.TrimSpace(input.SourceType)
 	input.SourceID = strings.TrimSpace(input.SourceID)
@@ -368,7 +379,7 @@ func AppendLoyaltyEntry(db *sql.DB, input AppendLoyaltyEntryInput) (*LoyaltyEntr
 		return nil, ErrInvalid
 	}
 
-	existing, err := GetLoyaltyEntryByIdempotency(db, input.IdempotencyKey)
+	existing, err := GetLoyaltyEntryByIdempotency(ctx, db, input.IdempotencyKey)
 	if err == nil {
 		if existing.ClientID != input.ClientID || existing.Direction != input.Direction ||
 			existing.SourceType != input.SourceType || existing.SourceID != input.SourceID {
@@ -380,21 +391,21 @@ func AppendLoyaltyEntry(db *sql.DB, input AppendLoyaltyEntryInput) (*LoyaltyEntr
 		return nil, err
 	}
 
-	tx, err := db.BeginTx(nil, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	_, err = tx.Exec(`INSERT INTO wlt_loyalty_accounts(client_id) VALUES ($1)
-		ON CONFLICT (client_id) DO NOTHING`, input.ClientID)
+	_, err = tx.ExecContext(ctx, `INSERT INTO wlt_loyalty_accounts(operator_context_id, client_id) VALUES ($1,$2)
+		ON CONFLICT (operator_context_id, client_id) DO NOTHING`, operatorContextID, input.ClientID)
 	if err != nil {
 		return nil, err
 	}
 
 	var balance, lifetime int64
-	if err := tx.QueryRow(`SELECT points_balance, lifetime_points
-		FROM wlt_loyalty_accounts WHERE client_id=$1 FOR UPDATE`, input.ClientID).Scan(&balance, &lifetime); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT points_balance, lifetime_points
+		FROM wlt_loyalty_accounts WHERE operator_context_id=$1 AND client_id=$2 FOR UPDATE`, operatorContextID, input.ClientID).Scan(&balance, &lifetime); err != nil {
 		return nil, err
 	}
 
@@ -409,20 +420,20 @@ func AppendLoyaltyEntry(db *sql.DB, input AppendLoyaltyEntryInput) (*LoyaltyEntr
 	case "burn", "expire":
 		deltaBalance = -points
 	case "reverse":
-		var originalClient, originalDirection string
+		var originalOperatorContext, originalClient, originalDirection string
 		var originalPoints int64
-		if err := tx.QueryRow(`SELECT client_id, direction, points
-			FROM wlt_loyalty_entries WHERE id=$1 FOR UPDATE`, input.ReversalOf).
-			Scan(&originalClient, &originalDirection, &originalPoints); errors.Is(err, sql.ErrNoRows) {
+		if err := tx.QueryRowContext(ctx, `SELECT operator_context_id, client_id, direction, points
+				FROM wlt_loyalty_entries WHERE id=$1 AND operator_context_id=$2 FOR UPDATE`, input.ReversalOf, operatorContextID).
+			Scan(&originalOperatorContext, &originalClient, &originalDirection, &originalPoints); errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		} else if err != nil {
 			return nil, err
 		}
-		if originalClient != input.ClientID || originalDirection == "reverse" {
+		if originalOperatorContext != operatorContextID || originalClient != input.ClientID || originalDirection == "reverse" {
 			return nil, ErrInvalid
 		}
 		var reversalCount int
-		if err := tx.QueryRow(`SELECT COUNT(*) FROM wlt_loyalty_entries WHERE reversal_of=$1`, input.ReversalOf).Scan(&reversalCount); err != nil {
+		if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM wlt_loyalty_entries WHERE operator_context_id=$1 AND reversal_of=$2`, operatorContextID, input.ReversalOf).Scan(&reversalCount); err != nil {
 			return nil, err
 		}
 		if reversalCount > 0 {
@@ -443,9 +454,9 @@ func AppendLoyaltyEntry(db *sql.DB, input AppendLoyaltyEntryInput) (*LoyaltyEntr
 	if newBalance < 0 || newLifetime < 0 {
 		return nil, ErrInsufficientPoints
 	}
-	if _, err := tx.Exec(`UPDATE wlt_loyalty_accounts
-		SET points_balance=$2, lifetime_points=$3, updated_at=NOW()
-		WHERE client_id=$1`, input.ClientID, newBalance, newLifetime); err != nil {
+	if _, err := tx.ExecContext(ctx, `UPDATE wlt_loyalty_accounts
+		SET points_balance=$3, lifetime_points=$4, updated_at=NOW()
+		WHERE operator_context_id=$1 AND client_id=$2`, operatorContextID, input.ClientID, newBalance, newLifetime); err != nil {
 		return nil, err
 	}
 
@@ -453,13 +464,13 @@ func AppendLoyaltyEntry(db *sql.DB, input AppendLoyaltyEntryInput) (*LoyaltyEntr
 	if err != nil {
 		return nil, ErrInvalid
 	}
-	entry, err := scanLoyaltyEntry(tx.QueryRow(`
-		INSERT INTO wlt_loyalty_entries
-			(client_id, direction, points, balance_after, source_type, source_id,
+	entry, err := scanLoyaltyEntry(tx.QueryRowContext(ctx, `
+			INSERT INTO wlt_loyalty_entries
+				(operator_context_id, client_id, direction, points, balance_after, source_type, source_id,
 			 reversal_of, idempotency_key, correlation_id, metadata)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NULLIF($9,''), $10)
-		RETURNING `+loyaltyEntrySelectCols,
-		input.ClientID,
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NULLIF($10,''), $11)
+			RETURNING `+loyaltyEntrySelectCols,
+		operatorContextID, input.ClientID,
 		input.Direction,
 		points,
 		newBalance,
@@ -480,18 +491,19 @@ func AppendLoyaltyEntry(db *sql.DB, input AppendLoyaltyEntryInput) (*LoyaltyEntr
 }
 
 type Subscription struct {
-	ID               string  `json:"id"`
-	ClientID         string  `json:"clientId"`
-	ProductReference string  `json:"productReference"`
-	Status           string  `json:"status"`
-	PaymentSessionID *string `json:"paymentSessionId,omitempty"`
-	StartsAt         string  `json:"startsAt"`
-	EndsAt           *string `json:"endsAt,omitempty"`
-	CreatedAt        string  `json:"createdAt"`
-	UpdatedAt        string  `json:"updatedAt"`
+	ID                string  `json:"id"`
+	OperatorContextID string  `json:"operatorContextId"`
+	ClientID          string  `json:"clientId"`
+	ProductReference  string  `json:"productReference"`
+	Status            string  `json:"status"`
+	PaymentSessionID  *string `json:"paymentSessionId,omitempty"`
+	StartsAt          string  `json:"startsAt"`
+	EndsAt            *string `json:"endsAt,omitempty"`
+	CreatedAt         string  `json:"createdAt"`
+	UpdatedAt         string  `json:"updatedAt"`
 }
 
-const subscriptionSelectCols = `id::TEXT, client_id, product_reference, status,
+const subscriptionSelectCols = `id::TEXT, operator_context_id, client_id, product_reference, status,
 	payment_session_id::TEXT, starts_at::TEXT, ends_at::TEXT, created_at::TEXT, updated_at::TEXT`
 
 func scanSubscription(row interface{ Scan(dest ...any) error }) (*Subscription, error) {
@@ -499,7 +511,7 @@ func scanSubscription(row interface{ Scan(dest ...any) error }) (*Subscription, 
 	var paymentSession sql.NullString
 	var endsAt sql.NullString
 	err := row.Scan(
-		&subscription.ID, &subscription.ClientID, &subscription.ProductReference,
+		&subscription.ID, &subscription.OperatorContextID, &subscription.ClientID, &subscription.ProductReference,
 		&subscription.Status, &paymentSession, &subscription.StartsAt, &endsAt,
 		&subscription.CreatedAt, &subscription.UpdatedAt,
 	)
@@ -535,7 +547,11 @@ func cycleEnd(start time.Time, cycle string) time.Time {
 	}
 }
 
-func ActivateSubscription(db *sql.DB, input ActivateSubscriptionInput) (*Subscription, error) {
+func ActivateSubscription(ctx context.Context, db *sql.DB, input ActivateSubscriptionInput) (*Subscription, error) {
+	operatorContextID, contextErr := shared.RequireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, ErrInvalid
+	}
 	input.ClientID = strings.TrimSpace(input.ClientID)
 	input.ProductReference = strings.TrimSpace(input.ProductReference)
 	input.PaymentSessionID = strings.TrimSpace(input.PaymentSessionID)
@@ -562,11 +578,11 @@ func ActivateSubscription(db *sql.DB, input ActivateSubscriptionInput) (*Subscri
 		return nil, ErrInvalidTransition
 	}
 
-	var paymentClient, paymentStatus, paymentCurrency string
+	var paymentOperatorContext, paymentClient, paymentStatus, paymentCurrency string
 	var paymentAmount int64
-	if err := tx.QueryRow(`SELECT client_id, status, amount_minor_units, currency
+	if err := tx.QueryRowContext(ctx, `SELECT operator_context_id, client_id, status, amount_minor_units, currency
 		FROM wlt_payment_sessions WHERE id=$1 FOR UPDATE`, input.PaymentSessionID).
-		Scan(&paymentClient, &paymentStatus, &paymentAmount, &paymentCurrency); errors.Is(err, sql.ErrNoRows) {
+		Scan(&paymentOperatorContext, &paymentClient, &paymentStatus, &paymentAmount, &paymentCurrency); errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
 	} else if err != nil {
 		return nil, err
@@ -574,13 +590,13 @@ func ActivateSubscription(db *sql.DB, input ActivateSubscriptionInput) (*Subscri
 	if paymentStatus != "captured" {
 		return nil, ErrPaymentNotCaptured
 	}
-	if paymentClient != input.ClientID || paymentAmount != price || paymentCurrency != currency {
+	if paymentOperatorContext != operatorContextID || paymentClient != input.ClientID || paymentAmount != price || paymentCurrency != currency {
 		return nil, ErrPaymentMismatch
 	}
 
 	var activeCount int
-	if err := tx.QueryRow(`SELECT COUNT(*) FROM wlt_client_subscriptions
-		WHERE client_id=$1 AND status='active'`, input.ClientID).Scan(&activeCount); err != nil {
+	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM wlt_client_subscriptions
+		WHERE operator_context_id=$1 AND client_id=$2 AND status='active'`, operatorContextID, input.ClientID).Scan(&activeCount); err != nil {
 		return nil, err
 	}
 	if activeCount > 0 {
@@ -590,10 +606,11 @@ func ActivateSubscription(db *sql.DB, input ActivateSubscriptionInput) (*Subscri
 	start := time.Now().UTC()
 	end := cycleEnd(start, cycle)
 	subscription, err := scanSubscription(tx.QueryRow(`
-		INSERT INTO wlt_client_subscriptions
-			(client_id, product_reference, status, payment_session_id, starts_at, ends_at)
-		VALUES ($1, $2, 'active', $3, $4, $5)
+INSERT INTO wlt_client_subscriptions
+				(operator_context_id, client_id, product_reference, status, payment_session_id, starts_at, ends_at)
+			VALUES ($1, $2, $3, 'active', $4, $5, $6)
 		RETURNING `+subscriptionSelectCols,
+		operatorContextID,
 		input.ClientID,
 		input.ProductReference,
 		input.PaymentSessionID,
@@ -614,16 +631,20 @@ type ClientBenefits struct {
 	ActiveSubscription *Subscription   `json:"activeSubscription,omitempty"`
 }
 
-func GetClientBenefits(db *sql.DB, clientID string) (*ClientBenefits, error) {
+func GetClientBenefits(ctx context.Context, db *sql.DB, clientID string) (*ClientBenefits, error) {
+	operatorContextID, contextErr := shared.RequireOperatorContext(ctx)
+	if contextErr != nil {
+		return nil, ErrInvalid
+	}
 	if db == nil || strings.TrimSpace(clientID) == "" {
 		return nil, ErrInvalid
 	}
 	benefits := &ClientBenefits{}
 	var account LoyaltyAccount
 	var tier sql.NullString
-	err := db.QueryRow(`SELECT client_id, points_balance, lifetime_points,
-		tier_reference, updated_at::TEXT FROM wlt_loyalty_accounts WHERE client_id=$1`, clientID).
-		Scan(&account.ClientID, &account.PointsBalance, &account.LifetimePoints, &tier, &account.UpdatedAt)
+	err := db.QueryRowContext(ctx, `SELECT operator_context_id, client_id, points_balance, lifetime_points,
+		tier_reference, updated_at::TEXT FROM wlt_loyalty_accounts WHERE operator_context_id=$1 AND client_id=$2`, operatorContextID, clientID).
+		Scan(&account.OperatorContextID, &account.ClientID, &account.PointsBalance, &account.LifetimePoints, &tier, &account.UpdatedAt)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return nil, err
 	}
@@ -634,10 +655,10 @@ func GetClientBenefits(db *sql.DB, clientID string) (*ClientBenefits, error) {
 		benefits.LoyaltyAccount = &account
 	}
 
-	subscription, err := scanSubscription(db.QueryRow(`SELECT `+subscriptionSelectCols+`
+	subscription, err := scanSubscription(db.QueryRowContext(ctx, `SELECT `+subscriptionSelectCols+`
 		FROM wlt_client_subscriptions
-		WHERE client_id=$1 AND status='active'
-		ORDER BY starts_at DESC LIMIT 1`, clientID))
+		WHERE operator_context_id=$1 AND client_id=$2 AND status='active'
+		ORDER BY starts_at DESC LIMIT 1`, operatorContextID, clientID))
 	if err != nil && !errors.Is(err, ErrNotFound) {
 		return nil, err
 	}
@@ -711,10 +732,6 @@ func HandleCreateProduct(db *sql.DB) http.HandlerFunc {
 		shared.SendJSON(w, http.StatusCreated, map[string]any{"product": product})
 	}
 }
-
-
-
-
 
 func ProductMatches(product *Product, displayName string, priceMinorUnits int64, currency, billingCycle string) error {
 	if product == nil {

@@ -3,7 +3,7 @@
   "service": "wlt",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "wlt-949_external_statement_fingerprint.sql",
+  "cutover": "wlt-959_commercial_operator_context_closure.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -899,6 +899,13 @@
       "file": "wlt-958_external_statement_verification_link.sql",
       "sha256": "f4dbe00a39c9a132caf5f73922e8ae018b250a8946f5c16bd22fbc7894b85c7b",
       "historicalPrefix": "958",
+      "state": "HISTORICAL_IMMUTABLE"
+    },
+    {
+      "ordinal": 129,
+      "file": "wlt-959_commercial_operator_context_closure.sql",
+      "sha256": "afa9352bdc5a1eb1d2a6c0fb119425ac207a5639ad9d0a220d72734dd9df91d4",
+      "historicalPrefix": "959",
       "state": "ACTIVE"
     }
   ]

@@ -74,6 +74,8 @@ func writeSupportSessionError(w http.ResponseWriter, err error) {
 		sendError(w, http.StatusConflict, "SUPPORT_SESSION_ALREADY_ISSUED", err.Error())
 	case errors.Is(err, identity.ErrSupportSessionRequestConflict):
 		sendError(w, http.StatusConflict, "SUPPORT_SESSION_REQUEST_CONFLICT", err.Error())
+	case errors.Is(err, identity.ErrSupportSessionCredentialUnavailable):
+		sendError(w, http.StatusConflict, "SUPPORT_SESSION_CREDENTIAL_RECOVERY_REQUIRED", err.Error())
 	case errors.Is(err, identity.ErrSupportSessionSelfTarget):
 		sendError(w, http.StatusBadRequest, "SUPPORT_SESSION_SELF_TARGET", err.Error())
 	case errors.Is(err, identity.ErrSupportSessionTargetUnavailable):
