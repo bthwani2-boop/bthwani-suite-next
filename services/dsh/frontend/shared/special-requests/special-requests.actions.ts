@@ -28,12 +28,8 @@ export function canClientApproveSpecialRequestQuote(request: DshSpecialRequestRe
 }
 
 /** Client quote refusal uses the governed cancellation mutation. */
-export function isClientQuoteDecisionPending(request: DshSpecialRequestResponse): boolean {
-  return canClientApproveSpecialRequestQuote(request);
-}
-
 export function clientCancellationActionLabel(request: DshSpecialRequestResponse): string {
-  return isClientQuoteDecisionPending(request) ? "رفض العرض" : "إلغاء الطلب";
+  return canClientApproveSpecialRequestQuote(request) ? "رفض العرض" : "إلغاء الطلب";
 }
 
 export function specialRequestTypeLabel(request: DshSpecialRequestResponse): string {
