@@ -370,8 +370,12 @@ export function OperatorSpecialRequestsWorkbench({
                 id: 'inspect',
                 label: item.recommendation,
                 onAction: () => router.push(buildOperationsHref(
-                  requestType === 'SHEIN_ASSISTED_PURCHASE' ? 'sheinproxy' : 'awnak-operations',
-                  { requestId: item.id, panel: 'detail' },
+                  'special-ops',
+                  {
+                    requestId: item.id,
+                    panel: 'detail',
+                    subGroup: requestType === 'SHEIN_ASSISTED_PURCHASE' ? 'shein' : 'awnak',
+                  },
                 )),
               }}
             />
