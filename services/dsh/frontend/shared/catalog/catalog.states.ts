@@ -27,10 +27,6 @@ export function catalogSuccessState(catalog: ClientStoreCatalog): CatalogState {
   return { kind: "success", catalog };
 }
 
-export function catalogSubmissionPermissionDeniedState(): CatalogSubmissionState {
-  return { kind: "permission_denied" };
-}
-
 export function catalogSubmissionEmptyState(): CatalogSubmissionState {
   return { kind: "empty" };
 }
