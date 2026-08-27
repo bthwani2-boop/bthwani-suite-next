@@ -58,12 +58,36 @@ func (r *Repository) StoreIdempotentResponse(ctx context.Context, actorID, opera
 	if err != nil {
 		return err
 	}
-	_, err = r.db.ExecContext(ctx, `
+	result, err := r.db.ExecContext(ctx, `
 		INSERT INTO providers_idempotency (operator_context_id, actor_id, operation, idempotency_key, request_hash, response_body)
 		VALUES ($1, $2, $3, $4, $5, $6::jsonb)
 		ON CONFLICT (operator_context_id, actor_id, operation, idempotency_key) DO NOTHING`,
 		operatorContextID, actorID, operation, key, requestHash, string(response))
-	return err
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		// A concurrent request stored a response under this key first. An
+		// identical request hash means the stored response is byte-equal to
+		// ours (same claim, same execution) and there is nothing to persist;
+		// a different hash means two different payloads adopted one key —
+		// that must surface as a conflict, never as silence.
+		var storedHash string
+		if err := r.db.QueryRowContext(ctx, `
+			SELECT request_hash FROM providers_idempotency
+			WHERE operator_context_id=$1 AND actor_id=$2 AND operation=$3 AND idempotency_key=$4`,
+			operatorContextID, actorID, operation, key).Scan(&storedHash); err != nil {
+			return err
+		}
+		if storedHash != requestHash {
+			return ErrIdempotencyConflict
+		}
+	}
+	return nil
 }
 
 // ---- audit ----

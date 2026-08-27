@@ -96,7 +96,7 @@ func TransitionProposalAtomicExpected(
 			for _, masterProductID := range barcodeMatches {
 				_, insertErr := tx.ExecContext(ctx, `INSERT INTO dsh_product_duplicate_candidates
 					(id, proposal_id, candidate_master_product_id, reason, score, status)
-					VALUES ($1,$2,$3,'barcode match',1.0,'pending') ON CONFLICT DO NOTHING`,
+					VALUES ($1,$2,$3,'barcode match',1.0,'pending') ON CONFLICT (proposal_id, candidate_master_product_id) DO NOTHING`,
 					entityID("dup-candidate"), id, masterProductID)
 				if insertErr != nil {
 					return ProductProposal{}, insertErr
@@ -114,7 +114,7 @@ func TransitionProposalAtomicExpected(
 			for _, masterProductID := range nameMatches {
 				_, insertErr := tx.ExecContext(ctx, `INSERT INTO dsh_product_duplicate_candidates
 					(id, proposal_id, candidate_master_product_id, reason, score, status)
-					VALUES ($1,$2,$3,'exact name match in category',0.9,'pending') ON CONFLICT DO NOTHING`,
+					VALUES ($1,$2,$3,'exact name match in category',0.9,'pending') ON CONFLICT (proposal_id, candidate_master_product_id) DO NOTHING`,
 					entityID("dup-candidate"), id, masterProductID)
 				if insertErr != nil {
 					return ProductProposal{}, insertErr

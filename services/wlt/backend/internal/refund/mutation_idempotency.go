@@ -108,7 +108,7 @@ func claimRefundMutationReceipt(
 		INSERT INTO wlt_refund_operation_receipts
 			(operator_context_id,operation,request_path,idempotency_key,request_hash,actor_id,reason,correlation_id,request_body)
 		VALUES($1,$2,$3,$4,$5,NULLIF($6,''),NULLIF($7,''),NULLIF($8,''),$9)
-		ON CONFLICT DO NOTHING
+		ON CONFLICT (operator_context_id, operation, request_path, idempotency_key) DO NOTHING
 		RETURNING id::text,request_hash,status,response_status,response_content_type,response_body`,
 		operatorContextID, operation, path, idempotencyKey, requestHash, actorID, reason, correlationID, string(canonicalRefundMutationBody(body)),
 	).Scan(&receipt.ID, &receipt.RequestHash, &receipt.Status, &receipt.ResponseStatus, &receipt.ResponseContentType, &receipt.ResponseBody)

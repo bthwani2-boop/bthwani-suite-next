@@ -104,12 +104,35 @@ func storeIdempotentResponseTx(ctx context.Context, tx *sql.Tx, actorID, operati
 	if err != nil {
 		return err
 	}
-	_, err = tx.ExecContext(ctx, `
+	result, err := tx.ExecContext(ctx, `
                 INSERT INTO workforce_idempotency (operator_context_id, actor_id, operation, idempotency_key, request_hash, response_body)
                 VALUES ($1, $2, $3, $4, $5, $6::jsonb)
                 ON CONFLICT (actor_id, operation, idempotency_key) DO NOTHING`,
 		operatorContextID, actorID, operation, key, requestHash, string(response))
-	return err
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		// A concurrent governed command stored its response under this key
+		// first. Identical request hash -> the stored response is byte-equal
+		// to ours and there is nothing to persist; a different hash means two
+		// different payloads adopted one key — surfaced as a conflict.
+		var storedHash string
+		if err := tx.QueryRowContext(ctx, `
+			SELECT request_hash FROM workforce_idempotency
+			WHERE actor_id=$1 AND operation=$2 AND idempotency_key=$3`,
+			actorID, operation, key).Scan(&storedHash); err != nil {
+			return err
+		}
+		if storedHash != requestHash {
+			return ErrIdempotencyConflict
+		}
+	}
+	return nil
 }
 
 // personByActorIDTx is the tx-scoped readback used by governed writes so the

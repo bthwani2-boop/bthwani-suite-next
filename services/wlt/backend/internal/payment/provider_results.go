@@ -70,7 +70,7 @@ func ApplyAuthoritativeProviderEvent(ctx context.Context, db *sql.DB, input Prov
 				(provider_event_id, operator_context_id, payment_session_id, event_type, provider_status,
 				 provider_reference, payload_hash, signature_timestamp, occurred_at)
 			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-			ON CONFLICT DO NOTHING
+			ON CONFLICT (provider_event_id) DO NOTHING
 			RETURNING true
 		)
 		SELECT true FROM inserted
