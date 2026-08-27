@@ -152,30 +152,7 @@ export function createDshOrderLifecycleHttpClient(
         );
         return normalizeOrderResponse(resp).order;
       }
-      if (req.actor === 'operator' && req.status === 'cancelled') {
-        const resp = await doFetch<{ order?: BackendOrder }>(
-          baseUrl,
-          fetchFn,
-          'POST',
-          `/dsh/operator/orders/${encodeURIComponent(orderId)}/cancel`,
-          { reason: req.note ?? 'operator_cancelled' },
-          orderAuthHeaders(auth),
-        );
-        return normalizeOrderResponse(resp).order;
-      }
       unsupportedTransition(`unsupported order transition for ${req.actor}: ${req.status}`);
-    },
-    cancelOrder: async (orderId, req = {}) => {
-      if (!baseUrl) throw { kind: 'offline' } as DshOrderApiOfflineError;
-      const resp = await doFetch<{ order?: BackendOrder }>(
-        baseUrl,
-        fetchFn,
-        'POST',
-        `/dsh/operator/orders/${encodeURIComponent(orderId)}/cancel`,
-        { reason: req.note ?? 'operator_cancelled' },
-        orderAuthHeaders(auth),
-      );
-      return normalizeOrderResponse(resp).order;
     },
     createSupportEscalation: async () => {
       unsupportedTransition('support escalation must use the governed DSH support ticket API');

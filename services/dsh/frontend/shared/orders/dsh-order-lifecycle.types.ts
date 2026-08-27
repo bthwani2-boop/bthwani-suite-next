@@ -88,11 +88,6 @@ export type DshUpdateOrderStatusRequest =
       readonly expectedVersion: number;
       readonly idempotencyKey: string;
       readonly note?: string;
-    }
-  | {
-      readonly actor: 'client' | 'captain' | 'operator' | 'system';
-      readonly status: 'cancelled';
-      readonly note?: string;
     };
 
 export type DshCreateSupportEscalationRequest = {
@@ -205,7 +200,6 @@ export interface DshOrderLifecycleClient {
   listOrders(query?: DshListOrdersQuery): Promise<DshListOrdersResponse>;
   getOrder(orderId: string): Promise<DshOrderDetailsResponse>;
   updateOrderStatus(orderId: string, req: DshUpdateOrderStatusRequest): Promise<DshOrderRecord>;
-  cancelOrder(orderId: string, req?: { actor?: string; note?: string }): Promise<DshOrderRecord>;
   createSupportEscalation(req: DshCreateSupportEscalationRequest): Promise<DshSupportEscalationRecord>;
   assignCaptain(orderId: string, req: { captain_id: string }): Promise<DshOrderRecord>;
   acceptTask(assignmentId: string, req: { captain_id: string }): Promise<DshOrderRecord>;
