@@ -1082,12 +1082,6 @@ export function getDshRenderableFlowsForSurface(surfaceId: DshSurfaceId): readon
   });
 }
 
-/** True when a flow ID is a legacy/hidden-compat entry that must NOT render primary. */
-export function isDshHiddenCompatFlow(id: string): boolean {
-  const entry = getDshFlowById(id);
-  return entry?.hiddenCompat === true;
-}
-
 /**
  * All flows that require escalation handling (have an escalationOwner defined).
  * Useful for control-panel escalation queue wiring.
