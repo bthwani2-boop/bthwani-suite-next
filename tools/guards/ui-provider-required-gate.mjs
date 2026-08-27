@@ -1,3 +1,22 @@
+/**
+ * tools/guards/ui-provider-required-gate.mjs
+ *
+ * Canonical enforcement: every runtime surface must mount exactly one UI
+ * provider at its root, and that provider must be the canonical composition
+ * owner for its platform.
+ *
+ * Mobile (apps/app-{client,partner,captain,field}/runtime/src/index.ts):
+ *   - Exactly one `MobileUiProvider` from `@bthwani/ui-kit/mobile`.
+ *   - Direct `BthwaniUiProvider` usage is FORBIDDEN here — it is the internal
+ *     composition of `MobileUiProvider` (which owns mobile-only concerns:
+ *     `useColorScheme`, native icon renderer configuration). This canonical
+ *     cutover happened in commit 0099b9d57 (2026-08-22).
+ *   - Exactly one `SafeAreaProvider` at the same root.
+ *   - App.tsx must NOT contain either provider (no nested providers).
+ *
+ * Web (apps/control-panel/runtime/src/app/layout.tsx):
+ *   - Must render `<WebThemeStyle />` to inject canonical CSS variables.
+ */
 import fs from "node:fs";
 import path from "node:path";
 import { fail, repoRoot } from "./_guard-utils.mjs";
@@ -34,18 +53,40 @@ for (const name of MOBILE_APPS) {
   const indexContent = fs.readFileSync(indexPath, "utf8");
   const appContent = fs.readFileSync(appPath, "utf8");
 
-  const uiProviderRoots =
-    count(indexContent, /React\.createElement\(\s*BthwaniUiProvider\b/g) +
-    count(indexContent, /<BthwaniUiProvider\b/g);
+  const mobileProviderRoots =
+    count(indexContent, /React\.createElement\(\s*MobileUiProvider\b/g) +
+    count(indexContent, /<MobileUiProvider\b/g);
 
   const safeAreaRoots =
     count(indexContent, /React\.createElement\(\s*SafeAreaProvider\b/g) +
     count(indexContent, /<SafeAreaProvider\b/g);
 
-  if (!indexContent.includes('from "@bthwani/ui-kit"') || uiProviderRoots !== 1) {
+  // Direct BthwaniUiProvider usage is forbidden in mobile runtime — it is the
+  // internal composition of the canonical MobileUiProvider.
+  const directBthwaniProviderRoots =
+    count(indexContent, /React\.createElement\(\s*BthwaniUiProvider\b/g) +
+    count(indexContent, /<BthwaniUiProvider\b/g);
+
+  if (!indexContent.includes('from "@bthwani/ui-kit/mobile"') || mobileProviderRoots !== 1) {
     violations.push({
       file: indexRelative,
-      message: `Expected exactly one BthwaniUiProvider at the runtime root; found ${uiProviderRoots}.`,
+      message: `Expected exactly one MobileUiProvider from "@bthwani/ui-kit/mobile" at the runtime root; found ${mobileProviderRoots}.`,
+    });
+  }
+
+  if (directBthwaniProviderRoots !== 0) {
+    violations.push({
+      file: indexRelative,
+      message: `Direct BthwaniUiProvider usage is forbidden in mobile runtime; use MobileUiProvider from "@bthwani/ui-kit/mobile" instead (found ${directBthwaniProviderRoots}).`,
+    });
+  }
+
+  // App-owned fixed theme is forbidden; MobileUiProvider derives theme from
+  // the system color scheme (canonical mobile composition root).
+  if (/defaultTheme\s*:\s*["'](?:light|dark)["']/.test(indexContent)) {
+    violations.push({
+      file: indexRelative,
+      message: "App-owned fixed mobile theme is forbidden; MobileUiProvider owns theme resolution.",
     });
   }
 
@@ -56,10 +97,10 @@ for (const name of MOBILE_APPS) {
     });
   }
 
-  if (/\bBthwaniUiProvider\b/.test(appContent)) {
+  if (/\b(?:BthwaniUiProvider|MobileUiProvider)\b/.test(appContent)) {
     violations.push({
       file: appRelative,
-      message: "Nested BthwaniUiProvider is forbidden; the provider belongs in src/index.ts only.",
+      message: "Nested UI provider is forbidden; the provider belongs in src/index.ts only.",
     });
   }
 
