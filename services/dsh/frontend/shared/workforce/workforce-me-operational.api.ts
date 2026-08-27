@@ -8,10 +8,6 @@ import type {
 
 const { request } = createDshHttpClient(resolveWorkforceApiBaseUrl(), "workforce-me-operational", 10000);
 
-export function fetchOwnOperationalCore(): Promise<OperationalCoreResponse> {
-  return request<OperationalCoreResponse>("/workforce/me/operational-core");
-}
-
 export async function listOwnAvailabilityNotices(limit = 50): Promise<readonly ProviderAvailabilityNotice[]> {
   const safeLimit = Math.min(Math.max(Math.trunc(limit), 1), 100);
   const result = await request<{ availabilityNotices: ProviderAvailabilityNotice[] }>(
