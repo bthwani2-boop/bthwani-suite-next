@@ -5,7 +5,6 @@
 
 
 // ── Providers Types ───────────────────────────────────────────────────────────
-export type ProviderStatus = 'active' | 'inactive' | 'test-only' | 'pending-approval';
 
 
 // ── Services Types ────────────────────────────────────────────────────────────
