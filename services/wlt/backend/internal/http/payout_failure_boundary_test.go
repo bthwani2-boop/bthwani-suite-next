@@ -31,7 +31,7 @@ func payoutFailureRequest(t *testing.T, path, body string) *http.Request {
 // governed financial denial, so the binding gate treated the contract as
 // unimplemented.
 func TestManualPayoutFailureIsRegisteredAndRefused(t *testing.T) {
-	router := NewRouter(nil, true, openDecisionService{})
+	router := NewRouter(nil, true, openDecisionService{}, nil)
 	req := payoutFailureRequest(t, "/wlt/payout-requests/payout-1/fail", `{"operatorId":"operator-1"}`)
 	rec := httptest.NewRecorder()
 
@@ -46,7 +46,7 @@ func TestManualPayoutFailureIsRegisteredAndRefused(t *testing.T) {
 }
 
 func TestManualPayoutFailureRejectsUngovernedRequest(t *testing.T) {
-	router := NewRouter(nil, true, openDecisionService{})
+	router := NewRouter(nil, true, openDecisionService{}, nil)
 	for name, body := range map[string]string{
 		"missing operator": `{}`,
 		"blank operator":   `{"operatorId":"   "}`,
@@ -68,7 +68,7 @@ func TestManualPayoutFailureRejectsUngovernedRequest(t *testing.T) {
 // The boundary must never need a database handle: a nil *sql.DB router proves it
 // cannot read payout state or release a hold on the way to refusing.
 func TestManualPayoutFailureTouchesNoFinancialState(t *testing.T) {
-	router := NewRouter(nil, true, openDecisionService{})
+	router := NewRouter(nil, true, openDecisionService{}, nil)
 	req := payoutFailureRequest(t, "/wlt/payout-requests/payout-1/fail", `{"operatorId":"operator-1"}`)
 	rec := httptest.NewRecorder()
 

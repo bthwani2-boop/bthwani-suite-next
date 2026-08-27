@@ -15,7 +15,7 @@ const (
 	wltMigrationServiceName = "wlt"
 	// WLT-947 gates readiness before Workforce can depend on penalty command
 	// idempotency and authoritative readback.
-	wltLatestMigration      = "wlt-947_provider_penalty_command_idempotency.sql"
+	wltLatestMigration      = "wlt-948_financial_rail_registry_seed.sql"
 	wltReadinessTimeout     = 2 * time.Second
 )
 

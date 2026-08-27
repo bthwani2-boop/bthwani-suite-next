@@ -3,7 +3,7 @@ package http
 import "testing"
 
 func TestFinancialReferenceRoutesRequireAuthenticatedReadBoundary(t *testing.T) {
-	_, routes := newRouterWithRoutes(nil, false, nil)
+	_, routes := newRouterWithRoutes(nil, false, nil, nil)
 	required := map[string]bool{
 		"GET /wlt/references/payment-status":    false,
 		"GET /wlt/references/settlement-status": false,

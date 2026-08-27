@@ -23,7 +23,7 @@ const providerWebhookMaxSkew = 5 * time.Minute
 type providerWebhookEnvelope struct {
 	EventID           string `json:"eventId"`
 	Type              string `json:"type"`
-	OperatorContextID          string `json:"operatorContextId"`
+	OperatorContextID string `json:"operatorContextId"`
 	PaymentSessionID  string `json:"paymentSessionId"`
 	Status            string `json:"status"`
 	ProviderReference string `json:"providerReference"`
@@ -117,7 +117,7 @@ func HandlePaymentProviderWebhook(db *sql.DB) http.HandlerFunc {
 		providerCtx := shared.WithOperatorContext(r.Context(), envelope.OperatorContextID)
 		application, err := ApplyAuthoritativeProviderEvent(providerCtx, db, ProviderEventInput{
 			EventID:           envelope.EventID,
-			OperatorContextID:          envelope.OperatorContextID,
+			OperatorContextID: envelope.OperatorContextID,
 			PaymentSessionID:  envelope.PaymentSessionID,
 			EventType:         envelope.Type,
 			ProviderStatus:    envelope.Status,

@@ -13,6 +13,7 @@ import (
 	"wlt-api/internal/payout"
 	"wlt-api/internal/penalty"
 	"wlt-api/internal/promotionfunding"
+	"wlt-api/internal/provider"
 	"wlt-api/internal/reconciliation"
 	"wlt-api/internal/reference"
 	"wlt-api/internal/refund"
@@ -37,12 +38,12 @@ type registeredRoute struct {
 
 type routeRegistrar func(pattern string, handler http.HandlerFunc)
 
-func NewRouter(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionService) *http.ServeMux {
-	mux, _ := newRouterWithRoutes(db, mutationsEnabled, ds)
+func NewRouter(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionService, rail provider.CashInRail) *http.ServeMux {
+	mux, _ := newRouterWithRoutes(db, mutationsEnabled, ds, rail)
 	return mux
 }
 
-func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionService) (*http.ServeMux, []registeredRoute) {
+func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionService, rail provider.CashInRail) (*http.ServeMux, []registeredRoute) {
 	mux := http.NewServeMux()
 	routes := make([]registeredRoute, 0, 128)
 	gate := newMutationGate(mutationsEnabled)
@@ -91,15 +92,15 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	read("GET /wlt/payment-sessions/{paymentSessionId}", reference.HandleGetPaymentSessionTrustedDsh(db))
 	read("GET /wlt/payment-sessions/{paymentSessionId}/timeline", payment.HandleGetPaymentSessionTimeline(db))
 
-	mutation("POST /wlt/payment-sessions/{paymentSessionId}/authorize", payment.HandleGovernedPaymentOperation(db, "authorize", payment.HandleAuthorizeSessionSovereign(db)))
-	mutation("POST /wlt/payment-sessions/{paymentSessionId}/capture", payment.HandleGovernedPaymentOperation(db, "capture", payment.HandleCaptureSessionSovereign(db)))
-	mutation("POST /wlt/payment-sessions/{paymentSessionId}/refresh-provider-status", payment.HandleGovernedPaymentOperation(db, "provider_status_refresh", payment.HandleRefreshProviderStatus(db)))
+	mutation("POST /wlt/payment-sessions/{paymentSessionId}/authorize", payment.HandleGovernedPaymentOperation(db, "authorize", payment.HandleAuthorizeSessionSovereign(db, rail)))
+	mutation("POST /wlt/payment-sessions/{paymentSessionId}/capture", payment.HandleGovernedPaymentOperation(db, "capture", payment.HandleCaptureSessionSovereign(db, rail)))
+	mutation("POST /wlt/payment-sessions/{paymentSessionId}/refresh-provider-status", payment.HandleGovernedPaymentOperation(db, "provider_status_refresh", payment.HandleRefreshProviderStatus(db, rail)))
 	mutation("POST /wlt/payment-sessions/{paymentSessionId}/expire", payment.HandleOperatorContextScopedPaymentSession(db, payment.HandleExpireSession(db)))
 	mutation("POST /wlt/payment-sessions/{paymentSessionId}/cancel-for-order", payment.HandleOperatorContextScopedPaymentSession(db, payment.HandleGovernedSessionCancellation(db)))
 
 	mutation("POST /wlt/topup-sessions", reference.HandleCreateTopUpSessionTrustedDsh(db))
-	mutation("POST /wlt/topup-sessions/{paymentSessionId}/authorize", payment.HandleGovernedPaymentOperation(db, "authorize", payment.HandleAuthorizeTopUpSession(db)))
-	mutation("POST /wlt/topup-sessions/{paymentSessionId}/capture", payment.HandleGovernedPaymentOperation(db, "capture", payment.HandleCaptureTopUpSession(db)))
+	mutation("POST /wlt/topup-sessions/{paymentSessionId}/authorize", payment.HandleGovernedPaymentOperation(db, "authorize", payment.HandleAuthorizeTopUpSession(db, rail)))
+	mutation("POST /wlt/topup-sessions/{paymentSessionId}/capture", payment.HandleGovernedPaymentOperation(db, "capture", payment.HandleCaptureTopUpSession(db, rail)))
 	providerMutation("POST /wlt/provider/webhooks/payment", payment.HandlePaymentProviderWebhook(db))
 
 	mutation("POST /wlt/refunds", refund.RequireOperatorContextScope(db, refund.RequireMutationIdempotency(db, "create", refund.HandleCreateGovernedRefund(db))))
@@ -107,7 +108,7 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	read("GET /wlt/refunds", refund.RequireOperatorContextScope(db, refund.HandleListGovernedRefunds(db)))
 	read("GET /wlt/refunds/{refundId}/audit", refund.RequireOperatorContextScope(db, refund.HandleListGovernedRefundAudit(db)))
 	mutation("POST /wlt/refunds/{refundId}/approve", refund.RequireOperatorContextScope(db, refund.RequireMutationIdempotency(db, "approve", refund.HandleApproveGovernedRefund(db))))
-	mutation("POST /wlt/refunds/{refundId}/complete", refund.RequireOperatorContextScope(db, refund.RequireMutationIdempotency(db, "complete", refund.HandleCompleteGovernedRefundDurable(db))))
+	mutation("POST /wlt/refunds/{refundId}/complete", refund.RequireOperatorContextScope(db, refund.RequireMutationIdempotency(db, "complete", refund.HandleCompleteGovernedRefundDurable(db, rail))))
 	mutation("POST /wlt/refunds/{refundId}/reject", refund.RequireOperatorContextScope(db, refund.RequireMutationIdempotency(db, "reject", refund.HandleRejectGovernedRefund(db))))
 	mutation("POST /wlt/refunds/{refundId}/reconcile", refund.RequireOperatorContextScope(db, refund.RequireMutationIdempotency(db, "reconcile", refund.HandleReconcileGovernedRefund(db))))
 

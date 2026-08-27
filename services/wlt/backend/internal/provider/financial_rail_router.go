@@ -50,10 +50,10 @@ type CashInRail interface {
 // is an implementation detail and cannot be constructed directly by consumers.
 // Production fails closed when no real provider adapter exists.
 type FinancialRailRouter struct {
-	client     *Client
-	registry   *Registry
-	environment string
-	providerType string
+	client        *Client
+	registry      *Registry
+	environment   string
+	providerType  string
 	timeoutBudget time.Duration
 }
 
@@ -134,7 +134,11 @@ func loadInternalConfig() (Config, error) {
 
 func (r *FinancialRailRouter) checkActive(ctx context.Context, capability Capability) error {
 	if r.registry == nil {
-		return nil
+		// Fail closed: a rail without the provider registry authority would let
+		// every call bypass active/maintenance/timeout enforcement, which is
+		// exactly the bypass the registry exists to prevent. Mock-mode local
+		// simulation is no exception — seed the registry row (wlt-948) instead.
+		return fmt.Errorf("financial rail capability %s refused: %w", capability, ErrRailRegistryRequired)
 	}
 	_, _, err := r.registry.GetActiveProvider(ctx, "payment-gateway", r.environment)
 	if err != nil {

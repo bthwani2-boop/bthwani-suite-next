@@ -173,14 +173,6 @@ func claimSession(db *sql.DB, sessionID string, allowedFrom []string, pendingSta
 	return s, nil
 }
 
-func AuthorizeSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
-	rail, err := provider.NewFinancialRailRouter(nil, "")
-	if err != nil {
-		return nil, err
-	}
-	return AuthorizeSessionWithProvider(context.Background(), db, rail, sessionID, provider.NewRequestMeta("wlt-authorize"))
-}
-
 // AuthorizeSessionWithProvider authorizes sessionID with the payment
 // provider through the capability-checked CashInRail. The amount and currency
 // are always read from the session's own row (never from caller input) so a
@@ -242,14 +234,6 @@ func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, rail provider
 		return nil, err
 	}
 	return s, tx.Commit()
-}
-
-func CaptureSession(db *sql.DB, sessionID string) (*PaymentSession, error) {
-	rail, err := provider.NewFinancialRailRouter(nil, "")
-	if err != nil {
-		return nil, err
-	}
-	return CaptureSessionWithProvider(context.Background(), db, rail, sessionID, provider.NewRequestMeta("wlt-capture"))
 }
 
 // CaptureSessionWithProvider claims the session into 'capture_pending' (see

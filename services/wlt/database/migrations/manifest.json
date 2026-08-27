@@ -823,6 +823,13 @@
       "sha256": "c218a6c3ad80e2f98903e097ed6be8283ac9a4f5fe043a96fdc39d037d5291e7",
       "historicalPrefix": "947",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 118,
+      "file": "wlt-948_financial_rail_registry_seed.sql",
+      "sha256": "928bc2abeec8e4086d526c2965f7f0b9ae70fdb1a071f1f2b1dfdd351076106e",
+      "historicalPrefix": "948",
+      "state": "ACTIVE"
     }
   ]
 }

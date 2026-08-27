@@ -202,11 +202,10 @@ func CaptureTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashInRa
 	return s, nil
 }
 
-func HandleAuthorizeTopUpSession(db *sql.DB) http.HandlerFunc {
+func HandleAuthorizeTopUpSession(db *sql.DB, rail provider.CashInRail) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rail, err := provider.NewFinancialRailRouter(nil, "")
-		if err != nil {
-			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
+		if rail == nil {
+			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", "financial rail is not wired; refusing unenforced money movement")
 			return
 		}
 		session, err := AuthorizeTopUpSession(r.Context(), db, rail, r.PathValue("paymentSessionId"), provider.RequestMetaFromHTTP(r, "wlt-topup-authorize"))
@@ -230,11 +229,10 @@ func HandleAuthorizeTopUpSession(db *sql.DB) http.HandlerFunc {
 	}
 }
 
-func HandleCaptureTopUpSession(db *sql.DB) http.HandlerFunc {
+func HandleCaptureTopUpSession(db *sql.DB, rail provider.CashInRail) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rail, err := provider.NewFinancialRailRouter(nil, "")
-		if err != nil {
-			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
+		if rail == nil {
+			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", "financial rail is not wired; refusing unenforced money movement")
 			return
 		}
 		session, err := CaptureTopUpSession(r.Context(), db, rail, r.PathValue("paymentSessionId"), provider.RequestMetaFromHTTP(r, "wlt-topup-capture"))

@@ -52,7 +52,7 @@ func CompleteGovernedRefundWithProviderDurable(ctx context.Context, db *sql.DB, 
 // HandleCompleteGovernedRefundDurable is the public governed completion route.
 // It uses the durable wrapper so an outcome-persistence failure can never be
 // mistaken for a normal provider decline or an acknowledged unknown result.
-func HandleCompleteGovernedRefundDurable(db *sql.DB) http.HandlerFunc {
+func HandleCompleteGovernedRefundDurable(db *sql.DB, rail provider.CashInRail) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var input struct {
 			OperatorID string `json:"operatorId"`
@@ -60,9 +60,8 @@ func HandleCompleteGovernedRefundDurable(db *sql.DB) http.HandlerFunc {
 		if !decodeGovernedJSON(w, r, &input) {
 			return
 		}
-		rail, err := provider.NewFinancialRailRouter(nil, "")
-		if err != nil {
-			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
+		if rail == nil {
+			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", "financial rail is not wired; refusing unenforced money movement")
 			return
 		}
 		item, err := CompleteGovernedRefundWithProviderDurable(

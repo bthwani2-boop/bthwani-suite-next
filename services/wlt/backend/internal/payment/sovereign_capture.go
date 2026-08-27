@@ -88,11 +88,10 @@ func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, rail p
 	return s, nil
 }
 
-func HandleCaptureSessionSovereign(db *sql.DB) http.HandlerFunc {
+func HandleCaptureSessionSovereign(db *sql.DB, rail provider.CashInRail) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		rail, err := provider.NewFinancialRailRouter(nil, "")
-		if err != nil {
-			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
+		if rail == nil {
+			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", "financial rail is not wired; refusing unenforced money movement")
 			return
 		}
 		session, err := CaptureSessionWithProviderSovereign(r.Context(), db, rail, r.PathValue("paymentSessionId"), provider.RequestMetaFromHTTP(r, "wlt-capture"))

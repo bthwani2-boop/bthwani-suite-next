@@ -14,7 +14,7 @@ import (
 	"wlt-api/internal/shared"
 )
 
-func HandleRefreshProviderStatus(db *sql.DB) http.HandlerFunc {
+func HandleRefreshProviderStatus(db *sql.DB, rail provider.CashInRail) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sessionID := r.PathValue("paymentSessionId")
 		session, err := getSession(db, sessionID)
@@ -33,15 +33,14 @@ func HandleRefreshProviderStatus(db *sql.DB) http.HandlerFunc {
 		}
 		if session.Status == "captured" || session.Status == "failed" || session.Status == "expired" {
 			shared.SendJSON(w, http.StatusOK, map[string]any{
-				"paymentSession":      session,
+				"paymentSession":         session,
 				"providerRefreshSkipped": true,
-				"reason":              "session is already terminal",
+				"reason":                 "session is already terminal",
 			})
 			return
 		}
-		rail, err := provider.NewFinancialRailRouter(nil, "")
-		if err != nil {
-			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", err.Error())
+		if rail == nil {
+			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", "financial rail is not wired; refusing unenforced money movement")
 			return
 		}
 		result, err := rail.Status(r.Context(), provider.RequestMetaFromHTTP(r, "wlt-provider-status-refresh"))
@@ -59,15 +58,15 @@ func HandleRefreshProviderStatus(db *sql.DB) http.HandlerFunc {
 		payload := fmt.Sprintf("%s\x1f%s\x1f%s\x1f%s", session.OperatorContextID, session.ID, result.Status, result.ProviderReference)
 		hash := sha256.Sum256([]byte(payload))
 		application, err := ApplyAuthoritativeProviderEvent(r.Context(), db, ProviderEventInput{
-			EventID:            eventID,
-			OperatorContextID:  session.OperatorContextID,
-			PaymentSessionID:   session.ID,
-			EventType:          eventType,
-			ProviderStatus:     result.Status,
-			ProviderReference:  result.ProviderReference,
-			PayloadHash:        hex.EncodeToString(hash[:]),
-			SignatureTime:      time.Now().UTC(),
-			ProcessingSource:   "provider_status_refresh",
+			EventID:           eventID,
+			OperatorContextID: session.OperatorContextID,
+			PaymentSessionID:  session.ID,
+			EventType:         eventType,
+			ProviderStatus:    result.Status,
+			ProviderReference: result.ProviderReference,
+			PayloadHash:       hex.EncodeToString(hash[:]),
+			SignatureTime:     time.Now().UTC(),
+			ProcessingSource:  "provider_status_refresh",
 		})
 		if errors.Is(err, ErrProviderEventConflict) {
 			shared.SendError(w, http.StatusConflict, "PROVIDER_EVENT_REPLAY_CONFLICT", err.Error())
