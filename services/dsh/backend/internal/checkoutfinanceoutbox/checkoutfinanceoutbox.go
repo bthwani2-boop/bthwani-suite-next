@@ -35,6 +35,7 @@ type Event struct {
 	AttemptCount         int
 	ReadbackAttemptCount int
 	FailureDisposition   string
+	FailureClassification string
 	DiagnosticCode       string
 	LeaseToken           string
 }
@@ -185,7 +186,9 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 		       COALESCE(outbox.order_id::text, ''), outbox.client_id, outbox.reason,
 		       COALESCE(outbox.correlation_id, outbox.checkout_intent_id::text),
 		       outbox.attempt_count, outbox.readback_attempt_count,
-		       outbox.failure_disposition, COALESCE(outbox.diagnostic_code, '')
+		       COALESCE(outbox.failure_disposition, 'none'),
+		       COALESCE(outbox.failure_classification, 'UNKNOWN_REQUIRES_READBACK'),
+		       COALESCE(outbox.diagnostic_code, '')
 		FROM dsh_checkout_financial_closure_outbox outbox
 		JOIN dsh_checkout_intents intent ON intent.id = outbox.checkout_intent_id
 		WHERE (
@@ -206,7 +209,8 @@ func ClaimBatch(db *sql.DB, limit int, lease time.Duration) ([]Event, error) {
 			&event.ID, &event.EventType, &event.Status, &event.OperatorContextID,
 			&event.CheckoutIntentID, &event.PaymentSessionID, &event.OrderID,
 			&event.ClientID, &event.Reason, &event.CorrelationID, &event.AttemptCount,
-			&event.ReadbackAttemptCount, &event.FailureDisposition, &event.DiagnosticCode,
+							&event.ReadbackAttemptCount, &event.FailureDisposition, &event.FailureClassification, &event.DiagnosticCode,
+
 		); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scan checkout finance outbox event: %w", err)

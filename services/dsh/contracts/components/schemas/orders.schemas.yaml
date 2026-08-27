@@ -180,6 +180,7 @@ DshOrderCancellation:
     - financialOutboxId
     - financialOutboxStatus
     - financialRecoveryDisposition
+    - financialFailureClassification
     - financialDiagnosticCode
     - financialAttemptCount
     - financialReadbackAttemptCount
@@ -205,6 +206,9 @@ DshOrderCancellation:
     financialOutboxId: { type: string }
     financialOutboxStatus: { type: string }
     financialRecoveryDisposition: { type: string }
+    financialFailureClassification:
+      type: string
+      enum: [PROVEN_ABSENT, PROVEN_REJECTED, PROVEN_APPLIED, UNKNOWN_REQUIRES_READBACK, INVALID_UNRECOVERABLE]
     financialDiagnosticCode: { type: string }
     financialAttemptCount: { type: integer, minimum: 0 }
     financialReadbackAttemptCount: { type: integer, minimum: 0 }

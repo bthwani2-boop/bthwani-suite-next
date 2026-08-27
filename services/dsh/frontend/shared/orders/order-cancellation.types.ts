@@ -48,6 +48,7 @@ export type DshOrderCancellation = {
   readonly financialOutboxId: string;
   readonly financialOutboxStatus: string;
   readonly financialRecoveryDisposition: string;
+  readonly financialFailureClassification: "PROVEN_ABSENT" | "PROVEN_REJECTED" | "PROVEN_APPLIED" | "UNKNOWN_REQUIRES_READBACK" | "INVALID_UNRECOVERABLE";
   readonly financialDiagnosticCode: string;
   readonly financialAttemptCount: number;
   readonly financialReadbackAttemptCount: number;
