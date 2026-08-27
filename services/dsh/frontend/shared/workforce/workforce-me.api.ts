@@ -52,9 +52,9 @@ export async function fetchWorkforceMe(): Promise<WorkforceMeResult> {
   }
 }
 
-export async function updateWorkforceMeSelf(input: UpdateSelfInput): Promise<WorkforceMeResult> {
+export async function updateWorkforceMeSelf(input: UpdateSelfInput, idempotencyKey?: string): Promise<WorkforceMeResult> {
   try {
-    const me = await request<WorkforceMe>("/workforce/me", { method: "PATCH", body: input });
+    const me = await request<WorkforceMe>("/workforce/me", { method: "PATCH", body: input, idempotencyKey });
     return { kind: "ok", me };
   } catch (error) {
     return classifyError(error);
