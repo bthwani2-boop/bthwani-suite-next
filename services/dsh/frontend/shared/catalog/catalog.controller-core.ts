@@ -1,9 +1,6 @@
 import type { CatalogSubmission } from "./catalog.types";
 import type { CatalogState } from "./client-catalog.types";
 import {
-  type CatalogActionState,
-  catalogActionConflictState,
-  catalogActionErrorState,
   catalogAuditErrorState,
   catalogAuditLoadingState,
   catalogAuditSuccessState,
@@ -11,11 +8,6 @@ import {
   catalogLoadingState,
   catalogPermissionDeniedState,
 } from "./catalog.states";
-
-export function resolveCatalogActionError(error: unknown): CatalogActionState {
-  const typed = error as { status?: number };
-  return typed.status === 409 ? catalogActionConflictState() : catalogActionErrorState();
-}
 
 export function resolveCatalogError(error: unknown): CatalogState {
   const typed = error as { kind?: string; status?: number };
