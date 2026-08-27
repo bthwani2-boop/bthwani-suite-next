@@ -124,12 +124,12 @@ export async function updateFieldAgent(actorId: string, input: UpdateFieldAgentI
   return request<FieldAgent>(`/workforce/field-agents/${encodeURIComponent(actorId)}`, { method: "PATCH", body: input });
 }
 
-export async function suspendFieldAgent(actorId: string, expectedVersion: number, reason: string): Promise<FieldAgent> {
-  return request<FieldAgent>(`/workforce/field-agents/${encodeURIComponent(actorId)}/suspend`, { method: "POST", body: { expectedVersion, reason } });
+export async function suspendFieldAgent(actorId: string, expectedVersion: number, reason: string, idempotencyKey?: string): Promise<FieldAgent> {
+  return request<FieldAgent>(`/workforce/field-agents/${encodeURIComponent(actorId)}/suspend`, { method: "POST", body: { expectedVersion, reason }, idempotencyKey });
 }
 
-export async function reactivateFieldAgent(actorId: string, expectedVersion: number, reason: string): Promise<FieldAgent> {
-  return request<FieldAgent>(`/workforce/field-agents/${encodeURIComponent(actorId)}/reactivate`, { method: "POST", body: { expectedVersion, reason } });
+export async function reactivateFieldAgent(actorId: string, expectedVersion: number, reason: string, idempotencyKey?: string): Promise<FieldAgent> {
+  return request<FieldAgent>(`/workforce/field-agents/${encodeURIComponent(actorId)}/reactivate`, { method: "POST", body: { expectedVersion, reason }, idempotencyKey });
 }
 
 export async function issueFieldAgentActivationCode(actorId: string, expectedVersion: number): Promise<ActivationCodeResult> {
@@ -165,12 +165,12 @@ export async function updateCaptain(actorId: string, input: UpdateCaptainInput):
   return request<Captain>(`/workforce/captains/${encodeURIComponent(actorId)}`, { method: "PATCH", body: input });
 }
 
-export async function suspendCaptain(actorId: string, expectedVersion: number, reason: string): Promise<Captain> {
-  return request<Captain>(`/workforce/captains/${encodeURIComponent(actorId)}/suspend`, { method: "POST", body: { expectedVersion, reason } });
+export async function suspendCaptain(actorId: string, expectedVersion: number, reason: string, idempotencyKey?: string): Promise<Captain> {
+  return request<Captain>(`/workforce/captains/${encodeURIComponent(actorId)}/suspend`, { method: "POST", body: { expectedVersion, reason }, idempotencyKey });
 }
 
-export async function reactivateCaptain(actorId: string, expectedVersion: number, reason: string): Promise<Captain> {
-  return request<Captain>(`/workforce/captains/${encodeURIComponent(actorId)}/reactivate`, { method: "POST", body: { expectedVersion, reason } });
+export async function reactivateCaptain(actorId: string, expectedVersion: number, reason: string, idempotencyKey?: string): Promise<Captain> {
+  return request<Captain>(`/workforce/captains/${encodeURIComponent(actorId)}/reactivate`, { method: "POST", body: { expectedVersion, reason }, idempotencyKey });
 }
 
 export async function issueCaptainActivationCode(actorId: string, expectedVersion: number): Promise<ActivationCodeResult> {
@@ -209,12 +209,12 @@ export async function updateEmployee(actorId: string, input: UpdateEmployeeInput
   return request<Employee>(`${DEPARTMENT_EMPLOYEE_PATH}/${encodeURIComponent(actorId)}`, { method: "PATCH", body: input });
 }
 
-export async function suspendEmployee(actorId: string, expectedVersion: number, reason: string): Promise<Employee> {
-  return request<Employee>(`${DEPARTMENT_EMPLOYEE_PATH}/${encodeURIComponent(actorId)}/suspend`, { method: "POST", body: { expectedVersion, reason } });
+export async function suspendEmployee(actorId: string, expectedVersion: number, reason: string, idempotencyKey?: string): Promise<Employee> {
+  return request<Employee>(`${DEPARTMENT_EMPLOYEE_PATH}/${encodeURIComponent(actorId)}/suspend`, { method: "POST", body: { expectedVersion, reason }, idempotencyKey });
 }
 
-export async function reactivateEmployee(actorId: string, expectedVersion: number, reason: string): Promise<Employee> {
-  return request<Employee>(`${DEPARTMENT_EMPLOYEE_PATH}/${encodeURIComponent(actorId)}/reactivate`, { method: "POST", body: { expectedVersion, reason } });
+export async function reactivateEmployee(actorId: string, expectedVersion: number, reason: string, idempotencyKey?: string): Promise<Employee> {
+  return request<Employee>(`${DEPARTMENT_EMPLOYEE_PATH}/${encodeURIComponent(actorId)}/reactivate`, { method: "POST", body: { expectedVersion, reason }, idempotencyKey });
 }
 
 export async function searchSupervisors(kind: ProviderKind, q: string): Promise<readonly SupervisorCandidate[]> {
