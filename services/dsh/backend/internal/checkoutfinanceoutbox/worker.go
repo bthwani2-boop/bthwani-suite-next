@@ -193,7 +193,7 @@ func dispatch(ctx context.Context, client *wlt.Client, event Event) (DeliveryRes
 			return DeliveryResult{}, err
 		}
 		if result == nil {
-			return DeliveryResult{}, fmt.Errorf("WLT cancel-for-order returned no result")
+			return DeliveryResult{}, fmt.Errorf("WLT order-cancellation returned no result")
 		}
 		paymentSessionID := result.PaymentSessionID
 		if paymentSessionID == "" {
