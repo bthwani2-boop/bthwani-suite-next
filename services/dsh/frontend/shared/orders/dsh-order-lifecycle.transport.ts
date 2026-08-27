@@ -35,7 +35,7 @@ function orderAuthHeaders(auth: DshOrderAuthContext): Record<string, string> {
   return bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {};
 }
 
-export function unsupportedTransition(message: string): never {
+function unsupportedTransition(message: string): never {
   throw { kind: 'http', status: 400, body: message } as DshOrderApiHttpError;
 }
 
