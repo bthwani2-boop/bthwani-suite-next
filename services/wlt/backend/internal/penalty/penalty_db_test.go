@@ -245,3 +245,23 @@ func TestReservedPathSegmentIsNeverCapturedAsIdentifier(t *testing.T) {
 		t.Fatalf("explicit code required, got %s", recorder.Body.String())
 	}
 }
+
+func TestDebtLegReversalRefusesSettledAndDriftedStates(t *testing.T) {
+	// Root #4 regression fence: the reversal error surface is explicit and
+	// fail-closed. The decision logic is enforced in SQL under FOR UPDATE; the
+	// sentinel surface is proven here so handler mapping cannot regress.
+	if !strings.Contains(ErrDebtPartiallySettled.Error(), "partially settled") ||
+		!strings.Contains(ErrDebtStateConflict.Error(), "conflicts") {
+		t.Fatal("sentinels must carry explicit semantics")
+	}
+	recorder := httptest.NewRecorder()
+	writeError(recorder, ErrDebtPartiallySettled)
+	if recorder.Code != http.StatusConflict || !strings.Contains(recorder.Body.String(), "PROVIDER_DEBT_PARTIALLY_SETTLED") {
+		t.Fatalf("partial settlement must map to 409 PROVIDER_DEBT_PARTIALLY_SETTLED, got %d %s", recorder.Code, recorder.Body.String())
+	}
+	recorder = httptest.NewRecorder()
+	writeError(recorder, ErrDebtStateConflict)
+	if recorder.Code != http.StatusConflict || !strings.Contains(recorder.Body.String(), "PROVIDER_DEBT_STATE_CONFLICT") {
+		t.Fatalf("debt state drift must map to 409 PROVIDER_DEBT_STATE_CONFLICT, got %d %s", recorder.Code, recorder.Body.String())
+	}
+}

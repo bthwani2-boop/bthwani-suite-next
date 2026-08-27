@@ -21,6 +21,14 @@ var (
 	ErrPolicyUnavailable = errors.New("provider penalty policy is unavailable")
 	ErrPolicyVersion     = errors.New("provider penalty policy version conflict")
 	ErrWalletUnavailable = errors.New("provider wallet is unavailable")
+	// ErrDebtPartiallySettled: the debt leg carries real repayments. Crediting
+	// the original debt amount would over-credit the provider by the settled
+	// portion, and settlement-reversal semantics do not exist yet — so the
+	// reversal fails closed until they do (root #4).
+	ErrDebtPartiallySettled = errors.New("provider debt is partially settled; reversal requires explicit settlement reversal")
+	// ErrDebtStateConflict: the debt leg is not in a reversal-eligible state, or
+	// its live state drifted from the penalty snapshot (root #4).
+	ErrDebtStateConflict = errors.New("provider debt state conflicts with the penalty snapshot")
 )
 
 type ProviderPenaltyPolicy struct {
@@ -70,7 +78,7 @@ func UpsertPolicy(ctx context.Context, db *sql.DB, policyID string, input Upsert
 	}
 	var currentVersion int64
 	err = tx.QueryRowContext(ctx, `SELECT COALESCE(NULLIF(regexp_replace(policy_version,'^v',''),'')::bigint,0)
-		FROM wlt_provider_penalty_policies WHERE operator_context_id=$1 AND policy_id=$2 FOR UPDATE`, operatorContextID, policyID).Scan(&currentVersion)
+                FROM wlt_provider_penalty_policies WHERE operator_context_id=$1 AND policy_id=$2 FOR UPDATE`, operatorContextID, policyID).Scan(&currentVersion)
 	if errors.Is(err, sql.ErrNoRows) {
 		currentVersion = 0
 	} else if err != nil {
@@ -82,14 +90,14 @@ func UpsertPolicy(ctx context.Context, db *sql.DB, policyID string, input Upsert
 	nextVersion := currentVersion + 1
 	var policy ProviderPenaltyPolicy
 	err = tx.QueryRowContext(ctx, `INSERT INTO wlt_provider_penalty_policies(
-		operator_context_id,policy_id,policy_version,provider_actor_type,amount_minor_units,currency,enabled,change_reason,updated_by_actor_id,updated_at)
-		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,now())
-		ON CONFLICT(operator_context_id,policy_id) DO UPDATE SET
-			policy_version=EXCLUDED.policy_version,provider_actor_type=EXCLUDED.provider_actor_type,
-			amount_minor_units=EXCLUDED.amount_minor_units,currency=EXCLUDED.currency,
-			enabled=EXCLUDED.enabled,change_reason=EXCLUDED.change_reason,
-			updated_by_actor_id=EXCLUDED.updated_by_actor_id,updated_at=now()
-		RETURNING policy_id,policy_version,provider_actor_type,amount_minor_units,currency,enabled,change_reason,updated_by_actor_id,updated_at`,
+                operator_context_id,policy_id,policy_version,provider_actor_type,amount_minor_units,currency,enabled,change_reason,updated_by_actor_id,updated_at)
+                VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,now())
+                ON CONFLICT(operator_context_id,policy_id) DO UPDATE SET
+                        policy_version=EXCLUDED.policy_version,provider_actor_type=EXCLUDED.provider_actor_type,
+                        amount_minor_units=EXCLUDED.amount_minor_units,currency=EXCLUDED.currency,
+                        enabled=EXCLUDED.enabled,change_reason=EXCLUDED.change_reason,
+                        updated_by_actor_id=EXCLUDED.updated_by_actor_id,updated_at=now()
+                RETURNING policy_id,policy_version,provider_actor_type,amount_minor_units,currency,enabled,change_reason,updated_by_actor_id,updated_at`,
 		operatorContextID, policyID, fmt.Sprintf("v%d", nextVersion), input.ProviderActorType,
 		input.AmountMinorUnits, input.Currency, input.Enabled, input.ChangeReason, input.UpdatedByActorID).
 		Scan(&policy.PolicyID, &policy.PolicyVersion, &policy.ProviderActorType, &policy.AmountMinorUnits,
@@ -147,12 +155,12 @@ type ReverseInput struct {
 }
 
 const columns = `id,operator_context_id,incident_id,provider_actor_id,provider_actor_type,
-	policy_id,policy_version,COALESCE(debt_id,''),amount_minor_units,wallet_applied_amount_minor_units,
-	debt_amount_minor_units,currency,reason,status,ledger_transaction_id,
-	COALESCE(reversal_ledger_transaction_id,''),posted_by_actor_id,
-	COALESCE(reversed_by_actor_id,''),COALESCE(reversed_reason,''),idempotency_key,post_request_hash,
-	COALESCE(reversal_idempotency_key,''),COALESCE(reversal_request_hash,''),
-	created_at,reversed_at,updated_at`
+        policy_id,policy_version,COALESCE(debt_id,''),amount_minor_units,wallet_applied_amount_minor_units,
+        debt_amount_minor_units,currency,reason,status,ledger_transaction_id,
+        COALESCE(reversal_ledger_transaction_id,''),posted_by_actor_id,
+        COALESCE(reversed_by_actor_id,''),COALESCE(reversed_reason,''),idempotency_key,post_request_hash,
+        COALESCE(reversal_idempotency_key,''),COALESCE(reversal_request_hash,''),
+        created_at,reversed_at,updated_at`
 
 type scanner interface{ Scan(dest ...any) error }
 
@@ -221,10 +229,10 @@ type penaltyPolicy struct {
 func loadPenaltyPolicy(ctx context.Context, tx *sql.Tx, operatorContextID string, input PostInput) (penaltyPolicy, error) {
 	var policy penaltyPolicy
 	err := tx.QueryRowContext(ctx, `
-		SELECT policy_version,provider_actor_type,amount_minor_units,currency
-		FROM wlt_provider_penalty_policies
-		WHERE operator_context_id=$1 AND policy_id=$2 AND enabled
-		FOR SHARE`, operatorContextID, input.PolicyID).
+                SELECT policy_version,provider_actor_type,amount_minor_units,currency
+                FROM wlt_provider_penalty_policies
+                WHERE operator_context_id=$1 AND policy_id=$2 AND enabled
+                FOR SHARE`, operatorContextID, input.PolicyID).
 		Scan(&policy.Version, &policy.ProviderActorType, &policy.AmountMinorUnits, &policy.Currency)
 	if errors.Is(err, sql.ErrNoRows) {
 		return penaltyPolicy{}, ErrPolicyUnavailable
@@ -334,7 +342,7 @@ func Post(ctx context.Context, db *sql.DB, idempotencyKey string, input PostInpu
 	var walletStatus, walletCurrency string
 	var available int64
 	err = tx.QueryRowContext(ctx, `SELECT status,currency,available_balance_minor_units
-		FROM wlt_wallets WHERE operator_context_id=$1 AND actor_type=$2 AND actor_id=$3 FOR UPDATE`,
+                FROM wlt_wallets WHERE operator_context_id=$1 AND actor_type=$2 AND actor_id=$3 FOR UPDATE`,
 		operatorContextID, input.ProviderActorType, input.ProviderActorID).Scan(&walletStatus, &walletCurrency, &available)
 	if errors.Is(err, sql.ErrNoRows) {
 		walletStatus, walletCurrency, available = "", "", 0
@@ -364,9 +372,9 @@ func Post(ctx context.Context, db *sql.DB, idempotencyKey string, input PostInpu
 	}
 
 	item, err := scan(tx.QueryRowContext(ctx, `INSERT INTO wlt_provider_penalties(
-		operator_context_id,incident_id,provider_actor_id,provider_actor_type,amount_minor_units,
-		policy_id,policy_version,wallet_applied_amount_minor_units,debt_amount_minor_units,currency,reason,ledger_transaction_id,posted_by_actor_id,idempotency_key,post_request_hash)
-		VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING `+columns,
+                operator_context_id,incident_id,provider_actor_id,provider_actor_type,amount_minor_units,
+                policy_id,policy_version,wallet_applied_amount_minor_units,debt_amount_minor_units,currency,reason,ledger_transaction_id,posted_by_actor_id,idempotency_key,post_request_hash)
+                VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING `+columns,
 		operatorContextID, input.IncidentID, input.ProviderActorID, input.ProviderActorType, policy.AmountMinorUnits,
 		input.PolicyID, policy.Version, walletApplied, debtAmount, policy.Currency, input.Reason, ledgerID, input.PostedByActorID, idempotencyKey, postRequestHash))
 	if err != nil {
@@ -374,16 +382,16 @@ func Post(ctx context.Context, db *sql.DB, idempotencyKey string, input PostInpu
 	}
 	if debtAmount > 0 {
 		if err := tx.QueryRowContext(ctx, `INSERT INTO wlt_provider_debts(
-			operator_context_id,provider_actor_id,provider_actor_type,source_type,source_id,
-			policy_id,policy_version,original_amount_minor_units,outstanding_amount_minor_units,
-			currency,ledger_transaction_id)
-			VALUES($1,$2,$3,'provider_penalty',$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+                        operator_context_id,provider_actor_id,provider_actor_type,source_type,source_id,
+                        policy_id,policy_version,original_amount_minor_units,outstanding_amount_minor_units,
+                        currency,ledger_transaction_id)
+                        VALUES($1,$2,$3,'provider_penalty',$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
 			operatorContextID, input.ProviderActorID, input.ProviderActorType, item.ID,
 			input.PolicyID, policy.Version, policy.AmountMinorUnits, debtAmount, policy.Currency, ledgerID).Scan(&item.DebtID); err != nil {
 			return ProviderPenalty{}, err
 		}
 		item, err = scan(tx.QueryRowContext(ctx, `UPDATE wlt_provider_penalties SET debt_id=$3,updated_at=now()
-			WHERE operator_context_id=$1 AND id=$2 RETURNING `+columns, operatorContextID, item.ID, item.DebtID))
+                        WHERE operator_context_id=$1 AND id=$2 RETURNING `+columns, operatorContextID, item.ID, item.DebtID))
 		if err != nil {
 			return ProviderPenalty{}, err
 		}
@@ -443,27 +451,60 @@ func Reverse(ctx context.Context, db *sql.DB, penaltyID, idempotencyKey string, 
 	if item.Status == "reversed" {
 		return ProviderPenalty{}, ErrConflict
 	}
+	// Root #4: the debt leg is an independent live liability. Reverse must
+	// credit what is ACTUALLY still outstanding under a row lock, never the
+	// snapshot's original amounts, and must refuse when real repayments exist.
+	debtOutstandingMinorUnits := int64(0)
+	if item.DebtID != "" {
+		var debtStatus string
+		var debtOutstanding int64
+		if err := tx.QueryRowContext(ctx, `SELECT status,outstanding_amount_minor_units
+                        FROM wlt_provider_debts WHERE operator_context_id=$1 AND id=$2 FOR UPDATE`,
+			operatorContextID, item.DebtID).Scan(&debtStatus, &debtOutstanding); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return ProviderPenalty{}, ErrDebtStateConflict
+			}
+			return ProviderPenalty{}, err
+		}
+		if debtStatus == "partially_settled" || (debtStatus == "open" && debtOutstanding < item.DebtAmountMinorUnits) {
+			return ProviderPenalty{}, ErrDebtPartiallySettled
+		}
+		if debtStatus != "open" || debtOutstanding != item.DebtAmountMinorUnits {
+			return ProviderPenalty{}, ErrDebtStateConflict
+		}
+		debtOutstandingMinorUnits = debtOutstanding
+	} else if item.DebtAmountMinorUnits > 0 {
+		// Snapshot claims a debt leg but no canonical debt row backs it:
+		// refuse rather than post an unbacked receivable credit.
+		return ProviderPenalty{}, ErrDebtStateConflict
+	}
 	lines := []ledger.LedgerLine{{AccountType: "platform_revenue", DebitCredit: "debit", AmountMinorUnits: item.AmountMinorUnits, Currency: item.Currency}}
 	if item.WalletAppliedAmountMinorUnits > 0 {
 		lines = append(lines, ledger.LedgerLine{AccountType: "wallet", ActorType: item.ProviderActorType, ActorID: item.ProviderActorID, DebitCredit: "credit", AmountMinorUnits: item.WalletAppliedAmountMinorUnits, Currency: item.Currency})
 	}
 	if item.DebtAmountMinorUnits > 0 {
-		lines = append(lines, ledger.LedgerLine{AccountType: "provider_receivable", DebitCredit: "credit", AmountMinorUnits: item.DebtAmountMinorUnits, Currency: item.Currency})
+		lines = append(lines, ledger.LedgerLine{AccountType: "provider_receivable", DebitCredit: "credit", AmountMinorUnits: debtOutstandingMinorUnits, Currency: item.Currency})
 	}
 	ledgerID, err := ledger.PostLedgerTransaction(ctx, tx, "provider_penalty_reversed", "provider_penalty", item.ID, lines, ledger.Actor{ID: input.ReversedByActorID, Type: "operator"})
 	if err != nil {
 		return ProviderPenalty{}, err
 	}
 	if item.DebtID != "" {
-		if _, err := tx.ExecContext(ctx, `UPDATE wlt_provider_debts SET status='reversed',outstanding_amount_minor_units=0,reversed_at=now(),updated_at=now()
-			WHERE operator_context_id=$1 AND id=$2 AND status IN ('open','partially_settled')`, operatorContextID, item.DebtID); err != nil {
+		debtResult, err := tx.ExecContext(ctx, `UPDATE wlt_provider_debts SET status='reversed',outstanding_amount_minor_units=0,reversed_at=now(),updated_at=now()
+                        WHERE operator_context_id=$1 AND id=$2 AND status='open'`, operatorContextID, item.DebtID)
+		if err != nil {
 			return ProviderPenalty{}, err
+		}
+		if affected, _ := debtResult.RowsAffected(); affected != 1 {
+			// The FOR UPDATE read above verified 'open'; a miss here means the
+			// state changed inside this transaction's window — refuse loudly.
+			return ProviderPenalty{}, ErrDebtStateConflict
 		}
 	}
 	item, err = scan(tx.QueryRowContext(ctx, `UPDATE wlt_provider_penalties SET status='reversed',
-		reversal_ledger_transaction_id=$3,reversed_by_actor_id=$4,reversed_reason=$5,
-		reversal_idempotency_key=$6,reversal_request_hash=$7,
-		reversed_at=now(),updated_at=now() WHERE operator_context_id=$1 AND id=$2 RETURNING `+columns,
+                reversal_ledger_transaction_id=$3,reversed_by_actor_id=$4,reversed_reason=$5,
+                reversal_idempotency_key=$6,reversal_request_hash=$7,
+                reversed_at=now(),updated_at=now() WHERE operator_context_id=$1 AND id=$2 RETURNING `+columns,
 		operatorContextID, item.ID, ledgerID, input.ReversedByActorID, input.Reason, idempotencyKey, reversalRequestHash))
 	if err != nil {
 		return ProviderPenalty{}, err
@@ -486,6 +527,10 @@ func writeError(w http.ResponseWriter, err error) {
 		shared.SendError(w, http.StatusConflict, "PROVIDER_PENALTY_POLICY_UNAVAILABLE", err.Error())
 	case errors.Is(err, ErrWalletUnavailable):
 		shared.SendError(w, http.StatusConflict, "PROVIDER_WALLET_UNAVAILABLE", err.Error())
+	case errors.Is(err, ErrDebtPartiallySettled):
+		shared.SendError(w, http.StatusConflict, "PROVIDER_DEBT_PARTIALLY_SETTLED", err.Error())
+	case errors.Is(err, ErrDebtStateConflict):
+		shared.SendError(w, http.StatusConflict, "PROVIDER_DEBT_STATE_CONFLICT", err.Error())
 	default:
 		shared.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
 	}
