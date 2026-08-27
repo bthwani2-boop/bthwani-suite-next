@@ -30,6 +30,15 @@ type DailyFinanceClose struct {
 	ClosedAt                           time.Time `json:"closedAt"`
 }
 
+func validateDailyCloseBusinessDate(date, now time.Time) error {
+	dateUTC := date.UTC().Truncate(24 * time.Hour)
+	todayUTC := now.UTC().Truncate(24 * time.Hour)
+	if dateUTC.After(todayUTC) {
+		return fmt.Errorf("cannot close future business date %s", date.Format(time.DateOnly))
+	}
+	return nil
+}
+
 func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDailyCloseInput, correlationID string) (*DailyFinanceClose, error) {
 	operatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
@@ -50,6 +59,9 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 	if err != nil {
 		return nil, fmt.Errorf("businessDate must be YYYY-MM-DD")
 	}
+	if err := validateDailyCloseBusinessDate(date, time.Now().UTC()); err != nil {
+		return nil, err
+	}
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -63,6 +75,44 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 		return nil, fmt.Errorf("business date %s is already closed", input.BusinessDate)
 	} else if err != sql.ErrNoRows {
 		return nil, err
+	}
+
+	var unresolvedPaymentOutcomes int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM wlt_payment_sessions
+		WHERE operator_context_id = $1
+		  AND status IN ('pending_provider', 'provider_result_unknown')
+	`, operatorContextID).Scan(&unresolvedPaymentOutcomes); err != nil {
+		return nil, err
+	}
+	if unresolvedPaymentOutcomes > 0 {
+		return nil, fmt.Errorf("cannot close day: %d payment-provider outcomes are unresolved", unresolvedPaymentOutcomes)
+	}
+
+	var openReconciliationCases int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM wlt_reconciliation_cases
+		WHERE operator_context_id = $1 AND status = 'open'
+	`, operatorContextID).Scan(&openReconciliationCases); err != nil {
+		return nil, err
+	}
+	if openReconciliationCases > 0 {
+		return nil, fmt.Errorf("cannot close day: %d reconciliation cases remain open", openReconciliationCases)
+	}
+
+	var unresolvedPayoutOutcomes int
+	if err := tx.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM wlt_payout_requests
+		WHERE operator_context_id = $1
+		  AND status IN ('provider_pending', 'provider_result_unknown')
+	`, operatorContextID).Scan(&unresolvedPayoutOutcomes); err != nil {
+		return nil, err
+	}
+	if unresolvedPayoutOutcomes > 0 {
+		return nil, fmt.Errorf("cannot close day: %d payout-provider outcomes are unresolved", unresolvedPayoutOutcomes)
 	}
 
 	// Calculate totals for the day from the ledger

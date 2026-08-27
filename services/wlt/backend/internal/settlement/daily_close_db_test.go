@@ -10,6 +10,17 @@ import (
 	"wlt-api/internal/testsupport"
 )
 
+func TestValidateDailyCloseBusinessDateRejectsFuture(t *testing.T) {
+	now := time.Date(2026, time.August, 27, 12, 0, 0, 0, time.UTC)
+	future := now.AddDate(0, 0, 1)
+	if err := validateDailyCloseBusinessDate(future, now); err == nil {
+		t.Fatal("future business date must be rejected")
+	}
+	if err := validateDailyCloseBusinessDate(now, now); err != nil {
+		t.Fatalf("current business date should remain representable for the canonical cutoff gate: %v", err)
+	}
+}
+
 // TestDailyCloseTotalsComeFromTheCanonicalLedger proves the close reads the
 // double-entry kernel.
 //
