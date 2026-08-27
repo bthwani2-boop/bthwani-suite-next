@@ -14,22 +14,6 @@ export type AppearanceScope = 'Global' | 'Platform' | 'App' | 'Surface' | 'Servi
 export type AppearanceRisk = 'low' | 'medium' | 'high' | 'visual-identity';
 export type AppearanceOwner = 'Platform' | 'DesignSystem' | 'AppShell' | 'ServiceOwner';
 
-interface AppearanceRecord {
-  id: string;
-  label: string;
-  owner: AppearanceOwner;
-  status: AppearanceStatus;
-  scope: AppearanceScope;
-  risk: AppearanceRisk;
-  currentSnapshotValue: string;
-  proposedSnapshotValue: string;
-  effectSummary: string;
-  auditRollbackHint: string;
-  centralColorSystemNote: string;
-  reason?: string;
-  evidence?: string;
-  rollbackTarget?: string;
-}
 
 // ── Providers Types ───────────────────────────────────────────────────────────
 export type ProviderEnvironment = 'test' | 'sandbox' | 'production';
