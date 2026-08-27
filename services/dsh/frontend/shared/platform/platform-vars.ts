@@ -4,8 +4,6 @@ export interface PlatformVarsConfig {
   dshApiBaseUrl: string | null;
   authBaseUrl: string | null;
   dshClientId: string | null;
-  mediaBaseUrl: string | null;
-  devMediaBaseUrl: string | null;
   dshVisibilityRegionSanaa: string | null;
   partnerAcceptanceTimeoutSecs: string | null;
   dispatchSearchRadiusKm: string | null;
@@ -17,8 +15,6 @@ export const DEFAULT_PLATFORM_VARS: PlatformVarsConfig = {
   dshApiBaseUrl: null,
   authBaseUrl: null,
   dshClientId: null,
-  mediaBaseUrl: null,
-  devMediaBaseUrl: null,
   dshVisibilityRegionSanaa: null,
   partnerAcceptanceTimeoutSecs: null,
   dispatchSearchRadiusKm: null,
@@ -47,18 +43,6 @@ export class PlatformVarsRegistry {
         null
       )?.trim() || null;
       this.config.dshClientId = (process.env.EXPO_PUBLIC_DSH_CLIENT_ID ?? null)?.trim() || null;
-      this.config.mediaBaseUrl = (
-        process.env.EXPO_PUBLIC_MEDIA_BASE_URL ??
-        process.env.NEXT_PUBLIC_MEDIA_BASE_URL ??
-        null
-      )?.trim() || null;
-      this.config.devMediaBaseUrl = (
-        process.env.EXPO_PUBLIC_DEV_MEDIA_BASE_URL ??
-        process.env.EXPO_PUBLIC_DEV_MEDIA_BASE ??
-        process.env.NEXT_PUBLIC_DEV_MEDIA_BASE_URL ??
-        process.env.NEXT_PUBLIC_DEV_MEDIA_BASE ??
-        null
-      )?.trim() || null;
     }
   }
 
