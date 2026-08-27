@@ -69,6 +69,15 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 	}
 	defer tx.Rollback() //nolint:errcheck
 
+	// Serialize close attempts for the same operator context and business day.
+	// This prevents two concurrent callers from observing the same pre-close
+	// snapshot and producing competing financial close records.
+	if _, err := tx.ExecContext(ctx, `
+		SELECT pg_advisory_xact_lock(hashtextextended($1 || ':' || $2, 0))
+	`, operatorContextID, date.Format(time.DateOnly)); err != nil {
+		return nil, fmt.Errorf("lock daily finance close boundary: %w", err)
+	}
+
 	var cutoffAt time.Time
 	if err := tx.QueryRowContext(ctx, `SELECT clock_timestamp()`).Scan(&cutoffAt); err != nil {
 		return nil, err
