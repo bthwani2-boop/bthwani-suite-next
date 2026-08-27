@@ -4,8 +4,12 @@ import {
   resolveMutationIdentityScope,
 } from "@bthwani/data-runtime/mutation-identity-scope";
 
-const STORAGE_KEY = "@bthwani/field-payout-attempt:v2";
+const STORAGE_PREFIX = "@bthwani/field-payout-attempt:v3/";
 const STORAGE_KEY_LEGACY = "@bthwani/field-payout-attempt:v1";
+
+function storageKey(scope: { readonly actorId: string; readonly installationId: string; readonly entityId: string }, signature: string): string {
+  return `${STORAGE_PREFIX}${encodeURIComponent(scope.actorId)}/${encodeURIComponent(scope.installationId)}/${encodeURIComponent(scope.entityId)}/${encodeURIComponent(signature)}`;
+}
 const MAX_ATTEMPT_AGE_MS = 24 * 60 * 60 * 1000;
 let fallbackSequence = 0;
 
@@ -76,8 +80,9 @@ export async function getOrCreateFieldPayoutAttempt(
   const entityId = payoutEntityId(normalizedActorId, amountMinorUnits, normalizedCurrency);
   const scope = await resolveMutationIdentityScope(normalizedActorId, { entityId });
   const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
+  const attemptKey = storageKey(scoped, signature);
 
-  const existingRaw = await bthwaniDurableStorage.getItem(STORAGE_KEY);
+  const existingRaw = await bthwaniDurableStorage.getItem(attemptKey);
   if (existingRaw) {
     const existing = parseStoredAttempt(existingRaw);
     if (existing) {
@@ -94,14 +99,14 @@ export async function getOrCreateFieldPayoutAttempt(
         );
       }
       if (existing.scope.entityId !== entityId) {
-        await bthwaniDurableStorage.removeItem(STORAGE_KEY);
+        await bthwaniDurableStorage.removeItem(attemptKey);
       } else if (
         existing.signature === signature
         && Date.now() - existing.createdAtMs <= MAX_ATTEMPT_AGE_MS
       ) {
         return existing;
       } else {
-        await bthwaniDurableStorage.removeItem(STORAGE_KEY);
+        await bthwaniDurableStorage.removeItem(attemptKey);
       }
     }
   }
@@ -118,10 +123,25 @@ export async function getOrCreateFieldPayoutAttempt(
     createdAtMs: Date.now(),
     scope: scoped,
   };
-  await bthwaniDurableStorage.setItem(STORAGE_KEY, JSON.stringify(attempt));
+  await bthwaniDurableStorage.setItem(attemptKey, JSON.stringify(attempt));
   return attempt;
 }
 
-export async function clearFieldPayoutAttempt(): Promise<void> {
-  await bthwaniDurableStorage.removeItem(STORAGE_KEY);
+export async function clearFieldPayoutAttempt(
+  actorId: string,
+  amountMinorUnits: number,
+  currency: string,
+  signature: string,
+): Promise<void> {
+  const normalizedActorId = actorId.trim();
+  const normalizedCurrency = currency.trim().toUpperCase();
+  const normalizedSignature = signature.trim();
+  if (!normalizedActorId || !normalizedCurrency || !normalizedSignature) return;
+  const entityId = payoutEntityId(normalizedActorId, amountMinorUnits, normalizedCurrency);
+  const scope = await resolveMutationIdentityScope(normalizedActorId, { entityId });
+  const key = storageKey({ actorId: scope.actorId, installationId: scope.installationId, entityId }, normalizedSignature);
+  const parsed = parseStoredAttempt(await bthwaniDurableStorage.getItem(key));
+  if (parsed?.signature === normalizedSignature && parsed.scope.actorId === scope.actorId && parsed.scope.installationId === scope.installationId && parsed.scope.entityId === entityId) {
+    await bthwaniDurableStorage.removeItem(key);
+  }
 }
