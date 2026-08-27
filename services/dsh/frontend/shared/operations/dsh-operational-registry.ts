@@ -116,7 +116,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'detail-on-open',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'dsh/frontend/shared/products/products.contract.ts',
+    currentEvidencePath: 'dsh/frontend/shared/catalog/central-catalog.types.ts',
     notes: 'Catalog data remains central; surfaces must not clone product/media payloads locally.',
   },
   {
