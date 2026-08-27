@@ -131,15 +131,21 @@ func ResolveReconciliationCase(ctx context.Context, db *sql.DB, caseID, operator
 		return err
 	}
 
+	// Reference the ledger transaction the resolution produced (when the
+	// confirmed status was a capture) so the event row is traceable to its
+	// money movement without joining through the session.
+	processingResult := "reconciliation case " + caseID + " resolved"
+	if ledgerTransactionID != "" {
+		processingResult += "; ledger transaction " + ledgerTransactionID
+	}
 	if _, err = tx.ExecContext(ctx, `
 		UPDATE wlt_payment_provider_events
 		SET processing_state='applied', processing_result=$2, processed_at=NOW()
-		WHERE provider_event_id=$1`, eventID, "reconciliation case "+caseID+" resolved"); err != nil {
+		WHERE provider_event_id=$1`, eventID, processingResult); err != nil {
 		return err
 	}
 	if err := tx.Commit(); err != nil {
 		return err
 	}
-	_ = ledgerTransactionID
 	return nil
 }
