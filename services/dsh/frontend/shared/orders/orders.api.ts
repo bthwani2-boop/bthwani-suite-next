@@ -7,7 +7,6 @@ import type {
   DshPartnerOrder,
   DshRejectOrderInput,
   DshStoreCaptainHandoff,
-  DshStorePreparationPolicy,
   DshPreparationIssue,
   DshPreparationIssueList,
   DshCreatePreparationIssueInput,
@@ -185,23 +184,6 @@ export async function resolveOrderPreparationIssue(
     withOptionalToken({ method: "POST", body: input }, token),
   );
   return data.issue;
-}
-
-export async function updateStorePreparationPolicy(
-  storeId: string,
-  input: {
-    readonly expectedVersion: number;
-    readonly defaultPreparationMinutes: number;
-    readonly warningBeforeMinutes: number;
-    readonly reason: string;
-  },
-  token?: string,
-): Promise<DshStorePreparationPolicy> {
-  const data = await request<{ policy: DshStorePreparationPolicy }>(
-    `/dsh/partner/stores/${encodeURIComponent(storeId)}/order-preparation-policy`,
-    withOptionalToken({ method: "PUT", body: input }, token),
-  );
-  return data.policy;
 }
 
 export function classifyOrderError(error: unknown): {
