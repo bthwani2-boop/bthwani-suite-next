@@ -1063,14 +1063,6 @@ export function getDshFlowsForSurface(surfaceId: DshSurfaceId): readonly DshFlow
   );
 }
 
-/**
- * All flows with financialImpact=true.
- * These must remain finance-snapshot-only — no mutation from DSH.
- */
-export function getDshFinanceImpactFlows(): readonly DshFlowRegistryEntry[] {
-  return DSH_FLOW_REGISTRY.filter((entry) => entry.financialImpact === true);
-}
-
 export type DshFlowPolicySummary = {
   readonly flowId: string;
   readonly ownerSurface: DshSurfaceId;
