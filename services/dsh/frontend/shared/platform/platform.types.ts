@@ -36,23 +36,6 @@ export type ProviderEnvironment = 'test' | 'sandbox' | 'production';
 export type ProviderStatus = 'active' | 'inactive' | 'test-only' | 'pending-approval';
 export type ProviderOwner = 'Platform' | 'DesignSystem' | 'ServiceOwner';
 
-interface ProviderRecord {
-  id: string;
-  label: string;
-  category: string;
-  selectedProvider: string;
-  /** Always masked — never show real keys */
-  maskedCredential: string;
-  environment: ProviderEnvironment;
-  status: ProviderStatus;
-  owner: ProviderOwner;
-  priority: number;
-  fallbackProvider?: string;
-  lastTestResult?: 'pass' | 'fail' | 'not-run';
-  rollbackTarget?: string;
-  evidence?: string;
-  activationNote: string;
-}
 
 // ── Services Types ────────────────────────────────────────────────────────────
 export type ServiceStatus = 'live' | 'paused' | 'internal-only' | 'pilot' | 'maintenance';
