@@ -120,8 +120,8 @@ export async function createFieldAgent(input: CreateFieldAgentInput): Promise<Fi
   });
 }
 
-export async function updateFieldAgent(actorId: string, input: UpdateFieldAgentInput): Promise<FieldAgent> {
-  return request<FieldAgent>(`/workforce/field-agents/${encodeURIComponent(actorId)}`, { method: "PATCH", body: input });
+export async function updateFieldAgent(actorId: string, input: UpdateFieldAgentInput, idempotencyKey?: string): Promise<FieldAgent> {
+  return request<FieldAgent>(`/workforce/field-agents/${encodeURIComponent(actorId)}`, { method: "PATCH", body: input, idempotencyKey });
 }
 
 export async function suspendFieldAgent(actorId: string, expectedVersion: number, reason: string, idempotencyKey?: string): Promise<FieldAgent> {
@@ -161,8 +161,8 @@ export async function createCaptain(input: CreateCaptainInput): Promise<Captain>
   });
 }
 
-export async function updateCaptain(actorId: string, input: UpdateCaptainInput): Promise<Captain> {
-  return request<Captain>(`/workforce/captains/${encodeURIComponent(actorId)}`, { method: "PATCH", body: input });
+export async function updateCaptain(actorId: string, input: UpdateCaptainInput, idempotencyKey?: string): Promise<Captain> {
+  return request<Captain>(`/workforce/captains/${encodeURIComponent(actorId)}`, { method: "PATCH", body: input, idempotencyKey });
 }
 
 export async function suspendCaptain(actorId: string, expectedVersion: number, reason: string, idempotencyKey?: string): Promise<Captain> {
@@ -205,8 +205,8 @@ export async function createEmployee(input: CreateEmployeeInput): Promise<Employ
   return result.employee;
 }
 
-export async function updateEmployee(actorId: string, input: UpdateEmployeeInput): Promise<Employee> {
-  return request<Employee>(`${DEPARTMENT_EMPLOYEE_PATH}/${encodeURIComponent(actorId)}`, { method: "PATCH", body: input });
+export async function updateEmployee(actorId: string, input: UpdateEmployeeInput, idempotencyKey?: string): Promise<Employee> {
+  return request<Employee>(`${DEPARTMENT_EMPLOYEE_PATH}/${encodeURIComponent(actorId)}`, { method: "PATCH", body: input, idempotencyKey });
 }
 
 export async function suspendEmployee(actorId: string, expectedVersion: number, reason: string, idempotencyKey?: string): Promise<Employee> {

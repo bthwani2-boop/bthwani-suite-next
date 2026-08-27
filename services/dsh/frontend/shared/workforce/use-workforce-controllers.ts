@@ -50,7 +50,7 @@ function useWorkforceMutationCommands(targetActorId: string) {
   const identity = useIdentitySession();
   const operatorActorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
   const commandIds = useMemo(() => new Map<string, string>(), [operatorActorId, targetActorId]);
-  const commandFor = useCallback((action: "suspend" | "reactivate", expectedVersion: number, reason: string) => {
+  const commandFor = useCallback((action: "update" | "suspend" | "reactivate", expectedVersion: number, reason: string) => {
     if (!operatorActorId) throw new Error("جلسة لوحة التحكم غير جاهزة لتنفيذ تغيير حالة الملف.");
     const key = `${operatorActorId}:${targetActorId}:${action}:${expectedVersion}:${reason.trim()}`;
     const existing = commandIds.get(key);
@@ -137,8 +137,14 @@ export function useFieldAgentDetailController(actorId: string) {
   );
 
   const update = useCallback(
-    (input: UpdateFieldAgentInput) => runAction(() => updateFieldAgent(actorId, input)),
-    [actorId, runAction],
+    (input: UpdateFieldAgentInput) => runAction(() => {
+      const command = mutationCommands.commandFor("update", 0, JSON.stringify(input));
+      return updateFieldAgent(actorId, input, command.id).then((result) => {
+        mutationCommands.commandIds.delete(command.key);
+        return result;
+      });
+    }),
+    [actorId, mutationCommands, runAction],
   );
   const suspend = useCallback(
     (expectedVersion: number, reason: string) => runAction(() => {
@@ -301,8 +307,14 @@ export function useCaptainDetailController(actorId: string) {
   );
 
   const update = useCallback(
-    (input: UpdateCaptainInput) => runAction(() => updateCaptain(actorId, input)),
-    [actorId, runAction],
+    (input: UpdateCaptainInput) => runAction(() => {
+      const command = mutationCommands.commandFor("update", 0, JSON.stringify(input));
+      return updateCaptain(actorId, input, command.id).then((result) => {
+        mutationCommands.commandIds.delete(command.key);
+        return result;
+      });
+    }),
+    [actorId, mutationCommands, runAction],
   );
   const suspend = useCallback(
     (expectedVersion: number, reason: string) => runAction(() => {

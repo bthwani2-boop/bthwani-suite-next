@@ -24,7 +24,7 @@ function useEmployeeMutationCommands(targetActorId: string) {
   const identity = useIdentitySession();
   const operatorActorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
   const commandIds = useMemo(() => new Map<string, string>(), [operatorActorId, targetActorId]);
-  const commandFor = useCallback((action: "suspend" | "reactivate", expectedVersion: number, reason: string) => {
+  const commandFor = useCallback((action: "update" | "suspend" | "reactivate", expectedVersion: number, reason: string) => {
     if (!operatorActorId) throw new Error("جلسة لوحة التحكم غير جاهزة لتنفيذ تغيير حالة الموظف.");
     const key = `${operatorActorId}:${targetActorId}:${action}:${expectedVersion}:${reason.trim()}`;
     const existing = commandIds.get(key);
@@ -114,8 +114,14 @@ export function useEmployeeDetailController(actorId: string) {
   );
 
   const update = useCallback(
-    (input: UpdateEmployeeInput) => runAction(() => updateEmployee(actorId, input)),
-    [actorId, runAction],
+    (input: UpdateEmployeeInput) => runAction(() => {
+      const command = mutationCommands.commandFor("update", 0, JSON.stringify(input));
+      return updateEmployee(actorId, input, command.id).then((result) => {
+        mutationCommands.commandIds.delete(command.key);
+        return result;
+      });
+    }),
+    [actorId, mutationCommands, runAction],
   );
   const suspend = useCallback(
     (expectedVersion: number, reason: string) => runAction(() => {
