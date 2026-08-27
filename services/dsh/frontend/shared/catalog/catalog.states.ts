@@ -51,10 +51,6 @@ export function catalogActionIdleState(): CatalogActionState {
   return "idle";
 }
 
-export function catalogActionSuccessState(): CatalogActionState {
-  return "success";
-}
-
 export function catalogActionErrorState(): CatalogActionState {
   return "error";
 }
