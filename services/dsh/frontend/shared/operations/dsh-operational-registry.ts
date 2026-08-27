@@ -137,7 +137,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'detail-on-open',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'dsh/frontend/shared/dsh-order-journey.model.ts',
+    currentEvidencePath: 'dsh/frontend/shared/orders/orders.state-machine.ts',
     notes: 'Order lifecycle belongs to DSH; payment/refund truth stays WLT read-only.',
   },
   {
