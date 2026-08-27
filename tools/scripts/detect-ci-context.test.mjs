@@ -63,8 +63,8 @@ test("dependency manifests route to node integrity verification", () => {
   assert.deepEqual(result.required_jobs, ["node", "backends"]);
 });
 
-test("full mode enables every owner without adding a tier or profile", () => {
-  const result = classifyFiles([], { mode: "full" });
+test("fullScope enables every owner without adding a tier or profile", () => {
+  const result = classifyFiles([], { fullScope: true });
   for (const key of ["frontend", "contracts", "dsh", "wlt", "identity", "workforce", "platform", "providers", "database", "runtime_required", "node", "backend"]) {
     assert.equal(result[key], true, key);
   }

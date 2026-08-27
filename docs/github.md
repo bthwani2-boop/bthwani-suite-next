@@ -62,7 +62,7 @@ RESOLVE EXACT LIVE CANDIDATE
 
 A new commit produces a different exact SHA, so previous evidence cannot satisfy current-head merge protection. The status names remain `BThwani CI / PR result` and `BThwani / Final Closure`.
 
-OpenCodeReview is context/delegation preparation only. It is not a semantic review and is not part of the required Final Closure gate. `master-sonar.yml` remains a separate post-merge default-branch analysis authority when its dashboard/trend purpose is required.
+OpenCodeReview is not part of the CI control plane and has been removed because the repository had no semantic-review consumer for its context-only output. `master-sonar.yml` remains a separate post-merge default-branch analysis authority when its dashboard/trend purpose is required.
 
 ## Verification discipline
 

@@ -114,10 +114,9 @@ jobs:
     name: Full CI preflight
     needs: [resolve]
     if: ${{ needs.resolve.result == 'success' }}
-    uses: ./.github/workflows/ci.yml
+    uses: ./.github/workflows/ci-check.yml
     with:
-      mode: full
-      target_kind: pull_request
+      full_scope: true
       pr_number: ${{ needs.resolve.outputs.pr_number }}
       expected_head_sha: ${{ needs.resolve.outputs.head_sha }}
       expected_base_sha: ${{ needs.resolve.outputs.base_sha }}
@@ -153,12 +152,8 @@ jobs:
     if: ${{ needs.resolve.result == 'success' && needs.ci.result == 'success' }}
     uses: ./.github/workflows/semgrep.yml
     with:
-      mode: diff
-      pr_number: ${{ needs.resolve.outputs.pr_number }}
       head_sha: ${{ needs.resolve.outputs.head_sha }}
       base_sha: ${{ needs.resolve.outputs.base_sha }}
-      base_ref: ${{ needs.resolve.outputs.base_ref }}
-      head_ref: ${{ needs.resolve.outputs.head_ref }}
 
   security:
     name: Security exact analysis

@@ -1,41 +1,19 @@
 name: BThwani CI
-run-name: >-
-  ${{ inputs.target_kind == 'pull_request' && 'BThwani CI / PR result' || 'BThwani CI / check result' }}
+run-name: BThwani CI ${{ inputs.expected_head_sha || github.sha }}
 
 on:
   workflow_call:
     inputs:
-      mode: {type: string, required: false, default: affected}
-      target_kind: {type: string, required: false, default: branch}
+      full_scope: {type: boolean, required: false, default: false}
       pr_number: {type: string, required: false, default: ""}
       expected_head_sha: {type: string, required: false, default: ""}
       expected_base_sha: {type: string, required: false, default: ""}
   workflow_dispatch:
     inputs:
-      mode:
-        description: Internal verification scope
-        required: true
-        default: affected
-        type: choice
-        options: [affected, full]
-      target_kind:
-        description: Internal target identity
-        required: false
-        default: branch
-        type: choice
-        options: [branch, pull_request]
-      pr_number:
-        description: Pull request number for a PR candidate
-        required: false
-        type: string
-      expected_head_sha:
-        description: Exact candidate SHA
-        required: false
-        type: string
-      expected_base_sha:
-        description: Exact base SHA
-        required: false
-        type: string
+      pr_number: {description: Optional open PR number, required: false, type: string}
+      expected_head_sha: {description: Optional exact HEAD SHA, required: false, type: string}
+      expected_base_sha: {description: Optional exact BASE SHA, required: false, type: string}
+      full_scope: {description: Run all owner checks, required: false, default: false, type: boolean}
 
 permissions:
   actions: read
@@ -44,7 +22,7 @@ permissions:
   statuses: write
 
 concurrency:
-  group: bthwani-ci-${{ inputs.target_kind || 'branch' }}-${{ inputs.pr_number || inputs.expected_head_sha || github.ref }}
+  group: bthwani-ci-${{ inputs.pr_number || inputs.expected_head_sha || github.ref }}
   cancel-in-progress: true
 
 env:
@@ -52,21 +30,18 @@ env:
 
 jobs:
   context:
-    name: Resolve exact live candidate and affected scope
+    name: Verify exact candidate and resolve affected scope
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
-      target_kind: ${{ steps.target.outputs.target_kind }}
-      pr_number: ${{ steps.target.outputs.pr_number }}
-      head_ref: ${{ steps.target.outputs.head_ref }}
-      base_ref: ${{ steps.target.outputs.base_ref }}
-      base_sha: ${{ steps.target.outputs.base_sha }}
-      head_sha: ${{ steps.target.outputs.head_sha }}
+      head_sha: ${{ steps.identity.outputs.head_sha }}
+      base_sha: ${{ steps.identity.outputs.base_sha }}
+      pr_number: ${{ steps.identity.outputs.pr_number }}
       full_scope: ${{ steps.scope.outputs.full_scope }}
       dependency_changed: ${{ steps.scope.outputs.dependency_changed }}
+      platform: ${{ steps.scope.outputs.platform }}
       infrastructure: ${{ steps.scope.outputs.infrastructure }}
       ci_control_plane: ${{ steps.scope.outputs.ci_control_plane }}
-      frontend: ${{ steps.scope.outputs.frontend }}
       contracts: ${{ steps.scope.outputs.contracts }}
       dsh: ${{ steps.scope.outputs.dsh }}
       wlt: ${{ steps.scope.outputs.wlt }}
@@ -80,7 +55,7 @@ jobs:
       verification_required: ${{ steps.scope.outputs.verification_required }}
       backend_required: ${{ steps.scope.outputs.backend_required }}
     steps:
-      - name: Checkout exact requested candidate
+      - name: Checkout exact candidate
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: ${{ inputs.expected_head_sha || github.sha }}
@@ -88,75 +63,48 @@ jobs:
           fetch-tags: false
           filter: blob:none
           persist-credentials: false
-
       - name: Set up locked Node runtime
         uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
           node-version: "24.17.0"
-
-      - name: Resolve live branch and PR identity
-        id: target
+      - name: Revalidate exact candidate and PR when supplied
+        id: identity
         shell: bash
         env:
-          TARGET_KIND: ${{ inputs.target_kind }}
-          PR_NUMBER_INPUT: ${{ inputs.pr_number }}
-          EXPECTED_HEAD_SHA: ${{ inputs.expected_head_sha }}
-          EXPECTED_BASE_SHA: ${{ inputs.expected_base_sha }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+          INPUT_HEAD_SHA: ${{ inputs.expected_head_sha }}
+          INPUT_BASE_SHA: ${{ inputs.expected_base_sha }}
           DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
         run: |
           set -euo pipefail
           actual_head="$(git rev-parse HEAD)"
-          target_kind="${TARGET_KIND:-branch}"
-          pr_number="${PR_NUMBER_INPUT:-}"
-          head_ref="${GITHUB_REF_NAME}"
-          base_ref="${DEFAULT_BRANCH}"
-          base_sha=""
-
-          if [[ "${target_kind}" == "pull_request" ]]; then
-            [[ "${pr_number}" =~ ^[1-9][0-9]*$ ]] || { echo "::error::a PR number is required"; exit 1; }
-            pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${pr_number}")"
+          expected_head="${INPUT_HEAD_SHA:-${actual_head}}"
+          [[ "${actual_head}" == "${expected_head}" ]] || { echo "::error::candidate checkout drift"; exit 1; }
+          if [[ -n "${PR_NUMBER}" ]]; then
+            pr="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}")"
             [[ "$(jq -r '.state' <<<"${pr}")" == "open" ]] || { echo "::error::PR is not open"; exit 1; }
-            pr_head="$(jq -r '.head.sha' <<<"${pr}")"
             base_sha="$(jq -r '.base.sha' <<<"${pr}")"
-            head_ref="$(jq -r '.head.ref' <<<"${pr}")"
-            base_ref="$(jq -r '.base.ref' <<<"${pr}")"
-            [[ "${actual_head}" == "${pr_head}" ]] || { echo "::error::live checkout is not the PR HEAD"; exit 1; }
-            [[ -z "${EXPECTED_HEAD_SHA}" || "${EXPECTED_HEAD_SHA}" == "${pr_head}" ]] || { echo "::error::stale head identity"; exit 1; }
-            [[ -z "${EXPECTED_BASE_SHA}" || "${EXPECTED_BASE_SHA}" == "${base_sha}" ]] || { echo "::error::stale base identity"; exit 1; }
+            [[ "$(jq -r '.head.sha' <<<"${pr}")" == "${expected_head}" ]] || { echo "::error::stale PR head"; exit 1; }
+            [[ -z "${INPUT_BASE_SHA}" || "${INPUT_BASE_SHA}" == "${base_sha}" ]] || { echo "::error::stale PR base"; exit 1; }
           else
-            [[ -z "${EXPECTED_HEAD_SHA}" || "${EXPECTED_HEAD_SHA}" == "${actual_head}" ]] || { echo "::error::stale branch identity"; exit 1; }
-            base_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/branches/${base_ref}" --jq '.commit.sha')"
-            if [[ "${base_sha}" == "${actual_head}" ]]; then
-              echo "::error::branch HEAD equals base; no candidate delta"; exit 1
+            base_sha="${INPUT_BASE_SHA:-}"
+            if [[ -z "${base_sha}" ]]; then
+              base_sha="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/branches/${DEFAULT_BRANCH}" --jq '.commit.sha')"
             fi
           fi
-          [[ "${base_sha}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::invalid base SHA"; exit 1; }
-          [[ "${actual_head}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::invalid head SHA"; exit 1; }
+          [[ "${expected_head}" =~ ^[0-9a-fA-F]{40}$ && "${base_sha}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::exact head/base SHA required"; exit 1; }
           git cat-file -e "${base_sha}^{commit}"
-          git merge-base --is-ancestor "${base_sha}" "${actual_head}" || { echo "::error::base is not an ancestor of candidate"; exit 1; }
-          {
-            echo "target_kind=${target_kind}"
-            echo "pr_number=${pr_number}"
-            echo "head_ref=${head_ref}"
-            echo "base_ref=${base_ref}"
-            echo "base_sha=${base_sha}"
-            echo "head_sha=${actual_head}"
-          } >> "${GITHUB_OUTPUT}"
-          {
-            echo "### Exact candidate"
-            echo "- Target: ${target_kind}"
-            echo "- PR: ${pr_number:-none}"
-            echo "- Head: ${head_ref}@${actual_head}"
-            echo "- Base: ${base_ref}@${base_sha}"
-          } >> "${GITHUB_STEP_SUMMARY}"
-
+          git merge-base --is-ancestor "${base_sha}" "${expected_head}" || { echo "::error::base is not an ancestor"; exit 1; }
+          echo "head_sha=${expected_head}" >> "${GITHUB_OUTPUT}"
+          echo "base_sha=${base_sha}" >> "${GITHUB_OUTPUT}"
+          echo "pr_number=${PR_NUMBER}" >> "${GITHUB_OUTPUT}"
       - name: Resolve affected owners from exact Git diff
         id: scope
         shell: bash
         env:
-          CI_BASE_SHA: ${{ steps.target.outputs.base_sha }}
-          CI_HEAD_SHA: ${{ steps.target.outputs.head_sha }}
-          CI_MODE: ${{ inputs.mode }}
+          CI_BASE_SHA: ${{ steps.identity.outputs.base_sha }}
+          CI_HEAD_SHA: ${{ steps.identity.outputs.head_sha }}
+          CI_FULL_SCOPE: ${{ inputs.full_scope }}
         run: node tools/scripts/detect-ci-context.mjs
 
   diagnostics:
@@ -182,6 +130,7 @@ jobs:
       contracts: ${{ needs.context.outputs.contracts }}
       ci_control_plane: ${{ needs.context.outputs.ci_control_plane }}
       dependency_changed: ${{ needs.context.outputs.dependency_changed }}
+      platform: ${{ needs.context.outputs.platform }}
 
   backends:
     name: Backend verification
@@ -209,13 +158,13 @@ jobs:
       candidate_sha: ${{ needs.context.outputs.head_sha }}
 
   result:
-    name: ${{ inputs.target_kind == 'pull_request' && 'BThwani CI / PR result' || 'BThwani CI / check result' }}
+    name: ${{ inputs.pr_number != '' && 'BThwani CI / PR result' || 'BThwani CI / check result' }}
     needs: [context, diagnostics, verification, backends, runtime]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Enforce applicable results on the exact candidate
+      - name: Enforce applicable results
         shell: bash
         env:
           CONTEXT_RESULT: ${{ needs.context.result }}
@@ -228,7 +177,6 @@ jobs:
           BACKEND_REQUIRED: ${{ needs.context.outputs.backend_required }}
           RUNTIME_REQUIRED: ${{ needs.context.outputs.runtime_required }}
           HEAD_SHA: ${{ needs.context.outputs.head_sha }}
-          TARGET_KIND: ${{ needs.context.outputs.target_kind }}
         run: |
           set -euo pipefail
           [[ "${CONTEXT_RESULT}" == "success" ]] || { echo "::error::candidate context failed"; exit 1; }
@@ -243,7 +191,7 @@ jobs:
           check_result backends "${BACKENDS_RESULT}" "${BACKEND_REQUIRED}"
           check_result runtime "${RUNTIME_RESULT}" "${RUNTIME_REQUIRED}"
           if (( ${#failures[@]} )); then
-            echo "::error::BThwani CI failed for ${HEAD_SHA}: $(IFS=,; echo "${failures[*]}")"
+            echo "::error::Exact CI failed for ${HEAD_SHA}: $(IFS=,; echo "${failures[*]}")"
             exit 1
           fi
-          echo "Exact candidate ${HEAD_SHA} passed applicable verification (${TARGET_KIND})."
+          echo "Exact candidate ${HEAD_SHA} passed applicable verification."

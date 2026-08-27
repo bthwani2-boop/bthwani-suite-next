@@ -19,11 +19,10 @@ const mustNotContain = (text, patterns, owner) => {
 const workflowDir = path.resolve(".github/workflows");
 const workflowFiles = fs.readdirSync(workflowDir).filter((file) => file.endsWith(".yml"));
 const allWorkflowText = workflowFiles.map((file) => read(path.join(workflowDir, file))).join("\n");
-const ci = read(path.join(workflowDir, "ci.yml"));
+const ci = read(path.join(workflowDir, "ci-check.yml"));
 const closure = read(path.join(workflowDir, "final-closure.yml"));
-
-mustContain(ci, ["workflow_call:", "workflow_dispatch:", "Resolve exact live candidate and affected scope", "git merge-base --is-ancestor"], "manual check controller");
-mustNotContain(ci, ["pull_request:", "run_assurance", "verification_tier", "runtime_profile", "previous_head_sha", "github.event.before"], "manual check controller");
+mustContain(ci, ["workflow_call:", "workflow_dispatch:", "Verify exact candidate and resolve affected scope", "git merge-base --is-ancestor"], "single CI controller");
+mustNotContain(ci, ["pull_request:", "push:", "schedule:", "run_assurance", "verification_tier", "runtime_profile", "previous_head_sha", "github.event.before"], "single CI controller");
 mustContain(closure, ["workflow_dispatch:", "Resolve exact live PR candidate", "git diff --name-only", "name: Full CI preflight", "BThwani / Final Closure", "statuses/${HEAD_SHA}"], "final closure");
 mustNotContain(closure, ["pull_request:", "open-code-review.yml", "SEMANTIC_RESULT", "pulls/.*?/files?", "per_page=100", "workflow_run:", "repository_dispatch", "sleep", "poll"], "final closure control plane");
 mustNotContain(allWorkflowText, ["workflow_run:", "repository_dispatch", "actions/workflows/"], "workflow control plane");

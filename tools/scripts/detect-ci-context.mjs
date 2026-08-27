@@ -11,7 +11,7 @@ const isDockerFile = (file) => file === ".dockerignore" || /(^|\/)(Dockerfile(?:
 
 export function classifyFiles(inputFiles, options = {}) {
   const files = sorted(inputFiles);
-  const fullScope = String(options.mode ?? "affected").trim().toLowerCase() === "full" || options.fullScope === true;
+  const fullScope = options.fullScope === true;
 
   const moduleChanged = (prefixes) => fullScope || hasPath(files, (file) => startsWithAny(file, prefixes));
   const frontend = fullScope || hasPath(files, (file) =>
@@ -94,11 +94,11 @@ function writeOutputs(outputs) {
 function main() {
   const baseSha = String(process.env.CI_BASE_SHA ?? "").trim();
   const headSha = String(process.env.CI_HEAD_SHA ?? "HEAD").trim() || "HEAD";
-  const mode = String(process.env.CI_MODE ?? "affected").trim() || "affected";
+  const fullScope = String(process.env.CI_FULL_SCOPE ?? "false").trim().toLowerCase() === "true";
   const provided = String(process.env.CI_CHANGED_FILES ?? "").trim();
   const files = provided ? provided.split(/\r?\n/u).map(normalizePath).filter(Boolean) : readChangedFiles(baseSha, headSha);
-  const classification = classifyFiles(files, { mode });
-  const outputs = { base_sha: baseSha, head_sha: headSha, mode, ...classification };
+  const classification = classifyFiles(files, { fullScope });
+  const outputs = { base_sha: baseSha, head_sha: headSha, ...classification };
   writeOutputs(outputs);
   process.stdout.write(`${JSON.stringify(outputs, null, 2)}\n`);
 }

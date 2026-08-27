@@ -24,17 +24,12 @@ function main() {
 
   const pr = prs[0];
   if (pr && pr.headRefOid !== headSha) fail(`local HEAD ${headSha} is not live PR HEAD ${pr.headRefOid}`);
-  const fields = [
-    "--ref", branch,
-    "-f", "mode=affected",
-    "-f", `target_kind=${pr ? "pull_request" : "branch"}`,
-    "-f", `expected_head_sha=${headSha}`,
-  ];
-  if (pr) fields.push("-f", `pr_number=${pr.number}`, "-f", `expected_base_sha=${pr.baseRefOid}`);
-  const dispatch = run("gh", ["workflow", "run", "ci.yml", "--repo", repository, ...fields]);
+  const args = ["workflow", "run", "ci-check.yml", "--repo", repository, "--ref", branch];
+  if (pr) args.push("-f", `pr_number=${pr.number}`, "-f", `expected_head_sha=${headSha}`, "-f", `expected_base_sha=${pr.baseRefOid}`);
+  const dispatch = run("gh", args);
   process.stdout.write(JSON.stringify({
     repository,
-    workflow: "ci.yml",
+    workflow: "ci-check.yml",
     branch,
     headSha,
     prNumber: pr?.number ?? null,

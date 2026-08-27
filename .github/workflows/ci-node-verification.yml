@@ -9,6 +9,7 @@ on:
       contracts: {type: string, required: true}
       ci_control_plane: {type: string, required: true}
       dependency_changed: {type: string, required: true}
+      platform: {type: string, required: true}
 
 permissions:
   contents: read
@@ -101,6 +102,17 @@ jobs:
           node --test tools/scripts/detect-ci-context.test.mjs
           node --test tools/scripts/ci-routing.test.mjs
           node --test tools/scripts/ci-runtime-bootstrap-policy.test.mjs
+      - name: Verify Platform contract and generated client when affected
+        if: ${{ inputs.platform == 'true' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm run openapi:generate:platform-control
+          pnpm --dir services/dsh exec tsc -p tsconfig.platform-change-sets.json --noEmit --pretty false
+          node tools/guards/platform-change-sets-gate.mjs
+          git diff --exit-code -- core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml core/platform-control/clients/generated/platform-control-api.ts
+          test -z "$(git status --porcelain -- core/platform-control/contracts/generated/platform-control.bundle.openapi.yaml core/platform-control/clients/generated/platform-control-api.ts)"
+
       - name: Verify dependency integrity when affected
         if: ${{ inputs.dependency_changed == 'true' }}
         run: pnpm install --frozen-lockfile --ignore-scripts

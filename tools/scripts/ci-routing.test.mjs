@@ -7,18 +7,27 @@ const repoRoot = path.resolve(import.meta.dirname, "../..");
 const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 const exists = (relativePath) => fs.existsSync(path.join(repoRoot, relativePath));
 
-test("the canonical check controller is manual and has no PR event trigger", () => {
-  const workflow = read(".github/workflows/ci.yml");
+test("ci-check is the single manual and reusable controller", () => {
+  const workflow = read(".github/workflows/ci-check.yml");
   assert.match(workflow, /workflow_call:/u);
   assert.match(workflow, /workflow_dispatch:/u);
-  assert.doesNotMatch(workflow, /pull_request:/u);
-  assert.match(workflow, /Resolve exact live candidate and affected scope/u);
+  assert.doesNotMatch(workflow, /pull_request:|push:|schedule:/u);
+  assert.match(workflow, /Verify exact candidate and resolve affected scope/u);
   assert.match(workflow, /git merge-base --is-ancestor/u);
   assert.match(workflow, /cancel-in-progress: true/u);
-  assert.match(workflow, /group: bthwani-ci-\$\{\{ inputs\.target_kind \|\| 'branch' \}\}/u);
+  assert.match(workflow, /group: bthwani-ci-\$\{\{ inputs\.pr_number \|\| inputs\.expected_head_sha \|\| github\.ref \}\}/u);
+  assert.equal(exists(".github/workflows/ci.yml"), false);
   for (const legacy of ["run_assurance", "verification_tier", "runtime_profile", "previous_head_sha", "incremental-run-history", "github.event.before"]) {
     assert.equal(workflow.includes(legacy), false, legacy);
   }
+});
+
+test("ci-check exposes the one manual affected-verification entrypoint", () => {
+  const workflow = read(".github/workflows/ci-check.yml");
+  assert.match(workflow, /name: BThwani CI/u);
+  assert.match(workflow, /full_scope: \{description: Run all owner checks, required: false, default: false, type: boolean\}/u);
+  assert.match(workflow, /BThwani CI \/ PR result/u);
+  assert.doesNotMatch(workflow, /workflow_run:|repository_dispatch|actions\/workflows\//u);
 });
 
 test("the affected router is based on the exact current Base-to-Head diff", () => {
@@ -29,7 +38,7 @@ test("the affected router is based on the exact current Base-to-Head diff", () =
 });
 
 test("backend changes cannot become green by skipping backend verification", () => {
-  const workflow = read(".github/workflows/ci.yml");
+  const workflow = read(".github/workflows/ci-check.yml");
   assert.match(workflow, /backend_required == 'true'/u);
   assert.match(workflow, /uses: \.\/\.github\/workflows\/ci-backends\.yml/u);
   assert.doesNotMatch(workflow, /run_assurance/u);
@@ -78,6 +87,7 @@ test("ci commands resolve live identity before dispatch", () => {
     assert.match(command, /gh.*pr.*list/su);
     assert.match(command, /headRefOid/u);
     assert.match(command, /workflow.*run/su);
+    assert.match(command, file.includes("ci-check") ? /ci-check\.yml/u : /final-closure\.yml/u);
     assert.doesNotMatch(command, /sleep|poll|previous/u);
   }
 });
@@ -87,7 +97,7 @@ test("analyzer workers are reusable only and no workflow-run orchestration exist
   for (const filename of fs.readdirSync(workflowDir)) {
     const content = fs.readFileSync(path.join(workflowDir, filename), "utf8");
     assert.doesNotMatch(content, /workflow_run:|repository_dispatch|actions\/workflows\//u, filename);
-    if (["sonarqube.yml", "codeql.yml", "semgrep.yml", "security-remote.yml", "dependency-review.yml", "lockfile-integrity.yml", "docker-runtime-hardening.yml", "open-code-review.yml"].includes(filename)) {
+    if (["sonarqube.yml", "codeql.yml", "semgrep.yml", "security-remote.yml", "dependency-review.yml", "lockfile-integrity.yml", "docker-runtime-hardening.yml"].includes(filename)) {
       assert.match(content, /workflow_call:/u, filename);
       assert.doesNotMatch(content, /^\s{2}(push|pull_request|schedule):/mu, filename);
     }

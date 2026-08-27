@@ -15,7 +15,7 @@ const legacyDshAuthorityFiles = [
   "services/dsh/backend/internal/platform/changeset/changeset.go",
   "services/dsh/backend/internal/http/platform_changesets_routes.go",
 ];
-const callerWorkflowFile = ".github/workflows/ci.yml";
+const callerWorkflowFile = ".github/workflows/ci-check.yml";
 const verificationWorkflowFile = ".github/workflows/ci-node-verification.yml";
 const requiredFiles = [
   validationMigrationFile,
@@ -193,11 +193,11 @@ if (failures.length === 0) {
   ]);
   requireText(callerWorkflowFile, [
     "uses: ./.github/workflows/ci-node-verification.yml",
-    "platform_change_sets: ${{ needs.context.outputs.platform_change_sets }}",
+    "platform: ${{ needs.context.outputs.platform }}",
   ]);
   requireText(verificationWorkflowFile, [
-    "platform_change_sets:",
-    "name: Verify platform change-set binding",
+    "platform: {type: string, required: true}",
+    "name: Verify Platform contract and generated client when affected",
     "pnpm --dir services/dsh exec tsc -p tsconfig.platform-change-sets.json --noEmit --pretty false",
     "git diff --exit-code --",
     generatedBundleFile,
