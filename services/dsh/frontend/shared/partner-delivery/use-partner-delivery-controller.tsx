@@ -18,6 +18,7 @@ import type {
 } from "./partner-delivery.types";
 import { corrId } from "../_kernel/dsh-http-request";
 import { useCameraPhotoCapture } from "../media/useCameraPhotoCapture";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { uploadAndSubmitPartnerDeliveryProof } from "../media/pod/delivery-proof-media.api";
 
 export type FetchState<T> = { readonly loaded: boolean; readonly error: string | null; readonly offline: boolean; readonly data: T };
@@ -39,6 +40,8 @@ export type PartnerDeliveryActionState = {
 
 export function usePartnerDeliveryActionsController(orderId: string) {
   const camera = useCameraPhotoCapture();
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
   const commandIds = useRef<Record<string, string>>({});
   const [state, setState] = useState<PartnerDeliveryActionState>({
     task: null,
@@ -50,12 +53,13 @@ export function usePartnerDeliveryActionsController(orderId: string) {
   });
 
   const commandFor = useCallback((key: string) => {
-    const existing = commandIds.current[key];
+    const scopedKey = `${actorId ?? "anonymous"}:${key}`;
+    const existing = commandIds.current[scopedKey];
     if (existing) return existing;
     const created = corrId(`partner-delivery-${key}`);
-    commandIds.current[key] = created;
+    commandIds.current[scopedKey] = created;
     return created;
-  }, []);
+  }, [actorId]);
 
   const load = useCallback(async () => {
     if (!orderId) return;
@@ -91,11 +95,15 @@ export function usePartnerDeliveryActionsController(orderId: string) {
     label: string,
     action: (commandId: string) => Promise<unknown>,
   ) => {
+    if (!actorId) {
+      setState((current) => ({ ...current, busy: false, isError: true, message: "جلسة موصل المتجر غير جاهزة لتنفيذ العملية." }));
+      return false;
+    }
     const currentCommandId = commandFor(actionKey);
     setState((current) => ({ ...current, busy: true, message: null, isError: false }));
     try {
       await action(currentCommandId);
-      delete commandIds.current[actionKey];
+      delete commandIds.current[`${actorId}:${actionKey}`];
       const response = await fetchPartnerDeliveryTask(orderId);
       setState({
         task: response.task,
@@ -109,7 +117,7 @@ export function usePartnerDeliveryActionsController(orderId: string) {
     } catch (error) {
       const { message, classified } = classifiedMessage(error, "تعذر تنفيذ الإجراء.");
       if (classified.kind !== "network" && classified.kind !== "unavailable") {
-        delete commandIds.current[actionKey];
+        delete commandIds.current[`${actorId}:${actionKey}`];
       }
       setState((current) => ({
         ...current,
@@ -120,7 +128,7 @@ export function usePartnerDeliveryActionsController(orderId: string) {
       }));
       return false;
     }
-  }, [commandFor, orderId]);
+  }, [actorId, commandFor, orderId]);
 
   const assign = useCallback((storeCourierId: string) =>
     runAction(`assign:${storeCourierId}`, "تم إسناد موصل المتجر.", (commandId) =>
@@ -187,6 +195,8 @@ export type UseOperatorPartnerDeliveriesControllerParams = {
 
 export function useOperatorPartnerDeliveriesController(params: UseOperatorPartnerDeliveriesControllerParams = {}) {
   const { storeId, status, limit = 100, autoLoad = true } = params;
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
   const operatorCommandIds = useRef<Record<string, string>>({});
   const [listState, setListState] = useState<FetchState<readonly DshPartnerDeliveryTask[]>>({ loaded: false, error: null, offline: false, data: [] });
   const [detailState, setDetailState] = useState<FetchState<DshPartnerDeliveryTask | null>>({ loaded: false, error: null, offline: false, data: null });
@@ -230,7 +240,10 @@ export function useOperatorPartnerDeliveriesController(params: UseOperatorPartne
     ticketReference: string,
     evidenceReferences: readonly string[] = [],
   ) => {
-    const commandKey = `${orderIdValue}:${expectedVersion}:${reason}:${evidenceReferences.join("|")}`;
+    if (!actorId) {
+      return Promise.resolve({ ok: false as const, kind: "forbidden" as const, message: "جلسة العمليات غير جاهزة لتنفيذ الاستثناء." });
+    }
+    const commandKey = `${actorId}:${orderIdValue}:${expectedVersion}:${reason}:${evidenceReferences.join("|")}`;
     const existing = operatorCommandIds.current[commandKey] ?? corrId("operator-partner-delivery-exception");
     operatorCommandIds.current[commandKey] = existing;
     return raisePartnerDeliveryException(orderIdValue, {
@@ -252,7 +265,7 @@ export function useOperatorPartnerDeliveriesController(params: UseOperatorPartne
         }
         return { ok: false as const, kind: classified.kind, message };
       });
-  }, []);
+  }, [actorId]);
 
   return { listState, loadList, detailState, loadDetail, loadDetailByOrder, raiseException };
 }
