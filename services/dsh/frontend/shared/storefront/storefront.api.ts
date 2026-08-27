@@ -64,7 +64,6 @@ function toClientStorefront(storeId: string, response: DshStorefrontResponse): C
       ? [{
           id: effectiveMediaLink?.id ?? `${product.id}-effective`,
           productId: product.id,
-          contentType: effectiveMediaLink?.mimeType ?? "image/webp",
           state: "complete",
           publicUrl: product.effectiveImage.url.startsWith("http")
             ? product.effectiveImage.url
