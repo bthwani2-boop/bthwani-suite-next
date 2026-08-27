@@ -1679,7 +1679,7 @@
       "state": "HISTORICAL_IMMUTABLE"
     },
     {
-      "ordinal": 240,
+      "ordinal": 289,
       "file": "dsh-1042_support_session_operator_context.sql",
       "sha256": "dc577e1000f9cd01fb82d70deb3a2e4376ae273fe845ddbb89ed1fdf47bdd4d4",
       "historicalPrefix": "1042",
