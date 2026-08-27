@@ -323,8 +323,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
-          mode=affected
-          if [[ "${EVENT_NAME}" == "workflow_dispatch" || "${EVENT_NAME}" == "workflow_call" ]]; then mode="${DISPATCH_MODE:-affected}"; fi
+          mode="${DISPATCH_MODE:-affected}"
           CI_MODE="${mode}" node tools/scripts/detect-ci-context.mjs
 
       - name: Publish canonical identity summary
