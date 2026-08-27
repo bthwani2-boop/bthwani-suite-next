@@ -2,6 +2,7 @@ package http
 
 import (
 	"crypto/sha256"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -96,14 +97,8 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 	rows, err := s.db.QueryContext(r.Context(), `
 			SELECT o.id::text, btrim(intent.wlt_payment_session_id), o.subtotal_minor_units, o.currency,
 			       delivered.delivered_at, delivered.completion_event_id, o.pricing_snapshot_hash,
-			       COALESCE((
-					SELECT cancellation.status
-					FROM dsh_order_cancellations cancellation
-					WHERE cancellation.order_id = o.id
-					  AND cancellation.status IN ('requested', 'review', 'approved', 'cancelling', 'cancelled', 'conflict', 'unknown')
-					ORDER BY cancellation.updated_at DESC, cancellation.id DESC
-					LIMIT 1
-			       ), 'not_cancelled') AS cancellation_status
+				       cancellation.status AS cancellation_status
+
 			FROM dsh_orders o
 			JOIN dsh_checkout_intents intent ON intent.id = o.checkout_intent_id
 			JOIN dsh_stores st ON st.id = o.store_id
@@ -114,6 +109,14 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 				ORDER BY event.created_at DESC, event.id DESC
 				LIMIT 1
 			) delivered ON TRUE
+			LEFT JOIN LATERAL (
+				SELECT cancellation.status
+				FROM dsh_order_cancellations cancellation
+				WHERE cancellation.order_id = o.id
+				  AND cancellation.status IN ('requested', 'review', 'approved', 'cancelling', 'cancelled', 'conflict', 'unknown')
+				ORDER BY cancellation.updated_at DESC, cancellation.id DESC
+				LIMIT 1
+			) cancellation ON TRUE
 			WHERE st.partner_id::text = $1 AND o.status = 'delivered'
 			  AND delivered.delivered_at >= $2::date
 			  AND delivered.delivered_at < ($3::date + INTERVAL '1 day')
@@ -133,14 +136,22 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 	orderSources := make([]financeSettlementOrderSource, 0)
 	for rows.Next() {
 		var source financeSettlementOrderSource
-		if err := rows.Scan(&source.OrderID, &source.PaymentSessionID, &source.GrossAmountMinorUnits, &source.Currency, &source.DeliveredAt, &source.CompletionEventID, &source.PricingSnapshotHash, &source.CancellationStatus); err != nil {
+		var observedCancellation sql.NullString
+		if err := rows.Scan(&source.OrderID, &source.PaymentSessionID, &source.GrossAmountMinorUnits, &source.Currency, &source.DeliveredAt, &source.CompletionEventID, &source.PricingSnapshotHash, &observedCancellation); err != nil {
 
 			store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to decode delivered order source")
 			return
 		}
-		// CancellationStatus is read from the canonical cancellation owner query;
-		// the NOT EXISTS predicate excludes every active cancellation state. The
-		// completion event identity comes from the immutable persisted event row.
+		if observedCancellation.Valid {
+			// This should be unreachable because the canonical NOT EXISTS predicate
+			// above excludes every active cancellation state. Never turn a returned
+			// cancellation into a non-cancelled settlement fact.
+			store.SendError(w, http.StatusConflict, "CANCELLATION_STATE_CHANGED", "canonical cancellation state changed during settlement source read")
+			return
+		}
+		source.CancellationStatus = "not_cancelled"
+		// CancellationStatus is now derived only after the canonical owner query
+		// proves absence; completion identity comes from the immutable event row.
 		source.CompletionEvidenceHash = settlementEvidenceHash(source.OrderID, source.PaymentSessionID, "delivered", source.DeliveredAt.UTC().Format(time.RFC3339Nano), source.CompletionEventID, source.PricingSnapshotHash, fmt.Sprint(source.GrossAmountMinorUnits), source.Currency, source.CancellationStatus)
 
 		orderSources = append(orderSources, source)
