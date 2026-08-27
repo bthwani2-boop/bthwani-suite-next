@@ -39,33 +39,6 @@ export function isUploadTerminal(progress: AssetUploadProgress): boolean {
   return progress.stage === "linked" || progress.stage === "failed";
 }
 
-// --- Asset card states ---------------------------------------------------------
-
-export type AssetCardState =
-  | { kind: "draft"; asset: CatalogAsset }
-  | { kind: "pending"; asset: CatalogAsset }
-  | { kind: "approved"; asset: CatalogAsset; link: CatalogAssetLink }
-  | { kind: "rejected"; asset: CatalogAsset; reason: string }
-  | { kind: "archived"; asset: CatalogAsset };
-
-export function assetCardStateFromAsset(asset: CatalogAsset, link?: CatalogAssetLink): AssetCardState {
-  switch (asset.status) {
-    case "draft":
-      return { kind: "draft", asset };
-    case "uploaded":
-    case "pending_review":
-      return { kind: "pending", asset };
-    case "approved":
-      return link ? { kind: "approved", asset, link } : { kind: "pending", asset };
-    case "rejected":
-      return { kind: "rejected", asset, reason: asset.reviewNote };
-    case "archived":
-      return { kind: "archived", asset };
-    default:
-      return { kind: "draft", asset };
-  }
-}
-
 // --- Effective image resolution ------------------------------------------------
 
 /**
