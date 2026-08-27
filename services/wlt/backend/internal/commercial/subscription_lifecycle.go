@@ -257,16 +257,86 @@ func appendActivationLoyaltyEntry(
 	if points <= 0 {
 		return nil
 	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_loyalty_accounts(operator_context_id, client_id)
-			VALUES ($1,$2) ON CONFLICT (operator_context_id, client_id) DO NOTHING`, operatorContextID, clientID); err != nil {
+	if err := ensureActivationLoyaltyAccount(ctx, tx, operatorContextID, clientID); err != nil {
 		return err
+	}
+	return recordActivationLoyaltyEntry(ctx, tx, operatorContextID, clientID, subscriptionID,
+		purchaseID, correlationID, points)
+}
+
+// ensureActivationLoyaltyAccount guarantees the client's loyalty account row
+// exists within the operator context. Both outcomes of the ON CONFLICT insert
+// are valid (0 = already existed, 1 = created); RowsAffected is still
+// inspected so a driver-level failure cannot be mistaken for a silent
+// conflict.
+func ensureActivationLoyaltyAccount(ctx context.Context, tx *sql.Tx, operatorContextID, clientID string) error {
+	result, err := tx.ExecContext(ctx, `INSERT INTO wlt_loyalty_accounts(operator_context_id, client_id)
+		VALUES ($1,$2) ON CONFLICT (operator_context_id, client_id) DO NOTHING`, operatorContextID, clientID)
+	if err != nil {
+		return err
+	}
+	if _, err := result.RowsAffected(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// recordActivationLoyaltyEntry claims the earn entry's command identity
+// BEFORE the account balance is mutated: an entry whose context-scoped
+// idempotency key already exists proves this purchase already credited the
+// account, so a replay must return untouched instead of re-running the
+// balance UPDATE.
+func recordActivationLoyaltyEntry(
+	ctx context.Context,
+	tx *sql.Tx,
+	operatorContextID, clientID, subscriptionID, purchaseID, correlationID string,
+	points int64,
+) error {
+	entryKey := "subscription-activation:" + purchaseID
+	var alreadyEarned bool
+	if err := tx.QueryRowContext(ctx, `SELECT EXISTS(
+			SELECT 1 FROM wlt_loyalty_entries
+			WHERE operator_context_id=$1 AND idempotency_key=$2)`, operatorContextID, entryKey).
+		Scan(&alreadyEarned); err != nil {
+		return err
+	}
+	if alreadyEarned {
+		return nil
 	}
 	var balance, lifetime int64
 	if err := tx.QueryRowContext(ctx, `SELECT points_balance, lifetime_points
-		FROM wlt_loyalty_accounts WHERE operator_context_id=$1 AND client_id=$2 FOR UPDATE`, operatorContextID, clientID).
-		Scan(&balance, &lifetime); err != nil {
+		FROM wlt_loyalty_accounts WHERE operator_context_id=$1 AND client_id=$2 FOR UPDATE`,
+		operatorContextID, clientID).Scan(&balance, &lifetime); err != nil {
 		return err
 	}
+	metadata, _ := json.Marshal(map[string]any{
+		"capability":             "subscription-lifecycle",
+		"subscriptionId":         subscriptionID,
+		"subscriptionPurchaseId": purchaseID,
+	})
+	// Claim the identity first: the entry is inserted with the post-credit
+	// balance BEFORE the balance moves. RowsAffected == 0 means a concurrent
+	// activation won the context-scoped key despite the pre-gate — abort the
+	// transaction rather than commit an account credit whose entry belongs to
+	// the winner.
+	result, err := tx.ExecContext(ctx, `INSERT INTO wlt_loyalty_entries
+		(operator_context_id, client_id, direction, points, balance_after, source_type, source_id,
+		 idempotency_key, correlation_id, metadata)
+		VALUES ($1,$2,'earn',$3,$4,'subscription_activation',$5,$6,$7,$8)
+		ON CONFLICT (operator_context_id, idempotency_key) DO NOTHING`,
+		operatorContextID, clientID, points, balance+points, subscriptionID,
+		entryKey, correlationID, metadata)
+	if err != nil {
+		return err
+	}
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return ErrConflict
+	}
+	// Identity claimed — now move the money and persist the new balances.
 	balance += points
 	lifetime += points
 	if _, err := tx.ExecContext(ctx, `UPDATE wlt_loyalty_accounts
@@ -275,19 +345,7 @@ func appendActivationLoyaltyEntry(
 		operatorContextID, clientID, balance, lifetime); err != nil {
 		return err
 	}
-	metadata, _ := json.Marshal(map[string]any{
-		"capability":             "subscription-lifecycle",
-		"subscriptionId":         subscriptionID,
-		"subscriptionPurchaseId": purchaseID,
-	})
-	_, err := tx.ExecContext(ctx, `INSERT INTO wlt_loyalty_entries
-			(operator_context_id, client_id, direction, points, balance_after, source_type, source_id,
-		 idempotency_key, correlation_id, metadata)
-VALUES ($1,$2,'earn',$3,$4,'subscription_activation',$5,$6,$7,$8)
-			ON CONFLICT (operator_context_id, idempotency_key) DO NOTHING`,
-		operatorContextID, clientID, points, balance, subscriptionID,
-		"subscription-activation:"+purchaseID, correlationID, metadata)
-	return err
+	return nil
 }
 
 func ActivateSubscriptionLifecycleGoverned(
