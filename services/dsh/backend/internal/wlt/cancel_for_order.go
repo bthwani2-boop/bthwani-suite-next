@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	neturl "net/url"
 	"strings"
 )
 
@@ -42,22 +41,24 @@ func (c *Client) CancelSessionForOrderWithResult(
 		return nil, fmt.Errorf("paymentSessionId, orderId, clientId, and reason are required")
 	}
 	requestBody := struct {
-		OrderID  string `json:"orderId"`
-		ClientID string `json:"clientId"`
-		Reason   string `json:"reason"`
+		PaymentSessionID string `json:"paymentSessionId"`
+		OrderID          string `json:"orderId"`
+		ClientID         string `json:"clientId"`
+		Reason           string `json:"reason"`
 	}{
-		OrderID:  input.OrderID,
-		ClientID: input.ClientID,
-		Reason:   input.Reason,
+		PaymentSessionID: paymentSessionID,
+		OrderID:          input.OrderID,
+		ClientID:         input.ClientID,
+		Reason:           input.Reason,
 	}
 	body, err := json.Marshal(requestBody)
 	if err != nil {
-		return nil, fmt.Errorf("encode WLT cancel-for-order request: %w", err)
+		return nil, fmt.Errorf("encode WLT order-cancellation request: %w", err)
 	}
-	url := c.baseURL + "/wlt/payment-sessions/" + neturl.PathEscape(paymentSessionID) + "/cancel-for-order"
+	url := c.baseURL + "/wlt/order-cancellations"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
 	if err != nil {
-		return nil, fmt.Errorf("build WLT cancel-for-order request: %w", err)
+		return nil, fmt.Errorf("build WLT order-cancellation request: %w", err)
 	}
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("Content-Type", "application/json")
@@ -72,18 +73,18 @@ func (c *Client) CancelSessionForOrderWithResult(
 		correlationID,
 		deterministicMutationKey("cancel-session-for-order", paymentSessionID, input.OrderID),
 	); err != nil {
-		return nil, fmt.Errorf("prepare WLT cancel-for-order request: %w", err)
+		return nil, fmt.Errorf("prepare WLT order-cancellation request: %w", err)
 	}
 	response, err := c.http.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("%w: call WLT cancel-for-order: %v", ErrMutationOutcomeUnknown, err)
+		return nil, fmt.Errorf("%w: call WLT order-cancellation: %v", ErrMutationOutcomeUnknown, err)
 	}
 	defer response.Body.Close()
 	if response.StatusCode == http.StatusRequestTimeout || response.StatusCode == http.StatusTooManyRequests || response.StatusCode >= 500 {
-		return nil, fmt.Errorf("%w: WLT cancel-for-order returned HTTP %d", ErrMutationOutcomeUnknown, response.StatusCode)
+		return nil, fmt.Errorf("%w: WLT order-cancellation returned HTTP %d", ErrMutationOutcomeUnknown, response.StatusCode)
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
-		return nil, fmt.Errorf("WLT cancel-for-order returned HTTP %d", response.StatusCode)
+		return nil, fmt.Errorf("WLT order-cancellation returned HTTP %d", response.StatusCode)
 	}
 
 	var envelope struct {
@@ -97,11 +98,11 @@ func (c *Client) CancelSessionForOrderWithResult(
 		} `json:"refund"`
 	}
 	if err := json.NewDecoder(response.Body).Decode(&envelope); err != nil {
-		return nil, fmt.Errorf("%w: decode WLT cancel-for-order response: %v", ErrMutationOutcomeUnknown, err)
+		return nil, fmt.Errorf("%w: decode WLT order-cancellation response: %v", ErrMutationOutcomeUnknown, err)
 	}
 	action := strings.TrimSpace(envelope.Action)
 	if action != "expired" && action != "refund_requested" && action != "none" {
-		return nil, fmt.Errorf("WLT cancel-for-order returned unsupported action %q", action)
+		return nil, fmt.Errorf("WLT order-cancellation returned unsupported action %q", action)
 	}
 	result := &CancelSessionForOrderResult{
 		Action:        action,

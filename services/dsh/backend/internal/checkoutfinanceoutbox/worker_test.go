@@ -220,9 +220,12 @@ func TestProcessOnceDispatchesCancelForOrderDBIntegration(t *testing.T) {
 		t.Fatalf("ProcessOnce failed: %v", err)
 	}
 
-	expectedPath := "/wlt/payment-sessions/" + paymentSessionID + "/cancel-for-order"
+	expectedPath := "/wlt/order-cancellations"
 	if gotPath != expectedPath {
 		t.Fatalf("expected path %q, got %q", expectedPath, gotPath)
+	}
+	if gotBody["paymentSessionId"] != paymentSessionID {
+		t.Fatalf("expected paymentSessionId=%q, got %v", paymentSessionID, gotBody["paymentSessionId"])
 	}
 	if gotBody["orderId"] != orderID {
 		t.Fatalf("expected orderId=%q, got %v", orderID, gotBody["orderId"])

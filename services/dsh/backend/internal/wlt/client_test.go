@@ -509,11 +509,11 @@ func TestCancelSessionForOrderSendsExactBodyAndHeaders(t *testing.T) {
 	if result.Action != "refund_requested" || result.RefundID != "refund-1" {
 		t.Fatalf("unexpected cancel result: %+v", result)
 	}
-	if gotPath != "/wlt/payment-sessions/ps-1/cancel-for-order" {
-		t.Fatalf("expected /wlt/payment-sessions/ps-1/cancel-for-order, got %q", gotPath)
+	if gotPath != "/wlt/order-cancellations" {
+		t.Fatalf("expected /wlt/order-cancellations, got %q", gotPath)
 	}
-	if _, ok := gotBody["paymentSessionId"]; ok {
-		t.Fatalf("paymentSessionId must come from the path, not the body: %+v", gotBody)
+	if gotBody["paymentSessionId"] != "ps-1" {
+		t.Fatalf("expected paymentSessionId in canonical body, got %+v", gotBody)
 	}
 	if gotBody["orderId"] != "order-1" || gotBody["clientId"] != "client-1" || gotBody["reason"] != "store rejected order" {
 		t.Fatalf("unexpected request body: %+v", gotBody)
