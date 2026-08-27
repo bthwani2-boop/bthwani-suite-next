@@ -16,10 +16,6 @@ import {
   catalogSubmissionPermissionDeniedState,
 } from "./catalog.states";
 
-export function shouldLoadAuthenticatedCatalog(authKind: string): boolean {
-  return authKind === "authenticated";
-}
-
 export async function runCatalogAction(
   operation: () => Promise<unknown>,
   reload: () => Promise<void>,
