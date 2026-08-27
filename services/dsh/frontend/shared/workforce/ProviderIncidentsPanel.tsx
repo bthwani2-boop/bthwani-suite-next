@@ -1,10 +1,12 @@
 import React from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
+import { useIdentitySession } from "@bthwani/core-identity";
 import { Badge, Icon, StateView, Text, colorRoles, spacing } from "@bthwani/ui-kit";
 import {
   listOwnProviderIncidents,
   submitOwnProviderIncidentAppeal,
 } from "./workforce-me-operational.api";
+import { corrId } from "../_kernel/dsh-http-request";
 import type { ProviderIncident } from "./workforce.types";
 
 function statusLabel(status: string): string {
@@ -34,6 +36,9 @@ function isAppealable(status: string): boolean {
 }
 
 export function ProviderIncidentsPanel() {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
+  const commandRef = React.useRef<{ readonly actorId: string; readonly key: string; readonly id: string } | null>(null);
   const [incidents, setIncidents] = React.useState<readonly ProviderIncident[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -60,10 +65,21 @@ export function ProviderIncidentsPanel() {
       setError("اكتب سبب اعتراض واضحًا.");
       return;
     }
+    if (!actorId) {
+      setError("جلسة مقدم الخدمة غير جاهزة لإرسال الاعتراض.");
+      return;
+    }
+    const appealKey = `${incidentId}:${appealNote.trim()}`;
+    const existing = commandRef.current?.actorId === actorId && commandRef.current.key === appealKey
+      ? commandRef.current
+      : null;
+    const command = existing ?? { actorId, key: appealKey, id: corrId("workforce-incident-appeal") };
+    commandRef.current = command;
     setBusy(true);
     setError(null);
     try {
-      const updated = await submitOwnProviderIncidentAppeal(incidentId, appealNote.trim());
+      const updated = await submitOwnProviderIncidentAppeal(incidentId, appealNote.trim(), command.id);
+      commandRef.current = null;
       setIncidents((current) => current.map((incident) => incident.id === updated.id ? updated : incident));
       setAppealId(null);
       setAppealNote("");
