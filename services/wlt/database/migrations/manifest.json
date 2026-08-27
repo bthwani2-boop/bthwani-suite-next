@@ -851,6 +851,13 @@
       "sha256": "5f856d28462ad3d838b4fee8bd08ca5707eab49cbe5c246be8b1e689db58fb13",
       "historicalPrefix": "951",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 122,
+      "file": "wlt-952_daily_close_mutation_fences.sql",
+      "sha256": "998fd948ab542bae3940630eb6ab1ec268528d833e68b41b26761817f19e340d",
+      "historicalPrefix": "952",
+      "state": "ACTIVE"
     }
   ]
 }
