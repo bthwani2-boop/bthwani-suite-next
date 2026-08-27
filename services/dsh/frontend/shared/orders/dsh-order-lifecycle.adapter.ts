@@ -115,7 +115,7 @@ function normalizeOrderItem(raw: BackendOrderItem, orderId = ''): DshOrderItemRe
   };
 }
 
-export function deriveTotalPrice(raw: BackendOrder): number {
+function deriveTotalPrice(raw: BackendOrder): number {
   const explicit = raw.total_price ?? raw.totalPrice;
   if (explicit != null) return Number(explicit);
   return (raw.items ?? []).reduce((sum, item) => {
