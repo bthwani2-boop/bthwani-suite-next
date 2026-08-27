@@ -19,6 +19,14 @@ test("operator dispatch operations fail closed without actor identity", () => {
   assert.match(operations, /const scopedKey = `\$\{actorId\}:\$\{key\}`/);
 });
 
+test("operator reassign forwards a stable actor-scoped command identity", () => {
+  assert.match(operations, /if \(!actorId\) \{[\s\S]*جلسة العمليات غير جاهزة لإعادة الإسناد/);
+  assert.match(operations, /const command = commandFor\(`reassign:\$\{assignment\.id\}:\$\{assignment\.version\}/);
+  assert.match(operations, /idempotencyKey: command\.id/);
+  assert.match(operations, /\}, \[actorId, commandFor, load\]\);/);
+  assert.doesNotMatch(operations, /buildDispatchAssignmentIdempotencyKey\(assignment\.orderId, normalizedCaptainId\)/);
+});
+
 test("operator cancellation and expiry forward stable idempotency keys", () => {
   assert.match(operations, /expireDispatchAssignments\(200, command\.id\)/);
   assert.match(operations, /cancelDispatchAssignment\(assignmentId, 'OPERATOR_CANCELLED', normalizedReason, command\.id\)/);

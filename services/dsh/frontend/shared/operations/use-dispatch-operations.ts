@@ -15,7 +15,6 @@ import type {
 } from '../dispatch/dispatch.types';
 import { corrId } from '../_kernel/dsh-http-request';
 import { useIdentitySession } from '@bthwani/core-identity';
-import { buildDispatchAssignmentIdempotencyKey } from './dispatch-assignment.api';
 
 export type DispatchOperationsState = {
   readonly kind: 'loading' | 'ready' | 'error';
@@ -204,12 +203,17 @@ export function useDispatchOperations() {
       }));
       return;
     }
+    if (!actorId) {
+      setState((current) => ({ ...current, mutationKind: 'idle', message: 'جلسة العمليات غير جاهزة لإعادة الإسناد.' }));
+      return;
+    }
+    const command = commandFor(`reassign:${assignment.id}:${assignment.version}:${normalizedCaptainId}:${serviceAreaCode}:${normalizedReason}:${assignment.priority ?? 0}:${assignment.distanceMeters ?? ''}`);
     setState((current) => ({ ...current, mutationKind: 'reassigning', message: '' }));
     try {
       await reassignDispatchAssignment(assignment.id, {
         captainId: normalizedCaptainId,
         serviceAreaCode,
-        idempotencyKey: buildDispatchAssignmentIdempotencyKey(assignment.orderId, normalizedCaptainId),
+        idempotencyKey: command.id,
         priority: assignment.priority ?? 0,
         ...(assignment.distanceMeters === null || assignment.distanceMeters === undefined
           ? {}
@@ -226,7 +230,7 @@ export function useDispatchOperations() {
         message: dispatchOperationsErrorMessage(error),
       }));
     }
-  }, [load]);
+  }, [actorId, commandFor, load]);
 
   React.useEffect(() => {
     void load();
