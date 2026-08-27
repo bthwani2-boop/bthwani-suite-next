@@ -380,9 +380,9 @@ export function useOperatorPickupsController(
   );
 
   const extendWindow = useCallback(
-    (orderIdValue: string, expectedVersion: number, reason: string, newExpiry: string) => {
+    async (orderIdValue: string, expectedVersion: number, reason: string, newExpiry: string) => {
       if (!actorId) {
-        return Promise.resolve({ ok: false as const, kind: "forbidden" as const, message: "جلسة العمليات غير جاهزة لتمديد نافذة الاستلام." });
+        return { ok: false as const, kind: "forbidden" as const, message: "جلسة العمليات غير جاهزة لتمديد نافذة الاستلام." };
       }
       const command = commandFor(orderIdValue, "extend_window", expectedVersion, reason, newExpiry);
       return executeWindowMutation(
