@@ -1064,25 +1064,6 @@ export function getDshFlowsForSurface(surfaceId: DshSurfaceId): readonly DshFlow
 }
 
 /**
- * Entries that can render in a visible workspace for a surface.
- * Excludes hidden-compat and disabled everywhere, and excludes internal
- * outside control-panel. Pure read-only filter — no side effects, no throws.
- */
-export function getDshRenderableFlowsForSurface(surfaceId: DshSurfaceId): readonly DshFlowRegistryEntry[] {
-  return getDshFlowsForSurface(surfaceId).filter((entry) => {
-    if (entry.visibility === 'hidden-compat' || entry.visibility === 'disabled') {
-      return false;
-    }
-
-    if (entry.visibility === 'internal' && surfaceId !== 'control-panel') {
-      return false;
-    }
-
-    return true;
-  });
-}
-
-/**
  * All flows that require escalation handling (have an escalationOwner defined).
  * Useful for control-panel escalation queue wiring.
  */
