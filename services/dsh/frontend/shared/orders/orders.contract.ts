@@ -605,12 +605,6 @@ export const DSH_ORDER_LIFECYCLE_HANDOFFS: readonly DshOrderLifecycleHandoff[] =
   },
 ];
 
-export function getHandoffsForSurface(surfaceId: DshSurfaceId): readonly DshOrderLifecycleHandoff[] {
-  return DSH_ORDER_LIFECYCLE_HANDOFFS.filter((h) =>
-    h.surfaceObservations.some((o) => o.surfaceId === surfaceId),
-  );
-}
-
 export function getActionableHandoffsForSurface(surfaceId: DshSurfaceId): readonly DshOrderLifecycleHandoff[] {
   return DSH_ORDER_LIFECYCLE_HANDOFFS.filter((h) =>
     h.surfaceObservations.some((o) => o.surfaceId === surfaceId && o.actionRequired),
