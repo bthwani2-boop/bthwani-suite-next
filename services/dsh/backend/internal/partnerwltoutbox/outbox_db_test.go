@@ -159,6 +159,7 @@ func TestPartnerWltReconciliationCreatesAndResolvesMaskedReadbackCaseDBIntegrati
 			http.Error(w, "not found", http.StatusNotFound)
 			return
 		}
+		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"payoutDestination": map[string]any{
 				"id":                            "wpd-reconciliation-ref",
