@@ -21,8 +21,6 @@ export {
   WLT_BOUNDARY_PROVIDER_KINDS,
 } from "./platform-provider.policy";
 
-export type { MapsProviderPublicConfig } from "./platform-provider-public-config";
-
 export { PLATFORM_PROVIDER_REGISTRY } from "./platform-provider.registry";
 
 export * from "./platform-vars";
