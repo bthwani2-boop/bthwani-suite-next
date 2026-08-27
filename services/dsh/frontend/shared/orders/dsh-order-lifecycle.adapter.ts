@@ -194,7 +194,7 @@ export function normalizeOrderList(resp: { readonly orders?: readonly BackendOrd
   };
 }
 
-export function normalizeDispatchAssignmentAsOrder(raw: BackendDispatchAssignment): DshOrderRecord {
+function normalizeDispatchAssignmentAsOrder(raw: BackendDispatchAssignment): DshOrderRecord {
   const captainId = raw.captainId;
   const lifecycleStatus = raw.delivery?.status;
   const podReference = raw.delivery?.podReference;
