@@ -29,7 +29,7 @@ mustContain(read(".github/workflows/ci.yml"), [
 ], "fast PR gate");
 mustContain(read(".github/workflows/final-closure.yml"), [
   "name: BThwani Final Closure",
-  "types: [ready_for_review]",
+  "types: [ready_for_review, synchronize, reopened]",
   "Resolve exact live PR candidate",
   "uses: ./.github/workflows/ci.yml",
   "uses: ./.github/workflows/sonarqube.yml",
