@@ -5,7 +5,6 @@ import {
   buildDshPartnerSupportDirectoryRouteFromFlow,
   buildDshPartnerSupportScreenRoute,
 } from './partner-navigation';
-import { OperationalOrderDecisionScreen } from './orders/OperationalOrderDecisionScreen';
 import { OperationalOrdersInboxScreen } from './orders/OperationalOrdersInboxScreen';
 import { PartnerDispatchTrackingScreen } from './orders/PartnerDispatchTrackingScreen';
 
@@ -13,18 +12,6 @@ type Props = React.ComponentProps<typeof DshPartnerRouteRenderer>;
 
 export function DshPartnerOrderJourneyRenderer(props: Props): React.ReactElement {
   const { route, navigation } = props;
-
-  if (route.kind === 'order-rejection') {
-    const activeOrder = props.partnerOrders.find((order) => order.id === route.orderId);
-    return props.renderSurfaceShell(
-      <OperationalOrderDecisionScreen
-        order={activeOrder}
-        orderId={route.orderId}
-        refreshOrders={props.refreshOrders}
-        onBack={navigation.back}
-      />,
-    );
-  }
 
   if (route.kind === 'support-screen' && route.screenId === 'order-out-for-delivery') {
     if (!route.orderId) {
@@ -55,7 +42,7 @@ export function DshPartnerOrderJourneyRenderer(props: Props): React.ReactElement
       onRetry={props.refreshOrders}
       onNavigateAction={(actionId, orderId) => {
         if (actionId === 'reject') {
-          navigation.navigate({ kind: 'order-rejection', orderId });
+          navigation.navigate(buildDshPartnerSupportDirectoryRouteFromFlow('order-reject', 'orders', orderId));
           return;
         }
         if (actionId === 'issue') {

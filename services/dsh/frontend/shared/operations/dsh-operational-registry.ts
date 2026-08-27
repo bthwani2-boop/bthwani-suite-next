@@ -458,9 +458,8 @@ export type DshFlowRegistryEntry = {
 
 // ---------------------------------------------------------------------------
 // Registry — Partner Operational Flows
-// Note: registry also covers 2 legacy support-route aliases (auction-status-update,
-// order-rejection) that exist in DSH_PARTNER_SUPPORT_ROUTE_IDS but NOT in
-// DSH_PARTNER_OPERATIONAL_FLOW_IDS — they appear in PARTNER_HIDDEN_COMPAT_FLOWS.
+// Note: registry also covers the legacy auction-status-update support alias
+// for registry consumers that have not yet migrated to the canonical flow.
 // ---------------------------------------------------------------------------
 
 const PARTNER_ORDER_LIFECYCLE: readonly DshFlowRegistryEntry[] = [
@@ -643,19 +642,6 @@ const PARTNER_HIDDEN_COMPAT_FLOWS: readonly DshFlowRegistryEntry[] = [
     allowedActions: ['الاحتفاظ بالتوافق للمستهلكين القدامى'],
     forbiddenActions: ['إظهاره كخيار أساسي', 'إنشاء route مستقل جديد'],
     notes: 'Legacy registry consumer only. See operations-support.snapshot.ts for detail.',
-  },
-  {
-    id: 'order-rejection',
-    label: 'Order Rejection (Legacy Route)',
-    domain: 'cancellation-rejection',
-    ownerSurface: 'app-partner',
-    visibleSurfaces: ['app-partner'],
-    visibility: 'hidden-compat',
-    hiddenCompat: true,
-    onDemandPolicy: 'summary-only',
-    allowedActions: ['الاحتفاظ بالتوافق'],
-    forbiddenActions: ['عرضه كصفحة أساسية منفصلة'],
-    notes: 'Legacy alias. استخدم order-reject (flow) أو partner-reject-request (support) بدلًا منه.',
   },
 ];
 

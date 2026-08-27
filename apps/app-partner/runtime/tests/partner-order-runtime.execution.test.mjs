@@ -60,7 +60,6 @@ test("partner route registry binds every critical operational surface", () => {
     "detail",
     "bell",
     "inventory-management",
-    "order-rejection",
     "store-courier",
     "product-edit",
     "category-management",
@@ -76,6 +75,7 @@ test("partner route registry binds every critical operational surface", () => {
     assert.equal(hasDshPartnerBindingContract(required), true, `route lookup rejected ${required}`);
   }
   assert.equal(ids.size, DSH_PARTNER_BINDING_CONTRACTS.length, "partner bindings must be unique");
+  assert.equal(ids.has("order-rejection"), false, "legacy rejection surface must not be registered");
 });
 
 test("partner finance remains an explicit wallet bridge rather than DSH mutation authority", () => {

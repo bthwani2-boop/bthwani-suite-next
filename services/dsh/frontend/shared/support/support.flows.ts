@@ -40,7 +40,6 @@ export const DSH_OPERATIONS_SUPPORT_FLOW_IDS = [
   'field-proof-required',
   'store-nomination-intake',
   'auction-status-update',
-  'order-rejection',
 ] as const;
 
 export type DshOperationsSupportFlowId = (typeof DSH_OPERATIONS_SUPPORT_FLOW_IDS)[number];
@@ -444,22 +443,6 @@ export const DSH_OPERATIONS_SUPPORT_FLOWS: readonly DshOperationsSupportFlowSpec
     nextAction: 'ابقه مخفيًا واستخدم المسارات الحالية بدلًا منه.',
     hiddenCompat: true,
   },
-  {
-    flowId: 'order-rejection',
-    title: 'Order Rejection Legacy Route',
-    description: 'legacy compat route يوازي مسار رفض الطلب الحالي ولا يجب أن يعود كمسار أساسي مستقل.',
-    surfaceVisibility: [
-      visibility('app-partner', 'hidden-compat', 'order-rejection', 'legacy route only.'),
-    ],
-    ownerSurface: 'app-partner', ownerLabel: 'الشريك',
-    escalationOwner: 'control-panel', escalationOwnerLabel: cpOwnerLabel,
-    severity: 'info',
-    allowedActions: ['الاحتفاظ بالتوافق'],
-    forbiddenActions: ['عرضه كصفحة أساسية منفصلة'],
-    relatedOrderState: 'legacy_hidden_compat', requiresEvidence: false,
-    nextAction: 'استخدم partner-reject-request بدل هذا alias القديم.',
-    hiddenCompat: true,
-  },
 ] as const;
 
 export const DSH_OPERATIONS_SUPPORT_HIDDEN_COMPAT_FLOW_IDS = DSH_OPERATIONS_SUPPORT_FLOWS
@@ -492,8 +475,4 @@ export function getOperationsSupportFlowsForSurface(
     if (entry.mode === 'hidden-compat' && !options.includeHiddenCompat) return false;
     return true;
   });
-}
-
-function isOperationsSupportHiddenCompatFlow(flowId: DshOperationsSupportFlowId): boolean {
-  return DSH_OPERATIONS_SUPPORT_HIDDEN_COMPAT_FLOW_IDS.includes(flowId);
 }

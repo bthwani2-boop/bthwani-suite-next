@@ -46,7 +46,6 @@ export type DshPartnerNavigationRoute =
   | { readonly kind: "support-directory"; readonly context: DshPartnerSupportCommandContext; readonly orderId?: string }
   | { readonly kind: "support-screen"; readonly screenId: DshPartnerSupportRouteId; readonly context: DshPartnerSupportCommandContext; readonly orderId?: string }
   | { readonly kind: "inventory-management" }
-  | { readonly kind: "order-rejection"; readonly orderId: string }
   | { readonly kind: "store-courier" }
   | { readonly kind: "product-edit"; readonly productId: string }
   | { readonly kind: "category-management" }
@@ -112,7 +111,6 @@ export function dshPartnerRouteToPath(route: DshPartnerNavigationRoute): string 
     case "support-directory": return withQuery("/support", [...supportContextEntries(route.context), ["orderId", route.orderId]]);
     case "support-screen": return withQuery(`/support/${segment(route.screenId)}`, [...supportContextEntries(route.context), ["orderId", route.orderId]]);
     case "inventory-management": return "/catalog";
-    case "order-rejection": return `/orders/${segment(route.orderId)}/reject`;
     case "store-courier": return "/operations/store-courier";
     case "product-edit": return `/catalog/products/${segment(route.productId)}/edit`;
     case "category-management": return "/catalog/categories";

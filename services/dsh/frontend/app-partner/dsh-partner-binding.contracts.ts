@@ -57,10 +57,6 @@ const DSH_PARTNER_BINDING_CONTRACT_DEFINITIONS = {
     bindingName: 'partner-inventory-binding',
     description: 'Sovereign catalog, assortment, price, stock, and publication bridge.',
   },
-  'order-rejection': {
-    bindingName: 'partner-order-rejection-binding',
-    description: 'Reasoned order rejection with real order context and read-after-write refresh.',
-  },
   'store-courier': {
     bindingName: 'partner-store-courier-binding',
     description: 'Store courier setup, governed policy, coverage, and activation bridge.',

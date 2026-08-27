@@ -461,7 +461,6 @@ export type DshPartnerRoute =
   | 'support-directory'
   | 'support-screen'
   | 'inventory-management'
-  | 'order-rejection'
   | 'store-courier'
   | 'product-edit'
   | 'category-management'
