@@ -1,9 +1,10 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import type { DshSlaAlertStatus, DshSlaRefreshResult } from "../sla/sla.types";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "pickup-sla-alerts");
 
-export type DshPickupSLAAlertStatus = "open" | "acknowledged" | "resolved";
+export type DshPickupSLAAlertStatus = DshSlaAlertStatus;
 
 export type DshPickupSLAAlert = {
   readonly id: string;
@@ -19,11 +20,7 @@ export type DshPickupSLAAlert = {
   readonly version: number;
 };
 
-export type DshRefreshSLAAlertsResult = {
-  readonly opened: number;
-  readonly resolved: number;
-  readonly active: number;
-};
+export type DshRefreshSLAAlertsResult = DshSlaRefreshResult;
 
 export async function refreshPickupSLAAlerts(): Promise<DshRefreshSLAAlertsResult> {
   const response = await request<{ result: DshRefreshSLAAlertsResult }>(

@@ -1,6 +1,14 @@
 /** Volatile, computed-on-read SLA projection shared by pickup and partner_delivery reads. */
 export type DshSlaState = "not_started" | "on_track" | "due_soon" | "overdue" | "closed";
 
+export type DshSlaAlertStatus = "open" | "acknowledged" | "resolved";
+
+export type DshSlaRefreshResult = {
+  readonly opened: number;
+  readonly resolved: number;
+  readonly active: number;
+};
+
 export type DshSlaProjection = {
   readonly state: DshSlaState;
   readonly currentLeg: string;
