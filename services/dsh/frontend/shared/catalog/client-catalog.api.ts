@@ -50,7 +50,6 @@ export async function fetchPublishedCatalog(storeId: string): Promise<CatalogSta
             publicUrl: product.effectiveImage.url.startsWith("http")
               ? product.effectiveImage.url
               : `${baseUrl}${product.effectiveImage.url}`,
-            version: effectiveMediaLink?.version ?? product.version,
           }]
         : [];
       return {

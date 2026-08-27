@@ -13,7 +13,6 @@ export type CatalogMedia = {
   readonly productId: string | null;
   readonly state: "pending" | "complete" | "deleted";
   readonly publicUrl: string | null;
-  readonly version: number;
 };
 
 export type CatalogSubmission = {
