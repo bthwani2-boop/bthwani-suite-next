@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { corrId } from "../_kernel/dsh-http-request";
 import {
   approveSpecialRequestQuote,
   assignSpecialRequestDispatch,
@@ -52,6 +54,18 @@ function listLoadStateForError(error: ClassifiedSpecialRequestError): DshSpecial
 }
 
 export function useSpecialRequestsController() {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
+  const commandIds = useRef<Record<string, string>>({});
+  const commandFor = useCallback((scope: string) => {
+    if (!actorId) throw new Error("جلسة العميل غير جاهزة لتنفيذ طلب الخدمة.");
+    const key = `${actorId}:${scope}`;
+    const existing = commandIds.current[key];
+    if (existing) return existing;
+    const id = corrId("client-special-request");
+    commandIds.current[key] = id;
+    return id;
+  }, [actorId]);
   const [state, setState] = useState<DshSpecialRequestState>(specialRequestIdleState());
 
   const submit = useCallback(async (input: DshCreateSpecialRequest): Promise<boolean> => {
@@ -69,26 +83,34 @@ export function useSpecialRequestsController() {
 
   const cancel = useCallback(async (id: string, expectedVersion?: number) => {
     if (state.kind === "submitting") return;
+    if (!actorId) {
+      setState(resolveSubmitError({ kind: "forbidden" }));
+      return;
+    }
+    const commandId = commandFor(`cancel:${id}:${expectedVersion ?? "current"}`);
     setState(beginSubmit());
     try {
-      await cancelSpecialRequest(id, expectedVersion);
+      await cancelSpecialRequest(id, expectedVersion, commandId);
       setState(resolveCancelSuccess(await fetchClientSpecialRequest(id)));
     } catch (error) {
       setState(resolveSubmitError(classifySpecialRequestError(error)));
     }
-  }, [state.kind]);
-
+    }, [actorId, commandFor, state.kind]);
   const approveQuote = useCallback(async (id: string, expectedVersion: number) => {
     if (state.kind === "submitting") return;
+    if (!actorId) {
+      setState(resolveSubmitError({ kind: "forbidden" }));
+      return;
+    }
+    const commandId = commandFor(`approve-quote:${id}:${expectedVersion}`);
     setState(beginSubmit());
     try {
-      await approveSpecialRequestQuote(id, expectedVersion);
+      await approveSpecialRequestQuote(id, expectedVersion, commandId);
       setState(resolveApproveQuoteSuccess(await fetchClientSpecialRequest(id)));
     } catch (error) {
       setState(resolveSubmitError(classifySpecialRequestError(error)));
     }
-  }, [state.kind]);
-
+    }, [actorId, commandFor, state.kind]);
   const reload = useCallback(async (id: string) => {
     try {
       setState(resolveSubmitSuccess(await fetchClientSpecialRequest(id)));
@@ -138,8 +160,19 @@ export function useClientSpecialRequestsListController(
   const [detailsByRequestId, setDetailsByRequestId] = useState<Readonly<Record<string, SpecialRequestDetailBundle>>>({});
   const [total, setTotal] = useState(0);
   const [loadState, setLoadState] = useState<DshSpecialRequestListLoadState>("loading");
-  const [busyRequestId, setBusyRequestId] = useState<string | null>(null);
-
+    const [busyRequestId, setBusyRequestId] = useState<string | null>(null);
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
+  const commandIds = useRef<Record<string, string>>({});
+  const commandFor = useCallback((scope: string) => {
+    if (!actorId) throw new Error("جلسة العميل غير جاهزة لتنفيذ طلب الخدمة.");
+    const key = `${actorId}:${scope}`;
+    const existing = commandIds.current[key];
+    if (existing) return existing;
+    const id = corrId("client-special-request");
+    commandIds.current[key] = id;
+    return id;
+  }, [actorId]);
   const load = useCallback(async () => {
     setLoadState("loading");
     try {
@@ -179,19 +212,33 @@ export function useClientSpecialRequestsListController(
   }, [load]);
 
   const cancelRequest = useCallback(
-    (request: DshSpecialRequestResponse) => runMutation(
-      request,
-      () => cancelSpecialRequest(request.id, request.version),
-    ),
-    [runMutation],
+    (request: DshSpecialRequestResponse) => {
+      if (!actorId) {
+        setLoadState("forbidden");
+        return Promise.resolve(false);
+      }
+      const commandId = commandFor(`cancel:${request.id}:${request.version}`);
+      return runMutation(
+        request,
+        () => cancelSpecialRequest(request.id, request.version, commandId),
+      );
+    },
+    [actorId, commandFor, runMutation],
   );
 
   const approveQuote = useCallback(
-    (request: DshSpecialRequestResponse) => runMutation(
-      request,
-      () => approveSpecialRequestQuote(request.id, request.version),
-    ),
-    [runMutation],
+    (request: DshSpecialRequestResponse) => {
+      if (!actorId) {
+        setLoadState("forbidden");
+        return Promise.resolve(false);
+      }
+      const commandId = commandFor(`approve-quote:${request.id}:${request.version}`);
+      return runMutation(
+        request,
+        () => approveSpecialRequestQuote(request.id, request.version, commandId),
+      );
+    },
+    [actorId, commandFor, runMutation],
   );
 
   const respondInformation = useCallback((

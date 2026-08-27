@@ -82,13 +82,15 @@ export async function fetchClientSpecialRequestExecution(
 
 export async function cancelSpecialRequest(
   id: string,
-  expectedVersion?: number,
+  expectedVersion: number | undefined,
+  idempotencyKey: string,
 ): Promise<DshSpecialRequestResponse> {
   return request<DshSpecialRequestResponse>(
     `/dsh/client/special-requests/${encodeURIComponent(id)}/cancel`,
     {
       method: "POST",
       ...(expectedVersion !== undefined ? { body: { expectedVersion } } : {}),
+      idempotencyKey,
     },
   );
 }
@@ -96,10 +98,11 @@ export async function cancelSpecialRequest(
 export async function approveSpecialRequestQuote(
   id: string,
   expectedVersion: number,
+  idempotencyKey: string,
 ): Promise<DshSpecialRequestResponse> {
   return request<DshSpecialRequestResponse>(
     `/dsh/client/special-requests/${encodeURIComponent(id)}/approve-quote`,
-    { method: "POST", body: { expectedVersion } },
+    { method: "POST", body: { expectedVersion }, idempotencyKey },
   );
 }
 
