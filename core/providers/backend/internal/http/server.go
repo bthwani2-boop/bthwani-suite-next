@@ -142,7 +142,7 @@ func (s *server) providerReadiness(w http.ResponseWriter, r *http.Request, ident
 
 	if s.db == nil {
 		sendJSON(w, http.StatusServiceUnavailable, map[string]string{
-			"status": "not_ready",
+			"status": "NOT_READY",
 			"reason": "database_unavailable",
 		})
 		return
@@ -153,13 +153,13 @@ func (s *server) providerReadiness(w http.ResponseWriter, r *http.Request, ident
 
 	if err := s.db.PingContext(ctx); err != nil {
 		sendJSON(w, http.StatusServiceUnavailable, map[string]string{
-			"status": "not_ready",
+			"status": "NOT_READY",
 			"reason": "database_unavailable",
 		})
 		return
 	}
 
-	sendJSON(w, http.StatusOK, map[string]string{"status": "ready"})
+	sendJSON(w, http.StatusOK, map[string]string{"status": "HEALTHY"})
 }
 
 func (s *server) getProvider(w http.ResponseWriter, r *http.Request, identity auth.Identity) {

@@ -49,6 +49,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeReadinessResponse"
+        "400":
+          description: Invalid readiness probe request.
         "503":
           description: Providers runtime is not ready because its sovereign database is
             unavailable.
@@ -56,12 +58,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RuntimeReadinessResponse"
-        "401":
-          description: Authentication is required.
-        "403":
-          description: Provider readiness read permission is required.
-      security:
-        - bearerAuth: []
+      security: []
 
   /providers:
     get:
@@ -269,7 +266,7 @@ components:
       properties:
         status:
           type: string
-          enum: [ ready, not_ready ]
+          enum: [ HEALTHY, NOT_READY ]
         reason:
           type: string
           enum: [ database_unavailable ]
