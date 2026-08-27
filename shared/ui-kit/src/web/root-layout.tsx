@@ -24,8 +24,7 @@ html {
   min-height: 100vh;
 }
 
-/* compatibility: accept both old and new root class names so styles continue to apply */
-body.bth-web-root-body, body.ui-web-root-body, html, #__next {
+html, #__next {
   margin: 0;
   height: 100%;
   min-height: 100vh;
@@ -37,29 +36,23 @@ body.bth-web-root-body, body.ui-web-root-body, html, #__next {
 
 /* The root owns the baseline for every web surface. Individual panes may
    override geometry, but they inherit one accessible visual contract. */
-html, body.bth-web-root-body, body.ui-web-root-body, #__next {
+html, #__next {
   scrollbar-width: thin;
   scrollbar-color: var(--bthwani-line) transparent;
 }
 
 html::-webkit-scrollbar,
-body.bth-web-root-body::-webkit-scrollbar,
-body.ui-web-root-body::-webkit-scrollbar,
 #__next::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
 html::-webkit-scrollbar-track,
-body.bth-web-root-body::-webkit-scrollbar-track,
-body.ui-web-root-body::-webkit-scrollbar-track,
 #__next::-webkit-scrollbar-track {
   background: transparent;
 }
 
 html::-webkit-scrollbar-thumb,
-body.bth-web-root-body::-webkit-scrollbar-thumb,
-body.ui-web-root-body::-webkit-scrollbar-thumb,
 #__next::-webkit-scrollbar-thumb {
   background: var(--bthwani-line-strong);
   border: 2px solid transparent;
