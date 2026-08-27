@@ -155,13 +155,3 @@ export function translateOwner(owner: string | undefined): string {
 
 
 // ─── Live Order Decisions & Auditing ────────────────────────────────────────
-
-export type UiAuditRow = {
-  id: string; who: string; why: string; when: string; permissionResult: string;
-  slaBreachReason: string; supportTicketLink: string; proofRequired: string;
-  evidenceState: string; resolutionPath: string; note: string; statusTone: string;
-};
-
-let _globalUiAuditRows: UiAuditRow[] = [];
-
-export function getDynamicUiAudits(): UiAuditRow[] { return _globalUiAuditRows; }
