@@ -3,7 +3,7 @@ import { Box, Button, Divider, KeyValueList, MobileScrollView, StateView, Surfac
 import { DshOperationScreen } from '../DshOperationScreen';
 import { OrderInboxSection } from './OrderInboxSection';
 import { OrderDetailSection } from './OrderDetailSection';
-import { OrderChatSection } from './OrderChatSection';
+import { CaptainOrderSupportConversationScreen } from './CaptainOrderSupportConversationScreen';
 import { OrderBellSection } from './OrderBellSection';
 import { OrderActionSection } from './OrderActionSection';
 import { OrderProofSection } from './OrderProofSection';
@@ -87,7 +87,13 @@ export function DshCaptainOrdersScreen({
     return <DshCaptainOrderGetScreen summary={summary} onBack={onBackToInbox} onSecondaryAction={onBackToInbox} onActionPress={onActionPress} />;
   }
   if (section === 'chat' && summary) {
-    return <OrderChatSection orderId={summary.orderId} pickupLabel={summary.pickupLabel} dropoffLabel={summary.dropoffLabel} />;
+    return (
+      <CaptainOrderSupportConversationScreen
+        orderId={summary.orderId}
+        composerEnabled
+        onBack={onBackToInbox ?? (() => undefined)}
+      />
+    );
   }
   if (section === 'proof' && summary) {
     return <OrderProofSection summary={summary} status={proofStatus} onBackToInbox={onBackToInbox} onActionPress={onActionPress} />;
