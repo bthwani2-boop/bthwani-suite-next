@@ -777,7 +777,9 @@ func (s *Service) IssueActivation(ctx context.Context, operator Operator, actorI
 		}
 	} else if !sovereignFieldsComplete(person) {
 		return identityclient.ActivationCode{}, ErrProfileIncomplete
-	} else {
+	} else if expectedActorType == "captain" {
+		// Captain financial-dispatch eligibility is a captain-only gate:
+		// captains move money on the road, employees do not (root #7).
 		if s.dsh == nil {
 			return identityclient.ActivationCode{}, ErrProfileIncomplete
 		}
@@ -786,6 +788,9 @@ func (s *Service) IssueActivation(ctx context.Context, operator Operator, actorI
 			return identityclient.ActivationCode{}, ErrProfileIncomplete
 		}
 	}
+	// Employees: the sovereign employee minimum (department + role) IS the
+	// readiness gate, symmetric with the EmployeeByID readback — no
+	// captain eligibility is consulted (root #7 divergence closed).
 	code, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, expectedActorType, expectedSurface, idempotencyKey, correlationID)
 	if err != nil {
 		return identityclient.ActivationCode{}, err
@@ -946,6 +951,17 @@ func (s *Service) CaptainByID(ctx context.Context, actorID string) (FieldAgentDe
 		return FieldAgentDetail{}, err
 	}
 	detail.ReadyToIssue = detail.EngagementStatus == "pending_activation" && sovereignFieldsComplete(detail.Person)
+	// Captain issuance additionally requires DSH financial eligibility (the
+	// same gate IssueActivation enforces). The readback stays advisory — a DSH
+	// outage degrades to the sovereign-only signal instead of failing the
+	// whole readback — but when DSH is reachable the flag must not over-report
+	// readiness the issuance path would refuse (root #7 symmetry).
+	if detail.ReadyToIssue && s.dsh != nil && s.dsh.Configured() {
+		if decision, decisionErr := s.dsh.CaptainFinancialEligibility(ctx, actorID); decisionErr == nil &&
+			(!decision.Eligible || !decision.ExpiresAt.After(time.Now().UTC())) {
+			detail.ReadyToIssue = false
+		}
+	}
 	return detail, nil
 }
 
