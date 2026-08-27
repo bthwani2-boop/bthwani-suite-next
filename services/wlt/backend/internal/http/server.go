@@ -90,7 +90,7 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	mutation("POST /wlt/captain-collateral/release", collateral.HandleRelease(db))
 	mutation("POST /wlt/payment-sessions", reference.HandleCreatePaymentSessionTrustedDsh(db))
 	read("GET /wlt/payment-sessions/{paymentSessionId}", reference.HandleGetPaymentSessionTrustedDsh(db))
-	read("GET /wlt/payment-sessions/by-checkout-intent/{checkoutIntentId}/lookup", reference.HandleGetPaymentSessionByCheckoutIntentTrustedDsh(db))
+
 	read("GET /wlt/payment-sessions/{paymentSessionId}/timeline", payment.HandleGetPaymentSessionTimeline(db))
 
 	mutation("POST /wlt/payment-sessions/{paymentSessionId}/authorize", payment.HandleGovernedPaymentOperation(db, "authorize", payment.HandleAuthorizeSession(db, rail)))
