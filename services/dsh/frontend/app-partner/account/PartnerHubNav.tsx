@@ -411,23 +411,12 @@ export function HubNavRow({
   );
 }
 
-export function resolveServiceModeEnabled(serviceModes: readonly { id: string; enabled: boolean }[] | undefined, modeId: PartnerOperationalMode['id'], fallback: boolean) {
-  const matched = serviceModes?.find((mode) => {
-    if (modeId === 'pickup') return mode.id === 'pickup';
-    // transitional aliases: legacy `delivery` plus textual `store delivery` / `partner delivery`
-    // all map to canonical `partner_delivery` which is displayed as "توصيل المتجر".
-    if (modeId === 'partner_delivery') {
-      return mode.id === 'partner_delivery'
-        || mode.id === 'partner delivery'
-        || mode.id === 'delivery'
-        || mode.id === 'store-delivery'
-        || mode.id === 'store delivery';
-    }
-    // transitional aliases: legacy 'scheduled' / 'seconds' map to bthwani_delivery
-    return mode.id === 'bthwani_delivery' || mode.id === 'scheduled' || mode.id === 'seconds';
-  });
-
-  return matched?.enabled ?? fallback;
+export function resolveServiceModeEnabled(
+  serviceModes: readonly { id: string; enabled: boolean }[] | undefined,
+  modeId: PartnerOperationalMode['id'],
+  fallback: boolean,
+) {
+  return serviceModes?.find((mode) => mode.id === modeId)?.enabled ?? fallback;
 }
 
 export function OperationsModeRow({
