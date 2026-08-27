@@ -1,11 +1,4 @@
-import type { CatalogSubmission, CatalogSubmissionState } from "./catalog.types";
 import type { CatalogState, ClientStoreCatalog } from "./client-catalog.types";
-
-export type CatalogAuditState =
-  | { readonly kind: "idle"; readonly entries: readonly CatalogSubmission[] }
-  | { readonly kind: "loading"; readonly entries: readonly CatalogSubmission[] }
-  | { readonly kind: "success"; readonly entries: readonly CatalogSubmission[] }
-  | { readonly kind: "error"; readonly entries: readonly CatalogSubmission[]; readonly message: string };
 
 export function catalogLoadingState(): CatalogState {
   return { kind: "loading" };
@@ -25,11 +18,4 @@ export function catalogErrorState(message: string): CatalogState {
 
 export function catalogSuccessState(catalog: ClientStoreCatalog): CatalogState {
   return { kind: "success", catalog };
-}
-
-export function catalogAuditErrorState(
-  entries: readonly CatalogSubmission[],
-  message: string,
-): CatalogAuditState {
-  return { kind: "error", entries, message };
 }
