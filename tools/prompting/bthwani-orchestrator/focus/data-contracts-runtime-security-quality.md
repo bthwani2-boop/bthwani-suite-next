@@ -223,3 +223,19 @@ When dependencies, lockfiles, build tooling, generated artifacts, containers, CI
 ### 18.6 Assurance standards are mutable external evidence
 
 Use current authoritative external standards/platform requirements when external research is allowed and materially needed. Do not hard-code mutable version numbers into this package as eternal truth. Examples may include current NIST secure-development/privacy guidance, OWASP ASVS/MASVS/MASTG, SLSA, platform store policies and reliability guidance. Repository policy may pin a requirement separately when it intentionally owns that durable choice.
+
+## 19. Human-experience telemetry, perceived performance and design-asset provenance
+
+When `01` marks human-experience evidence material, operational evidence must measure the user-facing claim without creating a privacy or analytics shadow system.
+
+Useful experience signals may include, only when they have a real Product/Operations decision consumer:
+
+`task completion | abandonment | repeated retry | validation/error frequency | recovery success | support/escalation recurrence | interaction delay | rendered instability | offline/reconnect failure | accessibility failure signal where observable without sensitive profiling`.
+
+Collect the minimum data needed for the declared purpose. Do not emit unnecessary PII, secrets, free-form sensitive content or durable user profiling merely to improve UX evidence. Experience telemetry remains subordinate to the privacy/data-lifecycle rules in §18.2 and to canonical Product metrics ownership.
+
+User-perceived performance is not proven solely by backend latency or synthetic build speed. For material journeys, inspect the smallest applicable end-user signals for loading, interaction responsiveness, rendering stability, payload/device/network behavior and recovery. Numeric targets must come from authorized Product/Operations/platform requirements or a defensible measured baseline; do not invent them.
+
+Fonts, icons, images, illustrations, motion assets and other material design dependencies require known source/ownership and licensing/provenance compatible with the repository/product use. An attractive asset with unknown or incompatible provenance is not a valid final-state design input.
+
+Experience analytics, asset tooling and performance instrumentation are evidence mechanisms, not new Product/Design authorities.

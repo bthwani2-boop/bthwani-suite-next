@@ -401,3 +401,28 @@ REQUIRED FALSIFICATION EVIDENCE
 ```
 
 Scanners may support this model but never substitute for it. When a service boundary itself is ambiguous, use a task-local live `SERVICE PASSPORT` view — owner, purpose, owned state/data, contracts/events, dependencies, consumers, trust/failure boundaries — as diagnostic structure only; do not create a persistent registry.
+
+## 17. Human-experience root diagnosis and design-evidence discipline
+
+When a material root affects a user-facing journey or surface, diagnose at the highest relevant human-experience altitude before patching presentation:
+
+```text
+USER / ACTOR NEED
+-> JOURNEY / TASK
+-> INFORMATION ARCHITECTURE
+-> INTERACTION / FEEDBACK / RECOVERY
+-> CONTENT / TERMINOLOGY
+-> BRAND / VISUAL-LANGUAGE AUTHORITY
+-> DESIGN TOKENS / COMPONENT / PATTERN AUTHORITY
+-> SURFACE COMPOSITION
+-> RENDERED BEHAVIOR
+-> USABILITY / ACCESSIBILITY / PERCEIVED-PERFORMANCE EVIDENCE
+```
+
+High-leverage experience-root signals include competing design sources, unjustified local token/style overrides, duplicate component/pattern authority, inconsistent state or error semantics, missing material component states, cross-surface divergence without Product reason, rendered-only defects and high-risk usability assumptions presented as fact.
+
+When internal authority does not determine the design/interaction choice and `01` permits external research, evaluate current authoritative or high-quality open evidence by source authority, recency, platform/context applicability, accessibility implications and licensing/provenance when assets are involved. Extract and compare principles/patterns; do not import another product's identity or use external practice to invent BThwani Product behavior.
+
+For a design root, Source-of-Fix may be Product/Brand governance, semantic tokens, canonical component/pattern, content terminology, surface composition or platform adaptation. A screenshot-local style patch is not root treatment when a higher canonical source is wrong or missing.
+
+`DESIGNER/AGENT CONFIDENCE != USABILITY EVIDENCE`. When a material claim depends on real-user comprehension or task success and cannot be derived from existing evidence, convert the assumption into a falsifiable usability/research obligation rather than self-certifying it.

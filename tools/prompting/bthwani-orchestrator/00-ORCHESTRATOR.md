@@ -1,6 +1,6 @@
 # BThwani Root-Cause Orchestrator
 
-PACKAGE_REVISION: 17
+PACKAGE_REVISION: 18
 PACKAGE_CLASS: UNIFIED_ROOT_CAUSE_EXECUTION_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -409,3 +409,28 @@ LEVEL_4_REPOSITORY_SYSTEM_BASELINE
 `LEVEL_4_REPOSITORY_SYSTEM_BASELINE` is the only level that may support a repository/system-baseline cleanliness claim. Levels 1–3 must never be promoted linguistically into repository-wide completeness.
 
 When the human gives a broad `START`/`AUTO` execution intent, broad discovery may continue until the Level-4 fixed point is reached, but mutation remains incremental by Closure Unit. Discovery breadth never authorizes a repository-wide rewrite or brute-force execution of every tool/component.
+
+## 13. Human-experience and design closure invariant
+
+A user-facing surface is not closed merely because it functions, builds or renders. When human experience is material, the same canonical-truth and fixed-point laws apply to the complete experience chain:
+
+```text
+PRODUCT / BRAND TRUTH
+-> USER / ACTOR NEED
+-> JOURNEY
+-> INFORMATION ARCHITECTURE
+-> INTERACTION MODEL
+-> VISUAL LANGUAGE
+-> SEMANTIC DESIGN TOKENS
+-> CANONICAL COMPONENTS / PATTERNS
+-> SURFACE COMPOSITION
+-> RENDERED EXPERIENCE
+-> REAL INTERACTION / JOURNEY
+-> USABILITY / ACCESSIBILITY / PERCEIVED-PERFORMANCE EVIDENCE
+```
+
+`DESIGN SOURCE != RENDERED EXPERIENCE`. A correct token/component/source representation does not prove the screen or journey is correct in execution. Conversely, a visually attractive screen does not prove Product/UX truth, accessibility, consistency or recoverability.
+
+When internal authority is insufficient and research is allowed/materially required, use current authoritative or high-quality open design/platform evidence as input, classify its applicability, and adapt the proven principle or pattern to BThwani actors, context and brand. External design systems and competitor patterns are evidence, never BThwani Product/Brand authority and never permission to copy a foreign identity.
+
+Human-experience closure is evidence-bounded. Do not claim mathematically unknowable superlatives such as “best design in the world”; prove the materially applicable experience obligations under `01`/`04` on the exact candidate.

@@ -369,6 +369,7 @@ AND ZERO_UNDISPOSITIONED_MATERIAL_TOOL_FINDINGS
 AND ZERO_UNJUSTIFIED_OR_EXPIRED_MATERIAL_SUPPRESSIONS
 AND ZERO_UNRECONCILED_ACTIVE_WORKSET_COLLISIONS
 AND ZERO_UNRESOLVED_SHARED_CUTOVER_OR_EVIDENCE_DEPENDENCIES
+AND ALL_MATERIAL_HUMAN_EXPERIENCE_CLAIMS_SATISFY_§21_WHEN_USER_FACING
 AND ALL_REQUIRED_APPLICABLE_FINAL_TOOL/REMOTE_EVIDENCE_PRESENT_ON_EXACT_FINAL_CANDIDATE
 AND NO_STALE_OR_CROSS_PR_OR_CROSS_SHA_CLOSURE_EVIDENCE
 AND FINAL_NEGATIVE_SPACE_CLEAN
@@ -588,3 +589,55 @@ ALL REQUIRED FINAL REMOTE/PLATFORM EVIDENCE CURRENT ON EXACT CANDIDATE
 Clean-state proof must not rely on hidden manual database edits, undeclared global tools, machine-specific generated source, stale processes, untracked configuration or previous workspace mutation. If a material platform/environment requirement cannot be reproduced from declared inputs, the Level-4 claim remains open.
 
 Fixed-point and Level-4 claims are always scope- and evidence-bounded. They must never be phrased as proof that no future or currently unknowable defect can exist.
+
+## 21. Rendered human-experience proof
+
+For every user-facing root where `01` marks human experience material:
+
+```text
+SOURCE / TOKEN / COMPONENT CORRECT != RENDERED EXPERIENCE CORRECT
+PIXEL-SAME != DESIGN CORRECT
+AUTOMATED ACCESSIBILITY PASS != ACCESSIBLE JOURNEY
+DESIGNER/AGENT CONFIDENCE != USABILITY EVIDENCE
+```
+
+Select a **sparse rendered-experience matrix** containing only combinations capable of falsifying the actual claim. Dimensions may include:
+
+```text
+SURFACE / ROUTE / SCREEN
+× VIEWPORT / DEVICE / PLATFORM
+× MATERIAL UI / DOMAIN STATE
+× ACTOR / PERMISSION CONTEXT
+× LANGUAGE / DIRECTION
+× TEXT SCALE
+× INPUT MODE
+× NETWORK / OFFLINE CONDITION
+× THEME when governed
+× REDUCED-MOTION / ACCESSIBILITY CONDITION
+```
+
+Evidence depth follows risk. As applicable combine canonical design/content-source inspection, component/pattern state proof, rendered visual comparison, responsive/layout inspection, keyboard/focus and screen-reader/platform accessibility proof, interaction/journey execution, user-perceived performance evidence and representative usability evidence when the claim depends on real-user comprehension or task completion.
+
+Visual regression proves that an approved baseline did or did not change; it does not prove that the baseline was correct. Snapshot/pixel evidence therefore cannot replace Product/UX, accessibility or usability proof.
+
+Human-experience closure requires, where material:
+
+```text
+ZERO_UNKNOWN_MATERIAL_USER_NEEDS
+AND ZERO_UNKNOWN_MATERIAL_UX/DESIGN_DIMENSIONS
+AND ZERO_UNJUSTIFIED_VISUAL_IDENTITY_DRIFT
+AND ZERO_UNJUSTIFIED_LOCAL_DESIGN-TOKEN AUTHORITY
+AND ZERO_DUPLICATE_COMPONENT/PATTERN DESIGN AUTHORITY
+AND ZERO_UNCLASSIFIED_MATERIAL_COMPONENT/PATTERN STATES
+AND ZERO_UNVERIFIED_MATERIAL_RESPONSIVE/PLATFORM STATES
+AND ZERO_KNOWN_MATERIAL RTL/LOCALIZATION DEFECTS
+AND ZERO_KNOWN_MATERIAL ACCESSIBILITY DEFECTS
+AND ZERO_UNPROVEN_CROSS-SURFACE EXPERIENCE DIVERGENCE
+AND ZERO_KNOWN_MATERIAL VISUAL/INTERACTION REGRESSIONS
+AND ZERO_UNCLASSIFIED_MATERIAL CONTENT/MICROCOPY SEMANTICS
+AND ZERO_UNPROVEN_HIGH-RISK USABILITY ASSUMPTIONS
+AND ZERO_UNKNOWN/INCOMPATIBLE MATERIAL DESIGN-ASSET PROVENANCE
+AND RENDERED EXPERIENCE EVIDENCE CURRENT ON THE EXACT CANDIDATE
+```
+
+If representative-user or platform/device evidence is genuinely required for the specific claim and cannot be obtained with available authority/capability, do not self-certify the claim. Keep the dependent closure open and map the inability to the existing legitimate `00` stop state that actually applies.

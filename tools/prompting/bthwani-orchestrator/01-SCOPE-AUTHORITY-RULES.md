@@ -464,3 +464,35 @@ DATA RECONCILIATION / DRIFT DETECTION
 ```
 
 `COMPLETE COVERAGE` therefore means both topology disposition and lens disposition are complete for the claimed cone. The package must discover broadly enough that a material cross-service, cross-surface or operational dependency cannot disappear merely because no currently edited file names it.
+
+## 18. Human-experience applicability and design-source disposition
+
+When a root can materially affect a user-facing surface or journey, extend the §17 lens law to the smallest applicable human-experience set:
+
+```text
+USER / ACTOR NEED
+JOURNEY / TASK COMPLETION
+INFORMATION ARCHITECTURE / NAVIGATION
+INTERACTION MODEL / FEEDBACK / RECOVERY
+BRAND / VISUAL LANGUAGE
+CONTENT / TERMINOLOGY / MICROCOPY
+DESIGN TOKENS
+COMPONENT / PATTERN STATE COVERAGE
+RESPONSIVE / DEVICE / PLATFORM ADAPTATION
+ACCESSIBILITY / INPUT MODE / TEXT SCALE / REDUCED MOTION
+LOCALIZATION / RTL
+RENDERED VISUAL / INTERACTION STATE
+CROSS-SURFACE EXPERIENCE CONSISTENCY
+USABILITY EVIDENCE
+USER-PERCEIVED PERFORMANCE
+DESIGN-SOURCE RECONCILIATION
+ASSET / LICENSE PROVENANCE
+EXPERIMENT / FEATURE-FLAG EXPERIENCE DIVERGENCE
+EXPERIENCE TELEMETRY / PRIVACY
+```
+
+Each materially plausible item receives `AFFECTED | VERIFICATION_REQUIRED | VERIFIED_UNCHANGED | N/A_PROVEN`; implicit omission is forbidden.
+
+Design representations are not automatic authority. A design file, prototype, token source, component library, implementation and rendered screen may each be authoritative, derived or evidentiary for different concepts. Resolve the canonical owner/source for the material design concept before mutation and prevent competing design truths from surviving the cutover.
+
+Human-experience completeness is a sparse applicability projection, not a Cartesian demand to test every device/state combination. `04` owns selection of the rendered scenarios capable of falsifying the actual claim.
