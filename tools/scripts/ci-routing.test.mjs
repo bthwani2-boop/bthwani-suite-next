@@ -56,6 +56,9 @@ test("ci-check exposes the one manual affected-verification entrypoint", () => {
   assert.match(workflow, /name: BThwani CI/u);
   assert.match(workflow, /full_scope: \{description: Run all owner checks, required: false, default: false, type: boolean\}/u);
   assert.match(workflow, /BThwani CI \/ PR result/u);
+  assert.match(workflow, /statuses: write/u);
+  assert.match(workflow, /statuses\/\$\{HEAD_SHA\}/u);
+  assert.match(workflow, /publish_status success/u);
   assert.doesNotMatch(workflow, /workflow_run:|repository_dispatch|actions\/workflows\//u);
 });
 
