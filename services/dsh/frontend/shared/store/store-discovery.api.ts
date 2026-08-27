@@ -23,8 +23,6 @@ const httpClient = validateDshApiBaseUrl(DSH_API_BASE_URL)
   ? createDshFlexibleHttpClient(DSH_API_BASE_URL)
   : null;
 
-export { loadingState };
-
 type StoreListResponse = ListDshStoresResponse;
 
 function hasRuntimeCardContract(
