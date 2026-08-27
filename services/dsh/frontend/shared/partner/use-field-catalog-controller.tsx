@@ -73,8 +73,6 @@ export type FieldCatalogActionState =
 
 export type FieldStoreAssortmentInput = {
   readonly unitPrice: number;
-  /** @deprecated Currency is resolved from the current assortment or by DSH Backend on create. */
-  readonly currency?: string;
   readonly available: boolean;
   readonly stockStatus: "in_stock" | "low_stock" | "out_of_stock";
   readonly localNote: string;
