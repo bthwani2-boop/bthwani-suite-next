@@ -28,7 +28,7 @@ import {
   PlatformVarMutationAction,
 } from './platform-vars.policy';
 
-export type PlatformVarsSessionEntry = {
+type PlatformVarsSessionEntry = {
   readonly current: string;
   readonly proposed: string | null;
   readonly status: DshPlatformVarStatus;
