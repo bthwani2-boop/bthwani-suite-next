@@ -187,17 +187,6 @@ export async function resolveOrderPreparationIssue(
   return data.issue;
 }
 
-export async function fetchStorePreparationPolicy(
-  storeId: string,
-  token?: string,
-): Promise<DshStorePreparationPolicy> {
-  const data = await request<{ policy: DshStorePreparationPolicy }>(
-    `/dsh/partner/stores/${encodeURIComponent(storeId)}/order-preparation-policy`,
-    withOptionalToken({}, token),
-  );
-  return data.policy;
-}
-
 export async function updateStorePreparationPolicy(
   storeId: string,
   input: {
