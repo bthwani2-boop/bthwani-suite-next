@@ -42,10 +42,11 @@ export type CreateProviderIncidentInput = {
   readonly policyId?: string | undefined;
 };
 
-export async function createProviderIncident(input: CreateProviderIncidentInput): Promise<ProviderIncident> {
+export async function createProviderIncident(input: CreateProviderIncidentInput, idempotencyKey?: string): Promise<ProviderIncident> {
   const result = await request<{ incident: ProviderIncident }>("/workforce/provider-incidents", {
     method: "POST",
     body: input,
+    idempotencyKey,
   });
   return result.incident;
 }

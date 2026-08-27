@@ -10,10 +10,10 @@ import type {
 
 const { request } = createDshHttpClient("/api/workforce", "workforce-operational-enforcement", 15000);
 
-export function promoteCaptainToBasic(actorId: string, input: PromoteCaptainInput): Promise<PromoteCaptainResponse> {
+export function promoteCaptainToBasic(actorId: string, input: PromoteCaptainInput, idempotencyKey?: string): Promise<PromoteCaptainResponse> {
   return request<PromoteCaptainResponse>(
     `/workforce/captains/${encodeURIComponent(actorId)}/classification/basic`,
-    { method: "POST", body: input },
+    { method: "POST", body: input, idempotencyKey },
   );
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   CpButton,
   CpMutedInline,
@@ -9,6 +10,7 @@ import {
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import { Text } from "@bthwani/ui-kit";
+import { corrId } from "../../shared/_kernel/dsh-http-request";
 import {
   createProviderIncident,
   getProviderPenaltyCommand,
@@ -74,6 +76,18 @@ export type ProviderOperationalEnforcementPanelProps = {
 };
 
 export function ProviderOperationalEnforcementPanel({ actorId, providerKind, canManage }: ProviderOperationalEnforcementPanelProps) {
+  const identity = useIdentitySession();
+  const operatorActorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
+  const commandIds = React.useRef<Record<string, string>>({});
+  const commandFor = (key: string) => {
+    if (!operatorActorId) throw new Error("جلسة لوحة التحكم غير جاهزة لتنفيذ القرار التشغيلي.");
+    const scopedKey = `${operatorActorId}:${key}`;
+    const existing = commandIds.current[scopedKey];
+    if (existing) return { key: scopedKey, id: existing };
+    const id = corrId("workforce-operational-decision");
+    commandIds.current[scopedKey] = id;
+    return { key: scopedKey, id };
+  };
   const [core, setCore] = React.useState<OperationalCoreResponse | null>(null);
   const [incidents, setIncidents] = React.useState<readonly ProviderIncident[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -123,6 +137,11 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
       setError("أدخل رحلات مكتملة ونسبة أداء صحيحة ودليلًا وملاحظة قرار واضحة.");
       return;
     }
+    if (!operatorActorId) {
+      setError("جلسة لوحة التحكم غير جاهزة لتنفيذ القرار التشغيلي.");
+      return;
+    }
+    const command = commandFor(`promote:${actorId}:${deliveries}:${Math.round(ratePercent * 100)}:${evidence.join(",")}:${promotionNote.trim()}`);
     setBusy(true);
     setError(null);
     setSuccess(null);
@@ -133,7 +152,8 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
         severeIncidentFree: true,
         evidenceMediaRefs: evidence,
         decisionNote: promotionNote.trim(),
-      });
+      }, command.id);
+      delete commandIds.current[command.key];
       setCore((current) => current ? { ...current, operationalCore: result.operationalCore } : current);
       setSuccess("تم اعتماد انتقال الكابتن من Joker إلى Basic بسجل أدلة.");
       setCompletedDeliveries("");
@@ -157,6 +177,11 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
       setError("اختيار سياسة مالية يحتاج دليلًا قبل تسجيل القضية.");
       return;
     }
+    if (!operatorActorId) {
+      setError("جلسة لوحة التحكم غير جاهزة لتسجيل المخالفة.");
+      return;
+    }
+    const command = commandFor(`incident:${actorId}:${incidentCode.trim()}:${incidentDescription.trim()}:${incidentSeverity}:${incidentPolicyId.trim()}:${evidence.join(",")}`);
     setBusy(true);
     setError(null);
     setSuccess(null);
@@ -168,7 +193,8 @@ export function ProviderOperationalEnforcementPanel({ actorId, providerKind, can
         evidenceMediaRefs: evidence,
         severity: incidentSeverity,
         policyId: incidentPolicyId.trim() || undefined,
-      });
+      }, command.id);
+      delete commandIds.current[command.key];
       setIncidents((current) => [incident, ...current]);
       setSuccess("تم تسجيل المخالفة كقضية، ولم ينفذ أي خصم مالي.");
       setIncidentCode("");
