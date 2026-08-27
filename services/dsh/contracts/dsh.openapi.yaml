@@ -52,7 +52,6 @@ x-bthwani-contracts:
   representativeFinance: ./dsh.representative-finance.openapi.yaml
   runtimeExtensions: ./dsh.runtime-extensions.openapi.yaml
   settlementsCommissions: ./dsh.settlements-commissions.openapi.yaml
-  storeCaptainHandoff: ./dsh.store-captain-handoff.openapi.yaml
   supportGovernance: ./dsh.support-governance.openapi.yaml
   supportMessageDelivery: ./dsh.support-message-delivery.openapi.yaml
   workforceScopes: ./dsh.workforce-scopes.openapi.yaml

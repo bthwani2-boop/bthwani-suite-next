@@ -344,14 +344,6 @@ export const DSH_CONTRACT_REGISTRY = [
     adapterOwner: "frontend/shared/support/order-rescue.api.ts",
   },
   {
-    id: "dsh-store-captain-handoff",
-    path: "contracts/dsh.store-captain-handoff.openapi.yaml",
-    state: "CONTRACT_ACTIVE",
-    runtimeDependency: true,
-    clientStrategy: "STANDALONE_MANUAL_TYPED_ADAPTER",
-    adapterOwner: "frontend/shared/orders",
-  },
-  {
     id: "dsh-dispatch-governance",
     path: "contracts/dsh.dispatch-governance.openapi.yaml",
     state: "CONTRACT_ACTIVE",
