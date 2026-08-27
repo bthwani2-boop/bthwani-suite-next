@@ -1728,6 +1728,10 @@ components:
       $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestFinancialReadback"
     DshSpecialRequestExecutionResponse:
       $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestExecutionResponse"
+    DshSpecialRequestSaga:
+      $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestSaga"
+    DshSpecialRequestSagaResponse:
+      $ref: "./components/schemas/common.schemas.yaml#/DshSpecialRequestSagaResponse"
     DshPartnerDeliveryTaskStatus:
       $ref: "./components/schemas/partner.schemas.yaml#/DshPartnerDeliveryTaskStatus"
     DshPartnerDeliveryTask:
