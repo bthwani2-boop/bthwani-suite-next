@@ -27,7 +27,7 @@ export const sentryEnabled = initSentry();
 
 const APP_KEY = "app-field";
 const queryClient = createBthwaniQueryClient();
-const queryPersistenceKey = `bthwani-query-cache:v2:${APP_KEY}`;
+const queryPersistenceKey = `bthwani-query-cache:v3:${APP_KEY}`;
 
 export function MobileRuntimeProviders({ children }: { readonly children: React.ReactNode }) {
   useEffect(() => {
