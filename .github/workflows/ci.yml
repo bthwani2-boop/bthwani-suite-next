@@ -468,10 +468,10 @@ jobs:
           VERIFICATION_RESULT: ${{ needs.verification.result }}
           BACKENDS_RESULT: ${{ needs.backends.result }}
           RUNTIME_RESULT: ${{ needs.runtime.result }}
-          DIAGNOSTICS_REQUIRED: ${{ needs.context.outputs.diagnostics_required }}
-          VERIFICATION_REQUIRED: ${{ needs.context.outputs.verification_required }}
-          BACKEND_REQUIRED: ${{ needs.context.outputs.backend_required }}
-          RUNTIME_REQUIRED: ${{ needs.context.outputs.runtime_required }}
+          DIAGNOSTICS_REQUIRED: ${{ inputs.run_assurance == true && needs.context.outputs.diagnostics_required == 'true' }}
+          VERIFICATION_REQUIRED: ${{ needs.context.outputs.verification_required == 'true' }}
+          BACKEND_REQUIRED: ${{ inputs.run_assurance == true && needs.context.outputs.backend_required == 'true' }}
+          RUNTIME_REQUIRED: ${{ inputs.run_assurance == true && needs.context.outputs.runtime_required == 'true' }}
           RUN_ANALYZERS: ${{ inputs.run_analyzers == true }}
           CODEQL_RESULT: ${{ needs.codeql.result }}
           SONAR_RESULT: ${{ needs.sonar.result }}
