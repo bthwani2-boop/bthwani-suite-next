@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -191,5 +192,55 @@ func TestStatusReadbackPostsBoundInquiry(t *testing.T) {
 	}
 	if result.ProviderReference != "ref-status-1" || result.Status != "authorized" {
 		t.Fatalf("unexpected provider result: %+v", result)
+	}
+}
+
+func TestFinancialRailRouter_ClientUsesConfiguredProviderEnvironment(t *testing.T) {
+	t.Setenv("WLT_FINANCIAL_PROVIDER_MODE", "sandbox")
+	t.Setenv("WLT_FINANCIAL_PROVIDER_BASE_URL", "http://127.0.0.1:1")
+
+	db := getTestDB(t)
+	defer db.Close()
+
+	envSuffix, err := randomToken()
+	if err != nil {
+		t.Fatalf("random token: %v", err)
+	}
+	environment := "client-environment-" + envSuffix
+	var providerID string
+	if err := db.QueryRow(`
+		INSERT INTO wlt_financial_providers
+			(provider_type, environment, is_active, is_maintenance, secret_reference, timeout_budget_ms)
+		VALUES ('payment-gateway', $1, true, false, 'env:TEST_SECRET', 1)
+		RETURNING id
+	`, environment).Scan(&providerID); err != nil {
+		t.Fatalf("seed environment-scoped provider: %v", err)
+	}
+	defer func() {
+		_, _ = db.Exec(`DELETE FROM wlt_financial_providers WHERE id = $1`, providerID)
+	}()
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(50 * time.Millisecond)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"providerReference":"ref-timeout","status":"authorized"}`))
+	}))
+	defer upstream.Close()
+	t.Setenv("WLT_FINANCIAL_PROVIDER_BASE_URL", upstream.URL)
+
+	router, err := NewFinancialRailRouter(NewRegistry(db), environment)
+	if err != nil {
+		t.Fatalf("router construction: %v", err)
+	}
+
+	_, err = router.Status(context.Background(), StatusInquiry{
+		PaymentSessionID:  "session-timeout",
+		ProviderReference: "ref-timeout",
+	}, NewRequestMeta("client-environment-test"))
+	if err == nil {
+		t.Fatal("expected configured environment timeout to cancel the provider request")
+	}
+	if !strings.Contains(err.Error(), "context deadline exceeded") && !strings.Contains(err.Error(), "Client.Timeout exceeded") {
+		t.Fatalf("expected timeout from configured provider environment, got %v", err)
 	}
 }

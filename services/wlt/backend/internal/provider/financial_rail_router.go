@@ -81,11 +81,14 @@ func NewFinancialRailRouter(registry *Registry, environment string) (*FinancialR
 
 	// Use environment-configured timeout as default; registry can override at call time
 	timeoutBudget := config.TimeoutBudget
-	providerType := string(config.Mode)
+	providerType := "payment-gateway"
 
-	// Construct internal HTTP client (implementation detail)
+	// Construct internal HTTP client (implementation detail). The client must
+	// use the same registry identity that checkActive validates below.
 	client := &Client{
-		baseURL: strings.TrimRight(config.BaseURL, "/"),
+		baseURL:      strings.TrimRight(config.BaseURL, "/"),
+		providerType: "payment-gateway",
+		environment:  strings.TrimSpace(environment),
 		httpClient: &http.Client{
 			Timeout: timeoutBudget,
 		},
