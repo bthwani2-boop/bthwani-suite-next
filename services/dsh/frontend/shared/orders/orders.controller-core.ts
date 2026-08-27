@@ -10,7 +10,6 @@ export function resolveOrdersLoadError(classified: { readonly kind: OrderErrorKi
   if (scope === "operator") return ordersErrorState("تعذر تحميل قائمة الطلبات.");
   return ordersErrorState("تعذر تحميل الطلبات.");
 }
-export function resolveCreateOrderSuccess(order: DshOrder) { return orderActionSuccessState(order); }
 export function resolveCreateOrderError(classified: { readonly kind: OrderErrorKind }) {
   if (classified.kind === "offline") return orderActionErrorState("لا يوجد اتصال بالإنترنت.");
   if (classified.kind === "permission_denied") return orderActionErrorState("يلزم تسجيل الدخول لإنشاء الطلب.");
