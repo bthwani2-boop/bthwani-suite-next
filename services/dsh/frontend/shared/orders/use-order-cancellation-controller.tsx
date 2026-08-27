@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { corrId } from "../_kernel/dsh-http-request";
 import {
   cancelOrder,
   classifyCancellationError,
@@ -27,6 +28,7 @@ export function useOrderCancellationController({
   onCancelled,
 }: UseOrderCancellationControllerOptions) {
   const [state, setState] = useState<OrderCancellationState>({ kind: "idle" });
+  const commandIds = useRef<Record<string, string>>({});
 
   const load = useCallback(async () => {
     if (!orderId) {
@@ -70,13 +72,29 @@ export function useOrderCancellationController({
         ? { kind: "submitting", cancellation: previousCancellation }
         : { kind: "submitting" },
     );
+    const commandKey = JSON.stringify({
+      surface,
+      orderId,
+      reasonCode: input.reasonCode,
+      reasonNote: input.reasonNote?.trim() ?? "",
+      ticketReference: input.ticketReference?.trim() ?? "",
+    });
+    const commandId = input.commandId?.trim() || commandIds.current[commandKey] || corrId(`${surface}-order-cancel`);
+    commandIds.current[commandKey] = commandId;
+    const commandInput = input.commandId?.trim()
+      ? input
+      : { ...input, commandId, correlationId: input.correlationId?.trim() || commandId };
     try {
-      const response = await cancelOrder(surface, orderId, input, token);
+      const response = await cancelOrder(surface, orderId, commandInput, token);
+      delete commandIds.current[commandKey];
       setState({ kind: "ready", cancellation: response.cancellation });
       await onCancelled?.();
       return { ok: true as const, response };
     } catch (error) {
       const classified = classifyCancellationError(error);
+      if (classified.kind === "invalid" || classified.kind === "permission_denied" || classified.kind === "not_found") {
+        delete commandIds.current[commandKey];
+      }
       if (classified.kind === "requires_review") {
         setState({ kind: "requires_review", message: classified.message });
       } else {
