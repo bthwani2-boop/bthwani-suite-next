@@ -95,7 +95,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'evidence-on-open',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'dsh/docs/RUNTIME_EVIDENCE_MATRIX.md',
+    currentEvidencePath: 'dsh/frontend/app-field/onboarding/DshFieldOnboardingScreen.tsx',
     notes: 'Field owns visit/readiness evidence; partner sees approval state; control-panel approves or requests completion.',
   },
   {
