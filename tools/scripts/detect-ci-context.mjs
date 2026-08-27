@@ -30,6 +30,7 @@ export function classifyFiles(inputFiles, options = {}) {
   const fullVerification = fullScope || verificationDepth === "full";
 
   const workspace = equals("package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "nx.json");
+  const dependencyChanged = workspace || has((file) => /(^|\/)(package-lock\.json|npm-shrinkwrap\.json|yarn\.lock|go\.mod|go\.sum|requirements[^/]*\.txt|poetry\.lock|Cargo\.lock)$/.test(file));
   const workflow = starts(".github/") || verificationAuthorityChanged;
   const infrastructure = starts("infra/") || has((file) => /(^|\/)Dockerfile(?:\.|$)/.test(file) || file.endsWith(".dockerfile"));
 
@@ -186,6 +187,8 @@ export function classifyFiles(inputFiles, options = {}) {
     verification_requirement: verificationRequirement,
     required_jobs: verificationRequirement.required_jobs,
     workflow,
+    workspace,
+    dependency_changed: dependencyChanged,
     infrastructure,
     security,
     security_scan: mobileTransport || protectedSecurityChanged,

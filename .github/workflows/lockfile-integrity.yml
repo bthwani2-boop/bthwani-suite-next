@@ -6,30 +6,11 @@ run-name: >-
   || github.sha) }}
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
-      pr_number:
-        description: PR number for exact closure verification
-        required: false
-        type: string
-      head_sha:
-        description: Immutable candidate SHA
-        required: false
-        type: string
-      base_sha:
-        description: Immutable PR base SHA
-        required: false
-        type: string
-  pull_request:
-    branches: ["**"]
-    paths:
-      - "package.json"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "apps/**/package.json"
-      - "services/**/package.json"
-      - "shared/**/package.json"
-      - "core/**/package.json"
+      pr_number: {type: string, required: false, default: ""}
+      head_sha: {type: string, required: true}
+      base_sha: {type: string, required: true}
 
 permissions:
   contents: read

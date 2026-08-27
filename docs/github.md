@@ -50,7 +50,7 @@ Local scanner execution is not a closure authority. Local `gh`/Sonar clients may
 
 Semgrep does not translate unknown severities into success. Every raw result and engine error is counted. A non-empty result set is an execution finding that must be diagnosed/dispositioned before closure.
 
-`remote-analysis-evidence.yml` remains default-branch/post-merge read-back. It is not PR closure authority.
+`master-sonar.yml` is the sole post-merge Sonar authority. All PR analyzers are reusable workers invoked by the fast gate or Final Closure; no workflow-run read-back or polling path is required.
 
 ## Semantic review attestation
 
@@ -67,32 +67,22 @@ verdict=PASS
 
 The comment body should summarize the material scope reviewed and any finding dispositions. The attestation channel is an issue comment because GitHub forbids APPROVED reviews on self-authored PRs; solo-maintenance authority policy deliberately does not require author independence. A new commit supersedes the attestation. A comment missing any marker, anchored to a stale head, or from an account without write authority is not closure evidence.
 
-## Remote command ingress
+## Canonical CI request interface
 
-`remote-command.yml` accepts schema v2 only. It is a control ingress, not a scanner.
+`pnpm ci:request` is the single human-facing interface. It resolves the repository default branch, current local HEAD, and any matching open PR through GitHub before dispatching the default-branch `ci.yml` definition.
 
-Example full-CI verification request for an open PR:
-
-```json
-{
-  "schema_version": 2,
-  "request_id": "verify-20260824-001",
-  "command": "ci-full",
-  "target_kind": "pull_request",
-  "target_ref": "",
-  "pr_number": 284,
-  "expected_head_sha": "<40-char current PR head>",
-  "expected_base_sha": "<40-char current PR base>"
-}
+```text
+pnpm ci:request --affected
+pnpm ci:request --full
+pnpm ci:request --runtime
+pnpm ci:request --journey partner-onboarding
 ```
 
-For `target_kind=pull_request`, the workflow reads the PR directly and validates exact head/base SHA. For `target_kind=branch`, it validates the named existing branch directly. No branch is created by remote command ingress.
-
-Supported commands are bounded: `ci-affected`, `ci-full`, `ci-runtime`, `ci-journey`, `codeql-full`, `codeql-hygiene`, `sonar-full`, `security-full`, `semgrep-full`, `lockfile-integrity`, and `remote-evidence` (default-branch evidence read-back). PR closure itself is not a remote command; it is requested through the closure-request label path. Arbitrary shell execution is forbidden.
+Every request carries the exact candidate SHA and, when a PR exists, the exact PR number and base SHA. No issue marker, label lifecycle, synthetic branch, arbitrary shell command, `workflow_run` read-back, or polling loop is part of the interface. Final closure is started by `ready_for_review` or by the explicit PR-number dispatch on `final-closure.yml`.
 
 ## Platform enforcement
 
-Tracked files cannot prove live GitHub Rulesets. The canonical integration branch should be protected in GitHub live configuration with PR-required merging, blocked force-push/deletion, and `BThwani / PR Closure Evidence` as the stable required closure status once that ruleset is configured and read back successfully.
+Tracked files cannot prove live GitHub Rulesets. The canonical integration branch should be protected in GitHub live configuration with PR-required merging, blocked force-push/deletion, and `BThwani / Final Closure` as the stable required closure status once that ruleset is configured and read back successfully.
 
 ## Verification discipline
 

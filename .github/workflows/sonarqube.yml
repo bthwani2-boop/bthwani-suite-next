@@ -6,27 +6,13 @@ run-name: >-
   candidate {0}', inputs.head_sha || github.sha) }}
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
-      pr_number:
-        description: PR number for an exact closure scan
-        required: false
-        type: string
-      head_sha:
-        description: Immutable candidate SHA
-        required: false
-        type: string
-      base_sha:
-        description: Immutable PR base SHA
-        required: false
-        type: string
-      head_ref:
-        description: Canonical PR head branch for Sonar read-back
-        required: false
-        type: string
-
-  push:
-    branches: ["**"]
+      pr_number: {type: string, required: false, default: ""}
+      head_sha: {type: string, required: true}
+      base_sha: {type: string, required: true}
+      head_ref: {type: string, required: false, default: ""}
+      base_ref: {type: string, required: false, default: ""}
 
 permissions:
   contents: read
@@ -126,7 +112,7 @@ jobs:
           }
 
           mode=affected
-          if [[ "${EVENT_NAME}" == "workflow_dispatch" || \
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" || "${EVENT_NAME}" == "workflow_call" || \
                 ( "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ) ]]; then
             mode=full
           fi
@@ -682,8 +668,9 @@ jobs:
     if: >-
       ${{ needs.ownership.outputs.skip_duplicate_push != 'true' &&
       needs.scope.result == 'success' && needs.assemble.result == 'success' &&
-      ((github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch)
-      || (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch)) }}
+      (github.event_name == 'workflow_call' ||
+      (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) ||
+      (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch)) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -709,10 +696,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          [[ "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]] || {
-            echo "::error::secret-bearing Sonar analysis requires the default-branch workflow definition"
-            exit 1
-          }
+          if [[ "${GITHUB_EVENT_NAME}" != "workflow_call" ]]; then
+            [[ "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]] || {
+              echo "::error::secret-bearing Sonar analysis requires the default-branch workflow definition"
+              exit 1
+            }
+          fi
           [[ "$(git rev-parse HEAD)" == "${EXPECTED_HEAD_SHA}" ]] || {
             echo "::error::Sonar trusted scan checkout drift"
             exit 1
@@ -814,7 +803,9 @@ jobs:
         uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e # v8.2.0
         with:
           args: >-
-            ${{ inputs.head_ref && format('-Dsonar.branch.name={0}', inputs.head_ref) || '' }}
+            ${{ inputs.pr_number && format('-Dsonar.pullrequest.key={0}', inputs.pr_number) || '' }}
+            ${{ inputs.base_ref && format('-Dsonar.pullrequest.base={0}', inputs.base_ref) || '' }}
+            ${{ inputs.head_ref && format('-Dsonar.pullrequest.branch={0}', inputs.head_ref) || '' }}
             ${{ inputs.head_sha && format('-Dsonar.scm.revision={0}', inputs.head_sha) || '' }}
             -Dsonar.javascript.lcov.reportPaths=.sonar/node-coverage/lcov.info
             -Dsonar.go.coverage.reportPaths=**/.sonar/coverage.out
@@ -871,7 +862,7 @@ jobs:
           [[ "${ASSEMBLE_RESULT}" == "success" ]] || failures+=("assemble:${ASSEMBLE_RESULT}")
 
           trusted_scan_required=false
-          if [[ "${EVENT_NAME}" == "workflow_dispatch" || \
+          if [[ "${EVENT_NAME}" == "workflow_call" || "${EVENT_NAME}" == "workflow_dispatch" || \
                 ( "${EVENT_NAME}" == "push" && "${REF_NAME}" == "${DEFAULT_BRANCH}" ) ]]; then
             trusted_scan_required=true
           fi

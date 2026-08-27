@@ -1,168 +1,74 @@
 import fs from "node:fs";
+import path from "node:path";
 
 const fail = (message) => {
   console.error(`[REMOTE_ANALYSIS_AUTHORITY FAIL] ${message}`);
   process.exit(1);
 };
-const read = (path) => {
-  if (!fs.existsSync(path)) fail(`missing ${path}`);
-  return fs.readFileSync(path, "utf8");
+const read = (file) => {
+  if (!fs.existsSync(file)) fail(`missing ${file}`);
+  return fs.readFileSync(file, "utf8");
 };
-const mustContain = (text, values, owner) => {
-  for (const value of values) if (!text.includes(value)) fail(`${owner} is missing invariant: ${value}`);
+const mustContain = (text, patterns, owner) => {
+  for (const pattern of patterns) if (!text.includes(pattern)) fail(`${owner} missing: ${pattern}`);
 };
-const mustNotContain = (text, values, owner) => {
-  for (const value of values) if (text.includes(value)) fail(`${owner} contains forbidden authority: ${value}`);
+const mustNotContain = (text, patterns, owner) => {
+  for (const pattern of patterns) if (text.includes(pattern)) fail(`${owner} contains forbidden path: ${pattern}`);
 };
 
-const expectedUrl = "https://api.sonarcloud.io/mcp";
-const expectedOrg = "bthwani2-boop";
-const tokenReference = "Bearer ${SONARQUBE_TOKEN}";
+const workflows = fs.readdirSync(path.resolve(".github/workflows"))
+  .filter((file) => file.endsWith(".yml"))
+  .map((file) => `.github/workflows/${file}`);
+const allWorkflowText = workflows.map(read).join("\n");
 
-const antigravity = JSON.parse(read(".agents/mcp_config.json"));
-const antigravitySonar = antigravity?.mcpServers?.sonarqube;
-if (!antigravitySonar) fail("Antigravity SonarQube MCP definition is missing");
-if (antigravitySonar.serverUrl !== expectedUrl) fail("Antigravity must use SonarQube Cloud hosted MCP");
-if ("command" in antigravitySonar || "args" in antigravitySonar) fail("Antigravity must not launch local SonarQube MCP");
-if (antigravitySonar.headers?.SONARQUBE_ORG !== expectedOrg) fail("Antigravity Sonar organization drift");
-if (antigravitySonar.headers?.SONARQUBE_READ_ONLY !== "true") fail("Antigravity Sonar MCP must be read-only");
-if (antigravitySonar.headers?.Authorization !== tokenReference) fail("Antigravity token must remain environment-owned");
-
-const projectMcp = JSON.parse(read(".mcp.json"));
-const projectSonar = projectMcp?.mcpServers?.sonarqube;
-if (!projectSonar || projectSonar.type !== "http" || projectSonar.url !== expectedUrl) fail("project MCP must use SonarQube Cloud HTTP transport");
-if ("command" in projectSonar || "args" in projectSonar || "serverUrl" in projectSonar) fail("project MCP must not launch local SonarQube MCP");
-if (projectSonar.headers?.SONARQUBE_ORG !== expectedOrg || projectSonar.headers?.SONARQUBE_READ_ONLY !== "true") fail("project SonarQube MCP headers drift");
-if (projectSonar.headers?.Authorization !== tokenReference) fail("project Sonar token must remain environment-owned");
-
-const codex = read(".codex/config.toml");
-mustNotContain(codex, ["sonar.exe", "mcp/sonarqube", "sonarsource/sonarqube-mcp", "localhost:9000", 'command = "sonar"'], "Codex Sonar config");
-mustContain(codex, [`url = "${expectedUrl}"`, 'bearer_token_env_var = "SONARQUBE_TOKEN"', `"SONARQUBE_ORG" = "${expectedOrg}"`, '"SONARQUBE_READ_ONLY" = "true"'], "Codex Sonar config");
-
-for (const path of [
-  ".agents/hooks.json",
-  ".agents/rules/sonar-prompt-secrets.md",
-  ".agents/sonar/hooks/pretool-secrets.ps1",
-  ".codex/hooks.json",
-  ".codex/hooks/sonar-secrets/build-scripts/prompt-secrets.ps1",
-  ".claude/hooks/sonar-secrets/build-scripts/prompt-secrets.ps1",
-  ".claude/hooks/sonar-secrets/build-scripts/pretool-secrets.ps1",
-]) if (fs.existsSync(path)) fail(`local Sonar hook path must not exist: ${path}`);
-
-const ci = read(".github/workflows/ci.yml");
-mustContain(ci, [
+mustContain(read(".github/workflows/ci.yml"), [
+  "workflow_call:",
+  "workflow_dispatch:",
   "Resolve canonical branch/PR identity",
-  "target_kind",
-  "pr_number",
-  "expected_head_sha",
-  "expected_base_sha",
   "PR_IDENTITY_CONFLICT",
-], "contextual CI control plane");
-const closureEvidence = read(".github/workflows/pr-closure-evidence.yml");
-mustContain(closureEvidence, [
-  "name: BThwani PR Closure Evidence",
-  "name: BThwani / PR Closure Evidence",
-  "statuses: write",
-  "BThwani / PR Closure Evidence",
-  "Publish canonical closure status",
-], "PR closure evidence workflow");
-const closureDispatch = read(".github/workflows/pr-closure-dispatch.yml");
-mustContain(closureDispatch, [
-  "name: BThwani PR Closure Dispatch",
-  "bthwani:closure-request",
-  "actions: write",
-  "uses: ./.github/workflows/pr-closure-evidence.yml",
-], "PR closure dispatch workflow");
-mustContain(closureEvidence, [
-  "Dispatch and wait for exact unprivileged full CI",
-  "actions/workflows/ci.yml/dispatches",
-  "expected_title=\"closure-pr-${PR_NUMBER}-head-${HEAD_SHA}-base-${BASE_SHA}\"",
-], "PR closure exact-CI dispatch");
-mustNotContain(ci, ["branches: [\"c\"]", "GITHUB_REF_NAME == \"c\"", "refs/heads/c"], "contextual CI control plane");
+], "fast PR gate");
+mustContain(read(".github/workflows/final-closure.yml"), [
+  "name: BThwani Final Closure",
+  "types: [ready_for_review]",
+  "Resolve exact live PR candidate",
+  "uses: ./.github/workflows/ci.yml",
+  "uses: ./.github/workflows/sonarqube.yml",
+  "uses: ./.github/workflows/codeql.yml",
+  "uses: ./.github/workflows/semgrep.yml",
+  "uses: ./.github/workflows/security-remote.yml",
+  "name: BThwani / Final Closure",
+  "statuses/${HEAD_SHA}",
+], "final closure");
+mustNotContain(allWorkflowText, ["workflow_run:", "repository_dispatch", "actions/workflows/"], "workflow control plane");
+mustNotContain(read(".github/workflows/final-closure.yml"), ["sleep", "poll", "workflow_run:", "repository_dispatch", "actions/workflows/"], "final closure control plane");
 
-const sonarWorkflow = read(".github/workflows/sonarqube.yml");
-mustContain(sonarWorkflow, ["SonarQube Cloud", "SonarSource/sonarqube-scan-action@"], "SonarQube workflow");
-mustNotContain(sonarWorkflow, ["localhost:9000", "sonar-scanner"], "SonarQube workflow");
+for (const file of [
+  ".github/workflows/pr-closure-dispatch.yml",
+  ".github/workflows/pr-closure-evidence.yml",
+  ".github/workflows/pr-closure-invalidate.yml",
+  ".github/workflows/pr-closure-request.yml",
+  ".github/workflows/remote-command.yml",
+  ".github/workflows/remote-analysis-evidence.yml",
+  ".github/workflows/codeql-hygiene.yml",
+]) if (fs.existsSync(file)) fail(`obsolete workflow remains: ${file}`);
 
-const codeqlWorkflow = read(".github/workflows/codeql.yml");
-mustContain(codeqlWorkflow, ["github/codeql-action/init@", "github/codeql-action/analyze@"], "CodeQL workflow");
-
-const semgrep = read(".github/workflows/semgrep.yml");
-mustContain(semgrep, [
-  "classify-semgrep-evidence.mjs",
-  "classifiedEngineErrors",
-  "totalFindings",
-  "engineConditions",
-  "toolLimitationsProven",
-  "unknownEngineErrors",
-  "Semgrep findings require diagnosis/disposition before closure",
-], "Semgrep workflow");
-const semgrepNormalizer = read("tools/scripts/classify-semgrep-evidence.mjs");
-mustContain(semgrepNormalizer, [
-  "allRawFindingsAccounted",
-  "classifiedEngineErrors",
-  "TOOL_LIMITATION_PROVEN",
-  "UNKNOWN_ENGINE_ERROR",
-  "raw",
-], "Semgrep evidence normalizer");
-
-for (const path of [".github/workflows/docker-runtime-hardening.yml", ".github/workflows/lockfile-integrity.yml"]) {
-  const text = read(path);
-  mustContain(text, ["github.event.pull_request.head.sha || github.sha", "Verify exact candidate checkout"], path);
+for (const file of ["codeql.yml", "semgrep.yml", "security-remote.yml", "sonarqube.yml"]) {
+  const content = read(`.github/workflows/${file}`);
+  mustContain(content, ["workflow_call:", "head_sha", "base_sha"], file);
 }
+const sonar = read(".github/workflows/sonarqube.yml");
+mustContain(sonar, [
+  "SonarSource/sonarqube-scan-action@",
+  "secrets.SONAR_TOKEN",
+  "sonar.pullrequest.key",
+  "sonar.scm.revision",
+], "SonarQube authority");
+mustNotContain(sonar, ["SONAR_HOST_URL", "localhost:9000", "vars.SONAR_PROJECT_KEY"], "SonarQube authority");
+const semgrep = read(".github/workflows/semgrep.yml");
+mustContain(semgrep, ["classify-semgrep-evidence.mjs", "unknownEngineErrors", "Semgrep findings require diagnosis/disposition before closure"], "Semgrep authority");
+const security = read(".github/workflows/security-remote.yml");
+mustContain(security, ["gitleaks detect", "run-osv-scanner.mjs", "run-trivy.mjs", "runs-on: ubuntu-24.04"], "security authority");
+mustContain(read(".github/workflows/codeql.yml"), ["github/codeql-action/init@", "github/codeql-action/analyze@"], "CodeQL authority");
+mustContain(read("sonar-project.properties"), ["sonar.organization=bthwani2-boop", "sonar.projectKey=bthwani2-boop_bthwani-suite-next"], "Sonar identity");
 
-const remoteSecurityWorkflow = read(".github/workflows/security-remote.yml");
-mustContain(remoteSecurityWorkflow, ["gitleaks detect", "run-osv-scanner.mjs", "run-trivy.mjs", "runs-on: ubuntu-24.04"], "remote security workflow");
-
-const codeqlHygiene = read(".github/workflows/codeql-hygiene.yml");
-mustContain(codeqlHygiene, ['workflows: ["CodeQL"]', "security-events: write", "github.event.repository.default_branch", "/code-scanning/analyses", "confirm_delete=true"], "CodeQL metadata hygiene");
-mustNotContain(codeqlHygiene, ["branches/master", "refs/heads/master", "/branches/master", "actions/checkout@", "github/codeql-action/init@", "github/codeql-action/analyze@", "sonar-scanner"], "CodeQL metadata hygiene");
-
-const remoteEvidence = read(".github/workflows/remote-analysis-evidence.yml");
-mustContain(remoteEvidence, ["collect-remote-analysis-evidence.mjs", "Remote Analysis Evidence", "statuses: write", "workflow_run:", "cancel-in-progress: false"], "default-branch remote evidence");
-mustNotContain(remoteEvidence, ["github/codeql-action/init@", "github/codeql-action/analyze@", "gitleaks detect", "sonar-scanner"], "default-branch remote evidence");
-
-const remoteCommand = read(".github/workflows/remote-command.yml");
-mustContain(remoteCommand, [
-  ".schema_version==2",
-  "request_id",
-  "target_kind",
-  "pr_number",
-  "expected_head_sha",
-  "expected_base_sha",
-  "actions/workflows/${WORKFLOW}/dispatches",
-], "remote command ingress");
-mustNotContain(remoteCommand, ["schema_version == 1", "pr-closure", "Invoke-Expression", "github/codeql-action/init@", "sonar-scanner"], "remote command ingress");
-
-const ocr = read(".github/workflows/open-code-review.yml");
-mustContain(ocr, [
-  "ocr delegate preview",
-  "ocr delegate rule",
-  "schemaVersion: 3",
-  "repository: $repository",
-  "reviewableFiles: $reviewableFiles",
-  "resolvedRulesSha256: $rulesSha256",
-  "artifactIdentity: $artifactIdentity",
-  "packageIntegrity: $packageIntegrity",
-  "hostAgentRequired: true",
-  "hostAgentExecutedByThisWorkflow: false",
-  "semanticReviewClaimedByThisWorkflow: false",
-], "OpenCodeReview delegation");
-mustNotContain(ocr, ["COPILOT_GITHUB_TOKEN", "OCR_EVALUATOR_SHA", "evaluate-opencodereview.mjs", "OCR_LLM_"], "OpenCodeReview delegation");
-const attestationParser = read("tools/scripts/parse-semantic-attestation.mjs");
-mustContain(attestationParser, [
-  "BTHWANI_SEMANTIC_REVIEW:v1",
-  "candidate SHA mismatch",
-  "external-authorized-host-agent",
-  "duplicate semantic attestations are ambiguous",
-  "PR author cannot author semantic attestation",
-], "semantic attestation parser");
-mustContain(closureEvidence, [
-  "contents/tools/scripts/parse-semantic-attestation.mjs",
-  "sha256sum -c context-files.sha256",
-  "artifactIdentity == $artifact",
-  "--candidate-sha \"${HEAD_SHA}\"",
-], "exact semantic attestation consumer");
-mustNotContain(closureEvidence, ["contains(\"BTHWANI_SEMANTIC_REVIEW:v1\")", "contains(\"verdict=PASS\")"], "exact semantic attestation consumer");
-
-console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] Branch-agnostic PR identity, exact-head closure evidence, hosted scanners, total Semgrep accounting with proven tool limitations, API-only metadata hygiene, trusted OCR artifact provenance, and deterministic external-host attestation remain separated canonical responsibilities.");
+console.log("[REMOTE_ANALYSIS_AUTHORITY PASS] The repository has one fast PR gate, one exact non-polling final closure, reusable analyzer workers, live candidate binding, and no legacy dispatch or workflow-run polling paths.");

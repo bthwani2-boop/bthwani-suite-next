@@ -6,27 +6,12 @@ run-name: >-
   || format('OpenCodeReview dispatched candidate {0}', inputs.head_sha) }}
 
 "on":
-  pull_request:
-    branches: ["**"]
-    types: [opened, synchronize, reopened, ready_for_review]
-  workflow_dispatch:
+  workflow_call:
     inputs:
-      pr_number:
-        description: PR number for exact closure correlation
-        required: false
-        type: string
-      base_ref:
-        description: Trusted base commit/ref
-        required: true
-        type: string
-      head_sha:
-        description: Exact candidate SHA to prepare
-        required: true
-        type: string
-      base_sha:
-        description: Immutable PR base SHA for closure correlation
-        required: false
-        type: string
+      pr_number: {type: string, required: true}
+      base_ref: {type: string, required: true}
+      head_sha: {type: string, required: true}
+      base_sha: {type: string, required: true}
 
 permissions:
   contents: read

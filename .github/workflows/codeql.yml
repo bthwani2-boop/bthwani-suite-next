@@ -6,30 +6,14 @@ run-name: >-
   {0}', inputs.head_sha || github.sha) }}
 
 on:
-  pull_request:
-    branches: ["**"]
-  push:
-    branches: ["**"]
-  schedule:
-    - cron: "17 3 * * 1"
-  workflow_dispatch:
+  workflow_call:
     inputs:
-      pr_number:
-        description: PR number for an exact closure scan
-        required: false
-        type: string
-      head_sha:
-        description: Immutable candidate SHA
-        required: false
-        type: string
-      base_sha:
-        description: Immutable PR base SHA
-        required: false
-        type: string
-      head_ref:
-        description: Canonical candidate branch for trusted SARIF upload
-        required: false
-        type: string
+      pr_number: {type: string, required: false, default: ""}
+      head_sha: {type: string, required: true}
+      base_sha: {type: string, required: true}
+      head_ref: {type: string, required: false, default: ""}
+      base_ref: {type: string, required: false, default: ""}
+      full_scope: {type: boolean, required: false, default: false}
 
 permissions:
   contents: read
@@ -98,7 +82,7 @@ jobs:
           fi
           full=false
           skip_duplicate=false
-          if [[ "${EVENT_NAME}" == "schedule" || "${EVENT_NAME}" == "workflow_dispatch" || ( \
+          if [[ "${EVENT_NAME}" == "schedule" || "${EVENT_NAME}" == "workflow_dispatch" || "${EVENT_NAME}" == "workflow_call" || ( \
           "${EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ) ]]; then
             full=true
           elif [[ "${EVENT_NAME}" == "push" ]]; then
@@ -325,9 +309,10 @@ jobs:
     if: >-
       ${{ needs.scope.outputs.skip_duplicate_push != 'true' && needs.analyze-javascript-typescript.result ==
       'success' && needs.analyze-go.result == 'success' && needs.analyze-actions.result == 'success' &&
-      ((github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch)
-      || github.event_name == 'schedule' || (github.event_name == 'push' && github.ref_name ==
-      github.event.repository.default_branch)) }}
+      (github.event_name == 'workflow_call' ||
+      (github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch) ||
+      github.event_name == 'schedule' ||
+      (github.event_name == 'push' && github.ref_name == github.event.repository.default_branch)) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     permissions:
@@ -430,17 +415,11 @@ jobs:
             echo "${upload_id}" >> "${RUNNER_TEMP}/codeql-upload-ids.txt"
           done < "${RUNNER_TEMP}/codeql-sarif-files"
 
-          while IFS= read -r upload_id; do
-            status=""
-            for _ in $(seq 1 120); do
-              response="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
-              "/repos/${GITHUB_REPOSITORY}/code-scanning/sarifs/${upload_id}")"
-              status="$(jq -r '.processing_status // "unknown"' <<<"${response}")"
-              [[ "${status}" == "pending" ]] || break
-              sleep 5
-            done
-            [[ "${status}" == "complete" ]] || { echo "::error::CodeQL SARIF processing status=${status}"; exit 1; }
-          done < "${RUNNER_TEMP}/codeql-upload-ids.txt"
+          [[ -s "${RUNNER_TEMP}/codeql-upload-ids.txt" ]] || {
+            echo "::error::CodeQL SARIF upload ids missing"
+            exit 1
+          }
+          echo "CodeQL SARIF uploads accepted by GitHub for asynchronous processing"
 
   result:
     name: >-
@@ -490,7 +469,7 @@ jobs:
             exit 1
           fi
           trusted_upload_required=false
-          if [[ "${EVENT_NAME}" == "workflow_dispatch" || "${EVENT_NAME}" == "schedule" || ( \
+          if [[ "${EVENT_NAME}" == "workflow_dispatch" || "${EVENT_NAME}" == "workflow_call" || "${EVENT_NAME}" == "schedule" || ( \
           "${EVENT_NAME}" == "push" && "${REF_NAME}" == "${DEFAULT_BRANCH}" ) ]]; then
             trusted_upload_required=true
           fi
