@@ -43,14 +43,11 @@ func reconcilePayoutWithAuthoritativeStatement(t *testing.T, db *sql.DB, operato
 	if err != nil {
 		t.Fatalf("register external provider account: %v", err)
 	}
-	statement, err := ImportAuthoritativeStatement(reconcilerCtx, db, ImportAuthoritativeStatementInput{
+	statementInput := ImportAuthoritativeStatementInput{
 		ExternalProviderAccountID: account.ID,
 		StatementReference:        "statement-" + payoutID,
-		// Leave the artifact identity empty so WLT derives and persists the
-		// canonical hash from the complete statement facts below.
-		ArtifactSHA256: "",
-		BusinessDate:   time.Now().UTC().Format(time.DateOnly),
-		Currency:       "YER",
+		BusinessDate:              time.Now().UTC().Format(time.DateOnly),
+		Currency:                  "YER",
 		Lines: []AuthoritativeStatementLineInput{{
 			ExternalTransferReference: externalReference,
 			Direction:                 "outgoing",
@@ -59,7 +56,16 @@ func reconcilePayoutWithAuthoritativeStatement(t *testing.T, db *sql.DB, operato
 			DestinationReferenceHash:  destinationHash,
 			SourceRecord:              map[string]any{"fixture": "authoritative"},
 		}},
-	})
+	}
+	businessDate, err := time.Parse(time.DateOnly, statementInput.BusinessDate)
+	if err != nil {
+		t.Fatalf("parse fixture business date: %v", err)
+	}
+	statementInput.ArtifactSHA256, err = canonicalStatementArtifactSHA256(statementInput, businessDate)
+	if err != nil {
+		t.Fatalf("compute fixture artifact hash: %v", err)
+	}
+	statement, err := ImportAuthoritativeStatement(reconcilerCtx, db, statementInput)
 	if err != nil {
 		t.Fatalf("import authoritative statement: %v", err)
 	}

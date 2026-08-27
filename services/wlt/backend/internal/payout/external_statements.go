@@ -124,7 +124,10 @@ func validateCanonicalStatementArtifact(input ImportAuthoritativeStatementInput,
 	if err != nil {
 		return "", "", err
 	}
-	if input.ArtifactSHA256 != "" && input.ArtifactSHA256 != computedArtifactSHA256 {
+	if input.ArtifactSHA256 == "" {
+		return "", "", fmt.Errorf("artifactSha256 is required and must be computed by the provider ingestion boundary")
+	}
+	if input.ArtifactSHA256 != computedArtifactSHA256 {
 		return "", "", fmt.Errorf("artifactSha256 does not match the server-computed canonical statement fingerprint")
 	}
 	statementFingerprint, err := canonicalStatementFingerprint(input, businessDate, computedArtifactSHA256)
@@ -193,7 +196,7 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 	input.ArtifactSHA256 = strings.ToLower(strings.TrimSpace(input.ArtifactSHA256))
 	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
 	businessDate, err := time.Parse(time.DateOnly, strings.TrimSpace(input.BusinessDate))
-	if err != nil || input.ExternalProviderAccountID == "" || input.StatementReference == "" || (input.ArtifactSHA256 != "" && !isSHA256(input.ArtifactSHA256)) || input.Currency == "" || len(input.Lines) == 0 {
+	if err != nil || input.ExternalProviderAccountID == "" || input.StatementReference == "" || (!isSHA256(input.ArtifactSHA256)) || input.Currency == "" || len(input.Lines) == 0 {
 		return nil, fmt.Errorf("account, statementReference, SHA-256 artifact, businessDate, currency and statement lines are required")
 	}
 	for i := range input.Lines {
