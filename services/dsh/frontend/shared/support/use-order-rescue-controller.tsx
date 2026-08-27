@@ -48,7 +48,7 @@ function fingerprint(value: unknown): string {
   return JSON.stringify(value);
 }
 
-export function useOrderRescueController(authKind = "unauthenticated") {
+export function useOrderRescueController(actorId: string | null, authKind = "unauthenticated") {
   const [listState, setListState] = useState<OrderRescueListState>({ kind: "idle" });
   const [actionState, setActionState] = useState<OrderRescueActionState>({ kind: "idle" });
   const [eventState, setEventState] = useState<OrderRescueEventState>({ kind: "idle" });
@@ -81,8 +81,13 @@ export function useOrderRescueController(authKind = "unauthenticated") {
   }, []);
 
   const createCase = useCallback(async (input: DshCreateGovernedOrderRescueInput): Promise<boolean> => {
+    if (!actorId) {
+      setActionState({ kind: "error", message: "تعذر تحديد هوية مشغل إنقاذ الطلب" });
+      return false;
+    }
     const valueFingerprint = fingerprint(input);
     const attempt = await getOrCreateSupportMutationAttempt({
+      actorId,
       scope: "operator",
       operation: "order-rescue-create",
       entityId: input.orderId,
@@ -92,6 +97,7 @@ export function useOrderRescueController(authKind = "unauthenticated") {
     try {
       const rescueCase = await createOrderRescueCase(input, attempt.context);
       await clearSupportMutationAttempt({
+        actorId,
         scope: "operator",
         operation: "order-rescue-create",
         entityId: input.orderId,
@@ -104,12 +110,16 @@ export function useOrderRescueController(authKind = "unauthenticated") {
       setActionState({ kind: "error", message: resolveMessage(error) });
       return false;
     }
-  }, [load, loadEvents]);
+  }, [actorId, load, loadEvents]);
 
   const updateCase = useCallback(async (
     rescueCase: DshGovernedOrderRescueCase,
     input: Omit<DshUpdateGovernedOrderRescueInput, "expectedStatus" | "expectedVersion">,
   ): Promise<boolean> => {
+    if (!actorId) {
+      setActionState({ kind: "error", message: "تعذر تحديد هوية مشغل إنقاذ الطلب" });
+      return false;
+    }
     const governedInput: DshUpdateGovernedOrderRescueInput = {
       ...input,
       expectedStatus: rescueCase.status,
@@ -117,6 +127,7 @@ export function useOrderRescueController(authKind = "unauthenticated") {
     };
     const valueFingerprint = fingerprint(governedInput);
     const attempt = await getOrCreateSupportMutationAttempt({
+      actorId,
       scope: "operator",
       operation: "order-rescue-transition",
       entityId: rescueCase.id,
@@ -126,6 +137,7 @@ export function useOrderRescueController(authKind = "unauthenticated") {
     try {
       const updated = await updateOrderRescueCase(rescueCase.id, governedInput, attempt.context);
       await clearSupportMutationAttempt({
+        actorId,
         scope: "operator",
         operation: "order-rescue-transition",
         entityId: rescueCase.id,
@@ -138,7 +150,7 @@ export function useOrderRescueController(authKind = "unauthenticated") {
       setActionState({ kind: "error", message: resolveMessage(error) });
       return false;
     }
-  }, [load, loadEvents]);
+  }, [actorId, load, loadEvents]);
 
   const resetAction = useCallback(() => setActionState({ kind: "idle" }), []);
 

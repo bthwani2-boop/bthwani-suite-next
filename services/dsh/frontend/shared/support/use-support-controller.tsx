@@ -64,7 +64,7 @@ function stableFingerprint(value: unknown): string {
   return JSON.stringify(value);
 }
 
-export function useSupportTicketController(authKind = "unauthenticated") {
+export function useSupportTicketController(actorId: string | null, authKind = "unauthenticated") {
   const [listState, setListState] = useState(ticketListIdle());
   const [actionState, setActionState] = useState(ticketActionIdle());
 
@@ -83,12 +83,13 @@ export function useSupportTicketController(authKind = "unauthenticated") {
   }, [authKind, load]);
 
   const submitTicket = useCallback(async (input: DshCreateTicketInput): Promise<boolean> => {
-    if (!isAuthenticated(authKind)) {
+    if (!isAuthenticated(authKind) || !actorId) {
       setActionState(ticketActionError("يجب تسجيل الدخول قبل إنشاء تذكرة دعم"));
       return false;
     }
     const fingerprint = stableFingerprint(input);
     const attempt = await getOrCreateSupportMutationAttempt({
+      actorId,
       scope: "client",
       operation: "ticket-create",
       fingerprint,
@@ -97,6 +98,7 @@ export function useSupportTicketController(authKind = "unauthenticated") {
     try {
       const ticket = await createSupportTicket(input, attempt.context);
       await clearSupportMutationAttempt({
+        actorId,
         scope: "client",
         operation: "ticket-create",
         fingerprint,
@@ -108,14 +110,14 @@ export function useSupportTicketController(authKind = "unauthenticated") {
       setActionState(ticketActionError(resolveMessage(err)));
       return false;
     }
-  }, [authKind, load]);
+  }, [actorId, authKind, load]);
 
   const resetAction = useCallback(() => setActionState(ticketActionIdle()), []);
 
   return { listState, actionState, reload: load, submitTicket, resetAction };
 }
 
-export function useOperatorTicketController(authKind = "unauthenticated") {
+export function useOperatorTicketController(actorId: string | null, authKind = "unauthenticated") {
   const [listState, setListState] = useState(ticketListIdle());
   const [actionState, setActionState] = useState(ticketActionIdle());
 
@@ -137,8 +139,13 @@ export function useOperatorTicketController(authKind = "unauthenticated") {
     ticketId: string,
     input: DshUpdateTicketInput,
   ): Promise<boolean> => {
+    if (!actorId) {
+      setActionState(ticketActionError("تعذر تحديد هوية مشغل الدعم"));
+      return false;
+    }
     const fingerprint = stableFingerprint(input);
     const attempt = await getOrCreateSupportMutationAttempt({
+      actorId,
       scope: "operator",
       operation: "ticket-transition",
       entityId: ticketId,
@@ -148,6 +155,7 @@ export function useOperatorTicketController(authKind = "unauthenticated") {
     try {
       const ticket = await updateTicket(ticketId, input, attempt.context);
       await clearSupportMutationAttempt({
+        actorId,
         scope: "operator",
         operation: "ticket-transition",
         entityId: ticketId,
@@ -160,7 +168,7 @@ export function useOperatorTicketController(authKind = "unauthenticated") {
       setActionState(ticketActionError(resolveMessage(err)));
       return false;
     }
-  }, [load]);
+  }, [actorId, load]);
 
   const resetAction = useCallback(() => setActionState(ticketActionIdle()), []);
 
@@ -176,6 +184,7 @@ export type SupportEventState =
 
 export function useTicketDetailController(
   ticketId: string,
+  actorId: string | null,
   authKind = "unauthenticated",
   mode: SupportTicketDetailMode = "client",
 ) {
@@ -244,8 +253,13 @@ export function useTicketDetailController(
       return false;
     }
     const normalizedInput: DshAddMessageInput = { ...input, body };
+    if (!actorId) {
+      setMessageActionState(messageActionError("تعذر تحديد هوية مرسل الرسالة"));
+      return false;
+    }
     const fingerprint = stableFingerprint({ body, isInternal: input.isInternal === true });
     const attempt = await getOrCreateSupportMutationAttempt({
+      actorId,
       scope: mode,
       operation: "ticket-message",
       entityId: ticketId,
@@ -257,6 +271,7 @@ export function useTicketDetailController(
         ? await addOperatorTicketMessage(ticketId, normalizedInput, attempt.context)
         : await addTicketMessage(ticketId, normalizedInput, attempt.context);
       await clearSupportMutationAttempt({
+        actorId,
         scope: mode,
         operation: "ticket-message",
         entityId: ticketId,

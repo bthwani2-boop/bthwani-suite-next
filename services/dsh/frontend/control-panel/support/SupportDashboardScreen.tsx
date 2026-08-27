@@ -23,6 +23,7 @@ import {
   CpTextInput,
 } from "@bthwani/control-panel/components";
 import { DataTablePageFrame } from "@bthwani/control-panel/shell";
+import { useControlPanelSession } from "../session";
 import {
   useOperatorTicketController,
   useSupportIncidentController,
@@ -61,8 +62,10 @@ function formatEvent(event: DshSupportTicketEvent): string {
 }
 
 export function SupportDashboardScreen() {
-  const ticketCtrl = useOperatorTicketController("authenticated");
-  const incidentCtrl = useSupportIncidentController("authenticated");
+  const session = useControlPanelSession();
+  const actorId = session.state.kind === "authenticated" ? session.state.identity.subject : null;
+  const ticketCtrl = useOperatorTicketController(actorId, session.state.kind);
+  const incidentCtrl = useSupportIncidentController(actorId, session.state.kind);
   const [mainTab, setMainTab] = useState<SupportMainTabId>("queues");
   const [queueFilter, setQueueFilter] = useState<SupportQueueFilterId>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -71,7 +74,7 @@ export function SupportDashboardScreen() {
   const [replyBody, setReplyBody] = useState("");
   const [internalReply, setInternalReply] = useState(false);
 
-  const detailCtrl = useTicketDetailController(selectedTicketId ?? "", "authenticated", "operator");
+  const detailCtrl = useTicketDetailController(selectedTicketId ?? "", actorId, session.state.kind, "operator");
   const tickets = ticketCtrl.listState.kind === "success" ? ticketCtrl.listState.tickets : [];
   const incidents = incidentCtrl.listState.kind === "success" ? incidentCtrl.listState.incidents : [];
   const metrics = useMemo(() => buildSupportKpiMetrics(tickets, incidents), [tickets, incidents]);

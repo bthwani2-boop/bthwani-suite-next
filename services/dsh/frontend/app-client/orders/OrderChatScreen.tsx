@@ -1,4 +1,5 @@
 import React from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   ActivityIndicator,
   Pressable,
@@ -93,6 +94,8 @@ export function OrderChatScreen({
   onBack,
   onOpenNotifications,
 }: OrderChatScreenProps) {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
   const [loadState, setLoadState] = React.useState<LoadState>("idle");
   const [mutationState, setMutationState] = React.useState<MutationState>("idle");
   const [ticket, setTicket] = React.useState<DshSupportTicket | null>(null);
@@ -114,6 +117,11 @@ export function OrderChatScreen({
 
   const loadConversation = React.useCallback(async () => {
     if (!orderId.trim()) return;
+    if (!actorId) {
+      setLoadState("error");
+      setErrorMessage("يجب تسجيل الدخول قبل فتح محادثة الطلب.");
+      return;
+    }
     setLoadState("loading");
     setErrorMessage("");
     try {
@@ -131,6 +139,7 @@ export function OrderChatScreen({
         };
         const fingerprint = JSON.stringify(input);
         const attempt = await getOrCreateSupportMutationAttempt({
+          actorId,
           scope: "client",
           operation: "create-order-chat",
           entityId: orderId,
@@ -138,6 +147,7 @@ export function OrderChatScreen({
         });
         selected = await createActorSupportTicket(input, attempt.context);
         await clearSupportMutationAttempt({
+          actorId,
           scope: "client",
           operation: "create-order-chat",
           entityId: orderId,
@@ -150,7 +160,7 @@ export function OrderChatScreen({
       setLoadState("error");
       setErrorMessage(error instanceof Error ? error.message : "تعذر تحميل محادثة الطلب من DSH.");
     }
-  }, [isPickup, orderId, readback]);
+  }, [actorId, isPickup, orderId, readback]);
 
   React.useEffect(() => {
     void loadConversation();
@@ -158,12 +168,13 @@ export function OrderChatScreen({
 
   const sendMessage = React.useCallback(async () => {
     const body = draft.trim();
-    if (!ticket || body.length < 2 || mutationState !== "idle" || CLOSED_STATUSES.has(ticket.status)) return;
+    if (!ticket || !actorId || body.length < 2 || mutationState !== "idle" || CLOSED_STATUSES.has(ticket.status)) return;
     const fingerprint = JSON.stringify({ ticketId: ticket.id, body });
     setMutationState("sending");
     setErrorMessage("");
     try {
       const attempt = await getOrCreateSupportMutationAttempt({
+        actorId,
         scope: "client",
         operation: "send-order-chat-msg",
         entityId: ticket.id,
@@ -171,6 +182,7 @@ export function OrderChatScreen({
       });
       await addActorSupportMessage(ticket.id, { body }, attempt.context);
       await clearSupportMutationAttempt({
+        actorId,
         scope: "client",
         operation: "send-order-chat-msg",
         entityId: ticket.id,
@@ -185,7 +197,7 @@ export function OrderChatScreen({
     } finally {
       setMutationState("idle");
     }
-  }, [draft, mutationState, orderId, readback, ticket]);
+  }, [actorId, draft, mutationState, orderId, readback, ticket]);
 
   if (loadState === "error" && !ticket) {
     return (

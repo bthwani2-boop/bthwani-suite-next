@@ -47,7 +47,7 @@ export type IncidentEventState =
   | { readonly kind: "error"; readonly message: string }
   | { readonly kind: "success"; readonly events: readonly DshIncidentEvent[] };
 
-export function useGovernedSupportIncidentController(authKind = "unauthenticated") {
+export function useGovernedSupportIncidentController(actorId: string | null, authKind = "unauthenticated") {
   const [listState, setListState] = useState(incidentListIdle());
   const [actionState, setActionState] = useState(incidentActionIdle());
   const [eventState, setEventState] = useState<IncidentEventState>({ kind: "idle" });
@@ -80,8 +80,13 @@ export function useGovernedSupportIncidentController(authKind = "unauthenticated
   }, []);
 
   const raiseIncident = useCallback(async (input: DshCreateIncidentInput): Promise<boolean> => {
+    if (!actorId) {
+      setActionState(incidentActionError("تعذر تحديد هوية مشغل الحوادث"));
+      return false;
+    }
     const fingerprint = stableFingerprint(input);
     const attempt = await getOrCreateSupportMutationAttempt({
+      actorId,
       scope: "operator",
       operation: "incident-create",
       fingerprint,
@@ -90,6 +95,7 @@ export function useGovernedSupportIncidentController(authKind = "unauthenticated
     try {
       const incident = await createGovernedIncident(input, attempt.context);
       await clearSupportMutationAttempt({
+        actorId,
         scope: "operator",
         operation: "incident-create",
         fingerprint,
@@ -101,12 +107,16 @@ export function useGovernedSupportIncidentController(authKind = "unauthenticated
       setActionState(incidentActionError(resolveIncidentMessage(error)));
       return false;
     }
-  }, [load]);
+  }, [actorId, load]);
 
   const resolveIncident = useCallback(async (
     incidentId: string,
     input: DshUpdateIncidentInput,
   ): Promise<boolean> => {
+    if (!actorId) {
+      setActionState(incidentActionError("تعذر تحديد هوية مشغل الحوادث"));
+      return false;
+    }
     const current = listState.kind === "success"
       ? listState.incidents.find((incident) => incident.id === incidentId)
       : undefined;
@@ -117,6 +127,7 @@ export function useGovernedSupportIncidentController(authKind = "unauthenticated
     const governedInput = { ...input, expectedStatus: current.status, expectedVersion: current.version };
     const fingerprint = stableFingerprint(governedInput);
     const attempt = await getOrCreateSupportMutationAttempt({
+      actorId,
       scope: "operator",
       operation: "incident-transition",
       entityId: incidentId,
@@ -126,6 +137,7 @@ export function useGovernedSupportIncidentController(authKind = "unauthenticated
     try {
       const incident = await updateGovernedIncident(incidentId, governedInput, attempt.context);
       await clearSupportMutationAttempt({
+        actorId,
         scope: "operator",
         operation: "incident-transition",
         entityId: incidentId,
@@ -138,7 +150,7 @@ export function useGovernedSupportIncidentController(authKind = "unauthenticated
       setActionState(incidentActionError(resolveIncidentMessage(error)));
       return false;
     }
-  }, [listState, load, loadEvents]);
+  }, [actorId, listState, load, loadEvents]);
 
   const resetAction = useCallback(() => setActionState(incidentActionIdle()), []);
 

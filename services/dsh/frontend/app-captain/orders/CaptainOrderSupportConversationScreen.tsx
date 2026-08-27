@@ -1,4 +1,5 @@
 import React from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
 import {
   Badge,
   Box,
@@ -66,6 +67,8 @@ export function CaptainOrderSupportConversationScreen({
   composerEnabled,
   onBack,
 }: CaptainOrderSupportConversationScreenProps) {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
   const [loadState, setLoadState] = React.useState<LoadState>("idle");
   const [mutationState, setMutationState] = React.useState<MutationState>("idle");
   const [ticket, setTicket] = React.useState<DshSupportTicket | null>(null);
@@ -75,6 +78,11 @@ export function CaptainOrderSupportConversationScreen({
 
   const load = React.useCallback(async () => {
     if (!orderId) return;
+    if (!actorId) {
+      setLoadState("error");
+      setErrorMessage("يجب تسجيل الدخول قبل فتح محادثة الطلب.");
+      return;
+    }
     setLoadState("loading");
     setErrorMessage("");
     try {
@@ -95,14 +103,14 @@ export function CaptainOrderSupportConversationScreen({
         error instanceof Error ? error.message : "تعذر تحميل محادثة الطلب من DSH.",
       );
     }
-  }, [orderId]);
+  }, [actorId, orderId]);
 
   React.useEffect(() => {
     void load();
   }, [load]);
 
   const createConversation = React.useCallback(async () => {
-    if (!orderId || mutationState !== "idle") return;
+    if (!orderId || !actorId || mutationState !== "idle") return;
     const input = {
       orderId,
       subject: `تواصل الكابتن حول الطلب ${orderId}`,
@@ -115,6 +123,7 @@ export function CaptainOrderSupportConversationScreen({
     setErrorMessage("");
     try {
       const attempt = await getOrCreateSupportMutationAttempt({
+        actorId,
         scope: "actor",
         operation: "create-order-conversation",
         entityId: orderId,
@@ -122,6 +131,7 @@ export function CaptainOrderSupportConversationScreen({
       });
       const created = await createActorSupportTicket(input, attempt.context);
       await clearSupportMutationAttempt({
+        actorId,
         scope: "actor",
         operation: "create-order-conversation",
         entityId: orderId,
@@ -139,16 +149,17 @@ export function CaptainOrderSupportConversationScreen({
     } finally {
       setMutationState("idle");
     }
-  }, [mutationState, orderId]);
+  }, [actorId, mutationState, orderId]);
 
   const sendMessage = React.useCallback(async () => {
     const body = draft.trim();
-    if (!ticket || body.length < 2 || mutationState !== "idle") return;
+    if (!ticket || !actorId || body.length < 2 || mutationState !== "idle") return;
     const fingerprint = JSON.stringify({ ticketId: ticket.id, body });
     setMutationState("sending");
     setErrorMessage("");
     try {
       const attempt = await getOrCreateSupportMutationAttempt({
+        actorId,
         scope: "actor",
         operation: "send-order-message",
         entityId: ticket.id,
@@ -156,6 +167,7 @@ export function CaptainOrderSupportConversationScreen({
       });
       await addActorSupportMessage(ticket.id, { body }, attempt.context);
       await clearSupportMutationAttempt({
+        actorId,
         scope: "actor",
         operation: "send-order-message",
         entityId: ticket.id,
@@ -176,7 +188,7 @@ export function CaptainOrderSupportConversationScreen({
     } finally {
       setMutationState("idle");
     }
-  }, [draft, mutationState, ticket]);
+  }, [actorId, draft, mutationState, ticket]);
 
   if (!orderId) {
     return (
