@@ -132,16 +132,16 @@ export async function reactivateFieldAgent(actorId: string, expectedVersion: num
   return request<FieldAgent>(`/workforce/field-agents/${encodeURIComponent(actorId)}/reactivate`, { method: "POST", body: { expectedVersion, reason }, idempotencyKey });
 }
 
-export async function issueFieldAgentActivationCode(actorId: string, expectedVersion: number): Promise<ActivationCodeResult> {
+export async function issueFieldAgentActivationCode(actorId: string, expectedVersion: number, idempotencyKey?: string): Promise<ActivationCodeResult> {
   return request<ActivationCodeResult>(`/workforce/field-agents/${encodeURIComponent(actorId)}/activation-codes`, {
     method: "POST",
-    idempotencyKey: corrId("wf-activation-field"),
+    idempotencyKey: idempotencyKey ?? corrId("wf-activation-field"),
     body: { expectedVersion },
   });
 }
 
-export async function revokeFieldAgentActivationCodes(actorId: string): Promise<void> {
-  await request<void>(`/workforce/field-agents/${encodeURIComponent(actorId)}/activation-codes`, { method: "DELETE" });
+export async function revokeFieldAgentActivationCodes(actorId: string, idempotencyKey?: string): Promise<void> {
+  await request<void>(`/workforce/field-agents/${encodeURIComponent(actorId)}/activation-codes`, { method: "DELETE", idempotencyKey });
 }
 
 export async function listCaptains(filter: CaptainListFilter = {}): Promise<readonly Captain[]> {
@@ -173,16 +173,16 @@ export async function reactivateCaptain(actorId: string, expectedVersion: number
   return request<Captain>(`/workforce/captains/${encodeURIComponent(actorId)}/reactivate`, { method: "POST", body: { expectedVersion, reason }, idempotencyKey });
 }
 
-export async function issueCaptainActivationCode(actorId: string, expectedVersion: number): Promise<ActivationCodeResult> {
+export async function issueCaptainActivationCode(actorId: string, expectedVersion: number, idempotencyKey?: string): Promise<ActivationCodeResult> {
   return request<ActivationCodeResult>(`/workforce/captains/${encodeURIComponent(actorId)}/activation-codes`, {
     method: "POST",
-    idempotencyKey: corrId("wf-activation-captain"),
+    idempotencyKey: idempotencyKey ?? corrId("wf-activation-captain"),
     body: { expectedVersion },
   });
 }
 
-export async function revokeCaptainActivationCodes(actorId: string): Promise<void> {
-  await request<void>(`/workforce/captains/${encodeURIComponent(actorId)}/activation-codes`, { method: "DELETE" });
+export async function revokeCaptainActivationCodes(actorId: string, idempotencyKey?: string): Promise<void> {
+  await request<void>(`/workforce/captains/${encodeURIComponent(actorId)}/activation-codes`, { method: "DELETE", idempotencyKey });
 }
 
 const DEPARTMENT_EMPLOYEE_PATH = "/workforce/department-employees";

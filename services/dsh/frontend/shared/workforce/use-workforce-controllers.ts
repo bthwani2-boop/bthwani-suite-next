@@ -50,7 +50,7 @@ function useWorkforceMutationCommands(targetActorId: string) {
   const identity = useIdentitySession();
   const operatorActorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
   const commandIds = useMemo(() => new Map<string, string>(), [operatorActorId, targetActorId]);
-  const commandFor = useCallback((action: "update" | "suspend" | "reactivate", expectedVersion: number, reason: string) => {
+  const commandFor = useCallback((action: "update" | "suspend" | "reactivate" | "issueCode" | "revokeCodes", expectedVersion: number, reason: string) => {
     if (!operatorActorId) throw new Error("جلسة لوحة التحكم غير جاهزة لتنفيذ تغيير حالة الملف.");
     const key = `${operatorActorId}:${targetActorId}:${action}:${expectedVersion}:${reason.trim()}`;
     const existing = commandIds.get(key);
@@ -169,17 +169,21 @@ export function useFieldAgentDetailController(actorId: string) {
   const issueCode = useCallback(
     (expectedVersion: number) =>
       runAction(async () => {
-        setIssuedCode(await issueFieldAgentActivationCode(actorId, expectedVersion));
+        const command = mutationCommands.commandFor("issueCode", expectedVersion, "");
+        setIssuedCode(await issueFieldAgentActivationCode(actorId, expectedVersion, command.id));
+        mutationCommands.commandIds.delete(command.key);
       }),
-    [actorId, runAction],
+    [actorId, mutationCommands, runAction],
   );
   const revokeCodes = useCallback(
     () =>
       runAction(async () => {
-        await revokeFieldAgentActivationCodes(actorId);
+        const command = mutationCommands.commandFor("revokeCodes", 0, "");
+        await revokeFieldAgentActivationCodes(actorId, command.id);
+        mutationCommands.commandIds.delete(command.key);
         setIssuedCode(null);
       }),
-    [actorId, runAction],
+    [actorId, mutationCommands, runAction],
   );
 
   return { state, reload, actionBusy, actionError, issuedCode, update, suspend, reactivate, issueCode, revokeCodes };
@@ -339,17 +343,21 @@ export function useCaptainDetailController(actorId: string) {
   const issueCode = useCallback(
     (expectedVersion: number) =>
       runAction(async () => {
-        setIssuedCode(await issueCaptainActivationCode(actorId, expectedVersion));
+        const command = mutationCommands.commandFor("issueCode", expectedVersion, "");
+        setIssuedCode(await issueCaptainActivationCode(actorId, expectedVersion, command.id));
+        mutationCommands.commandIds.delete(command.key);
       }),
-    [actorId, runAction],
+    [actorId, mutationCommands, runAction],
   );
   const revokeCodes = useCallback(
     () =>
       runAction(async () => {
-        await revokeCaptainActivationCodes(actorId);
+        const command = mutationCommands.commandFor("revokeCodes", 0, "");
+        await revokeCaptainActivationCodes(actorId, command.id);
+        mutationCommands.commandIds.delete(command.key);
         setIssuedCode(null);
       }),
-    [actorId, runAction],
+    [actorId, mutationCommands, runAction],
   );
 
   return { state, reload, actionBusy, actionError, issuedCode, update, suspend, reactivate, issueCode, revokeCodes };
@@ -499,23 +507,27 @@ export function useProviderActivationController(providerKind: "field" | "captain
 
   const issueCode = async () => {
     if (!detail) return;
+    const command = mutationCommands.commandFor("issueCode", detail.version, "");
     setIssuedCode(null);
     await runAction(async () => {
       const res = providerKind === "captain"
-        ? await issueCaptainActivationCode(actorId, detail.version)
-        : await issueFieldAgentActivationCode(actorId, detail.version);
+        ? await issueCaptainActivationCode(actorId, detail.version, command.id)
+        : await issueFieldAgentActivationCode(actorId, detail.version, command.id);
+      mutationCommands.commandIds.delete(command.key);
       setIssuedCode(res);
     });
   };
 
   const revokeCode = async () => {
+    const command = mutationCommands.commandFor("revokeCodes", 0, "");
     setIssuedCode(null);
     await runAction(async () => {
       if (providerKind === "captain") {
-        await revokeCaptainActivationCodes(actorId);
+        await revokeCaptainActivationCodes(actorId, command.id);
       } else {
-        await revokeFieldAgentActivationCodes(actorId);
+        await revokeFieldAgentActivationCodes(actorId, command.id);
       }
+      mutationCommands.commandIds.delete(command.key);
     });
   };
 
