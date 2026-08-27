@@ -178,15 +178,6 @@ export async function fetchMasterProductsPage(query?: {
   return { items: resp.masterProducts, total: resp.total, limit: resp.limit, offset: resp.offset };
 }
 
-// fetchMasterProducts is kept as a thin backward-compatible wrapper (items
-// only) so existing consumers — notably services/dsh/frontend/app-field,
-// which this work package must not touch — keep compiling against the
-// pre-pagination array shape. New consumers that need total/limit/offset
-// should call fetchMasterProductsPage instead.
-export async function fetchMasterProducts(query?: Parameters<typeof fetchMasterProductsPage>[0]): Promise<readonly MasterProduct[]> {
-  return (await fetchMasterProductsPage(query)).items;
-}
-
 export async function createMasterProduct(input: {
   readonly domainId: string;
   readonly categoryNodeId: string | null;
