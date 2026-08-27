@@ -16,6 +16,7 @@ import (
 	"dsh-api/internal/auth"
 	"dsh-api/internal/cache"
 	"dsh-api/internal/checkoutfinanceoutbox"
+	"dsh-api/internal/checkoutpaymentsaga"
 	"dsh-api/internal/fieldcommissionoutbox"
 	dshHttp "dsh-api/internal/http"
 	"dsh-api/internal/media"
@@ -135,6 +136,7 @@ func main() {
 	}
 
 	go specialrequests.RunSpecialRequestSagaWorker(outboxCtx, db, wltClient, 15*time.Second)
+	go checkoutpaymentsaga.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 	if wltClient.Configured() {
 		go wltoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)
 		go fieldcommissionoutbox.RunWorker(outboxCtx, db, wltClient, 15*time.Second)

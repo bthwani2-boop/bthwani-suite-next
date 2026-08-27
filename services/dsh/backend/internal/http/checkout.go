@@ -11,7 +11,7 @@ import (
 
 	"dsh-api/internal/cart"
 	"dsh-api/internal/checkout"
-	"dsh-api/internal/checkoutfinanceoutbox"
+	"dsh-api/internal/checkoutpaymentsaga"
 	"dsh-api/internal/clientaddress"
 	"dsh-api/internal/coupons"
 	"dsh-api/internal/platformpolicies"
@@ -486,100 +486,47 @@ func (s *protectedStoreServer) handleCreateCheckoutIntent(w http.ResponseWriter,
 		return
 	}
 
-	paymentSession, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
-		CheckoutIntentID: intent.ID, ClientID: actor.ID,
-		StoreID: intent.StoreID, PaymentMethod: string(intent.PaymentMethod),
+	saga, _, err := checkoutpaymentsaga.Start(r.Context(), s.db, checkoutpaymentsaga.Input{
+		OperatorContextID: actor.OperatorContextID, CheckoutIntentID: intent.ID, ClientID: actor.ID,
+		SourceVersion: intent.Version, CommandID: "dsh-checkout-intent:" + intent.ID,
+		CorrelationID: correlationID, StoreID: intent.StoreID, PaymentMethod: string(intent.PaymentMethod),
 		AmountMinorUnits: pricing.TotalMinorUnits, Currency: pricing.Currency,
-		CartSnapshotHash: canonicalQuote.CartSnapshotHash,
-		PricingQuoteID:   canonicalQuote.ID,
-		CorrelationID:    correlationID,
-		IdempotencyKey:   "dsh-checkout-intent:" + intent.ID,
+		CartSnapshotHash: canonicalQuote.CartSnapshotHash, PricingQuoteID: canonicalQuote.ID,
 	})
 	if err != nil {
-		if wlt.IsPaymentSessionOutcomeUnknown(err) {
-			unknownIntent, markErr := checkout.MarkWltOutcomeUnknown(s.db, intent.ID, actor.OperatorContextID, actor.ID)
-			if markErr != nil {
-				store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to mark unknown WLT outcome")
-				return
-			}
-			store.SendJSON(w, http.StatusAccepted, map[string]any{
-				"intent":                 marshalIntentWithPricing(unknownIntent, pricing),
-				"reconciliationRequired": true,
-				"error": map[string]any{
-					"code":    "WLT_OUTCOME_UNKNOWN",
-					"message": "WLT may have accepted the idempotent request; retry or operator reconciliation is required",
-				},
-			})
-			return
-		}
-		var compensationErr error
-		if fundingProjection != nil {
-			if releaseErr := s.releaseCouponFunding(r.Context(), actor.OperatorContextID, intent.ID, "payment_session_handoff_failed", correlationID); releaseErr != nil {
-				compensationErr = errors.Join(compensationErr, releaseErr)
-				if markErr := coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_payment_handoff_failed"); markErr != nil {
-					compensationErr = errors.Join(compensationErr, markErr)
-				}
-			}
-		}
-		if releaseErr := coupons.ReleaseByIntent(s.db, intent.ID, "wlt_handoff_failed"); releaseErr != nil {
-			compensationErr = errors.Join(compensationErr, releaseErr)
-		}
-		if failedIntent, markErr := checkout.MarkHandoffBlocked(s.db, intent.ID, actor.OperatorContextID, actor.ID); markErr == nil {
-			code := "WLT_HANDOFF_UNAVAILABLE"
-			message := "WLT payment-session handoff is unavailable"
-			if compensationErr != nil {
-				code = "WLT_HANDOFF_AND_FUNDING_COMPENSATION_FAILED"
-				message = "payment handoff failed and promotion funding compensation requires reconciliation"
-			}
-			store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
-				"intent": marshalIntentWithPricing(failedIntent, pricing),
-				"error":  map[string]any{"code": code, "message": message},
-			})
-			return
-		}
-		store.SendError(w, http.StatusServiceUnavailable, "WLT_HANDOFF_UNAVAILABLE", "WLT payment-session handoff is unavailable")
+		store.SendError(w, http.StatusInternalServerError, "CHECKOUT_SAGA_CREATE_FAILED", "failed to create durable payment-session command")
 		return
 	}
-
-	intent, err = checkout.AttachWltPaymentSessionIdempotent(s.db, intent.ID, actor.OperatorContextID, actor.ID, paymentSession.ID)
+	if saga.State == checkoutpaymentsaga.Ready {
+		if err := checkoutpaymentsaga.Activate(r.Context(), s.db, saga.ID); err != nil && !errors.Is(err, checkoutpaymentsaga.ErrConflict) {
+			store.SendError(w, http.StatusInternalServerError, "CHECKOUT_SAGA_ACTIVATE_FAILED", "failed to activate durable payment-session command")
+			return
+		}
+	}
+	saga, dispatchErr := checkoutpaymentsaga.Dispatch(r.Context(), s.db, s.wlt, saga.ID)
+	if dispatchErr != nil && saga == nil {
+		store.SendError(w, http.StatusAccepted, "CHECKOUT_SAGA_PENDING", "payment-session command was durably recorded and awaits reconciliation")
+		return
+	}
+	if saga == nil || saga.State != checkoutpaymentsaga.Completed {
+		currentIntent, readErr := checkout.GetIntent(s.db, intent.ID, actor.OperatorContextID, actor.ID)
+		if readErr != nil {
+			currentIntent = intent
+		}
+		store.SendJSON(w, http.StatusAccepted, map[string]any{
+			"intent":                 marshalIntentWithPricing(currentIntent, pricing),
+			"saga":                   map[string]any{"id": saga.ID, "state": saga.State, "commandId": saga.CommandID, "reconciliationRequired": saga.State == checkoutpaymentsaga.ReconciliationRequired || saga.State == checkoutpaymentsaga.RemoteOutcomeUnknown},
+			"reconciliationRequired": saga.State == checkoutpaymentsaga.ReconciliationRequired || saga.State == checkoutpaymentsaga.RemoteOutcomeUnknown,
+			"error":                  dispatchErr,
+		})
+		return
+	}
+	intent, err = checkout.GetIntent(s.db, intent.ID, actor.OperatorContextID, actor.ID)
 	if err != nil {
-		var compensationErr error
-		if expireErr := s.wlt.ExpireSession(r.Context(), paymentSession.ID, correlationID); expireErr != nil {
-			if queueErr := checkoutfinanceoutbox.EnqueuePaymentSessionExpiry(s.db, intent.ID, paymentSession.ID, actor.ID, "payment_session_attach_failed", correlationID); queueErr != nil {
-				compensationErr = errors.Join(compensationErr, expireErr, queueErr)
-			}
-		}
-		if fundingProjection != nil {
-			if releaseErr := s.releaseCouponFunding(r.Context(), actor.OperatorContextID, intent.ID, "payment_session_attach_failed", correlationID); releaseErr != nil {
-				compensationErr = errors.Join(compensationErr, releaseErr)
-				if markErr := coupons.MarkFundingFailed(r.Context(), s.db, fundingProjection.RedemptionID, "wlt_release_after_attach_failed"); markErr != nil {
-					compensationErr = errors.Join(compensationErr, markErr)
-				}
-			}
-		}
-		if releaseErr := coupons.ReleaseByIntent(s.db, intent.ID, "payment_session_attach_failed"); releaseErr != nil {
-			compensationErr = errors.Join(compensationErr, releaseErr)
-		}
-		_, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, actor.OperatorContextID, actor.ID)
-		if markErr != nil {
-			compensationErr = errors.Join(compensationErr, markErr)
-		}
-		if compensationErr != nil {
-			store.SendError(w, http.StatusServiceUnavailable, "CHECKOUT_COMPENSATION_REQUIRED", "WLT payment-session attach failed and financial compensation requires reconciliation")
-			return
-		}
-		if errors.Is(err, checkout.ErrInvalid) {
-			store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", err.Error())
-			return
-		}
-		if errors.Is(err, checkout.ErrConflict) {
-			store.SendError(w, http.StatusConflict, "CONFLICT", "checkout intent is not in confirming state for WLT handoff")
-			return
-		}
-		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "failed to attach WLT payment session")
+		store.SendError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "payment session completed but checkout readback failed")
 		return
 	}
-	store.SendJSON(w, responseStatus, map[string]any{"intent": marshalIntentWithPricing(intent, pricing)})
+	store.SendJSON(w, responseStatus, map[string]any{"intent": marshalIntentWithPricing(intent, pricing), "saga": map[string]any{"id": saga.ID, "state": saga.State, "commandId": saga.CommandID}})
 }
 
 func (s *protectedStoreServer) sendCheckoutCartVersionConflict(
@@ -761,8 +708,8 @@ func (s *protectedStoreServer) handleReconcileCheckoutIntent(w http.ResponseWrit
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "invalid checkout intent")
 		return
 	}
-	if intent.State != checkout.StateConfirming {
-		store.SendError(w, http.StatusConflict, "RECONCILIATION_NOT_REQUIRED", "checkout intent is not in confirming state")
+	if intent.State != checkout.StateReady && intent.State != checkout.StateConfirming && intent.State != checkout.StateBlocked {
+		store.SendError(w, http.StatusConflict, "RECONCILIATION_NOT_REQUIRED", "checkout intent is not in a payment-handoff state")
 		return
 	}
 	pricing, err := checkout.GetPricing(s.db, intent.ID)
@@ -776,60 +723,38 @@ func (s *protectedStoreServer) handleReconcileCheckoutIntent(w http.ResponseWrit
 		store.SendError(w, http.StatusServiceUnavailable, "WLT_PRICING_QUOTE_UNAVAILABLE", "canonical WLT pricing quote is unavailable or does not match the frozen checkout")
 		return
 	}
-	session, err := s.wlt.CreatePaymentSession(r.Context(), wlt.CreatePaymentSessionInput{
-		CheckoutIntentID: intent.ID,
-		ClientID:         intent.ClientID,
-		StoreID:          intent.StoreID,
-		PaymentMethod:    string(intent.PaymentMethod),
-		AmountMinorUnits: pricing.TotalMinorUnits,
-		Currency:         pricing.Currency,
-		CartSnapshotHash: canonicalQuote.CartSnapshotHash,
-		PricingQuoteID:   canonicalQuote.ID,
-		CorrelationID:    correlationID,
-		IdempotencyKey:   "dsh-checkout-intent:" + intent.ID,
+	saga, _, err := checkoutpaymentsaga.Start(r.Context(), s.db, checkoutpaymentsaga.Input{
+		OperatorContextID: intent.OperatorContextID, CheckoutIntentID: intent.ID, ClientID: intent.ClientID,
+		SourceVersion: intent.Version, CommandID: "dsh-checkout-intent:" + intent.ID,
+		CorrelationID: correlationID, StoreID: intent.StoreID, PaymentMethod: string(intent.PaymentMethod),
+		AmountMinorUnits: pricing.TotalMinorUnits, Currency: pricing.Currency,
+		CartSnapshotHash: canonicalQuote.CartSnapshotHash, PricingQuoteID: canonicalQuote.ID,
 	})
 	if err != nil {
-		if wlt.IsPaymentSessionOutcomeUnknown(err) {
-			store.SendJSON(w, http.StatusAccepted, map[string]any{
-				"intent":                 marshalIntentWithPricing(intent, pricing),
-				"reconciliationRequired": true,
-			})
-			return
-		}
-		var compensationErr error
-		if releaseErr := s.releaseCouponFunding(r.Context(), intent.OperatorContextID, intent.ID, "reconciliation_definitive_failure", correlationID); releaseErr != nil {
-			compensationErr = errors.Join(compensationErr, releaseErr)
-		}
-		if releaseErr := coupons.ReleaseByIntent(s.db, intent.ID, "reconciliation_definitive_failure"); releaseErr != nil {
-			compensationErr = errors.Join(compensationErr, releaseErr)
-		}
-		failed, markErr := checkout.MarkWltHandoffFailed(s.db, intent.ID, intent.OperatorContextID, intent.ClientID)
-		if markErr == nil {
-			if compensationErr != nil {
-				store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
-					"intent":                 marshalIntentWithPricing(failed, pricing),
-					"reconciliationRequired": true,
-					"error":                  map[string]any{"code": "WLT_HANDOFF_COMPENSATION_REQUIRED", "message": "WLT reconciliation failed and financial compensation requires reconciliation"},
-				})
-				return
-			}
-			store.SendJSON(w, http.StatusServiceUnavailable, map[string]any{
-				"intent":                 marshalIntentWithPricing(failed, pricing),
-				"reconciliationRequired": false,
-			})
-			return
-		}
-		store.SendError(w, http.StatusServiceUnavailable, "WLT_HANDOFF_UNAVAILABLE", "WLT reconciliation failed definitively")
+		store.SendError(w, http.StatusConflict, "RECONCILIATION_CONFLICT", "checkout payment command identity does not match")
 		return
 	}
-	reconciled, err := checkout.AttachWltPaymentSessionIdempotent(s.db, intent.ID, intent.OperatorContextID, intent.ClientID, session.ID)
-	if err != nil {
-		store.SendError(w, http.StatusConflict, "RECONCILIATION_CONFLICT", "checkout state changed while reconciling")
+	if saga.State == checkoutpaymentsaga.Ready || saga.State == checkoutpaymentsaga.RetryScheduled || saga.State == checkoutpaymentsaga.RemoteOutcomeUnknown {
+		_ = checkoutpaymentsaga.Activate(r.Context(), s.db, saga.ID)
+	}
+	saga, dispatchErr := checkoutpaymentsaga.Dispatch(r.Context(), s.db, s.wlt, saga.ID)
+	if saga == nil {
+		store.SendJSON(w, http.StatusAccepted, map[string]any{"intent": marshalIntentWithPricing(intent, pricing), "reconciliationRequired": true, "error": dispatchErr})
 		return
 	}
-	store.SendJSON(w, http.StatusOK, map[string]any{
-		"intent":                 marshalIntentWithPricing(reconciled, pricing),
-		"reconciliationRequired": false,
+	current, readErr := checkout.GetIntent(s.db, intent.ID, intent.OperatorContextID, intent.ClientID)
+	if readErr != nil {
+		current = intent
+	}
+	status := http.StatusAccepted
+	if saga.State == checkoutpaymentsaga.Completed {
+		status = http.StatusOK
+	}
+	store.SendJSON(w, status, map[string]any{
+		"intent":                 marshalIntentWithPricing(current, pricing),
+		"saga":                   map[string]any{"id": saga.ID, "state": saga.State, "commandId": saga.CommandID, "reconciliationRequired": saga.State == checkoutpaymentsaga.ReconciliationRequired || saga.State == checkoutpaymentsaga.RemoteOutcomeUnknown},
+		"reconciliationRequired": saga.State == checkoutpaymentsaga.ReconciliationRequired || saga.State == checkoutpaymentsaga.RemoteOutcomeUnknown,
+		"error":                  dispatchErr,
 	})
 }
 
