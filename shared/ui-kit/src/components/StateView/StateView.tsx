@@ -9,7 +9,6 @@ import { Text } from "../Text";
 
 export type StateTone = "neutral" | "info" | "success" | "warning" | "danger";
 export type StateViewId = "loading" | "empty" | "offline" | "recoverableError";
-export type StateViewKind = "warning";
 
 export type StateViewProps = {
   title: string;
@@ -20,8 +19,6 @@ export type StateViewProps = {
    * presentation.
    */
   stateId?: StateViewId | undefined;
-  /** Compatibility with governed state-copy records that classify warnings. */
-  kind?: StateViewKind | undefined;
   tone?: StateTone | undefined;
   loading?: boolean | undefined;
   icon?: ReactNode | undefined;
@@ -48,7 +45,6 @@ export function StateView({
   title,
   description,
   stateId,
-  kind,
   tone,
   loading,
   icon,
@@ -59,7 +55,7 @@ export function StateView({
   onSecondaryActionPress
 }: StateViewProps) {
   const semanticPresentation = stateId ? STATE_PRESENTATION[stateId] : undefined;
-  const resolvedTone = tone ?? (kind === "warning" ? "warning" : semanticPresentation?.tone) ?? "neutral";
+  const resolvedTone = tone ?? semanticPresentation?.tone ?? "neutral";
   const resolvedLoading = loading ?? semanticPresentation?.loading ?? false;
   const surfaceTone = resolvedTone === "neutral" ? "inset" : resolvedTone;
   // A colour change alone is not perceivable feedback: announce the state and
