@@ -178,6 +178,7 @@ describe("operational capability verification hygiene", () => {
     }
     assert.equal(exists("../../../.github/workflows/ci.yml"), false);
     assert.match(contextualCi, /run-name: BThwani CI/);
+    assert.match(contextualCi, /name: BThwani CI/);
     assert.match(contextualCi, /workflow_call:/);
     assert.match(contextualCi, /workflow_dispatch:/);
     assert.match(contextualCi, /uses: \.\/\.github\/workflows\/ci-node-verification\.yml/);
@@ -185,6 +186,7 @@ describe("operational capability verification hygiene", () => {
     assert.match(contextualCi, /uses: \.\/\.github\/workflows\/ci-runtime\.yml/);
     assert.match(contextualCi, /BThwani CI \/ PR result/);
     assert.match(contextualCi, /BThwani CI \/ check result/);
+    assert.doesNotMatch(contextualCi, /BThwani CI \/ push result|BThwani CI \/ dispatched result/);
   });
 
   it("preserves sovereign boundary assurance on the immutable contextual verification path", () => {
