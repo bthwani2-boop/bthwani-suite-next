@@ -1,7 +1,7 @@
 // Re-export from shared captain folder
 export type {
   DshCaptainRouteId,
-  DshCaptainLegacyRoute,
+  DshCaptainRoute,
   DshCaptainRouteRecord,
 } from '../shared/delivery/captain.contract';
 

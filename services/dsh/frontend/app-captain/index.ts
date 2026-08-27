@@ -20,7 +20,7 @@ export type {
 export {
   DSH_CAPTAIN_ACCOUNT_SECTIONS,
   DSH_CAPTAIN_SUPPORT_ROUTES,
-  dshCaptainLegacyRoute,
+  dshCaptainRouteFromNavigation,
   dshCaptainRouteAssignmentId,
   dshCaptainRouteSupportScreen,
   dshCaptainRouteToPath,
@@ -35,7 +35,6 @@ export type {
 } from "./captain-navigation";
 
 export type {
-  DshCaptainLegacyRoute,
   DshCaptainRouteId,
   DshCaptainRouteRecord,
 } from "./dsh-captain.routes";

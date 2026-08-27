@@ -82,7 +82,7 @@ export function dshCaptainRouteToPath(route: DshCaptainNavigationRoute): string 
   }
 }
 
-export function dshCaptainLegacyRoute(route: DshCaptainNavigationRoute): DshCaptainRoute {
+export function dshCaptainRouteFromNavigation(route: DshCaptainNavigationRoute): DshCaptainRoute {
   switch (route.kind) {
     case "home": return "home";
     case "inbox": return "inbox";
