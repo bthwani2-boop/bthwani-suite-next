@@ -38,7 +38,7 @@ export function useCheckoutController() {
       const attempt = await getOrCreateCheckoutAttempt(input);
       const intent = await createCheckoutIntent(input, attempt.context);
       try {
-        await clearCheckoutAttempt();
+        await clearCheckoutAttempt(attempt.fingerprint);
       } catch {
         // The accepted server mutation is idempotent; retaining the key is safe.
       }

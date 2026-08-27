@@ -7,8 +7,12 @@ import {
 import type { DshCreateIntentInput } from "./checkout.types";
 import { secureRandomId } from "../_kernel/secure-random.ts";
 
-const STORAGE_KEY = "@bthwani/checkout-create-attempt:v2";
+const STORAGE_PREFIX = "@bthwani/checkout-create-attempt:v3/";
 const STORAGE_KEY_LEGACY = "@bthwani/checkout-create-attempt:v1";
+
+function storageKey(scope: { readonly actorId: string; readonly installationId: string; readonly entityId: string }, fingerprint: string): string {
+  return `${STORAGE_PREFIX}${encodeURIComponent(scope.actorId)}/${encodeURIComponent(scope.installationId)}/${encodeURIComponent(scope.entityId)}/${encodeURIComponent(fingerprint)}`;
+}
 
 export type DshCheckoutMutationContext = {
   readonly idempotencyKey: string;
@@ -83,8 +87,9 @@ export async function getOrCreateCheckoutAttempt(
   const entityId = fingerprint.slice(0, 32);
   const scope = await resolveMutationIdentityScope("", { entityId });
   const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
+  const attemptKey = storageKey(scoped, fingerprint);
 
-  const raw = await bthwaniDurableStorage.getItem(STORAGE_KEY);
+  const raw = await bthwaniDurableStorage.getItem(attemptKey);
   if (raw) {
     try {
       const parsed: unknown = JSON.parse(raw);
@@ -103,7 +108,7 @@ export async function getOrCreateCheckoutAttempt(
         }
         if (parsed.scope.entityId !== scoped.entityId) {
           throw new MutationIdentityPersistenceError(
-            STORAGE_KEY,
+            attemptKey,
             new Error("stored entityId does not match the current checkout draft"),
           );
         }
@@ -119,19 +124,24 @@ export async function getOrCreateCheckoutAttempt(
   }
 
   const attempt = newAttempt(fingerprint, scoped);
-  await bthwaniDurableStorage.setItem(STORAGE_KEY, JSON.stringify(attempt));
+  await bthwaniDurableStorage.setItem(attemptKey, JSON.stringify(attempt));
   return attempt;
 }
 
-export async function clearCheckoutAttempt(): Promise<void> {
-  const raw = await bthwaniDurableStorage.getItem(STORAGE_KEY);
+export async function clearCheckoutAttempt(fingerprint: string): Promise<void> {
+  const normalizedFingerprint = fingerprint.trim();
+  if (!normalizedFingerprint) return;
+  const entityId = normalizedFingerprint.slice(0, 32);
+  const scope = await resolveMutationIdentityScope("", { entityId });
+  const key = storageKey({ actorId: scope.actorId, installationId: scope.installationId, entityId }, normalizedFingerprint);
+  const raw = await bthwaniDurableStorage.getItem(key);
   if (!raw) return;
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (isStoredAttempt(parsed)) {
-      await bthwaniDurableStorage.removeItem(STORAGE_KEY);
+    if (isStoredAttempt(parsed) && parsed.fingerprint === normalizedFingerprint) {
+      await bthwaniDurableStorage.removeItem(key);
     }
   } catch {
-    await bthwaniDurableStorage.removeItem(STORAGE_KEY);
+    // Never delete a different entity's unresolved attempt on corrupt data.
   }
 }
