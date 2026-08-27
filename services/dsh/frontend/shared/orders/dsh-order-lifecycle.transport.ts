@@ -81,7 +81,7 @@ async function doFetch<T>(
   return response.json() as Promise<T>;
 }
 
-export function ordersPathForScope(scope: DshListOrdersQuery['scope'] | DshOrderAuthContext['scope']): string {
+function ordersPathForScope(scope: DshListOrdersQuery['scope'] | DshOrderAuthContext['scope']): string {
   if (scope === 'partner') return '/dsh/partner/orders';
   if (scope === 'operator') return '/dsh/operator/orders';
   return '/dsh/client/orders';
