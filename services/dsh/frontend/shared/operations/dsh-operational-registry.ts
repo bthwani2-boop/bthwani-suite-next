@@ -158,7 +158,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'detail-on-open',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'dsh/docs/RUNTIME_EVIDENCE_MATRIX.md',
+    currentEvidencePath: 'dsh/frontend/shared/delivery/delivery.contract.ts',
     notes: 'Trip is operational proof for WLT later; DSH does not account for the trip.',
   },
   {
