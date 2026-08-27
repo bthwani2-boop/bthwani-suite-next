@@ -160,6 +160,5 @@ export function usePlatformVarsModel({ activeDomain }: { activeDomain: VarsDomai
     hasProposed,
     isDesignVar: isDesign,
     isValidDesignVal,
-    getLive,
   };
 }
