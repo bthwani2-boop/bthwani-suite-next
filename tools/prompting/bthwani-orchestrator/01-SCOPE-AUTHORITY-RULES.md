@@ -404,3 +404,63 @@ N/A_PROVEN
 ```
 
 Do not encode a fixed application list as eternal package truth. New or renamed surfaces must become discoverable without changing this invariant.
+
+## 17. Expert-lens applicability and extended completeness dimensions
+
+Expert lenses are **inspection/falsification perspectives**, not new authorities. The coordinator may execute them sequentially or delegate read-only/non-overlapping work in parallel, but all results return to the single root/authority model owned by `00`–`05`.
+
+For every selected root and for every materially plausible lens, assign one explicit state:
+
+```text
+AFFECTED
+VERIFICATION_REQUIRED
+VERIFIED_UNCHANGED
+N/A_PROVEN
+```
+
+Material lenses may not remain `NOT_INSPECTED`, `FORGOTTEN`, `PROBABLY_FINE` or implicit. Applicability must be proven, not assumed from file type or current directory.
+
+The minimum lens families to consider are:
+
+```text
+PRODUCT / SYSTEM / UX MEANING
+DOMAIN / ARCHITECTURE / OWNERSHIP
+BACKEND / TRANSACTIONS / ERROR SEMANTICS
+FRONTEND / STATE BINDING / CLIENT RESILIENCE
+API / CONTRACTS / GENERATED BINDINGS
+DATA / MIGRATION / RECONCILIATION
+DISTRIBUTED HANDOFFS / ORDERING / PARTIAL FAILURE
+CONCURRENCY / IDEMPOTENCY / REPLAY
+SECURITY / TRUST / ABUSE / PRIVACY
+MOBILE / PLATFORM / APP LIFECYCLE
+ACCESSIBILITY / LOCALIZATION / RTL
+PERFORMANCE / CAPACITY / RESOURCE LIFECYCLE
+RELIABILITY / RECOVERY / OBSERVABILITY
+TESTING / FALSIFIABILITY
+BUILD / REPRODUCIBILITY / SUPPLY CHAIN / PROVENANCE
+RELEASE / ROLLBACK / OPERATIONS
+SIMPLIFICATION / NEGATIVE SPACE
+INDEPENDENT ADVERSARIAL CHALLENGE
+```
+
+Extend the material coverage matrix, when applicable, with:
+
+```text
+OBSERVABILITY / TELEMETRY / CORRELATION
+ACCESSIBILITY
+LOCALIZATION / RTL
+PRIVACY / DATA LIFECYCLE / RETENTION / REDACTION
+BACKUP / RESTORE / DISASTER RECOVERY
+RESOURCE / CAPACITY / QUOTAS / BACKPRESSURE
+BUILD / CLEAN REPRODUCIBILITY
+SUPPLY CHAIN / ARTIFACT PROVENANCE
+RELEASE / ROLLBACK / PROMOTION
+MOBILE APP LIFECYCLE / PROCESS DEATH
+OFFLINE / WEAK OR INTERMITTENT NETWORK
+BACKGROUND / RESUME
+DEEP LINKS / PUSH / PLATFORM PERMISSIONS
+OPERATOR / SUPPORT / ADMIN FLOWS
+DATA RECONCILIATION / DRIFT DETECTION
+```
+
+`COMPLETE COVERAGE` therefore means both topology disposition and lens disposition are complete for the claimed cone. The package must discover broadly enough that a material cross-service, cross-surface or operational dependency cannot disappear merely because no currently edited file names it.

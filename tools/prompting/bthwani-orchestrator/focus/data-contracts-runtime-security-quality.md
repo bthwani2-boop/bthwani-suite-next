@@ -187,3 +187,39 @@ Tool failure does not create a separate preparation phase, does not require a pl
 ## 17. Closure for this focus
 
 Close only when materially affected data/contract/runtime/security/quality truth is consistent through consumers, migrations/cutovers/failure paths are proven, remote authority evidence is current where required, all material tool outputs are accounted/dispositioned, suppressions satisfy policy, obsolete authority/tooling residue is removed and control-path changes preserve assurance without shifting hidden cost.
+
+## 18. Operational assurance, privacy, resilience and supply-chain lenses
+
+When routed as materially applicable by `01`, deepen this focus using the claim-specific verification selector in `04` rather than a generic checklist.
+
+### 18.1 Observability and operational truth
+
+A material failure mode must have a proven way to be recognized when operations/recovery depend on detecting it. Inspect the smallest useful combination of:
+
+`health/readiness truthfulness | structured logs | metrics | traces/correlation | failure/degradation signals | queue/job visibility | reconciliation/drift signals | alertability/diagnostic value`.
+
+Do not create telemetry without a consumer or decision value. Do not allow silent fake-success or healthy status while a material dependency/path is broken.
+
+### 18.2 Privacy and data lifecycle
+
+For materially handled personal/sensitive data, trace:
+
+`data element -> purpose -> canonical owner -> allowed actors/scopes -> collection/minimization -> storage -> transport -> logs/evidence exposure -> retention -> redaction/masking -> export/share -> deletion/reconciliation`.
+
+Security controls do not by themselves prove appropriate data collection, purpose, retention or deletion semantics.
+
+### 18.3 Backup, restore and disaster recovery
+
+When durable-data risk is material, schema/migration success is insufficient. Establish the applicable recovery claim: backup source/identity, restorability, representative restore/recovery evidence, partial migration/backfill recovery, and RPO/RTO only where an authorized operational requirement exists. Do not invent numeric recovery targets.
+
+### 18.4 Performance, capacity and resilience
+
+For material hot paths or bounded resources, inspect latency/capacity/error expectations, timeout/retry budgets, backpressure, pools/connections, queues/caches, CPU/memory, query plans/N+1, payload/pagination and provider quotas. Do not invent SLO numbers; absence of a required performance/reliability contract is itself a finding when the system cannot be operated safely without one.
+
+### 18.5 Supply chain and provenance
+
+When dependencies, lockfiles, build tooling, generated artifacts, containers, CI actions, release pipelines or native signing/build inputs change, prove locked/authorized sources, reproducibility, artifact/source identity and applicable provenance/attestation/SBOM requirements under live repository/delivery policy. External frameworks and scanners are evidence sources; they do not create BThwani Product Truth.
+
+### 18.6 Assurance standards are mutable external evidence
+
+Use current authoritative external standards/platform requirements when external research is allowed and materially needed. Do not hard-code mutable version numbers into this package as eternal truth. Examples may include current NIST secure-development/privacy guidance, OWASP ASVS/MASVS/MASTG, SLSA, platform store policies and reliability guidance. Repository policy may pin a requirement separately when it intentionally owns that durable choice.

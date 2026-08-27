@@ -381,7 +381,7 @@ If a deep post-treatment audit can still reasonably find material residue tied t
 
 ## 19. System-completeness closure matrix
 
-`04` is the only closure authority for the completeness dispositions introduced by `01` and the three levels introduced by `00`.
+`04` is the only closure authority for the completeness dispositions introduced by `01` and the closure levels introduced by `00`.
 
 Before any closure claim, reconcile the selected root against the live material matrix:
 
@@ -472,7 +472,7 @@ INVARIANT
 
 An invariant with no proven enforcement owner is a material gap.
 
-### 19.3 Three-level closure proof
+### 19.3 Closure-level proof
 
 ```text
 LEVEL_1_CLOSURE_UNIT
@@ -483,9 +483,12 @@ LEVEL_2_CAPABILITY_OR_JOURNEY
 
 LEVEL_3_FINAL_SYSTEM_CANDIDATE
 = every Closure Unit required by the current objective is reconciled on one exact candidate with all applicable final evidence current.
+
+LEVEL_4_REPOSITORY_SYSTEM_BASELINE
+= the claimed repository/system baseline has complete live topology and lens dispositions, zero known material open roots or unknown material cells, a clean fresh broad adversarial re-audit, and exact-candidate baseline evidence.
 ```
 
-A Level 1 proof must never be reported as Level 2 or Level 3.
+A lower-level proof must never be reported as a higher-level proof.
 
 ### 19.4 Zero-unclassified-noise gate
 
@@ -526,3 +529,62 @@ AND LEVEL_CLAIM_MATCHES_ACTUAL_PROOF
 ```
 
 These terms strengthen, and do not replace, the existing Closure Equation.
+
+## 20. Verification-technique selection, evidence diversity and fixed-point proof
+
+Verification technique must be selected by the claim and failure model, not habit. Use the smallest sufficient technique set capable of falsifying the material risk, escalating only when required. Applicable techniques include:
+
+```text
+EXAMPLE-BASED TESTING
+PROPERTY-BASED TESTING
+STATE-MACHINE / MODEL-BASED TESTING
+FUZZING
+DIFFERENTIAL TESTING
+CONTRACT TESTING
+MUTATION TESTING
+CONCURRENCY / RACE TESTING
+FAULT INJECTION / DEPENDENCY FAILURE
+LOAD / STRESS / SOAK TESTING
+RESTART / RECOVERY TESTING
+MIGRATION / BACKFILL REHEARSAL
+CLEAN-STATE / CLEAN-ROOM REPRODUCTION
+VISUAL / ACCESSIBILITY / RTL PROOF
+DEVICE / PLATFORM / MOBILE-LIFECYCLE PROOF
+REMOTE EXACT-CANDIDATE ANALYSIS
+```
+
+Do not run every technique mechanically. A technique is justified only when it can materially falsify a claim or expose a plausible failure mode.
+
+For high-risk claims, increase **evidence diversity** rather than repeating one evidence class. Examples:
+
+```text
+AUTHORIZATION -> source/policy inspection + negative isolation test + runtime/readback when material
+MIGRATION -> schema/migration inspection + representative upgrade/backfill + persisted readback
+DISTRIBUTED RETRY -> logic proof + duplicate/replay integration + restart/unknown-result evidence
+```
+
+There is no fixed evidence-count quota. The rule is:
+
+```text
+MATERIAL RISK UP -> REQUIRED INDEPENDENT EVIDENCE DIVERSITY UP
+```
+
+A repository/system fixed point under `00` may be claimed only after the root queue is exhausted **and then** a fresh broad audit is rebuilt from current live topology, current lens dispositions and current exact candidate. If that fresh audit exposes a material root, stale/unknown cell or contradicted assumption, fixed point is false and the execution loop reopens.
+
+`LEVEL_4_REPOSITORY_SYSTEM_BASELINE` additionally requires, where applicable to the claimed baseline:
+
+```text
+ALL LIVE MATERIAL DOMAINS/SERVICES/APPLICATIONS/SURFACES/JOURNEYS DISCOVERED
+ALL MATERIAL TOPOLOGY + EXPERT-LENS DISPOSITIONS COMPLETE
+ZERO KNOWN MATERIAL OPEN ROOTS IN CLAIMED BASELINE
+ZERO UNKNOWN/UNCLASSIFIED MATERIAL CELLS
+ZERO KNOWN MATERIAL LEGACY/SHADOW/NOISE RESIDUE
+FRESH BROAD ADVERSARIAL RE-AUDIT CLEAN
+CLEAN-STATE REPRODUCTION FROM DECLARED SOURCE/TOOLCHAIN/LOCKED INPUTS PROVEN
+REQUIRED GENERATION/MIGRATION/STARTUP/HEALTH/BUILD/MATERIAL SMOKES PROVEN
+ALL REQUIRED FINAL REMOTE/PLATFORM EVIDENCE CURRENT ON EXACT CANDIDATE
+```
+
+Clean-state proof must not rely on hidden manual database edits, undeclared global tools, machine-specific generated source, stale processes, untracked configuration or previous workspace mutation. If a material platform/environment requirement cannot be reproduced from declared inputs, the Level-4 claim remains open.
+
+Fixed-point and Level-4 claims are always scope- and evidence-bounded. They must never be phrased as proof that no future or currently unknowable defect can exist.

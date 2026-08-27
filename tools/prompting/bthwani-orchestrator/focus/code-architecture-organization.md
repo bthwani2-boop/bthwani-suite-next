@@ -129,3 +129,15 @@ Before closure, inspect every materially affected remaining structure for:
 `ownerless artifact | misplaced file | duplicated authority | unjustified directory | pass-through wrapper | dead alias | stale import/export | obsolete dependency | generated fork | legacy residue | unfinished move/split/merge`.
 
 Known material structural residue tied to the root blocks `CLOSED` under `04`.
+
+## 15. Mobile/client lifecycle and resource correctness
+
+When a mobile/native or long-lived client surface is materially affected, inspect implementation behavior beyond rendered screens:
+
+`secure local storage | session/bootstrap lifecycle | process death | background/resume | app-state transitions | offline/intermittent network | retry/replay | deep links/URL intents | push handling | platform permissions | local persistence/cache reconciliation | cancellation | stale subscriptions/listeners/timers | sensitive client-visible data | native/platform boundary`.
+
+Client convenience must not create alternate Product/System truth. Offline/local state remains subordinate to canonical authority and must define synchronization/conflict/recovery behavior when material.
+
+For frontend/mobile resource-sensitive paths, inspect boundedness and cleanup of subscriptions, listeners, timers, async work, caches, retained state and repeated rendering/fetching. A leak or unbounded retry/render/fetch loop is a correctness/reliability finding when it can materially degrade the user journey or runtime.
+
+Accessibility, localization and RTL are correctness dimensions for materially affected surfaces, not optional polish. Apply the live lens/disposition law in `01` and prove implementation using the technique selector in `04`.

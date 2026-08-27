@@ -352,3 +352,35 @@ Do not select:
 > **Do not ask which catalog item comes next. Ask: what is the highest materially proven way the current system can still be wrong, what is its highest causal root, and what is the smallest complete root-correct Closure Unit that can be closed now without colliding with active work or transferring its obligations elsewhere?**
 
 That is the objective to declare and, when authorized, execute immediately.
+
+## 17. Convergence queue and fixed-point selection law
+
+For broad/AUTO repository or system work, maintain only a **task-local/in-memory convergence queue**; never create a durable root registry merely to track execution. Each discovered independent material root receives one current state such as:
+
+```text
+ACTIVE
+PROVEN_NEXT
+CONSEQUENCE_OF_ACTIVE
+INDEPENDENT_UNRANKED
+BLOCKED_BY_LEGITIMATE_STOP
+OWNED_BY_ACTIVE_WORKSET
+N/A_PROVEN
+CLOSED_ON_CURRENT_LINEAGE
+```
+
+The queue is not a schedule authority. After every coherent Closure Unit checkpoint:
+
+```text
+RE-PIN LIVE HEAD
+-> INGEST NEW LOCAL/REMOTE/CONCURRENT EVIDENCE
+-> INVALIDATE STALE ROOT ASSUMPTIONS
+-> REBUILD AFFECTED ROOT GRAPH
+-> RE-RANK ALL STILL-LIVE ROOTS
+-> SELECT HIGHEST EXECUTABLE ROOT
+```
+
+No independently discovered material root may be silently dropped because the original task list ended, a tool became green, a lower root was fixed or context shifted. It must be closed, proven obsolete/duplicate/N/A, owned by a declared non-overlapping active objective, or mapped to a legitimate stop state.
+
+When the convergence queue appears empty, do **not** immediately claim repository/system completion. Trigger the fresh broad adversarial re-audit required by `00`/`04`. Any new material root refills the queue and restarts incremental closure. Only a clean fresh audit may support fixed-point and Level-4 selection/closure claims.
+
+For repository-wide `AUTO/NEXT` execution, objective selection therefore converges by repeated highest-root closure rather than by a precomputed catalog. `WIDE DISCOVERY; NARROW COMPLETE EXECUTION` remains the rule throughout.

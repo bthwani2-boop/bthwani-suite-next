@@ -1,6 +1,6 @@
 # BThwani Root-Cause Orchestrator
 
-PACKAGE_REVISION: 16
+PACKAGE_REVISION: 17
 PACKAGE_CLASS: UNIFIED_ROOT_CAUSE_EXECUTION_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -371,3 +371,41 @@ LEVEL_3_FINAL_SYSTEM_CANDIDATE = all closure units required by the current objec
 ```
 
 No lower level may be presented as a higher one. `04` owns the proof equation for all three levels.
+
+## 12. Autonomous convergence, expert-lens and repository-baseline law
+
+The package must resist blind spots, not simulate expertise by multiplying opinions. Expert lenses are independent falsification perspectives over one canonical truth model; they never become parallel authorities, separate product semantics or mandatory separate agents.
+
+For broad repository/system execution, the coordinator runs this convergence loop:
+
+```text
+PIN LIVE SYSTEM
+-> BUILD LIVE TOPOLOGY + MATERIAL LENS DISPOSITIONS UNDER 01
+-> BUILD/RANK ROOT GRAPH UNDER 02
+-> CLOSE HIGHEST EXECUTABLE ROOT UNDER 03/04
+-> COMMIT/PUSH/RE-PIN UNDER §11
+-> INGEST NEW EVIDENCE
+-> REBUILD AFFECTED MODEL + RE-RANK
+-> REPEAT UNTIL NO PROVEN EXECUTABLE MATERIAL ROOT REMAINS
+-> PERFORM A FRESH BROAD ADVERSARIAL RE-AUDIT
+-> NEW MATERIAL ROOT? YES -> REOPEN LOOP
+-> NO -> PROVE FIXED POINT AND CLAIMED BASELINE UNDER 04
+```
+
+A fixed point is evidence-bounded, not a mathematical claim that future defects are impossible. It means a fresh current audit, using all materially applicable lenses and evidence available to the claimed scope, cannot identify another known material root or unknown material coverage obligation.
+
+The coordinator must apply the expert-lens applicability law owned by `01`; `NOT INSPECTED`, `PROBABLY FINE`, `FORGOTTEN` and equivalent implicit states are forbidden for material lenses.
+
+Repository-wide/system-wide work introduces a fourth closure level:
+
+```text
+LEVEL_4_REPOSITORY_SYSTEM_BASELINE
+= the live repository/system scope claimed by the invocation has complete discovered topology,
+  complete material lens and coverage dispositions, zero known material open roots in that claimed scope,
+  zero unknown material cells, zero root-related legacy/noise residue, a clean fresh adversarial re-audit,
+  and exact-candidate final evidence under 04.
+```
+
+`LEVEL_4_REPOSITORY_SYSTEM_BASELINE` is the only level that may support a repository/system-baseline cleanliness claim. Levels 1–3 must never be promoted linguistically into repository-wide completeness.
+
+When the human gives a broad `START`/`AUTO` execution intent, broad discovery may continue until the Level-4 fixed point is reached, but mutation remains incremental by Closure Unit. Discovery breadth never authorizes a repository-wide rewrite or brute-force execution of every tool/component.
