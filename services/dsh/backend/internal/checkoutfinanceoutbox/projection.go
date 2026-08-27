@@ -125,7 +125,8 @@ func MarkSentWithResult(db *sql.DB, id, leaseToken string, result DeliveryResult
 	updated, err := markLeaseTransition(tx, id, leaseToken, `
 		UPDATE dsh_checkout_financial_closure_outbox
 		SET status='sent', result_action=$3, result_reference=NULLIF($4,''),
-		    completed_at=NOW(), last_error=NULL, failure_disposition='none',
+			    completed_at=NOW(), last_error=NULL, failure_disposition='none',
+			    failure_classification='PROVEN_APPLIED',
 		    diagnostic_code=NULL, lease_token=NULL, lease_expires_at=NULL,
 		    updated_at=NOW()
 		WHERE id=$1::uuid AND lease_token=$2::uuid AND status='processing'`, result.Action, reference)
@@ -178,7 +179,7 @@ func MarkDeliveryFailure(db *sql.DB, event Event, cause error) error {
 		query = `
 			UPDATE dsh_checkout_financial_closure_outbox
 			SET status='failed', attempt_count=$3, last_error=$4,
-			    failure_disposition='manual_retry_required', diagnostic_code='max_attempts_exhausted',
+			    failure_disposition='manual_retry_required', failure_classification='PROVEN_REJECTED', diagnostic_code='max_attempts_exhausted',
 			    lease_token=NULL, lease_expires_at=NULL, updated_at=NOW()
 			WHERE id=$1::uuid AND lease_token=$2::uuid AND status='processing'`
 		args = []any{nextAttempt, message}
@@ -231,7 +232,7 @@ func MarkOutcomeUnknown(db *sql.DB, event Event, cause error) error {
 		query = `
 			UPDATE dsh_checkout_financial_closure_outbox
 			SET status='failed', attempt_count=$3, readback_attempt_count=$4, last_error=$5,
-			    failure_disposition='reconciliation_required', diagnostic_code='wlt_outcome_unknown',
+			    failure_disposition='reconciliation_required', failure_classification='UNKNOWN_REQUIRES_READBACK', diagnostic_code='wlt_outcome_unknown',
 			    last_readback_at=NOW(), lease_token=NULL, lease_expires_at=NULL, updated_at=NOW()
 			WHERE id=$1::uuid AND lease_token=$2::uuid AND status='processing'`
 		args = []any{nextAttempt, nextReadback, message}
@@ -239,7 +240,7 @@ func MarkOutcomeUnknown(db *sql.DB, event Event, cause error) error {
 		query = `
 			UPDATE dsh_checkout_financial_closure_outbox
 			SET status='unknown', attempt_count=$3, readback_attempt_count=$4, last_error=$5,
-			    failure_disposition='reconciliation_required', diagnostic_code='wlt_outcome_unknown',
+			    failure_disposition='reconciliation_required', failure_classification='UNKNOWN_REQUIRES_READBACK', diagnostic_code='wlt_outcome_unknown',
 			    last_readback_at=NOW(), next_retry_at=NOW()+$6::interval, lease_token=NULL, lease_expires_at=NULL,
 			    updated_at=NOW()
 			WHERE id=$1::uuid AND lease_token=$2::uuid AND status='processing'`
@@ -268,7 +269,7 @@ func MarkReadbackAbsent(db *sql.DB, event Event, cause error) error {
 	defer tx.Rollback()
 	updated, err := markLeaseTransition(tx, event.ID, event.LeaseToken, `
 		UPDATE dsh_checkout_financial_closure_outbox
-		SET status='pending', failure_disposition='retry_scheduled', diagnostic_code='wlt_readback_absent',
+		SET status='pending', failure_disposition='retry_scheduled', failure_classification='PROVEN_ABSENT', diagnostic_code='wlt_readback_absent',
 		    last_error=$3, last_readback_at=NOW(), next_retry_at=NOW()+$4::interval,
 		    lease_token=NULL, lease_expires_at=NULL, updated_at=NOW()
 		WHERE id=$1::uuid AND lease_token=$2::uuid AND status='processing'`,
@@ -290,7 +291,7 @@ func MarkInvalidOperatorContext(db *sql.DB, event Event, cause error) error {
 	defer tx.Rollback()
 	updated, err := markLeaseTransition(tx, event.ID, event.LeaseToken, `
 		UPDATE dsh_checkout_financial_closure_outbox
-		SET status='failed', failure_disposition='invalid_operator_context', diagnostic_code='invalid_operator_context',
+		SET status='failed', failure_disposition='invalid_operator_context', failure_classification='INVALID_UNRECOVERABLE', diagnostic_code='invalid_operator_context',
 		    last_error=$3, lease_token=NULL, lease_expires_at=NULL, updated_at=NOW()
 		WHERE id=$1::uuid AND lease_token=$2::uuid AND status='processing'`, errorText(cause))
 	if err != nil {
@@ -333,7 +334,7 @@ func retryFailed(db *sql.DB, id, operatorContextID, reason string) error {
 		UPDATE dsh_checkout_financial_closure_outbox outbox
 		SET status='pending', attempt_count=0, readback_attempt_count=0,
 		    last_readback_at=NULL, next_retry_at=NOW(), last_error=$2,
-		    failure_disposition='retry_scheduled', diagnostic_code='manual_retry_requested',
+		    failure_disposition='retry_scheduled', failure_classification='PROVEN_ABSENT', diagnostic_code='manual_retry_requested',
 		    completed_at=NULL, result_action=NULL, result_reference=NULL,
 		    lease_token=NULL, lease_expires_at=NULL, updated_at=NOW()
 		WHERE outbox.id=$1::uuid AND outbox.status='failed'
@@ -377,7 +378,7 @@ func requeueForReconciliation(db *sql.DB, id, operatorContextID, reason string) 
 	result, err := db.Exec(`
 		UPDATE dsh_checkout_financial_closure_outbox outbox
 		SET status='unknown', next_retry_at=NOW(), readback_attempt_count=0,
-		    failure_disposition='reconciliation_required', diagnostic_code='manual_reconciliation_requested',
+		    failure_disposition='reconciliation_required', failure_classification='UNKNOWN_REQUIRES_READBACK', diagnostic_code='manual_reconciliation_requested',
 		    last_error=$2, lease_token=NULL, lease_expires_at=NULL, updated_at=NOW()
 		WHERE outbox.id=$1::uuid AND outbox.status='failed'
 		  AND outbox.failure_disposition='reconciliation_required'

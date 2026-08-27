@@ -324,6 +324,13 @@
       "sha256": "edb1bdd6a88596d161297e4c05ad35e68fb4993255cceaacd112a291039a5347",
       "historicalPrefix": "1045",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 286,
+      "file": "dsh-1046_checkout_financial_failure_classification.sql",
+      "sha256": "7455657bbc6893f68bdd6e98487eeb23fef5cdb9c08342b08ce3efec6a4bffd9",
+      "historicalPrefix": "1046",
+      "state": "ACTIVE"
     }
   ]
 }
