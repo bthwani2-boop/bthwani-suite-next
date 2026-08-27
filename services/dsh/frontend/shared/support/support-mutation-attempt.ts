@@ -23,8 +23,6 @@ type StoredAttempt = {
 type SupportMutationScope = "actor" | "client" | "operator" | "partner";
 
 const PREFIX = "@bthwani/dsh/support-mutation/v2/";
-const PREFIX_LEGACY = "@bthwani/dsh/support-mutation/v1/";
-
 function nextPart(): string {
   return secureRandomId();
 }
@@ -108,18 +106,4 @@ export async function clearSupportMutationAttempt(input: {
   const existing = parseStored(await bthwaniDurableStorage.getItem(storageKey));
   if (!existing || existing.fingerprint !== input.fingerprint) return;
   await bthwaniDurableStorage.removeItem(storageKey);
-}
-
-export async function clearSupportMutationAttemptsForScope(): Promise<void> {
-  const allKeys = await bthwaniDurableStorage.getAllKeys();
-  for (const key of allKeys) {
-    if (!key.startsWith(PREFIX)) continue;
-    await bthwaniDurableStorage.removeItem(key);
-  }
-  for (const key of allKeys.filter((k) => k.startsWith(PREFIX_LEGACY))) {
-    const raw = await bthwaniDurableStorage.getItem(key);
-    if (!raw) continue;
-    await bthwaniDurableStorage.setItem(`${key}:quarantine:${Date.now()}`, raw);
-    await bthwaniDurableStorage.removeItem(key);
-  }
 }
