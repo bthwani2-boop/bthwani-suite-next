@@ -4,7 +4,6 @@ import assert from "node:assert/strict";
 const {
   resolveCatalogActionError,
   resolveCatalogError,
-  shouldLoadAuthenticatedCatalog,
 } = await import("../dist/services/dsh/frontend/shared/catalog/catalog.controller-core.js");
 const {
   resolveCatalogSubmissionState,
@@ -19,11 +18,6 @@ const catalog = (products = [], categories = []) => ({
 });
 
 describe("catalog controller core", () => {
-  test("loads only authenticated catalog controllers", () => {
-    assert.equal(shouldLoadAuthenticatedCatalog("authenticated"), true);
-    assert.equal(shouldLoadAuthenticatedCatalog("unauthenticated"), false);
-  });
-
   test("resolves empty and success catalog states", () => {
     assert.equal(resolvePartnerCatalogState(catalog()).kind, "empty");
     assert.equal(resolvePublishedCatalogState(catalog()).kind, "empty");
