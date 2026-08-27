@@ -39,7 +39,7 @@ export function unsupportedTransition(message: string): never {
   throw { kind: 'http', status: 400, body: message } as DshOrderApiHttpError;
 }
 
-export async function doFetch<T>(
+async function doFetch<T>(
   baseUrl: string,
   fetchFn: DshOrderFetchFn,
   method: string,
