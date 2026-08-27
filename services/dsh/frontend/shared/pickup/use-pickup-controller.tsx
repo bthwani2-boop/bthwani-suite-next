@@ -295,6 +295,18 @@ export function useOperatorPickupsController(
   params: UseOperatorPickupsControllerParams = {},
 ) {
   const { storeId, limit = 100, autoLoad = true } = params;
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
+  const commandIds = useRef<Record<string, string>>({});
+  const commandFor = useCallback((orderIdValue: string, action: string, expectedVersion: number, reason: string, newExpiry: string) => {
+    if (!actorId) throw new Error("جلسة العمليات غير جاهزة لتمديد نافذة الاستلام.");
+    const key = `${actorId}:${orderIdValue}:${action}:${expectedVersion}:${reason.trim()}:${newExpiry}`;
+    const existing = commandIds.current[key];
+    if (existing) return { key, id: existing };
+    const id = corrId(`operator-pickup-${action}`);
+    commandIds.current[key] = id;
+    return { key, id };
+  }, [actorId]);
   const [listState, setListState] = useState<FetchState<readonly DshPickupSession[]>>({
     loaded: false,
     error: null,
@@ -347,8 +359,9 @@ export function useOperatorPickupsController(
       reason: string,
       newExpiry: string,
       fallback: string,
+      commandId: string,
     ): Promise<OperatorPickupMutationResult> => {
-      return action(orderIdValue, { expectedVersion, reason, newExpiry })
+      return action(orderIdValue, { expectedVersion, reason, newExpiry }, commandId)
         .then((response) => {
           setDetailState({ loaded: true, error: null, offline: false, data: response.session });
           return { ok: true as const, session: response.session };
@@ -367,16 +380,22 @@ export function useOperatorPickupsController(
   );
 
   const extendWindow = useCallback(
-    (orderIdValue: string, expectedVersion: number, reason: string, newExpiry: string) =>
-      executeWindowMutation(
+    (orderIdValue: string, expectedVersion: number, reason: string, newExpiry: string) => {
+      if (!actorId) {
+        return Promise.resolve({ ok: false as const, kind: "forbidden" as const, message: "جلسة العمليات غير جاهزة لتمديد نافذة الاستلام." });
+      }
+      const command = commandFor(orderIdValue, "extend_window", expectedVersion, reason, newExpiry);
+      return executeWindowMutation(
         extendPickupWindow,
         orderIdValue,
         expectedVersion,
         reason,
         newExpiry,
         "تعذر تمديد نافذة الاستلام.",
-      ),
-    [executeWindowMutation],
+        command.id,
+      );
+    },
+    [actorId, commandFor, executeWindowMutation],
   );
 
   const rescheduleWindow = useCallback(
@@ -388,8 +407,9 @@ export function useOperatorPickupsController(
         reason,
         newExpiry,
         "تعذر إعادة جدولة نافذة الاستلام.",
+        commandFor(orderIdValue, "reschedule", expectedVersion, reason, newExpiry).id,
       ),
-    [executeWindowMutation],
+    [commandFor, executeWindowMutation],
   );
 
   return {

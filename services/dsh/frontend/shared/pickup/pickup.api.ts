@@ -1,5 +1,5 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { createDshHttpClient, corrId } from "../_kernel/dsh-http-request";
+import { createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   ClassifiedPickupError,
   DshPickupCustomerArrivedResponse,
@@ -137,10 +137,11 @@ export async function fetchOperatorPickup(orderId: string): Promise<DshPickupSes
 export async function extendPickupWindow(
   orderId: string,
   input: { readonly expectedVersion: number; readonly reason: string; readonly newExpiry: string },
+  commandId: string,
 ): Promise<DshPickupSessionResponse> {
   return request<DshPickupSessionResponse>(
     `/dsh/operator/pickups/${encodeURIComponent(orderId)}/extend-window`,
-    { method: "POST", body: { ...input, commandId: corrId("pk-extend") } },
+    { method: "POST", body: { ...input, commandId } },
   );
 }
 
@@ -152,6 +153,7 @@ export async function extendPickupWindow(
 export async function reschedulePickupWindow(
   _orderId: string,
   _input: { readonly expectedVersion: number; readonly reason: string; readonly newExpiry: string },
+  _commandId?: string,
 ): Promise<DshPickupSessionResponse> {
   throw new Error("Operator pickup rescheduling is not supported; use the partner-owned recovery flow.");
 }
