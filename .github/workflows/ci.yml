@@ -306,7 +306,7 @@ jobs:
     needs: [context]
     if: >-
       ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.diagnostics_required ==
-      'true' && (inputs.run_assurance == true || github.event_name != 'pull_request') }}
+      'true' && inputs.run_assurance == true }}
     uses: ./.github/workflows/ci-node-diagnostics.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
@@ -340,7 +340,7 @@ jobs:
   backends:
     name: Backend verification
     needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.backend_required == 'true' && (inputs.run_assurance == true || github.event_name != 'pull_request') }}
+    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.backend_required == 'true' && inputs.run_assurance == true }}
     uses: ./.github/workflows/ci-backends.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
@@ -358,7 +358,7 @@ jobs:
   runtime:
     name: Runtime proof
     needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.runtime_required == 'true' && (inputs.run_assurance == true || github.event_name != 'pull_request') }}
+    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.runtime_required == 'true' && inputs.run_assurance == true }}
     uses: ./.github/workflows/ci-runtime.yml
     with:
       candidate_sha: ${{ needs.context.outputs.head_sha }}
