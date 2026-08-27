@@ -79,7 +79,7 @@ test("candidate-bound smoke reuses the prepared DSH image and preserves selected
 test("aggregate runtime applicability follows the canonical runtime_required decision", () => {
   assert.match(
     contextualWorkflow,
-    /RUNTIME_REQUIRED:\s*\$\{\{\s*needs\.context\.outputs\.runtime_required\s*\}\}/,
+    /RUNTIME_REQUIRED:\s*\$\{\{\s*inputs\.run_assurance\s*==\s*true\s*&&\s*needs\.context\.outputs\.runtime_required\s*==\s*'true'\s*\}\}/,
     "aggregate must consume the router's canonical runtime_required output",
   );
   assert.doesNotMatch(
