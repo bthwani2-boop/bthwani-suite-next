@@ -7,14 +7,12 @@ import (
 	"strings"
 )
 
-// CreateZoneInput and UpdateZoneInput/CreateZone/UpdateZone were dropped from
-// this package by the DSH infrastructure reconstruction without a migrated
-// consumer; they are restored here byte-for-byte from their last known-good
-// implementation because TestPostgresLifecycle (postgres_test.go) exercises
-// the full zone → SLA → capacity → rollback → idempotency chain through them,
-// and no replacement exists. HTTP mutation routes are intentionally not
-// re-registered for these primitives here; the owning contract must provide
-// the sole governed write path for any mutation that uses them.
+// Zone mutation is a product capability owned by DSH's governed control-panel
+// routes. CreateZone and UpdateZone are the single persistence writers used by
+// those authenticated routes and by the same lifecycle tests; tests must not
+// construct an alternate production writer or treat these primitives as a
+// test-only compatibility seam. The route layer supplies permission, actor,
+// correlation, reason, and idempotency context before entering this package.
 type CreateZoneInput struct {
 	ID              string `json:"id,omitempty"`
 	Name            string `json:"name"`
