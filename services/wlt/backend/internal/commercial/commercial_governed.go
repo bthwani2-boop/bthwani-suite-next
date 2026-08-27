@@ -7,7 +7,6 @@ import (
 	"errors"
 	"net/http"
 	"strings"
-	"time"
 
 	"wlt-api/internal/shared"
 )
@@ -176,86 +175,4 @@ func HandleAppendLoyaltyEntryGoverned(db *sql.DB) http.HandlerFunc {
 		}
 		shared.SendJSON(w, http.StatusCreated, map[string]any{"entry": entry})
 	}
-}
-
-type ActivateSubscriptionGovernedInput struct {
-	ClientID               string `json:"clientId"`
-	ProductReference       string `json:"productReference"`
-	PaymentSessionID       string `json:"paymentSessionId"`
-	SubscriptionPurchaseID string `json:"subscriptionPurchaseId"`
-}
-
-func ActivateSubscriptionGoverned(ctx context.Context, db *sql.DB, input ActivateSubscriptionGovernedInput) (*Subscription, error) {
-	operatorContextID, contextErr := shared.RequireOperatorContext(ctx)
-	if contextErr != nil {
-		return nil, ErrInvalid
-	}
-	input.ClientID = strings.TrimSpace(input.ClientID)
-	input.ProductReference = strings.TrimSpace(input.ProductReference)
-	input.PaymentSessionID = strings.TrimSpace(input.PaymentSessionID)
-	input.SubscriptionPurchaseID = strings.TrimSpace(input.SubscriptionPurchaseID)
-	if db == nil || input.ClientID == "" || input.ProductReference == "" || input.PaymentSessionID == "" || input.SubscriptionPurchaseID == "" {
-		return nil, ErrInvalid
-	}
-
-	tx, err := db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = tx.Rollback() }()
-
-	var price int64
-	var currency, cycle, productStatus string
-	err = tx.QueryRowContext(ctx, `SELECT price_minor_units, currency, billing_cycle, status FROM wlt_commercial_products WHERE reference=$1 FOR UPDATE`, input.ProductReference).Scan(&price, &currency, &cycle, &productStatus)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
-	if err != nil {
-		return nil, err
-	}
-	if productStatus != "active" {
-		return nil, ErrInvalidTransition
-	}
-
-	var paymentOperatorContext, paymentClient, paymentStatus, paymentCurrency string
-	var paymentAmount int64
-	var purchaseID, productReference, checkoutIntentID, specialRequestID sql.NullString
-	err = tx.QueryRowContext(ctx, `SELECT operator_context_id, client_id, status, amount_minor_units, currency, subscription_purchase_id, commercial_product_reference, checkout_intent_id, special_request_id FROM wlt_payment_sessions WHERE id=$1 FOR UPDATE`, input.PaymentSessionID).Scan(&paymentOperatorContext, &paymentClient, &paymentStatus, &paymentAmount, &paymentCurrency, &purchaseID, &productReference, &checkoutIntentID, &specialRequestID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return nil, ErrNotFound
-	}
-	if err != nil {
-		return nil, err
-	}
-	if paymentStatus != "captured" {
-		return nil, ErrPaymentNotCaptured
-	}
-	if paymentOperatorContext != operatorContextID || !purchaseID.Valid || purchaseID.String != input.SubscriptionPurchaseID || !productReference.Valid || productReference.String != input.ProductReference || checkoutIntentID.Valid || specialRequestID.Valid || paymentClient != input.ClientID || paymentAmount != price || paymentCurrency != currency {
-		return nil, ErrPaymentMismatch
-	}
-
-	var activeCount int
-	if err := tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM wlt_client_subscriptions WHERE operator_context_id=$1 AND client_id=$2 AND status='active'`, operatorContextID, input.ClientID).Scan(&activeCount); err != nil {
-		return nil, err
-	}
-	if activeCount > 0 {
-		return nil, ErrActiveSubscription
-	}
-
-	start := time.Now().UTC()
-	end := cycleEnd(start, cycle)
-	subscription, err := scanSubscription(tx.QueryRowContext(ctx, `
-INSERT INTO wlt_client_subscriptions
-				(operator_context_id, client_id, product_reference, status, payment_session_id, subscription_purchase_id, starts_at, ends_at)
-			VALUES ($1, $2, $3, 'active', $4, $5, $6, $7)
-		RETURNING `+subscriptionSelectCols,
-		operatorContextID, input.ClientID, input.ProductReference, input.PaymentSessionID, input.SubscriptionPurchaseID, start, end,
-	))
-	if err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return subscription, nil
 }
