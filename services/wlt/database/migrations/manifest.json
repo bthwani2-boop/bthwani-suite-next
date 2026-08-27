@@ -3,7 +3,7 @@
   "service": "wlt",
   "ordering": "explicit",
   "orderingSource": "Sort-Object { $_.Name.ToLowerInvariant() }, Name (tools/scripts/invoke-service-migrations.ps1), snapshotted here via PowerShell to avoid approximating .NET culture-aware string comparison in JS",
-  "cutover": "wlt-961_wallet_tender_projection_and_refund_outbox.sql",
+  "cutover": "wlt-962_wallet_projection_negative_balance.sql",
   "migrations": [
     {
       "ordinal": 1,
@@ -920,6 +920,13 @@
       "file": "wlt-961_wallet_tender_projection_and_refund_outbox.sql",
       "sha256": "4cb2a3b77f07900abe8c4c9578d4b462bd4e649b16c977036e967d0fde4c41bd",
       "historicalPrefix": "961",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 132,
+      "file": "wlt-962_wallet_projection_negative_balance.sql",
+      "sha256": "709a79062601fd213e01a94fe315c2611beae2eaebbc417ba30aba798516d687",
+      "historicalPrefix": "962",
       "state": "ACTIVE"
     }
   ]
