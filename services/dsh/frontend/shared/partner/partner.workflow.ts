@@ -143,12 +143,6 @@ const OWNER_LABELS: Record<string, string> = {
   system:    'النظام',
 };
 
-const ENTITY_TYPE_LABELS: Record<string, string> = {
-  product:  'منتج',
-  category: 'تصنيف',
-  store:    'متجر',
-};
-
 export function translateStage(stage: string | undefined): string {
   if (!stage) return '—';
   return STAGE_LABELS[stage] ?? stage;
@@ -159,10 +153,6 @@ export function translateOwner(owner: string | undefined): string {
   return OWNER_LABELS[owner] ?? owner;
 }
 
-export function translateEntityType(entityType: string | undefined): string {
-  if (!entityType) return '—';
-  return ENTITY_TYPE_LABELS[entityType] ?? entityType;
-}
 
 // ─── Live Order Decisions & Auditing ────────────────────────────────────────
 
