@@ -62,7 +62,6 @@ function toClientStorefront(storeId: string, response: DshStorefrontResponse): C
       : undefined;
     const media: CatalogMedia[] = product.effectiveImage
       ? [{
-          id: effectiveMediaLink?.id ?? `${product.id}-effective`,
           state: "complete",
           publicUrl: product.effectiveImage.url.startsWith("http")
             ? product.effectiveImage.url

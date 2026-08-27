@@ -9,7 +9,6 @@ export type MediaUploadIntent = {
 };
 
 export type CatalogMedia = {
-  readonly id: string;
   readonly state: "pending" | "complete" | "deleted";
   readonly publicUrl: string | null;
 };
