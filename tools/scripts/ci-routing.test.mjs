@@ -53,7 +53,7 @@ test("the fast gate excludes heavy analyzers from its daily DAG", () => {
 test("the final closure is the only final entrypoint and has no polling orchestration", () => {
   const workflow = read(".github/workflows/final-closure.yml");
   assert.match(workflow, /name: BThwani Final Closure/u);
-  assert.match(workflow, /types: \[ready_for_review\]/u);
+  assert.match(workflow, /types: \[ready_for_review, synchronize, reopened\]/u);
   assert.match(workflow, /Resolve exact live PR candidate/u);
   for (const worker of ["ci.yml", "sonarqube.yml", "codeql.yml", "semgrep.yml", "security-remote.yml"]) {
     assert.match(workflow, new RegExp(`uses: \\.\\/.github/workflows/${worker.replace(".", "\\.")}`, "u"), worker);
