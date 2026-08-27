@@ -1,4 +1,6 @@
 import React from "react";
+import { useIdentitySession } from "@bthwani/core-identity";
+import { corrId } from "../_kernel/dsh-http-request";
 import {
   acceptOperatorDeliveryProof,
   classifyDeliveryProofError,
@@ -165,6 +167,18 @@ export function useCaptainDeliveryProofController(assignmentId: string) {
 }
 
 export function useOperatorDeliveryProofReviewController(initialStatus: DshDeliveryProofStatus = "pending_review") {
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === "authenticated" ? identity.state.identity.subject : null;
+  const commandIds = React.useRef<Record<string, string>>({});
+  const commandFor = React.useCallback((proofId: string, action: "accept" | "reject", input: DshReviewDeliveryProofInput) => {
+    if (!actorId) throw new Error("جلسة العمليات غير جاهزة لمراجعة إثبات التسليم.");
+    const key = `${actorId}:${proofId}:${action}:${input.expectedVersion}:${input.reason.trim()}`;
+    const existing = commandIds.current[key];
+    if (existing) return { key, id: existing };
+    const id = corrId(`operator-delivery-proof-${action}`);
+    commandIds.current[key] = id;
+    return { key, id };
+  }, [actorId]);
   const [status, setStatus] = React.useState<DshDeliveryProofStatus>(initialStatus);
   const [state, setState] = React.useState<DshDeliveryProofLoadState>("idle");
   const [proofs, setProofs] = React.useState<readonly DshDeliveryProof[]>([]);
@@ -195,9 +209,10 @@ export function useOperatorDeliveryProofReviewController(initialStatus: DshDeliv
     setReviewingProofId(proofId);
     setError(null);
     try {
+      const command = commandFor(proofId, action, input);
       const updated = action === "accept"
-        ? await acceptOperatorDeliveryProof(proofId, input)
-        : await rejectOperatorDeliveryProof(proofId, input);
+        ? await acceptOperatorDeliveryProof(proofId, input, command.id)
+        : await rejectOperatorDeliveryProof(proofId, input, command.id);
       setProofs((current) => current.filter((item) => item.id !== proofId));
       setState((current) => current === "ready" && proofs.length <= 1 ? "empty" : current);
       return updated;
@@ -208,7 +223,7 @@ export function useOperatorDeliveryProofReviewController(initialStatus: DshDeliv
     } finally {
       setReviewingProofId(null);
     }
-  }, [proofs.length]);
+  }, [commandFor, proofs.length]);
 
   React.useEffect(() => {
     void refresh();

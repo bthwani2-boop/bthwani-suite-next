@@ -1,5 +1,5 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
-import { createDshHttpClient } from "../_kernel/dsh-http-request";
+import { corrId, createDshHttpClient } from "../_kernel/dsh-http-request";
 import type {
   DshClientDeliveryProof,
   DshDeliveryPinResponse,
@@ -69,10 +69,16 @@ export async function fetchOperatorDeliveryProof(proofId: string): Promise<DshDe
 export async function acceptOperatorDeliveryProof(
   proofId: string,
   input: DshReviewDeliveryProofInput,
+  idempotencyKey?: string,
 ): Promise<DshDeliveryProof> {
   const data = await request<{ readonly proof: DshDeliveryProof }>(
     `/dsh/operator/delivery-proofs/${encodeURIComponent(proofId)}/accept`,
-    { method: "POST", body: input, expectedVersion: input.expectedVersion },
+    {
+      method: "POST",
+      body: input,
+      expectedVersion: input.expectedVersion,
+      idempotencyKey: idempotencyKey ?? corrId("operator-delivery-proof-accept"),
+    },
   );
   return data.proof;
 }
@@ -80,10 +86,16 @@ export async function acceptOperatorDeliveryProof(
 export async function rejectOperatorDeliveryProof(
   proofId: string,
   input: DshReviewDeliveryProofInput,
+  idempotencyKey?: string,
 ): Promise<DshDeliveryProof> {
   const data = await request<{ readonly proof: DshDeliveryProof }>(
     `/dsh/operator/delivery-proofs/${encodeURIComponent(proofId)}/reject`,
-    { method: "POST", body: input, expectedVersion: input.expectedVersion },
+    {
+      method: "POST",
+      body: input,
+      expectedVersion: input.expectedVersion,
+      idempotencyKey: idempotencyKey ?? corrId("operator-delivery-proof-reject"),
+    },
   );
   return data.proof;
 }
