@@ -951,46 +951,6 @@ func CreateProposal(ctx context.Context, db *sql.DB, actorID string, input Produ
 	return GetProposal(ctx, db, id)
 }
 
-type ProposalDecisionInput struct {
-	Decision               string  `json:"decision"` // under_review | adopted | rejected | needs_fix
-	ReviewNote             string  `json:"reviewNote"`
-	AdoptedMasterProductID *string `json:"adoptedMasterProductId"` // link to existing master product instead of creating one
-}
-
-// DecideProposal moves a proposal through review. On "adopted" without an
-// existing AdoptedMasterProductID, it creates a new dsh_master_products row
-// from the proposal fields (status pending_review — an operator must still
-// approve it for client visibility, per rule 4 of the sovereignty decision).
-// legacyDecisionToPipelineStatus maps the pre-dsh-031 decision vocabulary to
-// the current pipeline status names so old callers of the decision endpoint
-// keep working instead of silently failing validProposalStatus.
-var legacyDecisionToPipelineStatus = map[string]string{
-	"under_review": "partner-review",
-	"adopted":      "catalog-adopted",
-	"rejected":     "rejected",
-	"needs_fix":    "needs-fix",
-}
-
-// DecideProposal is DEPRECATED: kept only as a thin translation wrapper over
-// TransitionProposal for callers still using the pre-dsh-031 decision
-// vocabulary. New code must call TransitionProposal directly.
-func DecideProposal(ctx context.Context, db *sql.DB, actorID, actorRole, id string, input ProposalDecisionInput) (ProductProposal, error) {
-	nextStatus, ok := legacyDecisionToPipelineStatus[input.Decision]
-	if !ok {
-		nextStatus, ok = input.Decision, validProposalStatus[input.Decision]
-	}
-	if !ok {
-		return ProductProposal{}, ErrInvalid
-	}
-	createMasterProduct := input.AdoptedMasterProductID == nil
-	return TransitionProposal(ctx, db, actorID, actorRole, id, ProposalTransitionInput{
-		NextStatus:             nextStatus,
-		Note:                   input.ReviewNote,
-		AdoptedMasterProductID: input.AdoptedMasterProductID,
-		CreateMasterProduct:    &createMasterProduct,
-	})
-}
-
 // ── Store assortment (store-local truth: price/availability/stock/note/image) ─
 
 type StoreAssortment struct {
