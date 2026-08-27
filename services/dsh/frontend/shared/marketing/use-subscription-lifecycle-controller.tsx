@@ -98,6 +98,13 @@ export function useSubscriptionLifecycleController() {
 
   useEffect(() => {
     let active = true;
+    if (!actorId) {
+      // Identity restoration and signed-out states are not allowed to touch
+      // actor-scoped durable mutation recovery or cleanup.
+      return () => {
+        active = false;
+      };
+    }
     const unregisterSessionEndHook = registerIdentityBeforeSessionEndHook(() => clearSubscriptionMutationAttempts(actorId));
     void (async () => {
       try {
