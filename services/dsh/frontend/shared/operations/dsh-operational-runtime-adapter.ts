@@ -97,7 +97,3 @@ export async function fetchDshRuntimeOrders(
     };
   }
 }
-
-export function isDshRuntimeAvailable(): boolean {
-  return resolveDshOrderApiBaseUrl() !== null;
-}
