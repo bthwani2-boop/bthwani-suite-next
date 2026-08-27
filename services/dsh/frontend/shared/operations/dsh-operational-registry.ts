@@ -221,7 +221,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'evidence-on-open',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'dsh/docs/RUNTIME_EVIDENCE_MATRIX.md',
+    currentEvidencePath: 'dsh/frontend/shared/pickup/pickup.api.ts',
     notes: 'Pickup proof prevents store/captain handoff disputes from becoming untraceable.',
   },
   {
