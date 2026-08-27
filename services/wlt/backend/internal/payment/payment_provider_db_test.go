@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -403,5 +404,49 @@ func TestProviderAmbiguousError_Capture_DBFlow(t *testing.T) {
 	_, err = AuthorizeSessionWithProvider(ctx, db, client2, sessionID, provider.RequestMeta{})
 	if !errors.Is(err, ErrNotAuthorizable) {
 		t.Fatalf("expected ErrNotAuthorizable for provider_result_unknown session, got %v", err)
+	}
+}
+
+func TestCaptureAccountingIsPathIndependentBetweenSyncAndProviderEvent(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	ctx := shared.WithOperatorContext(context.Background(), "OperatorContext-test")
+	firstID := seedCheckoutSession(t, db, fmt.Sprintf("test-checkout-sync-equivalence-%d", time.Now().UnixNano()), "authorized", "sync-auth", 1000, false)
+	secondID := seedCheckoutSession(t, db, fmt.Sprintf("test-checkout-event-equivalence-%d", time.Now().UnixNano()), "authorized", "event-auth", 1000, false)
+	if _, err := CaptureSessionWithProvider(ctx, db, &fakeProvider{res: provider.ProviderResult{ProviderReference: "sync-captured", Status: "captured"}}, firstID, provider.RequestMeta{}); err != nil {
+		t.Fatalf("sync capture: %v", err)
+	}
+	if _, err := ApplyAuthoritativeProviderEvent(ctx, db, ProviderEventInput{
+		EventID:           "equivalence-event-" + secondID,
+		OperatorContextID: "OperatorContext-test",
+		PaymentSessionID:  secondID,
+		EventType:         "payment.captured",
+		ProviderStatus:    "captured",
+		ProviderReference: "event-captured",
+		PayloadHash:       strings.Repeat("e", 64),
+		ProcessingSource:  "provider_status_refresh",
+	}); err != nil {
+		t.Fatalf("provider-event capture: %v", err)
+	}
+
+	ledgerSignature := func(sessionID string) string {
+		var signature string
+		err := db.QueryRowContext(ctx, `
+			SELECT string_agg(a.account_type||':'||COALESCE(a.actor_type,'')||':'||COALESCE(a.actor_id,'')||':'||l.debit_credit||':'||l.amount_minor_units::text||':'||l.currency, ',' ORDER BY a.account_type,l.debit_credit,l.amount_minor_units)
+			FROM wlt_ledger_transactions t
+			JOIN wlt_ledger_lines l ON l.ledger_transaction_id=t.id AND l.operator_context_id=t.operator_context_id
+			JOIN wlt_ledger_accounts a ON a.id=l.account_id AND a.operator_context_id=l.operator_context_id
+			WHERE t.operator_context_id='OperatorContext-test' AND t.transaction_type='payment_captured' AND t.reference_type='payment_session' AND t.reference_id=$1`, sessionID).Scan(&signature)
+		if err != nil {
+			t.Fatalf("read ledger signature for %s: %v", sessionID, err)
+		}
+		return signature
+	}
+	if syncSignature, eventSignature := ledgerSignature(firstID), ledgerSignature(secondID); syncSignature != eventSignature {
+		t.Fatalf("capture accounting differs by delivery path: sync=%q event=%q", syncSignature, eventSignature)
 	}
 }

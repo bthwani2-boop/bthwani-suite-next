@@ -6,6 +6,15 @@ BEGIN;
 ALTER TABLE wlt_external_provider_statements
   ADD COLUMN IF NOT EXISTS provenance_evidence_bytes bytea NOT NULL DEFAULT ''::bytea;
 
+-- Historical rows that claimed provider provenance but have no retained raw
+-- evidence cannot continue to claim independent verification. Downgrade them
+-- explicitly to operator-attested evidence instead of fabricating provenance.
+UPDATE wlt_external_provider_statements
+SET provenance_type = 'operator_attested',
+    provenance_evidence_sha256 = artifact_sha256
+WHERE provenance_type IN ('provider_signed', 'provider_api_verified')
+  AND octet_length(provenance_evidence_bytes) = 0;
+
 ALTER TABLE wlt_external_provider_statements
   DROP CONSTRAINT IF EXISTS wlt_external_provider_statements_provenance_evidence_chk;
 ALTER TABLE wlt_external_provider_statements
