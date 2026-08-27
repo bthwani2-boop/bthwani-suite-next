@@ -8,9 +8,7 @@ import type { PartnerSupportMutationContext } from "./partner-support.api";
 import { secureRandomId } from "../_kernel/secure-random.ts";
 
 const CREATE_ATTEMPT_KEY = "@bthwani/dsh/partner-support/create-attempt/v2";
-const CREATE_ATTEMPT_KEY_LEGACY = "@bthwani/dsh/partner-support/create-attempt/v1";
 const MESSAGE_ATTEMPT_PREFIX = "@bthwani/dsh/partner-support/message-attempt/v2/";
-const MESSAGE_ATTEMPT_PREFIX_LEGACY = "@bthwani/dsh/partner-support/message-attempt/v1/";
 
 function uniquePart(): string {
   return secureRandomId();
@@ -104,11 +102,6 @@ export async function getOrCreatePartnerTicketAttempt(
     scope: scoped,
   } as const;
   await bthwaniDurableStorage.setItem(CREATE_ATTEMPT_KEY, JSON.stringify(attempt));
-  const legacy = await bthwaniDurableStorage.getItem(CREATE_ATTEMPT_KEY_LEGACY);
-  if (legacy) {
-    await bthwaniDurableStorage.setItem(`${CREATE_ATTEMPT_KEY_LEGACY}:quarantine:${Date.now()}`, legacy);
-    await bthwaniDurableStorage.removeItem(CREATE_ATTEMPT_KEY_LEGACY);
-  }
   return attempt;
 }
 
@@ -146,12 +139,6 @@ export async function getOrCreatePartnerMessageAttempt(
     scope: scoped,
   } as const;
   await bthwaniDurableStorage.setItem(key, JSON.stringify(attempt));
-  const legacyKey = `${MESSAGE_ATTEMPT_PREFIX_LEGACY}${ticketId}`;
-  const legacy = await bthwaniDurableStorage.getItem(legacyKey);
-  if (legacy) {
-    await bthwaniDurableStorage.setItem(`${legacyKey}:quarantine:${Date.now()}`, legacy);
-    await bthwaniDurableStorage.removeItem(legacyKey);
-  }
   return attempt;
 }
 
