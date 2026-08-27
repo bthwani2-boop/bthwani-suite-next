@@ -15,7 +15,7 @@ const (
 	wltMigrationServiceName = "wlt"
 	// The latest active manifest migration is the readiness gate: no instance
 	// is ready while the canonical schema has not reached this cutover.
-	wltLatestMigration  = "wlt-950_daily_close_cutoff_high_watermark.sql"
+	wltLatestMigration  = "wlt-952_daily_close_mutation_fences.sql"
 	wltReadinessTimeout = 2 * time.Second
 )
 
