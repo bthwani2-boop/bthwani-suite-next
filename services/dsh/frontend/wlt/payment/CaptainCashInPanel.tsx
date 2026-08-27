@@ -101,10 +101,15 @@ export function CaptainCashInPanel({ actorId }: { readonly actorId: string | nul
 
   const allocateCollateral = React.useCallback(async () => {
     if (!session || session.status !== "captured" || collateralAllocated) return;
+    if (!actorId) {
+      setCollateralState("error");
+      setCollateralMessage("هوية الكابتن غير متاحة؛ أوقفنا تخصيص الضمانة حفاظًا على العزل.");
+      return;
+    }
     setCollateralState("loading");
     setCollateralMessage("");
     try {
-      const context = await getOrCreateCaptainCashInMutationContext({ operation: "allocateCollateral", sessionId: session.id, fingerprint: `${session.id}|allocate-collateral` });
+      const context = await getOrCreateCaptainCashInMutationContext({ actorId, operation: "allocateCollateral", sessionId: session.id, fingerprint: `${session.id}|allocate-collateral` });
       await allocateCaptainCollateral({ paymentSessionId: session.id, idempotencyKey: context.idempotencyKey, correlationId: context.correlationId });
       await clearCaptainCashInMutationContext("allocateCollateral", session.id);
       setCollateralAllocated(true);
@@ -116,7 +121,7 @@ export function CaptainCashInPanel({ actorId }: { readonly actorId: string | nul
       setCollateralMessage(normalized.message);
       if (normalized.state === "unknown") void syncCollateral(session.id);
     }
-  }, [collateralAllocated, session, syncCollateral]);
+  }, [actorId, collateralAllocated, session, syncCollateral]);
 
   const advance = React.useCallback(async () => {
     if (!actorId) {
@@ -134,7 +139,7 @@ export function CaptainCashInPanel({ actorId }: { readonly actorId: string | nul
           throw new CaptainCashInError("error", "INVALID_AMOUNT", "أدخل مبلغًا صحيحًا موجبًا بوحدة الريال الأصغر.");
         }
         const fingerprint = `${actorId}|${amountMinorUnits}|YER`;
-        const context = await getOrCreateCaptainCashInMutationContext({ operation: "create", fingerprint });
+        const context = await getOrCreateCaptainCashInMutationContext({ actorId, operation: "create", fingerprint });
         current = await createCaptainCashInSession({
           topupReference: context.topupReference,
           amountMinorUnits,
@@ -147,14 +152,14 @@ export function CaptainCashInPanel({ actorId }: { readonly actorId: string | nul
         await clearCaptainCashInMutationContext("create");
       }
       if (current.status === "reference_created") {
-        const context = await getOrCreateCaptainCashInMutationContext({ operation: "authorize", sessionId: current.id, fingerprint: `${current.id}|authorize` });
+        const context = await getOrCreateCaptainCashInMutationContext({ actorId, operation: "authorize", sessionId: current.id, fingerprint: `${current.id}|authorize` });
         current = await mutateCaptainCashInSession({ sessionId: current.id, operation: "authorize", idempotencyKey: context.idempotencyKey, correlationId: context.correlationId });
         setSession(current);
         await storeCaptainCashInSession(actorId, current);
         await clearCaptainCashInMutationContext("authorize", current.id);
       }
       if (current.status === "authorized") {
-        const context = await getOrCreateCaptainCashInMutationContext({ operation: "capture", sessionId: current.id, fingerprint: `${current.id}|capture` });
+        const context = await getOrCreateCaptainCashInMutationContext({ actorId, operation: "capture", sessionId: current.id, fingerprint: `${current.id}|capture` });
         current = await mutateCaptainCashInSession({ sessionId: current.id, operation: "capture", idempotencyKey: context.idempotencyKey, correlationId: context.correlationId });
         setSession(current);
         await storeCaptainCashInSession(actorId, current);

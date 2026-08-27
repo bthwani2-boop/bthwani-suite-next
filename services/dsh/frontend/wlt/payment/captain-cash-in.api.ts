@@ -9,8 +9,6 @@ import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "captain-cash-in", 12000);
 const ACTIVE_SESSION_KEY = "@bthwani/wlt/captain-cash-in/v2/active";
 const MUTATION_PREFIX = "@bthwani/wlt/captain-cash-in/v2/mutation/";
-const ACTIVE_SESSION_KEY_LEGACY = "@bthwani/wlt/captain-cash-in/v1/active";
-const MUTATION_PREFIX_LEGACY = "@bthwani/wlt/captain-cash-in/v1/mutation/";
 
 export type CaptainCashInSession = {
   readonly id: string;
@@ -127,13 +125,14 @@ function parseStoredMutation(raw: string | null): StoredMutationContext | null {
 }
 
 export async function getOrCreateCaptainCashInMutationContext(input: {
+  readonly actorId: string;
   readonly operation: "create" | "authorize" | "capture" | "allocateCollateral";
   readonly sessionId?: string;
   readonly fingerprint: string;
 }): Promise<{ readonly topupReference: string; readonly idempotencyKey: string; readonly correlationId: string }> {
   const key = mutationStorageKey(input.operation, input.sessionId);
   const entityId = mutationEntityId(input.operation, input.sessionId, input.fingerprint);
-  const scope = await resolveMutationIdentityScope("", { entityId });
+  const scope = await resolveMutationIdentityScope(input.actorId, { entityId });
   const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
 
   const raw = await bthwaniDurableStorage.getItem(key);
@@ -162,13 +161,6 @@ export async function getOrCreateCaptainCashInMutationContext(input: {
         };
       }
     }
-  }
-
-  const legacyKey = `${MUTATION_PREFIX_LEGACY}${input.operation}/${input.sessionId ?? "create"}`;
-  const legacy = await bthwaniDurableStorage.getItem(legacyKey);
-  if (legacy) {
-    await bthwaniDurableStorage.setItem(`${legacyKey}:quarantine:${Date.now()}`, legacy);
-    await bthwaniDurableStorage.removeItem(legacyKey);
   }
 
   const context = newCaptainCashInContext();
@@ -248,14 +240,7 @@ function parseStoredSession(raw: string | null): StoredSession | null {
 
 export async function loadStoredCaptainCashInSession(actorId: string): Promise<CaptainCashInSession | null> {
   const stored = parseStoredSession(await bthwaniDurableStorage.getItem(ACTIVE_SESSION_KEY));
-  if (!stored) {
-    const legacy = await bthwaniDurableStorage.getItem(ACTIVE_SESSION_KEY_LEGACY);
-    if (legacy) {
-      await bthwaniDurableStorage.setItem(`${ACTIVE_SESSION_KEY_LEGACY}:quarantine:${Date.now()}`, legacy);
-      await bthwaniDurableStorage.removeItem(ACTIVE_SESSION_KEY_LEGACY);
-    }
-    return null;
-  }
+  if (!stored) return null;
   if (stored.actorId !== actorId) {
     await bthwaniDurableStorage.removeItem(ACTIVE_SESSION_KEY);
     return null;
