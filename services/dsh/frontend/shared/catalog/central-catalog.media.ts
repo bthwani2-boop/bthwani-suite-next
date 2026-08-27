@@ -4,7 +4,7 @@ import type { CatalogAsset, CatalogAssetLink, AssetUploadIntentInput, AssetUploa
 
 export type { AssetUploadProgress };
 
-const entityTypeMap: Record<string, CatalogAssetLink["entityType"]> = {
+const entityTypeMap = {
   domains: "domain",
   nodes: "node",
   "master-products": "master_product",
@@ -15,7 +15,7 @@ const entityTypeMap: Record<string, CatalogAssetLink["entityType"]> = {
 
 export interface UploadAndLinkOptions {
   readonly file: File;
-  readonly entityType: string;
+  readonly entityType: keyof typeof entityTypeMap;
   readonly entityId: string;
   readonly role: string;
   readonly altAr?: string;
@@ -37,7 +37,7 @@ export async function uploadAndLinkAsset(
   opts: UploadAndLinkOptions,
 ): Promise<{ readonly asset: CatalogAsset; readonly link: CatalogAssetLink }> {
   const { file, entityType, entityId, role, altAr = "", altEn = "", onProgress } = opts;
-  const normalizedEntityType = entityTypeMap[entityType] ?? entityType;
+  const normalizedEntityType = entityTypeMap[entityType];
 
   onProgress?.({ stage: "signing" });
 
