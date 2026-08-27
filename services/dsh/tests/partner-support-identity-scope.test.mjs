@@ -7,6 +7,8 @@ import {
   configureBthwaniDurableStorage,
 } from "@bthwani/data-runtime/storage-adapter";
 import {
+  clearPartnerMessageAttempt,
+  clearPartnerTicketAttempt,
   getOrCreatePartnerMessageAttempt,
   getOrCreatePartnerTicketAttempt,
 } from "../frontend/shared/support/partner-support-attempt.ts";
@@ -53,6 +55,22 @@ test("partner ticket attempts persist the explicit authenticated actor", async (
   assert.equal(attempt.scope.installationId.length > 0, true);
 });
 
+test("partner ticket attempts isolate actors and cleanup only the current actor", async () => {
+  const { adapter, map } = memoryDurable();
+  configureBthwaniDurableStorage(adapter);
+
+  await getOrCreatePartnerTicketAttempt("actor-A", ticketInput);
+  await getOrCreatePartnerTicketAttempt("actor-B", ticketInput);
+  const keys = [...map.keys()].filter((key) => key.includes("partner-support/create-attempt/v3/"));
+  assert.equal(keys.length, 2);
+  assert.equal(keys.some((key) => key.includes("actor-A")), true);
+  assert.equal(keys.some((key) => key.includes("actor-B")), true);
+
+  await clearPartnerTicketAttempt("actor-A");
+  assert.equal([...map.keys()].some((key) => key.includes("partner-support/create-attempt/v3/") && key.includes("actor-A")), false);
+  assert.equal([...map.keys()].some((key) => key.includes("partner-support/create-attempt/v3/") && key.includes("actor-B")), true);
+});
+
 test("partner message attempts persist the explicit authenticated actor", async () => {
   const { adapter } = memoryDurable();
   configureBthwaniDurableStorage(adapter);
@@ -61,6 +79,20 @@ test("partner message attempts persist the explicit authenticated actor", async 
 
   assert.equal(attempt.scope.actorId, "actor-A");
   assert.equal(attempt.scope.entityId.startsWith("ticket-1:"), true);
+});
+
+test("partner message attempts isolate actors and cleanup only the current actor", async () => {
+  const { adapter, map } = memoryDurable();
+  configureBthwaniDurableStorage(adapter);
+
+  await getOrCreatePartnerMessageAttempt("actor-A", "ticket-1", "متابعة الحالة");
+  await getOrCreatePartnerMessageAttempt("actor-B", "ticket-1", "متابعة الحالة");
+  const keys = [...map.keys()].filter((key) => key.includes("partner-support/message-attempt/v3/"));
+  assert.equal(keys.length, 2);
+
+  await clearPartnerMessageAttempt("actor-A", "ticket-1");
+  assert.equal([...map.keys()].some((key) => key.includes("partner-support/message-attempt/v3/") && key.includes("actor-A")), false);
+  assert.equal([...map.keys()].some((key) => key.includes("partner-support/message-attempt/v3/") && key.includes("actor-B")), true);
 });
 
 test("partner ticket attempts fail closed when actor identity is absent", async () => {

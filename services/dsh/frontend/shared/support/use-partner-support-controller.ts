@@ -125,7 +125,7 @@ export function usePartnerSupportController(actorId: string | null, enabled = tr
     const attempt = await getOrCreatePartnerTicketAttempt(actorId, input);
     const ticket = await runMutation(() => createPartnerSupportTicket(input, attempt.context));
     if (!ticket) return false;
-    await clearPartnerTicketAttempt();
+    await clearPartnerTicketAttempt(actorId);
     setSelectedTicketId(ticket.id);
     await loadTickets();
     await loadDetail(ticket.id);
@@ -150,7 +150,7 @@ export function usePartnerSupportController(actorId: string | null, enabled = tr
       attempt.context,
     ));
     if (!message) return false;
-    await clearPartnerMessageAttempt(ticketId);
+    await clearPartnerMessageAttempt(actorId, ticketId);
     await loadDetail(ticketId);
     return true;
   }, [actorId, loadDetail, runMutation, selectedTicketId]);

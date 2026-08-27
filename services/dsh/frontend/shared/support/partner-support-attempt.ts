@@ -7,8 +7,8 @@ import type { DshCreateTicketInput } from "./support.types";
 import type { PartnerSupportMutationContext } from "./partner-support.api";
 import { secureRandomId } from "../_kernel/secure-random.ts";
 
-const CREATE_ATTEMPT_KEY = "@bthwani/dsh/partner-support/create-attempt/v2";
-const MESSAGE_ATTEMPT_PREFIX = "@bthwani/dsh/partner-support/message-attempt/v2/";
+const CREATE_ATTEMPT_PREFIX = "@bthwani/dsh/partner-support/create-attempt/v3/";
+const MESSAGE_ATTEMPT_PREFIX = "@bthwani/dsh/partner-support/message-attempt/v3/";
 
 function uniquePart(): string {
   return secureRandomId();
@@ -63,6 +63,17 @@ function createFingerprint(input: DshCreateTicketInput): string {
   });
 }
 
+function createAttemptKey(scope: { readonly actorId: string; readonly installationId: string }): string {
+  return `${CREATE_ATTEMPT_PREFIX}${encodeURIComponent(scope.actorId)}/${encodeURIComponent(scope.installationId)}`;
+}
+
+function messageAttemptKey(
+  scope: { readonly actorId: string; readonly installationId: string },
+  ticketId: string,
+): string {
+  return `${MESSAGE_ATTEMPT_PREFIX}${encodeURIComponent(scope.actorId)}/${encodeURIComponent(scope.installationId)}/${encodeURIComponent(ticketId)}`;
+}
+
 function assertScopeMatchesStored(stored: PersistedAttempt, scope: { readonly actorId: string; readonly installationId: string; readonly entityId: string }): void {
   if (stored.scope.actorId !== scope.actorId) {
     throw new MutationIdentityScopeError(
@@ -86,12 +97,13 @@ export async function getOrCreatePartnerTicketAttempt(
   const entityId = fingerprint.slice(0, 32);
   const scope = await resolveMutationIdentityScope(actorId, { entityId });
   const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
+  const key = createAttemptKey(scoped);
 
-  const stored = parseAttempt(await bthwaniDurableStorage.getItem(CREATE_ATTEMPT_KEY));
+  const stored = parseAttempt(await bthwaniDurableStorage.getItem(key));
   if (stored?.fingerprint === fingerprint) {
     assertScopeMatchesStored(stored, scoped);
     if (stored.scope.entityId !== entityId) {
-      await bthwaniDurableStorage.removeItem(CREATE_ATTEMPT_KEY);
+      await bthwaniDurableStorage.removeItem(key);
     } else {
       return stored;
     }
@@ -101,16 +113,13 @@ export async function getOrCreatePartnerTicketAttempt(
     context: newContext("partner-ticket-create"),
     scope: scoped,
   } as const;
-  await bthwaniDurableStorage.setItem(CREATE_ATTEMPT_KEY, JSON.stringify(attempt));
+  await bthwaniDurableStorage.setItem(key, JSON.stringify(attempt));
   return attempt;
 }
 
-export async function clearPartnerTicketAttempt(): Promise<void> {
-  await bthwaniDurableStorage.removeItem(CREATE_ATTEMPT_KEY);
-}
-
-function messageAttemptKey(ticketId: string): string {
-  return `${MESSAGE_ATTEMPT_PREFIX}${ticketId}`;
+export async function clearPartnerTicketAttempt(actorId: string): Promise<void> {
+  const scope = await resolveMutationIdentityScope(actorId, { entityId: "partner-ticket-create-cleanup" });
+  await bthwaniDurableStorage.removeItem(createAttemptKey(scope));
 }
 
 export async function getOrCreatePartnerMessageAttempt(
@@ -119,10 +128,10 @@ export async function getOrCreatePartnerMessageAttempt(
   body: string,
 ): Promise<PersistedAttempt> {
   const fingerprint = JSON.stringify({ ticketId, body: body.trim() });
-  const key = messageAttemptKey(ticketId);
   const entityId = `${ticketId}:${fingerprint.slice(0, 16)}`;
   const scope = await resolveMutationIdentityScope(actorId, { entityId });
   const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
+  const key = messageAttemptKey(scoped, ticketId);
 
   const stored = parseAttempt(await bthwaniDurableStorage.getItem(key));
   if (stored?.fingerprint === fingerprint) {
@@ -142,6 +151,7 @@ export async function getOrCreatePartnerMessageAttempt(
   return attempt;
 }
 
-export async function clearPartnerMessageAttempt(ticketId: string): Promise<void> {
-  await bthwaniDurableStorage.removeItem(messageAttemptKey(ticketId));
+export async function clearPartnerMessageAttempt(actorId: string, ticketId: string): Promise<void> {
+  const scope = await resolveMutationIdentityScope(actorId, { entityId: `${ticketId}:cleanup` });
+  await bthwaniDurableStorage.removeItem(messageAttemptKey(scope, ticketId));
 }
