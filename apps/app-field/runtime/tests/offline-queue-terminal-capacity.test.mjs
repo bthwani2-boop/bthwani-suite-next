@@ -16,14 +16,13 @@ const queue = await import(
 
 const {
   configureFieldOfflineQueueStorage,
-  configureFieldOfflineLegacyStorage,
   configureFieldOfflineQueueScope,
   enqueueFieldOperation,
   markOperationFailed,
   getAllOperations,
   getDueOperations,
   evacuateTerminalOperations,
-  readLegacyQuarantine,
+  readFieldOfflineRecovery,
 } = queue;
 
 const SCOPE = { actorId: "wf-actor-1", installationId: "install-1" };
@@ -40,7 +39,6 @@ function memoryStore() {
 
 function install() {
   configureFieldOfflineQueueStorage(memoryStore());
-  configureFieldOfflineLegacyStorage(memoryStore());
   configureFieldOfflineQueueScope(SCOPE);
 }
 
@@ -64,7 +62,7 @@ test("a permanently refused operation is evacuated out of the live queue", async
 
   assert.equal(evacuated, 1);
   assert.equal((await getAllOperations()).length, 0, "capacity is released");
-  const recovered = await readLegacyQuarantine();
+  const recovered = await readFieldOfflineRecovery();
   assert.equal(recovered.length, 1, "the refused work is still recoverable");
   assert.equal(recovered[0].reason, "TERMINAL_SYNC_FAILURE");
   assert.match(recovered[0].raw, /store-1/, "the original payload is retained");
@@ -114,5 +112,5 @@ test("evacuation is a no-op when nothing has failed permanently", async () => {
 
   assert.equal(await evacuateTerminalOperations(), 0);
   assert.equal((await getAllOperations()).length, 1);
-  assert.equal((await readLegacyQuarantine()).length, 0);
+  assert.equal((await readFieldOfflineRecovery()).length, 0);
 });

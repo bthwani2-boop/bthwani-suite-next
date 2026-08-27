@@ -16,7 +16,6 @@ const queue = await import(
 
 const {
   configureFieldOfflineQueueStorage,
-  configureFieldOfflineLegacyStorage,
   configureFieldOfflineQueueScope,
   enqueueFieldOperation,
   markOperationUnknown,
@@ -39,7 +38,6 @@ function memoryStore() {
 test("unknown result survives restart and cannot be delivered blindly", async () => {
   const storage = memoryStore();
   configureFieldOfflineQueueStorage(storage);
-  configureFieldOfflineLegacyStorage(memoryStore());
   configureFieldOfflineQueueScope(SCOPE);
 
   const operation = await enqueueFieldOperation(
@@ -63,7 +61,6 @@ test("unknown result survives restart and cannot be delivered blindly", async ()
 test("unknown result is isolated from another actor and installation", async () => {
   const storage = memoryStore();
   configureFieldOfflineQueueStorage(storage);
-  configureFieldOfflineLegacyStorage(memoryStore());
   configureFieldOfflineQueueScope(SCOPE);
   const operation = await enqueueFieldOperation(
     "create_visit",

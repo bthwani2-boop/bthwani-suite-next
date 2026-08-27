@@ -31,9 +31,7 @@ export {
 export { useFieldEscalationSubmissionController } from "./use-field-escalation-submission-controller";
 export {
   configureFieldOfflineQueueStorage,
-  configureFieldOfflineLegacyStorage,
   configureFieldOfflineQueueScope,
-  prepareFieldOfflineQueue,
   clearFieldOfflineQueue,
   enqueueFieldOperation,
   markOperationSynced,
@@ -46,19 +44,17 @@ export {
   evacuateTerminalOperations,
   getAllOperations,
   recoverCorruptFieldOfflineQueue,
-  readLegacyQuarantine,
+  readFieldOfflineRecovery,
   FieldOfflineQueueCorruptError,
 } from "./field-offline-queue";
 export type {
   FieldOfflineQueueScope,
   FieldOfflineQueueStorageAdapter,
-  FieldOfflineLegacyStorageAdapter,
   FieldOfflineOperation,
   FieldOfflineOperationType,
   FieldOfflineOperationStatus,
   FieldOfflineQuarantineReason,
   FieldOfflineQuarantineRecord,
-  FieldOfflineLegacyMigrationSummary,
 } from "./field-offline-queue";
 export { useFieldOfflineSync } from "./use-field-offline-sync";
 export type {

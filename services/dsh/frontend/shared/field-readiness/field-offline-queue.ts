@@ -38,25 +38,13 @@ export type FieldOfflineQueueStorageAdapter = {
   readonly removeItem: (key: string) => Promise<void>;
 };
 
-export type FieldOfflineLegacyStorageAdapter = {
-  readonly getItem: (key: string) => Promise<string | null>;
-  readonly removeItem: (key: string) => Promise<void>;
-};
-
-export type FieldOfflineQuarantineReason =
-  | "LEGACY_V1_UNSCOPED"
-  | "TERMINAL_SYNC_FAILURE";
+export type FieldOfflineQuarantineReason = "TERMINAL_SYNC_FAILURE";
 
 export type FieldOfflineQuarantineRecord = {
   readonly sourceKey: string;
   readonly reason: FieldOfflineQuarantineReason;
   readonly capturedAt: string;
   readonly raw: string;
-};
-
-export type FieldOfflineLegacyMigrationSummary = {
-  readonly adopted: number;
-  readonly quarantined: number;
 };
 
 export type FieldOfflineOperation<P = unknown> = {
@@ -74,10 +62,6 @@ export type FieldOfflineOperation<P = unknown> = {
   readonly lastError?: string;
 };
 
-const LEGACY_V1_STORAGE_KEYS = [
-  "@bthwani/field-offline-queue:v1",
-  "@bthwani/field-offline-queue:corrupt:v1",
-] as const;
 const STORAGE_PREFIX = "bthwani.field-offline-queue.v3";
 const MAX_ATTEMPTS = 10;
 const MAX_QUEUE_OPERATIONS = 100;
@@ -86,10 +70,6 @@ const MAX_SERIALIZED_CHARACTERS = 48_000;
 let storageAdapter: FieldOfflineQueueStorageAdapter = {
   getItem: (key) => bthwaniDurableStorage.getItem(key),
   setItem: (key, value) => bthwaniDurableStorage.setItem(key, value),
-  removeItem: (key) => bthwaniDurableStorage.removeItem(key),
-};
-let legacyStorageAdapter: FieldOfflineLegacyStorageAdapter = {
-  getItem: (key) => bthwaniDurableStorage.getItem(key),
   removeItem: (key) => bthwaniDurableStorage.removeItem(key),
 };
 let activeScope: FieldOfflineQueueScope | null = null;
@@ -133,16 +113,12 @@ function corruptStorageKey(scope: FieldOfflineQueueScope): string {
   return `${STORAGE_PREFIX}.corrupt.${scopeFingerprint(scope)}`;
 }
 
-function legacyQuarantineStorageKey(scope: FieldOfflineQueueScope): string {
-  return `${STORAGE_PREFIX}.legacy-quarantine.${scopeFingerprint(scope)}`;
+function recoveryQuarantineStorageKey(scope: FieldOfflineQueueScope): string {
+  return `${STORAGE_PREFIX}.recovery-quarantine.${scopeFingerprint(scope)}`;
 }
 
 export function configureFieldOfflineQueueStorage(adapter: FieldOfflineQueueStorageAdapter): void {
   storageAdapter = adapter;
-}
-
-export function configureFieldOfflineLegacyStorage(adapter: FieldOfflineLegacyStorageAdapter): void {
-  legacyStorageAdapter = adapter;
 }
 
 export function configureFieldOfflineQueueScope(scope: FieldOfflineQueueScope | null): void {
@@ -175,7 +151,7 @@ function isOperation(value: unknown, scope: FieldOfflineQueueScope): value is Fi
 }
 
 async function readQuarantine(scope: FieldOfflineQueueScope): Promise<FieldOfflineQuarantineRecord[]> {
-  const raw = await storageAdapter.getItem(legacyQuarantineStorageKey(scope));
+  const raw = await storageAdapter.getItem(recoveryQuarantineStorageKey(scope));
   if (!raw) return [];
   try {
     const parsed: unknown = JSON.parse(raw);
@@ -185,31 +161,7 @@ async function readQuarantine(scope: FieldOfflineQueueScope): Promise<FieldOffli
   }
 }
 
-async function migrateLegacyQueues(scope: FieldOfflineQueueScope): Promise<FieldOfflineLegacyMigrationSummary> {
-  const found: { key: string; raw: string }[] = [];
-  for (const key of LEGACY_V1_STORAGE_KEYS) {
-    const raw = await legacyStorageAdapter.getItem(key);
-    if (raw) found.push({ key, raw });
-  }
-  if (found.length === 0) return { adopted: 0, quarantined: 0 };
-
-  const capturedAt = new Date().toISOString();
-  const quarantined = [
-    ...(await readQuarantine(scope)),
-    ...found.map(({ key, raw }) => ({
-      sourceKey: key,
-      reason: "LEGACY_V1_UNSCOPED" as const,
-      capturedAt,
-      raw,
-    })),
-  ];
-
-  await storageAdapter.setItem(legacyQuarantineStorageKey(scope), JSON.stringify(quarantined));
-  for (const { key } of found) await legacyStorageAdapter.removeItem(key);
-  return { adopted: 0, quarantined: quarantined.length };
-}
-
-export async function readLegacyQuarantine(): Promise<FieldOfflineQuarantineRecord[]> {
+export async function readFieldOfflineRecovery(): Promise<FieldOfflineQuarantineRecord[]> {
   return readQuarantine(requireScope());
 }
 
@@ -249,18 +201,13 @@ async function writeQueue(queue: FieldOfflineOperation[]): Promise<void> {
   await storageAdapter.setItem(storageKey(scope), serialized);
 }
 
-export async function prepareFieldOfflineQueue(): Promise<FieldOfflineLegacyMigrationSummary> {
-  return migrateLegacyQueues(requireScope());
-}
-
 export async function clearFieldOfflineQueue(): Promise<void> {
   const scope = activeScope;
-  for (const key of LEGACY_V1_STORAGE_KEYS) await legacyStorageAdapter.removeItem(key);
   if (!scope) return;
   await Promise.all([
     storageAdapter.removeItem(storageKey(scope)),
     storageAdapter.removeItem(corruptStorageKey(scope)),
-    storageAdapter.removeItem(legacyQuarantineStorageKey(scope)),
+    storageAdapter.removeItem(recoveryQuarantineStorageKey(scope)),
   ]);
 }
 
@@ -392,7 +339,7 @@ export async function evacuateTerminalOperations(): Promise<number> {
       raw: JSON.stringify(operation),
     })),
   ];
-  await storageAdapter.setItem(legacyQuarantineStorageKey(scope), JSON.stringify(quarantined));
+  await storageAdapter.setItem(recoveryQuarantineStorageKey(scope), JSON.stringify(quarantined));
   await writeQueue(queue.filter((operation) => operation.status !== "failed_permanent"));
   return terminal.length;
 }
