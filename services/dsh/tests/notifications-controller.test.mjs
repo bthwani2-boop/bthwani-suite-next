@@ -68,6 +68,34 @@ describe("notifications states", () => {
   });
 });
 
+describe("notification action URL policy", () => {
+  it("normalizes only HTTPS and the configured app deep link", async () => {
+    const { resolveSafeDshNotificationActionUrl } = await import(
+      "../dist/services/dsh/frontend/shared/notifications/mobile-notification-action.js"
+    );
+    assert.equal(
+      resolveSafeDshNotificationActionUrl("https://example.test/orders/1", "bthwani-client"),
+      "https://example.test/orders/1",
+    );
+    assert.equal(
+      resolveSafeDshNotificationActionUrl("/orders/1", "bthwani-client"),
+      "bthwani-client://orders/1",
+    );
+    assert.equal(
+      resolveSafeDshNotificationActionUrl("bthwani-client://orders/1", "bthwani-client"),
+      "bthwani-client://orders/1",
+    );
+    assert.equal(
+      resolveSafeDshNotificationActionUrl("http://example.test/orders/1", "bthwani-client"),
+      null,
+    );
+    assert.equal(
+      resolveSafeDshNotificationActionUrl("javascript:alert(1)", "bthwani-client"),
+      null,
+    );
+  });
+});
+
 describe("administration types validation", () => {
   it("partner activation valid statuses are complete", () => {
     const statuses = ["submitted", "ops_approved", "partner_active", "blocked"];

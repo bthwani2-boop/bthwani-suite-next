@@ -8,17 +8,9 @@ import {
   getDshMobileNotificationRuntime,
   type DshMobileNotificationResponse,
 } from "../mobile-capabilities";
+import { openDshNotificationActionUrl } from "./mobile-notification-action";
 
 type DshMobileAppKey = "app-client" | "app-partner" | "app-captain" | "app-field";
-
-function resolveSafeActionUrl(actionUrl: string, appScheme: string): string | null {
-  const value = actionUrl.trim();
-  if (!value) return null;
-  if (value.startsWith("https://")) return value;
-  if (value.startsWith(`${appScheme}://`)) return value;
-  if (value.includes(":")) return null;
-  return `${appScheme}://${value.replace(/^\/+/, "")}`;
-}
 
 async function openNotificationAction(
   response: DshMobileNotificationResponse | null,
@@ -26,10 +18,7 @@ async function openNotificationAction(
 ): Promise<void> {
   const runtime = getDshMobileNotificationRuntime();
   if (!response || response.actionIdentifier !== runtime.defaultActionIdentifier) return;
-  const actionUrl = response.actionUrl ?? "";
-  const safeUrl = resolveSafeActionUrl(actionUrl, appScheme);
-  if (!safeUrl) return;
-  await runtime.openUrl(safeUrl);
+  await openDshNotificationActionUrl(response.actionUrl ?? "", appScheme);
 }
 
 export function useDshMobilePushRegistration(

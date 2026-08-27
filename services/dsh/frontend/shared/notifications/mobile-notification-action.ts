@@ -1,11 +1,5 @@
 import { getDshMobileNotificationRuntime } from "../mobile-capabilities";
 
-let activeMobileAppScheme: string | null = null;
-
-export function setActiveDshMobileAppScheme(appScheme: string | null): void {
-  activeMobileAppScheme = appScheme?.trim().replace(/:\/\/$/, "") || null;
-}
-
 export function resolveSafeDshNotificationActionUrl(
   actionUrl: string,
   appScheme: string,
@@ -13,7 +7,7 @@ export function resolveSafeDshNotificationActionUrl(
   const value = actionUrl.trim();
   const scheme = appScheme.trim().replace(/:\/\/$/, "");
   if (!value || !scheme) return null;
-  if (/^https?:\/\//i.test(value)) return value;
+  if (/^https:\/\//i.test(value)) return value;
   if (value.startsWith(`${scheme}://`)) return value;
   if (value.includes(":")) return null;
   return `${scheme}://${value.replace(/^\/+/, "")}`;
@@ -26,9 +20,4 @@ export async function openDshNotificationActionUrl(
   const resolvedUrl = resolveSafeDshNotificationActionUrl(actionUrl, appScheme);
   if (!resolvedUrl) return;
   await getDshMobileNotificationRuntime().openUrl(resolvedUrl);
-}
-
-export async function openDshMobileNotificationActionUrl(actionUrl: string): Promise<void> {
-  if (!activeMobileAppScheme) return;
-  await openDshNotificationActionUrl(actionUrl, activeMobileAppScheme);
 }
