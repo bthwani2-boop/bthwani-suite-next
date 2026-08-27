@@ -30,8 +30,9 @@ CREATE TABLE dsh_store_publication_decisions (
 CREATE INDEX idx_dsh_store_publication_decisions_scope
   ON dsh_store_publication_decisions(operator_context_id, store_id, created_at DESC);
 
--- Every tenant starts fail-closed. Platform policy may later permit named soft
--- blockers; no publication prerequisite is bypassable without that durable row.
+-- Every operator context starts fail-closed. Platform policy may later permit
+-- named soft blockers; no publication prerequisite is bypassable without that
+-- durable row.
 INSERT INTO dsh_store_publication_override_policies
   (operator_context_id, enabled, allowed_blocker_codes, updated_by)
 SELECT DISTINCT operator_context_id, FALSE, ARRAY[]::TEXT[], 'migration:dsh-1007'

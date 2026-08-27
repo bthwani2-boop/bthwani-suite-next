@@ -323,7 +323,7 @@ The developer MUST run the smallest complete evidence set for the affected cone.
 Material changes MUST test relevant failure paths, not only happy paths. Examples include:
 
 - unauthenticated/unauthorized/forbidden access;
-- cross-tenant/cross-scope access;
+- cross-operator-context/cross-scope access;
 - invalid state transition;
 - duplicate request;
 - retry and idempotency;

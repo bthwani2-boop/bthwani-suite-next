@@ -25,8 +25,8 @@ type governedStoreCreationFingerprint struct {
 
 // CreateGovernedStoreForOperatorContextIdempotent is the sole generic branch-
 // creation primitive. It is control-panel only at the HTTP boundary and closes
-// partner ownership, partner-owner scope, audit, tenant isolation, and retry
-// identity in one transaction.
+// partner ownership, partner-owner scope, audit, operator-context
+// isolation, and retry identity in one transaction.
 func CreateGovernedStoreForOperatorContextIdempotent(
 	ctx context.Context,
 	db *sql.DB,

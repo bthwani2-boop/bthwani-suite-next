@@ -9,7 +9,8 @@ type operatorContextKey struct{}
 
 // WithOperatorContext binds the context resolved from Identity to the current
 // request. Downstream service clients must use this value; they must not infer
-// tenant scope from process configuration or caller-controlled headers.
+// operator-context scope from process configuration or caller-controlled
+// headers.
 func WithOperatorContext(ctx context.Context, operatorContextID string) context.Context {
 	return context.WithValue(ctx, operatorContextKey{}, strings.TrimSpace(operatorContextID))
 }
