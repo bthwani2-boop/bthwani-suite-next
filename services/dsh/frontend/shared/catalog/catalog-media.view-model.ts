@@ -13,23 +13,6 @@ import type {
 
 // --- Upload state labels -------------------------------------------------------
 
-export function uploadStageLabel(progress: AssetUploadProgress): string {
-  switch (progress.stage) {
-    case "idle":
-      return "";
-    case "signing":
-      return "Preparing upload...";
-    case "uploading":
-      return `Uploading... ${progress.percent}%`;
-    case "verifying":
-      return "Verifying upload...";
-    case "linked":
-      return "Upload complete";
-    case "failed":
-      return `Upload failed: ${progress.error}`;
-  }
-}
-
 export function isUploadInProgress(progress: AssetUploadProgress): boolean {
   return progress.stage === "signing" || progress.stage === "uploading" || progress.stage === "verifying";
 }
