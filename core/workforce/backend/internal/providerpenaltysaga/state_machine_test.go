@@ -53,14 +53,39 @@ func TestMandatoryRemoteFailureWindowsAreGoverned(t *testing.T) {
 	}
 }
 
-func TestFinancialSagaProjectionFencesStaleVersions(t *testing.T) {
-	post := command{Operation: "post", SourceVersion: 7}
-	if !projectionVersionAllowed(post, 7) || projectionVersionAllowed(post, 8) {
-		t.Fatal("post projection did not enforce its exact incident source version")
+func TestFinancialSagaProjectionFollowsStatusPath(t *testing.T) {
+	// Root #3 regression fence: the incident's CURRENT STATUS PATH governs a
+	// remote-confirmed projection. Incidental version drift (note/evidence
+	// edits) can never strand a live financial fact, and impossible paths
+	// escalate instead of terminally rejecting real money effects.
+	cases := []struct {
+		name                                           string
+		operation, currentStatus, currentRef, remoteID string
+		absent                                         bool
+		want                                           projectionDisposition
+	}{
+		{"post onto approved proceeds", "post", "approved", "", "p1", false, projectionProceed},
+		{"post already converged with matching ref", "post", "financial_action_posted", "p1", "p1", false, projectionAlreadyConverged},
+		{"post already converged without remote id", "post", "financial_action_posted", "", "", true, projectionAlreadyConverged},
+		{"post superseded by later reversal", "post", "reversed", "p1", "p1", false, projectionSupersededByReversal},
+		{"post onto rejected escalates", "post", "rejected", "", "p1", false, projectionConflict},
+		{"post onto closed escalates", "post", "closed", "", "p1", false, projectionConflict},
+		{"post onto reported escalates", "post", "reported", "", "p1", false, projectionConflict},
+		{"reverse onto posted proceeds", "reverse", "financial_action_posted", "p1", "p1", false, projectionProceed},
+		{"reverse absence onto approved proceeds", "reverse", "approved", "", "", true, projectionProceed},
+		{"reverse already converged", "reverse", "reversed", "p1", "p1", false, projectionAlreadyConverged},
+		{"reverse onto closed escalates", "reverse", "closed", "p1", "p1", false, projectionConflict},
+		{"reverse onto approved without absence escalates", "reverse", "approved", "", "p1", false, projectionConflict},
 	}
-	reverseAfterPost := command{Operation: "reverse", SourceVersion: 7, ParentCommandID: "post-command"}
-	if !projectionVersionAllowed(reverseAfterPost, 7) || !projectionVersionAllowed(reverseAfterPost, 8) || projectionVersionAllowed(reverseAfterPost, 9) {
-		t.Fatal("reverse projection did not allow only its own version or the single parent-post increment")
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := decideProjectionDisposition(tc.operation, tc.currentStatus, tc.currentRef, tc.remoteID, tc.absent); got != tc.want {
+				t.Fatalf("decideProjectionDisposition(%s,%s) = %s, want %s", tc.operation, tc.currentStatus, got, tc.want)
+			}
+		})
+	}
+	if !errors.Is(errProjectionStatusConflict, errProjectionStatusConflict) || errProjectionStatusConflict.Error() == "" {
+		t.Fatal("conflict sentinel must be a usable error")
 	}
 }
 
@@ -110,9 +135,11 @@ func TestFailureWindowsAToQHaveExplicitGovernedTransitions(t *testing.T) {
 				t.Fatal("a terminal command replay must return its durable result")
 			}
 		}},
-		{"F concurrent operations fence incident version", func(t *testing.T) {
-			if projectionVersionAllowed(command{Operation: "post", SourceVersion: 4}, 5) {
-				t.Fatal("a competing incident version must fence the stale post")
+		{"F non-status version drift cannot strand a confirmed fact", func(t *testing.T) {
+			// A note/evidence edit bumps the incident version without touching
+			// status: the projection path stays PROCEED (root #3).
+			if got := decideProjectionDisposition("post", "approved", "", "p1", false); got != projectionProceed {
+				t.Fatalf("version-only drift must not escalate, got %s", got)
 			}
 		}},
 		{"G two workers claim one intent", func(t *testing.T) {
@@ -166,9 +193,9 @@ func TestFailureWindowsAToQHaveExplicitGovernedTransitions(t *testing.T) {
 				t.Fatal("a different reversal identity must never satisfy readback")
 			}
 		}},
-		{"P stale incident version attempts newer financial state", func(t *testing.T) {
-			if projectionVersionAllowed(command{Operation: "reverse", SourceVersion: 8, ParentCommandID: "parent"}, 10) {
-				t.Fatal("stale reversal must not overwrite a newer incident state")
+		{"P impossible projection path escalates instead of rejecting", func(t *testing.T) {
+			if got := decideProjectionDisposition("reverse", "closed", "p1", "p1", false); got != projectionConflict {
+				t.Fatalf("impossible path must escalate, got %s", got)
 			}
 		}},
 		{"Q OperatorContext changes during recovery", func(t *testing.T) {

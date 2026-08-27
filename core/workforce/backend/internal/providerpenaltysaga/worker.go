@@ -24,8 +24,7 @@ const (
 )
 
 var (
-	errStaleProjection = errors.New("stale incident projection")
-	errLeaseLost       = errors.New("provider penalty command lease was lost")
+	errLeaseLost = errors.New("provider penalty command lease was lost")
 )
 
 type command struct {
@@ -69,9 +68,57 @@ func operatorContextValid(item command) bool {
 	return item.OperatorContextID != "" && item.OperatorContextID == item.IncidentOperatorContextID && item.OperatorContextID == item.ActorOperatorContextID
 }
 
-func projectionVersionAllowed(item command, currentVersion int) bool {
-	return currentVersion == item.SourceVersion ||
-		(item.Operation == "reverse" && item.ParentCommandID != "" && currentVersion == item.SourceVersion+1)
+// projectionDisposition decides how a REMOTE-CONFIRMED (or absence-proven)
+// financial fact converges onto the incident projection, based on the
+// incident's CURRENT status path — never on incidental version drift from
+// non-status edits. A version bump alone (note/evidence edit) can never
+// strand a live financial effect (root #3).
+type projectionDisposition string
+
+const (
+	projectionProceed              projectionDisposition = "proceed"
+	projectionAlreadyConverged     projectionDisposition = "already_converged"
+	projectionSupersededByReversal projectionDisposition = "superseded_by_reversal"
+	projectionConflict             projectionDisposition = "conflict"
+)
+
+func decideProjectionDisposition(operation, currentStatus, currentRef, remoteID string, absent bool) projectionDisposition {
+	target := "financial_action_posted"
+	if operation == "reverse" {
+		target = "reversed"
+	}
+	if currentStatus == target && (remoteID == "" || currentRef == remoteID) {
+		return projectionAlreadyConverged
+	}
+	switch operation {
+	case "post":
+		switch currentStatus {
+		case "approved":
+			return projectionProceed
+		case "reversed":
+			// A later reversal already projected the incident past this post;
+			// the reversal command owns the projection and the ledger trail.
+			return projectionSupersededByReversal
+		}
+	case "reverse":
+		if currentStatus == "financial_action_posted" || (absent && currentStatus == "approved") {
+			return projectionProceed
+		}
+	}
+	// Statuses that can never legally reach the target (e.g. post onto a
+	// rejected/closed incident, reverse onto a closed incident) are escalated,
+	//      not terminally rejected: the WLT financial effect is real and must stay
+	// visible in the recovery index until an operator resolves the conflict.
+	return projectionConflict
+}
+
+// projectionConflictError is the escalation signal for decideProjectionDisposition
+// conflicts; it keeps the command recoverable (REMOTE_CONFIRMED + backoff)
+// instead of terminally rejecting a live financial fact.
+var errProjectionStatusConflict = errors.New("incident status path conflicts with a remote-confirmed financial fact; operator resolution required")
+
+func projectionConflictCode(operation, currentStatus string) string {
+	return "PROJECTION_STATUS_CONFLICT_" + strings.ToUpper(operation[0:1]) + strings.ToUpper(currentStatus[0:1]) + "_" + currentStatus
 }
 
 func parentDisposition(state string) string {
@@ -114,25 +161,25 @@ func claimBatch(ctx context.Context, db *sql.DB, owner string, limit int, lease 
 	}
 	defer tx.Rollback() //nolint:errcheck
 	rows, err := tx.QueryContext(ctx, `SELECT command.id::text,command.operator_context_id,command.incident_id::text,
-		command.incident_source_version,command.operation,command.command_idempotency_key,
-		command.provider_actor_id,command.provider_actor_type,command.policy_id,command.reason,
-		command.requested_by_actor_id,command.requested_by_role,command.correlation_id,
-		command.lifecycle_state,command.attempt_count,command.readback_attempt_count,
-		command.remote_penalty_id,command.remote_ledger_transaction_id,command.remote_status,
-		command.terminal_disposition,COALESCE(command.parent_command_id::text,''),
-		COALESCE(parent.lifecycle_state,''),COALESCE(parent.remote_penalty_id,''),
-		COALESCE(incident.operator_context_id,''),COALESCE(person.operator_context_id,''),
-		COALESCE(incident.status,''),COALESCE(incident.version,0),COALESCE(incident.wlt_ledger_reference,'')
-	FROM workforce_provider_penalty_commands command
-	LEFT JOIN workforce_provider_penalty_commands parent ON parent.id=command.parent_command_id
-	LEFT JOIN workforce_provider_incidents incident ON incident.id=command.incident_id
-	LEFT JOIN workforce_people person ON person.actor_id=command.provider_actor_id
-	WHERE command.next_retry_at <= NOW() AND (
-		command.lifecycle_state IN ('READY','REMOTE_OUTCOME_UNKNOWN','REMOTE_CONFIRMED','LOCAL_PROJECTION_PENDING','RECONCILING','RETRY_SCHEDULED')
-		OR (command.lifecycle_state='IN_FLIGHT' AND (command.lease_expires_at IS NULL OR command.lease_expires_at <= NOW()))
-	)
-	ORDER BY command.created_at,command.id
-	LIMIT $1 FOR UPDATE OF command SKIP LOCKED`, limit)
+                command.incident_source_version,command.operation,command.command_idempotency_key,
+                command.provider_actor_id,command.provider_actor_type,command.policy_id,command.reason,
+                command.requested_by_actor_id,command.requested_by_role,command.correlation_id,
+                command.lifecycle_state,command.attempt_count,command.readback_attempt_count,
+                command.remote_penalty_id,command.remote_ledger_transaction_id,command.remote_status,
+                command.terminal_disposition,COALESCE(command.parent_command_id::text,''),
+                COALESCE(parent.lifecycle_state,''),COALESCE(parent.remote_penalty_id,''),
+                COALESCE(incident.operator_context_id,''),COALESCE(person.operator_context_id,''),
+                COALESCE(incident.status,''),COALESCE(incident.version,0),COALESCE(incident.wlt_ledger_reference,'')
+        FROM workforce_provider_penalty_commands command
+        LEFT JOIN workforce_provider_penalty_commands parent ON parent.id=command.parent_command_id
+        LEFT JOIN workforce_provider_incidents incident ON incident.id=command.incident_id
+        LEFT JOIN workforce_people person ON person.actor_id=command.provider_actor_id
+        WHERE command.next_retry_at <= NOW() AND (
+                command.lifecycle_state IN ('READY','REMOTE_OUTCOME_UNKNOWN','REMOTE_CONFIRMED','LOCAL_PROJECTION_PENDING','RECONCILING','RETRY_SCHEDULED')
+                OR (command.lifecycle_state='IN_FLIGHT' AND (command.lease_expires_at IS NULL OR command.lease_expires_at <= NOW()))
+        )
+        ORDER BY command.created_at,command.id
+        LIMIT $1 FOR UPDATE OF command SKIP LOCKED`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -160,9 +207,9 @@ func claimBatch(ctx context.Context, db *sql.DB, owner string, limit int, lease 
 	leaseSeconds := fmt.Sprintf("%.6f seconds", lease.Seconds())
 	for index := range items {
 		result, err := tx.ExecContext(ctx, `UPDATE workforce_provider_penalty_commands
-			SET lifecycle_state='IN_FLIGHT',lease_token=$2::uuid,lease_owner=$3,
-				lease_expires_at=NOW()+$4::interval,last_attempt_at=NOW(),updated_at=NOW()
-			WHERE id=$1::uuid AND lifecycle_state=$5`, items[index].ID, items[index].LeaseToken,
+                        SET lifecycle_state='IN_FLIGHT',lease_token=$2::uuid,lease_owner=$3,
+                                lease_expires_at=NOW()+$4::interval,last_attempt_at=NOW(),updated_at=NOW()
+                        WHERE id=$1::uuid AND lifecycle_state=$5`, items[index].ID, items[index].LeaseToken,
 			owner, leaseSeconds, items[index].LifecycleState)
 		if err != nil {
 			return nil, err
@@ -211,9 +258,9 @@ func requireFencedUpdate(ok bool, err error) error {
 func releaseRetry(ctx context.Context, db *sql.DB, item command, code string, cause error) error {
 	next := item.AttemptCount + 1
 	ok, err := fencedUpdate(ctx, db, item, `UPDATE workforce_provider_penalty_commands
-		SET lifecycle_state='RETRY_SCHEDULED',attempt_count=$3,next_retry_at=NOW()+$4::interval,
-			last_error_code=$5,last_error=$6,lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
-		WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='IN_FLIGHT' AND lease_expires_at>NOW()`,
+                SET lifecycle_state='RETRY_SCHEDULED',attempt_count=$3,next_retry_at=NOW()+$4::interval,
+                        last_error_code=$5,last_error=$6,lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
+                WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='IN_FLIGHT' AND lease_expires_at>NOW()`,
 		next, fmt.Sprintf("%.6f seconds", backoff(next).Seconds()), code, errorText(cause))
 	return requireFencedUpdate(ok, err)
 }
@@ -221,10 +268,10 @@ func releaseRetry(ctx context.Context, db *sql.DB, item command, code string, ca
 func markUnknown(ctx context.Context, db *sql.DB, item command, cause error) error {
 	next := item.AttemptCount + 1
 	ok, err := fencedUpdate(ctx, db, item, `UPDATE workforce_provider_penalty_commands
-		SET lifecycle_state='REMOTE_OUTCOME_UNKNOWN',attempt_count=$3,reconciliation_state='REQUIRED',
-			next_retry_at=NOW()+$4::interval,last_error_code='REMOTE_OUTCOME_UNKNOWN',last_error=$5,
-			lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
-		WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='IN_FLIGHT' AND lease_expires_at>NOW()`,
+                SET lifecycle_state='REMOTE_OUTCOME_UNKNOWN',attempt_count=$3,reconciliation_state='REQUIRED',
+                        next_retry_at=NOW()+$4::interval,last_error_code='REMOTE_OUTCOME_UNKNOWN',last_error=$5,
+                        lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
+                WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='IN_FLIGHT' AND lease_expires_at>NOW()`,
 		next, fmt.Sprintf("%.6f seconds", backoff(next).Seconds()), errorText(cause))
 	return requireFencedUpdate(ok, err)
 }
@@ -232,31 +279,31 @@ func markUnknown(ctx context.Context, db *sql.DB, item command, cause error) err
 func markReadbackFailure(ctx context.Context, db *sql.DB, item command, cause error) error {
 	next := item.ReadbackAttemptCount + 1
 	ok, err := fencedUpdate(ctx, db, item, `UPDATE workforce_provider_penalty_commands
-		SET lifecycle_state='RECONCILING',readback_attempt_count=$3,reconciliation_state='REQUIRED',last_readback_at=NOW(),
-			next_retry_at=NOW()+$4::interval,last_error_code='READBACK_RETRYABLE',last_error=$5,
-			lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
-		WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='IN_FLIGHT' AND lease_expires_at>NOW()`,
+                SET lifecycle_state='RECONCILING',readback_attempt_count=$3,reconciliation_state='REQUIRED',last_readback_at=NOW(),
+                        next_retry_at=NOW()+$4::interval,last_error_code='READBACK_RETRYABLE',last_error=$5,
+                        lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
+                WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='IN_FLIGHT' AND lease_expires_at>NOW()`,
 		next, fmt.Sprintf("%.6f seconds", backoff(next).Seconds()), errorText(cause))
 	return requireFencedUpdate(ok, err)
 }
 
 func markPermanent(ctx context.Context, db *sql.DB, item command, code string, cause error) error {
 	ok, err := fencedUpdate(ctx, db, item, `UPDATE workforce_provider_penalty_commands
-		SET lifecycle_state='PERMANENTLY_REJECTED',last_error_code=$3,last_error=$4,
-			terminal_disposition=$3,reconciliation_state=CASE WHEN remote_penalty_id='' THEN 'ABSENT' ELSE reconciliation_state END,
-			completed_at=NOW(),lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
-		WHERE id=$1::uuid AND lease_token=$2::uuid
-		  AND lifecycle_state IN ('IN_FLIGHT','REMOTE_CONFIRMED','LOCAL_PROJECTION_PENDING')
-		  AND lease_expires_at>NOW()`, code, errorText(cause))
+                SET lifecycle_state='PERMANENTLY_REJECTED',last_error_code=$3,last_error=$4,
+                        terminal_disposition=$3,reconciliation_state=CASE WHEN remote_penalty_id='' THEN 'ABSENT' ELSE reconciliation_state END,
+                        completed_at=NOW(),lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
+                WHERE id=$1::uuid AND lease_token=$2::uuid
+                  AND lifecycle_state IN ('IN_FLIGHT','REMOTE_CONFIRMED','LOCAL_PROJECTION_PENDING')
+                  AND lease_expires_at>NOW()`, code, errorText(cause))
 	return requireFencedUpdate(ok, err)
 }
 
 func markHistoricUnproven(ctx context.Context, db *sql.DB, item command, code string, cause error) error {
 	ok, err := fencedUpdate(ctx, db, item, `UPDATE workforce_provider_penalty_commands
-		SET lifecycle_state='HISTORIC_UNPROVEN',last_error_code=$3,last_error=$4,
-			terminal_disposition=$3,reconciliation_state='UNPROVEN',completed_at=NOW(),last_readback_at=NOW(),
-			lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
-		WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='IN_FLIGHT' AND lease_expires_at>NOW()`, code, errorText(cause))
+                SET lifecycle_state='HISTORIC_UNPROVEN',last_error_code=$3,last_error=$4,
+                        terminal_disposition=$3,reconciliation_state='UNPROVEN',completed_at=NOW(),last_readback_at=NOW(),
+                        lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
+                WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='IN_FLIGHT' AND lease_expires_at>NOW()`, code, errorText(cause))
 	return requireFencedUpdate(ok, err)
 }
 
@@ -267,10 +314,10 @@ func reconcileHistoricAbsence(ctx context.Context, db *sql.DB, item command, cau
 	}
 	defer tx.Rollback() //nolint:errcheck
 	result, err := tx.ExecContext(ctx, `UPDATE workforce_provider_penalty_commands
-		SET lifecycle_state='HISTORIC_UNPROVEN',last_error_code='HISTORIC_WLT_EVIDENCE_ABSENT',last_error=$3,
-			terminal_disposition='historic_wlt_evidence_absent',reconciliation_state='ABSENT',
-			completed_at=NOW(),last_readback_at=NOW(),lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
-		WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='IN_FLIGHT' AND lease_expires_at>NOW()`,
+                SET lifecycle_state='HISTORIC_UNPROVEN',last_error_code='HISTORIC_WLT_EVIDENCE_ABSENT',last_error=$3,
+                        terminal_disposition='historic_wlt_evidence_absent',reconciliation_state='ABSENT',
+                        completed_at=NOW(),last_readback_at=NOW(),lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
+                WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='IN_FLIGHT' AND lease_expires_at>NOW()`,
 		item.ID, item.LeaseToken, errorText(cause))
 	if err != nil {
 		return err
@@ -283,10 +330,12 @@ func reconcileHistoricAbsence(ctx context.Context, db *sql.DB, item command, cau
 		return errLeaseLost
 	}
 	if item.Operation == "post" && (item.IncidentStatus == "financial_action_posted" || item.IncidentStatus == "reversed") {
+		// Status-fenced, not version-fenced: a non-status edit that bumped
+		// the version must not abort an authoritative absence projection.
 		incidentResult, err := tx.ExecContext(ctx, `UPDATE workforce_provider_incidents
-			SET status='approved',wlt_ledger_reference='',resolved_at=NULL,version=version+1,updated_at=NOW()
-			WHERE operator_context_id=$1 AND id=$2::uuid AND version=$3`,
-			item.OperatorContextID, item.IncidentID, item.IncidentVersion)
+                        SET status='approved',wlt_ledger_reference='',resolved_at=NULL,version=version+1,updated_at=NOW()
+                        WHERE operator_context_id=$1 AND id=$2::uuid AND status=$3`,
+			item.OperatorContextID, item.IncidentID, item.IncidentStatus)
 		if err != nil {
 			return err
 		}
@@ -295,13 +344,13 @@ func reconcileHistoricAbsence(ctx context.Context, db *sql.DB, item command, cau
 			return err
 		}
 		if incidentCount != 1 {
-			return fmt.Errorf("%w: historic incident changed before authoritative absence projection", errStaleProjection)
+			return fmt.Errorf("historic incident changed before authoritative absence projection: %w", errProjectionStatusConflict)
 		}
 		if _, err := tx.ExecContext(ctx, `INSERT INTO workforce_provider_incident_transitions(
-			operator_context_id,incident_id,actor_id,from_status,to_status,reason,wlt_ledger_reference,
-			decided_by_actor_id,incident_version,financial_command_id)
-			VALUES($1,$2::uuid,$3,$4,'approved',$5,'',$6,$7+1,$8::uuid)
-			ON CONFLICT (financial_command_id) WHERE financial_command_id IS NOT NULL DO NOTHING`,
+                        operator_context_id,incident_id,actor_id,from_status,to_status,reason,wlt_ledger_reference,
+                        decided_by_actor_id,incident_version,financial_command_id)
+                        VALUES($1,$2::uuid,$3,$4,'approved',$5,'',$6,$7+1,$8::uuid)
+                        ON CONFLICT (financial_command_id) WHERE financial_command_id IS NOT NULL DO NOTHING`,
 			item.OperatorContextID, item.IncidentID, item.ProviderActorID, item.IncidentStatus,
 			"WLT authoritative readback found no historical financial record", item.RequestedByActorID,
 			item.IncidentVersion, item.ID); err != nil {
@@ -309,14 +358,14 @@ func reconcileHistoricAbsence(ctx context.Context, db *sql.DB, item command, cau
 		}
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO workforce_action_audit(
-		operator_context_id,actor_id,actor_role,target_actor_id,action,operation,from_state,to_state,
-		reason,correlation_id,idempotency_key,financial_command_id)
-		VALUES($1,$2,$3,$4,'provider.incident.historic_financial_claim_reconciled',$5,
-			jsonb_build_object('status',$6::text,'version',$7::integer,'wltPenaltyId',$8::text),
-			jsonb_build_object('status',CASE WHEN $5::text='provider_penalty_post' AND $6::text IN ('financial_action_posted','reversed') THEN 'approved' ELSE $6::text END,
-				'version',CASE WHEN $5='provider_penalty_post' AND $6 IN ('financial_action_posted','reversed') THEN $7::integer+1 ELSE $7::integer END,
-				'wltReadback','ABSENT'),$9,$10,$11,$12::uuid)
-		ON CONFLICT (financial_command_id) WHERE financial_command_id IS NOT NULL DO NOTHING`,
+                operator_context_id,actor_id,actor_role,target_actor_id,action,operation,from_state,to_state,
+                reason,correlation_id,idempotency_key,financial_command_id)
+                VALUES($1,$2,$3,$4,'provider.incident.historic_financial_claim_reconciled',$5,
+                        jsonb_build_object('status',$6::text,'version',$7::integer,'wltPenaltyId',$8::text),
+                        jsonb_build_object('status',CASE WHEN $5::text='provider_penalty_post' AND $6::text IN ('financial_action_posted','reversed') THEN 'approved' ELSE $6::text END,
+                                'version',CASE WHEN $5='provider_penalty_post' AND $6 IN ('financial_action_posted','reversed') THEN $7::integer+1 ELSE $7::integer END,
+                                'wltReadback','ABSENT'),$9,$10,$11,$12::uuid)
+                ON CONFLICT (financial_command_id) WHERE financial_command_id IS NOT NULL DO NOTHING`,
 		item.OperatorContextID, item.RequestedByActorID, item.RequestedByRole, item.ProviderActorID,
 		"provider_penalty_"+item.Operation, item.IncidentStatus, item.IncidentVersion,
 		item.IncidentFinancialRef, errorText(cause), item.CorrelationID, item.IdempotencyKey, item.ID); err != nil {
@@ -327,27 +376,27 @@ func reconcileHistoricAbsence(ctx context.Context, db *sql.DB, item command, cau
 
 func markAbsentReady(ctx context.Context, db *sql.DB, item command) error {
 	ok, err := fencedUpdate(ctx, db, item, `UPDATE workforce_provider_penalty_commands
-		SET lifecycle_state='READY',reconciliation_state='ABSENT',last_readback_at=NOW(),next_retry_at=NOW(),
-			last_error_code='',last_error='',lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
-		WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='IN_FLIGHT' AND lease_expires_at>NOW()`)
+                SET lifecycle_state='READY',reconciliation_state='ABSENT',last_readback_at=NOW(),next_retry_at=NOW(),
+                        last_error_code='',last_error='',lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
+                WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='IN_FLIGHT' AND lease_expires_at>NOW()`)
 	return requireFencedUpdate(ok, err)
 }
 
 func markConfirmed(ctx context.Context, db *sql.DB, item command, remote wltclient.SagaProviderPenalty) (bool, error) {
 	return fencedUpdate(ctx, db, item, `UPDATE workforce_provider_penalty_commands
-		SET lifecycle_state='REMOTE_CONFIRMED',remote_penalty_id=$3,remote_ledger_transaction_id=$4,
-			remote_status=$5,reconciliation_state='FOUND',remote_confirmed_at=NOW(),next_retry_at=NOW(),
-			last_error_code='',last_error='',lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
-		WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='IN_FLIGHT' AND lease_expires_at>NOW()`,
+                SET lifecycle_state='REMOTE_CONFIRMED',remote_penalty_id=$3,remote_ledger_transaction_id=$4,
+                        remote_status=$5,reconciliation_state='FOUND',remote_confirmed_at=NOW(),next_retry_at=NOW(),
+                        last_error_code='',last_error='',lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
+                WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='IN_FLIGHT' AND lease_expires_at>NOW()`,
 		remote.ID, remote.LedgerTransactionID, remote.Status)
 }
 
 func releaseProjectionRetry(ctx context.Context, db *sql.DB, item command, cause error) error {
 	ok, err := fencedUpdate(ctx, db, item, `UPDATE workforce_provider_penalty_commands
-		SET lifecycle_state='REMOTE_CONFIRMED',next_retry_at=NOW()+$3::interval,
-			last_error_code='LOCAL_PROJECTION_RETRYABLE',last_error=$4,
-			lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
-		WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='IN_FLIGHT' AND lease_expires_at>NOW()`,
+                SET lifecycle_state='REMOTE_CONFIRMED',next_retry_at=NOW()+$3::interval,
+                        last_error_code='LOCAL_PROJECTION_RETRYABLE',last_error=$4,
+                        lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
+                WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='IN_FLIGHT' AND lease_expires_at>NOW()`,
 		fmt.Sprintf("%.6f seconds", backoff(item.AttemptCount+1).Seconds()), errorText(cause))
 	return requireFencedUpdate(ok, err)
 }
@@ -370,9 +419,9 @@ func project(ctx context.Context, db *sql.DB, item command, remote *wltclient.Sa
 	}
 	defer tx.Rollback() //nolint:errcheck
 	result, err := tx.ExecContext(ctx, `UPDATE workforce_provider_penalty_commands
-		SET lifecycle_state='LOCAL_PROJECTION_PENDING',reconciliation_state=CASE WHEN $3 THEN 'ABSENT' ELSE 'FOUND' END,updated_at=NOW()
-		WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state IN ('IN_FLIGHT','REMOTE_CONFIRMED')
-			AND lease_expires_at>NOW()`, item.ID, item.LeaseToken, absent)
+                SET lifecycle_state='LOCAL_PROJECTION_PENDING',reconciliation_state=CASE WHEN $3 THEN 'ABSENT' ELSE 'FOUND' END,updated_at=NOW()
+                WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state IN ('IN_FLIGHT','REMOTE_CONFIRMED')
+                        AND lease_expires_at>NOW()`, item.ID, item.LeaseToken, absent)
 	if err != nil {
 		return err
 	}
@@ -386,7 +435,7 @@ func project(ctx context.Context, db *sql.DB, item command, remote *wltclient.Sa
 	var currentStatus, currentRef, actorID string
 	var currentVersion int
 	if err := tx.QueryRowContext(ctx, `SELECT status,wlt_ledger_reference,actor_id,version
-		FROM workforce_provider_incidents WHERE operator_context_id=$1 AND id=$2::uuid FOR UPDATE`,
+                FROM workforce_provider_incidents WHERE operator_context_id=$1 AND id=$2::uuid FOR UPDATE`,
 		item.OperatorContextID, item.IncidentID).Scan(&currentStatus, &currentRef, &actorID, &currentVersion); err != nil {
 		return err
 	}
@@ -398,71 +447,94 @@ func project(ctx context.Context, db *sql.DB, item command, remote *wltclient.Sa
 	if remote != nil {
 		remoteID, ledgerID, remoteStatus = remote.ID, remote.LedgerTransactionID, remote.Status
 	}
-	if currentStatus == target && (remoteID == "" || currentRef == remoteID) {
+	// Authority is the incident's CURRENT status path under the row lock
+	// held above; incidental version drift from non-status edits cannot
+	// strand the financial fact (root #3).
+	disposition := decideProjectionDisposition(item.Operation, currentStatus, currentRef, remoteID, absent)
+	if disposition == projectionAlreadyConverged {
 		if _, err := tx.ExecContext(ctx, `INSERT INTO workforce_action_audit(
-			operator_context_id,actor_id,actor_role,target_actor_id,action,operation,from_state,to_state,reason,correlation_id,idempotency_key,financial_command_id)
-			VALUES($1,$2,$3,$4,'provider.incident.financial_saga_reconciled',$5,
-				jsonb_build_object('status',$6::text,'version',$7::integer),
-				jsonb_build_object('status',$6::text,'version',$7::integer,'wltPenaltyId',$8::text,'wltLedgerTransactionId',$9::text,'wltStatus',$10::text),
-				$11,$12,$13,$14::uuid)
-			ON CONFLICT (financial_command_id) WHERE financial_command_id IS NOT NULL DO NOTHING`,
+                        operator_context_id,actor_id,actor_role,target_actor_id,action,operation,from_state,to_state,reason,correlation_id,idempotency_key,financial_command_id)
+                        VALUES($1,$2,$3,$4,'provider.incident.financial_saga_reconciled',$5,
+                                jsonb_build_object('status',$6::text,'version',$7::integer),
+                                jsonb_build_object('status',$6::text,'version',$7::integer,'wltPenaltyId',$8::text,'wltLedgerTransactionId',$9::text,'wltStatus',$10::text),
+                                $11,$12,$13,$14::uuid)
+                        ON CONFLICT (financial_command_id) WHERE financial_command_id IS NOT NULL DO NOTHING`,
 			item.OperatorContextID, item.RequestedByActorID, item.RequestedByRole, actorID,
 			"provider_penalty_"+item.Operation, currentStatus, currentVersion, remoteID, ledgerID, remoteStatus,
 			item.Reason, item.CorrelationID, item.IdempotencyKey, item.ID); err != nil {
 			return err
 		}
 		_, err = tx.ExecContext(ctx, `UPDATE workforce_provider_penalty_commands
-			SET lifecycle_state='COMPLETED',terminal_disposition='projected',completed_at=NOW(),
-				lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
-			WHERE id=$1::uuid AND lease_token=$2::uuid`, item.ID, item.LeaseToken)
+                        SET lifecycle_state='COMPLETED',terminal_disposition='projected',completed_at=NOW(),
+                                lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
+                        WHERE id=$1::uuid AND lease_token=$2::uuid`, item.ID, item.LeaseToken)
 		if err != nil {
 			return err
 		}
 		return tx.Commit()
 	}
-	versionAllowed := projectionVersionAllowed(item, currentVersion)
-	statusAllowed := (item.Operation == "post" && currentStatus == "approved") ||
-		(item.Operation == "reverse" && (currentStatus == "financial_action_posted" || (absent && currentStatus == "approved")))
-	if !versionAllowed || !statusAllowed {
-		return fmt.Errorf("%w: current=%s@%d source=%d operation=%s", errStaleProjection, currentStatus, currentVersion, item.SourceVersion, item.Operation)
+	if disposition == projectionSupersededByReversal {
+		if _, err := tx.ExecContext(ctx, `INSERT INTO workforce_action_audit(
+                        operator_context_id,actor_id,actor_role,target_actor_id,action,operation,from_state,to_state,reason,correlation_id,idempotency_key,financial_command_id)
+                        VALUES($1,$2,$3,$4,'provider.incident.financial_saga_superseded',$5,
+                                jsonb_build_object('status',$6::text,'version',$7::integer),
+                                jsonb_build_object('status',$6::text,'version',$7::integer,'wltPenaltyId',$8::text,'wltLedgerTransactionId',$9::text,'wltStatus',$10::text),
+                                $11,$12,$13,$14::uuid)
+                        ON CONFLICT (financial_command_id) WHERE financial_command_id IS NOT NULL DO NOTHING`,
+			item.OperatorContextID, item.RequestedByActorID, item.RequestedByRole, actorID,
+			"provider_penalty_"+item.Operation, currentStatus, currentVersion, remoteID, ledgerID, remoteStatus,
+			item.Reason, item.CorrelationID, item.IdempotencyKey, item.ID); err != nil {
+			return err
+		}
+		_, err = tx.ExecContext(ctx, `UPDATE workforce_provider_penalty_commands
+                        SET lifecycle_state='COMPLETED',terminal_disposition='superseded_by_reversal',completed_at=NOW(),
+                                lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
+                        WHERE id=$1::uuid AND lease_token=$2::uuid`, item.ID, item.LeaseToken)
+		if err != nil {
+			return err
+		}
+		return tx.Commit()
+	}
+	if disposition == projectionConflict {
+		return fmt.Errorf("%w: operation=%s current=%s@%d source=%d", errProjectionStatusConflict, item.Operation, currentStatus, currentVersion, item.SourceVersion)
 	}
 	newRef := currentRef
 	if remoteID != "" {
 		newRef = remoteID
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE workforce_provider_incidents SET status=$3,wlt_ledger_reference=$4,
-		resolution_note=$5,reviewed_by_actor_id=$6,resolved_at=CASE WHEN $3='reversed' THEN NOW() ELSE NULL END,
-		version=version+1,updated_at=NOW() WHERE operator_context_id=$1 AND id=$2::uuid`,
+                resolution_note=$5,reviewed_by_actor_id=$6,resolved_at=CASE WHEN $3='reversed' THEN NOW() ELSE NULL END,
+                version=version+1,updated_at=NOW() WHERE operator_context_id=$1 AND id=$2::uuid`,
 		item.OperatorContextID, item.IncidentID, target, newRef, item.Reason, item.RequestedByActorID); err != nil {
 		return err
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO workforce_provider_incident_transitions(
-		operator_context_id,incident_id,actor_id,from_status,to_status,reason,wlt_ledger_reference,
-		decided_by_actor_id,incident_version,financial_command_id)
-		VALUES($1,$2::uuid,$3,$4,$5,$6,$7,$8,$9+1,$10::uuid)
-		ON CONFLICT (financial_command_id) WHERE financial_command_id IS NOT NULL DO NOTHING`,
+                operator_context_id,incident_id,actor_id,from_status,to_status,reason,wlt_ledger_reference,
+                decided_by_actor_id,incident_version,financial_command_id)
+                VALUES($1,$2::uuid,$3,$4,$5,$6,$7,$8,$9+1,$10::uuid)
+                ON CONFLICT (financial_command_id) WHERE financial_command_id IS NOT NULL DO NOTHING`,
 		item.OperatorContextID, item.IncidentID, actorID, currentStatus, target, item.Reason,
 		newRef, item.RequestedByActorID, currentVersion, item.ID); err != nil {
 		return err
 	}
 	if _, err := tx.ExecContext(ctx, `INSERT INTO workforce_action_audit(
-		operator_context_id,actor_id,actor_role,target_actor_id,action,operation,from_state,to_state,reason,correlation_id,idempotency_key,financial_command_id)
-		VALUES($1,$2,$3,$4,'provider.incident.financial_saga_projected',$5,
-			jsonb_build_object('status',$6::text,'version',$7::integer),
-			jsonb_build_object('status',$8::text,'version',$7::integer+1,'wltPenaltyId',$9::text,'wltLedgerTransactionId',$10::text,'wltStatus',$11::text),
-			$12,$13,$14,$15::uuid)
-		ON CONFLICT (financial_command_id) WHERE financial_command_id IS NOT NULL DO NOTHING`,
+                operator_context_id,actor_id,actor_role,target_actor_id,action,operation,from_state,to_state,reason,correlation_id,idempotency_key,financial_command_id)
+                VALUES($1,$2,$3,$4,'provider.incident.financial_saga_projected',$5,
+                        jsonb_build_object('status',$6::text,'version',$7::integer),
+                        jsonb_build_object('status',$8::text,'version',$7::integer+1,'wltPenaltyId',$9::text,'wltLedgerTransactionId',$10::text,'wltStatus',$11::text),
+                        $12,$13,$14,$15::uuid)
+                ON CONFLICT (financial_command_id) WHERE financial_command_id IS NOT NULL DO NOTHING`,
 		item.OperatorContextID, item.RequestedByActorID, item.RequestedByRole, actorID,
 		"provider_penalty_"+item.Operation, currentStatus, currentVersion, target, remoteID, ledgerID, remoteStatus,
 		item.Reason, item.CorrelationID, item.IdempotencyKey, item.ID); err != nil {
 		return err
 	}
 	if _, err := tx.ExecContext(ctx, `UPDATE workforce_provider_penalty_commands
-		SET lifecycle_state='COMPLETED',remote_penalty_id=CASE WHEN $3='' THEN remote_penalty_id ELSE $3 END,
-			remote_ledger_transaction_id=CASE WHEN $4='' THEN remote_ledger_transaction_id ELSE $4 END,
-			remote_status=$5,terminal_disposition=CASE WHEN $6 THEN 'no_financial_effect' ELSE 'projected' END,
-			completed_at=NOW(),lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
-		WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='LOCAL_PROJECTION_PENDING'`,
+                SET lifecycle_state='COMPLETED',remote_penalty_id=CASE WHEN $3='' THEN remote_penalty_id ELSE $3 END,
+                        remote_ledger_transaction_id=CASE WHEN $4='' THEN remote_ledger_transaction_id ELSE $4 END,
+                        remote_status=$5,terminal_disposition=CASE WHEN $6 THEN 'no_financial_effect' ELSE 'projected' END,
+                        completed_at=NOW(),lease_token=NULL,lease_owner=NULL,lease_expires_at=NULL,updated_at=NOW()
+                WHERE id=$1::uuid AND lease_token=$2::uuid AND lifecycle_state='LOCAL_PROJECTION_PENDING'`,
 		item.ID, item.LeaseToken, remoteID, ledgerID, remoteStatus, absent); err != nil {
 		return err
 	}
@@ -511,8 +583,10 @@ func processItem(ctx context.Context, db *sql.DB, identity *identityclient.Clien
 				return reconcileHistoricAbsence(ctx, db, item, fmt.Errorf("historic reversal has no reconciled WLT post authority"))
 			}
 			if err := project(ctx, db, item, nil, true); err != nil {
-				if errors.Is(err, errStaleProjection) {
-					return markPermanent(ctx, db, item, "STALE_LOCAL_PROJECTION", err)
+				if errors.Is(err, errProjectionStatusConflict) {
+					// A live/absent-proven financial fact cannot be terminally
+					// rejected because the incident drifted: escalate, stay recoverable.
+					return releaseRetry(ctx, db, item, projectionConflictCode(item.Operation, "absent-projection"), err)
 				}
 				return releaseRetry(ctx, db, item, "LOCAL_PROJECTION_RETRYABLE", err)
 			}
@@ -531,8 +605,11 @@ func processItem(ctx context.Context, db *sql.DB, identity *identityclient.Clien
 			PolicyID: item.PolicyID, Status: item.RemoteStatus, LedgerTransactionID: item.RemoteLedgerTransactionID,
 			IdempotencyKey: item.IdempotencyKey, ReversalIdempotencyKey: item.IdempotencyKey}
 		if err := project(ctx, db, item, &remote, false); err != nil {
-			if errors.Is(err, errStaleProjection) {
-				return markPermanent(ctx, db, item, "STALE_LOCAL_PROJECTION", err)
+			if errors.Is(err, errProjectionStatusConflict) {
+				// REMOTE_CONFIRMED fact + impossible projection path: the
+				// WLT effect is real, so the command stays recoverable and
+				// visible instead of terminally rejected (root #3).
+				return releaseProjectionRetry(ctx, db, item, err)
 			}
 			return releaseProjectionRetry(ctx, db, item, err)
 		}
@@ -589,8 +666,12 @@ func processItem(ctx context.Context, db *sql.DB, identity *identityclient.Clien
 	var remote wltclient.SagaProviderPenalty
 	var err error
 	if item.Operation == "post" {
-		if item.IncidentStatus != "approved" || item.IncidentVersion != item.SourceVersion {
-			return markPermanent(ctx, db, item, "STALE_INCIDENT_VERSION", fmt.Errorf("post source is stale: incident=%s@%d command=%d", item.IncidentStatus, item.IncidentVersion, item.SourceVersion))
+		if item.IncidentStatus != "approved" {
+			// Pre-remote: no WLT effect exists yet, so a genuinely
+			// superseded incident is a correct terminal rejection. A
+			// non-status version bump alone is NOT staleness — the
+			// incident is still the approved source of this command.
+			return markPermanent(ctx, db, item, "SUPERSEDED_INCIDENT", fmt.Errorf("post source is no longer approved: incident=%s@%d command=%d", item.IncidentStatus, item.IncidentVersion, item.SourceVersion))
 		}
 		remote, err = client.PostPenaltySaga(callCtx, item.IdempotencyKey, item.CorrelationID, wltclient.PostPenaltyInput{
 			IncidentID: item.IncidentID, ProviderActorID: item.ProviderActorID, ProviderActorType: item.ProviderActorType,

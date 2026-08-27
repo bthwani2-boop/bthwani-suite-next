@@ -214,3 +214,18 @@ func TestFinancialReadRoutesRequireInternalServiceAuth(t *testing.T) {
 		}
 	}
 }
+
+// TestPenaltyLookupConeReservedSegments (root #9): the literal reserved
+// segment patterns must shadow the {penaltyId} wildcard so the by-incident
+// lookup cone can never be captured as an identifier.
+func TestPenaltyLookupConeReservedSegments(t *testing.T) {
+	router := NewRouter(nil, false, nil, nil)
+	for _, path := range []string{"/wlt/provider-penalties/by-incident"} {
+		recorder := httptest.NewRecorder()
+		router.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, path, nil))
+		body := recorder.Body.String()
+		if strings.Contains(body, "PROVIDER_PENALTY_NOT_FOUND") || strings.Contains(body, "INVALID_REQUEST") {
+			t.Fatalf("%s fell through to the wildcard lookup: %d %s", path, recorder.Code, body)
+		}
+	}
+}

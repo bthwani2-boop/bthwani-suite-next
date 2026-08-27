@@ -587,3 +587,15 @@ func HandleGetByID(db *sql.DB) http.HandlerFunc {
 func HandleGetByIncident(db *sql.DB) http.HandlerFunc {
 	return handleGet(GetByIncident, "incidentId", db)
 }
+
+// HandleReservedPathSegment closes the URI ambiguity between
+// /wlt/provider-penalties/{penaltyId} and the by-incident lookup cone
+// (root #9): the literal reserved segment must never be captured as an
+// identifier, it fails fast with an explicit 400 instead of a misleading
+// not-found or cast error deeper in the stack.
+func HandleReservedPathSegment(segment string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		shared.SendError(w, http.StatusBadRequest, "RESERVED_PATH_SEGMENT",
+			segment+" is a reserved path segment; provide the identifier segment")
+	}
+}

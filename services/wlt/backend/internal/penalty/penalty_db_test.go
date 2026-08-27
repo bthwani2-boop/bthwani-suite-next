@@ -233,3 +233,15 @@ func TestPenaltyPostCreatesCanonicalDebtWhenWalletIsInsufficient(t *testing.T) {
 		t.Fatalf("reversal did not close canonical debt: outstanding=%d status=%s", outstanding, status)
 	}
 }
+
+func TestReservedPathSegmentIsNeverCapturedAsIdentifier(t *testing.T) {
+	handler := HandleReservedPathSegment("by-incident")
+	recorder := httptest.NewRecorder()
+	handler(recorder, httptest.NewRequest(http.MethodGet, "/wlt/provider-penalties/by-incident", nil))
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("reserved segment must 400, got %d", recorder.Code)
+	}
+	if !strings.Contains(recorder.Body.String(), "RESERVED_PATH_SEGMENT") {
+		t.Fatalf("explicit code required, got %s", recorder.Body.String())
+	}
+}
