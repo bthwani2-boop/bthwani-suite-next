@@ -248,7 +248,6 @@ export const DSH_CAPABILITY_MAP = [
       "markDshOrderPreparing",
       "markDshOrderReadyForPickup",
       "listDshOperatorOrders",
-      "cancelDshOperatorOrder",
     ],
     surfaces: ["app-client", "app-partner", "control-panel"],
     runtimeBound: true,

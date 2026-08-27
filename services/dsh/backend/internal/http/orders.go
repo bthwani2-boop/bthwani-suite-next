@@ -264,13 +264,6 @@ func (s *protectedStoreServer) handleMarkReadyForPickup(w http.ResponseWriter, r
 	store.SendJSON(w, http.StatusOK, map[string]any{"order": marshalOrder(order)})
 }
 
-// POST /dsh/operator/orders/{orderId}/cancel
-// Compatibility alias: all operator cancellation writes execute through the
-// canonical platform-context-scoped, idempotent order handler.
-func (s *protectedStoreServer) handleOperatorCancelOrder(w http.ResponseWriter, r *http.Request) {
-	s.handleOperatorCancelOrderGoverned(w, r)
-}
-
 func marshalOrder(o *orders.Order) map[string]any {
 	items := make([]map[string]any, len(o.Items))
 	totalPrice := 0.0

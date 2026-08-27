@@ -245,8 +245,6 @@ paths:
     $ref: "./paths/partner.paths.yaml#/~1dsh~1partner~1orders~1{orderId}~1ready"
   /dsh/operator/orders:
     $ref: "./paths/orders.paths.yaml#/~1dsh~1operator~1orders"
-  /dsh/operator/orders/{orderId}/cancel:
-    $ref: "./paths/orders.paths.yaml#/~1dsh~1operator~1orders~1{orderId}~1cancel"
   /dsh/operator/dispatch/assignments:
     $ref: "./paths/dispatch.paths.yaml#/~1dsh~1operator~1dispatch~1assignments"
   /dsh/captain/dispatch/assignments:

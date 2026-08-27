@@ -161,6 +161,10 @@ DshOrderCancellationRequest:
     correlationId:
       type: string
       description: Cross-service correlation identifier; defaults to commandId.
+    ticketReference:
+      type: string
+      minLength: 1
+      description: Required for operator cancellations and binds the override to the operational incident record.
 
 DshOrderCancellation:
   type: object
