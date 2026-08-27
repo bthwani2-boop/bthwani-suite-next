@@ -18,15 +18,8 @@ import type {
   ApprovalStage,
   ApprovalEntityType,
   ApprovalSourceSurface,
-  DshPromotionCandidate,
   PartnerQueueRecord,
 } from './partner.types';
-
-function dshPromotionCandidates(
-  _storeId: string,
-): readonly DshPromotionCandidate[] {
-  return [];
-}
 
 const APPROVAL_SOURCE_SURFACES: readonly ApprovalSourceSurface[] = [
   'app-partner',
