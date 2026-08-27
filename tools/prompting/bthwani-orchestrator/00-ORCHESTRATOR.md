@@ -362,7 +362,7 @@ COMPLETE COVERAGE != RUN EVERYTHING
 COMPLETE COVERAGE = EVERY MATERIAL DIMENSION HAS A PROVEN DISPOSITION
 ```
 
-Three closure levels are distinct:
+Closure levels 1–3 for Closure Unit/objective progression are distinct:
 
 ```text
 LEVEL_1_CLOSURE_UNIT = one root/causal cluster fully closed across its complete causal system cone
@@ -370,7 +370,7 @@ LEVEL_2_CAPABILITY_OR_JOURNEY = all material services/surfaces/transitions/hando
 LEVEL_3_FINAL_SYSTEM_CANDIDATE = all closure units required by the current objective reconciled on one exact final candidate
 ```
 
-No lower level may be presented as a higher one. `04` owns the proof equation for all three levels.
+Level 4 repository/system-baseline semantics are introduced in §12. No lower level may be presented as a higher one. `04` owns the proof equation for all closure levels.
 
 ## 12. Autonomous convergence, expert-lens and repository-baseline law
 

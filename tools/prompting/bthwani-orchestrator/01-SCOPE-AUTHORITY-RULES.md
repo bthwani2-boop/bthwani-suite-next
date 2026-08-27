@@ -80,8 +80,8 @@ PRODUCT | GOVERNANCE
 -> focus/governance-product-design.md
 
 DESIGN
--> focus/governance-product-design.md for Product meaning, actors, journeys, IA and handoffs
--> focus/code-architecture-organization.md for UI/component/layout/accessibility/design-system implementation
+-> focus/governance-product-design.md for Product meaning, actors, journeys, IA, brand/visual-language/content semantics and handoffs
+-> focus/code-architecture-organization.md for tokens/components/patterns/layout/accessibility/rendered implementation
 
 DATA | CONTRACTS | RUNTIME | SECURITY | QUALITY | OPERATIONS
 -> focus/data-contracts-runtime-security-quality.md
@@ -271,13 +271,13 @@ Ordinary repository file deletion inside the authorized working cone is not a pr
 
 ## 13. Research
 
-`AUTO`: use current internal/connected evidence first; research authoritative external technical/platform facts when local evidence is materially insufficient.
+`AUTO`: use current internal/connected evidence first; research current authoritative external technical/platform/design/accessibility/research-method evidence when local evidence is materially insufficient.
 
 `INTERNAL_ONLY`: do not browse; unavailable required external truth remains an explicit evidence gap.
 
-`EXTERNAL_ALLOWED`: external research may materially improve technical correctness.
+`EXTERNAL_ALLOWED`: external research may materially improve technical, design or assurance correctness.
 
-External evidence may establish platform/library/standard/security facts; it may not invent BThwani Product/System behavior.
+External evidence may establish technical/platform/standard/security/accessibility/design-system/research-method facts and support pattern evaluation; it may not invent BThwani Product/System/Brand behavior.
 
 ## 14. Durable project-memory routing
 
