@@ -282,7 +282,6 @@ export type DshPartnerOperationalFlowId = (typeof DSH_PARTNER_OPERATIONAL_FLOW_I
 
 
 export const DSH_PARTNER_SUPPORT_ROUTE_IDS = [
-  'auction-status-update',
   'chat-read-ack',
   'chat-send',
   'inventory-adjust',
@@ -336,7 +335,6 @@ export type DshPartnerSupportCommandContext = {
 };
 
 export const DSH_PARTNER_SUPPORT_ROUTE_TO_OPERATIONAL_FLOW: Record<DshPartnerSupportRouteId, DshPartnerOperationalFlowId | null> = {
-  'auction-status-update': null,
   'chat-read-ack': 'order-chat-read-ack',
   'chat-send': 'order-chat-send',
   'inventory-adjust': 'inventory-adjust',

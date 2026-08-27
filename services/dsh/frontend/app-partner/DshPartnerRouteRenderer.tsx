@@ -10,7 +10,6 @@ import type { DshPartnerOperationalScope } from "../shared/partner/partner.types
 import { defaultSupportCommandContext } from "../shared/support/support.partner-context";
 import { isCommandCenterInlineManagedRoute } from "../shared/support/support.partner-policies";
 import { DshPartnerHubSurface } from "./account/PartnerHubScreen";
-import { AuctionStatusUpdateScreen } from "./account/AuctionStatusUpdateScreen";
 import { ConversationScreen } from "./orders/PartnerConversationScreen";
 import { InventoryActionScreen } from "./catalog/InventoryActionScreen";
 import { NotificationsScreen } from "./account/NotificationsScreen";
@@ -409,9 +408,6 @@ export function DshPartnerRouteRenderer(props: DshPartnerRouteRendererProps): Re
 
     const categoryId = route.context.highlightedIssueCategoryId ?? "partner-reject-request";
     const screens: Record<DshPartnerSupportRouteId, React.ReactNode> = {
-      "auction-status-update": (
-        <AuctionStatusUpdateScreen onBack={returnToSupportDirectory} onSecondaryAction={returnToSupportDirectory} />
-      ),
       "chat-read-ack": (
         <ConversationScreen
           activeFlowId="chat-read-ack"

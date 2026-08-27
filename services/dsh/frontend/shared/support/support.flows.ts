@@ -39,7 +39,6 @@ export const DSH_OPERATIONS_SUPPORT_FLOW_IDS = [
   'branch-readiness-escalation',
   'field-proof-required',
   'store-nomination-intake',
-  'auction-status-update',
 ] as const;
 
 export type DshOperationsSupportFlowId = (typeof DSH_OPERATIONS_SUPPORT_FLOW_IDS)[number];
@@ -67,7 +66,6 @@ export type DshOperationsSupportFlowSpec = {
   financialImpactRef?: string;
   requiresEvidence: boolean;
   nextAction: string;
-  hiddenCompat?: boolean;
 };
 
 // DSH_SUPPORT_ISSUE_TYPES: canonical API issue_type values for POST /support/escalations.
@@ -427,27 +425,7 @@ export const DSH_OPERATIONS_SUPPORT_FLOWS: readonly DshOperationsSupportFlowSpec
     relatedOrderState: 'store_nomination_intake', requiresEvidence: false,
     nextAction: 'استكمل ملف الانضمام ثم حوّله للمراجعة.',
   },
-  {
-    flowId: 'auction-status-update',
-    title: 'Auction Status Update',
-    description: 'legacy compat flow موجود للمستهلكين القدامى فقط ولا يجب أن يظهر كمدخل أساسي.',
-    surfaceVisibility: [
-      visibility('app-partner', 'hidden-compat', 'auction-status-update', 'legacy registry consumer only.'),
-    ],
-    ownerSurface: 'app-partner', ownerLabel: 'الشريك',
-    escalationOwner: 'control-panel', escalationOwnerLabel: cpOwnerLabel,
-    severity: 'info',
-    allowedActions: ['الاحتفاظ بالتوافق'],
-    forbiddenActions: ['إظهاره كخيار أساسي'],
-    relatedOrderState: 'legacy_hidden_compat', requiresEvidence: false,
-    nextAction: 'ابقه مخفيًا واستخدم المسارات الحالية بدلًا منه.',
-    hiddenCompat: true,
-  },
 ] as const;
-
-export const DSH_OPERATIONS_SUPPORT_HIDDEN_COMPAT_FLOW_IDS = DSH_OPERATIONS_SUPPORT_FLOWS
-  .filter((item) => item.hiddenCompat)
-  .map((item) => item.flowId) as readonly DshOperationsSupportFlowId[];
 
 export const DSH_OPERATIONS_SUPPORT_FLOWS_BY_ID = Object.fromEntries(
   DSH_OPERATIONS_SUPPORT_FLOWS.map((item) => [item.flowId, item])

@@ -458,8 +458,6 @@ export type DshFlowRegistryEntry = {
 
 // ---------------------------------------------------------------------------
 // Registry — Partner Operational Flows
-// Note: registry also covers the legacy auction-status-update support alias
-// for registry consumers that have not yet migrated to the canonical flow.
 // ---------------------------------------------------------------------------
 
 const PARTNER_ORDER_LIFECYCLE: readonly DshFlowRegistryEntry[] = [
@@ -629,19 +627,6 @@ const PARTNER_HIDDEN_COMPAT_FLOWS: readonly DshFlowRegistryEntry[] = [
     allowedActions: ['الاحتفاظ بالتوافق'],
     forbiddenActions: ['إظهاره كخيار ابتدائي'],
     notes: 'استخدم order-issue-queue بدلًا منه للتدفقات الجديدة.',
-  },
-  {
-    id: 'auction-status-update',
-    label: 'Auction Status Update (Legacy)',
-    domain: 'order-lifecycle',
-    ownerSurface: 'app-partner',
-    visibleSurfaces: ['app-partner'],
-    visibility: 'hidden-compat',
-    hiddenCompat: true,
-    onDemandPolicy: 'summary-only',
-    allowedActions: ['الاحتفاظ بالتوافق للمستهلكين القدامى'],
-    forbiddenActions: ['إظهاره كخيار أساسي', 'إنشاء route مستقل جديد'],
-    notes: 'Legacy registry consumer only. See operations-support.snapshot.ts for detail.',
   },
 ];
 
