@@ -43,6 +43,8 @@ type ImportAuthoritativeStatementInput struct {
 	StatementReference        string                            `json:"statementReference"`
 	ArtifactSHA256            string                            `json:"artifactSha256"`
 	ArtifactBytesBase64       string                            `json:"artifactBytesBase64"`
+	ProvenanceType            string                            `json:"provenanceType,omitempty"`
+	ProvenanceEvidenceSHA256  string                            `json:"provenanceEvidenceSha256,omitempty"`
 	BusinessDate              string                            `json:"businessDate"`
 	ClosingBalanceMinorUnits  int64                             `json:"closingBalanceMinorUnits"`
 	Currency                  string                            `json:"currency"`
@@ -50,10 +52,12 @@ type ImportAuthoritativeStatementInput struct {
 }
 
 type AuthoritativeStatement struct {
-	ID                   string `json:"id"`
-	StatementReference   string `json:"statementReference"`
-	ArtifactSHA256       string `json:"artifactSha256"`
-	StatementFingerprint string `json:"statementFingerprint"`
+	ID                       string `json:"id"`
+	StatementReference       string `json:"statementReference"`
+	ArtifactSHA256           string `json:"artifactSha256"`
+	StatementFingerprint     string `json:"statementFingerprint"`
+	ProvenanceType           string `json:"provenanceType"`
+	ProvenanceEvidenceSHA256 string `json:"provenanceEvidenceSha256"`
 }
 
 type canonicalStatementLine struct {
@@ -217,10 +221,23 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 	input.StatementReference = strings.TrimSpace(input.StatementReference)
 	input.ArtifactSHA256 = strings.ToLower(strings.TrimSpace(input.ArtifactSHA256))
 	input.ArtifactBytesBase64 = strings.TrimSpace(input.ArtifactBytesBase64)
+	input.ProvenanceType = strings.ToLower(strings.TrimSpace(input.ProvenanceType))
+	input.ProvenanceEvidenceSHA256 = strings.ToLower(strings.TrimSpace(input.ProvenanceEvidenceSHA256))
+	if input.ProvenanceType == "" {
+		input.ProvenanceType = "operator_attested"
+	}
 	input.Currency = strings.ToUpper(strings.TrimSpace(input.Currency))
 	businessDate, err := time.Parse(time.DateOnly, strings.TrimSpace(input.BusinessDate))
 	if err != nil || input.ExternalProviderAccountID == "" || input.StatementReference == "" || (!isSHA256(input.ArtifactSHA256)) || input.ArtifactBytesBase64 == "" || input.Currency == "" || len(input.Lines) == 0 {
 		return nil, fmt.Errorf("account, statementReference, SHA-256 artifact, businessDate, currency and statement lines are required")
+	}
+	if input.ProvenanceType != "operator_attested" && input.ProvenanceType != "provider_signed" && input.ProvenanceType != "provider_api_verified" {
+		return nil, fmt.Errorf("provenanceType must be operator_attested, provider_signed or provider_api_verified")
+	}
+	if input.ProvenanceType == "operator_attested" {
+		input.ProvenanceEvidenceSHA256 = input.ArtifactSHA256
+	} else if !isSHA256(input.ProvenanceEvidenceSHA256) {
+		return nil, fmt.Errorf("independent provenance evidence SHA-256 is required for %s statements", input.ProvenanceType)
 	}
 	for i := range input.Lines {
 		line := &input.Lines[i]
@@ -252,17 +269,22 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 		return nil, fmt.Errorf("statement currency must match external provider account currency")
 	}
 
-	var existingArtifactSHA256 string
+	var existingArtifactSHA256, existingProvenanceType, existingEvidenceSHA256 string
 	existingErr := tx.QueryRowContext(ctx, `
-		SELECT artifact_sha256
+		SELECT artifact_sha256, COALESCE(provenance_type, 'operator_attested'), COALESCE(provenance_evidence_sha256, '')
 		FROM wlt_external_provider_statements
 		WHERE operator_context_id=$1 AND external_provider_account_id=$2
 		  AND statement_reference=$3 AND business_date=$4
 		FOR UPDATE`,
 		operatorContextID, input.ExternalProviderAccountID, input.StatementReference, businessDate,
-	).Scan(&existingArtifactSHA256)
-	if existingErr == nil && existingArtifactSHA256 != input.ArtifactSHA256 {
-		return nil, fmt.Errorf("statement reference is already bound to a different artifact payload")
+	).Scan(&existingArtifactSHA256, &existingProvenanceType, &existingEvidenceSHA256)
+	if existingErr == nil {
+		if existingArtifactSHA256 != input.ArtifactSHA256 {
+			return nil, fmt.Errorf("statement reference is already bound to a different artifact payload")
+		}
+		if existingProvenanceType != input.ProvenanceType || existingEvidenceSHA256 != input.ProvenanceEvidenceSHA256 {
+			return nil, fmt.Errorf("statement replay provenance does not match the immutable existing evidence")
+		}
 	}
 	if existingErr != nil && existingErr != sql.ErrNoRows {
 		return nil, existingErr
@@ -270,22 +292,27 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 
 	var statement AuthoritativeStatement
 	err = tx.QueryRowContext(ctx, `
-					INSERT INTO wlt_external_provider_statements
+			INSERT INTO wlt_external_provider_statements
 				(operator_context_id, external_provider_account_id, statement_reference,
-				 artifact_sha256, statement_fingerprint, business_date, closing_balance_minor_units, currency, imported_by_operator_id)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+				 artifact_sha256, statement_fingerprint, business_date, closing_balance_minor_units, currency,
+				 imported_by_operator_id, provenance_type, provenance_evidence_sha256)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
 			ON CONFLICT (operator_context_id, artifact_sha256) DO NOTHING
-			RETURNING id, statement_reference, artifact_sha256, statement_fingerprint`,
+			RETURNING id, statement_reference, artifact_sha256, statement_fingerprint, provenance_type, provenance_evidence_sha256`,
 
 		operatorContextID, input.ExternalProviderAccountID, input.StatementReference,
-		input.ArtifactSHA256, statementFingerprint, businessDate, input.ClosingBalanceMinorUnits, input.Currency, operatorID,
-	).Scan(&statement.ID, &statement.StatementReference, &statement.ArtifactSHA256, &statement.StatementFingerprint)
+		input.ArtifactSHA256, statementFingerprint, businessDate, input.ClosingBalanceMinorUnits, input.Currency,
+		operatorID, input.ProvenanceType, input.ProvenanceEvidenceSHA256,
+	).Scan(&statement.ID, &statement.StatementReference, &statement.ArtifactSHA256, &statement.StatementFingerprint,
+		&statement.ProvenanceType, &statement.ProvenanceEvidenceSHA256)
 	if err == sql.ErrNoRows {
 		err = tx.QueryRowContext(ctx, `
-			SELECT id, statement_reference, artifact_sha256, COALESCE(statement_fingerprint, '')
-			FROM wlt_external_provider_statements
+			SELECT id, statement_reference, artifact_sha256, COALESCE(statement_fingerprint, ''),
+			       COALESCE(provenance_type, 'operator_attested'), COALESCE(provenance_evidence_sha256, '')
+				FROM wlt_external_provider_statements
 			WHERE operator_context_id=$1 AND artifact_sha256=$2`, operatorContextID, input.ArtifactSHA256,
-		).Scan(&statement.ID, &statement.StatementReference, &statement.ArtifactSHA256, &statement.StatementFingerprint)
+		).Scan(&statement.ID, &statement.StatementReference, &statement.ArtifactSHA256, &statement.StatementFingerprint,
+			&statement.ProvenanceType, &statement.ProvenanceEvidenceSHA256)
 		if err != nil {
 			return nil, err
 		}

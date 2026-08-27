@@ -214,6 +214,17 @@ func isAmbiguousProviderError(err error) bool {
 // expectedStatus guards the UPDATE (e.g. 'authorization_pending' or
 // 'capture_pending') so this only ever affects the session this caller
 // actually claimed via claimSession.
+// withDurableRecoveryError preserves the provider/local cause while making a
+// failed recovery write impossible to hide from the caller. Returning the
+// original error alone would leave an ambiguous session without a durable
+// recovery record and would invite an unsafe retry.
+func withDurableRecoveryError(cause error, recovery func() error) error {
+	if recoveryErr := recovery(); recoveryErr != nil {
+		return errors.Join(cause, fmt.Errorf("durable provider recovery failed: %w", recoveryErr))
+	}
+	return cause
+}
+
 func markSessionFailedAndNotify(db *sql.DB, session *PaymentSession, expectedStatus string) error {
 	if session == nil {
 		return nil

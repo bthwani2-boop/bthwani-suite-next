@@ -35,16 +35,19 @@ func CaptureSessionWithProvider(ctx context.Context, db *sql.DB, rail provider.C
 	result, err := captureProvider(ctx, rail, claimed, meta)
 	if err != nil {
 		if isAmbiguousProviderError(err) {
-			_ = markSessionResultUnknownAndOpenCase(db, claimed, "capture", err, "capture_pending")
-		} else {
-			_ = markSessionFailedAndNotify(db, claimed, "capture_pending")
+			return nil, withDurableRecoveryError(err, func() error {
+				return markSessionResultUnknownAndOpenCase(db, claimed, "capture", err, "capture_pending")
+			})
 		}
-		return nil, err
+		return nil, withDurableRecoveryError(err, func() error {
+			return markSessionFailedAndNotify(db, claimed, "capture_pending")
+		})
 	}
 
 	finalizationFailure := func(cause error) (*PaymentSession, error) {
-		_ = markSessionResultUnknownAndOpenCase(db, claimed, "capture", cause, "capture_pending")
-		return nil, cause
+		return nil, withDurableRecoveryError(cause, func() error {
+			return markSessionResultUnknownAndOpenCase(db, claimed, "capture", cause, "capture_pending")
+		})
 	}
 
 	tx, err := db.BeginTx(ctx, nil)
@@ -53,14 +56,11 @@ func CaptureSessionWithProvider(ctx context.Context, db *sql.DB, rail provider.C
 	}
 	defer tx.Rollback()
 
-	if claimed.AmountMinorUnits <= 0 || claimed.Currency == "" {
-		return finalizationFailure(fmt.Errorf("captured session %s has invalid accounting amount/currency", claimed.ID))
+	lines, actor, effectErr := captureEconomicEffect(claimed)
+	if effectErr != nil {
+		return finalizationFailure(effectErr)
 	}
-	lines := []ledger.LedgerLine{
-		{AccountType: "provider_clearing", DebitCredit: "debit", AmountMinorUnits: claimed.AmountMinorUnits, Currency: claimed.Currency},
-		{AccountType: "platform_payable", DebitCredit: "credit", AmountMinorUnits: claimed.AmountMinorUnits, Currency: claimed.Currency},
-	}
-	ledgerTransactionID, err := ledger.PostLedgerTransaction(ctx, tx, "payment_captured", "payment_session", claimed.ID, lines, ledger.Actor{ID: "wlt", Type: "service"})
+	ledgerTransactionID, err := ledger.PostLedgerTransaction(ctx, tx, "payment_captured", "payment_session", claimed.ID, lines, actor)
 	if err != nil {
 		return finalizationFailure(fmt.Errorf("post capture ledger transaction: %w", err))
 	}

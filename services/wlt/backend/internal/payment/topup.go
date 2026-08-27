@@ -53,16 +53,19 @@ func AuthorizeTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashIn
 		return claimed, err
 	}
 	if _, err := topUpActorType(claimed.FinancialPurpose); err != nil {
-		_ = markSessionFailedAndNotify(db, claimed, "authorization_pending")
-		return nil, err
+		return nil, withDurableRecoveryError(err, func() error {
+			return markSessionFailedAndNotify(db, claimed, "authorization_pending")
+		})
 	}
 	currency := claimed.Currency
 	if currency == "" {
 		currency = "YER"
 	}
 	if claimed.AmountMinorUnits <= 0 {
-		_ = markSessionFailedAndNotify(db, claimed, "authorization_pending")
-		return nil, fmt.Errorf("payment session has no amount to authorize")
+		cause := fmt.Errorf("payment session has no amount to authorize")
+		return nil, withDurableRecoveryError(cause, func() error {
+			return markSessionFailedAndNotify(db, claimed, "authorization_pending")
+		})
 	}
 
 	result, err := rail.Authorize(ctx, map[string]any{
@@ -78,16 +81,19 @@ func AuthorizeTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashIn
 	}
 	if err != nil {
 		if isAmbiguousProviderError(err) {
-			_ = markSessionResultUnknownAndOpenCase(db, claimed, "authorize", err, "authorization_pending")
-		} else {
-			_ = markSessionFailedAndNotify(db, claimed, "authorization_pending")
+			return nil, withDurableRecoveryError(err, func() error {
+				return markSessionResultUnknownAndOpenCase(db, claimed, "authorize", err, "authorization_pending")
+			})
 		}
-		return nil, err
+		return nil, withDurableRecoveryError(err, func() error {
+			return markSessionFailedAndNotify(db, claimed, "authorization_pending")
+		})
 	}
 
 	finalizationFailure := func(cause error) (*PaymentSession, error) {
-		_ = markSessionResultUnknownAndOpenCase(db, claimed, "authorize", cause, "authorization_pending")
-		return nil, cause
+		return nil, withDurableRecoveryError(cause, func() error {
+			return markSessionResultUnknownAndOpenCase(db, claimed, "authorize", cause, "authorization_pending")
+		})
 	}
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -135,8 +141,9 @@ func CaptureTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashInRa
 		return claimed, err
 	}
 	if _, err := topUpActorType(claimed.FinancialPurpose); err != nil {
-		_ = markSessionFailedAndNotify(db, claimed, "capture_pending")
-		return nil, err
+		return nil, withDurableRecoveryError(err, func() error {
+			return markSessionFailedAndNotify(db, claimed, "capture_pending")
+		})
 	}
 
 	result, err := rail.Capture(ctx, map[string]any{
@@ -150,16 +157,19 @@ func CaptureTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashInRa
 	}
 	if err != nil {
 		if isAmbiguousProviderError(err) {
-			_ = markSessionResultUnknownAndOpenCase(db, claimed, "capture", err, "capture_pending")
-		} else {
-			_ = markSessionFailedAndNotify(db, claimed, "capture_pending")
+			return nil, withDurableRecoveryError(err, func() error {
+				return markSessionResultUnknownAndOpenCase(db, claimed, "capture", err, "capture_pending")
+			})
 		}
-		return nil, err
+		return nil, withDurableRecoveryError(err, func() error {
+			return markSessionFailedAndNotify(db, claimed, "capture_pending")
+		})
 	}
 
 	finalizationFailure := func(cause error) (*PaymentSession, error) {
-		_ = markSessionResultUnknownAndOpenCase(db, claimed, "capture", cause, "capture_pending")
-		return nil, cause
+		return nil, withDurableRecoveryError(cause, func() error {
+			return markSessionResultUnknownAndOpenCase(db, claimed, "capture", cause, "capture_pending")
+		})
 	}
 	if claimed.AmountMinorUnits <= 0 || claimed.Currency == "" {
 		return finalizationFailure(fmt.Errorf("captured topup session %s has invalid accounting amount/currency", claimed.ID))

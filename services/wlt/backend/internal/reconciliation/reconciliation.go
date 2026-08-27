@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 
+	"wlt-api/internal/payment"
 	"wlt-api/internal/shared"
 )
 
@@ -223,30 +224,19 @@ func ResolveCaseForOperatorContext(ctx context.Context, db *sql.DB, caseID, oper
 	if operatorID == "" {
 		return nil, fmt.Errorf("operatorId is required")
 	}
-	switch resolutionAction {
-	case "confirmed_success", "confirmed_failed", "manual_adjustment", "ignored":
-	default:
-		return nil, fmt.Errorf("resolutionAction must be one of confirmed_success, confirmed_failed, manual_adjustment, ignored")
+	if resolutionAction != "confirmed_success" && resolutionAction != "confirmed_failed" {
+		return nil, fmt.Errorf("resolutionAction must be one of confirmed_success or confirmed_failed; manual adjustment and ignore cannot establish financial truth")
 	}
-
-	row := db.QueryRowContext(ctx, `
-		UPDATE wlt_reconciliation_cases
-		SET status='resolved',resolved_by_operator_id=$3,resolution_action=$4,
-		    resolution_note=$5,resolution=$4,resolved_at=NOW(),updated_at=NOW()
-		WHERE operator_context_id=$1 AND id=$2 AND status='open'
-		RETURNING `+caseCols, operatorContextID, caseID, operatorID, resolutionAction, resolutionNote)
-	c, err := scanCase(row)
-	if errors.Is(err, sql.ErrNoRows) {
-		existing, getErr := GetCaseForOperatorContext(ctx, db, caseID)
-		if getErr != nil {
-			return nil, getErr
-		}
-		if existing == nil {
+	if err := payment.ResolveReconciliationCase(ctx, db, caseID, operatorContextID, operatorID, resolutionAction, resolutionNote); err != nil {
+		if errors.Is(err, payment.ErrReconciliationCaseNotFound) {
 			return nil, nil
 		}
-		return nil, ErrCaseNotOpen
+		if errors.Is(err, payment.ErrReconciliationCaseNotOpen) {
+			return nil, ErrCaseNotOpen
+		}
+		return nil, err
 	}
-	return c, err
+	return GetCaseForOperatorContext(ctx, db, caseID)
 }
 
 func ResolveCase(db *sql.DB, caseID, operatorID, resolutionAction, resolutionNote string) (*Case, error) {

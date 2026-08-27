@@ -2,7 +2,9 @@ package promotionfunding
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -327,6 +329,61 @@ func promotionReversalLedgerLines(reservation *Reservation) ([]ledger.LedgerLine
 	return commitLines, nil
 }
 
+func transitionRequestHash(reservationID, target string, input TransitionInput) (string, error) {
+	operation := map[string]string{"committed": "commit", "released": "release", "reversed": "reverse"}[target]
+	payload, err := json.Marshal(struct {
+		OperatorContextID string `json:"operatorContextId"`
+		ReservationID     string `json:"reservationId"`
+		Operation         string `json:"operation"`
+		TargetStatus      string `json:"targetStatus"`
+		OrderID           string `json:"orderId"`
+		Reason            string `json:"reason"`
+	}{input.OperatorContextID, reservationID, operation, target, input.OrderID, input.Reason})
+	if err != nil {
+		return "", err
+	}
+	digest := sha256.Sum256(payload)
+	return hex.EncodeToString(digest[:]), nil
+}
+
+// claimTransitionCommand is the idempotency gate for promotion-funding
+// transitions. It runs before the reservation lock and before any ledger call.
+// A completed command is an exact replay; a reused key with another request
+// hash is a conflict. A claimed command is safely resumed because the command
+// and its eventual financial effect are committed together.
+func claimTransitionCommand(ctx context.Context, tx *sql.Tx, reservationID, target string, input TransitionInput, requestHash string) (bool, error) {
+	operation := map[string]string{"committed": "commit", "released": "release", "reversed": "reverse"}[target]
+	var insertedHash string
+	err := tx.QueryRowContext(ctx, `
+		INSERT INTO wlt_promotion_funding_commands
+			(operator_context_id,reservation_id,operation,target_status,idempotency_key,request_hash)
+		VALUES ($1,$2,$3,$4,$5,$6)
+		ON CONFLICT (operator_context_id,reservation_id,operation,idempotency_key) DO NOTHING
+		RETURNING request_hash`,
+		input.OperatorContextID, reservationID, operation, target, input.IdempotencyKey, requestHash).Scan(&insertedHash)
+	if err == nil {
+		return false, nil
+	}
+	if err != sql.ErrNoRows {
+		return false, err
+	}
+	var existingHash, state string
+	if err := tx.QueryRowContext(ctx, `
+		SELECT request_hash,state
+		FROM wlt_promotion_funding_commands
+		WHERE operator_context_id=$1 AND reservation_id=$2 AND operation=$3 AND idempotency_key=$4
+		FOR UPDATE`, input.OperatorContextID, reservationID, operation, input.IdempotencyKey).Scan(&existingHash, &state); err != nil {
+		return false, err
+	}
+	if existingHash != requestHash {
+		return false, ErrConflict
+	}
+	if state == "completed" {
+		return true, nil
+	}
+	return false, nil
+}
+
 func transition(ctx context.Context, db *sql.DB, reservationID, target string, input TransitionInput) (*Reservation, error) {
 	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.OrderID = strings.TrimSpace(input.OrderID)
@@ -346,12 +403,21 @@ func transition(ctx context.Context, db *sql.DB, reservationID, target string, i
 	if target == "released" && input.Reason == "" {
 		return nil, ErrInvalid
 	}
+	requestHash, err := transitionRequestHash(reservationID, target, input)
+	if err != nil {
+		return nil, err
+	}
 
 	tx, err := db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelSerializable})
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = tx.Rollback() }()
+
+	replayed, err := claimTransitionCommand(ctx, tx, reservationID, target, input, requestHash)
+	if err != nil {
+		return nil, err
+	}
 
 	current, err := scanReservation(tx.QueryRowContext(ctx, `SELECT `+reservationColumns+`
 		FROM wlt_promotion_funding_reservations WHERE id=$1 AND operator_context_id=$2 FOR UPDATE`,
@@ -360,7 +426,7 @@ func transition(ctx context.Context, db *sql.DB, reservationID, target string, i
 		return nil, err
 	}
 	if current.Status == target {
-		if !completedTransitionMatches(current, target, input) {
+		if !replayed || !completedTransitionMatches(current, target, input) {
 			return nil, ErrConflict
 		}
 		return current, tx.Commit()
@@ -418,18 +484,28 @@ func transition(ctx context.Context, db *sql.DB, reservationID, target string, i
 	if err != nil {
 		return nil, err
 	}
+	eventIdentity := "transition:" + input.OperatorContextID + ":" + reservationID + ":" + target + ":" + input.IdempotencyKey
 	if _, err := tx.ExecContext(ctx, `INSERT INTO wlt_promotion_funding_events
 		(reservation_id,event_type,from_status,to_status,order_id,idempotency_key,correlation_id,reason)
-		VALUES ($1,$2,$3,$2,NULLIF($4,''),$5,$6,$7)
-		ON CONFLICT (idempotency_key) DO NOTHING`,
+			VALUES ($1,$2,$3,$2,NULLIF($4,''),$5,$6,$7)`,
 		reservationID,
 		target,
 		current.Status,
 		input.OrderID,
-		input.IdempotencyKey,
+		eventIdentity,
 		input.CorrelationID,
 		input.Reason,
 	); err != nil {
+		return nil, err
+	}
+	if _, err := tx.ExecContext(ctx, `
+			UPDATE wlt_promotion_funding_commands
+			SET state='completed', result_status=$2, result_ledger_transaction_id=$3,
+			    completed_at=NOW()
+			WHERE operator_context_id=$1 AND reservation_id=$4
+			  AND target_status=$5 AND idempotency_key=$6 AND request_hash=$7`,
+		input.OperatorContextID, updated.Status, ledgerTransactionID, reservationID,
+		target, input.IdempotencyKey, requestHash); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(); err != nil {
