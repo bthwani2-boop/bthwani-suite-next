@@ -1052,17 +1052,6 @@ export function getDshFlowById(id: string): DshFlowRegistryEntry | undefined {
   return DSH_FLOW_REGISTRY.find((entry) => entry.id === id);
 }
 
-/**
- * All registry entries that are visible on a given surface
- * (owns, or listed in visibleSurfaces — including hidden-compat).
- */
-export function getDshFlowsForSurface(surfaceId: DshSurfaceId): readonly DshFlowRegistryEntry[] {
-  return DSH_FLOW_REGISTRY.filter(
-    (entry) =>
-      entry.ownerSurface === surfaceId || entry.visibleSurfaces.includes(surfaceId)
-  );
-}
-
 export type DshFlowPolicySummary = {
   readonly flowId: string;
   readonly ownerSurface: DshSurfaceId;
