@@ -100,7 +100,7 @@ function deriveOrderStatusFromDispatch(raw: BackendDispatchAssignment): DshOrder
   }
 }
 
-export function normalizeOrderItem(raw: BackendOrderItem, orderId = ''): DshOrderItemRecord {
+function normalizeOrderItem(raw: BackendOrderItem, orderId = ''): DshOrderItemRecord {
   const quantity = Number(raw.quantity ?? 0);
   const price = Number(raw.price ?? raw.unitPrice ?? 0);
   const productName = raw.product_name ?? raw.productName;
