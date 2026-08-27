@@ -259,12 +259,6 @@ export async function fetchProductProposalsPage(query?: {
   return { items: resp.proposals, total: resp.total, limit: resp.limit, offset: resp.offset };
 }
 
-// See fetchMasterProducts above: kept as an items-only wrapper for
-// backward compatibility with pre-pagination consumers.
-export async function fetchProductProposals(query?: Parameters<typeof fetchProductProposalsPage>[0]): Promise<readonly ProductProposal[]> {
-  return (await fetchProductProposalsPage(query)).items;
-}
-
 export async function transitionProductProposal(
   proposalId: string,
   input: {
@@ -569,12 +563,6 @@ export async function fetchCatalogAssetsPage(query?: { status?: string; limit?: 
   const path = qs ? `/dsh/operator/catalog/assets?${qs}` : "/dsh/operator/catalog/assets";
   const resp = await request<{ assets: readonly CatalogAsset[]; total: number; limit: number; offset: number }>(path);
   return { items: resp.assets, total: resp.total, limit: resp.limit, offset: resp.offset };
-}
-
-// See fetchMasterProducts above: kept as an items-only wrapper for
-// backward compatibility with pre-pagination consumers.
-export async function fetchCatalogAssets(query?: Parameters<typeof fetchCatalogAssetsPage>[0]): Promise<readonly CatalogAsset[]> {
-  return (await fetchCatalogAssetsPage(query)).items;
 }
 
 export interface AssetUploadIntent {
