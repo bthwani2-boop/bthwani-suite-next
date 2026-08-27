@@ -50,17 +50,6 @@ export async function fetchClientOrderTruthDetail(
   return data.order;
 }
 
-export async function fetchClientOrderTruthEvents(
-  orderId: string,
-  token?: string,
-): Promise<OrderTruth["statusTimeline"]> {
-  const data = await request<{ events: OrderTruth["statusTimeline"] }>(
-    `/dsh/client/order-truth/${encodeURIComponent(orderId)}/events`,
-    withOptionalToken({}, token),
-  );
-  return data.events ?? [];
-}
-
 export async function fetchPartnerOrderTruth(
   input: { readonly status?: string; readonly limit?: number } = {},
   token?: string,
