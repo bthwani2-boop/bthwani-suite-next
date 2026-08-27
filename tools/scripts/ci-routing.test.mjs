@@ -26,6 +26,7 @@ test("the fast PR gate owns affected development verification", () => {
   assert.match(workflow, /PR_IDENTITY_CONFLICT/u);
   assert.match(workflow, /affected/u);
   assert.match(workflow, /cancel-in-progress: true/u);
+  assert.match(workflow, /group: bthwani-ci-\$\{\{ inputs\.target_kind \|\| 'branch' \}\}/u);
   assert.match(workflow, /mode="\$\{DISPATCH_MODE:-affected\}"/u);
 });
 
