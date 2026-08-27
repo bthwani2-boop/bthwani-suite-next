@@ -1,7 +1,11 @@
 import { execFileSync } from "node:child_process";
 
 function run(command, args) {
-  return execFileSync(command, args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+  return execFileSync(command, args, {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+    env: { ...process.env, GH_FORCE_TTY: "0", NO_COLOR: "1" },
+  }).trim();
 }
 
 function fail(message) {
