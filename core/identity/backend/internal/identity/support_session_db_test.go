@@ -2,6 +2,7 @@ package identity
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"testing"
 )
@@ -27,27 +28,31 @@ import (
 // Run with:
 //
 //	IDENTITY_REQUIRE_DB_TESTS=true DATABASE_URL=postgres://... go test ./internal/identity/...
+func cleanupSupportReplayActors(t *testing.T, db *sql.DB, ids ...string) {
+	t.Helper()
+	for _, id := range ids {
+		if _, err := db.Exec(`DELETE FROM identity_support_session_audit WHERE target_actor_id = $1 OR initiator_actor_id = $1`, id); err != nil {
+			t.Errorf("clean up support-session audit for actor %s: %v", id, err)
+		}
+		if _, err := db.Exec(`DELETE FROM identity_sessions WHERE actor_id = $1 OR initiator_actor_id = $1`, id); err != nil {
+			t.Errorf("clean up identity sessions for actor %s: %v", id, err)
+		}
+		if _, err := db.Exec(`DELETE FROM identity_actors WHERE id = $1`, id); err != nil {
+			t.Errorf("clean up support replay actor %s: %v", id, err)
+		}
+	}
+}
+
 func issueReplayTestActors(t *testing.T) (target, initiator string, cleanup func()) {
 	t.Helper()
 	db := openIdentityTestDB(t)
 	target = "identity-test-support-target"
 	initiator = "identity-test-support-initiator"
-	for _, actor := range []struct{ id, username string }{
-		{target, "support-replay-target"},
-		{initiator, "support-replay-initiator"},
-	} {
-		if _, err := db.Exec(`DELETE FROM identity_actors WHERE id = $1`, actor.id); err != nil {
-			t.Fatalf("clean up support replay actor %s: %v", actor.id, err)
-		}
-	}
+	cleanupSupportReplayActors(t, db, target, initiator)
 	insertIdentityTestActor(t, db, target, "support-replay-target", "identity-test-ctx", "", nil, nil, ActorStatusActive, 1)
 	insertIdentityTestActor(t, db, initiator, "support-replay-initiator", "identity-test-ctx", "", nil, nil, ActorStatusActive, 1)
 	return target, initiator, func() {
-		for _, id := range []string{target, initiator} {
-			if _, err := db.Exec(`DELETE FROM identity_actors WHERE id = $1`, id); err != nil {
-				t.Errorf("clean up support replay actor %s: %v", id, err)
-			}
-		}
+		cleanupSupportReplayActors(t, db, target, initiator)
 	}
 }
 

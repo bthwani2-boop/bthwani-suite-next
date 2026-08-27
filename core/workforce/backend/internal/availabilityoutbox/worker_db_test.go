@@ -169,7 +169,7 @@ func TestAvailabilityOutboxSourceFencingLeaseRecoveryAndConcurrentClaim(t *testi
 	if _, err := db.Exec(`
 		UPDATE workforce_dsh_availability_outbox
 		SET lifecycle_state='processing', lease_expires_at=NOW()-INTERVAL '1 second',
-		    reconciliation_eligible=true, failure_disposition='reconciliation_required',
+		    reconciliation_eligible=false, failure_disposition='reconciliation_required',
 		    last_error='simulated process restart after remote success'
 		WHERE notice_id=$1::uuid`, noticeID); err != nil {
 		t.Fatalf("seed expired processing recovery state: %v", err)

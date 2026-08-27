@@ -94,9 +94,11 @@ jobs:
           [[ "${expected_head}" =~ ^[0-9a-fA-F]{40}$ && "${base_sha}" =~ ^[0-9a-fA-F]{40}$ ]] || { echo "::error::exact head/base SHA required"; exit 1; }
           git cat-file -e "${base_sha}^{commit}"
           git merge-base --is-ancestor "${base_sha}" "${expected_head}" || { echo "::error::base is not an ancestor"; exit 1; }
-          echo "head_sha=${expected_head}" >> "${GITHUB_OUTPUT}"
-          echo "base_sha=${base_sha}" >> "${GITHUB_OUTPUT}"
-          echo "pr_number=${PR_NUMBER}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "head_sha=${expected_head}"
+            echo "base_sha=${base_sha}"
+            echo "pr_number=${PR_NUMBER}"
+          } >> "${GITHUB_OUTPUT}"
       - name: Resolve affected owners from exact Git diff
         id: scope
         shell: bash
