@@ -49,7 +49,7 @@ describe("support conversation and order rescue", () => {
     assert.match(deliveryRoutes, /messages\/\{messageId\}\/attachments/);
     assert.match(deliveryRoutes, /messages\/read/);
     assert.match(deliveryApi, /attachActorSupportMessageAsset/);
-    assert.match(deliveryApi, /markActorSupportMessagesRead/);
+    assert.match(actorApi, /markActorSupportMessagesRead/);
     assert.match(conversation, /markActorSupportMessagesRead/);
     assert.match(apiMain, /RegisterSupportMessageDeliveryRoutes\(router/);
   });

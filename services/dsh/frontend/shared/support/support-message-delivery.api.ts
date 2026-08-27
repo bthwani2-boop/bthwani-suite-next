@@ -1,6 +1,5 @@
 import { resolveDshApiBaseUrl } from "../_kernel/dsh-api-base-url";
 import { createDshHttpClient } from "../_kernel/dsh-http-request";
-import { markActorSupportMessagesRead } from "./actor-support.api";
 import type { SupportMutationContext } from "./support-mutation-attempt";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "support-message-delivery");
@@ -43,5 +42,3 @@ export async function attachActorSupportMessageAsset(
   );
   return data.attachment;
 }
-
-export { markActorSupportMessagesRead };
