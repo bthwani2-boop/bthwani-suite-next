@@ -89,15 +89,3 @@ test("corrupt storage is quarantined and exact terminal purge preserves other en
   assert.equal(store.values.has(durableMutationAttemptKey("registry-test", scopeB, "survivor")), true);
   assert.equal(other.context.idempotencyKey, "idempotency-survivor");
 });
-
-test("legacy prefix entries are quarantined before v4 creation", async () => {
-  const store = memoryStore();
-  configureBthwaniDurableStorage(store.adapter);
-  await store.adapter.setItem("@bthwani/client-address-create-attempt:v3/old", "legacy");
-  await getOrCreateDurableMutationAttempt({
-    ...options(scopeA, "legacy-migration", "new"),
-    legacyPrefixes: ["@bthwani/client-address-create-attempt:v3/"],
-  });
-  assert.equal(store.values.has("@bthwani/client-address-create-attempt:v3/old"), false);
-  assert.ok([...store.values.keys()].some((key) => key.startsWith("@bthwani/client-address-create-attempt:v3/old:quarantine:")));
-});

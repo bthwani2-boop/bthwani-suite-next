@@ -8,7 +8,6 @@ describe("checkout identity scope regression", () => {
   test("checkout-create-attempt source does not contain v1 legacy fallback", () => {
     const source = read("services/dsh/frontend/shared/checkout/checkout-create-attempt.ts");
     assert.ok(!source.includes("checkout-create-attempt:v1"), "v1 storage key must be removed");
-    assert.ok(!source.includes("quarantineLegacy"), "quarantineLegacy function must be removed");
     assert.ok(!source.includes('resolveMutationIdentityScope("")'), "empty actor resolver call must be removed");
     assert.match(source, /resolveMutationIdentityScope\(actorId,/);
   });

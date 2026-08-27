@@ -18,8 +18,6 @@ type RegistryOptions<TAttempt extends DurableMutationAttemptEnvelope<unknown>> =
   readonly fingerprint: string;
   readonly create: () => TAttempt;
   readonly parse: (value: unknown) => value is TAttempt;
-  readonly legacyKeys?: readonly string[];
-  readonly legacyPrefixes?: readonly string[];
 };
 
 function encode(value: string): string {
@@ -35,20 +33,6 @@ export function durableMutationAttemptKey(
     throw new Error("durable mutation registry identity is incomplete");
   }
   return `@bthwani/mutation-attempt:v4/${encode(operation)}/${encode(scope.actorId)}/${encode(scope.installationId)}/${encode(scope.entityId)}/${encode(fingerprint)}`;
-}
-
-async function quarantineLegacy(keys: readonly string[], prefixes: readonly string[] = []): Promise<void> {
-  const discovered = await bthwaniDurableStorage.getAllKeys();
-  const allKeys = [...new Set([
-    ...keys,
-    ...discovered.filter((key) => prefixes.some((prefix) => key.startsWith(prefix))),
-  ])];
-  for (const key of allKeys) {
-    const raw = await bthwaniDurableStorage.getItem(key);
-    if (!raw) continue;
-    await bthwaniDurableStorage.setItem(`${key}:quarantine:${Date.now()}`, raw);
-    await bthwaniDurableStorage.removeItem(key);
-  }
 }
 
 export async function getOrCreateDurableMutationAttempt<TAttempt extends DurableMutationAttemptEnvelope<unknown>>(
@@ -73,9 +57,6 @@ export async function getOrCreateDurableMutationAttempt<TAttempt extends Durable
       await bthwaniDurableStorage.setItem(`${key}:quarantine:${Date.now()}`, raw);
       await bthwaniDurableStorage.removeItem(key);
     }
-  }
-  if (options.legacyKeys?.length || options.legacyPrefixes?.length) {
-    await quarantineLegacy(options.legacyKeys ?? [], options.legacyPrefixes ?? []);
   }
   const attempt = options.create();
   if (!options.parse(attempt)) throw new Error("durable mutation registry create() returned an invalid attempt");
