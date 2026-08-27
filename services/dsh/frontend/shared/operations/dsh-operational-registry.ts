@@ -1064,28 +1064,6 @@ export function getDshFlowsForSurface(surfaceId: DshSurfaceId): readonly DshFlow
 }
 
 /**
- * All flows that require escalation handling (have an escalationOwner defined).
- * Useful for control-panel escalation queue wiring.
- */
-export function getDshEscalationFlows(): readonly DshFlowRegistryEntry[] {
-  return DSH_FLOW_REGISTRY.filter((entry) => entry.escalationOwner !== undefined);
-}
-
-/**
- * Escalation-aware flows relevant to a given surface.
- * Includes flows owned by the surface, visible on the surface, or escalated to it.
- * Pure read-only filter — no side effects, no throws.
- */
-export function getDshEscalationFlowsForSurface(surfaceId: DshSurfaceId): readonly DshFlowRegistryEntry[] {
-  return getDshEscalationFlows().filter(
-    (entry) =>
-      entry.ownerSurface === surfaceId ||
-      entry.visibleSurfaces.includes(surfaceId) ||
-      entry.escalationOwner === surfaceId,
-  );
-}
-
-/**
  * All flows with financialImpact=true.
  * These must remain finance-snapshot-only — no mutation from DSH.
  */
