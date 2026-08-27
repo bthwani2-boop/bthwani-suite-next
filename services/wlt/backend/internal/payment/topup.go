@@ -134,8 +134,7 @@ func CaptureTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashInRa
 	if err != nil || claimed == nil {
 		return claimed, err
 	}
-	actorType, err := topUpActorType(claimed.FinancialPurpose)
-	if err != nil {
+	if _, err := topUpActorType(claimed.FinancialPurpose); err != nil {
 		_ = markSessionFailedAndNotify(db, claimed, "capture_pending")
 		return nil, err
 	}
@@ -172,12 +171,12 @@ func CaptureTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashInRa
 	}
 	defer tx.Rollback()
 
-	lines := []ledger.LedgerLine{
-		{AccountType: "provider_clearing", DebitCredit: "debit", AmountMinorUnits: claimed.AmountMinorUnits, Currency: claimed.Currency},
-		{AccountType: "wallet", ActorType: actorType, ActorID: claimed.ClientID, DebitCredit: "credit", AmountMinorUnits: claimed.AmountMinorUnits, Currency: claimed.Currency},
+	lines, actor, err := captureEconomicEffect(claimed)
+	if err != nil {
+		return finalizationFailure(err)
 	}
 	postCtx := shared.WithOperatorContext(ctx, claimed.OperatorContextID)
-	ledgerTransactionID, err := ledger.PostLedgerTransaction(postCtx, tx, "cash_in_topup", "payment_session", claimed.ID, lines, ledger.Actor{ID: claimed.ClientID, Type: actorType})
+	ledgerTransactionID, err := ledger.PostLedgerTransaction(postCtx, tx, "cash_in_topup", "payment_session", claimed.ID, lines, actor)
 	if err != nil {
 		return finalizationFailure(fmt.Errorf("post topup capture ledger transaction: %w", err))
 	}

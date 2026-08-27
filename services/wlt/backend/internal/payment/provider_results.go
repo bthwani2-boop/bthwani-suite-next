@@ -200,10 +200,11 @@ func postCapturedProviderResult(ctx context.Context, tx *sql.Tx, session *Paymen
 	if session.AmountMinorUnits <= 0 || session.Currency == "" {
 		return "", fmt.Errorf("captured session has invalid accounting amount or currency")
 	}
-	ledgerTransactionID, err := ledger.PostLedgerTransaction(ctx, tx, "payment_captured", "payment_session", session.ID, []ledger.LedgerLine{
-		{AccountType: "provider_clearing", DebitCredit: "debit", AmountMinorUnits: session.AmountMinorUnits, Currency: session.Currency},
-		{AccountType: "platform_payable", DebitCredit: "credit", AmountMinorUnits: session.AmountMinorUnits, Currency: session.Currency},
-	}, ledger.Actor{ID: "wlt", Type: "service"})
+	lines, actor, err := captureEconomicEffect(session)
+	if err != nil {
+		return "", err
+	}
+	ledgerTransactionID, err := ledger.PostLedgerTransaction(ctx, tx, "payment_captured", "payment_session", session.ID, lines, actor)
 	if err != nil {
 		return "", fmt.Errorf("post capture ledger transaction: %w", err)
 	}
