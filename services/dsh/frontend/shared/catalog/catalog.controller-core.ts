@@ -4,8 +4,6 @@ import {
   type CatalogActionState,
   catalogActionConflictState,
   catalogActionErrorState,
-  catalogActionSubmittingState,
-  catalogActionSuccessState,
   catalogAuditErrorState,
   catalogAuditLoadingState,
   catalogAuditSuccessState,
@@ -15,22 +13,6 @@ import {
   catalogSubmissionErrorState,
   catalogSubmissionPermissionDeniedState,
 } from "./catalog.states";
-
-export async function runCatalogAction(
-  operation: () => Promise<unknown>,
-  reload: () => Promise<void>,
-  publish: (state: CatalogActionState) => void,
-  publishResult: (state: CatalogActionState) => void,
-): Promise<void> {
-  publish(catalogActionSubmittingState());
-  try {
-    await operation();
-    publishResult(catalogActionSuccessState());
-    await reload();
-  } catch (error) {
-    publishResult(resolveCatalogActionError(error));
-  }
-}
 
 export function resolveCatalogActionError(error: unknown): CatalogActionState {
   const typed = error as { status?: number };
