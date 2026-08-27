@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import {
   clearCheckoutAttempt,
+  fingerprintCheckoutInput,
   getOrCreateCheckoutAttempt,
 } from "./checkout-create-attempt";
 import {
@@ -44,7 +45,7 @@ export function useCheckoutToOrderFlow() {
       const attempt = await getOrCreateCheckoutAttempt(input);
       const intent = await createCheckoutIntent(input, attempt.context);
       try {
-        await clearCheckoutAttempt();
+        await clearCheckoutAttempt(fingerprintCheckoutInput(input));
       } catch {
         // The canonical checkout mutation succeeded; stale local cleanup must
         // not rewrite the server result.

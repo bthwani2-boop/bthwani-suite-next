@@ -255,7 +255,7 @@ test("checkout carries the confirmed cart version into the canonical DSH OCC con
   );
   assertMarkers(
     "services/dsh/frontend/shared/order-truth/use-order-truth-controller.ts",
-    ["fetchClientOrderTruthDetail(created.id, token)", "clearOrderTruthAttempt()"],
+    ["fetchClientOrderTruthDetail(created.id, token)", "clearOrderTruthAttempt(attempt.fingerprint)"],
   );
 });
 

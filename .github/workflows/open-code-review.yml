@@ -302,9 +302,11 @@ jobs:
             echo "The closure consumer rejects free-form, malformed, stale, duplicated, conflicting, or candidate-authored text."
           } > "${evidence}/README.md"
 
-          echo "count=${count}" >> "${GITHUB_OUTPUT}"
-          echo "context_sha256=${context_sha256}" >> "${GITHUB_OUTPUT}"
-          echo "artifact_identity=${artifact_identity}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "count=${count}"
+            echo "context_sha256=${context_sha256}"
+            echo "artifact_identity=${artifact_identity}"
+          } >> "${GITHUB_OUTPUT}"
           popd >/dev/null
 
       - name: Publish delegation summary

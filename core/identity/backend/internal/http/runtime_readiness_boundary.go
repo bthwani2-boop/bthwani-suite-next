@@ -18,7 +18,7 @@ const (
 	minimumActivationHMACSecretLength = 32
 	minimumInternalServiceTokenLength = 32
 	identityMigrationServiceName      = "identity"
-	identityLatestMigration           = "identity-040_retire_local_platform_persona_roles.sql"
+	identityLatestMigration           = "identity-041_support_session_request_fingerprint.sql"
 	defaultReadinessProbeTimeout      = 2 * time.Second
 	defaultReadinessCheckTimeout      = 750 * time.Millisecond
 	defaultClockSkewLimit             = 5 * time.Second

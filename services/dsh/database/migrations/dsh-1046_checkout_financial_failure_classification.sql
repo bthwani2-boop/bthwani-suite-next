@@ -1,6 +1,13 @@
 -- DSH-1046: governed classification for checkout financial closure outcomes.
 -- Unknown historical/provider outcomes remain readback-required; this migration
 -- never infers provider absence, rejection, or application from legacy rows.
+--
+-- Classification law:
+-- PROVEN_ABSENT: canonical readback proves the prior mutation is absent.
+-- PROVEN_REJECTED: the provider/owner returned a definitive rejection.
+-- PROVEN_APPLIED: canonical completion readback/commit proves application.
+-- UNKNOWN_REQUIRES_READBACK: no mutation may be retried directly.
+-- INVALID_UNRECOVERABLE: request/context is invalid and cannot be retried.
 
 BEGIN;
 
@@ -42,10 +49,3 @@ CREATE INDEX IF NOT EXISTS idx_dsh_checkout_financial_closure_outbox_failure_cla
   ON dsh_checkout_financial_closure_outbox(failure_classification, updated_at DESC);
 
 COMMIT;
-
--- Classification law:
--- PROVEN_ABSENT: canonical readback proves the prior mutation is absent.
--- PROVEN_REJECTED: the provider/owner returned a definitive rejection.
--- PROVEN_APPLIED: canonical completion readback/commit proves application.
--- UNKNOWN_REQUIRES_READBACK: no mutation may be retried directly.
--- INVALID_UNRECOVERABLE: request/context is invalid and cannot be retried.

@@ -115,7 +115,7 @@ func ExecuteDailyFinanceClose(ctx context.Context, db *sql.DB, input ExecuteDail
 		FROM wlt_payout_requests
 		WHERE operator_context_id = $1
 		  AND status IN ('provider_pending', 'provider_result_unknown')
-		  AND updated_at <= $2
+		  AND requested_at <= $2
 	`, operatorContextID, cutoffAt).Scan(&unresolvedPayoutOutcomes); err != nil {
 		return nil, err
 	}
