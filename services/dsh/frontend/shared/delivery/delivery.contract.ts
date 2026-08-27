@@ -61,14 +61,6 @@ export function getDshDeliveryModeDefinition(
 }
 
 /**
- * Temporary pure projection for consumers not yet migrated to server-provided
- * allowed actions. It must never be used as a permission or enablement check.
- */
-export function isDshModeDispatchRequired(mode: DshFulfillmentDeliveryMode): boolean {
-  return mode === "bthwani_delivery";
-}
-
-/**
  * Presentation-only timeline projection. Backend order state and allowedActions
  * remain authoritative for transitions and mutations.
  */
