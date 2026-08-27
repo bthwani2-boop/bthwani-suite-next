@@ -26,41 +26,25 @@ WHERE EXISTS (
       AND g.service_area_code <> z.city_code
 );
 
--- 2. Remove orphan zones whose binding references no governed service area. Under
---    the geofence-assignment law such zones can never bind a checkout-assigned
---    store, so they are dead configuration, removed together with their dependents.
-DELETE FROM dsh_platform_sla_rules
-WHERE zone_id IN (
-    SELECT z.id FROM dsh_platform_zones z
+-- 2. Pre-flight inventory: an unresolved relationship is not proof that a
+--    zone or any dependent policy is dead. Fail the migration before the
+--    canonical rename rather than deleting operational truth. Any cleanup of
+--    genuinely obsolete rows must be a separately governed migration with an
+--    explicit owner, consumer inventory, and zero-reachability proof.
+DO $$
+DECLARE
+    unresolved_zones integer;
+BEGIN
+    SELECT COUNT(*) INTO unresolved_zones
+    FROM dsh_platform_zones z
     WHERE NOT EXISTS (
         SELECT 1 FROM dsh_service_area_geofences g
-        WHERE g.service_area_code = z.city_code
-    )
-);
-
-DELETE FROM dsh_platform_capacity_configs
-WHERE zone_id IN (
-    SELECT z.id FROM dsh_platform_zones z
-    WHERE NOT EXISTS (
-        SELECT 1 FROM dsh_service_area_geofences g
-        WHERE g.service_area_code = z.city_code
-    )
-);
-
-DELETE FROM dsh_platform_delivery_mode_policies
-WHERE zone_id IN (
-    SELECT z.id FROM dsh_platform_zones z
-    WHERE NOT EXISTS (
-        SELECT 1 FROM dsh_service_area_geofences g
-        WHERE g.service_area_code = z.city_code
-    )
-);
-
-DELETE FROM dsh_platform_zones z
-WHERE NOT EXISTS (
-    SELECT 1 FROM dsh_service_area_geofences g
-    WHERE g.service_area_code = z.city_code
-);
+        WHERE lower(g.service_area_code) = lower(z.city_code)
+    );
+    IF unresolved_zones > 0 THEN
+        RAISE EXCEPTION 'dsh-1043 requires explicit canonical mapping; % zone rows are unresolved and no data will be deleted', unresolved_zones;
+    END IF;
+END $$;
 
 -- 3. Canonical rename.
 ALTER TABLE dsh_platform_zones
