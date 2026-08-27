@@ -28,6 +28,19 @@ test("the fast PR gate owns affected development verification", () => {
   assert.match(workflow, /cancel-in-progress: true/u);
 });
 
+test("PR synchronize routes only the previous exact PR head delta", () => {
+  const workflow = read(".github/workflows/ci.yml");
+  assert.match(workflow, /PR_ACTION_EVENT: \$\{\{ github\.event\.action \}\}/u);
+  assert.match(workflow, /PR_BEFORE_SHA: \$\{\{ github\.event\.before \}\}/u);
+  assert.match(workflow, /EVENT_NAME.*pull_request.*PR_ACTION_EVENT.*synchronize/su);
+  assert.match(workflow, /scope_base_sha="\$\{base_sha\}"/u);
+  assert.match(workflow, /scope_base_sha="\$\{previous_head_sha\}"/u);
+  assert.match(workflow, /incremental-event-before/u);
+  assert.match(workflow, /incremental-run-history/u);
+  assert.match(workflow, /refusing to widen to base→head/u);
+  assert.match(workflow, /canonical_base_sha: \$\{\{ steps\.target\.outputs\.base_sha \}\}/u);
+});
+
 test("the final closure is the only final entrypoint and has no polling orchestration", () => {
   const workflow = read(".github/workflows/final-closure.yml");
   assert.match(workflow, /name: BThwani Final Closure/u);

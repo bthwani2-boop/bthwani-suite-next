@@ -90,7 +90,11 @@ jobs:
       pr_number: ${{ steps.target.outputs.pr_number }}
       head_ref: ${{ steps.target.outputs.head_ref }}
       base_ref: ${{ steps.target.outputs.base_ref }}
+      # base_sha is the exact delta base consumed by affected verification.
       base_sha: ${{ steps.scope.outputs.base_sha }}
+      canonical_base_sha: ${{ steps.target.outputs.base_sha }}
+      scope_base_sha: ${{ steps.scope.outputs.base_sha }}
+      scope_kind: ${{ steps.target.outputs.scope_kind }}
       head_sha: ${{ steps.scope.outputs.head_sha }}
       full_verification: ${{ steps.scope.outputs.full_verification }}
       full_scope: ${{ steps.scope.outputs.full_scope }}
@@ -156,6 +160,9 @@ jobs:
           PR_HEAD_SHA_EVENT: ${{ github.event.pull_request.head.sha }}
           PR_BASE_REF_EVENT: ${{ github.event.pull_request.base.ref }}
           PR_BASE_SHA_EVENT: ${{ github.event.pull_request.base.sha }}
+          PR_ACTION_EVENT: ${{ github.event.action }}
+          PR_BEFORE_SHA: ${{ github.event.before }}
+          CURRENT_RUN_ID: ${{ github.run_id }}
           REQUEST_TARGET_KIND: ${{ inputs.target_kind }}
           REQUEST_PR_NUMBER: ${{ inputs.pr_number }}
           REQUEST_HEAD_SHA: ${{ inputs.expected_head_sha }}
@@ -171,6 +178,9 @@ jobs:
           base_sha=""
           phase=development
           skip_duplicate=false
+          scope_base_sha=""
+          scope_kind="canonical"
+          previous_head_sha=""
 
           resolve_pr() {
             local number="$1"
@@ -249,12 +259,52 @@ jobs:
             base_sha="$(git rev-parse HEAD^ 2>/dev/null || printf '%s' "${actual_head}")"
           fi
 
+          scope_base_sha="${base_sha}"
+          if [[ "${EVENT_NAME}" == "pull_request" && "${PR_ACTION_EVENT}" == "synchronize" ]]; then
+            if [[ "${PR_BEFORE_SHA:-}" =~ ^[0-9a-fA-F]{40}$ && "${PR_BEFORE_SHA}" != "${actual_head}" ]]; then
+              previous_head_sha="${PR_BEFORE_SHA}"
+              scope_kind="incremental-event-before"
+            else
+              current_run="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+                "/repos/${GITHUB_REPOSITORY}/actions/runs/${CURRENT_RUN_ID}")"
+              current_created_at="$(jq -r '.created_at' <<<"${current_run}")"
+              runs="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' \
+                --method GET "/repos/${GITHUB_REPOSITORY}/actions/runs" \
+                -f event=pull_request -f per_page=100)"
+              previous_head_sha="$(jq -r \
+                --arg branch "${head_ref}" \
+                --arg pr "${pr_number}" \
+                --arg current "${actual_head}" \
+                --arg run_id "${CURRENT_RUN_ID}" \
+                --arg created "${current_created_at}" '
+                [.workflow_runs[]
+                  | select((.name // "") | startswith("bthwani-ci-pull_request-"))
+                  | select((.id | tostring) != $run_id)
+                  | select((.head_sha // "") != $current)
+                  | select((.created_at // "") < $created)
+                  | select((.head_branch == $branch) or ((.pull_requests // []) | any(.number == ($pr | tonumber))))]
+                | sort_by(.created_at)
+                | last
+                | .head_sha // empty' <<<"${runs}")"
+              if [[ "${previous_head_sha}" =~ ^[0-9a-fA-F]{40}$ && "${previous_head_sha}" != "${actual_head}" ]]; then
+                scope_kind="incremental-run-history"
+              else
+                echo "::error::Unable to resolve the exact previous PR HEAD for synchronize; refusing to widen to base→head"
+                exit 1
+              fi
+            fi
+            scope_base_sha="${previous_head_sha}"
+          fi
+
           {
             echo "target_kind=${target_kind}"
             echo "pr_number=${pr_number}"
             echo "head_ref=${head_ref}"
             echo "base_ref=${base_ref}"
             echo "base_sha=${base_sha}"
+            echo "scope_base_sha=${scope_base_sha}"
+            echo "scope_kind=${scope_kind}"
+            echo "previous_head_sha=${previous_head_sha}"
             echo "head_sha=${actual_head}"
             echo "execution_phase=${phase}"
             echo "skip_duplicate_push=${skip_duplicate}"
@@ -264,7 +314,7 @@ jobs:
         id: scope
         shell: bash
         env:
-          CI_BASE_SHA: ${{ steps.target.outputs.base_sha }}
+          CI_BASE_SHA: ${{ steps.target.outputs.scope_base_sha }}
           CI_HEAD_SHA: ${{ steps.target.outputs.head_sha }}
           CI_EXECUTION_PHASE: ${{ steps.target.outputs.execution_phase }}
           DISPATCH_MODE: ${{ inputs.mode }}
@@ -286,6 +336,8 @@ jobs:
           HEAD_SHA: ${{ steps.scope.outputs.head_sha }}
           BASE_REF: ${{ steps.target.outputs.base_ref }}
           BASE_SHA: ${{ steps.scope.outputs.base_sha }}
+          CANONICAL_BASE_SHA: ${{ steps.target.outputs.base_sha }}
+          SCOPE_KIND: ${{ steps.target.outputs.scope_kind }}
           PHASE: ${{ steps.target.outputs.execution_phase }}
           SKIP_DUPLICATE: ${{ steps.target.outputs.skip_duplicate_push }}
           TIER: ${{ steps.scope.outputs.verification_tier }}
@@ -295,11 +347,14 @@ jobs:
             echo "- Target: ${TARGET_KIND}"
             echo "- PR: ${PR_NUMBER:-none}"
             echo "- Head: ${HEAD_REF}@${HEAD_SHA}"
-            echo "- Base: ${BASE_REF}@${BASE_SHA}"
+            echo "- Scope base: ${BASE_REF}@${BASE_SHA}"
+            echo "- Canonical PR base: ${BASE_REF}@${CANONICAL_BASE_SHA}"
+            echo "- Scope selection: ${SCOPE_KIND}"
             echo "- Phase: ${PHASE}"
             echo "- Verification tier: ${TIER}"
             echo "- Duplicate push suppressed: ${SKIP_DUPLICATE}"
-          } >> "${GITHUB_STEP_SUMMARY}"
+          } >> "${          GITHUB_STEP_SUMMARY
+}"
 
   diagnostics:
     name: Contract diagnostics
