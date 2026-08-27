@@ -16,6 +16,7 @@ func validJRN036SettlementInput() CreateEvidenceSettlementInput {
 		OrderSources: []VerifiedDeliveredOrderSource{
 			{
 				OrderID:               "order-2",
+				PaymentSessionID:      "payment-session-2",
 				GrossAmountMinorUnits: 20000,
 				Currency:              "YER",
 				DeliveredAt:           time.Date(2026, 7, 4, 12, 0, 0, 0, time.UTC),
@@ -25,6 +26,7 @@ func validJRN036SettlementInput() CreateEvidenceSettlementInput {
 			},
 			{
 				OrderID:               "order-1",
+				PaymentSessionID:      "payment-session-1",
 				GrossAmountMinorUnits: 10000,
 				Currency:              "YER",
 				DeliveredAt:           time.Date(2026, 7, 2, 12, 0, 0, 0, time.UTC),

@@ -15,6 +15,7 @@ import (
 
 type financeSettlementOrderSource struct {
 	OrderID                string    `json:"orderId"`
+	PaymentSessionID       string    `json:"paymentSessionId"`
 	GrossAmountMinorUnits  int64     `json:"grossAmountMinorUnits"`
 	Currency               string    `json:"currency"`
 	DeliveredAt            time.Time `json:"deliveredAt"`
@@ -93,7 +94,7 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 	}
 
 	rows, err := s.db.QueryContext(r.Context(), `
-			SELECT o.id::text, o.subtotal_minor_units, o.currency,
+			SELECT o.id::text, btrim(intent.wlt_payment_session_id), o.subtotal_minor_units, o.currency,
 			       delivered.delivered_at, delivered.completion_event_id, o.pricing_snapshot_hash,
 			       COALESCE((
 					SELECT cancellation.status
@@ -104,6 +105,7 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 					LIMIT 1
 			       ), 'not_cancelled') AS cancellation_status
 			FROM dsh_orders o
+			JOIN dsh_checkout_intents intent ON intent.id = o.checkout_intent_id
 			JOIN dsh_stores st ON st.id = o.store_id
 			JOIN LATERAL (
 				SELECT event.id::text AS completion_event_id, event.created_at AS delivered_at
@@ -131,7 +133,7 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 	orderSources := make([]financeSettlementOrderSource, 0)
 	for rows.Next() {
 		var source financeSettlementOrderSource
-		if err := rows.Scan(&source.OrderID, &source.GrossAmountMinorUnits, &source.Currency, &source.DeliveredAt, &source.CompletionEventID, &source.PricingSnapshotHash, &source.CancellationStatus); err != nil {
+		if err := rows.Scan(&source.OrderID, &source.PaymentSessionID, &source.GrossAmountMinorUnits, &source.Currency, &source.DeliveredAt, &source.CompletionEventID, &source.PricingSnapshotHash, &source.CancellationStatus); err != nil {
 
 			store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to decode delivered order source")
 			return
@@ -139,7 +141,7 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 		// CancellationStatus is read from the canonical cancellation owner query;
 		// the NOT EXISTS predicate excludes every active cancellation state. The
 		// completion event identity comes from the immutable persisted event row.
-		source.CompletionEvidenceHash = settlementEvidenceHash(source.OrderID, "delivered", source.DeliveredAt.UTC().Format(time.RFC3339Nano), source.CompletionEventID, source.PricingSnapshotHash, fmt.Sprint(source.GrossAmountMinorUnits), source.Currency, source.CancellationStatus)
+		source.CompletionEvidenceHash = settlementEvidenceHash(source.OrderID, source.PaymentSessionID, "delivered", source.DeliveredAt.UTC().Format(time.RFC3339Nano), source.CompletionEventID, source.PricingSnapshotHash, fmt.Sprint(source.GrossAmountMinorUnits), source.Currency, source.CancellationStatus)
 
 		orderSources = append(orderSources, source)
 	}

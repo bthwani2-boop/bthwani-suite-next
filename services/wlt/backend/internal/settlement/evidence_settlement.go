@@ -25,6 +25,7 @@ var (
 
 type VerifiedDeliveredOrderSource struct {
 	OrderID                string    `json:"orderId"`
+	PaymentSessionID       string    `json:"paymentSessionId"`
 	GrossAmountMinorUnits  int64     `json:"grossAmountMinorUnits"`
 	Currency               string    `json:"currency"`
 	DeliveredAt            time.Time `json:"deliveredAt"`
@@ -91,7 +92,9 @@ func hashSettlementParts(parts ...string) string {
 func expectedCompletionEvidenceHash(source VerifiedDeliveredOrderSource) string {
 	return hashSettlementParts(
 		source.OrderID,
+		source.PaymentSessionID,
 		"delivered",
+
 		source.DeliveredAt.UTC().Format(time.RFC3339Nano),
 		source.CompletionEventID,
 		source.PricingSnapshotHash,
@@ -122,12 +125,14 @@ func normalizeEvidenceSettlementInput(input CreateEvidenceSettlementInput) (Crea
 	for index := range input.OrderSources {
 		source := input.OrderSources[index]
 		source.OrderID = strings.TrimSpace(source.OrderID)
+		source.PaymentSessionID = strings.TrimSpace(source.PaymentSessionID)
 		source.Currency = strings.ToUpper(strings.TrimSpace(source.Currency))
+
 		source.PricingSnapshotHash = strings.TrimSpace(source.PricingSnapshotHash)
 		source.CompletionEventID = strings.TrimSpace(source.CompletionEventID)
 		source.CompletionEvidenceHash = strings.TrimSpace(source.CompletionEvidenceHash)
 		source.CancellationStatus = strings.ToLower(strings.TrimSpace(source.CancellationStatus))
-		if source.OrderID == "" || source.GrossAmountMinorUnits <= 0 || source.Currency == "" || source.DeliveredAt.IsZero() || source.PricingSnapshotHash == "" || source.CompletionEventID == "" || source.CompletionEvidenceHash == "" {
+		if source.OrderID == "" || source.PaymentSessionID == "" || source.GrossAmountMinorUnits <= 0 || source.Currency == "" || source.DeliveredAt.IsZero() || source.PricingSnapshotHash == "" || source.CompletionEventID == "" || source.CompletionEvidenceHash == "" {
 			return input, time.Time{}, time.Time{}, fmt.Errorf("orderSources[%d]: %w", index, ErrSettlementEvidenceRequired)
 		}
 		if source.CancellationStatus != "not_cancelled" {
@@ -290,7 +295,8 @@ func CreateEvidenceBackedSettlement(ctx context.Context, db *sql.DB, input Creat
 	}
 	hashParts := []string{operatorContextID, input.PartnerID, input.PeriodStart, input.PeriodEnd, input.OperatorID}
 	for _, source := range input.OrderSources {
-		hashParts = append(hashParts, source.OrderID, fmt.Sprint(source.GrossAmountMinorUnits), source.Currency, source.DeliveredAt.UTC().Format(time.RFC3339Nano), source.PricingSnapshotHash, source.CompletionEventID, source.CompletionEvidenceHash, source.CancellationStatus)
+		hashParts = append(hashParts, source.OrderID, source.PaymentSessionID, fmt.Sprint(source.GrossAmountMinorUnits), source.Currency, source.DeliveredAt.UTC().Format(time.RFC3339Nano), source.PricingSnapshotHash, source.CompletionEventID, source.CompletionEvidenceHash, source.CancellationStatus)
+
 	}
 	requestHash := hashSettlementParts(hashParts...)
 	tx, err := db.BeginTx(ctx, nil)
@@ -333,6 +339,9 @@ func CreateEvidenceBackedSettlement(ctx context.Context, db *sql.DB, input Creat
 	verified := make([]verifiedSource, 0, len(input.OrderSources))
 	var gross int64
 	for _, source := range input.OrderSources {
+		if _, err := tx.ExecContext(ctx, `SELECT id FROM wlt_payment_sessions WHERE operator_context_id=$1 AND id=$2 FOR UPDATE`, operatorContextID, source.PaymentSessionID); err != nil {
+			return nil, fmt.Errorf("order %s payment session is unavailable for refund authority lock: %w", source.OrderID, err)
+		}
 		if source.Currency != policy.Currency {
 			return nil, fmt.Errorf("order %s currency does not match settlement policy", source.OrderID)
 		}
