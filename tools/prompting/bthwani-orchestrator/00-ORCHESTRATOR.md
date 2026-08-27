@@ -1,6 +1,6 @@
 # BThwani Root-Cause Orchestrator
 
-PACKAGE_REVISION: 15
+PACKAGE_REVISION: 16
 PACKAGE_CLASS: UNIFIED_ROOT_CAUSE_EXECUTION_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -319,3 +319,55 @@ The following are **not** stop states by themselves:
 If a deep post-treatment audit can still reasonably discover a material related cleanup, structural, ownership, duplication, legacy, reference, contract, data, runtime, governance or assurance defect that should have been closed with the selected root, that root was never closed.
 
 If another active objective owns an independent cone, do not absorb it merely to make the current objective look comprehensive. Closure means the selected root is complete **and** concurrent boundaries remain consistent, not that one window owns the whole repository.
+
+## 11. Incremental root-closure checkpoint and system-completeness invariant
+
+Execution is incremental by **causally coherent Closure Unit**, not by arbitrary file, layer or symptom count.
+
+For every selected Closure Unit:
+
+```text
+PIN LIVE HEAD
+-> PROVE ROOT + SOURCE-OF-FIX
+-> DISCOVER/CLASSIFY COMPLETE MATERIAL SYSTEM CONE UNDER 01/02
+-> TREAT ACTUAL SOURCE-OF-DEFECT
+-> MIGRATE/CUT OVER ALL AFFECTED WRITERS/READERS/CONSUMERS
+-> DELETE SUPERSEDED/SHADOW/LEGACY AUTHORITY
+-> VERIFY NEAREST INVALIDATED CLAIMS
+-> RE-AUDIT THE UNIT + NEGATIVE SPACE
+-> PROVE UNIT INTERNALLY COMPLETE UNDER 04
+-> COMMIT ONE COHERENT CLOSURE CHECKPOINT
+-> PUSH CURRENT HUMAN-AUTHORIZED BRANCH
+-> VERIFY REMOTE HEAD == INTENDED COMMIT
+-> RE-PIN LIVE HEAD
+-> INGEST NEW LOCAL/REMOTE EVIDENCE
+-> RE-RANK ROOT LANDSCAPE
+-> SELECT NEXT HIGHEST EXECUTABLE ROOT
+```
+
+Independent roots MUST NOT accumulate as one large unpushed mutation set. A commit boundary follows causal closure, not file count.
+
+```text
+DO NOT UNDER-SPLIT ONE ROOT.
+DO NOT OVER-BUNDLE INDEPENDENT ROOTS.
+PUSH = DURABLE CHECKPOINT, NOT REMOTE-CI WAIT BARRIER.
+```
+
+If nearest sufficient proof passes and no material dependency requires remote evidence, continue immediately from the newly pinned HEAD. Remote CI/scanners remain asynchronous evidence and may preempt later work only when their new evidence is materially root-changing or closure-invalidating.
+
+A material root is not closed by fixing its local file. Its **complete causal system cone** must be discovered, explicitly dispositioned, treated, migrated, cut over, cleaned and verified across every applicable domain/service/application/surface/actor/journey/state/transition/handoff/writer/reader/consumer/contract/event/generated binding/data/database/migration/runtime/integration/security/failure-recovery/performance/test/legacy dimension owned by the current root.
+
+```text
+COMPLETE COVERAGE != RUN EVERYTHING
+COMPLETE COVERAGE = EVERY MATERIAL DIMENSION HAS A PROVEN DISPOSITION
+```
+
+Three closure levels are distinct:
+
+```text
+LEVEL_1_CLOSURE_UNIT = one root/causal cluster fully closed across its complete causal system cone
+LEVEL_2_CAPABILITY_OR_JOURNEY = all material services/surfaces/transitions/handoffs for that capability/journey mutually consistent
+LEVEL_3_FINAL_SYSTEM_CANDIDATE = all closure units required by the current objective reconciled on one exact final candidate
+```
+
+No lower level may be presented as a higher one. `04` owns the proof equation for all three levels.

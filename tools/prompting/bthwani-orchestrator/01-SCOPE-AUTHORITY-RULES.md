@@ -299,3 +299,108 @@ Active objective IDs, executor names, worktree labels, temporary root queues and
 - no provider-specific semantic forks;
 - package remains materially simpler than the system it governs;
 - mutable tool/product names are implementation choices, not eternal semantic authorities.
+
+## 16. Live system topology and material coverage matrix
+
+System completeness is established from **live discovered topology**, not from a hard-coded list of historical services, applications or surfaces.
+
+For each selected Closure Unit, discover broadly enough to identify every dimension that can materially carry, consume, enforce, transform, persist, display or invalidate the root:
+
+```text
+DOMAINS
+SERVICES
+APPLICATIONS
+SURFACES
+ACTORS
+CAPABILITIES / JOURNEYS
+STATES
+TRANSITIONS
+HANDOFFS
+WRITERS
+READERS / CONSUMERS
+CONTRACTS / EVENTS
+GENERATED BINDINGS
+DATA / DATABASE / MIGRATIONS
+JOBS / ASYNC PROCESSING
+RUNTIME / INTEGRATIONS / PROVIDERS
+AUTHORIZATION / SECURITY / PRIVACY
+FAILURE / RECOVERY / IDEMPOTENCY / CONCURRENCY
+PERFORMANCE / RESOURCE BEHAVIOR
+TESTS / ASSURANCE
+LEGACY / NEGATIVE SPACE
+DURABLE GOVERNANCE when materially touched
+```
+
+For every material discovered node, assign an explicit disposition from the smallest applicable set:
+
+```text
+AFFECTED_AND_TREATED
+AFFECTED_PENDING_TREATMENT
+UPSTREAM_DEPENDENCY
+DOWNSTREAM_CONSUMER
+CONTRACT_CONSUMER
+DATA_CONSUMER
+RUNTIME_DEPENDENT
+DERIVED_ONLY
+VERIFICATION_ONLY
+VERIFIED_UNCHANGED
+N/A_PROVEN
+DECISION_REQUIRED
+BLOCKED
+UNKNOWN_MATERIAL
+```
+
+`COMPLETE COVERAGE` means **100% material applicability disposition**, not 100% execution of every repository component.
+
+```text
+DISCOVER BROADLY.
+EXECUTE NARROWLY.
+VERIFY COMPLETELY.
+```
+
+A service/surface/application that is proven independent may be `N/A_PROVEN`; it need not be scanned or executed merely to make a matrix look complete. Conversely, an unclassified plausible consumer cannot be silently omitted.
+
+Before any Closure Unit can be closed under `04`:
+
+```text
+UNKNOWN_MATERIAL = 0
+AFFECTED_PENDING_TREATMENT = 0
+UNCLASSIFIED MATERIAL NODES = 0
+```
+
+`BLOCKED` or `DECISION_REQUIRED` remain legitimate only when they map to a legitimate `00` stop state for the dependent cone; they never count as successful closure.
+
+### 16.1 Live service topology
+
+For each materially implicated service, resolve enough live truth to establish:
+
+```text
+SERVICE
+-> CANONICAL OWNER
+-> UNIQUE RESPONSIBILITIES
+-> INBOUND CONTRACTS / EVENTS
+-> OUTBOUND CONTRACTS / EVENTS
+-> OWNED DATA / STATES
+-> ALLOWED WRITE AUTHORITY
+-> CALLERS
+-> DOWNSTREAM CONSUMERS
+-> EXTERNAL DEPENDENCIES
+-> RUNTIME / JOBS
+-> AUTHORIZATION / TRUST BOUNDARY
+-> FAILURE / RECOVERY BOUNDARY
+```
+
+A directory name is not proof of service ownership. A service that works in isolation is not sufficient when its handoffs or consumers remain inconsistent.
+
+### 16.2 Surface/application discovery
+
+Surface discovery is always live. For every materially related application/surface prove one of:
+
+```text
+AFFECTED_AND_TREATED
+DOWNSTREAM_CONSUMER
+VERIFIED_UNCHANGED
+N/A_PROVEN
+```
+
+Do not encode a fixed application list as eternal package truth. New or renamed surfaces must become discoverable without changing this invariant.

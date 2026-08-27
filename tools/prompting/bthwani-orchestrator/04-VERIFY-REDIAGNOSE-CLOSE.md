@@ -378,3 +378,151 @@ AND FINAL_ADVERSARIAL_REDIAGNOSIS_CLEAN
 This equation is scoped to the selected Closure Unit and its complete causal affected cone. It does not require an independent active root in another proven non-overlapping cone to be closed first.
 
 If a deep post-treatment audit can still reasonably find material residue tied to the selected root that should have been closed with it, `CLOSED` is false.
+
+## 19. System-completeness closure matrix
+
+`04` is the only closure authority for the completeness dispositions introduced by `01` and the three levels introduced by `00`.
+
+Before any closure claim, reconcile the selected root against the live material matrix:
+
+```text
+DOMAINS
+SERVICES
+APPLICATIONS
+SURFACES
+ACTORS
+JOURNEYS / CAPABILITIES
+STATES
+TRANSITIONS
+HANDOFFS
+WRITERS
+READERS / CONSUMERS
+CONTRACTS / EVENTS
+GENERATED BINDINGS
+DATA / DATABASE / MIGRATIONS
+JOBS / ASYNC PROCESSING
+RUNTIME / INTEGRATIONS / PROVIDERS
+AUTHORIZATION / SECURITY / PRIVACY
+FAILURE / RECOVERY / IDEMPOTENCY / CONCURRENCY
+PERFORMANCE / RESOURCE BEHAVIOR
+TESTS / ASSURANCE
+LEGACY / NEGATIVE SPACE
+DURABLE GOVERNANCE when materially touched
+```
+
+For every material matrix cell, final state must be one of:
+
+```text
+TREATED_AND_VERIFIED
+VERIFIED_UNCHANGED
+DERIVED_ONLY_WITH_CANONICAL_SOURCE_PROVEN
+N/A_PROVEN
+```
+
+A closure claim is forbidden while any materially relevant cell is:
+
+```text
+UNKNOWN_MATERIAL
+AFFECTED_PENDING_TREATMENT
+STALE
+PARTIAL
+UNVERIFIED
+CONFLICTING
+BLOCKED
+DECISION_REQUIRED
+UNCLASSIFIED
+```
+
+A legitimate stop state may explain why work cannot close; it does not turn the blocked cell into a pass.
+
+### 19.1 Transition and handoff proof
+
+Every materially affected transition/handoff must prove, as applicable:
+
+```text
+CURRENT STATE
+-> ACTOR / INITIATOR
+-> ACTION / EVENT
+-> AUTHORIZATION + PRECONDITIONS
+-> CANONICAL DECISION OWNER
+-> CANONICAL WRITER / TRANSACTION
+-> NEW STATE
+-> CONTRACT / EVENT / TRANSPORT
+-> NEXT SERVICE / CONSUMER
+-> NEXT SURFACE / ACTOR
+-> CANONICAL READBACK / ACKNOWLEDGEMENT
+-> FAILURE / RETRY / DUPLICATE / ORDERING / RECOVERY
+-> TERMINAL OR NEXT OWNED ACTION
+```
+
+Check domain transitions, service handoffs, surface handoffs and data/schema transitions separately when each is material. An unverified boundary keeps the parent journey/capability open.
+
+### 19.2 Invariant proof
+
+For every material invariant prove:
+
+```text
+INVARIANT
+-> CANONICAL OWNER
+-> ENFORCEMENT LAYER(S)
+-> CONCURRENCY / TRANSACTION SAFETY WHEN MATERIAL
+-> FALSIFIABLE TEST/PROOF
+-> RUNTIME/PERSISTED READBACK WHEN MATERIAL
+```
+
+An invariant with no proven enforcement owner is a material gap.
+
+### 19.3 Three-level closure proof
+
+```text
+LEVEL_1_CLOSURE_UNIT
+= selected root/causal cluster is fully treated and verified across its complete causal system cone.
+
+LEVEL_2_CAPABILITY_OR_JOURNEY
+= every material service/surface/state/transition/handoff in the capability/journey is mutually consistent from entry through failure/recovery to terminal/readback outcome.
+
+LEVEL_3_FINAL_SYSTEM_CANDIDATE
+= every Closure Unit required by the current objective is reconciled on one exact candidate with all applicable final evidence current.
+```
+
+A Level 1 proof must never be reported as Level 2 or Level 3.
+
+### 19.4 Zero-unclassified-noise gate
+
+Closure does **not** mean zero useful logging or zero intentional observability. It requires zero **unclassified material noise** within the proven cone, including as applicable:
+
+```text
+owned unexplained compiler warnings
+material type/lint findings
+unexpected runtime errors/warnings
+unexpected console noise
+known test flakiness
+unexplained skipped material tests
+active-code deprecation residue
+scanner findings without disposition
+silent degradation/fake-success behavior
+```
+
+A system must not appear healthy while materially broken. Failure must be explicit, deliberately degraded under a proven design, or recovered through a proven recovery path.
+
+### 19.5 Adversarial completeness pass
+
+When materially applicable, actively challenge the final candidate with negative-space scenarios such as:
+
+`wrong actor | wrong role/scope | stale state | duplicate request | replayed event | out-of-order event | concurrent mutation | double submit | timeout | unknown result | dependency outage | partial service failure | invalid data | stale generated client | legacy consumer | retry/restart/recovery`.
+
+Do not run every scenario mechanically. Select the scenarios capable of falsifying the actual invariants, transitions, handoffs and failure model of the selected root.
+
+### 19.6 Additional non-optional closure terms
+
+The §18 equation additionally requires, where material:
+
+```text
+ZERO_UNKNOWN_MATERIAL_MATRIX_CELLS
+AND ZERO_UNVERIFIED_MATERIAL_TRANSITIONS_OR_HANDOFFS
+AND ZERO_MATERIAL_INVARIANTS_WITHOUT_PROVEN_ENFORCEMENT
+AND ZERO_UNCLASSIFIED_MATERIAL_NOISE
+AND LEVEL_CLAIM_MATCHES_ACTUAL_PROOF
+```
+
+These terms strengthen, and do not replace, the existing Closure Equation.
