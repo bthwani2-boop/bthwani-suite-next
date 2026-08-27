@@ -86,7 +86,6 @@ export * from "./central-catalog.permissions";
 export * from "./central-catalog.bulk";
 export * from "./central-catalog.errors";
 export * from "./client-visible-catalog.adapter";
-export * from "./store-assortment.adapter";
 export * from "./product-proposal.adapter";
 export * from "./catalog-quality";
 export * from "./catalog-search";
