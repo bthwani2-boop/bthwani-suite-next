@@ -16,6 +16,7 @@ on:
       expected_head_sha: {type: string, required: false, default: ""}
       expected_base_sha: {type: string, required: false, default: ""}
       run_analyzers: {type: boolean, required: false, default: false}
+      run_assurance: {type: boolean, required: false, default: false}
   workflow_dispatch:
     inputs:
       mode:
@@ -301,7 +302,7 @@ jobs:
     needs: [context]
     if: >-
       ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.diagnostics_required ==
-      'true' }}
+      'true' && (inputs.run_assurance == true || github.event_name != 'pull_request') }}
     uses: ./.github/workflows/ci-node-diagnostics.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
@@ -335,7 +336,7 @@ jobs:
   backends:
     name: Backend verification
     needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.backend_required == 'true' }}
+    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.backend_required == 'true' && (inputs.run_assurance == true || github.event_name != 'pull_request') }}
     uses: ./.github/workflows/ci-backends.yml
     with:
       base_sha: ${{ needs.context.outputs.base_sha }}
@@ -353,7 +354,7 @@ jobs:
   runtime:
     name: Runtime proof
     needs: [context]
-    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.runtime_required == 'true' }}
+    if: ${{ needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.runtime_required == 'true' && (inputs.run_assurance == true || github.event_name != 'pull_request') }}
     uses: ./.github/workflows/ci-runtime.yml
     with:
       candidate_sha: ${{ needs.context.outputs.head_sha }}
@@ -365,7 +366,7 @@ jobs:
   codeql:
     name: CodeQL applicable analysis
     needs: [context]
-    if: ${{ (github.event_name == 'pull_request' || inputs.run_analyzers == true) && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.workflow == 'true' }}
+    if: ${{ inputs.run_analyzers == true && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.workflow == 'true' }}
     uses: ./.github/workflows/codeql.yml
     with:
       pr_number: ${{ needs.context.outputs.pr_number }}
@@ -378,7 +379,7 @@ jobs:
   sonar:
     name: SonarQube PR analysis
     needs: [context]
-    if: ${{ (github.event_name == 'pull_request' || inputs.run_analyzers == true) && needs.context.outputs.skip_duplicate_push != 'true' }}
+    if: ${{ inputs.run_analyzers == true && needs.context.outputs.skip_duplicate_push != 'true' }}
     uses: ./.github/workflows/sonarqube.yml
     secrets: inherit
     with:
@@ -391,7 +392,7 @@ jobs:
   semgrep:
     name: Semgrep applicable analysis
     needs: [context]
-    if: ${{ (github.event_name == 'pull_request' || inputs.run_analyzers == true) && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.security == 'true' }}
+    if: ${{ inputs.run_analyzers == true && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.security == 'true' }}
     uses: ./.github/workflows/semgrep.yml
     with:
       mode: diff
@@ -404,7 +405,7 @@ jobs:
   security:
     name: Security applicable analysis
     needs: [context]
-    if: ${{ (github.event_name == 'pull_request' || inputs.run_analyzers == true) && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.security == 'true' }}
+    if: ${{ inputs.run_analyzers == true && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.security == 'true' }}
     uses: ./.github/workflows/security-remote.yml
     with:
       pr_number: ${{ needs.context.outputs.pr_number }}
@@ -416,7 +417,7 @@ jobs:
   dependency:
     name: Dependency review when applicable
     needs: [context]
-    if: ${{ (github.event_name == 'pull_request' || inputs.run_analyzers == true) && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.dependency_changed == 'true' }}
+    if: ${{ inputs.run_analyzers == true && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.dependency_changed == 'true' }}
     uses: ./.github/workflows/dependency-review.yml
     with:
       pr_number: ${{ needs.context.outputs.pr_number }}
@@ -429,7 +430,7 @@ jobs:
   lockfile:
     name: Lockfile integrity when applicable
     needs: [context]
-    if: ${{ (github.event_name == 'pull_request' || inputs.run_analyzers == true) && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.dependency_changed == 'true' }}
+    if: ${{ inputs.run_analyzers == true && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.dependency_changed == 'true' }}
     uses: ./.github/workflows/lockfile-integrity.yml
     with:
       pr_number: ${{ needs.context.outputs.pr_number }}
@@ -439,7 +440,7 @@ jobs:
   docker:
     name: Docker policy when applicable
     needs: [context]
-    if: ${{ (github.event_name == 'pull_request' || inputs.run_analyzers == true) && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.infrastructure == 'true' }}
+    if: ${{ inputs.run_analyzers == true && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.infrastructure == 'true' }}
     uses: ./.github/workflows/docker-runtime-hardening.yml
     with:
       pr_number: ${{ needs.context.outputs.pr_number }}
@@ -467,7 +468,7 @@ jobs:
           VERIFICATION_REQUIRED: ${{ needs.context.outputs.verification_required }}
           BACKEND_REQUIRED: ${{ needs.context.outputs.backend_required }}
           RUNTIME_REQUIRED: ${{ needs.context.outputs.runtime_required }}
-          RUN_ANALYZERS: ${{ github.event_name == 'pull_request' || inputs.run_analyzers == true }}
+          RUN_ANALYZERS: ${{ inputs.run_analyzers == true }}
           CODEQL_RESULT: ${{ needs.codeql.result }}
           SONAR_RESULT: ${{ needs.sonar.result }}
           SEMGREP_RESULT: ${{ needs.semgrep.result }}

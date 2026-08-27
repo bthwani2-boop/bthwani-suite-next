@@ -15,14 +15,14 @@ function parseArgs(argv) {
   if (argv.length === 0) fail("a verification mode is required");
   const modeArg = argv[0];
   const modes = new Map([
-    ["--affected", { mode: "affected", runtimeProof: "false" }],
-    ["--full", { mode: "full", runtimeProof: "false" }],
-    ["--runtime", { mode: "affected", runtimeProof: "true" }],
+    ["--affected", { mode: "affected", runtimeProof: "false", runAssurance: "false" }],
+    ["--full", { mode: "full", runtimeProof: "false", runAssurance: "true" }],
+    ["--runtime", { mode: "affected", runtimeProof: "true", runAssurance: "true" }],
   ]);
   if (modeArg === "--journey") {
     const journey = argv[1]?.trim();
     if (!journey) fail("--journey requires a capability name");
-    return { mode: "affected", runtimeProof: "false", journey };
+    return { mode: "affected", runtimeProof: "false", runAssurance: "true", journey };
   }
   const parsed = modes.get(modeArg);
   if (!parsed || argv.length !== 1) fail("unsupported arguments");
@@ -51,6 +51,7 @@ function main() {
     "--ref", defaultBranch,
     "-f", `mode=${options.mode}`,
     "-f", `runtime_proof=${options.runtimeProof}`,
+    "-f", `run_assurance=${options.runAssurance}`,
     "-f", `target_kind=${pr ? "pull_request" : "branch"}`,
     "-f", `expected_head_sha=${headSha}`,
   ];
