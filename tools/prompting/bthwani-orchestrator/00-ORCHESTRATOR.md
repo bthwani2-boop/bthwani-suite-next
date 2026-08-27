@@ -1,6 +1,6 @@
 # BThwani Root-Cause Orchestrator
 
-PACKAGE_REVISION: 19
+PACKAGE_REVISION: 20
 PACKAGE_CLASS: UNIFIED_ROOT_CAUSE_EXECUTION_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -24,7 +24,7 @@ PROJECT_FRAME != WORKING_CONE
 OBJECTIVE != AUTHORITY
 OBJECTIVE != ARCHITECTURAL EXCEPTION
 ACTIVE_WORKSET != PROJECT TRUTH
-WORKTREE/EXECUTOR/MODEL != AUTHORITY
+EXECUTOR/MODEL != AUTHORITY
 PLAN != AUTHORITY
 GREEN != CLOSED
 WORKING != JUSTIFIED
@@ -71,7 +71,7 @@ ACTIVE_WORKSET: <NONE | complete human-known active objective snapshot>
 PRIMARY_FOCUS: <AUTO | explicit focus>
 SCOPE: <AUTO | REPOSITORY | DOMAIN | SERVICE | SURFACE | FEATURE | JOURNEY | PATH | SEMANTIC_SCOPE>
 RESEARCH: <AUTO | INTERNAL_ONLY | EXTERNAL_ALLOWED>
-EXECUTION_LOCATION: <DIRECT_ON_TARGET | existing explicitly human-authorized isolated workspace>
+EXECUTION_LOCATION: DIRECT_ON_TARGET
 ```
 
 There is **one normal root-closure operating loop**, not separate audit/preparation and execution phases.
@@ -144,7 +144,7 @@ MANDATORY plans/diagnose-implementing = NO
 PLAN FILE REQUIRED FOR EXECUTION = NO
 ```
 
-The coordinator/agent may plan in memory or create a temporary task-local planning/evidence artifact **only when it materially improves correctness, coordination or recoverability**. It may choose the suitable local/worktree path supported by its execution environment.
+The coordinator/agent may plan in memory or create a temporary task-local planning/evidence artifact **only when it materially improves correctness, coordination or recoverability**. It must remain outside the repository unless the current human instruction explicitly authorizes otherwise.
 
 Any such artifact:
 
@@ -158,11 +158,11 @@ A supplied historical plan is evidence/context only. Re-resolve live truth befor
 
 ## 4. Objective declaration and concurrent-work law
 
-When concurrent sessions/worktrees/providers exist or are known, `ACTIVE_WORKSET` completeness and missing-snapshot behavior are owned by `05-OBJECTIVES-PLAYBOOK.md` and MUST be satisfied before any new concurrent mutation may be claimed `PARALLEL_SAFE`. Provider names such as ChatGPT, Claude, Manus, Codex or others are optional coordination labels only.
+When concurrent sessions/providers exist or are known, `ACTIVE_WORKSET` completeness and missing-snapshot behavior are owned by `05-OBJECTIVES-PLAYBOOK.md` and MUST be satisfied before any new concurrent mutation may be claimed `PARALLEL_SAFE`. Provider names such as ChatGPT, Claude, Manus, Codex or others are optional coordination labels only.
 
 Before selecting a new concurrently executable Closure Unit, compare every candidate against **every** active objective using `01`/`05`.
 
-Concurrent mutation is allowed only when the candidate is proven `PARALLEL_SAFE` against the complete active workset. A separate worktree alone is not proof of independence.
+Concurrent mutation is allowed only when the candidate is proven `PARALLEL_SAFE` against the complete active workset. Filesystem location is not proof of independence.
 
 If a higher-ranked root collides with active work, classify the collision and choose the next highest proven executable `PARALLEL_SAFE` root. Do not artificially split or weaken the colliding root merely to create parallelism.
 
@@ -175,13 +175,11 @@ BRANCH NAME = target-resolution input only
 NO source-branch hard-coding in orchestration semantics
 ```
 
-Branch/worktree creation is human-only:
+Branch creation is human-only:
 
 ```text
 BRANCH_CREATION_AUTHORITY = HUMAN_ONLY
 AGENT_AUTOMATIC_BRANCH_CREATION = FORBIDDEN
-WORKTREE_CREATION_AUTHORITY = HUMAN_ONLY
-AGENT_AUTOMATIC_WORKTREE_CREATION = FORBIDDEN
 ```
 
 The canonical integration trunk is resolved live from repository policy / explicit authorized intent. Source branches may have arbitrary names.
@@ -305,7 +303,7 @@ Only:
 - `OBJECTIVE_SELECTED` — the human requested selection/recommendation only; portable objective emitted, no mutation authorized.
 - `AUDIT_COMPLETE` — the human explicitly requested read-only audit/reporting; report roots, proof limits and executable next treatment without mutation.
 - `DECISION_REQUIRED` — non-derivable material Product/System/architecture decision.
-- `HUMAN_ACTION_REQUIRED` — human-only topology/repository action such as creating/selecting a required branch/worktree.
+- `HUMAN_ACTION_REQUIRED` — human-only repository action such as creating/selecting a required branch.
 - `AUTHORIZATION_REQUIRED` — missing permission/secret/authorization that cannot be acquired by the agent.
 - `EXTERNAL_UNAVAILABLE` — required external authority/service genuinely unavailable and no sufficient alternative evidence exists.
 - `UNSAFE_TO_PROCEED` — continuing would violate safety/legal/irreversible-operation boundaries.

@@ -37,7 +37,7 @@ pnpm ci:check
 pnpm ci:close
 ```
 
-Both commands resolve the repository, current branch, live HEAD, open PR, and live base through GitHub before dispatching a workflow with exact identity. `ci:check` accepts no user routing flags. `ci:close` requires exactly one open, non-draft PR and accepts no analyzer or runtime options.
+Both commands require a clean working tree, then resolve the repository, current branch, live HEAD, open PR, and live base through GitHub before dispatching a workflow pinned to the exact local HEAD SHA. `ci:check` accepts no user routing flags. `ci:close` requires exactly one open, non-draft PR and accepts no analyzer or runtime options. Uncommitted local changes are never included in remote evidence.
 
 ## Affected verification
 

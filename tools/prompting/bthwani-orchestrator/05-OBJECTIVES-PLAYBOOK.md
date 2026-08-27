@@ -1,4 +1,5 @@
 # BThwani Objectives Playbook
+
 ## Discovery, Selection, Decomposition, Declaration and Cross-Window Coordination
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
@@ -21,7 +22,7 @@ OBJECTIVE != PROJECT TRUTH
 OBJECTIVE != CLOSURE EVIDENCE
 ACTIVE_WORKSET = coordination input
 ACTIVE_WORKSET != PROJECT TRUTH
-WORKTREE/EXECUTOR/MODEL != AUTHORITY
+EXECUTOR/MODEL != AUTHORITY
 PLAN != AUTHORITY
 ```
 
@@ -67,7 +68,7 @@ Rewrite, move, rename, split, merge, migrate, backfill, regenerate, cut over, de
 
 ## 3. Provider-neutral ACTIVE_WORKSET coordination
 
-Concurrent execution may occur across ChatGPT, Claude, Manus, Codex, other agents, IDEs or human-managed worktrees. Provider identity has no semantic authority.
+Concurrent execution may occur across ChatGPT, Claude, Manus, Codex, other agents, IDEs or humans. Provider identity has no semantic authority.
 
 When concurrent execution is known or declared, the complete **human-known** active-work snapshot is REQUIRED before a new independent concurrent mutation may be selected or started:
 
@@ -76,7 +77,7 @@ ACTIVE_WORKSET:
 - ID: <portable coordination id>
   OBJECTIVE: <one concise self-contained objective sentence>
   EXECUTOR: <optional provider/agent/human label>
-  WORKSPACE: <optional worktree/branch/ref>
+  BRANCH_REF: <optional exact branch/ref>
   STARTING_SHA: <optional immutable source identity>
   STATUS: ACTIVE
 ```
@@ -251,7 +252,7 @@ Only `PARALLEL_SAFE` is sufficient for independent concurrent mutation.
 
 A candidate colliding with even one active objective is not parallel-safe overall.
 
-Do not use separate worktrees as proof of semantic independence. Filesystem separation prevents some mechanical conflicts; it does not prevent two agents from redefining the same authority or producing incompatible cutovers.
+Do not use execution context as proof of semantic independence. Physical separation does not prevent two agents from redefining the same authority or producing incompatible cutovers.
 
 ## 11. Governance impact in objective synthesis
 
@@ -344,7 +345,7 @@ Do not select:
 - arbitrary frontend/backend/language partitions of one root;
 - partial objectives that defer rename/import/delete/migration/verification obligations of one cutover;
 - a historically ranked catalog item without live proof;
-- a colliding objective merely because another worktree exists;
+- a colliding objective merely because another execution context exists;
 - a lower-value root while a higher parallel-safe root is already proven executable.
 
 ## 16. Final selection principle

@@ -4,8 +4,37 @@ import path from "node:path";
 import test from "node:test";
 
 const repoRoot = path.resolve(import.meta.dirname, "../..");
+const orchestratorRoot = path.join(repoRoot, "tools/prompting/bthwani-orchestrator");
 const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 const exists = (relativePath) => fs.existsSync(path.join(repoRoot, relativePath));
+const orchestratorFiles = [
+  "00-ORCHESTRATOR.md",
+  "01-SCOPE-AUTHORITY-RULES.md",
+  "02-DIAGNOSE-ROOT-CAUSE.md",
+  "03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md",
+  "04-VERIFY-REDIAGNOSE-CLOSE.md",
+  "05-OBJECTIVES-PLAYBOOK.md",
+  "focus/code-architecture-organization.md",
+  "focus/data-contracts-runtime-security-quality.md",
+  "focus/governance-product-design.md",
+];
+
+test("orchestrator package keeps its declared nine owners and revision", () => {
+  const actual = [];
+  for (const entry of fs.readdirSync(orchestratorRoot, {withFileTypes: true})) {
+    if (entry.isFile() && entry.name.endsWith(".md")) actual.push(entry.name);
+    if (entry.isDirectory()) {
+      for (const nested of fs.readdirSync(path.join(orchestratorRoot, entry.name), {withFileTypes: true})) {
+        if (nested.isFile() && nested.name.endsWith(".md")) actual.push(`${entry.name}/${nested.name}`);
+      }
+    }
+  }
+  assert.deepEqual(actual.sort(), [...orchestratorFiles].sort());
+  const entrypoint = read("tools/prompting/bthwani-orchestrator/00-ORCHESTRATOR.md");
+  assert.match(entrypoint, /PACKAGE_REVISION: 20/u);
+  assert.match(entrypoint, /Exactly nine files are semantic owners/u);
+  for (const relativePath of orchestratorFiles) assert.equal(exists(`tools/prompting/bthwani-orchestrator/${relativePath}`), true, relativePath);
+});
 
 test("ci-check is the single manual and reusable controller", () => {
   const workflow = read(".github/workflows/ci-check.yml");
@@ -85,6 +114,8 @@ test("package exposes exactly the two remote user commands", () => {
 test("ci commands resolve live identity before dispatch", () => {
   for (const file of ["tools/scripts/ci-check.mjs", "tools/scripts/ci-close.mjs"]) {
     const command = read(file);
+    assert.match(command, /git.*status.*--porcelain=v1/su);
+    assert.match(command, /working tree is not clean/u);
     assert.match(command, /gh.*repo.*view/su);
     assert.match(command, /gh.*pr.*list/su);
     assert.match(command, /headRefOid/u);

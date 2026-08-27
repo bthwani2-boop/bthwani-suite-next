@@ -117,22 +117,18 @@ EXACT HEAD BRANCH + CANONICAL BASE -> query open PR
 
 PR body, issue text, comments and old plans are historical/context evidence only. They cannot override live PR API identity/current head.
 
-## 6. Branch/workspace authority
+## 6. Branch authority
 
 ```text
 BRANCH_CREATION_AUTHORITY = HUMAN_ONLY
 AGENT_AUTOMATIC_BRANCH_CREATION = FORBIDDEN
-WORKTREE_CREATION_AUTHORITY = HUMAN_ONLY
-AGENT_AUTOMATIC_WORKTREE_CREATION = FORBIDDEN
 ```
 
-An existing explicitly selected branch/workspace is the invocation target unless the human changes it. Do not silently switch to the default branch or another workspace.
+An existing explicitly selected branch is the invocation target unless the human changes it. Do not silently switch to the default branch or another branch.
 
-If correct execution requires a branch/worktree that does not exist or was not human-authorized, emit `HUMAN_ACTION_REQUIRED` for only that dependent cone and continue independent read-only work.
+If correct execution requires a branch that does not exist or was not human-authorized, emit `HUMAN_ACTION_REQUIRED` for only that dependent cone and continue independent read-only work.
 
 Never force-push, blindly hard-reset newer work, discard foreign changes or overwrite concurrent truth.
-
-A separate worktree is a physical isolation mechanism, **not** evidence that two objectives are semantically independent.
 
 ## 7. Capability-to-evidence discipline
 
@@ -179,7 +175,7 @@ The coordinator exclusively owns:
 
 A subagent may inspect, run tools, reconstruct traces, search negative space, inventory consumers/artifacts, challenge hypotheses, verify claims or perform explicitly delegated non-overlapping mutation. It returns provenance, findings, contradictions, proof limits and write set.
 
-A subagent may not independently create/switch branches/worktrees, infer a competing PR, redefine Product/System truth, select a competing Closure Unit, change migration/cutover semantics, integration refs, collision status, readiness or closure.
+A subagent may not independently create/switch branches, infer a competing PR, redefine Product/System truth, select a competing Closure Unit, change migration/cutover semantics, integration refs, collision status, readiness or closure.
 
 The coordinator loads all core owners `00`–`05`. Subagents receive the settled bounded contract plus relevant owners/focus modules; forcing every subagent to reload all package text is unnecessary context duplication.
 
@@ -287,7 +283,7 @@ New facts are classified:
 
 Only proven durable reusable truth whose absence/ambiguity can materially mislead future work is routed to the smallest live canonical governance owner. Expected governance paths must always be verified live before mutation; never recreate a stale path merely because this package historically named it.
 
-Active objective IDs, executor names, worktree labels, temporary root queues and task plans are normally `COORDINATION_INPUT` or `TASK_LOCAL_FACT`, not durable governance.
+Active objective IDs, executor names, temporary root queues and task plans are normally `COORDINATION_INPUT` or `TASK_LOCAL_FACT`, not durable governance.
 
 ## 15. Anti-bloat
 

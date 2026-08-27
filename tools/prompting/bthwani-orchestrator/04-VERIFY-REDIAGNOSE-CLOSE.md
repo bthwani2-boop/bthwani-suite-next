@@ -16,7 +16,7 @@ STATIC PASS != RUNTIME PROOF
 TOOL GREEN != ALL FINDINGS RESOLVED
 PR BODY != CURRENT PR TRUTH
 OLD SHA != CURRENT CANDIDATE
-SEPARATE WORKTREE != PARALLEL SAFETY
+SEPARATE EXECUTION CONTEXT != PARALLEL SAFETY
 ```
 
 ## 2. Candidate, PR and concurrent-work identity
@@ -318,7 +318,7 @@ Assume closure is false. Search deliberately for:
 
 Any material issue reopens diagnosis/treatment/verification.
 
-## 17. Final concurrent-work reconciliation gate
+## 17. Final concurrent-execution contextconciliation gate
 
 Immediately before declaring the selected Closure Unit closed:
 

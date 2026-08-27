@@ -13,8 +13,14 @@ function fail(message) {
   process.exit(1);
 }
 
+function requireCleanWorktree() {
+  const status = run("git", ["status", "--porcelain=v1"]);
+  if (status) fail("working tree is not clean; commit or discard local changes before dispatch");
+}
+
 function main() {
   if (process.argv.length !== 2) fail("this command takes no arguments");
+  requireCleanWorktree();
   const repository = run("gh", ["repo", "view", "--json", "nameWithOwner", "--jq", ".nameWithOwner"]);
   const defaultBranch = run("gh", ["repo", "view", "--json", "defaultBranchRef", "--jq", ".defaultBranchRef.name"]);
   const branch = run("git", ["branch", "--show-current"]);
