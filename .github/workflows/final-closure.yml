@@ -109,7 +109,7 @@ jobs:
     uses: ./.github/workflows/ci.yml
     with:
       mode: full
-      journey: "true"
+      journey: ${{ 'true' }}
       runtime_proof: true
       run_assurance: true
       target_kind: pull_request
