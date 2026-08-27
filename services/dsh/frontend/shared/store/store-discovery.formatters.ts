@@ -38,12 +38,12 @@ const DELIVERY_MODE_TO_FULFILLMENT_MODE: Record<DshDeliveryMode, DshFulfillmentD
   pickup: "pickup",
 };
 
-export function toFulfillmentMode(mode: string): DshFulfillmentDeliveryMode {
-  return DELIVERY_MODE_TO_FULFILLMENT_MODE[mode as DshDeliveryMode] ?? "partner_delivery";
+export function toFulfillmentMode(mode: DshDeliveryMode): DshFulfillmentDeliveryMode {
+  return DELIVERY_MODE_TO_FULFILLMENT_MODE[mode];
 }
 
 export function toFulfillmentModes(
-  modes: readonly string[],
+  modes: readonly DshDeliveryMode[],
 ): readonly DshFulfillmentDeliveryMode[] {
   return modes.map(toFulfillmentMode);
 }
