@@ -13,10 +13,6 @@ import type {
 
 // --- Upload state labels -------------------------------------------------------
 
-export function isUploadInProgress(progress: AssetUploadProgress): boolean {
-  return progress.stage === "signing" || progress.stage === "uploading" || progress.stage === "verifying";
-}
-
 export function isUploadTerminal(progress: AssetUploadProgress): boolean {
   return progress.stage === "linked" || progress.stage === "failed";
 }
