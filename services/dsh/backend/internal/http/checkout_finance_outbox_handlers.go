@@ -7,6 +7,7 @@ import (
 
 	"dsh-api/internal/checkoutfinanceoutbox"
 	"dsh-api/internal/store"
+	"dsh-api/internal/wltoutbox"
 )
 
 type checkoutClosureRecoveryCommand struct {
@@ -66,4 +67,44 @@ func (s *protectedStoreServer) handleRetryCheckoutFinancialClosure(w http.Respon
 
 func (s *protectedStoreServer) handleReconcileCheckoutFinancialClosure(w http.ResponseWriter, r *http.Request) {
 	s.checkoutClosureRecovery(w, r, true)
+}
+
+// handleRetryWltOutboxEvent re-drives a DSH→WLT financial event (loyalty,
+// commission, promotion funding) that exhausted its delivery or readback
+// attempts. The underlying WLT mutations are idempotent by deterministic
+// command identity, so re-dispatch cannot double-apply.
+func (s *protectedStoreServer) handleRetryWltOutboxEvent(w http.ResponseWriter, r *http.Request) {
+	actor, ok := s.ActorFromContext(r.Context())
+	if !ok {
+		return
+	}
+	operatorContextID, ok := requiredPaymentPlatformContext(w, actor.OperatorContextID)
+	if !ok {
+		return
+	}
+	eventID := strings.TrimSpace(r.PathValue("eventId"))
+	if eventID == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "eventId is required")
+		return
+	}
+	var input checkoutClosureRecoveryCommand
+	decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 16*1024))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&input); err != nil {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "request body is invalid")
+		return
+	}
+	input.Reason = strings.TrimSpace(input.Reason)
+	if input.Reason == "" {
+		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "reason is required")
+		return
+	}
+	if err := wltoutbox.RetryFailedForOperatorContext(r.Context(), s.db, eventID, operatorContextID, input.Reason); err != nil {
+		store.SendError(w, http.StatusConflict, "WLT_OUTBOX_RECOVERY_CONFLICT", "WLT outbox event is not eligible for recovery")
+		return
+	}
+	store.SendJSON(w, http.StatusOK, map[string]string{
+		"eventId": eventID,
+		"status":  "retry_scheduled",
+	})
 }

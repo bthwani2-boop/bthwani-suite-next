@@ -20,13 +20,6 @@ type GovernedOrderCancellationInput struct {
 	Reason           string `json:"reason"`
 }
 
-// CancelOrderFinancially is retained only as a compile-compatible fail-closed
-// seam for older callers that do not carry authenticated request context. New
-// code must use CancelOrderFinanciallyWithContext.
-func CancelOrderFinancially(db *sql.DB, input GovernedOrderCancellationInput) (*CancelForOrderResult, error) {
-	return nil, fmt.Errorf("authenticated OperatorContext context is required; use CancelOrderFinanciallyWithContext")
-}
-
 func CancelOrderFinanciallyWithContext(ctx context.Context, db *sql.DB, input GovernedOrderCancellationInput) (*CancelForOrderResult, error) {
 	input.PaymentSessionID = strings.TrimSpace(input.PaymentSessionID)
 	input.OrderID = strings.TrimSpace(input.OrderID)

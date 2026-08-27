@@ -144,48 +144,6 @@ func ListPartnerSettlements(ctx context.Context, db *sql.DB, requestedOperatorCo
 	return settlements, rows.Err()
 }
 
-func ListSettlementSummary(ctx context.Context, db *sql.DB, partnerID, periodStart, periodEnd string) (*SettlementSummary, error) {
-	operatorContextID, err := shared.RequireOperatorContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-	partnerID = strings.TrimSpace(partnerID)
-	if partnerID == "" {
-		return nil, fmt.Errorf("partnerId is required")
-	}
-	const q = `
-		SELECT
-			$2::text,
-			COALESCE(MIN(period_start)::text, ''),
-			COALESCE(MAX(period_end)::text, ''),
-			COALESCE(SUM(gross_amount), 0),
-			COALESCE(SUM(platform_fee), 0),
-			COALESCE(SUM(net_amount), 0),
-			COALESCE(SUM(order_count), 0),
-			COUNT(*),
-			COALESCE(MAX(currency), 'YER')
-		FROM wlt_settlements
-		WHERE operator_context_id = $1 AND partner_id = $2
-		  AND ($3 = '' OR period_start >= $3::date)
-		  AND ($4 = '' OR period_end <= $4::date)`
-	var summary SettlementSummary
-	err = db.QueryRowContext(ctx, q, operatorContextID, partnerID, periodStart, periodEnd).Scan(
-		&summary.PartnerID,
-		&summary.PeriodStart,
-		&summary.PeriodEnd,
-		&summary.TotalGross,
-		&summary.TotalFee,
-		&summary.TotalNet,
-		&summary.TotalOrders,
-		&summary.SettlementCount,
-		&summary.Currency,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &summary, nil
-}
-
 func postSettlement(ctx context.Context, db *sql.DB, settlementID string) (*Settlement, error) {
 	settlementID = strings.TrimSpace(settlementID)
 	if settlementID == "" {

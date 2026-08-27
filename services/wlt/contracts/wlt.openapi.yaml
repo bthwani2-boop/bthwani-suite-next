@@ -242,6 +242,58 @@ paths:
         '200': { description: Reconciliation case resolved }
         '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
         '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+  /wlt/dsh-outbox-events/{eventId}/retry:
+    post:
+      operationId: retryWltDshOutboxEvent
+      summary: Re-drive a delivery-parked DSH outbox event in the trusted OperatorContext.
+      description: >-
+        Explicit operator recovery transition for a wlt_dsh_outbox_events row
+        that exhausted its delivery attempts. Without it a terminal failed
+        event has no exit and DSH would permanently miss the WLT-owned
+        payment outcome it carries. Requires a delegated finance principal
+        and an explicit reason.
+      tags: [ WltReconciliation ]
+      security: [ { serviceBearer: [] } ]
+      x-bthwani-mutation-approved: false
+      x-bthwani-default-enabled: false
+      parameters:
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/Authorization'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/ServiceCaller'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OperatorContextId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/OutboxEventId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/CorrelationId'
+        - $ref: './wlt.common.openapi.yaml#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [ reason ]
+              properties:
+                reason: { type: string, minLength: 1, maxLength: 512 }
+      responses:
+        '200':
+          description: Outbox event requeued for delivery.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [ outboxEvent ]
+                properties:
+                  outboxEvent:
+                    type: object
+                    additionalProperties: false
+                    required: [ id, status, retriedBy ]
+                    properties:
+                      id: { type: string, format: uuid }
+                      status: { type: string, enum: [ retry_scheduled ] }
+                      retriedBy: { type: string }
+        '400': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '403': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
+        '409': { $ref: './wlt.common.openapi.yaml#/components/responses/Error' }
   /wlt/ledger/entries:
     get:
       operationId: listWltLedgerEntries

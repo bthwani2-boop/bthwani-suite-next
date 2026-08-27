@@ -123,19 +123,22 @@ else {
   if (!Array.isArray(settlementOperation.activationEvidence) || settlementOperation.activationEvidence.length < 8) violations.push({ file: operationStateFile, line: 0, message: "CREATE_SETTLEMENT_ACTIVATION_EVIDENCE_INCOMPLETE" });
 }
 
-const settlementSourceFile = "services/wlt/backend/internal/settlement/governed_source.go";
+const settlementSourceFile = "services/wlt/backend/internal/settlement/evidence_settlement.go";
 const settlementSource = readCanonicalSource(settlementSourceFile);
+const settlementArithmeticSource = settlementSource + "\n" + readCanonicalSource("services/wlt/backend/internal/settlement/governed_source.go");
 for (const [pattern, message] of [
-  [/func CreateSettlementFromDeliveredOrders/, "GOVERNED_SETTLEMENT_CREATOR_MISSING"],
+  [/func CreateEvidenceBackedSettlement/, "GOVERNED_SETTLEMENT_CREATOR_MISSING"],
   [/wlt_settlement_policies/, "SETTLEMENT_POLICY_SOURCE_MISSING"],
   [/fee_basis_points/, "SETTLEMENT_FEE_POLICY_MISSING"],
   [/wlt_settlement_source_orders/, "SETTLEMENT_SOURCE_ORDER_LOCK_MISSING"],
-  [/duplicate orderId|ErrSettlementOrderAlreadyUsed/, "SETTLEMENT_DUPLICATE_ORDER_PROTECTION_MISSING"],
-  [/addPositiveMinorUnits[\s\S]*ErrSettlementAmountOverflow/, "SETTLEMENT_GROSS_OVERFLOW_PROTECTION_MISSING"],
-  [/settlementFeeFromBasisPoints[\s\S]*grossAmount\s*\/\s*10000/, "SETTLEMENT_FEE_OVERFLOW_PROTECTION_MISSING"],
-  [/grossAmount[\s\S]*platformFee[\s\S]*netAmount/, "SETTLEMENT_SERVER_ARITHMETIC_MISSING"],
-  [/BeginTx[\s\S]*INSERT INTO wlt_settlements[\s\S]*INSERT INTO wlt_settlement_source_orders[\s\S]*tx\.Commit/, "SETTLEMENT_SOURCE_AND_RECORD_NOT_ATOMIC"],
+  [/ErrSettlementOrderAlreadyUsed/, "SETTLEMENT_DUPLICATE_ORDER_PROTECTION_MISSING"],
 ]) if (!pattern.test(settlementSource)) violations.push({ file: settlementSourceFile, line: 0, message });
+for (const [pattern, message] of [
+  [/func addPositiveMinorUnits[\s\S]*ErrSettlementAmountOverflow/, "SETTLEMENT_GROSS_OVERFLOW_PROTECTION_MISSING"],
+  [/func settlementFeeFromBasisPoints[\s\S]*grossAmount\s*\/\s*10000/, "SETTLEMENT_FEE_OVERFLOW_PROTECTION_MISSING"],
+  [/var gross int64[\s\S]*addPositiveMinorUnits\(gross, basis\)[\s\S]*settlementFeeFromBasisPoints\(gross[\s\S]*net := gross - fee/, "SETTLEMENT_SERVER_ARITHMETIC_MISSING"],
+  [/BeginTx[\s\S]*INSERT INTO wlt_settlements[\s\S]*INSERT INTO wlt_settlement_source_orders[\s\S]*tx\.Commit/, "SETTLEMENT_SOURCE_AND_RECORD_NOT_ATOMIC"],
+]) if (!pattern.test(settlementArithmeticSource)) violations.push({ file: settlementSourceFile, line: 0, message });
 
 const settlementPostingFile = "services/wlt/backend/internal/settlement/settlement.go";
 const settlementPosting = readCanonicalSource(settlementPostingFile);

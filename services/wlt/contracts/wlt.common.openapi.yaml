@@ -72,6 +72,11 @@ components:
       in: path
       required: true
       schema: { type: string, minLength: 1 }
+    OutboxEventId:
+      name: eventId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
     PayoutId:
       name: payoutId
       in: path

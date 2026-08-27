@@ -14,9 +14,11 @@ func registerRefundFinanceRoutes(mux *http.ServeMux, s *protectedStoreServer) {
 	mux.HandleFunc("GET /dsh/control-panel/finance/refunds/{refundId}/audit", s.withPermission("control-panel", FinancePermissionRead, s.handleFinanceRefundAudit))
 	mux.HandleFunc("POST /dsh/control-panel/finance/checkout-closures/{outboxId}/retry", s.withPermission("control-panel", FinancePermissionManage, s.handleRetryCheckoutFinancialClosure))
 	mux.HandleFunc("POST /dsh/control-panel/finance/checkout-closures/{outboxId}/reconcile", s.withPermission("control-panel", FinancePermissionManage, s.handleReconcileCheckoutFinancialClosure))
+	mux.HandleFunc("POST /dsh/control-panel/finance/wlt-outbox/{eventId}/retry", s.withPermission("control-panel", FinancePermissionManage, s.handleRetryWltOutboxEvent))
 	mux.HandleFunc("GET /dsh/client/orders/{orderId}/refunds", s.handleClientOrderRefunds)
 	mux.HandleFunc("GET /dsh/partner/orders/{orderId}/refunds", s.handlePartnerOrderRefunds)
 
 	registerPayoutFinanceRoutes(mux, s)
 	registerReconciliationFinanceRoutes(mux, s)
+	registerWltOutboxFinanceRoutes(mux, s)
 }

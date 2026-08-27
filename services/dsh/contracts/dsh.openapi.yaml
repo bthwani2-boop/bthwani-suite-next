@@ -405,6 +405,10 @@ paths:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1reconciliation-cases~1{caseId}~1assign"
   /dsh/control-panel/finance/reconciliation-cases/{caseId}/resolve:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1reconciliation-cases~1{caseId}~1resolve"
+  /dsh/control-panel/finance/wlt-outbox-events/{eventId}/retry:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1wlt-outbox-events~1{eventId}~1retry"
+  /dsh/control-panel/finance/wlt-outbox/{eventId}/retry:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1control-panel~1finance~1wlt-outbox~1{eventId}~1retry"
   /dsh/catalog-approvals:
     $ref: "./paths/catalog.paths.yaml#/~1dsh~1catalog-approvals"
   /dsh/catalog-approvals/{recordId}:

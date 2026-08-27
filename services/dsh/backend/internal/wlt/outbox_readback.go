@@ -49,8 +49,6 @@ func (c *Client) ReadbackOutboxEvent(ctx context.Context, input OutboxReadbackIn
 		return c.readPromotionFunding(ctx, input)
 	case "loyalty_earned", "loyalty_reversed":
 		return c.readLoyaltyEntry(ctx, input)
-	case "order_return_approved":
-		return c.readRefund(ctx, input)
 	default:
 		return OutboxReadbackResult{}, fmt.Errorf("%w: unsupported event type %q", ErrCanonicalReadbackUnavailable, input.EventType)
 	}
@@ -166,29 +164,6 @@ func (c *Client) readLoyaltyEntry(ctx context.Context, input OutboxReadbackInput
 		return OutboxReadbackResult{}, fmt.Errorf("%w: loyalty readback idempotency mismatch", ErrCanonicalReadbackUnavailable)
 	}
 	return OutboxReadbackResult{Present: true, Reference: envelope.LoyaltyEntry.ID}, nil
-}
-
-func (c *Client) readRefund(ctx context.Context, input OutboxReadbackInput) (OutboxReadbackResult, error) {
-	var envelope struct {
-		Refunds []struct {
-			ID             string `json:"id"`
-			IdempotencyKey string `json:"idempotencyKey"`
-		} `json:"refunds"`
-	}
-	_, err := c.readJSON(ctx, "/wlt/refunds?orderId="+url.QueryEscape(input.OrderID), &envelope)
-	if err != nil {
-		return OutboxReadbackResult{}, err
-	}
-	returnKey := ""
-	if returnID, ok := input.Payload["returnId"].(string); ok && strings.TrimSpace(returnID) != "" {
-		returnKey = "order:" + input.OrderID + ":return:" + returnID + ":refund"
-	}
-	for _, refund := range envelope.Refunds {
-		if refund.ID != "" && refund.IdempotencyKey == returnKey {
-			return OutboxReadbackResult{Present: true, Reference: refund.ID}, nil
-		}
-	}
-	return OutboxReadbackResult{Absent: true}, nil
 }
 
 // FindCancellationRefund reads the deterministic refund created by WLT's

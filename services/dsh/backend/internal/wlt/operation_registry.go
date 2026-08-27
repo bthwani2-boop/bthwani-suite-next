@@ -109,6 +109,7 @@ func NewOperationRegistry() *OperationRegistry {
 	write("finance.payout_destinations.deactivate", http.MethodPost, "/wlt/payout-destinations/{actorType}/{actorId}/deactivate", "finance.payout_destinations.deactivate", "", FinanceResponseNoContent, true, true)
 	write("finance.reconciliation.assign", http.MethodPost, "/wlt/reconciliation-cases/{caseId}/assign", "finance.manage", "reconciliationCase", FinanceResponseObject, true, true)
 	write("finance.reconciliation.resolve", http.MethodPost, "/wlt/reconciliation-cases/{caseId}/resolve", "finance.manage", "reconciliationCase", FinanceResponseObject, true, true)
+	write("finance.wlt_outbox_events.retry", http.MethodPost, "/wlt/dsh-outbox-events/{eventId}/retry", "finance.manage", "outboxEvent", FinanceResponseObject, true, true)
 	write("finance.captain_collateral.allocate", http.MethodPost, "/wlt/captain-collateral/allocate", "finance.manage", "collateral", FinanceResponseObject, true, true)
 	write("finance.captain_collateral.release", http.MethodPost, "/wlt/captain-collateral/release", "finance.manage", "collateral", FinanceResponseObject, true, true)
 	write("finance.refunds.create", http.MethodPost, "/wlt/refunds", "finance.manage", "refund", FinanceResponseObject, true, true, "refund", "replayed")

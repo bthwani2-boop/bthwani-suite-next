@@ -201,10 +201,6 @@ func AssignCaseForOperatorContext(ctx context.Context, db *sql.DB, caseID, opera
 	return c, err
 }
 
-func AssignCase(db *sql.DB, caseID, operatorID string) (*Case, error) {
-	return AssignCaseForOperatorContext(context.Background(), db, caseID, operatorID)
-}
-
 func ResolveCaseForOperatorContext(ctx context.Context, db *sql.DB, caseID, operatorID, resolutionAction, resolutionNote string) (*Case, error) {
 	operatorID, err := resolveReconciliationPrincipal(ctx, operatorID)
 	if err != nil {
@@ -237,10 +233,6 @@ func ResolveCaseForOperatorContext(ctx context.Context, db *sql.DB, caseID, oper
 		return nil, err
 	}
 	return GetCaseForOperatorContext(ctx, db, caseID)
-}
-
-func ResolveCase(db *sql.DB, caseID, operatorID, resolutionAction, resolutionNote string) (*Case, error) {
-	return ResolveCaseForOperatorContext(context.Background(), db, caseID, operatorID, resolutionAction, resolutionNote)
 }
 
 func HandleListCases(db *sql.DB) http.HandlerFunc {

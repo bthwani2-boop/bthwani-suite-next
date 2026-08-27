@@ -505,6 +505,92 @@
       "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
       "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
 
+/dsh/control-panel/finance/wlt-outbox-events/{eventId}/retry:
+  post:
+    operationId: retryDshControlPanelFinanceWltDeliveryEvent
+    summary: Operator re-drives a WLT-owned delivery that exhausted its attempts
+      via the DSH finance proxy. WLT remains the owner of the outbox state
+      machine.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
+    parameters:
+      - name: eventId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - $ref: "#/components/parameters/IdempotencyKey"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [ reason ]
+            properties:
+              reason: { type: string, minLength: 1, maxLength: 512 }
+    responses:
+      "200":
+        {
+          description: Outbox event requeued for delivery (verbatim passthrough),
+          content: { application/json: { schema: { type: object, additionalProperties: true } } }
+        }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
+/dsh/control-panel/finance/wlt-outbox/{eventId}/retry:
+  post:
+    operationId: retryDshControlPanelFinanceWltFinancialOutboxEvent
+    summary: Operator re-drives a DSH-owned WLT financial event (loyalty,
+      commission, promotion funding) that exhausted its delivery or readback
+      attempts. WLT deduplicates the deterministic command identity.
+    tags: [ DshFinanceProxy ]
+    security: [ { bearerAuth: [] } ]
+    parameters:
+      - name: eventId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - $ref: "#/components/parameters/IdempotencyKey"
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [ reason ]
+            properties:
+              reason: { type: string, minLength: 1, maxLength: 512 }
+    responses:
+      "200":
+        {
+          description: "WLT outbox event requeued for delivery",
+          content:
+            {
+              application/json:
+                {
+                  schema:
+                    {
+                      type: object,
+                      additionalProperties: false,
+                      required: [ eventId, status ],
+                      properties:
+                        {
+                          eventId: { type: string, format: uuid },
+                          status: { type: string, enum: [ retry_scheduled ] }
+                        }
+                    }
+                }
+            }
+        }
+      "400": { $ref: "../dsh.openapi.yaml#/components/responses/InvalidRequest" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+      "409": { $ref: "../dsh.openapi.yaml#/components/responses/Conflict" }
+
 /dsh/notifications:
   get:
     operationId: listDshNotifications

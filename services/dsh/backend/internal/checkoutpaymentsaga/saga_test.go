@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"dsh-api/internal/checkout"
+	"dsh-api/internal/wlt"
 )
 
 func validInput() Input {
@@ -47,5 +48,56 @@ func TestHashPayloadIsStableAndSensitiveToPayloadChanges(t *testing.T) {
 	}
 	if len(first) != 64 {
 		t.Fatalf("expected SHA-256 hex length 64, got %d", len(first))
+	}
+}
+
+func TestMatchesEnforcesCheckoutCommandIdentityAgainstWltReadContract(t *testing.T) {
+	input := validInput()
+	readback := &wlt.PaymentSessionDetail{
+		ID:                "session-1",
+		ClientID:          input.ClientID,
+		StoreID:           input.StoreID,
+		PaymentMethod:     input.PaymentMethod,
+		Status:            "reference_created",
+		ProviderReference: "WLT-001",
+		AmountMinorUnits:  input.AmountMinorUnits,
+		Currency:          input.Currency,
+	}
+	if !matches(input, readback) {
+		t.Fatal("readback mirroring the checkout command must match")
+	}
+
+	wrongClient := *readback
+	wrongClient.ClientID = "client-other"
+	if matches(input, &wrongClient) {
+		t.Fatal("readback for a different client must never match the checkout command")
+	}
+
+	wrongStore := *readback
+	wrongStore.StoreID = "store-other"
+	if matches(input, &wrongStore) {
+		t.Fatal("readback for a different store must never match the checkout command")
+	}
+
+	wrongAmount := *readback
+	wrongAmount.AmountMinorUnits = input.AmountMinorUnits + 1
+	if matches(input, &wrongAmount) {
+		t.Fatal("readback with a different amount must never match the checkout command")
+	}
+
+	expired := *readback
+	expired.Status = "expired"
+	if matches(input, &expired) {
+		t.Fatal("expired readback must never match the checkout command")
+	}
+
+	failed := *readback
+	failed.Status = "failed"
+	if matches(input, &failed) {
+		t.Fatal("failed readback must never match the checkout command")
+	}
+
+	if matches(input, nil) {
+		t.Fatal("nil readback must never match")
 	}
 }

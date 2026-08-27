@@ -19,26 +19,26 @@ func TestValidatePromotionFundingReserveResponse(t *testing.T) {
 		PlatformFundedMinorUnits: 600, PartnerFundedMinorUnits: 400,
 		TotalDiscountMinorUnits: 1000, Currency: "YER", Status: "reserved",
 	}
-	if err := validatePromotionFundingReserveResponse(matching, input); err != nil {
+	if err := validatePromotionFundingReserveResponseStatuses(matching, input, "reserved"); err != nil {
 		t.Fatalf("matching reserve response rejected: %v", err)
 	}
 
 	mismatched := *matching
 	mismatched.OperatorContextID = "OperatorContext-2"
-	if err := validatePromotionFundingReserveResponse(&mismatched, input); err == nil {
+	if err := validatePromotionFundingReserveResponseStatuses(&mismatched, input, "reserved"); err == nil {
 		t.Fatal("cross-OperatorContext reserve response was accepted")
 	}
 
 	mismatched = *matching
 	mismatched.PlatformFundedMinorUnits = 700
 	mismatched.PartnerFundedMinorUnits = 300
-	if err := validatePromotionFundingReserveResponse(&mismatched, input); err == nil {
+	if err := validatePromotionFundingReserveResponseStatuses(&mismatched, input, "reserved"); err == nil {
 		t.Fatal("changed funding split was accepted")
 	}
 
 	released := *matching
 	released.Status = "released"
-	if err := validatePromotionFundingReserveResponse(&released, input); err == nil {
+	if err := validatePromotionFundingReserveResponseStatuses(&released, input, "reserved"); err == nil {
 		t.Fatal("ordinary reserve validation accepted an already released reservation")
 	}
 	if err := validatePromotionFundingReserveResponseStatuses(&released, input, "reserved", "released"); err != nil {
