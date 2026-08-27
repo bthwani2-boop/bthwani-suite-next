@@ -93,21 +93,28 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 	}
 
 	rows, err := s.db.QueryContext(r.Context(), `
-		SELECT o.id::text, o.subtotal_minor_units, o.currency,
-		       delivered.delivered_at, o.pricing_snapshot_hash
-		FROM dsh_orders o
-		JOIN dsh_stores st ON st.id = o.store_id
-		JOIN LATERAL (
-			SELECT MAX(event.created_at) AS delivered_at
-			FROM dsh_order_status_events event
-			WHERE event.order_id = o.id AND event.to_status = 'delivered'
-		) delivered ON delivered.delivered_at IS NOT NULL
-		WHERE st.partner_id::text = $1 AND o.status = 'delivered'
-		  AND delivered.delivered_at >= $2::date
-		  AND delivered.delivered_at < ($3::date + INTERVAL '1 day')
-		  AND o.subtotal_minor_units > 0 AND btrim(o.currency) <> ''
-		  AND btrim(o.pricing_snapshot_hash) <> ''
-		ORDER BY delivered.delivered_at, o.id`, input.PartnerID, input.PeriodStart, input.PeriodEnd)
+			SELECT o.id::text, o.subtotal_minor_units, o.currency,
+			       delivered.delivered_at, delivered.completion_event_id, o.pricing_snapshot_hash
+			FROM dsh_orders o
+			JOIN dsh_stores st ON st.id = o.store_id
+			JOIN LATERAL (
+				SELECT event.id::text AS completion_event_id, event.created_at AS delivered_at
+				FROM dsh_order_status_events event
+				WHERE event.order_id = o.id AND event.to_status = 'delivered'
+				ORDER BY event.created_at DESC, event.id DESC
+				LIMIT 1
+			) delivered ON TRUE
+			WHERE st.partner_id::text = $1 AND o.status = 'delivered'
+			  AND delivered.delivered_at >= $2::date
+			  AND delivered.delivered_at < ($3::date + INTERVAL '1 day')
+			  AND o.subtotal_minor_units > 0 AND btrim(o.currency) <> ''
+			  AND btrim(o.pricing_snapshot_hash) <> ''
+			  AND NOT EXISTS (
+				SELECT 1 FROM dsh_order_cancellations cancellation
+				WHERE cancellation.order_id = o.id
+				  AND cancellation.status IN ('requested', 'review', 'approved', 'cancelling', 'cancelled', 'conflict', 'unknown')
+			  )
+			ORDER BY delivered.delivered_at, o.id`, input.PartnerID, input.PeriodStart, input.PeriodEnd)
 	if err != nil {
 		store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to derive delivered order sources")
 		return
@@ -116,13 +123,17 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 	orderSources := make([]financeSettlementOrderSource, 0)
 	for rows.Next() {
 		var source financeSettlementOrderSource
-		if err := rows.Scan(&source.OrderID, &source.GrossAmountMinorUnits, &source.Currency, &source.DeliveredAt, &source.PricingSnapshotHash); err != nil {
+		if err := rows.Scan(&source.OrderID, &source.GrossAmountMinorUnits, &source.Currency, &source.DeliveredAt, &source.CompletionEventID, &source.PricingSnapshotHash); err != nil {
+
 			store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to decode delivered order source")
 			return
 		}
+		// The cancellation owner is consulted by the NOT EXISTS predicate above;
+		// this is a derived non-cancelled state, not a handler assertion. The
+		// completion event identity comes from the immutable persisted event row.
 		source.CancellationStatus = "not_cancelled"
-		source.CompletionEventID = "delivered:" + source.OrderID + ":" + source.DeliveredAt.UTC().Format(time.RFC3339Nano)
-		source.CompletionEvidenceHash = settlementEvidenceHash(source.OrderID, "delivered", source.DeliveredAt.UTC().Format(time.RFC3339Nano), source.PricingSnapshotHash, fmt.Sprint(source.GrossAmountMinorUnits), source.Currency, source.CancellationStatus)
+		source.CompletionEvidenceHash = settlementEvidenceHash(source.OrderID, "delivered", source.DeliveredAt.UTC().Format(time.RFC3339Nano), source.CompletionEventID, source.PricingSnapshotHash, fmt.Sprint(source.GrossAmountMinorUnits), source.Currency, source.CancellationStatus)
+
 		orderSources = append(orderSources, source)
 	}
 	if err := rows.Err(); err != nil {

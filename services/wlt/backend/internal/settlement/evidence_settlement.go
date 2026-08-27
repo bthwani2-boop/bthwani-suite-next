@@ -54,15 +54,15 @@ type UpsertGovernedSettlementPolicyInput struct {
 }
 
 type GovernedSettlementPolicy struct {
-	PartnerID           string `json:"partnerId"`
-	Version             int64  `json:"version"`
-	FeeBasisPoints      int    `json:"feeBasisPoints"`
-	Currency            string `json:"currency"`
-	Status              string `json:"status"`
-	CycleDays           int    `json:"cycleDays"`
-	MinimumNetMinorUnits int64 `json:"minimumNetMinorUnits"`
-	ChangeReason        string `json:"changeReason"`
-	UpdatedByOperatorID string `json:"updatedByOperatorId"`
+	PartnerID            string `json:"partnerId"`
+	Version              int64  `json:"version"`
+	FeeBasisPoints       int    `json:"feeBasisPoints"`
+	Currency             string `json:"currency"`
+	Status               string `json:"status"`
+	CycleDays            int    `json:"cycleDays"`
+	MinimumNetMinorUnits int64  `json:"minimumNetMinorUnits"`
+	ChangeReason         string `json:"changeReason"`
+	UpdatedByOperatorID  string `json:"updatedByOperatorId"`
 }
 
 type SettlementSourceEvidenceView struct {
@@ -80,11 +80,25 @@ type SettlementSourceEvidenceView struct {
 
 func hashSettlementParts(parts ...string) string {
 	h := sha256.New()
+
 	for _, part := range parts {
 		_, _ = h.Write([]byte(strings.TrimSpace(part)))
 		_, _ = h.Write([]byte{0})
 	}
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+func expectedCompletionEvidenceHash(source VerifiedDeliveredOrderSource) string {
+	return hashSettlementParts(
+		source.OrderID,
+		"delivered",
+		source.DeliveredAt.UTC().Format(time.RFC3339Nano),
+		source.CompletionEventID,
+		source.PricingSnapshotHash,
+		fmt.Sprint(source.GrossAmountMinorUnits),
+		source.Currency,
+		source.CancellationStatus,
+	)
 }
 
 func normalizeEvidenceSettlementInput(input CreateEvidenceSettlementInput) (CreateEvidenceSettlementInput, time.Time, time.Time, error) {
@@ -118,6 +132,9 @@ func normalizeEvidenceSettlementInput(input CreateEvidenceSettlementInput) (Crea
 		}
 		if source.CancellationStatus != "not_cancelled" {
 			return input, time.Time{}, time.Time{}, fmt.Errorf("orderSources[%d] is cancelled: %w", index, ErrSettlementEvidenceRequired)
+		}
+		if source.CompletionEvidenceHash != expectedCompletionEvidenceHash(source) {
+			return input, time.Time{}, time.Time{}, fmt.Errorf("orderSources[%d] completion evidence hash cannot be re-derived from canonical facts: %w", index, ErrSettlementEvidenceRequired)
 		}
 		if source.DeliveredAt.Before(periodStart) || !source.DeliveredAt.Before(periodEnd.Add(24*time.Hour)) {
 			return input, time.Time{}, time.Time{}, fmt.Errorf("orderSources[%d] deliveredAt is outside the settlement period", index)
