@@ -13,6 +13,9 @@ on:
       base_sha: {type: string, required: true}
       head_ref: {type: string, required: false, default: ""}
       base_ref: {type: string, required: false, default: ""}
+    secrets:
+      SONAR_TOKEN:
+        required: true
 
 permissions:
   contents: read
