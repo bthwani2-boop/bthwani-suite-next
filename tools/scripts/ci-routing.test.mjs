@@ -53,6 +53,21 @@ test("the final closure is the only final entrypoint and has no polling orchestr
   assert.doesNotMatch(workflow, /workflow_run:|repository_dispatch|actions\/workflows\/|\bsleep\b/u);
 });
 
+test("final closure executes full exact-candidate assurance and fail-closes every required authority", () => {
+  const workflow = read(".github/workflows/final-closure.yml");
+  assert.match(workflow, /mode: full/u);
+  assert.match(workflow, /journey: "true"/u);
+  assert.match(workflow, /runtime_proof: true/u);
+  assert.match(workflow, /run_assurance: true/u);
+  assert.match(workflow, /needs: \[resolve, ci, sonar, codeql, semgrep, security, semantic, dependency, docker\]/u);
+  assert.match(workflow, /"sonar:\$\{SONAR_RESULT\}"/u);
+  assert.match(workflow, /"codeql:\$\{CODEQL_RESULT\}"/u);
+  assert.match(workflow, /"semgrep:\$\{SEMGREP_RESULT\}"/u);
+  assert.match(workflow, /"security:\$\{SECURITY_RESULT\}"/u);
+  assert.doesNotMatch(workflow, /Reuse exact valid evidence/u);
+  assert.doesNotMatch(workflow, /runtime_proof: false|run_assurance: false/u);
+});
+
 test("obsolete control-plane files are deleted instead of retained as compatibility paths", () => {
   for (const workflow of legacyWorkflows) assert.equal(exists(workflow), false, workflow);
 });

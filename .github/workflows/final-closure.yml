@@ -102,59 +102,17 @@ jobs:
             echo "- Base: ${base_ref}@${base_sha}"
           } >> "${GITHUB_STEP_SUMMARY}"
 
-  evidence:
-    name: Reuse exact valid evidence
-    needs: [resolve]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    outputs:
-      ci_valid: ${{ steps.lookup.outputs.ci_valid }}
-      sonar_valid: ${{ steps.lookup.outputs.sonar_valid }}
-      codeql_valid: ${{ steps.lookup.outputs.codeql_valid }}
-      semgrep_valid: ${{ steps.lookup.outputs.semgrep_valid }}
-      security_valid: ${{ steps.lookup.outputs.security_valid }}
-      dependency_valid: ${{ steps.lookup.outputs.dependency_valid }}
-    steps:
-      - name: Reuse only successful exact-SHA check evidence
-        id: lookup
-        shell: bash
-        env:
-          HEAD_SHA: ${{ needs.resolve.outputs.head_sha }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          checks="$(gh api -H 'X-GitHub-Api-Version: 2022-11-28' "/repos/${GITHUB_REPOSITORY}/commits/${HEAD_SHA}/check-runs?per_page=100")"
-          valid() {
-            local pattern="$1"
-            jq -e --arg pattern "$pattern" '[.check_runs[] | select(.status == "completed" and .conclusion == "success" and (.name | test($pattern)))] | length > 0' <<<"${checks}" >/dev/null && echo true || echo false
-          }
-          ci_valid="$(valid '^BThwani CI / PR result$')"
-          sonar_valid="$(valid '^SonarQube / PR result$')"
-          codeql_valid="$(valid '^CodeQL / PR result$')"
-          semgrep_valid="$(valid '^Semgrep / PR result$')"
-          security_valid="$(valid '^Remote Security / PR result$')"
-          dependency_valid="$(valid '^Dependency review$')"
-          {
-            echo "ci_valid=${ci_valid}"
-            echo "sonar_valid=${sonar_valid}"
-            echo "codeql_valid=${codeql_valid}"
-            echo "semgrep_valid=${semgrep_valid}"
-            echo "security_valid=${security_valid}"
-            echo "dependency_valid=${dependency_valid}"
-          } >> "${GITHUB_OUTPUT}"
-          echo "Exact evidence reuse: CI=${ci_valid} Sonar=${sonar_valid} CodeQL=${codeql_valid} Semgrep=${semgrep_valid} Security=${security_valid} Dependency=${dependency_valid}" >> "${GITHUB_STEP_SUMMARY}"
-
   ci:
     name: Fast PR Gate
-    needs: [resolve, evidence]
-    if: ${{ needs.evidence.outputs.ci_valid != 'true' }}
+    needs: [resolve]
+    if: ${{ needs.resolve.result == 'success' }}
     uses: ./.github/workflows/ci.yml
     with:
-      mode: affected
-      journey: ""
-      runtime_proof: false
+      mode: full
+      journey: "true"
+      runtime_proof: true
       run_analyzers: false
-      run_assurance: false
+      run_assurance: true
       target_kind: pull_request
       pr_number: ${{ needs.resolve.outputs.pr_number }}
       expected_head_sha: ${{ needs.resolve.outputs.head_sha }}
@@ -162,8 +120,8 @@ jobs:
 
   sonar:
     name: SonarQube exact analysis
-    needs: [resolve, evidence]
-    if: ${{ needs.evidence.outputs.sonar_valid != 'true' }}
+    needs: [resolve]
+    if: ${{ needs.resolve.result == 'success' }}
     uses: ./.github/workflows/sonarqube.yml
     secrets: inherit
     with:
@@ -175,8 +133,8 @@ jobs:
 
   codeql:
     name: CodeQL exact analysis
-    needs: [resolve, evidence]
-    if: ${{ needs.evidence.outputs.codeql_valid != 'true' }}
+    needs: [resolve]
+    if: ${{ needs.resolve.result == 'success' }}
     uses: ./.github/workflows/codeql.yml
     with:
       pr_number: ${{ needs.resolve.outputs.pr_number }}
@@ -187,8 +145,8 @@ jobs:
 
   semgrep:
     name: Semgrep exact analysis
-    needs: [resolve, evidence]
-    if: ${{ needs.evidence.outputs.semgrep_valid != 'true' }}
+    needs: [resolve]
+    if: ${{ needs.resolve.result == 'success' }}
     uses: ./.github/workflows/semgrep.yml
     with:
       mode: diff
@@ -200,8 +158,8 @@ jobs:
 
   security:
     name: Security exact analysis
-    needs: [resolve, evidence]
-    if: ${{ needs.evidence.outputs.security_valid != 'true' }}
+    needs: [resolve]
+    if: ${{ needs.resolve.result == 'success' }}
     uses: ./.github/workflows/security-remote.yml
     with:
       pr_number: ${{ needs.resolve.outputs.pr_number }}
@@ -222,8 +180,8 @@ jobs:
 
   dependency:
     name: Dependency review when applicable
-    needs: [resolve, evidence]
-    if: ${{ needs.resolve.outputs.dependency_changed == 'true' && needs.evidence.outputs.dependency_valid != 'true' }}
+    needs: [resolve]
+    if: ${{ needs.resolve.outputs.dependency_changed == 'true' }}
     uses: ./.github/workflows/dependency-review.yml
     with:
       pr_number: ${{ needs.resolve.outputs.pr_number }}
@@ -245,7 +203,7 @@ jobs:
 
   final:
     name: BThwani / Final Closure
-    needs: [resolve, evidence, ci, semantic, dependency, docker]
+    needs: [resolve, ci, sonar, codeql, semgrep, security, semantic, dependency, docker]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -257,31 +215,40 @@ jobs:
           PR_NUMBER: ${{ needs.resolve.outputs.pr_number }}
           RESOLVE_RESULT: ${{ needs.resolve.result }}
           CI_RESULT: ${{ needs.ci.result }}
+          SONAR_RESULT: ${{ needs.sonar.result }}
+          CODEQL_RESULT: ${{ needs.codeql.result }}
+          SEMGREP_RESULT: ${{ needs.semgrep.result }}
+          SECURITY_RESULT: ${{ needs.security.result }}
           SEMANTIC_RESULT: ${{ needs.semantic.result }}
           DEPENDENCY_RESULT: ${{ needs.dependency.result }}
+          DEPENDENCY_CHANGED: ${{ needs.resolve.outputs.dependency_changed }}
           DOCKER_RESULT: ${{ needs.docker.result }}
-          CI_EVIDENCE: ${{ needs.evidence.outputs.ci_valid }}
+          DOCKER_CHANGED: ${{ needs.resolve.outputs.docker_changed }}
         run: |
           set -euo pipefail
           failures=()
           for pair in \
             "resolve:${RESOLVE_RESULT}" \
             "fast-gate:${CI_RESULT}" \
+            "sonar:${SONAR_RESULT}" \
+            "codeql:${CODEQL_RESULT}" \
+            "semgrep:${SEMGREP_RESULT}" \
+            "security:${SECURITY_RESULT}" \
             "semantic:${SEMANTIC_RESULT}"; do
             name="${pair%%:*}"
             result="${pair#*:}"
-            evidence="false"
-            case "${name}" in
-              fast-gate) evidence="${CI_EVIDENCE}" ;;
-              sonar) evidence="${SONAR_EVIDENCE}" ;;
-              codeql) evidence="${CODEQL_EVIDENCE}" ;;
-              semgrep) evidence="${SEMGREP_EVIDENCE}" ;;
-              security) evidence="${SECURITY_EVIDENCE}" ;;
-            esac
-            [[ "${result}" == "success" || "${evidence}" == "true" ]] || failures+=("${name}:${result}")
+            [[ "${result}" == "success" ]] || failures+=("${name}:${result}")
           done
-          [[ "${DEPENDENCY_RESULT}" == "success" || "${DEPENDENCY_RESULT}" == "skipped" ]] || failures+=("dependency:${DEPENDENCY_RESULT}")
-          [[ "${DOCKER_RESULT}" == "success" || "${DOCKER_RESULT}" == "skipped" ]] || failures+=("docker:${DOCKER_RESULT}")
+          if [[ "${DEPENDENCY_CHANGED}" == "true" ]]; then
+            [[ "${DEPENDENCY_RESULT}" == "success" ]] || failures+=("dependency:${DEPENDENCY_RESULT}")
+          else
+            [[ "${DEPENDENCY_RESULT}" == "success" || "${DEPENDENCY_RESULT}" == "skipped" ]] || failures+=("dependency:${DEPENDENCY_RESULT}")
+          fi
+          if [[ "${DOCKER_CHANGED}" == "true" ]]; then
+            [[ "${DOCKER_RESULT}" == "success" ]] || failures+=("docker:${DOCKER_RESULT}")
+          else
+            [[ "${DOCKER_RESULT}" == "success" || "${DOCKER_RESULT}" == "skipped" ]] || failures+=("docker:${DOCKER_RESULT}")
+          fi
           if (( ${#failures[@]} )); then
             gh api --method POST -H 'X-GitHub-Api-Version: 2022-11-28' \
               "/repos/${GITHUB_REPOSITORY}/statuses/${HEAD_SHA}" \
