@@ -60,13 +60,23 @@ jobs:
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Restore Nx computation cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2c1d52a9 # v6.1.0
         with:
           path: .nx/cache
           key: nx-${{ inputs.verification_tier }}-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-${{ env.CANDIDATE_SHA }}
           restore-keys: |
             nx-${{ inputs.verification_tier }}-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
             nx-${{ hashFiles('pnpm-lock.yaml', 'nx.json') }}-
+      - name: Materialize contracts and run workspace assurance guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec nx run contracts:materialize
+          node tools/scripts/run-guard-suite.mjs --concurrency 2 \
+            tools/guards/no-broken-imports.mjs \
+            tools/guards/runtime-config-gate.mjs \
+            tools/guards/ui-provider-required-gate.mjs
+          pnpm run diagnostics:madge
       - name: Verify exact affected or full Node graph
         id: node_graph
         continue-on-error: true

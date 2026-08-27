@@ -1,5 +1,5 @@
 import React from "react";
-import type { IconRendererProps } from "./Icon";
+import type { IconRendererProps } from "./icon.types";
 
 // The web owner renders the shared Icon contract directly. This deliberately
 // does not masquerade as an implementation of an external native package.

@@ -13,7 +13,7 @@
  * synchronous and the contract is locally visible.
  */
 
-import type { MutationIdentityScope } from "./mutation-identity-scope.ts";
+import type { MutationIdentityScope } from "./mutation-identity-scope.types.ts";
 
 type ActorBinding = {
   readonly actorId: string;

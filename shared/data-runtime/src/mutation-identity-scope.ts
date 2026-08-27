@@ -16,12 +16,9 @@
 import { BthwaniDurableWriteError } from "./storage-adapter.ts";
 import { getBthwaniCurrentActor } from "./current-actor.ts";
 import { getBthwaniInstallationId } from "./installation-id.ts";
+import type { MutationIdentityScope } from "./mutation-identity-scope.types.ts";
 
-export type MutationIdentityScope = {
-  readonly actorId: string;
-  readonly installationId: string;
-  readonly entityId?: string;
-};
+export type { MutationIdentityScope } from "./mutation-identity-scope.types.ts";
 
 export class MutationIdentityScopeError extends Error {
   readonly code = "MUTATION_IDENTITY_SCOPE_INVALID";
