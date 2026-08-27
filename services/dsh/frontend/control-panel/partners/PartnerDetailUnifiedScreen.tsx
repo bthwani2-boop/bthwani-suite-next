@@ -227,7 +227,7 @@ export function PartnerDetailUnifiedScreen({ partnerId, onBack }: PartnerDetailU
                 <CpDescriptionRow label="معرّف حساب المالك">{viewModel.ownerActorId}</CpDescriptionRow>
                 <CpDescriptionRow label="معرّف العامل الميداني">{viewModel.workforcePersonId}</CpDescriptionRow>
                 <CpDescriptionRow label="الهاتف">{viewModel.primaryPhone}</CpDescriptionRow>
-                <CpDescriptionRow label="مجال النشاط">{getDshBusinessVerticalLabel(viewModel.businessVerticalId, viewModel.category)}</CpDescriptionRow>
+                <CpDescriptionRow label="مجال النشاط">{getDshBusinessVerticalLabel(viewModel.businessVerticalId)}</CpDescriptionRow>
                 <CpDescriptionRow label="الإصدار">{partner.version}</CpDescriptionRow>
               </CpDescriptionList>
             ))}
