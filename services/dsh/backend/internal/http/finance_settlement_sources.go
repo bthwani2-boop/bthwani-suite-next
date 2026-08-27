@@ -94,7 +94,15 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 
 	rows, err := s.db.QueryContext(r.Context(), `
 			SELECT o.id::text, o.subtotal_minor_units, o.currency,
-			       delivered.delivered_at, delivered.completion_event_id, o.pricing_snapshot_hash
+			       delivered.delivered_at, delivered.completion_event_id, o.pricing_snapshot_hash,
+			       COALESCE((
+					SELECT cancellation.status
+					FROM dsh_order_cancellations cancellation
+					WHERE cancellation.order_id = o.id
+					  AND cancellation.status IN ('requested', 'review', 'approved', 'cancelling', 'cancelled', 'conflict', 'unknown')
+					ORDER BY cancellation.updated_at DESC, cancellation.id DESC
+					LIMIT 1
+			       ), 'not_cancelled') AS cancellation_status
 			FROM dsh_orders o
 			JOIN dsh_stores st ON st.id = o.store_id
 			JOIN LATERAL (
@@ -123,15 +131,14 @@ func (s *protectedStoreServer) handleCreateFinanceSettlementFromDeliveredOrders(
 	orderSources := make([]financeSettlementOrderSource, 0)
 	for rows.Next() {
 		var source financeSettlementOrderSource
-		if err := rows.Scan(&source.OrderID, &source.GrossAmountMinorUnits, &source.Currency, &source.DeliveredAt, &source.CompletionEventID, &source.PricingSnapshotHash); err != nil {
+		if err := rows.Scan(&source.OrderID, &source.GrossAmountMinorUnits, &source.Currency, &source.DeliveredAt, &source.CompletionEventID, &source.PricingSnapshotHash, &source.CancellationStatus); err != nil {
 
 			store.SendError(w, http.StatusInternalServerError, "DB_ERROR", "failed to decode delivered order source")
 			return
 		}
-		// The cancellation owner is consulted by the NOT EXISTS predicate above;
-		// this is a derived non-cancelled state, not a handler assertion. The
+		// CancellationStatus is read from the canonical cancellation owner query;
+		// the NOT EXISTS predicate excludes every active cancellation state. The
 		// completion event identity comes from the immutable persisted event row.
-		source.CancellationStatus = "not_cancelled"
 		source.CompletionEvidenceHash = settlementEvidenceHash(source.OrderID, "delivered", source.DeliveredAt.UTC().Format(time.RFC3339Nano), source.CompletionEventID, source.PricingSnapshotHash, fmt.Sprint(source.GrossAmountMinorUnits), source.Currency, source.CancellationStatus)
 
 		orderSources = append(orderSources, source)
