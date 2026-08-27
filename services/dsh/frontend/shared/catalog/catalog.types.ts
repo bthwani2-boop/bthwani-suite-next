@@ -1,13 +1,6 @@
 // Store-catalog submission workflow types (media intents, audit submissions).
 // Client-facing product/category view models live in client-catalog.types.ts.
 
-export type MediaUploadIntent = {
-  readonly mediaId: string;
-  readonly uploadUrl: string;
-  readonly objectKey: string;
-  readonly expiresAt: string;
-};
-
 export type CatalogMedia = {
   readonly state: "pending" | "complete" | "deleted";
   readonly publicUrl: string | null;
