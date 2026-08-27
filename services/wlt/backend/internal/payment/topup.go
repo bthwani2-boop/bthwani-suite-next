@@ -38,7 +38,7 @@ func topUpActorType(financialPurpose string) (string, error) {
 // AuthorizeTopUpSession authorizes a Cash-In wallet top-up session through the
 // capability-checked CashInRail (U002-T001) instead of an arbitrary Post/Get
 // call to a caller-chosen path. It otherwise mirrors
-// AuthorizeSessionWithProviderSovereign's claim-before-mutation and
+// AuthorizeSessionWithProvider's claim-before-mutation and
 // ambiguous-result handling exactly, so a topup session gets the same
 // guarantees an order-payment session already has.
 func AuthorizeTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashInRail, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
@@ -122,7 +122,7 @@ func AuthorizeTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashIn
 // UPDATE or the ledger posting fails after the provider confirmed capture,
 // the whole transaction rolls back and the session is marked
 // provider_result_unknown for reconciliation, exactly like
-// CaptureSessionWithProviderSovereign already does for order payments.
+// CaptureSessionWithProvider already does for order payments.
 func CaptureTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashInRail, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("paymentSessionId is required")

@@ -11,13 +11,13 @@ import (
 	"wlt-api/internal/shared"
 )
 
-// AuthorizeSessionWithProviderSovereign claims the payment session before the
+// AuthorizeSessionWithProvider claims the payment session before the
 // provider call and records every ambiguous outcome. A clean provider decline
 // becomes failed. A transport ambiguity, malformed success response, or any
 // local persistence failure after provider success becomes
 // provider_result_unknown with an open reconciliation case, so callers must
 // refresh authoritative provider status rather than repeat authorization.
-func AuthorizeSessionWithProviderSovereign(ctx context.Context, db *sql.DB, rail provider.CashInRail, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
+func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, rail provider.CashInRail, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("paymentSessionId is required")
 	}
@@ -36,7 +36,7 @@ func AuthorizeSessionWithProviderSovereign(ctx context.Context, db *sql.DB, rail
 		_ = markSessionFailedAndNotify(db, claimed, "authorization_pending")
 		return nil, fmt.Errorf("payment session has no amount to authorize")
 	}
-	result, err := authorizeProviderSovereign(ctx, rail, claimed, claimed.AmountMinorUnits, currency, meta)
+	result, err := authorizeProvider(ctx, rail, claimed, claimed.AmountMinorUnits, currency, meta)
 	if err != nil {
 		if isAmbiguousProviderError(err) {
 			_ = markSessionResultUnknownAndOpenCase(db, claimed, "authorize", err, "authorization_pending")
@@ -74,13 +74,13 @@ func AuthorizeSessionWithProviderSovereign(ctx context.Context, db *sql.DB, rail
 	return session, nil
 }
 
-func HandleAuthorizeSessionSovereign(db *sql.DB, rail provider.CashInRail) http.HandlerFunc {
+func HandleAuthorizeSession(db *sql.DB, rail provider.CashInRail) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if rail == nil {
 			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", "financial rail is not wired; refusing unenforced money movement")
 			return
 		}
-		session, err := AuthorizeSessionWithProviderSovereign(r.Context(), db, rail, r.PathValue("paymentSessionId"), provider.RequestMetaFromHTTP(r, "wlt-authorize"))
+		session, err := AuthorizeSessionWithProvider(r.Context(), db, rail, r.PathValue("paymentSessionId"), provider.RequestMetaFromHTTP(r, "wlt-authorize"))
 		if errors.Is(err, ErrNotAuthorizable) {
 			shared.SendError(w, http.StatusConflict, "INVALID_PAYMENT_STATE", err.Error())
 			return
@@ -97,7 +97,7 @@ func HandleAuthorizeSessionSovereign(db *sql.DB, rail provider.CashInRail) http.
 	}
 }
 
-func authorizeProviderSovereign(ctx context.Context, rail provider.CashInRail, session *PaymentSession, amountMinorUnits int64, currency string, meta provider.RequestMeta) (provider.ProviderResult, error) {
+func authorizeProvider(ctx context.Context, rail provider.CashInRail, session *PaymentSession, amountMinorUnits int64, currency string, meta provider.RequestMeta) (provider.ProviderResult, error) {
 	result, err := rail.Authorize(ctx, map[string]any{
 		"paymentSessionId":  session.ID,
 		"checkoutIntentId":  strOrEmpty(session.CheckoutIntentID),

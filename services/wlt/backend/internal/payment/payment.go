@@ -1,7 +1,6 @@
 package payment
 
 import (
-	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -186,118 +185,9 @@ func claimSession(db *sql.DB, sessionID string, allowedFrom []string, pendingSta
 // claimSession) before the provider is ever called, so two concurrent
 // requests on the same session cannot both reach the provider call below --
 // the second one's claim fails with ErrSessionClaimConflict.
-func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, rail provider.CashInRail, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
-	if sessionID == "" {
-		return nil, fmt.Errorf("paymentSessionId is required")
-	}
-	claimed, err := claimSession(db, sessionID, []string{"reference_created", "pending_provider"}, "authorization_pending")
-	if errors.Is(err, ErrSessionClaimConflict) {
-		return nil, ErrNotAuthorizable
-	}
-	if err != nil || claimed == nil {
-		return claimed, err
-	}
-	amountMinorUnits := claimed.AmountMinorUnits
-	currency := claimed.Currency
-	if currency == "" {
-		currency = "YER"
-	}
-	if amountMinorUnits <= 0 {
-		_ = markSessionFailedAndNotify(db, claimed, "authorization_pending")
-		return nil, fmt.Errorf("payment session has no amount to authorize")
-	}
-	result, err := authorizeProvider(ctx, rail, claimed, amountMinorUnits, currency, meta)
-	if err != nil {
-		if isAmbiguousProviderError(err) {
-			_ = markSessionResultUnknownAndOpenCase(db, claimed, "authorize", err, "authorization_pending")
-		} else {
-			_ = markSessionFailedAndNotify(db, claimed, "authorization_pending")
-		}
-		return nil, err
-	}
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	const q = `
-		UPDATE wlt_payment_sessions
-		SET status = 'authorized', provider_reference = $2, updated_at = NOW()
-		WHERE id = $1 AND status = 'authorization_pending'
-		RETURNING ` + sessionCols
-	row := tx.QueryRow(q, sessionID, result.ProviderReference)
-	s, err := scanSession(row)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("session %s was no longer authorization_pending when finalizing authorize", sessionID)
-	}
-	if err != nil {
-		return nil, err
-	}
-	return s, tx.Commit()
-}
-
 // CaptureSessionWithProvider claims the session into 'capture_pending' (see
 // claimSession) before calling the provider, closing the same double-call
 // race described on AuthorizeSessionWithProvider.
-func CaptureSessionWithProvider(ctx context.Context, db *sql.DB, rail provider.CashInRail, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
-	if sessionID == "" {
-		return nil, fmt.Errorf("paymentSessionId is required")
-	}
-	claimed, err := claimSession(db, sessionID, []string{"authorized"}, "capture_pending")
-	if errors.Is(err, ErrSessionClaimConflict) {
-		return nil, fmt.Errorf("payment session must be authorized before capture")
-	}
-	if err != nil || claimed == nil {
-		return claimed, err
-	}
-	result, err := captureProvider(ctx, rail, claimed, meta)
-	if err != nil {
-		if isAmbiguousProviderError(err) {
-			_ = markSessionResultUnknownAndOpenCase(db, claimed, "capture", err, "capture_pending")
-		} else {
-			_ = markSessionFailedAndNotify(db, claimed, "capture_pending")
-		}
-		return nil, err
-	}
-	return captureSessionAndNotify(db, sessionID, result.ProviderReference)
-}
-
-func authorizeProvider(ctx context.Context, rail provider.CashInRail, session *PaymentSession, amountMinorUnits int64, currency string, meta provider.RequestMeta) (provider.ProviderResult, error) {
-	result, err := rail.Authorize(ctx, map[string]any{
-		"paymentSessionId":  session.ID,
-		"checkoutIntentId":  strOrEmpty(session.CheckoutIntentID),
-		"clientId":          session.ClientID,
-		"storeId":           session.StoreID,
-		"amountMinorUnits":  amountMinorUnits,
-		"currency":          currency,
-		"paymentMethod":     session.PaymentMethod,
-		"providerReference": session.ProviderReference,
-	}, meta)
-	if err != nil {
-		return provider.ProviderResult{}, err
-	}
-	if result.Status != "authorized" || result.ProviderReference == "" {
-		return provider.ProviderResult{}, fmt.Errorf("provider authorization returned invalid status or reference")
-	}
-	return result, nil
-}
-
-func captureProvider(ctx context.Context, rail provider.CashInRail, session *PaymentSession, meta provider.RequestMeta) (provider.ProviderResult, error) {
-	result, err := rail.Capture(ctx, map[string]any{
-		"paymentSessionId":  session.ID,
-		"providerReference": session.ProviderReference,
-		"amountMinorUnits":  session.AmountMinorUnits,
-		"currency":          session.Currency,
-	}, meta)
-	if err != nil {
-		return provider.ProviderResult{}, err
-	}
-	if result.Status != "captured" || result.ProviderReference == "" {
-		return provider.ProviderResult{}, fmt.Errorf("provider capture returned invalid status or reference")
-	}
-	return result, nil
-}
-
 // isAmbiguousProviderError distinguishes a clean provider decline from a
 // genuinely ambiguous outcome.
 //
@@ -392,34 +282,6 @@ func markSessionResultUnknownAndOpenCase(db *sql.DB, session *PaymentSession, op
 // captureSessionAndNotify commits the captured transition and enqueues the
 // DSH outbox event atomically. Guarded on status = 'capture_pending' so it
 // only finalizes the session this caller actually claimed via claimSession.
-func captureSessionAndNotify(db *sql.DB, sessionID, providerReference string) (*PaymentSession, error) {
-	tx, err := db.Begin()
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-	const q = `
-		UPDATE wlt_payment_sessions
-		SET status = 'captured', provider_reference = $2, captured_at = NOW(), updated_at = NOW()
-		WHERE id = $1 AND status = 'capture_pending'
-		RETURNING ` + sessionCols
-	row := tx.QueryRow(q, sessionID, providerReference)
-	s, err := scanSession(row)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("session %s was no longer capture_pending when finalizing capture", sessionID)
-	}
-	if err != nil {
-		return nil, err
-	}
-	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeCaptured, s.ID, s.OperatorContextID, s.CheckoutIntentID, s.SpecialRequestID); err != nil {
-		return nil, err
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
-	}
-	return s, nil
-}
-
 // sendProviderError is handled by shared.SendProviderError.
 
 // ExpireSession commits the expired transition and enqueues the DSH outbox

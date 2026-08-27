@@ -92,8 +92,8 @@ func newRouterWithRoutes(db *sql.DB, mutationsEnabled bool, ds wallet.DecisionSe
 	read("GET /wlt/payment-sessions/{paymentSessionId}", reference.HandleGetPaymentSessionTrustedDsh(db))
 	read("GET /wlt/payment-sessions/{paymentSessionId}/timeline", payment.HandleGetPaymentSessionTimeline(db))
 
-	mutation("POST /wlt/payment-sessions/{paymentSessionId}/authorize", payment.HandleGovernedPaymentOperation(db, "authorize", payment.HandleAuthorizeSessionSovereign(db, rail)))
-	mutation("POST /wlt/payment-sessions/{paymentSessionId}/capture", payment.HandleGovernedPaymentOperation(db, "capture", payment.HandleCaptureSessionSovereign(db, rail)))
+	mutation("POST /wlt/payment-sessions/{paymentSessionId}/authorize", payment.HandleGovernedPaymentOperation(db, "authorize", payment.HandleAuthorizeSession(db, rail)))
+	mutation("POST /wlt/payment-sessions/{paymentSessionId}/capture", payment.HandleGovernedPaymentOperation(db, "capture", payment.HandleCaptureSession(db, rail)))
 	mutation("POST /wlt/payment-sessions/{paymentSessionId}/refresh-provider-status", payment.HandleGovernedPaymentOperation(db, "provider_status_refresh", payment.HandleRefreshProviderStatus(db, rail)))
 	mutation("POST /wlt/payment-sessions/{paymentSessionId}/expire", payment.HandleOperatorContextScopedPaymentSession(db, payment.HandleExpireSession(db)))
 

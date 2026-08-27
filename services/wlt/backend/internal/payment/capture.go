@@ -13,14 +13,14 @@ import (
 	"wlt-api/internal/shared"
 )
 
-// CaptureSessionWithProviderSovereign is the live capture path. Provider
+// CaptureSessionWithProvider is the live capture path. Provider
 // success, payment-session state, double-entry posting and DSH notification are
 // committed as one WLT transaction. A captured session can therefore never be
 // visible without its accounting effect. If the provider confirms success but
 // local finalization fails, WLT moves the claimed session to the explicit
 // provider_result_unknown reconciliation path instead of allowing a blind
 // capture retry.
-func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, rail provider.CashInRail, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
+func CaptureSessionWithProvider(ctx context.Context, db *sql.DB, rail provider.CashInRail, sessionID string, meta provider.RequestMeta) (*PaymentSession, error) {
 	if sessionID == "" {
 		return nil, fmt.Errorf("paymentSessionId is required")
 	}
@@ -32,7 +32,7 @@ func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, rail p
 		return claimed, err
 	}
 
-	result, err := captureProviderSovereign(ctx, rail, claimed, meta)
+	result, err := captureProvider(ctx, rail, claimed, meta)
 	if err != nil {
 		if isAmbiguousProviderError(err) {
 			_ = markSessionResultUnknownAndOpenCase(db, claimed, "capture", err, "capture_pending")
@@ -88,13 +88,13 @@ func CaptureSessionWithProviderSovereign(ctx context.Context, db *sql.DB, rail p
 	return s, nil
 }
 
-func HandleCaptureSessionSovereign(db *sql.DB, rail provider.CashInRail) http.HandlerFunc {
+func HandleCaptureSession(db *sql.DB, rail provider.CashInRail) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if rail == nil {
 			shared.SendError(w, http.StatusBadGateway, "PROVIDER_CONFIG_ERROR", "financial rail is not wired; refusing unenforced money movement")
 			return
 		}
-		session, err := CaptureSessionWithProviderSovereign(r.Context(), db, rail, r.PathValue("paymentSessionId"), provider.RequestMetaFromHTTP(r, "wlt-capture"))
+		session, err := CaptureSessionWithProvider(r.Context(), db, rail, r.PathValue("paymentSessionId"), provider.RequestMetaFromHTTP(r, "wlt-capture"))
 		if err != nil {
 			shared.SendProviderError(w, err)
 			return
@@ -107,7 +107,7 @@ func HandleCaptureSessionSovereign(db *sql.DB, rail provider.CashInRail) http.Ha
 	}
 }
 
-func captureProviderSovereign(ctx context.Context, rail provider.CashInRail, session *PaymentSession, meta provider.RequestMeta) (provider.ProviderResult, error) {
+func captureProvider(ctx context.Context, rail provider.CashInRail, session *PaymentSession, meta provider.RequestMeta) (provider.ProviderResult, error) {
 	result, err := rail.Capture(ctx, map[string]any{
 		"paymentSessionId":  session.ID,
 		"providerReference": session.ProviderReference,
