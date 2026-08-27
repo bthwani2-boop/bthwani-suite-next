@@ -10,8 +10,6 @@ import {
   catalogErrorState,
   catalogLoadingState,
   catalogPermissionDeniedState,
-  catalogSubmissionErrorState,
-  catalogSubmissionPermissionDeniedState,
 } from "./catalog.states";
 
 export function resolveCatalogActionError(error: unknown): CatalogActionState {
@@ -34,13 +32,6 @@ export function resolveCatalogError(error: unknown): CatalogState {
     return catalogErrorState("خدمة الكتالوج غير متاحة حاليًا.");
   }
   return catalogErrorState("تعذر تنفيذ عملية الكتالوج.");
-}
-
-export function resolveCatalogSubmissionError(error: unknown) {
-  const state = resolveCatalogError(error);
-  if (state.kind === "permission_denied") return catalogSubmissionPermissionDeniedState();
-  if (state.kind === "error") return catalogSubmissionErrorState(state.message);
-  return catalogSubmissionErrorState("تعذر تحميل طلبات اعتماد الكتالوج.");
 }
 
 export function beginCatalogAuditLoad(previousEntries: readonly CatalogSubmission[]) {
