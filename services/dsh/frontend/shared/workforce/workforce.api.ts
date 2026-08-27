@@ -231,13 +231,13 @@ export async function listWorkforceCities(includeInactive = false): Promise<read
   return result.cities;
 }
 
-export async function createWorkforceCity(city: WorkforceCity): Promise<WorkforceCity> {
-  return request<WorkforceCity>("/workforce/reference/cities", { method: "POST", body: city });
+export async function createWorkforceCity(city: WorkforceCity, idempotencyKey?: string): Promise<WorkforceCity> {
+  return request<WorkforceCity>("/workforce/reference/cities", { method: "POST", body: city, idempotencyKey });
 }
 
-export async function updateWorkforceCity(city: WorkforceCity): Promise<WorkforceCity> {
+export async function updateWorkforceCity(city: WorkforceCity, idempotencyKey?: string): Promise<WorkforceCity> {
   const { code, ...body } = city;
-  return request<WorkforceCity>(`/workforce/reference/cities/${encodeURIComponent(code)}`, { method: "PATCH", body });
+  return request<WorkforceCity>(`/workforce/reference/cities/${encodeURIComponent(code)}`, { method: "PATCH", body, idempotencyKey });
 }
 
 export async function listWorkforceShifts(includeInactive = false): Promise<readonly WorkforceShift[]> {
@@ -245,13 +245,13 @@ export async function listWorkforceShifts(includeInactive = false): Promise<read
   return result.shifts;
 }
 
-export async function createWorkforceShift(shift: WorkforceShift): Promise<WorkforceShift> {
-  return request<WorkforceShift>("/workforce/reference/shifts", { method: "POST", body: shift });
+export async function createWorkforceShift(shift: WorkforceShift, idempotencyKey?: string): Promise<WorkforceShift> {
+  return request<WorkforceShift>("/workforce/reference/shifts", { method: "POST", body: shift, idempotencyKey });
 }
 
-export async function updateWorkforceShift(shift: WorkforceShift): Promise<WorkforceShift> {
+export async function updateWorkforceShift(shift: WorkforceShift, idempotencyKey?: string): Promise<WorkforceShift> {
   const { code, ...body } = shift;
-  return request<WorkforceShift>(`/workforce/reference/shifts/${encodeURIComponent(code)}`, { method: "PATCH", body });
+  return request<WorkforceShift>(`/workforce/reference/shifts/${encodeURIComponent(code)}`, { method: "PATCH", body, idempotencyKey });
 }
 
 export async function getWorkforceMe(): Promise<WorkforceMe> {
