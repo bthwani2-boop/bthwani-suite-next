@@ -111,7 +111,6 @@ jobs:
       mode: full
       journey: "true"
       runtime_proof: true
-      run_analyzers: false
       run_assurance: true
       target_kind: pull_request
       pr_number: ${{ needs.resolve.outputs.pr_number }}

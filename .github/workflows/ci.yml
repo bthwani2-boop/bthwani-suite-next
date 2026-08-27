@@ -15,7 +15,6 @@ on:
       pr_number: {type: string, required: false, default: ""}
       expected_head_sha: {type: string, required: false, default: ""}
       expected_base_sha: {type: string, required: false, default: ""}
-      run_analyzers: {type: boolean, required: false, default: false}
       run_assurance: {type: boolean, required: false, default: false}
   workflow_dispatch:
     inputs:
@@ -421,95 +420,11 @@ jobs:
       runtime_profile: ${{ needs.context.outputs.runtime_profile }}
       runtime_proof: ${{ inputs.runtime_proof == true }}
 
-  codeql:
-    name: CodeQL applicable analysis
-    needs: [context]
-    if: ${{ inputs.run_analyzers == true && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.workflow == 'true' }}
-    uses: ./.github/workflows/codeql.yml
-    with:
-      pr_number: ${{ needs.context.outputs.pr_number }}
-      head_sha: ${{ needs.context.outputs.head_sha }}
-      base_sha: ${{ needs.context.outputs.base_sha }}
-      head_ref: ${{ needs.context.outputs.head_ref }}
-      base_ref: ${{ needs.context.outputs.base_ref }}
-      full_scope: ${{ needs.context.outputs.full_verification == 'true' }}
-
-  sonar:
-    name: SonarQube PR analysis
-    needs: [context]
-    if: ${{ inputs.run_analyzers == true && needs.context.outputs.skip_duplicate_push != 'true' }}
-    uses: ./.github/workflows/sonarqube.yml
-    secrets: inherit
-    with:
-      pr_number: ${{ needs.context.outputs.pr_number }}
-      head_sha: ${{ needs.context.outputs.head_sha }}
-      base_sha: ${{ needs.context.outputs.base_sha }}
-      head_ref: ${{ needs.context.outputs.head_ref }}
-      base_ref: ${{ needs.context.outputs.base_ref }}
-
-  semgrep:
-    name: Semgrep applicable analysis
-    needs: [context]
-    if: ${{ inputs.run_analyzers == true && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.security == 'true' }}
-    uses: ./.github/workflows/semgrep.yml
-    with:
-      mode: diff
-      pr_number: ${{ needs.context.outputs.pr_number }}
-      head_sha: ${{ needs.context.outputs.head_sha }}
-      base_sha: ${{ needs.context.outputs.base_sha }}
-      base_ref: ${{ needs.context.outputs.base_ref }}
-      head_ref: ${{ needs.context.outputs.head_ref }}
-
-  security:
-    name: Security applicable analysis
-    needs: [context]
-    if: ${{ inputs.run_analyzers == true && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.security == 'true' }}
-    uses: ./.github/workflows/security-remote.yml
-    with:
-      pr_number: ${{ needs.context.outputs.pr_number }}
-      head_sha: ${{ needs.context.outputs.head_sha }}
-      base_sha: ${{ needs.context.outputs.base_sha }}
-      head_ref: ${{ needs.context.outputs.head_ref }}
-      base_ref: ${{ needs.context.outputs.base_ref }}
-
-  dependency:
-    name: Dependency review when applicable
-    needs: [context]
-    if: ${{ inputs.run_analyzers == true && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.dependency_changed == 'true' }}
-    uses: ./.github/workflows/dependency-review.yml
-    with:
-      pr_number: ${{ needs.context.outputs.pr_number }}
-      head_sha: ${{ needs.context.outputs.head_sha }}
-      base_sha: ${{ needs.context.outputs.base_sha }}
-      base_ref: ${{ needs.context.outputs.base_ref }}
-      head_ref: ${{ needs.context.outputs.head_ref }}
-      expected_sha: ${{ needs.context.outputs.head_sha }}
-
-  lockfile:
-    name: Lockfile integrity when applicable
-    needs: [context]
-    if: ${{ inputs.run_analyzers == true && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.dependency_changed == 'true' }}
-    uses: ./.github/workflows/lockfile-integrity.yml
-    with:
-      pr_number: ${{ needs.context.outputs.pr_number }}
-      head_sha: ${{ needs.context.outputs.head_sha }}
-      base_sha: ${{ needs.context.outputs.base_sha }}
-
-  docker:
-    name: Docker policy when applicable
-    needs: [context]
-    if: ${{ inputs.run_analyzers == true && needs.context.outputs.skip_duplicate_push != 'true' && needs.context.outputs.infrastructure == 'true' }}
-    uses: ./.github/workflows/docker-runtime-hardening.yml
-    with:
-      pr_number: ${{ needs.context.outputs.pr_number }}
-      head_sha: ${{ needs.context.outputs.head_sha }}
-      base_sha: ${{ needs.context.outputs.base_sha }}
-
   result:
     name: >-
       ${{ github.event_name == 'pull_request' && 'BThwani CI / PR result' || github.event_name == 'push' &&
       'BThwani CI / push result' || 'BThwani CI / dispatched result' }}
-    needs: [context, diagnostics, verification, backends, runtime, codeql, sonar, semgrep, security, dependency, lockfile, docker]
+    needs: [context, diagnostics, verification, backends, runtime]
     if: ${{ always() }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -526,19 +441,6 @@ jobs:
           VERIFICATION_REQUIRED: ${{ needs.context.outputs.verification_required == 'true' }}
           BACKEND_REQUIRED: ${{ inputs.run_assurance == true && needs.context.outputs.backend_required == 'true' }}
           RUNTIME_REQUIRED: ${{ inputs.run_assurance == true && needs.context.outputs.runtime_required == 'true' }}
-          RUN_ANALYZERS: ${{ inputs.run_analyzers == true }}
-          CODEQL_RESULT: ${{ needs.codeql.result }}
-          SONAR_RESULT: ${{ needs.sonar.result }}
-          SEMGREP_RESULT: ${{ needs.semgrep.result }}
-          SECURITY_RESULT: ${{ needs.security.result }}
-          WORKFLOW_REQUIRED: ${{ needs.context.outputs.workflow }}
-          DEPENDENCY_RESULT: ${{ needs.dependency.result }}
-          LOCKFILE_RESULT: ${{ needs.lockfile.result }}
-          DOCKER_RESULT: ${{ needs.docker.result }}
-          INFRASTRUCTURE_REQUIRED: ${{ needs.context.outputs.infrastructure }}
-          DEPENDENCY_REQUIRED: ${{ needs.context.outputs.dependency_changed }}
-          LOCKFILE_REQUIRED: ${{ needs.context.outputs.dependency_changed }}
-          DOCKER_REQUIRED: ${{ needs.context.outputs.infrastructure }}
           SKIP_DUPLICATE_PUSH: ${{ needs.context.outputs.skip_duplicate_push }}
         run: |
           set -euo pipefail
@@ -558,21 +460,6 @@ jobs:
           check_result verification "${VERIFICATION_RESULT}" "${VERIFICATION_REQUIRED}"
           check_result backends "${BACKENDS_RESULT}" "${BACKEND_REQUIRED}"
           check_result runtime "${RUNTIME_RESULT}" "${RUNTIME_REQUIRED}"
-          if [[ "${RUN_ANALYZERS}" == "true" && "${WORKFLOW_REQUIRED}" == "true" ]]; then
-            check_result codeql "${CODEQL_RESULT}" "true"
-            check_result sonar "${SONAR_RESULT}" "true"
-            check_result semgrep "${SEMGREP_RESULT}" "true"
-            check_result security "${SECURITY_RESULT}" "true"
-          fi
-          dependency_applicable=false
-          lockfile_applicable=false
-          docker_applicable=false
-          [[ "${RUN_ANALYZERS}" == "true" && "${DEPENDENCY_REQUIRED}" == "true" ]] && dependency_applicable=true
-          [[ "${RUN_ANALYZERS}" == "true" && "${LOCKFILE_REQUIRED}" == "true" ]] && lockfile_applicable=true
-          [[ "${RUN_ANALYZERS}" == "true" && "${DOCKER_REQUIRED}" == "true" ]] && docker_applicable=true
-          check_result dependency "${DEPENDENCY_RESULT}" "${dependency_applicable}"
-          check_result lockfile "${LOCKFILE_RESULT}" "${lockfile_applicable}"
-          check_result docker "${DOCKER_RESULT}" "${docker_applicable}"
           if (( ${#failures[@]} )); then
             echo "::error title=BThwani CI failed::$(IFS=,; echo "${failures[*]}")"
             exit 1

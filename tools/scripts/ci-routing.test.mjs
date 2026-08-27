@@ -41,6 +41,15 @@ test("PR synchronize routes only the previous exact PR head delta", () => {
   assert.match(workflow, /canonical_base_sha: \$\{\{ steps\.target\.outputs\.base_sha \}\}/u);
 });
 
+test("the fast gate excludes heavy analyzers from its daily DAG", () => {
+  const workflow = read(".github/workflows/ci.yml");
+  for (const worker of ["sonarqube.yml", "codeql.yml", "semgrep.yml", "security-remote.yml", "dependency-review.yml", "lockfile-integrity.yml", "docker-runtime-hardening.yml"]) {
+    assert.doesNotMatch(workflow, new RegExp(`uses: \\.\\/.github/workflows/${worker.replace(".", "\\\\.")}`, "u"), worker);
+  }
+  assert.match(workflow, /needs: \[context, diagnostics, verification, backends, runtime\]/u);
+  assert.doesNotMatch(workflow, /run_analyzers/u);
+});
+
 test("the final closure is the only final entrypoint and has no polling orchestration", () => {
   const workflow = read(".github/workflows/final-closure.yml");
   assert.match(workflow, /name: BThwani Final Closure/u);
