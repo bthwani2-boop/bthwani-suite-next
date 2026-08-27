@@ -4,8 +4,10 @@ const guardId = "dispatch-contract-registry-gate";
 const violations = [];
 
 const contractRelative = "services/dsh/contracts/dsh.dispatch-governance.openapi.yaml";
+const entryRelative = "services/dsh/contracts/dsh.openapi.yaml";
 const registryRelative = "services/dsh/contracts/contract-registry.ts";
 const contract = read(contractRelative);
+const entry = read(entryRelative);
 const registry = read(registryRelative);
 
 for (const marker of [
@@ -15,12 +17,17 @@ for (const marker of [
   "x-bthwani-client-generation: DISABLED",
   "x-bthwani-adapter-owner: frontend/shared/dispatch/dispatch.api.ts",
   "x-bthwani-runtime-dependency: true",
-  "/dsh/operator/dispatch/assignments:",
-  "/dsh/captain/dispatch/assignments:",
   "/dsh/operator/dispatch/candidates:",
   "/dsh/operator/dispatch/decisions:",
 ]) {
   if (!contract.includes(marker)) violations.push({ file: contractRelative, line: 0, message: `CONTRACT_MISSING_MARKER ${marker}` });
+}
+
+for (const marker of [
+  "/dsh/operator/dispatch/assignments:",
+  "/dsh/captain/dispatch/assignments:",
+]) {
+  if (!entry.includes(marker)) violations.push({ file: entryRelative, line: 0, message: `ENTRY_CONTRACT_MISSING_MARKER ${marker}` });
 }
 
 for (const marker of [
