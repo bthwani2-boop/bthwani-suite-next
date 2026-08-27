@@ -1,5 +1,5 @@
 import type { DshOrder, DshOrdersListState } from "./orders.types";
-import { orderActionErrorState, orderActionSubmittingState, orderActionSuccessState, ordersErrorState } from "./orders.states";
+import { orderActionErrorState, orderActionSuccessState, ordersErrorState } from "./orders.states";
 import { hasRejectReason, resolveOrdersListState } from "./orders.view-model";
 
 export type OrderErrorKind = "permission_denied" | "offline" | "conflict" | "not_found" | "error";
@@ -10,7 +10,6 @@ export function resolveOrdersLoadError(classified: { readonly kind: OrderErrorKi
   if (scope === "operator") return ordersErrorState("تعذر تحميل قائمة الطلبات.");
   return ordersErrorState("تعذر تحميل الطلبات.");
 }
-export function beginOrderAction() { return orderActionSubmittingState(); }
 export function resolveCreateOrderSuccess(order: DshOrder) { return orderActionSuccessState(order); }
 export function resolveCreateOrderError(classified: { readonly kind: OrderErrorKind }) {
   if (classified.kind === "offline") return orderActionErrorState("لا يوجد اتصال بالإنترنت.");
