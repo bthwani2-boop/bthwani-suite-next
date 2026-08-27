@@ -131,7 +131,7 @@ export function useClientAddressController() {
       const attempt = await getOrCreateClientAddressAttempt(input);
       const created = await createDshClientAddress(input, attempt.context);
       try {
-        await clearClientAddressAttempt();
+        await clearClientAddressAttempt(attempt.fingerprint);
       } catch {
         // The server accepted the idempotent mutation; replaying the stored key remains safe.
       }

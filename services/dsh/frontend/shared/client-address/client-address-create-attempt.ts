@@ -6,8 +6,12 @@ import {
 import type { DshAddressMutationContext, DshClientAddressDraft } from "./client-address.types";
 import { secureRandomId } from "../_kernel/secure-random.ts";
 
-const STORAGE_KEY = "@bthwani/client-address-create-attempt:v2";
+const STORAGE_PREFIX = "@bthwani/client-address-create-attempt:v3/";
 const STORAGE_KEY_LEGACY = "@bthwani/client-address-create-attempt:v1";
+
+function storageKey(scope: { readonly actorId: string; readonly installationId: string; readonly entityId: string }, fingerprint: string): string {
+  return `${STORAGE_PREFIX}${encodeURIComponent(scope.actorId)}/${encodeURIComponent(scope.installationId)}/${encodeURIComponent(scope.entityId)}/${encodeURIComponent(fingerprint)}`;
+}
 
 type StoredAttempt = {
   readonly fingerprint: string;
@@ -85,8 +89,9 @@ export async function getOrCreateClientAddressAttempt(
   const entityId = fingerprint.slice(0, 32);
   const scope = await resolveMutationIdentityScope("", { entityId });
   const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
+  const attemptKey = storageKey(scoped, fingerprint);
 
-  const raw = await bthwaniDurableStorage.getItem(STORAGE_KEY);
+  const raw = await bthwaniDurableStorage.getItem(attemptKey);
   if (raw) {
     try {
       const parsed: unknown = JSON.parse(raw);
@@ -104,7 +109,7 @@ export async function getOrCreateClientAddressAttempt(
           );
         }
         if (parsed.scope.entityId !== scoped.entityId) {
-          await bthwaniDurableStorage.removeItem(STORAGE_KEY);
+          await bthwaniDurableStorage.removeItem(attemptKey);
         } else {
           return parsed;
         }
@@ -116,19 +121,24 @@ export async function getOrCreateClientAddressAttempt(
   }
 
   const attempt = newAttempt(fingerprint, scoped);
-  await bthwaniDurableStorage.setItem(STORAGE_KEY, JSON.stringify(attempt));
+  await bthwaniDurableStorage.setItem(attemptKey, JSON.stringify(attempt));
   return attempt;
 }
 
-export async function clearClientAddressAttempt(): Promise<void> {
-  const raw = await bthwaniDurableStorage.getItem(STORAGE_KEY);
+export async function clearClientAddressAttempt(fingerprint: string): Promise<void> {
+  const normalizedFingerprint = fingerprint.trim();
+  if (!normalizedFingerprint) return;
+  const entityId = normalizedFingerprint.slice(0, 32);
+  const scope = await resolveMutationIdentityScope("", { entityId });
+  const key = storageKey({ actorId: scope.actorId, installationId: scope.installationId, entityId }, normalizedFingerprint);
+  const raw = await bthwaniDurableStorage.getItem(key);
   if (!raw) return;
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (isStoredAttempt(parsed)) {
-      await bthwaniDurableStorage.removeItem(STORAGE_KEY);
+    if (isStoredAttempt(parsed) && parsed.fingerprint === normalizedFingerprint) {
+      await bthwaniDurableStorage.removeItem(key);
     }
   } catch {
-    await bthwaniDurableStorage.removeItem(STORAGE_KEY);
+    // Preserve unresolved attempts when the entry is corrupt.
   }
 }
