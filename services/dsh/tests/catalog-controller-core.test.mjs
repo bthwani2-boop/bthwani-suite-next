@@ -6,8 +6,7 @@ const {
   resolveCatalogError,
 } = await import("../dist/services/dsh/frontend/shared/catalog/catalog.controller-core.js");
 const {
-  resolveCatalogSubmissionState,
-  resolvePartnerCatalogState,
+  isPartnerCatalogEmpty,
   resolvePublishedCatalogState,
 } = await import("../dist/services/dsh/frontend/shared/catalog/catalog.view-model.js");
 
@@ -19,21 +18,14 @@ const catalog = (products = [], categories = []) => ({
 
 describe("catalog controller core", () => {
   test("resolves empty and success catalog states", () => {
-    assert.equal(resolvePartnerCatalogState(catalog()).kind, "empty");
+    assert.equal(isPartnerCatalogEmpty(catalog()), true);
+    assert.equal(isPartnerCatalogEmpty(catalog([], [{ id: "c1" }])), false);
+    assert.equal(isPartnerCatalogEmpty(catalog([{ id: "p1" }])), false);
     assert.equal(resolvePublishedCatalogState(catalog()).kind, "empty");
     assert.equal(
       resolvePublishedCatalogState(catalog([{ id: "p1" }])).kind,
       "success",
     );
-    assert.equal(
-      resolvePartnerCatalogState(catalog([], [{ id: "c1" }])).kind,
-      "success",
-    );
-  });
-
-  test("resolves submission state", () => {
-    assert.equal(resolveCatalogSubmissionState([]).kind, "empty");
-    assert.equal(resolveCatalogSubmissionState([{ id: "s1" }]).kind, "success");
   });
 
   test("classifies permission, conflict, network, and action errors", () => {
