@@ -5,7 +5,6 @@
  * Provides computed values from raw data for rendering states.
  */
 import type {
-  CatalogAsset,
   CatalogAssetLink,
   AssetUploadProgress,
   EffectiveImage,
