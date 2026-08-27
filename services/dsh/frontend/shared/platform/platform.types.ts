@@ -28,21 +28,6 @@ export type ServiceScope = 'Global' | 'Region' | 'City' | 'Zone' | 'Service';
 export type ServiceOwner = 'Platform' | 'Operations' | 'DesignSystem';
 export type ServiceRisk = 'low' | 'medium' | 'high' | 'critical';
 
-interface ServiceRecord {
-  id: string;
-  label: string;
-  description: string;
-  owner: ServiceOwner;
-  status: ServiceStatus;
-  clientVisibility: ServiceClientVisibility;
-  scope: ServiceScope;
-  risk: ServiceRisk;
-  effectSummary: string;
-  auditRollbackHint: string;
-  reason?: string;
-  evidence?: string;
-  rollbackTarget?: ServiceStatus;
-}
 
 // ── Vars Types ────────────────────────────────────────────────────────────────
 export type DshPlatformVarOwner = 'DSH' | 'WLT' | 'Provider';
