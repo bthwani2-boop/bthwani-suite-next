@@ -16,7 +16,6 @@ export function resolveCreateOrderError(classified: { readonly kind: OrderErrorK
   return orderActionErrorState("تعذر إنشاء الطلب.");
 }
 export function resolveRejectOrderValidation(reason: string) { return hasRejectReason(reason) ? null : orderActionErrorState("سبب الرفض مطلوب."); }
-export function resolvePartnerOrderActionSuccess(order: DshOrder) { return orderActionSuccessState(order); }
 export function resolvePartnerOrderActionError(classified: { readonly kind: OrderErrorKind }, action: "accept" | "reject" | "preparing" | "ready") {
   if (classified.kind === "conflict") {
     if (action === "accept") return orderActionErrorState("الطلب في حالة لا تسمح بالقبول.");
