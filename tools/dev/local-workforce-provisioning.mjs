@@ -157,7 +157,7 @@ export async function ensureActiveZone(operatorToken) {
 
   const payload = {
     name: 'منطقة صنعاء المحلية',
-    cityCode: 'sana',
+    serviceAreaCode: 'sana',
     description: 'Local governed mobile development zone',
     reason: 'Provision governed local mobile development data',
   };
