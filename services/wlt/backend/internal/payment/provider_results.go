@@ -99,8 +99,11 @@ func ApplyAuthoritativeProviderEvent(ctx context.Context, db *sql.DB, input Prov
 		}
 		ledgerTransactionID := ""
 		if session.Status == "captured" {
-			_ = tx.QueryRowContext(ctx, `SELECT COALESCE(capture_ledger_transaction_id, '') FROM wlt_payment_sessions WHERE id = $1`, session.ID).Scan(&ledgerTransactionID)
+			if err := tx.QueryRowContext(ctx, `SELECT COALESCE(capture_ledger_transaction_id, '') FROM wlt_payment_sessions WHERE id = $1`, session.ID).Scan(&ledgerTransactionID); err != nil {
+				return nil, err
+			}
 		}
+
 		if err := tx.Commit(); err != nil {
 			return nil, err
 		}
@@ -112,10 +115,12 @@ func ApplyAuthoritativeProviderEvent(ctx context.Context, db *sql.DB, input Prov
 	}
 
 	if !legalAuthoritativeTransition(session.Status, input.ProviderStatus) {
-		_, _ = tx.ExecContext(ctx, `
-			UPDATE wlt_payment_provider_events
-			SET processing_state = 'conflict', processing_result = $2, processed_at = NOW()
-			WHERE provider_event_id = $1`, input.EventID, "illegal transition from "+session.Status)
+		if _, err := tx.ExecContext(ctx, `
+				UPDATE wlt_payment_provider_events
+				SET processing_state = 'conflict', processing_result = $2, processed_at = NOW()
+				WHERE provider_event_id = $1`, input.EventID, "illegal transition from "+session.Status); err != nil {
+			return nil, err
+		}
 		if err := tx.Commit(); err != nil {
 			return nil, err
 		}
@@ -136,21 +141,29 @@ func ApplyAuthoritativeProviderEvent(ctx context.Context, db *sql.DB, input Prov
 			}
 		}
 	} else if input.ProviderStatus == "captured" {
-		_ = tx.QueryRowContext(ctx, `SELECT COALESCE(capture_ledger_transaction_id, '') FROM wlt_payment_sessions WHERE id = $1`, session.ID).Scan(&ledgerTransactionID)
+		if err := tx.QueryRowContext(ctx, `SELECT COALESCE(capture_ledger_transaction_id, '') FROM wlt_payment_sessions WHERE id = $1`, session.ID).Scan(&ledgerTransactionID); err != nil {
+			return nil, err
+		}
 	}
 
-	if _, err = tx.ExecContext(ctx, `
-		UPDATE wlt_reconciliation_cases
-		SET status = 'resolved',
-		    resolution = $2,
-		    resolution_action = CASE WHEN $3 IN ('authorized','captured') THEN 'confirmed_success' ELSE 'confirmed_failed' END,
-		    resolution_note = $4,
-		    resolved_at = NOW(), updated_at = NOW()
-		WHERE payment_session_id = $1 AND status = 'open'`,
-		session.ID, "authoritative provider status: "+input.ProviderStatus, input.ProviderStatus,
-		"resolved by "+input.ProcessingSource+" event "+input.EventID,
-	); err != nil {
+	reconciliationCaseID, err := openReconciliationCaseForProviderEvent(ctx, tx, session.ID, input.EventType)
+	if err != nil {
 		return nil, err
+	}
+	if reconciliationCaseID != "" {
+		if _, err = tx.ExecContext(ctx, `
+			UPDATE wlt_reconciliation_cases
+			SET status = 'resolved',
+			    resolution = $2,
+			    resolution_action = CASE WHEN $3 IN ('authorized','captured') THEN 'confirmed_success' ELSE 'confirmed_failed' END,
+			    resolution_note = $4,
+			    resolved_at = NOW(), updated_at = NOW()
+			WHERE id = $1 AND payment_session_id = $5 AND status = 'open'`,
+			reconciliationCaseID, "authoritative provider status: "+input.ProviderStatus, input.ProviderStatus,
+			"resolved by "+input.ProcessingSource+" event "+input.EventID, session.ID,
+		); err != nil {
+			return nil, err
+		}
 	}
 	if _, err = tx.ExecContext(ctx, `
 		UPDATE wlt_payment_provider_events
@@ -162,6 +175,46 @@ func ApplyAuthoritativeProviderEvent(ctx context.Context, db *sql.DB, input Prov
 		return nil, err
 	}
 	return &ProviderResultApplication{Session: session, LedgerTransactionID: ledgerTransactionID}, nil
+}
+
+func openReconciliationCaseForProviderEvent(ctx context.Context, tx *sql.Tx, paymentSessionID, eventType string) (string, error) {
+	operation := ""
+	switch eventType {
+	case "payment.authorized":
+		operation = "authorize"
+	case "payment.captured":
+		operation = "capture"
+	case "payment.failed", "payment.expired":
+	default:
+		return "", fmt.Errorf("unsupported provider event type %q", eventType)
+	}
+	query := `SELECT id FROM wlt_reconciliation_cases WHERE payment_session_id=$1 AND status='open'`
+	args := []any{paymentSessionID}
+	if operation != "" {
+		query += ` AND operation=$2`
+		args = append(args, operation)
+	}
+	query += ` FOR UPDATE`
+	rows, err := tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return "", err
+	}
+	defer rows.Close()
+	var caseID string
+	count := 0
+	for rows.Next() {
+		if err := rows.Scan(&caseID); err != nil {
+			return "", err
+		}
+		count++
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	if count > 1 {
+		return "", fmt.Errorf("provider event %s cannot resolve multiple open reconciliation cases", eventType)
+	}
+	return caseID, nil
 }
 
 func legalAuthoritativeTransition(current, next string) bool {

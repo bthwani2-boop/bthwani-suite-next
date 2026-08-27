@@ -90,12 +90,13 @@ func AuthorizeTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashIn
 		})
 	}
 
+	var tx *sql.Tx
 	finalizationFailure := func(cause error) (*PaymentSession, error) {
-		return nil, withDurableRecoveryError(cause, func() error {
+		return nil, recoverAfterFinalizationFailure(tx, cause, func() error {
 			return markSessionResultUnknownAndOpenCase(db, claimed, "authorize", cause, "authorization_pending")
 		})
 	}
-	tx, err := db.BeginTx(ctx, nil)
+	tx, err = db.BeginTx(ctx, nil)
 	if err != nil {
 		return finalizationFailure(fmt.Errorf("begin topup authorize finalization: %w", err))
 	}
@@ -166,8 +167,9 @@ func CaptureTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashInRa
 		})
 	}
 
+	var tx *sql.Tx
 	finalizationFailure := func(cause error) (*PaymentSession, error) {
-		return nil, withDurableRecoveryError(cause, func() error {
+		return nil, recoverAfterFinalizationFailure(tx, cause, func() error {
 			return markSessionResultUnknownAndOpenCase(db, claimed, "capture", cause, "capture_pending")
 		})
 	}
@@ -175,7 +177,7 @@ func CaptureTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashInRa
 		return finalizationFailure(fmt.Errorf("captured topup session %s has invalid accounting amount/currency", claimed.ID))
 	}
 
-	tx, err := db.BeginTx(ctx, nil)
+	tx, err = db.BeginTx(ctx, nil)
 	if err != nil {
 		return finalizationFailure(fmt.Errorf("begin topup capture finalization: %w", err))
 	}

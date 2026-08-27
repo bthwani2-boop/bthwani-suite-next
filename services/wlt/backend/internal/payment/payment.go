@@ -225,6 +225,15 @@ func withDurableRecoveryError(cause error, recovery func() error) error {
 	return cause
 }
 
+func recoverAfterFinalizationFailure(tx *sql.Tx, cause error, recovery func() error) error {
+	if tx != nil {
+		if rollbackErr := tx.Rollback(); rollbackErr != nil && !errors.Is(rollbackErr, sql.ErrTxDone) {
+			return errors.Join(cause, fmt.Errorf("rollback of failed financial finalization failed: %w", rollbackErr))
+		}
+	}
+	return withDurableRecoveryError(cause, recovery)
+}
+
 func markSessionFailedAndNotify(db *sql.DB, session *PaymentSession, expectedStatus string) error {
 	if session == nil {
 		return nil
@@ -234,7 +243,7 @@ func markSessionFailedAndNotify(db *sql.DB, session *PaymentSession, expectedSta
 		return err
 	}
 	defer tx.Rollback()
-	res, err := tx.Exec(`UPDATE wlt_payment_sessions SET status = 'failed', updated_at = NOW() WHERE id = $1 AND status = $2`, session.ID, expectedStatus)
+	res, err := tx.Exec(`UPDATE wlt_payment_sessions SET status = 'failed', last_provider_status = 'failed', updated_at = NOW() WHERE id = $1 AND status = $2`, session.ID, expectedStatus)
 	if err != nil {
 		return err
 	}
@@ -269,7 +278,7 @@ func markSessionResultUnknownAndOpenCase(db *sql.DB, session *PaymentSession, op
 		return err
 	}
 	defer tx.Rollback()
-	res, err := tx.Exec(`UPDATE wlt_payment_sessions SET status = 'provider_result_unknown', updated_at = NOW() WHERE id = $1 AND status = $2`, session.ID, expectedStatus)
+	res, err := tx.Exec(`UPDATE wlt_payment_sessions SET status = 'provider_result_unknown', last_provider_status = 'unknown', updated_at = NOW() WHERE id = $1 AND status = $2`, session.ID, expectedStatus)
 	if err != nil {
 		return err
 	}

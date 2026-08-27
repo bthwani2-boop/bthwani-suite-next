@@ -111,7 +111,10 @@ func HandleGovernedPaymentOperation(db *sql.DB, operation string, next http.Hand
 		recorder := newBufferedResponseWriter()
 		next(recorder, r)
 		state, responseStatus, providerReference := classifyOperationResult(db, sessionID, recorder.status)
-		_ = finishOperationReceipt(db, receipt.ID, state, responseStatus, providerReference)
+		if err := finishOperationReceipt(db, receipt.ID, state, responseStatus, providerReference); err != nil {
+			shared.SendError(w, http.StatusInternalServerError, "IDEMPOTENCY_RECEIPT_FINALIZATION_FAILED", "payment operation completed but its durable replay receipt could not be persisted; refresh canonical status")
+			return
+		}
 
 		for key, values := range recorder.Header() {
 			for _, value := range values {

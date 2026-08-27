@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/lib/pq"
+
 	"wlt-api/internal/ledger"
 	"wlt-api/internal/shared"
 )
@@ -384,7 +386,34 @@ func claimTransitionCommand(ctx context.Context, tx *sql.Tx, reservationID, targ
 	return false, nil
 }
 
+func isRetryableTransitionError(err error) bool {
+	var pgErr *pq.Error
+	if !errors.As(err, &pgErr) {
+		return false
+	}
+	return pgErr.Code == "40001" || pgErr.Code == "40P01"
+}
+
 func transition(ctx context.Context, db *sql.DB, reservationID, target string, input TransitionInput) (*Reservation, error) {
+	const maxAttempts = 4
+	var lastErr error
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		updated, err := transitionOnce(ctx, db, reservationID, target, input)
+		if err == nil || !isRetryableTransitionError(err) {
+			return updated, err
+		}
+		lastErr = err
+		backoff := time.Duration(1<<attempt) * 10 * time.Millisecond
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(backoff):
+		}
+	}
+	return nil, fmt.Errorf("promotion funding transition retries exhausted: %w", lastErr)
+}
+
+func transitionOnce(ctx context.Context, db *sql.DB, reservationID, target string, input TransitionInput) (*Reservation, error) {
 	input.OperatorContextID = strings.TrimSpace(input.OperatorContextID)
 	input.OrderID = strings.TrimSpace(input.OrderID)
 	input.Reason = strings.TrimSpace(input.Reason)
@@ -645,5 +674,3 @@ func transitionHandler(db *sql.DB, target string) http.HandlerFunc {
 func HandleCommit(db *sql.DB) http.HandlerFunc  { return transitionHandler(db, "committed") }
 func HandleRelease(db *sql.DB) http.HandlerFunc { return transitionHandler(db, "released") }
 func HandleReverse(db *sql.DB) http.HandlerFunc { return transitionHandler(db, "reversed") }
-
-var _ = time.Now

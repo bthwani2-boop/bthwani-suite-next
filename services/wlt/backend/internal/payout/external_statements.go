@@ -39,16 +39,17 @@ type AuthoritativeStatementLineInput struct {
 }
 
 type ImportAuthoritativeStatementInput struct {
-	ExternalProviderAccountID string                            `json:"externalProviderAccountId"`
-	StatementReference        string                            `json:"statementReference"`
-	ArtifactSHA256            string                            `json:"artifactSha256"`
-	ArtifactBytesBase64       string                            `json:"artifactBytesBase64"`
-	ProvenanceType            string                            `json:"provenanceType,omitempty"`
-	ProvenanceEvidenceSHA256  string                            `json:"provenanceEvidenceSha256,omitempty"`
-	BusinessDate              string                            `json:"businessDate"`
-	ClosingBalanceMinorUnits  int64                             `json:"closingBalanceMinorUnits"`
-	Currency                  string                            `json:"currency"`
-	Lines                     []AuthoritativeStatementLineInput `json:"lines"`
+	ExternalProviderAccountID     string                            `json:"externalProviderAccountId"`
+	StatementReference            string                            `json:"statementReference"`
+	ArtifactSHA256                string                            `json:"artifactSha256"`
+	ArtifactBytesBase64           string                            `json:"artifactBytesBase64"`
+	ProvenanceType                string                            `json:"provenanceType,omitempty"`
+	ProvenanceEvidenceSHA256      string                            `json:"provenanceEvidenceSha256,omitempty"`
+	ProvenanceEvidenceBytesBase64 string                            `json:"provenanceEvidenceBytesBase64,omitempty"`
+	BusinessDate                  string                            `json:"businessDate"`
+	ClosingBalanceMinorUnits      int64                             `json:"closingBalanceMinorUnits"`
+	Currency                      string                            `json:"currency"`
+	Lines                         []AuthoritativeStatementLineInput `json:"lines"`
 }
 
 type AuthoritativeStatement struct {
@@ -223,6 +224,7 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 	input.ArtifactBytesBase64 = strings.TrimSpace(input.ArtifactBytesBase64)
 	input.ProvenanceType = strings.ToLower(strings.TrimSpace(input.ProvenanceType))
 	input.ProvenanceEvidenceSHA256 = strings.ToLower(strings.TrimSpace(input.ProvenanceEvidenceSHA256))
+	input.ProvenanceEvidenceBytesBase64 = strings.TrimSpace(input.ProvenanceEvidenceBytesBase64)
 	if input.ProvenanceType == "" {
 		input.ProvenanceType = "operator_attested"
 	}
@@ -236,8 +238,19 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 	}
 	if input.ProvenanceType == "operator_attested" {
 		input.ProvenanceEvidenceSHA256 = input.ArtifactSHA256
-	} else if !isSHA256(input.ProvenanceEvidenceSHA256) {
-		return nil, fmt.Errorf("independent provenance evidence SHA-256 is required for %s statements", input.ProvenanceType)
+	} else if !isSHA256(input.ProvenanceEvidenceSHA256) || input.ProvenanceEvidenceBytesBase64 == "" {
+		return nil, fmt.Errorf("independent provenance evidence SHA-256 and bytes are required for %s statements", input.ProvenanceType)
+	}
+	provenanceEvidenceBytes, err := base64.StdEncoding.DecodeString(input.ProvenanceEvidenceBytesBase64)
+	if input.ProvenanceType == "operator_attested" && input.ProvenanceEvidenceBytesBase64 == "" {
+		provenanceEvidenceBytes, err = base64.StdEncoding.DecodeString(input.ArtifactBytesBase64)
+	}
+	if err != nil || len(provenanceEvidenceBytes) == 0 {
+		return nil, fmt.Errorf("provenance evidence bytes are invalid or empty")
+	}
+	evidenceDigest := sha256.Sum256(provenanceEvidenceBytes)
+	if hex.EncodeToString(evidenceDigest[:]) != input.ProvenanceEvidenceSHA256 {
+		return nil, fmt.Errorf("provenance evidence bytes do not match provenanceEvidenceSha256")
 	}
 	for i := range input.Lines {
 		line := &input.Lines[i]
@@ -295,14 +308,14 @@ func ImportAuthoritativeStatement(ctx context.Context, db *sql.DB, input ImportA
 			INSERT INTO wlt_external_provider_statements
 				(operator_context_id, external_provider_account_id, statement_reference,
 				 artifact_sha256, statement_fingerprint, business_date, closing_balance_minor_units, currency,
-				 imported_by_operator_id, provenance_type, provenance_evidence_sha256)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+				 imported_by_operator_id, provenance_type, provenance_evidence_sha256, provenance_evidence_bytes)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
 			ON CONFLICT (operator_context_id, artifact_sha256) DO NOTHING
 			RETURNING id, statement_reference, artifact_sha256, statement_fingerprint, provenance_type, provenance_evidence_sha256`,
 
 		operatorContextID, input.ExternalProviderAccountID, input.StatementReference,
 		input.ArtifactSHA256, statementFingerprint, businessDate, input.ClosingBalanceMinorUnits, input.Currency,
-		operatorID, input.ProvenanceType, input.ProvenanceEvidenceSHA256,
+		operatorID, input.ProvenanceType, input.ProvenanceEvidenceSHA256, provenanceEvidenceBytes,
 	).Scan(&statement.ID, &statement.StatementReference, &statement.ArtifactSHA256, &statement.StatementFingerprint,
 		&statement.ProvenanceType, &statement.ProvenanceEvidenceSHA256)
 	if err == sql.ErrNoRows {

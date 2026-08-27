@@ -459,6 +459,13 @@ func isDefinitiveProviderFailure(err error) bool {
 	return errors.As(err, &providerErr)
 }
 
+func withDurableRefundRecoveryError(cause error, recovery func() error) error {
+	if recoveryErr := recovery(); recoveryErr != nil {
+		return errors.Join(cause, fmt.Errorf("durable refund provider recovery failed: %w", recoveryErr))
+	}
+	return cause
+}
+
 func markGovernedRefundProviderFailure(ctx context.Context, db *sql.DB, refund *GovernedRefund, cause error, correlationID string) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
@@ -646,13 +653,16 @@ func CompleteGovernedRefundWithProvider(ctx context.Context, db *sql.DB, rail pr
 
 	sourceStatus, err := resolveRefundSourceStatus(ctx, db, claimed.PaymentSessionID)
 	if err != nil {
-		_ = markGovernedRefundProviderUnknown(ctx, db, claimed, fmt.Errorf("resolve refund funding source: %w", err), meta.CorrelationID)
-		return nil, ErrRefundProviderUnknown
+		cause := fmt.Errorf("resolve refund funding source: %w", err)
+		return nil, withDurableRefundRecoveryError(ErrRefundProviderUnknown, func() error {
+			return markGovernedRefundProviderUnknown(ctx, db, claimed, cause, meta.CorrelationID)
+		})
 	}
 	if sourceStatus != "captured" {
 		cause := fmt.Errorf("%w: original payment session status is %q", ErrRefundSourceNotProviderBacked, sourceStatus)
-		_ = markGovernedRefundProviderFailure(ctx, db, claimed, cause, meta.CorrelationID)
-		return nil, cause
+		return nil, withDurableRefundRecoveryError(cause, func() error {
+			return markGovernedRefundProviderFailure(ctx, db, claimed, cause, meta.CorrelationID)
+		})
 	}
 
 	result, err := rail.Refund(ctx, map[string]any{
@@ -663,16 +673,19 @@ func CompleteGovernedRefundWithProvider(ctx context.Context, db *sql.DB, rail pr
 	}, meta)
 	if err != nil {
 		if isDefinitiveProviderFailure(err) {
-			_ = markGovernedRefundProviderFailure(ctx, db, claimed, err, meta.CorrelationID)
-			return nil, err
+			return nil, withDurableRefundRecoveryError(err, func() error {
+				return markGovernedRefundProviderFailure(ctx, db, claimed, err, meta.CorrelationID)
+			})
 		}
-		_ = markGovernedRefundProviderUnknown(ctx, db, claimed, err, meta.CorrelationID)
-		return nil, ErrRefundProviderUnknown
+		return nil, withDurableRefundRecoveryError(ErrRefundProviderUnknown, func() error {
+			return markGovernedRefundProviderUnknown(ctx, db, claimed, err, meta.CorrelationID)
+		})
 	}
 	if result.Status != "refunded" || strings.TrimSpace(result.ProviderReference) == "" {
 		cause := fmt.Errorf("provider refund returned an unrecognized result")
-		_ = markGovernedRefundProviderUnknown(ctx, db, claimed, cause, meta.CorrelationID)
-		return nil, ErrRefundProviderUnknown
+		return nil, withDurableRefundRecoveryError(ErrRefundProviderUnknown, func() error {
+			return markGovernedRefundProviderUnknown(ctx, db, claimed, cause, meta.CorrelationID)
+		})
 	}
 	return finalizeGovernedRefundSuccess(ctx, db, claimed.ID, "wlt", "service", result.ProviderReference, "provider confirmed refunded", meta.CorrelationID, []string{"processing"})
 }

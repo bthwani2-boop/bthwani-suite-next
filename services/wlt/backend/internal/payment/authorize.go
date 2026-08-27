@@ -50,12 +50,13 @@ func AuthorizeSessionWithProvider(ctx context.Context, db *sql.DB, rail provider
 		})
 	}
 
+	var tx *sql.Tx
 	finalizationFailure := func(cause error) (*PaymentSession, error) {
-		return nil, withDurableRecoveryError(cause, func() error {
+		return nil, recoverAfterFinalizationFailure(tx, cause, func() error {
 			return markSessionResultUnknownAndOpenCase(db, claimed, "authorize", cause, "authorization_pending")
 		})
 	}
-	tx, err := db.BeginTx(ctx, nil)
+	tx, err = db.BeginTx(ctx, nil)
 	if err != nil {
 		return finalizationFailure(fmt.Errorf("begin authorize finalization: %w", err))
 	}
