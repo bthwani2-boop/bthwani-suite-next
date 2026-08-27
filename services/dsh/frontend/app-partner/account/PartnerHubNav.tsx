@@ -411,14 +411,6 @@ export function HubNavRow({
   );
 }
 
-export function resolveServiceModeEnabled(
-  serviceModes: readonly { id: string; enabled: boolean }[] | undefined,
-  modeId: PartnerOperationalMode['id'],
-  fallback: boolean,
-) {
-  return serviceModes?.find((mode) => mode.id === modeId)?.enabled ?? fallback;
-}
-
 export function OperationsModeRow({
   mode,
   selected,
