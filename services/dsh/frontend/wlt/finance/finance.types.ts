@@ -8,33 +8,6 @@ export type FinanceCanonicalWorkspaceId =
   | 'reconciliation-risk'
   | 'reports-policies-approvals';
 
-export type FinanceLegacyWorkspaceAlias =
-  | 'financial-center'
-  | 'account-statements'
-  | 'store-settlements'
-  | 'settlement-calendar'
-  | 'refund-ledger'
-  | 'ledger'
-  | 'daily-close'
-  | 'audit-close'
-  | 'overview'
-  | 'settlements'
-  | 'captain-eligibility'
-  | 'payouts'
-  | 'tax-compliance'
-  | 'risk-audit'
-  | 'captain-finance'
-  | 'store-delivery-finance'
-  | 'refunds'
-  | 'variances'
-  | 'stores'
-  | 'partners'
-  | 'partner-settlements';
-
-export type FinanceWorkspaceInput =
-  | FinanceCanonicalWorkspaceId
-  | FinanceLegacyWorkspaceAlias;
-
 export type CanonicalFinanceGroupId = FinanceCanonicalWorkspaceId;
 
 export type FinancePanelId = 'detail' | 'evidence';

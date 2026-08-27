@@ -3,7 +3,6 @@ import type {
   FinanceGroupMeta,
   FinanceNormalizationResult,
   FinancePanelId,
-  FinanceWorkspaceInput,
 } from './finance.types';
 
 export const FINANCE_CANONICAL_GROUPS: readonly FinanceGroupMeta[] = [
@@ -105,61 +104,6 @@ export const FINANCE_CANONICAL_GROUP_IDS = FINANCE_CANONICAL_GROUPS.map((group) 
 
 export function getFinanceGroupMeta(groupId: CanonicalFinanceGroupId) {
   return FINANCE_CANONICAL_GROUPS.find((group) => group.id === groupId) ?? FINANCE_CANONICAL_GROUPS[0]!;
-}
-
-function normalizeFinanceLocation(workspace?: string, panel?: string): FinanceNormalizationResult {
-  const resolvedPanel = panel as FinancePanelId | undefined;
-  const typedWorkspace = workspace as FinanceWorkspaceInput | undefined;
-
-  if (!typedWorkspace) {
-    return { kind: 'group', group: 'financial-command-center', subGroup: 'overview', sourceWorkspace: workspace, panel: resolvedPanel };
-  }
-
-  if (FINANCE_CANONICAL_GROUP_IDS.includes(typedWorkspace as CanonicalFinanceGroupId)) {
-    const group = typedWorkspace as CanonicalFinanceGroupId;
-    const meta = getFinanceGroupMeta(group);
-    return { kind: 'group', group, subGroup: meta.subGroups?.[0]?.id, sourceWorkspace: workspace, panel: resolvedPanel };
-  }
-
-  switch (typedWorkspace) {
-    case 'financial-center':
-      return { kind: 'group', group: 'financial-command-center', subGroup: 'position', sourceWorkspace: workspace, panel: resolvedPanel };
-    case 'overview':
-      return { kind: 'group', group: 'financial-command-center', subGroup: 'overview', sourceWorkspace: workspace, panel: resolvedPanel };
-    case 'ledger':
-      return { kind: 'group', group: 'ledger-order-finance', subGroup: 'ledger', sourceWorkspace: workspace, panel: resolvedPanel };
-    case 'audit-close':
-    case 'daily-close':
-      return { kind: 'group', group: 'reports-policies-approvals', subGroup: 'approvals', sourceWorkspace: workspace, panel: resolvedPanel };
-    case 'account-statements':
-      return { kind: 'group', group: 'payments-wallets', subGroup: 'client-wallets', sourceWorkspace: workspace, panel: resolvedPanel };
-    case 'captain-finance':
-      return { kind: 'group', group: 'payments-wallets', subGroup: 'captain-wallets', sourceWorkspace: workspace, panel: resolvedPanel };
-    case 'store-settlements':
-    case 'stores':
-    case 'store-delivery-finance':
-      return { kind: 'group', group: 'settlements-payouts', subGroup: 'stores', sourceWorkspace: workspace, panel: resolvedPanel };
-    case 'partner-settlements':
-    case 'partners':
-    case 'settlements':
-    case 'payouts':
-    case 'settlements-payouts':
-      return { kind: 'group', group: 'settlements-payouts', subGroup: 'partners', sourceWorkspace: workspace, panel: resolvedPanel };
-    case 'settlement-calendar':
-      return { kind: 'group', group: 'settlements-payouts', subGroup: 'bank-transfers', sourceWorkspace: workspace, panel: resolvedPanel };
-    case 'tax-compliance':
-      return { kind: 'group', group: 'commissions-fees-promo', subGroup: 'fees', sourceWorkspace: workspace, panel: resolvedPanel };
-    case 'refund-ledger':
-    case 'refunds':
-      return { kind: 'group', group: 'refunds-disputes-holds', subGroup: 'refunds', sourceWorkspace: workspace, panel: resolvedPanel };
-    case 'captain-eligibility':
-      return { kind: 'group', group: 'reconciliation-risk', subGroup: 'reconciliation', sourceWorkspace: workspace, panel: resolvedPanel };
-    case 'risk-audit':
-    case 'variances':
-      return { kind: 'group', group: 'reconciliation-risk', subGroup: 'risk-fraud', sourceWorkspace: workspace, panel: resolvedPanel };
-    default:
-      return { kind: 'group', group: 'financial-command-center', subGroup: 'overview', sourceWorkspace: workspace, panel: resolvedPanel };
-  }
 }
 
 export function buildFinanceHref(group: CanonicalFinanceGroupId = 'financial-command-center', options?: { subGroup?: string | undefined; panel?: FinancePanelId | undefined }) {
