@@ -3,7 +3,6 @@ import type {
   PromoteCaptainInput,
   PromoteCaptainResponse,
   ProviderPenaltyCommand,
-  ProviderIncidentTransition,
   TransitionProviderIncidentInput,
   TransitionProviderIncidentResponse,
 } from "./workforce-operational-enforcement.types";
@@ -33,13 +32,4 @@ export async function getProviderPenaltyCommand(commandId: string): Promise<Prov
     `/workforce/provider-penalty-commands/${encodeURIComponent(commandId)}`,
   );
   return result.financialCommand;
-}
-
-export async function listProviderIncidentTransitions(
-  incidentId: string,
-): Promise<readonly ProviderIncidentTransition[]> {
-  const result = await request<{ transitions: ProviderIncidentTransition[] }>(
-    `/workforce/provider-incidents/${encodeURIComponent(incidentId)}/transitions`,
-  );
-  return result.transitions;
 }

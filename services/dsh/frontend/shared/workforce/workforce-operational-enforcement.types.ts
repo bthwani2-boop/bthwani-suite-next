@@ -61,14 +61,3 @@ export type ProviderPenaltyCommand = {
   readonly remoteLedgerTransactionId?: string | undefined;
   readonly terminalDisposition?: string | undefined;
 };
-
-export type ProviderIncidentTransition = {
-  readonly id: string;
-  readonly incidentId: string;
-  readonly fromStatus: ProviderIncidentStatus;
-  readonly toStatus: ProviderIncidentStatus;
-  readonly resolutionNote?: string | undefined;
-  readonly wltLedgerReference?: string | undefined;
-  readonly changedByActorId: string;
-  readonly createdAt: string;
-};
