@@ -96,11 +96,12 @@ func TestGovernedRefundTopUpCompletionDebitsWalletBack(t *testing.T) {
         var walletDebit, providerCredit, platformDebit int64
         err = db.QueryRow(`
                 SELECT
-                        COALESCE(SUM(CASE WHEN l.account_type='wallet' AND l.debit_credit='debit' AND l.actor_type='client' AND l.actor_id='topup-client-1' THEN l.amount_minor_units ELSE 0 END),0),
-                        COALESCE(SUM(CASE WHEN l.account_type='provider_clearing' AND l.debit_credit='credit' THEN l.amount_minor_units ELSE 0 END),0),
-                        COALESCE(SUM(CASE WHEN l.account_type='platform_payable' AND l.debit_credit='debit' THEN l.amount_minor_units ELSE 0 END),0)
+                        COALESCE(SUM(CASE WHEN a.account_type='wallet' AND l.debit_credit='debit' AND a.actor_type='client' AND a.actor_id='topup-client-1' THEN l.amount_minor_units ELSE 0 END),0),
+                        COALESCE(SUM(CASE WHEN a.account_type='provider_clearing' AND l.debit_credit='credit' THEN l.amount_minor_units ELSE 0 END),0),
+                        COALESCE(SUM(CASE WHEN a.account_type='platform_payable' AND l.debit_credit='debit' THEN l.amount_minor_units ELSE 0 END),0)
                 FROM wlt_ledger_transactions t
                 JOIN wlt_ledger_lines l ON l.ledger_transaction_id=t.id
+                JOIN wlt_ledger_accounts a ON a.id=l.account_id
                 WHERE t.transaction_type='refund_completed' AND t.reference_type='refund' AND t.reference_id=$1`, completed.ID,
         ).Scan(&walletDebit, &providerCredit, &platformDebit)
         if err != nil {
@@ -161,10 +162,11 @@ func TestGovernedRefundOrderPaymentStillPostsPlatformPayable(t *testing.T) {
         var platformDebit, walletDebit int64
         err = db.QueryRow(`
                 SELECT
-                        COALESCE(SUM(CASE WHEN l.account_type='platform_payable' AND l.debit_credit='debit' THEN l.amount_minor_units ELSE 0 END),0),
-                        COALESCE(SUM(CASE WHEN l.account_type='wallet' AND l.debit_credit='debit' THEN l.amount_minor_units ELSE 0 END),0)
+                        COALESCE(SUM(CASE WHEN a.account_type='platform_payable' AND l.debit_credit='debit' THEN l.amount_minor_units ELSE 0 END),0),
+                        COALESCE(SUM(CASE WHEN a.account_type='wallet' AND l.debit_credit='debit' THEN l.amount_minor_units ELSE 0 END),0)
                 FROM wlt_ledger_transactions t
                 JOIN wlt_ledger_lines l ON l.ledger_transaction_id=t.id
+                JOIN wlt_ledger_accounts a ON a.id=l.account_id
                 WHERE t.transaction_type='refund_completed' AND t.reference_type='refund' AND t.reference_id=$1`, completed.ID,
         ).Scan(&platformDebit, &walletDebit)
         if err != nil {
