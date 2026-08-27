@@ -45,12 +45,6 @@ export function catalogSubmissionSuccessState(
   return { kind: "success", submissions };
 }
 
-export function catalogAuditLoadingState(
-  entries: readonly CatalogSubmission[],
-): CatalogAuditState {
-  return { kind: "loading", entries };
-}
-
 export function catalogAuditSuccessState(
   entries: readonly CatalogSubmission[],
 ): CatalogAuditState {
