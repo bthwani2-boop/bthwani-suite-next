@@ -13,6 +13,26 @@ import (
 	workforceauth "workforce-api/internal/auth"
 )
 
+func TestValidateZoneUsesCanonicalServiceAreaCode(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/dsh/operator/platform/zones" {
+			t.Fatalf("unexpected request %s %s", r.Method, r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = io.WriteString(w, `{"zones":[{"id":"zone-1","name":"Sanaa","serviceAreaCode":"sana","isActive":true}]}`)
+	}))
+	defer server.Close()
+
+	client := NewClient(server.URL, "dsh-token")
+	zone, err := client.ValidateZone(t.Context(), "zone-1", "Bearer operator-token")
+	if err != nil {
+		t.Fatalf("ValidateZone() error = %v", err)
+	}
+	if zone.ServiceAreaCode != "sana" {
+		t.Fatalf("ServiceAreaCode = %q, want sana", zone.ServiceAreaCode)
+	}
+}
+
 func TestValidateProviderDocumentMediaUsesTrustedServiceBoundary(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost || r.URL.Path != "/dsh/internal/workforce/provider-media-refs/validate" {

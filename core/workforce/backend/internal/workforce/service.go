@@ -151,7 +151,7 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 		}
 		return Person{}, false, err
 	}
-	if err := s.ensureServiceZoneCity(ctx, zone.CityCode); err != nil {
+	if err := s.ensureServiceZoneCity(ctx, zone.ServiceAreaCode); err != nil {
 		return Person{}, false, err
 	}
 
@@ -205,7 +205,7 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 	var person Person
 	unitErr := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
 		var err error
-		person, err = createPersonTx(ctx, tx, actorID, workforceCode, zone.CityCode, input)
+		person, err = createPersonTx(ctx, tx, actorID, workforceCode, zone.ServiceAreaCode, input)
 		if err != nil {
 			return err
 		}
@@ -265,7 +265,7 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 		}
 		return Person{}, false, err
 	}
-	if err := s.ensureServiceZoneCity(ctx, zone.CityCode); err != nil {
+	if err := s.ensureServiceZoneCity(ctx, zone.ServiceAreaCode); err != nil {
 		return Person{}, false, err
 	}
 
@@ -320,7 +320,7 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 	var person Person
 	unitErr := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
 		var err error
-		person, err = createCaptainTx(ctx, tx, actorID, workforceCode, zone.CityCode, input)
+		person, err = createCaptainTx(ctx, tx, actorID, workforceCode, zone.ServiceAreaCode, input)
 		if err != nil {
 			return err
 		}
@@ -484,10 +484,10 @@ func (s *Service) UpdateFieldAgent(ctx context.Context, operator Operator, actor
 			}
 			return Person{}, err
 		}
-		if err := s.ensureServiceZoneCity(ctx, zone.CityCode); err != nil {
+		if err := s.ensureServiceZoneCity(ctx, zone.ServiceAreaCode); err != nil {
 			return Person{}, err
 		}
-		derivedCityCode = &zone.CityCode
+		derivedCityCode = &zone.ServiceAreaCode
 	}
 	var person Person
 	if err := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
@@ -526,10 +526,10 @@ func (s *Service) UpdateCaptain(ctx context.Context, operator Operator, actorID 
 			}
 			return Person{}, err
 		}
-		if err := s.ensureServiceZoneCity(ctx, zone.CityCode); err != nil {
+		if err := s.ensureServiceZoneCity(ctx, zone.ServiceAreaCode); err != nil {
 			return Person{}, err
 		}
-		derivedCityCode = &zone.CityCode
+		derivedCityCode = &zone.ServiceAreaCode
 	}
 	var person Person
 	if err := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {

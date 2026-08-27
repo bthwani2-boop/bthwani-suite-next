@@ -63,11 +63,11 @@ func (c *Client) AvailabilityProjectionConfigured() bool {
 }
 
 type Zone struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	CityCode    string `json:"cityCode"`
-	IsActive    bool   `json:"isActive"`
-	Description string `json:"description"`
+	ID              string `json:"id"`
+	Name            string `json:"name"`
+	ServiceAreaCode string `json:"serviceAreaCode"`
+	IsActive        bool   `json:"isActive"`
+	Description     string `json:"description"`
 }
 
 type listZonesResponse struct {
