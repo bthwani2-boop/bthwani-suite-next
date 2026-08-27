@@ -601,17 +601,21 @@ components:
       type: object
       additionalProperties: false
       description: >-
-        The artifactSha256 value must equal the SHA-256 fingerprint computed by
-        WLT from the normalized account, statement, balance, currency, and line
-        payload. A caller assertion that does not match is rejected.
-      required: [ externalProviderAccountId, statementReference, artifactSha256, businessDate, closingBalanceMinorUnits, currency, lines ]
+        The provider ingestion boundary must send the exact canonical artifact
+        bytes and its SHA-256 digest. WLT verifies both byte-for-byte and rejects
+        any caller assertion that does not match the normalized statement facts.
+      required: [ externalProviderAccountId, statementReference, artifactSha256, artifactBytesBase64, businessDate, closingBalanceMinorUnits, currency, lines ]
       properties:
         externalProviderAccountId: { type: string, minLength: 1 }
         statementReference: { type: string, minLength: 1 }
         artifactSha256:
           type: string
           pattern: '^[a-f0-9]{64}$'
-          description: Server-verified SHA-256 fingerprint of the normalized statement payload.
+          description: SHA-256 digest asserted by the provider and verified by WLT against the exact artifact bytes.
+        artifactBytesBase64:
+          type: string
+          minLength: 1
+          description: Exact canonical provider artifact bytes encoded as base64; WLT verifies these bytes byte-for-byte.
         businessDate: { type: string, format: date }
         closingBalanceMinorUnits: { type: integer, format: int64, minimum: 0 }
         currency: { type: string, minLength: 3, maxLength: 3 }
