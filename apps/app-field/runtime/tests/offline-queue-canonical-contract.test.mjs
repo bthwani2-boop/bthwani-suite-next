@@ -1,18 +1,20 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 
-const source = readFileSync(
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../../..");
+const readRepositoryFile = (relativePath) => readFileSync(resolve(repositoryRoot, relativePath), "utf8");
+
+const source = readRepositoryFile(
   "services/dsh/frontend/shared/field-readiness/field-offline-queue.ts",
-  "utf8",
 );
-const barrel = readFileSync(
+const barrel = readRepositoryFile(
   "services/dsh/frontend/shared/field-readiness/index.ts",
-  "utf8",
 );
-const sync = readFileSync(
+const sync = readRepositoryFile(
   "services/dsh/frontend/shared/field-readiness/use-field-offline-sync.ts",
-  "utf8",
 );
 
 test("field offline queue exposes only canonical scoped storage and recovery", () => {
