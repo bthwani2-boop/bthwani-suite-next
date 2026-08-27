@@ -7,9 +7,9 @@ import {
   BthwaniQueryProvider,
   clearBthwaniQueryClient,
   createBthwaniQueryClient,
-  wireBatteryAwareQueue,
   wireNetInfoOnlineManager,
 } from "@bthwani/data-runtime";
+import { wireBatteryAwareQueue } from "@bthwani/data-runtime/power-policy";
 import { initSentry } from "./observability/sentry";
 
 export const sentryEnabled = initSentry();

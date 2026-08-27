@@ -1,5 +1,8 @@
 declare const require: ((id: string) => unknown) | undefined;
 
+const optionalNativeRequire: ((id: string) => unknown) | undefined =
+  typeof require === "function" ? require : undefined;
+
 type BatteryState = {
   readonly lowPowerMode?: boolean;
   readonly batteryLevel?: number;
@@ -14,10 +17,10 @@ type BatteryModule = {
 };
 
 export function wireBatteryAwareQueue(): () => void {
-  if (typeof require !== "function") return () => {};
+  if (!optionalNativeRequire) return () => {};
   let battery: BatteryModule;
   try {
-    battery = require("expo-battery") as BatteryModule;
+    battery = optionalNativeRequire("expo-battery") as BatteryModule;
   } catch {
     return () => {};
   }

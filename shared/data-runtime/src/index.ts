@@ -3,7 +3,6 @@ export * from "./netinfo-online-manager";
 export * from "./query-keys";
 export * from "./BthwaniQueryProvider";
 export * from "./persistence";
-export * from "./power-policy";
 export * from "./storage-adapter";
 export * from "./mutation-identity-scope";
 export * from "./installation-id";

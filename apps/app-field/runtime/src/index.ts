@@ -9,9 +9,9 @@ import {
   BthwaniQueryProvider,
   clearBthwaniQueryClient,
   createBthwaniQueryClient,
-  wireBatteryAwareQueue,
   wireNetInfoOnlineManager,
 } from "@bthwani/data-runtime";
+import { wireBatteryAwareQueue } from "@bthwani/data-runtime/power-policy";
 import { clearFieldOfflineQueue, configureFieldOfflineQueueStorage } from "@bthwani/dsh/app-field";
 import { initSentry } from "./observability/sentry";
 
