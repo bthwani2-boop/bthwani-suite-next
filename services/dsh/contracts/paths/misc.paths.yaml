@@ -961,3 +961,52 @@
         content:
           application/json:
             schema: { type: object }
+
+/dsh/client/special-requests/{requestId}/sagas/{sagaId}:
+  get:
+    operationId: getDshClientSpecialRequestSaga
+    summary: Read the durable saga status for an owned special request.
+    tags: [ DshClientSpecialRequests ]
+    security: [ { bearerAuth: [] } ]
+    parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - name: sagaId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    responses:
+      "200":
+        description: Durable saga status.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestSagaResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }
+
+/dsh/operator/special-requests/{requestId}/sagas/{sagaId}:
+  get:
+    operationId: getDshOperatorSpecialRequestSaga
+    summary: Read the durable saga status for a governed special request.
+    tags: [ DshOperatorSpecialRequests ]
+    security: [ { bearerAuth: [] } ]
+    parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - name: sagaId
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    responses:
+      "200":
+        description: Durable saga status.
+        content:
+          application/json:
+            schema: { $ref: "../dsh.openapi.yaml#/components/schemas/DshSpecialRequestSagaResponse" }
+      "401": { $ref: "../dsh.openapi.yaml#/components/responses/Unauthenticated" }
+      "403": { $ref: "../dsh.openapi.yaml#/components/responses/Forbidden" }
+      "404": { $ref: "../dsh.openapi.yaml#/components/responses/NotFound" }

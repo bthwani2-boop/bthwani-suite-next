@@ -615,6 +615,8 @@ paths:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1client~1special-requests~1{requestId}~1information-response"
   /dsh/client/special-requests/{requestId}/execution:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1client~1special-requests~1{requestId}~1execution"
+  /dsh/client/special-requests/{requestId}/sagas/{sagaId}:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1client~1special-requests~1{requestId}~1sagas~1{sagaId}"
   /dsh/operator/special-requests:
     $ref: "./paths/operator.paths.yaml#/~1dsh~1operator~1special-requests"
   /dsh/operator/special-requests/{requestId}:
@@ -625,6 +627,8 @@ paths:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1operator~1special-requests~1{requestId}~1information-request"
   /dsh/operator/special-requests/{requestId}/execution:
     $ref: "./paths/misc.paths.yaml#/~1dsh~1operator~1special-requests~1{requestId}~1execution"
+  /dsh/operator/special-requests/{requestId}/sagas/{sagaId}:
+    $ref: "./paths/misc.paths.yaml#/~1dsh~1operator~1special-requests~1{requestId}~1sagas~1{sagaId}"
   /dsh/operator/special-requests/{requestId}/dispatch:
     $ref: "./paths/dispatch.paths.yaml#/~1dsh~1operator~1special-requests~1{requestId}~1dispatch"
   /dsh/partner/orders/{orderId}/partner-delivery:

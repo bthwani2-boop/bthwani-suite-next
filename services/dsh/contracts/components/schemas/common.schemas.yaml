@@ -984,3 +984,26 @@ DshSpecialRequestExecutionResponse:
   properties:
     execution: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSpecialRequestExecution" }
     financial: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSpecialRequestFinancialReadback" }
+
+DshSpecialRequestSaga:
+  type: object
+  additionalProperties: false
+  required: [id, commandId, operation, specialRequestId, state, attemptCount]
+  properties:
+    id: { type: string, format: uuid }
+    commandId: { type: string, format: uuid }
+    operation: { type: string, enum: [quote, payment_session, cancel] }
+    specialRequestId: { type: string, format: uuid }
+    state: { type: string, enum: [blocked, pending, in_flight, remote_applied, locally_confirmed, completed, retryable, reconciliation_required, failed] }
+    attemptCount: { type: integer, minimum: 0 }
+    remoteReference: { type: [string, "null"] }
+    lastError: { type: [string, "null"] }
+    nextAttemptAt: { type: [string, "null"], format: date-time }
+    completedAt: { type: [string, "null"], format: date-time }
+
+DshSpecialRequestSagaResponse:
+  type: object
+  additionalProperties: false
+  required: [saga]
+  properties:
+    saga: { $ref: "../../dsh.openapi.yaml#/components/schemas/DshSpecialRequestSaga" }
