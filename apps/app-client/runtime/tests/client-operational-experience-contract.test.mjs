@@ -338,7 +338,7 @@ test("subscription mutations persist one governed attempt across retries and res
   );
   assertMarkers(
     "services/dsh/frontend/shared/marketing/subscription-mutation-attempt.ts",
-    ["@bthwani/data-runtime", "bthwaniDurableStorage", "LATEST_PURCHASE_KEY"],
+    ["@bthwani/data-runtime", "bthwaniDurableStorage", "latestPurchaseKey", "PREFIX"],
   );
 });
 
