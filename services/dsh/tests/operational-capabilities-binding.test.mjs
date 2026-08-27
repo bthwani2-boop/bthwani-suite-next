@@ -160,7 +160,7 @@ describe("campaigns, tickers, and partner offers", () => {
 
 describe("operational capability verification hygiene", () => {
   const retiredVerifierPath = "../../../.github/workflows/manual-deep-verification.yml";
-  const contextualCi = source("../../../.github/workflows/ci.yml");
+  const contextualCi = source("../../../.github/workflows/ci-check.yml");
   const nodeVerification = source("../../../.github/workflows/ci-node-verification.yml");
   const dshPackage = JSON.parse(source("../package.json"));
   const wltPackage = JSON.parse(source("../../wlt/package.json"));
@@ -176,11 +176,15 @@ describe("operational capability verification hygiene", () => {
     ]) {
       assert.equal(exists(`../../../.github/workflows/${workflow}`), false, `${workflow} must remain removed`);
     }
-    assert.match(contextualCi, /name: BThwani Contextual CI/);
+    assert.equal(exists("../../../.github/workflows/ci.yml"), false);
+    assert.match(contextualCi, /run-name: BThwani CI/);
+    assert.match(contextualCi, /workflow_call:/);
+    assert.match(contextualCi, /workflow_dispatch:/);
     assert.match(contextualCi, /uses: \.\/\.github\/workflows\/ci-node-verification\.yml/);
+    assert.match(contextualCi, /uses: \.\/\.github\/workflows\/ci-backends\.yml/);
+    assert.match(contextualCi, /uses: \.\/\.github\/workflows\/ci-runtime\.yml/);
     assert.match(contextualCi, /BThwani CI \/ PR result/);
-    assert.match(contextualCi, /BThwani CI \/ push result/);
-    assert.match(contextualCi, /BThwani CI \/ dispatched result/);
+    assert.match(contextualCi, /BThwani CI \/ check result/);
   });
 
   it("preserves sovereign boundary assurance on the immutable contextual verification path", () => {

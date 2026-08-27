@@ -37,7 +37,7 @@ jobs:
         uses: ./.github/actions/setup-node-workspace
       - name: Materialize contracts
         run: pnpm exec nx run contracts:materialize
-      - name: Execute full runtime verification
+      - name: Bootstrap runtime and read back catalog
         shell: pwsh
         env:
           SOURCE_SHA: ${{ env.CANDIDATE_SHA }}
@@ -48,6 +48,19 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "runtime bootstrap failed" }
           & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action catalog-readback -Profiles $env:RUNTIME_COMPONENTS
           if ($LASTEXITCODE -ne 0) { throw "runtime catalog readback failed" }
+      - name: Execute DSH operator governance preflight
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/runtime/smoke-dsh-operator-governance-preflight.ps1
+          if ($LASTEXITCODE -ne 0) { throw "DSH operator governance preflight failed" }
+      - name: Execute full runtime smoke
+        shell: pwsh
+        env:
+          SOURCE_SHA: ${{ env.CANDIDATE_SHA }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          if ((git rev-parse HEAD).Trim() -ne $env:SOURCE_SHA) { throw "Runtime checkout SHA mismatch" }
           & pwsh -NoProfile -ExecutionPolicy Bypass -File tools/scripts/invoke-runtime-phase.ps1 -Action smoke -Profiles $env:RUNTIME_COMPONENTS
           if ($LASTEXITCODE -ne 0) { throw "runtime smoke failed" }
       - name: Capture runtime diagnostics
