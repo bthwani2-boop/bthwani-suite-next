@@ -192,6 +192,11 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 	provisionedIdentity := actor.Created
 
 	if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
+		if existing.FieldProfile == nil {
+			// The actor exists under another workforce kind: a field replay
+			// must never surface a foreign profile as its own (root #10).
+			return Person{}, false, ErrWorkforceKindConflict
+		}
 		return existing, true, nil
 	}
 
@@ -220,6 +225,9 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 	if unitErr != nil {
 		if errors.Is(unitErr, ErrDuplicateWorkforceCode) {
 			if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
+				if existing.FieldProfile == nil {
+					return Person{}, false, ErrWorkforceKindConflict
+				}
 				return existing, true, nil
 			}
 		}
@@ -332,6 +340,9 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 	if unitErr != nil {
 		if errors.Is(unitErr, ErrDuplicateWorkforceCode) {
 			if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
+				if existing.CaptainProfile == nil {
+					return Person{}, false, ErrWorkforceKindConflict
+				}
 				return existing, true, nil
 			}
 		}
@@ -431,6 +442,9 @@ func (s *Service) CreateEmployee(ctx context.Context, operator Operator, input C
 	if unitErr != nil {
 		if errors.Is(unitErr, ErrDuplicateWorkforceCode) {
 			if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
+				if existing.EmployeeProfile == nil {
+					return Person{}, false, ErrWorkforceKindConflict
+				}
 				return existing, true, nil
 			}
 		}
