@@ -1,6 +1,6 @@
 # BThwani Root-Cause Orchestrator
 
-PACKAGE_REVISION: 18
+PACKAGE_REVISION: 19
 PACKAGE_CLASS: UNIFIED_ROOT_CAUSE_EXECUTION_PACKAGE
 PROJECT: bthwani-suite-next
 SELF_CONTAINED: YES
@@ -42,7 +42,7 @@ Exactly nine files are semantic owners in this package:
 3. `02-DIAGNOSE-ROOT-CAUSE.md` — evidence, findings, root proof, Source-of-Fix and internal execution-readiness gate.
 4. `03-LIVE-EXECUTION-RESTRUCTURE-CLEANUP.md` — live mutation, migration, cutover, restructuring, cleanup/deletion and finishing.
 5. `04-VERIFY-REDIAGNOSE-CLOSE.md` — exact-candidate evidence, repository-platform proof, re-diagnosis and fail-closed closure.
-6. `05-OBJECTIVES-PLAYBOOK.md` — objective discovery, decomposition, portable pre-execution declaration and cross-window collision selection.
+6. `05-OBJECTIVES-PLAYBOOK.md` — objective discovery, decomposition, traversal/campaign scheduling, elastic safe delegation, portable pre-execution declaration and cross-window collision selection.
 7. `focus/code-architecture-organization.md` — code/architecture/structure/UI implementation quality.
 8. `focus/governance-product-design.md` — Product/System meaning, UX semantics and durable governance reconciliation.
 9. `focus/data-contracts-runtime-security-quality.md` — data/contracts/runtime/security/quality/tools/CI evidence.
@@ -239,7 +239,7 @@ workflow_dispatch -> explicit target only
 schedule -> baseline/maintenance only; no inferred PR claim
 ```
 
-Merge readiness requires the exact verified final PR head SHA. After merge, source-branch retirement follows repository policy; another lifecycle begins only from a human-authorized branch/workspace.
+Merge readiness requires the exact verified final head SHA. After merge, source-branch retirement follows repository policy; another lifecycle begins only from a human-authorized branch/workspace.
 
 ## 6. Root-cause closure continuity
 
@@ -434,3 +434,50 @@ PRODUCT / BRAND TRUTH
 When internal authority is insufficient and research is allowed/materially required, use current authoritative or high-quality open design/platform evidence as input, classify its applicability, and adapt the proven principle or pattern to BThwani actors, context and brand. External design systems and competitor patterns are evidence, never BThwani Product/Brand authority and never permission to copy a foreign identity.
 
 Human-experience closure is evidence-bounded. Do not claim mathematically unknowable superlatives such as “best design in the world”; prove the materially applicable experience obligations under `01`/`04` on the exact candidate.
+
+## 14. Systemic Completeness Engine
+
+For repository/system-wide `AUTO`, `START`, or equivalent broad execution, local root closure is necessary but not sufficient. The coordinator must operate a **systemic campaign** until the evidence-bounded Level-4 fixed point is proven or a legitimate `00` stop state blocks a dependent cone.
+
+The campaign kernel is:
+
+```text
+PIN LIVE REPOSITORY / PR / HEAD
+-> MAXIMUM USEFUL SAFE READ-ONLY CARTOGRAPHY
+-> BUILD LIVE MULTIPLEX SYSTEM MODEL UNDER 01/05
+-> INDEPENDENTLY CHALLENGE ROOT/BOUNDARY ASSUMPTIONS UNDER 02
+-> BUILD + RANK ROOT GRAPH
+-> SELECT ADAPTIVE EXECUTION TOPOLOGY UNDER 05
+-> BUILD SAFE PARALLELIZATION GRAPH UNDER 05
+-> CLOSE HIGHEST EXECUTABLE ROOT(S) IN COMPLETE CAUSAL UNITS
+-> SERIALIZE SHARED AUTHORITIES / MIGRATIONS / CUTOVERS / REF MOVEMENT
+-> VERIFY + COMMIT/PUSH/RE-PIN
+-> INGEST NEW EVIDENCE
+-> REBUILD INVALIDATED MODEL REGIONS + RE-RANK
+-> REPEAT UNTIL ROOT QUEUE IS EMPTY
+-> RUN MANDATORY LEVEL-4 BASELINE PASSES UNDER 04
+-> RUN FRESH BROAD ADVERSARIAL RE-AUDIT
+-> NEW MATERIAL ROOT? YES -> REOPEN CAMPAIGN
+-> NO -> LEVEL_4_REPOSITORY_SYSTEM_BASELINE MAY BE CLAIMED ONLY UNDER 04
+```
+
+Root selection remains causal: **highest proven executable causal root first**. Treatment traversal is not hard-coded as vertical, horizontal, top-down or surface-by-surface; `05` selects and re-selects the traversal topology from current evidence before mutation and after material model invalidation.
+
+For Level 4, the following baseline families are mandatory applicability domains rather than optional afterthoughts:
+
+```text
+DURABLE GOVERNANCE
+OPERATIONAL SURFACE / CONTROL-PANEL COMPLETENESS
+REPOSITORY / SERVICE / SURFACE STRUCTURAL INTEGRITY
+FRONTEND ENGINEERING COMPLETENESS
+BACKEND ENGINEERING COMPLETENESS
+PRODUCT / JOURNEY / HANDOFF COMPLETENESS
+HUMAN EXPERIENCE
+DATA / CONTRACT / RUNTIME / SECURITY / PRIVACY / RELIABILITY
+ASSURANCE / DELIVERY / TOOL FINDING ACCOUNTING
+LEGACY / SHADOW / DEAD / DUPLICATE / MISPLACED NEGATIVE SPACE
+```
+
+`04` owns the exact proof obligations and the distinction between `PROVEN`, `N/A_PROVEN`, and a legitimate blocked state. A family may not be silently skipped because no current root happened to touch it.
+
+Parallelism is capability- and evidence-bounded. Use the maximum useful safe fan-out for discovery, challenge and independent work, but never manufacture concurrency by splitting one authority/root/cutover. One coordinator retains Product/System reconciliation, root ranking, integration/ref movement and final closure authority.

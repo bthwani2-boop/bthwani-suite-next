@@ -486,7 +486,7 @@ LEVEL_3_FINAL_SYSTEM_CANDIDATE
 = every Closure Unit required by the current objective is reconciled on one exact candidate with all applicable final evidence current.
 
 LEVEL_4_REPOSITORY_SYSTEM_BASELINE
-= the claimed repository/system baseline has complete live topology and lens dispositions, zero known material open roots or unknown material cells, a clean fresh broad adversarial re-audit, and exact-candidate baseline evidence.
+= the claimed repository/system baseline has complete live topology and lens dispositions, zero known material open roots or unknown material cells, every systemic baseline in §22 proven or N/A_PROVEN, a clean fresh broad adversarial re-audit, and exact-candidate baseline evidence.
 ```
 
 A lower-level proof must never be reported as a higher-level proof.
@@ -577,6 +577,7 @@ A repository/system fixed point under `00` may be claimed only after the root qu
 ```text
 ALL LIVE MATERIAL DOMAINS/SERVICES/APPLICATIONS/SURFACES/JOURNEYS DISCOVERED
 ALL MATERIAL TOPOLOGY + EXPERT-LENS DISPOSITIONS COMPLETE
+ALL SYSTEMIC BASELINE FAMILIES IN §22 PROVEN OR N/A_PROVEN
 ZERO KNOWN MATERIAL OPEN ROOTS IN CLAIMED BASELINE
 ZERO UNKNOWN/UNCLASSIFIED MATERIAL CELLS
 ZERO KNOWN MATERIAL LEGACY/SHADOW/NOISE RESIDUE
@@ -635,9 +636,192 @@ AND ZERO_KNOWN_MATERIAL ACCESSIBILITY DEFECTS
 AND ZERO_UNPROVEN_CROSS-SURFACE EXPERIENCE DIVERGENCE
 AND ZERO_KNOWN_MATERIAL VISUAL/INTERACTION REGRESSIONS
 AND ZERO_UNCLASSIFIED_MATERIAL CONTENT/MICROCOPY SEMANTICS
-AND ZERO_UNPROVEN_HIGH-RISK USABILITY ASSUMPTIONS
-AND ZERO_UNKNOWN/INCOMPATIBLE MATERIAL DESIGN-ASSET PROVENANCE
+AND ZERO_UNPROVEN_HIGH-RISK USABILITY_ASSUMPTIONS
+AND ZERO_UNKNOWN/INCOMPATIBLE_MATERIAL_DESIGN-ASSET_PROVENANCE
 AND RENDERED EXPERIENCE EVIDENCE CURRENT ON THE EXACT CANDIDATE
 ```
 
 If representative-user or platform/device evidence is genuinely required for the specific claim and cannot be obtained with available authority/capability, do not self-certify the claim. Keep the dependent closure open and map the inability to the existing legitimate `00` stop state that actually applies.
+
+## 22. Level-4 systemic baseline proof
+
+`LEVEL_4_REPOSITORY_SYSTEM_BASELINE` is stronger than exhaustion of the currently known root queue. At Level 4, each baseline family below becomes materially in scope for applicability proof even when no earlier Closure Unit happened to touch it.
+
+Every family must end as `PROVEN_BASELINE`, `N/A_PROVEN`, or a legitimate `00` stop state. `NOT_INSPECTED`, implicit omission and “no complaint observed” are forbidden.
+
+### 22.1 Durable-governance baseline
+
+Audit the live `governance/` tree as a durable-truth graph, not as documentation polish:
+
+```text
+DISCOVER LIVE GOVERNANCE TREE
+-> MAP EACH MATERIAL ARTIFACT TO A DURABLE CONCEPT
+-> MAP EACH CONCEPT TO CURRENT PRODUCT/SYSTEM/POLICY AUTHORITY
+-> CLASSIFY:
+   CANONICAL
+   DERIVED
+   STALE
+   WRONG
+   CONFLICTING
+   DUPLICATE
+   INCOMPLETE
+   MISPLACED
+   OWNERLESS
+   OBSOLETE
+   MISSING_REQUIRED
+   N/A_PROVEN
+-> APPLY THE GOVERNANCE WRITE GATE
+-> UPDATE / MOVE / MERGE / SPLIT / DELETE ONLY AS PROVEN
+-> REPAIR REFERENCES
+-> SEARCH NEGATIVE SPACE
+-> PROVE ONE DURABLE AUTHORITY PER MATERIAL CONCEPT
+```
+
+This Level-4 pass makes governance integrity itself a material baseline claim; it is not an unrelated documentation sweep and does not weaken the governance write gate.
+
+### 22.2 Operational-surface completeness
+
+A surface/section is not operationally complete merely because it renders, calls an API or exposes controls. For every material operational area—especially administrative/control surfaces—prove the applicable chain:
+
+```text
+OPERATING PURPOSE
+-> RESPONSIBLE ACTOR
+-> INPUT / WORK INTAKE OR QUEUE
+-> PRIORITY / CONTEXT
+-> CURRENT CANONICAL STATE
+-> RECOMMENDED / NEXT OWNED ACTION
+-> ALLOWED COMMANDS
+-> AUTHORITY / PRECONDITIONS
+-> REQUIRED EVIDENCE
+-> DECISION
+-> CANONICAL WRITE
+-> READBACK
+-> HANDOFF
+-> EXCEPTION
+-> ESCALATION
+-> RECOVERY
+-> AUDITABILITY
+-> TERMINAL OUTCOME OR NEXT OWNER
+-> OPERATIONAL SIGNAL
+```
+
+A link may be `N/A_PROVEN` when the capability genuinely does not require it. A materially missing link is a root candidate. Local frontend stage/transition/permission/financial logic must be proven derived from canonical authority; otherwise it is a parallel-truth finding.
+
+### 22.3 Frontend engineering baseline
+
+For every live material frontend application/surface prove, as applicable:
+
+```text
+CANONICAL PRODUCT/JOURNEY BINDING
+ONE SERVER/CANONICAL AUTHORITY FOR MATERIAL BUSINESS DECISIONS
+CURRENT CONTRACT / GENERATED-BINDING ALIGNMENT
+NO LOCAL SHADOW STATE MACHINE / AUTHORIZATION / MONEY AUTHORITY
+COMPLETE MATERIAL UI STATES:
+  loading / empty / offline / forbidden / conflict / error / recovery / success
+MUTATION -> CANONICAL READBACK / RECONCILIATION
+CROSS-SURFACE HANDOFF CONSISTENCY
+SESSION / CACHE / OFFLINE / RESUME / RETRY CORRECTNESS
+ACCESSIBILITY / LOCALIZATION / RTL / PLATFORM ADAPTATION
+RESPONSIVE / RENDERED / INTERACTION CORRECTNESS
+RESOURCE / SUBSCRIPTION / REQUEST BOUNDEDNESS
+PERCEIVED-PERFORMANCE / PAYLOAD BEHAVIOR WHERE MATERIAL
+ZERO DEAD OR DUPLICATE ROUTES/COMPONENT/PATTERN AUTHORITIES
+ZERO STALE GENERATED OR MANUAL CONTRACT FORKS
+FOCUSED + INTEGRATION + RENDERED/JOURNEY EVIDENCE AS RISK REQUIRES
+```
+
+Frontend quality is not proven by build/type/lint success alone.
+
+### 22.4 Backend engineering baseline
+
+For every live material backend/domain/service prove, as applicable:
+
+```text
+CANONICAL DOMAIN/SERVICE OWNER + BOUNDARY
+ONE MATERIAL MUTATION AUTHORITY / WRITE POLICY
+EXPLICIT COMMAND / QUERY / STATE-TRANSITION SEMANTICS
+SERVER-SIDE AUTHENTICATION / AUTHORIZATION / OBJECT SCOPE
+CANONICAL API / EVENT / ERROR CONTRACT
+INPUT VALIDATION + TRUST-BOUNDARY CONTROL
+TRANSACTION / CONSTRAINT / CONCURRENCY SAFETY
+IDEMPOTENCY / REPLAY / ORDERING / UNKNOWN-RESULT SEMANTICS
+MIGRATION / BACKFILL / RECONCILIATION / PERSISTED READBACK
+TIMEOUT / RETRY / BACKOFF / CANCELLATION / RESOURCE BOUNDS
+FAILURE / DEGRADATION / RECOVERY / RESTART CORRECTNESS
+OBSERVABILITY / HEALTH / READINESS TRUTHFULNESS
+CONFIG / SECRET / PROVIDER AUTHORITY
+PRIVACY / RETENTION / AUDIT / FINANCIAL SAFETY WHERE MATERIAL
+QUERY / PAYLOAD / CAPACITY / BACKPRESSURE CORRECTNESS
+ZERO SHADOW ENDPOINTS / DUPLICATE BUSINESS RULES / OLD WRITERS
+CLEAN-STATE STARTUP + REQUIRED TEST/CONTRACT/DB/RUNTIME EVIDENCE
+```
+
+Backend quality is not proven by handler success, unit tests or scanner green alone.
+
+### 22.5 Repository structural baseline
+
+Prove the live implementation tree reflects canonical system ownership rather than historical accident:
+
+```text
+PRODUCT CAPABILITY
+-> CANONICAL OWNER
+-> DOMAIN
+-> SERVICE / BOUNDED RESPONSIBILITY
+-> CONTRACT / DATA
+-> APPLICATION / SURFACE
+-> PACKAGE / MODULE
+-> DIRECTORY
+-> FILE
+-> SYMBOL
+```
+
+Search for and resolve proven material:
+
+```text
+AMBIGUOUS CANONICAL HOMES
+GOD MODULES / MIXED OWNERSHIP
+JUNK-DRAWER DIRECTORIES
+UNJUSTIFIED MICRO-FRAGMENTATION
+ACCIDENTAL PUBLIC/RE-EXPORT SURFACES
+DEAD PACKAGES / DIRECTORIES / FILES
+HISTORICAL OR SUPERSEDED PATHS
+DUPLICATE IMPLEMENTATIONS
+WRONG DEPENDENCY DIRECTION
+UNJUSTIFIED SHARED/COMMON/UTILS
+UNFINISHED MOVES / SPLITS / MERGES
+STALE ALIASES / REFERENCES
+```
+
+File size alone is never the decision rule. Cohesion, owner, responsibility, dependencies, consumers and canonical discoverability decide the treatment.
+
+### 22.6 Level-4 systemic equation
+
+In addition to all earlier applicable terms:
+
+```text
+SYSTEM_BASELINE_CLOSED =
+ZERO_UNKNOWN_MATERIAL_TOPOLOGY
+AND ZERO_UNCLASSIFIED_MATERIAL_LENSES
+AND ZERO_KNOWN_MATERIAL_OPEN_ROOTS
+AND ZERO_MISSING_MATERIAL_OPERATIONAL_CAPABILITIES
+AND ZERO_UNVERIFIED_MATERIAL_JOURNEYS_OR_HANDOFFS
+AND ZERO_UNRECONCILED_DURABLE_GOVERNANCE
+AND ZERO_STALE_DUPLICATE_MISPLACED_GOVERNANCE_AUTHORITY
+AND ZERO_AMBIGUOUS_CANONICAL_OWNERS
+AND ZERO_UNJUSTIFIED_PARALLEL_TRUTH
+AND ZERO_KNOWN_MATERIAL_STRUCTURAL_ENTROPY
+AND ZERO_AMBIGUOUS_CANONICAL_PATHS
+AND FRONTEND_BASELINE_PROVEN
+AND BACKEND_BASELINE_PROVEN
+AND OPERATIONAL_SURFACE_BASELINE_PROVEN
+AND GOVERNANCE_BASELINE_PROVEN
+AND STRUCTURAL_BASELINE_PROVEN
+AND ALL_OTHER_MATERIAL_00_§14_BASELINE_FAMILIES_PROVEN_OR_N/A_PROVEN
+AND ZERO_UNDISPOSITIONED_MATERIAL_TOOL_FINDINGS
+AND ZERO_UNVERIFIED_MATERIAL_CUTOVERS
+AND ZERO_KNOWN_MATERIAL_LEGACY_SHADOW_DEAD_RESIDUE
+AND FRESH_REPOSITORY_WIDE_ADVERSARIAL_REAUDIT_FINDS_NO_NEW_MATERIAL_ROOT
+AND EXACT_CANDIDATE_EVIDENCE_IS_CURRENT
+```
+
+The equation is evidence-bounded. It is not a mathematical guarantee that an unknowable future defect cannot exist.

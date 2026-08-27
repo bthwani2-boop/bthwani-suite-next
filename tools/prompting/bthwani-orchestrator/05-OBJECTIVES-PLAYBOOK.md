@@ -2,7 +2,7 @@
 ## Discovery, Selection, Decomposition, Declaration and Cross-Window Coordination
 
 Status: ACTIVE_CANONICAL_ORCHESTRATOR_OWNER
-Owner: Objective discovery / decomposition / portable declaration / active-work collision selection
+Owner: Objective discovery / decomposition / adaptive traversal and campaign scheduling / elastic safe delegation / portable declaration / active-work collision selection
 Execution authority: `00-ORCHESTRATOR.md` through `04-VERIFY-REDIAGNOSE-CLOSE.md`
 Delivery authority: `governance/policies/delivery.md`
 
@@ -12,7 +12,7 @@ This owner answers one question:
 
 > **What is the next materially correct Closure Unit, at the right causal altitude and execution size, that can be declared clearly and executed safely against the current live state and all known concurrent work?**
 
-It owns objective discovery, selection, decomposition, portable declaration and cross-window collision selection. It does **not** own Product/System truth, root-cause proof, mutation law, closure law, governance policy, repository status or evidence.
+It owns objective discovery, selection, decomposition, adaptive traversal/campaign scheduling, elastic safe delegation, portable declaration and cross-window collision selection. It does **not** own Product/System truth, root-cause proof, mutation law, closure law, governance policy, repository status or evidence.
 
 ```text
 OBJECTIVE = current priority / intended closure outcome
@@ -384,3 +384,102 @@ No independently discovered material root may be silently dropped because the or
 When the convergence queue appears empty, do **not** immediately claim repository/system completion. Trigger the fresh broad adversarial re-audit required by `00`/`04`. Any new material root refills the queue and restarts incremental closure. Only a clean fresh audit may support fixed-point and Level-4 selection/closure claims.
 
 For repository-wide `AUTO/NEXT` execution, objective selection therefore converges by repeated highest-root closure rather than by a precomputed catalog. `WIDE DISCOVERY; NARROW COMPLETE EXECUTION` remains the rule throughout.
+
+## 18. Adaptive multi-axis traversal and elastic campaign scheduling
+
+Root ranking and treatment traversal are separate decisions:
+
+```text
+ROOT SELECTION = HIGHEST PROVEN EXECUTABLE CAUSAL ROOT FIRST
+TREATMENT TRAVERSAL = ADAPTIVE MULTI-AXIS
+```
+
+After the root and Source-of-Fix frontier are sufficiently proven, but before the first material mutation for that Closure Unit, build only the live graph dimensions capable of changing treatment, cutover, collision or proof:
+
+```text
+CAUSAL GRAPH
+AUTHORITY / OWNERSHIP GRAPH
+DOMAIN / SERVICE GRAPH
+SURFACE / ACTOR GRAPH
+JOURNEY / HANDOFF GRAPH
+STATE / TRANSITION GRAPH
+CONTRACT / EVENT GRAPH
+DATA-LINEAGE GRAPH
+RUNTIME / PROVIDER GRAPH
+SECURITY / TRUST GRAPH
+GOVERNANCE GRAPH
+REPOSITORY-STRUCTURE GRAPH
+EVIDENCE / INVALIDATION GRAPH
+```
+
+Select the primary traversal mode from evidence, not habit:
+
+```text
+TOP_DOWN_CAUSAL
+VERTICAL_END_TO_END
+HORIZONTAL_AUTHORITY
+CROSS_SURFACE_JOURNEY
+SERVICE_CHAIN
+STATE_TRANSITION
+DATA_LINEAGE
+SECURITY_TRUST_BOUNDARY
+STRUCTURAL_TREE
+GOVERNANCE_GRAPH
+MULTI_AXIS_HYBRID
+```
+
+Before mutation, hold a task-local **Execution Topology Contract** containing enough of:
+
+```text
+PRIMARY_TRAVERSAL_AXIS
+SECONDARY_FALSIFICATION_AXES
+CAUSAL_ROOT_ORDER
+AUTHORITY_ORDER
+MIGRATION / CUTOVER ORDER
+DATA ORDER
+SURFACE / HANDOFF ORDER
+SERIALIZATION_POINTS
+PARALLEL_SAFE_CONES
+VERIFICATION_ORDER
+REOPEN / RECOMPUTE CONDITIONS
+```
+
+This contract is coordination state, not durable governance. Recompute affected parts after a re-pin whenever new evidence or concurrent delta changes a root, owner, dependency, cutover, consumer or verification obligation.
+
+### 18.1 Maximum useful safe parallelism
+
+The scheduling objective is **maximum useful safe parallelism**, never a fixed worker count and never parallelism for appearance.
+
+Read-only discovery/challenge may fan out aggressively across independent graph regions or lenses when real subagent capability exists. Mutation workers are admitted only for Closure Units proven `PARALLEL_SAFE` against every active objective and every other simultaneously scheduled mutator.
+
+The coordinator continuously performs:
+
+```text
+DISCOVER BOUNDED WORK UNITS
+-> BUILD DEPENDENCY / COLLISION GRAPH
+-> SELECT MAXIMAL USEFUL SET OF MUTUALLY PARALLEL_SAFE UNITS
+-> DELEGATE MINIMUM SUFFICIENT CONTEXT
+-> COLLECT PROVENANCE + FINDINGS + WRITE SET + PROOF LIMITS
+-> INTEGRATE THROUGH ONE COORDINATOR
+-> RE-PIN / RE-RANK / REFILL CAPACITY IMMEDIATELY
+```
+
+Do not wait for a batch barrier when one safe slot becomes available. Do not split by file, language, frontend/backend or surface merely to increase worker count. Prefer causal/authority-independent cones.
+
+The following authorities remain singular per invocation/workspace:
+
+```text
+ONE PRIMARY COORDINATOR
+ONE PRODUCT/SYSTEM RECONCILIATION AUTHORITY
+ONE ROOT-RANKING AUTHORITY
+ONE INTEGRATION / REF-MOVEMENT AUTHORITY
+ONE FINAL CLOSURE AUTHORITY
+```
+
+A worker may own a bounded mutation cone only after its authority, dependencies, allowed writes, forbidden writes, required cutover and verification are explicit. Shared canonical-owner changes, source/generated pairs, shared migrations/cutovers and unresolved evidence dependencies serialize.
+
+### 18.2 Level-4 baseline scheduling
+
+An empty root queue triggers **baseline discovery**, not completion. For repository/system Level 4, schedule fresh passes for every baseline family required by `00 §14` and prove them under `04 §22`. A discovered material defect becomes a new root and re-enters normal highest-root scheduling.
+
+Baseline passes are sparse and evidence-driven: they must cover every material live area, but they must not become brute-force Cartesian products or mechanical execution of every tool.
