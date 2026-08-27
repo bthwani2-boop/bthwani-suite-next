@@ -30,7 +30,7 @@ export function resolveDshOrderApiBaseUrl(): string | null {
   return PlatformVarsRegistry.get('dshApiBaseUrl') ?? null;
 }
 
-export function orderAuthHeaders(auth: DshOrderAuthContext): Record<string, string> {
+function orderAuthHeaders(auth: DshOrderAuthContext): Record<string, string> {
   const bearerToken = auth.bearerToken?.trim();
   return bearerToken ? { Authorization: `Bearer ${bearerToken}` } : {};
 }
