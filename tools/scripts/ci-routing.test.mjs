@@ -65,7 +65,7 @@ test("the final closure is the only final entrypoint and has no polling orchestr
 test("final closure executes full exact-candidate assurance and fail-closes every required authority", () => {
   const workflow = read(".github/workflows/final-closure.yml");
   assert.match(workflow, /mode: full/u);
-  assert.match(workflow, /journey: "true"/u);
+  assert.match(workflow, /journey: (?:"true"|\$\{\{ 'true' \}\})/u);
   assert.match(workflow, /runtime_proof: true/u);
   assert.match(workflow, /run_assurance: true/u);
   assert.match(workflow, /needs: \[resolve, ci, sonar, codeql, semgrep, security, semantic, dependency, docker\]/u);
