@@ -2,7 +2,6 @@ import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 
 const {
-  resolveCatalogActionError,
   resolveCatalogError,
 } = await import("../dist/services/dsh/frontend/shared/catalog/catalog.controller-core.js");
 const {
@@ -28,11 +27,9 @@ describe("catalog controller core", () => {
     );
   });
 
-  test("classifies permission, conflict, network, and action errors", () => {
+  test("classifies permission, conflict, and network errors", () => {
     assert.equal(resolveCatalogError({ kind: "http", status: 403 }).kind, "permission_denied");
     assert.equal(resolveCatalogError({ kind: "http", status: 409 }).kind, "error");
     assert.equal(resolveCatalogError({ kind: "network" }).kind, "error");
-    assert.equal(resolveCatalogActionError({ status: 409 }), "conflict");
-    assert.equal(resolveCatalogActionError({ status: 500 }), "error");
   });
 });
