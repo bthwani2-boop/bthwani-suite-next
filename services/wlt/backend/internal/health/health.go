@@ -13,10 +13,10 @@ import (
 
 const (
 	wltMigrationServiceName = "wlt"
-	// WLT-947 gates readiness before Workforce can depend on penalty command
-	// idempotency and authoritative readback.
-	wltLatestMigration      = "wlt-948_financial_rail_registry_seed.sql"
-	wltReadinessTimeout     = 2 * time.Second
+	// The latest active manifest migration is the readiness gate: no instance
+	// is ready while the canonical schema has not reached this cutover.
+	wltLatestMigration  = "wlt-949_external_statement_fingerprint.sql"
+	wltReadinessTimeout = 2 * time.Second
 )
 
 type runtimeReadinessStore interface {

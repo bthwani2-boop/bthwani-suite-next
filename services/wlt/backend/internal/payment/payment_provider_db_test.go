@@ -11,6 +11,7 @@ import (
 
 	_ "github.com/lib/pq"
 	"wlt-api/internal/provider"
+	"wlt-api/internal/shared"
 )
 
 type fakeProvider struct {
@@ -126,7 +127,7 @@ func TestCaptureSessionWithProvider_DBFlow(t *testing.T) {
 	}
 	defer db.Close()
 
-	ctx := context.Background()
+	ctx := shared.WithOperatorContext(context.Background(), "OperatorContext-test")
 	checkoutIntentID := fmt.Sprintf("test-checkout-cap-%d", time.Now().UnixNano())
 
 	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "authorized", "card-auth-001", 1000, false)

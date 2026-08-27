@@ -46,9 +46,11 @@ func reconcilePayoutWithAuthoritativeStatement(t *testing.T, db *sql.DB, operato
 	statement, err := ImportAuthoritativeStatement(reconcilerCtx, db, ImportAuthoritativeStatementInput{
 		ExternalProviderAccountID: account.ID,
 		StatementReference:        "statement-" + payoutID,
-		ArtifactSHA256:            fixtureSHA256("artifact:" + payoutID),
-		BusinessDate:              time.Now().UTC().Format(time.DateOnly),
-		Currency:                  "YER",
+		// Leave the artifact identity empty so WLT derives and persists the
+		// canonical hash from the complete statement facts below.
+		ArtifactSHA256: "",
+		BusinessDate:   time.Now().UTC().Format(time.DateOnly),
+		Currency:       "YER",
 		Lines: []AuthoritativeStatementLineInput{{
 			ExternalTransferReference: externalReference,
 			Direction:                 "outgoing",

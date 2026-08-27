@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"wlt-api/internal/provider"
+	"wlt-api/internal/shared"
 )
 
 // slowCountingProvider simulates a provider call slow enough that, without
@@ -58,7 +59,7 @@ func TestCaptureSessionWithProvider_ConcurrentCalls_OnlyOneReachesProvider(t *te
 	}
 	defer db.Close()
 
-	ctx := context.Background()
+	ctx := shared.WithOperatorContext(context.Background(), "OperatorContext-test")
 	checkoutIntentID := fmt.Sprintf("test-checkout-concurrent-cap-%d", time.Now().UnixNano())
 	sessionID := seedCheckoutSession(t, db, checkoutIntentID, "authorized", "card-auth-concurrent", 1000, false)
 
