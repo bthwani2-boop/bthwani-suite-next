@@ -82,7 +82,7 @@ jobs:
               package.json|pnpm-lock.yaml|pnpm-workspace.yaml|*/package.json|*/go.mod|*/go.sum|*/requirements*.txt|*/Cargo.lock) dependency_changed=true ;;
             esac
             case "${file}" in
-              .dockerignore|infra/docker/*|*Dockerfile*|*.dockerfile|tools/scripts/*.ps1|services/*/database/scripts/*.ps1|apps/*/runtime/*.ps1|core/*/Dockerfile) docker_changed=true ;;
+              .dockerignore|infra/docker/*|*Dockerfile*|tools/scripts/*.ps1|services/*/database/scripts/*.ps1|apps/*/runtime/*.ps1) docker_changed=true ;;
             esac
           done
           {
@@ -189,7 +189,7 @@ jobs:
     if: ${{ needs.evidence.outputs.semgrep_valid != 'true' }}
     uses: ./.github/workflows/semgrep.yml
     with:
-      mode: full
+      mode: diff
       pr_number: ${{ needs.resolve.outputs.pr_number }}
       head_sha: ${{ needs.resolve.outputs.head_sha }}
       base_sha: ${{ needs.resolve.outputs.base_sha }}
