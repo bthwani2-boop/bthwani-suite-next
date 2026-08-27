@@ -14,7 +14,6 @@
  */
 
 import { BthwaniDurableWriteError } from "./storage-adapter.ts";
-import { getBthwaniCurrentActor } from "./current-actor.ts";
 import { getBthwaniInstallationId } from "./installation-id.ts";
 import type { MutationIdentityScope } from "./mutation-identity-scope.types.ts";
 
@@ -106,22 +105,21 @@ export function assertScopeMatches(
  * Callers must supply the actor id explicitly so the contract is
  * locally visible; the installation id is read from the durable
  * store so it survives reload, app restart, and the identity
- * session lifecycle. The current-actor binding is consulted only
- * as a last-resort safety net for legacy call sites.
+ * session lifecycle. Identity ownership is never inferred from
+ * mutable process state.
  */
 export async function resolveMutationIdentityScope(
   actorId: string,
   overrides?: { readonly installationId?: string; readonly entityId?: string },
 ): Promise<Required<Pick<MutationIdentityScope, "actorId" | "installationId">> & { readonly entityId?: string }> {
-  const binding = getBthwaniCurrentActor();
-  const trimmedActor = actorId.trim() || binding?.actorId.trim() || "";
+  const trimmedActor = actorId.trim();
   if (!trimmedActor) {
     throw new MutationIdentityScopeError(
       "missing_actor",
       "mutation identity scope requires an actor id",
     );
   }
-  const trimmedInstallation = (overrides?.installationId ?? binding?.installationId ?? "").trim() || await getBthwaniInstallationId();
+  const trimmedInstallation = (overrides?.installationId ?? "").trim() || await getBthwaniInstallationId();
   if (!trimmedInstallation) {
     throw new MutationIdentityScopeError(
       "missing_installation",

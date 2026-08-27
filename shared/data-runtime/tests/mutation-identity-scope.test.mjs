@@ -16,10 +16,6 @@ import {
   resolveMutationIdentityScope,
 } from "../src/mutation-identity-scope.ts";
 import {
-  resetBthwaniCurrentActor,
-  setBthwaniCurrentActor,
-} from "../src/current-actor.ts";
-import {
   bthwaniDurableStorage,
   configureBthwaniDurableStorage,
   BthwaniDurableWriteError,
@@ -27,7 +23,6 @@ import {
 } from "../src/storage-adapter.ts";
 
 afterEach(() => {
-  resetBthwaniCurrentActor();
   configureBthwaniDurableStorage({
     getItem: async () => null,
     setItem: async () => undefined,
@@ -86,21 +81,20 @@ test("assertScopeMatches refuses cross-entity reuse", () => {
   );
 });
 
-test("resolveMutationIdentityScope throws when no actor is bound", async () => {
+test("resolveMutationIdentityScope requires an explicit actor id", async () => {
   await assert.rejects(
     resolveMutationIdentityScope(""),
     (error) => error instanceof MutationIdentityScopeError && error.reason === "missing_actor",
   );
 });
 
-test("resolveMutationIdentityScope returns the current binding when no override is given", async () => {
+test("resolveMutationIdentityScope uses durable installation state without actor fallback", async () => {
   const { adapter, map } = memoryDurable();
   configureBthwaniDurableStorage(adapter);
   const installationIdModule = await import("../src/installation-id.ts");
   const installationId = await installationIdModule.getBthwaniInstallationId();
   assert.equal(map.size, 1, "installation id is persisted on first read");
-  setBthwaniCurrentActor({ actorId: "actor-A", installationId });
-  const resolved = await resolveMutationIdentityScope("");
+  const resolved = await resolveMutationIdentityScope("actor-A");
   assert.equal(resolved.actorId, "actor-A");
   assert.equal(resolved.installationId, installationId);
 });
@@ -108,7 +102,6 @@ test("resolveMutationIdentityScope returns the current binding when no override 
 test("resolveMutationIdentityScope fails closed when the actor id is non-empty but unmatched", async () => {
   const { adapter } = memoryDurable();
   configureBthwaniDurableStorage(adapter);
-  setBthwaniCurrentActor({ actorId: "actor-A", installationId: "install-1" });
   const resolved = await resolveMutationIdentityScope("actor-B");
   assert.equal(resolved.actorId, "actor-B", "explicit actor id always wins over the binding");
 });
