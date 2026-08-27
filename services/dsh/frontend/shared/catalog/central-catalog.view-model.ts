@@ -1,6 +1,3 @@
-export function formatIsActive(isActive: boolean): string {
-  return isActive ? "نشط" : "معطل";
-}
 
 export function formatDateTime(isoString: string): string {
   try {
