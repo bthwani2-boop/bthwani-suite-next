@@ -7,8 +7,8 @@ import { corrId, createDshHttpClient } from "../../shared/_kernel/dsh-http-reque
 import { resolveDshApiBaseUrl } from "../../shared/_kernel/dsh-api-base-url";
 
 const { request } = createDshHttpClient(resolveDshApiBaseUrl(), "captain-cash-in", 12000);
-const ACTIVE_SESSION_KEY = "@bthwani/wlt/captain-cash-in/v2/active";
-const MUTATION_PREFIX = "@bthwani/wlt/captain-cash-in/v2/mutation/";
+const ACTIVE_SESSION_PREFIX = "@bthwani/wlt/captain-cash-in/v3/active/";
+const MUTATION_PREFIX = "@bthwani/wlt/captain-cash-in/v3/mutation/";
 
 export type CaptainCashInSession = {
   readonly id: string;
@@ -96,8 +96,16 @@ export function newCaptainCashInContext(): { readonly topupReference: string; re
   return { topupReference: id, idempotencyKey: id, correlationId: id };
 }
 
-function mutationStorageKey(operation: string, sessionId?: string): string {
-  return `${MUTATION_PREFIX}${operation}/${sessionId ?? "create"}`;
+function mutationStorageKey(
+  scope: { readonly actorId: string; readonly installationId: string },
+  operation: string,
+  sessionId?: string,
+): string {
+  return `${MUTATION_PREFIX}${encodeURIComponent(scope.actorId)}/${encodeURIComponent(scope.installationId)}/${operation}/${sessionId ?? "create"}`;
+}
+
+function activeSessionKey(scope: { readonly actorId: string; readonly installationId: string }): string {
+  return `${ACTIVE_SESSION_PREFIX}${encodeURIComponent(scope.actorId)}/${encodeURIComponent(scope.installationId)}`;
 }
 
 function mutationEntityId(operation: string, sessionId: string | undefined, fingerprint: string): string {
@@ -130,10 +138,10 @@ export async function getOrCreateCaptainCashInMutationContext(input: {
   readonly sessionId?: string;
   readonly fingerprint: string;
 }): Promise<{ readonly topupReference: string; readonly idempotencyKey: string; readonly correlationId: string }> {
-  const key = mutationStorageKey(input.operation, input.sessionId);
   const entityId = mutationEntityId(input.operation, input.sessionId, input.fingerprint);
   const scope = await resolveMutationIdentityScope(input.actorId, { entityId });
   const scoped = { actorId: scope.actorId, installationId: scope.installationId, entityId };
+  const key = mutationStorageKey(scoped, input.operation, input.sessionId);
 
   const raw = await bthwaniDurableStorage.getItem(key);
   if (raw) {
@@ -172,10 +180,14 @@ export async function getOrCreateCaptainCashInMutationContext(input: {
 }
 
 export async function clearCaptainCashInMutationContext(
+  actorId: string,
   operation: "create" | "authorize" | "capture" | "allocateCollateral",
   sessionId?: string,
 ): Promise<void> {
-  await bthwaniDurableStorage.removeItem(mutationStorageKey(operation, sessionId));
+  const scope = await resolveMutationIdentityScope(actorId, {
+    entityId: mutationEntityId(operation, sessionId, "cleanup"),
+  });
+  await bthwaniDurableStorage.removeItem(mutationStorageKey(scope, operation, sessionId));
 }
 
 export async function createCaptainCashInSession(input: {
@@ -239,24 +251,25 @@ function parseStoredSession(raw: string | null): StoredSession | null {
 }
 
 export async function loadStoredCaptainCashInSession(actorId: string): Promise<CaptainCashInSession | null> {
-  const stored = parseStoredSession(await bthwaniDurableStorage.getItem(ACTIVE_SESSION_KEY));
+  const scope = await resolveMutationIdentityScope(actorId);
+  const key = activeSessionKey(scope);
+  const stored = parseStoredSession(await bthwaniDurableStorage.getItem(key));
   if (!stored) return null;
-  if (stored.actorId !== actorId) {
-    await bthwaniDurableStorage.removeItem(ACTIVE_SESSION_KEY);
+  if (stored.actorId !== scope.actorId || stored.installationId !== scope.installationId) {
+    await bthwaniDurableStorage.removeItem(key);
     return null;
   }
   const { actorId: _actor, installationId: _install, ...session } = stored;
   return session.id ? session : null;
 }
-
 export async function storeCaptainCashInSession(actorId: string, session: CaptainCashInSession): Promise<void> {
   const scope = await resolveMutationIdentityScope(actorId);
   await bthwaniDurableStorage.setItem(
-    ACTIVE_SESSION_KEY,
-    JSON.stringify({ ...session, actorId, installationId: scope.installationId } satisfies StoredSession),
+    activeSessionKey(scope),
+    JSON.stringify({ ...session, actorId: scope.actorId, installationId: scope.installationId } satisfies StoredSession),
   );
 }
-
-export async function clearCaptainCashInSession(): Promise<void> {
-  await bthwaniDurableStorage.removeItem(ACTIVE_SESSION_KEY);
+export async function clearCaptainCashInSession(actorId: string): Promise<void> {
+  const scope = await resolveMutationIdentityScope(actorId);
+  await bthwaniDurableStorage.removeItem(activeSessionKey(scope));
 }

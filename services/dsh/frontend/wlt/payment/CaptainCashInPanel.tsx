@@ -111,7 +111,7 @@ export function CaptainCashInPanel({ actorId }: { readonly actorId: string | nul
     try {
       const context = await getOrCreateCaptainCashInMutationContext({ actorId, operation: "allocateCollateral", sessionId: session.id, fingerprint: `${session.id}|allocate-collateral` });
       await allocateCaptainCollateral({ paymentSessionId: session.id, idempotencyKey: context.idempotencyKey, correlationId: context.correlationId });
-      await clearCaptainCashInMutationContext("allocateCollateral", session.id);
+      await clearCaptainCashInMutationContext(actorId, "allocateCollateral", session.id);
       setCollateralAllocated(true);
       setCollateralState("success");
       setCollateralMessage("تم تخصيص Cash-In كضمانة محمية في WLT.");
@@ -149,21 +149,21 @@ export function CaptainCashInPanel({ actorId }: { readonly actorId: string | nul
         });
         setSession(current);
         await storeCaptainCashInSession(actorId, current);
-        await clearCaptainCashInMutationContext("create");
+        await clearCaptainCashInMutationContext(actorId, "create");
       }
       if (current.status === "reference_created") {
         const context = await getOrCreateCaptainCashInMutationContext({ actorId, operation: "authorize", sessionId: current.id, fingerprint: `${current.id}|authorize` });
         current = await mutateCaptainCashInSession({ sessionId: current.id, operation: "authorize", idempotencyKey: context.idempotencyKey, correlationId: context.correlationId });
         setSession(current);
         await storeCaptainCashInSession(actorId, current);
-        await clearCaptainCashInMutationContext("authorize", current.id);
+        await clearCaptainCashInMutationContext(actorId, "authorize", current.id);
       }
       if (current.status === "authorized") {
         const context = await getOrCreateCaptainCashInMutationContext({ actorId, operation: "capture", sessionId: current.id, fingerprint: `${current.id}|capture` });
         current = await mutateCaptainCashInSession({ sessionId: current.id, operation: "capture", idempotencyKey: context.idempotencyKey, correlationId: context.correlationId });
         setSession(current);
         await storeCaptainCashInSession(actorId, current);
-        await clearCaptainCashInMutationContext("capture", current.id);
+        await clearCaptainCashInMutationContext(actorId, "capture", current.id);
       }
       if (current.status === "captured") {
         setPanelState("success");
@@ -184,16 +184,17 @@ export function CaptainCashInPanel({ actorId }: { readonly actorId: string | nul
   }, [actorId, amountText, refresh, session]);
 
   const reset = React.useCallback(async () => {
-    await clearCaptainCashInSession();
+    if (!actorId) return;
+    await clearCaptainCashInSession(actorId);
     if (session) {
-      await clearCaptainCashInMutationContext("authorize", session.id);
-      await clearCaptainCashInMutationContext("capture", session.id);
-      await clearCaptainCashInMutationContext("allocateCollateral", session.id);
+      await clearCaptainCashInMutationContext(actorId, "authorize", session.id);
+      await clearCaptainCashInMutationContext(actorId, "capture", session.id);
+      await clearCaptainCashInMutationContext(actorId, "allocateCollateral", session.id);
     }
     setSession(null);
     setPanelState("idle");
     setMessage("");
-  }, [session]);
+  }, [actorId, session]);
 
   if (!actorId) {
     return <StateView title="Cash-In غير متاح" description="لا يمكن تمويل المحفظة دون هوية Captain موثقة من Identity/DSH." tone="warning" />;
