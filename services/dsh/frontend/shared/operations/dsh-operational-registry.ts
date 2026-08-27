@@ -242,7 +242,7 @@ export const DSH_OPERATIONAL_REGISTRY: readonly DshOperationalRegistryEntry[] = 
     onDemandPolicy: 'evidence-on-open',
     dataClassification: 'RUNTIME_UNPROVEN',
     currentClosureStatus: 'registry-defined',
-    currentEvidencePath: 'dsh/frontend/app-captain/screens/DshCaptainPoDSubmissionScreen.tsx',
+    currentEvidencePath: 'dsh/frontend/app-captain/orders/DshCaptainPoDSubmissionScreen.tsx',
     notes: 'PoD acceptance can become WLT evidence; PoD rejection can become audit candidate.',
   },
   {
