@@ -47,10 +47,6 @@ export function catalogSubmissionSuccessState(
   return { kind: "success", submissions };
 }
 
-export function catalogActionIdleState(): CatalogActionState {
-  return "idle";
-}
-
 export function catalogActionErrorState(): CatalogActionState {
   return "error";
 }
