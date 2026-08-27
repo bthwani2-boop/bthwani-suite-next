@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -180,5 +181,52 @@ func TestAuthorizeTopUpSession_AmbiguousProviderErrorOpensReconciliationCase(t *
 	}
 	if caseCount != 1 {
 		t.Fatalf("expected exactly one reconciliation case, got %d", caseCount)
+	}
+}
+
+func TestTopUpCaptureClassificationIsPathIndependent(t *testing.T) {
+	db := getTestDB(t)
+	if db == nil {
+		return
+	}
+	defer db.Close()
+
+	ctx := context.Background()
+	actorID := "captain-topup-equivalence"
+	syncID, syncOperatorContext := insertTopUpSession(t, ctx, "captain", actorID, "authorized", "sync-topup-auth", 7500)
+	asyncID, asyncOperatorContext := insertTopUpSession(t, ctx, "captain", actorID, "authorized", "async-topup-auth", 7500)
+
+	if _, err := CaptureTopUpSession(ctx, db, &fakeCashInRail{captureRes: provider.ProviderResult{ProviderReference: "sync-topup-captured", Status: "captured"}}, syncID, provider.RequestMeta{}); err != nil {
+		t.Fatalf("synchronous top-up capture: %v", err)
+	}
+	eventCtx := shared.WithOperatorContext(ctx, asyncOperatorContext)
+	if _, err := ApplyAuthoritativeProviderEvent(eventCtx, db, ProviderEventInput{
+		EventID:           "topup-equivalence-event-" + asyncID,
+		OperatorContextID: asyncOperatorContext,
+		PaymentSessionID:  asyncID,
+		EventType:         "payment.captured",
+		ProviderStatus:    "captured",
+		ProviderReference: "async-topup-captured",
+		PayloadHash:       "f" + strings.Repeat("f", 63),
+		ProcessingSource:  "provider_status_refresh",
+	}); err != nil {
+		t.Fatalf("provider-event top-up capture: %v", err)
+	}
+
+	ledgerSignature := func(operatorContextID, sessionID string) string {
+		var signature string
+		err := db.QueryRowContext(ctx, `
+			SELECT string_agg(a.account_type||':'||COALESCE(a.actor_type,'')||':'||COALESCE(a.actor_id,'')||':'||l.debit_credit||':'||l.amount_minor_units::text||':'||l.currency, ',' ORDER BY a.account_type,l.debit_credit,l.amount_minor_units)
+			FROM wlt_ledger_transactions t
+			JOIN wlt_ledger_lines l ON l.ledger_transaction_id=t.id AND l.operator_context_id=t.operator_context_id
+			JOIN wlt_ledger_accounts a ON a.id=l.account_id AND a.operator_context_id=l.operator_context_id
+			WHERE t.operator_context_id=$1 AND t.transaction_type='cash_in_topup' AND t.reference_type='payment_session' AND t.reference_id=$2`, operatorContextID, sessionID).Scan(&signature)
+		if err != nil {
+			t.Fatalf("read top-up ledger signature: %v", err)
+		}
+		return signature
+	}
+	if syncSignature, asyncSignature := ledgerSignature(syncOperatorContext, syncID), ledgerSignature(asyncOperatorContext, asyncID); syncSignature != asyncSignature {
+		t.Fatalf("top-up classification differs by delivery path: sync=%q async=%q", syncSignature, asyncSignature)
 	}
 }

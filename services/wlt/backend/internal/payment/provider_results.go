@@ -253,11 +253,11 @@ func postCapturedProviderResult(ctx context.Context, tx *sql.Tx, session *Paymen
 	if session.AmountMinorUnits <= 0 || session.Currency == "" {
 		return "", fmt.Errorf("captured session has invalid accounting amount or currency")
 	}
-	lines, actor, err := captureEconomicEffect(session)
+	effect, err := captureEconomicEffect(session)
 	if err != nil {
 		return "", err
 	}
-	ledgerTransactionID, err := ledger.PostLedgerTransaction(ctx, tx, "payment_captured", "payment_session", session.ID, lines, actor)
+	ledgerTransactionID, err := ledger.PostLedgerTransaction(ctx, tx, effect.TransactionType, effect.ReferenceType, effect.ReferenceID, effect.Lines, effect.Actor)
 	if err != nil {
 		return "", fmt.Errorf("post capture ledger transaction: %w", err)
 	}
@@ -274,10 +274,17 @@ func postCapturedProviderResult(ctx context.Context, tx *sql.Tx, session *Paymen
 		return "", err
 	}
 	*session = *updated
-	if err := dshoutbox.Enqueue(tx, dshoutbox.EventTypeCaptured, session.ID, session.OperatorContextID, session.CheckoutIntentID, session.SpecialRequestID); err != nil {
+	if err := enqueuePaymentProjection(tx, dshoutbox.EventTypeCaptured, session); err != nil {
 		return "", err
 	}
 	return ledgerTransactionID, nil
+}
+
+func enqueuePaymentProjection(tx *sql.Tx, eventType string, session *PaymentSession) error {
+	if session == nil || (session.CheckoutIntentID == nil && session.SpecialRequestID == nil) {
+		return nil
+	}
+	return dshoutbox.Enqueue(tx, eventType, session.ID, session.OperatorContextID, session.CheckoutIntentID, session.SpecialRequestID)
 }
 
 func updateAuthoritativeSessionState(ctx context.Context, tx *sql.Tx, session *PaymentSession, status, providerReference, eventID string) (*PaymentSession, error) {
@@ -300,7 +307,7 @@ func updateAuthoritativeSessionState(ctx context.Context, tx *sql.Tx, session *P
 		eventType = dshoutbox.EventTypeExpired
 	}
 	if eventType != "" {
-		if err := dshoutbox.Enqueue(tx, eventType, updated.ID, updated.OperatorContextID, updated.CheckoutIntentID, updated.SpecialRequestID); err != nil {
+		if err := enqueuePaymentProjection(tx, eventType, updated); err != nil {
 			return nil, err
 		}
 	}

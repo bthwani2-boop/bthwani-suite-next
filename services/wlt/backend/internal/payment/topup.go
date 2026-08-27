@@ -183,12 +183,12 @@ func CaptureTopUpSession(ctx context.Context, db *sql.DB, rail provider.CashInRa
 	}
 	defer tx.Rollback()
 
-	lines, actor, err := captureEconomicEffect(claimed)
+	effect, err := captureEconomicEffect(claimed)
 	if err != nil {
 		return finalizationFailure(err)
 	}
 	postCtx := shared.WithOperatorContext(ctx, claimed.OperatorContextID)
-	ledgerTransactionID, err := ledger.PostLedgerTransaction(postCtx, tx, "cash_in_topup", "payment_session", claimed.ID, lines, actor)
+	ledgerTransactionID, err := ledger.PostLedgerTransaction(postCtx, tx, effect.TransactionType, effect.ReferenceType, effect.ReferenceID, effect.Lines, effect.Actor)
 	if err != nil {
 		return finalizationFailure(fmt.Errorf("post topup capture ledger transaction: %w", err))
 	}

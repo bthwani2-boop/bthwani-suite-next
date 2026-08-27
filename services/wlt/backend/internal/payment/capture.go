@@ -57,11 +57,11 @@ func CaptureSessionWithProvider(ctx context.Context, db *sql.DB, rail provider.C
 	}
 	defer tx.Rollback()
 
-	lines, actor, effectErr := captureEconomicEffect(claimed)
+	effect, effectErr := captureEconomicEffect(claimed)
 	if effectErr != nil {
 		return finalizationFailure(effectErr)
 	}
-	ledgerTransactionID, err := ledger.PostLedgerTransaction(ctx, tx, "payment_captured", "payment_session", claimed.ID, lines, actor)
+	ledgerTransactionID, err := ledger.PostLedgerTransaction(ctx, tx, effect.TransactionType, effect.ReferenceType, effect.ReferenceID, effect.Lines, effect.Actor)
 	if err != nil {
 		return finalizationFailure(fmt.Errorf("post capture ledger transaction: %w", err))
 	}

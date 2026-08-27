@@ -858,6 +858,34 @@
       "sha256": "998fd948ab542bae3940630eb6ab1ec268528d833e68b41b26761817f19e340d",
       "historicalPrefix": "952",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 123,
+      "file": "wlt-953_promotion_funding_command_identity.sql",
+      "sha256": "bc557da37f522f9ae3dcb19ec0f1b3a3e6b19732fbe6e3253234b8f4474cc5f0",
+      "historicalPrefix": "953",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 124,
+      "file": "wlt-954_external_statement_provenance.sql",
+      "sha256": "fbd75d6c0d9577fbbc3e6eb6c2fe1eea753cf0b7c6524e339e6e84082d490e28",
+      "historicalPrefix": "954",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 125,
+      "file": "wlt-955_reconciliation_financial_truth_guard.sql",
+      "sha256": "7d611b32a7f2d20585e3fcde7c040845ae4118a1b837f5c00cd88ec259f20136",
+      "historicalPrefix": "955",
+      "state": "ACTIVE"
+    },
+    {
+      "ordinal": 126,
+      "file": "wlt-956_external_statement_provenance_evidence.sql",
+      "sha256": "bfff721dcd0e6499c342c49b413c4b4fef343d294eff33149e031026b4e48b7d",
+      "historicalPrefix": "956",
+      "state": "ACTIVE"
     }
   ]
 }
