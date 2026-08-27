@@ -206,7 +206,7 @@ func TestFinancialRailRouter_ClientUsesConfiguredProviderEnvironment(t *testing.
 	if err != nil {
 		t.Fatalf("random token: %v", err)
 	}
-	environment := "client-environment-" + envSuffix
+	environment := "client-env-" + envSuffix
 	var providerID string
 	if err := db.QueryRow(`
 		INSERT INTO wlt_financial_providers
