@@ -1,5 +1,3 @@
-import type { PlatformProviderRecord } from "./platform-provider.types";
-
 export type ProviderVisibleFields = {
   readonly id: string;
   readonly kind: string;
@@ -18,25 +16,3 @@ export type ProviderVisibleFields = {
   readonly rollbackTarget?: string | null;
   readonly publicRuntimeConfig: Record<string, string | number | boolean>;
 };
-
-/** Strips secretPolicy and returns only display-safe fields. */
-export function toProviderVisibleFields(record: PlatformProviderRecord): ProviderVisibleFields {
-  return {
-    id: record.id,
-    kind: record.kind,
-    label: record.label,
-    selectedProvider: record.selectedProvider,
-    fallbackProvider: record.fallbackProvider ?? null,
-    environment: record.environment,
-    status: record.status,
-    credentialVisibility: record.credentialVisibility,
-    maskedCredential: record.maskedCredential ?? null,
-    lastHealthStatus: record.lastHealthStatus,
-    lastHealthCheckedAt: record.lastHealthCheckedAt ?? null,
-    affectedSurfaces: record.affectedSurfaces,
-    wltBoundary: record.wltBoundary,
-    auditRequired: record.auditRequired,
-    rollbackTarget: record.rollbackTarget ?? null,
-    publicRuntimeConfig: record.publicRuntimeConfig,
-  };
-}

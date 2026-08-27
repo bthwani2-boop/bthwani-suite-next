@@ -9,7 +9,6 @@ export type {
 } from "./platform-provider.types";
 
 export type { ProviderVisibleFields } from "./platform-provider-visibility.policy";
-export { toProviderVisibleFields } from "./platform-provider-visibility.policy";
 
 export { PROVIDER_SECRET_POLICIES, PROVIDER_CREDENTIAL_VISIBILITY, isForbiddenInFrontend } from "./platform-provider-secrets.policy";
 
