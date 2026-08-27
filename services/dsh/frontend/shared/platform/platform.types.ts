@@ -8,7 +8,6 @@
 
 
 // ── Services Types ────────────────────────────────────────────────────────────
-export type ServiceOwner = 'Platform' | 'Operations' | 'DesignSystem';
 
 
 // ── Vars Types ────────────────────────────────────────────────────────────────
