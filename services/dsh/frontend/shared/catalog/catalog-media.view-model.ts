@@ -13,10 +13,6 @@ import type {
 
 // --- Upload state labels -------------------------------------------------------
 
-export function isUploadTerminal(progress: AssetUploadProgress): boolean {
-  return progress.stage === "linked" || progress.stage === "failed";
-}
-
 // --- Effective image resolution ------------------------------------------------
 
 /**
