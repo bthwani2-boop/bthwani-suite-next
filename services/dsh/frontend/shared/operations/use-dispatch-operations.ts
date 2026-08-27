@@ -13,6 +13,8 @@ import type {
   DshDispatchAssignment,
   DshDispatchDecision,
 } from '../dispatch/dispatch.types';
+import { corrId } from '../_kernel/dsh-http-request';
+import { useIdentitySession } from '@bthwani/core-identity';
 import { buildDispatchAssignmentIdempotencyKey } from './dispatch-assignment.api';
 
 export type DispatchOperationsState = {
@@ -53,6 +55,18 @@ function activeAssignments(items: readonly DshDispatchAssignment[]): readonly Ds
 export function useDispatchOperations() {
   const [state, setState] = React.useState<DispatchOperationsState>(initialState);
   const requestTokenRef = React.useRef(0);
+  const identity = useIdentitySession();
+  const actorId = identity.state.kind === 'authenticated' ? identity.state.identity.subject : null;
+  const commandIds = React.useRef<Record<string, string>>({});
+  const commandFor = React.useCallback((key: string) => {
+    if (!actorId) throw new Error('جلسة العمليات غير جاهزة لتنفيذ عملية الإسناد.');
+    const scopedKey = `${actorId}:${key}`;
+    const existing = commandIds.current[scopedKey];
+    if (existing) return { key: scopedKey, id: existing };
+    const id = corrId(`operator-dispatch-${key}`);
+    commandIds.current[scopedKey] = id;
+    return { key: scopedKey, id };
+  }, [actorId]);
 
   const load = React.useCallback(async (options: { readonly preserveSelection?: boolean } = {}) => {
     const token = ++requestTokenRef.current;
@@ -126,9 +140,15 @@ export function useDispatchOperations() {
   }, []);
 
   const expire = React.useCallback(async () => {
+    if (!actorId) {
+      setState((current) => ({ ...current, mutationKind: 'idle', message: 'جلسة العمليات غير جاهزة لإنهاء العروض المتأخرة.' }));
+      return;
+    }
+    const command = commandFor('expire:200');
     setState((current) => ({ ...current, mutationKind: 'expiring', message: '' }));
     try {
-      const expiredCount = await expireDispatchAssignments(200);
+      const expiredCount = await expireDispatchAssignments(200, command.id);
+      delete commandIds.current[command.key];
       await load({ preserveSelection: true });
       setState((current) => ({
         ...current,
@@ -141,7 +161,7 @@ export function useDispatchOperations() {
         message: dispatchOperationsErrorMessage(error),
       }));
     }
-  }, [load]);
+  }, [actorId, commandFor, load]);
 
   const cancel = React.useCallback(async (assignmentId: string, reason: string) => {
     const normalizedReason = reason.trim();
@@ -149,9 +169,15 @@ export function useDispatchOperations() {
       setState((current) => ({ ...current, message: 'سبب الإلغاء مطلوب.' }));
       return;
     }
+    if (!actorId) {
+      setState((current) => ({ ...current, mutationKind: 'idle', message: 'جلسة العمليات غير جاهزة لإلغاء الإسناد.' }));
+      return;
+    }
+    const command = commandFor(`cancel:${assignmentId}:${normalizedReason}`);
     setState((current) => ({ ...current, mutationKind: 'cancelling', message: '' }));
     try {
-      await cancelDispatchAssignment(assignmentId, 'OPERATOR_CANCELLED', normalizedReason);
+      await cancelDispatchAssignment(assignmentId, 'OPERATOR_CANCELLED', normalizedReason, command.id);
+      delete commandIds.current[command.key];
       await load();
       setState((current) => ({ ...current, message: 'تم إلغاء الإسناد وإعادة الطلب إلى طابور الجاهزية.' }));
     } catch (error) {
@@ -161,7 +187,7 @@ export function useDispatchOperations() {
         message: dispatchOperationsErrorMessage(error),
       }));
     }
-  }, [load]);
+  }, [actorId, commandFor, load]);
 
   const reassign = React.useCallback(async (
     assignment: DshDispatchAssignment,

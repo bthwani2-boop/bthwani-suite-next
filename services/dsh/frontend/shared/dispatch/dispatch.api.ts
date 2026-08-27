@@ -121,19 +121,21 @@ export async function cancelDispatchAssignment(
   assignmentId: string,
   reasonCode: string,
   reason: string,
+  idempotencyKey?: string,
 ): Promise<void> {
   await request<void>(
     `/dsh/operator/dispatch/assignments/${encodeURIComponent(assignmentId)}/cancel`,
-    { method: "POST", body: { reasonCode, reason } },
+    { method: "POST", body: { reasonCode, reason }, idempotencyKey: idempotencyKey ?? corrId("operator-dispatch-cancel") },
   );
 }
 
 export async function expireDispatchAssignments(
   limit = 100,
+  idempotencyKey?: string,
 ): Promise<number> {
   const data = await request<{ expiredCount: number }>(
     "/dsh/operator/dispatch/assignments/expire",
-    { method: "POST", body: { limit } },
+    { method: "POST", body: { limit }, idempotencyKey: idempotencyKey ?? corrId("operator-dispatch-expire") },
   );
   return Math.max(0, Number(data.expiredCount ?? 0));
 }
