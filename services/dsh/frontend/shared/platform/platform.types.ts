@@ -7,7 +7,6 @@
 // ── Providers Types ───────────────────────────────────────────────────────────
 export type ProviderEnvironment = 'test' | 'sandbox' | 'production';
 export type ProviderStatus = 'active' | 'inactive' | 'test-only' | 'pending-approval';
-export type ProviderOwner = 'Platform' | 'DesignSystem' | 'ServiceOwner';
 
 
 // ── Services Types ────────────────────────────────────────────────────────────
