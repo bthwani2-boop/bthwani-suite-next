@@ -20,16 +20,7 @@ import type {
   ApprovalSourceSurface,
   DshPromotionCandidate,
   PartnerQueueRecord,
-  ApprovalRecord,
 } from './partner.types';
-
-export const MARKETING_SIGNAL_ENTITY_TYPES: ReadonlyArray<ApprovalEntityType> = [
-  'product', 'product-media', 'category-suggestion', 'store',
-];
-
-export const MARKETING_SIGNAL_STAGES: ReadonlyArray<ApprovalStage> = [
-  'marketing-review', 'marketing-approved', 'needs-fix', 'catalog-adopted', 'rejected',
-];
 
 function dshPromotionCandidates(
   _storeId: string,
@@ -67,34 +58,6 @@ function normalizePartnerQueueOwner(
   if (source === 'control-panel-catalog') return 'catalog';
   if (source === 'control-panel-marketing') return 'marketing';
   return 'system';
-}
-
-// Real DSH backend calls (GET /dsh/catalog-approvals, GET /dsh/partner/catalog-approvals).
-// No in-memory mock: an unreachable/misconfigured API surfaces as an empty
-// list rather than fabricated data.
-export async function getAllApprovalRecords(): Promise<ApprovalRecord[]> {
-  const { listCatalogApprovals } = await import('./catalog-approval.api');
-  const records = await listCatalogApprovals();
-  return records.map((record) => ({
-    id: record.id,
-    entityType: record.entityType,
-    source: record.source,
-    stage: record.stage,
-    title: record.title,
-    submittedAt: record.submittedAt,
-    ...(record.metadata ? { metadata: record.metadata } : {}),
-    ...(record.auditTrail
-      ? {
-          auditTrail: record.auditTrail.map((entry) => ({
-            at: entry.at,
-            fromStage: entry.fromStage,
-            toStage: entry.toStage,
-            owner: normalizeApprovalSource(entry.owner),
-            actionLabel: entry.actionLabel,
-          })),
-        }
-      : {}),
-  }));
 }
 
 async function getPartnerQueueRecords(
