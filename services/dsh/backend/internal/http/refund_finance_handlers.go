@@ -119,7 +119,7 @@ func (s *protectedStoreServer) handleCreateFinanceRefund(w http.ResponseWriter, 
 	body, _ := json.Marshal(map[string]any{
 		"operatorContextId": operatorContextID, "paymentSessionId": input.PaymentSessionID, "orderId": input.OrderID,
 		"clientId": input.ClientID, "amountMinorUnits": input.AmountMinorUnits, "reason": input.Reason,
-		"eligibilityReference": input.EligibilityReference, "requestedByOperatorId": actor.ID,
+		"eligibilityReference": input.EligibilityReference,
 	})
 	correlationID, idempotencyKey := refundRequestIdentity(r, operatorContextID, input.PaymentSessionID, input.OrderID, input.ClientID, fmt.Sprint(input.AmountMinorUnits), input.Reason, input.EligibilityReference, actor.ID)
 	r.Header.Set("X-Correlation-ID", correlationID)
@@ -152,7 +152,7 @@ func (s *protectedStoreServer) refundDecisionCommand(w http.ResponseWriter, r *h
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "reason is required")
 		return
 	}
-	body, _ := json.Marshal(map[string]string{"operatorId": actor.ID, "reason": input.Reason})
+	body, _ := json.Marshal(map[string]string{"reason": input.Reason})
 	correlationID, idempotencyKey := refundRequestIdentity(r, operatorContextID, refundID, action, actor.ID, input.Reason)
 	r.Header.Set("X-Correlation-ID", correlationID)
 	s.writeRefundCommand(w, r, "finance.refunds."+action, operatorContextID, actor.ID, idempotencyKey, map[string]string{"refundId": refundID}, body)
@@ -180,7 +180,7 @@ func (s *protectedStoreServer) handleCompleteFinanceRefund(w http.ResponseWriter
 		store.SendError(w, http.StatusBadRequest, "INVALID_REQUEST", "refundId is required")
 		return
 	}
-	body, _ := json.Marshal(map[string]string{"operatorId": actor.ID})
+	body := []byte(`{}`)
 	correlationID, idempotencyKey := refundRequestIdentity(r, operatorContextID, refundID, "complete", actor.ID)
 	r.Header.Set("X-Correlation-ID", correlationID)
 	s.writeRefundCommand(w, r, "finance.refunds.complete", operatorContextID, actor.ID, idempotencyKey, map[string]string{"refundId": refundID}, body)
@@ -215,8 +215,8 @@ func (s *protectedStoreServer) handleReconcileFinanceRefund(w http.ResponseWrite
 		return
 	}
 	body, _ := json.Marshal(map[string]string{
-		"operatorId": actor.ID, "resolutionAction": input.ResolutionAction,
-		"evidenceNote": input.EvidenceNote, "providerReference": input.ProviderReference,
+		"resolutionAction": input.ResolutionAction,
+		"evidenceNote":     input.EvidenceNote, "providerReference": input.ProviderReference,
 	})
 	correlationID, idempotencyKey := refundRequestIdentity(r, operatorContextID, refundID, "reconcile", actor.ID, input.ResolutionAction, input.EvidenceNote, input.ProviderReference)
 	r.Header.Set("X-Correlation-ID", correlationID)

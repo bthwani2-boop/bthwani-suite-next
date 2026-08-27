@@ -54,10 +54,13 @@ func CompleteGovernedRefundWithProviderDurable(ctx context.Context, db *sql.DB, 
 // mistaken for a normal provider decline or an acknowledged unknown result.
 func HandleCompleteGovernedRefundDurable(db *sql.DB, rail provider.CashInRail) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var input struct {
-			OperatorID string `json:"operatorId"`
-		}
+		var input struct{}
 		if !decodeGovernedJSON(w, r, &input) {
+			return
+		}
+		principal, principalErr := shared.RequireDelegatedFinancePrincipal(r.Context())
+		if principalErr != nil {
+			shared.SendError(w, http.StatusForbidden, "AUTHENTICATED_PRINCIPAL_REQUIRED", principalErr.Error())
 			return
 		}
 		if rail == nil {
@@ -69,7 +72,7 @@ func HandleCompleteGovernedRefundDurable(db *sql.DB, rail provider.CashInRail) h
 			db,
 			rail,
 			r.PathValue("refundId"),
-			input.OperatorID,
+			principal,
 			r.Header.Get("X-Correlation-ID"),
 		)
 		if err != nil {

@@ -17,6 +17,7 @@ import (
 
 var (
 	ErrRefundAmountUnavailable   = errors.New("requested refund amount exceeds the remaining refundable amount")
+	ErrRefundPrincipalMismatch   = errors.New("refund principal does not match the authenticated delegated principal")
 	ErrRefundIdempotencyConflict = errors.New("refund idempotency key was already used with a different payload")
 	ErrRefundMakerChecker        = errors.New("refund maker cannot review the same refund")
 	ErrRefundProviderUnknown     = errors.New("refund provider result is unknown and requires reconciliation")
@@ -61,26 +62,30 @@ type GovernedRefund struct {
 }
 
 type GovernedCreateRefundInput struct {
-	OperatorContextID     string `json:"operatorContextId"`
-	PaymentSessionID      string `json:"paymentSessionId"`
-	OrderID               string `json:"orderId"`
-	ClientID              string `json:"clientId"`
-	AmountMinorUnits      int64  `json:"amountMinorUnits"`
-	Reason                string `json:"reason"`
-	EligibilityReference  string `json:"eligibilityReference"`
-	RequestedByOperatorID string `json:"requestedByOperatorId"`
+	OperatorContextID    string `json:"operatorContextId"`
+	PaymentSessionID     string `json:"paymentSessionId"`
+	OrderID              string `json:"orderId"`
+	ClientID             string `json:"clientId"`
+	AmountMinorUnits     int64  `json:"amountMinorUnits"`
+	Reason               string `json:"reason"`
+	EligibilityReference string `json:"eligibilityReference"`
+	// RequestedByOperatorID is internal compatibility data only. HTTP callers
+	// cannot supply it; the handler binds it from the authenticated principal.
+	RequestedByOperatorID string `json:"-"`
 	IdempotencyKey        string `json:"-"`
 	CorrelationID         string `json:"-"`
 }
 
 type RefundDecisionInput struct {
-	OperatorID    string `json:"operatorId"`
+	// OperatorID is an internal assertion only; HTTP callers cannot supply it.
+	OperatorID    string `json:"-"`
 	Reason        string `json:"reason"`
 	CorrelationID string `json:"-"`
 }
 
 type RefundReconciliationInput struct {
-	OperatorID        string `json:"operatorId"`
+	// OperatorID is an internal assertion only; HTTP callers cannot supply it.
+	OperatorID        string `json:"-"`
 	ResolutionAction  string `json:"resolutionAction"`
 	EvidenceNote      string `json:"evidenceNote"`
 	ProviderReference string `json:"providerReference"`
@@ -136,6 +141,22 @@ func scanGovernedRefund(row scanner) (*GovernedRefund, error) {
 		out.ResolvedAt = &value
 	}
 	return &out, nil
+}
+
+func resolveRefundPrincipal(ctx context.Context, asserted string) (string, error) {
+	asserted = strings.TrimSpace(asserted)
+	if authenticated, ok := shared.DelegatedFinancePrincipalFromContext(ctx); ok {
+		if asserted != "" && asserted != authenticated {
+			return "", ErrRefundPrincipalMismatch
+		}
+		return authenticated, nil
+	}
+	// Trusted in-process callers may pass an authenticated service principal
+	// explicitly. HTTP boundaries require the delegated principal context.
+	if asserted == "" {
+		return "", fmt.Errorf("Identity-authenticated delegated finance principal is required")
+	}
+	return asserted, nil
 }
 
 func normalizeCreateInput(input GovernedCreateRefundInput) GovernedCreateRefundInput {
@@ -218,6 +239,11 @@ func ListGovernedRefunds(db *sql.DB, orderID, clientID, operatorContextID string
 
 func CreateGovernedRefund(ctx context.Context, db *sql.DB, input GovernedCreateRefundInput) (*GovernedRefund, bool, error) {
 	input = normalizeCreateInput(input)
+	principal, err := resolveRefundPrincipal(ctx, input.RequestedByOperatorID)
+	if err != nil {
+		return nil, false, err
+	}
+	input.RequestedByOperatorID = principal
 	trustedOperatorContextID, err := shared.RequireOperatorContext(ctx)
 	if err != nil {
 		return nil, false, err
@@ -326,6 +352,11 @@ func decideGovernedRefund(ctx context.Context, db *sql.DB, refundID string, inpu
 	input.OperatorID = strings.TrimSpace(input.OperatorID)
 	input.Reason = strings.TrimSpace(input.Reason)
 	input.CorrelationID = strings.TrimSpace(input.CorrelationID)
+	principal, err := resolveRefundPrincipal(ctx, input.OperatorID)
+	if err != nil {
+		return nil, err
+	}
+	input.OperatorID = principal
 	if refundID == "" || input.OperatorID == "" || input.Reason == "" {
 		return nil, fmt.Errorf("refundId, operatorId and reason are required")
 	}
@@ -600,6 +631,10 @@ func resolveRefundSourceStatus(ctx context.Context, db *sql.DB, paymentSessionID
 // ErrRefundSourceNotProviderBacked instead of calling a provider that never
 // processed the original payment.
 func CompleteGovernedRefundWithProvider(ctx context.Context, db *sql.DB, rail provider.CashInRail, refundID, operatorID, correlationID string) (*GovernedRefund, error) {
+	operatorID, err := resolveRefundPrincipal(ctx, operatorID)
+	if err != nil {
+		return nil, err
+	}
 	claimed, err := claimGovernedRefundExecution(ctx, db, refundID, operatorID, correlationID)
 	if err != nil || claimed == nil {
 		return claimed, err
@@ -644,6 +679,11 @@ func CompleteGovernedRefundWithProvider(ctx context.Context, db *sql.DB, rail pr
 
 func ReconcileGovernedRefund(ctx context.Context, db *sql.DB, refundID string, input RefundReconciliationInput) (*GovernedRefund, error) {
 	input.OperatorID = strings.TrimSpace(input.OperatorID)
+	principal, err := resolveRefundPrincipal(ctx, input.OperatorID)
+	if err != nil {
+		return nil, err
+	}
+	input.OperatorID = principal
 	input.ResolutionAction = strings.TrimSpace(input.ResolutionAction)
 	input.EvidenceNote = strings.TrimSpace(input.EvidenceNote)
 	input.ProviderReference = strings.TrimSpace(input.ProviderReference)
@@ -722,6 +762,15 @@ func decodeGovernedJSON(w http.ResponseWriter, r *http.Request, target any) bool
 	return true
 }
 
+func requireRefundPrincipal(w http.ResponseWriter, r *http.Request) (string, bool) {
+	principal, err := shared.RequireDelegatedFinancePrincipal(r.Context())
+	if err != nil {
+		shared.SendError(w, http.StatusForbidden, "AUTHENTICATED_PRINCIPAL_REQUIRED", err.Error())
+		return "", false
+	}
+	return principal, true
+}
+
 func sendGovernedRefundError(w http.ResponseWriter, err error) bool {
 	switch {
 	case errors.Is(err, ErrRefundReferenceConflict):
@@ -732,7 +781,7 @@ func sendGovernedRefundError(w http.ResponseWriter, err error) bool {
 		shared.SendError(w, http.StatusConflict, "REFUND_AMOUNT_UNAVAILABLE", err.Error())
 	case errors.Is(err, ErrRefundIdempotencyConflict):
 		shared.SendError(w, http.StatusConflict, "IDEMPOTENCY_CONFLICT", err.Error())
-	case errors.Is(err, ErrRefundMakerChecker):
+	case errors.Is(err, ErrRefundMakerChecker), errors.Is(err, ErrRefundPrincipalMismatch):
 		shared.SendError(w, http.StatusForbidden, "MAKER_CHECKER_VIOLATION", err.Error())
 	case errors.Is(err, ErrRefundNotInExpectedState):
 		shared.SendError(w, http.StatusConflict, "INVALID_STATE", err.Error())
@@ -752,6 +801,11 @@ func HandleCreateGovernedRefund(db *sql.DB) http.HandlerFunc {
 		if !decodeGovernedJSON(w, r, &input) {
 			return
 		}
+		principal, ok := requireRefundPrincipal(w, r)
+		if !ok {
+			return
+		}
+		input.RequestedByOperatorID = principal
 		input.IdempotencyKey = r.Header.Get("Idempotency-Key")
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
 		created, replayed, err := CreateGovernedRefund(r.Context(), db, input)
@@ -801,6 +855,11 @@ func HandleApproveGovernedRefund(db *sql.DB) http.HandlerFunc {
 		if !decodeGovernedJSON(w, r, &input) {
 			return
 		}
+		principal, ok := requireRefundPrincipal(w, r)
+		if !ok {
+			return
+		}
+		input.OperatorID = principal
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
 		item, err := ApproveGovernedRefund(r.Context(), db, r.PathValue("refundId"), input)
 		if err != nil {
@@ -823,6 +882,11 @@ func HandleRejectGovernedRefund(db *sql.DB) http.HandlerFunc {
 		if !decodeGovernedJSON(w, r, &input) {
 			return
 		}
+		principal, ok := requireRefundPrincipal(w, r)
+		if !ok {
+			return
+		}
+		input.OperatorID = principal
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
 		item, err := RejectGovernedRefund(r.Context(), db, r.PathValue("refundId"), input)
 		if err != nil {
@@ -845,6 +909,11 @@ func HandleReconcileGovernedRefund(db *sql.DB) http.HandlerFunc {
 		if !decodeGovernedJSON(w, r, &input) {
 			return
 		}
+		principal, ok := requireRefundPrincipal(w, r)
+		if !ok {
+			return
+		}
+		input.OperatorID = principal
 		input.CorrelationID = r.Header.Get("X-Correlation-ID")
 		item, err := ReconcileGovernedRefund(r.Context(), db, r.PathValue("refundId"), input)
 		if err != nil {
