@@ -49,7 +49,7 @@ func TestAvailabilityOutboxSourceFencingLeaseRecoveryAndConcurrentClaim(t *testi
 
 	_, err := db.Exec(`
 		INSERT INTO workforce_people(
-			operator_context_id, actor_id, full_name_ar, provider_code, workforce_kind,
+			operator_context_id, actor_id, full_name_ar, workforce_code, workforce_kind,
 			engagement_type, engagement_status
 		) VALUES($1,$2,'اختبار التوفر',$3,'captain','independent_contractor','active')`,
 		operatorContextID, actorID, providerCode)

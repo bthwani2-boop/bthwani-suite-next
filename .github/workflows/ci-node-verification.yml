@@ -47,7 +47,10 @@ jobs:
           repository: ${{ github.repository }}
       - name: Verify patch whitespace
         shell: bash
-        run: git diff --check "${{ inputs.base_sha }}" "${{ env.CANDIDATE_SHA }}"
+        env:
+          BASE_SHA: ${{ inputs.base_sha }}
+          HEAD_SHA: ${{ env.CANDIDATE_SHA }}
+        run: git diff --check "${BASE_SHA}" "${HEAD_SHA}"
       - name: Set up locked Node workspace
         uses: ./.github/actions/setup-node-workspace
       - name: Restore Nx computation cache

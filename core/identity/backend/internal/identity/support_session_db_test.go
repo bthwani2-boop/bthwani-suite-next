@@ -36,13 +36,17 @@ func issueReplayTestActors(t *testing.T) (target, initiator string, cleanup func
 		{target, "support-replay-target"},
 		{initiator, "support-replay-initiator"},
 	} {
-		cleanupTestPhone(t, db, actor.id) // cascades identity_sessions
+		if _, err := db.Exec(`DELETE FROM identity_actors WHERE id = $1`, actor.id); err != nil {
+			t.Fatalf("clean up support replay actor %s: %v", actor.id, err)
+		}
 	}
 	insertIdentityTestActor(t, db, target, "support-replay-target", "identity-test-ctx", "", nil, nil, ActorStatusActive, 1)
 	insertIdentityTestActor(t, db, initiator, "support-replay-initiator", "identity-test-ctx", "", nil, nil, ActorStatusActive, 1)
 	return target, initiator, func() {
 		for _, id := range []string{target, initiator} {
-			cleanupTestPhone(t, db, id)
+			if _, err := db.Exec(`DELETE FROM identity_actors WHERE id = $1`, id); err != nil {
+				t.Errorf("clean up support replay actor %s: %v", id, err)
+			}
 		}
 	}
 }

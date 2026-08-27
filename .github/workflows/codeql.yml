@@ -469,8 +469,10 @@ jobs:
             exit 1
           fi
           trusted_upload_required=false
-          if [[ "${EVENT_NAME}" == "workflow_dispatch" || "${EVENT_NAME}" == "workflow_call" || "${EVENT_NAME}" == "schedule" || ( \
-          "${EVENT_NAME}" == "push" && "${REF_NAME}" == "${DEFAULT_BRANCH}" ) ]]; then
+          if [[ "${EVENT_NAME}" == "workflow_call" || \
+                ( "${EVENT_NAME}" == "workflow_dispatch" && "${REF_NAME}" == "${DEFAULT_BRANCH}" ) || \
+                "${EVENT_NAME}" == "schedule" || \
+                ( "${EVENT_NAME}" == "push" && "${REF_NAME}" == "${DEFAULT_BRANCH}" ) ]]; then
             trusted_upload_required=true
           fi
           if [[ "${trusted_upload_required}" == "true" ]]; then

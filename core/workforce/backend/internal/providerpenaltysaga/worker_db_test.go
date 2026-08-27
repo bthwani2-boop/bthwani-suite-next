@@ -177,7 +177,7 @@ func TestProviderPenaltySagaCrashRecoveryAndConcurrentAuthority(t *testing.T) {
 			// client must classify this as UNKNOWN, never as safe-to-retry.
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write([]byte(`{"providerPenalty":`))
-		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/reverse"):
+		case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/wlt/provider-penalties/reverse/"):
 			reverseCalls.Add(1)
 			stored.Status = "reversed"
 			stored.ReversalIdempotencyKey = r.Header.Get("Idempotency-Key")

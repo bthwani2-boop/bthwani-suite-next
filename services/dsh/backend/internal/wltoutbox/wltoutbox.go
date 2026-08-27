@@ -299,7 +299,7 @@ func MarkSentWithReference(db *sql.DB, id, externalReference string) error {
 func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
         nextAttempt := attemptCount + 1
         if nextAttempt > 15 {
-                _, err := db.Exec(`
+                _, err := db.ExecContext(context.Background(), `
                         UPDATE dsh_wlt_outbox_events
                         SET status = 'failed', attempt_count = $2, last_error = $3, updated_at = NOW()
                         WHERE id = $1::uuid`, id, nextAttempt, cause.Error())
@@ -310,7 +310,7 @@ func MarkFailed(db *sql.DB, id string, attemptCount int, cause error) error {
         if backoff > 30*time.Minute {
                 backoff = 30 * time.Minute
         }
-        _, err := db.Exec(`
+        _, err := db.ExecContext(context.Background(), `
                 UPDATE dsh_wlt_outbox_events
                 SET status=CASE
                       WHEN event_type='loyalty_earned' AND reversal_requested=TRUE THEN 'cancelled'
@@ -336,7 +336,7 @@ func MarkUnknown(db *sql.DB, id string, attemptCount int, cause error) error {
         if cause != nil {
                 message = cause.Error()
         }
-        _, err := db.Exec(`
+        _, err := db.ExecContext(context.Background(), `
                 UPDATE dsh_wlt_outbox_events
                 SET status=CASE WHEN readback_attempt_count+1 >= $4 THEN 'failed' ELSE 'unknown' END,
                     attempt_count=$2,last_error=$3,next_retry_at=NOW()+INTERVAL '5 seconds',

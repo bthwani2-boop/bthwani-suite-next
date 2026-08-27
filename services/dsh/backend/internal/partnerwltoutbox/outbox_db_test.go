@@ -150,13 +150,18 @@ func TestPartnerWltReconciliationCreatesAndResolvesMaskedReadbackCaseDBIntegrati
 
 	active := true
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeJSONError := func(status int, code, message string) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(status)
+			_ = json.NewEncoder(w).Encode(map[string]string{"code": code, "message": message})
+		}
 		if r.Method != http.MethodGet {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			writeJSONError(http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED", "method not allowed")
 			return
 		}
 		requestedPartnerID := strings.TrimPrefix(r.URL.Path, "/wlt/payout-destinations/partner/")
 		if requestedPartnerID != partnerID {
-			http.Error(w, "not found", http.StatusNotFound)
+			writeJSONError(http.StatusNotFound, "NOT_FOUND", "not found")
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
