@@ -1,6 +1,5 @@
-import { Platform } from "react-native";
 import type { TokenResponse } from "@bthwani/core-identity";
-import { isDshDeviceLoopbackBridgeEnabled } from "../_kernel/dsh-api-base-url";
+import { resolveDshLocalRuntimeHost } from "../_kernel/dsh-api-base-url";
 import {
   resolveMobileDevGatewayBaseUrl,
   resolveMobileDevGatewayCapability,
@@ -23,10 +22,7 @@ function brokerTarget(): BrokerTarget {
   }
 
   return {
-    baseUrl:
-      Platform.OS === "web" || isDshDeviceLoopbackBridgeEnabled()
-        ? "http://127.0.0.1:18100"
-        : "http://10.0.2.2:18100",
+    baseUrl: `http://${resolveDshLocalRuntimeHost()}:18100`,
     headers: {},
   };
 }

@@ -1,7 +1,12 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 
-const { validateDshApiBaseUrl, resolveDshApiBaseUrl } = await import(
+const {
+  validateDshApiBaseUrl,
+  resolveDshApiBaseUrl,
+  resolveDshLocalRuntimeHost,
+} = await import(
   "../dist/services/dsh/frontend/shared/_kernel/dsh-api-base-url.js"
 );
 
@@ -98,6 +103,21 @@ describe("validateDshApiBaseUrl — rejects malformed URLs", () => {
 
   test("rejects garbage", () => {
     assert.equal(validateDshApiBaseUrl("not-a-url"), false);
+  });
+});
+
+describe("resolveDshLocalRuntimeHost — canonical broker/API host", () => {
+  test("uses loopback outside a React Native runtime", () => {
+    assert.equal(resolveDshLocalRuntimeHost(), "127.0.0.1");
+  });
+
+  test("broker adapter delegates host selection to the shared resolver", () => {
+    const broker = readFileSync(new URL(
+      "../frontend/shared/session/dev-session-broker.adapter.ts",
+      import.meta.url,
+    ), "utf8");
+    assert.match(broker, /resolveDshLocalRuntimeHost/);
+    assert.doesNotMatch(broker, /10\.0\.2\.2|Platform\.OS/);
   });
 });
 
