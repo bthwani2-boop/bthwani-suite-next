@@ -6,8 +6,6 @@ import {
 } from "../../shared/_kernel/durable-mutation-attempt-registry.ts";
 
 const OPERATION = "field-payout-create";
-const STORAGE_KEY_LEGACY = "@bthwani/field-payout-attempt:v1";
-const MAX_ATTEMPT_AGE_MS = 24 * 60 * 60 * 1000;
 let fallbackSequence = 0;
 
 type StoredPayoutAttempt = DurableMutationAttemptEnvelope<{ readonly idempotencyKey: string }> & {
@@ -83,8 +81,6 @@ export async function getOrCreateFieldPayoutAttempt(
       };
     },
     parse: parseStoredAttempt,
-    legacyKeys: [STORAGE_KEY_LEGACY],
-    legacyPrefixes: ["@bthwani/field-payout-attempt:v2", "@bthwani/field-payout-attempt:v3/"],
   });
 }
 
