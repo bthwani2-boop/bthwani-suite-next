@@ -7,7 +7,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"log"
 	"strings"
 	"time"
 
@@ -22,6 +21,7 @@ var (
 	ErrInvalidInput          = errors.New("invalid input")
 	ErrInvalidSupervisor     = errors.New("supervisor actor is missing, inactive, or invalid")
 	ErrWorkforceKindConflict = errors.New("actor already holds a profile of another workforce kind")
+	ErrActivationReplay      = errors.New("activation was already issued; submit a new idempotency key")
 )
 
 // Service orchestrates the workforce lifecycle across Workforce (sovereign
@@ -120,11 +120,10 @@ func (s *Service) ensureServiceZoneCity(ctx context.Context, cityCode string) er
 	return s.repo.EnsureCity(ctx, cityCode, cityCode)
 }
 
-// CreateFieldAgent provisions the Identity actor first (idempotent on
-// phone+role, returns the actor id that keys everything), then writes the
-// sovereign profile. If the local write fails the provisioned actor stays
-// inactive and unbound to any profile — a retry with the same phone reuses
-// it via idempotent provisioning, so no orphaned live credentials exist.
+// CreateFieldAgent records a durable local intent before provisioning the
+// Identity actor. The durable case records the remote outcome and is completed
+// atomically with the sovereign profile, audit, and idempotent response, so a
+// crash never relies on best-effort deletion of a remotely committed actor.
 // The workforce code is generated server-side and never accepted from the
 // caller.
 func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input CreateFieldAgentInput, idempotencyKey, correlationID string) (Person, bool, error) {
@@ -170,6 +169,18 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 	if err != nil {
 		return Person{}, false, err
 	}
+	boundaryCase, err := s.repo.beginIdentityBoundaryCase(ctx, identityBoundaryCaseInput{
+		OperatorContextID: operator.OperatorContextID, Operation: "create_field_agent", WorkforceKind: "field",
+		WorkforceCode: workforceCode, RequestHash: requestHash, IdempotencyKey: idempotencyKey,
+		RequestedByActorID: operator.ActorID, RequestedByRole: operator.Role, CorrelationID: correlationID,
+		Payload: fieldIdentityBoundaryPayload{Input: input, CityCode: zone.ServiceAreaCode},
+	})
+	if err != nil {
+		return Person{}, false, err
+	}
+	if boundaryCase.WorkforceCode != "" {
+		workforceCode = boundaryCase.WorkforceCode
+	}
 
 	if s.identity == nil {
 		return Person{}, false, identityclient.ErrUnavailable
@@ -186,10 +197,9 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 		return Person{}, false, identityclient.ErrInvalidActor
 	}
 	actorID := actor.ActorID
-	// Identity is idempotent. Only the response from a genuinely new
-	// provision authorizes saga compensation; a replay may point at an
-	// existing inactive actor that belongs to a retry already in flight.
-	provisionedIdentity := actor.Created
+	if err := s.repo.markIdentityBoundaryRemote(ctx, boundaryCase.ID, actorID, workforceCode, actor); err != nil {
+		return Person{}, false, err
+	}
 
 	if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
 		if existing.FieldProfile == nil {
@@ -220,7 +230,11 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 		}); err != nil {
 			return err
 		}
-		return storeIdempotentResponseTx(ctx, tx, operator.ActorID, "create_field_agent", idempotencyKey, requestHash, encoded)
+		if err := storeIdempotentResponseTx(ctx, tx, operator.ActorID, "create_field_agent", idempotencyKey, requestHash, encoded); err != nil {
+			return err
+		}
+		return completeIdentityBoundaryTx(ctx, tx, boundaryCase.ID)
+
 	})
 	if unitErr != nil {
 		if errors.Is(unitErr, ErrDuplicateWorkforceCode) {
@@ -231,12 +245,11 @@ func (s *Service) CreateFieldAgent(ctx context.Context, operator Operator, input
 				return existing, true, nil
 			}
 		}
-		if provisionedIdentity {
-			if compensationErr := s.identity.Deprovision(ctx, actorID); compensationErr != nil {
-				log.Printf("[workforce] field identity compensation failed actor=%s: %v", actorID, compensationErr)
-			}
-		}
+		// The remote actor is deliberately retained. The durable case is the
+		// recovery authority; deleting the actor here would recreate the
+		// remote-success/local-failure crash window.
 		return Person{}, false, unitErr
+
 	}
 	return person, false, nil
 }
@@ -284,7 +297,18 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 	if err != nil {
 		return Person{}, false, err
 	}
-
+	boundaryCase, err := s.repo.beginIdentityBoundaryCase(ctx, identityBoundaryCaseInput{
+		OperatorContextID: operator.OperatorContextID, Operation: "create_captain", WorkforceKind: "captain",
+		WorkforceCode: workforceCode, RequestHash: requestHash, IdempotencyKey: idempotencyKey,
+		RequestedByActorID: operator.ActorID, RequestedByRole: operator.Role, CorrelationID: correlationID,
+		Payload: captainIdentityBoundaryPayload{Input: input, CityCode: zone.ServiceAreaCode},
+	})
+	if err != nil {
+		return Person{}, false, err
+	}
+	if boundaryCase.WorkforceCode != "" {
+		workforceCode = boundaryCase.WorkforceCode
+	}
 	if s.identity == nil {
 		return Person{}, false, identityclient.ErrUnavailable
 	}
@@ -298,14 +322,8 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 		return Person{}, false, identityclient.ErrInvalidActor
 	}
 	actorID := actor.ActorID
-	identityCreated := actor.Created
-	compensate := func() {
-		if !identityCreated {
-			return
-		}
-		if compensationErr := s.identity.Deprovision(ctx, actorID); compensationErr != nil {
-			log.Printf("[workforce] captain identity compensation failed actor=%s: %v", actorID, compensationErr)
-		}
+	if err := s.repo.markIdentityBoundaryRemote(ctx, boundaryCase.ID, actorID, workforceCode, actor); err != nil {
+		return Person{}, false, err
 	}
 
 	if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
@@ -335,7 +353,11 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 		}); err != nil {
 			return err
 		}
-		return storeIdempotentResponseTx(ctx, tx, operator.ActorID, "create_captain", idempotencyKey, requestHash, encoded)
+		if err := storeIdempotentResponseTx(ctx, tx, operator.ActorID, "create_captain", idempotencyKey, requestHash, encoded); err != nil {
+			return err
+		}
+		return completeIdentityBoundaryTx(ctx, tx, boundaryCase.ID)
+
 	})
 	if unitErr != nil {
 		if errors.Is(unitErr, ErrDuplicateWorkforceCode) {
@@ -346,7 +368,8 @@ func (s *Service) CreateCaptain(ctx context.Context, operator Operator, input Cr
 				return existing, true, nil
 			}
 		}
-		compensate()
+		// The durable identity-boundary case remains the recovery authority;
+		// best-effort remote deletion is not a valid final design.
 		return Person{}, false, unitErr
 	}
 	return person, false, nil
@@ -385,6 +408,18 @@ func (s *Service) CreateEmployee(ctx context.Context, operator Operator, input C
 	if err != nil {
 		return Person{}, false, err
 	}
+	boundaryCase, err := s.repo.beginIdentityBoundaryCase(ctx, identityBoundaryCaseInput{
+		OperatorContextID: operator.OperatorContextID, Operation: "create_employee", WorkforceKind: "employee",
+		WorkforceCode: workforceCode, RequestHash: requestHash, IdempotencyKey: idempotencyKey,
+		RequestedByActorID: operator.ActorID, RequestedByRole: operator.Role, CorrelationID: correlationID,
+		Payload: employeeIdentityBoundaryPayload{Input: input, PermissionBundle: input.PermissionBundle},
+	})
+	if err != nil {
+		return Person{}, false, err
+	}
+	if boundaryCase.WorkforceCode != "" {
+		workforceCode = boundaryCase.WorkforceCode
+	}
 
 	if s.identity == nil {
 		return Person{}, false, identityclient.ErrUnavailable
@@ -400,14 +435,8 @@ func (s *Service) CreateEmployee(ctx context.Context, operator Operator, input C
 		return Person{}, false, identityclient.ErrInvalidActor
 	}
 	actorID := actor.ActorID
-	identityCreated := actor.Created
-	compensate := func() {
-		if !identityCreated {
-			return
-		}
-		if compensationErr := s.identity.Deprovision(ctx, actorID); compensationErr != nil {
-			log.Printf("[workforce] employee identity compensation failed actor=%s: %v", actorID, compensationErr)
-		}
+	if err := s.repo.markIdentityBoundaryRemote(ctx, boundaryCase.ID, actorID, workforceCode, actor); err != nil {
+		return Person{}, false, err
 	}
 
 	if existing, lookupErr := s.repo.PersonByActorID(ctx, actorID); lookupErr == nil {
@@ -437,7 +466,11 @@ func (s *Service) CreateEmployee(ctx context.Context, operator Operator, input C
 		}); err != nil {
 			return err
 		}
-		return storeIdempotentResponseTx(ctx, tx, operator.ActorID, "create_employee", idempotencyKey, requestHash, encoded)
+		if err := storeIdempotentResponseTx(ctx, tx, operator.ActorID, "create_employee", idempotencyKey, requestHash, encoded); err != nil {
+			return err
+		}
+		return completeIdentityBoundaryTx(ctx, tx, boundaryCase.ID)
+
 	})
 	if unitErr != nil {
 		if errors.Is(unitErr, ErrDuplicateWorkforceCode) {
@@ -448,7 +481,8 @@ func (s *Service) CreateEmployee(ctx context.Context, operator Operator, input C
 				return existing, true, nil
 			}
 		}
-		compensate()
+		// The durable identity-boundary case remains the recovery authority;
+		// best-effort remote deletion is not a valid final design.
 		return Person{}, false, unitErr
 	}
 	return person, false, nil
@@ -805,19 +839,43 @@ func (s *Service) IssueActivation(ctx context.Context, operator Operator, actorI
 	// Employees: the sovereign employee minimum (department + role) IS the
 	// readiness gate, symmetric with the EmployeeByID readback — no
 	// captain eligibility is consulted (root #7 divergence closed).
-	code, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, expectedActorType, expectedSurface, idempotencyKey, correlationID)
+	requestHash := hashRequest(struct {
+		ActorID           string
+		ExpectedVersion   int
+		ExpectedActorType string
+		ExpectedSurface   string
+	}{actorID, expectedVersion, expectedActorType, expectedSurface})
+	boundaryCase, err := s.repo.beginIdentityBoundaryCase(ctx, identityBoundaryCaseInput{
+		OperatorContextID: operator.OperatorContextID, Operation: "issue_activation", WorkforceKind: expectedActorType,
+		ActorID: actorID, RequestHash: requestHash, IdempotencyKey: idempotencyKey,
+		RequestedByActorID: operator.ActorID, RequestedByRole: operator.Role, CorrelationID: correlationID,
+		Payload: struct{ ActorID, ExpectedActorType, ExpectedSurface, IdempotencyKey string }{actorID, expectedActorType, expectedSurface, idempotencyKey},
+	})
 	if err != nil {
+		return identityclient.ActivationCode{}, err
+	}
+	code, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, expectedActorType, expectedSurface, boundaryCase.CommandKey, correlationID)
+	if err != nil {
+		return identityclient.ActivationCode{}, err
+	}
+	if boundaryCase.LifecycleState == "LOCAL_COMMITTED" && idempotencyKey == "" {
+		return identityclient.ActivationCode{}, ErrActivationReplay
+	}
+	if err := s.repo.markIdentityBoundaryRemote(ctx, boundaryCase.ID, actorID, "", map[string]string{"activationId": code.ActivationID}); err != nil {
 		return identityclient.ActivationCode{}, err
 	}
 	// Governed unit: the activation audit is the local evidence of the issued
 	// code; it is idempotent on the command's idempotency key, so a retry that
 	// re-issues (identity-side idempotent) converges instead of duplicating.
 	if err := s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
-		return recordAuditTx(ctx, tx, auditInput{
+		if err := recordAuditTx(ctx, tx, auditInput{
 			OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
 			TargetActorID: actorID, Action: "workforce.activation_issued", Operation: "issue_activation",
 			ToState: map[string]string{"activationId": code.ActivationID}, CorrelationID: correlationID, IdempotencyKey: idempotencyKey,
-		})
+		}); err != nil {
+			return err
+		}
+		return completeIdentityBoundaryTx(ctx, tx, boundaryCase.ID)
 	}); err != nil {
 		return identityclient.ActivationCode{}, err
 	}
@@ -852,20 +910,40 @@ func personHasWorkforceKind(person Person, workforceKind string) bool {
 
 // RevokeActivation cancels all pending codes for the provider.
 func (s *Service) RevokeActivation(ctx context.Context, operator Operator, actorID, correlationID string) error {
-	if _, err := s.repo.PersonByActorID(ctx, actorID); err != nil {
+	person, err := s.repo.PersonByActorID(ctx, actorID)
+	if err != nil {
 		return err
+	}
+	workforceKind := person.WorkforceKind
+	requestHash := hashRequest(struct{ ActorID string }{actorID})
+	boundaryCase, err := s.repo.beginIdentityBoundaryCase(ctx, identityBoundaryCaseInput{
+		OperatorContextID: operator.OperatorContextID, Operation: "revoke_activation", WorkforceKind: workforceKind,
+		ActorID: actorID, RequestHash: requestHash, RequestedByActorID: operator.ActorID,
+		RequestedByRole: operator.Role, CorrelationID: correlationID, Payload: struct{ ActorID string }{actorID},
+	})
+	if err != nil {
+		return err
+	}
+	if boundaryCase.LifecycleState == "LOCAL_COMMITTED" {
+		return nil
 	}
 	if err := s.identity.RevokeActivations(ctx, actorID); err != nil {
 		return err
 	}
-	// Governed unit: the revocation audit is the local evidence of the
-	// remote revocation.
+	if err := s.repo.markIdentityBoundaryRemote(ctx, boundaryCase.ID, actorID, "", map[string]string{"revoked": "true"}); err != nil {
+		return err
+	}
+	// Governed unit: the revocation audit and durable case completion are the
+	// local evidence of the remote revocation.
 	return s.repo.GovernedWrite(ctx, func(tx *sql.Tx) error {
-		return recordAuditTx(ctx, tx, auditInput{
+		if err := recordAuditTx(ctx, tx, auditInput{
 			OperatorContextID: operator.OperatorContextID, ActorID: operator.ActorID, ActorRole: operator.Role,
 			TargetActorID: actorID, Action: "workforce.activation_revoked", Operation: "revoke_activation",
 			CorrelationID: correlationID,
-		})
+		}); err != nil {
+			return err
+		}
+		return completeIdentityBoundaryTx(ctx, tx, boundaryCase.ID)
 	})
 }
 

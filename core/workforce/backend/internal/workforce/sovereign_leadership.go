@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -295,6 +294,17 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 	if err != nil {
 		return SovereignLeadershipCreationResult{}, false, err
 	}
+	boundaryCase, err := s.repo.beginIdentityBoundaryCase(ctx, identityBoundaryCaseInput{
+		OperatorContextID: operator.OperatorContextID, Operation: "create_sovereign_leader", WorkforceKind: "employee",
+		WorkforceCode: workforceCode, RequestHash: requestHash, IdempotencyKey: idempotencyKey,
+		RequestedByActorID: operator.ActorID, RequestedByRole: operator.Role, CorrelationID: correlationID, Payload: input,
+	})
+	if err != nil {
+		return SovereignLeadershipCreationResult{}, false, err
+	}
+	if boundaryCase.WorkforceCode != "" {
+		workforceCode = boundaryCase.WorkforceCode
+	}
 	if s.identity == nil {
 		return SovereignLeadershipCreationResult{}, false, identityclient.ErrUnavailable
 	}
@@ -309,14 +319,8 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 		return SovereignLeadershipCreationResult{}, false, identityclient.ErrInvalidActor
 	}
 	actorID := actor.ActorID
-	identityCreated := actor.Created
-	compensate := func() {
-		if !identityCreated {
-			return
-		}
-		if compensationErr := s.identity.Deprovision(ctx, actorID); compensationErr != nil {
-			log.Printf("[workforce] leadership identity compensation failed actor=%s: %v", actorID, compensationErr)
-		}
+	if err := s.repo.markIdentityBoundaryRemote(ctx, boundaryCase.ID, actorID, workforceCode, actor); err != nil {
+		return SovereignLeadershipCreationResult{}, false, err
 	}
 
 	if actorID == "" {
@@ -331,7 +335,6 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 		return SovereignLeadershipCreationResult{}, false, ErrWorkforceKindConflict
 	}
 	if personErr != nil && !errors.Is(personErr, ErrNotFound) {
-		compensate()
 		return SovereignLeadershipCreationResult{}, false, personErr
 	}
 
@@ -375,13 +378,14 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 		return err
 	})
 	if unitErr != nil {
-		compensate()
 		return SovereignLeadershipCreationResult{}, false, unitErr
 	}
 
-	activation, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, "employee", "webapp", idempotencyKey+":activation", correlationID)
+	activation, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, "employee", "webapp", boundaryCase.CommandKey+":activation", correlationID)
 	if err != nil {
-		compensate()
+		return SovereignLeadershipCreationResult{}, false, err
+	}
+	if err := s.repo.markIdentityBoundaryRemote(ctx, boundaryCase.ID, actorID, workforceCode, map[string]any{"actor": actor, "activationId": activation.ActivationID}); err != nil {
 		return SovereignLeadershipCreationResult{}, false, err
 	}
 	result := SovereignLeadershipCreationResult{
@@ -402,7 +406,10 @@ func (s *Service) CreateSovereignLeader(ctx context.Context, operator Operator, 
 		if err != nil {
 			return err
 		}
-		return storeIdempotentResponseTx(ctx, tx, operator.ActorID, "create_sovereign_leader", idempotencyKey, requestHash, encoded)
+		if err := storeIdempotentResponseTx(ctx, tx, operator.ActorID, "create_sovereign_leader", idempotencyKey, requestHash, encoded); err != nil {
+			return err
+		}
+		return completeIdentityBoundaryTx(ctx, tx, boundaryCase.ID)
 	}); err != nil {
 		return SovereignLeadershipCreationResult{}, false, err
 	}
@@ -437,6 +444,18 @@ func (s *Service) CreateDepartmentEmployee(ctx context.Context, operator Operato
 	if err != nil {
 		return DepartmentEmployeeCreationResult{}, false, err
 	}
+	boundaryCase, err := s.repo.beginIdentityBoundaryCase(ctx, identityBoundaryCaseInput{
+		OperatorContextID: operator.OperatorContextID, Operation: "create_department_employee", WorkforceKind: "employee",
+		WorkforceCode: workforceCode, RequestHash: requestHash, IdempotencyKey: idempotencyKey,
+		RequestedByActorID: operator.ActorID, RequestedByRole: operator.Role, CorrelationID: correlationID,
+		Payload: employeeIdentityBoundaryPayload{Input: input, PermissionBundle: "staff"},
+	})
+	if err != nil {
+		return DepartmentEmployeeCreationResult{}, false, err
+	}
+	if boundaryCase.WorkforceCode != "" {
+		workforceCode = boundaryCase.WorkforceCode
+	}
 	if s.identity == nil {
 		return DepartmentEmployeeCreationResult{}, false, identityclient.ErrUnavailable
 	}
@@ -451,14 +470,8 @@ func (s *Service) CreateDepartmentEmployee(ctx context.Context, operator Operato
 		return DepartmentEmployeeCreationResult{}, false, identityclient.ErrInvalidActor
 	}
 	actorID := actor.ActorID
-	identityCreated := actor.Created
-	compensate := func() {
-		if !identityCreated {
-			return
-		}
-		if compensationErr := s.identity.Deprovision(ctx, actorID); compensationErr != nil {
-			log.Printf("[workforce] employee identity compensation failed actor=%s: %v", actorID, compensationErr)
-		}
+	if err := s.repo.markIdentityBoundaryRemote(ctx, boundaryCase.ID, actorID, workforceCode, actor); err != nil {
+		return DepartmentEmployeeCreationResult{}, false, err
 	}
 	person, personErr := s.repo.PersonByActorID(ctx, actorID)
 	if errors.Is(personErr, ErrNotFound) {
@@ -468,18 +481,18 @@ func (s *Service) CreateDepartmentEmployee(ctx context.Context, operator Operato
 			person, err = createEmployeeTx(ctx, tx, actorID, workforceCode, input)
 			return err
 		}); err != nil {
-			compensate()
 			return DepartmentEmployeeCreationResult{}, false, err
 		}
 	} else if personErr == nil && person.EmployeeProfile == nil {
 		return DepartmentEmployeeCreationResult{}, false, ErrWorkforceKindConflict
 	} else if personErr != nil {
-		compensate()
 		return DepartmentEmployeeCreationResult{}, false, personErr
 	}
-	activation, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, "employee", "webapp", idempotencyKey+":activation", correlationID)
+	activation, err := s.identity.IssueActivation(ctx, actorID, operator.ActorID, "employee", "webapp", boundaryCase.CommandKey+":activation", correlationID)
 	if err != nil {
-		compensate()
+		return DepartmentEmployeeCreationResult{}, false, err
+	}
+	if err := s.repo.markIdentityBoundaryRemote(ctx, boundaryCase.ID, actorID, workforceCode, map[string]any{"actor": actor, "activationId": activation.ActivationID}); err != nil {
 		return DepartmentEmployeeCreationResult{}, false, err
 	}
 	result := DepartmentEmployeeCreationResult{Employee: person, Activation: activation}
@@ -496,7 +509,10 @@ func (s *Service) CreateDepartmentEmployee(ctx context.Context, operator Operato
 		if err != nil {
 			return err
 		}
-		return storeIdempotentResponseTx(ctx, tx, operator.ActorID, "create_department_employee", idempotencyKey, requestHash, encoded)
+		if err := storeIdempotentResponseTx(ctx, tx, operator.ActorID, "create_department_employee", idempotencyKey, requestHash, encoded); err != nil {
+			return err
+		}
+		return completeIdentityBoundaryTx(ctx, tx, boundaryCase.ID)
 	}); err != nil {
 		return DepartmentEmployeeCreationResult{}, false, err
 	}

@@ -207,6 +207,13 @@
       "sha256": "3223697eb7bfff6fe398811b5bbcca9cc370e12a02bfcdd48a4facb9fa960e39",
       "historicalPrefix": "029",
       "state": "ACTIVE"
+    },
+    {
+      "ordinal": 30,
+      "file": "workforce-030_identity_boundary_saga.sql",
+      "sha256": "fe297a6bb6572714134fef8da3cd71cf46a6c58073ad3851ba411e021584e516",
+      "historicalPrefix": "030",
+      "state": "ACTIVE"
     }
   ]
 }

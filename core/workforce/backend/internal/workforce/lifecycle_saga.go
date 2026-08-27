@@ -244,6 +244,9 @@ func RunLifecycleReconciler(ctx context.Context, db *sql.DB, identity *identityc
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
+			if _, err := ProcessIdentityBoundaryRecoveryPass(ctx, db, identity); err != nil {
+				log.Printf("[workforce] identity boundary reconciler pass failed: %v", err)
+			}
 			if _, err := ProcessLifecycleRecoveryPass(ctx, db, identity); err != nil {
 				log.Printf("[workforce] lifecycle reconciler pass failed: %v", err)
 			}
