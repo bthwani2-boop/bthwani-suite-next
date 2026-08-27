@@ -260,43 +260,6 @@ const DSH_SIGNAL_EVENT_LABELS: Record<DshSignalEventKind, string> = {
   settlement_ready_wlt:   'التسوية جاهزة — WLT',
 };
 
-// ─── Tone Map ─────────────────────────────────────────────────────────────────
-
-const DSH_SIGNAL_TONES: Record<DshSignalEventKind, 'brand' | 'success' | 'warning' | 'danger' | 'default'> = {
-  partner_submitted:      'brand',
-  partner_docs_missing:   'warning',
-  partner_approved:       'success',
-  partner_rejected:       'danger',
-  catalog_item_approved:  'success',
-  catalog_item_rejected:  'danger',
-  catalog_published:      'success',
-  marketing_content_approved: 'success',
-  marketing_content_rejected: 'danger',
-  marketing_content_needs_fix: 'warning',
-  order_created:          'brand',
-  payment_failed:         'danger',
-  partner_accepted:       'success',
-  partner_rejected_order: 'danger',
-  captain_assigned:       'brand',
-  captain_declined:       'warning',
-  reassignment_required:  'danger',
-  picked_up:              'brand',
-  delivered:              'success',
-  delivery_failed:        'danger',
-  ticket_created:         'warning',
-  ticket_escalated:       'danger',
-  sla_breach:             'danger',
-  manual_call_intake_requested: 'warning',
-  customer_360_followup:  'brand',
-  assisted_order_requested: 'warning',
-  order_rescue_requested: 'danger',
-  partner_capacity_degraded: 'warning',
-  catalog_conflict_detected: 'warning',
-  refund_pending_wlt:     'warning',
-  refund_completed_wlt:   'success',
-  settlement_ready_wlt:   'brand',
-};
-
 // ─── Signal Layer Simulated Events ─────────────────────────────────────────────
 // Canonical signal seed data lives in the archived local signal source.
 // Re-exported here typed for the signal layer contract.
@@ -387,11 +350,6 @@ function getAllSignalEvents(): ReadonlyArray<DshSignalEvent> {
 /** Get Arabic label for a signal event kind */
 export function getDshSignalEventLabel(kind: DshSignalEventKind): string {
   return DSH_SIGNAL_EVENT_LABELS[kind];
-}
-
-/** Get display tone for a signal event kind */
-export function getDshSignalEventTone(kind: DshSignalEventKind): 'brand' | 'success' | 'warning' | 'danger' | 'default' {
-  return DSH_SIGNAL_TONES[kind];
 }
 
 /** Get actor routing config for a signal kind */
