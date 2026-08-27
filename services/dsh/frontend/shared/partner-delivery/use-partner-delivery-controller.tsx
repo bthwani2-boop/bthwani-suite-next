@@ -233,7 +233,7 @@ export function useOperatorPartnerDeliveriesController(params: UseOperatorPartne
       });
   }, []);
 
-  const raiseException = useCallback((
+  const raiseException = useCallback(async (
     orderIdValue: string,
     expectedVersion: number,
     reason: string,
@@ -241,7 +241,7 @@ export function useOperatorPartnerDeliveriesController(params: UseOperatorPartne
     evidenceReferences: readonly string[] = [],
   ) => {
     if (!actorId) {
-      return Promise.resolve({ ok: false as const, kind: "forbidden" as const, message: "جلسة العمليات غير جاهزة لتنفيذ الاستثناء." });
+      return { ok: false as const, kind: "forbidden" as const, message: "جلسة العمليات غير جاهزة لتنفيذ الاستثناء." };
     }
     const commandKey = `${actorId}:${orderIdValue}:${expectedVersion}:${reason}:${evidenceReferences.join("|")}`;
     const existing = operatorCommandIds.current[commandKey] ?? corrId("operator-partner-delivery-exception");
